@@ -1,8 +1,7 @@
 <div align="center">
 
-<img src="https://img.alicdn.com/imgextra/i1/O1CN01RSQFUD1jN5IBzHORt_!!6000000004535-2-tps-2440-521.png" alt="Aliyun Model Studio CLI" width="420" />
+<img src="https://img.alicdn.com/imgextra/i1/O1CN01kGgO3z1N30OINgUoG_!!6000000001513-2-tps-1915-821.png" alt="Aliyun Model Studio CLI" />
 
-# >\_ Aliyun Model Studio CLI
 
 **阿里云百炼 (DashScope) AI 平台命令行工具**
 
@@ -11,7 +10,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli) · [English](https://unpkg.com/bailian-cli/README.md) · [API 文档](https://help.aliyun.com/zh/model-studio/) · [获取 API Key](https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key)
+[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli) · [English](README.md) · [API 文档](https://help.aliyun.com/zh/model-studio/) · [获取 API Key](https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key)
 
 ---
 
@@ -38,9 +37,35 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 - **控制台能力** — 浏览百炼应用（`app list`），查询模型免费额度（`usage free`）
 - **本地文件自动上传** — 所有 URL 参数同时支持本地路径，免费临时存储 48 小时
 
+## 示例:一句话生成一部电影短片
+
 <p align="center">
-  <img src="https://img.alicdn.com/imgextra/i1/O1CN01Df2LiL1IcCkXJROYz_!!6000000000913-2-tps-759-426.png" alt="bl --help" width="720" />
+  <a href="https://cloud.video.taobao.com/vod/dS2F4huqbw5Nfe5L3wwb3grz2q2DNYD3retq8dU-iHo.mp4">
+    <img src="https://img.alicdn.com/imgextra/i1/O1CN01Q5052k232Hd36NodG_!!6000000007197-0-tps-2940-1656.jpg" alt="点击播放演示视频" width="720" />
+  </a>
 </p>
+
+<p align="center"><i>👆 点击封面播放完整 2 分钟演示</i></p>
+
+一部完整的 **2 分钟、16:9 电影感短片** —— 由一句自然语言端到端生成,**全程零手动剪辑**。这个示例展示了 AI Agent 如何把三个基础能力编排成一条多步创作流水线:
+
+- **[Qwen Code](https://github.com/QwenLM/qwen-code)** —— Agentic coding 模型,解析用户意图、驱动整个工作流
+- **[阿里云百炼 CLI](https://github.com/modelstudioai/cli/)** —— 调用 **HappyHorse 1.0**,百炼的文生/图生/参考生视频模型
+- **[spark-video Skill](https://github.com/JohnKeating1997/spark-video)** —— 负责场景拆分、分镜设计、镜头连贯性和最终拼接
+
+### 唯一的提示词
+
+> *"帮我生成一段日系影视风格,高中女生的青涩初恋故事,剧情高甜,让人看了想谈恋爱,2 分钟左右的视频,尺寸是 16:9"*
+
+### 工作流程
+
+1. **Qwen Code** 解析需求、规划叙事节奏,决定要调用哪些工具。
+2. **spark-video Skill** 把故事拆成镜头、为每个镜头写提示词,并保证视觉连贯性(角色、光线、色调、镜头语言)。
+3. **`bl video generate`** 把每个镜头并行下发给 **HappyHorse 1.0**。
+4. Skill 把所有片段拼成最终的 16:9 / 约 2 分钟成片。
+
+没有时间线拖拽,没有逐帧剪辑。一句话 → 一部短片。
+
 
 ## 安装
 
@@ -143,3 +168,11 @@ bl update
 | 阿里云百炼控制台        | https://bailian.console.aliyun.com/                             |
 | 获取 API Key            | https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key |
 | 获取 AccessKey          | https://ram.console.aliyun.com/manage/ak                        |
+
+## 更新日志
+
+每个版本的变更详情记录在 [CHANGELOG_CN.md](CHANGELOG_CN.md)。
+
+## 参与贡献
+
+欢迎提 Issue、Feature Request 和 PR。开发环境搭建、仓库结构、新增/修改命令的工作流请见 [CONTRIBUTING_CN.md](CONTRIBUTING_CN.md)。

@@ -2,7 +2,7 @@
 
 `bailian-cli` 是阿里云百炼(DashScope)的官方 CLI。本文是面向**开发者**的指南;终端用户请看 [README_CN.md](README_CN.md)。
 
-[English](CONTRIBUTING.md)
+[English](CONTRIBUTING.md) · [README](README_CN.md) · [更新日志](CHANGELOG_CN.md)
 
 ## 环境要求
 

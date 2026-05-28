@@ -10,7 +10,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&) · [中文文档](https://unpkg.com/bailian-cli/README_CN.md) · [API Documentation](https://help.aliyun.com/zh/model-studio/) · [Get API Key](https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key)
+[Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&) · [中文文档](README_CN.md) · [API Documentation](https://help.aliyun.com/zh/model-studio/) · [Get API Key](https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key)
 
 ---
 
@@ -170,3 +170,11 @@ Config file location: `~/.bailian/config.json`
 | Aliyun Model Studio Console  | https://bailian.console.aliyun.com/                             |
 | Get API Key                  | https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key |
 | Get AccessKey                | https://ram.console.aliyun.com/manage/ak                        |
+
+## Changelog
+
+Release notes for every version live in [CHANGELOG.md](CHANGELOG.md).
+
+## Contributing
+
+Bug reports, feature requests, and PRs are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for developer setup, repo layout, and the workflow for adding or changing commands.

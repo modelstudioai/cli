@@ -4,7 +4,7 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/spec/v2.0.0.html)。两个包共享一个版本号,总是一起发布。
 
-[English](CHANGELOG.md)
+[English](CHANGELOG.md) · [README](README_CN.md) · [参与贡献](CONTRIBUTING_CN.md)
 
 ## [1.1.0] - 2026-05-28
 
