@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.alicdn.com/imgextra/i2/O1CN01A3R1nA1OKEuUtYco1_!!6000000001686-2-tps-1984-926.png" alt="Aliyun Model Studio CLI" />
+<img src="https://img.alicdn.com/imgextra/i1/O1CN01kGgO3z1N30OINgUoG_!!6000000001513-2-tps-1915-821.png" alt="Aliyun Model Studio CLI" />
 
 # >\_ Aliyun Model Studio CLI
 
