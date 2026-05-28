@@ -1,0 +1,14 @@
+{
+  "$comment": "压测任务数/并发默认值。优先级：命令行 --count/-n、-c/--concurrency > 本文件 > lib/stress-config.mjs 中 CODE_DEFAULTS",
+  "targets": {
+    "text": { "count": 100, "concurrency": 50 },
+    "speech-tts": { "count": 100, "concurrency": 50 },
+    "speech-asr": { "count": 50, "concurrency": 50 },
+    "image-generate": { "count": 100, "concurrency": 20 },
+    "image-edit": { "count": 50, "concurrency": 20 },
+    "video-t2v": { "count": 20, "concurrency": 10 },
+    "video-i2v": { "count": 20, "concurrency": 20 },
+    "video-ref": { "count": 20, "concurrency": 20 },
+    "video-edit": { "count": 20, "concurrency": 20 }
+  }
+}

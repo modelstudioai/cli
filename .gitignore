@@ -1,0 +1,46 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies & build output
+node_modules
+dist
+dist-ssr
+tools/generated
+
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Crawled document metadata (generated)
+*.meta.json
+
+# AI agent / IDE config (machine-local — keep out of the public repo)
+.claude/worktrees/
+.claude/settings.json
+.claude/settings.local.json
+.cursor/
+.qwen/
+.playwright-mcp/
+.pnpm-store/
+
+# Test & scene outputs
+/test/
+packages/cli/scene/**/outputs/
+
+# Environment variables (sensitive data)
+.env

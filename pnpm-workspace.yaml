@@ -1,0 +1,24 @@
+packages:
+  - packages/*
+  - tools/*
+
+catalog:
+  "@types/node": ^24
+  ajv: ^8.20.0
+  typescript: ^5
+  vite: npm:@voidzero-dev/vite-plus-core@latest
+  vite-plus: latest
+  vitest: npm:@voidzero-dev/vite-plus-test@latest
+  yaml: ^2.8.3
+
+catalogMode: prefer
+overrides:
+  vite: "catalog:"
+  vitest: "catalog:"
+peerDependencyRules:
+  allowAny:
+    - vite
+    - vitest
+  allowedVersions:
+    vite: "*"
+    vitest: "*"
