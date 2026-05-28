@@ -40,7 +40,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 ## Showcase: One-Sentence Cinematic Video
 
 <p align="center">
-  <a href="https://cloud.video.taobao.com/vod/pQlbW_HCZzrxCZqwWjZCG1uBpLHrRGqfGiLKZ9Fqidg.mp4">
+  <a href="https://cloud.video.taobao.com/vod/dS2F4huqbw5Nfe5L3wwb3grz2q2DNYD3retq8dU-iHo.mp4">
     <img src="https://img.alicdn.com/imgextra/i1/O1CN01Q5052k232Hd36NodG_!!6000000007197-0-tps-2940-1656.jpg" alt="Click to play the demo video" width="720" />
   </a>
 </p>
