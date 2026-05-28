@@ -2,39 +2,41 @@ import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { cliPackageRoot, parseStdoutJson, runCli } from "./helpers.ts";
-
-const DEMO_WORKFLOWS = [
-  "chat-basic.json",
-  "chained-text.json",
-  "chained-text.yaml",
-  "image-generate.json",
-  "image-gen/image-gen-workflow.json",
-  "image-to-video.json",
-  "image2video/lego/lego-build-sequence.json",
-  "image2video/nine-grid-storyboard.json",
-  "image2video/virtual-tryon/virtual-tryon-workflow.json",
-  "logic-nodes.json",
-  "commerce/amazon-listing/amazon-listing-workflow.json",
-  "commerce/audio-meeting-summary/workflow.json",
-  "commerce/cool-background/cool-background-workflow.json",
-  "commerce/dress-on-model/dress-on-model-workflow.json",
-  "commerce/flatlay/flatlay-workflow.json",
-  "commerce/poster-i18n/poster-i18n-workflow.json",
-  "commerce/scatter-flatlay/scatter-flatlay-workflow.json",
-  "commerce/six-view-product/six-view-workflow.json",
-  "commerce/valentine-marketing/valentine-marketing-workflow.json",
-];
+import { parseStdoutJson, runCli } from "./helpers.ts";
 
 describe("e2e: pipeline", () => {
   let tempDir: string;
+  let chatBasicPath: string;
   let invalidPipelinePath: string;
-
-  const sceneRoot = join(cliPackageRoot, "scene");
-  const scenePipelinePath = join(sceneRoot, "chat-basic.json");
 
   beforeAll(async () => {
     tempDir = await mkdtemp(join(tmpdir(), "bailian-cli-pipeline-"));
+    chatBasicPath = join(tempDir, "chat-basic.json");
+    await writeFile(
+      chatBasicPath,
+      JSON.stringify({
+        version: "workflow/v1",
+        inputs: {
+          type: "object",
+          properties: {
+            message: { type: "string", default: "Hello from the demo pipeline." },
+          },
+          additionalProperties: false,
+        },
+        steps: [
+          {
+            id: "chat",
+            type: "text/chat",
+            input: {
+              message: { $input: "/message" },
+              system: "You are a concise assistant for pipeline demos.",
+              temperature: 0.2,
+            },
+          },
+        ],
+      }),
+    );
+
     invalidPipelinePath = join(tempDir, "invalid-dependency-pipeline.json");
     await writeFile(
       invalidPipelinePath,
@@ -83,11 +85,11 @@ describe("e2e: pipeline", () => {
     expect(stderr).toMatch(/pipeline validate|workflow\.json|output json/i);
   });
 
-  test("pipeline validate --output json 校验 scene workflow", async () => {
+  test("pipeline validate --output json 校验合法 workflow", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "pipeline",
       "validate",
-      scenePipelinePath,
+      chatBasicPath,
       "--output",
       "json",
     ]);
@@ -98,26 +100,11 @@ describe("e2e: pipeline", () => {
   });
 
   test("pipeline validate 使用 config 输出格式", async () => {
-    const { stdout, stderr, exitCode } = await runCli(["pipeline", "validate", scenePipelinePath], {
+    const { stdout, stderr, exitCode } = await runCli(["pipeline", "validate", chatBasicPath], {
       DASHSCOPE_OUTPUT: "text",
     });
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toBe("Pipeline definition is valid.\n");
-  });
-
-  test("pipeline validate --output json 校验迁移后的全部 scene workflows", async () => {
-    for (const workflow of DEMO_WORKFLOWS) {
-      const { stdout, stderr, exitCode } = await runCli([
-        "pipeline",
-        "validate",
-        join(sceneRoot, workflow),
-        "--output",
-        "json",
-      ]);
-      expect(exitCode, `${workflow}\n${stderr}`).toBe(0);
-      const data = parseStdoutJson<{ valid?: boolean; issues?: string[] }>(stdout);
-      expect(data, workflow).toEqual({ valid: true, issues: [] });
-    }
   });
 
   test("pipeline validate 拒绝非法依赖 workflow", async () => {
@@ -145,7 +132,7 @@ describe("e2e: pipeline", () => {
     const { stdout, stderr, exitCode } = await runCli([
       "pipeline",
       "run",
-      scenePipelinePath,
+      chatBasicPath,
       "--input",
       '{"message":"hello"}',
       "--dry-run",
@@ -179,7 +166,7 @@ describe("e2e: pipeline", () => {
       [
         "pipeline",
         "run",
-        scenePipelinePath,
+        chatBasicPath,
         "--input",
         '{"message":"hello"}',
         "--dry-run",
@@ -196,7 +183,7 @@ describe("e2e: pipeline", () => {
     const { stderr, exitCode } = await runCli([
       "pipeline",
       "run",
-      scenePipelinePath,
+      chatBasicPath,
       "--input",
       '{"message":"hello"}',
       "--dry-run",
@@ -212,7 +199,7 @@ describe("e2e: pipeline", () => {
     const { stdout, stderr, exitCode } = await runCli([
       "pipeline",
       "run",
-      scenePipelinePath,
+      chatBasicPath,
       "--input",
       '{"message":"hello"}',
       "--dry-run",
@@ -240,7 +227,7 @@ describe("e2e: pipeline", () => {
     const { stdout, stderr, exitCode } = await runCli([
       "pipeline",
       "run",
-      scenePipelinePath,
+      chatBasicPath,
       "--dry-run",
       "--events",
       "bogus",

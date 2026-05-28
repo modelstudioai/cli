@@ -1,7 +1,0 @@
-{
-  "modelImage": "./model.png",
-  "styleReferenceImage": "./clothing-extraction.png",
-  "size": "16:9",
-  "n": 1,
-  "outDir": "./outputs"
-}
