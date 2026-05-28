@@ -4,7 +4,7 @@ All notable changes to `bailian-cli` and `bailian-cli-core` are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The two packages share a single version number — they are always released together.
 
-[中文版](CHANGELOG_CN.md)
+[中文版](CHANGELOG_CN.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
 ## [1.1.0] - 2026-05-28
 
