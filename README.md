@@ -37,9 +37,37 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **Console capabilities** — Browse Bailian apps (`app list`) and check free-tier quota (`usage free`)
 - **Local file auto-upload** — Every URL parameter accepts a local path; uploaded to free temp storage with 48-hour validity
 
+## Showcase: One-Sentence Cinematic Video
+
 <p align="center">
-  <img src="https://img.alicdn.com/imgextra/i1/O1CN01Df2LiL1IcCkXJROYz_!!6000000000913-2-tps-759-426.png" alt="bl --help" width="720" />
+  <a href="https://cloud.video.taobao.com/vod/pQlbW_HCZzrxCZqwWjZCG1uBpLHrRGqfGiLKZ9Fqidg.mp4">
+    <img src="https://img.alicdn.com/imgextra/i1/O1CN01Q5052k232Hd36NodG_!!6000000007197-0-tps-2940-1656.jpg" alt="Click to play the demo video" width="720" />
+  </a>
 </p>
+
+<p align="center"><i>👆 Click the cover to play the full 2-minute demo</i></p>
+
+A complete **2-minute, 16:9 cinematic short film** — produced end-to-end from a single natural-language sentence, with **zero manual editing**. This showcase demonstrates how an AI Agent can compose a multi-step creative pipeline by orchestrating three primitives:
+
+- **[Qwen Code](https://github.com/QwenLM/qwen-code)** — the agentic coding model that interprets the user's intent and drives the workflow
+- **[Aliyun Model Studio CLI](https://github.com/modelstudioai/cli/)** — invokes **HappyHorse 1.0**, Aliyun Model Studio's text-/image-/reference-to-video generation model
+- **[spark-video Skill](https://github.com/JohnKeating1997/spark-video)** — handles scene decomposition, storyboarding, shot continuity, and final stitching
+
+### The single prompt
+
+> *"Generate a roughly 2-minute video in Japanese cinematic style — a sweet, innocent first-love story about a high-school girl. The plot should be heart-fluttering enough to make viewers want to fall in love. Aspect ratio: 16:9."*
+>
+> *(Original: "帮我生成一段日系影视风格，高中女生的青涩初恋故事，剧情高甜，让人看了想谈恋爱，2分钟左右的视频，尺寸是16:9")*
+
+### How it works
+
+1. **Qwen Code** parses the request, plans the narrative beats, and decides which tools to call.
+2. The **spark-video Skill** breaks the story into shots, writes per-shot prompts, and enforces visual continuity (characters, lighting, palette, lens language).
+3. **`bl video generate`** dispatches each shot to **HappyHorse 1.0** in parallel.
+4. The skill stitches all clips back together into a single 16:9 / ~2-min deliverable.
+
+No timeline scrubbing. No frame-by-frame editing. Just one sentence → one video.
+
 
 ## Installation
 
