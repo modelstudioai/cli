@@ -2,7 +2,6 @@
 
 <img src="https://img.alicdn.com/imgextra/i1/O1CN01kGgO3z1N30OINgUoG_!!6000000001513-2-tps-1915-821.png" alt="Aliyun Model Studio CLI" />
 
-# >\_ Aliyun Model Studio CLI
 
 **The official command-line interface for Aliyun Model Studio (DashScope) AI Platform**
 
