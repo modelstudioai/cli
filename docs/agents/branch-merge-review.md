@@ -58,7 +58,7 @@ git diff --name-only <base>...<head>
   - [README.md](README.md) + [README_CN.md](README_CN.md)(中英文都要,常漏 `_CN`)
   - (SKILL.md 已迁出本仓库,由 `npx add skills` 机制独立维护,不在本仓库 review 范围)
 - [ ] **`bl <cmd> --help`** 文案完整:`description` / `examples` / `apiDocs` 都填了
-- [ ] **demo / quickstart**:用户可调用的新命令至少有一个示例(参考 [packages/cli/scene/](packages/cli/scene/) 的组织方式)
+- [ ] **demo / quickstart**:用户可调用的新命令至少有一个示例
 - [ ] **行为变化的老命令**:在 commit message / CHANGELOG 注明用户感知的差异
 - [ ] **错误信息 / 提示文案**:面向用户的字符串通顺、双语(项目主体是中文场景)
 
