@@ -1,0 +1,117 @@
+{
+  "version": "workflow/v1",
+  "inputs": {
+    "type": "object",
+    "properties": {
+      "fileUrl": {
+        "type": "string",
+        "default": "",
+        "description": "视频文件 URL（mp4 等）；fun-asr 会自动提取音轨。为空时走兜底分支输出『视频文件为空！』"
+      },
+      "query": {
+        "type": "string",
+        "default": "",
+        "description": "用户输入：例如要求翻译为某种语言"
+      }
+    },
+    "additionalProperties": false
+  },
+  "steps": [
+    {
+      "id": "guard",
+      "type": "script/js",
+      "input": {
+        "code": "return { hasFile: !!(args.url && String(args.url).length > 0) };",
+        "args": {
+          "url": { "$input": "/fileUrl" }
+        }
+      }
+    },
+    {
+      "id": "to-array",
+      "type": "script/js",
+      "when": { "$ne": [{ "$input": "/fileUrl" }, ""] },
+      "input": {
+        "code": "const url = String(args.url); const lower = url.toLowerCase(); const isRemote = lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('oss://') || lower.startsWith('file://'); const isAbs = url.startsWith('/'); let resolved = url; if (!isRemote && !isAbs) { let base = String(args.baseDir); if (base.endsWith('/')) base = base.slice(0, -1); let rel = url; if (rel.startsWith('./')) rel = rel.slice(2); resolved = base + '/' + rel; } return { result: [resolved] };",
+        "args": {
+          "url": { "$input": "/fileUrl" },
+          "baseDir": "scene/commerce/audio-meeting-summary"
+        }
+      }
+    },
+    {
+      "id": "asr",
+      "type": "speech/recognize",
+      "when": { "$ne": [{ "$input": "/fileUrl" }, ""] },
+      "input": {
+        "url": { "$from": "to-array", "path": "/data/result" },
+        "model": "fun-asr"
+      }
+    },
+    {
+      "id": "detect-lang",
+      "type": "text/chat",
+      "when": { "$ne": [{ "$input": "/fileUrl" }, ""] },
+      "input": {
+        "model": "qwen3.7-max",
+        "enable-thinking": false,
+        "system": "你是一个严格的语种识别器。阅读用户提供的文本后，只输出一个表示主要语种的中文名称，如：中文、英语、日语、韩语、法语、西班牙语、德语、俄语、阿拉伯语等。严禁输出解释、标点、引号或多余字符，只输出一个词。若混合语种，输出占比最大的那一种。",
+        "message": {
+          "$concat": ["识别以下文本的主要语种：\n", { "$from": "asr", "path": "/data/text" }]
+        }
+      }
+    },
+    {
+      "id": "summarize",
+      "type": "text/chat",
+      "when": { "$ne": [{ "$input": "/fileUrl" }, ""] },
+      "input": {
+        "model": "qwen3-max-preview",
+        "enable-thinking": false,
+        "system": "你是一个专业的对话分析助手。你的任务是将一段由语音识别（ASR）生成的、未标注说话人的连续会议或对话文本，自动整理成带说话人标识的结构化对话记录。最后根据用户输入判断是否要翻译为别的语言。\n\n\n请遵循以下规则：\n输入：一段纯文本，包含多轮发言，但无“张三：”“李四：”等说话人标签。\n输出格式：\n首行固定为：「检测语种：<语种>」（<语种>使用调用方传入的嵌入值）\n次行空行后，结构化对话记录，每行格式为：说话人尽量从对话中推断出人物真实姓名，若未提及则用ABC代替\n\n【说话人A】：[发言内容]\n\n【说话人B】：[发言内容]\n推断逻辑：\n根据语义转折、话题切换、语气差异、问答结构等线索判断是否为不同说话人。\n连续表达同一观点或逻辑连贯的句子，视为同一人发言。\n避免过度分割——宁可合并，也不要无依据地拆分。\n保持原意：不得修改、删减或润色原始文本内容，仅添加说话人标签和换行。\n翻译规则：\n- 若用户明确指定目标语言（如“翻译为英文”），则将“结构化对话记录”部分翻译为该语言；首行语种标注仍用中文。\n- 若检测出的语种与用户要求的目标语言一致，则不需翻译，直接输出原文。\n- 若用户未提及翻译要求，则保持原语输出，不进行任何翻译。\n- 翻译时保持语义不变、用词自然。\n特殊情况：\n若无法判断某句归属，可沿用上一句的说话人（保守策略）。",
+        "message": {
+          "$concat": [
+            "检测到的原文语种：",
+            { "$from": "detect-lang", "path": "/data/choices/0/message/content" },
+            "\n会议对话内容：",
+            { "$from": "asr", "path": "/data/text" },
+            "\n用户输入：",
+            { "$input": "/query" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "final",
+      "type": "logic/select",
+      "dependsOn": ["guard"],
+      "input": {
+        "candidates": [
+          {
+            "source": "summary",
+            "available": { "$ne": [{ "$input": "/fileUrl" }, ""] },
+            "value": {
+              "$coalesce": [
+                { "$from": "summarize", "path": "/data/choices/0/message/content" },
+                "n/a"
+              ]
+            }
+          }
+        ],
+        "defaultSource": "empty",
+        "defaultValue": "视频文件为空！"
+      }
+    },
+    {
+      "id": "report",
+      "type": "script/js",
+      "input": {
+        "code": "const value = String(args.value); const path = args.outDir + '/result.txt'; const fs = require('node:fs'); fs.writeFileSync(path, value, 'utf-8'); return 'Saved to ' + path + '\\n' + value;",
+        "args": {
+          "value": { "$from": "final", "path": "/data/value" },
+          "outDir": "scene/commerce/audio-meeting-summary/outputs"
+        }
+      }
+    }
+  ]
+}

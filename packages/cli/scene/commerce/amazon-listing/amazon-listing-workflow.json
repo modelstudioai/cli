@@ -1,0 +1,242 @@
+{
+  "version": "workflow/v1",
+  "inputs": {
+    "type": "object",
+    "properties": {
+      "modelImage": {
+        "type": "string",
+        "description": "模特图（本地路径或 URL），将作为 6 张套图的参考底图"
+      },
+      "visionModel": {
+        "type": "string",
+        "default": "qwen-vl-max",
+        "description": "用于分析模特图视觉特征的视觉模型"
+      },
+      "promptModel": {
+        "type": "string",
+        "default": "qwen3.7-max",
+        "description": "用于生成 6 张图专用 prompt 的文本模型"
+      },
+      "imageModel": {
+        "type": "string",
+        "default": "qwen-image-2.0",
+        "description": "用于生成 6 张套图的图像编辑模型"
+      },
+      "size": {
+        "type": "string",
+        "default": "1:1",
+        "description": "亚马逊主图推荐 1:1"
+      },
+      "outDir": {
+        "type": "string",
+        "default": "./outputs",
+        "description": "6 张套图保存目录"
+      }
+    },
+    "required": ["modelImage"],
+    "additionalProperties": false
+  },
+  "steps": [
+    {
+      "id": "analyze-model-image",
+      "type": "vision/describe",
+      "input": {
+        "model": { "$input": "/visionModel" },
+        "image": { "$input": "/modelImage" },
+        "prompt": "你是亚马逊电商视觉营销专家。请详细描述这张模特图中的所有视觉元素：模特外貌特征（性别、发型、肤色、神态、身材）、服装款式、颜色、剪裁、面料质感、关键设计细节（褶皱/拉链/纽扣/印花等）、姿势、背景环境、品牌标识。要求结构化、信息密度高，便于后续作为电商套图生成的参考上下文。务必用简体中文输出，不要 markdown，不要解释。"
+      }
+    },
+
+    {
+      "id": "prompt-1-main",
+      "type": "text/chat",
+      "dependsOn": ["analyze-model-image"],
+      "input": {
+        "model": { "$input": "/promptModel" },
+        "system": "你是亚马逊电商视觉营销提示词专家。基于用户提供的【产品视觉分析】，输出一段可直接喂给文生图/图像编辑模型的英文 prompt。要求：(1) 完整保留模特身份、服装款式与颜色、品牌调性；(2) 在 prompt 末尾显式约束 'keep the model's identity, hair, face, body proportions and the outfit design exactly the same as in the reference'；(3) 包含光线、构图、背景、镜头、风格关键词；(4) 只输出英文 prompt 正文，不要解释、不要 markdown、不要引号包裹。",
+        "message": {
+          "$concat": [
+            "【产品视觉分析】\n",
+            { "$from": "analyze-model-image", "path": "/data/choices/0/message/content" },
+            "\n\n【目标用途】亚马逊主图（Main Image）：纯白背景 (#FFFFFF) 全身正面构图，产品占画面 70% 以上，柔和均匀棚灯，符合亚马逊主图合规。请输出对应的英文 prompt。"
+          ]
+        }
+      }
+    },
+
+    {
+      "id": "prompt-2-detail",
+      "type": "text/chat",
+      "dependsOn": ["analyze-model-image"],
+      "input": {
+        "model": { "$input": "/promptModel" },
+        "system": "你是亚马逊电商视觉营销提示词专家。基于用户提供的【产品视觉分析】，输出一段可直接喂给图像编辑模型的英文 prompt。要求：(1) 完整保留服装的颜色与设计细节；(2) 在 prompt 末尾显式约束 'keep the outfit color, fabric and design exactly the same as in the reference'；(3) 包含微距镜头、光线、景深、背景、风格关键词；(4) 只输出英文 prompt 正文，不要解释、不要 markdown、不要引号包裹。",
+        "message": {
+          "$concat": [
+            "【产品视觉分析】\n",
+            { "$from": "analyze-model-image", "path": "/data/choices/0/message/content" },
+            "\n\n【目标用途】细节特写图（Detail Shot）：聚焦于服装的关键设计细节（请基于上文分析自动选定最有卖点的部位，例如腰部褶皱、领口、面料质感等），微距镜头、浅景深、侧光突出材质，弱化或模糊背景。请输出对应的英文 prompt。"
+          ]
+        }
+      }
+    },
+
+    {
+      "id": "prompt-3-lifestyle",
+      "type": "text/chat",
+      "dependsOn": ["analyze-model-image"],
+      "input": {
+        "model": { "$input": "/promptModel" },
+        "system": "你是亚马逊电商视觉营销提示词专家。基于用户提供的【产品视觉分析】，输出一段可直接喂给图像编辑模型的英文 prompt。要求：(1) 完整保留模特身份与服装设计；(2) 在 prompt 末尾显式约束 'preserve the model's identity and the outfit design fully'；(3) 包含场景、自然光线、构图、风格关键词；(4) 只输出英文 prompt 正文，不要解释、不要 markdown、不要引号包裹。",
+        "message": {
+          "$concat": [
+            "【产品视觉分析】\n",
+            { "$from": "analyze-model-image", "path": "/data/choices/0/message/content" },
+            "\n\n【目标用途】生活方式场景图（Lifestyle Shot）：根据品牌调性自动选择契合的真实场景（都市街拍 / 咖啡厅 / 室内 / 旅行 等任选其一），自然光、3/4 候选姿态、editorial 风格、保持品牌调性一致。请输出对应的英文 prompt。"
+          ]
+        }
+      }
+    },
+
+    {
+      "id": "prompt-4-selling-point",
+      "type": "text/chat",
+      "dependsOn": ["analyze-model-image"],
+      "input": {
+        "model": { "$input": "/promptModel" },
+        "system": "你是亚马逊电商视觉营销提示词专家。基于用户提供的【产品视觉分析】，输出一段可直接喂给图像编辑模型的英文 prompt。要求：(1) 完整保留模特身份与服装；(2) 在 prompt 末尾显式约束 'keep model identity and outfit identical to the reference'；(3) 突出该单品最核心的卖点（请基于分析自动判断，例如修身/显瘦/材质/版型），用合适的姿态和打光语言表现；(4) 只输出英文 prompt 正文，不要解释、不要 markdown、不要引号包裹。",
+        "message": {
+          "$concat": [
+            "【产品视觉分析】\n",
+            { "$from": "analyze-model-image", "path": "/data/choices/0/message/content" },
+            "\n\n【目标用途】卖点展示图（Selling Point Shot）：自动识别本商品最适合放大的卖点（修身 / 廓形 / 面料光泽 / 印花 / 工艺 等），用 3/4 角度构图与轮廓光强化它，灰色无缝背景，technical fashion photography 风格。请输出对应的英文 prompt。"
+          ]
+        }
+      }
+    },
+
+    {
+      "id": "prompt-5-size",
+      "type": "text/chat",
+      "dependsOn": ["analyze-model-image"],
+      "input": {
+        "model": { "$input": "/promptModel" },
+        "system": "你是亚马逊电商视觉营销提示词专家。基于用户提供的【产品视觉分析】，输出一段可直接喂给图像编辑模型的英文 prompt。要求：(1) 完整保留模特身份与服装；(2) 在 prompt 末尾显式约束 'keep model identity and outfit identical to the reference'；(3) 适合作为尺码参考图：正面对称构图、左右两侧留白以便后续叠加尺码标注、平光纯色背景；(4) 只输出英文 prompt 正文，不要解释、不要 markdown、不要引号包裹。",
+        "message": {
+          "$concat": [
+            "【产品视觉分析】\n",
+            { "$from": "analyze-model-image", "path": "/data/choices/0/message/content" },
+            "\n\n【目标用途】尺码参考图（Size Reference Shot）：模特正面直立、双脚并拢、双手自然下垂，纯白无缝背景，平光，左右留白用于后期叠加身高/体重/三围。请输出对应的英文 prompt。"
+          ]
+        }
+      }
+    },
+
+    {
+      "id": "prompt-6-styling",
+      "type": "text/chat",
+      "dependsOn": ["analyze-model-image"],
+      "input": {
+        "model": { "$input": "/promptModel" },
+        "system": "你是亚马逊电商视觉营销提示词专家。基于用户提供的【产品视觉分析】，输出一段可直接喂给图像编辑模型的英文 prompt。要求：(1) 完整保留模特身份与主商品；(2) 在 prompt 末尾显式约束 'preserve model identity and outfit design exactly'；(3) 自动给主商品搭配契合品牌调性的鞋包配饰，色彩协调；(4) 只输出英文 prompt 正文，不要解释、不要 markdown、不要引号包裹。",
+        "message": {
+          "$concat": [
+            "【产品视觉分析】\n",
+            { "$from": "analyze-model-image", "path": "/data/choices/0/message/content" },
+            "\n\n【目标用途】搭配建议图（Styling Shot）：基于产品色调与风格，自动搭配鞋、包、首饰等配饰，整体配色和谐，lookbook 风格，简洁现代背景。请输出对应的英文 prompt。"
+          ]
+        }
+      }
+    },
+
+    {
+      "id": "image-1-main",
+      "type": "image/edit",
+      "dependsOn": ["prompt-1-main"],
+      "input": {
+        "model": { "$input": "/imageModel" },
+        "image": { "$input": "/modelImage" },
+        "size": { "$input": "/size" },
+        "n": 1,
+        "out-dir": { "$input": "/outDir" },
+        "out-prefix": "01-main",
+        "prompt": { "$from": "prompt-1-main", "path": "/data/choices/0/message/content" }
+      }
+    },
+
+    {
+      "id": "image-2-detail",
+      "type": "image/edit",
+      "dependsOn": ["prompt-2-detail"],
+      "input": {
+        "model": { "$input": "/imageModel" },
+        "image": { "$input": "/modelImage" },
+        "size": { "$input": "/size" },
+        "n": 1,
+        "out-dir": { "$input": "/outDir" },
+        "out-prefix": "02-detail",
+        "prompt": { "$from": "prompt-2-detail", "path": "/data/choices/0/message/content" }
+      }
+    },
+
+    {
+      "id": "image-3-lifestyle",
+      "type": "image/edit",
+      "dependsOn": ["prompt-3-lifestyle"],
+      "input": {
+        "model": { "$input": "/imageModel" },
+        "image": { "$input": "/modelImage" },
+        "size": { "$input": "/size" },
+        "n": 1,
+        "out-dir": { "$input": "/outDir" },
+        "out-prefix": "03-lifestyle",
+        "prompt": { "$from": "prompt-3-lifestyle", "path": "/data/choices/0/message/content" }
+      }
+    },
+
+    {
+      "id": "image-4-selling-point",
+      "type": "image/edit",
+      "dependsOn": ["prompt-4-selling-point"],
+      "input": {
+        "model": { "$input": "/imageModel" },
+        "image": { "$input": "/modelImage" },
+        "size": { "$input": "/size" },
+        "n": 1,
+        "out-dir": { "$input": "/outDir" },
+        "out-prefix": "04-selling-point",
+        "prompt": { "$from": "prompt-4-selling-point", "path": "/data/choices/0/message/content" }
+      }
+    },
+
+    {
+      "id": "image-5-size",
+      "type": "image/edit",
+      "dependsOn": ["prompt-5-size"],
+      "input": {
+        "model": { "$input": "/imageModel" },
+        "image": { "$input": "/modelImage" },
+        "size": { "$input": "/size" },
+        "n": 1,
+        "out-dir": { "$input": "/outDir" },
+        "out-prefix": "05-size",
+        "prompt": { "$from": "prompt-5-size", "path": "/data/choices/0/message/content" }
+      }
+    },
+
+    {
+      "id": "image-6-styling",
+      "type": "image/edit",
+      "dependsOn": ["prompt-6-styling"],
+      "input": {
+        "model": { "$input": "/imageModel" },
+        "image": { "$input": "/modelImage" },
+        "size": { "$input": "/size" },
+        "n": 1,
+        "out-dir": { "$input": "/outDir" },
+        "out-prefix": "06-styling",
+        "prompt": { "$from": "prompt-6-styling", "path": "/data/choices/0/message/content" }
+      }
+    }
+  ]
+}

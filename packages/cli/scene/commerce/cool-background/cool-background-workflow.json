@@ -1,0 +1,70 @@
+{
+  "version": "workflow/v1",
+  "inputs": {
+    "type": "object",
+    "properties": {
+      "productImage": {
+        "type": "string",
+        "description": "商品原图（本地路径或 URL），将作为背景替换的底图"
+      },
+      "imageModel": {
+        "type": "string",
+        "default": "qwen-image-2.0",
+        "description": "图像编辑模型"
+      },
+      "size": {
+        "type": "string",
+        "default": "3:4",
+        "description": "输出尺寸，电商海报推荐 3:4"
+      },
+      "outDir": {
+        "type": "string",
+        "default": "./outputs",
+        "description": "三个方向的背景图统一输出目录"
+      }
+    },
+    "required": ["productImage"],
+    "additionalProperties": false
+  },
+  "steps": [
+    {
+      "id": "direction-ice",
+      "type": "image/edit",
+      "input": {
+        "model": { "$input": "/imageModel" },
+        "image": { "$input": "/productImage" },
+        "size": { "$input": "/size" },
+        "n": 1,
+        "out-dir": { "$input": "/outDir" },
+        "out-prefix": "dir1_ice",
+        "prompt": "方向一·极致冰爽特写：保持原商品（瓶身、标签、配色与品牌元素）完全不变，仅替换背景。商品被无数大块透明冰块紧密环绕，瓶身上凝结着大颗水珠并向下滑落，冰晶在空中迸溅飞舞，背景是深蓝色冷雾与冷光色调，戏剧化逆光从背后打亮商品轮廓，强烈的冰镇感与质感反差，商业产品摄影质感，4K 高清，景深虚化，电商主图氛围"
+      }
+    },
+    {
+      "id": "direction-beach",
+      "type": "image/edit",
+      "input": {
+        "model": { "$input": "/imageModel" },
+        "image": { "$input": "/productImage" },
+        "size": { "$input": "/size" },
+        "n": 1,
+        "out-dir": { "$input": "/outDir" },
+        "out-prefix": "dir2_beach",
+        "prompt": "方向二·夏日海滩度假：保持原商品（瓶身、标签、配色与品牌元素）完全不变，仅替换背景。商品摆放在洁白细沙上，背景是碧蓝大海、椰子树与金色阳光，远处海浪缓缓翻涌，瓶身有水珠与阳光反射光斑，画面色彩明亮饱和、阳光通透，传达夏日清凉度假氛围，商业广告海报风格"
+      }
+    },
+    {
+      "id": "direction-nature",
+      "type": "image/edit",
+      "input": {
+        "model": { "$input": "/imageModel" },
+        "image": { "$input": "/productImage" },
+        "size": { "$input": "/size" },
+        "n": 1,
+        "out-dir": { "$input": "/outDir" },
+        "out-prefix": "dir3_nature",
+        "prompt": "方向三·山间清泉自然系：保持原商品（瓶身、标签、配色与品牌元素）完全不变，仅替换背景。商品置于覆盖着青苔的岩石上，背景是清澈的山间瀑布飞泻、绿色森林与缭绕雾气，阳光透过树叶洒下斑驳光斑，新鲜薄荷叶与野生浆果点缀在前景，传达天然纯净的清凉解渴感，电影级自然光摄影，柔和景深"
+      }
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "version": "workflow/v1",
+  "inputs": {
+    "type": "object",
+    "properties": {
+      "inputImage": {
+        "type": "string",
+        "description": "待修复的风景照片（本地路径或 URL），支持模糊、低饱和度、低分辨率图片"
+      },
+      "imageModel": {
+        "type": "string",
+        "default": "qwen-image-2.0",
+        "description": "图像编辑模型"
+      },
+      "outDir": {
+        "type": "string",
+        "default": "./outputs",
+        "description": "增强结果输出目录"
+      },
+      "prompt": {
+        "type": "string",
+        "default": "Photo restoration: fix the blur and soft focus in this landscape photo. Sharpen the mountain ridges and vegetation. Make the lake water appear deep blue and smooth with natural cloud reflections. Keep the sky soft and overcast. Maintain natural, muted color palette like real outdoor photography. Result should look like a sharp DSLR photo with natural tones, not HDR, not over-saturated, not painted. IMPORTANT: Do NOT expand, outpaint, or extend the image boundaries. Keep the exact same framing, composition, and field of view as the original input photo. Do not add any new content beyond the original edges.",
+        "description": "自定义增强描述（可选）。不传则使用内置的自然风光修复 prompt；传入时可用中英文描述期望的画面风格，例如 '日落暖色调，橙红色天空倒映在湖面'"
+      },
+      "negativePrompt": {
+        "type": "string",
+        "default": "painting, illustration, HDR, overexposed, oversaturated, vivid, surreal, dark border, frame, noise, grain, water ripple artifacts, vintage filter, outpainting, expanded frame, extended boundaries, wider field of view, extra content beyond original edges, zoomed out",
+        "description": "负面提示词（可选）。不传则使用内置的反 HDR / 反过饱和约束；传入时可追加或替换需要排除的风格关键词"
+      }
+    },
+    "required": ["inputImage"],
+    "additionalProperties": false
+  },
+  "steps": [
+    {
+      "id": "enhance-photo",
+      "type": "image/edit",
+      "input": {
+        "model": { "$input": "/imageModel" },
+        "image": { "$input": "/inputImage" },
+        "n": 1,
+        "out-dir": { "$input": "/outDir" },
+        "out-prefix": "enhanced",
+        "prompt": { "$input": "/prompt" },
+        "negative-prompt": { "$input": "/negativePrompt" }
+      }
+    }
+  ]
+}

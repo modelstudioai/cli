@@ -1,0 +1,5 @@
+{
+  "dressImage": "./clothes.png",
+  "outDir": "./outputs",
+  "size": "3:4"
+}

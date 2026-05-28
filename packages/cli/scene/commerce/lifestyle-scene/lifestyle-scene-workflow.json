@@ -1,0 +1,55 @@
+{
+  "version": "workflow/v1",
+  "inputs": {
+    "type": "object",
+    "properties": {
+      "productImage": {
+        "type": "string",
+        "description": "白底商品原图（本地路径或 URL），将被转换为生活美学场景图"
+      },
+      "imageModel": {
+        "type": "string",
+        "default": "qwen-image-2.0",
+        "description": "图像编辑模型"
+      },
+      "size": {
+        "type": "string",
+        "default": "3:4",
+        "description": "输出尺寸，电商生活场景主图推荐 3:4"
+      },
+      "outDir": {
+        "type": "string",
+        "default": "./outputs",
+        "description": "输出目录"
+      },
+      "description": {
+        "type": "string",
+        "default": "",
+        "description": "自然语言场景描述，传入后直接作为生成 prompt；不传则使用默认的生活美学场景 prompt"
+      }
+    },
+    "required": ["productImage"],
+    "additionalProperties": false
+  },
+  "steps": [
+    {
+      "id": "generate-scene",
+      "type": "image/edit",
+      "input": {
+        "model": { "$input": "/imageModel" },
+        "image": { "$input": "/productImage" },
+        "size": { "$input": "/size" },
+        "n": 1,
+        "out-dir": { "$input": "/outDir" },
+        "out-prefix": "lifestyle_scene",
+        "prompt": {
+          "$js": "args.desc || args.defaultPrompt",
+          "args": {
+            "desc": { "$input": "/description" },
+            "defaultPrompt": "将这个白色背景上的陶瓷杯，转换为高级感商品场景图，搭配木质桌面、柔和光影和绿植等道具，营造温馨生活美学氛围。"
+          }
+        }
+      }
+    }
+  ]
+}

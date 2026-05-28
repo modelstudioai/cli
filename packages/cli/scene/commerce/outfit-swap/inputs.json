@@ -1,0 +1,7 @@
+{
+  "modelImage": "./sample-model.png",
+  "targetOutfit": "一件优雅的深红色丝缎质地落地晚礼服，细吊带设计，垂坠领口（cowl neckline），收腰剪裁，鱼尾轮廓自然拖地，面料光泽高级，整体气质华贵优雅",
+  "size": "1:1",
+  "n": 2,
+  "outDir": "./outputs"
+}

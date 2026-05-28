@@ -1,0 +1,60 @@
+{
+  "version": "workflow/v1",
+  "inputs": {
+    "type": "object",
+    "properties": {
+      "inputImage": {
+        "type": "string",
+        "description": "原始人像照片（本地路径或 URL），通常为日常便装半身照或证件照"
+      },
+      "imageModel": {
+        "type": "string",
+        "default": "qwen-image-2.0",
+        "description": "图像编辑模型"
+      },
+      "size": {
+        "type": "string",
+        "default": "1:1",
+        "description": "输出尺寸比例（证件照常用 1:1 / 3:4）"
+      },
+      "n": {
+        "type": "number",
+        "default": 1,
+        "description": "生成图片数量（最大 6）"
+      },
+      "outDir": {
+        "type": "string",
+        "default": "./outputs",
+        "description": "输出目录"
+      },
+      "prompt": {
+        "type": "string",
+        "default": "Transform the person into a professional business portrait. Replace the casual clothing with a crisp white button-up shirt and a tailored dark navy or charcoal blazer (suit jacket). Keep the face, hairstyle, skin tone, pose, body angle, head orientation and facial expression EXACTLY the same as the input image. Replace the background with a clean minimalistic gray gradient studio backdrop, soft transition from light gray to medium gray. Use professional studio lighting: soft key light from front, gentle fill light, subtle rim light to separate the subject from the background. Sharp focus on the face, premium business headshot photography, LinkedIn-style executive portrait, high-end corporate photography, natural skin tones, photo-realistic.",
+        "description": "自定义换装/换背景描述（可选）。不传则使用内置的「白衬衫+西装+灰渐变背景」商务形象 prompt；传入时可完全替换为其他风格（如黑色西装、暖色背景等）"
+      },
+      "negativePrompt": {
+        "type": "string",
+        "default": "cartoon, painting, illustration, oversaturated, HDR, distorted face, plastic skin, blurry, low quality, watermark, extra fingers, deformed hands, casual clothes, t-shirt, hoodie, jeans, busy background, messy background, outdoor scene, cluttered, neon colors",
+        "description": "负面提示词（可选）。不传则使用内置约束以排除卡通感、变形、低质量、便装、杂乱背景等问题"
+      }
+    },
+    "required": ["inputImage"],
+    "additionalProperties": false
+  },
+  "steps": [
+    {
+      "id": "generate-business-portrait",
+      "type": "image/edit",
+      "input": {
+        "model": { "$input": "/imageModel" },
+        "image": { "$input": "/inputImage" },
+        "size": { "$input": "/size" },
+        "n": { "$input": "/n" },
+        "out-dir": { "$input": "/outDir" },
+        "out-prefix": "business-portrait",
+        "prompt": { "$input": "/prompt" },
+        "negative-prompt": { "$input": "/negativePrompt" }
+      }
+    }
+  ]
+}

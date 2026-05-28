@@ -1,0 +1,322 @@
+import { writeFileSync } from "fs";
+import {
+  defineCommand,
+  request,
+  chatEndpoint,
+  parseSSE,
+  detectOutputFormat,
+  type Config,
+  type GlobalFlags,
+  type ChatMessage,
+  type ChatMessageContent,
+  type ChatRequest,
+  type StreamChunk,
+  isInteractive,
+  resolveFileUrl,
+} from "bailian-cli-core";
+import { promptText, failIfMissing } from "../../output/prompt.ts";
+import { emitResult } from "../../output/output.ts";
+import { resolveOutputDir, resolveCredential } from "bailian-cli-core";
+
+const OMNI_VOICES = ["Chelsie", "Cherry", "Ethan", "Serena", "Tina"];
+
+/**
+ * Build a standard WAV file header for PCM 16-bit mono 24kHz audio.
+ */
+function buildWavHeader(dataLength: number): Buffer {
+  const header = Buffer.alloc(44);
+  header.write("RIFF", 0);
+  header.writeUInt32LE(36 + dataLength, 4);
+  header.write("WAVE", 8);
+  header.write("fmt ", 12);
+  header.writeUInt32LE(16, 16); // PCM chunk size
+  header.writeUInt16LE(1, 20); // format = PCM
+  header.writeUInt16LE(1, 22); // channels = 1 (mono)
+  header.writeUInt32LE(24000, 24); // sample rate
+  header.writeUInt32LE(48000, 28); // byte rate (24000 * 1 * 2)
+  header.writeUInt16LE(2, 32); // block align (channels * bitsPerSample / 8)
+  header.writeUInt16LE(16, 34); // bits per sample
+  header.write("data", 36);
+  header.writeUInt32LE(dataLength, 40);
+  return header;
+}
+
+export default defineCommand({
+  name: "omni",
+  description: "Multimodal chat with text + audio output (Qwen-Omni)",
+  apiDocs: "/model-studio/qwen-omni",
+  usage: "bl omni --message <text> [flags]",
+  options: [
+    {
+      flag: "--message <text>",
+      description: "Message text (repeatable, prefix role: to set role)",
+      required: true,
+      type: "array",
+    },
+    { flag: "--model <model>", description: "Model ID (default: qwen3.5-omni-plus)" },
+    { flag: "--system <text>", description: "System prompt" },
+    { flag: "--image <url>", description: "Image URL or local file (repeatable)", type: "array" },
+    { flag: "--audio <url>", description: "Audio URL or local file (repeatable)", type: "array" },
+    {
+      flag: "--video <url>",
+      description: "Video file URL / local path, or comma-separated frame URLs",
+      type: "array",
+    },
+    {
+      flag: "--voice <voice>",
+      description: `Output voice (default: Cherry). Options: ${OMNI_VOICES.join(", ")}`,
+    },
+    { flag: "--audio-format <fmt>", description: "Audio output format (default: wav)" },
+    { flag: "--audio-out <path>", description: "Save audio to file (default: auto-generate)" },
+    { flag: "--text-only", description: "Output text only, no audio generation" },
+    { flag: "--max-tokens <n>", description: "Maximum tokens to generate", type: "number" },
+    { flag: "--temperature <n>", description: "Sampling temperature (0.0, 2.0]", type: "number" },
+  ],
+  examples: [
+    'bl omni --message "你好，你是谁？"',
+    'bl omni --message "描述这张图片" --image ./photo.jpg',
+    'bl omni --message "这段音频在说什么？" --audio https://example.com/audio.wav',
+    'bl omni --message "总结这个视频" --video https://example.com/video.mp4',
+    'bl omni --message "这个视频讲了什么" --video ./local-video.mp4 --text-only',
+    'bl omni --message "用四川话回答：今天天气怎么样" --voice Serena',
+    'bl omni --message "Hello" --text-only --output json',
+    'bl omni --message "朗读这段话" --audio-out greeting.wav',
+  ],
+  async run(config: Config, flags: GlobalFlags) {
+    // --- Parse messages ---
+    let userMessages: string[] = [];
+    if (flags.message) {
+      userMessages = flags.message as string[];
+    }
+
+    if (userMessages.length === 0) {
+      if (isInteractive({ nonInteractive: config.nonInteractive })) {
+        const hint = await promptText({ message: "Enter your message:" });
+        if (!hint) {
+          process.stderr.write("Omni chat cancelled.\n");
+          process.exit(1);
+        }
+        userMessages = [hint];
+      } else {
+        failIfMissing("message", "bl text omni --message <text>");
+      }
+    }
+
+    const model = (flags.model as string) || config.defaultOmniModel || "qwen3.5-omni-plus";
+    const voice = (flags.voice as string) || "Cherry";
+    const audioFormat = (flags.audioFormat as string) || "wav";
+    const textOnly = flags.textOnly === true;
+    const format = detectOutputFormat(config.output);
+
+    // --- Build messages array ---
+    const allMessages: ChatMessage[] = [];
+    if (flags.system) {
+      allMessages.push({ role: "system", content: flags.system as string });
+    }
+
+    // Build multimodal content for user messages
+    const validRoles = new Set(["system", "user", "assistant"]);
+    for (const m of userMessages) {
+      const colonIdx = m.indexOf(":");
+      const maybeRole = colonIdx !== -1 ? m.slice(0, colonIdx) : "";
+
+      if (validRoles.has(maybeRole)) {
+        const content = m.slice(colonIdx + 1);
+        if (maybeRole === "system") {
+          allMessages.push({ role: "system", content });
+        } else {
+          allMessages.push({ role: maybeRole as "user" | "assistant", content });
+        }
+      } else {
+        allMessages.push({ role: "user", content: m });
+      }
+    }
+
+    // Attach multimodal inputs to the last user message
+    const rawImageUrls = (flags.image as string[] | undefined) || [];
+    const rawAudioUrls = (flags.audio as string[] | undefined) || [];
+    const rawVideoUrls = (flags.video as string[] | undefined) || [];
+
+    // Auto-upload local files
+    const imageUrls: string[] = [];
+    const audioUrls: string[] = [];
+    const videoUrls: string[] = [];
+
+    const needsResolve =
+      rawImageUrls.length > 0 || rawAudioUrls.length > 0 || rawVideoUrls.length > 0;
+    if (needsResolve) {
+      const credential = await resolveCredential(config);
+      for (const u of rawImageUrls) {
+        const resolved = await resolveFileUrl(u, credential.token, model);
+        imageUrls.push(resolved);
+      }
+      for (const u of rawAudioUrls) {
+        const resolved = await resolveFileUrl(u, credential.token, model);
+        audioUrls.push(resolved);
+      }
+      for (const u of rawVideoUrls) {
+        // Detect: comma-separated = frame list, otherwise single video URL/file
+        if (u.includes(",")) {
+          // Legacy frame list mode
+          const frames = u
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+          // Resolve each frame URL
+          for (const f of frames) {
+            const resolved = await resolveFileUrl(f, credential.token, model);
+            videoUrls.push(`frame:${resolved}`);
+          }
+        } else {
+          const resolved = await resolveFileUrl(u, credential.token, model);
+          videoUrls.push(resolved);
+        }
+      }
+    }
+
+    if (imageUrls.length > 0 || audioUrls.length > 0 || videoUrls.length > 0) {
+      // Find last user message and convert to multimodal content array
+      for (let i = allMessages.length - 1; i >= 0; i--) {
+        if (allMessages[i].role === "user") {
+          const existingContent = allMessages[i].content;
+          const contentArray: ChatMessageContent[] = [];
+
+          // Keep existing text
+          if (typeof existingContent === "string") {
+            contentArray.push({ type: "text", text: existingContent });
+          } else if (Array.isArray(existingContent)) {
+            contentArray.push(...existingContent);
+          }
+
+          // Add image URLs
+          for (const url of imageUrls) {
+            contentArray.push({ type: "image_url", image_url: { url } });
+          }
+
+          // Add audio URLs
+          for (const url of audioUrls) {
+            contentArray.push({ type: "audio_url", audio_url: { url } });
+          }
+
+          // Add video URLs: frame:xxx are frame list items, others are direct video URLs
+          const frameItems = videoUrls.filter((v) => v.startsWith("frame:")).map((v) => v.slice(6));
+          const directVideoUrls = videoUrls.filter((v) => !v.startsWith("frame:"));
+
+          if (frameItems.length > 0) {
+            contentArray.push({ type: "video", video: frameItems });
+          }
+          for (const url of directVideoUrls) {
+            contentArray.push({ type: "video_url", video_url: { url } });
+          }
+
+          allMessages[i] = { role: "user", content: contentArray };
+          break;
+        }
+      }
+    }
+
+    // --- Build request body ---
+    const body: ChatRequest = {
+      model,
+      messages: allMessages,
+      stream: true,
+      stream_options: { include_usage: true },
+    };
+
+    if (!textOnly) {
+      body.modalities = ["text", "audio"];
+      body.audio = { voice, format: audioFormat };
+    }
+
+    if (flags.maxTokens !== undefined) body.max_tokens = flags.maxTokens as number;
+    if (flags.temperature !== undefined) body.temperature = flags.temperature as number;
+
+    if (config.dryRun) {
+      emitResult({ request: body }, format);
+      return;
+    }
+
+    if (!config.quiet) {
+      const modeLabel = textOnly ? "text-only" : `text+audio, voice: ${voice}`;
+      process.stderr.write(`[Model: ${model}] [${modeLabel}]\n`);
+    }
+
+    // --- Stream request ---
+    const url = chatEndpoint(config.baseUrl);
+    const res = await request(config, {
+      url,
+      method: "POST",
+      body,
+      stream: true,
+    });
+
+    let textContent = "";
+    let audioBase64 = "";
+    const isTTY = process.stdout.isTTY;
+    const resultOut = process.stdout;
+
+    for await (const event of parseSSE(res)) {
+      if (event.data === "[DONE]") break;
+      try {
+        const parsed = JSON.parse(event.data) as StreamChunk;
+
+        for (const choice of parsed.choices) {
+          const delta = choice.delta;
+
+          // Collect text content
+          if (delta.content) {
+            textContent += delta.content;
+            if (isTTY) {
+              resultOut.write(delta.content);
+            }
+          }
+
+          // Collect audio data
+          if (delta.audio?.data) {
+            audioBase64 += delta.audio.data;
+          }
+        }
+      } catch {
+        // Skip unparseable chunks
+      }
+    }
+
+    if (isTTY && textContent) {
+      resultOut.write("\n");
+    }
+
+    // --- Save audio ---
+    let audioSaved: string | undefined;
+    if (audioBase64 && !textOnly) {
+      const pcmBuffer = Buffer.from(audioBase64, "base64");
+      const wavHeader = buildWavHeader(pcmBuffer.length);
+      const wavBuffer = Buffer.concat([wavHeader, pcmBuffer]);
+
+      let destPath = flags.audioOut as string | undefined;
+      if (!destPath) {
+        // eslint-disable-next-line @typescript-eslint/unbound-method
+        const { join } = await import("path");
+        const destDir = resolveOutputDir(config, { subDir: "omni" });
+        const timestamp = Date.now();
+        destPath = join(destDir, `omni_${timestamp}.wav`);
+      }
+
+      writeFileSync(destPath, wavBuffer);
+      audioSaved = destPath;
+
+      if (!config.quiet) {
+        process.stderr.write(`Audio saved: ${destPath}\n`);
+      }
+    }
+
+    // --- Emit structured result ---
+    if (!isTTY || format === "json") {
+      const result: Record<string, unknown> = { content: textContent };
+      if (audioSaved) {
+        result.audio_saved = audioSaved;
+        result.voice = voice;
+      }
+      emitResult(result, format);
+    }
+  },
+});

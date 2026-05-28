@@ -1,0 +1,1138 @@
+app:
+  mode: workflow
+  name: 一键生成电商组图-副本3Lhc
+  subMode: chat
+kind: app
+version: 0.1.0
+workflow:
+  graph:
+    edges:
+      - id: Start_NZpD-Start_NZpD-Judge_Og6K-Judge_Og6K
+        source: Start_NZpD
+        sourceHandle: Start_NZpD
+        target: Judge_Og6K
+        targetHandle: Judge_Og6K
+      - id: Judge_Og6K-Judge_Og6K_default-LLM_C1XO-LLM_C1XO
+        source: Judge_Og6K
+        sourceHandle: Judge_Og6K_default
+        target: LLM_C1XO
+        targetHandle: LLM_C1XO
+      - id: Judge_Og6K-Judge_Og6K_njdH-LLM_5ViG-LLM_5ViG
+        source: Judge_Og6K
+        sourceHandle: Judge_Og6K_njdH
+        target: LLM_5ViG
+        targetHandle: LLM_5ViG
+      - id: LLM_5ViG-LLM_5ViG-Script_XkEv-Script_XkEv
+        source: LLM_5ViG
+        sourceHandle: LLM_5ViG
+        target: Script_XkEv
+        targetHandle: Script_XkEv
+      - id: Script_XkEv-Script_XkEv-LLM_vEpw-LLM_vEpw
+        source: Script_XkEv
+        sourceHandle: Script_XkEv
+        target: LLM_vEpw
+        targetHandle: LLM_vEpw
+      - id: MCP_I7HJ-MCP_I7HJ-LLM_gJu8-LLM_gJu8
+        source: MCP_I7HJ
+        sourceHandle: MCP_I7HJ
+        target: LLM_gJu8
+        targetHandle: LLM_gJu8
+      - id: MCP_Fd4l-MCP_Fd4l-LLM_LB2s-LLM_LB2s
+        source: MCP_Fd4l
+        sourceHandle: MCP_Fd4l
+        target: LLM_LB2s
+        targetHandle: LLM_LB2s
+      - id: MCP_Nu91-MCP_Nu91-Script_EzDU-Script_EzDU
+        source: MCP_Nu91
+        sourceHandle: MCP_Nu91
+        target: Script_EzDU
+        targetHandle: Script_EzDU
+      - id: Script_EzDU-Script_EzDU-End_C86F-End_C86F
+        source: Script_EzDU
+        sourceHandle: Script_EzDU
+        target: End_C86F
+        targetHandle: End_C86F
+      - id: LLM_vEpw-LLM_vEpw-VariableHandle_Psd3-VariableHandle_Psd3
+        source: LLM_vEpw
+        sourceHandle: LLM_vEpw
+        target: VariableHandle_Psd3
+        targetHandle: VariableHandle_Psd3
+      - id: VariableHandle_Psd3-VariableHandle_Psd3-MCP_I7HJ-MCP_I7HJ
+        source: VariableHandle_Psd3
+        sourceHandle: VariableHandle_Psd3
+        target: MCP_I7HJ
+        targetHandle: MCP_I7HJ
+      - id: LLM_gJu8-LLM_gJu8-VariableHandle_dmfr-VariableHandle_dmfr
+        source: LLM_gJu8
+        sourceHandle: LLM_gJu8
+        target: VariableHandle_dmfr
+        targetHandle: VariableHandle_dmfr
+      - id: VariableHandle_dmfr-VariableHandle_dmfr-MCP_Fd4l-MCP_Fd4l
+        source: VariableHandle_dmfr
+        sourceHandle: VariableHandle_dmfr
+        target: MCP_Fd4l
+        targetHandle: MCP_Fd4l
+      - id: LLM_LB2s-LLM_LB2s-VariableHandle_WAOM-VariableHandle_WAOM
+        source: LLM_LB2s
+        sourceHandle: LLM_LB2s
+        target: VariableHandle_WAOM
+        targetHandle: VariableHandle_WAOM
+      - id: VariableHandle_WAOM-VariableHandle_WAOM-MCP_2ZZp-MCP_2ZZp
+        source: VariableHandle_WAOM
+        sourceHandle: VariableHandle_WAOM
+        target: MCP_2ZZp
+        targetHandle: MCP_2ZZp
+      - id: LLM_rOKf-LLM_rOKf-VariableHandle_oSw8-VariableHandle_oSw8
+        source: LLM_rOKf
+        sourceHandle: LLM_rOKf
+        target: VariableHandle_oSw8
+        targetHandle: VariableHandle_oSw8
+      - id: VariableHandle_oSw8-VariableHandle_oSw8-MCP_Nu91-MCP_Nu91
+        source: VariableHandle_oSw8
+        sourceHandle: VariableHandle_oSw8
+        target: MCP_Nu91
+        targetHandle: MCP_Nu91
+      - id: LLM_C1XO-LLM_C1XO-MCP_XDjL-MCP_XDjL
+        source: LLM_C1XO
+        sourceHandle: LLM_C1XO
+        target: MCP_XDjL
+        targetHandle: MCP_XDjL
+      - id: MCP_XDjL-MCP_XDjL-Script_XkEv-Script_XkEv
+        source: MCP_XDjL
+        sourceHandle: MCP_XDjL
+        target: Script_XkEv
+        targetHandle: Script_XkEv
+      - id: MCP_2ZZp-MCP_2ZZp-LLM_duld-LLM_duld
+        source: MCP_2ZZp
+        sourceHandle: MCP_2ZZp
+        target: LLM_duld
+        targetHandle: LLM_duld
+      - id: LLM_duld-LLM_duld-VariableHandle_34Jm-VariableHandle_34Jm
+        source: LLM_duld
+        sourceHandle: LLM_duld
+        target: VariableHandle_34Jm
+        targetHandle: VariableHandle_34Jm
+      - id: VariableHandle_34Jm-VariableHandle_34Jm-MCP_7ZYF-MCP_7ZYF
+        source: VariableHandle_34Jm
+        sourceHandle: VariableHandle_34Jm
+        target: MCP_7ZYF
+        targetHandle: MCP_7ZYF
+      - id: MCP_7ZYF-MCP_7ZYF-LLM_rOKf-LLM_rOKf
+        source: MCP_7ZYF
+        sourceHandle: MCP_7ZYF
+        target: LLM_rOKf
+        targetHandle: LLM_rOKf
+    nodes:
+      - id: Start_NZpD
+        type: Start
+        name: 开始
+        x: 12
+        y: 116
+        config:
+          inputParams: []
+          outputParams: []
+          nodeParam: {}
+      - id: End_C86F
+        type: End
+        name: 结束
+        x: 4176
+        y: 396
+        config:
+          inputParams: []
+          outputParams: []
+          nodeParam:
+            jsonParams: []
+            outputType: text
+            textTemplate: "${Script_EzDU.imageUrl}"
+      - id: Judge_Og6K
+        type: Judge
+        name: 条件判断-判断上传图片是否为空
+        x: 482
+        y: 80
+        config:
+          inputParams: []
+          outputParams: []
+          nodeParam:
+            branches:
+              - targetIds:
+                  - LLM_C1XO
+                id: default
+                label: 默认条件
+              - targetIds:
+                  - LLM_5ViG
+                id: njdH
+                label: 新条件组1
+                logic: or
+                conditions:
+                  - left:
+                      type: Array<String>
+                      value: "${sys.imageList}"
+                      valueFrom: refer
+                    right:
+                      type: String
+                      valueFrom: input
+                    operator: isNotNull
+                  - left:
+                      type: Array<String>
+                      value: "${sys.imageList}"
+                      valueFrom: refer
+                    right:
+                      type: Number
+                      value: "0"
+                      valueFrom: input
+                    operator: lengthGreater
+      - id: LLM_C1XO
+        type: LLM
+        name: 大模型-商品图提示词生成
+        x: 952
+        y: 110
+        config:
+          inputParams:
+            - key: content
+              valueFrom: refer
+          outputParams:
+            - key: result
+              type: String
+              desc: 文本输出
+            - key: reasoningContent
+              type: String
+              desc: 深度思考
+          nodeParam:
+            promptContent: "${sys.query}"
+            shortMemory:
+              round: 3
+              param:
+                type: Array<String>
+                value: "${sys.historyList}"
+                key: historyList
+                valueFrom: refer
+              type: self
+              enabled: false
+            tryCatchConfig:
+              defaultValues:
+                - isSystem: true
+                  type: String
+                  key: result
+                  desc: 文本输出
+              strategy: noop
+            batchEnable: false
+            modelConfig:
+              referParams: []
+              modelId: qwen-plus-latest
+              params: {}
+            retryConfig:
+              maxRetries: 3
+              retryEnabled: false
+              retryInterval: 500
+            concurrentSize: 5
+            processCanOutput: false
+            contextParam:
+              type: Array<String>
+              value: "${sys.historyList}"
+              key: historyList
+              valueFrom: refer
+            sysPromptContent: |-
+              # 角色
+              你是一位专业的商品英文提示词生成专家，能够根据用户输入的内容生成高质量的商品英文提示词。如果用户没有提供详细的描述信息，电影级面光，光线追踪，那么生成的 内容由你决定，提供了按照用户的要求生成。
+
+              ## 技能
+              ### 技能1：理解用户需求
+              - 仔细阅读并理解用户输入的内容，明确用户的需求和期望。
+              - 根据用户提供的信息，确定商品的关键特征和卖点。
+
+              ### 技能2：生成高质量提示词
+              - 结合商品的关键特征和卖点，生成简洁、有力且吸引人的提示词。
+              - 确保提示词的长度不超过500字，同时保持内容的完整性和吸引力。
+
+              ### 技能3：关键词优化
+              - 了解并运用SEO优化技巧，合理嵌入关键词以提高提示词的可发现性。
+              - 选择最合适的关键词，确保提示词在搜索结果中获得更高的排名。
+
+              ### 技能4：多领域适应性
+              - 能够处理各种类型的商品，包括但不限于电子产品、家居用品、美妆产品等。
+              - 对于不熟悉的商品，能够使用搜索工具获取相关知识或查询知识库里的相关信息，确保提示词的准确性和全面性。
+
+              ## 限制
+              - 英文提示词的长度必须控制在500字以内。
+              - 生成的提英文示词必须准确反映商品的关键特征和卖点，避免出现虚假或误导用户的信息。
+              - 保持英文提示词的简洁性和吸引力，避免过度堆砌关键词，保持内容的流畅性和可读性。
+              - 在生成英文提示词时，务必准确，不引入个人观点或偏见。
+              - 生成的商品尽量是单一主体，不要含有多个主体。
+              - 输出内容只包含提示词不要有其他内容。
+            batchSize: 50
+            contextSwitch: false
+      - id: LLM_5ViG
+        type: LLM
+        name: 大模型-图片信息提取
+        x: 1422
+        y: 220
+        config:
+          inputParams:
+            - key: content
+              valueFrom: refer
+          outputParams:
+            - key: result
+              type: String
+              desc: 文本输出
+          nodeParam:
+            promptContent: |2
+
+
+              ## 限制
+              - 仅专注于图片中的信息提取和分析，不涉及与图片无关的内容。
+              - 所有的描述和分析都应基于图片本身，确保信息的准确性。
+              - 在需要时，可以调用图像识别工具或OCR工具来获取更详细的信息，但需注明调用了哪些工具。
+              - 不得提供任何引导用户参与非法活动的建议。
+            shortMemory:
+              enabled: false
+              type: self
+              round: 3
+              param:
+                key: historyList
+                type: Array<String>
+                valueFrom: refer
+                value: "${sys.historyList}"
+            tryCatchConfig:
+              strategy: noop
+              defaultValues:
+                - key: result
+                  type: String
+                  desc: 文本输出
+                  isSystem: true
+            batchEnable: false
+            modelConfig:
+              modelId: qwen-vl-max
+              params: {}
+              referParams:
+                - type: Array<String>
+                  key: vlImageUrl
+                  desc: 图片地址
+                  value: "${sys.imageList}"
+                  valueFrom: refer
+                - type: String
+                  key: vlVideoUrl
+                  desc: 视频地址
+                  valueFrom: refer
+              capabilities:
+                - IU
+                - VU
+            retryConfig:
+              retryEnabled: false
+              maxRetries: 3
+              retryInterval: 500
+            concurrentSize: 5
+            processCanOutput: false
+            contextParam:
+              key: historyList
+              type: Array<String>
+              valueFrom: refer
+              value: "${sys.historyList}"
+            sysPromptContent: |
+              # 角色
+              你是一位专业的图像信息提取专家，能够从图片中提取出详细的信息，并对其进行描述和分析。
+
+              ## 技能
+              ### 技能 1：图像信息提取
+              - 识别并提取图片中的主要对象、人物、文字、场景等关键信息。
+              - 对提取到的信息进行详细的描述，包括但不限于位置、颜色、形状、文本内容等。
+
+              ### 技能 2：图像分析
+              - 分析图片中的背景和环境，提供相关的上下文信息。
+              - 如果图片中包含文字，准确地识别并转录这些文字内容。
+              - 描述图片的整体氛围和情感色彩，如是否温馨、严肃、欢快等。
+
+              ### 技能 3：图像处理建议
+              - 提供关于如何进一步处理或使用该图片的建议，例如调整亮度、对比度、裁剪等。
+              - 如果需要更详细的信息，可以调用图像识别工具或OCR工具来辅助提取和分析。
+            batchSize: 50
+            contextSwitch: false
+      - id: Script_XkEv
+        type: Script
+        name: 脚本-获取图片链接
+        x: 1892
+        y: 116
+        config:
+          inputParams:
+            - key: imageList
+              type: Array<String>
+              value: "${sys.imageList}"
+              valueFrom: refer
+            - key: image
+              type: String
+              value: "${MCP_XDjL.result}"
+              valueFrom: refer
+          outputParams:
+            - key: imageUrl
+              type: String
+              desc: 输出结果
+              properties: []
+          nodeParam:
+            scriptContent: "function main() {\n  let imageUrl = ''\n  let imageList\
+              \ = params.imageList\n  if(imageList != null && imageList.length > 0){\n\
+              \    imageUrl = imageList[0]\n  }\n  let image = params.image\n  if(image\
+              \ != null){\n    let content = image.content\n    if(content != null &&\
+              \ content.length > 0){\n      let text = content[0].text\n      if(text\
+              \ !=  null && text != ''){\n        let textJSONObj = JSON.parse(text)\n\
+              \        imageUrl = textJSONObj.results[0]\n      }\n      \n    }\n \
+              \ }\n  \n  const ret = {\n      \"imageUrl\": imageUrl\n  };\n  return\
+              \ ret;\n}"
+            tryCatchConfig:
+              strategy: noop
+            retryConfig:
+              retryEnabled: false
+              maxRetries: 3
+              retryInterval: 500
+            scriptType: javascript
+      - id: LLM_vEpw
+        type: LLM
+        name: 大模型-侧视图
+        x: 2314
+        y: 116
+        config:
+          inputParams:
+            - key: content
+              valueFrom: refer
+          outputParams:
+            - key: result
+              type: String
+              desc: 文本输出
+            - key: reasoningContent
+              type: String
+              desc: 深度思考
+          nodeParam:
+            promptContent: "${sys.query}\n${LLM_5ViG.result}\n${LLM_C1XO.result}"
+            shortMemory:
+              enabled: false
+              type: self
+              round: 3
+              param:
+                key: historyList
+                type: Array<String>
+                valueFrom: refer
+                value: "${sys.historyList}"
+            tryCatchConfig:
+              strategy: noop
+              defaultValues:
+                - key: result
+                  type: String
+                  desc: 文本输出
+                  isSystem: true
+            batchEnable: false
+            modelConfig:
+              modelId: qwen-plus
+              params: {}
+              referParams: []
+            retryConfig:
+              retryEnabled: false
+              maxRetries: 3
+              retryInterval: 500
+            concurrentSize: 5
+            processCanOutput: false
+            contextParam:
+              key: historyList
+              type: Array<String>
+              valueFrom: refer
+              value: "${sys.historyList}"
+            sysPromptContent: |-
+              生成产品图片侧视图英文提示词，从产品侧面展示图片，
+              提示词长度不超过100字，输出内容只包含提示词不要有其他内容。
+               注意商品和人物已经场景的比例大小，不要出现奇怪的比例
+            batchSize: 50
+            contextSwitch: false
+      - id: MCP_I7HJ
+        type: MCP
+        name: MCP-侧视图
+        x: 3154
+        y: 116
+        config:
+          inputParams:
+            - key: image_url
+              type: String
+              value: "${Script_XkEv.imageUrl}"
+              valueFrom: refer
+            - key: prompt
+              type: String
+              value: "${VariableHandle_Psd3.result}"
+              valueFrom: refer
+            - key: watermark
+              type: Boolean
+              value: "true"
+              valueFrom: input
+            - key: negative_prompt
+              type: String
+              value: " disgusting proportions, script, truncated, split image, skew, storyboard,\
+                \ tiling, cropped, out of focus, unattractive, unnatural poses, Unreal\
+                \ Engine, ugly, text color not in harmony with the background, text distorted,\
+                \ unreal The scenes are discontinuous, the products are inconsistent,\
+                \ the characters are inconsistent, and the characters are not realistic"
+              valueFrom: input
+          outputParams:
+            - key: result
+              type: String
+              desc: 工具执行结果
+          nodeParam:
+            serverCode: QwenImage
+            serverName: 通义千问-图像生成
+            toolName: modelstudio_qwen_image_edit
+      - id: LLM_gJu8
+        type: LLM
+        name: 大模型-后视图
+        x: 2325
+        y: 337
+        config:
+          inputParams:
+            - key: content
+              valueFrom: refer
+          outputParams:
+            - key: result
+              type: String
+              desc: 文本输出
+            - key: reasoningContent
+              type: String
+              desc: 深度思考
+          nodeParam:
+            promptContent: "${sys.query}\n${LLM_5ViG.result}\n${LLM_C1XO.result}"
+            shortMemory:
+              enabled: false
+              type: self
+              round: 3
+              param:
+                key: historyList
+                type: Array<String>
+                valueFrom: refer
+                value: "${sys.historyList}"
+            tryCatchConfig:
+              strategy: noop
+              defaultValues:
+                - key: result
+                  type: String
+                  desc: 文本输出
+                  isSystem: true
+            batchEnable: false
+            modelConfig:
+              modelId: qwen-plus
+              params: {}
+              referParams: []
+            retryConfig:
+              retryEnabled: false
+              maxRetries: 3
+              retryInterval: 500
+            concurrentSize: 5
+            processCanOutput: false
+            contextParam:
+              key: historyList
+              type: Array<String>
+              valueFrom: refer
+              value: "${sys.historyList}"
+            sysPromptContent: |-
+              生成产品图片后视图英文提示词，从产品后面展示图片，
+              提示词长度不超过100字，输出内容只包含提示词不要有其他内容。
+               注意商品和人物已经场景的比例大小，不要出现奇怪的比例
+            batchSize: 50
+            contextSwitch: false
+      - id: MCP_Fd4l
+        type: MCP
+        name: MCP-后视图
+        x: 3171
+        y: 329
+        config:
+          inputParams:
+            - key: image_url
+              type: String
+              value: "${Script_XkEv.imageUrl}"
+              valueFrom: refer
+            - key: prompt
+              type: String
+              value: "${VariableHandle_dmfr.result}"
+              valueFrom: refer
+            - key: watermark
+              type: Boolean
+              value: "true"
+              valueFrom: input
+            - key: negative_prompt
+              type: String
+              value: " disgusting proportions, script, truncated, split image, skew, storyboard,\
+                \ tiling, cropped, out of focus, unattractive, unnatural poses, Unreal\
+                \ Engine, ugly, text color not in harmony with the background, text distorted,\
+                \ unreal The scenes are discontinuous, the products are inconsistent,\
+                \ the characters are inconsistent, and the characters are not realistic"
+              valueFrom: input
+          outputParams:
+            - key: result
+              type: String
+              desc: 工具执行结果
+          nodeParam:
+            serverCode: QwenImage
+            serverName: 通义千问-图像生成
+            toolName: modelstudio_qwen_image_edit
+      - id: LLM_LB2s
+        type: LLM
+        name: 大模型-产品介绍图
+        x: 2318
+        y: 549
+        config:
+          inputParams:
+            - key: content
+              valueFrom: refer
+          outputParams:
+            - key: result
+              type: String
+              desc: 文本输出
+            - key: reasoningContent
+              type: String
+              desc: 深度思考
+          nodeParam:
+            promptContent: "${sys.query}\n${LLM_5ViG.result}\n${LLM_C1XO.result}"
+            shortMemory:
+              enabled: false
+              type: self
+              round: 3
+              param:
+                key: historyList
+                type: Array<String>
+                valueFrom: refer
+                value: "${sys.historyList}"
+            tryCatchConfig:
+              strategy: noop
+              defaultValues:
+                - key: result
+                  type: String
+                  desc: 文本输出
+                  isSystem: true
+            batchEnable: false
+            modelConfig:
+              modelId: qwen-plus
+              params: {}
+              referParams: []
+            retryConfig:
+              retryEnabled: false
+              maxRetries: 3
+              retryInterval: 500
+            concurrentSize: 5
+            processCanOutput: false
+            contextParam:
+              key: historyList
+              type: Array<String>
+              valueFrom: refer
+              value: "${sys.historyList}"
+            sysPromptContent: |-
+              生成图片产品介绍图英文提示词，并在图片当中从不同，角度展示产品，正视图，侧视图，后视图
+              提示词长度不超过100字，输出内容只包含提示词不要有其他内容。
+               注意商品和人物已经场景的比例大小，不要出现奇怪的比例
+            batchSize: 50
+            contextSwitch: false
+      - id: MCP_2ZZp
+        type: MCP
+        name: MCP-产品介绍图
+        x: 3161
+        y: 547
+        config:
+          inputParams:
+            - key: image_url
+              type: String
+              value: "${Script_XkEv.imageUrl}"
+              valueFrom: refer
+            - key: prompt
+              type: String
+              value: "${VariableHandle_WAOM.result}"
+              valueFrom: refer
+            - key: watermark
+              type: Boolean
+              value: "true"
+              valueFrom: input
+            - key: negative_prompt
+              type: String
+              value: " disgusting proportions, script, truncated, split image, skew, storyboard,\
+                \ tiling, cropped, out of focus, unattractive, unnatural poses, Unreal\
+                \ Engine, ugly, text color not in harmony with the background, text distorted,\
+                \ unreal The scenes are discontinuous, the products are inconsistent,\
+                \ the characters are inconsistent, and the characters are not realistic"
+              valueFrom: input
+          outputParams:
+            - key: result
+              type: String
+              desc: 工具执行结果
+          nodeParam:
+            serverCode: QwenImage
+            serverName: 千问-图像生成
+            toolName: modelstudio_qwen_image_edit
+      - id: LLM_rOKf
+        type: LLM
+        name: 大模型-人物产品六视图
+        x: 2311
+        y: 892
+        config:
+          inputParams:
+            - key: content
+              valueFrom: refer
+          outputParams:
+            - key: result
+              type: String
+              desc: 文本输出
+            - key: reasoningContent
+              type: String
+              desc: 深度思考
+          nodeParam:
+            promptContent: "${sys.query}\n${LLM_5ViG.result}\n${LLM_C1XO.result}"
+            shortMemory:
+              enabled: false
+              type: self
+              round: 3
+              param:
+                key: historyList
+                type: Array<String>
+                valueFrom: refer
+                value: "${sys.historyList}"
+            tryCatchConfig:
+              strategy: noop
+              defaultValues:
+                - key: result
+                  type: String
+                  desc: 文本输出
+                  isSystem: true
+            batchEnable: false
+            modelConfig:
+              modelId: qwen-plus
+              params: {}
+              referParams: []
+            retryConfig:
+              retryEnabled: false
+              maxRetries: 3
+              retryInterval: 500
+            concurrentSize: 5
+            processCanOutput: false
+            contextParam:
+              key: historyList
+              type: Array<String>
+              valueFrom: refer
+              value: "${sys.historyList}"
+            sysPromptContent: |-
+              生成人物产品多视角介绍图英文提示词，生成人物和产品多视角介绍图，生成内容一定要包含一个产品6个多视角介绍的人物和产品图，注意人物必须真实，还要注意人物和产品的比例关系，产品人物六视图。
+              提示词长度不超过100字，输出内容只包含提示词不要有其他内容。
+               注意商品和人物已经场景的比例大小，不要出现奇怪的比例
+            batchSize: 50
+            contextSwitch: false
+      - id: MCP_Nu91
+        type: MCP
+        name: MCP-人物产品六视图
+        x: 3172
+        y: 877
+        config:
+          inputParams:
+            - key: image_url
+              type: String
+              value: "${Script_XkEv.imageUrl}"
+              valueFrom: refer
+            - key: prompt
+              type: String
+              value: "${VariableHandle_oSw8.result}"
+              valueFrom: refer
+            - key: watermark
+              type: Boolean
+              value: "true"
+              valueFrom: input
+            - key: negative_prompt
+              type: String
+              value: " disgusting proportions, script, truncated, split image, skew, storyboard,\
+                \ tiling, cropped, out of focus, unattractive, unnatural poses, Unreal\
+                \ Engine, ugly, text color not in harmony with the background, text distorted,\
+                \ unreal The scenes are discontinuous, the products are inconsistent,\
+                \ the characters are inconsistent, and the characters are not realistic"
+              valueFrom: input
+          outputParams:
+            - key: result
+              type: String
+              desc: 工具执行结果
+          nodeParam:
+            serverCode: QwenImage
+            serverName: 通义千问-图像生成
+            toolName: modelstudio_qwen_image_edit
+      - id: Script_EzDU
+        type: Script
+        name: 脚本-图片整合
+        x: 3681
+        y: 452
+        config:
+          inputParams:
+            - key: image1
+              type: String
+              value: "${MCP_I7HJ.result}"
+              valueFrom: refer
+            - key: image2
+              type: String
+              value: "${MCP_Fd4l.result}"
+              valueFrom: refer
+            - key: image3
+              type: String
+              value: "${MCP_2ZZp.result}"
+              valueFrom: refer
+            - key: image4
+              type: String
+              value: "${MCP_Nu91.result}"
+              valueFrom: refer
+            - key: imageList
+              type: Array<String>
+              value: "${sys.imageList}"
+              valueFrom: refer
+            - key: image5
+              type: String
+              value: "${MCP_7ZYF.result}"
+              valueFrom: refer
+          outputParams:
+            - key: imageUrl
+              type: String
+              desc: 输出结果
+              properties: []
+          nodeParam:
+            scriptContent: "function main() {\n\n  let image1 = params.image1\n  let\
+              \ imageUrl1 = ''\n  let image2 = params.image2\n  let imageUrl2 = ''\n\
+              \  let image3 = params.image3\n  let imageUrl3 = ''\n  let image4 = params.image4\n\
+              \  let imageUrl4 = ''\n\n  let image5 = params.image5\n  let imageUrl5\
+              \ = ''\n\n  let imageUrl = ''\n  \n  let imageList = params.imageList\n\
+              \  if(imageList != null && imageList.length > 0){\n    imageUrl = '!['+imageList[0]+']('+imageList[0]+')'\n\
+              \  }\n  \n  if(image1 != null){\n    let content = image1.content\n  \
+              \  if(content != null && content.length > 0){\n      let text = content[0].text\n\
+              \      if(text !=  null && text != ''){\n        let textJSONObj = JSON.parse(text)\n\
+              \        imageUrl1 = '!['+textJSONObj.results[0]+']('+textJSONObj.results[0]+')'\n\
+              \      }\n    }\n  }\n  if(image2 != null){\n    let content = image2.content\n\
+              \    if(content != null && content.length > 0){\n      let text = content[0].text\n\
+              \      if(text !=  null && text != ''){\n        let textJSONObj = JSON.parse(text)\n\
+              \        imageUrl2 = '!['+textJSONObj.results[0]+']('+textJSONObj.results[0]+')'\n\
+              \      }\n    }\n  }\n  if(image3 != null){\n    let content = image3.content\n\
+              \    if(content != null && content.length > 0){\n      let text = content[0].text\n\
+              \      if(text !=  null && text != ''){\n        let textJSONObj = JSON.parse(text)\n\
+              \        imageUrl3 = '!['+textJSONObj.results[0]+']('+textJSONObj.results[0]+')'\n\
+              \      }\n    }\n  }\n  if(image4 != null){\n    let content = image4.content\n\
+              \    if(content != null && content.length > 0){\n      let text = content[0].text\n\
+              \      if(text !=  null && text != ''){\n        let textJSONObj = JSON.parse(text)\n\
+              \        imageUrl4 = '!['+textJSONObj.results[0]+']('+textJSONObj.results[0]+')'\n\
+              \      }\n    }\n  }\n\n  if(image5 != null){\n    let content = image5.content\n\
+              \    if(content != null && content.length > 0){\n      let text = content[0].text\n\
+              \      if(text !=  null && text != ''){\n        let textJSONObj = JSON.parse(text)\n\
+              \        imageUrl5 = '!['+textJSONObj.results[0]+']('+textJSONObj.results[0]+')'\n\
+              \      }\n    }\n  }\n  \n  const ret = {\n      \"imageUrl\":  imageUrl\
+              \ + imageUrl1 + imageUrl2 + imageUrl3 + imageUrl5 + imageUrl4\n  };\n\
+              \  return ret;\n}"
+            tryCatchConfig:
+              strategy: noop
+            retryConfig:
+              retryEnabled: false
+              maxRetries: 3
+              retryInterval: 500
+            scriptType: javascript
+      - id: VariableHandle_Psd3
+        type: VariableHandle
+        name: 变量处理-大模型-侧视图
+        x: 2734
+        y: 116
+        config:
+          inputParams: []
+          outputParams:
+            - key: result
+              type: String
+          nodeParam:
+            jsonParams: []
+            groups:
+              - groupId: aB7s
+                groupName: Group1
+                outputType: String
+                variables:
+                  - id: kPQJ
+                    valueFrom: refer
+                    type: String
+                  - id: J1Bo
+                    valueFrom: refer
+                    type: String
+            templateContent: "${LLM_vEpw.result},Maintain strict consistency across\
+              \ all generated images: the product’s shape, color, dimensions (length\
+              \ and width), and material must remain unchanged and undeformed.\nDo not\
+              \ add any text to the images.Depict only realistic human characters—no\
+              \ 2D illustrations, no 3D-rendered avatars, and no stylized or fictional\
+              \ figures.Preserve the exact product color and material as shown in the\
+              \ reference image—do not alter or reinterpret them.Ensure the product\
+              \ is scaled proportionally to the human character(s) in the scene; the\
+              \ relative size between product and person must appear natural and realistic.Overall\
+              \ composition must maintain visual harmony and accurate size relationships\
+              \ between the product and the people interacting with it.Do not change\
+              \ the material and appearance of the product"
+            groupStrategy: firstNotNull
+            type: template
+      - id: VariableHandle_dmfr
+        type: VariableHandle
+        name: 变量处理-后视图
+        x: 2747
+        y: 332
+        config:
+          inputParams: []
+          outputParams:
+            - key: result
+              type: String
+          nodeParam:
+            jsonParams: []
+            groups:
+              - groupId: aB7s
+                groupName: Group1
+                outputType: String
+                variables:
+                  - id: kPQJ
+                    valueFrom: refer
+                    type: String
+                  - id: J1Bo
+                    valueFrom: refer
+                    type: String
+            templateContent: "${LLM_gJu8.result},Maintain strict consistency across\
+              \ all generated images: the product’s shape, color, dimensions (length\
+              \ and width), and material must remain unchanged and undeformed.\nDo not\
+              \ add any text to the images.Depict only realistic human characters—no\
+              \ 2D illustrations, no 3D-rendered avatars, and no stylized or fictional\
+              \ figures.Preserve the exact product color and material as shown in the\
+              \ reference image—do not alter or reinterpret them.Ensure the product\
+              \ is scaled proportionally to the human character(s) in the scene; the\
+              \ relative size between product and person must appear natural and realistic.Overall\
+              \ composition must maintain visual harmony and accurate size relationships\
+              \ between the product and the people interacting with it.Do not change\
+              \ the material and appearance of the product"
+            groupStrategy: firstNotNull
+            type: template
+      - id: VariableHandle_WAOM
+        type: VariableHandle
+        name: 变量处理-产品介绍图
+        x: 2741
+        y: 548
+        config:
+          inputParams: []
+          outputParams:
+            - key: result
+              type: String
+          nodeParam:
+            jsonParams: []
+            groups:
+              - groupId: aB7s
+                groupName: Group1
+                outputType: String
+                variables:
+                  - id: kPQJ
+                    valueFrom: refer
+                    type: String
+                  - id: J1Bo
+                    valueFrom: refer
+                    type: String
+            templateContent: "${LLM_LB2s.result},Maintain strict consistency across\
+              \ all generated images: the product’s shape, color, dimensions (length\
+              \ and width), and material must remain unchanged and undeformed.\nDo not\
+              \ add any text to the images.Depict only realistic human characters—no\
+              \ 2D illustrations, no 3D-rendered avatars, and no stylized or fictional\
+              \ figures.Preserve the exact product color and material as shown in the\
+              \ reference image—do not alter or reinterpret them.Ensure the product\
+              \ is scaled proportionally to the human character(s) in the scene; the\
+              \ relative size between product and person must appear natural and realistic.Overall\
+              \ composition must maintain visual harmony and accurate size relationships\
+              \ between the product and the people interacting with it.Do not change\
+              \ the material and appearance of the product"
+            groupStrategy: firstNotNull
+            type: template
+      - id: VariableHandle_oSw8
+        type: VariableHandle
+        name: 变量处理-人物产品六视图
+        x: 2723
+        y: 890
+        config:
+          inputParams: []
+          outputParams:
+            - key: result
+              type: String
+          nodeParam:
+            jsonParams: []
+            groups:
+              - groupId: aB7s
+                groupName: Group1
+                outputType: String
+                variables:
+                  - id: kPQJ
+                    valueFrom: refer
+                    type: String
+                  - id: J1Bo
+                    valueFrom: refer
+                    type: String
+            templateContent: "${LLM_rOKf.result},Maintain strict consistency across\
+              \ all generated images: the product’s shape, color, dimensions (length\
+              \ and width), and material must remain unchanged and undeformed.\nDo not\
+              \ add any text to the images.Depict only realistic human characters—no\
+              \ 2D illustrations, no 3D-rendered avatars, and no stylized or fictional\
+              \ figures.Preserve the exact product color and material as shown in the\
+              \ reference image—do not alter or reinterpret them.Ensure the product\
+              \ is scaled proportionally to the human character(s) in the scene; the\
+              \ relative size between product and person must appear natural and realistic.Overall\
+              \ composition must maintain visual harmony and accurate size relationships\
+              \ between the product and the people interacting with it.Do not change\
+              \ the material and appearance of the product"
+            groupStrategy: firstNotNull
+            type: template
+      - id: MCP_XDjL
+        type: MCP
+        name: MCP1
+        x: 1429
+        y: 13
+        config:
+          inputParams:
+            - key: prompt
+              type: String
+              value: "${LLM_C1XO.result}"
+              valueFrom: refer
+            - key: watermark
+              valueFrom: refer
+            - key: size
+              valueFrom: refer
+            - key: negative_prompt
+              type: String
+              value: " disgusting proportions, script, truncated, split image, skew, storyboard,\
+                \ tiling, cropped, out of focus, unattractive, unnatural poses, Unreal\
+                \ Engine, ugly, text color not in harmony with the background, text distorted,\
+                \ unreal The scenes are discontinuous, the products are inconsistent,\
+                \ the characters are inconsistent, and the characters are not realistic"
+              valueFrom: input
+            - key: prompt_extend
+              valueFrom: refer
+            - key: "n"
+              valueFrom: refer
+          outputParams:
+            - key: result
+              type: String
+              desc: 工具执行结果
+          nodeParam:
+            serverCode: Wan25Media
+            serverName: 通义万相2.5-图像视频生成
+            toolName: modelstudio_image_gen_wan25
+      - id: LLM_duld
+        type: LLM
+        name: 大模型-产品细节特写放大镜头
+        x: 2302
+        y: 732
+        config:
+          inputParams:
+            - key: content
+              valueFrom: refer
+          outputParams:
+            - key: result
+              type: String
+              desc: 文本输出
+            - key: reasoningContent
+              type: String
+              desc: 深度思考
+          nodeParam:
+            promptContent: "${sys.query}\n${LLM_5ViG.result}\n${LLM_C1XO.result}"
+            shortMemory:
+              enabled: false
+              type: self
+              round: 3
+              param:
+                key: historyList
+                type: Array<String>
+                valueFrom: refer
+                value: "${sys.historyList}"
+            tryCatchConfig:
+              strategy: noop
+              defaultValues:
+                - key: result
+                  type: String
+                  desc: 文本输出
+                  isSystem: true
+            batchEnable: false
+            modelConfig:
+              modelId: qwen-plus
+              params: {}
+              referParams: []
+            retryConfig:
+              retryEnabled: false
+              maxRetries: 3
+              retryInterval: 500
+            concurrentSize: 5
+            processCanOutput: false
+            contextParam:
+              key: historyList
+              type: Array<String>
+              valueFrom: refer
+              value: "${sys.historyList}"
+            sysPromptContent: |-
+              生成人物产品细节特写放大镜头介绍图英文提示词
+              提示词长度不超过100字，输出内容只包含提示词不要有其他内容。
+               注意商品和人物已经场景的比例大小，不要出现奇怪的比例
+            batchSize: 50
+            contextSwitch: false
+      - id: VariableHandle_34Jm
+        type: VariableHandle
+        name: 变量处理-产品细节特写放大镜头
+        x: 2729
+        y: 727
+        config:
+          inputParams: []
+          outputParams:
+            - key: result
+              type: String
+          nodeParam:
+            jsonParams: []
+            groups:
+              - groupId: aB7s
+                groupName: Group1
+                outputType: String
+                variables:
+                  - id: kPQJ
+                    valueFrom: refer
+                    type: String
+                  - id: J1Bo
+                    valueFrom: refer
+                    type: String
+            templateContent: "${LLM_duld.result},Maintain strict consistency across\
+              \ all generated images: the product’s shape, color, dimensions (length\
+              \ and width), and material must remain unchanged and undeformed.\nDo not\
+              \ add any text to the images.Depict only realistic human characters—no\
+              \ 2D illustrations, no 3D-rendered avatars, and no stylized or fictional\
+              \ figures.Preserve the exact product color and material as shown in the\
+              \ reference image—do not alter or reinterpret them.Ensure the product\
+              \ is scaled proportionally to the human character(s) in the scene; the\
+              \ relative size between product and person must appear natural and realistic.Overall\
+              \ composition must maintain visual harmony and accurate size relationships\
+              \ between the product and the people interacting with it.Do not change\
+              \ the material and appearance of the product"
+            groupStrategy: firstNotNull
+            type: template
+      - id: MCP_7ZYF
+        type: MCP
+        name: MCP-产品细节特写放大镜头
+        x: 3168
+        y: 725
+        config:
+          inputParams:
+            - key: image_url
+              type: String
+              value: "${Script_XkEv.imageUrl}"
+              valueFrom: refer
+            - key: prompt
+              type: String
+              value: "${VariableHandle_34Jm.result}"
+              valueFrom: refer
+            - key: watermark
+              type: Boolean
+              value: "true"
+              valueFrom: input
+            - key: negative_prompt
+              type: String
+              value: " disgusting proportions, script, truncated, split image, skew, storyboard,\
+                \ tiling, cropped, out of focus, unattractive, unnatural poses, Unreal\
+                \ Engine, ugly, text color not in harmony with the background, text distorted,\
+                \ unreal The scenes are discontinuous, the products are inconsistent,\
+                \ the characters are inconsistent, and the characters are not realistic"
+              valueFrom: input
+          outputParams:
+            - key: result
+              type: String
+              desc: 工具执行结果
+          nodeParam:
+            serverCode: QwenImage
+            serverName: 通义千问-图像生成
+            toolName: modelstudio_qwen_image_edit
+  globalConfig:
+    historyConfig:
+      historySwitch: true
+      historyMaxRound: 5
+    historyMaxRound: 5

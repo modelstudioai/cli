@@ -1,0 +1,47 @@
+{
+  "name": "bailian-cli-core",
+  "version": "1.1.0",
+  "description": "Core SDK for bailian-cli. See https://www.npmjs.com/package/bailian-cli for usage.",
+  "homepage": "https://bailian.console.aliyun.com/cli",
+  "bugs": {
+    "url": "https://github.com/modelstudioai/cli/issues"
+  },
+  "license": "Apache-2.0",
+  "author": "Aliyun Model Studio",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/modelstudioai/cli.git",
+    "directory": "packages/core"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check"
+  },
+  "dependencies": {
+    "yaml": "^2.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "7.0.0-dev.20260328.1",
+    "typescript": "^6.0.2",
+    "vite-plus": "catalog:"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

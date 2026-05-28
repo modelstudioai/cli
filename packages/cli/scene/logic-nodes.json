@@ -1,0 +1,59 @@
+{
+  "version": "workflow/v1",
+  "inputs": {
+    "type": "object",
+    "properties": {
+      "mode": { "type": "string", "default": "review" }
+    },
+    "additionalProperties": false
+  },
+  "steps": [
+    {
+      "id": "route",
+      "type": "logic/switch",
+      "input": {
+        "cases": [
+          {
+            "key": "publish",
+            "condition": { "$eq": [{ "$input": "/mode" }, "publish"] },
+            "value": { "action": "publish", "queue": "release" }
+          },
+          {
+            "key": "draft",
+            "condition": { "$eq": [{ "$input": "/mode" }, "draft"] },
+            "value": { "action": "draft", "queue": "editorial" }
+          }
+        ],
+        "defaultKey": "review",
+        "defaultValue": { "action": "review", "queue": "editorial" }
+      }
+    },
+    {
+      "id": "guard",
+      "type": "logic/assert",
+      "input": {
+        "condition": {
+          "$in": [{ "$from": "route", "path": "/data/selected" }, ["publish", "draft", "review"]]
+        },
+        "message": "Route must select a supported workflow mode"
+      }
+    },
+    {
+      "id": "selected",
+      "type": "logic/select",
+      "input": {
+        "candidates": [
+          {
+            "source": "route",
+            "value": { "$from": "route", "path": "/data/value" }
+          },
+          {
+            "source": "fallback",
+            "available": false,
+            "value": { "action": "review", "queue": "editorial" }
+          }
+        ]
+      }
+    }
+  ]
+}

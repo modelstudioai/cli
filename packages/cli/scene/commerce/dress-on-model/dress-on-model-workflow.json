@@ -1,0 +1,88 @@
+{
+  "version": "workflow/v1",
+  "inputs": {
+    "type": "object",
+    "properties": {
+      "dressImage": { "type": "string" },
+      "visionModel": { "type": "string", "default": "qwen-vl-max" },
+      "promptModel": { "type": "string", "default": "qwen3.7-max" },
+      "imageModel": { "type": "string", "default": "qwen-image-2.0" },
+      "size": { "type": "string", "default": "3:4" },
+      "outDir": { "type": "string", "default": "./outputs" }
+    },
+    "required": ["dressImage"],
+    "additionalProperties": false
+  },
+  "steps": [
+    {
+      "id": "analyze-dress",
+      "type": "vision/describe",
+      "input": {
+        "model": { "$input": "/visionModel" },
+        "image": { "$input": "/dressImage" },
+        "prompt": "你是高端时装电商视觉分析师。请识别图中这件裙装/服饰的特征，结构化输出：(1) 整体风格 2~3 个关键词；(2) 版型与剪裁；(3) 长度；(4) 领口与袖型；(5) 主面料与质感；(6) 主色 + 辅色；(7) 印花/图案/装饰；(8) 适配模特气质；(9) 适合场景；(10) 推荐搭配（首饰金属色调、鞋款、发型、妆容）。每条单独成行，简体中文输出，不要 markdown 标题。"
+      }
+    },
+    {
+      "id": "prepare-hero-prompt",
+      "type": "text/chat",
+      "dependsOn": ["analyze-dress"],
+      "input": {
+        "model": { "$input": "/promptModel" },
+        "system": "你是高端时装电商模特图提示词专家。基于裙装风格分析，输出一段英文 prompt 用于让模特穿上参考图中的裙装。要求：(1) 模特特征明确（年龄、肤色、发型发色、妆容、首饰、鞋履），与裙装气质匹配；(2) 背景场景匹配裙装风格，明确光线（柔和自然光）、景深（浅景深虚化）、氛围；(3) 姿态：full-body front-facing standing portrait, gentle smile, arms relaxed naturally；(4) 末尾追加约束：'keep the dress exactly the same as in the reference image - same color, fabric, pattern, silhouette, length, neckline, sleeves and all design details; high-end fashion editorial photography, sharp focus, magazine-quality lighting'；(5) 只输出英文 prompt 正文，不要解释、不要 markdown、不要引号包裹。",
+        "message": {
+          "$concat": [
+            "Dress analysis:\n",
+            { "$from": "analyze-dress", "path": "/data/choices/0/message/content" },
+            "\n\nGenerate the English prompt for a front-facing full-body model photo."
+          ]
+        }
+      }
+    },
+    {
+      "id": "generate-hero",
+      "type": "image/edit",
+      "dependsOn": ["prepare-hero-prompt"],
+      "retry": { "maxAttempts": 3, "backoff": "exponential" },
+      "input": {
+        "model": { "$input": "/imageModel" },
+        "image": { "$input": "/dressImage" },
+        "size": { "$input": "/size" },
+        "n": 1,
+        "out-dir": { "$input": "/outDir" },
+        "out-prefix": "model-hero",
+        "prompt": { "$from": "prepare-hero-prompt", "path": "/data/choices/0/message/content" }
+      }
+    },
+    {
+      "id": "generate-side",
+      "type": "image/edit",
+      "dependsOn": ["generate-hero"],
+      "retry": { "maxAttempts": 3, "backoff": "exponential" },
+      "input": {
+        "model": { "$input": "/imageModel" },
+        "image": { "$from": "generate-hero", "path": "/artifacts/0/url" },
+        "size": { "$input": "/size" },
+        "n": 1,
+        "out-dir": { "$input": "/outDir" },
+        "out-prefix": "model-side",
+        "prompt": "Transform this exact same model into a three-quarter side view full-body portrait. CRITICAL: keep the model face, hairstyle, body proportions, skin tone, makeup, ALL jewelry, ALL accessories and the dress (same color, fabric, pattern, silhouette, length, neckline, sleeves) absolutely identical to the input image - this is the same person in the same outfit, only the pose changes. Change ONLY the pose: body turned about 45 degrees away from camera, looking back over the shoulder with a soft pensive gaze, one hand lightly touching the skirt hem to reveal fabric drape, slight walking-step posture. Keep the same background scene style and lighting atmosphere. Vertical 3:4 composition, high-end fashion editorial photography, sharp focus, magazine-quality lighting."
+      }
+    },
+    {
+      "id": "generate-seated",
+      "type": "image/edit",
+      "dependsOn": ["generate-side"],
+      "retry": { "maxAttempts": 3, "backoff": "exponential" },
+      "input": {
+        "model": { "$input": "/imageModel" },
+        "image": { "$from": "generate-hero", "path": "/artifacts/0/url" },
+        "size": { "$input": "/size" },
+        "n": 1,
+        "out-dir": { "$input": "/outDir" },
+        "out-prefix": "model-seated",
+        "prompt": "Transform this exact same model into an elegant seated three-quarter portrait. CRITICAL: keep the model face, hairstyle, body proportions, skin tone, makeup, ALL jewelry, ALL accessories and the dress (same color, fabric, pattern, silhouette, length, neckline, sleeves) absolutely identical to the input image - this is the same person in the same outfit, only the pose changes. Change ONLY the pose: the model is gracefully seated on a stylized low chair or stool that fits the scene, legs crossed naturally with the dress draping beautifully over her knees, one hand resting on her lap and the other gently behind, slight head tilt with a serene downward glance, medium shot from knees up. Keep the same background scene style and lighting atmosphere with soft side lighting to emphasize fabric texture. Vertical 3:4 composition, high-end fashion editorial photography, sharp focus."
+      }
+    }
+  ]
+}

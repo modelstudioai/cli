@@ -1,0 +1,26 @@
+{
+  "version": "workflow/v1",
+  "inputs": {
+    "type": "object",
+    "properties": {
+      "message": {
+        "type": "string",
+        "default": "Hello from the demo pipeline."
+      }
+    },
+    "additionalProperties": false
+  },
+  "steps": [
+    {
+      "id": "chat",
+      "type": "text/chat",
+      "input": {
+        "message": {
+          "$input": "/message"
+        },
+        "system": "You are a concise assistant for pipeline demos.",
+        "temperature": 0.2
+      }
+    }
+  ]
+}
