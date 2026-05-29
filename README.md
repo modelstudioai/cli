@@ -10,7 +10,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&) · [中文文档](README_CN.md) · [API Documentation](https://help.aliyun.com/zh/model-studio/) · [Get API Key](https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key)
+[Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&) · [中文文档](README_CN.md) · [API Documentation](https://help.aliyun.com/zh/model-studio/) · [Get API Key](https://bailian.console.aliyun.com/cli?source_channel=key_github&)
 
 ---
 
@@ -50,7 +50,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 A complete **2-minute, 16:9 cinematic short film** — produced end-to-end from a single natural-language sentence, with **zero manual editing**. This showcase demonstrates how an AI Agent can compose a multi-step creative pipeline by orchestrating three primitives:
 
 - **[Qwen Code](https://github.com/QwenLM/qwen-code)** — the agentic coding model that interprets the user's intent and drives the workflow
-- **[Aliyun Model Studio CLI](https://github.com/modelstudioai/cli/)** — invokes **HappyHorse 1.0**, Aliyun Model Studio's text-/image-/reference-to-video generation model
+- **[Aliyun Model Studio CLI](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)** — invokes **HappyHorse 1.0**, Aliyun Model Studio's text-/image-/reference-to-video generation model
 - **[spark-video Skill](https://github.com/JohnKeating1997/spark-video)** — handles scene decomposition, storyboarding, shot continuity, and final stitching
 
 ### The single prompt
@@ -104,13 +104,13 @@ bl app list
 bl usage free --model qwen3-max
 ```
 
-> More examples and scenarios: [Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli)
+> More examples and scenarios: [Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)
 
 ## Authentication
 
 ### DashScope API Key
 
-Required for most commands. Get your key from the [DashScope Console](https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key).
+Required for most commands. Get your key from the [DashScope Console](https://bailian.console.aliyun.com/cli?source_channel=key_github&).
 
 ```bash
 # Option 1: Environment variable
