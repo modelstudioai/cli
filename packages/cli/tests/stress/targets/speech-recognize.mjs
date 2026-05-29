@@ -30,7 +30,7 @@ export const runStress = defineStressTarget({
 
   generatePrompt: (idx) => `[ASR-${idx}-${Date.now().toString(36)}]`,
 
-  buildCliArgs: ({ MODEL, CLI_TIMEOUT_SEC, POLL_INTERVAL, fixtureRef, runDir, index }) => [
+  buildCliArgs: ({ MODEL, CLI_TIMEOUT_SEC, POLL_INTERVAL, fixtureRef, runDir }) => [
     "speech",
     "recognize",
     "--model",

@@ -93,12 +93,12 @@ export async function runStressSuite({ globals, forwarded }) {
 
   // Phase 0: 生成共享前置资源
   console.error("");
-  console.error("========== [Phase 0] 生成共享前置资源 ==========");
+  console.error("========== [Phase 0] 生成前置资源 ==========");
   let sharedFixturesDir;
   try {
     sharedFixturesDir = await generateCombinedFixtures({ suiteRoot, cliPackage: undefined });
   } catch (err) {
-    console.error(`[全量压测] 共享前置资源生成失败: ${err.message}`);
+    console.error(`[全量压测] 前置资源生成失败: ${err.message}`);
     process.exit(1);
   }
 

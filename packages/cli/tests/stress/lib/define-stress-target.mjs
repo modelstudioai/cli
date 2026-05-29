@@ -1,7 +1,7 @@
 /**
  * 压测 target 工厂函数：封装共享逻辑，每个 target 只需声明式配置。
  */
-import { mkdirSync, existsSync, readFileSync } from "node:fs";
+import { mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";

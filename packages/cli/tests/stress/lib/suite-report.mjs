@@ -14,6 +14,16 @@ export function formatSuccessRate(rate) {
 }
 
 /**
+ * 用例墙钟耗时：优先 wallClockMs，否则 finishedAt - startedAt，无效时 0。
+ * @param {{ wallClockMs?: number, finishedAt?: number, startedAt?: number }} row
+ */
+function caseWallClockMs(row) {
+  if (row.wallClockMs != null) return row.wallClockMs;
+  const delta = row.finishedAt - row.startedAt;
+  return Number.isFinite(delta) ? delta : 0;
+}
+
+/**
  * @param {string} suiteRoot
  * @param {object[]} rows 各用例 finishStressRun 返回的摘要
  * @param {object} meta
@@ -55,7 +65,7 @@ function buildSuiteMarkdown(rows, meta) {
   lines.push("| 用例 | 执行时间 | 任务数 | 并发 | 成功 | 失败 | 成功率 | 详细报告 |");
   lines.push("|------|----------|--------|------|------|------|--------|--------|");
   for (const r of rows) {
-    const dur = formatDuration(r.wallClockMs ?? r.finishedAt - r.startedAt ?? 0);
+    const dur = formatDuration(caseWallClockMs(r));
     const sub = r.reportPath ? `\`${r.reportPath}\`` : "—";
     lines.push(
       `| ${escapeTableCell(r.displayName)} | ${dur} | ${r.count ?? "—"} | ${r.concurrency ?? "—"} | ${r.successCount ?? "—"} | ${r.failCount ?? "—"} | ${formatSuccessRate(r.successRate)} | ${sub} |`,
@@ -71,7 +81,7 @@ function buildSuiteMarkdown(rows, meta) {
 function buildSuiteHtml(rows, meta) {
   const tableRows = rows
     .map((r) => {
-      const dur = formatDuration(r.wallClockMs ?? r.finishedAt - r.startedAt ?? 0);
+      const dur = formatDuration(caseWallClockMs(r));
       const sub = r.reportPath
         ? `<a href="${escapeHtml(r.reportPath)}">${escapeHtml(r.reportPath)}</a>`
         : "—";
