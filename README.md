@@ -164,11 +164,11 @@ Config file location: `~/.bailian/config.json`
 
 | Resource                     | URL                                                             |
 | :--------------------------- | :-------------------------------------------------------------- |
-| Aliyun Model Studio CLI Site | https://bailian.console.aliyun.com/cli                          |
+| Aliyun Model Studio CLI Site | https://bailian.console.aliyun.com/cli?source_channel=cli_github&                          |
 | DashScope API Docs           | https://help.aliyun.com/zh/model-studio/                        |
 | Qwen Model List              | https://help.aliyun.com/zh/model-studio/getting-started/models  |
 | Aliyun Model Studio Console  | https://bailian.console.aliyun.com/                             |
-| Get API Key                  | https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key |
+| Get API Key                  | https://bailian.console.aliyun.com/cli?source_channel=key_github& |
 | Get AccessKey                | https://ram.console.aliyun.com/manage/ak                        |
 
 ## Changelog
