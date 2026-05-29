@@ -24,13 +24,13 @@ export function videoGenerateEndpoint(baseUrl: string): string {
 // ---- Async Task Query ----
 
 export function taskEndpoint(baseUrl: string, taskId: string): string {
-  return `${baseUrl}/api/v1/tasks/${taskId}`;
+  return `${baseUrl}/api/v1/tasks/${encodeURIComponent(taskId)}`;
 }
 
 // ---- Application (Agent / Workflow) ----
 
 export function appCompletionEndpoint(baseUrl: string, appId: string): string {
-  return `${baseUrl}/api/v1/apps/${appId}/completion`;
+  return `${baseUrl}/api/v1/apps/${encodeURIComponent(appId)}/completion`;
 }
 
 // ---- Memory (DashScope v2) ----
@@ -48,7 +48,7 @@ export function memoryListEndpoint(baseUrl: string): string {
 }
 
 export function memoryNodeEndpoint(baseUrl: string, nodeId: string): string {
-  return `${baseUrl}/api/v2/apps/memory/memory_nodes/${nodeId}`;
+  return `${baseUrl}/api/v2/apps/memory/memory_nodes/${encodeURIComponent(nodeId)}`;
 }
 
 // ---- Speech Synthesis (TTS) ----
@@ -70,7 +70,7 @@ export function profileSchemaEndpoint(baseUrl: string): string {
 }
 
 export function userProfileEndpoint(baseUrl: string, schemaId: string): string {
-  return `${baseUrl}/api/v2/apps/memory/profile_schemas/${schemaId}/profiles`;
+  return `${baseUrl}/api/v2/apps/memory/profile_schemas/${encodeURIComponent(schemaId)}/profiles`;
 }
 
 // ---- MCP Services (Streamable HTTP) ----
