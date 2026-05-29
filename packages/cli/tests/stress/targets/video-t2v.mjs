@@ -88,7 +88,7 @@ export const runStress = defineStressTarget({
     String(POLL_INTERVAL),
   ],
 
-  buildBaseRecord: ({ runDir, index, extraParams }) => ({
+  buildBaseRecord: ({ runDir, index }) => ({
     downloadPath: join(runDir, `video_${String(index + 1).padStart(3, "0")}.mp4`),
   }),
 

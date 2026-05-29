@@ -5,6 +5,33 @@ import { extractJsonFromStdout } from "./parsers.mjs";
 import { fetchRequestIdByTaskId } from "./fetch-request-id.mjs";
 
 /**
+ * 将 trace id 字段转为非空字符串；对象等无法可靠转换时返回 undefined。
+ * @param {unknown} value
+ * @returns {string | undefined}
+ */
+function toTraceString(value) {
+  if (value == null) return undefined;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  }
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    const trimmed = String(value).trim();
+    return trimmed || undefined;
+  }
+  return undefined;
+}
+
+/**
+ * 将日志字段转为字符串；非 string 时返回空字符串。
+ * @param {unknown} value
+ * @returns {string}
+ */
+function toLogText(value) {
+  return typeof value === "string" ? value : "";
+}
+
+/**
  * @param {unknown} data
  */
 export function extractTraceIdsFromJson(data) {
@@ -18,9 +45,9 @@ export function extractTraceIdsFromJson(data) {
       ? /** @type {Record<string, unknown>} */ (obj.error)
       : undefined;
 
-  const requestIdRaw = obj.request_id ?? obj.requestId ?? err?.request_id ?? err?.requestId;
-  const requestId =
-    requestIdRaw != null && String(requestIdRaw).trim() ? String(requestIdRaw).trim() : undefined;
+  const requestId = toTraceString(
+    obj.request_id ?? obj.requestId ?? err?.request_id ?? err?.requestId,
+  );
 
   const taskId = formatTaskIdFromJson(obj);
   return { requestId, taskId };
@@ -30,28 +57,29 @@ export function extractTraceIdsFromJson(data) {
  * @param {Record<string, unknown>} data
  */
 function formatTaskIdFromJson(data) {
-  if (data.task_id != null && String(data.task_id).trim()) {
-    return String(data.task_id).trim();
-  }
+  const single = toTraceString(data.task_id);
+  if (single) return single;
   if (data.task_ids != null) {
     return formatTaskIdsValue(data.task_ids);
   }
   if (Array.isArray(data.videos)) {
     const ids = data.videos
       .map((v) =>
-        v && typeof v === "object" ? /** @type {{ task_id?: unknown }} */ (v).task_id : null,
+        v && typeof v === "object"
+          ? toTraceString(/** @type {{ task_id?: unknown }} */ (v).task_id)
+          : undefined,
       )
-      .filter((id) => id != null && String(id).trim())
-      .map((id) => String(id).trim());
+      .filter((id) => id != null);
     if (ids.length > 0) return [...new Set(ids)].join(", ");
   }
   if (Array.isArray(data.images)) {
     const ids = data.images
       .map((v) =>
-        v && typeof v === "object" ? /** @type {{ task_id?: unknown }} */ (v).task_id : null,
+        v && typeof v === "object"
+          ? toTraceString(/** @type {{ task_id?: unknown }} */ (v).task_id)
+          : undefined,
       )
-      .filter((id) => id != null && String(id).trim())
-      .map((id) => String(id).trim());
+      .filter((id) => id != null);
     if (ids.length > 0) return [...new Set(ids)].join(", ");
   }
   return undefined;
@@ -62,11 +90,10 @@ function formatTaskIdFromJson(data) {
  */
 function formatTaskIdsValue(value) {
   if (Array.isArray(value)) {
-    const ids = value.map((v) => String(v).trim()).filter(Boolean);
+    const ids = value.map((v) => toTraceString(v)).filter((id) => id != null);
     return ids.length > 0 ? ids.join(", ") : undefined;
   }
-  if (value != null && String(value).trim()) return String(value).trim();
-  return undefined;
+  return toTraceString(value);
 }
 
 /**
@@ -186,9 +213,9 @@ export function extractTraceIdsFromLogs(stdout, stderr) {
  * @param {Record<string, unknown>} result
  */
 export function mergeTraceIds(result) {
-  const stdout = String(result.stdout ?? "");
-  const stderr = String(result.stderr ?? "");
-  const errorText = String(result.error ?? "");
+  const stdout = toLogText(result.stdout);
+  const stderr = toLogText(result.stderr);
+  const errorText = toLogText(result.error);
   const combined = `${stdout}\n${stderr}\n${errorText}`;
 
   const data = extractJsonFromStdout(stdout);
@@ -230,7 +257,7 @@ export async function enrichTraceIdsAsync(result) {
 
   if (merged.requestId) return merged;
 
-  const taskId = merged.taskId ? String(merged.taskId).split(",")[0].trim() : "";
+  const taskId = toTraceString(merged.taskId)?.split(",")[0]?.trim() ?? "";
   if (!taskId) return merged;
 
   if (process.env.STRESS_FETCH_REQUEST_ID === "0") return merged;
