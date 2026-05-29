@@ -97,7 +97,7 @@ bl auth login --console
 
 # 浏览应用 / 免费额度
 bl app list
-bl usage free --model qwen3-vl-plus
+bl usage free --model qwen3-max
 ```
 
 > 更多案例与使用场景：[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli)

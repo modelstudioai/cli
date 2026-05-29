@@ -32,7 +32,7 @@ export default defineCommand({
     },
   ],
   examples: [
-    `bl console call --api zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota --data '{"queryFreeTierQuotaRequest":{"models":["qwen3-vl-plus"]}}'`,
+    `bl console call --api zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota --data '{"queryFreeTierQuotaRequest":{"models":["qwen3-max"]}}'`,
     `bl console call --api some.api.name --data '{"key":"value"}' --region cn-beijing`,
   ],
   async run(config: Config, flags: GlobalFlags) {
