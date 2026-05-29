@@ -68,7 +68,7 @@ export default defineCommand({
       type: "array",
     },
     { flag: "--prompt <text>", description: "Question about the content (default: auto-detected)" },
-    { flag: "--model <model>", description: "Vision model (default: qwen-vl-max)" },
+    { flag: "--model <model>", description: "Vision model (default: qwen3-vl-plus)" },
   ],
   examples: [
     "bl vision describe --image photo.jpg",
@@ -82,7 +82,7 @@ export default defineCommand({
       | string
       | undefined;
     const videoInputs = (flags.video as string[] | undefined) ?? [];
-    const model = (flags.model as string) || "qwen-vl-max";
+    const model = (flags.model as string) || "qwen3-vl-plus";
 
     // Auto-detect: if --image was given a video file, treat it as --video
     if (image && isVideoInput(image)) {
