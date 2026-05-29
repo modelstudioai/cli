@@ -10,7 +10,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli) · [English](README.md) · [API 文档](https://help.aliyun.com/zh/model-studio/) · [获取 API Key](https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key)
+[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli) · [English](https://github.com/modelstudioai/cli/blob/main/README.md) · [API 文档](https://help.aliyun.com/zh/model-studio/) · [获取 API Key](https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key)
 
 ---
 
@@ -171,8 +171,8 @@ bl update
 
 ## 更新日志
 
-每个版本的变更详情记录在 [CHANGELOG_CN.md](CHANGELOG_CN.md)。
+每个版本的变更详情记录在 [CHANGELOG_CN.md](https://github.com/modelstudioai/cli/blob/main/CHANGELOG_CN.md)。
 
 ## 参与贡献
 
-欢迎提 Issue、Feature Request 和 PR。开发环境搭建、仓库结构、新增/修改命令的工作流请见 [CONTRIBUTING_CN.md](CONTRIBUTING_CN.md)。
+欢迎提 Issue、Feature Request 和 PR。开发环境搭建、仓库结构、新增/修改命令的工作流请见 [CONTRIBUTING_CN.md](https://github.com/modelstudioai/cli/blob/main/CONTRIBUTING_CN.md)。

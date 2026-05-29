@@ -1,8 +1,7 @@
 <div align="center">
 
-<img src="https://img.alicdn.com/imgextra/i1/O1CN01RSQFUD1jN5IBzHORt_!!6000000004535-2-tps-2440-521.png" alt="Aliyun Model Studio CLI" width="420" />
+<img src="https://img.alicdn.com/imgextra/i1/O1CN01kGgO3z1N30OINgUoG_!!6000000001513-2-tps-1915-821.png" alt="Aliyun Model Studio CLI" />
 
-# >\_ Aliyun Model Studio CLI
 
 **The official command-line interface for Aliyun Model Studio (DashScope) AI Platform**
 
@@ -11,7 +10,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli) · [中文文档](https://github.com/modelstudioai/cli/blob/main/README_CN.md) · [API Documentation](https://help.aliyun.com/zh/model-studio/) · [Get API Key](https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key)
+[Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&) · [中文文档](https://github.com/modelstudioai/cli/blob/main/README_CN.md) · [API Documentation](https://help.aliyun.com/zh/model-studio/) · [Get API Key](https://bailian.console.aliyun.com/cli?source_channel=key_github&)
 
 ---
 
@@ -38,9 +37,37 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **Console capabilities** — Browse Bailian apps (`app list`) and check free-tier quota (`usage free`)
 - **Local file auto-upload** — Every URL parameter accepts a local path; uploaded to free temp storage with 48-hour validity
 
+## Showcase: One-Sentence Cinematic Video
+
 <p align="center">
-  <img src="https://img.alicdn.com/imgextra/i1/O1CN01Df2LiL1IcCkXJROYz_!!6000000000913-2-tps-759-426.png" alt="bl --help" width="720" />
+  <a href="https://cloud.video.taobao.com/vod/dS2F4huqbw5Nfe5L3wwb3grz2q2DNYD3retq8dU-iHo.mp4">
+    <img src="https://img.alicdn.com/imgextra/i1/O1CN01Q5052k232Hd36NodG_!!6000000007197-0-tps-2940-1656.jpg" alt="Click to play the demo video" width="720" />
+  </a>
 </p>
+
+<p align="center"><i>👆 Click the cover to play the full 2-minute demo</i></p>
+
+A complete **2-minute, 16:9 cinematic short film** — produced end-to-end from a single natural-language sentence, with **zero manual editing**. This showcase demonstrates how an AI Agent can compose a multi-step creative pipeline by orchestrating three primitives:
+
+- **[Qwen Code](https://github.com/QwenLM/qwen-code)** — the agentic coding model that interprets the user's intent and drives the workflow
+- **[Aliyun Model Studio CLI](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)** — invokes **HappyHorse 1.0**, Aliyun Model Studio's text-/image-/reference-to-video generation model
+- **[spark-video Skill](https://github.com/JohnKeating1997/spark-video)** — handles scene decomposition, storyboarding, shot continuity, and final stitching
+
+### The single prompt
+
+> *"Generate a roughly 2-minute video in Japanese cinematic style — a sweet, innocent first-love story about a high-school girl. The plot should be heart-fluttering enough to make viewers want to fall in love. Aspect ratio: 16:9."*
+>
+> *(Original: "帮我生成一段日系影视风格，高中女生的青涩初恋故事，剧情高甜，让人看了想谈恋爱，2分钟左右的视频，尺寸是16:9")*
+
+### How it works
+
+1. **Qwen Code** parses the request, plans the narrative beats, and decides which tools to call.
+2. The **spark-video Skill** breaks the story into shots, writes per-shot prompts, and enforces visual continuity (characters, lighting, palette, lens language).
+3. **`bl video generate`** dispatches each shot to **HappyHorse 1.0** in parallel.
+4. The skill stitches all clips back together into a single 16:9 / ~2-min deliverable.
+
+No timeline scrubbing. No frame-by-frame editing. Just one sentence → one video.
+
 
 ## Installation
 
@@ -77,13 +104,13 @@ bl app list
 bl usage free --model qwen3-max
 ```
 
-> More examples and scenarios: [Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli)
+> More examples and scenarios: [Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)
 
 ## Authentication
 
 ### DashScope API Key
 
-Required for most commands. Get your key from the [DashScope Console](https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key).
+Required for most commands. Get your key from the [DashScope Console](https://bailian.console.aliyun.com/cli?source_channel=key_github&).
 
 ```bash
 # Option 1: Environment variable
@@ -137,11 +164,11 @@ Config file location: `~/.bailian/config.json`
 
 | Resource                     | URL                                                             |
 | :--------------------------- | :-------------------------------------------------------------- |
-| Aliyun Model Studio CLI Site | https://bailian.console.aliyun.com/cli                          |
+| Aliyun Model Studio CLI Site | https://bailian.console.aliyun.com/cli?source_channel=cli_github&                          |
 | DashScope API Docs           | https://help.aliyun.com/zh/model-studio/                        |
 | Qwen Model List              | https://help.aliyun.com/zh/model-studio/getting-started/models  |
 | Aliyun Model Studio Console  | https://bailian.console.aliyun.com/                             |
-| Get API Key                  | https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key |
+| Get API Key                  | https://bailian.console.aliyun.com/cli?source_channel=key_github& |
 | Get AccessKey                | https://ram.console.aliyun.com/manage/ak                        |
 
 ## Changelog

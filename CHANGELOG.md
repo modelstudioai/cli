@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG_CN.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.1.1] - 2026-05-29
+
+Documentation-only release. No CLI or SDK behavior changes.
+
+### Added
+
+- `INSTALL.md` with AI-Agent-driven installation instructions.
+
+### Changed
+
+- README cross-links between root and `packages/cli` are now in sync; CN README aligned with EN.
+- Removed unpkg links from README in favor of canonical sources.
+- `tools/release.mjs` now asserts root and `packages/cli` READMEs stay in sync before publishing.
+
 ## [1.1.0] - 2026-05-28
 
 Initial public release on GitHub. The CLI was previously developed internally; this is the first version published as open source under Apache-2.0.

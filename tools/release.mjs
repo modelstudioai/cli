@@ -186,8 +186,27 @@ function assertCorePackage(coreExtractDir) {
   }
 }
 
+function assertReadmeSync() {
+  step("Checking README sync between root and packages/cli");
+  for (const file of ["README.md", "README_CN.md"]) {
+    const rootPath = join(ROOT, file);
+    const cliPath = join(ROOT, "packages/cli", file);
+    const rootBuf = readFileSync(rootPath);
+    const cliBuf = readFileSync(cliPath);
+    if (!rootBuf.equals(cliBuf)) {
+      fail(
+        `${file} differs between root and packages/cli. ` +
+          `Sync them manually (e.g. \`cp ${file} packages/cli/${file}\`).`,
+      );
+    }
+    log(`${file}: in sync`);
+  }
+}
+
 function validatePackages() {
   const jsonByKey = new Map();
+
+  assertReadmeSync();
 
   step("Checking package metadata");
   for (const pkg of PACKAGES) {

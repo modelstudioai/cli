@@ -6,6 +6,20 @@
 
 [English](CHANGELOG.md) · [README](README_CN.md) · [参与贡献](CONTRIBUTING_CN.md)
 
+## [1.1.1] - 2026-05-29
+
+仅文档更新，CLI 与 SDK 行为无变化。
+
+### 新增
+
+- 新增 `INSTALL.md`，提供面向 AI Agent 的安装指引。
+
+### 变更
+
+- 同步根目录与 `packages/cli` 的 README 互链；中文 README 与英文版对齐。
+- 移除 README 中的 unpkg 链接,改用官方来源。
+- `tools/release.mjs` 在发布前会校验根目录与 `packages/cli` 的 README 保持同步。
+
 ## [1.1.0] - 2026-05-28
 
 GitHub 上的首次公开发布。本项目此前在内部开发,这是首个以 Apache-2.0 协议开源的版本。
