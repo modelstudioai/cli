@@ -99,7 +99,7 @@ bl auth login --console
 
 # Browse apps / free-tier quota
 bl app list
-bl usage free --model qwen3-max
+bl usage free --model qwen3-vl-plus
 ```
 
 > More examples and scenarios: [Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)

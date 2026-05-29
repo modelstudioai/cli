@@ -30,7 +30,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: file upload（DashScope）", () =>
       "file",
       "upload",
       "--model",
-      "qwen-vl-max",
+      "qwen3-vl-plus",
       "--non-interactive",
     ]);
     expect(exitCode).toBe(0);
@@ -58,7 +58,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: file upload（DashScope）", () =>
       "--file",
       testFile,
       "--model",
-      "qwen-vl-max",
+      "qwen3-vl-plus",
       "--non-interactive",
       "--output",
       "json",
@@ -67,7 +67,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: file upload（DashScope）", () =>
     const data = parseStdoutJson<{ url?: string; model?: string; expires_in?: string }>(stdout);
     expect(data.url).toBeDefined();
     expect(data.url).toMatch(/^oss:\/\//);
-    expect(data.model).toBe("qwen-vl-max");
+    expect(data.model).toBe("qwen3-vl-plus");
     expect(data.expires_in).toBe("48 hours");
   }, 120_000);
 });

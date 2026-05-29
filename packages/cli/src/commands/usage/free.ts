@@ -18,7 +18,7 @@ export default defineCommand({
   options: [
     {
       flag: "--model <model>",
-      description: "Model name to query (e.g. qwen3-max, qwen-turbo)",
+      description: "Model name to query (e.g. qwen3-vl-plus, qwen-turbo)",
       required: true,
     },
     {
@@ -27,9 +27,9 @@ export default defineCommand({
     },
   ],
   examples: [
-    "bl usage free --model qwen3-max",
+    "bl usage free --model qwen3-vl-plus",
     "bl usage free --model qwen-turbo --output json",
-    "bl usage free --model qwen3-max --region cn-beijing",
+    "bl usage free --model qwen3-vl-plus --region cn-beijing",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const model = flags.model as string;
