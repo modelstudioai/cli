@@ -16,8 +16,7 @@ tools/generated
 *.local
 
 # Editor directories and files
-.vscode/*
-!.vscode/extensions.json
+.vscode/
 .idea
 .DS_Store
 *.suo
@@ -30,6 +29,7 @@ tools/generated
 *.meta.json
 
 # AI agent / IDE config (machine-local — keep out of the public repo)
+.codegraph/
 .claude/worktrees/
 .claude/settings.json
 .claude/settings.local.json
