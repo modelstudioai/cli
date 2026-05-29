@@ -27,7 +27,7 @@ export default defineCommand({
     },
   ],
   examples: [
-    "bl file upload --file photo.jpg --model qwen-vl-max",
+    "bl file upload --file photo.jpg --model qwen3-vl-plus",
     "bl file upload --file video.mp4 --model wan2.1-t2v-plus",
     "bl file upload --file audio.wav --model qwen3-asr-flash",
     "bl file upload --file cat.png --model qwen-image-2.0",

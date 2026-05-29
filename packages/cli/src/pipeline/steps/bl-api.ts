@@ -104,7 +104,7 @@ export async function visionDescribe(
   input: VisionDescribeInput,
   ctx: StepContext,
 ): Promise<ChatResponse> {
-  const model = input.model || "qwen-vl-max";
+  const model = input.model || "qwen3-vl-plus";
   const images = Array.isArray(input.image) ? input.image : input.image ? [input.image] : [];
   const hasVideo = !!input.video;
   const defaultPrompt = hasVideo ? "Describe the video." : "Describe the image.";
