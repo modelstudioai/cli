@@ -77,7 +77,7 @@ pnpm bl video generate --prompt "一只走路的猫"
 
 ## 反馈问题
 
-Bug 和需求都走 https://github.com/modelstudioai/cli/issues。如果是 bug,请包含:
+Bug 和需求都走 https://github.com/modelstudioai/cli/issues 如果是 bug, 请包含:
 
 - CLI 版本(`bl --version`)
 - Node 版本(`node --version`)
