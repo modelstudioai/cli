@@ -264,11 +264,11 @@ async function releaseCheck() {
   step("Installing dependencies with frozen lockfile");
   run("pnpm", ["install", "--frozen-lockfile"]);
 
-  step("Running format, lint, and type checks");
-  run("pnpm", ["run", "check"]);
-
   step("Building packages");
   buildPackages();
+
+  step("Running format, lint, and type checks");
+  run("pnpm", ["run", "check"]);
 
   packAndScan(coreJson);
 

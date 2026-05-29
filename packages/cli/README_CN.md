@@ -2,7 +2,6 @@
 
 <img src="https://img.alicdn.com/imgextra/i1/O1CN01kGgO3z1N30OINgUoG_!!6000000001513-2-tps-1915-821.png" alt="Aliyun Model Studio CLI" />
 
-
 **阿里云百炼 (DashScope) AI 平台命令行工具**
 
 [![npm version](https://img.shields.io/npm/v/bailian-cli?color=0969da&label=npm)](https://www.npmjs.com/package/bailian-cli)
@@ -55,7 +54,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 
 ### 唯一的提示词
 
-> *"帮我生成一段日系影视风格,高中女生的青涩初恋故事,剧情高甜,让人看了想谈恋爱,2 分钟左右的视频,尺寸是 16:9"*
+> _"帮我生成一段日系影视风格,高中女生的青涩初恋故事,剧情高甜,让人看了想谈恋爱,2 分钟左右的视频,尺寸是 16:9"_
 
 ### 工作流程
 
@@ -65,7 +64,6 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 4. Skill 把所有片段拼成最终的 16:9 / 约 2 分钟成片。
 
 没有时间线拖拽,没有逐帧剪辑。一句话 → 一部短片。
-
 
 ## 安装
 

@@ -47,13 +47,13 @@ pnpm bl video generate --prompt "一只走路的猫"
 
 ## 常用脚本
 
-| 命令             | 作用                                       |
-| ---------------- | ------------------------------------------ |
-| `pnpm bl <args>` | 从源码运行 CLI                             |
-| `pnpm dev`       | watch-build `bailian-cli-core`             |
-| `pnpm check`     | format + lint + 类型检查                   |
-| `pnpm test`      | 单测 + e2e(e2e 需要 `DASHSCOPE_API_KEY`)   |
-| `pnpm ready`     | 提 PR 前的完整自检                         |
+| 命令             | 作用                                     |
+| ---------------- | ---------------------------------------- |
+| `pnpm bl <args>` | 从源码运行 CLI                           |
+| `pnpm dev`       | watch-build `bailian-cli-core`           |
+| `pnpm check`     | format + lint + 类型检查                 |
+| `pnpm test`      | 单测 + e2e(e2e 需要 `DASHSCOPE_API_KEY`) |
+| `pnpm ready`     | 提 PR 前的完整自检                       |
 
 ## AI Native 工程化
 

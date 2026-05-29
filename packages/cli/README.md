@@ -2,7 +2,6 @@
 
 <img src="https://img.alicdn.com/imgextra/i1/O1CN01kGgO3z1N30OINgUoG_!!6000000001513-2-tps-1915-821.png" alt="Aliyun Model Studio CLI" />
 
-
 **The official command-line interface for Aliyun Model Studio (DashScope) AI Platform**
 
 [![npm version](https://img.shields.io/npm/v/bailian-cli?color=0969da&label=npm)](https://www.npmjs.com/package/bailian-cli)
@@ -55,9 +54,9 @@ A complete **2-minute, 16:9 cinematic short film** — produced end-to-end from 
 
 ### The single prompt
 
-> *"Generate a roughly 2-minute video in Japanese cinematic style — a sweet, innocent first-love story about a high-school girl. The plot should be heart-fluttering enough to make viewers want to fall in love. Aspect ratio: 16:9."*
+> _"Generate a roughly 2-minute video in Japanese cinematic style — a sweet, innocent first-love story about a high-school girl. The plot should be heart-fluttering enough to make viewers want to fall in love. Aspect ratio: 16:9."_
 >
-> *(Original: "帮我生成一段日系影视风格，高中女生的青涩初恋故事，剧情高甜，让人看了想谈恋爱，2分钟左右的视频，尺寸是16:9")*
+> _(Original: "帮我生成一段日系影视风格，高中女生的青涩初恋故事，剧情高甜，让人看了想谈恋爱，2分钟左右的视频，尺寸是16:9")_
 
 ### How it works
 
@@ -67,7 +66,6 @@ A complete **2-minute, 16:9 cinematic short film** — produced end-to-end from 
 4. The skill stitches all clips back together into a single 16:9 / ~2-min deliverable.
 
 No timeline scrubbing. No frame-by-frame editing. Just one sentence → one video.
-
 
 ## Installation
 
@@ -162,14 +160,14 @@ Config file location: `~/.bailian/config.json`
 
 ## Links
 
-| Resource                     | URL                                                             |
-| :--------------------------- | :-------------------------------------------------------------- |
-| Aliyun Model Studio CLI Site | https://bailian.console.aliyun.com/cli?source_channel=cli_github&                          |
-| DashScope API Docs           | https://help.aliyun.com/zh/model-studio/                        |
-| Qwen Model List              | https://help.aliyun.com/zh/model-studio/getting-started/models  |
-| Aliyun Model Studio Console  | https://bailian.console.aliyun.com/                             |
+| Resource                     | URL                                                               |
+| :--------------------------- | :---------------------------------------------------------------- |
+| Aliyun Model Studio CLI Site | https://bailian.console.aliyun.com/cli?source_channel=cli_github& |
+| DashScope API Docs           | https://help.aliyun.com/zh/model-studio/                          |
+| Qwen Model List              | https://help.aliyun.com/zh/model-studio/getting-started/models    |
+| Aliyun Model Studio Console  | https://bailian.console.aliyun.com/                               |
 | Get API Key                  | https://bailian.console.aliyun.com/cli?source_channel=key_github& |
-| Get AccessKey                | https://ram.console.aliyun.com/manage/ak                        |
+| Get AccessKey                | https://ram.console.aliyun.com/manage/ak                          |
 
 ## Changelog
 

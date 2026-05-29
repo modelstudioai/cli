@@ -47,13 +47,13 @@ pnpm bl video generate --prompt "a cat walking"
 
 ## Common scripts
 
-| Command          | What it does                                |
-| ---------------- | ------------------------------------------- |
-| `pnpm bl <args>` | Run the CLI from source                     |
-| `pnpm dev`       | Watch-build `bailian-cli-core`              |
-| `pnpm check`     | Format + lint + type check                  |
-| `pnpm test`      | Unit + e2e (e2e needs `DASHSCOPE_API_KEY`)  |
-| `pnpm ready`     | Full pre-PR verification                    |
+| Command          | What it does                               |
+| ---------------- | ------------------------------------------ |
+| `pnpm bl <args>` | Run the CLI from source                    |
+| `pnpm dev`       | Watch-build `bailian-cli-core`             |
+| `pnpm check`     | Format + lint + type check                 |
+| `pnpm test`      | Unit + e2e (e2e needs `DASHSCOPE_API_KEY`) |
+| `pnpm ready`     | Full pre-PR verification                   |
 
 ## AI Native engineering
 
