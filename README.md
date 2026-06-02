@@ -79,7 +79,10 @@ npx skills add modelstudioai/skills --all -g
 ## Quick Start
 
 ```bash
-# Authenticate
+# Authenticate, recommended
+bl auth login --console
+
+# Or authenticate with an API key
 bl auth login --api-key sk-xxxxx
 
 # Chat with Qwen
