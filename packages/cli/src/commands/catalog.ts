@@ -35,6 +35,10 @@ import consoleCall from "./console/call.ts";
 import usageFree from "./usage/free.ts";
 import pipelineRun from "./pipeline/run.ts";
 import pipelineValidate from "./pipeline/validate.ts";
+import pluginsList from "./plugins/list.ts";
+import pluginsInstall from "./plugins/install.ts";
+import pluginsLink from "./plugins/link.ts";
+import pluginsRemove from "./plugins/remove.ts";
 
 /** Command registry map (no dependency on registry.ts — safe for build-time import). */
 export const commands: Record<string, Command> = {
@@ -69,6 +73,10 @@ export const commands: Record<string, Command> = {
   "usage free": usageFree,
   "pipeline run": pipelineRun,
   "pipeline validate": pipelineValidate,
+  "plugins list": pluginsList,
+  "plugins install": pluginsInstall,
+  "plugins link": pluginsLink,
+  "plugins remove": pluginsRemove,
   "config show": configShow,
   "config set": configSet,
   "config export-schema": configExportSchema,

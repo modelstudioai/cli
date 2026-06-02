@@ -1,13 +1,14 @@
-import { defineCommand, generateToolSchema } from "bailian-cli-core";
+import { defineCommand, generateToolSchema, type Command } from "bailian-cli-core";
 import type { Config } from "bailian-cli-core";
 import type { GlobalFlags } from "bailian-cli-core";
 import { BailianError } from "bailian-cli-core";
 import { ExitCode } from "bailian-cli-core";
+import { loadCommandCatalog } from "../../load-commands.ts";
 
 /**
  * Commands that are infrastructure/auth-related and not suitable as Agent tools.
  */
-const SKIP_PREFIXES = ["auth ", "config ", "update"];
+const SKIP_PREFIXES = ["auth ", "config ", "update", "plugins "];
 
 export default defineCommand({
   name: "config export-schema",
@@ -22,7 +23,7 @@ export default defineCommand({
   ],
   examples: ["bl config export-schema", 'bl config export-schema --command "video generate"'],
   async run(config: Config, flags: GlobalFlags) {
-    const { commands } = await import("../catalog.ts");
+    const { commands } = await loadCommandCatalog();
     const targetCommand = flags.command as string | undefined;
 
     if (targetCommand) {
@@ -35,8 +36,7 @@ export default defineCommand({
       return;
     }
 
-    // Export all suitable commands
-    const allCommands = Object.values(commands);
+    const allCommands = Object.values(commands) as Command[];
     const schemas = allCommands
       .filter((c) => !SKIP_PREFIXES.some((p) => c.name.startsWith(p)))
       .map((c) => generateToolSchema(c));

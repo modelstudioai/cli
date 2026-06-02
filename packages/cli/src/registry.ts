@@ -2,7 +2,6 @@ import type { Command } from "bailian-cli-core";
 import { BailianError } from "bailian-cli-core";
 import { ExitCode } from "bailian-cli-core";
 import { DOCS_HOSTS, GLOBAL_OPTIONS, type Region } from "bailian-cli-core";
-import { commands } from "./commands/catalog.ts";
 
 export type { Command, OptionDef } from "bailian-cli-core";
 
@@ -11,7 +10,7 @@ interface CommandNode {
   children: Map<string, CommandNode>;
 }
 
-class CommandRegistry {
+export class CommandRegistry {
   private root: CommandNode = { children: new Map() };
 
   constructor(commands: Record<string, Command>) {
@@ -279,4 +278,32 @@ ${b("Getting Help:")}
   }
 }
 
-export const registry = new CommandRegistry(commands);
+let registryPromise: Promise<CommandRegistry> | undefined;
+let activeRegistry: CommandRegistry | undefined;
+
+export function resetRegistry(): void {
+  activeRegistry = undefined;
+  registryPromise = undefined;
+}
+
+/** 异步创建命令注册表（内置 + 插件） */
+export async function createRegistry(): Promise<CommandRegistry> {
+  if (activeRegistry) return activeRegistry;
+  if (!registryPromise) {
+    registryPromise = (async () => {
+      const { loadCommandCatalog } = await import("./load-commands.ts");
+      const catalog = await loadCommandCatalog();
+      activeRegistry = new CommandRegistry(catalog.commands);
+      return activeRegistry;
+    })();
+  }
+  return registryPromise;
+}
+
+/** main 初始化后获取 registry */
+export function getActiveRegistry(): CommandRegistry {
+  if (!activeRegistry) {
+    throw new Error("Command registry is not initialized yet.");
+  }
+  return activeRegistry;
+}

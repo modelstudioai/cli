@@ -21,3 +21,12 @@ export async function ensureConfigDir(): Promise<void> {
   const fs = await import("fs/promises");
   await fs.mkdir(dir, { recursive: true, mode: 0o700 });
 }
+
+export function getPluginsDir(): string {
+  if (process.env.BAILIAN_PLUGINS_DIR) return process.env.BAILIAN_PLUGINS_DIR;
+  return join(getConfigDir(), "plugins");
+}
+
+export function getPluginsManifestPath(): string {
+  return join(getPluginsDir(), "package.json");
+}

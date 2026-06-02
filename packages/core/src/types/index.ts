@@ -1,5 +1,12 @@
 export type { Command, CommandSpec, OptionDef } from "./command.ts";
 export { defineCommand, GLOBAL_OPTIONS } from "./command.ts";
+export type { BailianCliPackageMeta, BailianPlugin } from "./plugin.ts";
+export {
+  commandPathToFileBase,
+  fileToCommandPath,
+  isBailianPluginPackage,
+  isPluginPackageName,
+} from "./plugin.ts";
 export type { GlobalFlags } from "./flags.ts";
 export type {
   AppCompletionRequest,
