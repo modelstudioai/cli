@@ -59,18 +59,25 @@ npx skills add modelstudioai/skills --all -g
 
 ## 3. 鉴权（安装后必做才能调 API）
 
-用户需具备阿里云百炼 **API Key**。
+### 推荐：浏览器登录（控制台会话）
+
+适用于本机交互式安装，无需用户手动复制 API Key：
+
+1. 执行 `bl auth status --output json`，判断是否已配置。
+2. 若未配置，在**用户本机终端**执行 `bl auth login --console`；命令会拉起浏览器完成阿里云控制台登录授权。
+3. 登录成功后执行 `bl auth status --output json` 确认；汇报时只使用 masked 字段，**禁止**回显完整凭据。
+
+> 此方式同时打通 `app list`、`usage free` 等控制台能力，并自动配置 API Key 调用所需的鉴权信息。
+
+### 备选：由 Agent 引导用户输入 API Key 后登录
+
+适用于无法拉起浏览器的对话式安装（远程 SSH、CI 调试、纯终端环境等）：
 
 - 获取入口：[百炼控制台 API Key](https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key)
-
-### 推荐：由 Agent 引导用户输入后登录
-
-适用于对话式安装（Cursor、Claude 等）：
 
 1. 执行 `bl auth status --output json`，判断是否已配置。
 2. 若未配置或后续 API 校验失败，**请用户粘贴 API Key**（可说明从上述控制台复制；勿要求用户发到公开渠道）。
 3. 用户提供了 Key 之后，在**用户本机终端**执行（Agent 用终端工具跑，勿把 Key 写进回复正文）：`bl auth login --api-key <用户提供的_Key>`
-
 4. 登录成功后执行 `bl auth status --output json` 确认；汇报时只使用 masked 字段，**禁止**回显完整 Key。
 
 ### 其他方式
@@ -78,7 +85,6 @@ npx skills add modelstudioai/skills --all -g
 - **环境变量**（不落盘到配置文件）：在 shell 中配置 API Key 环境变量；变量名见 `bl auth status --help`，勿在对话中向用户解释底层命名。
 - **写入配置文件**（持久化，与 `auth login` 落盘相同）：`bl config set --key api_key --value <key>`（`--key api-key` 亦可）。**不会**像 `bl auth login --api-key` 那样先校验 Key 是否可用；Agent 引导安装时仍**优先**用 `auth login`。
 - **命令行临时传入**：需要 API Key 的 `bl` 子命令可在**当次**执行附加全局 `--api-key <key>`，仅本次生效、不落盘（例：`bl text chat --api-key sk-xxx --message "你好"`）。与上文持久化方式不是同一用途。
-- **浏览器登录（控制台会话）**：`bl auth login --console`，用于 `app list`、`usage free` 等控制台能力；与 API Key 登录可并存，详见 `bl auth login --help`
 
 ### Agent 安全约束
 
