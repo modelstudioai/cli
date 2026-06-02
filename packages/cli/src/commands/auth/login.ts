@@ -58,7 +58,10 @@ export default defineCommand({
         return;
       }
       const hasApiKey = !!(config.apiKey || config.fileApiKey);
-      await runConsoleLogin(resolveConsoleOrigin(), { needApiKey: !hasApiKey });
+      await runConsoleLogin(resolveConsoleOrigin(), {
+        needApiKey: !hasApiKey,
+        onApiKey: (key) => validateKeyAndPersist(config, key),
+      });
       return;
     }
 
