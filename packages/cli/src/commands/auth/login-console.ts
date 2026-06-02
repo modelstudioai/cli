@@ -278,7 +278,7 @@ function openInBrowser(url: string): Promise<void> {
 
 export async function runConsoleLogin(
   consoleOrigin: string,
-  opts?: { needApiKey?: boolean },
+  opts?: { needApiKey?: boolean; onApiKey?: (key: string) => Promise<void> },
 ): Promise<void> {
   const state = randomBytes(16).toString("hex");
   const server = http.createServer(async (req, res) => {
@@ -304,12 +304,15 @@ export async function runConsoleLogin(
 
       if (accessToken || apiKey) {
         try {
-          const existing = readConfigFile() as Record<string, unknown>;
-          if (accessToken) existing.access_token = accessToken;
-          if (apiKey) existing.api_key = apiKey;
-          await writeConfigFile(existing);
-          if (accessToken) process.stderr.write(`access_token saved to ${getConfigPath()}\n`);
-          if (apiKey) process.stderr.write(`api_key saved to ${getConfigPath()}\n`);
+          if (accessToken) {
+            const existing = readConfigFile() as Record<string, unknown>;
+            existing.access_token = accessToken;
+            await writeConfigFile(existing);
+            process.stderr.write(`access_token saved to ${getConfigPath()}\n`);
+          }
+          if (apiKey && opts?.onApiKey) {
+            await opts.onApiKey(apiKey);
+          }
         } catch {
           res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
           res.end("Failed to save credentials\n");
