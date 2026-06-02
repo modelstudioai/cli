@@ -281,6 +281,7 @@ export async function runConsoleLogin(
   opts?: { needApiKey?: boolean; onApiKey?: (key: string) => Promise<void> },
 ): Promise<void> {
   const state = randomBytes(16).toString("hex");
+  let callbackError: unknown;
   const server = http.createServer(async (req, res) => {
     try {
       if (req.method === "OPTIONS") {
@@ -313,9 +314,11 @@ export async function runConsoleLogin(
           if (apiKey && opts?.onApiKey) {
             await opts.onApiKey(apiKey);
           }
-        } catch {
+        } catch (err: unknown) {
+          callbackError = err;
           res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
           res.end("Failed to save credentials\n");
+          server.close();
           return;
         }
       }
@@ -388,4 +391,8 @@ export async function runConsoleLogin(
       }
     });
   });
+
+  if (callbackError) {
+    throw callbackError;
+  }
 }

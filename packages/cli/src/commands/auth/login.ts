@@ -1,4 +1,6 @@
 import {
+  BailianError,
+  ExitCode,
   chatEndpoint,
   defineCommand,
   getConfigPath,
@@ -16,18 +18,58 @@ import { promptConfirm } from "../../output/prompt.ts";
 import { printCurrentCommandHelp } from "../../utils/command-help.ts";
 import { resolveConsoleOrigin, runConsoleLogin } from "./login-console.ts";
 
+const RETRY_DELAY_BASE_MS = 500;
+
+function canRetry(err: unknown): boolean {
+  if (err instanceof BailianError) {
+    if (err.exitCode === ExitCode.NETWORK || err.exitCode === ExitCode.TIMEOUT) {
+      return true;
+    }
+    const status = err.api?.httpStatus;
+    return status === 401 || (status !== undefined && status >= 500);
+  }
+  if (err instanceof Error) {
+    return (
+      err.name === "AbortError" ||
+      err.name === "TimeoutError" ||
+      err.message.includes("timed out") ||
+      err.message === "fetch failed"
+    );
+  }
+  return false;
+}
+
 async function validateKeyAndPersist(config: Config, key: string): Promise<void> {
   process.stderr.write("Testing key... ");
   const testConfig = { ...config, apiKey: key };
-  await requestJson<unknown>(testConfig, {
+  const requestOpts = {
     url: chatEndpoint(testConfig.baseUrl),
     method: "POST",
+    timeout: Math.min(config.timeout, 30),
     body: {
       model: "qwen3.7-max",
       messages: [{ role: "user", content: "hi" }],
       max_tokens: 1,
     },
-  });
+  };
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await requestJson<unknown>(testConfig, requestOpts);
+      break;
+    } catch (err) {
+      if (attempt >= 3 || !canRetry(err)) {
+        process.stderr.write("\n");
+        throw new BailianError("API key validation failed", ExitCode.AUTH, "Invalid API key.", {
+          cause: err,
+        });
+      }
+      // retry delay: 500ms, 1000ms, 2000ms
+      const delayMs = RETRY_DELAY_BASE_MS * 2 ** (attempt - 1);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
   process.stderr.write("Valid\n");
 
   const existing = readConfigFile() as Record<string, unknown>;
