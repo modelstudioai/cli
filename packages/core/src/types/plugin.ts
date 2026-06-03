@@ -33,24 +33,21 @@ export function commandPathToFileBase(commandPath: string): string {
 
 const BUILTIN_PACKAGE_NAMES = new Set(["bailian-cli", "bailian-cli-core"]);
 
-/** 判断 npm 包名是否像 bailian 官方/第三方插件包 */
+/** 判断 npm 包名是否符合 bailian-cli 插件命名：bailian-plugin-* 或 @scope/bailian-plugin-* */
 export function isPluginPackageName(name: string): boolean {
   if (BUILTIN_PACKAGE_NAMES.has(name)) return false;
-  if (name.startsWith("bailian-") && name !== "bailian-cli") return true;
+  if (name.startsWith("bailian-plugin-")) return true;
   const scoped = /^@[^/]+\/(.+)$/.exec(name);
-  if (scoped) {
-    const base = scoped[1]!;
-    if (base.startsWith("bailian-plugin-")) return true;
-    if (base.startsWith("bailian-") && base !== "bailian-cli") return true;
-  }
+  if (scoped) return scoped[1]!.startsWith("bailian-plugin-");
   return false;
 }
 
-/** 读取 package.json 后判断是否为 bailian-cli 插件（须显式声明 bailianCli.plugin=true） */
+/** 读取 package.json 后判断是否为 bailian-cli 插件（命名 + bailianCli.plugin=true） */
 export function isBailianPluginPackage(
   name: string,
   bailianCli: BailianCliPackageMeta | undefined,
 ): boolean {
   if (BUILTIN_PACKAGE_NAMES.has(name)) return false;
+  if (!isPluginPackageName(name)) return false;
   return bailianCli?.plugin === true;
 }

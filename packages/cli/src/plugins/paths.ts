@@ -21,8 +21,6 @@ export function resolveCliPackageRoot(): string {
  */
 export function getNodeModuleRoots(): string[] {
   const roots = new Set<string>();
-  const cwdModules = join(process.cwd(), "node_modules");
-  if (existsSync(cwdModules)) roots.add(cwdModules);
 
   const cliModules = join(resolveCliPackageRoot(), "node_modules");
   if (existsSync(cliModules)) roots.add(cliModules);
@@ -31,4 +29,12 @@ export function getNodeModuleRoots(): string[] {
   if (existsSync(userModules)) roots.add(userModules);
 
   return [...roots];
+}
+
+/**
+ * Get the plugins cache path.
+ * @returns The plugins cache path.
+ */
+export function getPluginsCachePath(): string {
+  return join(getPluginsDir(), "commands-cache.json");
 }

@@ -14,7 +14,10 @@ export default defineCommand({
   description: "Install a bailian-cli plugin package into ~/.bailian/plugins",
   usage: "bl plugins install <package>",
   options: [],
-  examples: ["bl plugins install @alife/bailian-agent", "bl plugins install bailian-agent"],
+  examples: [
+    "bl plugins install @ali/bailian-plugin-agent",
+    "bl plugins install bailian-plugin-agent",
+  ],
   async run(_config: Config, flags: GlobalFlags) {
     const positional = flags._positional as string[] | undefined;
     const packageSpec = positional?.[0];

@@ -5,17 +5,22 @@ import {
 } from "../src/types/plugin.ts";
 import { expect, test } from "vite-plus/test";
 
-test("isPluginPackageName matches naming convention only", () => {
-  expect(isPluginPackageName("bailian-agent")).toBe(true);
-  expect(isPluginPackageName("@alife/bailian-agent")).toBe(true);
-  expect(isPluginPackageName("lodash")).toBe(false);
+test("isPluginPackageName requires bailian-plugin-* prefix", () => {
+  expect(isPluginPackageName("bailian-plugin-agent")).toBe(true);
+  expect(isPluginPackageName("@alife/bailian-plugin-agent")).toBe(true);
+  expect(isPluginPackageName("bailian-agent")).toBe(false);
+  expect(isPluginPackageName("@alife/bailian-agent")).toBe(false);
   expect(isPluginPackageName("bailian-cli")).toBe(false);
+  expect(isPluginPackageName("lodash")).toBe(false);
 });
 
-test("isBailianPluginPackage requires bailianCli.plugin=true", () => {
-  expect(isBailianPluginPackage("bailian-agent", { plugin: true, commands: "./cmds" })).toBe(true);
-  expect(isBailianPluginPackage("bailian-agent", { commands: "./cmds" })).toBe(false);
-  expect(isBailianPluginPackage("bailian-agent", undefined)).toBe(false);
+test("isBailianPluginPackage requires naming and bailianCli.plugin=true", () => {
+  expect(isBailianPluginPackage("bailian-plugin-agent", { plugin: true, commands: "./cmds" })).toBe(
+    true,
+  );
+  expect(isBailianPluginPackage("bailian-agent", { plugin: true, commands: "./cmds" })).toBe(false);
+  expect(isBailianPluginPackage("bailian-plugin-agent", { commands: "./cmds" })).toBe(false);
+  expect(isBailianPluginPackage("bailian-plugin-agent", undefined)).toBe(false);
   expect(isBailianPluginPackage("bailian-cli", { plugin: true, commands: "./cmds" })).toBe(false);
 });
 

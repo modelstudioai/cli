@@ -13,7 +13,7 @@ export default defineCommand({
   name: "plugins remove",
   description: "Remove an installed bailian-cli plugin",
   usage: "bl plugins remove <name>",
-  examples: ["bl plugins remove @alife/bailian-agent"],
+  examples: ["bl plugins remove bailian-plugin-agent"],
   async run(_config: Config, flags: GlobalFlags) {
     const positional = flags._positional as string[] | undefined;
     const name = positional?.[0];

@@ -11,6 +11,7 @@ import {
   type BailianCliPackageMeta,
 } from "bailian-cli-core";
 import { resetCommandCatalogCache } from "../load-commands.ts";
+import { clearCommandsCache } from "./cache.ts";
 import { discoverPlugins, readPackageJson } from "./discover.ts";
 import {
   diffAddedDepNames,
@@ -58,6 +59,7 @@ async function writeManifest(manifest: UserPluginsManifest): Promise<void> {
     },
   );
   resetCommandCatalogCache();
+  void clearCommandsCache();
 }
 
 async function validatePluginPackageAsync(
@@ -69,7 +71,7 @@ async function validatePluginPackageAsync(
   }
   if (!isBailianPluginPackage(pjson.name, pjson.bailianCli)) {
     throw new BailianError(
-      `Package "${pjson.name}" is not a valid bailian-cli plugin (set bailianCli.plugin=true and bailianCli.commands).`,
+      `Package "${pjson.name}" is not a valid bailian-cli plugin (name must be bailian-plugin-* or @scope/bailian-plugin-*, with bailianCli.plugin=true and bailianCli.commands).`,
       ExitCode.USAGE,
     );
   }
