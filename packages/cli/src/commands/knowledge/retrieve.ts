@@ -2,6 +2,7 @@ import {
   defineCommand,
   signRequest,
   detectOutputFormat,
+  maskToken,
   type Config,
   type GlobalFlags,
   type KnowledgeRetrieveRequest,
@@ -105,7 +106,7 @@ export default defineCommand({
 
     if (config.verbose) {
       process.stderr.write(`> POST ${url}\n`);
-      process.stderr.write(`> AK: ${accessKeyId.slice(0, 8)}...\n`);
+      process.stderr.write(`> AK: ${maskToken(accessKeyId)}\n`);
     }
 
     const timeoutMs = config.timeout * 1000;
