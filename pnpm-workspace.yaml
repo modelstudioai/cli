@@ -9,7 +9,7 @@ catalog:
   vite: npm:@voidzero-dev/vite-plus-core@latest
   vite-plus: latest
   vitest: npm:@voidzero-dev/vite-plus-test@latest
-  yaml: ^2.8.3
+  yaml: ^2.9.0
 
 catalogMode: prefer
 overrides:
