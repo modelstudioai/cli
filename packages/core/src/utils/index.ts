@@ -10,4 +10,4 @@ export {
   parseOptionalBooleanValue,
   resolveBooleanFlag,
   resolveWatermark,
-} from "./watermark.ts";
+} from "./boolean-flag.ts";

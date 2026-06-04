@@ -166,7 +166,7 @@ export interface ImageGenerateInput {
   seed?: number;
   "negative-prompt"?: string;
   "prompt-extend"?: boolean | string;
-  watermark?: boolean;
+  watermark?: boolean | string;
   "out-dir"?: string;
   "out-prefix"?: string;
 }
@@ -251,7 +251,7 @@ export interface ImageEditInput {
   seed?: number;
   "negative-prompt"?: string;
   "prompt-extend"?: boolean | string;
-  watermark?: boolean;
+  watermark?: boolean | string;
   "out-dir"?: string;
   "out-prefix"?: string;
 }
@@ -375,7 +375,7 @@ export interface VideoGenerateInput {
   ratio?: string;
   duration?: number;
   "prompt-extend"?: boolean | string;
-  watermark?: boolean;
+  watermark?: boolean | string;
   seed?: number;
   "poll-interval"?: number;
 }

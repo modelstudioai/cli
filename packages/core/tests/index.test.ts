@@ -2,7 +2,11 @@ import { expect, test } from "vite-plus/test";
 import type { Config } from "../src/index.ts";
 import { BailianError, ExitCode, McpClient, mapApiError, request } from "../src/index.ts";
 import { parseConfigFile } from "../src/config/schema.ts";
-import { parseBooleanValue, resolveBooleanFlag, resolveWatermark } from "../src/utils/watermark.ts";
+import {
+  parseBooleanValue,
+  resolveBooleanFlag,
+  resolveWatermark,
+} from "../src/utils/boolean-flag.ts";
 
 function testConfig(overrides: Partial<Config> = {}): Config {
   return {

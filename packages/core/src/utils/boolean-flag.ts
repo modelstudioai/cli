@@ -1,7 +1,7 @@
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 
-/** Parse true/false from CLI flags (e.g. `--watermark`). */
+/** Parse true/false from CLI flags (e.g. `--watermark <bool>`). */
 export function parseBooleanValue(value: unknown, label = "boolean"): boolean {
   if (typeof value === "boolean") return value;
   if (typeof value === "string") {
@@ -36,5 +36,5 @@ export function resolveBooleanFlag(
 
 /** Resolve `--watermark` flag; default true when unset. */
 export function resolveWatermark(flagValue: unknown): boolean {
-  return resolveBooleanFlag(flagValue, true, "watermark") ?? true;
+  return parseOptionalBooleanValue(flagValue, "watermark") ?? true;
 }
