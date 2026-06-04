@@ -46,7 +46,7 @@
     "bailian-cli-core": "workspace:*"
   },
   "devDependencies": {
-    "@clack/prompts": "^0.7.0",
+    "@clack/prompts": "^1.5.1",
     "@types/node": "catalog:",
     "@typescript/native-preview": "7.0.0-dev.20260328.1",
     "ajv": "catalog:",
