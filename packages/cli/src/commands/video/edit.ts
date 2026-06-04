@@ -22,6 +22,10 @@ import { poll } from "../../utils/polling.ts";
 import { downloadFile, formatBytes } from "../../utils/download.ts";
 import { promptText, failIfMissing } from "../../output/prompt.ts";
 import { emitResult, emitBare } from "../../output/output.ts";
+import {
+  BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT,
+  BOOL_FLAG_WATERMARK,
+} from "../../utils/flag-descriptions.ts";
 
 export default defineCommand({
   name: "video edit",
@@ -55,11 +59,11 @@ export default defineCommand({
     },
     {
       flag: "--prompt-extend <bool>",
-      description: "Enable prompt extend (true/false). Omit to use API default.",
+      description: BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT,
     },
     {
       flag: "--watermark <bool>",
-      description: "Enable watermark (true/false). Default: true.",
+      description: BOOL_FLAG_WATERMARK,
     },
     { flag: "--seed <n>", description: "Random seed for reproducible generation", type: "number" },
     { flag: "--download <path>", description: "Save video to file on completion" },

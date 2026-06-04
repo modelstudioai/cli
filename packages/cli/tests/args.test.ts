@@ -1,11 +1,12 @@
 import { expect, test } from "vite-plus/test";
 import { ExitCode, GLOBAL_OPTIONS } from "bailian-cli-core";
 import { parseFlags } from "../src/args.ts";
+import { BOOL_FLAG_WATERMARK } from "../src/utils/flag-descriptions.ts";
 
 const IMAGE_GENERATE_OPTIONS = [
   { flag: "--prompt <text>", description: "Image description", required: true },
   { flag: "--model <model>", description: "Model ID" },
-  { flag: "--watermark <bool>", description: "Enable watermark (true/false). Default: true." },
+  { flag: "--watermark <bool>", description: BOOL_FLAG_WATERMARK },
 ];
 
 test("parseFlags rejects unknown long flags", () => {

@@ -26,6 +26,10 @@ import { runConcurrent, downloadParallel, getConcurrency } from "../../utils/con
 import { promptText, failIfMissing } from "../../output/prompt.ts";
 import { emitResult, emitBare } from "../../output/output.ts";
 import { resolveImageSize } from "../../utils/image-size.ts";
+import {
+  BOOL_FLAG_PROMPT_EXTEND_IMAGE_GENERATE,
+  BOOL_FLAG_WATERMARK,
+} from "../../utils/flag-descriptions.ts";
 
 import { join } from "path";
 
@@ -60,12 +64,11 @@ export default defineCommand({
     },
     {
       flag: "--prompt-extend <bool>",
-      description:
-        "Enable prompt extend (true/false). Default: true for qwen-image sync models; omit for async.",
+      description: BOOL_FLAG_PROMPT_EXTEND_IMAGE_GENERATE,
     },
     {
       flag: "--watermark <bool>",
-      description: "Enable watermark (true/false). Default: true.",
+      description: BOOL_FLAG_WATERMARK,
     },
     {
       flag: "--no-wait",

@@ -24,6 +24,10 @@ import { promptText, failIfMissing } from "../../output/prompt.ts";
 import { emitResult, emitBare } from "../../output/output.ts";
 import { resolveImageSize } from "../../utils/image-size.ts";
 import { join } from "path";
+import {
+  BOOL_FLAG_PROMPT_EXTEND_CLI_TRUE,
+  BOOL_FLAG_WATERMARK,
+} from "../../utils/flag-descriptions.ts";
 
 export default defineCommand({
   name: "image edit",
@@ -51,11 +55,11 @@ export default defineCommand({
     },
     {
       flag: "--prompt-extend <bool>",
-      description: "Enable prompt extend (true/false). Default: true.",
+      description: BOOL_FLAG_PROMPT_EXTEND_CLI_TRUE,
     },
     {
       flag: "--watermark <bool>",
-      description: "Enable watermark (true/false). Default: true.",
+      description: BOOL_FLAG_WATERMARK,
     },
     { flag: "--out-dir <dir>", description: "Download images to directory" },
     { flag: "--out-prefix <prefix>", description: "Filename prefix (default: edited)" },
