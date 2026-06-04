@@ -1,8 +1,7 @@
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
-import type { Config } from "../config/schema.ts";
 
-/** Parse true/false from CLI flags or `bl config set --key watermark --value …`. */
+/** Parse true/false from CLI flags (e.g. `--watermark`). */
 export function parseBooleanValue(value: unknown, label = "boolean"): boolean {
   if (typeof value === "boolean") return value;
   if (typeof value === "string") {
@@ -21,10 +20,21 @@ export function parseOptionalBooleanValue(value: unknown, label = "boolean"): bo
   return parseBooleanValue(value, label);
 }
 
-/** Command `--watermark` overrides `config.watermark`; default true when both unset. */
-export function resolveWatermark(config: Config, flagValue: unknown): boolean {
-  const fromFlag = parseOptionalBooleanValue(flagValue, "watermark");
+/**
+ * Resolve a tri-state boolean CLI flag (`--name <bool>`).
+ * Returns `defaultWhenUnset` when the flag is omitted.
+ */
+export function resolveBooleanFlag(
+  flagValue: unknown,
+  defaultWhenUnset: boolean | undefined,
+  label = "boolean",
+): boolean | undefined {
+  const fromFlag = parseOptionalBooleanValue(flagValue, label);
   if (fromFlag !== undefined) return fromFlag;
-  if (config.watermark !== undefined) return config.watermark;
-  return true;
+  return defaultWhenUnset;
+}
+
+/** Resolve `--watermark` flag; default true when unset. */
+export function resolveWatermark(flagValue: unknown): boolean {
+  return resolveBooleanFlag(flagValue, true, "watermark") ?? true;
 }

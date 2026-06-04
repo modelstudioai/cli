@@ -33,7 +33,6 @@ export interface ConfigFile {
   workspace_id?: string;
   console_gateway_url?: string;
   telemetry?: boolean;
-  watermark?: boolean;
 }
 
 const VALID_REGIONS = new Set<string>(["cn", "us", "intl"]);
@@ -91,7 +90,6 @@ export function parseConfigFile(raw: unknown): ConfigFile {
   if (typeof obj.console_gateway_url === "string" && isHttpUrl(obj.console_gateway_url))
     out.console_gateway_url = obj.console_gateway_url;
   if (typeof obj.telemetry === "boolean") out.telemetry = obj.telemetry;
-  if (typeof obj.watermark === "boolean") out.watermark = obj.watermark;
 
   return out;
 }
@@ -129,5 +127,4 @@ export interface Config {
   nonInteractive: boolean;
   async: boolean;
   telemetry: boolean;
-  watermark?: boolean;
 }

@@ -15,6 +15,7 @@ import {
   type DashScopeImageSyncResponse,
   ExitCode,
   BailianError,
+  resolveBooleanFlag,
   resolveWatermark,
 } from "bailian-cli-core";
 import { downloadFile } from "../../utils/download.ts";
@@ -48,11 +49,13 @@ export default defineCommand({
       flag: "--negative-prompt <text>",
       description: "Negative prompt to exclude unwanted content",
     },
-    { flag: "--prompt-extend", description: "Enable prompt smart rewrite (default: true)" },
-    { flag: "--no-prompt-extend", description: "Disable prompt extend" },
+    {
+      flag: "--prompt-extend <bool>",
+      description: "Enable prompt extend (true/false). Default: true.",
+    },
     {
       flag: "--watermark <bool>",
-      description: "Enable watermark (true/false). Overrides config watermark.",
+      description: "Enable watermark (true/false). Default: true.",
     },
     { flag: "--out-dir <dir>", description: "Download images to directory" },
     { flag: "--out-prefix <prefix>", description: "Filename prefix (default: edited)" },
@@ -101,15 +104,7 @@ export default defineCommand({
     );
     const n = (flags.n as number) ?? 1;
 
-    // Determine prompt_extend
-    let promptExtend: boolean | undefined;
-    if (flags.noPromptExtend === true) {
-      promptExtend = false;
-    } else if (flags.promptExtend === true) {
-      promptExtend = true;
-    } else {
-      promptExtend = true; // default on for qwen-image
-    }
+    const promptExtend = resolveBooleanFlag(flags.promptExtend, true, "prompt-extend");
 
     // Build content: all images first, then text prompt
     const contentItems: Array<{ image?: string; text?: string }> = resolvedImages.map(
@@ -117,7 +112,7 @@ export default defineCommand({
     );
     contentItems.push({ text: prompt! });
 
-    const watermark = resolveWatermark(config, flags.watermark);
+    const watermark = resolveWatermark(flags.watermark);
 
     const body: DashScopeImageRequest = {
       model,

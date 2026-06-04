@@ -15,6 +15,7 @@ import {
   resolveCredential,
   BailianError,
   ExitCode,
+  resolveBooleanFlag,
   resolveWatermark,
 } from "bailian-cli-core";
 import { poll } from "../../utils/polling.ts";
@@ -59,10 +60,13 @@ export default defineCommand({
       description: "Video duration in seconds (default: 5)",
       type: "number",
     },
-    { flag: "--prompt-extend", description: "Automatically extend prompt for better results" },
+    {
+      flag: "--prompt-extend <bool>",
+      description: "Enable prompt extend (true/false). Omit to use API default.",
+    },
     {
       flag: "--watermark <bool>",
-      description: "Enable watermark (true/false). Overrides config watermark.",
+      description: "Enable watermark (true/false). Default: true.",
     },
     { flag: "--seed <n>", description: "Random seed for reproducible generation", type: "number" },
     { flag: "--download <path>", description: "Save video to file on completion" },
@@ -115,7 +119,8 @@ export default defineCommand({
       resolvedImageUrl = await resolveFileUrl(imageUrl, credential.token, model);
     }
 
-    const watermark = resolveWatermark(config, flags.watermark);
+    const watermark = resolveWatermark(flags.watermark);
+    const promptExtend = resolveBooleanFlag(flags.promptExtend, undefined, "prompt-extend");
 
     const body: DashScopeVideoRequest = {
       model,
@@ -131,7 +136,7 @@ export default defineCommand({
         resolution: normalizeResolution(flags.resolution as string) || undefined,
         ratio: (flags.ratio as string) || undefined,
         duration: (flags.duration as number) || undefined,
-        prompt_extend: flags.promptExtend === true ? true : undefined,
+        prompt_extend: promptExtend,
         watermark,
         seed: flags.seed as number | undefined,
       },

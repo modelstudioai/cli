@@ -4,7 +4,6 @@ import {
   maskToken,
   readConfigFile,
   writeConfigFile,
-  parseBooleanValue,
   BailianError,
   type Config,
   type GlobalFlags,
@@ -28,7 +27,6 @@ const VALID_KEYS = [
   "access_key_id",
   "access_key_secret",
   "workspace_id",
-  "watermark",
 ];
 
 // Keys whose values are secrets. Their stored value must never be echoed back in
@@ -50,7 +48,6 @@ const KEY_ALIASES: Record<string, string> = {
   "access-key-id": "access_key_id",
   "access-key-secret": "access_key_secret",
   "workspace-id": "workspace_id",
-  watermark: "watermark",
 };
 
 export default defineCommand({
@@ -61,14 +58,13 @@ export default defineCommand({
     {
       flag: "--key <key>",
       description:
-        "Config key (region, base_url, output, output_dir, timeout, api_key, access_token, default_*_model, access_key_id, access_key_secret, workspace_id, watermark)",
+        "Config key (region, base_url, output, output_dir, timeout, api_key, access_token, default_*_model, access_key_id, access_key_secret, workspace_id)",
     },
     { flag: "--value <value>", description: "Value to set" },
   ],
   examples: [
     "bl config set --key output --value json",
     "bl config set --key timeout --value 600",
-    "bl config set --key watermark --value false",
     "bl config set --key base_url --value https://dashscope.aliyuncs.com",
   ],
   async run(config: Config, flags: GlobalFlags) {
@@ -118,10 +114,7 @@ export default defineCommand({
       }
     }
 
-    let storedValue: string | number | boolean = resolvedKey === "timeout" ? Number(value) : value;
-    if (resolvedKey === "watermark") {
-      storedValue = parseBooleanValue(value, "watermark");
-    }
+    const storedValue: string | number = resolvedKey === "timeout" ? Number(value) : value;
 
     const format = detectOutputFormat(config.output);
 

@@ -17,6 +17,7 @@ import {
   type OutputFormat,
   type DashScopeTaskResponse,
   generateFilename,
+  resolveBooleanFlag,
   resolveWatermark,
 } from "bailian-cli-core";
 import { poll } from "../../utils/polling.ts";
@@ -58,13 +59,13 @@ export default defineCommand({
       description: "Negative prompt to exclude unwanted content",
     },
     {
-      flag: "--prompt-extend",
-      description: "Automatically extend prompt for better results (default: true for qwen-image)",
+      flag: "--prompt-extend <bool>",
+      description:
+        "Enable prompt extend (true/false). Default: true for qwen-image sync models; omit for async.",
     },
-    { flag: "--no-prompt-extend", description: "Disable prompt extend" },
     {
       flag: "--watermark <bool>",
-      description: "Enable watermark (true/false). Overrides config watermark.",
+      description: "Enable watermark (true/false). Default: true.",
     },
     {
       flag: "--no-wait",
@@ -82,7 +83,7 @@ export default defineCommand({
     'bl image generate --prompt "一只穿太空服的猫在火星上"',
     'bl image generate --prompt "Logo design" --n 3 --out-dir ./generated/',
     'bl image generate --prompt "Mountain landscape" --size 2688*1536',
-    'bl image generate --prompt "A castle" --seed 42 --no-prompt-extend',
+    'bl image generate --prompt "A castle" --seed 42 --prompt-extend false',
     'bl image generate --prompt "Logo" --watermark false',
     'bl image generate --prompt "An alien in the space" --watermark false',
     'bl image generate --prompt "sunset" --model wan2.6-t2i --no-wait --quiet',
@@ -117,17 +118,13 @@ export default defineCommand({
     const n = (flags.n as number) ?? 1;
     const concurrent = getConcurrency(flags);
 
-    // Determine prompt_extend: default true for qwen-image, undefined for others
-    let promptExtend: boolean | undefined;
-    if (flags.noPromptExtend === true) {
-      promptExtend = false;
-    } else if (flags.promptExtend === true) {
-      promptExtend = true;
-    } else if (useSync) {
-      promptExtend = true; // qwen-image default
-    }
+    const promptExtend = resolveBooleanFlag(
+      flags.promptExtend,
+      useSync ? true : undefined,
+      "prompt-extend",
+    );
 
-    const watermark = resolveWatermark(config, flags.watermark);
+    const watermark = resolveWatermark(flags.watermark);
 
     const body: DashScopeImageRequest = {
       model,

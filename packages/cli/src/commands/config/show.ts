@@ -38,7 +38,6 @@ export default defineCommand({
     if (file.default_text_model) result.default_text_model = file.default_text_model;
     if (file.default_video_model) result.default_video_model = file.default_video_model;
     if (file.default_image_model) result.default_image_model = file.default_image_model;
-    if (file.watermark !== undefined) result.watermark = file.watermark;
 
     emitResult(result, format);
   },

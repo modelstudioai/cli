@@ -67,7 +67,6 @@ const PARAM_ALLOWLIST = new Set([
   "noWait",
   "textOnly",
   "promptExtend",
-  "noPromptExtend",
   "enableSsml",
   "watermark",
   "hasThoughts",

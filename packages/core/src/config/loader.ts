@@ -96,6 +96,5 @@ export function loadConfig(flags: GlobalFlags): Config {
     nonInteractive: flags.nonInteractive || false,
     async: flags.async || false,
     telemetry: process.env.DO_NOT_TRACK === "1" ? false : (file.telemetry ?? true),
-    watermark: file.watermark,
   };
 }
