@@ -19,8 +19,7 @@
     "dev": "pnpm -F bailian-cli-core dev",
     "bl": "pnpm -F bailian-cli dev",
     "test": "vp test",
-    "release:check": "node tools/release.mjs check",
-    "release:publish": "node tools/release.mjs publish",
+    "release:check": "node tools/release/check.mjs",
     "wiki:crawl": "node tools/wiki-crawler/index.mjs",
     "test:stress": "node packages/cli/tests/stress/run.mjs"
   },
