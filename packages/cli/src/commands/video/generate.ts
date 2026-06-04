@@ -15,6 +15,8 @@ import {
   resolveCredential,
   BailianError,
   ExitCode,
+  resolveBooleanFlag,
+  resolveWatermark,
 } from "bailian-cli-core";
 import { poll } from "../../utils/polling.ts";
 import { downloadFile, formatBytes } from "../../utils/download.ts";
@@ -58,8 +60,14 @@ export default defineCommand({
       description: "Video duration in seconds (default: 5)",
       type: "number",
     },
-    { flag: "--prompt-extend", description: "Automatically extend prompt for better results" },
-    { flag: "--watermark", description: "Add watermark to generated video" },
+    {
+      flag: "--prompt-extend <bool>",
+      description: "Enable prompt extend (true/false). Omit to use API default.",
+    },
+    {
+      flag: "--watermark <bool>",
+      description: "Enable watermark (true/false). Default: true.",
+    },
     { flag: "--seed <n>", description: "Random seed for reproducible generation", type: "number" },
     { flag: "--download <path>", description: "Save video to file on completion" },
     { flag: "--no-wait", description: "Return task ID immediately without waiting" },
@@ -78,6 +86,7 @@ export default defineCommand({
     'bl video generate --prompt "Ocean waves at sunset." --download sunset.mp4',
     'bl video generate --image https://example.com/cat.png --prompt "让画面中的猫动起来"',
     'bl video generate --prompt "Mountain landscape" --resolution 1280*720 --duration 5',
+    'bl video generate --prompt "A cat playing with a ball" --watermark false',
   ],
   async run(config: Config, flags: GlobalFlags) {
     let prompt = flags.prompt as string | undefined;
@@ -110,6 +119,9 @@ export default defineCommand({
       resolvedImageUrl = await resolveFileUrl(imageUrl, credential.token, model);
     }
 
+    const watermark = resolveWatermark(flags.watermark);
+    const promptExtend = resolveBooleanFlag(flags.promptExtend, undefined, "prompt-extend");
+
     const body: DashScopeVideoRequest = {
       model,
       input: {
@@ -124,8 +136,8 @@ export default defineCommand({
         resolution: normalizeResolution(flags.resolution as string) || undefined,
         ratio: (flags.ratio as string) || undefined,
         duration: (flags.duration as number) || undefined,
-        prompt_extend: flags.promptExtend === true ? true : undefined,
-        watermark: flags.watermark === true ? true : undefined,
+        prompt_extend: promptExtend,
+        watermark,
         seed: flags.seed as number | undefined,
       },
     };

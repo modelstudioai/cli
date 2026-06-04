@@ -114,6 +114,8 @@ export default defineCommand({
       }
     }
 
+    const storedValue: string | number = resolvedKey === "timeout" ? Number(value) : value;
+
     const format = detectOutputFormat(config.output);
 
     if (config.dryRun) {
@@ -122,7 +124,7 @@ export default defineCommand({
     }
 
     const existing = readConfigFile() as Record<string, unknown>;
-    existing[resolvedKey] = resolvedKey === "timeout" ? Number(value) : value;
+    existing[resolvedKey] = storedValue;
     await writeConfigFile(existing);
 
     if (!config.quiet) {

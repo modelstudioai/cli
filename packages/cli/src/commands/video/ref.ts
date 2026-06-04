@@ -15,6 +15,8 @@ import {
   resolveCredential,
   BailianError,
   ExitCode,
+  resolveBooleanFlag,
+  resolveWatermark,
 } from "bailian-cli-core";
 import { poll } from "../../utils/polling.ts";
 import { downloadFile, formatBytes } from "../../utils/download.ts";
@@ -61,9 +63,14 @@ export default defineCommand({
       description: "Video duration in seconds (2-10, default: 5)",
       type: "number",
     },
-    { flag: "--prompt-extend", description: "Enable prompt intelligent rewriting" },
-    { flag: "--no-prompt-extend", description: "Disable prompt intelligent rewriting" },
-    { flag: "--watermark", description: "Add watermark to generated video" },
+    {
+      flag: "--prompt-extend <bool>",
+      description: "Enable prompt extend (true/false). Omit to use API default.",
+    },
+    {
+      flag: "--watermark <bool>",
+      description: "Enable watermark (true/false). Default: true.",
+    },
     { flag: "--seed <n>", description: "Random seed for reproducible generation", type: "number" },
     { flag: "--download <path>", description: "Save video to file on completion" },
     { flag: "--no-wait", description: "Return task ID immediately without waiting" },
@@ -82,6 +89,7 @@ export default defineCommand({
     'bl video ref --prompt "视频1在弹吉他，图1走过来" --ref-video scene.mp4 --image person.jpg',
     'bl video ref --prompt "图1说话" --image person.jpg --image-voice voice.mp3 --resolution 1080P',
     'bl video ref --prompt "图1和图2在对话" --image a.jpg --image b.jpg --image-voice va.mp3 --image-voice vb.mp3',
+    'bl video ref --prompt "图1在喝水" --image person.jpg --watermark false',
   ],
   async run(config: Config, flags: GlobalFlags) {
     // --- Validate prompt ---
@@ -157,8 +165,8 @@ export default defineCommand({
     }
 
     // --- Build request body ---
-    const promptExtend =
-      flags.noPromptExtend === true ? false : flags.promptExtend === true ? true : undefined;
+    const promptExtend = resolveBooleanFlag(flags.promptExtend, undefined, "prompt-extend");
+    const watermark = resolveWatermark(flags.watermark);
 
     const body: DashScopeVideoRefRequest = {
       model,
@@ -171,7 +179,7 @@ export default defineCommand({
         ratio: (flags.ratio as string) || undefined,
         duration: (flags.duration as number) || undefined,
         prompt_extend: promptExtend,
-        watermark: flags.watermark === true ? true : undefined,
+        watermark,
         seed: flags.seed as number | undefined,
       },
     };

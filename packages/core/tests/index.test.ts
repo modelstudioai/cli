@@ -2,6 +2,7 @@ import { expect, test } from "vite-plus/test";
 import type { Config } from "../src/index.ts";
 import { BailianError, ExitCode, McpClient, mapApiError, request } from "../src/index.ts";
 import { parseConfigFile } from "../src/config/schema.ts";
+import { parseBooleanValue, resolveBooleanFlag, resolveWatermark } from "../src/utils/watermark.ts";
 
 function testConfig(overrides: Partial<Config> = {}): Config {
   return {
@@ -173,6 +174,26 @@ test("McpClient uses injected client identity for initialize and User-Agent", as
     method: "initialize",
     params: { clientInfo: { name: "test-client", version: "9.8.7" } },
   });
+});
+
+test("resolveWatermark uses flag or defaults to true", () => {
+  expect(resolveWatermark("false")).toBe(false);
+  expect(resolveWatermark("true")).toBe(true);
+  expect(resolveWatermark(undefined)).toBe(true);
+});
+
+test("resolveBooleanFlag uses flag or defaultWhenUnset", () => {
+  expect(resolveBooleanFlag("false", true, "prompt-extend")).toBe(false);
+  expect(resolveBooleanFlag(undefined, true, "prompt-extend")).toBe(true);
+  expect(resolveBooleanFlag(undefined, undefined, "prompt-extend")).toBeUndefined();
+});
+
+test("parseBooleanValue accepts only true and false strings (case-insensitive)", () => {
+  expect(parseBooleanValue("true")).toBe(true);
+  expect(parseBooleanValue("FALSE")).toBe(false);
+  expect(() => parseBooleanValue("1")).toThrow(BailianError);
+  expect(() => parseBooleanValue("yes")).toThrow(BailianError);
+  expect(() => parseBooleanValue("maybe")).toThrow(BailianError);
 });
 
 test("parseConfigFile accepts only well-formed http(s) base_url / console_gateway_url", () => {
