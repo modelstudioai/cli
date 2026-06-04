@@ -1,0 +1,91 @@
+name: Release
+
+# Consolidated workflow because npm Trusted Publishers only allows ONE
+# (repo, workflow, environment) tuple per package — so stable + channel
+# must share a single workflow file.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Release mode"
+        required: true
+        type: choice
+        options:
+          - stable
+          - channel
+      channel:
+        description: "dist-tag for channel mode (kebab-case, e.g. mcp/plugin/advisor). Reserved: latest/beta/alpha/next/rc/canary/dev. Ignored when mode=stable."
+        required: false
+        type: string
+
+# Serialize stable globally; serialize channel per dist-tag name.
+concurrency:
+  group: release-${{ inputs.mode }}-${{ inputs.channel }}
+  cancel-in-progress: false
+
+jobs:
+  publish-stable:
+    if: inputs.mode == 'stable'
+    name: publish stable to npm + tag
+    runs-on: ubuntu-latest
+    environment: production # Required Reviewers gate
+    permissions:
+      contents: write # push lightweight tag to origin
+      id-token: write # OIDC for npm Trusted Publishing + provenance
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org/"
+
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          GITLEAKS_VERSION=8.21.2
+          curl -sSfL \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: publish-stable
+        run: node tools/release/publish-stable.mjs
+
+  publish-channel:
+    if: inputs.mode == 'channel'
+    name: publish beta to npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # no tag, no Release; just publish
+      id-token: write # OIDC for npm Trusted Publishing + provenance
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org/"
+
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          GITLEAKS_VERSION=8.21.2
+          curl -sSfL \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: publish-channel
+        run: node tools/release/publish-channel.mjs --channel "${{ inputs.channel }}"
