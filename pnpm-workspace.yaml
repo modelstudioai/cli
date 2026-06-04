@@ -3,7 +3,7 @@ packages:
   - tools/*
 
 catalog:
-  "@types/node": ^24
+  "@types/node": ^25
   ajv: ^8.20.0
   typescript: ^5
   vite: npm:@voidzero-dev/vite-plus-core@latest
