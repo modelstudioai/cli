@@ -289,25 +289,10 @@ function resolvePlannedExpression(
     return combineResolved(undefined, undefined, false, false);
   }
   if ("$js" in expression) {
-    const argsExpressions = (expression.args ?? {}) as Record<string, PipelineInputExpression>;
-    const hasFrom = Object.values(argsExpressions).some((v) => isRecord(v) && "$from" in v);
-    if (hasFrom) return combineResolved({ ...expression }, { ...expression }, false);
-    const code = expression.$js as string;
-    const resolvedArgs: Record<string, unknown> = {};
-    let sensitive = false;
-    for (const [key, argExpr] of Object.entries(argsExpressions)) {
-      const resolved = resolvePlannedExpression(argExpr, pipeline, runtimeInput);
-      resolvedArgs[key] = resolved.value;
-      sensitive = sensitive || resolved.sensitive;
-    }
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-implied-eval
-      const fn = new Function("args", `return (${code})`);
-      const value = fn(resolvedArgs);
-      return combineResolved(value, sensitive ? REDACTED : value, sensitive);
-    } catch {
-      return combineResolved({ ...expression }, { ...expression }, false);
-    }
+    // Planning / dry-run must be a non-executing preview: never run user
+    // JavaScript here. Surface the expression as an unresolved placeholder so a
+    // `--dry-run` of an untrusted pipeline cannot trigger code execution.
+    return combineResolved({ ...expression }, { ...expression }, false);
   }
   return combineResolved(expression, expression, false);
 }

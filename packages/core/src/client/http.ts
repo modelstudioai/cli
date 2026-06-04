@@ -4,6 +4,7 @@ import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { resolveCredential } from "../auth/resolver.ts";
 import { mapApiError } from "../errors/api.ts";
+import { maskToken } from "../utils/token.ts";
 import { SOURCE_CONFIG, trackingHeaders } from "./headers.ts";
 
 export interface RequestOpts {
@@ -58,7 +59,7 @@ export async function request(config: Config, opts: RequestOpts): Promise<Respon
 
     if (config.verbose) {
       console.error(`> ${opts.method ?? "GET"} ${opts.url}`);
-      console.error(`> Auth: ${credential.token.slice(0, 8)}...`);
+      console.error(`> Auth: ${maskToken(credential.token)}`);
       console.error(`> x-dashscope-source-config: ${SOURCE_CONFIG}`);
     }
   }

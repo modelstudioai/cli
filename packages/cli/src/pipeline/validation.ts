@@ -125,6 +125,21 @@ function collectPipelineSemanticIssues(
         `semantic: step "${stepLabel}" timeout must be a positive number of seconds or duration string`,
       );
     }
+
+    // `script/js` executes its `code` as host JavaScript. Require it to be a
+    // literal string in the pipeline definition: code sourced from another step
+    // ($from) or any expression is rejected, so untrusted/model-generated text
+    // can never become the body of the executed function.
+    if (step.type === "script/js") {
+      const code = isRecord(step.input) ? step.input.code : undefined;
+      if (typeof code !== "string") {
+        issues.push(
+          `semantic: step "${stepLabel}" (script/js) requires a literal string "code"; ` +
+            `code sourced from another step ($from) or an expression is not allowed, ` +
+            `since it would execute untrusted text as host code`,
+        );
+      }
+    }
   }
 
   // Check dependency references

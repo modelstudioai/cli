@@ -70,6 +70,8 @@ export function orderReports(
   return [...reports].sort((a, b) => (index.get(a.id) ?? 0) - (index.get(b.id) ?? 0));
 }
 
+const MAX_CONCURRENCY = 64;
+
 export function normalizeConcurrency(value: number | undefined): number {
   if (value === undefined) return 1;
   if (!Number.isInteger(value) || value < 1) {
@@ -77,5 +79,7 @@ export function normalizeConcurrency(value: number | undefined): number {
       details: { issues: ["concurrency must be a positive integer"] },
     });
   }
-  return value;
+  // Cap fan-out so a single run cannot launch an unbounded number of concurrent
+  // API calls / downloads and exhaust sockets, file descriptors, or memory.
+  return Math.min(value, MAX_CONCURRENCY);
 }
