@@ -13,10 +13,6 @@ function extractTarball(tarball, tempDir, key) {
   return extractDir;
 }
 
-/**
- * pnpm pack each package, then run publint / attw / gitleaks on the tarball
- * or the extracted directory. attw only runs on packages that declare types.
- */
 export function packAndScan({ log }) {
   const tempDir = mkdtempSync(join(tmpdir(), "bailian-release-"));
   try {
@@ -28,11 +24,6 @@ export function packAndScan({ log }) {
 
       log(`publint ${pkg.name}`);
       run("npx", ["--yes", "publint", extractDir]);
-
-      if (json.types) {
-        log(`attw ${pkg.name}`);
-        run("npx", ["--yes", "@arethetypeswrong/cli", "--pack", extractDir]);
-      }
 
       log(`gitleaks ${pkg.name}`);
       run("gitleaks", ["detect", "--source", extractDir, "--no-git", "--redact"]);

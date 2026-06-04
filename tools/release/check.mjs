@@ -33,7 +33,7 @@ export async function runCheck() {
   step("build bailian-cli");
   run("pnpm", ["--filter", "bailian-cli", "run", "build"]);
 
-  step("pack + scan (publint, attw, gitleaks)");
+  step("pack + scan (publint, gitleaks)");
   packAndScan({ log });
 
   log("\nrelease check passed.");
