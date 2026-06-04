@@ -25,6 +25,15 @@ interface FlagSchema {
   arrays: Set<string>;
 }
 
+function buildAllowedFlagKeys(options: OptionDef[]): Set<string> {
+  const keys = new Set<string>();
+  for (const opt of options) {
+    const key = flagKey(opt);
+    if (key) keys.add(key);
+  }
+  return keys;
+}
+
 function buildSchema(options: OptionDef[]): FlagSchema {
   const booleans = new Set<string>();
   const numbers = new Set<string>();
@@ -91,6 +100,7 @@ export function scanCommandPath(argv: string[], globalOptions: OptionDef[] = [])
  *   - default: string
  */
 export function parseFlags(argv: string[], options: OptionDef[]): GlobalFlags {
+  const allowedKeys = buildAllowedFlagKeys(options);
   const schema = buildSchema(options);
   const flags: GlobalFlags = {
     quiet: false,
@@ -129,6 +139,13 @@ export function parseFlags(argv: string[], options: OptionDef[]): GlobalFlags {
       }
 
       const camelKey = kebabToCamel(key);
+
+      if (!allowedKeys.has(camelKey)) {
+        throw new BailianError(
+          `Unknown flag "--${key}". Run with --help to see available options.`,
+          ExitCode.USAGE,
+        );
+      }
 
       if (schema.booleans.has(camelKey)) {
         (flags as Record<string, unknown>)[camelKey] = true;
