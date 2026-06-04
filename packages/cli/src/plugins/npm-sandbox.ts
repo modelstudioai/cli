@@ -2,24 +2,24 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-/** npm ls --json 输出的节点 */
+/** Node in `npm ls --json` output. */
 export interface NpmLsNode {
   dependencies?: Record<string, NpmLsNode>;
 }
 
-/** 从 npm ls --depth=0 结果提取顶级依赖名 */
+/** Extract top-level dependency names from `npm ls --depth=0` output. */
 export function topLevelDepNamesFromNpmLs(tree: NpmLsNode): string[] {
   if (!tree.dependencies) return [];
   return Object.keys(tree.dependencies);
 }
 
-/** 对比安装前后新增的顶级依赖名 */
+/** Return top-level dependency names added between before and after install. */
 export function diffAddedDepNames(before: string[], after: string[]): string[] {
   const prev = new Set(before);
   return after.filter((name) => !prev.has(name));
 }
 
-/** 解析沙箱 node_modules 中包的根目录 */
+/** Resolve the package root under the sandbox `node_modules` directory. */
 export function resolveSandboxPackageRoot(pluginsDir: string, packageName: string): string {
   if (packageName.startsWith("@")) {
     const slash = packageName.indexOf("/");
@@ -31,7 +31,8 @@ export function resolveSandboxPackageRoot(pluginsDir: string, packageName: strin
 }
 
 /**
- * 从 install spec 解析 npm 包名（git URL / tarball 无法推断时返回 undefined）
+ * Parse an npm package name from an install spec.
+ * Returns undefined for git URLs, tarballs, and other non-registry specs.
  */
 export function parsePackageNameFromSpec(spec: string): string | undefined {
   const s = spec.trim();
@@ -47,7 +48,7 @@ export function parsePackageNameFromSpec(spec: string): string | undefined {
 }
 
 /**
- * 根据安装前后顶级依赖 diff 与 spec，选出本次安装的目标包名
+ * Pick the target package name for this install from the top-level dependency diff and spec.
  */
 export function pickInstalledPackageName(
   packageSpec: string,
@@ -65,8 +66,57 @@ export function pickInstalledPackageName(
   return undefined;
 }
 
-/** 读取沙箱 package.json 中的顶级 dependencies 名 */
-export async function readSandboxPjsonDepNames(pluginsDir: string): Promise<string[]> {
+/**
+ * Exact-match env var allowlist passed to npm child processes.
+ * Keeps only what npm needs to run; strips business credentials (e.g. DASHSCOPE_API_KEY)
+ * so plugin install scripts cannot read sensitive values if --ignore-scripts is bypassed.
+ */
+const NPM_ENV_ALLOW_EXACT = new Set<string>([
+  "PATH",
+  "HOME",
+  "USER",
+  "LOGNAME",
+  "SHELL",
+  "TMPDIR",
+  "TEMP",
+  "TMP",
+  "LANG",
+  "TERM",
+  "NODE",
+  "NODE_PATH",
+  "NODE_OPTIONS",
+  "FORCE_COLOR",
+  "NO_COLOR",
+  "NPM_TOKEN",
+  "HTTP_PROXY",
+  "HTTPS_PROXY",
+  "NO_PROXY",
+  "http_proxy",
+  "https_proxy",
+  "no_proxy",
+  "SystemRoot",
+  "ComSpec",
+  "APPDATA",
+  "PATHEXT",
+]);
+
+/** Prefix-match env var allowlist for npm config and locale variables. */
+const NPM_ENV_ALLOW_PREFIX = ["npm_config_", "NPM_CONFIG_", "LC_"] as const;
+
+/** Build a minimal env for npm child processes (allowlist only). */
+export function buildNpmEnv(base: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  const out: NodeJS.ProcessEnv = {};
+  for (const [key, value] of Object.entries(base)) {
+    if (value === undefined) continue;
+    if (NPM_ENV_ALLOW_EXACT.has(key) || NPM_ENV_ALLOW_PREFIX.some((p) => key.startsWith(p))) {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
+/** Read top-level dependency names from the sandbox package.json. */
+export async function readSandboxDeps(pluginsDir: string): Promise<string[]> {
   const path = join(pluginsDir, "package.json");
   if (!existsSync(path)) return [];
   try {

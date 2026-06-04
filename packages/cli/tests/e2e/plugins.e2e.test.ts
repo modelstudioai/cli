@@ -50,7 +50,7 @@ test("linked fixture plugin exposes bl test ping --help", async () => {
     resetCommandCatalogCache();
     resetRegistry();
 
-    const linkResult = await runCli(["plugins", "link", fixtureRoot], pluginEnv(dir, true));
+    const linkResult = await runCli(["plugin", "link", fixtureRoot], pluginEnv(dir, true));
     expect(linkResult.exitCode).toBe(0);
 
     resetCommandCatalogCache();
@@ -82,7 +82,7 @@ test("linked fixture plugin exposes bl test ping", async () => {
     resetCommandCatalogCache();
     resetRegistry();
 
-    const linkResult = await runCli(["plugins", "link", fixtureRoot], pluginEnv(dir, true));
+    const linkResult = await runCli(["plugin", "link", fixtureRoot], pluginEnv(dir, true));
     expect(linkResult.exitCode).toBe(0);
 
     resetCommandCatalogCache();

@@ -12,15 +12,16 @@ import {
 } from "./plugins/cache.ts";
 import { discoverPlugins } from "./plugins/discover.ts";
 import { mergeCommands, type PluginCommandEntry } from "./plugins/priority.ts";
-import { extractCommandMeta, lazyCommandFromMeta, scanPluginCommands } from "./plugins/scan.ts";
+import {
+  extractCommandMeta,
+  filterValidNoAuthSetup,
+  lazyCommandFromMeta,
+  scanPluginCommands,
+} from "./plugins/scan.ts";
 import type { CommandCatalog, DiscoveredPlugin, PluginLoadError } from "./plugins/types.ts";
 import { CLI_VERSION } from "./version.ts";
 
 let cachedCatalog: CommandCatalog | undefined;
-
-function collectNoAuthSetup(plugin: DiscoveredPlugin): string[] {
-  return (plugin.bailianCli.noAuthSetup ?? []).map((p) => p.trim()).filter(Boolean);
-}
 
 function expandNoAuthSetup(paths: string[]): string[][] {
   return paths.map((p) => p.split(/\s+/).filter(Boolean));
@@ -64,15 +65,12 @@ async function loadPluginCommandsWithCache(plugins: DiscoveredPlugin[]): Promise
 
     if (useCache) needsWrite = true;
 
-    const { commands: scanned, error } = await scanPluginCommands(plugin);
-    if (error) pluginErrors.push(error);
-
-    const noAuthPaths = collectNoAuthSetup(plugin);
-    for (const paths of expandNoAuthSetup(noAuthPaths)) {
-      noAuthSetup.push(paths);
-    }
+    const { commands: scanned, error: scanError } = await scanPluginCommands(plugin);
+    const scanFailed = scanError !== undefined;
+    if (scanError) pluginErrors.push(scanError);
 
     const metas = [];
+    let loadFailed = false;
     for (const item of scanned) {
       const meta = await extractCommandMeta(item);
       if (!meta) {
@@ -80,6 +78,7 @@ async function loadPluginCommandsWithCache(plugins: DiscoveredPlugin[]): Promise
           plugin: plugin.name,
           message: `Could not load command module: ${item.commandPath}`,
         });
+        loadFailed = true;
         continue;
       }
       metas.push(meta);
@@ -90,11 +89,22 @@ async function loadPluginCommandsWithCache(plugins: DiscoveredPlugin[]): Promise
       });
     }
 
-    if (useCache) {
+    const { paths: validNoAuthPaths, errors: noAuthErrors } = filterValidNoAuthSetup(
+      plugin,
+      scanned.map((item) => item.commandPath),
+    );
+    pluginErrors.push(...noAuthErrors);
+    for (const paths of expandNoAuthSetup(validNoAuthPaths)) {
+      noAuthSetup.push(paths);
+    }
+
+    // Do not cache partial or failed scans so the next startup retries loading.
+    const canCache = !scanFailed && !loadFailed;
+    if (useCache && canCache) {
       nextPlugins[plugin.name] = {
         fingerprint,
         commands: metas,
-        noAuthSetup: noAuthPaths,
+        noAuthSetup: validNoAuthPaths,
       };
     }
   }
@@ -145,8 +155,4 @@ export async function loadCommandCatalog(): Promise<CommandCatalog> {
  */
 export function resetCommandCatalogCache(): void {
   cachedCatalog = undefined;
-}
-
-export function getCachedCommandCatalog(): CommandCatalog | undefined {
-  return cachedCatalog;
 }

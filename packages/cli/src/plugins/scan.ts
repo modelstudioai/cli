@@ -42,7 +42,6 @@ function resolveCommandModulePath(commandsDir: string, commandPath: string): str
   return undefined;
 }
 
-/** 扫描单个插件包的 commands 目录 */
 export async function scanPluginCommands(
   plugin: DiscoveredPlugin,
 ): Promise<{ commands: ScannedPluginCommand[]; error?: PluginLoadError }> {
@@ -72,7 +71,44 @@ export async function scanPluginCommands(
   return { commands };
 }
 
-/** 从命令模块读取元数据（不执行 run） */
+/** Whether a noAuthSetup rule is a prefix of a plugin command path. */
+function isNoAuthRuleForCommand(rule: string[], commandPath: string[]): boolean {
+  if (rule.length > commandPath.length) return false;
+  return rule.every((segment, i) => commandPath[i] === segment);
+}
+
+/**
+ * Keep only noAuthSetup entries that prefix-match a command owned by this plugin.
+ * Rejects rules like "text" that would skip auth setup for unrelated built-in commands.
+ */
+export function filterValidNoAuthSetup(
+  plugin: DiscoveredPlugin,
+  pluginCommandPaths: string[],
+): { paths: string[]; errors: PluginLoadError[] } {
+  const rawPaths = (plugin.bailianCli.noAuthSetup ?? []).map((p) => p.trim()).filter(Boolean);
+  const commandSegments = pluginCommandPaths.map((p) => p.split(/\s+/).filter(Boolean));
+  const paths: string[] = [];
+  const errors: PluginLoadError[] = [];
+
+  for (const raw of rawPaths) {
+    const rule = raw.split(/\s+/).filter(Boolean);
+    if (rule.length === 0) continue;
+
+    const matches = commandSegments.some((cp) => isNoAuthRuleForCommand(rule, cp));
+    if (matches) {
+      paths.push(raw);
+    } else {
+      errors.push({
+        plugin: plugin.name,
+        message: `noAuthSetup "${raw}" does not match any command provided by this plugin and was ignored.`,
+      });
+    }
+  }
+
+  return { paths, errors };
+}
+
+/** load command metadata from module (without executing run) */
 async function loadCommandMetadata(modulePath: string): Promise<Command | undefined> {
   try {
     const mod = await import(pathToFileURL(modulePath).href);
@@ -95,7 +131,7 @@ function getCachedCommand(modulePath: string): Promise<Command | undefined> {
   return pending;
 }
 
-/** import 一次并提取可缓存的命令元数据 */
+/** import once and extract cacheable command metadata */
 export async function extractCommandMeta(
   scanned: ScannedPluginCommand,
 ): Promise<CachedCommandMeta | undefined> {
@@ -113,7 +149,7 @@ export async function extractCommandMeta(
   };
 }
 
-/** 从缓存元数据构建 Command（启动期不 import，execute 懒加载） */
+/** build Command from cached metadata (do not import during startup, lazy load execute) */
 export function lazyCommandFromMeta(meta: CachedCommandMeta): Command {
   const modulePath = meta.modulePath;
   return {
@@ -131,47 +167,4 @@ export function lazyCommandFromMeta(meta: CachedCommandMeta): Command {
       return cmd.execute(config, flags);
     },
   };
-}
-
-/** 将扫描结果转为可注册 Command（import 读元数据，execute 懒加载） */
-export async function buildLazyPluginCommand(
-  scanned: ScannedPluginCommand,
-): Promise<Command | undefined> {
-  const meta = await extractCommandMeta(scanned);
-  if (!meta) return undefined;
-  return lazyCommandFromMeta(meta);
-}
-
-/** 扫描所有插件并构建命令表 */
-export async function scanAllPluginCommands(plugins: DiscoveredPlugin[]): Promise<{
-  entries: Array<{ path: string; command: Command; plugin: DiscoveredPlugin }>;
-  pluginErrors: PluginLoadError[];
-  noAuthSetup: string[][];
-}> {
-  const entries: Array<{ path: string; command: Command; plugin: DiscoveredPlugin }> = [];
-  const pluginErrors: PluginLoadError[] = [];
-  const noAuthSetup: string[][] = [];
-
-  for (const plugin of plugins) {
-    const { commands: scanned, error } = await scanPluginCommands(plugin);
-    if (error) pluginErrors.push(error);
-
-    for (const path of plugin.bailianCli.noAuthSetup ?? []) {
-      noAuthSetup.push(path.trim().split(/\s+/));
-    }
-
-    for (const item of scanned) {
-      const meta = await extractCommandMeta(item);
-      if (!meta) {
-        pluginErrors.push({
-          plugin: plugin.name,
-          message: `Could not load command module: ${item.commandPath}`,
-        });
-        continue;
-      }
-      entries.push({ path: meta.commandPath, command: lazyCommandFromMeta(meta), plugin });
-    }
-  }
-
-  return { entries, pluginErrors, noAuthSetup };
 }

@@ -13,8 +13,8 @@ export interface MergeResult {
 }
 
 /**
- * 合并内置命令与插件命令。
- * 内置命令优先；插件不能覆盖内置；两插件同名命令记为错误。
+ * merge built-in commands with plugin commands.
+ * built-in commands take precedence; plugins cannot override built-in commands; two plugins with the same command name are recorded as errors.
  */
 export function mergeCommands(
   builtin: Record<string, Command>,

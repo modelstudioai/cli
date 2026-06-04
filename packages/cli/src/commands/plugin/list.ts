@@ -2,10 +2,10 @@ import { defineCommand, type Config, type GlobalFlags } from "bailian-cli-core";
 import { listPlugins } from "../../plugins/manager.ts";
 
 export default defineCommand({
-  name: "plugins list",
+  name: "plugin list",
   description: "List installed and discovered bailian-cli plugins",
-  usage: "bl plugins list",
-  examples: ["bl plugins list"],
+  usage: "bl plugin list",
+  examples: ["bl plugin list"],
   async run(_config: Config, flags: GlobalFlags) {
     const { plugins, errors } = await listPlugins();
     const format = flags.output === "json" ? "json" : "text";

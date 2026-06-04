@@ -14,13 +14,16 @@ import { resetCommandCatalogCache } from "../load-commands.ts";
 import { clearCommandsCache } from "./cache.ts";
 import { discoverPlugins, readPackageJson } from "./discover.ts";
 import {
+  buildNpmEnv,
   diffAddedDepNames,
+  parsePackageNameFromSpec,
   pickInstalledPackageName,
-  readSandboxPjsonDepNames,
+  readSandboxDeps,
   resolveSandboxPackageRoot,
   topLevelDepNamesFromNpmLs,
   type NpmLsNode,
 } from "./npm-sandbox.ts";
+import { assertPluginAllowed } from "./policy.ts";
 import type { UserPluginsManifest } from "./types.ts";
 
 const INIT_MANIFEST: UserPluginsManifest = {
@@ -44,7 +47,11 @@ async function readManifest(): Promise<UserPluginsManifest> {
       },
     };
   } catch {
-    return structuredClone(INIT_MANIFEST);
+    throw new BailianError(
+      `Plugin manifest at ${path} is corrupted and could not be parsed.`,
+      ExitCode.GENERAL,
+      "Restore from backup or delete the file, then run bl plugin install again.",
+    );
   }
 }
 
@@ -90,7 +97,7 @@ function runNpm(args: string[], cwd: string): void {
   const result = spawnSync("npm", npmArgs, {
     cwd,
     stdio: "inherit",
-    env: process.env,
+    env: buildNpmEnv(),
   });
   if (result.status !== 0) {
     throw new BailianError(
@@ -106,7 +113,7 @@ function runNpmJson(args: string[], cwd: string): NpmLsNode {
   const result = spawnSync("npm", npmArgs, {
     cwd,
     encoding: "utf8",
-    env: process.env,
+    env: buildNpmEnv(),
   });
   const stdout = result.stdout?.trim();
   if (!stdout) {
@@ -125,7 +132,7 @@ async function listTopLevelSandboxDeps(pluginsDir: string): Promise<string[]> {
     const tree = runNpmJson(["ls", "--json", "--depth=0"], pluginsDir);
     return topLevelDepNamesFromNpmLs(tree);
   } catch {
-    return readSandboxPjsonDepNames(pluginsDir);
+    return readSandboxDeps(pluginsDir);
   }
 }
 
@@ -183,6 +190,7 @@ export async function listPlugins(): Promise<{
 export async function linkPlugin(pluginPath: string): Promise<void> {
   const root = resolve(pluginPath);
   const { name } = await validatePluginPackageAsync(root);
+  assertPluginAllowed(name);
   const manifest = await readManifest();
   const plugins = manifest.bailianCli!.plugins!.filter(
     (p) => !(p.type === "link" && p.name === name),
@@ -194,6 +202,16 @@ export async function linkPlugin(pluginPath: string): Promise<void> {
 
 /** 安装 npm 插件到用户沙箱 */
 export async function installPlugin(packageSpec: string): Promise<string> {
+  // 安装前先按 spec 解析包名做准入校验,避免对不被允许的包执行任何 npm 操作
+  const specName = parsePackageNameFromSpec(packageSpec);
+  if (!specName) {
+    throw new BailianError(
+      `无法从 "${packageSpec}" 识别 npm 包名(不支持 git / tarball / 本地路径安装)。目前仅支持安装官方白名单插件(@ali 作用域),暂不支持用户自定义插件。`,
+      ExitCode.USAGE,
+    );
+  }
+  assertPluginAllowed(specName);
+
   const pluginsDir = getPluginsDir();
   await mkdir(pluginsDir, { recursive: true, mode: 0o700 });
 
@@ -202,8 +220,10 @@ export async function installPlugin(packageSpec: string): Promise<string> {
   }
 
   const beforeDeps = await listTopLevelSandboxDeps(pluginsDir);
-
-  runNpm(["install", packageSpec, "--save-exact", "--no-fund", "--no-audit"], pluginsDir);
+  runNpm(
+    ["install", packageSpec, "--save-exact", "--ignore-scripts", "--no-fund", "--no-audit"],
+    pluginsDir,
+  );
 
   const afterDeps = await listTopLevelSandboxDeps(pluginsDir);
   const added = diffAddedDepNames(beforeDeps, afterDeps);
@@ -223,6 +243,7 @@ export async function installPlugin(packageSpec: string): Promise<string> {
 
   const root = resolveSandboxPackageRoot(pluginsDir, packageName);
   const { name } = await validatePluginPackageAsync(root);
+  assertPluginAllowed(name);
 
   const manifest = await readManifest();
   const plugins = manifest.bailianCli!.plugins!.filter((p) => p.name !== name);
@@ -232,7 +253,7 @@ export async function installPlugin(packageSpec: string): Promise<string> {
   return name;
 }
 
-/** 从用户沙箱移除插件 */
+/** remove plugin from user sandbox */
 export async function removePlugin(name: string): Promise<void> {
   const manifest = await readManifest();
   const record = manifest.bailianCli!.plugins!.find((p) => p.name === name);
@@ -243,9 +264,9 @@ export async function removePlugin(name: string): Promise<void> {
   if (record.type === "user") {
     const pluginsDir = getPluginsDir();
     try {
-      runNpm(["uninstall", name, "--no-fund", "--no-audit"], pluginsDir);
+      runNpm(["uninstall", name, "--ignore-scripts", "--no-fund", "--no-audit"], pluginsDir);
     } catch {
-      /* 包可能已被手动删除 */
+      /* package may have been manually deleted */
     }
   }
 

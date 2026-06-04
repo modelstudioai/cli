@@ -37,10 +37,10 @@ const BUILTIN_NO_AUTH_SETUP: string[][] = [
   ["app", "list"],
   ["console", "call"],
   ["usage", "free"],
-  ["plugins", "list"],
-  ["plugins", "install"],
-  ["plugins", "link"],
-  ["plugins", "remove"],
+  ["plugin", "list"],
+  ["plugin", "install"],
+  ["plugin", "link"],
+  ["plugin", "remove"],
 ];
 
 function matchesNoAuthSetup(commandPath: string[], rules: string[][]): boolean {

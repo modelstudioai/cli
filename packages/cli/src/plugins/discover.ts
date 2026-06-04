@@ -8,6 +8,7 @@ import {
   type BailianCliPackageMeta,
 } from "bailian-cli-core";
 import { getNodeModuleRoots } from "./paths.ts";
+import { isPluginAllowed } from "./policy.ts";
 import type { DiscoveredPlugin, UserPluginRecord, UserPluginsManifest } from "./types.ts";
 
 const PACKAGE_JSON = "package.json";
@@ -40,6 +41,8 @@ function toDiscovered(
   if (!name || !pjson.bailianCli) return undefined;
   if (!isBailianPluginPackage(name, pjson.bailianCli)) return undefined;
   if (!pjson.bailianCli.commands) return undefined;
+  // white list check
+  if (!isPluginAllowed(name)) return undefined;
   return {
     name,
     root,

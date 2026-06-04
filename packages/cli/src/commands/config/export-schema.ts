@@ -8,7 +8,7 @@ import { loadCommandCatalog } from "../../load-commands.ts";
 /**
  * Commands that are infrastructure/auth-related and not suitable as Agent tools.
  */
-const SKIP_PREFIXES = ["auth ", "config ", "update", "plugins "];
+const SKIP_PREFIXES = ["auth ", "config ", "update", "plugin "];
 
 export default defineCommand({
   name: "config export-schema",

@@ -10,15 +10,15 @@ import { resetCommandCatalogCache } from "../../load-commands.ts";
 import { createRegistry, resetRegistry } from "../../registry.ts";
 
 export default defineCommand({
-  name: "plugins remove",
+  name: "plugin remove",
   description: "Remove an installed bailian-cli plugin",
-  usage: "bl plugins remove <name>",
-  examples: ["bl plugins remove bailian-plugin-agent"],
+  usage: "bl plugin remove <name>",
+  examples: ["bl plugin remove bailian-plugin-agent"],
   async run(_config: Config, flags: GlobalFlags) {
     const positional = flags._positional as string[] | undefined;
     const name = positional?.[0];
     if (!name) {
-      throw new BailianError("Missing plugin name.", ExitCode.USAGE, "bl plugins remove <name>");
+      throw new BailianError("Missing plugin name.", ExitCode.USAGE, "bl plugin remove <name>");
     }
 
     await removePlugin(name);

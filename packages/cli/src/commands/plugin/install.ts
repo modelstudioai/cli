@@ -10,13 +10,13 @@ import { resetCommandCatalogCache } from "../../load-commands.ts";
 import { createRegistry, resetRegistry } from "../../registry.ts";
 
 export default defineCommand({
-  name: "plugins install",
+  name: "plugin install",
   description: "Install a bailian-cli plugin package into ~/.bailian/plugins",
-  usage: "bl plugins install <package>",
+  usage: "bl plugin install <package>",
   options: [],
   examples: [
-    "bl plugins install @ali/bailian-plugin-agent",
-    "bl plugins install bailian-plugin-agent",
+    "bl plugin install @ali/bailian-plugin-agent",
+    "bl plugin install bailian-plugin-agent",
   ],
   async run(_config: Config, flags: GlobalFlags) {
     const positional = flags._positional as string[] | undefined;
@@ -25,7 +25,7 @@ export default defineCommand({
       throw new BailianError(
         "Missing plugin package name.",
         ExitCode.USAGE,
-        "bl plugins install <package>",
+        "bl plugin install <package>",
       );
     }
 
