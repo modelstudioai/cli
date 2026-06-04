@@ -15,6 +15,7 @@ import {
   type DashScopeImageSyncResponse,
   ExitCode,
   BailianError,
+  resolveWatermark,
 } from "bailian-cli-core";
 import { downloadFile } from "../../utils/download.ts";
 import { runConcurrent, downloadParallel, getConcurrency } from "../../utils/concurrent.ts";
@@ -49,7 +50,10 @@ export default defineCommand({
     },
     { flag: "--prompt-extend", description: "Enable prompt smart rewrite (default: true)" },
     { flag: "--no-prompt-extend", description: "Disable prompt extend" },
-    { flag: "--watermark", description: "Add watermark to output images" },
+    {
+      flag: "--watermark <bool>",
+      description: "Enable watermark (true/false). Overrides config watermark.",
+    },
     { flag: "--out-dir <dir>", description: "Download images to directory" },
     { flag: "--out-prefix <prefix>", description: "Filename prefix (default: edited)" },
   ],
@@ -58,6 +62,7 @@ export default defineCommand({
     'bl image edit --image https://example.com/logo.png --prompt "Change color to blue" --n 3',
     'bl image edit --image ./a.png --image ./b.png --prompt "把两张图合并成一张拼图"',
     'bl image edit --image https://example.com/photo.png --prompt "Remove the person" --model qwen-image-2.0-pro',
+    'bl image edit --image ./photo.png --prompt "把背景换成海滩" --watermark false',
   ],
   async run(config: Config, flags: GlobalFlags) {
     // Normalize --image to string array (supports both single and repeated flags)
@@ -112,6 +117,8 @@ export default defineCommand({
     );
     contentItems.push({ text: prompt! });
 
+    const watermark = resolveWatermark(config, flags.watermark);
+
     const body: DashScopeImageRequest = {
       model,
       input: {
@@ -127,7 +134,7 @@ export default defineCommand({
         n,
         seed: flags.seed as number | undefined,
         prompt_extend: promptExtend,
-        watermark: flags.watermark === true ? true : undefined,
+        watermark,
         negative_prompt: (flags.negativePrompt as string) || undefined,
       },
     };

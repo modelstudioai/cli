@@ -17,6 +17,7 @@ import {
   type OutputFormat,
   type DashScopeTaskResponse,
   generateFilename,
+  resolveWatermark,
 } from "bailian-cli-core";
 import { poll } from "../../utils/polling.ts";
 import { downloadFile } from "../../utils/download.ts";
@@ -61,7 +62,10 @@ export default defineCommand({
       description: "Automatically extend prompt for better results (default: true for qwen-image)",
     },
     { flag: "--no-prompt-extend", description: "Disable prompt extend" },
-    { flag: "--watermark", description: "Add watermark to generated images" },
+    {
+      flag: "--watermark <bool>",
+      description: "Enable watermark (true/false). Overrides config watermark.",
+    },
     {
       flag: "--no-wait",
       description: "Return task ID immediately without waiting (async models only)",
@@ -79,6 +83,8 @@ export default defineCommand({
     'bl image generate --prompt "Logo design" --n 3 --out-dir ./generated/',
     'bl image generate --prompt "Mountain landscape" --size 2688*1536',
     'bl image generate --prompt "A castle" --seed 42 --no-prompt-extend',
+    'bl image generate --prompt "Logo" --watermark false',
+    'bl image generate --prompt "An alien in the space" --watermark false',
     'bl image generate --prompt "sunset" --model wan2.6-t2i --no-wait --quiet',
     'bl image generate --prompt "Pro quality" --model qwen-image-2.0-pro',
     'bl image generate --prompt "Product shots" --n 2 --concurrent 3  # 6 images in parallel',
@@ -121,6 +127,8 @@ export default defineCommand({
       promptExtend = true; // qwen-image default
     }
 
+    const watermark = resolveWatermark(config, flags.watermark);
+
     const body: DashScopeImageRequest = {
       model,
       input: {
@@ -131,7 +139,7 @@ export default defineCommand({
         n,
         seed: flags.seed as number | undefined,
         prompt_extend: promptExtend,
-        watermark: flags.watermark === true ? true : undefined,
+        watermark,
         negative_prompt: (flags.negativePrompt as string) || undefined,
       },
     };

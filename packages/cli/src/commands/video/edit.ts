@@ -15,6 +15,7 @@ import {
   resolveCredential,
   BailianError,
   ExitCode,
+  resolveWatermark,
 } from "bailian-cli-core";
 import { poll } from "../../utils/polling.ts";
 import { downloadFile, formatBytes } from "../../utils/download.ts";
@@ -53,7 +54,10 @@ export default defineCommand({
     },
     { flag: "--prompt-extend", description: "Enable prompt intelligent rewriting (default: true)" },
     { flag: "--no-prompt-extend", description: "Disable prompt intelligent rewriting" },
-    { flag: "--watermark", description: 'Add "AI生成" watermark' },
+    {
+      flag: "--watermark <bool>",
+      description: "Enable watermark (true/false). Overrides config watermark.",
+    },
     { flag: "--seed <n>", description: "Random seed for reproducible generation", type: "number" },
     { flag: "--download <path>", description: "Save video to file on completion" },
     { flag: "--no-wait", description: "Return task ID immediately without waiting" },
@@ -71,6 +75,7 @@ export default defineCommand({
     'bl video edit --video https://example.com/input.mp4 --prompt "将整个画面转换为黏土风格"',
     'bl video edit --video https://example.com/input.mp4 --prompt "替换衣服为图片中的款式" --ref-image https://example.com/clothes.png',
     'bl video edit --video https://example.com/input.mp4 --prompt "Convert to anime style" --resolution 720P --download output.mp4',
+    'bl video edit --video https://example.com/input.mp4 --prompt "给视频里的小猫穿上衣服" --watermark false',
   ],
   async run(config: Config, flags: GlobalFlags) {
     // --- Validate video URL ---
@@ -130,6 +135,8 @@ export default defineCommand({
     const promptExtend =
       flags.noPromptExtend === true ? false : flags.promptExtend === true ? true : undefined;
 
+    const watermark = resolveWatermark(config, flags.watermark);
+
     const body: DashScopeVideoEditRequest = {
       model,
       input: {
@@ -143,7 +150,7 @@ export default defineCommand({
         duration: (flags.duration as number) || undefined,
         audio_setting: (flags.audioSetting as "auto" | "origin") || undefined,
         prompt_extend: promptExtend,
-        watermark: flags.watermark === true ? true : undefined,
+        watermark,
         seed: flags.seed as number | undefined,
       },
     };

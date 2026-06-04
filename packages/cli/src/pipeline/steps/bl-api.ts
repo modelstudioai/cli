@@ -14,6 +14,7 @@ import {
   resolveFileUrl,
   resolveCredential,
   stripUndefined,
+  resolveWatermark,
   type Config,
   type ChatRequest,
   type ChatResponse,
@@ -204,7 +205,7 @@ export async function imageGenerate(
       n,
       seed: input.seed,
       prompt_extend: promptExtend,
-      watermark: input.watermark === true ? true : undefined,
+      watermark: resolveWatermark(config, input.watermark),
       negative_prompt: input["negative-prompt"] || undefined,
     },
   };
@@ -305,7 +306,7 @@ export async function imageEdit(
       n,
       seed: input.seed,
       prompt_extend: promptExtend,
-      watermark: input.watermark === true ? true : undefined,
+      watermark: resolveWatermark(config, input.watermark),
       negative_prompt: input["negative-prompt"] || undefined,
     },
   };
@@ -425,7 +426,7 @@ export async function videoGenerate(
       ratio: input.ratio || undefined,
       duration: input.duration,
       prompt_extend: input["prompt-extend"],
-      watermark: input.watermark,
+      watermark: resolveWatermark(config, input.watermark),
       seed: input.seed,
     },
   };
