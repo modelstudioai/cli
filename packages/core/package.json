@@ -37,7 +37,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@typescript/native-preview": "7.0.0-dev.20260328.1",
+    "@typescript/native-preview": "7.0.0-dev.20260604.1",
     "typescript": "^6.0.2",
     "vite-plus": "catalog:"
   },

@@ -48,7 +48,7 @@
   "devDependencies": {
     "@clack/prompts": "^0.7.0",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "7.0.0-dev.20260328.1",
+    "@typescript/native-preview": "7.0.0-dev.20260604.1",
     "ajv": "catalog:",
     "typescript": "^6.0.2",
     "vite-plus": "catalog:",
