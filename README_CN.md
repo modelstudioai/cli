@@ -33,6 +33,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 - **知识库与记忆库** — 多模态 RAG 检索 + 跨会话记忆，提供个性化连贯对话体验
 - **应用调用** — 调用已发布在阿里云百炼平台上的智能体与工作流应用
 - **联网搜索** — 实时互联网信息检索，提升回答准确性及时效性
+- **模型推荐** — 描述你的场景，智能推荐最适合的模型；支持限定范围搜索、模型对比和替代发现
 - **控制台能力** — 浏览百炼应用（`app list`），查询模型免费额度（`usage free`）
 - **本地文件自动上传** — 所有 URL 参数同时支持本地路径，免费临时存储 48 小时
 
@@ -91,6 +92,12 @@ bl image generate --prompt "一只穿太空服的猫在火星上" --out-dir ./im
 
 # 图生视频（本地文件自动上传）
 bl video generate --image ./cat.png --prompt "让画面中的猫动起来" --download cat.mp4
+
+# 模型推荐 — 根据场景推荐最适合的模型
+bl advisor recommend --message "我要做一个能理解图片的客服机器人"
+
+# 对比特定模型
+bl advisor recommend --message "qwen-max 和 deepseek-v3 哪个更适合做代码生成"
 
 # 浏览器登录（控制台能力相关命令需要）
 bl auth login --console
