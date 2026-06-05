@@ -16,12 +16,6 @@ on:
       - "packages/cli/src/commands/**"
       - "tools/generate-reference.ts"
       - "packages/core/src/types/command.ts"
-    paths-ignore:
-      # Tests and fixtures under commands/ do not affect generated reference.
-      - "packages/cli/src/commands/**/*.test.ts"
-      - "packages/cli/src/commands/**/*.spec.ts"
-      - "packages/cli/src/commands/**/__fixtures__/**"
-      - "packages/cli/src/commands/**/__tests__/**"
   schedule:
     - cron: "0 19 * * *"
   workflow_dispatch:
