@@ -29,7 +29,7 @@ Skill / 命令手册不再随 npm 包发布,改由独立的 `npx add skills` 机
 
 非代码资产:
 
-- `tools/release.mjs` — 发版自动化
+- `tools/release/` — 发版自动化（CI 驱动，见 `.github/workflows/publish.yml`）
 - `tools/generate-reference.ts` — 从 `catalog.ts` 生成命令手册(临时输出到 `tools/generated/reference/`)
 - `README.md` / `README_CN.md` — npm 和 GitHub 主页
 
@@ -55,7 +55,7 @@ Skill / 命令手册不再随 npm 包发布,改由独立的 `npx add skills` 机
 | URL / 渠道变更 | 控制台域名 / 文档站 / 追踪参数               | [docs/agents/url-change.md](docs/agents/url-change.md)                   |
 | 鉴权扩展       | 加 OAuth / SSO / 换 token 来源               | [docs/agents/auth-change.md](docs/agents/auth-change.md)                 |
 | 配置项扩展     | 新 env var 或 `~/.bailian/config.json` 字段  | [docs/agents/config-add.md](docs/agents/config-add.md)                   |
-| 发版前自检     | beta / rc / 正式发布到 npm                   | [docs/agents/release.md](docs/agents/release.md)                         |
+| 发布           | channel / stable 发布到 npm（CI 驱动）       | [docs/agents/publish.md](docs/agents/publish.md)                         |
 | 工具链调整     | lint 规则 / 构建配置 / 依赖升级              | [docs/agents/lint-toolchain.md](docs/agents/lint-toolchain.md)           |
 
 如果当前任务无法对应任何场景,先按经验完成,然后**回来评估这是不是一类新场景** —— 是就新增一份 `docs/agents/<scenario>.md`,把清单沉淀下来。

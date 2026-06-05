@@ -176,11 +176,11 @@ git show <commit> --stat
 | 版本号 bump commit 自身的 README 改动算进上个版本 | 重复 / 错位                                             |
 | 中英两份不同步                                    | 文档可信度直接崩,等同于撒谎                             |
 
-## 与 release.md 的边界
+## 与 publish.md 的边界
 
-| 文档                     | 管什么                                               |
-| ------------------------ | ---------------------------------------------------- |
-| [release.md](release.md) | 发版前自检:版本号 / 包内容 / 安全扫描 / publish 流程 |
-| 本文档                   | 发版后写说明:面向用户的 release notes                |
+| 文档                     | 管什么                                        |
+| ------------------------ | --------------------------------------------- |
+| [publish.md](publish.md) | 发布流程:自检 / 构建 / npm publish（CI 驱动） |
+| 本文档                   | 发版后写说明:面向用户的 release notes         |
 
-两者顺序:`release.md` → npm publish → 本文档(更新 `CHANGELOG.md` + `CHANGELOG_CN.md`)→ 推到 GitHub。
+两者顺序:`publish.md` → npm publish → 本文档(更新 `CHANGELOG.md` + `CHANGELOG_CN.md`)→ 推到 GitHub。
