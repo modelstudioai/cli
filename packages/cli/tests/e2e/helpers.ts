@@ -146,7 +146,12 @@ export async function runCli(
       cwd: cliPackageRoot,
       encoding: "utf8",
       maxBuffer: 32 * 1024 * 1024,
-      env: { ...process.env, NODE_NO_WARNINGS: "1", ...envOverrides },
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: "1",
+        DO_NOT_TRACK: "1",
+        ...envOverrides,
+      },
     });
     return { stdout: stdout ?? "", stderr: stderr ?? "", exitCode: 0 };
   } catch (err: unknown) {

@@ -32,7 +32,9 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **Image & video understanding** — Qwen-VL: long-form video analysis, chart/document parsing, visual reasoning, multilingual OCR
 - **Knowledge base & memory** — Multimodal RAG retrieval and cross-session memory for personalized, coherent dialogue
 - **App calls** — Invoke agents and workflows already published on Aliyun Model Studio
+- **MCP integration** — Orchestrate Bailian MCP servers: list services, inspect tools, and invoke any tool directly from the terminal
 - **Web search** — Real-time internet retrieval for up-to-date, accurate answers
+- **Model recommendation** — Describe your scenario and get best-fit model suggestions; supports scoped search, model comparison, and alternative discovery
 - **Console capabilities** — Browse Bailian apps (`app list`) and check free-tier quota (`usage free`)
 - **Local file auto-upload** — Every URL parameter accepts a local path; uploaded to free temp storage with 48-hour validity
 
@@ -79,7 +81,10 @@ npx skills add modelstudioai/skills --all -g
 ## Quick Start
 
 ```bash
-# Authenticate
+# Authenticate, recommended
+bl auth login --console
+
+# Or authenticate with an API key
 bl auth login --api-key sk-xxxxx
 
 # Chat with Qwen
@@ -93,6 +98,12 @@ bl image generate --prompt "A cat in a spacesuit" --out-dir ./images/
 
 # Generate a video from local image
 bl video generate --image ./cat.png --prompt "Make the cat move" --download cat.mp4
+
+# Model recommendation — find the best model for your use case
+bl advisor recommend --message "I need a visual-understanding chatbot"
+
+# Compare specific models
+bl advisor recommend --message "qwen-max vs deepseek-v3 for code generation"
 
 # Browser login (required for console capability commands)
 bl auth login --console

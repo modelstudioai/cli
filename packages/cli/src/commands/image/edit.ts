@@ -15,6 +15,8 @@ import {
   type DashScopeImageSyncResponse,
   ExitCode,
   BailianError,
+  resolveBooleanFlag,
+  resolveWatermark,
 } from "bailian-cli-core";
 import { downloadFile } from "../../utils/download.ts";
 import { runConcurrent, downloadParallel, getConcurrency } from "../../utils/concurrent.ts";
@@ -22,6 +24,10 @@ import { promptText, failIfMissing } from "../../output/prompt.ts";
 import { emitResult, emitBare } from "../../output/output.ts";
 import { resolveImageSize } from "../../utils/image-size.ts";
 import { join } from "path";
+import {
+  BOOL_FLAG_PROMPT_EXTEND_CLI_TRUE,
+  BOOL_FLAG_WATERMARK,
+} from "../../utils/flag-descriptions.ts";
 
 export default defineCommand({
   name: "image edit",
@@ -47,9 +53,14 @@ export default defineCommand({
       flag: "--negative-prompt <text>",
       description: "Negative prompt to exclude unwanted content",
     },
-    { flag: "--prompt-extend", description: "Enable prompt smart rewrite (default: true)" },
-    { flag: "--no-prompt-extend", description: "Disable prompt extend" },
-    { flag: "--watermark", description: "Add watermark to output images" },
+    {
+      flag: "--prompt-extend <bool>",
+      description: BOOL_FLAG_PROMPT_EXTEND_CLI_TRUE,
+    },
+    {
+      flag: "--watermark <bool>",
+      description: BOOL_FLAG_WATERMARK,
+    },
     { flag: "--out-dir <dir>", description: "Download images to directory" },
     { flag: "--out-prefix <prefix>", description: "Filename prefix (default: edited)" },
   ],
@@ -58,6 +69,7 @@ export default defineCommand({
     'bl image edit --image https://example.com/logo.png --prompt "Change color to blue" --n 3',
     'bl image edit --image ./a.png --image ./b.png --prompt "把两张图合并成一张拼图"',
     'bl image edit --image https://example.com/photo.png --prompt "Remove the person" --model qwen-image-2.0-pro',
+    'bl image edit --image ./photo.png --prompt "把背景换成海滩" --watermark false',
   ],
   async run(config: Config, flags: GlobalFlags) {
     // Normalize --image to string array (supports both single and repeated flags)
@@ -96,21 +108,15 @@ export default defineCommand({
     );
     const n = (flags.n as number) ?? 1;
 
-    // Determine prompt_extend
-    let promptExtend: boolean | undefined;
-    if (flags.noPromptExtend === true) {
-      promptExtend = false;
-    } else if (flags.promptExtend === true) {
-      promptExtend = true;
-    } else {
-      promptExtend = true; // default on for qwen-image
-    }
+    const promptExtend = resolveBooleanFlag(flags.promptExtend, true, "prompt-extend");
 
     // Build content: all images first, then text prompt
     const contentItems: Array<{ image?: string; text?: string }> = resolvedImages.map(
       (u: string) => ({ image: u }),
     );
     contentItems.push({ text: prompt! });
+
+    const watermark = resolveWatermark(flags.watermark);
 
     const body: DashScopeImageRequest = {
       model,
@@ -127,7 +133,7 @@ export default defineCommand({
         n,
         seed: flags.seed as number | undefined,
         prompt_extend: promptExtend,
-        watermark: flags.watermark === true ? true : undefined,
+        watermark,
         negative_prompt: (flags.negativePrompt as string) || undefined,
       },
     };

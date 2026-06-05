@@ -2,9 +2,13 @@
  * MCP (Model Context Protocol) streamable HTTP client.
  *
  * Implements the JSON-RPC 2.0 based MCP protocol over streamable HTTP transport.
- * Used by DashScope MCP services like WebSearch.
+ * Used by DashScope MCP services like WebSearch and the Bailian marketplace.
  *
  * Protocol flow: initialize → tools/list → tools/call
+ *
+ * Auth: always sends `Authorization: Bearer <DashScope sk-key>` resolved via
+ * `resolveCredential`. Bailian MCPs all accept this; non-Bailian endpoints
+ * are out of scope for this client.
  */
 
 import type { Config } from "../config/schema.ts";
@@ -47,23 +51,33 @@ export interface McpToolResult {
   isError?: boolean;
 }
 
+// ---- Bailian MCP URL convention ----
+
+/**
+ * Compose the streamable-HTTP MCP endpoint for a Bailian MCP server.
+ * The path is `/api/v1/mcps/<serverCode>/mcp`; the `serverCode` is taken
+ * verbatim from `bl mcp list` (e.g. `WebSearch`, `market-cmapi00073529`).
+ */
+export function bailianMcpUrl(baseUrl: string, serverCode: string): string {
+  const root = baseUrl.replace(/\/$/, "");
+  return `${root}/api/v1/mcps/${serverCode}/mcp`;
+}
+
 // ---- MCP Client ----
 
 export class McpClient {
-  private baseUrl: string;
+  private url: string;
   private sessionId: string | undefined;
   private nextId = 1;
   private config: Config;
   private authToken: string | undefined;
 
-  constructor(config: Config, baseUrl: string) {
+  constructor(config: Config, url: string) {
     this.config = config;
-    this.baseUrl = baseUrl;
+    this.url = url;
   }
 
-  /**
-   * Initialize the MCP session. Must be called before any other method.
-   */
+  /** Initialize the MCP session. Must be called before any other method. */
   async initialize(): Promise<void> {
     const credential = await resolveCredential(this.config);
     this.authToken = credential.token;
@@ -82,21 +96,14 @@ export class McpClient {
       console.error(`[MCP] Server: ${JSON.stringify(result)}`);
     }
 
-    // Send initialized notification (no id = notification)
     await this.notify("notifications/initialized");
   }
 
-  /**
-   * List available tools from the MCP server.
-   */
   async listTools(): Promise<McpTool[]> {
     const result = (await this.rpc("tools/list")) as { tools: McpTool[] };
     return result.tools || [];
   }
 
-  /**
-   * Call a tool on the MCP server.
-   */
   async callTool(name: string, args: Record<string, unknown>): Promise<McpToolResult> {
     const result = (await this.rpc("tools/call", { name, arguments: args })) as McpToolResult;
     return result;
@@ -153,12 +160,12 @@ export class McpClient {
     }
 
     if (this.config.verbose) {
-      console.error(`> POST ${this.baseUrl}`);
+      console.error(`> POST ${this.url}`);
       console.error(`> Method: ${(body as { method?: string }).method}`);
     }
 
     const timeoutMs = this.config.timeout * 1000;
-    const res = await fetch(this.baseUrl, {
+    const res = await fetch(this.url, {
       method: "POST",
       headers,
       body: JSON.stringify(body),
@@ -169,7 +176,6 @@ export class McpClient {
       console.error(`< ${res.status} ${res.statusText}`);
     }
 
-    // Capture session ID from response
     const sid = res.headers.get("Mcp-Session-Id") || res.headers.get("mcp-session-id");
     if (sid) this.sessionId = sid;
 

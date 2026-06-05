@@ -6,6 +6,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG_CN.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.2.0] - 2026-06-05
+
+### Added
+
+- `bl mcp` command group: `bl mcp list` to list MCP servers, `bl mcp tools <server>` to inspect available tools, and `bl mcp call <server>.<tool>` to invoke a tool with `--arg k=v` or `--json`.
+- `bl advisor recommend` — describe your task in natural language and get intelligent model recommendations ranked by fit, with context-window, pricing, and capability details.
+
+### Fixed
+
+- Image/video watermark was always on regardless of config; now respects `bl config set watermark false`.
+- Paired flags (e.g. `--watermark` / `--no-watermark`) are properly mutually exclusive.
+- Null-value flag validation no longer crashes on missing optional arguments.
+- **Security**: credentials no longer leak to on-disk logs; file permissions tightened.
+- **Security**: `base_url` / `console_gateway_url` validated as real HTTP(S) URLs.
+- **Security**: script/JS `code` fields require a string literal (blocks untrusted-code RCE).
+- **Security**: URL path segments are percent-encoded; SSE buffer is bounded.
+- **Security**: pipeline planning, pointer traversal, and concurrency hardened.
+- MCP commands now handle auth _after_ arg validation and dry-run checks.
+
+### Changed
+
+- Flag default-value text is now unified and de-duplicated across all commands.
+- Illegal/unknown flag names surface a clear error instead of silently ignoring.
+
 ## [1.1.3] - 2026-06-02
 
 ### Added
