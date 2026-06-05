@@ -15,7 +15,7 @@ on:
     paths:
       - "packages/cli/src/commands/catalog.ts"
   schedule:
-    - cron: "30 20 * * *"
+    - cron: "0 19 * * *"
   workflow_dispatch:
 
 concurrency:
