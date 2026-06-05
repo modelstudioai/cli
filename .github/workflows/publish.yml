@@ -1,27 +1,22 @@
-name: Release
-
-# Consolidated workflow because npm Trusted Publishers only allows ONE
-# (repo, workflow, environment) tuple per package — so stable + channel
-# must share a single workflow file.
+name: Publish
 
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Release mode"
+        description: "Publish mode"
         required: true
         type: choice
         options:
-          - stable
           - channel
+          - stable
       channel:
-        description: "dist-tag for channel mode (kebab-case, e.g. mcp/plugin/advisor). Reserved: latest/beta/alpha/next/rc/canary/dev. Ignored when mode=stable."
+        description: "dist-tag (channel mode only, e.g. mcp/plugin/advisor)"
         required: false
         type: string
 
-# Serialize stable globally; serialize channel per dist-tag name.
 concurrency:
-  group: release-${{ inputs.mode }}-${{ inputs.channel }}
+  group: publish-${{ inputs.mode }}-${{ inputs.channel }}
   cancel-in-progress: false
 
 jobs:
@@ -40,7 +35,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: pnpm
           registry-url: "https://registry.npmjs.org/"
 
@@ -72,7 +67,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: pnpm
           registry-url: "https://registry.npmjs.org/"
 
