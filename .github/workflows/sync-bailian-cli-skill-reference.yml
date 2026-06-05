@@ -85,12 +85,14 @@ jobs:
           mkdir -p "$DEST"
           rsync -a --delete "$SRC/" "$DEST/"
 
-          if git diff --quiet && git diff --cached --quiet; then
+          # Stage before checking: untracked new files are invisible to `git diff` until added.
+          git add -A -- skills/bailian-cli/reference
+
+          if git diff --cached --quiet; then
             echo "No changes to skill reference; exiting."
             exit 0
           fi
 
-          git add skills/bailian-cli/reference
           RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${CLI_RUN}"
           git commit \
             -m "chore(bailian-cli): sync reference from cli" \
