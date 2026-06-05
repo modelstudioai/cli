@@ -13,8 +13,8 @@
 
 两种模式：
 
-| 模式    | 用途                          | 触发方式                                          |
-| ------- | ----------------------------- | ------------------------------------------------- |
+| 模式    | 用途                           | 触发方式                                           |
+| ------- | ------------------------------ | -------------------------------------------------- |
 | channel | 发 channel 版本到指定 dist-tag | 选 mode=channel，填 dist-tag 名称（如 mcp/plugin） |
 | stable  | 正式发版到 latest              | 选 mode=stable，需 production environment 审批     |
 
@@ -36,16 +36,16 @@
 
 两种模式都会先跑 `check.mjs`，覆盖以下检查：
 
-| 检查项                       | 说明                                        |
-| ---------------------------- | ------------------------------------------- |
-| `pnpm install --frozen-lockfile` | lockfile 一致性                         |
-| README 同步                  | `packages/cli/README.md` 与根 README 一致   |
-| 版本号一致                   | cli 与 core 的 version 字段相同             |
-| `workspace:*` 替换           | cli 对 core 的依赖解析为真实版本号          |
-| 构建 core + cli              | `pnpm build`                                |
-| pnpm pack                    | 打 tarball                                  |
-| publint                      | 包元数据校验                                |
-| gitleaks                     | 敏感信息扫描                                |
+| 检查项                           | 说明                                      |
+| -------------------------------- | ----------------------------------------- |
+| `pnpm install --frozen-lockfile` | lockfile 一致性                           |
+| README 同步                      | `packages/cli/README.md` 与根 README 一致 |
+| 版本号一致                       | cli 与 core 的 version 字段相同           |
+| `workspace:*` 替换               | cli 对 core 的依赖解析为真实版本号        |
+| 构建 core + cli                  | `pnpm build`                              |
+| pnpm pack                        | 打 tarball                                |
+| publint                          | 包元数据校验                              |
+| gitleaks                         | 敏感信息扫描                              |
 
 本地可以 dry-run 验证：
 
@@ -81,11 +81,11 @@ node tools/release/publish-channel.mjs --channel test --dry-run
 
 ## 常见漏点（基于历史踩坑）
 
-| 漏点                                             | 后果                                                 |
-| ------------------------------------------------ | ---------------------------------------------------- |
-| cli 升版号但 core 没升                           | check.mjs 会拦下                                     |
-| `1.0.0` 当 beta 直接发                           | 占了 `latest` tag，所有用户被强升，撤回成本极高       |
-| README 写的 bin 名实际 `package.json.bin` 没注册 | 用户复制命令报 `command not found`                   |
-| Node 徽章 `>=18`、engines `>=22.12` 不一致       | 用户在 Node 18 上 `npm i` 被 engine 警告或直接失败   |
-| npm Trusted Publisher 的 workflow filename 改了没同步 | OIDC 匹配不上，publish 报 404                   |
-| CI 用 Node 22（npm 10）跑 publish               | npm 10 不支持 OIDC token 交换，publish 报 404        |
+| 漏点                                                  | 后果                                               |
+| ----------------------------------------------------- | -------------------------------------------------- |
+| cli 升版号但 core 没升                                | check.mjs 会拦下                                   |
+| `1.0.0` 当 beta 直接发                                | 占了 `latest` tag，所有用户被强升，撤回成本极高    |
+| README 写的 bin 名实际 `package.json.bin` 没注册      | 用户复制命令报 `command not found`                 |
+| Node 徽章 `>=18`、engines `>=22.12` 不一致            | 用户在 Node 18 上 `npm i` 被 engine 警告或直接失败 |
+| npm Trusted Publisher 的 workflow filename 改了没同步 | OIDC 匹配不上，publish 报 404                      |
+| CI 用 Node 22（npm 10）跑 publish                     | npm 10 不支持 OIDC token 交换，publish 报 404      |
