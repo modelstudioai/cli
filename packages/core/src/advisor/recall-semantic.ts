@@ -1,5 +1,5 @@
 import type { Config } from "../config/schema.ts";
-import type { IntentProfile, IntentSegment, ModelProfile } from "./types.ts";
+import type { IntentProfile, IntentSegment, ModelPreference, ModelProfile } from "./types.ts";
 import { Complexities } from "./types.ts";
 import {
   buildAndCacheEmbeddings,
@@ -21,6 +21,22 @@ function getEmbeddings(): ModelEmbedding[] | null {
 
 export function isSemanticAvailable(): boolean {
   return getEmbeddings() !== null;
+}
+
+function matchesTarget(model: ModelProfile, target: string): boolean {
+  const needle = target.toLowerCase();
+  return [model.model, model.name, model.family, model.familyName, model.provider].some((field) =>
+    field?.toLowerCase().includes(needle),
+  );
+}
+
+function matchesAnyTarget(model: ModelProfile, targets: string[]): boolean {
+  return targets.some((target) => matchesTarget(model, target));
+}
+
+function applyExcludes(candidates: ScoredCandidate[], excludes: string[]): ScoredCandidate[] {
+  if (excludes.length === 0) return candidates;
+  return candidates.filter(({ model }) => !matchesAnyTarget(model, excludes));
 }
 
 function matchesSegment(model: ModelProfile, segment: IntentSegment): boolean {
@@ -50,6 +66,114 @@ function rankByEmbedding(
     .slice(0, topK);
 }
 
+function recallScoped(
+  models: ModelProfile[],
+  embeddings: ModelEmbedding[],
+  queryVector: number[],
+  preference: ModelPreference,
+  topK: number,
+): ScoredCandidate[] {
+  const targets = preference.targets ?? [];
+  const scopedModels =
+    targets.length > 0 ? models.filter((profile) => matchesAnyTarget(profile, targets)) : models;
+
+  const MIN_SCOPED = 5;
+  const pool = scopedModels.length >= MIN_SCOPED ? scopedModels : models;
+  const poolIds = new Set(pool.map((profile) => profile.model));
+  const scored = rankByEmbedding(embeddings, queryVector, poolIds, topK);
+
+  const modelMap = new Map(models.map((profile) => [profile.model, profile]));
+  const results: ScoredCandidate[] = [];
+
+  if (scopedModels.length < MIN_SCOPED && targets.length > 0) {
+    for (const profile of scopedModels) {
+      results.push({ model: profile, score: 1.0 });
+    }
+    const seen = new Set(results.map(({ model }) => model.model));
+    for (const { id, similarity } of scored) {
+      if (seen.has(id)) continue;
+      const model = modelMap.get(id);
+      if (model) results.push({ model, score: similarity });
+      if (results.length >= topK) break;
+    }
+    return results;
+  }
+
+  for (const { id, similarity } of scored) {
+    const model = modelMap.get(id);
+    if (model) results.push({ model, score: similarity });
+  }
+  return results;
+}
+
+function recallComparison(
+  models: ModelProfile[],
+  embeddings: ModelEmbedding[],
+  queryVector: number[],
+  preference: ModelPreference,
+  topK: number,
+): ScoredCandidate[] {
+  const targets = preference.targets ?? [];
+  const modelMap = new Map(models.map((profile) => [profile.model, profile]));
+
+  const forced: ScoredCandidate[] = [];
+  const forcedIds = new Set<string>();
+  for (const profile of models) {
+    if (matchesAnyTarget(profile, targets) && !forcedIds.has(profile.model)) {
+      forced.push({ model: profile, score: 1.0 });
+      forcedIds.add(profile.model);
+    }
+  }
+
+  const remaining = topK - forced.length;
+  if (remaining > 0) {
+    const allIds = new Set(
+      models.filter((profile) => !forcedIds.has(profile.model)).map((profile) => profile.model),
+    );
+    const extra = rankByEmbedding(embeddings, queryVector, allIds, remaining);
+    for (const { id, similarity } of extra) {
+      const model = modelMap.get(id);
+      if (model) forced.push({ model, score: similarity });
+    }
+  }
+
+  return forced;
+}
+
+function recallAlternative(
+  models: ModelProfile[],
+  embeddings: ModelEmbedding[],
+  queryVector: number[],
+  preference: ModelPreference,
+  topK: number,
+): ScoredCandidate[] {
+  const targets = preference.targets ?? [];
+  const modelMap = new Map(models.map((profile) => [profile.model, profile]));
+
+  const refModels = models.filter((profile) => matchesAnyTarget(profile, targets));
+  const refFamilies = new Set(refModels.map((profile) => profile.family).filter(Boolean));
+
+  const results: ScoredCandidate[] = [];
+  const seen = new Set<string>();
+
+  for (const profile of refModels) {
+    results.push({ model: profile, score: 1.0 });
+    seen.add(profile.model);
+  }
+
+  const altPool = models.filter(
+    (profile) => !seen.has(profile.model) && (!profile.family || !refFamilies.has(profile.family)),
+  );
+  const altIds = new Set(altPool.map((profile) => profile.model));
+  const scored = rankByEmbedding(embeddings, queryVector, altIds, topK - results.length);
+  for (const { id, similarity } of scored) {
+    const model = modelMap.get(id);
+    if (model) results.push({ model, score: similarity });
+  }
+
+  return results;
+}
+
 export async function recallSemantic(
   config: Config,
   models: ModelProfile[],
@@ -66,6 +190,26 @@ export async function recallSemantic(
 
   const queryVector = await embedQuery(config, query);
   const modelMap = new Map(models.map((profile) => [profile.model, profile]));
+  const preference = intent?.modelPreference;
+  const excludes = preference?.excludes ?? [];
+
+  if (preference && preference.mode !== "unconstrained") {
+    let results: ScoredCandidate[];
+    switch (preference.mode) {
+      case "scoped":
+        results = recallScoped(models, embeddings, queryVector, preference, topK);
+        break;
+      case "comparison":
+        results = recallComparison(models, embeddings, queryVector, preference, topK);
+        break;
+      case "alternative":
+        results = recallAlternative(models, embeddings, queryVector, preference, topK);
+        break;
+      default:
+        results = [];
+    }
+    return applyExcludes(results, excludes);
+  }
 
   if (intent?.complexity === Complexities.Pipeline && intent.segments?.length) {
     const seen = new Set<string>();
@@ -89,7 +233,7 @@ export async function recallSemantic(
       }
     }
 
-    return results;
+    return applyExcludes(results, excludes);
   }
 
   const allIds = new Set(models.map((profile) => profile.model));
@@ -103,5 +247,5 @@ export async function recallSemantic(
     }
   }
 
-  return results;
+  return applyExcludes(results, excludes);
 }

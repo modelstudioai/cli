@@ -27,6 +27,13 @@ export type Feature =
   | "structured-outputs"
   | "prefix-completion";
 export type ModelCategory = "Flagship" | "Cost-optimized";
+export type PreferenceMode = "unconstrained" | "scoped" | "comparison" | "alternative";
+
+export interface ModelPreference {
+  mode: PreferenceMode;
+  targets?: string[];
+  excludes?: string[];
+}
 
 export const Modalities = {
   Text: "Text",
@@ -99,6 +106,8 @@ export interface IntentProfile {
   contextNeed: ContextNeed;
   qualityPreference: QualityPreference;
   confidence: number;
+
+  modelPreference?: ModelPreference;
 }
 
 // ---- Model Profile ----

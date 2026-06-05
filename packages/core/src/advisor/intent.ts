@@ -33,6 +33,19 @@ export async function analyzeIntent(config: Config, input: string): Promise<Inte
     if (!jsonMatch) return DEFAULT_INTENT;
 
     const parsed = JSON.parse(jsonMatch[0]);
+    const VALID_MODES = ["scoped", "comparison", "alternative"] as const;
+    const rawPref = parsed.modelPreference as Record<string, unknown> | undefined;
+    const modelPreference =
+      rawPref && typeof rawPref === "object"
+        ? {
+            mode: VALID_MODES.includes(rawPref.mode as (typeof VALID_MODES)[number])
+              ? (rawPref.mode as (typeof VALID_MODES)[number])
+              : ("unconstrained" as const),
+            targets: Array.isArray(rawPref.targets) ? (rawPref.targets as string[]) : undefined,
+            excludes: Array.isArray(rawPref.excludes) ? (rawPref.excludes as string[]) : undefined,
+          }
+        : undefined;
+
     return {
       complexity:
         parsed.complexity === Complexities.Pipeline ? Complexities.Pipeline : Complexities.Single,
@@ -58,6 +71,7 @@ export async function analyzeIntent(config: Config, input: string): Promise<Inte
       contextNeed: parsed.contextNeed ?? DEFAULT_INTENT.contextNeed,
       qualityPreference: parsed.qualityPreference ?? DEFAULT_INTENT.qualityPreference,
       confidence: 1,
+      modelPreference,
     };
   } catch {
     return DEFAULT_INTENT;

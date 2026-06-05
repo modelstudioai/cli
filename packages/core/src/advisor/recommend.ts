@@ -4,6 +4,8 @@ import { parseSSE } from "../client/stream.ts";
 import type { Config } from "../config/schema.ts";
 import type { ChatResponse, StreamChunk } from "../types/api.ts";
 import {
+  ALTERNATIVE_SYSTEM_PROMPT,
+  COMPARISON_SYSTEM_PROMPT,
   PIPELINE_SYSTEM_PROMPT,
   RANKING_MODEL,
   RANKING_MODEL_FAST,
@@ -81,6 +83,7 @@ function buildIntentContext(intent: IntentProfile): string {
     qualityPreference,
     contextNeed,
     segments,
+    modelPreference,
   } = intent;
   const parts: string[] = [];
   if (taskSummary) parts.push(`场景理解: ${taskSummary}`);
@@ -92,6 +95,13 @@ function buildIntentContext(intent: IntentProfile): string {
   parts.push(`预算倾向: ${budget}`);
   parts.push(`质量偏好: ${qualityPreference}`);
   if (contextNeed !== ContextNeeds.Standard) parts.push(`上下文需求: ${contextNeed}`);
+  if (modelPreference && modelPreference.mode !== "unconstrained") {
+    parts.push(`模型偏好: ${modelPreference.mode}`);
+    if (modelPreference.targets?.length)
+      parts.push(`目标模型: ${modelPreference.targets.join(", ")}`);
+    if (modelPreference.excludes?.length)
+      parts.push(`排除模型: ${modelPreference.excludes.join(", ")}`);
+  }
   if (segments?.length) {
     parts.push(`拆解步骤:`);
     for (const seg of segments) {
@@ -185,8 +195,25 @@ export async function rankModels(
 ): Promise<RecommendResult> {
   const candidatesContext = buildCandidatesContext(candidates);
   const intentContext = buildIntentContext(intent);
-  const systemPrompt =
-    intent.complexity === Complexities.Pipeline ? PIPELINE_SYSTEM_PROMPT : SINGLE_SYSTEM_PROMPT;
+  const preferenceMode = intent.modelPreference?.mode;
+
+  let systemPrompt: string;
+  if (preferenceMode === "comparison") {
+    systemPrompt = COMPARISON_SYSTEM_PROMPT;
+  } else if (preferenceMode === "alternative") {
+    systemPrompt = ALTERNATIVE_SYSTEM_PROMPT;
+  } else if (preferenceMode === "scoped") {
+    const scopeNote = intent.modelPreference?.targets?.length
+      ? `\n\n## 范围限定\n用户明确要求在以下范围内推荐：${intent.modelPreference.targets.join("、")}。请优先从匹配该范围的模型中选择。`
+      : "";
+    systemPrompt =
+      (intent.complexity === Complexities.Pipeline
+        ? PIPELINE_SYSTEM_PROMPT
+        : SINGLE_SYSTEM_PROMPT) + scopeNote;
+  } else {
+    systemPrompt =
+      intent.complexity === Complexities.Pipeline ? PIPELINE_SYSTEM_PROMPT : SINGLE_SYSTEM_PROMPT;
+  }
 
   const useThinkingModel = options?.enableThinking ?? false;
 

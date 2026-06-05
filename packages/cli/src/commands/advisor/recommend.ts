@@ -53,6 +53,11 @@ const QUALITY_LABELS: Record<string, string> = {
   balanced: "均衡",
   "cost-optimized": "性价比优先",
 };
+const PREFERENCE_MODE_LABELS: Record<string, string> = {
+  scoped: "限定范围",
+  comparison: "对比评估",
+  alternative: "替代推荐",
+};
 
 function formatIntentSummary(intent: IntentProfile, noColor: boolean): string {
   const colorize = noColor ? new Chalk({ level: 0 }) : chalk;
@@ -91,6 +96,20 @@ function formatIntentSummary(intent: IntentProfile, noColor: boolean): string {
   lines.push(
     `${colorize.dim("预算倾向")} ${budgetLabel}    ${colorize.dim("质量偏好")} ${qualityLabel}`,
   );
+
+  const preference = intent.modelPreference;
+  if (preference && preference.mode !== "unconstrained") {
+    lines.push("");
+    const modeLabel = PREFERENCE_MODE_LABELS[preference.mode] ?? preference.mode;
+    const prefParts = [colorize.dim("推荐模式") + ` ${colorize.yellow(modeLabel)}`];
+    if (preference.targets?.length) {
+      prefParts.push(colorize.dim("目标") + ` ${preference.targets.join(", ")}`);
+    }
+    if (preference.excludes?.length) {
+      prefParts.push(colorize.dim("排除") + ` ${preference.excludes.join(", ")}`);
+    }
+    lines.push(prefParts.join("    "));
+  }
 
   if (intent.segments?.length) {
     lines.push("");
