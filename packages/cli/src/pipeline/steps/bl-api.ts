@@ -14,6 +14,8 @@ import {
   resolveFileUrl,
   resolveCredential,
   stripUndefined,
+  resolveBooleanFlag,
+  resolveWatermark,
   type Config,
   type ChatRequest,
   type ChatResponse,
@@ -163,9 +165,8 @@ export interface ImageGenerateInput {
   n?: number;
   seed?: number;
   "negative-prompt"?: string;
-  "prompt-extend"?: boolean;
-  "no-prompt-extend"?: boolean;
-  watermark?: boolean;
+  "prompt-extend"?: boolean | string;
+  watermark?: boolean | string;
   "out-dir"?: string;
   "out-prefix"?: string;
 }
@@ -185,14 +186,11 @@ export async function imageGenerate(
   const useSync = isSyncImageModel(model);
   const n = input.n ?? 1;
 
-  let promptExtend: boolean | undefined;
-  if (input["no-prompt-extend"]) {
-    promptExtend = false;
-  } else if (input["prompt-extend"]) {
-    promptExtend = true;
-  } else if (useSync) {
-    promptExtend = true;
-  }
+  const promptExtend = resolveBooleanFlag(
+    input["prompt-extend"],
+    useSync ? true : undefined,
+    "prompt-extend",
+  );
 
   const body: DashScopeImageRequest = {
     model,
@@ -204,7 +202,7 @@ export async function imageGenerate(
       n,
       seed: input.seed,
       prompt_extend: promptExtend,
-      watermark: input.watermark === true ? true : undefined,
+      watermark: resolveWatermark(input.watermark),
       negative_prompt: input["negative-prompt"] || undefined,
     },
   };
@@ -252,9 +250,8 @@ export interface ImageEditInput {
   n?: number;
   seed?: number;
   "negative-prompt"?: string;
-  "prompt-extend"?: boolean;
-  "no-prompt-extend"?: boolean;
-  watermark?: boolean;
+  "prompt-extend"?: boolean | string;
+  watermark?: boolean | string;
   "out-dir"?: string;
   "out-prefix"?: string;
 }
@@ -275,14 +272,11 @@ export async function imageEdit(
   const useSync = isSyncImageModel(model);
   const n = input.n ?? 1;
 
-  let promptExtend: boolean | undefined;
-  if (input["no-prompt-extend"]) {
-    promptExtend = false;
-  } else if (input["prompt-extend"]) {
-    promptExtend = true;
-  } else if (useSync) {
-    promptExtend = true;
-  }
+  const promptExtend = resolveBooleanFlag(
+    input["prompt-extend"],
+    useSync ? true : undefined,
+    "prompt-extend",
+  );
 
   const content: Array<{ text?: string; image?: string }> = [];
   for (const img of images) {
@@ -305,7 +299,7 @@ export async function imageEdit(
       n,
       seed: input.seed,
       prompt_extend: promptExtend,
-      watermark: input.watermark === true ? true : undefined,
+      watermark: resolveWatermark(input.watermark),
       negative_prompt: input["negative-prompt"] || undefined,
     },
   };
@@ -380,8 +374,8 @@ export interface VideoGenerateInput {
   resolution?: string;
   ratio?: string;
   duration?: number;
-  "prompt-extend"?: boolean;
-  watermark?: boolean;
+  "prompt-extend"?: boolean | string;
+  watermark?: boolean | string;
   seed?: number;
   "poll-interval"?: number;
 }
@@ -424,8 +418,8 @@ export async function videoGenerate(
       resolution: input.resolution || undefined,
       ratio: input.ratio || undefined,
       duration: input.duration,
-      prompt_extend: input["prompt-extend"],
-      watermark: input.watermark,
+      prompt_extend: resolveBooleanFlag(input["prompt-extend"], undefined, "prompt-extend"),
+      watermark: resolveWatermark(input.watermark),
       seed: input.seed,
     },
   };
