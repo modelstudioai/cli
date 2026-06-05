@@ -1,5 +1,5 @@
-# When the CLI command catalog changes, regenerate skill reference markdown,
-# push to modelstudioai/skills, and open a PR against main.
+# When CLI command definitions or the reference generator change, regenerate skill
+# reference markdown, push to modelstudioai/skills, and open a PR against main.
 #
 # Required repository secret (Settings → Secrets and variables → Actions):
 #   SKILLS_SYNC_TOKEN — PAT with repo scope on modelstudioai/skills:
@@ -13,7 +13,15 @@ on:
   push:
     branches: [main]
     paths:
-      - "packages/cli/src/commands/catalog.ts"
+      - "packages/cli/src/commands/**"
+      - "tools/generate-reference.ts"
+      - "packages/core/src/types/command.ts"
+    paths-ignore:
+      # Tests and fixtures under commands/ do not affect generated reference.
+      - "packages/cli/src/commands/**/*.test.ts"
+      - "packages/cli/src/commands/**/*.spec.ts"
+      - "packages/cli/src/commands/**/__fixtures__/**"
+      - "packages/cli/src/commands/**/__tests__/**"
   schedule:
     - cron: "0 19 * * *"
   workflow_dispatch:
@@ -78,18 +86,20 @@ jobs:
 
           SHORT_SHA="${CLI_SHA:0:7}"
           BRANCH="sync/bailian-cli-reference-${SHORT_SHA}"
+          REFERENCE_PATH="skills/bailian-cli/reference"
+
           git checkout -B "$BRANCH"
 
           SRC="${GITHUB_WORKSPACE}/tools/generated/reference"
-          DEST="${GITHUB_WORKSPACE}/skills-repo/skills/bailian-cli/reference"
+          DEST="${GITHUB_WORKSPACE}/skills-repo/${REFERENCE_PATH}"
           mkdir -p "$DEST"
           rsync -a --delete "$SRC/" "$DEST/"
 
-          # Stage before checking: untracked new files are invisible to `git diff` until added.
-          git add -A -- skills/bailian-cli/reference
+          # Untracked new files are invisible to `git diff` until added.
+          git add -A -- "$REFERENCE_PATH"
 
-          if git diff --cached --quiet; then
-            echo "No changes to skill reference; exiting."
+          if git diff --cached --quiet origin/main -- "$REFERENCE_PATH"; then
+            echo "No diff vs origin/main under ${REFERENCE_PATH}; exiting."
             exit 0
           fi
 
@@ -99,7 +109,13 @@ jobs:
             -m "Synced from modelstudioai/cli@${CLI_SHA}" \
             -m "Workflow run: ${RUN_URL}"
 
-          # Branch is automation-owned; lease-safe force covers re-runs / updated main base.
+          # Re-fetch before push: main may have been updated with the same reference content.
+          git fetch origin main
+          if git diff --quiet origin/main HEAD -- "$REFERENCE_PATH"; then
+            echo "Committed tree matches origin/main; skipping push and PR."
+            exit 0
+          fi
+
           git push -u origin "$BRANCH" --force-with-lease
 
           EXISTING=$(gh pr list --repo modelstudioai/skills --head "$BRANCH" --state open --json number --jq 'length')
@@ -108,7 +124,7 @@ jobs:
             {
               echo "## Summary"
               echo ""
-              echo "- Regenerated \`skills/bailian-cli/reference/*.md\` from [\`packages/cli/src/commands/catalog.ts\`](https://github.com/modelstudioai/cli/blob/${CLI_SHA}/packages/cli/src/commands/catalog.ts) in [\`modelstudioai/cli\`](https://github.com/modelstudioai/cli) (commit \`${SHORT_SHA}\`)."
+              echo "- Regenerated \`skills/bailian-cli/reference/*.md\` from CLI command definitions at [\`modelstudioai/cli\`](https://github.com/modelstudioai/cli) commit \`${SHORT_SHA}\`."
               echo ""
               echo "## Test plan"
               echo ""
