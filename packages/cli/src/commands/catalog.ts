@@ -38,6 +38,7 @@ import consoleCall from "./console/call.ts";
 import usageFree from "./usage/free.ts";
 import pipelineRun from "./pipeline/run.ts";
 import pipelineValidate from "./pipeline/validate.ts";
+import advisorRecommend from "./advisor/recommend.ts";
 
 /** Command registry map (no dependency on registry.ts — safe for build-time import). */
 export const commands: Record<string, Command> = {
@@ -78,5 +79,6 @@ export const commands: Record<string, Command> = {
   "config show": configShow,
   "config set": configSet,
   "config export-schema": configExportSchema,
+  "advisor recommend": advisorRecommend,
   update: update,
 };
