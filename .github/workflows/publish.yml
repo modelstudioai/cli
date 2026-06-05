@@ -1,27 +1,22 @@
-name: Release
-
-# Consolidated workflow because npm Trusted Publishers only allows ONE
-# (repo, workflow, environment) tuple per package — so stable + channel
-# must share a single workflow file.
+name: Publish
 
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Release mode"
+        description: "Publish mode"
         required: true
         type: choice
         options:
-          - stable
           - channel
+          - stable
       channel:
-        description: "dist-tag for channel mode (kebab-case, e.g. mcp/plugin/advisor). Reserved: latest/beta/alpha/next/rc/canary/dev. Ignored when mode=stable."
+        description: "dist-tag (channel mode only, e.g. mcp/plugin/advisor)"
         required: false
         type: string
 
-# Serialize stable globally; serialize channel per dist-tag name.
 concurrency:
-  group: release-${{ inputs.mode }}-${{ inputs.channel }}
+  group: publish-${{ inputs.mode }}-${{ inputs.channel }}
   cancel-in-progress: false
 
 jobs:
@@ -34,13 +29,13 @@ jobs:
       contents: write # push lightweight tag to origin
       id-token: write # OIDC for npm Trusted Publishing + provenance
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: "22"
+          node-version: "24"
           cache: pnpm
           registry-url: "https://registry.npmjs.org/"
 
@@ -66,13 +61,13 @@ jobs:
       contents: read # no tag, no Release; just publish
       id-token: write # OIDC for npm Trusted Publishing + provenance
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: "22"
+          node-version: "24"
           cache: pnpm
           registry-url: "https://registry.npmjs.org/"
 
