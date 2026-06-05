@@ -1,5 +1,5 @@
-# When the CLI command catalog changes, regenerate skill reference markdown,
-# push to modelstudioai/skills, and open a PR against main.
+# When CLI command definitions or the reference generator change, regenerate skill
+# reference markdown, push to modelstudioai/skills, and open a PR against main.
 #
 # Required repository secret (Settings → Secrets and variables → Actions):
 #   SKILLS_SYNC_TOKEN — PAT with repo scope on modelstudioai/skills:
@@ -13,7 +13,9 @@ on:
   push:
     branches: [main]
     paths:
-      - "packages/cli/src/commands/catalog.ts"
+      - "packages/cli/src/commands/**"
+      - "tools/generate-reference.ts"
+      - "packages/core/src/types/command.ts"
   schedule:
     - cron: "0 19 * * *"
   workflow_dispatch:
@@ -88,8 +90,9 @@ jobs:
           # Stage before checking: untracked new files are invisible to `git diff` until added.
           git add -A -- skills/bailian-cli/reference
 
-          if git diff --cached --quiet; then
-            echo "No changes to skill reference; exiting."
+          # Compare staged tree to skills repo main (explicit); no diff → no commit / no PR.
+          if git diff --cached --quiet origin/main; then
+            echo "No diff vs origin/main under skills/bailian-cli/reference; exiting."
             exit 0
           fi
 
@@ -102,13 +105,21 @@ jobs:
           # Branch is automation-owned; lease-safe force covers re-runs / updated main base.
           git push -u origin "$BRANCH" --force-with-lease
 
+          git fetch origin main
+          if git diff --quiet origin/main HEAD; then
+            echo "Branch tree matches origin/main; skipping PR creation."
+            git push origin --delete "$BRANCH"
+            echo "Deleted remote branch ${BRANCH} (no PR opened)."
+            exit 0
+          fi
+
           EXISTING=$(gh pr list --repo modelstudioai/skills --head "$BRANCH" --state open --json number --jq 'length')
           if [ "${EXISTING}" -eq 0 ]; then
             BODY_FILE="$(mktemp)"
             {
               echo "## Summary"
               echo ""
-              echo "- Regenerated \`skills/bailian-cli/reference/*.md\` from [\`packages/cli/src/commands/catalog.ts\`](https://github.com/modelstudioai/cli/blob/${CLI_SHA}/packages/cli/src/commands/catalog.ts) in [\`modelstudioai/cli\`](https://github.com/modelstudioai/cli) (commit \`${SHORT_SHA}\`)."
+              echo "- Regenerated \`skills/bailian-cli/reference/*.md\` from CLI command definitions at [\`modelstudioai/cli\`](https://github.com/modelstudioai/cli) commit \`${SHORT_SHA}\`."
               echo ""
               echo "## Test plan"
               echo ""
