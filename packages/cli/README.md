@@ -32,6 +32,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **Image & video understanding** — Qwen-VL: long-form video analysis, chart/document parsing, visual reasoning, multilingual OCR
 - **Knowledge base & memory** — Multimodal RAG retrieval and cross-session memory for personalized, coherent dialogue
 - **App calls** — Invoke agents and workflows already published on Aliyun Model Studio
+- **MCP integration** — Orchestrate Bailian MCP servers: list services, inspect tools, and invoke any tool directly from the terminal
 - **Web search** — Real-time internet retrieval for up-to-date, accurate answers
 - **Console capabilities** — Browse Bailian apps (`app list`) and check free-tier quota (`usage free`)
 - **Local file auto-upload** — Every URL parameter accepts a local path; uploaded to free temp storage with 48-hour validity

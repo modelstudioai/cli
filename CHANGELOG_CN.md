@@ -6,6 +6,29 @@
 
 [English](CHANGELOG.md) · [README](README_CN.md) · [参与贡献](CONTRIBUTING_CN.md)
 
+## [1.2.0] - 2026-06-05
+
+### 新增
+
+- `bl mcp` 命令组：`bl mcp list` 列出 MCP 服务器，`bl mcp tools <server>` 查看可用工具，`bl mcp call <server>.<tool>` 通过 `--arg k=v` 或 `--json` 调用工具。
+
+### 修复
+
+- 图片/视频水印始终开启的问题，现在正确遵守 `bl config set watermark false` 配置。
+- 成对 flag（如 `--watermark` / `--no-watermark`）现已正确互斥。
+- 可选参数为空时 flag 校验不再崩溃。
+- **安全**：凭据不再泄漏到磁盘日志，文件权限已收紧。
+- **安全**：校验 `base_url` / `console_gateway_url` 为合法 HTTP(S) URL。
+- **安全**：script/JS `code` 字段强制为字符串字面量（阻止不可信代码 RCE）。
+- **安全**：URL 路径段已百分号编码，SSE 缓冲区设上限。
+- **安全**：流水线规划、指针遍历及并发安全加固。
+- MCP 命令现在在参数校验和 dry-run 检查之后才处理鉴权。
+
+### 变更
+
+- 所有命令的 flag 默认值文案统一并去重。
+- 非法/未知 flag 名称现在会报明确错误，而非静默忽略。
+
 ## [1.1.3] - 2026-06-02
 
 ### 新增
