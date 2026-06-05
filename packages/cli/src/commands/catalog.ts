@@ -27,6 +27,9 @@ import memoryDelete from "./memory/delete.ts";
 import memoryProfileCreate from "./memory/profile-create.ts";
 import memoryProfileGet from "./memory/profile-get.ts";
 import knowledgeRetrieve from "./knowledge/retrieve.ts";
+import mcpCall from "./mcp/call.ts";
+import mcpList from "./mcp/list.ts";
+import mcpTools from "./mcp/tools.ts";
 import searchWeb from "./search/web.ts";
 import speechSynthesize from "./speech/synthesize.ts";
 import speechRecognize from "./speech/recognize.ts";
@@ -61,6 +64,9 @@ export const commands: Record<string, Command> = {
   "memory profile create": memoryProfileCreate,
   "memory profile get": memoryProfileGet,
   "knowledge retrieve": knowledgeRetrieve,
+  "mcp list": mcpList,
+  "mcp tools": mcpTools,
+  "mcp call": mcpCall,
   "search web": searchWeb,
   "speech synthesize": speechSynthesize,
   "speech recognize": speechRecognize,

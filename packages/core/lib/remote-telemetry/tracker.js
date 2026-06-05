@@ -1129,9 +1129,7 @@ module.exports = (function (e) {
                 method: "POST",
                 keepalive: true,
                 body: JSON.stringify({ gokey: encodeURIComponent(e), gmkey: "EXP" }),
-              }).catch(function (e) {
-                console.warn("send fail", e);
-              })
+              }).catch(function () {})
             );
           })
           .catch(function (t) {
