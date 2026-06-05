@@ -1,6 +1,7 @@
 import { expect, test } from "vite-plus/test";
 import type { Config } from "../src/index.ts";
 import { BailianError, ExitCode, McpClient, mapApiError, request } from "../src/index.ts";
+import { parseConfigFile } from "../src/config/schema.ts";
 
 function testConfig(overrides: Partial<Config> = {}): Config {
   return {
@@ -172,4 +173,17 @@ test("McpClient uses injected client identity for initialize and User-Agent", as
     method: "initialize",
     params: { clientInfo: { name: "test-client", version: "9.8.7" } },
   });
+});
+
+test("parseConfigFile accepts only well-formed http(s) base_url / console_gateway_url", () => {
+  expect(parseConfigFile({ base_url: "https://dashscope.aliyuncs.com" }).base_url).toBe(
+    "https://dashscope.aliyuncs.com",
+  );
+  expect(parseConfigFile({ base_url: "http://localhost:8080" }).base_url).toBe(
+    "http://localhost:8080",
+  );
+  // Previously accepted because the value merely "starts with http".
+  expect(parseConfigFile({ base_url: "httpfoo://evil" }).base_url).toBeUndefined();
+  expect(parseConfigFile({ base_url: "not a url" }).base_url).toBeUndefined();
+  expect(parseConfigFile({ console_gateway_url: "ftp://x" }).console_gateway_url).toBeUndefined();
 });

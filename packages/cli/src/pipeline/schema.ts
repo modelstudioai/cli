@@ -91,6 +91,14 @@ export function getByJsonPointer(value: unknown, pointer: string): unknown {
       continue;
     }
     if (isRecord(current)) {
+      // A JSON pointer over data must not reach object internals. Block
+      // prototype-polluting keys and only follow own properties so a crafted
+      // `$from`/`$input` path cannot pull out `constructor`/`__proto__` and feed
+      // it into downstream consumers.
+      if (segment === "__proto__" || segment === "constructor" || segment === "prototype") {
+        return undefined;
+      }
+      if (!Object.prototype.hasOwnProperty.call(current, segment)) return undefined;
       current = current[segment];
       continue;
     }

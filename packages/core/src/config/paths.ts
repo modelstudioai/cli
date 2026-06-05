@@ -20,6 +20,15 @@ export async function ensureConfigDir(): Promise<void> {
   const dir = getConfigDir();
   const fs = await import("fs/promises");
   await fs.mkdir(dir, { recursive: true, mode: 0o700 });
+  // `mkdir`'s `mode` only applies to directories it creates (and is masked by
+  // umask). A config dir created by an older build or another tool may still be
+  // world/group-readable while holding cleartext credentials, so tighten it
+  // explicitly. Best-effort: never let a chmod failure break the command.
+  try {
+    await fs.chmod(dir, 0o700);
+  } catch {
+    /* best effort */
+  }
 }
 
 export function getPluginsDir(): string {

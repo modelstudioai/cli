@@ -6,6 +6,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG_CN.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.1.3] - 2026-06-02
+
+### Added
+
+- `bl auth login --console` now also obtains and saves a DashScope API key when none is configured, so a single browser login covers both OAuth and API-key setup.
+
+### Changed
+
+- API-key validation is more resilient: retries on transient network / 401 / 5xx errors and caps each attempt at 30s.
+
+## [1.1.2] - 2026-05-29
+
+### Changed
+
+- Default vision model upgraded from `qwen-vl` to `qwen3-vl-plus` for stronger visual reasoning and chart/document parsing.
+
+### Fixed
+
+- TypeScript / lint issues surfaced after the 1.1.0 open-source cut.
+
 ## [1.1.1] - 2026-05-29
 
 Documentation-only release. No CLI or SDK behavior changes.

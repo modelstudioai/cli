@@ -90,7 +90,7 @@ export async function localSink(event: TrackingEvent): Promise<void> {
       // 文件还不存在，忽略
     }
 
-    appendFileSync(path, JSON.stringify(event) + "\n");
+    appendFileSync(path, JSON.stringify(event) + "\n", { mode: 0o600 });
   } catch {
     // 埋点逻辑任何异常都不能影响 CLI 主流程
   }

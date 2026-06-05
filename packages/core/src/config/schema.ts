@@ -38,6 +38,21 @@ export interface ConfigFile {
 const VALID_REGIONS = new Set<string>(["cn", "us", "intl"]);
 const VALID_OUTPUTS = new Set<string>(["text", "json"]);
 
+/**
+ * A syntactically valid absolute http(s) URL. Used to validate `base_url` and
+ * `console_gateway_url` from the config file: the credential-bearing client
+ * sends the Bearer token to these origins, so a bare `startsWith("http")` check
+ * (which also accepts e.g. "httpfoo://…") is too loose.
+ */
+function isHttpUrl(value: string): boolean {
+  try {
+    const u = new URL(value);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export function parseConfigFile(raw: unknown): ConfigFile {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   const obj = raw as Record<string, unknown>;
@@ -50,8 +65,7 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     out.access_token = obj.accessToken;
   if (typeof obj.region === "string" && VALID_REGIONS.has(obj.region))
     out.region = obj.region as Region;
-  if (typeof obj.base_url === "string" && obj.base_url.startsWith("http"))
-    out.base_url = obj.base_url;
+  if (typeof obj.base_url === "string" && isHttpUrl(obj.base_url)) out.base_url = obj.base_url;
   if (typeof obj.output === "string" && VALID_OUTPUTS.has(obj.output))
     out.output = obj.output as ConfigFile["output"];
   if (typeof obj.output_dir === "string" && obj.output_dir.length > 0)
@@ -73,7 +87,7 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     out.access_key_secret = obj.access_key_secret;
   if (typeof obj.workspace_id === "string" && obj.workspace_id.length > 0)
     out.workspace_id = obj.workspace_id;
-  if (typeof obj.console_gateway_url === "string" && obj.console_gateway_url.startsWith("http"))
+  if (typeof obj.console_gateway_url === "string" && isHttpUrl(obj.console_gateway_url))
     out.console_gateway_url = obj.console_gateway_url;
   if (typeof obj.telemetry === "boolean") out.telemetry = obj.telemetry;
 

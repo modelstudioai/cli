@@ -18,7 +18,7 @@ bailian-cli/
 │   ├── cli/              # `bailian-cli` —— CLI 入口、命令、UI
 │   └── core/             # `bailian-cli-core` —— 鉴权、HTTP、类型
 ├── docs/agents/          # 场景化维护文档
-├── tools/                # 发版与命令手册生成
+├── tools/                # 发版自动化与命令手册生成
 ├── AGENTS.md             # AI agent 维护契约
 └── README.md
 ```

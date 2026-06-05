@@ -18,7 +18,7 @@ bailian-cli/
 │   ├── cli/              # `bailian-cli` — CLI entry, commands, UI
 │   └── core/             # `bailian-cli-core` — auth, HTTP, types
 ├── docs/agents/          # Scenario-based maintenance guides
-├── tools/                # Release & reference generation
+├── tools/                # Release automation & reference generation
 ├── AGENTS.md             # Contract for AI agents
 └── README.md
 ```

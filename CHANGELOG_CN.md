@@ -6,6 +6,26 @@
 
 [English](CHANGELOG.md) · [README](README_CN.md) · [参与贡献](CONTRIBUTING_CN.md)
 
+## [1.1.3] - 2026-06-02
+
+### 新增
+
+- `bl auth login --console` 在未配置 DashScope API Key 时会自动获取并保存,一次浏览器登录即可完成 OAuth 与 API Key 配置。
+
+### 变更
+
+- API Key 校验更稳健:网络 / 401 / 5xx 等瞬时错误会自动重试,单次请求超时上限收紧为 30 秒。
+
+## [1.1.2] - 2026-05-29
+
+### 变更
+
+- 默认视觉模型由 `qwen-vl` 升级为 `qwen3-vl-plus`,视觉推理与图表/文档解析能力更强。
+
+### 修复
+
+- 修复 1.1.0 开源切换后暴露的 TypeScript / lint 问题。
+
 ## [1.1.1] - 2026-05-29
 
 仅文档更新，CLI 与 SDK 行为无变化。

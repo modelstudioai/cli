@@ -1,6 +1,7 @@
 import {
   defineCommand,
   detectOutputFormat,
+  maskToken,
   readConfigFile,
   writeConfigFile,
   BailianError,
@@ -27,6 +28,11 @@ const VALID_KEYS = [
   "access_key_secret",
   "workspace_id",
 ];
+
+// Keys whose values are secrets. Their stored value must never be echoed back in
+// cleartext (CI logs, pipes, shared terminals); show a masked form instead — the
+// same policy `config show` and `auth status` already follow.
+const SECRET_KEYS = new Set(["api_key", "access_token", "access_key_id", "access_key_secret"]);
 
 // Allow hyphen-style keys (e.g. default-text-model → default_text_model)
 const KEY_ALIASES: Record<string, string> = {
@@ -120,7 +126,10 @@ export default defineCommand({
     await writeConfigFile(existing);
 
     if (!config.quiet) {
-      emitResult({ [resolvedKey]: existing[resolvedKey] }, format);
+      const shown = SECRET_KEYS.has(resolvedKey)
+        ? maskToken(String(existing[resolvedKey]))
+        : existing[resolvedKey];
+      emitResult({ [resolvedKey]: shown }, format);
     }
   },
 });
