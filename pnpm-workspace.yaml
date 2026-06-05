@@ -5,6 +5,8 @@ packages:
 catalog:
   "@types/node": ^24
   ajv: ^8.20.0
+  boxen: ^8.0.1
+  chalk: ^5.6.2
   typescript: ^5
   vite: npm:@voidzero-dev/vite-plus-core@latest
   vite-plus: latest

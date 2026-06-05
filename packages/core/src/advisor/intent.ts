@@ -1,0 +1,65 @@
+import { requestJson } from "../client/http.ts";
+import { chatEndpoint } from "../client/endpoints.ts";
+import type { Config } from "../config/schema.ts";
+import type { ChatResponse } from "../types/api.ts";
+import { Complexities } from "./types.ts";
+import type { IntentProfile } from "./types.ts";
+import { INTENT_MODEL, INTENT_SYSTEM_PROMPT } from "./constants/prompts.ts";
+import { DEFAULT_INTENT } from "./constants/defaults.ts";
+
+export async function analyzeIntent(config: Config, input: string): Promise<IntentProfile> {
+  const url = chatEndpoint(config.baseUrl);
+
+  const body = {
+    model: INTENT_MODEL,
+    messages: [
+      { role: "system", content: INTENT_SYSTEM_PROMPT },
+      { role: "user", content: input },
+    ],
+    max_tokens: 1024,
+    temperature: 0,
+  };
+
+  try {
+    const response = await requestJson<ChatResponse>(config, {
+      url,
+      method: "POST",
+      body,
+      timeout: 5000,
+    });
+
+    const content = response.choices?.[0]?.message?.content ?? "";
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return DEFAULT_INTENT;
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    return {
+      complexity:
+        parsed.complexity === Complexities.Pipeline ? Complexities.Pipeline : Complexities.Single,
+      taskSummary: typeof parsed.taskSummary === "string" ? parsed.taskSummary : "",
+      scenarioHints: Array.isArray(parsed.scenarioHints) ? parsed.scenarioHints : [],
+      segments: Array.isArray(parsed.segments)
+        ? parsed.segments.map((seg: Record<string, unknown>) => ({
+            step: (seg.step as string) ?? "",
+            inputModality: Array.isArray(seg.inputModality) ? seg.inputModality : [],
+            outputModality: Array.isArray(seg.outputModality) ? seg.outputModality : [],
+            requiredCapabilities: Array.isArray(seg.requiredCapabilities)
+              ? seg.requiredCapabilities
+              : [],
+          }))
+        : undefined,
+      inputModality: Array.isArray(parsed.inputModality) ? parsed.inputModality : [],
+      outputModality: Array.isArray(parsed.outputModality) ? parsed.outputModality : [],
+      requiredCapabilities: Array.isArray(parsed.requiredCapabilities)
+        ? parsed.requiredCapabilities
+        : [],
+      requiredFeatures: Array.isArray(parsed.requiredFeatures) ? parsed.requiredFeatures : [],
+      budget: parsed.budget ?? DEFAULT_INTENT.budget,
+      contextNeed: parsed.contextNeed ?? DEFAULT_INTENT.contextNeed,
+      qualityPreference: parsed.qualityPreference ?? DEFAULT_INTENT.qualityPreference,
+      confidence: 1,
+    };
+  } catch {
+    return DEFAULT_INTENT;
+  }
+}

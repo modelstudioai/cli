@@ -63,7 +63,8 @@ const NO_AUTH_SETUP = [
 ];
 
 async function main() {
-  const argv = process.argv.slice(2);
+  let argv = process.argv.slice(2);
+  if (argv[0] === "--") argv = argv.slice(1);
 
   if (argv.includes("--version") || argv.includes("-v")) {
     process.stdout.write(`bl ${CLI_VERSION}\n`);
