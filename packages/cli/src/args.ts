@@ -147,19 +147,22 @@ export function parseFlags(argv: string[], options: OptionDef[]): GlobalFlags {
         );
       }
 
+      // Switch-style flags (--quiet, --dry-run): no value. Value flags need a non-flag next token.
       if (schema.booleans.has(camelKey)) {
         (flags as Record<string, unknown>)[camelKey] = true;
         i++;
         continue;
       }
 
+      // --prompt <text>, --watermark <bool>, …
       if (value === undefined) {
         i++;
-        value = argv[i];
+        const next = argv[i];
+        if (next === undefined || next.startsWith("-")) {
+          throw new BailianError(`Flag --${key} requires a value.`, ExitCode.USAGE);
+        }
+        value = next;
       }
-
-      if (value === undefined)
-        throw new BailianError(`Flag --${key} requires a value.`, ExitCode.USAGE);
 
       if (schema.arrays.has(camelKey)) {
         const arr = (flags as Record<string, unknown>)[camelKey] as string[] | undefined;
