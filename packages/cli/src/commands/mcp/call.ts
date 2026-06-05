@@ -8,6 +8,7 @@ import {
 } from "bailian-cli-core";
 import { failIfMissing } from "../../output/prompt.ts";
 import { emitResult } from "../../output/output.ts";
+import { ensureApiKey } from "../../utils/ensure-key.ts";
 
 function parseArgFlags(raw: string[]): Record<string, unknown> {
   const out: Record<string, unknown> = {};
@@ -106,6 +107,7 @@ export default defineCommand({
       return;
     }
 
+    await ensureApiKey(config);
     const client = new McpClient(config, url);
     await client.initialize();
     const result = await client.callTool(toolName, toolArgs);

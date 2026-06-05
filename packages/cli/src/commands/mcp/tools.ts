@@ -8,6 +8,7 @@ import {
 } from "bailian-cli-core";
 import { failIfMissing } from "../../output/prompt.ts";
 import { emitResult } from "../../output/output.ts";
+import { ensureApiKey } from "../../utils/ensure-key.ts";
 
 export default defineCommand({
   name: "mcp tools",
@@ -40,6 +41,7 @@ export default defineCommand({
       return;
     }
 
+    await ensureApiKey(config);
     const client = new McpClient(config, url);
     await client.initialize();
     const tools = await client.listTools();
