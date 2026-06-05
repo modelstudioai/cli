@@ -3,7 +3,6 @@ import type { Config } from "bailian-cli-core";
 import type { GlobalFlags } from "bailian-cli-core";
 import { BailianError } from "bailian-cli-core";
 import { ExitCode } from "bailian-cli-core";
-import { loadCommandCatalog } from "../../load-commands.ts";
 
 /**
  * Commands that are infrastructure/auth-related and not suitable as Agent tools.
@@ -23,6 +22,7 @@ export default defineCommand({
   ],
   examples: ["bl config export-schema", 'bl config export-schema --command "video generate"'],
   async run(config: Config, flags: GlobalFlags) {
+    const { loadCommandCatalog } = await import("../../load-commands.ts");
     const { commands } = await loadCommandCatalog();
     const targetCommand = flags.command as string | undefined;
 
