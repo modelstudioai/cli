@@ -11,6 +11,7 @@
 ### 新增
 
 - `bl mcp` 命令组：`bl mcp list` 列出 MCP 服务器，`bl mcp tools <server>` 查看可用工具，`bl mcp call <server>.<tool>` 通过 `--arg k=v` 或 `--json` 调用工具。
+- `bl advisor recommend` — 用自然语言描述任务需求，智能推荐最合适的模型，展示上下文窗口、定价及能力详情。
 
 ### 修复
 

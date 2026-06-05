@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - `bl mcp` command group: `bl mcp list` to list MCP servers, `bl mcp tools <server>` to inspect available tools, and `bl mcp call <server>.<tool>` to invoke a tool with `--arg k=v` or `--json`.
+- `bl advisor recommend` — describe your task in natural language and get intelligent model recommendations ranked by fit, with context-window, pricing, and capability details.
 
 ### Fixed
 
