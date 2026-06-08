@@ -2,7 +2,7 @@
 
 Developer guide for `bailian-cli` — the official CLI for Aliyun Model Studio (DashScope). For end-user usage, see [README.md](README.md).
 
-[中文版](CONTRIBUTING_CN.md) · [README](README.md) · [Changelog](CHANGELOG.md)
+[中文版](CONTRIBUTING.zh.md) · [README](README.md) · [Changelog](CHANGELOG.md)
 
 ## Prerequisites
 
