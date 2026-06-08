@@ -60,7 +60,7 @@ registry.ts  main.ts      tools/generate-reference.ts   export-schema.ts
 ### B. 文档层
 
 - [ ] 运行 `pnpm run sync:skill-assets`(或正常 `git commit` 走 pre-commit),刷新 `skills/bailian-cli/reference/` 与 `SKILL.md` 的 `metadata.version` 并提交
-- [ ] `README.md` / `README_CN.md`: Quick Start、命令一览(用户向,与 help 对齐即可)
+- [ ] `README.md` / `README.zh.md`: Quick Start、命令一览(用户向,与 help 对齐即可)
 - [ ] `skills/bailian-cli/SKILL.md`: 若安装说明或能力边界有变,同步更新
 
 ### C. 测试层
