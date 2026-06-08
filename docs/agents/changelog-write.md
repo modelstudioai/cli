@@ -10,7 +10,7 @@
 更新仓库内的两份文件,英文优先,中文同步:
 
 - [`CHANGELOG.md`](../../CHANGELOG.md)
-- [`CHANGELOG_CN.md`](../../CHANGELOG_CN.md)
+- [`CHANGELOG.zh.md`](../../CHANGELOG.zh.md)
 
 新版本条目插在文件顶部"## [X.Y.Z] - YYYY-MM-DD"位置,旧版本依次向下保留。两份文件保持一一对应——任何条目只在一份里出现,另一份漏写,视为错误。
 
@@ -129,7 +129,7 @@ git show <commit> --stat
 
 ### 8. 写完后给用户过一遍再写入文件
 
-**不要直接编辑 `CHANGELOG.md` / `CHANGELOG_CN.md`**。先把中英两份草稿都贴回对话里,让用户:
+**不要直接编辑 `CHANGELOG.md` / `CHANGELOG.zh.md`**。先把中英两份草稿都贴回对话里,让用户:
 
 - 增删条目
 - 调整措辞(中英、术语)
@@ -183,4 +183,4 @@ git show <commit> --stat
 | [publish.md](publish.md) | 发布流程:自检 / 构建 / npm publish（CI 驱动） |
 | 本文档                   | 发版后写说明:面向用户的 release notes         |
 
-两者顺序:`publish.md` → npm publish → 本文档(更新 `CHANGELOG.md` + `CHANGELOG_CN.md`)→ 推到 GitHub。
+两者顺序:`publish.md` → npm publish → 本文档(更新 `CHANGELOG.md` + `CHANGELOG.zh.md`)→ 推到 GitHub。

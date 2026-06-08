@@ -177,8 +177,8 @@ bl update
 
 ## 更新日志
 
-每个版本的变更详情记录在 [CHANGELOG_CN.md](https://github.com/modelstudioai/cli/blob/main/CHANGELOG_CN.md)。
+每个版本的变更详情记录在 [CHANGELOG.zh.md](https://github.com/modelstudioai/cli/blob/main/CHANGELOG.zh.md)。
 
 ## 参与贡献
 
-欢迎提 Issue、Feature Request 和 PR。开发环境搭建、仓库结构、新增/修改命令的工作流请见 [CONTRIBUTING_CN.md](https://github.com/modelstudioai/cli/blob/main/CONTRIBUTING_CN.md)。
+欢迎提 Issue、Feature Request 和 PR。开发环境搭建、仓库结构、新增/修改命令的工作流请见 [CONTRIBUTING.zh.md](https://github.com/modelstudioai/cli/blob/main/CONTRIBUTING.zh.md)。
