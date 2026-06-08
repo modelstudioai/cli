@@ -40,6 +40,7 @@
 
 - [ ] `.vite-hooks/pre-commit` 改动后,`pnpm install` 重新软链(走 `prepare: vp config`)
 - [ ] 增加 hook 时,确认在干净 clone 后能自动激活
+- [ ] pre-commit 会跑 `pnpm run sync:skill-assets`(先 build core,再 `generate:reference` + `sync:skill-version`)并 `git add` skill 资产,最后 `vp staged`
 
 ### F. CI / 发版工具
 

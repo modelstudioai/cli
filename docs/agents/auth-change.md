@@ -89,7 +89,7 @@ flag 优先 ─→ config 文件 ─→ env var
 
 ### F. 用户面文档
 
-- [ ] `README.md` / `README_CN.md` "Authentication" 段落
+- [ ] `README.md` / `README.zh.md` "Authentication" 段落
 
 ### G. 测试
 

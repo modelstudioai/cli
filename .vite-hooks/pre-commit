@@ -1,1 +1,10 @@
+#!/usr/bin/env sh
+set -eu
+
+# Regenerate skill reference + SKILL metadata (needs bailian-cli-core dist).
+pnpm run sync:skill-assets
+
+# Stage generator output so it is included in this commit.
+git add skills/bailian-cli/reference skills/bailian-cli/SKILL.md
+
 vp staged

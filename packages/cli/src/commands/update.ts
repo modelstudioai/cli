@@ -5,9 +5,24 @@ import { defineCommand, getConfigDir } from "bailian-cli-core";
 import { CLI_VERSION } from "../version.ts";
 import { NPM_PACKAGE, fetchLatestVersion } from "../utils/update-checker.ts";
 
+const SKILL_NAME = "bailian-cli";
+
 /** Build the install command */
 function detectInstallCommand(): { cmd: string; label: string } {
   return { cmd: `npm install -g ${NPM_PACKAGE}@latest`, label: "npm" };
+}
+
+function updateAgentSkill(colors: { green: string; yellow: string; reset: string }): void {
+  const { green, yellow, reset } = colors;
+  process.stderr.write("\nUpdating agent skill...\n");
+  try {
+    execSync(`npx skills update ${SKILL_NAME} -g -y`, { stdio: "inherit" });
+    process.stderr.write(`${green}\u2713 Agent skill updated.${reset}\n`);
+  } catch {
+    process.stderr.write(
+      `${yellow}Agent skill update skipped. Run manually: npx skills update ${SKILL_NAME} -g -y${reset}\n`,
+    );
+  }
 }
 
 export default defineCommand({
@@ -62,6 +77,7 @@ export default defineCommand({
       } catch {
         process.stderr.write(`\n${green}\u2713 Update complete.${reset}\n`);
       }
+      updateAgentSkill({ green, yellow, reset });
     } catch {
       process.stderr.write("\nAutomatic update failed. Please run manually:\n");
       process.stderr.write(`  ${cmd}\n\n`);
