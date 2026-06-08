@@ -37,7 +37,8 @@
   },
   "scripts": {
     "generate:reference": "node --experimental-strip-types ../../tools/generate-reference.ts && sh -c 'cd ../.. && vp check --fix skills/bailian-cli/reference'",
-    "build": "pnpm run generate:reference && vp pack",
+    "sync:skill-version": "node --experimental-strip-types ../../tools/sync-skill-metadata.ts",
+    "build": "pnpm run generate:reference && pnpm run sync:skill-version && vp pack",
     "dev": "node src/main.ts",
     "test": "vp test",
     "check": "vp check"

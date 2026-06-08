@@ -27,6 +27,15 @@ jobs:
 
       - run: pnpm -r --filter "./packages/*" build
 
+      - name: Verify generated skill assets are committed
+        run: |
+          if ! git diff --exit-code -- skills/bailian-cli/SKILL.md skills/bailian-cli/reference/; then
+            echo "::error::skills/bailian-cli/SKILL.md or reference/ differs from build output."
+            echo "Run: pnpm --filter bailian-cli run build"
+            echo "Then commit the updated files."
+            exit 1
+          fi
+
       - run: pnpm run check
 
       - run: pnpm test
