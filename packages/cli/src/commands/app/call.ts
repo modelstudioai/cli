@@ -102,11 +102,11 @@ export default defineCommand({
     }
 
     if (config.dryRun) {
-      emitResult({ endpoint: appCompletionEndpoint(config.baseUrl, appId), request: body }, format);
+      emitResult({ endpoint: appCompletionEndpoint(config, appId), request: body }, format);
       return;
     }
 
-    const url = appCompletionEndpoint(config.baseUrl, appId);
+    const url = appCompletionEndpoint(config, appId);
 
     if (shouldStream) {
       const headers: Record<string, string> = { "X-DashScope-SSE": "enable" };

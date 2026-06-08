@@ -11,6 +11,8 @@ import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { trackingHeaders } from "../client/headers.ts";
 import { REGIONS } from "../config/schema.ts";
+import { requireNativeDashScope } from "../auth/resolver.ts";
+import type { ResolvedCredential } from "../auth/types.ts";
 
 // Pinned to cn region; thread baseUrl through if overseas upload becomes a requirement.
 const UPLOAD_API = `${REGIONS.cn}/api/v1/uploads`;
@@ -148,12 +150,13 @@ export function isLocalFile(input: string): boolean {
  */
 export async function resolveFileUrl(
   input: string,
-  apiKey: string,
+  credential: ResolvedCredential,
   model: string,
   opts: { signal?: AbortSignal } = {},
 ): Promise<string> {
   if (!isLocalFile(input)) return input;
-  return uploadFile({ apiKey, model, filePath: input, signal: opts.signal });
+  requireNativeDashScope(credential, "Local file upload");
+  return uploadFile({ apiKey: credential.token, model, filePath: input, signal: opts.signal });
 }
 
 function combineWithTimeout(

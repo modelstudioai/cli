@@ -173,7 +173,7 @@ async function handleSyncMode(
   format: string,
   concurrent: number,
 ): Promise<void> {
-  const url = imageSyncEndpoint(config.baseUrl);
+  const url = imageSyncEndpoint(config);
 
   const results = await runConcurrent(concurrent, config, () =>
     requestJson<DashScopeImageSyncResponse>(config, { url, method: "POST", body }),
@@ -202,7 +202,7 @@ async function handleAsyncMode(
   format: string,
   concurrent: number,
 ): Promise<void> {
-  const url = imageEndpoint(config.baseUrl);
+  const url = imageEndpoint(config);
 
   const responses = await runConcurrent(
     concurrent,
@@ -222,7 +222,7 @@ async function handleAsyncMode(
   const pollInterval = (flags.pollInterval as number) ?? 3;
 
   const pollPromises = taskIds.map((taskId) => {
-    const pollUrl = taskEndpoint(config.baseUrl, taskId);
+    const pollUrl = taskEndpoint(config, taskId);
     return poll<DashScopeTaskResponse>(config, {
       url: pollUrl,
       intervalSec: pollInterval,

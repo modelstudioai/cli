@@ -1,6 +1,7 @@
 import {
   defineCommand,
   resolveCredential,
+  requireNativeDashScope,
   detectOutputFormat,
   type Config,
   type GlobalFlags,
@@ -50,8 +51,8 @@ export default defineCommand({
       return;
     }
 
-    // Resolve API key for upload
     const credential = await resolveCredential(config);
+    requireNativeDashScope(credential, "File upload");
 
     const ossUrl = await uploadFile({
       apiKey: credential.token,

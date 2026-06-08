@@ -30,7 +30,7 @@ export default defineCommand({
       return;
     }
 
-    const url = taskEndpoint(config.baseUrl, taskId);
+    const url = taskEndpoint(config, taskId);
     const response = await requestJson<DashScopeTaskResponse>(config, { url });
 
     if (config.quiet) {

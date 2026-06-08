@@ -18,9 +18,19 @@ interface StoredCredential {
 }
 
 interface AuthStatusPayload {
+  active_mode: string;
   api_key: StoredCredential;
   access_token: StoredCredential;
-  dashscope_commands?: { method: string; source: string; masked: string };
+  coding_plan_api_key?: StoredCredential;
+  token_plan_api_key?: StoredCredential;
+  dashscope_commands?: {
+    method: string;
+    mode: string;
+    source: string;
+    masked: string;
+    base_url: string;
+    api_style: string;
+  };
   console_gateway_commands?: { method: string; source: string; masked: string };
 }
 
@@ -56,6 +66,13 @@ function storedAccessToken(config: Config): StoredCredential {
   return { configured: false };
 }
 
+function storedPlanKey(key: string | undefined, envVar: string): StoredCredential {
+  const env = process.env[envVar]?.trim();
+  if (key) return { configured: true, source: "config.json", masked: maskToken(key) };
+  if (env) return { configured: true, source: envVar, masked: maskToken(env) };
+  return { configured: false };
+}
+
 async function tryResolveDashscope(config: Config): Promise<ResolvedCredential | undefined> {
   try {
     return await resolveCredential(config);
@@ -74,16 +91,25 @@ async function tryResolveConsole(config: Config): Promise<ResolvedCredential | u
 
 async function buildStatus(config: Config): Promise<AuthStatusPayload> {
   const status: AuthStatusPayload = {
+    active_mode: config.activeAuthMode,
     api_key: storedApiKey(config),
     access_token: storedAccessToken(config),
   };
+
+  const codingPlan = storedPlanKey(config.codingPlanApiKey, "BAILIAN_CODING_PLAN_API_KEY");
+  if (codingPlan.configured) status.coding_plan_api_key = codingPlan;
+  const tokenPlan = storedPlanKey(config.tokenPlanApiKey, "BAILIAN_TOKEN_PLAN_API_KEY");
+  if (tokenPlan.configured) status.token_plan_api_key = tokenPlan;
 
   const dashscope = await tryResolveDashscope(config);
   if (dashscope) {
     status.dashscope_commands = {
       method: dashscope.method,
+      mode: dashscope.mode,
       source: dashscope.source,
       masked: maskToken(dashscope.token),
+      base_url: dashscope.baseUrl,
+      api_style: dashscope.apiStyle,
     };
   }
 
@@ -103,6 +129,8 @@ function hasAnyAuth(status: AuthStatusPayload): boolean {
   return (
     status.api_key.configured ||
     status.access_token.configured ||
+    !!status.coding_plan_api_key?.configured ||
+    !!status.token_plan_api_key?.configured ||
     !!status.dashscope_commands ||
     !!status.console_gateway_commands
   );
@@ -110,31 +138,44 @@ function hasAnyAuth(status: AuthStatusPayload): boolean {
 
 function emitTextStatus(status: AuthStatusPayload): void {
   emitBare("Authentication Status:");
-  emitBare("  Stored credentials (can coexist):");
+  emitBare(`  Active Mode:   ${status.active_mode}`);
+  emitBare("  Stored credentials:");
   if (status.api_key.configured) {
-    emitBare(`    API key:         ${status.api_key.source}  ${status.api_key.masked}`);
+    emitBare(`    API key:             ${status.api_key.source}  ${status.api_key.masked}`);
   } else {
-    emitBare("    API key:         not configured");
+    emitBare("    API key:             not configured");
   }
   if (status.access_token.configured) {
-    emitBare(`    Console token:   ${status.access_token.source}  ${status.access_token.masked}`);
-  } else {
-    emitBare("    Console token:   not configured");
+    emitBare(
+      `    Console token:       ${status.access_token.source}  ${status.access_token.masked}`,
+    );
   }
-  emitBare("  Effective credential per command family:");
+  if (status.coding_plan_api_key?.configured) {
+    emitBare(
+      `    Coding Plan key:     ${status.coding_plan_api_key.source}  ${status.coding_plan_api_key.masked}`,
+    );
+  }
+  if (status.token_plan_api_key?.configured) {
+    emitBare(
+      `    Token Plan key:      ${status.token_plan_api_key.source}  ${status.token_plan_api_key.masked}`,
+    );
+  }
+  emitBare("  Effective credential:");
   if (status.dashscope_commands) {
     emitBare(
-      `    DashScope API:   ${status.dashscope_commands.method} (${status.dashscope_commands.source})  ${status.dashscope_commands.masked}`,
+      `    DashScope API:       ${status.dashscope_commands.mode} (${status.dashscope_commands.source})  ${status.dashscope_commands.masked}`,
     );
+    emitBare(`    Base URL:            ${status.dashscope_commands.base_url}`);
+    emitBare(`    API Style:           ${status.dashscope_commands.api_style}`);
   } else {
-    emitBare("    DashScope API:   unavailable");
+    emitBare("    DashScope API:       unavailable");
   }
   if (status.console_gateway_commands) {
     emitBare(
-      `    Console gateway: ${status.console_gateway_commands.method} (${status.console_gateway_commands.source})  ${status.console_gateway_commands.masked}`,
+      `    Console gateway:     ${status.console_gateway_commands.method} (${status.console_gateway_commands.source})  ${status.console_gateway_commands.masked}`,
     );
   } else {
-    emitBare("    Console gateway: unavailable (run bl auth login --console)");
+    emitBare("    Console gateway:     unavailable (run bl auth login --console)");
   }
 }
 
@@ -152,7 +193,7 @@ export default defineCommand({
         authenticated: false,
         message: "Not authenticated.",
         hint: [
-          "DashScope API: bl auth login --api-key <key> or DASHSCOPE_API_KEY",
+          `DashScope API: bl auth login --mode ${config.activeAuthMode} --api-key <key> or DASHSCOPE_API_KEY`,
           "Console gateway: bl auth login --console or DASHSCOPE_ACCESS_TOKEN",
           `Get API Key: ${API_KEY_PAGE}`,
         ].join("\n"),

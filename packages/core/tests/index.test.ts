@@ -23,6 +23,9 @@ function testConfig(overrides: Partial<Config> = {}): Config {
     async: false,
     telemetry: true,
     consoleGatewayUrl: "https://bailian-cs.console.aliyun.com",
+    activeAuthMode: "standard-api-key" as const,
+    codingPlanRegion: "cn" as const,
+    tokenPlanRegion: "cn" as const,
     ...overrides,
   };
 }

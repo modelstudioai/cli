@@ -136,7 +136,7 @@ export default defineCommand({
 
     // Add reference images
     for (let i = 0; i < images.length; i++) {
-      const resolved = await resolveFileUrl(images[i]!, credential.token, model);
+      const resolved = await resolveFileUrl(images[i]!, credential, model);
       const entry: DashScopeVideoRefRequest["input"]["media"][number] = {
         type: "reference_image",
         url: resolved,
@@ -144,7 +144,7 @@ export default defineCommand({
 
       // Pair voice by position
       if (imageVoices[i]) {
-        const resolvedVoice = await resolveFileUrl(imageVoices[i]!, credential.token, model);
+        const resolvedVoice = await resolveFileUrl(imageVoices[i]!, credential, model);
         entry.reference_voice = resolvedVoice;
       }
 
@@ -153,7 +153,7 @@ export default defineCommand({
 
     // Add reference videos
     for (let i = 0; i < refVideos.length; i++) {
-      const resolved = await resolveFileUrl(refVideos[i]!, credential.token, model);
+      const resolved = await resolveFileUrl(refVideos[i]!, credential, model);
       const entry: DashScopeVideoRefRequest["input"]["media"][number] = {
         type: "reference_video",
         url: resolved,
@@ -161,7 +161,7 @@ export default defineCommand({
 
       // Pair voice by position
       if (videoVoices[i]) {
-        const resolvedVoice = await resolveFileUrl(videoVoices[i]!, credential.token, model);
+        const resolvedVoice = await resolveFileUrl(videoVoices[i]!, credential, model);
         entry.reference_voice = resolvedVoice;
       }
 
@@ -194,7 +194,7 @@ export default defineCommand({
     }
 
     // --- Submit async task ---
-    const url = videoGenerateEndpoint(config.baseUrl);
+    const url = videoGenerateEndpoint(config);
     const response = await requestJson<DashScopeAsyncResponse>(config, {
       url,
       method: "POST",
@@ -219,7 +219,7 @@ export default defineCommand({
 
     // --- Poll until completion ---
     const pollInterval = (flags.pollInterval as number) ?? 15;
-    const pollUrl = taskEndpoint(config.baseUrl, taskId);
+    const pollUrl = taskEndpoint(config, taskId);
     const refTimeout = Math.max(config.timeout, 600);
 
     const result = await poll<DashScopeTaskResponse>(config, {

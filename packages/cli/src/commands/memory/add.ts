@@ -60,11 +60,11 @@ export default defineCommand({
     const format = detectOutputFormat(config.output);
 
     if (config.dryRun) {
-      emitResult({ endpoint: memoryAddEndpoint(config.baseUrl), request: body }, format);
+      emitResult({ endpoint: memoryAddEndpoint(config), request: body }, format);
       return;
     }
 
-    const url = memoryAddEndpoint(config.baseUrl);
+    const url = memoryAddEndpoint(config);
     const response = await requestJson<MemoryAddResponse>(config, {
       url,
       method: "POST",

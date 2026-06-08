@@ -35,6 +35,11 @@ function enhanceHint(err: BailianError): string | undefined {
       .filter((s): s is string => s !== undefined)
       .join("\n");
   }
+  if (err.exitCode === ExitCode.QUOTA) {
+    return [err.hint, "", `Console: ${API_KEY_PAGE}`]
+      .filter((s): s is string => s !== undefined)
+      .join("\n");
+  }
   return err.hint;
 }
 

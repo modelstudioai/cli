@@ -40,7 +40,7 @@ export default defineCommand({
     }
 
     // Get task info to find video URL
-    const url = taskEndpoint(config.baseUrl, taskId);
+    const url = taskEndpoint(config, taskId);
     const taskInfo = await requestJson<DashScopeTaskResponse>(config, { url });
 
     if (taskInfo.output.task_status !== "SUCCEEDED") {

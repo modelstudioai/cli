@@ -104,7 +104,7 @@ export default defineCommand({
     // Auto-upload local files (resolve all images in parallel)
     const credential = await resolveCredential(config);
     const resolvedImages = await Promise.all(
-      rawImages.map((img) => resolveFileUrl(img, credential.token, model)),
+      rawImages.map((img) => resolveFileUrl(img, credential, model)),
     );
     const n = (flags.n as number) ?? 1;
 
@@ -152,7 +152,7 @@ export default defineCommand({
       process.stderr.write(`[Model: ${model}] [Mode: sync] [Images: ${resolvedImages.length}]\n`);
     }
 
-    const url = imageSyncEndpoint(config.baseUrl);
+    const url = imageSyncEndpoint(config);
     const concurrent = getConcurrency(flags);
 
     const results = await runConcurrent(concurrent, config, () =>

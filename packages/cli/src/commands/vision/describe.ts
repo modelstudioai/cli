@@ -140,7 +140,7 @@ export default defineCommand({
             throw new BailianError(`Video file not found: ${videoInput}`, ExitCode.USAGE);
           }
           const credential = await resolveCredential(config);
-          videoUrl = await resolveFileUrl(videoInput, credential.token, model);
+          videoUrl = await resolveFileUrl(videoInput, credential, model);
         }
 
         contentArray.push({ type: "video_url", video_url: { url: videoUrl } });
@@ -157,7 +157,7 @@ export default defineCommand({
         const fileSize = statSync(image).size;
         if (fileSize > 5 * 1024 * 1024) {
           const credential = await resolveCredential(config);
-          finalImageUrl = await resolveFileUrl(image, credential.token, model);
+          finalImageUrl = await resolveFileUrl(image, credential, model);
         }
       }
 
@@ -177,7 +177,7 @@ export default defineCommand({
       ],
     };
 
-    const url = chatEndpoint(config.baseUrl);
+    const url = chatEndpoint(config);
     const response = await requestJson<ChatResponse>(config, {
       url,
       method: "POST",

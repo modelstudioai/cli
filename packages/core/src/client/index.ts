@@ -3,6 +3,7 @@ export { signRequest } from "./ak-sign.ts";
 export {
   appCompletionEndpoint,
   chatEndpoint,
+  compatibleBaseUrl,
   imageEndpoint,
   imageSyncEndpoint,
   memoryAddEndpoint,
@@ -10,6 +11,7 @@ export {
   memoryNodeEndpoint,
   memorySearchEndpoint,
   mcpWebSearchEndpoint,
+  nativeBaseUrl,
   profileSchemaEndpoint,
   speechRecognizeEndpoint,
   speechSynthesizeEndpoint,

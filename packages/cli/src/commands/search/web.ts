@@ -27,7 +27,7 @@ export default defineCommand({
     "bl search web --list-tools",
   ],
   async run(config: Config, flags: GlobalFlags) {
-    const mcpUrl = mcpWebSearchEndpoint(config.baseUrl);
+    const mcpUrl = mcpWebSearchEndpoint(config);
     const format = detectOutputFormat(config.output);
 
     // --- List tools mode ---

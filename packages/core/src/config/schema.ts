@@ -1,3 +1,5 @@
+import type { AuthMode } from "../auth/types.ts";
+
 export const REGIONS = {
   cn: "https://dashscope.aliyuncs.com",
   us: "https://dashscope-us.aliyuncs.com",
@@ -13,11 +15,23 @@ export const DOCS_HOSTS = {
 export const BAILIAN_HOST = "https://bailian.cn-beijing.aliyuncs.com";
 
 export type Region = keyof typeof REGIONS;
+export type { AuthMode } from "../auth/types.ts";
+export type CodingPlanRegion = "cn" | "intl";
+export type TokenPlanRegion = "cn" | "intl";
+
+export const AUTH_MODES = new Set<string>(["standard-api-key", "coding-plan", "token-plan"]);
+export const CODING_PLAN_REGIONS = new Set<string>(["cn", "intl"]);
+export const TOKEN_PLAN_REGIONS = new Set<string>(["cn", "intl"]);
 
 export interface ConfigFile {
   api_key?: string;
   /** OAuth-style token from `bl auth login --console` callback; sent as `Authorization: Bearer …` */
   access_token?: string;
+  active_auth_mode?: AuthMode;
+  coding_plan_api_key?: string;
+  coding_plan_region?: CodingPlanRegion;
+  token_plan_api_key?: string;
+  token_plan_region?: TokenPlanRegion;
   region?: Region;
   base_url?: string;
   output?: "text" | "json";
@@ -38,12 +52,6 @@ export interface ConfigFile {
 const VALID_REGIONS = new Set<string>(["cn", "us", "intl"]);
 const VALID_OUTPUTS = new Set<string>(["text", "json"]);
 
-/**
- * A syntactically valid absolute http(s) URL. Used to validate `base_url` and
- * `console_gateway_url` from the config file: the credential-bearing client
- * sends the Bearer token to these origins, so a bare `startsWith("http")` check
- * (which also accepts e.g. "httpfoo://…") is too loose.
- */
 function isHttpUrl(value: string): boolean {
   try {
     const u = new URL(value);
@@ -63,6 +71,16 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     out.access_token = obj.access_token;
   else if (typeof obj.accessToken === "string" && obj.accessToken.length > 0)
     out.access_token = obj.accessToken;
+  if (typeof obj.active_auth_mode === "string" && AUTH_MODES.has(obj.active_auth_mode))
+    out.active_auth_mode = obj.active_auth_mode as AuthMode;
+  if (typeof obj.coding_plan_api_key === "string" && obj.coding_plan_api_key.length > 0)
+    out.coding_plan_api_key = obj.coding_plan_api_key;
+  if (typeof obj.coding_plan_region === "string" && CODING_PLAN_REGIONS.has(obj.coding_plan_region))
+    out.coding_plan_region = obj.coding_plan_region as CodingPlanRegion;
+  if (typeof obj.token_plan_api_key === "string" && obj.token_plan_api_key.length > 0)
+    out.token_plan_api_key = obj.token_plan_api_key;
+  if (typeof obj.token_plan_region === "string" && TOKEN_PLAN_REGIONS.has(obj.token_plan_region))
+    out.token_plan_region = obj.token_plan_region as TokenPlanRegion;
   if (typeof obj.region === "string" && VALID_REGIONS.has(obj.region))
     out.region = obj.region as Region;
   if (typeof obj.base_url === "string" && isHttpUrl(obj.base_url)) out.base_url = obj.base_url;
@@ -97,12 +115,17 @@ export function parseConfigFile(raw: unknown): ConfigFile {
 export interface Config {
   clientName?: string;
   clientVersion?: string;
+  activeAuthMode: AuthMode;
   apiKey?: string;
   /** `DASHSCOPE_ACCESS_TOKEN` env (explicit override). */
   accessTokenEnv?: string;
   /** `access_token` in config file (console login). */
   fileAccessToken?: string;
   fileApiKey?: string;
+  codingPlanApiKey?: string;
+  codingPlanRegion: CodingPlanRegion;
+  tokenPlanApiKey?: string;
+  tokenPlanRegion: TokenPlanRegion;
   fileRegion?: Region;
   configPath?: string;
   region: Region;

@@ -119,7 +119,7 @@ export default defineCommand({
 
     // Auto-upload local files
     const credential = await resolveCredential(config);
-    const resolvedVideoUrl = await resolveFileUrl(videoUrl!, credential.token, model);
+    const resolvedVideoUrl = await resolveFileUrl(videoUrl!, credential, model);
     // --- Build media array ---
     const media: DashScopeVideoEditRequest["input"]["media"] = [
       { type: "video", url: resolvedVideoUrl },
@@ -133,7 +133,7 @@ export default defineCommand({
         .map((s) => s.trim())
         .filter(Boolean);
       for (const imgUrl of images) {
-        const resolved = await resolveFileUrl(imgUrl, credential.token, model);
+        const resolved = await resolveFileUrl(imgUrl, credential, model);
         media.push({ type: "reference_image", url: resolved });
       }
     }
@@ -166,7 +166,7 @@ export default defineCommand({
     }
 
     // --- Submit async task ---
-    const url = videoGenerateEndpoint(config.baseUrl);
+    const url = videoGenerateEndpoint(config);
     const response = await requestJson<DashScopeAsyncResponse>(config, {
       url,
       method: "POST",
@@ -190,7 +190,7 @@ export default defineCommand({
     // --- Poll until completion ---
     // Video editing is compute-intensive; default timeout = 600s (10 min)
     const pollInterval = (flags.pollInterval as number) ?? 15;
-    const pollUrl = taskEndpoint(config.baseUrl, taskId);
+    const pollUrl = taskEndpoint(config, taskId);
     const editTimeout = Math.max(config.timeout, 600);
 
     const result = await poll<DashScopeTaskResponse>(config, {

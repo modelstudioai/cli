@@ -147,11 +147,11 @@ export default defineCommand({
     if (needsResolve) {
       const credential = await resolveCredential(config);
       for (const u of rawImageUrls) {
-        const resolved = await resolveFileUrl(u, credential.token, model);
+        const resolved = await resolveFileUrl(u, credential, model);
         imageUrls.push(resolved);
       }
       for (const u of rawAudioUrls) {
-        const resolved = await resolveFileUrl(u, credential.token, model);
+        const resolved = await resolveFileUrl(u, credential, model);
         audioUrls.push(resolved);
       }
       for (const u of rawVideoUrls) {
@@ -164,11 +164,11 @@ export default defineCommand({
             .filter(Boolean);
           // Resolve each frame URL
           for (const f of frames) {
-            const resolved = await resolveFileUrl(f, credential.token, model);
+            const resolved = await resolveFileUrl(f, credential, model);
             videoUrls.push(`frame:${resolved}`);
           }
         } else {
-          const resolved = await resolveFileUrl(u, credential.token, model);
+          const resolved = await resolveFileUrl(u, credential, model);
           videoUrls.push(resolved);
         }
       }
@@ -242,7 +242,7 @@ export default defineCommand({
     }
 
     // --- Stream request ---
-    const url = chatEndpoint(config.baseUrl);
+    const url = chatEndpoint(config);
     const res = await request(config, {
       url,
       method: "POST",

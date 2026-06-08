@@ -49,6 +49,7 @@ process.stdout.on("error", (e: NodeJS.ErrnoException) => {
 const NO_AUTH_SETUP = [
   ["auth", "login"],
   ["auth", "logout"],
+  ["auth", "use"],
   ["config", "show"],
   ["config", "set"],
   ["config", "export-schema"],
@@ -99,7 +100,9 @@ async function main() {
       config.apiKey ||
       config.fileApiKey ||
       config.fileAccessToken ||
-      config.accessTokenEnv
+      config.accessTokenEnv ||
+      config.codingPlanApiKey ||
+      config.tokenPlanApiKey
     );
     if (hasKey) printQuickStart();
     else printWelcomeBanner();
@@ -131,7 +134,7 @@ async function main() {
     await ensureApiKey(config);
     try {
       const credential = await resolveCredential(config);
-      maybeShowStatusBar(config, credential.token, credential);
+      maybeShowStatusBar(config, credential);
     } catch {
       /* 没有凭证，不展示状态栏 */
     }

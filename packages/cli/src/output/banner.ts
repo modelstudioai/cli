@@ -21,14 +21,16 @@ export function printWelcomeBanner(): void {
   process.stderr.write(`\n  Welcome to ${purple}Bailian${reset} CLI!\n\n`);
   process.stderr.write("  Get started in 2 steps:\n");
   process.stderr.write(`  1. Get your API Key:  ${API_KEY_PAGE}\n`);
-  process.stderr.write("  2. Login:             bl auth login --api-key <your-key>\n\n");
+  process.stderr.write("  2. Login:             bl auth login\n\n");
 }
 
 export function printQuickStart(): void {
-  const { dim, reset } = colors();
-  process.stderr.write("\n🎯 Try these with your AI coding assistant:\n\n");
+  const { purple, dim, reset } = colors();
+  process.stderr.write(
+    `\n  ${purple}Quick Start${reset} — try these with your AI coding assistant:\n\n`,
+  );
   QUICK_START_TASKS.forEach((task, i) => {
-    process.stderr.write(`${dim}${i + 1}${reset}  ${task}\n`);
+    process.stderr.write(`  ${dim}${i + 1}${reset}  ${task}\n`);
   });
   process.stderr.write("\n");
 }

@@ -24,6 +24,7 @@ export default defineCommand({
       output: config.output,
       timeout: config.timeout,
       config_file: getConfigPath(),
+      active_auth_mode: config.activeAuthMode,
     };
 
     // Mask API key if present
@@ -32,6 +33,20 @@ export default defineCommand({
     }
     if (file.access_token) {
       result.access_token = maskToken(file.access_token);
+    }
+
+    // Plan-related fields
+    if (file.coding_plan_api_key) {
+      result.coding_plan_api_key = maskToken(file.coding_plan_api_key);
+    }
+    if (file.coding_plan_region) {
+      result.coding_plan_region = file.coding_plan_region;
+    }
+    if (file.token_plan_api_key) {
+      result.token_plan_api_key = maskToken(file.token_plan_api_key);
+    }
+    if (file.token_plan_region) {
+      result.token_plan_region = file.token_plan_region;
     }
 
     // Default models

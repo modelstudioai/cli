@@ -1,5 +1,17 @@
 import { readFileSync, writeFileSync, renameSync, existsSync } from "fs";
-import { parseConfigFile, REGIONS, type Config, type ConfigFile, type Region } from "./schema.ts";
+import {
+  AUTH_MODES,
+  CODING_PLAN_REGIONS,
+  parseConfigFile,
+  REGIONS,
+  TOKEN_PLAN_REGIONS,
+  type AuthMode,
+  type CodingPlanRegion,
+  type Config,
+  type ConfigFile,
+  type Region,
+  type TokenPlanRegion,
+} from "./schema.ts";
 import { ensureConfigDir, getConfigPath } from "./paths.ts";
 import { detectOutputFormat, type OutputFormat } from "../output/formatter.ts";
 import { BailianError } from "../errors/base.ts";
@@ -36,6 +48,23 @@ export function loadConfig(flags: GlobalFlags): Config {
   const accessTokenEnv = process.env.DASHSCOPE_ACCESS_TOKEN?.trim() || undefined;
   const fileAccessToken = file.access_token?.trim() || undefined;
 
+  const envAuthMode = process.env.BAILIAN_AUTH_MODE;
+  const activeAuthMode: AuthMode = apiKey
+    ? "standard-api-key"
+    : envAuthMode && AUTH_MODES.has(envAuthMode)
+      ? (envAuthMode as AuthMode)
+      : file.active_auth_mode || "standard-api-key";
+  const envCodingPlanRegion = process.env.BAILIAN_CODING_PLAN_REGION;
+  const codingPlanRegion: CodingPlanRegion =
+    envCodingPlanRegion && CODING_PLAN_REGIONS.has(envCodingPlanRegion)
+      ? (envCodingPlanRegion as CodingPlanRegion)
+      : file.coding_plan_region || "cn";
+  const envTokenPlanRegion = process.env.BAILIAN_TOKEN_PLAN_REGION;
+  const tokenPlanRegion: TokenPlanRegion =
+    envTokenPlanRegion && TOKEN_PLAN_REGIONS.has(envTokenPlanRegion)
+      ? (envTokenPlanRegion as TokenPlanRegion)
+      : file.token_plan_region || "cn";
+
   const explicitRegion = (flags.region as string) || process.env.DASHSCOPE_REGION || undefined;
   const cachedRegion = file.region;
   const region = (explicitRegion || cachedRegion || "cn") as Region;
@@ -64,10 +93,15 @@ export function loadConfig(flags: GlobalFlags): Config {
   }
 
   return {
+    activeAuthMode,
     apiKey,
     accessTokenEnv,
     fileAccessToken,
     fileApiKey,
+    codingPlanApiKey: file.coding_plan_api_key || process.env.BAILIAN_CODING_PLAN_API_KEY,
+    codingPlanRegion,
+    tokenPlanApiKey: file.token_plan_api_key || process.env.BAILIAN_TOKEN_PLAN_API_KEY,
+    tokenPlanRegion,
     fileRegion: file.region,
     configPath: getConfigPath(),
     region,

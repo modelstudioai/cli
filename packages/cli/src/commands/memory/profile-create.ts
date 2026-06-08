@@ -49,11 +49,11 @@ export default defineCommand({
     const format = detectOutputFormat(config.output);
 
     if (config.dryRun) {
-      emitResult({ endpoint: profileSchemaEndpoint(config.baseUrl), request: body }, format);
+      emitResult({ endpoint: profileSchemaEndpoint(config), request: body }, format);
       return;
     }
 
-    const url = profileSchemaEndpoint(config.baseUrl);
+    const url = profileSchemaEndpoint(config);
     const response = await requestJson<ProfileSchemaCreateResponse>(config, {
       url,
       method: "POST",

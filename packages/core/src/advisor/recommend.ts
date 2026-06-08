@@ -237,7 +237,7 @@ export async function rankModels(
     body.enable_thinking = true;
   }
 
-  const url = chatEndpoint(config.baseUrl);
+  const url = chatEndpoint(config);
   let content: string;
 
   if (useThinkingModel) {

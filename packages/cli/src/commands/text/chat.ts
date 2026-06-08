@@ -181,7 +181,7 @@ export default defineCommand({
       return;
     }
 
-    const url = chatEndpoint(config.baseUrl);
+    const url = chatEndpoint(config);
 
     if (shouldStream) {
       const res = await request(config, {

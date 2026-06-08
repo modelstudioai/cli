@@ -14,7 +14,7 @@
 import type { Config } from "../config/schema.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
-import { resolveCredential } from "../auth/resolver.ts";
+import { requireNativeDashScope, resolveCredential } from "../auth/resolver.ts";
 import { trackingHeaders } from "./headers.ts";
 
 // ---- JSON-RPC 2.0 Types ----
@@ -80,6 +80,7 @@ export class McpClient {
   /** Initialize the MCP session. Must be called before any other method. */
   async initialize(): Promise<void> {
     const credential = await resolveCredential(this.config);
+    requireNativeDashScope(credential, "MCP services");
     this.authToken = credential.token;
 
     const result = await this.rpc("initialize", {

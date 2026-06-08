@@ -12,21 +12,13 @@ function tildePath(p: string): string {
   return p.startsWith(homedir()) ? p.replace(homedir(), "~") : p;
 }
 
-export function maybeShowStatusBar(
-  config: Config,
-  token: string,
-  resolved?: ResolvedCredential,
-): void {
+export function maybeShowStatusBar(config: Config, credential: ResolvedCredential): void {
   if (config.quiet || !process.stderr.isTTY) return;
 
   const filePath = config.configPath ? tildePath(config.configPath) : "~/.bailian/config.json";
   const regionSrc = config.fileRegion ? `${config.fileRegion} (file)` : "cn (default)";
-  const authTag = resolved
-    ? `${resolved.source} · ${resolved.method}`
-    : config.apiKey
-      ? "flag · api-key"
-      : "config";
-  const maskedKey = maskToken(token);
+  const keySrc = credential.source === "flag" ? "(flag)" : "(active)";
+  const maskedKey = maskToken(credential.token);
 
   process.stderr.write(
     `${bold}${mmBlue}BAILIAN${reset} ` +
@@ -34,6 +26,8 @@ export function maybeShowStatusBar(
       `${dim}|${reset} ` +
       `${dim}Region:${reset} ${mmCyan}${regionSrc}${reset} ` +
       `${dim}|${reset} ` +
-      `${dim}Auth:${reset} ${mmPink}${maskedKey}${reset} ${dim}${authTag}${reset}\n`,
+      `${dim}Mode:${reset} ${mmCyan}${credential.mode}${reset} ` +
+      `${dim}|${reset} ` +
+      `${dim}Key:${reset} ${mmPink}${maskedKey}${reset} ${dim}${keySrc}${reset}\n`,
   );
 }

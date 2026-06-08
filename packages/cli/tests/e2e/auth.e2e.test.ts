@@ -47,7 +47,7 @@ describe("e2e: auth", () => {
       "--non-interactive",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stdout).toContain("Would validate and save API key.");
+    expect(stdout).toContain("Would validate and save standard-api-key API key.");
   });
 
   test("auth login --dry-run 覆盖全局参数 --output json --timeout", async () => {
@@ -65,7 +65,7 @@ describe("e2e: auth", () => {
       "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stdout).toContain("Would validate and save API key.");
+    expect(stdout).toContain("Would validate and save standard-api-key API key.");
   });
 
   test("auth login 缺少密钥且 --output json 时仍打印子命令帮助 (0)", async () => {

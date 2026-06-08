@@ -318,7 +318,7 @@ export default defineCommand({
       process.stderr.write(`[Model: ${model}] [Voice: ${voice}]\n`);
     }
 
-    const url = speechSynthesizeEndpoint(config.baseUrl);
+    const url = speechSynthesizeEndpoint(config);
 
     if (useStream) {
       await handleStreamMode(config, url, body, flags, format);

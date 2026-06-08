@@ -48,13 +48,13 @@ export default defineCommand({
 
     if (config.dryRun) {
       emitResult(
-        { endpoint: memoryNodeEndpoint(config.baseUrl, nodeId), method: "PATCH", request: body },
+        { endpoint: memoryNodeEndpoint(config, nodeId), method: "PATCH", request: body },
         format,
       );
       return;
     }
 
-    const url = memoryNodeEndpoint(config.baseUrl, nodeId);
+    const url = memoryNodeEndpoint(config, nodeId);
     const response = await requestJson<{ request_id: string }>(config, {
       url,
       method: "PATCH",

@@ -27,12 +27,24 @@ const VALID_KEYS = [
   "access_key_id",
   "access_key_secret",
   "workspace_id",
+  "active_auth_mode",
+  "coding_plan_api_key",
+  "coding_plan_region",
+  "token_plan_api_key",
+  "token_plan_region",
 ];
 
 // Keys whose values are secrets. Their stored value must never be echoed back in
 // cleartext (CI logs, pipes, shared terminals); show a masked form instead — the
 // same policy `config show` and `auth status` already follow.
-const SECRET_KEYS = new Set(["api_key", "access_token", "access_key_id", "access_key_secret"]);
+const SECRET_KEYS = new Set([
+  "api_key",
+  "access_token",
+  "access_key_id",
+  "access_key_secret",
+  "coding_plan_api_key",
+  "token_plan_api_key",
+]);
 
 // Allow hyphen-style keys (e.g. default-text-model → default_text_model)
 const KEY_ALIASES: Record<string, string> = {
@@ -48,6 +60,12 @@ const KEY_ALIASES: Record<string, string> = {
   "access-key-id": "access_key_id",
   "access-key-secret": "access_key_secret",
   "workspace-id": "workspace_id",
+  "active-auth-mode": "active_auth_mode",
+  "auth-mode": "active_auth_mode",
+  "coding-plan-api-key": "coding_plan_api_key",
+  "coding-plan-region": "coding_plan_region",
+  "token-plan-api-key": "token_plan_api_key",
+  "token-plan-region": "token_plan_region",
 };
 
 export default defineCommand({
@@ -100,6 +118,30 @@ export default defineCommand({
     if (resolvedKey === "output" && !["text", "json"].includes(value)) {
       throw new BailianError(
         `Invalid output format "${value}". Valid values: text, json`,
+        ExitCode.USAGE,
+      );
+    }
+
+    if (
+      resolvedKey === "active_auth_mode" &&
+      !["standard-api-key", "coding-plan", "token-plan"].includes(value)
+    ) {
+      throw new BailianError(
+        `Invalid active_auth_mode "${value}". Valid values: standard-api-key, coding-plan, token-plan`,
+        ExitCode.USAGE,
+      );
+    }
+
+    if (resolvedKey === "coding_plan_region" && !["cn", "intl"].includes(value)) {
+      throw new BailianError(
+        `Invalid coding_plan_region "${value}". Valid values: cn, intl`,
+        ExitCode.USAGE,
+      );
+    }
+
+    if (resolvedKey === "token_plan_region" && !["cn", "intl"].includes(value)) {
+      throw new BailianError(
+        `Invalid token_plan_region "${value}". Valid values: cn, intl`,
         ExitCode.USAGE,
       );
     }

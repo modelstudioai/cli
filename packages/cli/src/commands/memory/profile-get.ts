@@ -29,7 +29,7 @@ export default defineCommand({
 
     const format = detectOutputFormat(config.output);
     const params = new URLSearchParams({ user_id: userId });
-    const url = `${userProfileEndpoint(config.baseUrl, schemaId)}?${params.toString()}`;
+    const url = `${userProfileEndpoint(config, schemaId)}?${params.toString()}`;
 
     if (config.dryRun) {
       emitResult({ endpoint: url, method: "GET" }, format);

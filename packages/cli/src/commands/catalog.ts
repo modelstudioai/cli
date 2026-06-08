@@ -3,6 +3,7 @@ import type { Command } from "bailian-cli-core";
 import authLogin from "./auth/login.ts";
 import authStatus from "./auth/status.ts";
 import authLogout from "./auth/logout.ts";
+import authUse from "./auth/use.ts";
 import textChat from "./text/chat.ts";
 import textOmni from "./omni/chat.ts";
 import imageGenerate from "./image/generate.ts";
@@ -45,6 +46,7 @@ export const commands: Record<string, Command> = {
   "auth login": authLogin,
   "auth status": authStatus,
   "auth logout": authLogout,
+  "auth use": authUse,
   "text chat": textChat,
   omni: textOmni,
   "image generate": imageGenerate,

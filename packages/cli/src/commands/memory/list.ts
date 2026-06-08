@@ -35,7 +35,7 @@ export default defineCommand({
     if (flags.page !== undefined) params.set("page_num", String(flags.page as number));
     if (flags.memoryLibraryId) params.set("memory_library_id", flags.memoryLibraryId as string);
 
-    const url = `${memoryListEndpoint(config.baseUrl)}?${params.toString()}`;
+    const url = `${memoryListEndpoint(config)}?${params.toString()}`;
 
     if (config.dryRun) {
       emitResult({ endpoint: url, method: "GET" }, format);

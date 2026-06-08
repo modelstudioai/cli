@@ -29,7 +29,7 @@ export default defineCommand({
     const format = detectOutputFormat(config.output);
     const params = new URLSearchParams({ user_id: userId });
     if (flags.memoryLibraryId) params.set("memory_library_id", flags.memoryLibraryId as string);
-    const url = `${memoryNodeEndpoint(config.baseUrl, nodeId)}?${params.toString()}`;
+    const url = `${memoryNodeEndpoint(config, nodeId)}?${params.toString()}`;
 
     if (config.dryRun) {
       emitResult({ endpoint: url, method: "DELETE" }, format);

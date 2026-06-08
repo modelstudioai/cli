@@ -4,47 +4,67 @@ import {
   isInteractive,
   maskToken,
   readConfigFile,
+  resolveCredential,
   writeConfigFile,
   type Config,
 } from "bailian-cli-core";
-import { promptText, promptConfirm } from "../output/prompt.ts";
+import { promptConfirm } from "../output/prompt.ts";
+import { interactiveAuthSetup } from "./auth-wizard.ts";
 
 export async function ensureApiKey(config: Config): Promise<void> {
-  if (config.apiKey || config.fileApiKey || config.accessTokenEnv || config.fileAccessToken) return;
+  try {
+    await resolveCredential(config);
+    return;
+  } catch {
+    // No valid credential — need setup
+  }
+
+  if (!isInteractive({ nonInteractive: config.nonInteractive })) {
+    throw new BailianError(
+      `No credentials found for active auth mode "${config.activeAuthMode}".`,
+      ExitCode.AUTH,
+      "Set the matching environment variable, pass --api-key, or run interactively to be guided.\n" +
+        `  bl auth login --mode ${config.activeAuthMode} --api-key <your-key>`,
+    );
+  }
 
   const envKey = process.env.DASHSCOPE_API_KEY;
-  let key: string | undefined;
-
-  if (envKey) {
-    if (!isInteractive({ nonInteractive: config.nonInteractive })) {
-      key = envKey;
-    } else {
-      const use = await promptConfirm({
-        message: `Found DASHSCOPE_API_KEY in environment (${maskToken(envKey)}). Save it to config file?`,
-      });
-      if (use) key = envKey;
+  if (envKey && config.activeAuthMode === "standard-api-key") {
+    const use = await promptConfirm({
+      message: `Found DASHSCOPE_API_KEY in environment (${maskToken(envKey)}). Save it to config file?`,
+    });
+    if (use) {
+      const data = {
+        ...(readConfigFile() as Record<string, unknown>),
+        active_auth_mode: "standard-api-key",
+        api_key: envKey,
+      };
+      await writeConfigFile(data);
+      config.fileApiKey = envKey;
+      config.activeAuthMode = "standard-api-key";
+      const path = config.configPath ?? "~/.bailian/config.json";
+      process.stderr.write(`API key saved to ${path}\n`);
+      return;
     }
   }
 
-  if (!key) {
-    if (!isInteractive({ nonInteractive: config.nonInteractive })) {
-      throw new BailianError(
-        "No API key found.",
-        ExitCode.AUTH,
-        "Set DASHSCOPE_API_KEY environment variable, pass --api-key, or run interactively to be prompted.",
-      );
-    }
-    const input = await promptText({ message: "Enter your DashScope API key:" });
-    if (!input) throw new BailianError("API key is required.", ExitCode.AUTH);
-    key = input;
-  }
+  const result = await interactiveAuthSetup(config);
 
-  const data: Record<string, unknown> = {
-    ...(readConfigFile() as Record<string, unknown>),
-    api_key: key,
-  };
+  const data = readConfigFile() as Record<string, unknown>;
+  data.active_auth_mode = result.mode;
+  if (result.mode === "standard-api-key") data.api_key = result.key;
+  if (result.mode === "coding-plan") {
+    data.coding_plan_api_key = result.key;
+    if (result.codingPlanRegion) data.coding_plan_region = result.codingPlanRegion;
+  }
+  if (result.mode === "token-plan") data.token_plan_api_key = result.key;
   await writeConfigFile(data);
-  config.fileApiKey = key;
+
+  config.activeAuthMode = result.mode;
+  config.fileApiKey = result.mode === "standard-api-key" ? result.key : undefined;
+  config.codingPlanApiKey = result.mode === "coding-plan" ? result.key : undefined;
+  config.tokenPlanApiKey = result.mode === "token-plan" ? result.key : undefined;
+  if (result.codingPlanRegion) config.codingPlanRegion = result.codingPlanRegion;
 
   const path = config.configPath ?? "~/.bailian/config.json";
   process.stderr.write(`API key saved to ${path}\n`);

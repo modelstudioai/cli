@@ -89,7 +89,7 @@ export default defineCommand({
     // Auto-upload local files in parallel
     const credential = await resolveCredential(config);
     const resolvedUrls = await Promise.all(
-      rawUrls.map((u) => resolveFileUrl(u, credential.token, model)),
+      rawUrls.map((u) => resolveFileUrl(u, credential, model)),
     );
     const channelId = flags.channelId as number | undefined;
     const language = flags.language as string | undefined;
@@ -121,7 +121,7 @@ export default defineCommand({
       process.stderr.write(`[Model: ${model}] [Mode: async] [Files: ${resolvedUrls.length}]\n`);
     }
 
-    const url = speechRecognizeEndpoint(config.baseUrl);
+    const url = speechRecognizeEndpoint(config);
     await handleAsyncMode(config, url, body, flags, format, resolvedUrls.length);
   },
 });
@@ -152,7 +152,7 @@ async function handleAsyncMode(
 
   // Poll until completion
   const pollInterval = (flags.pollInterval as number) ?? 2;
-  const pollUrl = taskEndpoint(config.baseUrl, taskId);
+  const pollUrl = taskEndpoint(config, taskId);
 
   const result = await poll<DashScopeASRTaskResult>(config, {
     url: pollUrl,

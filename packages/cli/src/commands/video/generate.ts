@@ -120,7 +120,7 @@ export default defineCommand({
     let resolvedImageUrl: string | undefined;
     if (imageUrl) {
       const credential = await resolveCredential(config);
-      resolvedImageUrl = await resolveFileUrl(imageUrl, credential.token, model);
+      resolvedImageUrl = await resolveFileUrl(imageUrl, credential, model);
     }
 
     const watermark = resolveWatermark(flags.watermark);
@@ -153,7 +153,7 @@ export default defineCommand({
 
     // Submit async task(s) — supports --concurrent for parallel generation
     const concurrent = getConcurrency(flags);
-    const url = videoGenerateEndpoint(config.baseUrl);
+    const url = videoGenerateEndpoint(config);
 
     const responses = await runConcurrent(
       concurrent,
@@ -184,7 +184,7 @@ export default defineCommand({
     const pollInterval = (flags.pollInterval as number) ?? 5;
 
     const pollPromises = taskIds.map((taskId) => {
-      const pollUrl = taskEndpoint(config.baseUrl, taskId);
+      const pollUrl = taskEndpoint(config, taskId);
       return poll<DashScopeTaskResponse>(config, {
         url: pollUrl,
         intervalSec: pollInterval,

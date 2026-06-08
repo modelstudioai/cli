@@ -63,11 +63,11 @@ export default defineCommand({
     const format = detectOutputFormat(config.output);
 
     if (config.dryRun) {
-      emitResult({ endpoint: memorySearchEndpoint(config.baseUrl), request: body }, format);
+      emitResult({ endpoint: memorySearchEndpoint(config), request: body }, format);
       return;
     }
 
-    const url = memorySearchEndpoint(config.baseUrl);
+    const url = memorySearchEndpoint(config);
     const response = await requestJson<MemorySearchResponse>(config, {
       url,
       method: "POST",

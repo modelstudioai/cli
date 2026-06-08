@@ -2,7 +2,7 @@ import type { Config } from "../config/schema.ts";
 import type { ApiErrorBody } from "../errors/api.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
-import { resolveCredential } from "../auth/resolver.ts";
+import { requireNativeDashScope, resolveCredential } from "../auth/resolver.ts";
 import { mapApiError } from "../errors/api.ts";
 import { maskToken } from "../utils/token.ts";
 import { SOURCE_CONFIG, trackingHeaders } from "./headers.ts";
@@ -30,6 +30,18 @@ function bodyReferencesOssUrl(body: unknown): boolean {
   return JSON.stringify(body).includes("oss://");
 }
 
+function isDashScopeNativeUrl(url: string): boolean {
+  return /\/api\/v\d+\//.test(url) || url.includes("/mcps/");
+}
+
+function canUseNativeUrl(credential: Awaited<ReturnType<typeof resolveCredential>>, url: string) {
+  if (credential.apiStyle === "dashscope-native") return true;
+  if (credential.mode === "token-plan") {
+    return url.startsWith(`${credential.baseUrl}/api/`);
+  }
+  return false;
+}
+
 export async function request(config: Config, opts: RequestOpts): Promise<Response> {
   const isFormData = typeof FormData !== "undefined" && opts.body instanceof FormData;
 
@@ -55,6 +67,9 @@ export async function request(config: Config, opts: RequestOpts): Promise<Respon
 
   if (!opts.noAuth) {
     const credential = await resolveCredential(config);
+    if (isDashScopeNativeUrl(opts.url) && !canUseNativeUrl(credential, opts.url)) {
+      requireNativeDashScope(credential, "This API");
+    }
     headers["Authorization"] = `Bearer ${credential.token}`;
 
     if (config.verbose) {
