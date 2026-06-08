@@ -53,7 +53,7 @@ CLI 校验通过后，在本机终端执行：
 npx skills add modelstudioai/cli --all -g
 ```
 
-完整说明见 [百炼Skills](https://github.com/modelstudioai/cli/blob/main/skills/bailian-cli/SKILL.md)。安装成功后，用中文简要说明已安装的 skills 及用户可做什么。
+安装成功后，用中文简要说明已安装的 skills 及用户可做什么。
 
 ---
 
