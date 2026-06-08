@@ -29,7 +29,7 @@
 
 ### D. 用户面文档
 
-- [ ] `README.md` / `README_CN.md`:
+- [ ] `README.md` / `README.zh.md`:
   - Quick Start 示例如使用了具体型号,确认仍可用
   - 顶部 introduction 段落如提到"Qwen-Omni"等品牌名,无需变(模型代号变化不算品牌变)
 

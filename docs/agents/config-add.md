@@ -54,7 +54,7 @@ config 文件     ─┘
 
 ### E. 文档
 
-- [ ] `README.md` / `README_CN.md` 的 env var 表格
+- [ ] `README.md` / `README.zh.md` 的 env var 表格
 
 ### F. 测试
 
