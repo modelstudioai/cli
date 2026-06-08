@@ -73,7 +73,7 @@ No timeline scrubbing. No frame-by-frame editing. Just one sentence → one vide
 
 ```bash
 npm install -g bailian-cli
-npx skills add modelstudioai/skills --all -g
+npx skills add modelstudioai/cli --all -g
 ```
 
 > Requires Node.js >= 22.12.

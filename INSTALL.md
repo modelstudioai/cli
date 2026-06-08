@@ -50,10 +50,10 @@ which bl   # Windows 可用 where bl
 CLI 校验通过后，在本机终端执行：
 
 ```bash
-npx skills add modelstudioai/skills --all -g
+npx skills add modelstudioai/cli --all -g
 ```
 
-完整说明见 [百炼Skills](https://github.com/modelstudioai/skills)。安装成功后，用中文简要说明已安装的 skills 及用户可做什么。
+完整说明见 [百炼Skills](https://github.com/modelstudioai/cli/blob/main/skills/bailian-cli/SKILL.md)。安装成功后，用中文简要说明已安装的 skills 及用户可做什么。
 
 ---
 

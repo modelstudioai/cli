@@ -25,12 +25,12 @@ packages/cli/
 └── tests/e2e/
 ```
 
-Skill / 命令手册不再随 npm 包发布,改由独立的 `npx add skills` 机制安装。`tools/generate-reference.ts` 仍然从 `catalog.ts` 生成命令手册到 `tools/generated/reference/`(gitignore,临时),等新机制接入后再迁走。
+Skill / 命令手册随 `skills/bailian-cli/` 经 `npx skills add modelstudioai/cli` 安装。`tools/generate-reference.ts` 从 `catalog.ts` 生成命令手册到 `skills/bailian-cli/reference/`(纳入 git)。
 
 非代码资产:
 
 - `tools/release/` — 发版自动化（CI 驱动，见 `.github/workflows/publish.yml`）
-- `tools/generate-reference.ts` — 从 `catalog.ts` 生成命令手册(临时输出到 `tools/generated/reference/`)
+- `tools/generate-reference.ts` — 从 `catalog.ts` 生成命令手册到 `skills/bailian-cli/reference/`
 - `README.md` / `README_CN.md` — npm 和 GitHub 主页
 
 约定:

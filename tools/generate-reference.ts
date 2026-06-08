@@ -1,10 +1,9 @@
 /**
  * Generator: reads `packages/cli/src/commands/catalog.ts` and writes:
- *   - `tools/generated/reference/index.md` — quick index, global flags, notes
- *   - `tools/generated/reference/<group>.md` — per top-level command group details
+ *   - `skills/bailian-cli/reference/index.md` — quick index, global flags, notes
+ *   - `skills/bailian-cli/reference/<group>.md` — per top-level command group details
  *
- * Output is temporary — the new skill install mechanism (`npx add skills`) will
- * consume these files from a yet-to-be-decided location.
+ * Committed to git; consumed by the `bailian-cli` Agent Skill (`npx skills add modelstudioai/cli`).
  *
  * Run: pnpm --filter bailian-cli run generate:reference
  */
@@ -20,7 +19,7 @@ import {
 import { commands } from "../packages/cli/src/commands/catalog.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REF_DIR = join(__dirname, "generated/reference");
+const REF_DIR = join(__dirname, "../skills/bailian-cli/reference");
 const INDEX_PATH = join(REF_DIR, "index.md");
 
 const GENERATED_BANNER =
