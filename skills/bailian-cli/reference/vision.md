@@ -7,28 +7,28 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command | Description |
-| --- | --- |
+| Command              | Description                              |
+| -------------------- | ---------------------------------------- |
 | `bl vision describe` | Describe an image or video using Qwen-VL |
 
 ## Command details
 
 ### `bl vision describe`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `vision describe` |
-| **Description** | Describe an image or video using Qwen-VL |
-| **Usage** | `bl vision describe --image <path-or-url> [--video <url>] [--prompt <text>]` |
+| Field           | Value                                                                        |
+| --------------- | ---------------------------------------------------------------------------- |
+| **Name**        | `vision describe`                                                            |
+| **Description** | Describe an image or video using Qwen-VL                                     |
+| **Usage**       | `bl vision describe --image <path-or-url> [--video <url>] [--prompt <text>]` |
 
 #### Options
 
-| Flag | Type | Required | Description |
-| --- | --- | --- | --- |
-| `--image <path-or-url>` | string | no | Local image path or URL |
-| `--video <url>` | array | no | Video file URL or local path (mp4/mov/avi/mkv/webm) |
-| `--prompt <text>` | string | no | Question about the content (default: auto-detected) |
-| `--model <model>` | string | no | Vision model (default: qwen3-vl-plus) |
+| Flag                    | Type   | Required | Description                                         |
+| ----------------------- | ------ | -------- | --------------------------------------------------- |
+| `--image <path-or-url>` | string | no       | Local image path or URL                             |
+| `--video <url>`         | array  | no       | Video file URL or local path (mp4/mov/avi/mkv/webm) |
+| `--prompt <text>`       | string | no       | Question about the content (default: auto-detected) |
+| `--model <model>`       | string | no       | Vision model (default: qwen3-vl-plus)               |
 
 #### Examples
 

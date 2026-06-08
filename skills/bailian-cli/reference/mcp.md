@@ -7,31 +7,31 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command | Description |
-| --- | --- |
-| `bl mcp call` | Call a tool on an MCP server (tools/call) |
-| `bl mcp list` | List MCP servers activated under your Bailian account |
-| `bl mcp tools` | List tools exposed by an MCP server (tools/list) |
+| Command        | Description                                           |
+| -------------- | ----------------------------------------------------- |
+| `bl mcp call`  | Call a tool on an MCP server (tools/call)             |
+| `bl mcp list`  | List MCP servers activated under your Bailian account |
+| `bl mcp tools` | List tools exposed by an MCP server (tools/list)      |
 
 ## Command details
 
 ### `bl mcp call`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `mcp call` |
-| **Description** | Call a tool on an MCP server (tools/call) |
-| **Usage** | `bl mcp call <server-code>.<tool> [--arg k=v ...] [--json '{...}'] [--url <url>]` |
+| Field           | Value                                                                             |
+| --------------- | --------------------------------------------------------------------------------- |
+| **Name**        | `mcp call`                                                                        |
+| **Description** | Call a tool on an MCP server (tools/call)                                         |
+| **Usage**       | `bl mcp call <server-code>.<tool> [--arg k=v ...] [--json '{...}'] [--url <url>]` |
 
 #### Options
 
-| Flag | Type | Required | Description |
-| --- | --- | --- | --- |
-| `<server-code>.<tool>` | string | yes | Server code and tool name joined by a dot, e.g. market-cmapi00073529.SmartStockSelection |
-| `--arg <kv>` | array | no | Tool argument (repeatable). Values parsed as JSON if possible, else string. |
-| `--json <obj>` | string | no | Full arguments object as JSON; merged with --arg (arg wins). |
-| `--query <text>` | string | no | Shortcut for --arg query=<text> (mirrors many DashScope MCP tools). |
-| `--url <url>` | string | no | Override the MCP endpoint URL (for non-Bailian servers) |
+| Flag                   | Type   | Required | Description                                                                              |
+| ---------------------- | ------ | -------- | ---------------------------------------------------------------------------------------- |
+| `<server-code>.<tool>` | string | yes      | Server code and tool name joined by a dot, e.g. market-cmapi00073529.SmartStockSelection |
+| `--arg <kv>`           | array  | no       | Tool argument (repeatable). Values parsed as JSON if possible, else string.              |
+| `--json <obj>`         | string | no       | Full arguments object as JSON; merged with --arg (arg wins).                             |
+| `--query <text>`       | string | no       | Shortcut for --arg query=<text> (mirrors many DashScope MCP tools).                      |
+| `--url <url>`          | string | no       | Override the MCP endpoint URL (for non-Bailian servers)                                  |
 
 #### Examples
 
@@ -49,21 +49,21 @@ bl mcp call market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 --arg min
 
 ### `bl mcp list`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `mcp list` |
+| Field           | Value                                                 |
+| --------------- | ----------------------------------------------------- |
+| **Name**        | `mcp list`                                            |
 | **Description** | List MCP servers activated under your Bailian account |
-| **Usage** | `bl mcp list [flags]` |
+| **Usage**       | `bl mcp list [flags]`                                 |
 
 #### Options
 
-| Flag | Type | Required | Description |
-| --- | --- | --- | --- |
-| `--name <text>` | string | no | Filter by server name (substring match) |
-| `--type <type>` | string | no | Server type: OFFICIAL \| PRIVATE (default: OFFICIAL) |
-| `--page <n>` | number | no | Page number (default: 1) |
-| `--page-size <n>` | number | no | Results per page (default: 30) |
-| `--region <region>` | string | no | API region (default: cn-beijing) |
+| Flag                | Type   | Required | Description                                          |
+| ------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--name <text>`     | string | no       | Filter by server name (substring match)              |
+| `--type <type>`     | string | no       | Server type: OFFICIAL \| PRIVATE (default: OFFICIAL) |
+| `--page <n>`        | number | no       | Page number (default: 1)                             |
+| `--page-size <n>`   | number | no       | Results per page (default: 30)                       |
+| `--region <region>` | string | no       | API region (default: cn-beijing)                     |
 
 #### Examples
 
@@ -81,18 +81,18 @@ bl mcp list --output json
 
 ### `bl mcp tools`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `mcp tools` |
+| Field           | Value                                            |
+| --------------- | ------------------------------------------------ |
+| **Name**        | `mcp tools`                                      |
 | **Description** | List tools exposed by an MCP server (tools/list) |
-| **Usage** | `bl mcp tools <server-code> [--url <url>]` |
+| **Usage**       | `bl mcp tools <server-code> [--url <url>]`       |
 
 #### Options
 
-| Flag | Type | Required | Description |
-| --- | --- | --- | --- |
-| `<server-code>` | string | yes | Server code from `bl mcp list` (e.g. market-cmapi00073529) |
-| `--url <url>` | string | no | Override the MCP endpoint URL (for non-Bailian servers) |
+| Flag            | Type   | Required | Description                                                |
+| --------------- | ------ | -------- | ---------------------------------------------------------- |
+| `<server-code>` | string | yes      | Server code from `bl mcp list` (e.g. market-cmapi00073529) |
+| `--url <url>`   | string | no       | Override the MCP endpoint URL (for non-Bailian servers)    |
 
 #### Examples
 

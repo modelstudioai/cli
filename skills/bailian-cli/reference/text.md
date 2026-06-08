@@ -7,36 +7,36 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command | Description |
-| --- | --- |
+| Command        | Description                                           |
+| -------------- | ----------------------------------------------------- |
 | `bl text chat` | Send a chat completion (OpenAI compatible, DashScope) |
 
 ## Command details
 
 ### `bl text chat`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `text chat` |
-| **Description** | Send a chat completion (OpenAI compatible, DashScope) |
-| **Usage** | `bl text chat --message <text> [flags]` |
-| **API docs** | [/compatibility-of-openai-with-dashscope](https://help.aliyun.com/zh/model-studio/compatibility-of-openai-with-dashscope) |
+| Field           | Value                                                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Name**        | `text chat`                                                                                                               |
+| **Description** | Send a chat completion (OpenAI compatible, DashScope)                                                                     |
+| **Usage**       | `bl text chat --message <text> [flags]`                                                                                   |
+| **API docs**    | [/compatibility-of-openai-with-dashscope](https://help.aliyun.com/zh/model-studio/compatibility-of-openai-with-dashscope) |
 
 #### Options
 
-| Flag | Type | Required | Description |
-| --- | --- | --- | --- |
-| `--model <model>` | string | no | Model ID (default: qwen3.7-max) |
-| `--message <text>` | array | yes | Message text (repeatable, prefix role: to set role) |
-| `--messages-file <path>` | string | no | JSON file with messages array (use - for stdin) |
-| `--system <text>` | string | no | System prompt |
-| `--max-tokens <n>` | number | no | Maximum tokens to generate (default: 4096) |
-| `--temperature <n>` | number | no | Sampling temperature (0.0, 2.0] |
-| `--top-p <n>` | number | no | Nucleus sampling threshold |
-| `--stream` | boolean | no | Stream response tokens (default: on in TTY) |
-| `--tool <json-or-path>` | array | no | Tool definition as JSON or file path (repeatable) |
-| `--enable-thinking` | boolean | no | Enable thinking/reasoning mode (for qwen3/qwq models) |
-| `--thinking-budget <n>` | number | no | Max tokens for thinking (default: 4096) |
+| Flag                     | Type    | Required | Description                                           |
+| ------------------------ | ------- | -------- | ----------------------------------------------------- |
+| `--model <model>`        | string  | no       | Model ID (default: qwen3.7-max)                       |
+| `--message <text>`       | array   | yes      | Message text (repeatable, prefix role: to set role)   |
+| `--messages-file <path>` | string  | no       | JSON file with messages array (use - for stdin)       |
+| `--system <text>`        | string  | no       | System prompt                                         |
+| `--max-tokens <n>`       | number  | no       | Maximum tokens to generate (default: 4096)            |
+| `--temperature <n>`      | number  | no       | Sampling temperature (0.0, 2.0]                       |
+| `--top-p <n>`            | number  | no       | Nucleus sampling threshold                            |
+| `--stream`               | boolean | no       | Stream response tokens (default: on in TTY)           |
+| `--tool <json-or-path>`  | array   | no       | Tool definition as JSON or file path (repeatable)     |
+| `--enable-thinking`      | boolean | no       | Enable thinking/reasoning mode (for qwen3/qwq models) |
+| `--thinking-budget <n>`  | number  | no       | Max tokens for thinking (default: 4096)               |
 
 #### Examples
 

@@ -7,27 +7,27 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command | Description |
-| --- | --- |
+| Command          | Description                                              |
+| ---------------- | -------------------------------------------------------- |
 | `bl file upload` | Upload a local file to DashScope temporary storage (48h) |
 
 ## Command details
 
 ### `bl file upload`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `file upload` |
-| **Description** | Upload a local file to DashScope temporary storage (48h) |
-| **Usage** | `bl file upload --file <path> --model <model>` |
-| **API docs** | [/developer-reference/get-temporary-file-url](https://help.aliyun.com/zh/model-studio/developer-reference/get-temporary-file-url) |
+| Field           | Value                                                                                                                             |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**        | `file upload`                                                                                                                     |
+| **Description** | Upload a local file to DashScope temporary storage (48h)                                                                          |
+| **Usage**       | `bl file upload --file <path> --model <model>`                                                                                    |
+| **API docs**    | [/developer-reference/get-temporary-file-url](https://help.aliyun.com/zh/model-studio/developer-reference/get-temporary-file-url) |
 
 #### Options
 
-| Flag | Type | Required | Description |
-| --- | --- | --- | --- |
-| `--file <path>` | string | yes | Local file to upload (image, video, audio) |
-| `--model <model>` | string | yes | Target model name (file is bound to this model) |
+| Flag              | Type   | Required | Description                                     |
+| ----------------- | ------ | -------- | ----------------------------------------------- |
+| `--file <path>`   | string | yes      | Local file to upload (image, video, audio)      |
+| `--model <model>` | string | yes      | Target model name (file is bound to this model) |
 
 #### Examples
 

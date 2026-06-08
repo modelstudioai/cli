@@ -7,37 +7,37 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command | Description |
-| --- | --- |
+| Command   | Description                                          |
+| --------- | ---------------------------------------------------- |
 | `bl omni` | Multimodal chat with text + audio output (Qwen-Omni) |
 
 ## Command details
 
 ### `bl omni`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `omni` |
-| **Description** | Multimodal chat with text + audio output (Qwen-Omni) |
-| **Usage** | `bl omni --message <text> [flags]` |
-| **API docs** | [/model-studio/qwen-omni](https://help.aliyun.com/zh/model-studio/model-studio/qwen-omni) |
+| Field           | Value                                                                                     |
+| --------------- | ----------------------------------------------------------------------------------------- |
+| **Name**        | `omni`                                                                                    |
+| **Description** | Multimodal chat with text + audio output (Qwen-Omni)                                      |
+| **Usage**       | `bl omni --message <text> [flags]`                                                        |
+| **API docs**    | [/model-studio/qwen-omni](https://help.aliyun.com/zh/model-studio/model-studio/qwen-omni) |
 
 #### Options
 
-| Flag | Type | Required | Description |
-| --- | --- | --- | --- |
-| `--message <text>` | array | yes | Message text (repeatable, prefix role: to set role) |
-| `--model <model>` | string | no | Model ID (default: qwen3.5-omni-plus) |
-| `--system <text>` | string | no | System prompt |
-| `--image <url>` | array | no | Image URL or local file (repeatable) |
-| `--audio <url>` | array | no | Audio URL or local file (repeatable) |
-| `--video <url>` | array | no | Video file URL / local path, or comma-separated frame URLs |
-| `--voice <voice>` | string | no | Output voice (default: Cherry). Options: Chelsie, Cherry, Ethan, Serena, Tina |
-| `--audio-format <fmt>` | string | no | Audio output format (default: wav) |
-| `--audio-out <path>` | string | no | Save audio to file (default: auto-generate) |
-| `--text-only` | boolean | no | Output text only, no audio generation |
-| `--max-tokens <n>` | number | no | Maximum tokens to generate |
-| `--temperature <n>` | number | no | Sampling temperature (0.0, 2.0] |
+| Flag                   | Type    | Required | Description                                                                   |
+| ---------------------- | ------- | -------- | ----------------------------------------------------------------------------- |
+| `--message <text>`     | array   | yes      | Message text (repeatable, prefix role: to set role)                           |
+| `--model <model>`      | string  | no       | Model ID (default: qwen3.5-omni-plus)                                         |
+| `--system <text>`      | string  | no       | System prompt                                                                 |
+| `--image <url>`        | array   | no       | Image URL or local file (repeatable)                                          |
+| `--audio <url>`        | array   | no       | Audio URL or local file (repeatable)                                          |
+| `--video <url>`        | array   | no       | Video file URL / local path, or comma-separated frame URLs                    |
+| `--voice <voice>`      | string  | no       | Output voice (default: Cherry). Options: Chelsie, Cherry, Ethan, Serena, Tina |
+| `--audio-format <fmt>` | string  | no       | Audio output format (default: wav)                                            |
+| `--audio-out <path>`   | string  | no       | Save audio to file (default: auto-generate)                                   |
+| `--text-only`          | boolean | no       | Output text only, no audio generation                                         |
+| `--max-tokens <n>`     | number  | no       | Maximum tokens to generate                                                    |
+| `--temperature <n>`    | number  | no       | Sampling temperature (0.0, 2.0]                                               |
 
 #### Examples
 

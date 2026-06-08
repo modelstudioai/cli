@@ -36,7 +36,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "generate:reference": "node --experimental-strip-types ../../tools/generate-reference.ts",
+    "generate:reference": "node --experimental-strip-types ../../tools/generate-reference.ts && sh -c 'cd ../.. && vp check --fix skills/bailian-cli/reference'",
     "build": "pnpm run generate:reference && vp pack",
     "dev": "node src/main.ts",
     "test": "vp test",

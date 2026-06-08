@@ -7,27 +7,27 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command | Description |
-| --- | --- |
+| Command                | Description                                                                                    |
+| ---------------------- | ---------------------------------------------------------------------------------------------- |
 | `bl advisor recommend` | Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking) |
 
 ## Command details
 
 ### `bl advisor recommend`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `advisor recommend` |
+| Field           | Value                                                                                          |
+| --------------- | ---------------------------------------------------------------------------------------------- |
+| **Name**        | `advisor recommend`                                                                            |
 | **Description** | Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking) |
-| **Usage** | `bl advisor recommend <prompt> [flags]` |
+| **Usage**       | `bl advisor recommend <prompt> [flags]`                                                        |
 
 #### Options
 
-| Flag | Type | Required | Description |
-| --- | --- | --- | --- |
-| `--message <text>` | string | no | Describe your requirements (alternative to positional prompt) |
-| `--dry-run` | boolean | no | Show intent analysis and candidate list without LLM ranking |
-| `--output <format>` | string | no | Output format: text (default in TTY), json, yaml |
+| Flag                | Type    | Required | Description                                                   |
+| ------------------- | ------- | -------- | ------------------------------------------------------------- |
+| `--message <text>`  | string  | no       | Describe your requirements (alternative to positional prompt) |
+| `--dry-run`         | boolean | no       | Show intent analysis and candidate list without LLM ranking   |
+| `--output <format>` | string  | no       | Output format: text (default in TTY), json, yaml              |
 
 #### Examples
 

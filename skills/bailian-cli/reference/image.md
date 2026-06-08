@@ -7,37 +7,37 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command | Description |
-| --- | --- |
-| `bl image edit` | Edit an existing image with text instructions (Qwen-Image) |
-| `bl image generate` | Generate images (Qwen-Image / wan2.x) |
+| Command             | Description                                                |
+| ------------------- | ---------------------------------------------------------- |
+| `bl image edit`     | Edit an existing image with text instructions (Qwen-Image) |
+| `bl image generate` | Generate images (Qwen-Image / wan2.x)                      |
 
 ## Command details
 
 ### `bl image edit`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `image edit` |
-| **Description** | Edit an existing image with text instructions (Qwen-Image) |
-| **Usage** | `bl image edit --image <url> --prompt <text> [flags]` |
-| **API docs** | [/developer-reference/qwen-image-edit-api](https://help.aliyun.com/zh/model-studio/developer-reference/qwen-image-edit-api) |
+| Field           | Value                                                                                                                       |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **Name**        | `image edit`                                                                                                                |
+| **Description** | Edit an existing image with text instructions (Qwen-Image)                                                                  |
+| **Usage**       | `bl image edit --image <url> --prompt <text> [flags]`                                                                       |
+| **API docs**    | [/developer-reference/qwen-image-edit-api](https://help.aliyun.com/zh/model-studio/developer-reference/qwen-image-edit-api) |
 
 #### Options
 
-| Flag | Type | Required | Description |
-| --- | --- | --- | --- |
-| `--image <url>` | array | yes | Source image URL or local file path (repeatable for multi-image merge) |
-| `--prompt <text>` | string | yes | Edit instruction text |
-| `--model <model>` | string | no | Model ID (default: qwen-image-2.0) |
-| `--size <W*H>` | string | no | Output image size: ratio (3:4, 16:9) or pixels (2048*2048) |
-| `--n <count>` | number | no | Number of images (default: 1, max: 6) |
-| `--seed <n>` | number | no | Random seed for reproducible results |
-| `--negative-prompt <text>` | string | no | Negative prompt to exclude unwanted content |
-| `--prompt-extend <bool>` | string | no | Enable prompt extend (true/false). Omit flag to use CLI default (true). |
-| `--watermark <bool>` | string | no | Enable watermark (true/false). Omit flag to use CLI default (true). |
-| `--out-dir <dir>` | string | no | Download images to directory |
-| `--out-prefix <prefix>` | string | no | Filename prefix (default: edited) |
+| Flag                       | Type   | Required | Description                                                             |
+| -------------------------- | ------ | -------- | ----------------------------------------------------------------------- |
+| `--image <url>`            | array  | yes      | Source image URL or local file path (repeatable for multi-image merge)  |
+| `--prompt <text>`          | string | yes      | Edit instruction text                                                   |
+| `--model <model>`          | string | no       | Model ID (default: qwen-image-2.0)                                      |
+| `--size <W*H>`             | string | no       | Output image size: ratio (3:4, 16:9) or pixels (2048\*2048)             |
+| `--n <count>`              | number | no       | Number of images (default: 1, max: 6)                                   |
+| `--seed <n>`               | number | no       | Random seed for reproducible results                                    |
+| `--negative-prompt <text>` | string | no       | Negative prompt to exclude unwanted content                             |
+| `--prompt-extend <bool>`   | string | no       | Enable prompt extend (true/false). Omit flag to use CLI default (true). |
+| `--watermark <bool>`       | string | no       | Enable watermark (true/false). Omit flag to use CLI default (true).     |
+| `--out-dir <dir>`          | string | no       | Download images to directory                                            |
+| `--out-prefix <prefix>`    | string | no       | Filename prefix (default: edited)                                       |
 
 #### Examples
 
@@ -63,29 +63,29 @@ bl image edit --image ./photo.png --prompt "把背景换成海滩" --watermark f
 
 ### `bl image generate`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `image generate` |
-| **Description** | Generate images (Qwen-Image / wan2.x) |
-| **Usage** | `bl image generate --prompt <text> [flags]` |
-| **API docs** | [/best-practice/wanx/text-to-image](https://help.aliyun.com/zh/model-studio/best-practice/wanx/text-to-image) |
+| Field           | Value                                                                                                         |
+| --------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Name**        | `image generate`                                                                                              |
+| **Description** | Generate images (Qwen-Image / wan2.x)                                                                         |
+| **Usage**       | `bl image generate --prompt <text> [flags]`                                                                   |
+| **API docs**    | [/best-practice/wanx/text-to-image](https://help.aliyun.com/zh/model-studio/best-practice/wanx/text-to-image) |
 
 #### Options
 
-| Flag | Type | Required | Description |
-| --- | --- | --- | --- |
-| `--prompt <text>` | string | yes | Image description |
-| `--model <model>` | string | no | Model ID (default: qwen-image-2.0) |
-| `--size <W*H>` | string | no | Image size: ratio (3:4, 16:9, 1:1) or pixels (2048*2048) |
-| `--n <count>` | number | no | Number of images per request (default: 1, max: 6) |
-| `--seed <n>` | number | no | Random seed for reproducible generation |
-| `--negative-prompt <text>` | string | no | Negative prompt to exclude unwanted content |
-| `--prompt-extend <bool>` | string | no | Enable prompt extend (true/false). Omit flag: true for qwen-image sync; parameter omitted on async models (API default). |
-| `--watermark <bool>` | string | no | Enable watermark (true/false). Omit flag to use CLI default (true). |
-| `--no-wait` | boolean | no | Return task ID immediately without waiting (async models only) |
-| `--out-dir <dir>` | string | no | Download images to directory |
-| `--out-prefix <prefix>` | string | no | Filename prefix (default: image) |
-| `--poll-interval <seconds>` | number | no | Polling interval when waiting (default: 3) |
+| Flag                        | Type    | Required | Description                                                                                                              |
+| --------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `--prompt <text>`           | string  | yes      | Image description                                                                                                        |
+| `--model <model>`           | string  | no       | Model ID (default: qwen-image-2.0)                                                                                       |
+| `--size <W*H>`              | string  | no       | Image size: ratio (3:4, 16:9, 1:1) or pixels (2048\*2048)                                                                |
+| `--n <count>`               | number  | no       | Number of images per request (default: 1, max: 6)                                                                        |
+| `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                                                  |
+| `--negative-prompt <text>`  | string  | no       | Negative prompt to exclude unwanted content                                                                              |
+| `--prompt-extend <bool>`    | string  | no       | Enable prompt extend (true/false). Omit flag: true for qwen-image sync; parameter omitted on async models (API default). |
+| `--watermark <bool>`        | string  | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                                                      |
+| `--no-wait`                 | boolean | no       | Return task ID immediately without waiting (async models only)                                                           |
+| `--out-dir <dir>`           | string  | no       | Download images to directory                                                                                             |
+| `--out-prefix <prefix>`     | string  | no       | Filename prefix (default: image)                                                                                         |
+| `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 3)                                                                               |
 
 #### Examples
 

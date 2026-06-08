@@ -7,27 +7,27 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command | Description |
-| --- | --- |
+| Command         | Description                                          |
+| --------------- | ---------------------------------------------------- |
 | `bl search web` | Search the web using DashScope MCP WebSearch service |
 
 ## Command details
 
 ### `bl search web`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `search web` |
+| Field           | Value                                                |
+| --------------- | ---------------------------------------------------- |
+| **Name**        | `search web`                                         |
 | **Description** | Search the web using DashScope MCP WebSearch service |
-| **Usage** | `bl search web --query <text> [flags]` |
+| **Usage**       | `bl search web --query <text> [flags]`               |
 
 #### Options
 
-| Flag | Type | Required | Description |
-| --- | --- | --- | --- |
-| `--query <text>` | string | yes | Search query text |
-| `--count <n>` | number | no | Number of search results (default: 10) |
-| `--list-tools` | boolean | no | List available MCP tools and exit |
+| Flag             | Type    | Required | Description                            |
+| ---------------- | ------- | -------- | -------------------------------------- |
+| `--query <text>` | string  | yes      | Search query text                      |
+| `--count <n>`    | number  | no       | Number of search results (default: 10) |
+| `--list-tools`   | boolean | no       | List available MCP tools and exit      |
 
 #### Examples
 

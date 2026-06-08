@@ -7,27 +7,27 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command | Description |
-| --- | --- |
+| Command           | Description                                    |
+| ----------------- | ---------------------------------------------- |
 | `bl console call` | Call a Bailian console API via the CLI gateway |
 
 ## Command details
 
 ### `bl console call`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `console call` |
-| **Description** | Call a Bailian console API via the CLI gateway |
-| **Usage** | `bl console call --api <api> --data <json> [flags]` |
+| Field           | Value                                               |
+| --------------- | --------------------------------------------------- |
+| **Name**        | `console call`                                      |
+| **Description** | Call a Bailian console API via the CLI gateway      |
+| **Usage**       | `bl console call --api <api> --data <json> [flags]` |
 
 #### Options
 
-| Flag | Type | Required | Description |
-| --- | --- | --- | --- |
-| `--api <api>` | string | yes | API name (e.g. zeldaEasy.broadscope-bailian.memory-library.getLibraries) |
-| `--data <json>` | string | yes | Request data as JSON string |
-| `--region <region>` | string | no | API region (default: cn-beijing) |
+| Flag                | Type   | Required | Description                                                              |
+| ------------------- | ------ | -------- | ------------------------------------------------------------------------ |
+| `--api <api>`       | string | yes      | API name (e.g. zeldaEasy.broadscope-bailian.memory-library.getLibraries) |
+| `--data <json>`     | string | yes      | Request data as JSON string                                              |
+| `--region <region>` | string | no       | API region (default: cn-beijing)                                         |
 
 #### Examples
 

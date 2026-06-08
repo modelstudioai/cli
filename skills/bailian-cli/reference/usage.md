@@ -7,26 +7,26 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command | Description |
-| --- | --- |
+| Command         | Description                       |
+| --------------- | --------------------------------- |
 | `bl usage free` | Query free-tier quota for a model |
 
 ## Command details
 
 ### `bl usage free`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `usage free` |
-| **Description** | Query free-tier quota for a model |
-| **Usage** | `bl usage free --model <model> [flags]` |
+| Field           | Value                                   |
+| --------------- | --------------------------------------- |
+| **Name**        | `usage free`                            |
+| **Description** | Query free-tier quota for a model       |
+| **Usage**       | `bl usage free --model <model> [flags]` |
 
 #### Options
 
-| Flag | Type | Required | Description |
-| --- | --- | --- | --- |
-| `--model <model>` | string | yes | Model name to query (e.g. qwen3-max, qwen-turbo) |
-| `--region <region>` | string | no | API region (default: cn-beijing) |
+| Flag                | Type   | Required | Description                                      |
+| ------------------- | ------ | -------- | ------------------------------------------------ |
+| `--model <model>`   | string | yes      | Model name to query (e.g. qwen3-max, qwen-turbo) |
+| `--region <region>` | string | no       | API region (default: cn-beijing)                 |
 
 #### Examples
 

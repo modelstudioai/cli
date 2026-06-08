@@ -7,28 +7,28 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command | Description |
-| --- | --- |
-| `bl auth login` | Authenticate with API key or console browser login (credentials can coexist) |
-| `bl auth logout` | Clear stored credentials |
-| `bl auth status` | Show current authentication state |
+| Command          | Description                                                                  |
+| ---------------- | ---------------------------------------------------------------------------- |
+| `bl auth login`  | Authenticate with API key or console browser login (credentials can coexist) |
+| `bl auth logout` | Clear stored credentials                                                     |
+| `bl auth status` | Show current authentication state                                            |
 
 ## Command details
 
 ### `bl auth login`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `auth login` |
+| Field           | Value                                                                        |
+| --------------- | ---------------------------------------------------------------------------- |
+| **Name**        | `auth login`                                                                 |
 | **Description** | Authenticate with API key or console browser login (credentials can coexist) |
-| **Usage** | `bl auth login --api-key <key> \| bl auth login --console` |
+| **Usage**       | `bl auth login --api-key <key> \| bl auth login --console`                   |
 
 #### Options
 
-| Flag | Type | Required | Description |
-| --- | --- | --- | --- |
-| `--api-key <key>` | string | no | DashScope API key to store |
-| `--console` | boolean | no | Sign in via browser; opens the console login URL in your default browser |
+| Flag              | Type    | Required | Description                                                              |
+| ----------------- | ------- | -------- | ------------------------------------------------------------------------ |
+| `--api-key <key>` | string  | no       | DashScope API key to store                                               |
+| `--console`       | boolean | no       | Sign in via browser; opens the console login URL in your default browser |
 
 #### Examples
 
@@ -42,18 +42,18 @@ bl auth login --console
 
 ### `bl auth logout`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `auth logout` |
-| **Description** | Clear stored credentials |
-| **Usage** | `bl auth logout [--console] [--yes] [--dry-run]` |
+| Field           | Value                                            |
+| --------------- | ------------------------------------------------ |
+| **Name**        | `auth logout`                                    |
+| **Description** | Clear stored credentials                         |
+| **Usage**       | `bl auth logout [--console] [--yes] [--dry-run]` |
 
 #### Options
 
-| Flag | Type | Required | Description |
-| --- | --- | --- | --- |
-| `--console` | boolean | no | Only clear the console access_token, keep api_key intact |
-| `--yes` | boolean | no | Skip confirmation prompt |
+| Flag        | Type    | Required | Description                                              |
+| ----------- | ------- | -------- | -------------------------------------------------------- |
+| `--console` | boolean | no       | Only clear the console access_token, keep api_key intact |
+| `--yes`     | boolean | no       | Skip confirmation prompt                                 |
 
 #### Examples
 
@@ -75,11 +75,11 @@ bl auth logout --yes
 
 ### `bl auth status`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `auth status` |
+| Field           | Value                             |
+| --------------- | --------------------------------- |
+| **Name**        | `auth status`                     |
 | **Description** | Show current authentication state |
-| **Usage** | `bl auth status` |
+| **Usage**       | `bl auth status`                  |
 
 #### Options
 

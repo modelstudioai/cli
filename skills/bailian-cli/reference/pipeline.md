@@ -7,30 +7,30 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command | Description |
-| --- | --- |
-| `bl pipeline run` | Run a pipeline workflow definition |
+| Command                | Description                                      |
+| ---------------------- | ------------------------------------------------ |
+| `bl pipeline run`      | Run a pipeline workflow definition               |
 | `bl pipeline validate` | Validate a pipeline definition without executing |
 
 ## Command details
 
 ### `bl pipeline run`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `pipeline run` |
+| Field           | Value                              |
+| --------------- | ---------------------------------- |
+| **Name**        | `pipeline run`                     |
 | **Description** | Run a pipeline workflow definition |
-| **Usage** | `bl pipeline run <file> [flags]` |
+| **Usage**       | `bl pipeline run <file> [flags]`   |
 
 #### Options
 
-| Flag | Type | Required | Description |
-| --- | --- | --- | --- |
-| `--input <json>` | string | no | Runtime input as inline JSON |
-| `--input-file <path>` | string | no | Runtime input from a JSON file |
-| `--concurrency <n>` | number | no | Max parallel steps (default: 1) |
-| `--events <format>` | string | no | Emit lifecycle events: jsonl |
-| `--timeout <seconds>` | number | no | Default step timeout in seconds |
+| Flag                  | Type   | Required | Description                     |
+| --------------------- | ------ | -------- | ------------------------------- |
+| `--input <json>`      | string | no       | Runtime input as inline JSON    |
+| `--input-file <path>` | string | no       | Runtime input from a JSON file  |
+| `--concurrency <n>`   | number | no       | Max parallel steps (default: 1) |
+| `--events <format>`   | string | no       | Emit lifecycle events: jsonl    |
+| `--timeout <seconds>` | number | no       | Default step timeout in seconds |
 
 #### Examples
 
@@ -56,11 +56,11 @@ bl pipeline run workflow.yaml --output json
 
 ### `bl pipeline validate`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `pipeline validate` |
+| Field           | Value                                            |
+| --------------- | ------------------------------------------------ |
+| **Name**        | `pipeline validate`                              |
 | **Description** | Validate a pipeline definition without executing |
-| **Usage** | `bl pipeline validate <file>` |
+| **Usage**       | `bl pipeline validate <file>`                    |
 
 #### Options
 

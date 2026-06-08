@@ -7,19 +7,19 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command | Description |
-| --- | --- |
+| Command     | Description                     |
+| ----------- | ------------------------------- |
 | `bl update` | Update bl to the latest version |
 
 ## Command details
 
 ### `bl update`
 
-| Field | Value |
-| --- | --- |
-| **Name** | `update` |
+| Field           | Value                           |
+| --------------- | ------------------------------- |
+| **Name**        | `update`                        |
 | **Description** | Update bl to the latest version |
-| **Usage** | `bl update` |
+| **Usage**       | `bl update`                     |
 
 #### Options
 
