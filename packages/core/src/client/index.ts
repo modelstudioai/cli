@@ -5,6 +5,7 @@ export {
   chatEndpoint,
   imageEndpoint,
   imageSyncEndpoint,
+  knowledgeRetrieveEndpoint,
   memoryAddEndpoint,
   memoryListEndpoint,
   memoryNodeEndpoint,

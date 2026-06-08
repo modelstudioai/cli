@@ -1,53 +1,316 @@
-import { join } from "path";
+import { tmpdir } from "os";
 import { describe, expect, test } from "vite-plus/test";
-import {
-  isBailianE2EEnabled,
-  isKnowledgeE2EReady,
-  monorepoRoot,
-  parseStdoutJson,
-  runCli,
-} from "./helpers.ts";
+import { isDashScopeE2EReady, isKnowledgeAkSkReady, parseStdoutJson, runCli } from "./helpers.ts";
 
-// 已开启 E2E 但 AK/SK、索引等未齐时提醒配置根目录 .env（否则本文件整组 describe 会被 skip）
-if (isBailianE2EEnabled() && !isKnowledgeE2EReady()) {
-  const envFile = join(monorepoRoot(), ".env");
-  console.warn(
-    [
-      "[e2e:knowledge] 知识库检索需要 RAM 的 AK/SK、索引 ID，以及工作空间 ID；当前未就绪，本组用例将被跳过。",
-      `请在 monorepo 根目录的 .env 中配置（${envFile}）：`,
-      "  ALIBABA_CLOUD_ACCESS_KEY_ID",
-      "  ALIBABA_CLOUD_ACCESS_KEY_SECRET",
-      "  BAILIAN_E2E_INDEX_ID",
-      "  BAILIAN_WORKSPACE_ID（也可执行: bl config set workspace_id <工作空间 id>）",
-    ].join("\n"),
-  );
+// ---- Types ----
+
+interface ApiKeyRetrieveBody {
+  request_id?: string;
+  data?: { total?: number; nodes?: Array<{ text: string; score: number }> };
+  code?: string;
+  message?: string;
 }
 
-interface KnowledgeRetrieveBody {
+interface AkSkRetrieveBody {
   Success?: boolean;
   Code?: string;
-  Data?: { Nodes?: unknown[] };
+  Data?: { Nodes?: Array<{ Text: string; Score: number }> };
 }
 
-/** 知识库检索（需 AK/SK + workspace + 索引；未就绪则整组跳过） */
-describe.skipIf(!isKnowledgeE2EReady())("e2e: knowledge retrieve", () => {
-  test("知识库检索", async () => {
-    const indexId = process.env.BAILIAN_E2E_INDEX_ID!;
-    const { stdout, stderr, exitCode } = await runCli([
+interface DryRunBody {
+  endpoint?: string;
+  request?: {
+    index_id?: string;
+    query?: string;
+    search_filters?: unknown[];
+    rerank_top_n?: number;
+    enable_reranking?: boolean;
+    dense_similarity_top_k?: number;
+    sparse_similarity_top_k?: number;
+    rerank?: Array<{ model_name?: string; rerank_mode?: string; rerank_instruct?: string }>;
+  };
+}
+
+// ---- Help & missing args (no credentials needed) ----
+
+describe("e2e: knowledge retrieve", () => {
+  test("knowledge 分组展示子命令帮助且成功退出", async () => {
+    const { stdout, stderr, exitCode } = await runCli(["knowledge"]);
+    expect(exitCode, stderr).toBe(0);
+    const out = `${stdout}\n${stderr}`;
+    expect(out).toMatch(/knowledge|retrieve/i);
+  });
+
+  test("knowledge retrieve --help 正常退出", async () => {
+    const { stderr, exitCode } = await runCli(["knowledge", "retrieve", "--help"]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--index-id/i);
+    expect(stderr).toMatch(/--query/i);
+    expect(stderr).toMatch(/--rerank-top-n/i);
+    expect(stderr).toMatch(/deprecated/i);
+    expect(stderr).toMatch(/API-KEY only/i);
+  });
+
+  test("缺少 --index-id 时打印帮助并退出 (0)", async () => {
+    const { stderr, exitCode } = await runCli([
+      "knowledge",
+      "retrieve",
+      "--query",
+      "test",
+      "--non-interactive",
+    ]);
+    expect(exitCode).toBe(0);
+    expect(stderr).toMatch(/--index-id|Usage:/i);
+  });
+
+  test("缺少 --query 时打印帮助并退出 (0)", async () => {
+    const { stderr, exitCode } = await runCli([
       "knowledge",
       "retrieve",
       "--index-id",
-      indexId,
+      "idx_test",
+      "--non-interactive",
+    ]);
+    expect(exitCode).toBe(0);
+    expect(stderr).toMatch(/--query|Usage:/i);
+  });
+});
+
+// ---- Error scenarios (no real credentials needed) ----
+
+describe("e2e: knowledge retrieve errors", () => {
+  test("无任何凭证时提示 No credentials found 并非零退出", async () => {
+    const { stderr, exitCode } = await runCli(
+      [
+        "knowledge",
+        "retrieve",
+        "--index-id",
+        "idx_test",
+        "--query",
+        "test",
+        "--non-interactive",
+        "--output",
+        "json",
+      ],
+      {
+        DASHSCOPE_API_KEY: undefined,
+        DASHSCOPE_ACCESS_TOKEN: undefined,
+        ALIBABA_CLOUD_ACCESS_KEY_ID: undefined,
+        ALIBABA_CLOUD_ACCESS_KEY_SECRET: undefined,
+        BAILIAN_CONFIG_DIR: tmpdir(),
+      },
+    );
+    expect(exitCode).not.toBe(0);
+    expect(stderr).toMatch(/no credentials found/i);
+  });
+});
+
+// ---- Dry-run (no real credentials needed) ----
+
+describe("e2e: knowledge retrieve dry-run", () => {
+  test("--dry-run 输出 endpoint 和 snake_case body", async () => {
+    const { stdout, stderr, exitCode } = await runCli(
+      [
+        "knowledge",
+        "retrieve",
+        "--dry-run",
+        "--index-id",
+        "idx_test",
+        "--query",
+        "hello",
+        "--non-interactive",
+        "--output",
+        "json",
+      ],
+      { DASHSCOPE_API_KEY: "sk-fake-for-dryrun" },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<DryRunBody>(stdout);
+    expect(data.endpoint).toMatch(/api\/v1\/indices\/rag\/index\/retrieve/);
+    expect(data.request?.index_id).toBe("idx_test");
+    expect(data.request?.query).toBe("hello");
+  });
+
+  test("--dry-run + --top-k 转发到 rerank_top_n 并输出废弃警告", async () => {
+    const { stdout, stderr, exitCode } = await runCli(
+      [
+        "knowledge",
+        "retrieve",
+        "--dry-run",
+        "--index-id",
+        "idx_test",
+        "--query",
+        "hello",
+        "--top-k",
+        "5",
+        "--non-interactive",
+        "--output",
+        "json",
+      ],
+      { DASHSCOPE_API_KEY: "sk-fake-for-dryrun" },
+    );
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--top-k.*deprecated/i);
+    const data = parseStdoutJson<DryRunBody>(stdout);
+    expect(data.request?.rerank_top_n).toBe(5);
+  });
+
+  test("--dry-run + --rerank-top-n 优先于 --top-k", async () => {
+    const { stdout, stderr, exitCode } = await runCli(
+      [
+        "knowledge",
+        "retrieve",
+        "--dry-run",
+        "--index-id",
+        "idx_test",
+        "--query",
+        "hello",
+        "--top-k",
+        "5",
+        "--rerank-top-n",
+        "10",
+        "--non-interactive",
+        "--output",
+        "json",
+      ],
+      { DASHSCOPE_API_KEY: "sk-fake-for-dryrun" },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<DryRunBody>(stdout);
+    expect(data.request?.rerank_top_n).toBe(10);
+  });
+
+  test("--dry-run + rerank 参数完整输出", async () => {
+    const { stdout, stderr, exitCode } = await runCli(
+      [
+        "knowledge",
+        "retrieve",
+        "--dry-run",
+        "--index-id",
+        "idx_test",
+        "--query",
+        "hello",
+        "--rerank",
+        "--rerank-model",
+        "qwen3-rerank-hybrid",
+        "--rerank-mode",
+        "custom",
+        "--rerank-instruct",
+        "按相关性排序",
+        "--dense-similarity-top-k",
+        "100",
+        "--sparse-similarity-top-k",
+        "50",
+        "--non-interactive",
+        "--output",
+        "json",
+      ],
+      { DASHSCOPE_API_KEY: "sk-fake-for-dryrun" },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<DryRunBody>(stdout);
+    expect(data.request?.enable_reranking).toBe(true);
+    expect(data.request?.dense_similarity_top_k).toBe(100);
+    expect(data.request?.sparse_similarity_top_k).toBe(50);
+    expect(data.request?.rerank?.[0]?.model_name).toBe("qwen3-rerank-hybrid");
+    expect(data.request?.rerank?.[0]?.rerank_mode).toBe("custom");
+    expect(data.request?.rerank?.[0]?.rerank_instruct).toBe("按相关性排序");
+  });
+});
+
+// ---- API-KEY path (real network call) ----
+
+describe.skipIf(!isDashScopeE2EReady() || !process.env.BAILIAN_E2E_INDEX_ID)(
+  "e2e: knowledge retrieve (API-KEY)",
+  () => {
+    test("API-KEY 知识库检索", async () => {
+      const indexId = process.env.BAILIAN_E2E_INDEX_ID!;
+      const { stdout, stderr, exitCode } = await runCli([
+        "knowledge",
+        "retrieve",
+        "--index-id",
+        indexId,
+        "--query",
+        "端到端检索测试",
+        "--rerank-top-n",
+        "3",
+        "--non-interactive",
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<ApiKeyRetrieveBody>(stdout);
+      expect(Array.isArray(data.data?.nodes)).toBe(true);
+    }, 120_000);
+  },
+);
+
+// ---- API-KEY error paths (real network call) ----
+
+describe.skipIf(!isDashScopeE2EReady())("e2e: knowledge retrieve API-KEY errors", () => {
+  test("无效 API-KEY 返回认证错误", async () => {
+    const { stderr, exitCode } = await runCli([
+      "knowledge",
+      "retrieve",
+      "--api-key",
+      "sk-invalid-key-for-test",
+      "--index-id",
+      "idx_test",
       "--query",
-      "端到端检索测试",
-      "--top-k",
-      "3",
+      "test",
       "--non-interactive",
       "--output",
       "json",
     ]);
+    expect(exitCode).not.toBe(0);
+    expect(stderr).toMatch(/InvalidApiKey|401|auth/i);
+  }, 30_000);
+
+  test("无效 index_id 返回索引不存在错误", async () => {
+    const { stderr, exitCode } = await runCli([
+      "knowledge",
+      "retrieve",
+      "--index-id",
+      "idx_nonexistent_test",
+      "--query",
+      "test",
+      "--non-interactive",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).not.toBe(0);
+    expect(stderr).toMatch(/IndexNotExist|not exist|400/i);
+  }, 30_000);
+});
+
+// ---- AK/SK deprecated path (real network call) ----
+
+describe.skipIf(!isKnowledgeAkSkReady())("e2e: knowledge retrieve (AK/SK deprecated)", () => {
+  test("AK/SK 知识库检索输出废弃警告", async () => {
+    const indexId = process.env.BAILIAN_E2E_INDEX_ID!;
+    const { stdout, stderr, exitCode } = await runCli(
+      [
+        "knowledge",
+        "retrieve",
+        "--index-id",
+        indexId,
+        "--query",
+        "端到端检索测试",
+        "--rerank-top-n",
+        "3",
+        "--non-interactive",
+        "--output",
+        "json",
+      ],
+      {
+        DASHSCOPE_API_KEY: undefined,
+        DASHSCOPE_ACCESS_TOKEN: undefined,
+        BAILIAN_CONFIG_DIR: tmpdir(),
+      },
+    );
     expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<KnowledgeRetrieveBody>(stdout);
+    expect(stderr).toMatch(/deprecated/i);
+    const data = parseStdoutJson<AkSkRetrieveBody>(stdout);
     const ok = data.Success === true || data.Code === "Success";
     expect(ok).toBe(true);
     expect(Array.isArray(data.Data?.Nodes)).toBe(true);
