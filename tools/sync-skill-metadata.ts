@@ -3,7 +3,7 @@
  * `packages/cli/package.json` (single source of truth for CLI release version).
  *
  * Run: pnpm --filter bailian-cli run sync:skill-version
- * Invoked automatically by `pnpm --filter bailian-cli run build`.
+ * Invoked via `pnpm run sync:skill-assets` or the repo pre-commit hook (see `.vite-hooks/pre-commit`).
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

@@ -40,7 +40,7 @@ registry.ts  main.ts      tools/generate-reference.ts   export-schema.ts
 - **`packages/cli/src/commands/catalog.ts`**: `import` 命令模块 + `"<path>": handler` 映射;**不** `import registry.ts`(避免构建时循环依赖)
 - **`packages/cli/src/commands/index.ts`**: `export { commands } from "./catalog.ts"`(给包内 re-export 用)
 - **`packages/cli/src/registry.ts`**: `import { commands } from "./commands/catalog.ts"`,建树、`resolve`、`printHelp`;Commands / Global Flags 从 `Command` 元数据与 `GLOBAL_OPTIONS` **动态生成**
-- **`tools/generate-reference.ts`**: build 前读 `catalog.ts`,写 `skills/bailian-cli/reference/index.md`(索引) + `skills/bailian-cli/reference/<一级命令>.md`(详情,勿手改)。该目录**纳入 git**,随 `npx skills add modelstudioai/cli` 分发
+- **`tools/generate-reference.ts`**: pre-commit / `pnpm run sync:skill-assets` 时读 `catalog.ts`,写 `skills/bailian-cli/reference/index.md`(索引) + `skills/bailian-cli/reference/<一级命令>.md`(详情,勿手改)。该目录**纳入 git**,随 `npx skills add modelstudioai/cli` 分发
 
 已删除、勿再引用:`commands/help.ts`、`registry.ts` 内联 `new CommandRegistry({...})`、`printRootHelp` 手写命令行。
 
@@ -59,7 +59,7 @@ registry.ts  main.ts      tools/generate-reference.ts   export-schema.ts
 
 ### B. 文档层
 
-- [ ] 运行 `pnpm --filter bailian-cli run generate:reference`(或 `build`),刷新 `skills/bailian-cli/reference/` 下生成文件并提交
+- [ ] 运行 `pnpm run sync:skill-assets`(或正常 `git commit` 走 pre-commit),刷新 `skills/bailian-cli/reference/` 与 `SKILL.md` 的 `metadata.version` 并提交
 - [ ] `README.md` / `README_CN.md`: Quick Start、命令一览(用户向,与 help 对齐即可)
 - [ ] `skills/bailian-cli/SKILL.md`: 若安装说明或能力边界有变,同步更新
 
@@ -80,7 +80,7 @@ registry.ts  main.ts      tools/generate-reference.ts   export-schema.ts
 ## 完成后自查
 
 ```sh
-pnpm --filter bailian-cli run generate:reference   # reference/ 与 catalog 一致
+pnpm run sync:skill-assets   # reference/ + SKILL metadata.version 与 catalog / package.json 一致
 node packages/cli/src/main.ts <new-command> --help
 node packages/cli/src/main.ts                        # 根 help 列表含新命令
 vp test packages/cli/tests/e2e/<topic>.e2e.test.ts   # 相关 e2e

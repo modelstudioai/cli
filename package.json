@@ -16,6 +16,7 @@
     "ready": "vp check && vp run -r test && vp run -r build",
     "prepare": "vp config",
     "check": "vp check",
+    "sync:skill-assets": "pnpm --filter bailian-cli-core run build && pnpm --filter bailian-cli run generate:reference && pnpm --filter bailian-cli run sync:skill-version",
     "dev": "pnpm -F bailian-cli-core dev",
     "bl": "pnpm -F bailian-cli dev",
     "test": "vp test",
