@@ -1,7 +1,7 @@
 import {
   defineCommand,
-  mcpWebSearchEndpoint,
   detectOutputFormat,
+  mcpWebSearchEndpoint,
   type Config,
   type GlobalFlags,
   isInteractive,

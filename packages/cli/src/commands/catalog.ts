@@ -27,6 +27,9 @@ import memoryDelete from "./memory/delete.ts";
 import memoryProfileCreate from "./memory/profile-create.ts";
 import memoryProfileGet from "./memory/profile-get.ts";
 import knowledgeRetrieve from "./knowledge/retrieve.ts";
+import mcpCall from "./mcp/call.ts";
+import mcpList from "./mcp/list.ts";
+import mcpTools from "./mcp/tools.ts";
 import searchWeb from "./search/web.ts";
 import speechSynthesize from "./speech/synthesize.ts";
 import speechRecognize from "./speech/recognize.ts";
@@ -35,6 +38,7 @@ import consoleCall from "./console/call.ts";
 import usageFree from "./usage/free.ts";
 import pipelineRun from "./pipeline/run.ts";
 import pipelineValidate from "./pipeline/validate.ts";
+import advisorRecommend from "./advisor/recommend.ts";
 import pluginList from "./plugin/list.ts";
 import pluginInstall from "./plugin/install.ts";
 import pluginLink from "./plugin/link.ts";
@@ -65,6 +69,9 @@ export const commands: Record<string, Command> = {
   "memory profile create": memoryProfileCreate,
   "memory profile get": memoryProfileGet,
   "knowledge retrieve": knowledgeRetrieve,
+  "mcp list": mcpList,
+  "mcp tools": mcpTools,
+  "mcp call": mcpCall,
   "search web": searchWeb,
   "speech synthesize": speechSynthesize,
   "speech recognize": speechRecognize,
@@ -80,5 +87,6 @@ export const commands: Record<string, Command> = {
   "config show": configShow,
   "config set": configSet,
   "config export-schema": configExportSchema,
+  "advisor recommend": advisorRecommend,
   update: update,
 };

@@ -1,6 +1,6 @@
 {
   "name": "bailian-cli",
-  "version": "1.1.3-alpha.0",
+  "version": "1.2.1",
   "description": "CLI for Aliyun Model Studio (DashScope) AI Platform.",
   "keywords": [
     "agent",
@@ -25,7 +25,7 @@
   },
   "files": [
     "dist",
-    "README_CN.md"
+    "README.zh.md"
   ],
   "type": "module",
   "exports": {
@@ -36,14 +36,17 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "generate:reference": "node --experimental-strip-types ../../tools/generate-reference.ts",
-    "build": "pnpm run generate:reference && vp pack",
+    "generate:reference": "node --experimental-strip-types ../../tools/generate-reference.ts && sh -c 'cd ../.. && vp check --fix skills/bailian-cli/reference'",
+    "sync:skill-version": "node --experimental-strip-types ../../tools/sync-skill-metadata.ts",
+    "build": "vp pack",
     "dev": "node src/main.ts",
     "test": "vp test",
     "check": "vp check"
   },
   "dependencies": {
-    "bailian-cli-core": "workspace:*"
+    "bailian-cli-core": "workspace:*",
+    "boxen": "catalog:",
+    "chalk": "catalog:"
   },
   "devDependencies": {
     "@clack/prompts": "^0.7.0",

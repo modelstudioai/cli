@@ -1,6 +1,6 @@
 # bailian-cli-core
 
-[English](./README.md) | [简体中文](./README_CN.md)
+[English](./README.md) | [简体中文](./README.zh.md)
 
 [`bailian-cli`](https://www.npmjs.com/package/bailian-cli) 的内部 SDK。
 

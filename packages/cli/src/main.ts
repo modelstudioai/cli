@@ -22,8 +22,22 @@ import {
   setExecutingCommandPath,
 } from "./utils/command-help.ts";
 
+// 优雅处理 Ctrl+C
+// 退出前尝试 best-effort 刷出埋点，让去抖队列中 / 在途的 fetch 请求有机会
+// 落网络；flush 与较短超时 race，保证 SIGINT 仍然响应及时。
+process.on("SIGINT", () => {
+  process.stderr.write("\nInterrupted. Exiting.\n");
+  void flushTelemetry(500).finally(() => process.exit(130));
+});
+
+// 优雅处理 stdout EPIPE（例如管道到提前退出的 `mpv`）
+process.stdout.on("error", (e: NodeJS.ErrnoException) => {
+  if (e.code === "EPIPE") process.exit(0);
+  else throw e;
+});
+
 // 自己接管鉴权 或 根本不需要 API key 的命令
-const BUILTIN_NO_AUTH_SETUP: string[][] = [
+const NO_AUTH_SETUP = [
   ["auth", "login"],
   ["auth", "logout"],
   ["config", "show"],
@@ -37,6 +51,9 @@ const BUILTIN_NO_AUTH_SETUP: string[][] = [
   ["app", "list"],
   ["console", "call"],
   ["usage", "free"],
+  ["mcp", "list"],
+  ["mcp", "tools"],
+  ["mcp", "call"],
   ["plugin", "list"],
   ["plugin", "install"],
   ["plugin", "link"],
@@ -50,10 +67,10 @@ function matchesNoAuthSetup(commandPath: string[], rules: string[][]): boolean {
 async function main() {
   const registry = await createRegistry();
   const catalog = await loadCommandCatalog();
-  const noAuthSetup = [...BUILTIN_NO_AUTH_SETUP, ...catalog.noAuthSetup];
+  const noAuthSetup = [...NO_AUTH_SETUP, ...catalog.noAuthSetup];
 
   registerCommandHelpPrinter((commandPath, out) => {
-    const a = process.argv.slice(2);
+    let a = process.argv.slice(2);
     const ri = a.indexOf("--region");
     const region = ((ri >= 0 && a[ri + 1]) ||
       process.env.DASHSCOPE_REGION ||
@@ -62,7 +79,8 @@ async function main() {
     getActiveRegistry().printHelp(commandPath, out, region);
   });
 
-  const argv = process.argv.slice(2);
+  let argv = process.argv.slice(2);
+  if (argv[0] === "--") argv = argv.slice(1);
 
   if (argv.includes("--version") || argv.includes("-v")) {
     process.stdout.write(`bl ${CLI_VERSION}\n`);
@@ -167,16 +185,10 @@ async function main() {
   await flushTelemetry(1000);
 }
 
-process.on("SIGINT", () => {
-  process.stderr.write("\nInterrupted. Exiting.\n");
-  void flushTelemetry(500).finally(() => process.exit(130));
-});
-
-process.stdout.on("error", (e: NodeJS.ErrnoException) => {
-  if (e.code === "EPIPE") process.exit(0);
-  else throw e;
-});
-
 main().catch((err) => {
+  // 在 handleError() 调用 process.exit() 之前刷出在途埋点。
+  // 命令抛出的错误已被 trackCommandExecution 的 finally 块记录，
+  // 但底层 tracker 有 ~500ms 的发送去抖。不主动 flush 的话，
+  // 错误事件会随进程退出丢掉。
   void flushTelemetry(1000).finally(() => handleError(err));
 });

@@ -4,7 +4,44 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/spec/v2.0.0.html)。两个包共享一个版本号,总是一起发布。
 
-[English](CHANGELOG.md) · [README](README_CN.md) · [参与贡献](CONTRIBUTING_CN.md)
+[English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
+
+## [1.2.1] - 2026-06-09
+
+### 变更
+
+- Skill 安装命令从 `npx skills add modelstudioai/skills` 更新为 `npx skills add modelstudioai/cli --all -g`，所有 README 和文档已同步。
+- `bl update` 现在会在 CLI 升级后自动更新 `bailian-cli` agent skill。
+- 全仓库 `README_CN.md` 统一重命名为 `README.zh.md`（ISO 639 命名规范）。
+
+### 新增
+
+- 官方 skill（`skills/bailian-cli/`）迁入本仓库，pre-commit 自动生成 reference 文档并同步 SKILL.md 版本号。
+- `bailian-cli` skill 新增中英文双语 README。
+
+## [1.2.0] - 2026-06-05
+
+### 新增
+
+- `bl mcp` 命令组：`bl mcp list` 列出 MCP 服务器，`bl mcp tools <server>` 查看可用工具，`bl mcp call <server>.<tool>` 通过 `--arg k=v` 或 `--json` 调用工具。
+- `bl advisor recommend` — 用自然语言描述任务需求，智能推荐最合适的模型，展示上下文窗口、定价及能力详情。
+
+### 修复
+
+- 图片/视频水印始终开启的问题，现在正确遵守 `bl config set watermark false` 配置。
+- 成对 flag（如 `--watermark` / `--no-watermark`）现已正确互斥。
+- 可选参数为空时 flag 校验不再崩溃。
+- **安全**：凭据不再泄漏到磁盘日志，文件权限已收紧。
+- **安全**：校验 `base_url` / `console_gateway_url` 为合法 HTTP(S) URL。
+- **安全**：script/JS `code` 字段强制为字符串字面量（阻止不可信代码 RCE）。
+- **安全**：URL 路径段已百分号编码，SSE 缓冲区设上限。
+- **安全**：流水线规划、指针遍历及并发安全加固。
+- MCP 命令现在在参数校验和 dry-run 检查之后才处理鉴权。
+
+### 变更
+
+- 所有命令的 flag 默认值文案统一并去重。
+- 非法/未知 flag 名称现在会报明确错误，而非静默忽略。
 
 ## [1.1.3] - 2026-06-02
 

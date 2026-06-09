@@ -25,11 +25,11 @@
 
 ### C. 命令手册
 
-- [ ] 若 `--model` 的 description 含 default,改命令后跑 `pnpm --filter bailian-cli run generate:reference` 更新 `tools/generated/reference/<group>.md`(本仓库 gitignore;SKILL.md 由独立的 `npx add skills` 仓库维护,本仓库不再含)
+- [ ] 若 `--model` 的 description 含 default,改命令后跑 `pnpm --filter bailian-cli run generate:reference` 更新 `skills/bailian-cli/reference/<group>.md` 并提交
 
 ### D. 用户面文档
 
-- [ ] `README.md` / `README_CN.md`:
+- [ ] `README.md` / `README.zh.md`:
   - Quick Start 示例如使用了具体型号,确认仍可用
   - 顶部 introduction 段落如提到"Qwen-Omni"等品牌名,无需变(模型代号变化不算品牌变)
 

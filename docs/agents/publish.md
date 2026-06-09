@@ -69,7 +69,7 @@ node tools/release/publish-channel.mjs --channel test --dry-run
 
 ### 用户面文档
 
-- [ ] `README.md` / `README_CN.md` 的 Quick Start 命令仍能跑通
+- [ ] `README.md` / `README.zh.md` 的 Quick Start 命令仍能跑通
 - [ ] README 的 Node.js 徽章版本与 `cli/package.json.engines.node` 一致
 - [ ] README 宣传的 bin 名称在 `cli/package.json.bin` 都真的注册
 - [ ] `LICENSE` 文件存在（根 + cli + core 各一份）

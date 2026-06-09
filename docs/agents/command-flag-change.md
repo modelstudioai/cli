@@ -28,8 +28,8 @@
 
 ### C. 文档层
 
-- [ ] `README.md` / `README_CN.md` 如果在示例里展示了相关命令,补充新 flag
-- [ ] 跑 `pnpm --filter bailian-cli run generate:reference`,让 `tools/generated/reference/` 与命令一致(本仓库 gitignore,勿手改;SKILL.md 已迁出本仓库)
+- [ ] `README.md` / `README.zh.md` 如果在示例里展示了相关命令,补充新 flag
+- [ ] 跑 `pnpm --filter bailian-cli run generate:reference`,让 `skills/bailian-cli/reference/` 与命令一致(勿手改;改完提交)
 
 ### D. 测试层
 

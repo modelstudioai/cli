@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&) · [中文文档](https://github.com/modelstudioai/cli/blob/main/README_CN.md) · [API Documentation](https://help.aliyun.com/zh/model-studio/) · [Get API Key](https://bailian.console.aliyun.com/cli?source_channel=key_github&)
+[Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&) · [中文文档](https://github.com/modelstudioai/cli/blob/main/README.zh.md) · [API Documentation](https://help.aliyun.com/zh/model-studio/) · [Get API Key](https://bailian.console.aliyun.com/cli?source_channel=key_github&)
 
 ---
 
@@ -32,7 +32,9 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **Image & video understanding** — Qwen-VL: long-form video analysis, chart/document parsing, visual reasoning, multilingual OCR
 - **Knowledge base & memory** — Multimodal RAG retrieval and cross-session memory for personalized, coherent dialogue
 - **App calls** — Invoke agents and workflows already published on Aliyun Model Studio
+- **MCP integration** — Orchestrate Bailian MCP servers: list services, inspect tools, and invoke any tool directly from the terminal
 - **Web search** — Real-time internet retrieval for up-to-date, accurate answers
+- **Model recommendation** — Describe your scenario and get best-fit model suggestions; supports scoped search, model comparison, and alternative discovery
 - **Console capabilities** — Browse Bailian apps (`app list`) and check free-tier quota (`usage free`)
 - **Local file auto-upload** — Every URL parameter accepts a local path; uploaded to free temp storage with 48-hour validity
 
@@ -71,7 +73,7 @@ No timeline scrubbing. No frame-by-frame editing. Just one sentence → one vide
 
 ```bash
 npm install -g bailian-cli
-npx skills add modelstudioai/skills --all -g
+npx skills add modelstudioai/cli --all -g
 ```
 
 > Requires Node.js >= 22.12.
@@ -96,6 +98,12 @@ bl image generate --prompt "A cat in a spacesuit" --out-dir ./images/
 
 # Generate a video from local image
 bl video generate --image ./cat.png --prompt "Make the cat move" --download cat.mp4
+
+# Model recommendation — find the best model for your use case
+bl advisor recommend --message "I need a visual-understanding chatbot"
+
+# Compare specific models
+bl advisor recommend --message "qwen-max vs deepseek-v3 for code generation"
 
 # Browser login (required for console capability commands)
 bl auth login --console
