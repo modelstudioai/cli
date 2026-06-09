@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&) · [中文文档](https://github.com/modelstudioai/cli/blob/main/README_CN.md) · [API Documentation](https://help.aliyun.com/zh/model-studio/) · [Get API Key](https://bailian.console.aliyun.com/cli?source_channel=key_github&)
+[Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&) · [中文文档](https://github.com/modelstudioai/cli/blob/main/README.zh.md) · [API Documentation](https://help.aliyun.com/zh/model-studio/) · [Get API Key](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key)
 
 ---
 
@@ -73,7 +73,7 @@ No timeline scrubbing. No frame-by-frame editing. Just one sentence → one vide
 
 ```bash
 npm install -g bailian-cli
-npx skills add modelstudioai/skills --all -g
+npx skills add modelstudioai/cli --all -g
 ```
 
 > Requires Node.js >= 22.12.
@@ -119,7 +119,7 @@ bl usage free --model qwen3-max
 
 ### DashScope API Key
 
-Required for most commands. Get your key from the [DashScope Console](https://bailian.console.aliyun.com/cli?source_channel=key_github&).
+Required for most commands. Get your key from the [DashScope Console](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key).
 
 ```bash
 # Option 1: Environment variable
@@ -176,8 +176,8 @@ Config file location: `~/.bailian/config.json`
 | Aliyun Model Studio CLI Site | https://bailian.console.aliyun.com/cli?source_channel=cli_github& |
 | DashScope API Docs           | https://help.aliyun.com/zh/model-studio/                          |
 | Qwen Model List              | https://help.aliyun.com/zh/model-studio/getting-started/models    |
-| Aliyun Model Studio Console  | https://bailian.console.aliyun.com/                               |
-| Get API Key                  | https://bailian.console.aliyun.com/cli?source_channel=key_github& |
+| Aliyun Model Studio Console  | https://bailian.console.aliyun.com/?source_channel=cli_github                               |
+| Get API Key                  | https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key |
 | Get AccessKey                | https://ram.console.aliyun.com/manage/ak                          |
 
 ## Changelog

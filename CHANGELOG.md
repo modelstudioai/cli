@@ -4,7 +4,20 @@ All notable changes to `bailian-cli` and `bailian-cli-core` are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The two packages share a single version number — they are always released together.
 
-[中文版](CHANGELOG_CN.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
+[中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
+
+## [1.2.1] - 2026-06-09
+
+### Changed
+
+- Skill install command updated from `npx skills add modelstudioai/skills` to `npx skills add modelstudioai/cli --all -g` across all READMEs and docs.
+- `bl update` now automatically updates the `bailian-cli` agent skill after CLI upgrade.
+- Renamed `README_CN.md` to `README.zh.md` (ISO 639 convention) across the entire repo.
+
+### Added
+
+- Official skill (`skills/bailian-cli/`) now ships in this repository with pre-commit auto-generation of reference docs and SKILL.md version sync.
+- Bilingual READMEs (EN + CN) for the `bailian-cli` skill.
 
 ## [1.2.0] - 2026-06-05
 

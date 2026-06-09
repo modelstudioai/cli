@@ -34,13 +34,13 @@ commands/catalog.ts   export const commands: Record<string, Command>
    ┌────┴────┬──────────────────────┬─────────────────────┐
    ↓         ↓                      ↓                     ↓
 registry.ts  main.ts      tools/generate-reference.ts   export-schema.ts
-(解析/help)  (入口)       → tools/generated/reference/index.md + <group>.md
+(解析/help)  (入口)       → skills/bailian-cli/reference/index.md + <group>.md
 ```
 
 - **`packages/cli/src/commands/catalog.ts`**: `import` 命令模块 + `"<path>": handler` 映射;**不** `import registry.ts`(避免构建时循环依赖)
 - **`packages/cli/src/commands/index.ts`**: `export { commands } from "./catalog.ts"`(给包内 re-export 用)
 - **`packages/cli/src/registry.ts`**: `import { commands } from "./commands/catalog.ts"`,建树、`resolve`、`printHelp`;Commands / Global Flags 从 `Command` 元数据与 `GLOBAL_OPTIONS` **动态生成**
-- **`tools/generate-reference.ts`**: build 前读 `catalog.ts`,写 `tools/generated/reference/index.md`(索引) + `tools/generated/reference/<一级命令>.md`(详情,勿手改)。该目录被 gitignore,产物供未来的 `npx add skills` 安装机制消费
+- **`tools/generate-reference.ts`**: pre-commit / `pnpm run sync:skill-assets` 时读 `catalog.ts`,写 `skills/bailian-cli/reference/index.md`(索引) + `skills/bailian-cli/reference/<一级命令>.md`(详情,勿手改)。该目录**纳入 git**,随 `npx skills add modelstudioai/cli` 分发
 
 已删除、勿再引用:`commands/help.ts`、`registry.ts` 内联 `new CommandRegistry({...})`、`printRootHelp` 手写命令行。
 
@@ -59,9 +59,9 @@ registry.ts  main.ts      tools/generate-reference.ts   export-schema.ts
 
 ### B. 文档层
 
-- [ ] 运行 `pnpm --filter bailian-cli run generate:reference`(或 `build`),刷新 `tools/generated/reference/` 下生成文件(本仓库 gitignore,仅供本地校验和未来 skill 安装机制消费)
-- [ ] `README.md` / `README_CN.md`: Quick Start、命令一览(用户向,与 help 对齐即可)
-- [ ] SKILL.md 已搬出本仓库(由 `npx add skills` 机制分发),本仓库不再维护
+- [ ] 运行 `pnpm run sync:skill-assets`(或正常 `git commit` 走 pre-commit),刷新 `skills/bailian-cli/reference/` 与 `SKILL.md` 的 `metadata.version` 并提交
+- [ ] `README.md` / `README.zh.md`: Quick Start、命令一览(用户向,与 help 对齐即可)
+- [ ] `skills/bailian-cli/SKILL.md`: 若安装说明或能力边界有变,同步更新
 
 ### C. 测试层
 
@@ -73,14 +73,14 @@ registry.ts  main.ts      tools/generate-reference.ts   export-schema.ts
 - [ ] 全仓 grep **旧命令名字符串**,确保以下位置全部更新:
   - `catalog.ts` 的 key
   - error hints(cli 层)
-  - `tools/generated/reference/`(重建后检查;本仓库 gitignore)
+  - `skills/bailian-cli/reference/`(重建后检查并提交)
   - README 示例
   - 测试断言
 
 ## 完成后自查
 
 ```sh
-pnpm --filter bailian-cli run generate:reference   # reference/ 与 catalog 一致
+pnpm run sync:skill-assets   # reference/ + SKILL metadata.version 与 catalog / package.json 一致
 node packages/cli/src/main.ts <new-command> --help
 node packages/cli/src/main.ts                        # 根 help 列表含新命令
 vp test packages/cli/tests/e2e/<topic>.e2e.test.ts   # 相关 e2e
@@ -89,6 +89,6 @@ vp test packages/cli/tests/e2e/<topic>.e2e.test.ts   # 相关 e2e
 ## 常见漏点
 
 - ✗ 只改了命令文件,忘了 **`catalog.ts`** → 命令不存在或 help 里没有
-- ✗ 手改 **`tools/generated/reference/*.md`** → 下次 build 被覆盖;应改 `defineCommand` 后重新 generate
+- ✗ 手改 **`skills/bailian-cli/reference/*.md`** → 下次 generate 被覆盖;应改 `defineCommand` 后重新 generate 并提交
 - ✗ 在 `export-schema.ts` 顶层 `import catalog` → 可能与 registry 循环依赖
 - ✗ 单 action 的子组是反模式,新增时优先拍平为两级

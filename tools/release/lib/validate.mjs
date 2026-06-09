@@ -3,7 +3,7 @@ import { join } from "path";
 
 import { PACKAGES, ROOT, readPackageJson } from "./packages.mjs";
 
-const README_FILES = ["README.md", "README_CN.md"];
+const README_FILES = ["README.md", "README.zh.md"];
 
 export function assertReadmeSync() {
   for (const file of README_FILES) {

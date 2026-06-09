@@ -30,6 +30,19 @@ export async function runCheck() {
   step("build bailian-cli-core");
   run("pnpm", ["--filter", "bailian-cli-core", "run", "build"]);
 
+  step("generate skill reference + sync SKILL.md version");
+  run("pnpm", ["--filter", "bailian-cli", "run", "generate:reference"]);
+  run("pnpm", ["--filter", "bailian-cli", "run", "sync:skill-version"]);
+
+  step("verify committed skill assets match generators");
+  run("git", [
+    "diff",
+    "--exit-code",
+    "--",
+    "skills/bailian-cli/SKILL.md",
+    "skills/bailian-cli/reference/",
+  ]);
+
   step("build bailian-cli");
   run("pnpm", ["--filter", "bailian-cli", "run", "build"]);
 
