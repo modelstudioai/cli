@@ -81,19 +81,27 @@ export default defineCommand({
 
     const format = detectOutputFormat(config.output);
 
-    // Determine auth: prefer API-KEY, fall back to AK/SK (deprecated)
-    let useApiKey = false;
-    try {
-      await resolveCredential(config);
-      useApiKey = true;
-    } catch {
-      // No API-KEY credential available
-    }
+    const hasExplicitApiKey = !!config.apiKey;
+    const hasExplicitAkSk = !!(flags.accessKeyId && flags.accessKeySecret);
 
-    if (useApiKey) {
+    if (hasExplicitApiKey) {
       await runWithApiKey(config, flags, indexId, query, format);
-    } else {
+    } else if (hasExplicitAkSk) {
       await runWithAkSk(config, flags, indexId, query, format);
+    } else {
+      let useApiKey = false;
+      try {
+        await resolveCredential(config);
+        useApiKey = true;
+      } catch {
+        // No API-KEY credential available
+      }
+
+      if (useApiKey) {
+        await runWithApiKey(config, flags, indexId, query, format);
+      } else {
+        await runWithAkSk(config, flags, indexId, query, format);
+      }
     }
   },
 });
