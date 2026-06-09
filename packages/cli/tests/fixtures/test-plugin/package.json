@@ -5,6 +5,9 @@
   "type": "module",
   "bailianCli": {
     "plugin": true,
-    "commands": "./src/commands"
+    "commands": "./src/commands",
+    "noAuthSetup": [
+      "test ping"
+    ]
   }
 }
