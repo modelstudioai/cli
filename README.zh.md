@@ -171,7 +171,7 @@ bl update
 | 阿里云百炼 CLI 官方主页 | https://bailian.console.aliyun.com/cli?source_channel=cli_github& |
 | DashScope API 文档      | https://help.aliyun.com/zh/model-studio/                          |
 | 通义千问模型列表        | https://help.aliyun.com/zh/model-studio/getting-started/models    |
-| 阿里云百炼控制台        | https://bailian.console.aliyun.com/                               |
+| 阿里云百炼控制台        | https://bailian.console.aliyun.com/?source_channel=cli_github                               |
 | 获取 API Key            | https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key |
 | 获取 AccessKey          | https://ram.console.aliyun.com/manage/ak                          |
 
