@@ -16,8 +16,15 @@ function step(msg) {
 /**
  * Pure-validation pipeline. Reusable from publish-stable / publish-channel.
  * Returns { coreJson, cliJson } for callers that need the parsed package.jsons.
+ *
+ * @param {{ channel?: boolean }} [options]
+ * @param {boolean} [options.channel] — When true (publish-channel): regenerate
+ *   `reference/` and assert it matches git, but do not sync `SKILL.md` from the
+ *   temporary beta `package.json` version (repo skill stays aligned with stable).
  */
-export async function runCheck() {
+export async function runCheck(options = {}) {
+  const channel = options.channel === true;
+
   step("pnpm install --frozen-lockfile");
   run("pnpm", ["install", "--frozen-lockfile"]);
 
@@ -30,16 +37,26 @@ export async function runCheck() {
   step("build bailian-cli-core");
   run("pnpm", ["--filter", "bailian-cli-core", "run", "build"]);
 
-  step("generate skill reference + sync SKILL.md version");
+  step(
+    channel
+      ? "generate skill reference (channel: skip SKILL.md version sync)"
+      : "generate skill reference + sync SKILL.md version",
+  );
   run("pnpm", ["--filter", "bailian-cli", "run", "generate:reference"]);
-  run("pnpm", ["--filter", "bailian-cli", "run", "sync:skill-version"]);
+  if (!channel) {
+    run("pnpm", ["--filter", "bailian-cli", "run", "sync:skill-version"]);
+  }
 
-  step("verify committed skill assets match generators");
+  step(
+    channel
+      ? "verify committed reference/ matches generator"
+      : "verify committed skill assets match generators",
+  );
   run("git", [
     "diff",
     "--exit-code",
     "--",
-    "skills/bailian-cli/SKILL.md",
+    ...(channel ? [] : ["skills/bailian-cli/SKILL.md"]),
     "skills/bailian-cli/reference/",
   ]);
 

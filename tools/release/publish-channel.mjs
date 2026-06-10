@@ -66,7 +66,7 @@ try {
   // pnpm pack resolves `workspace:*` to the in-tree version, so CLI tarball
   // will depend on bailian-cli-core@<betaVersion> after this bump.
 
-  await runCheck();
+  await runCheck({ channel: true });
 
   step(`idempotency: check ${betaVersion} against registry`);
   const corePublished = npmViewExists(core.name, betaVersion);
