@@ -74,5 +74,16 @@ export async function callConsoleGateway(
     );
   }
 
-  return res.json() as Promise<unknown>;
+  const json = (await res.json()) as Record<string, unknown>;
+
+  const innerData = json.data as Record<string, unknown> | undefined;
+  if (innerData?.success === false && innerData.errorCode) {
+    throw new BailianError(
+      `Console gateway error: ${innerData.errorCode}`,
+      ExitCode.GENERAL,
+      typeof innerData.errorMsg === "string" ? innerData.errorMsg : undefined,
+    );
+  }
+
+  return json;
 }

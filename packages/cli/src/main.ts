@@ -60,9 +60,16 @@ const NO_AUTH_SETUP = [
   ["app", "list"],
   ["console", "call"],
   ["usage", "free"],
+  ["usage", "freetier"],
+  ["usage", "stats"],
   ["mcp", "list"],
   ["mcp", "tools"],
   ["mcp", "call"],
+  ["workspace", "list"],
+  ["quota", "list"],
+  ["quota", "request"],
+  ["quota", "history"],
+  ["quota", "check"],
 ];
 
 async function main() {

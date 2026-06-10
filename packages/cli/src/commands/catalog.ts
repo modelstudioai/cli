@@ -36,9 +36,16 @@ import speechRecognize from "./speech/recognize.ts";
 import fileUpload from "./file/upload.ts";
 import consoleCall from "./console/call.ts";
 import usageFree from "./usage/free.ts";
+import usageFreetier from "./usage/freetier.ts";
+import usageStats from "./usage/stats.ts";
 import pipelineRun from "./pipeline/run.ts";
 import pipelineValidate from "./pipeline/validate.ts";
 import advisorRecommend from "./advisor/recommend.ts";
+import workspaceList from "./workspace/list.ts";
+import quotaList from "./quota/list.ts";
+import quotaRequest from "./quota/request.ts";
+import quotaHistory from "./quota/history.ts";
+import quotaCheck from "./quota/check.ts";
 
 /** Command registry map (no dependency on registry.ts — safe for build-time import). */
 export const commands: Record<string, Command> = {
@@ -74,11 +81,18 @@ export const commands: Record<string, Command> = {
   "file upload": fileUpload,
   "console call": consoleCall,
   "usage free": usageFree,
+  "usage freetier": usageFreetier,
+  "usage stats": usageStats,
   "pipeline run": pipelineRun,
   "pipeline validate": pipelineValidate,
   "config show": configShow,
   "config set": configSet,
   "config export-schema": configExportSchema,
   "advisor recommend": advisorRecommend,
+  "workspace list": workspaceList,
+  "quota list": quotaList,
+  "quota request": quotaRequest,
+  "quota history": quotaHistory,
+  "quota check": quotaCheck,
   update: update,
 };

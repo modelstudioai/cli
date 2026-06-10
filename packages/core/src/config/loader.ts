@@ -87,7 +87,7 @@ export function loadConfig(flags: GlobalFlags): Config {
     consoleGatewayUrl:
       process.env.BAILIAN_CONSOLE_GATEWAY_URL ||
       file.console_gateway_url ||
-      "https://pre-bailian-cs.console.aliyun.com",
+      "https://bailian-cs.console.aliyun.com",
     verbose: flags.verbose || process.env.DASHSCOPE_VERBOSE === "1",
     quiet: flags.quiet || false,
     noColor: flags.noColor || process.env.NO_COLOR !== undefined || !process.stdout.isTTY,
