@@ -55,7 +55,7 @@ git diff --name-only <base>...<head>
 ## 清单 B:用户透出(用户可见的新东西必看)
 
 - [ ] **新命令 / 新 flag** 已同步到用户面文档:
-  - [README.md](README.md) + [README_CN.md](README_CN.md)(中英文都要,常漏 `_CN`)
+  - [README.md](README.md) + [README.zh.md](README.zh.md)(中英文都要,常漏 `_CN`)
   - (SKILL.md 已迁出本仓库,由 `npx add skills` 机制独立维护,不在本仓库 review 范围)
 - [ ] **`bl <cmd> --help`** 文案完整:`description` / `examples` / `apiDocs` 都填了
 - [ ] **demo / quickstart**:用户可调用的新命令至少有一个示例
@@ -67,7 +67,7 @@ git diff --name-only <base>...<head>
 - [ ] **改了文件但没补测试**:`git diff --stat <base>...<head> -- '*test*' '*spec*'` 与改动文件清单对照
 - [ ] **新功能埋点同步**:遥测事件名 + 参数 allowlist(参考 main 上的 `feat(telemetry): track console gateway api name in params allowlist` commit)
 - [ ] **环境变量**:新增 / 重命名的 env var 进 README,旧的有没有兼容
-- [ ] **i18n**:`README.md` 改了,`README_CN.md` 同步了吗
+- [ ] **i18n**:`README.md` 改了,`README.zh.md` 同步了吗
 
 ## 输出报告(照模板填)
 
@@ -98,7 +98,7 @@ git diff --name-only <base>...<head>
 | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
 | `pnpm-workspace.yaml` 把 `packages/*` 收窄成显式列表                           | 合并后目标分支的新子包不再被 workspace 识别,`pnpm install` 看似正常但子包失联 |
 | 源分支 version 比目标分支低,直接 merge 覆盖                                    | npm 上版本号回退,latest tag 错乱                                              |
-| `registry.ts` 注册新命令但忘了 [README](README.md) / [README_CN](README_CN.md) | 用户完全感知不到新功能                                                        |
+| `registry.ts` 注册新命令但忘了 [README](README.md) / [README.zh](README.zh.md) | 用户完全感知不到新功能                                                        |
 | 共享 util 重构(抽公共函数)只改了一处调用方                                     | 其它调用方静默走旧分支,行为分裂                                               |
 | `NO_AUTH_SETUP` 加了不该免登录的命令                                           | 安全风险,用户没登录也能调付费 API                                             |
 | `NO_AUTH_SETUP` / `registry.ts` 这类全局表两边都加项,解冲突时被合掉一侧        | 某个命令突然要求登录 / 某个新命令注册丢失,编译能过、回归不易察觉              |

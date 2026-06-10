@@ -46,8 +46,8 @@ grep -rnE "https://dashscope[a-z-]*\.aliyuncs\.com" packages/ --include="*.ts" \
 
 ### B. 非 TS 文件(只能人工同步,无法 import)
 
-- [ ] `tools/generated/reference/` 各 `<group>.md` 中 API/控制台 URL(`generate:reference` 重建后核对;本仓库 gitignore)
-- [ ] `README.md` / `README_CN.md` 中所有 URL
+- [ ] `skills/bailian-cli/reference/` 各 `<group>.md` 中 API/控制台 URL(`generate:reference` 重建后核对并提交)
+- [ ] `README.md` / `README.zh.md` 中所有 URL
 
 ### C. 渠道追踪参数
 

@@ -4,7 +4,20 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/spec/v2.0.0.html)。两个包共享一个版本号,总是一起发布。
 
-[English](CHANGELOG.md) · [README](README_CN.md) · [参与贡献](CONTRIBUTING_CN.md)
+[English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
+
+## [1.2.1] - 2026-06-09
+
+### 变更
+
+- Skill 安装命令从 `npx skills add modelstudioai/skills` 更新为 `npx skills add modelstudioai/cli --all -g`，所有 README 和文档已同步。
+- `bl update` 现在会在 CLI 升级后自动更新 `bailian-cli` agent skill。
+- 全仓库 `README_CN.md` 统一重命名为 `README.zh.md`（ISO 639 命名规范）。
+
+### 新增
+
+- 官方 skill（`skills/bailian-cli/`）迁入本仓库，pre-commit 自动生成 reference 文档并同步 SKILL.md 版本号。
+- `bailian-cli` skill 新增中英文双语 README。
 
 ## [1.2.0] - 2026-06-05
 

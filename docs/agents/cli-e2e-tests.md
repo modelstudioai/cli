@@ -60,7 +60,7 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 ## 新增 command 检查清单
 
 - [ ] `commands/catalog.ts` 登记 + `tests/e2e/<topic>.e2e.test.ts`（新建或扩展）
-- [ ] 若改了 `usage` / `options` / `examples`,跑 `pnpm --filter bailian-cli run generate:reference` 更新 `tools/generated/reference/`(本仓库 gitignore)
+- [ ] 若改了 `usage` / `options` / `examples`,跑 `pnpm --filter bailian-cli run generate:reference` 更新 `skills/bailian-cli/reference/` 并提交
 - [ ] 顶层：分组 help + 子命令 `--help`（多子命令则各一条 help）
 - [ ] skip 块：每个 required flag 缺参；可 dry-run 则加一条
 - [ ] 至少一条真实集成（或说明为何仅 smoke）；不破坏已有集成用例顺序
