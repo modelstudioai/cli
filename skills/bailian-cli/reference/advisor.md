@@ -32,25 +32,25 @@ Index: [index.md](index.md)
 #### Examples
 
 ```bash
-bl advisor recommend --message "我要做一个能理解图片的客服机器人"
+bl advisor recommend --message "I need a visual-understanding chatbot"
 ```
 
 ```bash
-bl advisor recommend --message "做一个Agent自动根据用户意图生成动画片"
+bl advisor recommend --message "Build an Agent that auto-generates animations"
 ```
 
 ```bash
-bl advisor recommend --message "法律合同审查，要求高精准度"
+bl advisor recommend --message "Legal contract review, high precision required"
 ```
 
 ```bash
-bl advisor recommend --message "做一个低成本高并发的在线客服" --output json
+bl advisor recommend --message "Low-cost high-concurrency online customer service" --output json
 ```
 
 ```bash
-bl advisor recommend --message "长文本摘要" --dry-run
+bl advisor recommend --message "Long document summarization" --dry-run
 ```
 
 ```bash
-bl advisor recommend                                          # 交互式输入需求
+bl advisor recommend                                          # Interactive input
 ```

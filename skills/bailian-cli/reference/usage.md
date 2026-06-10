@@ -7,11 +7,11 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command             | Description                                                                                           |
-| ------------------- | ----------------------------------------------------------------------------------------------------- |
-| `bl usage free`     | Query free-tier quota for models (all models if --model is omitted)                                   |
-| `bl usage freetier` | Enable or disable auto-stop (用完即停) for free-tier models. Enables by default; use --off to disable |
-| `bl usage stats`    | 查询模型用量统计 (Query model usage statistics)                                                       |
+| Command             | Description                                                                                |
+| ------------------- | ------------------------------------------------------------------------------------------ |
+| `bl usage free`     | Query free-tier quota for models (all models if --model is omitted)                        |
+| `bl usage freetier` | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable |
+| `bl usage stats`    | Query model usage statistics                                                               |
 
 ## Command details
 
@@ -64,11 +64,11 @@ bl usage free --model qwen3-max --region cn-beijing
 
 ### `bl usage freetier`
 
-| Field           | Value                                                                                                 |
-| --------------- | ----------------------------------------------------------------------------------------------------- |
-| **Name**        | `usage freetier`                                                                                      |
-| **Description** | Enable or disable auto-stop (用完即停) for free-tier models. Enables by default; use --off to disable |
-| **Usage**       | `bl usage freetier <--model <model>[,model2,...] \| --all> [--off] [flags]`                           |
+| Field           | Value                                                                                      |
+| --------------- | ------------------------------------------------------------------------------------------ |
+| **Name**        | `usage freetier`                                                                           |
+| **Description** | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable |
+| **Usage**       | `bl usage freetier <--model <model>[,model2,...] \| --all> [--off] [flags]`                |
 
 #### Options
 
@@ -111,18 +111,18 @@ bl usage freetier --off --all
 | Field           | Value                                                      |
 | --------------- | ---------------------------------------------------------- |
 | **Name**        | `usage stats`                                              |
-| **Description** | 查询模型用量统计 (Query model usage statistics)            |
+| **Description** | Query model usage statistics                               |
 | **Usage**       | `bl usage stats [--model <model>] [--days <days>] [flags]` |
 
 #### Options
 
-| Flag                  | Type   | Required | Description                                                                                    |
-| --------------------- | ------ | -------- | ---------------------------------------------------------------------------------------------- |
-| `--model <model>`     | string | no       | 模型名称，逗号分隔多个；不指定则查全部概览 (Model name(s), comma-separated; omit for overview) |
-| `--days <days>`       | string | no       | 查询天数，默认 7 (Number of days, default: 7)                                                  |
-| `--type <type>`       | string | no       | 模型类型: Text, Vision, Multimodal, Audio, Embedding                                           |
-| `--workspace-id <id>` | string | no       | 业务空间 ID (Workspace ID; env: BAILIAN_WORKSPACE_ID)                                          |
-| `--region <region>`   | string | no       | API 区域，默认 cn-beijing (API region, default: cn-beijing)                                    |
+| Flag                  | Type   | Required | Description                                            |
+| --------------------- | ------ | -------- | ------------------------------------------------------ |
+| `--model <model>`     | string | no       | Model name(s), comma-separated; omit for overview      |
+| `--days <days>`       | string | no       | Number of days (default: 7)                            |
+| `--type <type>`       | string | no       | Model type: Text, Vision, Multimodal, Audio, Embedding |
+| `--workspace-id <id>` | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)               |
+| `--region <region>`   | string | no       | API region (default: cn-beijing)                       |
 
 #### Examples
 

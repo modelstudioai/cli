@@ -7,26 +7,26 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command             | Description                            |
-| ------------------- | -------------------------------------- |
-| `bl workspace list` | 列出所有业务空间 (List all workspaces) |
+| Command             | Description         |
+| ------------------- | ------------------- |
+| `bl workspace list` | List all workspaces |
 
 ## Command details
 
 ### `bl workspace list`
 
-| Field           | Value                                  |
-| --------------- | -------------------------------------- |
-| **Name**        | `workspace list`                       |
-| **Description** | 列出所有业务空间 (List all workspaces) |
-| **Usage**       | `bl workspace list [flags]`            |
+| Field           | Value                       |
+| --------------- | --------------------------- |
+| **Name**        | `workspace list`            |
+| **Description** | List all workspaces         |
+| **Usage**       | `bl workspace list [flags]` |
 
 #### Options
 
-| Flag                | Type   | Required | Description                                                 |
-| ------------------- | ------ | -------- | ----------------------------------------------------------- |
-| `--list <n>`        | string | no       | 返回数量限制 (Limit number of results)                      |
-| `--region <region>` | string | no       | API 区域，默认 cn-beijing (API region, default: cn-beijing) |
+| Flag                | Type   | Required | Description                      |
+| ------------------- | ------ | -------- | -------------------------------- |
+| `--list <n>`        | string | no       | Limit number of results          |
+| `--region <region>` | string | no       | API region (default: cn-beijing) |
 
 #### Examples
 

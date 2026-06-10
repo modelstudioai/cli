@@ -37,25 +37,25 @@ Use this index for the full quick index and global flags.
 | `bl omni`                  | Multimodal chat with text + audio output (Qwen-Omni)                                                  | [omni.md](omni.md)           |
 | `bl pipeline run`          | Run a pipeline workflow definition                                                                    | [pipeline.md](pipeline.md)   |
 | `bl pipeline validate`     | Validate a pipeline definition without executing                                                      | [pipeline.md](pipeline.md)   |
-| `bl quota check`           | 查看当前用量 vs 限流阈值 (Check current usage against rate limits)                                    | [quota.md](quota.md)         |
-| `bl quota history`         | 查看提额历史记录 (View quota change history)                                                          | [quota.md](quota.md)         |
-| `bl quota list`            | 查看模型 RPM/TPM 限流值 (View model rate limits)                                                      | [quota.md](quota.md)         |
-| `bl quota request`         | 申请临时提额 (Request temporary quota increase)                                                       | [quota.md](quota.md)         |
+| `bl quota check`           | Check current usage against rate limits                                                               | [quota.md](quota.md)         |
+| `bl quota history`         | View quota change history                                                                             | [quota.md](quota.md)         |
+| `bl quota list`            | View model RPM/TPM rate limits                                                                        | [quota.md](quota.md)         |
+| `bl quota request`         | Request a temporary quota increase                                                                    | [quota.md](quota.md)         |
 | `bl search web`            | Search the web using DashScope MCP WebSearch service                                                  | [search.md](search.md)       |
 | `bl speech recognize`      | Recognize speech from audio files (FunAudio-ASR)                                                      | [speech.md](speech.md)       |
 | `bl speech synthesize`     | Synthesize speech from text (CosyVoice TTS)                                                           | [speech.md](speech.md)       |
 | `bl text chat`             | Send a chat completion (OpenAI compatible, DashScope)                                                 | [text.md](text.md)           |
 | `bl update`                | Update bl to the latest version                                                                       | [update.md](update.md)       |
 | `bl usage free`            | Query free-tier quota for models (all models if --model is omitted)                                   | [usage.md](usage.md)         |
-| `bl usage freetier`        | Enable or disable auto-stop (用完即停) for free-tier models. Enables by default; use --off to disable | [usage.md](usage.md)         |
-| `bl usage stats`           | 查询模型用量统计 (Query model usage statistics)                                                       | [usage.md](usage.md)         |
+| `bl usage freetier`        | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable            | [usage.md](usage.md)         |
+| `bl usage stats`           | Query model usage statistics                                                                          | [usage.md](usage.md)         |
 | `bl video download`        | Download a completed video by task ID                                                                 | [video.md](video.md)         |
 | `bl video edit`            | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                | [video.md](video.md)         |
 | `bl video generate`        | Generate a video from text or image (happyhorse-1.0-t2v / happyhorse-1.0-i2v / wan2.6-t2v)            | [video.md](video.md)         |
 | `bl video ref`             | Reference-to-video generation (happyhorse-1.0-r2v / wan2.6-r2v): multi-subject, multi-shot with voice | [video.md](video.md)         |
 | `bl video task get`        | Query async task status                                                                               | [video.md](video.md)         |
 | `bl vision describe`       | Describe an image or video using Qwen-VL                                                              | [vision.md](vision.md)       |
-| `bl workspace list`        | 列出所有业务空间 (List all workspaces)                                                                | [workspace.md](workspace.md) |
+| `bl workspace list`        | List all workspaces                                                                                   | [workspace.md](workspace.md) |
 
 ## By group
 
