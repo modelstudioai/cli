@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?source_channel=cli_github&) · [English](https://github.com/modelstudioai/cli/blob/main/README.md) · [API 文档](https://help.aliyun.com/zh/model-studio/) · [获取 API Key](https://bailian.console.aliyun.com/cli?source_channel=key_github&)
+[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?source_channel=cli_github&) · [English](https://github.com/modelstudioai/cli/blob/main/README.md) · [API 文档](https://help.aliyun.com/zh/model-studio/) · [获取 API Key](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key)
 
 ---
 
@@ -127,7 +127,7 @@ bl quota history                                      # 查看提额历史记录
 
 ### DashScope API Key
 
-大部分命令均需要 API Key。前往 [DashScope 控制台](https://bailian.console.aliyun.com/cli?source_channel=key_github&) 获取。
+大部分命令均需要 API Key。前往 [DashScope 控制台](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key) 获取。
 
 ```bash
 # 方式一：环境变量
@@ -184,8 +184,8 @@ bl update
 | 阿里云百炼 CLI 官方主页 | https://bailian.console.aliyun.com/cli?source_channel=cli_github& |
 | DashScope API 文档      | https://help.aliyun.com/zh/model-studio/                          |
 | 通义千问模型列表        | https://help.aliyun.com/zh/model-studio/getting-started/models    |
-| 阿里云百炼控制台        | https://bailian.console.aliyun.com/                               |
-| 获取 API Key            | https://bailian.console.aliyun.com/cli?source_channel=key_github& |
+| 阿里云百炼控制台        | https://bailian.console.aliyun.com/?source_channel=cli_github                               |
+| 获取 API Key            | https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key |
 | 获取 AccessKey          | https://ram.console.aliyun.com/manage/ak                          |
 
 ## 更新日志
