@@ -31,27 +31,27 @@ export default defineCommand({
     { flag: "--query <text>", description: "Search query (required)", required: true },
     {
       flag: "--dense-similarity-top-k <n>",
-      description: "Dense retrieval top K (API-KEY only)",
+      description: "Dense retrieval top K",
       type: "number",
     },
     {
       flag: "--sparse-similarity-top-k <n>",
-      description: "Sparse retrieval top K (API-KEY only)",
+      description: "Sparse retrieval top K",
       type: "number",
     },
     { flag: "--rerank", description: "Enable reranking" },
     { flag: "--rerank-top-n <n>", description: "Rerank top N results", type: "number" },
     {
       flag: "--rerank-model <name>",
-      description: "Rerank model, e.g. qwen3-rerank-hybrid (API-KEY only)",
+      description: "Rerank model, e.g. qwen3-rerank-hybrid",
     },
     {
       flag: "--rerank-mode <mode>",
-      description: "Rerank mode: qa, similar, or custom (API-KEY only)",
+      description: "Rerank mode: qa, similar, or custom",
     },
     {
       flag: "--rerank-instruct <text>",
-      description: "Custom rerank instruction, when mode=custom (API-KEY only)",
+      description: "Custom rerank instruction, when mode=custom",
     },
     {
       flag: "--top-k <n>",
@@ -205,6 +205,19 @@ async function runWithAkSk(
   if (flags.topK !== undefined) body.TopK = flags.topK as number;
   if (flags.rerank) body.EnableReranking = true;
   if (flags.rerankTopN !== undefined) body.RerankTopN = flags.rerankTopN as number;
+  if (flags.denseSimilarityTopK !== undefined)
+    body.DenseSimilarityTopK = flags.denseSimilarityTopK as number;
+  if (flags.sparseSimilarityTopK !== undefined)
+    body.SparseSimilarityTopK = flags.sparseSimilarityTopK as number;
+
+  if (flags.rerankModel) {
+    const rerank: { ModelName: string; RerankMode?: string; RerankInstruct?: string } = {
+      ModelName: flags.rerankModel as string,
+    };
+    if (flags.rerankMode) rerank.RerankMode = flags.rerankMode as string;
+    if (flags.rerankInstruct) rerank.RerankInstruct = flags.rerankInstruct as string;
+    body.Rerank = rerank;
+  }
 
   const pathname = `/${workspaceId}/index/retrieve`;
 

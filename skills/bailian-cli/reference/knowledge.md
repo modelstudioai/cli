@@ -23,21 +23,21 @@ Index: [index.md](index.md)
 
 #### Options
 
-| Flag                            | Type    | Required | Description                                                |
-| ------------------------------- | ------- | -------- | ---------------------------------------------------------- |
-| `--index-id <id>`               | string  | yes      | Knowledge base index ID (required)                         |
-| `--query <text>`                | string  | yes      | Search query (required)                                    |
-| `--dense-similarity-top-k <n>`  | number  | no       | Dense retrieval top K (API-KEY only)                       |
-| `--sparse-similarity-top-k <n>` | number  | no       | Sparse retrieval top K (API-KEY only)                      |
-| `--rerank`                      | boolean | no       | Enable reranking                                           |
-| `--rerank-top-n <n>`            | number  | no       | Rerank top N results                                       |
-| `--rerank-model <name>`         | string  | no       | Rerank model, e.g. qwen3-rerank-hybrid (API-KEY only)      |
-| `--rerank-mode <mode>`          | string  | no       | Rerank mode: qa, similar, or custom (API-KEY only)         |
-| `--rerank-instruct <text>`      | string  | no       | Custom rerank instruction, when mode=custom (API-KEY only) |
-| `--top-k <n>`                   | number  | no       | Number of results (deprecated, use --rerank-top-n)         |
-| `--workspace-id <id>`           | string  | no       | Bailian workspace ID (required for AK/SK auth)             |
-| `--access-key-id <key>`         | string  | no       | Alibaba Cloud Access Key ID (deprecated)                   |
-| `--access-key-secret <key>`     | string  | no       | Alibaba Cloud Access Key Secret (deprecated)               |
+| Flag                            | Type    | Required | Description                                        |
+| ------------------------------- | ------- | -------- | -------------------------------------------------- |
+| `--index-id <id>`               | string  | yes      | Knowledge base index ID (required)                 |
+| `--query <text>`                | string  | yes      | Search query (required)                            |
+| `--dense-similarity-top-k <n>`  | number  | no       | Dense retrieval top K                              |
+| `--sparse-similarity-top-k <n>` | number  | no       | Sparse retrieval top K                             |
+| `--rerank`                      | boolean | no       | Enable reranking                                   |
+| `--rerank-top-n <n>`            | number  | no       | Rerank top N results                               |
+| `--rerank-model <name>`         | string  | no       | Rerank model, e.g. qwen3-rerank-hybrid             |
+| `--rerank-mode <mode>`          | string  | no       | Rerank mode: qa, similar, or custom                |
+| `--rerank-instruct <text>`      | string  | no       | Custom rerank instruction, when mode=custom        |
+| `--top-k <n>`                   | number  | no       | Number of results (deprecated, use --rerank-top-n) |
+| `--workspace-id <id>`           | string  | no       | Bailian workspace ID (required for AK/SK auth)     |
+| `--access-key-id <key>`         | string  | no       | Alibaba Cloud Access Key ID (deprecated)           |
+| `--access-key-secret <key>`     | string  | no       | Alibaba Cloud Access Key Secret (deprecated)       |
 
 #### Examples
 
