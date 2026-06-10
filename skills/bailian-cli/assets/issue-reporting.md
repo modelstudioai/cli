@@ -69,7 +69,6 @@ function matchesIncludeCriteria(exitCode, apiCode, message):
 
 These are **user**, **environment**, or **service business** errors. Give fix hints; do not ask to file an issue.
 
-
 | Category                   | Signal                                 | Examples                                                                        |
 | -------------------------- | -------------------------------------- | ------------------------------------------------------------------------------- |
 | **Usage / args**           | Exit code **2** (USAGE)                | Missing flag, invalid path, unknown subcommand, local file not found            |
@@ -82,7 +81,6 @@ These are **user**, **environment**, or **service business** errors. Give fix hi
 | **Obvious local env**      | Hint is sufficient                     | `ENOENT` / `EACCES`, wrong file path, disk full                                 |
 | **Network (self-service)** | Exit code **6** (NETWORK) + clear hint | DNS, proxy, TLS — user fixes `DASHSCOPE_BASE_URL`, proxy, or network            |
 | **Timeout (self-service)** | Exit code **5** (TIMEOUT) + hint works | Increase `--timeout`, check region with `bl auth status`                        |
-
 
 **Rule:** If the authoritative source of the error is the **service response** or **user input**, treat it as non-reportable (same boundary as the CLI repo’s error-handling docs).
 
@@ -103,7 +101,6 @@ Match case-insensitively on `Error:` line, `api_code`, or JSON `error.message`:
 
 Offer reporting when **none** of EXCLUDE applies **and** any of the following holds:
 
-
 | Category                       | Signal                                                             | Examples                                                                                       |
 | ------------------------------ | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
 | **CLI internal logic**         | Exit code **1** (GENERAL), not explained by service business error | Task succeeded but “no images returned”, SSE parse failure, missing download URL after success |
@@ -114,7 +111,6 @@ Offer reporting when **none** of EXCLUDE applies **and** any of the following ho
 | **dry-run mismatch**           | `--dry-run` passes, real run fails (not AUTH/QUOTA)                | Validation path ≠ execution path                                                               |
 | **Contradictory CLI output**   | Message vs hint vs exit code disagree                              | Misleading auth or usage signal from CLI itself                                                |
 | **Persistent NETWORK/TIMEOUT** | Exit 5/6 after env fixes and repro on multiple tries               | Possible CLI or gateway defect                                                                 |
-
 
 ### Before offering to report
 
@@ -128,14 +124,12 @@ If it still fails with INCLUDE signals → offer reporting.
 
 ## Agent constraints
 
-
 | Situation                     | Behavior                                                                         |
 | ----------------------------- | -------------------------------------------------------------------------------- |
 | **CI / `--non-interactive`**  | Do **not** ask proactively. Only report if the user explicitly requests it.      |
 | **Same error in one session** | Ask **at most once** per distinct failure.                                       |
 | **User declines**             | Stop asking; continue troubleshooting or alternate tools.                        |
 | **Secrets**                   | Never paste raw API keys or tokens into the issue (see [Redaction](#redaction)). |
-
 
 ---
 
@@ -155,7 +149,6 @@ If the user agrees → [Collect information](#collect-information) → [Submit](
 
 Run these commands and paste results into the issue template (redact first).
 
-
 | Field               | How to obtain                                              |
 | ------------------- | ---------------------------------------------------------- |
 | CLI version         | `bl --version`                                             |
@@ -169,7 +162,6 @@ Run these commands and paste results into the issue template (redact first).
 | Repro steps         | Numbered 1-2-3                                             |
 | Expected vs actual  | One sentence each                                          |
 | Frequency           | Always / sometimes / once                                  |
-
 
 ### Redaction
 
@@ -269,7 +261,6 @@ Exit code: ...
 
 - Frequency: always / intermittent / once
 - Invoked via: terminal / agent (Cursor, etc.)
-
 ````
 
 ---
@@ -346,7 +337,6 @@ Do **not** block on `gh` — always provide a manual path.
 
 ## Exit codes (reference)
 
-
 | Code | Name           | Usually reportable?                             |
 | ---- | -------------- | ----------------------------------------------- |
 | 0    | SUCCESS        | —                                               |
@@ -357,6 +347,5 @@ Do **not** block on `gh` — always provide a manual path.
 | 5    | TIMEOUT        | Rarely (after user fixes env)                   |
 | 6    | NETWORK        | Rarely (after user fixes env)                   |
 | 10   | CONTENT_FILTER | No                                              |
-
 
 JSON errors use the same numeric `error.code` field when `--output json` is set.
