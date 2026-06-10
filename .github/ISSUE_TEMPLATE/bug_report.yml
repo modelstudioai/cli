@@ -1,0 +1,185 @@
+name: Bug Report
+description: Report a bug in bailian-cli (bl)
+title: "[bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+
+        **Before submitting:** search [open issues](https://github.com/modelstudioai/cli/issues?q=is%3Aissue+is%3Aopen) for duplicates.
+
+        **Security:** redact API keys (`sk-...`), console tokens, internal URLs, and business prompts before pasting output.
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Environment
+
+  - type: input
+    id: cli-version
+    attributes:
+      label: CLI version
+      description: "Output of bl --version (use only X.Y.Z, without the bl prefix)"
+      placeholder: "1.2.1"
+    validations:
+      required: true
+
+  - type: input
+    id: skill-version
+    attributes:
+      label: Skill version (optional)
+      description: "metadata.version from the installed bailian-cli skill, if applicable"
+      placeholder: "1.2.1"
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node version
+      description: "Output of node --version"
+      placeholder: "v22.12.0"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      description: "e.g. darwin 24.5.0, Ubuntu 22.04"
+      placeholder: "darwin 24.5.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: region
+    attributes:
+      label: Region
+      description: "From bl auth status or bl config show"
+      options:
+        - cn
+        - us
+        - intl
+        - unknown
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Reproduction
+
+  - type: textarea
+    id: reproduce-command
+    attributes:
+      label: Command to reproduce
+      description: "Exact command that failed. Redact --api-key, sk-..., and sensitive prompts."
+      render: shell
+      placeholder: |
+        bl video generate --prompt "sunset" --download out.mp4 --verbose
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead?
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Error output
+
+        Paste stderr as printed by `bl`. Include `Request ID` when present — it helps us trace logs.
+
+  - type: textarea
+    id: full-output
+    attributes:
+      label: Full output
+      description: Error, Hint, Status, Request ID, Exit code, etc.
+      render: shell
+      placeholder: |
+        Error:       Generation completed but no images returned.
+        Hint:        ...
+        Status:      HTTP 200 (...)
+        Request ID:  ...
+        Exit code:   1
+    validations:
+      required: true
+
+  - type: textarea
+    id: json-error
+    attributes:
+      label: JSON error (optional)
+      description: "Re-run with --output json and paste the error object if available"
+      render: json
+      placeholder: |
+        {
+          "error": {
+            "code": 1,
+            "message": "...",
+            "http_status": 200,
+            "api_code": "...",
+            "request_id": "..."
+          }
+        }
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Troubleshooting already tried
+
+  - type: checkboxes
+    id: already-tried
+    attributes:
+      label: Already tried
+      options:
+        - label: "bl update and skill version aligned with CLI"
+        - label: "bl auth status OK for this command"
+        - label: "Different network / region — still reproduces"
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Additional context
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often does this happen?
+      options:
+        - Always
+        - Intermittent
+        - Once
+    validations:
+      required: true
+
+  - type: dropdown
+    id: invoked-via
+    attributes:
+      label: How was bl invoked?
+      options:
+        - Terminal (manual)
+        - Agent (Cursor, Claude, etc.)
+        - CI / script
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes (optional)
+      description: Anything else that might help — related issues, screenshots, minimal repro repo, etc.
