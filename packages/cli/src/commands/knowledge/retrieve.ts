@@ -203,7 +203,7 @@ async function runWithAkSk(
   };
 
   if (flags.topK !== undefined) body.TopK = flags.topK as number;
-  if (flags.rerank) body.Rerank = true;
+  if (flags.rerank) body.EnableReranking = true;
   if (flags.rerankTopN !== undefined) body.RerankTopN = flags.rerankTopN as number;
 
   const pathname = `/${workspaceId}/index/retrieve`;
