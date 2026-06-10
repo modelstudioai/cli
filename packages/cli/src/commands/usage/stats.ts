@@ -306,29 +306,28 @@ function printModelTable(
 
 export default defineCommand({
   name: "usage stats",
-  description: "查询模型用量统计 (Query model usage statistics)",
+  description: "Query model usage statistics",
   usage: "bl usage stats [--model <model>] [--days <days>] [flags]",
   options: [
     {
       flag: "--model <model>",
-      description:
-        "模型名称，逗号分隔多个；不指定则查全部概览 (Model name(s), comma-separated; omit for overview)",
+      description: "Model name(s), comma-separated; omit for overview",
     },
     {
       flag: "--days <days>",
-      description: "查询天数，默认 7 (Number of days, default: 7)",
+      description: "Number of days (default: 7)",
     },
     {
       flag: "--type <type>",
-      description: "模型类型: Text, Vision, Multimodal, Audio, Embedding",
+      description: "Model type: Text, Vision, Multimodal, Audio, Embedding",
     },
     {
       flag: "--workspace-id <id>",
-      description: "业务空间 ID (Workspace ID; env: BAILIAN_WORKSPACE_ID)",
+      description: "Workspace ID (env: BAILIAN_WORKSPACE_ID)",
     },
     {
       flag: "--region <region>",
-      description: "API 区域，默认 cn-beijing (API region, default: cn-beijing)",
+      description: "API region (default: cn-beijing)",
     },
   ],
   examples: [

@@ -249,20 +249,20 @@ function printTable(rows: CheckRow[], noColor: boolean): void {
 
 export default defineCommand({
   name: "quota check",
-  description: "查看当前用量 vs 限流阈值 (Check current usage against rate limits)",
+  description: "Check current usage against rate limits",
   usage: "bl quota check [--model <model>] [flags]",
   options: [
     {
       flag: "--model <model>",
-      description: "模型名称，逗号分隔多个 (Model name(s), comma-separated)",
+      description: "Model name(s), comma-separated",
     },
     {
       flag: "--period <minutes>",
-      description: "查询最近 N 分钟的用量，默认 2 (Query usage for the last N minutes, default: 2)",
+      description: "Query usage for the last N minutes (default: 2)",
     },
     {
       flag: "--region <region>",
-      description: "API 区域，默认 cn-beijing (API region, default: cn-beijing)",
+      description: "API region (default: cn-beijing)",
     },
   ],
   examples: [

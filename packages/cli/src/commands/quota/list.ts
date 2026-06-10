@@ -160,21 +160,20 @@ function printTable(models: ModelWithQpm[], noColor: boolean): void {
 
 export default defineCommand({
   name: "quota list",
-  description: "查看模型 RPM/TPM 限流值 (View model rate limits)",
+  description: "View model RPM/TPM rate limits",
   usage: "bl quota list [--model <model>] [flags]",
   options: [
     {
       flag: "--model <model>",
-      description: "模型名称，逗号分隔多个 (Model name(s), comma-separated)",
+      description: "Model name(s), comma-separated",
     },
     {
       flag: "--all",
-      description:
-        "显示全部模型，不仅限于支持自助提额的 (Show all models, not just self-service ones)",
+      description: "Show all models, not just self-service ones",
     },
     {
       flag: "--region <region>",
-      description: "API 区域，默认 cn-beijing (API region, default: cn-beijing)",
+      description: "API region (default: cn-beijing)",
     },
   ],
   examples: [

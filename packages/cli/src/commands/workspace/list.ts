@@ -86,16 +86,16 @@ function printTable(workspaces: WorkspaceInfo[], noColor: boolean): void {
 
 export default defineCommand({
   name: "workspace list",
-  description: "列出所有业务空间 (List all workspaces)",
+  description: "List all workspaces",
   usage: "bl workspace list [flags]",
   options: [
     {
       flag: "--list <n>",
-      description: "返回数量限制 (Limit number of results)",
+      description: "Limit number of results",
     },
     {
       flag: "--region <region>",
-      description: "API 区域，默认 cn-beijing (API region, default: cn-beijing)",
+      description: "API region (default: cn-beijing)",
     },
   ],
   examples: ["bl workspace list", "bl workspace list --list 5", "bl workspace list --output json"],

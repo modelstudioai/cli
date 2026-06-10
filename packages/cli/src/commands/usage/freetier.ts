@@ -104,7 +104,7 @@ async function fetchAllModelNames(config: Config, token: string): Promise<string
 export default defineCommand({
   name: "usage freetier",
   description:
-    "Enable or disable auto-stop (用完即停) for free-tier models. Enables by default; use --off to disable",
+    "Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable",
   usage: "bl usage freetier <--model <model>[,model2,...] | --all> [--off] [flags]",
   options: [
     {

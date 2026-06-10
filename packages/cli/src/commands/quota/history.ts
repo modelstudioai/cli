@@ -99,24 +99,24 @@ function printTable(records: LimitApplicationItem[], noColor: boolean, total: nu
 
 export default defineCommand({
   name: "quota history",
-  description: "查看提额历史记录 (View quota change history)",
+  description: "View quota change history",
   usage: "bl quota history [flags]",
   options: [
     {
       flag: "--page <n>",
-      description: "页码，默认 1 (Page number, default: 1)",
+      description: "Page number (default: 1)",
     },
     {
       flag: "--page-size <n>",
-      description: "每页条数，默认 10 (Page size, default: 10)",
+      description: "Page size (default: 10)",
     },
     {
       flag: "--model <model>",
-      description: "按模型名过滤 (Filter by model name)",
+      description: "Filter by model name",
     },
     {
       flag: "--region <region>",
-      description: "API 区域，默认 cn-beijing (API region, default: cn-beijing)",
+      description: "API region (default: cn-beijing)",
     },
   ],
   examples: [

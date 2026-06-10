@@ -81,26 +81,26 @@ async function fetchModelQpmInfo(
 
 export default defineCommand({
   name: "quota request",
-  description: "申请临时提额 (Request temporary quota increase)",
+  description: "Request a temporary quota increase",
   usage: "bl quota request --model <model> --tpm <value> [flags]",
   options: [
     {
       flag: "--model <model>",
-      description: "模型名称（必填）(Model name, required)",
+      description: "Model name (required)",
       required: true,
     },
     {
       flag: "--tpm <value>",
-      description: "目标 TPM 值（必填）(Target TPM value, required)",
+      description: "Target TPM value (required)",
       required: true,
     },
     {
       flag: "--yes",
-      description: "跳过降配确认 (Skip downgrade confirmation)",
+      description: "Skip downgrade confirmation",
     },
     {
       flag: "--region <region>",
-      description: "API 区域，默认 cn-beijing (API region, default: cn-beijing)",
+      description: "API region (default: cn-beijing)",
     },
   ],
   examples: [
