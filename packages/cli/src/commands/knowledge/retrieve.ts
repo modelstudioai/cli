@@ -202,7 +202,11 @@ async function runWithAkSk(
     Query: query,
   };
 
-  if (flags.topK !== undefined) body.TopK = flags.topK as number;
+  if (flags.topK !== undefined && flags.rerankTopN === undefined) {
+    process.stderr.write("Warning: --top-k is deprecated. Use --rerank-top-n instead.\n");
+    flags.rerankTopN = flags.topK;
+  }
+
   if (flags.rerank) body.EnableReranking = true;
   if (flags.rerankTopN !== undefined) body.RerankTopN = flags.rerankTopN as number;
   if (flags.denseSimilarityTopK !== undefined)
