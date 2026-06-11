@@ -172,7 +172,7 @@ Config file location: `~/.bailian/config.json`
 ## Links
 
 | Resource                     | URL                                                                                       |
-| ---------------------------- | ----------------------------------------------------------------------------------------- |
+| :--------------------------- | :---------------------------------------------------------------------------------------- |
 | Aliyun Model Studio CLI Site | https://bailian.console.aliyun.com/cli?source_channel=cli_github&                         |
 | DashScope API Docs           | https://help.aliyun.com/zh/model-studio/                                                  |
 | Qwen Model List              | https://help.aliyun.com/zh/model-studio/getting-started/models                            |
