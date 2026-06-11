@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
 <<<<<<< HEAD
+
 ## [1.3.0] - 2026-06-11
 
 ### Added
@@ -36,8 +37,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
-- `--rerank` flag in AK/SK path now correctly sets `EnableReranking` instead of the non-functional `Rerank: true` boolean.
-=======
+- # `--rerank` flag in AK/SK path now correctly sets `EnableReranking` instead of the non-functional `Rerank: true` boolean.
+
 ## [1.3.0] - 2026-06-10
 
 ### Added
@@ -58,7 +59,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Fixed
 
 - `--rerank` flag in AK/SK path now correctly sets `EnableReranking` instead of the non-functional `Rerank: true` boolean.
->>>>>>> main
+  > > > > > > > main
 
 ## [1.2.1] - 2026-06-09
 
