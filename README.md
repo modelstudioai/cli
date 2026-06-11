@@ -20,7 +20,7 @@ _Built for AI Agents. Every command works as a structured tool call._
 
 </div>
 
-## Features
+##Features
 
 Equip your AI Agent out-of-the-box with these capabilities, composable across complex tasks:
 
