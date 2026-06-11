@@ -2,7 +2,7 @@
 
 <img src="https://img.alicdn.com/imgextra/i1/O1CN01kGgO3z1N30OINgUoG_!!6000000001513-2-tps-1915-821.png" alt="Aliyun Model Studio CLI" />
 
-** The official command-line interface for Aliyun Model Studio (DashScope) AI Platform**
+**The official command-line interface for Aliyun Model Studio (DashScope) AI Platform**
 
 [![npm version](https://img.shields.io/npm/v/bailian-cli?color=0969da&label=npm)](https://www.npmjs.com/package/bailian-cli)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D22.12-brightgreen)](https://nodejs.org)
@@ -172,7 +172,7 @@ Config file location: `~/.bailian/config.json`
 ## Links
 
 | Resource                     | URL                                                                                       |
-| :--------------------------- | :---------------------------------------------------------------------------------------- |
+| ---------------------------- | ----------------------------------------------------------------------------------------- |
 | Aliyun Model Studio CLI Site | https://bailian.console.aliyun.com/cli?source_channel=cli_github&                         |
 | DashScope API Docs           | https://help.aliyun.com/zh/model-studio/                                                  |
 | Qwen Model List              | https://help.aliyun.com/zh/model-studio/getting-started/models                            |
