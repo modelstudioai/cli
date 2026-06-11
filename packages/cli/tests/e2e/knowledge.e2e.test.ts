@@ -1,21 +1,8 @@
 import { tmpdir } from "os";
 import { describe, expect, test } from "vite-plus/test";
-import { isDashScopeE2EReady, isKnowledgeAkSkReady, parseStdoutJson, runCli } from "./helpers.ts";
+import { parseStdoutJson, runCli } from "./helpers.ts";
 
 // ---- Types ----
-
-interface ApiKeyRetrieveBody {
-  request_id?: string;
-  data?: { total?: number; nodes?: Array<{ text: string; score: number }> };
-  code?: string;
-  message?: string;
-}
-
-interface AkSkRetrieveBody {
-  Success?: boolean;
-  Code?: string;
-  Data?: { Nodes?: Array<{ Text: string; Score: number }> };
-}
 
 interface DryRunBody {
   endpoint?: string;
@@ -48,7 +35,7 @@ describe("e2e: knowledge retrieve", () => {
     expect(stderr).toMatch(/--query/i);
     expect(stderr).toMatch(/--rerank-top-n/i);
     expect(stderr).toMatch(/deprecated/i);
-    expect(stderr).toMatch(/API-KEY only/i);
+    expect(stderr).toMatch(/--workspace-id/i);
   });
 
   test("缺少 --index-id 时打印帮助并退出 (0)", async () => {
@@ -216,103 +203,4 @@ describe("e2e: knowledge retrieve dry-run", () => {
     expect(data.request?.rerank?.[0]?.rerank_mode).toBe("custom");
     expect(data.request?.rerank?.[0]?.rerank_instruct).toBe("按相关性排序");
   });
-});
-
-// ---- API-KEY path (real network call) ----
-
-describe.skipIf(!isDashScopeE2EReady() || !process.env.BAILIAN_E2E_INDEX_ID)(
-  "e2e: knowledge retrieve (API-KEY)",
-  () => {
-    test("API-KEY 知识库检索", async () => {
-      const indexId = process.env.BAILIAN_E2E_INDEX_ID!;
-      const { stdout, stderr, exitCode } = await runCli([
-        "knowledge",
-        "retrieve",
-        "--index-id",
-        indexId,
-        "--query",
-        "端到端检索测试",
-        "--rerank-top-n",
-        "3",
-        "--non-interactive",
-        "--output",
-        "json",
-      ]);
-      expect(exitCode, stderr).toBe(0);
-      const data = parseStdoutJson<ApiKeyRetrieveBody>(stdout);
-      expect(Array.isArray(data.data?.nodes)).toBe(true);
-    }, 120_000);
-  },
-);
-
-// ---- API-KEY error paths (real network call) ----
-
-describe.skipIf(!isDashScopeE2EReady())("e2e: knowledge retrieve API-KEY errors", () => {
-  test("无效 API-KEY 返回认证错误", async () => {
-    const { stderr, exitCode } = await runCli([
-      "knowledge",
-      "retrieve",
-      "--api-key",
-      "sk-invalid-key-for-test",
-      "--index-id",
-      "idx_test",
-      "--query",
-      "test",
-      "--non-interactive",
-      "--output",
-      "json",
-    ]);
-    expect(exitCode).not.toBe(0);
-    expect(stderr).toMatch(/InvalidApiKey|401|auth/i);
-  }, 30_000);
-
-  test("无效 index_id 返回索引不存在错误", async () => {
-    const { stderr, exitCode } = await runCli([
-      "knowledge",
-      "retrieve",
-      "--index-id",
-      "idx_nonexistent_test",
-      "--query",
-      "test",
-      "--non-interactive",
-      "--output",
-      "json",
-    ]);
-    expect(exitCode).not.toBe(0);
-    expect(stderr).toMatch(/IndexNotExist|not exist|400/i);
-  }, 30_000);
-});
-
-// ---- AK/SK deprecated path (real network call) ----
-
-describe.skipIf(!isKnowledgeAkSkReady())("e2e: knowledge retrieve (AK/SK deprecated)", () => {
-  test("AK/SK 知识库检索输出废弃警告", async () => {
-    const indexId = process.env.BAILIAN_E2E_INDEX_ID!;
-    const { stdout, stderr, exitCode } = await runCli(
-      [
-        "knowledge",
-        "retrieve",
-        "--index-id",
-        indexId,
-        "--query",
-        "端到端检索测试",
-        "--rerank-top-n",
-        "3",
-        "--non-interactive",
-        "--output",
-        "json",
-      ],
-      {
-        DASHSCOPE_API_KEY: undefined,
-        DASHSCOPE_ACCESS_TOKEN: undefined,
-        BAILIAN_CONFIG_DIR: tmpdir(),
-      },
-    );
-    expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/deprecated/i);
-    const data = parseStdoutJson<AkSkRetrieveBody>(stdout);
-    const ok = data.Success === true || data.Code === "Success";
-    expect(ok).toBe(true);
-    expect(Array.isArray(data.Data?.Nodes)).toBe(true);
-  }, 120_000);
 });
