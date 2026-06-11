@@ -6,6 +6,27 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.3.0] - 2026-06-10
+
+### 新增
+
+- `bl knowledge retrieve` 新增 API-Key 鉴权（DashScope 网关），与原有 AK/SK 并存，可用时自动优先使用 API-Key。
+- 新增检索参数：`--dense-similarity-top-k`、`--sparse-similarity-top-k`、`--rerank-model`、`--rerank-mode`、`--rerank-instruct`，API-Key 与 AK/SK 两条链路均支持。
+- `bailian-cli-core` 新增 `DashScopeKnowledgeRetrieveRequest` / `DashScopeKnowledgeRetrieveResponse` 类型及 `knowledgeRetrieveEndpoint` 端点。
+- 知识库检索全面 E2E 测试，覆盖两种鉴权路径、dry-run、rerank 参数及错误场景。
+
+### 变更
+
+- 凭据解析优先级：显式 API-Key → 显式 AK/SK flag → 自动检测 API-Key → 回退至配置/环境变量中的 AK/SK。
+- `--workspace-id` 仅在 AK/SK 鉴权时必填，API-Key 模式下不再强制要求。
+- `--top-k` 标记为废弃，改用 `--rerank-top-n`；使用时输出警告并自动映射。
+- `--access-key-id` / `--access-key-secret` 标记为废弃（推荐使用 API-Key）。
+- 全部文档中的 API Key 和控制台链接更新为直达密钥管理页面。
+
+### 修复
+
+- AK/SK 链路 `--rerank` 现在正确设置 `EnableReranking`，而非之前无效的 `Rerank: true` 布尔值。
+
 ## [1.2.1] - 2026-06-09
 
 ### 变更

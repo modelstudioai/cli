@@ -23,7 +23,7 @@ Use this index for the full quick index and global flags.
 | `bl file upload`           | Upload a local file to DashScope temporary storage (48h)                                              | [file.md](file.md)           |
 | `bl image edit`            | Edit an existing image with text instructions (Qwen-Image)                                            | [image.md](image.md)         |
 | `bl image generate`        | Generate images (Qwen-Image / wan2.x)                                                                 | [image.md](image.md)         |
-| `bl knowledge retrieve`    | Retrieve from a Bailian knowledge base (requires AK/SK)                                               | [knowledge.md](knowledge.md) |
+| `bl knowledge retrieve`    | Retrieve from a Bailian knowledge base                                                                | [knowledge.md](knowledge.md) |
 | `bl mcp call`              | Call a tool on an MCP server (tools/call)                                                             | [mcp.md](mcp.md)             |
 | `bl mcp list`              | List MCP servers activated under your Bailian account                                                 | [mcp.md](mcp.md)             |
 | `bl mcp tools`             | List tools exposed by an MCP server (tools/list)                                                      | [mcp.md](mcp.md)             |

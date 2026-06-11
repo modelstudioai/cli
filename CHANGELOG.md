@@ -6,6 +6,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.3.0] - 2026-06-10
+
+### Added
+
+- `bl knowledge retrieve` now supports API-Key authentication (DashScope gateway), in addition to AK/SK. API-Key is auto-detected and preferred when available.
+- New retrieval options: `--dense-similarity-top-k`, `--sparse-similarity-top-k`, `--rerank-model`, `--rerank-mode`, `--rerank-instruct` — supported on both API-Key and AK/SK paths.
+- `DashScopeKnowledgeRetrieveRequest` / `DashScopeKnowledgeRetrieveResponse` types and `knowledgeRetrieveEndpoint` added to `bailian-cli-core`.
+- Comprehensive E2E tests for knowledge retrieve covering both auth paths, dry-run, rerank flags, and error cases.
+
+### Changed
+
+- Credential resolution priority: explicit API-Key → explicit AK/SK flags → auto-detected API-Key → fallback AK/SK from config/env.
+- `--workspace-id` is now only required for AK/SK auth, no longer mandatory for API-Key mode.
+- `--top-k` deprecated in favor of `--rerank-top-n`; emits a warning and maps to `--rerank-top-n` when used.
+- `--access-key-id` / `--access-key-secret` flags marked as deprecated (API-Key is recommended).
+- API Key and console links updated to direct key management pages across all docs.
+
+### Fixed
+
+- `--rerank` flag in AK/SK path now correctly sets `EnableReranking` instead of the non-functional `Rerank: true` boolean.
+
 ## [1.2.1] - 2026-06-09
 
 ### Changed
