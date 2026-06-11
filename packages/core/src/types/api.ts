@@ -363,7 +363,11 @@ export interface KnowledgeRetrieveRequest {
   EnableRewrite?: boolean;
   RerankTopN?: number;
   TopK?: number;
-  Rerank?: boolean;
+  Rerank?: {
+    ModelName?: string;
+    RerankMode?: string;
+    RerankInstruct?: string;
+  };
   RerankTopN_legacy?: number;
   SearchFilters?: Array<{
     Key: string;
@@ -380,6 +384,35 @@ export interface KnowledgeRetrieveResponse {
       Text: string;
       Score: number;
       Metadata: Record<string, unknown>;
+    }>;
+  };
+}
+
+// ---- Knowledge Retrieve (DashScope protocol — snake_case) ----
+
+export interface DashScopeKnowledgeRetrieveRequest {
+  index_id: string;
+  query: string;
+  search_filters?: Array<Record<string, unknown>>;
+  dense_similarity_top_k?: number;
+  sparse_similarity_top_k?: number;
+  enable_reranking?: boolean;
+  rerank_top_n?: number;
+  rerank?: Array<{
+    model_name: string;
+    rerank_mode?: string;
+    rerank_instruct?: string;
+  }>;
+}
+
+export interface DashScopeKnowledgeRetrieveResponse {
+  request_id: string;
+  data: {
+    total: number;
+    nodes: Array<{
+      text: string;
+      score: number;
+      metadata: Record<string, unknown>;
     }>;
   };
 }

@@ -73,6 +73,12 @@ export function userProfileEndpoint(baseUrl: string, schemaId: string): string {
   return `${baseUrl}/api/v2/apps/memory/profile_schemas/${encodeURIComponent(schemaId)}/profiles`;
 }
 
+// ---- Knowledge Base Retrieve (DashScope) ----
+
+export function knowledgeRetrieveEndpoint(baseUrl: string): string {
+  return `${baseUrl}/api/v1/indices/rag/index/retrieve`;
+}
+
 // ---- MCP Services (Streamable HTTP) ----
 
 export function mcpWebSearchEndpoint(baseUrl: string): string {
