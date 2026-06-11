@@ -6,10 +6,20 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
-## [1.3.0] - 2026-06-10
+## [1.3.0] - 2026-06-11
 
 ### 新增
 
+- `bl usage` 命令组：
+  - `bl usage free` — 查询所有模型的免费额度（可通过 `--model` 指定模型）。
+  - `bl usage freetier` — 启用（`--on`）或禁用（`--off`）免费额度模型的自动停服。
+  - `bl usage stats` — 查询模型用量统计（需指定 `--workspace-id`）。
+- `bl quota` 命令组：
+  - `bl quota list` — 查看模型 RPM/TPM 速率限制（支持 `--model` 过滤，`--all` 展示全部）。
+  - `bl quota check` — 查看当前 RPM/TPM 用量与速率限制。
+  - `bl quota history` — 查看配额变更记录，支持分页。
+  - `bl quota request` — 申请模型临时配额提升。
+- `bl workspace list` — 列出所有业务空间，包含地域和 endpoint 信息。
 - `bl knowledge retrieve` 新增 API-Key 鉴权（DashScope 网关），与原有 AK/SK 并存，可用时自动优先使用 API-Key。
 - 新增检索参数：`--dense-similarity-top-k`、`--sparse-similarity-top-k`、`--rerank-model`、`--rerank-mode`、`--rerank-instruct`，API-Key 与 AK/SK 两条链路均支持。
 - `bailian-cli-core` 新增 `DashScopeKnowledgeRetrieveRequest` / `DashScopeKnowledgeRetrieveResponse` 类型及 `knowledgeRetrieveEndpoint` 端点。
