@@ -33,6 +33,7 @@ tools/generated
 .claude/worktrees/
 .claude/settings.json
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 .cursor/
 .qwen/
 .playwright-mcp/
