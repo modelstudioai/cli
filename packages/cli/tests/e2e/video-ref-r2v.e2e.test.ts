@@ -69,7 +69,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "--model",
         "qwen-image-2.0",
         "--prompt",
-        "一只简笔画小猫，白底",
+        "一片绿色的树叶，白底",
         "--out-dir",
         outDir,
         "--out-prefix",
