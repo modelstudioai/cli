@@ -29,7 +29,7 @@ Index: [index.md](index.md)
 | `--model <model>`      | string  | no       | Model ID (default: qwen3.5-omni-plus)                                         |
 | `--system <text>`      | string  | no       | System prompt                                                                 |
 | `--image <url>`        | array   | no       | Image URL or local file (repeatable)                                          |
-| `--audio <url>`        | array   | no       | Audio URL or local file (repeatable)                                          |
+| `--audio <url>`        | array   | no       | Audio URL or local file (.wav/.mp3/.amr/.aac/.m4a/.3gp/.3gpp)                 |
 | `--video <url>`        | array   | no       | Video file URL / local path, or comma-separated frame URLs                    |
 | `--voice <voice>`      | string  | no       | Output voice (default: Cherry). Options: Chelsie, Cherry, Ethan, Serena, Tina |
 | `--audio-format <fmt>` | string  | no       | Audio output format (default: wav)                                            |

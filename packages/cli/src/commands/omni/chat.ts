@@ -1,10 +1,13 @@
 import { writeFileSync } from "fs";
+import { extname } from "path";
 import {
   defineCommand,
   request,
   chatEndpoint,
   parseSSE,
   detectOutputFormat,
+  BailianError,
+  ExitCode,
   type Config,
   type GlobalFlags,
   type ChatMessage,
@@ -19,6 +22,46 @@ import { emitResult } from "../../output/output.ts";
 import { resolveOutputDir, resolveCredential } from "bailian-cli-core";
 
 const OMNI_VOICES = ["Chelsie", "Cherry", "Ethan", "Serena", "Tina"];
+
+/**
+ * Extension to input audio format.
+ */
+const OMNI_INPUT_AUDIO_EXT: Record<string, string> = {
+  wav: "wav",
+  mp3: "mp3",
+  amr: "amr",
+  aac: "aac",
+  m4a: "aac",
+  ogg: "ogg",
+  "3gp": "3gp",
+  "3gpp": "3gpp",
+};
+
+const audioExts = Object.keys(OMNI_INPUT_AUDIO_EXT);
+
+/**
+ * Infer the input audio format from the source URL or local file path.
+ */
+function inferInputAudioFormat(source: string): string {
+  const pathPart = source.split("?")[0].split("#")[0];
+  const ext = extname(pathPart).slice(1).toLowerCase();
+  if (!ext) {
+    throw new BailianError(
+      `Cannot infer audio format from "${source}". ` +
+        `Use a file/URL whose path ends with: ${audioExts.join(", ")}.`,
+      ExitCode.USAGE,
+    );
+  }
+  const format = OMNI_INPUT_AUDIO_EXT[ext];
+  if (!format) {
+    throw new BailianError(
+      `Unsupported audio extension ".${ext}" for "${source}". ` +
+        `Supported extensions: ${audioExts.join(", ")}.`,
+      ExitCode.USAGE,
+    );
+  }
+  return format;
+}
 
 /**
  * Build a standard WAV file header for PCM 16-bit mono 24kHz audio.
@@ -55,7 +98,11 @@ export default defineCommand({
     { flag: "--model <model>", description: "Model ID (default: qwen3.5-omni-plus)" },
     { flag: "--system <text>", description: "System prompt" },
     { flag: "--image <url>", description: "Image URL or local file (repeatable)", type: "array" },
-    { flag: "--audio <url>", description: "Audio URL or local file (repeatable)", type: "array" },
+    {
+      flag: "--audio <url>",
+      description: "Audio URL or local file (.wav/.mp3/.amr/.aac/.m4a/.3gp/.3gpp)",
+      type: "array",
+    },
     {
       flag: "--video <url>",
       description: "Video file URL / local path, or comma-separated frame URLs",
@@ -138,7 +185,7 @@ export default defineCommand({
 
     // Auto-upload local files
     const imageUrls: string[] = [];
-    const audioUrls: string[] = [];
+    const audioInputs: Array<{ source: string; data: string }> = [];
     const videoUrls: string[] = [];
 
     const needsResolve =
@@ -151,7 +198,7 @@ export default defineCommand({
       }
       for (const u of rawAudioUrls) {
         const resolved = await resolveFileUrl(u, credential.token, model);
-        audioUrls.push(resolved);
+        audioInputs.push({ source: u, data: resolved });
       }
       for (const u of rawVideoUrls) {
         // Detect: comma-separated = frame list, otherwise single video URL/file
@@ -173,7 +220,7 @@ export default defineCommand({
       }
     }
 
-    if (imageUrls.length > 0 || audioUrls.length > 0 || videoUrls.length > 0) {
+    if (imageUrls.length > 0 || audioInputs.length > 0 || videoUrls.length > 0) {
       // Find last user message and convert to multimodal content array
       for (let i = allMessages.length - 1; i >= 0; i--) {
         if (allMessages[i].role === "user") {
@@ -192,9 +239,11 @@ export default defineCommand({
             contentArray.push({ type: "image_url", image_url: { url } });
           }
 
-          // Add audio URLs
-          for (const url of audioUrls) {
-            contentArray.push({ type: "audio_url", audio_url: { url } });
+          for (const { source, data } of audioInputs) {
+            contentArray.push({
+              type: "input_audio",
+              input_audio: { data, format: inferInputAudioFormat(source) },
+            });
           }
 
           // Add video URLs: frame:xxx are frame list items, others are direct video URLs
