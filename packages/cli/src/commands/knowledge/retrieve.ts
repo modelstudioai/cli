@@ -220,7 +220,7 @@ async function runWithAkSk(
     };
     if (flags.rerankMode) rerank.RerankMode = flags.rerankMode as string;
     if (flags.rerankInstruct) rerank.RerankInstruct = flags.rerankInstruct as string;
-    body.Rerank = rerank;
+    body.Rerank = [rerank];
   }
 
   const pathname = `/${workspaceId}/index/retrieve`;

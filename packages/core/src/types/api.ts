@@ -363,11 +363,11 @@ export interface KnowledgeRetrieveRequest {
   EnableRewrite?: boolean;
   RerankTopN?: number;
   TopK?: number;
-  Rerank?: {
+  Rerank?: Array<{
     ModelName?: string;
     RerankMode?: string;
     RerankInstruct?: string;
-  };
+  }>;
   RerankTopN_legacy?: number;
   SearchFilters?: Array<{
     Key: string;
