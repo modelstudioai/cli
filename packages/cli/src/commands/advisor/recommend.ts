@@ -234,12 +234,12 @@ export default defineCommand({
     },
   ],
   examples: [
-    'bl advisor recommend --message "我要做一个能理解图片的客服机器人"',
-    'bl advisor recommend --message "做一个Agent自动根据用户意图生成动画片"',
-    'bl advisor recommend --message "法律合同审查，要求高精准度"',
-    'bl advisor recommend --message "做一个低成本高并发的在线客服" --output json',
-    'bl advisor recommend --message "长文本摘要" --dry-run',
-    "bl advisor recommend                                          # 交互式输入需求",
+    'bl advisor recommend --message "I need a visual-understanding chatbot"',
+    'bl advisor recommend --message "Build an Agent that auto-generates animations"',
+    'bl advisor recommend --message "Legal contract review, high precision required"',
+    'bl advisor recommend --message "Low-cost high-concurrency online customer service" --output json',
+    'bl advisor recommend --message "Long document summarization" --dry-run',
+    "bl advisor recommend                                          # Interactive input",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const positional = ((flags as Record<string, unknown>)._positional as string[]) ?? [];

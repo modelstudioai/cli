@@ -15,6 +15,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `DashScopeKnowledgeRetrieveRequest` / `DashScopeKnowledgeRetrieveResponse` types and `knowledgeRetrieveEndpoint` added to `bailian-cli-core`.
 - Comprehensive E2E tests for knowledge retrieve covering both auth paths, dry-run, rerank flags, and error cases.
 
+- `bl usage` command group:
+  - `bl usage free` — query free-tier quota for all models (or a specific model with `--model`).
+  - `bl usage freetier` — enable (`--on`) or disable (`--off`) auto-stop for free-tier models.
+  - `bl usage stats` — query model usage statistics (requires `--workspace-id`).
+- `bl quota` command group:
+  - `bl quota list` — view model RPM/TPM rate limits (filter with `--model`, show all with `--all`).
+  - `bl quota check` — check current RPM/TPM usage against rate limits.
+  - `bl quota history` — view quota change history with pagination.
+  - `bl quota request` — request a temporary quota increase for a model.
+- `bl workspace list` — list all workspaces with region and endpoint details.
+
 ### Changed
 
 - Credential resolution priority: explicit API-Key → explicit AK/SK flags → auto-detected API-Key → fallback AK/SK from config/env.

@@ -35,7 +35,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **MCP integration** — Orchestrate Bailian MCP servers: list services, inspect tools, and invoke any tool directly from the terminal
 - **Web search** — Real-time internet retrieval for up-to-date, accurate answers
 - **Model recommendation** — Describe your scenario and get best-fit model suggestions; supports scoped search, model comparison, and alternative discovery
-- **Console capabilities** — Browse Bailian apps (`app list`) and check free-tier quota (`usage free`)
+- **Console capabilities** — Browse Bailian apps (`app list`), check free-tier quota (`usage free`), view model usage statistics (`usage stats`), manage workspaces (`workspace list`), and manage rate limits (`quota list/request/check/history`)
 - **Local file auto-upload** — Every URL parameter accepts a local path; uploaded to free temp storage with 48-hour validity
 
 ## Showcase: One-Sentence Cinematic Video
@@ -108,9 +108,22 @@ bl advisor recommend --message "qwen-max vs deepseek-v3 for code generation"
 # Browser login (required for console capability commands)
 bl auth login --console
 
-# Browse apps / free-tier quota
+# Browse apps / free-tier quota / usage statistics / workspaces
 bl app list
 bl usage free --model qwen3-max
+bl usage free --expiring 30                           # Quotas expiring within 30 days
+bl usage free --sort remaining                        # Sort by remaining % ascending
+bl usage stats --workspace-id <id>                    # Usage overview for a workspace
+bl usage stats --model qwen-turbo --workspace-id <id> # Per-model usage
+bl workspace list                                     # List all workspaces
+
+# Rate limit management
+bl quota list                                         # View RPM/TPM limits for all models
+bl quota list --model qwen3.6-plus                    # View limits for a specific model
+bl quota check                                        # Current usage vs rate limits
+bl quota check --model qwen3.6-plus --period 5        # Check usage over last 5 minutes
+bl quota request --model qwen3.6-plus --tpm 6000000   # Request a temporary TPM increase
+bl quota history                                      # View quota change history
 ```
 
 > More examples and scenarios: [Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)
@@ -134,7 +147,7 @@ bl text chat --api-key sk-xxxxx --message "Hello"
 
 ### Console Login (OAuth)
 
-Required for console capability commands (`app list`, `usage free`). Opens the Bailian console in your browser to sign in.
+Required for console capability commands (`app list`, `usage free`, `usage stats`, `workspace list`, `quota list/request/check/history`). Opens the Bailian console in your browser to sign in.
 
 ```bash
 bl auth login --console
