@@ -12,7 +12,6 @@ import { emitResult, emitBare } from "../../output/output.ts";
 export default defineCommand({
   name: "file upload",
   description: "Upload a local file to DashScope temporary storage (48h)",
-  apiDocs: "/developer-reference/get-temporary-file-url",
   usage: "bl file upload --file <path> --model <model>",
   options: [
     {

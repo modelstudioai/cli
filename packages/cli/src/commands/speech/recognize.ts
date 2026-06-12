@@ -25,7 +25,6 @@ import { emitResult, emitBare } from "../../output/output.ts";
 export default defineCommand({
   name: "speech recognize",
   description: "Recognize speech from audio files (FunAudio-ASR)",
-  apiDocs: "/developer-reference/recording-file-recognition",
   usage: "bl speech recognize --url <audio-url> [flags]",
   options: [
     {

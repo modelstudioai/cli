@@ -44,7 +44,6 @@ export default defineCommand({
   name: "video generate",
   description:
     "Generate a video from text or image (happyhorse-1.0-t2v / happyhorse-1.0-i2v / wan2.6-t2v)",
-  apiDocs: "/best-practice/wanx/text-to-video",
   usage: "bl video generate --prompt <text> [--image <url>] [flags]",
   options: [
     {

@@ -44,7 +44,6 @@ function buildWavHeader(dataLength: number): Buffer {
 export default defineCommand({
   name: "omni",
   description: "Multimodal chat with text + audio output (Qwen-Omni)",
-  apiDocs: "/model-studio/qwen-omni",
   usage: "bl omni --message <text> [flags]",
   options: [
     {

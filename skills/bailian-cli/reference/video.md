@@ -44,12 +44,11 @@ bl video download --task-id 3b256896-xxxx --out video.mp4 --quiet
 
 ### `bl video edit`
 
-| Field           | Value                                                                                                   |
-| --------------- | ------------------------------------------------------------------------------------------------------- |
-| **Name**        | `video edit`                                                                                            |
-| **Description** | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                  |
-| **Usage**       | `bl video edit --video <url> --prompt <text> [flags]`                                                   |
-| **API docs**    | [/best-practice/wanx/video-edit](https://help.aliyun.com/zh/model-studio/best-practice/wanx/video-edit) |
+| Field           | Value                                                                                  |
+| --------------- | -------------------------------------------------------------------------------------- |
+| **Name**        | `video edit`                                                                           |
+| **Description** | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.) |
+| **Usage**       | `bl video edit --video <url> --prompt <text> [flags]`                                  |
 
 #### Options
 
@@ -92,12 +91,11 @@ bl video edit --video https://example.com/input.mp4 --prompt "给视频里的小
 
 ### `bl video generate`
 
-| Field           | Value                                                                                                         |
-| --------------- | ------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `video generate`                                                                                              |
-| **Description** | Generate a video from text or image (happyhorse-1.0-t2v / happyhorse-1.0-i2v / wan2.6-t2v)                    |
-| **Usage**       | `bl video generate --prompt <text> [--image <url>] [flags]`                                                   |
-| **API docs**    | [/best-practice/wanx/text-to-video](https://help.aliyun.com/zh/model-studio/best-practice/wanx/text-to-video) |
+| Field           | Value                                                                                      |
+| --------------- | ------------------------------------------------------------------------------------------ |
+| **Name**        | `video generate`                                                                           |
+| **Description** | Generate a video from text or image (happyhorse-1.0-t2v / happyhorse-1.0-i2v / wan2.6-t2v) |
+| **Usage**       | `bl video generate --prompt <text> [--image <url>] [flags]`                                |
 
 #### Options
 
@@ -142,12 +140,11 @@ bl video generate --prompt "A cat playing with a ball" --watermark false
 
 ### `bl video ref`
 
-| Field           | Value                                                                                                             |
-| --------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `video ref`                                                                                                       |
-| **Description** | Reference-to-video generation (happyhorse-1.0-r2v / wan2.6-r2v): multi-subject, multi-shot with voice             |
-| **Usage**       | `bl video ref --prompt <text> --image <url>... [--ref-video <url>...] [flags]`                                    |
-| **API docs**    | [/best-practice/wanx/video-reference](https://help.aliyun.com/zh/model-studio/best-practice/wanx/video-reference) |
+| Field           | Value                                                                                                 |
+| --------------- | ----------------------------------------------------------------------------------------------------- |
+| **Name**        | `video ref`                                                                                           |
+| **Description** | Reference-to-video generation (happyhorse-1.0-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
+| **Usage**       | `bl video ref --prompt <text> --image <url>... [--ref-video <url>...] [flags]`                        |
 
 #### Options
 

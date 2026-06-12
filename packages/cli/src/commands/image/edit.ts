@@ -32,7 +32,6 @@ import {
 export default defineCommand({
   name: "image edit",
   description: "Edit an existing image with text instructions (Qwen-Image)",
-  apiDocs: "/developer-reference/qwen-image-edit-api",
   usage: "bl image edit --image <url> --prompt <text> [flags]",
   options: [
     {

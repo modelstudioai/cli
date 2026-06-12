@@ -15,12 +15,11 @@ Index: [index.md](index.md)
 
 ### `bl file upload`
 
-| Field           | Value                                                                                                                             |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `file upload`                                                                                                                     |
-| **Description** | Upload a local file to DashScope temporary storage (48h)                                                                          |
-| **Usage**       | `bl file upload --file <path> --model <model>`                                                                                    |
-| **API docs**    | [/developer-reference/get-temporary-file-url](https://help.aliyun.com/zh/model-studio/developer-reference/get-temporary-file-url) |
+| Field           | Value                                                    |
+| --------------- | -------------------------------------------------------- |
+| **Name**        | `file upload`                                            |
+| **Description** | Upload a local file to DashScope temporary storage (48h) |
+| **Usage**       | `bl file upload --file <path> --model <model>`           |
 
 #### Options
 

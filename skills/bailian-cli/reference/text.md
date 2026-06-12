@@ -15,12 +15,11 @@ Index: [index.md](index.md)
 
 ### `bl text chat`
 
-| Field           | Value                                                                                                                     |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `text chat`                                                                                                               |
-| **Description** | Send a chat completion (OpenAI compatible, DashScope)                                                                     |
-| **Usage**       | `bl text chat --message <text> [flags]`                                                                                   |
-| **API docs**    | [/compatibility-of-openai-with-dashscope](https://help.aliyun.com/zh/model-studio/compatibility-of-openai-with-dashscope) |
+| Field           | Value                                                 |
+| --------------- | ----------------------------------------------------- |
+| **Name**        | `text chat`                                           |
+| **Description** | Send a chat completion (OpenAI compatible, DashScope) |
+| **Usage**       | `bl text chat --message <text> [flags]`               |
 
 #### Options
 

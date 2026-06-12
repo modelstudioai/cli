@@ -70,7 +70,6 @@ function parseMessages(flags: GlobalFlags): ParsedMessages {
 export default defineCommand({
   name: "text chat",
   description: "Send a chat completion (OpenAI compatible, DashScope)",
-  apiDocs: "/compatibility-of-openai-with-dashscope",
   usage: "bl text chat --message <text> [flags]",
   options: [
     { flag: "--model <model>", description: "Model ID (default: qwen3.7-max)" },

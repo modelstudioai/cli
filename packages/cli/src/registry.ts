@@ -1,7 +1,7 @@
 import type { Command } from "bailian-cli-core";
 import { BailianError } from "bailian-cli-core";
 import { ExitCode } from "bailian-cli-core";
-import { DOCS_HOSTS, GLOBAL_OPTIONS, type Region } from "bailian-cli-core";
+import { GLOBAL_OPTIONS, type Region } from "bailian-cli-core";
 import { commands } from "./commands/catalog.ts";
 
 export type { Command, OptionDef } from "bailian-cli-core";
@@ -252,9 +252,6 @@ ${b("Getting Help:")}
       for (const ex of cmd.examples) {
         out.write(`  ${d(ex)}\n`);
       }
-    }
-    if (cmd.apiDocs) {
-      out.write(`\n${b("API Reference:")} ${d(DOCS_HOSTS[region] + cmd.apiDocs)}\n`);
     }
     out.write(
       `\n${d("Global flags (--api-key, --output, --quiet, etc.) are always available.")}\n`,
