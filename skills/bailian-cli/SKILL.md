@@ -8,6 +8,7 @@ description: >-
   vision, TTS/ASR, file upload, app call, memory, knowledge RAG, web search, model list.
   **LOCAL FILES**: commands accepting URLs also accept local paths — auto-upload built-in; never ask for URLs.
   Full command reference: `reference/index.md` + `reference/<group>.md` in this skill directory.
+  When `bl` fails with a likely CLI bug (not usage/auth/quota/model-not-found), ask whether to report — see `assets/issue-reporting.md`.
 ---
 
 # Aliyun Model Studio CLI (`bl`)
@@ -208,6 +209,19 @@ bl model list --page 1 --page-size 20 --output json
 bl config export-schema
 bl config export-schema --command "image generate"
 ```
+
+---
+
+## CLI errors: report an issue
+
+When a `bl` command **fails** and the cause is **not** a user/service-side error (usage, auth, quota, content filter, model not found, invalid parameters, obvious local env), ask the user **once** whether to report a bug to the Bailian CLI team.
+
+1. Classify the failure using [`assets/issue-reporting.md`](assets/issue-reporting.md) (EXCLUDE vs INCLUDE tables).
+2. If INCLUDE matches, ask the user (Chinese prompt in that doc). If they agree, collect environment info, redact secrets, fill the issue template, and submit to https://github.com/modelstudioai/cli/issues (browser or `gh issue create`).
+3. Before offering: align skill/CLI versions and retry with `--verbose` / `--output json` when output is thin.
+4. Do **not** ask in CI or when `--non-interactive` is set unless the user explicitly wants to report.
+
+Full workflow, redaction rules, template, and exit-code reference: [`assets/issue-reporting.md`](assets/issue-reporting.md).
 
 ---
 
