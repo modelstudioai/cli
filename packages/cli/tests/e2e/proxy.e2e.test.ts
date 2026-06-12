@@ -30,6 +30,11 @@ afterAll(async () => {
   await new Promise<void>((resolve) => proxy.close(() => resolve()));
 });
 
+/**
+ * 注入假 console 凭证：`app list` 在发请求前会解析 console 凭证（`resolveConsoleGatewayCredential`），
+ * CI 上无 `~/.bailian/config.json` 也无凭证时会先抛 AUTH 错误、走不到 fetch，代理便收不到 CONNECT。
+ * `DASHSCOPE_ACCESS_TOKEN` 优先级最高，注入任意假值即可让请求真正发出、被代理拦截（目标域 .invalid 仍不产生外网流量）。
+ */
 const PROXY_ENV_CLEARED = {
   HTTPS_PROXY: "",
   https_proxy: "",
@@ -37,6 +42,7 @@ const PROXY_ENV_CLEARED = {
   http_proxy: "",
   NO_PROXY: "",
   no_proxy: "",
+  DASHSCOPE_ACCESS_TOKEN: "bl-proxy-e2e-fake-token",
 };
 
 describe("e2e: proxy", () => {
