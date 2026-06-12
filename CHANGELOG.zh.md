@@ -6,6 +6,13 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.3.1] - 2026-06-12
+
+### 修复
+
+- `bl` 现在支持 `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` 环境变量。此前 CLI 始终直连，在 VPN / 公司代理环境下会报 `ECONNRESET`（#35）。小写变量优先于大写（与 curl 约定一致）；未设置代理变量时行为完全不变。
+- 代理 URL 非法时给出明确的 `Invalid proxy configuration` 报错而非裸堆栈，`ECONNRESET` 错误提示中增加设置 `HTTPS_PROXY` 的指引。
+
 ## [1.3.0] - 2026-06-11
 
 ### 新增

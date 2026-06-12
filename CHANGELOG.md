@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.3.1] - 2026-06-12
+
+### Fixed
+
+- `bl` now honors the `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` environment variables. Previously the CLI always connected directly, which failed with `ECONNRESET` behind a VPN or corporate proxy (#35). Lowercase variables take precedence over uppercase (curl convention); when no proxy variable is set, behavior is unchanged.
+- An invalid proxy URL now fails with a clear `Invalid proxy configuration` error instead of a raw stack trace, and the `ECONNRESET` hint suggests setting `HTTPS_PROXY`.
+
 ## [1.3.0] - 2026-06-10
 
 ### Added
