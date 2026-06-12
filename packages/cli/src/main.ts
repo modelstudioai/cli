@@ -8,6 +8,7 @@ import {
   flushTelemetry,
 } from "bailian-cli-core";
 import { ensureApiKey } from "./utils/ensure-key.ts";
+import { setupProxyFromEnv } from "./proxy.ts";
 import { handleError } from "./error-handler.ts";
 import { checkForUpdate, getPendingUpdateNotification } from "./utils/update-checker.ts";
 import { maybeShowStatusBar } from "./output/status-bar.ts";
@@ -18,6 +19,13 @@ import {
   registerCommandHelpPrinter,
   setExecutingCommandPath,
 } from "./utils/command-help.ts";
+
+// 必须在任何 fetch 发起前安装（含 update-checker / telemetry）
+try {
+  setupProxyFromEnv();
+} catch (err) {
+  handleError(err);
+}
 
 registerCommandHelpPrinter((commandPath, out) => {
   registry.printHelp(commandPath, out);

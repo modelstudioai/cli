@@ -80,7 +80,11 @@ function pickNetworkHint(code: string | undefined): string {
     case "ECONNREFUSED":
       return "Connection refused. Check the target host/port and proxy settings.";
     case "ECONNRESET":
-      return "Connection reset by peer. Retry, or check proxy / firewall.";
+      return (
+        "Connection reset by peer. Retry, or check proxy / firewall.\n" +
+        "If you are behind a VPN or corporate proxy, route bl through it:\n" +
+        "export HTTPS_PROXY=http://127.0.0.1:<proxy-port>"
+      );
     case "ETIMEDOUT":
       return "Connection timed out. Check your network or try a different region.";
     case "CERT_HAS_EXPIRED":

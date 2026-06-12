@@ -6,6 +6,12 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.3.1] - 2026-06-12
+
+### 修复
+
+- `bl` 现在会读取 `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` 环境变量(#35)。Node 内置的 `fetch`(undici)默认忽略代理环境变量,导致 VPN 或公司代理下出现 `ECONNRESET`。现已在启动时根据这些变量安装全局代理 dispatcher,并在 `ECONNRESET` 报错提示中给出 `export HTTPS_PROXY=http://127.0.0.1:<port>` 的指引。
+
 ## [1.3.0] - 2026-06-11
 
 ### 新增

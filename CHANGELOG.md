@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.3.1] - 2026-06-12
+
+### Fixed
+
+- `bl` now honors `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` environment variables (#35). Node's built-in `fetch` (undici) ignores proxy env vars by default, causing `ECONNRESET` for users behind a VPN or corporate proxy. A global proxy dispatcher is now installed at startup when these variables are set, and the `ECONNRESET` error hint points to `export HTTPS_PROXY=http://127.0.0.1:<port>`.
+
 ## [1.3.0] - 2026-06-10
 
 ### Added
