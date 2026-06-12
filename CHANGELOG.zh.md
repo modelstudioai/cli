@@ -6,6 +6,12 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.3.2] - 2026-06-12
+
+### 修复
+
+- 修复 `bl omni --audio` 始终返回 HTTP 400 的问题（#54），音频输入现已能正常理解。
+
 ## [1.3.1] - 2026-06-12
 
 ### 修复

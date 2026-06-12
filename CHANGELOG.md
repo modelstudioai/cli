@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.3.2] - 2026-06-12
+
+### Fixed
+
+- Fixed `bl omni --audio` always returning HTTP 400 (#54); audio inputs are now understood correctly.
+
 ## [1.3.1] - 2026-06-12
 
 ### Fixed
