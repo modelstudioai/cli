@@ -16,12 +16,11 @@ Index: [index.md](index.md)
 
 ### `bl image edit`
 
-| Field           | Value                                                                                                                       |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `image edit`                                                                                                                |
-| **Description** | Edit an existing image with text instructions (Qwen-Image)                                                                  |
-| **Usage**       | `bl image edit --image <url> --prompt <text> [flags]`                                                                       |
-| **API docs**    | [/developer-reference/qwen-image-edit-api](https://help.aliyun.com/zh/model-studio/developer-reference/qwen-image-edit-api) |
+| Field           | Value                                                      |
+| --------------- | ---------------------------------------------------------- |
+| **Name**        | `image edit`                                               |
+| **Description** | Edit an existing image with text instructions (Qwen-Image) |
+| **Usage**       | `bl image edit --image <url> --prompt <text> [flags]`      |
 
 #### Options
 
@@ -63,12 +62,11 @@ bl image edit --image ./photo.png --prompt "把背景换成海滩" --watermark f
 
 ### `bl image generate`
 
-| Field           | Value                                                                                                         |
-| --------------- | ------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `image generate`                                                                                              |
-| **Description** | Generate images (Qwen-Image / wan2.x)                                                                         |
-| **Usage**       | `bl image generate --prompt <text> [flags]`                                                                   |
-| **API docs**    | [/best-practice/wanx/text-to-image](https://help.aliyun.com/zh/model-studio/best-practice/wanx/text-to-image) |
+| Field           | Value                                       |
+| --------------- | ------------------------------------------- |
+| **Name**        | `image generate`                            |
+| **Description** | Generate images (Qwen-Image / wan2.x)       |
+| **Usage**       | `bl image generate --prompt <text> [flags]` |
 
 #### Options
 

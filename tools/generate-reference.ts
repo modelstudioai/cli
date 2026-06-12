@@ -11,12 +11,7 @@
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  DOCS_HOSTS,
-  GLOBAL_OPTIONS,
-  type Command,
-  type OptionDef,
-} from "../packages/core/dist/index.mjs";
+import { GLOBAL_OPTIONS, type Command, type OptionDef } from "../packages/core/dist/index.mjs";
 import { commands } from "../packages/cli/src/commands/catalog.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -68,10 +63,6 @@ function commandSection(path: string, cmd: Command): string {
   lines.push(`| **Description** | ${escCell(cmd.description)} |`);
   if (cmd.usage) {
     lines.push(`| **Usage** | \`${escCell(cmd.usage)}\` |`);
-  }
-  if (cmd.apiDocs) {
-    const url = `${DOCS_HOSTS.cn}${cmd.apiDocs}`;
-    lines.push(`| **API docs** | [${escCell(cmd.apiDocs)}](${url}) |`);
   }
   lines.push("");
 

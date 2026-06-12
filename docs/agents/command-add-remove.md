@@ -27,7 +27,7 @@
 命令元数据以 **`catalog.ts` 为单一登记处**;`registry.ts` 只负责解析与打印 help,不再内嵌命令表或手写 Resources 列表。
 
 ```
-commands/<...>.ts   defineCommand({ name, description, usage, options, examples, apiDocs?, run })
+commands/<...>.ts   defineCommand({ name, description, usage, options, examples, run })
         ↓
 commands/catalog.ts   export const commands: Record<string, Command>
         ↓
@@ -53,7 +53,6 @@ registry.ts  main.ts      tools/generate-reference.ts   export-schema.ts
   - 增删 `import xxx from "./.../xxx.ts"`
   - 在 `export const commands` 里增删 `"<group> <action>": xxx`(key 与 `defineCommand({ name })` 一致)
 - [ ] **不要**在 `registry.ts` 里重复登记命令(已从 catalog 读取)
-- [ ] 命令需在 `bl help` / `reference/` 展示 API 文档链接时,在 `defineCommand` 里设 `apiDocs`(相对路径);help 与 reference 均从此字段生成
 - [ ] 如果命令需要鉴权之外的特殊路径,看 `packages/cli/src/main.ts` 的 `NO_AUTH_SETUP`
 - [ ] **`config/export-schema.ts`**: 若新命令不适合作为 agent tool,评估是否加入 `SKIP_PREFIXES`;该文件在 `run()` 内 `import("../catalog.ts")`,勿顶层 import catalog 以免循环依赖
 

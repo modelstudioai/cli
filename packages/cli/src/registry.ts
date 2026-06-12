@@ -1,7 +1,7 @@
 import type { Command } from "bailian-cli-core";
 import { BailianError } from "bailian-cli-core";
 import { ExitCode } from "bailian-cli-core";
-import { DOCS_HOSTS, GLOBAL_OPTIONS, type Region } from "bailian-cli-core";
+import { GLOBAL_OPTIONS } from "bailian-cli-core";
 import { commands } from "./commands/catalog.ts";
 
 export type { Command, OptionDef } from "bailian-cli-core";
@@ -133,11 +133,7 @@ class CommandRegistry {
     out.isTTY ? `\x1b[38;2;59;130;246m${s}\x1b[0m` : s;
   private dim = (s: string, out: NodeJS.WriteStream) => (out.isTTY ? `\x1b[2m${s}\x1b[0m` : s);
 
-  printHelp(
-    commandPath: string[],
-    out: NodeJS.WriteStream = process.stdout,
-    region: Region = "cn",
-  ): void {
+  printHelp(commandPath: string[], out: NodeJS.WriteStream = process.stdout): void {
     if (commandPath.length === 0) {
       this.printRootHelp(out);
       return;
@@ -154,7 +150,7 @@ class CommandRegistry {
     }
 
     if (node.command) {
-      this.printCommandHelp(node.command, out, region);
+      this.printCommandHelp(node.command, out);
       return;
     }
 
@@ -233,7 +229,7 @@ ${b("Getting Help:")}
 `);
   }
 
-  private printCommandHelp(cmd: Command, out: NodeJS.WriteStream, region: Region = "cn"): void {
+  private printCommandHelp(cmd: Command, out: NodeJS.WriteStream): void {
     const b = (s: string) => this.bold(s, out);
     const a = (s: string) => this.accent(s, out);
     const d = (s: string) => this.dim(s, out);
@@ -252,9 +248,6 @@ ${b("Getting Help:")}
       for (const ex of cmd.examples) {
         out.write(`  ${d(ex)}\n`);
       }
-    }
-    if (cmd.apiDocs) {
-      out.write(`\n${b("API Reference:")} ${d(DOCS_HOSTS[region] + cmd.apiDocs)}\n`);
     }
     out.write(
       `\n${d("Global flags (--api-key, --output, --quiet, etc.) are always available.")}\n`,

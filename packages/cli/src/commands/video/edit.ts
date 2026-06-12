@@ -31,7 +31,6 @@ export default defineCommand({
   name: "video edit",
   description:
     "Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)",
-  apiDocs: "/best-practice/wanx/video-edit",
   usage: "bl video edit --video <url> --prompt <text> [flags]",
   options: [
     { flag: "--model <model>", description: "Model ID (default: happyhorse-1.0-video-edit)" },

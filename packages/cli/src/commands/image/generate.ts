@@ -43,7 +43,6 @@ function isSyncModel(model: string): boolean {
 export default defineCommand({
   name: "image generate",
   description: "Generate images (Qwen-Image / wan2.x)",
-  apiDocs: "/best-practice/wanx/text-to-image",
   usage: "bl image generate --prompt <text> [flags]",
   options: [
     { flag: "--prompt <text>", description: "Image description", required: true },

@@ -16,12 +16,11 @@ Index: [index.md](index.md)
 
 ### `bl speech recognize`
 
-| Field           | Value                                                                                                                                     |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `speech recognize`                                                                                                                        |
-| **Description** | Recognize speech from audio files (FunAudio-ASR)                                                                                          |
-| **Usage**       | `bl speech recognize --url <audio-url> [flags]`                                                                                           |
-| **API docs**    | [/developer-reference/recording-file-recognition](https://help.aliyun.com/zh/model-studio/developer-reference/recording-file-recognition) |
+| Field           | Value                                            |
+| --------------- | ------------------------------------------------ |
+| **Name**        | `speech recognize`                               |
+| **Description** | Recognize speech from audio files (FunAudio-ASR) |
+| **Usage**       | `bl speech recognize --url <audio-url> [flags]`  |
 
 #### Options
 
@@ -70,12 +69,11 @@ bl speech recognize --url https://example.com/audio.mp3 --no-wait --quiet
 
 ### `bl speech synthesize`
 
-| Field           | Value                                                                                                   |
-| --------------- | ------------------------------------------------------------------------------------------------------- |
-| **Name**        | `speech synthesize`                                                                                     |
-| **Description** | Synthesize speech from text (CosyVoice TTS)                                                             |
-| **Usage**       | `bl speech synthesize --text <text> [flags]`                                                            |
-| **API docs**    | [/developer-reference/cosyvoice](https://help.aliyun.com/zh/model-studio/developer-reference/cosyvoice) |
+| Field           | Value                                        |
+| --------------- | -------------------------------------------- |
+| **Name**        | `speech synthesize`                          |
+| **Description** | Synthesize speech from text (CosyVoice TTS)  |
+| **Usage**       | `bl speech synthesize --text <text> [flags]` |
 
 #### Options
 

@@ -31,7 +31,6 @@ export default defineCommand({
   name: "video ref",
   description:
     "Reference-to-video generation (happyhorse-1.0-r2v / wan2.6-r2v): multi-subject, multi-shot with voice",
-  apiDocs: "/best-practice/wanx/video-reference",
   usage: "bl video ref --prompt <text> --image <url>... [--ref-video <url>...] [flags]",
   options: [
     { flag: "--model <model>", description: "Model ID (default: happyhorse-1.0-r2v)" },

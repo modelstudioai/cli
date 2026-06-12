@@ -15,12 +15,11 @@ Index: [index.md](index.md)
 
 ### `bl omni`
 
-| Field           | Value                                                                                     |
-| --------------- | ----------------------------------------------------------------------------------------- |
-| **Name**        | `omni`                                                                                    |
-| **Description** | Multimodal chat with text + audio output (Qwen-Omni)                                      |
-| **Usage**       | `bl omni --message <text> [flags]`                                                        |
-| **API docs**    | [/model-studio/qwen-omni](https://help.aliyun.com/zh/model-studio/model-studio/qwen-omni) |
+| Field           | Value                                                |
+| --------------- | ---------------------------------------------------- |
+| **Name**        | `omni`                                               |
+| **Description** | Multimodal chat with text + audio output (Qwen-Omni) |
+| **Usage**       | `bl omni --message <text> [flags]`                   |
 
 #### Options
 
