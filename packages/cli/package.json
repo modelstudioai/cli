@@ -46,7 +46,8 @@
   "dependencies": {
     "bailian-cli-core": "workspace:*",
     "boxen": "catalog:",
-    "chalk": "catalog:"
+    "chalk": "catalog:",
+    "undici": "catalog:"
   },
   "devDependencies": {
     "@clack/prompts": "^0.7.0",
