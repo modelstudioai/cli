@@ -3,11 +3,9 @@ import { registry } from "./registry.ts";
 import {
   GLOBAL_OPTIONS,
   loadConfig,
-  readConfigFile,
   resolveCredential,
   trackCommandExecution,
   flushTelemetry,
-  type Region,
 } from "bailian-cli-core";
 import { ensureApiKey } from "./utils/ensure-key.ts";
 import { handleError } from "./error-handler.ts";
@@ -22,13 +20,7 @@ import {
 } from "./utils/command-help.ts";
 
 registerCommandHelpPrinter((commandPath, out) => {
-  const a = process.argv.slice(2);
-  const ri = a.indexOf("--region");
-  const region = ((ri >= 0 && a[ri + 1]) ||
-    process.env.DASHSCOPE_REGION ||
-    readConfigFile().region ||
-    "cn") as Region;
-  registry.printHelp(commandPath, out, region);
+  registry.printHelp(commandPath, out);
 });
 
 // 优雅处理 Ctrl+C
@@ -84,12 +76,7 @@ async function main() {
   const commandPath = scanCommandPath(argv, GLOBAL_OPTIONS);
 
   if (argv.includes("--help") || argv.includes("-h")) {
-    const ri = argv.indexOf("--region");
-    const region = ((ri >= 0 && argv[ri + 1]) ||
-      process.env.DASHSCOPE_REGION ||
-      readConfigFile().region ||
-      "cn") as Region;
-    registry.printHelp(commandPath, process.stderr, region);
+    registry.printHelp(commandPath, process.stderr);
     process.exit(0);
   }
 
@@ -115,12 +102,7 @@ async function main() {
 
   // 组路径（例如 `bl speech` 未接子命令）：展示帮助后干净退出
   if (registry.isGroupPath(commandPath)) {
-    const ri = argv.indexOf("--region");
-    const region = ((ri >= 0 && argv[ri + 1]) ||
-      process.env.DASHSCOPE_REGION ||
-      readConfigFile().region ||
-      "cn") as Region;
-    registry.printHelp(commandPath, process.stderr, region);
+    registry.printHelp(commandPath, process.stderr);
     process.exit(0);
   }
 
