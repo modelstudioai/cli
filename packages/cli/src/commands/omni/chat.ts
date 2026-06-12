@@ -100,7 +100,7 @@ export default defineCommand({
     { flag: "--image <url>", description: "Image URL or local file (repeatable)", type: "array" },
     {
       flag: "--audio <url>",
-      description: "Audio URL or local file (.wav/.mp3/.amr/.aac/.m4a/.3gp/.3gpp)",
+      description: "Audio URL or local file (.wav/.mp3/.amr/.aac/.m4a/.ogg/.3gp/.3gpp)",
       type: "array",
     },
     {
