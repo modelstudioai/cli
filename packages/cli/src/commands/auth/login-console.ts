@@ -388,7 +388,7 @@ function canRetry(err: unknown): boolean {
   return false;
 }
 
-async function validateAndPersistApiKey(
+export async function validateAndPersistApiKey(
   config: Config,
   key: string,
   baseUrl: string,
@@ -400,7 +400,7 @@ async function validateAndPersistApiKey(
     method: "POST",
     timeout: Math.min(config.timeout, 30),
     body: {
-      model: "qwen-max",
+      model: "qwen3.7-max",
       messages: [{ role: "user", content: "hi" }],
       max_tokens: 1,
     },
