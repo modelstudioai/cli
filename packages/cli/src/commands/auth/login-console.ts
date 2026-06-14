@@ -13,7 +13,7 @@ import {
 const CONSOLE_LOGIN_TIMEOUT_MS = 15 * 60 * 1000;
 const MAX_AUTH_CALLBACK_BODY = 65536;
 
-const DEFAULT_CONSOLE_ORIGIN = "https://bailian.console.aliyun.com";
+const DEFAULT_CONSOLE_ORIGIN = "https://pre-bailian.console.aliyun.com";
 
 export function resolveConsoleOrigin(): string {
   return process.env.BAILIAN_CONSOLE_ORIGIN || DEFAULT_CONSOLE_ORIGIN;
@@ -323,38 +323,21 @@ export async function runConsoleLogin(
 
       const { accessToken, apiKey, baseUrl, consoleSite, consoleRegion, consoleSwitchAgent } =
         await extractCredentialsFromRequest(req);
+      const hasConfig =
+        accessToken || baseUrl || consoleSite || consoleRegion || consoleSwitchAgent;
 
-      if (accessToken || apiKey || baseUrl || consoleSite || consoleRegion || consoleSwitchAgent) {
+      if (hasConfig || apiKey) {
         try {
-          const existing = readConfigFile() as Record<string, unknown>;
-          let changed = false;
-
-          if (accessToken) {
-            existing.access_token = accessToken;
-            changed = true;
-          }
-          if (baseUrl) {
-            existing.base_url = baseUrl;
-            changed = true;
-          }
-          if (consoleSite) {
-            existing.console_site = consoleSite;
-            changed = true;
-          }
-          if (consoleRegion) {
-            existing.console_region = consoleRegion;
-            changed = true;
-          }
-          if (consoleSwitchAgent) {
-            existing.console_switch_agent = Number(consoleSwitchAgent);
-            changed = true;
-          }
-
-          if (changed) {
+          if (hasConfig) {
+            const existing = readConfigFile() as Record<string, unknown>;
+            if (accessToken) existing.access_token = accessToken;
+            if (baseUrl) existing.base_url = baseUrl;
+            if (consoleSite) existing.console_site = consoleSite;
+            if (consoleRegion) existing.console_region = consoleRegion;
+            if (consoleSwitchAgent) existing.console_switch_agent = Number(consoleSwitchAgent);
             await writeConfigFile(existing);
             process.stderr.write(`Config saved to ${getConfigPath()}\n`);
           }
-
           if (apiKey && opts?.onApiKey) {
             await opts.onApiKey(apiKey);
           }
@@ -373,7 +356,7 @@ export async function runConsoleLogin(
       });
       res.end("OK\n");
 
-      if (accessToken || apiKey || baseUrl || consoleSite || consoleRegion || consoleSwitchAgent) {
+      if (hasConfig || apiKey) {
         server.close();
       }
     } catch {
