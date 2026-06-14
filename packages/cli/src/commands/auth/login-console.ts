@@ -5,15 +5,18 @@ import http from "node:http";
 import {
   BailianError,
   ExitCode,
+  chatEndpoint,
   getConfigPath,
   readConfigFile,
+  requestJson,
   writeConfigFile,
+  type Config,
 } from "bailian-cli-core";
 
 const CONSOLE_LOGIN_TIMEOUT_MS = 15 * 60 * 1000;
 const MAX_AUTH_CALLBACK_BODY = 65536;
 
-const DEFAULT_CONSOLE_ORIGIN = "https://pre-bailian.console.aliyun.com";
+const DEFAULT_CONSOLE_ORIGIN = "https://bailian.console.aliyun.com";
 
 export function resolveConsoleOrigin(): string {
   return process.env.BAILIAN_CONSOLE_ORIGIN || DEFAULT_CONSOLE_ORIGIN;
@@ -366,12 +369,69 @@ function openInBrowser(url: string): Promise<void> {
   });
 }
 
+const RETRY_DELAY_BASE_MS = 500;
+
+function canRetry(err: unknown): boolean {
+  if (err instanceof BailianError) {
+    if (err.exitCode === ExitCode.NETWORK || err.exitCode === ExitCode.TIMEOUT) return true;
+    const status = err.api?.httpStatus;
+    return status === 401 || (status !== undefined && status >= 500);
+  }
+  if (err instanceof Error) {
+    return (
+      err.name === "AbortError" ||
+      err.name === "TimeoutError" ||
+      err.message.includes("timed out") ||
+      err.message === "fetch failed"
+    );
+  }
+  return false;
+}
+
+async function validateAndPersistApiKey(
+  config: Config,
+  key: string,
+  baseUrl: string,
+): Promise<void> {
+  process.stderr.write("Testing key... ");
+  const testConfig = { ...config, apiKey: key, baseUrl };
+  const requestOpts = {
+    url: chatEndpoint(testConfig.baseUrl),
+    method: "POST",
+    timeout: Math.min(config.timeout, 30),
+    body: {
+      model: "qwen-max",
+      messages: [{ role: "user", content: "hi" }],
+      max_tokens: 1,
+    },
+  };
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await requestJson<unknown>(testConfig, requestOpts);
+      break;
+    } catch (err) {
+      if (attempt >= 3 || !canRetry(err)) {
+        process.stderr.write("Failed\n");
+        throw new BailianError("API key validation failed", ExitCode.AUTH, "Invalid API key.", {
+          cause: err,
+        });
+      }
+      const delayMs = RETRY_DELAY_BASE_MS * 2 ** (attempt - 1);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  process.stderr.write("Valid\n");
+  const existing = readConfigFile() as Record<string, unknown>;
+  existing.api_key = key;
+  await writeConfigFile(existing);
+}
+
 export async function runConsoleLogin(
   consoleOrigin: string,
-  opts?: {
-    needApiKey?: boolean;
-    onApiKey?: ({ apiKey, baseUrl }: { apiKey: string; baseUrl?: string }) => Promise<void>;
-  },
+  config: Config,
+  opts?: { needApiKey?: boolean },
 ): Promise<void> {
   const state = randomBytes(16).toString("hex");
   let callbackError: unknown;
@@ -397,7 +457,6 @@ export async function runConsoleLogin(
       const { accessToken, apiKey, baseUrl, consoleSite, consoleRegion, consoleSwitchAgent } =
         await extractCredentialsFromRequest(req);
 
-      console.log({ accessToken, apiKey, baseUrl, consoleSite, consoleRegion, consoleSwitchAgent });
       const hasConfig =
         accessToken || baseUrl || consoleSite || consoleRegion || consoleSwitchAgent;
 
@@ -413,8 +472,9 @@ export async function runConsoleLogin(
             await writeConfigFile(existing);
             process.stderr.write(`Config saved to ${getConfigPath()}\n`);
           }
-          if (apiKey && opts?.onApiKey) {
-            await opts.onApiKey({ apiKey, baseUrl: baseUrl ?? undefined });
+          if (apiKey) {
+            const testBaseUrl = baseUrl || config.baseUrl;
+            await validateAndPersistApiKey(config, apiKey, testBaseUrl);
           }
         } catch (err: unknown) {
           callbackError = err;
