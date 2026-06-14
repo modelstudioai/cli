@@ -86,6 +86,10 @@ export default defineCommand({
   options: [
     { flag: "--api-key <key>", description: "DashScope API key to store" },
     {
+      flag: "--base-url <url>",
+      description: "DashScope API base URL (used with --api-key for validation)",
+    },
+    {
       flag: "--console",
       description: "Sign in via browser; opens the console login URL in your default browser",
       type: "boolean",
@@ -130,8 +134,16 @@ export default defineCommand({
       process.exit(0);
     }
 
+    const baseUrl = (flags.baseUrl as string) || undefined;
+    const effectiveConfig = baseUrl ? { ...config, baseUrl } : config;
+
     if (!config.dryRun) {
-      await validateKeyAndPersist(config, key);
+      await validateKeyAndPersist(effectiveConfig, key);
+      if (baseUrl) {
+        const existing = readConfigFile() as Record<string, unknown>;
+        existing.base_url = baseUrl;
+        await writeConfigFile(existing);
+      }
       printQuickStart();
     } else {
       emitBare("Would validate and save API key.");
