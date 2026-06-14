@@ -215,7 +215,7 @@ function parseApiKeyFromRawBody(raw: string, contentType: string): string | null
 
 type CallbackExtras = Pick<
   CallbackCredentials,
-  "baseUrl" | "consoleSite" | "consoleRegion" | "consoleSwitchAgent"
+  "baseUrl" | "consoleSite" | "consoleRegion" | "consoleSwitchAgent" | "workspaceId"
 >;
 
 function stringField(o: Record<string, unknown>, ...keys: string[]): string | null {
@@ -232,6 +232,7 @@ function parseExtrasFromRawBody(raw: string, contentType: string): CallbackExtra
     consoleSite: null,
     consoleRegion: null,
     consoleSwitchAgent: null,
+    workspaceId: null,
   };
   if (!raw.trim()) return empty;
 
@@ -270,6 +271,7 @@ function parseExtrasFromRawBody(raw: string, contentType: string): CallbackExtra
     consoleSite: stringField(obj, "console_site", "consoleSite"),
     consoleRegion: stringField(obj, "console_region", "consoleRegion"),
     consoleSwitchAgent: stringField(obj, "console_switch_agent", "consoleSwitchAgent"),
+    workspaceId: stringField(obj, "workspace_id", "workspaceId"),
   };
 }
 
@@ -280,6 +282,7 @@ interface CallbackCredentials {
   consoleSite: string | null;
   consoleRegion: string | null;
   consoleSwitchAgent: string | null;
+  workspaceId: string | null;
 }
 
 async function extractCredentialsFromRequest(
@@ -296,12 +299,15 @@ async function extractCredentialsFromRequest(
     u.searchParams.get("console_region") ?? u.searchParams.get("consoleRegion");
   const consoleSwitchAgentFromQuery =
     u.searchParams.get("console_switch_agent") ?? u.searchParams.get("consoleSwitchAgent");
+  const workspaceIdFromQuery =
+    u.searchParams.get("workspace_id") ?? u.searchParams.get("workspaceId");
 
   const extras = {
     baseUrl: baseUrlFromQuery?.trim() || null,
     consoleSite: consoleSiteFromQuery?.trim() || null,
     consoleRegion: consoleRegionFromQuery?.trim() || null,
     consoleSwitchAgent: consoleSwitchAgentFromQuery?.trim() || null,
+    workspaceId: workspaceIdFromQuery?.trim() || null,
   };
 
   const m = req.method ?? "GET";
@@ -337,6 +343,7 @@ async function extractCredentialsFromRequest(
     consoleSite: extras.consoleSite || bodyExtras.consoleSite,
     consoleRegion: extras.consoleRegion || bodyExtras.consoleRegion,
     consoleSwitchAgent: extras.consoleSwitchAgent || bodyExtras.consoleSwitchAgent,
+    workspaceId: extras.workspaceId || bodyExtras.workspaceId,
   };
 }
 
@@ -454,11 +461,18 @@ export async function runConsoleLogin(
         return;
       }
 
-      const { accessToken, apiKey, baseUrl, consoleSite, consoleRegion, consoleSwitchAgent } =
-        await extractCredentialsFromRequest(req);
+      const {
+        accessToken,
+        apiKey,
+        baseUrl,
+        consoleSite,
+        consoleRegion,
+        consoleSwitchAgent,
+        workspaceId,
+      } = await extractCredentialsFromRequest(req);
 
       const hasConfig =
-        accessToken || baseUrl || consoleSite || consoleRegion || consoleSwitchAgent;
+        accessToken || baseUrl || consoleSite || consoleRegion || consoleSwitchAgent || workspaceId;
 
       if (hasConfig || apiKey) {
         try {
@@ -469,6 +483,7 @@ export async function runConsoleLogin(
             if (consoleSite) existing.console_site = consoleSite;
             if (consoleRegion) existing.console_region = consoleRegion;
             if (consoleSwitchAgent) existing.console_switch_agent = Number(consoleSwitchAgent);
+            if (workspaceId) existing.workspace_id = workspaceId;
             await writeConfigFile(existing);
             process.stderr.write(`Config saved to ${getConfigPath()}\n`);
           }
