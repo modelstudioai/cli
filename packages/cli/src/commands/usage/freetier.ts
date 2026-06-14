@@ -63,7 +63,7 @@ async function pollUntilDone(
   api: string,
   requestKey: string,
   models: string[],
-  region: string,
+  region: string | undefined,
 ): Promise<unknown> {
   let nextTaskId: string | undefined;
 
@@ -140,7 +140,7 @@ export default defineCommand({
     const modelFlag = (flags.model as string) || undefined;
     const all = Boolean(flags.all);
     const off = Boolean(flags.off);
-    const region = (flags.region as string) || "cn-beijing";
+    const region = (flags.region as string) || undefined;
     const format = detectOutputFormat(config.output);
 
     if (!modelFlag && !all) {

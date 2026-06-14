@@ -232,7 +232,7 @@ export default defineCommand({
       );
       process.exit(1);
     }
-    const region = (flags.region as string) || "cn-beijing";
+    const region = (flags.region as string) || undefined;
     const format = detectOutputFormat(config.output);
 
     const credential = await resolveConsoleGatewayCredential(config);

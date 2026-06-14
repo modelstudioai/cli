@@ -32,11 +32,15 @@ export interface ConfigFile {
   access_key_secret?: string;
   workspace_id?: string;
   console_gateway_url?: string;
+  console_site?: "domestic" | "international";
+  console_region?: string;
+  console_switch_agent?: number;
   telemetry?: boolean;
 }
 
 const VALID_REGIONS = new Set<string>(["cn", "us", "intl"]);
 const VALID_OUTPUTS = new Set<string>(["text", "json"]);
+const VALID_CONSOLE_SITES = new Set<string>(["domestic", "international"]);
 
 /**
  * A syntactically valid absolute http(s) URL. Used to validate `base_url` and
@@ -89,6 +93,12 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     out.workspace_id = obj.workspace_id;
   if (typeof obj.console_gateway_url === "string" && isHttpUrl(obj.console_gateway_url))
     out.console_gateway_url = obj.console_gateway_url;
+  if (typeof obj.console_site === "string" && VALID_CONSOLE_SITES.has(obj.console_site))
+    out.console_site = obj.console_site as ConfigFile["console_site"];
+  if (typeof obj.console_region === "string" && obj.console_region.length > 0)
+    out.console_region = obj.console_region;
+  if (typeof obj.console_switch_agent === "number" && obj.console_switch_agent > 0)
+    out.console_switch_agent = obj.console_switch_agent;
   if (typeof obj.telemetry === "boolean") out.telemetry = obj.telemetry;
 
   return out;
@@ -118,7 +128,9 @@ export interface Config {
   accessKeyId?: string;
   accessKeySecret?: string;
   workspaceId?: string;
-  consoleGatewayUrl: string;
+  consoleSite?: "domestic" | "international";
+  consoleRegion?: string;
+  consoleSwitchAgent?: number;
   verbose: boolean;
   quiet: boolean;
   noColor: boolean;

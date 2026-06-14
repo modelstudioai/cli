@@ -213,6 +213,10 @@ function parseApiKeyFromRawBody(raw: string, contentType: string): string | null
 interface CallbackCredentials {
   accessToken: string | null;
   apiKey: string | null;
+  baseUrl: string | null;
+  consoleSite: string | null;
+  consoleRegion: string | null;
+  consoleSwitchAgent: string | null;
 }
 
 async function extractCredentialsFromRequest(
@@ -222,12 +226,27 @@ async function extractCredentialsFromRequest(
   const accessTokenFromQuery =
     u.searchParams.get("access_token") ?? u.searchParams.get("accessToken");
   const apiKeyFromQuery = u.searchParams.get("api_key") ?? u.searchParams.get("apiKey");
+  const baseUrlFromQuery = u.searchParams.get("base_url") ?? u.searchParams.get("baseUrl");
+  const consoleSiteFromQuery =
+    u.searchParams.get("console_site") ?? u.searchParams.get("consoleSite");
+  const consoleRegionFromQuery =
+    u.searchParams.get("console_region") ?? u.searchParams.get("consoleRegion");
+  const consoleSwitchAgentFromQuery =
+    u.searchParams.get("console_switch_agent") ?? u.searchParams.get("consoleSwitchAgent");
+
+  const extras = {
+    baseUrl: baseUrlFromQuery?.trim() || null,
+    consoleSite: consoleSiteFromQuery?.trim() || null,
+    consoleRegion: consoleRegionFromQuery?.trim() || null,
+    consoleSwitchAgent: consoleSwitchAgentFromQuery?.trim() || null,
+  };
 
   const m = req.method ?? "GET";
   if (m !== "POST" && m !== "PUT" && m !== "PATCH") {
     return {
       accessToken: accessTokenFromQuery?.trim() || null,
       apiKey: apiKeyFromQuery?.trim() || null,
+      ...extras,
     };
   }
 
@@ -239,12 +258,13 @@ async function extractCredentialsFromRequest(
     return {
       accessToken: accessTokenFromQuery?.trim() || null,
       apiKey: apiKeyFromQuery?.trim() || null,
+      ...extras,
     };
   }
 
   const accessToken = accessTokenFromQuery?.trim() || parseAccessTokenFromRawBody(raw, contentType);
   const apiKey = apiKeyFromQuery?.trim() || parseApiKeyFromRawBody(raw, contentType);
-  return { accessToken, apiKey };
+  return { accessToken, apiKey, ...extras };
 }
 
 function listenServerOnFreeLocalPort(server: http.Server): Promise<number> {
@@ -301,16 +321,40 @@ export async function runConsoleLogin(
         return;
       }
 
-      const { accessToken, apiKey } = await extractCredentialsFromRequest(req);
+      const { accessToken, apiKey, baseUrl, consoleSite, consoleRegion, consoleSwitchAgent } =
+        await extractCredentialsFromRequest(req);
 
-      if (accessToken || apiKey) {
+      if (accessToken || apiKey || baseUrl || consoleSite || consoleRegion || consoleSwitchAgent) {
         try {
+          const existing = readConfigFile() as Record<string, unknown>;
+          let changed = false;
+
           if (accessToken) {
-            const existing = readConfigFile() as Record<string, unknown>;
             existing.access_token = accessToken;
-            await writeConfigFile(existing);
-            process.stderr.write(`access_token saved to ${getConfigPath()}\n`);
+            changed = true;
           }
+          if (baseUrl) {
+            existing.base_url = baseUrl;
+            changed = true;
+          }
+          if (consoleSite) {
+            existing.console_site = consoleSite;
+            changed = true;
+          }
+          if (consoleRegion) {
+            existing.console_region = consoleRegion;
+            changed = true;
+          }
+          if (consoleSwitchAgent) {
+            existing.console_switch_agent = Number(consoleSwitchAgent);
+            changed = true;
+          }
+
+          if (changed) {
+            await writeConfigFile(existing);
+            process.stderr.write(`Config saved to ${getConfigPath()}\n`);
+          }
+
           if (apiKey && opts?.onApiKey) {
             await opts.onApiKey(apiKey);
           }
@@ -329,7 +373,7 @@ export async function runConsoleLogin(
       });
       res.end("OK\n");
 
-      if (accessToken || apiKey) {
+      if (accessToken || apiKey || baseUrl || consoleSite || consoleRegion || consoleSwitchAgent) {
         server.close();
       }
     } catch {

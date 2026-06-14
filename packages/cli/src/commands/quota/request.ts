@@ -53,7 +53,7 @@ function extractResponseData(result: Record<string, unknown>): Record<string, un
 async function fetchModelQpmInfo(
   config: Config,
   token: string,
-  region: string,
+  region: string | undefined,
   modelName: string,
 ): Promise<{ model: string; qpmInfo: Record<string, QpmInfoItem> } | undefined> {
   const raw = await callConsoleGateway(config, token, {
@@ -122,7 +122,7 @@ export default defineCommand({
     }
 
     const autoConfirm = Boolean(flags.yes) || config.yes;
-    const region = (flags.region as string) || "cn-beijing";
+    const region = (flags.region as string) || undefined;
     const format = detectOutputFormat(config.output);
 
     const credential = await resolveConsoleGatewayCredential(config);

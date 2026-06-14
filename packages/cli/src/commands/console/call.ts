@@ -7,6 +7,7 @@ import {
   detectOutputFormat,
   type Config,
   type GlobalFlags,
+  type ConsoleSite,
 } from "bailian-cli-core";
 import { failIfMissing } from "../../output/prompt.ts";
 import { emitResult } from "../../output/output.ts";
@@ -28,7 +29,15 @@ export default defineCommand({
     },
     {
       flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
+      description: "Console region (e.g. cn-beijing, ap-southeast-1)",
+    },
+    {
+      flag: "--site <site>",
+      description: "Console site: domestic or international",
+    },
+    {
+      flag: "--switch-agent <uid>",
+      description: "Switch agent UID for delegated access",
     },
   ],
   examples: [
@@ -50,7 +59,9 @@ export default defineCommand({
       process.exit(1);
     }
 
-    const region = (flags.region as string) || "cn-beijing";
+    const region = (flags.region as string) || undefined;
+    const site = ((flags.site as string) || undefined) as ConsoleSite | undefined;
+    const switchAgent = flags.switchAgent ? Number(flags.switchAgent) : undefined;
     const format = detectOutputFormat(config.output);
 
     let token: string | undefined;
@@ -71,6 +82,8 @@ export default defineCommand({
       api,
       data,
       region,
+      site,
+      switchAgent,
     });
 
     emitResult(result, format);

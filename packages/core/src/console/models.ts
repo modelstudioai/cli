@@ -28,7 +28,7 @@ export async function fetchModelList(
     name = "",
     providers = [],
     capabilities = [],
-    region = "cn-beijing",
+    region,
   } = params;
 
   const result = (await callConsoleGateway(config, token, {

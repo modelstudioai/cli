@@ -70,7 +70,7 @@ async function pollTelemetryApi(
   token: string,
   api: string,
   reqDTO: Record<string, unknown>,
-  region: string,
+  region: string | undefined,
 ): Promise<unknown> {
   let nextTaskId: string | undefined;
 
@@ -343,7 +343,7 @@ export default defineCommand({
     const modelFlag = (flags.model as string) || undefined;
     const daysFlag = Number(flags.days) || 7;
     const typeFlag = (flags.type as string) || undefined;
-    const region = (flags.region as string) || "cn-beijing";
+    const region = (flags.region as string) || undefined;
     const format = detectOutputFormat(config.output);
 
     const flagWorkspaceId = (flags.workspaceId as string) || undefined;

@@ -68,7 +68,7 @@ function extractResponseData(result: Record<string, unknown>): Record<string, un
 async function fetchAllModelsWithQpm(
   config: Config,
   token: string,
-  region: string,
+  region: string | undefined,
   onlySelfService: boolean,
 ): Promise<ModelWithQpm[]> {
   const allModels: ModelWithQpm[] = [];
@@ -186,7 +186,7 @@ export default defineCommand({
   async run(config: Config, flags: GlobalFlags) {
     const modelFlag = (flags.model as string) || undefined;
     const showAll = Boolean(flags.all);
-    const region = (flags.region as string) || "cn-beijing";
+    const region = (flags.region as string) || undefined;
     const format = detectOutputFormat(config.output);
 
     const credential = await resolveConsoleGatewayCredential(config);

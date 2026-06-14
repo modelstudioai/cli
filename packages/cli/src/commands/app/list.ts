@@ -44,7 +44,7 @@ export default defineCommand({
     const name = (flags.name as string) || "";
     const pageNo = (flags.page as number) || 1;
     const pageSize = (flags.pageSize as number) || 30;
-    const region = (flags.region as string) || "cn-beijing";
+    const region = (flags.region as string) || undefined;
     const format = detectOutputFormat(config.output);
 
     const credential = await resolveConsoleGatewayCredential(config);

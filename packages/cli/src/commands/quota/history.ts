@@ -130,7 +130,7 @@ export default defineCommand({
     const page = Number(flags.page) || 1;
     const pageSize = Number(flags.pageSize) || 10;
     const modelFilter = (flags.model as string) || undefined;
-    const region = (flags.region as string) || "cn-beijing";
+    const region = (flags.region as string) || undefined;
     const format = detectOutputFormat(config.output);
 
     const credential = await resolveConsoleGatewayCredential(config);
