@@ -210,6 +210,66 @@ function parseApiKeyFromRawBody(raw: string, contentType: string): string | null
   return null;
 }
 
+type CallbackExtras = Pick<
+  CallbackCredentials,
+  "baseUrl" | "consoleSite" | "consoleRegion" | "consoleSwitchAgent"
+>;
+
+function stringField(o: Record<string, unknown>, ...keys: string[]): string | null {
+  for (const k of keys) {
+    const v = o[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return null;
+}
+
+function parseExtrasFromRawBody(raw: string, contentType: string): CallbackExtras {
+  const empty: CallbackExtras = {
+    baseUrl: null,
+    consoleSite: null,
+    consoleRegion: null,
+    consoleSwitchAgent: null,
+  };
+  if (!raw.trim()) return empty;
+
+  let obj: Record<string, unknown> | null = null;
+
+  const ct = contentType.toLowerCase();
+  if (ct.includes("application/json") || ct.includes("text/json")) {
+    try {
+      const parsed = JSON.parse(raw.trim());
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) obj = parsed;
+    } catch {
+      /* */
+    }
+  }
+  if (!obj && ct.includes("application/x-www-form-urlencoded")) {
+    try {
+      const params = new URLSearchParams(raw.trim());
+      obj = Object.fromEntries(params);
+    } catch {
+      /* */
+    }
+  }
+  if (!obj) {
+    try {
+      const parsed = JSON.parse(raw.trim());
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) obj = parsed;
+    } catch {
+      /* */
+    }
+  }
+
+  if (!obj) return empty;
+
+  return {
+    baseUrl: stringField(obj, "base_url", "baseUrl"),
+    consoleSite: stringField(obj, "console_site", "consoleSite"),
+    consoleRegion: stringField(obj, "console_region", "consoleRegion"),
+    consoleSwitchAgent: stringField(obj, "console_switch_agent", "consoleSwitchAgent"),
+  };
+}
+
 interface CallbackCredentials {
   accessToken: string | null;
   apiKey: string | null;
@@ -264,7 +324,17 @@ async function extractCredentialsFromRequest(
 
   const accessToken = accessTokenFromQuery?.trim() || parseAccessTokenFromRawBody(raw, contentType);
   const apiKey = apiKeyFromQuery?.trim() || parseApiKeyFromRawBody(raw, contentType);
-  return { accessToken, apiKey, ...extras };
+
+  const bodyExtras = parseExtrasFromRawBody(raw, contentType);
+
+  return {
+    accessToken,
+    apiKey,
+    baseUrl: extras.baseUrl || bodyExtras.baseUrl,
+    consoleSite: extras.consoleSite || bodyExtras.consoleSite,
+    consoleRegion: extras.consoleRegion || bodyExtras.consoleRegion,
+    consoleSwitchAgent: extras.consoleSwitchAgent || bodyExtras.consoleSwitchAgent,
+  };
 }
 
 function listenServerOnFreeLocalPort(server: http.Server): Promise<number> {
@@ -298,7 +368,10 @@ function openInBrowser(url: string): Promise<void> {
 
 export async function runConsoleLogin(
   consoleOrigin: string,
-  opts?: { needApiKey?: boolean; onApiKey?: (key: string) => Promise<void> },
+  opts?: {
+    needApiKey?: boolean;
+    onApiKey?: ({ apiKey, baseUrl }: { apiKey: string; baseUrl?: string }) => Promise<void>;
+  },
 ): Promise<void> {
   const state = randomBytes(16).toString("hex");
   let callbackError: unknown;
@@ -323,6 +396,8 @@ export async function runConsoleLogin(
 
       const { accessToken, apiKey, baseUrl, consoleSite, consoleRegion, consoleSwitchAgent } =
         await extractCredentialsFromRequest(req);
+
+      console.log({ accessToken, apiKey, baseUrl, consoleSite, consoleRegion, consoleSwitchAgent });
       const hasConfig =
         accessToken || baseUrl || consoleSite || consoleRegion || consoleSwitchAgent;
 
@@ -339,7 +414,7 @@ export async function runConsoleLogin(
             process.stderr.write(`Config saved to ${getConfigPath()}\n`);
           }
           if (apiKey && opts?.onApiKey) {
-            await opts.onApiKey(apiKey);
+            await opts.onApiKey({ apiKey, baseUrl: baseUrl ?? undefined });
           }
         } catch (err: unknown) {
           callbackError = err;

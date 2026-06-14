@@ -41,6 +41,8 @@ function canRetry(err: unknown): boolean {
 
 async function validateKeyAndPersist(config: Config, key: string): Promise<void> {
   process.stderr.write("Testing key... ");
+  process.stderr.write("\r\n" + JSON.stringify(config));
+
   const testConfig = { ...config, apiKey: key };
   const requestOpts = {
     url: chatEndpoint(testConfig.baseUrl),
@@ -102,7 +104,9 @@ export default defineCommand({
       const hasApiKey = !!(config.apiKey || config.fileApiKey);
       await runConsoleLogin(resolveConsoleOrigin(), {
         needApiKey: !hasApiKey,
-        onApiKey: (key) => validateKeyAndPersist(config, key),
+        onApiKey: ({ apiKey, baseUrl }) => {
+          return validateKeyAndPersist({ ...config, ...(baseUrl ? { baseUrl } : {}) }, apiKey);
+        },
       });
       return;
     }
