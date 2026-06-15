@@ -16,7 +16,8 @@ import {
 const CONSOLE_LOGIN_TIMEOUT_MS = 15 * 60 * 1000;
 const MAX_AUTH_CALLBACK_BODY = 65536;
 
-const DEFAULT_CONSOLE_ORIGIN = "https://bailian.console.aliyun.com";
+// 总是默认打开 中国站的登录页
+const DEFAULT_CONSOLE_ORIGIN = "https://pre-bailian.console.aliyun.com";
 
 export function resolveConsoleOrigin(): string {
   return process.env.BAILIAN_CONSOLE_ORIGIN || DEFAULT_CONSOLE_ORIGIN;
