@@ -64,16 +64,16 @@ export default defineCommand({
     },
     {
       flag: "--access-key-id <key>",
-      description: "Deprecated: use global --api-key or env DASHSCOPE_API_KEY instead",
+      description: "Deprecated: use global --api-key instead",
     },
     {
       flag: "--access-key-secret <key>",
-      description: "Deprecated: use global --api-key or env DASHSCOPE_API_KEY instead",
+      description: "Deprecated: use global --api-key instead",
     },
   ],
   notes: [
-    "Authentication: use global flag `--api-key <key>` or env var `DASHSCOPE_API_KEY` (recommended). AK/SK auth is deprecated and will be removed in a future version.",
-    "`--workspace-id` is NOT required when using API-KEY auth.",
+    "Authentication: pass `--api-key <key>`. AK/SK auth is deprecated and will be removed in a future version.",
+    "`--workspace-id` is NOT required when using --api-key.",
   ],
   examples: [
     'bl knowledge retrieve --index-id idx_xxx --query "如何使用阿里云百炼"',
