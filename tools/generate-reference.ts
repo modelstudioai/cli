@@ -55,6 +55,11 @@ function formatExamples(examples: string[] | undefined): string {
   return examples.map((ex) => ["```bash", ex, "```"].join("\n")).join("\n\n") + "\n";
 }
 
+function formatNotes(notes: string[] | undefined): string {
+  if (!notes?.length) return "";
+  return notes.map((n) => `- ${n}`).join("\n") + "\n";
+}
+
 function commandSection(path: string, cmd: Command): string {
   const lines: string[] = [];
   lines.push(`### \`bl ${path}\``, "");
@@ -68,6 +73,11 @@ function commandSection(path: string, cmd: Command): string {
 
   lines.push("#### Options", "");
   lines.push(formatOptionsTable(cmd.options));
+
+  if (cmd.notes?.length) {
+    lines.push("#### Notes", "");
+    lines.push(formatNotes(cmd.notes));
+  }
 
   lines.push("#### Examples", "");
   lines.push(formatExamples(cmd.examples));
