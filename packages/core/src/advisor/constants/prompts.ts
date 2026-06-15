@@ -1,6 +1,6 @@
-export const INTENT_MODEL = "qwen-turbo";
+export const INTENT_MODEL = "qwen-flash";
 export const RANKING_MODEL = "qwen3.6-flash";
-export const RANKING_MODEL_FAST = "qwen-turbo";
+export const RANKING_MODEL_FAST = "qwen-flash";
 
 export const INTENT_SYSTEM_PROMPT = `你是一个意图分析器。根据用户的需求描述，先理解用户场景，再提取结构化信息。
 
