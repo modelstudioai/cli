@@ -42,8 +42,8 @@ export function loadConfig(flags: GlobalFlags): Config {
 
   const baseUrl =
     flags.baseUrl ||
-    process.env.DASHSCOPE_BASE_URL ||
     file.base_url ||
+    process.env.DASHSCOPE_BASE_URL ||
     REGIONS[region] ||
     REGIONS.cn;
 
