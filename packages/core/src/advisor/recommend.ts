@@ -220,8 +220,8 @@ export async function rankModels(
 
   const userMessage =
     intent.complexity === Complexities.Pipeline
-      ? `Intent Analysis:\n${intentContext}\n\nCandidate Models:\n${candidatesContext}\n\nUser Request: ${userInput}\n\nRecommend up to ${top} models for each pipeline step.`
-      : `Intent Analysis:\n${intentContext}\n\nCandidate Models:\n${candidatesContext}\n\nUser Request: ${userInput}\n\nRecommend up to ${top} models.`;
+      ? `Intent Analysis:\n${intentContext}\n\nCandidate Models:\n${candidatesContext}\n\nUser Request: ${userInput}\n\nRecommend up to ${top} models for each pipeline step. Respond in English only.`
+      : `Intent Analysis:\n${intentContext}\n\nCandidate Models:\n${candidatesContext}\n\nUser Request: ${userInput}\n\nRecommend up to ${top} models. Respond in English only.`;
 
   const body: Record<string, unknown> = {
     model: useThinkingModel ? RANKING_MODEL : RANKING_MODEL_FAST,

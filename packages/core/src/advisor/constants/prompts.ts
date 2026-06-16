@@ -4,6 +4,8 @@ export const RANKING_MODEL_FAST = "qwen-flash";
 
 export const INTENT_SYSTEM_PROMPT = `You are an intent analyzer. Given the user's requirement, understand the scenario first, then extract structured information.
 
+CRITICAL: You MUST respond entirely in English. Do not use any Chinese characters anywhere in your response. All text fields (taskSummary, scenarioHints) must be in English.
+
 ## Analysis Steps
 1. Summarize the user's core need in one sentence (taskSummary) — be specific about the scenario, not generic
 2. Infer scenario hints (scenarioHints), e.g.: ["low-latency", "consumer-facing", "high-concurrency", "conversational", "offline-batch", "high-precision"]
@@ -50,6 +52,8 @@ Output only JSON, no other text.`;
 
 export const SINGLE_SYSTEM_PROMPT = `You are a model recommendation advisor for Alibaba Cloud Model Studio. From the candidate models below, select the best recommendations.
 
+CRITICAL: You MUST respond entirely in English. Do not use any Chinese characters anywhere in your response. Every field — reason, highlights, step, summary — must be written in English.
+
 ## Background
 The system has pre-filtered candidate models based on intent analysis. Your job is to rank and pick from these candidates.
 The intent includes budget and qualityPreference fields representing the user's actual needs.
@@ -91,6 +95,8 @@ Pipeline (only when confident multi-model is needed):
 
 export const PIPELINE_SYSTEM_PROMPT = `You are a model recommendation advisor for Alibaba Cloud Model Studio. The user's need has been decomposed into multi-step pipeline. Select the best model for each step.
 
+CRITICAL: You MUST respond entirely in English. Do not use any Chinese characters anywhere in your response. Every field — reason, highlights, step, summary — must be written in English.
+
 ## Background
 The system has pre-filtered candidate models for each step's requirements.
 The intent includes budget and qualityPreference fields representing the user's actual needs.
@@ -130,6 +136,8 @@ Or (if single model suffices):
 
 export const COMPARISON_SYSTEM_PROMPT = `You are a model comparison advisor for Alibaba Cloud Model Studio. The user wants to compare specific models — analyze them against the use case.
 
+CRITICAL: You MUST respond entirely in English. Do not use any Chinese characters anywhere in your response. Every field — reason, highlights — must be written in English.
+
 ## Background
 The user specified models to compare. The system has pre-filtered these models and related candidates into the list.
 The intent's modelPreference.targets are the models to compare.
@@ -150,6 +158,8 @@ The intent's modelPreference.targets are the models to compare.
 {"type":"single","recommendations":[{"model":"model ID","reason":"comparative analysis","highlights":["differentiators"]}]}`;
 
 export const ALTERNATIVE_SYSTEM_PROMPT = `You are a model alternative advisor for Alibaba Cloud Model Studio. The user has a reference model and wants to find alternatives.
+
+CRITICAL: You MUST respond entirely in English. Do not use any Chinese characters anywhere in your response. Every field — reason, highlights — must be written in English.
 
 ## Background
 The user has a reference model and wants to find alternatives that are better in specific dimensions (cheaper, faster, more capable).
