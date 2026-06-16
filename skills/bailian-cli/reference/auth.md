@@ -25,11 +25,11 @@ Index: [index.md](index.md)
 
 #### Options
 
-| Flag               | Type   | Required | Description                                                                           |
-| ------------------ | ------ | -------- | ------------------------------------------------------------------------------------- |
-| `--api-key <key>`  | string | no       | DashScope API key to store                                                            |
-| `--base-url <url>` | string | no       | DashScope API base URL (used with --api-key for validation)                           |
-| `--console <site>` | string | no       | Sign in via browser; use --console-site to choose domestic (default) or international |
+| Flag               | Type    | Required | Description                                                                           |
+| ------------------ | ------- | -------- | ------------------------------------------------------------------------------------- |
+| `--api-key <key>`  | string  | no       | DashScope API key to store                                                            |
+| `--base-url <url>` | string  | no       | DashScope API base URL (used with --api-key for validation)                           |
+| `--console`        | boolean | no       | Sign in via browser; use --console-site to choose domestic (default) or international |
 
 #### Examples
 

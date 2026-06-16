@@ -28,7 +28,7 @@ export default defineCommand({
       description: "DashScope API base URL (used with --api-key for validation)",
     },
     {
-      flag: "--console <site>",
+      flag: "--console",
       description:
         "Sign in via browser; use --console-site to choose domestic (default) or international",
     },
@@ -43,7 +43,7 @@ export default defineCommand({
         return;
       }
       const hasApiKey = !!(config.apiKey || config.fileApiKey);
-      await runConsoleLogin(resolveConsoleOrigin(config.consoleSite), config, {
+      await runConsoleLogin(resolveConsoleOrigin(config.consoleSite || "domestic"), config, {
         needApiKey: !hasApiKey,
       });
       return;
