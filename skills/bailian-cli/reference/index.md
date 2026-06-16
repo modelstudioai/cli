@@ -90,7 +90,6 @@ Available on every command (in addition to command-specific options):
 | Flag                           | Type    | Required | Description                                              |
 | ------------------------------ | ------- | -------- | -------------------------------------------------------- |
 | `--api-key <key>`              | string  | no       | API key                                                  |
-| `--region <region>`            | string  | no       | API region: cn (default), us, intl                       |
 | `--base-url <url>`             | string  | no       | API base URL                                             |
 | `--output <format>`            | string  | no       | Output format: text, json                                |
 | `--timeout <seconds>`          | number  | no       | Request timeout                                          |

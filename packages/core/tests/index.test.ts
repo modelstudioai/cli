@@ -10,7 +10,6 @@ import {
 
 function testConfig(overrides: Partial<Config> = {}): Config {
   return {
-    region: "cn",
     baseUrl: "https://dashscope.aliyuncs.com",
     output: "json",
     timeout: 30,
@@ -197,6 +196,11 @@ test("parseBooleanValue accepts only true and false strings (case-insensitive)",
   expect(() => parseBooleanValue("1")).toThrow(BailianError);
   expect(() => parseBooleanValue("yes")).toThrow(BailianError);
   expect(() => parseBooleanValue("maybe")).toThrow(BailianError);
+});
+
+test("parseConfigFile ignores obsolete region field", () => {
+  const f = parseConfigFile({ region: "intl" });
+  expect("region" in f).toBe(false);
 });
 
 test("parseConfigFile accepts only well-formed http(s) base_url", () => {

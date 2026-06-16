@@ -20,7 +20,7 @@ function shouldOfferIssueReport(exitCode, apiCode, message, hint):
 
   # Step 2: NETWORK / TIMEOUT — exclude if hint is actionable
   if exitCode in [5 (TIMEOUT), 6 (NETWORK)] AND hint is actionable:
-    return EXCLUDE  # user can self-service (DNS, proxy, --timeout, region)
+    return EXCLUDE  # user can self-service (DNS, proxy, --timeout, base_url)
 
   # Step 3: GENERAL (exit code 1) — shared by CLI bugs AND service passthrough
   #          MUST inspect api_code / message to disambiguate
@@ -80,7 +80,7 @@ These are **user**, **environment**, or **service business** errors. Give fix hi
 | **Free quota query**       | `bl usage free` business result        | Quota used up — not a CLI defect                                                |
 | **Obvious local env**      | Hint is sufficient                     | `ENOENT` / `EACCES`, wrong file path, disk full                                 |
 | **Network (self-service)** | Exit code **6** (NETWORK) + clear hint | DNS, proxy, TLS — user fixes `DASHSCOPE_BASE_URL`, proxy, or network            |
-| **Timeout (self-service)** | Exit code **5** (TIMEOUT) + hint works | Increase `--timeout`, check region with `bl auth status`                        |
+| **Timeout (self-service)** | Exit code **5** (TIMEOUT) + hint works | Increase `--timeout`, check `base_url` with `bl auth status`                    |
 
 **Rule:** If the authoritative source of the error is the **service response** or **user input**, treat it as non-reportable (same boundary as the CLI repo’s error-handling docs).
 
@@ -172,7 +172,7 @@ Before any paste or `gh issue create`:
 - Replace `Authorization: Bearer ...` headers in verbose output → `Authorization: Bearer [REDACTED]`
 - Redact `--prompt` / `--message` / `--biz-params` contents if they contain user business data → summarize as `[user prompt about <topic>]`
 - Redact `account`, `uid`, `aliuid` from `bl auth status` output → `[REDACTED]`
-- Redact sensitive fields from `bl config show` (keep non-secret keys like `region`, model defaults)
+- Redact sensitive fields from `bl config show` (keep non-secret keys like `base_url`, model defaults)
 - **Keep** `Request ID` / `request_id` — helps the team trace logs
 - Local paths may stay or be generalized (`~/path/to/file.png`)
 

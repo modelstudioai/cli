@@ -66,7 +66,7 @@ describe("e2e: mcp", () => {
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
       api?: string;
-      region?: string;
+      consoleRegion?: string;
       data?: {
         reqDTO?: {
           type?: string;

@@ -6,6 +6,12 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [未发布]
+
+### 移除
+
+- 全局 `--region`、环境变量 `DASHSCOPE_REGION` 以及 `bl config set --key region`。DashScope API 地址仅通过 `--base-url`、`DASHSCOPE_BASE_URL` 或 `config.json` 中的 `base_url` 指定（默认中国大陆）。`config.json` 中的 `region` 字段不再读取；若曾依赖 `us` / `intl`，请改为设置对应的 `base_url`。
+
 ## [1.3.2] - 2026-06-12
 
 ### 修复

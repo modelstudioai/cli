@@ -172,7 +172,7 @@ export BAILIAN_WORKSPACE_ID=ws-...
 bl config show
 
 # Set defaults
-bl config set --key region --value us
+bl config set --key base_url --value https://dashscope-us.aliyuncs.com
 bl config set --key default_text_model --value qwen-turbo
 bl config set --key timeout --value 600
 

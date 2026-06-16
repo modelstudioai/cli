@@ -9,6 +9,10 @@ import { API_KEY_PAGE } from "./urls.ts";
 
 const LABEL_WIDTH = 13;
 
+/** Short reminder; full resolution order matches `loadConfig` in bailian-cli-core. */
+const BASE_URL_HINT =
+  "If the DashScope host is wrong, check baseUrl (--base-url, bl config show, or DASHSCOPE_BASE_URL).";
+
 function pad(label: string): string {
   return label.padEnd(LABEL_WIDTH);
 }
@@ -76,7 +80,7 @@ function pickNetworkHint(code: string | undefined): string {
   switch (code) {
     case "ENOTFOUND":
     case "EAI_AGAIN":
-      return "DNS resolution failed. Check DASHSCOPE_BASE_URL or your DNS / network.";
+      return `DNS resolution failed. Check DNS / network. ${BASE_URL_HINT}`;
     case "ECONNREFUSED":
       return "Connection refused. Check the target host/port and proxy settings.";
     case "ECONNRESET":
@@ -86,13 +90,13 @@ function pickNetworkHint(code: string | undefined): string {
         "export HTTPS_PROXY=http://127.0.0.1:<proxy-port>"
       );
     case "ETIMEDOUT":
-      return "Connection timed out. Check your network or try a different region.";
+      return `Connection timed out. Check your network. ${BASE_URL_HINT}`;
     case "CERT_HAS_EXPIRED":
     case "UNABLE_TO_VERIFY_LEAF_SIGNATURE":
     case "DEPTH_ZERO_SELF_SIGNED_CERT":
       return "TLS certificate error. Check system clock and CA bundle.";
     default:
-      return "Check network connection, proxy settings (HTTP_PROXY / HTTPS_PROXY), and DASHSCOPE_BASE_URL.";
+      return `Check network and proxy (HTTP_PROXY / HTTPS_PROXY). ${BASE_URL_HINT}`;
   }
 }
 
@@ -166,9 +170,8 @@ export function handleError(err: unknown): never {
         "Request timed out.",
         ExitCode.TIMEOUT,
         "Try increasing --timeout (e.g. --timeout 60).\n" +
-          "If this happens on every request with a valid API key, you may be hitting the wrong region.\n" +
-          "Run: bl auth status   — to check your credentials and region.\n" +
-          "Run: bl config set --key region --value cn   — to override the region.",
+          `${BASE_URL_HINT}\n` +
+          "Run: bl auth status — to check credentials.",
         { cause: err },
       );
       return handleError(timeout);

@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [Unreleased]
+
+### Removed
+
+- Global `--region`, environment variable `DASHSCOPE_REGION`, and `bl config set --key region`. DashScope API endpoint is selected only via `--base-url`, `DASHSCOPE_BASE_URL`, or `base_url` in `config.json` (defaults to the China mainland URL). Existing `region` entries in `config.json` are ignored; set `base_url` explicitly if you relied on `us` / `intl`.
+
 ## [1.3.2] - 2026-06-12
 
 ### Fixed

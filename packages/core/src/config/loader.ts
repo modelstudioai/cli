@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync, renameSync, existsSync } from "fs";
-import { parseConfigFile, REGIONS, type Config, type ConfigFile, type Region } from "./schema.ts";
+import { parseConfigFile, REGIONS, type Config, type ConfigFile } from "./schema.ts";
 import { ensureConfigDir, getConfigPath } from "./paths.ts";
 import { detectOutputFormat, type OutputFormat } from "../output/formatter.ts";
 import { BailianError } from "../errors/base.ts";
@@ -36,16 +36,7 @@ export function loadConfig(flags: GlobalFlags): Config {
   const accessTokenEnv = process.env.DASHSCOPE_ACCESS_TOKEN?.trim() || undefined;
   const fileAccessToken = file.access_token?.trim() || undefined;
 
-  const explicitRegion = (flags.region as string) || process.env.DASHSCOPE_REGION || undefined;
-  const cachedRegion = file.region;
-  const region = (explicitRegion || cachedRegion || "cn") as Region;
-
-  const baseUrl =
-    flags.baseUrl ||
-    file.base_url ||
-    process.env.DASHSCOPE_BASE_URL ||
-    REGIONS[region] ||
-    REGIONS.cn;
+  const baseUrl = flags.baseUrl || file.base_url || process.env.DASHSCOPE_BASE_URL || REGIONS.cn;
 
   const output: OutputFormat = detectOutputFormat(
     flags.output || process.env.DASHSCOPE_OUTPUT || file.output,
@@ -68,9 +59,7 @@ export function loadConfig(flags: GlobalFlags): Config {
     accessTokenEnv,
     fileAccessToken,
     fileApiKey,
-    fileRegion: file.region,
     configPath: getConfigPath(),
-    region,
     baseUrl,
     output,
     outputDir: file.output_dir || undefined,

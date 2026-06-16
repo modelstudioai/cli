@@ -12,7 +12,6 @@ import {
 import { emitResult } from "../../output/output.ts";
 
 const VALID_KEYS = [
-  "region",
   "base_url",
   "output",
   "output_dir",
@@ -58,7 +57,7 @@ export default defineCommand({
     {
       flag: "--key <key>",
       description:
-        "Config key (region, base_url, output, output_dir, timeout, api_key, access_token, default_*_model, access_key_id, access_key_secret, workspace_id)",
+        "Config key (base_url, output, output_dir, timeout, api_key, access_token, default_*_model, access_key_id, access_key_secret, workspace_id)",
     },
     { flag: "--value <value>", description: "Value to set" },
   ],
@@ -90,13 +89,6 @@ export default defineCommand({
     }
 
     // Validate specific values
-    if (resolvedKey === "region" && !["cn", "us", "intl"].includes(value)) {
-      throw new BailianError(
-        `Invalid region "${value}". Valid values: cn, us, intl`,
-        ExitCode.USAGE,
-      );
-    }
-
     if (resolvedKey === "output" && !["text", "json"].includes(value)) {
       throw new BailianError(
         `Invalid output format "${value}". Valid values: text, json`,

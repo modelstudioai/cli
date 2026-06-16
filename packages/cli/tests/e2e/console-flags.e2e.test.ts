@@ -9,17 +9,18 @@ type ConsoleDryRunMeta = {
 
 /**
  * E2E for global console flags (`--console-region`, `--console-site`,
- * `--console-switch-agent`) vs DashScope `--region`.
+ * `--console-switch-agent`) and DashScope `--base-url`.
  */
 
 describe("e2e: console global flags", () => {
-  test("根帮助展示 --console-region / --console-site / --console-switch-agent", async () => {
+  test("根帮助展示 --base-url 与 console 全局标志", async () => {
     const { stderr, exitCode } = await runCli(["--help"]);
     expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--base-url/);
     expect(stderr).toMatch(/--console-region/);
     expect(stderr).toMatch(/--console-site/);
     expect(stderr).toMatch(/--console-switch-agent/);
-    expect(stderr).toMatch(/--region.*cn.*us.*intl/i);
+    expect(stderr).not.toMatch(/^\s*--region\s/m);
   });
 
   test("quota check --help 不重复命令级 region，并提示全局 flags", async () => {
@@ -93,8 +94,8 @@ describe("e2e: console global flags", () => {
     expect(data.consoleSwitchAgent).toBe(12345);
   });
 
-  test("console call --dry-run --region cn-beijing 不改变 consoleRegion", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
+  test("console call 拒绝未知全局 flag --region", async () => {
+    const { stderr, exitCode } = await runCli([
       "console",
       "call",
       "--api",
@@ -103,16 +104,11 @@ describe("e2e: console global flags", () => {
       "{}",
       "--dry-run",
       "--non-interactive",
-      "--output",
-      "json",
       "--region",
-      "cn-beijing",
-      "--console-region",
-      "ap-southeast-1",
+      "cn",
     ]);
-    expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<ConsoleDryRunMeta>(stdout);
-    expect(data.consoleRegion).toBe("ap-southeast-1");
+    expect(exitCode).not.toBe(0);
+    expect(stderr).toMatch(/Unknown flag.*--region/);
   });
 
   test("mcp list --dry-run --console-region 透传", async () => {

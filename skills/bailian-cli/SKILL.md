@@ -117,7 +117,7 @@ bl auth logout --console  # clear console token only
 
 Get an API key: https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key
 
-**Region:** `cn` (default), `us`, `intl` — `--region` or `DASHSCOPE_REGION` or `bl config set --key region --value us`.
+**DashScope endpoint:** default `https://dashscope.aliyuncs.com` (China). Override with `--base-url`, `bl config set --key base_url --value https://dashscope-us.aliyuncs.com` (US), or `DASHSCOPE_BASE_URL` / `https://dashscope-intl.aliyuncs.com` (international).
 
 ---
 
@@ -127,13 +127,13 @@ See [`reference/index.md` → Global flags](reference/index.md#global-flags) for
 
 Commonly used:
 
-| Flag                                  | Purpose                                                   |
-| ------------------------------------- | --------------------------------------------------------- |
-| `--output text\|json`                 | Structured output (default: text in TTY, json when piped) |
-| `--api-key`, `--region`, `--base-url` | Override auth / endpoint                                  |
-| `--quiet`, `--verbose`, `--dry-run`   | Output control                                            |
-| `--non-interactive`                   | CI / agent mode (no prompts)                              |
-| `--help`                              | Per-command help                                          |
+| Flag                                | Purpose                                                   |
+| ----------------------------------- | --------------------------------------------------------- |
+| `--output text\|json`               | Structured output (default: text in TTY, json when piped) |
+| `--api-key`, `--base-url`           | Override auth / endpoint                                  |
+| `--quiet`, `--verbose`, `--dry-run` | Output control                                            |
+| `--non-interactive`                 | CI / agent mode (no prompts)                              |
+| `--help`                            | Per-command help                                          |
 
 ---
 
@@ -176,7 +176,7 @@ ffmpeg -f concat -safe 0 -i list.txt -c copy output.mp4
 ## Configuration
 
 - **Config file:** `~/.bailian/config.json`
-- **Env:** `DASHSCOPE_API_KEY`, `DASHSCOPE_REGION`, `DASHSCOPE_BASE_URL`, `DASHSCOPE_OUTPUT`
+- **Env:** `DASHSCOPE_API_KEY`, `DASHSCOPE_BASE_URL`, `DASHSCOPE_OUTPUT`
 
 ```bash
 bl config show

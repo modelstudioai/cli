@@ -18,7 +18,6 @@ export interface ConfigFile {
   api_key?: string;
   /** OAuth-style token from `bl auth login --console` callback; sent as `Authorization: Bearer …` */
   access_token?: string;
-  region?: Region;
   base_url?: string;
   output?: "text" | "json";
   output_dir?: string;
@@ -37,7 +36,6 @@ export interface ConfigFile {
   telemetry?: boolean;
 }
 
-const VALID_REGIONS = new Set<string>(["cn", "us", "intl"]);
 const VALID_OUTPUTS = new Set<string>(["text", "json"]);
 const VALID_CONSOLE_SITES = new Set<string>(["domestic", "international"]);
 
@@ -66,8 +64,6 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     out.access_token = obj.access_token;
   else if (typeof obj.accessToken === "string" && obj.accessToken.length > 0)
     out.access_token = obj.accessToken;
-  if (typeof obj.region === "string" && VALID_REGIONS.has(obj.region))
-    out.region = obj.region as Region;
   if (typeof obj.base_url === "string" && isHttpUrl(obj.base_url)) out.base_url = obj.base_url;
   if (typeof obj.output === "string" && VALID_OUTPUTS.has(obj.output))
     out.output = obj.output as ConfigFile["output"];
@@ -110,9 +106,7 @@ export interface Config {
   /** `access_token` in config file (console login). */
   fileAccessToken?: string;
   fileApiKey?: string;
-  fileRegion?: Region;
   configPath?: string;
-  region: Region;
   baseUrl: string;
   output: "text" | "json";
   outputDir?: string;
