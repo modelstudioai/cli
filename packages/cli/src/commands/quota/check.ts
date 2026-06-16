@@ -254,6 +254,16 @@ export default defineCommand({
       flag: "--period <minutes>",
       description: "Query usage for the last N minutes (default: 2)",
     },
+    { flag: "--console-region <region>", description: "Console region (global flag)" },
+    {
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international (global flag)",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID (global flag)",
+      type: "number",
+    },
   ],
   examples: [
     "bl quota check",

@@ -93,6 +93,16 @@ export default defineCommand({
       flag: "--list <n>",
       description: "Limit number of results",
     },
+    { flag: "--console-region <region>", description: "Console region (global flag)" },
+    {
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international (global flag)",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID (global flag)",
+      type: "number",
+    },
   ],
   examples: ["bl workspace list", "bl workspace list --list 5", "bl workspace list --output json"],
   async run(config: Config, flags: GlobalFlags) {

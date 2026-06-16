@@ -323,6 +323,16 @@ export default defineCommand({
       flag: "--workspace-id <id>",
       description: "Workspace ID (env: BAILIAN_WORKSPACE_ID)",
     },
+    { flag: "--console-region <region>", description: "Console region (global flag)" },
+    {
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international (global flag)",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID (global flag)",
+      type: "number",
+    },
   ],
   examples: [
     "bl usage stats",

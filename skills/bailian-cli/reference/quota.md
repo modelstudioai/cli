@@ -26,10 +26,13 @@ Index: [index.md](index.md)
 
 #### Options
 
-| Flag                 | Type   | Required | Description                                     |
-| -------------------- | ------ | -------- | ----------------------------------------------- |
-| `--model <model>`    | string | no       | Model name(s), comma-separated                  |
-| `--period <minutes>` | string | no       | Query usage for the last N minutes (default: 2) |
+| Flag                           | Type   | Required | Description                                         |
+| ------------------------------ | ------ | -------- | --------------------------------------------------- |
+| `--model <model>`              | string | no       | Model name(s), comma-separated                      |
+| `--period <minutes>`           | string | no       | Query usage for the last N minutes (default: 2)     |
+| `--console-region <region>`    | string | no       | Console region (global flag)                        |
+| `--console-site <site>`        | string | no       | Console site: domestic, international (global flag) |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID (global flag)                      |
 
 #### Examples
 
@@ -63,11 +66,14 @@ bl quota check --output json
 
 #### Options
 
-| Flag              | Type   | Required | Description              |
-| ----------------- | ------ | -------- | ------------------------ |
-| `--page <n>`      | string | no       | Page number (default: 1) |
-| `--page-size <n>` | string | no       | Page size (default: 10)  |
-| `--model <model>` | string | no       | Filter by model name     |
+| Flag                           | Type   | Required | Description                                         |
+| ------------------------------ | ------ | -------- | --------------------------------------------------- |
+| `--page <n>`                   | string | no       | Page number (default: 1)                            |
+| `--page-size <n>`              | string | no       | Page size (default: 10)                             |
+| `--model <model>`              | string | no       | Filter by model name                                |
+| `--console-region <region>`    | string | no       | Console region (global flag)                        |
+| `--console-site <site>`        | string | no       | Console site: domestic, international (global flag) |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID (global flag)                      |
 
 #### Examples
 
@@ -101,10 +107,13 @@ bl quota history --output json
 
 #### Options
 
-| Flag              | Type    | Required | Description                                 |
-| ----------------- | ------- | -------- | ------------------------------------------- |
-| `--model <model>` | string  | no       | Model name(s), comma-separated              |
-| `--all`           | boolean | no       | Show all models, not just self-service ones |
+| Flag                           | Type    | Required | Description                                         |
+| ------------------------------ | ------- | -------- | --------------------------------------------------- |
+| `--model <model>`              | string  | no       | Model name(s), comma-separated                      |
+| `--all`                        | boolean | no       | Show all models, not just self-service ones         |
+| `--console-region <region>`    | string  | no       | Console region (global flag)                        |
+| `--console-site <site>`        | string  | no       | Console site: domestic, international (global flag) |
+| `--console-switch-agent <uid>` | number  | no       | Switch agent UID (global flag)                      |
 
 #### Examples
 
@@ -138,11 +147,14 @@ bl quota list --output json
 
 #### Options
 
-| Flag              | Type    | Required | Description                 |
-| ----------------- | ------- | -------- | --------------------------- |
-| `--model <model>` | string  | yes      | Model name (required)       |
-| `--tpm <value>`   | string  | yes      | Target TPM value (required) |
-| `--yes`           | boolean | no       | Skip downgrade confirmation |
+| Flag                           | Type    | Required | Description                                         |
+| ------------------------------ | ------- | -------- | --------------------------------------------------- |
+| `--model <model>`              | string  | yes      | Model name (required)                               |
+| `--tpm <value>`                | string  | yes      | Target TPM value (required)                         |
+| `--yes`                        | boolean | no       | Skip downgrade confirmation                         |
+| `--console-region <region>`    | string  | no       | Console region (global flag)                        |
+| `--console-site <site>`        | string  | no       | Console site: domestic, international (global flag) |
+| `--console-switch-agent <uid>` | number  | no       | Switch agent UID (global flag)                      |
 
 #### Examples
 

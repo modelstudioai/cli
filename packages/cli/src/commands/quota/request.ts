@@ -96,6 +96,16 @@ export default defineCommand({
       flag: "--yes",
       description: "Skip downgrade confirmation",
     },
+    { flag: "--console-region <region>", description: "Console region (global flag)" },
+    {
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international (global flag)",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID (global flag)",
+      type: "number",
+    },
   ],
   examples: [
     "bl quota request --model qwen-turbo --tpm 100000",

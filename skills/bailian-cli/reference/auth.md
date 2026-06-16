@@ -84,7 +84,11 @@ bl auth logout --yes
 
 #### Options
 
-_No command-specific options._
+| Flag                           | Type   | Required | Description                                         |
+| ------------------------------ | ------ | -------- | --------------------------------------------------- |
+| `--console-region <region>`    | string | no       | Console region (global flag)                        |
+| `--console-site <site>`        | string | no       | Console site: domestic, international (global flag) |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID (global flag)                      |
 
 #### Examples
 
