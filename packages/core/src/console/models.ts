@@ -9,7 +9,6 @@ export interface ModelListParams {
   name?: string;
   providers?: string[];
   capabilities?: string[];
-  region?: string;
 }
 
 export interface ModelListResult {
