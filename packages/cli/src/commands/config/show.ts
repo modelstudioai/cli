@@ -19,25 +19,21 @@ export default defineCommand({
     const format = detectOutputFormat(config.output);
 
     const result: Record<string, unknown> = {
-      region: config.region,
+      ...file,
       base_url: config.baseUrl,
       output: config.output,
       timeout: config.timeout,
       config_file: getConfigPath(),
     };
 
-    // Mask API key if present
-    if (file.api_key) {
-      result.api_key = maskToken(file.api_key);
+    if (typeof result.api_key === "string") result.api_key = maskToken(result.api_key);
+    if (typeof result.access_token === "string")
+      result.access_token = maskToken(result.access_token);
+    if (typeof result.access_key_id === "string")
+      result.access_key_id = maskToken(result.access_key_id);
+    if (typeof result.access_key_secret === "string") {
+      result.access_key_secret = maskToken(result.access_key_secret);
     }
-    if (file.access_token) {
-      result.access_token = maskToken(file.access_token);
-    }
-
-    // Default models
-    if (file.default_text_model) result.default_text_model = file.default_text_model;
-    if (file.default_video_model) result.default_video_model = file.default_video_model;
-    if (file.default_image_model) result.default_image_model = file.default_image_model;
 
     emitResult(result, format);
   },
