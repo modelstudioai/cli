@@ -78,7 +78,6 @@ function printTable(
   typeMap: Map<string, string>,
   noColor: boolean,
 ): void {
-  const headersCn = ["模型", "类型", "剩余/总量", "使用率", "过期时间", "用完即停"];
   const headersEn = ["Model", "Type", "Remaining/Total", "Usage", "Expires", "Auto-Stop"];
 
   const rows = quotas.map((quota) => {
@@ -102,12 +101,8 @@ function printTable(
     ];
   });
 
-  const widths = headersCn.map((label, col) =>
-    Math.max(
-      displayWidth(label),
-      displayWidth(headersEn[col]),
-      ...rows.map((row) => displayWidth(row[col])),
-    ),
+  const widths = headersEn.map((label, col) =>
+    Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
   const dim = noColor ? (text: string) => text : (text: string) => `\x1b[2m${text}\x1b[0m`;
@@ -115,12 +110,10 @@ function printTable(
   const green = noColor ? (text: string) => text : (text: string) => `\x1b[32m${text}\x1b[0m`;
   const yellow = noColor ? (text: string) => text : (text: string) => `\x1b[33m${text}\x1b[0m`;
 
-  const autoStopCol = headersCn.length - 1;
-  const cnLine = headersCn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const enLine = headersEn.map((label, col) => dim(padEnd(label, widths[col]))).join("  ");
+  const autoStopCol = headersEn.length - 1;
+  const enLine = headersEn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((width) => dim("─".repeat(width))).join("──");
 
-  process.stdout.write(cnLine + "\n");
   process.stdout.write(enLine + "\n");
   process.stdout.write(separator + "\n");
 
@@ -296,11 +289,6 @@ export default defineCommand({
       }),
     ]);
 
-    if (format === "json") {
-      emitResult(quotaResult, format);
-      return;
-    }
-
     const allQuotas = extractQuotas(quotaResult);
     let quotas = modelFlag
       ? allQuotas
@@ -321,13 +309,43 @@ export default defineCommand({
       quotas.sort((a, b) => (a.quotaValidityPeriod ?? 0) - (b.quotaValidityPeriod ?? 0));
     }
 
+    const stopStatuses = extractFreeTierOnlyStatuses(stopResult);
+    const stopMap = new Map(stopStatuses.map((status) => [status.model, status.freeTierOnly]));
+
+    if (format === "json") {
+      const items = quotas.map((quota) => {
+        const hasQuota = quota.quotaInitTotal != null && quota.quotaTotal != null;
+        const used = hasQuota ? quota.quotaInitTotal - quota.quotaTotal : 0;
+        const stopStatus = stopMap.get(quota.model);
+        const autoStop =
+          quota.quotaStatus === "UNKNOWN"
+            ? "unsupported"
+            : stopStatus === true
+              ? true
+              : stopStatus === false
+                ? false
+                : null;
+        return {
+          model: quota.model,
+          type: typeMap.get(quota.model) || null,
+          remaining: hasQuota ? quota.quotaTotal : null,
+          total: hasQuota ? quota.quotaInitTotal : null,
+          usagePercent:
+            hasQuota && quota.quotaInitTotal > 0
+              ? Math.round((used / quota.quotaInitTotal) * 1000) / 10
+              : null,
+          expires: quota.quotaValidityPeriod ? formatDate(quota.quotaValidityPeriod) : null,
+          autoStop,
+        };
+      });
+      emitResult(items, format);
+      return;
+    }
+
     if (quotas.length === 0) {
       process.stdout.write("No free-tier quota found.\n");
       return;
     }
-
-    const stopStatuses = extractFreeTierOnlyStatuses(stopResult);
-    const stopMap = new Map(stopStatuses.map((status) => [status.model, status.freeTierOnly]));
 
     printTable(quotas, stopMap, typeMap, config.noColor);
   },

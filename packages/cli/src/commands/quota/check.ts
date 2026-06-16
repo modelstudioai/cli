@@ -64,9 +64,9 @@ function formatRatio(usage: number, limit: number): string {
 function getStatus(usage: number, limit: number): string {
   if (limit <= 0) return "-";
   const pct = (usage / limit) * 100;
-  if (pct >= 100) return "已限流";
-  if (pct >= 80) return "接近限流";
-  return "正常";
+  if (pct >= 100) return "Throttled";
+  if (pct >= 80) return "Near Limit";
+  return "Normal";
 }
 
 function getNestedRecord(
@@ -193,7 +193,6 @@ function printTable(rows: CheckRow[], noColor: boolean): void {
   const yellow = noColor ? (t: string) => t : (t: string) => `\x1b[33m${t}\x1b[0m`;
   const red = noColor ? (t: string) => t : (t: string) => `\x1b[31m${t}\x1b[0m`;
 
-  const headersCn = ["模型", "RPM 用量/限额", "TPM 用量/限额", "状态"];
   const headersEn = ["Model", "RPM Usage/Limit", "TPM Usage/Limit", "Status"];
 
   const tableRows = rows.map((r) => {
@@ -215,36 +214,30 @@ function printTable(rows: CheckRow[], noColor: boolean): void {
     return;
   }
 
-  const widths = headersCn.map((label, col) =>
-    Math.max(
-      displayWidth(label),
-      displayWidth(headersEn[col]),
-      ...tableRows.map((r) => displayWidth(r.cells[col])),
-    ),
+  const widths = headersEn.map((label, col) =>
+    Math.max(displayWidth(label), ...tableRows.map((r) => displayWidth(r.cells[col]))),
   );
 
-  const cnLine = headersCn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const enLine = headersEn.map((label, col) => dim(padEnd(label, widths[col]))).join("  ");
+  const headerLine = headersEn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((w) => dim("─".repeat(w))).join("──");
 
-  process.stdout.write(cnLine + "\n");
-  process.stdout.write(enLine + "\n");
+  process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
 
   const statusCol = 3;
   for (const r of tableRows) {
     const cells = r.cells.map((cell, col) => {
       if (col === statusCol) {
-        if (cell === "已限流") return red(padEnd(cell, widths[col]));
-        if (cell === "接近限流") return yellow(padEnd(cell, widths[col]));
-        if (cell === "正常") return green(padEnd(cell, widths[col]));
+        if (cell === "Throttled") return red(padEnd(cell, widths[col]));
+        if (cell === "Near Limit") return yellow(padEnd(cell, widths[col]));
+        if (cell === "Normal") return green(padEnd(cell, widths[col]));
       }
       return padEnd(cell, widths[col]);
     });
     process.stdout.write(cells.join("  ") + "\n");
   }
 
-  process.stdout.write(dim(`\n共 ${rows.length} 个模型 (Total: ${rows.length})`) + "\n");
+  process.stdout.write(dim(`\nTotal: ${rows.length} models`) + "\n");
 }
 
 export default defineCommand({

@@ -46,8 +46,7 @@ function printTable(workspaces: WorkspaceInfo[], noColor: boolean): void {
   const dim = noColor ? (text: string) => text : (text: string) => `\x1b[2m${text}\x1b[0m`;
   const green = noColor ? (text: string) => text : (text: string) => `\x1b[32m${text}\x1b[0m`;
 
-  const headersCn = ["空间名称", "Workspace ID", "默认空间"];
-  const headersEn = ["Name", "", "Default"];
+  const headersEn = ["Name", "Workspace ID", "Default"];
 
   const rows = workspaces.map((ws) => [
     ws.agentName,
@@ -55,20 +54,14 @@ function printTable(workspaces: WorkspaceInfo[], noColor: boolean): void {
     ws.defaultAgent ? "Yes" : "-",
   ]);
 
-  const widths = headersCn.map((label, col) =>
-    Math.max(
-      displayWidth(label),
-      displayWidth(headersEn[col]),
-      ...rows.map((row) => displayWidth(row[col])),
-    ),
+  const widths = headersEn.map((label, col) =>
+    Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const cnLine = headersCn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const enLine = headersEn.map((label, col) => dim(padEnd(label, widths[col]))).join("  ");
+  const headerLine = headersEn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((width) => dim("─".repeat(width))).join("──");
 
-  process.stdout.write(cnLine + "\n");
-  process.stdout.write(enLine + "\n");
+  process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
 
   for (const row of rows) {
@@ -79,9 +72,7 @@ function printTable(workspaces: WorkspaceInfo[], noColor: boolean): void {
     process.stdout.write(cells.join("  ") + "\n");
   }
 
-  process.stdout.write(
-    dim(`\n共 ${workspaces.length} 个空间 (Total: ${workspaces.length})`) + "\n",
-  );
+  process.stdout.write(dim(`\nTotal: ${workspaces.length} workspaces`) + "\n");
 }
 
 export default defineCommand({
@@ -117,20 +108,29 @@ export default defineCommand({
       region,
     });
 
-    if (format === "json") {
-      emitResult(result, format);
-      return;
-    }
-
     const resp = extractResponseData(result as Record<string, unknown>);
     const dataArr = resp.data as Record<string, unknown>[] | undefined;
     if (!Array.isArray(dataArr) || dataArr.length === 0) {
-      process.stdout.write("No workspace found.\n");
+      if (format === "json") {
+        emitResult([], format);
+      } else {
+        process.stdout.write("No workspace found.\n");
+      }
       return;
     }
 
     let workspaces = dataArr as unknown as WorkspaceInfo[];
     if (limit > 0) workspaces = workspaces.slice(0, limit);
+
+    if (format === "json") {
+      const items = workspaces.map((ws) => ({
+        workspaceId: ws.workspaceId,
+        name: ws.agentName,
+        default: ws.defaultAgent,
+      }));
+      emitResult(items, format);
+      return;
+    }
 
     printTable(workspaces, config.noColor);
   },

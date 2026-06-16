@@ -108,7 +108,6 @@ function printTable(models: ModelWithQpm[], noColor: boolean): void {
   const bold = noColor ? (t: string) => t : (t: string) => `\x1b[1m${t}\x1b[0m`;
   const dim = noColor ? (t: string) => t : (t: string) => `\x1b[2m${t}\x1b[0m`;
 
-  const headersCn = ["模型", "RPM", "TPM", "可设上限 TPM"];
   const headersEn = ["Model", "Req/min", "Token/min", "Max TPM"];
 
   const rows = models.map((m) => {
@@ -135,27 +134,21 @@ function printTable(models: ModelWithQpm[], noColor: boolean): void {
     return;
   }
 
-  const widths = headersCn.map((label, col) =>
-    Math.max(
-      displayWidth(label),
-      displayWidth(headersEn[col]),
-      ...rows.map((row) => displayWidth(row[col])),
-    ),
+  const widths = headersEn.map((label, col) =>
+    Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const cnLine = headersCn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const enLine = headersEn.map((label, col) => dim(padEnd(label, widths[col]))).join("  ");
+  const headerLine = headersEn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((w) => dim("─".repeat(w))).join("──");
 
-  process.stdout.write(cnLine + "\n");
-  process.stdout.write(enLine + "\n");
+  process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
 
   for (const row of rows) {
     process.stdout.write(row.map((cell, col) => padEnd(cell, widths[col])).join("  ") + "\n");
   }
 
-  process.stdout.write(dim(`\n共 ${models.length} 个模型 (Total: ${models.length})`) + "\n");
+  process.stdout.write(dim(`\nTotal: ${models.length} models`) + "\n");
 }
 
 export default defineCommand({
@@ -221,7 +214,25 @@ export default defineCommand({
     }
 
     if (format === "json") {
-      emitResult(models, format);
+      const items = models.map((m) => {
+        const qpm = m.qpmInfo;
+        const modelDefault = qpm?.["model-default"];
+        const userSpec = qpm?.["user-spec"];
+
+        const defaultRPM = calculateRPM(modelDefault);
+        const defaultTPM = calculateTPM(modelDefault);
+        const currentRPM = calculateRPM(userSpec, modelDefault?.count_limit_period) || defaultRPM;
+        const currentTPM = calculateTPM(userSpec, modelDefault?.usage_limit_period) || defaultTPM;
+        const maxTPM = defaultTPM * 2;
+
+        return {
+          model: m.model,
+          rpm: currentRPM > 0 ? currentRPM : null,
+          tpm: currentTPM > 0 ? currentTPM : null,
+          maxTPM: maxTPM > 0 ? maxTPM : null,
+        };
+      });
+      emitResult(items, format);
       return;
     }
 

@@ -133,12 +133,21 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "json",
     ]);
     expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{
-      code?: string;
-      successResponse?: boolean;
-    }>(stdout);
-    expect(data.code).toBe("200");
-    expect(data.successResponse).toBe(true);
+    const data = parseStdoutJson<
+      Array<{
+        model?: string;
+        type?: string | null;
+        remaining?: number | null;
+        total?: number | null;
+        usagePercent?: number | null;
+        expires?: string | null;
+        autoStop?: boolean | string | null;
+      }>
+    >(stdout);
+    expect(Array.isArray(data)).toBe(true);
+    expect(data.length).toBeGreaterThan(0);
+    expect(data[0].model).toBe("qwen3-max");
+    expect(data[0].type).toBeTypeOf("string");
   });
 
   test("usage free --model 单模型文本输出包含表头", async () => {
@@ -276,7 +285,9 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "json",
     ]);
     expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{ code?: string }>(stdout);
-    expect(data.code).toBe("200");
+    const data = parseStdoutJson<Array<{ model?: string }>>(stdout);
+    expect(Array.isArray(data)).toBe(true);
+    expect(data.length).toBeGreaterThan(0);
+    expect(data[0].model).toBe("qwen3-max");
   });
 });
