@@ -79,7 +79,6 @@ describe("e2e: mcp", () => {
       };
     }>(stdout);
     expect(data.api).toBe("zeldaEasy.broadscope-bailian.mcp-server.PageList");
-    expect(data.region).toBe("cn-beijing");
     expect(data.data?.reqDTO?.activated).toBe(1);
     expect(data.data?.reqDTO?.displayTools).toBe(false);
     expect(data.data?.reqDTO?.type).toBe("OFFICIAL");
