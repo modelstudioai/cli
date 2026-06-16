@@ -78,10 +78,19 @@ export async function callConsoleGateway(
 
   const innerData = json.data as Record<string, unknown> | undefined;
   if (innerData?.success === false && innerData.errorCode) {
+    const errorCode = String(innerData.errorCode);
+    const notLogined = errorCode.includes("NotLogined");
+    const errorMsg = typeof innerData.errorMsg === "string" ? innerData.errorMsg : undefined;
     throw new BailianError(
-      `Console gateway error: ${innerData.errorCode}`,
-      ExitCode.GENERAL,
-      typeof innerData.errorMsg === "string" ? innerData.errorMsg : undefined,
+      notLogined
+        ? "Console session is not logged in or has expired."
+        : `Console gateway error: ${errorCode}`,
+      notLogined ? ExitCode.AUTH : ExitCode.GENERAL,
+      notLogined
+        ? "Run `bl auth login --console` to sign in or refresh your console session."
+        : errorMsg && errorMsg !== errorCode
+          ? errorMsg
+          : undefined,
     );
   }
 
