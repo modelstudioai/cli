@@ -98,9 +98,9 @@ CLI 只为「自己能权威解释的错误」发出语义化信号,服务端的
 如果新命令使用了 `callConsoleGateway`，必须在 `options` 中添加以下三个全局 flag 的说明，以便 `--help` 中展示：
 
 ```ts
-{ flag: "--console-region <region>", description: "Console region (global flag)" },
-{ flag: "--console-site <site>", description: "Console site: domestic, international (global flag)" },
-{ flag: "--console-switch-agent <uid>", description: "Switch agent UID (global flag)", type: "number" },
+{ flag: "--console-region <region>", description: "Console region" },
+{ flag: "--console-site <site>", description: "Console site: domestic, international" },
+{ flag: "--console-switch-agent <uid>", description: "Switch agent UID", type: "number" },
 ```
 
 这些 flag 已在 `GLOBAL_OPTIONS`（`packages/core/src/types/command.ts`）中注册，由 `loadConfig` 写入 `config.consoleRegion` / `config.consoleSite` / `config.consoleSwitchAgent`，`callConsoleGateway` 自动读取——命令无需手动提取或传递。
