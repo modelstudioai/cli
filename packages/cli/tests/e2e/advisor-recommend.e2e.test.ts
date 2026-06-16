@@ -64,17 +64,21 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend（DashScope）",
     ]);
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
-      type?: string;
-      recommendations?: Array<{
-        model?: string;
-        name?: string;
-        reason?: string;
-      }>;
+      intent?: { taskSummary?: string };
+      result?: {
+        type?: string;
+        recommendations?: Array<{
+          model?: string;
+          name?: string;
+          reason?: string;
+        }>;
+      };
+      candidates?: number;
     }>(stdout);
-    expect(data.type).toBe("single");
-    expect(data.recommendations?.length).toBeGreaterThan(0);
-    expect(data.recommendations?.[0]?.model).toBeDefined();
-    expect(data.recommendations?.[0]?.reason).toBeDefined();
+    expect(data.result?.type).toBe("single");
+    expect(data.result?.recommendations?.length).toBeGreaterThan(0);
+    expect(data.result?.recommendations?.[0]?.model).toBeDefined();
+    expect(data.result?.recommendations?.[0]?.reason).toBeDefined();
   }, 120_000);
 
   // ---- 模型偏好：正例 ----
