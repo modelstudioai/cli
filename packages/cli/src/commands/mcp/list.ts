@@ -36,6 +36,16 @@ export default defineCommand({
     },
     { flag: "--page <n>", description: "Page number (default: 1)", type: "number" },
     { flag: "--page-size <n>", description: "Results per page (default: 30)", type: "number" },
+    { flag: "--console-region <region>", description: "Console region (global flag)" },
+    {
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international (global flag)",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID (global flag)",
+      type: "number",
+    },
   ],
   examples: ["bl mcp list", "bl mcp list --name 金融", "bl mcp list --output json"],
   async run(config: Config, flags: GlobalFlags) {

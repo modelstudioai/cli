@@ -142,6 +142,18 @@ export default defineCommand({
   name: "auth status",
   description: "Show current authentication state",
   usage: "bl auth status",
+  options: [
+    { flag: "--console-region <region>", description: "Console region (global flag)" },
+    {
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international (global flag)",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID (global flag)",
+      type: "number",
+    },
+  ],
   examples: ["bl auth status", "bl auth status --output json"],
   async run(config: Config, _flags: GlobalFlags) {
     const format = detectOutputFormat(config.output);
