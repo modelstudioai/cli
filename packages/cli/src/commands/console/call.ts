@@ -1,6 +1,7 @@
 import {
   defineCommand,
   callConsoleGateway,
+  effectiveConsoleGatewayConfig,
   resolveConsoleGatewayCredential,
   CONSOLE_GATEWAY_NO_TOKEN_MESSAGE,
   BailianError,
@@ -58,7 +59,15 @@ export default defineCommand({
     }
 
     if (config.dryRun) {
-      emitResult({ api, data, token: token ? token.slice(0, 8) + "..." : null }, format);
+      emitResult(
+        {
+          api,
+          data,
+          token: token ? token.slice(0, 8) + "..." : null,
+          ...effectiveConsoleGatewayConfig(config),
+        },
+        format,
+      );
       return;
     }
 

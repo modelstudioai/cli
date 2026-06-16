@@ -35,6 +35,20 @@ function resolveGateway(region: string, site: ConsoleSite): ConsoleGatewayInfo {
   return REGION_GATEWAYS[region]?.[site] ?? REGION_GATEWAYS["cn-beijing"]![site];
 }
 
+/** Resolved console gateway settings (same defaults as {@link callConsoleGateway}). */
+export function effectiveConsoleGatewayConfig(config: Config): {
+  consoleRegion: string;
+  consoleSite: ConsoleSite;
+  consoleSwitchAgent?: number;
+} {
+  const consoleRegion = config.consoleRegion ?? "cn-beijing";
+  const consoleSite = config.consoleSite ?? "domestic";
+  const consoleSwitchAgent = config.consoleSwitchAgent;
+  return consoleSwitchAgent != null
+    ? { consoleRegion, consoleSite, consoleSwitchAgent }
+    : { consoleRegion, consoleSite };
+}
+
 export interface ConsoleGatewayRequest {
   /** Console API name, e.g. zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota */
   api: string;
@@ -85,9 +99,11 @@ export async function callConsoleGateway(
   token: string | undefined,
   { api, data }: ConsoleGatewayRequest,
 ): Promise<unknown> {
-  const effectiveRegion = config.consoleRegion ?? "cn-beijing";
-  const effectiveSite = config.consoleSite ?? "domestic";
-  const effectiveSwitchAgent = config.consoleSwitchAgent;
+  const {
+    consoleRegion: effectiveRegion,
+    consoleSite: effectiveSite,
+    consoleSwitchAgent: effectiveSwitchAgent,
+  } = effectiveConsoleGatewayConfig(config);
 
   const resolved = resolveGateway(effectiveRegion, effectiveSite);
   const gatewayBase = `https://${resolved.csGateway}`;

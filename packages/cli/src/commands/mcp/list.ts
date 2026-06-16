@@ -1,6 +1,7 @@
 import {
   defineCommand,
   callConsoleGateway,
+  effectiveConsoleGatewayConfig,
   resolveConsoleGatewayCredential,
   detectOutputFormat,
   BailianError,
@@ -56,7 +57,7 @@ export default defineCommand({
     };
 
     if (config.dryRun) {
-      emitResult({ api: MCP_LIST_API, data }, format);
+      emitResult({ api: MCP_LIST_API, data, ...effectiveConsoleGatewayConfig(config) }, format);
       return;
     }
 

@@ -228,11 +228,28 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
       "json",
     ]);
     expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{ apis?: string[] }>(stdout);
+    const data = parseStdoutJson<{ apis?: string[]; consoleRegion?: string }>(stdout);
     expect(data.apis).toContain(
       "zeldaHttp.dashscopeModel./zelda/api/v1/modelCenter/listFoundationModels",
     );
     expect(data.apis).toContain("zeldaEasy.bailian-telemetry.monitor.getMonitorData");
+    expect(data.consoleRegion).toBe("cn-beijing");
+  });
+
+  test("quota check --dry-run --console-region 透传", async () => {
+    const { stdout, stderr, exitCode } = await runCli([
+      "quota",
+      "check",
+      "--dry-run",
+      "--non-interactive",
+      "--output",
+      "json",
+      "--console-region",
+      "cn-hangzhou",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ consoleRegion?: string }>(stdout);
+    expect(data.consoleRegion).toBe("cn-hangzhou");
   });
 
   test("quota check 文本输出包含双行表头", async () => {

@@ -88,7 +88,7 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp list --dry-run 自定义 --console-region 透传", async () => {
-    const { stderr, exitCode } = await runCli([
+    const { stdout, stderr, exitCode } = await runCli([
       "mcp",
       "list",
       "--dry-run",
@@ -99,6 +99,8 @@ describe("e2e: mcp", () => {
       "cn-hangzhou",
     ]);
     expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ consoleRegion?: string }>(stdout);
+    expect(data.consoleRegion).toBe("cn-hangzhou");
   });
 
   test("mcp tools <server-code> --dry-run 输出 /api/v1/mcps/<code>/mcp 形态 URL", async () => {

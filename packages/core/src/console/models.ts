@@ -22,14 +22,7 @@ export async function fetchModelList(
   token: string,
   params: ModelListParams = {},
 ): Promise<ModelListResult> {
-  const {
-    pageNo = 1,
-    pageSize = 50,
-    name = "",
-    providers = [],
-    capabilities = [],
-    region,
-  } = params;
+  const { pageNo = 1, pageSize = 50, name = "", providers = [], capabilities = [] } = params;
 
   const result = (await callConsoleGateway(config, token, {
     api: MODEL_LIST_API,
@@ -46,7 +39,6 @@ export async function fetchModelList(
         contextWindows: [],
       },
     },
-    region,
   })) as any;
 
   const responseData = result?.data?.DataV2?.data ?? result?.data ?? {};

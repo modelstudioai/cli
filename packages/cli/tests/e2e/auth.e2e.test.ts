@@ -17,6 +17,7 @@ describe("e2e: auth", () => {
     const { stderr, exitCode } = await runCli(["auth", "login", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/login|api-key/i);
+    expect(stderr).toMatch(/--console-site/);
   });
 
   test("auth logout --help 正常退出", async () => {

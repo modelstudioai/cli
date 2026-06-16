@@ -1,6 +1,7 @@
 import {
   defineCommand,
   callConsoleGateway,
+  effectiveConsoleGatewayConfig,
   resolveConsoleGatewayCredential,
   detectOutputFormat,
   type Config,
@@ -277,6 +278,7 @@ export default defineCommand({
       emitResult(
         {
           apis: [MODEL_LIST_API, MONITOR_API],
+          ...effectiveConsoleGatewayConfig(config),
         },
         format,
       );
