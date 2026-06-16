@@ -81,6 +81,7 @@ async function validateKeyAndPersist(config: Config, key: string): Promise<void>
 export default defineCommand({
   name: "auth login",
   description: "Authenticate with API key or console browser login (credentials can coexist)",
+  skipDefaultApiKeySetup: true,
   usage: "bl auth login --api-key <key> | bl auth login --console",
   options: [
     { flag: "--api-key <key>", description: "DashScope API key to store" },

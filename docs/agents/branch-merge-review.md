@@ -50,7 +50,7 @@ git diff --name-only <base>...<head>
 - [ ] **`package.json` 没破坏发布元数据**:`bin` / `exports` / `files` / `inlinedDependencies` 字段任何删除或改名都要单独评估
 - [ ] **公共依赖没被悄悄升级**:catalog / 根 lockfile 改动要列出来
 - [ ] **`package.json` version 没倒退**:目标分支已经更高时(如 main 1.0.3 vs head 1.0.0-beta.1),手动对齐版本号,不要被 head 覆盖
-- [ ] **全局表没冲突**:`registry.ts`、`NO_AUTH_SETUP`(`packages/cli/src/main.ts`)、`ExitCode` 三个全局表新增项不和现有项冲突
+- [ ] **全局表没冲突**:`registry.ts`、`defineCommand` 的 `skipDefaultApiKeySetup`(见 `packages/core/src/types/command.ts`)、`ExitCode` 三处新增项不和现有项冲突
 
 ## 清单 B:用户透出(用户可见的新东西必看)
 
@@ -80,7 +80,7 @@ git diff --name-only <base>...<head>
 解冲突要点(merge 时不要漏):
   - <冲突文件> + <字段/段落> + <怎么取舍>
   ↑ 放"合并那一刻才会出现"的细节,例如 package.json 的 files/scripts/devDependencies 各取并集、
-    NO_AUTH_SETUP 这种全局表两边都加项时不要丢一侧、pnpm-lock.yaml 直接 rm 后 pnpm install 重生等。
+    `skipDefaultApiKeySetup` 这类命令元数据两边都加项时不要丢一侧、pnpm-lock.yaml 直接 rm 后 pnpm install 重生等。
 建议修(可后置):
   - ...
 仅信息(无需动作,告知即可):
@@ -94,11 +94,11 @@ git diff --name-only <base>...<head>
 
 ## 常见漏点(基于历史踩坑)
 
-| 漏点                                                                           | 后果                                                                          |
-| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
-| `pnpm-workspace.yaml` 把 `packages/*` 收窄成显式列表                           | 合并后目标分支的新子包不再被 workspace 识别,`pnpm install` 看似正常但子包失联 |
-| 源分支 version 比目标分支低,直接 merge 覆盖                                    | npm 上版本号回退,latest tag 错乱                                              |
-| `registry.ts` 注册新命令但忘了 [README](README.md) / [README.zh](README.zh.md) | 用户完全感知不到新功能                                                        |
-| 共享 util 重构(抽公共函数)只改了一处调用方                                     | 其它调用方静默走旧分支,行为分裂                                               |
-| `NO_AUTH_SETUP` 加了不该免登录的命令                                           | 安全风险,用户没登录也能调付费 API                                             |
-| `NO_AUTH_SETUP` / `registry.ts` 这类全局表两边都加项,解冲突时被合掉一侧        | 某个命令突然要求登录 / 某个新命令注册丢失,编译能过、回归不易察觉              |
+| 漏点                                                                            | 后果                                                                          |
+| ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `pnpm-workspace.yaml` 把 `packages/*` 收窄成显式列表                            | 合并后目标分支的新子包不再被 workspace 识别,`pnpm install` 看似正常但子包失联 |
+| 源分支 version 比目标分支低,直接 merge 覆盖                                     | npm 上版本号回退,latest tag 错乱                                              |
+| `registry.ts` 注册新命令但忘了 [README](README.md) / [README.zh](README.zh.md)  | 用户完全感知不到新功能                                                        |
+| 共享 util 重构(抽公共函数)只改了一处调用方                                      | 其它调用方静默走旧分支,行为分裂                                               |
+| 不该跳过默认 API key 引导的命令误设 `skipDefaultApiKeySetup: true`              | 安全风险,用户没配置 key 也能调付费 API                                        |
+| `catalog.ts` / `skipDefaultApiKeySetup` 这类元数据两边都加项,解冲突时被合掉一侧 | 某个命令突然要求登录 / 某个新命令注册丢失,编译能过、回归不易察觉              |

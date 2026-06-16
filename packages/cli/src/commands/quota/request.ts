@@ -82,6 +82,7 @@ async function fetchModelQpmInfo(
 export default defineCommand({
   name: "quota request",
   description: "Request a temporary quota increase",
+  skipDefaultApiKeySetup: true,
   usage: "bl quota request --model <model> --tpm <value> [flags]",
   options: [
     {

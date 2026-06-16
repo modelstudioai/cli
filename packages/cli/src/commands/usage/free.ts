@@ -193,6 +193,7 @@ async function fetchAllModels(config: Config, token: string): Promise<ModelInfo[
 export default defineCommand({
   name: "usage free",
   description: "Query free-tier quota for models (all models if --model is omitted)",
+  skipDefaultApiKeySetup: true,
   usage: "bl usage free [--model <model>[,model2,...]] [flags]",
   options: [
     {

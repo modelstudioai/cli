@@ -25,6 +25,7 @@ const BAILIAN_HOST = "bailian.cn-beijing.aliyuncs.com";
 export default defineCommand({
   name: "knowledge retrieve",
   description: "Retrieve from a Bailian knowledge base",
+  skipDefaultApiKeySetup: true,
   usage: "bl knowledge retrieve --index-id <id> --query <text> [flags]",
   options: [
     { flag: "--index-id <id>", description: "Knowledge base index ID (required)", required: true },

@@ -8,6 +8,7 @@ import { loadPipelineFile } from "./load-file.ts";
 export default defineCommand({
   name: "pipeline validate",
   description: "Validate a pipeline definition without executing",
+  skipDefaultApiKeySetup: true,
   usage: "bl pipeline validate <file>",
   options: [],
   examples: [

@@ -32,6 +32,7 @@ function parseArgFlags(raw: string[]): Record<string, unknown> {
 export default defineCommand({
   name: "mcp call",
   description: "Call a tool on an MCP server (tools/call)",
+  skipDefaultApiKeySetup: true,
   usage: "bl mcp call <server-code>.<tool> [--arg k=v ...] [--json '{...}'] [--url <url>]",
   options: [
     {

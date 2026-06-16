@@ -45,32 +45,6 @@ process.stdout.on("error", (e: NodeJS.ErrnoException) => {
   else throw e;
 });
 
-// 自己接管鉴权 或 根本不需要 API key 的命令
-const NO_AUTH_SETUP = [
-  ["auth", "login"],
-  ["auth", "logout"],
-  ["config", "show"],
-  ["config", "set"],
-  ["config", "export-schema"],
-  ["update"],
-  ["knowledge", "retrieve"],
-  ["pipeline", "run"],
-  ["pipeline", "validate"],
-  ["app", "list"],
-  ["console", "call"],
-  ["usage", "free"],
-  ["usage", "freetier"],
-  ["usage", "stats"],
-  ["mcp", "list"],
-  ["mcp", "tools"],
-  ["mcp", "call"],
-  ["workspace", "list"],
-  ["quota", "list"],
-  ["quota", "request"],
-  ["quota", "history"],
-  ["quota", "check"],
-];
-
 async function main() {
   let argv = process.argv.slice(2);
   if (argv[0] === "--") argv = argv.slice(1);
@@ -122,8 +96,8 @@ async function main() {
   config.clientName = "bailian-cli";
   config.clientVersion = CLI_VERSION;
 
-  const needsAuthSetup = !NO_AUTH_SETUP.some((cmd) => cmd.every((c, i) => commandPath[i] === c));
-  if (needsAuthSetup) {
+  // 默认执行 ensureApiKey；自行处理鉴权或仅需 Console/AK-SK 等的命令在 defineCommand 上设 skipDefaultApiKeySetup
+  if (!command.skipDefaultApiKeySetup) {
     await ensureApiKey(config);
     try {
       const credential = await resolveCredential(config);

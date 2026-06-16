@@ -161,6 +161,7 @@ function printTable(models: ModelWithQpm[], noColor: boolean): void {
 export default defineCommand({
   name: "quota list",
   description: "View model RPM/TPM rate limits",
+  skipDefaultApiKeySetup: true,
   usage: "bl quota list [--model <model>] [flags]",
   options: [
     {

@@ -14,6 +14,12 @@ export interface Command {
   usage?: string;
   options?: OptionDef[];
   examples?: string[];
+  /**
+   * When true, the CLI entrypoint skips the default DashScope API key prompt
+   * (`ensureApiKey`) and the optional status bar credential resolution; the
+   * command implements its own auth (Console token, AK/SK, pipeline-only, etc.).
+   */
+  skipDefaultApiKeySetup?: boolean;
   execute: (config: Config, flags: GlobalFlags) => Promise<void>;
 }
 
@@ -23,6 +29,7 @@ export interface CommandSpec {
   usage?: string;
   options?: OptionDef[];
   examples?: string[];
+  skipDefaultApiKeySetup?: boolean;
   run: (config: Config, flags: GlobalFlags) => Promise<void>;
 }
 
@@ -33,6 +40,7 @@ export function defineCommand(spec: CommandSpec): Command {
     usage: spec.usage,
     options: spec.options,
     examples: spec.examples,
+    skipDefaultApiKeySetup: spec.skipDefaultApiKeySetup,
     execute: (config, flags) => spec.run(config, flags),
   };
 }

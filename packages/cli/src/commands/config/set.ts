@@ -53,6 +53,7 @@ const KEY_ALIASES: Record<string, string> = {
 export default defineCommand({
   name: "config set",
   description: "Set a config value",
+  skipDefaultApiKeySetup: true,
   usage: "bl config set --key <key> --value <value>",
   options: [
     {

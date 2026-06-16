@@ -100,6 +100,7 @@ function printTable(records: LimitApplicationItem[], noColor: boolean, total: nu
 export default defineCommand({
   name: "quota history",
   description: "View quota change history",
+  skipDefaultApiKeySetup: true,
   usage: "bl quota history [flags]",
   options: [
     {
