@@ -3,8 +3,6 @@ import {
   requestJson,
   memorySearchEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type MemorySearchRequest,
   type MemorySearchResponse,
 } from "bailian-cli-core";
@@ -30,17 +28,17 @@ export default defineCommand({
     'bl memory search --user-id user1 --query "编程偏好"',
     'bl memory search --user-id user1 --messages \'[{"role":"user","content":"推荐一本书"}]\' --top-k 5',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const userId = flags.userId as string;
+  async run(config, flags) {
+    const userId = flags.userId;
     if (!userId) failIfMissing("user-id", "bl memory search --user-id <id>");
 
     const body: MemorySearchRequest = { user_id: userId };
 
-    if (flags.query) body.query = flags.query as string;
+    if (flags.query) body.query = flags.query;
 
     if (flags.messages) {
       try {
-        body.messages = JSON.parse(flags.messages as string);
+        body.messages = JSON.parse(flags.messages);
       } catch {
         process.stderr.write("Error: --messages must be valid JSON array\n");
         process.exit(1);
@@ -57,8 +55,8 @@ export default defineCommand({
       process.exit(1);
     }
 
-    if (flags.topK !== undefined) body.top_k = flags.topK as number;
-    if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId as string;
+    if (flags.topK !== undefined) body.top_k = flags.topK;
+    if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId;
 
     const format = detectOutputFormat(config.output);
 

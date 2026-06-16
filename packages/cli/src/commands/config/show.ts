@@ -4,8 +4,6 @@ import {
   getConfigPath,
   detectOutputFormat,
   maskToken,
-  type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "../../output/output.ts";
 
@@ -14,7 +12,7 @@ export default defineCommand({
   description: "Display current configuration",
   usage: "bl config show",
   examples: ["bl config show", "bl config show --output json"],
-  async run(config: Config, _flags: GlobalFlags) {
+  async run(config, _flags) {
     const file = loadConfigFile();
     const format = detectOutputFormat(config.output);
 

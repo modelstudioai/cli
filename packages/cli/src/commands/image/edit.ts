@@ -3,8 +3,6 @@ import {
   requestJson,
   imageSyncEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   resolveCredential,
   resolveFileUrl,
   resolveOutputDir,
@@ -70,11 +68,11 @@ export default defineCommand({
     'bl image edit --image https://example.com/photo.png --prompt "Remove the person" --model qwen-image-2.0-pro',
     'bl image edit --image ./photo.png --prompt "把背景换成海滩" --watermark false',
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     // Normalize --image to string array (supports both single and repeated flags)
     let rawImages: string[] = [];
     if (Array.isArray(flags.image)) {
-      rawImages = flags.image as string[];
+      rawImages = flags.image;
     } else if (typeof flags.image === "string") {
       rawImages = [flags.image];
     }
@@ -82,7 +80,7 @@ export default defineCommand({
       failIfMissing("image", "bl image edit --image <url> --prompt <text>");
     }
 
-    let prompt = flags.prompt as string | undefined;
+    let prompt = flags.prompt;
     if (!prompt) {
       if (isInteractive({ nonInteractive: config.nonInteractive })) {
         const hint = await promptText({
@@ -98,14 +96,14 @@ export default defineCommand({
       }
     }
 
-    const model = (flags.model as string) || config.defaultImageModel || "qwen-image-2.0";
+    const model = flags.model || config.defaultImageModel || "qwen-image-2.0";
 
     // Auto-upload local files (resolve all images in parallel)
     const credential = await resolveCredential(config);
     const resolvedImages = await Promise.all(
       rawImages.map((img) => resolveFileUrl(img, credential.token, model)),
     );
-    const n = (flags.n as number) ?? 1;
+    const n = flags.n ?? 1;
 
     const promptExtend = resolveBooleanFlag(flags.promptExtend, true, "prompt-extend");
 
@@ -128,12 +126,12 @@ export default defineCommand({
         ],
       },
       parameters: {
-        size: resolveImageSize(flags.size as string | undefined, true),
+        size: resolveImageSize(flags.size, true),
         n,
-        seed: flags.seed as number | undefined,
+        seed: flags.seed,
         prompt_extend: promptExtend,
         watermark,
-        negative_prompt: (flags.negativePrompt as string) || undefined,
+        negative_prompt: flags.negativePrompt || undefined,
       },
     };
 
@@ -174,12 +172,11 @@ export default defineCommand({
     }
 
     const outDir = resolveOutputDir(config, {
-      flagDir: flags.outDir as string | undefined,
+      flagDir: flags.outDir,
       subDir: flags.outDir ? undefined : "images",
     });
 
-    const prefix =
-      (flags.outPrefix as string) || generateFilename("edited", flags?.prompt as string);
+    const prefix = flags.outPrefix || generateFilename("edited", flags.prompt as string);
 
     // Parallel download all images
     const items =

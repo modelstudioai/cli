@@ -1,11 +1,9 @@
 import {
   analyzeIntent,
   buildDocLink,
-  type Config,
   defineCommand,
   detectOutputFormat,
   type GetModelsOptions,
-  type GlobalFlags,
   getModels,
   type IntentProfile,
   isInteractive,
@@ -241,9 +239,9 @@ export default defineCommand({
     'bl advisor recommend --message "Long document summarization" --dry-run',
     "bl advisor recommend                                          # Interactive input",
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     const positional = ((flags as Record<string, unknown>)._positional as string[]) ?? [];
-    let userInput = (flags.message as string) || positional.join(" ");
+    let userInput = flags.message || positional.join(" ");
 
     if (!userInput.trim()) {
       if (isInteractive({ nonInteractive: config.nonInteractive })) {

@@ -3,8 +3,6 @@ import {
   callConsoleGateway,
   resolveConsoleGatewayCredential,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "../../output/output.ts";
 import { displayWidth, padEnd } from "../../output/cjk-width.ts";
@@ -105,7 +103,7 @@ export default defineCommand({
     },
   ],
   examples: ["bl workspace list", "bl workspace list --list 5", "bl workspace list --output json"],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     const limit = Number(flags.list) || 0;
     const format = detectOutputFormat(config.output);
 

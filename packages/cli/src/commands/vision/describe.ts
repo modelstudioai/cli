@@ -3,8 +3,6 @@ import {
   requestJson,
   chatEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type ChatRequest,
   type ChatResponse,
   type ChatMessageContent,
@@ -77,12 +75,10 @@ export default defineCommand({
     "bl vision describe --video ./local-video.mp4",
     'bl vision describe --image photo.png --prompt "Extract the text" --model qwen-vl-plus',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    let image = (flags.image ?? (flags._positional as string[] | undefined)?.[0]) as
-      | string
-      | undefined;
-    const videoInputs = (flags.video as string[] | undefined) ?? [];
-    const model = (flags.model as string) || "qwen3-vl-plus";
+  async run(config, flags) {
+    let image = flags.image ?? (flags._positional as string[] | undefined)?.[0];
+    const videoInputs = flags.video ?? [];
+    const model = flags.model || "qwen3-vl-plus";
 
     // Auto-detect: if --image was given a video file, treat it as --video
     if (image && isVideoInput(image)) {
@@ -92,7 +88,7 @@ export default defineCommand({
 
     const hasVideo = videoInputs.length > 0;
     const defaultPrompt = hasVideo ? "Describe the video." : "Describe the image.";
-    const prompt = (flags.prompt as string) || defaultPrompt;
+    const prompt = flags.prompt || defaultPrompt;
 
     if (!image && !hasVideo) {
       if (isInteractive({ nonInteractive: config.nonInteractive })) {

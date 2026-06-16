@@ -5,7 +5,6 @@ import {
   fetchModelList,
   detectOutputFormat,
   type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "../../output/output.ts";
 
@@ -140,8 +139,8 @@ export default defineCommand({
     "bl usage freetier --off --model qwen3-max",
     "bl usage freetier --off --all",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const modelFlag = (flags.model as string) || undefined;
+  async run(config, flags) {
+    const modelFlag = flags.model || undefined;
     const all = Boolean(flags.all);
     const off = Boolean(flags.off);
     const format = detectOutputFormat(config.output);

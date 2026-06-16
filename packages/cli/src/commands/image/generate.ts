@@ -92,10 +92,8 @@ export default defineCommand({
     'bl image generate --prompt "Pro quality" --model qwen-image-2.0-pro',
     'bl image generate --prompt "Product shots" --n 2 --concurrent 3  # 6 images in parallel',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    let prompt = (flags.prompt ?? (flags._positional as string[] | undefined)?.[0]) as
-      | string
-      | undefined;
+  async run(config, flags) {
+    let prompt = flags.prompt ?? (flags._positional as string[] | undefined)?.[0];
 
     if (!prompt) {
       if (isInteractive({ nonInteractive: config.nonInteractive })) {
@@ -112,12 +110,12 @@ export default defineCommand({
       }
     }
 
-    const model = (flags.model as string) || config.defaultImageModel || "qwen-image-2.0";
+    const model = flags.model || config.defaultImageModel || "qwen-image-2.0";
     const useSync = isSyncModel(model);
     const defaultSize = useSync ? "1:1" : "1:1";
-    const sizeInput = (flags.size as string) || defaultSize;
+    const sizeInput = flags.size || defaultSize;
     const size = resolveImageSize(sizeInput, useSync);
-    const n = (flags.n as number) ?? 1;
+    const n = flags.n ?? 1;
     const concurrent = getConcurrency(flags);
 
     const promptExtend = resolveBooleanFlag(
@@ -136,10 +134,10 @@ export default defineCommand({
       parameters: {
         size,
         n,
-        seed: flags.seed as number | undefined,
+        seed: flags.seed,
         prompt_extend: promptExtend,
         watermark,
-        negative_prompt: (flags.negativePrompt as string) || undefined,
+        negative_prompt: flags.negativePrompt || undefined,
       },
     };
 

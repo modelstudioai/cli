@@ -4,7 +4,6 @@ import {
   resolveConsoleGatewayCredential,
   detectOutputFormat,
   type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "../../output/output.ts";
 import { displayWidth, padEnd } from "../../output/cjk-width.ts";
@@ -187,8 +186,8 @@ export default defineCommand({
     "bl quota list --all",
     "bl quota list --output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const modelFlag = (flags.model as string) || undefined;
+  async run(config, flags) {
+    const modelFlag = flags.model || undefined;
     const showAll = Boolean(flags.all);
     const format = detectOutputFormat(config.output);
 

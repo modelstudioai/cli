@@ -3,8 +3,6 @@ import {
   requestJson,
   taskEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type DashScopeTaskResponse,
   BailianError,
   ExitCode,
@@ -25,11 +23,11 @@ export default defineCommand({
     "bl video download --task-id 3b256896-xxxx --out video.mp4",
     "bl video download --task-id 3b256896-xxxx --out video.mp4 --quiet",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const taskId = flags.taskId as string | undefined;
+  async run(config, flags) {
+    const taskId = flags.taskId;
     if (!taskId) failIfMissing("task-id", "bl video download --task-id <id> --out <path>");
 
-    const outPath = flags.out as string | undefined;
+    const outPath = flags.out;
     if (!outPath) failIfMissing("out", "bl video download --task-id <id> --out video.mp4");
 
     const format = detectOutputFormat(config.output);

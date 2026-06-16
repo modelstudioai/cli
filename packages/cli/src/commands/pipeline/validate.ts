@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { defineCommand, type Config, type GlobalFlags } from "bailian-cli-core";
+import { defineCommand } from "bailian-cli-core";
 import { emitResult } from "../../output/output.ts";
 import { initPipelineSteps } from "../../pipeline/init.ts";
 import { collectPipelineIssues, collectPipelineHints } from "../../pipeline/validation.ts";
@@ -14,7 +14,7 @@ export default defineCommand({
     "bl pipeline validate workflow.yaml",
     "bl pipeline validate workflow.json --output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     const file = ((flags._positional as string[] | undefined) ?? [])[0] as string | undefined;
     if (!file) {
       process.stderr.write(

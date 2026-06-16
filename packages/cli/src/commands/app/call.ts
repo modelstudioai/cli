@@ -5,8 +5,6 @@ import {
   appCompletionEndpoint,
   parseSSE,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type AppCompletionRequest,
   type AppStreamChunk,
   type AppCompletionResponse,
@@ -42,11 +40,11 @@ export default defineCommand({
     'bl app call --app-id abc123 --prompt "搜索资料" --pipeline-ids pipe1,pipe2',
     'bl app call --app-id abc123 --prompt "开始" --biz-params \'{"key":"value"}\'',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const appId = flags.appId as string;
+  async run(config, flags) {
+    const appId = flags.appId;
     if (!appId) failIfMissing("app-id", "bl app call --app-id <id> --prompt <text>");
 
-    const prompt = flags.prompt as string;
+    const prompt = flags.prompt;
     if (!prompt) failIfMissing("prompt", "bl app call --app-id <id> --prompt <text>");
 
     const shouldStream =
@@ -61,17 +59,17 @@ export default defineCommand({
     };
 
     if (flags.sessionId) {
-      body.input.session_id = flags.sessionId as string;
+      body.input.session_id = flags.sessionId;
     }
 
     // Pass image URLs via image_list
-    const imageUrls = flags.image as string[] | undefined;
+    const imageUrls = flags.image;
     if (imageUrls && imageUrls.length > 0) {
       body.input.image_list = imageUrls;
     }
 
     // Pass pre-uploaded file IDs
-    const fileIds = flags.fileId as string[] | undefined;
+    const fileIds = flags.fileId;
     if (fileIds && fileIds.length > 0) {
       body.input.file_ids = fileIds;
     }
@@ -81,7 +79,7 @@ export default defineCommand({
     }
 
     if (flags.pipelineIds) {
-      const ids = (flags.pipelineIds as string)
+      const ids = flags.pipelineIds
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
@@ -89,12 +87,12 @@ export default defineCommand({
     }
 
     if (flags.memoryId) {
-      body.parameters!.memory_id = flags.memoryId as string;
+      body.parameters!.memory_id = flags.memoryId;
     }
 
     if (flags.bizParams) {
       try {
-        body.input.biz_params = JSON.parse(flags.bizParams as string);
+        body.input.biz_params = JSON.parse(flags.bizParams);
       } catch {
         process.stderr.write("Error: --biz-params must be valid JSON\n");
         process.exit(1);

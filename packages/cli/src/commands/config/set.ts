@@ -5,8 +5,6 @@ import {
   readConfigFile,
   writeConfigFile,
   BailianError,
-  type Config,
-  type GlobalFlags,
   ExitCode,
 } from "bailian-cli-core";
 import { emitResult } from "../../output/output.ts";
@@ -67,9 +65,9 @@ export default defineCommand({
     "bl config set --key timeout --value 600",
     "bl config set --key base_url --value https://dashscope.aliyuncs.com",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const key = flags.key as string | undefined;
-    const value = flags.value as string | undefined;
+  async run(config, flags) {
+    const key = flags.key;
+    const value = flags.value;
 
     if (!key || value === undefined) {
       throw new BailianError(

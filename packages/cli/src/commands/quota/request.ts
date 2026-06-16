@@ -5,7 +5,6 @@ import {
   detectOutputFormat,
   BailianError,
   type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "../../output/output.ts";
 
@@ -112,8 +111,8 @@ export default defineCommand({
     "bl quota request --model qwen3.6-plus --tpm 8000000 --yes",
     "bl quota request --model qwen-turbo --tpm 100000 --output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const modelName = flags.model as string;
+  async run(config, flags) {
+    const modelName = flags.model;
     if (!modelName) {
       process.stderr.write("Error: --model is required.\n");
       process.exit(1);

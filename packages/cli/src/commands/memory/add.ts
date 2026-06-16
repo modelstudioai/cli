@@ -3,8 +3,6 @@ import {
   requestJson,
   memoryAddEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type MemoryAddRequest,
   type MemoryAddResponse,
 } from "bailian-cli-core";
@@ -30,15 +28,15 @@ export default defineCommand({
     'bl memory add --user-id user1 --messages \'[{"role":"user","content":"我喜欢旅行"}]\'',
     'bl memory add --user-id user1 --content "住在北京" --profile-schema schema_xxx',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const userId = flags.userId as string;
+  async run(config, flags) {
+    const userId = flags.userId;
     if (!userId) failIfMissing("user-id", "bl memory add --user-id <id>");
 
     const body: MemoryAddRequest = { user_id: userId };
 
     if (flags.messages) {
       try {
-        body.messages = JSON.parse(flags.messages as string);
+        body.messages = JSON.parse(flags.messages);
       } catch {
         process.stderr.write("Error: --messages must be valid JSON array\n");
         process.exit(1);
@@ -46,7 +44,7 @@ export default defineCommand({
     }
 
     if (flags.content) {
-      body.custom_content = flags.content as string;
+      body.custom_content = flags.content;
     }
 
     if (!body.messages && !body.custom_content) {
@@ -54,8 +52,8 @@ export default defineCommand({
       process.exit(1);
     }
 
-    if (flags.profileSchema) body.profile_schema = flags.profileSchema as string;
-    if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId as string;
+    if (flags.profileSchema) body.profile_schema = flags.profileSchema;
+    if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId;
 
     const format = detectOutputFormat(config.output);
 

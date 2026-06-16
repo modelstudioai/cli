@@ -8,6 +8,36 @@ export interface OptionDef {
   required?: boolean;
 }
 
+type KebabToCamel<S extends string> = S extends `${infer A}-${infer B}`
+  ? `${A}${Capitalize<KebabToCamel<B>>}`
+  : S;
+
+type ExtractFlagName<S extends string> = S extends `--${infer Name} <${string}>`
+  ? KebabToCamel<Name>
+  : S extends `--${infer Name} [${string}]`
+    ? KebabToCamel<Name>
+    : S extends `--no-${infer Name}`
+      ? KebabToCamel<Name>
+      : S extends `--${infer Name}`
+        ? KebabToCamel<Name>
+        : never;
+
+type FlagValueType<T extends OptionDef> = T["type"] extends "number"
+  ? number
+  : T["type"] extends "boolean"
+    ? true
+    : T["type"] extends "array"
+      ? string[]
+      : T["flag"] extends `--${string} <${string}>`
+        ? string
+        : T["flag"] extends `--${string} [${string}]`
+          ? string
+          : true;
+
+type InferFlags<T extends readonly OptionDef[]> = {
+  [K in T[number] as ExtractFlagName<K["flag"]>]?: FlagValueType<K>;
+};
+
 export interface Command {
   name: string;
   description: string;
@@ -17,23 +47,25 @@ export interface Command {
   execute: (config: Config, flags: GlobalFlags) => Promise<void>;
 }
 
-export interface CommandSpec {
+export interface CommandSpec<Options extends readonly OptionDef[] = OptionDef[]> {
   name: string;
   description: string;
   usage?: string;
-  options?: OptionDef[];
+  options?: Options;
   examples?: string[];
-  run: (config: Config, flags: GlobalFlags) => Promise<void>;
+  run: (config: Config, flags: GlobalFlags & InferFlags<Options>) => Promise<void>;
 }
 
-export function defineCommand(spec: CommandSpec): Command {
+export function defineCommand<const Options extends readonly OptionDef[]>(
+  spec: CommandSpec<Options>,
+): Command {
   return {
     name: spec.name,
     description: spec.description,
     usage: spec.usage,
-    options: spec.options,
+    options: spec.options as OptionDef[] | undefined,
     examples: spec.examples,
-    execute: (config, flags) => spec.run(config, flags),
+    execute: (config, flags) => spec.run(config, flags as GlobalFlags & InferFlags<Options>),
   };
 }
 

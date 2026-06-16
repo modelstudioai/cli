@@ -3,8 +3,6 @@ import {
   requestJson,
   memoryNodeEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { failIfMissing } from "../../output/prompt.ts";
 import { emitResult, emitBare } from "../../output/output.ts";
@@ -19,16 +17,16 @@ export default defineCommand({
     { flag: "--memory-library-id <id>", description: "Memory library ID (non-default library)" },
   ],
   examples: ["bl memory delete --node-id node_xxx --user-id user1"],
-  async run(config: Config, flags: GlobalFlags) {
-    const nodeId = flags.nodeId as string;
+  async run(config, flags) {
+    const nodeId = flags.nodeId;
     if (!nodeId) failIfMissing("node-id", "bl memory delete --node-id <id> --user-id <id>");
 
-    const userId = flags.userId as string;
+    const userId = flags.userId;
     if (!userId) failIfMissing("user-id", "bl memory delete --node-id <id> --user-id <id>");
 
     const format = detectOutputFormat(config.output);
     const params = new URLSearchParams({ user_id: userId });
-    if (flags.memoryLibraryId) params.set("memory_library_id", flags.memoryLibraryId as string);
+    if (flags.memoryLibraryId) params.set("memory_library_id", flags.memoryLibraryId);
     const url = `${memoryNodeEndpoint(config.baseUrl, nodeId)}?${params.toString()}`;
 
     if (config.dryRun) {

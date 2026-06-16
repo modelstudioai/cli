@@ -3,8 +3,6 @@ import {
   requestJson,
   userProfileEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type UserProfileResponse,
 } from "bailian-cli-core";
 import { failIfMissing } from "../../output/prompt.ts";
@@ -19,12 +17,12 @@ export default defineCommand({
     { flag: "--user-id <id>", description: "User ID (required)", required: true },
   ],
   examples: ["bl memory profile get --schema-id schema_xxx --user-id user1"],
-  async run(config: Config, flags: GlobalFlags) {
-    const schemaId = flags.schemaId as string;
+  async run(config, flags) {
+    const schemaId = flags.schemaId;
     if (!schemaId)
       failIfMissing("schema-id", "bl memory profile get --schema-id <id> --user-id <id>");
 
-    const userId = flags.userId as string;
+    const userId = flags.userId;
     if (!userId) failIfMissing("user-id", "bl memory profile get --schema-id <id> --user-id <id>");
 
     const format = detectOutputFormat(config.output);

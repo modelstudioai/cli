@@ -3,8 +3,6 @@ import {
   callConsoleGateway,
   resolveConsoleGatewayCredential,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "../../output/output.ts";
 
@@ -46,10 +44,10 @@ export default defineCommand({
     "bl app list --page 2 --page-size 10",
     "bl app list --output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const name = (flags.name as string) || "";
-    const pageNo = (flags.page as number) || 1;
-    const pageSize = (flags.pageSize as number) || 30;
+  async run(config, flags) {
+    const name = flags.name || "";
+    const pageNo = flags.page || 1;
+    const pageSize = flags.pageSize || 30;
     const format = detectOutputFormat(config.output);
 
     const credential = await resolveConsoleGatewayCredential(config);

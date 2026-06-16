@@ -4,8 +4,6 @@ import {
   resolveConsoleGatewayCredential,
   detectOutputFormat,
   BailianError,
-  type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "../../output/output.ts";
 import { displayWidth, padEnd } from "../../output/cjk-width.ts";
@@ -132,10 +130,10 @@ export default defineCommand({
     "bl quota history --model qwen-turbo",
     "bl quota history --output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     const page = Number(flags.page) || 1;
     const pageSize = Number(flags.pageSize) || 10;
-    const modelFilter = (flags.model as string) || undefined;
+    const modelFilter = flags.model || undefined;
     const format = detectOutputFormat(config.output);
 
     const credential = await resolveConsoleGatewayCredential(config);

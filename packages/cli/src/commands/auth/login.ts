@@ -4,8 +4,6 @@ import {
   maskToken,
   readConfigFile,
   writeConfigFile,
-  type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { printQuickStart } from "../../output/banner.ts";
 import { emitBare } from "../../output/output.ts";
@@ -34,7 +32,7 @@ export default defineCommand({
     },
   ],
   examples: ["bl auth login --api-key sk-xxxxx", "bl auth login --console"],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     if (flags.console) {
       if (config.dryRun) {
         emitBare(
@@ -66,13 +64,13 @@ export default defineCommand({
       }
     }
 
-    const key = (flags.apiKey as string) || config.apiKey;
+    const key = flags.apiKey || config.apiKey;
     if (!key) {
       printCurrentCommandHelp(process.stderr);
       process.exit(0);
     }
 
-    const baseUrl = (flags.baseUrl as string) || undefined;
+    const baseUrl = flags.baseUrl || undefined;
     const effectiveConfig = baseUrl ? { ...config, baseUrl } : config;
 
     if (!config.dryRun) {

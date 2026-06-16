@@ -3,8 +3,6 @@ import {
   requestJson,
   profileSchemaEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type ProfileSchemaCreateRequest,
   type ProfileSchemaCreateResponse,
 } from "bailian-cli-core";
@@ -27,11 +25,11 @@ export default defineCommand({
   examples: [
     'bl memory profile create --name "user_basic" --attributes \'[{"name":"age","description":"年龄"},{"name":"hobby","description":"爱好"}]\'',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const name = flags.name as string;
+  async run(config, flags) {
+    const name = flags.name;
     if (!name) failIfMissing("name", "bl memory profile create --name <name> --attributes <json>");
 
-    const attrStr = flags.attributes as string;
+    const attrStr = flags.attributes;
     if (!attrStr)
       failIfMissing("attributes", "bl memory profile create --name <name> --attributes <json>");
 
@@ -44,7 +42,7 @@ export default defineCommand({
     }
 
     const body: ProfileSchemaCreateRequest = { name, attributes };
-    if (flags.description) body.description = flags.description as string;
+    if (flags.description) body.description = flags.description;
 
     const format = detectOutputFormat(config.output);
 

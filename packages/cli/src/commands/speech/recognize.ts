@@ -60,11 +60,11 @@ export default defineCommand({
     "bl speech recognize --url https://example.com/audio.mp3 --out result.json",
     "bl speech recognize --url https://example.com/audio.mp3 --no-wait --quiet",
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     // Normalize --url to string[] (supports both single and repeated flags)
     let rawUrls: string[] = [];
     if (Array.isArray(flags.url)) {
-      rawUrls = flags.url as string[];
+      rawUrls = flags.url;
     } else if (typeof flags.url === "string") {
       rawUrls = [flags.url];
     }
@@ -73,7 +73,7 @@ export default defineCommand({
     }
 
     // Strict validation: --speaker-count requires --diarization
-    const speakerCount = flags.speakerCount as number | undefined;
+    const speakerCount = flags.speakerCount;
     const diarization = flags.diarization === true;
     if (speakerCount !== undefined && !diarization) {
       throw new BailianError(
@@ -82,7 +82,7 @@ export default defineCommand({
       );
     }
 
-    const model = (flags.model as string) || "fun-asr";
+    const model = flags.model || "fun-asr";
     const format = detectOutputFormat(config.output);
 
     // Auto-upload local files in parallel
@@ -90,9 +90,9 @@ export default defineCommand({
     const resolvedUrls = await Promise.all(
       rawUrls.map((u) => resolveFileUrl(u, credential.token, model)),
     );
-    const channelId = flags.channelId as number | undefined;
-    const language = flags.language as string | undefined;
-    const vocabularyId = flags.vocabularyId as string | undefined;
+    const channelId = flags.channelId;
+    const language = flags.language;
+    const vocabularyId = flags.vocabularyId;
 
     const body: DashScopeASRRequest = {
       model,

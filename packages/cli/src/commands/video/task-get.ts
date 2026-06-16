@@ -3,8 +3,6 @@ import {
   requestJson,
   taskEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type DashScopeTaskResponse,
 } from "bailian-cli-core";
 import { failIfMissing } from "../../output/prompt.ts";
@@ -19,8 +17,8 @@ export default defineCommand({
     "bl video task get --task-id 3b256896-3e70-xxxx-xxxx-xxxxxxxxxxxx",
     "bl video task get --task-id 3b256896-3e70-xxxx --output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const taskId = flags.taskId as string | undefined;
+  async run(config, flags) {
+    const taskId = flags.taskId;
     if (!taskId) failIfMissing("task-id", "bl video task get --task-id <id>");
 
     const format = detectOutputFormat(config.output);

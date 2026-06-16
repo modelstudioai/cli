@@ -5,7 +5,6 @@ import {
   chatEndpoint,
   parseSSE,
   detectOutputFormat,
-  type Config,
   type GlobalFlags,
   type ChatMessage,
   type ChatRequest,
@@ -115,7 +114,7 @@ export default defineCommand({
     'bl text chat --message "Hello" --output json',
     'bl text chat --model qwq-plus --message "Solve 1+1" --enable-thinking',
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     const { system, messages: parsedMessages } = parseMessages(flags);
     let messages = parsedMessages;
 
@@ -134,7 +133,7 @@ export default defineCommand({
       }
     }
 
-    const model = (flags.model as string) || config.defaultTextModel || "qwen3.7-max";
+    const model = flags.model || config.defaultTextModel || "qwen3.7-max";
     const shouldStream =
       flags.stream === true || (flags.stream === undefined && process.stdout.isTTY);
     const format = detectOutputFormat(config.output);
@@ -149,22 +148,22 @@ export default defineCommand({
     const body: ChatRequest = {
       model,
       messages: allMessages,
-      max_tokens: (flags.maxTokens as number) ?? 4096,
+      max_tokens: flags.maxTokens ?? 4096,
       stream: shouldStream,
     };
 
-    if (flags.temperature !== undefined) body.temperature = flags.temperature as number;
-    if (flags.topP !== undefined) body.top_p = flags.topP as number;
+    if (flags.temperature !== undefined) body.temperature = flags.temperature;
+    if (flags.topP !== undefined) body.top_p = flags.topP;
 
     if (flags.enableThinking) {
       body.enable_thinking = true;
       if (flags.thinkingBudget !== undefined) {
-        body.thinking_budget = flags.thinkingBudget as number;
+        body.thinking_budget = flags.thinkingBudget;
       }
     }
 
     if (flags.tool) {
-      const tools = (flags.tool as string[]).map((t) => {
+      const tools = flags.tool.map((t) => {
         try {
           return JSON.parse(t);
         } catch {

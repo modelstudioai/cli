@@ -8,8 +8,6 @@ import {
   detectOutputFormat,
   BailianError,
   ExitCode,
-  type Config,
-  type GlobalFlags,
   type ChatMessage,
   type ChatMessageContent,
   type ChatRequest,
@@ -128,11 +126,11 @@ export default defineCommand({
     'bl omni --message "Hello" --text-only --output json',
     'bl omni --message "朗读这段话" --audio-out greeting.wav',
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     // --- Parse messages ---
     let userMessages: string[] = [];
     if (flags.message) {
-      userMessages = flags.message as string[];
+      userMessages = flags.message;
     }
 
     if (userMessages.length === 0) {
@@ -148,16 +146,16 @@ export default defineCommand({
       }
     }
 
-    const model = (flags.model as string) || config.defaultOmniModel || "qwen3.5-omni-plus";
-    const voice = (flags.voice as string) || "Cherry";
-    const audioFormat = (flags.audioFormat as string) || "wav";
+    const model = flags.model || config.defaultOmniModel || "qwen3.5-omni-plus";
+    const voice = flags.voice || "Cherry";
+    const audioFormat = flags.audioFormat || "wav";
     const textOnly = flags.textOnly === true;
     const format = detectOutputFormat(config.output);
 
     // --- Build messages array ---
     const allMessages: ChatMessage[] = [];
     if (flags.system) {
-      allMessages.push({ role: "system", content: flags.system as string });
+      allMessages.push({ role: "system", content: flags.system });
     }
 
     // Build multimodal content for user messages
@@ -179,9 +177,9 @@ export default defineCommand({
     }
 
     // Attach multimodal inputs to the last user message
-    const rawImageUrls = (flags.image as string[] | undefined) || [];
-    const rawAudioUrls = (flags.audio as string[] | undefined) || [];
-    const rawVideoUrls = (flags.video as string[] | undefined) || [];
+    const rawImageUrls = flags.image || [];
+    const rawAudioUrls = flags.audio || [];
+    const rawVideoUrls = flags.video || [];
 
     // Auto-upload local files
     const imageUrls: string[] = [];
@@ -276,8 +274,8 @@ export default defineCommand({
       body.audio = { voice, format: audioFormat };
     }
 
-    if (flags.maxTokens !== undefined) body.max_tokens = flags.maxTokens as number;
-    if (flags.temperature !== undefined) body.temperature = flags.temperature as number;
+    if (flags.maxTokens !== undefined) body.max_tokens = flags.maxTokens;
+    if (flags.temperature !== undefined) body.temperature = flags.temperature;
 
     if (config.dryRun) {
       emitResult({ request: body }, format);
@@ -340,7 +338,7 @@ export default defineCommand({
       const wavHeader = buildWavHeader(pcmBuffer.length);
       const wavBuffer = Buffer.concat([wavHeader, pcmBuffer]);
 
-      let destPath = flags.audioOut as string | undefined;
+      let destPath = flags.audioOut;
       if (!destPath) {
         // eslint-disable-next-line @typescript-eslint/unbound-method
         const { join } = await import("path");

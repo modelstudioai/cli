@@ -6,8 +6,6 @@ import {
   detectOutputFormat,
   BailianError,
   ExitCode,
-  type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "../../output/output.ts";
 
@@ -48,11 +46,11 @@ export default defineCommand({
     },
   ],
   examples: ["bl mcp list", "bl mcp list --name 金融", "bl mcp list --output json"],
-  async run(config: Config, flags: GlobalFlags) {
-    const serverName = (flags.name as string) || "";
-    const type = (flags.type as string) || "OFFICIAL";
-    const pageNo = (flags.page as number) || 1;
-    const pageSize = (flags.pageSize as number) || 30;
+  async run(config, flags) {
+    const serverName = flags.name || "";
+    const type = flags.type || "OFFICIAL";
+    const pageNo = flags.page || 1;
+    const pageSize = flags.pageSize || 30;
     const format = detectOutputFormat(config.output);
 
     const data = {

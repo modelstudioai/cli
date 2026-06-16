@@ -4,8 +4,6 @@ import {
   videoGenerateEndpoint,
   taskEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type DashScopeVideoRefRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
@@ -94,9 +92,9 @@ export default defineCommand({
     'bl video ref --prompt "图1和图2在对话" --image a.jpg --image b.jpg --image-voice va.mp3 --image-voice vb.mp3',
     'bl video ref --prompt "图1在喝水" --image person.jpg --watermark false',
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     // --- Validate prompt ---
-    let prompt = flags.prompt as string | undefined;
+    let prompt = flags.prompt;
     if (!prompt) {
       if (isInteractive({ nonInteractive: config.nonInteractive })) {
         const hint = await promptText({
@@ -112,8 +110,8 @@ export default defineCommand({
       }
     }
 
-    const images = (flags.image as string[] | undefined) || [];
-    const refVideos = (flags.refVideo as string[] | undefined) || [];
+    const images = flags.image || [];
+    const refVideos = flags.refVideo || [];
 
     if (images.length === 0 && refVideos.length === 0) {
       throw new BailianError(
@@ -123,10 +121,10 @@ export default defineCommand({
       );
     }
 
-    const imageVoices = (flags.imageVoice as string[] | undefined) || [];
-    const videoVoices = (flags.videoVoice as string[] | undefined) || [];
+    const imageVoices = flags.imageVoice || [];
+    const videoVoices = flags.videoVoice || [];
 
-    const model = (flags.model as string) || "happyhorse-1.0-r2v";
+    const model = flags.model || "happyhorse-1.0-r2v";
     const format = detectOutputFormat(config.output);
 
     // --- Resolve file URLs (auto-upload local files) ---
@@ -178,12 +176,12 @@ export default defineCommand({
         media,
       },
       parameters: {
-        resolution: (flags.resolution as string) || undefined,
-        ratio: (flags.ratio as string) || undefined,
-        duration: (flags.duration as number) || undefined,
+        resolution: flags.resolution || undefined,
+        ratio: flags.ratio || undefined,
+        duration: flags.duration || undefined,
         prompt_extend: promptExtend,
         watermark,
-        seed: flags.seed as number | undefined,
+        seed: flags.seed,
       },
     };
 
@@ -217,7 +215,7 @@ export default defineCommand({
     }
 
     // --- Poll until completion ---
-    const pollInterval = (flags.pollInterval as number) ?? 15;
+    const pollInterval = flags.pollInterval ?? 15;
     const pollUrl = taskEndpoint(config.baseUrl, taskId);
     const refTimeout = Math.max(config.timeout, 600);
 
@@ -243,7 +241,7 @@ export default defineCommand({
 
     // --download: save to file
     if (flags.download) {
-      const destPath = flags.download as string;
+      const destPath = flags.download;
       const { size } = await downloadFile(resultVideoUrl, destPath, { quiet: config.quiet });
 
       if (config.quiet) {

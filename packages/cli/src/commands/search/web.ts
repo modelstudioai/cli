@@ -2,8 +2,6 @@ import {
   defineCommand,
   detectOutputFormat,
   mcpWebSearchEndpoint,
-  type Config,
-  type GlobalFlags,
   isInteractive,
   McpClient,
 } from "bailian-cli-core";
@@ -26,7 +24,7 @@ export default defineCommand({
     'bl search web --query "今日新闻"',
     "bl search web --list-tools",
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     const mcpUrl = mcpWebSearchEndpoint(config.baseUrl);
     const format = detectOutputFormat(config.output);
 
@@ -46,7 +44,7 @@ export default defineCommand({
     }
 
     // --- Search mode ---
-    let query = flags.query as string | undefined;
+    let query = flags.query;
     if (!query) {
       if (isInteractive({ nonInteractive: config.nonInteractive })) {
         const hint = await promptText({ message: "Enter your search query:" });
@@ -68,7 +66,7 @@ export default defineCommand({
           tool: "bailian_web_search",
           arguments: {
             query: query!,
-            count: (flags.count as number) || undefined,
+            count: flags.count || undefined,
           },
         },
         format,
@@ -89,7 +87,7 @@ export default defineCommand({
 
       // Build tool arguments
       const toolArgs: Record<string, unknown> = { query: query! };
-      if (flags.count) toolArgs.count = flags.count as number;
+      if (flags.count) toolArgs.count = flags.count;
 
       // Call the search tool
       const result = await client.callTool("bailian_web_search", toolArgs);

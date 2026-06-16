@@ -1,11 +1,4 @@
-import {
-  defineCommand,
-  McpClient,
-  bailianMcpUrl,
-  detectOutputFormat,
-  type Config,
-  type GlobalFlags,
-} from "bailian-cli-core";
+import { defineCommand, McpClient, bailianMcpUrl, detectOutputFormat } from "bailian-cli-core";
 import { failIfMissing } from "../../output/prompt.ts";
 import { emitResult } from "../../output/output.ts";
 import { ensureApiKey } from "../../utils/ensure-key.ts";
@@ -27,13 +20,13 @@ export default defineCommand({
     "bl mcp tools market-cmapi00073529 --output json",
     "bl mcp tools my-server --url https://example.com/mcp",
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     const positional =
       ((flags as Record<string, unknown>)._positional as string[] | undefined) ?? [];
     const code = positional[0];
     if (!code) failIfMissing("server-code", "bl mcp tools <server-code>");
 
-    const url = (flags.url as string) || bailianMcpUrl(config.baseUrl, code!);
+    const url = flags.url || bailianMcpUrl(config.baseUrl, code!);
     const format = detectOutputFormat(config.output);
 
     if (config.dryRun) {

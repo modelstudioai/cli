@@ -4,7 +4,6 @@ import {
   resolveConsoleGatewayCredential,
   detectOutputFormat,
   type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "../../output/output.ts";
 import { displayWidth, padEnd } from "../../output/cjk-width.ts";
@@ -343,13 +342,13 @@ export default defineCommand({
     "bl usage stats --type Text --days 14",
     "bl usage stats --output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const modelFlag = (flags.model as string) || undefined;
+  async run(config, flags) {
+    const modelFlag = flags.model || undefined;
     const daysFlag = Number(flags.days) || 7;
-    const typeFlag = (flags.type as string) || undefined;
+    const typeFlag = flags.type || undefined;
     const format = detectOutputFormat(config.output);
 
-    const flagWorkspaceId = (flags.workspaceId as string) || undefined;
+    const flagWorkspaceId = flags.workspaceId || undefined;
     const workspaceId = resolveWorkspaceId(config, flagWorkspaceId);
 
     const credential = await resolveConsoleGatewayCredential(config);

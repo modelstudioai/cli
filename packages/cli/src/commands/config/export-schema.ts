@@ -1,6 +1,4 @@
 import { defineCommand, generateToolSchema } from "bailian-cli-core";
-import type { Config } from "bailian-cli-core";
-import type { GlobalFlags } from "bailian-cli-core";
 import { BailianError } from "bailian-cli-core";
 import { ExitCode } from "bailian-cli-core";
 
@@ -21,9 +19,9 @@ export default defineCommand({
     },
   ],
   examples: ["bl config export-schema", 'bl config export-schema --command "video generate"'],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     const { commands } = await import("../catalog.ts");
-    const targetCommand = flags.command as string | undefined;
+    const targetCommand = flags.command;
 
     if (targetCommand) {
       const command = commands[targetCommand];

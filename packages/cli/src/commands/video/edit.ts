@@ -4,8 +4,6 @@ import {
   videoGenerateEndpoint,
   taskEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type DashScopeVideoEditRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
@@ -83,9 +81,9 @@ export default defineCommand({
     'bl video edit --video https://example.com/input.mp4 --prompt "Convert to anime style" --resolution 720P --download output.mp4',
     'bl video edit --video https://example.com/input.mp4 --prompt "给视频里的小猫穿上衣服" --watermark false',
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     // --- Validate video URL ---
-    let videoUrl = flags.video as string | undefined;
+    let videoUrl = flags.video;
     if (!videoUrl) {
       if (isInteractive({ nonInteractive: config.nonInteractive })) {
         const hint = await promptText({ message: "Enter the video URL to edit:" });
@@ -100,7 +98,7 @@ export default defineCommand({
     }
 
     // --- Prompt ---
-    let prompt = flags.prompt as string | undefined;
+    let prompt = flags.prompt;
     if (!prompt) {
       if (isInteractive({ nonInteractive: config.nonInteractive })) {
         const hint = await promptText({ message: "Enter your edit instruction:" });
@@ -113,7 +111,7 @@ export default defineCommand({
       // prompt is optional for video edit per API spec
     }
 
-    const model = (flags.model as string) || "happyhorse-1.0-video-edit";
+    const model = flags.model || "happyhorse-1.0-video-edit";
     const format = detectOutputFormat(config.output);
 
     // Auto-upload local files
@@ -125,7 +123,7 @@ export default defineCommand({
     ];
 
     // Support comma-separated reference images
-    const refImageArg = flags.refImage as string | undefined;
+    const refImageArg = flags.refImage;
     if (refImageArg) {
       const images = refImageArg
         .split(",")
@@ -145,17 +143,17 @@ export default defineCommand({
       model,
       input: {
         prompt: prompt || undefined,
-        negative_prompt: (flags.negativePrompt as string) || undefined,
+        negative_prompt: flags.negativePrompt || undefined,
         media,
       },
       parameters: {
-        resolution: (flags.resolution as string) || undefined,
-        ratio: (flags.ratio as string) || undefined,
-        duration: (flags.duration as number) || undefined,
+        resolution: flags.resolution || undefined,
+        ratio: flags.ratio || undefined,
+        duration: flags.duration || undefined,
         audio_setting: (flags.audioSetting as "auto" | "origin") || undefined,
         prompt_extend: promptExtend,
         watermark,
-        seed: flags.seed as number | undefined,
+        seed: flags.seed,
       },
     };
 
@@ -188,7 +186,7 @@ export default defineCommand({
 
     // --- Poll until completion ---
     // Video editing is compute-intensive; default timeout = 600s (10 min)
-    const pollInterval = (flags.pollInterval as number) ?? 15;
+    const pollInterval = flags.pollInterval ?? 15;
     const pollUrl = taskEndpoint(config.baseUrl, taskId);
     const editTimeout = Math.max(config.timeout, 600);
 
@@ -214,7 +212,7 @@ export default defineCommand({
 
     // --download: save to file
     if (flags.download) {
-      const destPath = flags.download as string;
+      const destPath = flags.download;
       const { size } = await downloadFile(resultVideoUrl, destPath, { quiet: config.quiet });
 
       if (config.quiet) {

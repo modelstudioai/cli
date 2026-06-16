@@ -1,11 +1,4 @@
-import {
-  defineCommand,
-  McpClient,
-  bailianMcpUrl,
-  detectOutputFormat,
-  type Config,
-  type GlobalFlags,
-} from "bailian-cli-core";
+import { defineCommand, McpClient, bailianMcpUrl, detectOutputFormat } from "bailian-cli-core";
 import { failIfMissing } from "../../output/prompt.ts";
 import { emitResult } from "../../output/output.ts";
 import { ensureApiKey } from "../../utils/ensure-key.ts";
@@ -60,7 +53,7 @@ export default defineCommand({
     'bl mcp call market-cmapi00073529.FinQuery --json \'{"q":"贵州茅台","limit":5}\'',
     "bl mcp call market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 --arg minScale=10",
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     const positional =
       ((flags as Record<string, unknown>)._positional as string[] | undefined) ?? [];
     const target = positional[0];
@@ -77,7 +70,7 @@ export default defineCommand({
     let toolArgs: Record<string, unknown> = {};
     if (flags.json) {
       try {
-        const parsed = JSON.parse(flags.json as string);
+        const parsed = JSON.parse(flags.json);
         if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
           process.stderr.write("Error: --json must decode to an object.\n");
           process.exit(1);
@@ -88,10 +81,10 @@ export default defineCommand({
         process.exit(1);
       }
     }
-    Object.assign(toolArgs, parseArgFlags((flags.arg as string[] | undefined) ?? []));
+    Object.assign(toolArgs, parseArgFlags(flags.arg ?? []));
     if (flags.query !== undefined) toolArgs.query = flags.query;
 
-    const url = (flags.url as string) || bailianMcpUrl(config.baseUrl, serverCode);
+    const url = flags.url || bailianMcpUrl(config.baseUrl, serverCode);
     const format = detectOutputFormat(config.output);
 
     if (config.dryRun) {

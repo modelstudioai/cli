@@ -1,11 +1,4 @@
-import {
-  defineCommand,
-  resolveCredential,
-  detectOutputFormat,
-  type Config,
-  type GlobalFlags,
-  uploadFile,
-} from "bailian-cli-core";
+import { defineCommand, resolveCredential, detectOutputFormat, uploadFile } from "bailian-cli-core";
 import { failIfMissing } from "../../output/prompt.ts";
 import { emitResult, emitBare } from "../../output/output.ts";
 
@@ -31,13 +24,13 @@ export default defineCommand({
     "bl file upload --file audio.wav --model qwen3-asr-flash",
     "bl file upload --file cat.png --model qwen-image-2.0",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const filePath = flags.file as string | undefined;
+  async run(config, flags) {
+    const filePath = flags.file;
     if (!filePath) {
       failIfMissing("file", "bl file upload --file <path> --model <model>");
     }
 
-    const model = flags.model as string | undefined;
+    const model = flags.model;
     if (!model) {
       failIfMissing("model", "bl file upload --file <path> --model <model>");
     }

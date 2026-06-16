@@ -6,8 +6,6 @@ import {
   CONSOLE_GATEWAY_NO_TOKEN_MESSAGE,
   BailianError,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { failIfMissing } from "../../output/prompt.ts";
 import { emitResult } from "../../output/output.ts";
@@ -42,11 +40,11 @@ export default defineCommand({
     `bl console call --api zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota --data '{"queryFreeTierQuotaRequest":{"models":["qwen3-max"]}}'`,
     `bl console call --api some.api.name --data '{"key":"value"}' --console-region cn-beijing`,
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const api = flags.api as string;
+  async run(config, flags) {
+    const api = flags.api;
     if (!api) failIfMissing("api", "bl console call --api <api> --data <json>");
 
-    const dataRaw = flags.data as string;
+    const dataRaw = flags.data;
     if (!dataRaw) failIfMissing("data", "bl console call --api <api> --data <json>");
 
     let data: Record<string, unknown>;

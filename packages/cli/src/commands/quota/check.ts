@@ -5,7 +5,6 @@ import {
   resolveConsoleGatewayCredential,
   detectOutputFormat,
   type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "../../output/output.ts";
 import { displayWidth, padEnd } from "../../output/cjk-width.ts";
@@ -272,8 +271,8 @@ export default defineCommand({
     "bl quota check --model qwen3.6-plus,qwen-turbo",
     "bl quota check --output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const modelFlag = (flags.model as string) || undefined;
+  async run(config, flags) {
+    const modelFlag = flags.model || undefined;
     const rawPeriod = Number(flags.period) || 2;
     if (rawPeriod < 1) {
       process.stderr.write("Error: --period must be at least 1 minute.\n");

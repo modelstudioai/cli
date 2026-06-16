@@ -192,8 +192,8 @@ export default defineCommand({
     "# Pipe to ffplay",
     'bl speech synthesize --text "Hello" --voice <voice_id> --stream | ffplay -nodisp -autoexit -f s16le -ar 24000 -ac 1 -',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const model = (flags.model as string) || config.defaultSpeechModel || "cosyvoice-v3-flash";
+  async run(config, flags) {
+    const model = flags.model || config.defaultSpeechModel || "cosyvoice-v3-flash";
 
     // --list-voices: print voice list for the model and exit
     if (flags.listVoices) {
@@ -201,11 +201,11 @@ export default defineCommand({
       return;
     }
 
-    let text = flags.text as string | undefined;
+    let text = flags.text;
 
     // --text-file takes precedence if provided and --text is empty
     if (!text && flags.textFile) {
-      const filePath = flags.textFile as string;
+      const filePath = flags.textFile;
       try {
         text = readFileSync(filePath, "utf-8").trim();
       } catch {
@@ -226,7 +226,7 @@ export default defineCommand({
       }
     }
 
-    let voice = (flags.voice as string) || undefined;
+    let voice = flags.voice || undefined;
 
     // In interactive mode, prompt the user to select / enter a voice
     if (!voice) {
@@ -275,8 +275,8 @@ export default defineCommand({
       }
     }
 
-    const language = (flags.language as string) || undefined;
-    const instruction = (flags.instruction as string) || undefined;
+    const language = flags.language || undefined;
+    const instruction = flags.instruction || undefined;
     const audioFormat = (flags.format as "mp3" | "pcm" | "wav" | "opus") || undefined;
     const sampleRate = flags.sampleRate !== undefined ? Number(flags.sampleRate) : undefined;
     const volume = flags.volume !== undefined ? Number(flags.volume) : undefined;

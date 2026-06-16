@@ -5,7 +5,6 @@ import {
   fetchModelList,
   detectOutputFormat,
   type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "../../output/output.ts";
 import { displayWidth, padEnd } from "../../output/cjk-width.ts";
@@ -227,11 +226,11 @@ export default defineCommand({
     "bl usage free --model qwen-turbo --output json",
     "bl usage free --model qwen3-max --console-region cn-beijing",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const modelFlag = (flags.model as string) || undefined;
+  async run(config, flags) {
+    const modelFlag = flags.model || undefined;
     const expiringDays = Number(flags.expiring) || 0;
     const VALID_SORT_FIELDS = ["remaining", "expires"] as const;
-    const sortField = (flags.sort as string) || undefined;
+    const sortField = flags.sort || undefined;
     if (sortField && !VALID_SORT_FIELDS.includes(sortField as (typeof VALID_SORT_FIELDS)[number])) {
       process.stderr.write(
         `Error: invalid --sort value "${sortField}". Must be one of: ${VALID_SORT_FIELDS.join(", ")}\n`,

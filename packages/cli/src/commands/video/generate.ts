@@ -4,8 +4,6 @@ import {
   videoGenerateEndpoint,
   taskEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type DashScopeVideoRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
@@ -91,8 +89,8 @@ export default defineCommand({
     'bl video generate --prompt "Mountain landscape" --resolution 1280*720 --duration 5',
     'bl video generate --prompt "A cat playing with a ball" --watermark false',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    let prompt = flags.prompt as string | undefined;
+  async run(config, flags) {
+    let prompt = flags.prompt;
 
     if (!prompt) {
       if (isInteractive({ nonInteractive: config.nonInteractive })) {
@@ -108,12 +106,12 @@ export default defineCommand({
     }
 
     const model =
-      (flags.model as string) ||
+      flags.model ||
       config.defaultVideoModel ||
-      ((flags.image as string) ? "happyhorse-1.0-i2v" : "happyhorse-1.0-t2v");
+      (flags.image ? "happyhorse-1.0-i2v" : "happyhorse-1.0-t2v");
     const format = detectOutputFormat(config.output);
 
-    const imageUrl = flags.image as string | undefined;
+    const imageUrl = flags.image;
 
     // Auto-upload local image file for i2v
     let resolvedImageUrl: string | undefined;
@@ -129,19 +127,19 @@ export default defineCommand({
       model,
       input: {
         prompt: prompt!,
-        negative_prompt: (flags.negativePrompt as string) || undefined,
+        negative_prompt: flags.negativePrompt || undefined,
         // i2v models (happyhorse-1.0-i2v) require input.media with type 'first_frame'
         ...(resolvedImageUrl
           ? { media: [{ type: "first_frame" as const, url: resolvedImageUrl }] }
           : {}),
       },
       parameters: {
-        resolution: normalizeResolution(flags.resolution as string) || undefined,
-        ratio: (flags.ratio as string) || undefined,
-        duration: (flags.duration as number) || undefined,
+        resolution: normalizeResolution(flags.resolution) || undefined,
+        ratio: flags.ratio || undefined,
+        duration: flags.duration || undefined,
         prompt_extend: promptExtend,
         watermark,
-        seed: flags.seed as number | undefined,
+        seed: flags.seed,
       },
     };
 
@@ -180,7 +178,7 @@ export default defineCommand({
     }
 
     // Poll all tasks concurrently
-    const pollInterval = (flags.pollInterval as number) ?? 5;
+    const pollInterval = flags.pollInterval ?? 5;
 
     const pollPromises = taskIds.map((taskId) => {
       const pollUrl = taskEndpoint(config.baseUrl, taskId);
@@ -217,7 +215,7 @@ export default defineCommand({
 
     // --download: save to file (first video only for explicit path)
     if (flags.download) {
-      const destPath = flags.download as string;
+      const destPath = flags.download;
       const { size } = await downloadFile(videos[0]!.videoUrl, destPath, { quiet: config.quiet });
 
       if (config.quiet) {

@@ -4,8 +4,6 @@ import {
   readConfigFile,
   writeConfigFile,
   getConfigPath,
-  type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitBare } from "../../output/output.ts";
 
@@ -35,7 +33,7 @@ export default defineCommand({
     "bl auth logout --dry-run",
     "bl auth logout --yes",
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     const file = readConfigFile();
 
     if (flags.console) {

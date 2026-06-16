@@ -147,14 +147,12 @@ export function parseFlags(argv: string[], options: OptionDef[]): GlobalFlags {
         );
       }
 
-      // Switch-style flags (--quiet, --dry-run): no value. Value flags need a non-flag next token.
       if (schema.booleans.has(camelKey)) {
         (flags as Record<string, unknown>)[camelKey] = true;
         i++;
         continue;
       }
 
-      // --prompt <text>, --watermark <bool>, …
       if (value === undefined) {
         i++;
         const next = argv[i];

@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { defineCommand, type Config, type GlobalFlags } from "bailian-cli-core";
+import { defineCommand, type GlobalFlags } from "bailian-cli-core";
 import { emitResult } from "../../output/output.ts";
 import { initPipelineSteps } from "../../pipeline/init.ts";
 import { executePipeline, streamPipelineEvents } from "../../pipeline/executor.ts";
@@ -33,7 +33,7 @@ export default defineCommand({
     "bl pipeline run workflow.json --events jsonl",
     "bl pipeline run workflow.yaml --output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     const file = ((flags._positional as string[] | undefined) ?? [])[0] as string | undefined;
     if (!file) {
       process.stderr.write("Error: pipeline file is required\nUsage: bl pipeline run <file>\n");
@@ -42,7 +42,7 @@ export default defineCommand({
 
     initPipelineSteps();
 
-    const eventsFormat = flags.events as string | undefined;
+    const eventsFormat = flags.events;
     if (eventsFormat !== undefined && eventsFormat !== "jsonl") {
       process.stderr.write(
         `Error: unsupported --events format: ${eventsFormat}. Supported: jsonl\n`,
@@ -57,10 +57,10 @@ export default defineCommand({
 
     if (eventsFormat === "jsonl") {
       for await (const event of streamPipelineEvents(pipeline, runtimeInput, {
-        concurrency: flags.concurrency as number | undefined,
+        concurrency: flags.concurrency,
         basePath,
         dryRun: flags.dryRun,
-        timeoutSeconds: flags.timeout as number | undefined,
+        timeoutSeconds: flags.timeout,
       })) {
         process.stdout.write(JSON.stringify(event) + "\n");
       }
@@ -68,10 +68,10 @@ export default defineCommand({
     }
 
     const report = await executePipeline(pipeline, runtimeInput, {
-      concurrency: flags.concurrency as number | undefined,
+      concurrency: flags.concurrency,
       basePath,
       dryRun: flags.dryRun,
-      timeoutSeconds: flags.timeout as number | undefined,
+      timeoutSeconds: flags.timeout,
       onEvent: flags.verbose ? logEvent : undefined,
     });
 

@@ -72,11 +72,11 @@ export default defineCommand({
     'bl knowledge retrieve --index-id idx_xxx --query "如何使用阿里云百炼"',
     'bl knowledge retrieve --index-id idx_xxx --query "API限流" --rerank --rerank-model qwen3-rerank-hybrid',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const indexId = flags.indexId as string;
+  async run(config, flags) {
+    const indexId = flags.indexId;
     if (!indexId) failIfMissing("index-id", "bl knowledge retrieve --index-id <id> --query <text>");
 
-    const query = flags.query as string;
+    const query = flags.query;
     if (!query) failIfMissing("query", "bl knowledge retrieve --index-id <id> --query <text>");
 
     const format = detectOutputFormat(config.output);

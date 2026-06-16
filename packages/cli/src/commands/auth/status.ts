@@ -5,7 +5,6 @@ import {
   detectOutputFormat,
   maskToken,
   type Config,
-  type GlobalFlags,
   type ResolvedCredential,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "../../output/output.ts";
@@ -155,7 +154,7 @@ export default defineCommand({
     },
   ],
   examples: ["bl auth status", "bl auth status --output json"],
-  async run(config: Config, _flags: GlobalFlags) {
+  async run(config, _flags) {
     const format = detectOutputFormat(config.output);
     const status = await buildStatus(config);
 

@@ -3,8 +3,6 @@ import {
   requestJson,
   memoryListEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type MemoryNodeListResponse,
 } from "bailian-cli-core";
 import { failIfMissing } from "../../output/prompt.ts";
@@ -24,16 +22,16 @@ export default defineCommand({
     "bl memory list --user-id user1",
     "bl memory list --user-id user1 --page-size 20 --page 2",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const userId = flags.userId as string;
+  async run(config, flags) {
+    const userId = flags.userId;
     if (!userId) failIfMissing("user-id", "bl memory list --user-id <id>");
 
     const format = detectOutputFormat(config.output);
     const params = new URLSearchParams();
     params.set("user_id", userId);
-    if (flags.pageSize !== undefined) params.set("page_size", String(flags.pageSize as number));
-    if (flags.page !== undefined) params.set("page_num", String(flags.page as number));
-    if (flags.memoryLibraryId) params.set("memory_library_id", flags.memoryLibraryId as string);
+    if (flags.pageSize !== undefined) params.set("page_size", String(flags.pageSize));
+    if (flags.page !== undefined) params.set("page_num", String(flags.page));
+    if (flags.memoryLibraryId) params.set("memory_library_id", flags.memoryLibraryId);
 
     const url = `${memoryListEndpoint(config.baseUrl)}?${params.toString()}`;
 

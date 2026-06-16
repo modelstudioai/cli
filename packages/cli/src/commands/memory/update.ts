@@ -3,8 +3,6 @@ import {
   requestJson,
   memoryNodeEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type MemoryNodeUpdateRequest,
 } from "bailian-cli-core";
 import { failIfMissing } from "../../output/prompt.ts";
@@ -25,16 +23,16 @@ export default defineCommand({
     { flag: "--memory-library-id <id>", description: "Memory library ID (non-default library)" },
   ],
   examples: ['bl memory update --node-id node_xxx --user-id user1 --content "更新后的记忆内容"'],
-  async run(config: Config, flags: GlobalFlags) {
-    const nodeId = flags.nodeId as string;
+  async run(config, flags) {
+    const nodeId = flags.nodeId;
     if (!nodeId)
       failIfMissing("node-id", "bl memory update --node-id <id> --user-id <id> --content <text>");
 
-    const userId = flags.userId as string;
+    const userId = flags.userId;
     if (!userId)
       failIfMissing("user-id", "bl memory update --node-id <id> --user-id <id> --content <text>");
 
-    const content = flags.content as string;
+    const content = flags.content;
     if (!content)
       failIfMissing("content", "bl memory update --node-id <id> --user-id <id> --content <text>");
 
@@ -42,7 +40,7 @@ export default defineCommand({
       user_id: userId,
       custom_content: content,
     };
-    if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId as string;
+    if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId;
 
     const format = detectOutputFormat(config.output);
 
