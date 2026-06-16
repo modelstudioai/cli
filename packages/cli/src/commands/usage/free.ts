@@ -207,10 +207,6 @@ export default defineCommand({
       flag: "--sort <field>",
       description: "Sort by: remaining (ascending), expires (ascending)",
     },
-    {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
-    },
   ],
   examples: [
     "bl usage free",
@@ -219,7 +215,7 @@ export default defineCommand({
     "bl usage free --expiring 30",
     "bl usage free --sort remaining",
     "bl usage free --model qwen-turbo --output json",
-    "bl usage free --model qwen3-max --region cn-beijing",
+    "bl usage free --model qwen3-max --console-region cn-beijing",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const modelFlag = (flags.model as string) || undefined;
@@ -232,7 +228,6 @@ export default defineCommand({
       );
       process.exit(1);
     }
-    const region = (flags.region as string) || undefined;
     const format = detectOutputFormat(config.output);
 
     const credential = await resolveConsoleGatewayCredential(config);
@@ -275,7 +270,6 @@ export default defineCommand({
         {
           api: FREE_TIER_API,
           data: requestData,
-          region,
           token: credential.token.slice(0, 8) + "...",
         },
         format,
@@ -287,12 +281,10 @@ export default defineCommand({
       callConsoleGateway(config, credential.token, {
         api: FREE_TIER_API,
         data: requestData,
-        region,
       }),
       callConsoleGateway(config, credential.token, {
         api: FREE_TIER_ONLY_STATUS_API,
         data: { queryFreeTierOnlyStatusRequest: { models } },
-        region,
       }),
     ]);
 

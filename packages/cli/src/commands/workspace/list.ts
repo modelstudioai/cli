@@ -93,28 +93,22 @@ export default defineCommand({
       flag: "--list <n>",
       description: "Limit number of results",
     },
-    {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
-    },
   ],
   examples: ["bl workspace list", "bl workspace list --list 5", "bl workspace list --output json"],
   async run(config: Config, flags: GlobalFlags) {
-    const region = (flags.region as string) || undefined;
     const limit = Number(flags.list) || 0;
     const format = detectOutputFormat(config.output);
 
     const credential = await resolveConsoleGatewayCredential(config);
 
     if (config.dryRun) {
-      emitResult({ api: LIST_WORKSPACES_API, data: {}, region }, format);
+      emitResult({ api: LIST_WORKSPACES_API, data: {} }, format);
       return;
     }
 
     const result = await callConsoleGateway(config, credential.token, {
       api: LIST_WORKSPACES_API,
       data: {},
-      region,
     });
 
     if (format === "json") {

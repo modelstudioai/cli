@@ -35,7 +35,6 @@ export default defineCommand({
     },
     { flag: "--page <n>", description: "Page number (default: 1)", type: "number" },
     { flag: "--page-size <n>", description: "Results per page (default: 30)", type: "number" },
-    { flag: "--region <region>", description: "API region (default: cn-beijing)" },
   ],
   examples: ["bl mcp list", "bl mcp list --name 金融", "bl mcp list --output json"],
   async run(config: Config, flags: GlobalFlags) {
@@ -43,7 +42,6 @@ export default defineCommand({
     const type = (flags.type as string) || "OFFICIAL";
     const pageNo = (flags.page as number) || 1;
     const pageSize = (flags.pageSize as number) || 30;
-    const region = (flags.region as string) || undefined;
     const format = detectOutputFormat(config.output);
 
     const data = {
@@ -58,7 +56,7 @@ export default defineCommand({
     };
 
     if (config.dryRun) {
-      emitResult({ api: MCP_LIST_API, data, region }, format);
+      emitResult({ api: MCP_LIST_API, data }, format);
       return;
     }
 
@@ -67,7 +65,6 @@ export default defineCommand({
     const result = (await callConsoleGateway(config, credential.token, {
       api: MCP_LIST_API,
       data,
-      region,
     })) as Record<string, unknown>;
 
     const dataField = (result?.data as Record<string, unknown> | undefined) ?? {};

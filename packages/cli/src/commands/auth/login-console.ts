@@ -16,11 +16,13 @@ import {
 const CONSOLE_LOGIN_TIMEOUT_MS = 15 * 60 * 1000;
 const MAX_AUTH_CALLBACK_BODY = 65536;
 
-// 总是默认打开 中国站的登录页
-const DEFAULT_CONSOLE_ORIGIN = "https://bailian.console.aliyun.com";
+const CONSOLE_ORIGINS: Record<string, string> = {
+  domestic: "https://bailian.console.aliyun.com",
+  international: "https://modelstudio.console.alibabacloud.com",
+};
 
-export function resolveConsoleOrigin(): string {
-  return DEFAULT_CONSOLE_ORIGIN;
+export function resolveConsoleOrigin(site?: string): string {
+  return (site && CONSOLE_ORIGINS[site]) || CONSOLE_ORIGINS.domestic!;
 }
 
 function readBodyBounded(req: http.IncomingMessage): Promise<string> {

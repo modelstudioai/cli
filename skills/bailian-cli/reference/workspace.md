@@ -23,10 +23,9 @@ Index: [index.md](index.md)
 
 #### Options
 
-| Flag                | Type   | Required | Description                      |
-| ------------------- | ------ | -------- | -------------------------------- |
-| `--list <n>`        | string | no       | Limit number of results          |
-| `--region <region>` | string | no       | API region (default: cn-beijing) |
+| Flag         | Type   | Required | Description             |
+| ------------ | ------ | -------- | ----------------------- |
+| `--list <n>` | string | no       | Limit number of results |
 
 #### Examples
 

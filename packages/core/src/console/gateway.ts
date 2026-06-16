@@ -83,11 +83,11 @@ function buildGatewayParams(
 export async function callConsoleGateway(
   config: Config,
   token: string | undefined,
-  { api, data, region, site, switchAgent }: ConsoleGatewayRequest,
+  { api, data }: ConsoleGatewayRequest,
 ): Promise<unknown> {
-  const effectiveRegion = region ?? config.consoleRegion ?? "cn-beijing";
-  const effectiveSite = site ?? config.consoleSite ?? "domestic";
-  const effectiveSwitchAgent = switchAgent ?? config.consoleSwitchAgent;
+  const effectiveRegion = config.consoleRegion ?? "cn-beijing";
+  const effectiveSite = config.consoleSite ?? "domestic";
+  const effectiveSwitchAgent = config.consoleSwitchAgent;
 
   const resolved = resolveGateway(effectiveRegion, effectiveSite);
   const gatewayBase = `https://${resolved.csGateway}`;
@@ -102,6 +102,15 @@ export async function callConsoleGateway(
     "Content-Type": "application/x-www-form-urlencoded",
   };
   if (token) headers.Authorization = `Bearer ${token}`;
+
+  console.log({
+    gatewayBase,
+    action,
+    api,
+    effectiveRegion,
+    effectiveSite,
+    effectiveSwitchAgent,
+  });
 
   const res = await fetch(
     `${gatewayBase}/cli/api.json?action=${action}&product=${GATEWAY_PRODUCT}&api=${encodeURIComponent(api)}`,

@@ -114,10 +114,6 @@ export default defineCommand({
       flag: "--model <model>",
       description: "Filter by model name",
     },
-    {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
-    },
   ],
   examples: [
     "bl quota history",
@@ -130,7 +126,6 @@ export default defineCommand({
     const page = Number(flags.page) || 1;
     const pageSize = Number(flags.pageSize) || 10;
     const modelFilter = (flags.model as string) || undefined;
-    const region = (flags.region as string) || undefined;
     const format = detectOutputFormat(config.output);
 
     const credential = await resolveConsoleGatewayCredential(config);
@@ -140,7 +135,7 @@ export default defineCommand({
     };
 
     if (config.dryRun) {
-      emitResult({ api: HISTORY_API, data: requestData, region }, format);
+      emitResult({ api: HISTORY_API, data: requestData }, format);
       return;
     }
 
@@ -149,7 +144,6 @@ export default defineCommand({
       result = await callConsoleGateway(config, credential.token, {
         api: HISTORY_API,
         data: requestData,
-        region,
       });
     } catch (err) {
       if (err instanceof BailianError && err.message.includes("NotLogined")) {

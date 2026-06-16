@@ -30,7 +30,6 @@ Index: [index.md](index.md)
 | `--model <model>`   | string | no       | Model name(s) to query, comma-separated for multiple; omit for all models |
 | `--expiring <days>` | string | no       | Only show quotas expiring within N days                                   |
 | `--sort <field>`    | string | no       | Sort by: remaining (ascending), expires (ascending)                       |
-| `--region <region>` | string | no       | API region (default: cn-beijing)                                          |
 
 #### Examples
 
@@ -59,7 +58,7 @@ bl usage free --model qwen-turbo --output json
 ```
 
 ```bash
-bl usage free --model qwen3-max --region cn-beijing
+bl usage free --model qwen3-max --console-region cn-beijing
 ```
 
 ### `bl usage freetier`
@@ -72,13 +71,12 @@ bl usage free --model qwen3-max --region cn-beijing
 
 #### Options
 
-| Flag                | Type    | Required | Description                                 |
-| ------------------- | ------- | -------- | ------------------------------------------- |
-| `--model <model>`   | string  | no       | Model name(s), comma-separated for multiple |
-| `--all`             | boolean | no       | Apply to all free-tier models               |
-| `--on`              | boolean | no       | Enable auto-stop (default behavior)         |
-| `--off`             | boolean | no       | Disable auto-stop                           |
-| `--region <region>` | string  | no       | API region (default: cn-beijing)            |
+| Flag              | Type    | Required | Description                                 |
+| ----------------- | ------- | -------- | ------------------------------------------- |
+| `--model <model>` | string  | no       | Model name(s), comma-separated for multiple |
+| `--all`           | boolean | no       | Apply to all free-tier models               |
+| `--on`            | boolean | no       | Enable auto-stop (default behavior)         |
+| `--off`           | boolean | no       | Disable auto-stop                           |
 
 #### Examples
 
@@ -122,7 +120,6 @@ bl usage freetier --off --all
 | `--days <days>`       | string | no       | Number of days (default: 7)                            |
 | `--type <type>`       | string | no       | Model type: Text, Vision, Multimodal, Audio, Embedding |
 | `--workspace-id <id>` | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)               |
-| `--region <region>`   | string | no       | API region (default: cn-beijing)                       |
 
 #### Examples
 

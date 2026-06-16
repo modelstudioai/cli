@@ -7,7 +7,6 @@ import {
   detectOutputFormat,
   type Config,
   type GlobalFlags,
-  type ConsoleSite,
 } from "bailian-cli-core";
 import { failIfMissing } from "../../output/prompt.ts";
 import { emitResult } from "../../output/output.ts";
@@ -27,22 +26,10 @@ export default defineCommand({
       description: "Request data as JSON string",
       required: true,
     },
-    {
-      flag: "--region <region>",
-      description: "Console region (e.g. cn-beijing, ap-southeast-1)",
-    },
-    {
-      flag: "--site <site>",
-      description: "Console site: domestic or international",
-    },
-    {
-      flag: "--switch-agent <uid>",
-      description: "Switch agent UID for delegated access",
-    },
   ],
   examples: [
     `bl console call --api zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota --data '{"queryFreeTierQuotaRequest":{"models":["qwen3-max"]}}'`,
-    `bl console call --api some.api.name --data '{"key":"value"}' --region cn-beijing`,
+    `bl console call --api some.api.name --data '{"key":"value"}' --console-region cn-beijing`,
   ],
   async run(config: Config, flags: GlobalFlags) {
     const api = flags.api as string;
@@ -59,9 +46,6 @@ export default defineCommand({
       process.exit(1);
     }
 
-    const region = (flags.region as string) || undefined;
-    const site = ((flags.site as string) || undefined) as ConsoleSite | undefined;
-    const switchAgent = flags.switchAgent ? Number(flags.switchAgent) : undefined;
     const format = detectOutputFormat(config.output);
 
     let token: string | undefined;
@@ -74,16 +58,13 @@ export default defineCommand({
     }
 
     if (config.dryRun) {
-      emitResult({ api, data, region, token: token ? token.slice(0, 8) + "..." : null }, format);
+      emitResult({ api, data, token: token ? token.slice(0, 8) + "..." : null }, format);
       return;
     }
 
     const result = await callConsoleGateway(config, token, {
       api,
       data,
-      region,
-      site,
-      switchAgent,
     });
 
     emitResult(result, format);

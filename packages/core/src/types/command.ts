@@ -50,6 +50,16 @@ export const GLOBAL_OPTIONS: OptionDef[] = [
   { flag: "--dry-run", description: "Dry run mode" },
   { flag: "--non-interactive", description: "Disable interactive prompts" },
   { flag: "--concurrent <n>", description: "Run N parallel requests (default: 1)", type: "number" },
+  {
+    flag: "--console-region <region>",
+    description: "Console gateway region (e.g. cn-beijing, ap-southeast-1)",
+  },
+  { flag: "--console-site <site>", description: "Console site: domestic, international" },
+  {
+    flag: "--console-switch-agent <uid>",
+    description: "Switch agent UID for delegated access",
+    type: "number",
+  },
   { flag: "--help", description: "Show help" },
   { flag: "--version", description: "Print version" },
 ];

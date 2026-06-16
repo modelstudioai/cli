@@ -84,9 +84,10 @@ export function loadConfig(flags: GlobalFlags): Config {
     accessKeySecret:
       process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET || file.access_key_secret || undefined,
     workspaceId: process.env.BAILIAN_WORKSPACE_ID || file.workspace_id || undefined,
-    consoleSite: file.console_site || undefined,
-    consoleRegion: file.console_region || undefined,
-    consoleSwitchAgent: file.console_switch_agent || undefined,
+    consoleSite: (flags.consoleSite as Config["consoleSite"]) || file.console_site || undefined,
+    consoleRegion: (flags.consoleRegion as string) || file.console_region || undefined,
+    consoleSwitchAgent:
+      (flags.consoleSwitchAgent as number) || file.console_switch_agent || undefined,
     verbose: flags.verbose || process.env.DASHSCOPE_VERBOSE === "1",
     quiet: flags.quiet || false,
     noColor: flags.noColor || process.env.NO_COLOR !== undefined || !process.stdout.isTTY,

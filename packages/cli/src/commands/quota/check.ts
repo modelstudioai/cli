@@ -91,11 +91,7 @@ function extractResponseData(result: Record<string, unknown>): Record<string, un
   return direct ?? data;
 }
 
-async function fetchAllModelsWithQpm(
-  config: Config,
-  token: string,
-  region: string | undefined,
-): Promise<ModelWithQpm[]> {
+async function fetchAllModelsWithQpm(config: Config, token: string): Promise<ModelWithQpm[]> {
   const allModels: ModelWithQpm[] = [];
   let pageNo = 1;
 
@@ -112,7 +108,6 @@ async function fetchAllModelsWithQpm(
           supports: { selfServiceLimitIncrease: true },
         },
       },
-      region,
     });
 
     const resp = extractResponseData(raw as Record<string, unknown>);
@@ -130,7 +125,6 @@ async function fetchAllModelsWithQpm(
 async function fetchMonitorData(
   config: Config,
   token: string,
-  region: string | undefined,
   modelName: string,
   windowMinutes: number,
 ): Promise<{ rpm: number; tpm: number }> {
@@ -155,7 +149,6 @@ async function fetchMonitorData(
           endTime: now,
         },
       },
-      region,
     });
 
     const resp = extractResponseData(raw as Record<string, unknown>);
@@ -260,10 +253,6 @@ export default defineCommand({
       flag: "--period <minutes>",
       description: "Query usage for the last N minutes (default: 2)",
     },
-    {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
-    },
   ],
   examples: [
     "bl quota check",
@@ -280,7 +269,6 @@ export default defineCommand({
       process.exit(1);
     }
     const windowMinutes = rawPeriod;
-    const region = (flags.region as string) || undefined;
     const format = detectOutputFormat(config.output);
 
     const credential = await resolveConsoleGatewayCredential(config);
@@ -289,14 +277,13 @@ export default defineCommand({
       emitResult(
         {
           apis: [MODEL_LIST_API, MONITOR_API],
-          region,
         },
         format,
       );
       return;
     }
 
-    let models = await fetchAllModelsWithQpm(config, credential.token, region);
+    let models = await fetchAllModelsWithQpm(config, credential.token);
 
     if (modelFlag) {
       const names = new Set(
@@ -316,7 +303,7 @@ export default defineCommand({
     }
 
     const monitorResults = await Promise.all(
-      models.map((m) => fetchMonitorData(config, credential.token, region, m.model, windowMinutes)),
+      models.map((m) => fetchMonitorData(config, credential.token, m.model, windowMinutes)),
     );
 
     const checkRows: CheckRow[] = models.map((m, idx) => {

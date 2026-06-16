@@ -73,12 +73,11 @@ bl app call --app-id abc123 --prompt "开始" --biz-params '{"key":"value"}'
 
 #### Options
 
-| Flag                | Type   | Required | Description                         |
-| ------------------- | ------ | -------- | ----------------------------------- |
-| `--name <name>`     | string | no       | Filter by app name (keyword search) |
-| `--page <n>`        | number | no       | Page number (default: 1)            |
-| `--page-size <n>`   | number | no       | Results per page (default: 30)      |
-| `--region <region>` | string | no       | API region (default: cn-beijing)    |
+| Flag              | Type   | Required | Description                         |
+| ----------------- | ------ | -------- | ----------------------------------- |
+| `--name <name>`   | string | no       | Filter by app name (keyword search) |
+| `--page <n>`      | number | no       | Page number (default: 1)            |
+| `--page-size <n>` | number | no       | Results per page (default: 30)      |
 
 #### Examples
 

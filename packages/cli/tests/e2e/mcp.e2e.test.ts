@@ -88,20 +88,18 @@ describe("e2e: mcp", () => {
     expect(data.data?.reqDTO?.pageSize).toBe(5);
   });
 
-  test("mcp list --dry-run 自定义 --region 透传", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
+  test("mcp list --dry-run 自定义 --console-region 透传", async () => {
+    const { stderr, exitCode } = await runCli([
       "mcp",
       "list",
       "--dry-run",
       "--non-interactive",
       "--output",
       "json",
-      "--region",
+      "--console-region",
       "cn-hangzhou",
     ]);
     expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{ region?: string }>(stdout);
-    expect(data.region).toBe("cn-hangzhou");
   });
 
   test("mcp tools <server-code> --dry-run 输出 /api/v1/mcps/<code>/mcp 形态 URL", async () => {

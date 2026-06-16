@@ -30,7 +30,6 @@ Index: [index.md](index.md)
 | -------------------- | ------ | -------- | ----------------------------------------------- |
 | `--model <model>`    | string | no       | Model name(s), comma-separated                  |
 | `--period <minutes>` | string | no       | Query usage for the last N minutes (default: 2) |
-| `--region <region>`  | string | no       | API region (default: cn-beijing)                |
 
 #### Examples
 
@@ -64,12 +63,11 @@ bl quota check --output json
 
 #### Options
 
-| Flag                | Type   | Required | Description                      |
-| ------------------- | ------ | -------- | -------------------------------- |
-| `--page <n>`        | string | no       | Page number (default: 1)         |
-| `--page-size <n>`   | string | no       | Page size (default: 10)          |
-| `--model <model>`   | string | no       | Filter by model name             |
-| `--region <region>` | string | no       | API region (default: cn-beijing) |
+| Flag              | Type   | Required | Description              |
+| ----------------- | ------ | -------- | ------------------------ |
+| `--page <n>`      | string | no       | Page number (default: 1) |
+| `--page-size <n>` | string | no       | Page size (default: 10)  |
+| `--model <model>` | string | no       | Filter by model name     |
 
 #### Examples
 
@@ -103,11 +101,10 @@ bl quota history --output json
 
 #### Options
 
-| Flag                | Type    | Required | Description                                 |
-| ------------------- | ------- | -------- | ------------------------------------------- |
-| `--model <model>`   | string  | no       | Model name(s), comma-separated              |
-| `--all`             | boolean | no       | Show all models, not just self-service ones |
-| `--region <region>` | string  | no       | API region (default: cn-beijing)            |
+| Flag              | Type    | Required | Description                                 |
+| ----------------- | ------- | -------- | ------------------------------------------- |
+| `--model <model>` | string  | no       | Model name(s), comma-separated              |
+| `--all`           | boolean | no       | Show all models, not just self-service ones |
 
 #### Examples
 
@@ -141,12 +138,11 @@ bl quota list --output json
 
 #### Options
 
-| Flag                | Type    | Required | Description                      |
-| ------------------- | ------- | -------- | -------------------------------- |
-| `--model <model>`   | string  | yes      | Model name (required)            |
-| `--tpm <value>`     | string  | yes      | Target TPM value (required)      |
-| `--yes`             | boolean | no       | Skip downgrade confirmation      |
-| `--region <region>` | string  | no       | API region (default: cn-beijing) |
+| Flag              | Type    | Required | Description                 |
+| ----------------- | ------- | -------- | --------------------------- |
+| `--model <model>` | string  | yes      | Model name (required)       |
+| `--tpm <value>`   | string  | yes      | Target TPM value (required) |
+| `--yes`           | boolean | no       | Skip downgrade confirmation |
 
 #### Examples
 
