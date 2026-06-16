@@ -56,7 +56,6 @@ const NO_AUTH_SETUP = [
   ["knowledge", "retrieve"],
   ["pipeline", "run"],
   ["pipeline", "validate"],
-  ["model", "list"],
   ["app", "list"],
   ["console", "call"],
   ["usage", "free"],
