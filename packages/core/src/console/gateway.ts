@@ -103,15 +103,6 @@ export async function callConsoleGateway(
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  console.log({
-    gatewayBase,
-    action,
-    api,
-    effectiveRegion,
-    effectiveSite,
-    effectiveSwitchAgent,
-  });
-
   const res = await fetch(
     `${gatewayBase}/cli/api.json?action=${action}&product=${GATEWAY_PRODUCT}&api=${encodeURIComponent(api)}`,
     {
