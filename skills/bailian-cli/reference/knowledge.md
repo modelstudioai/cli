@@ -42,9 +42,9 @@ Index: [index.md](index.md)
 #### Examples
 
 ```bash
-bl knowledge retrieve --index-id idx_xxx --query "如何使用阿里云百炼"
+bl knowledge retrieve --index-id idx_xxx --query "How to use Alibaba Cloud Bailian"
 ```
 
 ```bash
-bl knowledge retrieve --index-id idx_xxx --query "API限流" --rerank --rerank-model qwen3-rerank-hybrid
+bl knowledge retrieve --index-id idx_xxx --query "API rate limiting" --rerank --rerank-model qwen3-rerank-hybrid
 ```

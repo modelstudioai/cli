@@ -37,7 +37,7 @@ export default defineCommand({
     { flag: "--page-size <n>", description: "Results per page (default: 30)", type: "number" },
     { flag: "--region <region>", description: "API region (default: cn-beijing)" },
   ],
-  examples: ["bl mcp list", "bl mcp list --name 金融", "bl mcp list --output json"],
+  examples: ["bl mcp list", "bl mcp list --name finance", "bl mcp list --output json"],
   async run(config: Config, flags: GlobalFlags) {
     const serverName = (flags.name as string) || "";
     const type = (flags.type as string) || "OFFICIAL";

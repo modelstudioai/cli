@@ -24,7 +24,9 @@ export default defineCommand({
     },
     { flag: "--memory-library-id <id>", description: "Memory library ID (non-default library)" },
   ],
-  examples: ['bl memory update --node-id node_xxx --user-id user1 --content "更新后的记忆内容"'],
+  examples: [
+    'bl memory update --node-id node_xxx --user-id user1 --content "updated memory content"',
+  ],
   async run(config: Config, flags: GlobalFlags) {
     const nodeId = flags.nodeId as string;
     if (!nodeId)

@@ -41,27 +41,27 @@ Index: [index.md](index.md)
 #### Examples
 
 ```bash
-bl omni --message "你好，你是谁？"
+bl omni --message "Hello, who are you?"
 ```
 
 ```bash
-bl omni --message "描述这张图片" --image ./photo.jpg
+bl omni --message "Describe this image" --image ./photo.jpg
 ```
 
 ```bash
-bl omni --message "这段音频在说什么？" --audio https://example.com/audio.wav
+bl omni --message "What is this audio saying?" --audio https://example.com/audio.wav
 ```
 
 ```bash
-bl omni --message "总结这个视频" --video https://example.com/video.mp4
+bl omni --message "Summarize this video" --video https://example.com/video.mp4
 ```
 
 ```bash
-bl omni --message "这个视频讲了什么" --video ./local-video.mp4 --text-only
+bl omni --message "What is this video about?" --video ./local-video.mp4 --text-only
 ```
 
 ```bash
-bl omni --message "用四川话回答：今天天气怎么样" --voice Serena
+bl omni --message "Answer in Sichuan dialect: How's the weather today?" --voice Sunny
 ```
 
 ```bash
@@ -69,5 +69,5 @@ bl omni --message "Hello" --text-only --output json
 ```
 
 ```bash
-bl omni --message "朗读这段话" --audio-out greeting.wav
+bl omni --message "Read this passage aloud" --audio-out greeting.wav
 ```

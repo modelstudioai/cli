@@ -27,8 +27,8 @@ export default defineCommand({
     { flag: "--memory-library-id <id>", description: "Memory library ID" },
   ],
   examples: [
-    'bl memory search --user-id user1 --query "编程偏好"',
-    'bl memory search --user-id user1 --messages \'[{"role":"user","content":"推荐一本书"}]\' --top-k 5',
+    'bl memory search --user-id user1 --query "programming preferences"',
+    'bl memory search --user-id user1 --messages \'[{"role":"user","content":"recommend a book"}]\' --top-k 5',
   ],
   async run(config: Config, flags: GlobalFlags) {
     const userId = flags.userId as string;

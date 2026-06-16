@@ -36,7 +36,7 @@ export default defineCommand({
   ],
   examples: [
     "bl app list",
-    "bl app list --name 客服",
+    "bl app list --name customer service",
     "bl app list --page 2 --page-size 10",
     "bl app list --output json",
   ],

@@ -64,11 +64,11 @@ export default defineCommand({
     { flag: "--out-prefix <prefix>", description: "Filename prefix (default: edited)" },
   ],
   examples: [
-    'bl image edit --image ./photo.png --prompt "把背景换成海滩"',
+    'bl image edit --image ./photo.png --prompt "Replace the background with a beach"',
     'bl image edit --image https://example.com/logo.png --prompt "Change color to blue" --n 3',
-    'bl image edit --image ./a.png --image ./b.png --prompt "把两张图合并成一张拼图"',
+    'bl image edit --image ./a.png --image ./b.png --prompt "Merge two images into one collage"',
     'bl image edit --image https://example.com/photo.png --prompt "Remove the person" --model qwen-image-2.0-pro',
-    'bl image edit --image ./photo.png --prompt "把背景换成海滩" --watermark false',
+    'bl image edit --image ./photo.png --prompt "Replace the background with a beach" --watermark false',
   ],
   async run(config: Config, flags: GlobalFlags) {
     // Normalize --image to string array (supports both single and repeated flags)

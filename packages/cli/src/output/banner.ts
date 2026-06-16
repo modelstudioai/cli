@@ -1,10 +1,10 @@
 import { API_KEY_PAGE } from "../urls.ts";
 
 const QUICK_START_TASKS = [
-  "帮我生成一套鸭舌帽的亚马逊电商主图(白底 + 场景图 + 模特上身图)",
-  "帮我生成一段 3 分钟的幽默相声音频",
-  "帮我生成一套小红帽故事绘本 PDF(含插图)",
-  "帮我分析这个视频的内容并写一篇小红书文案",
+  "Help me generate a set of Amazon e-commerce main images for baseball caps (white background + lifestyle shots + model wear shots)",
+  "Help me generate a 3-minute humorous crosstalk audio clip",
+  "Help me generate a Little Red Riding Hood picture-book PDF (with illustrations)",
+  "Help me analyze this video and write a Xiaohongshu-style post",
 ];
 
 function colors() {

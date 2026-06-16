@@ -141,7 +141,7 @@ Commonly used:
 
 ```bash
 # Chat
-bl text chat --message "用中文写一首关于春天的诗"
+bl text chat --message "Write a poem about spring in Chinese"
 
 # Image
 bl image generate --prompt "A cat in space" --out-dir ./out/
@@ -150,11 +150,11 @@ bl image generate --prompt "A cat in space" --out-dir ./out/
 bl video generate --prompt "Sunset on the beach" --download sunset.mp4
 
 # Omni (local files OK)
-bl omni --message "描述视频内容" --video ./demo.mp4 --text-only
+bl omni --message "Describe the video content" --video ./demo.mp4 --text-only
 
 # App
 bl app list --output json
-bl app call --app-id <code> --prompt "你好"
+bl app call --app-id <code> --prompt "Hello"
 ```
 
 More examples per command: see `reference/<group>.md` (e.g. [`reference/text.md`](reference/text.md)).

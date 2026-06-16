@@ -41,7 +41,7 @@ Index: [index.md](index.md)
 #### Examples
 
 ```bash
-bl image edit --image ./photo.png --prompt "把背景换成海滩"
+bl image edit --image ./photo.png --prompt "Replace the background with a beach"
 ```
 
 ```bash
@@ -49,7 +49,7 @@ bl image edit --image https://example.com/logo.png --prompt "Change color to blu
 ```
 
 ```bash
-bl image edit --image ./a.png --image ./b.png --prompt "把两张图合并成一张拼图"
+bl image edit --image ./a.png --image ./b.png --prompt "Merge two images into one collage"
 ```
 
 ```bash
@@ -57,7 +57,7 @@ bl image edit --image https://example.com/photo.png --prompt "Remove the person"
 ```
 
 ```bash
-bl image edit --image ./photo.png --prompt "把背景换成海滩" --watermark false
+bl image edit --image ./photo.png --prompt "Replace the background with a beach" --watermark false
 ```
 
 ### `bl image generate`
@@ -88,7 +88,7 @@ bl image edit --image ./photo.png --prompt "把背景换成海滩" --watermark f
 #### Examples
 
 ```bash
-bl image generate --prompt "一只穿太空服的猫在火星上"
+bl image generate --prompt "A cat in a spacesuit on Mars"
 ```
 
 ```bash
