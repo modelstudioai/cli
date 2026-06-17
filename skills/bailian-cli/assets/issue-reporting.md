@@ -114,7 +114,7 @@ Offer reporting when **none** of EXCLUDE applies **and** any of the following ho
 
 ### Before offering to report
 
-1. Align versions: [SKILL.md → Skill / CLI version check](../SKILL.md#skill--cli-version-check-agent--do-first) — run `bl update` and `npx skills update bailian-cli -g -y` if mismatched.
+1. Align versions: [SKILL.md → Version & updates](../SKILL.md#version--updates-agent--do-first) — run `bl update` and `npx skills update bailian-cli -g -y` if mismatched.
 2. Confirm `bl auth status` is healthy (for commands that need auth).
 3. Retry once with `--verbose` if stderr was thin.
 
