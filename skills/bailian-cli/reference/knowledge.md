@@ -51,5 +51,5 @@ bl knowledge retrieve --index-id idx_xxx --query "How to use Alibaba Cloud Baili
 ```
 
 ```bash
-bl knowledge retrieve --api-key $DASHSCOPE_API_KEY --index-id idx_xxx --query "RAG检索" --rerank --rerank-model qwen3-rerank-hybrid
+bl knowledge retrieve --api-key $DASHSCOPE_API_KEY --index-id idx_xxx --query "RAG retrieval" --rerank --rerank-model qwen3-rerank-hybrid
 ```
