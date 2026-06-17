@@ -78,9 +78,7 @@ flag 优先 ─→ config 文件 ─→ env var
 
 ### D. main 启动逻辑
 
-- [ ] `packages/cli/src/main.ts:NO_AUTH_SETUP` 列表:
-  - 如果新增的命令"自己管鉴权或不需要鉴权",加进去绕开 ensureApiKey 拦截
-  - 当前清单以 `main.ts:NO_AUTH_SETUP` 为准
+- [ ] 若新增命令**自行处理鉴权**或**不应在入口触发默认 API key 引导**,在对应 `defineCommand` 上设 `skipDefaultApiKeySetup: true`(见 `packages/core/src/types/command.ts`;`packages/cli/src/main.ts` 在 `registry.resolve` 后读取 `command.skipDefaultApiKeySetup`)
 
 ### E. 错误文案
 

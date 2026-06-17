@@ -12,6 +12,7 @@ import { emitResult } from "../../output/output.ts";
 export default defineCommand({
   name: "config show",
   description: "Display current configuration",
+  skipDefaultApiKeySetup: true,
   usage: "bl config show",
   examples: ["bl config show", "bl config show --output json"],
   async run(config: Config, _flags: GlobalFlags) {

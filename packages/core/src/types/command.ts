@@ -14,6 +14,7 @@ export interface Command {
   usage?: string;
   options?: OptionDef[];
   examples?: string[];
+  skipDefaultApiKeySetup?: boolean;
   notes?: string[];
   execute: (config: Config, flags: GlobalFlags) => Promise<void>;
 }
@@ -24,6 +25,7 @@ export interface CommandSpec {
   usage?: string;
   options?: OptionDef[];
   examples?: string[];
+  skipDefaultApiKeySetup?: boolean;
   notes?: string[];
   run: (config: Config, flags: GlobalFlags) => Promise<void>;
 }
@@ -35,6 +37,7 @@ export function defineCommand(spec: CommandSpec): Command {
     usage: spec.usage,
     options: spec.options,
     examples: spec.examples,
+    skipDefaultApiKeySetup: spec.skipDefaultApiKeySetup,
     notes: spec.notes,
     execute: (config, flags) => spec.run(config, flags),
   };

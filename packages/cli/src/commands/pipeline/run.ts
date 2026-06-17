@@ -10,6 +10,7 @@ import { loadPipelineFile } from "./load-file.ts";
 export default defineCommand({
   name: "pipeline run",
   description: "Run a pipeline workflow definition",
+  skipDefaultApiKeySetup: true,
   usage: "bl pipeline run <file> [flags]",
   options: [
     { flag: "--input <json>", description: "Runtime input as inline JSON" },

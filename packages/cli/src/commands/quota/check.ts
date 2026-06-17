@@ -250,6 +250,7 @@ function printTable(rows: CheckRow[], noColor: boolean): void {
 export default defineCommand({
   name: "quota check",
   description: "Check current usage against rate limits",
+  skipDefaultApiKeySetup: true,
   usage: "bl quota check [--model <model>] [flags]",
   options: [
     {

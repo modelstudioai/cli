@@ -87,6 +87,7 @@ function printTable(workspaces: WorkspaceInfo[], noColor: boolean): void {
 export default defineCommand({
   name: "workspace list",
   description: "List all workspaces",
+  skipDefaultApiKeySetup: true,
   usage: "bl workspace list [flags]",
   options: [
     {
