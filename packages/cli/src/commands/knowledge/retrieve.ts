@@ -61,17 +61,24 @@ export default defineCommand({
     },
     {
       flag: "--workspace-id <id>",
-      description: "Bailian workspace ID (required for AK/SK auth)",
+      description: "Bailian workspace ID (only needed for deprecated AK/SK auth)",
     },
-    { flag: "--access-key-id <key>", description: "Alibaba Cloud Access Key ID (deprecated)" },
+    {
+      flag: "--access-key-id <key>",
+      description: "Deprecated: use global --api-key instead",
+    },
     {
       flag: "--access-key-secret <key>",
-      description: "Alibaba Cloud Access Key Secret (deprecated)",
+      description: "Deprecated: use global --api-key instead",
     },
+  ],
+  notes: [
+    "Authentication: pass `--api-key <key>`. AK/SK auth is deprecated and will be removed in a future version.",
+    "`--workspace-id` is NOT required when using --api-key.",
   ],
   examples: [
     'bl knowledge retrieve --index-id idx_xxx --query "如何使用阿里云百炼"',
-    'bl knowledge retrieve --index-id idx_xxx --query "API限流" --rerank --rerank-model qwen3-rerank-hybrid',
+    'bl knowledge retrieve --api-key $DASHSCOPE_API_KEY --index-id idx_xxx --query "RAG检索" --rerank --rerank-model qwen3-rerank-hybrid',
   ],
   async run(config: Config, flags: GlobalFlags) {
     const indexId = flags.indexId as string;
