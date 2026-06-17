@@ -30,6 +30,9 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **Video generation & editing** — HappyHorse-1.0 series: text-/image-/reference-to-video and natural-language video editing (up to 9-image reference)
 - **Speech synthesis & recognition** — CosyVoice streaming TTS, voice cloning from 5–20s samples; FunAudio-ASR covers 30 languages including 7 Chinese dialects and 20+ Mandarin accents
 - **Image & video understanding** — Qwen-VL: long-form video analysis, chart/document parsing, visual reasoning, multilingual OCR
+
+> **Note:** The features below are currently available only to China site (aliyun.com) account holders and are not yet supported for international / global site accounts.
+
 - **Knowledge base & memory** — Multimodal RAG retrieval and cross-session memory for personalized, coherent dialogue
 - **App calls** — Invoke agents and workflows already published on Aliyun Model Studio
 - **MCP integration** — Orchestrate Bailian MCP servers: list services, inspect tools, and invoke any tool directly from the terminal
