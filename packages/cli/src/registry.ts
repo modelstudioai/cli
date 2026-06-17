@@ -243,6 +243,12 @@ ${b("Getting Help:")}
         out.write(`  ${a(opt.flag.padEnd(maxLen + 2))} ${d(opt.description)}\n`);
       }
     }
+    if (cmd.notes && cmd.notes.length > 0) {
+      out.write(`\n${b("Notes:")}\n`);
+      for (const note of cmd.notes) {
+        out.write(`  ${note}\n`);
+      }
+    }
     if (cmd.examples && cmd.examples.length > 0) {
       out.write(`\n${b("Examples:")}\n`);
       for (const ex of cmd.examples) {
