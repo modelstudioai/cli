@@ -21,7 +21,7 @@ import { promptText, failIfMissing } from "../../output/prompt.ts";
 import { emitResult } from "../../output/output.ts";
 import { resolveOutputDir, resolveCredential } from "bailian-cli-core";
 
-const OMNI_VOICES = ["Chelsie", "Cherry", "Ethan", "Serena", "Tina"];
+const OMNI_VOICES = ["Chelsie", "Cherry", "Ethan", "Serena", "Sunny", "Tina"];
 
 /**
  * Extension to input audio format.

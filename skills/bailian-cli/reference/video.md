@@ -74,7 +74,7 @@ bl video download --task-id 3b256896-xxxx --out video.mp4 --quiet
 #### Examples
 
 ```bash
-bl video edit --video https://example.com/input.mp4 --prompt "	Convert the entire scene to claymation style"
+bl video edit --video https://example.com/input.mp4 --prompt "Convert the entire scene to claymation style"
 ```
 
 ```bash

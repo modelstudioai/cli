@@ -81,7 +81,7 @@ export default defineCommand({
     },
   ],
   examples: [
-    'bl video edit --video https://example.com/input.mp4 --prompt "	Convert the entire scene to claymation style"',
+    'bl video edit --video https://example.com/input.mp4 --prompt "Convert the entire scene to claymation style"',
     'bl video edit --video https://example.com/input.mp4 --prompt "Replace the outfit with the style shown in the image" --ref-image https://example.com/clothes.png',
     'bl video edit --video https://example.com/input.mp4 --prompt "Convert to anime style" --resolution 720P --download output.mp4',
     'bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the kitten in the video" --watermark false',
