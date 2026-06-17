@@ -70,7 +70,6 @@ async function pollTelemetryApi(
   token: string,
   api: string,
   reqDTO: Record<string, unknown>,
-  region: string,
 ): Promise<unknown> {
   let nextTaskId: string | undefined;
 
@@ -82,7 +81,6 @@ async function pollTelemetryApi(
     const raw = await callConsoleGateway(config, token, {
       api,
       data: requestData,
-      region,
     });
 
     const resp = extractResponseData(raw as Record<string, unknown>);
@@ -306,9 +304,15 @@ export default defineCommand({
       flag: "--workspace-id <id>",
       description: "Workspace ID (env: BAILIAN_WORKSPACE_ID)",
     },
+    { flag: "--console-region <region>", description: "Console region" },
     {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID",
+      type: "number",
     },
   ],
   examples: [
@@ -324,13 +328,10 @@ export default defineCommand({
     const modelFlag = (flags.model as string) || undefined;
     const daysFlag = Number(flags.days) || 7;
     const typeFlag = (flags.type as string) || undefined;
-    const region = (flags.region as string) || "cn-beijing";
     const format = detectOutputFormat(config.output);
 
     const flagWorkspaceId = (flags.workspaceId as string) || undefined;
     const workspaceId = resolveWorkspaceId(config, flagWorkspaceId);
-
-    const credential = await resolveConsoleGatewayCredential(config);
 
     const endTime = Date.now();
     const startTime = endTime - daysFlag * 24 * 60 * 60 * 1000;
@@ -359,15 +360,17 @@ export default defineCommand({
 
       if (config.dryRun) {
         emitResult(
-          { api: LIST_API, data: { reqDTO: { ...baseReqDTO, model: models.join(",") } }, region },
+          { api: LIST_API, data: { reqDTO: { ...baseReqDTO, model: models.join(",") } } },
           format,
         );
         return;
       }
 
+      const credential = await resolveConsoleGatewayCredential(config);
+
       const results = await Promise.all(
         models.map((model) =>
-          pollTelemetryApi(config, credential.token, LIST_API, { ...baseReqDTO, model }, region),
+          pollTelemetryApi(config, credential.token, LIST_API, { ...baseReqDTO, model }),
         ),
       );
 
@@ -396,11 +399,13 @@ export default defineCommand({
       if (typeFlag) reqDTO.obsModelType = typeFlag;
 
       if (config.dryRun) {
-        emitResult({ api: OVERVIEW_API, data: { reqDTO }, region }, format);
+        emitResult({ api: OVERVIEW_API, data: { reqDTO } }, format);
         return;
       }
 
-      const result = await pollTelemetryApi(config, credential.token, OVERVIEW_API, reqDTO, region);
+      const credential = await resolveConsoleGatewayCredential(config);
+
+      const result = await pollTelemetryApi(config, credential.token, OVERVIEW_API, reqDTO);
       if (!result) {
         process.stderr.write("Error: request timed out.\n");
         process.exit(1);

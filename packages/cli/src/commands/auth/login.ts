@@ -1,13 +1,8 @@
 import {
-  BailianError,
-  ExitCode,
-  chatEndpoint,
   defineCommand,
-  getConfigPath,
   isInteractive,
   maskToken,
   readConfigFile,
-  requestJson,
   writeConfigFile,
   type Config,
   type GlobalFlags,
@@ -16,67 +11,11 @@ import { printQuickStart } from "../../output/banner.ts";
 import { emitBare } from "../../output/output.ts";
 import { promptConfirm } from "../../output/prompt.ts";
 import { printCurrentCommandHelp } from "../../utils/command-help.ts";
-import { resolveConsoleOrigin, runConsoleLogin } from "./login-console.ts";
-
-const RETRY_DELAY_BASE_MS = 500;
-
-function canRetry(err: unknown): boolean {
-  if (err instanceof BailianError) {
-    if (err.exitCode === ExitCode.NETWORK || err.exitCode === ExitCode.TIMEOUT) {
-      return true;
-    }
-    const status = err.api?.httpStatus;
-    return status === 401 || (status !== undefined && status >= 500);
-  }
-  if (err instanceof Error) {
-    return (
-      err.name === "AbortError" ||
-      err.name === "TimeoutError" ||
-      err.message.includes("timed out") ||
-      err.message === "fetch failed"
-    );
-  }
-  return false;
-}
-
-async function validateKeyAndPersist(config: Config, key: string): Promise<void> {
-  process.stderr.write("Testing key... ");
-  const testConfig = { ...config, apiKey: key };
-  const requestOpts = {
-    url: chatEndpoint(testConfig.baseUrl),
-    method: "POST",
-    timeout: Math.min(config.timeout, 30),
-    body: {
-      model: "qwen3.7-max",
-      messages: [{ role: "user", content: "hi" }],
-      max_tokens: 1,
-    },
-  };
-
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      await requestJson<unknown>(testConfig, requestOpts);
-      break;
-    } catch (err) {
-      if (attempt >= 3 || !canRetry(err)) {
-        process.stderr.write("\n");
-        throw new BailianError("API key validation failed", ExitCode.AUTH, "Invalid API key.", {
-          cause: err,
-        });
-      }
-      // retry delay: 500ms, 1000ms, 2000ms
-      const delayMs = RETRY_DELAY_BASE_MS * 2 ** (attempt - 1);
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-    }
-  }
-
-  process.stderr.write("Valid\n");
-
-  const existing = readConfigFile() as Record<string, unknown>;
-  existing.api_key = key;
-  await writeConfigFile(existing);
-  process.stderr.write(`Saved to ${getConfigPath()}\n`);
-}
+import {
+  resolveConsoleOrigin,
+  runConsoleLogin,
+  validateAndPersistApiKey,
+} from "./login-console.ts";
 
 export default defineCommand({
   name: "auth login",
@@ -86,9 +25,13 @@ export default defineCommand({
   options: [
     { flag: "--api-key <key>", description: "DashScope API key to store" },
     {
+      flag: "--base-url <url>",
+      description: "DashScope API base URL (used with --api-key for validation)",
+    },
+    {
       flag: "--console",
-      description: "Sign in via browser; opens the console login URL in your default browser",
-      type: "boolean",
+      description:
+        "Sign in via browser; use --console-site to choose domestic (default) or international",
     },
   ],
   examples: ["bl auth login --api-key sk-xxxxx", "bl auth login --console"],
@@ -101,9 +44,8 @@ export default defineCommand({
         return;
       }
       const hasApiKey = !!(config.apiKey || config.fileApiKey);
-      await runConsoleLogin(resolveConsoleOrigin(), {
+      await runConsoleLogin(resolveConsoleOrigin(config.consoleSite || "domestic"), config, {
         needApiKey: !hasApiKey,
-        onApiKey: (key) => validateKeyAndPersist(config, key),
       });
       return;
     }
@@ -131,8 +73,16 @@ export default defineCommand({
       process.exit(0);
     }
 
+    const baseUrl = (flags.baseUrl as string) || undefined;
+    const effectiveConfig = baseUrl ? { ...config, baseUrl } : config;
+
     if (!config.dryRun) {
-      await validateKeyAndPersist(config, key);
+      if (baseUrl) {
+        const existing = readConfigFile() as Record<string, unknown>;
+        existing.base_url = baseUrl;
+        await writeConfigFile(existing);
+      }
+      await validateAndPersistApiKey(effectiveConfig, key, effectiveConfig.baseUrl);
       printQuickStart();
     } else {
       emitBare("Would validate and save API key.");

@@ -93,6 +93,18 @@ CLI 只为「自己能权威解释的错误」发出语义化信号,服务端的
 
 不要扮演服务端错误的翻译官——我们没有最新的错误码体系认知,二次包装只会撒谎(详见 `docs/agents/error-hint-change.md` 中的反面 case)。
 
+### 4. Console Gateway 命令必须声明 console 全局 flags
+
+如果新命令使用了 `callConsoleGateway`，必须在 `options` 中添加以下三个全局 flag 的说明，以便 `--help` 中展示：
+
+```ts
+{ flag: "--console-region <region>", description: "Console region" },
+{ flag: "--console-site <site>", description: "Console site: domestic, international" },
+{ flag: "--console-switch-agent <uid>", description: "Switch agent UID", type: "number" },
+```
+
+这些 flag 已在 `GLOBAL_OPTIONS`（`packages/core/src/types/command.ts`）中注册，由 `loadConfig` 写入 `config.consoleRegion` / `config.consoleSite` / `config.consoleSwitchAgent`，`callConsoleGateway` 自动读取——命令无需手动提取或传递。
+
 ## 完成改动后的快速验证
 
 ```sh

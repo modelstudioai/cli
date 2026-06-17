@@ -10,7 +10,6 @@ import {
 
 function testConfig(overrides: Partial<Config> = {}): Config {
   return {
-    region: "cn",
     baseUrl: "https://dashscope.aliyuncs.com",
     output: "json",
     timeout: 30,
@@ -22,7 +21,6 @@ function testConfig(overrides: Partial<Config> = {}): Config {
     nonInteractive: true,
     async: false,
     telemetry: true,
-    consoleGatewayUrl: "https://bailian-cs.console.aliyun.com",
     ...overrides,
   };
 }
@@ -200,7 +198,12 @@ test("parseBooleanValue accepts only true and false strings (case-insensitive)",
   expect(() => parseBooleanValue("maybe")).toThrow(BailianError);
 });
 
-test("parseConfigFile accepts only well-formed http(s) base_url / console_gateway_url", () => {
+test("parseConfigFile ignores obsolete region field", () => {
+  const f = parseConfigFile({ region: "intl" });
+  expect("region" in f).toBe(false);
+});
+
+test("parseConfigFile accepts only well-formed http(s) base_url", () => {
   expect(parseConfigFile({ base_url: "https://dashscope.aliyuncs.com" }).base_url).toBe(
     "https://dashscope.aliyuncs.com",
   );
@@ -210,5 +213,4 @@ test("parseConfigFile accepts only well-formed http(s) base_url / console_gatewa
   // Previously accepted because the value merely "starts with http".
   expect(parseConfigFile({ base_url: "httpfoo://evil" }).base_url).toBeUndefined();
   expect(parseConfigFile({ base_url: "not a url" }).base_url).toBeUndefined();
-  expect(parseConfigFile({ console_gateway_url: "ftp://x" }).console_gateway_url).toBeUndefined();
 });

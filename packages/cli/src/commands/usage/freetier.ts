@@ -63,7 +63,6 @@ async function pollUntilDone(
   api: string,
   requestKey: string,
   models: string[],
-  region: string,
 ): Promise<unknown> {
   let nextTaskId: string | undefined;
 
@@ -75,7 +74,6 @@ async function pollUntilDone(
     const raw = await callConsoleGateway(config, token, {
       api,
       data: requestData,
-      region,
     });
 
     const resp = extractResponseData(raw as Record<string, unknown>);
@@ -124,9 +122,15 @@ export default defineCommand({
       flag: "--off",
       description: "Disable auto-stop",
     },
+    { flag: "--console-region <region>", description: "Console region" },
     {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID",
+      type: "number",
     },
   ],
   examples: [
@@ -141,7 +145,6 @@ export default defineCommand({
     const modelFlag = (flags.model as string) || undefined;
     const all = Boolean(flags.all);
     const off = Boolean(flags.off);
-    const region = (flags.region as string) || "cn-beijing";
     const format = detectOutputFormat(config.output);
 
     if (!modelFlag && !all) {
@@ -150,8 +153,6 @@ export default defineCommand({
       );
       process.exit(1);
     }
-
-    const credential = await resolveConsoleGatewayCredential(config);
 
     let models: string[];
     if (modelFlag) {
@@ -164,7 +165,7 @@ export default defineCommand({
         ),
       ];
     } else {
-      models = await fetchAllModelNames(config, credential.token);
+      models = [];
     }
 
     const api = off ? DEACTIVATE_API : ACTIVATE_API;
@@ -177,12 +178,16 @@ export default defineCommand({
         {
           api,
           data: { [requestKey]: { models } },
-          region,
-          token: credential.token.slice(0, 8) + "...",
         },
         format,
       );
       return;
+    }
+
+    const credential = await resolveConsoleGatewayCredential(config);
+
+    if (!modelFlag) {
+      models = await fetchAllModelNames(config, credential.token);
     }
 
     if (off) {
@@ -190,12 +195,10 @@ export default defineCommand({
         callConsoleGateway(config, credential.token, {
           api: FREE_TIER_API,
           data: { queryFreeTierQuotaRequest: { models } },
-          region,
         }),
         callConsoleGateway(config, credential.token, {
           api: FREE_TIER_ONLY_STATUS_API,
           data: { queryFreeTierOnlyStatusRequest: { models } },
-          region,
         }),
       ]);
 
@@ -219,7 +222,7 @@ export default defineCommand({
           );
           continue;
         }
-        await pollUntilDone(config, credential.token, api, requestKey, [name], region);
+        await pollUntilDone(config, credential.token, api, requestKey, [name]);
         process.stdout.write(`Disabled auto-stop for "${name}".\n`);
       }
       return;
@@ -227,7 +230,7 @@ export default defineCommand({
 
     const jsonResults: unknown[] = [];
     for (const name of models) {
-      const result = await pollUntilDone(config, credential.token, api, requestKey, [name], region);
+      const result = await pollUntilDone(config, credential.token, api, requestKey, [name]);
       if (format === "json") {
         jsonResults.push(result);
         continue;

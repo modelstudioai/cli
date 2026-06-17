@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync, renameSync, existsSync } from "fs";
-import { parseConfigFile, REGIONS, type Config, type ConfigFile, type Region } from "./schema.ts";
+import { parseConfigFile, REGIONS, type Config, type ConfigFile } from "./schema.ts";
 import { ensureConfigDir, getConfigPath } from "./paths.ts";
 import { detectOutputFormat, type OutputFormat } from "../output/formatter.ts";
 import { BailianError } from "../errors/base.ts";
@@ -36,16 +36,7 @@ export function loadConfig(flags: GlobalFlags): Config {
   const accessTokenEnv = process.env.DASHSCOPE_ACCESS_TOKEN?.trim() || undefined;
   const fileAccessToken = file.access_token?.trim() || undefined;
 
-  const explicitRegion = (flags.region as string) || process.env.DASHSCOPE_REGION || undefined;
-  const cachedRegion = file.region;
-  const region = (explicitRegion || cachedRegion || "cn") as Region;
-
-  const baseUrl =
-    flags.baseUrl ||
-    process.env.DASHSCOPE_BASE_URL ||
-    file.base_url ||
-    REGIONS[region] ||
-    REGIONS.cn;
+  const baseUrl = flags.baseUrl || file.base_url || process.env.DASHSCOPE_BASE_URL || REGIONS.cn;
 
   const output: OutputFormat = detectOutputFormat(
     flags.output || process.env.DASHSCOPE_OUTPUT || file.output,
@@ -68,9 +59,7 @@ export function loadConfig(flags: GlobalFlags): Config {
     accessTokenEnv,
     fileAccessToken,
     fileApiKey,
-    fileRegion: file.region,
     configPath: getConfigPath(),
-    region,
     baseUrl,
     output,
     outputDir: file.output_dir || undefined,
@@ -84,10 +73,10 @@ export function loadConfig(flags: GlobalFlags): Config {
     accessKeySecret:
       process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET || file.access_key_secret || undefined,
     workspaceId: process.env.BAILIAN_WORKSPACE_ID || file.workspace_id || undefined,
-    consoleGatewayUrl:
-      process.env.BAILIAN_CONSOLE_GATEWAY_URL ||
-      file.console_gateway_url ||
-      "https://bailian-cs.console.aliyun.com",
+    consoleSite: (flags.consoleSite as Config["consoleSite"]) || file.console_site || undefined,
+    consoleRegion: (flags.consoleRegion as string) || file.console_region || undefined,
+    consoleSwitchAgent:
+      (flags.consoleSwitchAgent as number) || file.console_switch_agent || undefined,
     verbose: flags.verbose || process.env.DASHSCOPE_VERBOSE === "1",
     quiet: flags.quiet || false,
     noColor: flags.noColor || process.env.NO_COLOR !== undefined || !process.stdout.isTTY,

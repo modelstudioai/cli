@@ -201,9 +201,15 @@ export default defineCommand({
       flag: "--sort <field>",
       description: "Sort by: remaining (ascending), expires (ascending)",
     },
+    { flag: "--console-region <region>", description: "Console region" },
     {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID",
+      type: "number",
     },
   ],
   examples: [
@@ -213,7 +219,7 @@ export default defineCommand({
     "bl usage free --expiring 30",
     "bl usage free --sort remaining",
     "bl usage free --model qwen-turbo --output json",
-    "bl usage free --model qwen3-max --region cn-beijing",
+    "bl usage free --model qwen3-max --console-region cn-beijing",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const modelFlag = (flags.model as string) || undefined;
@@ -226,10 +232,7 @@ export default defineCommand({
       );
       process.exit(1);
     }
-    const region = (flags.region as string) || "cn-beijing";
     const format = detectOutputFormat(config.output);
-
-    const credential = await resolveConsoleGatewayCredential(config);
 
     let models: string[];
     const typeMap = new Map<string, string>();
@@ -243,21 +246,8 @@ export default defineCommand({
             .filter(Boolean),
         ),
       ];
-      const searchResults = await Promise.all(
-        models.map((name) => fetchModelList(config, credential.token, { name, pageSize: 50 })),
-      );
-      for (let idx = 0; idx < models.length; idx++) {
-        const matched = searchResults[idx].models.find((item) => item.model === models[idx]);
-        if (matched) {
-          typeMap.set(models[idx], resolveModelType((matched.capabilities as string[]) || []));
-        }
-      }
     } else {
-      const modelInfos = await fetchAllModels(config, credential.token);
-      models = modelInfos.map((info) => info.name);
-      for (const info of modelInfos) {
-        typeMap.set(info.name, info.type);
-      }
+      models = [];
     }
 
     const requestData = {
@@ -269,24 +259,41 @@ export default defineCommand({
         {
           api: FREE_TIER_API,
           data: requestData,
-          region,
-          token: credential.token.slice(0, 8) + "...",
         },
         format,
       );
       return;
     }
 
+    const credential = await resolveConsoleGatewayCredential(config);
+
+    if (!modelFlag) {
+      const modelInfos = await fetchAllModels(config, credential.token);
+      models = modelInfos.map((info) => info.name);
+      for (const info of modelInfos) {
+        typeMap.set(info.name, info.type);
+      }
+      requestData.queryFreeTierQuotaRequest.models = models;
+    } else {
+      const searchResults = await Promise.all(
+        models.map((name) => fetchModelList(config, credential.token, { name, pageSize: 50 })),
+      );
+      for (let idx = 0; idx < models.length; idx++) {
+        const matched = searchResults[idx].models.find((item) => item.model === models[idx]);
+        if (matched) {
+          typeMap.set(models[idx], resolveModelType((matched.capabilities as string[]) || []));
+        }
+      }
+    }
+
     const [quotaResult, stopResult] = await Promise.all([
       callConsoleGateway(config, credential.token, {
         api: FREE_TIER_API,
         data: requestData,
-        region,
       }),
       callConsoleGateway(config, credential.token, {
         api: FREE_TIER_ONLY_STATUS_API,
         data: { queryFreeTierOnlyStatusRequest: { models } },
-        region,
       }),
     ]);
 
