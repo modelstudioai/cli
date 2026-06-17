@@ -201,9 +201,15 @@ export default defineCommand({
       flag: "--sort <field>",
       description: "Sort by: remaining (ascending), expires (ascending)",
     },
+    { flag: "--console-region <region>", description: "Console region" },
     {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID",
+      type: "number",
     },
   ],
   examples: [
@@ -213,7 +219,7 @@ export default defineCommand({
     "bl usage free --expiring 30",
     "bl usage free --sort remaining",
     "bl usage free --model qwen-turbo --output json",
-    "bl usage free --model qwen3-max --region cn-beijing",
+    "bl usage free --model qwen3-max --console-region cn-beijing",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const modelFlag = (flags.model as string) || undefined;
@@ -226,7 +232,6 @@ export default defineCommand({
       );
       process.exit(1);
     }
-    const region = (flags.region as string) || "cn-beijing";
     const format = detectOutputFormat(config.output);
 
     let models: string[];
@@ -286,12 +291,10 @@ export default defineCommand({
       callConsoleGateway(config, credential.token, {
         api: FREE_TIER_API,
         data: requestData,
-        region,
       }),
       callConsoleGateway(config, credential.token, {
         api: FREE_TIER_ONLY_STATUS_API,
         data: { queryFreeTierOnlyStatusRequest: { models } },
-        region,
       }),
     ]);
 

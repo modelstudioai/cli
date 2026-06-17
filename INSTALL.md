@@ -102,7 +102,7 @@ bl auth status --output json
 bl text chat --message "ping" --non-interactive --output json
 ```
 
-若失败：根据 stderr / JSON 中的 `hint` 或 `message` 排查（网络、Key 无效、region 等）。全局 region：`--region cn|us|intl`，默认 `cn`。
+若失败：根据 stderr / JSON 中的 `hint` 或 `message` 排查（网络、Key 无效、`base_url` 等）。DashScope 端点：使用 `--base-url` / `bl config set --key base_url` / `DASHSCOPE_BASE_URL`，默认中国大陆 `https://dashscope.aliyuncs.com`。
 
 ---
 

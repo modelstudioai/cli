@@ -273,13 +273,13 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
     expect(hasAutoStop).toBe(true);
   });
 
-  test("usage free --model --region cn-beijing 指定区域查询", async () => {
+  test("usage free --model --console-region cn-beijing 指定区域查询", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "usage",
       "free",
       "--model",
       "qwen3-max",
-      "--region",
+      "--console-region",
       "cn-beijing",
       "--output",
       "json",

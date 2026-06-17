@@ -68,7 +68,6 @@ function extractResponseData(result: Record<string, unknown>): Record<string, un
 async function fetchAllModelsWithQpm(
   config: Config,
   token: string,
-  region: string,
   onlySelfService: boolean,
 ): Promise<ModelWithQpm[]> {
   const allModels: ModelWithQpm[] = [];
@@ -89,7 +88,6 @@ async function fetchAllModelsWithQpm(
     const raw = await callConsoleGateway(config, token, {
       api: MODEL_LIST_API,
       data: { input },
-      region,
     });
 
     const resp = extractResponseData(raw as Record<string, unknown>);
@@ -165,9 +163,15 @@ export default defineCommand({
       flag: "--all",
       description: "Show all models, not just self-service ones",
     },
+    { flag: "--console-region <region>", description: "Console region" },
     {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID",
+      type: "number",
     },
   ],
   examples: [
@@ -180,7 +184,6 @@ export default defineCommand({
   async run(config: Config, flags: GlobalFlags) {
     const modelFlag = (flags.model as string) || undefined;
     const showAll = Boolean(flags.all);
-    const region = (flags.region as string) || "cn-beijing";
     const format = detectOutputFormat(config.output);
 
     if (config.dryRun) {
@@ -192,7 +195,7 @@ export default defineCommand({
         ignoreWorkspaceServiceSite: true,
       };
       if (!showAll) input.supports = { selfServiceLimitIncrease: true };
-      emitResult({ api: MODEL_LIST_API, data: { input }, region }, format);
+      emitResult({ api: MODEL_LIST_API, data: { input } }, format);
       return;
     }
 

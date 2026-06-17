@@ -53,7 +53,6 @@ function extractResponseData(result: Record<string, unknown>): Record<string, un
 async function fetchModelQpmInfo(
   config: Config,
   token: string,
-  region: string,
   modelName: string,
 ): Promise<{ model: string; qpmInfo: Record<string, QpmInfoItem> } | undefined> {
   const raw = await callConsoleGateway(config, token, {
@@ -69,7 +68,6 @@ async function fetchModelQpmInfo(
         supports: { selfServiceLimitIncrease: true },
       },
     },
-    region,
   });
 
   const resp = extractResponseData(raw as Record<string, unknown>);
@@ -99,9 +97,15 @@ export default defineCommand({
       flag: "--yes",
       description: "Skip downgrade confirmation",
     },
+    { flag: "--console-region <region>", description: "Console region" },
     {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID",
+      type: "number",
     },
   ],
   examples: [
@@ -123,7 +127,6 @@ export default defineCommand({
     }
 
     const autoConfirm = Boolean(flags.yes) || config.yes;
-    const region = (flags.region as string) || "cn-beijing";
     const format = detectOutputFormat(config.output);
 
     if (config.dryRun) {
@@ -139,7 +142,7 @@ export default defineCommand({
 
     const credential = await resolveConsoleGatewayCredential(config);
 
-    const modelInfo = await fetchModelQpmInfo(config, credential.token, region, modelName);
+    const modelInfo = await fetchModelQpmInfo(config, credential.token, modelName);
     if (!modelInfo) {
       process.stderr.write(
         `Error: model "${modelName}" not found or does not support self-service quota increase.\n`,
@@ -179,7 +182,6 @@ export default defineCommand({
         return await callConsoleGateway(config, credential.token, {
           api: UPDATE_LIMITS_API,
           data: requestData,
-          region,
         });
       } catch (err) {
         if (err instanceof BailianError && err.message.includes("NotLogined")) {

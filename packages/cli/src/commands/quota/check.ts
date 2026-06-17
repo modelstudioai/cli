@@ -1,6 +1,7 @@
 import {
   defineCommand,
   callConsoleGateway,
+  effectiveConsoleGatewayConfig,
   resolveConsoleGatewayCredential,
   detectOutputFormat,
   type Config,
@@ -91,11 +92,7 @@ function extractResponseData(result: Record<string, unknown>): Record<string, un
   return direct ?? data;
 }
 
-async function fetchAllModelsWithQpm(
-  config: Config,
-  token: string,
-  region: string,
-): Promise<ModelWithQpm[]> {
+async function fetchAllModelsWithQpm(config: Config, token: string): Promise<ModelWithQpm[]> {
   const allModels: ModelWithQpm[] = [];
   let pageNo = 1;
 
@@ -112,7 +109,6 @@ async function fetchAllModelsWithQpm(
           supports: { selfServiceLimitIncrease: true },
         },
       },
-      region,
     });
 
     const resp = extractResponseData(raw as Record<string, unknown>);
@@ -130,7 +126,6 @@ async function fetchAllModelsWithQpm(
 async function fetchMonitorData(
   config: Config,
   token: string,
-  region: string,
   modelName: string,
   windowMinutes: number,
 ): Promise<{ rpm: number; tpm: number }> {
@@ -155,7 +150,6 @@ async function fetchMonitorData(
           endTime: now,
         },
       },
-      region,
     });
 
     const resp = extractResponseData(raw as Record<string, unknown>);
@@ -254,9 +248,15 @@ export default defineCommand({
       flag: "--period <minutes>",
       description: "Query usage for the last N minutes (default: 2)",
     },
+    { flag: "--console-region <region>", description: "Console region" },
     {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID",
+      type: "number",
     },
   ],
   examples: [
@@ -274,23 +274,22 @@ export default defineCommand({
       process.exit(1);
     }
     const windowMinutes = rawPeriod;
-    const region = (flags.region as string) || "cn-beijing";
     const format = detectOutputFormat(config.output);
-
-    const credential = await resolveConsoleGatewayCredential(config);
 
     if (config.dryRun) {
       emitResult(
         {
           apis: [MODEL_LIST_API, MONITOR_API],
-          region,
+          ...effectiveConsoleGatewayConfig(config),
         },
         format,
       );
       return;
     }
 
-    let models = await fetchAllModelsWithQpm(config, credential.token, region);
+    const credential = await resolveConsoleGatewayCredential(config);
+
+    let models = await fetchAllModelsWithQpm(config, credential.token);
 
     if (modelFlag) {
       const names = new Set(
@@ -310,7 +309,7 @@ export default defineCommand({
     }
 
     const monitorResults = await Promise.all(
-      models.map((m) => fetchMonitorData(config, credential.token, region, m.model, windowMinutes)),
+      models.map((m) => fetchMonitorData(config, credential.token, m.model, windowMinutes)),
     );
 
     const checkRows: CheckRow[] = models.map((m, idx) => {
