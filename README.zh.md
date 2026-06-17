@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?source_channel=cli_github&) · [English](https://github.com/modelstudioai/cli/blob/main/README.md) · [API 文档](https://help.aliyun.com/zh/model-studio/) · [获取 API Key](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key)
+[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?source_channel=cli_github) · [English](https://github.com/modelstudioai/cli/blob/main/README.md) · [API 文档](https://help.aliyun.com/zh/model-studio/) · [获取 API Key](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key)
 
 ---
 
@@ -121,7 +121,7 @@ bl quota request --model qwen3.6-plus --tpm 6000000   # 申请临时 TPM 提额
 bl quota history                                      # 查看提额历史记录
 ```
 
-> 更多案例与使用场景：[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)
+> 更多案例与使用场景：[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?source_channel=cli_github)
 
 ## 认证方式
 
@@ -181,7 +181,7 @@ bl update
 
 | 资源                    | 地址                                                                                      |
 | :---------------------- | :---------------------------------------------------------------------------------------- |
-| 阿里云百炼 CLI 官方主页 | https://bailian.console.aliyun.com/cli?source_channel=cli_github&                         |
+| 阿里云百炼 CLI 官方主页 | https://bailian.console.aliyun.com/cli?source_channel=cli_github                         |
 | DashScope API 文档      | https://help.aliyun.com/zh/model-studio/                                                  |
 | 通义千问模型列表        | https://help.aliyun.com/zh/model-studio/getting-started/models                            |
 | 阿里云百炼控制台        | https://bailian.console.aliyun.com/?source_channel=cli_github                             |

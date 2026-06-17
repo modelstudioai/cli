@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&) · [中文文档](https://github.com/modelstudioai/cli/blob/main/README.zh.md) · [API Documentation](https://help.aliyun.com/zh/model-studio/) · [Get API Key](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key)
+[Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github) · [中文文档](https://github.com/modelstudioai/cli/blob/main/README.zh.md) · [API Documentation](https://help.aliyun.com/zh/model-studio/) · [Get API Key](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key)
 
 ---
 
@@ -51,7 +51,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 A complete **2-minute, 16:9 cinematic short film** — produced end-to-end from a single natural-language sentence, with **zero manual editing**. This showcase demonstrates how an AI Agent can compose a multi-step creative pipeline by orchestrating three primitives:
 
 - **[Qwen Code](https://github.com/QwenLM/qwen-code)** — the agentic coding model that interprets the user's intent and drives the workflow
-- **[Aliyun Model Studio CLI](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)** — invokes **HappyHorse 1.0**, Aliyun Model Studio's text-/image-/reference-to-video generation model
+- **[Aliyun Model Studio CLI](https://bailian.console.aliyun.com/cli?source_channel=cli_github)** — invokes **HappyHorse 1.0**, Aliyun Model Studio's text-/image-/reference-to-video generation model
 - **[spark-video Skill](https://github.com/JohnKeating1997/spark-video)** — handles scene decomposition, storyboarding, shot continuity, and final stitching
 
 ### The single prompt
@@ -126,7 +126,7 @@ bl quota request --model qwen3.6-plus --tpm 6000000   # Request a temporary TPM 
 bl quota history                                      # View quota change history
 ```
 
-> More examples and scenarios: [Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)
+> More examples and scenarios: [Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github)
 
 ## Authentication
 
@@ -186,7 +186,7 @@ Config file location: `~/.bailian/config.json`
 
 | Resource                     | URL                                                                                       |
 | :--------------------------- | :---------------------------------------------------------------------------------------- |
-| Aliyun Model Studio CLI Site | https://bailian.console.aliyun.com/cli?source_channel=cli_github&                         |
+| Aliyun Model Studio CLI Site | https://bailian.console.aliyun.com/cli?source_channel=cli_github                         |
 | DashScope API Docs           | https://help.aliyun.com/zh/model-studio/                                                  |
 | Qwen Model List              | https://help.aliyun.com/zh/model-studio/getting-started/models                            |
 | Aliyun Model Studio Console  | https://bailian.console.aliyun.com/?source_channel=cli_github                             |
