@@ -30,9 +30,9 @@ Index: [index.md](index.md)
 | `--model <model>`              | string | no       | Model name(s) to query, comma-separated for multiple; omit for all models |
 | `--expiring <days>`            | string | no       | Only show quotas expiring within N days                                   |
 | `--sort <field>`               | string | no       | Sort by: remaining (ascending), expires (ascending)                       |
-| `--console-region <region>`    | string | no       | Console region (global flag)                                              |
-| `--console-site <site>`        | string | no       | Console site: domestic, international (global flag)                       |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID (global flag)                                            |
+| `--console-region <region>`    | string | no       | Console region                                                            |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                                     |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID                                                          |
 
 #### Examples
 
@@ -74,15 +74,15 @@ bl usage free --model qwen3-max --console-region cn-beijing
 
 #### Options
 
-| Flag                           | Type    | Required | Description                                         |
-| ------------------------------ | ------- | -------- | --------------------------------------------------- |
-| `--model <model>`              | string  | no       | Model name(s), comma-separated for multiple         |
-| `--all`                        | boolean | no       | Apply to all free-tier models                       |
-| `--on`                         | boolean | no       | Enable auto-stop (default behavior)                 |
-| `--off`                        | boolean | no       | Disable auto-stop                                   |
-| `--console-region <region>`    | string  | no       | Console region (global flag)                        |
-| `--console-site <site>`        | string  | no       | Console site: domestic, international (global flag) |
-| `--console-switch-agent <uid>` | number  | no       | Switch agent UID (global flag)                      |
+| Flag                           | Type    | Required | Description                                 |
+| ------------------------------ | ------- | -------- | ------------------------------------------- |
+| `--model <model>`              | string  | no       | Model name(s), comma-separated for multiple |
+| `--all`                        | boolean | no       | Apply to all free-tier models               |
+| `--on`                         | boolean | no       | Enable auto-stop (default behavior)         |
+| `--off`                        | boolean | no       | Disable auto-stop                           |
+| `--console-region <region>`    | string  | no       | Console region                              |
+| `--console-site <site>`        | string  | no       | Console site: domestic, international       |
+| `--console-switch-agent <uid>` | number  | no       | Switch agent UID                            |
 
 #### Examples
 
@@ -126,9 +126,9 @@ bl usage freetier --off --all
 | `--days <days>`                | string | no       | Number of days (default: 7)                            |
 | `--type <type>`                | string | no       | Model type: Text, Vision, Multimodal, Audio, Embedding |
 | `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)               |
-| `--console-region <region>`    | string | no       | Console region (global flag)                           |
-| `--console-site <site>`        | string | no       | Console site: domestic, international (global flag)    |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID (global flag)                         |
+| `--console-region <region>`    | string | no       | Console region                                         |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                  |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID                                       |
 
 #### Examples
 

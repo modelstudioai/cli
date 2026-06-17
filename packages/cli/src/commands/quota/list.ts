@@ -169,14 +169,14 @@ export default defineCommand({
       flag: "--all",
       description: "Show all models, not just self-service ones",
     },
-    { flag: "--console-region <region>", description: "Console region (global flag)" },
+    { flag: "--console-region <region>", description: "Console region" },
     {
       flag: "--console-site <site>",
-      description: "Console site: domestic, international (global flag)",
+      description: "Console site: domestic, international",
     },
     {
       flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID (global flag)",
+      description: "Switch agent UID",
       type: "number",
     },
   ],
@@ -192,8 +192,6 @@ export default defineCommand({
     const showAll = Boolean(flags.all);
     const format = detectOutputFormat(config.output);
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
     if (config.dryRun) {
       const input: Record<string, unknown> = {
         pageNo: 1,
@@ -206,6 +204,8 @@ export default defineCommand({
       emitResult({ api: MODEL_LIST_API, data: { input } }, format);
       return;
     }
+
+    const credential = await resolveConsoleGatewayCredential(config);
 
     let models = await fetchAllModelsWithQpm(config, credential.token, !showAll);
 

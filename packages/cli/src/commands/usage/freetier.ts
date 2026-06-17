@@ -121,14 +121,14 @@ export default defineCommand({
       flag: "--off",
       description: "Disable auto-stop",
     },
-    { flag: "--console-region <region>", description: "Console region (global flag)" },
+    { flag: "--console-region <region>", description: "Console region" },
     {
       flag: "--console-site <site>",
-      description: "Console site: domestic, international (global flag)",
+      description: "Console site: domestic, international",
     },
     {
       flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID (global flag)",
+      description: "Switch agent UID",
       type: "number",
     },
   ],
@@ -153,8 +153,6 @@ export default defineCommand({
       process.exit(1);
     }
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
     let models: string[];
     if (modelFlag) {
       models = [
@@ -166,7 +164,7 @@ export default defineCommand({
         ),
       ];
     } else {
-      models = await fetchAllModelNames(config, credential.token);
+      models = [];
     }
 
     const api = off ? DEACTIVATE_API : ACTIVATE_API;
@@ -179,11 +177,16 @@ export default defineCommand({
         {
           api,
           data: { [requestKey]: { models } },
-          token: credential.token.slice(0, 8) + "...",
         },
         format,
       );
       return;
+    }
+
+    const credential = await resolveConsoleGatewayCredential(config);
+
+    if (!modelFlag) {
+      models = await fetchAllModelNames(config, credential.token);
     }
 
     if (off) {

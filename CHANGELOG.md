@@ -6,11 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
-## [Unreleased]
+## [1.3.3] - 2026-06-16
 
-### Removed
+### Changed
 
-- Global `--region`, environment variable `DASHSCOPE_REGION`, and `bl config set --key region`. DashScope API endpoint is selected only via `--base-url`, `DASHSCOPE_BASE_URL`, or `base_url` in `config.json` (defaults to the China mainland URL). Existing `region` entries in `config.json` are ignored; set `base_url` explicitly if you relied on `us` / `intl`.
+- `bl knowledge retrieve --help` now clearly indicates that `--api-key` is the recommended authentication method; AK/SK flags are explicitly marked as deprecated with guidance to use `--api-key` instead.
+
+### Added
+
+- `notes` field for command definitions — commands can now include contextual notes (auth requirements, deprecation notices, etc.) that are displayed in both `--help` output and the generated reference docs.
 
 ## [1.3.2] - 2026-06-12
 

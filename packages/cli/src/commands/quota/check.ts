@@ -254,14 +254,14 @@ export default defineCommand({
       flag: "--period <minutes>",
       description: "Query usage for the last N minutes (default: 2)",
     },
-    { flag: "--console-region <region>", description: "Console region (global flag)" },
+    { flag: "--console-region <region>", description: "Console region" },
     {
       flag: "--console-site <site>",
-      description: "Console site: domestic, international (global flag)",
+      description: "Console site: domestic, international",
     },
     {
       flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID (global flag)",
+      description: "Switch agent UID",
       type: "number",
     },
   ],
@@ -282,8 +282,6 @@ export default defineCommand({
     const windowMinutes = rawPeriod;
     const format = detectOutputFormat(config.output);
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
     if (config.dryRun) {
       emitResult(
         {
@@ -294,6 +292,8 @@ export default defineCommand({
       );
       return;
     }
+
+    const credential = await resolveConsoleGatewayCredential(config);
 
     let models = await fetchAllModelsWithQpm(config, credential.token);
 

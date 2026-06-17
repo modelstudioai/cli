@@ -96,14 +96,14 @@ export default defineCommand({
       flag: "--yes",
       description: "Skip downgrade confirmation",
     },
-    { flag: "--console-region <region>", description: "Console region (global flag)" },
+    { flag: "--console-region <region>", description: "Console region" },
     {
       flag: "--console-site <site>",
-      description: "Console site: domestic, international (global flag)",
+      description: "Console site: domestic, international",
     },
     {
       flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID (global flag)",
+      description: "Switch agent UID",
       type: "number",
     },
   ],
@@ -127,6 +127,17 @@ export default defineCommand({
 
     const autoConfirm = Boolean(flags.yes) || config.yes;
     const format = detectOutputFormat(config.output);
+
+    if (config.dryRun) {
+      const requestData = {
+        input: {
+          model: modelName,
+          limit: { usage_limit: tpmValue },
+        },
+      };
+      emitResult({ api: UPDATE_LIMITS_API, data: requestData }, format);
+      return;
+    }
 
     const credential = await resolveConsoleGatewayCredential(config);
 
@@ -161,11 +172,6 @@ export default defineCommand({
         originalQpmInfo: modelInfo.qpmInfo,
       } as Record<string, unknown>,
     };
-
-    if (config.dryRun) {
-      emitResult({ api: UPDATE_LIMITS_API, data: requestData }, format);
-      return;
-    }
 
     const submitRequest = async (confirmedDowngrade?: boolean): Promise<unknown> => {
       if (confirmedDowngrade) {

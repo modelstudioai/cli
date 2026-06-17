@@ -114,14 +114,14 @@ export default defineCommand({
       flag: "--model <model>",
       description: "Filter by model name",
     },
-    { flag: "--console-region <region>", description: "Console region (global flag)" },
+    { flag: "--console-region <region>", description: "Console region" },
     {
       flag: "--console-site <site>",
-      description: "Console site: domestic, international (global flag)",
+      description: "Console site: domestic, international",
     },
     {
       flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID (global flag)",
+      description: "Switch agent UID",
       type: "number",
     },
   ],
@@ -138,8 +138,6 @@ export default defineCommand({
     const modelFilter = (flags.model as string) || undefined;
     const format = detectOutputFormat(config.output);
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
     const requestData = {
       input: { pageNo: page, pageSize },
     };
@@ -148,6 +146,8 @@ export default defineCommand({
       emitResult({ api: HISTORY_API, data: requestData }, format);
       return;
     }
+
+    const credential = await resolveConsoleGatewayCredential(config);
 
     let result: unknown;
     try {

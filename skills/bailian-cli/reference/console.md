@@ -27,9 +27,9 @@ Index: [index.md](index.md)
 | ------------------------------ | ------ | -------- | ------------------------------------------------------------------------ |
 | `--api <api>`                  | string | yes      | API name (e.g. zeldaEasy.broadscope-bailian.memory-library.getLibraries) |
 | `--data <json>`                | string | yes      | Request data as JSON string                                              |
-| `--console-region <region>`    | string | no       | Console region (global flag)                                             |
-| `--console-site <site>`        | string | no       | Console site: domestic, international (global flag)                      |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID (global flag)                                           |
+| `--console-region <region>`    | string | no       | Console region                                                           |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID                                                         |
 
 #### Examples
 

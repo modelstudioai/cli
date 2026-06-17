@@ -14,6 +14,7 @@ export interface Command {
   usage?: string;
   options?: OptionDef[];
   examples?: string[];
+  notes?: string[];
   execute: (config: Config, flags: GlobalFlags) => Promise<void>;
 }
 
@@ -23,6 +24,7 @@ export interface CommandSpec {
   usage?: string;
   options?: OptionDef[];
   examples?: string[];
+  notes?: string[];
   run: (config: Config, flags: GlobalFlags) => Promise<void>;
 }
 
@@ -33,6 +35,7 @@ export function defineCommand(spec: CommandSpec): Command {
     usage: spec.usage,
     options: spec.options,
     examples: spec.examples,
+    notes: spec.notes,
     execute: (config, flags) => spec.run(config, flags),
   };
 }

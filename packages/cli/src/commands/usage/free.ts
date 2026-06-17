@@ -207,14 +207,14 @@ export default defineCommand({
       flag: "--sort <field>",
       description: "Sort by: remaining (ascending), expires (ascending)",
     },
-    { flag: "--console-region <region>", description: "Console region (global flag)" },
+    { flag: "--console-region <region>", description: "Console region" },
     {
       flag: "--console-site <site>",
-      description: "Console site: domestic, international (global flag)",
+      description: "Console site: domestic, international",
     },
     {
       flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID (global flag)",
+      description: "Switch agent UID",
       type: "number",
     },
   ],
@@ -240,8 +240,6 @@ export default defineCommand({
     }
     const format = detectOutputFormat(config.output);
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
     let models: string[];
     const typeMap = new Map<string, string>();
 
@@ -254,21 +252,8 @@ export default defineCommand({
             .filter(Boolean),
         ),
       ];
-      const searchResults = await Promise.all(
-        models.map((name) => fetchModelList(config, credential.token, { name, pageSize: 50 })),
-      );
-      for (let idx = 0; idx < models.length; idx++) {
-        const matched = searchResults[idx].models.find((item) => item.model === models[idx]);
-        if (matched) {
-          typeMap.set(models[idx], resolveModelType((matched.capabilities as string[]) || []));
-        }
-      }
     } else {
-      const modelInfos = await fetchAllModels(config, credential.token);
-      models = modelInfos.map((info) => info.name);
-      for (const info of modelInfos) {
-        typeMap.set(info.name, info.type);
-      }
+      models = [];
     }
 
     const requestData = {
@@ -280,11 +265,31 @@ export default defineCommand({
         {
           api: FREE_TIER_API,
           data: requestData,
-          token: credential.token.slice(0, 8) + "...",
         },
         format,
       );
       return;
+    }
+
+    const credential = await resolveConsoleGatewayCredential(config);
+
+    if (!modelFlag) {
+      const modelInfos = await fetchAllModels(config, credential.token);
+      models = modelInfos.map((info) => info.name);
+      for (const info of modelInfos) {
+        typeMap.set(info.name, info.type);
+      }
+      requestData.queryFreeTierQuotaRequest.models = models;
+    } else {
+      const searchResults = await Promise.all(
+        models.map((name) => fetchModelList(config, credential.token, { name, pageSize: 50 })),
+      );
+      for (let idx = 0; idx < models.length; idx++) {
+        const matched = searchResults[idx].models.find((item) => item.model === models[idx]);
+        if (matched) {
+          typeMap.set(models[idx], resolveModelType((matched.capabilities as string[]) || []));
+        }
+      }
     }
 
     const [quotaResult, stopResult] = await Promise.all([

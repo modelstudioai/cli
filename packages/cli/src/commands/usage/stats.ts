@@ -323,14 +323,14 @@ export default defineCommand({
       flag: "--workspace-id <id>",
       description: "Workspace ID (env: BAILIAN_WORKSPACE_ID)",
     },
-    { flag: "--console-region <region>", description: "Console region (global flag)" },
+    { flag: "--console-region <region>", description: "Console region" },
     {
       flag: "--console-site <site>",
-      description: "Console site: domestic, international (global flag)",
+      description: "Console site: domestic, international",
     },
     {
       flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID (global flag)",
+      description: "Switch agent UID",
       type: "number",
     },
   ],
@@ -351,8 +351,6 @@ export default defineCommand({
 
     const flagWorkspaceId = (flags.workspaceId as string) || undefined;
     const workspaceId = resolveWorkspaceId(config, flagWorkspaceId);
-
-    const credential = await resolveConsoleGatewayCredential(config);
 
     const endTime = Date.now();
     const startTime = endTime - daysFlag * 24 * 60 * 60 * 1000;
@@ -386,6 +384,8 @@ export default defineCommand({
         );
         return;
       }
+
+      const credential = await resolveConsoleGatewayCredential(config);
 
       const results = await Promise.all(
         models.map((model) =>
@@ -421,6 +421,8 @@ export default defineCommand({
         emitResult({ api: OVERVIEW_API, data: { reqDTO } }, format);
         return;
       }
+
+      const credential = await resolveConsoleGatewayCredential(config);
 
       const result = await pollTelemetryApi(config, credential.token, OVERVIEW_API, reqDTO);
       if (!result) {

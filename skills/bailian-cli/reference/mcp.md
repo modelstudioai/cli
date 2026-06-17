@@ -63,9 +63,9 @@ bl mcp call market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 --arg min
 | `--type <type>`                | string | no       | Server type: OFFICIAL \| PRIVATE (default: OFFICIAL) |
 | `--page <n>`                   | number | no       | Page number (default: 1)                             |
 | `--page-size <n>`              | number | no       | Results per page (default: 30)                       |
-| `--console-region <region>`    | string | no       | Console region (global flag)                         |
-| `--console-site <site>`        | string | no       | Console site: domestic, international (global flag)  |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID (global flag)                       |
+| `--console-region <region>`    | string | no       | Console region                                       |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID                                     |
 
 #### Examples
 
