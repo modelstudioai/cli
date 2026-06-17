@@ -29,41 +29,41 @@ function formatContextWindow(tokens: number): string {
 }
 
 const MODALITY_LABELS: Record<string, string> = {
-  Text: "文本",
-  Image: "图片",
-  Video: "视频",
-  Audio: "音频",
+  Text: "Text",
+  Image: "Image",
+  Video: "Video",
+  Audio: "Audio",
 };
 const CAPABILITY_LABELS: Record<string, string> = {
-  TG: "文本生成",
-  VU: "视觉理解",
-  IG: "图像生成",
-  VG: "视频生成",
-  TTS: "语音合成",
-  ASR: "语音识别",
-  Reasoning: "推理",
+  TG: "Text Gen",
+  VU: "Vision",
+  IG: "Image Gen",
+  VG: "Video Gen",
+  TTS: "Text-to-Speech",
+  ASR: "Speech-to-Text",
+  Reasoning: "Reasoning",
 };
 const BUDGET_LABELS: Record<string, string> = {
-  low: "低成本优先",
-  medium: "适中",
-  high: "高投入",
+  low: "Cost-Effective",
+  medium: "Balanced",
+  high: "High Investment",
 };
 const QUALITY_LABELS: Record<string, string> = {
-  flagship: "旗舰优先",
-  balanced: "均衡",
-  "cost-optimized": "性价比优先",
+  flagship: "Flagship",
+  balanced: "Balanced",
+  "cost-optimized": "Value",
 };
 const PREFERENCE_MODE_LABELS: Record<string, string> = {
-  scoped: "限定范围",
-  comparison: "对比评估",
-  alternative: "替代推荐",
+  scoped: "Scoped",
+  comparison: "Comparison",
+  alternative: "Alternative",
 };
 
 function formatIntentSummary(intent: IntentProfile, noColor: boolean): string {
   const colorize = noColor ? new Chalk({ level: 0 }) : chalk;
 
   const lines: string[] = [];
-  lines.push(colorize.cyan.bold("需求理解"));
+  lines.push(colorize.cyan.bold("Intent Analysis"));
 
   if (intent.taskSummary) {
     lines.push("");
@@ -72,7 +72,7 @@ function formatIntentSummary(intent: IntentProfile, noColor: boolean): string {
 
   if (intent.scenarioHints.length) {
     lines.push("");
-    lines.push(`${colorize.dim("场景特征")}  ${intent.scenarioHints.join(" · ")}`);
+    lines.push(`${colorize.dim("Scenario")}  ${intent.scenarioHints.join(" · ")}`);
   }
 
   const inputLabels = intent.inputModality.map((mod) => MODALITY_LABELS[mod] ?? mod);
@@ -80,40 +80,40 @@ function formatIntentSummary(intent: IntentProfile, noColor: boolean): string {
   if (inputLabels.length || outputLabels.length) {
     lines.push("");
     const parts: string[] = [];
-    if (inputLabels.length) parts.push(`${colorize.dim("输入")} ${inputLabels.join(", ")}`);
-    if (outputLabels.length) parts.push(`${colorize.dim("输出")} ${outputLabels.join(", ")}`);
+    if (inputLabels.length) parts.push(`${colorize.dim("Input")} ${inputLabels.join(", ")}`);
+    if (outputLabels.length) parts.push(`${colorize.dim("Output")} ${outputLabels.join(", ")}`);
     lines.push(parts.join("    "));
   }
 
   const capLabels = intent.requiredCapabilities.map((cap) => CAPABILITY_LABELS[cap] ?? cap);
   if (capLabels.length) {
-    lines.push(`${colorize.dim("所需能力")}  ${capLabels.join(", ")}`);
+    lines.push(`${colorize.dim("Capabilities")}  ${capLabels.join(", ")}`);
   }
 
   const budgetLabel = BUDGET_LABELS[intent.budget] ?? intent.budget;
   const qualityLabel = QUALITY_LABELS[intent.qualityPreference] ?? intent.qualityPreference;
   lines.push("");
   lines.push(
-    `${colorize.dim("预算倾向")} ${budgetLabel}    ${colorize.dim("质量偏好")} ${qualityLabel}`,
+    `${colorize.dim("Budget")} ${budgetLabel}    ${colorize.dim("Quality")} ${qualityLabel}`,
   );
 
   const preference = intent.modelPreference;
   if (preference && preference.mode !== "unconstrained") {
     lines.push("");
     const modeLabel = PREFERENCE_MODE_LABELS[preference.mode] ?? preference.mode;
-    const prefParts = [colorize.dim("推荐模式") + ` ${colorize.yellow(modeLabel)}`];
+    const prefParts = [colorize.dim("Mode") + ` ${colorize.yellow(modeLabel)}`];
     if (preference.targets?.length) {
-      prefParts.push(colorize.dim("目标") + ` ${preference.targets.join(", ")}`);
+      prefParts.push(colorize.dim("Targets") + ` ${preference.targets.join(", ")}`);
     }
     if (preference.excludes?.length) {
-      prefParts.push(colorize.dim("排除") + ` ${preference.excludes.join(", ")}`);
+      prefParts.push(colorize.dim("Excludes") + ` ${preference.excludes.join(", ")}`);
     }
     lines.push(prefParts.join("    "));
   }
 
   if (intent.segments?.length) {
     lines.push("");
-    lines.push(colorize.dim("任务拆解"));
+    lines.push(colorize.dim("Pipeline"));
     for (const [idx, segment] of intent.segments.entries()) {
       const outMods = segment.outputModality.map((mod) => MODALITY_LABELS[mod] ?? mod).join(", ");
       lines.push(
@@ -131,19 +131,19 @@ function formatIntentSummary(intent: IntentProfile, noColor: boolean): string {
   });
 }
 
-const RECOMMEND_LABELS = ["最佳推荐", "次优选择", "备选参考"];
+const RECOMMEND_LABELS = ["Best Pick", "Runner-Up", "Alternative"];
 
 function renderCard(rec: RecommendedModel, index: number, colorize: ChalkInstance): string {
   const labelColors = [colorize.green.bold, colorize.blue.bold, colorize.magenta.bold];
   const colorFn = labelColors[index] ?? colorize.white.bold;
-  const label = RECOMMEND_LABELS[index] ?? `推荐 #${index + 1}`;
+  const label = RECOMMEND_LABELS[index] ?? `#${index + 1}`;
 
   const lines: string[] = [];
-  lines.push(colorFn(`⬢ 推荐 #${index + 1} — ${label}`));
+  lines.push(colorFn(`⬢  #${index + 1} — ${label}`));
   lines.push("");
   lines.push(`${colorize.bold(rec.name)}  ${colorize.dim(`(${rec.model})`)}`);
   lines.push("");
-  lines.push(`${colorize.cyan("推荐理由")}  ${rec.reason}`);
+  lines.push(`${colorize.cyan("Why")}  ${rec.reason}`);
 
   if (rec.highlights.length) {
     lines.push("");
@@ -153,8 +153,8 @@ function renderCard(rec: RecommendedModel, index: number, colorize: ChalkInstanc
   }
 
   const meta: string[] = [];
-  if (rec.contextWindow) meta.push(`上下文 ${formatContextWindow(rec.contextWindow)}`);
-  if (rec.maxOutputTokens) meta.push(`最大输出 ${formatContextWindow(rec.maxOutputTokens)}`);
+  if (rec.contextWindow) meta.push(`Context ${formatContextWindow(rec.contextWindow)}`);
+  if (rec.maxOutputTokens) meta.push(`Max Output ${formatContextWindow(rec.maxOutputTokens)}`);
   if (meta.length) {
     lines.push("");
     lines.push(colorize.dim(meta.join("  ·  ")));
@@ -163,7 +163,7 @@ function renderCard(rec: RecommendedModel, index: number, colorize: ChalkInstanc
   const docLink = buildDocLink(rec.docUrl);
   if (docLink) {
     lines.push("");
-    lines.push(colorize.dim(`文档  ${docLink}`));
+    lines.push(colorize.dim(`Docs  ${docLink}`));
   }
 
   return boxen(lines.join("\n"), {
@@ -183,7 +183,7 @@ function formatSingleResult(results: RecommendedModel[], noColor: boolean): stri
 function formatPipelineResult(summary: string, steps: PipelineStep[], noColor: boolean): string {
   const colorize = noColor ? new Chalk({ level: 0 }) : chalk;
   const lines: string[] = [];
-  lines.push(`  ${colorize.yellow.bold("⚡ 组合方案")}  ${summary}`);
+  lines.push(`  ${colorize.yellow.bold("⚡ Pipeline")}  ${summary}`);
 
   for (const [stepIdx, { step, recommendations, warnings }] of steps.entries()) {
     lines.push("");
@@ -247,14 +247,14 @@ export default defineCommand({
 
     if (!userInput.trim()) {
       if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({ message: "描述你的需求:" });
+        const hint = await promptText({ message: "Describe your requirement:" });
         if (!hint) {
-          process.stderr.write("已取消。\n");
+          process.stderr.write("Cancelled.\n");
           process.exit(1);
         }
         userInput = hint;
       } else {
-        failIfMissing("message", 'bl advisor recommend "你的需求"');
+        failIfMissing("message", 'bl advisor recommend "your requirement"');
       }
     }
 
@@ -262,16 +262,16 @@ export default defineCommand({
     const format = detectOutputFormat(config.output);
 
     const modelsOptions: GetModelsOptions = {
-      onPrepareStart: () => process.stderr.write("初始化中...\n"),
+      onPrepareStart: () => process.stderr.write("Initializing model data...\n"),
     };
-    process.stderr.write("正在分析需求...\n");
+    process.stderr.write("Analyzing your request...\n");
     const [allModels, intent] = await Promise.all([
       getModels(config, modelsOptions),
       analyzeIntent(config, userInput),
     ]);
 
     if (intent.confidence === 0) {
-      process.stderr.write("需求分析超时，使用默认参数继续...\n");
+      process.stderr.write("Intent analysis timed out, using defaults...\n");
     } else {
       process.stderr.write("\n");
     }
@@ -297,7 +297,7 @@ export default defineCommand({
     }
 
     // Stage 3: LLM Ranking
-    const spinner = createSpinner("正在推荐最佳模型...");
+    const spinner = createSpinner("Recommending best models...");
     spinner.start();
 
     const result = await rankModels(config, candidates, intent, userInput, top);
@@ -305,12 +305,31 @@ export default defineCommand({
     spinner.stop();
 
     if (isEmptyResult(result)) {
-      emitBare("暂无满足该需求的模型。");
+      emitBare("No suitable models found for this request.");
       return;
     }
 
     if (format !== "text") {
-      emitResult(result, format);
+      emitResult(
+        {
+          intent: {
+            taskSummary: intent.taskSummary,
+            scenarioHints: intent.scenarioHints,
+            complexity: intent.complexity,
+            inputModality: intent.inputModality,
+            outputModality: intent.outputModality,
+            requiredCapabilities: intent.requiredCapabilities,
+            budget: intent.budget,
+            qualityPreference: intent.qualityPreference,
+            modelPreference:
+              intent.modelPreference?.mode !== "unconstrained" ? intent.modelPreference : undefined,
+            segments: intent.segments,
+          },
+          result,
+          candidates: candidates.length,
+        },
+        format,
+      );
       return;
     }
 

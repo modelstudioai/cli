@@ -113,20 +113,29 @@ export default defineCommand({
       data: {},
     });
 
-    if (format === "json") {
-      emitResult(result, format);
-      return;
-    }
-
     const resp = extractResponseData(result as Record<string, unknown>);
     const dataArr = resp.data as Record<string, unknown>[] | undefined;
     if (!Array.isArray(dataArr) || dataArr.length === 0) {
-      process.stdout.write("No workspace found.\n");
+      if (format === "json") {
+        emitResult([], format);
+      } else {
+        process.stdout.write("No workspace found.\n");
+      }
       return;
     }
 
     let workspaces = dataArr as unknown as WorkspaceInfo[];
     if (limit > 0) workspaces = workspaces.slice(0, limit);
+
+    if (format === "json") {
+      const items = workspaces.map((ws) => ({
+        workspaceId: ws.workspaceId,
+        name: ws.agentName,
+        default: ws.defaultAgent,
+      }));
+      emitResult(items, format);
+      return;
+    }
 
     printTable(workspaces, config.noColor);
   },
