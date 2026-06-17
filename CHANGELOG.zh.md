@@ -6,6 +6,30 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.4.0] - 2026-06-17
+
+### 新增
+
+- 控制台网关支持多 region 与多站点：`cn-beijing` 与 `ap-southeast-1`，各含国内站 / 国际站变体，并新增 `switchAgent` 委托访问。
+- 新增全局标志 `--console-region`、`--console-site`、`--console-switch-agent`；`bl console call` 另外新增 `--site` 与 `--switch-agent`。
+- `bl auth login --base-url <url>`：使用 API Key 登录时可指定 base URL。
+- `bl omni` 新增 `--voice` 选项（Chelsie、Cherry、Ethan、Serena、Sunny、Tina，默认 Cherry）。
+
+### 变更
+
+- 所有面向用户的 CLI 文案统一为英文。
+- 配置文件中的 `base_url` 现在优先级高于环境变量 `DASHSCOPE_BASE_URL`。
+- `bl config show` 现在展示 `config.json` 中的全部字段（敏感值已脱敏）。
+
+### 移除
+
+- 移除遗留的 `region` 配置字段及其相关选项。
+- 清理 `model list` 命令移除后遗留的无效代码。
+
+### 修复
+
+- 当控制台会话未登录或已过期时，CLI 现在会给出明确的登录提示，不再是笼统的网关错误。
+
 ## [1.3.3] - 2026-06-16
 
 ### 变更

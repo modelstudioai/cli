@@ -6,6 +6,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.4.0] - 2026-06-17
+
+### Added
+
+- Console gateway now supports multiple regions and sites: `cn-beijing` and `ap-southeast-1`, each with domestic and international variants, plus `switchAgent` for delegated access.
+- New global flags `--console-region`, `--console-site`, and `--console-switch-agent`; `bl console call` also gains `--site` and `--switch-agent`.
+- `bl auth login --base-url <url>` to specify the base URL when logging in with an API key.
+- `bl omni` gains a `--voice` option (Chelsie, Cherry, Ethan, Serena, Sunny, Tina; default Cherry).
+
+### Changed
+
+- All user-facing CLI text is now standardized to English.
+- `base_url` from the config file now takes priority over the `DASHSCOPE_BASE_URL` environment variable.
+- `bl config show` now displays all fields from `config.json`, with sensitive values masked.
+
+### Removed
+
+- The legacy `region` config field and its related options.
+- Invalid leftover code for the removed `model list` command.
+
+### Fixed
+
+- When the console session is not logged in or has expired, the CLI now shows a clear sign-in prompt instead of a generic gateway error.
+
 ## [1.3.3] - 2026-06-16
 
 ### Changed
