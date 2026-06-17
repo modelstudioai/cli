@@ -139,14 +139,19 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
     expect(stderr).toContain("no matching models found");
   });
 
-  test("quota list JSON 输出包含 qpmInfo", async () => {
+  test("quota list JSON 输出包含 model/rpm/tpm/maxTPM", async () => {
     const { stdout, stderr, exitCode } = await runCli(["quota", "list", "--output", "json"]);
     expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<Array<{ model?: string; qpmInfo?: unknown }>>(stdout);
+    const data =
+      parseStdoutJson<
+        Array<{ model?: string; rpm?: number | null; tpm?: number | null; maxTPM?: number | null }>
+      >(stdout);
     expect(Array.isArray(data)).toBe(true);
     expect(data.length).toBeGreaterThan(0);
     expect(data[0].model).toBeTypeOf("string");
-    expect(data[0].qpmInfo).toBeDefined();
+    expect(data[0].rpm).toBeTypeOf("number");
+    expect(data[0].tpm).toBeTypeOf("number");
+    expect(data[0].maxTPM).toBeTypeOf("number");
   });
 
   test("quota request --dry-run 输出请求参数", async () => {

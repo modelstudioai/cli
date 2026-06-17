@@ -76,20 +76,20 @@ async function embedBatch(config: Config, texts: string[]): Promise<number[][]> 
 }
 
 const CAPABILITY_LABELS: Record<string, string> = {
-  TG: "文本生成",
-  Reasoning: "推理",
-  VU: "视觉理解",
-  IG: "图像生成",
-  VG: "视频生成",
-  TTS: "语音合成",
-  ASR: "语音识别",
+  TG: "Text Generation",
+  Reasoning: "Reasoning",
+  VU: "Vision Understanding",
+  IG: "Image Generation",
+  VG: "Video Generation",
+  TTS: "Text-to-Speech",
+  ASR: "Speech-to-Text",
 };
 
 const MODALITY_LABELS: Record<string, string> = {
-  Text: "文本",
-  Image: "图片/图像",
-  Video: "视频",
-  Audio: "音频/语音",
+  Text: "Text",
+  Image: "Image",
+  Video: "Video",
+  Audio: "Audio",
 };
 
 interface GroupData {
@@ -135,12 +135,12 @@ function buildModelText(model: ModelProfile, descriptions: Map<string, string>):
     model.name,
     model.model,
     description,
-    caps ? `能力: ${caps}` : "",
-    inputMods ? `输入: ${inputMods}` : "",
-    outputMods ? `输出: ${outputMods}` : "",
-    model.features?.length ? `特性: ${model.features.join(", ")}` : "",
+    caps ? `Capabilities: ${caps}` : "",
+    inputMods ? `Input: ${inputMods}` : "",
+    outputMods ? `Output: ${outputMods}` : "",
+    model.features?.length ? `Features: ${model.features.join(", ")}` : "",
     model.familyName || "",
-    model.category ? `定位: ${model.category}` : "",
+    model.category ? `Category: ${model.category}` : "",
   ].filter(Boolean);
 
   return parts.join(" | ");

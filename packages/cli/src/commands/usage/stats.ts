@@ -375,16 +375,31 @@ export default defineCommand({
       );
 
       const allItems: ModelStatisticItem[] = [];
-      const jsonResults: unknown[] = [];
       for (const result of results) {
         if (!result) continue;
-        jsonResults.push(result);
         const listData = extractListData(result);
         allItems.push(...listData.list);
       }
 
       if (format === "json") {
-        emitResult(jsonResults.length === 1 ? jsonResults[0] : jsonResults, format);
+        const items = allItems.map((item) => {
+          const usage = resolveUsageMap(item);
+          const clean: Record<string, unknown> = {
+            model: item.model,
+            successfulCalls: item.callSuccessCount ?? 0,
+          };
+          for (const [key, val] of Object.entries(usage)) {
+            clean[key] = val;
+          }
+          return clean;
+        });
+        emitResult(
+          {
+            period: { start: formatDate(startTime), end: formatDate(endTime), days: daysFlag },
+            items,
+          },
+          format,
+        );
         return;
       }
 
@@ -411,12 +426,37 @@ export default defineCommand({
         process.exit(1);
       }
 
+      const stat = extractOverviewData(result);
+
       if (format === "json") {
-        emitResult(result, format);
+        if (!stat) {
+          emitResult(
+            {
+              period: { start: formatDate(startTime), end: formatDate(endTime), days: daysFlag },
+              modelsCalled: 0,
+              successfulCalls: 0,
+            },
+            format,
+          );
+          return;
+        }
+        emitResult(
+          {
+            period: { start: formatDate(startTime), end: formatDate(endTime), days: daysFlag },
+            modelsCalled: stat.modelCount ?? 0,
+            successfulCalls: stat.callSuccessCount ?? 0,
+            usages: (stat.usages ?? []).map((u) => ({
+              key: u.key,
+              value: u.value,
+              unit: u.unit,
+              label: USAGE_KEY_LABELS[u.key]?.en ?? u.key,
+            })),
+          },
+          format,
+        );
         return;
       }
 
-      const stat = extractOverviewData(result);
       if (!stat) {
         process.stdout.write("No usage data found.\n");
         return;

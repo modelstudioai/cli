@@ -297,11 +297,6 @@ export default defineCommand({
       }),
     ]);
 
-    if (format === "json") {
-      emitResult(quotaResult, format);
-      return;
-    }
-
     const allQuotas = extractQuotas(quotaResult);
     let quotas = modelFlag
       ? allQuotas
@@ -322,13 +317,43 @@ export default defineCommand({
       quotas.sort((a, b) => (a.quotaValidityPeriod ?? 0) - (b.quotaValidityPeriod ?? 0));
     }
 
+    const stopStatuses = extractFreeTierOnlyStatuses(stopResult);
+    const stopMap = new Map(stopStatuses.map((status) => [status.model, status.freeTierOnly]));
+
+    if (format === "json") {
+      const items = quotas.map((quota) => {
+        const hasQuota = quota.quotaInitTotal != null && quota.quotaTotal != null;
+        const used = hasQuota ? quota.quotaInitTotal - quota.quotaTotal : 0;
+        const stopStatus = stopMap.get(quota.model);
+        const autoStop =
+          quota.quotaStatus === "UNKNOWN"
+            ? "unsupported"
+            : stopStatus === true
+              ? true
+              : stopStatus === false
+                ? false
+                : null;
+        return {
+          model: quota.model,
+          type: typeMap.get(quota.model) || null,
+          remaining: hasQuota ? quota.quotaTotal : null,
+          total: hasQuota ? quota.quotaInitTotal : null,
+          usagePercent:
+            hasQuota && quota.quotaInitTotal > 0
+              ? Math.round((used / quota.quotaInitTotal) * 1000) / 10
+              : null,
+          expires: quota.quotaValidityPeriod ? formatDate(quota.quotaValidityPeriod) : null,
+          autoStop,
+        };
+      });
+      emitResult(items, format);
+      return;
+    }
+
     if (quotas.length === 0) {
       process.stdout.write("No free-tier quota found.\n");
       return;
     }
-
-    const stopStatuses = extractFreeTierOnlyStatuses(stopResult);
-    const stopMap = new Map(stopStatuses.map((status) => [status.model, status.freeTierOnly]));
 
     printTable(quotas, stopMap, typeMap, config.noColor);
   },

@@ -169,11 +169,17 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
     ]);
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
-      code?: string;
-      successResponse?: boolean;
+      period?: { start?: string; end?: string; days?: number };
+      modelsCalled?: number;
+      successfulCalls?: number;
+      usages?: Array<{ key?: string; value?: number }>;
     }>(stdout);
-    expect(data.code).toBe("200");
-    expect(data.successResponse).toBe(true);
+    expect(data.period).toBeDefined();
+    expect(data.period?.start).toBeTypeOf("string");
+    expect(data.period?.end).toBeTypeOf("string");
+    expect(data.period?.days).toBeTypeOf("number");
+    expect(data.modelsCalled).toBeTypeOf("number");
+    expect(data.successfulCalls).toBeTypeOf("number");
   });
 
   test("usage stats 概览文本输出包含英文标签", async () => {

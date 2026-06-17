@@ -218,7 +218,25 @@ export default defineCommand({
     }
 
     if (format === "json") {
-      emitResult(models, format);
+      const items = models.map((m) => {
+        const qpm = m.qpmInfo;
+        const modelDefault = qpm?.["model-default"];
+        const userSpec = qpm?.["user-spec"];
+
+        const defaultRPM = calculateRPM(modelDefault);
+        const defaultTPM = calculateTPM(modelDefault);
+        const currentRPM = calculateRPM(userSpec, modelDefault?.count_limit_period) || defaultRPM;
+        const currentTPM = calculateTPM(userSpec, modelDefault?.usage_limit_period) || defaultTPM;
+        const maxTPM = defaultTPM * 2;
+
+        return {
+          model: m.model,
+          rpm: currentRPM > 0 ? currentRPM : null,
+          tpm: currentTPM > 0 ? currentTPM : null,
+          maxTPM: maxTPM > 0 ? maxTPM : null,
+        };
+      });
+      emitResult(items, format);
       return;
     }
 
