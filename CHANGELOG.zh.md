@@ -6,6 +6,34 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.4.0] - 2026-06-17
+
+### 新增
+
+- 控制台网关地址现在通过 **region + site** 映射表解析，不再依赖单一硬编码值。支持 `cn-beijing` 与 `ap-southeast-1` 两个 region，各含国内站 / 国际站变体，并新增 `switchAgent` 委托访问支持。
+- 新增全局标志 `--console-region`、`--console-site`、`--console-switch-agent`，按 CLI 标志 → 配置文件 → 默认值的优先级流转，自动作用于所有控制台网关命令；`bl console call` 另外新增 `--site` 与 `--switch-agent`。
+- `bl auth login --base-url <url>`：与 `--api-key` 配合使用时，会针对指定 base URL 校验 key 并持久化。
+- `bl auth login --console` 现在会从登录回调中解析并持久化 `workspace_id`、`base_url`、`site`、`region` 和 `switchAgent`。
+- `bl omni` 新增 `--voice` 选项（Chelsie、Cherry、Ethan、Serena、Sunny、Tina，默认 Cherry）。
+
+### 变更
+
+- 所有面向用户的 CLI 文案统一为英文。
+- 命令是否需要默认 API-Key 引导改为在 `defineCommand` 上通过 `skipDefaultApiKeySetup` 声明，取代 `main.ts` 中集中的 `NO_AUTH_SETUP` 列表。
+- 配置文件中的 `base_url` 现在优先级高于环境变量 `DASHSCOPE_BASE_URL`。
+- `bl config show` 现在展示 `config.json` 中的全部字段（敏感值已脱敏），不再只展示精选子集，也不再显示已移除的 `region` 字段。
+- 重构了 `usage` 与 `quota` 命令的访问令牌解析逻辑，控制台鉴权更可靠。
+- 默认控制台登录页设为正式中国站地址（`https://bailian.console.aliyun.com`）。
+
+### 移除
+
+- 移除遗留的 `region` 配置字段及其全部相关逻辑、选项与埋点；region 现在由上述控制台网关解析推导得出。
+- 清理 `model list` 命令移除后遗留的无效代码。
+
+### 修复
+
+- 当控制台会话未登录或已过期时，CLI 现在会抛出明确的 `AUTH` 错误并提示运行 `bl auth login --console`，不再是笼统的网关错误。
+
 ## [1.3.3] - 2026-06-16
 
 ### 变更

@@ -6,6 +6,34 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.4.0] - 2026-06-17
+
+### Added
+
+- Console gateway URL is now resolved from a **region + site** mapping instead of a single hardcoded value. `cn-beijing` and `ap-southeast-1` regions are supported, each with domestic and international site variants, plus `switchAgent` support for delegated access.
+- New global flags `--console-region`, `--console-site`, and `--console-switch-agent` flow through CLI flags → config file → defaults and are applied to all console gateway commands; `bl console call` also gains `--site` and `--switch-agent`.
+- `bl auth login --base-url <url>` — when used with `--api-key`, validates the key against the given base URL and persists it.
+- `bl auth login --console` now parses and persists `workspace_id`, `base_url`, `site`, `region`, and `switchAgent` from the console login callback.
+- `bl omni` gains a `--voice` option (Chelsie, Cherry, Ethan, Serena, Sunny, Tina; default Cherry).
+
+### Changed
+
+- All user-facing CLI text is now standardized to English.
+- Commands declare whether they need the default API-key setup via `skipDefaultApiKeySetup` on `defineCommand`, replacing the centralized `NO_AUTH_SETUP` list in `main.ts`.
+- `base_url` from the config file now takes priority over the `DASHSCOPE_BASE_URL` environment variable.
+- `bl config show` now displays all fields from `config.json` (with sensitive values masked) rather than a curated subset, and no longer surfaces the removed `region` field.
+- Access-token resolution for `usage` and `quota` commands reworked for more reliable console authentication.
+- Default console login page set to the official China-site address (`https://bailian.console.aliyun.com`).
+
+### Removed
+
+- The legacy `region` config field and all related logic, options, and telemetry have been removed; region is now derived from the console gateway resolution above.
+- Invalid leftover code for the removed `model list` command.
+
+### Fixed
+
+- When the console session is not logged in or has expired, the CLI now throws a clear `AUTH` error with the hint to run `bl auth login --console`, instead of a generic gateway error.
+
 ## [1.3.3] - 2026-06-16
 
 ### Changed
