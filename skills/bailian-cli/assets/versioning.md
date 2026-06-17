@@ -38,17 +38,16 @@ bl update
 `bl update` upgrades `bailian-cli` via npm and, on success, also runs
 `npx skills update bailian-cli -g -y` to keep the skill in lockstep.
 
-## 3. Auto-update policy
+## 3. Update policy — always ask first
 
-- When `bl` is older than the latest release, **run `bl update` automatically**,
-  then continue the user's task with the upgraded binary.
-- Do this **at most once per session** (cache the result; do not re-check before
-  every command).
-- If `npm view` / `bl update` fails (offline, registry blocked, permission), do
-  **not** block the task — continue with the current `bl` and tell the user it
-  could not be updated.
-- After re-check, confirm `bl --version` matches the updated skill's
-  `metadata.version`.
+- When any version mismatch is detected, **stop and ask the user before proceeding**.
+  - Report: skill version, installed CLI version, and npm latest.
+  - Ask: "A newer version of bl is available (current: X.Y.Z, latest: A.B.C). Upgrade before continuing?"
+- **Do NOT auto-upgrade silently** — the user decides.
+- If the user agrees, run `bl update`, then continue the task.
+- If the user declines, continue with the current version and note it in the summary.
+- Do this **at most once per session** (cache the result; do not re-check before every command).
+- If `npm view` / `bl update` fails (offline, registry blocked, permission), do **not** block the task — continue with the current `bl` and tell the user it could not be updated.
 
 ## 4. Missing `bl`
 
