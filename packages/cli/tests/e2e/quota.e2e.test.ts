@@ -96,7 +96,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
     expect(data.data?.input?.supports).toBeUndefined();
   });
 
-  test("quota list 文本输出包含单行英⽂表头", async () => {
+  test("quota list 文本输出包含英文表头", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "quota",
       "list",
@@ -238,7 +238,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
     expect(data.apis).toContain("zeldaEasy.bailian-telemetry.monitor.getMonitorData");
   });
 
-  test("quota check 文本输出包含单行英⽂表头", async () => {
+  test("quota check 文本输出包含英文表头", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "quota",
       "check",
@@ -312,7 +312,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
     expect(data[0].tpmLimit).toBeTypeOf("number");
   });
 
-  test("quota check 状态列显示 Normal/Near Limit/Throttled 之一", async () => {
+  test("quota check 状态列显示 Normal/Near limit/Rate Limited 之一", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "quota",
       "check",
@@ -324,7 +324,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
     ]);
     expect(exitCode, stderr).toBe(0);
     const hasStatus =
-      stdout.includes("Normal") || stdout.includes("Near Limit") || stdout.includes("Throttled");
+      stdout.includes("Normal") || stdout.includes("Near limit") || stdout.includes("Rate Limited");
     expect(hasStatus).toBe(true);
   });
 

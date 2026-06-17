@@ -78,7 +78,7 @@ function printTable(
   typeMap: Map<string, string>,
   noColor: boolean,
 ): void {
-  const headersEn = ["Model", "Type", "Remaining/Total", "Usage", "Expires", "Auto-Stop"];
+  const headers = ["Model", "Type", "Remaining/Total", "Usage", "Expires", "Auto-Stop"];
 
   const rows = quotas.map((quota) => {
     const hasQuota = quota.quotaInitTotal != null && quota.quotaTotal != null;
@@ -101,7 +101,7 @@ function printTable(
     ];
   });
 
-  const widths = headersEn.map((label, col) =>
+  const widths = headers.map((label, col) =>
     Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
@@ -110,11 +110,11 @@ function printTable(
   const green = noColor ? (text: string) => text : (text: string) => `\x1b[32m${text}\x1b[0m`;
   const yellow = noColor ? (text: string) => text : (text: string) => `\x1b[33m${text}\x1b[0m`;
 
-  const autoStopCol = headersEn.length - 1;
-  const enLine = headersEn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
+  const autoStopCol = headers.length - 1;
+  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((width) => dim("─".repeat(width))).join("──");
 
-  process.stdout.write(enLine + "\n");
+  process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
 
   for (const row of rows) {
@@ -186,6 +186,7 @@ async function fetchAllModels(config: Config, token: string): Promise<ModelInfo[
 export default defineCommand({
   name: "usage free",
   description: "Query free-tier quota for models (all models if --model is omitted)",
+  skipDefaultApiKeySetup: true,
   usage: "bl usage free [--model <model>[,model2,...]] [flags]",
   options: [
     {

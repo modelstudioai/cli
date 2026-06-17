@@ -28,6 +28,7 @@ function updateAgentSkill(colors: { green: string; yellow: string; reset: string
 export default defineCommand({
   name: "update",
   description: "Update bl to the latest version",
+  skipDefaultApiKeySetup: true,
   usage: "bl update",
   examples: ["bl update"],
   async run() {

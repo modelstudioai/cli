@@ -22,7 +22,10 @@ function alignContinuation(text: string): string {
 
 function enhanceHint(err: BailianError): string | undefined {
   if (err.exitCode === ExitCode.AUTH) {
-    if (err.message === CONSOLE_GATEWAY_NO_TOKEN_MESSAGE) {
+    if (
+      err.message === CONSOLE_GATEWAY_NO_TOKEN_MESSAGE ||
+      err.hint?.includes("auth login --console")
+    ) {
       return err.hint;
     }
     return [

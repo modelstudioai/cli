@@ -56,7 +56,7 @@ bl video download --task-id 3b256896-xxxx --out video.mp4 --quiet
 | --------------------------- | ------- | -------- | --------------------------------------------------------------------------------------- |
 | `--model <model>`           | string  | no       | Model ID (default: happyhorse-1.0-video-edit)                                           |
 | `--video <url>`             | string  | yes      | Input video URL or local file (mp4/mov, 2-10s)                                          |
-| `--prompt <text>`           | string  | no       | Edit instruction (e.g. "将画面转换为黏土风格")                                          |
+| `--prompt <text>`           | string  | no       | Edit instruction (e.g. "Convert the scene to a claymation style")                       |
 | `--ref-image <url>`         | string  | no       | Reference image URL (up to 4, comma-separated)                                          |
 | `--negative-prompt <text>`  | string  | no       | Negative prompt to exclude unwanted content                                             |
 | `--resolution <res>`        | string  | no       | Resolution: 720P or 1080P (default: 1080P)                                              |
@@ -74,11 +74,11 @@ bl video download --task-id 3b256896-xxxx --out video.mp4 --quiet
 #### Examples
 
 ```bash
-bl video edit --video https://example.com/input.mp4 --prompt "将整个画面转换为黏土风格"
+bl video edit --video https://example.com/input.mp4 --prompt "Convert the entire scene to claymation style"
 ```
 
 ```bash
-bl video edit --video https://example.com/input.mp4 --prompt "替换衣服为图片中的款式" --ref-image https://example.com/clothes.png
+bl video edit --video https://example.com/input.mp4 --prompt "Replace the outfit with the style shown in the image" --ref-image https://example.com/clothes.png
 ```
 
 ```bash
@@ -86,7 +86,7 @@ bl video edit --video https://example.com/input.mp4 --prompt "Convert to anime s
 ```
 
 ```bash
-bl video edit --video https://example.com/input.mp4 --prompt "给视频里的小猫穿上衣服" --watermark false
+bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the kitten in the video" --watermark false
 ```
 
 ### `bl video generate`
@@ -119,7 +119,7 @@ bl video edit --video https://example.com/input.mp4 --prompt "给视频里的小
 #### Examples
 
 ```bash
-bl video generate --prompt "一个人在读书，静态镜头"
+bl video generate --prompt "A person reading a book, static shot"
 ```
 
 ```bash
@@ -127,7 +127,7 @@ bl video generate --prompt "Ocean waves at sunset." --download sunset.mp4
 ```
 
 ```bash
-bl video generate --image https://example.com/cat.png --prompt "让画面中的猫动起来"
+bl video generate --image https://example.com/cat.png --prompt "Make the cat in the scene move"
 ```
 
 ```bash
@@ -151,7 +151,7 @@ bl video generate --prompt "A cat playing with a ball" --watermark false
 | Flag                        | Type    | Required | Description                                                                             |
 | --------------------------- | ------- | -------- | --------------------------------------------------------------------------------------- |
 | `--model <model>`           | string  | no       | Model ID (default: happyhorse-1.0-r2v)                                                  |
-| `--prompt <text>`           | string  | yes      | Video description with reference markers (图1, 视频1, etc.)                             |
+| `--prompt <text>`           | string  | yes      | Video description with reference markers (image1, video1, etc.)                         |
 | `--image <url>`             | array   | no       | Reference image URL or local file (repeatable for multiple subjects)                    |
 | `--ref-video <url>`         | array   | no       | Reference video URL or local file (repeatable)                                          |
 | `--image-voice <url>`       | array   | no       | Voice URL for corresponding image (pairs by position)                                   |
@@ -170,23 +170,23 @@ bl video generate --prompt "A cat playing with a ball" --watermark false
 #### Examples
 
 ```bash
-bl video ref --prompt "图1在草地上奔跑" --image person.jpg
+bl video ref --prompt "Image1 running on the grass" --image person.jpg
 ```
 
 ```bash
-bl video ref --prompt "视频1在弹吉他，图1走过来" --ref-video scene.mp4 --image person.jpg
+bl video ref --prompt "Video 1 plays guitar, Image 1 walks over" --ref-video scene.mp4 --image person.jpg
 ```
 
 ```bash
-bl video ref --prompt "图1说话" --image person.jpg --image-voice voice.mp3 --resolution 1080P
+bl video ref --prompt "Image 1 speaks" --image person.jpg --image-voice voice.mp3 --resolution 1080P
 ```
 
 ```bash
-bl video ref --prompt "图1和图2在对话" --image a.jpg --image b.jpg --image-voice va.mp3 --image-voice vb.mp3
+bl video ref --prompt "Image 1 and Image 2 have a conversation" --image a.jpg --image b.jpg --image-voice va.mp3 --image-voice vb.mp3
 ```
 
 ```bash
-bl video ref --prompt "图1在喝水" --image person.jpg --watermark false
+bl video ref --prompt "Image 1 drinks water" --image person.jpg --watermark false
 ```
 
 ### `bl video task get`

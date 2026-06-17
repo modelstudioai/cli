@@ -65,7 +65,7 @@ function printTable(records: LimitApplicationItem[], noColor: boolean, total: nu
   const bold = noColor ? (t: string) => t : (t: string) => `\x1b[1m${t}\x1b[0m`;
   const dim = noColor ? (t: string) => t : (t: string) => `\x1b[2m${t}\x1b[0m`;
 
-  const headersEn = ["Model", "Token Limit", "Applied At"];
+  const headers = ["Model", "Token Limit", "Applied At"];
 
   const rows = records.map((r) => [
     r.deployedModel,
@@ -73,11 +73,11 @@ function printTable(records: LimitApplicationItem[], noColor: boolean, total: nu
     formatDateTime(r.gmtCreate),
   ]);
 
-  const widths = headersEn.map((label, col) =>
+  const widths = headers.map((label, col) =>
     Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const headerLine = headersEn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
+  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((w) => dim("─".repeat(w))).join("──");
 
   process.stdout.write(headerLine + "\n");
@@ -93,6 +93,7 @@ function printTable(records: LimitApplicationItem[], noColor: boolean, total: nu
 export default defineCommand({
   name: "quota history",
   description: "View quota change history",
+  skipDefaultApiKeySetup: true,
   usage: "bl quota history [flags]",
   options: [
     {

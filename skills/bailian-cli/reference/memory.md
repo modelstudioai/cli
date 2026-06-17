@@ -40,15 +40,15 @@ Index: [index.md](index.md)
 #### Examples
 
 ```bash
-bl memory add --user-id user1 --content "用户喜欢Python编程"
+bl memory add --user-id user1 --content "The user likes Python programming"
 ```
 
 ```bash
-bl memory add --user-id user1 --messages '[{"role":"user","content":"我喜欢旅行"}]'
+bl memory add --user-id user1 --messages '[{"role":"user","content":"I like traveling"}]'
 ```
 
 ```bash
-bl memory add --user-id user1 --content "住在北京" --profile-schema schema_xxx
+bl memory add --user-id user1 --content "Lives in Beijing" --profile-schema schema_xxx
 ```
 
 ### `bl memory delete`
@@ -110,16 +110,16 @@ bl memory list --user-id user1 --page-size 20 --page 2
 
 #### Options
 
-| Flag                   | Type   | Required | Description                                                  |
-| ---------------------- | ------ | -------- | ------------------------------------------------------------ |
-| `--name <name>`        | string | yes      | Schema name (required)                                       |
-| `--description <text>` | string | no       | Schema description                                           |
-| `--attributes <json>`  | string | yes      | Attributes JSON array: [{"name":"age","description":"年龄"}] |
+| Flag                   | Type   | Required | Description                                                 |
+| ---------------------- | ------ | -------- | ----------------------------------------------------------- |
+| `--name <name>`        | string | yes      | Schema name (required)                                      |
+| `--description <text>` | string | no       | Schema description                                          |
+| `--attributes <json>`  | string | yes      | Attributes JSON array: [{"name":"age","description":"age"}] |
 
 #### Examples
 
 ```bash
-bl memory profile create --name "user_basic" --attributes '[{"name":"age","description":"年龄"},{"name":"hobby","description":"爱好"}]'
+bl memory profile create --name "user_basic" --attributes '[{"name":"age","description":"age"},{"name":"hobby","description":"hobby"}]'
 ```
 
 ### `bl memory profile get`
@@ -164,11 +164,11 @@ bl memory profile get --schema-id schema_xxx --user-id user1
 #### Examples
 
 ```bash
-bl memory search --user-id user1 --query "编程偏好"
+bl memory search --user-id user1 --query "programming preferences"
 ```
 
 ```bash
-bl memory search --user-id user1 --messages '[{"role":"user","content":"推荐一本书"}]' --top-k 5
+bl memory search --user-id user1 --messages '[{"role":"user","content":"recommend a book"}]' --top-k 5
 ```
 
 ### `bl memory update`
@@ -191,5 +191,5 @@ bl memory search --user-id user1 --messages '[{"role":"user","content":"推荐�
 #### Examples
 
 ```bash
-bl memory update --node-id node_xxx --user-id user1 --content "更新后的记忆内容"
+bl memory update --node-id node_xxx --user-id user1 --content "updated memory content"
 ```

@@ -21,9 +21,9 @@ export default defineCommand({
     { flag: "--list-tools", description: "List available MCP tools and exit" },
   ],
   examples: [
-    'bl search web --query "阿里云百炼最新功能"',
+    'bl search web --query "Alibaba Cloud Bailian latest features"',
     'bl search web --query "TypeScript 5.9 new features" --count 5',
-    'bl search web --query "今日新闻"',
+    'bl search web --query "Today\'s news"',
     "bl search web --list-tools",
   ],
   async run(config: Config, flags: GlobalFlags) {

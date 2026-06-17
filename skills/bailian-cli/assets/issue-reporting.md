@@ -137,9 +137,9 @@ If it still fails with INCLUDE signals → offer reporting.
 
 When INCLUDE matches, ask in **Chinese** (adjust if the user prefers English):
 
-> `bl` 命令出现了疑似 CLI 自身的问题。
-> 是否需要帮你整理信息，向百炼 CLI 团队提交 GitHub Issue？
-> 提交前会自动脱敏 API Key；你也可以只复制模版自行提交。
+> The `bl` command hit what looks like a CLI bug.
+> Would you like help gathering details to file a GitHub Issue with the Bailian CLI team?
+> API Keys will be redacted automatically before submission; you can also copy the template and submit yourself.
 
 If the user agrees → [Collect information](#collect-information) → [Submit](#submit).
 
@@ -290,7 +290,7 @@ If a matching open issue exists:
 
 Before submitting, **always show the redacted issue body to the user** and ask for confirmation:
 
-> 以下是即将提交的 Issue 内容（已脱敏），请确认是否提交：
+> Below is the redacted Issue content to be submitted—confirm submission?
 > show body
 
 Only proceed after the user confirms.
@@ -329,7 +329,7 @@ If `gh` is not installed or not authenticated:
 1. Write the complete redacted issue body to a local file (e.g. `./cli-bug-report.md`)
 2. Print the file content to the user
 3. Provide the direct URL: [https://github.com/modelstudioai/cli/issues/new?template=bug_report.yml](https://github.com/modelstudioai/cli/issues/new?template=bug_report.yml)
-4. Instruct: "请在浏览器中打开上面的链接，将内容粘贴到 issue body 中提交。"
+4. Instruct: "Open the link above in your browser and paste the content into the issue body to submit."
 
 Do **not** block on `gh` — always provide a manual path.
 

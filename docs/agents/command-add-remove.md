@@ -53,7 +53,7 @@ registry.ts  main.ts      tools/generate-reference.ts   export-schema.ts
   - 增删 `import xxx from "./.../xxx.ts"`
   - 在 `export const commands` 里增删 `"<group> <action>": xxx`(key 与 `defineCommand({ name })` 一致)
 - [ ] **不要**在 `registry.ts` 里重复登记命令(已从 catalog 读取)
-- [ ] 如果命令需要鉴权之外的特殊路径,看 `packages/cli/src/main.ts` 的 `NO_AUTH_SETUP`
+- [ ] 如果命令需要跳过入口的默认 DashScope API key 引导(`ensureApiKey`),在对应 `defineCommand` 上设 `skipDefaultApiKeySetup: true`(字段定义见 `packages/core/src/types/command.ts`;`main.ts` 根据已解析的 `command` 读取)
 - [ ] **`config/export-schema.ts`**: 若新命令不适合作为 agent tool,评估是否加入 `SKIP_PREFIXES`;该文件在 `run()` 内 `import("../catalog.ts")`,勿顶层 import catalog 以免循环依赖
 
 ### B. 文档层

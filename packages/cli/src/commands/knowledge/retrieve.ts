@@ -25,6 +25,7 @@ const BAILIAN_HOST = "bailian.cn-beijing.aliyuncs.com";
 export default defineCommand({
   name: "knowledge retrieve",
   description: "Retrieve from a Bailian knowledge base",
+  skipDefaultApiKeySetup: true,
   usage: "bl knowledge retrieve --index-id <id> --query <text> [flags]",
   options: [
     { flag: "--index-id <id>", description: "Knowledge base index ID (required)", required: true },
@@ -76,8 +77,8 @@ export default defineCommand({
     "`--workspace-id` is NOT required when using --api-key.",
   ],
   examples: [
-    'bl knowledge retrieve --index-id idx_xxx --query "如何使用阿里云百炼"',
-    'bl knowledge retrieve --api-key $DASHSCOPE_API_KEY --index-id idx_xxx --query "RAG检索" --rerank --rerank-model qwen3-rerank-hybrid',
+    'bl knowledge retrieve --index-id idx_xxx --query "How to use Alibaba Cloud Bailian"',
+    'bl knowledge retrieve --api-key $DASHSCOPE_API_KEY --index-id idx_xxx --query "RAG retrieval" --rerank --rerank-model qwen3-rerank-hybrid',
   ],
   async run(config: Config, flags: GlobalFlags) {
     const indexId = flags.indexId as string;

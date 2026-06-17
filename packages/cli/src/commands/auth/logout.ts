@@ -20,6 +20,7 @@ async function clearConsoleToken(): Promise<boolean> {
 export default defineCommand({
   name: "auth logout",
   description: "Clear stored credentials",
+  skipDefaultApiKeySetup: true,
   usage: "bl auth logout [--console] [--yes] [--dry-run]",
   options: [
     {

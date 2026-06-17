@@ -14,6 +14,7 @@ import { emitResult } from "../../output/output.ts";
 export default defineCommand({
   name: "console call",
   description: "Call a Bailian console API via the CLI gateway",
+  skipDefaultApiKeySetup: true,
   usage: "bl console call --api <api> --data <json> [flags]",
   options: [
     {

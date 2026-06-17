@@ -13,6 +13,7 @@ export default defineCommand({
   name: "config export-schema",
   description:
     "Export all (or one) CLI command(s) as Anthropic/OpenAI-compatible JSON tool schemas",
+  skipDefaultApiKeySetup: true,
   usage: 'bl config export-schema [--command "<name>"]',
   options: [
     {

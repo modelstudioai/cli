@@ -36,11 +36,11 @@ Index: [index.md](index.md)
 #### Examples
 
 ```bash
-bl mcp call market-cmapi00073529.SmartStockSelection --query "筛选ROE>15%的消费股"
+bl mcp call market-cmapi00073529.SmartStockSelection --query "Screen consumer stocks with ROE > 15%"
 ```
 
 ```bash
-bl mcp call market-cmapi00073529.FinQuery --json '{"q":"贵州茅台","limit":5}'
+bl mcp call market-cmapi00073529.FinQuery --json '{"q":"Guizhou Maotai","limit":5}'
 ```
 
 ```bash
@@ -72,7 +72,7 @@ bl mcp list
 ```
 
 ```bash
-bl mcp list --name 金融
+bl mcp list --name finance
 ```
 
 ```bash

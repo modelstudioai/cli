@@ -46,7 +46,7 @@ function printTable(workspaces: WorkspaceInfo[], noColor: boolean): void {
   const dim = noColor ? (text: string) => text : (text: string) => `\x1b[2m${text}\x1b[0m`;
   const green = noColor ? (text: string) => text : (text: string) => `\x1b[32m${text}\x1b[0m`;
 
-  const headersEn = ["Name", "Workspace ID", "Default"];
+  const headers = ["Name", "Workspace ID", "Default"];
 
   const rows = workspaces.map((ws) => [
     ws.agentName,
@@ -54,11 +54,11 @@ function printTable(workspaces: WorkspaceInfo[], noColor: boolean): void {
     ws.defaultAgent ? "Yes" : "-",
   ]);
 
-  const widths = headersEn.map((label, col) =>
+  const widths = headers.map((label, col) =>
     Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const headerLine = headersEn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
+  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((width) => dim("─".repeat(width))).join("──");
 
   process.stdout.write(headerLine + "\n");
@@ -72,12 +72,13 @@ function printTable(workspaces: WorkspaceInfo[], noColor: boolean): void {
     process.stdout.write(cells.join("  ") + "\n");
   }
 
-  process.stdout.write(dim(`\nTotal: ${workspaces.length} workspaces`) + "\n");
+  process.stdout.write(dim(`\nTotal: ${workspaces.length}`) + "\n");
 }
 
 export default defineCommand({
   name: "workspace list",
   description: "List all workspaces",
+  skipDefaultApiKeySetup: true,
   usage: "bl workspace list [flags]",
   options: [
     {

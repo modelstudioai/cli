@@ -172,8 +172,8 @@ const USAGE_KEY_LABELS: Record<string, UsageLabel> = {
   purein_text_output_token: { en: "Text Output", unit: "tokens" },
   embedding_token: { en: "Embedding", unit: "tokens" },
   image_number: { en: "Images", unit: "images" },
-  video_duration: { en: "Video Duration", unit: "seconds" },
-  content_duration: { en: "Audio Duration", unit: "seconds" },
+  video_duration: { en: "Video Duration", unit: "sec" },
+  content_duration: { en: "Audio Duration", unit: "sec" },
   tts_text_number: { en: "TTS Chars", unit: "chars" },
   total_token_avg: { en: "Avg Tokens/Req" },
 };
@@ -194,7 +194,7 @@ function printOverview(
   const dim = noColor ? (text: string) => text : (text: string) => `\x1b[2m${text}\x1b[0m`;
 
   process.stdout.write(
-    `${dim("Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${dim(`(${days} days)`)}\n\n`,
+    `${dim("Time Range Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${dim(`(${days} days)`)}\n\n`,
   );
 
   const rows: [string, string][] = [
@@ -225,7 +225,7 @@ function printModelTable(
   const dim = noColor ? (text: string) => text : (text: string) => `\x1b[2m${text}\x1b[0m`;
 
   process.stdout.write(
-    `${dim("Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${dim(`(${days} days)`)}\n\n`,
+    `${dim("Time Range Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${dim(`(${days} days)`)}\n\n`,
   );
 
   if (items.length === 0) {
@@ -256,11 +256,7 @@ function printModelTable(
     return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
   });
 
-  const headersEn = [
-    "Model",
-    "Calls",
-    ...orderedKeys.map((key) => USAGE_KEY_LABELS[key]?.en ?? key),
-  ];
+  const headers = ["Model", "Calls", ...orderedKeys.map((key) => USAGE_KEY_LABELS[key]?.en ?? key)];
   const rows = items.map((item, idx) => [
     item.model,
     formatNumber(item.callSuccessCount ?? 0),
@@ -270,11 +266,11 @@ function printModelTable(
     }),
   ]);
 
-  const widths = headersEn.map((label, col) =>
+  const widths = headers.map((label, col) =>
     Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const headerLine = headersEn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
+  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((width) => dim("─".repeat(width))).join("──");
 
   process.stdout.write(headerLine + "\n");
@@ -291,6 +287,7 @@ function printModelTable(
 export default defineCommand({
   name: "usage stats",
   description: "Query model usage statistics",
+  skipDefaultApiKeySetup: true,
   usage: "bl usage stats [--model <model>] [--days <days>] [flags]",
   options: [
     {

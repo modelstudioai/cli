@@ -64,8 +64,8 @@ function formatRatio(usage: number, limit: number): string {
 function getStatus(usage: number, limit: number): string {
   if (limit <= 0) return "-";
   const pct = (usage / limit) * 100;
-  if (pct >= 100) return "Throttled";
-  if (pct >= 80) return "Near Limit";
+  if (pct >= 100) return "Rate Limited";
+  if (pct >= 80) return "Near limit";
   return "Normal";
 }
 
@@ -193,7 +193,7 @@ function printTable(rows: CheckRow[], noColor: boolean): void {
   const yellow = noColor ? (t: string) => t : (t: string) => `\x1b[33m${t}\x1b[0m`;
   const red = noColor ? (t: string) => t : (t: string) => `\x1b[31m${t}\x1b[0m`;
 
-  const headersEn = ["Model", "RPM Usage/Limit", "TPM Usage/Limit", "Status"];
+  const headers = ["Model", "RPM Usage/Limit", "TPM Usage/Limit", "Status"];
 
   const tableRows = rows.map((r) => {
     const rpmStr = r.rpmUsage < 0 ? "-" : formatRatio(r.rpmUsage, r.rpmLimit);
@@ -214,11 +214,11 @@ function printTable(rows: CheckRow[], noColor: boolean): void {
     return;
   }
 
-  const widths = headersEn.map((label, col) =>
+  const widths = headers.map((label, col) =>
     Math.max(displayWidth(label), ...tableRows.map((r) => displayWidth(r.cells[col]))),
   );
 
-  const headerLine = headersEn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
+  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((w) => dim("─".repeat(w))).join("──");
 
   process.stdout.write(headerLine + "\n");
@@ -228,8 +228,8 @@ function printTable(rows: CheckRow[], noColor: boolean): void {
   for (const r of tableRows) {
     const cells = r.cells.map((cell, col) => {
       if (col === statusCol) {
-        if (cell === "Throttled") return red(padEnd(cell, widths[col]));
-        if (cell === "Near Limit") return yellow(padEnd(cell, widths[col]));
+        if (cell === "Rate Limited") return red(padEnd(cell, widths[col]));
+        if (cell === "Near limit") return yellow(padEnd(cell, widths[col]));
         if (cell === "Normal") return green(padEnd(cell, widths[col]));
       }
       return padEnd(cell, widths[col]);
@@ -243,6 +243,7 @@ function printTable(rows: CheckRow[], noColor: boolean): void {
 export default defineCommand({
   name: "quota check",
   description: "Check current usage against rate limits",
+  skipDefaultApiKeySetup: true,
   usage: "bl quota check [--model <model>] [flags]",
   options: [
     {

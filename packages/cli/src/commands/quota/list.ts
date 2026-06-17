@@ -108,7 +108,7 @@ function printTable(models: ModelWithQpm[], noColor: boolean): void {
   const bold = noColor ? (t: string) => t : (t: string) => `\x1b[1m${t}\x1b[0m`;
   const dim = noColor ? (t: string) => t : (t: string) => `\x1b[2m${t}\x1b[0m`;
 
-  const headersEn = ["Model", "Req/min", "Token/min", "Max TPM"];
+  const headers = ["Model", "Req/min", "Token/min", "Max TPM"];
 
   const rows = models.map((m) => {
     const qpm = m.qpmInfo;
@@ -134,11 +134,11 @@ function printTable(models: ModelWithQpm[], noColor: boolean): void {
     return;
   }
 
-  const widths = headersEn.map((label, col) =>
+  const widths = headers.map((label, col) =>
     Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const headerLine = headersEn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
+  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((w) => dim("─".repeat(w))).join("──");
 
   process.stdout.write(headerLine + "\n");
@@ -154,6 +154,7 @@ function printTable(models: ModelWithQpm[], noColor: boolean): void {
 export default defineCommand({
   name: "quota list",
   description: "View model RPM/TPM rate limits",
+  skipDefaultApiKeySetup: true,
   usage: "bl quota list [--model <model>] [flags]",
   options: [
     {
