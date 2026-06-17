@@ -22,13 +22,6 @@ Before using this skill or following `reference/`, run the version alignment flo
 
 Quick rules (run **once per session** before the first `bl` command; full flow in [`assets/versioning.md`](assets/versioning.md)):
 
-1. If `bl --version` fails, install: `npm install -g bailian-cli` and `npx skills add modelstudioai/cli --all -g`.
-2. Compare this skill `metadata.version` with `bl --version` (compare only `X.Y.Z`). If they differ, run `npx skills update bailian-cli -g -y`.
-3. Run `npm view bailian-cli version`. If local `bl` is older than the latest release, run `bl update` automatically (at most once per session), then continue with the upgraded binary.
-4. If `npm view` / `bl update` fails (offline, registry blocked), do not block the task — continue with the current `bl` and tell the user it could not be updated.
-
-Do not rely on stale `reference/` when versions mismatch — flags and commands may be out of date.
-
 ## Command reference (authoritative)
 
 **All commands, flags, usage strings, and examples are documented in:**
