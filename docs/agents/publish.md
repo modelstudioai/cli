@@ -67,6 +67,12 @@ node tools/release/publish-channel.mjs --channel test --dry-run
 - [ ] `packages/cli/package.json` 和 `packages/core/package.json` 已升到目标版本
 - [ ] pre-release 格式正确（`1.0.0-beta.0` / `1.0.0-rc.1`，**不要直接用 `1.0.0` 当 beta**）
 
+### CHANGELOG（仅 stable）
+
+- [ ] `CHANGELOG.md` 和 `CHANGELOG.zh.md` 都已新增目标版本条目，中英文一一对应
+- [ ] 分类标题用 Keep a Changelog 规范的 `Added` / `Changed` / `Deprecated` / `Removed` / `Fixed` / `Security`（中文版对应 `新增` / `变更` / `已弃用` / `已移除` / `修复` / `安全`），**不要自创 `Improved` / `优化` 等规范外分类**
+- [ ] 条目日期与发版日期一致
+
 ### 用户面文档
 
 - [ ] `README.md` / `README.zh.md` 的 Quick Start 命令仍能跑通
@@ -81,11 +87,12 @@ node tools/release/publish-channel.mjs --channel test --dry-run
 
 ## 常见漏点（基于历史踩坑）
 
-| 漏点                                                  | 后果                                               |
-| ----------------------------------------------------- | -------------------------------------------------- |
-| cli 升版号但 core 没升                                | check.mjs 会拦下                                   |
-| `1.0.0` 当 beta 直接发                                | 占了 `latest` tag，所有用户被强升，撤回成本极高    |
-| README 写的 bin 名实际 `package.json.bin` 没注册      | 用户复制命令报 `command not found`                 |
-| Node 徽章 `>=18`、engines `>=22.12` 不一致            | 用户在 Node 18 上 `npm i` 被 engine 警告或直接失败 |
-| npm Trusted Publisher 的 workflow filename 改了没同步 | OIDC 匹配不上，publish 报 404                      |
-| CI 用 Node 22（npm 10）跑 publish                     | npm 10 不支持 OIDC token 交换，publish 报 404      |
+| 漏点                                                     | 后果                                               |
+| -------------------------------------------------------- | -------------------------------------------------- |
+| cli 升版号但 core 没升                                   | check.mjs 会拦下                                   |
+| 发版漏更 CHANGELOG，或分类写成规范外的 `优化`/`Improved` | 用户看不到本次变更，分类与历史不一致               |
+| `1.0.0` 当 beta 直接发                                   | 占了 `latest` tag，所有用户被强升，撤回成本极高    |
+| README 写的 bin 名实际 `package.json.bin` 没注册         | 用户复制命令报 `command not found`                 |
+| Node 徽章 `>=18`、engines `>=22.12` 不一致               | 用户在 Node 18 上 `npm i` 被 engine 警告或直接失败 |
+| npm Trusted Publisher 的 workflow filename 改了没同步    | OIDC 匹配不上，publish 报 404                      |
+| CI 用 Node 22（npm 10）跑 publish                        | npm 10 不支持 OIDC token 交换，publish 报 404      |
