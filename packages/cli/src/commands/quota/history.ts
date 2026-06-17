@@ -127,8 +127,6 @@ export default defineCommand({
     const region = (flags.region as string) || "cn-beijing";
     const format = detectOutputFormat(config.output);
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
     const requestData = {
       input: { pageNo: page, pageSize },
     };
@@ -137,6 +135,8 @@ export default defineCommand({
       emitResult({ api: HISTORY_API, data: requestData, region }, format);
       return;
     }
+
+    const credential = await resolveConsoleGatewayCredential(config);
 
     let result: unknown;
     try {

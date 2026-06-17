@@ -330,8 +330,6 @@ export default defineCommand({
     const flagWorkspaceId = (flags.workspaceId as string) || undefined;
     const workspaceId = resolveWorkspaceId(config, flagWorkspaceId);
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
     const endTime = Date.now();
     const startTime = endTime - daysFlag * 24 * 60 * 60 * 1000;
 
@@ -364,6 +362,8 @@ export default defineCommand({
         );
         return;
       }
+
+      const credential = await resolveConsoleGatewayCredential(config);
 
       const results = await Promise.all(
         models.map((model) =>
@@ -414,6 +414,8 @@ export default defineCommand({
         emitResult({ api: OVERVIEW_API, data: { reqDTO }, region }, format);
         return;
       }
+
+      const credential = await resolveConsoleGatewayCredential(config);
 
       const result = await pollTelemetryApi(config, credential.token, OVERVIEW_API, reqDTO, region);
       if (!result) {

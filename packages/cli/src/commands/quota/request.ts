@@ -126,6 +126,17 @@ export default defineCommand({
     const region = (flags.region as string) || "cn-beijing";
     const format = detectOutputFormat(config.output);
 
+    if (config.dryRun) {
+      const requestData = {
+        input: {
+          model: modelName,
+          limit: { usage_limit: tpmValue },
+        },
+      };
+      emitResult({ api: UPDATE_LIMITS_API, data: requestData, region }, format);
+      return;
+    }
+
     const credential = await resolveConsoleGatewayCredential(config);
 
     const modelInfo = await fetchModelQpmInfo(config, credential.token, region, modelName);
@@ -159,11 +170,6 @@ export default defineCommand({
         originalQpmInfo: modelInfo.qpmInfo,
       } as Record<string, unknown>,
     };
-
-    if (config.dryRun) {
-      emitResult({ api: UPDATE_LIMITS_API, data: requestData, region }, format);
-      return;
-    }
 
     const submitRequest = async (confirmedDowngrade?: boolean): Promise<unknown> => {
       if (confirmedDowngrade) {

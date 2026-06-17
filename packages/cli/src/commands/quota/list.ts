@@ -183,8 +183,6 @@ export default defineCommand({
     const region = (flags.region as string) || "cn-beijing";
     const format = detectOutputFormat(config.output);
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
     if (config.dryRun) {
       const input: Record<string, unknown> = {
         pageNo: 1,
@@ -197,6 +195,8 @@ export default defineCommand({
       emitResult({ api: MODEL_LIST_API, data: { input }, region }, format);
       return;
     }
+
+    const credential = await resolveConsoleGatewayCredential(config);
 
     let models = await fetchAllModelsWithQpm(config, credential.token, region, !showAll);
 
