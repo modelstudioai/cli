@@ -39,7 +39,10 @@ export default defineCommand({
       description: "Input video URL or local file (mp4/mov, 2-10s)",
       required: true,
     },
-    { flag: "--prompt <text>", description: 'Edit instruction (e.g. "将画面转换为黏土风格")' },
+    {
+      flag: "--prompt <text>",
+      description: 'Edit instruction (e.g. "Convert the scene to a claymation style")',
+    },
     { flag: "--ref-image <url>", description: "Reference image URL (up to 4, comma-separated)" },
     {
       flag: "--negative-prompt <text>",
@@ -78,10 +81,10 @@ export default defineCommand({
     },
   ],
   examples: [
-    'bl video edit --video https://example.com/input.mp4 --prompt "将整个画面转换为黏土风格"',
-    'bl video edit --video https://example.com/input.mp4 --prompt "替换衣服为图片中的款式" --ref-image https://example.com/clothes.png',
+    'bl video edit --video https://example.com/input.mp4 --prompt "Convert the entire scene to claymation style"',
+    'bl video edit --video https://example.com/input.mp4 --prompt "Replace the outfit with the style shown in the image" --ref-image https://example.com/clothes.png',
     'bl video edit --video https://example.com/input.mp4 --prompt "Convert to anime style" --resolution 720P --download output.mp4',
-    'bl video edit --video https://example.com/input.mp4 --prompt "给视频里的小猫穿上衣服" --watermark false',
+    'bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the kitten in the video" --watermark false',
   ],
   async run(config: Config, flags: GlobalFlags) {
     // --- Validate video URL ---

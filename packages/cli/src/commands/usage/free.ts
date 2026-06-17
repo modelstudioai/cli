@@ -78,8 +78,7 @@ function printTable(
   typeMap: Map<string, string>,
   noColor: boolean,
 ): void {
-  const headersCn = ["模型", "类型", "剩余/总量", "使用率", "过期时间", "用完即停"];
-  const headersEn = ["Model", "Type", "Remaining/Total", "Usage", "Expires", "Auto-Stop"];
+  const headers = ["Model", "Type", "Remaining/Total", "Usage", "Expires", "Auto-Stop"];
 
   const rows = quotas.map((quota) => {
     const hasQuota = quota.quotaInitTotal != null && quota.quotaTotal != null;
@@ -102,12 +101,8 @@ function printTable(
     ];
   });
 
-  const widths = headersCn.map((label, col) =>
-    Math.max(
-      displayWidth(label),
-      displayWidth(headersEn[col]),
-      ...rows.map((row) => displayWidth(row[col])),
-    ),
+  const widths = headers.map((label, col) =>
+    Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
   const dim = noColor ? (text: string) => text : (text: string) => `\x1b[2m${text}\x1b[0m`;
@@ -115,13 +110,11 @@ function printTable(
   const green = noColor ? (text: string) => text : (text: string) => `\x1b[32m${text}\x1b[0m`;
   const yellow = noColor ? (text: string) => text : (text: string) => `\x1b[33m${text}\x1b[0m`;
 
-  const autoStopCol = headersCn.length - 1;
-  const cnLine = headersCn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const enLine = headersEn.map((label, col) => dim(padEnd(label, widths[col]))).join("  ");
+  const autoStopCol = headers.length - 1;
+  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((width) => dim("─".repeat(width))).join("──");
 
-  process.stdout.write(cnLine + "\n");
-  process.stdout.write(enLine + "\n");
+  process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
 
   for (const row of rows) {

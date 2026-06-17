@@ -26,9 +26,9 @@ export default defineCommand({
     { flag: "--memory-library-id <id>", description: "Memory library ID (isolate memory space)" },
   ],
   examples: [
-    'bl memory add --user-id user1 --content "用户喜欢Python编程"',
-    'bl memory add --user-id user1 --messages \'[{"role":"user","content":"我喜欢旅行"}]\'',
-    'bl memory add --user-id user1 --content "住在北京" --profile-schema schema_xxx',
+    'bl memory add --user-id user1 --content "The user likes Python programming"',
+    'bl memory add --user-id user1 --messages \'[{"role":"user","content":"I like traveling"}]\'',
+    'bl memory add --user-id user1 --content "Lives in Beijing" --profile-schema schema_xxx',
   ],
   async run(config: Config, flags: GlobalFlags) {
     const userId = flags.userId as string;

@@ -46,8 +46,7 @@ function printTable(workspaces: WorkspaceInfo[], noColor: boolean): void {
   const dim = noColor ? (text: string) => text : (text: string) => `\x1b[2m${text}\x1b[0m`;
   const green = noColor ? (text: string) => text : (text: string) => `\x1b[32m${text}\x1b[0m`;
 
-  const headersCn = ["空间名称", "Workspace ID", "默认空间"];
-  const headersEn = ["Name", "", "Default"];
+  const headers = ["Name", "Workspace ID", "Default"];
 
   const rows = workspaces.map((ws) => [
     ws.agentName,
@@ -55,20 +54,14 @@ function printTable(workspaces: WorkspaceInfo[], noColor: boolean): void {
     ws.defaultAgent ? "Yes" : "-",
   ]);
 
-  const widths = headersCn.map((label, col) =>
-    Math.max(
-      displayWidth(label),
-      displayWidth(headersEn[col]),
-      ...rows.map((row) => displayWidth(row[col])),
-    ),
+  const widths = headers.map((label, col) =>
+    Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const cnLine = headersCn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const enLine = headersEn.map((label, col) => dim(padEnd(label, widths[col]))).join("  ");
+  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((width) => dim("─".repeat(width))).join("──");
 
-  process.stdout.write(cnLine + "\n");
-  process.stdout.write(enLine + "\n");
+  process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
 
   for (const row of rows) {
@@ -79,9 +72,7 @@ function printTable(workspaces: WorkspaceInfo[], noColor: boolean): void {
     process.stdout.write(cells.join("  ") + "\n");
   }
 
-  process.stdout.write(
-    dim(`\n共 ${workspaces.length} 个空间 (Total: ${workspaces.length})`) + "\n",
-  );
+  process.stdout.write(dim(`\nTotal: ${workspaces.length}`) + "\n");
 }
 
 export default defineCommand({

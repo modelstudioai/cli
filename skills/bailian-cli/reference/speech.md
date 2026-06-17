@@ -91,7 +91,7 @@ bl speech recognize --url https://example.com/audio.mp3 --no-wait --quiet
 | `--pitch <pitch>`      | string  | no       | Pitch multiplier 0.5-2.0 (default: 1.0)                                                                                 |
 | `--seed <seed>`        | string  | no       | Random seed 0-65535 for reproducible synthesis                                                                          |
 | `--language <lang>`    | string  | no       | Language hint (e.g. zh, en, ja, ko, fr, de)                                                                             |
-| `--instruction <text>` | string  | no       | Natural language instruction to control speech style (e.g. "请用温柔的语调"）                                           |
+| `--instruction <text>` | string  | no       | Natural language instruction to control speech style (e.g. "Use a gentle tone"）                                        |
 | `--enable-ssml`        | boolean | no       | Enable SSML markup parsing in input text                                                                                |
 | `--out <path>`         | string  | no       | Save audio to file (default: auto-generate in temp dir)                                                                 |
 | `--stream`             | boolean | no       | Stream raw PCM audio to stdout (pipe to player)                                                                         |
@@ -103,7 +103,7 @@ bl speech synthesize --list-voices --model cosyvoice-v3-flash
 ```
 
 ```bash
-bl speech synthesize --text "你好，我是千问" --voice <voice_id>
+bl speech synthesize --text "Hello, I am Qwen" --voice <voice_id>
 ```
 
 ```bash
@@ -115,7 +115,7 @@ bl speech synthesize --text-file script.txt --out speech.wav --voice <voice_id>
 ```
 
 ```bash
-bl speech synthesize --text "今天天气真好" --voice <voice_id> --instruction "请用温柔的语调说话"
+bl speech synthesize --text "Today is a good day" --voice <voice_id> --instruction "Use a gentle tone"
 ```
 
 ```bash
@@ -127,7 +127,7 @@ bl speech synthesize --text "Hello" --voice <voice_id> --format wav --sample-rat
 ```
 
 ```bash
-bl speech synthesize --text "你好" --voice <voice_id> --stream | afplay -
+bl speech synthesize --text "Hello" --voice <voice_id> --stream | afplay -
 ```
 
 ```bash

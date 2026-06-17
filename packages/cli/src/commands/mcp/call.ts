@@ -57,8 +57,8 @@ export default defineCommand({
     { flag: "--url <url>", description: "Override the MCP endpoint URL (for non-Bailian servers)" },
   ],
   examples: [
-    'bl mcp call market-cmapi00073529.SmartStockSelection --query "筛选ROE>15%的消费股"',
-    'bl mcp call market-cmapi00073529.FinQuery --json \'{"q":"贵州茅台","limit":5}\'',
+    'bl mcp call market-cmapi00073529.SmartStockSelection --query "Screen consumer stocks with ROE > 15%"',
+    'bl mcp call market-cmapi00073529.FinQuery --json \'{"q":"Guizhou Maotai","limit":5}\'',
     "bl mcp call market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 --arg minScale=10",
   ],
   async run(config: Config, flags: GlobalFlags) {

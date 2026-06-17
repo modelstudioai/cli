@@ -96,7 +96,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
     expect(data.data?.input?.supports).toBeUndefined();
   });
 
-  test("quota list 文本输出包含双行表头", async () => {
+  test("quota list 文本输出包含英文表头", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "quota",
       "list",
@@ -105,11 +105,9 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
       "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stdout).toContain("模型");
     expect(stdout).toContain("Model");
-    expect(stdout).toContain("RPM");
-    expect(stdout).toContain("TPM");
-    expect(stdout).toContain("可设上限 TPM");
+    expect(stdout).toContain("Req/min");
+    expect(stdout).toContain("Token/min");
     expect(stdout).toContain("Max TPM");
   });
 
@@ -125,7 +123,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("qwen3.6-plus");
-    expect(stdout).toMatch(/共 1 个模型/);
+    expect(stdout).toMatch(/Total: 1 models/);
   });
 
   test("quota list --model 不存在的模型报错", async () => {
@@ -235,7 +233,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
     expect(data.apis).toContain("zeldaEasy.bailian-telemetry.monitor.getMonitorData");
   });
 
-  test("quota check 文本输出包含双行表头", async () => {
+  test("quota check 文本输出包含英文表头", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "quota",
       "check",
@@ -244,12 +242,10 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
       "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stdout).toContain("模型");
     expect(stdout).toContain("Model");
-    expect(stdout).toContain("RPM 用量/限额");
     expect(stdout).toContain("RPM Usage/Limit");
-    expect(stdout).toContain("TPM 用量/限额");
-    expect(stdout).toContain("状态");
+    expect(stdout).toContain("TPM Usage/Limit");
+    expect(stdout).toContain("Status");
   });
 
   test("quota check --model 指定单模型", async () => {
@@ -264,7 +260,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("qwen3.6-plus");
-    expect(stdout).toMatch(/共 1 个模型/);
+    expect(stdout).toMatch(/Total: 1 models/);
   });
 
   test("quota check --model 逗号分隔多模型", async () => {
@@ -280,7 +276,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("qwen3.6-plus");
     expect(stdout).toContain("qwen-plus");
-    expect(stdout).toMatch(/共 2 个模型/);
+    expect(stdout).toMatch(/Total: 2 models/);
   });
 
   test("quota check JSON 输出包含用量和限额字段", async () => {
@@ -311,7 +307,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
     expect(data[0].tpmLimit).toBeTypeOf("number");
   });
 
-  test("quota check 状态列显示正常/接近限流/已限流之一", async () => {
+  test("quota check 状态列显示 Normal/Near limit/Rate Limited 之一", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "quota",
       "check",
@@ -323,7 +319,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
     ]);
     expect(exitCode, stderr).toBe(0);
     const hasStatus =
-      stdout.includes("正常") || stdout.includes("接近限流") || stdout.includes("已限流");
+      stdout.includes("Normal") || stdout.includes("Near limit") || stdout.includes("Rate Limited");
     expect(hasStatus).toBe(true);
   });
 

@@ -176,8 +176,8 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
     expect(data.successResponse).toBe(true);
   });
 
-  test("usage stats 概览文本输出包含中英文表头", async () => {
-    const { stderr, exitCode } = await runCli([
+  test("usage stats 概览文本输出包含英文标签", async () => {
+    const { stdout, stderr, exitCode } = await runCli([
       "usage",
       "stats",
       "--workspace-id",
@@ -187,10 +187,13 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
+    expect(stdout).toContain("Time Range Period:");
+    expect(stdout).toContain("Models Called");
+    expect(stdout).toContain("Successful Calls");
   });
 
   test("usage stats 概览文本输出包含 Token 用量", async () => {
-    const { stderr, exitCode } = await runCli([
+    const { stdout, stderr, exitCode } = await runCli([
       "usage",
       "stats",
       "--workspace-id",
@@ -200,10 +203,11 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
+    expect(stdout).toMatch(/Total Tokens|Input Tokens|Output Tokens/);
   });
 
-  test("usage stats --model 单模型文本输出包含双行表头", async () => {
-    const { stderr, exitCode } = await runCli([
+  test("usage stats --model 单模型文本输出包含英文表头", async () => {
+    const { stdout, stderr, exitCode } = await runCli([
       "usage",
       "stats",
       "--workspace-id",
@@ -215,10 +219,14 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
+    expect(stdout).toContain("Time Range Period:");
+    expect(stdout).toContain("Model");
+    expect(stdout).toContain("Calls");
+    expect(stdout).toMatch(/Total: \d+ models/);
   });
 
   test("usage stats --model 逗号分隔多模型返回多行", async () => {
-    const { stderr, exitCode } = await runCli([
+    const { stdout, stderr, exitCode } = await runCli([
       "usage",
       "stats",
       "--workspace-id",
@@ -230,6 +238,9 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
+    expect(stdout).toContain("qwen3.6-plus");
+    expect(stdout).toContain("deepseek-v4-pro");
+    expect(stdout).toMatch(/Total: 2 models/);
   });
 
   test("usage stats --model 不存在的模型返回空表格", async () => {
@@ -249,7 +260,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
   });
 
   test("usage stats --days 1 短时间范围正常返回", async () => {
-    const { stderr, exitCode } = await runCli([
+    const { stdout, stderr, exitCode } = await runCli([
       "usage",
       "stats",
       "--workspace-id",
@@ -261,10 +272,11 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
+    expect(stdout).toContain("(1 days)");
   });
 
   test("usage stats --type Vision 按类型过滤", async () => {
-    const { stderr, exitCode } = await runCli([
+    const { stdout, stderr, exitCode } = await runCli([
       "usage",
       "stats",
       "--workspace-id",
@@ -276,5 +288,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
+    expect(stdout).toContain("Time Range Period:");
   });
 });

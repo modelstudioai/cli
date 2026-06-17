@@ -171,7 +171,8 @@ export default defineCommand({
     { flag: "--language <lang>", description: "Language hint (e.g. zh, en, ja, ko, fr, de)" },
     {
       flag: "--instruction <text>",
-      description: 'Natural language instruction to control speech style (e.g. "请用温柔的语调"）',
+      description:
+        'Natural language instruction to control speech style (e.g. "Use a gentle tone"）',
     },
     { flag: "--enable-ssml", description: "Enable SSML markup parsing in input text" },
     {
@@ -182,13 +183,13 @@ export default defineCommand({
   ],
   examples: [
     "bl speech synthesize --list-voices --model cosyvoice-v3-flash",
-    'bl speech synthesize --text "你好，我是千问" --voice <voice_id>',
+    'bl speech synthesize --text "Hello, I am Qwen" --voice <voice_id>',
     'bl speech synthesize --text "Hello world" --voice <voice_id> --language en',
     "bl speech synthesize --text-file script.txt --out speech.wav --voice <voice_id>",
-    'bl speech synthesize --text "今天天气真好" --voice <voice_id> --instruction "请用温柔的语调说话"',
+    'bl speech synthesize --text "Today is a good day" --voice <voice_id> --instruction "Use a gentle tone"',
     'bl speech synthesize --text "Hello" --voice <voice_id> --format wav --sample-rate 24000',
     "# Stream to audio player (macOS)",
-    'bl speech synthesize --text "你好" --voice <voice_id> --stream | afplay -',
+    'bl speech synthesize --text "Hello" --voice <voice_id> --stream | afplay -',
     "# Pipe to ffplay",
     'bl speech synthesize --text "Hello" --voice <voice_id> --stream | ffplay -nodisp -autoexit -f s16le -ar 24000 -ac 1 -',
   ],

@@ -65,8 +65,7 @@ function printTable(records: LimitApplicationItem[], noColor: boolean, total: nu
   const bold = noColor ? (t: string) => t : (t: string) => `\x1b[1m${t}\x1b[0m`;
   const dim = noColor ? (t: string) => t : (t: string) => `\x1b[2m${t}\x1b[0m`;
 
-  const headersCn = ["模型", "Token 账号限流", "申请时间"];
-  const headersEn = ["Model", "Token Limit", "Applied At"];
+  const headers = ["Model", "Token Limit", "Applied At"];
 
   const rows = records.map((r) => [
     r.deployedModel,
@@ -74,27 +73,21 @@ function printTable(records: LimitApplicationItem[], noColor: boolean, total: nu
     formatDateTime(r.gmtCreate),
   ]);
 
-  const widths = headersCn.map((label, col) =>
-    Math.max(
-      displayWidth(label),
-      displayWidth(headersEn[col]),
-      ...rows.map((row) => displayWidth(row[col])),
-    ),
+  const widths = headers.map((label, col) =>
+    Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const cnLine = headersCn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const enLine = headersEn.map((label, col) => dim(padEnd(label, widths[col]))).join("  ");
+  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((w) => dim("─".repeat(w))).join("──");
 
-  process.stdout.write(cnLine + "\n");
-  process.stdout.write(enLine + "\n");
+  process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
 
   for (const row of rows) {
     process.stdout.write(row.map((cell, col) => padEnd(cell, widths[col])).join("  ") + "\n");
   }
 
-  process.stdout.write(dim(`\n共 ${total} 条记录 (Total: ${total})`) + "\n");
+  process.stdout.write(dim(`\nTotal: ${total} records`) + "\n");
 }
 
 export default defineCommand({
