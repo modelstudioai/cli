@@ -31,6 +31,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Fixed
 
 - When the console session is not logged in or has expired, the CLI now shows a clear sign-in prompt instead of a generic gateway error.
+- Corrected `--resolution` / `--ratio` / `--duration` flag descriptions for `bl video` commands.
 
 ## [1.3.3] - 2026-06-16
 
