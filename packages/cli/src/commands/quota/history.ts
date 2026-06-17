@@ -138,8 +138,6 @@ export default defineCommand({
     const modelFilter = (flags.model as string) || undefined;
     const format = detectOutputFormat(config.output);
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
     const requestData = {
       input: { pageNo: page, pageSize },
     };
@@ -148,6 +146,8 @@ export default defineCommand({
       emitResult({ api: HISTORY_API, data: requestData }, format);
       return;
     }
+
+    const credential = await resolveConsoleGatewayCredential(config);
 
     let result: unknown;
     try {

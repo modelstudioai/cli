@@ -282,8 +282,6 @@ export default defineCommand({
     const windowMinutes = rawPeriod;
     const format = detectOutputFormat(config.output);
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
     if (config.dryRun) {
       emitResult(
         {
@@ -294,6 +292,8 @@ export default defineCommand({
       );
       return;
     }
+
+    const credential = await resolveConsoleGatewayCredential(config);
 
     let models = await fetchAllModelsWithQpm(config, credential.token);
 

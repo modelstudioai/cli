@@ -192,8 +192,6 @@ export default defineCommand({
     const showAll = Boolean(flags.all);
     const format = detectOutputFormat(config.output);
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
     if (config.dryRun) {
       const input: Record<string, unknown> = {
         pageNo: 1,
@@ -206,6 +204,8 @@ export default defineCommand({
       emitResult({ api: MODEL_LIST_API, data: { input } }, format);
       return;
     }
+
+    const credential = await resolveConsoleGatewayCredential(config);
 
     let models = await fetchAllModelsWithQpm(config, credential.token, !showAll);
 
