@@ -18,7 +18,6 @@ export interface ConfigFile {
   api_key?: string;
   /** OAuth-style token from `bl auth login --console` callback; sent as `Authorization: Bearer …` */
   access_token?: string;
-  region?: Region;
   base_url?: string;
   output?: "text" | "json";
   output_dir?: string;
@@ -31,16 +30,18 @@ export interface ConfigFile {
   access_key_id?: string;
   access_key_secret?: string;
   workspace_id?: string;
-  console_gateway_url?: string;
+  console_site?: "domestic" | "international";
+  console_region?: string;
+  console_switch_agent?: number;
   telemetry?: boolean;
 }
 
-const VALID_REGIONS = new Set<string>(["cn", "us", "intl"]);
 const VALID_OUTPUTS = new Set<string>(["text", "json"]);
+const VALID_CONSOLE_SITES = new Set<string>(["domestic", "international"]);
 
 /**
- * A syntactically valid absolute http(s) URL. Used to validate `base_url` and
- * `console_gateway_url` from the config file: the credential-bearing client
+ * A syntactically valid absolute http(s) URL. Used to validate `base_url`
+ * from the config file: the credential-bearing client
  * sends the Bearer token to these origins, so a bare `startsWith("http")` check
  * (which also accepts e.g. "httpfoo://…") is too loose.
  */
@@ -63,8 +64,6 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     out.access_token = obj.access_token;
   else if (typeof obj.accessToken === "string" && obj.accessToken.length > 0)
     out.access_token = obj.accessToken;
-  if (typeof obj.region === "string" && VALID_REGIONS.has(obj.region))
-    out.region = obj.region as Region;
   if (typeof obj.base_url === "string" && isHttpUrl(obj.base_url)) out.base_url = obj.base_url;
   if (typeof obj.output === "string" && VALID_OUTPUTS.has(obj.output))
     out.output = obj.output as ConfigFile["output"];
@@ -87,8 +86,12 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     out.access_key_secret = obj.access_key_secret;
   if (typeof obj.workspace_id === "string" && obj.workspace_id.length > 0)
     out.workspace_id = obj.workspace_id;
-  if (typeof obj.console_gateway_url === "string" && isHttpUrl(obj.console_gateway_url))
-    out.console_gateway_url = obj.console_gateway_url;
+  if (typeof obj.console_site === "string" && VALID_CONSOLE_SITES.has(obj.console_site))
+    out.console_site = obj.console_site as ConfigFile["console_site"];
+  if (typeof obj.console_region === "string" && obj.console_region.length > 0)
+    out.console_region = obj.console_region;
+  if (typeof obj.console_switch_agent === "number" && obj.console_switch_agent > 0)
+    out.console_switch_agent = obj.console_switch_agent;
   if (typeof obj.telemetry === "boolean") out.telemetry = obj.telemetry;
 
   return out;
@@ -103,9 +106,7 @@ export interface Config {
   /** `access_token` in config file (console login). */
   fileAccessToken?: string;
   fileApiKey?: string;
-  fileRegion?: Region;
   configPath?: string;
-  region: Region;
   baseUrl: string;
   output: "text" | "json";
   outputDir?: string;
@@ -118,7 +119,9 @@ export interface Config {
   accessKeyId?: string;
   accessKeySecret?: string;
   workspaceId?: string;
-  consoleGatewayUrl: string;
+  consoleSite?: "domestic" | "international";
+  consoleRegion?: string;
+  consoleSwitchAgent?: number;
   verbose: boolean;
   quiet: boolean;
   noColor: boolean;

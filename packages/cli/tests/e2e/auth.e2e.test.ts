@@ -17,6 +17,7 @@ describe("e2e: auth", () => {
     const { stderr, exitCode } = await runCli(["auth", "login", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/login|api-key/i);
+    expect(stderr).toMatch(/--console-site/);
   });
 
   test("auth logout --help 正常退出", async () => {
@@ -159,20 +160,25 @@ describe("e2e: auth", () => {
     expect(data.dashscope_commands?.method).toBeDefined();
   });
 
-  test.skipIf(!isDashScopeE2EReady())("auth status --output json --quiet --region cn", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
-      "auth",
-      "status",
-      "--non-interactive",
-      "--output",
-      "json",
-      "--quiet",
-      "--region",
-      "cn",
-    ]);
-    expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{ authenticated?: boolean; dashscope_commands?: unknown }>(stdout);
-    expect(data.authenticated).toBe(true);
-    expect(data.dashscope_commands).toBeDefined();
-  });
+  test.skipIf(!isDashScopeE2EReady())(
+    "auth status --output json --quiet --base-url 国内",
+    async () => {
+      const { stdout, stderr, exitCode } = await runCli([
+        "auth",
+        "status",
+        "--non-interactive",
+        "--output",
+        "json",
+        "--quiet",
+        "--base-url",
+        "https://dashscope.aliyuncs.com",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{ authenticated?: boolean; dashscope_commands?: unknown }>(
+        stdout,
+      );
+      expect(data.authenticated).toBe(true);
+      expect(data.dashscope_commands).toBeDefined();
+    },
+  );
 });

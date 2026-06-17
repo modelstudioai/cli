@@ -66,7 +66,7 @@ describe("e2e: mcp", () => {
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
       api?: string;
-      region?: string;
+      consoleRegion?: string;
       data?: {
         reqDTO?: {
           type?: string;
@@ -79,7 +79,6 @@ describe("e2e: mcp", () => {
       };
     }>(stdout);
     expect(data.api).toBe("zeldaEasy.broadscope-bailian.mcp-server.PageList");
-    expect(data.region).toBe("cn-beijing");
     expect(data.data?.reqDTO?.activated).toBe(1);
     expect(data.data?.reqDTO?.displayTools).toBe(false);
     expect(data.data?.reqDTO?.type).toBe("OFFICIAL");
@@ -88,7 +87,7 @@ describe("e2e: mcp", () => {
     expect(data.data?.reqDTO?.pageSize).toBe(5);
   });
 
-  test("mcp list --dry-run 自定义 --region 透传", async () => {
+  test("mcp list --dry-run 自定义 --console-region 透传", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "mcp",
       "list",
@@ -96,12 +95,12 @@ describe("e2e: mcp", () => {
       "--non-interactive",
       "--output",
       "json",
-      "--region",
+      "--console-region",
       "cn-hangzhou",
     ]);
     expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{ region?: string }>(stdout);
-    expect(data.region).toBe("cn-hangzhou");
+    const data = parseStdoutJson<{ consoleRegion?: string }>(stdout);
+    expect(data.consoleRegion).toBe("cn-hangzhou");
   });
 
   test("mcp tools <server-code> --dry-run 输出 /api/v1/mcps/<code>/mcp 形态 URL", async () => {

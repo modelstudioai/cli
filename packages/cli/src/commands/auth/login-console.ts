@@ -5,18 +5,24 @@ import http from "node:http";
 import {
   BailianError,
   ExitCode,
+  chatEndpoint,
   getConfigPath,
   readConfigFile,
+  requestJson,
   writeConfigFile,
+  type Config,
 } from "bailian-cli-core";
 
 const CONSOLE_LOGIN_TIMEOUT_MS = 15 * 60 * 1000;
 const MAX_AUTH_CALLBACK_BODY = 65536;
 
-const DEFAULT_CONSOLE_ORIGIN = "https://bailian.console.aliyun.com";
+const CONSOLE_ORIGINS: Record<string, string> = {
+  domestic: "https://bailian.console.aliyun.com",
+  international: "https://modelstudio.console.alibabacloud.com",
+};
 
-export function resolveConsoleOrigin(): string {
-  return process.env.BAILIAN_CONSOLE_ORIGIN || DEFAULT_CONSOLE_ORIGIN;
+export function resolveConsoleOrigin(site?: string): string {
+  return (site && CONSOLE_ORIGINS[site]) || CONSOLE_ORIGINS.domestic!;
 }
 
 function readBodyBounded(req: http.IncomingMessage): Promise<string> {
@@ -210,9 +216,76 @@ function parseApiKeyFromRawBody(raw: string, contentType: string): string | null
   return null;
 }
 
+type CallbackExtras = Pick<
+  CallbackCredentials,
+  "baseUrl" | "consoleSite" | "consoleRegion" | "consoleSwitchAgent" | "workspaceId"
+>;
+
+function stringField(o: Record<string, unknown>, ...keys: string[]): string | null {
+  for (const k of keys) {
+    const v = o[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return null;
+}
+
+function parseExtrasFromRawBody(raw: string, contentType: string): CallbackExtras {
+  const empty: CallbackExtras = {
+    baseUrl: null,
+    consoleSite: null,
+    consoleRegion: null,
+    consoleSwitchAgent: null,
+    workspaceId: null,
+  };
+  if (!raw.trim()) return empty;
+
+  let obj: Record<string, unknown> | null = null;
+
+  const ct = contentType.toLowerCase();
+  if (ct.includes("application/json") || ct.includes("text/json")) {
+    try {
+      const parsed = JSON.parse(raw.trim());
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) obj = parsed;
+    } catch {
+      /* */
+    }
+  }
+  if (!obj && ct.includes("application/x-www-form-urlencoded")) {
+    try {
+      const params = new URLSearchParams(raw.trim());
+      obj = Object.fromEntries(params);
+    } catch {
+      /* */
+    }
+  }
+  if (!obj) {
+    try {
+      const parsed = JSON.parse(raw.trim());
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) obj = parsed;
+    } catch {
+      /* */
+    }
+  }
+
+  if (!obj) return empty;
+
+  return {
+    baseUrl: stringField(obj, "base_url", "baseUrl"),
+    consoleSite: stringField(obj, "console_site", "consoleSite"),
+    consoleRegion: stringField(obj, "console_region", "consoleRegion"),
+    consoleSwitchAgent: stringField(obj, "console_switch_agent", "consoleSwitchAgent"),
+    workspaceId: stringField(obj, "workspace_id", "workspaceId"),
+  };
+}
+
 interface CallbackCredentials {
   accessToken: string | null;
   apiKey: string | null;
+  baseUrl: string | null;
+  consoleSite: string | null;
+  consoleRegion: string | null;
+  consoleSwitchAgent: string | null;
+  workspaceId: string | null;
 }
 
 async function extractCredentialsFromRequest(
@@ -222,12 +295,30 @@ async function extractCredentialsFromRequest(
   const accessTokenFromQuery =
     u.searchParams.get("access_token") ?? u.searchParams.get("accessToken");
   const apiKeyFromQuery = u.searchParams.get("api_key") ?? u.searchParams.get("apiKey");
+  const baseUrlFromQuery = u.searchParams.get("base_url") ?? u.searchParams.get("baseUrl");
+  const consoleSiteFromQuery =
+    u.searchParams.get("console_site") ?? u.searchParams.get("consoleSite");
+  const consoleRegionFromQuery =
+    u.searchParams.get("console_region") ?? u.searchParams.get("consoleRegion");
+  const consoleSwitchAgentFromQuery =
+    u.searchParams.get("console_switch_agent") ?? u.searchParams.get("consoleSwitchAgent");
+  const workspaceIdFromQuery =
+    u.searchParams.get("workspace_id") ?? u.searchParams.get("workspaceId");
+
+  const extras = {
+    baseUrl: baseUrlFromQuery?.trim() || null,
+    consoleSite: consoleSiteFromQuery?.trim() || null,
+    consoleRegion: consoleRegionFromQuery?.trim() || null,
+    consoleSwitchAgent: consoleSwitchAgentFromQuery?.trim() || null,
+    workspaceId: workspaceIdFromQuery?.trim() || null,
+  };
 
   const m = req.method ?? "GET";
   if (m !== "POST" && m !== "PUT" && m !== "PATCH") {
     return {
       accessToken: accessTokenFromQuery?.trim() || null,
       apiKey: apiKeyFromQuery?.trim() || null,
+      ...extras,
     };
   }
 
@@ -239,12 +330,24 @@ async function extractCredentialsFromRequest(
     return {
       accessToken: accessTokenFromQuery?.trim() || null,
       apiKey: apiKeyFromQuery?.trim() || null,
+      ...extras,
     };
   }
 
   const accessToken = accessTokenFromQuery?.trim() || parseAccessTokenFromRawBody(raw, contentType);
   const apiKey = apiKeyFromQuery?.trim() || parseApiKeyFromRawBody(raw, contentType);
-  return { accessToken, apiKey };
+
+  const bodyExtras = parseExtrasFromRawBody(raw, contentType);
+
+  return {
+    accessToken,
+    apiKey,
+    baseUrl: extras.baseUrl || bodyExtras.baseUrl,
+    consoleSite: extras.consoleSite || bodyExtras.consoleSite,
+    consoleRegion: extras.consoleRegion || bodyExtras.consoleRegion,
+    consoleSwitchAgent: extras.consoleSwitchAgent || bodyExtras.consoleSwitchAgent,
+    workspaceId: extras.workspaceId || bodyExtras.workspaceId,
+  };
 }
 
 function listenServerOnFreeLocalPort(server: http.Server): Promise<number> {
@@ -276,9 +379,69 @@ function openInBrowser(url: string): Promise<void> {
   });
 }
 
+const RETRY_DELAY_BASE_MS = 500;
+
+function canRetry(err: unknown): boolean {
+  if (err instanceof BailianError) {
+    if (err.exitCode === ExitCode.NETWORK || err.exitCode === ExitCode.TIMEOUT) return true;
+    const status = err.api?.httpStatus;
+    return status === 401 || (status !== undefined && status >= 500);
+  }
+  if (err instanceof Error) {
+    return (
+      err.name === "AbortError" ||
+      err.name === "TimeoutError" ||
+      err.message.includes("timed out") ||
+      err.message === "fetch failed"
+    );
+  }
+  return false;
+}
+
+export async function validateAndPersistApiKey(
+  config: Config,
+  key: string,
+  baseUrl: string,
+): Promise<void> {
+  process.stderr.write("Testing key... ");
+  const testConfig = { ...config, apiKey: key, baseUrl };
+  const requestOpts = {
+    url: chatEndpoint(testConfig.baseUrl),
+    method: "POST",
+    timeout: Math.min(config.timeout, 30),
+    body: {
+      model: "qwen3.7-max",
+      messages: [{ role: "user", content: "hi" }],
+      max_tokens: 1,
+    },
+  };
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await requestJson<unknown>(testConfig, requestOpts);
+      break;
+    } catch (err) {
+      if (attempt >= 3 || !canRetry(err)) {
+        process.stderr.write("Failed\n");
+        throw new BailianError("API key validation failed", ExitCode.AUTH, "Invalid API key.", {
+          cause: err,
+        });
+      }
+      const delayMs = RETRY_DELAY_BASE_MS * 2 ** (attempt - 1);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  process.stderr.write("Valid\n");
+  const existing = readConfigFile() as Record<string, unknown>;
+  existing.api_key = key;
+  await writeConfigFile(existing);
+}
+
 export async function runConsoleLogin(
   consoleOrigin: string,
-  opts?: { needApiKey?: boolean; onApiKey?: (key: string) => Promise<void> },
+  config: Config,
+  opts?: { needApiKey?: boolean },
 ): Promise<void> {
   const state = randomBytes(16).toString("hex");
   let callbackError: unknown;
@@ -301,18 +464,35 @@ export async function runConsoleLogin(
         return;
       }
 
-      const { accessToken, apiKey } = await extractCredentialsFromRequest(req);
+      const {
+        accessToken,
+        apiKey,
+        baseUrl,
+        consoleSite,
+        consoleRegion,
+        consoleSwitchAgent,
+        workspaceId,
+      } = await extractCredentialsFromRequest(req);
 
-      if (accessToken || apiKey) {
+      const hasConfig =
+        accessToken || baseUrl || consoleSite || consoleRegion || consoleSwitchAgent || workspaceId;
+
+      if (hasConfig || apiKey) {
         try {
-          if (accessToken) {
+          if (hasConfig) {
             const existing = readConfigFile() as Record<string, unknown>;
-            existing.access_token = accessToken;
+            if (accessToken) existing.access_token = accessToken;
+            if (baseUrl) existing.base_url = baseUrl;
+            if (consoleSite) existing.console_site = consoleSite;
+            if (consoleRegion) existing.console_region = consoleRegion;
+            if (consoleSwitchAgent) existing.console_switch_agent = Number(consoleSwitchAgent);
+            if (workspaceId) existing.workspace_id = workspaceId;
             await writeConfigFile(existing);
-            process.stderr.write(`access_token saved to ${getConfigPath()}\n`);
+            process.stderr.write(`Config saved to ${getConfigPath()}\n`);
           }
-          if (apiKey && opts?.onApiKey) {
-            await opts.onApiKey(apiKey);
+          if (apiKey) {
+            const testBaseUrl = baseUrl || config.baseUrl;
+            await validateAndPersistApiKey(config, apiKey, testBaseUrl);
           }
         } catch (err: unknown) {
           callbackError = err;
@@ -329,7 +509,7 @@ export async function runConsoleLogin(
       });
       res.end("OK\n");
 
-      if (accessToken || apiKey) {
+      if (hasConfig || apiKey) {
         server.close();
       }
     } catch {

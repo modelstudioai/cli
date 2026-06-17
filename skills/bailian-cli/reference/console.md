@@ -23,11 +23,13 @@ Index: [index.md](index.md)
 
 #### Options
 
-| Flag                | Type   | Required | Description                                                              |
-| ------------------- | ------ | -------- | ------------------------------------------------------------------------ |
-| `--api <api>`       | string | yes      | API name (e.g. zeldaEasy.broadscope-bailian.memory-library.getLibraries) |
-| `--data <json>`     | string | yes      | Request data as JSON string                                              |
-| `--region <region>` | string | no       | API region (default: cn-beijing)                                         |
+| Flag                           | Type   | Required | Description                                                              |
+| ------------------------------ | ------ | -------- | ------------------------------------------------------------------------ |
+| `--api <api>`                  | string | yes      | API name (e.g. zeldaEasy.broadscope-bailian.memory-library.getLibraries) |
+| `--data <json>`                | string | yes      | Request data as JSON string                                              |
+| `--console-region <region>`    | string | no       | Console region                                                           |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID                                                         |
 
 #### Examples
 
@@ -36,5 +38,5 @@ bl console call --api zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota 
 ```
 
 ```bash
-bl console call --api some.api.name --data '{"key":"value"}' --region cn-beijing
+bl console call --api some.api.name --data '{"key":"value"}' --console-region cn-beijing
 ```

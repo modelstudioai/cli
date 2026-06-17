@@ -30,9 +30,15 @@ export default defineCommand({
       description: "Results per page (default: 30)",
       type: "number",
     },
+    { flag: "--console-region <region>", description: "Console region" },
     {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID",
+      type: "number",
     },
   ],
   examples: [
@@ -45,7 +51,6 @@ export default defineCommand({
     const name = (flags.name as string) || "";
     const pageNo = (flags.page as number) || 1;
     const pageSize = (flags.pageSize as number) || 30;
-    const region = (flags.region as string) || "cn-beijing";
     const format = detectOutputFormat(config.output);
 
     const credential = await resolveConsoleGatewayCredential(config);
@@ -62,17 +67,13 @@ export default defineCommand({
     };
 
     if (config.dryRun) {
-      emitResult(
-        { api: APP_LIST_API, data, region, token: credential.token.slice(0, 8) + "..." },
-        format,
-      );
+      emitResult({ api: APP_LIST_API, data, token: credential.token.slice(0, 8) + "..." }, format);
       return;
     }
 
     const result = (await callConsoleGateway(config, credential.token, {
       api: APP_LIST_API,
       data,
-      region,
     })) as any;
 
     const list: unknown[] = result?.data?.DataV2?.data?.data?.list ?? [];

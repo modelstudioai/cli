@@ -1,6 +1,7 @@
 import {
   defineCommand,
   callConsoleGateway,
+  effectiveConsoleGatewayConfig,
   resolveConsoleGatewayCredential,
   CONSOLE_GATEWAY_NO_TOKEN_MESSAGE,
   BailianError,
@@ -27,14 +28,20 @@ export default defineCommand({
       description: "Request data as JSON string",
       required: true,
     },
+    { flag: "--console-region <region>", description: "Console region" },
     {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID",
+      type: "number",
     },
   ],
   examples: [
     `bl console call --api zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota --data '{"queryFreeTierQuotaRequest":{"models":["qwen3-max"]}}'`,
-    `bl console call --api some.api.name --data '{"key":"value"}' --region cn-beijing`,
+    `bl console call --api some.api.name --data '{"key":"value"}' --console-region cn-beijing`,
   ],
   async run(config: Config, flags: GlobalFlags) {
     const api = flags.api as string;
@@ -51,7 +58,6 @@ export default defineCommand({
       process.exit(1);
     }
 
-    const region = (flags.region as string) || "cn-beijing";
     const format = detectOutputFormat(config.output);
 
     let token: string | undefined;
@@ -64,14 +70,21 @@ export default defineCommand({
     }
 
     if (config.dryRun) {
-      emitResult({ api, data, region, token: token ? token.slice(0, 8) + "..." : null }, format);
+      emitResult(
+        {
+          api,
+          data,
+          token: token ? token.slice(0, 8) + "..." : null,
+          ...effectiveConsoleGatewayConfig(config),
+        },
+        format,
+      );
       return;
     }
 
     const result = await callConsoleGateway(config, token, {
       api,
       data,
-      region,
     });
 
     emitResult(result, format);
