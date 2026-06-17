@@ -18,6 +18,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - All user-facing CLI text is now standardized to English.
+- `bl advisor recommend` internal intent/ranking model upgraded from `qwen-turbo` to `qwen-flash`.
+- Cleaner JSON output for `usage`, `quota`, and `workspace` commands.
 - `base_url` from the config file now takes priority over the `DASHSCOPE_BASE_URL` environment variable.
 - `bl config show` now displays all fields from `config.json`, with sensitive values masked.
 

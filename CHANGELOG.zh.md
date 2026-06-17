@@ -18,6 +18,8 @@
 ### 变更
 
 - 所有面向用户的 CLI 文案统一为英文。
+- `bl advisor recommend` 内部意图 / 排序模型由 `qwen-turbo` 升级为 `qwen-flash`。
+- 优化 `usage`、`quota`、`workspace` 命令的 JSON 输出。
 - 配置文件中的 `base_url` 现在优先级高于环境变量 `DASHSCOPE_BASE_URL`。
 - `bl config show` 现在展示 `config.json` 中的全部字段（敏感值已脱敏）。
 
