@@ -17,7 +17,7 @@ description: >-
 
 ## Version & updates (agent — do this BEFORE any other action)
 
-**MANDATORY:** Before running any `bl` command, follow [`assets/versioning.md`](assets/versioning.md). If versions mismatch, ask the user whether to upgrade — do not proceed silently.
+**MANDATORY:** Before running any `bl` command, complete the **Agent pre-flight checklist** in [`assets/versioning.md`](assets/versioning.md). Do NOT run any `bl` command until the checklist is complete. If versions mismatch, ask the user whether to upgrade — do not proceed silently.
 
 ## Command reference (authoritative)
 
