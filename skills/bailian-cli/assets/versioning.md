@@ -18,7 +18,7 @@ Run this flow **once per session**, before the first `bl` command.
 2. **CLI version** — `bl --version` (output `bl X.Y.Z`; compare only `X.Y.Z`).
 3. If the two strings **differ**, refresh the skill first:
    ```bash
-   npx skills update bailian-cli -g -y
+   npx skills add modelstudioai/cli --all -g -y
    ```
 
 Do not trust a stale `reference/` when versions mismatch — flags may be wrong.
@@ -36,7 +36,7 @@ bl update
 ```
 
 `bl update` upgrades `bailian-cli` via npm and, on success, also runs
-`npx skills update bailian-cli -g -y` to keep the skill in lockstep.
+`npx skills add modelstudioai/cli --all -g -y` to keep the skill in lockstep across all agent apps.
 
 ## 3. Update policy — always ask first
 
