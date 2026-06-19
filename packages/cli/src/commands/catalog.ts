@@ -46,6 +46,7 @@ import quotaList from "./quota/list.ts";
 import quotaRequest from "./quota/request.ts";
 import quotaHistory from "./quota/history.ts";
 import quotaCheck from "./quota/check.ts";
+import agentSetup from "./agent/setup.ts";
 
 /** Command registry map (no dependency on registry.ts — safe for build-time import). */
 export const commands: Record<string, Command> = {
@@ -94,5 +95,6 @@ export const commands: Record<string, Command> = {
   "quota request": quotaRequest,
   "quota history": quotaHistory,
   "quota check": quotaCheck,
+  "agent setup": agentSetup,
   update: update,
 };
