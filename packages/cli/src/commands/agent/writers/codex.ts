@@ -1,7 +1,7 @@
 import { homedir } from "os";
 import { join } from "path";
 import { mkdirSync, writeFileSync, renameSync } from "fs";
-import { backup, type AgentDef } from "./utils.ts";
+import { backup, readJson, writeJsonAtomic, type AgentDef } from "./utils.ts";
 
 export default {
   label: "Codex",
@@ -27,16 +27,16 @@ export default {
     writeFileSync(tmp, toml, { mode: 0o600 });
     renameSync(tmp, configPath);
 
-    // Also hint about OPENAI_API_KEY env var
-    const shell = process.platform === "win32" ? "powershell" : "shell";
-    const envHint =
-      shell === "powershell"
-        ? `Set env: [Environment]::SetEnvironmentVariable("OPENAI_API_KEY", "${apiKey}", "User")`
-        : `Set env: export OPENAI_API_KEY="${apiKey}"`;
+    // auth.json — store API key for Codex to read
+    const authPath = join(homedir(), ".codex", "auth.json");
+    backup(authPath);
+    const auth = readJson(authPath);
+    auth.OPENAI_API_KEY = apiKey;
+    writeJsonAtomic(authPath, auth);
 
     return {
-      paths: [configPath],
-      nextStep: `${envHint}\n  Then run \`codex\` to start using Codex with DashScope.`,
+      paths: [configPath, authPath],
+      nextStep: "Run `codex` to start using Codex with DashScope.",
     };
   },
 } satisfies AgentDef;

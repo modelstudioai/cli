@@ -1,6 +1,6 @@
 import { homedir } from "os";
 import { join } from "path";
-import { backup, readJson, writeJsonAtomic, type AgentDef } from "./utils.ts";
+import { backup, readJson, writeJsonAtomic, isAnthropicEndpoint, type AgentDef } from "./utils.ts";
 
 export default {
   label: "OpenClaw",
@@ -14,10 +14,11 @@ export default {
     const models = (config.models ?? {}) as Record<string, unknown>;
     models.mode = "merge";
     const providers = (models.providers ?? {}) as Record<string, unknown>;
+    const api = isAnthropicEndpoint(baseUrl) ? "anthropic-messages" : "openai-completions";
     providers.bailian = {
       baseUrl,
       apiKey,
-      api: "anthropic-messages",
+      api,
       models: [
         {
           id: model,

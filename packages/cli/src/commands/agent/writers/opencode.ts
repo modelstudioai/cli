@@ -1,6 +1,6 @@
 import { homedir } from "os";
 import { join } from "path";
-import { backup, readJson, writeJsonAtomic, type AgentDef } from "./utils.ts";
+import { backup, readJson, writeJsonAtomic, isAnthropicEndpoint, type AgentDef } from "./utils.ts";
 
 export default {
   label: "OpenCode",
@@ -13,8 +13,9 @@ export default {
     if (!config.$schema) config.$schema = "https://opencode.ai/config.json";
 
     const provider = (config.provider ?? {}) as Record<string, unknown>;
+    const npm = isAnthropicEndpoint(baseUrl) ? "@ai-sdk/anthropic" : "@ai-sdk/openai-compatible";
     provider.bailian = {
-      npm: "@ai-sdk/anthropic",
+      npm,
       name: "Alibaba Cloud Model Studio",
       options: { baseURL: baseUrl, apiKey },
       models: { [model]: { name: model } },

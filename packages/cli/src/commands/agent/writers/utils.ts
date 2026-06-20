@@ -38,3 +38,7 @@ export function backup(path: string): void {
   const ts = Math.floor(Date.now() / 1000);
   copyFileSync(path, `${path}.bak.${ts}`);
 }
+
+export function isAnthropicEndpoint(baseUrl: string): boolean {
+  return baseUrl.includes("/apps/anthropic");
+}

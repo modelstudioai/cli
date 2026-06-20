@@ -2,7 +2,7 @@ import { homedir } from "os";
 import { join } from "path";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from "fs";
 import yaml from "yaml";
-import { backup, type AgentDef } from "./utils.ts";
+import { backup, isAnthropicEndpoint, type AgentDef } from "./utils.ts";
 
 export default {
   label: "Hermes Agent",
@@ -20,11 +20,12 @@ export default {
       }
     }
 
+    const apiMode = isAnthropicEndpoint(baseUrl) ? "anthropic_messages" : "chat_completions";
     config.model = {
       default: model,
       provider: "custom",
       base_url: baseUrl,
-      api_mode: "anthropic_messages",
+      api_mode: apiMode,
       api_key: apiKey,
     };
 
