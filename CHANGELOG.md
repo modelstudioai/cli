@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.4.1] - 2026-06-22
+
+### Changed
+
+- Video generation now defaults to the upgraded HappyHorse 1.1 model for better quality. The 1.0 models are still available via `--model`.
+- `bl update` now keeps the agent skill in sync across all your agent apps (Claude Code, Cursor, etc.), and refreshes it even when the CLI is already up to date.
+
 ## [1.4.0] - 2026-06-17
 
 ### Added
