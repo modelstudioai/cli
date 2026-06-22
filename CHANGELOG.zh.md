@@ -6,6 +6,13 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.4.1] - 2026-06-22
+
+### 变更
+
+- 视频生成默认升级到 HappyHorse 1.1 模型,画面质量更佳。如需使用 1.0 模型,可通过 `--model` 指定。
+- `bl update` 现在会把 agent skill 同步更新到所有 agent 应用(Claude Code、Cursor 等),即使 CLI 已是最新版本也会刷新 skill。
+
 ## [1.4.0] - 2026-06-17
 
 ### 新增
