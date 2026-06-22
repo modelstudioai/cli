@@ -37,7 +37,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "video",
         "generate",
         "--model",
-        "happyhorse-1.0-i2v",
+        "happyhorse-1.1-i2v",
         "--image",
         "https://example.com/placeholder.png",
         "--non-interactive",
@@ -53,7 +53,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "generate",
         "--dry-run",
         "--model",
-        "happyhorse-1.0-t2v",
+        "happyhorse-1.1-t2v",
         "--prompt",
         "干跑无图",
         "--non-interactive",
@@ -68,7 +68,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       expect(data.request?.input?.media).toBeUndefined();
     });
 
-    test("【happyhorse-1.0-i2v】图片生成视频", async () => {
+    test("【happyhorse-1.1-i2v】图片生成视频", async () => {
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
       const png = join(outDir, "e2e-gen.png");
       const gen = await runCli([
@@ -95,7 +95,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "video",
         "generate",
         "--model",
-        "happyhorse-1.0-i2v",
+        "happyhorse-1.1-i2v",
         "--image",
         imagePath,
         "--prompt",

@@ -37,7 +37,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "video",
         "ref",
         "--model",
-        "happyhorse-1.0-r2v",
+        "happyhorse-1.1-r2v",
         "--image",
         "https://example.com/x.png",
         "--non-interactive",
@@ -52,7 +52,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "video",
         "ref",
         "--model",
-        "happyhorse-1.0-r2v",
+        "happyhorse-1.1-r2v",
         "--prompt",
         "仅有描述无素材",
         "--non-interactive",
@@ -61,7 +61,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       expect(stderr).toMatch(/--image|ref-video|At least one|required/i);
     });
 
-    test("【happyhorse-1.0-r2v】视频参考生成", async () => {
+    test("【happyhorse-1.1-r2v】视频参考生成", async () => {
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
       const gen = await runCli([
         "image",
@@ -88,7 +88,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "video",
         "ref",
         "--model",
-        "happyhorse-1.0-r2v",
+        "happyhorse-1.1-r2v",
         "--prompt",
         "图1在画面中心轻微晃动",
         "--image",

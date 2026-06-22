@@ -27,7 +27,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 - **文本对话** — Qwen3.7-max：Agentic coding、前端编程、Vibe coding 等能力显著增强
 - **全模态对话** — 文本 + 图像 + 音频 + 视频全模态支持
 - **图像生成与编辑** — Qwen-Image 2.0：专业文字渲染、真实质感、强语义遵循、多图合成
-- **视频生成与编辑** — HappyHorse-1.0 系列，支持文生 / 图生 / 参考生（最多 9 张图参考）/ 自然语言视频编辑
+- **视频生成与编辑** — happyhorse-1.1 系列，支持文生 / 图生 / 参考生（最多 9 张图参考）/ 自然语言视频编辑
 - **语音合成与识别** — CosyVoice 实时流式合成，5-20s 样本即可克隆；FunAudio-ASR 覆盖 30 种语种，含汉语七大方言与 20+ 口音官话
 - **图像与视频理解** — Qwen-VL：长视频解析、复杂图表与文档识别、视觉推理、多语种 OCR
 
@@ -54,7 +54,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 一部完整的 **2 分钟、16:9 电影感短片** —— 由一句自然语言端到端生成,**全程零手动剪辑**。这个示例展示了 AI Agent 如何把三个基础能力编排成一条多步创作流水线:
 
 - **[Qwen Code](https://github.com/QwenLM/qwen-code)** —— Agentic coding 模型,解析用户意图、驱动整个工作流
-- **[阿里云百炼 CLI](https://github.com/modelstudioai/cli/)** —— 调用 **HappyHorse 1.0**,百炼的文生/图生/参考生视频模型
+- **[阿里云百炼 CLI](https://github.com/modelstudioai/cli/)** —— 调用 **HappyHorse 1.1**,百炼的文生/图生/参考生视频模型
 - **[spark-video Skill](https://github.com/JohnKeating1997/spark-video)** —— 负责场景拆分、分镜设计、镜头连贯性和最终拼接
 
 ### 唯一的提示词
@@ -65,7 +65,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 
 1. **Qwen Code** 解析需求、规划叙事节奏,决定要调用哪些工具。
 2. **spark-video Skill** 把故事拆成镜头、为每个镜头写提示词,并保证视觉连贯性(角色、光线、色调、镜头语言)。
-3. **`bl video generate`** 把每个镜头并行下发给 **HappyHorse 1.0**。
+3. **`bl video generate`** 把每个镜头并行下发给 **HappyHorse 1.1**。
 4. Skill 把所有片段拼成最终的 16:9 / 约 2 分钟成片。
 
 没有时间线拖拽,没有逐帧剪辑。一句话 → 一部短片。

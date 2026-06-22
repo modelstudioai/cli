@@ -51,8 +51,8 @@ Use this index for the full quick index and global flags.
 | `bl usage stats`           | Query model usage statistics                                                                          | [usage.md](usage.md)         |
 | `bl video download`        | Download a completed video by task ID                                                                 | [video.md](video.md)         |
 | `bl video edit`            | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                | [video.md](video.md)         |
-| `bl video generate`        | Generate a video from text or image (happyhorse-1.0-t2v / happyhorse-1.0-i2v / wan2.6-t2v)            | [video.md](video.md)         |
-| `bl video ref`             | Reference-to-video generation (happyhorse-1.0-r2v / wan2.6-r2v): multi-subject, multi-shot with voice | [video.md](video.md)         |
+| `bl video generate`        | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)            | [video.md](video.md)         |
+| `bl video ref`             | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice | [video.md](video.md)         |
 | `bl video task get`        | Query async task status                                                                               | [video.md](video.md)         |
 | `bl vision describe`       | Describe an image or video using Qwen-VL                                                              | [vision.md](vision.md)       |
 | `bl workspace list`        | List all workspaces                                                                                   | [workspace.md](workspace.md) |

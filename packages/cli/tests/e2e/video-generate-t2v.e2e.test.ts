@@ -37,7 +37,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "video",
         "generate",
         "--model",
-        "happyhorse-1.0-t2v",
+        "happyhorse-1.1-t2v",
         "--non-interactive",
       ]);
       expect(exitCode).toBe(0);
@@ -51,7 +51,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "generate",
         "--dry-run",
         "--model",
-        "happyhorse-1.0-t2v",
+        "happyhorse-1.1-t2v",
         "--prompt",
         "干跑校验",
         "--non-interactive",
@@ -62,18 +62,18 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       const data = parseStdoutJson<{ request?: { model?: string; input?: { prompt?: string } } }>(
         stdout,
       );
-      expect(data.request?.model).toBe("happyhorse-1.0-t2v");
+      expect(data.request?.model).toBe("happyhorse-1.1-t2v");
       expect(data.request?.input?.prompt).toBe("干跑校验");
     });
 
-    test("【happyhorse-1.0-t2v】文本生成视频", async () => {
+    test("【happyhorse-1.1-t2v】文本生成视频", async () => {
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
       const { stdout, stderr, exitCode } = await runCli([
         ...cliTimeoutPrefix(),
         "video",
         "generate",
         "--model",
-        "happyhorse-1.0-t2v",
+        "happyhorse-1.1-t2v",
         "--prompt",
         "夕阳下海面波光，远景静态镜头",
         "--download",

@@ -45,9 +45,9 @@ Do not guess flags — use the reference files or `--help`.
 | Video/audio understanding (with audio reply) | `bl omni --video` / `--audio`          | Prefer over generic VL for A/V Q&A           |
 | Image from text                              | `bl image generate`                    | `qwen-image-2.0`                             |
 | Image edit / multi-image merge               | `bl image edit` (repeat `--image`)     | `qwen-image-2.0`                             |
-| Video from text or image                     | `bl video generate`                    | `happyhorse-1.0-t2v` / `-i2v` with `--image` |
+| Video from text or image                     | `bl video generate`                    | `happyhorse-1.1-t2v` / `-i2v` with `--image` |
 | Video edit / style transfer                  | `bl video edit`                        | `happyhorse-1.0-video-edit`                  |
-| Reference-to-video + voice                   | `bl video ref`                         | `happyhorse-1.0-r2v`                         |
+| Reference-to-video + voice                   | `bl video ref`                         | `happyhorse-1.1-r2v`                         |
 | Image / video describe (text only)           | `bl vision describe`                   | `qwen-vl-max`                                |
 | TTS                                          | `bl speech synthesize`                 | `cosyvoice-v3-flash`                         |
 | ASR                                          | `bl speech recognize`                  | `fun-asr`                                    |
