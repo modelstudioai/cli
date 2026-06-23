@@ -15,6 +15,15 @@ describe("e2e: omni", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/omni|--message|--audio|text-only/i);
   });
+
+  test("omni --list-voices 输出音色列表并退出", async () => {
+    const { stdout, stderr, exitCode } = await runCli(["omni", "--list-voices"]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stdout).toMatch(/Omni output voices:/);
+    expect(stdout).toMatch(/Dylan/);
+    expect(stdout).toMatch(/Cherry/);
+    expect(stdout).toMatch(/Total: 17 voices/);
+  });
 });
 
 describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
