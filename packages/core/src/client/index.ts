@@ -1,5 +1,5 @@
 export type { AkSignConfig } from "./ak-sign.ts";
-export { signRequest } from "./ak-sign.ts";
+export { buildCanonicalQuery, signRequest } from "./ak-sign.ts";
 export {
   appCompletionEndpoint,
   chatEndpoint,
@@ -10,6 +10,7 @@ export {
   memoryListEndpoint,
   memoryNodeEndpoint,
   memorySearchEndpoint,
+  modelStudioHost,
   mcpWebSearchEndpoint,
   profileSchemaEndpoint,
   speechRecognizeEndpoint,

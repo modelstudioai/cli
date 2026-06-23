@@ -45,6 +45,7 @@ Use this index for the full quick index and global flags.
 | `bl speech recognize`      | Recognize speech from audio files (FunAudio-ASR)                                                      | [speech.md](speech.md)       |
 | `bl speech synthesize`     | Synthesize speech from text (CosyVoice TTS)                                                           | [speech.md](speech.md)       |
 | `bl text chat`             | Send a chat completion (OpenAI compatible, DashScope)                                                 | [text.md](text.md)           |
+| `bl tokenplan seats`       | List Token Plan subscription seat details                                                             | [tokenplan.md](tokenplan.md) |
 | `bl update`                | Update bl to the latest version                                                                       | [update.md](update.md)       |
 | `bl usage free`            | Query free-tier quota for models (all models if --model is omitted)                                   | [usage.md](usage.md)         |
 | `bl usage freetier`        | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable            | [usage.md](usage.md)         |
@@ -77,6 +78,7 @@ Use this index for the full quick index and global flags.
 | `search`    | `web`                                                                        | [search.md](search.md)       |
 | `speech`    | `recognize`, `synthesize`                                                    | [speech.md](speech.md)       |
 | `text`      | `chat`                                                                       | [text.md](text.md)           |
+| `tokenplan` | `seats`                                                                      | [tokenplan.md](tokenplan.md) |
 | `update`    | `(root)`                                                                     | [update.md](update.md)       |
 | `usage`     | `free`, `freetier`, `stats`                                                  | [usage.md](usage.md)         |
 | `video`     | `download`, `edit`, `generate`, `ref`, `task get`                            | [video.md](video.md)         |

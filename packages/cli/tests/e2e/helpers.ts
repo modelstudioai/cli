@@ -136,6 +136,15 @@ export function isKnowledgeAkSkReady(): boolean {
   );
 }
 
+/** Token Plan POP commands (AK/SK only). */
+export function isTokenPlanAkSkReady(): boolean {
+  return (
+    isBailianE2EEnabled() &&
+    !!process.env.ALIBABA_CLOUD_ACCESS_KEY_ID &&
+    !!process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET
+  );
+}
+
 export interface RunCliResult {
   stdout: string;
   stderr: string;
