@@ -22,7 +22,13 @@ const CONSOLE_ORIGINS: Record<string, string> = {
 };
 
 export function resolveConsoleOrigin(site?: string): string {
-  return (site && CONSOLE_ORIGINS[site]) || CONSOLE_ORIGINS.domestic!;
+  const origin = (site && CONSOLE_ORIGINS[site]) || CONSOLE_ORIGINS.domestic!;
+  if (process.env.BAILIAN_PRE) {
+    const u = new URL(origin);
+    u.hostname = `pre-${u.hostname}`;
+    return u.origin;
+  }
+  return origin;
 }
 
 function readBodyBounded(req: http.IncomingMessage): Promise<string> {

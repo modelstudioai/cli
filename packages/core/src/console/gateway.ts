@@ -35,6 +35,14 @@ function resolveGateway(region: string, site: ConsoleSite): ConsoleGatewayInfo {
   return REGION_GATEWAYS[region]?.[site] ?? REGION_GATEWAYS["cn-beijing"]![site];
 }
 
+export function isPreEnv(): boolean {
+  return !!process.env.BAILIAN_PRE;
+}
+
+function applyPrePrefix(host: string): string {
+  return isPreEnv() ? `pre-${host}` : host;
+}
+
 /** Resolved console gateway settings (same defaults as {@link callConsoleGateway}). */
 export function effectiveConsoleGatewayConfig(config: Config): {
   consoleRegion: string;
@@ -106,7 +114,7 @@ export async function callConsoleGateway(
   } = effectiveConsoleGatewayConfig(config);
 
   const resolved = resolveGateway(effectiveRegion, effectiveSite);
-  const gatewayBase = `https://${resolved.csGateway}`;
+  const gatewayBase = `https://${applyPrePrefix(resolved.csGateway)}`;
   const action = resolved.action;
 
   const params = buildGatewayParams(api, data, effectiveSwitchAgent);
