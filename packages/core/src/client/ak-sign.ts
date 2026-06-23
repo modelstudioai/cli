@@ -28,9 +28,9 @@ export function buildCanonicalQuery(params: Record<string, string | string[] | u
   for (const [key, value] of Object.entries(params)) {
     if (value === undefined || value === "") continue;
     if (Array.isArray(value)) {
-      const sorted = [...value].sort();
-      for (const v of sorted) {
-        if (v !== "") pairs.push([key, v]);
+      for (let i = 0; i < value.length; i++) {
+        const v = value[i];
+        if (v !== "") pairs.push([`${key}.${i + 1}`, v]);
       }
     } else {
       pairs.push([key, value]);

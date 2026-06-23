@@ -165,7 +165,7 @@ function buildQueryParams(
   if (Array.isArray(accountIds) && accountIds.length > 0) {
     params.AccountIds = accountIds;
   } else if (typeof accountIds === "string" && accountIds.length > 0) {
-    params.AccountIds = accountIds;
+    params.AccountIds = [accountIds];
   }
 
   return params;

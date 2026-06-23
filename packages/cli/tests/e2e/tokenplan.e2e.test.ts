@@ -328,6 +328,8 @@ describe("e2e: tokenplan dry-run", () => {
     expect(data.query?.WorkspaceId).toBe("ws_456");
     expect(data.query?.SeatType).toBe("standard");
     expect(data.query?.AccountIds).toEqual(["acc_1", "acc_2"]);
+    expect(data.endpoint).toMatch(/AccountIds\.1=acc_1/);
+    expect(data.endpoint).toMatch(/AccountIds\.2=acc_2/);
   });
 
   test("add-member --dry-run 输出 endpoint 和 query 参数", async () => {
