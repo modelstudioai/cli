@@ -1,6 +1,6 @@
 # bailian-cli (`bl`) command reference
 
-> Auto-generated from `packages/cli/src/commands/catalog.ts`. Do not edit by hand.
+> Auto-generated from `packages/commands/src/commands/catalog.ts`. Do not edit by hand.
 > Regenerate: `pnpm --filter bailian-cli run generate:reference`.
 
 Command **details** are in sibling `<group>.md` files in this directory.
@@ -45,7 +45,7 @@ Use this index for the full quick index and global flags.
 | `bl speech recognize`      | Recognize speech from audio files (FunAudio-ASR)                                                      | [speech.md](speech.md)       |
 | `bl speech synthesize`     | Synthesize speech from text (CosyVoice TTS)                                                           | [speech.md](speech.md)       |
 | `bl text chat`             | Send a chat completion (OpenAI compatible, DashScope)                                                 | [text.md](text.md)           |
-| `bl update`                | Update bl to the latest version                                                                       | [update.md](update.md)       |
+| `bl update`                | Update the CLI to the latest version                                                                  | [update.md](update.md)       |
 | `bl usage free`            | Query free-tier quota for models (all models if --model is omitted)                                   | [usage.md](usage.md)         |
 | `bl usage freetier`        | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable            | [usage.md](usage.md)         |
 | `bl usage stats`           | Query model usage statistics                                                                          | [usage.md](usage.md)         |

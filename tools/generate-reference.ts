@@ -1,5 +1,5 @@
 /**
- * Generator: reads `packages/cli/src/commands/catalog.ts` and writes:
+ * Generator: reads `packages/commands/src/commands/catalog.ts` and writes:
  *   - `skills/bailian-cli/reference/index.md` — quick index, global flags, notes
  *   - `skills/bailian-cli/reference/<group>.md` — per top-level command group details
  *
@@ -12,14 +12,14 @@ import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { GLOBAL_OPTIONS, type Command, type OptionDef } from "../packages/core/dist/index.mjs";
-import { commands } from "../packages/cli/src/commands/catalog.ts";
+import { commands } from "../packages/commands/src/commands/catalog.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REF_DIR = join(__dirname, "../skills/bailian-cli/reference");
 const INDEX_PATH = join(REF_DIR, "index.md");
 
 const GENERATED_BANNER =
-  "> Auto-generated from `packages/cli/src/commands/catalog.ts`. Do not edit by hand.\n" +
+  "> Auto-generated from `packages/commands/src/commands/catalog.ts`. Do not edit by hand.\n" +
   "> Regenerate: `pnpm --filter bailian-cli run generate:reference`.";
 
 function escCell(s: string): string {

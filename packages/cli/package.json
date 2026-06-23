@@ -44,32 +44,23 @@
     "check": "vp check"
   },
   "dependencies": {
+    "bailian-cli-commands": "workspace:*",
     "bailian-cli-core": "workspace:*",
-    "boxen": "catalog:",
-    "chalk": "catalog:",
-    "undici": "catalog:"
+    "bailian-cli-runtime": "workspace:*"
   },
   "devDependencies": {
     "@clack/prompts": "^0.7.0",
     "@types/node": "catalog:",
     "@typescript/native-preview": "7.0.0-dev.20260328.1",
     "ajv": "catalog:",
+    "boxen": "catalog:",
+    "chalk": "catalog:",
     "typescript": "^6.0.2",
-    "vite-plus": "catalog:",
+    "undici": "catalog:",
+    "vite-plus": "0.1.22",
     "yaml": "catalog:"
   },
   "engines": {
     "node": ">=22.12.0"
-  },
-  "inlinedDependencies": {
-    "@clack/core": "0.3.5",
-    "@clack/prompts": "0.7.0",
-    "ajv": "8.20.0",
-    "fast-deep-equal": "3.1.3",
-    "fast-uri": "3.1.2",
-    "json-schema-traverse": "1.0.0",
-    "picocolors": "1.1.1",
-    "sisteransi": "1.0.5",
-    "yaml": "2.8.3"
   }
 }

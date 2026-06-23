@@ -100,6 +100,10 @@ export function parseConfigFile(raw: unknown): ConfigFile {
 export interface Config {
   clientName?: string;
   clientVersion?: string;
+  /** Product binary name (e.g. "bl", "rag"), injected by createCli for command-facing output. */
+  binName?: string;
+  /** npm package name for self-update (e.g. "bailian-cli", "bailian-cli-rag"), injected by createCli. */
+  npmPackage?: string;
   apiKey?: string;
   /** `DASHSCOPE_ACCESS_TOKEN` env (explicit override). */
   accessTokenEnv?: string;
