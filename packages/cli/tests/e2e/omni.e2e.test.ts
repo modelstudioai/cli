@@ -15,20 +15,19 @@ describe("e2e: omni", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/omni|--message|--audio|text-only/i);
   });
-
-  test("omni --list-voices 输出音色列表并退出", async () => {
-    const { stdout, stderr, exitCode } = await runCli(["omni", "--list-voices"]);
-    expect(exitCode, stderr).toBe(0);
-    expect(stdout).toMatch(/Omni output voices:/);
-    expect(stdout).toMatch(/Dylan/);
-    expect(stdout).toMatch(/Cherry/);
-    expect(stdout).toMatch(/Total: 17 voices/);
-  });
 });
 
 describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
   "e2e: omni（DashScope 媒体）",
   () => {
+    test("omni --list-voices 输出音色列表并退出", async () => {
+      const { stdout, stderr, exitCode } = await runCli(["omni", "--list-voices"]);
+      expect(exitCode, stderr).toBe(0);
+      expect(stdout).toMatch(/Omni output voices:/);
+      expect(stdout).toMatch(/Dylan/);
+      expect(stdout).toMatch(/Cherry/);
+      expect(stdout).toMatch(/Total: 17 voices/);
+    });
     test("omni 缺少 --message 时打印子命令帮助并退出 (0)", async () => {
       const { stderr, exitCode } = await runCli([
         "omni",
