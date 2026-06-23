@@ -143,18 +143,20 @@ function buildQueryParams(flags: GlobalFlags): Record<string, string | string[] 
   if (flags.namespaceId) params.NamespaceId = flags.namespaceId as string;
   if (flags.statusListStr) params.StatusListStr = flags.statusListStr as string;
 
-  const status = flags.status;
-  if (Array.isArray(status) && status.length > 0) {
-    params.StatusList = status as string[];
-  } else if (typeof status === "string" && status.length > 0) {
-    params.StatusList = [status];
+  const status = flags.status as string[] | undefined;
+  if (status && status.length > 0) {
+    params.StatusList = status;
   }
 
   if (flags.seatId) params.SeatId = flags.seatId as string;
   if (flags.seatType) params.SeatType = flags.seatType as string;
 
   if (typeof flags.queryAssigned === "string" && flags.queryAssigned.length > 0) {
-    params.QueryAssigned = flags.queryAssigned;
+    const val = flags.queryAssigned.toLowerCase();
+    if (val !== "true" && val !== "false") {
+      throw new BailianError("--query-assigned must be 'true' or 'false'.", ExitCode.USAGE);
+    }
+    params.QueryAssigned = val;
   }
 
   return params;

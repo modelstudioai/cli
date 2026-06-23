@@ -86,11 +86,8 @@ export default defineCommand({
       throw new BailianError("Missing required argument --seat-type.", ExitCode.USAGE);
     }
 
-    const accountIds = flags.accountId;
-    const hasAccountIds =
-      (Array.isArray(accountIds) && accountIds.length > 0) ||
-      (typeof accountIds === "string" && accountIds.length > 0);
-    if (!hasAccountIds) {
+    const accountIds = flags.accountId as string[] | undefined;
+    if (!accountIds || accountIds.length === 0) {
       throw new BailianError("Missing required argument --account-id.", ExitCode.USAGE);
     }
 
@@ -161,11 +158,9 @@ function buildQueryParams(
   if (flags.namespaceId) params.NamespaceId = flags.namespaceId as string;
   if (flags.locale) params.Locale = flags.locale as string;
 
-  const accountIds = flags.accountId as string | string[] | undefined;
-  if (Array.isArray(accountIds) && accountIds.length > 0) {
+  const accountIds = flags.accountId as string[] | undefined;
+  if (accountIds && accountIds.length > 0) {
     params.AccountIds = accountIds;
-  } else if (typeof accountIds === "string" && accountIds.length > 0) {
-    params.AccountIds = [accountIds];
   }
 
   return params;
