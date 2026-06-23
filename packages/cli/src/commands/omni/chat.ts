@@ -31,18 +31,14 @@ interface VoiceEntry {
 
 // qwen-omni 系统音色
 const OMNI_VOICES: VoiceEntry[] = [
+  { voice: "Tina", name: "甜妹", desc: "甜美亲切", lang: "中文/英文" },
   { voice: "Dylan", name: "北京-晓东", desc: "胡同少年", lang: "中文/北京" },
   { voice: "Kiki", name: "粤语-阿清", desc: "甜美港妹", lang: "中文/英文" },
   { voice: "Li", name: "南京-老李", desc: "南京大叔", lang: "中文/英文" },
   { voice: "Sunny", name: "四川-晴儿", desc: "甜飒川妹", lang: "中文" },
-  { voice: "Elias", name: "墨讲师", desc: "学术讲师女", lang: "中文/英文" },
-  { voice: "Nofish", name: "不吃鱼", desc: "南方口音男", lang: "中文/英文" },
   { voice: "Marcus", name: "陕西-秦川", desc: "陕北汉子", lang: "中文/英文" },
   { voice: "Eric", name: "四川-程川", desc: "成都大哥", lang: "中文/英文" },
-  { voice: "Jada", name: "上海-阿珍", desc: "沪上阿姐", lang: "中文" },
   { voice: "Rocky", name: "粤语-阿强", desc: "幽默港仔", lang: "中文/英文" },
-  { voice: "Cherry", name: "芊悦", desc: "阳光自然女", lang: "中文/英文" },
-  { voice: "Roy", name: "闽南-阿杰", desc: "闽南哥仔", lang: "中文/英文" },
   { voice: "Jennifer", name: "詹妮弗", desc: "美剧大女主", lang: "中文/英文" },
   { voice: "Ryan", name: "甜茶", desc: "美剧张力男", lang: "中文/英文" },
   { voice: "Katerina", name: "卡捷琳娜", desc: "御姐深情女", lang: "中文/英文" },
@@ -150,7 +146,7 @@ export default defineCommand({
     },
     {
       flag: "--voice <voice>",
-      description: "Output voice ID (default: Cherry). Use --list-voices to see all options",
+      description: "Output voice ID (default: Tina). Use --list-voices to see all options",
     },
     {
       flag: "--list-voices",
@@ -199,7 +195,7 @@ export default defineCommand({
     }
 
     const model = (flags.model as string) || config.defaultOmniModel || "qwen3.5-omni-plus";
-    const voice = (flags.voice as string) || "Cherry";
+    const voice = (flags.voice as string) || "Tina";
     const audioFormat = (flags.audioFormat as string) || "wav";
     const textOnly = flags.textOnly === true;
     const format = detectOutputFormat(config.output);

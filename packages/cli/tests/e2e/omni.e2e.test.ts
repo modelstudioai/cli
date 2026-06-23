@@ -24,9 +24,9 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
       const { stdout, stderr, exitCode } = await runCli(["omni", "--list-voices"]);
       expect(exitCode, stderr).toBe(0);
       expect(stdout).toMatch(/Omni output voices:/);
+      expect(stdout).toMatch(/Tina/);
       expect(stdout).toMatch(/Dylan/);
-      expect(stdout).toMatch(/Cherry/);
-      expect(stdout).toMatch(/Total: 17 voices/);
+      expect(stdout).toMatch(/Total: 13 voices/);
     });
     test("omni 缺少 --message 时打印子命令帮助并退出 (0)", async () => {
       const { stderr, exitCode } = await runCli([
