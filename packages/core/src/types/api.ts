@@ -455,6 +455,38 @@ export interface GetSubscriptionSeatDetailsResponse {
   };
 }
 
+export interface CreateTokenPlanKeyResponse {
+  Success?: boolean;
+  Code?: string;
+  Message?: string;
+  Data?: {
+    ApiKeyId?: string;
+    PlainApiKey?: string;
+    MaskedApiKey?: string;
+    Description?: string;
+    CreatedAt?: string;
+    SourceId?: string;
+  };
+}
+
+export interface BatchAssignSeatsResponse {
+  Success?: boolean;
+  Code?: string;
+  Message?: string;
+}
+
+export interface AddOrganizationMemberResponse {
+  Success?: boolean;
+  Code?: string;
+  Message?: string;
+  RequestId?: string;
+  HttpStatusCode?: number;
+  Data?: {
+    AccountId?: string;
+    SeatAssigned?: boolean;
+  };
+}
+
 // ---- Speech Synthesis / TTS (DashScope) ----
 
 export interface DashScopeTTSRequest {

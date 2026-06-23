@@ -71,6 +71,9 @@ const NO_AUTH_SETUP = [
   ["quota", "history"],
   ["quota", "check"],
   ["tokenplan", "seats"],
+  ["tokenplan", "create-key"],
+  ["tokenplan", "assign-seats"],
+  ["tokenplan", "add-member"],
 ];
 
 async function main() {
