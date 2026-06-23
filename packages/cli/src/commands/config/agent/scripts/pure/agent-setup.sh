@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bailian — Pure Agent Setup (no Node.js / npx required)
+# Bailian — Pure Agent Config (no Node.js / npx required)
 #
 # Directly writes config files for coding agents to use DashScope API.
 #

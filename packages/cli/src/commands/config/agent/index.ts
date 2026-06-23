@@ -9,10 +9,10 @@ import {
 import { AGENTS, VALID_AGENT_NAMES, type WriteParams } from "./writers.ts";
 
 export default defineCommand({
-  name: "agent setup",
+  name: "config agent",
   description: "Configure a coding agent to use DashScope API",
   skipDefaultApiKeySetup: true,
-  usage: "bl agent setup --agent <name> --base-url <url> --api-key <key> --model <model>",
+  usage: "bl config agent --agent <name> --base-url <url> --api-key <key> --model <model>",
   options: [
     {
       flag: "--agent <name>",
@@ -23,12 +23,12 @@ export default defineCommand({
     { flag: "--model <model>", description: "Default model name" },
   ],
   examples: [
-    "npx bailian-cli agent setup --agent claude-code --base-url https://dashscope.aliyuncs.com/apps/anthropic --api-key sk-xxxxx --model qwen3.7-max",
-    "npx bailian-cli agent setup --agent qwen-code --base-url https://dashscope.aliyuncs.com/compatible-mode/v1 --api-key sk-xxxxx --model qwen3.6-plus",
-    "npx bailian-cli agent setup --agent opencode --base-url https://dashscope.aliyuncs.com/apps/anthropic/v1 --api-key sk-xxxxx --model qwen3.7-max",
-    "npx bailian-cli agent setup --agent openclaw --base-url https://dashscope.aliyuncs.com/apps/anthropic --api-key sk-xxxxx --model qwen3.6-plus",
-    "npx bailian-cli agent setup --agent hermes --base-url https://dashscope.aliyuncs.com/apps/anthropic --api-key sk-xxxxx --model qwen3.7-max",
-    "npx bailian-cli agent setup --agent codex --base-url https://dashscope.aliyuncs.com/compatible-mode/v1 --api-key sk-xxxxx --model qwen3.7-max",
+    "npx bailian-cli config agent --agent claude-code --base-url https://dashscope.aliyuncs.com/apps/anthropic --api-key sk-xxxxx --model qwen3.7-max",
+    "npx bailian-cli config agent --agent qwen-code --base-url https://dashscope.aliyuncs.com/compatible-mode/v1 --api-key sk-xxxxx --model qwen3.6-plus",
+    "npx bailian-cli config agent --agent opencode --base-url https://dashscope.aliyuncs.com/apps/anthropic/v1 --api-key sk-xxxxx --model qwen3.7-max",
+    "npx bailian-cli config agent --agent openclaw --base-url https://dashscope.aliyuncs.com/apps/anthropic --api-key sk-xxxxx --model qwen3.6-plus",
+    "npx bailian-cli config agent --agent hermes --base-url https://dashscope.aliyuncs.com/apps/anthropic --api-key sk-xxxxx --model qwen3.7-max",
+    "npx bailian-cli config agent --agent codex --base-url https://dashscope.aliyuncs.com/compatible-mode/v1 --api-key sk-xxxxx --model qwen3.7-max",
   ],
   async run(_config: Config, flags: GlobalFlags) {
     const agent = flags.agent as string | undefined;
@@ -40,7 +40,7 @@ export default defineCommand({
       throw new BailianError(
         "All flags are required: --agent, --base-url, --api-key, --model",
         ExitCode.USAGE,
-        "bl agent setup --agent <name> --base-url <url> --api-key <key> --model <model>",
+        "bl config agent --agent <name> --base-url <url> --api-key <key> --model <model>",
       );
     }
 

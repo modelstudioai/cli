@@ -100,7 +100,7 @@ done
 
 check_node
 
-log_info "Running: npx bailian-cli@latest agent setup $*"
+log_info "Running: npx bailian-cli@latest config agent $*"
 echo ""
 
-npx bailian-cli@latest agent setup "$@"
+npx bailian-cli@latest config agent "$@"

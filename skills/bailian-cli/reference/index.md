@@ -11,12 +11,12 @@ Use this index for the full quick index and global flags.
 | Command                    | Description                                                                                           | Detail                       |
 | -------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------- |
 | `bl advisor recommend`     | Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking)        | [advisor.md](advisor.md)     |
-| `bl agent setup`           | Configure a coding agent to use DashScope API                                                         | [agent.md](agent.md)         |
 | `bl app call`              | Call a Bailian application (agent or workflow)                                                        | [app.md](app.md)             |
 | `bl app list`              | List Bailian applications                                                                             | [app.md](app.md)             |
 | `bl auth login`            | Authenticate with API key or console browser login (credentials can coexist)                          | [auth.md](auth.md)           |
 | `bl auth logout`           | Clear stored credentials                                                                              | [auth.md](auth.md)           |
 | `bl auth status`           | Show current authentication state                                                                     | [auth.md](auth.md)           |
+| `bl config agent`          | Configure a coding agent to use DashScope API                                                         | [config.md](config.md)       |
 | `bl config export-schema`  | Export all (or one) CLI command(s) as Anthropic/OpenAI-compatible JSON tool schemas                   | [config.md](config.md)       |
 | `bl config set`            | Set a config value                                                                                    | [config.md](config.md)       |
 | `bl config show`           | Display current configuration                                                                         | [config.md](config.md)       |
@@ -63,10 +63,9 @@ Use this index for the full quick index and global flags.
 | Group       | Commands                                                                     | Reference                    |
 | ----------- | ---------------------------------------------------------------------------- | ---------------------------- |
 | `advisor`   | `recommend`                                                                  | [advisor.md](advisor.md)     |
-| `agent`     | `setup`                                                                      | [agent.md](agent.md)         |
 | `app`       | `call`, `list`                                                               | [app.md](app.md)             |
 | `auth`      | `login`, `logout`, `status`                                                  | [auth.md](auth.md)           |
-| `config`    | `export-schema`, `set`, `show`                                               | [config.md](config.md)       |
+| `config`    | `agent`, `export-schema`, `set`, `show`                                      | [config.md](config.md)       |
 | `console`   | `call`                                                                       | [console.md](console.md)     |
 | `file`      | `upload`                                                                     | [file.md](file.md)           |
 | `image`     | `edit`, `generate`                                                           | [image.md](image.md)         |

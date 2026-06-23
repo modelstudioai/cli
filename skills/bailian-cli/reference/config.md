@@ -9,11 +9,55 @@ Index: [index.md](index.md)
 
 | Command                   | Description                                                                         |
 | ------------------------- | ----------------------------------------------------------------------------------- |
+| `bl config agent`         | Configure a coding agent to use DashScope API                                       |
 | `bl config export-schema` | Export all (or one) CLI command(s) as Anthropic/OpenAI-compatible JSON tool schemas |
 | `bl config set`           | Set a config value                                                                  |
 | `bl config show`          | Display current configuration                                                       |
 
 ## Command details
+
+### `bl config agent`
+
+| Field           | Value                                                                             |
+| --------------- | --------------------------------------------------------------------------------- |
+| **Name**        | `config agent`                                                                    |
+| **Description** | Configure a coding agent to use DashScope API                                     |
+| **Usage**       | `bl config agent --agent <name> --base-url <url> --api-key <key> --model <model>` |
+
+#### Options
+
+| Flag               | Type   | Required | Description                                                             |
+| ------------------ | ------ | -------- | ----------------------------------------------------------------------- |
+| `--agent <name>`   | string | no       | Target agent: claude-code, qwen-code, opencode, openclaw, hermes, codex |
+| `--base-url <url>` | string | no       | API base URL                                                            |
+| `--api-key <key>`  | string | no       | API key                                                                 |
+| `--model <model>`  | string | no       | Default model name                                                      |
+
+#### Examples
+
+```bash
+npx bailian-cli config agent --agent claude-code --base-url https://dashscope.aliyuncs.com/apps/anthropic --api-key sk-xxxxx --model qwen3.7-max
+```
+
+```bash
+npx bailian-cli config agent --agent qwen-code --base-url https://dashscope.aliyuncs.com/compatible-mode/v1 --api-key sk-xxxxx --model qwen3.6-plus
+```
+
+```bash
+npx bailian-cli config agent --agent opencode --base-url https://dashscope.aliyuncs.com/apps/anthropic/v1 --api-key sk-xxxxx --model qwen3.7-max
+```
+
+```bash
+npx bailian-cli config agent --agent openclaw --base-url https://dashscope.aliyuncs.com/apps/anthropic --api-key sk-xxxxx --model qwen3.6-plus
+```
+
+```bash
+npx bailian-cli config agent --agent hermes --base-url https://dashscope.aliyuncs.com/apps/anthropic --api-key sk-xxxxx --model qwen3.7-max
+```
+
+```bash
+npx bailian-cli config agent --agent codex --base-url https://dashscope.aliyuncs.com/compatible-mode/v1 --api-key sk-xxxxx --model qwen3.7-max
+```
 
 ### `bl config export-schema`
 

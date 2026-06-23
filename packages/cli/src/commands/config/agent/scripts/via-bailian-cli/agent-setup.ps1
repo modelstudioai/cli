@@ -63,7 +63,7 @@ if (-not $Agent -or -not $BaseUrl -or -not $ApiKey -or -not $Model) {
 
 Test-Node
 
-$npxArgs = @("bailian-cli@latest", "agent", "setup",
+$npxArgs = @("bailian-cli@latest", "config", "agent",
     "--agent", $Agent,
     "--base-url", $BaseUrl,
     "--api-key", $ApiKey,
