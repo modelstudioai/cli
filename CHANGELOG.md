@@ -6,6 +6,56 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.4.2] - 2026-06-24
+
+### Added
+
+- `bl omni --list-voices` prints the built-in output voices (ID, name, description, language) and exits without needing an API key. The built-in voice table is expanded from 6 to 17 voices, including dialect voices such as Dylan, Sunny, and Kiki.
+
+### Changed
+
+- `bl omni` default `--voice` is now `Tina` (previously `Cherry`). The `--voice` help points at `--list-voices` instead of listing every option inline.
+- `bl speech synthesize --list-voices` and its missing-`--voice` hint now include a link to the official CosyVoice voice documentation.
+- Agent skill setup guidance now covers console site selection (`--console-site domestic` / `international`) for console login and gateway commands.
+
+### Fixed
+
+- `bl speech synthesize` corrects the `cosyvoice-v3-flash` built-in voice ID from `longanhuan` to `longanhuan_v3`.
+
+## [1.4.1] - 2026-06-22
+
+### Changed
+
+- Video generation now defaults to the upgraded HappyHorse 1.1 model for better quality. The 1.0 models are still available via `--model`.
+- `bl update` now keeps the agent skill in sync across all your agent apps (Claude Code, Cursor, etc.), and refreshes it even when the CLI is already up to date.
+
+## [1.4.0] - 2026-06-17
+
+### Added
+
+- Console gateway now supports multiple regions and sites: `cn-beijing` and `ap-southeast-1`, each with domestic and international variants, plus `switchAgent` for delegated access.
+- New global flags `--console-region`, `--console-site`, and `--console-switch-agent`; `bl console call` also gains `--site` and `--switch-agent`.
+- `bl auth login --base-url <url>` to specify the base URL when logging in with an API key.
+- `bl omni` gains a `--voice` option (Chelsie, Cherry, Ethan, Serena, Sunny, Tina; default Cherry).
+
+### Changed
+
+- All user-facing CLI text is now standardized to English.
+- `bl advisor recommend` internal intent/ranking model upgraded from `qwen-turbo` to `qwen-flash`.
+- Cleaner JSON output for `usage`, `quota`, and `workspace` commands.
+- `base_url` from the config file now takes priority over the `DASHSCOPE_BASE_URL` environment variable.
+- `bl config show` now displays all fields from `config.json`, with sensitive values masked.
+
+### Removed
+
+- The legacy `region` config field and its related options.
+- Invalid leftover code for the removed `model list` command.
+
+### Fixed
+
+- When the console session is not logged in or has expired, the CLI now shows a clear sign-in prompt instead of a generic gateway error.
+- Corrected `--resolution` / `--ratio` / `--duration` flag descriptions for `bl video` commands.
+
 ## [1.3.3] - 2026-06-16
 
 ### Changed

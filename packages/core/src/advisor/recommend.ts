@@ -46,26 +46,27 @@ function buildCandidatesContext(candidates: ScoredCandidate[]): string {
     .map(({ model: profile }) => {
       const parts = [
         `ID: ${profile.model}`,
-        `名称: ${profile.name}`,
-        `描述: ${profile.shortDescription || profile.description}`,
-        `能力: ${profile.capabilities.join(", ")}`,
-        `特性: ${profile.features.join(", ")}`,
+        `Name: ${profile.name}`,
+        `Description: ${profile.shortDescription || profile.description}`,
+        `Capabilities: ${profile.capabilities.join(", ")}`,
+        `Features: ${profile.features.join(", ")}`,
       ];
-      if (profile.contextWindow) parts.push(`上下文窗口: ${profile.contextWindow}`);
-      if (profile.maxOutputTokens) parts.push(`最大输出: ${profile.maxOutputTokens}`);
-      if (profile.category) parts.push(`类别: ${profile.category}`);
+      if (profile.contextWindow) parts.push(`Context Window: ${profile.contextWindow}`);
+      if (profile.maxOutputTokens) parts.push(`Max Output: ${profile.maxOutputTokens}`);
+      if (profile.category) parts.push(`Category: ${profile.category}`);
       const modality = profile.inferenceMetadata;
       if (modality?.request_modality?.length)
-        parts.push(`输入模态: ${modality.request_modality.join(", ")}`);
+        parts.push(`Input Modality: ${modality.request_modality.join(", ")}`);
       if (modality?.response_modality?.length)
-        parts.push(`输出模态: ${modality.response_modality.join(", ")}`);
+        parts.push(`Output Modality: ${modality.response_modality.join(", ")}`);
       const prices = formatPrices(profile);
-      if (prices) parts.push(`定价: ${prices}`);
+      if (prices) parts.push(`Pricing: ${prices}`);
       const qpm = formatQpm(profile);
       if (qpm) parts.push(`QPM: ${qpm}`);
-      if (profile.versionTag) parts.push(`版本: ${profile.versionTag}`);
-      if (profile.openSource !== undefined) parts.push(`开源: ${profile.openSource ? "是" : "否"}`);
-      if (profile.family) parts.push(`家族: ${profile.family}`);
+      if (profile.versionTag) parts.push(`Version: ${profile.versionTag}`);
+      if (profile.openSource !== undefined)
+        parts.push(`Open Source: ${profile.openSource ? "Yes" : "No"}`);
+      if (profile.family) parts.push(`Family: ${profile.family}`);
       return parts.join(" | ");
     })
     .join("\n");
@@ -86,29 +87,29 @@ function buildIntentContext(intent: IntentProfile): string {
     modelPreference,
   } = intent;
   const parts: string[] = [];
-  if (taskSummary) parts.push(`场景理解: ${taskSummary}`);
-  if (scenarioHints.length) parts.push(`场景特征: ${scenarioHints.join(", ")}`);
-  if (inputModality.length) parts.push(`输入模态: ${inputModality.join(", ")}`);
-  if (outputModality.length) parts.push(`输出模态: ${outputModality.join(", ")}`);
-  if (requiredCapabilities.length) parts.push(`所需能力: ${requiredCapabilities.join(", ")}`);
-  if (requiredFeatures.length) parts.push(`所需特性: ${requiredFeatures.join(", ")}`);
-  parts.push(`预算倾向: ${budget}`);
-  parts.push(`质量偏好: ${qualityPreference}`);
-  if (contextNeed !== ContextNeeds.Standard) parts.push(`上下文需求: ${contextNeed}`);
+  if (taskSummary) parts.push(`Task: ${taskSummary}`);
+  if (scenarioHints.length) parts.push(`Scenario: ${scenarioHints.join(", ")}`);
+  if (inputModality.length) parts.push(`Input: ${inputModality.join(", ")}`);
+  if (outputModality.length) parts.push(`Output: ${outputModality.join(", ")}`);
+  if (requiredCapabilities.length) parts.push(`Capabilities: ${requiredCapabilities.join(", ")}`);
+  if (requiredFeatures.length) parts.push(`Features: ${requiredFeatures.join(", ")}`);
+  parts.push(`Budget: ${budget}`);
+  parts.push(`Quality: ${qualityPreference}`);
+  if (contextNeed !== ContextNeeds.Standard) parts.push(`Context: ${contextNeed}`);
   if (modelPreference && modelPreference.mode !== "unconstrained") {
-    parts.push(`模型偏好: ${modelPreference.mode}`);
+    parts.push(`Mode: ${modelPreference.mode}`);
     if (modelPreference.targets?.length)
-      parts.push(`目标模型: ${modelPreference.targets.join(", ")}`);
+      parts.push(`Targets: ${modelPreference.targets.join(", ")}`);
     if (modelPreference.excludes?.length)
-      parts.push(`排除模型: ${modelPreference.excludes.join(", ")}`);
+      parts.push(`Excludes: ${modelPreference.excludes.join(", ")}`);
   }
   if (segments?.length) {
-    parts.push(`拆解步骤:`);
+    parts.push(`Pipeline Steps:`);
     for (const seg of segments) {
-      const inMod = seg.inputModality.join(",") || "无";
-      const outMod = seg.outputModality.join(",") || "无";
-      const caps = seg.requiredCapabilities.join(",") || "无";
-      parts.push(`  - ${seg.step} (输入: ${inMod} → 输出: ${outMod}, 能力: ${caps})`);
+      const inMod = seg.inputModality.join(",") || "none";
+      const outMod = seg.outputModality.join(",") || "none";
+      const caps = seg.requiredCapabilities.join(",") || "none";
+      parts.push(`  - ${seg.step} (Input: ${inMod} → Output: ${outMod}, Capabilities: ${caps})`);
     }
   }
   return parts.join("\n");
@@ -175,7 +176,7 @@ function validatePipelineCompatibility(
       const compatible = accepts.some((mod) => prevOutputs.has(mod));
       if (!compatible && accepts.length > 0) {
         warnings.push(
-          `${rec.name} 的输入模态 [${accepts.join(", ")}] 可能不兼容上一步的输出模态 [${[...prevOutputs].join(", ")}]`,
+          `${rec.name}'s input modalities [${accepts.join(", ")}] may not be compatible with the previous step's output modalities [${[...prevOutputs].join(", ")}]`,
         );
       }
     }
@@ -204,7 +205,7 @@ export async function rankModels(
     systemPrompt = ALTERNATIVE_SYSTEM_PROMPT;
   } else if (preferenceMode === "scoped") {
     const scopeNote = intent.modelPreference?.targets?.length
-      ? `\n\n## 范围限定\n用户明确要求在以下范围内推荐：${intent.modelPreference.targets.join("、")}。请优先从匹配该范围的模型中选择。`
+      ? `\n\n## Scope Restriction\nThe user explicitly requested recommendations from: ${intent.modelPreference.targets.join(", ")}. Prioritize models within this scope.`
       : "";
     systemPrompt =
       (intent.complexity === Complexities.Pipeline
@@ -219,8 +220,8 @@ export async function rankModels(
 
   const userMessage =
     intent.complexity === Complexities.Pipeline
-      ? `意图分析结果：\n${intentContext}\n\n候选模型列表：\n${candidatesContext}\n\n用户原始需求：${userInput}\n\n请为流水线各步骤各推荐最多 ${top} 个模型。`
-      : `意图分析结果：\n${intentContext}\n\n候选模型列表：\n${candidatesContext}\n\n用户原始需求：${userInput}\n\n请推荐最多 ${top} 个模型。`;
+      ? `Intent Analysis:\n${intentContext}\n\nCandidate Models:\n${candidatesContext}\n\nUser Request: ${userInput}\n\nRecommend up to ${top} models for each pipeline step. Respond in English only.`
+      : `Intent Analysis:\n${intentContext}\n\nCandidate Models:\n${candidatesContext}\n\nUser Request: ${userInput}\n\nRecommend up to ${top} models. Respond in English only.`;
 
   const body: Record<string, unknown> = {
     model: useThinkingModel ? RANKING_MODEL : RANKING_MODEL_FAST,

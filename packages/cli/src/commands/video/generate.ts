@@ -28,27 +28,15 @@ import {
   BOOL_FLAG_WATERMARK,
 } from "../../utils/flag-descriptions.ts";
 
-// Normalize shorthand resolution (720P, 1080P) to pixel format for video generation models
-const RESOLUTION_SHORTCUTS: Record<string, string> = {
-  "720p": "1280*720",
-  "1080p": "1920*1080",
-  "480p": "832*480",
-};
-
-function normalizeResolution(res: string | undefined): string | undefined {
-  if (!res) return undefined;
-  return RESOLUTION_SHORTCUTS[res.toLowerCase()] || res;
-}
-
 export default defineCommand({
   name: "video generate",
   description:
-    "Generate a video from text or image (happyhorse-1.0-t2v / happyhorse-1.0-i2v / wan2.6-t2v)",
+    "Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)",
   usage: "bl video generate --prompt <text> [--image <url>] [flags]",
   options: [
     {
       flag: "--model <model>",
-      description: "Model ID (default: happyhorse-1.0-t2v, or happyhorse-1.0-i2v with --image)",
+      description: "Model ID (default: happyhorse-1.1-t2v, or happyhorse-1.1-i2v with --image)",
     },
     { flag: "--prompt <text>", description: "Video description", required: true },
     { flag: "--image <url>", description: "Input image URL for image-to-video generation" },
@@ -56,8 +44,8 @@ export default defineCommand({
       flag: "--negative-prompt <text>",
       description: "Negative prompt to exclude unwanted content",
     },
-    { flag: "--resolution <res>", description: "Resolution (e.g. 1280*720, 960*960)" },
-    { flag: "--ratio <ratio>", description: "Aspect ratio (e.g. 16:9, 1:1)" },
+    { flag: "--resolution <res>", description: "Resolution: 720P or 1080P (default: 1080P)" },
+    { flag: "--ratio <ratio>", description: "Aspect ratio (e.g. 16:9, 9:16, 1:1)" },
     {
       flag: "--duration <seconds>",
       description: "Video duration in seconds (default: 5)",
@@ -88,7 +76,7 @@ export default defineCommand({
     'bl video generate --prompt "A person reading a book, static shot"',
     'bl video generate --prompt "Ocean waves at sunset." --download sunset.mp4',
     'bl video generate --image https://example.com/cat.png --prompt "Make the cat in the scene move"',
-    'bl video generate --prompt "Mountain landscape" --resolution 1280*720 --duration 5',
+    'bl video generate --prompt "Mountain landscape" --resolution 720P --duration 5',
     'bl video generate --prompt "A cat playing with a ball" --watermark false',
   ],
   async run(config: Config, flags: GlobalFlags) {
@@ -110,7 +98,7 @@ export default defineCommand({
     const model =
       (flags.model as string) ||
       config.defaultVideoModel ||
-      ((flags.image as string) ? "happyhorse-1.0-i2v" : "happyhorse-1.0-t2v");
+      ((flags.image as string) ? "happyhorse-1.1-i2v" : "happyhorse-1.1-t2v");
     const format = detectOutputFormat(config.output);
 
     const imageUrl = flags.image as string | undefined;
@@ -130,13 +118,13 @@ export default defineCommand({
       input: {
         prompt: prompt!,
         negative_prompt: (flags.negativePrompt as string) || undefined,
-        // i2v models (happyhorse-1.0-i2v) require input.media with type 'first_frame'
+        // i2v models (happyhorse-1.1-i2v) require input.media with type 'first_frame'
         ...(resolvedImageUrl
           ? { media: [{ type: "first_frame" as const, url: resolvedImageUrl }] }
           : {}),
       },
       parameters: {
-        resolution: normalizeResolution(flags.resolution as string) || undefined,
+        resolution: (flags.resolution as string) || undefined,
         ratio: (flags.ratio as string) || undefined,
         duration: (flags.duration as number) || undefined,
         prompt_extend: promptExtend,

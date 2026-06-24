@@ -11,8 +11,8 @@ Index: [index.md](index.md)
 | ------------------- | ----------------------------------------------------------------------------------------------------- |
 | `bl video download` | Download a completed video by task ID                                                                 |
 | `bl video edit`     | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                |
-| `bl video generate` | Generate a video from text or image (happyhorse-1.0-t2v / happyhorse-1.0-i2v / wan2.6-t2v)            |
-| `bl video ref`      | Reference-to-video generation (happyhorse-1.0-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
+| `bl video generate` | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)            |
+| `bl video ref`      | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
 | `bl video task get` | Query async task status                                                                               |
 
 ## Command details
@@ -94,19 +94,19 @@ bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the
 | Field           | Value                                                                                      |
 | --------------- | ------------------------------------------------------------------------------------------ |
 | **Name**        | `video generate`                                                                           |
-| **Description** | Generate a video from text or image (happyhorse-1.0-t2v / happyhorse-1.0-i2v / wan2.6-t2v) |
+| **Description** | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v) |
 | **Usage**       | `bl video generate --prompt <text> [--image <url>] [flags]`                                |
 
 #### Options
 
 | Flag                        | Type    | Required | Description                                                                             |
 | --------------------------- | ------- | -------- | --------------------------------------------------------------------------------------- |
-| `--model <model>`           | string  | no       | Model ID (default: happyhorse-1.0-t2v, or happyhorse-1.0-i2v with --image)              |
+| `--model <model>`           | string  | no       | Model ID (default: happyhorse-1.1-t2v, or happyhorse-1.1-i2v with --image)              |
 | `--prompt <text>`           | string  | yes      | Video description                                                                       |
 | `--image <url>`             | string  | no       | Input image URL for image-to-video generation                                           |
 | `--negative-prompt <text>`  | string  | no       | Negative prompt to exclude unwanted content                                             |
-| `--resolution <res>`        | string  | no       | Resolution (e.g. 1280*720, 960*960)                                                     |
-| `--ratio <ratio>`           | string  | no       | Aspect ratio (e.g. 16:9, 1:1)                                                           |
+| `--resolution <res>`        | string  | no       | Resolution: 720P or 1080P (default: 1080P)                                              |
+| `--ratio <ratio>`           | string  | no       | Aspect ratio (e.g. 16:9, 9:16, 1:1)                                                     |
 | `--duration <seconds>`      | number  | no       | Video duration in seconds (default: 5)                                                  |
 | `--prompt-extend <bool>`    | string  | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default). |
 | `--watermark <bool>`        | string  | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
@@ -131,7 +131,7 @@ bl video generate --image https://example.com/cat.png --prompt "Make the cat in 
 ```
 
 ```bash
-bl video generate --prompt "Mountain landscape" --resolution 1280*720 --duration 5
+bl video generate --prompt "Mountain landscape" --resolution 720P --duration 5
 ```
 
 ```bash
@@ -143,22 +143,22 @@ bl video generate --prompt "A cat playing with a ball" --watermark false
 | Field           | Value                                                                                                 |
 | --------------- | ----------------------------------------------------------------------------------------------------- |
 | **Name**        | `video ref`                                                                                           |
-| **Description** | Reference-to-video generation (happyhorse-1.0-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
+| **Description** | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
 | **Usage**       | `bl video ref --prompt <text> --image <url>... [--ref-video <url>...] [flags]`                        |
 
 #### Options
 
 | Flag                        | Type    | Required | Description                                                                             |
 | --------------------------- | ------- | -------- | --------------------------------------------------------------------------------------- |
-| `--model <model>`           | string  | no       | Model ID (default: happyhorse-1.0-r2v)                                                  |
+| `--model <model>`           | string  | no       | Model ID (default: happyhorse-1.1-r2v)                                                  |
 | `--prompt <text>`           | string  | yes      | Video description with reference markers (image1, video1, etc.)                         |
 | `--image <url>`             | array   | no       | Reference image URL or local file (repeatable for multiple subjects)                    |
 | `--ref-video <url>`         | array   | no       | Reference video URL or local file (repeatable)                                          |
 | `--image-voice <url>`       | array   | no       | Voice URL for corresponding image (pairs by position)                                   |
 | `--video-voice <url>`       | array   | no       | Voice URL for corresponding ref-video (pairs by position)                               |
-| `--resolution <res>`        | string  | no       | Resolution: 720P or 1080P (default: 720P)                                               |
+| `--resolution <res>`        | string  | no       | Resolution: 720P or 1080P (default: 1080P)                                              |
 | `--ratio <ratio>`           | string  | no       | Aspect ratio (16:9, 9:16, 1:1)                                                          |
-| `--duration <seconds>`      | number  | no       | Video duration in seconds (2-10, default: 5)                                            |
+| `--duration <seconds>`      | number  | no       | Video duration in seconds (default: 5)                                                  |
 | `--prompt-extend <bool>`    | string  | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default). |
 | `--watermark <bool>`        | string  | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
 | `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                 |

@@ -30,10 +30,10 @@ import {
 export default defineCommand({
   name: "video ref",
   description:
-    "Reference-to-video generation (happyhorse-1.0-r2v / wan2.6-r2v): multi-subject, multi-shot with voice",
+    "Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice",
   usage: "bl video ref --prompt <text> --image <url>... [--ref-video <url>...] [flags]",
   options: [
-    { flag: "--model <model>", description: "Model ID (default: happyhorse-1.0-r2v)" },
+    { flag: "--model <model>", description: "Model ID (default: happyhorse-1.1-r2v)" },
     {
       flag: "--prompt <text>",
       description: "Video description with reference markers (image1, video1, etc.)",
@@ -59,11 +59,11 @@ export default defineCommand({
       description: "Voice URL for corresponding ref-video (pairs by position)",
       type: "array",
     },
-    { flag: "--resolution <res>", description: "Resolution: 720P or 1080P (default: 720P)" },
+    { flag: "--resolution <res>", description: "Resolution: 720P or 1080P (default: 1080P)" },
     { flag: "--ratio <ratio>", description: "Aspect ratio (16:9, 9:16, 1:1)" },
     {
       flag: "--duration <seconds>",
-      description: "Video duration in seconds (2-10, default: 5)",
+      description: "Video duration in seconds (default: 5)",
       type: "number",
     },
     {
@@ -126,7 +126,7 @@ export default defineCommand({
     const imageVoices = (flags.imageVoice as string[] | undefined) || [];
     const videoVoices = (flags.videoVoice as string[] | undefined) || [];
 
-    const model = (flags.model as string) || "happyhorse-1.0-r2v";
+    const model = (flags.model as string) || "happyhorse-1.1-r2v";
     const format = detectOutputFormat(config.output);
 
     // --- Resolve file URLs (auto-upload local files) ---

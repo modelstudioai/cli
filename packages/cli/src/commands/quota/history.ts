@@ -159,17 +159,22 @@ export default defineCommand({
       throw err;
     }
 
-    if (format === "json") {
-      emitResult(result, format);
-      return;
-    }
-
     const resp = extractResponseData(result as Record<string, unknown>);
     let records = (resp.records as LimitApplicationItem[]) ?? [];
     const total = (resp.items as number) ?? records.length;
 
     if (modelFilter) {
       records = records.filter((r) => r.deployedModel === modelFilter);
+    }
+
+    if (format === "json") {
+      const items = records.map((r) => ({
+        model: r.deployedModel,
+        tokenLimit: r.usageLimit,
+        appliedAt: formatDateTime(r.gmtCreate),
+      }));
+      emitResult({ records: items, total: modelFilter ? records.length : total }, format);
+      return;
     }
 
     if (records.length === 0) {

@@ -14,3 +14,6 @@ export const BAILIAN_CONSOLE = `${BAILIAN_CONSOLE_ROOT}/cn-beijing`;
 
 /** Direct deep link to API key management page. */
 export const API_KEY_PAGE = `${BAILIAN_CONSOLE}/?tab=app#/api-key`;
+
+/** Voice TTS experience center — browse system and custom voices. */
+export const VOICE_TTS_PAGE = "https://help.aliyun.com/zh/model-studio/cosyvoice-voice-list";
