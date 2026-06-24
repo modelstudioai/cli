@@ -33,6 +33,10 @@
     "./package.json": "./package.json"
   },
   "publishConfig": {
+    "exports": {
+      ".": "./dist/bailian.mjs",
+      "./package.json": "./package.json"
+    },
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {

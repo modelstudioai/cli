@@ -32,6 +32,10 @@
     "./package.json": "./package.json"
   },
   "publishConfig": {
+    "exports": {
+      ".": "./dist/rag.mjs",
+      "./package.json": "./package.json"
+    },
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
