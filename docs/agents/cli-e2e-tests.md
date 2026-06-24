@@ -1,19 +1,48 @@
 # CLI E2E 测试规范
 
+## 架构（composable-cli）
+
+E2E 按包分层，与命令实现 / 产品入口解耦：
+
+| 层级             | 路径                                                                                   | 测什么                                                                            |
+| ---------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **公共基建**     | `packages/commands/tests/e2e/core/`                                                    | `createCliRunner`、skip 判定、输出目录、global-setup                              |
+| **命令契约 e2e** | `packages/commands/tests/e2e/*.e2e.test.ts`                                            | help、缺参、dry-run、**真实集成**；跑 canonical 入口 `tests/fixtures/test-cli.ts` |
+| **产品 smoke**   | `packages/cli/tests/e2e/smoke.e2e.test.ts`、`packages/rag/tests/e2e/smoke.e2e.test.ts` | 版本、root help、命令面裁剪；跑各产品 `src/main.ts`                               |
+
+> `commands/tests/e2e/core` 是 e2e 测试基建，与 `packages/core`（`bailian-cli-core`）无关。
+
 ## 触发条件
 
-- 新增/修改 `packages/cli/src` 下的 command（`commands/catalog.ts` 登记、`defineCommand` 实现、options/usage）
-- 新建或扩展 `packages/cli/tests/e2e/*.e2e.test.ts` 用例
+- 新增/修改 `packages/commands/src/commands/` 下的 command（`groups.ts` 登记、`defineCommand` 实现、options/usage）
+- 新建或扩展 `packages/commands/tests/e2e/<topic>.e2e.test.ts` 用例
+- 新增/变更产品命令面（bl / rag）时同步维护对应 smoke 用例
 - 为命令补 help / 缺参 / dry-run / 真实集成测试
-
-以上情况必须同步维护 `packages/cli/tests/e2e/<topic>.e2e.test.ts`。跑测与环境变量见 `.cursor/skills/bailian-cli-e2e/SKILL.md`。
 
 ## 文件与工具
 
-- 路径：`packages/cli/tests/e2e/<kebab-topic>.e2e.test.ts`
-- 框架：`vite-plus/test`；子进程跑 CLI：`runCli` from `./helpers.ts`
-- 解析 JSON stdout：`parseStdoutJson`；输出目录：`makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url))`
-- 长任务：`cliTimeoutPrefix()`；视频用例加 `test(..., 3_600_000)` 等显式超时
+- **契约 e2e 路径**：`packages/commands/tests/e2e/<kebab-topic>.e2e.test.ts`
+- **框架**：`vite-plus/test`；契约测试 `runCli` from `./setup.ts`；cli/rag smoke from `./setup.ts`（内部 `import from "bailian-cli-commands/e2e"`）
+- **解析 JSON stdout**：`parseStdoutJson`；输出目录：`makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url))`
+- **长任务**：`cliTimeoutPrefix()`；视频用例加 `test(..., 3_600_000)` 等显式超时
+
+## 跑测命令
+
+```sh
+# 一次跑全部 e2e（契约 + bl/rag smoke）
+pnpm test:e2e
+
+# 仅命令契约（含真实集成，需 BAILIAN_E2E=1 等）
+pnpm --filter bailian-cli-commands test
+
+# 单文件（在 bailian-cli-commands 包目录下运行，路径相对于 packages/commands）
+pnpm --filter bailian-cli-commands test tests/e2e/text-chat.e2e.test.ts
+
+# 全 monorepo（unit + e2e）
+vp run -r test
+```
+
+环境变量与 skip 条件见 `.cursor/skills/bailian-cli-e2e/SKILL.md`（若存在）或下文 skip 表。
 
 ## 双层 describe（固定结构）
 
@@ -32,7 +61,7 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 });
 ```
 
-## skip 条件（helpers.ts）
+## skip 条件（`tests/e2e/core/skip.ts`）
 
 | 场景                | 条件                                                  |
 | ------------------- | ----------------------------------------------------- |
@@ -59,12 +88,13 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 ## 新增 command 检查清单
 
-- [ ] `commands/catalog.ts` 登记 + `tests/e2e/<topic>.e2e.test.ts`（新建或扩展）
+- [ ] `packages/commands/src/commands/groups.ts` 登记 + `packages/commands/tests/e2e/<topic>.e2e.test.ts`（新建或扩展）
 - [ ] 若改了 `usage` / `options` / `examples`,跑 `pnpm --filter bailian-cli run generate:reference` 更新 `skills/bailian-cli/reference/` 并提交
 - [ ] 顶层：分组 help + 子命令 `--help`（多子命令则各一条 help）
 - [ ] skip 块：每个 required flag 缺参；可 dry-run 则加一条
 - [ ] 至少一条真实集成（或说明为何仅 smoke）；不破坏已有集成用例顺序
-- [ ] `pnpm test packages/cli/tests/e2e/<file>` 通过
+- [ ] 若 bl/rag 命令面变更，更新对应 smoke 用例
+- [ ] `pnpm --filter bailian-cli-commands test tests/e2e/<file>` 通过
 
 ## 示例片段
 
@@ -97,4 +127,4 @@ test("foo bar --dry-run 仅输出计划", async () => {
 - **E2E**：单条/少量调用、断言固定、可进 `vp test`（见上文 skip 条件）
 - **批量压测**：`packages/cli/tests/stress/run.mjs` + `targets/*.mjs`，并发 + 报告，**仅手动** `pnpm run test:stress -- <target>`
 
-勿把压测并入 E2E 或默认 CI。详见 [stress-batch-tests.md](stress-batch-tests.md)。
+勿把压测并入 E2E 或默认 CI。详见 [stress-batch-tests.md](stress-batch-tests.md).

@@ -21,6 +21,7 @@
     "bl": "pnpm -F bailian-cli dev",
     "rag": "pnpm -F bailian-cli-rag dev",
     "test": "vp test",
+    "test:e2e": "pnpm --filter bailian-cli-commands --filter bailian-cli --filter bailian-cli-rag test",
     "release:check": "node tools/release/check.mjs",
     "wiki:crawl": "node tools/wiki-crawler/index.mjs",
     "test:stress": "node packages/cli/tests/stress/run.mjs"

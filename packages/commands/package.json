@@ -20,10 +20,15 @@
   "types": "./dist/index.d.mts",
   "exports": {
     ".": "./dist/index.mjs",
+    "./e2e": "./tests/e2e/core/index.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "access": "public",
+    "exports": {
+      ".": "./dist/index.mjs",
+      "./package.json": "./package.json"
+    },
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {

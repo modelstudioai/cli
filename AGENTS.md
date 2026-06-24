@@ -4,28 +4,30 @@
 
 ## 项目地图
 
-monorepo 双包结构:
+monorepo 多包结构:
 
-- `packages/cli` — `bailian-cli` 包,CLI 命令、UI、入口
-- `packages/core` — `bailian-cli-core` 包,鉴权 / HTTP / 类型,纯逻辑层
+- `packages/core` — `bailian-cli-core`,鉴权 / HTTP / 类型,纯逻辑层
+- `packages/runtime` — `bailian-cli-runtime`,`createCli` / registry / args / output
+- `packages/commands` — `bailian-cli-commands`,命令实现 + **契约 e2e** + e2e 公共基建(`tests/e2e/core`)
+- `packages/cli` — `bailian-cli`,`bl` 产品入口 + smoke e2e
+- `packages/rag` — `bailian-cli-rag`,`rag` 产品入口 + smoke e2e
+
+### E2E 测试分布
+
+- 契约 e2e(help / dry-run / 真实集成): `packages/commands/tests/e2e/`
+- e2e 基建(`createCliRunner` 等): `packages/commands/tests/e2e/core/`(export `bailian-cli-commands/e2e`)
+- 产品 smoke: `packages/cli/tests/e2e/smoke.e2e.test.ts`、`packages/rag/tests/e2e/smoke.e2e.test.ts`
+- 一次跑全量 e2e: 根目录 `pnpm test:e2e`
 
 ### `packages/cli` 目录要点
 
 ```
 packages/cli/
-├── src/
-│   ├── main.ts              # 入口、鉴权分支、调用 registry
-│   ├── registry.ts          # 命令树解析、动态 help(读 catalog)
-│   ├── commands/
-│   │   ├── catalog.ts       # 命令总表(登记处,构建脚本也读它)
-│   │   ├── index.ts         # re-export commands
-│   │   └── <group>/...ts    # 各命令 defineCommand 实现
-│   ├── output/              # CLI 输出、prompt、progress
-│   └── urls.ts              # 控制台/文档 URL(仅 cli)
-└── tests/e2e/
+├── src/main.ts              # bl 入口(createCli + commands)
+└── tests/e2e/smoke.e2e.test.ts
 ```
 
-Skill / 命令手册随 `skills/bailian-cli/` 经 `npx skills add modelstudioai/cli` 安装。`tools/generate-reference.ts` 从 `catalog.ts` 生成命令手册到 `skills/bailian-cli/reference/`(纳入 git);与 `tools/sync-skill-metadata.ts` 一起在 **pre-commit**（`.vite-hooks/pre-commit`）及根脚本 `pnpm run sync:skill-assets` 中执行。
+命令实现见 `packages/commands/src/commands/`;登记在 **`groups.ts`**。`bl --help` 与 `tools/generate-reference.ts` 生成的命令手册同源,见 [command-add-remove.md](docs/agents/command-add-remove.md)。
 
 非代码资产:
 
@@ -37,9 +39,11 @@ Skill / 命令手册随 `skills/bailian-cli/` 经 `npx skills add modelstudioai/
 约定:
 
 - core 是纯库,不依赖 cli(详见下方通用约定)
-- 文件路径与命令路径一一对应:`commands/text/chat.ts` ↔ `bl text chat`
+- 文件路径与命令路径一一对应:`packages/commands/src/commands/text/chat.ts` ↔ `bl text chat`
 - 单级命令:`commands/<name>.ts`(如 `update.ts`);两级:`commands/<group>/<action>.ts`
-- 命令登记在 **`catalog.ts`**;`bl --help` 与 `tools/generate-reference.ts` 生成的命令手册同源,见 [command-add-remove.md](docs/agents/command-add-remove.md)
+- 命令登记在 **`packages/commands/src/commands/groups.ts`**
+
+Skill / 命令手册随 `skills/bailian-cli/` 经 `npx skills add modelstudioai/cli` 安装。`tools/generate-reference.ts` 从 catalog 生成命令手册到 `skills/bailian-cli/reference/`(纳入 git);与 `tools/sync-skill-metadata.ts` 一起在 **pre-commit**（`.vite-hooks/pre-commit`）及根脚本 `pnpm run sync:skill-assets` 中执行。
 
 ## 业务场景索引
 
