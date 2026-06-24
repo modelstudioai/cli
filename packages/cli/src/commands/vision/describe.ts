@@ -72,8 +72,8 @@ export default defineCommand({
   ],
   examples: [
     "bl vision describe --image photo.jpg",
-    'bl vision describe --image https://example.com/photo.jpg --prompt "这只狗是什么品种？"',
-    'bl vision describe --video https://example.com/video.mp4 --prompt "总结视频内容"',
+    'bl vision describe --image https://example.com/photo.jpg --prompt "What breed is this dog?"',
+    'bl vision describe --video https://example.com/video.mp4 --prompt "Summarize the video content"',
     "bl vision describe --video ./local-video.mp4",
     'bl vision describe --image photo.png --prompt "Extract the text" --model qwen-vl-plus',
   ],

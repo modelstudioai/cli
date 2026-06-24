@@ -20,7 +20,7 @@ function shouldOfferIssueReport(exitCode, apiCode, message, hint):
 
   # Step 2: NETWORK / TIMEOUT — exclude if hint is actionable
   if exitCode in [5 (TIMEOUT), 6 (NETWORK)] AND hint is actionable:
-    return EXCLUDE  # user can self-service (DNS, proxy, --timeout, region)
+    return EXCLUDE  # user can self-service (DNS, proxy, --timeout, base_url)
 
   # Step 3: GENERAL (exit code 1) — shared by CLI bugs AND service passthrough
   #          MUST inspect api_code / message to disambiguate
@@ -80,7 +80,7 @@ These are **user**, **environment**, or **service business** errors. Give fix hi
 | **Free quota query**       | `bl usage free` business result        | Quota used up — not a CLI defect                                                |
 | **Obvious local env**      | Hint is sufficient                     | `ENOENT` / `EACCES`, wrong file path, disk full                                 |
 | **Network (self-service)** | Exit code **6** (NETWORK) + clear hint | DNS, proxy, TLS — user fixes `DASHSCOPE_BASE_URL`, proxy, or network            |
-| **Timeout (self-service)** | Exit code **5** (TIMEOUT) + hint works | Increase `--timeout`, check region with `bl auth status`                        |
+| **Timeout (self-service)** | Exit code **5** (TIMEOUT) + hint works | Increase `--timeout`, check `base_url` with `bl auth status`                    |
 
 **Rule:** If the authoritative source of the error is the **service response** or **user input**, treat it as non-reportable (same boundary as the CLI repo’s error-handling docs).
 
@@ -114,7 +114,7 @@ Offer reporting when **none** of EXCLUDE applies **and** any of the following ho
 
 ### Before offering to report
 
-1. Align versions: [SKILL.md → Skill / CLI version check](../SKILL.md#skill--cli-version-check-agent--do-first) — run `bl update` and `npx skills update bailian-cli -g -y` if mismatched.
+1. Align versions: [SKILL.md → Version & updates](../SKILL.md#version--updates-agent--do-first) — run `bl update` and `npx skills add modelstudioai/cli --all -g -y` if mismatched.
 2. Confirm `bl auth status` is healthy (for commands that need auth).
 3. Retry once with `--verbose` if stderr was thin.
 
@@ -137,9 +137,9 @@ If it still fails with INCLUDE signals → offer reporting.
 
 When INCLUDE matches, ask in **Chinese** (adjust if the user prefers English):
 
-> `bl` 命令出现了疑似 CLI 自身的问题。
-> 是否需要帮你整理信息，向百炼 CLI 团队提交 GitHub Issue？
-> 提交前会自动脱敏 API Key；你也可以只复制模版自行提交。
+> The `bl` command hit what looks like a CLI bug.
+> Would you like help gathering details to file a GitHub Issue with the Bailian CLI team?
+> API Keys will be redacted automatically before submission; you can also copy the template and submit yourself.
 
 If the user agrees → [Collect information](#collect-information) → [Submit](#submit).
 
@@ -172,7 +172,7 @@ Before any paste or `gh issue create`:
 - Replace `Authorization: Bearer ...` headers in verbose output → `Authorization: Bearer [REDACTED]`
 - Redact `--prompt` / `--message` / `--biz-params` contents if they contain user business data → summarize as `[user prompt about <topic>]`
 - Redact `account`, `uid`, `aliuid` from `bl auth status` output → `[REDACTED]`
-- Redact sensitive fields from `bl config show` (keep non-secret keys like `region`, model defaults)
+- Redact sensitive fields from `bl config show` (keep non-secret keys like `base_url`, model defaults)
 - **Keep** `Request ID` / `request_id` — helps the team trace logs
 - Local paths may stay or be generalized (`~/path/to/file.png`)
 
@@ -290,7 +290,7 @@ If a matching open issue exists:
 
 Before submitting, **always show the redacted issue body to the user** and ask for confirmation:
 
-> 以下是即将提交的 Issue 内容（已脱敏），请确认是否提交：
+> Below is the redacted Issue content to be submitted—confirm submission?
 > show body
 
 Only proceed after the user confirms.
@@ -329,7 +329,7 @@ If `gh` is not installed or not authenticated:
 1. Write the complete redacted issue body to a local file (e.g. `./cli-bug-report.md`)
 2. Print the file content to the user
 3. Provide the direct URL: [https://github.com/modelstudioai/cli/issues/new?template=bug_report.yml](https://github.com/modelstudioai/cli/issues/new?template=bug_report.yml)
-4. Instruct: "请在浏览器中打开上面的链接，将内容粘贴到 issue body 中提交。"
+4. Instruct: "Open the link above in your browser and paste the content into the issue body to submit."
 
 Do **not** block on `gh` — always provide a manual path.
 

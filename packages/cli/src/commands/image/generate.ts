@@ -82,7 +82,7 @@ export default defineCommand({
     },
   ],
   examples: [
-    'bl image generate --prompt "一只穿太空服的猫在火星上"',
+    'bl image generate --prompt "A cat in a spacesuit on Mars"',
     'bl image generate --prompt "Logo design" --n 3 --out-dir ./generated/',
     'bl image generate --prompt "Mountain landscape" --size 2688*1536',
     'bl image generate --prompt "A castle" --seed 42 --prompt-extend false',

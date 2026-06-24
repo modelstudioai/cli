@@ -40,27 +40,27 @@ Index: [index.md](index.md)
 #### Examples
 
 ```bash
-bl app call --app-id abc123 --prompt "你好"
+bl app call --app-id abc123 --prompt "Hello"
 ```
 
 ```bash
-bl app call --app-id abc123 --prompt "描述这张图片" --image https://example.com/photo.jpg
+bl app call --app-id abc123 --prompt "Describe this image" --image https://example.com/photo.jpg
 ```
 
 ```bash
-bl app call --app-id abc123 --prompt "分析图片" --image img1.jpg --image img2.jpg
+bl app call --app-id abc123 --prompt "Analyze the image" --image img1.jpg --image img2.jpg
 ```
 
 ```bash
-bl app call --app-id abc123 --prompt "继续" --session-id sess_xxx --stream
+bl app call --app-id abc123 --prompt "Continue" --session-id sess_xxx --stream
 ```
 
 ```bash
-bl app call --app-id abc123 --prompt "搜索资料" --pipeline-ids pipe1,pipe2
+bl app call --app-id abc123 --prompt "Search for materials" --pipeline-ids pipe1,pipe2
 ```
 
 ```bash
-bl app call --app-id abc123 --prompt "开始" --biz-params '{"key":"value"}'
+bl app call --app-id abc123 --prompt "Start" --biz-params '{"key":"value"}'
 ```
 
 ### `bl app list`
@@ -73,12 +73,14 @@ bl app call --app-id abc123 --prompt "开始" --biz-params '{"key":"value"}'
 
 #### Options
 
-| Flag                | Type   | Required | Description                         |
-| ------------------- | ------ | -------- | ----------------------------------- |
-| `--name <name>`     | string | no       | Filter by app name (keyword search) |
-| `--page <n>`        | number | no       | Page number (default: 1)            |
-| `--page-size <n>`   | number | no       | Results per page (default: 30)      |
-| `--region <region>` | string | no       | API region (default: cn-beijing)    |
+| Flag                           | Type   | Required | Description                           |
+| ------------------------------ | ------ | -------- | ------------------------------------- |
+| `--name <name>`                | string | no       | Filter by app name (keyword search)   |
+| `--page <n>`                   | number | no       | Page number (default: 1)              |
+| `--page-size <n>`              | number | no       | Results per page (default: 30)        |
+| `--console-region <region>`    | string | no       | Console region                        |
+| `--console-site <site>`        | string | no       | Console site: domestic, international |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID                      |
 
 #### Examples
 
@@ -87,7 +89,7 @@ bl app list
 ```
 
 ```bash
-bl app list --name 客服
+bl app list --name customer service
 ```
 
 ```bash

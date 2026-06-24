@@ -68,7 +68,6 @@ function extractResponseData(result: Record<string, unknown>): Record<string, un
 async function fetchAllModelsWithQpm(
   config: Config,
   token: string,
-  region: string,
   onlySelfService: boolean,
 ): Promise<ModelWithQpm[]> {
   const allModels: ModelWithQpm[] = [];
@@ -89,7 +88,6 @@ async function fetchAllModelsWithQpm(
     const raw = await callConsoleGateway(config, token, {
       api: MODEL_LIST_API,
       data: { input },
-      region,
     });
 
     const resp = extractResponseData(raw as Record<string, unknown>);
@@ -108,8 +106,7 @@ function printTable(models: ModelWithQpm[], noColor: boolean): void {
   const bold = noColor ? (t: string) => t : (t: string) => `\x1b[1m${t}\x1b[0m`;
   const dim = noColor ? (t: string) => t : (t: string) => `\x1b[2m${t}\x1b[0m`;
 
-  const headersCn = ["模型", "RPM", "TPM", "可设上限 TPM"];
-  const headersEn = ["Model", "Req/min", "Token/min", "Max TPM"];
+  const headers = ["Model", "Req/min", "Token/min", "Max TPM"];
 
   const rows = models.map((m) => {
     const qpm = m.qpmInfo;
@@ -135,32 +132,27 @@ function printTable(models: ModelWithQpm[], noColor: boolean): void {
     return;
   }
 
-  const widths = headersCn.map((label, col) =>
-    Math.max(
-      displayWidth(label),
-      displayWidth(headersEn[col]),
-      ...rows.map((row) => displayWidth(row[col])),
-    ),
+  const widths = headers.map((label, col) =>
+    Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const cnLine = headersCn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const enLine = headersEn.map((label, col) => dim(padEnd(label, widths[col]))).join("  ");
+  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((w) => dim("─".repeat(w))).join("──");
 
-  process.stdout.write(cnLine + "\n");
-  process.stdout.write(enLine + "\n");
+  process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
 
   for (const row of rows) {
     process.stdout.write(row.map((cell, col) => padEnd(cell, widths[col])).join("  ") + "\n");
   }
 
-  process.stdout.write(dim(`\n共 ${models.length} 个模型 (Total: ${models.length})`) + "\n");
+  process.stdout.write(dim(`\nTotal: ${models.length} models`) + "\n");
 }
 
 export default defineCommand({
   name: "quota list",
   description: "View model RPM/TPM rate limits",
+  skipDefaultApiKeySetup: true,
   usage: "bl quota list [--model <model>] [flags]",
   options: [
     {
@@ -171,9 +163,15 @@ export default defineCommand({
       flag: "--all",
       description: "Show all models, not just self-service ones",
     },
+    { flag: "--console-region <region>", description: "Console region" },
     {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID",
+      type: "number",
     },
   ],
   examples: [
@@ -186,10 +184,7 @@ export default defineCommand({
   async run(config: Config, flags: GlobalFlags) {
     const modelFlag = (flags.model as string) || undefined;
     const showAll = Boolean(flags.all);
-    const region = (flags.region as string) || "cn-beijing";
     const format = detectOutputFormat(config.output);
-
-    const credential = await resolveConsoleGatewayCredential(config);
 
     if (config.dryRun) {
       const input: Record<string, unknown> = {
@@ -200,11 +195,13 @@ export default defineCommand({
         ignoreWorkspaceServiceSite: true,
       };
       if (!showAll) input.supports = { selfServiceLimitIncrease: true };
-      emitResult({ api: MODEL_LIST_API, data: { input }, region }, format);
+      emitResult({ api: MODEL_LIST_API, data: { input } }, format);
       return;
     }
 
-    let models = await fetchAllModelsWithQpm(config, credential.token, region, !showAll);
+    const credential = await resolveConsoleGatewayCredential(config);
+
+    let models = await fetchAllModelsWithQpm(config, credential.token, !showAll);
 
     if (modelFlag) {
       const names = new Set(
@@ -221,7 +218,25 @@ export default defineCommand({
     }
 
     if (format === "json") {
-      emitResult(models, format);
+      const items = models.map((m) => {
+        const qpm = m.qpmInfo;
+        const modelDefault = qpm?.["model-default"];
+        const userSpec = qpm?.["user-spec"];
+
+        const defaultRPM = calculateRPM(modelDefault);
+        const defaultTPM = calculateTPM(modelDefault);
+        const currentRPM = calculateRPM(userSpec, modelDefault?.count_limit_period) || defaultRPM;
+        const currentTPM = calculateTPM(userSpec, modelDefault?.usage_limit_period) || defaultTPM;
+        const maxTPM = defaultTPM * 2;
+
+        return {
+          model: m.model,
+          rpm: currentRPM > 0 ? currentRPM : null,
+          tpm: currentTPM > 0 ? currentTPM : null,
+          maxTPM: maxTPM > 0 ? maxTPM : null,
+        };
+      });
+      emitResult(items, format);
       return;
     }
 

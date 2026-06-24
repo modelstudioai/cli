@@ -41,12 +41,10 @@ describe("e2e: config", () => {
     ]);
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
-      region?: string;
       config_file?: string;
       base_url?: string;
       timeout?: number;
     }>(stdout);
-    expect(data.region).toBeDefined();
     expect(data.config_file).toBeDefined();
     expect(data.base_url).toBeDefined();
     expect(data.timeout).toBeDefined();
@@ -62,7 +60,7 @@ describe("e2e: config", () => {
       "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stdout).toMatch(/region|config_file|timeout|base_url/i);
+    expect(stdout).toMatch(/config_file|timeout|base_url/i);
   });
 
   test("config set 缺少 --key / --value 时退出为用法错误 (2)", async () => {
@@ -83,20 +81,6 @@ describe("e2e: config", () => {
     ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/Invalid config key|not-a-real-key/i);
-  });
-
-  test("config set 非法 region", async () => {
-    const { stderr, exitCode } = await runCli([
-      "config",
-      "set",
-      "--non-interactive",
-      "--key",
-      "region",
-      "--value",
-      "invalid-region",
-    ]);
-    expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/Invalid region|cn, us, intl/i);
   });
 
   test("config set 非法 output", async () => {

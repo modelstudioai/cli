@@ -11,5 +11,8 @@ export interface GlobalFlags {
   help: boolean;
   nonInteractive: boolean;
   async: boolean;
+  consoleRegion?: string;
+  consoleSite?: string;
+  consoleSwitchAgent?: number;
   [key: string]: unknown;
 }

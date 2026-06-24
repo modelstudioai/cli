@@ -21,7 +21,7 @@ import { promptText, failIfMissing } from "../../output/prompt.ts";
 import { emitResult } from "../../output/output.ts";
 import { resolveOutputDir, resolveCredential } from "bailian-cli-core";
 
-const OMNI_VOICES = ["Chelsie", "Cherry", "Ethan", "Serena", "Tina"];
+const OMNI_VOICES = ["Chelsie", "Cherry", "Ethan", "Serena", "Sunny", "Tina"];
 
 /**
  * Extension to input audio format.
@@ -119,14 +119,14 @@ export default defineCommand({
     { flag: "--temperature <n>", description: "Sampling temperature (0.0, 2.0]", type: "number" },
   ],
   examples: [
-    'bl omni --message "你好，你是谁？"',
-    'bl omni --message "描述这张图片" --image ./photo.jpg',
-    'bl omni --message "这段音频在说什么？" --audio https://example.com/audio.wav',
-    'bl omni --message "总结这个视频" --video https://example.com/video.mp4',
-    'bl omni --message "这个视频讲了什么" --video ./local-video.mp4 --text-only',
-    'bl omni --message "用四川话回答：今天天气怎么样" --voice Serena',
+    'bl omni --message "Hello, who are you?"',
+    'bl omni --message "Describe this image" --image ./photo.jpg',
+    'bl omni --message "What is this audio saying?" --audio https://example.com/audio.wav',
+    'bl omni --message "Summarize this video" --video https://example.com/video.mp4',
+    'bl omni --message "What is this video about?" --video ./local-video.mp4 --text-only',
+    'bl omni --message "Answer in Sichuan dialect: How\'s the weather today?" --voice Sunny',
     'bl omni --message "Hello" --text-only --output json',
-    'bl omni --message "朗读这段话" --audio-out greeting.wav',
+    'bl omni --message "Read this passage aloud" --audio-out greeting.wav',
   ],
   async run(config: Config, flags: GlobalFlags) {
     // --- Parse messages ---

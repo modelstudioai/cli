@@ -55,8 +55,8 @@ Use this index for the full quick index and global flags.
 | `bl usage stats`            | Query model usage statistics                                                                          | [usage.md](usage.md)         |
 | `bl video download`         | Download a completed video by task ID                                                                 | [video.md](video.md)         |
 | `bl video edit`             | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                | [video.md](video.md)         |
-| `bl video generate`         | Generate a video from text or image (happyhorse-1.0-t2v / happyhorse-1.0-i2v / wan2.6-t2v)            | [video.md](video.md)         |
-| `bl video ref`              | Reference-to-video generation (happyhorse-1.0-r2v / wan2.6-r2v): multi-subject, multi-shot with voice | [video.md](video.md)         |
+| `bl video generate`         | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)            | [video.md](video.md)         |
+| `bl video ref`              | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice | [video.md](video.md)         |
 | `bl video task get`         | Query async task status                                                                               | [video.md](video.md)         |
 | `bl vision describe`        | Describe an image or video using Qwen-VL                                                              | [vision.md](vision.md)       |
 | `bl workspace list`         | List all workspaces                                                                                   | [workspace.md](workspace.md) |
@@ -92,21 +92,23 @@ Use this index for the full quick index and global flags.
 
 Available on every command (in addition to command-specific options):
 
-| Flag                  | Type    | Required | Description                          |
-| --------------------- | ------- | -------- | ------------------------------------ |
-| `--api-key <key>`     | string  | no       | API key                              |
-| `--region <region>`   | string  | no       | API region: cn (default), us, intl   |
-| `--base-url <url>`    | string  | no       | API base URL                         |
-| `--output <format>`   | string  | no       | Output format: text, json            |
-| `--timeout <seconds>` | number  | no       | Request timeout                      |
-| `--quiet`             | boolean | no       | Suppress non-essential output        |
-| `--verbose`           | boolean | no       | Print HTTP request/response details  |
-| `--no-color`          | boolean | no       | Disable ANSI colors                  |
-| `--dry-run`           | boolean | no       | Dry run mode                         |
-| `--non-interactive`   | boolean | no       | Disable interactive prompts          |
-| `--concurrent <n>`    | number  | no       | Run N parallel requests (default: 1) |
-| `--help`              | boolean | no       | Show help                            |
-| `--version`           | boolean | no       | Print version                        |
+| Flag                           | Type    | Required | Description                                              |
+| ------------------------------ | ------- | -------- | -------------------------------------------------------- |
+| `--api-key <key>`              | string  | no       | API key                                                  |
+| `--base-url <url>`             | string  | no       | API base URL                                             |
+| `--output <format>`            | string  | no       | Output format: text, json                                |
+| `--timeout <seconds>`          | number  | no       | Request timeout                                          |
+| `--quiet`                      | boolean | no       | Suppress non-essential output                            |
+| `--verbose`                    | boolean | no       | Print HTTP request/response details                      |
+| `--no-color`                   | boolean | no       | Disable ANSI colors                                      |
+| `--dry-run`                    | boolean | no       | Dry run mode                                             |
+| `--non-interactive`            | boolean | no       | Disable interactive prompts                              |
+| `--concurrent <n>`             | number  | no       | Run N parallel requests (default: 1)                     |
+| `--console-region <region>`    | string  | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string  | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number  | no       | Switch agent UID for delegated access                    |
+| `--help`                       | boolean | no       | Show help                                                |
+| `--version`                    | boolean | no       | Print version                                            |
 
 ## Notes
 

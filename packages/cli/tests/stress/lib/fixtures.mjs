@@ -180,7 +180,7 @@ export async function ensurePrerequisites(ctx) {
       "video",
       "generate",
       "--model",
-      "happyhorse-1.0-t2v",
+      "happyhorse-1.1-t2v",
       "--prompt",
       "压测前置短视频：海浪与静态远景，无明显人物。",
       "--duration",

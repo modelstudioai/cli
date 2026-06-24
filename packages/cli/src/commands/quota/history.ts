@@ -65,8 +65,7 @@ function printTable(records: LimitApplicationItem[], noColor: boolean, total: nu
   const bold = noColor ? (t: string) => t : (t: string) => `\x1b[1m${t}\x1b[0m`;
   const dim = noColor ? (t: string) => t : (t: string) => `\x1b[2m${t}\x1b[0m`;
 
-  const headersCn = ["模型", "Token 账号限流", "申请时间"];
-  const headersEn = ["Model", "Token Limit", "Applied At"];
+  const headers = ["Model", "Token Limit", "Applied At"];
 
   const rows = records.map((r) => [
     r.deployedModel,
@@ -74,32 +73,27 @@ function printTable(records: LimitApplicationItem[], noColor: boolean, total: nu
     formatDateTime(r.gmtCreate),
   ]);
 
-  const widths = headersCn.map((label, col) =>
-    Math.max(
-      displayWidth(label),
-      displayWidth(headersEn[col]),
-      ...rows.map((row) => displayWidth(row[col])),
-    ),
+  const widths = headers.map((label, col) =>
+    Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const cnLine = headersCn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const enLine = headersEn.map((label, col) => dim(padEnd(label, widths[col]))).join("  ");
+  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((w) => dim("─".repeat(w))).join("──");
 
-  process.stdout.write(cnLine + "\n");
-  process.stdout.write(enLine + "\n");
+  process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
 
   for (const row of rows) {
     process.stdout.write(row.map((cell, col) => padEnd(cell, widths[col])).join("  ") + "\n");
   }
 
-  process.stdout.write(dim(`\n共 ${total} 条记录 (Total: ${total})`) + "\n");
+  process.stdout.write(dim(`\nTotal: ${total} records`) + "\n");
 }
 
 export default defineCommand({
   name: "quota history",
   description: "View quota change history",
+  skipDefaultApiKeySetup: true,
   usage: "bl quota history [flags]",
   options: [
     {
@@ -114,9 +108,15 @@ export default defineCommand({
       flag: "--model <model>",
       description: "Filter by model name",
     },
+    { flag: "--console-region <region>", description: "Console region" },
     {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID",
+      type: "number",
     },
   ],
   examples: [
@@ -130,26 +130,24 @@ export default defineCommand({
     const page = Number(flags.page) || 1;
     const pageSize = Number(flags.pageSize) || 10;
     const modelFilter = (flags.model as string) || undefined;
-    const region = (flags.region as string) || "cn-beijing";
     const format = detectOutputFormat(config.output);
-
-    const credential = await resolveConsoleGatewayCredential(config);
 
     const requestData = {
       input: { pageNo: page, pageSize },
     };
 
     if (config.dryRun) {
-      emitResult({ api: HISTORY_API, data: requestData, region }, format);
+      emitResult({ api: HISTORY_API, data: requestData }, format);
       return;
     }
+
+    const credential = await resolveConsoleGatewayCredential(config);
 
     let result: unknown;
     try {
       result = await callConsoleGateway(config, credential.token, {
         api: HISTORY_API,
         data: requestData,
-        region,
       });
     } catch (err) {
       if (err instanceof BailianError && err.message.includes("NotLogined")) {
@@ -161,17 +159,22 @@ export default defineCommand({
       throw err;
     }
 
-    if (format === "json") {
-      emitResult(result, format);
-      return;
-    }
-
     const resp = extractResponseData(result as Record<string, unknown>);
     let records = (resp.records as LimitApplicationItem[]) ?? [];
     const total = (resp.items as number) ?? records.length;
 
     if (modelFilter) {
       records = records.filter((r) => r.deployedModel === modelFilter);
+    }
+
+    if (format === "json") {
+      const items = records.map((r) => ({
+        model: r.deployedModel,
+        tokenLimit: r.usageLimit,
+        appliedAt: formatDateTime(r.gmtCreate),
+      }));
+      emitResult({ records: items, total: modelFilter ? records.length : total }, format);
+      return;
     }
 
     if (records.length === 0) {

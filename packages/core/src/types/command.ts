@@ -14,6 +14,8 @@ export interface Command {
   usage?: string;
   options?: OptionDef[];
   examples?: string[];
+  skipDefaultApiKeySetup?: boolean;
+  notes?: string[];
   execute: (config: Config, flags: GlobalFlags) => Promise<void>;
 }
 
@@ -23,6 +25,8 @@ export interface CommandSpec {
   usage?: string;
   options?: OptionDef[];
   examples?: string[];
+  skipDefaultApiKeySetup?: boolean;
+  notes?: string[];
   run: (config: Config, flags: GlobalFlags) => Promise<void>;
 }
 
@@ -33,6 +37,8 @@ export function defineCommand(spec: CommandSpec): Command {
     usage: spec.usage,
     options: spec.options,
     examples: spec.examples,
+    skipDefaultApiKeySetup: spec.skipDefaultApiKeySetup,
+    notes: spec.notes,
     execute: (config, flags) => spec.run(config, flags),
   };
 }
@@ -40,7 +46,6 @@ export function defineCommand(spec: CommandSpec): Command {
 /** Global flags shared by all commands — drives the parser's type resolution. */
 export const GLOBAL_OPTIONS: OptionDef[] = [
   { flag: "--api-key <key>", description: "API key" },
-  { flag: "--region <region>", description: "API region: cn (default), us, intl" },
   { flag: "--base-url <url>", description: "API base URL" },
   { flag: "--output <format>", description: "Output format: text, json" },
   { flag: "--timeout <seconds>", description: "Request timeout", type: "number" },
@@ -50,6 +55,16 @@ export const GLOBAL_OPTIONS: OptionDef[] = [
   { flag: "--dry-run", description: "Dry run mode" },
   { flag: "--non-interactive", description: "Disable interactive prompts" },
   { flag: "--concurrent <n>", description: "Run N parallel requests (default: 1)", type: "number" },
+  {
+    flag: "--console-region <region>",
+    description: "Console gateway region (e.g. cn-beijing, ap-southeast-1)",
+  },
+  { flag: "--console-site <site>", description: "Console site: domestic, international" },
+  {
+    flag: "--console-switch-agent <uid>",
+    description: "Switch agent UID for delegated access",
+    type: "number",
+  },
   { flag: "--help", description: "Show help" },
   { flag: "--version", description: "Print version" },
 ];

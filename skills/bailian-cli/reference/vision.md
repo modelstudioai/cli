@@ -37,11 +37,11 @@ bl vision describe --image photo.jpg
 ```
 
 ```bash
-bl vision describe --image https://example.com/photo.jpg --prompt "这只狗是什么品种？"
+bl vision describe --image https://example.com/photo.jpg --prompt "What breed is this dog?"
 ```
 
 ```bash
-bl vision describe --video https://example.com/video.mp4 --prompt "总结视频内容"
+bl vision describe --video https://example.com/video.mp4 --prompt "Summarize the video content"
 ```
 
 ```bash

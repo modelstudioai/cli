@@ -78,8 +78,7 @@ function printTable(
   typeMap: Map<string, string>,
   noColor: boolean,
 ): void {
-  const headersCn = ["模型", "类型", "剩余/总量", "使用率", "过期时间", "用完即停"];
-  const headersEn = ["Model", "Type", "Remaining/Total", "Usage", "Expires", "Auto-Stop"];
+  const headers = ["Model", "Type", "Remaining/Total", "Usage", "Expires", "Auto-Stop"];
 
   const rows = quotas.map((quota) => {
     const hasQuota = quota.quotaInitTotal != null && quota.quotaTotal != null;
@@ -102,12 +101,8 @@ function printTable(
     ];
   });
 
-  const widths = headersCn.map((label, col) =>
-    Math.max(
-      displayWidth(label),
-      displayWidth(headersEn[col]),
-      ...rows.map((row) => displayWidth(row[col])),
-    ),
+  const widths = headers.map((label, col) =>
+    Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
   const dim = noColor ? (text: string) => text : (text: string) => `\x1b[2m${text}\x1b[0m`;
@@ -115,13 +110,11 @@ function printTable(
   const green = noColor ? (text: string) => text : (text: string) => `\x1b[32m${text}\x1b[0m`;
   const yellow = noColor ? (text: string) => text : (text: string) => `\x1b[33m${text}\x1b[0m`;
 
-  const autoStopCol = headersCn.length - 1;
-  const cnLine = headersCn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const enLine = headersEn.map((label, col) => dim(padEnd(label, widths[col]))).join("  ");
+  const autoStopCol = headers.length - 1;
+  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((width) => dim("─".repeat(width))).join("──");
 
-  process.stdout.write(cnLine + "\n");
-  process.stdout.write(enLine + "\n");
+  process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
 
   for (const row of rows) {
@@ -193,6 +186,7 @@ async function fetchAllModels(config: Config, token: string): Promise<ModelInfo[
 export default defineCommand({
   name: "usage free",
   description: "Query free-tier quota for models (all models if --model is omitted)",
+  skipDefaultApiKeySetup: true,
   usage: "bl usage free [--model <model>[,model2,...]] [flags]",
   options: [
     {
@@ -207,9 +201,15 @@ export default defineCommand({
       flag: "--sort <field>",
       description: "Sort by: remaining (ascending), expires (ascending)",
     },
+    { flag: "--console-region <region>", description: "Console region" },
     {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID",
+      type: "number",
     },
   ],
   examples: [
@@ -219,7 +219,7 @@ export default defineCommand({
     "bl usage free --expiring 30",
     "bl usage free --sort remaining",
     "bl usage free --model qwen-turbo --output json",
-    "bl usage free --model qwen3-max --region cn-beijing",
+    "bl usage free --model qwen3-max --console-region cn-beijing",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const modelFlag = (flags.model as string) || undefined;
@@ -232,10 +232,7 @@ export default defineCommand({
       );
       process.exit(1);
     }
-    const region = (flags.region as string) || "cn-beijing";
     const format = detectOutputFormat(config.output);
-
-    const credential = await resolveConsoleGatewayCredential(config);
 
     let models: string[];
     const typeMap = new Map<string, string>();
@@ -249,21 +246,8 @@ export default defineCommand({
             .filter(Boolean),
         ),
       ];
-      const searchResults = await Promise.all(
-        models.map((name) => fetchModelList(config, credential.token, { name, pageSize: 50 })),
-      );
-      for (let idx = 0; idx < models.length; idx++) {
-        const matched = searchResults[idx].models.find((item) => item.model === models[idx]);
-        if (matched) {
-          typeMap.set(models[idx], resolveModelType((matched.capabilities as string[]) || []));
-        }
-      }
     } else {
-      const modelInfos = await fetchAllModels(config, credential.token);
-      models = modelInfos.map((info) => info.name);
-      for (const info of modelInfos) {
-        typeMap.set(info.name, info.type);
-      }
+      models = [];
     }
 
     const requestData = {
@@ -275,31 +259,43 @@ export default defineCommand({
         {
           api: FREE_TIER_API,
           data: requestData,
-          region,
-          token: credential.token.slice(0, 8) + "...",
         },
         format,
       );
       return;
     }
 
+    const credential = await resolveConsoleGatewayCredential(config);
+
+    if (!modelFlag) {
+      const modelInfos = await fetchAllModels(config, credential.token);
+      models = modelInfos.map((info) => info.name);
+      for (const info of modelInfos) {
+        typeMap.set(info.name, info.type);
+      }
+      requestData.queryFreeTierQuotaRequest.models = models;
+    } else {
+      const searchResults = await Promise.all(
+        models.map((name) => fetchModelList(config, credential.token, { name, pageSize: 50 })),
+      );
+      for (let idx = 0; idx < models.length; idx++) {
+        const matched = searchResults[idx].models.find((item) => item.model === models[idx]);
+        if (matched) {
+          typeMap.set(models[idx], resolveModelType((matched.capabilities as string[]) || []));
+        }
+      }
+    }
+
     const [quotaResult, stopResult] = await Promise.all([
       callConsoleGateway(config, credential.token, {
         api: FREE_TIER_API,
         data: requestData,
-        region,
       }),
       callConsoleGateway(config, credential.token, {
         api: FREE_TIER_ONLY_STATUS_API,
         data: { queryFreeTierOnlyStatusRequest: { models } },
-        region,
       }),
     ]);
-
-    if (format === "json") {
-      emitResult(quotaResult, format);
-      return;
-    }
 
     const allQuotas = extractQuotas(quotaResult);
     let quotas = modelFlag
@@ -321,13 +317,43 @@ export default defineCommand({
       quotas.sort((a, b) => (a.quotaValidityPeriod ?? 0) - (b.quotaValidityPeriod ?? 0));
     }
 
+    const stopStatuses = extractFreeTierOnlyStatuses(stopResult);
+    const stopMap = new Map(stopStatuses.map((status) => [status.model, status.freeTierOnly]));
+
+    if (format === "json") {
+      const items = quotas.map((quota) => {
+        const hasQuota = quota.quotaInitTotal != null && quota.quotaTotal != null;
+        const used = hasQuota ? quota.quotaInitTotal - quota.quotaTotal : 0;
+        const stopStatus = stopMap.get(quota.model);
+        const autoStop =
+          quota.quotaStatus === "UNKNOWN"
+            ? "unsupported"
+            : stopStatus === true
+              ? true
+              : stopStatus === false
+                ? false
+                : null;
+        return {
+          model: quota.model,
+          type: typeMap.get(quota.model) || null,
+          remaining: hasQuota ? quota.quotaTotal : null,
+          total: hasQuota ? quota.quotaInitTotal : null,
+          usagePercent:
+            hasQuota && quota.quotaInitTotal > 0
+              ? Math.round((used / quota.quotaInitTotal) * 1000) / 10
+              : null,
+          expires: quota.quotaValidityPeriod ? formatDate(quota.quotaValidityPeriod) : null,
+          autoStop,
+        };
+      });
+      emitResult(items, format);
+      return;
+    }
+
     if (quotas.length === 0) {
       process.stdout.write("No free-tier quota found.\n");
       return;
     }
-
-    const stopStatuses = extractFreeTierOnlyStatuses(stopResult);
-    const stopMap = new Map(stopStatuses.map((status) => [status.model, status.freeTierOnly]));
 
     printTable(quotas, stopMap, typeMap, config.noColor);
   },

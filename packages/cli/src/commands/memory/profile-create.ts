@@ -20,12 +20,12 @@ export default defineCommand({
     { flag: "--description <text>", description: "Schema description" },
     {
       flag: "--attributes <json>",
-      description: 'Attributes JSON array: [{"name":"age","description":"年龄"}]',
+      description: 'Attributes JSON array: [{"name":"age","description":"age"}]',
       required: true,
     },
   ],
   examples: [
-    'bl memory profile create --name "user_basic" --attributes \'[{"name":"age","description":"年龄"},{"name":"hobby","description":"爱好"}]\'',
+    'bl memory profile create --name "user_basic" --attributes \'[{"name":"age","description":"age"},{"name":"hobby","description":"hobby"}]\'',
   ],
   async run(config: Config, flags: GlobalFlags) {
     const name = flags.name as string;

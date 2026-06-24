@@ -1,6 +1,7 @@
 import {
   defineCommand,
   callConsoleGateway,
+  effectiveConsoleGatewayConfig,
   resolveConsoleGatewayCredential,
   detectOutputFormat,
   type Config,
@@ -64,9 +65,9 @@ function formatRatio(usage: number, limit: number): string {
 function getStatus(usage: number, limit: number): string {
   if (limit <= 0) return "-";
   const pct = (usage / limit) * 100;
-  if (pct >= 100) return "已限流";
-  if (pct >= 80) return "接近限流";
-  return "正常";
+  if (pct >= 100) return "Rate Limited";
+  if (pct >= 80) return "Near limit";
+  return "Normal";
 }
 
 function getNestedRecord(
@@ -91,11 +92,7 @@ function extractResponseData(result: Record<string, unknown>): Record<string, un
   return direct ?? data;
 }
 
-async function fetchAllModelsWithQpm(
-  config: Config,
-  token: string,
-  region: string,
-): Promise<ModelWithQpm[]> {
+async function fetchAllModelsWithQpm(config: Config, token: string): Promise<ModelWithQpm[]> {
   const allModels: ModelWithQpm[] = [];
   let pageNo = 1;
 
@@ -112,7 +109,6 @@ async function fetchAllModelsWithQpm(
           supports: { selfServiceLimitIncrease: true },
         },
       },
-      region,
     });
 
     const resp = extractResponseData(raw as Record<string, unknown>);
@@ -130,7 +126,6 @@ async function fetchAllModelsWithQpm(
 async function fetchMonitorData(
   config: Config,
   token: string,
-  region: string,
   modelName: string,
   windowMinutes: number,
 ): Promise<{ rpm: number; tpm: number }> {
@@ -155,7 +150,6 @@ async function fetchMonitorData(
           endTime: now,
         },
       },
-      region,
     });
 
     const resp = extractResponseData(raw as Record<string, unknown>);
@@ -193,8 +187,7 @@ function printTable(rows: CheckRow[], noColor: boolean): void {
   const yellow = noColor ? (t: string) => t : (t: string) => `\x1b[33m${t}\x1b[0m`;
   const red = noColor ? (t: string) => t : (t: string) => `\x1b[31m${t}\x1b[0m`;
 
-  const headersCn = ["模型", "RPM 用量/限额", "TPM 用量/限额", "状态"];
-  const headersEn = ["Model", "RPM Usage/Limit", "TPM Usage/Limit", "Status"];
+  const headers = ["Model", "RPM Usage/Limit", "TPM Usage/Limit", "Status"];
 
   const tableRows = rows.map((r) => {
     const rpmStr = r.rpmUsage < 0 ? "-" : formatRatio(r.rpmUsage, r.rpmLimit);
@@ -215,41 +208,36 @@ function printTable(rows: CheckRow[], noColor: boolean): void {
     return;
   }
 
-  const widths = headersCn.map((label, col) =>
-    Math.max(
-      displayWidth(label),
-      displayWidth(headersEn[col]),
-      ...tableRows.map((r) => displayWidth(r.cells[col])),
-    ),
+  const widths = headers.map((label, col) =>
+    Math.max(displayWidth(label), ...tableRows.map((r) => displayWidth(r.cells[col]))),
   );
 
-  const cnLine = headersCn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const enLine = headersEn.map((label, col) => dim(padEnd(label, widths[col]))).join("  ");
+  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((w) => dim("─".repeat(w))).join("──");
 
-  process.stdout.write(cnLine + "\n");
-  process.stdout.write(enLine + "\n");
+  process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
 
   const statusCol = 3;
   for (const r of tableRows) {
     const cells = r.cells.map((cell, col) => {
       if (col === statusCol) {
-        if (cell === "已限流") return red(padEnd(cell, widths[col]));
-        if (cell === "接近限流") return yellow(padEnd(cell, widths[col]));
-        if (cell === "正常") return green(padEnd(cell, widths[col]));
+        if (cell === "Rate Limited") return red(padEnd(cell, widths[col]));
+        if (cell === "Near limit") return yellow(padEnd(cell, widths[col]));
+        if (cell === "Normal") return green(padEnd(cell, widths[col]));
       }
       return padEnd(cell, widths[col]);
     });
     process.stdout.write(cells.join("  ") + "\n");
   }
 
-  process.stdout.write(dim(`\n共 ${rows.length} 个模型 (Total: ${rows.length})`) + "\n");
+  process.stdout.write(dim(`\nTotal: ${rows.length} models`) + "\n");
 }
 
 export default defineCommand({
   name: "quota check",
   description: "Check current usage against rate limits",
+  skipDefaultApiKeySetup: true,
   usage: "bl quota check [--model <model>] [flags]",
   options: [
     {
@@ -260,9 +248,15 @@ export default defineCommand({
       flag: "--period <minutes>",
       description: "Query usage for the last N minutes (default: 2)",
     },
+    { flag: "--console-region <region>", description: "Console region" },
     {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID",
+      type: "number",
     },
   ],
   examples: [
@@ -280,23 +274,22 @@ export default defineCommand({
       process.exit(1);
     }
     const windowMinutes = rawPeriod;
-    const region = (flags.region as string) || "cn-beijing";
     const format = detectOutputFormat(config.output);
-
-    const credential = await resolveConsoleGatewayCredential(config);
 
     if (config.dryRun) {
       emitResult(
         {
           apis: [MODEL_LIST_API, MONITOR_API],
-          region,
+          ...effectiveConsoleGatewayConfig(config),
         },
         format,
       );
       return;
     }
 
-    let models = await fetchAllModelsWithQpm(config, credential.token, region);
+    const credential = await resolveConsoleGatewayCredential(config);
+
+    let models = await fetchAllModelsWithQpm(config, credential.token);
 
     if (modelFlag) {
       const names = new Set(
@@ -316,7 +309,7 @@ export default defineCommand({
     }
 
     const monitorResults = await Promise.all(
-      models.map((m) => fetchMonitorData(config, credential.token, region, m.model, windowMinutes)),
+      models.map((m) => fetchMonitorData(config, credential.token, m.model, windowMinutes)),
     );
 
     const checkRows: CheckRow[] = models.map((m, idx) => {

@@ -70,7 +70,6 @@ async function pollTelemetryApi(
   token: string,
   api: string,
   reqDTO: Record<string, unknown>,
-  region: string,
 ): Promise<unknown> {
   let nextTaskId: string | undefined;
 
@@ -82,7 +81,6 @@ async function pollTelemetryApi(
     const raw = await callConsoleGateway(config, token, {
       api,
       data: requestData,
-      region,
     });
 
     const resp = extractResponseData(raw as Record<string, unknown>);
@@ -155,33 +153,32 @@ function resolveUsageMap(item: ModelStatisticItem): Record<string, number> {
 }
 
 interface UsageLabel {
-  cn: string;
   en: string;
   unit?: string;
 }
 
 const USAGE_KEY_LABELS: Record<string, UsageLabel> = {
-  total_token: { cn: "总 Token", en: "Total Tokens", unit: "tokens" },
-  input_token: { cn: "输入 Token", en: "Input Tokens", unit: "tokens" },
-  output_token: { cn: "输出 Token", en: "Output Tokens", unit: "tokens" },
-  input_token_cache: { cn: "缓存 Token", en: "Cached Tokens", unit: "tokens" },
-  input_token_cache_read: { cn: "缓存读取", en: "Cache Read", unit: "tokens" },
-  input_token_cache_creation: { cn: "缓存创建", en: "Cache Creation", unit: "tokens" },
-  thinking_input_token: { cn: "思考输入", en: "Thinking Input", unit: "tokens" },
-  thinking_output_token: { cn: "思考输出", en: "Thinking Output", unit: "tokens" },
-  text_input_token: { cn: "文本输入", en: "Text Input", unit: "tokens" },
-  purein_text_output_token: { cn: "文本输出", en: "Text Output", unit: "tokens" },
-  embedding_token: { cn: "向量", en: "Embedding", unit: "tokens" },
-  image_number: { cn: "图片数", en: "Images", unit: "张" },
-  video_duration: { cn: "视频时长", en: "Video Duration", unit: "秒" },
-  content_duration: { cn: "音频时长", en: "Audio Duration", unit: "秒" },
-  tts_text_number: { cn: "语音合成", en: "TTS Chars", unit: "字符" },
-  total_token_avg: { cn: "平均 Token/次", en: "Avg Tokens/Req" },
+  total_token: { en: "Total Tokens", unit: "tokens" },
+  input_token: { en: "Input Tokens", unit: "tokens" },
+  output_token: { en: "Output Tokens", unit: "tokens" },
+  input_token_cache: { en: "Cached Tokens", unit: "tokens" },
+  input_token_cache_read: { en: "Cache Read", unit: "tokens" },
+  input_token_cache_creation: { en: "Cache Creation", unit: "tokens" },
+  thinking_input_token: { en: "Thinking Input", unit: "tokens" },
+  thinking_output_token: { en: "Thinking Output", unit: "tokens" },
+  text_input_token: { en: "Text Input", unit: "tokens" },
+  purein_text_output_token: { en: "Text Output", unit: "tokens" },
+  embedding_token: { en: "Embedding", unit: "tokens" },
+  image_number: { en: "Images", unit: "images" },
+  video_duration: { en: "Video Duration", unit: "sec" },
+  content_duration: { en: "Audio Duration", unit: "sec" },
+  tts_text_number: { en: "TTS Chars", unit: "chars" },
+  total_token_avg: { en: "Avg Tokens/Req" },
 };
 
 function formatLabel(label: UsageLabel): string {
   const unitSuffix = label.unit ? ` [${label.unit}]` : "";
-  return `${label.cn} (${label.en})${unitSuffix}`;
+  return `${label.en}${unitSuffix}`;
 }
 
 function printOverview(
@@ -195,12 +192,12 @@ function printOverview(
   const dim = noColor ? (text: string) => text : (text: string) => `\x1b[2m${text}\x1b[0m`;
 
   process.stdout.write(
-    `${dim("时间范围 Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${dim(`(${days} 天)`)}\n\n`,
+    `${dim("Time Range Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${dim(`(${days} days)`)}\n\n`,
   );
 
   const rows: [string, string][] = [
-    ["调用模型数 (Models Called)", formatNumber(stat.modelCount ?? 0)],
-    ["调用成功次数 (Successful Calls)", formatNumber(stat.callSuccessCount ?? 0)],
+    ["Models Called", formatNumber(stat.modelCount ?? 0)],
+    ["Successful Calls", formatNumber(stat.callSuccessCount ?? 0)],
   ];
 
   for (const usage of stat.usages ?? []) {
@@ -226,7 +223,7 @@ function printModelTable(
   const dim = noColor ? (text: string) => text : (text: string) => `\x1b[2m${text}\x1b[0m`;
 
   process.stdout.write(
-    `${dim("时间范围 Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${dim(`(${days} 天)`)}\n\n`,
+    `${dim("Time Range Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${dim(`(${days} days)`)}\n\n`,
   );
 
   if (items.length === 0) {
@@ -257,20 +254,7 @@ function printModelTable(
     return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
   });
 
-  const headersCn = [
-    "模型",
-    "调用次数",
-    ...orderedKeys.map((key) => {
-      const label = USAGE_KEY_LABELS[key];
-      if (!label) return key;
-      return label.unit ? `${label.cn} [${label.unit}]` : label.cn;
-    }),
-  ];
-  const headersEn = [
-    "Model",
-    "Calls",
-    ...orderedKeys.map((key) => USAGE_KEY_LABELS[key]?.en ?? key),
-  ];
+  const headers = ["Model", "Calls", ...orderedKeys.map((key) => USAGE_KEY_LABELS[key]?.en ?? key)];
   const rows = items.map((item, idx) => [
     item.model,
     formatNumber(item.callSuccessCount ?? 0),
@@ -280,20 +264,14 @@ function printModelTable(
     }),
   ]);
 
-  const widths = headersCn.map((label, col) =>
-    Math.max(
-      displayWidth(label),
-      displayWidth(headersEn[col]),
-      ...rows.map((row) => displayWidth(row[col])),
-    ),
+  const widths = headers.map((label, col) =>
+    Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const cnLine = headersCn.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const enLine = headersEn.map((label, col) => dim(padEnd(label, widths[col]))).join("  ");
+  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
   const separator = widths.map((width) => dim("─".repeat(width))).join("──");
 
-  process.stdout.write(cnLine + "\n");
-  process.stdout.write(enLine + "\n");
+  process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
 
   for (const row of rows) {
@@ -301,12 +279,13 @@ function printModelTable(
     process.stdout.write(cells.join("  ") + "\n");
   }
 
-  process.stdout.write(dim(`\n共 ${items.length} 个模型 (Total: ${items.length})`) + "\n");
+  process.stdout.write(dim(`\nTotal: ${items.length} models`) + "\n");
 }
 
 export default defineCommand({
   name: "usage stats",
   description: "Query model usage statistics",
+  skipDefaultApiKeySetup: true,
   usage: "bl usage stats [--model <model>] [--days <days>] [flags]",
   options: [
     {
@@ -325,9 +304,15 @@ export default defineCommand({
       flag: "--workspace-id <id>",
       description: "Workspace ID (env: BAILIAN_WORKSPACE_ID)",
     },
+    { flag: "--console-region <region>", description: "Console region" },
     {
-      flag: "--region <region>",
-      description: "API region (default: cn-beijing)",
+      flag: "--console-site <site>",
+      description: "Console site: domestic, international",
+    },
+    {
+      flag: "--console-switch-agent <uid>",
+      description: "Switch agent UID",
+      type: "number",
     },
   ],
   examples: [
@@ -343,13 +328,10 @@ export default defineCommand({
     const modelFlag = (flags.model as string) || undefined;
     const daysFlag = Number(flags.days) || 7;
     const typeFlag = (flags.type as string) || undefined;
-    const region = (flags.region as string) || "cn-beijing";
     const format = detectOutputFormat(config.output);
 
     const flagWorkspaceId = (flags.workspaceId as string) || undefined;
     const workspaceId = resolveWorkspaceId(config, flagWorkspaceId);
-
-    const credential = await resolveConsoleGatewayCredential(config);
 
     const endTime = Date.now();
     const startTime = endTime - daysFlag * 24 * 60 * 60 * 1000;
@@ -378,29 +360,46 @@ export default defineCommand({
 
       if (config.dryRun) {
         emitResult(
-          { api: LIST_API, data: { reqDTO: { ...baseReqDTO, model: models.join(",") } }, region },
+          { api: LIST_API, data: { reqDTO: { ...baseReqDTO, model: models.join(",") } } },
           format,
         );
         return;
       }
 
+      const credential = await resolveConsoleGatewayCredential(config);
+
       const results = await Promise.all(
         models.map((model) =>
-          pollTelemetryApi(config, credential.token, LIST_API, { ...baseReqDTO, model }, region),
+          pollTelemetryApi(config, credential.token, LIST_API, { ...baseReqDTO, model }),
         ),
       );
 
       const allItems: ModelStatisticItem[] = [];
-      const jsonResults: unknown[] = [];
       for (const result of results) {
         if (!result) continue;
-        jsonResults.push(result);
         const listData = extractListData(result);
         allItems.push(...listData.list);
       }
 
       if (format === "json") {
-        emitResult(jsonResults.length === 1 ? jsonResults[0] : jsonResults, format);
+        const items = allItems.map((item) => {
+          const usage = resolveUsageMap(item);
+          const clean: Record<string, unknown> = {
+            model: item.model,
+            successfulCalls: item.callSuccessCount ?? 0,
+          };
+          for (const [key, val] of Object.entries(usage)) {
+            clean[key] = val;
+          }
+          return clean;
+        });
+        emitResult(
+          {
+            period: { start: formatDate(startTime), end: formatDate(endTime), days: daysFlag },
+            items,
+          },
+          format,
+        );
         return;
       }
 
@@ -415,22 +414,49 @@ export default defineCommand({
       if (typeFlag) reqDTO.obsModelType = typeFlag;
 
       if (config.dryRun) {
-        emitResult({ api: OVERVIEW_API, data: { reqDTO }, region }, format);
+        emitResult({ api: OVERVIEW_API, data: { reqDTO } }, format);
         return;
       }
 
-      const result = await pollTelemetryApi(config, credential.token, OVERVIEW_API, reqDTO, region);
+      const credential = await resolveConsoleGatewayCredential(config);
+
+      const result = await pollTelemetryApi(config, credential.token, OVERVIEW_API, reqDTO);
       if (!result) {
         process.stderr.write("Error: request timed out.\n");
         process.exit(1);
       }
 
+      const stat = extractOverviewData(result);
+
       if (format === "json") {
-        emitResult(result, format);
+        if (!stat) {
+          emitResult(
+            {
+              period: { start: formatDate(startTime), end: formatDate(endTime), days: daysFlag },
+              modelsCalled: 0,
+              successfulCalls: 0,
+            },
+            format,
+          );
+          return;
+        }
+        emitResult(
+          {
+            period: { start: formatDate(startTime), end: formatDate(endTime), days: daysFlag },
+            modelsCalled: stat.modelCount ?? 0,
+            successfulCalls: stat.callSuccessCount ?? 0,
+            usages: (stat.usages ?? []).map((u) => ({
+              key: u.key,
+              value: u.value,
+              unit: u.unit,
+              label: USAGE_KEY_LABELS[u.key]?.en ?? u.key,
+            })),
+          },
+          format,
+        );
         return;
       }
 
-      const stat = extractOverviewData(result);
       if (!stat) {
         process.stdout.write("No usage data found.\n");
         return;

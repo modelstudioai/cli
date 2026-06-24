@@ -13,6 +13,7 @@ import { ensureApiKey } from "../../utils/ensure-key.ts";
 export default defineCommand({
   name: "mcp tools",
   description: "List tools exposed by an MCP server (tools/list)",
+  skipDefaultApiKeySetup: true,
   usage: "bl mcp tools <server-code> [--url <url>]",
   options: [
     {

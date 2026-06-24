@@ -5,7 +5,8 @@ import { defineCommand, getConfigDir } from "bailian-cli-core";
 import { CLI_VERSION } from "../version.ts";
 import { NPM_PACKAGE, fetchLatestVersion } from "../utils/update-checker.ts";
 
-const SKILL_NAME = "bailian-cli";
+const SKILL_SOURCE = "modelstudioai/cli";
+const SKILL_INSTALL_CMD = `npx skills add ${SKILL_SOURCE} --all -g -y`;
 
 /** Build the install command */
 function detectInstallCommand(): { cmd: string; label: string } {
@@ -16,11 +17,13 @@ function updateAgentSkill(colors: { green: string; yellow: string; reset: string
   const { green, yellow, reset } = colors;
   process.stderr.write("\nUpdating agent skill...\n");
   try {
-    execSync(`npx skills update ${SKILL_NAME} -g -y`, { stdio: "inherit" });
+    // Reinstall (not `skills update`) into ~/.agents/skills/ and sync to all agent apps.
+    // `--all` on `skills add` means --skill '*' --agent '*' -y (Cursor, Claude Code, etc.).
+    execSync(SKILL_INSTALL_CMD, { stdio: "inherit" });
     process.stderr.write(`${green}\u2713 Agent skill updated.${reset}\n`);
   } catch {
     process.stderr.write(
-      `${yellow}Agent skill update skipped. Run manually: npx skills update ${SKILL_NAME} -g -y${reset}\n`,
+      `${yellow}Agent skill update skipped. Run manually: ${SKILL_INSTALL_CMD}${reset}\n`,
     );
   }
 }
@@ -28,6 +31,7 @@ function updateAgentSkill(colors: { green: string; yellow: string; reset: string
 export default defineCommand({
   name: "update",
   description: "Update bl to the latest version",
+  skipDefaultApiKeySetup: true,
   usage: "bl update",
   examples: ["bl update"],
   async run() {
@@ -44,6 +48,7 @@ export default defineCommand({
 
     if (latest && latest === CLI_VERSION) {
       process.stderr.write(`${green}\u2713 Already up to date (${CLI_VERSION}).${reset}\n`);
+      updateAgentSkill({ green, yellow, reset });
       return;
     }
 

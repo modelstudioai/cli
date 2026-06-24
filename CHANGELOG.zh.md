@@ -6,6 +6,50 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.4.1] - 2026-06-22
+
+### 变更
+
+- 视频生成默认升级到 HappyHorse 1.1 模型,画面质量更佳。如需使用 1.0 模型,可通过 `--model` 指定。
+- `bl update` 现在会把 agent skill 同步更新到所有 agent 应用(Claude Code、Cursor 等),即使 CLI 已是最新版本也会刷新 skill。
+
+## [1.4.0] - 2026-06-17
+
+### 新增
+
+- 控制台网关支持多 region 与多站点：`cn-beijing` 与 `ap-southeast-1`，各含国内站 / 国际站变体，并新增 `switchAgent` 委托访问。
+- 新增全局标志 `--console-region`、`--console-site`、`--console-switch-agent`；`bl console call` 另外新增 `--site` 与 `--switch-agent`。
+- `bl auth login --base-url <url>`：使用 API Key 登录时可指定 base URL。
+- `bl omni` 新增 `--voice` 选项（Chelsie、Cherry、Ethan、Serena、Sunny、Tina，默认 Cherry）。
+
+### 变更
+
+- 所有面向用户的 CLI 文案统一为英文。
+- `bl advisor recommend` 内部意图 / 排序模型由 `qwen-turbo` 升级为 `qwen-flash`。
+- 优化 `usage`、`quota`、`workspace` 命令的 JSON 输出。
+- 配置文件中的 `base_url` 现在优先级高于环境变量 `DASHSCOPE_BASE_URL`。
+- `bl config show` 现在展示 `config.json` 中的全部字段（敏感值已脱敏）。
+
+### 移除
+
+- 移除遗留的 `region` 配置字段及其相关选项。
+- 清理 `model list` 命令移除后遗留的无效代码。
+
+### 修复
+
+- 当控制台会话未登录或已过期时，CLI 现在会给出明确的登录提示，不再是笼统的网关错误。
+- 修正 `bl video` 命令 `--resolution` / `--ratio` / `--duration` 的帮助文案。
+
+## [1.3.3] - 2026-06-16
+
+### 变更
+
+- `bl knowledge retrieve --help` 现在明确指出 `--api-key` 是推荐的鉴权方式；AK/SK 相关选项已标注废弃并引导用户使用 `--api-key`。
+
+### 新增
+
+- 命令定义新增 `notes` 字段 — 命令可以附带上下文说明（鉴权要求、废弃提示等），同时展示在 `--help` 输出和生成的命令手册中。
+
 ## [1.3.2] - 2026-06-12
 
 ### 修复

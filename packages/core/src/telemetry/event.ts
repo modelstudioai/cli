@@ -7,7 +7,6 @@ export interface TrackingEvent {
   httpStatus?: number;
   requestId?: string;
   cliVersion: string;
-  region: string;
   nodeVersion: string;
   os: string;
   authMethod?: string;
@@ -20,7 +19,6 @@ export function createTrackingEvent(opts: {
   success: boolean;
   error?: { message?: string; httpStatus?: number; requestId?: string };
   cliVersion: string;
-  region: string;
   authMethod?: string;
   params?: Record<string, unknown>;
 }): TrackingEvent {
@@ -30,7 +28,6 @@ export function createTrackingEvent(opts: {
     durationMs: opts.durationMs,
     success: opts.success,
     cliVersion: opts.cliVersion,
-    region: opts.region,
     nodeVersion: process.version,
     os: process.platform,
   };

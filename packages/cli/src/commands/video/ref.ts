@@ -30,13 +30,13 @@ import {
 export default defineCommand({
   name: "video ref",
   description:
-    "Reference-to-video generation (happyhorse-1.0-r2v / wan2.6-r2v): multi-subject, multi-shot with voice",
+    "Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice",
   usage: "bl video ref --prompt <text> --image <url>... [--ref-video <url>...] [flags]",
   options: [
-    { flag: "--model <model>", description: "Model ID (default: happyhorse-1.0-r2v)" },
+    { flag: "--model <model>", description: "Model ID (default: happyhorse-1.1-r2v)" },
     {
       flag: "--prompt <text>",
-      description: "Video description with reference markers (图1, 视频1, etc.)",
+      description: "Video description with reference markers (image1, video1, etc.)",
       required: true,
     },
     {
@@ -59,11 +59,11 @@ export default defineCommand({
       description: "Voice URL for corresponding ref-video (pairs by position)",
       type: "array",
     },
-    { flag: "--resolution <res>", description: "Resolution: 720P or 1080P (default: 720P)" },
+    { flag: "--resolution <res>", description: "Resolution: 720P or 1080P (default: 1080P)" },
     { flag: "--ratio <ratio>", description: "Aspect ratio (16:9, 9:16, 1:1)" },
     {
       flag: "--duration <seconds>",
-      description: "Video duration in seconds (2-10, default: 5)",
+      description: "Video duration in seconds (default: 5)",
       type: "number",
     },
     {
@@ -88,11 +88,11 @@ export default defineCommand({
     },
   ],
   examples: [
-    'bl video ref --prompt "图1在草地上奔跑" --image person.jpg',
-    'bl video ref --prompt "视频1在弹吉他，图1走过来" --ref-video scene.mp4 --image person.jpg',
-    'bl video ref --prompt "图1说话" --image person.jpg --image-voice voice.mp3 --resolution 1080P',
-    'bl video ref --prompt "图1和图2在对话" --image a.jpg --image b.jpg --image-voice va.mp3 --image-voice vb.mp3',
-    'bl video ref --prompt "图1在喝水" --image person.jpg --watermark false',
+    'bl video ref --prompt "Image1 running on the grass" --image person.jpg',
+    'bl video ref --prompt "Video 1 plays guitar, Image 1 walks over" --ref-video scene.mp4 --image person.jpg',
+    'bl video ref --prompt "Image 1 speaks" --image person.jpg --image-voice voice.mp3 --resolution 1080P',
+    'bl video ref --prompt "Image 1 and Image 2 have a conversation" --image a.jpg --image b.jpg --image-voice va.mp3 --image-voice vb.mp3',
+    'bl video ref --prompt "Image 1 drinks water" --image person.jpg --watermark false',
   ],
   async run(config: Config, flags: GlobalFlags) {
     // --- Validate prompt ---
@@ -100,7 +100,7 @@ export default defineCommand({
     if (!prompt) {
       if (isInteractive({ nonInteractive: config.nonInteractive })) {
         const hint = await promptText({
-          message: "Enter your video prompt (use 图1, 视频1 to reference inputs):",
+          message: "Enter your video prompt (use Image1, Video1 to reference inputs):",
         });
         if (!hint) {
           process.stderr.write("Video generation cancelled.\n");
@@ -119,14 +119,14 @@ export default defineCommand({
       throw new BailianError(
         "At least one --image or --ref-video is required.",
         ExitCode.USAGE,
-        'bl video ref --prompt "描述" --image person.jpg',
+        'bl video ref --prompt "description" --image person.jpg',
       );
     }
 
     const imageVoices = (flags.imageVoice as string[] | undefined) || [];
     const videoVoices = (flags.videoVoice as string[] | undefined) || [];
 
-    const model = (flags.model as string) || "happyhorse-1.0-r2v";
+    const model = (flags.model as string) || "happyhorse-1.1-r2v";
     const format = detectOutputFormat(config.output);
 
     // --- Resolve file URLs (auto-upload local files) ---

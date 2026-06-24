@@ -17,7 +17,6 @@ const GLOBAL_FLAG_KEYS = new Set([
   "help",
   "nonInteractive",
   "async",
-  "region",
   "console",
 ]);
 
@@ -131,7 +130,6 @@ export async function trackCommandExecution(
       success,
       error: success ? undefined : { message: errorMessage, httpStatus, requestId },
       cliVersion: config.clientVersion ?? "unknown",
-      region: config.region,
       authMethod,
       params: extractParams(flags),
     });

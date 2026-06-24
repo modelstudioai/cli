@@ -16,7 +16,7 @@ const motions = [
 
 export const runStress = defineStressTarget({
   canonical: "video-i2v",
-  defaultModel: "happyhorse-1.0-i2v",
+  defaultModel: "happyhorse-1.1-i2v",
   batchDirPrefix: "video-i2v-batch",
   helpText: "pnpm run test:stress -- video-i2v [--reuse-fixtures] -- --count 5 -c 2",
 

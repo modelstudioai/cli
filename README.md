@@ -27,9 +27,12 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **Text chat** — Qwen3.7-max: major gains in agentic coding, frontend coding, and vibe coding
 - **Multimodal (Omni)** — Full omni-modal support across text + image + audio + video
 - **Image generation & editing** — Qwen-Image 2.0: pro text rendering, photorealism, strong semantic adherence, multi-image composition
-- **Video generation & editing** — HappyHorse-1.0 series: text-/image-/reference-to-video and natural-language video editing (up to 9-image reference)
+- **Video generation & editing** — happyhorse-1.1 series: text-/image-/reference-to-video and natural-language video editing (up to 9-image reference)
 - **Speech synthesis & recognition** — CosyVoice streaming TTS, voice cloning from 5–20s samples; FunAudio-ASR covers 30 languages including 7 Chinese dialects and 20+ Mandarin accents
 - **Image & video understanding** — Qwen-VL: long-form video analysis, chart/document parsing, visual reasoning, multilingual OCR
+
+> **Note:** The features below are currently available only to China site (aliyun.com) account holders and are not yet supported for international / global site accounts.
+
 - **Knowledge base & memory** — Multimodal RAG retrieval and cross-session memory for personalized, coherent dialogue
 - **App calls** — Invoke agents and workflows already published on Aliyun Model Studio
 - **MCP integration** — Orchestrate Bailian MCP servers: list services, inspect tools, and invoke any tool directly from the terminal
@@ -51,7 +54,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 A complete **2-minute, 16:9 cinematic short film** — produced end-to-end from a single natural-language sentence, with **zero manual editing**. This showcase demonstrates how an AI Agent can compose a multi-step creative pipeline by orchestrating three primitives:
 
 - **[Qwen Code](https://github.com/QwenLM/qwen-code)** — the agentic coding model that interprets the user's intent and drives the workflow
-- **[Aliyun Model Studio CLI](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)** — invokes **HappyHorse 1.0**, Aliyun Model Studio's text-/image-/reference-to-video generation model
+- **[Aliyun Model Studio CLI](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)** — invokes **HappyHorse 1.1**, Aliyun Model Studio's text-/image-/reference-to-video generation model
 - **[spark-video Skill](https://github.com/JohnKeating1997/spark-video)** — handles scene decomposition, storyboarding, shot continuity, and final stitching
 
 ### The single prompt
@@ -64,7 +67,7 @@ A complete **2-minute, 16:9 cinematic short film** — produced end-to-end from 
 
 1. **Qwen Code** parses the request, plans the narrative beats, and decides which tools to call.
 2. The **spark-video Skill** breaks the story into shots, writes per-shot prompts, and enforces visual continuity (characters, lighting, palette, lens language).
-3. **`bl video generate`** dispatches each shot to **HappyHorse 1.0** in parallel.
+3. **`bl video generate`** dispatches each shot to **HappyHorse 1.1** in parallel.
 4. The skill stitches all clips back together into a single 16:9 / ~2-min deliverable.
 
 No timeline scrubbing. No frame-by-frame editing. Just one sentence → one video.
@@ -172,7 +175,7 @@ export BAILIAN_WORKSPACE_ID=ws-...
 bl config show
 
 # Set defaults
-bl config set --key region --value us
+bl config set --key base_url --value https://dashscope-us.aliyuncs.com
 bl config set --key default_text_model --value qwen-turbo
 bl config set --key timeout --value 600
 
