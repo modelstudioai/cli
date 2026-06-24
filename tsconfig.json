@@ -3,6 +3,7 @@
     "noEmit": true,
     "module": "nodenext",
     "moduleResolution": "nodenext",
+    "customConditions": ["@bailian-cli/source"],
     "allowImportingTsExtensions": true,
     "esModuleInterop": true
   }

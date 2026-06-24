@@ -6,33 +6,32 @@ import {
   type Config,
   type GlobalFlags,
 } from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
+import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult } from "bailian-cli-runtime";
 import { ensureApiKey } from "bailian-cli-runtime";
 
 export default defineCommand({
-  name: "mcp tools",
   description: "List tools exposed by an MCP server (tools/list)",
   skipDefaultApiKeySetup: true,
-  usage: "bl mcp tools <server-code> [--url <url>]",
+  usageArgs: "<server-code> [--url <url>]",
   options: [
     {
       flag: "<server-code>",
-      description: "Server code from `bl mcp list` (e.g. market-cmapi00073529)",
+      description: "Server code from `mcp list` (e.g. market-cmapi00073529)",
       required: true,
     },
     { flag: "--url <url>", description: "Override the MCP endpoint URL (for non-Bailian servers)" },
   ],
-  examples: [
-    "bl mcp tools market-cmapi00073529",
-    "bl mcp tools market-cmapi00073529 --output json",
-    "bl mcp tools my-server --url https://example.com/mcp",
+  exampleArgs: [
+    "market-cmapi00073529",
+    "market-cmapi00073529 --output json",
+    "my-server --url https://example.com/mcp",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const positional =
       ((flags as Record<string, unknown>)._positional as string[] | undefined) ?? [];
     const code = positional[0];
-    if (!code) failIfMissing("server-code", "bl mcp tools <server-code>");
+    if (!code) failIfMissing("server-code", cmdUsage(config, "<server-code>"));
 
     const url = (flags.url as string) || bailianMcpUrl(config.baseUrl, code!);
     const format = detectOutputFormat(config.output);

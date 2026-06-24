@@ -19,13 +19,12 @@ import {
   speechRecognizeEndpoint,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
-import { failIfMissing } from "bailian-cli-runtime";
+import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  name: "speech recognize",
   description: "Recognize speech from audio files (FunAudio-ASR)",
-  usage: "bl speech recognize --url <audio-url> [flags]",
+  usageArgs: "--url <audio-url> [flags]",
   options: [
     {
       flag: "--url <url>",
@@ -51,14 +50,14 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: [
-    "bl speech recognize --url https://example.com/audio.mp3",
-    "bl speech recognize --url https://example.com/a.mp3 --url https://example.com/b.mp3",
-    "bl speech recognize --url https://example.com/meeting.wav --diarization --speaker-count 3",
-    "bl speech recognize --url https://example.com/audio.mp3 --language zh",
-    "bl speech recognize --url https://example.com/audio.mp3 --vocabulary-id vocab-abc123",
-    "bl speech recognize --url https://example.com/audio.mp3 --out result.json",
-    "bl speech recognize --url https://example.com/audio.mp3 --no-wait --quiet",
+  exampleArgs: [
+    "--url https://example.com/audio.mp3",
+    "--url https://example.com/a.mp3 --url https://example.com/b.mp3",
+    "--url https://example.com/meeting.wav --diarization --speaker-count 3",
+    "--url https://example.com/audio.mp3 --language zh",
+    "--url https://example.com/audio.mp3 --vocabulary-id vocab-abc123",
+    "--url https://example.com/audio.mp3 --out result.json",
+    "--url https://example.com/audio.mp3 --no-wait --quiet",
   ],
   async run(config: Config, flags: GlobalFlags) {
     // Normalize --url to string[] (supports both single and repeated flags)
@@ -69,7 +68,7 @@ export default defineCommand({
       rawUrls = [flags.url];
     }
     if (rawUrls.length === 0) {
-      failIfMissing("url", "bl speech recognize --url <audio-url>");
+      failIfMissing("url", cmdUsage(config, "--url <audio-url>"));
     }
 
     // Strict validation: --speaker-count requires --diarization

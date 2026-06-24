@@ -165,7 +165,7 @@ export class CommandRegistry {
     }
 
     if (node.command) {
-      this.printCommandHelp(node.command, out);
+      this.printCommandHelp(node.command, commandPath, out);
       return;
     }
 
@@ -244,13 +244,17 @@ ${b("Getting Help:")}
 `);
   }
 
-  private printCommandHelp(cmd: Command, out: NodeJS.WriteStream): void {
+  private printCommandHelp(cmd: Command, commandPath: string[], out: NodeJS.WriteStream): void {
     const b = (s: string) => this.bold(s, out);
     const a = (s: string) => this.accent(s, out);
     const d = (s: string) => this.dim(s, out);
 
+    // `<bin> <path>` prefix is rendered here, not stored in the command, so the
+    // same command shows the right invocation under any product (bl / rag / …).
+    const prefix = [this.cliName, ...commandPath].join(" ");
+
     out.write(`\n${cmd.description}\n`);
-    if (cmd.usage) out.write(`${b("Usage:")} ${cmd.usage}\n`);
+    out.write(`${b("Usage:")} ${prefix}${cmd.usageArgs ? ` ${cmd.usageArgs}` : ""}\n`);
     if (cmd.options && cmd.options.length > 0) {
       const maxLen = Math.max(...cmd.options.map((o) => o.flag.length));
       out.write(`\n${b("Options:")}\n`);
@@ -264,10 +268,10 @@ ${b("Getting Help:")}
         out.write(`  ${note}\n`);
       }
     }
-    if (cmd.examples && cmd.examples.length > 0) {
+    if (cmd.exampleArgs && cmd.exampleArgs.length > 0) {
       out.write(`\n${b("Examples:")}\n`);
-      for (const ex of cmd.examples) {
-        out.write(`  ${d(ex)}\n`);
+      for (const ex of cmd.exampleArgs) {
+        out.write(`  ${d(ex ? `${prefix} ${ex}` : prefix)}\n`);
       }
     }
     out.write(

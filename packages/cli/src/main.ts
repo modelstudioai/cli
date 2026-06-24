@@ -1,8 +1,7 @@
 import { createCli } from "bailian-cli-runtime";
-import { commands } from "bailian-cli-commands";
+import { commands } from "./commands.ts";
 import pkg from "../package.json" with { type: "json" };
 
-// Full bailian-cli product: every command, exposed under the `bl` binary.
 createCli(commands, {
   binName: "bl",
   version: pkg.version,

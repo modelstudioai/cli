@@ -11,13 +11,12 @@ import {
   type AppStreamChunk,
   type AppCompletionResponse,
 } from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
+import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  name: "app call",
   description: "Call a Bailian application (agent or workflow)",
-  usage: "bl app call --app-id <id> --prompt <text> [flags]",
+  usageArgs: "--app-id <id> --prompt <text> [flags]",
   options: [
     { flag: "--app-id <id>", description: "Application ID (required)", required: true },
     { flag: "--prompt <text>", description: "Input prompt text", required: true },
@@ -34,20 +33,20 @@ export default defineCommand({
     { flag: "--biz-params <json>", description: "Business parameters JSON (workflow variables)" },
     { flag: "--has-thoughts", description: "Show agent thinking process" },
   ],
-  examples: [
-    'bl app call --app-id abc123 --prompt "Hello"',
-    'bl app call --app-id abc123 --prompt "Describe this image" --image https://example.com/photo.jpg',
-    'bl app call --app-id abc123 --prompt "Analyze the image" --image img1.jpg --image img2.jpg',
-    'bl app call --app-id abc123 --prompt "Continue" --session-id sess_xxx --stream',
-    'bl app call --app-id abc123 --prompt "Search for materials" --pipeline-ids pipe1,pipe2',
-    'bl app call --app-id abc123 --prompt "Start" --biz-params \'{"key":"value"}\'',
+  exampleArgs: [
+    '--app-id abc123 --prompt "Hello"',
+    '--app-id abc123 --prompt "Describe this image" --image https://example.com/photo.jpg',
+    '--app-id abc123 --prompt "Analyze the image" --image img1.jpg --image img2.jpg',
+    '--app-id abc123 --prompt "Continue" --session-id sess_xxx --stream',
+    '--app-id abc123 --prompt "Search for materials" --pipeline-ids pipe1,pipe2',
+    '--app-id abc123 --prompt "Start" --biz-params \'{"key":"value"}\'',
   ],
   async run(config: Config, flags: GlobalFlags) {
     const appId = flags.appId as string;
-    if (!appId) failIfMissing("app-id", "bl app call --app-id <id> --prompt <text>");
+    if (!appId) failIfMissing("app-id", cmdUsage(config, "--app-id <id> --prompt <text>"));
 
     const prompt = flags.prompt as string;
-    if (!prompt) failIfMissing("prompt", "bl app call --app-id <id> --prompt <text>");
+    if (!prompt) failIfMissing("prompt", cmdUsage(config, "--app-id <id> --prompt <text>"));
 
     const shouldStream =
       flags.stream === true || (flags.stream === undefined && process.stdout.isTTY);

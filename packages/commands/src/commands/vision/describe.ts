@@ -15,7 +15,7 @@ import {
   ExitCode,
   isLocalFile,
 } from "bailian-cli-core";
-import { promptText } from "bailian-cli-runtime";
+import { promptText, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { readFileSync, existsSync } from "fs";
 import { extname } from "path";
@@ -57,9 +57,8 @@ async function toImageUrl(image: string): Promise<string> {
 }
 
 export default defineCommand({
-  name: "vision describe",
   description: "Describe an image or video using Qwen-VL",
-  usage: "bl vision describe --image <path-or-url> [--video <url>] [--prompt <text>]",
+  usageArgs: "--image <path-or-url> [--video <url>] [--prompt <text>]",
   options: [
     { flag: "--image <path-or-url>", description: "Local image path or URL" },
     {
@@ -70,12 +69,12 @@ export default defineCommand({
     { flag: "--prompt <text>", description: "Question about the content (default: auto-detected)" },
     { flag: "--model <model>", description: "Vision model (default: qwen3-vl-plus)" },
   ],
-  examples: [
-    "bl vision describe --image photo.jpg",
-    'bl vision describe --image https://example.com/photo.jpg --prompt "What breed is this dog?"',
-    'bl vision describe --video https://example.com/video.mp4 --prompt "Summarize the video content"',
-    "bl vision describe --video ./local-video.mp4",
-    'bl vision describe --image photo.png --prompt "Extract the text" --model qwen-vl-plus',
+  exampleArgs: [
+    "--image photo.jpg",
+    '--image https://example.com/photo.jpg --prompt "What breed is this dog?"',
+    '--video https://example.com/video.mp4 --prompt "Summarize the video content"',
+    "--video ./local-video.mp4",
+    '--image photo.png --prompt "Extract the text" --model qwen-vl-plus',
   ],
   async run(config: Config, flags: GlobalFlags) {
     let image = (flags.image ?? (flags._positional as string[] | undefined)?.[0]) as
@@ -113,7 +112,7 @@ export default defineCommand({
         throw new BailianError(
           "Missing required argument --image or --video.",
           ExitCode.USAGE,
-          "bl vision describe --image <path-or-url>\nbl vision describe --video <url-or-path>",
+          `${cmdUsage(config, "--image <path-or-url>")}\n${cmdUsage(config, "--video <url-or-path>")}`,
         );
       }
     }

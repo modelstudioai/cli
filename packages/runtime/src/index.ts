@@ -22,7 +22,13 @@ export { BAILIAN_CONSOLE_ROOT, BAILIAN_CONSOLE, API_KEY_PAGE } from "./urls.ts";
 
 // Output facilities consumed by commands
 export { emitResult, emitBare } from "./output/output.ts";
-export { promptText, promptSelect, promptConfirm, failIfMissing } from "./output/prompt.ts";
+export {
+  promptText,
+  promptSelect,
+  promptConfirm,
+  failIfMissing,
+  cmdUsage,
+} from "./output/prompt.ts";
 export { createSpinner, createProgressBar } from "./output/progress.ts";
 export { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
 export { maybeShowStatusBar } from "./output/status-bar.ts";

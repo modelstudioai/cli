@@ -108,7 +108,7 @@ function hasAnyAuth(status: AuthStatusPayload): boolean {
   );
 }
 
-function emitTextStatus(status: AuthStatusPayload): void {
+function emitTextStatus(status: AuthStatusPayload, config: Config): void {
   emitBare("Authentication Status:");
   emitBare("  Stored credentials (can coexist):");
   if (status.api_key.configured) {
@@ -134,14 +134,12 @@ function emitTextStatus(status: AuthStatusPayload): void {
       `    Console gateway: ${status.console_gateway_commands.method} (${status.console_gateway_commands.source})  ${status.console_gateway_commands.masked}`,
     );
   } else {
-    emitBare("    Console gateway: unavailable (run bl auth login --console)");
+    emitBare(`    Console gateway: unavailable (run ${config.binName} auth login --console)`);
   }
 }
 
 export default defineCommand({
-  name: "auth status",
   description: "Show current authentication state",
-  usage: "bl auth status",
   options: [
     { flag: "--console-region <region>", description: "Console region" },
     {
@@ -154,7 +152,7 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: ["bl auth status", "bl auth status --output json"],
+  exampleArgs: ["", "--output json"],
   async run(config: Config, _flags: GlobalFlags) {
     const format = detectOutputFormat(config.output);
     const status = await buildStatus(config);
@@ -164,8 +162,8 @@ export default defineCommand({
         authenticated: false,
         message: "Not authenticated.",
         hint: [
-          "DashScope API: bl auth login --api-key <key> or DASHSCOPE_API_KEY",
-          "Console gateway: bl auth login --console or DASHSCOPE_ACCESS_TOKEN",
+          `DashScope API: ${config.binName} auth login --api-key <key> or DASHSCOPE_API_KEY`,
+          `Console gateway: ${config.binName} auth login --console or DASHSCOPE_ACCESS_TOKEN`,
           `Get API Key: ${API_KEY_PAGE}`,
         ].join("\n"),
         ...status,
@@ -179,6 +177,6 @@ export default defineCommand({
       return;
     }
 
-    emitTextStatus(status);
+    emitTextStatus(status, config);
   },
 });

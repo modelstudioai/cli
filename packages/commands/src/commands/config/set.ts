@@ -9,7 +9,7 @@ import {
   type GlobalFlags,
   ExitCode,
 } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { emitResult, cmdUsage } from "bailian-cli-runtime";
 
 const VALID_KEYS = [
   "base_url",
@@ -50,10 +50,9 @@ const KEY_ALIASES: Record<string, string> = {
 };
 
 export default defineCommand({
-  name: "config set",
   description: "Set a config value",
   skipDefaultApiKeySetup: true,
-  usage: "bl config set --key <key> --value <value>",
+  usageArgs: "--key <key> --value <value>",
   options: [
     {
       flag: "--key <key>",
@@ -62,10 +61,10 @@ export default defineCommand({
     },
     { flag: "--value <value>", description: "Value to set" },
   ],
-  examples: [
-    "bl config set --key output --value json",
-    "bl config set --key timeout --value 600",
-    "bl config set --key base_url --value https://dashscope.aliyuncs.com",
+  exampleArgs: [
+    "--key output --value json",
+    "--key timeout --value 600",
+    "--key base_url --value https://dashscope.aliyuncs.com",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const key = flags.key as string | undefined;
@@ -75,7 +74,7 @@ export default defineCommand({
       throw new BailianError(
         "--key and --value are required.",
         ExitCode.USAGE,
-        "bl config set --key <key> --value <value>",
+        cmdUsage(config, "--key <key> --value <value>"),
       );
     }
 

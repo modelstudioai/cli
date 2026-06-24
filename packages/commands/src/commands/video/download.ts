@@ -10,27 +10,26 @@ import {
   ExitCode,
 } from "bailian-cli-core";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
-import { failIfMissing } from "bailian-cli-runtime";
+import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  name: "video download",
   description: "Download a completed video by task ID",
-  usage: "bl video download --task-id <id> --out <path>",
+  usageArgs: "--task-id <id> --out <path>",
   options: [
     { flag: "--task-id <id>", description: "Task ID to download from" },
     { flag: "--out <path>", description: "Output file path" },
   ],
-  examples: [
-    "bl video download --task-id 3b256896-xxxx --out video.mp4",
-    "bl video download --task-id 3b256896-xxxx --out video.mp4 --quiet",
+  exampleArgs: [
+    "--task-id 3b256896-xxxx --out video.mp4",
+    "--task-id 3b256896-xxxx --out video.mp4 --quiet",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const taskId = flags.taskId as string | undefined;
-    if (!taskId) failIfMissing("task-id", "bl video download --task-id <id> --out <path>");
+    if (!taskId) failIfMissing("task-id", cmdUsage(config, "--task-id <id> --out <path>"));
 
     const outPath = flags.out as string | undefined;
-    if (!outPath) failIfMissing("out", "bl video download --task-id <id> --out video.mp4");
+    if (!outPath) failIfMissing("out", cmdUsage(config, "--task-id <id> --out video.mp4"));
 
     const format = detectOutputFormat(config.output);
 

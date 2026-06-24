@@ -8,13 +8,12 @@ import {
   type MemorySearchRequest,
   type MemorySearchResponse,
 } from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
+import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  name: "memory search",
   description: "Search memory nodes by query or messages",
-  usage: "bl memory search --user-id <id> [--query <text>] [flags]",
+  usageArgs: "--user-id <id> [--query <text>] [flags]",
   options: [
     { flag: "--user-id <id>", description: "User ID (required)", required: true },
     { flag: "--query <text>", description: "Search query text" },
@@ -26,13 +25,13 @@ export default defineCommand({
     },
     { flag: "--memory-library-id <id>", description: "Memory library ID" },
   ],
-  examples: [
-    'bl memory search --user-id user1 --query "programming preferences"',
-    'bl memory search --user-id user1 --messages \'[{"role":"user","content":"recommend a book"}]\' --top-k 5',
+  exampleArgs: [
+    '--user-id user1 --query "programming preferences"',
+    '--user-id user1 --messages \'[{"role":"user","content":"recommend a book"}]\' --top-k 5',
   ],
   async run(config: Config, flags: GlobalFlags) {
     const userId = flags.userId as string;
-    if (!userId) failIfMissing("user-id", "bl memory search --user-id <id>");
+    if (!userId) failIfMissing("user-id", cmdUsage(config, "--user-id <id>"));
 
     const body: MemorySearchRequest = { user_id: userId };
 

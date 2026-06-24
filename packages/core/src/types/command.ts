@@ -9,22 +9,33 @@ export interface OptionDef {
 }
 
 export interface Command {
-  name: string;
   description: string;
-  usage?: string;
+  /**
+   * Argument portion of the usage line, WITHOUT the `<bin> <path>` prefix
+   * (e.g. "--index-id <id> --query <text> [flags]"). The runtime prepends the
+   * product binary name and the command's actual path when rendering help, so
+   * the same command renders correctly under any product (bl / rag / …).
+   */
+  usageArgs?: string;
   options?: OptionDef[];
-  examples?: string[];
+  /**
+   * Example argument strings, each WITHOUT the `<bin> <path>` prefix
+   * (e.g. '--index-id idx_xxx --query "..."'). The runtime prepends
+   * `<bin> <path>` per product when rendering help.
+   */
+  exampleArgs?: string[];
   skipDefaultApiKeySetup?: boolean;
   notes?: string[];
   execute: (config: Config, flags: GlobalFlags) => Promise<void>;
 }
 
 export interface CommandSpec {
-  name: string;
   description: string;
-  usage?: string;
+  /** See {@link Command.usageArgs} — argument portion only, no `<bin> <path>` prefix. */
+  usageArgs?: string;
   options?: OptionDef[];
-  examples?: string[];
+  /** See {@link Command.exampleArgs} — argument strings only, no `<bin> <path>` prefix. */
+  exampleArgs?: string[];
   skipDefaultApiKeySetup?: boolean;
   notes?: string[];
   run: (config: Config, flags: GlobalFlags) => Promise<void>;
@@ -32,11 +43,10 @@ export interface CommandSpec {
 
 export function defineCommand(spec: CommandSpec): Command {
   return {
-    name: spec.name,
     description: spec.description,
-    usage: spec.usage,
+    usageArgs: spec.usageArgs,
     options: spec.options,
-    examples: spec.examples,
+    exampleArgs: spec.exampleArgs,
     skipDefaultApiKeySetup: spec.skipDefaultApiKeySetup,
     notes: spec.notes,
     execute: (config, flags) => spec.run(config, flags),

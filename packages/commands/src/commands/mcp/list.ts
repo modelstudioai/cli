@@ -25,10 +25,9 @@ interface ServerSummary {
 }
 
 export default defineCommand({
-  name: "mcp list",
   description: "List MCP servers activated under your Bailian account",
   skipDefaultApiKeySetup: true,
-  usage: "bl mcp list [flags]",
+  usageArgs: "[flags]",
   options: [
     { flag: "--name <text>", description: "Filter by server name (substring match)" },
     {
@@ -48,7 +47,7 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: ["bl mcp list", "bl mcp list --name finance", "bl mcp list --output json"],
+  exampleArgs: ["", "--name finance", "--output json"],
   async run(config: Config, flags: GlobalFlags) {
     const serverName = (flags.name as string) || "";
     const type = (flags.type as string) || "OFFICIAL";
@@ -85,7 +84,7 @@ export default defineCommand({
       const msg = (dataField.errorMsg as string | undefined) ?? code;
       const hint =
         code === "BailianGateway.Login.NotLogined"
-          ? "Run `bl auth login --console` to refresh your console session."
+          ? `Run \`${config.binName} auth login --console\` to refresh your console session.`
           : undefined;
       throw new BailianError(`Console gateway: ${msg}`, ExitCode.AUTH, hint);
     }

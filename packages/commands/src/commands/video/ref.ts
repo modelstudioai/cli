@@ -20,15 +20,14 @@ import {
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
-import { promptText, failIfMissing } from "bailian-cli-runtime";
+import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
 export default defineCommand({
-  name: "video ref",
   description:
     "Reference-to-video generation (happyhorse-1.0-r2v / wan2.6-r2v): multi-subject, multi-shot with voice",
-  usage: "bl video ref --prompt <text> --image <url>... [--ref-video <url>...] [flags]",
+  usageArgs: "--prompt <text> --image <url>... [--ref-video <url>...] [flags]",
   options: [
     { flag: "--model <model>", description: "Model ID (default: happyhorse-1.0-r2v)" },
     {
@@ -84,12 +83,12 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: [
-    'bl video ref --prompt "Image1 running on the grass" --image person.jpg',
-    'bl video ref --prompt "Video 1 plays guitar, Image 1 walks over" --ref-video scene.mp4 --image person.jpg',
-    'bl video ref --prompt "Image 1 speaks" --image person.jpg --image-voice voice.mp3 --resolution 1080P',
-    'bl video ref --prompt "Image 1 and Image 2 have a conversation" --image a.jpg --image b.jpg --image-voice va.mp3 --image-voice vb.mp3',
-    'bl video ref --prompt "Image 1 drinks water" --image person.jpg --watermark false',
+  exampleArgs: [
+    '--prompt "Image1 running on the grass" --image person.jpg',
+    '--prompt "Video 1 plays guitar, Image 1 walks over" --ref-video scene.mp4 --image person.jpg',
+    '--prompt "Image 1 speaks" --image person.jpg --image-voice voice.mp3 --resolution 1080P',
+    '--prompt "Image 1 and Image 2 have a conversation" --image a.jpg --image b.jpg --image-voice va.mp3 --image-voice vb.mp3',
+    '--prompt "Image 1 drinks water" --image person.jpg --watermark false',
   ],
   async run(config: Config, flags: GlobalFlags) {
     // --- Validate prompt ---
@@ -105,7 +104,7 @@ export default defineCommand({
         }
         prompt = hint;
       } else {
-        failIfMissing("prompt", "bl video ref --prompt <text> --image <url>");
+        failIfMissing("prompt", cmdUsage(config, "--prompt <text> --image <url>"));
       }
     }
 
@@ -116,7 +115,7 @@ export default defineCommand({
       throw new BailianError(
         "At least one --image or --ref-video is required.",
         ExitCode.USAGE,
-        'bl video ref --prompt "description" --image person.jpg',
+        cmdUsage(config, '--prompt "description" --image person.jpg'),
       );
     }
 

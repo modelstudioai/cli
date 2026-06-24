@@ -9,14 +9,13 @@ import {
   type Config,
   type GlobalFlags,
 } from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
+import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult } from "bailian-cli-runtime";
 
 export default defineCommand({
-  name: "console call",
   description: "Call a Bailian console API via the CLI gateway",
   skipDefaultApiKeySetup: true,
-  usage: "bl console call --api <api> --data <json> [flags]",
+  usageArgs: "--api <api> --data <json> [flags]",
   options: [
     {
       flag: "--api <api>",
@@ -39,16 +38,16 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: [
-    `bl console call --api zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota --data '{"queryFreeTierQuotaRequest":{"models":["qwen3-max"]}}'`,
-    `bl console call --api some.api.name --data '{"key":"value"}' --console-region cn-beijing`,
+  exampleArgs: [
+    `--api zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota --data '{"queryFreeTierQuotaRequest":{"models":["qwen3-max"]}}'`,
+    `--api some.api.name --data '{"key":"value"}' --console-region cn-beijing`,
   ],
   async run(config: Config, flags: GlobalFlags) {
     const api = flags.api as string;
-    if (!api) failIfMissing("api", "bl console call --api <api> --data <json>");
+    if (!api) failIfMissing("api", cmdUsage(config, "--api <api> --data <json>"));
 
     const dataRaw = flags.data as string;
-    if (!dataRaw) failIfMissing("data", "bl console call --api <api> --data <json>");
+    if (!dataRaw) failIfMissing("data", cmdUsage(config, "--api <api> --data <json>"));
 
     let data: Record<string, unknown>;
     try {

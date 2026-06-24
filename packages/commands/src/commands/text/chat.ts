@@ -13,7 +13,7 @@ import {
   type StreamChunk,
   isInteractive,
 } from "bailian-cli-core";
-import { promptText, failIfMissing } from "bailian-cli-runtime";
+import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { readFileSync } from "fs";
 
@@ -68,9 +68,8 @@ function parseMessages(flags: GlobalFlags): ParsedMessages {
 }
 
 export default defineCommand({
-  name: "text chat",
   description: "Send a chat completion (OpenAI compatible, DashScope)",
-  usage: "bl text chat --message <text> [flags]",
+  usageArgs: "--message <text> [flags]",
   options: [
     { flag: "--model <model>", description: "Model ID (default: qwen3.7-max)" },
     {
@@ -107,13 +106,13 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: [
-    'bl text chat --message "What is Qwen?"',
-    'bl text chat --model qwen-max --system "You are a coding assistant." --message "Write fizzbuzz in Python"',
-    'bl text chat --message "Hello" --message "assistant:Hi!" --message "How are you?"',
-    "cat conversation.json | bl text chat --messages-file - --stream",
-    'bl text chat --message "Hello" --output json',
-    'bl text chat --model qwq-plus --message "Solve 1+1" --enable-thinking',
+  exampleArgs: [
+    '--message "What is Qwen?"',
+    '--model qwen-max --system "You are a coding assistant." --message "Write fizzbuzz in Python"',
+    '--message "Hello" --message "assistant:Hi!" --message "How are you?"',
+    "--messages-file - --stream",
+    '--message "Hello" --output json',
+    '--model qwq-plus --message "Solve 1+1" --enable-thinking',
   ],
   async run(config: Config, flags: GlobalFlags) {
     const { system, messages: parsedMessages } = parseMessages(flags);
@@ -130,7 +129,7 @@ export default defineCommand({
         }
         messages = [{ role: "user", content: hint }];
       } else {
-        failIfMissing("message", "bl text chat --message <text>");
+        failIfMissing("message", cmdUsage(config, "--message <text>"));
       }
     }
 

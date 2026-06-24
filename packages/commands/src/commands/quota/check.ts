@@ -235,10 +235,9 @@ function printTable(rows: CheckRow[], noColor: boolean): void {
 }
 
 export default defineCommand({
-  name: "quota check",
   description: "Check current usage against rate limits",
   skipDefaultApiKeySetup: true,
-  usage: "bl quota check [--model <model>] [flags]",
+  usageArgs: "[--model <model>] [flags]",
   options: [
     {
       flag: "--model <model>",
@@ -259,12 +258,12 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: [
-    "bl quota check",
-    "bl quota check --model qwen3.6-plus",
-    "bl quota check --period 5",
-    "bl quota check --model qwen3.6-plus,qwen-turbo",
-    "bl quota check --output json",
+  exampleArgs: [
+    "",
+    "--model qwen3.6-plus",
+    "--period 5",
+    "--model qwen3.6-plus,qwen-turbo",
+    "--output json",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const modelFlag = (flags.model as string) || undefined;

@@ -8,13 +8,12 @@ import {
   type ProfileSchemaCreateRequest,
   type ProfileSchemaCreateResponse,
 } from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
+import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  name: "memory profile create",
   description: "Create a user profile schema for memory profiling",
-  usage: "bl memory profile create --name <name> --attributes <json> [flags]",
+  usageArgs: "--name <name> --attributes <json> [flags]",
   options: [
     { flag: "--name <name>", description: "Schema name (required)", required: true },
     { flag: "--description <text>", description: "Schema description" },
@@ -24,16 +23,16 @@ export default defineCommand({
       required: true,
     },
   ],
-  examples: [
-    'bl memory profile create --name "user_basic" --attributes \'[{"name":"age","description":"age"},{"name":"hobby","description":"hobby"}]\'',
+  exampleArgs: [
+    '--name "user_basic" --attributes \'[{"name":"age","description":"age"},{"name":"hobby","description":"hobby"}]\'',
   ],
   async run(config: Config, flags: GlobalFlags) {
     const name = flags.name as string;
-    if (!name) failIfMissing("name", "bl memory profile create --name <name> --attributes <json>");
+    if (!name) failIfMissing("name", cmdUsage(config, "--name <name> --attributes <json>"));
 
     const attrStr = flags.attributes as string;
     if (!attrStr)
-      failIfMissing("attributes", "bl memory profile create --name <name> --attributes <json>");
+      failIfMissing("attributes", cmdUsage(config, "--name <name> --attributes <json>"));
 
     let attributes;
     try {

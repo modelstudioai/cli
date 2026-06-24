@@ -19,7 +19,7 @@ import boxen from "boxen";
 import chalk, { Chalk, type ChalkInstance } from "chalk";
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { createSpinner } from "bailian-cli-runtime";
-import { failIfMissing, promptText } from "bailian-cli-runtime";
+import { failIfMissing, promptText, cmdUsage } from "bailian-cli-runtime";
 
 function formatContextWindow(tokens: number): string {
   if (tokens >= 1_000_000)
@@ -215,10 +215,9 @@ function isEmptyResult(result: RecommendResult): boolean {
 }
 
 export default defineCommand({
-  name: "advisor recommend",
   description:
     "Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking)",
-  usage: "bl advisor recommend <prompt> [flags]",
+  usageArgs: "<prompt> [flags]",
   options: [
     {
       flag: "--message <text>",
@@ -233,13 +232,13 @@ export default defineCommand({
       description: "Output format: text (default in TTY), json, yaml",
     },
   ],
-  examples: [
-    'bl advisor recommend --message "I need a visual-understanding chatbot"',
-    'bl advisor recommend --message "Build an Agent that auto-generates animations"',
-    'bl advisor recommend --message "Legal contract review, high precision required"',
-    'bl advisor recommend --message "Low-cost high-concurrency online customer service" --output json',
-    'bl advisor recommend --message "Long document summarization" --dry-run',
-    "bl advisor recommend                                          # Interactive input",
+  exampleArgs: [
+    '--message "I need a visual-understanding chatbot"',
+    '--message "Build an Agent that auto-generates animations"',
+    '--message "Legal contract review, high precision required"',
+    '--message "Low-cost high-concurrency online customer service" --output json',
+    '--message "Long document summarization" --dry-run',
+    "                                          # Interactive input",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const positional = ((flags as Record<string, unknown>)._positional as string[]) ?? [];
@@ -254,7 +253,7 @@ export default defineCommand({
         }
         userInput = hint;
       } else {
-        failIfMissing("message", 'bl advisor recommend "your requirement"');
+        failIfMissing("message", cmdUsage(config, '"your requirement"'));
       }
     }
 

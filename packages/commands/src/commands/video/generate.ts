@@ -21,15 +21,14 @@ import {
 import { poll } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
 import { runConcurrent, getConcurrency } from "bailian-cli-runtime";
-import { promptText, failIfMissing } from "bailian-cli-runtime";
+import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
 export default defineCommand({
-  name: "video generate",
   description:
     "Generate a video from text or image (happyhorse-1.0-t2v / happyhorse-1.0-i2v / wan2.6-t2v)",
-  usage: "bl video generate --prompt <text> [--image <url>] [flags]",
+  usageArgs: "--prompt <text> [--image <url>] [flags]",
   options: [
     {
       flag: "--model <model>",
@@ -69,12 +68,12 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: [
-    'bl video generate --prompt "A person reading a book, static shot"',
-    'bl video generate --prompt "Ocean waves at sunset." --download sunset.mp4',
-    'bl video generate --image https://example.com/cat.png --prompt "Make the cat in the scene move"',
-    'bl video generate --prompt "Mountain landscape" --resolution 720P --duration 5',
-    'bl video generate --prompt "A cat playing with a ball" --watermark false',
+  exampleArgs: [
+    '--prompt "A person reading a book, static shot"',
+    '--prompt "Ocean waves at sunset." --download sunset.mp4',
+    '--image https://example.com/cat.png --prompt "Make the cat in the scene move"',
+    '--prompt "Mountain landscape" --resolution 720P --duration 5',
+    '--prompt "A cat playing with a ball" --watermark false',
   ],
   async run(config: Config, flags: GlobalFlags) {
     let prompt = flags.prompt as string | undefined;
@@ -88,7 +87,7 @@ export default defineCommand({
         }
         prompt = hint;
       } else {
-        failIfMissing("prompt", "bl video generate --prompt <text>");
+        failIfMissing("prompt", cmdUsage(config, "--prompt <text>"));
       }
     }
 

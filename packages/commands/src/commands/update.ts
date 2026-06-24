@@ -28,11 +28,9 @@ function updateAgentSkill(colors: { green: string; yellow: string; reset: string
 }
 
 export default defineCommand({
-  name: "update",
   description: "Update the CLI to the latest version",
   skipDefaultApiKeySetup: true,
-  usage: "bl update",
-  examples: ["bl update"],
+  exampleArgs: [""],
   async run(config) {
     const npmPackage = config.npmPackage!;
     const binName = config.binName!;
