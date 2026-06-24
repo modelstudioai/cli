@@ -1,22 +1,24 @@
 import {
   defineCommand,
-  buildCanonicalQuery,
-  signRequest,
-  modelStudioHost,
   detectOutputFormat,
-  maskToken,
-  trackingHeaders,
   type Config,
   type GlobalFlags,
-  type GetSubscriptionSeatDetailsResponse,
-  type TokenPlanSeatDetail,
   BailianError,
   ExitCode,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "../../output/output.ts";
 import { padEnd } from "../../output/cjk-width.ts";
+import type { GetSubscriptionSeatDetailsResponse, TokenPlanSeatDetail } from "./types.ts";
+import {
+  TOKEN_PLAN_AK_OPTIONS,
+  TOKEN_PLAN_COMMON_QUERY_OPTIONS,
+  appendCommonQueryParams,
+  callTokenPlanApi,
+  prepareTokenPlanRequest,
+  resolveTokenPlanCredentials,
+  type TokenPlanQueryParams,
+} from "./utils.ts";
 
-const API_VERSION = "2026-02-10";
 const API_ACTION = "GetSubscriptionSeatDetails";
 const API_PATH = "/tokenplan/subscription/seat-detail";
 
@@ -27,14 +29,7 @@ export default defineCommand({
   options: [
     { flag: "--page-no <n>", description: "Page number (default: 1)", type: "number" },
     { flag: "--page-size <n>", description: "Page size (default: 10)", type: "number" },
-    {
-      flag: "--caller-uac-account-id <id>",
-      description: "Caller UAC account ID",
-    },
-    {
-      flag: "--namespace-id <id>",
-      description: "Product namespace ID (Token Plan default: namespace-1)",
-    },
+    ...TOKEN_PLAN_COMMON_QUERY_OPTIONS,
     {
       flag: "--status <status>",
       description:
@@ -54,11 +49,7 @@ export default defineCommand({
       flag: "--query-assigned <bool>",
       description: "Filter by assignment: true=assigned, false=unassigned",
     },
-    { flag: "--access-key-id <key>", description: "Alibaba Cloud Access Key ID (deprecated)" },
-    {
-      flag: "--access-key-secret <key>",
-      description: "Alibaba Cloud Access Key Secret (deprecated)",
-    },
+    ...TOKEN_PLAN_AK_OPTIONS,
   ],
   examples: [
     "bl tokenplan seats",
@@ -67,63 +58,27 @@ export default defineCommand({
   ],
   async run(config: Config, flags: GlobalFlags) {
     const format = detectOutputFormat(config.output);
-    const accessKeyId = (flags.accessKeyId as string) || config.accessKeyId;
-    const accessKeySecret = (flags.accessKeySecret as string) || config.accessKeySecret;
-
-    if (!accessKeyId || !accessKeySecret) {
-      throw new BailianError(
-        "No credentials found.\n" +
-          "Set ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET.",
-        ExitCode.AUTH,
-      );
-    }
-
+    const credentials = resolveTokenPlanCredentials(config, flags);
     const queryParams = buildQueryParams(flags);
-    const queryString = buildCanonicalQuery(queryParams);
-    const host = modelStudioHost(config.region);
-    const endpoint = `https://${host}${API_PATH}${queryString ? `?${queryString}` : ""}`;
 
     if (config.dryRun) {
-      emitResult({ endpoint, query: queryParams }, format);
+      const { endpoint, queryParams: query } = prepareTokenPlanRequest(
+        config,
+        API_PATH,
+        queryParams,
+      );
+      emitResult({ endpoint, query }, format);
       return;
     }
 
-    const headers = signRequest({
-      accessKeyId,
-      accessKeySecret,
+    const data = await callTokenPlanApi<GetSubscriptionSeatDetailsResponse>({
+      config,
+      credentials,
       action: API_ACTION,
-      version: API_VERSION,
-      body: "",
-      host,
-      pathname: API_PATH,
+      path: API_PATH,
       method: "GET",
-      queryString,
+      queryParams,
     });
-
-    if (config.verbose) {
-      process.stderr.write(`> GET ${endpoint}\n`);
-      process.stderr.write(`> AK: ${maskToken(accessKeyId)}\n`);
-    }
-
-    const timeoutMs = config.timeout * 1000;
-    const res = await fetch(endpoint, {
-      method: "GET",
-      headers: { ...headers, ...trackingHeaders() },
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-
-    if (config.verbose) {
-      process.stderr.write(`< ${res.status} ${res.statusText}\n`);
-    }
-
-    const data = (await res.json()) as GetSubscriptionSeatDetailsResponse;
-
-    if (!res.ok || data.Success === false) {
-      throw new BailianError(
-        `${data.Code || res.status} - ${data.Message || res.statusText}`,
-        ExitCode.GENERAL,
-      );
-    }
 
     const items = data.Data?.Items ?? [];
     if (config.quiet || format === "text") {
@@ -134,13 +89,12 @@ export default defineCommand({
   },
 });
 
-function buildQueryParams(flags: GlobalFlags): Record<string, string | string[] | undefined> {
-  const params: Record<string, string | string[] | undefined> = {};
+function buildQueryParams(flags: GlobalFlags): TokenPlanQueryParams {
+  const params: TokenPlanQueryParams = {};
 
   if (flags.pageNo !== undefined) params.PageNo = String(flags.pageNo as number);
   if (flags.pageSize !== undefined) params.PageSize = String(flags.pageSize as number);
-  if (flags.callerUacAccountId) params.CallerUacAccountId = flags.callerUacAccountId as string;
-  if (flags.namespaceId) params.NamespaceId = flags.namespaceId as string;
+  appendCommonQueryParams(params, flags);
   if (flags.statusListStr) params.StatusListStr = flags.statusListStr as string;
 
   const status = flags.status as string[] | undefined;

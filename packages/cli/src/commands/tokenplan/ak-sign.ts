@@ -1,15 +1,13 @@
 /**
- * Alibaba Cloud V3 Signature (ROA style) for Bailian Cloud API.
+ * ACS3-HMAC-SHA256 signing for ModelStudio Token Plan POP APIs (query-string style).
  *
- * Used by Knowledge Base Retrieve API which requires AK/SK authentication
- * instead of Bearer token.
- *
- * Reference: https://help.aliyun.com/document_detail/2712195.html
+ * Extends the core ROA signer with canonical query string support required by
+ * Token Plan endpoints that pass parameters in the URL query.
  */
 
 import { createHmac, createHash, randomUUID } from "crypto";
 
-export interface AkSignConfig {
+export interface TokenPlanAkSignConfig {
   accessKeyId: string;
   accessKeySecret: string;
   action: string;
@@ -18,9 +16,36 @@ export interface AkSignConfig {
   host: string;
   pathname: string;
   method?: string;
+  /** ACS3 canonical query string (sorted, encoded, no leading `?`). Empty for POST body-only APIs. */
+  queryString?: string;
 }
 
-export function signRequest(cfg: AkSignConfig): Record<string, string> {
+/** Build ACS3 canonical query string from POP query parameters. */
+export function buildCanonicalQuery(params: Record<string, string | string[] | undefined>): string {
+  const pairs: Array<[string, string]> = [];
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === "") continue;
+    if (Array.isArray(value)) {
+      for (let i = 0; i < value.length; i++) {
+        const v = value[i];
+        if (v !== "") pairs.push([`${key}.${i + 1}`, v]);
+      }
+    } else {
+      pairs.push([key, value]);
+    }
+  }
+  pairs.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  return pairs.map(([k, v]) => `${encodeRFC3986(k)}=${encodeRFC3986(v)}`).join("&");
+}
+
+function encodeRFC3986(str: string): string {
+  return encodeURIComponent(str).replace(
+    /[!'()*]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+}
+
+export function signTokenPlanRequest(cfg: TokenPlanAkSignConfig): Record<string, string> {
   const method = cfg.method ?? "POST";
   const now = new Date();
   const dateISO = now.toISOString().replace(/\.\d{3}Z$/, "Z");
@@ -38,7 +63,6 @@ export function signRequest(cfg: AkSignConfig): Record<string, string> {
     "content-type": "application/json",
   };
 
-  // Build canonical headers (sorted, lowercase)
   const signedHeaderKeys = Object.keys(headers)
     .filter((k) => k === "host" || k === "content-type" || k.startsWith("x-acs-"))
     .sort();
@@ -47,22 +71,21 @@ export function signRequest(cfg: AkSignConfig): Record<string, string> {
 
   const signedHeadersStr = signedHeaderKeys.join(";");
 
-  // Build canonical request
+  const queryString = cfg.queryString ?? "";
+
   const canonicalRequest = [
     method,
     cfg.pathname,
-    "", // query string (empty for POST)
+    queryString,
     canonicalHeaders,
     signedHeadersStr,
     hashedBody,
   ].join("\n");
 
-  // Build string to sign
   const algorithm = "ACS3-HMAC-SHA256";
   const hashedCanonical = sha256Hex(canonicalRequest);
   const stringToSign = `${algorithm}\n${hashedCanonical}`;
 
-  // Calculate signature
   const signature = hmacSHA256Hex(cfg.accessKeySecret, stringToSign);
 
   headers["authorization"] =

@@ -1,16 +1,3 @@
-import type { Region } from "../config/schema.ts";
-
-const MODEL_STUDIO_HOSTS: Record<Region, string> = {
-  cn: "modelstudio.cn-beijing.aliyuncs.com",
-  us: "modelstudio.cn-beijing.aliyuncs.com",
-  intl: "modelstudio.ap-southeast-1.aliyuncs.com",
-};
-
-/** ModelStudio POP OpenAPI host for the given DashScope region preset. */
-export function modelStudioHost(region: Region): string {
-  return MODEL_STUDIO_HOSTS[region] ?? MODEL_STUDIO_HOSTS.cn;
-}
-
 // ---- Chat (OpenAI Compatible) ----
 
 export function chatEndpoint(baseUrl: string): string {

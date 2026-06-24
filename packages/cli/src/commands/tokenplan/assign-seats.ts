@@ -1,20 +1,25 @@
 import {
   defineCommand,
-  buildCanonicalQuery,
-  signRequest,
-  modelStudioHost,
   detectOutputFormat,
-  maskToken,
-  trackingHeaders,
   type Config,
   type GlobalFlags,
-  type BatchAssignSeatsResponse,
   BailianError,
   ExitCode,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "../../output/output.ts";
+import type { BatchAssignSeatsResponse } from "./types.ts";
+import {
+  TOKEN_PLAN_AK_OPTIONS,
+  TOKEN_PLAN_COMMON_QUERY_OPTIONS,
+  TOKEN_PLAN_WORKSPACE_OPTION,
+  appendCommonQueryParams,
+  callTokenPlanApi,
+  prepareTokenPlanRequest,
+  requireWorkspaceId,
+  resolveTokenPlanCredentials,
+  type TokenPlanQueryParams,
+} from "./utils.ts";
 
-const API_VERSION = "2026-02-10";
 const API_ACTION = "BatchAssignSeats";
 const API_PATH = "/tokenplan/subscription/seat-assignments";
 
@@ -24,10 +29,7 @@ export default defineCommand({
   usage:
     "bl tokenplan assign-seats --workspace-id <id> --seat-type <type> --account-id <id> [flags]",
   options: [
-    {
-      flag: "--workspace-id <id>",
-      description: "Workspace ID (env: BAILIAN_WORKSPACE_ID, config: workspace_id)",
-    },
+    TOKEN_PLAN_WORKSPACE_OPTION,
     {
       flag: "--seat-type <type>",
       description: "Seat tier: standard, pro, or max",
@@ -38,23 +40,12 @@ export default defineCommand({
       description: "Target member account ID (repeatable)",
       type: "array",
     },
-    {
-      flag: "--caller-uac-account-id <id>",
-      description: "Caller UAC account ID",
-    },
-    {
-      flag: "--namespace-id <id>",
-      description: "Product namespace ID (Token Plan default: namespace-1)",
-    },
+    ...TOKEN_PLAN_COMMON_QUERY_OPTIONS,
     {
       flag: "--locale <locale>",
       description: "Language: zh-CN or en-US",
     },
-    { flag: "--access-key-id <key>", description: "Alibaba Cloud Access Key ID (deprecated)" },
-    {
-      flag: "--access-key-secret <key>",
-      description: "Alibaba Cloud Access Key Secret (deprecated)",
-    },
+    ...TOKEN_PLAN_AK_OPTIONS,
   ],
   examples: [
     "bl tokenplan assign-seats --workspace-id ws_456 --seat-type standard --account-id acc_123",
@@ -62,26 +53,10 @@ export default defineCommand({
   ],
   async run(config: Config, flags: GlobalFlags) {
     const format = detectOutputFormat(config.output);
-    const accessKeyId = (flags.accessKeyId as string) || config.accessKeyId;
-    const accessKeySecret = (flags.accessKeySecret as string) || config.accessKeySecret;
+    const credentials = resolveTokenPlanCredentials(config, flags);
 
-    if (!accessKeyId || !accessKeySecret) {
-      throw new BailianError(
-        "No credentials found.\n" +
-          "Set ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET.",
-        ExitCode.AUTH,
-      );
-    }
-
-    const workspaceId = (flags.workspaceId as string) || config.workspaceId;
+    const workspaceId = requireWorkspaceId(config, flags);
     const seatType = flags.seatType as string | undefined;
-    if (!workspaceId) {
-      throw new BailianError(
-        "Missing workspace ID.\n" +
-          "Set via: --workspace-id flag, env: BAILIAN_WORKSPACE_ID, or config: bl config set workspace_id <id>",
-        ExitCode.USAGE,
-      );
-    }
     if (!seatType) {
       throw new BailianError("Missing required argument --seat-type.", ExitCode.USAGE);
     }
@@ -92,51 +67,25 @@ export default defineCommand({
     }
 
     const queryParams = buildQueryParams(flags, workspaceId);
-    const queryString = buildCanonicalQuery(queryParams);
-    const host = modelStudioHost(config.region);
-    const endpoint = `https://${host}${API_PATH}${queryString ? `?${queryString}` : ""}`;
 
     if (config.dryRun) {
-      emitResult({ endpoint, query: queryParams }, format);
+      const { endpoint, queryParams: query } = prepareTokenPlanRequest(
+        config,
+        API_PATH,
+        queryParams,
+      );
+      emitResult({ endpoint, query }, format);
       return;
     }
 
-    const headers = signRequest({
-      accessKeyId,
-      accessKeySecret,
+    const data = await callTokenPlanApi<BatchAssignSeatsResponse>({
+      config,
+      credentials,
       action: API_ACTION,
-      version: API_VERSION,
-      body: "",
-      host,
-      pathname: API_PATH,
+      path: API_PATH,
       method: "POST",
-      queryString,
+      queryParams,
     });
-
-    if (config.verbose) {
-      process.stderr.write(`> POST ${endpoint}\n`);
-      process.stderr.write(`> AK: ${maskToken(accessKeyId)}\n`);
-    }
-
-    const timeoutMs = config.timeout * 1000;
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: { ...headers, ...trackingHeaders() },
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-
-    if (config.verbose) {
-      process.stderr.write(`< ${res.status} ${res.statusText}\n`);
-    }
-
-    const data = (await res.json()) as BatchAssignSeatsResponse;
-
-    if (!res.ok || data.Success === false) {
-      throw new BailianError(
-        `${data.Code || res.status} - ${data.Message || res.statusText}`,
-        ExitCode.GENERAL,
-      );
-    }
 
     if (config.quiet || format === "text") {
       emitBare("Seats assigned successfully.");
@@ -146,16 +95,12 @@ export default defineCommand({
   },
 });
 
-function buildQueryParams(
-  flags: GlobalFlags,
-  workspaceId: string,
-): Record<string, string | string[] | undefined> {
-  const params: Record<string, string | string[] | undefined> = {};
+function buildQueryParams(flags: GlobalFlags, workspaceId: string): TokenPlanQueryParams {
+  const params: TokenPlanQueryParams = {};
 
   params.WorkspaceId = workspaceId;
   if (flags.seatType) params.SeatType = flags.seatType as string;
-  if (flags.callerUacAccountId) params.CallerUacAccountId = flags.callerUacAccountId as string;
-  if (flags.namespaceId) params.NamespaceId = flags.namespaceId as string;
+  appendCommonQueryParams(params, flags);
   if (flags.locale) params.Locale = flags.locale as string;
 
   const accountIds = flags.accountId as string[] | undefined;

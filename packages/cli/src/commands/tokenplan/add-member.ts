@@ -1,21 +1,24 @@
 import {
   defineCommand,
-  buildCanonicalQuery,
-  signRequest,
-  modelStudioHost,
   detectOutputFormat,
-  maskToken,
-  trackingHeaders,
   type Config,
   type GlobalFlags,
-  type AddOrganizationMemberResponse,
   BailianError,
   ExitCode,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "../../output/output.ts";
 import { padEnd } from "../../output/cjk-width.ts";
+import type { AddOrganizationMemberResponse } from "./types.ts";
+import {
+  TOKEN_PLAN_AK_OPTIONS,
+  TOKEN_PLAN_COMMON_QUERY_OPTIONS,
+  appendCommonQueryParams,
+  callTokenPlanApi,
+  prepareTokenPlanRequest,
+  resolveTokenPlanCredentials,
+  type TokenPlanQueryParams,
+} from "./utils.ts";
 
-const API_VERSION = "2026-02-10";
 const API_ACTION = "AddOrganizationMember";
 const API_PATH = "/tokenplan/organization/member-additions";
 
@@ -36,19 +39,8 @@ export default defineCommand({
       flag: "--spec-type <type>",
       description: "Seat tier to assign on creation: standard, pro, or max",
     },
-    {
-      flag: "--caller-uac-account-id <id>",
-      description: "Caller UAC account ID",
-    },
-    {
-      flag: "--namespace-id <id>",
-      description: "Product namespace ID (Token Plan default: namespace-1)",
-    },
-    { flag: "--access-key-id <key>", description: "Alibaba Cloud Access Key ID (deprecated)" },
-    {
-      flag: "--access-key-secret <key>",
-      description: "Alibaba Cloud Access Key Secret (deprecated)",
-    },
+    ...TOKEN_PLAN_COMMON_QUERY_OPTIONS,
+    ...TOKEN_PLAN_AK_OPTIONS,
   ],
   examples: [
     "bl tokenplan add-member --account-name dev_user --org-id org_123",
@@ -57,16 +49,7 @@ export default defineCommand({
   ],
   async run(config: Config, flags: GlobalFlags) {
     const format = detectOutputFormat(config.output);
-    const accessKeyId = (flags.accessKeyId as string) || config.accessKeyId;
-    const accessKeySecret = (flags.accessKeySecret as string) || config.accessKeySecret;
-
-    if (!accessKeyId || !accessKeySecret) {
-      throw new BailianError(
-        "No credentials found.\n" +
-          "Set ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET.",
-        ExitCode.AUTH,
-      );
-    }
+    const credentials = resolveTokenPlanCredentials(config, flags);
 
     const accountName = flags.accountName as string | undefined;
     const orgId = flags.orgId as string | undefined;
@@ -78,51 +61,25 @@ export default defineCommand({
     }
 
     const queryParams = buildQueryParams(flags);
-    const queryString = buildCanonicalQuery(queryParams);
-    const host = modelStudioHost(config.region);
-    const endpoint = `https://${host}${API_PATH}${queryString ? `?${queryString}` : ""}`;
 
     if (config.dryRun) {
-      emitResult({ endpoint, query: queryParams }, format);
+      const { endpoint, queryParams: query } = prepareTokenPlanRequest(
+        config,
+        API_PATH,
+        queryParams,
+      );
+      emitResult({ endpoint, query }, format);
       return;
     }
 
-    const headers = signRequest({
-      accessKeyId,
-      accessKeySecret,
+    const data = await callTokenPlanApi<AddOrganizationMemberResponse>({
+      config,
+      credentials,
       action: API_ACTION,
-      version: API_VERSION,
-      body: "",
-      host,
-      pathname: API_PATH,
+      path: API_PATH,
       method: "POST",
-      queryString,
+      queryParams,
     });
-
-    if (config.verbose) {
-      process.stderr.write(`> POST ${endpoint}\n`);
-      process.stderr.write(`> AK: ${maskToken(accessKeyId)}\n`);
-    }
-
-    const timeoutMs = config.timeout * 1000;
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: { ...headers, ...trackingHeaders() },
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-
-    if (config.verbose) {
-      process.stderr.write(`< ${res.status} ${res.statusText}\n`);
-    }
-
-    const data = (await res.json()) as AddOrganizationMemberResponse;
-
-    if (!res.ok || data.Success === false) {
-      throw new BailianError(
-        `${data.Code || res.status} - ${data.Message || res.statusText}`,
-        ExitCode.GENERAL,
-      );
-    }
 
     if (config.quiet || format === "text") {
       emitTextMember(data);
@@ -132,8 +89,8 @@ export default defineCommand({
   },
 });
 
-function buildQueryParams(flags: GlobalFlags): Record<string, string | string[] | undefined> {
-  const params: Record<string, string | string[] | undefined> = {};
+function buildQueryParams(flags: GlobalFlags): TokenPlanQueryParams {
+  const params: TokenPlanQueryParams = {};
 
   if (flags.accountName) params.AccountName = flags.accountName as string;
   if (flags.orgId) params.OrgId = flags.orgId as string;
@@ -142,8 +99,7 @@ function buildQueryParams(flags: GlobalFlags): Record<string, string | string[] 
       ? flags.orgRoleCode
       : DEFAULT_ORG_ROLE;
   if (flags.specType) params.SpecType = flags.specType as string;
-  if (flags.callerUacAccountId) params.CallerUacAccountId = flags.callerUacAccountId as string;
-  if (flags.namespaceId) params.NamespaceId = flags.namespaceId as string;
+  appendCommonQueryParams(params, flags);
 
   return params;
 }
