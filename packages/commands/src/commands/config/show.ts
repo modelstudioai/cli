@@ -11,7 +11,7 @@ import { emitResult } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Display current configuration",
-  skipDefaultApiKeySetup: true,
+  auth: "none",
   exampleArgs: ["", "--output json"],
   async run(config: Config, _flags: GlobalFlags) {
     const file = loadConfigFile();

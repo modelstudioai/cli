@@ -24,6 +24,7 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Recognize speech from audio files (FunAudio-ASR)",
+  auth: "apiKey",
   usageArgs: "--url <audio-url> [flags]",
   options: [
     {

@@ -12,7 +12,7 @@ const APP_LIST_API = "zeldaEasy.broadscope-bailian.app-control.list";
 
 export default defineCommand({
   description: "List Bailian applications",
-  skipDefaultApiKeySetup: true,
+  auth: "console",
   usageArgs: "[flags]",
   options: [
     {

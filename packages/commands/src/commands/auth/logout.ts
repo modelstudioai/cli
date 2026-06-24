@@ -19,7 +19,7 @@ async function clearConsoleToken(): Promise<boolean> {
 
 export default defineCommand({
   description: "Clear stored credentials",
-  skipDefaultApiKeySetup: true,
+  auth: "none",
   usageArgs: "[--console] [--yes] [--dry-run]",
   options: [
     {

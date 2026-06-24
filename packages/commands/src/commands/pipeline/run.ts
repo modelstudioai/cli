@@ -9,7 +9,7 @@ import { loadPipelineFile } from "./load-file.ts";
 
 export default defineCommand({
   description: "Run a pipeline workflow definition",
-  skipDefaultApiKeySetup: true,
+  auth: "none",
   usageArgs: "<file> [flags]",
   options: [
     { flag: "--input <json>", description: "Runtime input as inline JSON" },

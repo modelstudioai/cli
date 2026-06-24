@@ -140,6 +140,7 @@ function emitTextStatus(status: AuthStatusPayload, config: Config): void {
 
 export default defineCommand({
   description: "Show current authentication state",
+  auth: "none",
   options: [
     { flag: "--console-region <region>", description: "Console region" },
     {

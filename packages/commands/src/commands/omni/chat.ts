@@ -86,6 +86,7 @@ function buildWavHeader(dataLength: number): Buffer {
 
 export default defineCommand({
   description: "Multimodal chat with text + audio output (Qwen-Omni)",
+  auth: "apiKey",
   usageArgs: "--message <text> [flags]",
   options: [
     {

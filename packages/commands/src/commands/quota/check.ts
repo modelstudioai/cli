@@ -236,7 +236,7 @@ function printTable(rows: CheckRow[], noColor: boolean): void {
 
 export default defineCommand({
   description: "Check current usage against rate limits",
-  skipDefaultApiKeySetup: true,
+  auth: "console",
   usageArgs: "[--model <model>] [flags]",
   options: [
     {

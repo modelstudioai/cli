@@ -151,7 +151,7 @@ function printTable(models: ModelWithQpm[], noColor: boolean): void {
 
 export default defineCommand({
   description: "View model RPM/TPM rate limits",
-  skipDefaultApiKeySetup: true,
+  auth: "console",
   usageArgs: "[--model <model>] [flags]",
   options: [
     {

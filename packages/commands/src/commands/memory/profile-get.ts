@@ -12,6 +12,7 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Get user profile by schema ID and user ID",
+  auth: "apiKey",
   usageArgs: "--schema-id <id> --user-id <id>",
   options: [
     { flag: "--schema-id <id>", description: "Profile schema ID (required)", required: true },

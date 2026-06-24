@@ -143,6 +143,7 @@ function printVoiceList(model: string): void {
 
 export default defineCommand({
   description: "Synthesize speech from text (CosyVoice TTS)",
+  auth: "apiKey",
   usageArgs: "--text <text> [flags]",
   options: [
     { flag: "--text <text>", description: "Text to synthesize into speech", required: true },

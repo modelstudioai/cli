@@ -16,6 +16,7 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Call a Bailian application (agent or workflow)",
+  auth: "apiKey",
   usageArgs: "--app-id <id> --prompt <text> [flags]",
   options: [
     { flag: "--app-id <id>", description: "Application ID (required)", required: true },

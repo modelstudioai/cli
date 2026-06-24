@@ -217,6 +217,7 @@ function isEmptyResult(result: RecommendResult): boolean {
 export default defineCommand({
   description:
     "Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking)",
+  auth: "apiKey",
   usageArgs: "<prompt> [flags]",
   options: [
     {

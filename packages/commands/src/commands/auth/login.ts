@@ -19,7 +19,7 @@ import {
 
 export default defineCommand({
   description: "Authenticate with API key or console browser login (credentials can coexist)",
-  skipDefaultApiKeySetup: true,
+  auth: "none",
   usageArgs: "--api-key <key> | --console",
   options: [
     { flag: "--api-key <key>", description: "DashScope API key to store" },

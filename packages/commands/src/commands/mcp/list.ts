@@ -26,7 +26,7 @@ interface ServerSummary {
 
 export default defineCommand({
   description: "List MCP servers activated under your Bailian account",
-  skipDefaultApiKeySetup: true,
+  auth: "console",
   usageArgs: "[flags]",
   options: [
     { flag: "--name <text>", description: "Filter by server name (substring match)" },

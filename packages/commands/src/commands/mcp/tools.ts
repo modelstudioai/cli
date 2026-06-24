@@ -12,7 +12,7 @@ import { ensureApiKey } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "List tools exposed by an MCP server (tools/list)",
-  skipDefaultApiKeySetup: true,
+  auth: "apiKey",
   usageArgs: "<server-code> [--url <url>]",
   options: [
     {

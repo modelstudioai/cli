@@ -123,8 +123,9 @@ export function createCli(commands: Record<string, Command>, opts: CliOptions): 
     config.binName = opts.binName;
     config.npmPackage = npmPackage;
 
-    // 默认执行 ensureApiKey；自行处理鉴权或仅需 Console/AK-SK 等的命令在 defineCommand 上设 skipDefaultApiKeySetup
-    if (!command.skipDefaultApiKeySetup) {
+    // 仅 apiKey 类命令由框架统一准备 API Key；dry-run 时跳过（只打印请求，不要求凭证）。
+    // console 命令在命令体内解析 Console Gateway 凭证；none 命令无需凭证。
+    if (command.auth === "apiKey" && !config.dryRun) {
       await ensureApiKey(config);
       try {
         const credential = await resolveCredential(config);

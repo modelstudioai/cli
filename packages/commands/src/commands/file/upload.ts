@@ -11,6 +11,7 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Upload a local file to DashScope temporary storage (48h)",
+  auth: "apiKey",
   usageArgs: "--file <path> --model <model>",
   options: [
     {

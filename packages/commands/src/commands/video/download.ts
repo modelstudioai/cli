@@ -15,6 +15,7 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Download a completed video by task ID",
+  auth: "none",
   usageArgs: "--task-id <id> --out <path>",
   options: [
     { flag: "--task-id <id>", description: "Task ID to download from" },

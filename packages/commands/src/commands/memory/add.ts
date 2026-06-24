@@ -13,6 +13,7 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Add memory from messages or custom content",
+  auth: "apiKey",
   usageArgs: "--user-id <id> [--messages <json>] [--content <text>] [flags]",
   options: [
     { flag: "--user-id <id>", description: "User ID (required)", required: true },

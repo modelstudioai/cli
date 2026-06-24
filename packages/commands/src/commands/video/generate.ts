@@ -28,6 +28,7 @@ import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailia
 export default defineCommand({
   description:
     "Generate a video from text or image (happyhorse-1.0-t2v / happyhorse-1.0-i2v / wan2.6-t2v)",
+  auth: "apiKey",
   usageArgs: "--prompt <text> [--image <url>] [flags]",
   options: [
     {

@@ -29,7 +29,7 @@ function updateAgentSkill(colors: { green: string; yellow: string; reset: string
 
 export default defineCommand({
   description: "Update the CLI to the latest version",
-  skipDefaultApiKeySetup: true,
+  auth: "none",
   exampleArgs: [""],
   async run(config) {
     const npmPackage = config.npmPackage!;

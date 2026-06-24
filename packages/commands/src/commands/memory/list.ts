@@ -12,6 +12,7 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "List memory nodes for a user",
+  auth: "apiKey",
   usageArgs: "--user-id <id> [flags]",
   options: [
     { flag: "--user-id <id>", description: "User ID (required)", required: true },

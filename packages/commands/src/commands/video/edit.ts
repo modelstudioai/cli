@@ -27,6 +27,7 @@ import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailia
 export default defineCommand({
   description:
     "Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)",
+  auth: "apiKey",
   usageArgs: "--video <url> --prompt <text> [flags]",
   options: [
     { flag: "--model <model>", description: "Model ID (default: happyhorse-1.0-video-edit)" },

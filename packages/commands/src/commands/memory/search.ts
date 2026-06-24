@@ -13,6 +13,7 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Search memory nodes by query or messages",
+  auth: "apiKey",
   usageArgs: "--user-id <id> [--query <text>] [flags]",
   options: [
     { flag: "--user-id <id>", description: "User ID (required)", required: true },

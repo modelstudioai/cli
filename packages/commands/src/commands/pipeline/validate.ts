@@ -7,7 +7,7 @@ import { loadPipelineFile } from "./load-file.ts";
 
 export default defineCommand({
   description: "Validate a pipeline definition without executing",
-  skipDefaultApiKeySetup: true,
+  auth: "none",
   usageArgs: "<file>",
   options: [],
   exampleArgs: ["workflow.yaml", "workflow.json --output json"],

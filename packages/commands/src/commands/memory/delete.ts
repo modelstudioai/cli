@@ -11,6 +11,7 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Delete a memory node",
+  auth: "apiKey",
   usageArgs: "--node-id <id> --user-id <id>",
   options: [
     { flag: "--node-id <id>", description: "Memory node ID (required)", required: true },

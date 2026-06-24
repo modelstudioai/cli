@@ -13,6 +13,7 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Create a user profile schema for memory profiling",
+  auth: "apiKey",
   usageArgs: "--name <name> --attributes <json> [flags]",
   options: [
     { flag: "--name <name>", description: "Schema name (required)", required: true },

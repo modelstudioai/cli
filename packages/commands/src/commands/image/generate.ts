@@ -39,6 +39,7 @@ function isSyncModel(model: string): boolean {
 
 export default defineCommand({
   description: "Generate images (Qwen-Image / wan2.x)",
+  auth: "apiKey",
   usageArgs: "--prompt <text> [flags]",
   options: [
     { flag: "--prompt <text>", description: "Image description", required: true },

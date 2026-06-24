@@ -13,6 +13,7 @@ import { emitResult } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Search the web using DashScope MCP WebSearch service",
+  auth: "apiKey",
   usageArgs: "--query <text> [flags]",
   options: [
     { flag: "--query <text>", description: "Search query text", required: true },

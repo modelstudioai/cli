@@ -28,6 +28,7 @@ import { BOOL_FLAG_PROMPT_EXTEND_CLI_TRUE, BOOL_FLAG_WATERMARK } from "bailian-c
 
 export default defineCommand({
   description: "Edit an existing image with text instructions (Qwen-Image)",
+  auth: "apiKey",
   usageArgs: "--image <url> --prompt <text> [flags]",
   options: [
     {

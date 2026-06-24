@@ -51,7 +51,7 @@ const KEY_ALIASES: Record<string, string> = {
 
 export default defineCommand({
   description: "Set a config value",
-  skipDefaultApiKeySetup: true,
+  auth: "none",
   usageArgs: "--key <key> --value <value>",
   options: [
     {

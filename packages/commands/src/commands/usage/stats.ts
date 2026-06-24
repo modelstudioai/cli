@@ -286,7 +286,7 @@ function printModelTable(
 
 export default defineCommand({
   description: "Query model usage statistics",
-  skipDefaultApiKeySetup: true,
+  auth: "console",
   usageArgs: "[--model <model>] [--days <days>] [flags]",
   options: [
     {

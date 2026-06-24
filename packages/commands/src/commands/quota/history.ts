@@ -92,7 +92,7 @@ function printTable(records: LimitApplicationItem[], noColor: boolean, total: nu
 
 export default defineCommand({
   description: "View quota change history",
-  skipDefaultApiKeySetup: true,
+  auth: "console",
   usageArgs: "[flags]",
   options: [
     {

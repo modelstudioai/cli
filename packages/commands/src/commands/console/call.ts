@@ -14,7 +14,7 @@ import { emitResult } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Call a Bailian console API via the CLI gateway",
-  skipDefaultApiKeySetup: true,
+  auth: "console",
   usageArgs: "--api <api> --data <json> [flags]",
   options: [
     {

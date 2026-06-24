@@ -58,6 +58,7 @@ async function toImageUrl(image: string): Promise<string> {
 
 export default defineCommand({
   description: "Describe an image or video using Qwen-VL",
+  auth: "apiKey",
   usageArgs: "--image <path-or-url> [--video <url>] [--prompt <text>]",
   options: [
     { flag: "--image <path-or-url>", description: "Local image path or URL" },

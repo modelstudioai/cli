@@ -8,6 +8,15 @@ export interface OptionDef {
   required?: boolean;
 }
 
+/**
+ * Credential a command requires. The runtime prepares it before execution.
+ *  - "apiKey"  : DashScope API Key. The runtime runs ensureApiKey beforehand,
+ *                except under --dry-run (which only prints the request).
+ *  - "console" : Console Gateway credential (usage / quota / app list / workspace, …).
+ *  - "none"    : No credential (config / auth login flow / pipeline validate / update, …).
+ */
+export type AuthRequirement = "apiKey" | "console" | "none";
+
 export interface Command {
   description: string;
   /**
@@ -24,7 +33,8 @@ export interface Command {
    * `<bin> <path>` per product when rendering help.
    */
   exampleArgs?: string[];
-  skipDefaultApiKeySetup?: boolean;
+  /** Credential this command requires. See {@link AuthRequirement}. */
+  auth: AuthRequirement;
   notes?: string[];
   execute: (config: Config, flags: GlobalFlags) => Promise<void>;
 }
@@ -36,7 +46,8 @@ export interface CommandSpec {
   options?: OptionDef[];
   /** See {@link Command.exampleArgs} — argument strings only, no `<bin> <path>` prefix. */
   exampleArgs?: string[];
-  skipDefaultApiKeySetup?: boolean;
+  /** Credential this command requires. See {@link AuthRequirement}. */
+  auth: AuthRequirement;
   notes?: string[];
   run: (config: Config, flags: GlobalFlags) => Promise<void>;
 }
@@ -47,7 +58,7 @@ export function defineCommand(spec: CommandSpec): Command {
     usageArgs: spec.usageArgs,
     options: spec.options,
     exampleArgs: spec.exampleArgs,
-    skipDefaultApiKeySetup: spec.skipDefaultApiKeySetup,
+    auth: spec.auth,
     notes: spec.notes,
     execute: (config, flags) => spec.run(config, flags),
   };

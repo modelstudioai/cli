@@ -12,6 +12,7 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Update a memory node content",
+  auth: "apiKey",
   usageArgs: "--node-id <id> --user-id <id> --content <text>",
   options: [
     { flag: "--node-id <id>", description: "Memory node ID (required)", required: true },
