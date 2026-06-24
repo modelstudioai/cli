@@ -23,9 +23,9 @@ const API_ACTION = "GetSubscriptionSeatDetails";
 const API_PATH = "/tokenplan/subscription/seat-detail";
 
 export default defineCommand({
-  name: "token-plan seats",
+  name: "token-plan list-seats",
   description: "List Token Plan subscription seat details",
-  usage: "bl token-plan seats [flags]",
+  usage: "bl token-plan list-seats [flags]",
   options: [
     { flag: "--page-no <n>", description: "Page number (default: 1)", type: "number" },
     { flag: "--page-size <n>", description: "Page size (default: 10)", type: "number" },
@@ -52,9 +52,9 @@ export default defineCommand({
     ...TOKEN_PLAN_AK_OPTIONS,
   ],
   examples: [
-    "bl token-plan seats",
-    "bl token-plan seats --page-size 20 --status NORMAL",
-    "bl token-plan seats --query-assigned true --seat-type standard",
+    "bl token-plan list-seats",
+    "bl token-plan list-seats --page-size 20 --status NORMAL",
+    "bl token-plan list-seats --query-assigned true --seat-type standard",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const format = detectOutputFormat(config.output);
