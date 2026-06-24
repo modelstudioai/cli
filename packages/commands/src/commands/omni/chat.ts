@@ -17,7 +17,7 @@ import {
   isInteractive,
   resolveFileUrl,
 } from "bailian-cli-core";
-import { promptText, failIfMissing } from "bailian-cli-runtime";
+import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult } from "bailian-cli-runtime";
 import { resolveOutputDir, resolveCredential } from "bailian-cli-core";
 
@@ -85,9 +85,8 @@ function buildWavHeader(dataLength: number): Buffer {
 }
 
 export default defineCommand({
-  name: "omni",
   description: "Multimodal chat with text + audio output (Qwen-Omni)",
-  usage: "bl omni --message <text> [flags]",
+  usageArgs: "--message <text> [flags]",
   options: [
     {
       flag: "--message <text>",
@@ -118,15 +117,15 @@ export default defineCommand({
     { flag: "--max-tokens <n>", description: "Maximum tokens to generate", type: "number" },
     { flag: "--temperature <n>", description: "Sampling temperature (0.0, 2.0]", type: "number" },
   ],
-  examples: [
-    'bl omni --message "Hello, who are you?"',
-    'bl omni --message "Describe this image" --image ./photo.jpg',
-    'bl omni --message "What is this audio saying?" --audio https://example.com/audio.wav',
-    'bl omni --message "Summarize this video" --video https://example.com/video.mp4',
-    'bl omni --message "What is this video about?" --video ./local-video.mp4 --text-only',
-    'bl omni --message "Answer in Sichuan dialect: How\'s the weather today?" --voice Sunny',
-    'bl omni --message "Hello" --text-only --output json',
-    'bl omni --message "Read this passage aloud" --audio-out greeting.wav',
+  exampleArgs: [
+    '--message "Hello, who are you?"',
+    '--message "Describe this image" --image ./photo.jpg',
+    '--message "What is this audio saying?" --audio https://example.com/audio.wav',
+    '--message "Summarize this video" --video https://example.com/video.mp4',
+    '--message "What is this video about?" --video ./local-video.mp4 --text-only',
+    '--message "Answer in Sichuan dialect: How\'s the weather today?" --voice Sunny',
+    '--message "Hello" --text-only --output json',
+    '--message "Read this passage aloud" --audio-out greeting.wav',
   ],
   async run(config: Config, flags: GlobalFlags) {
     // --- Parse messages ---
@@ -144,7 +143,7 @@ export default defineCommand({
         }
         userMessages = [hint];
       } else {
-        failIfMissing("message", "bl text omni --message <text>");
+        failIfMissing("message", cmdUsage(config, "--message <text>"));
       }
     }
 

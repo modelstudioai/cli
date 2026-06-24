@@ -11,10 +11,9 @@ import { emitResult } from "bailian-cli-runtime";
 const APP_LIST_API = "zeldaEasy.broadscope-bailian.app-control.list";
 
 export default defineCommand({
-  name: "app list",
   description: "List Bailian applications",
   skipDefaultApiKeySetup: true,
-  usage: "bl app list [flags]",
+  usageArgs: "[flags]",
   options: [
     {
       flag: "--name <name>",
@@ -41,12 +40,7 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: [
-    "bl app list",
-    "bl app list --name customer service",
-    "bl app list --page 2 --page-size 10",
-    "bl app list --output json",
-  ],
+  exampleArgs: ["", "--name customer service", "--page 2 --page-size 10", "--output json"],
   async run(config: Config, flags: GlobalFlags) {
     const name = (flags.name as string) || "";
     const pageNo = (flags.page as number) || 1;

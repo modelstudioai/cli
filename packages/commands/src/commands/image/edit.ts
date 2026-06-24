@@ -20,16 +20,15 @@ import {
 } from "bailian-cli-core";
 import { downloadFile } from "bailian-cli-runtime";
 import { runConcurrent, downloadParallel, getConcurrency } from "bailian-cli-runtime";
-import { promptText, failIfMissing } from "bailian-cli-runtime";
+import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveImageSize } from "bailian-cli-runtime";
 import { join } from "path";
 import { BOOL_FLAG_PROMPT_EXTEND_CLI_TRUE, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
 export default defineCommand({
-  name: "image edit",
   description: "Edit an existing image with text instructions (Qwen-Image)",
-  usage: "bl image edit --image <url> --prompt <text> [flags]",
+  usageArgs: "--image <url> --prompt <text> [flags]",
   options: [
     {
       flag: "--image <url>",
@@ -60,12 +59,12 @@ export default defineCommand({
     { flag: "--out-dir <dir>", description: "Download images to directory" },
     { flag: "--out-prefix <prefix>", description: "Filename prefix (default: edited)" },
   ],
-  examples: [
-    'bl image edit --image ./photo.png --prompt "Replace the background with a beach"',
-    'bl image edit --image https://example.com/logo.png --prompt "Change color to blue" --n 3',
-    'bl image edit --image ./a.png --image ./b.png --prompt "Merge two images into one collage"',
-    'bl image edit --image https://example.com/photo.png --prompt "Remove the person" --model qwen-image-2.0-pro',
-    'bl image edit --image ./photo.png --prompt "Replace the background with a beach" --watermark false',
+  exampleArgs: [
+    '--image ./photo.png --prompt "Replace the background with a beach"',
+    '--image https://example.com/logo.png --prompt "Change color to blue" --n 3',
+    '--image ./a.png --image ./b.png --prompt "Merge two images into one collage"',
+    '--image https://example.com/photo.png --prompt "Remove the person" --model qwen-image-2.0-pro',
+    '--image ./photo.png --prompt "Replace the background with a beach" --watermark false',
   ],
   async run(config: Config, flags: GlobalFlags) {
     // Normalize --image to string array (supports both single and repeated flags)
@@ -76,7 +75,7 @@ export default defineCommand({
       rawImages = [flags.image];
     }
     if (rawImages.length === 0) {
-      failIfMissing("image", "bl image edit --image <url> --prompt <text>");
+      failIfMissing("image", cmdUsage(config, "--image <url> --prompt <text>"));
     }
 
     let prompt = flags.prompt as string | undefined;
@@ -91,7 +90,7 @@ export default defineCommand({
         }
         prompt = hint;
       } else {
-        failIfMissing("prompt", "bl image edit --image <url> --prompt <text>");
+        failIfMissing("prompt", cmdUsage(config, "--image <url> --prompt <text>"));
       }
     }
 

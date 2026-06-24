@@ -91,10 +91,9 @@ function printTable(records: LimitApplicationItem[], noColor: boolean, total: nu
 }
 
 export default defineCommand({
-  name: "quota history",
   description: "View quota change history",
   skipDefaultApiKeySetup: true,
-  usage: "bl quota history [flags]",
+  usageArgs: "[flags]",
   options: [
     {
       flag: "--page <n>",
@@ -119,13 +118,7 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: [
-    "bl quota history",
-    "bl quota history --page 2",
-    "bl quota history --page-size 20",
-    "bl quota history --model qwen-turbo",
-    "bl quota history --output json",
-  ],
+  exampleArgs: ["", "--page 2", "--page-size 20", "--model qwen-turbo", "--output json"],
   async run(config: Config, flags: GlobalFlags) {
     const page = Number(flags.page) || 1;
     const pageSize = Number(flags.pageSize) || 10;
@@ -152,7 +145,7 @@ export default defineCommand({
     } catch (err) {
       if (err instanceof BailianError && err.message.includes("NotLogined")) {
         process.stderr.write(
-          "Error: session expired. Run `bl auth login --console` to re-authenticate.\n",
+          `Error: session expired. Run \`${config.binName} auth login --console\` to re-authenticate.\n`,
         );
         process.exit(1);
       }

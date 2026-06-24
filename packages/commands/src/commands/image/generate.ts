@@ -23,7 +23,7 @@ import {
 import { poll } from "bailian-cli-runtime";
 import { downloadFile } from "bailian-cli-runtime";
 import { runConcurrent, downloadParallel, getConcurrency } from "bailian-cli-runtime";
-import { promptText, failIfMissing } from "bailian-cli-runtime";
+import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveImageSize } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_IMAGE_GENERATE, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
@@ -38,9 +38,8 @@ function isSyncModel(model: string): boolean {
 }
 
 export default defineCommand({
-  name: "image generate",
   description: "Generate images (Qwen-Image / wan2.x)",
-  usage: "bl image generate --prompt <text> [flags]",
+  usageArgs: "--prompt <text> [flags]",
   options: [
     { flag: "--prompt <text>", description: "Image description", required: true },
     { flag: "--model <model>", description: "Model ID (default: qwen-image-2.0)" },
@@ -78,16 +77,16 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: [
-    'bl image generate --prompt "A cat in a spacesuit on Mars"',
-    'bl image generate --prompt "Logo design" --n 3 --out-dir ./generated/',
-    'bl image generate --prompt "Mountain landscape" --size 2688*1536',
-    'bl image generate --prompt "A castle" --seed 42 --prompt-extend false',
-    'bl image generate --prompt "Logo" --watermark false',
-    'bl image generate --prompt "An alien in the space" --watermark false',
-    'bl image generate --prompt "sunset" --model wan2.6-t2i --no-wait --quiet',
-    'bl image generate --prompt "Pro quality" --model qwen-image-2.0-pro',
-    'bl image generate --prompt "Product shots" --n 2 --concurrent 3  # 6 images in parallel',
+  exampleArgs: [
+    '--prompt "A cat in a spacesuit on Mars"',
+    '--prompt "Logo design" --n 3 --out-dir ./generated/',
+    '--prompt "Mountain landscape" --size 2688*1536',
+    '--prompt "A castle" --seed 42 --prompt-extend false',
+    '--prompt "Logo" --watermark false',
+    '--prompt "An alien in the space" --watermark false',
+    '--prompt "sunset" --model wan2.6-t2i --no-wait --quiet',
+    '--prompt "Pro quality" --model qwen-image-2.0-pro',
+    '--prompt "Product shots" --n 2 --concurrent 3  # 6 images in parallel',
   ],
   async run(config: Config, flags: GlobalFlags) {
     let prompt = (flags.prompt ?? (flags._positional as string[] | undefined)?.[0]) as
@@ -105,7 +104,7 @@ export default defineCommand({
         }
         prompt = hint;
       } else {
-        failIfMissing("prompt", "bl image generate --prompt <text>");
+        failIfMissing("prompt", cmdUsage(config, "--prompt <text>"));
       }
     }
 

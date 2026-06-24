@@ -8,13 +8,12 @@ import {
   type MemoryAddRequest,
   type MemoryAddResponse,
 } from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
+import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  name: "memory add",
   description: "Add memory from messages or custom content",
-  usage: "bl memory add --user-id <id> [--messages <json>] [--content <text>] [flags]",
+  usageArgs: "--user-id <id> [--messages <json>] [--content <text>] [flags]",
   options: [
     { flag: "--user-id <id>", description: "User ID (required)", required: true },
     {
@@ -25,14 +24,14 @@ export default defineCommand({
     { flag: "--profile-schema <id>", description: "Profile schema ID for user profiling" },
     { flag: "--memory-library-id <id>", description: "Memory library ID (isolate memory space)" },
   ],
-  examples: [
-    'bl memory add --user-id user1 --content "The user likes Python programming"',
-    'bl memory add --user-id user1 --messages \'[{"role":"user","content":"I like traveling"}]\'',
-    'bl memory add --user-id user1 --content "Lives in Beijing" --profile-schema schema_xxx',
+  exampleArgs: [
+    '--user-id user1 --content "The user likes Python programming"',
+    '--user-id user1 --messages \'[{"role":"user","content":"I like traveling"}]\'',
+    '--user-id user1 --content "Lives in Beijing" --profile-schema schema_xxx',
   ],
   async run(config: Config, flags: GlobalFlags) {
     const userId = flags.userId as string;
-    if (!userId) failIfMissing("user-id", "bl memory add --user-id <id>");
+    if (!userId) failIfMissing("user-id", cmdUsage(config, "--user-id <id>"));
 
     const body: MemoryAddRequest = { user_id: userId };
 

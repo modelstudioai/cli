@@ -100,11 +100,10 @@ async function fetchAllModelNames(config: Config, token: string): Promise<string
 }
 
 export default defineCommand({
-  name: "usage freetier",
   description:
     "Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable",
   skipDefaultApiKeySetup: true,
-  usage: "bl usage freetier <--model <model>[,model2,...] | --all> [--off] [flags]",
+  usageArgs: "<--model <model>[,model2,...] | --all> [--off] [flags]",
   options: [
     {
       flag: "--model <model>",
@@ -133,13 +132,13 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: [
-    "bl usage freetier --model qwen3-max",
-    "bl usage freetier --model qwen3-max,qwen-turbo",
-    "bl usage freetier --all",
-    "bl usage freetier --on --model qwen3-max",
-    "bl usage freetier --off --model qwen3-max",
-    "bl usage freetier --off --all",
+  exampleArgs: [
+    "--model qwen3-max",
+    "--model qwen3-max,qwen-turbo",
+    "--all",
+    "--on --model qwen3-max",
+    "--off --model qwen3-max",
+    "--off --all",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const modelFlag = (flags.model as string) || undefined;

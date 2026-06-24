@@ -7,13 +7,12 @@ import {
   type GlobalFlags,
   type MemoryNodeUpdateRequest,
 } from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
+import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  name: "memory update",
   description: "Update a memory node content",
-  usage: "bl memory update --node-id <id> --user-id <id> --content <text>",
+  usageArgs: "--node-id <id> --user-id <id> --content <text>",
   options: [
     { flag: "--node-id <id>", description: "Memory node ID (required)", required: true },
     { flag: "--user-id <id>", description: "User ID (required)", required: true },
@@ -24,21 +23,19 @@ export default defineCommand({
     },
     { flag: "--memory-library-id <id>", description: "Memory library ID (non-default library)" },
   ],
-  examples: [
-    'bl memory update --node-id node_xxx --user-id user1 --content "updated memory content"',
-  ],
+  exampleArgs: ['--node-id node_xxx --user-id user1 --content "updated memory content"'],
   async run(config: Config, flags: GlobalFlags) {
     const nodeId = flags.nodeId as string;
     if (!nodeId)
-      failIfMissing("node-id", "bl memory update --node-id <id> --user-id <id> --content <text>");
+      failIfMissing("node-id", cmdUsage(config, "--node-id <id> --user-id <id> --content <text>"));
 
     const userId = flags.userId as string;
     if (!userId)
-      failIfMissing("user-id", "bl memory update --node-id <id> --user-id <id> --content <text>");
+      failIfMissing("user-id", cmdUsage(config, "--node-id <id> --user-id <id> --content <text>"));
 
     const content = flags.content as string;
     if (!content)
-      failIfMissing("content", "bl memory update --node-id <id> --user-id <id> --content <text>");
+      failIfMissing("content", cmdUsage(config, "--node-id <id> --user-id <id> --content <text>"));
 
     const body: MemoryNodeUpdateRequest = {
       user_id: userId,

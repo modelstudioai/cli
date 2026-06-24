@@ -10,8 +10,19 @@
  * case explicitly.
  */
 
-import { BailianError, ExitCode, isInteractive } from "bailian-cli-core";
+import { BailianError, ExitCode, isInteractive, type Config } from "bailian-cli-core";
 import { printCurrentCommandHelp, getExecutingCommandPath } from "../utils/command-help.ts";
+
+/**
+ * Build a command-usage string for the running command: `<binName> <path> <args>`.
+ * Both the product binary name and the command path come from the runtime, so
+ * callers never hardcode "bl" or their own path — the same code renders as
+ * `bl knowledge retrieve …` under bl and `rag retrieve …` under rag.
+ */
+export function cmdUsage(config: Config, args = ""): string {
+  const parts = [config.binName, ...getExecutingCommandPath()].filter(Boolean);
+  return args ? `${parts.join(" ")} ${args}` : parts.join(" ");
+}
 
 // Dynamic import to avoid loading @clack/prompts in non-interactive envs unnecessarily
 // (though for CLI tools the startup cost is usually acceptable)

@@ -101,9 +101,11 @@ function resolveWorkspaceId(config: Config, flagWorkspaceId?: string): string {
   if (config.workspaceId) return config.workspaceId;
 
   process.stderr.write(
-    "Error: workspace-id is required. Set via --workspace-id, BAILIAN_WORKSPACE_ID, or `bl config set workspace_id <id>`.\n",
+    `Error: workspace-id is required. Set via --workspace-id, BAILIAN_WORKSPACE_ID, or \`${config.binName} config set workspace_id <id>\`.\n`,
   );
-  process.stderr.write("Hint: run `bl workspace list` to view available workspaces.\n");
+  process.stderr.write(
+    `Hint: run \`${config.binName} workspace list\` to view available workspaces.\n`,
+  );
   process.exit(1);
 }
 
@@ -283,10 +285,9 @@ function printModelTable(
 }
 
 export default defineCommand({
-  name: "usage stats",
   description: "Query model usage statistics",
   skipDefaultApiKeySetup: true,
-  usage: "bl usage stats [--model <model>] [--days <days>] [flags]",
+  usageArgs: "[--model <model>] [--days <days>] [flags]",
   options: [
     {
       flag: "--model <model>",
@@ -315,14 +316,14 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: [
-    "bl usage stats",
-    "bl usage stats --days 30",
-    "bl usage stats --model qwen-turbo",
-    "bl usage stats --model qwen-turbo --days 7",
-    "bl usage stats --model qwen3.6-plus,deepseek-v4-pro",
-    "bl usage stats --type Text --days 14",
-    "bl usage stats --output json",
+  exampleArgs: [
+    "",
+    "--days 30",
+    "--model qwen-turbo",
+    "--model qwen-turbo --days 7",
+    "--model qwen3.6-plus,deepseek-v4-pro",
+    "--type Text --days 14",
+    "--output json",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const modelFlag = (flags.model as string) || undefined;

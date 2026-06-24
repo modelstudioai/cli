@@ -7,25 +7,23 @@ import {
   type GlobalFlags,
   type UserProfileResponse,
 } from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
+import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  name: "memory profile get",
   description: "Get user profile by schema ID and user ID",
-  usage: "bl memory profile get --schema-id <id> --user-id <id>",
+  usageArgs: "--schema-id <id> --user-id <id>",
   options: [
     { flag: "--schema-id <id>", description: "Profile schema ID (required)", required: true },
     { flag: "--user-id <id>", description: "User ID (required)", required: true },
   ],
-  examples: ["bl memory profile get --schema-id schema_xxx --user-id user1"],
+  exampleArgs: ["--schema-id schema_xxx --user-id user1"],
   async run(config: Config, flags: GlobalFlags) {
     const schemaId = flags.schemaId as string;
-    if (!schemaId)
-      failIfMissing("schema-id", "bl memory profile get --schema-id <id> --user-id <id>");
+    if (!schemaId) failIfMissing("schema-id", cmdUsage(config, "--schema-id <id> --user-id <id>"));
 
     const userId = flags.userId as string;
-    if (!userId) failIfMissing("user-id", "bl memory profile get --schema-id <id> --user-id <id>");
+    if (!userId) failIfMissing("user-id", cmdUsage(config, "--schema-id <id> --user-id <id>"));
 
     const format = detectOutputFormat(config.output);
     const params = new URLSearchParams({ user_id: userId });

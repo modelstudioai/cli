@@ -18,10 +18,9 @@ async function clearConsoleToken(): Promise<boolean> {
 }
 
 export default defineCommand({
-  name: "auth logout",
   description: "Clear stored credentials",
   skipDefaultApiKeySetup: true,
-  usage: "bl auth logout [--console] [--yes] [--dry-run]",
+  usageArgs: "[--console] [--yes] [--dry-run]",
   options: [
     {
       flag: "--console",
@@ -30,12 +29,7 @@ export default defineCommand({
     },
     { flag: "--yes", description: "Skip confirmation prompt" },
   ],
-  examples: [
-    "bl auth logout",
-    "bl auth logout --console",
-    "bl auth logout --dry-run",
-    "bl auth logout --yes",
-  ],
+  exampleArgs: ["", "--console", "--dry-run", "--yes"],
   async run(config: Config, flags: GlobalFlags) {
     const file = readConfigFile();
 

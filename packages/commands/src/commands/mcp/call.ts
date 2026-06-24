@@ -6,7 +6,7 @@ import {
   type Config,
   type GlobalFlags,
 } from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
+import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult } from "bailian-cli-runtime";
 import { ensureApiKey } from "bailian-cli-runtime";
 
@@ -30,10 +30,9 @@ function parseArgFlags(raw: string[]): Record<string, unknown> {
 }
 
 export default defineCommand({
-  name: "mcp call",
   description: "Call a tool on an MCP server (tools/call)",
   skipDefaultApiKeySetup: true,
-  usage: "bl mcp call <server-code>.<tool> [--arg k=v ...] [--json '{...}'] [--url <url>]",
+  usageArgs: "<server-code>.<tool> [--arg k=v ...] [--json '{...}'] [--url <url>]",
   options: [
     {
       flag: "<server-code>.<tool>",
@@ -56,16 +55,16 @@ export default defineCommand({
     },
     { flag: "--url <url>", description: "Override the MCP endpoint URL (for non-Bailian servers)" },
   ],
-  examples: [
-    'bl mcp call market-cmapi00073529.SmartStockSelection --query "Screen consumer stocks with ROE > 15%"',
-    'bl mcp call market-cmapi00073529.FinQuery --json \'{"q":"Guizhou Maotai","limit":5}\'',
-    "bl mcp call market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 --arg minScale=10",
+  exampleArgs: [
+    'market-cmapi00073529.SmartStockSelection --query "Screen consumer stocks with ROE > 15%"',
+    'market-cmapi00073529.FinQuery --json \'{"q":"Guizhou Maotai","limit":5}\'',
+    "market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 --arg minScale=10",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const positional =
       ((flags as Record<string, unknown>)._positional as string[] | undefined) ?? [];
     const target = positional[0];
-    if (!target) failIfMissing("<server-code>.<tool>", "bl mcp call <server-code>.<tool>");
+    if (!target) failIfMissing("<server-code>.<tool>", cmdUsage(config, "<server-code>.<tool>"));
 
     const dot = target!.indexOf(".");
     if (dot <= 0 || dot === target!.length - 1) {

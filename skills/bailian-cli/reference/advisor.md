@@ -1,6 +1,6 @@
 # `bl advisor` commands
 
-> Auto-generated from `packages/commands/src/commands/catalog.ts`. Do not edit by hand.
+> Auto-generated from `packages/cli/src/commands.ts`. Do not edit by hand.
 > Regenerate: `pnpm --filter bailian-cli run generate:reference`.
 
 Index: [index.md](index.md)
@@ -52,5 +52,5 @@ bl advisor recommend --message "Long document summarization" --dry-run
 ```
 
 ```bash
-bl advisor recommend                                          # Interactive input
+bl advisor recommend                                           # Interactive input
 ```

@@ -76,10 +76,9 @@ function printTable(workspaces: WorkspaceInfo[], noColor: boolean): void {
 }
 
 export default defineCommand({
-  name: "workspace list",
   description: "List all workspaces",
   skipDefaultApiKeySetup: true,
-  usage: "bl workspace list [flags]",
+  usageArgs: "[flags]",
   options: [
     {
       flag: "--list <n>",
@@ -96,7 +95,7 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: ["bl workspace list", "bl workspace list --list 5", "bl workspace list --output json"],
+  exampleArgs: ["", "--list 5", "--output json"],
   async run(config: Config, flags: GlobalFlags) {
     const limit = Number(flags.list) || 0;
     const format = detectOutputFormat(config.output);

@@ -78,10 +78,9 @@ async function fetchModelQpmInfo(
 }
 
 export default defineCommand({
-  name: "quota request",
   description: "Request a temporary quota increase",
   skipDefaultApiKeySetup: true,
-  usage: "bl quota request --model <model> --tpm <value> [flags]",
+  usageArgs: "--model <model> --tpm <value> [flags]",
   options: [
     {
       flag: "--model <model>",
@@ -108,10 +107,10 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: [
-    "bl quota request --model qwen-turbo --tpm 100000",
-    "bl quota request --model qwen3.6-plus --tpm 8000000 --yes",
-    "bl quota request --model qwen-turbo --tpm 100000 --output json",
+  exampleArgs: [
+    "--model qwen-turbo --tpm 100000",
+    "--model qwen3.6-plus --tpm 8000000 --yes",
+    "--model qwen-turbo --tpm 100000 --output json",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const modelName = flags.model as string;
@@ -147,7 +146,9 @@ export default defineCommand({
       process.stderr.write(
         `Error: model "${modelName}" not found or does not support self-service quota increase.\n`,
       );
-      process.stderr.write("Hint: run `bl quota list` to view available models.\n");
+      process.stderr.write(
+        `Hint: run \`${config.binName} quota list\` to view available models.\n`,
+      );
       process.exit(1);
     }
 
@@ -186,7 +187,7 @@ export default defineCommand({
       } catch (err) {
         if (err instanceof BailianError && err.message.includes("NotLogined")) {
           process.stderr.write(
-            "Error: session expired. Run `bl auth login --console` to re-authenticate.\n",
+            `Error: session expired. Run \`${config.binName} auth login --console\` to re-authenticate.\n`,
           );
           process.exit(1);
         }

@@ -23,7 +23,7 @@ import {
 const COSYVOICE_CLONE_DESIGN_DOC = `${DOCS_HOSTS.cn}/cosyvoice-clone-design-api`;
 import { downloadFile } from "bailian-cli-runtime";
 import { runConcurrent, downloadParallel, getConcurrency } from "bailian-cli-runtime";
-import { promptText, promptSelect, failIfMissing } from "bailian-cli-runtime";
+import { promptText, promptSelect, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 interface VoiceEntry {
@@ -142,9 +142,8 @@ function printVoiceList(model: string): void {
 }
 
 export default defineCommand({
-  name: "speech synthesize",
   description: "Synthesize speech from text (CosyVoice TTS)",
-  usage: "bl speech synthesize --text <text> [flags]",
+  usageArgs: "--text <text> [flags]",
   options: [
     { flag: "--text <text>", description: "Text to synthesize into speech", required: true },
     { flag: "--text-file <path>", description: "Read text from a file instead of --text" },
@@ -181,17 +180,17 @@ export default defineCommand({
     },
     { flag: "--stream", description: "Stream raw PCM audio to stdout (pipe to player)" },
   ],
-  examples: [
-    "bl speech synthesize --list-voices --model cosyvoice-v3-flash",
-    'bl speech synthesize --text "Hello, I am Qwen" --voice <voice_id>',
-    'bl speech synthesize --text "Hello world" --voice <voice_id> --language en',
-    "bl speech synthesize --text-file script.txt --out speech.wav --voice <voice_id>",
-    'bl speech synthesize --text "Today is a good day" --voice <voice_id> --instruction "Use a gentle tone"',
-    'bl speech synthesize --text "Hello" --voice <voice_id> --format wav --sample-rate 24000',
+  exampleArgs: [
+    "--list-voices --model cosyvoice-v3-flash",
+    '--text "Hello, I am Qwen" --voice <voice_id>',
+    '--text "Hello world" --voice <voice_id> --language en',
+    "--text-file script.txt --out speech.wav --voice <voice_id>",
+    '--text "Today is a good day" --voice <voice_id> --instruction "Use a gentle tone"',
+    '--text "Hello" --voice <voice_id> --format wav --sample-rate 24000',
     "# Stream to audio player (macOS)",
-    'bl speech synthesize --text "Hello" --voice <voice_id> --stream | afplay -',
+    '--text "Hello" --voice <voice_id> --stream | afplay -',
     "# Pipe to ffplay",
-    'bl speech synthesize --text "Hello" --voice <voice_id> --stream | ffplay -nodisp -autoexit -f s16le -ar 24000 -ac 1 -',
+    '--text "Hello" --voice <voice_id> --stream | ffplay -nodisp -autoexit -f s16le -ar 24000 -ac 1 -',
   ],
   async run(config: Config, flags: GlobalFlags) {
     const model = (flags.model as string) || config.defaultSpeechModel || "cosyvoice-v3-flash";
@@ -223,7 +222,7 @@ export default defineCommand({
         }
         text = hint;
       } else {
-        failIfMissing("text", "bl speech synthesize --text <text>");
+        failIfMissing("text", cmdUsage(config, "--text <text>"));
       }
     }
 
@@ -264,7 +263,7 @@ export default defineCommand({
         const modelVoices = MODEL_VOICES[model];
         if (modelVoices && modelVoices.length > 0) {
           throw new BailianError(
-            `--voice is required.\nRun the following to see available voices:\n  bl speech synthesize --list-voices --model ${model}`,
+            `--voice is required.\nRun the following to see available voices:\n  ${cmdUsage(config, `--list-voices --model ${model}`)}`,
             ExitCode.USAGE,
           );
         } else {

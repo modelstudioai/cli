@@ -150,10 +150,9 @@ function printTable(models: ModelWithQpm[], noColor: boolean): void {
 }
 
 export default defineCommand({
-  name: "quota list",
   description: "View model RPM/TPM rate limits",
   skipDefaultApiKeySetup: true,
-  usage: "bl quota list [--model <model>] [flags]",
+  usageArgs: "[--model <model>] [flags]",
   options: [
     {
       flag: "--model <model>",
@@ -174,12 +173,12 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: [
-    "bl quota list",
-    "bl quota list --model qwen3.6-plus",
-    "bl quota list --model qwen3.6-plus,qwen-turbo",
-    "bl quota list --all",
-    "bl quota list --output json",
+  exampleArgs: [
+    "",
+    "--model qwen3.6-plus",
+    "--model qwen3.6-plus,qwen-turbo",
+    "--all",
+    "--output json",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const modelFlag = (flags.model as string) || undefined;

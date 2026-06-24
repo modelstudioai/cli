@@ -17,16 +17,15 @@ import {
   BailianError,
   ExitCode,
 } from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
+import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const BAILIAN_HOST = "bailian.cn-beijing.aliyuncs.com";
 
 export default defineCommand({
-  name: "knowledge retrieve",
   description: "Retrieve from a Bailian knowledge base",
   skipDefaultApiKeySetup: true,
-  usage: "bl knowledge retrieve --index-id <id> --query <text> [flags]",
+  usageArgs: "--index-id <id> --query <text> [flags]",
   options: [
     { flag: "--index-id <id>", description: "Knowledge base index ID (required)", required: true },
     { flag: "--query <text>", description: "Search query (required)", required: true },
@@ -76,16 +75,16 @@ export default defineCommand({
     "Authentication: pass `--api-key <key>`. AK/SK auth is deprecated and will be removed in a future version.",
     "`--workspace-id` is NOT required when using --api-key.",
   ],
-  examples: [
-    'bl knowledge retrieve --index-id idx_xxx --query "How to use Alibaba Cloud Bailian"',
-    'bl knowledge retrieve --api-key $DASHSCOPE_API_KEY --index-id idx_xxx --query "RAG retrieval" --rerank --rerank-model qwen3-rerank-hybrid',
+  exampleArgs: [
+    '--index-id idx_xxx --query "How to use Alibaba Cloud Bailian"',
+    '--api-key $DASHSCOPE_API_KEY --index-id idx_xxx --query "RAG retrieval" --rerank --rerank-model qwen3-rerank-hybrid',
   ],
   async run(config: Config, flags: GlobalFlags) {
     const indexId = flags.indexId as string;
-    if (!indexId) failIfMissing("index-id", "bl knowledge retrieve --index-id <id> --query <text>");
+    if (!indexId) failIfMissing("index-id", cmdUsage(config, "--index-id <id> --query <text>"));
 
     const query = flags.query as string;
-    if (!query) failIfMissing("query", "bl knowledge retrieve --index-id <id> --query <text>");
+    if (!query) failIfMissing("query", cmdUsage(config, "--index-id <id> --query <text>"));
 
     const format = detectOutputFormat(config.output);
 
@@ -196,7 +195,7 @@ async function runWithAkSk(
   if (!workspaceId) {
     throw new BailianError(
       "Knowledge retrieve requires a workspace ID.\n" +
-        "Set via: --workspace-id flag, or env: BAILIAN_WORKSPACE_ID, or config: bl config set workspace_id <id>",
+        `Set via: --workspace-id flag, or env: BAILIAN_WORKSPACE_ID, or config: ${config.binName} config set workspace_id <id>`,
       ExitCode.USAGE,
     );
   }

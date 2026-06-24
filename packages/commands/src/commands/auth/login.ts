@@ -18,10 +18,9 @@ import {
 } from "./login-console.ts";
 
 export default defineCommand({
-  name: "auth login",
   description: "Authenticate with API key or console browser login (credentials can coexist)",
   skipDefaultApiKeySetup: true,
-  usage: "bl auth login --api-key <key> | bl auth login --console",
+  usageArgs: "--api-key <key> | --console",
   options: [
     { flag: "--api-key <key>", description: "DashScope API key to store" },
     {
@@ -34,7 +33,7 @@ export default defineCommand({
         "Sign in via browser; use --console-site to choose domestic (default) or international",
     },
   ],
-  examples: ["bl auth login --api-key sk-xxxxx", "bl auth login --console"],
+  exampleArgs: ["--api-key sk-xxxxx", "--console"],
   async run(config: Config, flags: GlobalFlags) {
     if (flags.console) {
       if (config.dryRun) {

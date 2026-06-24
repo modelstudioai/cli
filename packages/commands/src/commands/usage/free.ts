@@ -184,10 +184,9 @@ async function fetchAllModels(config: Config, token: string): Promise<ModelInfo[
 }
 
 export default defineCommand({
-  name: "usage free",
   description: "Query free-tier quota for models (all models if --model is omitted)",
   skipDefaultApiKeySetup: true,
-  usage: "bl usage free [--model <model>[,model2,...]] [flags]",
+  usageArgs: "[--model <model>[,model2,...]] [flags]",
   options: [
     {
       flag: "--model <model>",
@@ -212,14 +211,14 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: [
-    "bl usage free",
-    "bl usage free --model qwen3-max",
-    "bl usage free --model qwen3-max,qwen-turbo",
-    "bl usage free --expiring 30",
-    "bl usage free --sort remaining",
-    "bl usage free --model qwen-turbo --output json",
-    "bl usage free --model qwen3-max --console-region cn-beijing",
+  exampleArgs: [
+    "",
+    "--model qwen3-max",
+    "--model qwen3-max,qwen-turbo",
+    "--expiring 30",
+    "--sort remaining",
+    "--model qwen-turbo --output json",
+    "--model qwen3-max --console-region cn-beijing",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const modelFlag = (flags.model as string) || undefined;

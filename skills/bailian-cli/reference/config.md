@@ -1,43 +1,18 @@
 # `bl config` commands
 
-> Auto-generated from `packages/commands/src/commands/catalog.ts`. Do not edit by hand.
+> Auto-generated from `packages/cli/src/commands.ts`. Do not edit by hand.
 > Regenerate: `pnpm --filter bailian-cli run generate:reference`.
 
 Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                   | Description                                                                         |
-| ------------------------- | ----------------------------------------------------------------------------------- |
-| `bl config export-schema` | Export all (or one) CLI command(s) as Anthropic/OpenAI-compatible JSON tool schemas |
-| `bl config set`           | Set a config value                                                                  |
-| `bl config show`          | Display current configuration                                                       |
+| Command          | Description                   |
+| ---------------- | ----------------------------- |
+| `bl config set`  | Set a config value            |
+| `bl config show` | Display current configuration |
 
 ## Command details
-
-### `bl config export-schema`
-
-| Field           | Value                                                                               |
-| --------------- | ----------------------------------------------------------------------------------- |
-| **Name**        | `config export-schema`                                                              |
-| **Description** | Export all (or one) CLI command(s) as Anthropic/OpenAI-compatible JSON tool schemas |
-| **Usage**       | `bl config export-schema [--command "<name>"]`                                      |
-
-#### Options
-
-| Flag               | Type   | Required | Description                                                       |
-| ------------------ | ------ | -------- | ----------------------------------------------------------------- |
-| `--command <name>` | string | no       | Export schema for a specific command only (e.g. "image generate") |
-
-#### Examples
-
-```bash
-bl config export-schema
-```
-
-```bash
-bl config export-schema --command "video generate"
-```
 
 ### `bl config set`
 

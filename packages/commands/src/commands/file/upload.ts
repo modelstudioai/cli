@@ -6,13 +6,12 @@ import {
   type GlobalFlags,
   uploadFile,
 } from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
+import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  name: "file upload",
   description: "Upload a local file to DashScope temporary storage (48h)",
-  usage: "bl file upload --file <path> --model <model>",
+  usageArgs: "--file <path> --model <model>",
   options: [
     {
       flag: "--file <path>",
@@ -25,21 +24,21 @@ export default defineCommand({
       required: true,
     },
   ],
-  examples: [
-    "bl file upload --file photo.jpg --model qwen3-vl-plus",
-    "bl file upload --file video.mp4 --model wan2.1-t2v-plus",
-    "bl file upload --file audio.wav --model qwen3-asr-flash",
-    "bl file upload --file cat.png --model qwen-image-2.0",
+  exampleArgs: [
+    "--file photo.jpg --model qwen3-vl-plus",
+    "--file video.mp4 --model wan2.1-t2v-plus",
+    "--file audio.wav --model qwen3-asr-flash",
+    "--file cat.png --model qwen-image-2.0",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const filePath = flags.file as string | undefined;
     if (!filePath) {
-      failIfMissing("file", "bl file upload --file <path> --model <model>");
+      failIfMissing("file", cmdUsage(config, "--file <path> --model <model>"));
     }
 
     const model = flags.model as string | undefined;
     if (!model) {
-      failIfMissing("model", "bl file upload --file <path> --model <model>");
+      failIfMissing("model", cmdUsage(config, "--file <path> --model <model>"));
     }
 
     const format = detectOutputFormat(config.output);

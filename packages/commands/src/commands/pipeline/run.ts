@@ -1,17 +1,16 @@
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { defineCommand, type Config, type GlobalFlags } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { emitResult, cmdUsage } from "bailian-cli-runtime";
 import { initPipelineSteps } from "bailian-cli-runtime";
 import { executePipeline, streamPipelineEvents } from "bailian-cli-runtime";
 import type { PipelineLifecycleEvent } from "bailian-cli-runtime";
 import { loadPipelineFile } from "./load-file.ts";
 
 export default defineCommand({
-  name: "pipeline run",
   description: "Run a pipeline workflow definition",
   skipDefaultApiKeySetup: true,
-  usage: "bl pipeline run <file> [flags]",
+  usageArgs: "<file> [flags]",
   options: [
     { flag: "--input <json>", description: "Runtime input as inline JSON" },
     { flag: "--input-file <path>", description: "Runtime input from a JSON file" },
@@ -27,17 +26,19 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: [
-    'bl pipeline run workflow.yaml --input \'{"brief":"hello"}\'',
-    "bl pipeline run workflow.json --input-file inputs.json --concurrency 3",
-    "bl pipeline run workflow.yaml --dry-run",
-    "bl pipeline run workflow.json --events jsonl",
-    "bl pipeline run workflow.yaml --output json",
+  exampleArgs: [
+    'workflow.yaml --input \'{"brief":"hello"}\'',
+    "workflow.json --input-file inputs.json --concurrency 3",
+    "workflow.yaml --dry-run",
+    "workflow.json --events jsonl",
+    "workflow.yaml --output json",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const file = ((flags._positional as string[] | undefined) ?? [])[0] as string | undefined;
     if (!file) {
-      process.stderr.write("Error: pipeline file is required\nUsage: bl pipeline run <file>\n");
+      process.stderr.write(
+        `Error: pipeline file is required\nUsage: ${cmdUsage(config, "<file>")}\n`,
+      );
       process.exit(2);
     }
 

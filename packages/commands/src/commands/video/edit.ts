@@ -20,15 +20,14 @@ import {
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
-import { promptText, failIfMissing } from "bailian-cli-runtime";
+import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
 export default defineCommand({
-  name: "video edit",
   description:
     "Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)",
-  usage: "bl video edit --video <url> --prompt <text> [flags]",
+  usageArgs: "--video <url> --prompt <text> [flags]",
   options: [
     { flag: "--model <model>", description: "Model ID (default: happyhorse-1.0-video-edit)" },
     {
@@ -77,11 +76,11 @@ export default defineCommand({
       type: "number",
     },
   ],
-  examples: [
-    'bl video edit --video https://example.com/input.mp4 --prompt "Convert the entire scene to claymation style"',
-    'bl video edit --video https://example.com/input.mp4 --prompt "Replace the outfit with the style shown in the image" --ref-image https://example.com/clothes.png',
-    'bl video edit --video https://example.com/input.mp4 --prompt "Convert to anime style" --resolution 720P --download output.mp4',
-    'bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the kitten in the video" --watermark false',
+  exampleArgs: [
+    '--video https://example.com/input.mp4 --prompt "Convert the entire scene to claymation style"',
+    '--video https://example.com/input.mp4 --prompt "Replace the outfit with the style shown in the image" --ref-image https://example.com/clothes.png',
+    '--video https://example.com/input.mp4 --prompt "Convert to anime style" --resolution 720P --download output.mp4',
+    '--video https://example.com/input.mp4 --prompt "Put clothes on the kitten in the video" --watermark false',
   ],
   async run(config: Config, flags: GlobalFlags) {
     // --- Validate video URL ---
@@ -95,7 +94,7 @@ export default defineCommand({
         }
         videoUrl = hint;
       } else {
-        failIfMissing("video", "bl video edit --video <url> --prompt <text>");
+        failIfMissing("video", cmdUsage(config, "--video <url> --prompt <text>"));
       }
     }
 

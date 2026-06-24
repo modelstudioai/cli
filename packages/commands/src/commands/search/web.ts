@@ -8,23 +8,22 @@ import {
   McpClient,
 } from "bailian-cli-core";
 import { createSpinner } from "bailian-cli-runtime";
-import { promptText, failIfMissing } from "bailian-cli-runtime";
+import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult } from "bailian-cli-runtime";
 
 export default defineCommand({
-  name: "search web",
   description: "Search the web using DashScope MCP WebSearch service",
-  usage: "bl search web --query <text> [flags]",
+  usageArgs: "--query <text> [flags]",
   options: [
     { flag: "--query <text>", description: "Search query text", required: true },
     { flag: "--count <n>", description: "Number of search results (default: 10)", type: "number" },
     { flag: "--list-tools", description: "List available MCP tools and exit" },
   ],
-  examples: [
-    'bl search web --query "Alibaba Cloud Bailian latest features"',
-    'bl search web --query "TypeScript 5.9 new features" --count 5',
-    'bl search web --query "Today\'s news"',
-    "bl search web --list-tools",
+  exampleArgs: [
+    '--query "Alibaba Cloud Bailian latest features"',
+    '--query "TypeScript 5.9 new features" --count 5',
+    '--query "Today\'s news"',
+    "--list-tools",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const mcpUrl = mcpWebSearchEndpoint(config.baseUrl);
@@ -56,7 +55,7 @@ export default defineCommand({
         }
         query = hint;
       } else {
-        failIfMissing("query", "bl search web --query <text>");
+        failIfMissing("query", cmdUsage(config, "--query <text>"));
       }
     }
 

@@ -1,6 +1,6 @@
 # `bl mcp` commands
 
-> Auto-generated from `packages/commands/src/commands/catalog.ts`. Do not edit by hand.
+> Auto-generated from `packages/cli/src/commands.ts`. Do not edit by hand.
 > Regenerate: `pnpm --filter bailian-cli run generate:reference`.
 
 Index: [index.md](index.md)
@@ -91,10 +91,10 @@ bl mcp list --output json
 
 #### Options
 
-| Flag            | Type   | Required | Description                                                |
-| --------------- | ------ | -------- | ---------------------------------------------------------- |
-| `<server-code>` | string | yes      | Server code from `bl mcp list` (e.g. market-cmapi00073529) |
-| `--url <url>`   | string | no       | Override the MCP endpoint URL (for non-Bailian servers)    |
+| Flag            | Type   | Required | Description                                             |
+| --------------- | ------ | -------- | ------------------------------------------------------- |
+| `<server-code>` | string | yes      | Server code from `mcp list` (e.g. market-cmapi00073529) |
+| `--url <url>`   | string | no       | Override the MCP endpoint URL (for non-Bailian servers) |
 
 #### Examples
 
