@@ -1,4 +1,5 @@
 node_modules
 dist
+tests/**/*.d.ts
 *.log
 .DS_Store
