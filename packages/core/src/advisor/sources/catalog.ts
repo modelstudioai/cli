@@ -5,7 +5,7 @@ import { getConfigDir } from "../../config/paths.ts";
 import type { ModelPrice, ModelProfile, QpmLimit } from "../types.ts";
 import type { ModelSource } from "./types.ts";
 
-const SKILL_DIR_NAME = "skills/doc-llm-wiki";
+const SKILL_DIR_NAME = "skills/bailian-docs-llm-wiki";
 const MODELS_FILE = "models.jsonl";
 
 function getCatalogDir(): string {
@@ -18,7 +18,7 @@ function getCatalogPath(): string {
 
 function getMonorepoModelsDir(): string {
   const coreDir = dirname(fileURLToPath(import.meta.url));
-  return join(coreDir, "../../../../../skills/doc-llm-wiki/models");
+  return join(coreDir, "../../../../../skills/bailian-docs-llm-wiki/models");
 }
 
 function fromJsonlRecord(raw: Record<string, unknown>): ModelProfile | null {

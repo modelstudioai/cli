@@ -34,6 +34,28 @@ import searchWeb from "./search/web.ts";
 import speechSynthesize from "./speech/synthesize.ts";
 import speechRecognize from "./speech/recognize.ts";
 import fileUpload from "./file/upload.ts";
+import datasetUpload from "./dataset/upload.ts";
+import datasetList from "./dataset/list.ts";
+import datasetGet from "./dataset/get.ts";
+import datasetDelete from "./dataset/delete.ts";
+import datasetValidate from "./dataset/validate.ts";
+import finetuneCreate from "./finetune/create.ts";
+import finetuneList from "./finetune/list.ts";
+import finetuneGet from "./finetune/get.ts";
+import finetuneCancel from "./finetune/cancel.ts";
+import finetuneDelete from "./finetune/delete.ts";
+import finetuneLogs from "./finetune/logs.ts";
+import finetuneCheckpoints from "./finetune/checkpoints.ts";
+import finetuneExport from "./finetune/export.ts";
+import finetuneWatch from "./finetune/watch.ts";
+import finetuneCapability from "./finetune/capability.ts";
+import deployCreate from "./deploy/create.ts";
+import deployList from "./deploy/list.ts";
+import deployGet from "./deploy/get.ts";
+import deployModels from "./deploy/models.ts";
+import deployScale from "./deploy/scale.ts";
+import deployUpdate from "./deploy/update.ts";
+import deployDelete from "./deploy/delete.ts";
 import consoleCall from "./console/call.ts";
 import usageFree from "./usage/free.ts";
 import usageFreetier from "./usage/freetier.ts";
@@ -79,6 +101,28 @@ export const commands: Record<string, Command> = {
   "speech synthesize": speechSynthesize,
   "speech recognize": speechRecognize,
   "file upload": fileUpload,
+  "dataset upload": datasetUpload,
+  "dataset list": datasetList,
+  "dataset get": datasetGet,
+  "dataset delete": datasetDelete,
+  "dataset validate": datasetValidate,
+  "finetune create": finetuneCreate,
+  "finetune list": finetuneList,
+  "finetune get": finetuneGet,
+  "finetune cancel": finetuneCancel,
+  "finetune delete": finetuneDelete,
+  "finetune logs": finetuneLogs,
+  "finetune checkpoints": finetuneCheckpoints,
+  "finetune export": finetuneExport,
+  "finetune watch": finetuneWatch,
+  "finetune capability": finetuneCapability,
+  "deploy create": deployCreate,
+  "deploy list": deployList,
+  "deploy get": deployGet,
+  "deploy models": deployModels,
+  "deploy scale": deployScale,
+  "deploy update": deployUpdate,
+  "deploy delete": deployDelete,
   "console call": consoleCall,
   "usage free": usageFree,
   "usage freetier": usageFreetier,

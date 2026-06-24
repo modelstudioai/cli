@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "bailian-docs-llm-wiki": {
+      "source": "modelstudioai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/bailian-docs-llm-wiki/SKILL.md",
+      "computedHash": "8dd6bd97d313cf0c3517259fc76faeae0b611fd5973d1206e5f02c1f34b41009"
+    },
+    "bailian-model-recommend": {
+      "source": "modelstudioai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/bailian-model-recommend/SKILL.md",
+      "computedHash": "514f9b56c0b2f116630a0220959bfb00a7937162346bb78c339c59a7a07299c1"
+    }
+  }
+}
