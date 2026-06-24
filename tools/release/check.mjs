@@ -37,6 +37,12 @@ export async function runCheck(options = {}) {
   step("build bailian-cli-core");
   run("pnpm", ["--filter", "bailian-cli-core", "run", "build"]);
 
+  step("build bailian-cli-runtime");
+  run("pnpm", ["--filter", "bailian-cli-runtime", "run", "build"]);
+
+  step("build bailian-cli-commands");
+  run("pnpm", ["--filter", "bailian-cli-commands", "run", "build"]);
+
   step(
     channel
       ? "generate skill reference (channel: skip SKILL.md version sync)"

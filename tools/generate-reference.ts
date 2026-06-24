@@ -6,7 +6,8 @@
  * Committed to git; consumed by the `bailian-cli` Agent Skill (`npx skills add modelstudioai/cli`).
  *
  * Run: pnpm --filter bailian-cli run generate:reference
- * (Also run via `pnpm run sync:skill-assets` or the repo pre-commit hook; requires built `bailian-cli-core`.)
+ * (Also run via `pnpm run sync:skill-assets` or the repo pre-commit hook; requires built
+ * `bailian-cli-core`, `bailian-cli-runtime`, and `bailian-cli-commands`.)
  */
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
