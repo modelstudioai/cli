@@ -25,9 +25,9 @@ const API_ACTION = "CreateTokenPlanKey";
 const API_PATH = "/tokenplan/api-keys";
 
 export default defineCommand({
-  name: "tokenplan create-key",
+  name: "token-plan create-key",
   description: "Create a Token Plan API key for a seat",
-  usage: "bl tokenplan create-key --account-id <id> --workspace-id <id> [flags]",
+  usage: "bl token-plan create-key --account-id <id> --workspace-id <id> [flags]",
   options: [
     { flag: "--account-id <id>", description: "Target member account ID", required: true },
     TOKEN_PLAN_WORKSPACE_OPTION,
@@ -36,8 +36,8 @@ export default defineCommand({
     ...TOKEN_PLAN_AK_OPTIONS,
   ],
   examples: [
-    "bl tokenplan create-key --account-id acc_123 --workspace-id ws_456",
-    "bl tokenplan create-key --account-id acc_123 --workspace-id ws_456 --description 'Dev key'",
+    "bl token-plan create-key --account-id acc_123 --workspace-id ws_456",
+    "bl token-plan create-key --account-id acc_123 --workspace-id ws_456 --description 'Dev key'",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const format = detectOutputFormat(config.output);
