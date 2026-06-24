@@ -124,7 +124,7 @@ bl quota request --model qwen3.6-plus --tpm 6000000   # 申请临时 TPM 提额
 bl quota history                                      # 查看提额历史记录
 
 # Token Plan 团队版管理（需 AK/SK，见下方认证说明）
-bl token-plan seats                                    # 查看订阅席位明细
+bl token-plan list-seats                                # 查看订阅席位明细
 bl token-plan add-member --account-name dev --org-id org_xxx
 bl token-plan assign-seats --workspace-id ws_xxx --seat-type standard --account-id acc_xxx
 bl token-plan create-key --account-id acc_xxx --workspace-id ws_xxx

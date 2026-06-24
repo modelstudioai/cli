@@ -12,7 +12,7 @@ Index: [index.md](index.md)
 | `bl token-plan add-member`   | Add a member to a Token Plan organization |
 | `bl token-plan assign-seats` | Batch assign Token Plan seats to members  |
 | `bl token-plan create-key`   | Create a Token Plan API key for a seat    |
-| `bl token-plan seats`        | List Token Plan subscription seat details |
+| `bl token-plan list-seats`   | List Token Plan subscription seat details |
 
 ## Command details
 
@@ -112,13 +112,13 @@ bl token-plan create-key --account-id acc_123 --workspace-id ws_456
 bl token-plan create-key --account-id acc_123 --workspace-id ws_456 --description 'Dev key'
 ```
 
-### `bl token-plan seats`
+### `bl token-plan list-seats`
 
 | Field           | Value                                     |
 | --------------- | ----------------------------------------- |
-| **Name**        | `token-plan seats`                        |
+| **Name**        | `token-plan list-seats`                   |
 | **Description** | List Token Plan subscription seat details |
-| **Usage**       | `bl token-plan seats [flags]`             |
+| **Usage**       | `bl token-plan list-seats [flags]`        |
 
 #### Options
 
@@ -139,13 +139,13 @@ bl token-plan create-key --account-id acc_123 --workspace-id ws_456 --descriptio
 #### Examples
 
 ```bash
-bl token-plan seats
+bl token-plan list-seats
 ```
 
 ```bash
-bl token-plan seats --page-size 20 --status NORMAL
+bl token-plan list-seats --page-size 20 --status NORMAL
 ```
 
 ```bash
-bl token-plan seats --query-assigned true --seat-type standard
+bl token-plan list-seats --query-assigned true --seat-type standard
 ```

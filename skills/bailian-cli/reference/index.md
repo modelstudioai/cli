@@ -48,7 +48,7 @@ Use this index for the full quick index and global flags.
 | `bl token-plan add-member`   | Add a member to a Token Plan organization                                                             | [token-plan.md](token-plan.md) |
 | `bl token-plan assign-seats` | Batch assign Token Plan seats to members                                                              | [token-plan.md](token-plan.md) |
 | `bl token-plan create-key`   | Create a Token Plan API key for a seat                                                                | [token-plan.md](token-plan.md) |
-| `bl token-plan seats`        | List Token Plan subscription seat details                                                             | [token-plan.md](token-plan.md) |
+| `bl token-plan list-seats`   | List Token Plan subscription seat details                                                             | [token-plan.md](token-plan.md) |
 | `bl update`                  | Update bl to the latest version                                                                       | [update.md](update.md)         |
 | `bl usage free`              | Query free-tier quota for models (all models if --model is omitted)                                   | [usage.md](usage.md)           |
 | `bl usage freetier`          | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable            | [usage.md](usage.md)           |
@@ -81,7 +81,7 @@ Use this index for the full quick index and global flags.
 | `search`     | `web`                                                                        | [search.md](search.md)         |
 | `speech`     | `recognize`, `synthesize`                                                    | [speech.md](speech.md)         |
 | `text`       | `chat`                                                                       | [text.md](text.md)             |
-| `token-plan` | `add-member`, `assign-seats`, `create-key`, `seats`                          | [token-plan.md](token-plan.md) |
+| `token-plan` | `add-member`, `assign-seats`, `create-key`, `list-seats`                     | [token-plan.md](token-plan.md) |
 | `update`     | `(root)`                                                                     | [update.md](update.md)         |
 | `usage`      | `free`, `freetier`, `stats`                                                  | [usage.md](usage.md)           |
 | `video`      | `download`, `edit`, `generate`, `ref`, `task get`                            | [video.md](video.md)           |
