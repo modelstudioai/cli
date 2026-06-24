@@ -71,6 +71,114 @@ export function getPendingUpdateNotification(): string | null {
   return pendingNotification;
 }
 
+/**
+ * Determines if the version gap is large enough to warrant auto-update.
+ * Conditions (either triggers auto-update):
+ * 1. New major > current major
+ * 2. Same major, but new minor - current minor > 3
+ */
+export function isMajorUpgrade(latest: string, current: string): boolean {
+  const [latestMajor, latestMinor] = latest.split(".").map(Number);
+  const [currentMajor, currentMinor] = current.split(".").map(Number);
+
+  // Condition 1: major version bump
+  if (latestMajor > currentMajor) return true;
+
+  // Condition 2: same major, minor gap > 3
+  if (latestMajor === currentMajor && latestMinor - currentMinor > 3) return true;
+
+  return false;
+}
+
+/**
+ * Perform auto-update: install latest version globally and update agent skill.
+ * Returns true if update succeeded, false otherwise.
+ */
+export async function performAutoUpdate(
+  currentVersion: string,
+  latestVersion: string,
+): Promise<boolean> {
+  const isTTY = process.stderr.isTTY;
+  const green = isTTY ? "\x1b[32m" : "";
+  const yellow = isTTY ? "\x1b[33m" : "";
+  const cyan = isTTY ? "\x1b[36m" : "";
+  const dim = isTTY ? "\x1b[2m" : "";
+  const reset = isTTY ? "\x1b[0m" : "";
+
+  const [latestMajor] = latestVersion.split(".").map(Number);
+  const [currentMajor] = currentVersion.split(".").map(Number);
+  const isMajorBump = latestMajor > currentMajor;
+
+  process.stderr.write("\n");
+  process.stderr.write(`  ${yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${reset}\n`);
+  if (isMajorBump) {
+    process.stderr.write(
+      `  ${yellow}⚡ Major update detected: ${currentVersion} → ${latestVersion}${reset}\n`,
+    );
+  } else {
+    process.stderr.write(
+      `  ${yellow}⚡ Significant update detected: ${currentVersion} → ${latestVersion}${reset}\n`,
+    );
+  }
+  process.stderr.write(`  ${dim}Auto-updating to keep your CLI up to date...${reset}\n`);
+  process.stderr.write(`  ${yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${reset}\n\n`);
+
+  const cmd = `npm install -g ${NPM_PACKAGE}@latest`;
+
+  try {
+    const { execSync } = await import("child_process");
+    execSync(cmd, { stdio: "inherit" });
+
+    // Verify installed version
+    let newVer: string | null = null;
+    try {
+      const rawVer = execSync("bl --version 2>/dev/null", { encoding: "utf-8" }).trim();
+      newVer = rawVer.replace(/^bl\s+/, "");
+    } catch {
+      /* ignore */
+    }
+
+    // Update cached state
+    try {
+      const { writeFileSync } = await import("fs");
+      const { join } = await import("path");
+      const { getConfigDir } = await import("bailian-cli-core");
+      const stateFile = join(getConfigDir(), "update-state.json");
+      writeFileSync(
+        stateFile,
+        JSON.stringify({ lastChecked: Date.now(), latestVersion: newVer ?? latestVersion }),
+      );
+    } catch {
+      /* ignore */
+    }
+
+    process.stderr.write(
+      `  ${green}✓ Update complete: ${currentVersion} → ${newVer ?? latestVersion}${reset}\n`,
+    );
+    process.stderr.write(`  ${dim}Run ${cyan}bl --version${reset}${dim} to verify.${reset}\n\n`);
+
+    // Update agent skill
+    try {
+      const { execSync: exec } = await import("child_process");
+      process.stderr.write(`  ${dim}Syncing agent skill...${reset}\n`);
+      exec(`npx skills add modelstudioai/cli --all -g -y`, { stdio: "inherit" });
+      process.stderr.write(`  ${green}✓ Agent skill updated.${reset}\n\n`);
+    } catch {
+      process.stderr.write(
+        `  ${yellow}Agent skill sync skipped (run manually: npx skills add modelstudioai/cli --all -g -y)${reset}\n\n`,
+      );
+    }
+
+    // Clear pending notification
+    pendingNotification = null;
+    return true;
+  } catch {
+    process.stderr.write(`  ${yellow}⚠ Auto-update failed. Please run manually:${reset}\n`);
+    process.stderr.write(`    ${cyan}${cmd}${reset}\n\n`);
+    return false;
+  }
+}
+
 export async function checkForUpdate(currentVersion: string): Promise<void> {
   // Skip in CI / non-TTY environments
   if (process.env.CI || !process.stderr.isTTY) return;
