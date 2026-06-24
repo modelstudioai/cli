@@ -77,24 +77,24 @@ bl speech recognize --url https://example.com/audio.mp3 --no-wait --quiet
 
 #### Options
 
-| Flag                   | Type    | Required | Description                                                                                                             |
-| ---------------------- | ------- | -------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `--text <text>`        | string  | yes      | Text to synthesize into speech                                                                                          |
-| `--text-file <path>`   | string  | no       | Read text from a file instead of --text                                                                                 |
-| `--model <model>`      | string  | no       | Model ID (default: cosyvoice-v3-flash). System voices available for cosyvoice-v3-flash                                  |
-| `--voice <voice>`      | string  | no       | Voice ID. Use --list-voices to see system voices for cosyvoice-v3-flash; for v3.5-flash provide a clone/design voice ID |
-| `--list-voices`        | boolean | no       | List available system voices for the selected model and exit                                                            |
-| `--format <format>`    | string  | no       | Audio format: mp3, pcm, wav, opus (default: mp3)                                                                        |
-| `--sample-rate <rate>` | string  | no       | Audio sample rate in Hz (e.g. 24000)                                                                                    |
-| `--volume <volume>`    | string  | no       | Volume 0-100 (default: 50)                                                                                              |
-| `--rate <rate>`        | string  | no       | Speech rate 0.5-2.0 (default: 1.0)                                                                                      |
-| `--pitch <pitch>`      | string  | no       | Pitch multiplier 0.5-2.0 (default: 1.0)                                                                                 |
-| `--seed <seed>`        | string  | no       | Random seed 0-65535 for reproducible synthesis                                                                          |
-| `--language <lang>`    | string  | no       | Language hint (e.g. zh, en, ja, ko, fr, de)                                                                             |
-| `--instruction <text>` | string  | no       | Natural language instruction to control speech style (e.g. "Use a gentle tone"）                                        |
-| `--enable-ssml`        | boolean | no       | Enable SSML markup parsing in input text                                                                                |
-| `--out <path>`         | string  | no       | Save audio to file (default: auto-generate in temp dir)                                                                 |
-| `--stream`             | boolean | no       | Stream raw PCM audio to stdout (pipe to player)                                                                         |
+| Flag                   | Type    | Required | Description                                                                                                               |
+| ---------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `--text <text>`        | string  | yes      | Text to synthesize into speech                                                                                            |
+| `--text-file <path>`   | string  | no       | Read text from a file instead of --text                                                                                   |
+| `--model <model>`      | string  | no       | Model ID (default: cosyvoice-v3-flash). System voices available for cosyvoice-v3-flash                                    |
+| `--voice <voice>`      | string  | no       | Voice ID. Use --list-voices to see built-in voices for cosyvoice-v3-flash; for v3.5-flash provide a clone/design voice ID |
+| `--list-voices`        | boolean | no       | List built-in system voices for the selected model and exit (console link shown in output)                                |
+| `--format <format>`    | string  | no       | Audio format: mp3, pcm, wav, opus (default: mp3)                                                                          |
+| `--sample-rate <rate>` | string  | no       | Audio sample rate in Hz (e.g. 24000)                                                                                      |
+| `--volume <volume>`    | string  | no       | Volume 0-100 (default: 50)                                                                                                |
+| `--rate <rate>`        | string  | no       | Speech rate 0.5-2.0 (default: 1.0)                                                                                        |
+| `--pitch <pitch>`      | string  | no       | Pitch multiplier 0.5-2.0 (default: 1.0)                                                                                   |
+| `--seed <seed>`        | string  | no       | Random seed 0-65535 for reproducible synthesis                                                                            |
+| `--language <lang>`    | string  | no       | Language hint (e.g. zh, en, ja, ko, fr, de)                                                                               |
+| `--instruction <text>` | string  | no       | Natural language instruction to control speech style (e.g. "Use a gentle tone"）                                          |
+| `--enable-ssml`        | boolean | no       | Enable SSML markup parsing in input text                                                                                  |
+| `--out <path>`         | string  | no       | Save audio to file (default: auto-generate in temp dir)                                                                   |
+| `--stream`             | boolean | no       | Stream raw PCM audio to stdout (pipe to player)                                                                           |
 
 #### Examples
 
