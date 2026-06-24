@@ -147,8 +147,11 @@ More examples per command: see `reference/<group>.md` (e.g. [`reference/text.md`
 Install, API key / console login, endpoint override, and config keys:
 [`assets/setup.md`](assets/setup.md).
 
+**Console login:** never run bare `bl auth login --console` — always pass `--console-site domestic` or `--console-site international`. Before login, run `bl config show --output json` and follow the site-selection rules in [`assets/setup.md` → Console site selection](assets/setup.md#console-site-selection).
+
 ```bash
 bl auth status                                      # check current auth
+bl auth login --console --console-site international  # example: international console
 bl text chat --message "Write a poem about spring"  # quick smoke test
 ```
 
@@ -197,3 +200,4 @@ Full workflow, redaction rules, template, and exit-code reference: [`assets/issu
 - Video understanding with audio context → `bl omni`, not only `bl vision describe`.
 - Search → `bl search web`.
 - Local paths → pass directly to `bl`; never require the user to obtain URLs first.
+- Console login → always `--console-site domestic|international`; see [`assets/setup.md`](assets/setup.md#console-site-selection).
