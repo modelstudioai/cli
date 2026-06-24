@@ -6,6 +6,22 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.4.2] - 2026-06-24
+
+### 新增
+
+- `bl omni --list-voices` 无需 API key 即可打印内置输出音色列表(ID、名称、描述、语言)并退出。内置音色表从 6 个扩展到 17 个,新增 Dylan、Sunny、Kiki 等方言音色。
+
+### 变更
+
+- `bl omni` 默认 `--voice` 改为 `Tina`(原为 `Cherry`)。`--voice` 帮助文案改为指向 `--list-voices`,不再内联列出全部音色。
+- `bl speech synthesize --list-voices` 输出及缺少 `--voice` 时的提示中,新增官方 CosyVoice 音色文档链接。
+- Agent skill 配置指引新增 console 站点选择说明(`--console-site domestic` / `international`),适用于 console 登录与网关类命令。
+
+### 修复
+
+- `bl speech synthesize` 修正 `cosyvoice-v3-flash` 内置音色 ID,由 `longanhuan` 改为 `longanhuan_v3`。
+
 ## [1.4.1] - 2026-06-22
 
 ### 变更
