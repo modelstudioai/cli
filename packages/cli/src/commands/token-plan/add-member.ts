@@ -25,9 +25,9 @@ const API_PATH = "/tokenplan/organization/member-additions";
 const DEFAULT_ORG_ROLE = "ORG_MEMBER";
 
 export default defineCommand({
-  name: "tokenplan add-member",
+  name: "token-plan add-member",
   description: "Add a member to a Token Plan organization",
-  usage: "bl tokenplan add-member --account-name <name> --org-id <id> [flags]",
+  usage: "bl token-plan add-member --account-name <name> --org-id <id> [flags]",
   options: [
     { flag: "--account-name <name>", description: "Member display name", required: true },
     { flag: "--org-id <id>", description: "Organization ID", required: true },
@@ -43,9 +43,9 @@ export default defineCommand({
     ...TOKEN_PLAN_AK_OPTIONS,
   ],
   examples: [
-    "bl tokenplan add-member --account-name dev_user --org-id org_123",
-    "bl tokenplan add-member --account-name admin_user --org-id org_123 --org-role-code ORG_ADMIN",
-    "bl tokenplan add-member --account-name member1 --org-id org_123 --spec-type standard",
+    "bl token-plan add-member --account-name dev_user --org-id org_123",
+    "bl token-plan add-member --account-name admin_user --org-id org_123 --org-role-code ORG_ADMIN",
+    "bl token-plan add-member --account-name member1 --org-id org_123 --spec-type standard",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const format = detectOutputFormat(config.output);

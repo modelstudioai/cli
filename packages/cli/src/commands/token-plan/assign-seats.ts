@@ -24,10 +24,10 @@ const API_ACTION = "BatchAssignSeats";
 const API_PATH = "/tokenplan/subscription/seat-assignments";
 
 export default defineCommand({
-  name: "tokenplan assign-seats",
+  name: "token-plan assign-seats",
   description: "Batch assign Token Plan seats to members",
   usage:
-    "bl tokenplan assign-seats --workspace-id <id> --seat-type <type> --account-id <id> [flags]",
+    "bl token-plan assign-seats --workspace-id <id> --seat-type <type> --account-id <id> [flags]",
   options: [
     TOKEN_PLAN_WORKSPACE_OPTION,
     {
@@ -48,8 +48,8 @@ export default defineCommand({
     ...TOKEN_PLAN_AK_OPTIONS,
   ],
   examples: [
-    "bl tokenplan assign-seats --workspace-id ws_456 --seat-type standard --account-id acc_123",
-    "bl tokenplan assign-seats --workspace-id ws_456 --seat-type pro --account-id acc_1 --account-id acc_2",
+    "bl token-plan assign-seats --workspace-id ws_456 --seat-type standard --account-id acc_123",
+    "bl token-plan assign-seats --workspace-id ws_456 --seat-type pro --account-id acc_1 --account-id acc_2",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const format = detectOutputFormat(config.output);

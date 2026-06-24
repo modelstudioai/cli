@@ -1,4 +1,4 @@
-# `bl tokenplan` commands
+# `bl token-plan` commands
 
 > Auto-generated from `packages/cli/src/commands/catalog.ts`. Do not edit by hand.
 > Regenerate: `pnpm --filter bailian-cli run generate:reference`.
@@ -7,22 +7,22 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                     | Description                               |
-| --------------------------- | ----------------------------------------- |
-| `bl tokenplan add-member`   | Add a member to a Token Plan organization |
-| `bl tokenplan assign-seats` | Batch assign Token Plan seats to members  |
-| `bl tokenplan create-key`   | Create a Token Plan API key for a seat    |
-| `bl tokenplan seats`        | List Token Plan subscription seat details |
+| Command                      | Description                               |
+| ---------------------------- | ----------------------------------------- |
+| `bl token-plan add-member`   | Add a member to a Token Plan organization |
+| `bl token-plan assign-seats` | Batch assign Token Plan seats to members  |
+| `bl token-plan create-key`   | Create a Token Plan API key for a seat    |
+| `bl token-plan list-seats`   | List Token Plan subscription seat details |
 
 ## Command details
 
-### `bl tokenplan add-member`
+### `bl token-plan add-member`
 
-| Field           | Value                                                                 |
-| --------------- | --------------------------------------------------------------------- |
-| **Name**        | `tokenplan add-member`                                                |
-| **Description** | Add a member to a Token Plan organization                             |
-| **Usage**       | `bl tokenplan add-member --account-name <name> --org-id <id> [flags]` |
+| Field           | Value                                                                  |
+| --------------- | ---------------------------------------------------------------------- |
+| **Name**        | `token-plan add-member`                                                |
+| **Description** | Add a member to a Token Plan organization                              |
+| **Usage**       | `bl token-plan add-member --account-name <name> --org-id <id> [flags]` |
 
 #### Options
 
@@ -40,24 +40,24 @@ Index: [index.md](index.md)
 #### Examples
 
 ```bash
-bl tokenplan add-member --account-name dev_user --org-id org_123
+bl token-plan add-member --account-name dev_user --org-id org_123
 ```
 
 ```bash
-bl tokenplan add-member --account-name admin_user --org-id org_123 --org-role-code ORG_ADMIN
+bl token-plan add-member --account-name admin_user --org-id org_123 --org-role-code ORG_ADMIN
 ```
 
 ```bash
-bl tokenplan add-member --account-name member1 --org-id org_123 --spec-type standard
+bl token-plan add-member --account-name member1 --org-id org_123 --spec-type standard
 ```
 
-### `bl tokenplan assign-seats`
+### `bl token-plan assign-seats`
 
-| Field           | Value                                                                                        |
-| --------------- | -------------------------------------------------------------------------------------------- |
-| **Name**        | `tokenplan assign-seats`                                                                     |
-| **Description** | Batch assign Token Plan seats to members                                                     |
-| **Usage**       | `bl tokenplan assign-seats --workspace-id <id> --seat-type <type> --account-id <id> [flags]` |
+| Field           | Value                                                                                         |
+| --------------- | --------------------------------------------------------------------------------------------- |
+| **Name**        | `token-plan assign-seats`                                                                     |
+| **Description** | Batch assign Token Plan seats to members                                                      |
+| **Usage**       | `bl token-plan assign-seats --workspace-id <id> --seat-type <type> --account-id <id> [flags]` |
 
 #### Options
 
@@ -75,20 +75,20 @@ bl tokenplan add-member --account-name member1 --org-id org_123 --spec-type stan
 #### Examples
 
 ```bash
-bl tokenplan assign-seats --workspace-id ws_456 --seat-type standard --account-id acc_123
+bl token-plan assign-seats --workspace-id ws_456 --seat-type standard --account-id acc_123
 ```
 
 ```bash
-bl tokenplan assign-seats --workspace-id ws_456 --seat-type pro --account-id acc_1 --account-id acc_2
+bl token-plan assign-seats --workspace-id ws_456 --seat-type pro --account-id acc_1 --account-id acc_2
 ```
 
-### `bl tokenplan create-key`
+### `bl token-plan create-key`
 
-| Field           | Value                                                                   |
-| --------------- | ----------------------------------------------------------------------- |
-| **Name**        | `tokenplan create-key`                                                  |
-| **Description** | Create a Token Plan API key for a seat                                  |
-| **Usage**       | `bl tokenplan create-key --account-id <id> --workspace-id <id> [flags]` |
+| Field           | Value                                                                    |
+| --------------- | ------------------------------------------------------------------------ |
+| **Name**        | `token-plan create-key`                                                  |
+| **Description** | Create a Token Plan API key for a seat                                   |
+| **Usage**       | `bl token-plan create-key --account-id <id> --workspace-id <id> [flags]` |
 
 #### Options
 
@@ -105,20 +105,20 @@ bl tokenplan assign-seats --workspace-id ws_456 --seat-type pro --account-id acc
 #### Examples
 
 ```bash
-bl tokenplan create-key --account-id acc_123 --workspace-id ws_456
+bl token-plan create-key --account-id acc_123 --workspace-id ws_456
 ```
 
 ```bash
-bl tokenplan create-key --account-id acc_123 --workspace-id ws_456 --description 'Dev key'
+bl token-plan create-key --account-id acc_123 --workspace-id ws_456 --description 'Dev key'
 ```
 
-### `bl tokenplan seats`
+### `bl token-plan list-seats`
 
 | Field           | Value                                     |
 | --------------- | ----------------------------------------- |
-| **Name**        | `tokenplan seats`                         |
+| **Name**        | `token-plan list-seats`                   |
 | **Description** | List Token Plan subscription seat details |
-| **Usage**       | `bl tokenplan seats [flags]`              |
+| **Usage**       | `bl token-plan list-seats [flags]`        |
 
 #### Options
 
@@ -139,13 +139,13 @@ bl tokenplan create-key --account-id acc_123 --workspace-id ws_456 --description
 #### Examples
 
 ```bash
-bl tokenplan seats
+bl token-plan list-seats
 ```
 
 ```bash
-bl tokenplan seats --page-size 20 --status NORMAL
+bl token-plan list-seats --page-size 20 --status NORMAL
 ```
 
 ```bash
-bl tokenplan seats --query-assigned true --seat-type standard
+bl token-plan list-seats --query-assigned true --seat-type standard
 ```
