@@ -38,6 +38,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 - **MCP 集成** — 统一调度百炼 MCP 服务：列出服务、查看工具、直接在终端调用任意工具
 - **联网搜索** — 实时互联网信息检索，提升回答准确性及时效性
 - **模型推荐** — 描述你的场景，智能推荐最适合的模型；支持限定范围搜索、模型对比和替代发现
+- **微调与部署** — 上传数据集、创建 SFT/LoRA/DPO/CPT 调优任务（`finetune create`）、非阻塞探测任务状态（`finetune watch`）、按模型查训练能力（`finetune capability`），并把训练好的模型部署为推理服务（`deploy create`）
 - **控制台能力** — 浏览百炼应用（`app list`），查询模型免费额度（`usage free`），查看模型用量统计（`usage stats`），管理业务空间（`workspace list`），管理限流与提额（`quota list/request/check/history`）
 - **本地文件自动上传** — 所有 URL 参数同时支持本地路径，免费临时存储 48 小时
 
@@ -106,22 +107,23 @@ bl advisor recommend --message "qwen-max 和 deepseek-v3 哪个更适合做代�
 # 浏览器登录（控制台能力相关命令需要）
 bl auth login --console
 
+# 微调与部署 — 从训练到服务的一站式流程
+bl dataset upload --file ./train.jsonl                 # 上传 .jsonl 数据集（先校验）
+bl finetune create --model qwen3-8b --datasets ./train.jsonl --training-type sft-lora  # 本地路径自动上传
+bl finetune watch --job-id ft-xxx --output json       # 非阻塞状态探测（退出码 0/1/3 = 成功/失败/进行中）
+bl finetune capability --model qwen3-8b               # 查询模型支持哪些训练方式
+bl deploy create --model qwen3-8b --name my-svc --plan mu  # 把训练好的模型部署为推理服务
+
 # 浏览应用 / 免费额度 / 用量统计 / 业务空间
 bl app list
-bl usage free --model qwen3-max
-bl usage free --expiring 30                           # 30 天内过期的额度
-bl usage free --sort remaining                        # 按剩余百分比升序排列
-bl usage stats --workspace-id <id>                    # 指定空间的用量概览
-bl usage stats --model qwen-turbo --workspace-id <id> # 指定模型用量
+bl usage free                                         # 各模型免费额度（可加 --model/--expiring/--sort）
+bl usage stats --workspace-id <id>                    # 模型用量统计（加 --model 查单模型）
 bl workspace list                                     # 列出所有业务空间
 
-# 限流管理与提额
-bl quota list                                         # 查看所有模型的 RPM/TPM 限额
-bl quota list --model qwen3.6-plus                    # 查看指定模型限额
-bl quota check                                        # 查看当前用量 vs 限流阈值
-bl quota check --model qwen3.6-plus --period 5        # 查看最近 5 分钟用量
+# 限流管理与提额（list / check / request / history）
+bl quota list                                         # 查看 RPM/TPM 限额（加 --model 过滤）
+bl quota check                                        # 当前用量 vs 限流阈值（加 --model/--period）
 bl quota request --model qwen3.6-plus --tpm 6000000   # 申请临时 TPM 提额
-bl quota history                                      # 查看提额历史记录
 ```
 
 > 更多案例与使用场景：[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)
