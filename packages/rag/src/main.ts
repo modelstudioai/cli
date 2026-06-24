@@ -42,7 +42,7 @@ const commands: Record<string, Command> = {
   retrieve: knowledgeRetrieve,
 };
 
-createCli(commands, {
+void createCli(commands, {
   binName: "rag",
   version: pkg.version,
   clientName: "rag-cli",

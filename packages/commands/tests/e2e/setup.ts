@@ -1,6 +1,6 @@
 import { join } from "path";
 import { fileURLToPath } from "url";
-import { createCliRunner } from "./core/cli-runner.ts";
+import { createCliRunner, type RunCliFn } from "./core/cli-runner.ts";
 
 export {
   cliTimeoutPrefix,
@@ -17,6 +17,7 @@ export {
   isKnowledgeAkSkReady,
   isKnowledgeE2EReady,
   createCliRunner,
+  type RunCliFn,
 } from "./core/index.ts";
 
 const commandsRoot = join(fileURLToPath(new URL(".", import.meta.url)), "..", "..");
@@ -28,4 +29,4 @@ const runner = createCliRunner({
   binName: "bl",
 });
 
-export const runCli = runner.runCli;
+export const runCli: RunCliFn = runner.runCli;

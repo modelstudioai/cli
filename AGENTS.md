@@ -15,7 +15,7 @@ monorepo 多包结构:
 ### E2E 测试分布
 
 - 契约 e2e(help / dry-run / 真实集成): `packages/commands/tests/e2e/`
-- e2e 基建(`createCliRunner` 等): `packages/commands/tests/e2e/core/`(export `bailian-cli-commands/e2e`)
+- e2e 基建(`createCliRunner` 等): `packages/commands/tests/e2e/core/`（cli/rag 以相对路径引用）
 - 产品 smoke: `packages/cli/tests/e2e/smoke.e2e.test.ts`、`packages/rag/tests/e2e/smoke.e2e.test.ts`
 - 一次跑全量 e2e: 根目录 `pnpm test:e2e`
 

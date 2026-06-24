@@ -1,4 +1,4 @@
-export { createCliRunner, type CliTarget, type RunCliResult } from "./cli-runner.ts";
+export { createCliRunner, type CliTarget, type RunCliFn, type RunCliResult } from "./cli-runner.ts";
 export {
   cliTimeoutPrefix,
   cliTimeoutSeconds,

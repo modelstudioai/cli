@@ -16,12 +16,14 @@ export interface RunCliResult {
   exitCode: number;
 }
 
+export type RunCliFn = (args: string[], envOverrides?: NodeJS.ProcessEnv) => Promise<RunCliResult>;
+
 /**
  * 工厂：绑定 CLI 入口后返回 `runCli`。
  * request_id 等诊断信息在 stderr；`--output json` 时 JSON 在 stdout。
  */
 export function createCliRunner(target: CliTarget): {
-  runCli: (args: string[], envOverrides?: NodeJS.ProcessEnv) => Promise<RunCliResult>;
+  runCli: RunCliFn;
   binName: string;
 } {
   const { entry, cwd, binName } = target;

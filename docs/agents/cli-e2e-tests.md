@@ -22,7 +22,7 @@ E2E 按包分层，与命令实现 / 产品入口解耦：
 ## 文件与工具
 
 - **契约 e2e 路径**：`packages/commands/tests/e2e/<kebab-topic>.e2e.test.ts`
-- **框架**：`vite-plus/test`；契约测试 `runCli` from `./setup.ts`；cli/rag smoke from `./setup.ts`（内部 `import from "bailian-cli-commands/e2e"`）
+- **框架**：`vite-plus/test`；契约测试 `runCli` from `./setup.ts`；cli/rag smoke 通过相对路径引用 `packages/commands/tests/e2e/core/`
 - **解析 JSON stdout**：`parseStdoutJson`；输出目录：`makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url))`
 - **长任务**：`cliTimeoutPrefix()`；视频用例加 `test(..., 3_600_000)` 等显式超时
 
