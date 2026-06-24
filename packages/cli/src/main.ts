@@ -13,8 +13,8 @@ import { handleError } from "./error-handler.ts";
 import {
   checkForUpdate,
   getPendingUpdateNotification,
-  isMajorUpgrade,
   performAutoUpdate,
+  shouldAutoUpdate,
 } from "./utils/update-checker.ts";
 import { maybeShowStatusBar } from "./output/status-bar.ts";
 import { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
@@ -134,8 +134,8 @@ async function main() {
   const isUpdateCommand = commandPath.length === 1 && commandPath[0] === "update";
   const newVersion = getPendingUpdateNotification();
   if (newVersion && !config.quiet && !isUpdateCommand) {
-    if (isMajorUpgrade(newVersion, CLI_VERSION)) {
-      // 大版本差距，自动更新
+    if (shouldAutoUpdate(newVersion, CLI_VERSION)) {
+      // 大版本差距且目标为稳定版，自动更新
       await performAutoUpdate(CLI_VERSION, newVersion);
     } else {
       // 普通小版本提示
