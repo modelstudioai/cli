@@ -12,6 +12,7 @@ import {
   toServerTrainingType,
   TRAINING_TYPES_CLI,
   DEFAULT_TRAINING_TYPE,
+  formatIssue,
   BailianError,
   ExitCode,
   type Config,
@@ -20,7 +21,6 @@ import {
   type FineTuneHyperParameters,
   type DatasetFile,
   type DatasetSchema,
-  type ValidationResult,
 } from "bailian-cli-core";
 import { existsSync, statSync } from "fs";
 import { basename } from "path";
@@ -36,19 +36,6 @@ import { emitResult, emitBare } from "../../output/output.ts";
  */
 function isLocalPath(token: string): boolean {
   return existsSync(token) && statSync(token).isFile();
-}
-
-/**
- * Format a single validation issue as a one-line string (mirrors
- * `dataset upload` so the error surface stays consistent across both
- * entry points into the same upload pipeline).
- */
-function formatIssue(issue: ValidationResult["errors"][number]): string {
-  const where: string[] = [];
-  if (issue.line !== undefined) where.push(`line ${issue.line}`);
-  if (issue.path) where.push(issue.path);
-  const tag = where.length ? ` [${where.join(" · ")}]` : "";
-  return `  ${issue.severity.toUpperCase()} ${issue.code}${tag}: ${issue.message}`;
 }
 
 interface ResolvedDataset {
@@ -333,10 +320,22 @@ export default defineCommand({
     if (flags.maxLength !== undefined) hp.max_length = flags.maxLength as number;
 
     // batch_size: clamp to [8, 1024] (server hard constraint, undocumented).
+    // Surface the clamp on stderr instead of silently rewriting the user's
+    // value — otherwise the confirmation panel below would show a number the
+    // user never typed, with no audit trail. (Range observed on common SFT
+    // / SFT-LoRA training types; some bases like qwen3.6-flash report a wider
+    // range, so the warning explicitly mentions "server range".)
     if (flags.batchSize !== undefined) {
-      let batchSize = flags.batchSize as number;
+      const requested = flags.batchSize as number;
+      let batchSize = requested;
       if (batchSize < 8) batchSize = 8;
       if (batchSize > 1024) batchSize = 1024;
+      if (batchSize !== requested && !config.quiet) {
+        process.stderr.write(
+          `warning: --batch-size ${requested} clamped to ${batchSize} ` +
+            `(server range [8, 1024] for the common training types).\n`,
+        );
+      }
       hp.batch_size = batchSize;
     }
 
@@ -388,8 +387,49 @@ export default defineCommand({
       }
     }
 
-    // Upload local paths now that the gate has cleared them. This swaps the
-    // placeholder path entries in `training.fileIds` / `validation?.fileIds`
+    // Pre-flight capability check: confirm the model actually supports the
+    // requested training type BEFORE any upload, so a wrong --model /
+    // --training-type combo doesn't burn storage on datasets that will never
+    // be trained against. listFoundationModels is a public API (no console
+    // login required); on lookup failure (network / 401 / etc.) we fall back
+    // to letting the server decide rather than blocking the submit.
+    if (!config.dryRun) {
+      let capability: Awaited<ReturnType<typeof fetchModelCapability>> | undefined;
+      try {
+        capability = await fetchModelCapability(config, model!);
+      } catch (error) {
+        if (!config.quiet) {
+          process.stderr.write(
+            `warning: model capability lookup failed (${(error as Error).message}); ` +
+              "proceeding without local pre-flight.\n",
+          );
+        }
+      }
+      if (capability && !listSupportedTrainingTypes(capability).includes(trainingType)) {
+        const supported = listSupportedTrainingTypes(capability);
+        throw new BailianError(
+          `Model "${model}" does not support training type "${trainingType}".`,
+          ExitCode.USAGE,
+          supported.length
+            ? `This model supports: ${supported.join(", ")}.`
+            : "This model reports no supported training types.",
+        );
+      }
+    }
+
+    // Non-interactive guard — moved BEFORE upload. In CI / scripted mode the
+    // user must opt in via --yes; otherwise we must not silently consume quota
+    // OR upload any file. (Local validation is still allowed to run.)
+    if (!config.dryRun && !flags.yes && config.nonInteractive) {
+      throw new BailianError(
+        "Pass --yes to confirm fine-tune creation in non-interactive mode.",
+        ExitCode.USAGE,
+      );
+    }
+
+    // Upload local paths now that pre-flight (validation, batch-size gate,
+    // capability check, non-interactive guard) has cleared them. This swaps
+    // the placeholder path entries in `training.fileIds` / `validation?.fileIds`
     // for real file-ids, so the body and confirmation panel below see ids.
     let uploadedTraining: DatasetFile[] = [];
     let uploadedValidation: DatasetFile[] = [];
@@ -434,23 +474,8 @@ export default defineCommand({
       return;
     }
 
-    // Pre-flight capability check: confirm the model actually supports the
-    // requested training type before consuming quota. listFoundationModels is a
-    // public API (no console login needed); on any lookup failure we fall back
-    // to letting the server decide rather than blocking the submit.
-    const capability = await fetchModelCapability(config, model!);
-    if (capability && !listSupportedTrainingTypes(capability).includes(trainingType)) {
-      const supported = listSupportedTrainingTypes(capability);
-      throw new BailianError(
-        `Model "${model}" does not support training type "${trainingType}".`,
-        ExitCode.USAGE,
-        supported.length
-          ? `This model supports: ${supported.join(", ")}.`
-          : "This model reports no supported training types.",
-      );
-    }
-
     // Confirmation panel — destructive in the sense that it consumes quota.
+    // (Capability check and non-interactive guard already ran pre-upload.)
     if (!flags.yes && !config.nonInteractive && !config.quiet) {
       process.stderr.write("Create fine-tune job:\n");
       process.stderr.write(`  Model:          ${body.model}\n`);
@@ -480,11 +505,6 @@ export default defineCommand({
         emitBare("Cancelled.");
         return;
       }
-    } else if (!flags.yes && config.nonInteractive) {
-      throw new BailianError(
-        "Pass --yes to confirm fine-tune creation in non-interactive mode.",
-        ExitCode.USAGE,
-      );
     }
 
     const response = await createFineTune(config, body);

@@ -47,8 +47,10 @@ export interface DatasetGetResponse {
 /**
  * POST /compatible-mode/v1/files response (OpenAI-compatible).
  *
- * Flat shape — there is no `data` envelope. `id` is the file handle to pass to
- * fine-tune jobs; `purpose` is echoed back so callers can confirm it landed.
+ * Flat shape — there is no `data` envelope on success. `id` is the file handle
+ * to pass to fine-tune jobs; `purpose` is echoed back so callers can confirm
+ * it landed. On business-level failure (HTTP 200 + `data.failed_uploads`)
+ * `id` is absent and `data.failed_uploads[]` carries the platform's reason.
  */
 export interface DatasetUploadResponse {
   request_id?: string;
@@ -66,6 +68,19 @@ export interface DatasetUploadResponse {
   status?: string;
   /** Creation timestamp (Unix seconds). */
   created_at?: number;
+  /**
+   * Failure envelope: HTTP 200 + business failure. When present the upload
+   * did NOT produce a file_id; callers must treat this as an error. Common
+   * cause: server-side schema rejection (e.g. malformed JSONL slipped past
+   * the local pre-flight).
+   */
+  data?: {
+    failed_uploads?: Array<{
+      code?: string;
+      message?: string;
+      file_name?: string;
+    }>;
+  };
 }
 
 /** DELETE /api/v1/files/{file_id} response. */

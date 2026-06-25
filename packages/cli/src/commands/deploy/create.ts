@@ -2,7 +2,6 @@ import {
   defineCommand,
   detectOutputFormat,
   createDeployment,
-  listDeployableModels,
   BailianError,
   ExitCode,
   type Config,
@@ -10,25 +9,16 @@ import {
 } from "bailian-cli-core";
 import { failIfMissing, promptConfirm } from "../../output/prompt.ts";
 import { emitResult, emitBare } from "../../output/output.ts";
+import { pickPlanStrategy } from "./plans.ts";
 
 /**
  * `bl deploy create` — create a model deployment.
  *
- * Plan handling:
- *   - lora (default): Token-billed; `capacity` is required by API but ignored.
- *   - ptu:           Token-billed (provisioned throughput); requires
- *                     `ptu_capacity` {input_tpm, output_tpm}. The doc says
- *                     these default to 10000/1000 when omitted, but the platform
- *                     currently rejects creation without them ("Miss ptu capacity
- *                     info"), so the CLI requires --input-tpm/--output-tpm for ptu.
- *   - mu:             Unit-based; requires `capacity`, `billing_method` and a
- *                     `template_id`. `billing_method` defaults to "POST_PAY"
- *                     (the only value the platform currently supports). If
- *                     --template-id is omitted, the CLI auto-picks the template
- *                     returned by GET /deployments/models whose charge_type
- *                     matches billing_method; --capacity defaults to that
- *                     template's `capacity_unit_per_instance` (the smallest
- *                     valid multiple of base_capacity).
+ * Plan-specific behaviour (required flags / body assembly / confirm rows /
+ * auto-pick) lives in `plans.ts` (`PlanStrategy` + `STRATEGIES`). This file
+ * only handles the shared envelope: argument parsing, dispatch, dry-run,
+ * confirmation prompt, and result formatting. Adding a new plan = one entry
+ * in the strategy table; nothing here changes.
  *
  * `--model` (model identifier) and `--name` (console display name) are required.
  */
@@ -116,119 +106,22 @@ export default defineCommand({
     if (!name) failIfMissing("name", "bl deploy create --model <model_name> --name <display_name>");
 
     const plan = (flags.plan as string | undefined) || "lora";
-    let templateId = flags.templateId as string | undefined;
-    const inputTpm = flags.inputTpm as number | undefined;
-    const outputTpm = flags.outputTpm as number | undefined;
-    const thinkingOutputTpm = flags.thinkingOutputTpm as number | undefined;
-    // mu-only: capacity (resource units) and billing_method (default POST_PAY,
-    // the only value the platform currently supports per the deploy doc).
-    let capacity = flags.capacity as number | undefined;
-    const billingMethod = (flags.billingMethod as string | undefined) || "POST_PAY";
-
     const format = detectOutputFormat(config.output);
 
-    // Validate plan. The catalog lists plan names like `ptu_v2`, but the create
-    // endpoint only accepts `ptu` — so reject anything outside the supported set
-    // with a clear message instead of letting the API fail with a vague error.
-    const SUPPORTED_PLANS = ["lora", "ptu", "mu"] as const;
-    if (!(SUPPORTED_PLANS as readonly string[]).includes(plan)) {
-      throw new BailianError(
-        `Unsupported plan "${plan}". Supported plans: ${SUPPORTED_PLANS.join(", ")}.`,
-        ExitCode.USAGE,
-      );
-    }
-
-    // For plan=ptu, require throughput limits. The platform rejects creation
-    // without an explicit ptu_capacity ("Miss ptu capacity info") even though
-    // the doc lists 10000/1000 defaults.
-    if (plan === "ptu") {
-      if (inputTpm === undefined)
-        failIfMissing(
-          "input-tpm",
-          "bl deploy create --plan ptu --model <m> --name <n> --input-tpm <n> --output-tpm <n>",
-        );
-      if (outputTpm === undefined)
-        failIfMissing(
-          "output-tpm",
-          "bl deploy create --plan ptu --model <m> --name <n> --input-tpm <n> --output-tpm <n>",
-        );
-    }
-
-    // For plan=mu, auto-pick the template (preferring the one whose charge_type
-    // matches billing_method) and default capacity to the template's unit.
-    // Skip the catalog lookup when the user supplies --template-id explicitly —
-    // the model may be a fine-tuned custom model not present in the base
-    // catalog, and the lookup would otherwise throw a spurious error.
-    let autoPickedTemplate = false;
-    if (plan === "mu" && !config.dryRun && !templateId) {
-      try {
-        const resp = await listDeployableModels(config, {
-          modelSource: "base",
-          pageSize: 100,
-          version: "v1.0",
-        });
-        const payload = resp.output ?? resp.data;
-        const target = (payload?.models ?? []).find((m) => m.model_name === model);
-        const muPlan = target?.plans?.find((p) => p.plan === "mu");
-        const templates = muPlan?.templates ?? [];
-        if (templates.length === 0) {
-          throw new BailianError(
-            `No mu-plan template found for model "${model}". ` +
-              `Run \`bl deploy models --source base\` to inspect available models, ` +
-              `or pass --template-id explicitly.`,
-            ExitCode.USAGE,
-          );
-        }
-        // POST_PAY → post_paid template; fall back to the first available.
-        const wantChargeType = billingMethod === "POST_PAY" ? "post_paid" : "pre_paid";
-        const picked = templates.find((t) => t.charge_type === wantChargeType) ?? templates[0];
-        if (!picked?.template_id) {
-          throw new BailianError(
-            `No mu-plan template found for model "${model}". ` +
-              `Run \`bl deploy models --source base\` to inspect available models, ` +
-              `or pass --template-id explicitly.`,
-            ExitCode.USAGE,
-          );
-        }
-        templateId = picked.template_id;
-        autoPickedTemplate = true;
-        // capacity must be a multiple of base_capacity; default to the template's
-        // unit (capacity_unit_per_instance) which is the smallest valid value.
-        if (capacity === undefined) {
-          capacity = picked.roles?.unified?.capacity_unit_per_instance ?? 1;
-        }
-      } catch (e) {
-        if (e instanceof BailianError) throw e;
-        throw new BailianError(
-          `Failed to auto-pick template for plan=mu: ${(e as Error).message}. ` +
-            `Pass --template-id explicitly.`,
-          ExitCode.USAGE,
-        );
-      }
-    }
-
+    // Plan-specific behaviour is owned by `plans.ts`. The strategy:
+    //   1. Validates required flags (USAGE error if missing).
+    //   2. Resolves the body fragment + confirm rows (mu may auto-pick a
+    //      template from the deployable-models catalog).
+    // Anything outside the strategy table is rejected with a USAGE error.
+    const strategy = pickPlanStrategy(plan);
+    strategy.validateFlags(flags);
+    const resolved = await strategy.resolve({ config, flags, model: model!, name: name! });
     const body: Record<string, unknown> = {
       model_name: model!,
       name: name!,
       plan,
+      ...resolved.body,
     };
-    if (plan === "ptu") {
-      const ptuCapacity: Record<string, number> = {
-        input_tpm: inputTpm!,
-        output_tpm: outputTpm!,
-      };
-      if (thinkingOutputTpm !== undefined) ptuCapacity.thinking_output_tpm = thinkingOutputTpm;
-      body.ptu_capacity = ptuCapacity;
-    } else if (plan === "mu") {
-      // mu requires capacity, billing_method and template_id (auto-picked above
-      // if --template-id was not supplied).
-      body.capacity = capacity ?? 1;
-      body.billing_method = billingMethod;
-      if (templateId) body.template_id = templateId;
-    } else {
-      // lora: capacity required by API but ignored (per the working example).
-      body.capacity = 1;
-    }
 
     if (config.dryRun) {
       emitResult({ action: "deploy.create", body }, format);
@@ -240,22 +133,9 @@ export default defineCommand({
         "Create deployment:",
         `  model:        ${model}`,
         `  name:         ${name}`,
-        `  plan:         ${plan}${plan === "lora" ? " (Token-billed)" : plan === "ptu" ? " (Token-billed, provisioned throughput)" : ""}`,
+        `  plan:         ${plan}${resolved.planLabelSuffix ?? ""}`,
+        ...resolved.confirmRows,
       ];
-      if (templateId) {
-        const hint = autoPickedTemplate ? " (auto-picked)" : "";
-        lines.push(`  template_id:  ${templateId}${hint}`);
-      }
-      if (plan === "mu") {
-        lines.push(`  capacity:     ${capacity ?? 1}`);
-        lines.push(`  billing_method: ${billingMethod}`);
-      }
-      if (plan === "ptu") {
-        lines.push(`  input_tpm:    ${inputTpm}`);
-        lines.push(`  output_tpm:   ${outputTpm}`);
-        if (thinkingOutputTpm !== undefined)
-          lines.push(`  thinking_output_tpm: ${thinkingOutputTpm}`);
-      }
       process.stderr.write(lines.join("\n") + "\n");
       const ok = await promptConfirm({ message: "Proceed?", initialValue: true });
       if (!ok) {

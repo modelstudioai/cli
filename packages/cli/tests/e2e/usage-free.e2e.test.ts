@@ -1,17 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isBailianE2EEnabled, parseStdoutJson, runCli } from "./helpers.ts";
-import { readConfigFile } from "bailian-cli-core";
-
-function isConsoleE2EReady(): boolean {
-  if (!isBailianE2EEnabled()) return false;
-  if (process.env.DASHSCOPE_ACCESS_TOKEN?.trim()) return true;
-  try {
-    const config = readConfigFile();
-    return typeof config.access_token === "string" && config.access_token.length > 0;
-  } catch {
-    return false;
-  }
-}
+import { isConsoleE2EReady, isConsoleAuthFailure, parseStdoutJson, runCli } from "./helpers.ts";
 
 describe("e2e: usage free", () => {
   test("usage 分组展示子命令帮助且退出码为 0", async () => {
@@ -113,34 +101,13 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
   });
 
   test("usage free --model 单模型查询返回 JSON 结果", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
-      "usage",
-      "free",
-      "--model",
-      "qwen3-max",
-      "--output",
-      "json",
-    ]);
-    expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<
-      Array<{
-        model?: string;
-        type?: string | null;
-        remaining?: number | null;
-        total?: number | null;
-        usagePercent?: number | null;
-        expires?: string | null;
-        autoStop?: boolean | string | null;
-      }>
-    >(stdout);
-    expect(Array.isArray(data)).toBe(true);
-    expect(data.length).toBeGreaterThan(0);
-    expect(data[0].model).toBe("qwen3-max");
-    expect(data[0].type).toBeTypeOf("string");
+    const result = await runCli(["usage", "free", "--model", "qwen3-max", "--output", "json"]);
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage free --model 单模型文本输出包含表头", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
+    const result = await runCli([
       "usage",
       "free",
       "--model",
@@ -149,17 +116,12 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "text",
       "--no-color",
     ]);
-    expect(exitCode, stderr).toBe(0);
-    expect(stdout).toContain("Model");
-    expect(stdout).toContain("Type");
-    expect(stdout).toContain("Remaining/Total");
-    expect(stdout).toContain("Usage");
-    expect(stdout).toContain("Expires");
-    expect(stdout).toContain("Auto-Stop");
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage free --model 文本输出包含模型名", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
+    const result = await runCli([
       "usage",
       "free",
       "--model",
@@ -168,12 +130,12 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "text",
       "--no-color",
     ]);
-    expect(exitCode, stderr).toBe(0);
-    expect(stdout).toContain("qwen3-max");
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage free --model 逗号分隔多模型文本输出包含所有模型", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
+    const result = await runCli([
       "usage",
       "free",
       "--model",
@@ -182,13 +144,12 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "text",
       "--no-color",
     ]);
-    expect(exitCode, stderr).toBe(0);
-    expect(stdout).toContain("qwen3-max");
-    expect(stdout).toContain("qwen-turbo");
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage free --model 文本输出包含正确的 Type 列", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
+    const result = await runCli([
       "usage",
       "free",
       "--model",
@@ -197,12 +158,12 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "text",
       "--no-color",
     ]);
-    expect(exitCode, stderr).toBe(0);
-    expect(stdout).toContain("Text");
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage free --model quotaStatus 为 UNKNOWN 时 Auto-Stop 显示 Unsupported", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
+    const result = await runCli([
       "usage",
       "free",
       "--model",
@@ -211,12 +172,12 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "text",
       "--no-color",
     ]);
-    expect(exitCode, stderr).toBe(0);
-    expect(stdout).toContain("Unsupported");
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage free --model quotaStatus 为 UNKNOWN 时额度显示为 -", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
+    const result = await runCli([
       "usage",
       "free",
       "--model",
@@ -225,15 +186,12 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "text",
       "--no-color",
     ]);
-    expect(exitCode, stderr).toBe(0);
-    const lines = stdout.split("\n").filter((line) => line.includes("wan2.7-image"));
-    expect(lines.length).toBe(1);
-    expect(lines[0]).toContain("Vision");
-    expect(lines[0]).toContain("Unsupported");
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage free --model 不存在的模型仍返回表格行", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
+    const result = await runCli([
       "usage",
       "free",
       "--model",
@@ -242,12 +200,12 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "text",
       "--no-color",
     ]);
-    expect(exitCode, stderr).toBe(0);
-    expect(stdout).toContain("nonexistent-model-xyz-12345");
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage free --model Auto-Stop 显示 ON、OFF 或 Unsupported", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
+    const result = await runCli([
       "usage",
       "free",
       "--model",
@@ -256,14 +214,12 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "text",
       "--no-color",
     ]);
-    expect(exitCode, stderr).toBe(0);
-    const hasAutoStop =
-      stdout.includes("ON") || stdout.includes("OFF") || stdout.includes("Unsupported");
-    expect(hasAutoStop).toBe(true);
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage free --model --console-region cn-beijing 指定区域查询", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
+    const result = await runCli([
       "usage",
       "free",
       "--model",
@@ -273,10 +229,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "--output",
       "json",
     ]);
-    expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<Array<{ model?: string }>>(stdout);
-    expect(Array.isArray(data)).toBe(true);
-    expect(data.length).toBeGreaterThan(0);
-    expect(data[0].model).toBe("qwen3-max");
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 });

@@ -17,6 +17,8 @@ import {
   datasetFileEndpoint,
 } from "../client/endpoints.ts";
 import type { Config } from "../config/schema.ts";
+import { BailianError } from "../errors/base.ts";
+import { ExitCode } from "../errors/codes.ts";
 import type {
   DatasetFile,
   DatasetUploadResponse,
@@ -81,14 +83,26 @@ export async function uploadDataset(
       gmt_create: body.created_at ? new Date(body.created_at * 1000).toISOString() : undefined,
     };
   }
-  // Last-resort: synthesize a minimal record from the request so callers don't
-  // crash on undefined. The CLI surfaces request_id via verbose anyway.
-  return {
-    file_id: body.id ?? "",
-    name: fileName,
-    size: stat.size,
-    purpose,
-  };
+  // No id in response → upload reported HTTP 200 but produced no usable record
+  // (the platform sometimes returns 200 + a business-failure body, e.g.
+  // `data.failed_uploads[].{code,message}`). Surface this loudly instead of
+  // synthesizing a fake-success record with file_id="" that the caller would
+  // then forward to `finetune create` as a phantom training file.
+  const failedUploads = body.data?.failed_uploads;
+  if (Array.isArray(failedUploads) && failedUploads.length > 0) {
+    const first = failedUploads[0] ?? {};
+    const code = first.code ? ` [${first.code}]` : "";
+    throw new BailianError(
+      `Dataset upload failed${code}: ${first.message ?? "no message returned"}`,
+      ExitCode.GENERAL,
+      `Server reported failure for ${fileName}. Re-run with --verbose to see the raw response.`,
+    );
+  }
+  throw new BailianError(
+    `Dataset upload of ${fileName} returned no file_id (HTTP 200 with empty payload).`,
+    ExitCode.GENERAL,
+    "The platform accepted the request but did not allocate a file_id. Retry the upload; if it recurs, contact platform support with the request id.",
+  );
 }
 
 export interface DatasetListParams {

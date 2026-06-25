@@ -4,27 +4,16 @@ import {
   uploadDataset,
   validateDataset,
   parseDatasetSchemaFlag,
+  formatIssue,
   MAX_DATASET_BYTES,
   BailianError,
   ExitCode,
   type Config,
   type GlobalFlags,
   type DatasetFile,
-  type ValidationResult,
 } from "bailian-cli-core";
 import { failIfMissing } from "../../output/prompt.ts";
 import { emitResult, emitBare } from "../../output/output.ts";
-
-/**
- * Format a single validation issue as a one-line string.
- */
-function formatIssue(issue: ValidationResult["errors"][number]): string {
-  const where: string[] = [];
-  if (issue.line !== undefined) where.push(`line ${issue.line}`);
-  if (issue.path) where.push(issue.path);
-  const tag = where.length ? ` [${where.join(" · ")}]` : "";
-  return `  ${issue.severity.toUpperCase()} ${issue.code}${tag}: ${issue.message}`;
-}
 
 export default defineCommand({
   name: "dataset upload",

@@ -5,6 +5,7 @@ export {
   listSupportedFormats,
 } from "./registry.ts";
 export { MAX_DATASET_BYTES, parseDatasetSchemaFlag } from "./common.ts";
+export { formatIssue } from "./format.ts";
 export type {
   ValidatorSpec,
   ValidateOpts,

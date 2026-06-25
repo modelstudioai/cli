@@ -7,6 +7,7 @@ export {
   listSupportedFormats,
   MAX_DATASET_BYTES,
   parseDatasetSchemaFlag,
+  formatIssue,
 } from "./validate/index.ts";
 export type {
   ValidatorSpec,

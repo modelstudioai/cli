@@ -3,23 +3,15 @@ import {
   detectOutputFormat,
   validateDataset,
   parseDatasetSchemaFlag,
+  formatIssue,
   BailianError,
   ExitCode,
   type Config,
   type GlobalFlags,
-  type ValidationIssue,
   type ValidationResult,
 } from "bailian-cli-core";
 import { failIfMissing } from "../../output/prompt.ts";
 import { emitResult, emitBare } from "../../output/output.ts";
-
-function formatIssue(issue: ValidationIssue): string {
-  const where: string[] = [];
-  if (issue.line !== undefined) where.push(`line ${issue.line}`);
-  if (issue.path) where.push(issue.path);
-  const tag = where.length ? ` [${where.join(" · ")}]` : "";
-  return `  ${issue.severity.toUpperCase()} ${issue.code}${tag}: ${issue.message}`;
-}
 
 function formatStats(result: ValidationResult): string[] {
   const out: string[] = [];
