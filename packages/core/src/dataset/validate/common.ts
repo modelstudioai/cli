@@ -75,11 +75,11 @@ export function emptyStats(): ValidationStats {
 export function parseDatasetSchemaFlag(value: string | undefined): DatasetSchema | undefined {
   if (value === undefined || value.trim() === "") return undefined;
   const v = value.trim();
-  if (v === "chatml" || v === "dpo") return v;
+  if (v === "chatml" || v === "dpo" || v === "cpt") return v;
   throw new BailianError(
-    `Unsupported --schema "${value}". Supported: chatml, dpo.`,
+    `Unsupported --schema "${value}". Supported: chatml, dpo, cpt.`,
     ExitCode.USAGE,
-    `Omit --schema to auto-detect per record (a record with chosen/rejected is treated as DPO).`,
+    `Omit --schema to auto-detect per record (chosen/rejected → DPO, text → CPT, else ChatML).`,
   );
 }
 

@@ -159,6 +159,8 @@ bl finetune checkpoints --job-id ft-xxx --output json
 - --datasets / --validations accept either file-ids (from `bl dataset
 - upload`) or local .jsonl paths. Local paths are validated and uploaded
 - first, then their file-ids are submitted — a one-step upload-and-train.
+- Dataset record schema is chosen from --training-type: dpo\* → {messages,
+- chosen, rejected}; cpt → {text} (raw pre-training text); else {messages}.
 - Pre-submit gate: if the training dataset's sample count is not greater
 - than batch_size, the job is rejected before upload or quota consumption
 - (the platform would otherwise fail ~10 min in, after data processing).

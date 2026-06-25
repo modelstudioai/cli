@@ -275,6 +275,8 @@ export default defineCommand({
     "--datasets / --validations accept either file-ids (from `bl dataset",
     "upload`) or local .jsonl paths. Local paths are validated and uploaded",
     "first, then their file-ids are submitted — a one-step upload-and-train.",
+    "Dataset record schema is chosen from --training-type: dpo* → {messages,",
+    "chosen, rejected}; cpt → {text} (raw pre-training text); else {messages}.",
     "Pre-submit gate: if the training dataset's sample count is not greater",
     "than batch_size, the job is rejected before upload or quota consumption",
     "(the platform would otherwise fail ~10 min in, after data processing).",
@@ -298,8 +300,13 @@ export default defineCommand({
         `Supported values: ${TRAINING_TYPES_CLI.join(", ")} (default: ${DEFAULT_TRAINING_TYPE}).`,
       );
     }
-    // dpo / dpo-lora → "dpo" schema (strict chosen/rejected); else ChatML.
-    const datasetSchema: DatasetSchema = trainingType.startsWith("dpo") ? "dpo" : "chatml";
+    // dpo / dpo-lora → "dpo" schema (strict chosen/rejected); cpt → "cpt"
+    // (raw {text} records); else ChatML ({messages}).
+    const datasetSchema: DatasetSchema = trainingType.startsWith("dpo")
+      ? "dpo"
+      : trainingType === "cpt"
+        ? "cpt"
+        : "chatml";
 
     const training = await analyzeDatasetTokens(config, datasetsRaw!, "datasets", datasetSchema);
     const trainingFileIds = training.fileIds;

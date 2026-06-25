@@ -28,7 +28,7 @@ export default defineCommand({
   description: "Locally validate a dataset file (.jsonl) without uploading",
   // 纯本地校验，不触网、不需 API key（与 `pipeline validate` 一致）。
   skipDefaultApiKeySetup: true,
-  usage: "bl dataset validate --file <path> [--full-validate] [--schema <chatml|dpo>]",
+  usage: "bl dataset validate --file <path> [--full-validate] [--schema <chatml|dpo|cpt>]",
   options: [
     { flag: "--file <path>", description: "Local .jsonl dataset file", required: true },
     {
@@ -39,12 +39,13 @@ export default defineCommand({
     {
       flag: "--schema <s>",
       description:
-        'Record schema: "chatml" (SFT) or "dpo" (requires chosen/rejected). Default auto-detects per record.',
+        'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), or "cpt" (raw text). Default auto-detects per record.',
     },
   ],
   examples: [
     "bl dataset validate --file train.jsonl",
     "bl dataset validate --file dpo.jsonl --schema dpo",
+    "bl dataset validate --file cpt.jsonl --schema cpt",
     "bl dataset validate --file eval.jsonl --full-validate",
     "bl dataset validate --file train.jsonl --output json",
   ],
@@ -52,11 +53,12 @@ export default defineCommand({
     "Default scan: every line gets a structural check, then ~160 lines (front 50,",
     "evenly spaced 100, last 10) are JSON.parsed against the active schema.",
     "Schemas: chatml = {messages:[...]} (SFT); dpo = {messages:[...], chosen,",
-    "rejected} where chosen/rejected are single assistant messages. With no",
-    "--schema, a record carrying chosen/rejected is validated as DPO; pass",
-    "--schema dpo to require chosen/rejected on every record (strict), or",
-    "--schema chatml to ignore preference fields.",
-    "Use --full-validate to JSON.parse every line.",
+    "rejected} where chosen/rejected are single assistant messages; cpt =",
+    '{text:"..."} (continual pre-training, raw text). With no --schema, a',
+    "record carrying chosen/rejected is validated as DPO, one with text (and no",
+    "messages) as CPT, otherwise as ChatML. Pass --schema dpo / cpt to require",
+    "that shape on every record (strict), or --schema chatml to ignore the",
+    "preference / text fields. Use --full-validate to JSON.parse every line.",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const filePath = flags.file as string | undefined;

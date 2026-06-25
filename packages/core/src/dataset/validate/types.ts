@@ -22,17 +22,20 @@ export interface ValidateOpts {
    *   - `"chatml"` — `{messages: [...]}` (SFT). `chosen`/`rejected` ignored.
    *   - `"dpo"`    — `{messages: [...], chosen: {role,content}, rejected: {...}}`.
    *                   Every record MUST carry `chosen` + `rejected`.
+   *   - `"cpt"`    — `{text: "..."}` (continual pre-training). Raw text only,
+   *                   no `messages[]`.
    *   - `undefined` — auto-detect per record: a record with `chosen` or
-   *                   `rejected` is validated as DPO, otherwise as ChatML.
-   * `finetune create` sets this from `--training-type` (dpo* → "dpo") so a DPO
-   * job with malformed preference pairs fails at validate time, not on the
+   *                   `rejected` is validated as DPO, one with `text` (and no
+   *                   `messages`) as CPT, otherwise as ChatML.
+   * `finetune create` sets this from `--training-type` (dpo* → "dpo",
+   * cpt → "cpt") so a malformed dataset fails at validate time, not on the
    * platform ten minutes in.
    */
   schema?: DatasetSchema;
 }
 
 /** The schemas a `.jsonl` record can be validated against. */
-export type DatasetSchema = "chatml" | "dpo";
+export type DatasetSchema = "chatml" | "dpo" | "cpt";
 
 export type ValidationSeverity = "error" | "warning";
 

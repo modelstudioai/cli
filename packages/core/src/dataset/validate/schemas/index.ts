@@ -14,10 +14,13 @@
 import type { DatasetSchema } from "../types.ts";
 import type { RecordSchemaSpec } from "./types.ts";
 import { chatmlSchema } from "./chatml.ts";
+import { cptSchema } from "./cpt.ts";
 import { dpoSchema } from "./dpo.ts";
 
-// Order matters: DPO before ChatML (ChatML is the catch-all fallback).
-export const RECORD_SCHEMAS: RecordSchemaSpec[] = [dpoSchema, chatmlSchema];
+// Order matters: DPO (chosen/rejected) and CPT (text) before ChatML (the
+// catch-all fallback). Each keys off a distinguishing field so the three
+// partition cleanly — DPO never looks like CPT, etc.
+export const RECORD_SCHEMAS: RecordSchemaSpec[] = [dpoSchema, cptSchema, chatmlSchema];
 
 /**
  * Pick the right schema for a single parsed record.

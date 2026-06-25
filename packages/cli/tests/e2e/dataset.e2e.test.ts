@@ -103,6 +103,44 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
     expect(data.stats.totalRecords).toBe(2);
   });
 
+  test("dataset validate 自动识别 CPT 并校验 {text} 记录", async () => {
+    // No --schema: a record carrying `text` (and no `messages`) is auto-detected
+    // as CPT and the valid fixture passes.
+    const file = join(__dirname, ".dataset-cpt-valid.jsonl");
+    const { stdout, stderr, exitCode } = await runCli([
+      "dataset",
+      "validate",
+      "--file",
+      file,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ valid: boolean; stats: { totalRecords?: number } }>(stdout);
+    expect(data.valid).toBe(true);
+    expect(data.stats.totalRecords).toBe(2);
+  });
+
+  test("dataset validate --schema cpt 拒绝缺失 text 的记录", async () => {
+    const file = join(__dirname, ".dataset-valid.jsonl"); // SFT {messages}, no text
+    const { stdout, exitCode } = await runCli([
+      "dataset",
+      "validate",
+      "--file",
+      file,
+      "--schema",
+      "cpt",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).not.toBe(0);
+    const data = parseStdoutJson<{ valid: boolean; errors: { code: string; path?: string }[] }>(
+      stdout,
+    );
+    expect(data.valid).toBe(false);
+    expect(data.errors.map((e) => e.code)).toContain("MISSING_TEXT");
+  });
+
   test("dataset validate --schema dpo 拒绝缺失 rejected 的记录", async () => {
     const file = join(__dirname, ".dataset-dpo-invalid.jsonl");
     const { stdout, exitCode } = await runCli([

@@ -19,7 +19,7 @@ export default defineCommand({
   name: "dataset upload",
   description: "Upload a dataset file (.jsonl) to Bailian",
   usage:
-    "bl dataset upload --file <path> [--purpose <name>] [--schema <chatml|dpo>] [--no-validate] [--full-validate]",
+    "bl dataset upload --file <path> [--purpose <name>] [--schema <chatml|dpo|cpt>] [--no-validate] [--full-validate]",
   options: [
     {
       flag: "--file <path>",
@@ -33,7 +33,7 @@ export default defineCommand({
     {
       flag: "--schema <s>",
       description:
-        'Record schema: "chatml" (SFT) or "dpo" (requires chosen/rejected). Default auto-detects per record.',
+        'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), or "cpt" (raw text). Default auto-detects per record.',
     },
     {
       flag: "--no-validate",
@@ -49,17 +49,20 @@ export default defineCommand({
   examples: [
     "bl dataset upload --file train.jsonl",
     "bl dataset upload --file dpo.jsonl --schema dpo",
+    "bl dataset upload --file cpt.jsonl --schema cpt",
     "bl dataset upload --file eval.jsonl --purpose evaluation",
     "bl dataset upload --file train.jsonl --full-validate",
     "bl dataset upload --file train.jsonl --no-validate",
   ],
   notes: [
-    "Only .jsonl is supported in this release. Two record schemas are",
+    "Only .jsonl is supported in this release. Three record schemas are",
     "recognized: chatml = {messages:[...]} (SFT); dpo = {messages:[...],",
-    "chosen, rejected} where chosen/rejected are single assistant messages.",
-    "With no --schema, a record carrying chosen/rejected is validated as DPO;",
-    "pass --schema dpo to require it on every record, or --schema chatml to",
-    "ignore preference fields. Other purposes may carry a different schema in",
+    "chosen, rejected} where chosen/rejected are single assistant messages;",
+    'cpt = {text:"..."} (continual pre-training, raw text). With no --schema,',
+    "a record carrying chosen/rejected is validated as DPO, one with text (and",
+    "no messages) as CPT, otherwise as ChatML. Pass --schema dpo / cpt to",
+    "require that shape on every record, or --schema chatml to ignore the",
+    "preference / text fields. Other purposes may carry a different schema in",
     "the future and would be served by a purpose-specific validator.",
     "The dataset upload cap is 300MB per file.",
     "Upload uses the OpenAI-compatible /compatible-mode/v1/files endpoint so",

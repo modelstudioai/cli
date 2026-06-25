@@ -109,6 +109,59 @@ describe("validateDataset — DPO schema", () => {
   });
 });
 
+describe("validateDataset — CPT schema", () => {
+  const CPT_OK = '{"text":"The quick brown fox jumps over the lazy dog."}';
+
+  test("valid CPT record passes under auto-detect and --schema cpt", async () => {
+    const p = file("cpt_ok.jsonl", [CPT_OK]);
+    const auto = await validateDataset(p, { fullValidate: true });
+    expect(auto.valid).toBe(true);
+    const cpt = await validateDataset(p, { fullValidate: true, schema: "cpt" });
+    expect(cpt.valid).toBe(true);
+  });
+
+  test("missing text → MISSING_TEXT under --schema cpt", async () => {
+    const p = file("cpt_no_text.jsonl", ['{"title":"doc"}']);
+    const r = await validateDataset(p, { fullValidate: true, schema: "cpt" });
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("MISSING_TEXT");
+  });
+
+  test("non-string text → INVALID_TEXT", async () => {
+    const p = file("cpt_bad_text.jsonl", ['{"text":42}']);
+    const r = await validateDataset(p, { fullValidate: true, schema: "cpt" });
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("INVALID_TEXT");
+  });
+
+  test("empty / whitespace-only text → EMPTY_TEXT", async () => {
+    const p = file("cpt_empty.jsonl", ['{"text":"   "}']);
+    const r = await validateDataset(p, { fullValidate: true, schema: "cpt" });
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("EMPTY_TEXT");
+  });
+
+  test("auto-detect routes a {text} record to CPT, not ChatML", async () => {
+    // A CPT record has no `messages`; under auto-detect it must NOT produce a
+    // ChatML MISSING_MESSAGES error — it should be validated as CPT and pass.
+    const p = file("cpt_auto.jsonl", [CPT_OK]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+    expect(codes(r).errors).not.toContain("MISSING_MESSAGES");
+  });
+
+  test("SFT record with a stray text field still routes to ChatML", async () => {
+    // {messages, text} is ambiguous; CPT detect requires text AND no messages,
+    // so this falls through to ChatML and validates as SFT (text ignored).
+    const p = file("mixed.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"yo"}],"text":"noise"}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+    expect(codes(r).errors).toEqual([]);
+  });
+});
+
 describe("parseDatasetSchemaFlag", () => {
   test("undefined / empty → undefined (auto)", () => {
     expect(parseDatasetSchemaFlag(undefined)).toBeUndefined();
@@ -116,9 +169,10 @@ describe("parseDatasetSchemaFlag", () => {
     expect(parseDatasetSchemaFlag("  ")).toBeUndefined();
   });
 
-  test("chatml / dpo pass through", () => {
+  test("chatml / dpo / cpt pass through", () => {
     expect(parseDatasetSchemaFlag("chatml")).toBe("chatml");
     expect(parseDatasetSchemaFlag("dpo")).toBe("dpo");
+    expect(parseDatasetSchemaFlag("cpt")).toBe("cpt");
     expect(parseDatasetSchemaFlag("  dpo ")).toBe("dpo");
   });
 
