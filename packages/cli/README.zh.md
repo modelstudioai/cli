@@ -124,6 +124,13 @@ bl workspace list                                     # 列出所有业务空间
 bl quota list                                         # 查看 RPM/TPM 限额（加 --model 过滤）
 bl quota check                                        # 当前用量 vs 限流阈值（加 --model/--period）
 bl quota request --model qwen3.6-plus --tpm 6000000   # 申请临时 TPM 提额
+bl quota history                                      # 查看提额历史记录
+
+# Token Plan 团队版管理（需 AK/SK，见下方认证说明）
+bl token-plan list-seats                                # 查看订阅席位明细
+bl token-plan add-member --account-name dev --org-id org_xxx
+bl token-plan assign-seats --workspace-id ws_xxx --seat-type standard --account-id acc_xxx
+bl token-plan create-key --account-id acc_xxx --workspace-id ws_xxx
 ```
 
 > 更多案例与使用场景：[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)
@@ -153,9 +160,9 @@ bl text chat --api-key sk-xxxxx --message "你好"
 bl auth login --console
 ```
 
-### 阿里云 AK/SK（仅知识库检索）
+### 阿里云 AK/SK（知识库检索与 Token Plan）
 
-`knowledge retrieve` 命令需要阿里云 AccessKey。前往 [RAM 控制台](https://ram.console.aliyun.com/manage/ak) 获取。
+`knowledge retrieve` 与 `token-plan` 命令组需要阿里云 AccessKey。前往 [RAM 控制台](https://ram.console.aliyun.com/manage/ak) 获取。
 
 > 建议：创建 RAM 子账号并授予最小权限，避免使用主账号 AK/SK。
 

@@ -68,6 +68,10 @@ import quotaList from "./quota/list.ts";
 import quotaRequest from "./quota/request.ts";
 import quotaHistory from "./quota/history.ts";
 import quotaCheck from "./quota/check.ts";
+import tokenPlanListSeats from "./token-plan/list-seats.ts";
+import tokenPlanCreateKey from "./token-plan/create-key.ts";
+import tokenPlanAssignSeats from "./token-plan/assign-seats.ts";
+import tokenPlanAddMember from "./token-plan/add-member.ts";
 
 /** Command registry map (no dependency on registry.ts — safe for build-time import). */
 export const commands: Record<string, Command> = {
@@ -138,5 +142,9 @@ export const commands: Record<string, Command> = {
   "quota request": quotaRequest,
   "quota history": quotaHistory,
   "quota check": quotaCheck,
+  "token-plan list-seats": tokenPlanListSeats,
+  "token-plan create-key": tokenPlanCreateKey,
+  "token-plan assign-seats": tokenPlanAssignSeats,
+  "token-plan add-member": tokenPlanAddMember,
   update: update,
 };
