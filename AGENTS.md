@@ -19,31 +19,43 @@ monorepo 多包结构:
 - 产品 smoke: `packages/cli/tests/e2e/smoke.e2e.test.ts`、`packages/rag/tests/e2e/smoke.e2e.test.ts`
 - 一次跑全量 e2e: 根目录 `pnpm test:e2e`
 
+### 命令登记分层
+
+命令**实现**在 `packages/commands/src/commands/`;**路径映射**由各产品 / 测试 fixture 自行维护,库本身不预设:
+
+| 层           | 文件                                               | 作用                                   |
+| ------------ | -------------------------------------------------- | -------------------------------------- |
+| 单命令导出   | `packages/commands/src/index.ts`                   | 从实现文件 re-export,供产品与 e2e 引用 |
+| bl 产品 map  | `packages/cli/src/commands.ts`                     | `bl` 暴露的全量命令路径                |
+| rag 产品 map | `packages/rag/src/main.ts` 内 `commands`           | `rag` 裁剪后的命令路径(如 `retrieve`)  |
+| 契约 e2e map | `packages/commands/tests/fixtures/e2e-commands.ts` | 测试用全量 map,不依赖任何产品包        |
+
+`bl --help` 与 `tools/generate-reference.ts` 读 **`packages/cli/src/commands.ts`**,见 [command-add-remove.md](docs/agents/command-add-remove.md)。
+
 ### `packages/cli` 目录要点
 
 ```
 packages/cli/
 ├── src/main.ts              # bl 入口(createCli + commands)
+├── src/commands.ts          # bl 产品 command map
 └── tests/e2e/smoke.e2e.test.ts
 ```
-
-命令实现见 `packages/commands/src/commands/`;登记在 **`groups.ts`**。`bl --help` 与 `tools/generate-reference.ts` 生成的命令手册同源,见 [command-add-remove.md](docs/agents/command-add-remove.md)。
 
 非代码资产:
 
 - `tools/release/` — 发版自动化（CI 驱动，见 `.github/workflows/publish.yml`）
-- `tools/generate-reference.ts` — 从 `catalog.ts` 生成命令手册到 `skills/bailian-cli/reference/`
+- `tools/generate-reference.ts` — 从 `packages/cli/src/commands.ts` 生成命令手册到 `skills/bailian-cli/reference/`
 - `tools/sync-skill-metadata.ts` — 从 `packages/cli/package.json` 同步 `skills/bailian-cli/SKILL.md` 的 `metadata.version`（与 `generate:reference` 一并由根目录 `pnpm run sync:skill-assets` 及 pre-commit 执行）
 - `README.md` / `README.zh.md` — npm 和 GitHub 主页
 
 约定:
 
 - core 是纯库,不依赖 cli(详见下方通用约定)
-- 文件路径与命令路径一一对应:`packages/commands/src/commands/text/chat.ts` ↔ `bl text chat`
+- 文件路径与命令路径一一对应:`packages/commands/src/commands/text/chat.ts` ↔ `bl text chat`(路径 key 由产品 map 决定,rag 可 remap)
 - 单级命令:`commands/<name>.ts`(如 `update.ts`);两级:`commands/<group>/<action>.ts`
-- 命令登记在 **`packages/commands/src/commands/groups.ts`**
+- 新增命令:实现 + `index.ts` 导出 + `e2e-commands.ts` 登记;bl 暴露则同步 `cli/src/commands.ts`(详见 [command-add-remove.md](docs/agents/command-add-remove.md))
 
-Skill / 命令手册随 `skills/bailian-cli/` 经 `npx skills add modelstudioai/cli` 安装。`tools/generate-reference.ts` 从 catalog 生成命令手册到 `skills/bailian-cli/reference/`(纳入 git);与 `tools/sync-skill-metadata.ts` 一起在 **pre-commit**（`.vite-hooks/pre-commit`）及根脚本 `pnpm run sync:skill-assets` 中执行。
+Skill / 命令手册随 `skills/bailian-cli/` 经 `npx skills add modelstudioai/cli` 安装。`tools/generate-reference.ts` 从 `cli/src/commands.ts` 生成命令手册到 `skills/bailian-cli/reference/`(纳入 git);与 `tools/sync-skill-metadata.ts` 一起在 **pre-commit**（`.vite-hooks/pre-commit`）及根脚本 `pnpm run sync:skill-assets` 中执行。
 
 ## 业务场景索引
 
@@ -79,7 +91,7 @@ core 不应该知道 cli 的存在。具体表现:
 
 - core 不写 stderr,不调 `process.exit`(用 `console.*` 或 `throw`)
 - core 抛的 `BailianError`,hint 字符串不出现 `bl xxx` 命令名
-- core 不写死域名 / region / 追踪参数(URL 集中在 `packages/cli/src/urls.ts`)
+- core 不写死域名 / region / 追踪参数(URL 集中在 `packages/runtime/src/urls.ts`)
 - core 接收 cli 通过 `Config` 注入的 metadata(`clientName` / `clientVersion`)
 
 ### 3. 错误处理边界:CLI 不翻译服务端错误

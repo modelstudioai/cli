@@ -1,8 +1,8 @@
 import { createCli } from "bailian-cli-runtime";
-import { commands } from "../../../cli/src/commands.ts";
+import { e2eCommands } from "./e2e-commands.ts";
 
-// 契约 e2e 专用 canonical 入口：全量 commands，与 bl 命令面一致。
-void createCli(commands, {
+// 契约 e2e 专用 canonical 入口：全量 commands，独立于 bl/rag 产品。
+void createCli(e2eCommands, {
   binName: "bl",
   version: "0.0.0-test",
   clientName: "bailian-cli",

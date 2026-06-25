@@ -4,17 +4,18 @@
 
 E2E 按包分层，与命令实现 / 产品入口解耦：
 
-| 层级             | 路径                                                                                   | 测什么                                                                            |
-| ---------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| **公共基建**     | `packages/commands/tests/e2e/core/`                                                    | `createCliRunner`、skip 判定、输出目录、global-setup                              |
-| **命令契约 e2e** | `packages/commands/tests/e2e/*.e2e.test.ts`                                            | help、缺参、dry-run、**真实集成**；跑 canonical 入口 `tests/fixtures/test-cli.ts` |
-| **产品 smoke**   | `packages/cli/tests/e2e/smoke.e2e.test.ts`、`packages/rag/tests/e2e/smoke.e2e.test.ts` | 版本、root help、命令面裁剪；跑各产品 `src/main.ts`                               |
+| 层级             | 路径                                                                                   | 测什么                                                                                           |
+| ---------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| **公共基建**     | `packages/commands/tests/e2e/core/`                                                    | `createCliRunner`、skip 判定、输出目录、global-setup                                             |
+| **契约 e2e map** | `packages/commands/tests/fixtures/e2e-commands.ts`                                     | 测试用全量 `{ "<path>": command }` map，仅依赖 `bailian-cli-commands` 单命令导出，不绑定任何产品 |
+| **命令契约 e2e** | `packages/commands/tests/e2e/*.e2e.test.ts`                                            | help、缺参、dry-run、**真实集成**；跑 `tests/fixtures/test-cli.ts`（引用上述 fixture map）       |
+| **产品 smoke**   | `packages/cli/tests/e2e/smoke.e2e.test.ts`、`packages/rag/tests/e2e/smoke.e2e.test.ts` | 版本、root help、命令面裁剪；跑各产品 `src/main.ts`                                              |
 
 > `commands/tests/e2e/core` 是 e2e 测试基建，与 `packages/core`（`bailian-cli-core`）无关。
 
 ## 触发条件
 
-- 新增/修改 `packages/commands/src/commands/` 下的 command（`groups.ts` 登记、`defineCommand` 实现、options/usage）
+- 新增/修改 `packages/commands/src/commands/` 下的 command（`src/index.ts` 单命令导出、`defineCommand` 实现、options/usage）
 - 新建或扩展 `packages/commands/tests/e2e/<topic>.e2e.test.ts` 用例
 - 新增/变更产品命令面（bl / rag）时同步维护对应 smoke 用例
 - 为命令补 help / 缺参 / dry-run / 真实集成测试
@@ -88,7 +89,8 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 ## 新增 command 检查清单
 
-- [ ] `packages/commands/src/commands/groups.ts` 登记 + `packages/commands/tests/e2e/<topic>.e2e.test.ts`（新建或扩展）
+- [ ] `packages/commands/src/index.ts` 导出 + `tests/fixtures/e2e-commands.ts` 登记路径 + `packages/commands/tests/e2e/<topic>.e2e.test.ts`（新建或扩展）
+- [ ] 若 bl 也暴露该命令，同步 `packages/cli/src/commands.ts` 产品 map
 - [ ] 若改了 `usage` / `options` / `examples`,跑 `pnpm --filter bailian-cli run generate:reference` 更新 `skills/bailian-cli/reference/` 并提交
 - [ ] 顶层：分组 help + 子命令 `--help`（多子命令则各一条 help）
 - [ ] skip 块：每个 required flag 缺参；可 dry-run 则加一条
