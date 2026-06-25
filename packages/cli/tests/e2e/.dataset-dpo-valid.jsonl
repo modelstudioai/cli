@@ -1,0 +1,2 @@
+{"messages":[{"role":"user","content":"你能帮我写一篇文章吗?"}],"chosen":{"role":"assistant","content":"当然可以，请告诉我具体方向。"},"rejected":{"role":"assistant","content":"可以。"}}
+{"messages":[{"role":"user","content":"安排一下明天的日程?"}],"chosen":{"role":"assistant","content":"当然，请告诉我具体事项。"},"rejected":{"role":"assistant","content":"好的。"}}

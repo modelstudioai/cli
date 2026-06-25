@@ -2,6 +2,7 @@ import {
   defineCommand,
   detectOutputFormat,
   validateDataset,
+  parseDatasetSchemaFlag,
   BailianError,
   ExitCode,
   type Config,
@@ -32,7 +33,7 @@ function formatStats(r: ValidationResult): string[] {
 export default defineCommand({
   name: "dataset validate",
   description: "Locally validate a dataset file (.jsonl) without uploading",
-  usage: "bl dataset validate --file <path> [--full-validate]",
+  usage: "bl dataset validate --file <path> [--full-validate] [--schema <chatml|dpo>]",
   options: [
     { flag: "--file <path>", description: "Local .jsonl dataset file", required: true },
     {
@@ -40,16 +41,26 @@ export default defineCommand({
       description: "JSON.parse every line instead of sampling (slower)",
       type: "boolean",
     },
+    {
+      flag: "--schema <s>",
+      description:
+        'Record schema: "chatml" (SFT) or "dpo" (requires chosen/rejected). Default auto-detects per record.',
+    },
   ],
   examples: [
     "bl dataset validate --file train.jsonl",
+    "bl dataset validate --file dpo.jsonl --schema dpo",
     "bl dataset validate --file eval.jsonl --full-validate",
     "bl dataset validate --file train.jsonl --output json",
   ],
   notes: [
     "Default scan: every line gets a structural check, then ~160 lines (front 50,",
     "evenly spaced 100, last 10) are JSON.parsed against the active schema.",
-    "Today the only registered .jsonl schema is ChatML (messages array).",
+    "Schemas: chatml = {messages:[...]} (SFT); dpo = {messages:[...], chosen,",
+    "rejected} where chosen/rejected are single assistant messages. With no",
+    "--schema, a record carrying chosen/rejected is validated as DPO; pass",
+    "--schema dpo to require chosen/rejected on every record (strict), or",
+    "--schema chatml to ignore preference fields.",
     "Use --full-validate to JSON.parse every line.",
   ],
   async run(config: Config, flags: GlobalFlags) {
@@ -57,14 +68,23 @@ export default defineCommand({
     if (!filePath) failIfMissing("file", "bl dataset validate --file <path>");
 
     const fullValidate = Boolean(flags.fullValidate);
+    const schema = parseDatasetSchemaFlag(flags.schema as string | undefined);
     const format = detectOutputFormat(config.output);
 
     if (config.dryRun) {
-      emitResult({ action: "dataset.validate", file: filePath, full: fullValidate }, format);
+      emitResult(
+        {
+          action: "dataset.validate",
+          file: filePath,
+          full: fullValidate,
+          schema: schema ?? "auto",
+        },
+        format,
+      );
       return;
     }
 
-    const result = await validateDataset(filePath!, { fullValidate });
+    const result = await validateDataset(filePath!, { fullValidate, schema });
 
     if (format === "json") {
       // For json output we always emit the structured result, exit code conveys validity.

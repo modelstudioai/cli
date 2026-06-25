@@ -16,7 +16,23 @@ export interface ValidateOpts {
   maxBytes?: number;
   /** Optional abort signal for long-running scans. */
   signal?: AbortSignal;
+  /**
+   * Record-schema selector for formats that carry more than one schema under
+   * the same extension. Today only the `.jsonl` ChatML family honors it:
+   *   - `"chatml"` — `{messages: [...]}` (SFT). `chosen`/`rejected` ignored.
+   *   - `"dpo"`    — `{messages: [...], chosen: {role,content}, rejected: {...}}`.
+   *                   Every record MUST carry `chosen` + `rejected`.
+   *   - `undefined` — auto-detect per record: a record with `chosen` or
+   *                   `rejected` is validated as DPO, otherwise as ChatML.
+   * `finetune create` sets this from `--training-type` (dpo* → "dpo") so a DPO
+   * job with malformed preference pairs fails at validate time, not on the
+   * platform ten minutes in.
+   */
+  schema?: DatasetSchema;
 }
+
+/** The schemas a `.jsonl` record can be validated against. */
+export type DatasetSchema = "chatml" | "dpo";
 
 export type ValidationSeverity = "error" | "warning";
 

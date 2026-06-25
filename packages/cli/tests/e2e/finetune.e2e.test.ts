@@ -177,6 +177,51 @@ describe("e2e: finetune (offline)", () => {
     expect(exitCode, stdout + stderr).not.toBe(0);
   });
 
+  test("finetune create 样本数 <= batch_size 时提交前快速失败且不上传", async () => {
+    // The fixture has 3 records; the small-file auto-adjust sets batch_size=8,
+    // so 3 <= 8 trips the pre-submit gate. The gate fires before any upload,
+    // so this is fully offline (no key, no network) — the proof is that the
+    // error is the gate message AND no "Uploaded …" line ever appears.
+    const localPath = join(cliPackageRoot, "tests", "e2e", ".dataset-valid.jsonl");
+    const { stdout, stderr, exitCode } = await runCli([
+      "finetune",
+      "create",
+      "--model",
+      "qwen3-8b",
+      "--datasets",
+      localPath,
+      "--yes",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stdout + stderr).not.toBe(0);
+    const combined = `${stdout}\n${stderr}`;
+    expect(combined).toMatch(/not greater than batch_size/i);
+    // Crucially, no upload happened — the gate must fire before the upload step.
+    expect(combined).not.toMatch(/Uploaded .* → file-/);
+  });
+
+  test("finetune create --batch-size 过小仍按 8 下限比较（不绕过卡口）", async () => {
+    // Even with --batch-size 1 (server clamps to 8), 3 samples <= 8 still trips
+    // the gate — confirms the gate uses the clamped/effective batch, not the raw.
+    const localPath = join(cliPackageRoot, "tests", "e2e", ".dataset-valid.jsonl");
+    const { stdout, stderr, exitCode } = await runCli([
+      "finetune",
+      "create",
+      "--model",
+      "qwen3-8b",
+      "--datasets",
+      localPath,
+      "--batch-size",
+      "1",
+      "--yes",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stdout + stderr).not.toBe(0);
+    expect(`${stdout}\n${stderr}`).toMatch(/batch_size \(8\)/);
+  });
+
   test.each([
     ["list", ["--status", "RUNNING"]],
     ["get", ["--job-id", "ft-xxx"]],

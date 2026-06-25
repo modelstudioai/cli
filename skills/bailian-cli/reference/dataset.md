@@ -102,27 +102,31 @@ bl dataset list --output json
 
 ### `bl dataset upload`
 
-| Field           | Value                                                                                  |
-| --------------- | -------------------------------------------------------------------------------------- |
-| **Name**        | `dataset upload`                                                                       |
-| **Description** | Upload a dataset file (.jsonl) to Bailian                                              |
-| **Usage**       | `bl dataset upload --file <path> [--purpose <name>] [--no-validate] [--full-validate]` |
+| Field           | Value                                                                                                           |
+| --------------- | --------------------------------------------------------------------------------------------------------------- |
+| **Name**        | `dataset upload`                                                                                                |
+| **Description** | Upload a dataset file (.jsonl) to Bailian                                                                       |
+| **Usage**       | `bl dataset upload --file <path> [--purpose <name>] [--schema <chatml\|dpo>] [--no-validate] [--full-validate]` |
 
 #### Options
 
-| Flag               | Type    | Required | Description                                                   |
-| ------------------ | ------- | -------- | ------------------------------------------------------------- |
-| `--file <path>`    | string  | yes      | Local .jsonl dataset file (≤300MB)                            |
-| `--purpose <name>` | string  | no       | Dataset purpose tag (default: "fine-tune"; e.g. "evaluation") |
-| `--no-validate`    | boolean | no       | Skip the local JSONL pre-flight check (not recommended)       |
-| `--full-validate`  | boolean | no       | JSON.parse every line instead of sampling (slower)            |
+| Flag               | Type    | Required | Description                                                                                         |
+| ------------------ | ------- | -------- | --------------------------------------------------------------------------------------------------- |
+| `--file <path>`    | string  | yes      | Local .jsonl dataset file (≤300MB)                                                                  |
+| `--purpose <name>` | string  | no       | Dataset purpose tag (default: "fine-tune"; e.g. "evaluation")                                       |
+| `--schema <s>`     | string  | no       | Record schema: "chatml" (SFT) or "dpo" (requires chosen/rejected). Default auto-detects per record. |
+| `--no-validate`    | boolean | no       | Skip the local JSONL pre-flight check (not recommended)                                             |
+| `--full-validate`  | boolean | no       | JSON.parse every line instead of sampling (slower)                                                  |
 
 #### Notes
 
-- Only .jsonl is supported in this release. The default validator expects a
-- ChatML schema (each line a JSON object with a "messages" array). Other
-- purposes may carry a different schema in the future and would be served
-- by a purpose-specific validator at that point.
+- Only .jsonl is supported in this release. Two record schemas are
+- recognized: chatml = {messages:[...]} (SFT); dpo = {messages:[...],
+- chosen, rejected} where chosen/rejected are single assistant messages.
+- With no --schema, a record carrying chosen/rejected is validated as DPO;
+- pass --schema dpo to require it on every record, or --schema chatml to
+- ignore preference fields. Other purposes may carry a different schema in
+- the future and would be served by a purpose-specific validator.
 - The dataset upload cap is 300MB per file.
 - Upload uses the OpenAI-compatible /compatible-mode/v1/files endpoint so
 - the purpose tag is persisted (the DashScope-native /api/v1/files drops it).
@@ -131,6 +135,10 @@ bl dataset list --output json
 
 ```bash
 bl dataset upload --file train.jsonl
+```
+
+```bash
+bl dataset upload --file dpo.jsonl --schema dpo
 ```
 
 ```bash
@@ -147,30 +155,39 @@ bl dataset upload --file train.jsonl --no-validate
 
 ### `bl dataset validate`
 
-| Field           | Value                                                      |
-| --------------- | ---------------------------------------------------------- |
-| **Name**        | `dataset validate`                                         |
-| **Description** | Locally validate a dataset file (.jsonl) without uploading |
-| **Usage**       | `bl dataset validate --file <path> [--full-validate]`      |
+| Field           | Value                                                                          |
+| --------------- | ------------------------------------------------------------------------------ |
+| **Name**        | `dataset validate`                                                             |
+| **Description** | Locally validate a dataset file (.jsonl) without uploading                     |
+| **Usage**       | `bl dataset validate --file <path> [--full-validate] [--schema <chatml\|dpo>]` |
 
 #### Options
 
-| Flag              | Type    | Required | Description                                        |
-| ----------------- | ------- | -------- | -------------------------------------------------- |
-| `--file <path>`   | string  | yes      | Local .jsonl dataset file                          |
-| `--full-validate` | boolean | no       | JSON.parse every line instead of sampling (slower) |
+| Flag              | Type    | Required | Description                                                                                         |
+| ----------------- | ------- | -------- | --------------------------------------------------------------------------------------------------- |
+| `--file <path>`   | string  | yes      | Local .jsonl dataset file                                                                           |
+| `--full-validate` | boolean | no       | JSON.parse every line instead of sampling (slower)                                                  |
+| `--schema <s>`    | string  | no       | Record schema: "chatml" (SFT) or "dpo" (requires chosen/rejected). Default auto-detects per record. |
 
 #### Notes
 
 - Default scan: every line gets a structural check, then ~160 lines (front 50,
 - evenly spaced 100, last 10) are JSON.parsed against the active schema.
-- Today the only registered .jsonl schema is ChatML (messages array).
+- Schemas: chatml = {messages:[...]} (SFT); dpo = {messages:[...], chosen,
+- rejected} where chosen/rejected are single assistant messages. With no
+- --schema, a record carrying chosen/rejected is validated as DPO; pass
+- --schema dpo to require chosen/rejected on every record (strict), or
+- --schema chatml to ignore preference fields.
 - Use --full-validate to JSON.parse every line.
 
 #### Examples
 
 ```bash
 bl dataset validate --file train.jsonl
+```
+
+```bash
+bl dataset validate --file dpo.jsonl --schema dpo
 ```
 
 ```bash

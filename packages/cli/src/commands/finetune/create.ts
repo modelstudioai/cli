@@ -7,6 +7,7 @@ import {
   validateDataset,
   fetchModelCapability,
   listSupportedTrainingTypes,
+  preflightBatchSizeGate,
   isTrainingTypeCli,
   toServerTrainingType,
   TRAINING_TYPES_CLI,
@@ -18,6 +19,7 @@ import {
   type CreateFineTuneRequest,
   type FineTuneHyperParameters,
   type DatasetFile,
+  type DatasetSchema,
   type ValidationResult,
 } from "bailian-cli-core";
 import { existsSync, statSync } from "fs";
@@ -50,30 +52,44 @@ function formatIssue(issue: ValidationResult["errors"][number]): string {
 }
 
 interface ResolvedDataset {
-  /** file-ids in input order (local uploads resolved to their new ids). */
+  /**
+   * Tokens in input order. Local paths are kept as-is here (a placeholder
+   * until `uploadResolvedLocal` swaps them for real file-ids); bare file-ids
+   * pass through untouched. In dry-run the paths stay (the previewed body
+   * reflects exactly what the user typed).
+   */
   fileIds: string[];
-  /** local paths that were uploaded (empty in dry-run). */
-  uploaded: DatasetFile[];
-  /** local paths recorded but not uploaded (dry-run only). */
-  pendingPaths: string[];
-  /** in-hand size for the first token, if known (avoids a redundant getDataset). */
+  /** Local paths in input order, for the deferred upload step. */
+  localPaths: string[];
+  /** In-hand size for the first local token, if known (local statSync). */
   firstSize?: number;
+  /**
+   * Total training-sample count across local tokens, when known. Sourced from
+   * `validateDataset`'s `stats.totalRecords` (summed per token). Undefined when
+   * any token is a bare file-id (no local file to count) or in dry-run — the
+   * pre-submit batch-size gate only fires when this is known, so file-id flows
+   * fall through to the platform rather than risk a false positive.
+   */
+  recordCount?: number;
 }
 
 /**
- * Resolve a comma-separated `--datasets` / `--validations` value into
- * file-ids, uploading any local paths through the same pipeline as
- * `bl dataset upload` (validate → upload). File-id tokens are passed through.
+ * Analyze a comma-separated `--datasets` / `--validations` value WITHOUT
+ * uploading: bare file-ids pass through; local paths are validated through the
+ * same pipeline as `bl dataset upload` (so structural errors surface here),
+ * their sample count and size are captured for the pre-submit gate, and the
+ * path itself is recorded in `localPaths` for a later, deferred upload.
  *
- * In dry-run mode no upload happens: local paths are recorded in
- * `pendingPaths` and left in `fileIds` as-is so the previewed body still
- * reflects what the user typed.
+ * Splitting analysis from upload lets the batch-size gate fire before any
+ * network call — a doomed job (too few samples) is rejected without burning an
+ * upload, and is offline-testable. In dry-run mode local paths are not
+ * validated (the preview never touches the network or the disk beyond stat).
  */
-async function resolveDatasetTokens(
+async function analyzeDatasetTokens(
   config: Config,
   raw: string,
-  purpose: string,
   label: string,
+  schema?: DatasetSchema,
 ): Promise<ResolvedDataset> {
   const tokens = raw
     .split(",")
@@ -84,23 +100,32 @@ async function resolveDatasetTokens(
   }
 
   const fileIds: string[] = [];
-  const uploaded: DatasetFile[] = [];
-  const pendingPaths: string[] = [];
+  const localPaths: string[] = [];
   let firstSize: number | undefined;
+  let recordCount: number | undefined;
+  // A file-id token has no local file to count, so the total sample count is
+  // only knowable when every token is a local path. Once any file-id is seen,
+  // flip to unknown and stop accumulating to avoid an undercount that could
+  // trip the batch-size gate falsely.
+  let recordCountKnown = true;
 
-  for (const [index, token] of tokens.entries()) {
+  for (const token of tokens) {
     if (!isLocalPath(token)) {
       fileIds.push(token);
-      continue;
-    }
-    if (config.dryRun) {
-      pendingPaths.push(token);
-      fileIds.push(token);
+      recordCountKnown = false;
       continue;
     }
 
-    // Local path → validate then upload (same flow as `bl dataset upload`).
-    const result = await validateDataset(token);
+    fileIds.push(token);
+    localPaths.push(token);
+
+    if (config.dryRun) continue;
+
+    // Local path → validate (same checks as `bl dataset upload`). Upload is
+    // deferred to `uploadResolvedLocal` so the gate can run first. The schema
+    // (SFT vs DPO) is derived from --training-type so a DPO job validates the
+    // chosen/rejected preference pairs here, not on the platform.
+    const result = await validateDataset(token, { schema });
     if (!result.valid) {
       const lines = [
         `Dataset validation failed for ${token}`,
@@ -129,6 +154,40 @@ async function resolveDatasetTokens(
       }
     }
 
+    // Accumulate the sample count so the caller can pre-flight the batch-size
+    // gate before submitting. `totalRecords` is set by the jsonl validator as
+    // (non-blank lines); undefined stats fall back to "unknown" (no gate).
+    const tokenRecords = result.stats.totalRecords;
+    if (typeof tokenRecords === "number") {
+      recordCount = (recordCount ?? 0) + tokenRecords;
+    }
+    if (firstSize === undefined) firstSize = statSync(token).size;
+  }
+
+  return {
+    fileIds,
+    localPaths,
+    firstSize,
+    recordCount: recordCountKnown ? recordCount : undefined,
+  };
+}
+
+/**
+ * Upload each local path recorded in `resolved.localPaths`, swapping the
+ * placeholder path entries in `resolved.fileIds` for the returned file-ids.
+ * Returns the uploaded file records (for the confirmation panel). No-op in
+ * dry-run. Validation already happened in `analyzeDatasetTokens`, so this is
+ * pure upload.
+ */
+async function uploadResolvedLocal(
+  config: Config,
+  resolved: ResolvedDataset,
+  purpose: string,
+  label: string,
+): Promise<DatasetFile[]> {
+  const uploaded: DatasetFile[] = [];
+  for (const [index, token] of resolved.fileIds.entries()) {
+    if (!isLocalPath(token)) continue;
     const file: DatasetFile = await uploadDataset(config, { filePath: token, purpose });
     if (!file.file_id) {
       throw new BailianError(
@@ -137,17 +196,14 @@ async function resolveDatasetTokens(
       );
     }
     uploaded.push(file);
-    fileIds.push(file.file_id);
-    if (index === 0) firstSize = file.size;
-
+    resolved.fileIds[index] = file.file_id;
     if (!config.quiet) {
       process.stderr.write(
         `Uploaded ${basename(token)} → ${file.file_id} (auto from --${label})\n`,
       );
     }
   }
-
-  return { fileIds, uploaded, pendingPaths, firstSize };
+  return uploaded;
 }
 
 export default defineCommand({
@@ -232,6 +288,9 @@ export default defineCommand({
     "--datasets / --validations accept either file-ids (from `bl dataset",
     "upload`) or local .jsonl paths. Local paths are validated and uploaded",
     "first, then their file-ids are submitted — a one-step upload-and-train.",
+    "Pre-submit gate: if the training dataset's sample count is not greater",
+    "than batch_size, the job is rejected before upload or quota consumption",
+    "(the platform would otherwise fail ~10 min in, after data processing).",
   ],
   async run(config: Config, flags: GlobalFlags) {
     const model = flags.model as string | undefined;
@@ -240,18 +299,11 @@ export default defineCommand({
     const datasetsRaw = flags.datasets as string | undefined;
     if (!datasetsRaw) failIfMissing("datasets", "bl finetune create --datasets <ids|paths>");
 
-    const training = await resolveDatasetTokens(config, datasetsRaw!, "fine-tune", "datasets");
-    const trainingFileIds = training.fileIds;
-
-    const validationsRaw = flags.validations as string | undefined;
-    const validation = validationsRaw
-      ? await resolveDatasetTokens(config, validationsRaw, "fine-tune", "validations")
-      : undefined;
-    const validationFileIds = validation?.fileIds;
-
+    // Resolve the training type before analyzing datasets so the validator can
+    // enforce the right record schema (DPO jobs require chosen/rejected on
+    // every record). Whitelist is the single source of truth in core
+    // (TRAINING_TYPES_CLI); any other value is rejected up-front.
     const trainingType = (flags.trainingType as string | undefined) || DEFAULT_TRAINING_TYPE;
-    // Whitelist is the single source of truth in core (TRAINING_TYPES_CLI);
-    // any other value is rejected up-front with an actionable error.
     if (!isTrainingTypeCli(trainingType)) {
       throw new BailianError(
         `--training-type "${trainingType}" is not supported.`,
@@ -259,6 +311,18 @@ export default defineCommand({
         `Supported values: ${TRAINING_TYPES_CLI.join(", ")} (default: ${DEFAULT_TRAINING_TYPE}).`,
       );
     }
+    // dpo / dpo-lora → "dpo" schema (strict chosen/rejected); else ChatML.
+    const datasetSchema: DatasetSchema = trainingType.startsWith("dpo") ? "dpo" : "chatml";
+
+    const training = await analyzeDatasetTokens(config, datasetsRaw!, "datasets", datasetSchema);
+    const trainingFileIds = training.fileIds;
+
+    const validationsRaw = flags.validations as string | undefined;
+    const validation = validationsRaw
+      ? await analyzeDatasetTokens(config, validationsRaw, "validations", datasetSchema)
+      : undefined;
+    const validationFileIds = validation?.fileIds;
+
     const modelName = flags.modelName as string | undefined;
     const suffix = flags.suffix as string | undefined;
 
@@ -299,6 +363,48 @@ export default defineCommand({
       }
     }
 
+    // Pre-submit batch-size gate: the platform rejects a job whose number of
+    // training samples is not greater than batch_size, but only surfaces that
+    // ~10 minutes into the run (after data processing). Fail fast here, before
+    // burning quota. `recordCount` is only known when every --datasets token
+    // was a local file we validated; file-id tokens fall through to the
+    // platform rather than risk a false positive from an undercount.
+    //
+    // The decision lives in core (`preflightBatchSizeGate`) — a structured,
+    // job-level pre-flight that returns a `ValidationIssue` (same shape / stable
+    // code as `validateDataset`) so the failure surfaces through the same
+    // `BailianError` + issue convention used by `bl dataset upload`/`validate`.
+    // ExitCode.GENERAL matches the existing validation-failed exit code.
+    if (!config.dryRun && training.recordCount !== undefined) {
+      // 16 is the platform default when neither the user nor the small-file
+      // auto-adjust set a batch_size (see the auto-adjust comment above).
+      const effectiveBatchSize = hp.batch_size ?? 16;
+      const gate = preflightBatchSizeGate({
+        recordCount: training.recordCount,
+        batchSize: effectiveBatchSize,
+      });
+      if (!gate.ok && gate.issue) {
+        throw new BailianError(gate.issue.message, ExitCode.GENERAL, gate.hint);
+      }
+    }
+
+    // Upload local paths now that the gate has cleared them. This swaps the
+    // placeholder path entries in `training.fileIds` / `validation?.fileIds`
+    // for real file-ids, so the body and confirmation panel below see ids.
+    let uploadedTraining: DatasetFile[] = [];
+    let uploadedValidation: DatasetFile[] = [];
+    if (!config.dryRun) {
+      uploadedTraining = await uploadResolvedLocal(config, training, "fine-tune", "datasets");
+      if (validation) {
+        uploadedValidation = await uploadResolvedLocal(
+          config,
+          validation,
+          "fine-tune",
+          "validations",
+        );
+      }
+    }
+
     const body: CreateFineTuneRequest = {
       model: model!,
       training_file_ids: trainingFileIds,
@@ -316,8 +422,8 @@ export default defineCommand({
 
     if (config.dryRun) {
       const pending = [
-        ...training.pendingPaths.map((path) => ({ field: "datasets", path })),
-        ...(validation?.pendingPaths ?? []).map((path) => ({ field: "validations", path })),
+        ...training.localPaths.map((path) => ({ field: "datasets", path })),
+        ...(validation?.localPaths ?? []).map((path) => ({ field: "validations", path })),
       ];
       emitResult(
         pending.length > 0
@@ -353,10 +459,10 @@ export default defineCommand({
       if (validationFileIds) {
         process.stderr.write(`  Validation:     ${validationFileIds.join(", ")}\n`);
       }
-      for (const file of training.uploaded) {
+      for (const file of uploadedTraining) {
         process.stderr.write(`  Uploaded:       ${file.name} → ${file.file_id}\n`);
       }
-      for (const file of validation?.uploaded ?? []) {
+      for (const file of uploadedValidation) {
         process.stderr.write(`  Uploaded:       ${file.name} → ${file.file_id} (validation)\n`);
       }
       process.stderr.write(`  n_epochs:       ${hp.n_epochs}\n`);

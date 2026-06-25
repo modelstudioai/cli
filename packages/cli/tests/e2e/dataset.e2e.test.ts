@@ -79,6 +79,98 @@ describe("e2e: dataset (offline)", () => {
     expect(data.action).toBe("dataset.upload");
     expect(data.validate).toBe(false);
   });
+
+  test("dataset validate 自动识别 DPO 并校验 chosen/rejected", async () => {
+    // No --schema: a record carrying chosen/rejected is auto-detected as DPO
+    // and the valid fixture passes.
+    const file = join(__dirname, ".dataset-dpo-valid.jsonl");
+    const { stdout, stderr, exitCode } = await runCli([
+      "dataset",
+      "validate",
+      "--file",
+      file,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ valid: boolean; stats: { totalRecords?: number } }>(stdout);
+    expect(data.valid).toBe(true);
+    expect(data.stats.totalRecords).toBe(2);
+  });
+
+  test("dataset validate --schema dpo 拒绝缺失 rejected 的记录", async () => {
+    const file = join(__dirname, ".dataset-dpo-invalid.jsonl");
+    const { stdout, exitCode } = await runCli([
+      "dataset",
+      "validate",
+      "--file",
+      file,
+      "--schema",
+      "dpo",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).not.toBe(0);
+    const data = parseStdoutJson<{ valid: boolean; errors: { code: string; path?: string }[] }>(
+      stdout,
+    );
+    expect(data.valid).toBe(false);
+    expect(data.errors.map((e) => e.code)).toContain("MISSING_REJECTED");
+  });
+
+  test("dataset validate --schema chatml 忽略 chosen/rejected（不报 DPO 错误）", async () => {
+    // Same invalid-DPO file, but --schema chatml must not run DPO checks.
+    const file = join(__dirname, ".dataset-dpo-invalid.jsonl");
+    const { stdout, stderr, exitCode } = await runCli([
+      "dataset",
+      "validate",
+      "--file",
+      file,
+      "--schema",
+      "chatml",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ valid: boolean; errors: { code: string }[] }>(stdout);
+    expect(data.valid).toBe(true);
+    expect(data.errors.filter((c) => c.code.startsWith("MISSING_"))).toEqual([]);
+  });
+
+  test("dataset validate --schema <bad> 以非零码退出", async () => {
+    const file = join(__dirname, ".dataset-valid.jsonl");
+    const { stdout, stderr, exitCode } = await runCli([
+      "dataset",
+      "validate",
+      "--file",
+      file,
+      "--schema",
+      "sft",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).not.toBe(0);
+    expect(`${stdout}\n${stderr}`).toMatch(/Unsupported --schema/);
+  });
+
+  test("dataset upload --dry-run 转发 --schema", async () => {
+    const file = join(__dirname, ".dataset-dpo-valid.jsonl");
+    const { stdout, stderr, exitCode } = await runCli([
+      "dataset",
+      "upload",
+      "--file",
+      file,
+      "--schema",
+      "dpo",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ action: string; schema: string }>(stdout);
+    expect(data.action).toBe("dataset.upload");
+    expect(data.schema).toBe("dpo");
+  });
 });
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (DashScope)", () => {

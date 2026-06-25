@@ -9,7 +9,7 @@ import { existsSync, statSync } from "fs";
 import { extname } from "path";
 import { BailianError } from "../../errors/base.ts";
 import { ExitCode } from "../../errors/codes.ts";
-import type { ValidationIssue, ValidationStats } from "./types.ts";
+import type { DatasetSchema, ValidationIssue, ValidationStats } from "./types.ts";
 
 /**
  * The platform caps dataset uploads at 300MB per file. `bl dataset upload`
@@ -64,6 +64,23 @@ export function makeIssue(
 
 export function emptyStats(): ValidationStats {
   return {};
+}
+
+/**
+ * Parse a `--schema` CLI value into a `DatasetSchema` (or `undefined` for
+ * auto-detect). Single source of truth for the schema vocabulary so `dataset
+ * validate`, `dataset upload`, and any future caller agree on accepted values
+ * and error wording. Throws USAGE for anything unrecognized.
+ */
+export function parseDatasetSchemaFlag(value: string | undefined): DatasetSchema | undefined {
+  if (value === undefined || value.trim() === "") return undefined;
+  const v = value.trim();
+  if (v === "chatml" || v === "dpo") return v;
+  throw new BailianError(
+    `Unsupported --schema "${value}". Supported: chatml, dpo.`,
+    ExitCode.USAGE,
+    `Omit --schema to auto-detect per record (a record with chosen/rejected is treated as DPO).`,
+  );
 }
 
 /** Produce a deterministic set of sample line indices for deep checking.

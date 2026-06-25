@@ -3,6 +3,7 @@ import {
   detectOutputFormat,
   uploadDataset,
   validateDataset,
+  parseDatasetSchemaFlag,
   MAX_DATASET_BYTES,
   BailianError,
   ExitCode,
@@ -28,7 +29,8 @@ function formatIssue(issue: ValidationResult["errors"][number]): string {
 export default defineCommand({
   name: "dataset upload",
   description: "Upload a dataset file (.jsonl) to Bailian",
-  usage: "bl dataset upload --file <path> [--purpose <name>] [--no-validate] [--full-validate]",
+  usage:
+    "bl dataset upload --file <path> [--purpose <name>] [--schema <chatml|dpo>] [--no-validate] [--full-validate]",
   options: [
     {
       flag: "--file <path>",
@@ -38,6 +40,11 @@ export default defineCommand({
     {
       flag: "--purpose <name>",
       description: 'Dataset purpose tag (default: "fine-tune"; e.g. "evaluation")',
+    },
+    {
+      flag: "--schema <s>",
+      description:
+        'Record schema: "chatml" (SFT) or "dpo" (requires chosen/rejected). Default auto-detects per record.',
     },
     {
       flag: "--no-validate",
@@ -52,15 +59,19 @@ export default defineCommand({
   ],
   examples: [
     "bl dataset upload --file train.jsonl",
+    "bl dataset upload --file dpo.jsonl --schema dpo",
     "bl dataset upload --file eval.jsonl --purpose evaluation",
     "bl dataset upload --file train.jsonl --full-validate",
     "bl dataset upload --file train.jsonl --no-validate",
   ],
   notes: [
-    "Only .jsonl is supported in this release. The default validator expects a",
-    'ChatML schema (each line a JSON object with a "messages" array). Other',
-    "purposes may carry a different schema in the future and would be served",
-    "by a purpose-specific validator at that point.",
+    "Only .jsonl is supported in this release. Two record schemas are",
+    "recognized: chatml = {messages:[...]} (SFT); dpo = {messages:[...],",
+    "chosen, rejected} where chosen/rejected are single assistant messages.",
+    "With no --schema, a record carrying chosen/rejected is validated as DPO;",
+    "pass --schema dpo to require it on every record, or --schema chatml to",
+    "ignore preference fields. Other purposes may carry a different schema in",
+    "the future and would be served by a purpose-specific validator.",
     "The dataset upload cap is 300MB per file.",
     "Upload uses the OpenAI-compatible /compatible-mode/v1/files endpoint so",
     "the purpose tag is persisted (the DashScope-native /api/v1/files drops it).",
@@ -72,10 +83,11 @@ export default defineCommand({
     const purpose = (flags.purpose as string | undefined) || "fine-tune";
     const skipValidate = Boolean(flags.noValidate);
     const fullValidate = Boolean(flags.fullValidate);
+    const schema = parseDatasetSchemaFlag(flags.schema as string | undefined);
     const format = detectOutputFormat(config.output);
 
     if (!skipValidate) {
-      const result = await validateDataset(filePath!, { fullValidate });
+      const result = await validateDataset(filePath!, { fullValidate, schema });
       if (!result.valid) {
         const lines = [
           `Dataset validation failed for ${filePath}`,
@@ -112,6 +124,7 @@ export default defineCommand({
           purpose,
           max_bytes: MAX_DATASET_BYTES,
           validate: !skipValidate,
+          schema: schema ?? "auto",
         },
         format,
       );

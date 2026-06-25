@@ -6,10 +6,12 @@ export {
   registerValidator,
   listSupportedFormats,
   MAX_DATASET_BYTES,
+  parseDatasetSchemaFlag,
 } from "./validate/index.ts";
 export type {
   ValidatorSpec,
   ValidateOpts,
+  DatasetSchema,
   ValidationResult,
   ValidationIssue,
   ValidationSeverity,
