@@ -1,15 +1,18 @@
 {
-  "name": "bailian-cli-rag",
-  "version": "1.4.0",
-  "description": "RAG CLI for Aliyun Model Studio (DashScope) — knowledge-base capabilities only.",
+  "name": "knowledge-studio-cli",
+  "version": "0.0.1",
+  "description": "Lightweight RAG CLI for Aliyun Model Studio — focused on knowledge-base retrieval.",
   "keywords": [
-    "ai",
-    "cli",
+    "alibaba-cloud",
+    "aliyun",
+    "bailian",
+    "dashscope",
     "knowledge-base",
     "model-studio",
-    "rag"
+    "rag",
+    "retrieval"
   ],
-  "homepage": "https://bailian.console.aliyun.com/cli",
+  "homepage": "https://rag.console.aliyun.com/",
   "bugs": {
     "url": "https://github.com/modelstudioai/cli/issues"
   },
@@ -18,22 +21,22 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/modelstudioai/cli.git",
-    "directory": "packages/rag"
+    "directory": "packages/kscli"
   },
   "bin": {
-    "rag": "dist/rag.mjs"
+    "kscli": "dist/kscli.mjs"
   },
   "files": [
     "dist"
   ],
   "type": "module",
   "exports": {
-    ".": "./dist/rag.mjs",
+    ".": "./dist/kscli.mjs",
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "exports": {
-      ".": "./dist/rag.mjs",
+      ".": "./dist/kscli.mjs",
       "./package.json": "./package.json"
     },
     "registry": "https://registry.npmjs.org/"
