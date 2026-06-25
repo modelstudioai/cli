@@ -4,16 +4,16 @@ import { isDashScopeE2EReady, parseStdoutJson, runCli } from "./helpers.ts";
 /**
  * Deploy E2E.
  *
- * The offline suite exercises command discovery, help text, and the
- * `--dry-run` structured-output path (arg parsing + body construction) with no
- * network dependency, so it passes whether or not an API key is configured.
- * The remote list test is gated by isDashScopeE2EReady() — it is skipped when
- * no DashScope credential is present, and when it does run it tolerates both
- * empty accounts and auth/permission failures (see the test comment). The
- * suite is therefore green with no key, a valid key, or an invalid key.
+ * The suite exercises command discovery, help text, and the `--dry-run`
+ * structured-output path (arg parsing + body construction) with no network
+ * dependency. Because `ensureApiKey` runs before every command (see main.ts),
+ * these cases are gated by isDashScopeE2EReady() — they are skipped when no
+ * DashScope credential is present (e.g. on CI) and run offline when one is.
+ * The remote list test is also gated and tolerates both empty accounts and
+ * auth/permission failures (see the test comment).
  */
 
-describe("e2e: deploy (offline)", () => {
+describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
   test("deploy 列出子命令", async () => {
     const { stdout, stderr, exitCode } = await runCli(["deploy"]);
     expect(exitCode, stderr).toBe(0);

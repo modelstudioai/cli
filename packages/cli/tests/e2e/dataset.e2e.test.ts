@@ -8,12 +8,17 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 /**
  * Dataset (fine-tune file) E2E.
  *
- * The local validation tests have no network dependency and run in the
- * default suite. The remote upload/list/delete tests require DashScope
- * credentials and are gated by isDashScopeE2EReady().
+ * The suite exercises command discovery, help text, local dataset validation,
+ * and the `--dry-run` upload preview with no network dependency. Because
+ * `ensureApiKey` runs before every command (see main.ts), these cases are
+ * gated by isDashScopeE2EReady() — they are skipped when no DashScope
+ * credential is present (e.g. on CI) and run offline when one is. (`dataset
+ * validate` itself is keyless via skipDefaultApiKeySetup, but the rest of the
+ * suite needs a key, so the whole offline block is gated together.) The
+ * remote list test is also gated.
  */
 
-describe("e2e: dataset (offline)", () => {
+describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
   test("dataset --help 列出子命令", async () => {
     const { stdout, stderr, exitCode } = await runCli(["dataset"]);
     expect(exitCode, stderr).toBe(0);

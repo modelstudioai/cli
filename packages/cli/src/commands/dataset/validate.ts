@@ -26,6 +26,8 @@ function formatStats(result: ValidationResult): string[] {
 export default defineCommand({
   name: "dataset validate",
   description: "Locally validate a dataset file (.jsonl) without uploading",
+  // 纯本地校验，不触网、不需 API key（与 `pipeline validate` 一致）。
+  skipDefaultApiKeySetup: true,
   usage: "bl dataset validate --file <path> [--full-validate] [--schema <chatml|dpo>]",
   options: [
     { flag: "--file <path>", description: "Local .jsonl dataset file", required: true },
