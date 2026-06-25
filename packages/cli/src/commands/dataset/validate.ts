@@ -13,20 +13,21 @@ import {
 import { failIfMissing } from "../../output/prompt.ts";
 import { emitResult, emitBare } from "../../output/output.ts";
 
-function formatIssue(i: ValidationIssue): string {
+function formatIssue(issue: ValidationIssue): string {
   const where: string[] = [];
-  if (i.line !== undefined) where.push(`line ${i.line}`);
-  if (i.path) where.push(i.path);
+  if (issue.line !== undefined) where.push(`line ${issue.line}`);
+  if (issue.path) where.push(issue.path);
   const tag = where.length ? ` [${where.join(" · ")}]` : "";
-  return `  ${i.severity.toUpperCase()} ${i.code}${tag}: ${i.message}`;
+  return `  ${issue.severity.toUpperCase()} ${issue.code}${tag}: ${issue.message}`;
 }
 
-function formatStats(r: ValidationResult): string[] {
+function formatStats(result: ValidationResult): string[] {
   const out: string[] = [];
-  if (r.stats.totalRecords !== undefined) out.push(`records: ${r.stats.totalRecords}`);
-  if (r.stats.sampledRecords !== undefined) out.push(`sampled: ${r.stats.sampledRecords}`);
-  if (r.stats.bytes !== undefined) out.push(`bytes: ${r.stats.bytes}`);
-  if (r.stats.durationMs !== undefined) out.push(`took: ${r.stats.durationMs}ms`);
+  if (result.stats.totalRecords !== undefined) out.push(`records: ${result.stats.totalRecords}`);
+  if (result.stats.sampledRecords !== undefined)
+    out.push(`sampled: ${result.stats.sampledRecords}`);
+  if (result.stats.bytes !== undefined) out.push(`bytes: ${result.stats.bytes}`);
+  if (result.stats.durationMs !== undefined) out.push(`took: ${result.stats.durationMs}ms`);
   return out;
 }
 
@@ -99,14 +100,14 @@ export default defineCommand({
 
       if (result.errors.length) {
         emitBare(`Errors (${result.errors.length}):`);
-        for (const e of result.errors.slice(0, 20)) emitBare(formatIssue(e));
+        for (const error of result.errors.slice(0, 20)) emitBare(formatIssue(error));
         if (result.errors.length > 20) {
           emitBare(`  … and ${result.errors.length - 20} more.`);
         }
       }
       if (result.warnings.length) {
         emitBare(`Warnings (${result.warnings.length}):`);
-        for (const w of result.warnings.slice(0, 10)) emitBare(formatIssue(w));
+        for (const warning of result.warnings.slice(0, 10)) emitBare(formatIssue(warning));
         if (result.warnings.length > 10) {
           emitBare(`  … and ${result.warnings.length - 10} more.`);
         }

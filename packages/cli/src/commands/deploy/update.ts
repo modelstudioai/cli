@@ -86,14 +86,14 @@ export default defineCommand({
     }
 
     const response = await updateDeployment(config, deployedModel!, body);
-    const d = response.output ?? response.data;
+    const deployment = response.output ?? response.data;
 
     if (config.quiet) {
       emitBare(deployedModel!);
     } else if (format === "text") {
       const parts: string[] = [];
-      if (d?.rpm_limit !== undefined) parts.push(`rpm_limit=${d.rpm_limit}`);
-      if (d?.tpm_limit !== undefined) parts.push(`tpm_limit=${d.tpm_limit}`);
+      if (deployment?.rpm_limit !== undefined) parts.push(`rpm_limit=${deployment.rpm_limit}`);
+      if (deployment?.tpm_limit !== undefined) parts.push(`tpm_limit=${deployment.tpm_limit}`);
       const summary = parts.length ? ` (${parts.join(", ")})` : "";
       emitBare(`Updated ${deployedModel}${summary}.`);
     } else {

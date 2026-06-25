@@ -94,12 +94,12 @@ export default defineCommand({
     }
 
     const response = await scaleDeployment(config, deployedModel!, body);
-    const d = response.output ?? response.data;
+    const deployment = response.output ?? response.data;
 
     if (config.quiet) {
       emitBare(deployedModel!);
     } else if (format === "text") {
-      const cap = d?.capacity !== undefined ? ` (capacity=${d.capacity})` : "";
+      const cap = deployment?.capacity !== undefined ? ` (capacity=${deployment.capacity})` : "";
       emitBare(`Scaled ${deployedModel}${cap}.`);
     } else {
       emitResult(response, format);

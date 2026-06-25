@@ -45,13 +45,13 @@ export default defineCommand({
     const deployments = payload?.deployments ?? [];
     const total = payload?.total;
 
-    const items = deployments.map((d) => ({
-      deployed_model: d.deployed_model ?? "",
-      model_name: d.model_name ?? "",
-      status: d.status ?? "",
-      plan: d.plan ?? "",
-      capacity: d.capacity !== undefined ? String(d.capacity) : "",
-      created_at: d.gmt_create ?? "",
+    const items = deployments.map((item) => ({
+      deployed_model: item.deployed_model ?? "",
+      model_name: item.model_name ?? "",
+      status: item.status ?? "",
+      plan: item.plan ?? "",
+      capacity: item.capacity !== undefined ? String(item.capacity) : "",
+      created_at: item.gmt_create ?? "",
     }));
 
     if (format === "json") {

@@ -55,8 +55,8 @@ export default defineCommand({
     if (!flags.skipPrecheck) {
       try {
         const get = await getDeployment(config, deployedModel!);
-        const d = get.output ?? get.data;
-        const status = (d?.status ?? "").toUpperCase();
+        const deployment = get.output ?? get.data;
+        const status = (deployment?.status ?? "").toUpperCase();
         if (status && status !== "STOPPED" && status !== "FAILED") {
           throw new BailianError(
             `Deployment ${deployedModel} is ${status}. Only STOPPED / FAILED deployments can be deleted. ` +

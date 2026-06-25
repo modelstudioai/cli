@@ -15,10 +15,10 @@ import { emitResult, emitBare } from "../../output/output.ts";
  */
 function renderEntry(entry: FineTuneLogEntry | string): string {
   if (typeof entry === "string") return entry;
-  const e = entry as Record<string, unknown>;
-  const ts = (e.timestamp ?? e.time ?? e.create_time ?? "") as string;
-  const level = (e.level ?? "") as string;
-  const msg = (e.message ?? e.msg ?? e.log ?? "") as string;
+  const record = entry as Record<string, unknown>;
+  const ts = (record.timestamp ?? record.time ?? record.create_time ?? "") as string;
+  const level = (record.level ?? "") as string;
+  const msg = (record.message ?? record.msg ?? record.log ?? "") as string;
   if (msg || ts || level) {
     return [ts, level, msg].filter(Boolean).join("\t");
   }

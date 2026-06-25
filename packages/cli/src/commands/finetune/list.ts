@@ -45,13 +45,13 @@ export default defineCommand({
     const jobs = payload?.jobs ?? [];
     const total = payload?.total;
 
-    const items = jobs.map((j) => ({
-      job_id: j.job_id ?? "",
-      base_model: j.model ?? "",
-      status: j.status ?? "",
-      training_type: j.training_type ?? "",
-      output_model: j.finetuned_output ?? "",
-      created_at: j.create_time ?? j.gmt_create ?? "",
+    const items = jobs.map((item) => ({
+      job_id: item.job_id ?? "",
+      base_model: item.model ?? "",
+      status: item.status ?? "",
+      training_type: item.training_type ?? "",
+      output_model: item.finetuned_output ?? "",
+      created_at: item.create_time ?? item.gmt_create ?? "",
     }));
 
     if (format === "json") {

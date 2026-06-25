@@ -46,11 +46,11 @@ export default defineCommand({
     const total = response.data?.total;
 
     // Normalize to consistent structure for both text/json output.
-    const items = files.map((f) => ({
-      file_id: f.file_id ?? "",
-      name: f.name ?? "",
-      size: f.size !== undefined ? `${(f.size / 1024).toFixed(1)} KB` : "?",
-      purpose: f.purpose ?? "",
+    const items = files.map((item) => ({
+      file_id: item.file_id ?? "",
+      name: item.name ?? "",
+      size: item.size !== undefined ? `${(item.size / 1024).toFixed(1)} KB` : "?",
+      purpose: item.purpose ?? "",
     }));
 
     if (format === "json") {

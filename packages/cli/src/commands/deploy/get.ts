@@ -35,32 +35,32 @@ export default defineCommand({
     }
 
     const response = await getDeployment(config, deployedModel!);
-    const d = response.output ?? response.data;
+    const deployment = response.output ?? response.data;
 
-    if (!d) {
+    if (!deployment) {
       emitBare(`No data returned for ${deployedModel}`);
       return;
     }
 
     const item: Record<string, unknown> = {
-      deployed_model: d.deployed_model ?? deployedModel,
-      deployed_name: d.name ?? "",
-      model_name: d.model_name ?? "",
-      base_model: d.base_model ?? "",
-      status: d.status ?? "",
-      plan: d.plan ?? "",
+      deployed_model: deployment.deployed_model ?? deployedModel,
+      deployed_name: deployment.name ?? "",
+      model_name: deployment.model_name ?? "",
+      base_model: deployment.base_model ?? "",
+      status: deployment.status ?? "",
+      plan: deployment.plan ?? "",
     };
-    if (d.model_unit_spec) item.model_unit_spec = d.model_unit_spec;
-    if (d.charge_type) item.charge_type = d.charge_type;
-    if (d.capacity !== undefined) item.capacity = d.capacity;
-    if (d.base_capacity !== undefined) item.base_capacity = d.base_capacity;
-    if (d.ready_capacity !== undefined) item.ready_capacity = d.ready_capacity;
-    if (d.rpm_limit !== undefined) item.rpm_limit = d.rpm_limit;
-    if (d.tpm_limit !== undefined) item.tpm_limit = d.tpm_limit;
-    if (d.input_tpm !== undefined) item.input_tpm = d.input_tpm;
-    if (d.output_tpm !== undefined) item.output_tpm = d.output_tpm;
-    if (d.gmt_create) item.created_at = d.gmt_create;
-    if (d.gmt_modified) item.updated_at = d.gmt_modified;
+    if (deployment.model_unit_spec) item.model_unit_spec = deployment.model_unit_spec;
+    if (deployment.charge_type) item.charge_type = deployment.charge_type;
+    if (deployment.capacity !== undefined) item.capacity = deployment.capacity;
+    if (deployment.base_capacity !== undefined) item.base_capacity = deployment.base_capacity;
+    if (deployment.ready_capacity !== undefined) item.ready_capacity = deployment.ready_capacity;
+    if (deployment.rpm_limit !== undefined) item.rpm_limit = deployment.rpm_limit;
+    if (deployment.tpm_limit !== undefined) item.tpm_limit = deployment.tpm_limit;
+    if (deployment.input_tpm !== undefined) item.input_tpm = deployment.input_tpm;
+    if (deployment.output_tpm !== undefined) item.output_tpm = deployment.output_tpm;
+    if (deployment.gmt_create) item.created_at = deployment.gmt_create;
+    if (deployment.gmt_modified) item.updated_at = deployment.gmt_modified;
 
     if (format === "json") {
       emitResult(item, format);
@@ -68,10 +68,10 @@ export default defineCommand({
     }
 
     // text / quiet — fixed-width label column for alignment
-    const label = (k: string) => `${k}:`.padEnd(18);
-    for (const [k, v] of Object.entries(item)) {
-      if (v === "" || v === undefined) continue;
-      emitBare(`${label(k)}${v}`);
+    const label = (key: string) => `${key}:`.padEnd(18);
+    for (const [key, value] of Object.entries(item)) {
+      if (value === "" || value === undefined) continue;
+      emitBare(`${label(key)}${value}`);
     }
   },
 });

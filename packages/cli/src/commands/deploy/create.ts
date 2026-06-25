@@ -270,17 +270,17 @@ export default defineCommand({
     }
 
     const response = await createDeployment(config, body as never);
-    const d = response.output ?? response.data;
+    const deployment = response.output ?? response.data;
 
     if (config.quiet) {
-      emitBare(d?.deployed_model ?? "");
+      emitBare(deployment?.deployed_model ?? "");
     } else if (format === "text") {
       emitBare(`Created deployment.`);
-      if (d?.deployed_model) emitBare(`  deployed_model:  ${d.deployed_model}`);
-      if (d?.status) emitBare(`  status:          ${d.status}`);
-      if (d?.plan) emitBare(`  plan:            ${d.plan}`);
+      if (deployment?.deployed_model) emitBare(`  deployed_model:  ${deployment.deployed_model}`);
+      if (deployment?.status) emitBare(`  status:          ${deployment.status}`);
+      if (deployment?.plan) emitBare(`  plan:            ${deployment.plan}`);
       emitBare(
-        `\nNext: track readiness with: bl deploy get --deployed-model ${d?.deployed_model ?? "<id>"}`,
+        `\nNext: track readiness with: bl deploy get --deployed-model ${deployment?.deployed_model ?? "<id>"}`,
       );
     } else {
       emitResult(response, format);

@@ -140,9 +140,9 @@ function inspectMessageObject(msg: unknown, lineNo: number, path: string): Valid
     );
     return out;
   }
-  const m = msg as Record<string, unknown>;
-  const role = m.role;
-  const content = m.content;
+  const record = msg as Record<string, unknown>;
+  const role = record.role;
+  const content = record.content;
   if (typeof role !== "string" || !VALID_ROLES.has(role)) {
     out.push(
       makeIssue(

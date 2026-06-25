@@ -38,10 +38,10 @@ export default defineCommand({
     const ckpts = Array.isArray(payload) ? payload : (payload?.checkpoints ?? []);
     const total = Array.isArray(payload) ? payload.length : (payload?.total ?? ckpts.length);
 
-    const items = ckpts.map((c) => ({
-      checkpoint: c.checkpoint ?? c.checkpoint_id ?? "",
-      step: c.step !== undefined ? String(c.step) : "",
-      status: c.status ?? "",
+    const items = ckpts.map((item) => ({
+      checkpoint: item.checkpoint ?? item.checkpoint_id ?? "",
+      step: item.step !== undefined ? String(item.step) : "",
+      status: item.status ?? "",
     }));
 
     if (format === "json") {
