@@ -129,6 +129,13 @@ bl workspace list                                     # List all workspaces
 bl quota list                                         # View RPM/TPM limits (add --model to filter)
 bl quota check                                        # Current usage vs rate limits (add --model/--period)
 bl quota request --model qwen3.6-plus --tpm 6000000   # Request a temporary TPM increase
+bl quota history                                      # View quota-change history
+
+# Token Plan team management (requires AK/SK, see auth below)
+bl token-plan list-seats                                # View subscription seat details
+bl token-plan add-member --account-name dev --org-id org_xxx
+bl token-plan assign-seats --workspace-id ws_xxx --seat-type standard --account-id acc_xxx
+bl token-plan create-key --account-id acc_xxx --workspace-id ws_xxx
 ```
 
 > More examples and scenarios: [Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)
@@ -158,9 +165,9 @@ Required for console capability commands (`app list`, `usage free`, `usage stats
 bl auth login --console
 ```
 
-### Alibaba Cloud AK/SK (Knowledge Base only)
+### Alibaba Cloud AK/SK (Knowledge Base & Token Plan)
 
-Required for `knowledge retrieve`. Get your AccessKey from [RAM Console](https://ram.console.aliyun.com/manage/ak).
+Required for `knowledge retrieve` and the `token-plan` command group. Get your AccessKey from [RAM Console](https://ram.console.aliyun.com/manage/ak).
 
 > Recommended: create a RAM sub-account with minimum privileges instead of using the root account's AK/SK.
 

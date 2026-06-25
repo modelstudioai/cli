@@ -83,7 +83,10 @@ npx skills add modelstudioai/cli --all -g
 ## 快速开始
 
 ```bash
-# 认证
+# 认证（推荐浏览器登录）
+bl auth login --console
+
+# 或使用 API key 认证
 bl auth login --api-key sk-xxxxx
 
 # 和通义千问对话
