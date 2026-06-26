@@ -39,10 +39,8 @@ export async function runCheck(options = {}) {
   log(`bailian-cli-core@${coreJson.version}`);
   log(`bailian-cli@${cliJson.version}`);
 
-  step("build library packages (core, runtime, commands)");
-  // `bailian-cli^...` = all workspace dependencies of bailian-cli, in topological
-  // order, excluding bailian-cli itself. generate:reference imports their dist.
-  run("pnpm", ["--filter", "bailian-cli^...", "run", "build"]);
+  step("build bailian-cli-core");
+  run("pnpm", ["--filter", "bailian-cli-core", "run", "build"]);
 
   step(
     channel

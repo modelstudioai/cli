@@ -4,7 +4,7 @@ import { parseArgs } from "util";
 import { runCheck } from "./check.mjs";
 import { createTag, currentBranch, isWorkingTreeClean, pushTag, tagExists } from "./lib/git.mjs";
 import { npmViewExists, pnpmPublish } from "./lib/npm.mjs";
-import { ALL_PACKAGES, PACKAGES } from "./lib/packages.mjs";
+import { ALL_PACKAGES, findPackage, PACKAGES } from "./lib/packages.mjs";
 
 function log(msg = "") {
   process.stdout.write(`${msg}\n`);
@@ -58,7 +58,7 @@ try {
     process.exit(0);
   }
 
-  // Publish in dependency order (core → runtime → commands → cli [→ kscli]).
+  // Publish in dependency order.
   for (const pkg of packages) {
     if (published.get(pkg.key)) continue;
     step(`publish ${pkg.name}@${version} (tag=latest, provenance)`);
