@@ -39,8 +39,8 @@ export async function runCheck(options = {}) {
   log(`bailian-cli-core@${coreJson.version}`);
   log(`bailian-cli@${cliJson.version}`);
 
-  step("build bailian-cli-core");
-  run("pnpm", ["--filter", "bailian-cli-core", "run", "build"]);
+  step("build bailian-cli dependencies (core, commands, runtime)");
+  run("pnpm", ["--filter", "bailian-cli^...", "run", "build"]);
 
   step(
     channel
