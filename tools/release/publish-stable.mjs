@@ -4,7 +4,7 @@ import { parseArgs } from "util";
 import { runCheck } from "./check.mjs";
 import { createTag, currentBranch, isWorkingTreeClean, pushTag, tagExists } from "./lib/git.mjs";
 import { npmViewExists, pnpmPublish } from "./lib/npm.mjs";
-import { PACKAGES } from "./lib/packages.mjs";
+import { ALL_PACKAGES, PACKAGES } from "./lib/packages.mjs";
 
 function log(msg = "") {
   process.stdout.write(`${msg}\n`);
@@ -17,10 +17,13 @@ function step(msg) {
 const { values } = parseArgs({
   options: {
     "dry-run": { type: "boolean", default: false },
+    knowledge: { type: "boolean", default: false },
   },
   allowPositionals: false,
 });
 const dryRun = values["dry-run"];
+const knowledge = values.knowledge;
+const packages = knowledge ? ALL_PACKAGES : PACKAGES;
 
 try {
   if (!dryRun && !process.env.CI) {
@@ -40,23 +43,23 @@ try {
     log("[dry-run] skipping working-tree + branch preflight");
   }
 
-  const { coreJson } = await runCheck();
+  const { coreJson } = await runCheck({ knowledge });
   const version = coreJson.version; // all packages share this, asserted by runCheck
 
   step(`idempotency: check ${version} against registry`);
   const published = new Map();
-  for (const pkg of PACKAGES) {
+  for (const pkg of packages) {
     const exists = npmViewExists(pkg.name, version);
     published.set(pkg.key, exists);
     log(`${pkg.name}@${version}: ${exists ? "already published" : "to publish"}`);
   }
-  if (PACKAGES.every((pkg) => published.get(pkg.key))) {
+  if (packages.every((pkg) => published.get(pkg.key))) {
     log("\nall packages already published; nothing to do.");
     process.exit(0);
   }
 
-  // Publish in dependency order (core → runtime → commands → cli).
-  for (const pkg of PACKAGES) {
+  // Publish in dependency order (core → runtime → commands → cli [→ kscli]).
+  for (const pkg of packages) {
     if (published.get(pkg.key)) continue;
     step(`publish ${pkg.name}@${version} (tag=latest, provenance)`);
     pnpmPublish(pkg, { tag: "latest", provenance: true, dryRun });

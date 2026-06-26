@@ -18,10 +18,11 @@ export function assertReadmeSync() {
   }
 }
 
-export function loadAndValidatePackages() {
-  const internalNames = new Set(PACKAGES.map((p) => p.name));
+export function loadAndValidatePackages({ packages } = {}) {
+  const pkgs = packages ?? PACKAGES;
+  const internalNames = new Set(pkgs.map((p) => p.name));
   const jsonByKey = new Map();
-  for (const pkg of PACKAGES) {
+  for (const pkg of pkgs) {
     const json = readPackageJson(pkg);
     if (json.name !== pkg.name) {
       throw new Error(`${pkg.dir} name must be ${pkg.name}, got ${json.name}`);
@@ -32,7 +33,7 @@ export function loadAndValidatePackages() {
   const coreJson = jsonByKey.get("core");
   const version = coreJson.version;
 
-  for (const pkg of PACKAGES) {
+  for (const pkg of pkgs) {
     const json = jsonByKey.get(pkg.key);
     // All packages release in lockstep, so every version must match.
     if (json.version !== version) {

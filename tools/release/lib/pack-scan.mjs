@@ -13,10 +13,11 @@ function extractTarball(tarball, tempDir, key) {
   return extractDir;
 }
 
-export function packAndScan({ log }) {
+export function packAndScan({ log, packages }) {
+  const pkgs = packages ?? PACKAGES;
   const tempDir = mkdtempSync(join(tmpdir(), "bailian-release-"));
   try {
-    for (const pkg of PACKAGES) {
+    for (const pkg of pkgs) {
       const json = readPackageJson(pkg);
       log(`packing ${pkg.name}@${json.version}`);
       const tarball = pnpmPack(pkg, tempDir, json);
