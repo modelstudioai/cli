@@ -9,6 +9,11 @@ export const PACKAGES = [
   { key: "cli", dir: "packages/cli", name: "bailian-cli" },
 ];
 
+// knowledge-studio-cli shares the same library deps as bailian-cli.
+// Published via a separate workflow (publish-knowledge.yml) with --knowledge flag.
+export const KSCLI_PACKAGE = { key: "kscli", dir: "packages/kscli", name: "knowledge-studio-cli" };
+export const ALL_PACKAGES = [...PACKAGES, KSCLI_PACKAGE];
+
 export function readJson(path) {
   return JSON.parse(readFileSync(path, "utf-8"));
 }
