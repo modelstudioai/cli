@@ -29,6 +29,8 @@ export { default as memoryDelete } from "./commands/memory/delete.ts";
 export { default as memoryProfileCreate } from "./commands/memory/profile-create.ts";
 export { default as memoryProfileGet } from "./commands/memory/profile-get.ts";
 export { default as knowledgeRetrieve } from "./commands/knowledge/retrieve.ts";
+export { default as knowledgeSearch } from "./commands/knowledge/search.ts";
+export { default as knowledgeChat } from "./commands/knowledge/chat.ts";
 export { default as mcpCall } from "./commands/mcp/call.ts";
 export { default as mcpList } from "./commands/mcp/list.ts";
 export { default as mcpTools } from "./commands/mcp/tools.ts";

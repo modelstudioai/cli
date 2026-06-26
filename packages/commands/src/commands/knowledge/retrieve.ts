@@ -23,7 +23,7 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 const BAILIAN_HOST = "bailian.cn-beijing.aliyuncs.com";
 
 export default defineCommand({
-  description: "Retrieve from a Bailian knowledge base",
+  description: "Retrieve from a Bailian knowledge base (deprecated, use `search` instead)",
   skipDefaultApiKeySetup: true,
   usageArgs: "--index-id <id> --query <text> [flags]",
   options: [

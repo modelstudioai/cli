@@ -1,9 +1,14 @@
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
+  test: {
+    globalSetup: "./tests/e2e/global-setup.ts",
+    testTimeout: 60_000,
+    hookTimeout: 60_000,
+  },
   pack: {
     entry: {
-      rag: "src/main.ts",
+      kscli: "src/main.ts",
     },
     hash: false,
     minify: true,
