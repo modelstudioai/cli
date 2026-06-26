@@ -5,12 +5,7 @@ import { parseArgs } from "util";
 import { runCheck } from "./check.mjs";
 import { headSha7, utcDateStamp } from "./lib/git.mjs";
 import { npmViewExists, pnpmPublish } from "./lib/npm.mjs";
-import {
-  findPackage,
-  packageJsonPath,
-  readPackageJson,
-  writePackageJson,
-} from "./lib/packages.mjs";
+import { PACKAGES, packageJsonPath, readPackageJson, writePackageJson } from "./lib/packages.mjs";
 import { assertChannel } from "./lib/validate.mjs";
 
 function log(msg = "") {
@@ -37,16 +32,15 @@ if (!dryRun && !process.env.CI) {
   process.exit(1);
 }
 
-const core = findPackage("core");
-const cli = findPackage("cli");
-const corePath = packageJsonPath(core);
-const cliPath = packageJsonPath(cli);
-const coreOriginal = readFileSync(corePath, "utf-8");
-const cliOriginal = readFileSync(cliPath, "utf-8");
+// Snapshot every package.json so the temporary version bump is reverted in
+// `finally`, even when the release fails midway.
+const originals = PACKAGES.map((pkg) => {
+  const path = packageJsonPath(pkg);
+  return { pkg, path, content: readFileSync(path, "utf-8") };
+});
 
 function restoreOriginals() {
-  writeFileSync(corePath, coreOriginal);
-  writeFileSync(cliPath, cliOriginal);
+  for (const { path, content } of originals) writeFileSync(path, content);
 }
 
 try {
@@ -57,32 +51,31 @@ try {
   log(`channel=${channel}  version=${betaVersion}`);
 
   step("temporarily bump package.json (not committed)");
-  const coreJson = readPackageJson(core);
-  const cliJson = readPackageJson(cli);
-  coreJson.version = betaVersion;
-  cliJson.version = betaVersion;
-  writePackageJson(core, coreJson);
-  writePackageJson(cli, cliJson);
-  // pnpm pack resolves `workspace:*` to the in-tree version, so CLI tarball
-  // will depend on bailian-cli-core@<betaVersion> after this bump.
+  for (const pkg of PACKAGES) {
+    const json = readPackageJson(pkg);
+    json.version = betaVersion;
+    writePackageJson(pkg, json);
+  }
+  // pnpm pack resolves `workspace:*` to the in-tree version, so each tarball
+  // will depend on its siblings at <betaVersion> after this bump.
 
   await runCheck({ channel: true });
 
   step(`idempotency: check ${betaVersion} against registry`);
-  const corePublished = npmViewExists(core.name, betaVersion);
-  const cliPublished = npmViewExists(cli.name, betaVersion);
-  log(`${core.name}@${betaVersion}: ${corePublished ? "already published" : "to publish"}`);
-  log(`${cli.name}@${betaVersion}: ${cliPublished ? "already published" : "to publish"}`);
-  if (corePublished && cliPublished) {
-    log("\nboth packages already published; nothing to do.");
+  const published = new Map();
+  for (const pkg of PACKAGES) {
+    const exists = npmViewExists(pkg.name, betaVersion);
+    published.set(pkg.key, exists);
+    log(`${pkg.name}@${betaVersion}: ${exists ? "already published" : "to publish"}`);
+  }
+  if (PACKAGES.every((pkg) => published.get(pkg.key))) {
+    log("\nall packages already published; nothing to do.");
   } else {
-    if (!corePublished) {
-      step(`publish ${core.name}@${betaVersion} (tag=${channel}, provenance)`);
-      pnpmPublish(core, { tag: channel, provenance: true, dryRun });
-    }
-    if (!cliPublished) {
-      step(`publish ${cli.name}@${betaVersion} (tag=${channel}, provenance)`);
-      pnpmPublish(cli, { tag: channel, provenance: true, dryRun });
+    // Publish in dependency order (core → runtime → commands → cli).
+    for (const pkg of PACKAGES) {
+      if (published.get(pkg.key)) continue;
+      step(`publish ${pkg.name}@${betaVersion} (tag=${channel}, provenance)`);
+      pnpmPublish(pkg, { tag: channel, provenance: true, dryRun });
     }
   }
 

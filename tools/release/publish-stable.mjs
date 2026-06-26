@@ -4,7 +4,7 @@ import { parseArgs } from "util";
 import { runCheck } from "./check.mjs";
 import { createTag, currentBranch, isWorkingTreeClean, pushTag, tagExists } from "./lib/git.mjs";
 import { npmViewExists, pnpmPublish } from "./lib/npm.mjs";
-import { findPackage } from "./lib/packages.mjs";
+import { PACKAGES } from "./lib/packages.mjs";
 
 function log(msg = "") {
   process.stdout.write(`${msg}\n`);
@@ -41,27 +41,25 @@ try {
   }
 
   const { coreJson } = await runCheck();
-  const version = coreJson.version; // === cliJson.version, asserted by runCheck
+  const version = coreJson.version; // all packages share this, asserted by runCheck
 
   step(`idempotency: check ${version} against registry`);
-  const core = findPackage("core");
-  const cli = findPackage("cli");
-  const corePublished = npmViewExists(core.name, version);
-  const cliPublished = npmViewExists(cli.name, version);
-  log(`${core.name}@${version}: ${corePublished ? "already published" : "to publish"}`);
-  log(`${cli.name}@${version}: ${cliPublished ? "already published" : "to publish"}`);
-  if (corePublished && cliPublished) {
-    log("\nboth packages already published; nothing to do.");
+  const published = new Map();
+  for (const pkg of PACKAGES) {
+    const exists = npmViewExists(pkg.name, version);
+    published.set(pkg.key, exists);
+    log(`${pkg.name}@${version}: ${exists ? "already published" : "to publish"}`);
+  }
+  if (PACKAGES.every((pkg) => published.get(pkg.key))) {
+    log("\nall packages already published; nothing to do.");
     process.exit(0);
   }
 
-  if (!corePublished) {
-    step(`publish ${core.name}@${version} (tag=latest, provenance)`);
-    pnpmPublish(core, { tag: "latest", provenance: true, dryRun });
-  }
-  if (!cliPublished) {
-    step(`publish ${cli.name}@${version} (tag=latest, provenance)`);
-    pnpmPublish(cli, { tag: "latest", provenance: true, dryRun });
+  // Publish in dependency order (core → runtime → commands → cli).
+  for (const pkg of PACKAGES) {
+    if (published.get(pkg.key)) continue;
+    step(`publish ${pkg.name}@${version} (tag=latest, provenance)`);
+    pnpmPublish(pkg, { tag: "latest", provenance: true, dryRun });
   }
 
   if (dryRun) {
