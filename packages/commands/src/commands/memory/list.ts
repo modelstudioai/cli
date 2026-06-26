@@ -7,7 +7,6 @@ import {
   type GlobalFlags,
   type MemoryNodeListResponse,
 } from "bailian-cli-core";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -23,7 +22,6 @@ export default defineCommand({
   exampleArgs: ["--user-id user1", "--user-id user1 --page-size 20 --page 2"],
   async run(config: Config, flags: GlobalFlags) {
     const userId = flags.userId as string;
-    if (!userId) failIfMissing("user-id", cmdUsage(config, "--user-id <id>"));
 
     const format = detectOutputFormat(config.output);
     const params = new URLSearchParams();

@@ -140,18 +140,12 @@ export default defineCommand({
     "--off --model qwen3-max",
     "--off --all",
   ],
+  validate: (f) =>
+    !f.model && !f.all ? "Provide --model <model>[,model2,...] or --all." : undefined,
   async run(config: Config, flags: GlobalFlags) {
     const modelFlag = (flags.model as string) || undefined;
-    const all = Boolean(flags.all);
     const off = Boolean(flags.off);
     const format = detectOutputFormat(config.output);
-
-    if (!modelFlag && !all) {
-      process.stderr.write(
-        "Error: missing required flag. Specify --model <model>[,model2,...] or --all\n",
-      );
-      process.exit(1);
-    }
 
     let models: string[];
     if (modelFlag) {

@@ -9,7 +9,6 @@ import {
   type DashScopeVideoRefRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
-  isInteractive,
   resolveOutputDir,
   resolveFileUrl,
   resolveCredential,
@@ -20,7 +19,6 @@ import {
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
-import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
@@ -66,10 +64,12 @@ export default defineCommand({
     {
       flag: "--prompt-extend <bool>",
       description: BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT,
+      type: "boolean",
     },
     {
       flag: "--watermark <bool>",
       description: BOOL_FLAG_WATERMARK,
+      type: "boolean",
     },
     { flag: "--seed <n>", description: "Random seed for reproducible generation", type: "number" },
     { flag: "--download <path>", description: "Save video to file on completion" },
@@ -91,34 +91,15 @@ export default defineCommand({
     '--prompt "Image 1 and Image 2 have a conversation" --image a.jpg --image b.jpg --image-voice va.mp3 --image-voice vb.mp3',
     '--prompt "Image 1 drinks water" --image person.jpg --watermark false',
   ],
+  validate: (f) =>
+    !(f.image as string[] | undefined)?.length && !(f.refVideo as string[] | undefined)?.length
+      ? "Provide at least one --image or --ref-video."
+      : undefined,
   async run(config: Config, flags: GlobalFlags) {
-    // --- Validate prompt ---
-    let prompt = flags.prompt as string | undefined;
-    if (!prompt) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({
-          message: "Enter your video prompt (use Image1, Video1 to reference inputs):",
-        });
-        if (!hint) {
-          process.stderr.write("Video generation cancelled.\n");
-          process.exit(1);
-        }
-        prompt = hint;
-      } else {
-        failIfMissing("prompt", cmdUsage(config, "--prompt <text> --image <url>"));
-      }
-    }
+    const prompt = flags.prompt as string;
 
     const images = (flags.image as string[] | undefined) || [];
     const refVideos = (flags.refVideo as string[] | undefined) || [];
-
-    if (images.length === 0 && refVideos.length === 0) {
-      throw new BailianError(
-        "At least one --image or --ref-video is required.",
-        ExitCode.USAGE,
-        cmdUsage(config, '--prompt "description" --image person.jpg'),
-      );
-    }
 
     const imageVoices = (flags.imageVoice as string[] | undefined) || [];
     const videoVoices = (flags.videoVoice as string[] | undefined) || [];

@@ -8,7 +8,6 @@ import {
   type GlobalFlags,
   getModels,
   type IntentProfile,
-  isInteractive,
   type PipelineStep,
   type RecommendedModel,
   type RecommendResult,
@@ -19,7 +18,6 @@ import boxen from "boxen";
 import chalk, { Chalk, type ChalkInstance } from "chalk";
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { createSpinner } from "bailian-cli-runtime";
-import { failIfMissing, promptText, cmdUsage } from "bailian-cli-runtime";
 
 function formatContextWindow(tokens: number): string {
   if (tokens >= 1_000_000)
@@ -218,19 +216,12 @@ export default defineCommand({
   description:
     "Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking)",
   auth: "apiKey",
-  usageArgs: "<prompt> [flags]",
+  usageArgs: "--message <text> [flags]",
   options: [
     {
       flag: "--message <text>",
-      description: "Describe your requirements (alternative to positional prompt)",
-    },
-    {
-      flag: "--dry-run",
-      description: "Show intent analysis and candidate list without LLM ranking",
-    },
-    {
-      flag: "--output <format>",
-      description: "Output format: text (default in TTY), json, yaml",
+      description: "Describe your requirements",
+      required: true,
     },
   ],
   exampleArgs: [
@@ -239,24 +230,9 @@ export default defineCommand({
     '--message "Legal contract review, high precision required"',
     '--message "Low-cost high-concurrency online customer service" --output json',
     '--message "Long document summarization" --dry-run',
-    "                                          # Interactive input",
   ],
   async run(config: Config, flags: GlobalFlags) {
-    const positional = ((flags as Record<string, unknown>)._positional as string[]) ?? [];
-    let userInput = (flags.message as string) || positional.join(" ");
-
-    if (!userInput.trim()) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({ message: "Describe your requirement:" });
-        if (!hint) {
-          process.stderr.write("Cancelled.\n");
-          process.exit(1);
-        }
-        userInput = hint;
-      } else {
-        failIfMissing("message", cmdUsage(config, '"your requirement"'));
-      }
-    }
+    const userInput = flags.message as string;
 
     const top = 3;
     const format = detectOutputFormat(config.output);

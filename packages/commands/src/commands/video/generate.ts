@@ -9,7 +9,6 @@ import {
   type DashScopeVideoRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
-  isInteractive,
   resolveOutputDir,
   resolveFileUrl,
   resolveCredential,
@@ -21,7 +20,6 @@ import {
 import { poll } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
 import { runConcurrent, getConcurrency } from "bailian-cli-runtime";
-import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
@@ -51,10 +49,12 @@ export default defineCommand({
     {
       flag: "--prompt-extend <bool>",
       description: BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT,
+      type: "boolean",
     },
     {
       flag: "--watermark <bool>",
       description: BOOL_FLAG_WATERMARK,
+      type: "boolean",
     },
     { flag: "--seed <n>", description: "Random seed for reproducible generation", type: "number" },
     { flag: "--download <path>", description: "Save video to file on completion" },
@@ -77,20 +77,7 @@ export default defineCommand({
     '--prompt "A cat playing with a ball" --watermark false',
   ],
   async run(config: Config, flags: GlobalFlags) {
-    let prompt = flags.prompt as string | undefined;
-
-    if (!prompt) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({ message: "Enter your video prompt:" });
-        if (!hint) {
-          process.stderr.write("Video generation cancelled.\n");
-          process.exit(1);
-        }
-        prompt = hint;
-      } else {
-        failIfMissing("prompt", cmdUsage(config, "--prompt <text>"));
-      }
-    }
+    const prompt = flags.prompt as string;
 
     const model =
       (flags.model as string) ||

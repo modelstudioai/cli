@@ -33,9 +33,9 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
   () => {
     test("video ref 缺少 --prompt 时打印子命令帮助并退出 (0)", async () => {
       const { stderr, exitCode } = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "ref",
+        ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.0-r2v",
         "--image",
@@ -48,9 +48,9 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
 
     test("video ref 缺少 --image 与 --ref-video 时退出为用法错误 (2)", async () => {
       const { stderr, exitCode } = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "ref",
+        ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.0-r2v",
         "--prompt",
@@ -84,9 +84,9 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       expect(imagePath).toBeTruthy();
 
       const { stdout, stderr, exitCode } = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "ref",
+        ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.0-r2v",
         "--prompt",

@@ -27,6 +27,19 @@ describe("e2e: search web", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/web|--query|list-tools|count/i);
   });
+
+  test("search web --dry-run --list-tools 无需 --query 也无需凭证即可干跑", async () => {
+    const { stdout, stderr, exitCode } = await runCli(
+      ["search", "web", "--dry-run", "--list-tools", "--non-interactive", "--output", "json"],
+      {
+        DASHSCOPE_API_KEY: undefined,
+        DASHSCOPE_ACCESS_TOKEN: undefined,
+      },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ action?: string }>(stdout);
+    expect(data.action).toBe("tools/list");
+  });
 });
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: search web", () => {
@@ -59,21 +72,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: search web", () => {
     expect(data.tool).toBe("bailian_web_search");
     expect(data.arguments?.query).toBe("干跑校验");
     expect(data.arguments?.count).toBe(5);
-  });
-
-  test("search web --dry-run --list-tools 仅描述 tools/list", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
-      "search",
-      "web",
-      "--dry-run",
-      "--list-tools",
-      "--non-interactive",
-      "--output",
-      "json",
-    ]);
-    expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{ action?: string }>(stdout);
-    expect(data.action).toBe("tools/list");
   });
 
   test("联网搜索返回 JSON 且含搜索结果", async () => {

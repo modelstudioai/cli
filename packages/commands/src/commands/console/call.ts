@@ -9,7 +9,6 @@ import {
   type Config,
   type GlobalFlags,
 } from "bailian-cli-core";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -44,10 +43,7 @@ export default defineCommand({
   ],
   async run(config: Config, flags: GlobalFlags) {
     const api = flags.api as string;
-    if (!api) failIfMissing("api", cmdUsage(config, "--api <api> --data <json>"));
-
     const dataRaw = flags.data as string;
-    if (!dataRaw) failIfMissing("data", cmdUsage(config, "--api <api> --data <json>"));
 
     let data: Record<string, unknown>;
     try {

@@ -33,9 +33,9 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
   () => {
     test("video generate 缺少 --prompt 时打印子命令帮助并退出 (0)", async () => {
       const { stderr, exitCode } = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "generate",
+        ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.0-i2v",
         "--image",
@@ -48,9 +48,9 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
 
     test("video generate --dry-run（无 --image）仅输出 request（t2v 路径不调上传）", async () => {
       const { stdout, stderr, exitCode } = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "generate",
+        ...cliTimeoutPrefix(),
         "--dry-run",
         "--model",
         "happyhorse-1.0-t2v",
@@ -91,9 +91,9 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       const imagePath = genData.saved?.[0] ?? png;
 
       const { stdout, stderr, exitCode } = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "generate",
+        ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.0-i2v",
         "--image",

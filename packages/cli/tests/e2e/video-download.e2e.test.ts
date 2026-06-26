@@ -87,9 +87,9 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       const genMp4 = join(outDir, "e2e-gen-for-download.mp4");
 
       const gen = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "generate",
+        ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.0-t2v",
         "--duration",
@@ -116,9 +116,9 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
 
       const downloadMp4 = join(outDir, "e2e-download.mp4");
       const dl = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "download",
+        ...cliTimeoutPrefix(),
         "--task-id",
         genData.task_id!,
         "--out",

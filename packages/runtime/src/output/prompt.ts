@@ -10,18 +10,16 @@
  * case explicitly.
  */
 
-import { BailianError, ExitCode, isInteractive, type Config } from "bailian-cli-core";
-import { printCurrentCommandHelp, getExecutingCommandPath } from "../utils/command-help.ts";
+import { isInteractive, type Config } from "bailian-cli-core";
 
 /**
- * Build a command-usage string for the running command: `<binName> <path> <args>`.
- * Both the product binary name and the command path come from the runtime, so
- * callers never hardcode "bl" or their own path — the same code renders as
- * `bl knowledge retrieve …` under bl and `rag retrieve …` under rag.
+ * Build a command-usage string prefixed with the product binary name, e.g.
+ * `bl --list-voices --model x`. Used for actionable hints inside error messages
+ * (the error boundary renders full command help separately).
  */
 export function cmdUsage(config: Config, args = ""): string {
-  const parts = [config.binName, ...getExecutingCommandPath()].filter(Boolean);
-  return args ? `${parts.join(" ")} ${args}` : parts.join(" ");
+  const bin = config.binName ?? "";
+  return args ? `${bin} ${args}` : bin;
 }
 
 // Dynamic import to avoid loading @clack/prompts in non-interactive envs unnecessarily
@@ -104,22 +102,4 @@ export async function promptSelect(options: {
 
   if (typeof val === "symbol") return undefined;
   return val as string;
-}
-
-/**
- * Fail fast with a user-friendly error when a required option is missing
- * in non-interactive (agent / CI) mode.
- */
-export function failIfMissing(flagName: string, context: string): never {
-  if (getExecutingCommandPath().length > 0) {
-    printCurrentCommandHelp(process.stderr);
-    process.exit(0);
-  }
-  throw new BailianError(
-    `Missing required argument: --${flagName}\n` +
-      `Hint: In non-interactive (CI / agent) environments all required flags must be provided.\n` +
-      `      In an interactive terminal, run without --${flagName} and the CLI will prompt for it.`,
-    ExitCode.USAGE,
-    context,
-  );
 }

@@ -66,7 +66,7 @@ describe("e2e: knowledge retrieve", () => {
 // ---- Error scenarios (no real credentials needed) ----
 
 describe("e2e: knowledge retrieve errors", () => {
-  test("无任何凭证时提示 No credentials found 并非零退出", async () => {
+  test("无任何凭证时提示缺少密钥并非零退出", async () => {
     const { stderr, exitCode } = await runCli(
       [
         "knowledge",
@@ -88,7 +88,7 @@ describe("e2e: knowledge retrieve errors", () => {
       },
     );
     expect(exitCode).not.toBe(0);
-    expect(stderr).toMatch(/no credentials found/i);
+    expect(stderr).toMatch(/no api key found|no credentials found/i);
   });
 });
 

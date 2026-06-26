@@ -86,23 +86,23 @@ Use this index for the full quick index and global flags.
 
 Available on every command (in addition to command-specific options):
 
-| Flag                           | Type    | Required | Description                                              |
-| ------------------------------ | ------- | -------- | -------------------------------------------------------- |
-| `--api-key <key>`              | string  | no       | API key                                                  |
-| `--base-url <url>`             | string  | no       | API base URL                                             |
-| `--output <format>`            | string  | no       | Output format: text, json                                |
-| `--timeout <seconds>`          | number  | no       | Request timeout                                          |
-| `--quiet`                      | boolean | no       | Suppress non-essential output                            |
-| `--verbose`                    | boolean | no       | Print HTTP request/response details                      |
-| `--no-color`                   | boolean | no       | Disable ANSI colors                                      |
-| `--dry-run`                    | boolean | no       | Dry run mode                                             |
-| `--non-interactive`            | boolean | no       | Disable interactive prompts                              |
-| `--concurrent <n>`             | number  | no       | Run N parallel requests (default: 1)                     |
-| `--console-region <region>`    | string  | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
-| `--console-site <site>`        | string  | no       | Console site: domestic, international                    |
-| `--console-switch-agent <uid>` | number  | no       | Switch agent UID for delegated access                    |
-| `--help`                       | boolean | no       | Show help                                                |
-| `--version`                    | boolean | no       | Print version                                            |
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--api-key <key>`              | string | no       | API key                                                  |
+| `--base-url <url>`             | string | no       | API base URL                                             |
+| `--output <format>`            | string | no       | Output format: text, json                                |
+| `--timeout <seconds>`          | number | no       | Request timeout                                          |
+| `--quiet`                      | switch | no       | Suppress non-essential output                            |
+| `--verbose`                    | switch | no       | Print HTTP request/response details                      |
+| `--no-color`                   | switch | no       | Disable ANSI colors                                      |
+| `--dry-run`                    | switch | no       | Dry run mode                                             |
+| `--non-interactive`            | switch | no       | Disable interactive prompts                              |
+| `--concurrent <n>`             | number | no       | Run N parallel requests (default: 1)                     |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--help`                       | switch | no       | Show help                                                |
+| `--version`                    | switch | no       | Print version                                            |
 
 ## Notes
 

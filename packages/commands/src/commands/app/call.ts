@@ -11,7 +11,6 @@ import {
   type AppStreamChunk,
   type AppCompletionResponse,
 } from "bailian-cli-core";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -44,10 +43,7 @@ export default defineCommand({
   ],
   async run(config: Config, flags: GlobalFlags) {
     const appId = flags.appId as string;
-    if (!appId) failIfMissing("app-id", cmdUsage(config, "--app-id <id> --prompt <text>"));
-
     const prompt = flags.prompt as string;
-    if (!prompt) failIfMissing("prompt", cmdUsage(config, "--app-id <id> --prompt <text>"));
 
     const shouldStream =
       flags.stream === true || (flags.stream === undefined && process.stdout.isTTY);

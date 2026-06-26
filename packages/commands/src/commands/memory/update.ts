@@ -7,7 +7,6 @@ import {
   type GlobalFlags,
   type MemoryNodeUpdateRequest,
 } from "bailian-cli-core";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -27,16 +26,8 @@ export default defineCommand({
   exampleArgs: ['--node-id node_xxx --user-id user1 --content "updated memory content"'],
   async run(config: Config, flags: GlobalFlags) {
     const nodeId = flags.nodeId as string;
-    if (!nodeId)
-      failIfMissing("node-id", cmdUsage(config, "--node-id <id> --user-id <id> --content <text>"));
-
     const userId = flags.userId as string;
-    if (!userId)
-      failIfMissing("user-id", cmdUsage(config, "--node-id <id> --user-id <id> --content <text>"));
-
     const content = flags.content as string;
-    if (!content)
-      failIfMissing("content", cmdUsage(config, "--node-id <id> --user-id <id> --content <text>"));
 
     const body: MemoryNodeUpdateRequest = {
       user_id: userId,

@@ -19,7 +19,6 @@ import {
   speechRecognizeEndpoint,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -67,9 +66,6 @@ export default defineCommand({
       rawUrls = flags.url as string[];
     } else if (typeof flags.url === "string") {
       rawUrls = [flags.url];
-    }
-    if (rawUrls.length === 0) {
-      failIfMissing("url", cmdUsage(config, "--url <audio-url>"));
     }
 
     // Strict validation: --speaker-count requires --diarization

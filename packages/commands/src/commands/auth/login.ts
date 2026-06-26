@@ -1,16 +1,13 @@
 import {
   defineCommand,
-  isInteractive,
-  maskToken,
   readConfigFile,
   writeConfigFile,
   type Config,
   type GlobalFlags,
 } from "bailian-cli-core";
+import { IncompleteCommandError } from "bailian-cli-core";
 import { printQuickStart } from "bailian-cli-runtime";
 import { emitBare } from "bailian-cli-runtime";
-import { promptConfirm } from "bailian-cli-runtime";
-import { printCurrentCommandHelp } from "bailian-cli-runtime";
 import {
   resolveConsoleOrigin,
   runConsoleLogin,
@@ -51,25 +48,12 @@ export default defineCommand({
 
     const envKey = process.env.DASHSCOPE_API_KEY;
     if (envKey && !flags.apiKey) {
-      const maskedEnvKey = maskToken(envKey);
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const proceed = await promptConfirm({
-          message: `Detected DASHSCOPE_API_KEY in environment (${maskedEnvKey}).\nYou are already authenticated via env.\nDo you still want to configure local persistent credentials?`,
-          initialValue: false,
-        });
-        if (!proceed) {
-          process.stdout.write("Login skipped. Using environment variables.\n");
-          process.exit(0);
-        }
-      } else {
-        process.stderr.write(`Warning: DASHSCOPE_API_KEY is already set in environment.\n`);
-      }
+      process.stderr.write(`Warning: DASHSCOPE_API_KEY is already set in environment.\n`);
     }
 
     const key = (flags.apiKey as string) || config.apiKey;
     if (!key) {
-      printCurrentCommandHelp(process.stderr);
-      process.exit(0);
+      throw new IncompleteCommandError("Missing required argument: --api-key");
     }
 
     const baseUrl = (flags.baseUrl as string) || undefined;

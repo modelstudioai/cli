@@ -7,9 +7,6 @@ export function detectOutputFormat(flagValue?: string): OutputFormat {
   if (flagValue === "json" || flagValue === "text") {
     return flagValue;
   }
-  if (!process.stdout.isTTY) {
-    return "json";
-  }
   return "text";
 }
 

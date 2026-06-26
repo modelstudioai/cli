@@ -8,7 +8,6 @@ import {
   type MemorySearchRequest,
   type MemorySearchResponse,
 } from "bailian-cli-core";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -30,9 +29,9 @@ export default defineCommand({
     '--user-id user1 --query "programming preferences"',
     '--user-id user1 --messages \'[{"role":"user","content":"recommend a book"}]\' --top-k 5',
   ],
+  validate: (f) => (!f.query && !f.messages ? "Provide --query or --messages." : undefined),
   async run(config: Config, flags: GlobalFlags) {
     const userId = flags.userId as string;
-    if (!userId) failIfMissing("user-id", cmdUsage(config, "--user-id <id>"));
 
     const body: MemorySearchRequest = { user_id: userId };
 
@@ -50,11 +49,6 @@ export default defineCommand({
     // API requires messages; if only query is given, wrap it as a user message
     if (!body.messages && body.query) {
       body.messages = [{ role: "user", content: body.query }];
-    }
-
-    if (!body.query && !body.messages) {
-      process.stderr.write("Error: at least one of --query or --messages is required\n");
-      process.exit(1);
     }
 
     if (flags.topK !== undefined) body.top_k = flags.topK as number;

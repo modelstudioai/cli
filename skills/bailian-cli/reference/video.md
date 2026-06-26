@@ -29,8 +29,8 @@ Index: [index.md](index.md)
 
 | Flag             | Type   | Required | Description              |
 | ---------------- | ------ | -------- | ------------------------ |
-| `--task-id <id>` | string | no       | Task ID to download from |
-| `--out <path>`   | string | no       | Output file path         |
+| `--task-id <id>` | string | yes      | Task ID to download from |
+| `--out <path>`   | string | yes      | Output file path         |
 
 #### Examples
 
@@ -63,8 +63,8 @@ bl video download --task-id 3b256896-xxxx --out video.mp4 --quiet
 | `--ratio <ratio>`           | string  | no       | Aspect ratio (16:9, 9:16, 1:1, 4:3, 3:4)                                                |
 | `--duration <seconds>`      | number  | no       | Output video duration in seconds (2-10)                                                 |
 | `--audio-setting <mode>`    | string  | no       | Audio: auto (default) or origin (keep original)                                         |
-| `--prompt-extend <bool>`    | string  | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default). |
-| `--watermark <bool>`        | string  | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
+| `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default). |
+| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
 | `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                 |
 | `--download <path>`         | string  | no       | Save video to file on completion                                                        |
 | `--no-wait`                 | boolean | no       | Return task ID immediately without waiting                                              |
@@ -108,8 +108,8 @@ bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the
 | `--resolution <res>`        | string  | no       | Resolution: 720P or 1080P (default: 1080P)                                              |
 | `--ratio <ratio>`           | string  | no       | Aspect ratio (e.g. 16:9, 9:16, 1:1)                                                     |
 | `--duration <seconds>`      | number  | no       | Video duration in seconds (default: 5)                                                  |
-| `--prompt-extend <bool>`    | string  | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default). |
-| `--watermark <bool>`        | string  | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
+| `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default). |
+| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
 | `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                 |
 | `--download <path>`         | string  | no       | Save video to file on completion                                                        |
 | `--no-wait`                 | boolean | no       | Return task ID immediately without waiting                                              |
@@ -159,8 +159,8 @@ bl video generate --prompt "A cat playing with a ball" --watermark false
 | `--resolution <res>`        | string  | no       | Resolution: 720P or 1080P (default: 1080P)                                              |
 | `--ratio <ratio>`           | string  | no       | Aspect ratio (16:9, 9:16, 1:1)                                                          |
 | `--duration <seconds>`      | number  | no       | Video duration in seconds (default: 5)                                                  |
-| `--prompt-extend <bool>`    | string  | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default). |
-| `--watermark <bool>`        | string  | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
+| `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default). |
+| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
 | `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                 |
 | `--download <path>`         | string  | no       | Save video to file on completion                                                        |
 | `--no-wait`                 | boolean | no       | Return task ID immediately without waiting                                              |
@@ -201,7 +201,7 @@ bl video ref --prompt "Image 1 drinks water" --image person.jpg --watermark fals
 
 | Flag             | Type   | Required | Description   |
 | ---------------- | ------ | -------- | ------------- |
-| `--task-id <id>` | string | no       | Async task ID |
+| `--task-id <id>` | string | yes      | Async task ID |
 
 #### Examples
 

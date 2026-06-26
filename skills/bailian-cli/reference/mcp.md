@@ -17,34 +17,34 @@ Index: [index.md](index.md)
 
 ### `bl mcp call`
 
-| Field           | Value                                                                             |
-| --------------- | --------------------------------------------------------------------------------- |
-| **Name**        | `mcp call`                                                                        |
-| **Description** | Call a tool on an MCP server (tools/call)                                         |
-| **Usage**       | `bl mcp call <server-code>.<tool> [--arg k=v ...] [--json '{...}'] [--url <url>]` |
+| Field           | Value                                                                               |
+| --------------- | ----------------------------------------------------------------------------------- |
+| **Name**        | `mcp call`                                                                          |
+| **Description** | Call a tool on an MCP server (tools/call)                                           |
+| **Usage**       | `bl mcp call --target <server.tool> [--arg k=v ...] [--json '{...}'] [--url <url>]` |
 
 #### Options
 
-| Flag                   | Type   | Required | Description                                                                              |
-| ---------------------- | ------ | -------- | ---------------------------------------------------------------------------------------- |
-| `<server-code>.<tool>` | string | yes      | Server code and tool name joined by a dot, e.g. market-cmapi00073529.SmartStockSelection |
-| `--arg <kv>`           | array  | no       | Tool argument (repeatable). Values parsed as JSON if possible, else string.              |
-| `--json <obj>`         | string | no       | Full arguments object as JSON; merged with --arg (arg wins).                             |
-| `--query <text>`       | string | no       | Shortcut for --arg query=<text> (mirrors many DashScope MCP tools).                      |
-| `--url <url>`          | string | no       | Override the MCP endpoint URL (for non-Bailian servers)                                  |
+| Flag                     | Type   | Required | Description                                                                              |
+| ------------------------ | ------ | -------- | ---------------------------------------------------------------------------------------- |
+| `--target <server.tool>` | string | yes      | Server code and tool name joined by a dot, e.g. market-cmapi00073529.SmartStockSelection |
+| `--arg <kv>`             | array  | no       | Tool argument (repeatable). Values parsed as JSON if possible, else string.              |
+| `--json <obj>`           | string | no       | Full arguments object as JSON; merged with --arg (arg wins).                             |
+| `--query <text>`         | string | no       | Shortcut for --arg query=<text> (mirrors many DashScope MCP tools).                      |
+| `--url <url>`            | string | no       | Override the MCP endpoint URL (for non-Bailian servers)                                  |
 
 #### Examples
 
 ```bash
-bl mcp call market-cmapi00073529.SmartStockSelection --query "Screen consumer stocks with ROE > 15%"
+bl mcp call --target market-cmapi00073529.SmartStockSelection --query "Screen consumer stocks with ROE > 15%"
 ```
 
 ```bash
-bl mcp call market-cmapi00073529.FinQuery --json '{"q":"Guizhou Maotai","limit":5}'
+bl mcp call --target market-cmapi00073529.FinQuery --json '{"q":"Guizhou Maotai","limit":5}'
 ```
 
 ```bash
-bl mcp call market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 --arg minScale=10
+bl mcp call --target market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 --arg minScale=10
 ```
 
 ### `bl mcp list`
@@ -87,25 +87,25 @@ bl mcp list --output json
 | --------------- | ------------------------------------------------ |
 | **Name**        | `mcp tools`                                      |
 | **Description** | List tools exposed by an MCP server (tools/list) |
-| **Usage**       | `bl mcp tools <server-code> [--url <url>]`       |
+| **Usage**       | `bl mcp tools --server <code> [--url <url>]`     |
 
 #### Options
 
-| Flag            | Type   | Required | Description                                             |
-| --------------- | ------ | -------- | ------------------------------------------------------- |
-| `<server-code>` | string | yes      | Server code from `mcp list` (e.g. market-cmapi00073529) |
-| `--url <url>`   | string | no       | Override the MCP endpoint URL (for non-Bailian servers) |
+| Flag              | Type   | Required | Description                                             |
+| ----------------- | ------ | -------- | ------------------------------------------------------- |
+| `--server <code>` | string | yes      | Server code from `mcp list` (e.g. market-cmapi00073529) |
+| `--url <url>`     | string | no       | Override the MCP endpoint URL (for non-Bailian servers) |
 
 #### Examples
 
 ```bash
-bl mcp tools market-cmapi00073529
+bl mcp tools --server market-cmapi00073529
 ```
 
 ```bash
-bl mcp tools market-cmapi00073529 --output json
+bl mcp tools --server market-cmapi00073529 --output json
 ```
 
 ```bash
-bl mcp tools my-server --url https://example.com/mcp
+bl mcp tools --server my-server --url https://example.com/mcp
 ```

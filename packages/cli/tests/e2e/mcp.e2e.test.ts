@@ -33,13 +33,13 @@ describe("e2e: mcp", () => {
   test("mcp tools --help 正常退出", async () => {
     const { stderr, exitCode } = await runCli(["mcp", "tools", "--help"]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/tools|server-code|--url/i);
+    expect(stderr).toMatch(/tools|--server|--url/i);
   });
 
   test("mcp call --help 正常退出", async () => {
     const { stderr, exitCode } = await runCli(["mcp", "call", "--help"]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/call|server-code|tool|--arg|--json/i);
+    expect(stderr).toMatch(/call|--target|--arg|--json/i);
   });
 
   test("mcp list --help 不暴露 --all 入口（市场全量已下线）", async () => {
@@ -103,10 +103,11 @@ describe("e2e: mcp", () => {
     expect(data.consoleRegion).toBe("cn-hangzhou");
   });
 
-  test("mcp tools <server-code> --dry-run 输出 /api/v1/mcps/<code>/mcp 形态 URL", async () => {
+  test("mcp tools --server <code> --dry-run 输出 /api/v1/mcps/<code>/mcp 形态 URL", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "mcp",
       "tools",
+      "--server",
       "market-cmapi00073529",
       "--dry-run",
       "--non-interactive",
@@ -126,6 +127,7 @@ describe("e2e: mcp", () => {
     const { stdout, stderr, exitCode } = await runCli([
       "mcp",
       "tools",
+      "--server",
       "my-server",
       "--url",
       "https://example.com/custom/mcp",
@@ -140,16 +142,17 @@ describe("e2e: mcp", () => {
     expect(data.url).toBe("https://example.com/custom/mcp");
   });
 
-  test("mcp tools 缺少 server-code 时打印子命令帮助并退出 (0)", async () => {
+  test("mcp tools 缺少 --server 时打印子命令帮助并退出 (0)", async () => {
     const { stderr, exitCode } = await runCli(["mcp", "tools", "--non-interactive"]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/server-code|Usage:/i);
+    expect(stderr).toMatch(/--server|Usage:/i);
   });
 
-  test("mcp call <server-code>.<tool> --dry-run 输出工具调用计划", async () => {
+  test("mcp call --target <server.tool> --dry-run 输出工具调用计划", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "mcp",
       "call",
+      "--target",
       "market-cmapi00073529.SmartStockSelection",
       "--query",
       "筛选ROE>15%的消费股",
@@ -176,6 +179,7 @@ describe("e2e: mcp", () => {
     const { stdout, stderr, exitCode } = await runCli([
       "mcp",
       "call",
+      "--target",
       "market-cmapi00073529.FinQuery",
       "--json",
       '{"q":"贵州茅台","limit":5,"riskLevel":"R2"}',
@@ -208,10 +212,11 @@ describe("e2e: mcp", () => {
     expect(data.arguments?.query).toBe("招商银行");
   });
 
-  test("mcp call 目标缺少 . 时报错且非零退出", async () => {
+  test("mcp call --target 缺少 . 时报错且非零退出", async () => {
     const { stderr, exitCode } = await runCli([
       "mcp",
       "call",
+      "--target",
       "no-dot-target",
       "--non-interactive",
       "--output",
@@ -225,6 +230,7 @@ describe("e2e: mcp", () => {
     const { stderr, exitCode } = await runCli([
       "mcp",
       "call",
+      "--target",
       "srv.tool",
       "--arg",
       "no-equals-sign",
@@ -240,6 +246,7 @@ describe("e2e: mcp", () => {
     const { stderr, exitCode } = await runCli([
       "mcp",
       "call",
+      "--target",
       "srv.tool",
       "--json",
       "{not-json",
@@ -251,10 +258,10 @@ describe("e2e: mcp", () => {
     expect(stderr).toMatch(/--json is not valid JSON|--json must decode/);
   });
 
-  test("mcp call 缺少 positional 时打印子命令帮助并退出 (0)", async () => {
+  test("mcp call 缺少 --target 时打印子命令帮助并退出 (0)", async () => {
     const { stderr, exitCode } = await runCli(["mcp", "call", "--non-interactive"]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/server-code|Usage:/i);
+    expect(stderr).toMatch(/--target|Usage:/i);
   });
 });
 
@@ -266,6 +273,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: mcp (live)", () => {
     const { stdout, stderr, exitCode } = await runCli([
       "mcp",
       "tools",
+      "--server",
       "WebSearch",
       "--non-interactive",
       "--output",

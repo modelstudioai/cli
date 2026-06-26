@@ -6,7 +6,6 @@ import {
   type GlobalFlags,
   uploadFile,
 } from "bailian-cli-core";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -32,15 +31,8 @@ export default defineCommand({
     "--file cat.png --model qwen-image-2.0",
   ],
   async run(config: Config, flags: GlobalFlags) {
-    const filePath = flags.file as string | undefined;
-    if (!filePath) {
-      failIfMissing("file", cmdUsage(config, "--file <path> --model <model>"));
-    }
-
-    const model = flags.model as string | undefined;
-    if (!model) {
-      failIfMissing("model", cmdUsage(config, "--file <path> --model <model>"));
-    }
+    const filePath = flags.file as string;
+    const model = flags.model as string;
 
     const format = detectOutputFormat(config.output);
 
@@ -54,8 +46,8 @@ export default defineCommand({
 
     const ossUrl = await uploadFile({
       apiKey: credential.token,
-      model: model!,
-      filePath: filePath!,
+      model,
+      filePath,
     });
 
     if (config.quiet) {

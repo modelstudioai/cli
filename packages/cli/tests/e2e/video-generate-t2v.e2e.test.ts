@@ -33,9 +33,9 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
   () => {
     test("video generate 缺少 --prompt 时打印子命令帮助并退出 (0)", async () => {
       const { stderr, exitCode } = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "generate",
+        ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.0-t2v",
         "--non-interactive",
@@ -46,11 +46,11 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
 
     test("video generate --dry-run（无 --image）仅输出 request 且不调生成接口", async () => {
       const { stdout, stderr, exitCode } = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "generate",
         "--dry-run",
         "--model",
+        ...cliTimeoutPrefix(),
         "happyhorse-1.0-t2v",
         "--prompt",
         "干跑校验",
@@ -69,9 +69,9 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
     test("【happyhorse-1.0-t2v】文本生成视频", async () => {
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
       const { stdout, stderr, exitCode } = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "generate",
+        ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.0-t2v",
         "--prompt",

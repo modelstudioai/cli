@@ -7,10 +7,14 @@ export type { Cli, CliOptions } from "./create-cli.ts";
 
 // Command routing
 export { CommandRegistry } from "./registry.ts";
-export type { Command, OptionDef } from "./registry.ts";
+export type { Command, OptionDef, LocateResult } from "./registry.ts";
+export { resolve } from "./resolve.ts";
+export type { Resolution } from "./resolve.ts";
+export { compose, type RunContext, type Middleware } from "./middleware.ts";
 
 // Arg parsing
-export { scanCommandPath, parseFlags } from "./args.ts";
+export { parsePath, parseFlags } from "./args.ts";
+export type { ParsePathResult } from "./args.ts";
 
 // Process-level setup / error handling
 export { setupProxyFromEnv } from "./proxy.ts";
@@ -22,13 +26,7 @@ export { BAILIAN_CONSOLE_ROOT, BAILIAN_CONSOLE, API_KEY_PAGE } from "./urls.ts";
 
 // Output facilities consumed by commands
 export { emitResult, emitBare } from "./output/output.ts";
-export {
-  promptText,
-  promptSelect,
-  promptConfirm,
-  failIfMissing,
-  cmdUsage,
-} from "./output/prompt.ts";
+export { promptText, promptSelect, promptConfirm, cmdUsage } from "./output/prompt.ts";
 export { createSpinner, createProgressBar } from "./output/progress.ts";
 export { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
 export { maybeShowStatusBar } from "./output/status-bar.ts";
@@ -40,12 +38,6 @@ export { downloadFile, formatBytes } from "./utils/download.ts";
 export { runConcurrent, getConcurrency, downloadParallel } from "./utils/concurrent.ts";
 export { resolveImageSize } from "./utils/image-size.ts";
 export { ensureApiKey } from "./utils/ensure-key.ts";
-export {
-  printCurrentCommandHelp,
-  setExecutingCommandPath,
-  getExecutingCommandPath,
-  registerCommandHelpPrinter,
-} from "./utils/command-help.ts";
 export {
   checkForUpdate,
   getPendingUpdateNotification,

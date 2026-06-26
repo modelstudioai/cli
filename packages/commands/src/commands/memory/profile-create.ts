@@ -8,7 +8,6 @@ import {
   type ProfileSchemaCreateRequest,
   type ProfileSchemaCreateResponse,
 } from "bailian-cli-core";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -29,11 +28,7 @@ export default defineCommand({
   ],
   async run(config: Config, flags: GlobalFlags) {
     const name = flags.name as string;
-    if (!name) failIfMissing("name", cmdUsage(config, "--name <name> --attributes <json>"));
-
     const attrStr = flags.attributes as string;
-    if (!attrStr)
-      failIfMissing("attributes", cmdUsage(config, "--name <name> --attributes <json>"));
 
     let attributes;
     try {

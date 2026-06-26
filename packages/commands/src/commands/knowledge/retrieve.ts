@@ -17,7 +17,6 @@ import {
   BailianError,
   ExitCode,
 } from "bailian-cli-core";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const BAILIAN_HOST = "bailian.cn-beijing.aliyuncs.com";
@@ -81,10 +80,7 @@ export default defineCommand({
   ],
   async run(config: Config, flags: GlobalFlags) {
     const indexId = flags.indexId as string;
-    if (!indexId) failIfMissing("index-id", cmdUsage(config, "--index-id <id> --query <text>"));
-
     const query = flags.query as string;
-    if (!query) failIfMissing("query", cmdUsage(config, "--index-id <id> --query <text>"));
 
     const format = detectOutputFormat(config.output);
 

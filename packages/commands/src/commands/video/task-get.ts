@@ -7,21 +7,19 @@ import {
   type GlobalFlags,
   type DashScopeTaskResponse,
 } from "bailian-cli-core";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Query async task status",
   auth: "apiKey",
   usageArgs: "--task-id <id>",
-  options: [{ flag: "--task-id <id>", description: "Async task ID" }],
+  options: [{ flag: "--task-id <id>", description: "Async task ID", required: true }],
   exampleArgs: [
     "--task-id 3b256896-3e70-xxxx-xxxx-xxxxxxxxxxxx",
     "--task-id 3b256896-3e70-xxxx --output json",
   ],
   async run(config: Config, flags: GlobalFlags) {
-    const taskId = flags.taskId as string | undefined;
-    if (!taskId) failIfMissing("task-id", cmdUsage(config, "--task-id <id>"));
+    const taskId = flags.taskId as string;
 
     const format = detectOutputFormat(config.output);
 

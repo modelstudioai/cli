@@ -11,9 +11,7 @@ import {
   type ChatRequest,
   type ChatResponse,
   type StreamChunk,
-  isInteractive,
 } from "bailian-cli-core";
-import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { readFileSync } from "fs";
 
@@ -75,8 +73,7 @@ export default defineCommand({
     { flag: "--model <model>", description: "Model ID (default: qwen3.7-max)" },
     {
       flag: "--message <text>",
-      description: "Message text (repeatable, prefix role: to set role)",
-      required: true,
+      description: "Message text (repeatable, prefix role: to set role); or use --messages-file",
       type: "array",
     },
     {
@@ -115,24 +112,10 @@ export default defineCommand({
     '--message "Hello" --output json',
     '--model qwq-plus --message "Solve 1+1" --enable-thinking',
   ],
+  validate: (f) =>
+    !f.message && !f.messagesFile ? "Provide --message or --messages-file." : undefined,
   async run(config: Config, flags: GlobalFlags) {
-    const { system, messages: parsedMessages } = parseMessages(flags);
-    let messages = parsedMessages;
-
-    if (messages.length === 0) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({
-          message: "Enter your message:",
-        });
-        if (!hint) {
-          process.stderr.write("Chat cancelled.\n");
-          process.exit(1);
-        }
-        messages = [{ role: "user", content: hint }];
-      } else {
-        failIfMissing("message", cmdUsage(config, "--message <text>"));
-      }
-    }
+    const { system, messages } = parseMessages(flags);
 
     const model = (flags.model as string) || config.defaultTextModel || "qwen3.7-max";
     const shouldStream =

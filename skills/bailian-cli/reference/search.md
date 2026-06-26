@@ -25,7 +25,7 @@ Index: [index.md](index.md)
 
 | Flag             | Type    | Required | Description                            |
 | ---------------- | ------- | -------- | -------------------------------------- |
-| `--query <text>` | string  | yes      | Search query text                      |
+| `--query <text>` | string  | no       | Search query text                      |
 | `--count <n>`    | number  | no       | Number of search results (default: 10) |
 | `--list-tools`   | boolean | no       | List available MCP tools and exit      |
 

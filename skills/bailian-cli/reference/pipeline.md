@@ -16,42 +16,43 @@ Index: [index.md](index.md)
 
 ### `bl pipeline run`
 
-| Field           | Value                              |
-| --------------- | ---------------------------------- |
-| **Name**        | `pipeline run`                     |
-| **Description** | Run a pipeline workflow definition |
-| **Usage**       | `bl pipeline run <file> [flags]`   |
+| Field           | Value                                   |
+| --------------- | --------------------------------------- |
+| **Name**        | `pipeline run`                          |
+| **Description** | Run a pipeline workflow definition      |
+| **Usage**       | `bl pipeline run --file <path> [flags]` |
 
 #### Options
 
-| Flag                  | Type   | Required | Description                     |
-| --------------------- | ------ | -------- | ------------------------------- |
-| `--input <json>`      | string | no       | Runtime input as inline JSON    |
-| `--input-file <path>` | string | no       | Runtime input from a JSON file  |
-| `--concurrency <n>`   | number | no       | Max parallel steps (default: 1) |
-| `--events <format>`   | string | no       | Emit lifecycle events: jsonl    |
-| `--timeout <seconds>` | number | no       | Default step timeout in seconds |
+| Flag                  | Type   | Required | Description                          |
+| --------------------- | ------ | -------- | ------------------------------------ |
+| `--file <path>`       | string | yes      | Pipeline definition file (YAML/JSON) |
+| `--input <json>`      | string | no       | Runtime input as inline JSON         |
+| `--input-file <path>` | string | no       | Runtime input from a JSON file       |
+| `--concurrency <n>`   | number | no       | Max parallel steps (default: 1)      |
+| `--events <format>`   | string | no       | Emit lifecycle events: jsonl         |
+| `--timeout <seconds>` | number | no       | Default step timeout in seconds      |
 
 #### Examples
 
 ```bash
-bl pipeline run workflow.yaml --input '{"brief":"hello"}'
+bl pipeline run --file workflow.yaml --input '{"brief":"hello"}'
 ```
 
 ```bash
-bl pipeline run workflow.json --input-file inputs.json --concurrency 3
+bl pipeline run --file workflow.json --input-file inputs.json --concurrency 3
 ```
 
 ```bash
-bl pipeline run workflow.yaml --dry-run
+bl pipeline run --file workflow.yaml --dry-run
 ```
 
 ```bash
-bl pipeline run workflow.json --events jsonl
+bl pipeline run --file workflow.json --events jsonl
 ```
 
 ```bash
-bl pipeline run workflow.yaml --output json
+bl pipeline run --file workflow.yaml --output json
 ```
 
 ### `bl pipeline validate`
@@ -60,18 +61,20 @@ bl pipeline run workflow.yaml --output json
 | --------------- | ------------------------------------------------ |
 | **Name**        | `pipeline validate`                              |
 | **Description** | Validate a pipeline definition without executing |
-| **Usage**       | `bl pipeline validate <file>`                    |
+| **Usage**       | `bl pipeline validate --file <path>`             |
 
 #### Options
 
-_No command-specific options._
+| Flag            | Type   | Required | Description                          |
+| --------------- | ------ | -------- | ------------------------------------ |
+| `--file <path>` | string | yes      | Pipeline definition file (YAML/JSON) |
 
 #### Examples
 
 ```bash
-bl pipeline validate workflow.yaml
+bl pipeline validate --file workflow.yaml
 ```
 
 ```bash
-bl pipeline validate workflow.json --output json
+bl pipeline validate --file workflow.json --output json
 ```

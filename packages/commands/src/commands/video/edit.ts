@@ -9,7 +9,6 @@ import {
   type DashScopeVideoEditRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
-  isInteractive,
   resolveOutputDir,
   resolveFileUrl,
   resolveCredential,
@@ -20,7 +19,6 @@ import {
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
-import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
@@ -59,10 +57,12 @@ export default defineCommand({
     {
       flag: "--prompt-extend <bool>",
       description: BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT,
+      type: "boolean",
     },
     {
       flag: "--watermark <bool>",
       description: BOOL_FLAG_WATERMARK,
+      type: "boolean",
     },
     { flag: "--seed <n>", description: "Random seed for reproducible generation", type: "number" },
     { flag: "--download <path>", description: "Save video to file on completion" },
@@ -84,34 +84,10 @@ export default defineCommand({
     '--video https://example.com/input.mp4 --prompt "Put clothes on the kitten in the video" --watermark false',
   ],
   async run(config: Config, flags: GlobalFlags) {
-    // --- Validate video URL ---
-    let videoUrl = flags.video as string | undefined;
-    if (!videoUrl) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({ message: "Enter the video URL to edit:" });
-        if (!hint) {
-          process.stderr.write("Video editing cancelled.\n");
-          process.exit(1);
-        }
-        videoUrl = hint;
-      } else {
-        failIfMissing("video", cmdUsage(config, "--video <url> --prompt <text>"));
-      }
-    }
+    const videoUrl = flags.video as string;
 
-    // --- Prompt ---
-    let prompt = flags.prompt as string | undefined;
-    if (!prompt) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({ message: "Enter your edit instruction:" });
-        if (!hint) {
-          process.stderr.write("Video editing cancelled.\n");
-          process.exit(1);
-        }
-        prompt = hint;
-      }
-      // prompt is optional for video edit per API spec
-    }
+    // prompt is optional for video edit per API spec
+    const prompt = flags.prompt as string | undefined;
 
     const model = (flags.model as string) || "happyhorse-1.0-video-edit";
     const format = detectOutputFormat(config.output);

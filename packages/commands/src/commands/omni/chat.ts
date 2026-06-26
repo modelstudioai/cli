@@ -14,10 +14,8 @@ import {
   type ChatMessageContent,
   type ChatRequest,
   type StreamChunk,
-  isInteractive,
   resolveFileUrl,
 } from "bailian-cli-core";
-import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult } from "bailian-cli-runtime";
 import { resolveOutputDir, resolveCredential } from "bailian-cli-core";
 
@@ -130,23 +128,7 @@ export default defineCommand({
   ],
   async run(config: Config, flags: GlobalFlags) {
     // --- Parse messages ---
-    let userMessages: string[] = [];
-    if (flags.message) {
-      userMessages = flags.message as string[];
-    }
-
-    if (userMessages.length === 0) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({ message: "Enter your message:" });
-        if (!hint) {
-          process.stderr.write("Omni chat cancelled.\n");
-          process.exit(1);
-        }
-        userMessages = [hint];
-      } else {
-        failIfMissing("message", cmdUsage(config, "--message <text>"));
-      }
-    }
+    const userMessages = flags.message as string[];
 
     const model = (flags.model as string) || config.defaultOmniModel || "qwen3.5-omni-plus";
     const voice = (flags.voice as string) || "Cherry";

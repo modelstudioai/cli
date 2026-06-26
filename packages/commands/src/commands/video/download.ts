@@ -10,7 +10,6 @@ import {
   ExitCode,
 } from "bailian-cli-core";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -18,19 +17,17 @@ export default defineCommand({
   auth: "none",
   usageArgs: "--task-id <id> --out <path>",
   options: [
-    { flag: "--task-id <id>", description: "Task ID to download from" },
-    { flag: "--out <path>", description: "Output file path" },
+    { flag: "--task-id <id>", description: "Task ID to download from", required: true },
+    { flag: "--out <path>", description: "Output file path", required: true },
   ],
   exampleArgs: [
     "--task-id 3b256896-xxxx --out video.mp4",
     "--task-id 3b256896-xxxx --out video.mp4 --quiet",
   ],
   async run(config: Config, flags: GlobalFlags) {
-    const taskId = flags.taskId as string | undefined;
-    if (!taskId) failIfMissing("task-id", cmdUsage(config, "--task-id <id> --out <path>"));
+    const taskId = flags.taskId as string;
 
-    const outPath = flags.out as string | undefined;
-    if (!outPath) failIfMissing("out", cmdUsage(config, "--task-id <id> --out video.mp4"));
+    const outPath = flags.out as string;
 
     const format = detectOutputFormat(config.output);
 

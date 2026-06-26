@@ -8,14 +8,12 @@ import {
   type ChatRequest,
   type ChatResponse,
   type ChatMessageContent,
-  isInteractive,
   resolveFileUrl,
   resolveCredential,
   BailianError,
   ExitCode,
   isLocalFile,
 } from "bailian-cli-core";
-import { promptText, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { readFileSync, existsSync } from "fs";
 import { extname } from "path";
@@ -77,10 +75,12 @@ export default defineCommand({
     "--video ./local-video.mp4",
     '--image photo.png --prompt "Extract the text" --model qwen-vl-plus',
   ],
+  validate: (f) =>
+    !f.image && !(f.video as string[] | undefined)?.length
+      ? "Provide --image or --video."
+      : undefined,
   async run(config: Config, flags: GlobalFlags) {
-    let image = (flags.image ?? (flags._positional as string[] | undefined)?.[0]) as
-      | string
-      | undefined;
+    let image = flags.image as string | undefined;
     const videoInputs = (flags.video as string[] | undefined) ?? [];
     const model = (flags.model as string) || "qwen3-vl-plus";
 
@@ -93,30 +93,6 @@ export default defineCommand({
     const hasVideo = videoInputs.length > 0;
     const defaultPrompt = hasVideo ? "Describe the video." : "Describe the image.";
     const prompt = (flags.prompt as string) || defaultPrompt;
-
-    if (!image && !hasVideo) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({
-          message: "Enter image/video path or URL:",
-        });
-        if (!hint) {
-          process.stderr.write("Vision describe cancelled.\n");
-          process.exit(1);
-        }
-        // Detect if user entered a video
-        if (isVideoInput(hint)) {
-          videoInputs.push(hint);
-        } else {
-          image = hint;
-        }
-      } else {
-        throw new BailianError(
-          "Missing required argument --image or --video.",
-          ExitCode.USAGE,
-          `${cmdUsage(config, "--image <path-or-url>")}\n${cmdUsage(config, "--video <url-or-path>")}`,
-        );
-      }
-    }
 
     const format = detectOutputFormat(config.output);
 

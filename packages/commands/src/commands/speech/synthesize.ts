@@ -14,7 +14,7 @@ import {
   type OutputFormat,
   speechSynthesizeEndpoint,
   parseSSE,
-  isInteractive,
+  IncompleteCommandError,
   resolveOutputDir,
   request,
   DOCS_HOSTS,
@@ -23,7 +23,6 @@ import {
 const COSYVOICE_CLONE_DESIGN_DOC = `${DOCS_HOSTS.cn}/cosyvoice-clone-design-api`;
 import { downloadFile } from "bailian-cli-runtime";
 import { runConcurrent, downloadParallel, getConcurrency } from "bailian-cli-runtime";
-import { promptText, promptSelect, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 interface VoiceEntry {
@@ -146,7 +145,7 @@ export default defineCommand({
   auth: "apiKey",
   usageArgs: "--text <text> [flags]",
   options: [
-    { flag: "--text <text>", description: "Text to synthesize into speech", required: true },
+    { flag: "--text <text>", description: "Text to synthesize into speech (or use --text-file)" },
     { flag: "--text-file <path>", description: "Read text from a file instead of --text" },
     {
       flag: "--model <model>",
@@ -193,6 +192,12 @@ export default defineCommand({
     "# Pipe to ffplay",
     '--text "Hello" --voice <voice_id> --stream | ffplay -nodisp -autoexit -f s16le -ar 24000 -ac 1 -',
   ],
+  validate: (f) => {
+    if (f.listVoices) return undefined;
+    if (!f.text && !f.textFile) return "Provide --text or --text-file.";
+    if (!f.voice) return "Missing required flag: --voice";
+    return undefined;
+  },
   async run(config: Config, flags: GlobalFlags) {
     const model = (flags.model as string) || config.defaultSpeechModel || "cosyvoice-v3-flash";
 
@@ -215,66 +220,9 @@ export default defineCommand({
     }
 
     if (!text) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({ message: "Enter text to synthesize:" });
-        if (!hint) {
-          process.stderr.write("Speech synthesis cancelled.\n");
-          process.exit(1);
-        }
-        text = hint;
-      } else {
-        failIfMissing("text", cmdUsage(config, "--text <text>"));
-      }
+      throw new IncompleteCommandError("Provide --text or --text-file.");
     }
-
-    let voice = (flags.voice as string) || undefined;
-
-    // In interactive mode, prompt the user to select / enter a voice
-    if (!voice) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const modelVoices = MODEL_VOICES[model];
-        if (modelVoices && modelVoices.length > 0) {
-          const DEFAULT_VOICE = modelVoices[0]!.voice;
-          const choices = modelVoices.map((v) => ({
-            value: v.voice,
-            label: `${v.name} (${v.voice})`,
-            hint: `${v.desc} · ${v.lang}`,
-          }));
-          const selected = await promptSelect({
-            message: `Select a voice (default: ${DEFAULT_VOICE}):`,
-            choices,
-            defaultValue: DEFAULT_VOICE,
-          });
-          if (!selected) {
-            process.stderr.write("Speech synthesis cancelled.\n");
-            process.exit(1);
-          }
-          voice = selected;
-        } else {
-          // No built-in list (v3.5 / v2): prompt for clone/design voice ID
-          const entered = await promptText({ message: "Enter voice ID (clone/design voice):" });
-          if (!entered) {
-            process.stderr.write("Speech synthesis cancelled.\n");
-            process.exit(1);
-          }
-          voice = entered;
-        }
-      } else {
-        // Non-interactive mode: keep original error
-        const modelVoices = MODEL_VOICES[model];
-        if (modelVoices && modelVoices.length > 0) {
-          throw new BailianError(
-            `--voice is required.\nRun the following to see available voices:\n  ${cmdUsage(config, `--list-voices --model ${model}`)}`,
-            ExitCode.USAGE,
-          );
-        } else {
-          throw new BailianError(
-            `--voice is required. Model ${model} has no built-in system voices.\nCreate a clone or design voice first, then pass its ID via --voice <voice_id>.\nSee: ${COSYVOICE_CLONE_DESIGN_DOC}`,
-            ExitCode.USAGE,
-          );
-        }
-      }
-    }
+    const voice = flags.voice as string;
 
     const language = (flags.language as string) || undefined;
     const instruction = (flags.instruction as string) || undefined;

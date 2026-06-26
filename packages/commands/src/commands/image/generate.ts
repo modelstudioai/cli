@@ -8,7 +8,6 @@ import {
   type Config,
   type GlobalFlags,
   resolveOutputDir,
-  isInteractive,
   type DashScopeImageRequest,
   type DashScopeImageSyncResponse,
   BailianError,
@@ -23,7 +22,6 @@ import {
 import { poll } from "bailian-cli-runtime";
 import { downloadFile } from "bailian-cli-runtime";
 import { runConcurrent, downloadParallel, getConcurrency } from "bailian-cli-runtime";
-import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveImageSize } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_IMAGE_GENERATE, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
@@ -61,10 +59,12 @@ export default defineCommand({
     {
       flag: "--prompt-extend <bool>",
       description: BOOL_FLAG_PROMPT_EXTEND_IMAGE_GENERATE,
+      type: "boolean",
     },
     {
       flag: "--watermark <bool>",
       description: BOOL_FLAG_WATERMARK,
+      type: "boolean",
     },
     {
       flag: "--no-wait",
@@ -90,24 +90,7 @@ export default defineCommand({
     '--prompt "Product shots" --n 2 --concurrent 3  # 6 images in parallel',
   ],
   async run(config: Config, flags: GlobalFlags) {
-    let prompt = (flags.prompt ?? (flags._positional as string[] | undefined)?.[0]) as
-      | string
-      | undefined;
-
-    if (!prompt) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({
-          message: "Enter your image prompt:",
-        });
-        if (!hint) {
-          process.stderr.write("Image generation cancelled.\n");
-          process.exit(1);
-        }
-        prompt = hint;
-      } else {
-        failIfMissing("prompt", cmdUsage(config, "--prompt <text>"));
-      }
-    }
+    const prompt = flags.prompt as string;
 
     const model = (flags.model as string) || config.defaultImageModel || "qwen-image-2.0";
     const useSync = isSyncModel(model);
@@ -281,8 +264,7 @@ async function saveImages(
     subDir: flags.outDir ? undefined : "images",
   });
 
-  const promptText =
-    (flags.prompt as string) || (flags._positional as string[] | undefined)?.[0] || "";
+  const promptText = (flags.prompt as string) || "";
   const prefix = (flags.outPrefix as string) || generateFilename("image", promptText);
 
   // Parallel download all images

@@ -89,6 +89,7 @@ describe("e2e: pipeline", () => {
     const { stdout, stderr, exitCode } = await runCli([
       "pipeline",
       "validate",
+      "--file",
       chatBasicPath,
       "--output",
       "json",
@@ -100,9 +101,12 @@ describe("e2e: pipeline", () => {
   });
 
   test("pipeline validate 使用 config 输出格式", async () => {
-    const { stdout, stderr, exitCode } = await runCli(["pipeline", "validate", chatBasicPath], {
-      DASHSCOPE_OUTPUT: "text",
-    });
+    const { stdout, stderr, exitCode } = await runCli(
+      ["pipeline", "validate", "--file", chatBasicPath],
+      {
+        DASHSCOPE_OUTPUT: "text",
+      },
+    );
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toBe("Pipeline definition is valid.\n");
   });
@@ -111,6 +115,7 @@ describe("e2e: pipeline", () => {
     const { stdout, stderr, exitCode } = await runCli([
       "pipeline",
       "validate",
+      "--file",
       invalidPipelinePath,
       "--output",
       "json",
@@ -122,16 +127,17 @@ describe("e2e: pipeline", () => {
     expect(data.issues?.join("\n")).toMatch(/pipeline graph contains cycle/i);
   });
 
-  test("pipeline run 缺少 file 时退出为用法错误 (2)", async () => {
+  test("pipeline run 缺少 --file 时打印子命令帮助并退出 (0)", async () => {
     const { stderr, exitCode } = await runCli(["pipeline", "run", "--non-interactive"]);
-    expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/pipeline file is required|Usage: bl pipeline run <file>/i);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/Usage: bl pipeline run --file <path>|--file/i);
   });
 
   test("pipeline run --dry-run --output json 仅输出计划", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "pipeline",
       "run",
+      "--file",
       chatBasicPath,
       "--input",
       '{"message":"hello"}',
@@ -166,6 +172,7 @@ describe("e2e: pipeline", () => {
       [
         "pipeline",
         "run",
+        "--file",
         chatBasicPath,
         "--input",
         '{"message":"hello"}',
@@ -183,6 +190,7 @@ describe("e2e: pipeline", () => {
     const { stderr, exitCode } = await runCli([
       "pipeline",
       "run",
+      "--file",
       chatBasicPath,
       "--input",
       '{"message":"hello"}',
@@ -199,6 +207,7 @@ describe("e2e: pipeline", () => {
     const { stdout, stderr, exitCode } = await runCli([
       "pipeline",
       "run",
+      "--file",
       chatBasicPath,
       "--input",
       '{"message":"hello"}',
@@ -227,6 +236,7 @@ describe("e2e: pipeline", () => {
     const { stdout, stderr, exitCode } = await runCli([
       "pipeline",
       "run",
+      "--file",
       chatBasicPath,
       "--dry-run",
       "--events",

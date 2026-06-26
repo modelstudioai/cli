@@ -63,10 +63,10 @@ describe("e2e: config", () => {
     expect(stdout).toMatch(/config_file|timeout|base_url/i);
   });
 
-  test("config set 缺少 --key / --value 时退出为用法错误 (2)", async () => {
+  test("config set 缺少 --key / --value 时打印子命令帮助并退出 (0)", async () => {
     const { stderr, exitCode } = await runCli(["config", "set", "--non-interactive"]);
-    expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/--key|--value|required/i);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--key|--value|Usage:/i);
   });
 
   test("config set 非法 key 时退出为用法错误", async () => {

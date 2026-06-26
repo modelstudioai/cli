@@ -9,7 +9,6 @@ import {
   resolveFileUrl,
   resolveOutputDir,
   generateFilename,
-  isInteractive,
   stripUndefined,
   type DashScopeImageRequest,
   type DashScopeImageSyncResponse,
@@ -20,7 +19,6 @@ import {
 } from "bailian-cli-core";
 import { downloadFile } from "bailian-cli-runtime";
 import { runConcurrent, downloadParallel, getConcurrency } from "bailian-cli-runtime";
-import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveImageSize } from "bailian-cli-runtime";
 import { join } from "path";
@@ -52,10 +50,12 @@ export default defineCommand({
     {
       flag: "--prompt-extend <bool>",
       description: BOOL_FLAG_PROMPT_EXTEND_CLI_TRUE,
+      type: "boolean",
     },
     {
       flag: "--watermark <bool>",
       description: BOOL_FLAG_WATERMARK,
+      type: "boolean",
     },
     { flag: "--out-dir <dir>", description: "Download images to directory" },
     { flag: "--out-prefix <prefix>", description: "Filename prefix (default: edited)" },
@@ -75,25 +75,7 @@ export default defineCommand({
     } else if (typeof flags.image === "string") {
       rawImages = [flags.image];
     }
-    if (rawImages.length === 0) {
-      failIfMissing("image", cmdUsage(config, "--image <url> --prompt <text>"));
-    }
-
-    let prompt = flags.prompt as string | undefined;
-    if (!prompt) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({
-          message: "Enter your edit instruction:",
-        });
-        if (!hint) {
-          process.stderr.write("Image editing cancelled.\n");
-          process.exit(1);
-        }
-        prompt = hint;
-      } else {
-        failIfMissing("prompt", cmdUsage(config, "--image <url> --prompt <text>"));
-      }
-    }
+    const prompt = flags.prompt as string;
 
     const model = (flags.model as string) || config.defaultImageModel || "qwen-image-2.0";
 

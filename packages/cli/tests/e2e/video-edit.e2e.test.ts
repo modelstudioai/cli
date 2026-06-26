@@ -33,9 +33,9 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
   () => {
     test("video edit 缺少 --video 时打印子命令帮助并退出 (0)", async () => {
       const { stderr, exitCode } = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "edit",
+        ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.0-video-edit",
         "--prompt",
@@ -51,9 +51,9 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       const t2vPath = join(outDir, "e2e-video-t2v.mp4");
 
       const t2v = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "generate",
+        ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.0-t2v",
         "--prompt",
@@ -69,9 +69,9 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       expect(t2vData.status).toBe("SUCCEEDED");
 
       const { stdout, stderr, exitCode } = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "edit",
+        ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.0-video-edit",
         "--video",

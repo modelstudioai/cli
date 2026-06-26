@@ -79,7 +79,7 @@ bl speech recognize --url https://example.com/audio.mp3 --no-wait --quiet
 
 | Flag                   | Type    | Required | Description                                                                                                             |
 | ---------------------- | ------- | -------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `--text <text>`        | string  | yes      | Text to synthesize into speech                                                                                          |
+| `--text <text>`        | string  | no       | Text to synthesize into speech (or use --text-file)                                                                     |
 | `--text-file <path>`   | string  | no       | Read text from a file instead of --text                                                                                 |
 | `--model <model>`      | string  | no       | Model ID (default: cosyvoice-v3-flash). System voices available for cosyvoice-v3-flash                                  |
 | `--voice <voice>`      | string  | no       | Voice ID. Use --list-voices to see system voices for cosyvoice-v3-flash; for v3.5-flash provide a clone/design voice ID |

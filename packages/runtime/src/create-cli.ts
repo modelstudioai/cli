@@ -1,20 +1,24 @@
-import { scanCommandPath, parseFlags } from "./args.ts";
+import { parseFlags } from "./args.ts";
 import { CommandRegistry } from "./registry.ts";
-import type { Command } from "bailian-cli-core";
+import { resolve } from "./resolve.ts";
+import {
+  compose,
+  authStage,
+  telemetryStage,
+  versionCheckStage,
+  runCommandStage,
+  type RunContext,
+} from "./middleware.ts";
+import type { Command, Config, GlobalFlags } from "bailian-cli-core";
 import {
   GLOBAL_OPTIONS,
+  IncompleteCommandError,
   loadConfig,
-  resolveCredential,
-  trackCommandExecution,
   flushTelemetry,
 } from "bailian-cli-core";
-import { ensureApiKey } from "./utils/ensure-key.ts";
 import { setupProxyFromEnv } from "./proxy.ts";
 import { handleError } from "./error-handler.ts";
-import { checkForUpdate, getPendingUpdateNotification } from "./utils/update-checker.ts";
-import { maybeShowStatusBar } from "./output/status-bar.ts";
 import { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
-import { registerCommandHelpPrinter, setExecutingCommandPath } from "./utils/command-help.ts";
 
 /** Per-product identity injected by each CLI entrypoint (bl / rag / …). */
 export interface CliOptions {
@@ -33,30 +37,25 @@ export interface Cli {
 }
 
 /**
- * Build a CLI from an injected command set. The runtime is agnostic to *which*
+ * Build a CLI from an injected command set. The kernel is agnostic to *which*
  * commands exist — each product (bailian-cli, rag-cli, …) passes its own map and
- * identity. No module-level singleton: the registry is scoped to this instance.
+ * identity. `run` is a thin orchestrator: resolve argv into a {@link Resolution},
+ * then dispatch — terminal kinds render and return; `run` enters the middleware
+ * stack guarded by a single error boundary. No business `if`s, no scattered
+ * `process.exit`.
  */
 export function createCli(commands: Record<string, Command>, opts: CliOptions): Cli {
   const registry = new CommandRegistry(commands, opts.binName);
   const clientName = opts.clientName ?? opts.binName;
-  const npmPackage = opts.npmPackage;
-  const version = opts.version;
+  const { binName, version, npmPackage } = opts;
 
-  // 必须在任何 fetch 发起前安装（含 update-checker / telemetry）
   try {
     setupProxyFromEnv();
   } catch (err) {
-    handleError(err, opts.binName);
+    handleError(err, binName);
   }
 
-  registerCommandHelpPrinter((commandPath, out) => {
-    registry.printHelp(commandPath, out);
-  });
-
   // 优雅处理 Ctrl+C
-  // 退出前尝试 best-effort 刷出埋点，让去抖队列中 / 在途的 fetch 请求有机会
-  // 落网络；flush 与较短超时 race，保证 SIGINT 仍然响应及时。
   process.on("SIGINT", () => {
     process.stderr.write("\nInterrupted. Exiting.\n");
     void flushTelemetry(500).finally(() => process.exit(130));
@@ -68,107 +67,89 @@ export function createCli(commands: Record<string, Command>, opts: CliOptions): 
     else throw e;
   });
 
-  async function main(): Promise<void> {
-    let argv = process.argv.slice(2);
-    if (argv[0] === "--") argv = argv.slice(1);
+  const runMiddleware = compose([versionCheckStage, telemetryStage, authStage, runCommandStage]);
 
-    if (argv.includes("--version") || argv.includes("-v")) {
-      process.stdout.write(`${opts.binName} ${version}\n`);
-      process.exit(0);
-    }
+  function buildConfig(flags: GlobalFlags): Config {
+    const config = loadConfig(flags);
+    config.clientName = clientName;
+    config.clientVersion = version;
+    config.binName = binName;
+    config.npmPackage = npmPackage;
+    return config;
+  }
 
-    const commandPath = scanCommandPath(argv, GLOBAL_OPTIONS);
+  /** Render help for `path`; root ([]) doubles as the onboarding / login guide. */
+  function renderHelp(path: string[], argv: string[]): void {
+    registry.printHelp(path, process.stderr);
+    if (path.length > 0) return;
 
-    if (argv.includes("--help") || argv.includes("-h")) {
-      registry.printHelp(commandPath, process.stderr);
-      process.exit(0);
-    }
-
-    // 未传任何命令：展示帮助信息与登录引导
-    if (commandPath.length === 0) {
-      registry.printHelp([], process.stderr);
-
-      const flags = parseFlags(argv, GLOBAL_OPTIONS);
-      const config = loadConfig(flags);
-      config.clientName = clientName;
-      config.clientVersion = version;
-      config.binName = opts.binName;
-      config.npmPackage = npmPackage;
-
-      const hasKey = !!(
+    let hasKey = false;
+    try {
+      const config = buildConfig(parseFlags(argv, GLOBAL_OPTIONS));
+      hasKey = !!(
         config.apiKey ||
         config.fileApiKey ||
         config.fileAccessToken ||
         config.accessTokenEnv
       );
-      if (hasKey) printQuickStart();
-      else printWelcomeBanner(opts.binName);
-      process.exit(0);
+    } catch {
+      /* unparseable global flags on the bare invocation — fall through to welcome */
     }
+    if (hasKey) printQuickStart();
+    else printWelcomeBanner(binName);
+  }
 
-    // 组路径（例如 `bl speech` 未接子命令）：展示帮助后干净退出
-    if (registry.isGroupPath(commandPath)) {
-      registry.printHelp(commandPath, process.stderr);
-      process.exit(0);
-    }
+  async function dispatch(argv: string[]): Promise<void> {
+    const res = resolve(argv, registry);
 
-    const { command, extra } = registry.resolve(commandPath);
-    const flags = parseFlags(argv, [...GLOBAL_OPTIONS, ...(command.options ?? [])]);
+    switch (res.kind) {
+      case "version":
+        process.stdout.write(`${binName} ${version}\n`);
+        return;
 
-    if (extra.length > 0) (flags as Record<string, unknown>)._positional = extra;
+      case "help":
+        renderHelp(res.path, argv);
+        return;
 
-    const config = loadConfig(flags);
-    config.clientName = clientName;
-    config.clientVersion = version;
-    config.binName = opts.binName;
-    config.npmPackage = npmPackage;
+      case "usageError":
+        handleError(res.error, binName);
+        return;
 
-    // 仅 apiKey 类命令由框架统一准备 API Key；dry-run 时跳过（只打印请求，不要求凭证）。
-    // console 命令在命令体内解析 Console Gateway 凭证；none 命令无需凭证。
-    if (command.auth === "apiKey" && !config.dryRun) {
-      await ensureApiKey(config);
-      try {
-        const credential = await resolveCredential(config);
-        maybeShowStatusBar(config, credential.token, credential);
-      } catch {
-        /* 没有凭证，不展示状态栏 */
+      case "run": {
+        try {
+          const flags = parseFlags(res.rest, [...GLOBAL_OPTIONS, ...(res.command.options ?? [])]);
+          const invalid = res.command.validate?.(flags);
+          if (invalid) throw new IncompleteCommandError(invalid);
+          const config = buildConfig(flags);
+          const ctx: RunContext = {
+            binName,
+            version,
+            npmPackage,
+            path: res.path,
+            command: res.command,
+            config,
+            flags,
+          };
+          await runMiddleware(ctx);
+          await flushTelemetry(1000);
+        } catch (err) {
+          await flushTelemetry(1000);
+          if (err instanceof IncompleteCommandError) {
+            registry.printHelp(res.path, process.stderr);
+            return;
+          }
+          handleError(err, binName);
+        }
+        return;
       }
     }
-
-    const updateCheckPromise = checkForUpdate(version, npmPackage).catch(() => {});
-
-    setExecutingCommandPath(commandPath);
-
-    await trackCommandExecution(config, commandPath, flags, () => command.execute(config, flags));
-
-    await updateCheckPromise;
-    const isUpdateCommand = commandPath.length === 1 && commandPath[0] === "update";
-    const newVersion = getPendingUpdateNotification();
-    if (newVersion && !config.quiet && !isUpdateCommand) {
-      const isTTY = process.stderr.isTTY;
-      const yellow = isTTY ? "\x1b[33m" : "";
-      const cyan = isTTY ? "\x1b[36m" : "";
-      const reset = isTTY ? "\x1b[0m" : "";
-      process.stderr.write(`\n  ${yellow}Update available: ${version} → ${newVersion}${reset}\n`);
-      process.stderr.write(`  Run ${cyan}${opts.binName} update${reset} to upgrade\n\n`);
-    }
-
-    // 进程退出前尽力等待在途的埋点完成。
-    // 使用较短超时兜底，避免慢网拖慢用户感知。
-    await flushTelemetry(1000);
   }
 
   return {
-    run() {
-      return main().catch((err) => {
-        // 在 handleError() 调用 process.exit() 之前刷出在途埋点。
-        // 命令抛出的错误已被 trackCommandExecution 的 finally 块记录，
-        // 但底层 tracker 有 ~500ms 的发送去抖。不主动 flush 的话，
-        // 错误事件会随进程退出丢掉。
-        return flushTelemetry(1000).finally(() =>
-          handleError(err, opts.binName),
-        ) as unknown as void;
-      });
+    run(argv: string[] = process.argv.slice(2)) {
+      return dispatch(argv).catch(
+        (err) => flushTelemetry(1000).finally(() => handleError(err, binName)) as unknown as void,
+      );
     },
   };
 }

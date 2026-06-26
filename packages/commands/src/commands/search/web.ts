@@ -4,11 +4,9 @@ import {
   mcpWebSearchEndpoint,
   type Config,
   type GlobalFlags,
-  isInteractive,
   McpClient,
 } from "bailian-cli-core";
 import { createSpinner } from "bailian-cli-runtime";
-import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -16,7 +14,7 @@ export default defineCommand({
   auth: "apiKey",
   usageArgs: "--query <text> [flags]",
   options: [
-    { flag: "--query <text>", description: "Search query text", required: true },
+    { flag: "--query <text>", description: "Search query text" },
     { flag: "--count <n>", description: "Number of search results (default: 10)", type: "number" },
     { flag: "--list-tools", description: "List available MCP tools and exit" },
   ],
@@ -26,6 +24,7 @@ export default defineCommand({
     '--query "Today\'s news"',
     "--list-tools",
   ],
+  validate: (f) => (!f.listTools && !f.query ? "Missing required flag: --query" : undefined),
   async run(config: Config, flags: GlobalFlags) {
     const mcpUrl = mcpWebSearchEndpoint(config.baseUrl);
     const format = detectOutputFormat(config.output);
@@ -46,19 +45,7 @@ export default defineCommand({
     }
 
     // --- Search mode ---
-    let query = flags.query as string | undefined;
-    if (!query) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({ message: "Enter your search query:" });
-        if (!hint) {
-          process.stderr.write("Search cancelled.\n");
-          process.exit(1);
-        }
-        query = hint;
-      } else {
-        failIfMissing("query", cmdUsage(config, "--query <text>"));
-      }
-    }
+    const query = flags.query as string;
 
     if (config.dryRun) {
       emitResult(

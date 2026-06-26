@@ -1,6 +1,5 @@
 import type { Command } from "bailian-cli-core";
-import { BailianError } from "bailian-cli-core";
-import { ExitCode } from "bailian-cli-core";
+import { UsageError } from "bailian-cli-core";
 import { GLOBAL_OPTIONS } from "bailian-cli-core";
 
 export type { Command, OptionDef } from "bailian-cli-core";
@@ -9,6 +8,19 @@ interface CommandNode {
   command?: Command;
   children: Map<string, CommandNode>;
 }
+
+/**
+ * What a command path resolves to in the registry. The single judgement that
+ * feeds `resolve()` — no scattered `isGroupPath` + throwing `resolve`.
+ *  - leaf:    landed *exactly* on an executable command (no leftover tokens).
+ *  - group:   landed on a command group with no executable of its own (incl. root []).
+ *  - unknown: the path doesn't exist, or a valid command had unexpected trailing
+ *             tokens (no positionals); `error` carries the message + hint.
+ */
+export type LocateResult =
+  | { kind: "leaf"; command: Command; matched: string[] }
+  | { kind: "group"; matched: string[] }
+  | { kind: "unknown"; error: UsageError };
 
 export class CommandRegistry {
   private root: CommandNode = { children: new Map() };
@@ -59,17 +71,13 @@ export class CommandRegistry {
     return walk(this.root, []) ?? "<resource> <command>";
   }
 
-  isGroupPath(commandPath: string[]): boolean {
-    let node = this.root;
-    for (const part of commandPath) {
-      const child = node.children.get(part);
-      if (!child) return false;
-      node = child;
-    }
-    return !node.command && node.children.size > 0;
-  }
-
-  resolve(commandPath: string[]): { command: Command; extra: string[] } {
+  /**
+   * Resolve a command path to a leaf / group / unknown outcome. Pure: walks the
+   * trie taking the longest registered prefix as the command. There are no
+   * positionals, so a valid command followed by leftover tokens is `unknown`
+   * (unexpected argument). Never throws — unknown paths return a carried UsageError.
+   */
+  locate(commandPath: string[]): LocateResult {
     let node = this.root;
     const matched: string[] = [];
 
@@ -81,18 +89,23 @@ export class CommandRegistry {
     }
 
     if (node.command) {
-      return { command: node.command, extra: commandPath.slice(matched.length) };
-    }
-
-    // Single child: auto-forward (e.g. `bl config` → `bl config show`)
-    if (matched.length > 0 && node.children.size === 1) {
-      const [, child] = node.children.entries().next().value as [string, CommandNode];
-      if (child.command) {
-        return { command: child.command, extra: commandPath.slice(matched.length) };
+      const leftover = commandPath.slice(matched.length);
+      if (leftover.length === 0) {
+        return { kind: "leaf", command: node.command, matched };
       }
+      return {
+        kind: "unknown",
+        error: new UsageError(
+          `Unexpected argument: ${leftover.join(" ")}`,
+          `${this.cliName} ${matched.join(" ")} --help`,
+        ),
+      };
     }
 
-    // If we matched some path but no command, show help for that group
+    if (matched.length === commandPath.length && node.children.size > 0) {
+      return { kind: "group", matched };
+    }
+
     if (matched.length > 0 && node.children.size > 0) {
       const subcommands = Array.from(node.children.entries())
         .map(([name, n]) => {
@@ -101,18 +114,22 @@ export class CommandRegistry {
           return `  ${matched.join(" ")} ${name} [${subs}]`;
         })
         .join("\n");
-      throw new BailianError(
-        `Unknown command: ${this.cliName} ${commandPath.join(" ")}\n\nAvailable commands:\n${subcommands}`,
-        ExitCode.USAGE,
-        `${this.cliName} ${matched.join(" ")} --help`,
-      );
+      return {
+        kind: "unknown",
+        error: new UsageError(
+          `Unknown command: ${this.cliName} ${commandPath.join(" ")}\n\nAvailable commands:\n${subcommands}`,
+          `${this.cliName} ${matched.join(" ")} --help`,
+        ),
+      };
     }
 
-    throw new BailianError(
-      `Unknown command: ${this.cliName} ${commandPath.join(" ")}`,
-      ExitCode.USAGE,
-      `${this.cliName} --help`,
-    );
+    return {
+      kind: "unknown",
+      error: new UsageError(
+        `Unknown command: ${this.cliName} ${commandPath.join(" ")}`,
+        `${this.cliName} --help`,
+      ),
+    };
   }
 
   private buildResourceLines(a: (s: string) => string, d: (s: string) => string): string {

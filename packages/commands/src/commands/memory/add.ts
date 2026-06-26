@@ -8,7 +8,6 @@ import {
   type MemoryAddRequest,
   type MemoryAddResponse,
 } from "bailian-cli-core";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -30,9 +29,9 @@ export default defineCommand({
     '--user-id user1 --messages \'[{"role":"user","content":"I like traveling"}]\'',
     '--user-id user1 --content "Lives in Beijing" --profile-schema schema_xxx',
   ],
+  validate: (f) => (!f.messages && !f.content ? "Provide --messages or --content." : undefined),
   async run(config: Config, flags: GlobalFlags) {
     const userId = flags.userId as string;
-    if (!userId) failIfMissing("user-id", cmdUsage(config, "--user-id <id>"));
 
     const body: MemoryAddRequest = { user_id: userId };
 
@@ -47,11 +46,6 @@ export default defineCommand({
 
     if (flags.content) {
       body.custom_content = flags.content as string;
-    }
-
-    if (!body.messages && !body.custom_content) {
-      process.stderr.write("Error: at least one of --messages or --content is required\n");
-      process.exit(1);
     }
 
     if (flags.profileSchema) body.profile_schema = flags.profileSchema as string;

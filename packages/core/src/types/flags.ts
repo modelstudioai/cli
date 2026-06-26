@@ -8,7 +8,6 @@ export interface GlobalFlags {
   noColor: boolean;
   yes: boolean;
   dryRun: boolean;
-  help: boolean;
   nonInteractive: boolean;
   async: boolean;
   consoleRegion?: string;

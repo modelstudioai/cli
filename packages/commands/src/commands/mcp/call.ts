@@ -6,7 +6,6 @@ import {
   type Config,
   type GlobalFlags,
 } from "bailian-cli-core";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult } from "bailian-cli-runtime";
 import { ensureApiKey } from "bailian-cli-runtime";
 
@@ -32,10 +31,10 @@ function parseArgFlags(raw: string[]): Record<string, unknown> {
 export default defineCommand({
   description: "Call a tool on an MCP server (tools/call)",
   auth: "apiKey",
-  usageArgs: "<server-code>.<tool> [--arg k=v ...] [--json '{...}'] [--url <url>]",
+  usageArgs: "--target <server.tool> [--arg k=v ...] [--json '{...}'] [--url <url>]",
   options: [
     {
-      flag: "<server-code>.<tool>",
+      flag: "--target <server.tool>",
       description:
         "Server code and tool name joined by a dot, e.g. market-cmapi00073529.SmartStockSelection",
       required: true,
@@ -56,23 +55,20 @@ export default defineCommand({
     { flag: "--url <url>", description: "Override the MCP endpoint URL (for non-Bailian servers)" },
   ],
   exampleArgs: [
-    'market-cmapi00073529.SmartStockSelection --query "Screen consumer stocks with ROE > 15%"',
-    'market-cmapi00073529.FinQuery --json \'{"q":"Guizhou Maotai","limit":5}\'',
-    "market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 --arg minScale=10",
+    '--target market-cmapi00073529.SmartStockSelection --query "Screen consumer stocks with ROE > 15%"',
+    '--target market-cmapi00073529.FinQuery --json \'{"q":"Guizhou Maotai","limit":5}\'',
+    "--target market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 --arg minScale=10",
   ],
   async run(config: Config, flags: GlobalFlags) {
-    const positional =
-      ((flags as Record<string, unknown>)._positional as string[] | undefined) ?? [];
-    const target = positional[0];
-    if (!target) failIfMissing("<server-code>.<tool>", cmdUsage(config, "<server-code>.<tool>"));
+    const target = flags.target as string;
 
-    const dot = target!.indexOf(".");
-    if (dot <= 0 || dot === target!.length - 1) {
+    const dot = target.indexOf(".");
+    if (dot <= 0 || dot === target.length - 1) {
       process.stderr.write(`Error: target must be <server-code>.<tool>, got "${target}".\n`);
       process.exit(1);
     }
-    const serverCode = target!.slice(0, dot);
-    const toolName = target!.slice(dot + 1);
+    const serverCode = target.slice(0, dot);
+    const toolName = target.slice(dot + 1);
 
     let toolArgs: Record<string, unknown> = {};
     if (flags.json) {
