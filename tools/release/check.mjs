@@ -65,6 +65,9 @@ export async function runCheck(options = {}) {
   step("build bailian-cli");
   run("pnpm", ["--filter", "bailian-cli", "run", "build"]);
 
+  step("build knowledge-studio-cli");
+  run("pnpm", ["--filter", "knowledge-studio-cli", "run", "build"]);
+
   step("pack + scan (publint, gitleaks)");
   packAndScan({ log });
 
