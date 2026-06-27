@@ -5,7 +5,6 @@ import {
   type Config,
   type GlobalFlags,
 } from "bailian-cli-core";
-import { IncompleteCommandError } from "bailian-cli-core";
 import { printQuickStart } from "bailian-cli-runtime";
 import { emitBare } from "bailian-cli-runtime";
 import {
@@ -31,6 +30,7 @@ export default defineCommand({
     },
   ],
   exampleArgs: ["--api-key sk-xxxxx", "--console"],
+  validate: (f) => (!f.console && !f.apiKey ? "Provide --api-key or --console" : undefined),
   async run(config: Config, flags: GlobalFlags) {
     if (flags.console) {
       if (config.dryRun) {
@@ -51,10 +51,7 @@ export default defineCommand({
       process.stderr.write(`Warning: DASHSCOPE_API_KEY is already set in environment.\n`);
     }
 
-    const key = (flags.apiKey as string) || config.apiKey;
-    if (!key) {
-      throw new IncompleteCommandError("Missing required argument: --api-key");
-    }
+    const key = flags.apiKey as string;
 
     const baseUrl = (flags.baseUrl as string) || undefined;
     const effectiveConfig = baseUrl ? { ...config, baseUrl } : config;

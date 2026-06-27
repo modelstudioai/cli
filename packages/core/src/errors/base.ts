@@ -45,31 +45,11 @@ export class BailianError extends Error {
   }
 }
 
-/**
- * The user invoked the CLI in a structurally invalid way: unknown command path,
- * unknown/badly-typed flag, or a missing required argument. Always carries
- * {@link ExitCode.USAGE}. The runtime's error boundary recognises this type and
- * renders the relevant command's help before printing the message — so command
- * code never builds usage strings or prints help itself; it just throws this.
- */
+/** Invalid usage: unknown command, bad/unknown flag, missing required, failed validation. */
 export class UsageError extends BailianError {
   constructor(message: string, hint?: string) {
     super(message, ExitCode.USAGE, hint);
     this.name = "UsageError";
-  }
-}
-
-/**
- * The command is *incomplete* — a valid prefix that stopped short (a missing
- * required flag / positional). Distinct from {@link UsageError} ("you typed
- * something wrong"): an incomplete command is not an error. The runtime's error
- * boundary renders that command's help and exits 0 — exactly like landing on a
- * command group with no subcommand. Carries {@link ExitCode.SUCCESS}.
- */
-export class IncompleteCommandError extends BailianError {
-  constructor(message: string) {
-    super(message, ExitCode.SUCCESS);
-    this.name = "IncompleteCommandError";
   }
 }
 

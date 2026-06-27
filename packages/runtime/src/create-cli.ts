@@ -10,12 +10,7 @@ import {
   type RunContext,
 } from "./middleware.ts";
 import type { Command, Config, GlobalFlags } from "bailian-cli-core";
-import {
-  GLOBAL_OPTIONS,
-  IncompleteCommandError,
-  loadConfig,
-  flushTelemetry,
-} from "bailian-cli-core";
+import { GLOBAL_OPTIONS, UsageError, loadConfig, flushTelemetry } from "bailian-cli-core";
 import { setupProxyFromEnv } from "./proxy.ts";
 import { handleError } from "./error-handler.ts";
 import { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
@@ -37,12 +32,9 @@ export interface Cli {
 }
 
 /**
- * Build a CLI from an injected command set. The kernel is agnostic to *which*
- * commands exist — each product (bailian-cli, rag-cli, …) passes its own map and
- * identity. `run` is a thin orchestrator: resolve argv into a {@link Resolution},
- * then dispatch — terminal kinds render and return; `run` enters the middleware
- * stack guarded by a single error boundary. No business `if`s, no scattered
- * `process.exit`.
+ * Build a CLI from an injected command set — each product (bl / rag / …) passes
+ * its own commands + identity. `run` resolves argv into a {@link Resolution},
+ * then dispatches it.
  */
 export function createCli(commands: Record<string, Command>, opts: CliOptions): Cli {
   const registry = new CommandRegistry(commands, opts.binName);
@@ -117,9 +109,12 @@ export function createCli(commands: Record<string, Command>, opts: CliOptions): 
 
       case "run": {
         try {
+          // 解析 flag + 跨 flag 校验：任何用法问题都抛 UsageError
           const flags = parseFlags(res.rest, [...GLOBAL_OPTIONS, ...(res.command.options ?? [])]);
           const invalid = res.command.validate?.(flags);
-          if (invalid) throw new IncompleteCommandError(invalid);
+          if (invalid) throw new UsageError(invalid);
+
+          // 校验通过 → 准备配置、进中间件执行命令
           const config = buildConfig(flags);
           const ctx: RunContext = {
             binName,
@@ -133,11 +128,13 @@ export function createCli(commands: Record<string, Command>, opts: CliOptions): 
           await runMiddleware(ctx);
           await flushTelemetry(1000);
         } catch (err) {
-          await flushTelemetry(1000);
-          if (err instanceof IncompleteCommandError) {
+          // 裸调用（命令后什么都没写）下的 UsageError → 当"还没写完"，打 help、exit 0；
+          // 写了 flag 却无效、或执行时报错 → 报错、exit 2。
+          if (err instanceof UsageError && res.rest.length === 0) {
             registry.printHelp(res.path, process.stderr);
             return;
           }
+          await flushTelemetry(1000);
           handleError(err, binName);
         }
         return;

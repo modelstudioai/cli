@@ -47,12 +47,10 @@ export interface Command {
   auth: AuthRequirement;
   notes?: string[];
   /**
-   * Cross-flag validation, run after parsing and before execute. Return an
-   * error message when the flag combination is incomplete (one-of, 3-of-N,
-   * value-conditional, dependency, …); the runtime throws IncompleteCommandError
-   * and renders this command's help. Return undefined to pass. Single-flag
-   * `required: true` is enforced by the parser — use this only for rules that
-   * span multiple flags or depend on a flag's *value*.
+   * Cross-flag validation, run after parsing and before execute (one-of, 3-of-N,
+   * value-conditional, dependency, …). Return an error message → UsageError;
+   * undefined to pass. Single-flag `required: true` is enforced by the parser —
+   * use this only for rules spanning multiple flags or depending on a flag's *value*.
    */
   validate?: (flags: GlobalFlags) => string | undefined;
   execute: (config: Config, flags: GlobalFlags) => Promise<void>;

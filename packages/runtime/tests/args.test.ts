@@ -129,11 +129,11 @@ test("parseFlags validates number flags", () => {
   );
 });
 
-test("parseFlags throws IncompleteCommandError when a required flag is missing", () => {
+test("parseFlags throws UsageError when a required flag is missing", () => {
   expect(() => parseFlags(["--model", "qwen-image-2.0"], OPTS)).toThrowError(
     expect.objectContaining({
-      name: "IncompleteCommandError",
-      exitCode: ExitCode.SUCCESS,
+      name: "UsageError",
+      exitCode: ExitCode.USAGE,
       message: expect.stringContaining("Missing required flag: --prompt"),
     }),
   );

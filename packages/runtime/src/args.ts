@@ -1,6 +1,6 @@
 import type { GlobalFlags } from "bailian-cli-core";
 import type { OptionDef } from "bailian-cli-core";
-import { UsageError, IncompleteCommandError } from "bailian-cli-core";
+import { UsageError } from "bailian-cli-core";
 
 function kebabToCamel(str: string): string {
   return str.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
@@ -92,10 +92,8 @@ export function parsePath(argv: string[]): ParsePathResult {
 
 /**
  * Second pass — parse the flag region into typed values, driven entirely by the
- * OptionDef schema. Pure: returns typed flags or throws — never prints/exits.
- * The runtime's error boundary decides rendering. Throws IncompleteCommandError
- * for missing required flags (incomplete → help) and UsageError for malformed
- * input (unknown/short flag, bad value, unexpected token, duplicate).
+ * OptionDef schema. Pure: returns typed flags or throws UsageError — never
+ * prints/exits. The runtime's error boundary decides rendering.
  */
 export function parseFlags(rest: string[], options: OptionDef[]): GlobalFlags {
   const allowedKeys = buildAllowedFlagKeys(options);
@@ -189,7 +187,7 @@ export function parseFlags(rest: string[], options: OptionDef[]): GlobalFlags {
   });
   if (missing.length > 0) {
     const names = missing.map((opt) => opt.flag.match(/^(--[a-z][a-z0-9-]*)/i)?.[1] ?? opt.flag);
-    throw new IncompleteCommandError(
+    throw new UsageError(
       `Missing required ${names.length > 1 ? "flags" : "flag"}: ${names.join(", ")}`,
     );
   }

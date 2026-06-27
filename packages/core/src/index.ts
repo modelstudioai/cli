@@ -1,4 +1,4 @@
-export { BailianError, UsageError, IncompleteCommandError } from "./errors/base.ts";
+export { BailianError, UsageError } from "./errors/base.ts";
 export { mapApiError, type ApiErrorBody } from "./errors/api.ts";
 export { ExitCode } from "./errors/codes.ts";
 

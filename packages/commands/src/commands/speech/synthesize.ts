@@ -14,7 +14,6 @@ import {
   type OutputFormat,
   speechSynthesizeEndpoint,
   parseSSE,
-  IncompleteCommandError,
   resolveOutputDir,
   request,
   DOCS_HOSTS,
@@ -207,9 +206,8 @@ export default defineCommand({
       return;
     }
 
-    let text = flags.text as string | undefined;
-
-    // --text-file takes precedence if provided and --text is empty
+    // --text / --text-file presence enforced by validate; empty file content → API rejects.
+    let text = (flags.text as string) || "";
     if (!text && flags.textFile) {
       const filePath = flags.textFile as string;
       try {
@@ -217,10 +215,6 @@ export default defineCommand({
       } catch {
         throw new BailianError(`Cannot read text file: ${filePath}`, ExitCode.USAGE);
       }
-    }
-
-    if (!text) {
-      throw new IncompleteCommandError("Provide --text or --text-file.");
     }
     const voice = flags.voice as string;
 
