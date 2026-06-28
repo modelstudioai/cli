@@ -352,42 +352,6 @@ export interface UserProfileResponse {
   };
 }
 
-// ---- Knowledge Retrieve (Bailian Cloud API) ----
-
-export interface KnowledgeRetrieveRequest {
-  IndexId: string;
-  Query: string;
-  DenseSimilarityTopK?: number;
-  SparseSimilarityTopK?: number;
-  EnableReranking?: boolean;
-  EnableRewrite?: boolean;
-  RerankTopN?: number;
-  TopK?: number;
-  Rerank?: Array<{
-    ModelName?: string;
-    RerankMode?: string;
-    RerankInstruct?: string;
-  }>;
-  RerankTopN_legacy?: number;
-  SearchFilters?: Array<{
-    Key: string;
-    Value: string;
-    Operator: string;
-  }>;
-}
-
-export interface KnowledgeRetrieveResponse {
-  Success: boolean;
-  RequestId: string;
-  Data: {
-    Nodes: Array<{
-      Text: string;
-      Score: number;
-      Metadata: Record<string, unknown>;
-    }>;
-  };
-}
-
 // ---- Knowledge Retrieve (DashScope protocol — snake_case) ----
 
 export interface DashScopeKnowledgeRetrieveRequest {

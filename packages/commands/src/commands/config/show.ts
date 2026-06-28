@@ -27,11 +27,6 @@ export default defineCommand({
     if (typeof result.api_key === "string") result.api_key = maskToken(result.api_key);
     if (typeof result.access_token === "string")
       result.access_token = maskToken(result.access_token);
-    if (typeof result.access_key_id === "string")
-      result.access_key_id = maskToken(result.access_key_id);
-    if (typeof result.access_key_secret === "string") {
-      result.access_key_secret = maskToken(result.access_key_secret);
-    }
 
     emitResult(result, format);
   },

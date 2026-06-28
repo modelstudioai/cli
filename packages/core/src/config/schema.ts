@@ -27,8 +27,6 @@ export interface ConfigFile {
   default_image_model?: string;
   default_speech_model?: string;
   default_omni_model?: string;
-  access_key_id?: string;
-  access_key_secret?: string;
   workspace_id?: string;
   console_site?: "domestic" | "international";
   console_region?: string;
@@ -80,10 +78,6 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     out.default_speech_model = obj.default_speech_model;
   if (typeof obj.default_omni_model === "string" && obj.default_omni_model.length > 0)
     out.default_omni_model = obj.default_omni_model;
-  if (typeof obj.access_key_id === "string" && obj.access_key_id.length > 0)
-    out.access_key_id = obj.access_key_id;
-  if (typeof obj.access_key_secret === "string" && obj.access_key_secret.length > 0)
-    out.access_key_secret = obj.access_key_secret;
   if (typeof obj.workspace_id === "string" && obj.workspace_id.length > 0)
     out.workspace_id = obj.workspace_id;
   if (typeof obj.console_site === "string" && VALID_CONSOLE_SITES.has(obj.console_site))
@@ -121,8 +115,6 @@ export interface Config {
   defaultImageModel?: string;
   defaultSpeechModel?: string;
   defaultOmniModel?: string;
-  accessKeyId?: string;
-  accessKeySecret?: string;
   workspaceId?: string;
   consoleSite?: "domestic" | "international";
   consoleRegion?: string;

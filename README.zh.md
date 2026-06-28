@@ -151,18 +151,6 @@ bl text chat --api-key sk-xxxxx --message "你好"
 bl auth login --console
 ```
 
-### 阿里云 AK/SK（仅知识库检索）
-
-`knowledge retrieve` 命令需要阿里云 AccessKey。前往 [RAM 控制台](https://ram.console.aliyun.com/manage/ak) 获取。
-
-> 建议：创建 RAM 子账号并授予最小权限，避免使用主账号 AK/SK。
-
-```bash
-export ALIBABA_CLOUD_ACCESS_KEY_ID=LTAI5t...
-export ALIBABA_CLOUD_ACCESS_KEY_SECRET=...
-export BAILIAN_WORKSPACE_ID=ws-...
-```
-
 ## 配置
 
 ```bash

@@ -117,23 +117,11 @@ export function e2eLabelFromMetaUrl(metaUrl: string): string {
   return basename(fileURLToPath(metaUrl), ".ts").replace(/\.e2e\.test$/, "");
 }
 
-/** 知识库用例：须显式索引 ID + API-KEY 或 AK/SK */
+/** 知识库用例：须显式索引 ID + API-KEY */
 export function isKnowledgeE2EReady(): boolean {
   if (!isBailianE2EEnabled()) return false;
   if (!process.env.BAILIAN_E2E_INDEX_ID) return false;
-  const hasApiKey = isDashScopeE2EReady();
-  const hasAkSk =
-    !!process.env.ALIBABA_CLOUD_ACCESS_KEY_ID && !!process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET;
-  return hasApiKey || hasAkSk;
-}
-
-export function isKnowledgeAkSkReady(): boolean {
-  return (
-    isBailianE2EEnabled() &&
-    !!process.env.ALIBABA_CLOUD_ACCESS_KEY_ID &&
-    !!process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET &&
-    !!process.env.BAILIAN_E2E_INDEX_ID
-  );
+  return isDashScopeE2EReady();
 }
 
 export interface RunCliResult {

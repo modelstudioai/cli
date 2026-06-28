@@ -69,9 +69,6 @@ export function loadConfig(flags: GlobalFlags): Config {
     defaultImageModel: file.default_image_model,
     defaultSpeechModel: file.default_speech_model,
     defaultOmniModel: file.default_omni_model,
-    accessKeyId: process.env.ALIBABA_CLOUD_ACCESS_KEY_ID || file.access_key_id || undefined,
-    accessKeySecret:
-      process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET || file.access_key_secret || undefined,
     workspaceId: process.env.BAILIAN_WORKSPACE_ID || file.workspace_id || undefined,
     consoleSite: (flags.consoleSite as Config["consoleSite"]) || file.console_site || undefined,
     consoleRegion: (flags.consoleRegion as string) || file.console_region || undefined,

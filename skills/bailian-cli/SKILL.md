@@ -55,7 +55,7 @@ Do not guess flags — use the reference files or `--help`.
 | Bailian agent / workflow                     | `bl app call`                          | Needs `--app-id`                             |
 | Find app by name                             | `bl app list` then `bl app call`       | Console auth                                 |
 | Memory CRUD / profile                        | `bl memory *`                          | [`reference/memory.md`](reference/memory.md) |
-| Knowledge RAG                                | `bl knowledge retrieve`                | RAM AK/SK + index ID                         |
+| Knowledge RAG                                | `bl knowledge retrieve`                | API key + index ID                           |
 | Upload file to temp OSS                      | `bl file upload`                       | When you need `oss://` URL explicitly        |
 | Model selection / recommendation             | `bl advisor recommend`                 | Intent → candidate recall → LLM ranking      |
 | MCP tool discovery / call                    | `bl mcp list` / `tools` / `call`       | Bailian MCP marketplace                      |

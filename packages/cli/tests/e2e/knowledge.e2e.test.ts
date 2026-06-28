@@ -35,7 +35,6 @@ describe("e2e: knowledge retrieve", () => {
     expect(stderr).toMatch(/--query/i);
     expect(stderr).toMatch(/--rerank-top-n/i);
     expect(stderr).toMatch(/deprecated/i);
-    expect(stderr).toMatch(/--workspace-id/i);
   });
 
   test("缺少 --index-id 时打印帮助并退出 (0)", async () => {
@@ -82,8 +81,6 @@ describe("e2e: knowledge retrieve errors", () => {
       {
         DASHSCOPE_API_KEY: undefined,
         DASHSCOPE_ACCESS_TOKEN: undefined,
-        ALIBABA_CLOUD_ACCESS_KEY_ID: undefined,
-        ALIBABA_CLOUD_ACCESS_KEY_SECRET: undefined,
         BAILIAN_CONFIG_DIR: tmpdir(),
       },
     );

@@ -24,10 +24,10 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag              | Type   | Required | Description                                                                                                                                  |
-| ----------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--key <key>`     | string | yes      | Config key (base*url, output, output_dir, timeout, api_key, access_token, default*\*\_model, access_key_id, access_key_secret, workspace_id) |
-| `--value <value>` | string | yes      | Value to set                                                                                                                                 |
+| Flag              | Type   | Required | Description                                                                                                |
+| ----------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------- |
+| `--key <key>`     | string | yes      | Config key (base*url, output, output_dir, timeout, api_key, access_token, default*\*\_model, workspace_id) |
+| `--value <value>` | string | yes      | Value to set                                                                                               |
 
 #### Examples
 

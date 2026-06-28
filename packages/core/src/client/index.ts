@@ -1,5 +1,3 @@
-export type { AkSignConfig } from "./ak-sign.ts";
-export { signRequest } from "./ak-sign.ts";
 export {
   appCompletionPath,
   chatPath,

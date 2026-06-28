@@ -30,8 +30,6 @@ export type {
   DashScopeVideoEditRequest,
   DashScopeVideoRefRequest,
   DashScopeVideoRequest,
-  KnowledgeRetrieveRequest,
-  KnowledgeRetrieveResponse,
   MemoryAddRequest,
   MemoryAddResponse,
   MemoryMessage,
