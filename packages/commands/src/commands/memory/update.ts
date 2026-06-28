@@ -1,7 +1,6 @@
 import {
   defineCommand,
-  requestJson,
-  memoryNodeEndpoint,
+  memoryNodePath,
   detectOutputFormat,
   type MemoryNodeUpdateRequest,
 } from "bailian-cli-core";
@@ -37,7 +36,8 @@ export default defineCommand({
     },
   },
   exampleArgs: ['--node-id node_xxx --user-id user1 --content "updated memory content"'],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const nodeId = flags.nodeId;
     const userId = flags.userId;
     const content = flags.content;
@@ -52,15 +52,14 @@ export default defineCommand({
 
     if (config.dryRun) {
       emitResult(
-        { endpoint: memoryNodeEndpoint(config.baseUrl, nodeId), method: "PATCH", request: body },
+        { endpoint: ctx.client.url(memoryNodePath(nodeId)), method: "PATCH", request: body },
         format,
       );
       return;
     }
 
-    const url = memoryNodeEndpoint(config.baseUrl, nodeId);
-    const response = await requestJson<{ request_id: string }>(config, {
-      url,
+    const response = await ctx.client.requestJson<{ request_id: string }>({
+      path: memoryNodePath(nodeId),
       method: "PATCH",
       body,
     });

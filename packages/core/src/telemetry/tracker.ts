@@ -121,8 +121,9 @@ export async function trackCommandExecution(
 
     let authMethod: string | undefined;
     if (config.apiKey) authMethod = "api-key";
+    else if (config.apiKeyEnv) authMethod = "api-key";
     else if (config.fileApiKey) authMethod = "api-key";
-    else if (config.accessTokenEnv || config.fileAccessToken) authMethod = "access-token";
+    else if (config.fileAccessToken) authMethod = "access-token";
 
     const event = createTrackingEvent({
       command: commandPath.join(" "),

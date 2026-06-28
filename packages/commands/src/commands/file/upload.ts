@@ -1,4 +1,4 @@
-import { defineCommand, resolveCredential, detectOutputFormat, uploadFile } from "bailian-cli-core";
+import { defineCommand, detectOutputFormat } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -25,7 +25,8 @@ export default defineCommand({
     "--file audio.wav --model qwen3-asr-flash",
     "--file cat.png --model qwen-image-2.0",
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const filePath = flags.file;
     const model = flags.model;
 
@@ -36,14 +37,7 @@ export default defineCommand({
       return;
     }
 
-    // Resolve API key for upload
-    const credential = await resolveCredential(config);
-
-    const ossUrl = await uploadFile({
-      apiKey: credential.token,
-      model,
-      filePath,
-    });
+    const ossUrl = await ctx.client.uploadFile(filePath, model);
 
     if (config.quiet) {
       emitBare(ossUrl);

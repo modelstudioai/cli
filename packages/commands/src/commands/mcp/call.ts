@@ -1,6 +1,5 @@
-import { defineCommand, McpClient, bailianMcpUrl, detectOutputFormat } from "bailian-cli-core";
+import { defineCommand, bailianMcpPath, detectOutputFormat } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
-import { ensureApiKey } from "bailian-cli-runtime";
 
 function parseArgFlags(raw: string[]): Record<string, unknown> {
   const out: Record<string, unknown> = {};
@@ -59,7 +58,8 @@ export default defineCommand({
     '--target market-cmapi00073529.FinQuery --json \'{"q":"Guizhou Maotai","limit":5}\'',
     "--target market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 --arg minScale=10",
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const target = flags.target;
 
     const dot = target.indexOf(".");
@@ -87,7 +87,7 @@ export default defineCommand({
     Object.assign(toolArgs, parseArgFlags(flags.arg ?? []));
     if (flags.query !== undefined) toolArgs.query = flags.query;
 
-    const url = flags.url || bailianMcpUrl(config.baseUrl, serverCode);
+    const url = flags.url || ctx.client.url(bailianMcpPath(serverCode));
     const format = detectOutputFormat(config.output);
 
     if (config.dryRun) {
@@ -103,8 +103,7 @@ export default defineCommand({
       return;
     }
 
-    await ensureApiKey(config);
-    const client = new McpClient(config, url);
+    const client = ctx.client.mcp(url);
     await client.initialize();
     const result = await client.callTool(toolName, toolArgs);
 

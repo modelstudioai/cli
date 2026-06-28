@@ -1,8 +1,7 @@
 import {
   defineCommand,
   detectOutputFormat,
-  mcpWebSearchEndpoint,
-  McpClient,
+  mcpWebSearchPath,
   type FlagsDef,
 } from "bailian-cli-core";
 import { createSpinner } from "bailian-cli-runtime";
@@ -30,18 +29,18 @@ export default defineCommand({
     "--list-tools",
   ],
   validate: (f) => (!f.listTools && !f.query ? "Missing required flag: --query" : undefined),
-  async run(config, flags) {
-    const mcpUrl = mcpWebSearchEndpoint(config.baseUrl);
+  async run(ctx) {
+    const { config, flags } = ctx;
     const format = detectOutputFormat(config.output);
 
     // --- List tools mode ---
     if (flags.listTools) {
       if (config.dryRun) {
-        emitResult({ endpoint: mcpUrl, action: "tools/list" }, format);
+        emitResult({ endpoint: ctx.client.url(mcpWebSearchPath()), action: "tools/list" }, format);
         return;
       }
 
-      const client = new McpClient(config, mcpUrl);
+      const client = ctx.client.mcp(mcpWebSearchPath());
       await client.initialize();
       const tools = await client.listTools();
 
@@ -55,7 +54,7 @@ export default defineCommand({
     if (config.dryRun) {
       emitResult(
         {
-          endpoint: mcpUrl,
+          endpoint: ctx.client.url(mcpWebSearchPath()),
           action: "tools/call",
           tool: "bailian_web_search",
           arguments: {
@@ -69,7 +68,7 @@ export default defineCommand({
     }
 
     // Initialize MCP client
-    const client = new McpClient(config, mcpUrl);
+    const client = ctx.client.mcp(mcpWebSearchPath());
     const spinner = createSpinner("Initializing search...");
 
     if (!config.quiet) spinner.start();

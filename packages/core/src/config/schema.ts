@@ -104,9 +104,10 @@ export interface Config {
   binName?: string;
   /** npm package name for self-update (e.g. "bailian-cli", "bailian-cli-rag"), injected by createCli. */
   npmPackage?: string;
+  /** `--api-key` flag (highest priority for the model domain). */
   apiKey?: string;
-  /** `DASHSCOPE_ACCESS_TOKEN` env (explicit override). */
-  accessTokenEnv?: string;
+  /** `DASHSCOPE_API_KEY` env (model domain). */
+  apiKeyEnv?: string;
   /** `access_token` in config file (console login). */
   fileAccessToken?: string;
   fileApiKey?: string;

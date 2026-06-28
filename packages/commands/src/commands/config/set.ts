@@ -66,7 +66,8 @@ export default defineCommand({
     "--key timeout --value 600",
     "--key base_url --value https://dashscope.aliyuncs.com",
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const key = flags.key;
     const value = flags.value;
 

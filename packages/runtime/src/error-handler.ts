@@ -1,10 +1,4 @@
-import {
-  BailianError,
-  ExitCode,
-  detectOutputFormat,
-  type OutputFormat,
-  CONSOLE_GATEWAY_NO_TOKEN_MESSAGE,
-} from "bailian-cli-core";
+import { BailianError, ExitCode, detectOutputFormat, type OutputFormat } from "bailian-cli-core";
 import { API_KEY_PAGE } from "./urls.ts";
 
 const LABEL_WIDTH = 13;
@@ -30,10 +24,9 @@ function alignContinuation(text: string): string {
 
 function enhanceHint(err: BailianError): string | undefined {
   if (err.exitCode === ExitCode.AUTH) {
-    if (
-      err.message === CONSOLE_GATEWAY_NO_TOKEN_MESSAGE ||
-      err.hint?.includes("auth login --console")
-    ) {
+    // Console-domain auth errors already carry their own `--console` hint; don't
+    // append the api-key onboarding lines.
+    if (err.hint?.includes("auth login --console")) {
       return err.hint;
     }
     return [

@@ -5,7 +5,7 @@ import http from "node:http";
 import {
   BailianError,
   ExitCode,
-  chatEndpoint,
+  chatPath,
   getConfigPath,
   readConfigFile,
   requestJson,
@@ -406,7 +406,7 @@ export async function validateAndPersistApiKey(
   process.stderr.write("Testing key... ");
   const testConfig = { ...config, apiKey: key, baseUrl };
   const requestOpts = {
-    url: chatEndpoint(testConfig.baseUrl),
+    url: testConfig.baseUrl + chatPath(),
     method: "POST",
     timeout: Math.min(config.timeout, 30),
     body: {

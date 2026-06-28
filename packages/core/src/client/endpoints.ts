@@ -1,86 +1,78 @@
-// ---- Chat (OpenAI Compatible) ----
+// API path builders — return the path only; the Client prepends the
+// credential's baseUrl. Commands never see baseUrl.
 
-export function chatEndpoint(baseUrl: string): string {
-  return `${baseUrl}/compatible-mode/v1/chat/completions`;
+// ---- Chat (OpenAI Compatible) ----
+export function chatPath(): string {
+  return "/compatible-mode/v1/chat/completions";
 }
 
 // ---- Image Generation (DashScope) ----
-
-export function imageEndpoint(baseUrl: string): string {
-  return `${baseUrl}/api/v1/services/aigc/image-generation/generation`;
+export function imagePath(): string {
+  return "/api/v1/services/aigc/image-generation/generation";
 }
 
 // Synchronous image generation (qwen-image-2.0 / qwen-image-max series)
-export function imageSyncEndpoint(baseUrl: string): string {
-  return `${baseUrl}/api/v1/services/aigc/multimodal-generation/generation`;
+export function imageSyncPath(): string {
+  return "/api/v1/services/aigc/multimodal-generation/generation";
 }
 
 // ---- Video Generation (DashScope) ----
-
-export function videoGenerateEndpoint(baseUrl: string): string {
-  return `${baseUrl}/api/v1/services/aigc/video-generation/video-synthesis`;
+export function videoGeneratePath(): string {
+  return "/api/v1/services/aigc/video-generation/video-synthesis";
 }
 
 // ---- Async Task Query ----
-
-export function taskEndpoint(baseUrl: string, taskId: string): string {
-  return `${baseUrl}/api/v1/tasks/${encodeURIComponent(taskId)}`;
+export function taskPath(taskId: string): string {
+  return `/api/v1/tasks/${encodeURIComponent(taskId)}`;
 }
 
 // ---- Application (Agent / Workflow) ----
-
-export function appCompletionEndpoint(baseUrl: string, appId: string): string {
-  return `${baseUrl}/api/v1/apps/${encodeURIComponent(appId)}/completion`;
+export function appCompletionPath(appId: string): string {
+  return `/api/v1/apps/${encodeURIComponent(appId)}/completion`;
 }
 
 // ---- Memory (DashScope v2) ----
-
-export function memoryAddEndpoint(baseUrl: string): string {
-  return `${baseUrl}/api/v2/apps/memory/add`;
+export function memoryAddPath(): string {
+  return "/api/v2/apps/memory/add";
 }
 
-export function memorySearchEndpoint(baseUrl: string): string {
-  return `${baseUrl}/api/v2/apps/memory/memory_nodes/search`;
+export function memorySearchPath(): string {
+  return "/api/v2/apps/memory/memory_nodes/search";
 }
 
-export function memoryListEndpoint(baseUrl: string): string {
-  return `${baseUrl}/api/v2/apps/memory/memory_nodes`;
+export function memoryListPath(): string {
+  return "/api/v2/apps/memory/memory_nodes";
 }
 
-export function memoryNodeEndpoint(baseUrl: string, nodeId: string): string {
-  return `${baseUrl}/api/v2/apps/memory/memory_nodes/${encodeURIComponent(nodeId)}`;
+export function memoryNodePath(nodeId: string): string {
+  return `/api/v2/apps/memory/memory_nodes/${encodeURIComponent(nodeId)}`;
 }
 
 // ---- Speech Synthesis (TTS) ----
-
-export function speechSynthesizeEndpoint(baseUrl: string): string {
-  return `${baseUrl}/api/v1/services/audio/tts/SpeechSynthesizer`;
+export function speechSynthesizePath(): string {
+  return "/api/v1/services/audio/tts/SpeechSynthesizer";
 }
 
 // ---- Speech Recognition (ASR) ----
-
-export function speechRecognizeEndpoint(baseUrl: string): string {
-  return `${baseUrl}/api/v1/services/audio/asr/transcription`;
+export function speechRecognizePath(): string {
+  return "/api/v1/services/audio/asr/transcription";
 }
 
 // ---- Memory Profile (DashScope v2) ----
-
-export function profileSchemaEndpoint(baseUrl: string): string {
-  return `${baseUrl}/api/v2/apps/memory/profile_schemas`;
+export function profileSchemaPath(): string {
+  return "/api/v2/apps/memory/profile_schemas";
 }
 
-export function userProfileEndpoint(baseUrl: string, schemaId: string): string {
-  return `${baseUrl}/api/v2/apps/memory/profile_schemas/${encodeURIComponent(schemaId)}/profiles`;
+export function userProfilePath(schemaId: string): string {
+  return `/api/v2/apps/memory/profile_schemas/${encodeURIComponent(schemaId)}/profiles`;
 }
 
 // ---- Knowledge Base Retrieve (DashScope) ----
-
-export function knowledgeRetrieveEndpoint(baseUrl: string): string {
-  return `${baseUrl}/api/v1/indices/rag/index/retrieve`;
+export function knowledgeRetrievePath(): string {
+  return "/api/v1/indices/rag/index/retrieve";
 }
 
 // ---- MCP Services (Streamable HTTP) ----
-
-export function mcpWebSearchEndpoint(baseUrl: string): string {
-  return `${baseUrl}/api/v1/mcps/WebSearch/mcp`;
+export function mcpWebSearchPath(): string {
+  return "/api/v1/mcps/WebSearch/mcp";
 }

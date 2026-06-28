@@ -1,7 +1,6 @@
 import {
   defineCommand,
-  requestJson,
-  profileSchemaEndpoint,
+  profileSchemaPath,
   detectOutputFormat,
   type ProfileSchemaCreateRequest,
   type ProfileSchemaCreateResponse,
@@ -30,7 +29,8 @@ export default defineCommand({
   exampleArgs: [
     '--name "user_basic" --attributes \'[{"name":"age","description":"age"},{"name":"hobby","description":"hobby"}]\'',
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const name = flags.name;
     const attrStr = flags.attributes;
 
@@ -48,13 +48,12 @@ export default defineCommand({
     const format = detectOutputFormat(config.output);
 
     if (config.dryRun) {
-      emitResult({ endpoint: profileSchemaEndpoint(config.baseUrl), request: body }, format);
+      emitResult({ endpoint: ctx.client.url(profileSchemaPath()), request: body }, format);
       return;
     }
 
-    const url = profileSchemaEndpoint(config.baseUrl);
-    const response = await requestJson<ProfileSchemaCreateResponse>(config, {
-      url,
+    const response = await ctx.client.requestJson<ProfileSchemaCreateResponse>({
+      path: profileSchemaPath(),
       method: "POST",
       body,
     });

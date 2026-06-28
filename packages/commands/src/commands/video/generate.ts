@@ -1,15 +1,12 @@
 import {
   defineCommand,
-  requestJson,
-  videoGenerateEndpoint,
-  taskEndpoint,
+  videoGeneratePath,
+  taskPath,
   detectOutputFormat,
   type DashScopeVideoRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
   resolveOutputDir,
-  resolveFileUrl,
-  resolveCredential,
   BailianError,
   ExitCode,
   resolveBooleanFlag,
@@ -101,7 +98,8 @@ export default defineCommand({
     '--prompt "Mountain landscape" --resolution 720P --duration 5',
     '--prompt "A cat playing with a ball" --watermark false',
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const prompt = flags.prompt;
 
     const model =
@@ -115,8 +113,7 @@ export default defineCommand({
     // Auto-upload local image file for i2v
     let resolvedImageUrl: string | undefined;
     if (imageUrl) {
-      const credential = await resolveCredential(config);
-      resolvedImageUrl = await resolveFileUrl(imageUrl, credential.token, model);
+      resolvedImageUrl = await ctx.client.uploadFile(imageUrl, model);
     }
 
     const watermark = resolveWatermark(flags.watermark);
@@ -149,14 +146,13 @@ export default defineCommand({
 
     // Submit async task(s) — supports --concurrent for parallel generation
     const concurrent = getConcurrency(flags);
-    const url = videoGenerateEndpoint(config.baseUrl);
 
     const responses = await runConcurrent(
       concurrent,
       config,
       () =>
-        requestJson<DashScopeAsyncResponse>(config, {
-          url,
+        ctx.client.requestJson<DashScopeAsyncResponse>({
+          path: videoGeneratePath(),
           method: "POST",
           body,
           async: true,
@@ -180,7 +176,7 @@ export default defineCommand({
     const pollInterval = flags.pollInterval ?? 5;
 
     const pollPromises = taskIds.map((taskId) => {
-      const pollUrl = taskEndpoint(config.baseUrl, taskId);
+      const pollUrl = ctx.client.url(taskPath(taskId));
       return poll<DashScopeTaskResponse>(config, {
         url: pollUrl,
         intervalSec: pollInterval,

@@ -2,7 +2,7 @@ import type { Config } from "../config/schema.ts";
 import type { ApiErrorBody } from "../errors/api.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
-import { resolveCredential } from "../auth/resolver.ts";
+import { resolveApiKeyCredential } from "../auth/resolver.ts";
 import { mapApiError } from "../errors/api.ts";
 import { maskToken } from "../utils/token.ts";
 import { SOURCE_CONFIG, trackingHeaders } from "./headers.ts";
@@ -54,7 +54,7 @@ export async function request(config: Config, opts: RequestOpts): Promise<Respon
   }
 
   if (!opts.noAuth) {
-    const credential = await resolveCredential(config);
+    const credential = await resolveApiKeyCredential(config);
     headers["Authorization"] = `Bearer ${credential.token}`;
 
     if (config.verbose) {

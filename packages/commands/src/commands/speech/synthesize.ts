@@ -4,17 +4,16 @@ import {
   defineCommand,
   ExitCode,
   detectOutputFormat,
+  type Client,
   type Config,
   type DashScopeTTSRequest,
   type DashScopeTTSResponse,
   type DashScopeTTSStreamChunk,
   stripUndefined,
-  requestJson,
   type OutputFormat,
-  speechSynthesizeEndpoint,
+  speechSynthesizePath,
   parseSSE,
   resolveOutputDir,
-  request,
   DOCS_HOSTS,
   type FlagsDef,
   type Flags,
@@ -233,7 +232,8 @@ export default defineCommand({
     if (!f.voice) return "Missing required flag: --voice";
     return undefined;
   },
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const model = flags.model || config.defaultSpeechModel || "cosyvoice-v3-flash";
 
     // --list-voices: print voice list for the model and exit
@@ -296,19 +296,17 @@ export default defineCommand({
       process.stderr.write(`[Model: ${model}] [Voice: ${voice}]\n`);
     }
 
-    const url = speechSynthesizeEndpoint(config.baseUrl);
-
     if (useStream) {
-      await handleStreamMode(config, url, body, flags, format);
+      await handleStreamMode(ctx.client, config, body, flags, format);
     } else {
-      await handleNonStreamMode(config, url, body, flags, format);
+      await handleNonStreamMode(ctx.client, config, body, flags, format);
     }
   },
 });
 
 async function handleNonStreamMode(
+  client: Client,
   config: Config,
-  url: string,
   body: DashScopeTTSRequest,
   flags: SynthesizeFlags,
   format: OutputFormat,
@@ -316,7 +314,11 @@ async function handleNonStreamMode(
   const concurrent = getConcurrency(flags);
 
   const results = await runConcurrent(concurrent, config, () =>
-    requestJson<DashScopeTTSResponse>(config, { url, method: "POST", body }),
+    client.requestJson<DashScopeTTSResponse>({
+      path: speechSynthesizePath(),
+      method: "POST",
+      body,
+    }),
   );
 
   const audioUrls = results.map((r) => r.output?.audio?.url).filter(Boolean) as string[];
@@ -373,14 +375,14 @@ async function handleNonStreamMode(
 }
 
 async function handleStreamMode(
+  client: Client,
   config: Config,
-  url: string,
   body: DashScopeTTSRequest,
   flags: SynthesizeFlags,
   format: OutputFormat,
 ): Promise<void> {
-  const res = await request(config, {
-    url,
+  const res = await client.request({
+    path: speechSynthesizePath(),
     method: "POST",
     body,
     stream: true,

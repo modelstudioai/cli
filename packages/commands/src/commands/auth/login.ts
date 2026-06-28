@@ -26,7 +26,8 @@ export default defineCommand({
   },
   exampleArgs: ["--api-key sk-xxxxx", "--console"],
   validate: (f) => (!f.console && !f.apiKey ? "Provide --api-key or --console" : undefined),
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     if (flags.console) {
       if (config.dryRun) {
         emitBare(

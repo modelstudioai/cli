@@ -1,10 +1,8 @@
 import {
   defineCommand,
-  callConsoleGateway,
   effectiveConsoleGatewayConfig,
-  resolveConsoleGatewayCredential,
   detectOutputFormat,
-  type Config,
+  type Client,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
@@ -91,22 +89,19 @@ function extractResponseData(result: Record<string, unknown>): Record<string, un
   return direct ?? data;
 }
 
-async function fetchAllModelsWithQpm(config: Config, token: string): Promise<ModelWithQpm[]> {
+async function fetchAllModelsWithQpm(client: Client): Promise<ModelWithQpm[]> {
   const allModels: ModelWithQpm[] = [];
   let pageNo = 1;
 
   while (true) {
-    const raw = await callConsoleGateway(config, token, {
-      api: MODEL_LIST_API,
-      data: {
-        input: {
-          pageNo,
-          pageSize: 50,
-          group: false,
-          queryQpmInfo: true,
-          ignoreWorkspaceServiceSite: true,
-          supports: { selfServiceLimitIncrease: true },
-        },
+    const raw = await client.console(MODEL_LIST_API, {
+      input: {
+        pageNo,
+        pageSize: 50,
+        group: false,
+        queryQpmInfo: true,
+        ignoreWorkspaceServiceSite: true,
+        supports: { selfServiceLimitIncrease: true },
       },
     });
 
@@ -123,8 +118,7 @@ async function fetchAllModelsWithQpm(config: Config, token: string): Promise<Mod
 }
 
 async function fetchMonitorData(
-  config: Config,
-  token: string,
+  client: Client,
   modelName: string,
   windowMinutes: number,
 ): Promise<{ rpm: number; tpm: number }> {
@@ -132,22 +126,19 @@ async function fetchMonitorData(
   const startTime = now - windowMinutes * 60 * 1000;
 
   try {
-    const raw = await callConsoleGateway(config, token, {
-      api: MONITOR_API,
-      data: {
-        reqDTO: {
-          monitorType: "Advanced",
-          metricFilters: [
-            { aggMethod: "sum_pm", metricName: "model_total_amount" },
-            { aggMethod: "sum_pm", metricName: "model_call_count" },
-          ],
-          labelFilters: {
-            resourceId: modelName,
-            resourceType: "model",
-          },
-          startTime,
-          endTime: now,
+    const raw = await client.console(MONITOR_API, {
+      reqDTO: {
+        monitorType: "Advanced",
+        metricFilters: [
+          { aggMethod: "sum_pm", metricName: "model_total_amount" },
+          { aggMethod: "sum_pm", metricName: "model_call_count" },
+        ],
+        labelFilters: {
+          resourceId: modelName,
+          resourceType: "model",
         },
+        startTime,
+        endTime: now,
       },
     });
 
@@ -263,7 +254,8 @@ export default defineCommand({
     "--model qwen3.6-plus,qwen-turbo",
     "--output json",
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const modelFlag = flags.model || undefined;
     const rawPeriod = Number(flags.period) || 2;
     if (rawPeriod < 1) {
@@ -284,9 +276,7 @@ export default defineCommand({
       return;
     }
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
-    let models = await fetchAllModelsWithQpm(config, credential.token);
+    let models = await fetchAllModelsWithQpm(ctx.client);
 
     if (modelFlag) {
       const names = new Set(
@@ -306,7 +296,7 @@ export default defineCommand({
     }
 
     const monitorResults = await Promise.all(
-      models.map((m) => fetchMonitorData(config, credential.token, m.model, windowMinutes)),
+      models.map((m) => fetchMonitorData(ctx.client, m.model, windowMinutes)),
     );
 
     const checkRows: CheckRow[] = models.map((m, idx) => {

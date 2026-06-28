@@ -31,7 +31,8 @@ export default defineCommand({
   description: "Update the CLI to the latest version",
   auth: "none",
   exampleArgs: [""],
-  async run(config) {
+  async run(ctx) {
+    const { config } = ctx;
     const npmPackage = config.npmPackage!;
     const binName = config.binName!;
     const currentVersion = config.clientVersion!;

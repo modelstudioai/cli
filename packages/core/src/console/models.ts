@@ -1,6 +1,3 @@
-import { callConsoleGateway } from "./gateway.ts";
-import type { Config } from "../config/schema.ts";
-
 const MODEL_LIST_API = "zeldaHttp.dashscopeModel./zelda/api/v1/modelCenter/listFoundationModels";
 
 export interface ModelListParams {
@@ -16,27 +13,24 @@ export interface ModelListResult {
   models: Record<string, unknown>[];
 }
 
+/** Page the console model-list API. `call` makes the gateway request (e.g. `client.console`). */
 export async function fetchModelList(
-  config: Config,
-  token: string,
+  call: (api: string, data: Record<string, unknown>) => Promise<unknown>,
   params: ModelListParams = {},
 ): Promise<ModelListResult> {
   const { pageNo = 1, pageSize = 50, name = "", providers = [], capabilities = [] } = params;
 
-  const result = (await callConsoleGateway(config, token, {
-    api: MODEL_LIST_API,
-    data: {
-      input: {
-        pageNo,
-        pageSize,
-        name,
-        providers,
-        inferenceProviders: [],
-        features: [],
-        group: true,
-        capabilities,
-        contextWindows: [],
-      },
+  const result = (await call(MODEL_LIST_API, {
+    input: {
+      pageNo,
+      pageSize,
+      name,
+      providers,
+      inferenceProviders: [],
+      features: [],
+      group: true,
+      capabilities,
+      contextWindows: [],
     },
   })) as any;
 

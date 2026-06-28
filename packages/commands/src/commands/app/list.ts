@@ -1,9 +1,4 @@
-import {
-  defineCommand,
-  callConsoleGateway,
-  resolveConsoleGatewayCredential,
-  detectOutputFormat,
-} from "bailian-cli-core";
+import { defineCommand, detectOutputFormat } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
 const APP_LIST_API = "zeldaEasy.broadscope-bailian.app-control.list";
@@ -37,13 +32,12 @@ export default defineCommand({
     consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
   },
   exampleArgs: ["", "--name customer service", "--page 2 --page-size 10", "--output json"],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const name = flags.name || "";
     const pageNo = flags.page || 1;
     const pageSize = flags.pageSize || 30;
     const format = detectOutputFormat(config.output);
-
-    const credential = await resolveConsoleGatewayCredential(config);
 
     const data = {
       reqDTO: {
@@ -57,14 +51,11 @@ export default defineCommand({
     };
 
     if (config.dryRun) {
-      emitResult({ api: APP_LIST_API, data, token: credential.token.slice(0, 8) + "..." }, format);
+      emitResult({ api: APP_LIST_API, data }, format);
       return;
     }
 
-    const result = (await callConsoleGateway(config, credential.token, {
-      api: APP_LIST_API,
-      data,
-    })) as any;
+    const result = await ctx.client.console<any>(APP_LIST_API, data);
 
     const list: unknown[] = result?.data?.DataV2?.data?.data?.list ?? [];
     const total: number = result?.data?.DataV2?.data?.data?.total ?? 0;

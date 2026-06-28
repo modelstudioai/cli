@@ -1,10 +1,4 @@
-import {
-  defineCommand,
-  callConsoleGateway,
-  resolveConsoleGatewayCredential,
-  detectOutputFormat,
-  BailianError,
-} from "bailian-cli-core";
+import { defineCommand, detectOutputFormat, BailianError } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
@@ -117,7 +111,8 @@ export default defineCommand({
     consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
   },
   exampleArgs: ["", "--page 2", "--page-size 20", "--model qwen-turbo", "--output json"],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const page = Number(flags.page) || 1;
     const pageSize = Number(flags.pageSize) || 10;
     const modelFilter = flags.model || undefined;
@@ -132,14 +127,9 @@ export default defineCommand({
       return;
     }
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
     let result: unknown;
     try {
-      result = await callConsoleGateway(config, credential.token, {
-        api: HISTORY_API,
-        data: requestData,
-      });
+      result = await ctx.client.console(HISTORY_API, requestData);
     } catch (err) {
       if (err instanceof BailianError && err.message.includes("NotLogined")) {
         process.stderr.write(

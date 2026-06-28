@@ -1,12 +1,4 @@
-import {
-  defineCommand,
-  callConsoleGateway,
-  effectiveConsoleGatewayConfig,
-  resolveConsoleGatewayCredential,
-  CONSOLE_GATEWAY_NO_TOKEN_MESSAGE,
-  BailianError,
-  detectOutputFormat,
-} from "bailian-cli-core";
+import { defineCommand, effectiveConsoleGatewayConfig, detectOutputFormat } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -38,7 +30,8 @@ export default defineCommand({
     `--api zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota --data '{"queryFreeTierQuotaRequest":{"models":["qwen3-max"]}}'`,
     `--api some.api.name --data '{"key":"value"}' --console-region cn-beijing`,
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const api = flags.api;
     const dataRaw = flags.data;
 
@@ -52,21 +45,11 @@ export default defineCommand({
 
     const format = detectOutputFormat(config.output);
 
-    let token: string | undefined;
-    try {
-      token = (await resolveConsoleGatewayCredential(config)).token;
-    } catch (err) {
-      if (!(err instanceof BailianError && err.message === CONSOLE_GATEWAY_NO_TOKEN_MESSAGE)) {
-        throw err;
-      }
-    }
-
     if (config.dryRun) {
       emitResult(
         {
           api,
           data,
-          token: token ? token.slice(0, 8) + "..." : null,
           ...effectiveConsoleGatewayConfig(config),
         },
         format,
@@ -74,10 +57,7 @@ export default defineCommand({
       return;
     }
 
-    const result = await callConsoleGateway(config, token, {
-      api,
-      data,
-    });
+    const result = await ctx.client.console(api, data);
 
     emitResult(result, format);
   },

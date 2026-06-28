@@ -1,10 +1,7 @@
 import {
   defineCommand,
-  requestJson,
-  imageSyncEndpoint,
+  imageSyncPath,
   detectOutputFormat,
-  resolveCredential,
-  resolveFileUrl,
   resolveOutputDir,
   generateFilename,
   stripUndefined,
@@ -84,7 +81,8 @@ export default defineCommand({
     '--image https://example.com/photo.png --prompt "Remove the person" --model qwen-image-2.0-pro',
     '--image ./photo.png --prompt "Replace the background with a beach" --watermark false',
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     // Normalize --image to string array (supports both single and repeated flags)
     let rawImages: string[] = [];
     if (Array.isArray(flags.image)) {
@@ -97,9 +95,8 @@ export default defineCommand({
     const model = flags.model || config.defaultImageModel || "qwen-image-2.0";
 
     // Auto-upload local files (resolve all images in parallel)
-    const credential = await resolveCredential(config);
     const resolvedImages = await Promise.all(
-      rawImages.map((img) => resolveFileUrl(img, credential.token, model)),
+      rawImages.map((img) => ctx.client.uploadFile(img, model)),
     );
     const n = flags.n ?? 1;
 
@@ -147,12 +144,11 @@ export default defineCommand({
       process.stderr.write(`[Model: ${model}] [Mode: sync] [Images: ${resolvedImages.length}]\n`);
     }
 
-    const url = imageSyncEndpoint(config.baseUrl);
     const concurrent = getConcurrency(flags);
 
     const results = await runConcurrent(concurrent, config, () =>
-      requestJson<DashScopeImageSyncResponse>(config, {
-        url,
+      ctx.client.requestJson<DashScopeImageSyncResponse>({
+        path: imageSyncPath(),
         method: "POST",
         body,
       }),

@@ -1,4 +1,4 @@
-import { chatEndpoint } from "../client/endpoints.ts";
+import { chatPath } from "../client/endpoints.ts";
 import { request, requestJson } from "../client/http.ts";
 import { parseSSE } from "../client/stream.ts";
 import type { Config } from "../config/schema.ts";
@@ -238,7 +238,7 @@ export async function rankModels(
     body.enable_thinking = true;
   }
 
-  const url = chatEndpoint(config.baseUrl);
+  const url = config.baseUrl + chatPath();
   let content: string;
 
   if (useThinkingModel) {

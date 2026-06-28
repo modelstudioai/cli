@@ -1,7 +1,6 @@
 import {
   defineCommand,
-  requestJson,
-  memoryListEndpoint,
+  memoryListPath,
   detectOutputFormat,
   type MemoryNodeListResponse,
 } from "bailian-cli-core";
@@ -27,7 +26,8 @@ export default defineCommand({
     memoryLibraryId: { type: "string", valueHint: "<id>", description: "Memory library ID" },
   },
   exampleArgs: ["--user-id user1", "--user-id user1 --page-size 20 --page 2"],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const userId = flags.userId;
 
     const format = detectOutputFormat(config.output);
@@ -37,15 +37,15 @@ export default defineCommand({
     if (flags.page !== undefined) params.set("page_num", String(flags.page));
     if (flags.memoryLibraryId) params.set("memory_library_id", flags.memoryLibraryId);
 
-    const url = `${memoryListEndpoint(config.baseUrl)}?${params.toString()}`;
+    const path = `${memoryListPath()}?${params.toString()}`;
 
     if (config.dryRun) {
-      emitResult({ endpoint: url, method: "GET" }, format);
+      emitResult({ endpoint: ctx.client.url(path), method: "GET" }, format);
       return;
     }
 
-    const response = await requestJson<MemoryNodeListResponse>(config, {
-      url,
+    const response = await ctx.client.requestJson<MemoryNodeListResponse>({
+      path,
       method: "GET",
     });
 

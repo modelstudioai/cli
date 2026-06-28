@@ -1,4 +1,5 @@
 import type { Config } from "../config/schema.ts";
+import type { Client } from "../client/client.ts";
 
 // ── Flag definitions ─────────────────────────────────────────────────────────
 // Flags are keyed by camelCase name (the key IS the parsed flag name, e.g.
@@ -101,6 +102,18 @@ export type GlobalFlags = ParsedFlags<typeof GLOBAL_FLAGS>;
 /** A command's full flags: global + its own flags, inferred in one pass. */
 export type Flags<F extends FlagsDef> = ParsedFlags<typeof GLOBAL_FLAGS & F>;
 
+/**
+ * What a command's `run` receives: use `client` for all network calls (its
+ * credential is already injected per the command's `auth`), `config` for
+ * settings, and `flags` for parsed arguments. Never handle tokens or baseUrl.
+ */
+export interface CommandContext<F extends FlagsDef = FlagsDef> {
+  /** Network surface; the credential for the command's `auth` is pre-injected. */
+  client: Client;
+  config: Config;
+  flags: Flags<F>;
+}
+
 // ── Command ──────────────────────────────────────────────────────────────────
 /**
  * A command. Generic over its flags `F` so `run`/`validate` receive precisely
@@ -123,7 +136,7 @@ export interface Command<F extends FlagsDef = FlagsDef> {
    * parser — use this for rules spanning flags or depending on a flag's *value*.
    */
   validate?: (flags: Flags<F>) => string | undefined;
-  run: (config: Config, flags: Flags<F>) => Promise<void>;
+  run: (ctx: CommandContext<F>) => Promise<void>;
 }
 
 /** Type-erased command for heterogeneous storage (registry / context). */

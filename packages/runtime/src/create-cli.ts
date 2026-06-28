@@ -10,7 +10,7 @@ import {
   type RunContext,
 } from "./middleware.ts";
 import type { AnyCommand, Config, GlobalFlags } from "bailian-cli-core";
-import { GLOBAL_FLAGS, UsageError, loadConfig, flushTelemetry } from "bailian-cli-core";
+import { GLOBAL_FLAGS, UsageError, loadConfig, flushTelemetry, Client } from "bailian-cli-core";
 import { setupProxyFromEnv } from "./proxy.ts";
 import { handleError } from "./error-handler.ts";
 import { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
@@ -78,12 +78,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     let hasKey = false;
     try {
       const config = buildConfig(parseFlags(argv, GLOBAL_FLAGS));
-      hasKey = !!(
-        config.apiKey ||
-        config.fileApiKey ||
-        config.fileAccessToken ||
-        config.accessTokenEnv
-      );
+      hasKey = !!(config.apiKey || config.apiKeyEnv || config.fileApiKey || config.fileAccessToken);
     } catch {
       /* unparseable global flags on the bare invocation — fall through to welcome */
     }
@@ -127,6 +122,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             command: res.command,
             config,
             flags,
+            client: new Client(config),
           };
           await runMiddleware(ctx);
           await flushTelemetry(1000);

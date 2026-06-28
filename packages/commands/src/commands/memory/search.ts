@@ -1,7 +1,6 @@
 import {
   defineCommand,
-  requestJson,
-  memorySearchEndpoint,
+  memorySearchPath,
   detectOutputFormat,
   type FlagsDef,
   type Flags,
@@ -38,7 +37,8 @@ export default defineCommand({
   ],
   validate: (f: SearchFlags) =>
     !f.query && !f.messages ? "Provide --query or --messages." : undefined,
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const userId = flags.userId;
 
     const body: MemorySearchRequest = { user_id: userId };
@@ -65,13 +65,12 @@ export default defineCommand({
     const format = detectOutputFormat(config.output);
 
     if (config.dryRun) {
-      emitResult({ endpoint: memorySearchEndpoint(config.baseUrl), request: body }, format);
+      emitResult({ endpoint: ctx.client.url(memorySearchPath()), request: body }, format);
       return;
     }
 
-    const url = memorySearchEndpoint(config.baseUrl);
-    const response = await requestJson<MemorySearchResponse>(config, {
-      url,
+    const response = await ctx.client.requestJson<MemorySearchResponse>({
+      path: memorySearchPath(),
       method: "POST",
       body,
     });

@@ -1,10 +1,4 @@
-import {
-  defineCommand,
-  callConsoleGateway,
-  resolveConsoleGatewayCredential,
-  detectOutputFormat,
-  type Config,
-} from "bailian-cli-core";
+import { defineCommand, detectOutputFormat, type Client } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
@@ -65,8 +59,7 @@ function extractResponseData(result: Record<string, unknown>): Record<string, un
 }
 
 async function fetchAllModelsWithQpm(
-  config: Config,
-  token: string,
+  client: Client,
   onlySelfService: boolean,
 ): Promise<ModelWithQpm[]> {
   const allModels: ModelWithQpm[] = [];
@@ -84,10 +77,7 @@ async function fetchAllModelsWithQpm(
       input.supports = { selfServiceLimitIncrease: true };
     }
 
-    const raw = await callConsoleGateway(config, token, {
-      api: MODEL_LIST_API,
-      data: { input },
-    });
+    const raw = await client.console(MODEL_LIST_API, { input });
 
     const resp = extractResponseData(raw as Record<string, unknown>);
     const list = (resp.list as ModelWithQpm[]) ?? [];
@@ -177,7 +167,8 @@ export default defineCommand({
     "--all",
     "--output json",
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const modelFlag = flags.model || undefined;
     const showAll = Boolean(flags.all);
     const format = detectOutputFormat(config.output);
@@ -195,9 +186,7 @@ export default defineCommand({
       return;
     }
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
-    let models = await fetchAllModelsWithQpm(config, credential.token, !showAll);
+    let models = await fetchAllModelsWithQpm(ctx.client, !showAll);
 
     if (modelFlag) {
       const names = new Set(

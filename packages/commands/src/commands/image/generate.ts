@@ -1,10 +1,10 @@
 import {
   defineCommand,
-  requestJson,
-  imageEndpoint,
-  imageSyncEndpoint,
-  taskEndpoint,
+  imagePath,
+  imageSyncPath,
+  taskPath,
   detectOutputFormat,
+  type Client,
   type Config,
   type FlagsDef,
   type Flags,
@@ -107,7 +107,8 @@ export default defineCommand({
     '--prompt "Pro quality" --model qwen-image-2.0-pro',
     '--prompt "Product shots" --n 2 --concurrent 3  # 6 images in parallel',
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const prompt = flags.prompt;
 
     const model = flags.model || config.defaultImageModel || "qwen-image-2.0";
@@ -153,9 +154,9 @@ export default defineCommand({
     }
 
     if (useSync) {
-      await handleSyncMode(config, model, body, flags, format, concurrent);
+      await handleSyncMode(ctx.client, config, model, body, flags, format, concurrent);
     } else {
-      await handleAsyncMode(config, model, body, flags, format, concurrent);
+      await handleAsyncMode(ctx.client, config, model, body, flags, format, concurrent);
     }
   },
 });
@@ -163,6 +164,7 @@ export default defineCommand({
 // ---- Sync mode: qwen-image-2.0 series ----
 
 async function handleSyncMode(
+  client: Client,
   config: Config,
   _model: string,
   body: DashScopeImageRequest,
@@ -170,10 +172,8 @@ async function handleSyncMode(
   format: string,
   concurrent: number,
 ): Promise<void> {
-  const url = imageSyncEndpoint(config.baseUrl);
-
   const results = await runConcurrent(concurrent, config, () =>
-    requestJson<DashScopeImageSyncResponse>(config, { url, method: "POST", body }),
+    client.requestJson<DashScopeImageSyncResponse>({ path: imageSyncPath(), method: "POST", body }),
   );
 
   const imageUrls = results
@@ -192,6 +192,7 @@ async function handleSyncMode(
 // ---- Async mode: wan2.x / qwen-image-plus ----
 
 async function handleAsyncMode(
+  client: Client,
   config: Config,
   _model: string,
   body: DashScopeImageRequest,
@@ -199,12 +200,16 @@ async function handleAsyncMode(
   format: string,
   concurrent: number,
 ): Promise<void> {
-  const url = imageEndpoint(config.baseUrl);
-
   const responses = await runConcurrent(
     concurrent,
     config,
-    () => requestJson<DashScopeAsyncResponse>(config, { url, method: "POST", body, async: true }),
+    () =>
+      client.requestJson<DashScopeAsyncResponse>({
+        path: imagePath(),
+        method: "POST",
+        body,
+        async: true,
+      }),
     "tasks",
   );
   const taskIds = responses.map((r) => r.output.task_id);
@@ -219,7 +224,7 @@ async function handleAsyncMode(
   const pollInterval = flags.pollInterval ?? 3;
 
   const pollPromises = taskIds.map((taskId) => {
-    const pollUrl = taskEndpoint(config.baseUrl, taskId);
+    const pollUrl = client.url(taskPath(taskId));
     return poll<DashScopeTaskResponse>(config, {
       url: pollUrl,
       intervalSec: pollInterval,

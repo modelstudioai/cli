@@ -1,7 +1,6 @@
 import {
   defineCommand,
-  requestJson,
-  memoryAddEndpoint,
+  memoryAddPath,
   detectOutputFormat,
   type FlagsDef,
   type Flags,
@@ -43,7 +42,8 @@ export default defineCommand({
   ],
   validate: (f: AddFlags) =>
     !f.messages && !f.content ? "Provide --messages or --content." : undefined,
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const userId = flags.userId;
 
     const body: MemoryAddRequest = { user_id: userId };
@@ -67,13 +67,12 @@ export default defineCommand({
     const format = detectOutputFormat(config.output);
 
     if (config.dryRun) {
-      emitResult({ endpoint: memoryAddEndpoint(config.baseUrl), request: body }, format);
+      emitResult({ endpoint: ctx.client.url(memoryAddPath()), request: body }, format);
       return;
     }
 
-    const url = memoryAddEndpoint(config.baseUrl);
-    const response = await requestJson<MemoryAddResponse>(config, {
-      url,
+    const response = await ctx.client.requestJson<MemoryAddResponse>({
+      path: memoryAddPath(),
       method: "POST",
       body,
     });

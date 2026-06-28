@@ -26,7 +26,6 @@ export { BAILIAN_CONSOLE_ROOT, BAILIAN_CONSOLE, API_KEY_PAGE } from "./urls.ts";
 
 // Output facilities consumed by commands
 export { emitResult, emitBare } from "./output/output.ts";
-export { promptText, promptSelect, promptConfirm, cmdUsage } from "./output/prompt.ts";
 export { createSpinner, createProgressBar } from "./output/progress.ts";
 export { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
 export { maybeShowStatusBar } from "./output/status-bar.ts";
@@ -37,7 +36,6 @@ export { poll } from "./utils/polling.ts";
 export { downloadFile, formatBytes } from "./utils/download.ts";
 export { runConcurrent, getConcurrency, downloadParallel } from "./utils/concurrent.ts";
 export { resolveImageSize } from "./utils/image-size.ts";
-export { ensureApiKey } from "./utils/ensure-key.ts";
 export {
   checkForUpdate,
   getPendingUpdateNotification,

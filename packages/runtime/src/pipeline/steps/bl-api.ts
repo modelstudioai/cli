@@ -4,15 +4,15 @@
  */
 import {
   requestJson,
-  chatEndpoint,
-  imageEndpoint,
-  imageSyncEndpoint,
-  videoGenerateEndpoint,
-  taskEndpoint,
-  speechSynthesizeEndpoint,
-  speechRecognizeEndpoint,
+  chatPath,
+  imagePath,
+  imageSyncPath,
+  videoGeneratePath,
+  taskPath,
+  speechSynthesizePath,
+  speechRecognizePath,
   resolveFileUrl,
-  resolveCredential,
+  resolveApiKeyCredential,
   stripUndefined,
   resolveBooleanFlag,
   resolveWatermark,
@@ -81,7 +81,7 @@ export async function textChat(
     }
   }
 
-  const url = chatEndpoint(config.baseUrl);
+  const url = config.baseUrl + chatPath();
   const response = await requestJson<ChatResponse>(config, {
     url,
     method: "POST",
@@ -118,7 +118,7 @@ export async function visionDescribe(
   if (input.video) {
     let videoUrl = input.video;
     if (isLocalFile(videoUrl)) {
-      const credential = await resolveCredential(config);
+      const credential = await resolveApiKeyCredential(config);
       videoUrl = await resolveFileUrl(videoUrl, credential.token, model, { signal: ctx.signal });
     }
     contentArray.push({ type: "video_url", video_url: { url: videoUrl } });
@@ -128,7 +128,7 @@ export async function visionDescribe(
   for (const img of images) {
     let imageUrl = img;
     if (isLocalFile(img)) {
-      const credential = await resolveCredential(config);
+      const credential = await resolveApiKeyCredential(config);
       imageUrl = await resolveFileUrl(img, credential.token, model, { signal: ctx.signal });
     }
     contentArray.push({ type: "image_url", image_url: { url: imageUrl } });
@@ -141,7 +141,7 @@ export async function visionDescribe(
     messages: [{ role: "user", content: contentArray }],
   };
 
-  const url = chatEndpoint(config.baseUrl);
+  const url = config.baseUrl + chatPath();
   return await requestJson<ChatResponse>(config, {
     url,
     method: "POST",
@@ -208,7 +208,7 @@ export async function imageGenerate(
   };
 
   if (useSync) {
-    const url = imageSyncEndpoint(config.baseUrl);
+    const url = config.baseUrl + imageSyncPath();
     const response = await requestJson<DashScopeImageSyncResponse>(config, {
       url,
       method: "POST",
@@ -223,7 +223,7 @@ export async function imageGenerate(
     return { urls, request_id: response.request_id, ...(saved ? { saved } : {}) };
   } else {
     // Async mode: submit then poll
-    const url = imageEndpoint(config.baseUrl);
+    const url = config.baseUrl + imagePath();
     const asyncResp = await requestJson<DashScopeAsyncResponse>(config, {
       url,
       method: "POST",
@@ -282,7 +282,7 @@ export async function imageEdit(
   for (const img of images) {
     let imageUrl = img;
     if (isLocalFile(img)) {
-      const credential = await resolveCredential(config);
+      const credential = await resolveApiKeyCredential(config);
       imageUrl = await resolveFileUrl(img, credential.token, model, { signal: ctx.signal });
     }
     content.push({ image: imageUrl });
@@ -305,7 +305,7 @@ export async function imageEdit(
   };
 
   if (useSync) {
-    const url = imageSyncEndpoint(config.baseUrl);
+    const url = config.baseUrl + imageSyncPath();
     const response = await requestJson<DashScopeImageSyncResponse>(config, {
       url,
       method: "POST",
@@ -319,7 +319,7 @@ export async function imageEdit(
     const saved = await maybeDownloadImages(urls, input["out-dir"], input["out-prefix"]);
     return { urls, request_id: response.request_id, ...(saved ? { saved } : {}) };
   } else {
-    const url = imageEndpoint(config.baseUrl);
+    const url = config.baseUrl + imagePath();
     const asyncResp = await requestJson<DashScopeAsyncResponse>(config, {
       url,
       method: "POST",
@@ -396,7 +396,7 @@ export async function videoGenerate(
   let resolvedImageUrl: string | undefined;
   if (input.image) {
     if (isLocalFile(input.image)) {
-      const credential = await resolveCredential(config);
+      const credential = await resolveApiKeyCredential(config);
       resolvedImageUrl = await resolveFileUrl(input.image, credential.token, model, {
         signal: ctx.signal,
       });
@@ -425,7 +425,7 @@ export async function videoGenerate(
   };
   stripUndefined(body.parameters as Record<string, unknown>);
 
-  const url = videoGenerateEndpoint(config.baseUrl);
+  const url = config.baseUrl + videoGeneratePath();
   const asyncResp = await requestJson<DashScopeAsyncResponse>(config, {
     url,
     method: "POST",
@@ -496,7 +496,7 @@ export async function speechSynthesize(
   };
   stripUndefined(body.input as Record<string, unknown>);
 
-  const url = speechSynthesizeEndpoint(config.baseUrl);
+  const url = config.baseUrl + speechSynthesizePath();
   const response = await requestJson<DashScopeTTSResponse>(config, {
     url,
     method: "POST",
@@ -542,7 +542,7 @@ export async function speechRecognize(
   const fileUrls: string[] = [];
   for (const u of rawUrls) {
     if (isLocalFile(u)) {
-      const credential = await resolveCredential(config);
+      const credential = await resolveApiKeyCredential(config);
       fileUrls.push(
         await resolveFileUrl(u, credential.token, input.model || "fun-asr", {
           signal: ctx.signal,
@@ -567,7 +567,7 @@ export async function speechRecognize(
   };
   stripUndefined(body.parameters as Record<string, unknown>);
 
-  const url = speechRecognizeEndpoint(config.baseUrl);
+  const url = config.baseUrl + speechRecognizePath();
   const asyncResp = await requestJson<DashScopeAsyncResponse>(config, {
     url,
     method: "POST",
@@ -644,7 +644,7 @@ async function pollTaskWithOptions(
     await delay(pollIntervalMs, ctx?.signal);
     attempt++;
 
-    const url = taskEndpoint(config.baseUrl, taskId);
+    const url = config.baseUrl + taskPath(taskId);
     const result = await requestJson<DashScopeTaskResponse>(config, {
       url,
       method: "GET",

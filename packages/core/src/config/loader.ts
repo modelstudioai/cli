@@ -32,8 +32,8 @@ export function loadConfig(flags: GlobalFlags): Config {
   const file = readConfigFile();
 
   const apiKey = flags.apiKey || undefined;
+  const apiKeyEnv = process.env.DASHSCOPE_API_KEY?.trim() || undefined;
   const fileApiKey = file.api_key;
-  const accessTokenEnv = process.env.DASHSCOPE_ACCESS_TOKEN?.trim() || undefined;
   const fileAccessToken = file.access_token?.trim() || undefined;
 
   const baseUrl = flags.baseUrl || file.base_url || process.env.DASHSCOPE_BASE_URL || REGIONS.cn;
@@ -56,7 +56,7 @@ export function loadConfig(flags: GlobalFlags): Config {
 
   return {
     apiKey,
-    accessTokenEnv,
+    apiKeyEnv,
     fileAccessToken,
     fileApiKey,
     configPath: getConfigPath(),

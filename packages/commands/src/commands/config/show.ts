@@ -11,7 +11,8 @@ export default defineCommand({
   description: "Display current configuration",
   auth: "none",
   exampleArgs: ["", "--output json"],
-  async run(config, _flags) {
+  async run(ctx) {
+    const { config } = ctx;
     const file = loadConfigFile();
     const format = detectOutputFormat(config.output);
 

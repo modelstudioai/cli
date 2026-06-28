@@ -230,7 +230,8 @@ export default defineCommand({
     '--message "Low-cost high-concurrency online customer service" --output json',
     '--message "Long document summarization" --dry-run',
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const userInput = flags.message;
 
     const top = 3;

@@ -1,7 +1,6 @@
 import {
   defineCommand,
-  requestJson,
-  userProfileEndpoint,
+  userProfilePath,
   detectOutputFormat,
   type UserProfileResponse,
 } from "bailian-cli-core";
@@ -26,21 +25,22 @@ export default defineCommand({
     },
   },
   exampleArgs: ["--schema-id schema_xxx --user-id user1"],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const schemaId = flags.schemaId;
     const userId = flags.userId;
 
     const format = detectOutputFormat(config.output);
     const params = new URLSearchParams({ user_id: userId });
-    const url = `${userProfileEndpoint(config.baseUrl, schemaId)}?${params.toString()}`;
+    const path = `${userProfilePath(schemaId)}?${params.toString()}`;
 
     if (config.dryRun) {
-      emitResult({ endpoint: url, method: "GET" }, format);
+      emitResult({ endpoint: ctx.client.url(path), method: "GET" }, format);
       return;
     }
 
-    const response = await requestJson<UserProfileResponse>(config, {
-      url,
+    const response = await ctx.client.requestJson<UserProfileResponse>({
+      path,
       method: "GET",
     });
 

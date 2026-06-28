@@ -1,15 +1,12 @@
 import {
   defineCommand,
-  requestJson,
-  videoGenerateEndpoint,
-  taskEndpoint,
+  videoGeneratePath,
+  taskPath,
   detectOutputFormat,
   type DashScopeVideoRefRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
   resolveOutputDir,
-  resolveFileUrl,
-  resolveCredential,
   BailianError,
   ExitCode,
   resolveBooleanFlag,
@@ -110,7 +107,8 @@ export default defineCommand({
     !(f.image as string[] | undefined)?.length && !(f.refVideo as string[] | undefined)?.length
       ? "Provide at least one --image or --ref-video."
       : undefined,
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const prompt = flags.prompt;
 
     const images = flags.image || [];
@@ -123,12 +121,11 @@ export default defineCommand({
     const format = detectOutputFormat(config.output);
 
     // --- Resolve file URLs (auto-upload local files) ---
-    const credential = await resolveCredential(config);
     const media: DashScopeVideoRefRequest["input"]["media"] = [];
 
     // Add reference images
     for (let i = 0; i < images.length; i++) {
-      const resolved = await resolveFileUrl(images[i]!, credential.token, model);
+      const resolved = await ctx.client.uploadFile(images[i]!, model);
       const entry: DashScopeVideoRefRequest["input"]["media"][number] = {
         type: "reference_image",
         url: resolved,
@@ -136,7 +133,7 @@ export default defineCommand({
 
       // Pair voice by position
       if (imageVoices[i]) {
-        const resolvedVoice = await resolveFileUrl(imageVoices[i]!, credential.token, model);
+        const resolvedVoice = await ctx.client.uploadFile(imageVoices[i]!, model);
         entry.reference_voice = resolvedVoice;
       }
 
@@ -145,7 +142,7 @@ export default defineCommand({
 
     // Add reference videos
     for (let i = 0; i < refVideos.length; i++) {
-      const resolved = await resolveFileUrl(refVideos[i]!, credential.token, model);
+      const resolved = await ctx.client.uploadFile(refVideos[i]!, model);
       const entry: DashScopeVideoRefRequest["input"]["media"][number] = {
         type: "reference_video",
         url: resolved,
@@ -153,7 +150,7 @@ export default defineCommand({
 
       // Pair voice by position
       if (videoVoices[i]) {
-        const resolvedVoice = await resolveFileUrl(videoVoices[i]!, credential.token, model);
+        const resolvedVoice = await ctx.client.uploadFile(videoVoices[i]!, model);
         entry.reference_voice = resolvedVoice;
       }
 
@@ -186,9 +183,8 @@ export default defineCommand({
     }
 
     // --- Submit async task ---
-    const url = videoGenerateEndpoint(config.baseUrl);
-    const response = await requestJson<DashScopeAsyncResponse>(config, {
-      url,
+    const response = await ctx.client.requestJson<DashScopeAsyncResponse>({
+      path: videoGeneratePath(),
       method: "POST",
       body,
       async: true,
@@ -211,7 +207,7 @@ export default defineCommand({
 
     // --- Poll until completion ---
     const pollInterval = flags.pollInterval ?? 15;
-    const pollUrl = taskEndpoint(config.baseUrl, taskId);
+    const pollUrl = ctx.client.url(taskPath(taskId));
     const refTimeout = Math.max(config.timeout, 600);
 
     const result = await poll<DashScopeTaskResponse>(config, {

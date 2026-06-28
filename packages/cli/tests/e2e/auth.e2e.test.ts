@@ -152,12 +152,10 @@ describe("e2e: auth", () => {
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
       authenticated?: boolean;
-      api_key?: { configured?: boolean };
-      dashscope_commands?: { method?: string };
+      api_key?: { source?: string; masked?: string; base_url?: string };
     }>(stdout);
     expect(data.authenticated).toBe(true);
-    expect(data.api_key?.configured).toBe(true);
-    expect(data.dashscope_commands?.method).toBeDefined();
+    expect(data.api_key?.source).toBeDefined();
   });
 
   test.skipIf(!isDashScopeE2EReady())(
@@ -174,11 +172,9 @@ describe("e2e: auth", () => {
         "https://dashscope.aliyuncs.com",
       ]);
       expect(exitCode, stderr).toBe(0);
-      const data = parseStdoutJson<{ authenticated?: boolean; dashscope_commands?: unknown }>(
-        stdout,
-      );
+      const data = parseStdoutJson<{ authenticated?: boolean; api_key?: unknown }>(stdout);
       expect(data.authenticated).toBe(true);
-      expect(data.dashscope_commands).toBeDefined();
+      expect(data.api_key).toBeDefined();
     },
   );
 });

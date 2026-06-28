@@ -1,77 +1,57 @@
 import type { Config } from "../config/schema.ts";
-import type { ResolvedCredential } from "./types.ts";
+import type { ApiKeyCredential, ConsoleCredential, AuthState } from "./types.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 
-export async function resolveCredential(config: Config): Promise<ResolvedCredential> {
-  // 1. --api-key flag (explicit API key for this invocation)
-  if (config.apiKey) {
-    return { token: config.apiKey, method: "api-key", source: "flag" };
-  }
+// Resolve the credential for a command's declared domain (model = api-key,
+// console = access-token), by priority, or throw. Read only from `config`.
 
-  // 2. API key in config (DashScope sk-…); preferred over console token when both exist
-  if (config.fileApiKey) {
-    return { token: config.fileApiKey, method: "api-key", source: "config.json" };
-  }
-
-  // 3. access_token from env (temporary override)
-  if (config.accessTokenEnv) {
-    return {
-      token: config.accessTokenEnv,
-      method: "access-token",
-      source: "DASHSCOPE_ACCESS_TOKEN",
-    };
-  }
-
-  // 4. access_token from config (console callback)
-  if (config.fileAccessToken) {
-    return {
-      token: config.fileAccessToken,
-      method: "access-token",
-      source: "config.json",
-    };
-  }
-
-  // 5. API key from environment
-  if (process.env.DASHSCOPE_API_KEY) {
-    return { token: process.env.DASHSCOPE_API_KEY, method: "api-key", source: "DASHSCOPE_API_KEY" };
-  }
-
+/**
+ * Model-domain credential — always an API key. Priority: `--api-key` flag >
+ * `DASHSCOPE_API_KEY` env > config.json `api_key`. No access tokens here.
+ */
+export async function resolveApiKeyCredential(config: Config): Promise<ApiKeyCredential> {
+  const baseUrl = config.baseUrl;
+  if (config.apiKey) return { token: config.apiKey, baseUrl, source: "flag" };
+  if (config.apiKeyEnv) return { token: config.apiKeyEnv, baseUrl, source: "env" };
+  if (config.fileApiKey) return { token: config.fileApiKey, baseUrl, source: "config" };
   throw new BailianError(
-    "No credentials found.",
+    "No API key found.",
     ExitCode.AUTH,
-    "Set DASHSCOPE_API_KEY environment variable, pass --api-key, or configure a key.",
+    "Set DASHSCOPE_API_KEY, pass --api-key, or run `bl auth login`.",
   );
 }
 
-/**
- * Credential for Bailian **console** CLI gateway only (`callConsoleGateway`).
- * DashScope API keys are not valid Bearer tokens for this gateway — use env/file
- * `access_token` even when `api_key` is also present in config.
- */
-/** Thrown when `callConsoleGateway` has no usable console session token. */
-export const CONSOLE_GATEWAY_NO_TOKEN_MESSAGE = "No console access token found.";
-
-export async function resolveConsoleGatewayCredential(config: Config): Promise<ResolvedCredential> {
-  if (config.accessTokenEnv) {
-    return {
-      token: config.accessTokenEnv,
-      method: "access-token",
-      source: "DASHSCOPE_ACCESS_TOKEN",
-    };
-  }
-
+/** Console-domain credential — an access token from `bl auth login --console`. */
+export async function resolveConsoleCredential(config: Config): Promise<ConsoleCredential> {
   if (config.fileAccessToken) {
     return {
       token: config.fileAccessToken,
-      method: "access-token",
-      source: "config.json",
+      region: config.consoleRegion ?? "cn-beijing",
+      site: config.consoleSite ?? "domestic",
+      switchAgent: config.consoleSwitchAgent,
+      source: "config",
     };
   }
-
   throw new BailianError(
-    CONSOLE_GATEWAY_NO_TOKEN_MESSAGE,
+    "No console access token found.",
     ExitCode.AUTH,
-    "Run `bl auth login --console` or set DASHSCOPE_ACCESS_TOKEN.",
+    "Run `bl auth login --console`.",
   );
+}
+
+/** Full auth snapshot for `bl auth status` — what would resolve per domain (or undefined). */
+export async function describeAuth(config: Config): Promise<AuthState> {
+  const state: AuthState = {};
+  try {
+    state.apiKey = await resolveApiKeyCredential(config);
+  } catch {
+    /* no model credential */
+  }
+  try {
+    state.console = await resolveConsoleCredential(config);
+  } catch {
+    /* no console credential */
+  }
+  return state;
 }

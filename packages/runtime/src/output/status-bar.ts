@@ -1,5 +1,5 @@
 import { homedir } from "os";
-import { maskToken, type Config, type ResolvedCredential } from "bailian-cli-core";
+import { maskToken, type Config, type ApiKeyCredential } from "bailian-cli-core";
 
 const reset = "\x1b[0m";
 const dim = "\x1b[2m";
@@ -14,13 +14,13 @@ function tildePath(p: string): string {
 export function maybeShowStatusBar(
   config: Config,
   token: string,
-  resolved?: ResolvedCredential,
+  resolved?: ApiKeyCredential,
 ): void {
   if (config.quiet || !process.stderr.isTTY) return;
 
   const filePath = config.configPath ? tildePath(config.configPath) : "~/.bailian/config.json";
   const authTag = resolved
-    ? `${resolved.source} · ${resolved.method}`
+    ? `${resolved.source} · api-key`
     : config.apiKey
       ? "flag · api-key"
       : "config";

@@ -1,11 +1,4 @@
-import {
-  defineCommand,
-  callConsoleGateway,
-  resolveConsoleGatewayCredential,
-  fetchModelList,
-  detectOutputFormat,
-  type Config,
-} from "bailian-cli-core";
+import { defineCommand, detectOutputFormat, fetchModelList, type Client } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
@@ -165,11 +158,14 @@ interface ModelInfo {
   type: string;
 }
 
-async function fetchAllModels(config: Config, token: string): Promise<ModelInfo[]> {
+async function fetchAllModels(client: Client): Promise<ModelInfo[]> {
   const allModels: Record<string, unknown>[] = [];
   let page = 1;
   while (true) {
-    const result = await fetchModelList(config, token, { pageNo: page, pageSize: 50 });
+    const result = await fetchModelList((api, data) => client.console(api, data), {
+      pageNo: page,
+      pageSize: 50,
+    });
     allModels.push(...result.models);
     if (allModels.length >= result.total) break;
     page++;
@@ -219,7 +215,8 @@ export default defineCommand({
     "--model qwen-turbo --output json",
     "--model qwen3-max --console-region cn-beijing",
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const modelFlag = flags.model || undefined;
     const expiringDays = Number(flags.expiring) || 0;
     const VALID_SORT_FIELDS = ["remaining", "expires"] as const;
@@ -263,10 +260,8 @@ export default defineCommand({
       return;
     }
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
     if (!modelFlag) {
-      const modelInfos = await fetchAllModels(config, credential.token);
+      const modelInfos = await fetchAllModels(ctx.client);
       models = modelInfos.map((info) => info.name);
       for (const info of modelInfos) {
         typeMap.set(info.name, info.type);
@@ -274,7 +269,9 @@ export default defineCommand({
       requestData.queryFreeTierQuotaRequest.models = models;
     } else {
       const searchResults = await Promise.all(
-        models.map((name) => fetchModelList(config, credential.token, { name, pageSize: 50 })),
+        models.map((name) =>
+          fetchModelList((api, data) => ctx.client.console(api, data), { name, pageSize: 50 }),
+        ),
       );
       for (let idx = 0; idx < models.length; idx++) {
         const matched = searchResults[idx].models.find((item) => item.model === models[idx]);
@@ -285,13 +282,9 @@ export default defineCommand({
     }
 
     const [quotaResult, stopResult] = await Promise.all([
-      callConsoleGateway(config, credential.token, {
-        api: FREE_TIER_API,
-        data: requestData,
-      }),
-      callConsoleGateway(config, credential.token, {
-        api: FREE_TIER_ONLY_STATUS_API,
-        data: { queryFreeTierOnlyStatusRequest: { models } },
+      ctx.client.console(FREE_TIER_API, requestData),
+      ctx.client.console(FREE_TIER_ONLY_STATUS_API, {
+        queryFreeTierOnlyStatusRequest: { models },
       }),
     ]);
 

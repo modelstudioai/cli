@@ -1,9 +1,4 @@
-import {
-  defineCommand,
-  requestJson,
-  memoryNodeEndpoint,
-  detectOutputFormat,
-} from "bailian-cli-core";
+import { defineCommand, memoryNodePath, detectOutputFormat } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -30,22 +25,23 @@ export default defineCommand({
     },
   },
   exampleArgs: ["--node-id node_xxx --user-id user1"],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const nodeId = flags.nodeId;
     const userId = flags.userId;
 
     const format = detectOutputFormat(config.output);
     const params = new URLSearchParams({ user_id: userId });
     if (flags.memoryLibraryId) params.set("memory_library_id", flags.memoryLibraryId);
-    const url = `${memoryNodeEndpoint(config.baseUrl, nodeId)}?${params.toString()}`;
+    const path = `${memoryNodePath(nodeId)}?${params.toString()}`;
 
     if (config.dryRun) {
-      emitResult({ endpoint: url, method: "DELETE" }, format);
+      emitResult({ endpoint: ctx.client.url(path), method: "DELETE" }, format);
       return;
     }
 
-    const response = await requestJson<{ request_id: string }>(config, {
-      url,
+    const response = await ctx.client.requestJson<{ request_id: string }>({
+      path,
       method: "DELETE",
     });
 

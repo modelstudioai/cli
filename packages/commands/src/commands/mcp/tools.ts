@@ -1,6 +1,5 @@
-import { defineCommand, McpClient, bailianMcpUrl, detectOutputFormat } from "bailian-cli-core";
+import { defineCommand, bailianMcpPath, detectOutputFormat } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
-import { ensureApiKey } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "List tools exposed by an MCP server (tools/list)",
@@ -24,10 +23,11 @@ export default defineCommand({
     "--server market-cmapi00073529 --output json",
     "--server my-server --url https://example.com/mcp",
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const code = flags.server;
 
-    const url = flags.url || bailianMcpUrl(config.baseUrl, code);
+    const url = flags.url || ctx.client.url(bailianMcpPath(code));
     const format = detectOutputFormat(config.output);
 
     if (config.dryRun) {
@@ -35,8 +35,7 @@ export default defineCommand({
       return;
     }
 
-    await ensureApiKey(config);
-    const client = new McpClient(config, url);
+    const client = ctx.client.mcp(url);
     await client.initialize();
     const tools = await client.listTools();
     emitResult({ server: code, url, tools }, format);

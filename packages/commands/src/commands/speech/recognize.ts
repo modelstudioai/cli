@@ -4,18 +4,16 @@ import {
   defineCommand,
   ExitCode,
   detectOutputFormat,
+  type Client,
   type Config,
   type DashScopeASRRequest,
   type DashScopeASRTaskResult,
   type DashScopeAsyncResponse,
-  resolveFileUrl,
-  resolveCredential,
   trackingHeaders,
   stripUndefined,
-  taskEndpoint,
-  requestJson,
+  taskPath,
+  speechRecognizePath,
   type OutputFormat,
-  speechRecognizeEndpoint,
   type FlagsDef,
   type Flags,
 } from "bailian-cli-core";
@@ -71,7 +69,8 @@ export default defineCommand({
     "--url https://example.com/audio.mp3 --out result.json",
     "--url https://example.com/audio.mp3 --no-wait --quiet",
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     // Normalize --url to string[] (supports both single and repeated flags)
     let rawUrls: string[] = [];
     if (Array.isArray(flags.url)) {
@@ -94,10 +93,7 @@ export default defineCommand({
     const format = detectOutputFormat(config.output);
 
     // Auto-upload local files in parallel
-    const credential = await resolveCredential(config);
-    const resolvedUrls = await Promise.all(
-      rawUrls.map((u) => resolveFileUrl(u, credential.token, model)),
-    );
+    const resolvedUrls = await Promise.all(rawUrls.map((u) => ctx.client.uploadFile(u, model)));
     const channelId = flags.channelId;
     const language = flags.language;
     const vocabularyId = flags.vocabularyId;
@@ -128,22 +124,21 @@ export default defineCommand({
       process.stderr.write(`[Model: ${model}] [Mode: async] [Files: ${resolvedUrls.length}]\n`);
     }
 
-    const url = speechRecognizeEndpoint(config.baseUrl);
-    await handleAsyncMode(config, url, body, flags, format, resolvedUrls.length);
+    await handleAsyncMode(ctx.client, config, body, flags, format, resolvedUrls.length);
   },
 });
 
 async function handleAsyncMode(
+  client: Client,
   config: Config,
-  url: string,
   body: DashScopeASRRequest,
   flags: RecognizeFlags,
   format: OutputFormat,
   fileCount: number,
 ): Promise<void> {
   // Submit async task (always required for fun-asr)
-  const response = await requestJson<DashScopeAsyncResponse>(config, {
-    url,
+  const response = await client.requestJson<DashScopeAsyncResponse>({
+    path: speechRecognizePath(),
     method: "POST",
     body,
     async: true,
@@ -159,7 +154,7 @@ async function handleAsyncMode(
 
   // Poll until completion
   const pollInterval = flags.pollInterval ?? 2;
-  const pollUrl = taskEndpoint(config.baseUrl, taskId);
+  const pollUrl = client.url(taskPath(taskId));
 
   const result = await poll<DashScopeASRTaskResult>(config, {
     url: pollUrl,

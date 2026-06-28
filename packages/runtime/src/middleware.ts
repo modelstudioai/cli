@@ -1,14 +1,17 @@
-import type { AnyCommand, Config, GlobalFlags } from "bailian-cli-core";
-import { resolveCredential, trackCommandExecution } from "bailian-cli-core";
-import { ensureApiKey } from "./utils/ensure-key.ts";
+import type { AnyCommand, Config, GlobalFlags, ApiKeyCredential } from "bailian-cli-core";
+import {
+  Client,
+  resolveApiKeyCredential,
+  resolveConsoleCredential,
+  trackCommandExecution,
+} from "bailian-cli-core";
 import { maybeShowStatusBar } from "./output/status-bar.ts";
 import { checkForUpdate, getPendingUpdateNotification } from "./utils/update-checker.ts";
 
 /**
- * Everything a stage needs about the invocation in flight. Built once per `run`
- * by the kernel and threaded through the middleware stack. The command itself
- * still receives `(config, flags)` — this context is the pipeline's, not the
- * command's — so adding cross-cutting concerns never touches command code.
+ * What each middleware stage gets for the invocation in flight: the matched
+ * `command` with its `path`/`config`/`flags`, and the `client` (populated by
+ * {@link authStage}). A stage reads these and may augment them before `next()`.
  */
 export interface RunContext {
   readonly binName: string;
@@ -19,6 +22,8 @@ export interface RunContext {
   readonly command: AnyCommand;
   config: Config;
   flags: GlobalFlags;
+  /** Network surface with the credential baked in — set by {@link authStage}. */
+  client: Client;
 }
 
 /** Koa-style onion middleware: do work, call `next()`, do work after it returns. */
@@ -37,18 +42,24 @@ export function compose(stack: Middleware[]): (ctx: RunContext) => Promise<void>
 }
 
 /**
- * Prepare credentials for commands that need an API key. console / none
- * commands resolve their own (or no) credential inside the command body.
+ * Bake the credential for the command's declared `auth` into `ctx.client`, and
+ * gate: no credential → throw before the command runs (skipped under --dry-run,
+ * which needs none). `auth: "none"` commands keep a credential-less client.
  */
 export const authStage: Middleware = async (ctx, next) => {
-  if (ctx.command.auth === "apiKey" && !ctx.config.dryRun) {
-    await ensureApiKey(ctx.config);
+  const { command, config } = ctx;
+  if (command.auth === "apiKey") {
+    let cred: ApiKeyCredential | undefined;
     try {
-      const credential = await resolveCredential(ctx.config);
-      maybeShowStatusBar(ctx.config, credential.token, credential);
-    } catch {
-      /* no credential resolved — skip the status bar */
+      cred = await resolveApiKeyCredential(config);
+    } catch (err) {
+      if (!config.dryRun) throw err; // dry-run only prints the request — no key needed
     }
+    ctx.client = new Client(config, cred);
+    if (cred) maybeShowStatusBar(config, cred.token, cred);
+  } else if (command.auth === "console" && !config.dryRun) {
+    const cred = await resolveConsoleCredential(config);
+    ctx.client = new Client(config, undefined, cred);
   }
   await next();
 };
@@ -79,5 +90,5 @@ export const versionCheckStage: Middleware = async (ctx, next) => {
   }
 };
 
-/** Innermost stage: hand control to the command. */
-export const runCommandStage: Middleware = (ctx) => ctx.command.run(ctx.config, ctx.flags);
+/** Innermost stage: hand control to the command with its full context. */
+export const runCommandStage: Middleware = (ctx) => ctx.command.run(ctx);

@@ -1,5 +1,5 @@
 import { requestJson } from "../client/http.ts";
-import { chatEndpoint } from "../client/endpoints.ts";
+import { chatPath } from "../client/endpoints.ts";
 import type { Config } from "../config/schema.ts";
 import type { ChatResponse } from "../types/api.ts";
 import { Complexities } from "./types.ts";
@@ -8,7 +8,7 @@ import { INTENT_MODEL, INTENT_SYSTEM_PROMPT } from "./constants/prompts.ts";
 import { DEFAULT_INTENT } from "./constants/defaults.ts";
 
 export async function analyzeIntent(config: Config, input: string): Promise<IntentProfile> {
-  const url = chatEndpoint(config.baseUrl);
+  const url = config.baseUrl + chatPath();
 
   const body = {
     model: INTENT_MODEL,

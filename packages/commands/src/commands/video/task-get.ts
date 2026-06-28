@@ -1,7 +1,6 @@
 import {
   defineCommand,
-  requestJson,
-  taskEndpoint,
+  taskPath,
   detectOutputFormat,
   type DashScopeTaskResponse,
 } from "bailian-cli-core";
@@ -18,7 +17,8 @@ export default defineCommand({
     "--task-id 3b256896-3e70-xxxx-xxxx-xxxxxxxxxxxx",
     "--task-id 3b256896-3e70-xxxx --output json",
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const taskId = flags.taskId;
 
     const format = detectOutputFormat(config.output);
@@ -28,8 +28,9 @@ export default defineCommand({
       return;
     }
 
-    const url = taskEndpoint(config.baseUrl, taskId);
-    const response = await requestJson<DashScopeTaskResponse>(config, { url });
+    const response = await ctx.client.requestJson<DashScopeTaskResponse>({
+      path: taskPath(taskId),
+    });
 
     if (config.quiet) {
       emitBare(response.output.task_status);

@@ -1,9 +1,4 @@
-import {
-  defineCommand,
-  callConsoleGateway,
-  resolveConsoleGatewayCredential,
-  detectOutputFormat,
-} from "bailian-cli-core";
+import { defineCommand, detectOutputFormat } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
@@ -92,21 +87,17 @@ export default defineCommand({
     consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
   },
   exampleArgs: ["", "--list 5", "--output json"],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const limit = Number(flags.list) || 0;
     const format = detectOutputFormat(config.output);
-
-    const credential = await resolveConsoleGatewayCredential(config);
 
     if (config.dryRun) {
       emitResult({ api: LIST_WORKSPACES_API, data: {} }, format);
       return;
     }
 
-    const result = await callConsoleGateway(config, credential.token, {
-      api: LIST_WORKSPACES_API,
-      data: {},
-    });
+    const result = await ctx.client.console(LIST_WORKSPACES_API, {});
 
     const resp = extractResponseData(result as Record<string, unknown>);
     const dataArr = resp.data as Record<string, unknown>[] | undefined;

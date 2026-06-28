@@ -27,7 +27,8 @@ export default defineCommand({
     yes: { type: "switch", description: "Skip confirmation prompt" },
   },
   exampleArgs: ["", "--console", "--dry-run", "--yes"],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const file = readConfigFile();
 
     if (flags.console) {

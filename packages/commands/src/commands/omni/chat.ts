@@ -2,8 +2,7 @@ import { writeFileSync } from "fs";
 import { extname } from "path";
 import {
   defineCommand,
-  request,
-  chatEndpoint,
+  chatPath,
   parseSSE,
   detectOutputFormat,
   BailianError,
@@ -12,10 +11,9 @@ import {
   type ChatMessageContent,
   type ChatRequest,
   type StreamChunk,
-  resolveFileUrl,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
-import { resolveOutputDir, resolveCredential } from "bailian-cli-core";
+import { resolveOutputDir } from "bailian-cli-core";
 
 const OMNI_VOICES = ["Chelsie", "Cherry", "Ethan", "Serena", "Sunny", "Tina"];
 
@@ -145,7 +143,8 @@ export default defineCommand({
     '--message "Hello" --text-only --output json',
     '--message "Read this passage aloud" --audio-out greeting.wav',
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     // --- Parse messages ---
     const userMessages = flags.message;
 
@@ -192,13 +191,12 @@ export default defineCommand({
     const needsResolve =
       rawImageUrls.length > 0 || rawAudioUrls.length > 0 || rawVideoUrls.length > 0;
     if (needsResolve) {
-      const credential = await resolveCredential(config);
       for (const u of rawImageUrls) {
-        const resolved = await resolveFileUrl(u, credential.token, model);
+        const resolved = await ctx.client.uploadFile(u, model);
         imageUrls.push(resolved);
       }
       for (const u of rawAudioUrls) {
-        const resolved = await resolveFileUrl(u, credential.token, model);
+        const resolved = await ctx.client.uploadFile(u, model);
         audioInputs.push({ source: u, data: resolved });
       }
       for (const u of rawVideoUrls) {
@@ -211,11 +209,11 @@ export default defineCommand({
             .filter(Boolean);
           // Resolve each frame URL
           for (const f of frames) {
-            const resolved = await resolveFileUrl(f, credential.token, model);
+            const resolved = await ctx.client.uploadFile(f, model);
             videoUrls.push(`frame:${resolved}`);
           }
         } else {
-          const resolved = await resolveFileUrl(u, credential.token, model);
+          const resolved = await ctx.client.uploadFile(u, model);
           videoUrls.push(resolved);
         }
       }
@@ -291,9 +289,8 @@ export default defineCommand({
     }
 
     // --- Stream request ---
-    const url = chatEndpoint(config.baseUrl);
-    const res = await request(config, {
-      url,
+    const res = await ctx.client.request({
+      path: chatPath(),
       method: "POST",
       body,
       stream: true,

@@ -1,8 +1,6 @@
 import {
   defineCommand,
-  callConsoleGateway,
   effectiveConsoleGatewayConfig,
-  resolveConsoleGatewayCredential,
   detectOutputFormat,
   BailianError,
   ExitCode,
@@ -48,7 +46,8 @@ export default defineCommand({
     consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
   },
   exampleArgs: ["", "--name finance", "--output json"],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const serverName = flags.name || "";
     const type = flags.type || "OFFICIAL";
     const pageNo = flags.page || 1;
@@ -71,12 +70,7 @@ export default defineCommand({
       return;
     }
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
-    const result = (await callConsoleGateway(config, credential.token, {
-      api: MCP_LIST_API,
-      data,
-    })) as Record<string, unknown>;
+    const result = (await ctx.client.console(MCP_LIST_API, data)) as Record<string, unknown>;
 
     const dataField = (result?.data as Record<string, unknown> | undefined) ?? {};
     if (dataField.success === false) {

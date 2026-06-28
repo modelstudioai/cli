@@ -1,15 +1,12 @@
 import {
   defineCommand,
-  requestJson,
-  videoGenerateEndpoint,
-  taskEndpoint,
+  videoGeneratePath,
+  taskPath,
   detectOutputFormat,
   type DashScopeVideoEditRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
   resolveOutputDir,
-  resolveFileUrl,
-  resolveCredential,
   BailianError,
   ExitCode,
   resolveBooleanFlag,
@@ -110,7 +107,8 @@ export default defineCommand({
     '--video https://example.com/input.mp4 --prompt "Convert to anime style" --resolution 720P --download output.mp4',
     '--video https://example.com/input.mp4 --prompt "Put clothes on the kitten in the video" --watermark false',
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const videoUrl = flags.video;
 
     // prompt is optional for video edit per API spec
@@ -120,8 +118,7 @@ export default defineCommand({
     const format = detectOutputFormat(config.output);
 
     // Auto-upload local files
-    const credential = await resolveCredential(config);
-    const resolvedVideoUrl = await resolveFileUrl(videoUrl, credential.token, model);
+    const resolvedVideoUrl = await ctx.client.uploadFile(videoUrl, model);
     // --- Build media array ---
     const media: DashScopeVideoEditRequest["input"]["media"] = [
       { type: "video", url: resolvedVideoUrl },
@@ -135,7 +132,7 @@ export default defineCommand({
         .map((s) => s.trim())
         .filter(Boolean);
       for (const imgUrl of images) {
-        const resolved = await resolveFileUrl(imgUrl, credential.token, model);
+        const resolved = await ctx.client.uploadFile(imgUrl, model);
         media.push({ type: "reference_image", url: resolved });
       }
     }
@@ -168,9 +165,8 @@ export default defineCommand({
     }
 
     // --- Submit async task ---
-    const url = videoGenerateEndpoint(config.baseUrl);
-    const response = await requestJson<DashScopeAsyncResponse>(config, {
-      url,
+    const response = await ctx.client.requestJson<DashScopeAsyncResponse>({
+      path: videoGeneratePath(),
       method: "POST",
       body,
       async: true,
@@ -192,7 +188,7 @@ export default defineCommand({
     // --- Poll until completion ---
     // Video editing is compute-intensive; default timeout = 600s (10 min)
     const pollInterval = flags.pollInterval ?? 15;
-    const pollUrl = taskEndpoint(config.baseUrl, taskId);
+    const pollUrl = ctx.client.url(taskPath(taskId));
     const editTimeout = Math.max(config.timeout, 600);
 
     const result = await poll<DashScopeTaskResponse>(config, {

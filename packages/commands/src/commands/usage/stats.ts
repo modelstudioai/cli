@@ -1,10 +1,4 @@
-import {
-  defineCommand,
-  callConsoleGateway,
-  resolveConsoleGatewayCredential,
-  detectOutputFormat,
-  type Config,
-} from "bailian-cli-core";
+import { defineCommand, detectOutputFormat, type Config, type Client } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
@@ -65,8 +59,7 @@ const POLL_INTERVAL_MS = 500;
 const MAX_POLLS = 30;
 
 async function pollTelemetryApi(
-  config: Config,
-  token: string,
+  client: Client,
   api: string,
   reqDTO: Record<string, unknown>,
 ): Promise<unknown> {
@@ -77,10 +70,7 @@ async function pollTelemetryApi(
       ? { reqDTO: { ...reqDTO, asyncTaskId: nextTaskId } }
       : { reqDTO };
 
-    const raw = await callConsoleGateway(config, token, {
-      api,
-      data: requestData,
-    });
+    const raw = await client.console(api, requestData);
 
     const resp = extractResponseData(raw as Record<string, unknown>);
 
@@ -325,7 +315,8 @@ export default defineCommand({
     "--type Text --days 14",
     "--output json",
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const modelFlag = flags.model || undefined;
     const daysFlag = Number(flags.days) || 7;
     const typeFlag = flags.type || undefined;
@@ -367,12 +358,8 @@ export default defineCommand({
         return;
       }
 
-      const credential = await resolveConsoleGatewayCredential(config);
-
       const results = await Promise.all(
-        models.map((model) =>
-          pollTelemetryApi(config, credential.token, LIST_API, { ...baseReqDTO, model }),
-        ),
+        models.map((model) => pollTelemetryApi(ctx.client, LIST_API, { ...baseReqDTO, model })),
       );
 
       const allItems: ModelStatisticItem[] = [];
@@ -419,9 +406,7 @@ export default defineCommand({
         return;
       }
 
-      const credential = await resolveConsoleGatewayCredential(config);
-
-      const result = await pollTelemetryApi(config, credential.token, OVERVIEW_API, reqDTO);
+      const result = await pollTelemetryApi(ctx.client, OVERVIEW_API, reqDTO);
       if (!result) {
         process.stderr.write("Error: request timed out.\n");
         process.exit(1);

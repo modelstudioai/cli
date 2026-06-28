@@ -1,8 +1,6 @@
 import {
   defineCommand,
-  request,
-  requestJson,
-  appCompletionEndpoint,
+  appCompletionPath,
   parseSSE,
   detectOutputFormat,
   type AppCompletionRequest,
@@ -65,7 +63,8 @@ export default defineCommand({
     '--app-id abc123 --prompt "Search for materials" --pipeline-ids pipe1,pipe2',
     '--app-id abc123 --prompt "Start" --biz-params \'{"key":"value"}\'',
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const appId = flags.appId;
     const prompt = flags.prompt;
 
@@ -121,16 +120,14 @@ export default defineCommand({
     }
 
     if (config.dryRun) {
-      emitResult({ endpoint: appCompletionEndpoint(config.baseUrl, appId), request: body }, format);
+      emitResult({ endpoint: ctx.client.url(appCompletionPath(appId)), request: body }, format);
       return;
     }
 
-    const url = appCompletionEndpoint(config.baseUrl, appId);
-
     if (shouldStream) {
       const headers: Record<string, string> = { "X-DashScope-SSE": "enable" };
-      const res = await request(config, {
-        url,
+      const res = await ctx.client.request({
+        path: appCompletionPath(appId),
         method: "POST",
         body,
         headers,
@@ -188,8 +185,8 @@ export default defineCommand({
         process.stdout.write("\n");
       }
     } else {
-      const response = await requestJson<AppCompletionResponse>(config, {
-        url,
+      const response = await ctx.client.requestJson<AppCompletionResponse>({
+        path: appCompletionPath(appId),
         method: "POST",
         body,
       });

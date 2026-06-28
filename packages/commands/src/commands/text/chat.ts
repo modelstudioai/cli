@@ -1,8 +1,6 @@
 import {
   defineCommand,
-  request,
-  requestJson,
-  chatEndpoint,
+  chatPath,
   parseSSE,
   detectOutputFormat,
   type ChatMessage,
@@ -122,7 +120,8 @@ export default defineCommand({
   ],
   validate: (f) =>
     !f.message && !f.messagesFile ? "Provide --message or --messages-file." : undefined,
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const { system, messages } = parseMessages(flags);
 
     const model = flags.model || config.defaultTextModel || "qwen3.7-max";
@@ -170,11 +169,9 @@ export default defineCommand({
       return;
     }
 
-    const url = chatEndpoint(config.baseUrl);
-
     if (shouldStream) {
-      const res = await request(config, {
-        url,
+      const res = await ctx.client.request({
+        path: chatPath(),
         method: "POST",
         body,
         stream: true,
@@ -229,8 +226,8 @@ export default defineCommand({
         resultOut.write("\n");
       }
     } else {
-      const response = await requestJson<ChatResponse>(config, {
-        url,
+      const response = await ctx.client.requestJson<ChatResponse>({
+        path: chatPath(),
         method: "POST",
         body,
       });

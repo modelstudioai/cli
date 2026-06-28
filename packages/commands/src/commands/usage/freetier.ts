@@ -1,11 +1,4 @@
-import {
-  defineCommand,
-  callConsoleGateway,
-  resolveConsoleGatewayCredential,
-  fetchModelList,
-  detectOutputFormat,
-  type Config,
-} from "bailian-cli-core";
+import { defineCommand, detectOutputFormat, fetchModelList, type Client } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
 const ACTIVATE_API = "zeldaEasy.broadscope-bailian.freeTrial.batchActivateFreeTierOnly";
@@ -57,8 +50,7 @@ const POLL_INTERVAL_MS = 500;
 const MAX_POLLS = 20;
 
 async function pollUntilDone(
-  config: Config,
-  token: string,
+  client: Client,
   api: string,
   requestKey: string,
   models: string[],
@@ -70,10 +62,7 @@ async function pollUntilDone(
       [requestKey]: nextTaskId ? { taskId: nextTaskId } : { models },
     };
 
-    const raw = await callConsoleGateway(config, token, {
-      api,
-      data: requestData,
-    });
+    const raw = await client.console(api, requestData);
 
     const resp = extractResponseData(raw as Record<string, unknown>);
     if (resp.taskId && Object.keys(resp).length === 1) {
@@ -86,11 +75,14 @@ async function pollUntilDone(
   return null;
 }
 
-async function fetchAllModelNames(config: Config, token: string): Promise<string[]> {
+async function fetchAllModelNames(client: Client): Promise<string[]> {
   const allModels: Record<string, unknown>[] = [];
   let page = 1;
   while (true) {
-    const result = await fetchModelList(config, token, { pageNo: page, pageSize: 50 });
+    const result = await fetchModelList((api, data) => client.console(api, data), {
+      pageNo: page,
+      pageSize: 50,
+    });
     allModels.push(...result.models);
     if (allModels.length >= result.total) break;
     page++;
@@ -139,7 +131,8 @@ export default defineCommand({
   ],
   validate: (f) =>
     !f.model && !f.all ? "Provide --model <model>[,model2,...] or --all." : undefined,
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const modelFlag = flags.model || undefined;
     const off = Boolean(flags.off);
     const format = detectOutputFormat(config.output);
@@ -174,21 +167,15 @@ export default defineCommand({
       return;
     }
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
     if (!modelFlag) {
-      models = await fetchAllModelNames(config, credential.token);
+      models = await fetchAllModelNames(ctx.client);
     }
 
     if (off) {
       const [quotaResult, stopResult] = await Promise.all([
-        callConsoleGateway(config, credential.token, {
-          api: FREE_TIER_API,
-          data: { queryFreeTierQuotaRequest: { models } },
-        }),
-        callConsoleGateway(config, credential.token, {
-          api: FREE_TIER_ONLY_STATUS_API,
-          data: { queryFreeTierOnlyStatusRequest: { models } },
+        ctx.client.console(FREE_TIER_API, { queryFreeTierQuotaRequest: { models } }),
+        ctx.client.console(FREE_TIER_ONLY_STATUS_API, {
+          queryFreeTierOnlyStatusRequest: { models },
         }),
       ]);
 
@@ -212,7 +199,7 @@ export default defineCommand({
           );
           continue;
         }
-        await pollUntilDone(config, credential.token, api, requestKey, [name]);
+        await pollUntilDone(ctx.client, api, requestKey, [name]);
         process.stdout.write(`Disabled auto-stop for "${name}".\n`);
       }
       return;
@@ -220,7 +207,7 @@ export default defineCommand({
 
     const jsonResults: unknown[] = [];
     for (const name of models) {
-      const result = await pollUntilDone(config, credential.token, api, requestKey, [name]);
+      const result = await pollUntilDone(ctx.client, api, requestKey, [name]);
       if (format === "json") {
         jsonResults.push(result);
         continue;

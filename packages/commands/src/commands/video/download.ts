@@ -1,7 +1,6 @@
 import {
   defineCommand,
-  requestJson,
-  taskEndpoint,
+  taskPath,
   detectOutputFormat,
   type DashScopeTaskResponse,
   BailianError,
@@ -12,7 +11,7 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Download a completed video by task ID",
-  auth: "none",
+  auth: "apiKey",
   usageArgs: "--task-id <id> --out <path>",
   flags: {
     taskId: {
@@ -27,7 +26,8 @@ export default defineCommand({
     "--task-id 3b256896-xxxx --out video.mp4",
     "--task-id 3b256896-xxxx --out video.mp4 --quiet",
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const taskId = flags.taskId;
 
     const outPath = flags.out;
@@ -39,9 +39,10 @@ export default defineCommand({
       return;
     }
 
-    // Get task info to find video URL
-    const url = taskEndpoint(config.baseUrl, taskId);
-    const taskInfo = await requestJson<DashScopeTaskResponse>(config, { url });
+    // Get task info to find the video URL.
+    const taskInfo = await ctx.client.requestJson<DashScopeTaskResponse>({
+      path: taskPath(taskId),
+    });
 
     if (taskInfo.output.task_status !== "SUCCEEDED") {
       throw new BailianError(

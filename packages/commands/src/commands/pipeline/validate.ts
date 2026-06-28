@@ -18,7 +18,8 @@ export default defineCommand({
     },
   },
   exampleArgs: ["--file workflow.yaml", "--file workflow.json --output json"],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const file = flags.file;
 
     initPipelineSteps();

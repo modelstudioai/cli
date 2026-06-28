@@ -1,12 +1,12 @@
 import {
   defineCommand,
-  knowledgeRetrieveEndpoint,
+  knowledgeRetrievePath,
   signRequest,
-  requestJson,
   detectOutputFormat,
   maskToken,
-  resolveCredential,
+  resolveApiKeyCredential,
   trackingHeaders,
+  type Client,
   type Config,
   type Flags,
   type FlagsDef,
@@ -98,7 +98,8 @@ export default defineCommand({
     '--index-id idx_xxx --query "How to use Alibaba Cloud Bailian"',
     '--api-key $DASHSCOPE_API_KEY --index-id idx_xxx --query "RAG retrieval" --rerank --rerank-model qwen3-rerank-hybrid',
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const indexId = flags.indexId;
     const query = flags.query;
 
@@ -108,20 +109,20 @@ export default defineCommand({
     const hasExplicitAkSk = !!(flags.accessKeyId && flags.accessKeySecret);
 
     if (hasExplicitApiKey) {
-      await runWithApiKey(config, flags, indexId, query, format);
+      await runWithApiKey(ctx.client, config, flags, indexId, query, format);
     } else if (hasExplicitAkSk) {
       await runWithAkSk(config, flags, indexId, query, format);
     } else {
       let useApiKey = false;
       try {
-        await resolveCredential(config);
+        await resolveApiKeyCredential(config);
         useApiKey = true;
       } catch {
         // No API-KEY credential available
       }
 
       if (useApiKey) {
-        await runWithApiKey(config, flags, indexId, query, format);
+        await runWithApiKey(ctx.client, config, flags, indexId, query, format);
       } else {
         await runWithAkSk(config, flags, indexId, query, format);
       }
@@ -132,6 +133,7 @@ export default defineCommand({
 // ---- API-KEY path (DashScope gateway, snake_case) ----
 
 async function runWithApiKey(
+  client: Client,
   config: Config,
   flags: RetrieveFlags,
   indexId: string,
@@ -165,15 +167,13 @@ async function runWithApiKey(
     body.rerank = [rerankEntry];
   }
 
-  const url = knowledgeRetrieveEndpoint(config.baseUrl);
-
   if (config.dryRun) {
-    emitResult({ endpoint: url, request: body }, format);
+    emitResult({ endpoint: client.url(knowledgeRetrievePath()), request: body }, format);
     return;
   }
 
-  const response = await requestJson<DashScopeKnowledgeRetrieveResponse>(config, {
-    url,
+  const response = await client.requestJson<DashScopeKnowledgeRetrieveResponse>({
+    path: knowledgeRetrievePath(),
     method: "POST",
     body,
   });

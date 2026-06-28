@@ -1,11 +1,4 @@
-import {
-  defineCommand,
-  callConsoleGateway,
-  resolveConsoleGatewayCredential,
-  detectOutputFormat,
-  BailianError,
-  type Config,
-} from "bailian-cli-core";
+import { defineCommand, detectOutputFormat, BailianError, type Client } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
 const MODEL_LIST_API = "zeldaHttp.dashscopeModel./zelda/api/v1/modelCenter/listFoundationModels";
@@ -50,22 +43,18 @@ function extractResponseData(result: Record<string, unknown>): Record<string, un
 }
 
 async function fetchModelQpmInfo(
-  config: Config,
-  token: string,
+  client: Client,
   modelName: string,
 ): Promise<{ model: string; qpmInfo: Record<string, QpmInfoItem> } | undefined> {
-  const raw = await callConsoleGateway(config, token, {
-    api: MODEL_LIST_API,
-    data: {
-      input: {
-        pageNo: 1,
-        pageSize: 50,
-        name: modelName,
-        group: false,
-        queryQpmInfo: true,
-        ignoreWorkspaceServiceSite: true,
-        supports: { selfServiceLimitIncrease: true },
-      },
+  const raw = await client.console(MODEL_LIST_API, {
+    input: {
+      pageNo: 1,
+      pageSize: 50,
+      name: modelName,
+      group: false,
+      queryQpmInfo: true,
+      ignoreWorkspaceServiceSite: true,
+      supports: { selfServiceLimitIncrease: true },
     },
   });
 
@@ -107,7 +96,8 @@ export default defineCommand({
     "--model qwen3.6-plus --tpm 8000000 --yes",
     "--model qwen-turbo --tpm 100000 --output json",
   ],
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     const modelName = flags.model;
     if (!modelName) {
       process.stderr.write("Error: --model is required.\n");
@@ -134,9 +124,7 @@ export default defineCommand({
       return;
     }
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
-    const modelInfo = await fetchModelQpmInfo(config, credential.token, modelName);
+    const modelInfo = await fetchModelQpmInfo(ctx.client, modelName);
     if (!modelInfo) {
       process.stderr.write(
         `Error: model "${modelName}" not found or does not support self-service quota increase.\n`,
@@ -175,10 +163,7 @@ export default defineCommand({
         requestData.input.confirmedDowngrade = true;
       }
       try {
-        return await callConsoleGateway(config, credential.token, {
-          api: UPDATE_LIMITS_API,
-          data: requestData,
-        });
+        return await ctx.client.console(UPDATE_LIMITS_API, requestData);
       } catch (err) {
         if (err instanceof BailianError && err.message.includes("NotLogined")) {
           process.stderr.write(

@@ -4,7 +4,6 @@ import { readConfigFile } from "bailian-cli-core";
 
 function isConsoleE2EReady(): boolean {
   if (!isBailianE2EEnabled()) return false;
-  if (process.env.DASHSCOPE_ACCESS_TOKEN?.trim()) return true;
   try {
     const config = readConfigFile();
     return typeof config.access_token === "string" && config.access_token.length > 0;

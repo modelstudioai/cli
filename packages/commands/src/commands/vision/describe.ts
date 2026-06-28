@@ -1,13 +1,10 @@
 import {
   defineCommand,
-  requestJson,
-  chatEndpoint,
+  chatPath,
   detectOutputFormat,
   type ChatRequest,
   type ChatResponse,
   type ChatMessageContent,
-  resolveFileUrl,
-  resolveCredential,
   BailianError,
   ExitCode,
   isLocalFile,
@@ -85,7 +82,8 @@ export default defineCommand({
     !f.image && !(f.video as string[] | undefined)?.length
       ? "Provide --image or --video."
       : undefined,
-  async run(config, flags) {
+  async run(ctx) {
+    const { config, flags } = ctx;
     let image = flags.image;
     const videoInputs = flags.video ?? [];
     const model = flags.model || "qwen3-vl-plus";
@@ -121,8 +119,7 @@ export default defineCommand({
           if (!existsSync(videoInput)) {
             throw new BailianError(`Video file not found: ${videoInput}`, ExitCode.USAGE);
           }
-          const credential = await resolveCredential(config);
-          videoUrl = await resolveFileUrl(videoInput, credential.token, model);
+          videoUrl = await ctx.client.uploadFile(videoInput, model);
         }
 
         contentArray.push({ type: "video_url", video_url: { url: videoUrl } });
@@ -138,8 +135,7 @@ export default defineCommand({
         const { statSync } = await import("fs");
         const fileSize = statSync(image).size;
         if (fileSize > 5 * 1024 * 1024) {
-          const credential = await resolveCredential(config);
-          finalImageUrl = await resolveFileUrl(image, credential.token, model);
+          finalImageUrl = await ctx.client.uploadFile(image, model);
         }
       }
 
@@ -159,9 +155,8 @@ export default defineCommand({
       ],
     };
 
-    const url = chatEndpoint(config.baseUrl);
-    const response = await requestJson<ChatResponse>(config, {
-      url,
+    const response = await ctx.client.requestJson<ChatResponse>({
+      path: chatPath(),
       method: "POST",
       body,
     });

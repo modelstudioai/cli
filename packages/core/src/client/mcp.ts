@@ -7,14 +7,14 @@
  * Protocol flow: initialize → tools/list → tools/call
  *
  * Auth: always sends `Authorization: Bearer <DashScope sk-key>` resolved via
- * `resolveCredential`. Bailian MCPs all accept this; non-Bailian endpoints
+ * `resolveApiKeyCredential`. Bailian MCPs all accept this; non-Bailian endpoints
  * are out of scope for this client.
  */
 
 import type { Config } from "../config/schema.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
-import { resolveCredential } from "../auth/resolver.ts";
+import { resolveApiKeyCredential } from "../auth/resolver.ts";
 import { trackingHeaders } from "./headers.ts";
 
 // ---- JSON-RPC 2.0 Types ----
@@ -58,9 +58,8 @@ export interface McpToolResult {
  * The path is `/api/v1/mcps/<serverCode>/mcp`; the `serverCode` is taken
  * verbatim from `bl mcp list` (e.g. `WebSearch`, `market-cmapi00073529`).
  */
-export function bailianMcpUrl(baseUrl: string, serverCode: string): string {
-  const root = baseUrl.replace(/\/$/, "");
-  return `${root}/api/v1/mcps/${serverCode}/mcp`;
+export function bailianMcpPath(serverCode: string): string {
+  return `/api/v1/mcps/${serverCode}/mcp`;
 }
 
 // ---- MCP Client ----
@@ -72,15 +71,17 @@ export class McpClient {
   private config: Config;
   private authToken: string | undefined;
 
-  constructor(config: Config, url: string) {
+  constructor(config: Config, url: string, authToken?: string) {
     this.config = config;
     this.url = url;
+    this.authToken = authToken;
   }
 
   /** Initialize the MCP session. Must be called before any other method. */
   async initialize(): Promise<void> {
-    const credential = await resolveCredential(this.config);
-    this.authToken = credential.token;
+    if (!this.authToken) {
+      this.authToken = (await resolveApiKeyCredential(this.config)).token;
+    }
 
     const result = await this.rpc("initialize", {
       protocolVersion: "2025-03-26",

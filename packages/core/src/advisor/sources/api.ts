@@ -1,4 +1,5 @@
 import type { Config } from "../../config/schema.ts";
+import { callConsoleGateway } from "../../console/gateway.ts";
 import { fetchModelList } from "../../console/models.ts";
 import type { ModelProfile } from "../types.ts";
 import type { ModelSource } from "./types.ts";
@@ -39,18 +40,16 @@ export class ApiSource implements ModelSource {
   }
 
   async load(): Promise<ModelProfile[]> {
-    const first = await fetchModelList(this.config, "", {
-      pageNo: 1,
-      pageSize: PAGE_SIZE,
-    });
+    // Public model catalog — no console token (advisor runs unauthenticated).
+    const call = (api: string, data: Record<string, unknown>) =>
+      callConsoleGateway(this.config, "", { api, data });
+
+    const first = await fetchModelList(call, { pageNo: 1, pageSize: PAGE_SIZE });
     const allRaw = [...first.models];
 
     const totalPages = Math.ceil(first.total / PAGE_SIZE);
     for (let page = 2; page <= totalPages; page++) {
-      const result = await fetchModelList(this.config, "", {
-        pageNo: page,
-        pageSize: PAGE_SIZE,
-      });
+      const result = await fetchModelList(call, { pageNo: page, pageSize: PAGE_SIZE });
       allRaw.push(...result.models);
     }
 
