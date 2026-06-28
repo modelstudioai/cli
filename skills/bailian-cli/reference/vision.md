@@ -21,7 +21,7 @@ Index: [index.md](index.md)
 | **Description** | Describe an image or video using Qwen-VL                                     |
 | **Usage**       | `bl vision describe --image <path-or-url> [--video <url>] [--prompt <text>]` |
 
-#### Options
+#### Flags
 
 | Flag                    | Type   | Required | Description                                         |
 | ----------------------- | ------ | -------- | --------------------------------------------------- |

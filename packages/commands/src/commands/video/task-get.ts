@@ -3,8 +3,6 @@ import {
   requestJson,
   taskEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type DashScopeTaskResponse,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
@@ -13,13 +11,15 @@ export default defineCommand({
   description: "Query async task status",
   auth: "apiKey",
   usageArgs: "--task-id <id>",
-  options: [{ flag: "--task-id <id>", description: "Async task ID", required: true }],
+  flags: {
+    taskId: { type: "string", valueHint: "<id>", description: "Async task ID", required: true },
+  },
   exampleArgs: [
     "--task-id 3b256896-3e70-xxxx-xxxx-xxxxxxxxxxxx",
     "--task-id 3b256896-3e70-xxxx --output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const taskId = flags.taskId as string;
+  async run(config, flags) {
+    const taskId = flags.taskId;
 
     const format = detectOutputFormat(config.output);
 

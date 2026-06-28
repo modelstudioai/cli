@@ -8,7 +8,8 @@ import {
   resolveCredential,
   trackingHeaders,
   type Config,
-  type GlobalFlags,
+  type Flags,
+  type FlagsDef,
   type KnowledgeRetrieveRequest,
   type KnowledgeRetrieveResponse,
   type DashScopeKnowledgeRetrieveRequest,
@@ -21,55 +22,74 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const BAILIAN_HOST = "bailian.cn-beijing.aliyuncs.com";
 
+const RETRIEVE_FLAGS = {
+  indexId: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Knowledge base index ID (required)",
+    required: true,
+  },
+  query: {
+    type: "string",
+    valueHint: "<text>",
+    description: "Search query (required)",
+    required: true,
+  },
+  denseSimilarityTopK: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Dense retrieval top K",
+  },
+  sparseSimilarityTopK: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Sparse retrieval top K",
+  },
+  rerank: { type: "switch", description: "Enable reranking" },
+  rerankTopN: { type: "number", valueHint: "<n>", description: "Rerank top N results" },
+  rerankModel: {
+    type: "string",
+    valueHint: "<name>",
+    description: "Rerank model, e.g. qwen3-rerank-hybrid",
+  },
+  rerankMode: {
+    type: "string",
+    valueHint: "<mode>",
+    description: "Rerank mode: qa, similar, or custom",
+  },
+  rerankInstruct: {
+    type: "string",
+    valueHint: "<text>",
+    description: "Custom rerank instruction, when mode=custom",
+  },
+  topK: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Number of results (deprecated, use --rerank-top-n)",
+  },
+  workspaceId: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Bailian workspace ID (only needed for deprecated AK/SK auth)",
+  },
+  accessKeyId: {
+    type: "string",
+    valueHint: "<key>",
+    description: "Deprecated: use global --api-key instead",
+  },
+  accessKeySecret: {
+    type: "string",
+    valueHint: "<key>",
+    description: "Deprecated: use global --api-key instead",
+  },
+} satisfies FlagsDef;
+type RetrieveFlags = Flags<typeof RETRIEVE_FLAGS>;
+
 export default defineCommand({
   description: "Retrieve from a Bailian knowledge base",
   auth: "apiKey",
   usageArgs: "--index-id <id> --query <text> [flags]",
-  options: [
-    { flag: "--index-id <id>", description: "Knowledge base index ID (required)", required: true },
-    { flag: "--query <text>", description: "Search query (required)", required: true },
-    {
-      flag: "--dense-similarity-top-k <n>",
-      description: "Dense retrieval top K",
-      type: "number",
-    },
-    {
-      flag: "--sparse-similarity-top-k <n>",
-      description: "Sparse retrieval top K",
-      type: "number",
-    },
-    { flag: "--rerank", description: "Enable reranking" },
-    { flag: "--rerank-top-n <n>", description: "Rerank top N results", type: "number" },
-    {
-      flag: "--rerank-model <name>",
-      description: "Rerank model, e.g. qwen3-rerank-hybrid",
-    },
-    {
-      flag: "--rerank-mode <mode>",
-      description: "Rerank mode: qa, similar, or custom",
-    },
-    {
-      flag: "--rerank-instruct <text>",
-      description: "Custom rerank instruction, when mode=custom",
-    },
-    {
-      flag: "--top-k <n>",
-      description: "Number of results (deprecated, use --rerank-top-n)",
-      type: "number",
-    },
-    {
-      flag: "--workspace-id <id>",
-      description: "Bailian workspace ID (only needed for deprecated AK/SK auth)",
-    },
-    {
-      flag: "--access-key-id <key>",
-      description: "Deprecated: use global --api-key instead",
-    },
-    {
-      flag: "--access-key-secret <key>",
-      description: "Deprecated: use global --api-key instead",
-    },
-  ],
+  flags: RETRIEVE_FLAGS,
   notes: [
     "Authentication: pass `--api-key <key>`. AK/SK auth is deprecated and will be removed in a future version.",
     "`--workspace-id` is NOT required when using --api-key.",
@@ -78,9 +98,9 @@ export default defineCommand({
     '--index-id idx_xxx --query "How to use Alibaba Cloud Bailian"',
     '--api-key $DASHSCOPE_API_KEY --index-id idx_xxx --query "RAG retrieval" --rerank --rerank-model qwen3-rerank-hybrid',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const indexId = flags.indexId as string;
-    const query = flags.query as string;
+  async run(config, flags) {
+    const indexId = flags.indexId;
+    const query = flags.query;
 
     const format = detectOutputFormat(config.output);
 
@@ -113,7 +133,7 @@ export default defineCommand({
 
 async function runWithApiKey(
   config: Config,
-  flags: GlobalFlags,
+  flags: RetrieveFlags,
   indexId: string,
   query: string,
   format: OutputFormat,
@@ -130,18 +150,18 @@ async function runWithApiKey(
   };
 
   if (flags.denseSimilarityTopK !== undefined)
-    body.dense_similarity_top_k = flags.denseSimilarityTopK as number;
+    body.dense_similarity_top_k = flags.denseSimilarityTopK;
   if (flags.sparseSimilarityTopK !== undefined)
-    body.sparse_similarity_top_k = flags.sparseSimilarityTopK as number;
+    body.sparse_similarity_top_k = flags.sparseSimilarityTopK;
   if (flags.rerank) body.enable_reranking = true;
-  if (flags.rerankTopN !== undefined) body.rerank_top_n = flags.rerankTopN as number;
+  if (flags.rerankTopN !== undefined) body.rerank_top_n = flags.rerankTopN;
 
   if (flags.rerankModel) {
     const rerankEntry: { model_name: string; rerank_mode?: string; rerank_instruct?: string } = {
-      model_name: flags.rerankModel as string,
+      model_name: flags.rerankModel,
     };
-    if (flags.rerankMode) rerankEntry.rerank_mode = flags.rerankMode as string;
-    if (flags.rerankInstruct) rerankEntry.rerank_instruct = flags.rerankInstruct as string;
+    if (flags.rerankMode) rerankEntry.rerank_mode = flags.rerankMode;
+    if (flags.rerankInstruct) rerankEntry.rerank_instruct = flags.rerankInstruct;
     body.rerank = [rerankEntry];
   }
 
@@ -170,14 +190,14 @@ async function runWithApiKey(
 
 async function runWithAkSk(
   config: Config,
-  flags: GlobalFlags,
+  flags: RetrieveFlags,
   indexId: string,
   query: string,
   format: OutputFormat,
 ): Promise<void> {
-  const accessKeyId = (flags.accessKeyId as string) || config.accessKeyId;
-  const accessKeySecret = (flags.accessKeySecret as string) || config.accessKeySecret;
-  const workspaceId = (flags.workspaceId as string) || config.workspaceId;
+  const accessKeyId = flags.accessKeyId || config.accessKeyId;
+  const accessKeySecret = flags.accessKeySecret || config.accessKeySecret;
+  const workspaceId = flags.workspaceId || config.workspaceId;
 
   if (!accessKeyId || !accessKeySecret) {
     throw new BailianError(
@@ -211,18 +231,17 @@ async function runWithAkSk(
   }
 
   if (flags.rerank) body.EnableReranking = true;
-  if (flags.rerankTopN !== undefined) body.RerankTopN = flags.rerankTopN as number;
-  if (flags.denseSimilarityTopK !== undefined)
-    body.DenseSimilarityTopK = flags.denseSimilarityTopK as number;
+  if (flags.rerankTopN !== undefined) body.RerankTopN = flags.rerankTopN;
+  if (flags.denseSimilarityTopK !== undefined) body.DenseSimilarityTopK = flags.denseSimilarityTopK;
   if (flags.sparseSimilarityTopK !== undefined)
-    body.SparseSimilarityTopK = flags.sparseSimilarityTopK as number;
+    body.SparseSimilarityTopK = flags.sparseSimilarityTopK;
 
   if (flags.rerankModel) {
     const rerank: { ModelName: string; RerankMode?: string; RerankInstruct?: string } = {
-      ModelName: flags.rerankModel as string,
+      ModelName: flags.rerankModel,
     };
-    if (flags.rerankMode) rerank.RerankMode = flags.rerankMode as string;
-    if (flags.rerankInstruct) rerank.RerankInstruct = flags.rerankInstruct as string;
+    if (flags.rerankMode) rerank.RerankMode = flags.rerankMode;
+    if (flags.rerankInstruct) rerank.RerankInstruct = flags.rerankInstruct;
     body.Rerank = [rerank];
   }
 

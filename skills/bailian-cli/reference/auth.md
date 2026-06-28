@@ -23,13 +23,13 @@ Index: [index.md](index.md)
 | **Description** | Authenticate with API key or console browser login (credentials can coexist) |
 | **Usage**       | `bl auth login --api-key <key> \| --console`                                 |
 
-#### Options
+#### Flags
 
-| Flag               | Type    | Required | Description                                                                           |
-| ------------------ | ------- | -------- | ------------------------------------------------------------------------------------- |
-| `--api-key <key>`  | string  | no       | DashScope API key to store                                                            |
-| `--base-url <url>` | string  | no       | DashScope API base URL (used with --api-key for validation)                           |
-| `--console`        | boolean | no       | Sign in via browser; use --console-site to choose domestic (default) or international |
+| Flag               | Type   | Required | Description                                                                           |
+| ------------------ | ------ | -------- | ------------------------------------------------------------------------------------- |
+| `--api-key <key>`  | string | no       | DashScope API key to store                                                            |
+| `--base-url <url>` | string | no       | DashScope API base URL (used with --api-key for validation)                           |
+| `--console`        | switch | no       | Sign in via browser; use --console-site to choose domestic (default) or international |
 
 #### Examples
 
@@ -49,12 +49,12 @@ bl auth login --console
 | **Description** | Clear stored credentials                         |
 | **Usage**       | `bl auth logout [--console] [--yes] [--dry-run]` |
 
-#### Options
+#### Flags
 
-| Flag        | Type    | Required | Description                                              |
-| ----------- | ------- | -------- | -------------------------------------------------------- |
-| `--console` | boolean | no       | Only clear the console access_token, keep api_key intact |
-| `--yes`     | boolean | no       | Skip confirmation prompt                                 |
+| Flag        | Type   | Required | Description                                              |
+| ----------- | ------ | -------- | -------------------------------------------------------- |
+| `--console` | switch | no       | Only clear the console access_token, keep api_key intact |
+| `--yes`     | switch | no       | Skip confirmation prompt                                 |
 
 #### Examples
 
@@ -82,7 +82,7 @@ bl auth logout --yes
 | **Description** | Show current authentication state |
 | **Usage**       | `bl auth status`                  |
 
-#### Options
+#### Flags
 
 | Flag                           | Type   | Required | Description                           |
 | ------------------------------ | ------ | -------- | ------------------------------------- |

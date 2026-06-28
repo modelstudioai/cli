@@ -1,4 +1,4 @@
-import type { Command } from "bailian-cli-core";
+import type { AnyCommand } from "bailian-cli-core";
 import { type UsageError } from "bailian-cli-core";
 import type { CommandRegistry } from "./registry.ts";
 import { parsePath } from "./args.ts";
@@ -15,7 +15,7 @@ import { parsePath } from "./args.ts";
 export type Resolution =
   | { kind: "version" }
   | { kind: "help"; path: string[] }
-  | { kind: "run"; path: string[]; command: Command; rest: string[] }
+  | { kind: "run"; path: string[]; command: AnyCommand; rest: string[] }
   | { kind: "usageError"; error: UsageError };
 
 /**

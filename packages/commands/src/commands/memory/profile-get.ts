@@ -3,8 +3,6 @@ import {
   requestJson,
   userProfileEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type UserProfileResponse,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
@@ -13,14 +11,24 @@ export default defineCommand({
   description: "Get user profile by schema ID and user ID",
   auth: "apiKey",
   usageArgs: "--schema-id <id> --user-id <id>",
-  options: [
-    { flag: "--schema-id <id>", description: "Profile schema ID (required)", required: true },
-    { flag: "--user-id <id>", description: "User ID (required)", required: true },
-  ],
+  flags: {
+    schemaId: {
+      type: "string",
+      valueHint: "<id>",
+      description: "Profile schema ID (required)",
+      required: true,
+    },
+    userId: {
+      type: "string",
+      valueHint: "<id>",
+      description: "User ID (required)",
+      required: true,
+    },
+  },
   exampleArgs: ["--schema-id schema_xxx --user-id user1"],
-  async run(config: Config, flags: GlobalFlags) {
-    const schemaId = flags.schemaId as string;
-    const userId = flags.userId as string;
+  async run(config, flags) {
+    const schemaId = flags.schemaId;
+    const userId = flags.userId;
 
     const format = detectOutputFormat(config.output);
     const params = new URLSearchParams({ user_id: userId });

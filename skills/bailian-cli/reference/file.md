@@ -21,7 +21,7 @@ Index: [index.md](index.md)
 | **Description** | Upload a local file to DashScope temporary storage (48h) |
 | **Usage**       | `bl file upload --file <path> --model <model>`           |
 
-#### Options
+#### Flags
 
 | Flag              | Type   | Required | Description                                     |
 | ----------------- | ------ | -------- | ----------------------------------------------- |

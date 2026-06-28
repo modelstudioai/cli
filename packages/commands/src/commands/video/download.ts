@@ -3,8 +3,6 @@ import {
   requestJson,
   taskEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type DashScopeTaskResponse,
   BailianError,
   ExitCode,
@@ -16,18 +14,23 @@ export default defineCommand({
   description: "Download a completed video by task ID",
   auth: "none",
   usageArgs: "--task-id <id> --out <path>",
-  options: [
-    { flag: "--task-id <id>", description: "Task ID to download from", required: true },
-    { flag: "--out <path>", description: "Output file path", required: true },
-  ],
+  flags: {
+    taskId: {
+      type: "string",
+      valueHint: "<id>",
+      description: "Task ID to download from",
+      required: true,
+    },
+    out: { type: "string", valueHint: "<path>", description: "Output file path", required: true },
+  },
   exampleArgs: [
     "--task-id 3b256896-xxxx --out video.mp4",
     "--task-id 3b256896-xxxx --out video.mp4 --quiet",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const taskId = flags.taskId as string;
+  async run(config, flags) {
+    const taskId = flags.taskId;
 
-    const outPath = flags.out as string;
+    const outPath = flags.out;
 
     const format = detectOutputFormat(config.output);
 

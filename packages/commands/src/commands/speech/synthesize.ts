@@ -5,7 +5,6 @@ import {
   ExitCode,
   detectOutputFormat,
   type Config,
-  type GlobalFlags,
   type DashScopeTTSRequest,
   type DashScopeTTSResponse,
   type DashScopeTTSStreamChunk,
@@ -17,6 +16,8 @@ import {
   resolveOutputDir,
   request,
   DOCS_HOSTS,
+  type FlagsDef,
+  type Flags,
 } from "bailian-cli-core";
 
 const COSYVOICE_CLONE_DESIGN_DOC = `${DOCS_HOSTS.cn}/cosyvoice-clone-design-api`;
@@ -139,46 +140,81 @@ function printVoiceList(model: string): void {
   process.stdout.write(`\nTotal: ${voices.length} voices\n`);
 }
 
+const SYNTHESIZE_FLAGS = {
+  text: {
+    type: "string",
+    valueHint: "<text>",
+    description: "Text to synthesize into speech (or use --text-file)",
+  },
+  textFile: {
+    type: "string",
+    valueHint: "<path>",
+    description: "Read text from a file instead of --text",
+  },
+  model: {
+    type: "string",
+    valueHint: "<model>",
+    description:
+      "Model ID (default: cosyvoice-v3-flash). System voices available for cosyvoice-v3-flash",
+  },
+  voice: {
+    type: "string",
+    valueHint: "<voice>",
+    description:
+      "Voice ID. Use --list-voices to see system voices for cosyvoice-v3-flash; for v3.5-flash provide a clone/design voice ID",
+  },
+  listVoices: {
+    type: "switch",
+    description: "List available system voices for the selected model and exit",
+  },
+  format: {
+    type: "string",
+    valueHint: "<format>",
+    description: "Audio format: mp3, pcm, wav, opus (default: mp3)",
+    choices: ["mp3", "pcm", "wav", "opus"] as const,
+  },
+  sampleRate: {
+    type: "string",
+    valueHint: "<rate>",
+    description: "Audio sample rate in Hz (e.g. 24000)",
+  },
+  volume: { type: "string", valueHint: "<volume>", description: "Volume 0-100 (default: 50)" },
+  rate: { type: "string", valueHint: "<rate>", description: "Speech rate 0.5-2.0 (default: 1.0)" },
+  pitch: {
+    type: "string",
+    valueHint: "<pitch>",
+    description: "Pitch multiplier 0.5-2.0 (default: 1.0)",
+  },
+  seed: {
+    type: "string",
+    valueHint: "<seed>",
+    description: "Random seed 0-65535 for reproducible synthesis",
+  },
+  language: {
+    type: "string",
+    valueHint: "<lang>",
+    description: "Language hint (e.g. zh, en, ja, ko, fr, de)",
+  },
+  instruction: {
+    type: "string",
+    valueHint: "<text>",
+    description: 'Natural language instruction to control speech style (e.g. "Use a gentle tone"）',
+  },
+  enableSsml: { type: "switch", description: "Enable SSML markup parsing in input text" },
+  out: {
+    type: "string",
+    valueHint: "<path>",
+    description: "Save audio to file (default: auto-generate in temp dir)",
+  },
+  stream: { type: "switch", description: "Stream raw PCM audio to stdout (pipe to player)" },
+} satisfies FlagsDef;
+type SynthesizeFlags = Flags<typeof SYNTHESIZE_FLAGS>;
+
 export default defineCommand({
   description: "Synthesize speech from text (CosyVoice TTS)",
   auth: "apiKey",
   usageArgs: "--text <text> [flags]",
-  options: [
-    { flag: "--text <text>", description: "Text to synthesize into speech (or use --text-file)" },
-    { flag: "--text-file <path>", description: "Read text from a file instead of --text" },
-    {
-      flag: "--model <model>",
-      description:
-        "Model ID (default: cosyvoice-v3-flash). System voices available for cosyvoice-v3-flash",
-    },
-    {
-      flag: "--voice <voice>",
-      description:
-        "Voice ID. Use --list-voices to see system voices for cosyvoice-v3-flash; for v3.5-flash provide a clone/design voice ID",
-    },
-    {
-      flag: "--list-voices",
-      description: "List available system voices for the selected model and exit",
-    },
-    { flag: "--format <format>", description: "Audio format: mp3, pcm, wav, opus (default: mp3)" },
-    { flag: "--sample-rate <rate>", description: "Audio sample rate in Hz (e.g. 24000)" },
-    { flag: "--volume <volume>", description: "Volume 0-100 (default: 50)" },
-    { flag: "--rate <rate>", description: "Speech rate 0.5-2.0 (default: 1.0)" },
-    { flag: "--pitch <pitch>", description: "Pitch multiplier 0.5-2.0 (default: 1.0)" },
-    { flag: "--seed <seed>", description: "Random seed 0-65535 for reproducible synthesis" },
-    { flag: "--language <lang>", description: "Language hint (e.g. zh, en, ja, ko, fr, de)" },
-    {
-      flag: "--instruction <text>",
-      description:
-        'Natural language instruction to control speech style (e.g. "Use a gentle tone"）',
-    },
-    { flag: "--enable-ssml", description: "Enable SSML markup parsing in input text" },
-    {
-      flag: "--out <path>",
-      description: "Save audio to file (default: auto-generate in temp dir)",
-    },
-    { flag: "--stream", description: "Stream raw PCM audio to stdout (pipe to player)" },
-  ],
+  flags: SYNTHESIZE_FLAGS,
   exampleArgs: [
     "--list-voices --model cosyvoice-v3-flash",
     '--text "Hello, I am Qwen" --voice <voice_id>',
@@ -197,8 +233,8 @@ export default defineCommand({
     if (!f.voice) return "Missing required flag: --voice";
     return undefined;
   },
-  async run(config: Config, flags: GlobalFlags) {
-    const model = (flags.model as string) || config.defaultSpeechModel || "cosyvoice-v3-flash";
+  async run(config, flags) {
+    const model = flags.model || config.defaultSpeechModel || "cosyvoice-v3-flash";
 
     // --list-voices: print voice list for the model and exit
     if (flags.listVoices) {
@@ -207,9 +243,9 @@ export default defineCommand({
     }
 
     // --text / --text-file presence enforced by validate; empty file content → API rejects.
-    let text = (flags.text as string) || "";
+    let text = flags.text || "";
     if (!text && flags.textFile) {
-      const filePath = flags.textFile as string;
+      const filePath = flags.textFile;
       try {
         text = readFileSync(filePath, "utf-8").trim();
       } catch {
@@ -218,9 +254,9 @@ export default defineCommand({
     }
     const voice = flags.voice as string;
 
-    const language = (flags.language as string) || undefined;
-    const instruction = (flags.instruction as string) || undefined;
-    const audioFormat = (flags.format as "mp3" | "pcm" | "wav" | "opus") || undefined;
+    const language = flags.language || undefined;
+    const instruction = flags.instruction || undefined;
+    const audioFormat = flags.format || undefined;
     const sampleRate = flags.sampleRate !== undefined ? Number(flags.sampleRate) : undefined;
     const volume = flags.volume !== undefined ? Number(flags.volume) : undefined;
     const rate = flags.rate !== undefined ? Number(flags.rate) : undefined;
@@ -274,7 +310,7 @@ async function handleNonStreamMode(
   config: Config,
   url: string,
   body: DashScopeTTSRequest,
-  flags: GlobalFlags,
+  flags: SynthesizeFlags,
   format: OutputFormat,
 ): Promise<void> {
   const concurrent = getConcurrency(flags);
@@ -294,7 +330,7 @@ async function handleNonStreamMode(
   const destDir = resolveOutputDir(config, { subDir: "speech" });
 
   const items = audioUrls.map((audioUrl, i) => {
-    let destPath = flags.out as string | undefined;
+    let destPath = flags.out;
     if (destPath && audioUrls.length === 1) {
       // Single explicit output path
     } else {
@@ -340,7 +376,7 @@ async function handleStreamMode(
   config: Config,
   url: string,
   body: DashScopeTTSRequest,
-  flags: GlobalFlags,
+  flags: SynthesizeFlags,
   format: OutputFormat,
 ): Promise<void> {
   const res = await request(config, {
@@ -354,7 +390,7 @@ async function handleStreamMode(
     },
   });
 
-  const outPath = flags.out as string | undefined;
+  const outPath = flags.out;
   const writer = outPath ? createWriteStream(outPath) : null;
   let lastAudioUrl: string | undefined;
 

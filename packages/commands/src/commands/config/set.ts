@@ -5,8 +5,6 @@ import {
   readConfigFile,
   writeConfigFile,
   BailianError,
-  type Config,
-  type GlobalFlags,
   ExitCode,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
@@ -53,23 +51,24 @@ export default defineCommand({
   description: "Set a config value",
   auth: "none",
   usageArgs: "--key <key> --value <value>",
-  options: [
-    {
-      flag: "--key <key>",
+  flags: {
+    key: {
+      type: "string",
+      valueHint: "<key>",
       description:
         "Config key (base_url, output, output_dir, timeout, api_key, access_token, default_*_model, access_key_id, access_key_secret, workspace_id)",
       required: true,
     },
-    { flag: "--value <value>", description: "Value to set", required: true },
-  ],
+    value: { type: "string", valueHint: "<value>", description: "Value to set", required: true },
+  },
   exampleArgs: [
     "--key output --value json",
     "--key timeout --value 600",
     "--key base_url --value https://dashscope.aliyuncs.com",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const key = flags.key as string;
-    const value = flags.value as string;
+  async run(config, flags) {
+    const key = flags.key;
+    const value = flags.value;
 
     // Resolve hyphen aliases to underscore keys
     const resolvedKey: string = KEY_ALIASES[key] || key;

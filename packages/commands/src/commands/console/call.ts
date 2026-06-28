@@ -6,8 +6,6 @@ import {
   CONSOLE_GATEWAY_NO_TOKEN_MESSAGE,
   BailianError,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
@@ -15,35 +13,34 @@ export default defineCommand({
   description: "Call a Bailian console API via the CLI gateway",
   auth: "console",
   usageArgs: "--api <api> --data <json> [flags]",
-  options: [
-    {
-      flag: "--api <api>",
+  flags: {
+    api: {
+      type: "string",
+      valueHint: "<api>",
       description: "API name (e.g. zeldaEasy.broadscope-bailian.memory-library.getLibraries)",
       required: true,
     },
-    {
-      flag: "--data <json>",
+    data: {
+      type: "string",
+      valueHint: "<json>",
       description: "Request data as JSON string",
       required: true,
     },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
+    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
+    consoleSite: {
+      type: "string",
+      valueHint: "<site>",
       description: "Console site: domestic, international",
     },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
+  },
   exampleArgs: [
     `--api zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota --data '{"queryFreeTierQuotaRequest":{"models":["qwen3-max"]}}'`,
     `--api some.api.name --data '{"key":"value"}' --console-region cn-beijing`,
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const api = flags.api as string;
-    const dataRaw = flags.data as string;
+  async run(config, flags) {
+    const api = flags.api;
+    const dataRaw = flags.data;
 
     let data: Record<string, unknown>;
     try {

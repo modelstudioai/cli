@@ -3,8 +3,6 @@ import {
   callConsoleGateway,
   resolveConsoleGatewayCredential,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
@@ -79,24 +77,22 @@ export default defineCommand({
   description: "List all workspaces",
   auth: "console",
   usageArgs: "[flags]",
-  options: [
-    {
-      flag: "--list <n>",
+  flags: {
+    list: {
+      type: "string",
+      valueHint: "<n>",
       description: "Limit number of results",
     },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
+    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
+    consoleSite: {
+      type: "string",
+      valueHint: "<site>",
       description: "Console site: domestic, international",
     },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
+  },
   exampleArgs: ["", "--list 5", "--output json"],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     const limit = Number(flags.list) || 0;
     const format = detectOutputFormat(config.output);
 

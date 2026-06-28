@@ -11,7 +11,12 @@
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { GLOBAL_OPTIONS, type Command, type OptionDef } from "../packages/core/dist/index.mjs";
+import {
+  GLOBAL_FLAGS,
+  type AnyCommand,
+  type FlagDef,
+  type FlagsDef,
+} from "../packages/core/dist/index.mjs";
 import { commands } from "../packages/cli/src/commands.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -30,17 +35,29 @@ function topLevel(path: string): string {
   return path.split(" ")[0]!;
 }
 
-function optionType(opt: OptionDef): string {
-  if (opt.type) return opt.type;
-  if (!opt.flag.includes("<") && !opt.flag.includes("[")) return "boolean";
-  return "string";
+/** maxTokens → max-tokens. Flags are keyed by camelCase flag name. */
+function camelToKebab(str: string): string {
+  return str.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 }
 
-function formatOptionsTable(options: OptionDef[] | undefined): string {
-  if (!options?.length) return "_No command-specific options._\n";
-  const rows = options.map((o) => {
-    const req = o.required ? "yes" : "no";
-    return `| \`${escCell(o.flag)}\` | ${escCell(optionType(o))} | ${req} | ${escCell(o.description)} |`;
+/** "--max-tokens <count>" for a value flag, "--quiet" for a switch. */
+function flagDisplay(key: string, def: FlagDef): string {
+  const flag = `--${camelToKebab(key)}`;
+  if (def.type === "switch") return flag;
+  const hint = def.choices ? `<${def.choices.join("|")}>` : def.valueHint;
+  return `${flag} ${hint}`;
+}
+
+function flagType(def: FlagDef): string {
+  return def.type;
+}
+
+function formatFlagsTable(flags: FlagsDef | undefined): string {
+  const entries = Object.entries(flags ?? {});
+  if (!entries.length) return "_No command-specific flags._\n";
+  const rows = entries.map(([key, def]) => {
+    const req = def.type !== "switch" && def.required ? "yes" : "no";
+    return `| \`${escCell(flagDisplay(key, def))}\` | ${escCell(flagType(def))} | ${req} | ${escCell(def.description)} |`;
   });
   return [
     "| Flag | Type | Required | Description |",
@@ -65,7 +82,7 @@ function formatNotes(notes: string[] | undefined): string {
   return notes.map((n) => `- ${n}`).join("\n") + "\n";
 }
 
-function commandSection(path: string, cmd: Command): string {
+function commandSection(path: string, cmd: AnyCommand): string {
   const lines: string[] = [];
   lines.push(`### \`bl ${path}\``, "");
   lines.push(`| Field | Value |`, `| --- | --- |`);
@@ -76,8 +93,8 @@ function commandSection(path: string, cmd: Command): string {
   lines.push(`| **Usage** | \`${escCell(usage)}\` |`);
   lines.push("");
 
-  lines.push("#### Options", "");
-  lines.push(formatOptionsTable(cmd.options));
+  lines.push("#### Flags", "");
+  lines.push(formatFlagsTable(cmd.flags));
 
   if (cmd.notes?.length) {
     lines.push("#### Notes", "");
@@ -90,8 +107,8 @@ function commandSection(path: string, cmd: Command): string {
   return lines.join("\n");
 }
 
-function groupByTopLevel(entries: [string, Command][]): Map<string, [string, Command][]> {
-  const groups = new Map<string, [string, Command][]>();
+function groupByTopLevel(entries: [string, AnyCommand][]): Map<string, [string, AnyCommand][]> {
+  const groups = new Map<string, [string, AnyCommand][]>();
   for (const entry of entries) {
     const key = topLevel(entry[0]);
     const list = groups.get(key) ?? [];
@@ -104,7 +121,7 @@ function groupByTopLevel(entries: [string, Command][]): Map<string, [string, Com
   return groups;
 }
 
-function buildGroupFile(group: string, groupEntries: [string, Command][]): string {
+function buildGroupFile(group: string, groupEntries: [string, AnyCommand][]): string {
   const lines: string[] = [
     `# \`bl ${group}\` commands`,
     "",
@@ -131,8 +148,8 @@ function buildGroupFile(group: string, groupEntries: [string, Command][]): strin
 }
 
 function buildIndex(
-  entries: [string, Command][],
-  groups: Map<string, [string, Command][]>,
+  entries: [string, AnyCommand][],
+  groups: Map<string, [string, AnyCommand][]>,
 ): string {
   const lines: string[] = [
     "# bailian-cli (`bl`) command reference",
@@ -168,9 +185,9 @@ function buildIndex(
     "",
     "## Global flags",
     "",
-    "Available on every command (in addition to command-specific options):",
+    "Available on every command (in addition to command-specific flags):",
     "",
-    formatOptionsTable(GLOBAL_OPTIONS),
+    formatFlagsTable(GLOBAL_FLAGS),
     "",
     "## Notes",
     "",

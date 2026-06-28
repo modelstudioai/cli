@@ -5,7 +5,6 @@ import {
   resolveConsoleGatewayCredential,
   detectOutputFormat,
   type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
@@ -238,26 +237,25 @@ export default defineCommand({
   description: "Check current usage against rate limits",
   auth: "console",
   usageArgs: "[--model <model>] [flags]",
-  options: [
-    {
-      flag: "--model <model>",
+  flags: {
+    model: {
+      type: "string",
+      valueHint: "<model>",
       description: "Model name(s), comma-separated",
     },
-    {
-      flag: "--period <minutes>",
+    period: {
+      type: "string",
+      valueHint: "<minutes>",
       description: "Query usage for the last N minutes (default: 2)",
     },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
+    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
+    consoleSite: {
+      type: "string",
+      valueHint: "<site>",
       description: "Console site: domestic, international",
     },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
+  },
   exampleArgs: [
     "",
     "--model qwen3.6-plus",
@@ -265,8 +263,8 @@ export default defineCommand({
     "--model qwen3.6-plus,qwen-turbo",
     "--output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const modelFlag = (flags.model as string) || undefined;
+  async run(config, flags) {
+    const modelFlag = flags.model || undefined;
     const rawPeriod = Number(flags.period) || 2;
     if (rawPeriod < 1) {
       process.stderr.write("Error: --period must be at least 1 minute.\n");

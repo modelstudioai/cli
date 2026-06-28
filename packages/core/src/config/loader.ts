@@ -4,7 +4,7 @@ import { ensureConfigDir, getConfigPath } from "./paths.ts";
 import { detectOutputFormat, type OutputFormat } from "../output/formatter.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
-import type { GlobalFlags } from "../types/flags.ts";
+import type { GlobalFlags } from "../types/command.ts";
 
 export function readConfigFile(): ConfigFile {
   const path = getConfigPath();

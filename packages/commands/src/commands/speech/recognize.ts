@@ -5,7 +5,6 @@ import {
   ExitCode,
   detectOutputFormat,
   type Config,
-  type GlobalFlags,
   type DashScopeASRRequest,
   type DashScopeASRTaskResult,
   type DashScopeAsyncResponse,
@@ -17,39 +16,52 @@ import {
   requestJson,
   type OutputFormat,
   speechRecognizeEndpoint,
+  type FlagsDef,
+  type Flags,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
+
+const RECOGNIZE_FLAGS = {
+  url: {
+    type: "array",
+    valueHint: "<url>",
+    description: "Audio file URL or local file path (repeatable, max 100)",
+    required: true,
+  },
+  model: { type: "string", valueHint: "<model>", description: "Model ID (default: fun-asr)" },
+  language: { type: "string", valueHint: "<lang>", description: "Language hint (e.g. zh, en, ja)" },
+  diarization: { type: "switch", description: "Enable automatic speaker diarization" },
+  speakerCount: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Expected number of speakers (requires --diarization)",
+  },
+  vocabularyId: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Hot-word vocabulary ID for improved accuracy",
+  },
+  channelId: { type: "number", valueHint: "<n>", description: "Audio channel ID (default: 0)" },
+  out: {
+    type: "string",
+    valueHint: "<path>",
+    description: "Save full transcription result to JSON file",
+  },
+  noWait: { type: "switch", description: "Return task ID immediately without polling" },
+  pollInterval: {
+    type: "number",
+    valueHint: "<seconds>",
+    description: "Polling interval in seconds (default: 2)",
+  },
+} satisfies FlagsDef;
+type RecognizeFlags = Flags<typeof RECOGNIZE_FLAGS>;
 
 export default defineCommand({
   description: "Recognize speech from audio files (FunAudio-ASR)",
   auth: "apiKey",
   usageArgs: "--url <audio-url> [flags]",
-  options: [
-    {
-      flag: "--url <url>",
-      description: "Audio file URL or local file path (repeatable, max 100)",
-      required: true,
-      type: "array",
-    },
-    { flag: "--model <model>", description: "Model ID (default: fun-asr)" },
-    { flag: "--language <lang>", description: "Language hint (e.g. zh, en, ja)" },
-    { flag: "--diarization", description: "Enable automatic speaker diarization" },
-    {
-      flag: "--speaker-count <n>",
-      description: "Expected number of speakers (requires --diarization)",
-      type: "number",
-    },
-    { flag: "--vocabulary-id <id>", description: "Hot-word vocabulary ID for improved accuracy" },
-    { flag: "--channel-id <n>", description: "Audio channel ID (default: 0)", type: "number" },
-    { flag: "--out <path>", description: "Save full transcription result to JSON file" },
-    { flag: "--no-wait", description: "Return task ID immediately without polling" },
-    {
-      flag: "--poll-interval <seconds>",
-      description: "Polling interval in seconds (default: 2)",
-      type: "number",
-    },
-  ],
+  flags: RECOGNIZE_FLAGS,
   exampleArgs: [
     "--url https://example.com/audio.mp3",
     "--url https://example.com/a.mp3 --url https://example.com/b.mp3",
@@ -59,17 +71,17 @@ export default defineCommand({
     "--url https://example.com/audio.mp3 --out result.json",
     "--url https://example.com/audio.mp3 --no-wait --quiet",
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     // Normalize --url to string[] (supports both single and repeated flags)
     let rawUrls: string[] = [];
     if (Array.isArray(flags.url)) {
-      rawUrls = flags.url as string[];
+      rawUrls = flags.url;
     } else if (typeof flags.url === "string") {
       rawUrls = [flags.url];
     }
 
     // Strict validation: --speaker-count requires --diarization
-    const speakerCount = flags.speakerCount as number | undefined;
+    const speakerCount = flags.speakerCount;
     const diarization = flags.diarization === true;
     if (speakerCount !== undefined && !diarization) {
       throw new BailianError(
@@ -78,7 +90,7 @@ export default defineCommand({
       );
     }
 
-    const model = (flags.model as string) || "fun-asr";
+    const model = flags.model || "fun-asr";
     const format = detectOutputFormat(config.output);
 
     // Auto-upload local files in parallel
@@ -86,9 +98,9 @@ export default defineCommand({
     const resolvedUrls = await Promise.all(
       rawUrls.map((u) => resolveFileUrl(u, credential.token, model)),
     );
-    const channelId = flags.channelId as number | undefined;
-    const language = flags.language as string | undefined;
-    const vocabularyId = flags.vocabularyId as string | undefined;
+    const channelId = flags.channelId;
+    const language = flags.language;
+    const vocabularyId = flags.vocabularyId;
 
     const body: DashScopeASRRequest = {
       model,
@@ -125,7 +137,7 @@ async function handleAsyncMode(
   config: Config,
   url: string,
   body: DashScopeASRRequest,
-  flags: GlobalFlags,
+  flags: RecognizeFlags,
   format: OutputFormat,
   fileCount: number,
 ): Promise<void> {
@@ -146,7 +158,7 @@ async function handleAsyncMode(
   }
 
   // Poll until completion
-  const pollInterval = (flags.pollInterval as number) ?? 2;
+  const pollInterval = flags.pollInterval ?? 2;
   const pollUrl = taskEndpoint(config.baseUrl, taskId);
 
   const result = await poll<DashScopeASRTaskResult>(config, {
@@ -234,7 +246,7 @@ async function handleAsyncMode(
 
   // Save to --out file
   if (flags.out) {
-    const outPath = flags.out as string;
+    const outPath = flags.out;
     const outData = allTransData.length === 1 ? allTransData[0] : allTransData;
     writeFileSync(outPath, JSON.stringify(outData, null, 2) + "\n");
     if (!config.quiet) {

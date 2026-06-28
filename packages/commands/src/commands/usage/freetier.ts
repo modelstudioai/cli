@@ -5,7 +5,6 @@ import {
   fetchModelList,
   detectOutputFormat,
   type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
@@ -104,34 +103,32 @@ export default defineCommand({
     "Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable",
   auth: "console",
   usageArgs: "<--model <model>[,model2,...] | --all> [--off] [flags]",
-  options: [
-    {
-      flag: "--model <model>",
+  flags: {
+    model: {
+      type: "string",
+      valueHint: "<model>",
       description: "Model name(s), comma-separated for multiple",
     },
-    {
-      flag: "--all",
+    all: {
+      type: "switch",
       description: "Apply to all free-tier models",
     },
-    {
-      flag: "--on",
+    on: {
+      type: "switch",
       description: "Enable auto-stop (default behavior)",
     },
-    {
-      flag: "--off",
+    off: {
+      type: "switch",
       description: "Disable auto-stop",
     },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
+    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
+    consoleSite: {
+      type: "string",
+      valueHint: "<site>",
       description: "Console site: domestic, international",
     },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
+  },
   exampleArgs: [
     "--model qwen3-max",
     "--model qwen3-max,qwen-turbo",
@@ -142,8 +139,8 @@ export default defineCommand({
   ],
   validate: (f) =>
     !f.model && !f.all ? "Provide --model <model>[,model2,...] or --all." : undefined,
-  async run(config: Config, flags: GlobalFlags) {
-    const modelFlag = (flags.model as string) || undefined;
+  async run(config, flags) {
+    const modelFlag = flags.model || undefined;
     const off = Boolean(flags.off);
     const format = detectOutputFormat(config.output);
 

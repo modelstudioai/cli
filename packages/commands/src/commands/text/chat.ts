@@ -5,31 +5,73 @@ import {
   chatEndpoint,
   parseSSE,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type ChatMessage,
   type ChatRequest,
   type ChatResponse,
   type StreamChunk,
+  type FlagsDef,
+  type Flags,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { readFileSync } from "fs";
+
+const CHAT_FLAGS = {
+  model: { type: "string", valueHint: "<model>", description: "Model ID (default: qwen3.7-max)" },
+  message: {
+    type: "array",
+    valueHint: "<text>",
+    description: "Message text (repeatable, prefix role: to set role); or use --messages-file",
+  },
+  messagesFile: {
+    type: "string",
+    valueHint: "<path>",
+    description: "JSON file with messages array (use - for stdin)",
+  },
+  system: { type: "string", valueHint: "<text>", description: "System prompt" },
+  maxTokens: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Maximum tokens to generate (default: 4096)",
+  },
+  temperature: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Sampling temperature (0.0, 2.0]",
+  },
+  topP: { type: "number", valueHint: "<n>", description: "Nucleus sampling threshold" },
+  stream: { type: "switch", description: "Stream response tokens (default: on in TTY)" },
+  tool: {
+    type: "array",
+    valueHint: "<json-or-path>",
+    description: "Tool definition as JSON or file path (repeatable)",
+  },
+  enableThinking: {
+    type: "switch",
+    description: "Enable thinking/reasoning mode (for qwen3/qwq models)",
+  },
+  thinkingBudget: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Max tokens for thinking (default: 4096)",
+  },
+} satisfies FlagsDef;
+type ChatFlags = Flags<typeof CHAT_FLAGS>;
 
 interface ParsedMessages {
   system?: string;
   messages: ChatMessage[];
 }
 
-function parseMessages(flags: GlobalFlags): ParsedMessages {
+function parseMessages(flags: ChatFlags): ParsedMessages {
   const messages: ChatMessage[] = [];
   let system: string | undefined;
 
   if (flags.system) {
-    system = flags.system as string;
+    system = flags.system;
   }
 
   if (flags.messagesFile) {
-    const filePath = flags.messagesFile as string;
+    const filePath = flags.messagesFile;
     const raw =
       filePath === "-" ? readFileSync("/dev/stdin", "utf-8") : readFileSync(filePath, "utf-8");
     const parsed = JSON.parse(raw) as Array<{ role: string; content: string }>;
@@ -44,7 +86,7 @@ function parseMessages(flags: GlobalFlags): ParsedMessages {
 
   if (flags.message) {
     const validRoles = new Set(["system", "user", "assistant"]);
-    const msgs = flags.message as string[];
+    const msgs = flags.message;
     for (const m of msgs) {
       const colonIdx = m.indexOf(":");
       const maybeRole = colonIdx !== -1 ? m.slice(0, colonIdx) : "";
@@ -69,41 +111,7 @@ export default defineCommand({
   description: "Send a chat completion (OpenAI compatible, DashScope)",
   auth: "apiKey",
   usageArgs: "--message <text> [flags]",
-  options: [
-    { flag: "--model <model>", description: "Model ID (default: qwen3.7-max)" },
-    {
-      flag: "--message <text>",
-      description: "Message text (repeatable, prefix role: to set role); or use --messages-file",
-      type: "array",
-    },
-    {
-      flag: "--messages-file <path>",
-      description: "JSON file with messages array (use - for stdin)",
-    },
-    { flag: "--system <text>", description: "System prompt" },
-    {
-      flag: "--max-tokens <n>",
-      description: "Maximum tokens to generate (default: 4096)",
-      type: "number",
-    },
-    { flag: "--temperature <n>", description: "Sampling temperature (0.0, 2.0]", type: "number" },
-    { flag: "--top-p <n>", description: "Nucleus sampling threshold", type: "number" },
-    { flag: "--stream", description: "Stream response tokens (default: on in TTY)" },
-    {
-      flag: "--tool <json-or-path>",
-      description: "Tool definition as JSON or file path (repeatable)",
-      type: "array",
-    },
-    {
-      flag: "--enable-thinking",
-      description: "Enable thinking/reasoning mode (for qwen3/qwq models)",
-    },
-    {
-      flag: "--thinking-budget <n>",
-      description: "Max tokens for thinking (default: 4096)",
-      type: "number",
-    },
-  ],
+  flags: CHAT_FLAGS,
   exampleArgs: [
     '--message "What is Qwen?"',
     '--model qwen-max --system "You are a coding assistant." --message "Write fizzbuzz in Python"',
@@ -114,12 +122,11 @@ export default defineCommand({
   ],
   validate: (f) =>
     !f.message && !f.messagesFile ? "Provide --message or --messages-file." : undefined,
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     const { system, messages } = parseMessages(flags);
 
-    const model = (flags.model as string) || config.defaultTextModel || "qwen3.7-max";
-    const shouldStream =
-      flags.stream === true || (flags.stream === undefined && process.stdout.isTTY);
+    const model = flags.model || config.defaultTextModel || "qwen3.7-max";
+    const shouldStream = flags.stream || process.stdout.isTTY;
     const format = detectOutputFormat(config.output);
 
     // Build messages array with system prompt
@@ -132,22 +139,22 @@ export default defineCommand({
     const body: ChatRequest = {
       model,
       messages: allMessages,
-      max_tokens: (flags.maxTokens as number) ?? 4096,
+      max_tokens: flags.maxTokens ?? 4096,
       stream: shouldStream,
     };
 
-    if (flags.temperature !== undefined) body.temperature = flags.temperature as number;
-    if (flags.topP !== undefined) body.top_p = flags.topP as number;
+    if (flags.temperature !== undefined) body.temperature = flags.temperature;
+    if (flags.topP !== undefined) body.top_p = flags.topP;
 
     if (flags.enableThinking) {
       body.enable_thinking = true;
       if (flags.thinkingBudget !== undefined) {
-        body.thinking_budget = flags.thinkingBudget as number;
+        body.thinking_budget = flags.thinkingBudget;
       }
     }
 
     if (flags.tool) {
-      const tools = (flags.tool as string[]).map((t) => {
+      const tools = flags.tool.map((t) => {
         try {
           return JSON.parse(t);
         } catch {

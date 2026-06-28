@@ -4,7 +4,6 @@ import {
   resolveConsoleGatewayCredential,
   detectOutputFormat,
   type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
@@ -153,26 +152,24 @@ export default defineCommand({
   description: "View model RPM/TPM rate limits",
   auth: "console",
   usageArgs: "[--model <model>] [flags]",
-  options: [
-    {
-      flag: "--model <model>",
+  flags: {
+    model: {
+      type: "string",
+      valueHint: "<model>",
       description: "Model name(s), comma-separated",
     },
-    {
-      flag: "--all",
+    all: {
+      type: "switch",
       description: "Show all models, not just self-service ones",
     },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
+    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
+    consoleSite: {
+      type: "string",
+      valueHint: "<site>",
       description: "Console site: domestic, international",
     },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
+  },
   exampleArgs: [
     "",
     "--model qwen3.6-plus",
@@ -180,8 +177,8 @@ export default defineCommand({
     "--all",
     "--output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const modelFlag = (flags.model as string) || undefined;
+  async run(config, flags) {
+    const modelFlag = flags.model || undefined;
     const showAll = Boolean(flags.all);
     const format = detectOutputFormat(config.output);
 

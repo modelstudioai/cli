@@ -4,8 +4,6 @@ import {
   videoGenerateEndpoint,
   taskEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type DashScopeVideoRefRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
@@ -27,63 +25,80 @@ export default defineCommand({
     "Reference-to-video generation (happyhorse-1.0-r2v / wan2.6-r2v): multi-subject, multi-shot with voice",
   auth: "apiKey",
   usageArgs: "--prompt <text> --image <url>... [--ref-video <url>...] [flags]",
-  options: [
-    { flag: "--model <model>", description: "Model ID (default: happyhorse-1.0-r2v)" },
-    {
-      flag: "--prompt <text>",
+  flags: {
+    model: {
+      type: "string",
+      valueHint: "<model>",
+      description: "Model ID (default: happyhorse-1.0-r2v)",
+    },
+    prompt: {
+      type: "string",
+      valueHint: "<text>",
       description: "Video description with reference markers (image1, video1, etc.)",
       required: true,
     },
-    {
-      flag: "--image <url>",
+    image: {
+      type: "array",
+      valueHint: "<url>",
       description: "Reference image URL or local file (repeatable for multiple subjects)",
-      type: "array",
     },
-    {
-      flag: "--ref-video <url>",
+    refVideo: {
+      type: "array",
+      valueHint: "<url>",
       description: "Reference video URL or local file (repeatable)",
-      type: "array",
     },
-    {
-      flag: "--image-voice <url>",
+    imageVoice: {
+      type: "array",
+      valueHint: "<url>",
       description: "Voice URL for corresponding image (pairs by position)",
-      type: "array",
     },
-    {
-      flag: "--video-voice <url>",
+    videoVoice: {
+      type: "array",
+      valueHint: "<url>",
       description: "Voice URL for corresponding ref-video (pairs by position)",
-      type: "array",
     },
-    { flag: "--resolution <res>", description: "Resolution: 720P or 1080P (default: 1080P)" },
-    { flag: "--ratio <ratio>", description: "Aspect ratio (16:9, 9:16, 1:1)" },
-    {
-      flag: "--duration <seconds>",
-      description: "Video duration in seconds (default: 5)",
+    resolution: {
+      type: "string",
+      valueHint: "<res>",
+      description: "Resolution: 720P or 1080P (default: 1080P)",
+    },
+    ratio: { type: "string", valueHint: "<ratio>", description: "Aspect ratio (16:9, 9:16, 1:1)" },
+    duration: {
       type: "number",
+      valueHint: "<seconds>",
+      description: "Video duration in seconds (default: 5)",
     },
-    {
-      flag: "--prompt-extend <bool>",
+    promptExtend: {
+      type: "boolean",
+      valueHint: "<bool>",
       description: BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT,
-      type: "boolean",
     },
-    {
-      flag: "--watermark <bool>",
+    watermark: {
+      type: "boolean",
+      valueHint: "<bool>",
       description: BOOL_FLAG_WATERMARK,
-      type: "boolean",
     },
-    { flag: "--seed <n>", description: "Random seed for reproducible generation", type: "number" },
-    { flag: "--download <path>", description: "Save video to file on completion" },
-    { flag: "--no-wait", description: "Return task ID immediately without waiting" },
-    {
-      flag: "--async",
+    seed: {
+      type: "number",
+      valueHint: "<n>",
+      description: "Random seed for reproducible generation",
+    },
+    download: {
+      type: "string",
+      valueHint: "<path>",
+      description: "Save video to file on completion",
+    },
+    noWait: { type: "switch", description: "Return task ID immediately without waiting" },
+    pollInterval: {
+      type: "number",
+      valueHint: "<seconds>",
+      description: "Polling interval when waiting (default: 15)",
+    },
+    async: {
+      type: "switch",
       description: "Return task ID immediately (agent/CI mode, same as --no-wait)",
     },
-    {
-      flag: "--poll-interval <seconds>",
-      description: "Polling interval when waiting (default: 15)",
-      type: "number",
-    },
-  ],
+  },
   exampleArgs: [
     '--prompt "Image1 running on the grass" --image person.jpg',
     '--prompt "Video 1 plays guitar, Image 1 walks over" --ref-video scene.mp4 --image person.jpg',
@@ -95,16 +110,16 @@ export default defineCommand({
     !(f.image as string[] | undefined)?.length && !(f.refVideo as string[] | undefined)?.length
       ? "Provide at least one --image or --ref-video."
       : undefined,
-  async run(config: Config, flags: GlobalFlags) {
-    const prompt = flags.prompt as string;
+  async run(config, flags) {
+    const prompt = flags.prompt;
 
-    const images = (flags.image as string[] | undefined) || [];
-    const refVideos = (flags.refVideo as string[] | undefined) || [];
+    const images = flags.image || [];
+    const refVideos = flags.refVideo || [];
 
-    const imageVoices = (flags.imageVoice as string[] | undefined) || [];
-    const videoVoices = (flags.videoVoice as string[] | undefined) || [];
+    const imageVoices = flags.imageVoice || [];
+    const videoVoices = flags.videoVoice || [];
 
-    const model = (flags.model as string) || "happyhorse-1.0-r2v";
+    const model = flags.model || "happyhorse-1.0-r2v";
     const format = detectOutputFormat(config.output);
 
     // --- Resolve file URLs (auto-upload local files) ---
@@ -152,16 +167,16 @@ export default defineCommand({
     const body: DashScopeVideoRefRequest = {
       model,
       input: {
-        prompt: prompt!,
+        prompt: prompt,
         media,
       },
       parameters: {
-        resolution: (flags.resolution as string) || undefined,
-        ratio: (flags.ratio as string) || undefined,
-        duration: (flags.duration as number) || undefined,
+        resolution: flags.resolution || undefined,
+        ratio: flags.ratio || undefined,
+        duration: flags.duration || undefined,
         prompt_extend: promptExtend,
         watermark,
-        seed: flags.seed as number | undefined,
+        seed: flags.seed,
       },
     };
 
@@ -195,7 +210,7 @@ export default defineCommand({
     }
 
     // --- Poll until completion ---
-    const pollInterval = (flags.pollInterval as number) ?? 15;
+    const pollInterval = flags.pollInterval ?? 15;
     const pollUrl = taskEndpoint(config.baseUrl, taskId);
     const refTimeout = Math.max(config.timeout, 600);
 
@@ -221,7 +236,7 @@ export default defineCommand({
 
     // --download: save to file
     if (flags.download) {
-      const destPath = flags.download as string;
+      const destPath = flags.download;
       const { size } = await downloadFile(resultVideoUrl, destPath, { quiet: config.quiet });
 
       if (config.quiet) {

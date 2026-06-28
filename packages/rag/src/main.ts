@@ -1,5 +1,5 @@
 import { createCli } from "bailian-cli-runtime";
-import type { Command } from "bailian-cli-core";
+import type { AnyCommand } from "bailian-cli-core";
 import {
   authLogin,
   authStatus,
@@ -24,7 +24,7 @@ import pkg from "../package.json" with { type: "json" };
 // remapped to a flat `rag retrieve` path. Routing is driven entirely by these
 // keys, and usage/examples/errors render the path from the key — so the same
 // shared command shows `rag retrieve` here and `bl knowledge retrieve` in bl.
-const commands: Record<string, Command> = {
+const commands: Record<string, AnyCommand> = {
   "auth login": authLogin,
   "auth status": authStatus,
   "auth logout": authLogout,

@@ -1,11 +1,4 @@
-import {
-  defineCommand,
-  McpClient,
-  bailianMcpUrl,
-  detectOutputFormat,
-  type Config,
-  type GlobalFlags,
-} from "bailian-cli-core";
+import { defineCommand, McpClient, bailianMcpUrl, detectOutputFormat } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { ensureApiKey } from "bailian-cli-runtime";
 
@@ -13,23 +6,28 @@ export default defineCommand({
   description: "List tools exposed by an MCP server (tools/list)",
   auth: "apiKey",
   usageArgs: "--server <code> [--url <url>]",
-  options: [
-    {
-      flag: "--server <code>",
+  flags: {
+    server: {
+      type: "string",
+      valueHint: "<code>",
       description: "Server code from `mcp list` (e.g. market-cmapi00073529)",
       required: true,
     },
-    { flag: "--url <url>", description: "Override the MCP endpoint URL (for non-Bailian servers)" },
-  ],
+    url: {
+      type: "string",
+      valueHint: "<url>",
+      description: "Override the MCP endpoint URL (for non-Bailian servers)",
+    },
+  },
   exampleArgs: [
     "--server market-cmapi00073529",
     "--server market-cmapi00073529 --output json",
     "--server my-server --url https://example.com/mcp",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const code = flags.server as string;
+  async run(config, flags) {
+    const code = flags.server;
 
-    const url = (flags.url as string) || bailianMcpUrl(config.baseUrl, code);
+    const url = flags.url || bailianMcpUrl(config.baseUrl, code);
     const format = detectOutputFormat(config.output);
 
     if (config.dryRun) {

@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { defineCommand, type Config, type GlobalFlags } from "bailian-cli-core";
+import { defineCommand } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { initPipelineSteps } from "bailian-cli-runtime";
 import { collectPipelineIssues, collectPipelineHints } from "bailian-cli-runtime";
@@ -9,12 +9,17 @@ export default defineCommand({
   description: "Validate a pipeline definition without executing",
   auth: "none",
   usageArgs: "--file <path>",
-  options: [
-    { flag: "--file <path>", description: "Pipeline definition file (YAML/JSON)", required: true },
-  ],
+  flags: {
+    file: {
+      type: "string",
+      valueHint: "<path>",
+      description: "Pipeline definition file (YAML/JSON)",
+      required: true,
+    },
+  },
   exampleArgs: ["--file workflow.yaml", "--file workflow.json --output json"],
-  async run(config: Config, flags: GlobalFlags) {
-    const file = flags.file as string;
+  async run(config, flags) {
+    const file = flags.file;
 
     initPipelineSteps();
 

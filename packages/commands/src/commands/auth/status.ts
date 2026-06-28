@@ -5,7 +5,6 @@ import {
   detectOutputFormat,
   maskToken,
   type Config,
-  type GlobalFlags,
   type ResolvedCredential,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
@@ -141,20 +140,17 @@ function emitTextStatus(status: AuthStatusPayload, config: Config): void {
 export default defineCommand({
   description: "Show current authentication state",
   auth: "none",
-  options: [
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
+  exampleArgs: ["", "--output json"],
+  flags: {
+    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
+    consoleSite: {
+      type: "string",
+      valueHint: "<site>",
       description: "Console site: domestic, international",
     },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
-  exampleArgs: ["", "--output json"],
-  async run(config: Config, _flags: GlobalFlags) {
+    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
+  },
+  async run(config, _flags) {
     const format = detectOutputFormat(config.output);
     const status = await buildStatus(config);
 

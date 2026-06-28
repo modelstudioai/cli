@@ -4,8 +4,6 @@ import {
   resolveConsoleGatewayCredential,
   detectOutputFormat,
   BailianError,
-  type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
@@ -94,35 +92,35 @@ export default defineCommand({
   description: "View quota change history",
   auth: "console",
   usageArgs: "[flags]",
-  options: [
-    {
-      flag: "--page <n>",
+  flags: {
+    page: {
+      type: "string",
+      valueHint: "<n>",
       description: "Page number (default: 1)",
     },
-    {
-      flag: "--page-size <n>",
+    pageSize: {
+      type: "string",
+      valueHint: "<n>",
       description: "Page size (default: 10)",
     },
-    {
-      flag: "--model <model>",
+    model: {
+      type: "string",
+      valueHint: "<model>",
       description: "Filter by model name",
     },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
+    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
+    consoleSite: {
+      type: "string",
+      valueHint: "<site>",
       description: "Console site: domestic, international",
     },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
+  },
   exampleArgs: ["", "--page 2", "--page-size 20", "--model qwen-turbo", "--output json"],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     const page = Number(flags.page) || 1;
     const pageSize = Number(flags.pageSize) || 10;
-    const modelFilter = (flags.model as string) || undefined;
+    const modelFilter = flags.model || undefined;
     const format = detectOutputFormat(config.output);
 
     const requestData = {

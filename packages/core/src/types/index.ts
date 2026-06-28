@@ -1,6 +1,13 @@
-export type { Command, CommandSpec, OptionDef } from "./command.ts";
-export { defineCommand, GLOBAL_OPTIONS } from "./command.ts";
-export type { GlobalFlags } from "./flags.ts";
+export type {
+  Command,
+  AnyCommand,
+  FlagDef,
+  FlagsDef,
+  ParsedFlags,
+  Flags,
+  GlobalFlags,
+} from "./command.ts";
+export { defineCommand, GLOBAL_FLAGS } from "./command.ts";
 export type {
   AppCompletionRequest,
   AppCompletionResponse,

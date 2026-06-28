@@ -4,8 +4,6 @@ import {
   readConfigFile,
   writeConfigFile,
   getConfigPath,
-  type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitBare } from "bailian-cli-runtime";
 
@@ -21,16 +19,15 @@ export default defineCommand({
   description: "Clear stored credentials",
   auth: "none",
   usageArgs: "[--console] [--yes] [--dry-run]",
-  options: [
-    {
-      flag: "--console",
+  flags: {
+    console: {
+      type: "switch",
       description: "Only clear the console access_token, keep api_key intact",
-      type: "boolean",
     },
-    { flag: "--yes", description: "Skip confirmation prompt" },
-  ],
+    yes: { type: "switch", description: "Skip confirmation prompt" },
+  },
   exampleArgs: ["", "--console", "--dry-run", "--yes"],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     const file = readConfigFile();
 
     if (flags.console) {

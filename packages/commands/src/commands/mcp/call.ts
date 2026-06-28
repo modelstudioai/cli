@@ -1,11 +1,4 @@
-import {
-  defineCommand,
-  McpClient,
-  bailianMcpUrl,
-  detectOutputFormat,
-  type Config,
-  type GlobalFlags,
-} from "bailian-cli-core";
+import { defineCommand, McpClient, bailianMcpUrl, detectOutputFormat } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { ensureApiKey } from "bailian-cli-runtime";
 
@@ -32,35 +25,42 @@ export default defineCommand({
   description: "Call a tool on an MCP server (tools/call)",
   auth: "apiKey",
   usageArgs: "--target <server.tool> [--arg k=v ...] [--json '{...}'] [--url <url>]",
-  options: [
-    {
-      flag: "--target <server.tool>",
+  flags: {
+    target: {
+      type: "string",
+      valueHint: "<server.tool>",
       description:
         "Server code and tool name joined by a dot, e.g. market-cmapi00073529.SmartStockSelection",
       required: true,
     },
-    {
-      flag: "--arg <kv>",
-      description: "Tool argument (repeatable). Values parsed as JSON if possible, else string.",
+    arg: {
       type: "array",
+      valueHint: "<kv>",
+      description: "Tool argument (repeatable). Values parsed as JSON if possible, else string.",
     },
-    {
-      flag: "--json <obj>",
+    json: {
+      type: "string",
+      valueHint: "<obj>",
       description: "Full arguments object as JSON; merged with --arg (arg wins).",
     },
-    {
-      flag: "--query <text>",
+    query: {
+      type: "string",
+      valueHint: "<text>",
       description: "Shortcut for --arg query=<text> (mirrors many DashScope MCP tools).",
     },
-    { flag: "--url <url>", description: "Override the MCP endpoint URL (for non-Bailian servers)" },
-  ],
+    url: {
+      type: "string",
+      valueHint: "<url>",
+      description: "Override the MCP endpoint URL (for non-Bailian servers)",
+    },
+  },
   exampleArgs: [
     '--target market-cmapi00073529.SmartStockSelection --query "Screen consumer stocks with ROE > 15%"',
     '--target market-cmapi00073529.FinQuery --json \'{"q":"Guizhou Maotai","limit":5}\'',
     "--target market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 --arg minScale=10",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const target = flags.target as string;
+  async run(config, flags) {
+    const target = flags.target;
 
     const dot = target.indexOf(".");
     if (dot <= 0 || dot === target.length - 1) {
@@ -73,7 +73,7 @@ export default defineCommand({
     let toolArgs: Record<string, unknown> = {};
     if (flags.json) {
       try {
-        const parsed = JSON.parse(flags.json as string);
+        const parsed = JSON.parse(flags.json);
         if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
           process.stderr.write("Error: --json must decode to an object.\n");
           process.exit(1);
@@ -84,10 +84,10 @@ export default defineCommand({
         process.exit(1);
       }
     }
-    Object.assign(toolArgs, parseArgFlags((flags.arg as string[] | undefined) ?? []));
+    Object.assign(toolArgs, parseArgFlags(flags.arg ?? []));
     if (flags.query !== undefined) toolArgs.query = flags.query;
 
-    const url = (flags.url as string) || bailianMcpUrl(config.baseUrl, serverCode);
+    const url = flags.url || bailianMcpUrl(config.baseUrl, serverCode);
     const format = detectOutputFormat(config.output);
 
     if (config.dryRun) {

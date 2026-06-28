@@ -1,5 +1,5 @@
 import type { Config } from "../config/schema.ts";
-import type { GlobalFlags } from "../types/flags.ts";
+import type { GlobalFlags } from "../types/command.ts";
 import { BailianError } from "../errors/base.ts";
 import { createTrackingEvent } from "./event.ts";
 import { localSink, remoteSink } from "./sink.ts";

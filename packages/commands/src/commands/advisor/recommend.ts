@@ -1,11 +1,9 @@
 import {
   analyzeIntent,
   buildDocLink,
-  type Config,
   defineCommand,
   detectOutputFormat,
   type GetModelsOptions,
-  type GlobalFlags,
   getModels,
   type IntentProfile,
   type PipelineStep,
@@ -217,13 +215,14 @@ export default defineCommand({
     "Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking)",
   auth: "apiKey",
   usageArgs: "--message <text> [flags]",
-  options: [
-    {
-      flag: "--message <text>",
+  flags: {
+    message: {
+      type: "string",
+      valueHint: "<text>",
       description: "Describe your requirements",
       required: true,
     },
-  ],
+  },
   exampleArgs: [
     '--message "I need a visual-understanding chatbot"',
     '--message "Build an Agent that auto-generates animations"',
@@ -231,8 +230,8 @@ export default defineCommand({
     '--message "Low-cost high-concurrency online customer service" --output json',
     '--message "Long document summarization" --dry-run',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const userInput = flags.message as string;
+  async run(config, flags) {
+    const userInput = flags.message;
 
     const top = 3;
     const format = detectOutputFormat(config.output);

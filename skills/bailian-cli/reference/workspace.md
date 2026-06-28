@@ -21,7 +21,7 @@ Index: [index.md](index.md)
 | **Description** | List all workspaces         |
 | **Usage**       | `bl workspace list [flags]` |
 
-#### Options
+#### Flags
 
 | Flag                           | Type   | Required | Description                           |
 | ------------------------------ | ------ | -------- | ------------------------------------- |

@@ -9,8 +9,8 @@ import {
   runCommandStage,
   type RunContext,
 } from "./middleware.ts";
-import type { Command, Config, GlobalFlags } from "bailian-cli-core";
-import { GLOBAL_OPTIONS, UsageError, loadConfig, flushTelemetry } from "bailian-cli-core";
+import type { AnyCommand, Config, GlobalFlags } from "bailian-cli-core";
+import { GLOBAL_FLAGS, UsageError, loadConfig, flushTelemetry } from "bailian-cli-core";
 import { setupProxyFromEnv } from "./proxy.ts";
 import { handleError } from "./error-handler.ts";
 import { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
@@ -36,7 +36,7 @@ export interface Cli {
  * its own commands + identity. `run` resolves argv into a {@link Resolution},
  * then dispatches it.
  */
-export function createCli(commands: Record<string, Command>, opts: CliOptions): Cli {
+export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions): Cli {
   const registry = new CommandRegistry(commands, opts.binName);
   const clientName = opts.clientName ?? opts.binName;
   const { binName, version, npmPackage } = opts;
@@ -77,7 +77,7 @@ export function createCli(commands: Record<string, Command>, opts: CliOptions): 
 
     let hasKey = false;
     try {
-      const config = buildConfig(parseFlags(argv, GLOBAL_OPTIONS));
+      const config = buildConfig(parseFlags(argv, GLOBAL_FLAGS));
       hasKey = !!(
         config.apiKey ||
         config.fileApiKey ||
@@ -109,8 +109,11 @@ export function createCli(commands: Record<string, Command>, opts: CliOptions): 
 
       case "run": {
         try {
-          // 解析 flag + 跨 flag 校验：任何用法问题都抛 UsageError
-          const flags = parseFlags(res.rest, [...GLOBAL_OPTIONS, ...(res.command.options ?? [])]);
+          // 解析 flag + 跨 flag 校验：任何用法问题都抛 UsageError。
+          const flags = parseFlags(res.rest, {
+            ...GLOBAL_FLAGS,
+            ...res.command.flags,
+          }) as GlobalFlags;
           const invalid = res.command.validate?.(flags);
           if (invalid) throw new UsageError(invalid);
 

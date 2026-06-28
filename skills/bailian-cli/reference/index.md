@@ -84,7 +84,7 @@ Use this index for the full quick index and global flags.
 
 ## Global flags
 
-Available on every command (in addition to command-specific options):
+Available on every command (in addition to command-specific flags):
 
 | Flag                           | Type   | Required | Description                                              |
 | ------------------------------ | ------ | -------- | -------------------------------------------------------- |
@@ -92,12 +92,14 @@ Available on every command (in addition to command-specific options):
 | `--base-url <url>`             | string | no       | API base URL                                             |
 | `--output <format>`            | string | no       | Output format: text, json                                |
 | `--timeout <seconds>`          | number | no       | Request timeout                                          |
+| `--concurrent <n>`             | number | no       | Run N parallel requests (default: 1)                     |
 | `--quiet`                      | switch | no       | Suppress non-essential output                            |
 | `--verbose`                    | switch | no       | Print HTTP request/response details                      |
 | `--no-color`                   | switch | no       | Disable ANSI colors                                      |
 | `--dry-run`                    | switch | no       | Dry run mode                                             |
 | `--non-interactive`            | switch | no       | Disable interactive prompts                              |
-| `--concurrent <n>`             | number | no       | Run N parallel requests (default: 1)                     |
+| `--yes`                        | switch | no       | Skip confirmation prompts                                |
+| `--async`                      | switch | no       | Return async task id without waiting                     |
 | `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
 | `--console-site <site>`        | string | no       | Console site: domestic, international                    |
 | `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |

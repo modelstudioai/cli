@@ -2,22 +2,27 @@ import {
   defineCommand,
   detectOutputFormat,
   mcpWebSearchEndpoint,
-  type Config,
-  type GlobalFlags,
   McpClient,
+  type FlagsDef,
 } from "bailian-cli-core";
 import { createSpinner } from "bailian-cli-runtime";
 import { emitResult } from "bailian-cli-runtime";
+
+const WEB_SEARCH_FLAGS = {
+  query: { type: "string", valueHint: "<text>", description: "Search query text" },
+  count: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Number of search results (default: 10)",
+  },
+  listTools: { type: "switch", description: "List available MCP tools and exit" },
+} satisfies FlagsDef;
 
 export default defineCommand({
   description: "Search the web using DashScope MCP WebSearch service",
   auth: "apiKey",
   usageArgs: "--query <text> [flags]",
-  options: [
-    { flag: "--query <text>", description: "Search query text" },
-    { flag: "--count <n>", description: "Number of search results (default: 10)", type: "number" },
-    { flag: "--list-tools", description: "List available MCP tools and exit" },
-  ],
+  flags: WEB_SEARCH_FLAGS,
   exampleArgs: [
     '--query "Alibaba Cloud Bailian latest features"',
     '--query "TypeScript 5.9 new features" --count 5',
@@ -25,7 +30,7 @@ export default defineCommand({
     "--list-tools",
   ],
   validate: (f) => (!f.listTools && !f.query ? "Missing required flag: --query" : undefined),
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     const mcpUrl = mcpWebSearchEndpoint(config.baseUrl);
     const format = detectOutputFormat(config.output);
 
@@ -45,7 +50,7 @@ export default defineCommand({
     }
 
     // --- Search mode ---
-    const query = flags.query as string;
+    const query = flags.query;
 
     if (config.dryRun) {
       emitResult(
@@ -55,7 +60,7 @@ export default defineCommand({
           tool: "bailian_web_search",
           arguments: {
             query: query!,
-            count: (flags.count as number) || undefined,
+            count: flags.count || undefined,
           },
         },
         format,
@@ -76,7 +81,7 @@ export default defineCommand({
 
       // Build tool arguments
       const toolArgs: Record<string, unknown> = { query: query! };
-      if (flags.count) toolArgs.count = flags.count as number;
+      if (flags.count) toolArgs.count = flags.count;
 
       // Call the search tool
       const result = await client.callTool("bailian_web_search", toolArgs);

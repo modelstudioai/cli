@@ -23,7 +23,7 @@ Index: [index.md](index.md)
 | **Description** | Query free-tier quota for models (all models if --model is omitted) |
 | **Usage**       | `bl usage free [--model <model>[,model2,...]] [flags]`              |
 
-#### Options
+#### Flags
 
 | Flag                           | Type   | Required | Description                                                               |
 | ------------------------------ | ------ | -------- | ------------------------------------------------------------------------- |
@@ -72,17 +72,17 @@ bl usage free --model qwen3-max --console-region cn-beijing
 | **Description** | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable |
 | **Usage**       | `bl usage freetier <--model <model>[,model2,...] \| --all> [--off] [flags]`                |
 
-#### Options
+#### Flags
 
-| Flag                           | Type    | Required | Description                                 |
-| ------------------------------ | ------- | -------- | ------------------------------------------- |
-| `--model <model>`              | string  | no       | Model name(s), comma-separated for multiple |
-| `--all`                        | boolean | no       | Apply to all free-tier models               |
-| `--on`                         | boolean | no       | Enable auto-stop (default behavior)         |
-| `--off`                        | boolean | no       | Disable auto-stop                           |
-| `--console-region <region>`    | string  | no       | Console region                              |
-| `--console-site <site>`        | string  | no       | Console site: domestic, international       |
-| `--console-switch-agent <uid>` | number  | no       | Switch agent UID                            |
+| Flag                           | Type   | Required | Description                                 |
+| ------------------------------ | ------ | -------- | ------------------------------------------- |
+| `--model <model>`              | string | no       | Model name(s), comma-separated for multiple |
+| `--all`                        | switch | no       | Apply to all free-tier models               |
+| `--on`                         | switch | no       | Enable auto-stop (default behavior)         |
+| `--off`                        | switch | no       | Disable auto-stop                           |
+| `--console-region <region>`    | string | no       | Console region                              |
+| `--console-site <site>`        | string | no       | Console site: domestic, international       |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID                            |
 
 #### Examples
 
@@ -118,7 +118,7 @@ bl usage freetier --off --all
 | **Description** | Query model usage statistics                               |
 | **Usage**       | `bl usage stats [--model <model>] [--days <days>] [flags]` |
 
-#### Options
+#### Flags
 
 | Flag                           | Type   | Required | Description                                            |
 | ------------------------------ | ------ | -------- | ------------------------------------------------------ |

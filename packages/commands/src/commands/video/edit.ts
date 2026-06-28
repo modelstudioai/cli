@@ -4,8 +4,6 @@ import {
   videoGenerateEndpoint,
   taskEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type DashScopeVideoEditRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
@@ -27,81 +25,110 @@ export default defineCommand({
     "Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)",
   auth: "apiKey",
   usageArgs: "--video <url> --prompt <text> [flags]",
-  options: [
-    { flag: "--model <model>", description: "Model ID (default: happyhorse-1.0-video-edit)" },
-    {
-      flag: "--video <url>",
+  flags: {
+    model: {
+      type: "string",
+      valueHint: "<model>",
+      description: "Model ID (default: happyhorse-1.0-video-edit)",
+    },
+    video: {
+      type: "string",
+      valueHint: "<url>",
       description: "Input video URL or local file (mp4/mov, 2-10s)",
       required: true,
     },
-    {
-      flag: "--prompt <text>",
+    prompt: {
+      type: "string",
+      valueHint: "<text>",
       description: 'Edit instruction (e.g. "Convert the scene to a claymation style")',
     },
-    { flag: "--ref-image <url>", description: "Reference image URL (up to 4, comma-separated)" },
-    {
-      flag: "--negative-prompt <text>",
+    refImage: {
+      type: "string",
+      valueHint: "<url>",
+      description: "Reference image URL (up to 4, comma-separated)",
+    },
+    negativePrompt: {
+      type: "string",
+      valueHint: "<text>",
       description: "Negative prompt to exclude unwanted content",
     },
-    { flag: "--resolution <res>", description: "Resolution: 720P or 1080P (default: 1080P)" },
-    { flag: "--ratio <ratio>", description: "Aspect ratio (16:9, 9:16, 1:1, 4:3, 3:4)" },
-    {
-      flag: "--duration <seconds>",
-      description: "Output video duration in seconds (2-10)",
+    resolution: {
+      type: "string",
+      valueHint: "<res>",
+      description: "Resolution: 720P or 1080P (default: 1080P)",
+    },
+    ratio: {
+      type: "string",
+      valueHint: "<ratio>",
+      description: "Aspect ratio (16:9, 9:16, 1:1, 4:3, 3:4)",
+    },
+    duration: {
       type: "number",
+      valueHint: "<seconds>",
+      description: "Output video duration in seconds (2-10)",
     },
-    {
-      flag: "--audio-setting <mode>",
+    audioSetting: {
+      type: "string",
+      valueHint: "<mode>",
       description: "Audio: auto (default) or origin (keep original)",
+      choices: ["auto", "origin"] as const,
     },
-    {
-      flag: "--prompt-extend <bool>",
+    promptExtend: {
+      type: "boolean",
+      valueHint: "<bool>",
       description: BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT,
-      type: "boolean",
     },
-    {
-      flag: "--watermark <bool>",
+    watermark: {
+      type: "boolean",
+      valueHint: "<bool>",
       description: BOOL_FLAG_WATERMARK,
-      type: "boolean",
     },
-    { flag: "--seed <n>", description: "Random seed for reproducible generation", type: "number" },
-    { flag: "--download <path>", description: "Save video to file on completion" },
-    { flag: "--no-wait", description: "Return task ID immediately without waiting" },
-    {
-      flag: "--async",
+    seed: {
+      type: "number",
+      valueHint: "<n>",
+      description: "Random seed for reproducible generation",
+    },
+    download: {
+      type: "string",
+      valueHint: "<path>",
+      description: "Save video to file on completion",
+    },
+    noWait: { type: "switch", description: "Return task ID immediately without waiting" },
+    pollInterval: {
+      type: "number",
+      valueHint: "<seconds>",
+      description: "Polling interval when waiting (default: 15)",
+    },
+    async: {
+      type: "switch",
       description: "Return task ID immediately (agent/CI mode, same as --no-wait)",
     },
-    {
-      flag: "--poll-interval <seconds>",
-      description: "Polling interval when waiting (default: 15)",
-      type: "number",
-    },
-  ],
+  },
   exampleArgs: [
     '--video https://example.com/input.mp4 --prompt "Convert the entire scene to claymation style"',
     '--video https://example.com/input.mp4 --prompt "Replace the outfit with the style shown in the image" --ref-image https://example.com/clothes.png',
     '--video https://example.com/input.mp4 --prompt "Convert to anime style" --resolution 720P --download output.mp4',
     '--video https://example.com/input.mp4 --prompt "Put clothes on the kitten in the video" --watermark false',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const videoUrl = flags.video as string;
+  async run(config, flags) {
+    const videoUrl = flags.video;
 
     // prompt is optional for video edit per API spec
-    const prompt = flags.prompt as string | undefined;
+    const prompt = flags.prompt;
 
-    const model = (flags.model as string) || "happyhorse-1.0-video-edit";
+    const model = flags.model || "happyhorse-1.0-video-edit";
     const format = detectOutputFormat(config.output);
 
     // Auto-upload local files
     const credential = await resolveCredential(config);
-    const resolvedVideoUrl = await resolveFileUrl(videoUrl!, credential.token, model);
+    const resolvedVideoUrl = await resolveFileUrl(videoUrl, credential.token, model);
     // --- Build media array ---
     const media: DashScopeVideoEditRequest["input"]["media"] = [
       { type: "video", url: resolvedVideoUrl },
     ];
 
     // Support comma-separated reference images
-    const refImageArg = flags.refImage as string | undefined;
+    const refImageArg = flags.refImage;
     if (refImageArg) {
       const images = refImageArg
         .split(",")
@@ -121,17 +148,17 @@ export default defineCommand({
       model,
       input: {
         prompt: prompt || undefined,
-        negative_prompt: (flags.negativePrompt as string) || undefined,
+        negative_prompt: flags.negativePrompt || undefined,
         media,
       },
       parameters: {
-        resolution: (flags.resolution as string) || undefined,
-        ratio: (flags.ratio as string) || undefined,
-        duration: (flags.duration as number) || undefined,
-        audio_setting: (flags.audioSetting as "auto" | "origin") || undefined,
+        resolution: flags.resolution || undefined,
+        ratio: flags.ratio || undefined,
+        duration: flags.duration || undefined,
+        audio_setting: flags.audioSetting || undefined,
         prompt_extend: promptExtend,
         watermark,
-        seed: flags.seed as number | undefined,
+        seed: flags.seed,
       },
     };
 
@@ -164,7 +191,7 @@ export default defineCommand({
 
     // --- Poll until completion ---
     // Video editing is compute-intensive; default timeout = 600s (10 min)
-    const pollInterval = (flags.pollInterval as number) ?? 15;
+    const pollInterval = flags.pollInterval ?? 15;
     const pollUrl = taskEndpoint(config.baseUrl, taskId);
     const editTimeout = Math.max(config.timeout, 600);
 
@@ -190,7 +217,7 @@ export default defineCommand({
 
     // --download: save to file
     if (flags.download) {
-      const destPath = flags.download as string;
+      const destPath = flags.download;
       const { size } = await downloadFile(resultVideoUrl, destPath, { quiet: config.quiet });
 
       if (config.quiet) {

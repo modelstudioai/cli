@@ -3,8 +3,6 @@ import {
   requestJson,
   profileSchemaEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type ProfileSchemaCreateRequest,
   type ProfileSchemaCreateResponse,
 } from "bailian-cli-core";
@@ -14,21 +12,27 @@ export default defineCommand({
   description: "Create a user profile schema for memory profiling",
   auth: "apiKey",
   usageArgs: "--name <name> --attributes <json> [flags]",
-  options: [
-    { flag: "--name <name>", description: "Schema name (required)", required: true },
-    { flag: "--description <text>", description: "Schema description" },
-    {
-      flag: "--attributes <json>",
+  flags: {
+    name: {
+      type: "string",
+      valueHint: "<name>",
+      description: "Schema name (required)",
+      required: true,
+    },
+    description: { type: "string", valueHint: "<text>", description: "Schema description" },
+    attributes: {
+      type: "string",
+      valueHint: "<json>",
       description: 'Attributes JSON array: [{"name":"age","description":"age"}]',
       required: true,
     },
-  ],
+  },
   exampleArgs: [
     '--name "user_basic" --attributes \'[{"name":"age","description":"age"},{"name":"hobby","description":"hobby"}]\'',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const name = flags.name as string;
-    const attrStr = flags.attributes as string;
+  async run(config, flags) {
+    const name = flags.name;
+    const attrStr = flags.attributes;
 
     let attributes;
     try {
@@ -39,7 +43,7 @@ export default defineCommand({
     }
 
     const body: ProfileSchemaCreateRequest = { name, attributes };
-    if (flags.description) body.description = flags.description as string;
+    if (flags.description) body.description = flags.description;
 
     const format = detectOutputFormat(config.output);
 

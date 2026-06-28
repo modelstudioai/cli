@@ -4,7 +4,6 @@ import {
   resolveConsoleGatewayCredential,
   detectOutputFormat,
   type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
@@ -288,34 +287,35 @@ export default defineCommand({
   description: "Query model usage statistics",
   auth: "console",
   usageArgs: "[--model <model>] [--days <days>] [flags]",
-  options: [
-    {
-      flag: "--model <model>",
+  flags: {
+    model: {
+      type: "string",
+      valueHint: "<model>",
       description: "Model name(s), comma-separated; omit for overview",
     },
-    {
-      flag: "--days <days>",
+    days: {
+      type: "string",
+      valueHint: "<days>",
       description: "Number of days (default: 7)",
     },
-    {
-      flag: "--type <type>",
+    type: {
+      type: "string",
+      valueHint: "<type>",
       description: "Model type: Text, Vision, Multimodal, Audio, Embedding",
     },
-    {
-      flag: "--workspace-id <id>",
+    workspaceId: {
+      type: "string",
+      valueHint: "<id>",
       description: "Workspace ID (env: BAILIAN_WORKSPACE_ID)",
     },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
+    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
+    consoleSite: {
+      type: "string",
+      valueHint: "<site>",
       description: "Console site: domestic, international",
     },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
+  },
   exampleArgs: [
     "",
     "--days 30",
@@ -325,13 +325,13 @@ export default defineCommand({
     "--type Text --days 14",
     "--output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const modelFlag = (flags.model as string) || undefined;
+  async run(config, flags) {
+    const modelFlag = flags.model || undefined;
     const daysFlag = Number(flags.days) || 7;
-    const typeFlag = (flags.type as string) || undefined;
+    const typeFlag = flags.type || undefined;
     const format = detectOutputFormat(config.output);
 
-    const flagWorkspaceId = (flags.workspaceId as string) || undefined;
+    const flagWorkspaceId = flags.workspaceId || undefined;
     const workspaceId = resolveWorkspaceId(config, flagWorkspaceId);
 
     const endTime = Date.now();

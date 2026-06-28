@@ -5,7 +5,6 @@ import {
   fetchModelList,
   detectOutputFormat,
   type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
@@ -187,30 +186,30 @@ export default defineCommand({
   description: "Query free-tier quota for models (all models if --model is omitted)",
   auth: "console",
   usageArgs: "[--model <model>[,model2,...]] [flags]",
-  options: [
-    {
-      flag: "--model <model>",
+  flags: {
+    model: {
+      type: "string",
+      valueHint: "<model>",
       description: "Model name(s) to query, comma-separated for multiple; omit for all models",
     },
-    {
-      flag: "--expiring <days>",
+    expiring: {
+      type: "string",
+      valueHint: "<days>",
       description: "Only show quotas expiring within N days",
     },
-    {
-      flag: "--sort <field>",
+    sort: {
+      type: "string",
+      valueHint: "<field>",
       description: "Sort by: remaining (ascending), expires (ascending)",
     },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
+    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
+    consoleSite: {
+      type: "string",
+      valueHint: "<site>",
       description: "Console site: domestic, international",
     },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
+  },
   exampleArgs: [
     "",
     "--model qwen3-max",
@@ -220,11 +219,11 @@ export default defineCommand({
     "--model qwen-turbo --output json",
     "--model qwen3-max --console-region cn-beijing",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const modelFlag = (flags.model as string) || undefined;
+  async run(config, flags) {
+    const modelFlag = flags.model || undefined;
     const expiringDays = Number(flags.expiring) || 0;
     const VALID_SORT_FIELDS = ["remaining", "expires"] as const;
-    const sortField = (flags.sort as string) || undefined;
+    const sortField = flags.sort || undefined;
     if (sortField && !VALID_SORT_FIELDS.includes(sortField as (typeof VALID_SORT_FIELDS)[number])) {
       process.stderr.write(
         `Error: invalid --sort value "${sortField}". Must be one of: ${VALID_SORT_FIELDS.join(", ")}\n`,

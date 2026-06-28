@@ -7,7 +7,7 @@ export type { Cli, CliOptions } from "./create-cli.ts";
 
 // Command routing
 export { CommandRegistry } from "./registry.ts";
-export type { Command, OptionDef, LocateResult } from "./registry.ts";
+export type { Command, FlagDef, LocateResult } from "./registry.ts";
 export { resolve } from "./resolve.ts";
 export type { Resolution } from "./resolve.ts";
 export { compose, type RunContext, type Middleware } from "./middleware.ts";

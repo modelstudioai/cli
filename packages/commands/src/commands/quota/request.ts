@@ -5,7 +5,6 @@ import {
   detectOutputFormat,
   BailianError,
   type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
@@ -81,39 +80,35 @@ export default defineCommand({
   description: "Request a temporary quota increase",
   auth: "console",
   usageArgs: "--model <model> --tpm <value> [flags]",
-  options: [
-    {
-      flag: "--model <model>",
+  flags: {
+    model: {
+      type: "string",
+      valueHint: "<model>",
       description: "Model name (required)",
       required: true,
     },
-    {
-      flag: "--tpm <value>",
+    tpm: {
+      type: "string",
+      valueHint: "<value>",
       description: "Target TPM value (required)",
       required: true,
     },
-    {
-      flag: "--yes",
-      description: "Skip downgrade confirmation",
-    },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
+    yes: { type: "switch", description: "Skip downgrade confirmation" },
+    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
+    consoleSite: {
+      type: "string",
+      valueHint: "<site>",
       description: "Console site: domestic, international",
     },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
+  },
   exampleArgs: [
     "--model qwen-turbo --tpm 100000",
     "--model qwen3.6-plus --tpm 8000000 --yes",
     "--model qwen-turbo --tpm 100000 --output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const modelName = flags.model as string;
+  async run(config, flags) {
+    const modelName = flags.model;
     if (!modelName) {
       process.stderr.write("Error: --model is required.\n");
       process.exit(1);

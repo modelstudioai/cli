@@ -27,7 +27,7 @@ Index: [index.md](index.md)
 | **Description** | Add memory from messages or custom content                                    |
 | **Usage**       | `bl memory add --user-id <id> [--messages <json>] [--content <text>] [flags]` |
 
-#### Options
+#### Flags
 
 | Flag                       | Type   | Required | Description                                                |
 | -------------------------- | ------ | -------- | ---------------------------------------------------------- |
@@ -59,7 +59,7 @@ bl memory add --user-id user1 --content "Lives in Beijing" --profile-schema sche
 | **Description** | Delete a memory node                             |
 | **Usage**       | `bl memory delete --node-id <id> --user-id <id>` |
 
-#### Options
+#### Flags
 
 | Flag                       | Type   | Required | Description                             |
 | -------------------------- | ------ | -------- | --------------------------------------- |
@@ -81,7 +81,7 @@ bl memory delete --node-id node_xxx --user-id user1
 | **Description** | List memory nodes for a user            |
 | **Usage**       | `bl memory list --user-id <id> [flags]` |
 
-#### Options
+#### Flags
 
 | Flag                       | Type   | Required | Description                    |
 | -------------------------- | ------ | -------- | ------------------------------ |
@@ -108,7 +108,7 @@ bl memory list --user-id user1 --page-size 20 --page 2
 | **Description** | Create a user profile schema for memory profiling                    |
 | **Usage**       | `bl memory profile create --name <name> --attributes <json> [flags]` |
 
-#### Options
+#### Flags
 
 | Flag                   | Type   | Required | Description                                                 |
 | ---------------------- | ------ | -------- | ----------------------------------------------------------- |
@@ -130,7 +130,7 @@ bl memory profile create --name "user_basic" --attributes '[{"name":"age","descr
 | **Description** | Get user profile by schema ID and user ID               |
 | **Usage**       | `bl memory profile get --schema-id <id> --user-id <id>` |
 
-#### Options
+#### Flags
 
 | Flag               | Type   | Required | Description                  |
 | ------------------ | ------ | -------- | ---------------------------- |
@@ -151,7 +151,7 @@ bl memory profile get --schema-id schema_xxx --user-id user1
 | **Description** | Search memory nodes by query or messages                   |
 | **Usage**       | `bl memory search --user-id <id> [--query <text>] [flags]` |
 
-#### Options
+#### Flags
 
 | Flag                       | Type   | Required | Description                                  |
 | -------------------------- | ------ | -------- | -------------------------------------------- |
@@ -179,7 +179,7 @@ bl memory search --user-id user1 --messages '[{"role":"user","content":"recommen
 | **Description** | Update a memory node content                                      |
 | **Usage**       | `bl memory update --node-id <id> --user-id <id> --content <text>` |
 
-#### Options
+#### Flags
 
 | Flag                       | Type   | Required | Description                                |
 | -------------------------- | ------ | -------- | ------------------------------------------ |

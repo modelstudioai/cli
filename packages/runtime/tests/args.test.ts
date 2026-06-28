@@ -1,16 +1,16 @@
 import { expect, test } from "vite-plus/test";
-import { ExitCode, GLOBAL_OPTIONS, type OptionDef } from "bailian-cli-core";
+import { ExitCode, GLOBAL_FLAGS, type FlagsDef } from "bailian-cli-core";
 import { parsePath, parseFlags } from "../src/args.ts";
 
-const IMAGE_GENERATE_OPTIONS: OptionDef[] = [
-  { flag: "--prompt <text>", description: "Image description", required: true },
-  { flag: "--model <model>", description: "Model ID" },
-  { flag: "--image <url>", description: "Image URL (repeatable)", type: "array" },
-  { flag: "--n <count>", description: "Number of images", type: "number" },
-  { flag: "--watermark <bool>", description: "Watermark", type: "boolean" },
-  { flag: "--no-wait", description: "Return immediately", type: "switch" },
-];
-const OPTS = [...GLOBAL_OPTIONS, ...IMAGE_GENERATE_OPTIONS];
+const IMAGE_GENERATE_FLAGS = {
+  prompt: { type: "string", valueHint: "<text>", description: "Image description", required: true },
+  model: { type: "string", valueHint: "<model>", description: "Model ID" },
+  image: { type: "array", valueHint: "<url>", description: "Image URL (repeatable)" },
+  n: { type: "number", valueHint: "<count>", description: "Number of images" },
+  watermark: { type: "boolean", valueHint: "<bool>", description: "Watermark" },
+  noWait: { type: "switch", description: "Return immediately" },
+} satisfies FlagsDef;
+const OPTS = { ...GLOBAL_FLAGS, ...IMAGE_GENERATE_FLAGS };
 
 // ---- parsePath: routing only (command path first, then flags) ----
 

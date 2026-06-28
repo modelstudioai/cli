@@ -6,8 +6,6 @@ import {
   detectOutputFormat,
   BailianError,
   ExitCode,
-  type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
@@ -28,31 +26,33 @@ export default defineCommand({
   description: "List MCP servers activated under your Bailian account",
   auth: "console",
   usageArgs: "[flags]",
-  options: [
-    { flag: "--name <text>", description: "Filter by server name (substring match)" },
-    {
-      flag: "--type <type>",
+  flags: {
+    name: {
+      type: "string",
+      valueHint: "<text>",
+      description: "Filter by server name (substring match)",
+    },
+    type: {
+      type: "string",
+      valueHint: "<type>",
       description: "Server type: OFFICIAL | PRIVATE (default: OFFICIAL)",
     },
-    { flag: "--page <n>", description: "Page number (default: 1)", type: "number" },
-    { flag: "--page-size <n>", description: "Results per page (default: 30)", type: "number" },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
+    page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
+    pageSize: { type: "number", valueHint: "<n>", description: "Results per page (default: 30)" },
+    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
+    consoleSite: {
+      type: "string",
+      valueHint: "<site>",
       description: "Console site: domestic, international",
     },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
+  },
   exampleArgs: ["", "--name finance", "--output json"],
-  async run(config: Config, flags: GlobalFlags) {
-    const serverName = (flags.name as string) || "";
-    const type = (flags.type as string) || "OFFICIAL";
-    const pageNo = (flags.page as number) || 1;
-    const pageSize = (flags.pageSize as number) || 30;
+  async run(config, flags) {
+    const serverName = flags.name || "";
+    const type = flags.type || "OFFICIAL";
+    const pageNo = flags.page || 1;
+    const pageSize = flags.pageSize || 30;
     const format = detectOutputFormat(config.output);
 
     const data = {

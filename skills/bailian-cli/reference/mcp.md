@@ -23,7 +23,7 @@ Index: [index.md](index.md)
 | **Description** | Call a tool on an MCP server (tools/call)                                           |
 | **Usage**       | `bl mcp call --target <server.tool> [--arg k=v ...] [--json '{...}'] [--url <url>]` |
 
-#### Options
+#### Flags
 
 | Flag                     | Type   | Required | Description                                                                              |
 | ------------------------ | ------ | -------- | ---------------------------------------------------------------------------------------- |
@@ -55,7 +55,7 @@ bl mcp call --target market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 
 | **Description** | List MCP servers activated under your Bailian account |
 | **Usage**       | `bl mcp list [flags]`                                 |
 
-#### Options
+#### Flags
 
 | Flag                           | Type   | Required | Description                                          |
 | ------------------------------ | ------ | -------- | ---------------------------------------------------- |
@@ -89,7 +89,7 @@ bl mcp list --output json
 | **Description** | List tools exposed by an MCP server (tools/list) |
 | **Usage**       | `bl mcp tools --server <code> [--url <url>]`     |
 
-#### Options
+#### Flags
 
 | Flag              | Type   | Required | Description                                             |
 | ----------------- | ------ | -------- | ------------------------------------------------------- |

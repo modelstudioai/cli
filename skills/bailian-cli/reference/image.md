@@ -22,7 +22,7 @@ Index: [index.md](index.md)
 | **Description** | Edit an existing image with text instructions (Qwen-Image) |
 | **Usage**       | `bl image edit --image <url> --prompt <text> [flags]`      |
 
-#### Options
+#### Flags
 
 | Flag                       | Type    | Required | Description                                                             |
 | -------------------------- | ------- | -------- | ----------------------------------------------------------------------- |
@@ -68,7 +68,7 @@ bl image edit --image ./photo.png --prompt "Replace the background with a beach"
 | **Description** | Generate images (Qwen-Image / wan2.x)       |
 | **Usage**       | `bl image generate --prompt <text> [flags]` |
 
-#### Options
+#### Flags
 
 | Flag                        | Type    | Required | Description                                                                                                              |
 | --------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------ |
@@ -80,7 +80,7 @@ bl image edit --image ./photo.png --prompt "Replace the background with a beach"
 | `--negative-prompt <text>`  | string  | no       | Negative prompt to exclude unwanted content                                                                              |
 | `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag: true for qwen-image sync; parameter omitted on async models (API default). |
 | `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                                                      |
-| `--no-wait`                 | boolean | no       | Return task ID immediately without waiting (async models only)                                                           |
+| `--no-wait`                 | switch  | no       | Return task ID immediately without waiting (async models only)                                                           |
 | `--out-dir <dir>`           | string  | no       | Download images to directory                                                                                             |
 | `--out-prefix <prefix>`     | string  | no       | Filename prefix (default: image)                                                                                         |
 | `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 3)                                                                               |

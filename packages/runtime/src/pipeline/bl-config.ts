@@ -9,6 +9,7 @@ const PIPELINE_FLAGS: GlobalFlags = {
   yes: false,
   dryRun: false,
   help: false,
+  version: false,
   async: false,
 };
 

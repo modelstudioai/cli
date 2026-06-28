@@ -22,7 +22,7 @@ Index: [index.md](index.md)
 | **Description** | Set a config value                          |
 | **Usage**       | `bl config set --key <key> --value <value>` |
 
-#### Options
+#### Flags
 
 | Flag              | Type   | Required | Description                                                                                                                                  |
 | ----------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -51,9 +51,9 @@ bl config set --key base_url --value https://dashscope.aliyuncs.com
 | **Description** | Display current configuration |
 | **Usage**       | `bl config show`              |
 
-#### Options
+#### Flags
 
-_No command-specific options._
+_No command-specific flags._
 
 #### Examples
 

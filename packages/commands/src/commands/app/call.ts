@@ -5,8 +5,6 @@ import {
   appCompletionEndpoint,
   parseSSE,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type AppCompletionRequest,
   type AppStreamChunk,
   type AppCompletionResponse,
@@ -17,22 +15,48 @@ export default defineCommand({
   description: "Call a Bailian application (agent or workflow)",
   auth: "apiKey",
   usageArgs: "--app-id <id> --prompt <text> [flags]",
-  options: [
-    { flag: "--app-id <id>", description: "Application ID (required)", required: true },
-    { flag: "--prompt <text>", description: "Input prompt text", required: true },
-    {
-      flag: "--image <url>",
-      description: "Image URL(s) to pass to the app (repeatable)",
-      type: "array",
+  flags: {
+    appId: {
+      type: "string",
+      valueHint: "<id>",
+      description: "Application ID (required)",
+      required: true,
     },
-    { flag: "--file-id <id>", description: "Pre-uploaded file ID(s) (repeatable)", type: "array" },
-    { flag: "--session-id <id>", description: "Session ID for multi-turn conversation" },
-    { flag: "--stream", description: "Stream response (default: on in TTY)" },
-    { flag: "--pipeline-ids <ids>", description: "Knowledge base pipeline IDs (comma-separated)" },
-    { flag: "--memory-id <id>", description: "Memory ID for long-term memory" },
-    { flag: "--biz-params <json>", description: "Business parameters JSON (workflow variables)" },
-    { flag: "--has-thoughts", description: "Show agent thinking process" },
-  ],
+    prompt: {
+      type: "string",
+      valueHint: "<text>",
+      description: "Input prompt text",
+      required: true,
+    },
+    image: {
+      type: "array",
+      valueHint: "<url>",
+      description: "Image URL(s) to pass to the app (repeatable)",
+    },
+    fileId: {
+      type: "array",
+      valueHint: "<id>",
+      description: "Pre-uploaded file ID(s) (repeatable)",
+    },
+    sessionId: {
+      type: "string",
+      valueHint: "<id>",
+      description: "Session ID for multi-turn conversation",
+    },
+    stream: { type: "switch", description: "Stream response (default: on in TTY)" },
+    pipelineIds: {
+      type: "string",
+      valueHint: "<ids>",
+      description: "Knowledge base pipeline IDs (comma-separated)",
+    },
+    memoryId: { type: "string", valueHint: "<id>", description: "Memory ID for long-term memory" },
+    bizParams: {
+      type: "string",
+      valueHint: "<json>",
+      description: "Business parameters JSON (workflow variables)",
+    },
+    hasThoughts: { type: "switch", description: "Show agent thinking process" },
+  },
   exampleArgs: [
     '--app-id abc123 --prompt "Hello"',
     '--app-id abc123 --prompt "Describe this image" --image https://example.com/photo.jpg',
@@ -41,12 +65,11 @@ export default defineCommand({
     '--app-id abc123 --prompt "Search for materials" --pipeline-ids pipe1,pipe2',
     '--app-id abc123 --prompt "Start" --biz-params \'{"key":"value"}\'',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const appId = flags.appId as string;
-    const prompt = flags.prompt as string;
+  async run(config, flags) {
+    const appId = flags.appId;
+    const prompt = flags.prompt;
 
-    const shouldStream =
-      flags.stream === true || (flags.stream === undefined && process.stdout.isTTY);
+    const shouldStream = flags.stream || process.stdout.isTTY;
     const format = detectOutputFormat(config.output);
 
     const body: AppCompletionRequest = {
@@ -57,17 +80,17 @@ export default defineCommand({
     };
 
     if (flags.sessionId) {
-      body.input.session_id = flags.sessionId as string;
+      body.input.session_id = flags.sessionId;
     }
 
     // Pass image URLs via image_list
-    const imageUrls = flags.image as string[] | undefined;
+    const imageUrls = flags.image;
     if (imageUrls && imageUrls.length > 0) {
       body.input.image_list = imageUrls;
     }
 
     // Pass pre-uploaded file IDs
-    const fileIds = flags.fileId as string[] | undefined;
+    const fileIds = flags.fileId;
     if (fileIds && fileIds.length > 0) {
       body.input.file_ids = fileIds;
     }
@@ -77,7 +100,7 @@ export default defineCommand({
     }
 
     if (flags.pipelineIds) {
-      const ids = (flags.pipelineIds as string)
+      const ids = flags.pipelineIds
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
@@ -85,12 +108,12 @@ export default defineCommand({
     }
 
     if (flags.memoryId) {
-      body.parameters!.memory_id = flags.memoryId as string;
+      body.parameters!.memory_id = flags.memoryId;
     }
 
     if (flags.bizParams) {
       try {
-        body.input.biz_params = JSON.parse(flags.bizParams as string);
+        body.input.biz_params = JSON.parse(flags.bizParams);
       } catch {
         process.stderr.write("Error: --biz-params must be valid JSON\n");
         process.exit(1);

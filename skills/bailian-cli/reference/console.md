@@ -21,7 +21,7 @@ Index: [index.md](index.md)
 | **Description** | Call a Bailian console API via the CLI gateway      |
 | **Usage**       | `bl console call --api <api> --data <json> [flags]` |
 
-#### Options
+#### Flags
 
 | Flag                           | Type   | Required | Description                                                              |
 | ------------------------------ | ------ | -------- | ------------------------------------------------------------------------ |

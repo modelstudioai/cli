@@ -6,7 +6,8 @@ import {
   taskEndpoint,
   detectOutputFormat,
   type Config,
-  type GlobalFlags,
+  type FlagsDef,
+  type Flags,
   resolveOutputDir,
   type DashScopeImageRequest,
   type DashScopeImageSyncResponse,
@@ -35,49 +36,66 @@ function isSyncModel(model: string): boolean {
   return SYNC_MODEL_PREFIXES.some((p) => model.startsWith(p));
 }
 
+const GENERATE_FLAGS = {
+  prompt: { type: "string", valueHint: "<text>", description: "Image description", required: true },
+  model: {
+    type: "string",
+    valueHint: "<model>",
+    description: "Model ID (default: qwen-image-2.0)",
+  },
+  size: {
+    type: "string",
+    valueHint: "<W*H>",
+    description: "Image size: ratio (3:4, 16:9, 1:1) or pixels (2048*2048)",
+  },
+  n: {
+    type: "number",
+    valueHint: "<count>",
+    description: "Number of images per request (default: 1, max: 6)",
+  },
+  seed: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Random seed for reproducible generation",
+  },
+  negativePrompt: {
+    type: "string",
+    valueHint: "<text>",
+    description: "Negative prompt to exclude unwanted content",
+  },
+  promptExtend: {
+    type: "boolean",
+    valueHint: "<bool>",
+    description: BOOL_FLAG_PROMPT_EXTEND_IMAGE_GENERATE,
+  },
+  watermark: {
+    type: "boolean",
+    valueHint: "<bool>",
+    description: BOOL_FLAG_WATERMARK,
+  },
+  noWait: {
+    type: "switch",
+    description: "Return task ID immediately without waiting (async models only)",
+  },
+  outDir: { type: "string", valueHint: "<dir>", description: "Download images to directory" },
+  outPrefix: {
+    type: "string",
+    valueHint: "<prefix>",
+    description: "Filename prefix (default: image)",
+  },
+  pollInterval: {
+    type: "number",
+    valueHint: "<seconds>",
+    description: "Polling interval when waiting (default: 3)",
+  },
+} satisfies FlagsDef;
+type GenerateFlags = Flags<typeof GENERATE_FLAGS>;
+
 export default defineCommand({
   description: "Generate images (Qwen-Image / wan2.x)",
   auth: "apiKey",
   usageArgs: "--prompt <text> [flags]",
-  options: [
-    { flag: "--prompt <text>", description: "Image description", required: true },
-    { flag: "--model <model>", description: "Model ID (default: qwen-image-2.0)" },
-    {
-      flag: "--size <W*H>",
-      description: "Image size: ratio (3:4, 16:9, 1:1) or pixels (2048*2048)",
-    },
-    {
-      flag: "--n <count>",
-      description: "Number of images per request (default: 1, max: 6)",
-      type: "number",
-    },
-    { flag: "--seed <n>", description: "Random seed for reproducible generation", type: "number" },
-    {
-      flag: "--negative-prompt <text>",
-      description: "Negative prompt to exclude unwanted content",
-    },
-    {
-      flag: "--prompt-extend <bool>",
-      description: BOOL_FLAG_PROMPT_EXTEND_IMAGE_GENERATE,
-      type: "boolean",
-    },
-    {
-      flag: "--watermark <bool>",
-      description: BOOL_FLAG_WATERMARK,
-      type: "boolean",
-    },
-    {
-      flag: "--no-wait",
-      description: "Return task ID immediately without waiting (async models only)",
-    },
-    { flag: "--out-dir <dir>", description: "Download images to directory" },
-    { flag: "--out-prefix <prefix>", description: "Filename prefix (default: image)" },
-    {
-      flag: "--poll-interval <seconds>",
-      description: "Polling interval when waiting (default: 3)",
-      type: "number",
-    },
-  ],
+  flags: GENERATE_FLAGS,
   exampleArgs: [
     '--prompt "A cat in a spacesuit on Mars"',
     '--prompt "Logo design" --n 3 --out-dir ./generated/',
@@ -89,15 +107,15 @@ export default defineCommand({
     '--prompt "Pro quality" --model qwen-image-2.0-pro',
     '--prompt "Product shots" --n 2 --concurrent 3  # 6 images in parallel',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const prompt = flags.prompt as string;
+  async run(config, flags) {
+    const prompt = flags.prompt;
 
-    const model = (flags.model as string) || config.defaultImageModel || "qwen-image-2.0";
+    const model = flags.model || config.defaultImageModel || "qwen-image-2.0";
     const useSync = isSyncModel(model);
     const defaultSize = useSync ? "1:1" : "1:1";
-    const sizeInput = (flags.size as string) || defaultSize;
+    const sizeInput = flags.size || defaultSize;
     const size = resolveImageSize(sizeInput, useSync);
-    const n = (flags.n as number) ?? 1;
+    const n = flags.n ?? 1;
     const concurrent = getConcurrency(flags);
 
     const promptExtend = resolveBooleanFlag(
@@ -111,15 +129,15 @@ export default defineCommand({
     const body: DashScopeImageRequest = {
       model,
       input: {
-        messages: [{ role: "user", content: [{ text: prompt! }] }],
+        messages: [{ role: "user", content: [{ text: prompt }] }],
       },
       parameters: {
         size,
         n,
-        seed: flags.seed as number | undefined,
+        seed: flags.seed,
         prompt_extend: promptExtend,
         watermark,
-        negative_prompt: (flags.negativePrompt as string) || undefined,
+        negative_prompt: flags.negativePrompt || undefined,
       },
     };
 
@@ -148,7 +166,7 @@ async function handleSyncMode(
   config: Config,
   _model: string,
   body: DashScopeImageRequest,
-  flags: GlobalFlags,
+  flags: GenerateFlags,
   format: string,
   concurrent: number,
 ): Promise<void> {
@@ -177,7 +195,7 @@ async function handleAsyncMode(
   config: Config,
   _model: string,
   body: DashScopeImageRequest,
-  flags: GlobalFlags,
+  flags: GenerateFlags,
   format: string,
   concurrent: number,
 ): Promise<void> {
@@ -198,7 +216,7 @@ async function handleAsyncMode(
   }
 
   // Poll all tasks concurrently
-  const pollInterval = (flags.pollInterval as number) ?? 3;
+  const pollInterval = flags.pollInterval ?? 3;
 
   const pollPromises = taskIds.map((taskId) => {
     const pollUrl = taskEndpoint(config.baseUrl, taskId);
@@ -253,19 +271,19 @@ async function handleAsyncMode(
 
 async function saveImages(
   imageUrls: string[],
-  flags: GlobalFlags,
+  flags: GenerateFlags,
   config: Config,
   format: string,
   taskId?: string,
   taskIds?: string[],
 ): Promise<void> {
   const outDir = resolveOutputDir(config, {
-    flagDir: flags.outDir as string | undefined,
+    flagDir: flags.outDir,
     subDir: flags.outDir ? undefined : "images",
   });
 
-  const promptText = (flags.prompt as string) || "";
-  const prefix = (flags.outPrefix as string) || generateFilename("image", promptText);
+  const promptText = flags.prompt || "";
+  const prefix = flags.outPrefix || generateFilename("image", promptText);
 
   // Parallel download all images
   const items =

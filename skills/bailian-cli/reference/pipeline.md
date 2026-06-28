@@ -22,7 +22,7 @@ Index: [index.md](index.md)
 | **Description** | Run a pipeline workflow definition      |
 | **Usage**       | `bl pipeline run --file <path> [flags]` |
 
-#### Options
+#### Flags
 
 | Flag                  | Type   | Required | Description                          |
 | --------------------- | ------ | -------- | ------------------------------------ |
@@ -63,7 +63,7 @@ bl pipeline run --file workflow.yaml --output json
 | **Description** | Validate a pipeline definition without executing |
 | **Usage**       | `bl pipeline validate --file <path>`             |
 
-#### Options
+#### Flags
 
 | Flag            | Type   | Required | Description                          |
 | --------------- | ------ | -------- | ------------------------------------ |

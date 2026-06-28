@@ -3,8 +3,6 @@ import {
   requestJson,
   imageSyncEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   resolveCredential,
   resolveFileUrl,
   resolveOutputDir,
@@ -28,38 +26,57 @@ export default defineCommand({
   description: "Edit an existing image with text instructions (Qwen-Image)",
   auth: "apiKey",
   usageArgs: "--image <url> --prompt <text> [flags]",
-  options: [
-    {
-      flag: "--image <url>",
+  flags: {
+    image: {
+      type: "array",
+      valueHint: "<url>",
       description: "Source image URL or local file path (repeatable for multi-image merge)",
       required: true,
-      type: "array",
     },
-    { flag: "--prompt <text>", description: "Edit instruction text", required: true },
-    { flag: "--model <model>", description: "Model ID (default: qwen-image-2.0)" },
-    {
-      flag: "--size <W*H>",
+    prompt: {
+      type: "string",
+      valueHint: "<text>",
+      description: "Edit instruction text",
+      required: true,
+    },
+    model: {
+      type: "string",
+      valueHint: "<model>",
+      description: "Model ID (default: qwen-image-2.0)",
+    },
+    size: {
+      type: "string",
+      valueHint: "<W*H>",
       description: "Output image size: ratio (3:4, 16:9) or pixels (2048*2048)",
     },
-    { flag: "--n <count>", description: "Number of images (default: 1, max: 6)", type: "number" },
-    { flag: "--seed <n>", description: "Random seed for reproducible results", type: "number" },
-    {
-      flag: "--negative-prompt <text>",
+    n: {
+      type: "number",
+      valueHint: "<count>",
+      description: "Number of images (default: 1, max: 6)",
+    },
+    seed: { type: "number", valueHint: "<n>", description: "Random seed for reproducible results" },
+    negativePrompt: {
+      type: "string",
+      valueHint: "<text>",
       description: "Negative prompt to exclude unwanted content",
     },
-    {
-      flag: "--prompt-extend <bool>",
+    promptExtend: {
+      type: "boolean",
+      valueHint: "<bool>",
       description: BOOL_FLAG_PROMPT_EXTEND_CLI_TRUE,
-      type: "boolean",
     },
-    {
-      flag: "--watermark <bool>",
+    watermark: {
+      type: "boolean",
+      valueHint: "<bool>",
       description: BOOL_FLAG_WATERMARK,
-      type: "boolean",
     },
-    { flag: "--out-dir <dir>", description: "Download images to directory" },
-    { flag: "--out-prefix <prefix>", description: "Filename prefix (default: edited)" },
-  ],
+    outDir: { type: "string", valueHint: "<dir>", description: "Download images to directory" },
+    outPrefix: {
+      type: "string",
+      valueHint: "<prefix>",
+      description: "Filename prefix (default: edited)",
+    },
+  },
   exampleArgs: [
     '--image ./photo.png --prompt "Replace the background with a beach"',
     '--image https://example.com/logo.png --prompt "Change color to blue" --n 3',
@@ -67,24 +84,24 @@ export default defineCommand({
     '--image https://example.com/photo.png --prompt "Remove the person" --model qwen-image-2.0-pro',
     '--image ./photo.png --prompt "Replace the background with a beach" --watermark false',
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     // Normalize --image to string array (supports both single and repeated flags)
     let rawImages: string[] = [];
     if (Array.isArray(flags.image)) {
-      rawImages = flags.image as string[];
+      rawImages = flags.image;
     } else if (typeof flags.image === "string") {
       rawImages = [flags.image];
     }
-    const prompt = flags.prompt as string;
+    const prompt = flags.prompt;
 
-    const model = (flags.model as string) || config.defaultImageModel || "qwen-image-2.0";
+    const model = flags.model || config.defaultImageModel || "qwen-image-2.0";
 
     // Auto-upload local files (resolve all images in parallel)
     const credential = await resolveCredential(config);
     const resolvedImages = await Promise.all(
       rawImages.map((img) => resolveFileUrl(img, credential.token, model)),
     );
-    const n = (flags.n as number) ?? 1;
+    const n = flags.n ?? 1;
 
     const promptExtend = resolveBooleanFlag(flags.promptExtend, true, "prompt-extend");
 
@@ -92,7 +109,7 @@ export default defineCommand({
     const contentItems: Array<{ image?: string; text?: string }> = resolvedImages.map(
       (u: string) => ({ image: u }),
     );
-    contentItems.push({ text: prompt! });
+    contentItems.push({ text: prompt });
 
     const watermark = resolveWatermark(flags.watermark);
 
@@ -107,12 +124,12 @@ export default defineCommand({
         ],
       },
       parameters: {
-        size: resolveImageSize(flags.size as string | undefined, true),
+        size: resolveImageSize(flags.size, true),
         n,
-        seed: flags.seed as number | undefined,
+        seed: flags.seed,
         prompt_extend: promptExtend,
         watermark,
-        negative_prompt: (flags.negativePrompt as string) || undefined,
+        negative_prompt: flags.negativePrompt || undefined,
       },
     };
 
@@ -153,12 +170,11 @@ export default defineCommand({
     }
 
     const outDir = resolveOutputDir(config, {
-      flagDir: flags.outDir as string | undefined,
+      flagDir: flags.outDir,
       subDir: flags.outDir ? undefined : "images",
     });
 
-    const prefix =
-      (flags.outPrefix as string) || generateFilename("edited", flags?.prompt as string);
+    const prefix = flags.outPrefix || generateFilename("edited", flags.prompt);
 
     // Parallel download all images
     const items =

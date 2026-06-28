@@ -1,4 +1,4 @@
-import type { Command, Config, GlobalFlags } from "bailian-cli-core";
+import type { AnyCommand, Config, GlobalFlags } from "bailian-cli-core";
 import { resolveCredential, trackCommandExecution } from "bailian-cli-core";
 import { ensureApiKey } from "./utils/ensure-key.ts";
 import { maybeShowStatusBar } from "./output/status-bar.ts";
@@ -16,7 +16,7 @@ export interface RunContext {
   readonly npmPackage: string;
   /** The matched command path, e.g. ["speech","recognize"]. */
   readonly path: string[];
-  readonly command: Command;
+  readonly command: AnyCommand;
   config: Config;
   flags: GlobalFlags;
 }
@@ -80,4 +80,4 @@ export const versionCheckStage: Middleware = async (ctx, next) => {
 };
 
 /** Innermost stage: hand control to the command. */
-export const runCommandStage: Middleware = (ctx) => ctx.command.execute(ctx.config, ctx.flags);
+export const runCommandStage: Middleware = (ctx) => ctx.command.run(ctx.config, ctx.flags);

@@ -3,8 +3,6 @@ import {
   callConsoleGateway,
   resolveConsoleGatewayCredential,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
@@ -14,37 +12,35 @@ export default defineCommand({
   description: "List Bailian applications",
   auth: "console",
   usageArgs: "[flags]",
-  options: [
-    {
-      flag: "--name <name>",
+  flags: {
+    name: {
+      type: "string",
+      valueHint: "<name>",
       description: "Filter by app name (keyword search)",
     },
-    {
-      flag: "--page <n>",
+    page: {
+      type: "number",
+      valueHint: "<n>",
       description: "Page number (default: 1)",
-      type: "number",
     },
-    {
-      flag: "--page-size <n>",
+    pageSize: {
+      type: "number",
+      valueHint: "<n>",
       description: "Results per page (default: 30)",
-      type: "number",
     },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
+    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
+    consoleSite: {
+      type: "string",
+      valueHint: "<site>",
       description: "Console site: domestic, international",
     },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
+  },
   exampleArgs: ["", "--name customer service", "--page 2 --page-size 10", "--output json"],
-  async run(config: Config, flags: GlobalFlags) {
-    const name = (flags.name as string) || "";
-    const pageNo = (flags.page as number) || 1;
-    const pageSize = (flags.pageSize as number) || 30;
+  async run(config, flags) {
+    const name = flags.name || "";
+    const pageNo = flags.page || 1;
+    const pageSize = flags.pageSize || 30;
     const format = detectOutputFormat(config.output);
 
     const credential = await resolveConsoleGatewayCredential(config);

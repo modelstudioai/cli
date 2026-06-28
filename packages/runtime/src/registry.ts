@@ -1,11 +1,20 @@
-import type { Command } from "bailian-cli-core";
+import type { AnyCommand, FlagDef } from "bailian-cli-core";
 import { UsageError } from "bailian-cli-core";
-import { GLOBAL_OPTIONS } from "bailian-cli-core";
+import { GLOBAL_FLAGS } from "bailian-cli-core";
+import { camelToKebab } from "./args.ts";
 
-export type { Command, OptionDef } from "bailian-cli-core";
+export type { Command, AnyCommand, FlagDef, FlagsDef } from "bailian-cli-core";
+
+/** "--max-tokens <count>" for a value flag, "--quiet" for a switch. */
+function flagDisplay(key: string, def: FlagDef): string {
+  const flag = `--${camelToKebab(key)}`;
+  if (def.type === "switch") return flag;
+  const hint = def.choices ? `<${def.choices.join("|")}>` : def.valueHint;
+  return `${flag} ${hint}`;
+}
 
 interface CommandNode {
-  command?: Command;
+  command?: AnyCommand;
   children: Map<string, CommandNode>;
 }
 
@@ -18,7 +27,7 @@ interface CommandNode {
  *             tokens (no positionals); `error` carries the message + hint.
  */
 export type LocateResult =
-  | { kind: "leaf"; command: Command; matched: string[] }
+  | { kind: "leaf"; command: AnyCommand; matched: string[] }
   | { kind: "group"; matched: string[] }
   | { kind: "unknown"; error: UsageError };
 
@@ -27,14 +36,14 @@ export class CommandRegistry {
   /** Binary name shown in usage/help/error strings (e.g. "bl", "rag"). */
   private readonly cliName: string;
 
-  constructor(commands: Record<string, Command>, cliName: string) {
+  constructor(commands: Record<string, AnyCommand>, cliName: string) {
     this.cliName = cliName;
     for (const [path, cmd] of Object.entries(commands)) {
       this.register(path, cmd);
     }
   }
 
-  private register(path: string, command: Command): void {
+  private register(path: string, command: AnyCommand): void {
     const parts = path.split(" ");
     let node = this.root;
     for (const part of parts) {
@@ -46,8 +55,8 @@ export class CommandRegistry {
     node.command = command;
   }
 
-  getAllCommands(): Command[] {
-    const commands: Command[] = [];
+  getAllCommands(): AnyCommand[] {
+    const commands: AnyCommand[] = [];
     const traverse = (node: CommandNode) => {
       if (node.command) commands.push(node.command);
       for (const child of node.children.values()) {
@@ -153,10 +162,12 @@ export class CommandRegistry {
   }
 
   private buildGlobalFlagLines(a: (s: string) => string, d: (s: string) => string): string {
-    const maxLen = Math.max(...GLOBAL_OPTIONS.map((o) => o.flag.length));
-    return GLOBAL_OPTIONS.map((o) => `  ${a(o.flag.padEnd(maxLen + 2))} ${d(o.description)}`).join(
-      "\n",
-    );
+    const lines = Object.entries(GLOBAL_FLAGS).map(([k, def]) => ({
+      flag: flagDisplay(k, def),
+      desc: def.description,
+    }));
+    const maxLen = Math.max(...lines.map((l) => l.flag.length));
+    return lines.map((l) => `  ${a(l.flag.padEnd(maxLen + 2))} ${d(l.desc)}`).join("\n");
   }
 
   // Color helpers — no-ops when output is not a TTY
@@ -256,12 +267,12 @@ ${b("Global Flags:")}
 ${globalFlagLines}
 
 ${b("Getting Help:")}
-  ${d("Add --help after any command to see its full list of options, defaults,")}
+  ${d("Add --help after any command to see its full list of flags, defaults,")}
   ${d("and usage examples. For example:")} ${this.cliName} ${this.helpExample()} --help
 `);
   }
 
-  private printCommandHelp(cmd: Command, commandPath: string[], out: NodeJS.WriteStream): void {
+  private printCommandHelp(cmd: AnyCommand, commandPath: string[], out: NodeJS.WriteStream): void {
     const b = (s: string) => this.bold(s, out);
     const a = (s: string) => this.accent(s, out);
     const d = (s: string) => this.dim(s, out);
@@ -272,11 +283,16 @@ ${b("Getting Help:")}
 
     out.write(`\n${cmd.description}\n`);
     out.write(`${b("Usage:")} ${prefix}${cmd.usageArgs ? ` ${cmd.usageArgs}` : ""}\n`);
-    if (cmd.options && cmd.options.length > 0) {
-      const maxLen = Math.max(...cmd.options.map((o) => o.flag.length));
-      out.write(`\n${b("Options:")}\n`);
-      for (const opt of cmd.options) {
-        out.write(`  ${a(opt.flag.padEnd(maxLen + 2))} ${d(opt.description)}\n`);
+    const flagEntries = Object.entries(cmd.flags ?? {}) as [string, FlagDef][];
+    if (flagEntries.length > 0) {
+      const lines = flagEntries.map(([k, def]) => ({
+        flag: flagDisplay(k, def),
+        desc: def.description,
+      }));
+      const maxLen = Math.max(...lines.map((l) => l.flag.length));
+      out.write(`\n${b("Flags:")}\n`);
+      for (const l of lines) {
+        out.write(`  ${a(l.flag.padEnd(maxLen + 2))} ${d(l.desc)}\n`);
       }
     }
     if (cmd.notes && cmd.notes.length > 0) {

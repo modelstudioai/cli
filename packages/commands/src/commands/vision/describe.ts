@@ -3,8 +3,6 @@ import {
   requestJson,
   chatEndpoint,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type ChatRequest,
   type ChatResponse,
   type ChatMessageContent,
@@ -58,16 +56,24 @@ export default defineCommand({
   description: "Describe an image or video using Qwen-VL",
   auth: "apiKey",
   usageArgs: "--image <path-or-url> [--video <url>] [--prompt <text>]",
-  options: [
-    { flag: "--image <path-or-url>", description: "Local image path or URL" },
-    {
-      flag: "--video <url>",
-      description: "Video file URL or local path (mp4/mov/avi/mkv/webm)",
+  flags: {
+    image: { type: "string", valueHint: "<path-or-url>", description: "Local image path or URL" },
+    video: {
       type: "array",
+      valueHint: "<url>",
+      description: "Video file URL or local path (mp4/mov/avi/mkv/webm)",
     },
-    { flag: "--prompt <text>", description: "Question about the content (default: auto-detected)" },
-    { flag: "--model <model>", description: "Vision model (default: qwen3-vl-plus)" },
-  ],
+    prompt: {
+      type: "string",
+      valueHint: "<text>",
+      description: "Question about the content (default: auto-detected)",
+    },
+    model: {
+      type: "string",
+      valueHint: "<model>",
+      description: "Vision model (default: qwen3-vl-plus)",
+    },
+  },
   exampleArgs: [
     "--image photo.jpg",
     '--image https://example.com/photo.jpg --prompt "What breed is this dog?"',
@@ -79,10 +85,10 @@ export default defineCommand({
     !f.image && !(f.video as string[] | undefined)?.length
       ? "Provide --image or --video."
       : undefined,
-  async run(config: Config, flags: GlobalFlags) {
-    let image = flags.image as string | undefined;
-    const videoInputs = (flags.video as string[] | undefined) ?? [];
-    const model = (flags.model as string) || "qwen3-vl-plus";
+  async run(config, flags) {
+    let image = flags.image;
+    const videoInputs = flags.video ?? [];
+    const model = flags.model || "qwen3-vl-plus";
 
     // Auto-detect: if --image was given a video file, treat it as --video
     if (image && isVideoInput(image)) {
@@ -92,7 +98,7 @@ export default defineCommand({
 
     const hasVideo = videoInputs.length > 0;
     const defaultPrompt = hasVideo ? "Describe the video." : "Describe the image.";
-    const prompt = (flags.prompt as string) || defaultPrompt;
+    const prompt = flags.prompt || defaultPrompt;
 
     const format = detectOutputFormat(config.output);
 

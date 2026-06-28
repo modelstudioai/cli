@@ -21,7 +21,7 @@ Index: [index.md](index.md)
 | **Description** | Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking) |
 | **Usage**       | `bl advisor recommend --message <text> [flags]`                                                |
 
-#### Options
+#### Flags
 
 | Flag               | Type   | Required | Description                |
 | ------------------ | ------ | -------- | -------------------------- |

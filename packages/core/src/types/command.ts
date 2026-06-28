@@ -1,111 +1,135 @@
 import type { Config } from "../config/schema.ts";
-import type { GlobalFlags } from "./flags.ts";
 
-/**
- * Flag value type, driving the parser.
- *  - string  : `--flag <value>` → string (default).
- *  - number  : `--flag <n>` → coerced + validated finite number.
- *  - boolean : `--flag true|false` → coerced boolean (a *value* flag).
- *  - switch  : `--flag` → presence = true, takes NO value (`--flag=x` errors).
- *  - array   : repeatable `--flag a --flag b` → string[].
- * Omitting `type`: a flag string with a `<…>`/`[…]` placeholder defaults to
- * string, otherwise to switch.
- */
-export interface OptionDef {
-  flag: string;
+// ── Flag definitions ─────────────────────────────────────────────────────────
+// Flags are keyed by camelCase name (the key IS the parsed flag name, e.g.
+// `maxTokens` ↔ `--max-tokens`). The flag's type drives both runtime parsing
+// and the compile-time flag types inferred via ParsedFlags.
+
+/** A presence flag: `--quiet`. No value; absent → false. */
+export interface SwitchFlag {
+  type: "switch";
   description: string;
-  type?: "string" | "number" | "boolean" | "switch" | "array";
-  required?: boolean;
 }
+/** A value flag: `--prompt <text>`, `--n <count>`, `--watermark true|false`. */
+export interface ValueFlag {
+  type: "string" | "number" | "boolean" | "array";
+  description: string;
+  valueHint: string;
+  required?: boolean;
+  /**
+   * Restrict to a fixed set of values. The parser rejects anything else and the
+   * parsed type narrows to the union. Declare with `as const` so the literals
+   * survive inference: `choices: ["mp3", "wav"] as const`.
+   */
+  choices?: readonly string[];
+}
+export type FlagDef = SwitchFlag | ValueFlag;
+export type FlagsDef = Record<string, FlagDef>;
+
+// ── Type inference: definition → parsed flag types ───────────────────────────
+type ParsedValue<F extends FlagDef> = F extends SwitchFlag
+  ? boolean
+  : F extends { type: "number" }
+    ? number
+    : F extends { type: "boolean" }
+      ? boolean
+      : F extends { choices: readonly (infer C extends string)[] }
+        ? F extends { type: "array" }
+          ? C[]
+          : C
+        : F extends { type: "array" }
+          ? string[]
+          : string;
+
+/** Switches and `required` value flags are present; other value flags optional. */
+type IsRequired<F extends FlagDef> = F extends SwitchFlag
+  ? true
+  : F extends { required: true }
+    ? true
+    : false;
 
 /**
- * Credential a command requires. The runtime prepares it before execution.
- *  - "apiKey"  : DashScope API Key. The runtime runs ensureApiKey beforehand,
- *                except under --dry-run (which only prints the request).
- *  - "console" : Console Gateway credential (usage / quota / app list / workspace, …).
- *  - "none"    : No credential (config / auth login flow / pipeline validate / update, …).
+ * Map a FlagsDef to the parsed flags object type. Required flags (switches +
+ * `required: true`) are required properties; optional value flags are `?`.
  */
+export type ParsedFlags<F extends FlagsDef> = {
+  [K in keyof F as IsRequired<F[K]> extends true ? K : never]: ParsedValue<F[K]>;
+} & {
+  [K in keyof F as IsRequired<F[K]> extends true ? never : K]?: ParsedValue<F[K]>;
+};
+
 export type AuthRequirement = "apiKey" | "console" | "none";
 
-export interface Command {
-  description: string;
-  /**
-   * Argument portion of the usage line, WITHOUT the `<bin> <path>` prefix
-   * (e.g. "--index-id <id> --query <text> [flags]"). The runtime prepends the
-   * product binary name and the command's actual path when rendering help, so
-   * the same command renders correctly under any product (bl / rag / …).
-   */
-  usageArgs?: string;
-  options?: OptionDef[];
-  /**
-   * Example argument strings, each WITHOUT the `<bin> <path>` prefix
-   * (e.g. '--index-id idx_xxx --query "..."'). The runtime prepends
-   * `<bin> <path>` per product when rendering help.
-   */
-  exampleArgs?: string[];
-  /** Credential this command requires. See {@link AuthRequirement}. */
-  auth: AuthRequirement;
-  notes?: string[];
-  /**
-   * Cross-flag validation, run after parsing and before execute (one-of, 3-of-N,
-   * value-conditional, dependency, …). Return an error message → UsageError;
-   * undefined to pass. Single-flag `required: true` is enforced by the parser —
-   * use this only for rules spanning multiple flags or depending on a flag's *value*.
-   */
-  validate?: (flags: GlobalFlags) => string | undefined;
-  execute: (config: Config, flags: GlobalFlags) => Promise<void>;
-}
-
-export interface CommandSpec {
-  description: string;
-  /** See {@link Command.usageArgs} — argument portion only, no `<bin> <path>` prefix. */
-  usageArgs?: string;
-  options?: OptionDef[];
-  /** See {@link Command.exampleArgs} — argument strings only, no `<bin> <path>` prefix. */
-  exampleArgs?: string[];
-  /** Credential this command requires. See {@link AuthRequirement}. */
-  auth: AuthRequirement;
-  notes?: string[];
-  /** Cross-flag validation — see {@link Command.validate}. */
-  validate?: (flags: GlobalFlags) => string | undefined;
-  run: (config: Config, flags: GlobalFlags) => Promise<void>;
-}
-
-export function defineCommand(spec: CommandSpec): Command {
-  return {
-    description: spec.description,
-    usageArgs: spec.usageArgs,
-    options: spec.options,
-    exampleArgs: spec.exampleArgs,
-    auth: spec.auth,
-    notes: spec.notes,
-    validate: spec.validate,
-    execute: (config, flags) => spec.run(config, flags),
-  };
-}
-
-/** Global flags shared by all commands — drives the parser's type resolution. */
-export const GLOBAL_OPTIONS: OptionDef[] = [
-  { flag: "--api-key <key>", description: "API key" },
-  { flag: "--base-url <url>", description: "API base URL" },
-  { flag: "--output <format>", description: "Output format: text, json" },
-  { flag: "--timeout <seconds>", description: "Request timeout", type: "number" },
-  { flag: "--quiet", description: "Suppress non-essential output", type: "switch" },
-  { flag: "--verbose", description: "Print HTTP request/response details", type: "switch" },
-  { flag: "--no-color", description: "Disable ANSI colors", type: "switch" },
-  { flag: "--dry-run", description: "Dry run mode", type: "switch" },
-  { flag: "--non-interactive", description: "Disable interactive prompts", type: "switch" },
-  { flag: "--concurrent <n>", description: "Run N parallel requests (default: 1)", type: "number" },
-  {
-    flag: "--console-region <region>",
+// ── Global flags (single source: derived from GLOBAL_FLAGS) ──────────────────
+export const GLOBAL_FLAGS = {
+  apiKey: { type: "string", valueHint: "<key>", description: "API key" },
+  baseUrl: { type: "string", valueHint: "<url>", description: "API base URL" },
+  output: { type: "string", valueHint: "<format>", description: "Output format: text, json" },
+  timeout: { type: "number", valueHint: "<seconds>", description: "Request timeout" },
+  concurrent: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Run N parallel requests (default: 1)",
+  },
+  quiet: { type: "switch", description: "Suppress non-essential output" },
+  verbose: { type: "switch", description: "Print HTTP request/response details" },
+  noColor: { type: "switch", description: "Disable ANSI colors" },
+  dryRun: { type: "switch", description: "Dry run mode" },
+  nonInteractive: { type: "switch", description: "Disable interactive prompts" },
+  yes: { type: "switch", description: "Skip confirmation prompts" },
+  async: { type: "switch", description: "Return async task id without waiting" },
+  consoleRegion: {
+    type: "string",
+    valueHint: "<region>",
     description: "Console gateway region (e.g. cn-beijing, ap-southeast-1)",
   },
-  { flag: "--console-site <site>", description: "Console site: domestic, international" },
-  {
-    flag: "--console-switch-agent <uid>",
-    description: "Switch agent UID for delegated access",
-    type: "number",
+  consoleSite: {
+    type: "string",
+    valueHint: "<site>",
+    description: "Console site: domestic, international",
   },
-  { flag: "--help", description: "Show help", type: "switch" },
-  { flag: "--version", description: "Print version", type: "switch" },
-];
+  consoleSwitchAgent: {
+    type: "number",
+    valueHint: "<uid>",
+    description: "Switch agent UID for delegated access",
+  },
+  help: { type: "switch", description: "Show help" },
+  version: { type: "switch", description: "Print version" },
+} satisfies FlagsDef;
+
+export type GlobalFlags = ParsedFlags<typeof GLOBAL_FLAGS>;
+/** A command's full flags: global + its own flags, inferred in one pass. */
+export type Flags<F extends FlagsDef> = ParsedFlags<typeof GLOBAL_FLAGS & F>;
+
+// ── Command ──────────────────────────────────────────────────────────────────
+/**
+ * A command. Generic over its flags `F` so `run`/`validate` receive precisely
+ * typed flags (`Flags<F>` = global + own flags). Stored heterogeneously as
+ * {@link AnyCommand}; the precise typing lives at the `defineCommand` call site.
+ */
+export interface Command<F extends FlagsDef = FlagsDef> {
+  description: string;
+  /** Credential this command requires. See {@link AuthRequirement}. */
+  auth: AuthRequirement;
+  /** Usage line arg portion, e.g. "--prompt <text> [flags]". Manually written. */
+  usageArgs?: string;
+  /** Example arg strings (without the `<bin> <path>` prefix). */
+  exampleArgs?: string[];
+  notes?: string[];
+  flags?: F;
+  /**
+   * Cross-flag validation, after parsing and before run. Return an error message
+   * → UsageError; undefined to pass. Single-flag `required` is enforced by the
+   * parser — use this for rules spanning flags or depending on a flag's *value*.
+   */
+  validate?: (flags: Flags<F>) => string | undefined;
+  run: (config: Config, flags: Flags<F>) => Promise<void>;
+}
+
+/** Type-erased command for heterogeneous storage (registry / context). */
+export type AnyCommand = Command<any>;
+
+/** Identity wrapper whose only job is to infer `F` from `spec.flags`. */
+export function defineCommand<F extends FlagsDef>(spec: Command<F>): Command<F> {
+  return spec;
+}

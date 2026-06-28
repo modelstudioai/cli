@@ -8,8 +8,6 @@ import {
   detectOutputFormat,
   BailianError,
   ExitCode,
-  type Config,
-  type GlobalFlags,
   type ChatMessage,
   type ChatMessageContent,
   type ChatRequest,
@@ -86,36 +84,57 @@ export default defineCommand({
   description: "Multimodal chat with text + audio output (Qwen-Omni)",
   auth: "apiKey",
   usageArgs: "--message <text> [flags]",
-  options: [
-    {
-      flag: "--message <text>",
+  flags: {
+    message: {
+      type: "array",
+      valueHint: "<text>",
       description: "Message text (repeatable, prefix role: to set role)",
       required: true,
-      type: "array",
     },
-    { flag: "--model <model>", description: "Model ID (default: qwen3.5-omni-plus)" },
-    { flag: "--system <text>", description: "System prompt" },
-    { flag: "--image <url>", description: "Image URL or local file (repeatable)", type: "array" },
-    {
-      flag: "--audio <url>",
+    model: {
+      type: "string",
+      valueHint: "<model>",
+      description: "Model ID (default: qwen3.5-omni-plus)",
+    },
+    system: { type: "string", valueHint: "<text>", description: "System prompt" },
+    image: {
+      type: "array",
+      valueHint: "<url>",
+      description: "Image URL or local file (repeatable)",
+    },
+    audio: {
+      type: "array",
+      valueHint: "<url>",
       description: "Audio URL or local file (.wav/.mp3/.amr/.aac/.m4a/.ogg/.3gp/.3gpp)",
-      type: "array",
     },
-    {
-      flag: "--video <url>",
+    video: {
+      type: "array",
+      valueHint: "<url>",
       description: "Video file URL / local path, or comma-separated frame URLs",
-      type: "array",
     },
-    {
-      flag: "--voice <voice>",
+    voice: {
+      type: "string",
+      valueHint: "<voice>",
       description: `Output voice (default: Cherry). Options: ${OMNI_VOICES.join(", ")}`,
     },
-    { flag: "--audio-format <fmt>", description: "Audio output format (default: wav)" },
-    { flag: "--audio-out <path>", description: "Save audio to file (default: auto-generate)" },
-    { flag: "--text-only", description: "Output text only, no audio generation" },
-    { flag: "--max-tokens <n>", description: "Maximum tokens to generate", type: "number" },
-    { flag: "--temperature <n>", description: "Sampling temperature (0.0, 2.0]", type: "number" },
-  ],
+    audioFormat: {
+      type: "string",
+      valueHint: "<fmt>",
+      description: "Audio output format (default: wav)",
+    },
+    audioOut: {
+      type: "string",
+      valueHint: "<path>",
+      description: "Save audio to file (default: auto-generate)",
+    },
+    textOnly: { type: "switch", description: "Output text only, no audio generation" },
+    maxTokens: { type: "number", valueHint: "<n>", description: "Maximum tokens to generate" },
+    temperature: {
+      type: "number",
+      valueHint: "<n>",
+      description: "Sampling temperature (0.0, 2.0]",
+    },
+  },
   exampleArgs: [
     '--message "Hello, who are you?"',
     '--message "Describe this image" --image ./photo.jpg',
@@ -126,20 +145,20 @@ export default defineCommand({
     '--message "Hello" --text-only --output json',
     '--message "Read this passage aloud" --audio-out greeting.wav',
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(config, flags) {
     // --- Parse messages ---
-    const userMessages = flags.message as string[];
+    const userMessages = flags.message;
 
-    const model = (flags.model as string) || config.defaultOmniModel || "qwen3.5-omni-plus";
-    const voice = (flags.voice as string) || "Cherry";
-    const audioFormat = (flags.audioFormat as string) || "wav";
+    const model = flags.model || config.defaultOmniModel || "qwen3.5-omni-plus";
+    const voice = flags.voice || "Cherry";
+    const audioFormat = flags.audioFormat || "wav";
     const textOnly = flags.textOnly === true;
     const format = detectOutputFormat(config.output);
 
     // --- Build messages array ---
     const allMessages: ChatMessage[] = [];
     if (flags.system) {
-      allMessages.push({ role: "system", content: flags.system as string });
+      allMessages.push({ role: "system", content: flags.system });
     }
 
     // Build multimodal content for user messages
@@ -161,9 +180,9 @@ export default defineCommand({
     }
 
     // Attach multimodal inputs to the last user message
-    const rawImageUrls = (flags.image as string[] | undefined) || [];
-    const rawAudioUrls = (flags.audio as string[] | undefined) || [];
-    const rawVideoUrls = (flags.video as string[] | undefined) || [];
+    const rawImageUrls = flags.image || [];
+    const rawAudioUrls = flags.audio || [];
+    const rawVideoUrls = flags.video || [];
 
     // Auto-upload local files
     const imageUrls: string[] = [];
@@ -258,8 +277,8 @@ export default defineCommand({
       body.audio = { voice, format: audioFormat };
     }
 
-    if (flags.maxTokens !== undefined) body.max_tokens = flags.maxTokens as number;
-    if (flags.temperature !== undefined) body.temperature = flags.temperature as number;
+    if (flags.maxTokens !== undefined) body.max_tokens = flags.maxTokens;
+    if (flags.temperature !== undefined) body.temperature = flags.temperature;
 
     if (config.dryRun) {
       emitResult({ request: body }, format);
@@ -322,7 +341,7 @@ export default defineCommand({
       const wavHeader = buildWavHeader(pcmBuffer.length);
       const wavBuffer = Buffer.concat([wavHeader, pcmBuffer]);
 
-      let destPath = flags.audioOut as string | undefined;
+      let destPath = flags.audioOut;
       if (!destPath) {
         // eslint-disable-next-line @typescript-eslint/unbound-method
         const { join } = await import("path");
