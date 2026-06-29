@@ -30,7 +30,7 @@ Index: [index.md](index.md)
 | `--message <text>`    | array  | yes      | Message text (repeatable). Supports role:content prefix to set role (e.g. user:hello), defaults to user. Follows OpenAI message format |
 | `--agent-id <id>`     | string | yes      | Q&A service ID (find in console knowledge Q&A page)                                                                                    |
 | `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                                                        |
-| `--image <url>`       | array  | no       | Image URL(s) (repeatable)                                                                                                              |
+| `--image <url>`       | array  | no       | Image URL (repeatable). Attached to the last user message as multimodal content                                                        |
 
 #### Notes
 
@@ -47,6 +47,10 @@ bl knowledge chat --message "What is RAG?" --agent-id aid-xxx --workspace-id ws-
 
 ```bash
 bl knowledge chat --message "user:What is RAG?" --message "assistant:RAG is..." --message "How does it work?" --agent-id aid-xxx --workspace-id ws-xxx
+```
+
+```bash
+bl knowledge chat --message "Describe these images" --image https://example.com/a.png --image https://example.com/b.png --agent-id aid-xxx --workspace-id ws-xxx
 ```
 
 ### `bl knowledge retrieve`

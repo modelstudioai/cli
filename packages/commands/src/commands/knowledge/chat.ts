@@ -9,22 +9,40 @@ import {
   isInteractive,
   type Config,
   type GlobalFlags,
+  type KnowledgeChatContentPart,
+  type KnowledgeChatMessage,
   type KnowledgeChatRequest,
   type KnowledgeChatStreamChunk,
 } from "bailian-cli-core";
 import { failIfMissing, cmdUsage, emitResult, emitBare, promptText } from "bailian-cli-runtime";
 
-interface ParsedMessage {
-  role: "user" | "assistant";
-  content: string;
-}
-
-function parseMessages(flags: GlobalFlags): ParsedMessage[] {
-  const messages: ParsedMessage[] = [];
+/**
+ * Parse --message flags into KnowledgeChatMessage[].
+ * Supports:
+ *   1. Simple text: "hello" → {role:"user", content:"hello"}
+ *   2. Role prefix: "user:hello" / "assistant:hi" → {role, content}
+ *   3. JSON object: '{"role":"user","content":[...]}' → structured message (advanced)
+ */
+function parseMessages(flags: GlobalFlags): KnowledgeChatMessage[] {
+  const messages: KnowledgeChatMessage[] = [];
   if (flags.message) {
     const validRoles = new Set(["user", "assistant"]);
     const msgs = flags.message as string[];
     for (const m of msgs) {
+      // Try JSON object first (advanced usage)
+      if (m.startsWith("{")) {
+        try {
+          const parsed = JSON.parse(m) as { role?: string; content?: unknown };
+          if (parsed.role && validRoles.has(parsed.role) && parsed.content !== undefined) {
+            messages.push(parsed as KnowledgeChatMessage);
+            continue;
+          }
+        } catch {
+          // Not valid JSON, fall through to simple parsing
+        }
+      }
+
+      // Simple role:content or plain text
       const colonIdx = m.indexOf(":");
       const maybeRole = colonIdx !== -1 ? m.slice(0, colonIdx) : "";
 
@@ -36,6 +54,55 @@ function parseMessages(flags: GlobalFlags): ParsedMessage[] {
     }
   }
   return messages;
+}
+
+/** Check if any message content already contains image_url parts */
+function hasEmbeddedImages(messages: KnowledgeChatMessage[]): boolean {
+  for (const msg of messages) {
+    if (Array.isArray(msg.content)) {
+      if (msg.content.some((p) => p.type === "image_url")) return true;
+    }
+  }
+  return false;
+}
+
+/** Attach --image URLs to the last user message's content (as multimodal array) */
+function attachImagesToLastUserMessage(
+  messages: KnowledgeChatMessage[],
+  imageUrls: string[],
+): void {
+  // Find last user message index
+  let lastUserIdx = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i]!.role === "user") {
+      lastUserIdx = i;
+      break;
+    }
+  }
+
+  // If no user message exists, append an empty one
+  if (lastUserIdx === -1) {
+    messages.push({ role: "user", content: "" });
+    lastUserIdx = messages.length - 1;
+  }
+
+  const target = messages[lastUserIdx]!;
+  const contentParts: KnowledgeChatContentPart[] = [];
+
+  // Preserve existing text content (always include a text part, even if empty)
+  if (typeof target.content === "string") {
+    contentParts.push({ type: "text", text: target.content });
+  } else {
+    // Already an array, extend it
+    contentParts.push(...target.content);
+  }
+
+  // Append image parts
+  for (const url of imageUrls) {
+    contentParts.push({ type: "image_url", image_url: { url } });
+  }
+
+  target.content = contentParts;
 }
 
 /** SSE step_change → human-friendly progress label (TTY only) */
@@ -67,7 +134,8 @@ export default defineCommand({
     },
     {
       flag: "--image <url>",
-      description: "Image URL(s) (repeatable)",
+      description:
+        "Image URL (repeatable). Attached to the last user message as multimodal content",
       type: "array",
     },
   ],
@@ -80,12 +148,19 @@ export default defineCommand({
   exampleArgs: [
     '--message "What is RAG?" --agent-id aid-xxx --workspace-id ws-xxx',
     '--message "user:What is RAG?" --message "assistant:RAG is..." --message "How does it work?" --agent-id aid-xxx --workspace-id ws-xxx',
+    '--message "Describe these images" --image https://example.com/a.png --image https://example.com/b.png --agent-id aid-xxx --workspace-id ws-xxx',
   ],
   async run(config: Config, flags: GlobalFlags) {
     let messages = parseMessages(flags);
 
+    const imageUrls = flags.image as string[] | undefined;
+    const hasImages = imageUrls && imageUrls.length > 0;
+
     if (messages.length === 0) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
+      if (hasImages) {
+        // --image without --message: create an empty user message to hold images
+        messages = [{ role: "user", content: "" }];
+      } else if (isInteractive({ nonInteractive: config.nonInteractive })) {
         const hint = await promptText({ message: "Enter your message:" });
         if (!hint) {
           process.stderr.write("Chat cancelled.\n");
@@ -113,6 +188,17 @@ export default defineCommand({
     // API only supports SSE; streamOutput controls whether to print tokens in real-time
     const streamOutput = format === "text" && !!process.stdout.isTTY;
 
+    // Attach --image URLs to messages (multimodal content array)
+    if (hasImages) {
+      if (hasEmbeddedImages(messages)) {
+        throw new BailianError(
+          "Cannot use --image when messages already contain embedded image_url content parts. Use one approach or the other.",
+          ExitCode.USAGE,
+        );
+      }
+      attachImagesToLastUserMessage(messages, imageUrls!);
+    }
+
     const body: KnowledgeChatRequest = {
       input: {
         messages,
@@ -124,11 +210,6 @@ export default defineCommand({
       },
       stream: true,
     };
-
-    const imageUrls = flags.image as string[] | undefined;
-    if (imageUrls && imageUrls.length > 0) {
-      body.parameters.agent_options.image_list = imageUrls;
-    }
 
     const url = knowledgeChatEndpoint(workspaceId);
 

@@ -7,7 +7,7 @@ interface DryRunBody {
   request?: {
     query?: string;
     agent_id?: string;
-    image_list?: string[];
+    images?: string[];
     query_history?: Array<{ role: string; content: string }>;
   };
 }
@@ -96,7 +96,7 @@ describe("e2e: knowledge search", () => {
     expect(data.request?.agent_id).toBe("aid_test");
   });
 
-  test("--dry-run + --image 输出 image_list", async () => {
+  test("--dry-run + --image 输出 images", async () => {
     const { stdout, stderr, exitCode } = await runCli(
       [
         "knowledge",
@@ -120,7 +120,7 @@ describe("e2e: knowledge search", () => {
     );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
-    expect(data.request?.image_list).toEqual([
+    expect(data.request?.images).toEqual([
       "https://example.com/a.jpg",
       "https://example.com/b.jpg",
     ]);

@@ -89,7 +89,7 @@ export default defineCommand({
 
     const imageUrls = flags.image as string[] | undefined;
     if (imageUrls && imageUrls.length > 0) {
-      body.image_list = imageUrls;
+      body.images = imageUrls;
     }
 
     // Parse query_history JSON for multi-turn context

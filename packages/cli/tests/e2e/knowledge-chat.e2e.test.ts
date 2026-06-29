@@ -2,16 +2,21 @@ import { tmpdir } from "os";
 import { describe, expect, test } from "vite-plus/test";
 import { parseStdoutJson, runCli } from "./helpers.ts";
 
+interface ContentPart {
+  type: string;
+  text?: string;
+  image_url?: { url: string };
+}
+
 interface DryRunBody {
   endpoint?: string;
   request?: {
     input?: {
-      messages?: Array<{ role: string; content: string }>;
+      messages?: Array<{ role: string; content: string | ContentPart[] }>;
     };
     parameters?: {
       agent_options?: {
         agent_id?: string;
-        image_list?: string[];
       };
     };
     stream?: boolean;
@@ -135,7 +140,7 @@ describe("e2e: knowledge chat", () => {
     expect(msgs[2]?.content).toBe("它怎么工作");
   });
 
-  test("--dry-run + --image 输出 image_list", async () => {
+  test("--dry-run + --image 输出多模态 content 数组", async () => {
     const { stdout, stderr, exitCode } = await runCli(
       [
         "knowledge",
@@ -157,8 +162,50 @@ describe("e2e: knowledge chat", () => {
     );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
-    expect(data.request?.parameters?.agent_options?.image_list).toEqual([
-      "https://example.com/img.jpg",
-    ]);
+    const lastMsg = data.request?.input?.messages?.[0];
+    expect(lastMsg?.role).toBe("user");
+    expect(Array.isArray(lastMsg?.content)).toBe(true);
+    const parts = lastMsg?.content as ContentPart[];
+    expect(parts[0]).toEqual({ type: "text", text: "描述这张图" });
+    expect(parts[1]).toEqual({
+      type: "image_url",
+      image_url: { url: "https://example.com/img.jpg" },
+    });
+  });
+
+  test("--dry-run + --image 无 --message 自动创建空 user message", async () => {
+    const { stdout, stderr, exitCode } = await runCli(
+      [
+        "knowledge",
+        "chat",
+        "--dry-run",
+        "--agent-id",
+        "aid_test",
+        "--workspace-id",
+        "ws_test",
+        "--image",
+        "https://example.com/a.png",
+        "--image",
+        "https://example.com/b.png",
+        "--non-interactive",
+        "--output",
+        "json",
+      ],
+      { DASHSCOPE_API_KEY: "sk-fake-for-dryrun" },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<DryRunBody>(stdout);
+    const lastMsg = data.request?.input?.messages?.[0];
+    expect(lastMsg?.role).toBe("user");
+    const parts = lastMsg?.content as ContentPart[];
+    expect(parts[0]).toEqual({ type: "text", text: "" });
+    expect(parts[1]).toEqual({
+      type: "image_url",
+      image_url: { url: "https://example.com/a.png" },
+    });
+    expect(parts[2]).toEqual({
+      type: "image_url",
+      image_url: { url: "https://example.com/b.png" },
+    });
   });
 });

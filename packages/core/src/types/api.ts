@@ -422,7 +422,7 @@ export interface DashScopeKnowledgeRetrieveResponse {
 export interface KnowledgeSearchRequest {
   query: string;
   agent_id: string;
-  image_list?: string[];
+  images?: string[];
   query_history?: Array<{ role: "user" | "assistant"; content: string }>;
 }
 
@@ -456,15 +456,22 @@ export interface KnowledgeSearchResponse {
 
 // ---- Knowledge Chat (新版 RAG 问答 SSE API, agent_id-based) ----
 
+export type KnowledgeChatContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
+export interface KnowledgeChatMessage {
+  role: "user" | "assistant";
+  content: string | KnowledgeChatContentPart[];
+}
+
 export interface KnowledgeChatRequest {
   input: {
-    messages: Array<{ role: "user" | "assistant"; content: string }>;
-    request_id?: string;
+    messages: KnowledgeChatMessage[];
   };
   parameters: {
     agent_options: {
       agent_id: string;
-      image_list?: string[];
       user?: {
         user_id?: string;
         workspace_id?: string;

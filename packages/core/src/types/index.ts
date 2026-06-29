@@ -23,6 +23,8 @@ export type {
   DashScopeVideoEditRequest,
   DashScopeVideoRefRequest,
   DashScopeVideoRequest,
+  KnowledgeChatContentPart,
+  KnowledgeChatMessage,
   KnowledgeChatRequest,
   KnowledgeChatStreamChunk,
   KnowledgeRetrieveRequest,
