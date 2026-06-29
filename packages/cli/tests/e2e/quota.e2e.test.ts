@@ -53,7 +53,7 @@ describe("e2e: quota", () => {
 
   test("quota check --period 0 报错最小值", async () => {
     const { stderr, exitCode } = await runCli(["quota", "check", "--period", "0.5"]);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(stderr).toContain("at least 1 minute");
   });
 });
@@ -184,7 +184,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
       "--tpm",
       "999",
     ]);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(stderr).toContain("out of range");
     expect(stderr).toContain("Current");
     expect(stderr).toContain("Range");

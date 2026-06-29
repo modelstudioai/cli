@@ -30,7 +30,7 @@ Index: [index.md](index.md)
 | `--input <json>`      | string | no       | Runtime input as inline JSON         |
 | `--input-file <path>` | string | no       | Runtime input from a JSON file       |
 | `--concurrency <n>`   | number | no       | Max parallel steps (default: 1)      |
-| `--events <format>`   | string | no       | Emit lifecycle events: jsonl         |
+| `--events <jsonl>`    | string | no       | Emit lifecycle events: jsonl         |
 | `--timeout <seconds>` | number | no       | Default step timeout in seconds      |
 
 #### Examples

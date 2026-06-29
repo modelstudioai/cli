@@ -1,4 +1,10 @@
-import { defineCommand, bailianMcpPath, detectOutputFormat } from "bailian-cli-core";
+import {
+  defineCommand,
+  UsageError,
+  BailianError,
+  bailianMcpPath,
+  detectOutputFormat,
+} from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
 function parseArgFlags(raw: string[]): Record<string, unknown> {
@@ -6,8 +12,7 @@ function parseArgFlags(raw: string[]): Record<string, unknown> {
   for (const item of raw) {
     const idx = item.indexOf("=");
     if (idx <= 0) {
-      process.stderr.write(`Error: --arg must be in K=V form, got: ${item}\n`);
-      process.exit(1);
+      throw new UsageError(`--arg must be in K=V form, got: ${item}`);
     }
     const key = item.slice(0, idx).trim();
     const rawVal = item.slice(idx + 1);
@@ -64,25 +69,23 @@ export default defineCommand({
 
     const dot = target.indexOf(".");
     if (dot <= 0 || dot === target.length - 1) {
-      process.stderr.write(`Error: target must be <server-code>.<tool>, got "${target}".\n`);
-      process.exit(1);
+      throw new UsageError(`target must be <server-code>.<tool>, got "${target}".`);
     }
     const serverCode = target.slice(0, dot);
     const toolName = target.slice(dot + 1);
 
     let toolArgs: Record<string, unknown> = {};
     if (flags.json) {
+      let parsed: unknown;
       try {
-        const parsed = JSON.parse(flags.json);
-        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-          process.stderr.write("Error: --json must decode to an object.\n");
-          process.exit(1);
-        }
-        toolArgs = parsed as Record<string, unknown>;
+        parsed = JSON.parse(flags.json);
       } catch (err) {
-        process.stderr.write(`Error: --json is not valid JSON — ${(err as Error).message}\n`);
-        process.exit(1);
+        throw new UsageError(`--json is not valid JSON — ${(err as Error).message}`);
       }
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new UsageError("--json must decode to an object.");
+      }
+      toolArgs = parsed as Record<string, unknown>;
     }
     Object.assign(toolArgs, parseArgFlags(flags.arg ?? []));
     if (flags.query !== undefined) toolArgs.query = flags.query;
@@ -109,8 +112,7 @@ export default defineCommand({
 
     if (result.isError) {
       const errText = result.content.map((c) => c.text || "").join("\n");
-      process.stderr.write(`Tool error: ${errText}\n`);
-      process.exit(1);
+      throw new BailianError(`Tool error: ${errText}`);
     }
 
     emitResult(result, format);

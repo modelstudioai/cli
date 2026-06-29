@@ -1,5 +1,6 @@
 import {
   defineCommand,
+  BailianError,
   detectOutputFormat,
   mcpWebSearchPath,
   type FlagsDef,
@@ -85,14 +86,13 @@ export default defineCommand({
       // Call the search tool
       const result = await client.callTool("bailian_web_search", toolArgs);
 
-      if (!config.quiet) spinner.stop("Done.");
-
       // Handle error response
       if (result.isError) {
         const errText = result.content.map((c) => c.text || "").join("\n");
-        process.stderr.write(`Search error: ${errText}\n`);
-        process.exit(1);
+        throw new BailianError(`Search error: ${errText}`);
       }
+
+      if (!config.quiet) spinner.stop("Done.");
 
       // Output results — always structured to stdout
       if (format === "json") {

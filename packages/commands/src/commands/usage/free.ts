@@ -197,6 +197,7 @@ export default defineCommand({
       type: "string",
       valueHint: "<field>",
       description: "Sort by: remaining (ascending), expires (ascending)",
+      choices: ["remaining", "expires"] as const,
     },
     consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
     consoleSite: {
@@ -219,14 +220,7 @@ export default defineCommand({
     const { config, flags } = ctx;
     const modelFlag = flags.model || undefined;
     const expiringDays = Number(flags.expiring) || 0;
-    const VALID_SORT_FIELDS = ["remaining", "expires"] as const;
     const sortField = flags.sort || undefined;
-    if (sortField && !VALID_SORT_FIELDS.includes(sortField as (typeof VALID_SORT_FIELDS)[number])) {
-      process.stderr.write(
-        `Error: invalid --sort value "${sortField}". Must be one of: ${VALID_SORT_FIELDS.join(", ")}\n`,
-      );
-      process.exit(1);
-    }
     const format = detectOutputFormat(config.output);
 
     let models: string[];

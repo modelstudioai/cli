@@ -245,6 +245,6 @@ describe("e2e: pipeline", () => {
     ]);
     expect(exitCode).toBe(2);
     expect(stdout).toBe("");
-    expect(stderr).toMatch(/unsupported --events format: bogus/i);
+    expect(stderr).toMatch(/--events must be one of: jsonl/i);
   });
 });

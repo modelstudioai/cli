@@ -142,7 +142,7 @@ export async function callConsoleGateway(
 
   const innerData = json.data as Record<string, unknown> | undefined;
   if (innerData?.success === false && innerData.errorCode) {
-    const errorCode = String(innerData.errorCode);
+    const errorCode = String(innerData.errorCode as string | number);
     const notLogined = errorCode.includes("NotLogined");
     const errorMsg = typeof innerData.errorMsg === "string" ? innerData.errorMsg : undefined;
     throw new BailianError(

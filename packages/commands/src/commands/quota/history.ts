@@ -1,4 +1,4 @@
-import { defineCommand, detectOutputFormat, BailianError } from "bailian-cli-core";
+import { defineCommand, detectOutputFormat, BailianError, ExitCode } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
@@ -132,10 +132,11 @@ export default defineCommand({
       result = await ctx.client.console(HISTORY_API, requestData);
     } catch (err) {
       if (err instanceof BailianError && err.message.includes("NotLogined")) {
-        process.stderr.write(
-          `Error: session expired. Run \`${config.binName} auth login --console\` to re-authenticate.\n`,
+        throw new BailianError(
+          "session expired.",
+          ExitCode.AUTH,
+          `Run \`${config.binName} auth login --console\` to re-authenticate.`,
         );
-        process.exit(1);
       }
       throw err;
     }

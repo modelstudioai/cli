@@ -25,7 +25,12 @@ const RUN_FLAGS = {
     valueHint: "<n>",
     description: "Max parallel steps (default: 1)",
   },
-  events: { type: "string", valueHint: "<format>", description: "Emit lifecycle events: jsonl" },
+  events: {
+    type: "string",
+    valueHint: "<format>",
+    description: "Emit lifecycle events: jsonl",
+    choices: ["jsonl"] as const,
+  },
   timeout: {
     type: "number",
     valueHint: "<seconds>",
@@ -46,6 +51,7 @@ export default defineCommand({
     "--file workflow.json --events jsonl",
     "--file workflow.yaml --output json",
   ],
+  validate: (f) => (f.input && f.inputFile ? "use --input or --input-file, not both" : undefined),
   async run(ctx) {
     const { config, flags } = ctx;
     const file = flags.file;
@@ -53,12 +59,6 @@ export default defineCommand({
     initPipelineSteps();
 
     const eventsFormat = flags.events;
-    if (eventsFormat !== undefined && eventsFormat !== "jsonl") {
-      process.stderr.write(
-        `Error: unsupported --events format: ${eventsFormat}. Supported: jsonl\n`,
-      );
-      process.exit(2);
-    }
 
     const filePath = resolve(file);
     const pipeline = await loadPipelineFile(filePath);
@@ -98,10 +98,6 @@ export default defineCommand({
 async function resolveRuntimeInput(flags: RunFlags): Promise<Record<string, unknown>> {
   const inputJson = flags.input;
   const inputFile = flags.inputFile;
-  if (inputJson && inputFile) {
-    process.stderr.write("Error: use --input or --input-file, not both\n");
-    process.exit(2);
-  }
   if (inputJson) return JSON.parse(inputJson) as Record<string, unknown>;
   if (inputFile) {
     const raw = await readFile(resolve(inputFile), "utf-8");

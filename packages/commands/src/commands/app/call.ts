@@ -1,5 +1,6 @@
 import {
   defineCommand,
+  UsageError,
   appCompletionPath,
   parseSSE,
   detectOutputFormat,
@@ -114,8 +115,7 @@ export default defineCommand({
       try {
         body.input.biz_params = JSON.parse(flags.bizParams);
       } catch {
-        process.stderr.write("Error: --biz-params must be valid JSON\n");
-        process.exit(1);
+        throw new UsageError("--biz-params must be valid JSON");
       }
     }
 

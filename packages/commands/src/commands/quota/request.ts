@@ -1,4 +1,11 @@
-import { defineCommand, detectOutputFormat, BailianError, type Client } from "bailian-cli-core";
+import {
+  defineCommand,
+  UsageError,
+  BailianError,
+  ExitCode,
+  detectOutputFormat,
+  type Client,
+} from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
 const MODEL_LIST_API = "zeldaHttp.dashscopeModel./zelda/api/v1/modelCenter/listFoundationModels";
@@ -96,20 +103,11 @@ export default defineCommand({
     "--model qwen3.6-plus --tpm 8000000 --yes",
     "--model qwen-turbo --tpm 100000 --output json",
   ],
+  validate: (f) => (Number(f.tpm) > 0 ? undefined : "--tpm must be a positive number."),
   async run(ctx) {
     const { config, flags } = ctx;
     const modelName = flags.model;
-    if (!modelName) {
-      process.stderr.write("Error: --model is required.\n");
-      process.exit(1);
-    }
-
     const tpmValue = Number(flags.tpm);
-    if (!tpmValue || tpmValue <= 0) {
-      process.stderr.write("Error: --tpm must be a positive number.\n");
-      process.exit(1);
-    }
-
     const autoConfirm = Boolean(flags.yes) || config.yes;
     const format = detectOutputFormat(config.output);
 
@@ -126,13 +124,11 @@ export default defineCommand({
 
     const modelInfo = await fetchModelQpmInfo(ctx.client, modelName);
     if (!modelInfo) {
-      process.stderr.write(
-        `Error: model "${modelName}" not found or does not support self-service quota increase.\n`,
+      throw new BailianError(
+        `model "${modelName}" not found or does not support self-service quota increase.`,
+        ExitCode.GENERAL,
+        `Run \`${config.binName} quota list\` to view available models.`,
       );
-      process.stderr.write(
-        `Hint: run \`${config.binName} quota list\` to view available models.\n`,
-      );
-      process.exit(1);
     }
 
     const modelDefault = modelInfo.qpmInfo["model-default"];
@@ -142,12 +138,10 @@ export default defineCommand({
     const maxLimit = minLimit * 2;
 
     if (tpmValue < minLimit || tpmValue > maxLimit) {
-      process.stderr.write(
-        `Error: TPM value ${tpmValue.toLocaleString()} is out of range.\n` +
-          `  Current: ${currentLimit.toLocaleString()}\n` +
-          `  Range:   ${minLimit.toLocaleString()} ~ ${maxLimit.toLocaleString()}\n`,
+      throw new UsageError(
+        `TPM value ${tpmValue.toLocaleString()} is out of range. ` +
+          `Current: ${currentLimit.toLocaleString()}, Range: ${minLimit.toLocaleString()} ~ ${maxLimit.toLocaleString()}.`,
       );
-      process.exit(1);
     }
 
     const requestData = {
@@ -166,10 +160,11 @@ export default defineCommand({
         return await ctx.client.console(UPDATE_LIMITS_API, requestData);
       } catch (err) {
         if (err instanceof BailianError && err.message.includes("NotLogined")) {
-          process.stderr.write(
-            `Error: session expired. Run \`${config.binName} auth login --console\` to re-authenticate.\n`,
+          throw new BailianError(
+            "session expired.",
+            ExitCode.AUTH,
+            `Run \`${config.binName} auth login --console\` to re-authenticate.`,
           );
-          process.exit(1);
         }
         throw err;
       }
@@ -182,17 +177,16 @@ export default defineCommand({
       const confirmCode = resp.confirmCode as string;
 
       if (confirmCode === "Refresh_Required") {
-        process.stderr.write("Error: rate limit has been updated externally. Please retry.\n");
-        process.exit(1);
+        throw new BailianError("rate limit has been updated externally. Please retry.");
       }
 
       if (confirmCode === "Downgrade") {
         if (!autoConfirm) {
-          process.stderr.write(
-            `Warning: target TPM (${tpmValue.toLocaleString()}) is lower than current (${currentLimit.toLocaleString()}).\n` +
-              "Use --yes to confirm downgrade.\n",
+          throw new BailianError(
+            `target TPM (${tpmValue.toLocaleString()}) is lower than current (${currentLimit.toLocaleString()}).`,
+            ExitCode.GENERAL,
+            "Use --yes to confirm downgrade.",
           );
-          process.exit(1);
         }
         result = await submitRequest(true);
       }

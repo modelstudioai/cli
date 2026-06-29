@@ -254,15 +254,12 @@ export default defineCommand({
     "--model qwen3.6-plus,qwen-turbo",
     "--output json",
   ],
+  validate: (f) =>
+    (Number(f.period) || 2) < 1 ? "--period must be at least 1 minute." : undefined,
   async run(ctx) {
     const { config, flags } = ctx;
     const modelFlag = flags.model || undefined;
-    const rawPeriod = Number(flags.period) || 2;
-    if (rawPeriod < 1) {
-      process.stderr.write("Error: --period must be at least 1 minute.\n");
-      process.exit(1);
-    }
-    const windowMinutes = rawPeriod;
+    const windowMinutes = Number(flags.period) || 2;
     const format = detectOutputFormat(config.output);
 
     if (config.dryRun) {

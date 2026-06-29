@@ -1,4 +1,4 @@
-import { defineCommand, detectOutputFormat, type Client } from "bailian-cli-core";
+import { defineCommand, BailianError, detectOutputFormat, type Client } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
@@ -197,8 +197,7 @@ export default defineCommand({
       );
       models = models.filter((m) => names.has(m.model));
       if (models.length === 0) {
-        process.stderr.write(`Error: no matching models found for "${modelFlag}".\n`);
-        process.exit(1);
+        throw new BailianError(`no matching models found for "${modelFlag}".`);
       }
     }
 

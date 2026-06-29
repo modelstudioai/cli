@@ -1,4 +1,11 @@
-import { defineCommand, detectOutputFormat, type Config, type Client } from "bailian-cli-core";
+import {
+  defineCommand,
+  BailianError,
+  ExitCode,
+  detectOutputFormat,
+  type Config,
+  type Client,
+} from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
@@ -89,13 +96,11 @@ function resolveWorkspaceId(config: Config, flagWorkspaceId?: string): string {
   if (flagWorkspaceId) return flagWorkspaceId;
   if (config.workspaceId) return config.workspaceId;
 
-  process.stderr.write(
-    `Error: workspace-id is required. Set via --workspace-id, BAILIAN_WORKSPACE_ID, or \`${config.binName} config set workspace_id <id>\`.\n`,
+  throw new BailianError(
+    `workspace-id is required. Set via --workspace-id, BAILIAN_WORKSPACE_ID, or \`${config.binName} config set workspace_id <id>\`.`,
+    ExitCode.GENERAL,
+    `Run \`${config.binName} workspace list\` to view available workspaces.`,
   );
-  process.stderr.write(
-    `Hint: run \`${config.binName} workspace list\` to view available workspaces.\n`,
-  );
-  process.exit(1);
 }
 
 function formatNumber(num: number): string {
@@ -408,8 +413,7 @@ export default defineCommand({
 
       const result = await pollTelemetryApi(ctx.client, OVERVIEW_API, reqDTO);
       if (!result) {
-        process.stderr.write("Error: request timed out.\n");
-        process.exit(1);
+        throw new BailianError("Request timed out.", ExitCode.TIMEOUT);
       }
 
       const stat = extractOverviewData(result);

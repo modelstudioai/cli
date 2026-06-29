@@ -1,5 +1,6 @@
 import {
   defineCommand,
+  UsageError,
   memorySearchPath,
   detectOutputFormat,
   type FlagsDef,
@@ -49,8 +50,7 @@ export default defineCommand({
       try {
         body.messages = JSON.parse(flags.messages);
       } catch {
-        process.stderr.write("Error: --messages must be valid JSON array\n");
-        process.exit(1);
+        throw new UsageError("--messages must be valid JSON array");
       }
     }
 

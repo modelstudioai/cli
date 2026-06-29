@@ -1,5 +1,6 @@
 import {
   defineCommand,
+  UsageError,
   profileSchemaPath,
   detectOutputFormat,
   type ProfileSchemaCreateRequest,
@@ -38,8 +39,7 @@ export default defineCommand({
     try {
       attributes = JSON.parse(attrStr);
     } catch {
-      process.stderr.write("Error: --attributes must be valid JSON array\n");
-      process.exit(1);
+      throw new UsageError("--attributes must be valid JSON array");
     }
 
     const body: ProfileSchemaCreateRequest = { name, attributes };

@@ -11,12 +11,8 @@
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  GLOBAL_FLAGS,
-  type AnyCommand,
-  type FlagDef,
-  type FlagsDef,
-} from "../packages/core/dist/index.mjs";
+import { GLOBAL_FLAGS } from "../packages/core/dist/index.mjs";
+import type { AnyCommand, FlagDef, FlagsDef } from "../packages/core/src/index.ts";
 import { commands } from "../packages/cli/src/commands.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

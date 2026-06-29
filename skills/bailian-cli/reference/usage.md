@@ -29,7 +29,7 @@ Index: [index.md](index.md)
 | ------------------------------ | ------ | -------- | ------------------------------------------------------------------------- |
 | `--model <model>`              | string | no       | Model name(s) to query, comma-separated for multiple; omit for all models |
 | `--expiring <days>`            | string | no       | Only show quotas expiring within N days                                   |
-| `--sort <field>`               | string | no       | Sort by: remaining (ascending), expires (ascending)                       |
+| `--sort <remaining\|expires>`  | string | no       | Sort by: remaining (ascending), expires (ascending)                       |
 | `--console-region <region>`    | string | no       | Console region                                                            |
 | `--console-site <site>`        | string | no       | Console site: domestic, international                                     |
 | `--console-switch-agent <uid>` | number | no       | Switch agent UID                                                          |

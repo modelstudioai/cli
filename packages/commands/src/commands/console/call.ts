@@ -1,4 +1,9 @@
-import { defineCommand, effectiveConsoleGatewayConfig, detectOutputFormat } from "bailian-cli-core";
+import {
+  defineCommand,
+  UsageError,
+  effectiveConsoleGatewayConfig,
+  detectOutputFormat,
+} from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -39,8 +44,7 @@ export default defineCommand({
     try {
       data = JSON.parse(dataRaw) as Record<string, unknown>;
     } catch {
-      process.stderr.write("Error: --data must be valid JSON\n");
-      process.exit(1);
+      throw new UsageError("--data must be valid JSON");
     }
 
     const format = detectOutputFormat(config.output);
