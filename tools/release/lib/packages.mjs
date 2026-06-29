@@ -6,6 +6,8 @@ export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..")
 
 export const PACKAGES = [
   { key: "core", dir: "packages/core", name: "bailian-cli-core" },
+  { key: "runtime", dir: "packages/runtime", name: "bailian-cli-runtime" },
+  { key: "commands", dir: "packages/commands", name: "bailian-cli-commands" },
   { key: "cli", dir: "packages/cli", name: "bailian-cli" },
 ];
 
