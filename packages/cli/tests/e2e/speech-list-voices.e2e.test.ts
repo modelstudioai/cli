@@ -27,9 +27,9 @@ describe("e2e: speech list-voices", () => {
 });
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: speech list-voices", () => {
-  test("speech synthesize 缺少 --text 且非 --list-voices 时打印子命令帮助并退出 (0)", async () => {
+  test("speech synthesize 缺少 --text 且非 --list-voices 时报用法错误并退出 (2)", async () => {
     const { stderr, exitCode } = await runCli(["speech", "synthesize", "--non-interactive"]);
-    expect(exitCode).toBe(0);
+    expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--text|Usage:/i);
   });
 

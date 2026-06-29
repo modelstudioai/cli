@@ -31,9 +31,9 @@ describe("e2e: speech recognize", () => {
 describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
   "e2e: speech recognize（DashScope 媒体）",
   () => {
-    test("speech recognize 缺少 --url 时打印子命令帮助并退出 (0)", async () => {
+    test("speech recognize 缺少 --url 时报用法错误并退出 (2)", async () => {
       const { stderr, exitCode } = await runCli(["speech", "recognize", "--non-interactive"]);
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--url|Usage:/i);
     });
 

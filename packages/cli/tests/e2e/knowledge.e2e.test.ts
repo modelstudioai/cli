@@ -37,7 +37,7 @@ describe("e2e: knowledge retrieve", () => {
     expect(stderr).toMatch(/deprecated/i);
   });
 
-  test("缺少 --index-id 时打印帮助并退出 (0)", async () => {
+  test("缺少 --index-id 时报用法错误并退出 (2)", async () => {
     const { stderr, exitCode } = await runCli([
       "knowledge",
       "retrieve",
@@ -45,11 +45,11 @@ describe("e2e: knowledge retrieve", () => {
       "test",
       "--non-interactive",
     ]);
-    expect(exitCode).toBe(0);
+    expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--index-id|Usage:/i);
   });
 
-  test("缺少 --query 时打印帮助并退出 (0)", async () => {
+  test("缺少 --query 时报用法错误并退出 (2)", async () => {
     const { stderr, exitCode } = await runCli([
       "knowledge",
       "retrieve",
@@ -57,7 +57,7 @@ describe("e2e: knowledge retrieve", () => {
       "idx_test",
       "--non-interactive",
     ]);
-    expect(exitCode).toBe(0);
+    expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--query|Usage:/i);
   });
 });

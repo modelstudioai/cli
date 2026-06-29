@@ -24,7 +24,7 @@ describe("e2e: video task get", () => {
 describe.skipIf(!isBailianE2EEnabled() || !taskId || !isDashScopeE2EReady())(
   "e2e: video task get（DashScope）",
   () => {
-    test("video task get 缺少 --task-id 时打印子命令帮助并退出 (0)", async () => {
+    test("video task get 缺少 --task-id 时报用法错误并退出 (2)", async () => {
       const { stderr, exitCode } = await runCli([
         "video",
         "task",
@@ -33,8 +33,10 @@ describe.skipIf(!isBailianE2EEnabled() || !taskId || !isDashScopeE2EReady())(
         "--output",
         "json",
       ]);
-      expect(exitCode).toBe(0);
-      expect(stderr).toMatch(/--task-id|Usage:/i);
+      expect(exitCode).toBe(2);
+      const err = JSON.parse(stderr.trim()) as { error?: { code?: number; message?: string } };
+      expect(err.error?.code).toBe(2);
+      expect(err.error?.message).toMatch(/--task-id/i);
     });
 
     test("video task get --dry-run 仅回显 task_id 且不调任务接口", async () => {

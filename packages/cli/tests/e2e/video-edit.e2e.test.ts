@@ -31,7 +31,7 @@ describe("e2e: video edit", () => {
 describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
   "e2e: video edit（DashScope 视频）",
   () => {
-    test("video edit 缺少 --video 时打印子命令帮助并退出 (0)", async () => {
+    test("video edit 缺少 --video 时报用法错误并退出 (2)", async () => {
       const { stderr, exitCode } = await runCli([
         "video",
         "edit",
@@ -42,7 +42,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "仅提示词",
         "--non-interactive",
       ]);
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--video|Usage:/i);
     });
 

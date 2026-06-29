@@ -36,7 +36,7 @@ describe("e2e: video download", () => {
 describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
   "e2e: video download（DashScope 视频）",
   () => {
-    test("video download 缺少 --task-id 时打印子命令帮助并退出 (0)", async () => {
+    test("video download 缺少 --task-id 时报用法错误并退出 (2)", async () => {
       const { stderr, exitCode } = await runCli([
         "video",
         "download",
@@ -44,11 +44,11 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "/tmp/will-not-be-used.mp4",
         "--non-interactive",
       ]);
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--task-id|Usage:/i);
     });
 
-    test("video download 缺少 --out 时打印子命令帮助并退出 (0)", async () => {
+    test("video download 缺少 --out 时报用法错误并退出 (2)", async () => {
       const { stderr, exitCode } = await runCli([
         "video",
         "download",
@@ -56,7 +56,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         PLACEHOLDER_TASK_ID,
         "--non-interactive",
       ]);
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--out|Usage:/i);
     });
 

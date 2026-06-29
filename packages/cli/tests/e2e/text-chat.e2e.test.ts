@@ -20,7 +20,7 @@ describe("e2e: text chat", () => {
 });
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: text chat（DashScope）", () => {
-  test("text chat 缺少 --message 时打印子命令帮助并退出 (0)", async () => {
+  test("text chat 缺少 --message 时报用法错误并退出 (2)", async () => {
     const { stderr, exitCode } = await runCli([
       "text",
       "chat",
@@ -28,7 +28,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: text chat（DashScope）", () => {
       "qwen3.7-max",
       "--non-interactive",
     ]);
-    expect(exitCode).toBe(0);
+    expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--message|Usage:/i);
   });
 

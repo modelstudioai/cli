@@ -20,14 +20,14 @@ describe("e2e: omni", () => {
 describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
   "e2e: omni（DashScope 媒体）",
   () => {
-    test("omni 缺少 --message 时打印子命令帮助并退出 (0)", async () => {
+    test("omni 缺少 --message 时报用法错误并退出 (2)", async () => {
       const { stderr, exitCode } = await runCli([
         "omni",
         "--model",
         "qwen3.5-omni-flash",
         "--non-interactive",
       ]);
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--message|Usage:/i);
     });
 

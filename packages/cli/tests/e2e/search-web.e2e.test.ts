@@ -43,9 +43,9 @@ describe("e2e: search web", () => {
 });
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: search web", () => {
-  test("search web 缺少 --query 时打印子命令帮助并退出 (0)", async () => {
+  test("search web 缺少 --query 时报用法错误并退出 (2)", async () => {
     const { stderr, exitCode } = await runCli(["search", "web", "--non-interactive"]);
-    expect(exitCode).toBe(0);
+    expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--query|Usage:/i);
   });
 

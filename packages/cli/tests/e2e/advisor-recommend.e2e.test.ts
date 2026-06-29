@@ -16,13 +16,13 @@ describe("e2e: advisor recommend", () => {
 });
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", () => {
-  test("advisor recommend without --message prints help and exits", async () => {
+  test("advisor recommend without --message errors as usage error (2)", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "advisor",
       "recommend",
       "--non-interactive",
     ]);
-    expect(exitCode).toBe(0);
+    expect(exitCode).toBe(2);
     expect(`${stdout}\n${stderr}`).toMatch(/--message|Usage:/i);
   });
 

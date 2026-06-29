@@ -32,7 +32,7 @@ describe("e2e: image edit", () => {
 });
 
 describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())("e2e: image edit", () => {
-  test("image edit 缺少 --image 时打印子命令帮助并退出 (0)", async () => {
+  test("image edit 缺少 --image 时报用法错误并退出 (2)", async () => {
     const { stderr, exitCode } = await runCli([
       "image",
       "edit",
@@ -40,11 +40,11 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())("e2e: ima
       "仅提示词",
       "--non-interactive",
     ]);
-    expect(exitCode).toBe(0);
+    expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--image|Usage:/i);
   });
 
-  test("image edit 缺少 --prompt 时打印子命令帮助并退出 (0)", async () => {
+  test("image edit 缺少 --prompt 时报用法错误并退出 (2)", async () => {
     const testPng = join(__dirname, ".smoke-32.png");
     const { stderr, exitCode } = await runCli([
       "image",
@@ -53,7 +53,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())("e2e: ima
       testPng,
       "--non-interactive",
     ]);
-    expect(exitCode).toBe(0);
+    expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--prompt|Usage:/i);
   });
 

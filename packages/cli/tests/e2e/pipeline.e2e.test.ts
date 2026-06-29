@@ -127,9 +127,9 @@ describe("e2e: pipeline", () => {
     expect(data.issues?.join("\n")).toMatch(/pipeline graph contains cycle/i);
   });
 
-  test("pipeline run 缺少 --file 时打印子命令帮助并退出 (0)", async () => {
+  test("pipeline run 缺少 --file 时报用法错误并退出 (2)", async () => {
     const { stderr, exitCode } = await runCli(["pipeline", "run", "--non-interactive"]);
-    expect(exitCode, stderr).toBe(0);
+    expect(exitCode, stderr).toBe(2);
     expect(stderr).toMatch(/Usage: bl pipeline run --file <path>|--file/i);
   });
 

@@ -142,9 +142,9 @@ describe("e2e: mcp", () => {
     expect(data.url).toBe("https://example.com/custom/mcp");
   });
 
-  test("mcp tools 缺少 --server 时打印子命令帮助并退出 (0)", async () => {
+  test("mcp tools 缺少 --server 时报用法错误并退出 (2)", async () => {
     const { stderr, exitCode } = await runCli(["mcp", "tools", "--non-interactive"]);
-    expect(exitCode, stderr).toBe(0);
+    expect(exitCode, stderr).toBe(2);
     expect(stderr).toMatch(/--server|Usage:/i);
   });
 
@@ -258,9 +258,9 @@ describe("e2e: mcp", () => {
     expect(stderr).toMatch(/--json is not valid JSON|--json must decode/);
   });
 
-  test("mcp call 缺少 --target 时打印子命令帮助并退出 (0)", async () => {
+  test("mcp call 缺少 --target 时报用法错误并退出 (2)", async () => {
     const { stderr, exitCode } = await runCli(["mcp", "call", "--non-interactive"]);
-    expect(exitCode, stderr).toBe(0);
+    expect(exitCode, stderr).toBe(2);
     expect(stderr).toMatch(/--target|Usage:/i);
   });
 });

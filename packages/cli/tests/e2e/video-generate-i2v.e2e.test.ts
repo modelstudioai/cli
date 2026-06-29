@@ -31,7 +31,7 @@ describe("e2e: video generate (i2v)", () => {
 describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
   "e2e: video generate (i2v)（DashScope 视频）",
   () => {
-    test("video generate 缺少 --prompt 时打印子命令帮助并退出 (0)", async () => {
+    test("video generate 缺少 --prompt 时报用法错误并退出 (2)", async () => {
       const { stderr, exitCode } = await runCli([
         "video",
         "generate",
@@ -42,7 +42,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "https://example.com/placeholder.png",
         "--non-interactive",
       ]);
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--prompt|Usage:/i);
     });
 

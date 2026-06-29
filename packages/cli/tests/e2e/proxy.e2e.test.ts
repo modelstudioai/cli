@@ -28,7 +28,7 @@ const FAKE_URL = `https://${FAKE_HOST}/probe`;
  * 代理行为由进程环境变量决定，正是被测对象；fetch 成败不重要，我们只看代理是否收到 CONNECT。
  */
 const PROBE_SCRIPT = `
-import { setupProxyFromEnv } from ${JSON.stringify(join(cliPackageRoot, "src", "proxy.ts"))};
+import { setupProxyFromEnv } from ${JSON.stringify(join(cliPackageRoot, "..", "runtime", "src", "proxy.ts"))};
 setupProxyFromEnv();
 try {
   await fetch(${JSON.stringify(FAKE_URL)}, { signal: AbortSignal.timeout(5000) });

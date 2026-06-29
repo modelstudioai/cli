@@ -32,7 +32,7 @@ describe("e2e: image generate", () => {
 describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
   "e2e: image generate",
   () => {
-    test("image generate 缺少 --prompt 时打印子命令帮助并退出 (0)", async () => {
+    test("image generate 缺少 --prompt 时报用法错误并退出 (2)", async () => {
       const { stderr, exitCode } = await runCli([
         "image",
         "generate",
@@ -40,7 +40,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
         "qwen-image-2.0",
         "--non-interactive",
       ]);
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--prompt|Usage:/i);
     });
 

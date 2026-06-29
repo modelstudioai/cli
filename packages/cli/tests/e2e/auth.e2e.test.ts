@@ -32,9 +32,9 @@ describe("e2e: auth", () => {
     expect(stderr).toMatch(/status|output/i);
   });
 
-  test("auth login 缺少 --api-key 时打印子命令帮助并退出 (0)", async () => {
+  test("auth login 缺少 --api-key 时报用法错误并退出 (2)", async () => {
     const { stderr, exitCode } = await runCli(["auth", "login", "--non-interactive"]);
-    expect(exitCode, stderr).toBe(0);
+    expect(exitCode, stderr).toBe(2);
     expect(stderr).toMatch(/--api-key|Usage:/i);
   });
 
@@ -69,7 +69,7 @@ describe("e2e: auth", () => {
     expect(stdout).toContain("Would validate and save API key.");
   });
 
-  test("auth login 缺少密钥且 --output json 时仍打印子命令帮助 (0)", async () => {
+  test("auth login 缺少密钥且 --output json 时报用法错误并退出 (2)", async () => {
     const { stderr, exitCode } = await runCli([
       "auth",
       "login",
@@ -77,8 +77,10 @@ describe("e2e: auth", () => {
       "--output",
       "json",
     ]);
-    expect(exitCode).toBe(0);
-    expect(stderr).toMatch(/--api-key|Usage:/i);
+    expect(exitCode).toBe(2);
+    const err = JSON.parse(stderr.trim()) as { error?: { code?: number; message?: string } };
+    expect(err.error?.code).toBe(2);
+    expect(err.error?.message).toMatch(/--api-key|console/i);
   });
 
   test("auth logout --dry-run 不写入配置", async () => {
