@@ -32,6 +32,30 @@ export interface Cli {
 }
 
 /**
+ * 进程级一次性设置：代理初始化、Ctrl+C、stdout EPIPE。
+ * 属进程生命周期行为，装一次即可，不进 per-command 中间件。
+ */
+function installProcessHandlers(binName: string): void {
+  try {
+    setupProxyFromEnv();
+  } catch (err) {
+    handleError(err, binName);
+  }
+
+  // 处理 Ctrl+C
+  process.on("SIGINT", () => {
+    process.stderr.write("\nInterrupted. Exiting.\n");
+    void flushTelemetry(500).finally(() => process.exit(130));
+  });
+
+  // 处理 stdout EPIPE（例如管道到提前退出的 `mpv`）
+  process.stdout.on("error", (e: NodeJS.ErrnoException) => {
+    if (e.code === "EPIPE") process.exit(0);
+    else throw e;
+  });
+}
+
+/**
  * Build a CLI from an injected command set — each product (bl / rag / …) passes
  * its own commands + identity. `run` resolves argv into a {@link Resolution},
  * then dispatches it.
@@ -41,23 +65,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
   const clientName = opts.clientName ?? opts.binName;
   const { binName, version, npmPackage } = opts;
 
-  try {
-    setupProxyFromEnv();
-  } catch (err) {
-    handleError(err, binName);
-  }
-
-  // 优雅处理 Ctrl+C
-  process.on("SIGINT", () => {
-    process.stderr.write("\nInterrupted. Exiting.\n");
-    void flushTelemetry(500).finally(() => process.exit(130));
-  });
-
-  // 优雅处理 stdout EPIPE（例如管道到提前退出的 `mpv`）
-  process.stdout.on("error", (e: NodeJS.ErrnoException) => {
-    if (e.code === "EPIPE") process.exit(0);
-    else throw e;
-  });
+  installProcessHandlers(binName);
 
   const runMiddleware = compose([versionCheckStage, telemetryStage, authStage, runCommandStage]);
 
