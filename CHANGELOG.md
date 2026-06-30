@@ -6,6 +6,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.4.2] - 2026-06-24
+
+### Added
+
+- `bl omni --list-voices` prints the built-in output voices (ID, name, description, language) and exits without needing an API key. The built-in voice table is expanded from 6 to 17 voices, including dialect voices such as Dylan, Sunny, and Kiki.
+
+### Changed
+
+- `bl omni` default `--voice` is now `Tina` (previously `Cherry`). The `--voice` help points at `--list-voices` instead of listing every option inline.
+- `bl speech synthesize --list-voices` and its missing-`--voice` hint now include a link to the official CosyVoice voice documentation.
+- Agent skill setup guidance now covers console site selection (`--console-site domestic` / `international`) for console login and gateway commands.
+
+### Fixed
+
+- `bl speech synthesize` corrects the `cosyvoice-v3-flash` built-in voice ID from `longanhuan` to `longanhuan_v3`.
+
+## [1.4.1] - 2026-06-22
+
+### Changed
+
+- Video generation now defaults to the upgraded HappyHorse 1.1 model for better quality. The 1.0 models are still available via `--model`.
+- `bl update` now keeps the agent skill in sync across all your agent apps (Claude Code, Cursor, etc.), and refreshes it even when the CLI is already up to date.
+
 ## [1.4.0] - 2026-06-17
 
 ### Added

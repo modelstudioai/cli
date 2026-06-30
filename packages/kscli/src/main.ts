@@ -10,7 +10,7 @@ const commands: Record<string, Command> = {
   retrieve: knowledgeRetrieve,
 };
 
-createCli(commands, {
+void createCli(commands, {
   binName: "kscli",
   version: pkg.version,
   clientName: "knowledge-studio-cli",

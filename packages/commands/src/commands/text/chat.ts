@@ -160,6 +160,11 @@ export default defineCommand({
       if (flags.thinkingBudget !== undefined) {
         body.thinking_budget = flags.thinkingBudget as number;
       }
+    } else if (!shouldStream) {
+      // DashScope qwen3 models default to enable_thinking=true server-side, but
+      // non-streaming calls require it to be explicitly false. Stream calls
+      // support thinking, so leave the field unset there (server handles it).
+      body.enable_thinking = false;
     }
 
     if (flags.tool) {

@@ -3,6 +3,13 @@ name: Publish
 on:
   workflow_dispatch:
     inputs:
+      package:
+        description: "Which package set to publish"
+        required: true
+        type: choice
+        options:
+          - bailian-cli
+          - knowledge-studio-cli
       mode:
         description: "Publish mode"
         required: true
@@ -16,13 +23,13 @@ on:
         type: string
 
 concurrency:
-  group: publish-${{ inputs.mode }}-${{ inputs.channel }}
+  group: publish-${{ inputs.package }}-${{ inputs.mode }}-${{ inputs.channel }}
   cancel-in-progress: false
 
 jobs:
   publish-stable:
     if: inputs.mode == 'stable'
-    name: publish stable to npm + tag
+    name: publish stable (${{ inputs.package }}) to npm + tag
     runs-on: ubuntu-latest
     environment: production # Required Reviewers gate
     permissions:
@@ -51,11 +58,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: publish-stable
-        run: node tools/release/publish-stable.mjs
+        run: node tools/release/publish-stable.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }}
 
   publish-channel:
     if: inputs.mode == 'channel'
-    name: publish beta to npm
+    name: publish channel (${{ inputs.package }}) to npm
     runs-on: ubuntu-latest
     permissions:
       contents: read # no tag, no Release; just publish
@@ -83,4 +90,4 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: publish-channel
-        run: node tools/release/publish-channel.mjs --channel "${{ inputs.channel }}"
+        run: node tools/release/publish-channel.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }} --channel "${{ inputs.channel }}"

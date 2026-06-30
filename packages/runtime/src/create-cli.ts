@@ -11,7 +11,12 @@ import {
 import { ensureApiKey } from "./utils/ensure-key.ts";
 import { setupProxyFromEnv } from "./proxy.ts";
 import { handleError } from "./error-handler.ts";
-import { checkForUpdate, getPendingUpdateNotification } from "./utils/update-checker.ts";
+import {
+  checkForUpdate,
+  getPendingUpdateNotification,
+  shouldAutoUpdate,
+  performAutoUpdate,
+} from "./utils/update-checker.ts";
 import { maybeShowStatusBar } from "./output/status-bar.ts";
 import { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
 import { registerCommandHelpPrinter, setExecutingCommandPath } from "./utils/command-help.ts";
@@ -144,12 +149,18 @@ export function createCli(commands: Record<string, Command>, opts: CliOptions): 
     const isUpdateCommand = commandPath.length === 1 && commandPath[0] === "update";
     const newVersion = getPendingUpdateNotification();
     if (newVersion && !config.quiet && !isUpdateCommand) {
-      const isTTY = process.stderr.isTTY;
-      const yellow = isTTY ? "\x1b[33m" : "";
-      const cyan = isTTY ? "\x1b[36m" : "";
-      const reset = isTTY ? "\x1b[0m" : "";
-      process.stderr.write(`\n  ${yellow}Update available: ${version} → ${newVersion}${reset}\n`);
-      process.stderr.write(`  Run ${cyan}${opts.binName} update${reset} to upgrade\n\n`);
+      if (shouldAutoUpdate(newVersion, version)) {
+        // 大版本差距且目标为稳定版,自动更新
+        await performAutoUpdate(version, newVersion, npmPackage);
+      } else {
+        // 普通小版本提示
+        const isTTY = process.stderr.isTTY;
+        const yellow = isTTY ? "\x1b[33m" : "";
+        const cyan = isTTY ? "\x1b[36m" : "";
+        const reset = isTTY ? "\x1b[0m" : "";
+        process.stderr.write(`\n  ${yellow}Update available: ${version} → ${newVersion}${reset}\n`);
+        process.stderr.write(`  Run ${cyan}${opts.binName} update${reset} to upgrade\n\n`);
+      }
     }
 
     // 进程退出前尽力等待在途的埋点完成。

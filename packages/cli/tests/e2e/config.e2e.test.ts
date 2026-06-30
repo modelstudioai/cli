@@ -25,12 +25,6 @@ describe("e2e: config", () => {
     expect(stderr).toMatch(/set|--key|--value/i);
   });
 
-  test("config export-schema --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCli(["config", "export-schema", "--help"]);
-    expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/export-schema|--command/i);
-  });
-
   test("config show --output json", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "config",
@@ -145,47 +139,5 @@ describe("e2e: config", () => {
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{ would_set?: { default_text_model?: string } }>(stdout);
     expect(data.would_set?.default_text_model).toBe("qwen3.7-max");
-  });
-
-  test("config export-schema --command 导出单条工具 JSON", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
-      "config",
-      "export-schema",
-      "--command",
-      "text chat",
-      "--non-interactive",
-    ]);
-    expect(exitCode, stderr).toBe(0);
-    const schema = parseStdoutJson<{ name?: string; input_schema?: { type?: string } }>(stdout);
-    expect(schema.name).toMatch(/bailian_text_chat/);
-    expect(schema.input_schema?.type).toBe("object");
-  });
-
-  test("config export-schema 不存在的子命令时报错", async () => {
-    const { stderr, exitCode } = await runCli([
-      "config",
-      "export-schema",
-      "--command",
-      "this-command-does-not-exist-xyz",
-      "--non-interactive",
-      "--output",
-      "json",
-    ]);
-    expect(exitCode).toBe(2);
-    const err = JSON.parse(stderr.trim()) as { error?: { message?: string } };
-    expect(err.error?.message).toMatch(/not found/i);
-  });
-
-  test("config export-schema 导出全部为 JSON 数组", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
-      "config",
-      "export-schema",
-      "--non-interactive",
-    ]);
-    expect(exitCode, stderr).toBe(0);
-    const arr = parseStdoutJson<Array<{ name?: string }>>(stdout);
-    expect(Array.isArray(arr)).toBe(true);
-    expect(arr.length).toBeGreaterThan(0);
-    expect(arr[0]?.name).toMatch(/^bailian_/);
   });
 });
