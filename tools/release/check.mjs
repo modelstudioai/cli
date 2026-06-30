@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import { packAndScan } from "./lib/pack-scan.mjs";
 import { run } from "./lib/proc.mjs";
 import { assertReadmeSync, loadAndValidatePackages } from "./lib/validate.mjs";
+import { ALL_PACKAGES, PACKAGES } from "./lib/packages.mjs";
 
 function log(msg = "") {
   process.stdout.write(`${msg}\n`);
@@ -17,20 +18,24 @@ function step(msg) {
  * Pure-validation pipeline. Reusable from publish-stable / publish-channel.
  * Returns { coreJson, cliJson } for callers that need the parsed package.jsons.
  *
- * @param {{ channel?: boolean }} [options]
+ * @param {{ channel?: boolean, knowledge?: boolean }} [options]
  * @param {boolean} [options.channel] — When true (publish-channel): regenerate
  *   `reference/` and assert it matches git, but do not sync `SKILL.md` from the
  *   temporary beta `package.json` version (repo skill stays aligned with stable).
+ * @param {boolean} [options.knowledge] — When true: also build and validate
+ *   knowledge-studio-cli alongside the base packages.
  */
 export async function runCheck(options = {}) {
   const channel = options.channel === true;
+  const knowledge = options.knowledge === true;
+  const packages = knowledge ? ALL_PACKAGES : PACKAGES;
 
   step("pnpm install --frozen-lockfile");
   run("pnpm", ["install", "--frozen-lockfile"]);
 
   step("metadata: README sync, version consistency, workspace:* dep");
   assertReadmeSync();
-  const { coreJson, cliJson } = loadAndValidatePackages();
+  const { coreJson, cliJson } = loadAndValidatePackages({ packages });
   log(`bailian-cli-core@${coreJson.version}`);
   log(`bailian-cli@${cliJson.version}`);
 
@@ -63,8 +68,13 @@ export async function runCheck(options = {}) {
   step("build bailian-cli");
   run("pnpm", ["--filter", "bailian-cli", "run", "build"]);
 
+  if (knowledge) {
+    step("build knowledge-studio-cli");
+    run("pnpm", ["--filter", "knowledge-studio-cli", "run", "build"]);
+  }
+
   step("pack + scan (publint, gitleaks)");
-  packAndScan({ log });
+  packAndScan({ log, packages });
 
   log("\nrelease check passed.");
   return { coreJson, cliJson };
