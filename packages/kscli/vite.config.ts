@@ -3,7 +3,7 @@ import { defineConfig } from "vite-plus";
 export default defineConfig({
   pack: {
     entry: {
-      rag: "src/main.ts",
+      kscli: "src/main.ts",
     },
     hash: false,
     minify: true,
