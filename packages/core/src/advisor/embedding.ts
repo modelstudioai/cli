@@ -23,7 +23,7 @@ export interface EmbeddingsData {
 }
 
 function skillDataDir(): string {
-  return join(getConfigDir(), "skills/doc-llm-wiki");
+  return join(getConfigDir(), "skills/bailian-docs-llm-wiki");
 }
 
 function embeddingsPath(): string {
