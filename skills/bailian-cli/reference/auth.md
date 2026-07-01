@@ -1,6 +1,6 @@
 # `bl auth` commands
 
-> Auto-generated from `packages/cli/src/commands/catalog.ts`. Do not edit by hand.
+> Auto-generated from `packages/cli/src/commands.ts`. Do not edit by hand.
 > Regenerate: `pnpm --filter bailian-cli run generate:reference`.
 
 Index: [index.md](index.md)
@@ -21,7 +21,7 @@ Index: [index.md](index.md)
 | --------------- | ---------------------------------------------------------------------------- |
 | **Name**        | `auth login`                                                                 |
 | **Description** | Authenticate with API key or console browser login (credentials can coexist) |
-| **Usage**       | `bl auth login --api-key <key> \| bl auth login --console`                   |
+| **Usage**       | `bl auth login --api-key <key> \| --console`                                 |
 
 #### Options
 

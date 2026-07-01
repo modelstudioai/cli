@@ -1,5 +1,5 @@
 /**
- * Generator: reads `packages/cli/src/commands/catalog.ts` and writes:
+ * Generator: reads the bl product command map (`packages/cli/src/commands.ts`) and writes:
  *   - `skills/bailian-cli/reference/index.md` — quick index, global flags, notes
  *   - `skills/bailian-cli/reference/<group>.md` — per top-level command group details
  *
@@ -12,14 +12,14 @@ import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { GLOBAL_OPTIONS, type Command, type OptionDef } from "../packages/core/dist/index.mjs";
-import { commands } from "../packages/cli/src/commands/catalog.ts";
+import { commands } from "../packages/cli/src/commands.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REF_DIR = join(__dirname, "../skills/bailian-cli/reference");
 const INDEX_PATH = join(REF_DIR, "index.md");
 
 const GENERATED_BANNER =
-  "> Auto-generated from `packages/cli/src/commands/catalog.ts`. Do not edit by hand.\n" +
+  "> Auto-generated from `packages/cli/src/commands.ts`. Do not edit by hand.\n" +
   "> Regenerate: `pnpm --filter bailian-cli run generate:reference`.";
 
 function escCell(s: string): string {
@@ -50,9 +50,14 @@ function formatOptionsTable(options: OptionDef[] | undefined): string {
   ].join("\n");
 }
 
-function formatExamples(examples: string[] | undefined): string {
-  if (!examples?.length) return "_No examples._\n";
-  return examples.map((ex) => ["```bash", ex, "```"].join("\n")).join("\n\n") + "\n";
+function formatExamples(path: string, exampleArgs: string[] | undefined): string {
+  if (!exampleArgs?.length) return "_No examples._\n";
+  // Commands store argument-only examples; prepend `bl <path>` for the reference.
+  return (
+    exampleArgs
+      .map((ex) => ["```bash", `bl ${path}${ex ? ` ${ex}` : ""}`, "```"].join("\n"))
+      .join("\n\n") + "\n"
+  );
 }
 
 function formatNotes(notes: string[] | undefined): string {
@@ -64,11 +69,11 @@ function commandSection(path: string, cmd: Command): string {
   const lines: string[] = [];
   lines.push(`### \`bl ${path}\``, "");
   lines.push(`| Field | Value |`, `| --- | --- |`);
-  lines.push(`| **Name** | \`${escCell(cmd.name)}\` |`);
+  lines.push(`| **Name** | \`${escCell(path)}\` |`);
   lines.push(`| **Description** | ${escCell(cmd.description)} |`);
-  if (cmd.usage) {
-    lines.push(`| **Usage** | \`${escCell(cmd.usage)}\` |`);
-  }
+  // Commands store argument-only usage; the `bl <path>` prefix is added here.
+  const usage = `bl ${path}${cmd.usageArgs ? ` ${cmd.usageArgs}` : ""}`;
+  lines.push(`| **Usage** | \`${escCell(usage)}\` |`);
   lines.push("");
 
   lines.push("#### Options", "");
@@ -80,7 +85,7 @@ function commandSection(path: string, cmd: Command): string {
   }
 
   lines.push("#### Examples", "");
-  lines.push(formatExamples(cmd.examples));
+  lines.push(formatExamples(path, cmd.exampleArgs));
 
   return lines.join("\n");
 }

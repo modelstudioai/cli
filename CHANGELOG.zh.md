@@ -2,9 +2,28 @@
 
 `bailian-cli` 和 `bailian-cli-core` 的所有重要变更都记录在此。
 
-格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/spec/v2.0.0.html)。两个包共享一个版本号,总是一起发布。
+格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/spec/v2.0.0.html)。`bailian-cli`、`bailian-cli-core`、`bailian-cli-runtime`、`bailian-cli-commands` 共享一个版本号,总是一起发布。
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
+
+## [1.5.0] - 2026-07-01
+
+### 新增
+
+- 模型精调 —— `bl finetune`:创建、列出、查询、观察、取消训练任务;拉取训练日志;列出 checkpoint;将 checkpoint 导出为可部署模型;查询训练能力(按模型或按训练类型)。支持 `sft`、`sft-lora`、`dpo`、`dpo-lora`、`cpt` 训练类型。
+- 模型部署 —— `bl deploy`:创建、列出、查询、更新(限流)、扩缩容、删除部署;列出可部署模型与套餐。
+- 数据集管理 —— `bl dataset`:上传、列出、查询、删除数据集文件,并新增 `bl dataset validate` 在上传前本地校验 `.jsonl`(ChatML / DPO / CPT 格式)。
+- Token Plan 管理 —— `bl token-plan`:列出订阅座位、添加成员、批量分配座位、为座位创建 API Key。
+- 自动更新检查:命令执行完成后,CLI 会(节流地)检查 npm 上是否有新版本并提示 `Update available`;若与稳定版存在大版本差距则自动升级。`--quiet` 或执行 `bl update` 时跳过。
+- 可组合包:`bailian-cli-runtime`(CLI 框架)与 `bailian-cli-commands`(命令库)现在与 `bailian-cli-core` 一起发布,并在其之上新增了同家族 CLI `knowledge-studio-cli`(`kscli`)。`bl` 行为保持不变。
+
+### 已移除
+
+- 移除 `bl config export-schema` 命令(原用于把 CLI 命令导出为 Anthropic/OpenAI 兼容的 JSON tool schema)。
+
+### 修复
+
+- 控制台网关类命令(`bl console call` 等)在网关返回非字符串 `errorCode` 时,现在会给出可读的错误信息,而不是 `[object Object]`。
 
 ## [1.4.2] - 2026-06-24
 

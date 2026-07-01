@@ -1,0 +1,58 @@
+{
+  "name": "bailian-cli-commands",
+  "version": "1.5.0",
+  "description": "Command library for bailian-cli products (knowledge, memory, media, …). See https://www.npmjs.com/package/bailian-cli for usage.",
+  "homepage": "https://bailian.console.aliyun.com/cli",
+  "bugs": {
+    "url": "https://github.com/modelstudioai/cli/issues"
+  },
+  "license": "Apache-2.0",
+  "author": "Aliyun Model Studio",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/modelstudioai/cli.git",
+    "directory": "packages/commands"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "@bailian-cli/source": "./src/index.ts",
+      "default": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": "./dist/index.mjs",
+      "./package.json": "./package.json"
+    },
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check"
+  },
+  "dependencies": {
+    "bailian-cli-core": "workspace:*",
+    "bailian-cli-runtime": "workspace:*",
+    "boxen": "catalog:",
+    "chalk": "catalog:",
+    "yaml": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "7.0.0-dev.20260328.1",
+    "typescript": "^6.0.2",
+    "vite-plus": "0.1.22"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

@@ -1,6 +1,6 @@
 # bailian-cli (`bl`) command reference
 
-> Auto-generated from `packages/cli/src/commands/catalog.ts`. Do not edit by hand.
+> Auto-generated from `packages/cli/src/commands.ts`. Do not edit by hand.
 > Regenerate: `pnpm --filter bailian-cli run generate:reference`.
 
 Command **details** are in sibling `<group>.md` files in this directory.
@@ -16,7 +16,6 @@ Use this index for the full quick index and global flags.
 | `bl auth login`              | Authenticate with API key or console browser login (credentials can coexist)                                                    | [auth.md](auth.md)             |
 | `bl auth logout`             | Clear stored credentials                                                                                                        | [auth.md](auth.md)             |
 | `bl auth status`             | Show current authentication state                                                                                               | [auth.md](auth.md)             |
-| `bl config export-schema`    | Export all (or one) CLI command(s) as Anthropic/OpenAI-compatible JSON tool schemas                                             | [config.md](config.md)         |
 | `bl config set`              | Set a config value                                                                                                              | [config.md](config.md)         |
 | `bl config show`             | Display current configuration                                                                                                   | [config.md](config.md)         |
 | `bl console call`            | Call a Bailian console API via the CLI gateway                                                                                  | [console.md](console.md)       |
@@ -71,7 +70,7 @@ Use this index for the full quick index and global flags.
 | `bl token-plan assign-seats` | Batch assign Token Plan seats to members                                                                                        | [token-plan.md](token-plan.md) |
 | `bl token-plan create-key`   | Create a Token Plan API key for a seat                                                                                          | [token-plan.md](token-plan.md) |
 | `bl token-plan list-seats`   | List Token Plan subscription seat details                                                                                       | [token-plan.md](token-plan.md) |
-| `bl update`                  | Update bl to the latest version                                                                                                 | [update.md](update.md)         |
+| `bl update`                  | Update the CLI to the latest version                                                                                            | [update.md](update.md)         |
 | `bl usage free`              | Query free-tier quota for models (all models if --model is omitted)                                                             | [usage.md](usage.md)           |
 | `bl usage freetier`          | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable                                      | [usage.md](usage.md)           |
 | `bl usage stats`             | Query model usage statistics                                                                                                    | [usage.md](usage.md)           |
@@ -90,7 +89,7 @@ Use this index for the full quick index and global flags.
 | `advisor`    | `recommend`                                                                                         | [advisor.md](advisor.md)       |
 | `app`        | `call`, `list`                                                                                      | [app.md](app.md)               |
 | `auth`       | `login`, `logout`, `status`                                                                         | [auth.md](auth.md)             |
-| `config`     | `export-schema`, `set`, `show`                                                                      | [config.md](config.md)         |
+| `config`     | `set`, `show`                                                                                       | [config.md](config.md)         |
 | `console`    | `call`                                                                                              | [console.md](console.md)       |
 | `dataset`    | `delete`, `get`, `list`, `upload`, `validate`                                                       | [dataset.md](dataset.md)       |
 | `deploy`     | `create`, `delete`, `get`, `list`, `models`, `scale`, `update`                                      | [deploy.md](deploy.md)         |

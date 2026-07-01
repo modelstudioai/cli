@@ -1,6 +1,6 @@
 # `bl finetune` commands
 
-> Auto-generated from `packages/cli/src/commands/catalog.ts`. Do not edit by hand.
+> Auto-generated from `packages/cli/src/commands.ts`. Do not edit by hand.
 > Regenerate: `pnpm --filter bailian-cli run generate:reference`.
 
 Index: [index.md](index.md)
@@ -45,11 +45,11 @@ Index: [index.md](index.md)
 #### Examples
 
 ```bash
-bl finetune cancel --job-id ft-xxx
+bl finetune cancel bl finetune cancel --job-id ft-xxx
 ```
 
 ```bash
-bl finetune cancel --job-id ft-xxx --yes
+bl finetune cancel bl finetune cancel --job-id ft-xxx --yes
 ```
 
 ### `bl finetune capability`
@@ -188,7 +188,7 @@ bl finetune create --model qwen3-8b --datasets ./train.jsonl --training-type sft
 ```
 
 ```bash
-bl finetune create --model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4
+bl finetune create bl finetune create --model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4
 ```
 
 ```bash
@@ -218,11 +218,11 @@ bl finetune create --model qwen3-8b --datasets file-xxx --yes --output json
 #### Examples
 
 ```bash
-bl finetune delete --job-id ft-xxx
+bl finetune delete bl finetune delete --job-id ft-xxx
 ```
 
 ```bash
-bl finetune delete --job-id ft-xxx --yes
+bl finetune delete bl finetune delete --job-id ft-xxx --yes
 ```
 
 ### `bl finetune export`
@@ -250,7 +250,7 @@ bl finetune delete --job-id ft-xxx --yes
 #### Examples
 
 ```bash
-bl finetune export --job-id ft-xxx --checkpoint ckpt-3 --model-name my-qwen-sft
+bl finetune export bl finetune export --job-id ft-xxx --checkpoint ckpt-3 --model-name my-qwen-sft
 ```
 
 ### `bl finetune get`
@@ -270,11 +270,11 @@ bl finetune export --job-id ft-xxx --checkpoint ckpt-3 --model-name my-qwen-sft
 #### Examples
 
 ```bash
-bl finetune get --job-id ft-xxx
+bl finetune get bl finetune get --job-id ft-xxx
 ```
 
 ```bash
-bl finetune get --job-id ft-xxx --output json
+bl finetune get bl finetune get --job-id ft-xxx --output json
 ```
 
 ### `bl finetune list`

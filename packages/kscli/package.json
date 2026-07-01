@@ -1,0 +1,70 @@
+{
+  "name": "knowledge-studio-cli",
+  "version": "0.0.1",
+  "description": "Lightweight RAG CLI for Aliyun Model Studio — focused on knowledge-base retrieval.",
+  "keywords": [
+    "alibaba-cloud",
+    "aliyun",
+    "bailian",
+    "dashscope",
+    "knowledge-base",
+    "model-studio",
+    "rag",
+    "retrieval"
+  ],
+  "homepage": "https://rag.console.aliyun.com/",
+  "bugs": {
+    "url": "https://github.com/modelstudioai/cli/issues"
+  },
+  "license": "Apache-2.0",
+  "author": "Aliyun Model Studio",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/modelstudioai/cli.git",
+    "directory": "packages/kscli"
+  },
+  "bin": {
+    "kscli": "dist/kscli.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./dist/kscli.mjs",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/kscli.mjs",
+      "./package.json": "./package.json"
+    },
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "node src/main.ts",
+    "test": "vp test",
+    "check": "vp check"
+  },
+  "dependencies": {
+    "bailian-cli-commands": "workspace:*",
+    "bailian-cli-core": "workspace:*",
+    "bailian-cli-runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@clack/prompts": "^0.7.0",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "7.0.0-dev.20260328.1",
+    "ajv": "catalog:",
+    "boxen": "catalog:",
+    "chalk": "catalog:",
+    "typescript": "^6.0.2",
+    "undici": "catalog:",
+    "vite-plus": "0.1.22",
+    "yaml": "catalog:"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}
