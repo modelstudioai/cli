@@ -2,9 +2,28 @@
 
 All notable changes to `bailian-cli` and `bailian-cli-core` are documented here.
 
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The two packages share a single version number — they are always released together.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The `bailian-cli`, `bailian-cli-core`, `bailian-cli-runtime`, and `bailian-cli-commands` packages share a single version number — they are always released together.
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
+
+## [1.5.0] - 2026-07-01
+
+### Added
+
+- Model fine-tuning — `bl finetune`: create, list, get, watch, and cancel jobs; fetch training logs; list checkpoints; export a checkpoint as a deployable model; and query training capability (by model or by training type). Supports `sft`, `sft-lora`, `dpo`, `dpo-lora`, and `cpt` training types.
+- Model deployment — `bl deploy`: create, list, get, update (rate limits), scale, and delete deployments; list deployable models and plans.
+- Dataset management — `bl dataset`: upload, list, get, and delete dataset files, plus `bl dataset validate` to check a local `.jsonl` before uploading (ChatML / DPO / CPT formats).
+- Token Plan management — `bl token-plan`: list subscription seats, add members, batch-assign seats, and create a per-seat API key.
+- Automatic update check: after a command finishes, the CLI checks npm for a newer release (throttled) and shows an `Update available` hint; a major stable-version gap upgrades itself automatically. Skipped with `--quiet` or when running `bl update`.
+- Composable packages: `bailian-cli-runtime` (CLI framework) and `bailian-cli-commands` (command library) are now published alongside `bailian-cli-core`, and a new sibling CLI `knowledge-studio-cli` (`kscli`) ships on top of them. `bl` behavior is unchanged.
+
+### Removed
+
+- `bl config export-schema` (exported CLI commands as Anthropic/OpenAI-compatible JSON tool schemas) has been removed.
+
+### Fixed
+
+- Console gateway commands (`bl console call`, etc.) now surface a readable message when the gateway returns a non-string `errorCode`, instead of `[object Object]`.
 
 ## [1.4.2] - 2026-06-24
 
