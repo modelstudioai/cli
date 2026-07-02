@@ -24,25 +24,19 @@ describe("e2e: knowledge search", () => {
   });
 
   test("缺少 --query 时打印帮助并退出 (0)", async () => {
-    const { stderr, exitCode } = await runCli([
-      "knowledge",
-      "search",
-      "--agent-id",
-      "aid_test",
-      "--non-interactive",
-    ]);
+    const { stderr, exitCode } = await runCli(
+      ["knowledge", "search", "--agent-id", "aid_test", "--non-interactive"],
+      { DASHSCOPE_API_KEY: "sk-fake", BAILIAN_CONFIG_DIR: tmpdir() },
+    );
     expect(exitCode).toBe(0);
     expect(stderr).toMatch(/--query|Usage:/i);
   });
 
   test("缺少 --agent-id 时打印帮助并退出 (0)", async () => {
-    const { stderr, exitCode } = await runCli([
-      "knowledge",
-      "search",
-      "--query",
-      "test",
-      "--non-interactive",
-    ]);
+    const { stderr, exitCode } = await runCli(
+      ["knowledge", "search", "--query", "test", "--non-interactive"],
+      { DASHSCOPE_API_KEY: "sk-fake", BAILIAN_CONFIG_DIR: tmpdir() },
+    );
     expect(exitCode).toBe(0);
     expect(stderr).toMatch(/--agent-id|Usage:/i);
   });

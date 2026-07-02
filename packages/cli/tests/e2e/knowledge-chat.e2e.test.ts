@@ -33,25 +33,19 @@ describe("e2e: knowledge chat", () => {
   });
 
   test("缺少 --message 时打印帮助并退出 (0)", async () => {
-    const { stderr, exitCode } = await runCli([
-      "knowledge",
-      "chat",
-      "--agent-id",
-      "aid_test",
-      "--non-interactive",
-    ]);
+    const { stderr, exitCode } = await runCli(
+      ["knowledge", "chat", "--agent-id", "aid_test", "--non-interactive"],
+      { DASHSCOPE_API_KEY: "sk-fake", BAILIAN_CONFIG_DIR: tmpdir() },
+    );
     expect(exitCode).toBe(0);
     expect(stderr).toMatch(/--message|Usage:/i);
   });
 
   test("缺少 --agent-id 时打印帮助并退出 (0)", async () => {
-    const { stderr, exitCode } = await runCli([
-      "knowledge",
-      "chat",
-      "--message",
-      "Hello",
-      "--non-interactive",
-    ]);
+    const { stderr, exitCode } = await runCli(
+      ["knowledge", "chat", "--message", "Hello", "--non-interactive"],
+      { DASHSCOPE_API_KEY: "sk-fake", BAILIAN_CONFIG_DIR: tmpdir() },
+    );
     expect(exitCode).toBe(0);
     expect(stderr).toMatch(/--agent-id|Usage:/i);
   });
