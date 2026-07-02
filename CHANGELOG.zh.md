@@ -6,6 +6,20 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.6.0] - 2026-07-02
+
+### 新增
+
+- `bl knowledge search` — 基于新版 workspace RAG API 的知识库语义检索。支持 `--query`、`--agent-id`、`--workspace-id`、`--image`（多模态检索，可重复）和 `--query-history`（多轮对话上下文 JSON，用于查询重写）。
+- `bl knowledge chat` — 知识库 SSE 流式问答。支持 `--message`（可重复，支持 `角色:内容` 前缀传入多轮历史）、`--agent-id`、`--workspace-id` 和 `--image`（多模态）。交互模式下实时展示检索、规划、生成等步骤进度。
+- `bailian-cli-core` 新增 workspace 级知识 API 类型与端点：`KnowledgeSearchRequest` / `KnowledgeSearchResponse`、`KnowledgeChatRequest` / `KnowledgeChatStreamChunk` / `KnowledgeChatMessage` / `KnowledgeChatContentPart`，以及 `knowledgeSearchEndpoint` / `knowledgeChatEndpoint`。
+- `kscli` 现已包含 `search` 和 `chat` 命令。
+
+### 变更
+
+- `bl knowledge retrieve` 描述中已标记为废弃，请改用 `bl knowledge search`。
+- `kscli` README（中英文）更新，以 `search` 和 `chat` 为主推命令，`retrieve` 标记为废弃。
+
 ## [1.5.0] - 2026-07-01
 
 ### 新增

@@ -65,8 +65,6 @@ try {
     json.version = betaVersion;
     writePackageJson(pkg, json);
   }
-  // pnpm pack resolves `workspace:*` to the in-tree version, so each tarball
-  // will depend on its siblings at <betaVersion> after this bump.
 
   await runCheck({ channel: true, knowledge });
 

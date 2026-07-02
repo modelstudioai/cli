@@ -417,6 +417,91 @@ export interface DashScopeKnowledgeRetrieveResponse {
   };
 }
 
+// ---- Knowledge Search (新版 RAG 检索 API, agent_id-based) ----
+
+export interface KnowledgeSearchRequest {
+  query: string;
+  agent_id: string;
+  images?: string[];
+  query_history?: Array<{ role: "user" | "assistant"; content: string }>;
+}
+
+export interface KnowledgeSearchResponse {
+  code: string;
+  status_code: number;
+  request_id: string;
+  data: {
+    total: number;
+    cost_time: number;
+    nodes: Array<{
+      score: number;
+      text: string;
+      metadata: {
+        content?: string;
+        title?: string;
+        doc_id?: string;
+        doc_name?: string;
+        doc_url?: string;
+        pipeline_id?: string;
+        workspace_id?: string;
+        page_number?: number;
+        image_url?: string;
+        _knowledge_type?: string;
+        _citation_index?: number;
+        _score?: number;
+      };
+    }>;
+  };
+}
+
+// ---- Knowledge Chat (新版 RAG 问答 SSE API, agent_id-based) ----
+
+export type KnowledgeChatContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
+export interface KnowledgeChatMessage {
+  role: "user" | "assistant";
+  content: string | KnowledgeChatContentPart[];
+}
+
+export interface KnowledgeChatRequest {
+  input: {
+    messages: KnowledgeChatMessage[];
+  };
+  parameters: {
+    agent_options: {
+      agent_id: string;
+      user?: {
+        user_id?: string;
+        workspace_id?: string;
+      };
+    };
+  };
+  stream: boolean;
+}
+
+export interface KnowledgeChatStreamChunk {
+  output: {
+    choices: Array<{
+      message: {
+        role: string;
+        content: string;
+        tool_calls?: unknown[];
+        extra?: {
+          group?: string;
+          step_change?: string;
+          step?: string;
+        };
+      };
+      finish_reason: string;
+    }>;
+  };
+  code: string;
+  message: string;
+  request_id: string;
+}
+
 // ---- Speech Synthesis / TTS (DashScope) ----
 
 export interface DashScopeTTSRequest {

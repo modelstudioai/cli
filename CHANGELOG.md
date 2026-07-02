@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.6.0] - 2026-07-02
+
+### Added
+
+- `bl knowledge search` — semantic search across knowledge bases using the new workspace-based RAG API. Supports `--query`, `--agent-id`, `--workspace-id`, `--image` (multimodal retrieval, repeatable), and `--query-history` (JSON conversation context for multi-turn query rewriting).
+- `bl knowledge chat` — knowledge-base Q&A with SSE streaming. Supports `--message` (repeatable, with `role:content` prefix for multi-turn history), `--agent-id`, `--workspace-id`, and `--image` (multimodal). Displays real-time progress with step-change labels (retrieval, planning, generation) in interactive mode.
+- `bailian-cli-core` gains new types and endpoints for the workspace-based knowledge API: `KnowledgeSearchRequest` / `KnowledgeSearchResponse`, `KnowledgeChatRequest` / `KnowledgeChatStreamChunk` / `KnowledgeChatMessage` / `KnowledgeChatContentPart`, and `knowledgeSearchEndpoint` / `knowledgeChatEndpoint`.
+- `kscli` now ships `search` and `chat` commands alongside the existing `retrieve`.
+
+### Changed
+
+- `bl knowledge retrieve` is now marked as deprecated in its description; use `bl knowledge search` instead.
+- `kscli` README (EN + ZH) updated to feature `search` and `chat` as the primary commands, with `retrieve` marked deprecated.
+
 ## [1.5.0] - 2026-07-01
 
 ### Added

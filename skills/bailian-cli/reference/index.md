@@ -44,7 +44,9 @@ Use this index for the full quick index and global flags.
 | `bl finetune watch`          | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                      | [finetune.md](finetune.md)     |
 | `bl image edit`              | Edit an existing image with text instructions (Qwen-Image)                                                                      | [image.md](image.md)           |
 | `bl image generate`          | Generate images (Qwen-Image / wan2.x)                                                                                           | [image.md](image.md)           |
-| `bl knowledge retrieve`      | Retrieve from a Bailian knowledge base                                                                                          | [knowledge.md](knowledge.md)   |
+| `bl knowledge chat`          | Chat with a Bailian knowledge base (RAG Q&A with streaming)                                                                     | [knowledge.md](knowledge.md)   |
+| `bl knowledge retrieve`      | Retrieve from a Bailian knowledge base (deprecated, use `search` instead)                                                       | [knowledge.md](knowledge.md)   |
+| `bl knowledge search`        | Search a Bailian knowledge base (RAG semantic retrieval)                                                                        | [knowledge.md](knowledge.md)   |
 | `bl mcp call`                | Call a tool on an MCP server (tools/call)                                                                                       | [mcp.md](mcp.md)               |
 | `bl mcp list`                | List MCP servers activated under your Bailian account                                                                           | [mcp.md](mcp.md)               |
 | `bl mcp tools`               | List tools exposed by an MCP server (tools/list)                                                                                | [mcp.md](mcp.md)               |
@@ -96,7 +98,7 @@ Use this index for the full quick index and global flags.
 | `file`       | `upload`                                                                                            | [file.md](file.md)             |
 | `finetune`   | `cancel`, `capability`, `checkpoints`, `create`, `delete`, `export`, `get`, `list`, `logs`, `watch` | [finetune.md](finetune.md)     |
 | `image`      | `edit`, `generate`                                                                                  | [image.md](image.md)           |
-| `knowledge`  | `retrieve`                                                                                          | [knowledge.md](knowledge.md)   |
+| `knowledge`  | `chat`, `retrieve`, `search`                                                                        | [knowledge.md](knowledge.md)   |
 | `mcp`        | `call`, `list`, `tools`                                                                             | [mcp.md](mcp.md)               |
 | `memory`     | `add`, `delete`, `list`, `profile create`, `profile get`, `search`, `update`                        | [memory.md](memory.md)         |
 | `omni`       | `(root)`                                                                                            | [omni.md](omni.md)             |

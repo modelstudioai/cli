@@ -28,20 +28,29 @@ npm install -g knowledge-studio-cli
 ## Quick Start
 
 ```bash
-# Retrieve from a knowledge base
-kscli retrieve \
-  --index-id <your-index-id> \
-  --query "What is Model Studio?"
+# Search a knowledge base
+kscli search \
+  --query "What is Model Studio?" \
+  --agent-id <your-agent-id> \
+  --workspace-id <your-workspace-id>
+
+# Chat with a knowledge base
+kscli chat \
+  --message "What is RAG?" \
+  --agent-id <your-agent-id> \
+  --workspace-id <your-workspace-id>
 ```
 
 ## Commands
 
-| Command       | Description                       |
-| :------------ | :-------------------------------- |
-| `retrieve`    | Query a knowledge base (RAG)      |
-| `config show` | Display current configuration     |
-| `config set`  | Set a configuration value         |
-| `update`      | Self-update to the latest version |
+| Command       | Description                                       |
+| :------------ | :------------------------------------------------ |
+| `search`      | Semantic search across knowledge bases (RAG)      |
+| `chat`        | Knowledge-base Q&A with streaming (RAG)           |
+| `retrieve`    | Query a knowledge base (deprecated, use `search`) |
+| `config show` | Display current configuration                     |
+| `config set`  | Set a configuration value                         |
+| `update`      | Self-update to the latest version                 |
 
 ## Authentication
 
@@ -55,7 +64,7 @@ export DASHSCOPE_API_KEY=sk-xxxxx
 kscli config set --key api_key --value sk-xxxxx
 
 # Option 3: Per-command flag
-kscli retrieve --api-key sk-xxxxx --index-id <id> --query "..."
+kscli search --api-key sk-xxxxx --query "..." --agent-id <id> --workspace-id <id>
 ```
 
 ## Configuration

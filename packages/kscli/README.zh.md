@@ -29,19 +29,28 @@ npm install -g knowledge-studio-cli
 
 ```bash
 # 检索知识库
-kscli retrieve \
-  --index-id <your-index-id> \
-  --query "什么是 Model Studio？"
+kscli search \
+  --query "什么是 Model Studio？" \
+  --agent-id <your-agent-id> \
+  --workspace-id <your-workspace-id>
+
+# 知识库问答
+kscli chat \
+  --message "什么是RAG？" \
+  --agent-id <your-agent-id> \
+  --workspace-id <your-workspace-id>
 ```
 
 ## 命令列表
 
-| 命令          | 说明              |
-| :------------ | :---------------- |
-| `retrieve`    | 查询知识库（RAG） |
-| `config show` | 显示当前配置      |
-| `config set`  | 设置配置项        |
-| `update`      | 自更新到最新版本  |
+| 命令          | 说明                                  |
+| :------------ | :------------------------------------ |
+| `search`      | 知识库语义检索（RAG）                 |
+| `chat`        | 知识库问答（流式输出）                |
+| `retrieve`    | 查询知识库（已弃用，请使用 `search`） |
+| `config show` | 显示当前配置                          |
+| `config set`  | 设置配置项                            |
+| `update`      | 自更新到最新版本                      |
 
 ## 认证方式
 
@@ -55,7 +64,7 @@ export DASHSCOPE_API_KEY=sk-xxxxx
 kscli config set --key api_key --value sk-xxxxx
 
 # 方式三：命令行参数
-kscli retrieve --api-key sk-xxxxx --index-id <id> --query "..."
+kscli search --api-key sk-xxxxx --query "..." --agent-id <id> --workspace-id <id>
 ```
 
 ## 配置

@@ -79,6 +79,18 @@ export function knowledgeRetrieveEndpoint(baseUrl: string): string {
   return `${baseUrl}/api/v1/indices/rag/index/retrieve`;
 }
 
+// ---- Knowledge Search (新版 RAG 检索, workspace-based host) ----
+
+export function knowledgeSearchEndpoint(workspaceId: string): string {
+  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com/api/v1/indices/knowledge/search`;
+}
+
+// ---- Knowledge Chat (新版 RAG 问答, workspace-based host) ----
+
+export function knowledgeChatEndpoint(workspaceId: string): string {
+  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com/api/v2/apps/knowledge/chat`;
+}
+
 // ---- MCP Services (Streamable HTTP) ----
 
 export function mcpWebSearchEndpoint(baseUrl: string): string {
