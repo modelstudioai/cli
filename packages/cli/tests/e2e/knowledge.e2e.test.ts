@@ -80,10 +80,10 @@ describe("e2e: knowledge retrieve errors", () => {
         "json",
       ],
       {
-        DASHSCOPE_API_KEY: undefined,
-        DASHSCOPE_ACCESS_TOKEN: undefined,
-        ALIBABA_CLOUD_ACCESS_KEY_ID: undefined,
-        ALIBABA_CLOUD_ACCESS_KEY_SECRET: undefined,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_ACCESS_TOKEN: "",
+        ALIBABA_CLOUD_ACCESS_KEY_ID: "",
+        ALIBABA_CLOUD_ACCESS_KEY_SECRET: "",
         BAILIAN_CONFIG_DIR: tmpdir(),
       },
     );

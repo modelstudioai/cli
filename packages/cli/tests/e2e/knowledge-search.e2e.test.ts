@@ -47,17 +47,20 @@ describe("e2e: knowledge search", () => {
   });
 
   test("缺少 --workspace-id 时非零退出并提示", async () => {
-    const { stderr, exitCode } = await runCli([
-      "knowledge",
-      "search",
-      "--query",
-      "test",
-      "--agent-id",
-      "aid_test",
-      "--non-interactive",
-      "--output",
-      "json",
-    ]);
+    const { stderr, exitCode } = await runCli(
+      [
+        "knowledge",
+        "search",
+        "--query",
+        "test",
+        "--agent-id",
+        "aid_test",
+        "--non-interactive",
+        "--output",
+        "json",
+      ],
+      { BAILIAN_WORKSPACE_ID: "" },
+    );
     expect(exitCode).not.toBe(0);
     expect(stderr).toMatch(/workspace.*required/i);
   });
