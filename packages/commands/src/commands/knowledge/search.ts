@@ -15,6 +15,7 @@ import { failIfMissing, cmdUsage, emitResult, emitBare, promptText } from "baili
 
 export default defineCommand({
   description: "Search a Bailian knowledge base (RAG semantic retrieval)",
+  skipDefaultApiKeySetup: true,
   usageArgs: "--query <text> --agent-id <id> [flags]",
   options: [
     {

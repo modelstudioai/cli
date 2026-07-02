@@ -1,10 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { homedir } from "os";
-import { existsSync, readFileSync } from "fs";
-import { isBailianE2EEnabled, isDashScopeE2EReady, parseStdoutJson, runCli } from "./helpers.ts";
-import { readConfigFile } from "bailian-cli-core";
+import { isDashScopeE2EReady, parseStdoutJson, runCli } from "./helpers.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -26,36 +23,6 @@ describe("e2e: file upload", () => {
     expect(stderr).toMatch(/upload|--file|--model/i);
   });
 });
-
-// === DEBUG: 深入排查 readConfigFile 来源 ===
-const _configPath = join(homedir(), ".bailian", "config.json");
-const _configDir = process.env.BAILIAN_CONFIG_DIR;
-const _homedir = homedir();
-const _homeEnv = process.env.HOME;
-console.log(
-  "[worker:file-upload] DASHSCOPE_API_KEY =",
-  JSON.stringify(process.env.DASHSCOPE_API_KEY),
-);
-console.log("[worker:file-upload] isDashScopeE2EReady() =", isDashScopeE2EReady());
-console.log("[worker:file-upload] isBailianE2EEnabled() =", isBailianE2EEnabled());
-console.log("[worker:file-upload] homedir() =", JSON.stringify(_homedir));
-console.log("[worker:file-upload] process.env.HOME =", JSON.stringify(_homeEnv));
-console.log("[worker:file-upload] BAILIAN_CONFIG_DIR =", JSON.stringify(_configDir));
-console.log("[worker:file-upload] configPath (homedir) =", JSON.stringify(_configPath));
-console.log("[worker:file-upload] configPath exists =", existsSync(_configPath));
-try {
-  const _cfg = readConfigFile();
-  console.log("[worker:file-upload] readConfigFile() =", JSON.stringify(_cfg));
-  console.log("[worker:file-upload] readConfigFile().api_key =", JSON.stringify(_cfg.api_key));
-  console.log("[worker:file-upload] readConfigFile().api_key length =", _cfg.api_key?.length);
-} catch (err) {
-  console.log("[worker:file-upload] readConfigFile() threw:", err);
-}
-// 如果文件存在，直接读内容
-if (existsSync(_configPath)) {
-  console.log("[worker:file-upload] RAW config.json content =", readFileSync(_configPath, "utf8"));
-}
-// === DEBUG END ===
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: file upload（DashScope）", () => {
   test("file upload 缺少 --file 时打印子命令帮助并退出 (0)", async () => {

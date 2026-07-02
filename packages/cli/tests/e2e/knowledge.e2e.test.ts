@@ -96,21 +96,18 @@ describe("e2e: knowledge retrieve errors", () => {
 
 describe("e2e: knowledge retrieve dry-run", () => {
   test("--dry-run 输出 endpoint 和 snake_case body", async () => {
-    const { stdout, stderr, exitCode } = await runCli(
-      [
-        "knowledge",
-        "retrieve",
-        "--dry-run",
-        "--index-id",
-        "idx_test",
-        "--query",
-        "hello",
-        "--non-interactive",
-        "--output",
-        "json",
-      ],
-      { DASHSCOPE_API_KEY: "sk-fake-for-dryrun" },
-    );
+    const { stdout, stderr, exitCode } = await runCli([
+      "knowledge",
+      "retrieve",
+      "--dry-run",
+      "--index-id",
+      "idx_test",
+      "--query",
+      "hello",
+      "--non-interactive",
+      "--output",
+      "json",
+    ]);
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     expect(data.endpoint).toMatch(/api\/v1\/indices\/rag\/index\/retrieve/);
@@ -119,23 +116,20 @@ describe("e2e: knowledge retrieve dry-run", () => {
   });
 
   test("--dry-run + --top-k 转发到 rerank_top_n 并输出废弃警告", async () => {
-    const { stdout, stderr, exitCode } = await runCli(
-      [
-        "knowledge",
-        "retrieve",
-        "--dry-run",
-        "--index-id",
-        "idx_test",
-        "--query",
-        "hello",
-        "--top-k",
-        "5",
-        "--non-interactive",
-        "--output",
-        "json",
-      ],
-      { DASHSCOPE_API_KEY: "sk-fake-for-dryrun" },
-    );
+    const { stdout, stderr, exitCode } = await runCli([
+      "knowledge",
+      "retrieve",
+      "--dry-run",
+      "--index-id",
+      "idx_test",
+      "--query",
+      "hello",
+      "--top-k",
+      "5",
+      "--non-interactive",
+      "--output",
+      "json",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--top-k.*deprecated/i);
     const data = parseStdoutJson<DryRunBody>(stdout);
@@ -143,57 +137,51 @@ describe("e2e: knowledge retrieve dry-run", () => {
   });
 
   test("--dry-run + --rerank-top-n 优先于 --top-k", async () => {
-    const { stdout, stderr, exitCode } = await runCli(
-      [
-        "knowledge",
-        "retrieve",
-        "--dry-run",
-        "--index-id",
-        "idx_test",
-        "--query",
-        "hello",
-        "--top-k",
-        "5",
-        "--rerank-top-n",
-        "10",
-        "--non-interactive",
-        "--output",
-        "json",
-      ],
-      { DASHSCOPE_API_KEY: "sk-fake-for-dryrun" },
-    );
+    const { stdout, stderr, exitCode } = await runCli([
+      "knowledge",
+      "retrieve",
+      "--dry-run",
+      "--index-id",
+      "idx_test",
+      "--query",
+      "hello",
+      "--top-k",
+      "5",
+      "--rerank-top-n",
+      "10",
+      "--non-interactive",
+      "--output",
+      "json",
+    ]);
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     expect(data.request?.rerank_top_n).toBe(10);
   });
 
   test("--dry-run + rerank 参数完整输出", async () => {
-    const { stdout, stderr, exitCode } = await runCli(
-      [
-        "knowledge",
-        "retrieve",
-        "--dry-run",
-        "--index-id",
-        "idx_test",
-        "--query",
-        "hello",
-        "--rerank",
-        "--rerank-model",
-        "qwen3-rerank-hybrid",
-        "--rerank-mode",
-        "custom",
-        "--rerank-instruct",
-        "按相关性排序",
-        "--dense-similarity-top-k",
-        "100",
-        "--sparse-similarity-top-k",
-        "50",
-        "--non-interactive",
-        "--output",
-        "json",
-      ],
-      { DASHSCOPE_API_KEY: "sk-fake-for-dryrun" },
-    );
+    const { stdout, stderr, exitCode } = await runCli([
+      "knowledge",
+      "retrieve",
+      "--dry-run",
+      "--index-id",
+      "idx_test",
+      "--query",
+      "hello",
+      "--rerank",
+      "--rerank-model",
+      "qwen3-rerank-hybrid",
+      "--rerank-mode",
+      "custom",
+      "--rerank-instruct",
+      "按相关性排序",
+      "--dense-similarity-top-k",
+      "100",
+      "--sparse-similarity-top-k",
+      "50",
+      "--non-interactive",
+      "--output",
+      "json",
+    ]);
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     expect(data.request?.enable_reranking).toBe(true);

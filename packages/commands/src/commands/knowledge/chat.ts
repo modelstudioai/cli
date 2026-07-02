@@ -114,6 +114,7 @@ const STEP_LABELS: Record<string, string> = {
 
 export default defineCommand({
   description: "Chat with a Bailian knowledge base (RAG Q&A with streaming)",
+  skipDefaultApiKeySetup: true,
   usageArgs: "--message <text> --agent-id <id> [flags]",
   options: [
     {
