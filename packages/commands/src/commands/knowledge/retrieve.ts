@@ -91,7 +91,10 @@ export default defineCommand({
     const hasExplicitApiKey = !!config.apiKey;
     const hasExplicitAkSk = !!(flags.accessKeyId && flags.accessKeySecret);
 
-    if (hasExplicitApiKey) {
+    // dry-run 不需要真实凭证，直接走 API-KEY 路径输出请求体
+    if (config.dryRun) {
+      await runWithApiKey(config, flags, indexId, query, format);
+    } else if (hasExplicitApiKey) {
       await runWithApiKey(config, flags, indexId, query, format);
     } else if (hasExplicitAkSk) {
       await runWithAkSk(config, flags, indexId, query, format);
