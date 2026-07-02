@@ -44,7 +44,9 @@ export function loadAndValidatePackages({ packages } = {}) {
     }
     for (const [dep, range] of Object.entries(json.dependencies ?? {})) {
       if (internalNames.has(dep) && range !== "workspace:*") {
-        throw new Error(`${pkg.name} dependency on ${dep} must be "workspace:*", got ${range}.`);
+        throw new Error(
+          `${pkg.name} dependency on ${dep} must be "workspace:*", got ${String(range)}.`,
+        );
       }
     }
   }

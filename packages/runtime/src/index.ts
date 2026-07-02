@@ -18,10 +18,11 @@ export { handleError } from "./error-handler.ts";
 export { CLI_VERSION } from "./version.ts";
 
 // Console URLs referenced by commands (e.g. auth/status, banner)
-export { BAILIAN_CONSOLE_ROOT, BAILIAN_CONSOLE, API_KEY_PAGE } from "./urls.ts";
+export { BAILIAN_CONSOLE_ROOT, BAILIAN_CONSOLE, API_KEY_PAGE, VOICE_TTS_PAGE } from "./urls.ts";
 
 // Output facilities consumed by commands
 export { emitResult, emitBare } from "./output/output.ts";
+export { formatTable } from "./output/table.ts";
 export {
   promptText,
   promptSelect,

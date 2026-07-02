@@ -58,7 +58,7 @@ try {
     process.exit(0);
   }
 
-  // Publish in dependency order.
+  // Publish in dependency order (core → runtime → commands → cli [→ kscli]).
   for (const pkg of packages) {
     if (published.get(pkg.key)) continue;
     step(`publish ${pkg.name}@${version} (tag=latest, provenance)`);

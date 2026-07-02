@@ -27,7 +27,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **Text chat** — Qwen3.7-max: major gains in agentic coding, frontend coding, and vibe coding
 - **Multimodal (Omni)** — Full omni-modal support across text + image + audio + video
 - **Image generation & editing** — Qwen-Image 2.0: pro text rendering, photorealism, strong semantic adherence, multi-image composition
-- **Video generation & editing** — HappyHorse-1.0 series: text-/image-/reference-to-video and natural-language video editing (up to 9-image reference)
+- **Video generation & editing** — happyhorse-1.1 series: text-/image-/reference-to-video and natural-language video editing (up to 9-image reference)
 - **Speech synthesis & recognition** — CosyVoice streaming TTS, voice cloning from 5–20s samples; FunAudio-ASR covers 30 languages including 7 Chinese dialects and 20+ Mandarin accents
 - **Image & video understanding** — Qwen-VL: long-form video analysis, chart/document parsing, visual reasoning, multilingual OCR
 
@@ -38,6 +38,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **MCP integration** — Orchestrate Bailian MCP servers: list services, inspect tools, and invoke any tool directly from the terminal
 - **Web search** — Real-time internet retrieval for up-to-date, accurate answers
 - **Model recommendation** — Describe your scenario and get best-fit model suggestions; supports scoped search, model comparison, and alternative discovery
+- **Fine-tuning & deployment** — Upload datasets, create SFT/LoRA/DPO/CPT jobs (`finetune create`), probe job status non-blockingly (`finetune watch`), query per-model training capability (`finetune capability`), and deploy trained models as endpoints (`deploy create`)
 - **Console capabilities** — Browse Bailian apps (`app list`), check free-tier quota (`usage free`), view model usage statistics (`usage stats`), manage workspaces (`workspace list`), and manage rate limits (`quota list/request/check/history`)
 - **Local file auto-upload** — Every URL parameter accepts a local path; uploaded to free temp storage with 48-hour validity
 
@@ -54,7 +55,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 A complete **2-minute, 16:9 cinematic short film** — produced end-to-end from a single natural-language sentence, with **zero manual editing**. This showcase demonstrates how an AI Agent can compose a multi-step creative pipeline by orchestrating three primitives:
 
 - **[Qwen Code](https://github.com/QwenLM/qwen-code)** — the agentic coding model that interprets the user's intent and drives the workflow
-- **[Aliyun Model Studio CLI](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)** — invokes **HappyHorse 1.0**, Aliyun Model Studio's text-/image-/reference-to-video generation model
+- **[Aliyun Model Studio CLI](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)** — invokes **HappyHorse 1.1**, Aliyun Model Studio's text-/image-/reference-to-video generation model
 - **[spark-video Skill](https://github.com/JohnKeating1997/spark-video)** — handles scene decomposition, storyboarding, shot continuity, and final stitching
 
 ### The single prompt
@@ -67,7 +68,7 @@ A complete **2-minute, 16:9 cinematic short film** — produced end-to-end from 
 
 1. **Qwen Code** parses the request, plans the narrative beats, and decides which tools to call.
 2. The **spark-video Skill** breaks the story into shots, writes per-shot prompts, and enforces visual continuity (characters, lighting, palette, lens language).
-3. **`bl video generate`** dispatches each shot to **HappyHorse 1.0** in parallel.
+3. **`bl video generate`** dispatches each shot to **HappyHorse 1.1** in parallel.
 4. The skill stitches all clips back together into a single 16:9 / ~2-min deliverable.
 
 No timeline scrubbing. No frame-by-frame editing. Just one sentence → one video.
@@ -111,22 +112,30 @@ bl advisor recommend --message "qwen-max vs deepseek-v3 for code generation"
 # Browser login (required for console capability commands)
 bl auth login --console
 
+# Fine-tune & deploy — a one-shot train-to-serve workflow
+bl dataset upload --file ./train.jsonl                 # Upload a .jsonl dataset (validated first)
+bl finetune create --model qwen3-8b --datasets ./train.jsonl --training-type sft-lora  # Local paths auto-upload
+bl finetune watch --job-id ft-xxx --output json       # Non-blocking status probe (exit 0/1/3 = done/failed/running)
+bl finetune capability --model qwen3-8b               # Which training types a model supports
+bl deploy create --model qwen3-8b --name my-svc --plan mu  # Deploy the trained model as an endpoint
+
 # Browse apps / free-tier quota / usage statistics / workspaces
 bl app list
-bl usage free --model qwen3-max
-bl usage free --expiring 30                           # Quotas expiring within 30 days
-bl usage free --sort remaining                        # Sort by remaining % ascending
-bl usage stats --workspace-id <id>                    # Usage overview for a workspace
-bl usage stats --model qwen-turbo --workspace-id <id> # Per-model usage
+bl usage free                                         # Free-tier quota across models (add --model/--expiring/--sort)
+bl usage stats --workspace-id <id>                    # Model usage statistics (add --model for per-model)
 bl workspace list                                     # List all workspaces
 
-# Rate limit management
-bl quota list                                         # View RPM/TPM limits for all models
-bl quota list --model qwen3.6-plus                    # View limits for a specific model
-bl quota check                                        # Current usage vs rate limits
-bl quota check --model qwen3.6-plus --period 5        # Check usage over last 5 minutes
+# Rate limit management (list / check / request / history)
+bl quota list                                         # View RPM/TPM limits (add --model to filter)
+bl quota check                                        # Current usage vs rate limits (add --model/--period)
 bl quota request --model qwen3.6-plus --tpm 6000000   # Request a temporary TPM increase
-bl quota history                                      # View quota change history
+bl quota history                                      # View quota-change history
+
+# Token Plan team management (requires AK/SK, see auth below)
+bl token-plan list-seats                                # View subscription seat details
+bl token-plan add-member --account-name dev --org-id org_xxx
+bl token-plan assign-seats --workspace-id ws_xxx --seat-type standard --account-id acc_xxx
+bl token-plan create-key --account-id acc_xxx --workspace-id ws_xxx
 ```
 
 > More examples and scenarios: [Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)
@@ -156,9 +165,9 @@ Required for console capability commands (`app list`, `usage free`, `usage stats
 bl auth login --console
 ```
 
-### Alibaba Cloud AK/SK (Knowledge Base only)
+### Alibaba Cloud AK/SK (Knowledge Base & Token Plan)
 
-Required for `knowledge retrieve`. Get your AccessKey from [RAM Console](https://ram.console.aliyun.com/manage/ak).
+Required for `knowledge retrieve` and the `token-plan` command group. Get your AccessKey from [RAM Console](https://ram.console.aliyun.com/manage/ak).
 
 > Recommended: create a RAM sub-account with minimum privileges instead of using the root account's AK/SK.
 

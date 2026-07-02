@@ -16,12 +16,48 @@ import {
   type StreamChunk,
   isInteractive,
   resolveFileUrl,
+  resolveOutputDir,
+  resolveCredential,
 } from "bailian-cli-core";
 import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult } from "bailian-cli-runtime";
-import { resolveOutputDir, resolveCredential } from "bailian-cli-core";
 
-const OMNI_VOICES = ["Chelsie", "Cherry", "Ethan", "Serena", "Sunny", "Tina"];
+interface VoiceEntry {
+  voice: string;
+  name: string;
+  desc: string;
+  lang: string;
+}
+
+// qwen-omni 系统音色
+const OMNI_VOICES: VoiceEntry[] = [
+  { voice: "Tina", name: "甜妹", desc: "甜美亲切", lang: "中文/英文" },
+  { voice: "Dylan", name: "北京-晓东", desc: "胡同少年", lang: "中文/北京" },
+  { voice: "Kiki", name: "粤语-阿清", desc: "甜美港妹", lang: "中文/英文" },
+  { voice: "Li", name: "南京-老李", desc: "南京大叔", lang: "中文/英文" },
+  { voice: "Sunny", name: "四川-晴儿", desc: "甜飒川妹", lang: "中文" },
+  { voice: "Marcus", name: "陕西-秦川", desc: "陕北汉子", lang: "中文/英文" },
+  { voice: "Eric", name: "四川-程川", desc: "成都大哥", lang: "中文/英文" },
+  { voice: "Rocky", name: "粤语-阿强", desc: "幽默港仔", lang: "中文/英文" },
+  { voice: "Jennifer", name: "詹妮弗", desc: "美剧大女主", lang: "中文/英文" },
+  { voice: "Ryan", name: "甜茶", desc: "美剧张力男", lang: "中文/英文" },
+  { voice: "Katerina", name: "卡捷琳娜", desc: "御姐深情女", lang: "中文/英文" },
+  { voice: "Peter", name: "天津-李彼得", desc: "天津捧哏", lang: "中文/英文" },
+  { voice: "Ethan", name: "晨煦", desc: "北方口音男", lang: "中文/英文" },
+];
+
+function printVoiceList(): void {
+  const col = (s: string, w: number) => s.padEnd(w);
+  process.stdout.write("\nOmni output voices:\n");
+  process.stdout.write(
+    `${col("VOICE ID", 12)} ${col("NAME", 14)} ${col("DESCRIPTION", 14)} LANGUAGE\n`,
+  );
+  process.stdout.write(`${"-".repeat(12)} ${"-".repeat(14)} ${"-".repeat(14)} ${"-".repeat(12)}\n`);
+  for (const v of OMNI_VOICES) {
+    process.stdout.write(`${col(v.voice, 12)} ${col(v.name, 14)} ${col(v.desc, 14)} ${v.lang}\n`);
+  }
+  process.stdout.write(`\nTotal: ${OMNI_VOICES.length} voices\n`);
+}
 
 /**
  * Extension to input audio format.
@@ -109,7 +145,11 @@ export default defineCommand({
     },
     {
       flag: "--voice <voice>",
-      description: `Output voice (default: Cherry). Options: ${OMNI_VOICES.join(", ")}`,
+      description: "Output voice ID (default: Tina). Use --list-voices to see all options",
+    },
+    {
+      flag: "--list-voices",
+      description: "List available output voices and exit",
     },
     { flag: "--audio-format <fmt>", description: "Audio output format (default: wav)" },
     { flag: "--audio-out <path>", description: "Save audio to file (default: auto-generate)" },
@@ -118,6 +158,7 @@ export default defineCommand({
     { flag: "--temperature <n>", description: "Sampling temperature (0.0, 2.0]", type: "number" },
   ],
   exampleArgs: [
+    "--list-voices",
     '--message "Hello, who are you?"',
     '--message "Describe this image" --image ./photo.jpg',
     '--message "What is this audio saying?" --audio https://example.com/audio.wav',
@@ -128,6 +169,11 @@ export default defineCommand({
     '--message "Read this passage aloud" --audio-out greeting.wav',
   ],
   async run(config: Config, flags: GlobalFlags) {
+    if (flags.listVoices) {
+      printVoiceList();
+      return;
+    }
+
     // --- Parse messages ---
     let userMessages: string[] = [];
     if (flags.message) {
@@ -148,7 +194,7 @@ export default defineCommand({
     }
 
     const model = (flags.model as string) || config.defaultOmniModel || "qwen3.5-omni-plus";
-    const voice = (flags.voice as string) || "Cherry";
+    const voice = (flags.voice as string) || "Tina";
     const audioFormat = (flags.audioFormat as string) || "wav";
     const textOnly = flags.textOnly === true;
     const format = detectOutputFormat(config.output);

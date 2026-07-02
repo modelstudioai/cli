@@ -1,0 +1,5 @@
+{
+  "messages": [
+    { "role": "user", "content": "this is pretty-printed JSON, not JSONL" }
+  ]
+}

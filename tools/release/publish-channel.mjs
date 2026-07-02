@@ -78,7 +78,7 @@ try {
   if (packages.every((pkg) => published.get(pkg.key))) {
     log("\nall packages already published; nothing to do.");
   } else {
-    // Publish in dependency order.
+    // Publish in dependency order (core → runtime → commands → cli [→ kscli]).
     for (const pkg of packages) {
       if (published.get(pkg.key)) continue;
       step(`publish ${pkg.name}@${betaVersion} (tag=${channel}, provenance)`);
