@@ -1,7 +1,13 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "fs";
 import { join } from "path";
 import { parseEnv } from "util";
-import { E2E_RUN_SESSION_FILENAME, monorepoRoot } from "./helpers.ts";
+import {
+  E2E_RUN_SESSION_FILENAME,
+  isDashScopeE2EReady,
+  isConsoleE2EReady,
+  isKnowledgeE2EReady,
+  monorepoRoot,
+} from "./helpers.ts";
 
 /**
  * Vitest 在所有 worker 启动前执行一次：写入共享会话 id，使多进程并行时仍共用一个 `test/output/<会话>/`。
@@ -43,6 +49,37 @@ BAILIAN_E2E_INDEX_ID=
     `;
     writeFileSync(rootEnv, envContent, "utf8");
   }
+
+  // === DEBUG: 排查 CI 中 DASHSCOPE_API_KEY 来源 ===
+  console.log("\n========== [global-setup] DEBUG ==========");
+  console.log("[global-setup] CI =", JSON.stringify(process.env.CI));
+  console.log("[global-setup] BAILIAN_E2E =", JSON.stringify(process.env.BAILIAN_E2E));
+  console.log("[global-setup] DASHSCOPE_API_KEY =", JSON.stringify(process.env.DASHSCOPE_API_KEY));
+  console.log(
+    "[global-setup] DASHSCOPE_API_KEY.trim() =",
+    JSON.stringify(process.env.DASHSCOPE_API_KEY?.trim()),
+  );
+  console.log(
+    "[global-setup] DASHSCOPE_ACCESS_TOKEN =",
+    JSON.stringify(process.env.DASHSCOPE_ACCESS_TOKEN),
+  );
+  console.log(
+    "[global-setup] BAILIAN_E2E_INDEX_ID =",
+    JSON.stringify(process.env.BAILIAN_E2E_INDEX_ID),
+  );
+  console.log("[global-setup] isDashScopeE2EReady() =", isDashScopeE2EReady());
+  console.log("[global-setup] isConsoleE2EReady() =", isConsoleE2EReady());
+  console.log("[global-setup] isKnowledgeE2EReady() =", isKnowledgeE2EReady());
+  try {
+    const cfg = JSON.parse(
+      readFileSync(join(process.env.HOME || "", ".bailian", "config.json"), "utf8"),
+    );
+    console.log("[global-setup] ~/.bailian/config.json exists, keys =", Object.keys(cfg));
+    console.log("[global-setup] config.api_key length =", cfg.api_key?.length);
+  } catch {
+    console.log("[global-setup] ~/.bailian/config.json not found or unreadable");
+  }
+  console.log("========== [global-setup] DEBUG END ==========\n");
 
   // 创建生成内容目录
   const now = new Date();
