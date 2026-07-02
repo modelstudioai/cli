@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { isDashScopeE2EReady, parseStdoutJson, runCli } from "./helpers.ts";
+import { isBailianE2EEnabled, isDashScopeE2EReady, parseStdoutJson, runCli } from "./helpers.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -23,6 +23,15 @@ describe("e2e: file upload", () => {
     expect(stderr).toMatch(/upload|--file|--model/i);
   });
 });
+
+// === DEBUG: worker 进程中的环境变量 ===
+console.log(
+  "[worker:file-upload] DASHSCOPE_API_KEY =",
+  JSON.stringify(process.env.DASHSCOPE_API_KEY),
+);
+console.log("[worker:file-upload] isDashScopeE2EReady() =", isDashScopeE2EReady());
+console.log("[worker:file-upload] isBailianE2EEnabled() =", isBailianE2EEnabled());
+// === DEBUG END ===
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: file upload（DashScope）", () => {
   test("file upload 缺少 --file 时打印子命令帮助并退出 (0)", async () => {
