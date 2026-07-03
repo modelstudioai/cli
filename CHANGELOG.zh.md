@@ -6,6 +6,12 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.6.1] - 2026-07-03
+
+### 变更
+
+- `bl vision describe` 的示例与 skill 参考文档中的模型 id 由旧版 `qwen-vl-plus` 更新为 `qwen3-vl-plus`，与命令默认模型保持一致。
+
 ## [1.6.0] - 2026-07-02
 
 ### 新增
