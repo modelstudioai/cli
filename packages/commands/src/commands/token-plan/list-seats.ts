@@ -76,7 +76,7 @@ export default defineCommand({
     });
 
     const items = data.Data?.Items ?? [];
-    if (config.quiet || format === "text") {
+    if (config.quiet || format === "rich") {
       emitTextSeats(items, data.Data?.Total, data.Data?.PageNo, data.Data?.PageSize);
     } else {
       emitResult(data, format);

@@ -153,7 +153,7 @@ export default defineCommand({
 
     if (config.quiet) {
       emitBare(deployment?.deployed_model ?? "");
-    } else if (format === "text") {
+    } else if (format === "rich") {
       emitBare(`Created deployment.`);
       if (deployment?.deployed_model) emitBare(`  deployed_model:  ${deployment.deployed_model}`);
       if (deployment?.status) emitBare(`  status:          ${deployment.status}`);

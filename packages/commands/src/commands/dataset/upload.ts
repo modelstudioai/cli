@@ -129,7 +129,7 @@ export default defineCommand({
 
     if (config.quiet) {
       emitBare(uploaded.file_id);
-    } else if (format === "text") {
+    } else if (format === "rich") {
       emitBare(`Uploaded ${uploaded.name} → file_id=${uploaded.file_id}`);
     } else {
       emitResult(uploaded, format);

@@ -70,7 +70,7 @@ export default defineCommand({
       body,
     });
 
-    if (config.quiet || format === "text") {
+    if (config.quiet || format === "rich") {
       const ids = response.memory_ids?.join(", ") || "none";
       emitBare(`Memory added. IDs: ${ids}`);
     } else {

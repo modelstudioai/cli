@@ -518,7 +518,7 @@ export default defineCommand({
 
     if (config.quiet) {
       if (job?.job_id) emitBare(job.job_id);
-    } else if (format === "text") {
+    } else if (format === "rich") {
       if (job?.job_id) {
         emitBare(`Created fine-tune job: ${job.job_id}`);
         if (job.status) emitBare(`Status: ${job.status}`);

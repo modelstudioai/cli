@@ -172,7 +172,7 @@ export default defineCommand({
       return;
     }
 
-    if (format !== "text") {
+    if (format !== "rich") {
       emitResult({ authenticated: true, ...status }, format);
       return;
     }

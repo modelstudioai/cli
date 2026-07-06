@@ -69,7 +69,7 @@ export default defineCommand({
       queryParams,
     });
 
-    if (config.quiet || format === "text") {
+    if (config.quiet || format === "rich") {
       emitTextKey(data);
     } else {
       emitResult(data, format);

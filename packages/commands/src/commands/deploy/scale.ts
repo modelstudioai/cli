@@ -96,7 +96,7 @@ export default defineCommand({
 
     if (config.quiet) {
       emitBare(deployedModel!);
-    } else if (format === "text") {
+    } else if (format === "rich") {
       const cap = deployment?.capacity !== undefined ? ` (capacity=${deployment.capacity})` : "";
       emitBare(`Scaled ${deployedModel}${cap}.`);
     } else {

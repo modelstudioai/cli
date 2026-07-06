@@ -107,7 +107,7 @@ export default defineCommand({
         for (const value of supported) emitBare(value);
         return;
       }
-      if (format !== "text") {
+      if (format !== "rich") {
         emitResult(
           {
             model: capability.model ?? model,
@@ -155,7 +155,7 @@ export default defineCommand({
       for (const entry of matched) emitBare(entry.model);
       return;
     }
-    if (format !== "text") {
+    if (format !== "rich") {
       emitResult(
         {
           training_type: trainingType,

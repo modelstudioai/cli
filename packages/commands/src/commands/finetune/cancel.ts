@@ -52,7 +52,7 @@ export default defineCommand({
 
     if (config.quiet) {
       emitBare(jobId!);
-    } else if (format === "text") {
+    } else if (format === "rich") {
       const status = job?.status ? ` (status=${job.status})` : "";
       emitBare(`Cancelled ${jobId}${status}.`);
     } else {

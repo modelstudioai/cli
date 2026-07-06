@@ -40,7 +40,7 @@ export default defineCommand({
       method: "DELETE",
     });
 
-    if (config.quiet || format === "text") {
+    if (config.quiet || format === "rich") {
       emitBare(`Memory node ${nodeId} deleted.`);
     } else {
       emitResult(response, format);

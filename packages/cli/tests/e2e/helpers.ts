@@ -199,7 +199,10 @@ export async function runCli(
 
 export function parseStdoutJson<T = unknown>(stdout: string): T {
   const t = stdout.trim();
-  return JSON.parse(t) as T;
+  // Extract JSON object — stdout may contain [perf] console.time lines before JSON
+  const jsonMatch = t.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error(`No JSON object found in stdout: ${t.slice(0, 200)}`);
+  return JSON.parse(jsonMatch[0]) as T;
 }
 
 /**

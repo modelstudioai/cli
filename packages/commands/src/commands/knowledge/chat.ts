@@ -187,7 +187,7 @@ export default defineCommand({
 
     const format = detectOutputFormat(config.output);
     // API only supports SSE; streamOutput controls whether to print tokens in real-time
-    const streamOutput = format === "text" && !!process.stdout.isTTY;
+    const streamOutput = format === "rich" && !!process.stdout.isTTY;
 
     // Attach --image URLs to messages (multimodal content array)
     if (hasImages) {
@@ -327,7 +327,7 @@ export default defineCommand({
         }
       }
 
-      if (config.quiet || format === "text") {
+      if (config.quiet || format === "rich") {
         emitBare(textContent);
       } else {
         emitResult({ answer: textContent, request_id: requestId }, format);

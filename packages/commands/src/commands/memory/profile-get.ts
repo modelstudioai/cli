@@ -39,7 +39,7 @@ export default defineCommand({
       method: "GET",
     });
 
-    if (config.quiet || format === "text") {
+    if (config.quiet || format === "rich") {
       if (response.profile?.attributes) {
         for (const attr of response.profile.attributes) {
           emitBare(`${attr.name}: ${attr.value ?? "(empty)"}`);

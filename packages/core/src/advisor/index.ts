@@ -1,5 +1,6 @@
 export type { GetModelsOptions } from "./cache.ts";
 export { getModels } from "./cache.ts";
+export { SEMANTIC_TOP_K } from "./constants/scoring.ts";
 export { analyzeIntent } from "./intent.ts";
 export type { ScoredCandidate } from "./recall.ts";
 export { recallCandidates } from "./recall.ts";

@@ -85,7 +85,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota list 文本输出包含英文表头", async () => {
-    const result = await runCli(["quota", "list", "--output", "text", "--no-color"]);
+    const result = await runCli(["quota", "list", "--output", "rich", "--no-color"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
@@ -221,7 +221,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota check 文本输出包含英文表头", async () => {
-    const result = await runCli(["quota", "check", "--output", "text", "--no-color"]);
+    const result = await runCli(["quota", "check", "--output", "rich", "--no-color"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
