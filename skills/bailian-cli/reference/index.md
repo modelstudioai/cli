@@ -86,20 +86,16 @@ Use this index for the full quick index and global flags.
 
 Available on every command (in addition to command-specific flags):
 
-| Flag                  | Type   | Required | Description                          |
-| --------------------- | ------ | -------- | ------------------------------------ |
-| `--output <format>`   | string | no       | Output format: text, json            |
-| `--timeout <seconds>` | number | no       | Request timeout                      |
-| `--concurrent <n>`    | number | no       | Run N parallel requests (default: 1) |
-| `--quiet`             | switch | no       | Suppress non-essential output        |
-| `--verbose`           | switch | no       | Print HTTP request/response details  |
-| `--no-color`          | switch | no       | Disable ANSI colors                  |
-| `--dry-run`           | switch | no       | Dry run mode                         |
-| `--non-interactive`   | switch | no       | Disable interactive prompts          |
-| `--yes`               | switch | no       | Skip confirmation prompts            |
-| `--async`             | switch | no       | Return async task id without waiting |
-| `--help`              | switch | no       | Show help                            |
-| `--version`           | switch | no       | Print version                        |
+| Flag                  | Type   | Required | Description                         |
+| --------------------- | ------ | -------- | ----------------------------------- |
+| `--output <format>`   | string | no       | Output format: text, json           |
+| `--timeout <seconds>` | number | no       | Request timeout                     |
+| `--quiet`             | switch | no       | Suppress non-essential output       |
+| `--verbose`           | switch | no       | Print HTTP request/response details |
+| `--no-color`          | switch | no       | Disable ANSI colors                 |
+| `--dry-run`           | switch | no       | Dry run mode                        |
+| `--help`              | switch | no       | Show help                           |
+| `--version`           | switch | no       | Print version                       |
 
 ## Model auth flags
 

@@ -121,7 +121,6 @@ pnpm run test:stress -- video-edit --reuse-fixtures -- --count 3
 
 ### 必须带的 CLI 参数（通用）
 
-- `--non-interactive`
 - 除 `speech recognize` 外，压测子进程宜带 `--output json`（语音识别以 `--out` 文件为准 stdout 可能为纯文本）
 - 异步类命令带 `--timeout`、对应 `--poll-interval`
 

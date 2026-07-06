@@ -11,6 +11,8 @@ import {
   ExitCode,
   resolveBooleanFlag,
   resolveWatermark,
+  ASYNC_FLAG,
+  CONCURRENT_FLAG,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
@@ -81,6 +83,8 @@ export default defineCommand({
       description: "Save video to file on completion",
     },
     noWait: { type: "switch", description: "Return task ID immediately without waiting" },
+    ...ASYNC_FLAG,
+    ...CONCURRENT_FLAG,
     pollInterval: {
       type: "number",
       valueHint: "<seconds>",
@@ -141,7 +145,7 @@ export default defineCommand({
     }
 
     // Submit async task(s) — supports --concurrent for parallel generation
-    const concurrent = getConcurrency(settings);
+    const concurrent = getConcurrency(flags);
 
     const responses = await runConcurrent(
       concurrent,
@@ -163,7 +167,7 @@ export default defineCommand({
     }
 
     // --no-wait or --async: return task ID(s) immediately
-    if (flags.noWait || settings.async) {
+    if (flags.noWait || flags.async) {
       emitResult(taskIds.length === 1 ? { task_id: taskIds[0] } : { task_ids: taskIds }, format);
       return;
     }

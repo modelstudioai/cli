@@ -11,11 +11,8 @@ const GLOBAL_FLAG_KEYS = new Set([
   "verbose",
   "timeout",
   "noColor",
-  "yes",
   "dryRun",
   "help",
-  "nonInteractive",
-  "async",
   "console",
 ]);
 

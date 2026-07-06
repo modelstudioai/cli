@@ -35,6 +35,7 @@ Index: [index.md](index.md)
 | `--channel-id <n>`          | number | no       | Audio channel ID (default: 0)                           |
 | `--out <path>`              | string | no       | Save full transcription result to JSON file             |
 | `--no-wait`                 | switch | no       | Return task ID immediately without polling              |
+| `--async`                   | switch | no       | Return async task id without waiting                    |
 | `--poll-interval <seconds>` | number | no       | Polling interval in seconds (default: 2)                |
 | `--api-key <key>`           | string | no       | API key                                                 |
 | `--base-url <url>`          | string | no       | API base URL                                            |
@@ -97,6 +98,7 @@ bl speech recognize --url https://example.com/audio.mp3 --no-wait --quiet
 | `--enable-ssml`                  | switch | no       | Enable SSML markup parsing in input text                                                                                |
 | `--out <path>`                   | string | no       | Save audio to file (default: auto-generate in temp dir)                                                                 |
 | `--stream`                       | switch | no       | Stream raw PCM audio to stdout (pipe to player)                                                                         |
+| `--concurrent <n>`               | number | no       | Run N parallel requests (default: 1)                                                                                    |
 | `--api-key <key>`                | string | no       | API key                                                                                                                 |
 | `--base-url <url>`               | string | no       | API base URL                                                                                                            |
 

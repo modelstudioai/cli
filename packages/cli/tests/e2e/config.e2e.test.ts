@@ -26,13 +26,7 @@ describe("e2e: config", () => {
   });
 
   test("config show --output json", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
-      "config",
-      "show",
-      "--non-interactive",
-      "--output",
-      "json",
-    ]);
+    const { stdout, stderr, exitCode } = await runCli(["config", "show", "--output", "json"]);
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
       config_file?: string;
@@ -48,7 +42,6 @@ describe("e2e: config", () => {
     const { stdout, stderr, exitCode } = await runCli([
       "config",
       "show",
-      "--non-interactive",
       "--output",
       "text",
       "--no-color",
@@ -58,7 +51,7 @@ describe("e2e: config", () => {
   });
 
   test("config set 缺少 --key / --value 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCli(["config", "set", "--non-interactive"]);
+    const { stderr, exitCode } = await runCli(["config", "set", "--quiet"]);
     expect(exitCode, stderr).toBe(2);
     expect(stderr).toMatch(/--key|--value|Usage:/i);
   });
@@ -67,7 +60,6 @@ describe("e2e: config", () => {
     const { stderr, exitCode } = await runCli([
       "config",
       "set",
-      "--non-interactive",
       "--key",
       "not-a-real-key",
       "--value",
@@ -81,7 +73,6 @@ describe("e2e: config", () => {
     const { stderr, exitCode } = await runCli([
       "config",
       "set",
-      "--non-interactive",
       "--key",
       "output",
       "--value",
@@ -95,7 +86,6 @@ describe("e2e: config", () => {
     const { stderr, exitCode } = await runCli([
       "config",
       "set",
-      "--non-interactive",
       "--key",
       "timeout",
       "--value",
@@ -110,7 +100,6 @@ describe("e2e: config", () => {
       "config",
       "set",
       "--dry-run",
-      "--non-interactive",
       "--key",
       "output",
       "--value",
@@ -128,7 +117,6 @@ describe("e2e: config", () => {
       "config",
       "set",
       "--dry-run",
-      "--non-interactive",
       "--key",
       "default-text-model",
       "--value",

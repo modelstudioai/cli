@@ -184,7 +184,7 @@ When a `bl` command **fails** and the cause is **not** a user/service-side error
 1. Classify the failure using [`assets/issue-reporting.md`](assets/issue-reporting.md) (EXCLUDE vs INCLUDE tables).
 2. If INCLUDE matches, ask the user (Chinese prompt in that doc). If they agree, collect environment info, redact secrets, fill the issue template, and submit to https://github.com/modelstudioai/cli/issues (browser or `gh issue create`).
 3. Before offering: align skill/CLI versions and retry with `--verbose` / `--output json` when output is thin.
-4. Do **not** ask in CI or when `--non-interactive` is set unless the user explicitly wants to report.
+4. Do **not** ask in CI or non-TTY automation unless the user explicitly wants to report.
 
 Full workflow, redaction rules, template, and exit-code reference: [`assets/issue-reporting.md`](assets/issue-reporting.md).
 

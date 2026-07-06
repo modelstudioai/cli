@@ -59,7 +59,7 @@ grep -rnE "https://dashscope[a-z-]*\.aliyuncs\.com" packages/ --include="*.ts" \
 
 ```sh
 # 验证错误 hint 不再泄漏旧 URL
-HOME=/tmp/empty node packages/cli/src/main.ts text chat --message x --non-interactive
+HOME=/tmp/empty node packages/cli/src/main.ts text chat --message x
 # 看输出的 Get API Key URL 是否走新值
 
 # 验证 banner / help

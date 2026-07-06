@@ -28,7 +28,7 @@ describe("e2e: speech list-voices", () => {
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: speech list-voices", () => {
   test("speech synthesize 缺少 --text 且非 --list-voices 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCli(["speech", "synthesize", "--non-interactive"]);
+    const { stderr, exitCode } = await runCli(["speech", "synthesize", "--quiet"]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--text|Usage:/i);
   });
@@ -40,7 +40,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: speech list-voices", () => {
       "--list-voices",
       "--model",
       "cosyvoice-v3-flash",
-      "--non-interactive",
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("longxiaochun_v3");

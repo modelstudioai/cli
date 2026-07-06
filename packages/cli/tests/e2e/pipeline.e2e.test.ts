@@ -128,7 +128,7 @@ describe("e2e: pipeline", () => {
   });
 
   test("pipeline run 缺少 --file 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCli(["pipeline", "run", "--non-interactive"]);
+    const { stderr, exitCode } = await runCli(["pipeline", "run", "--quiet"]);
     expect(exitCode, stderr).toBe(2);
     expect(stderr).toMatch(/Usage: bl pipeline run --file <path>|--file/i);
   });
@@ -144,7 +144,6 @@ describe("e2e: pipeline", () => {
       "--dry-run",
       "--output",
       "json",
-      "--non-interactive",
     ]);
     expect(exitCode, stderr).toBe(0);
     const report = parseStdoutJson<{
@@ -169,16 +168,7 @@ describe("e2e: pipeline", () => {
 
   test("pipeline run 使用 config 输出格式", async () => {
     const { stdout, stderr, exitCode } = await runCli(
-      [
-        "pipeline",
-        "run",
-        "--file",
-        chatBasicPath,
-        "--input",
-        '{"message":"hello"}',
-        "--dry-run",
-        "--non-interactive",
-      ],
+      ["pipeline", "run", "--file", chatBasicPath, "--input", '{"message":"hello"}', "--dry-run"],
       { DASHSCOPE_OUTPUT: "text" },
     );
     expect(exitCode, stderr).toBe(0);
@@ -196,7 +186,6 @@ describe("e2e: pipeline", () => {
       '{"message":"hello"}',
       "--dry-run",
       "--verbose",
-      "--non-interactive",
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/\[pipeline\.started\] 1 step/);
@@ -214,7 +203,6 @@ describe("e2e: pipeline", () => {
       "--dry-run",
       "--events",
       "jsonl",
-      "--non-interactive",
     ]);
     expect(exitCode, stderr).toBe(0);
     const events = stdout
@@ -241,7 +229,6 @@ describe("e2e: pipeline", () => {
       "--dry-run",
       "--events",
       "bogus",
-      "--non-interactive",
     ]);
     expect(exitCode).toBe(2);
     expect(stdout).toBe("");

@@ -46,7 +46,7 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 1. **分组 help**：`runCli(["image"])` → `exitCode === 0`，stdout+stderr 含子命令名
 2. **--help**：`runCli([..., "--help"])` → stderr 含主要 flags
-3. **缺参**：`--non-interactive` 且不传 required flag → `exitCode === 2`，stderr 匹配 `--flag|Missing required argument`
+3. **缺参**：带一个无害全局 flag（如 `--quiet`）且不传 required flag → `exitCode === 2`，stderr 匹配 `--flag|Missing required argument`
 4. **--dry-run**：仅当实现在联网/上传/写盘**之前**返回；断言 stdout JSON/文本，不入网
 5. **真实集成**：保留既有用例名称与断言；放在 skip 块**末尾**
 
@@ -70,7 +70,7 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 ```ts
 test("foo bar 缺少 --prompt 时退出为用法错误 (2)", async () => {
-  const { stderr, exitCode } = await runCli(["foo", "bar", "--non-interactive"]);
+  const { stderr, exitCode } = await runCli(["foo", "bar", "--quiet"]);
   expect(exitCode).toBe(2);
   expect(stderr).toMatch(/--prompt|Missing required argument/i);
 });
@@ -82,7 +82,6 @@ test("foo bar --dry-run 仅输出计划", async () => {
     "--dry-run",
     "--prompt",
     "x",
-    "--non-interactive",
     "--output",
     "json",
   ]);

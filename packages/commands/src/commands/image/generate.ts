@@ -19,6 +19,8 @@ import {
   generateFilename,
   resolveBooleanFlag,
   resolveWatermark,
+  ASYNC_FLAG,
+  CONCURRENT_FLAG,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { downloadFile } from "bailian-cli-runtime";
@@ -77,6 +79,8 @@ const GENERATE_FLAGS = {
     type: "switch",
     description: "Return task ID immediately without waiting (async models only)",
   },
+  ...ASYNC_FLAG,
+  ...CONCURRENT_FLAG,
   outDir: { type: "string", valueHint: "<dir>", description: "Download images to directory" },
   outPrefix: {
     type: "string",
@@ -117,7 +121,7 @@ export default defineCommand({
     const sizeInput = flags.size || defaultSize;
     const size = resolveImageSize(sizeInput, useSync);
     const n = flags.n ?? 1;
-    const concurrent = getConcurrency(settings);
+    const concurrent = getConcurrency(flags);
 
     const promptExtend = resolveBooleanFlag(
       flags.promptExtend,
@@ -215,7 +219,7 @@ async function handleAsyncMode(
   const taskIds = responses.map((r) => r.output.task_id);
 
   // --no-wait: return all task IDs immediately
-  if (flags.noWait || settings.async) {
+  if (flags.noWait || flags.async) {
     emitResult({ task_ids: taskIds }, format as OutputFormat);
     return;
   }

@@ -112,8 +112,6 @@ export interface Settings {
   output: "text" | "json";
   outputDir?: string;
   timeout: number;
-  /** `--concurrent`,仅 flag 源。 */
-  concurrent?: number;
   defaultTextModel?: string;
   defaultVideoModel?: string;
   defaultImageModel?: string;
@@ -126,9 +124,6 @@ export interface Settings {
   verbose: boolean;
   quiet: boolean;
   noColor: boolean;
-  yes: boolean;
   dryRun: boolean;
-  nonInteractive: boolean;
-  async: boolean;
   telemetry: boolean;
 }

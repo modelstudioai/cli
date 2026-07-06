@@ -140,28 +140,17 @@ test("default*Model / outputDir:仅 file 源", () => {
   expect(resolve({}).defaultTextModel).toBeUndefined();
 });
 
-test("buildSettings:concurrent 仅 flag 源", () => {
-  expect(resolve({ flags: { concurrent: 4 } }).concurrent).toBe(4);
-  expect(resolve({}).concurrent).toBeUndefined();
-});
-
-test("quiet/yes/dryRun/async/nonInteractive:仅 flag 源,直通", () => {
+test("quiet/dryRun:仅 flag 源,直通", () => {
   const on = resolve({
-    flags: { quiet: true, yes: true, dryRun: true, async: true, nonInteractive: true },
+    flags: { quiet: true, dryRun: true },
   });
   expect(on).toMatchObject({
     quiet: true,
-    yes: true,
     dryRun: true,
-    async: true,
-    nonInteractive: true,
   });
   const off = resolve({});
   expect(off).toMatchObject({
     quiet: false,
-    yes: false,
     dryRun: false,
-    async: false,
-    nonInteractive: false,
   });
 });

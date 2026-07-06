@@ -37,6 +37,7 @@ Index: [index.md](index.md)
 | `--watermark <bool>`       | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).     |
 | `--out-dir <dir>`          | string  | no       | Download images to directory                                            |
 | `--out-prefix <prefix>`    | string  | no       | Filename prefix (default: edited)                                       |
+| `--concurrent <n>`         | number  | no       | Run N parallel requests (default: 1)                                    |
 | `--api-key <key>`          | string  | no       | API key                                                                 |
 | `--base-url <url>`         | string  | no       | API base URL                                                            |
 
@@ -83,6 +84,8 @@ bl image edit --image ./photo.png --prompt "Replace the background with a beach"
 | `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag: true for qwen-image sync; parameter omitted on async models (API default). |
 | `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                                                      |
 | `--no-wait`                 | switch  | no       | Return task ID immediately without waiting (async models only)                                                           |
+| `--async`                   | switch  | no       | Return async task id without waiting                                                                                     |
+| `--concurrent <n>`          | number  | no       | Run N parallel requests (default: 1)                                                                                     |
 | `--out-dir <dir>`           | string  | no       | Download images to directory                                                                                             |
 | `--out-prefix <prefix>`     | string  | no       | Filename prefix (default: image)                                                                                         |
 | `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 3)                                                                               |

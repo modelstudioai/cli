@@ -40,7 +40,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "happyhorse-1.0-r2v",
         "--image",
         "https://example.com/x.png",
-        "--non-interactive",
       ]);
       expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--prompt|Usage:/i);
@@ -55,7 +54,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "happyhorse-1.0-r2v",
         "--prompt",
         "仅有描述无素材",
-        "--non-interactive",
       ]);
       expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--image|ref-video|At least one|required/i);
@@ -74,7 +72,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         outDir,
         "--out-prefix",
         "e2e-gen",
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -95,7 +92,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         imagePath!,
         "--download",
         join(outDir, "e2e-video-r2v.mp4"),
-        "--non-interactive",
         "--output",
         "json",
       ]);

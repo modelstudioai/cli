@@ -17,6 +17,7 @@ import {
   DOCS_HOSTS,
   type FlagsDef,
   type ParsedFlags,
+  CONCURRENT_FLAG,
 } from "bailian-cli-core";
 
 const COSYVOICE_CLONE_DESIGN_DOC = `${DOCS_HOSTS.cn}/cosyvoice-clone-design-api`;
@@ -206,6 +207,7 @@ const SYNTHESIZE_FLAGS = {
     description: "Save audio to file (default: auto-generate in temp dir)",
   },
   stream: { type: "switch", description: "Stream raw PCM audio to stdout (pipe to player)" },
+  ...CONCURRENT_FLAG,
 } satisfies FlagsDef;
 type SynthesizeFlags = ParsedFlags<typeof SYNTHESIZE_FLAGS>;
 
@@ -311,7 +313,7 @@ async function handleNonStreamMode(
   flags: SynthesizeFlags,
   format: OutputFormat,
 ): Promise<void> {
-  const concurrent = getConcurrency(settings);
+  const concurrent = getConcurrency(flags);
 
   const results = await runConcurrent(concurrent, settings, () =>
     client.requestJson<DashScopeTTSResponse>({

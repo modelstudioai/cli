@@ -243,7 +243,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
       "quota",
       "check",
       "--dry-run",
-      "--non-interactive",
       "--output",
       "json",
       "--console-region",

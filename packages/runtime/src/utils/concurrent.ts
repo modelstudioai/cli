@@ -2,7 +2,7 @@
  * Generic concurrent execution utility.
  *
  * Allows any command to run N parallel API requests and aggregate results.
- * Used via the global `--concurrent <N>` flag.
+ * Used by commands that declare `--concurrent <N>`.
  *
  * @example
  *   const results = await runConcurrent(3, config, () => callApi());
@@ -10,9 +10,9 @@
 
 import type { Settings } from "bailian-cli-core";
 
-/** Resolve concurrency from settings(`--concurrent`,defaults to 1). */
-export function getConcurrency(settings: Settings): number {
-  return Math.max(1, settings.concurrent ?? 1);
+/** Resolve concurrency from parsed command flags(`--concurrent`,defaults to 1). */
+export function getConcurrency(flags: { concurrent?: number }): number {
+  return Math.max(1, flags.concurrent ?? 1);
 }
 
 /**

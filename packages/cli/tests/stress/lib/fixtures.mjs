@@ -97,7 +97,6 @@ export async function ensurePrerequisites(ctx) {
       "压测前置语音样本，用于语音识别链路。",
       "--out",
       outAudio,
-      "--non-interactive",
       "--output",
       "json",
     ];
@@ -137,7 +136,6 @@ export async function ensurePrerequisites(ctx) {
       fixturesDir,
       "--out-prefix",
       "stress-setup-image",
-      "--non-interactive",
       "--output",
       "json",
       "--timeout",
@@ -187,7 +185,6 @@ export async function ensurePrerequisites(ctx) {
       "5",
       "--download",
       downloadPath,
-      "--non-interactive",
       "--output",
       "json",
       "--timeout",

@@ -16,6 +16,7 @@ import {
   type OutputFormat,
   type FlagsDef,
   type ParsedFlags,
+  ASYNC_FLAG,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
@@ -47,6 +48,7 @@ const RECOGNIZE_FLAGS = {
     description: "Save full transcription result to JSON file",
   },
   noWait: { type: "switch", description: "Return task ID immediately without polling" },
+  ...ASYNC_FLAG,
   pollInterval: {
     type: "number",
     valueHint: "<seconds>",
@@ -147,7 +149,7 @@ async function handleAsyncMode(
   const taskId = response.output.task_id;
 
   // --no-wait: return task ID immediately
-  if (flags.noWait || settings.async) {
+  if (flags.noWait || flags.async) {
     emitResult({ task_id: taskId }, format);
     return;
   }

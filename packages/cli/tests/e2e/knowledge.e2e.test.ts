@@ -38,25 +38,13 @@ describe("e2e: knowledge retrieve", () => {
   });
 
   test("缺少 --index-id 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCli([
-      "knowledge",
-      "retrieve",
-      "--query",
-      "test",
-      "--non-interactive",
-    ]);
+    const { stderr, exitCode } = await runCli(["knowledge", "retrieve", "--query", "test"]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--index-id|Usage:/i);
   });
 
   test("缺少 --query 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCli([
-      "knowledge",
-      "retrieve",
-      "--index-id",
-      "idx_test",
-      "--non-interactive",
-    ]);
+    const { stderr, exitCode } = await runCli(["knowledge", "retrieve", "--index-id", "idx_test"]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--query|Usage:/i);
   });
@@ -67,17 +55,7 @@ describe("e2e: knowledge retrieve", () => {
 describe("e2e: knowledge retrieve errors", () => {
   test("无任何凭证时提示缺少密钥并非零退出", async () => {
     const { stderr, exitCode } = await runCli(
-      [
-        "knowledge",
-        "retrieve",
-        "--index-id",
-        "idx_test",
-        "--query",
-        "test",
-        "--non-interactive",
-        "--output",
-        "json",
-      ],
+      ["knowledge", "retrieve", "--index-id", "idx_test", "--query", "test", "--output", "json"],
       {
         DASHSCOPE_API_KEY: undefined,
         DASHSCOPE_ACCESS_TOKEN: undefined,
@@ -102,7 +80,6 @@ describe("e2e: knowledge retrieve dry-run", () => {
         "idx_test",
         "--query",
         "hello",
-        "--non-interactive",
         "--output",
         "json",
       ],
@@ -127,7 +104,6 @@ describe("e2e: knowledge retrieve dry-run", () => {
         "hello",
         "--top-k",
         "5",
-        "--non-interactive",
         "--output",
         "json",
       ],
@@ -153,7 +129,6 @@ describe("e2e: knowledge retrieve dry-run", () => {
         "5",
         "--rerank-top-n",
         "10",
-        "--non-interactive",
         "--output",
         "json",
       ],
@@ -185,7 +160,6 @@ describe("e2e: knowledge retrieve dry-run", () => {
         "100",
         "--sparse-similarity-top-k",
         "50",
-        "--non-interactive",
         "--output",
         "json",
       ],

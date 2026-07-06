@@ -11,6 +11,7 @@ import {
   BailianError,
   resolveBooleanFlag,
   resolveWatermark,
+  CONCURRENT_FLAG,
 } from "bailian-cli-core";
 import { downloadFile } from "bailian-cli-runtime";
 import { runConcurrent, downloadParallel, getConcurrency } from "bailian-cli-runtime";
@@ -73,6 +74,7 @@ export default defineCommand({
       valueHint: "<prefix>",
       description: "Filename prefix (default: edited)",
     },
+    ...CONCURRENT_FLAG,
   },
   exampleArgs: [
     '--image ./photo.png --prompt "Replace the background with a beach"',
@@ -144,7 +146,7 @@ export default defineCommand({
       process.stderr.write(`[Model: ${model}] [Mode: sync] [Images: ${resolvedImages.length}]\n`);
     }
 
-    const concurrent = getConcurrency(settings);
+    const concurrent = getConcurrency(flags);
 
     const results = await runConcurrent(concurrent, settings, () =>
       ctx.client.requestJson<DashScopeImageSyncResponse>({

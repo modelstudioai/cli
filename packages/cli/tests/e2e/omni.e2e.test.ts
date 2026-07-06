@@ -21,12 +21,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
   "e2e: omni（DashScope 媒体）",
   () => {
     test("omni 缺少 --message 时报用法错误并退出 (2)", async () => {
-      const { stderr, exitCode } = await runCli([
-        "omni",
-        "--model",
-        "qwen3.5-omni-flash",
-        "--non-interactive",
-      ]);
+      const { stderr, exitCode } = await runCli(["omni", "--model", "qwen3.5-omni-flash"]);
       expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--message|Usage:/i);
     });
@@ -41,7 +36,6 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
         "--text-only",
         "--message",
         "这段音频在说什么？",
-        "--non-interactive",
       ]);
       expect(exitCode).toBe(2);
       expect(stderr).toMatch(/Unsupported audio extension|Cannot infer audio format/i);
@@ -58,7 +52,6 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
         "--text-only",
         "--message",
         "这段音频在说什么？",
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -102,7 +95,6 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
         "wav",
         "--out",
         clipWav,
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -119,7 +111,6 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
         "请逐字转写用户提供的音频内容，不要添加解释。",
         "--message",
         "请转写这段音频。",
-        "--non-interactive",
         "--output",
         "json",
       ]);

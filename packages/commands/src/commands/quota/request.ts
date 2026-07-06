@@ -89,6 +89,7 @@ export default defineCommand({
       description: "Target TPM value (required)",
       required: true,
     },
+    yes: { type: "switch", description: "Skip confirmation prompts" },
   },
   exampleArgs: [
     "--model qwen-turbo --tpm 100000",
@@ -100,7 +101,7 @@ export default defineCommand({
     const { identity, settings, flags } = ctx;
     const modelName = flags.model;
     const tpmValue = Number(flags.tpm);
-    const autoConfirm = settings.yes;
+    const autoConfirm = flags.yes;
     const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {

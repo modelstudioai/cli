@@ -42,7 +42,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "download",
         "--out",
         "/tmp/will-not-be-used.mp4",
-        "--non-interactive",
       ]);
       expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--task-id|Usage:/i);
@@ -54,7 +53,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "download",
         "--task-id",
         PLACEHOLDER_TASK_ID,
-        "--non-interactive",
       ]);
       expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--out|Usage:/i);
@@ -71,7 +69,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         PLACEHOLDER_TASK_ID,
         "--out",
         fakeOut,
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -98,7 +95,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "极简几何色块，静态镜头，用于下载测试",
         "--download",
         genMp4,
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -123,7 +119,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         genData.task_id!,
         "--out",
         downloadMp4,
-        "--non-interactive",
         "--output",
         "json",
       ]);

@@ -19,14 +19,13 @@ export interface PipelineEnv {
 /**
  * Build the in-process env for pipeline steps. Uses the same source resolution
  * as the CLI itself (env vars, config file; no CLI flags), but forces JSON
- * output + non-interactive + quiet mode.
+ * output + quiet mode.
  */
 export function buildPipelineEnv(): PipelineEnv {
   const sources: ResolutionSources = { flags: {}, file: readConfigFile(), env: process.env };
   const settings: Settings = {
     ...buildSettings(sources),
     output: "json",
-    nonInteractive: true,
     noColor: true,
     quiet: true,
   };

@@ -21,13 +21,7 @@ describe("e2e: text chat", () => {
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: text chat（DashScope）", () => {
   test("text chat 缺少 --message 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCli([
-      "text",
-      "chat",
-      "--model",
-      "qwen3.7-max",
-      "--non-interactive",
-    ]);
+    const { stderr, exitCode } = await runCli(["text", "chat", "--model", "qwen3.7-max"]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--message|Usage:/i);
   });
@@ -43,7 +37,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: text chat（DashScope）", () => {
       "干跑",
       "--max-tokens",
       "8",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -65,7 +58,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: text chat（DashScope）", () => {
       "只回复一个字：好",
       "--max-tokens",
       "32",
-      "--non-interactive",
       "--output",
       "json",
     ]);

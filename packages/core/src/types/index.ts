@@ -10,6 +10,8 @@ export {
   defineCommand,
   credentialFlagDefs,
   GLOBAL_FLAGS,
+  CONCURRENT_FLAG,
+  ASYNC_FLAG,
   MODEL_AUTH_FLAGS,
   CONSOLE_AUTH_FLAGS,
 } from "./command.ts";

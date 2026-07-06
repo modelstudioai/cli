@@ -64,7 +64,6 @@ export const runStress = defineStressTarget({
     join(runDir, `edited_${String(index + 1).padStart(3, "0")}.mp4`),
     "--duration",
     String(extraParams.DURATION),
-    "--non-interactive",
     "--output",
     "json",
     "--timeout",

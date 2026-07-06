@@ -68,20 +68,26 @@ export type AuthRequirement = "apiKey" | "console" | "none";
 export const GLOBAL_FLAGS = {
   output: { type: "string", valueHint: "<format>", description: "Output format: text, json" },
   timeout: { type: "number", valueHint: "<seconds>", description: "Request timeout" },
+  quiet: { type: "switch", description: "Suppress non-essential output" },
+  verbose: { type: "switch", description: "Print HTTP request/response details" },
+  noColor: { type: "switch", description: "Disable ANSI colors" },
+  dryRun: { type: "switch", description: "Dry run mode" },
+  help: { type: "switch", description: "Show help" },
+  version: { type: "switch", description: "Print version" },
+} satisfies FlagsDef;
+
+/** Command-scoped flag for commands that support parallel API calls. */
+export const CONCURRENT_FLAG = {
   concurrent: {
     type: "number",
     valueHint: "<n>",
     description: "Run N parallel requests (default: 1)",
   },
-  quiet: { type: "switch", description: "Suppress non-essential output" },
-  verbose: { type: "switch", description: "Print HTTP request/response details" },
-  noColor: { type: "switch", description: "Disable ANSI colors" },
-  dryRun: { type: "switch", description: "Dry run mode" },
-  nonInteractive: { type: "switch", description: "Disable interactive prompts" },
-  yes: { type: "switch", description: "Skip confirmation prompts" },
+} satisfies FlagsDef;
+
+/** Command-scoped flag for task-based commands that can return without polling. */
+export const ASYNC_FLAG = {
   async: { type: "switch", description: "Return async task id without waiting" },
-  help: { type: "switch", description: "Show help" },
-  version: { type: "switch", description: "Print version" },
 } satisfies FlagsDef;
 
 /** Model 域凭证/连接 flag,`auth: "apiKey"` 命令可见。 */

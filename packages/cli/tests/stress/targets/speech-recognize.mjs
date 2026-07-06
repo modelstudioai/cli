@@ -41,7 +41,6 @@ export const runStress = defineStressTarget({
     String(POLL_INTERVAL),
     "--out",
     join(runDir, "asr-result.json"),
-    "--non-interactive",
     "--timeout",
     String(CLI_TIMEOUT_SEC),
     "--language",

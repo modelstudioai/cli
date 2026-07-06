@@ -40,7 +40,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "happyhorse-1.0-video-edit",
         "--prompt",
         "仅提示词",
-        "--non-interactive",
       ]);
       expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--video|Usage:/i);
@@ -60,7 +59,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "夕阳下海面波光，海边有两个小朋友在玩耍",
         "--download",
         t2vPath,
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -80,7 +78,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "整体色调偏暖",
         "--download",
         join(outDir, "e2e-video-edit.mp4"),
-        "--non-interactive",
         "--output",
         "json",
       ]);

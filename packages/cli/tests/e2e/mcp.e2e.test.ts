@@ -53,7 +53,6 @@ describe("e2e: mcp", () => {
       "mcp",
       "list",
       "--dry-run",
-      "--non-interactive",
       "--output",
       "json",
       "--name",
@@ -92,7 +91,6 @@ describe("e2e: mcp", () => {
       "mcp",
       "list",
       "--dry-run",
-      "--non-interactive",
       "--output",
       "json",
       "--console-region",
@@ -110,7 +108,6 @@ describe("e2e: mcp", () => {
       "--server",
       "market-cmapi00073529",
       "--dry-run",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -132,7 +129,6 @@ describe("e2e: mcp", () => {
       "--url",
       "https://example.com/custom/mcp",
       "--dry-run",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -143,7 +139,7 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp tools 缺少 --server 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCli(["mcp", "tools", "--non-interactive"]);
+    const { stderr, exitCode } = await runCli(["mcp", "tools", "--quiet"]);
     expect(exitCode, stderr).toBe(2);
     expect(stderr).toMatch(/--server|Usage:/i);
   });
@@ -157,7 +153,6 @@ describe("e2e: mcp", () => {
       "--query",
       "筛选ROE>15%的消费股",
       "--dry-run",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -190,7 +185,6 @@ describe("e2e: mcp", () => {
       "--query",
       "招商银行",
       "--dry-run",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -218,7 +212,6 @@ describe("e2e: mcp", () => {
       "call",
       "--target",
       "no-dot-target",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -234,7 +227,6 @@ describe("e2e: mcp", () => {
       "srv.tool",
       "--arg",
       "no-equals-sign",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -250,7 +242,6 @@ describe("e2e: mcp", () => {
       "srv.tool",
       "--json",
       "{not-json",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -259,7 +250,7 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp call 缺少 --target 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCli(["mcp", "call", "--non-interactive"]);
+    const { stderr, exitCode } = await runCli(["mcp", "call", "--quiet"]);
     expect(exitCode, stderr).toBe(2);
     expect(stderr).toMatch(/--target|Usage:/i);
   });
@@ -275,7 +266,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: mcp (live)", () => {
       "tools",
       "--server",
       "WebSearch",
-      "--non-interactive",
       "--output",
       "json",
     ]);

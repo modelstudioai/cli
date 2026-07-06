@@ -25,14 +25,7 @@ describe.skipIf(!isBailianE2EEnabled() || !taskId || !isDashScopeE2EReady())(
   "e2e: video task get（DashScope）",
   () => {
     test("video task get 缺少 --task-id 时报用法错误并退出 (2)", async () => {
-      const { stderr, exitCode } = await runCli([
-        "video",
-        "task",
-        "get",
-        "--non-interactive",
-        "--output",
-        "json",
-      ]);
+      const { stderr, exitCode } = await runCli(["video", "task", "get", "--output", "json"]);
       expect(exitCode).toBe(2);
       const err = JSON.parse(stderr.trim()) as { error?: { code?: number; message?: string } };
       expect(err.error?.code).toBe(2);
@@ -47,7 +40,6 @@ describe.skipIf(!isBailianE2EEnabled() || !taskId || !isDashScopeE2EReady())(
         "--dry-run",
         "--task-id",
         taskId!,
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -63,7 +55,6 @@ describe.skipIf(!isBailianE2EEnabled() || !taskId || !isDashScopeE2EReady())(
         "get",
         "--task-id",
         taskId!,
-        "--non-interactive",
         "--output",
         "json",
       ]);

@@ -30,7 +30,7 @@ describe("e2e: search web", () => {
 
   test("search web --dry-run --list-tools 无需 --query 也无需凭证即可干跑", async () => {
     const { stdout, stderr, exitCode } = await runCli(
-      ["search", "web", "--dry-run", "--list-tools", "--non-interactive", "--output", "json"],
+      ["search", "web", "--dry-run", "--list-tools", "--output", "json"],
       {
         DASHSCOPE_API_KEY: undefined,
         DASHSCOPE_ACCESS_TOKEN: undefined,
@@ -44,7 +44,7 @@ describe("e2e: search web", () => {
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: search web", () => {
   test("search web 缺少 --query 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCli(["search", "web", "--non-interactive"]);
+    const { stderr, exitCode } = await runCli(["search", "web", "--quiet"]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--query|Usage:/i);
   });
@@ -54,7 +54,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: search web", () => {
       "search",
       "web",
       "--dry-run",
-      "--non-interactive",
       "--output",
       "json",
       "--query",
@@ -82,7 +81,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: search web", () => {
       "阿里云百炼",
       "--count",
       "3",
-      "--non-interactive",
       "--output",
       "json",
     ]);

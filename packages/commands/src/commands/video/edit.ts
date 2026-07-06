@@ -11,6 +11,7 @@ import {
   ExitCode,
   resolveBooleanFlag,
   resolveWatermark,
+  ASYNC_FLAG,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
@@ -91,6 +92,7 @@ export default defineCommand({
       description: "Save video to file on completion",
     },
     noWait: { type: "switch", description: "Return task ID immediately without waiting" },
+    ...ASYNC_FLAG,
     pollInterval: {
       type: "number",
       valueHint: "<seconds>",
@@ -176,7 +178,7 @@ export default defineCommand({
     }
 
     // --no-wait or --async: return task ID immediately
-    if (flags.noWait || settings.async) {
+    if (flags.noWait || flags.async) {
       emitResult({ task_id: taskId }, format);
       return;
     }

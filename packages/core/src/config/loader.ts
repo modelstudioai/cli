@@ -64,7 +64,6 @@ export function buildSettings(s: ResolutionSources): Settings {
     output: detectOutputFormat(flags.output || env.DASHSCOPE_OUTPUT || file.output),
     outputDir: file.output_dir || undefined,
     timeout,
-    concurrent: flags.concurrent,
     defaultTextModel: file.default_text_model,
     defaultVideoModel: file.default_video_model,
     defaultImageModel: file.default_image_model,
@@ -77,10 +76,7 @@ export function buildSettings(s: ResolutionSources): Settings {
     verbose: flags.verbose || env.DASHSCOPE_VERBOSE === "1",
     quiet: flags.quiet || false,
     noColor: flags.noColor || env.NO_COLOR !== undefined || !process.stdout.isTTY,
-    yes: flags.yes || false,
     dryRun: flags.dryRun || false,
-    nonInteractive: flags.nonInteractive || false,
-    async: flags.async || false,
     telemetry: env.DO_NOT_TRACK === "1" ? false : (file.telemetry ?? true),
   };
 }

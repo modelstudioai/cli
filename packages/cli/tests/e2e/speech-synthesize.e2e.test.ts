@@ -38,7 +38,6 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
         "cosyvoice-v3-flash",
         "--voice",
         "longxiaochun_v3",
-        "--non-interactive",
       ]);
       expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--text|Usage:/i);
@@ -55,7 +54,6 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
         "longxiaochun_v3",
         "--text",
         "干跑",
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -81,7 +79,6 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
         "端到端语音测试",
         "--out",
         outMp3,
-        "--non-interactive",
         "--output",
         "json",
       ]);

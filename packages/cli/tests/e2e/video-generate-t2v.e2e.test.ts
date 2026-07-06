@@ -38,7 +38,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.0-t2v",
-        "--non-interactive",
       ]);
       expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--prompt|Usage:/i);
@@ -54,7 +53,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "happyhorse-1.0-t2v",
         "--prompt",
         "干跑校验",
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -78,7 +76,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "夕阳下海面波光，远景静态镜头",
         "--download",
         join(outDir, "e2e-video-t2v.mp4"),
-        "--non-interactive",
         "--output",
         "json",
       ]);

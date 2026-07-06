@@ -33,7 +33,7 @@ describe("e2e: auth", () => {
   });
 
   test("auth login 缺少 --api-key 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCli(["auth", "login", "--non-interactive"]);
+    const { stderr, exitCode } = await runCli(["auth", "login", "--quiet"]);
     expect(exitCode, stderr).toBe(2);
     expect(stderr).toMatch(/--api-key|Usage:/i);
   });
@@ -45,7 +45,6 @@ describe("e2e: auth", () => {
       "--dry-run",
       "--api-key",
       "sk-e2e-dry-run-placeholder",
-      "--non-interactive",
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("Would validate and save API key.");
@@ -58,7 +57,6 @@ describe("e2e: auth", () => {
       "--dry-run",
       "--api-key",
       "sk-e2e-dry-run-placeholder",
-      "--non-interactive",
       "--output",
       "json",
       "--timeout",
@@ -70,13 +68,7 @@ describe("e2e: auth", () => {
   });
 
   test("auth login 缺少密钥且 --output json 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCli([
-      "auth",
-      "login",
-      "--non-interactive",
-      "--output",
-      "json",
-    ]);
+    const { stderr, exitCode } = await runCli(["auth", "login", "--output", "json"]);
     expect(exitCode).toBe(2);
     const err = JSON.parse(stderr.trim()) as { error?: { code?: number; message?: string } };
     expect(err.error?.code).toBe(2);
@@ -85,19 +77,6 @@ describe("e2e: auth", () => {
 
   test("auth logout --dry-run 不写入配置", async () => {
     const { stdout, stderr, exitCode } = await runCli(["auth", "logout", "--dry-run"]);
-    expect(exitCode, stderr).toBe(0);
-    expect(stdout).toContain("No changes made.");
-    expect(stderr).not.toContain("Cleared api_key");
-  });
-
-  test("auth logout --dry-run --yes --non-interactive", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
-      "auth",
-      "logout",
-      "--dry-run",
-      "--yes",
-      "--non-interactive",
-    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("No changes made.");
     expect(stderr).not.toContain("Cleared api_key");
@@ -122,7 +101,6 @@ describe("e2e: auth", () => {
       "--dry-run",
       "--output",
       "json",
-      "--non-interactive",
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("No changes made.");
@@ -130,13 +108,7 @@ describe("e2e: auth", () => {
   });
 
   test.skipIf(!isDashScopeE2EReady())("auth status 文本输出", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
-      "auth",
-      "status",
-      "--non-interactive",
-      "--output",
-      "text",
-    ]);
+    const { stdout, stderr, exitCode } = await runCli(["auth", "status", "--output", "text"]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toMatch(
       /Authentication Status|API key:|Console token:|DashScope API:|Console gateway:/,
@@ -144,13 +116,7 @@ describe("e2e: auth", () => {
   });
 
   test.skipIf(!isDashScopeE2EReady())("auth status --output json", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
-      "auth",
-      "status",
-      "--non-interactive",
-      "--output",
-      "json",
-    ]);
+    const { stdout, stderr, exitCode } = await runCli(["auth", "status", "--output", "json"]);
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
       authenticated?: boolean;
@@ -164,7 +130,7 @@ describe("e2e: auth", () => {
     "auth status --output json --quiet(base_url 经 env 指定;凭证域 flag 对 status 不可见)",
     async () => {
       const { stdout, stderr, exitCode } = await runCli(
-        ["auth", "status", "--non-interactive", "--output", "json", "--quiet"],
+        ["auth", "status", "--output", "json", "--quiet"],
         { DASHSCOPE_BASE_URL: "https://dashscope.aliyuncs.com" },
       );
       expect(exitCode, stderr).toBe(0);
