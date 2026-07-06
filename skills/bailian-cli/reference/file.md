@@ -23,10 +23,12 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag              | Type   | Required | Description                                     |
-| ----------------- | ------ | -------- | ----------------------------------------------- |
-| `--file <path>`   | string | yes      | Local file to upload (image, video, audio)      |
-| `--model <model>` | string | yes      | Target model name (file is bound to this model) |
+| Flag               | Type   | Required | Description                                     |
+| ------------------ | ------ | -------- | ----------------------------------------------- |
+| `--file <path>`    | string | yes      | Local file to upload (image, video, audio)      |
+| `--model <model>`  | string | yes      | Target model name (file is bound to this model) |
+| `--api-key <key>`  | string | no       | API key                                         |
+| `--base-url <url>` | string | no       | API base URL                                    |
 
 #### Examples
 

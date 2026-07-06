@@ -4,7 +4,7 @@ import { ensureConfigDir, getConfigPath } from "./paths.ts";
 import { detectOutputFormat } from "../output/formatter.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
-import type { GlobalFlags } from "../types/command.ts";
+import type { SourceFlags } from "../types/command.ts";
 
 export function readConfigFile(): ConfigFile {
   const path = getConfigPath();
@@ -33,13 +33,13 @@ export async function writeConfigFile(data: Record<string, unknown>): Promise<vo
  * 必填 boolean,收 Partial 让 pipeline 等无 flag 场景传 {} 即可。
  */
 export interface ResolutionSources {
-  flags: Partial<GlobalFlags>;
+  flags: Partial<SourceFlags>;
   file: ConfigFile;
   env: NodeJS.ProcessEnv;
 }
 
-export function buildSources(globalFlags: Partial<GlobalFlags>): ResolutionSources {
-  return { flags: globalFlags, file: readConfigFile(), env: process.env };
+export function buildSources(flags: Partial<SourceFlags>): ResolutionSources {
+  return { flags, file: readConfigFile(), env: process.env };
 }
 
 /**
@@ -70,7 +70,7 @@ export function buildSettings(s: ResolutionSources): Settings {
     defaultImageModel: file.default_image_model,
     defaultSpeechModel: file.default_speech_model,
     defaultOmniModel: file.default_omni_model,
-    workspaceId: env.BAILIAN_WORKSPACE_ID || file.workspace_id || undefined,
+    workspaceId: flags.workspaceId || env.BAILIAN_WORKSPACE_ID || file.workspace_id || undefined,
     consoleRegion: flags.consoleRegion || file.console_region || undefined,
     consoleSite: (flags.consoleSite as Settings["consoleSite"]) || file.console_site || undefined,
     consoleSwitchAgent: flags.consoleSwitchAgent || file.console_switch_agent || undefined,

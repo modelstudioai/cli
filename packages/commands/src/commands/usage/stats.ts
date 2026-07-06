@@ -92,9 +92,7 @@ async function pollTelemetryApi(
   return null;
 }
 
-// 注意:`--workspace-id` 是命令级 flag、不进 settings,flag 的第一优先级须在此显式保住。
-function resolveWorkspaceId(settings: Settings, binName: string, flagWorkspaceId?: string): string {
-  if (flagWorkspaceId) return flagWorkspaceId;
+function requireWorkspaceId(settings: Settings, binName: string): string {
   if (settings.workspaceId) return settings.workspaceId;
 
   throw new BailianError(
@@ -299,18 +297,6 @@ export default defineCommand({
       valueHint: "<type>",
       description: "Model type: Text, Vision, Multimodal, Audio, Embedding",
     },
-    workspaceId: {
-      type: "string",
-      valueHint: "<id>",
-      description: "Workspace ID (env: BAILIAN_WORKSPACE_ID)",
-    },
-    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
-    consoleSite: {
-      type: "string",
-      valueHint: "<site>",
-      description: "Console site: domestic, international",
-    },
-    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
   },
   exampleArgs: [
     "",
@@ -328,8 +314,7 @@ export default defineCommand({
     const typeFlag = flags.type || undefined;
     const format = detectOutputFormat(settings.output);
 
-    const flagWorkspaceId = flags.workspaceId || undefined;
-    const workspaceId = resolveWorkspaceId(settings, identity.binName, flagWorkspaceId);
+    const workspaceId = requireWorkspaceId(settings, identity.binName);
 
     const endTime = Date.now();
     const startTime = endTime - daysFlag * 24 * 60 * 60 * 1000;

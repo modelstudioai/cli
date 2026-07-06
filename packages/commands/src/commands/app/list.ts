@@ -23,13 +23,6 @@ export default defineCommand({
       valueHint: "<n>",
       description: "Results per page (default: 30)",
     },
-    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
-    consoleSite: {
-      type: "string",
-      valueHint: "<site>",
-      description: "Console site: domestic, international",
-    },
-    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
   },
   exampleArgs: ["", "--name customer service", "--page 2 --page-size 10", "--output json"],
   async run(ctx) {

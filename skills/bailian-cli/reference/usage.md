@@ -30,9 +30,10 @@ Index: [index.md](index.md)
 | `--model <model>`              | string | no       | Model name(s) to query, comma-separated for multiple; omit for all models |
 | `--expiring <days>`            | string | no       | Only show quotas expiring within N days                                   |
 | `--sort <remaining\|expires>`  | string | no       | Sort by: remaining (ascending), expires (ascending)                       |
-| `--console-region <region>`    | string | no       | Console region                                                            |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1)                  |
 | `--console-site <site>`        | string | no       | Console site: domestic, international                                     |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID                                                          |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                                     |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                                  |
 
 #### Examples
 
@@ -74,15 +75,16 @@ bl usage free --model qwen3-max --console-region cn-beijing
 
 #### Flags
 
-| Flag                           | Type   | Required | Description                                 |
-| ------------------------------ | ------ | -------- | ------------------------------------------- |
-| `--model <model>`              | string | no       | Model name(s), comma-separated for multiple |
-| `--all`                        | switch | no       | Apply to all free-tier models               |
-| `--on`                         | switch | no       | Enable auto-stop (default behavior)         |
-| `--off`                        | switch | no       | Disable auto-stop                           |
-| `--console-region <region>`    | string | no       | Console region                              |
-| `--console-site <site>`        | string | no       | Console site: domestic, international       |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID                            |
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--model <model>`              | string | no       | Model name(s), comma-separated for multiple              |
+| `--all`                        | switch | no       | Apply to all free-tier models                            |
+| `--on`                         | switch | no       | Enable auto-stop (default behavior)                      |
+| `--off`                        | switch | no       | Disable auto-stop                                        |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
 
 #### Examples
 
@@ -120,15 +122,15 @@ bl usage freetier --off --all
 
 #### Flags
 
-| Flag                           | Type   | Required | Description                                            |
-| ------------------------------ | ------ | -------- | ------------------------------------------------------ |
-| `--model <model>`              | string | no       | Model name(s), comma-separated; omit for overview      |
-| `--days <days>`                | string | no       | Number of days (default: 7)                            |
-| `--type <type>`                | string | no       | Model type: Text, Vision, Multimodal, Audio, Embedding |
-| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)               |
-| `--console-region <region>`    | string | no       | Console region                                         |
-| `--console-site <site>`        | string | no       | Console site: domestic, international                  |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID                                       |
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--model <model>`              | string | no       | Model name(s), comma-separated; omit for overview        |
+| `--days <days>`                | string | no       | Number of days (default: 7)                              |
+| `--type <type>`                | string | no       | Model type: Text, Vision, Multimodal, Audio, Embedding   |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
 
 #### Examples
 

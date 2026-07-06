@@ -37,6 +37,8 @@ Index: [index.md](index.md)
 | `--watermark <bool>`       | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).     |
 | `--out-dir <dir>`          | string  | no       | Download images to directory                                            |
 | `--out-prefix <prefix>`    | string  | no       | Filename prefix (default: edited)                                       |
+| `--api-key <key>`          | string  | no       | API key                                                                 |
+| `--base-url <url>`         | string  | no       | API base URL                                                            |
 
 #### Examples
 
@@ -84,6 +86,8 @@ bl image edit --image ./photo.png --prompt "Replace the background with a beach"
 | `--out-dir <dir>`           | string  | no       | Download images to directory                                                                                             |
 | `--out-prefix <prefix>`     | string  | no       | Filename prefix (default: image)                                                                                         |
 | `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 3)                                                                               |
+| `--api-key <key>`           | string  | no       | API key                                                                                                                  |
+| `--base-url <url>`          | string  | no       | API base URL                                                                                                             |
 
 #### Examples
 

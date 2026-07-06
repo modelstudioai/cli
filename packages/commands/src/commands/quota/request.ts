@@ -89,14 +89,6 @@ export default defineCommand({
       description: "Target TPM value (required)",
       required: true,
     },
-    yes: { type: "switch", description: "Skip downgrade confirmation" },
-    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
-    consoleSite: {
-      type: "string",
-      valueHint: "<site>",
-      description: "Console site: domestic, international",
-    },
-    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
   },
   exampleArgs: [
     "--model qwen-turbo --tpm 100000",
@@ -108,7 +100,7 @@ export default defineCommand({
     const { identity, settings, flags } = ctx;
     const modelName = flags.model;
     const tpmValue = Number(flags.tpm);
-    const autoConfirm = Boolean(flags.yes) || settings.yes;
+    const autoConfirm = settings.yes;
     const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {

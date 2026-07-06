@@ -36,6 +36,8 @@ Index: [index.md](index.md)
 | `--out <path>`              | string | no       | Save full transcription result to JSON file             |
 | `--no-wait`                 | switch | no       | Return task ID immediately without polling              |
 | `--poll-interval <seconds>` | number | no       | Polling interval in seconds (default: 2)                |
+| `--api-key <key>`           | string | no       | API key                                                 |
+| `--base-url <url>`          | string | no       | API base URL                                            |
 
 #### Examples
 
@@ -95,6 +97,8 @@ bl speech recognize --url https://example.com/audio.mp3 --no-wait --quiet
 | `--enable-ssml`                  | switch | no       | Enable SSML markup parsing in input text                                                                                |
 | `--out <path>`                   | string | no       | Save audio to file (default: auto-generate in temp dir)                                                                 |
 | `--stream`                       | switch | no       | Stream raw PCM audio to stdout (pipe to player)                                                                         |
+| `--api-key <key>`                | string | no       | API key                                                                                                                 |
+| `--base-url <url>`               | string | no       | API base URL                                                                                                            |
 
 #### Examples
 

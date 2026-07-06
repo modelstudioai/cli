@@ -48,9 +48,11 @@ test("timeout:flag > 合法 env > file > 300;非法 env 被跳过;非法 flag �
   expect(() => resolve({ flags: { timeout: -1 } })).toThrow(/Timeout/);
 });
 
-test("workspaceId:env > file(没有全局 flag 这一源)", () => {
+test("workspaceId:flag > env > file(console 域 flag)", () => {
   const file: ConfigFile = { workspace_id: "ws-file" };
-  expect(resolve({ env: { BAILIAN_WORKSPACE_ID: "ws-env" }, file }).workspaceId).toBe("ws-env");
+  const env = { BAILIAN_WORKSPACE_ID: "ws-env" };
+  expect(resolve({ flags: { workspaceId: "ws-flag" }, env, file }).workspaceId).toBe("ws-flag");
+  expect(resolve({ env, file }).workspaceId).toBe("ws-env");
   expect(resolve({ file }).workspaceId).toBe("ws-file");
   expect(resolve({}).workspaceId).toBeUndefined();
 });

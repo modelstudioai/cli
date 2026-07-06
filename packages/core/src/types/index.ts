@@ -4,9 +4,15 @@ export type {
   FlagDef,
   FlagsDef,
   ParsedFlags,
-  GlobalFlags,
+  SourceFlags,
 } from "./command.ts";
-export { defineCommand, GLOBAL_FLAGS } from "./command.ts";
+export {
+  defineCommand,
+  credentialFlagDefs,
+  GLOBAL_FLAGS,
+  MODEL_AUTH_FLAGS,
+  CONSOLE_AUTH_FLAGS,
+} from "./command.ts";
 export type {
   AppCompletionRequest,
   AppCompletionResponse,

@@ -24,14 +24,14 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag                  | Type   | Required | Description                          |
-| --------------------- | ------ | -------- | ------------------------------------ |
-| `--file <path>`       | string | yes      | Pipeline definition file (YAML/JSON) |
-| `--input <json>`      | string | no       | Runtime input as inline JSON         |
-| `--input-file <path>` | string | no       | Runtime input from a JSON file       |
-| `--concurrency <n>`   | number | no       | Max parallel steps (default: 1)      |
-| `--events <jsonl>`    | string | no       | Emit lifecycle events: jsonl         |
-| `--timeout <seconds>` | number | no       | Default step timeout in seconds      |
+| Flag                       | Type   | Required | Description                          |
+| -------------------------- | ------ | -------- | ------------------------------------ |
+| `--file <path>`            | string | yes      | Pipeline definition file (YAML/JSON) |
+| `--input <json>`           | string | no       | Runtime input as inline JSON         |
+| `--input-file <path>`      | string | no       | Runtime input from a JSON file       |
+| `--concurrency <n>`        | number | no       | Max parallel steps (default: 1)      |
+| `--events <jsonl>`         | string | no       | Emit lifecycle events: jsonl         |
+| `--step-timeout <seconds>` | number | no       | Default step timeout in seconds      |
 
 #### Examples
 

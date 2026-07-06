@@ -37,6 +37,8 @@ Index: [index.md](index.md)
 | `--text-only`          | switch | no       | Output text only, no audio generation                                                |
 | `--max-tokens <n>`     | number | no       | Maximum tokens to generate                                                           |
 | `--temperature <n>`    | number | no       | Sampling temperature (0.0, 2.0]                                                      |
+| `--api-key <key>`      | string | no       | API key                                                                              |
+| `--base-url <url>`     | string | no       | API base URL                                                                         |
 
 #### Examples
 

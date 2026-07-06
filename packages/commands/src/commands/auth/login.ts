@@ -23,6 +23,11 @@ export default defineCommand({
       description:
         "Sign in via browser; use --console-site to choose domestic (default) or international",
     },
+    consoleSite: {
+      type: "string",
+      valueHint: "<site>",
+      description: "Console site: domestic, international",
+    },
   },
   exampleArgs: ["--api-key sk-xxxxx", "--console"],
   validate: (f) => (!f.console && !f.apiKey ? "Provide --api-key or --console" : undefined),
@@ -30,6 +35,9 @@ export default defineCommand({
     const { identity, settings, flags } = ctx;
     const store = ctx.authStore();
     const deps = { identity, settings, authStore: store };
+    const key = flags.apiKey;
+    const baseUrl = flags.baseUrl || undefined;
+
     if (flags.console) {
       if (settings.dryRun) {
         emitBare(
@@ -37,27 +45,26 @@ export default defineCommand({
         );
         return;
       }
-      const hasApiKey = !!(flags.apiKey || store.stored().apiKey);
-      await runConsoleLogin(resolveConsoleOrigin(settings.consoleSite || "domestic"), deps, {
+      const hasApiKey = !!(key || store.stored().apiKey);
+      // 本次登录站点:参数缺省时用配置默认(file 里上次登录存的站点)。
+      const site = flags.consoleSite || settings.consoleSite || "domestic";
+      await runConsoleLogin(resolveConsoleOrigin(site), deps, {
         needApiKey: !hasApiKey,
       });
       return;
     }
 
     // --api-key path; validate() guarantees apiKey on the non-console branch.
-    if (flags.apiKey) {
-      const key = flags.apiKey;
-      const baseUrl = flags.baseUrl || undefined;
+    if (!key) return;
 
-      if (settings.dryRun) {
-        emitBare("Would validate and save API key.");
-        return;
-      }
-      if (baseUrl) {
-        await store.login({ base_url: baseUrl });
-      }
-      await validateAndPersistApiKey(deps, key, baseUrl || store.resolveBaseUrl());
-      printQuickStart();
+    if (settings.dryRun) {
+      emitBare("Would validate and save API key.");
+      return;
     }
+    if (baseUrl) {
+      await store.login({ base_url: baseUrl });
+    }
+    await validateAndPersistApiKey(deps, key, baseUrl || store.resolveBaseUrl());
+    printQuickStart();
   },
 });

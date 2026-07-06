@@ -199,13 +199,6 @@ export default defineCommand({
       description: "Sort by: remaining (ascending), expires (ascending)",
       choices: ["remaining", "expires"] as const,
     },
-    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
-    consoleSite: {
-      type: "string",
-      valueHint: "<site>",
-      description: "Console site: domestic, international",
-    },
-    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
   },
   exampleArgs: [
     "",

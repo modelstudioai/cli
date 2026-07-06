@@ -25,11 +25,12 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag               | Type   | Required | Description                                                                           |
-| ------------------ | ------ | -------- | ------------------------------------------------------------------------------------- |
-| `--api-key <key>`  | string | no       | DashScope API key to store                                                            |
-| `--base-url <url>` | string | no       | DashScope API base URL (used with --api-key for validation)                           |
-| `--console`        | switch | no       | Sign in via browser; use --console-site to choose domestic (default) or international |
+| Flag                    | Type   | Required | Description                                                                           |
+| ----------------------- | ------ | -------- | ------------------------------------------------------------------------------------- |
+| `--api-key <key>`       | string | no       | DashScope API key to store                                                            |
+| `--base-url <url>`      | string | no       | DashScope API base URL (used with --api-key for validation)                           |
+| `--console`             | switch | no       | Sign in via browser; use --console-site to choose domestic (default) or international |
+| `--console-site <site>` | string | no       | Console site: domestic, international                                                 |
 
 #### Examples
 
@@ -43,18 +44,17 @@ bl auth login --console
 
 ### `bl auth logout`
 
-| Field           | Value                                            |
-| --------------- | ------------------------------------------------ |
-| **Name**        | `auth logout`                                    |
-| **Description** | Clear stored credentials                         |
-| **Usage**       | `bl auth logout [--console] [--yes] [--dry-run]` |
+| Field           | Value                                    |
+| --------------- | ---------------------------------------- |
+| **Name**        | `auth logout`                            |
+| **Description** | Clear stored credentials                 |
+| **Usage**       | `bl auth logout [--console] [--dry-run]` |
 
 #### Flags
 
 | Flag        | Type   | Required | Description                                              |
 | ----------- | ------ | -------- | -------------------------------------------------------- |
 | `--console` | switch | no       | Only clear the console access_token, keep api_key intact |
-| `--yes`     | switch | no       | Skip confirmation prompt                                 |
 
 #### Examples
 
@@ -70,10 +70,6 @@ bl auth logout --console
 bl auth logout --dry-run
 ```
 
-```bash
-bl auth logout --yes
-```
-
 ### `bl auth status`
 
 | Field           | Value                             |
@@ -84,11 +80,7 @@ bl auth logout --yes
 
 #### Flags
 
-| Flag                           | Type   | Required | Description                           |
-| ------------------------------ | ------ | -------- | ------------------------------------- |
-| `--console-region <region>`    | string | no       | Console region                        |
-| `--console-site <site>`        | string | no       | Console site: domestic, international |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID                      |
+_No command-specific flags._
 
 #### Examples
 

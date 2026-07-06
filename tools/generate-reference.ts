@@ -11,7 +11,12 @@
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { GLOBAL_FLAGS } from "../packages/core/dist/index.mjs";
+import {
+  CONSOLE_AUTH_FLAGS,
+  GLOBAL_FLAGS,
+  MODEL_AUTH_FLAGS,
+  credentialFlagDefs,
+} from "../packages/core/dist/index.mjs";
 import type { AnyCommand, FlagDef, FlagsDef } from "../packages/core/src/index.ts";
 import { commands } from "../packages/cli/src/commands.ts";
 
@@ -89,8 +94,9 @@ function commandSection(path: string, cmd: AnyCommand): string {
   lines.push(`| **Usage** | \`${escCell(usage)}\` |`);
   lines.push("");
 
+  // 与命令 help 的 Flags 区一致:自有 + 该命令可见的凭证域 flag。
   lines.push("#### Flags", "");
-  lines.push(formatFlagsTable(cmd.flags));
+  lines.push(formatFlagsTable({ ...cmd.flags, ...credentialFlagDefs(cmd) }));
 
   if (cmd.notes?.length) {
     lines.push("#### Notes", "");
@@ -184,6 +190,18 @@ function buildIndex(
     "Available on every command (in addition to command-specific flags):",
     "",
     formatFlagsTable(GLOBAL_FLAGS),
+    "",
+    "## Model auth flags",
+    "",
+    "Available on model-domain commands (API-key auth); also listed per command below:",
+    "",
+    formatFlagsTable(MODEL_AUTH_FLAGS),
+    "",
+    "## Console auth flags",
+    "",
+    "Available on console-domain commands (console login auth); also listed per command below:",
+    "",
+    formatFlagsTable(CONSOLE_AUTH_FLAGS),
     "",
     "## Notes",
     "",

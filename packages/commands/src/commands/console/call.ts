@@ -23,13 +23,6 @@ export default defineCommand({
       description: "Request data as JSON string",
       required: true,
     },
-    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
-    consoleSite: {
-      type: "string",
-      valueHint: "<site>",
-      description: "Console site: domestic, international",
-    },
-    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
   },
   exampleArgs: [
     `--api zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota --data '{"queryFreeTierQuotaRequest":{"models":["qwen3-max"]}}'`,

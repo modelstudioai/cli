@@ -31,7 +31,7 @@ const RUN_FLAGS = {
     description: "Emit lifecycle events: jsonl",
     choices: ["jsonl"] as const,
   },
-  timeout: {
+  stepTimeout: {
     type: "number",
     valueHint: "<seconds>",
     description: "Default step timeout in seconds",
@@ -70,7 +70,7 @@ export default defineCommand({
         concurrency: flags.concurrency,
         basePath,
         dryRun: settings.dryRun,
-        timeoutSeconds: flags.timeout,
+        timeoutSeconds: flags.stepTimeout,
       })) {
         process.stdout.write(JSON.stringify(event) + "\n");
       }
@@ -81,7 +81,7 @@ export default defineCommand({
       concurrency: flags.concurrency,
       basePath,
       dryRun: settings.dryRun,
-      timeoutSeconds: flags.timeout,
+      timeoutSeconds: flags.stepTimeout,
       onEvent: settings.verbose ? logEvent : undefined,
     });
 

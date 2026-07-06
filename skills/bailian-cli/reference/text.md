@@ -36,6 +36,8 @@ Index: [index.md](index.md)
 | `--tool <json-or-path>`  | array  | no       | Tool definition as JSON or file path (repeatable)                           |
 | `--enable-thinking`      | switch | no       | Enable thinking/reasoning mode (for qwen3/qwq models)                       |
 | `--thinking-budget <n>`  | number | no       | Max tokens for thinking (default: 4096)                                     |
+| `--api-key <key>`        | string | no       | API key                                                                     |
+| `--base-url <url>`       | string | no       | API base URL                                                                |
 
 #### Examples
 

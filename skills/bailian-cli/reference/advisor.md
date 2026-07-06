@@ -26,6 +26,8 @@ Index: [index.md](index.md)
 | Flag               | Type   | Required | Description                |
 | ------------------ | ------ | -------- | -------------------------- |
 | `--message <text>` | string | yes      | Describe your requirements |
+| `--api-key <key>`  | string | no       | API key                    |
+| `--base-url <url>` | string | no       | API base URL               |
 
 #### Examples
 

@@ -4,15 +4,14 @@ import { emitBare } from "bailian-cli-runtime";
 export default defineCommand({
   description: "Clear stored credentials",
   auth: "none",
-  usageArgs: "[--console] [--yes] [--dry-run]",
+  usageArgs: "[--console] [--dry-run]",
   flags: {
     console: {
       type: "switch",
       description: "Only clear the console access_token, keep api_key intact",
     },
-    yes: { type: "switch", description: "Skip confirmation prompt" },
   },
-  exampleArgs: ["", "--console", "--dry-run", "--yes"],
+  exampleArgs: ["", "--console", "--dry-run"],
   async run(ctx) {
     const { settings, flags } = ctx;
     const store = ctx.authStore();

@@ -27,10 +27,12 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag             | Type   | Required | Description              |
-| ---------------- | ------ | -------- | ------------------------ |
-| `--task-id <id>` | string | yes      | Task ID to download from |
-| `--out <path>`   | string | yes      | Output file path         |
+| Flag               | Type   | Required | Description              |
+| ------------------ | ------ | -------- | ------------------------ |
+| `--task-id <id>`   | string | yes      | Task ID to download from |
+| `--out <path>`     | string | yes      | Output file path         |
+| `--api-key <key>`  | string | no       | API key                  |
+| `--base-url <url>` | string | no       | API base URL             |
 
 #### Examples
 
@@ -69,7 +71,8 @@ bl video download --task-id 3b256896-xxxx --out video.mp4 --quiet
 | `--download <path>`              | string  | no       | Save video to file on completion                                                        |
 | `--no-wait`                      | switch  | no       | Return task ID immediately without waiting                                              |
 | `--poll-interval <seconds>`      | number  | no       | Polling interval when waiting (default: 15)                                             |
-| `--async`                        | switch  | no       | Return task ID immediately (agent/CI mode, same as --no-wait)                           |
+| `--api-key <key>`                | string  | no       | API key                                                                                 |
+| `--base-url <url>`               | string  | no       | API base URL                                                                            |
 
 #### Examples
 
@@ -114,7 +117,8 @@ bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the
 | `--download <path>`         | string  | no       | Save video to file on completion                                                        |
 | `--no-wait`                 | switch  | no       | Return task ID immediately without waiting                                              |
 | `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 5)                                              |
-| `--async`                   | switch  | no       | Return task ID immediately (agent/CI mode, same as --no-wait)                           |
+| `--api-key <key>`           | string  | no       | API key                                                                                 |
+| `--base-url <url>`          | string  | no       | API base URL                                                                            |
 
 #### Examples
 
@@ -165,7 +169,8 @@ bl video generate --prompt "A cat playing with a ball" --watermark false
 | `--download <path>`         | string  | no       | Save video to file on completion                                                        |
 | `--no-wait`                 | switch  | no       | Return task ID immediately without waiting                                              |
 | `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 15)                                             |
-| `--async`                   | switch  | no       | Return task ID immediately (agent/CI mode, same as --no-wait)                           |
+| `--api-key <key>`           | string  | no       | API key                                                                                 |
+| `--base-url <url>`          | string  | no       | API base URL                                                                            |
 
 #### Examples
 
@@ -199,9 +204,11 @@ bl video ref --prompt "Image 1 drinks water" --image person.jpg --watermark fals
 
 #### Flags
 
-| Flag             | Type   | Required | Description   |
-| ---------------- | ------ | -------- | ------------- |
-| `--task-id <id>` | string | yes      | Async task ID |
+| Flag               | Type   | Required | Description   |
+| ------------------ | ------ | -------- | ------------- |
+| `--task-id <id>`   | string | yes      | Async task ID |
+| `--api-key <key>`  | string | no       | API key       |
+| `--base-url <url>` | string | no       | API base URL  |
 
 #### Examples
 

@@ -86,10 +86,6 @@ export default defineCommand({
       valueHint: "<seconds>",
       description: "Polling interval when waiting (default: 5)",
     },
-    async: {
-      type: "switch",
-      description: "Return task ID immediately (agent/CI mode, same as --no-wait)",
-    },
   },
   exampleArgs: [
     '--prompt "A person reading a book, static shot"',

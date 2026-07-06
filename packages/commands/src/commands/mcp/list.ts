@@ -37,13 +37,6 @@ export default defineCommand({
     },
     page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
     pageSize: { type: "number", valueHint: "<n>", description: "Results per page (default: 30)" },
-    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
-    consoleSite: {
-      type: "string",
-      valueHint: "<site>",
-      description: "Console site: domestic, international",
-    },
-    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
   },
   exampleArgs: ["", "--name finance", "--output json"],
   async run(ctx) {

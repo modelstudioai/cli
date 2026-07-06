@@ -63,10 +63,9 @@ export type ParsedFlags<F extends FlagsDef> = {
 
 export type AuthRequirement = "apiKey" | "console" | "none";
 
-// ── Global flags (single source: derived from GLOBAL_FLAGS) ──────────────────
+// ── Flag 分组:全局(所有命令) + 凭证域(按命令的 auth 可见) ────────────────────
+/** 所有命令都可用的全局 flag。 */
 export const GLOBAL_FLAGS = {
-  apiKey: { type: "string", valueHint: "<key>", description: "API key" },
-  baseUrl: { type: "string", valueHint: "<url>", description: "API base URL" },
   output: { type: "string", valueHint: "<format>", description: "Output format: text, json" },
   timeout: { type: "number", valueHint: "<seconds>", description: "Request timeout" },
   concurrent: {
@@ -81,6 +80,18 @@ export const GLOBAL_FLAGS = {
   nonInteractive: { type: "switch", description: "Disable interactive prompts" },
   yes: { type: "switch", description: "Skip confirmation prompts" },
   async: { type: "switch", description: "Return async task id without waiting" },
+  help: { type: "switch", description: "Show help" },
+  version: { type: "switch", description: "Print version" },
+} satisfies FlagsDef;
+
+/** Model 域凭证/连接 flag,`auth: "apiKey"` 命令可见。 */
+export const MODEL_AUTH_FLAGS = {
+  apiKey: { type: "string", valueHint: "<key>", description: "API key" },
+  baseUrl: { type: "string", valueHint: "<url>", description: "API base URL" },
+} satisfies FlagsDef;
+
+/** Console 域目标/作用域 flag,`auth: "console"` 命令可见。 */
+export const CONSOLE_AUTH_FLAGS = {
   consoleRegion: {
     type: "string",
     valueHint: "<region>",
@@ -96,11 +107,24 @@ export const GLOBAL_FLAGS = {
     valueHint: "<uid>",
     description: "Switch agent UID for delegated access",
   },
-  help: { type: "switch", description: "Show help" },
-  version: { type: "switch", description: "Print version" },
+  workspaceId: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Workspace ID (env: BAILIAN_WORKSPACE_ID)",
+  },
 } satisfies FlagsDef;
 
-export type GlobalFlags = ParsedFlags<typeof GLOBAL_FLAGS>;
+/** sources 里可能出现的全部 flag(全局 + 两个凭证域)。 */
+export type SourceFlags = ParsedFlags<
+  typeof GLOBAL_FLAGS & typeof MODEL_AUTH_FLAGS & typeof CONSOLE_AUTH_FLAGS
+>;
+
+/** 该命令可见的凭证域 flag 定义。 */
+export function credentialFlagDefs(cmd: { auth: AuthRequirement }): FlagsDef {
+  if (cmd.auth === "apiKey") return MODEL_AUTH_FLAGS;
+  if (cmd.auth === "console") return CONSOLE_AUTH_FLAGS;
+  return {};
+}
 
 /**
  * What a command's `run` receives: `client` for all network calls (its

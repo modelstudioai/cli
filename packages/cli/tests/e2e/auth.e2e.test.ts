@@ -161,22 +161,22 @@ describe("e2e: auth", () => {
   });
 
   test.skipIf(!isDashScopeE2EReady())(
-    "auth status --output json --quiet --base-url 国内",
+    "auth status --output json --quiet(base_url 经 env 指定;凭证域 flag 对 status 不可见)",
     async () => {
-      const { stdout, stderr, exitCode } = await runCli([
-        "auth",
-        "status",
-        "--non-interactive",
-        "--output",
-        "json",
-        "--quiet",
-        "--base-url",
-        "https://dashscope.aliyuncs.com",
-      ]);
+      const { stdout, stderr, exitCode } = await runCli(
+        ["auth", "status", "--non-interactive", "--output", "json", "--quiet"],
+        { DASHSCOPE_BASE_URL: "https://dashscope.aliyuncs.com" },
+      );
       expect(exitCode, stderr).toBe(0);
       const data = parseStdoutJson<{ authenticated?: boolean; api_key?: unknown }>(stdout);
       expect(data.authenticated).toBe(true);
       expect(data.api_key).toBeDefined();
     },
   );
+
+  test("auth status 不接受凭证域覆盖 flag(--base-url 报 Unknown flag)", async () => {
+    const { stderr, exitCode } = await runCli(["auth", "status", "--base-url", "https://x.test"]);
+    expect(exitCode).not.toBe(0);
+    expect(stderr).toMatch(/Unknown flag.*--base-url/);
+  });
 });

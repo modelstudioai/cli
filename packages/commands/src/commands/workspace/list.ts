@@ -78,13 +78,6 @@ export default defineCommand({
       valueHint: "<n>",
       description: "Limit number of results",
     },
-    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
-    consoleSite: {
-      type: "string",
-      valueHint: "<site>",
-      description: "Console site: domestic, international",
-    },
-    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
   },
   exampleArgs: ["", "--list 5", "--output json"],
   async run(ctx) {

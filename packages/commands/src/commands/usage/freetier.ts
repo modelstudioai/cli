@@ -113,13 +113,6 @@ export default defineCommand({
       type: "switch",
       description: "Disable auto-stop",
     },
-    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
-    consoleSite: {
-      type: "string",
-      valueHint: "<site>",
-      description: "Console site: domestic, international",
-    },
-    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
   },
   exampleArgs: [
     "--model qwen3-max",

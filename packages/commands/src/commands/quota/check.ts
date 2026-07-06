@@ -239,13 +239,6 @@ export default defineCommand({
       valueHint: "<minutes>",
       description: "Query usage for the last N minutes (default: 2)",
     },
-    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
-    consoleSite: {
-      type: "string",
-      valueHint: "<site>",
-      description: "Console site: domestic, international",
-    },
-    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
   },
   exampleArgs: [
     "",

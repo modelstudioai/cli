@@ -6,6 +6,8 @@
 >
 > 实施(2026-07-06):**已按本方案完成**——前置 baseUrl 翻转 + 阶段 0–6 全部落地(含 flags 收窄/分流/同名守卫、console/advisor/pipeline 收口、tracker 传值、边界守卫测试 `packages/commands/tests/boundaries.test.ts`)。全量 `vp check`/单测/关键 e2e 绿;**未 commit,待 review**。实施中的偏差:advisor 匿名调网关促使 `callConsoleGateway` 收 `ConsoleGatewayTarget`(token 可选)而非整个 credential;`describeAuth` 更名 `describeAuthState`;`ConfigStore.reset` 无消费者未实现。
 >
+> flag 边界轮(2026-07-06):**域化完成**——flag 拆 `GLOBAL_FLAGS` + `MODEL_AUTH_FLAGS`/`CONSOLE_AUTH_FLAGS`(按命令 `auth`/`authFlags` 可见),16 处遮蔽清零,跨域传 flag 报错,help 改为 Flags(自有+域)/Global Flags(全量)三段式,`pipeline run --timeout` 更名 `--step-timeout`,login 经 `AuthStore.flagInput()` 收凭证输入。workspaceId 已升入 console 域(链 flag > env > file),stats 命令内优先级删除。
+>
 > 修订(2026-07-04 评审后,均已拍板):§8 改 strangler 分阶段 + 阶段 0 行为锁定测试(已落地);§2 store 接口细化(write async / unset / AuthStore.login 揽登录落盘);§5 validate 收 ownFlags + 同名守卫 + authStage dry-run 双域容忍;§7 tracker/workspaceId 修法;§0/§9 优先级链保真口径。dry-run 决策:**保持"无需凭证"现状**,console 三元组归 Settings 服务 dry-run 展示(不引入 ConsoleTarget);dry-run 输出规范统一推后(§9)。
 >
 > 约束(务必遵守):
@@ -343,9 +345,9 @@ const authStage = async (ctx, next) => {
 ## 9. 本次不做(已在钉钉文档记录,后续单独轮次)
 
 - **flag 清理**:`nonInteractive` 删 / `async` ↔ 各命令 `--no-wait` 去重 / `yes` 收窄到命令级 / `noColor` 修一致性(registry/progress/banner 里内联 `process.stderr.isTTY` 绕过了 `config.noColor`)。
-- **workspaceId 的 flag 源**:今天没有全局 `--workspace-id`,只有 `usage/stats` 自声明的命令级 flag(命令内做 flag > settings 覆盖)。是否提升为全局 flag,与下条同名遮蔽清理**同一轮**看——都是全局↔命令级 flag 的边界问题。(优先级链归一本身已完成:唯一异类 baseUrl 已前置翻转,见 §0。)
+- ~~workspaceId 的 flag 源~~ **已完成**(flag 边界轮):`--workspace-id` 升入 `CONSOLE_AUTH_FLAGS`,链为 flag > env > file;stats 删除自有声明与命令内优先级。(优先级链归一与同名遮蔽清理亦已完成:baseUrl 前置翻转见 §0,遮蔽经域化清零见 §5。)
 - **dry-run 输出规范统一**:各域输出现状不一致 —— model/app 域只打请求 body(不含 URL/baseUrl),console 域额外打 api 名 + region/site 路由信息。应一次定规范、跨域对齐(是否展示路由、展示哪些字段);届时若 console 域不再展示,console 三元组可从 Settings 撤出、收敛为纯 credential。**本次保持现状输出**(e2e 有断言)。
-- **全局↔命令私有 flag 同名遮蔽**清理(§5 提到的 ~15 个)。本次用"全局恒进 sources"规避,不动声明。
+- ~~全局↔命令私有 flag 同名遮蔽清理~~ **已完成**(flag 边界轮,经域化):16 处遮蔽全删,凭证 flag 按 `auth` 域可见,跨域报 Unknown flag,守卫升级为同名即抛。
 - **key ↔ baseUrl 强校验**(region 锁)。落点已就位:`resolveApiKey` 是唯一同时产出 `{token, baseUrl}` 的地方,校验加在它内部即可;baseUrl 不在 Settings,命令侧无法绕过绑定;`AuthStore.login` 已支持 `api_key` + `base_url` 成对落盘。
 - **多 profile / 多身份**(arkcli 式)。结构已留缝:单一 `ResolutionSources` 边界 + credential 封装。
 - **IOStreams 注入**(gh `Factory.IOStreams` / vercel `Client.stdout`);与 noColor 修复同属下一轮。

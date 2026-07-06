@@ -6,15 +6,6 @@ export default defineCommand({
   description: "Show current authentication state",
   auth: "none",
   exampleArgs: ["", "--output json"],
-  flags: {
-    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
-    consoleSite: {
-      type: "string",
-      valueHint: "<site>",
-      description: "Console site: domestic, international",
-    },
-    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
-  },
   async run(ctx) {
     const { identity, settings } = ctx;
     const format = detectOutputFormat(settings.output);

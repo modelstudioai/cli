@@ -1,6 +1,11 @@
 import type { AnyCommand, FlagDef } from "bailian-cli-core";
 import { UsageError } from "bailian-cli-core";
-import { GLOBAL_FLAGS } from "bailian-cli-core";
+import {
+  CONSOLE_AUTH_FLAGS,
+  GLOBAL_FLAGS,
+  MODEL_AUTH_FLAGS,
+  credentialFlagDefs,
+} from "bailian-cli-core";
 import { camelToKebab } from "./args.ts";
 
 export type { Command, AnyCommand, FlagDef, FlagsDef } from "bailian-cli-core";
@@ -44,13 +49,11 @@ export class CommandRegistry {
   }
 
   private register(path: string, command: AnyCommand): void {
-    // 同名守卫:dispatch 的分流规则依赖"命令对全局 flag 的遮蔽都是同型重声明"。
-    for (const [key, def] of Object.entries(command.flags ?? {})) {
-      const global = (GLOBAL_FLAGS as Record<string, { type: string }>)[key];
-      if (global && global.type !== (def as { type: string }).type) {
-        throw new Error(
-          `Command "${path}" redeclares global flag "${key}" with type "${(def as { type: string }).type}" (global is "${global.type}").`,
-        );
+    // 同名守卫:命令自有 flag 不得与全局或其可见凭证域 flag 同名。
+    const reserved = { ...GLOBAL_FLAGS, ...credentialFlagDefs(command) };
+    for (const key of Object.keys(command.flags ?? {})) {
+      if (key in reserved) {
+        throw new Error(`Command "${path}" redeclares reserved flag "${key}".`);
       }
     }
     const parts = path.split(" ");
@@ -170,8 +173,12 @@ export class CommandRegistry {
     return entries.map((e) => `  ${a(e.path.padEnd(maxLen + 2))} ${d(e.desc)}`).join("\n");
   }
 
-  private buildGlobalFlagLines(a: (s: string) => string, d: (s: string) => string): string {
-    const lines = Object.entries(GLOBAL_FLAGS).map(([k, def]) => ({
+  private buildFlagLines(
+    defs: Record<string, FlagDef>,
+    a: (s: string) => string,
+    d: (s: string) => string,
+  ): string {
+    const lines = Object.entries(defs).map(([k, def]) => ({
       flag: flagDisplay(k, def),
       desc: def.description,
     }));
@@ -264,7 +271,9 @@ ${d(`  ${this.cliName} pipeline run workflow.yaml --dry-run --output json`)}
     const d = (s: string) => this.dim(s, out);
 
     const commandLines = this.buildResourceLines(a, d);
-    const globalFlagLines = this.buildGlobalFlagLines(a, d);
+    const globalFlagLines = this.buildFlagLines(GLOBAL_FLAGS, a, d);
+    const modelFlagLines = this.buildFlagLines(MODEL_AUTH_FLAGS, a, d);
+    const consoleFlagLines = this.buildFlagLines(CONSOLE_AUTH_FLAGS, a, d);
 
     out.write(`
 ${b("Usage:")} ${this.cliName} <resource> <command> [flags]
@@ -274,6 +283,12 @@ ${commandLines}
 
 ${b("Global Flags:")}
 ${globalFlagLines}
+
+${b("Model Auth Flags:")} ${d("(model-domain commands)")}
+${modelFlagLines}
+
+${b("Console Auth Flags:")} ${d("(console-domain commands)")}
+${consoleFlagLines}
 
 ${b("Getting Help:")}
   ${d("Add --help after any command to see its full list of flags, defaults,")}
@@ -292,7 +307,10 @@ ${b("Getting Help:")}
 
     out.write(`\n${cmd.description}\n`);
     out.write(`${b("Usage:")} ${prefix}${cmd.usageArgs ? ` ${cmd.usageArgs}` : ""}\n`);
-    const flagEntries = Object.entries(cmd.flags ?? {}) as [string, FlagDef][];
+    const flagEntries = [
+      ...Object.entries(cmd.flags ?? {}),
+      ...Object.entries(credentialFlagDefs(cmd)),
+    ] as [string, FlagDef][];
     if (flagEntries.length > 0) {
       const lines = flagEntries.map(([k, def]) => ({
         flag: flagDisplay(k, def),
@@ -304,6 +322,8 @@ ${b("Getting Help:")}
         out.write(`  ${a(l.flag.padEnd(maxLen + 2))} ${d(l.desc)}\n`);
       }
     }
+    out.write(`\n${b("Global Flags:")}\n`);
+    out.write(this.buildFlagLines(GLOBAL_FLAGS, a, d) + "\n");
     if (cmd.notes && cmd.notes.length > 0) {
       out.write(`\n${b("Notes:")}\n`);
       for (const note of cmd.notes) {
@@ -316,10 +336,6 @@ ${b("Getting Help:")}
         out.write(`  ${d(ex ? `${prefix} ${ex}` : prefix)}\n`);
       }
     }
-    out.write(
-      `\n${d("Global flags (--api-key, --output, --quiet, etc.) are always available.")}\n`,
-    );
-    out.write(`${d("Run")} ${this.cliName} --help ${d("for the full list.")}\n`);
   }
 
   private printChildren(node: CommandNode, prefix: string, out: NodeJS.WriteStream): void {

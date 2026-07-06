@@ -86,25 +86,40 @@ Use this index for the full quick index and global flags.
 
 Available on every command (in addition to command-specific flags):
 
+| Flag                  | Type   | Required | Description                          |
+| --------------------- | ------ | -------- | ------------------------------------ |
+| `--output <format>`   | string | no       | Output format: text, json            |
+| `--timeout <seconds>` | number | no       | Request timeout                      |
+| `--concurrent <n>`    | number | no       | Run N parallel requests (default: 1) |
+| `--quiet`             | switch | no       | Suppress non-essential output        |
+| `--verbose`           | switch | no       | Print HTTP request/response details  |
+| `--no-color`          | switch | no       | Disable ANSI colors                  |
+| `--dry-run`           | switch | no       | Dry run mode                         |
+| `--non-interactive`   | switch | no       | Disable interactive prompts          |
+| `--yes`               | switch | no       | Skip confirmation prompts            |
+| `--async`             | switch | no       | Return async task id without waiting |
+| `--help`              | switch | no       | Show help                            |
+| `--version`           | switch | no       | Print version                        |
+
+## Model auth flags
+
+Available on model-domain commands (API-key auth); also listed per command below:
+
+| Flag               | Type   | Required | Description  |
+| ------------------ | ------ | -------- | ------------ |
+| `--api-key <key>`  | string | no       | API key      |
+| `--base-url <url>` | string | no       | API base URL |
+
+## Console auth flags
+
+Available on console-domain commands (console login auth); also listed per command below:
+
 | Flag                           | Type   | Required | Description                                              |
 | ------------------------------ | ------ | -------- | -------------------------------------------------------- |
-| `--api-key <key>`              | string | no       | API key                                                  |
-| `--base-url <url>`             | string | no       | API base URL                                             |
-| `--output <format>`            | string | no       | Output format: text, json                                |
-| `--timeout <seconds>`          | number | no       | Request timeout                                          |
-| `--concurrent <n>`             | number | no       | Run N parallel requests (default: 1)                     |
-| `--quiet`                      | switch | no       | Suppress non-essential output                            |
-| `--verbose`                    | switch | no       | Print HTTP request/response details                      |
-| `--no-color`                   | switch | no       | Disable ANSI colors                                      |
-| `--dry-run`                    | switch | no       | Dry run mode                                             |
-| `--non-interactive`            | switch | no       | Disable interactive prompts                              |
-| `--yes`                        | switch | no       | Skip confirmation prompts                                |
-| `--async`                      | switch | no       | Return async task id without waiting                     |
 | `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
 | `--console-site <site>`        | string | no       | Console site: domestic, international                    |
 | `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
-| `--help`                       | switch | no       | Show help                                                |
-| `--version`                    | switch | no       | Print version                                            |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
 
 ## Notes
 

@@ -32,6 +32,8 @@ Index: [index.md](index.md)
 | `--json <obj>`           | string | no       | Full arguments object as JSON; merged with --arg (arg wins).                             |
 | `--query <text>`         | string | no       | Shortcut for --arg query=<text> (mirrors many DashScope MCP tools).                      |
 | `--url <url>`            | string | no       | Override the MCP endpoint URL (for non-Bailian servers)                                  |
+| `--api-key <key>`        | string | no       | API key                                                                                  |
+| `--base-url <url>`       | string | no       | API base URL                                                                             |
 
 #### Examples
 
@@ -57,15 +59,16 @@ bl mcp call --target market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 
 
 #### Flags
 
-| Flag                           | Type   | Required | Description                                          |
-| ------------------------------ | ------ | -------- | ---------------------------------------------------- |
-| `--name <text>`                | string | no       | Filter by server name (substring match)              |
-| `--type <type>`                | string | no       | Server type: OFFICIAL \| PRIVATE (default: OFFICIAL) |
-| `--page <n>`                   | number | no       | Page number (default: 1)                             |
-| `--page-size <n>`              | number | no       | Results per page (default: 30)                       |
-| `--console-region <region>`    | string | no       | Console region                                       |
-| `--console-site <site>`        | string | no       | Console site: domestic, international                |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID                                     |
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--name <text>`                | string | no       | Filter by server name (substring match)                  |
+| `--type <type>`                | string | no       | Server type: OFFICIAL \| PRIVATE (default: OFFICIAL)     |
+| `--page <n>`                   | number | no       | Page number (default: 1)                                 |
+| `--page-size <n>`              | number | no       | Results per page (default: 30)                           |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
 
 #### Examples
 
@@ -91,10 +94,12 @@ bl mcp list --output json
 
 #### Flags
 
-| Flag              | Type   | Required | Description                                             |
-| ----------------- | ------ | -------- | ------------------------------------------------------- |
-| `--server <code>` | string | yes      | Server code from `mcp list` (e.g. market-cmapi00073529) |
-| `--url <url>`     | string | no       | Override the MCP endpoint URL (for non-Bailian servers) |
+| Flag               | Type   | Required | Description                                             |
+| ------------------ | ------ | -------- | ------------------------------------------------------- |
+| `--server <code>`  | string | yes      | Server code from `mcp list` (e.g. market-cmapi00073529) |
+| `--url <url>`      | string | no       | Override the MCP endpoint URL (for non-Bailian servers) |
+| `--api-key <key>`  | string | no       | API key                                                 |
+| `--base-url <url>` | string | no       | API base URL                                            |
 
 #### Examples
 

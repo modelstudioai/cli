@@ -9,10 +9,13 @@ import {
   runCommandStage,
   type RunContext,
 } from "./middleware.ts";
-import type { AnyCommand, FlagsDef, GlobalFlags, Identity, ParsedFlags } from "bailian-cli-core";
+import type { AnyCommand, FlagsDef, Identity, ParsedFlags, SourceFlags } from "bailian-cli-core";
 import {
+  CONSOLE_AUTH_FLAGS,
   GLOBAL_FLAGS,
+  MODEL_AUTH_FLAGS,
   UsageError,
+  credentialFlagDefs,
   buildSources,
   buildSettings,
   describeAuthState,
@@ -94,7 +97,15 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
 
     let hasKey = false;
     try {
-      const auth = describeAuthState(buildSources(parseFlags(argv, GLOBAL_FLAGS) as GlobalFlags));
+      const auth = describeAuthState(
+        buildSources(
+          parseFlags(argv, {
+            ...GLOBAL_FLAGS,
+            ...MODEL_AUTH_FLAGS,
+            ...CONSOLE_AUTH_FLAGS,
+          }) as Partial<SourceFlags>,
+        ),
+      );
       hasKey = !!(auth.apiKey || auth.console);
     } catch {
       /* unparseable global flags on the bare invocation — fall through to welcome */
@@ -121,21 +132,26 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
 
       case "run": {
         try {
-          // 解析后分流:全局 flag 进 sources,命令声明的进 ctx.flags;同名的两边都进。
-          const parsed = parseFlags(res.rest, {
+          // 全局与凭证域 flag 进 sources,命令自有 flag 进 ctx.flags。
+          const credDefs = credentialFlagDefs(res.command);
+          const parsedFlags = parseFlags(res.rest, {
             ...GLOBAL_FLAGS,
+            ...credDefs,
             ...res.command.flags,
           }) as Record<string, unknown>;
-          const globals = pick(parsed, Object.keys(GLOBAL_FLAGS)) as GlobalFlags;
+          const globalFlags = pick(parsedFlags, [
+            ...Object.keys(GLOBAL_FLAGS),
+            ...Object.keys(credDefs),
+          ]) as Partial<SourceFlags>;
           const ownFlags = pick(
-            parsed,
+            parsedFlags,
             Object.keys(res.command.flags ?? {}),
           ) as ParsedFlags<FlagsDef>;
           const invalid = res.command.validate?.(ownFlags);
           if (invalid) throw new UsageError(invalid);
 
           // 校验通过 → 建源、解析 settings、组 ctx,进中间件执行命令。
-          const sources = buildSources(globals);
+          const sources = buildSources(globalFlags);
           const settings = buildSettings(sources);
           const ctx: RunContext = {
             identity,

@@ -35,6 +35,8 @@ Index: [index.md](index.md)
 | `--rerank-mode <mode>`          | string | no       | Rerank mode: qa, similar, or custom                |
 | `--rerank-instruct <text>`      | string | no       | Custom rerank instruction, when mode=custom        |
 | `--top-k <n>`                   | number | no       | Number of results (deprecated, use --rerank-top-n) |
+| `--api-key <key>`               | string | no       | API key                                            |
+| `--base-url <url>`              | string | no       | API base URL                                       |
 
 #### Examples
 

@@ -102,13 +102,6 @@ export default defineCommand({
       valueHint: "<model>",
       description: "Filter by model name",
     },
-    consoleRegion: { type: "string", valueHint: "<region>", description: "Console region" },
-    consoleSite: {
-      type: "string",
-      valueHint: "<site>",
-      description: "Console site: domestic, international",
-    },
-    consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
   },
   exampleArgs: ["", "--page 2", "--page-size 20", "--model qwen-turbo", "--output json"],
   async run(ctx) {
