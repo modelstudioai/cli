@@ -75,10 +75,6 @@ const GENERATE_FLAGS = {
     valueHint: "<bool>",
     description: BOOL_FLAG_WATERMARK,
   },
-  noWait: {
-    type: "switch",
-    description: "Return task ID immediately without waiting (async models only)",
-  },
   ...ASYNC_FLAG,
   ...CONCURRENT_FLAG,
   outDir: { type: "string", valueHint: "<dir>", description: "Download images to directory" },
@@ -107,7 +103,7 @@ export default defineCommand({
     '--prompt "A castle" --seed 42 --prompt-extend false',
     '--prompt "Logo" --watermark false',
     '--prompt "An alien in the space" --watermark false',
-    '--prompt "sunset" --model wan2.6-t2i --no-wait --quiet',
+    '--prompt "sunset" --model wan2.6-t2i --async --quiet',
     '--prompt "Pro quality" --model qwen-image-2.0-pro',
     '--prompt "Product shots" --n 2 --concurrent 3  # 6 images in parallel',
   ],
@@ -218,8 +214,8 @@ async function handleAsyncMode(
   );
   const taskIds = responses.map((r) => r.output.task_id);
 
-  // --no-wait: return all task IDs immediately
-  if (flags.noWait || flags.async) {
+  // --async: return all task IDs immediately
+  if (flags.async) {
     emitResult({ task_ids: taskIds }, format as OutputFormat);
     return;
   }

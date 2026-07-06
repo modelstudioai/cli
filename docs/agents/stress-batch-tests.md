@@ -126,7 +126,7 @@ pnpm run test:stress -- video-edit --reuse-fixtures -- --count 3
 
 **禁止**对子进程加 `--quiet`（与 `--output json` 并存时可能丢 `urls` / `video_url`）。
 
-**禁止**对视频相关子进程加 `--no-wait`；须阻塞到任务完成（及下载路径正确时落盘）。
+**禁止**对视频相关子进程加 `--async`；须阻塞到任务完成（及下载路径正确时落盘）。
 
 ### 成功 / 失败判定（概要）
 
@@ -192,7 +192,7 @@ pnpm run test:stress -- video-edit --reuse-fixtures -- --count 3
 
 - [ ] `lib/paths.mjs` 解析的 `CLI_PACKAGE` / `MONOREPO_ROOT` 仍正确
 - [ ] 子进程仍为 `node` + `src/main.ts`，未改回裸 `pnpm run dev` 执行任务
-- [ ] 未对子进程加 `--quiet`，视频未加 `--no-wait`
+- [ ] 未对子进程加 `--quiet`，视频未加 `--async`
 - [ ] `parsers.mjs` 与文档中的成功判定一致
 - [ ] 根 `package.json` 仅保留 `test:stress` 入口指向 `run.mjs`
 - [ ] `node --check` 对相关 `.mjs` 通过，`pnpm run test:stress -- list` 可运行

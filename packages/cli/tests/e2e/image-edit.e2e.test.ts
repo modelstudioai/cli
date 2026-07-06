@@ -27,7 +27,32 @@ describe("e2e: image edit", () => {
   test("image edit --help 正常退出", async () => {
     const { stderr, exitCode } = await runCli(["image", "edit", "--help"]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/edit|--image|--prompt/i);
+    expect(stderr).toMatch(/edit|--image|--prompt|--async|--concurrent/i);
+  });
+
+  test("image edit --dry-run 接受 async 模型的 --async 与 --concurrent", async () => {
+    const { stdout, stderr, exitCode } = await runCli([
+      "image",
+      "edit",
+      "--dry-run",
+      "--model",
+      "wan2.6-t2i",
+      "--image",
+      "https://example.com/source.png",
+      "--prompt",
+      "Change the background to blue",
+      "--async",
+      "--concurrent",
+      "2",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ mode?: string; request?: { input?: { messages?: unknown[] } } }>(
+      stdout,
+    );
+    expect(data.mode).toBe("async");
+    expect(data.request?.input?.messages?.length).toBeGreaterThan(0);
   });
 });
 

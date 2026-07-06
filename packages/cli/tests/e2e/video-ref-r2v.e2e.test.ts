@@ -24,7 +24,29 @@ describe("e2e: video ref (r2v)", () => {
   test("video ref --help 正常退出", async () => {
     const { stderr, exitCode } = await runCli(["video", "ref", "--help"]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/ref|--prompt|--image|model/i);
+    expect(stderr).toMatch(/ref|--prompt|--image|model|--async|--concurrent/i);
+  });
+
+  test("video ref --dry-run 接受 --async 与 --concurrent", async () => {
+    const { stdout, stderr, exitCode } = await runCli([
+      "video",
+      "ref",
+      "--dry-run",
+      "--prompt",
+      "Image 1 waves",
+      "--image",
+      "https://example.com/person.png",
+      "--async",
+      "--concurrent",
+      "2",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ request?: { input?: { media?: Array<{ url?: string }> } } }>(
+      stdout,
+    );
+    expect(data.request?.input?.media?.[0]?.url).toBe("https://example.com/person.png");
   });
 });
 

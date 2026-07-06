@@ -82,7 +82,6 @@ export default defineCommand({
       valueHint: "<path>",
       description: "Save video to file on completion",
     },
-    noWait: { type: "switch", description: "Return task ID immediately without waiting" },
     ...ASYNC_FLAG,
     ...CONCURRENT_FLAG,
     pollInterval: {
@@ -166,8 +165,8 @@ export default defineCommand({
       process.stderr.write(`[Model: ${model}]\n`);
     }
 
-    // --no-wait or --async: return task ID(s) immediately
-    if (flags.noWait || flags.async) {
+    // --async: return task ID(s) immediately
+    if (flags.async) {
       emitResult(taskIds.length === 1 ? { task_id: taskIds[0] } : { task_ids: taskIds }, format);
       return;
     }

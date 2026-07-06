@@ -24,7 +24,29 @@ describe("e2e: video edit", () => {
   test("video edit --help 正常退出", async () => {
     const { stderr, exitCode } = await runCli(["video", "edit", "--help"]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/edit|--video|--prompt|model/i);
+    expect(stderr).toMatch(/edit|--video|--prompt|model|--async|--concurrent/i);
+  });
+
+  test("video edit --dry-run 接受 --async 与 --concurrent", async () => {
+    const { stdout, stderr, exitCode } = await runCli([
+      "video",
+      "edit",
+      "--dry-run",
+      "--video",
+      "https://example.com/input.mp4",
+      "--prompt",
+      "整体色调偏暖",
+      "--async",
+      "--concurrent",
+      "2",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ request?: { input?: { media?: Array<{ url?: string }> } } }>(
+      stdout,
+    );
+    expect(data.request?.input?.media?.[0]?.url).toBe("https://example.com/input.mp4");
   });
 });
 

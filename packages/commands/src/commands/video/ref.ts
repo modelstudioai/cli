@@ -12,9 +12,11 @@ import {
   resolveBooleanFlag,
   resolveWatermark,
   ASYNC_FLAG,
+  CONCURRENT_FLAG,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
+import { runConcurrent, getConcurrency } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
@@ -86,8 +88,8 @@ export default defineCommand({
       valueHint: "<path>",
       description: "Save video to file on completion",
     },
-    noWait: { type: "switch", description: "Return task ID immediately without waiting" },
     ...ASYNC_FLAG,
+    ...CONCURRENT_FLAG,
     pollInterval: {
       type: "number",
       valueHint: "<seconds>",
@@ -180,15 +182,21 @@ export default defineCommand({
       return;
     }
 
-    // --- Submit async task ---
-    const response = await ctx.client.requestJson<DashScopeAsyncResponse>({
-      path: videoGeneratePath(),
-      method: "POST",
-      body,
-      async: true,
-    });
+    const concurrent = getConcurrency(flags);
+    const responses = await runConcurrent(
+      concurrent,
+      settings,
+      () =>
+        ctx.client.requestJson<DashScopeAsyncResponse>({
+          path: videoGeneratePath(),
+          method: "POST",
+          body,
+          async: true,
+        }),
+      "tasks",
+    );
 
-    const taskId = response.output.task_id;
+    const taskIds = responses.map((r) => r.output.task_id);
 
     if (!settings.quiet) {
       process.stderr.write(`[Model: ${model}]\n`);
@@ -197,49 +205,57 @@ export default defineCommand({
       );
     }
 
-    // --no-wait or --async: return task ID immediately
-    if (flags.noWait || flags.async) {
-      emitResult({ task_id: taskId }, format);
+    // --async: return task ID(s) immediately
+    if (flags.async) {
+      emitResult(taskIds.length === 1 ? { task_id: taskIds[0] } : { task_ids: taskIds }, format);
       return;
     }
 
     // --- Poll until completion ---
     const pollInterval = flags.pollInterval ?? 15;
-    const pollUrl = ctx.client.url(taskPath(taskId));
     const refTimeout = Math.max(settings.timeout, 600);
 
-    const result = await poll<DashScopeTaskResponse>(ctx.client, settings, {
-      url: pollUrl,
-      intervalSec: pollInterval,
-      timeoutSec: refTimeout,
-      isComplete: (d) => (d as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
-      isFailed: (d) => (d as DashScopeTaskResponse).output.task_status === "FAILED",
-      getStatus: (d) => (d as DashScopeTaskResponse).output.task_status,
-      getErrorMessage: (d) => {
-        const o = (d as DashScopeTaskResponse).output;
-        return o.message || o.code || undefined;
-      },
-    });
+    const results = await Promise.all(
+      taskIds.map((taskId) =>
+        poll<DashScopeTaskResponse>(ctx.client, settings, {
+          url: ctx.client.url(taskPath(taskId)),
+          intervalSec: pollInterval,
+          timeoutSec: refTimeout,
+          isComplete: (d) => (d as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
+          isFailed: (d) => (d as DashScopeTaskResponse).output.task_status === "FAILED",
+          getStatus: (d) => (d as DashScopeTaskResponse).output.task_status,
+          getErrorMessage: (d) => {
+            const o = (d as DashScopeTaskResponse).output;
+            return o.message || o.code || undefined;
+          },
+        }),
+      ),
+    );
 
-    const resultVideoUrl =
-      result.output.video_url || (result.output.results && result.output.results[0]?.url);
+    const videos: Array<{ taskId: string; videoUrl: string }> = [];
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i]!;
+      const videoUrl =
+        result.output.video_url || (result.output.results && result.output.results[0]?.url);
+      if (videoUrl) videos.push({ taskId: taskIds[i]!, videoUrl });
+    }
 
-    if (!resultVideoUrl) {
-      throw new BailianError("Task completed but no video URL returned.", ExitCode.GENERAL);
+    if (videos.length === 0) {
+      throw new BailianError("All tasks completed but no video URLs returned.", ExitCode.GENERAL);
     }
 
     // --download: save to file
     if (flags.download) {
       const destPath = flags.download;
-      const { size } = await downloadFile(resultVideoUrl, destPath, { quiet: settings.quiet });
+      const { size } = await downloadFile(videos[0]!.videoUrl, destPath, { quiet: settings.quiet });
 
       if (settings.quiet) {
         emitBare(destPath);
       } else {
         emitResult(
           {
-            task_id: taskId,
-            video_url: resultVideoUrl,
+            task_id: videos[0]!.taskId,
+            video_url: videos[0]!.videoUrl,
             status: "SUCCEEDED",
             saved: destPath,
             size: formatBytes(size),
@@ -254,10 +270,19 @@ export default defineCommand({
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const { join } = await import("path");
     const destDir = resolveOutputDir(settings, { subDir: "videos" });
-    const destPath = join(destDir, `${taskId}.mp4`);
+    const saved: Array<{ task_id: string; video_url: string; saved: string }> = [];
+    await Promise.all(
+      videos.map(async ({ taskId, videoUrl }) => {
+        const destPath = join(destDir, `${taskId}.mp4`);
+        await downloadFile(videoUrl, destPath, { quiet: settings.quiet });
+        saved.push({ task_id: taskId, video_url: videoUrl, saved: destPath });
+      }),
+    );
 
-    await downloadFile(resultVideoUrl, destPath, { quiet: settings.quiet });
-
-    emitResult({ task_id: taskId, video_url: resultVideoUrl, saved: destPath }, format);
+    if (saved.length === 1) {
+      emitResult(saved[0]!, format);
+    } else {
+      emitResult({ videos: saved, total: saved.length }, format);
+    }
   },
 });

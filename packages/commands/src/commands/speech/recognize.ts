@@ -47,7 +47,6 @@ const RECOGNIZE_FLAGS = {
     valueHint: "<path>",
     description: "Save full transcription result to JSON file",
   },
-  noWait: { type: "switch", description: "Return task ID immediately without polling" },
   ...ASYNC_FLAG,
   pollInterval: {
     type: "number",
@@ -69,7 +68,7 @@ export default defineCommand({
     "--url https://example.com/audio.mp3 --language zh",
     "--url https://example.com/audio.mp3 --vocabulary-id vocab-abc123",
     "--url https://example.com/audio.mp3 --out result.json",
-    "--url https://example.com/audio.mp3 --no-wait --quiet",
+    "--url https://example.com/audio.mp3 --async --quiet",
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
@@ -148,8 +147,8 @@ async function handleAsyncMode(
 
   const taskId = response.output.task_id;
 
-  // --no-wait: return task ID immediately
-  if (flags.noWait || flags.async) {
+  // --async: return task ID immediately
+  if (flags.async) {
     emitResult({ task_id: taskId }, format);
     return;
   }

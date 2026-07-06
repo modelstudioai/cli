@@ -8,7 +8,7 @@ const IMAGE_GENERATE_FLAGS = {
   image: { type: "array", valueHint: "<url>", description: "Image URL (repeatable)" },
   n: { type: "number", valueHint: "<count>", description: "Number of images" },
   watermark: { type: "boolean", valueHint: "<bool>", description: "Watermark" },
-  noWait: { type: "switch", description: "Return immediately" },
+  async: { type: "switch", description: "Return immediately" },
 } satisfies FlagsDef;
 const OPTS = { ...GLOBAL_FLAGS, ...IMAGE_GENERATE_FLAGS };
 
@@ -36,10 +36,10 @@ test("parsePath detects --help and --version in the flag region", () => {
 // ---- parseFlags: typed parsing ----
 
 test("parseFlags parses string / number / switch", () => {
-  const flags = parseFlags(["--prompt", "cat", "--n", "3", "--no-wait"], OPTS);
+  const flags = parseFlags(["--prompt", "cat", "--n", "3", "--async"], OPTS);
   expect(flags.prompt).toBe("cat");
   expect(flags.n).toBe(3);
-  expect(flags.noWait).toBe(true);
+  expect(flags.async).toBe(true);
 });
 
 test("parseFlags supports the --flag=value form", () => {
@@ -84,7 +84,7 @@ test("parseFlags rejects a repeated non-array flag", () => {
 });
 
 test("parseFlags rejects a switch given a value", () => {
-  expect(() => parseFlags(["--prompt", "x", "--no-wait=true"], OPTS)).toThrowError(
+  expect(() => parseFlags(["--prompt", "x", "--async=true"], OPTS)).toThrowError(
     expect.objectContaining({
       name: "UsageError",
       message: expect.stringContaining("takes no value"),

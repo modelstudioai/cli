@@ -59,7 +59,6 @@ const PARAM_ALLOWLIST = new Set([
   // Mode / behavior flags
   "mode",
   "download",
-  "noWait",
   "textOnly",
   "promptExtend",
   "enableSsml",
