@@ -7,6 +7,7 @@ import {
   credentialFlagDefs,
 } from "bailian-cli-core";
 import { camelToKebab } from "./args.ts";
+import { ansi } from "./output/color.ts";
 
 export type { Command, AnyCommand, FlagDef, FlagsDef } from "bailian-cli-core";
 
@@ -186,11 +187,10 @@ export class CommandRegistry {
     return lines.map((l) => `  ${a(l.flag.padEnd(maxLen + 2))} ${d(l.desc)}`).join("\n");
   }
 
-  // Color helpers — no-ops when output is not a TTY
-  private bold = (s: string, out: NodeJS.WriteStream) => (out.isTTY ? `\x1b[1m${s}\x1b[0m` : s);
-  private accent = (s: string, out: NodeJS.WriteStream) =>
-    out.isTTY ? `\x1b[38;2;59;130;246m${s}\x1b[0m` : s;
-  private dim = (s: string, out: NodeJS.WriteStream) => (out.isTTY ? `\x1b[2m${s}\x1b[0m` : s);
+  // Color helpers — no-ops when output is not a TTY.
+  private bold = (s: string, out: NodeJS.WriteStream) => ansi(out).bold(s);
+  private accent = (s: string, out: NodeJS.WriteStream) => ansi(out).accent(s);
+  private dim = (s: string, out: NodeJS.WriteStream) => ansi(out).dim(s);
 
   printHelp(commandPath: string[], out: NodeJS.WriteStream = process.stdout): void {
     if (commandPath.length === 0) {
@@ -254,16 +254,11 @@ ${d(`  ${this.cliName} pipeline run workflow.yaml --dry-run --output json`)}
       "██████╔╝██║  ██║██║███████╗██║██║  ██║██║ ╚████║",
       "╚═════╝ ╚═╝  ╚═╝╚═╝╚══════╝╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝",
     ];
-    const PURPLE = "\x1b[38;2;97;92;237m";
-    const RESET = "\x1b[0m";
+    const color = ansi(out);
 
     out.write("\n");
     for (const line of LOGO) {
-      if (out.isTTY) {
-        out.write(`${PURPLE}${line}${RESET}\n`);
-      } else {
-        out.write(line + "\n");
-      }
+      out.write(`${color.logo(line)}\n`);
     }
 
     const b = (s: string) => this.bold(s, out);

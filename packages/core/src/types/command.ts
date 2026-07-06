@@ -70,7 +70,6 @@ export const GLOBAL_FLAGS = {
   timeout: { type: "number", valueHint: "<seconds>", description: "Request timeout" },
   quiet: { type: "switch", description: "Suppress non-essential output" },
   verbose: { type: "switch", description: "Print HTTP request/response details" },
-  noColor: { type: "switch", description: "Disable ANSI colors" },
   dryRun: { type: "switch", description: "Dry run mode" },
   help: { type: "switch", description: "Show help" },
   version: { type: "switch", description: "Print version" },

@@ -96,13 +96,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota list 文本输出包含英文表头", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
-      "quota",
-      "list",
-      "--output",
-      "text",
-      "--no-color",
-    ]);
+    const { stdout, stderr, exitCode } = await runCli(["quota", "list", "--output", "text"]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("Model");
     expect(stdout).toContain("Req/min");
@@ -118,7 +112,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
       "qwen3.6-plus",
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("qwen3.6-plus");
@@ -254,13 +247,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota check 文本输出包含英文表头", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
-      "quota",
-      "check",
-      "--output",
-      "text",
-      "--no-color",
-    ]);
+    const { stdout, stderr, exitCode } = await runCli(["quota", "check", "--output", "text"]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("Model");
     expect(stdout).toContain("RPM Usage/Limit");
@@ -276,7 +263,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
       "qwen3.6-plus",
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("qwen3.6-plus");
@@ -291,7 +277,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
       "qwen3.6-plus,qwen-plus",
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("qwen3.6-plus");
@@ -335,7 +320,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
       "qwen3.6-plus",
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
     const hasStatus =

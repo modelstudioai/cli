@@ -14,8 +14,7 @@ import {
 } from "bailian-cli-core";
 import boxen from "boxen";
 import chalk, { Chalk, type ChalkInstance } from "chalk";
-import { emitBare, emitResult } from "bailian-cli-runtime";
-import { createSpinner } from "bailian-cli-runtime";
+import { createSpinner, emitBare, emitResult, supportsColor } from "bailian-cli-runtime";
 
 function formatContextWindow(tokens: number): string {
   if (tokens >= 1_000_000)
@@ -55,8 +54,13 @@ const PREFERENCE_MODE_LABELS: Record<string, string> = {
   alternative: "Alternative",
 };
 
-function formatIntentSummary(intent: IntentProfile, noColor: boolean): string {
-  const colorize = noColor ? new Chalk({ level: 0 }) : chalk;
+function chalkFor(out: NodeJS.WriteStream): ChalkInstance {
+  return supportsColor(out) ? chalk : new Chalk({ level: 0 });
+}
+
+function formatIntentSummary(intent: IntentProfile): string {
+  const colorize = chalkFor(process.stdout);
+  const useColor = supportsColor(process.stdout);
 
   const lines: string[] = [];
   lines.push(colorize.cyan.bold("Intent Analysis"));
@@ -121,15 +125,20 @@ function formatIntentSummary(intent: IntentProfile, noColor: boolean): string {
   return boxen(lines.join("\n"), {
     padding: { top: 0, bottom: 0, left: 1, right: 1 },
     margin: { top: 0, bottom: 0, left: 1, right: 0 },
-    borderColor: "cyan",
+    borderColor: useColor ? "cyan" : undefined,
     borderStyle: "round",
-    dimBorder: true,
+    dimBorder: useColor,
   });
 }
 
 const RECOMMEND_LABELS = ["Best Pick", "Runner-Up", "Alternative"];
 
-function renderCard(rec: RecommendedModel, index: number, colorize: ChalkInstance): string {
+function renderCard(
+  rec: RecommendedModel,
+  index: number,
+  colorize: ChalkInstance,
+  useColor: boolean,
+): string {
   const labelColors = [colorize.green.bold, colorize.blue.bold, colorize.magenta.bold];
   const colorFn = labelColors[index] ?? colorize.white.bold;
   const label = RECOMMEND_LABELS[index] ?? `#${index + 1}`;
@@ -165,19 +174,21 @@ function renderCard(rec: RecommendedModel, index: number, colorize: ChalkInstanc
   return boxen(lines.join("\n"), {
     padding: { top: 0, bottom: 0, left: 1, right: 1 },
     margin: { top: 0, bottom: 0, left: 1, right: 0 },
-    borderColor: "gray",
+    borderColor: useColor ? "gray" : undefined,
     borderStyle: "round",
-    dimBorder: true,
+    dimBorder: useColor,
   });
 }
 
-function formatSingleResult(results: RecommendedModel[], noColor: boolean): string {
-  const colorize = noColor ? new Chalk({ level: 0 }) : chalk;
-  return results.map((rec, idx) => renderCard(rec, idx, colorize)).join("\n");
+function formatSingleResult(results: RecommendedModel[]): string {
+  const colorize = chalkFor(process.stdout);
+  const useColor = supportsColor(process.stdout);
+  return results.map((rec, idx) => renderCard(rec, idx, colorize, useColor)).join("\n");
 }
 
-function formatPipelineResult(summary: string, steps: PipelineStep[], noColor: boolean): string {
-  const colorize = noColor ? new Chalk({ level: 0 }) : chalk;
+function formatPipelineResult(summary: string, steps: PipelineStep[]): string {
+  const colorize = chalkFor(process.stdout);
+  const useColor = supportsColor(process.stdout);
   const lines: string[] = [];
   lines.push(`  ${colorize.yellow.bold("⚡ Pipeline")}  ${summary}`);
 
@@ -192,17 +203,19 @@ function formatPipelineResult(summary: string, steps: PipelineStep[], noColor: b
     }
 
     lines.push("");
-    lines.push(recommendations.map((rec, idx) => renderCard(rec, idx, colorize)).join("\n"));
+    lines.push(
+      recommendations.map((rec, idx) => renderCard(rec, idx, colorize, useColor)).join("\n"),
+    );
   }
 
   return lines.join("\n");
 }
 
-function formatResult(result: RecommendResult, noColor: boolean): string {
+function formatResult(result: RecommendResult): string {
   if (result.type === "pipeline") {
-    return formatPipelineResult(result.summary, result.steps, noColor);
+    return formatPipelineResult(result.summary, result.steps);
   }
-  return formatSingleResult(result.recommendations, noColor);
+  return formatSingleResult(result.recommendations);
 }
 
 function isEmptyResult(result: RecommendResult): boolean {
@@ -308,8 +321,8 @@ export default defineCommand({
       return;
     }
 
-    emitBare(formatIntentSummary(intent, settings.noColor));
+    emitBare(formatIntentSummary(intent));
     emitBare("");
-    emitBare(formatResult(result, settings.noColor));
+    emitBare(formatResult(result));
   },
 });

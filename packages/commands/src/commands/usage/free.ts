@@ -1,5 +1,5 @@
 import { defineCommand, detectOutputFormat, fetchModelList, type Client } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { ansi, emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
 const FREE_TIER_API = "zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota";
@@ -68,8 +68,8 @@ function printTable(
   quotas: FreeTierQuota[],
   stopMap: Map<string, boolean>,
   typeMap: Map<string, string>,
-  noColor: boolean,
 ): void {
+  const color = ansi(process.stdout);
   const headers = ["Model", "Type", "Remaining/Total", "Usage", "Expires", "Auto-Stop"];
 
   const rows = quotas.map((quota) => {
@@ -97,14 +97,9 @@ function printTable(
     Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const dim = noColor ? (text: string) => text : (text: string) => `\x1b[2m${text}\x1b[0m`;
-  const bold = noColor ? (text: string) => text : (text: string) => `\x1b[1m${text}\x1b[0m`;
-  const green = noColor ? (text: string) => text : (text: string) => `\x1b[32m${text}\x1b[0m`;
-  const yellow = noColor ? (text: string) => text : (text: string) => `\x1b[33m${text}\x1b[0m`;
-
   const autoStopCol = headers.length - 1;
-  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const separator = widths.map((width) => dim("─".repeat(width))).join("──");
+  const headerLine = headers.map((label, col) => color.bold(padEnd(label, widths[col]))).join("  ");
+  const separator = widths.map((width) => color.dim("─".repeat(width))).join("──");
 
   process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
@@ -112,8 +107,8 @@ function printTable(
   for (const row of rows) {
     const cells = row.map((cell, col) => {
       if (col === autoStopCol) {
-        if (cell === "ON") return green(padEnd(cell, widths[col]));
-        if (cell === "OFF") return yellow(padEnd(cell, widths[col]));
+        if (cell === "ON") return color.green(padEnd(cell, widths[col]));
+        if (cell === "OFF") return color.yellow(padEnd(cell, widths[col]));
       }
       return padEnd(cell, widths[col]);
     });
@@ -333,6 +328,6 @@ export default defineCommand({
       return;
     }
 
-    printTable(quotas, stopMap, typeMap, settings.noColor);
+    printTable(quotas, stopMap, typeMap);
   },
 });

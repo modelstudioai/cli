@@ -26,7 +26,6 @@ export function buildPipelineEnv(): PipelineEnv {
   const settings: Settings = {
     ...buildSettings(sources),
     output: "json",
-    noColor: true,
     quiet: true,
   };
   const identity: Identity = {

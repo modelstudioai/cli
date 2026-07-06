@@ -34,6 +34,15 @@ Auto-generated from the CLI source at build time. Before running an unfamiliar c
 
 Do not guess flags — use the reference files or `--help`.
 
+### Color output
+
+When an agent needs plain text without ANSI color codes (for parsing, logs, or
+snapshots), run the command with `NO_COLOR=1`:
+
+```bash
+NO_COLOR=1 bl config show --output text
+```
+
 ---
 
 ## When to use which command

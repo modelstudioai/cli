@@ -146,7 +146,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "qwen3-max",
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("Model");
@@ -165,7 +164,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "qwen3-max",
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("qwen3-max");
@@ -179,7 +177,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "qwen3-max,qwen-turbo",
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("qwen3-max");
@@ -194,7 +191,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "qwen3-max",
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("Text");
@@ -208,7 +204,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "wan2.7-image",
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("Unsupported");
@@ -222,7 +217,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "wan2.7-image",
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
     const lines = stdout.split("\n").filter((line) => line.includes("wan2.7-image"));
@@ -239,7 +233,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "nonexistent-model-xyz-12345",
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("nonexistent-model-xyz-12345");
@@ -253,7 +246,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "qwen3-max",
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
     const hasAutoStop =

@@ -30,6 +30,13 @@ export { createSpinner, createProgressBar } from "./output/progress.ts";
 export { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
 export { maybeShowStatusBar } from "./output/status-bar.ts";
 export { displayWidth, padEnd } from "./output/cjk-width.ts";
+export {
+  ansi,
+  isTerminal,
+  supportsColor,
+  type AnsiStyles,
+  type TextStyle,
+} from "./output/color.ts";
 
 // Utility facilities consumed by commands
 export { poll } from "./utils/polling.ts";

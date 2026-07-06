@@ -123,7 +123,6 @@ export interface Settings {
   consoleSwitchAgent?: number;
   verbose: boolean;
   quiet: boolean;
-  noColor: boolean;
   dryRun: boolean;
   telemetry: boolean;
 }

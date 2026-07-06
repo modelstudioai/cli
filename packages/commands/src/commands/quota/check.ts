@@ -4,7 +4,7 @@ import {
   detectOutputFormat,
   type Client,
 } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { ansi, emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
 const MODEL_LIST_API = "zeldaHttp.dashscopeModel./zelda/api/v1/modelCenter/listFoundationModels";
@@ -170,12 +170,8 @@ interface CheckRow {
   tpmLimit: number;
 }
 
-function printTable(rows: CheckRow[], noColor: boolean): void {
-  const bold = noColor ? (t: string) => t : (t: string) => `\x1b[1m${t}\x1b[0m`;
-  const dim = noColor ? (t: string) => t : (t: string) => `\x1b[2m${t}\x1b[0m`;
-  const green = noColor ? (t: string) => t : (t: string) => `\x1b[32m${t}\x1b[0m`;
-  const yellow = noColor ? (t: string) => t : (t: string) => `\x1b[33m${t}\x1b[0m`;
-  const red = noColor ? (t: string) => t : (t: string) => `\x1b[31m${t}\x1b[0m`;
+function printTable(rows: CheckRow[]): void {
+  const color = ansi(process.stdout);
 
   const headers = ["Model", "RPM Usage/Limit", "TPM Usage/Limit", "Status"];
 
@@ -202,8 +198,8 @@ function printTable(rows: CheckRow[], noColor: boolean): void {
     Math.max(displayWidth(label), ...tableRows.map((r) => displayWidth(r.cells[col]))),
   );
 
-  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const separator = widths.map((w) => dim("─".repeat(w))).join("──");
+  const headerLine = headers.map((label, col) => color.bold(padEnd(label, widths[col]))).join("  ");
+  const separator = widths.map((w) => color.dim("─".repeat(w))).join("──");
 
   process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
@@ -212,16 +208,16 @@ function printTable(rows: CheckRow[], noColor: boolean): void {
   for (const r of tableRows) {
     const cells = r.cells.map((cell, col) => {
       if (col === statusCol) {
-        if (cell === "Rate Limited") return red(padEnd(cell, widths[col]));
-        if (cell === "Near limit") return yellow(padEnd(cell, widths[col]));
-        if (cell === "Normal") return green(padEnd(cell, widths[col]));
+        if (cell === "Rate Limited") return color.red(padEnd(cell, widths[col]));
+        if (cell === "Near limit") return color.yellow(padEnd(cell, widths[col]));
+        if (cell === "Normal") return color.green(padEnd(cell, widths[col]));
       }
       return padEnd(cell, widths[col]);
     });
     process.stdout.write(cells.join("  ") + "\n");
   }
 
-  process.stdout.write(dim(`\nTotal: ${rows.length} models`) + "\n");
+  process.stdout.write(color.dim(`\nTotal: ${rows.length} models`) + "\n");
 }
 
 export default defineCommand({
@@ -313,6 +309,6 @@ export default defineCommand({
       return;
     }
 
-    printTable(checkRows, settings.noColor);
+    printTable(checkRows);
   },
 });

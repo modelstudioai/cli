@@ -1,5 +1,5 @@
 import { defineCommand, BailianError, detectOutputFormat, type Client } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { ansi, emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
 const MODEL_LIST_API = "zeldaHttp.dashscopeModel./zelda/api/v1/modelCenter/listFoundationModels";
@@ -91,9 +91,8 @@ async function fetchAllModelsWithQpm(
   return allModels;
 }
 
-function printTable(models: ModelWithQpm[], noColor: boolean): void {
-  const bold = noColor ? (t: string) => t : (t: string) => `\x1b[1m${t}\x1b[0m`;
-  const dim = noColor ? (t: string) => t : (t: string) => `\x1b[2m${t}\x1b[0m`;
+function printTable(models: ModelWithQpm[]): void {
+  const color = ansi(process.stdout);
 
   const headers = ["Model", "Req/min", "Token/min", "Max TPM"];
 
@@ -125,8 +124,8 @@ function printTable(models: ModelWithQpm[], noColor: boolean): void {
     Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const separator = widths.map((w) => dim("─".repeat(w))).join("──");
+  const headerLine = headers.map((label, col) => color.bold(padEnd(label, widths[col]))).join("  ");
+  const separator = widths.map((w) => color.dim("─".repeat(w))).join("──");
 
   process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
@@ -135,7 +134,7 @@ function printTable(models: ModelWithQpm[], noColor: boolean): void {
     process.stdout.write(row.map((cell, col) => padEnd(cell, widths[col])).join("  ") + "\n");
   }
 
-  process.stdout.write(dim(`\nTotal: ${models.length} models`) + "\n");
+  process.stdout.write(color.dim(`\nTotal: ${models.length} models`) + "\n");
 }
 
 export default defineCommand({
@@ -217,6 +216,6 @@ export default defineCommand({
       return;
     }
 
-    printTable(models, settings.noColor);
+    printTable(models);
   },
 });

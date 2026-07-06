@@ -91,11 +91,6 @@ test("telemetry:DO_NOT_TRACK=1 一票否决 > file > 默认 true", () => {
   expect(resolve({}).telemetry).toBe(true);
 });
 
-test("noColor:NO_COLOR 只看存在性(空串也算);非 TTY 下恒为 true", () => {
-  expect(resolve({ env: { NO_COLOR: "" } }).noColor).toBe(true);
-  if (!process.stdout.isTTY) expect(resolve({}).noColor).toBe(true);
-});
-
 test("apiKey 凭证:flag > env > file,source 字段随之;无 key 抛 AUTH", () => {
   const all = src({
     flags: { apiKey: "sk-flag" },

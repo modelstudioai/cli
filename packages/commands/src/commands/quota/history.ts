@@ -1,5 +1,5 @@
 import { defineCommand, detectOutputFormat, BailianError, ExitCode } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { ansi, emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
 const HISTORY_API = "zeldaEasy.broadscope-platform.modelInstance.listModelLimitApplications";
@@ -53,9 +53,8 @@ function formatNumber(num: number): string {
   return num.toLocaleString("en-US");
 }
 
-function printTable(records: LimitApplicationItem[], noColor: boolean, total: number): void {
-  const bold = noColor ? (t: string) => t : (t: string) => `\x1b[1m${t}\x1b[0m`;
-  const dim = noColor ? (t: string) => t : (t: string) => `\x1b[2m${t}\x1b[0m`;
+function printTable(records: LimitApplicationItem[], total: number): void {
+  const color = ansi(process.stdout);
 
   const headers = ["Model", "Token Limit", "Applied At"];
 
@@ -69,8 +68,8 @@ function printTable(records: LimitApplicationItem[], noColor: boolean, total: nu
     Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const separator = widths.map((w) => dim("─".repeat(w))).join("──");
+  const headerLine = headers.map((label, col) => color.bold(padEnd(label, widths[col]))).join("  ");
+  const separator = widths.map((w) => color.dim("─".repeat(w))).join("──");
 
   process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
@@ -79,7 +78,7 @@ function printTable(records: LimitApplicationItem[], noColor: boolean, total: nu
     process.stdout.write(row.map((cell, col) => padEnd(cell, widths[col])).join("  ") + "\n");
   }
 
-  process.stdout.write(dim(`\nTotal: ${total} records`) + "\n");
+  process.stdout.write(color.dim(`\nTotal: ${total} records`) + "\n");
 }
 
 export default defineCommand({
@@ -157,6 +156,6 @@ export default defineCommand({
       return;
     }
 
-    printTable(records, settings.noColor, modelFilter ? records.length : total);
+    printTable(records, modelFilter ? records.length : total);
   },
 });

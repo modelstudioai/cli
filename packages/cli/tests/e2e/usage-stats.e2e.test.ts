@@ -177,7 +177,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       wsId,
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
   });
@@ -190,7 +189,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       wsId,
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
   });
@@ -205,7 +203,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "qwen3.6-plus",
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
   });
@@ -220,7 +217,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "qwen3.6-plus,deepseek-v4-pro",
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
   });
@@ -235,7 +231,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "nonexistent-model-xyz-99999",
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
   });
@@ -250,7 +245,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "1",
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
   });
@@ -265,7 +259,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "Vision",
       "--output",
       "text",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
   });

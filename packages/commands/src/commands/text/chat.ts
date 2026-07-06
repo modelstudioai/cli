@@ -10,7 +10,7 @@ import {
   type FlagsDef,
   type ParsedFlags,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { ansi, emitResult, emitBare } from "bailian-cli-runtime";
 import { readFileSync } from "fs";
 
 const CHAT_FLAGS = {
@@ -180,12 +180,11 @@ export default defineCommand({
       let textContent = "";
       let inThinking = false;
       const writesStreamingStdout = format === "text";
-      const dim = settings.noColor ? "" : "\x1b[2m";
-      const reset = settings.noColor ? "" : "\x1b[0m";
       const isTTY = process.stdout.isTTY;
       const statusOut =
         format === "json" ? process.stderr : isTTY ? process.stdout : process.stderr;
       const resultOut = process.stdout;
+      const statusColor = ansi(statusOut);
 
       for await (const event of parseSSE(res)) {
         if (event.data === "[DONE]") break;
@@ -199,7 +198,7 @@ export default defineCommand({
             if (delta.reasoning_content) {
               if (writesStreamingStdout && !inThinking) {
                 inThinking = true;
-                statusOut.write(`${dim}Thinking:\n`);
+                statusOut.write(statusColor.dim("Thinking:\n"));
               }
               if (writesStreamingStdout) statusOut.write(delta.reasoning_content);
             }
@@ -207,7 +206,7 @@ export default defineCommand({
             // Handle regular content
             if (delta.content) {
               if (writesStreamingStdout && inThinking) {
-                statusOut.write(`${reset}\n\nResponse:\n`);
+                statusOut.write(`${statusColor.reset}\n\nResponse:\n`);
                 inThinking = false;
               }
               textContent += delta.content;
@@ -218,7 +217,7 @@ export default defineCommand({
           // Skip unparseable chunks
         }
       }
-      if (inThinking) statusOut.write(reset);
+      if (inThinking) statusOut.write(statusColor.reset);
 
       if (format === "json") {
         emitResult({ content: textContent }, format);

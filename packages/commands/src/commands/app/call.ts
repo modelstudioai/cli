@@ -8,7 +8,7 @@ import {
   type AppStreamChunk,
   type AppCompletionResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { ansi, emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Call a Bailian application (agent or workflow)",
@@ -137,8 +137,7 @@ export default defineCommand({
       let fullText = "";
       let sessionId = "";
       const writesStreamingStdout = format === "text";
-      const dim = settings.noColor ? "" : "\x1b[2m";
-      const reset = settings.noColor ? "" : "\x1b[0m";
+      const stderrColor = ansi(process.stderr);
 
       for await (const event of parseSSE(res)) {
         if (event.data === "[DONE]") break;
@@ -160,13 +159,14 @@ export default defineCommand({
           // Show thoughts if available
           if (chunk.output?.thoughts && flags.hasThoughts) {
             for (const t of chunk.output.thoughts) {
-              if (t.thought) process.stderr.write(`${dim}[Thinking] ${t.thought}${reset}\n`);
+              if (t.thought)
+                process.stderr.write(`${stderrColor.dim(`[Thinking] ${t.thought}`)}\n`);
               if (t.action_name)
                 process.stderr.write(
-                  `${dim}[Action] ${t.action_name}: ${t.action_input || ""}${reset}\n`,
+                  `${stderrColor.dim(`[Action] ${t.action_name}: ${t.action_input || ""}`)}\n`,
                 );
               if (t.observation)
-                process.stderr.write(`${dim}[Observation] ${t.observation}${reset}\n`);
+                process.stderr.write(`${stderrColor.dim(`[Observation] ${t.observation}`)}\n`);
             }
           }
         } catch {
@@ -176,7 +176,7 @@ export default defineCommand({
 
       // Show session_id for multi-turn conversation
       if (sessionId && !settings.quiet) {
-        process.stderr.write(`${dim}Session ID: ${sessionId}${reset}\n`);
+        process.stderr.write(`${stderrColor.dim(`Session ID: ${sessionId}`)}\n`);
       }
 
       if (format === "json") {

@@ -6,7 +6,7 @@
 >
 > 实施(2026-07-06):**已按本方案完成**——前置 baseUrl 翻转 + 阶段 0–6 全部落地(含 flags 收窄/分流/同名守卫、console/advisor/pipeline 收口、tracker 传值、边界守卫测试 `packages/commands/tests/boundaries.test.ts`)。全量 `vp check`/单测/关键 e2e 绿;**未 commit,待 review**。实施中的偏差:advisor 匿名调网关促使 `callConsoleGateway` 收 `ConsoleGatewayTarget`(token 可选)而非整个 credential;`describeAuth` 更名 `describeAuthState`;`ConfigStore.reset` 无消费者未实现。
 >
-> flag 边界轮(2026-07-06):**域化完成**——flag 拆 `GLOBAL_FLAGS` + `MODEL_AUTH_FLAGS`/`CONSOLE_AUTH_FLAGS`(按命令 `auth`/`authFlags` 可见),16 处遮蔽清零,跨域传 flag 报错,help 改为 Flags(自有+域)/Global Flags(全量)三段式,`pipeline run --timeout` 更名 `--step-timeout`,login 经 `AuthStore.flagInput()` 收凭证输入。workspaceId 已升入 console 域(链 flag > env > file),stats 命令内优先级删除。
+> flag 边界轮(2026-07-06):**域化完成**——flag 拆 `GLOBAL_FLAGS` + `MODEL_AUTH_FLAGS`/`CONSOLE_AUTH_FLAGS`(按命令 `auth` 可见),16 处遮蔽清零,跨域传 flag 报错,help 改为 Flags(自有+域)/Global Flags(全量)三段式,`pipeline run --timeout` 更名 `--step-timeout`,login 凭证输入由自有 flags + `AuthStore.login()` 落盘。workspaceId 已升入 console 域(链 flag > env > file),stats 命令内优先级删除。
 >
 > 修订(2026-07-04 评审后,均已拍板):§8 改 strangler 分阶段 + 阶段 0 行为锁定测试(已落地);§2 store 接口细化(write async / unset / AuthStore.login 揽登录落盘);§5 validate 收 ownFlags + 同名守卫 + authStage dry-run 双域容忍;§7 tracker/workspaceId 修法;§0/§9 优先级链保真口径。dry-run 决策:**保持"无需凭证"现状**,console 三元组归 Settings 服务 dry-run 展示(不引入 ConsoleTarget);dry-run 输出规范统一推后(§9)。
 >
@@ -23,7 +23,7 @@
 
 > **ctx 是唯一组合根。它在边界处把 flag / env / file / 默认 各源解析成 `identity / settings / credential`,交给命令。**
 >
-> 优先级链已**统一为 flag > env > file > 默认**:唯一异类 baseUrl(原 flag>file>env)已在前置独立 commit 翻转,锁定表(`packages/core/tests/config-priority.test.ts`)同步更新,`buildSettings` 逐字段对照锁定表移植。workspaceId 无全局 flag 源(见 §9);verbose/noColor 为 OR 语义、telemetry 的 DO_NOT_TRACK 为业界标准,均非链序问题。
+> 优先级链已**统一为 flag > env > file > 默认**:唯一异类 baseUrl(原 flag>file>env)已在前置独立 commit 翻转,锁定表(`packages/core/tests/config-priority.test.ts`)同步更新,`buildSettings` 逐字段对照锁定表移植。workspaceId 已升入 console 域(链 flag > env > file);verbose 为 OR 语义、telemetry 的 DO_NOT_TRACK 为业界标准,均非链序问题。
 
 三条硬规矩:
 
@@ -70,7 +70,6 @@ export interface Settings {
   output: "text" | "json";
   outputDir?: string;
   timeout: number;
-  concurrent?: number; // 命令经 getConcurrency 读 → 归 settings
   defaultTextModel?: string;
   defaultVideoModel?: string;
   defaultImageModel?: string;
@@ -82,11 +81,7 @@ export interface Settings {
   consoleSwitchAgent?: number;
   verbose: boolean;
   quiet: boolean;
-  noColor: boolean;
-  yes: boolean;
   dryRun: boolean;
-  nonInteractive: boolean; // 0 消费者,可留可删;留着零风险
-  async: boolean;
   telemetry: boolean;
 }
 ```
@@ -236,11 +231,16 @@ export function describeAuth(s: ResolutionSources): AuthState; // auth status �
 
 ```ts
 case "run": {
-  // 1) 一次解析(全局+命令 flag 合并)
-  const parsed = parseFlags(res.rest, { ...GLOBAL_FLAGS, ...res.command.flags });
+  // 1) 一次解析(全局 + 凭证域 + 命令 flag 合并)
+  const credDefs = credentialFlagDefs(res.command);
+  const parsed = parseFlags(res.rest, {
+    ...GLOBAL_FLAGS,
+    ...credDefs,
+    ...res.command.flags,
+  });
 
   // 2) 分流(见下"分流规则"),validate 收收窄后的 ownFlags(与 §2 签名一致,别传 parsed)
-  const globals  = pick(parsed, Object.keys(GLOBAL_FLAGS));   // 全局 flag → sources
+  const globals  = pick(parsed, [...Object.keys(GLOBAL_FLAGS), ...Object.keys(credDefs)]); // 全局+凭证域 → sources
   const ownFlags = pick(parsed, Object.keys(res.command.flags ?? {})); // 命令声明的 → ctx.flags
   const invalid = res.command.validate?.(ownFlags);
   if (invalid) throw new UsageError(invalid);
@@ -262,13 +262,13 @@ case "run": {
 }
 ```
 
-**分流规则(重要,含"本次不改遮蔽"的妥协):**
+**分流规则(重要):**
 
-> **全局 flag 恒进 `sources`(用 `Object.keys(GLOBAL_FLAGS)`);命令声明的 flag 进 `ctx.flags`(用 `Object.keys(command.flags)`)。同名遮蔽者两边都出现(受控重叠)。**
+> **全局 flag + 当前命令可见的凭证域 flag 进 `sources`;命令自有 flag 进 `ctx.flags`。**
 
-为什么这样:约 15 个命令把全局 flag(`consoleSite/consoleRegion/switchAgent`、`async`)重声明成自己的,纯为 help 显示(声明不读)。若"命令声明的 key 一律归 ctx.flags 且不进 sources",这些遮蔽会让 `--console-region` 到不了 `resolveConsole`,区域覆盖静默失效。**本次不清理这些遮蔽**(已记录在钉钉文档),用"全局恒进 sources"规避,行为不变;代价是这 ~15 个 flag 在 ctx.flags 和 sources 各出现一次(auth login 的 apiKey/baseUrl 也在两边,但 auth:none 不解析,无害)。
+为什么这样:`MODEL_AUTH_FLAGS` / `CONSOLE_AUTH_FLAGS` 只按命令 `auth` 暴露,既保证 `--api-key` / `--console-region` 这类域 flag 能进入 credential/settings 解析链,也避免无关命令误收跨域 flag。历史同名遮蔽已清理,命令自有 flag 与全局/域 flag 不再受控重叠。
 
-**同名守卫**:registry 构建时断言 —— 命令 flag 与全局同名时,其 FlagDef `type` 必须一致。分流规则依赖"遮蔽都是同型重声明"这一假设;十行断言把口头约定变成机器约定,防止未来有人把 `async` 重声明成 value flag 后,错型值静默流进 sources。
+**同名守卫**:registry 构建时断言 —— 命令自有 flag 与全局/凭证域 flag 同名即报错。分流规则依赖"同一 key 只归一个域"这一约束,防止未来新增 flag 时把同名值静默分到错误通道。
 
 `authStage`(`packages/runtime/src/middleware.ts`):
 
@@ -292,17 +292,19 @@ const authStage = async (ctx, next) => {
 
 ## 6. 字段迁移对照(旧 `Config` → 去向)
 
-| 旧 `Config` 字段                                                                          | 去向                                                                 |
-| ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `clientName` / `clientVersion`                                                            | **Identity**(`clientName` / `version`)                               |
-| `binName` / `npmPackage`                                                                  | **Identity**                                                         |
-| `apiKey` / `apiKeyEnv` / `fileApiKey` / `fileAccessToken`                                 | **删除** → provider chain 从 sources 读                              |
-| `baseUrl`                                                                                 | **ApiKeyCredential.baseUrl**(resolveApiKey 里解析)                   |
-| `consoleSite` / `consoleRegion` / `consoleSwitchAgent`                                    | **Settings**(dry-run 展示)+ **ConsoleCredential**(真实调用),受控重叠 |
-| `workspaceId`                                                                             | **Settings**                                                         |
-| `output` / `outputDir` / `timeout` / `default*Model`                                      | **Settings**                                                         |
-| `verbose` / `quiet` / `noColor` / `dryRun` / `async` / `yes` / `telemetry` / `configPath` | **Settings**                                                         |
-| `concurrent`(原本仅 flags)                                                                | **Settings**(`getConcurrency` 改读 settings)                         |
+| 旧 `Config` 字段                                            | 去向                                                                 |
+| ----------------------------------------------------------- | -------------------------------------------------------------------- |
+| `clientName` / `clientVersion`                              | **Identity**(`clientName` / `version`)                               |
+| `binName` / `npmPackage`                                    | **Identity**                                                         |
+| `apiKey` / `apiKeyEnv` / `fileApiKey` / `fileAccessToken`   | **删除** → provider chain 从 sources 读                              |
+| `baseUrl`                                                   | **ApiKeyCredential.baseUrl**(resolveApiKey 里解析)                   |
+| `consoleSite` / `consoleRegion` / `consoleSwitchAgent`      | **Settings**(dry-run 展示)+ **ConsoleCredential**(真实调用),受控重叠 |
+| `workspaceId`                                               | **Settings**                                                         |
+| `output` / `outputDir` / `timeout` / `default*Model`        | **Settings**                                                         |
+| `verbose` / `quiet` / `dryRun` / `telemetry` / `configPath` | **Settings**                                                         |
+| `async` / `concurrent`                                      | **命令自有 flag**(`ASYNC_FLAG` / `CONCURRENT_FLAG`)                  |
+| `yes`                                                       | **命令自有 flag**(`quota request`)                                   |
+| `nonInteractive`                                            | **删除**                                                             |
 
 ---
 
@@ -314,10 +316,10 @@ const authStage = async (ctx, next) => {
 - `client/client.ts:38`:`apiCred?.baseUrl ?? config.baseUrl` → `apiCred.baseUrl`
 - 命令读 `config.binName`(约 6 处:`auth/status`、`usage/stats`、`mcp/list`、`quota/history`、`quota/request`)→ `identity.binName`(经 ctx)
 - **console 收口**:约 12 处 `callConsoleGateway(config, token, {api,data})`(`app/list`、`workspace/list`、`usage/*`、`mcp/list`、`quota/*`、`console/call`)→ `ctx.client.callConsole({api,data})`;dry-run 里的 `effectiveConsoleGatewayConfig(config)` → `effectiveConsoleGatewayConfig(settings)`(签名收窄,不走 client)
-- **workspaceId**:`usage/stats.ts` 的 `resolveWorkspaceId(config, flag)` → `flags.workspaceId ?? requireWorkspace(ctx.settings)`(新 helper 只兜 settings,缺失时报原来的错 + `${identity.binName} workspace list` 提示)。**注意:`--workspace-id` 是命令级 flag、不在 GLOBAL_FLAGS,进不了 sources/settings,flag 的第一优先级必须在命令里显式保住**,否则静默丢失
+- **workspaceId**:`usage/stats.ts` 的 `resolveWorkspaceId(config, flag)` → `requireWorkspaceId(ctx.settings, identity.binName)`。`--workspace-id` 已升入 `CONSOLE_AUTH_FLAGS`,进入 sources/settings,链为 flag > env > file。
 - **config/auth 命令**:`readConfigFile/writeConfigFile/resolver` 直接调用 → 走 `ctx.configStore()` / `ctx.authStore()`
 - **auth/login `validate`**:`!f.console && !f.apiKey`——`apiKey`/`baseUrl` 是它自己声明的 flag(`login.ts:15`),收窄后仍在 `ctx.flags`,**无需改**
-- **pipeline**:`buildPipelineConfig`(伪造整套 GlobalFlags,`runtime/src/pipeline/bl-config.ts`)→ `buildSettings({ flags: {}, file: readConfigFile(), env })`(flags 已收 Partial,见 §4) + 强制 `output:'json'/quiet/nonInteractive`;pipeline executor 是"迷你边界",给 step 构造 settings/client
+- **pipeline**:`buildPipelineConfig`(伪造整套 GlobalFlags,`runtime/src/pipeline/bl-config.ts`)→ `buildSettings({ flags: {}, file: readConfigFile(), env })`(flags 已收 Partial,见 §4) + 强制 `output:'json'/quiet`;pipeline executor 是"迷你边界",给 step 构造 settings/client
 - 其余把 `Config` 当类型用的地方 → `Settings`;ctx 字段 `config` → `settings`(`ctx.config` 仅 2 处、解构 `const { config } = ctx` 约 46 处 + 其函数体内 `config.` → `settings.`)
 
 **命名注意**:
@@ -344,13 +346,13 @@ const authStage = async (ctx, next) => {
 
 ## 9. 本次不做(已在钉钉文档记录,后续单独轮次)
 
-- **flag 清理**:`nonInteractive` 删 / `async` ↔ 各命令 `--no-wait` 去重 / `yes` 收窄到命令级 / `noColor` 修一致性(registry/progress/banner 里内联 `process.stderr.isTTY` 绕过了 `config.noColor`)。
+- ~~**flag 清理**~~ **已完成**:`nonInteractive` 删除;`async`/`concurrent` 改为命令级共享定义;`yes` 收窄为 `quota request` 自有;原颜色 CLI flag / Settings 字段删除,颜色由 `NO_COLOR` + 实际输出流 `isTTY` 共同决定,内联判断收束到 runtime helper。
 - ~~workspaceId 的 flag 源~~ **已完成**(flag 边界轮):`--workspace-id` 升入 `CONSOLE_AUTH_FLAGS`,链为 flag > env > file;stats 删除自有声明与命令内优先级。(优先级链归一与同名遮蔽清理亦已完成:baseUrl 前置翻转见 §0,遮蔽经域化清零见 §5。)
 - **dry-run 输出规范统一**:各域输出现状不一致 —— model/app 域只打请求 body(不含 URL/baseUrl),console 域额外打 api 名 + region/site 路由信息。应一次定规范、跨域对齐(是否展示路由、展示哪些字段);届时若 console 域不再展示,console 三元组可从 Settings 撤出、收敛为纯 credential。**本次保持现状输出**(e2e 有断言)。
 - ~~全局↔命令私有 flag 同名遮蔽清理~~ **已完成**(flag 边界轮,经域化):16 处遮蔽全删,凭证 flag 按 `auth` 域可见,跨域报 Unknown flag,守卫升级为同名即抛。
 - **key ↔ baseUrl 强校验**(region 锁)。落点已就位:`resolveApiKey` 是唯一同时产出 `{token, baseUrl}` 的地方,校验加在它内部即可;baseUrl 不在 Settings,命令侧无法绕过绑定;`AuthStore.login` 已支持 `api_key` + `base_url` 成对落盘。
 - **多 profile / 多身份**(arkcli 式)。结构已留缝:单一 `ResolutionSources` 边界 + credential 封装。
-- **IOStreams 注入**(gh `Factory.IOStreams` / vercel `Client.stdout`);与 noColor 修复同属下一轮。
+- **IOStreams 注入**(gh `Factory.IOStreams` / vercel `Client.stdout`);颜色 stream helper 已先行收束,完整 IOStreams 注入仍留后续轮次。
 - `ConfigFile`(磁盘格式)不变;无用户可见 CLI 变化。
 
 外部记录:钉钉文档 `https://alidocs.dingtalk.com/i/nodes/YMyQA2dXW7gYo6MzcZzzERNMWzlwrZgb`(全局 flag 对比、flag 清理项、遮蔽问题)。

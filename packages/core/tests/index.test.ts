@@ -22,7 +22,6 @@ function testDeps(identity: Partial<Identity> = {}): { identity: Identity; setti
       timeout: 30,
       verbose: false,
       quiet: true,
-      noColor: true,
       dryRun: false,
       telemetry: true,
     },

@@ -1,5 +1,5 @@
 import { defineCommand, detectOutputFormat } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { ansi, emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
 const LIST_WORKSPACES_API = "zeldaEasy.bailian-dash-workspace.space.listWorkspaces";
@@ -34,10 +34,8 @@ function extractResponseData(result: Record<string, unknown>): Record<string, un
   return direct ?? data;
 }
 
-function printTable(workspaces: WorkspaceInfo[], noColor: boolean): void {
-  const bold = noColor ? (text: string) => text : (text: string) => `\x1b[1m${text}\x1b[0m`;
-  const dim = noColor ? (text: string) => text : (text: string) => `\x1b[2m${text}\x1b[0m`;
-  const green = noColor ? (text: string) => text : (text: string) => `\x1b[32m${text}\x1b[0m`;
+function printTable(workspaces: WorkspaceInfo[]): void {
+  const color = ansi(process.stdout);
 
   const headers = ["Name", "Workspace ID", "Default"];
 
@@ -51,21 +49,21 @@ function printTable(workspaces: WorkspaceInfo[], noColor: boolean): void {
     Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const separator = widths.map((width) => dim("─".repeat(width))).join("──");
+  const headerLine = headers.map((label, col) => color.bold(padEnd(label, widths[col]))).join("  ");
+  const separator = widths.map((width) => color.dim("─".repeat(width))).join("──");
 
   process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
 
   for (const row of rows) {
     const cells = row.map((cell, col) => {
-      if (col === 2 && cell === "Yes") return green(padEnd(cell, widths[col]));
+      if (col === 2 && cell === "Yes") return color.green(padEnd(cell, widths[col]));
       return padEnd(cell, widths[col]);
     });
     process.stdout.write(cells.join("  ") + "\n");
   }
 
-  process.stdout.write(dim(`\nTotal: ${workspaces.length}`) + "\n");
+  process.stdout.write(color.dim(`\nTotal: ${workspaces.length}`) + "\n");
 }
 
 export default defineCommand({
@@ -116,6 +114,6 @@ export default defineCommand({
       return;
     }
 
-    printTable(workspaces, settings.noColor);
+    printTable(workspaces);
   },
 });

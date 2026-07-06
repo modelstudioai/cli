@@ -75,7 +75,6 @@ export function buildSettings(s: ResolutionSources): Settings {
     consoleSwitchAgent: flags.consoleSwitchAgent || file.console_switch_agent || undefined,
     verbose: flags.verbose || env.DASHSCOPE_VERBOSE === "1",
     quiet: flags.quiet || false,
-    noColor: flags.noColor || env.NO_COLOR !== undefined || !process.stdout.isTTY,
     dryRun: flags.dryRun || false,
     telemetry: env.DO_NOT_TRACK === "1" ? false : (file.telemetry ?? true),
   };

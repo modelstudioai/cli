@@ -19,6 +19,7 @@ import {
   trackCommandExecution,
 } from "bailian-cli-core";
 import { maybeShowStatusBar } from "./output/status-bar.ts";
+import { ansi } from "./output/color.ts";
 import { checkForUpdate, getPendingUpdateNotification } from "./utils/update-checker.ts";
 
 /**
@@ -116,14 +117,11 @@ export const versionCheckStage: Middleware = async (ctx, next) => {
   const isUpdateCommand = ctx.path.length === 1 && ctx.path[0] === "update";
   const newVersion = getPendingUpdateNotification();
   if (newVersion && !ctx.settings.quiet && !isUpdateCommand) {
-    const isTTY = process.stderr.isTTY;
-    const yellow = isTTY ? "\x1b[33m" : "";
-    const cyan = isTTY ? "\x1b[36m" : "";
-    const reset = isTTY ? "\x1b[0m" : "";
+    const color = ansi(process.stderr);
     process.stderr.write(
-      `\n  ${yellow}Update available: ${ctx.identity.version} → ${newVersion}${reset}\n`,
+      `\n  ${color.yellow(`Update available: ${ctx.identity.version} → ${newVersion}`)}\n`,
     );
-    process.stderr.write(`  Run ${cyan}${ctx.identity.binName} update${reset} to upgrade\n\n`);
+    process.stderr.write(`  Run ${color.cyan(`${ctx.identity.binName} update`)} to upgrade\n\n`);
   }
 };
 

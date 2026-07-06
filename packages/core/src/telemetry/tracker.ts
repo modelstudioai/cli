@@ -10,7 +10,6 @@ const GLOBAL_FLAG_KEYS = new Set([
   "quiet",
   "verbose",
   "timeout",
-  "noColor",
   "dryRun",
   "help",
   "console",

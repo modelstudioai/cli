@@ -38,14 +38,8 @@ describe("e2e: config", () => {
     expect(data.timeout).toBeDefined();
   });
 
-  test("config show --output text --no-color", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
-      "config",
-      "show",
-      "--output",
-      "text",
-      "--no-color",
-    ]);
+  test("config show --output text", async () => {
+    const { stdout, stderr, exitCode } = await runCli(["config", "show", "--output", "text"]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toMatch(/config_file|timeout|base_url/i);
   });

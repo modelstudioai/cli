@@ -61,7 +61,6 @@ describe("e2e: auth", () => {
       "json",
       "--timeout",
       "120",
-      "--no-color",
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("Would validate and save API key.");
@@ -82,14 +81,8 @@ describe("e2e: auth", () => {
     expect(stderr).not.toContain("Cleared api_key");
   });
 
-  test("auth logout --dry-run --quiet --no-color", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
-      "auth",
-      "logout",
-      "--dry-run",
-      "--quiet",
-      "--no-color",
-    ]);
+  test("auth logout --dry-run --quiet", async () => {
+    const { stdout, stderr, exitCode } = await runCli(["auth", "logout", "--dry-run", "--quiet"]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("No changes made.");
   });

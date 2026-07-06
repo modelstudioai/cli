@@ -6,7 +6,7 @@ import {
   type Settings,
   type Client,
 } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { ansi, emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
 const OVERVIEW_API = "zeldaEasy.bailian-telemetry.model.getModelUsageStatistic";
@@ -181,13 +181,11 @@ function printOverview(
   startTime: number,
   endTime: number,
   days: number,
-  noColor: boolean,
 ): void {
-  const bold = noColor ? (text: string) => text : (text: string) => `\x1b[1m${text}\x1b[0m`;
-  const dim = noColor ? (text: string) => text : (text: string) => `\x1b[2m${text}\x1b[0m`;
+  const color = ansi(process.stdout);
 
   process.stdout.write(
-    `${dim("Time Range Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${dim(`(${days} days)`)}\n\n`,
+    `${color.dim("Time Range Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${color.dim(`(${days} days)`)}\n\n`,
   );
 
   const rows: [string, string][] = [
@@ -203,7 +201,7 @@ function printOverview(
 
   const maxLabel = Math.max(...rows.map(([label]) => displayWidth(label)));
   for (const [label, value] of rows) {
-    process.stdout.write(`${bold(padEnd(label, maxLabel + 2))}${value}\n`);
+    process.stdout.write(`${color.bold(padEnd(label, maxLabel + 2))}${value}\n`);
   }
 }
 
@@ -212,13 +210,11 @@ function printModelTable(
   startTime: number,
   endTime: number,
   days: number,
-  noColor: boolean,
 ): void {
-  const bold = noColor ? (text: string) => text : (text: string) => `\x1b[1m${text}\x1b[0m`;
-  const dim = noColor ? (text: string) => text : (text: string) => `\x1b[2m${text}\x1b[0m`;
+  const color = ansi(process.stdout);
 
   process.stdout.write(
-    `${dim("Time Range Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${dim(`(${days} days)`)}\n\n`,
+    `${color.dim("Time Range Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${color.dim(`(${days} days)`)}\n\n`,
   );
 
   if (items.length === 0) {
@@ -263,8 +259,8 @@ function printModelTable(
     Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const separator = widths.map((width) => dim("─".repeat(width))).join("──");
+  const headerLine = headers.map((label, col) => color.bold(padEnd(label, widths[col]))).join("  ");
+  const separator = widths.map((width) => color.dim("─".repeat(width))).join("──");
 
   process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
@@ -274,7 +270,7 @@ function printModelTable(
     process.stdout.write(cells.join("  ") + "\n");
   }
 
-  process.stdout.write(dim(`\nTotal: ${items.length} models`) + "\n");
+  process.stdout.write(color.dim(`\nTotal: ${items.length} models`) + "\n");
 }
 
 export default defineCommand({
@@ -382,7 +378,7 @@ export default defineCommand({
         return;
       }
 
-      printModelTable(allItems, startTime, endTime, daysFlag, settings.noColor);
+      printModelTable(allItems, startTime, endTime, daysFlag);
     } else {
       const reqDTO: Record<string, unknown> = {
         startTime,
@@ -438,7 +434,7 @@ export default defineCommand({
         return;
       }
 
-      printOverview(stat, startTime, endTime, daysFlag, settings.noColor);
+      printOverview(stat, startTime, endTime, daysFlag);
     }
   },
 });
