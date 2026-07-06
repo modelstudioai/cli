@@ -112,17 +112,17 @@ export default defineCommand({
   },
   exampleArgs: ["", "--page 2", "--page-size 20", "--model qwen-turbo", "--output json"],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { identity, settings, flags } = ctx;
     const page = Number(flags.page) || 1;
     const pageSize = Number(flags.pageSize) || 10;
     const modelFilter = flags.model || undefined;
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
     const requestData = {
       input: { pageNo: page, pageSize },
     };
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ api: HISTORY_API, data: requestData }, format);
       return;
     }
@@ -135,7 +135,7 @@ export default defineCommand({
         throw new BailianError(
           "session expired.",
           ExitCode.AUTH,
-          `Run \`${config.binName} auth login --console\` to re-authenticate.`,
+          `Run \`${identity.binName} auth login --console\` to re-authenticate.`,
         );
       }
       throw err;
@@ -164,6 +164,6 @@ export default defineCommand({
       return;
     }
 
-    printTable(records, config.noColor, modelFilter ? records.length : total);
+    printTable(records, settings.noColor, modelFilter ? records.length : total);
   },
 });

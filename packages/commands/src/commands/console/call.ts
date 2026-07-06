@@ -36,7 +36,7 @@ export default defineCommand({
     `--api some.api.name --data '{"key":"value"}' --console-region cn-beijing`,
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const api = flags.api;
     const dataRaw = flags.data;
 
@@ -47,14 +47,14 @@ export default defineCommand({
       throw new UsageError("--data must be valid JSON");
     }
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         {
           api,
           data,
-          ...effectiveConsoleGatewayConfig(config),
+          ...effectiveConsoleGatewayConfig(settings),
         },
         format,
       );

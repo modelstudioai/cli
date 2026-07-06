@@ -47,12 +47,12 @@ export default defineCommand({
   },
   exampleArgs: ["", "--name finance", "--output json"],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, identity, flags } = ctx;
     const serverName = flags.name || "";
     const type = flags.type || "OFFICIAL";
     const pageNo = flags.page || 1;
     const pageSize = flags.pageSize || 30;
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
     const data = {
       reqDTO: {
@@ -65,8 +65,8 @@ export default defineCommand({
       },
     };
 
-    if (config.dryRun) {
-      emitResult({ api: MCP_LIST_API, data, ...effectiveConsoleGatewayConfig(config) }, format);
+    if (settings.dryRun) {
+      emitResult({ api: MCP_LIST_API, data, ...effectiveConsoleGatewayConfig(settings) }, format);
       return;
     }
 
@@ -78,7 +78,7 @@ export default defineCommand({
       const msg = (dataField.errorMsg as string | undefined) ?? code;
       const hint =
         code === "BailianGateway.Login.NotLogined"
-          ? `Run \`${config.binName} auth login --console\` to refresh your console session.`
+          ? `Run \`${identity.binName} auth login --console\` to refresh your console session.`
           : undefined;
       throw new BailianError(`Console gateway: ${msg}`, ExitCode.AUTH, hint);
     }

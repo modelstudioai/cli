@@ -83,7 +83,7 @@ export default defineCommand({
       ? "Provide --image or --video."
       : undefined,
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     let image = flags.image;
     const videoInputs = flags.video ?? [];
     const model = flags.model || "qwen3-vl-plus";
@@ -98,9 +98,9 @@ export default defineCommand({
     const defaultPrompt = hasVideo ? "Describe the video." : "Describe the image.";
     const prompt = flags.prompt || defaultPrompt;
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         { request: { prompt, image, video: videoInputs.length ? videoInputs : undefined, model } },
         format,

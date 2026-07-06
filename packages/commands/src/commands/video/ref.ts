@@ -108,7 +108,7 @@ export default defineCommand({
       ? "Provide at least one --image or --ref-video."
       : undefined,
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const prompt = flags.prompt;
 
     const images = flags.image || [];
@@ -118,7 +118,7 @@ export default defineCommand({
     const videoVoices = flags.videoVoice || [];
 
     const model = flags.model || "happyhorse-1.0-r2v";
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
     // --- Resolve file URLs (auto-upload local files) ---
     const media: DashScopeVideoRefRequest["input"]["media"] = [];
@@ -177,7 +177,7 @@ export default defineCommand({
       },
     };
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ request: body }, format);
       return;
     }
@@ -192,7 +192,7 @@ export default defineCommand({
 
     const taskId = response.output.task_id;
 
-    if (!config.quiet) {
+    if (!settings.quiet) {
       process.stderr.write(`[Model: ${model}]\n`);
       process.stderr.write(
         `Note: Reference-to-video typically takes 5-10 minutes. Please be patient.\n`,
@@ -200,7 +200,7 @@ export default defineCommand({
     }
 
     // --no-wait or --async: return task ID immediately
-    if (flags.noWait || config.async) {
+    if (flags.noWait || settings.async) {
       emitResult({ task_id: taskId }, format);
       return;
     }
@@ -208,9 +208,9 @@ export default defineCommand({
     // --- Poll until completion ---
     const pollInterval = flags.pollInterval ?? 15;
     const pollUrl = ctx.client.url(taskPath(taskId));
-    const refTimeout = Math.max(config.timeout, 600);
+    const refTimeout = Math.max(settings.timeout, 600);
 
-    const result = await poll<DashScopeTaskResponse>(config, {
+    const result = await poll<DashScopeTaskResponse>(ctx.client, settings, {
       url: pollUrl,
       intervalSec: pollInterval,
       timeoutSec: refTimeout,
@@ -233,9 +233,9 @@ export default defineCommand({
     // --download: save to file
     if (flags.download) {
       const destPath = flags.download;
-      const { size } = await downloadFile(resultVideoUrl, destPath, { quiet: config.quiet });
+      const { size } = await downloadFile(resultVideoUrl, destPath, { quiet: settings.quiet });
 
-      if (config.quiet) {
+      if (settings.quiet) {
         emitBare(destPath);
       } else {
         emitResult(
@@ -255,10 +255,10 @@ export default defineCommand({
     // Default: auto-download to output directory
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const { join } = await import("path");
-    const destDir = resolveOutputDir(config, { subDir: "videos" });
+    const destDir = resolveOutputDir(settings, { subDir: "videos" });
     const destPath = join(destDir, `${taskId}.mp4`);
 
-    await downloadFile(resultVideoUrl, destPath, { quiet: config.quiet });
+    await downloadFile(resultVideoUrl, destPath, { quiet: settings.quiet });
 
     emitResult({ task_id: taskId, video_url: resultVideoUrl, saved: destPath }, format);
   },

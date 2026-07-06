@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
-import type { Config } from "../config/schema.ts";
+import type { Settings } from "../config/schema.ts";
 
 const DEFAULT_OUTPUT_DIR = () => join(homedir(), "bailian-output");
 
@@ -17,10 +17,10 @@ const DEFAULT_OUTPUT_DIR = () => join(homedir(), "bailian-output");
  * Creates the directory if it doesn't exist.
  */
 export function resolveOutputDir(
-  config: Config,
+  settings: Settings,
   options?: { flagDir?: string; subDir?: string },
 ): string {
-  const base = options?.flagDir || config.outputDir || DEFAULT_OUTPUT_DIR();
+  const base = options?.flagDir || settings.outputDir || DEFAULT_OUTPUT_DIR();
   const dir = options?.subDir ? join(base, options.subDir) : base;
 
   if (!existsSync(dir)) {

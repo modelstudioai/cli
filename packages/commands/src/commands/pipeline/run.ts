@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { defineCommand, type FlagsDef, type Flags } from "bailian-cli-core";
+import { defineCommand, type FlagsDef, type ParsedFlags } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { initPipelineSteps } from "bailian-cli-runtime";
 import { executePipeline, streamPipelineEvents } from "bailian-cli-runtime";
@@ -37,7 +37,7 @@ const RUN_FLAGS = {
     description: "Default step timeout in seconds",
   },
 } satisfies FlagsDef;
-type RunFlags = Flags<typeof RUN_FLAGS>;
+type RunFlags = ParsedFlags<typeof RUN_FLAGS>;
 
 export default defineCommand({
   description: "Run a pipeline workflow definition",
@@ -53,7 +53,7 @@ export default defineCommand({
   ],
   validate: (f) => (f.input && f.inputFile ? "use --input or --input-file, not both" : undefined),
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const file = flags.file;
 
     initPipelineSteps();
@@ -69,7 +69,7 @@ export default defineCommand({
       for await (const event of streamPipelineEvents(pipeline, runtimeInput, {
         concurrency: flags.concurrency,
         basePath,
-        dryRun: flags.dryRun,
+        dryRun: settings.dryRun,
         timeoutSeconds: flags.timeout,
       })) {
         process.stdout.write(JSON.stringify(event) + "\n");
@@ -80,12 +80,12 @@ export default defineCommand({
     const report = await executePipeline(pipeline, runtimeInput, {
       concurrency: flags.concurrency,
       basePath,
-      dryRun: flags.dryRun,
+      dryRun: settings.dryRun,
       timeoutSeconds: flags.timeout,
-      onEvent: flags.verbose ? logEvent : undefined,
+      onEvent: settings.verbose ? logEvent : undefined,
     });
 
-    if (config.output === "json") {
+    if (settings.output === "json") {
       emitResult(report, "json");
     } else {
       printTextReport(report);

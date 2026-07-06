@@ -3,7 +3,7 @@ import {
   BailianError,
   ExitCode,
   detectOutputFormat,
-  type Config,
+  type Settings,
   type Client,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
@@ -92,14 +92,15 @@ async function pollTelemetryApi(
   return null;
 }
 
-function resolveWorkspaceId(config: Config, flagWorkspaceId?: string): string {
+// 注意:`--workspace-id` 是命令级 flag、不进 settings,flag 的第一优先级须在此显式保住。
+function resolveWorkspaceId(settings: Settings, binName: string, flagWorkspaceId?: string): string {
   if (flagWorkspaceId) return flagWorkspaceId;
-  if (config.workspaceId) return config.workspaceId;
+  if (settings.workspaceId) return settings.workspaceId;
 
   throw new BailianError(
-    `workspace-id is required. Set via --workspace-id, BAILIAN_WORKSPACE_ID, or \`${config.binName} config set workspace_id <id>\`.`,
+    `workspace-id is required. Set via --workspace-id, BAILIAN_WORKSPACE_ID, or \`${binName} config set workspace_id <id>\`.`,
     ExitCode.GENERAL,
-    `Run \`${config.binName} workspace list\` to view available workspaces.`,
+    `Run \`${binName} workspace list\` to view available workspaces.`,
   );
 }
 
@@ -321,14 +322,14 @@ export default defineCommand({
     "--output json",
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { identity, settings, flags } = ctx;
     const modelFlag = flags.model || undefined;
     const daysFlag = Number(flags.days) || 7;
     const typeFlag = flags.type || undefined;
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
     const flagWorkspaceId = flags.workspaceId || undefined;
-    const workspaceId = resolveWorkspaceId(config, flagWorkspaceId);
+    const workspaceId = resolveWorkspaceId(settings, identity.binName, flagWorkspaceId);
 
     const endTime = Date.now();
     const startTime = endTime - daysFlag * 24 * 60 * 60 * 1000;
@@ -355,7 +356,7 @@ export default defineCommand({
       };
       if (typeFlag) baseReqDTO.obsModelType = typeFlag;
 
-      if (config.dryRun) {
+      if (settings.dryRun) {
         emitResult(
           { api: LIST_API, data: { reqDTO: { ...baseReqDTO, model: models.join(",") } } },
           format,
@@ -396,7 +397,7 @@ export default defineCommand({
         return;
       }
 
-      printModelTable(allItems, startTime, endTime, daysFlag, config.noColor);
+      printModelTable(allItems, startTime, endTime, daysFlag, settings.noColor);
     } else {
       const reqDTO: Record<string, unknown> = {
         startTime,
@@ -406,7 +407,7 @@ export default defineCommand({
       };
       if (typeFlag) reqDTO.obsModelType = typeFlag;
 
-      if (config.dryRun) {
+      if (settings.dryRun) {
         emitResult({ api: OVERVIEW_API, data: { reqDTO } }, format);
         return;
       }
@@ -452,7 +453,7 @@ export default defineCommand({
         return;
       }
 
-      printOverview(stat, startTime, endTime, daysFlag, config.noColor);
+      printOverview(stat, startTime, endTime, daysFlag, settings.noColor);
     }
   },
 });

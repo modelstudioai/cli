@@ -1,5 +1,5 @@
-import type { Config } from "../../config/schema.ts";
-import { callConsoleGateway } from "../../console/gateway.ts";
+import type { Settings } from "../../config/schema.ts";
+import { callConsoleGateway, effectiveConsoleGatewayConfig } from "../../console/gateway.ts";
 import { fetchModelList } from "../../console/models.ts";
 import type { ModelProfile } from "../types.ts";
 import type { ModelSource } from "./types.ts";
@@ -33,7 +33,7 @@ function toModelProfile(item: Record<string, unknown>): ModelProfile | null {
 
 export class ApiSource implements ModelSource {
   readonly name = "api";
-  constructor(private config: Config) {}
+  constructor(private settings: Settings) {}
 
   available(): boolean {
     return true;
@@ -41,8 +41,13 @@ export class ApiSource implements ModelSource {
 
   async load(): Promise<ModelProfile[]> {
     // Public model catalog — no console token (advisor runs unauthenticated).
+    const eff = effectiveConsoleGatewayConfig(this.settings);
     const call = (api: string, data: Record<string, unknown>) =>
-      callConsoleGateway(this.config, "", { api, data });
+      callConsoleGateway(
+        { region: eff.consoleRegion, site: eff.consoleSite, switchAgent: eff.consoleSwitchAgent },
+        this.settings.timeout,
+        { api, data },
+      );
 
     const first = await fetchModelList(call, { pageNo: 1, pageSize: PAGE_SIZE });
     const allRaw = [...first.models];

@@ -1,5 +1,5 @@
 import { homedir } from "os";
-import { maskToken, type Config, type ApiKeyCredential } from "bailian-cli-core";
+import { maskToken, type Settings, type ApiKeyCredential } from "bailian-cli-core";
 
 const reset = "\x1b[0m";
 const dim = "\x1b[2m";
@@ -12,18 +12,14 @@ function tildePath(p: string): string {
 }
 
 export function maybeShowStatusBar(
-  config: Config,
+  settings: Settings,
   token: string,
-  resolved?: ApiKeyCredential,
+  resolved: ApiKeyCredential,
 ): void {
-  if (config.quiet || !process.stderr.isTTY) return;
+  if (settings.quiet || !process.stderr.isTTY) return;
 
-  const filePath = config.configPath ? tildePath(config.configPath) : "~/.bailian/config.json";
-  const authTag = resolved
-    ? `${resolved.source} · api-key`
-    : config.apiKey
-      ? "flag · api-key"
-      : "config";
+  const filePath = settings.configPath ? tildePath(settings.configPath) : "~/.bailian/config.json";
+  const authTag = `${resolved.source} · api-key`;
   const maskedKey = maskToken(token);
 
   process.stderr.write(

@@ -31,7 +31,7 @@ export default defineCommand({
     '--name "user_basic" --attributes \'[{"name":"age","description":"age"},{"name":"hobby","description":"hobby"}]\'',
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const name = flags.name;
     const attrStr = flags.attributes;
 
@@ -45,9 +45,9 @@ export default defineCommand({
     const body: ProfileSchemaCreateRequest = { name, attributes };
     if (flags.description) body.description = flags.description;
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ endpoint: ctx.client.url(profileSchemaPath()), request: body }, format);
       return;
     }
@@ -58,7 +58,7 @@ export default defineCommand({
       body,
     });
 
-    if (config.quiet || format === "text") {
+    if (settings.quiet || format === "text") {
       emitBare(`Profile schema created: ${response.profile_schema_id}`);
     } else {
       emitResult(response, format);

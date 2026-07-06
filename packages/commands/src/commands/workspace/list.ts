@@ -88,11 +88,11 @@ export default defineCommand({
   },
   exampleArgs: ["", "--list 5", "--output json"],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const limit = Number(flags.list) || 0;
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ api: LIST_WORKSPACES_API, data: {} }, format);
       return;
     }
@@ -123,6 +123,6 @@ export default defineCommand({
       return;
     }
 
-    printTable(workspaces, config.noColor);
+    printTable(workspaces, settings.noColor);
   },
 });

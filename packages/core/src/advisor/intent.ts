@@ -1,14 +1,13 @@
-import { requestJson } from "../client/http.ts";
 import { chatPath } from "../client/endpoints.ts";
-import type { Config } from "../config/schema.ts";
+import type { Client } from "../client/client.ts";
 import type { ChatResponse } from "../types/api.ts";
 import { Complexities } from "./types.ts";
 import type { IntentProfile } from "./types.ts";
 import { INTENT_MODEL, INTENT_SYSTEM_PROMPT } from "./constants/prompts.ts";
 import { DEFAULT_INTENT } from "./constants/defaults.ts";
 
-export async function analyzeIntent(config: Config, input: string): Promise<IntentProfile> {
-  const url = config.baseUrl + chatPath();
+export async function analyzeIntent(client: Client, input: string): Promise<IntentProfile> {
+  const url = chatPath();
 
   const body = {
     model: INTENT_MODEL,
@@ -21,8 +20,8 @@ export async function analyzeIntent(config: Config, input: string): Promise<Inte
   };
 
   try {
-    const response = await requestJson<ChatResponse>(config, {
-      url,
+    const response = await client.requestJson<ChatResponse>({
+      path: url,
       method: "POST",
       body,
       timeout: 5000,

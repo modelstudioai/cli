@@ -27,14 +27,14 @@ export default defineCommand({
     "--task-id 3b256896-xxxx --out video.mp4 --quiet",
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const taskId = flags.taskId;
 
     const outPath = flags.out;
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ task_id: taskId, action: "download", out: outPath }, format);
       return;
     }
@@ -59,9 +59,9 @@ export default defineCommand({
       throw new BailianError("No download URL available for this task.", ExitCode.GENERAL);
     }
 
-    const { size } = await downloadFile(downloadUrl, outPath, { quiet: config.quiet });
+    const { size } = await downloadFile(downloadUrl, outPath, { quiet: settings.quiet });
 
-    if (config.quiet) {
+    if (settings.quiet) {
       emitBare(outPath);
       return;
     }

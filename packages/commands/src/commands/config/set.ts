@@ -2,10 +2,9 @@ import {
   defineCommand,
   detectOutputFormat,
   maskToken,
-  readConfigFile,
-  writeConfigFile,
   BailianError,
   ExitCode,
+  type ConfigFile,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
@@ -63,7 +62,7 @@ export default defineCommand({
     "--key base_url --value https://dashscope.aliyuncs.com",
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const key = flags.key;
     const value = flags.value;
 
@@ -95,21 +94,18 @@ export default defineCommand({
       }
     }
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ would_set: { [resolvedKey]: value } }, format);
       return;
     }
 
-    const existing = readConfigFile() as Record<string, unknown>;
-    existing[resolvedKey] = resolvedKey === "timeout" ? Number(value) : value;
-    await writeConfigFile(existing);
+    const coerced = resolvedKey === "timeout" ? Number(value) : value;
+    await ctx.configStore().write({ [resolvedKey]: coerced } as Partial<ConfigFile>);
 
-    if (!config.quiet) {
-      const shown = SECRET_KEYS.has(resolvedKey)
-        ? maskToken(String(existing[resolvedKey]))
-        : existing[resolvedKey];
+    if (!settings.quiet) {
+      const shown = SECRET_KEYS.has(resolvedKey) ? maskToken(String(coerced)) : coerced;
       emitResult({ [resolvedKey]: shown }, format);
     }
   },

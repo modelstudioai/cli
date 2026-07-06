@@ -6,7 +6,7 @@ const LABEL_WIDTH = 13;
 /** Binary name used in error hints; set by handleError() so its helpers can read it. */
 let binName: string;
 
-/** Short reminder; full resolution order matches `loadConfig` in bailian-cli-core. */
+/** Short reminder; full resolution order matches `resolveApiKey` in bailian-cli-core. */
 function baseUrlHint(): string {
   return `If the DashScope host is wrong, check baseUrl (--base-url, ${binName} config show, or DASHSCOPE_BASE_URL).`;
 }

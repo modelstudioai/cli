@@ -91,33 +91,37 @@ export function parseConfigFile(raw: unknown): ConfigFile {
   return out;
 }
 
-export interface Config {
-  clientName?: string;
-  clientVersion?: string;
-  /** Product binary name (e.g. "bl", "rag"), injected by createCli for command-facing output. */
-  binName?: string;
-  /** npm package name for self-update (e.g. "bailian-cli", "bailian-cli-rag"), injected by createCli. */
-  npmPackage?: string;
-  /** `--api-key` flag (highest priority for the model domain). */
-  apiKey?: string;
-  /** `DASHSCOPE_API_KEY` env (model domain). */
-  apiKeyEnv?: string;
-  /** `access_token` in config file (console login). */
-  fileAccessToken?: string;
-  fileApiKey?: string;
+/** 静态产品身份,createCli 注入一次(bl/rag 各异,故注入而非模块常量)。 */
+export interface Identity {
+  /** Product binary name, e.g. "bl", "rag". */
+  binName: string;
+  version: string;
+  /** npm package name for self-update, e.g. "bailian-cli". */
+  npmPackage: string;
+  /** User-Agent / telemetry client name. */
+  clientName: string;
+}
+
+/**
+ * 命令唯一会读的配置面(flag/env/file 解析后的有效值)。
+ * 不含身份(Identity)、不含秘密(credential);console 三元组为 dry-run 展示保留,
+ * 真实调用走 ConsoleCredential(同链解析,受控重叠)。
+ */
+export interface Settings {
   configPath?: string;
-  baseUrl: string;
   output: "text" | "json";
   outputDir?: string;
   timeout: number;
+  /** `--concurrent`,仅 flag 源。 */
+  concurrent?: number;
   defaultTextModel?: string;
   defaultVideoModel?: string;
   defaultImageModel?: string;
   defaultSpeechModel?: string;
   defaultOmniModel?: string;
   workspaceId?: string;
-  consoleSite?: "domestic" | "international";
   consoleRegion?: string;
+  consoleSite?: "domestic" | "international";
   consoleSwitchAgent?: number;
   verbose: boolean;
   quiet: boolean;

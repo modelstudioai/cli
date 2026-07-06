@@ -108,14 +108,14 @@ export default defineCommand({
     '--video https://example.com/input.mp4 --prompt "Put clothes on the kitten in the video" --watermark false',
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const videoUrl = flags.video;
 
     // prompt is optional for video edit per API spec
     const prompt = flags.prompt;
 
     const model = flags.model || "happyhorse-1.0-video-edit";
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
     // Auto-upload local files
     const resolvedVideoUrl = await ctx.client.uploadFile(videoUrl, model);
@@ -159,7 +159,7 @@ export default defineCommand({
       },
     };
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ request: body }, format);
       return;
     }
@@ -174,13 +174,13 @@ export default defineCommand({
 
     const taskId = response.output.task_id;
 
-    if (!config.quiet) {
+    if (!settings.quiet) {
       process.stderr.write(`[Model: ${model}]\n`);
       process.stderr.write("Note: Video editing typically takes 5-8 minutes. Please be patient.\n");
     }
 
     // --no-wait or --async: return task ID immediately
-    if (flags.noWait || config.async) {
+    if (flags.noWait || settings.async) {
       emitResult({ task_id: taskId }, format);
       return;
     }
@@ -189,9 +189,9 @@ export default defineCommand({
     // Video editing is compute-intensive; default timeout = 600s (10 min)
     const pollInterval = flags.pollInterval ?? 15;
     const pollUrl = ctx.client.url(taskPath(taskId));
-    const editTimeout = Math.max(config.timeout, 600);
+    const editTimeout = Math.max(settings.timeout, 600);
 
-    const result = await poll<DashScopeTaskResponse>(config, {
+    const result = await poll<DashScopeTaskResponse>(ctx.client, settings, {
       url: pollUrl,
       intervalSec: pollInterval,
       timeoutSec: editTimeout,
@@ -214,9 +214,9 @@ export default defineCommand({
     // --download: save to file
     if (flags.download) {
       const destPath = flags.download;
-      const { size } = await downloadFile(resultVideoUrl, destPath, { quiet: config.quiet });
+      const { size } = await downloadFile(resultVideoUrl, destPath, { quiet: settings.quiet });
 
-      if (config.quiet) {
+      if (settings.quiet) {
         emitBare(destPath);
       } else {
         emitResult(
@@ -235,10 +235,10 @@ export default defineCommand({
 
     // Default: auto-download to output directory
     const path = await import("path");
-    const destDir = resolveOutputDir(config, { subDir: "videos" });
+    const destDir = resolveOutputDir(settings, { subDir: "videos" });
     const destPath = path.join(destDir, `${taskId}.mp4`);
 
-    await downloadFile(resultVideoUrl, destPath, { quiet: config.quiet });
+    await downloadFile(resultVideoUrl, destPath, { quiet: settings.quiet });
 
     emitResult({ task_id: taskId, video_url: resultVideoUrl, saved: destPath }, format);
   },

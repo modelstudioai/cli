@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, renameSync, existsSync } from "fs";
-import { parseConfigFile, REGIONS, type Config, type ConfigFile } from "./schema.ts";
+import { parseConfigFile, type ConfigFile, type Settings } from "./schema.ts";
 import { ensureConfigDir, getConfigPath } from "./paths.ts";
-import { detectOutputFormat, type OutputFormat } from "../output/formatter.ts";
+import { detectOutputFormat } from "../output/formatter.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import type { GlobalFlags } from "../types/command.ts";
@@ -28,23 +28,28 @@ export async function writeConfigFile(data: Record<string, unknown>): Promise<vo
   renameSync(tmp, path);
 }
 
-export function loadConfig(flags: GlobalFlags): Config {
-  const file = readConfigFile();
+/**
+ * 解析的三个来源,dispatch 边界一次构建。flags 收 Partial:ParsedFlags 里 switch 是
+ * 必填 boolean,收 Partial 让 pipeline 等无 flag 场景传 {} 即可。
+ */
+export interface ResolutionSources {
+  flags: Partial<GlobalFlags>;
+  file: ConfigFile;
+  env: NodeJS.ProcessEnv;
+}
 
-  const apiKey = flags.apiKey || undefined;
-  const apiKeyEnv = process.env.DASHSCOPE_API_KEY?.trim() || undefined;
-  const fileApiKey = file.api_key;
-  const fileAccessToken = file.access_token?.trim() || undefined;
+export function buildSources(globalFlags: Partial<GlobalFlags>): ResolutionSources {
+  return { flags: globalFlags, file: readConfigFile(), env: process.env };
+}
 
-  const baseUrl = flags.baseUrl || file.base_url || process.env.DASHSCOPE_BASE_URL || REGIONS.cn;
+/**
+ * 纯解析 sources → Settings(命令唯一会读的配置面)。不含身份、baseUrl、鉴权。
+ * 各字段链序 flag > env > file > 默认;锁定表 tests/config-priority.test.ts。
+ */
+export function buildSettings(s: ResolutionSources): Settings {
+  const { flags, file, env } = s;
 
-  const output: OutputFormat = detectOutputFormat(
-    flags.output || process.env.DASHSCOPE_OUTPUT || file.output,
-  );
-
-  const envTimeout = process.env.DASHSCOPE_TIMEOUT
-    ? Number(process.env.DASHSCOPE_TIMEOUT)
-    : undefined;
+  const envTimeout = env.DASHSCOPE_TIMEOUT ? Number(env.DASHSCOPE_TIMEOUT) : undefined;
   const validEnvTimeout =
     envTimeout !== undefined && Number.isFinite(envTimeout) && envTimeout > 0
       ? envTimeout
@@ -55,32 +60,27 @@ export function loadConfig(flags: GlobalFlags): Config {
   }
 
   return {
-    apiKey,
-    apiKeyEnv,
-    fileAccessToken,
-    fileApiKey,
     configPath: getConfigPath(),
-    baseUrl,
-    output,
+    output: detectOutputFormat(flags.output || env.DASHSCOPE_OUTPUT || file.output),
     outputDir: file.output_dir || undefined,
     timeout,
+    concurrent: flags.concurrent,
     defaultTextModel: file.default_text_model,
     defaultVideoModel: file.default_video_model,
     defaultImageModel: file.default_image_model,
     defaultSpeechModel: file.default_speech_model,
     defaultOmniModel: file.default_omni_model,
-    workspaceId: process.env.BAILIAN_WORKSPACE_ID || file.workspace_id || undefined,
-    consoleSite: (flags.consoleSite as Config["consoleSite"]) || file.console_site || undefined,
-    consoleRegion: (flags.consoleRegion as string) || file.console_region || undefined,
-    consoleSwitchAgent:
-      (flags.consoleSwitchAgent as number) || file.console_switch_agent || undefined,
-    verbose: flags.verbose || process.env.DASHSCOPE_VERBOSE === "1",
+    workspaceId: env.BAILIAN_WORKSPACE_ID || file.workspace_id || undefined,
+    consoleRegion: flags.consoleRegion || file.console_region || undefined,
+    consoleSite: (flags.consoleSite as Settings["consoleSite"]) || file.console_site || undefined,
+    consoleSwitchAgent: flags.consoleSwitchAgent || file.console_switch_agent || undefined,
+    verbose: flags.verbose || env.DASHSCOPE_VERBOSE === "1",
     quiet: flags.quiet || false,
-    noColor: flags.noColor || process.env.NO_COLOR !== undefined || !process.stdout.isTTY,
+    noColor: flags.noColor || env.NO_COLOR !== undefined || !process.stdout.isTTY,
     yes: flags.yes || false,
     dryRun: flags.dryRun || false,
     nonInteractive: flags.nonInteractive || false,
     async: flags.async || false,
-    telemetry: process.env.DO_NOT_TRACK === "1" ? false : (file.telemetry ?? true),
+    telemetry: env.DO_NOT_TRACK === "1" ? false : (file.telemetry ?? true),
   };
 }

@@ -82,7 +82,7 @@ export default defineCommand({
     '--image ./photo.png --prompt "Replace the background with a beach" --watermark false',
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     // Normalize --image to string array (supports both single and repeated flags)
     let rawImages: string[] = [];
     if (Array.isArray(flags.image)) {
@@ -92,7 +92,7 @@ export default defineCommand({
     }
     const prompt = flags.prompt;
 
-    const model = flags.model || config.defaultImageModel || "qwen-image-2.0";
+    const model = flags.model || settings.defaultImageModel || "qwen-image-2.0";
 
     // Auto-upload local files (resolve all images in parallel)
     const resolvedImages = await Promise.all(
@@ -133,20 +133,20 @@ export default defineCommand({
     // Remove undefined parameters
     stripUndefined(body.parameters as Record<string, unknown>);
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ request: body }, format);
       return;
     }
 
-    if (!config.quiet) {
+    if (!settings.quiet) {
       process.stderr.write(`[Model: ${model}] [Mode: sync] [Images: ${resolvedImages.length}]\n`);
     }
 
-    const concurrent = getConcurrency(flags);
+    const concurrent = getConcurrency(settings);
 
-    const results = await runConcurrent(concurrent, config, () =>
+    const results = await runConcurrent(concurrent, settings, () =>
       ctx.client.requestJson<DashScopeImageSyncResponse>({
         path: imageSyncPath(),
         method: "POST",
@@ -165,7 +165,7 @@ export default defineCommand({
       throw new BailianError("Edit completed but no images returned.", ExitCode.GENERAL);
     }
 
-    const outDir = resolveOutputDir(config, {
+    const outDir = resolveOutputDir(settings, {
       flagDir: flags.outDir,
       subDir: flags.outDir ? undefined : "images",
     });
@@ -181,9 +181,9 @@ export default defineCommand({
           })
         : [{ url: imageUrls[0], destPath: join(outDir, `${prefix}.png`) }];
 
-    const saved = await downloadParallel(items, downloadFile, { quiet: config.quiet });
+    const saved = await downloadParallel(items, downloadFile, { quiet: settings.quiet });
 
-    if (config.quiet) {
+    if (settings.quiet) {
       emitBare(saved.join("\n"));
     } else {
       emitResult({ urls: imageUrls, saved, total: imageUrls.length }, format);

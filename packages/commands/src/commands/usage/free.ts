@@ -217,11 +217,11 @@ export default defineCommand({
     "--model qwen3-max --console-region cn-beijing",
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const modelFlag = flags.model || undefined;
     const expiringDays = Number(flags.expiring) || 0;
     const sortField = flags.sort || undefined;
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
     let models: string[];
     const typeMap = new Map<string, string>();
@@ -243,7 +243,7 @@ export default defineCommand({
       queryFreeTierQuotaRequest: { models },
     };
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         {
           api: FREE_TIER_API,
@@ -340,6 +340,6 @@ export default defineCommand({
       return;
     }
 
-    printTable(quotas, stopMap, typeMap, config.noColor);
+    printTable(quotas, stopMap, typeMap, settings.noColor);
   },
 });

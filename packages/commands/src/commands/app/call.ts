@@ -65,12 +65,12 @@ export default defineCommand({
     '--app-id abc123 --prompt "Start" --biz-params \'{"key":"value"}\'',
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const appId = flags.appId;
     const prompt = flags.prompt;
 
     const shouldStream = flags.stream || process.stdout.isTTY;
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
     const body: AppCompletionRequest = {
       input: { prompt },
@@ -119,7 +119,7 @@ export default defineCommand({
       }
     }
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ endpoint: ctx.client.url(appCompletionPath(appId)), request: body }, format);
       return;
     }
@@ -137,8 +137,8 @@ export default defineCommand({
       let fullText = "";
       let sessionId = "";
       const writesStreamingStdout = format === "text";
-      const dim = config.noColor ? "" : "\x1b[2m";
-      const reset = config.noColor ? "" : "\x1b[0m";
+      const dim = settings.noColor ? "" : "\x1b[2m";
+      const reset = settings.noColor ? "" : "\x1b[0m";
 
       for await (const event of parseSSE(res)) {
         if (event.data === "[DONE]") break;
@@ -175,7 +175,7 @@ export default defineCommand({
       }
 
       // Show session_id for multi-turn conversation
-      if (sessionId && !config.quiet) {
+      if (sessionId && !settings.quiet) {
         process.stderr.write(`${dim}Session ID: ${sessionId}${reset}\n`);
       }
 
@@ -193,7 +193,7 @@ export default defineCommand({
 
       const text = response.output?.text ?? "";
 
-      if (config.quiet || format === "text") {
+      if (settings.quiet || format === "text") {
         emitBare(text);
       } else {
         emitResult(response, format);

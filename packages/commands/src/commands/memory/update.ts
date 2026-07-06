@@ -37,7 +37,7 @@ export default defineCommand({
   },
   exampleArgs: ['--node-id node_xxx --user-id user1 --content "updated memory content"'],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const nodeId = flags.nodeId;
     const userId = flags.userId;
     const content = flags.content;
@@ -48,9 +48,9 @@ export default defineCommand({
     };
     if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId;
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         { endpoint: ctx.client.url(memoryNodePath(nodeId)), method: "PATCH", request: body },
         format,
@@ -64,7 +64,7 @@ export default defineCommand({
       body,
     });
 
-    if (config.quiet || format === "text") {
+    if (settings.quiet || format === "text") {
       emitBare(`Memory node ${nodeId} updated.`);
     } else {
       emitResult(response, format);

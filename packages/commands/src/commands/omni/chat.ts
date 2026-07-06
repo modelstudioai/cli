@@ -144,15 +144,15 @@ export default defineCommand({
     '--message "Read this passage aloud" --audio-out greeting.wav',
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     // --- Parse messages ---
     const userMessages = flags.message;
 
-    const model = flags.model || config.defaultOmniModel || "qwen3.5-omni-plus";
+    const model = flags.model || settings.defaultOmniModel || "qwen3.5-omni-plus";
     const voice = flags.voice || "Cherry";
     const audioFormat = flags.audioFormat || "wav";
     const textOnly = flags.textOnly === true;
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
     // --- Build messages array ---
     const allMessages: ChatMessage[] = [];
@@ -278,12 +278,12 @@ export default defineCommand({
     if (flags.maxTokens !== undefined) body.max_tokens = flags.maxTokens;
     if (flags.temperature !== undefined) body.temperature = flags.temperature;
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ request: body }, format);
       return;
     }
 
-    if (!config.quiet) {
+    if (!settings.quiet) {
       const modeLabel = textOnly ? "text-only" : `text+audio, voice: ${voice}`;
       process.stderr.write(`[Model: ${model}] [${modeLabel}]\n`);
     }
@@ -342,7 +342,7 @@ export default defineCommand({
       if (!destPath) {
         // eslint-disable-next-line @typescript-eslint/unbound-method
         const { join } = await import("path");
-        const destDir = resolveOutputDir(config, { subDir: "omni" });
+        const destDir = resolveOutputDir(settings, { subDir: "omni" });
         const timestamp = Date.now();
         destPath = join(destDir, `omni_${timestamp}.wav`);
       }
@@ -350,7 +350,7 @@ export default defineCommand({
       writeFileSync(destPath, wavBuffer);
       audioSaved = destPath;
 
-      if (!config.quiet) {
+      if (!settings.quiet) {
         process.stderr.write(`Audio saved: ${destPath}\n`);
       }
     }

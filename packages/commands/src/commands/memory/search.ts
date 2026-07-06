@@ -4,7 +4,7 @@ import {
   memorySearchPath,
   detectOutputFormat,
   type FlagsDef,
-  type Flags,
+  type ParsedFlags,
   type MemorySearchRequest,
   type MemorySearchResponse,
 } from "bailian-cli-core";
@@ -25,7 +25,7 @@ const SEARCH_FLAGS = {
   },
   memoryLibraryId: { type: "string", valueHint: "<id>", description: "Memory library ID" },
 } satisfies FlagsDef;
-type SearchFlags = Flags<typeof SEARCH_FLAGS>;
+type SearchFlags = ParsedFlags<typeof SEARCH_FLAGS>;
 
 export default defineCommand({
   description: "Search memory nodes by query or messages",
@@ -39,7 +39,7 @@ export default defineCommand({
   validate: (f: SearchFlags) =>
     !f.query && !f.messages ? "Provide --query or --messages." : undefined,
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const userId = flags.userId;
 
     const body: MemorySearchRequest = { user_id: userId };
@@ -62,9 +62,9 @@ export default defineCommand({
     if (flags.topK !== undefined) body.top_k = flags.topK;
     if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId;
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ endpoint: ctx.client.url(memorySearchPath()), request: body }, format);
       return;
     }
@@ -75,7 +75,7 @@ export default defineCommand({
       body,
     });
 
-    if (config.quiet || format === "text") {
+    if (settings.quiet || format === "text") {
       if (!response.memory_nodes || response.memory_nodes.length === 0) {
         emitBare("No memory nodes found.");
       } else {

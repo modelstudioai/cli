@@ -5,7 +5,7 @@ import {
   ExitCode,
   detectOutputFormat,
   type Client,
-  type Config,
+  type Settings,
   type DashScopeTTSRequest,
   type DashScopeTTSResponse,
   type DashScopeTTSStreamChunk,
@@ -16,7 +16,7 @@ import {
   resolveOutputDir,
   DOCS_HOSTS,
   type FlagsDef,
-  type Flags,
+  type ParsedFlags,
 } from "bailian-cli-core";
 
 const COSYVOICE_CLONE_DESIGN_DOC = `${DOCS_HOSTS.cn}/cosyvoice-clone-design-api`;
@@ -207,7 +207,7 @@ const SYNTHESIZE_FLAGS = {
   },
   stream: { type: "switch", description: "Stream raw PCM audio to stdout (pipe to player)" },
 } satisfies FlagsDef;
-type SynthesizeFlags = Flags<typeof SYNTHESIZE_FLAGS>;
+type SynthesizeFlags = ParsedFlags<typeof SYNTHESIZE_FLAGS>;
 
 export default defineCommand({
   description: "Synthesize speech from text (CosyVoice TTS)",
@@ -233,8 +233,8 @@ export default defineCommand({
     return undefined;
   },
   async run(ctx) {
-    const { config, flags } = ctx;
-    const model = flags.model || config.defaultSpeechModel || "cosyvoice-v3-flash";
+    const { settings, flags } = ctx;
+    const model = flags.model || settings.defaultSpeechModel || "cosyvoice-v3-flash";
 
     // --list-voices: print voice list for the model and exit
     if (flags.listVoices) {
@@ -265,7 +265,7 @@ export default defineCommand({
     const enableSsml = flags.enableSsml === true ? true : undefined;
     const useStream = flags.stream === true;
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
     const body: DashScopeTTSRequest = {
       model,
@@ -287,33 +287,33 @@ export default defineCommand({
     // Remove undefined fields from input
     stripUndefined(body.input as Record<string, unknown>);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ request: body }, format);
       return;
     }
 
-    if (!config.quiet) {
+    if (!settings.quiet) {
       process.stderr.write(`[Model: ${model}] [Voice: ${voice}]\n`);
     }
 
     if (useStream) {
-      await handleStreamMode(ctx.client, config, body, flags, format);
+      await handleStreamMode(ctx.client, settings, body, flags, format);
     } else {
-      await handleNonStreamMode(ctx.client, config, body, flags, format);
+      await handleNonStreamMode(ctx.client, settings, body, flags, format);
     }
   },
 });
 
 async function handleNonStreamMode(
   client: Client,
-  config: Config,
+  settings: Settings,
   body: DashScopeTTSRequest,
   flags: SynthesizeFlags,
   format: OutputFormat,
 ): Promise<void> {
-  const concurrent = getConcurrency(flags);
+  const concurrent = getConcurrency(settings);
 
-  const results = await runConcurrent(concurrent, config, () =>
+  const results = await runConcurrent(concurrent, settings, () =>
     client.requestJson<DashScopeTTSResponse>({
       path: speechSynthesizePath(),
       method: "POST",
@@ -329,7 +329,7 @@ async function handleNonStreamMode(
 
   // Determine output paths
   const path = await import("path");
-  const destDir = resolveOutputDir(config, { subDir: "speech" });
+  const destDir = resolveOutputDir(settings, { subDir: "speech" });
 
   const items = audioUrls.map((audioUrl, i) => {
     let destPath = flags.out;
@@ -344,9 +344,9 @@ async function handleNonStreamMode(
     return { url: audioUrl, destPath: destPath! };
   });
 
-  const saved = await downloadParallel(items, downloadFile, { quiet: config.quiet });
+  const saved = await downloadParallel(items, downloadFile, { quiet: settings.quiet });
 
-  if (config.quiet) {
+  if (settings.quiet) {
     emitBare(saved.join("\n"));
   } else if (saved.length === 1) {
     const expiresAt = results[0]!.output?.audio?.expires_at;
@@ -376,7 +376,7 @@ async function handleNonStreamMode(
 
 async function handleStreamMode(
   client: Client,
-  config: Config,
+  settings: Settings,
   body: DashScopeTTSRequest,
   flags: SynthesizeFlags,
   format: OutputFormat,
@@ -420,7 +420,7 @@ async function handleStreamMode(
 
       if (chunk.output?.finish_reason === "stop") {
         lastAudioUrl = chunk.output?.audio?.url;
-        if (lastAudioUrl && !config.quiet) {
+        if (lastAudioUrl && !settings.quiet) {
           process.stderr.write(`\nFull audio URL: ${lastAudioUrl}\n`);
         }
         break;
@@ -433,7 +433,7 @@ async function handleStreamMode(
         writer.on("error", reject);
         writer.end();
       });
-      if (!config.quiet && outPath) {
+      if (!settings.quiet && outPath) {
         process.stderr.write(`Saved: ${outPath}\n`);
       }
     }

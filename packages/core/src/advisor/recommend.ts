@@ -1,7 +1,6 @@
 import { chatPath } from "../client/endpoints.ts";
-import { request, requestJson } from "../client/http.ts";
 import { parseSSE } from "../client/stream.ts";
-import type { Config } from "../config/schema.ts";
+import type { Client } from "../client/client.ts";
 import type { ChatResponse, StreamChunk } from "../types/api.ts";
 import {
   ALTERNATIVE_SYSTEM_PROMPT,
@@ -187,7 +186,7 @@ function validatePipelineCompatibility(
 }
 
 export async function rankModels(
-  config: Config,
+  client: Client,
   candidates: ScoredCandidate[],
   intent: IntentProfile,
   userInput: string,
@@ -238,12 +237,12 @@ export async function rankModels(
     body.enable_thinking = true;
   }
 
-  const url = config.baseUrl + chatPath();
+  const url = chatPath();
   let content: string;
 
   if (useThinkingModel) {
-    const res = await request(config, {
-      url,
+    const res = await client.request({
+      path: url,
       method: "POST",
       body,
       stream: true,
@@ -274,8 +273,8 @@ export async function rankModels(
     }
     content = accumulated || "{}";
   } else {
-    const response = await requestJson<ChatResponse>(config, {
-      url,
+    const response = await client.requestJson<ChatResponse>({
+      path: url,
       method: "POST",
       body,
     });

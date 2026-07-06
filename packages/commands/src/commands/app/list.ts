@@ -33,11 +33,11 @@ export default defineCommand({
   },
   exampleArgs: ["", "--name customer service", "--page 2 --page-size 10", "--output json"],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const name = flags.name || "";
     const pageNo = flags.page || 1;
     const pageSize = flags.pageSize || 30;
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
     const data = {
       reqDTO: {
@@ -50,7 +50,7 @@ export default defineCommand({
       },
     };
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ api: APP_LIST_API, data }, format);
       return;
     }

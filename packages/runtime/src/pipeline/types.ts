@@ -337,5 +337,5 @@ export interface StepContext {
   timeoutSeconds?: number;
   blRequestTimeoutSeconds?: number;
   emitEvent?: (event: Record<string, unknown>) => void | Promise<void>;
-  blConfig?: unknown;
+  blEnv?: unknown;
 }

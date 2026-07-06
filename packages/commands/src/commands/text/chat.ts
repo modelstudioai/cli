@@ -8,7 +8,7 @@ import {
   type ChatResponse,
   type StreamChunk,
   type FlagsDef,
-  type Flags,
+  type ParsedFlags,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { readFileSync } from "fs";
@@ -53,7 +53,7 @@ const CHAT_FLAGS = {
     description: "Max tokens for thinking (default: 4096)",
   },
 } satisfies FlagsDef;
-type ChatFlags = Flags<typeof CHAT_FLAGS>;
+type ChatFlags = ParsedFlags<typeof CHAT_FLAGS>;
 
 interface ParsedMessages {
   system?: string;
@@ -121,12 +121,12 @@ export default defineCommand({
   validate: (f) =>
     !f.message && !f.messagesFile ? "Provide --message or --messages-file." : undefined,
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const { system, messages } = parseMessages(flags);
 
-    const model = flags.model || config.defaultTextModel || "qwen3.7-max";
+    const model = flags.model || settings.defaultTextModel || "qwen3.7-max";
     const shouldStream = flags.stream || process.stdout.isTTY;
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
     // Build messages array with system prompt
     const allMessages: ChatMessage[] = [];
@@ -164,7 +164,7 @@ export default defineCommand({
       body.tools = tools;
     }
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ request: body }, format);
       return;
     }
@@ -180,8 +180,8 @@ export default defineCommand({
       let textContent = "";
       let inThinking = false;
       const writesStreamingStdout = format === "text";
-      const dim = config.noColor ? "" : "\x1b[2m";
-      const reset = config.noColor ? "" : "\x1b[0m";
+      const dim = settings.noColor ? "" : "\x1b[2m";
+      const reset = settings.noColor ? "" : "\x1b[0m";
       const isTTY = process.stdout.isTTY;
       const statusOut =
         format === "json" ? process.stderr : isTTY ? process.stdout : process.stderr;
@@ -234,7 +234,7 @@ export default defineCommand({
 
       const text = response.choices?.[0]?.message?.content ?? "";
 
-      if (config.quiet || format === "text") {
+      if (settings.quiet || format === "text") {
         emitBare(text);
       } else {
         emitResult(response, format);

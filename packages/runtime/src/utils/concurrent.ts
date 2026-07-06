@@ -8,12 +8,11 @@
  *   const results = await runConcurrent(3, config, () => callApi());
  */
 
-import type { Config, GlobalFlags } from "bailian-cli-core";
+import type { Settings } from "bailian-cli-core";
 
-/** Resolve concurrency from flags (defaults to 1). */
-export function getConcurrency(flags: GlobalFlags): number {
-  const n = flags.concurrent as number | undefined;
-  return Math.max(1, n ?? 1);
+/** Resolve concurrency from settings(`--concurrent`,defaults to 1). */
+export function getConcurrency(settings: Settings): number {
+  return Math.max(1, settings.concurrent ?? 1);
 }
 
 /**
@@ -21,14 +20,14 @@ export function getConcurrency(flags: GlobalFlags): number {
  * Returns all resolved results in order.
  * If any single task fails, the error propagates (Promise.all semantics).
  *
- * @param n       Number of concurrent executions
- * @param config  CLI config (for logging)
- * @param task    Async factory to execute
- * @param label   Optional label for status output (e.g. "requests", "tasks")
+ * @param n        Number of concurrent executions
+ * @param settings  Resolved settings (for logging)
+ * @param task     Async factory to execute
+ * @param label    Optional label for status output (e.g. "requests", "tasks")
  */
 export async function runConcurrent<T>(
   n: number,
-  config: Config,
+  settings: Settings,
   task: (index: number) => Promise<T>,
   label = "requests",
 ): Promise<T[]> {
@@ -37,7 +36,7 @@ export async function runConcurrent<T>(
     return [result];
   }
 
-  if (!config.quiet) {
+  if (!settings.quiet) {
     process.stderr.write(`[Concurrent: ${n} ${label}]\n`);
   }
 

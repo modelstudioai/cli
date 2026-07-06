@@ -4,7 +4,7 @@ import {
   memoryAddPath,
   detectOutputFormat,
   type FlagsDef,
-  type Flags,
+  type ParsedFlags,
   type MemoryAddRequest,
   type MemoryAddResponse,
 } from "bailian-cli-core";
@@ -29,7 +29,7 @@ const ADD_FLAGS = {
     description: "Memory library ID (isolate memory space)",
   },
 } satisfies FlagsDef;
-type AddFlags = Flags<typeof ADD_FLAGS>;
+type AddFlags = ParsedFlags<typeof ADD_FLAGS>;
 
 export default defineCommand({
   description: "Add memory from messages or custom content",
@@ -44,7 +44,7 @@ export default defineCommand({
   validate: (f: AddFlags) =>
     !f.messages && !f.content ? "Provide --messages or --content." : undefined,
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const userId = flags.userId;
 
     const body: MemoryAddRequest = { user_id: userId };
@@ -64,9 +64,9 @@ export default defineCommand({
     if (flags.profileSchema) body.profile_schema = flags.profileSchema;
     if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId;
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ endpoint: ctx.client.url(memoryAddPath()), request: body }, format);
       return;
     }
@@ -77,7 +77,7 @@ export default defineCommand({
       body,
     });
 
-    if (config.quiet || format === "text") {
+    if (settings.quiet || format === "text") {
       const ids = response.memory_ids?.join(", ") || "none";
       emitBare(`Memory added. IDs: ${ids}`);
     } else {

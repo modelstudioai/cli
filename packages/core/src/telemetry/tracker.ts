@@ -1,5 +1,4 @@
-import type { Config } from "../config/schema.ts";
-import type { GlobalFlags } from "../types/command.ts";
+import type { Identity, Settings } from "../config/schema.ts";
 import { BailianError } from "../errors/base.ts";
 import { createTrackingEvent } from "./event.ts";
 import { localSink, remoteSink } from "./sink.ts";
@@ -75,7 +74,7 @@ const PARAM_ALLOWLIST = new Set([
   "diarization",
 ]);
 
-function extractParams(flags: GlobalFlags): Record<string, unknown> {
+function extractParams(flags: Record<string, unknown>): Record<string, unknown> {
   const params: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(flags)) {
     if (key.startsWith("_")) continue;
@@ -87,13 +86,20 @@ function extractParams(flags: GlobalFlags): Record<string, unknown> {
   return params;
 }
 
+/** 遥测依赖:authMethod 由调用方(telemetryStage)从解析结果算好后传值——遥测不该拿到凭证能力。 */
+export interface TrackingDeps {
+  identity: Identity;
+  settings: Settings;
+  authMethod?: "api-key" | "access-token";
+}
+
 export async function trackCommandExecution(
-  config: Config,
+  deps: TrackingDeps,
   commandPath: string[],
-  flags: GlobalFlags,
+  flags: Record<string, unknown>,
   fn: () => Promise<void>,
 ): Promise<void> {
-  if (!config.telemetry) {
+  if (!deps.settings.telemetry) {
     await fn();
     return;
   }
@@ -119,19 +125,13 @@ export async function trackCommandExecution(
   } finally {
     const durationMs = Math.round(performance.now() - start);
 
-    let authMethod: string | undefined;
-    if (config.apiKey) authMethod = "api-key";
-    else if (config.apiKeyEnv) authMethod = "api-key";
-    else if (config.fileApiKey) authMethod = "api-key";
-    else if (config.fileAccessToken) authMethod = "access-token";
-
     const event = createTrackingEvent({
       command: commandPath.join(" "),
       durationMs,
       success,
       error: success ? undefined : { message: errorMessage, httpStatus, requestId },
-      cliVersion: config.clientVersion ?? "unknown",
-      authMethod,
+      cliVersion: deps.identity.version,
+      authMethod: deps.authMethod,
       params: extractParams(flags),
     });
 

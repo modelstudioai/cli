@@ -44,6 +44,15 @@ export class CommandRegistry {
   }
 
   private register(path: string, command: AnyCommand): void {
+    // 同名守卫:dispatch 的分流规则依赖"命令对全局 flag 的遮蔽都是同型重声明"。
+    for (const [key, def] of Object.entries(command.flags ?? {})) {
+      const global = (GLOBAL_FLAGS as Record<string, { type: string }>)[key];
+      if (global && global.type !== (def as { type: string }).type) {
+        throw new Error(
+          `Command "${path}" redeclares global flag "${key}" with type "${(def as { type: string }).type}" (global is "${global.type}").`,
+        );
+      }
+    }
     const parts = path.split(" ");
     let node = this.root;
     for (const part of parts) {

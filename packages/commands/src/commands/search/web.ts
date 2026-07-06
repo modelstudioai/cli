@@ -31,12 +31,12 @@ export default defineCommand({
   ],
   validate: (f) => (!f.listTools && !f.query ? "Missing required flag: --query" : undefined),
   async run(ctx) {
-    const { config, flags } = ctx;
-    const format = detectOutputFormat(config.output);
+    const { settings, flags } = ctx;
+    const format = detectOutputFormat(settings.output);
 
     // --- List tools mode ---
     if (flags.listTools) {
-      if (config.dryRun) {
+      if (settings.dryRun) {
         emitResult({ endpoint: ctx.client.url(mcpWebSearchPath()), action: "tools/list" }, format);
         return;
       }
@@ -52,7 +52,7 @@ export default defineCommand({
     // --- Search mode ---
     const query = flags.query;
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         {
           endpoint: ctx.client.url(mcpWebSearchPath()),
@@ -72,12 +72,12 @@ export default defineCommand({
     const client = ctx.client.mcp(mcpWebSearchPath());
     const spinner = createSpinner("Initializing search...");
 
-    if (!config.quiet) spinner.start();
+    if (!settings.quiet) spinner.start();
 
     try {
       await client.initialize();
 
-      if (!config.quiet) spinner.update("Searching...");
+      if (!settings.quiet) spinner.update("Searching...");
 
       // Build tool arguments
       const toolArgs: Record<string, unknown> = { query: query! };
@@ -92,7 +92,7 @@ export default defineCommand({
         throw new BailianError(`Search error: ${errText}`);
       }
 
-      if (!config.quiet) spinner.stop("Done.");
+      if (!settings.quiet) spinner.stop("Done.");
 
       // Output results — always structured to stdout
       if (format === "json") {

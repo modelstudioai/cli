@@ -5,7 +5,7 @@ import {
   ExitCode,
   detectOutputFormat,
   type Client,
-  type Config,
+  type Settings,
   type DashScopeASRRequest,
   type DashScopeASRTaskResult,
   type DashScopeAsyncResponse,
@@ -15,7 +15,7 @@ import {
   speechRecognizePath,
   type OutputFormat,
   type FlagsDef,
-  type Flags,
+  type ParsedFlags,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
@@ -53,7 +53,7 @@ const RECOGNIZE_FLAGS = {
     description: "Polling interval in seconds (default: 2)",
   },
 } satisfies FlagsDef;
-type RecognizeFlags = Flags<typeof RECOGNIZE_FLAGS>;
+type RecognizeFlags = ParsedFlags<typeof RECOGNIZE_FLAGS>;
 
 export default defineCommand({
   description: "Recognize speech from audio files (FunAudio-ASR)",
@@ -70,7 +70,7 @@ export default defineCommand({
     "--url https://example.com/audio.mp3 --no-wait --quiet",
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     // Normalize --url to string[] (supports both single and repeated flags)
     let rawUrls: string[] = [];
     if (Array.isArray(flags.url)) {
@@ -90,7 +90,7 @@ export default defineCommand({
     }
 
     const model = flags.model || "fun-asr";
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
     // Auto-upload local files in parallel
     const resolvedUrls = await Promise.all(rawUrls.map((u) => ctx.client.uploadFile(u, model)));
@@ -115,22 +115,22 @@ export default defineCommand({
     // Remove undefined parameter fields
     stripUndefined(body.parameters as Record<string, unknown>);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ request: body, mode: "async" }, format);
       return;
     }
 
-    if (!config.quiet) {
+    if (!settings.quiet) {
       process.stderr.write(`[Model: ${model}] [Mode: async] [Files: ${resolvedUrls.length}]\n`);
     }
 
-    await handleAsyncMode(ctx.client, config, body, flags, format, resolvedUrls.length);
+    await handleAsyncMode(ctx.client, settings, body, flags, format, resolvedUrls.length);
   },
 });
 
 async function handleAsyncMode(
   client: Client,
-  config: Config,
+  settings: Settings,
   body: DashScopeASRRequest,
   flags: RecognizeFlags,
   format: OutputFormat,
@@ -147,7 +147,7 @@ async function handleAsyncMode(
   const taskId = response.output.task_id;
 
   // --no-wait: return task ID immediately
-  if (flags.noWait || config.async) {
+  if (flags.noWait || settings.async) {
     emitResult({ task_id: taskId }, format);
     return;
   }
@@ -156,10 +156,10 @@ async function handleAsyncMode(
   const pollInterval = flags.pollInterval ?? 2;
   const pollUrl = client.url(taskPath(taskId));
 
-  const result = await poll<DashScopeASRTaskResult>(config, {
+  const result = await poll<DashScopeASRTaskResult>(client, settings, {
     url: pollUrl,
     intervalSec: pollInterval,
-    timeoutSec: config.timeout,
+    timeoutSec: settings.timeout,
     isComplete: (d) => (d as DashScopeASRTaskResult).output.task_status === "SUCCEEDED",
     isFailed: (d) => (d as DashScopeASRTaskResult).output.task_status === "FAILED",
     getStatus: (d) => (d as DashScopeASRTaskResult).output.task_status,
@@ -244,7 +244,7 @@ async function handleAsyncMode(
     const outPath = flags.out;
     const outData = allTransData.length === 1 ? allTransData[0] : allTransData;
     writeFileSync(outPath, JSON.stringify(outData, null, 2) + "\n");
-    if (!config.quiet) {
+    if (!settings.quiet) {
       process.stderr.write(`Full result saved to: ${outPath}\n`);
     }
   }

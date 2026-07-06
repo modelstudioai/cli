@@ -24,13 +24,13 @@ export default defineCommand({
     "--server my-server --url https://example.com/mcp",
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const code = flags.server;
 
     const url = flags.url || ctx.client.url(bailianMcpPath(code));
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ server: code, url, action: "tools/list" }, format);
       return;
     }

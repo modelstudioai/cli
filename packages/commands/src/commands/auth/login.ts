@@ -1,4 +1,4 @@
-import { defineCommand, readConfigFile, writeConfigFile } from "bailian-cli-core";
+import { defineCommand } from "bailian-cli-core";
 import { printQuickStart } from "bailian-cli-runtime";
 import { emitBare } from "bailian-cli-runtime";
 import {
@@ -27,16 +27,18 @@ export default defineCommand({
   exampleArgs: ["--api-key sk-xxxxx", "--console"],
   validate: (f) => (!f.console && !f.apiKey ? "Provide --api-key or --console" : undefined),
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { identity, settings, flags } = ctx;
+    const store = ctx.authStore();
+    const deps = { identity, settings, authStore: store };
     if (flags.console) {
-      if (config.dryRun) {
+      if (settings.dryRun) {
         emitBare(
           "Would bind a free port on 127.0.0.1 and open the console login URL in your browser.",
         );
         return;
       }
-      const hasApiKey = !!(config.apiKey || config.fileApiKey);
-      await runConsoleLogin(resolveConsoleOrigin(config.consoleSite || "domestic"), config, {
+      const hasApiKey = !!(flags.apiKey || store.stored().apiKey);
+      await runConsoleLogin(resolveConsoleOrigin(settings.consoleSite || "domestic"), deps, {
         needApiKey: !hasApiKey,
       });
       return;
@@ -46,18 +48,15 @@ export default defineCommand({
     if (flags.apiKey) {
       const key = flags.apiKey;
       const baseUrl = flags.baseUrl || undefined;
-      const effectiveConfig = baseUrl ? { ...config, baseUrl } : config;
 
-      if (config.dryRun) {
+      if (settings.dryRun) {
         emitBare("Would validate and save API key.");
         return;
       }
       if (baseUrl) {
-        const existing = readConfigFile() as Record<string, unknown>;
-        existing.base_url = baseUrl;
-        await writeConfigFile(existing);
+        await store.login({ base_url: baseUrl });
       }
-      await validateAndPersistApiKey(effectiveConfig, key, effectiveConfig.baseUrl);
+      await validateAndPersistApiKey(deps, key, baseUrl || store.resolveBaseUrl());
       printQuickStart();
     }
   },

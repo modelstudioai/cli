@@ -26,15 +26,15 @@ export default defineCommand({
   },
   exampleArgs: ["--schema-id schema_xxx --user-id user1"],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const schemaId = flags.schemaId;
     const userId = flags.userId;
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
     const params = new URLSearchParams({ user_id: userId });
     const path = `${userProfilePath(schemaId)}?${params.toString()}`;
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ endpoint: ctx.client.url(path), method: "GET" }, format);
       return;
     }
@@ -44,7 +44,7 @@ export default defineCommand({
       method: "GET",
     });
 
-    if (config.quiet || format === "text") {
+    if (settings.quiet || format === "text") {
       if (response.profile?.attributes) {
         for (const attr of response.profile.attributes) {
           emitBare(`${attr.name}: ${attr.value ?? "(empty)"}`);

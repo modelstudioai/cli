@@ -1,4 +1,4 @@
-import type { Config } from "../config/schema.ts";
+import type { Client } from "../client/client.ts";
 import type { IntentProfile, IntentSegment, ModelPreference, ModelProfile } from "./types.ts";
 import { Complexities } from "./types.ts";
 import {
@@ -175,7 +175,7 @@ function recallAlternative(
 }
 
 export async function recallSemantic(
-  config: Config,
+  client: Client,
   models: ModelProfile[],
   query: string,
   topK: number,
@@ -184,11 +184,11 @@ export async function recallSemantic(
   let embeddings = getEmbeddings();
 
   if (!embeddings) {
-    embeddings = await buildAndCacheEmbeddings(config, models);
+    embeddings = await buildAndCacheEmbeddings(client, models);
     cachedEmbeddings = embeddings;
   }
 
-  const queryVector = await embedQuery(config, query);
+  const queryVector = await embedQuery(client, query);
   const modelMap = new Map(models.map((profile) => [profile.model, profile]));
   const preference = intent?.modelPreference;
   const excludes = preference?.excludes ?? [];

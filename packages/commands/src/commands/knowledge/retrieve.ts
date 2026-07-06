@@ -65,8 +65,8 @@ export default defineCommand({
     '--index-id idx_xxx --query "RAG retrieval" --rerank --rerank-model qwen3-rerank-hybrid',
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
-    const format = detectOutputFormat(config.output);
+    const { settings, flags } = ctx;
+    const format = detectOutputFormat(settings.output);
 
     if (flags.topK !== undefined && flags.rerankTopN === undefined) {
       process.stderr.write("Warning: --top-k is deprecated. Use --rerank-top-n instead.\n");
@@ -95,7 +95,7 @@ export default defineCommand({
       body.rerank = [rerankEntry];
     }
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ endpoint: ctx.client.url(knowledgeRetrievePath()), request: body }, format);
       return;
     }
@@ -107,7 +107,7 @@ export default defineCommand({
     });
 
     const nodes = response.data?.nodes || [];
-    if (config.quiet || format === "text") {
+    if (settings.quiet || format === "text") {
       emitTextNodes(nodes.map((n) => ({ text: n.text, score: n.score })));
     } else {
       emitResult(response, format);

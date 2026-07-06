@@ -26,16 +26,16 @@ export default defineCommand({
   },
   exampleArgs: ["--node-id node_xxx --user-id user1"],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const nodeId = flags.nodeId;
     const userId = flags.userId;
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
     const params = new URLSearchParams({ user_id: userId });
     if (flags.memoryLibraryId) params.set("memory_library_id", flags.memoryLibraryId);
     const path = `${memoryNodePath(nodeId)}?${params.toString()}`;
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ endpoint: ctx.client.url(path), method: "DELETE" }, format);
       return;
     }
@@ -45,7 +45,7 @@ export default defineCommand({
       method: "DELETE",
     });
 
-    if (config.quiet || format === "text") {
+    if (settings.quiet || format === "text") {
       emitBare(`Memory node ${nodeId} deleted.`);
     } else {
       emitResult(response, format);

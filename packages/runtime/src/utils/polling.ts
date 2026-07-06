@@ -1,7 +1,8 @@
-import { BailianError, ExitCode, requestJson, type Config } from "bailian-cli-core";
+import { BailianError, ExitCode, type Client, type Settings } from "bailian-cli-core";
 import { createSpinner } from "../output/progress.ts";
 
 export interface PollOptions {
+  /** Absolute task URL (Client passes absolute URLs through as-is). */
   url: string;
   intervalSec: number;
   timeoutSec: number;
@@ -11,17 +12,17 @@ export interface PollOptions {
   getErrorMessage?: (data: unknown) => string | undefined;
 }
 
-export async function poll<T>(config: Config, opts: PollOptions): Promise<T> {
+export async function poll<T>(client: Client, settings: Settings, opts: PollOptions): Promise<T> {
   const deadline = Date.now() + opts.timeoutSec * 1000;
   const spinner = createSpinner("Polling...");
 
-  if (!config.quiet) spinner.start();
+  if (!settings.quiet) spinner.start();
 
   try {
     while (Date.now() < deadline) {
-      const data = await requestJson<T>(config, { url: opts.url });
+      const data = await client.requestJson<T>({ path: opts.url });
 
-      if (opts.getStatus && !config.quiet) {
+      if (opts.getStatus && !settings.quiet) {
         spinner.update(`Status: ${opts.getStatus(data)}`);
       }
 
@@ -32,7 +33,7 @@ export async function poll<T>(config: Config, opts: PollOptions): Promise<T> {
 
       if (opts.isFailed(data)) {
         spinner.stop("Failed.");
-        if (config.verbose) {
+        if (settings.verbose) {
           process.stderr.write(`[verbose] Task response: ${JSON.stringify(data, null, 2)}\n`);
         }
         const errMsg = opts.getErrorMessage?.(data);

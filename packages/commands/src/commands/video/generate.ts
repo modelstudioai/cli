@@ -99,14 +99,14 @@ export default defineCommand({
     '--prompt "A cat playing with a ball" --watermark false',
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const prompt = flags.prompt;
 
     const model =
       flags.model ||
-      config.defaultVideoModel ||
+      settings.defaultVideoModel ||
       (flags.image ? "happyhorse-1.0-i2v" : "happyhorse-1.0-t2v");
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
     const imageUrl = flags.image;
 
@@ -139,17 +139,17 @@ export default defineCommand({
       },
     };
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ request: body }, format);
       return;
     }
 
     // Submit async task(s) — supports --concurrent for parallel generation
-    const concurrent = getConcurrency(flags);
+    const concurrent = getConcurrency(settings);
 
     const responses = await runConcurrent(
       concurrent,
-      config,
+      settings,
       () =>
         ctx.client.requestJson<DashScopeAsyncResponse>({
           path: videoGeneratePath(),
@@ -162,12 +162,12 @@ export default defineCommand({
 
     const taskIds = responses.map((r) => r.output.task_id);
 
-    if (!config.quiet) {
+    if (!settings.quiet) {
       process.stderr.write(`[Model: ${model}]\n`);
     }
 
     // --no-wait or --async: return task ID(s) immediately
-    if (flags.noWait || config.async) {
+    if (flags.noWait || settings.async) {
       emitResult(taskIds.length === 1 ? { task_id: taskIds[0] } : { task_ids: taskIds }, format);
       return;
     }
@@ -177,10 +177,10 @@ export default defineCommand({
 
     const pollPromises = taskIds.map((taskId) => {
       const pollUrl = ctx.client.url(taskPath(taskId));
-      return poll<DashScopeTaskResponse>(config, {
+      return poll<DashScopeTaskResponse>(ctx.client, settings, {
         url: pollUrl,
         intervalSec: pollInterval,
-        timeoutSec: config.timeout,
+        timeoutSec: settings.timeout,
         isComplete: (d) => (d as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
         isFailed: (d) => (d as DashScopeTaskResponse).output.task_status === "FAILED",
         getStatus: (d) => (d as DashScopeTaskResponse).output.task_status,
@@ -211,9 +211,11 @@ export default defineCommand({
     // --download: save to file (first video only for explicit path)
     if (flags.download) {
       const destPath = flags.download;
-      const { size } = await downloadFile(videos[0]!.videoUrl, destPath, { quiet: config.quiet });
+      const { size } = await downloadFile(videos[0]!.videoUrl, destPath, {
+        quiet: settings.quiet,
+      });
 
-      if (config.quiet) {
+      if (settings.quiet) {
         emitBare(destPath);
       } else {
         emitResult(
@@ -231,7 +233,7 @@ export default defineCommand({
     }
 
     // Default: auto-download all to output directory
-    const destDir = resolveOutputDir(config, { subDir: "videos" });
+    const destDir = resolveOutputDir(settings, { subDir: "videos" });
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const { join } = await import("path");
 
@@ -239,7 +241,7 @@ export default defineCommand({
     await Promise.all(
       videos.map(async ({ taskId, videoUrl }) => {
         const destPath = join(destDir, `${taskId}.mp4`);
-        await downloadFile(videoUrl, destPath, { quiet: config.quiet });
+        await downloadFile(videoUrl, destPath, { quiet: settings.quiet });
         saved.push({ task_id: taskId, video_url: videoUrl, saved: destPath });
       }),
     );

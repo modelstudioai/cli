@@ -1,5 +1,5 @@
 import { expect, test } from "vite-plus/test";
-import type { Config } from "../src/index.ts";
+import type { Identity, Settings } from "../src/index.ts";
 import { BailianError, ExitCode, McpClient, mapApiError, request } from "../src/index.ts";
 import { parseConfigFile } from "../src/config/schema.ts";
 import {
@@ -8,20 +8,27 @@ import {
   resolveWatermark,
 } from "../src/utils/boolean-flag.ts";
 
-function testConfig(overrides: Partial<Config> = {}): Config {
+function testDeps(identity: Partial<Identity> = {}): { identity: Identity; settings: Settings } {
   return {
-    baseUrl: "https://dashscope.aliyuncs.com",
-    output: "json",
-    timeout: 30,
-    verbose: false,
-    quiet: true,
-    noColor: true,
-    yes: true,
-    dryRun: false,
-    nonInteractive: true,
-    async: false,
-    telemetry: true,
-    ...overrides,
+    identity: {
+      binName: "bl",
+      version: "0.0.0-test",
+      npmPackage: "bailian-cli",
+      clientName: "bailian-cli",
+      ...identity,
+    },
+    settings: {
+      output: "json",
+      timeout: 30,
+      verbose: false,
+      quiet: true,
+      noColor: true,
+      yes: true,
+      dryRun: false,
+      nonInteractive: true,
+      async: false,
+      telemetry: true,
+    },
   };
 }
 
@@ -104,9 +111,8 @@ test("request uses injected client identity for User-Agent", async () => {
   };
 
   try {
-    await request(testConfig({ clientName: "test-client", clientVersion: "9.8.7" }), {
+    await request(testDeps({ clientName: "test-client", version: "9.8.7" }), {
       url: "https://example.test",
-      noAuth: true,
     });
   } finally {
     globalThis.fetch = originalFetch;
@@ -130,9 +136,8 @@ test("request propagates caller AbortSignal to fetch", async () => {
     };
   });
 
-  const requestPromise = request(testConfig(), {
+  const requestPromise = request(testDeps(), {
     url: "https://example.test",
-    noAuth: true,
     signal: controller.signal,
   });
   try {
@@ -163,8 +168,9 @@ test("McpClient uses injected client identity for initialize and User-Agent", as
 
   try {
     const client = new McpClient(
-      testConfig({ apiKey: "sk-test", clientName: "test-client", clientVersion: "9.8.7" }),
+      testDeps({ clientName: "test-client", version: "9.8.7" }),
       "https://mcp.example.test",
+      "sk-test",
     );
     await client.initialize();
   } finally {

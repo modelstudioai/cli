@@ -1,4 +1,4 @@
-import { defineCommand, describeAuth, detectOutputFormat, maskToken } from "bailian-cli-core";
+import { defineCommand, detectOutputFormat, maskToken } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { API_KEY_PAGE } from "bailian-cli-runtime";
 
@@ -16,9 +16,9 @@ export default defineCommand({
     consoleSwitchAgent: { type: "number", valueHint: "<uid>", description: "Switch agent UID" },
   },
   async run(ctx) {
-    const { config } = ctx;
-    const format = detectOutputFormat(config.output);
-    const auth = await describeAuth(config);
+    const { identity, settings } = ctx;
+    const format = detectOutputFormat(settings.output);
+    const auth = ctx.authStore().describe();
 
     const apiKey = auth.apiKey
       ? {
@@ -44,8 +44,8 @@ export default defineCommand({
           authenticated: false,
           message: "Not authenticated.",
           hint: [
-            `API key (model):   ${config.binName} auth login --api-key <key> or DASHSCOPE_API_KEY`,
-            `Console gateway:   ${config.binName} auth login --console`,
+            `API key (model):   ${identity.binName} auth login --api-key <key> or DASHSCOPE_API_KEY`,
+            `Console gateway:   ${identity.binName} auth login --console`,
             `Get API Key: ${API_KEY_PAGE}`,
           ].join("\n"),
         },
@@ -70,7 +70,7 @@ export default defineCommand({
         `  Console gateway:  ${consoleCred.source}  ${consoleCred.masked}  (${consoleCred.region}, ${consoleCred.site})`,
       );
     } else {
-      emitBare(`  Console gateway:  not configured (run ${config.binName} auth login --console)`);
+      emitBare(`  Console gateway:  not configured (run ${identity.binName} auth login --console)`);
     }
   },
 });

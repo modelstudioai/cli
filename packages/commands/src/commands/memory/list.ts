@@ -27,10 +27,10 @@ export default defineCommand({
   },
   exampleArgs: ["--user-id user1", "--user-id user1 --page-size 20 --page 2"],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const userId = flags.userId;
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
     const params = new URLSearchParams();
     params.set("user_id", userId);
     if (flags.pageSize !== undefined) params.set("page_size", String(flags.pageSize));
@@ -39,7 +39,7 @@ export default defineCommand({
 
     const path = `${memoryListPath()}?${params.toString()}`;
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ endpoint: ctx.client.url(path), method: "GET" }, format);
       return;
     }
@@ -49,7 +49,7 @@ export default defineCommand({
       method: "GET",
     });
 
-    if (config.quiet || format === "text") {
+    if (settings.quiet || format === "text") {
       if (!response.memory_nodes || response.memory_nodes.length === 0) {
         emitBare("No memory nodes found.");
       } else {

@@ -105,13 +105,13 @@ export default defineCommand({
   ],
   validate: (f) => (Number(f.tpm) > 0 ? undefined : "--tpm must be a positive number."),
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { identity, settings, flags } = ctx;
     const modelName = flags.model;
     const tpmValue = Number(flags.tpm);
-    const autoConfirm = Boolean(flags.yes) || config.yes;
-    const format = detectOutputFormat(config.output);
+    const autoConfirm = Boolean(flags.yes) || settings.yes;
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       const requestData = {
         input: {
           model: modelName,
@@ -127,7 +127,7 @@ export default defineCommand({
       throw new BailianError(
         `model "${modelName}" not found or does not support self-service quota increase.`,
         ExitCode.GENERAL,
-        `Run \`${config.binName} quota list\` to view available models.`,
+        `Run \`${identity.binName} quota list\` to view available models.`,
       );
     }
 
@@ -163,7 +163,7 @@ export default defineCommand({
           throw new BailianError(
             "session expired.",
             ExitCode.AUTH,
-            `Run \`${config.binName} auth login --console\` to re-authenticate.`,
+            `Run \`${identity.binName} auth login --console\` to re-authenticate.`,
           );
         }
         throw err;

@@ -64,7 +64,7 @@ export default defineCommand({
     "--target market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 --arg minScale=10",
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const target = flags.target;
 
     const dot = target.indexOf(".");
@@ -91,9 +91,9 @@ export default defineCommand({
     if (flags.query !== undefined) toolArgs.query = flags.query;
 
     const url = flags.url || ctx.client.url(bailianMcpPath(serverCode));
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         {
           server: serverCode,

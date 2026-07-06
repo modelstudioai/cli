@@ -1,4 +1,6 @@
-import type { Config } from "../config/schema.ts";
+import type { Identity, Settings } from "../config/schema.ts";
+import type { ConfigStore } from "../config/store.ts";
+import type { AuthStore } from "../auth/store.ts";
 import type { Client } from "../client/client.ts";
 
 // ── Flag definitions ─────────────────────────────────────────────────────────
@@ -99,25 +101,32 @@ export const GLOBAL_FLAGS = {
 } satisfies FlagsDef;
 
 export type GlobalFlags = ParsedFlags<typeof GLOBAL_FLAGS>;
-/** A command's full flags: global + its own flags, inferred in one pass. */
-export type Flags<F extends FlagsDef> = ParsedFlags<typeof GLOBAL_FLAGS & F>;
 
 /**
- * What a command's `run` receives: use `client` for all network calls (its
- * credential is already injected per the command's `auth`), `config` for
- * settings, and `flags` for parsed arguments. Never handle tokens or baseUrl.
+ * What a command's `run` receives: `client` for all network calls (its
+ * credential is already injected per the command's `auth`), `settings` for the
+ * resolved configuration surface, `identity` for product identity, and `flags`
+ * for parsed arguments. Never handle tokens or baseUrl.
  */
 export interface CommandContext<F extends FlagsDef = FlagsDef> {
+  /** 静态产品身份(binName/version/npmPackage/clientName)。 */
+  identity: Identity;
+  /** flag/env/file 解析后的有效配置面。 */
+  settings: Settings;
+  /** 只含本命令声明的 flag;全局 flag 经 settings 读。 */
+  flags: ParsedFlags<F>;
   /** Network surface; the credential for the command's `auth` is pre-injected. */
   client: Client;
-  config: Config;
-  flags: Flags<F>;
+  /** 惰性访问器,lint 限定 commands/config/** 使用。 */
+  configStore(): ConfigStore;
+  /** 惰性访问器,lint 限定 commands/auth/** 使用。 */
+  authStore(): AuthStore;
 }
 
 // ── Command ──────────────────────────────────────────────────────────────────
 /**
  * A command. Generic over its flags `F` so `run`/`validate` receive precisely
- * typed flags (`Flags<F>` = global + own flags). Stored heterogeneously as
+ * typed flags (`ParsedFlags<F>` = 命令自有 flag). Stored heterogeneously as
  * {@link AnyCommand}; the precise typing lives at the `defineCommand` call site.
  */
 export interface Command<F extends FlagsDef = FlagsDef> {
@@ -135,7 +144,7 @@ export interface Command<F extends FlagsDef = FlagsDef> {
    * → UsageError; undefined to pass. Single-flag `required` is enforced by the
    * parser — use this for rules spanning flags or depending on a flag's *value*.
    */
-  validate?: (flags: Flags<F>) => string | undefined;
+  validate?: (flags: ParsedFlags<F>) => string | undefined;
   run: (ctx: CommandContext<F>) => Promise<void>;
 }
 

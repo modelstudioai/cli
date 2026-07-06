@@ -168,12 +168,12 @@ export default defineCommand({
     "--output json",
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const modelFlag = flags.model || undefined;
     const showAll = Boolean(flags.all);
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       const input: Record<string, unknown> = {
         pageNo: 1,
         pageSize: 50,
@@ -224,6 +224,6 @@ export default defineCommand({
       return;
     }
 
-    printTable(models, config.noColor);
+    printTable(models, settings.noColor);
   },
 });

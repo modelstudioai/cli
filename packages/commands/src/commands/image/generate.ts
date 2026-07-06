@@ -5,9 +5,9 @@ import {
   taskPath,
   detectOutputFormat,
   type Client,
-  type Config,
+  type Settings,
   type FlagsDef,
-  type Flags,
+  type ParsedFlags,
   resolveOutputDir,
   type DashScopeImageRequest,
   type DashScopeImageSyncResponse,
@@ -89,7 +89,7 @@ const GENERATE_FLAGS = {
     description: "Polling interval when waiting (default: 3)",
   },
 } satisfies FlagsDef;
-type GenerateFlags = Flags<typeof GENERATE_FLAGS>;
+type GenerateFlags = ParsedFlags<typeof GENERATE_FLAGS>;
 
 export default defineCommand({
   description: "Generate images (Qwen-Image / wan2.x)",
@@ -108,16 +108,16 @@ export default defineCommand({
     '--prompt "Product shots" --n 2 --concurrent 3  # 6 images in parallel',
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const prompt = flags.prompt;
 
-    const model = flags.model || config.defaultImageModel || "qwen-image-2.0";
+    const model = flags.model || settings.defaultImageModel || "qwen-image-2.0";
     const useSync = isSyncModel(model);
     const defaultSize = useSync ? "1:1" : "1:1";
     const sizeInput = flags.size || defaultSize;
     const size = resolveImageSize(sizeInput, useSync);
     const n = flags.n ?? 1;
-    const concurrent = getConcurrency(flags);
+    const concurrent = getConcurrency(settings);
 
     const promptExtend = resolveBooleanFlag(
       flags.promptExtend,
@@ -142,21 +142,21 @@ export default defineCommand({
       },
     };
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ request: body, mode: useSync ? "sync" : "async" }, format);
       return;
     }
 
-    if (!config.quiet) {
+    if (!settings.quiet) {
       process.stderr.write(`[Model: ${model}] [Mode: ${useSync ? "sync" : "async"}]\n`);
     }
 
     if (useSync) {
-      await handleSyncMode(ctx.client, config, model, body, flags, format, concurrent);
+      await handleSyncMode(ctx.client, settings, model, body, flags, format, concurrent);
     } else {
-      await handleAsyncMode(ctx.client, config, model, body, flags, format, concurrent);
+      await handleAsyncMode(ctx.client, settings, model, body, flags, format, concurrent);
     }
   },
 });
@@ -165,14 +165,14 @@ export default defineCommand({
 
 async function handleSyncMode(
   client: Client,
-  config: Config,
+  settings: Settings,
   _model: string,
   body: DashScopeImageRequest,
   flags: GenerateFlags,
   format: string,
   concurrent: number,
 ): Promise<void> {
-  const results = await runConcurrent(concurrent, config, () =>
+  const results = await runConcurrent(concurrent, settings, () =>
     client.requestJson<DashScopeImageSyncResponse>({ path: imageSyncPath(), method: "POST", body }),
   );
 
@@ -186,14 +186,14 @@ async function handleSyncMode(
     throw new BailianError("Generation completed but no images returned.", ExitCode.GENERAL);
   }
 
-  await saveImages(imageUrls, flags, config, format);
+  await saveImages(imageUrls, flags, settings, format);
 }
 
 // ---- Async mode: wan2.x / qwen-image-plus ----
 
 async function handleAsyncMode(
   client: Client,
-  config: Config,
+  settings: Settings,
   _model: string,
   body: DashScopeImageRequest,
   flags: GenerateFlags,
@@ -202,7 +202,7 @@ async function handleAsyncMode(
 ): Promise<void> {
   const responses = await runConcurrent(
     concurrent,
-    config,
+    settings,
     () =>
       client.requestJson<DashScopeAsyncResponse>({
         path: imagePath(),
@@ -215,7 +215,7 @@ async function handleAsyncMode(
   const taskIds = responses.map((r) => r.output.task_id);
 
   // --no-wait: return all task IDs immediately
-  if (flags.noWait || config.async) {
+  if (flags.noWait || settings.async) {
     emitResult({ task_ids: taskIds }, format as OutputFormat);
     return;
   }
@@ -225,10 +225,10 @@ async function handleAsyncMode(
 
   const pollPromises = taskIds.map((taskId) => {
     const pollUrl = client.url(taskPath(taskId));
-    return poll<DashScopeTaskResponse>(config, {
+    return poll<DashScopeTaskResponse>(client, settings, {
       url: pollUrl,
       intervalSec: pollInterval,
-      timeoutSec: config.timeout,
+      timeoutSec: settings.timeout,
       isComplete: (d) => (d as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
       isFailed: (d) => (d as DashScopeTaskResponse).output.task_status === "FAILED",
       getStatus: (d) => (d as DashScopeTaskResponse).output.task_status,
@@ -265,7 +265,7 @@ async function handleAsyncMode(
   await saveImages(
     imageUrls,
     flags,
-    config,
+    settings,
     format,
     taskIds.length === 1 ? taskIds[0] : undefined,
     taskIds,
@@ -277,12 +277,12 @@ async function handleAsyncMode(
 async function saveImages(
   imageUrls: string[],
   flags: GenerateFlags,
-  config: Config,
+  settings: Settings,
   format: string,
   taskId?: string,
   taskIds?: string[],
 ): Promise<void> {
-  const outDir = resolveOutputDir(config, {
+  const outDir = resolveOutputDir(settings, {
     flagDir: flags.outDir,
     subDir: flags.outDir ? undefined : "images",
   });
@@ -299,9 +299,9 @@ async function saveImages(
         })
       : [{ url: imageUrls[0], destPath: join(outDir, `${prefix}.png`) }];
 
-  const results = await downloadParallel(items, downloadFile, { quiet: config.quiet });
+  const results = await downloadParallel(items, downloadFile, { quiet: settings.quiet });
 
-  if (config.quiet) {
+  if (settings.quiet) {
     emitBare(results.join("\n"));
   } else {
     const output: Record<string, unknown> = {

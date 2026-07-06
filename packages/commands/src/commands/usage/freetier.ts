@@ -132,10 +132,10 @@ export default defineCommand({
   validate: (f) =>
     !f.model && !f.all ? "Provide --model <model>[,model2,...] or --all." : undefined,
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const modelFlag = flags.model || undefined;
     const off = Boolean(flags.off);
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
     let models: string[];
     if (modelFlag) {
@@ -156,7 +156,7 @@ export default defineCommand({
       ? "BatchDeactivateFreeTierOnlyRequest"
       : "BatchActivateFreeTierOnlyRequest";
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         {
           api,

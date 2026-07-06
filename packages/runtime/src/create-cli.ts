@@ -9,8 +9,19 @@ import {
   runCommandStage,
   type RunContext,
 } from "./middleware.ts";
-import type { AnyCommand, Config, GlobalFlags } from "bailian-cli-core";
-import { GLOBAL_FLAGS, UsageError, loadConfig, flushTelemetry, Client } from "bailian-cli-core";
+import type { AnyCommand, FlagsDef, GlobalFlags, Identity, ParsedFlags } from "bailian-cli-core";
+import {
+  GLOBAL_FLAGS,
+  UsageError,
+  buildSources,
+  buildSettings,
+  describeAuthState,
+  resolveModelBaseUrl,
+  makeConfigStore,
+  makeAuthStore,
+  flushTelemetry,
+  Client,
+} from "bailian-cli-core";
 import { setupProxyFromEnv } from "./proxy.ts";
 import { handleError } from "./error-handler.ts";
 import { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
@@ -21,14 +32,21 @@ export interface CliOptions {
   binName: string;
   /** Product version for `--version` output, telemetry and update checks. */
   version: string;
-  /** Telemetry client name (e.g. "bailian-cli", "rag-cli"). Defaults to `binName`. */
-  clientName?: string;
+  /** User-Agent / telemetry client name (e.g. "bailian-cli", "rag-cli")。必填,无默认。 */
+  clientName: string;
   /** npm package name for self-update (e.g. "bailian-cli", "bailian-cli-rag"). */
   npmPackage: string;
 }
 
 export interface Cli {
   run(argv?: string[]): Promise<void>;
+}
+
+/** 从解析结果里挑出给定 key 的子集(全局/命令 flag 分流用)。 */
+function pick(obj: Record<string, unknown>, keys: string[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of keys) if (key in obj) out[key] = obj[key];
+  return out;
 }
 
 /**
@@ -62,21 +80,12 @@ function installProcessHandlers(binName: string): void {
  */
 export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions): Cli {
   const registry = new CommandRegistry(commands, opts.binName);
-  const clientName = opts.clientName ?? opts.binName;
-  const { binName, version, npmPackage } = opts;
+  const { binName, version, npmPackage, clientName } = opts;
+  const identity: Identity = { binName, version, npmPackage, clientName };
 
   installProcessHandlers(binName);
 
   const runMiddleware = compose([versionCheckStage, telemetryStage, authStage, runCommandStage]);
-
-  function buildConfig(flags: GlobalFlags): Config {
-    const config = loadConfig(flags);
-    config.clientName = clientName;
-    config.clientVersion = version;
-    config.binName = binName;
-    config.npmPackage = npmPackage;
-    return config;
-  }
 
   /** Render help for `path`; root ([]) doubles as the onboarding / login guide. */
   function renderHelp(path: string[], argv: string[]): void {
@@ -85,8 +94,8 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
 
     let hasKey = false;
     try {
-      const config = buildConfig(parseFlags(argv, GLOBAL_FLAGS));
-      hasKey = !!(config.apiKey || config.apiKeyEnv || config.fileApiKey || config.fileAccessToken);
+      const auth = describeAuthState(buildSources(parseFlags(argv, GLOBAL_FLAGS) as GlobalFlags));
+      hasKey = !!(auth.apiKey || auth.console);
     } catch {
       /* unparseable global flags on the bare invocation — fall through to welcome */
     }
@@ -112,25 +121,32 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
 
       case "run": {
         try {
-          // 解析 flag + 跨 flag 校验：任何用法问题都抛 UsageError。
-          const flags = parseFlags(res.rest, {
+          // 解析后分流:全局 flag 进 sources,命令声明的进 ctx.flags;同名的两边都进。
+          const parsed = parseFlags(res.rest, {
             ...GLOBAL_FLAGS,
             ...res.command.flags,
-          }) as GlobalFlags;
-          const invalid = res.command.validate?.(flags);
+          }) as Record<string, unknown>;
+          const globals = pick(parsed, Object.keys(GLOBAL_FLAGS)) as GlobalFlags;
+          const ownFlags = pick(
+            parsed,
+            Object.keys(res.command.flags ?? {}),
+          ) as ParsedFlags<FlagsDef>;
+          const invalid = res.command.validate?.(ownFlags);
           if (invalid) throw new UsageError(invalid);
 
-          // 校验通过 → 准备配置、进中间件执行命令
-          const config = buildConfig(flags);
+          // 校验通过 → 建源、解析 settings、组 ctx,进中间件执行命令。
+          const sources = buildSources(globals);
+          const settings = buildSettings(sources);
           const ctx: RunContext = {
-            binName,
-            version,
-            npmPackage,
+            identity,
             path: res.path,
             command: res.command,
-            config,
-            flags,
-            client: new Client(config),
+            flags: ownFlags,
+            settings,
+            sources,
+            configStore: () => makeConfigStore(),
+            authStore: () => makeAuthStore(sources),
+            client: new Client({ identity, settings, baseUrl: resolveModelBaseUrl(sources) }),
           };
           await runMiddleware(ctx);
           await flushTelemetry(1000);

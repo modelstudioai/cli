@@ -26,20 +26,20 @@ export default defineCommand({
     "--file cat.png --model qwen-image-2.0",
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const filePath = flags.file;
     const model = flags.model;
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ action: "upload", file: filePath, model }, format);
       return;
     }
 
     const ossUrl = await ctx.client.uploadFile(filePath, model);
 
-    if (config.quiet) {
+    if (settings.quiet) {
       emitBare(ossUrl);
     } else {
       emitResult(

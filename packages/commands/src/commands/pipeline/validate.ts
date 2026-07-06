@@ -19,7 +19,7 @@ export default defineCommand({
   },
   exampleArgs: ["--file workflow.yaml", "--file workflow.json --output json"],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const file = flags.file;
 
     initPipelineSteps();
@@ -29,7 +29,7 @@ export default defineCommand({
     const issues = collectPipelineIssues(pipeline);
     const hints = issues.length === 0 ? collectPipelineHints(pipeline) : [];
 
-    if (config.output === "json") {
+    if (settings.output === "json") {
       emitResult(
         { valid: issues.length === 0, issues, ...(hints.length > 0 ? { hints } : {}) },
         "json",

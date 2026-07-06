@@ -1,10 +1,4 @@
-import {
-  defineCommand,
-  readConfigFile as loadConfigFile,
-  getConfigPath,
-  detectOutputFormat,
-  maskToken,
-} from "bailian-cli-core";
+import { defineCommand, detectOutputFormat, maskToken } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -12,16 +6,17 @@ export default defineCommand({
   auth: "none",
   exampleArgs: ["", "--output json"],
   async run(ctx) {
-    const { config } = ctx;
-    const file = loadConfigFile();
-    const format = detectOutputFormat(config.output);
+    const { settings, client } = ctx;
+    const store = ctx.configStore();
+    const file = store.read();
+    const format = detectOutputFormat(settings.output);
 
     const result: Record<string, unknown> = {
       ...file,
-      base_url: config.baseUrl,
-      output: config.output,
-      timeout: config.timeout,
-      config_file: getConfigPath(),
+      base_url: client.baseUrl,
+      output: settings.output,
+      timeout: settings.timeout,
+      config_file: store.path,
     };
 
     if (typeof result.api_key === "string") result.api_key = maskToken(result.api_key);

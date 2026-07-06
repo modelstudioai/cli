@@ -1,8 +1,21 @@
-import type { AnyCommand, Config, GlobalFlags, ApiKeyCredential } from "bailian-cli-core";
+import type {
+  AnyCommand,
+  ApiKeyCredential,
+  AuthStore,
+  ConfigStore,
+  ConsoleCredential,
+  FlagsDef,
+  Identity,
+  ParsedFlags,
+  ResolutionSources,
+  Settings,
+} from "bailian-cli-core";
 import {
   Client,
-  resolveApiKeyCredential,
-  resolveConsoleCredential,
+  describeAuthState,
+  resolveApiKey,
+  resolveConsole,
+  resolveModelBaseUrl,
   trackCommandExecution,
 } from "bailian-cli-core";
 import { maybeShowStatusBar } from "./output/status-bar.ts";
@@ -10,18 +23,25 @@ import { checkForUpdate, getPendingUpdateNotification } from "./utils/update-che
 
 /**
  * What each middleware stage gets for the invocation in flight: the matched
- * `command` with its `path`/`config`/`flags`, and the `client` (populated by
+ * `command` with its `path`/`settings`/`flags`, and the `client` (populated by
  * {@link authStage}). A stage reads these and may augment them before `next()`.
  */
 export interface RunContext {
-  readonly binName: string;
-  readonly version: string;
-  readonly npmPackage: string;
+  /** 静态产品身份(binName/version/npmPackage/clientName)。 */
+  readonly identity: Identity;
   /** The matched command path, e.g. ["speech","recognize"]. */
   readonly path: string[];
   readonly command: AnyCommand;
-  config: Config;
-  flags: GlobalFlags;
+  /** 只含本命令声明的 flag(分流后);全局 flag 在 sources/settings。 */
+  flags: ParsedFlags<FlagsDef>;
+  /** 解析后的有效配置面(命令的新读取面;双轨迁移期与 config 并存)。 */
+  settings: Settings;
+  /** 解析源:provider/访问器用;业务命令不可见(窄视图类型不含此字段)。 */
+  sources: ResolutionSources;
+  /** 惰性访问器,lint 限定 commands/config/** 使用。 */
+  configStore(): ConfigStore;
+  /** 惰性访问器,lint 限定 commands/auth/** 使用。 */
+  authStore(): AuthStore;
   /** Network surface with the credential baked in — set by {@link authStage}. */
   client: Client;
 }
@@ -43,30 +63,45 @@ export function compose(stack: Middleware[]): (ctx: RunContext) => Promise<void>
 
 /**
  * Bake the credential for the command's declared `auth` into `ctx.client`, and
- * gate: no credential → throw before the command runs (skipped under --dry-run,
- * which needs none). `auth: "none"` commands keep a credential-less client.
+ * gate: no credential → throw before the command runs. dry-run 例外:两域解析失败
+ * 都不抛(dry-run 只打印请求,无需凭证;console 的 dry-run 展示读 settings.console*)。
+ * `auth: "none"` commands keep a credential-less client.
  */
 export const authStage: Middleware = async (ctx, next) => {
-  const { command, config } = ctx;
+  const { command, settings, sources } = ctx;
+  const base = { identity: ctx.identity, settings, baseUrl: resolveModelBaseUrl(sources) };
   if (command.auth === "apiKey") {
     let cred: ApiKeyCredential | undefined;
     try {
-      cred = await resolveApiKeyCredential(config);
+      cred = resolveApiKey(sources);
     } catch (err) {
-      if (!config.dryRun) throw err; // dry-run only prints the request — no key needed
+      if (!settings.dryRun) throw err;
     }
-    ctx.client = new Client(config, cred);
-    if (cred) maybeShowStatusBar(config, cred.token, cred);
-  } else if (command.auth === "console" && !config.dryRun) {
-    const cred = await resolveConsoleCredential(config);
-    ctx.client = new Client(config, undefined, cred);
+    ctx.client = new Client({ ...base, apiCred: cred });
+    if (cred) maybeShowStatusBar(settings, cred.token, cred);
+  } else if (command.auth === "console") {
+    let cred: ConsoleCredential | undefined;
+    try {
+      cred = resolveConsole(sources);
+    } catch (err) {
+      if (!settings.dryRun) throw err;
+    }
+    if (cred) ctx.client = new Client({ ...base, consoleCred: cred });
   }
   await next();
 };
 
 /** Record command execution (start / success / failure) around the command. */
-export const telemetryStage: Middleware = (ctx, next) =>
-  trackCommandExecution(ctx.config, ctx.path, ctx.flags, next);
+export const telemetryStage: Middleware = (ctx, next) => {
+  const auth = describeAuthState(ctx.sources);
+  const authMethod = auth.apiKey ? "api-key" : auth.console ? "access-token" : undefined;
+  return trackCommandExecution(
+    { identity: ctx.identity, settings: ctx.settings, authMethod },
+    ctx.path,
+    ctx.flags,
+    next,
+  );
+};
 
 /**
  * Kick off a debounced update check before the command, then — only on success
@@ -74,19 +109,21 @@ export const telemetryStage: Middleware = (ctx, next) =>
  * if `next()` throws, the notice is skipped (no update nag on failure).
  */
 export const versionCheckStage: Middleware = async (ctx, next) => {
-  const pending = checkForUpdate(ctx.version, ctx.npmPackage).catch(() => {});
+  const pending = checkForUpdate(ctx.identity.version, ctx.identity.npmPackage).catch(() => {});
   await next();
   await pending;
 
   const isUpdateCommand = ctx.path.length === 1 && ctx.path[0] === "update";
   const newVersion = getPendingUpdateNotification();
-  if (newVersion && !ctx.config.quiet && !isUpdateCommand) {
+  if (newVersion && !ctx.settings.quiet && !isUpdateCommand) {
     const isTTY = process.stderr.isTTY;
     const yellow = isTTY ? "\x1b[33m" : "";
     const cyan = isTTY ? "\x1b[36m" : "";
     const reset = isTTY ? "\x1b[0m" : "";
-    process.stderr.write(`\n  ${yellow}Update available: ${ctx.version} → ${newVersion}${reset}\n`);
-    process.stderr.write(`  Run ${cyan}${ctx.binName} update${reset} to upgrade\n\n`);
+    process.stderr.write(
+      `\n  ${yellow}Update available: ${ctx.identity.version} → ${newVersion}${reset}\n`,
+    );
+    process.stderr.write(`  Run ${cyan}${ctx.identity.binName} update${reset} to upgrade\n\n`);
   }
 };
 

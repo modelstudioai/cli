@@ -18,12 +18,12 @@ export default defineCommand({
     "--task-id 3b256896-3e70-xxxx --output json",
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const taskId = flags.taskId;
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ task_id: taskId }, format);
       return;
     }
@@ -32,7 +32,7 @@ export default defineCommand({
       path: taskPath(taskId),
     });
 
-    if (config.quiet) {
+    if (settings.quiet) {
       emitBare(response.output.task_status);
       return;
     }

@@ -231,19 +231,18 @@ export default defineCommand({
     '--message "Long document summarization" --dry-run',
   ],
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const userInput = flags.message;
-
     const top = 3;
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
     const modelsOptions: GetModelsOptions = {
       onPrepareStart: () => process.stderr.write("Initializing model data...\n"),
     };
     process.stderr.write("Analyzing your request...\n");
     const [allModels, intent] = await Promise.all([
-      getModels(config, modelsOptions),
-      analyzeIntent(config, userInput),
+      getModels(settings, modelsOptions),
+      analyzeIntent(ctx.client, userInput),
     ]);
 
     if (intent.confidence === 0) {
@@ -253,9 +252,9 @@ export default defineCommand({
     }
 
     // Stage 2: Candidate Recall (semantic recall, auto-builds embeddings on first run)
-    const candidates = await recallSemantic(config, allModels, userInput, 50, intent);
+    const candidates = await recallSemantic(ctx.client, allModels, userInput, 50, intent);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         {
           userInput,
@@ -276,7 +275,7 @@ export default defineCommand({
     const spinner = createSpinner("Recommending best models...");
     spinner.start();
 
-    const result = await rankModels(config, candidates, intent, userInput, top);
+    const result = await rankModels(ctx.client, candidates, intent, userInput, top);
 
     spinner.stop();
 
@@ -309,8 +308,8 @@ export default defineCommand({
       return;
     }
 
-    emitBare(formatIntentSummary(intent, config.noColor));
+    emitBare(formatIntentSummary(intent, settings.noColor));
     emitBare("");
-    emitBare(formatResult(result, config.noColor));
+    emitBare(formatResult(result, settings.noColor));
   },
 });

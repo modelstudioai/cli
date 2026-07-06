@@ -257,16 +257,16 @@ export default defineCommand({
   validate: (f) =>
     (Number(f.period) || 2) < 1 ? "--period must be at least 1 minute." : undefined,
   async run(ctx) {
-    const { config, flags } = ctx;
+    const { settings, flags } = ctx;
     const modelFlag = flags.model || undefined;
     const windowMinutes = Number(flags.period) || 2;
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         {
           apis: [MODEL_LIST_API, MONITOR_API],
-          ...effectiveConsoleGatewayConfig(config),
+          ...effectiveConsoleGatewayConfig(settings),
         },
         format,
       );
@@ -320,6 +320,6 @@ export default defineCommand({
       return;
     }
 
-    printTable(checkRows, config.noColor);
+    printTable(checkRows, settings.noColor);
   },
 });

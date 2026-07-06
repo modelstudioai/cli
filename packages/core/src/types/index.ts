@@ -4,7 +4,6 @@ export type {
   FlagDef,
   FlagsDef,
   ParsedFlags,
-  Flags,
   GlobalFlags,
 } from "./command.ts";
 export { defineCommand, GLOBAL_FLAGS } from "./command.ts";

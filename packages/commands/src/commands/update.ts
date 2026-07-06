@@ -32,10 +32,10 @@ export default defineCommand({
   auth: "none",
   exampleArgs: [""],
   async run(ctx) {
-    const { config } = ctx;
-    const npmPackage = config.npmPackage!;
-    const binName = config.binName!;
-    const currentVersion = config.clientVersion!;
+    const { identity } = ctx;
+    const npmPackage = identity.npmPackage;
+    const binName = identity.binName;
+    const currentVersion = identity.version;
     const isTTY = process.stderr.isTTY;
     const green = isTTY ? "\x1b[32m" : "";
     const yellow = isTTY ? "\x1b[33m" : "";
