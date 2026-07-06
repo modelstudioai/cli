@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.6.1] - 2026-07-03
+
+### Changed
+
+- `bl vision describe` examples and skill reference now use `qwen3-vl-plus` instead of the legacy `qwen-vl-plus` model id, matching the command's default model.
+
 ## [1.6.0] - 2026-07-02
 
 ### Added
