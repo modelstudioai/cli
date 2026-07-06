@@ -2,97 +2,106 @@
 
 ## 触发条件
 
-- 增加新的鉴权方式(OAuth、SSO、控制台回调登录)
-- 增加新的 token 来源(env / config / flag / 文件)
-- 调整凭证解析优先级
-- 改 `bl auth login` 流程
+- 增加新的鉴权域或 token 来源(env / config / flag / 文件)
+- 调整 API Key / Console token 解析优先级
+- 改 `bl auth login` / `auth status` / `auth logout` 流程
+- 改 runtime 对 command `auth` 的 gating 或 credential 注入
 
 ## 鉴权链路
 
 ```
-flag 优先 ─→ config 文件 ─→ env var
-   │             │            │
-   └──── resolveCredential() (core) ───┐
-                                         │
-                                         ▼
-                       cli/utils/ensure-key.ts (启动时拦)
-                       命令注入 Authorization 头
+argv flags ─┐
+env var   ──┼─ buildSources(flags) ─┐
+config    ──┘                       │
+                                    ├─ buildSettings(sources) → ctx.settings
+                                    │
+                                    ├─ resolveApiKey(sources)     → model-domain Client
+                                    └─ resolveConsole(sources)    → console-domain Client
+
+defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx)
 ```
 
-凭证类型(`AuthMethod`):
+当前 command 鉴权域(`AuthRequirement`):
 
-- `api-key` — DashScope SK(`sk-...`),走 Bearer 头
-- `access-token` — 控制台 OAuth 回调拿到的临时 token,走 Bearer + 不同 endpoint
-- `ak/sk` — Alibaba Cloud 标准 AK/SK,走 ROA 签名(只用于知识库)
+- `apiKey` — DashScope / OpenAI-compatible 模型域,用 API key 与 model base URL
+- `console` — Bailian Console Gateway,用 console access token + region/site/switchAgent/workspace
+- `none` — 本地命令、登录/配置类命令、无需 credential 的命令
 
 ### 双凭证并存（API Key + Console）
 
-`~/.bailian/config.json` 可同时保存 `api_key` 与 `access_token`。**登录任一种方式不得删除另一种**（`bl auth login --api-key` / `--console` 只更新对应字段）。
+`~/.bailian/config.json` 可同时保存 `api_key` 与 `access_token`。登录任一种方式不得删除另一种:
+
+- `bl auth login --api-key ...` 只更新 `api_key` / `base_url`
+- `bl auth login --console` 只更新 `access_token` 以及回调携带的 console 作用域字段
+- `bl auth logout --console` 只清 `access_token`
+- `bl auth logout` 清 `api_key` + `access_token`
 
 解析分工:
 
-- `resolveCredential()` — DashScope API 命令（`text chat`、`file upload` 等）；config 里两者都有时 **优先 `api_key`**
-- `resolveConsoleGatewayCredential()` — 控制台网关（`app list`、`usage free`、`console call`）；**只用** env/file 的 `access_token`，忽略 `api_key`
+- `resolveApiKey()` — `auth: "apiKey"` 命令;优先级 `--api-key` > `DASHSCOPE_API_KEY` > config `api_key`
+- `resolveModelBaseUrl()` — model base URL;优先级 `--base-url` > `DASHSCOPE_BASE_URL` > config `base_url` > `REGIONS.cn`
+- `resolveConsole()` — `auth: "console"` 命令;当前 token 来自 config `access_token`,region/site/switchAgent 来自 flag > config > 默认
+- `describeAuthState()` — `auth status` / banner / telemetry 使用的只读快照
 
-必改调用点: 凡 `callConsoleGateway` 必须用 `resolveConsoleGatewayCredential`，不能误用 `resolveCredential`（否则 config 仅有 api_key 时会拿 sk- 打网关）。
-
-`bl auth logout --console` 只清 `access_token`；全量 `bl auth logout` 清两者。
+命令不要直接解析 token、env 或 config。业务请求统一走 `ctx.client`;登录/配置命令通过 `ctx.authStore()` / `ctx.configStore()` 的窄接口操作落盘。
 
 ## 必查清单
 
 ### A. core 层(类型 + 解析)
 
+- [ ] `packages/core/src/types/command.ts`:
+  - 如新增鉴权域,扩展 `AuthRequirement`
+  - 更新 `credentialFlagDefs()` 暴露该域可见的 flag
+  - 必要时新增 `*_AUTH_FLAGS`
 - [ ] `packages/core/src/auth/types.ts`:
-  - 新增 `AuthMethod` 字面量
-  - 新增 `ResolvedCredential` 字段(如 token 类型 / 过期时间)
+  - 新增 credential 类型 / source / scope 字段
 - [ ] `packages/core/src/auth/resolver.ts`:
-  - `resolveCredential()` 增加新分支
-  - 控制台网关命令用 `resolveConsoleGatewayCredential()`（与 DashScope 解析分离）
-  - 优先级注释保持清晰(数字标号)
-- [ ] `packages/core/src/auth/credentials.ts`:
-  - 如果新方式需要持久化,加 `save*` / `load*` / `clear*`
+  - 新增或调整 resolver,保持优先级注释清晰
+  - 新增/调整 resolver hint 时保持产品无关,不要新增 `bl` / `rag` 硬编码;当前遗留的 `bl auth login` hint 如被触碰,迁到 runtime `enhanceHint`
+- [ ] `packages/core/src/auth/store.ts`:
+  - 如果新方式需要持久化,扩展 `AuthStore` / `AuthPersistPatch`
 - [ ] `packages/core/src/config/schema.ts`:
-  - `Config` 接口加新字段(如 `fileAccessToken`、`accessTokenEnv`)
-  - `ConfigFile` 接口加对应 disk 字段(snake_case)
+  - `ConfigFile` 加 disk 字段(snake_case)
+  - `Settings` 加运行时字段(如果命令需要读取)
 - [ ] `packages/core/src/config/loader.ts`:
-  - `loadConfig()` 把 env / 文件读到 Config 上
+  - `buildSources()` / `buildSettings()` 把 flag/env/file 读到正确层
 
-### B. core 客户端
+### B. runtime 层
 
-- [ ] `packages/core/src/client/http.ts`:
-  - 不同 `credential.method` 走不同分支(参考已有 `access-token` 分支走 console gateway)
-  - Authorization 头注入正确
+- [ ] `packages/runtime/src/create-cli.ts`:
+  - parse flags 时纳入新的全局/凭证域 flag
+  - `globalFlags` 与 `ownFlags` 分流正确
+- [ ] `packages/runtime/src/middleware.ts:authStage`:
+  - 根据 `command.auth` 解析 credential 并注入 `ctx.client`
+  - `settings.dryRun` 下是否允许缺 credential 的策略明确
+- [ ] `packages/runtime/src/error-handler.ts`:
+  - AUTH hint 增强使用 `binName`,不要硬编码 `bl`
+  - URL 从 `packages/runtime/src/urls.ts` import
 
-### C. cli 层
+### C. command 层
 
-- [ ] `packages/cli/src/utils/ensure-key.ts`:
-  - 启动时检查新凭证方式是否已配置,缺的话提示
-  - 如果是交互式 setup(类似 `bl auth login --console`),增加新分支
-- [ ] `packages/cli/src/commands/auth/login.ts`:
-  - 新增 `--xxx` flag 触发新登录流程
-  - 持久化到 config(调用 core 的 save 函数)
-- [ ] `packages/cli/src/commands/auth/status.ts`:
-  - 分别显示 `api_key` / `access_token` 是否已配置，以及 DashScope vs 控制台网关各自生效的 credential
-- [ ] `packages/cli/src/output/status-bar.ts`:
-  - 顶部状态条显示新凭证 method
+- [ ] `packages/commands/src/commands/auth/login.ts`:
+  - 新增/调整登录 flag 与流程
+  - 持久化只走 `ctx.authStore().login(...)`
+- [ ] `packages/commands/src/commands/auth/status.ts`:
+  - 分别显示 model / console 鉴权状态,并 mask token
+- [ ] `packages/commands/src/commands/auth/logout.ts`:
+  - 清理范围与双凭证并存规则一致
+- [ ] 新的业务命令设置正确 `auth`:
+  - 模型域请求 → `auth: "apiKey"`
+  - Console Gateway → `auth: "console"`
+  - 本地/登录/配置 → `auth: "none"`
 
-### D. main 启动逻辑
-
-- [ ] 若新增命令**自行处理鉴权**或**不应在入口触发默认 API key 引导**,在对应 `defineCommand` 上设 `skipDefaultApiKeySetup: true`(见 `packages/core/src/types/command.ts`;`packages/cli/src/main.ts` 在 `registry.resolve` 后读取 `command.skipDefaultApiKeySetup`)
-
-### E. 错误文案
-
-- [ ] core 的 `BailianError` 鉴权失败 hint **保持通用**(不写 cli 命令名,见 [error-hint-change.md](error-hint-change.md))
-- [ ] cli 的 `enhanceHint` (error-handler.ts) 按 `ExitCode.AUTH` 注入新方式的 cli 命令引导
-
-### F. 用户面文档
+### D. 用户面文档
 
 - [ ] `README.md` / `README.zh.md` "Authentication" 段落
+- [ ] `skills/bailian-cli/reference/` 通过 `pnpm run sync:skill-assets` 重建
 
-### G. 测试
+### E. 测试
 
 - [ ] `packages/cli/tests/e2e/auth.e2e.test.ts` 增加新方式的 happy / failure 路径
 - [ ] mask token 的输出格式不变(避免泄漏)
+- [ ] 如调整 resolver 优先级,补 core/runtime 单测覆盖 flag > env > file
 
 ## 完成后自查
 
@@ -105,12 +114,21 @@ HOME=/tmp/empty node packages/cli/src/main.ts auth status
 node packages/cli/src/main.ts auth status --api-key sk-xxx
 
 # env 注入
-DASHSCOPE_ACCESS_TOKEN=xxx node packages/cli/src/main.ts auth status
+DASHSCOPE_API_KEY=sk-xxx node packages/cli/src/main.ts auth status
+```
+
+Console 登录/网关相关改动:
+
+```sh
+node packages/cli/src/main.ts auth login --console
+node packages/cli/src/main.ts usage stats --dry-run --output json
 ```
 
 ## 常见漏点
 
-- ✗ 加了新 token 来源但忘了改 `resolveCredential` 优先级,实际不生效
-- ✗ `Config` 加字段但 `loadConfig` 没读 → 字段永远 undefined
-- ✗ `bl auth login` 写成功但 `bl auth status` 不识别(两边走的 storage path 不一致)
+- ✗ 加了新 token 来源但忘了改 resolver 优先级,实际不生效
+- ✗ `ConfigFile` / `Settings` 加字段但 `parseConfigFile` 或 `buildSettings` 没读
+- ✗ `auth login` 写成功但 `auth status` 不识别(两边走的 storage path 不一致)
 - ✗ token mask 显示完整 token,日志泄漏
+- ✗ `auth: "console"` 命令误用 `apiKey` 域,config 只有 API key 时会把 `sk-...` 发到网关
+- ✗ 新增 core resolver hint 时写死产品命令,导致 `rag` 等入口提示错误

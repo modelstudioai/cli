@@ -2,7 +2,8 @@
 
 ## 触发条件
 
-- 新增/修改 `packages/cli/src` 下的 command（`commands/catalog.ts` 登记、`defineCommand` 实现、options/usage）
+- 新增/修改 `packages/commands/src/commands` 下的 command 实现
+- 新增/修改 `packages/cli/src/commands.ts` 的 `bl` 命令路径 map
 - 新建或扩展 `packages/cli/tests/e2e/*.e2e.test.ts` 用例
 - 为命令补 help / 缺参 / dry-run / 真实集成测试
 
@@ -59,8 +60,8 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 ## 新增 command 检查清单
 
-- [ ] `commands/catalog.ts` 登记 + `tests/e2e/<topic>.e2e.test.ts`（新建或扩展）
-- [ ] 若改了 `usage` / `options` / `examples`,跑 `pnpm --filter bailian-cli run generate:reference` 更新 `skills/bailian-cli/reference/` 并提交
+- [ ] `packages/commands/src/index.ts` 导出 + `packages/cli/src/commands.ts` 暴露路径 + `tests/e2e/<topic>.e2e.test.ts`（新建或扩展）
+- [ ] 若改了 `usageArgs` / `flags` / `exampleArgs`,跑 `pnpm --filter bailian-cli run generate:reference` 更新 `skills/bailian-cli/reference/` 并提交
 - [ ] 顶层：分组 help + 子命令 `--help`（多子命令则各一条 help）
 - [ ] skip 块：每个 required flag 缺参；可 dry-run 则加一条
 - [ ] 至少一条真实集成（或说明为何仅 smoke）；不破坏已有集成用例顺序

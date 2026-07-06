@@ -50,13 +50,13 @@ git diff --name-only <base>...<head>
 - [ ] **`package.json` 没破坏发布元数据**:`bin` / `exports` / `files` / `inlinedDependencies` 字段任何删除或改名都要单独评估
 - [ ] **公共依赖没被悄悄升级**:catalog / 根 lockfile 改动要列出来
 - [ ] **`package.json` version 没倒退**:目标分支已经更高时(如 main 1.0.3 vs head 1.0.0-beta.1),手动对齐版本号,不要被 head 覆盖
-- [ ] **全局表没冲突**:`registry.ts`、`defineCommand` 的 `skipDefaultApiKeySetup`(见 `packages/core/src/types/command.ts`)、`ExitCode` 三处新增项不和现有项冲突
+- [ ] **全局表没冲突**:`packages/cli/src/commands.ts` / `packages/rag/src/main.ts` command map、`defineCommand({ auth })`、`GLOBAL_FLAGS` / `MODEL_AUTH_FLAGS` / `CONSOLE_AUTH_FLAGS`、`ExitCode` 新增项不和现有项冲突
 
 ## 清单 B:用户透出(用户可见的新东西必看)
 
 - [ ] **新命令 / 新 flag** 已同步到用户面文档:
   - [README.md](README.md) + [README.zh.md](README.zh.md)(中英文都要,常漏 `_CN`)
-  - (SKILL.md 已迁出本仓库,由 `npx add skills` 机制独立维护,不在本仓库 review 范围)
+  - `skills/bailian-cli/reference/` + `skills/bailian-cli/SKILL.md` 通过 `pnpm run sync:skill-assets` 更新并提交
 - [ ] **`bl <cmd> --help`** 文案完整:`description` / `examples` 都填了
 - [ ] **demo / quickstart**:用户可调用的新命令至少有一个示例
 - [ ] **行为变化的老命令**:在 commit message / CHANGELOG 注明用户感知的差异
@@ -80,7 +80,7 @@ git diff --name-only <base>...<head>
 解冲突要点(merge 时不要漏):
   - <冲突文件> + <字段/段落> + <怎么取舍>
   ↑ 放"合并那一刻才会出现"的细节,例如 package.json 的 files/scripts/devDependencies 各取并集、
-    `skipDefaultApiKeySetup` 这类命令元数据两边都加项时不要丢一侧、pnpm-lock.yaml 直接 rm 后 pnpm install 重生等。
+    command map / `auth` / 全局 flags 这类元数据两边都加项时不要丢一侧、pnpm-lock.yaml 直接 rm 后 pnpm install 重生等。
 建议修(可后置):
   - ...
 仅信息(无需动作,告知即可):
@@ -94,11 +94,11 @@ git diff --name-only <base>...<head>
 
 ## 常见漏点(基于历史踩坑)
 
-| 漏点                                                                            | 后果                                                                          |
-| ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `pnpm-workspace.yaml` 把 `packages/*` 收窄成显式列表                            | 合并后目标分支的新子包不再被 workspace 识别,`pnpm install` 看似正常但子包失联 |
-| 源分支 version 比目标分支低,直接 merge 覆盖                                     | npm 上版本号回退,latest tag 错乱                                              |
-| `registry.ts` 注册新命令但忘了 [README](README.md) / [README.zh](README.zh.md)  | 用户完全感知不到新功能                                                        |
-| 共享 util 重构(抽公共函数)只改了一处调用方                                      | 其它调用方静默走旧分支,行为分裂                                               |
-| 不该跳过默认 API key 引导的命令误设 `skipDefaultApiKeySetup: true`              | 安全风险,用户没配置 key 也能调付费 API                                        |
-| `catalog.ts` / `skipDefaultApiKeySetup` 这类元数据两边都加项,解冲突时被合掉一侧 | 某个命令突然要求登录 / 某个新命令注册丢失,编译能过、回归不易察觉              |
+| 漏点                                                                                               | 后果                                                                          |
+| -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `pnpm-workspace.yaml` 把 `packages/*` 收窄成显式列表                                               | 合并后目标分支的新子包不再被 workspace 识别,`pnpm install` 看似正常但子包失联 |
+| 源分支 version 比目标分支低,直接 merge 覆盖                                                        | npm 上版本号回退,latest tag 错乱                                              |
+| `packages/cli/src/commands.ts` 注册新命令但忘了 [README](README.md) / [README.zh](README.zh.md)    | 用户完全感知不到新功能                                                        |
+| 共享 util 重构(抽公共函数)只改了一处调用方                                                         | 其它调用方静默走旧分支,行为分裂                                               |
+| 命令 `auth` 域设错（如 Console Gateway 用了 `apiKey`）                                             | 凭证域 flag/help/credential 注入都错,运行期才暴露                             |
+| `packages/cli/src/commands.ts` / `packages/rag/src/main.ts` 这类 map 两边都加项,解冲突时被合掉一侧 | 某个新命令注册丢失,编译能过、回归不易察觉                                     |

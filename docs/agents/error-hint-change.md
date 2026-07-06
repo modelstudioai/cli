@@ -3,8 +3,8 @@
 ## 触发条件
 
 - 修改 `BailianError` 的 message 或 hint
-- 调整 cli 的 hint 增强逻辑(`enhanceHint`)
-- 改 ensure-key 的 setup 流程文案
+- 调整 runtime 的 hint 增强逻辑(`enhanceHint`)
+- 改 auth stage / resolver 的鉴权失败文案
 - 改任何抛错位置的分类(exitCode)
 
 > 注意:`mapApiError` **不再做错误分类**(参见下方"边界原则")。如果你想给某种 HTTP 错误码加白名单分类,请先回到本文档读完"边界原则"再说。
@@ -17,7 +17,7 @@
 | ---------------------------------------------------- | -------- | ----------------------------------------------------------- |
 | 命令解析、缺 flag、参数校验                          | **内部** | `BailianError(USAGE)`                                       |
 | 文件 I/O(ENOENT/EACCES/...)                          | **内部** | `BailianError(GENERAL)` + errno-specific hint               |
-| 本地 credentials 缺失(resolver/ensure-key/AK-SK 等)  | **内部** | `BailianError(AUTH)`                                        |
+| 本地 credentials 缺失(resolver / authStage 等)       | **内部** | `BailianError(AUTH)`                                        |
 | `fetch` 自身失败(DNS/TCP/TLS/proxy)                  | **内部** | `BailianError(NETWORK)` + 读 `err.cause.code` 给 errno-hint |
 | polling 客户端超时                                   | **内部** | `BailianError(TIMEOUT)`                                     |
 | HTTP 4xx/5xx、HTTP 200 + 业务错码、async task FAILED | **服务** | `BailianError(GENERAL)`,**message 原样透传**,不分类、不替换 |
@@ -39,9 +39,9 @@
 ```
 core 抛出 BailianError(message, exitCode, hint, cause?)
   ↓ 沿调用栈冒泡
-cli/main.ts: main().catch(handleError)
+runtime/create-cli.ts: dispatch().catch(handleError)
   ↓
-cli/error-handler.ts:
+runtime/error-handler.ts:
   - 服务端错误(BailianError(GENERAL)) → text 直接打 message
   - 内部 AUTH/USAGE/NETWORK/TIMEOUT → 走 enhanceHint(只 AUTH 还有增强)
   - TypeError("fetch failed") → 读 err.cause.code 翻成 NETWORK
@@ -62,36 +62,42 @@ process.exit(err.exitCode)
 
 - ❌ 不要回退到"401 → AUTH、429 → QUOTA"那套白名单
 - ✅ message 把 status / apiCode / request_id 拼进去就够,exit 统一 GENERAL
-- 例外:CLI **自己**因为本地状态产生的 BailianError(resolver、ensure-key 等)可以用语义化 exitCode
+- 例外:CLI/runtime **自己**因为本地状态产生的 BailianError(resolver、authStage 等)可以用语义化 exitCode
 
 ### 3. core 的 hint 必须不含 cli 关切
 
-- ❌ 不写 `bl xxx` 命令名
-- ❌ 不写控制台 URL 或 region
-- ❌ 不写渠道追踪参数(`source_channel=xxx`)
+- ❌ 新增/改动时不写 `bl xxx` 命令名
+- ❌ 新增/改动时不写 `rag xxx` 等产品入口命令名
+- ❌ 新增/改动时不写控制台 URL 或 region
+- ❌ 新增/改动时不写渠道追踪参数(`source_channel=xxx`)
 - ✅ 只描述抽象做法(如 `"Set DASHSCOPE_API_KEY environment variable, or pass --api-key."`)
+- 当前遗留:`packages/core/src/auth/resolver.ts` 仍含 `bl auth login` hint;触碰鉴权错误时迁到 runtime `enhanceHint`
 
-### 4. cli 端可以自由使用 cli 命令名 + URL
+### 4. runtime / 产品层可以使用入口名 + URL
 
-- 命令文件、`error-handler.ts`、`utils/ensure-key.ts` 是 cli 层,内部可以写 `bl xxx`
-- URL 必须从 `packages/cli/src/urls.ts` import,不能硬编码
+- `packages/runtime/src/error-handler.ts` 通过 `binName` 渲染 `bl` / `rag` 等入口名,不要硬编码
+- 产品入口 / README / E2E 可以写具体入口命令
+- shared command 实现不写 `bl` / `rag` 前缀;`usageArgs` / `exampleArgs` 只写参数片段
+- URL 必须从 `packages/runtime/src/urls.ts` import,不能硬编码
 
 ## 必查清单
 
 ### A. core 改动(message / hint)
 
 - [ ] `packages/core/src/errors/api.ts` 的 `mapApiError`:**保持透传形态**,不要加白名单分支
-- [ ] `packages/core/src/auth/resolver.ts` 改 throw 语句:hint 不含 cli 关切
-- [ ] 任何 core 文件 throw 的 BailianError:同上
+- [ ] `packages/core/src/auth/resolver.ts` 新增/改 throw 语句时:hint 不含 cli 关切;已有 `bl auth login` 遗留点被触碰时要收敛
+- [ ] 任何 core 文件新增/改 BailianError:同上
 
-### B. cli 增强(`enhanceHint`)
+### B. runtime 增强(`enhanceHint`)
 
-- [ ] `packages/cli/src/error-handler.ts:enhanceHint`:**当前只为 internal AUTH 增强**(因为只有 resolver/ensure-key 等内部位置会发 AUTH)
+- [ ] `packages/runtime/src/error-handler.ts:enhanceHint`:**当前只为 internal AUTH 增强**(因为 resolver / authStage 等内部位置会发 AUTH)
+- [ ] 命令名使用 `binName`,不要硬编码 `bl`
 - [ ] URL 必须是 `import { API_KEY_PAGE } from "./urls.ts"`
 
-### C. cli 直接抛错(`ensure-key`、命令文件)
+### C. command / runtime 直接抛错
 
-- [ ] cli 层抛 BailianError 时,hint 里可以放 cli 命令名,但 **URL 一律走 `urls.ts` import**
+- [ ] runtime 层抛 BailianError 时,hint 里可以放 `binName` 渲染的入口命令,但 **URL 一律走 `urls.ts` import**
+- [ ] `packages/commands` 作为 shared command 库,默认不硬编码产品 bin;如果确需用户操作提示,优先依赖 runtime error handler 或 `ctx.identity.binName`
 - [ ] 抛错位置如果**已经在调用服务端**,catch 时不要替换 message——重新评估是否需要 catch
 
 ### D. 文案一致性

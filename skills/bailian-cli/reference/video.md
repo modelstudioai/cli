@@ -69,8 +69,8 @@ bl video download --task-id 3b256896-xxxx --out video.mp4 --quiet
 | `--watermark <bool>`             | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
 | `--seed <n>`                     | number  | no       | Random seed for reproducible generation                                                 |
 | `--download <path>`              | string  | no       | Save video to file on completion                                                        |
-| `--no-wait`                      | switch  | no       | Return task ID immediately without waiting                                              |
 | `--async`                        | switch  | no       | Return async task id without waiting                                                    |
+| `--concurrent <n>`               | number  | no       | Run N parallel requests (default: 1)                                                    |
 | `--poll-interval <seconds>`      | number  | no       | Polling interval when waiting (default: 15)                                             |
 | `--api-key <key>`                | string  | no       | API key                                                                                 |
 | `--base-url <url>`               | string  | no       | API base URL                                                                            |
@@ -116,7 +116,6 @@ bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the
 | `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
 | `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                 |
 | `--download <path>`         | string  | no       | Save video to file on completion                                                        |
-| `--no-wait`                 | switch  | no       | Return task ID immediately without waiting                                              |
 | `--async`                   | switch  | no       | Return async task id without waiting                                                    |
 | `--concurrent <n>`          | number  | no       | Run N parallel requests (default: 1)                                                    |
 | `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 5)                                              |
@@ -170,8 +169,8 @@ bl video generate --prompt "A cat playing with a ball" --watermark false
 | `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
 | `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                 |
 | `--download <path>`         | string  | no       | Save video to file on completion                                                        |
-| `--no-wait`                 | switch  | no       | Return task ID immediately without waiting                                              |
 | `--async`                   | switch  | no       | Return async task id without waiting                                                    |
+| `--concurrent <n>`          | number  | no       | Run N parallel requests (default: 1)                                                    |
 | `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 15)                                             |
 | `--api-key <key>`           | string  | no       | API key                                                                                 |
 | `--base-url <url>`          | string  | no       | API base URL                                                                            |

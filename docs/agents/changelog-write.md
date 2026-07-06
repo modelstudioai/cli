@@ -81,11 +81,12 @@ git merge-base --is-ancestor 12f2b1b 3fc54ae && echo "IN" || echo "NOT IN"
 光看 commit 还不够,要确认目标功能的代码 / 文件在 release commit 上真的存在:
 
 ```sh
-# 列出 release commit 下某目录的文件
-git ls-tree -r <releaseCommit> --name-only -- packages/cli/src/commands/
+# 列出 release commit 下命令实现与产品入口
+git ls-tree -r <releaseCommit> --name-only -- packages/commands/src/commands/
+git show <releaseCommit>:packages/cli/src/commands.ts | head
 
 # 看 release commit 下某文件的内容
-git show <releaseCommit>:packages/cli/src/commands/console/call.ts | head
+git show <releaseCommit>:packages/commands/src/commands/console/call.ts | head
 ```
 
 特别注意被一行带过的"杂项" commit。本仓库历史踩过坑:`feat(cli): enhance output options and add new commands` 这种标题里藏了**新命令** + **新输出格式** + **logout 增强**三件事,粗看会全部漏掉。

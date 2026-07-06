@@ -1,45 +1,54 @@
 # bailian-cli — AI 维护指南
 
-本文件是 AI agent 维护本仓库时的契约。每次进入项目首先读这里,从下方"业务场景索引"挑一条,跳到对应的详细文档,按它的清单完成改动。
+本文件是 AI agent 维护本仓库时的契约。每次进入项目先读这里,从"业务场景索引"挑一条,再进入对应 `docs/agents/*.md` 清单。
 
 ## 项目地图
 
-monorepo 双包结构:
+monorepo 现在按"纯逻辑 → 运行时框架 → 命令库 → 产品入口"分层:
 
-- `packages/cli` — `bailian-cli` 包,CLI 命令、UI、入口
-- `packages/core` — `bailian-cli-core` 包,鉴权 / HTTP / 类型,纯逻辑层
+- `packages/core` — `bailian-cli-core`,纯逻辑层:鉴权、配置、HTTP client、错误、类型、文件工具
+- `packages/runtime` — `bailian-cli-runtime`,通用 CLI 运行时:`createCli`、参数解析、registry/help、middleware、error handler、输出、pipeline
+- `packages/commands` — `bailian-cli-commands`,可复用命令实现库,只导出 command,不决定产品路径
+- `packages/cli` — `bailian-cli`,完整 `bl` 产品入口;`src/commands.ts` 组装 `bl` 暴露的命令路径
+- `packages/rag` — `bailian-cli-rag`,知识库向入口;`src/main.ts` 复用 commands 并重映射为 `rag` 路径
 
-### `packages/cli` 目录要点
+### 关键文件
 
 ```
-packages/cli/
-├── src/
-│   ├── main.ts              # 入口、鉴权分支、调用 registry
-│   ├── registry.ts          # 命令树解析、动态 help(读 catalog)
-│   ├── commands/
-│   │   ├── catalog.ts       # 命令总表(登记处,构建脚本也读它)
-│   │   ├── index.ts         # re-export commands
-│   │   └── <group>/...ts    # 各命令 defineCommand 实现
-│   ├── output/              # CLI 输出、prompt、progress
-│   └── urls.ts              # 控制台/文档 URL(仅 cli)
-└── tests/e2e/
+packages/cli/src/main.ts          # bl 入口,注入 binName/version/clientName/npmPackage
+packages/cli/src/commands.ts      # bl 产品命令 map,tools/generate-reference.ts 也读它
+packages/rag/src/main.ts          # rag 入口和命令 map
+
+packages/commands/src/index.ts    # re-export 单个命令实现
+packages/commands/src/commands/   # defineCommand({ auth, flags, usageArgs, exampleArgs, run })
+
+packages/runtime/src/create-cli.ts # createCli(commands, identity)
+packages/runtime/src/registry.ts   # 命令树解析 + 动态 help
+packages/runtime/src/middleware.ts # auth / telemetry / update / run command
+packages/runtime/src/urls.ts       # 用户面控制台 URL
+
+packages/core/src/types/command.ts # Command / flags / auth 类型
+packages/core/src/config/          # ConfigFile / Settings / source 解析
+packages/core/src/auth/            # apiKey / console credential 解析与落盘
+packages/core/src/client/          # HTTP client / endpoints / console gateway
 ```
 
-Skill / 命令手册随 `skills/bailian-cli/` 经 `npx skills add modelstudioai/cli` 安装。`tools/generate-reference.ts` 从 `catalog.ts` 生成命令手册到 `skills/bailian-cli/reference/`(纳入 git);与 `tools/sync-skill-metadata.ts` 一起在 **pre-commit**（`.vite-hooks/pre-commit`）及根脚本 `pnpm run sync:skill-assets` 中执行。
-
-非代码资产:
-
-- `tools/release/` — 发版自动化（CI 驱动，见 `.github/workflows/publish.yml`）
-- `tools/generate-reference.ts` — 从 `catalog.ts` 生成命令手册到 `skills/bailian-cli/reference/`
-- `tools/sync-skill-metadata.ts` — 从 `packages/cli/package.json` 同步 `skills/bailian-cli/SKILL.md` 的 `metadata.version`（与 `generate:reference` 一并由根目录 `pnpm run sync:skill-assets` 及 pre-commit 执行）
-- `README.md` / `README.zh.md` — npm 和 GitHub 主页
+Skill / 命令手册随 `skills/bailian-cli/` 经 `npx skills add modelstudioai/cli` 安装。`tools/generate-reference.ts` 从 **`packages/cli/src/commands.ts`** 生成 `skills/bailian-cli/reference/`(纳入 git);`tools/sync-skill-metadata.ts` 从 `packages/cli/package.json` 同步 `skills/bailian-cli/SKILL.md` 的 `metadata.version`。两者由根脚本 `pnpm run sync:skill-assets` 和 `.vite-hooks/pre-commit` 执行。
 
 约定:
 
-- core 是纯库,不依赖 cli(详见下方通用约定)
-- 文件路径与命令路径一一对应:`commands/text/chat.ts` ↔ `bl text chat`
-- 单级命令:`commands/<name>.ts`(如 `update.ts`);两级:`commands/<group>/<action>.ts`
-- 命令登记在 **`catalog.ts`**;`bl --help` 与 `tools/generate-reference.ts` 生成的命令手册同源,见 [command-add-remove.md](docs/agents/command-add-remove.md)
+- 命令实现文件路径仍按能力放置:`packages/commands/src/commands/text/chat.ts`
+- 产品命令路径由入口 map 决定:同一个实现可暴露为 `bl knowledge retrieve` 或 `rag retrieve`
+- `defineCommand` 只写命令元数据与逻辑: `auth`、`flags`、`usageArgs`、`exampleArgs`、`validate`、`run`
+- `usageArgs` / `exampleArgs` 不写 `bl` 或 `rag` 前缀;runtime / reference 生成器按产品路径补前缀
+- 不再使用 `catalog.ts` 作为登记处;新增/重命名命令必须同时看命令库导出和产品入口 map
+
+非代码资产:
+
+- `tools/release/` — 发版自动化（CI 驱动,见 `.github/workflows/publish.yml`）
+- `tools/generate-reference.ts` — 从 `packages/cli/src/commands.ts` 生成 `skills/bailian-cli/reference/`
+- `tools/sync-skill-metadata.ts` — 同步 `skills/bailian-cli/SKILL.md` 的 `metadata.version`
+- `README.md` / `README.zh.md` — npm 和 GitHub 主页
 
 ## 业务场景索引
 
@@ -47,7 +56,7 @@ Skill / 命令手册随 `skills/bailian-cli/` 经 `npx skills add modelstudioai/
 
 | 场景           | 何时进入                                     | 详见                                                                     |
 | -------------- | -------------------------------------------- | ------------------------------------------------------------------------ |
-| 命令增删改     | 增加 / 删除 / 重命名 `bl xxx`                | [docs/agents/command-add-remove.md](docs/agents/command-add-remove.md)   |
+| 命令增删改     | 增加 / 删除 / 重命名 `bl xxx` 或入口命令路径 | [docs/agents/command-add-remove.md](docs/agents/command-add-remove.md)   |
 | E2E 测试维护   | 新增/改命令或 e2e 用例、补 help/缺参/dry-run | [docs/agents/cli-e2e-tests.md](docs/agents/cli-e2e-tests.md)             |
 | 批量压测       | 改/跑多能力并发压测、`test:stress`、fixtures | [docs/agents/stress-batch-tests.md](docs/agents/stress-batch-tests.md)   |
 | 选项变更       | 给已有命令加 `--flag` 或改默认值             | [docs/agents/command-flag-change.md](docs/agents/command-flag-change.md) |
@@ -57,26 +66,24 @@ Skill / 命令手册随 `skills/bailian-cli/` 经 `npx skills add modelstudioai/
 | 鉴权扩展       | 加 OAuth / SSO / 换 token 来源               | [docs/agents/auth-change.md](docs/agents/auth-change.md)                 |
 | 配置项扩展     | 新 env var 或 `~/.bailian/config.json` 字段  | [docs/agents/config-add.md](docs/agents/config-add.md)                   |
 | 发布           | channel / stable 发布到 npm（CI 驱动）       | [docs/agents/publish.md](docs/agents/publish.md)                         |
+| Change Log     | 发版说明 / 历史版本说明                      | [docs/agents/changelog-write.md](docs/agents/changelog-write.md)         |
 | 工具链调整     | lint 规则 / 构建配置 / 依赖升级              | [docs/agents/lint-toolchain.md](docs/agents/lint-toolchain.md)           |
 
-如果当前任务无法对应任何场景,先按经验完成,然后**回来评估这是不是一类新场景** —— 是就新增一份 `docs/agents/<scenario>.md`,把清单沉淀下来。
+如果当前任务无法对应任何场景,先按经验完成,然后**回来评估这是不是一类新场景** —— 是就新增 `docs/agents/<scenario>.md`,把清单沉淀下来。
 
 ## 通用约定
 
-下面两条与场景无关,任何改动都适用。每次完成改动后自查。
+### 1. 发布包版本号同步
 
-### 1. cli 和 core 版本号同步
+源码包的 `version` 当前保持一致: `packages/core`、`packages/runtime`、`packages/commands`、`packages/cli`、`packages/rag`。做版本 bump 时一动多动。release 工具当前强校验 / 发布范围以 `tools/release/lib/packages.mjs` 为准;把新包纳入发布前必须同步该清单和 [publish.md](docs/agents/publish.md)。
 
-`packages/cli/package.json` 和 `packages/core/package.json` 的 `version` 字段必须始终相等。一动两动。
+### 2. 分层边界
 
-### 2. core 是纯库,cli 是 core 的 UI 层
-
-core 不应该知道 cli 的存在。具体表现:
-
-- core 不写 stderr,不调 `process.exit`(用 `console.*` 或 `throw`)
-- core 抛的 `BailianError`,hint 字符串不出现 `bl xxx` 命令名
-- core 不写死域名 / region / 追踪参数(URL 集中在 `packages/cli/src/urls.ts`)
-- core 接收 cli 通过 `Config` 注入的 metadata(`clientName` / `clientVersion`)
+- `core` 是纯库:不依赖 `runtime` / `commands` / 产品入口;不调 `process.exit`;新增/改动时不硬编码 `bl` / `rag` 命令名、控制台 URL 或渠道追踪参数。当前遗留项见 [error-hint-change.md](docs/agents/error-hint-change.md) 与 [url-change.md](docs/agents/url-change.md),触碰相关代码时顺手收敛
+- `runtime` 是通用 CLI 框架:可以处理 TTY、help、错误输出、middleware,但不写具体业务命令逻辑
+- `commands` 是命令实现库:不决定产品路径;不在 `usageArgs` / `exampleArgs` / hint 里硬编码产品 bin 前缀
+- `cli` / `rag` 是产品层:负责命令路径 map、产品 identity、README、技能 reference、发版入口
+- URL 集中在 `packages/runtime/src/urls.ts`(用户面控制台)和 `packages/core/src/config/schema.ts` / client 层(API)
 
 ### 3. 错误处理边界:CLI 不翻译服务端错误
 
@@ -86,30 +93,22 @@ CLI 只为「自己能权威解释的错误」发出语义化信号,服务端的
 | ---------------------------------------------------- | -------- | ----------------------------------------------------------- |
 | 命令解析、缺 flag、参数校验                          | **内部** | `BailianError(USAGE)`                                       |
 | 文件 I/O(ENOENT/EACCES/...)                          | **内部** | `BailianError(GENERAL)` + errno-specific hint               |
-| 本地 credentials 缺失(resolver/ensure-key/AK-SK 等)  | **内部** | `BailianError(AUTH)`                                        |
+| 本地 credentials 缺失(resolver / auth stage 等)      | **内部** | `BailianError(AUTH)`                                        |
 | `fetch` 自身失败(DNS/TCP/TLS/proxy)                  | **内部** | `BailianError(NETWORK)` + 读 `err.cause.code` 给 errno-hint |
 | polling 客户端超时                                   | **内部** | `BailianError(TIMEOUT)`                                     |
 | HTTP 4xx/5xx、HTTP 200 + 业务错码、async task FAILED | **服务** | `BailianError(GENERAL)`,**message 原样透传**,不分类、不替换 |
 
-不要扮演服务端错误的翻译官——我们没有最新的错误码体系认知,二次包装只会撒谎(详见 `docs/agents/error-hint-change.md` 中的反面 case)。
+不要扮演服务端错误的翻译官——我们没有最新的错误码体系认知,二次包装只会撒谎。
 
-### 4. Console Gateway 命令必须声明 console 全局 flags
+### 4. Console Gateway 命令必须声明鉴权域
 
-如果新命令使用了 `callConsoleGateway`，必须在 `options` 中添加以下三个全局 flag 的说明，以便 `--help` 中展示：
-
-```ts
-{ flag: "--console-region <region>", description: "Console region" },
-{ flag: "--console-site <site>", description: "Console site: domestic, international" },
-{ flag: "--console-switch-agent <uid>", description: "Switch agent UID", type: "number" },
-```
-
-这些 flag 已在 `GLOBAL_OPTIONS`（`packages/core/src/types/command.ts`）中注册，由 `loadConfig` 写入 `config.consoleRegion` / `config.consoleSite` / `config.consoleSwitchAgent`，`callConsoleGateway` 自动读取——命令无需手动提取或传递。
+如果命令调用 Console Gateway,`defineCommand` 必须设置 `auth: "console"`。runtime 会基于 `CONSOLE_AUTH_FLAGS` 自动在 help 中展示 `--console-region`、`--console-site`、`--console-switch-agent`、`--workspace-id`,并由 `authStage` 解析/注入 console credential。命令不要重复声明这些凭证域 flag,也不要手动从 env/config 解析 token。
 
 ## 完成改动后的快速验证
 
 ```sh
 vp check    # format + lint + type check
-vp test     # unit + e2e (e2e 需 API key)
+vp test     # unit + e2e (真实集成需 API key / console token)
 ```
 
 ## 这份指南本身怎么演化

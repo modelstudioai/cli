@@ -109,7 +109,7 @@
 ### Do
 
 - 写清晰的 **must / must-not / 必查**,不写"建议"性语气
-- 用 file path + 具体 action 的句式(`packages/cli/src/commands/catalog.ts:增加 import 与 commands 条目`)
+- 用 file path + 具体 action 的句式(`packages/cli/src/commands.ts:增加产品命令 map 条目`)
 - 在每份场景末尾留**常见漏点**段,持续累积真实经验
 - 在跨场景的不变量上互相引用,不复制
 

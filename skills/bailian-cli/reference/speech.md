@@ -34,7 +34,6 @@ Index: [index.md](index.md)
 | `--vocabulary-id <id>`      | string | no       | Hot-word vocabulary ID for improved accuracy            |
 | `--channel-id <n>`          | number | no       | Audio channel ID (default: 0)                           |
 | `--out <path>`              | string | no       | Save full transcription result to JSON file             |
-| `--no-wait`                 | switch | no       | Return task ID immediately without polling              |
 | `--async`                   | switch | no       | Return async task id without waiting                    |
 | `--poll-interval <seconds>` | number | no       | Polling interval in seconds (default: 2)                |
 | `--api-key <key>`           | string | no       | API key                                                 |
@@ -67,7 +66,7 @@ bl speech recognize --url https://example.com/audio.mp3 --out result.json
 ```
 
 ```bash
-bl speech recognize --url https://example.com/audio.mp3 --no-wait --quiet
+bl speech recognize --url https://example.com/audio.mp3 --async --quiet
 ```
 
 ### `bl speech synthesize`

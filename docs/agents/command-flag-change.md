@@ -11,20 +11,21 @@
 
 ### A. 命令文件本身
 
-- [ ] `packages/cli/src/commands/<group>/<action>.ts`:
-  - `defineCommand({ options: [...] })` 数组里增删/改 `{ flag, description, type, required }`
-  - `usage` 字段(如 `"bl text chat --message <text> [flags]"`)反映新签名
-  - `examples` 数组覆盖新 flag 至少一个示例
-  - `run()` 里读取 flag 的代码:
-    - 类型转换正确(`type: "number"` 时 `flags.x as number`,`"array"` 时 `as string[]`)
-    - 必填校验:`if (!flags.x) failIfMissing("x", ...)` 或交互式 prompt
-    - 默认值 fallback
+- [ ] `packages/commands/src/commands/<group>/<action>.ts`:
+  - `defineCommand({ flags: { ... } })` 里增删/改 camelCase flag key 与 `{ type, valueHint, description, required }`
+  - `usageArgs` 字段只写参数片段(如 `"--message <text> [flags]"`),不写 `bl <path>`
+  - `exampleArgs` 数组覆盖新 flag 至少一个示例,同样不写 bin/path 前缀
+  - `run()` 里只从 `ctx.flags` 读取本命令 flag,从 `ctx.settings` 读取全局/config 解析结果
+  - 类型由 `ParsedFlags<typeof FLAGS>` 推导;避免手写 `flags.x as number` 这类断言
+  - 单 flag 必填用 `required: true`;跨 flag / 值相关校验放 `validate`
+  - 默认值 fallback 写在命令实现或 `Settings` 解析层,不要重复解析 env/config
 
 ### B. 鉴权 / 全局选项
 
-- [ ] 如果是**全局 flag**(所有命令通用),改 `packages/core/src/types/command.ts` 的 `GLOBAL_OPTIONS`
-- [ ] 如果新 flag 影响 `Config`,改 `packages/core/src/config/schema.ts` 的 `Config` 接口
-- [ ] 如果对应 env var,改 `packages/core/src/config/loader.ts` 的 `loadConfig`
+- [ ] 如果是**全局 flag**(所有命令通用),改 `packages/core/src/types/command.ts` 的 `GLOBAL_FLAGS`
+- [ ] 如果是凭证域 flag,优先确认是否属于 `MODEL_AUTH_FLAGS` 或 `CONSOLE_AUTH_FLAGS`;不要在单个命令里重复声明
+- [ ] 如果新 flag 影响有效配置面,改 `packages/core/src/config/schema.ts` 的 `Settings` 接口
+- [ ] 如果对应 env var 或 config 文件字段,改 `packages/core/src/config/loader.ts` 的 `buildSettings`
 
 ### C. 文档层
 
@@ -44,13 +45,13 @@
 ## 完成后自查
 
 ```sh
-node packages/cli/src/main.ts <command> --help          # 看新 flag 出现在 Options
+node packages/cli/src/main.ts <command> --help          # 看新 flag 出现在 Flags
 node packages/cli/src/main.ts <command> --new-flag x   # 实测一遍
 ```
 
 ## 常见漏点
 
-- ✗ 加 `type: "number"` 但 `String(flags.x)` 触发 lint 警告(参考已修过的 memory/list.ts)
 - ✗ 加了 array 型 flag 但没考虑用户可能传多次
 - ✗ 改默认值忘记更新 description 里的 "(default: xxx)" 文案
-- ✗ Required flag 缺失时直接抛硬错而不是 prompt(交互友好性问题,参考已实现 prompt 的命令文件作为示例)
+- ✗ 在 `usageArgs` / `exampleArgs` 里写死 `bl <path>`,导致其它产品入口复用时 help 错
+- ✗ required flag 缺失又在 `run()` 里重复手写校验,与 parser/`validate` 的错误文案不一致
