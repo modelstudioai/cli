@@ -140,7 +140,7 @@ export default defineCommand({
       const result =
         tailApplied !== undefined ? scanned.slice(scanned.length - tailApplied) : scanned;
 
-      if (config.quiet || format === "text") {
+      if (config.quiet || format === "rich") {
         if (result.length === 0) {
           emitBare(search ? `No logs matched "${search}".` : "No logs returned.");
           return;
@@ -171,7 +171,7 @@ export default defineCommand({
     const payload = response.output ?? response.data;
     const logs = payload?.logs ?? [];
 
-    if (config.quiet || format === "text") {
+    if (config.quiet || format === "rich") {
       if (logs.length === 0) {
         emitBare("No logs returned.");
         return;

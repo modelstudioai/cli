@@ -5,6 +5,7 @@ export const DEFAULT_INTENT: IntentProfile = {
   complexity: Complexities.Single,
   taskSummary: "",
   scenarioHints: [],
+  semanticQuery: "",
   inputModality: [],
   outputModality: [],
   requiredCapabilities: [Capabilities.TG],

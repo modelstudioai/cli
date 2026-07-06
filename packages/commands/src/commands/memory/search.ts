@@ -73,7 +73,7 @@ export default defineCommand({
       body,
     });
 
-    if (config.quiet || format === "text") {
+    if (config.quiet || format === "rich") {
       if (!response.memory_nodes || response.memory_nodes.length === 0) {
         emitBare("No memory nodes found.");
       } else {

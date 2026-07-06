@@ -59,7 +59,7 @@ export default defineCommand({
       body,
     });
 
-    if (config.quiet || format === "text") {
+    if (config.quiet || format === "rich") {
       emitBare(`Profile schema created: ${response.profile_schema_id}`);
     } else {
       emitResult(response, format);

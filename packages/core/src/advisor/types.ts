@@ -96,6 +96,13 @@ export interface IntentProfile {
 
   taskSummary: string;
   scenarioHints: string[];
+  /**
+   * LLM-refined, self-contained English description of the need, optimized for
+   * semantic matching against model descriptions. Used as the embedding query
+   * for soft-track recall. Empty when intent analysis degrades (recall then
+   * falls back to the raw user query).
+   */
+  semanticQuery: string;
 
   inputModality: Modality[];
   outputModality: Modality[];

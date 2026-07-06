@@ -19,7 +19,13 @@ export interface ConfigFile {
   /** OAuth-style token from `bl auth login --console` callback; sent as `Authorization: Bearer …` */
   access_token?: string;
   base_url?: string;
-  output?: "text" | "json";
+  /**
+   * Dedicated base URL for the intent-detect model (tongyi-intent-detect-v3).
+   * Allows pointing the intent API at a different region/workspace than the
+   * main chat endpoint. Falls back to `base_url` when not set.
+   */
+  intent_detect_base_url?: string;
+  output?: "rich" | "json";
   output_dir?: string;
   timeout?: number;
   default_text_model?: string;
@@ -36,7 +42,7 @@ export interface ConfigFile {
   telemetry?: boolean;
 }
 
-const VALID_OUTPUTS = new Set<string>(["text", "json"]);
+const VALID_OUTPUTS = new Set<string>(["rich", "json"]);
 const VALID_CONSOLE_SITES = new Set<string>(["domestic", "international"]);
 
 /**
@@ -65,6 +71,8 @@ export function parseConfigFile(raw: unknown): ConfigFile {
   else if (typeof obj.accessToken === "string" && obj.accessToken.length > 0)
     out.access_token = obj.accessToken;
   if (typeof obj.base_url === "string" && isHttpUrl(obj.base_url)) out.base_url = obj.base_url;
+  if (typeof obj.intent_detect_base_url === "string" && isHttpUrl(obj.intent_detect_base_url))
+    out.intent_detect_base_url = obj.intent_detect_base_url;
   if (typeof obj.output === "string" && VALID_OUTPUTS.has(obj.output))
     out.output = obj.output as ConfigFile["output"];
   if (typeof obj.output_dir === "string" && obj.output_dir.length > 0)
@@ -112,7 +120,9 @@ export interface Config {
   fileApiKey?: string;
   configPath?: string;
   baseUrl: string;
-  output: "text" | "json";
+  /** Dedicated base URL for intent-detect model; falls back to baseUrl at call site. */
+  intentDetectBaseUrl?: string;
+  output: "rich" | "json";
   outputDir?: string;
   timeout: number;
   defaultTextModel?: string;

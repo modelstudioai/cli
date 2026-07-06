@@ -166,7 +166,7 @@ async function runWithApiKey(
   });
 
   const nodes = response.data?.nodes || [];
-  if (config.quiet || format === "text") {
+  if (config.quiet || format === "rich") {
     emitTextNodes(nodes.map((n) => ({ text: n.text, score: n.score })));
   } else {
     emitResult(response, format);
@@ -291,7 +291,7 @@ async function runWithAkSk(
   }
 
   const nodes = data.Data?.Nodes || [];
-  if (config.quiet || format === "text") {
+  if (config.quiet || format === "rich") {
     emitTextNodes(nodes.map((n) => ({ text: n.Text, score: n.Score })));
   } else {
     emitResult(data, format);

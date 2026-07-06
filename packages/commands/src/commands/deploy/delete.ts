@@ -84,7 +84,7 @@ export default defineCommand({
 
     if (config.quiet) {
       emitBare(deployedModel!);
-    } else if (format === "text") {
+    } else if (format === "rich") {
       emitBare(`Deleted ${deployedModel}.`);
     } else {
       emitResult(response, format);

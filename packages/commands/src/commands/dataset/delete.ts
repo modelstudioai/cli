@@ -52,7 +52,7 @@ export default defineCommand({
 
     const response = await deleteDataset(config, fileId!);
 
-    if (config.quiet || format === "text") {
+    if (config.quiet || format === "rich") {
       emitBare(`Deleted ${fileId}.`);
     } else {
       emitResult(response, format);

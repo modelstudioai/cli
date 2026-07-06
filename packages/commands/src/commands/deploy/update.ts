@@ -86,7 +86,7 @@ export default defineCommand({
 
     if (config.quiet) {
       emitBare(deployedModel!);
-    } else if (format === "text") {
+    } else if (format === "rich") {
       const parts: string[] = [];
       if (deployment?.rpm_limit !== undefined) parts.push(`rpm_limit=${deployment.rpm_limit}`);
       if (deployment?.tpm_limit !== undefined) parts.push(`tpm_limit=${deployment.tpm_limit}`);

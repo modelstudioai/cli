@@ -61,6 +61,8 @@ export function loadConfig(flags: GlobalFlags): Config {
     fileApiKey,
     configPath: getConfigPath(),
     baseUrl,
+    intentDetectBaseUrl:
+      file.intent_detect_base_url || process.env.DASHSCOPE_INTENT_DETECT_BASE_URL || undefined,
     output,
     outputDir: file.output_dir || undefined,
     timeout,

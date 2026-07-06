@@ -60,7 +60,7 @@ export default defineCommand({
       body,
     });
 
-    if (config.quiet || format === "text") {
+    if (config.quiet || format === "rich") {
       emitBare(`Memory node ${nodeId} updated.`);
     } else {
       emitResult(response, format);

@@ -185,7 +185,7 @@ export default defineCommand({
 
     const content = response.choices?.[0]?.message?.content;
 
-    if (format !== "text") {
+    if (format !== "rich") {
       emitResult(response, format);
       return;
     }

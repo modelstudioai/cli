@@ -4,6 +4,19 @@ export function chatEndpoint(baseUrl: string): string {
   return `${baseUrl}/compatible-mode/v1/chat/completions`;
 }
 
+// ---- Intent Detect (DashScope Native) ----
+
+/**
+ * DashScope-native text-generation endpoint for `tongyi-intent-detect-v3`.
+ * This model does not use the OpenAI-compatible chat endpoint — it requires
+ * the native `{ model, input, parameters }` request shape with
+ * `result_format: "message"` and returns a `{ output, usage, request_id }`
+ * envelope.
+ */
+export function intentDetectEndpoint(baseUrl: string): string {
+  return `${baseUrl}/api/v1/services/aigc/text-generation/generation`;
+}
+
 // ---- Image Generation (DashScope) ----
 
 export function imageEndpoint(baseUrl: string): string {

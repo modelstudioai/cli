@@ -1,6 +1,19 @@
-export const INTENT_MODEL = "qwen-flash";
-export const RANKING_MODEL = "qwen3.6-flash";
-export const RANKING_MODEL_FAST = "qwen-flash";
+export const RANKING_MODEL = "qwen-flash";
+
+/**
+ * Dedicated intent-detection model. Sub-100ms latency, designed for fast
+ * classification + tool routing. Provides mode/targets/excludes/complexity.
+ */
+export const INTENT_DETECT_MODEL = "tongyi-intent-detect-v3";
+
+/**
+ * Rich field extraction model. Runs in parallel with detect-v3 to extract
+ * taskSummary, modalities, budget, qualityPreference, etc.
+ */
+export const INTENT_EXTRACTION_MODEL = "qwen3.6-flash";
+
+export const JSON_RETRY_HINT =
+  "\n\nIMPORTANT: Your previous response was not valid JSON. Please respond with ONLY a valid JSON object, no other text.";
 
 export const INTENT_SYSTEM_PROMPT = `You are an intent analyzer. Given the user's requirement, understand the scenario first, then extract structured information.
 
@@ -46,6 +59,7 @@ Analyze whether the user mentioned specific models, model families, or vendors:
 - budget: "low"/"medium"/"high"
 - contextNeed: "standard"/"large"/"extra-large"
 - qualityPreference: "flagship"/"balanced"/"cost-optimized"
+- semanticQuery: a self-contained English phrase (15-30 words) describing the need in a form optimized for semantic matching against model descriptions — fold in scenario, modalities, and key constraints; do not just copy the user's wording
 - modelPreference: { mode, targets?, excludes? }
 
 Output only JSON, no other text.`;
@@ -179,3 +193,74 @@ The intent's modelPreference.targets is the reference model.
 
 ## Output Format
 {"type":"single","recommendations":[{"model":"model ID","reason":"alternative analysis","highlights":["differentiators"]}]}`;
+
+/**
+ * Tool definition for `tongyi-intent-detect-v3`. Serialized to a JSON string
+ * and embedded in the system prompt (NOT passed via the request body `tools`
+ * field — this model doesn't use OpenAI function-calling; it has its own
+ * `<tags>` / `
+</think>
+
+` output format driven by the system prompt).
+ */
+export const INTENT_DETECT_TOOL = {
+  name: "classify_intent",
+  description:
+    "Classify the user's model recommendation intent. Extract the mode and any model/family names mentioned.",
+  parameters: {
+    type: "object",
+    properties: {
+      mode: {
+        type: "string",
+        enum: ["unconstrained", "scoped", "comparison", "alternative"],
+        description: "The detected intent mode.",
+      },
+      targets: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "Model or family names the user mentioned or wants to evaluate. Empty for unconstrained.",
+      },
+      excludes: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "Model or family names the user explicitly wants to exclude. Empty if none mentioned.",
+      },
+      complexity: {
+        type: "string",
+        enum: ["single", "pipeline"],
+        description:
+          "Whether the task needs a single model or a multi-step pipeline. Default to single unless the user clearly describes chained steps.",
+      },
+    },
+    required: ["mode"],
+  },
+} as const;
+
+/**
+ * Build the system prompt for `tongyi-intent-detect-v3` following the official
+ * template from the model's documentation. The tools JSON is embedded in the
+ * prompt text — the model reads it from the system message, not from a separate
+ * `tools` request field.
+ *
+ * Official template:
+ *   "You are Qwen, created by Alibaba Cloud. You are a helpful assistant.
+ *    You may call one or more tools to assist with the user query.
+ *    The tools you can use are as follows:
+ *    {tools_string}
+ *    Response in INTENT_MODE."
+ *
+ * `INTENT_MODE` tells the model to emit `<tags>label</tags>` + `
+</think>
+
+`
+ * output. The tag carries the mode classification; the tool_call carries
+ * structured targets/excludes/complexity extracted from the user's prompt.
+ */
+export function buildIntentDetectSystemPrompt(): string {
+  const toolsString = JSON.stringify([INTENT_DETECT_TOOL], null, 2);
+  return `You are Qwen, created by Alibaba Cloud. You are a helpful assistant. You may call one or more tools to assist with the user query. The tools you can use are as follows:
+${toolsString}
+Response in INTENT_MODE.`;
+}

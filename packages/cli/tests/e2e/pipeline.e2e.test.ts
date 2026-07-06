@@ -101,7 +101,7 @@ describe("e2e: pipeline", () => {
 
   test("pipeline validate 使用 config 输出格式", async () => {
     const { stdout, stderr, exitCode } = await runCli(["pipeline", "validate", chatBasicPath], {
-      DASHSCOPE_OUTPUT: "text",
+      DASHSCOPE_OUTPUT: "rich",
     });
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toBe("Pipeline definition is valid.\n");
@@ -172,7 +172,7 @@ describe("e2e: pipeline", () => {
         "--dry-run",
         "--non-interactive",
       ],
-      { DASHSCOPE_OUTPUT: "text" },
+      { DASHSCOPE_OUTPUT: "rich" },
     );
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toMatch(/Pipeline planned/);

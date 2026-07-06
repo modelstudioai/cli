@@ -119,7 +119,7 @@ export default defineCommand({
 
       let fullText = "";
       let sessionId = "";
-      const writesStreamingStdout = format === "text";
+      const writesStreamingStdout = format === "rich";
       const dim = config.noColor ? "" : "\x1b[2m";
       const reset = config.noColor ? "" : "\x1b[0m";
 
@@ -176,7 +176,7 @@ export default defineCommand({
 
       const text = response.output?.text ?? "";
 
-      if (config.quiet || format === "text") {
+      if (config.quiet || format === "rich") {
         emitBare(text);
       } else {
         emitResult(response, format);

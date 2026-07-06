@@ -51,7 +51,7 @@ export default defineCommand({
 
     if (config.quiet) {
       emitBare(jobId!);
-    } else if (format === "text") {
+    } else if (format === "rich") {
       emitBare(`Deleted ${jobId}.`);
     } else {
       emitResult(response, format);

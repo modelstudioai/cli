@@ -122,7 +122,7 @@ export default defineCommand({
     });
 
     const nodes = response.data?.nodes || [];
-    if (config.quiet || format === "text") {
+    if (config.quiet || format === "rich") {
       if (nodes.length === 0) {
         emitBare("No results found.");
       } else {

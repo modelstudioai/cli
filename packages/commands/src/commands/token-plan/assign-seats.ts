@@ -85,7 +85,7 @@ export default defineCommand({
       queryParams,
     });
 
-    if (config.quiet || format === "text") {
+    if (config.quiet || format === "rich") {
       emitBare("Seats assigned successfully.");
     } else {
       emitResult(data, format);

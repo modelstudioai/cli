@@ -27,7 +27,7 @@ Index: [index.md](index.md)
 | ------------------- | ------- | -------- | ------------------------------------------------------------- |
 | `--message <text>`  | string  | no       | Describe your requirements (alternative to positional prompt) |
 | `--dry-run`         | boolean | no       | Show intent analysis and candidate list without LLM ranking   |
-| `--output <format>` | string  | no       | Output format: text (default in TTY), json, yaml              |
+| `--output <format>` | string  | no       | Output format: json (default), rich (boxen cards)             |
 
 #### Examples
 
@@ -44,7 +44,7 @@ bl advisor recommend --message "Legal contract review, high precision required"
 ```
 
 ```bash
-bl advisor recommend --message "Low-cost high-concurrency online customer service" --output json
+bl advisor recommend --message "Low-cost high-concurrency online customer service" --output rich
 ```
 
 ```bash

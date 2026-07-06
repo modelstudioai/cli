@@ -14,6 +14,10 @@ import {
 export interface ScoredCandidate {
   model: ModelProfile;
   score: number;
+  /** Normalized [0,1] preference-satisfaction score (capability/feature/context/quality). */
+  hardScore?: number;
+  /** Cosine similarity [0,1] between the semantic query and the model embedding. */
+  softScore?: number;
 }
 
 function hasMultiDomainCapabilities(caps: Capability[]): boolean {
@@ -164,6 +168,7 @@ function recallForSegment(
     complexity: Complexities.Single,
     taskSummary: "",
     scenarioHints: [],
+    semanticQuery: "",
     inputModality,
     outputModality,
     requiredCapabilities,

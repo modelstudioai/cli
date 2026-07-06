@@ -144,7 +144,7 @@ export default defineCommand({
       if (config.quiet) {
         // Just the status word — ideal for `status=$(bl finetune watch ... --quiet)`.
         emitBare(status || "UNKNOWN");
-      } else if (format === "text") {
+      } else if (format === "rich") {
         emitBare(`${nowStamp()}  ${jobId}  ${status || "UNKNOWN"}`);
         if (terminal) {
           const mark = status === "SUCCEEDED" ? "✓" : "✗";
@@ -172,14 +172,14 @@ export default defineCommand({
         const job = response.output ?? response.data;
         const status = String(job?.status ?? "").toUpperCase();
 
-        if (format === "text" && !config.quiet && status !== lastStatus) {
+        if (format === "rich" && !config.quiet && status !== lastStatus) {
           emitBare(`${nowStamp()}  ${jobId}  ${status || "UNKNOWN"}`);
           lastStatus = status;
         }
 
         if (TERMINAL_STATUSES.has(status)) {
           const elapsed = Date.now() - startedAt;
-          if (format !== "text" || config.quiet) {
+          if (format !== "rich" || config.quiet) {
             emitResult(response, format);
           } else {
             const mark = status === "SUCCEEDED" ? "✓" : "✗";
@@ -189,7 +189,7 @@ export default defineCommand({
         }
 
         if (timeoutSec !== undefined && (Date.now() - startedAt) / 1000 >= timeoutSec) {
-          if (format === "text" && !config.quiet) {
+          if (format === "rich" && !config.quiet) {
             emitBare(
               `\n⏼ ${jobId}  timed out after ${formatElapsed(Date.now() - startedAt)} (last status: ${status || "UNKNOWN"})`,
             );

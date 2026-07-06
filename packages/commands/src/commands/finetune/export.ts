@@ -59,7 +59,7 @@ export default defineCommand({
 
     if (config.quiet) {
       emitBare(exported!);
-    } else if (format === "text") {
+    } else if (format === "rich") {
       emitBare(`Exported ${jobId} / ${checkpoint} → model_name=${exported}`);
       emitBare("Next: bl deploy create --model " + exported + " --name <display-name>");
     } else {

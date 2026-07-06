@@ -89,9 +89,9 @@ export default defineCommand({
     }
 
     // Validate specific values
-    if (resolvedKey === "output" && !["text", "json"].includes(value)) {
+    if (resolvedKey === "output" && !["rich", "json"].includes(value)) {
       throw new BailianError(
-        `Invalid output format "${value}". Valid values: text, json`,
+        `Invalid output format "${value}". Valid values: rich, json`,
         ExitCode.USAGE,
       );
     }

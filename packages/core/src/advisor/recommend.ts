@@ -8,7 +8,6 @@ import {
   COMPARISON_SYSTEM_PROMPT,
   PIPELINE_SYSTEM_PROMPT,
   RANKING_MODEL,
-  RANKING_MODEL_FAST,
   SINGLE_SYSTEM_PROMPT,
 } from "./constants/prompts.ts";
 import type { ScoredCandidate } from "./recall.ts";
@@ -32,15 +31,6 @@ function formatPrices(profile: ModelProfile): string | undefined {
   return profile.prices.map((price) => `${price.type}:${price.price}/${price.unit}`).join(", ");
 }
 
-function formatQpm(profile: ModelProfile): string | undefined {
-  if (!profile.qpmInfo) return undefined;
-  const entries = Object.entries(profile.qpmInfo);
-  if (entries.length === 0) return undefined;
-  return entries
-    .map(([key, limit]) => `${key}:${limit.count_limit}/${limit.count_limit_period}s`)
-    .join(", ");
-}
-
 function buildCandidatesContext(candidates: ScoredCandidate[]): string {
   return candidates
     .map(({ model: profile }) => {
@@ -61,11 +51,6 @@ function buildCandidatesContext(candidates: ScoredCandidate[]): string {
         parts.push(`Output Modality: ${modality.response_modality.join(", ")}`);
       const prices = formatPrices(profile);
       if (prices) parts.push(`Pricing: ${prices}`);
-      const qpm = formatQpm(profile);
-      if (qpm) parts.push(`QPM: ${qpm}`);
-      if (profile.versionTag) parts.push(`Version: ${profile.versionTag}`);
-      if (profile.openSource !== undefined)
-        parts.push(`Open Source: ${profile.openSource ? "Yes" : "No"}`);
       if (profile.family) parts.push(`Family: ${profile.family}`);
       return parts.join(" | ");
     })
@@ -224,7 +209,7 @@ export async function rankModels(
       : `Intent Analysis:\n${intentContext}\n\nCandidate Models:\n${candidatesContext}\n\nUser Request: ${userInput}\n\nRecommend up to ${top} models. Respond in English only.`;
 
   const body: Record<string, unknown> = {
-    model: useThinkingModel ? RANKING_MODEL : RANKING_MODEL_FAST,
+    model: RANKING_MODEL,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userMessage },

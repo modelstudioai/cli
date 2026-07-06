@@ -196,7 +196,7 @@ export default defineCommand({
 
       let textContent = "";
       let inThinking = false;
-      const writesStreamingStdout = format === "text";
+      const writesStreamingStdout = format === "rich";
       const dim = config.noColor ? "" : "\x1b[2m";
       const reset = config.noColor ? "" : "\x1b[0m";
       const isTTY = process.stdout.isTTY;
@@ -251,7 +251,7 @@ export default defineCommand({
 
       const text = response.choices?.[0]?.message?.content ?? "";
 
-      if (config.quiet || format === "text") {
+      if (config.quiet || format === "rich") {
         emitBare(text);
       } else {
         emitResult(response, format);
