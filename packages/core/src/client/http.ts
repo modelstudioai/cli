@@ -3,7 +3,8 @@ import type { ApiErrorBody } from "../errors/api.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { mapApiError } from "../errors/api.ts";
-import { trackingHeaders } from "./headers.ts";
+import { maskToken } from "../utils/token.ts";
+import { SOURCE_CONFIG, trackingHeaders } from "./headers.ts";
 
 /** 传输层依赖:UA 用 identity,timeout/verbose 用 settings。凭证由调用方(Client)注头。 */
 export interface HttpDeps {
@@ -52,6 +53,13 @@ export async function request(deps: HttpDeps, opts: RequestOpts): Promise<Respon
 
   if (bodyReferencesOssUrl(opts.body)) {
     headers["X-DashScope-OssResourceResolve"] = "enable";
+  }
+
+  if (deps.settings.verbose) {
+    console.error(`> ${opts.method ?? "GET"} ${opts.url}`);
+    const auth = headers["Authorization"];
+    if (auth) console.error(`> Auth: ${maskToken(auth.replace(/^Bearer /, ""))}`);
+    console.error(`> x-dashscope-source-config: ${SOURCE_CONFIG}`);
   }
 
   const timeoutMs = (opts.timeout ?? deps.settings.timeout) * 1000;
