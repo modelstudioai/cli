@@ -24,20 +24,19 @@ Index: [index.md](index.md)
 
 ### `bl finetune cancel`
 
-| Field           | Value                                    |
-| --------------- | ---------------------------------------- |
-| **Name**        | `finetune cancel`                        |
-| **Description** | Cancel a running fine-tune job           |
-| **Usage**       | `bl finetune cancel --job-id <id> --yes` |
+| Field           | Value                              |
+| --------------- | ---------------------------------- |
+| **Name**        | `finetune cancel`                  |
+| **Description** | Cancel a running fine-tune job     |
+| **Usage**       | `bl finetune cancel --job-id <id>` |
 
 #### Flags
 
-| Flag               | Type   | Required | Description                                   |
-| ------------------ | ------ | -------- | --------------------------------------------- |
-| `--job-id <id>`    | string | yes      | Fine-tune job ID (required)                   |
-| `--yes`            | switch | no       | Confirm the cancellation (required to cancel) |
-| `--api-key <key>`  | string | no       | API key                                       |
-| `--base-url <url>` | string | no       | API base URL                                  |
+| Flag               | Type   | Required | Description                 |
+| ------------------ | ------ | -------- | --------------------------- |
+| `--job-id <id>`    | string | yes      | Fine-tune job ID (required) |
+| `--api-key <key>`  | string | no       | API key                     |
+| `--base-url <url>` | string | no       | API base URL                |
 
 #### Notes
 
@@ -47,7 +46,7 @@ Index: [index.md](index.md)
 #### Examples
 
 ```bash
-bl finetune cancel --job-id ft-xxx --yes
+bl finetune cancel --job-id ft-xxx
 ```
 
 ```bash
@@ -127,11 +126,11 @@ bl finetune checkpoints --job-id ft-xxx --output json
 
 ### `bl finetune create`
 
-| Field           | Value                                                                                                                                                                                                                                                                            |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `finetune create`                                                                                                                                                                                                                                                                |
-| **Description** | Create a fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                                                                                                                                                                               |
-| **Usage**       | `bl finetune create --model <model> --datasets <id\|path,...> [--validations <id\|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft\|sft-lora\|dpo\|dpo-lora\|cpt>] --yes` |
+| Field           | Value                                                                                                                                                                                                                                                                      |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**        | `finetune create`                                                                                                                                                                                                                                                          |
+| **Description** | Create a fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                                                                                                                                                                         |
+| **Usage**       | `bl finetune create --model <model> --datasets <id\|path,...> [--validations <id\|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft\|sft-lora\|dpo\|dpo-lora\|cpt>]` |
 
 #### Flags
 
@@ -147,14 +146,13 @@ bl finetune checkpoints --job-id ft-xxx --output json
 | `--batch-size <n>`           | number | no       | Per-device batch size (clamped to [8, 1024]). Auto-set to 8 for small datasets (<100KB)                                                                                                  |
 | `--learning-rate <str>`      | string | no       | Learning rate as a string to preserve precision (e.g. "1.6e-5")                                                                                                                          |
 | `--max-length <n>`           | number | no       | Max sequence length                                                                                                                                                                      |
-| `--yes`                      | switch | no       | Confirm job creation (required to submit; uploads data and consumes quota)                                                                                                               |
 | `--api-key <key>`            | string | no       | API key                                                                                                                                                                                  |
 | `--base-url <url>`           | string | no       | API base URL                                                                                                                                                                             |
 
 #### Notes
 
-- Creating a job consumes training quota, so --yes is required to submit
-- (use --dry-run to preview the request body without --yes).
+- Creating a job uploads any local datasets and consumes training quota.
+- Use --dry-run to preview the request body without submitting.
 - Training-type values use the `<method>` / `<method>-lora` convention:
 - sft (full) | sft-lora (LoRA) | dpo (full) | dpo-lora (LoRA) | cpt. These map
 - to the server's training_type at the interface boundary, so the rest of the
@@ -176,31 +174,31 @@ bl finetune checkpoints --job-id ft-xxx --output json
 #### Examples
 
 ```bash
-bl finetune create --model qwen3-8b --datasets file-xxx --yes
+bl finetune create --model qwen3-8b --datasets file-xxx
 ```
 
 ```bash
-bl finetune create --model qwen3-8b --datasets ./train.jsonl --yes
+bl finetune create --model qwen3-8b --datasets ./train.jsonl
 ```
 
 ```bash
-bl finetune create --model qwen3-8b --datasets ./train.jsonl --validations ./eval.jsonl --yes
+bl finetune create --model qwen3-8b --datasets ./train.jsonl --validations ./eval.jsonl
 ```
 
 ```bash
-bl finetune create --model qwen3-8b --datasets file-aaa,./extra.jsonl --yes
+bl finetune create --model qwen3-8b --datasets file-aaa,./extra.jsonl
 ```
 
 ```bash
-bl finetune create --model qwen3-8b --datasets ./train.jsonl --training-type sft --yes
+bl finetune create --model qwen3-8b --datasets ./train.jsonl --training-type sft
 ```
 
 ```bash
-bl finetune create --model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4 --yes
+bl finetune create --model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4
 ```
 
 ```bash
-bl finetune create --model qwen3-8b --datasets file-xxx --yes --output json
+bl finetune create --model qwen3-8b --datasets file-xxx --output json
 ```
 
 ```bash
@@ -209,20 +207,19 @@ bl finetune create --model qwen3-8b --datasets file-xxx --dry-run
 
 ### `bl finetune delete`
 
-| Field           | Value                                    |
-| --------------- | ---------------------------------------- |
-| **Name**        | `finetune delete`                        |
-| **Description** | Delete a fine-tune job record            |
-| **Usage**       | `bl finetune delete --job-id <id> --yes` |
+| Field           | Value                              |
+| --------------- | ---------------------------------- |
+| **Name**        | `finetune delete`                  |
+| **Description** | Delete a fine-tune job record      |
+| **Usage**       | `bl finetune delete --job-id <id>` |
 
 #### Flags
 
-| Flag               | Type   | Required | Description                               |
-| ------------------ | ------ | -------- | ----------------------------------------- |
-| `--job-id <id>`    | string | yes      | Fine-tune job ID (required)               |
-| `--yes`            | switch | no       | Confirm the deletion (required to delete) |
-| `--api-key <key>`  | string | no       | API key                                   |
-| `--base-url <url>` | string | no       | API base URL                              |
+| Flag               | Type   | Required | Description                 |
+| ------------------ | ------ | -------- | --------------------------- |
+| `--job-id <id>`    | string | yes      | Fine-tune job ID (required) |
+| `--api-key <key>`  | string | no       | API key                     |
+| `--base-url <url>` | string | no       | API base URL                |
 
 #### Notes
 
@@ -232,7 +229,7 @@ bl finetune create --model qwen3-8b --datasets file-xxx --dry-run
 #### Examples
 
 ```bash
-bl finetune delete --job-id ft-xxx --yes
+bl finetune delete --job-id ft-xxx
 ```
 
 ```bash

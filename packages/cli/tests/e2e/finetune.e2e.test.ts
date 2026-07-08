@@ -190,7 +190,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       "qwen3-8b",
       "--datasets",
       localPath,
-      "--yes",
       "--output",
       "json",
     ]);
@@ -214,7 +213,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       localPath,
       "--batch-size",
       "1",
-      "--yes",
       "--output",
       "json",
     ]);

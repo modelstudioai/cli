@@ -250,31 +250,27 @@ const CREATE_FLAGS = {
     valueHint: "<n>",
     description: "Max sequence length",
   },
-  yes: {
-    type: "switch",
-    description: "Confirm job creation (required to submit; uploads data and consumes quota)",
-  },
 } satisfies FlagsDef;
 
 export default defineCommand({
   description: "Create a fine-tune job (sft | sft-lora | dpo | dpo-lora | cpt)",
   auth: "apiKey",
   usageArgs:
-    "--model <model> --datasets <id|path,...> [--validations <id|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>] --yes",
+    "--model <model> --datasets <id|path,...> [--validations <id|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>]",
   flags: CREATE_FLAGS,
   exampleArgs: [
-    "--model qwen3-8b --datasets file-xxx --yes",
-    "--model qwen3-8b --datasets ./train.jsonl --yes",
-    "--model qwen3-8b --datasets ./train.jsonl --validations ./eval.jsonl --yes",
-    "--model qwen3-8b --datasets file-aaa,./extra.jsonl --yes",
-    "--model qwen3-8b --datasets ./train.jsonl --training-type sft --yes",
-    '--model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4 --yes',
-    "--model qwen3-8b --datasets file-xxx --yes --output json",
+    "--model qwen3-8b --datasets file-xxx",
+    "--model qwen3-8b --datasets ./train.jsonl",
+    "--model qwen3-8b --datasets ./train.jsonl --validations ./eval.jsonl",
+    "--model qwen3-8b --datasets file-aaa,./extra.jsonl",
+    "--model qwen3-8b --datasets ./train.jsonl --training-type sft",
+    '--model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4',
+    "--model qwen3-8b --datasets file-xxx --output json",
     "--model qwen3-8b --datasets file-xxx --dry-run",
   ],
   notes: [
-    "Creating a job consumes training quota, so --yes is required to submit",
-    "(use --dry-run to preview the request body without --yes).",
+    "Creating a job uploads any local datasets and consumes training quota.",
+    "Use --dry-run to preview the request body without submitting.",
     "Training-type values use the `<method>` / `<method>-lora` convention:",
     "sft (full) | sft-lora (LoRA) | dpo (full) | dpo-lora (LoRA) | cpt. These map",
     "to the server's training_type at the interface boundary, so the rest of the",
@@ -443,18 +439,8 @@ export default defineCommand({
       }
     }
 
-    // --yes gate — BEFORE upload: without it we must not silently consume
-    // quota OR upload any file. (Local validation is still allowed to run.)
-    if (!settings.dryRun && !flags.yes) {
-      throw new BailianError(
-        "Refusing to create a fine-tune job without --yes.",
-        ExitCode.USAGE,
-        "Pass --yes to confirm creation (uploads datasets and consumes training quota), or --dry-run to preview the request.",
-      );
-    }
-
     // Upload local paths now that pre-flight (validation, batch-size gate,
-    // capability check, --yes gate) has cleared them. This swaps the
+    // capability check) has cleared them. This swaps the
     // placeholder path entries in `training.fileIds` / `validation?.fileIds`
     // for real file-ids, so the body below sees ids.
     if (!settings.dryRun) {

@@ -154,7 +154,6 @@ bl quota list --output json
 | ------------------------------ | ------ | -------- | -------------------------------------------------------- |
 | `--model <model>`              | string | yes      | Model name (required)                                    |
 | `--tpm <value>`                | string | yes      | Target TPM value (required)                              |
-| `--yes`                        | switch | no       | Skip confirmation prompts                                |
 | `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
 | `--console-site <site>`        | string | no       | Console site: domestic, international                    |
 | `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
@@ -167,7 +166,7 @@ bl quota request --model qwen-turbo --tpm 100000
 ```
 
 ```bash
-bl quota request --model qwen3.6-plus --tpm 8000000 --yes
+bl quota request --model qwen3.6-plus --tpm 8000000
 ```
 
 ```bash

@@ -21,11 +21,11 @@ Index: [index.md](index.md)
 
 ### `bl deploy create`
 
-| Field           | Value                                                                                                                                                                                                             |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `deploy create`                                                                                                                                                                                                   |
-| **Description** | Create a model deployment                                                                                                                                                                                         |
-| **Usage**       | `bl deploy create --model <model_name> --name <display_name> --yes [--plan <plan>] [--template-id <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]` |
+| Field           | Value                                                                                                                                                                                                       |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**        | `deploy create`                                                                                                                                                                                             |
+| **Description** | Create a model deployment                                                                                                                                                                                   |
+| **Usage**       | `bl deploy create --model <model_name> --name <display_name> [--plan <plan>] [--template-id <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]` |
 
 #### Flags
 
@@ -40,7 +40,6 @@ Index: [index.md](index.md)
 | `--input-tpm <n>`           | number | no       | PTU max input tokens/min (required for plan=ptu)                                |
 | `--output-tpm <n>`          | number | no       | PTU max output tokens/min (required for plan=ptu)                               |
 | `--thinking-output-tpm <n>` | number | no       | PTU max thinking-output tokens/min (optional, some models)                      |
-| `--yes`                     | switch | no       | Confirm deployment creation (required to create)                                |
 | `--api-key <key>`           | string | no       | API key                                                                         |
 | `--base-url <url>`          | string | no       | API base URL                                                                    |
 
@@ -67,35 +66,34 @@ Index: [index.md](index.md)
 #### Examples
 
 ```bash
-bl deploy create --model my-qwen-sft --name my-sft-test --yes
+bl deploy create --model my-qwen-sft --name my-sft-test
 ```
 
 ```bash
-bl deploy create --model qwen3.6-flash-2026-04-16 --name my-flash --plan ptu --input-tpm 10000 --output-tpm 1000 --yes
+bl deploy create --model qwen3.6-flash-2026-04-16 --name my-flash --plan ptu --input-tpm 10000 --output-tpm 1000
 ```
 
 ```bash
-bl deploy create --model qwen3-8b --name my-qwen3-mu --plan mu --yes
+bl deploy create --model qwen3-8b --name my-qwen3-mu --plan mu
 ```
 
 ```bash
-bl deploy create --model qwen3-8b --name my-qwen3 --plan mu --template-id MU1 --capacity 2 --yes
+bl deploy create --model qwen3-8b --name my-qwen3 --plan mu --template-id MU1 --capacity 2
 ```
 
 ### `bl deploy delete`
 
-| Field           | Value                                                            |
-| --------------- | ---------------------------------------------------------------- |
-| **Name**        | `deploy delete`                                                  |
-| **Description** | Delete a model deployment (must be STOPPED or FAILED)            |
-| **Usage**       | `bl deploy delete --deployed-model <id> --yes [--skip-precheck]` |
+| Field           | Value                                                      |
+| --------------- | ---------------------------------------------------------- |
+| **Name**        | `deploy delete`                                            |
+| **Description** | Delete a model deployment (must be STOPPED or FAILED)      |
+| **Usage**       | `bl deploy delete --deployed-model <id> [--skip-precheck]` |
 
 #### Flags
 
 | Flag                    | Type   | Required | Description                                   |
 | ----------------------- | ------ | -------- | --------------------------------------------- |
 | `--deployed-model <id>` | string | yes      | Deployed model identifier (required)          |
-| `--yes`                 | switch | no       | Confirm the deletion (required to delete)     |
 | `--skip-precheck`       | switch | no       | Skip the local STOPPED/FAILED status precheck |
 | `--api-key <key>`       | string | no       | API key                                       |
 | `--base-url <url>`      | string | no       | API base URL                                  |
@@ -103,7 +101,7 @@ bl deploy create --model qwen3-8b --name my-qwen3 --plan mu --template-id MU1 --
 #### Examples
 
 ```bash
-bl deploy delete --deployed-model dep-... --yes
+bl deploy delete --deployed-model dep-...
 ```
 
 ```bash
@@ -207,11 +205,11 @@ bl deploy models --catalog-version v1.0 --output json
 
 ### `bl deploy scale`
 
-| Field           | Value                                                                                             |
-| --------------- | ------------------------------------------------------------------------------------------------- |
-| **Name**        | `deploy scale`                                                                                    |
-| **Description** | Scale a deployment's capacity                                                                     |
-| **Usage**       | `bl deploy scale --deployed-model <id> --capacity <n> --yes [--input-tpm <n>] [--output-tpm <n>]` |
+| Field           | Value                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------- |
+| **Name**        | `deploy scale`                                                                              |
+| **Description** | Scale a deployment's capacity                                                               |
+| **Usage**       | `bl deploy scale --deployed-model <id> --capacity <n> [--input-tpm <n>] [--output-tpm <n>]` |
 
 #### Flags
 
@@ -221,38 +219,36 @@ bl deploy models --catalog-version v1.0 --output json
 | `--capacity <n>`        | number | no       | New capacity in plan units (must be a multiple of base_capacity) |
 | `--input-tpm <n>`       | number | no       | PTU only — input tokens per minute                               |
 | `--output-tpm <n>`      | number | no       | PTU only — output tokens per minute                              |
-| `--yes`                 | switch | no       | Confirm the scaling (required to scale)                          |
 | `--api-key <key>`       | string | no       | API key                                                          |
 | `--base-url <url>`      | string | no       | API base URL                                                     |
 
 #### Examples
 
 ```bash
-bl deploy scale --deployed-model qwen-plus-...-b6d61c71 --capacity 8 --yes
+bl deploy scale --deployed-model qwen-plus-...-b6d61c71 --capacity 8
 ```
 
 ```bash
-bl deploy scale --deployed-model dep-... --capacity 2 --yes
+bl deploy scale --deployed-model dep-... --capacity 2
 ```
 
 ### `bl deploy update`
 
-| Field           | Value                                                                              |
-| --------------- | ---------------------------------------------------------------------------------- |
-| **Name**        | `deploy update`                                                                    |
-| **Description** | Update a deployment's rate limits (rpm_limit / tpm_limit)                          |
-| **Usage**       | `bl deploy update --deployed-model <id> --yes [--rpm-limit <n>] [--tpm-limit <n>]` |
+| Field           | Value                                                                        |
+| --------------- | ---------------------------------------------------------------------------- |
+| **Name**        | `deploy update`                                                              |
+| **Description** | Update a deployment's rate limits (rpm_limit / tpm_limit)                    |
+| **Usage**       | `bl deploy update --deployed-model <id> [--rpm-limit <n>] [--tpm-limit <n>]` |
 
 #### Flags
 
-| Flag                    | Type   | Required | Description                                        |
-| ----------------------- | ------ | -------- | -------------------------------------------------- |
-| `--deployed-model <id>` | string | yes      | Deployed model identifier (required)               |
-| `--rpm-limit <n>`       | number | no       | Requests per minute                                |
-| `--tpm-limit <n>`       | number | no       | Tokens per minute                                  |
-| `--yes`                 | switch | no       | Confirm the rate-limit update (required to update) |
-| `--api-key <key>`       | string | no       | API key                                            |
-| `--base-url <url>`      | string | no       | API base URL                                       |
+| Flag                    | Type   | Required | Description                          |
+| ----------------------- | ------ | -------- | ------------------------------------ |
+| `--deployed-model <id>` | string | yes      | Deployed model identifier (required) |
+| `--rpm-limit <n>`       | number | no       | Requests per minute                  |
+| `--tpm-limit <n>`       | number | no       | Tokens per minute                    |
+| `--api-key <key>`       | string | no       | API key                              |
+| `--base-url <url>`      | string | no       | API base URL                         |
 
 #### Notes
 
@@ -261,9 +257,9 @@ bl deploy scale --deployed-model dep-... --capacity 2 --yes
 #### Examples
 
 ```bash
-bl deploy update --deployed-model dep-... --rpm-limit 1000 --yes
+bl deploy update --deployed-model dep-... --rpm-limit 1000
 ```
 
 ```bash
-bl deploy update --deployed-model dep-... --rpm-limit 1000 --tpm-limit 200000 --yes
+bl deploy update --deployed-model dep-... --rpm-limit 1000 --tpm-limit 200000
 ```

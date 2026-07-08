@@ -19,25 +19,24 @@ Index: [index.md](index.md)
 
 ### `bl dataset delete`
 
-| Field           | Value                                    |
-| --------------- | ---------------------------------------- |
-| **Name**        | `dataset delete`                         |
-| **Description** | Delete a dataset file by ID              |
-| **Usage**       | `bl dataset delete --file-id <id> --yes` |
+| Field           | Value                              |
+| --------------- | ---------------------------------- |
+| **Name**        | `dataset delete`                   |
+| **Description** | Delete a dataset file by ID        |
+| **Usage**       | `bl dataset delete --file-id <id>` |
 
 #### Flags
 
-| Flag               | Type   | Required | Description                               |
-| ------------------ | ------ | -------- | ----------------------------------------- |
-| `--file-id <id>`   | string | yes      | Dataset file ID (required)                |
-| `--yes`            | switch | no       | Confirm the deletion (required to delete) |
-| `--api-key <key>`  | string | no       | API key                                   |
-| `--base-url <url>` | string | no       | API base URL                              |
+| Flag               | Type   | Required | Description                |
+| ------------------ | ------ | -------- | -------------------------- |
+| `--file-id <id>`   | string | yes      | Dataset file ID (required) |
+| `--api-key <key>`  | string | no       | API key                    |
+| `--base-url <url>` | string | no       | API base URL               |
 
 #### Examples
 
 ```bash
-bl dataset delete --file-id file-id-xxx --yes
+bl dataset delete --file-id file-id-xxx
 ```
 
 ```bash

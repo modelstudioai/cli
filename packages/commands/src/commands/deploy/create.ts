@@ -2,8 +2,6 @@ import {
   defineCommand,
   detectOutputFormat,
   createDeployment,
-  BailianError,
-  ExitCode,
   type CreateDeploymentRequest,
   type FlagsDef,
 } from "bailian-cli-core";
@@ -58,7 +56,6 @@ const CREATE_FLAGS = {
     valueHint: "<n>",
     description: "PTU max thinking-output tokens/min (optional, some models)",
   },
-  yes: { type: "switch", description: "Confirm deployment creation (required to create)" },
 } satisfies FlagsDef;
 
 /**
@@ -66,8 +63,8 @@ const CREATE_FLAGS = {
  *
  * Plan-specific behaviour (required flags / body assembly / auto-pick) lives
  * in `plans.ts` (`PlanStrategy` + `STRATEGIES`). This file only handles the
- * shared envelope: flag validation, dispatch, dry-run, the --yes gate, and
- * result formatting. Adding a new plan = one entry in the strategy table;
+ * shared envelope: flag validation, dispatch, dry-run, and result
+ * formatting. Adding a new plan = one entry in the strategy table;
  * nothing here changes.
  *
  * `--model` (model identifier) and `--name` (console display name) are required.
@@ -76,13 +73,13 @@ export default defineCommand({
   description: "Create a model deployment",
   auth: "apiKey",
   usageArgs:
-    "--model <model_name> --name <display_name> --yes [--plan <plan>] [--template-id <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]",
+    "--model <model_name> --name <display_name> [--plan <plan>] [--template-id <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]",
   flags: CREATE_FLAGS,
   exampleArgs: [
-    "--model my-qwen-sft --name my-sft-test --yes",
-    "--model qwen3.6-flash-2026-04-16 --name my-flash --plan ptu --input-tpm 10000 --output-tpm 1000 --yes",
-    "--model qwen3-8b --name my-qwen3-mu --plan mu --yes",
-    "--model qwen3-8b --name my-qwen3 --plan mu --template-id MU1 --capacity 2 --yes",
+    "--model my-qwen-sft --name my-sft-test",
+    "--model qwen3.6-flash-2026-04-16 --name my-flash --plan ptu --input-tpm 10000 --output-tpm 1000",
+    "--model qwen3-8b --name my-qwen3-mu --plan mu",
+    "--model qwen3-8b --name my-qwen3 --plan mu --template-id MU1 --capacity 2",
   ],
   notes: [
     "Plan defaults to `lora` (Token-billed). Pass --plan to override.",
@@ -123,15 +120,6 @@ export default defineCommand({
     // deployable-models catalog). Anything outside the strategy table was
     // already rejected by `validate` above.
     const strategy = pickPlanStrategy(plan);
-
-    // Gate before any side-effecting resolution (mu hits the catalog API).
-    if (!settings.dryRun && !flags.yes) {
-      throw new BailianError(
-        `Refusing to create deployment (model=${model}, name=${name}, plan=${plan}) without --yes.`,
-        ExitCode.USAGE,
-        "Pass --yes to confirm deployment creation, or use --dry-run to preview the request.",
-      );
-    }
 
     const resolved = await strategy.resolve({
       client: ctx.client,
