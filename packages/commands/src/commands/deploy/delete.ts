@@ -1,0 +1,87 @@
+import {
+  defineCommand,
+  detectOutputFormat,
+  deleteDeployment,
+  getDeployment,
+  BailianError,
+  ExitCode,
+  type FlagsDef,
+} from "bailian-cli-core";
+import { emitResult, emitBare } from "bailian-cli-runtime";
+
+const DELETE_FLAGS = {
+  deployedModel: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Deployed model identifier (required)",
+    required: true,
+  },
+  yes: { type: "switch", description: "Confirm the deletion (required to delete)" },
+  skipPrecheck: {
+    type: "switch",
+    description: "Skip the local STOPPED/FAILED status precheck",
+  },
+} satisfies FlagsDef;
+
+/**
+ * `bl deploy delete` — destroy a deployment.
+ *
+ * Server-side precondition: status must be STOPPED or FAILED. We surface a
+ * clear local hint for RUNNING / PENDING deployments before issuing the
+ * DELETE call.
+ */
+export default defineCommand({
+  description: "Delete a model deployment (must be STOPPED or FAILED)",
+  auth: "apiKey",
+  usageArgs: "--deployed-model <id> --yes [--skip-precheck]",
+  flags: DELETE_FLAGS,
+  exampleArgs: ["--deployed-model dep-... --yes", "--deployed-model dep-... --dry-run"],
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const deployedModel = flags.deployedModel;
+    const format = detectOutputFormat(settings.output);
+
+    if (settings.dryRun) {
+      emitResult({ action: "deploy.delete", deployed_model: deployedModel }, format);
+      return;
+    }
+
+    if (!flags.yes) {
+      throw new BailianError(
+        `Refusing to delete deployment ${deployedModel} without --yes.`,
+        ExitCode.USAGE,
+        "Pass --yes to confirm the deletion.",
+      );
+    }
+
+    // Precheck status unless skipped — surface a clear hint instead of letting
+    // the server return a generic precondition error.
+    if (!flags.skipPrecheck) {
+      try {
+        const get = await getDeployment(ctx.client, deployedModel);
+        const deployment = get.output ?? get.data;
+        const status = (deployment?.status ?? "").toUpperCase();
+        if (status && status !== "STOPPED" && status !== "FAILED") {
+          throw new BailianError(
+            `Deployment ${deployedModel} is ${status}. Only STOPPED / FAILED deployments can be deleted. ` +
+              `Stop it first via the platform console, or pass --skip-precheck to attempt deletion anyway.`,
+            ExitCode.USAGE,
+          );
+        }
+      } catch (e) {
+        if (e instanceof BailianError) throw e;
+        // If the get itself failed (e.g. not found), let the DELETE call surface the real error.
+      }
+    }
+
+    const response = await deleteDeployment(ctx.client, deployedModel);
+
+    if (settings.quiet) {
+      emitBare(deployedModel);
+    } else if (format === "text") {
+      emitBare(`Deleted ${deployedModel}.`);
+    } else {
+      emitResult(response, format);
+    }
+  },
+});

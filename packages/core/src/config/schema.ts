@@ -19,6 +19,12 @@ export interface ConfigFile {
   /** OAuth-style token from `bl auth login --console` callback; sent as `Authorization: Bearer …` */
   access_token?: string;
   base_url?: string;
+  /**
+   * Dedicated base URL for the intent-detect model (tongyi-intent-detect-v3).
+   * Allows pointing the intent API at a different region/workspace than the
+   * main chat endpoint. Falls back to `base_url` when not set.
+   */
+  intent_detect_base_url?: string;
   output?: "text" | "json";
   output_dir?: string;
   timeout?: number;
@@ -63,6 +69,8 @@ export function parseConfigFile(raw: unknown): ConfigFile {
   else if (typeof obj.accessToken === "string" && obj.accessToken.length > 0)
     out.access_token = obj.accessToken;
   if (typeof obj.base_url === "string" && isHttpUrl(obj.base_url)) out.base_url = obj.base_url;
+  if (typeof obj.intent_detect_base_url === "string" && isHttpUrl(obj.intent_detect_base_url))
+    out.intent_detect_base_url = obj.intent_detect_base_url;
   if (typeof obj.output === "string" && VALID_OUTPUTS.has(obj.output))
     out.output = obj.output as ConfigFile["output"];
   if (typeof obj.output_dir === "string" && obj.output_dir.length > 0)
@@ -109,7 +117,15 @@ export interface Identity {
  */
 export interface Settings {
   configPath?: string;
+  /** Dedicated base URL for intent-detect model; falls back to the model baseUrl at call site. */
+  intentDetectBaseUrl?: string;
   output: "text" | "json";
+  /**
+   * Whether `output` came from an explicit source (flag/env/file) rather than
+   * the default. Commands whose default format differs from the global default
+   * (e.g. `advisor recommend` defaults to json) branch on this.
+   */
+  outputExplicit: boolean;
   outputDir?: string;
   timeout: number;
   defaultTextModel?: string;

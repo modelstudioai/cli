@@ -20,10 +20,12 @@ import {
   CONCURRENT_FLAG,
 } from "bailian-cli-core";
 
-const COSYVOICE_CLONE_DESIGN_DOC = `${DOCS_HOSTS.cn}/cosyvoice-clone-design-api`;
 import { downloadFile } from "bailian-cli-runtime";
 import { runConcurrent, downloadParallel, getConcurrency } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
+import { VOICE_TTS_PAGE } from "bailian-cli-runtime";
+
+const COSYVOICE_CLONE_DESIGN_DOC = `${DOCS_HOSTS.cn}/cosyvoice-clone-design-api`;
 
 interface VoiceEntry {
   voice: string;
@@ -36,7 +38,7 @@ interface VoiceEntry {
 const COSYVOICE_V3_FLASH_VOICES: VoiceEntry[] = [
   // 社交陪伴
   { voice: "longanyang", name: "龙安洋", desc: "阳光大男孩", lang: "中文/英文" },
-  { voice: "longanhuan", name: "龙安欢", desc: "欢脱元气女", lang: "中文/英文" },
+  { voice: "longanhuan_v3", name: "龙安欢", desc: "欢脱元气女", lang: "中文/英文" },
   { voice: "longantai_v3", name: "龙安台", desc: "嗲甜台湾女", lang: "中文/英文" },
   { voice: "longhua_v3", name: "龙华", desc: "元气甜美女", lang: "中文/英文" },
   { voice: "longcheng_v3", name: "龙橙", desc: "智慧青年男", lang: "中文/英文" },
@@ -120,12 +122,14 @@ function printVoiceList(model: string): void {
   const voices = MODEL_VOICES[model];
   if (!voices) {
     process.stdout.write(`No built-in voice list available for model: ${model}\n`);
+    process.stdout.write(`Browse voices in the console: ${VOICE_TTS_PAGE}\n`);
     return;
   }
   if (voices.length === 0) {
     process.stdout.write(`Model ${model} has no system voices.\n`);
     process.stdout.write("Use clone or design voices created via the CosyVoice API.\n");
     process.stdout.write(`See: ${COSYVOICE_CLONE_DESIGN_DOC}\n`);
+    process.stdout.write(`Browse voices in the console: ${VOICE_TTS_PAGE}\n`);
     return;
   }
   const col = (s: string, w: number) => s.padEnd(w);
@@ -138,6 +142,7 @@ function printVoiceList(model: string): void {
     process.stdout.write(`${col(v.voice, 26)} ${col(v.name, 10)} ${col(v.desc, 16)} ${v.lang}\n`);
   }
   process.stdout.write(`\nTotal: ${voices.length} voices\n`);
+  process.stdout.write(`Preview and browse more voices in the console: \n${VOICE_TTS_PAGE}\n`);
 }
 
 const SYNTHESIZE_FLAGS = {
@@ -161,11 +166,12 @@ const SYNTHESIZE_FLAGS = {
     type: "string",
     valueHint: "<voice>",
     description:
-      "Voice ID. Use --list-voices to see system voices for cosyvoice-v3-flash; for v3.5-flash provide a clone/design voice ID",
+      "Voice ID. Use --list-voices to see built-in voices for cosyvoice-v3-flash; for v3.5-flash provide a clone/design voice ID",
   },
   listVoices: {
     type: "switch",
-    description: "List available system voices for the selected model and exit",
+    description:
+      "List built-in system voices for the selected model and exit (console link shown in output)",
   },
   format: {
     type: "string",
@@ -231,7 +237,8 @@ export default defineCommand({
   validate: (f) => {
     if (f.listVoices) return undefined;
     if (!f.text && !f.textFile) return "Provide --text or --text-file.";
-    if (!f.voice) return "Missing required flag: --voice";
+    if (!f.voice)
+      return `Missing required flag: --voice (use --list-voices; browse more voices: ${VOICE_TTS_PAGE})`;
     return undefined;
   },
   async run(ctx) {

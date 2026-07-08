@@ -45,7 +45,7 @@ const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 export const runStress = defineStressTarget({
   canonical: "video-t2v",
-  defaultModel: "happyhorse-1.0-t2v",
+  defaultModel: "happyhorse-1.1-t2v",
   batchDirPrefix: "video-t2v-batch",
   helpText: `用法：pnpm run test:stress -- video-t2v -- --concurrency 1 --count 3
 详见 docs/agents/stress-batch-tests.md`,

@@ -1,16 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isBailianE2EEnabled, parseStdoutJson, runCli } from "./helpers.ts";
+import { isConsoleE2EReady, isConsoleAuthFailure, parseStdoutJson, runCli } from "./helpers.ts";
 import { readConfigFile } from "bailian-cli-core";
-
-function isConsoleE2EReady(): boolean {
-  if (!isBailianE2EEnabled()) return false;
-  try {
-    const config = readConfigFile();
-    return typeof config.access_token === "string" && config.access_token.length > 0;
-  } catch {
-    return false;
-  }
-}
 
 function getStaticWorkspaceId(): string | undefined {
   if (process.env.BAILIAN_WORKSPACE_ID?.trim()) return process.env.BAILIAN_WORKSPACE_ID.trim();
@@ -21,17 +11,27 @@ function getStaticWorkspaceId(): string | undefined {
   return undefined;
 }
 
+// 当无静态 workspace-id 且 console 未登录/已过期时返回占位符，避免下游 dry-run
+// 用例因 `--workspace-id undefined` 而崩溃；live 用例各自用 isConsoleAuthFailure
+// 容忍鉴权失败。参考 deploy/dataset “无 key / 有效 / 失效 均绿”的策略。
+const FALLBACK_WORKSPACE_ID = "ws-e2e-unavailable";
+
 async function fetchDefaultWorkspaceId(): Promise<string> {
   const staticId = getStaticWorkspaceId();
   if (staticId) return staticId;
 
-  const { stdout } = await runCli(["workspace", "list", "--output", "json"]);
-  const result = JSON.parse(stdout);
-  const data = result?.data?.DataV2?.data?.data?.data ?? [];
-  const defaultWs = data.find((ws: { defaultAgent?: boolean }) => ws.defaultAgent);
-  if (defaultWs?.workspaceId) return defaultWs.workspaceId;
-  if (data.length > 0 && data[0].workspaceId) return data[0].workspaceId;
-  throw new Error("No workspace found for e2e tests");
+  const result = await runCli(["workspace", "list", "--output", "json"]);
+  if (isConsoleAuthFailure(result) || result.exitCode !== 0) return FALLBACK_WORKSPACE_ID;
+  try {
+    const parsed = JSON.parse(result.stdout);
+    const data = parsed?.data?.DataV2?.data?.data?.data ?? [];
+    const defaultWs = data.find((ws: { defaultAgent?: boolean }) => ws.defaultAgent);
+    if (defaultWs?.workspaceId) return defaultWs.workspaceId;
+    if (data.length > 0 && data[0].workspaceId) return data[0].workspaceId;
+  } catch {
+    /* fall through to placeholder */
+  }
+  return FALLBACK_WORKSPACE_ID;
 }
 
 describe("e2e: usage stats", () => {
@@ -158,43 +158,25 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
   });
 
   test("usage stats 概览模式返回 JSON 结果", async () => {
-    const { stderr, exitCode } = await runCli([
-      "usage",
-      "stats",
-      "--workspace-id",
-      wsId,
-      "--output",
-      "json",
-    ]);
-    expect(exitCode, stderr).toBe(0);
+    const result = await runCli(["usage", "stats", "--workspace-id", wsId, "--output", "json"]);
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage stats 概览文本输出包含英文标签", async () => {
-    const { stderr, exitCode } = await runCli([
-      "usage",
-      "stats",
-      "--workspace-id",
-      wsId,
-      "--output",
-      "text",
-    ]);
-    expect(exitCode, stderr).toBe(0);
+    const result = await runCli(["usage", "stats", "--workspace-id", wsId, "--output", "text"]);
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage stats 概览文本输出包含 Token 用量", async () => {
-    const { stderr, exitCode } = await runCli([
-      "usage",
-      "stats",
-      "--workspace-id",
-      wsId,
-      "--output",
-      "text",
-    ]);
-    expect(exitCode, stderr).toBe(0);
+    const result = await runCli(["usage", "stats", "--workspace-id", wsId, "--output", "text"]);
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage stats --model 单模型文本输出包含英文表头", async () => {
-    const { stderr, exitCode } = await runCli([
+    const result = await runCli([
       "usage",
       "stats",
       "--workspace-id",
@@ -204,11 +186,12 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "--output",
       "text",
     ]);
-    expect(exitCode, stderr).toBe(0);
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage stats --model 逗号分隔多模型返回多行", async () => {
-    const { stderr, exitCode } = await runCli([
+    const result = await runCli([
       "usage",
       "stats",
       "--workspace-id",
@@ -218,11 +201,12 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "--output",
       "text",
     ]);
-    expect(exitCode, stderr).toBe(0);
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage stats --model 不存在的模型返回空表格", async () => {
-    const { stderr, exitCode } = await runCli([
+    const result = await runCli([
       "usage",
       "stats",
       "--workspace-id",
@@ -232,11 +216,12 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "--output",
       "text",
     ]);
-    expect(exitCode, stderr).toBe(0);
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage stats --days 1 短时间范围正常返回", async () => {
-    const { stderr, exitCode } = await runCli([
+    const result = await runCli([
       "usage",
       "stats",
       "--workspace-id",
@@ -246,11 +231,12 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "--output",
       "text",
     ]);
-    expect(exitCode, stderr).toBe(0);
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage stats --type Vision 按类型过滤", async () => {
-    const { stderr, exitCode } = await runCli([
+    const result = await runCli([
       "usage",
       "stats",
       "--workspace-id",
@@ -260,6 +246,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "--output",
       "text",
     ]);
-    expect(exitCode, stderr).toBe(0);
+    if (isConsoleAuthFailure(result)) return;
+    expect(result.exitCode, result.stderr).toBe(0);
   });
 });

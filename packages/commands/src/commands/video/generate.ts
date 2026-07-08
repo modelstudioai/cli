@@ -22,14 +22,14 @@ import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailia
 
 export default defineCommand({
   description:
-    "Generate a video from text or image (happyhorse-1.0-t2v / happyhorse-1.0-i2v / wan2.6-t2v)",
+    "Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)",
   auth: "apiKey",
   usageArgs: "--prompt <text> [--image <url>] [flags]",
   flags: {
     model: {
       type: "string",
       valueHint: "<model>",
-      description: "Model ID (default: happyhorse-1.0-t2v, or happyhorse-1.0-i2v with --image)",
+      description: "Model ID (default: happyhorse-1.1-t2v, or happyhorse-1.1-i2v with --image)",
     },
     prompt: {
       type: "string",
@@ -104,7 +104,7 @@ export default defineCommand({
     const model =
       flags.model ||
       settings.defaultVideoModel ||
-      (flags.image ? "happyhorse-1.0-i2v" : "happyhorse-1.0-t2v");
+      (flags.image ? "happyhorse-1.1-i2v" : "happyhorse-1.1-t2v");
     const format = detectOutputFormat(settings.output);
 
     const imageUrl = flags.image;
@@ -123,7 +123,7 @@ export default defineCommand({
       input: {
         prompt: prompt,
         negative_prompt: flags.negativePrompt || undefined,
-        // i2v models (happyhorse-1.0-i2v) require input.media with type 'first_frame'
+        // i2v models (happyhorse-1.1-i2v) require input.media with type 'first_frame'
         ...(resolvedImageUrl
           ? { media: [{ type: "first_frame" as const, url: resolvedImageUrl }] }
           : {}),

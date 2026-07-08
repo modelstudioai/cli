@@ -56,7 +56,7 @@ const RETRIEVE_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Retrieve from a Bailian knowledge base",
+  description: "Retrieve from a Bailian knowledge base (deprecated, use `search` instead)",
   auth: "apiKey",
   usageArgs: "--index-id <id> --query <text> [flags]",
   flags: RETRIEVE_FLAGS,

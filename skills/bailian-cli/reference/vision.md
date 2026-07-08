@@ -51,5 +51,5 @@ bl vision describe --video ./local-video.mp4
 ```
 
 ```bash
-bl vision describe --image photo.png --prompt "Extract the text" --model qwen-vl-plus
+bl vision describe --image photo.png --prompt "Extract the text" --model qwen3-vl-plus
 ```

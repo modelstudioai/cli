@@ -11,8 +11,8 @@ Index: [index.md](index.md)
 | ------------------- | ----------------------------------------------------------------------------------------------------- |
 | `bl video download` | Download a completed video by task ID                                                                 |
 | `bl video edit`     | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                |
-| `bl video generate` | Generate a video from text or image (happyhorse-1.0-t2v / happyhorse-1.0-i2v / wan2.6-t2v)            |
-| `bl video ref`      | Reference-to-video generation (happyhorse-1.0-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
+| `bl video generate` | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)            |
+| `bl video ref`      | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
 | `bl video task get` | Query async task status                                                                               |
 
 ## Command details
@@ -98,14 +98,14 @@ bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the
 | Field           | Value                                                                                      |
 | --------------- | ------------------------------------------------------------------------------------------ |
 | **Name**        | `video generate`                                                                           |
-| **Description** | Generate a video from text or image (happyhorse-1.0-t2v / happyhorse-1.0-i2v / wan2.6-t2v) |
+| **Description** | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v) |
 | **Usage**       | `bl video generate --prompt <text> [--image <url>] [flags]`                                |
 
 #### Flags
 
 | Flag                        | Type    | Required | Description                                                                             |
 | --------------------------- | ------- | -------- | --------------------------------------------------------------------------------------- |
-| `--model <model>`           | string  | no       | Model ID (default: happyhorse-1.0-t2v, or happyhorse-1.0-i2v with --image)              |
+| `--model <model>`           | string  | no       | Model ID (default: happyhorse-1.1-t2v, or happyhorse-1.1-i2v with --image)              |
 | `--prompt <text>`           | string  | yes      | Video description                                                                       |
 | `--image <url>`             | string  | no       | Input image URL for image-to-video generation                                           |
 | `--negative-prompt <text>`  | string  | no       | Negative prompt to exclude unwanted content                                             |
@@ -149,14 +149,14 @@ bl video generate --prompt "A cat playing with a ball" --watermark false
 | Field           | Value                                                                                                 |
 | --------------- | ----------------------------------------------------------------------------------------------------- |
 | **Name**        | `video ref`                                                                                           |
-| **Description** | Reference-to-video generation (happyhorse-1.0-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
+| **Description** | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
 | **Usage**       | `bl video ref --prompt <text> --image <url>... [--ref-video <url>...] [flags]`                        |
 
 #### Flags
 
 | Flag                        | Type    | Required | Description                                                                             |
 | --------------------------- | ------- | -------- | --------------------------------------------------------------------------------------- |
-| `--model <model>`           | string  | no       | Model ID (default: happyhorse-1.0-r2v)                                                  |
+| `--model <model>`           | string  | no       | Model ID (default: happyhorse-1.1-r2v)                                                  |
 | `--prompt <text>`           | string  | yes      | Video description with reference markers (image1, video1, etc.)                         |
 | `--image <url>`             | array   | no       | Reference image URL or local file (repeatable for multiple subjects)                    |
 | `--ref-video <url>`         | array   | no       | Reference video URL or local file (repeatable)                                          |

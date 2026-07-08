@@ -18,9 +18,11 @@ export function assertReadmeSync() {
   }
 }
 
-export function loadAndValidatePackages() {
+export function loadAndValidatePackages({ packages } = {}) {
+  const pkgs = packages ?? PACKAGES;
+  const internalNames = new Set(pkgs.map((p) => p.name));
   const jsonByKey = new Map();
-  for (const pkg of PACKAGES) {
+  for (const pkg of pkgs) {
     const json = readPackageJson(pkg);
     if (json.name !== pkg.name) {
       throw new Error(`${pkg.dir} name must be ${pkg.name}, got ${json.name}`);
@@ -30,18 +32,23 @@ export function loadAndValidatePackages() {
 
   const coreJson = jsonByKey.get("core");
   const cliJson = jsonByKey.get("cli");
+  const version = coreJson.version;
 
-  if (cliJson.version !== coreJson.version) {
-    throw new Error(
-      `core and cli versions must match, got ${coreJson.version} and ${cliJson.version}.`,
-    );
-  }
-
-  const cliCoreDep = cliJson.dependencies?.["bailian-cli-core"];
-  if (cliCoreDep !== "workspace:*") {
-    throw new Error(
-      `packages/cli source dependency on bailian-cli-core must be "workspace:*", got ${cliCoreDep}.`,
-    );
+  for (const pkg of pkgs) {
+    const json = jsonByKey.get(pkg.key);
+    if (json.version !== version) {
+      throw new Error(
+        `all package versions must match ${version} (bailian-cli-core), ` +
+          `but ${pkg.name} is ${json.version}.`,
+      );
+    }
+    for (const [dep, range] of Object.entries(json.dependencies ?? {})) {
+      if (internalNames.has(dep) && range !== "workspace:*") {
+        throw new Error(
+          `${pkg.name} dependency on ${dep} must be "workspace:*", got ${String(range)}.`,
+        );
+      }
+    }
   }
 
   return { coreJson, cliJson };

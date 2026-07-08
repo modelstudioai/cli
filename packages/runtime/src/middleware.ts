@@ -20,7 +20,12 @@ import {
 } from "bailian-cli-core";
 import { maybeShowStatusBar } from "./output/status-bar.ts";
 import { ansi } from "./output/color.ts";
-import { checkForUpdate, getPendingUpdateNotification } from "./utils/update-checker.ts";
+import {
+  checkForUpdate,
+  getPendingUpdateNotification,
+  performAutoUpdate,
+  shouldAutoUpdate,
+} from "./utils/update-checker.ts";
 
 /**
  * What each middleware stage gets for the invocation in flight: the matched
@@ -117,11 +122,16 @@ export const versionCheckStage: Middleware = async (ctx, next) => {
   const isUpdateCommand = ctx.path.length === 1 && ctx.path[0] === "update";
   const newVersion = getPendingUpdateNotification();
   if (newVersion && !ctx.settings.quiet && !isUpdateCommand) {
-    const color = ansi(process.stderr);
-    process.stderr.write(
-      `\n  ${color.yellow(`Update available: ${ctx.identity.version} → ${newVersion}`)}\n`,
-    );
-    process.stderr.write(`  Run ${color.cyan(`${ctx.identity.binName} update`)} to upgrade\n\n`);
+    if (shouldAutoUpdate(newVersion, ctx.identity.version)) {
+      // 大版本差距且目标为稳定版,自动更新
+      await performAutoUpdate(ctx.identity.version, newVersion, ctx.identity.npmPackage);
+    } else {
+      const color = ansi(process.stderr);
+      process.stderr.write(
+        `\n  ${color.yellow(`Update available: ${ctx.identity.version} → ${newVersion}`)}\n`,
+      );
+      process.stderr.write(`  Run ${color.cyan(`${ctx.identity.binName} update`)} to upgrade\n\n`);
+    }
   }
 };
 

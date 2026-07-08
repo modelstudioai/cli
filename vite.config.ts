@@ -19,6 +19,12 @@ export default defineConfig({
         files: ["packages/runtime/src/**", "tools/**", "**/tests/**"],
         rules: { "unicorn/no-process-exit": "off" },
       },
+      {
+        // finetune watch 的退出码是公开探针契约（0 成功/1 失败/2 超时/3 运行中/130 中断），
+        // 非错误语义，不走 handleError。
+        files: ["packages/commands/src/commands/finetune/watch.ts"],
+        rules: { "unicorn/no-process-exit": "off" },
+      },
     ],
   },
   run: {

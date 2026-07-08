@@ -76,7 +76,7 @@ export default defineCommand({
     '--image https://example.com/photo.jpg --prompt "What breed is this dog?"',
     '--video https://example.com/video.mp4 --prompt "Summarize the video content"',
     "--video ./local-video.mp4",
-    '--image photo.png --prompt "Extract the text" --model qwen-vl-plus',
+    '--image photo.png --prompt "Extract the text" --model qwen3-vl-plus',
   ],
   validate: (f) =>
     !f.image && !(f.video as string[] | undefined)?.length

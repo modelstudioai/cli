@@ -27,7 +27,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 - **文本对话** — Qwen3.7-max：Agentic coding、前端编程、Vibe coding 等能力显著增强
 - **全模态对话** — 文本 + 图像 + 音频 + 视频全模态支持
 - **图像生成与编辑** — Qwen-Image 2.0：专业文字渲染、真实质感、强语义遵循、多图合成
-- **视频生成与编辑** — HappyHorse-1.0 系列，支持文生 / 图生 / 参考生（最多 9 张图参考）/ 自然语言视频编辑
+- **视频生成与编辑** — happyhorse-1.1 系列，支持文生 / 图生 / 参考生（最多 9 张图参考）/ 自然语言视频编辑
 - **语音合成与识别** — CosyVoice 实时流式合成，5-20s 样本即可克隆；FunAudio-ASR 覆盖 30 种语种，含汉语七大方言与 20+ 口音官话
 - **图像与视频理解** — Qwen-VL：长视频解析、复杂图表与文档识别、视觉推理、多语种 OCR
 
@@ -38,6 +38,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 - **MCP 集成** — 统一调度百炼 MCP 服务：列出服务、查看工具、直接在终端调用任意工具
 - **联网搜索** — 实时互联网信息检索，提升回答准确性及时效性
 - **模型推荐** — 描述你的场景，智能推荐最适合的模型；支持限定范围搜索、模型对比和替代发现
+- **微调与部署** — 上传数据集、创建 SFT/LoRA/DPO/CPT 调优任务（`finetune create`）、非阻塞探测任务状态（`finetune watch`）、按模型查训练能力（`finetune capability`），并把训练好的模型部署为推理服务（`deploy create`）
 - **控制台能力** — 浏览百炼应用（`app list`），查询模型免费额度（`usage free`），查看模型用量统计（`usage stats`），管理业务空间（`workspace list`），管理限流与提额（`quota list/request/check/history`）
 - **本地文件自动上传** — 所有 URL 参数同时支持本地路径，免费临时存储 48 小时
 
@@ -54,7 +55,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 一部完整的 **2 分钟、16:9 电影感短片** —— 由一句自然语言端到端生成,**全程零手动剪辑**。这个示例展示了 AI Agent 如何把三个基础能力编排成一条多步创作流水线:
 
 - **[Qwen Code](https://github.com/QwenLM/qwen-code)** —— Agentic coding 模型,解析用户意图、驱动整个工作流
-- **[阿里云百炼 CLI](https://github.com/modelstudioai/cli/)** —— 调用 **HappyHorse 1.0**,百炼的文生/图生/参考生视频模型
+- **[阿里云百炼 CLI](https://github.com/modelstudioai/cli/)** —— 调用 **HappyHorse 1.1**,百炼的文生/图生/参考生视频模型
 - **[spark-video Skill](https://github.com/JohnKeating1997/spark-video)** —— 负责场景拆分、分镜设计、镜头连贯性和最终拼接
 
 ### 唯一的提示词
@@ -65,7 +66,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 
 1. **Qwen Code** 解析需求、规划叙事节奏,决定要调用哪些工具。
 2. **spark-video Skill** 把故事拆成镜头、为每个镜头写提示词,并保证视觉连贯性(角色、光线、色调、镜头语言)。
-3. **`bl video generate`** 把每个镜头并行下发给 **HappyHorse 1.0**。
+3. **`bl video generate`** 把每个镜头并行下发给 **HappyHorse 1.1**。
 4. Skill 把所有片段拼成最终的 16:9 / 约 2 分钟成片。
 
 没有时间线拖拽,没有逐帧剪辑。一句话 → 一部短片。
@@ -82,7 +83,10 @@ npx skills add modelstudioai/cli --all -g
 ## 快速开始
 
 ```bash
-# 认证
+# 认证（推荐浏览器登录）
+bl auth login --console
+
+# 或使用 API key 认证
 bl auth login --api-key sk-xxxxx
 
 # 和通义千问对话
@@ -106,22 +110,30 @@ bl advisor recommend --message "qwen-max 和 deepseek-v3 哪个更适合做代�
 # 浏览器登录（控制台能力相关命令需要）
 bl auth login --console
 
+# 微调与部署 — 从训练到服务的一站式流程
+bl dataset upload --file ./train.jsonl                 # 上传 .jsonl 数据集（先校验）
+bl finetune create --model qwen3-8b --datasets ./train.jsonl --training-type sft-lora  # 本地路径自动上传
+bl finetune watch --job-id ft-xxx --output json       # 非阻塞状态探测（退出码 0/1/3 = 成功/失败/进行中）
+bl finetune capability --model qwen3-8b               # 查询模型支持哪些训练方式
+bl deploy create --model qwen3-8b --name my-svc --plan mu  # 把训练好的模型部署为推理服务
+
 # 浏览应用 / 免费额度 / 用量统计 / 业务空间
 bl app list
-bl usage free --model qwen3-max
-bl usage free --expiring 30                           # 30 天内过期的额度
-bl usage free --sort remaining                        # 按剩余百分比升序排列
-bl usage stats --workspace-id <id>                    # 指定空间的用量概览
-bl usage stats --model qwen-turbo --workspace-id <id> # 指定模型用量
+bl usage free                                         # 各模型免费额度（可加 --model/--expiring/--sort）
+bl usage stats --workspace-id <id>                    # 模型用量统计（加 --model 查单模型）
 bl workspace list                                     # 列出所有业务空间
 
-# 限流管理与提额
-bl quota list                                         # 查看所有模型的 RPM/TPM 限额
-bl quota list --model qwen3.6-plus                    # 查看指定模型限额
-bl quota check                                        # 查看当前用量 vs 限流阈值
-bl quota check --model qwen3.6-plus --period 5        # 查看最近 5 分钟用量
+# 限流管理与提额（list / check / request / history）
+bl quota list                                         # 查看 RPM/TPM 限额（加 --model 过滤）
+bl quota check                                        # 当前用量 vs 限流阈值（加 --model/--period）
 bl quota request --model qwen3.6-plus --tpm 6000000   # 申请临时 TPM 提额
 bl quota history                                      # 查看提额历史记录
+
+# Token Plan 团队版管理（需 AK/SK，见下方认证说明）
+bl token-plan list-seats                                # 查看订阅席位明细
+bl token-plan add-member --account-name dev --org-id org_xxx
+bl token-plan assign-seats --workspace-id ws_xxx --seat-type standard --account-id acc_xxx
+bl token-plan create-key --account-id acc_xxx --workspace-id ws_xxx
 ```
 
 > 更多案例与使用场景：[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)
@@ -149,6 +161,18 @@ bl text chat --api-key sk-xxxxx --message "你好"
 
 ```bash
 bl auth login --console
+```
+
+### 阿里云 AK/SK（仅 Token Plan）
+
+`token-plan` 命令组需要阿里云 AccessKey。前往 [RAM 控制台](https://ram.console.aliyun.com/manage/ak) 获取。
+
+> 建议：创建 RAM 子账号并授予最小权限，避免使用主账号 AK/SK。
+
+```bash
+export ALIBABA_CLOUD_ACCESS_KEY_ID=LTAI5t...
+export ALIBABA_CLOUD_ACCESS_KEY_SECRET=...
+export BAILIAN_WORKSPACE_ID=ws-...
 ```
 
 ## 配置

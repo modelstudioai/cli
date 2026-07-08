@@ -1,6 +1,5 @@
-import { tmpdir } from "os";
 import { describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCli } from "./helpers.ts";
+import { isDashScopeE2EReady, parseStdoutJson, runCli } from "./helpers.ts";
 
 // ---- Types ----
 
@@ -50,16 +49,16 @@ describe("e2e: knowledge retrieve", () => {
   });
 });
 
-// ---- Error scenarios (no real credentials needed) ----
+// ---- Error scenarios (gated: requires no real credentials, but env may leak) ----
 
-describe("e2e: knowledge retrieve errors", () => {
+describe.skipIf(!isDashScopeE2EReady())("e2e: knowledge retrieve errors", () => {
   test("无任何凭证时提示缺少密钥并非零退出", async () => {
     const { stderr, exitCode } = await runCli(
       ["knowledge", "retrieve", "--index-id", "idx_test", "--query", "test", "--output", "json"],
       {
-        DASHSCOPE_API_KEY: undefined,
-        DASHSCOPE_ACCESS_TOKEN: undefined,
-        BAILIAN_CONFIG_DIR: tmpdir(),
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_ACCESS_TOKEN: "",
+        BAILIAN_CONFIG_DIR: "/tmp",
       },
     );
     expect(exitCode).not.toBe(0);

@@ -19,6 +19,7 @@ function testDeps(identity: Partial<Identity> = {}): { identity: Identity; setti
     },
     settings: {
       output: "json",
+      outputExplicit: true,
       timeout: 30,
       verbose: false,
       quiet: true,

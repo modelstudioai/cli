@@ -22,14 +22,14 @@ import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailia
 
 export default defineCommand({
   description:
-    "Reference-to-video generation (happyhorse-1.0-r2v / wan2.6-r2v): multi-subject, multi-shot with voice",
+    "Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice",
   auth: "apiKey",
   usageArgs: "--prompt <text> --image <url>... [--ref-video <url>...] [flags]",
   flags: {
     model: {
       type: "string",
       valueHint: "<model>",
-      description: "Model ID (default: happyhorse-1.0-r2v)",
+      description: "Model ID (default: happyhorse-1.1-r2v)",
     },
     prompt: {
       type: "string",
@@ -117,7 +117,7 @@ export default defineCommand({
     const imageVoices = flags.imageVoice || [];
     const videoVoices = flags.videoVoice || [];
 
-    const model = flags.model || "happyhorse-1.0-r2v";
+    const model = flags.model || "happyhorse-1.1-r2v";
     const format = detectOutputFormat(settings.output);
 
     // --- Resolve file URLs (auto-upload local files) ---

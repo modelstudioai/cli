@@ -61,7 +61,10 @@ export function buildSettings(s: ResolutionSources): Settings {
 
   return {
     configPath: getConfigPath(),
+    intentDetectBaseUrl:
+      file.intent_detect_base_url || env.DASHSCOPE_INTENT_DETECT_BASE_URL || undefined,
     output: detectOutputFormat(flags.output || env.DASHSCOPE_OUTPUT || file.output),
+    outputExplicit: Boolean(flags.output || env.DASHSCOPE_OUTPUT || file.output),
     outputDir: file.output_dir || undefined,
     timeout,
     defaultTextModel: file.default_text_model,

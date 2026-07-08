@@ -101,6 +101,25 @@ export function isDashScopeE2EReady(): boolean {
   }
 }
 
+/**
+ * Console-gateway 命令（quota / usage free / usage stats）的 E2E 就绪检查：
+ * 需 `BAILIAN_E2E=1` 且存在 console access_token（`~/.bailian/config.json` 的
+ * `access_token`；凭证解析已集中到 authStage，不再读环境变量）。
+ *
+ * 仅检查 token 是否存在——无法本地判断是否过期。token 过期时 gated 用例仍会执行，
+ * 但用 `isConsoleAuthFailure` 把“session 未登录/已过期”的优雅报错视为通过，保持
+ * 与 deploy/dataset “无 key / 有效 key / 失效 key 均绿”的一致策略。
+ */
+export function isConsoleE2EReady(): boolean {
+  if (!isBailianE2EEnabled()) return false;
+  try {
+    const config = readConfigFile();
+    return typeof config.access_token === "string" && config.access_token.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 /** 语音与图像（可设 `BAILIAN_E2E_MEDIA=0` 在仅跑文本/记忆/知识库时跳过） */
 export function isBailianE2EMediaEnabled(): boolean {
   if (process.env.BAILIAN_E2E_MEDIA === "0") return false;
@@ -167,5 +186,21 @@ export async function runCli(
 
 export function parseStdoutJson<T = unknown>(stdout: string): T {
   const t = stdout.trim();
-  return JSON.parse(t) as T;
+  // Extract JSON object — stdout may contain [perf] console.time lines before JSON
+  const jsonMatch = t.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error(`No JSON object found in stdout: ${t.slice(0, 200)}`);
+  return JSON.parse(jsonMatch[0]) as T;
+}
+
+/**
+ * 判断一次 CLI 运行是否因 console session 未登录/已过期而失败。
+ *
+ * Console E2E 用例的 readiness 闸（`isConsoleE2EReady`）只能判断 token 是否存在，
+ * 无法判断是否过期；token 失效时 gated 用例仍会执行并拿到鉴权错误。本函数让用例
+ * 参考 deploy/dataset 的做法：只要 CLI 把鉴权错误优雅上抛（非零退出 + stderr 说明
+ * session 失效），即视为通过，而不是强求 exit 0 的成功输出。
+ */
+export function isConsoleAuthFailure(result: RunCliResult): boolean {
+  if (result.exitCode === 0) return false;
+  return /not logged in|has expired|NotLogined|Run `bl auth login/i.test(result.stderr);
 }

@@ -44,7 +44,7 @@ bl advisor recommend --message "Legal contract review, high precision required"
 ```
 
 ```bash
-bl advisor recommend --message "Low-cost high-concurrency online customer service" --output json
+bl advisor recommend --message "Low-cost high-concurrency online customer service" --output text
 ```
 
 ```bash

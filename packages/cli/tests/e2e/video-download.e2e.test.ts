@@ -88,7 +88,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "generate",
         ...cliTimeoutPrefix(),
         "--model",
-        "happyhorse-1.0-t2v",
+        "happyhorse-1.1-t2v",
         "--duration",
         "3",
         "--prompt",

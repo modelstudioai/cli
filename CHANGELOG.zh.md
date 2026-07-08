@@ -2,9 +2,71 @@
 
 `bailian-cli` 和 `bailian-cli-core` 的所有重要变更都记录在此。
 
-格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/spec/v2.0.0.html)。两个包共享一个版本号,总是一起发布。
+格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/spec/v2.0.0.html)。`bailian-cli`、`bailian-cli-core`、`bailian-cli-runtime`、`bailian-cli-commands` 共享一个版本号,总是一起发布。
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
+
+## [1.6.1] - 2026-07-03
+
+### 变更
+
+- `bl vision describe` 的示例与 skill 参考文档中的模型 id 由旧版 `qwen-vl-plus` 更新为 `qwen3-vl-plus`，与命令默认模型保持一致。
+
+## [1.6.0] - 2026-07-02
+
+### 新增
+
+- `bl knowledge search` — 基于新版 workspace RAG API 的知识库语义检索。支持 `--query`、`--agent-id`、`--workspace-id`、`--image`（多模态检索，可重复）和 `--query-history`（多轮对话上下文 JSON，用于查询重写）。
+- `bl knowledge chat` — 知识库 SSE 流式问答。支持 `--message`（可重复，支持 `角色:内容` 前缀传入多轮历史）、`--agent-id`、`--workspace-id` 和 `--image`（多模态）。交互模式下实时展示检索、规划、生成等步骤进度。
+- `bailian-cli-core` 新增 workspace 级知识 API 类型与端点：`KnowledgeSearchRequest` / `KnowledgeSearchResponse`、`KnowledgeChatRequest` / `KnowledgeChatStreamChunk` / `KnowledgeChatMessage` / `KnowledgeChatContentPart`，以及 `knowledgeSearchEndpoint` / `knowledgeChatEndpoint`。
+- `kscli` 现已包含 `search` 和 `chat` 命令。
+
+### 变更
+
+- `bl knowledge retrieve` 描述中已标记为废弃，请改用 `bl knowledge search`。
+- `kscli` README（中英文）更新，以 `search` 和 `chat` 为主推命令，`retrieve` 标记为废弃。
+
+## [1.5.0] - 2026-07-01
+
+### 新增
+
+- 模型精调 —— `bl finetune`:创建、列出、查询、观察、取消训练任务;拉取训练日志;列出 checkpoint;将 checkpoint 导出为可部署模型;查询训练能力(按模型或按训练类型)。支持 `sft`、`sft-lora`、`dpo`、`dpo-lora`、`cpt` 训练类型。
+- 模型部署 —— `bl deploy`:创建、列出、查询、更新(限流)、扩缩容、删除部署;列出可部署模型与套餐。
+- 数据集管理 —— `bl dataset`:上传、列出、查询、删除数据集文件,并新增 `bl dataset validate` 在上传前本地校验 `.jsonl`(ChatML / DPO / CPT 格式)。
+- Token Plan 管理 —— `bl token-plan`:列出订阅座位、添加成员、批量分配座位、为座位创建 API Key。
+- 自动更新检查:命令执行完成后,CLI 会(节流地)检查 npm 上是否有新版本并提示 `Update available`;若与稳定版存在大版本差距则自动升级。`--quiet` 或执行 `bl update` 时跳过。
+- 可组合包:`bailian-cli-runtime`(CLI 框架)与 `bailian-cli-commands`(命令库)现在与 `bailian-cli-core` 一起发布,并在其之上新增了同家族 CLI `knowledge-studio-cli`(`kscli`)。`bl` 行为保持不变。
+
+### 已移除
+
+- 移除 `bl config export-schema` 命令(原用于把 CLI 命令导出为 Anthropic/OpenAI 兼容的 JSON tool schema)。
+
+### 修复
+
+- 控制台网关类命令(`bl console call` 等)在网关返回非字符串 `errorCode` 时,现在会给出可读的错误信息,而不是 `[object Object]`。
+
+## [1.4.2] - 2026-06-24
+
+### 新增
+
+- `bl omni --list-voices` 无需 API key 即可打印内置输出音色列表(ID、名称、描述、语言)并退出。内置音色表从 6 个扩展到 17 个,新增 Dylan、Sunny、Kiki 等方言音色。
+
+### 变更
+
+- `bl omni` 默认 `--voice` 改为 `Tina`(原为 `Cherry`)。`--voice` 帮助文案改为指向 `--list-voices`,不再内联列出全部音色。
+- `bl speech synthesize --list-voices` 输出及缺少 `--voice` 时的提示中,新增官方 CosyVoice 音色文档链接。
+- Agent skill 配置指引新增 console 站点选择说明(`--console-site domestic` / `international`),适用于 console 登录与网关类命令。
+
+### 修复
+
+- `bl speech synthesize` 修正 `cosyvoice-v3-flash` 内置音色 ID,由 `longanhuan` 改为 `longanhuan_v3`。
+
+## [1.4.1] - 2026-06-22
+
+### 变更
+
+- 视频生成默认升级到 HappyHorse 1.1 模型,画面质量更佳。如需使用 1.0 模型,可通过 `--model` 指定。
+- `bl update` 现在会把 agent skill 同步更新到所有 agent 应用(Claude Code、Cursor 等),即使 CLI 已是最新版本也会刷新 skill。
 
 ## [1.4.0] - 2026-06-17
 

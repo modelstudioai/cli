@@ -11,6 +11,7 @@ import {
   type RecommendResult,
   rankModels,
   recallSemantic,
+  SEMANTIC_TOP_K,
 } from "bailian-cli-core";
 import boxen from "boxen";
 import chalk, { Chalk, type ChalkInstance } from "chalk";
@@ -240,42 +241,93 @@ export default defineCommand({
     '--message "I need a visual-understanding chatbot"',
     '--message "Build an Agent that auto-generates animations"',
     '--message "Legal contract review, high precision required"',
-    '--message "Low-cost high-concurrency online customer service" --output json',
+    '--message "Low-cost high-concurrency online customer service" --output text',
     '--message "Long document summarization" --dry-run',
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
     const userInput = flags.message;
     const top = 3;
-    const format = detectOutputFormat(settings.output);
+    // Default to JSON for structured output; render boxen cards only when the
+    // user explicitly asked for text output.
+    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
+
+    // Stage 1: Intent Analysis + Model Loading (parallel)
+    const spinner = createSpinner("Agent: Loading model data & analyzing intent...");
+    spinner.start();
 
     const modelsOptions: GetModelsOptions = {
-      onPrepareStart: () => process.stderr.write("Initializing model data...\n"),
+      onPrepareStart: () => {},
     };
-    process.stderr.write("Analyzing your request...\n");
-    const [allModels, intent] = await Promise.all([
-      getModels(settings, modelsOptions),
-      analyzeIntent(ctx.client, userInput),
-    ]);
+
+    // Track individual completions for spinner updates
+    let modelsReady = false;
+    let intentReady = false;
+
+    const getModelsPromise = getModels(settings, modelsOptions).then((result) => {
+      modelsReady = true;
+      if (!intentReady) {
+        spinner.update("Agent: Model data loaded, analyzing intent...");
+      }
+      return result;
+    });
+
+    const analyzeIntentPromise = analyzeIntent(ctx.client, userInput, {
+      intentDetectBaseUrl: settings.intentDetectBaseUrl,
+    }).then((result) => {
+      intentReady = true;
+      if (!modelsReady) {
+        spinner.update("Agent: Intent analyzed, loading model data...");
+      }
+      return result;
+    });
+
+    const [allModels, intent] = await Promise.all([getModelsPromise, analyzeIntentPromise]);
+
+    spinner.stop();
 
     if (intent.confidence === 0) {
       process.stderr.write("Intent analysis timed out, using defaults...\n");
-    } else {
-      process.stderr.write("\n");
     }
 
     // Stage 2: Candidate Recall (semantic recall, auto-builds embeddings on first run)
-    const candidates = await recallSemantic(ctx.client, allModels, userInput, 50, intent);
+    spinner.update("Agent: Recalling candidates...");
+    spinner.start();
+
+    const candidates = await recallSemantic(
+      ctx.client,
+      allModels,
+      userInput,
+      SEMANTIC_TOP_K,
+      intent,
+    );
+
+    spinner.stop();
 
     if (settings.dryRun) {
       emitResult(
         {
           userInput,
-          intent,
+          intent: {
+            taskSummary: intent.taskSummary,
+            scenarioHints: intent.scenarioHints,
+            complexity: intent.complexity,
+            inputModality: intent.inputModality,
+            outputModality: intent.outputModality,
+            requiredCapabilities: intent.requiredCapabilities,
+            budget: intent.budget,
+            qualityPreference: intent.qualityPreference,
+            modelPreference:
+              intent.modelPreference?.mode !== "unconstrained" ? intent.modelPreference : undefined,
+            segments: intent.segments,
+            semanticQuery: intent.semanticQuery,
+          },
           candidateCount: candidates.length,
-          candidates: candidates.map(({ model, score }) => ({
+          candidates: candidates.map(({ model, score, hardScore, softScore }) => ({
             model: model.model,
             score,
+            hardScore,
+            softScore,
           })),
           top,
         },
@@ -285,7 +337,7 @@ export default defineCommand({
     }
 
     // Stage 3: LLM Ranking
-    const spinner = createSpinner("Recommending best models...");
+    spinner.update("Agent: Ranking models...");
     spinner.start();
 
     const result = await rankModels(ctx.client, candidates, intent, userInput, top);
@@ -312,6 +364,7 @@ export default defineCommand({
             modelPreference:
               intent.modelPreference?.mode !== "unconstrained" ? intent.modelPreference : undefined,
             segments: intent.segments,
+            semanticQuery: intent.semanticQuery,
           },
           result,
           candidates: candidates.length,
