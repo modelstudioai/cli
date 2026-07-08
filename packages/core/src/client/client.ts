@@ -3,7 +3,7 @@ import type { ApiKeyCredential, ConsoleCredential } from "../auth/types.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { request, requestJson, type HttpDeps, type RequestOpts } from "./http.ts";
-import { resolveFileUrl } from "../files/upload.ts";
+import { isLocalFile, resolveFileUrl } from "../files/upload.ts";
 import { McpClient } from "./mcp.ts";
 import { callConsoleGateway } from "../console/gateway.ts";
 
@@ -25,9 +25,10 @@ export interface ClientRequestOpts extends Omit<RequestOpts, "url" | "noAuth"> {
 /**
  * A command's network surface: call its methods to reach the API — the
  * credential and base URL are already baked in, so commands never handle tokens
- * or baseUrl. Model methods (`request`/`requestJson`/`uploadFile`/`mcp`) need an
- * api key; `console` needs a console token; calling one without its credential
- * throws.
+ * or baseUrl. Model methods (`request`/`requestJson`/`mcp`) need an api key;
+ * `uploadFile` only needs one for local files, and passes URLs through without
+ * credentials. `console` needs a console token; calling one without its
+ * credential throws.
  */
 export class Client {
   constructor(private readonly deps: ClientDeps) {}
@@ -72,6 +73,7 @@ export class Client {
 
   /** Resolve a file arg: upload a local path to OSS (returns oss:// URL), or pass a URL through. */
   uploadFile(source: string, model: string, opts: { signal?: AbortSignal } = {}): Promise<string> {
+    if (!isLocalFile(source)) return Promise.resolve(source);
     return resolveFileUrl(source, this.requireApi().token, model, opts);
   }
 
