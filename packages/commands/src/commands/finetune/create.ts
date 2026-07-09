@@ -17,6 +17,7 @@ import {
   ExitCode,
   type Client,
   type Settings,
+  type CommandContext,
   type CreateFineTuneRequest,
   type FineTuneHyperParameters,
   type DatasetFile,
@@ -79,7 +80,7 @@ async function analyzeDatasetTokens(
   raw: string,
   label: string,
   profile: TrainingProfile,
-  _modality: DataModality,
+  modality: DataModality,
   model: string,
   /** Pre-detected modality for a known path (avoids re-opening the file). */
   knownModality?: { path: string; modality: DataModality },
@@ -114,21 +115,17 @@ async function analyzeDatasetTokens(
 
     if (settings.dryRun) continue;
 
-    // Detect modality per-file so each dataset is validated under the correct
-    // schema (e.g. a text JSONL and an audio ZIP in the same --datasets list
-    // are each validated with their own record schema). Reuse the caller's
-    // pre-detected modality when available to avoid opening the same file
-    // twice (matters for large ZIPs).
+    // The command's modality is authoritative; each local file is validated
+    // under that modality's schema. Reuse the caller's pre-detected modality
+    // when available to avoid opening the same file twice (matters for large
+    // ZIPs).
     const tokenModality =
-      knownModality && knownModality.path === token
-        ? knownModality.modality
-        : await detectModality(token);
+      knownModality && knownModality.path === token ? knownModality.modality : modality;
 
     // Local path → validate through the profile. The profile internally routes
-    // to the correct validator based on modality (detected from file content).
-    // Upload is deferred to `uploadResolvedLocal` so the gate can run first.
-    // `model` is forwarded for schema-agnostic cross-checks (e.g. the video
-    // validator verifies a kf2v model is paired with kf2v data).
+    // to the correct validator based on modality. Upload is deferred to
+    // `uploadResolvedLocal` so the gate can run first. `model` is forwarded for
+    // schema-agnostic cross-checks.
     const result = await profile.validate(token, tokenModality, { model });
     if (!result.valid) {
       const lines = [
@@ -210,25 +207,33 @@ async function uploadResolvedLocal(
   return uploaded;
 }
 
-const CREATE_FLAGS = {
+/** The modality a `finetune <modality> create` subcommand is bound to. */
+type CommandModality = "text" | "audio" | "image";
+
+/**
+ * Flags shared by every `finetune <modality> create` subcommand: what to train
+ * (model), what data to train on (datasets / validations), and how to name the
+ * output. Every modality's model consumes these.
+ */
+const COMMON_FLAGS = {
   model: {
     type: "string",
     valueHint: "<model>",
-    description: "Base model to fine-tune (e.g. qwen3-8b, qwen3-14b)",
+    description: "Base model to fine-tune",
     required: true,
   },
   datasets: {
     type: "string",
     valueHint: "<ids|paths>",
     description:
-      "Comma-separated dataset file IDs or local .jsonl paths. Local paths are uploaded (validated) first, then their file-ids are used.",
+      "Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image). Local paths are uploaded (validated) first, then their file-ids are used.",
     required: true,
   },
   validations: {
     type: "string",
     valueHint: "<ids|paths>",
     description:
-      "Comma-separated validation dataset file IDs or local .jsonl paths (auto-uploaded like --datasets).",
+      "Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).",
   },
   modelName: {
     type: "string",
@@ -240,6 +245,16 @@ const CREATE_FLAGS = {
     valueHint: "<text>",
     description: "Output suffix appended by the platform (finetuned_output_suffix)",
   },
+} satisfies FlagsDef;
+
+/**
+ * Text flags: text models consume the full hyper-parameter surface — training
+ * type selection plus n_epochs / batch_size / learning_rate / max_length (see
+ * resolveTextHyperParameters). Only text exposes --training-type because only
+ * text models support types other than the sft-lora default.
+ */
+const TEXT_FLAGS = {
+  ...COMMON_FLAGS,
   trainingType: {
     type: "string",
     valueHint: "<t>",
@@ -268,12 +283,330 @@ const CREATE_FLAGS = {
   },
 } satisfies FlagsDef;
 
-export default defineCommand({
-  description: "Create a fine-tune job (sft | sft-lora | dpo | dpo-lora | cpt)",
+/**
+ * Audio (CosyVoice TTS) flags: the audio model runs sft-lora with a fully fixed
+ * hyper-parameter set (AUDIO_HYPER_PARAMS). No --training-type or hyper-parameter
+ * flag is honored by resolveHyperParameters, so none are exposed.
+ */
+const AUDIO_FLAGS = {
+  ...COMMON_FLAGS,
+} satisfies FlagsDef;
+
+/**
+ * Image (Wan generation) flags: the image model runs sft-lora with fixed
+ * defaults; resolveHyperParameters only honors learning_rate, so --learning-rate
+ * is the sole extra knob exposed.
+ */
+const IMAGE_FLAGS = {
+  ...COMMON_FLAGS,
+  learningRate: {
+    type: "string",
+    valueHint: "<str>",
+    description: 'Learning rate as a string to preserve precision (e.g. "3e-5")',
+  },
+} satisfies FlagsDef;
+
+const TEXT_USAGE =
+  "--model <model> --datasets <id|path,...> [--validations <id|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>]";
+
+const AUDIO_USAGE =
+  "--model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>]";
+
+const IMAGE_USAGE =
+  "--model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>] [--learning-rate <str>]";
+
+const COMMON_NOTES = [
+  "Creating a job uploads any local datasets and consumes training quota.",
+  "Use --dry-run to preview the request body without submitting.",
+  "--datasets / --validations accept either file-ids (from `dataset upload`)",
+  "or local paths. Local paths are validated and uploaded first, then their",
+  "file-ids are submitted — a one-step upload-and-train.",
+];
+
+const TEXT_NOTES = [
+  ...COMMON_NOTES,
+  "Training-type values use the `<method>` / `<method>-lora` convention:",
+  "sft (full) | sft-lora (LoRA) | dpo (full) | dpo-lora (LoRA) | cpt. These map",
+  "to the server's training_type at the interface boundary, so the rest of the",
+  "CLI never sees the raw server strings.",
+  "Before submitting (non dry-run) the job, the model's training capability is",
+  "checked via listFoundationModels (no console login required); an unsupported",
+  "training type fails fast with the list the model actually supports.",
+  "n_epochs defaults to 3. Other hyper-parameters are platform defaults unless set.",
+  "Learning rate is forwarded as a string to avoid JSON-number precision loss.",
+  "Pre-submit gate: if the training dataset's sample count is not greater",
+  "than batch_size, the job is rejected before upload or quota consumption",
+  "(the platform would otherwise fail ~10 min in, after data processing).",
+];
+
+const AUDIO_NOTES = [
+  ...COMMON_NOTES,
+  "Audio TTS training runs sft-lora (efficient_sft) with fixed CosyVoice",
+  "hyper-parameter defaults; there are no training-type or hyper-parameter",
+  "knobs to set.",
+];
+
+const IMAGE_NOTES = [
+  ...COMMON_NOTES,
+  "Image generation training runs sft-lora (efficient_sft) with fixed defaults;",
+  "only --learning-rate is overridable. T2I vs I2I is auto-detected from the",
+  "data (records with input_img train I2I), which sets max_pixels accordingly.",
+];
+
+/**
+ * Shared `finetune <modality> create` implementation. The parameter surface and
+ * run logic are identical to the previous single `finetune create`; the ONLY
+ * change is that the data modality is fixed by the subcommand instead of being
+ * detected from data content. This is what lets file-id datasets (which have no
+ * local file to inspect) train the correct model — the old command silently
+ * defaulted a file-id to "text".
+ *
+ * Image is the only modality with a sub-variant (T2I vs I2I). It is upgraded to
+ * `image-i2i` only when a local file's first record carries `input_img`; a bare
+ * file-id defaults to plain "image" (T2I), matching the old detection fallback.
+ */
+async function runCreate<F extends FlagsDef>(
+  commandModality: CommandModality,
+  ctx: CommandContext<F>,
+): Promise<void> {
+  const { identity, settings } = ctx;
+  const flags = ctx.flags as Record<string, unknown>;
+  const model = flags.model as string;
+  const datasetsRaw = flags.datasets as string;
+
+  // Resolve the training type before analyzing datasets so the validator can
+  // enforce the right record schema (DPO jobs require chosen/rejected on
+  // every record). Whitelist is the single source of truth in core
+  // (TRAINING_TYPES_CLI); any other value is rejected up-front.
+  const trainingType = (flags.trainingType as string | undefined) || DEFAULT_TRAINING_TYPE;
+  if (!isTrainingTypeCli(trainingType)) {
+    throw new BailianError(
+      `--training-type "${trainingType}" is not supported.`,
+      ExitCode.USAGE,
+      `Supported values: ${TRAINING_TYPES_CLI.join(", ")} (default: ${DEFAULT_TRAINING_TYPE}).`,
+    );
+  }
+
+  // Profile: single source of truth for how this training type behaves
+  // (validation rules, hyper-parameters, gates, capability check).
+  const profile = getProfile(trainingType);
+
+  // Modality is fixed by the subcommand (no content-based detection) — this is
+  // the sole behavioural change of the modality split. Image alone probes a
+  // local file to upgrade T2I → I2I; a bare file-id stays "image".
+  const firstLocalPath = datasetsRaw
+    .split(",")
+    .map((token) => token.trim())
+    .find((token) => isLocalPath(token));
+  let modality: DataModality = commandModality;
+  if (commandModality === "image" && firstLocalPath && !settings.dryRun) {
+    const detected = await detectModality(firstLocalPath);
+    if (detected === "image-i2i") modality = "image-i2i";
+  }
+
+  const training = await analyzeDatasetTokens(
+    settings,
+    identity.binName,
+    datasetsRaw,
+    "datasets",
+    profile,
+    modality,
+    model,
+    firstLocalPath ? { path: firstLocalPath, modality } : undefined,
+  );
+  const trainingFileIds = training.fileIds;
+
+  const validation = flags.validations
+    ? await analyzeDatasetTokens(
+        settings,
+        identity.binName,
+        flags.validations as string,
+        "validations",
+        profile,
+        modality,
+        model,
+      )
+    : undefined;
+  const validationFileIds = validation?.fileIds;
+
+  const modelName = flags.modelName as string | undefined;
+  const suffix = flags.suffix as string | undefined;
+
+  // Hyper-parameters: the profile resolves modality-specific defaults
+  // (text: n_epochs/batch_size/learning_rate; audio: lm_max_epoch/fm_max_epoch/...).
+  const hp = profile.resolveHyperParameters(
+    modality,
+    flags as Record<string, unknown>,
+  ) as FineTuneHyperParameters;
+
+  // Restore the batch-size clamping warning that was lost when the logic moved
+  // into profiles. The profile silently clamps to [8, 1024]; surface it here
+  // so the user has an audit trail. Skip modalities that bypass the batch_size
+  // gate (image): their batch_size is a fixed model-family default, not a
+  // clamp of the user's value, so the [8, 1024] "clamped" message would be
+  // self-contradictory and misleading.
+  if (
+    flags.batchSize !== undefined &&
+    hp.batch_size !== undefined &&
+    !settings.quiet &&
+    !profile.shouldSkipGate("batch_size", modality)
+  ) {
+    const requested = flags.batchSize as number;
+    if (hp.batch_size !== requested) {
+      process.stderr.write(
+        `warning: --batch-size ${requested} clamped to ${hp.batch_size} ` +
+          `(server range [8, 1024] for the common training types).\n`,
+      );
+    }
+  }
+  // For modalities that skip the batch_size gate, warn the user that their
+  // explicit --batch-size was discarded (model uses a fixed batch_size).
+  if (
+    flags.batchSize !== undefined &&
+    !settings.quiet &&
+    profile.shouldSkipGate("batch_size", modality)
+  ) {
+    const requested = flags.batchSize as number;
+    if (hp.batch_size !== undefined && hp.batch_size !== requested) {
+      process.stderr.write(
+        `warning: --batch-size ${requested} ignored for ${modality} training ` +
+          `(model uses a fixed batch_size of ${hp.batch_size}).\n`,
+      );
+    }
+  }
+
+  // Auto batch_size for small datasets — only for text data. Audio/image
+  // profiles already set their own batch parameters.
+  if (modality === "text" && hp.batch_size === undefined && !settings.dryRun) {
+    let sizeBytes = training.firstSize ?? 0;
+    if (sizeBytes === 0) {
+      try {
+        const fileInfo = await getDataset(ctx.client, trainingFileIds[0]);
+        sizeBytes = fileInfo.data?.size ?? 0;
+      } catch {
+        // If we can't fetch file info, skip auto-adjustment; platform will use default.
+      }
+    }
+    if (sizeBytes > 0 && sizeBytes < 100 * 1024) {
+      hp.batch_size = 8;
+    }
+  }
+
+  // Pre-submit batch-size gate: the platform rejects a job whose number of
+  // training samples is not greater than batch_size, but only surfaces that
+  // ~10 minutes into the run (after data processing). Fail fast here, before
+  // burning quota. `recordCount` is only known when every --datasets token
+  // was a local file we validated; file-id tokens fall through to the
+  // platform rather than risk a false positive from an undercount.
+  if (
+    !settings.dryRun &&
+    training.recordCount !== undefined &&
+    !profile.shouldSkipGate("batch_size", modality)
+  ) {
+    // 16 is the platform default when neither the user nor the small-file
+    // auto-adjust set a batch_size (see the auto-adjust comment above).
+    const effectiveBatchSize = hp.batch_size ?? 16;
+    const gate = preflightBatchSizeGate({
+      recordCount: training.recordCount,
+      batchSize: effectiveBatchSize,
+    });
+    if (!gate.ok && gate.issue) {
+      throw new BailianError(gate.issue.message, ExitCode.GENERAL, gate.hint);
+    }
+  }
+
+  // Pre-flight capability check: confirm the model actually supports the
+  // requested training type BEFORE any upload, so a wrong --model /
+  // --training-type combo doesn't burn storage on datasets that will never
+  // be trained against. listFoundationModels is a public API (no console
+  // login required); on lookup failure (network / 401 / etc.) we fall back
+  // to letting the server decide rather than blocking the submit.
+  if (!settings.dryRun && !profile.shouldSkipCapabilityCheck(modality)) {
+    let capability: Awaited<ReturnType<typeof fetchModelCapability>> | undefined;
+    try {
+      capability = await fetchModelCapability(settings, model);
+    } catch (error) {
+      if (!settings.quiet) {
+        process.stderr.write(
+          `warning: model capability lookup failed (${(error as Error).message}); ` +
+            "proceeding without local pre-flight.\n",
+        );
+      }
+    }
+    if (capability && !listSupportedTrainingTypes(capability).includes(trainingType)) {
+      const supported = listSupportedTrainingTypes(capability);
+      throw new BailianError(
+        `Model "${model}" does not support training type "${trainingType}".`,
+        ExitCode.USAGE,
+        supported.length
+          ? `This model supports: ${supported.join(", ")}.`
+          : "This model reports no supported training types.",
+      );
+    }
+  }
+
+  // Upload local paths now that pre-flight (validation, batch-size gate,
+  // capability check) has cleared them. This swaps the placeholder path
+  // entries in `training.fileIds` / `validation?.fileIds` for real file-ids.
+  if (!settings.dryRun) {
+    await uploadResolvedLocal(ctx.client, settings, training, "fine-tune", "datasets");
+    if (validation) {
+      await uploadResolvedLocal(ctx.client, settings, validation, "fine-tune", "validations");
+    }
+  }
+
+  const body: CreateFineTuneRequest = {
+    model,
+    training_file_ids: trainingFileIds,
+    // Profile maps the CLI training type to the server value at the boundary.
+    training_type: profile.serverTrainingType,
+    hyper_parameters: hp,
+  };
+  if (validationFileIds && validationFileIds.length > 0) {
+    body.validation_file_ids = validationFileIds;
+  }
+  if (modelName) body.model_name = modelName;
+  if (suffix) body.finetuned_output_suffix = suffix;
+
+  const format = detectOutputFormat(settings.output);
+
+  if (settings.dryRun) {
+    const pending = [
+      ...training.localPaths.map((path) => ({ field: "datasets", path })),
+      ...(validation?.localPaths ?? []).map((path) => ({ field: "validations", path })),
+    ];
+    emitResult(
+      pending.length > 0
+        ? { action: "finetune.create", body, pending_uploads: pending }
+        : { action: "finetune.create", body },
+      format,
+    );
+    return;
+  }
+
+  const response = await createFineTune(ctx.client, body);
+  const job = response.output ?? response.data;
+
+  if (settings.quiet) {
+    if (job?.job_id) emitBare(job.job_id);
+  } else if (format === "text") {
+    if (job?.job_id) {
+      emitBare(`Created fine-tune job: ${job.job_id}`);
+      if (job.status) emitBare(`Status: ${job.status}`);
+    } else {
+      emitResult(response, format);
+    }
+  } else {
+    emitResult(response, format);
+  }
+}
+
+/** `bl finetune text create` — fine-tune a text model. Datasets are `.jsonl`. */
+export const finetuneTextCreate = defineCommand({
+  description: "Create a text model fine-tune job (sft | sft-lora | dpo | dpo-lora | cpt)",
   auth: "apiKey",
-  usageArgs:
-    "--model <model> --datasets <id|path,...> [--validations <id|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>]",
-  flags: CREATE_FLAGS,
+  usageArgs: TEXT_USAGE,
+  flags: TEXT_FLAGS,
   exampleArgs: [
     "--model qwen3-8b --datasets file-xxx",
     "--model qwen3-8b --datasets ./train.jsonl",
@@ -284,271 +617,40 @@ export default defineCommand({
     "--model qwen3-8b --datasets file-xxx --output json",
     "--model qwen3-8b --datasets file-xxx --dry-run",
   ],
-  notes: [
-    "Creating a job uploads any local datasets and consumes training quota.",
-    "Use --dry-run to preview the request body without submitting.",
-    "Training-type values use the `<method>` / `<method>-lora` convention:",
-    "sft (full) | sft-lora (LoRA) | dpo (full) | dpo-lora (LoRA) | cpt. These map",
-    "to the server's training_type at the interface boundary, so the rest of the",
-    "CLI never sees the raw server strings.",
-    "Before submitting (non dry-run) the job, the model's training capability is",
-    "checked via listFoundationModels (no console login required); an unsupported",
-    "training type fails fast with the list the model actually supports.",
-    "n_epochs defaults to 3. Other hyper-parameters are platform defaults unless set.",
-    "Learning rate is forwarded as a string to avoid JSON-number precision loss.",
-    "--datasets / --validations accept either file-ids (from `dataset upload`)",
-    "or local .jsonl paths. Local paths are validated and uploaded first, then",
-    "their file-ids are submitted — a one-step upload-and-train.",
-    "Dataset record schema is chosen from --training-type: dpo* → {messages,",
-    "chosen, rejected}; cpt → {text} (raw pre-training text); else {messages}.",
-    "Pre-submit gate: if the training dataset's sample count is not greater",
-    "than batch_size, the job is rejected before upload or quota consumption",
-    "(the platform would otherwise fail ~10 min in, after data processing).",
+  notes: TEXT_NOTES,
+  run: (ctx) => runCreate("text", ctx),
+});
+
+/** `bl finetune audio create` — fine-tune an audio TTS model. Datasets are `.zip`. */
+export const finetuneAudioCreate = defineCommand({
+  description: "Create an audio TTS model fine-tune job (sft-lora)",
+  auth: "apiKey",
+  usageArgs: AUDIO_USAGE,
+  flags: AUDIO_FLAGS,
+  exampleArgs: [
+    "--model cosyvoice-v3-flash --datasets ./audio.zip",
+    "--model cosyvoice-v3-flash --datasets file-xxx",
+    "--model cosyvoice-v3-flash --datasets ./audio.zip --model-name my-tts",
+    "--model cosyvoice-v3-flash --datasets file-xxx --output json",
+    "--model cosyvoice-v3-flash --datasets ./audio.zip --dry-run",
   ],
-  async run(ctx) {
-    const { identity, settings, flags } = ctx;
-    const model = flags.model;
-    const datasetsRaw = flags.datasets;
+  notes: AUDIO_NOTES,
+  run: (ctx) => runCreate("audio", ctx),
+});
 
-    // Resolve the training type before analyzing datasets so the validator can
-    // enforce the right record schema (DPO jobs require chosen/rejected on
-    // every record). Whitelist is the single source of truth in core
-    // (TRAINING_TYPES_CLI); any other value is rejected up-front.
-    const trainingType = flags.trainingType || DEFAULT_TRAINING_TYPE;
-    if (!isTrainingTypeCli(trainingType)) {
-      throw new BailianError(
-        `--training-type "${trainingType}" is not supported.`,
-        ExitCode.USAGE,
-        `Supported values: ${TRAINING_TYPES_CLI.join(", ")} (default: ${DEFAULT_TRAINING_TYPE}).`,
-      );
-    }
-
-    // Profile: single source of truth for how this training type behaves
-    // (validation rules, hyper-parameters, gates, capability check).
-    const profile = getProfile(trainingType);
-
-    // Detect data modality from the first local file path in --datasets. This
-    // drives the profile's internal branching (text vs audio vs image/video
-    // hyper-parameters, gate skips, capability check bypass). Falls back to
-    // "text" when no local file is available (file-id only). Image generation
-    // has a subtype "image-i2i" (first record has input_img) picked here.
-    const firstLocalPath = datasetsRaw
-      .split(",")
-      .map((token) => token.trim())
-      .find((token) => isLocalPath(token));
-    const modality: DataModality = firstLocalPath ? await detectModality(firstLocalPath) : "text";
-    // Video generation model fine-tuning is currently not exposed via the CLI.
-    // The core profile/schema implementation is retained, but the entry point
-    // is disabled here so video datasets are not accepted.
-    if (modality === "video" || modality === "video-kf2v") {
-      throw new BailianError(
-        `Video generation model fine-tuning is not supported.`,
-        ExitCode.USAGE,
-        `Detected video data in "${firstLocalPath}". Supported data: text, audio, image.`,
-      );
-    }
-
-    const training = await analyzeDatasetTokens(
-      settings,
-      identity.binName,
-      datasetsRaw,
-      "datasets",
-      profile,
-      modality,
-      model,
-      firstLocalPath ? { path: firstLocalPath, modality } : undefined,
-    );
-    const trainingFileIds = training.fileIds;
-
-    const validation = flags.validations
-      ? await analyzeDatasetTokens(
-          settings,
-          identity.binName,
-          flags.validations,
-          "validations",
-          profile,
-          modality,
-          model,
-        )
-      : undefined;
-    const validationFileIds = validation?.fileIds;
-
-    const modelName = flags.modelName;
-    const suffix = flags.suffix;
-
-    // Hyper-parameters: the profile resolves modality-specific defaults
-    // (text: n_epochs/batch_size/learning_rate; audio: lm_max_epoch/fm_max_epoch/...).
-    const hp = profile.resolveHyperParameters(
-      modality,
-      flags as Record<string, unknown>,
-    ) as FineTuneHyperParameters;
-
-    // Restore the batch-size clamping warning that was lost when the logic moved
-    // into profiles. The profile silently clamps to [8, 1024]; surface it here
-    // so the user has an audit trail. Skip modalities that bypass the batch_size
-    // gate (image/video): their batch_size is a fixed model-family default, not
-    // a clamp of the user's value, so the [8, 1024] "clamped" message would be
-    // self-contradictory (video uses 2/4) and misleading.
-    if (
-      flags.batchSize !== undefined &&
-      hp.batch_size !== undefined &&
-      !settings.quiet &&
-      !profile.shouldSkipGate("batch_size", modality)
-    ) {
-      const requested = flags.batchSize;
-      if (hp.batch_size !== requested) {
-        process.stderr.write(
-          `warning: --batch-size ${requested} clamped to ${hp.batch_size} ` +
-            `(server range [8, 1024] for the common training types).\n`,
-        );
-      }
-    }
-    // For modalities that skip the batch_size gate (video: fixed 2/4 by model
-    // family), warn the user that their explicit --batch-size was discarded.
-    if (
-      flags.batchSize !== undefined &&
-      !settings.quiet &&
-      profile.shouldSkipGate("batch_size", modality)
-    ) {
-      const requested = flags.batchSize;
-      if (hp.batch_size !== undefined && hp.batch_size !== requested) {
-        process.stderr.write(
-          `warning: --batch-size ${requested} ignored for ${modality} training ` +
-            `(model uses a fixed batch_size of ${hp.batch_size}).\n`,
-        );
-      }
-    }
-
-    // Auto batch_size for small datasets — only for text data. Audio/image/video
-    // profiles already set their own batch parameters.
-    if (modality === "text" && hp.batch_size === undefined && !settings.dryRun) {
-      let sizeBytes = training.firstSize ?? 0;
-      if (sizeBytes === 0) {
-        try {
-          const fileInfo = await getDataset(ctx.client, trainingFileIds[0]);
-          sizeBytes = fileInfo.data?.size ?? 0;
-        } catch {
-          // If we can't fetch file info, skip auto-adjustment; platform will use default.
-        }
-      }
-      if (sizeBytes > 0 && sizeBytes < 100 * 1024) {
-        hp.batch_size = 8;
-      }
-    }
-
-    // Pre-submit batch-size gate: the platform rejects a job whose number of
-    // training samples is not greater than batch_size, but only surfaces that
-    // ~10 minutes into the run (after data processing). Fail fast here, before
-    // burning quota. `recordCount` is only known when every --datasets token
-    // was a local file we validated; file-id tokens fall through to the
-    // platform rather than risk a false positive from an undercount.
-    //
-    // The decision lives in core (`preflightBatchSizeGate`) — a structured,
-    // job-level pre-flight that returns a `ValidationIssue` (same shape / stable
-    // code as `validateDataset`) so the failure surfaces through the same
-    // `BailianError` + issue convention used by `dataset upload`/`validate`.
-    // ExitCode.GENERAL matches the existing validation-failed exit code.
-    if (
-      !settings.dryRun &&
-      training.recordCount !== undefined &&
-      !profile.shouldSkipGate("batch_size", modality)
-    ) {
-      // 16 is the platform default when neither the user nor the small-file
-      // auto-adjust set a batch_size (see the auto-adjust comment above).
-      const effectiveBatchSize = hp.batch_size ?? 16;
-      const gate = preflightBatchSizeGate({
-        recordCount: training.recordCount,
-        batchSize: effectiveBatchSize,
-      });
-      if (!gate.ok && gate.issue) {
-        throw new BailianError(gate.issue.message, ExitCode.GENERAL, gate.hint);
-      }
-    }
-
-    // Pre-flight capability check: confirm the model actually supports the
-    // requested training type BEFORE any upload, so a wrong --model /
-    // --training-type combo doesn't burn storage on datasets that will never
-    // be trained against. listFoundationModels is a public API (no console
-    // login required); on lookup failure (network / 401 / etc.) we fall back
-    // to letting the server decide rather than blocking the submit.
-    if (!settings.dryRun && !profile.shouldSkipCapabilityCheck(modality)) {
-      let capability: Awaited<ReturnType<typeof fetchModelCapability>> | undefined;
-      try {
-        capability = await fetchModelCapability(settings, model);
-      } catch (error) {
-        if (!settings.quiet) {
-          process.stderr.write(
-            `warning: model capability lookup failed (${(error as Error).message}); ` +
-              "proceeding without local pre-flight.\n",
-          );
-        }
-      }
-      if (capability && !listSupportedTrainingTypes(capability).includes(trainingType)) {
-        const supported = listSupportedTrainingTypes(capability);
-        throw new BailianError(
-          `Model "${model}" does not support training type "${trainingType}".`,
-          ExitCode.USAGE,
-          supported.length
-            ? `This model supports: ${supported.join(", ")}.`
-            : "This model reports no supported training types.",
-        );
-      }
-    }
-
-    // Upload local paths now that pre-flight (validation, batch-size gate,
-    // capability check) has cleared them. This swaps the
-    // placeholder path entries in `training.fileIds` / `validation?.fileIds`
-    // for real file-ids, so the body below sees ids.
-    if (!settings.dryRun) {
-      await uploadResolvedLocal(ctx.client, settings, training, "fine-tune", "datasets");
-      if (validation) {
-        await uploadResolvedLocal(ctx.client, settings, validation, "fine-tune", "validations");
-      }
-    }
-
-    const body: CreateFineTuneRequest = {
-      model,
-      training_file_ids: trainingFileIds,
-      // Profile maps the CLI training type to the server value at the boundary.
-      training_type: profile.serverTrainingType,
-      hyper_parameters: hp,
-    };
-    if (validationFileIds && validationFileIds.length > 0) {
-      body.validation_file_ids = validationFileIds;
-    }
-    if (modelName) body.model_name = modelName;
-    if (suffix) body.finetuned_output_suffix = suffix;
-
-    const format = detectOutputFormat(settings.output);
-
-    if (settings.dryRun) {
-      const pending = [
-        ...training.localPaths.map((path) => ({ field: "datasets", path })),
-        ...(validation?.localPaths ?? []).map((path) => ({ field: "validations", path })),
-      ];
-      emitResult(
-        pending.length > 0
-          ? { action: "finetune.create", body, pending_uploads: pending }
-          : { action: "finetune.create", body },
-        format,
-      );
-      return;
-    }
-
-    const response = await createFineTune(ctx.client, body);
-    const job = response.output ?? response.data;
-
-    if (settings.quiet) {
-      if (job?.job_id) emitBare(job.job_id);
-    } else if (format === "text") {
-      if (job?.job_id) {
-        emitBare(`Created fine-tune job: ${job.job_id}`);
-        if (job.status) emitBare(`Status: ${job.status}`);
-      } else {
-        emitResult(response, format);
-      }
-    } else {
-      emitResult(response, format);
-    }
-  },
+/** `bl finetune image create` — fine-tune an image generation model. Datasets are `.zip`. */
+export const finetuneImageCreate = defineCommand({
+  description: "Create an image generation model fine-tune job (sft-lora)",
+  auth: "apiKey",
+  usageArgs: IMAGE_USAGE,
+  flags: IMAGE_FLAGS,
+  exampleArgs: [
+    "--model wan2.7-image-pro --datasets ./images.zip",
+    "--model wan2.7-image-pro --datasets file-xxx",
+    "--model wan2.7-image-pro --datasets ./images.zip --model-name my-wan",
+    "--model wan2.7-image-pro --datasets file-xxx --output json",
+    "--model wan2.7-image-pro --datasets ./images.zip --dry-run",
+  ],
+  notes: IMAGE_NOTES,
+  run: (ctx) => runCreate("image", ctx),
 });

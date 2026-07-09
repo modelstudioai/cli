@@ -22,7 +22,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
   });
 
   test("deploy create --help 正常退出并展示必填项", async () => {
-    const { stderr, exitCode } = await runCli(["deploy", "create", "--help"]);
+    const { stderr, exitCode } = await runCli(["deploy", "text", "create", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--model|--name/i);
   });
@@ -30,6 +30,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
   test("deploy create --dry-run 构造 lora 部署请求体", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "deploy",
+      "text",
       "create",
       "--model",
       "qwen-plus-2025-12-01",
@@ -59,6 +60,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
   test("deploy create --plan mu --deploy-spec --dry-run 透传 deploy_spec", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "deploy",
+      "text",
       "create",
       "--model",
       "qwen3-8b",
@@ -83,6 +85,28 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
     expect(data.body.plan).toBe("mu");
     expect(data.body.deploy_spec).toBe("MU1");
     expect(data.body.capacity).toBe(2);
+  });
+
+  test("deploy audio create --dry-run 构造 lora 部署请求体", async () => {
+    // deploy create does not inspect modality; the split only changes the path.
+    // The audio subcommand shares the full flag surface and run logic.
+    const { stdout, stderr, exitCode } = await runCli([
+      "deploy",
+      "audio",
+      "create",
+      "--model",
+      "my-cosyvoice-ft",
+      "--name",
+      "my-tts",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ action: string; body: { plan: string; name: string } }>(stdout);
+    expect(data.action).toBe("deploy.create");
+    expect(data.body.plan).toBe("lora");
+    expect(data.body.name).toBe("my-tts");
   });
 
   test("deploy scale --dry-run 转发 capacity", async () => {

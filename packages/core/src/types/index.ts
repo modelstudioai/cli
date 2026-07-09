@@ -1,6 +1,7 @@
 export type {
   Command,
   AnyCommand,
+  CommandContext,
   FlagDef,
   FlagsDef,
   ParsedFlags,

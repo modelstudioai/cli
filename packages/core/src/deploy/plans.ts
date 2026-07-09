@@ -1,5 +1,5 @@
 /**
- * Per-plan strategy table for `bl deploy create`.
+ * Per-plan strategy table for `deploy create`.
  *
  * Each PlanStrategy owns one slice of plan-specific behaviour:
  *   - required-flag checks (returned as validate-style error strings)
@@ -7,13 +7,17 @@
  *     catalog; lora/ptu are pure)
  *   - the plan-specific body fragment for POST /api/v1/deployments
  *
- * The dispatcher in `create.ts` only knows about `STRATEGIES[plan]`. Adding a
- * new plan = one new strategy object + one line in `STRATEGIES`. Nothing in
- * `create.ts` needs to change. This collapses the places where lora / ptu /
- * mu used to be hard-coded (default value list / required-flag checks /
- * auto-pick / body assembly) into one strategy entry per plan.
+ * The dispatcher in the `deploy create` command only knows about
+ * `STRATEGIES[plan]`. Adding a new plan = one new strategy object + one line in
+ * `STRATEGIES`. Nothing in the command needs to change. This collapses the
+ * places where lora / ptu / mu used to be hard-coded (default value list /
+ * required-flag checks / auto-pick / body assembly) into one strategy entry per
+ * plan.
  */
-import { listDeployableModels, BailianError, ExitCode, type Client } from "bailian-cli-core";
+import { listDeployableModels } from "./api.ts";
+import { BailianError } from "../errors/base.ts";
+import { ExitCode } from "../errors/codes.ts";
+import type { Client } from "../client/client.ts";
 import { DEPLOY_PLAN, BILLING_METHOD, CHARGE_TYPE, DEFAULT_BILLING_METHOD } from "./constants.ts";
 
 /** Plan-relevant subset of `deploy create` flags (parsed flags satisfy this shape). */
@@ -176,7 +180,7 @@ const muStrategy: PlanStrategy = {
 /**
  * Registry of supported plans. Adding a new plan = one entry here. The
  * catalog lists some additional plan names (e.g. `ptu_v2`) that are NOT
- * accepted by the create endpoint, so the dispatcher in `create.ts` will
+ * accepted by the create endpoint, so the dispatcher in the command will
  * reject anything outside this table with a clear USAGE error.
  */
 export const STRATEGIES: Record<string, PlanStrategy> = {
