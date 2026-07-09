@@ -1,7 +1,15 @@
-export { clearApiKey, loadApiKeyFromConfig, saveApiKeyToConfig } from "./credentials.ts";
 export {
-  resolveCredential,
-  resolveConsoleGatewayCredential,
-  CONSOLE_GATEWAY_NO_TOKEN_MESSAGE,
+  resolveApiKey,
+  resolveConsole,
+  resolveOpenApi,
+  describeAuthState,
+  resolveModelBaseUrl,
 } from "./resolver.ts";
-export type { AuthMethod, ResolvedCredential } from "./types.ts";
+export { makeAuthStore, type AuthStore, type AuthPersistPatch } from "./store.ts";
+export type {
+  ApiKeyCredential,
+  ConsoleCredential,
+  OpenApiCredential,
+  AuthState,
+  CredentialSource,
+} from "./types.ts";

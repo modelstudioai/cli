@@ -24,15 +24,16 @@ Index: [index.md](index.md)
 | **Description** | Check current usage against rate limits    |
 | **Usage**       | `bl quota check [--model <model>] [flags]` |
 
-#### Options
+#### Flags
 
-| Flag                           | Type   | Required | Description                                     |
-| ------------------------------ | ------ | -------- | ----------------------------------------------- |
-| `--model <model>`              | string | no       | Model name(s), comma-separated                  |
-| `--period <minutes>`           | string | no       | Query usage for the last N minutes (default: 2) |
-| `--console-region <region>`    | string | no       | Console region                                  |
-| `--console-site <site>`        | string | no       | Console site: domestic, international           |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID                                |
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--model <model>`              | string | no       | Model name(s), comma-separated                           |
+| `--period <minutes>`           | string | no       | Query usage for the last N minutes (default: 2)          |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
 
 #### Examples
 
@@ -64,16 +65,17 @@ bl quota check --output json
 | **Description** | View quota change history  |
 | **Usage**       | `bl quota history [flags]` |
 
-#### Options
+#### Flags
 
-| Flag                           | Type   | Required | Description                           |
-| ------------------------------ | ------ | -------- | ------------------------------------- |
-| `--page <n>`                   | string | no       | Page number (default: 1)              |
-| `--page-size <n>`              | string | no       | Page size (default: 10)               |
-| `--model <model>`              | string | no       | Filter by model name                  |
-| `--console-region <region>`    | string | no       | Console region                        |
-| `--console-site <site>`        | string | no       | Console site: domestic, international |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID                      |
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--page <n>`                   | string | no       | Page number (default: 1)                                 |
+| `--page-size <n>`              | string | no       | Page size (default: 10)                                  |
+| `--model <model>`              | string | no       | Filter by model name                                     |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
 
 #### Examples
 
@@ -105,15 +107,16 @@ bl quota history --output json
 | **Description** | View model RPM/TPM rate limits            |
 | **Usage**       | `bl quota list [--model <model>] [flags]` |
 
-#### Options
+#### Flags
 
-| Flag                           | Type    | Required | Description                                 |
-| ------------------------------ | ------- | -------- | ------------------------------------------- |
-| `--model <model>`              | string  | no       | Model name(s), comma-separated              |
-| `--all`                        | boolean | no       | Show all models, not just self-service ones |
-| `--console-region <region>`    | string  | no       | Console region                              |
-| `--console-site <site>`        | string  | no       | Console site: domestic, international       |
-| `--console-switch-agent <uid>` | number  | no       | Switch agent UID                            |
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--model <model>`              | string | no       | Model name(s), comma-separated                           |
+| `--all`                        | switch | no       | Show all models, not just self-service ones              |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
 
 #### Examples
 
@@ -145,16 +148,16 @@ bl quota list --output json
 | **Description** | Request a temporary quota increase                       |
 | **Usage**       | `bl quota request --model <model> --tpm <value> [flags]` |
 
-#### Options
+#### Flags
 
-| Flag                           | Type    | Required | Description                           |
-| ------------------------------ | ------- | -------- | ------------------------------------- |
-| `--model <model>`              | string  | yes      | Model name (required)                 |
-| `--tpm <value>`                | string  | yes      | Target TPM value (required)           |
-| `--yes`                        | boolean | no       | Skip downgrade confirmation           |
-| `--console-region <region>`    | string  | no       | Console region                        |
-| `--console-site <site>`        | string  | no       | Console site: domestic, international |
-| `--console-switch-agent <uid>` | number  | no       | Switch agent UID                      |
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--model <model>`              | string | yes      | Model name (required)                                    |
+| `--tpm <value>`                | string | yes      | Target TPM value (required)                              |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
 
 #### Examples
 
@@ -163,7 +166,7 @@ bl quota request --model qwen-turbo --tpm 100000
 ```
 
 ```bash
-bl quota request --model qwen3.6-plus --tpm 8000000 --yes
+bl quota request --model qwen3.6-plus --tpm 8000000
 ```
 
 ```bash

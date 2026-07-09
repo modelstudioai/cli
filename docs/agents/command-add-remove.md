@@ -5,89 +5,126 @@
 - 增加新的 `bl xxx` 命令
 - 删除已有命令
 - 重命名命令(包括从单级 `bl x` 改成 `bl x y` 或反向)
+- 调整某个 shared command 在 `bl` / `kscli` 等产品入口里的暴露路径
 
-## 命令路径与文件路径的对应规则
+## 命令实现与产品路径的关系
+
+命令实现住在 `packages/commands`,产品路径由入口包决定。实现文件路径按能力组织,但不再等同于最终命令路径。
 
 ```
-单级命令(无 group):  commands/<name>.ts          ↔  bl <name>
-                     例: commands/update.ts      ↔  bl update
-
-两级命令(有 group):  commands/<group>/<action>.ts ↔  bl <group> <action>
-                     例: commands/text/chat.ts   ↔  bl text chat
-
-三级命令(子组,慎用): commands/<group>/<sub>/<action>.ts ↔ bl <group> <sub> <action>
-                     例: commands/memory/profile/create.ts ↔ bl memory profile create
-                     仅当子组下有 ≥2 个 action 时合理(否则拍平到两级)
+实现文件:
+  packages/commands/src/commands/knowledge/retrieve.ts
+    ↓ packages/commands/src/index.ts export { default as knowledgeRetrieve }
+产品入口:
+  packages/cli/src/commands.ts  "knowledge retrieve": knowledgeRetrieve  ↔ bl knowledge retrieve
+  packages/kscli/src/main.ts    "retrieve": knowledgeRetrieve             ↔ kscli retrieve
 ```
 
-文件路径与命令路径必须 1:1 对齐。
+常见路径形态:
+
+```
+单级命令:  packages/commands/src/commands/update.ts              ↔ bl update
+两级命令:  packages/commands/src/commands/text/chat.ts           ↔ bl text chat
+子组命令:  packages/commands/src/commands/memory/profile-get.ts  ↔ bl memory profile get
+```
+
+子组要慎用:只有子组下有 ≥2 个 action 时才合理,否则优先拍平到两级。
 
 ## CLI 命令注册架构(必读)
 
-命令元数据以 **`catalog.ts` 为单一登记处**;`registry.ts` 只负责解析与打印 help,不再内嵌命令表或手写 Resources 列表。
+`packages/commands` 是命令库,只导出单个 command;不内置 path presets,不关心 `bl` / `kscli`。每个产品入口传入自己的 command map,`runtime` 负责解析、help、鉴权、遥测、执行。
 
 ```
-commands/<...>.ts   defineCommand({ name, description, usage, options, examples, run })
+packages/commands/src/commands/<...>.ts
+  defineCommand({ auth, flags, usageArgs, exampleArgs, validate, run })
         ↓
-commands/catalog.ts   export const commands: Record<string, Command>
+packages/commands/src/index.ts
+  export { default as xxxCommand } from "./commands/...ts"
         ↓
-   ┌────┴────┬──────────────────────┬─────────────────────┐
-   ↓         ↓                      ↓                     ↓
-registry.ts  main.ts      tools/generate-reference.ts   export-schema.ts
-(解析/help)  (入口)       → skills/bailian-cli/reference/index.md + <group>.md
+┌──────────────────────────────┬──────────────────────────────┐
+│ packages/cli/src/commands.ts │ packages/kscli/src/main.ts   │
+│ { "text chat": textChat }    │ { "retrieve": knowledge... } │
+└──────────────┬───────────────┴──────────────┬───────────────┘
+               ↓                              ↓
+        createCli(commands, identity)  →  runtime registry/help/middleware
+               ↓
+        tools/generate-reference.ts reads packages/cli/src/commands.ts
 ```
 
-- **`packages/cli/src/commands/catalog.ts`**: `import` 命令模块 + `"<path>": handler` 映射;**不** `import registry.ts`(避免构建时循环依赖)
-- **`packages/cli/src/commands/index.ts`**: `export { commands } from "./catalog.ts"`(给包内 re-export 用)
-- **`packages/cli/src/registry.ts`**: `import { commands } from "./commands/catalog.ts"`,建树、`resolve`、`printHelp`;Commands / Global Flags 从 `Command` 元数据与 `GLOBAL_OPTIONS` **动态生成**
-- **`tools/generate-reference.ts`**: pre-commit / `pnpm run sync:skill-assets` 时读 `catalog.ts`,写 `skills/bailian-cli/reference/index.md`(索引) + `skills/bailian-cli/reference/<一级命令>.md`(详情,勿手改)。该目录**纳入 git**,随 `npx skills add modelstudioai/cli` 分发
+- **`packages/commands/src/commands/<...>.ts`**:命令实现;`usageArgs` / `exampleArgs` 只写参数片段,不写 `bl` / `kscli` 前缀
+- **`packages/commands/src/index.ts`**:导出命令实现;新增命令必须在这里 re-export
+- **`packages/cli/src/commands.ts`**:`bl` 产品命令 map;新增/删除/重命名 `bl` 命令必须改这里
+- **`packages/kscli/src/main.ts`**:`kscli` 产品命令 map;只有该入口需要暴露/变更时才改
+- **`packages/runtime/src/registry.ts`**:通用 registry,从传入 map 建树;不要在这里登记业务命令
+- **`tools/generate-reference.ts`**:pre-commit / `pnpm run sync:skill-assets` 时读 `packages/cli/src/commands.ts`,写 `skills/bailian-cli/reference/index.md` + `<一级命令>.md`。该目录**纳入 git**,勿手改
 
-已删除、勿再引用:`commands/help.ts`、`registry.ts` 内联 `new CommandRegistry({...})`、`printRootHelp` 手写命令行。
+已删除/勿再引用:旧的 `packages/cli/src/commands/catalog.ts`、旧的 `packages/cli/src/commands/index.ts` catalog re-export、`packages/cli/src/registry.ts`、`skipDefaultApiKeySetup`、`ensureApiKey` 启动拦截、`config/export-schema.ts`。
 
 ## 必查清单
 
-### A. 代码层
+### A. 命令库
 
-- [ ] **新建/删除/移动**对应的 `packages/cli/src/commands/<...>.ts` 文件
-- [ ] **`packages/cli/src/commands/catalog.ts`**:
-  - 增删 `import xxx from "./.../xxx.ts"`
-  - 在 `export const commands` 里增删 `"<group> <action>": xxx`(key 与 `defineCommand({ name })` 一致)
-- [ ] **不要**在 `registry.ts` 里重复登记命令(已从 catalog 读取)
-- [ ] 如果命令需要跳过入口的默认 DashScope API key 引导(`ensureApiKey`),在对应 `defineCommand` 上设 `skipDefaultApiKeySetup: true`(字段定义见 `packages/core/src/types/command.ts`;`main.ts` 根据已解析的 `command` 读取)
-- [ ] **`config/export-schema.ts`**: 若新命令不适合作为 agent tool,评估是否加入 `SKIP_PREFIXES`;该文件在 `run()` 内 `import("../catalog.ts")`,勿顶层 import catalog 以免循环依赖
+- [ ] 新建/删除/移动对应的 `packages/commands/src/commands/<...>.ts`
+- [ ] `defineCommand` 字段使用当前 schema:
+  - `auth: "apiKey" | "console" | "openapi" | "none"`
+  - `flags`(camelCase key,由 runtime 渲染为 kebab-case)
+  - `usageArgs`(不含 bin/path 前缀)
+  - `exampleArgs`(不含 bin/path 前缀)
+  - `validate`(跨 flag 校验)
+  - 普通业务命令的 `run(ctx)` 只读 `ctx.flags` / `ctx.settings` / `ctx.client`
+  - `commands/auth/**` 可用 `ctx.authStore()`,`commands/config/**` 可用 `ctx.configStore()`;不要把这些 store accessor 扩散到普通业务命令
+- [ ] `packages/commands/src/index.ts`:新增或移除对应 export
+- [ ] 如果命令调用 Console Gateway,设置 `auth: "console"`;不要重复声明 console 凭证域 flags
+- [ ] 如果命令不需要网络或自己管理配置/登录,设置 `auth: "none"`;不要绕过 runtime auth stage
 
-### B. 文档层
+### B. 产品入口
+
+- [ ] `packages/cli/src/commands.ts`:按需增删 `import` 与 `commands` map key
+- [ ] 新 map key 就是 `bl` 下的命令路径;重命名时全仓 grep 旧路径字符串
+- [ ] 如果 `kscli` 入口也要暴露/移除该能力,同步 `packages/kscli/src/main.ts`
+- [ ] 不要在 `packages/runtime/src/registry.ts` 或 `create-cli.ts` 里写业务命令表
+
+### C. 文档层
 
 - [ ] 运行 `pnpm run sync:skill-assets`(或正常 `git commit` 走 pre-commit),刷新 `skills/bailian-cli/reference/` 与 `SKILL.md` 的 `metadata.version` 并提交
-- [ ] `README.md` / `README.zh.md`: Quick Start、命令一览(用户向,与 help 对齐即可)
-- [ ] `skills/bailian-cli/SKILL.md`: 若安装说明或能力边界有变,同步更新
+- [ ] `README.md` / `README.zh.md`:Quick Start、命令一览、认证说明(用户向,与 help 对齐)
+- [ ] `skills/bailian-cli/SKILL.md`:若安装说明或能力边界有变,同步更新
 
-### C. 测试层
+### D. 测试层
 
 - [ ] 按 [cli-e2e-tests.md](cli-e2e-tests.md) 新建或更新 `packages/cli/tests/e2e/<topic>.e2e.test.ts`
-- [ ] 删除命令时一并删对应 e2e
+- [ ] 删除命令时一并删对应 e2e / README 示例 / reference 生成结果
+- [ ] 如果 shared command 在不同入口路径下复用,至少确保 `bl` 入口 e2e 覆盖;`kscli` 入口改动需补对应入口测试或手工 smoke
 
-### D. 重命名特殊处理
+### E. 重命名特殊处理
 
 - [ ] 全仓 grep **旧命令名字符串**,确保以下位置全部更新:
-  - `catalog.ts` 的 key
-  - error hints(cli 层)
+  - `packages/cli/src/commands.ts` map key
+  - `packages/kscli/src/main.ts` map key(如适用)
+  - 用户可见 hint / README / tests
   - `skills/bailian-cli/reference/`(重建后检查并提交)
-  - README 示例
-  - 测试断言
+- [ ] 检查 `usageArgs` / `exampleArgs` 没有硬编码旧的 `bl <path>` 前缀
 
 ## 完成后自查
 
 ```sh
-pnpm run sync:skill-assets   # reference/ + SKILL metadata.version 与 catalog / package.json 一致
-node packages/cli/src/main.ts <new-command> --help
-node packages/cli/src/main.ts                        # 根 help 列表含新命令
-vp test packages/cli/tests/e2e/<topic>.e2e.test.ts   # 相关 e2e
+pnpm run sync:skill-assets
+pnpm -F bailian-cli exec tsx src/main.ts <new-command> --help
+pnpm -F bailian-cli exec tsx src/main.ts
+vp test packages/cli/tests/e2e/<topic>.e2e.test.ts
+```
+
+如改了 `kscli` 入口:
+
+```sh
+pnpm -F knowledge-studio-cli exec tsx src/main.ts <command> --help
 ```
 
 ## 常见漏点
 
-- ✗ 只改了命令文件,忘了 **`catalog.ts`** → 命令不存在或 help 里没有
-- ✗ 手改 **`skills/bailian-cli/reference/*.md`** → 下次 generate 被覆盖;应改 `defineCommand` 后重新 generate 并提交
-- ✗ 在 `export-schema.ts` 顶层 `import catalog` → 可能与 registry 循环依赖
+- ✗ 只新增 `packages/commands/src/commands/...` 文件,忘了在 `packages/commands/src/index.ts` 导出
+- ✗ 只导出了命令实现,忘了在 `packages/cli/src/commands.ts` 暴露路径 → `bl --help` 看不到
+- ✗ 手改 `skills/bailian-cli/reference/*.md` → 下次 generate 被覆盖;应改 command metadata 后重新 generate 并提交
+- ✗ 在 `usageArgs` / `exampleArgs` 写死 `bl text chat` → `kscli` 等入口复用时 help 错
+- ✗ Console Gateway 命令忘设 `auth: "console"` → console flags / credential 注入都不生效
 - ✗ 单 action 的子组是反模式,新增时优先拍平为两级

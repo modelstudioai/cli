@@ -1,4 +1,4 @@
-import type { Config } from "../config/schema.ts";
+import type { Client } from "../client/client.ts";
 import type {
   Capability,
   IntentProfile,
@@ -361,7 +361,7 @@ function recallAlternative(
 }
 
 export async function recallSemantic(
-  config: Config,
+  client: Client,
   models: ModelProfile[],
   query: string,
   topK: number,
@@ -370,7 +370,7 @@ export async function recallSemantic(
   let embeddings = getEmbeddings();
 
   if (!embeddings) {
-    embeddings = await buildAndCacheEmbeddings(config, models);
+    embeddings = await buildAndCacheEmbeddings(client, models);
     cachedEmbeddings = embeddings;
   } else {
     // id-coverage check: rebuild when the model set has drifted since the
@@ -390,7 +390,7 @@ export async function recallSemantic(
       }
     }
     if (drifted) {
-      embeddings = await buildAndCacheEmbeddings(config, models);
+      embeddings = await buildAndCacheEmbeddings(client, models);
       cachedEmbeddings = embeddings;
     }
   }
@@ -398,7 +398,7 @@ export async function recallSemantic(
   // soft track uses the LLM-refined semantic query when available, falling back
   // to the raw user query so the soft track never depends on intent LLM quality
   const semanticQuery = intent?.semanticQuery?.trim() || query;
-  const queryVector = await embedQuery(config, semanticQuery);
+  const queryVector = await embedQuery(client, semanticQuery);
   const modelMap = new Map(models.map((profile) => [profile.model, profile]));
   const preference = intent?.modelPreference;
   const excludes = preference?.excludes ?? [];

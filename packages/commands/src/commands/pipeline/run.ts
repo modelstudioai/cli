@@ -1,56 +1,64 @@
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { defineCommand, type Config, type GlobalFlags } from "bailian-cli-core";
-import { emitResult, cmdUsage } from "bailian-cli-runtime";
+import { defineCommand, type FlagsDef, type ParsedFlags } from "bailian-cli-core";
+import { emitResult } from "bailian-cli-runtime";
 import { initPipelineSteps } from "bailian-cli-runtime";
 import { executePipeline, streamPipelineEvents } from "bailian-cli-runtime";
 import type { PipelineLifecycleEvent } from "bailian-cli-runtime";
 import { loadPipelineFile } from "./load-file.ts";
 
+const RUN_FLAGS = {
+  file: {
+    type: "string",
+    valueHint: "<path>",
+    description: "Pipeline definition file (YAML/JSON)",
+    required: true,
+  },
+  input: { type: "string", valueHint: "<json>", description: "Runtime input as inline JSON" },
+  inputFile: {
+    type: "string",
+    valueHint: "<path>",
+    description: "Runtime input from a JSON file",
+  },
+  concurrency: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Max parallel steps (default: 1)",
+  },
+  events: {
+    type: "string",
+    valueHint: "<format>",
+    description: "Emit lifecycle events: jsonl",
+    choices: ["jsonl"] as const,
+  },
+  stepTimeout: {
+    type: "number",
+    valueHint: "<seconds>",
+    description: "Default step timeout in seconds",
+  },
+} satisfies FlagsDef;
+type RunFlags = ParsedFlags<typeof RUN_FLAGS>;
+
 export default defineCommand({
   description: "Run a pipeline workflow definition",
-  skipDefaultApiKeySetup: true,
-  usageArgs: "<file> [flags]",
-  options: [
-    { flag: "--input <json>", description: "Runtime input as inline JSON" },
-    { flag: "--input-file <path>", description: "Runtime input from a JSON file" },
-    {
-      flag: "--concurrency <n>",
-      description: "Max parallel steps (default: 1)",
-      type: "number",
-    },
-    { flag: "--events <format>", description: "Emit lifecycle events: jsonl" },
-    {
-      flag: "--timeout <seconds>",
-      description: "Default step timeout in seconds",
-      type: "number",
-    },
-  ],
+  auth: "none",
+  usageArgs: "--file <path> [flags]",
+  flags: RUN_FLAGS,
   exampleArgs: [
-    'workflow.yaml --input \'{"brief":"hello"}\'',
-    "workflow.json --input-file inputs.json --concurrency 3",
-    "workflow.yaml --dry-run",
-    "workflow.json --events jsonl",
-    "workflow.yaml --output json",
+    '--file workflow.yaml --input \'{"brief":"hello"}\'',
+    "--file workflow.json --input-file inputs.json --concurrency 3",
+    "--file workflow.yaml --dry-run",
+    "--file workflow.json --events jsonl",
+    "--file workflow.yaml --output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const file = ((flags._positional as string[] | undefined) ?? [])[0] as string | undefined;
-    if (!file) {
-      process.stderr.write(
-        `Error: pipeline file is required\nUsage: ${cmdUsage(config, "<file>")}\n`,
-      );
-      process.exit(2);
-    }
+  validate: (f) => (f.input && f.inputFile ? "use --input or --input-file, not both" : undefined),
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const file = flags.file;
 
     initPipelineSteps();
 
-    const eventsFormat = flags.events as string | undefined;
-    if (eventsFormat !== undefined && eventsFormat !== "jsonl") {
-      process.stderr.write(
-        `Error: unsupported --events format: ${eventsFormat}. Supported: jsonl\n`,
-      );
-      process.exit(2);
-    }
+    const eventsFormat = flags.events;
 
     const filePath = resolve(file);
     const pipeline = await loadPipelineFile(filePath);
@@ -59,10 +67,10 @@ export default defineCommand({
 
     if (eventsFormat === "jsonl") {
       for await (const event of streamPipelineEvents(pipeline, runtimeInput, {
-        concurrency: flags.concurrency as number | undefined,
+        concurrency: flags.concurrency,
         basePath,
-        dryRun: flags.dryRun,
-        timeoutSeconds: flags.timeout as number | undefined,
+        dryRun: settings.dryRun,
+        timeoutSeconds: flags.stepTimeout,
       })) {
         process.stdout.write(JSON.stringify(event) + "\n");
       }
@@ -70,14 +78,14 @@ export default defineCommand({
     }
 
     const report = await executePipeline(pipeline, runtimeInput, {
-      concurrency: flags.concurrency as number | undefined,
+      concurrency: flags.concurrency,
       basePath,
-      dryRun: flags.dryRun,
-      timeoutSeconds: flags.timeout as number | undefined,
-      onEvent: flags.verbose ? logEvent : undefined,
+      dryRun: settings.dryRun,
+      timeoutSeconds: flags.stepTimeout,
+      onEvent: settings.verbose ? logEvent : undefined,
     });
 
-    if (config.output === "json") {
+    if (settings.output === "json") {
       emitResult(report, "json");
     } else {
       printTextReport(report);
@@ -87,13 +95,9 @@ export default defineCommand({
   },
 });
 
-async function resolveRuntimeInput(flags: GlobalFlags): Promise<Record<string, unknown>> {
-  const inputJson = flags.input as string | undefined;
-  const inputFile = flags.inputFile as string | undefined;
-  if (inputJson && inputFile) {
-    process.stderr.write("Error: use --input or --input-file, not both\n");
-    process.exit(2);
-  }
+async function resolveRuntimeInput(flags: RunFlags): Promise<Record<string, unknown>> {
+  const inputJson = flags.input;
+  const inputFile = flags.inputFile;
   if (inputJson) return JSON.parse(inputJson) as Record<string, unknown>;
   if (inputFile) {
     const raw = await readFile(resolve(inputFile), "utf-8");

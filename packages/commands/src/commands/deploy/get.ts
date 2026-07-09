@@ -1,39 +1,35 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  getDeployment,
-  type Config,
-  type GlobalFlags,
-} from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
+import { defineCommand, detectOutputFormat, getDeployment, type FlagsDef } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
+
+const GET_FLAGS = {
+  deployedModel: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Deployed model identifier (required)",
+    required: true,
+  },
+} satisfies FlagsDef;
 
 export default defineCommand({
   description: "Get details of a single model deployment",
+  auth: "apiKey",
   usageArgs: "--deployed-model <id>",
-  options: [
-    {
-      flag: "--deployed-model <id>",
-      description: "Deployed model identifier (required)",
-      required: true,
-    },
-  ],
+  flags: GET_FLAGS,
   exampleArgs: [
     "--deployed-model qwen-plus-2025-12-01-b6d61c71",
     "--deployed-model qwen-plus-2025-12-01-b6d61c71 --output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const deployedModel = flags.deployedModel as string | undefined;
-    if (!deployedModel) failIfMissing("deployed-model", "bl deploy get --deployed-model <id>");
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const deployedModel = flags.deployedModel;
+    const format = detectOutputFormat(settings.output);
 
-    const format = detectOutputFormat(config.output);
-
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ action: "deploy.get", deployed_model: deployedModel }, format);
       return;
     }
 
-    const response = await getDeployment(config, deployedModel!);
+    const response = await getDeployment(ctx.client, deployedModel);
     const deployment = response.output ?? response.data;
 
     if (!deployment) {

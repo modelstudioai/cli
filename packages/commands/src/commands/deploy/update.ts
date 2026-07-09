@@ -2,13 +2,28 @@ import {
   defineCommand,
   detectOutputFormat,
   updateDeployment,
-  BailianError,
-  ExitCode,
-  type Config,
-  type GlobalFlags,
+  type FlagsDef,
 } from "bailian-cli-core";
-import { failIfMissing, promptConfirm } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
+
+const UPDATE_FLAGS = {
+  deployedModel: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Deployed model identifier (required)",
+    required: true,
+  },
+  rpmLimit: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Requests per minute",
+  },
+  tpmLimit: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Tokens per minute",
+  },
+} satisfies FlagsDef;
 
 /**
  * `bl deploy update` — update deployment rate limits.
@@ -18,75 +33,38 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
  */
 export default defineCommand({
   description: "Update a deployment's rate limits (rpm_limit / tpm_limit)",
-  usageArgs: "--deployed-model <id> [--rpm-limit <n>] [--tpm-limit <n>] [--yes]",
-  options: [
-    {
-      flag: "--deployed-model <id>",
-      description: "Deployed model identifier (required)",
-      required: true,
-    },
-    {
-      flag: "--rpm-limit <n>",
-      description: "Requests per minute",
-      type: "number",
-    },
-    {
-      flag: "--tpm-limit <n>",
-      description: "Tokens per minute",
-      type: "number",
-    },
-    { flag: "--yes", description: "Skip the confirmation prompt", type: "boolean" },
-  ],
+  auth: "apiKey",
+  usageArgs: "--deployed-model <id> [--rpm-limit <n>] [--tpm-limit <n>]",
+  flags: UPDATE_FLAGS,
   exampleArgs: [
     "--deployed-model dep-... --rpm-limit 1000",
-    "--deployed-model dep-... --rpm-limit 1000 --tpm-limit 200000 --yes",
+    "--deployed-model dep-... --rpm-limit 1000 --tpm-limit 200000",
   ],
   notes: ["At least one of --rpm-limit / --tpm-limit must be provided."],
-  async run(config: Config, flags: GlobalFlags) {
-    const deployedModel = flags.deployedModel as string | undefined;
-    if (!deployedModel)
-      failIfMissing("deployed-model", "--deployed-model <id> [--rpm-limit <n>] [--tpm-limit <n>]");
+  validate: (flags) =>
+    flags.rpmLimit === undefined && flags.tpmLimit === undefined
+      ? "Provide at least one of --rpm-limit / --tpm-limit."
+      : undefined,
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const deployedModel = flags.deployedModel;
+    const format = detectOutputFormat(settings.output);
 
-    const rpmLimit = flags.rpmLimit !== undefined ? (flags.rpmLimit as number) : undefined;
-    const tpmLimit = flags.tpmLimit !== undefined ? (flags.tpmLimit as number) : undefined;
-
-    if (rpmLimit === undefined && tpmLimit === undefined) {
-      throw new BailianError("Provide at least one of --rpm-limit / --tpm-limit.", ExitCode.USAGE);
-    }
-
-    const format = detectOutputFormat(config.output);
     const body: Record<string, unknown> = {};
-    if (rpmLimit !== undefined) body.rpm_limit = rpmLimit;
-    if (tpmLimit !== undefined) body.tpm_limit = tpmLimit;
+    if (flags.rpmLimit !== undefined) body.rpm_limit = flags.rpmLimit;
+    if (flags.tpmLimit !== undefined) body.tpm_limit = flags.tpmLimit;
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ action: "deploy.update", deployed_model: deployedModel, body }, format);
       return;
     }
 
-    if (!flags.yes && !config.nonInteractive && !config.quiet) {
-      const parts: string[] = [];
-      if (rpmLimit !== undefined) parts.push(`rpm_limit=${rpmLimit}`);
-      if (tpmLimit !== undefined) parts.push(`tpm_limit=${tpmLimit}`);
-      process.stderr.write(`Update rate limits for ${deployedModel} (${parts.join(", ")})?\n`);
-      const ok = await promptConfirm({ message: "Proceed?", initialValue: false });
-      if (!ok) {
-        emitBare("Cancelled.");
-        return;
-      }
-    } else if (!flags.yes && config.nonInteractive) {
-      throw new BailianError(
-        "Pass --yes to confirm rate-limit update in non-interactive mode.",
-        ExitCode.USAGE,
-      );
-    }
-
-    const response = await updateDeployment(config, deployedModel!, body);
+    const response = await updateDeployment(ctx.client, deployedModel, body);
     const deployment = response.output ?? response.data;
 
-    if (config.quiet) {
-      emitBare(deployedModel!);
-    } else if (format === "rich") {
+    if (settings.quiet) {
+      emitBare(deployedModel);
+    } else if (format === "text") {
       const parts: string[] = [];
       if (deployment?.rpm_limit !== undefined) parts.push(`rpm_limit=${deployment.rpm_limit}`);
       if (deployment?.tpm_limit !== undefined) parts.push(`tpm_limit=${deployment.tpm_limit}`);

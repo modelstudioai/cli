@@ -23,7 +23,6 @@ describe.skipIf(!isChatE2EReady())("e2e: kscli chat (live)", () => {
       agentId,
       "--workspace-id",
       workspaceId,
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -44,7 +43,6 @@ describe.skipIf(!isChatE2EReady())("e2e: kscli chat (live)", () => {
       agentId,
       "--workspace-id",
       workspaceId,
-      "--non-interactive",
       "--output",
       "text",
     ]);
@@ -62,7 +60,6 @@ describe.skipIf(!isChatE2EReady())("e2e: kscli chat (live)", () => {
       agentId,
       "--workspace-id",
       workspaceId,
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -83,7 +80,6 @@ describe.skipIf(!isChatE2EReady())("e2e: kscli chat (live)", () => {
       agentId,
       "--workspace-id",
       workspaceId,
-      "--non-interactive",
       "--output",
       "text",
     ]);
@@ -106,7 +102,6 @@ describe.skipIf(!isChatE2EReady())("e2e: kscli chat (live)", () => {
       agentId,
       "--workspace-id",
       workspaceId,
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -126,7 +121,6 @@ describe.skipIf(!isChatE2EReady())("e2e: kscli chat (live)", () => {
       "aid-invalid-not-exist",
       "--workspace-id",
       workspaceId,
-      "--non-interactive",
       "--output",
       "json",
     ]);

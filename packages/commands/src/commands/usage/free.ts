@@ -1,13 +1,5 @@
-import {
-  defineCommand,
-  callConsoleGateway,
-  resolveConsoleGatewayCredential,
-  fetchModelList,
-  detectOutputFormat,
-  type Config,
-  type GlobalFlags,
-} from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand, detectOutputFormat, fetchModelList, type Client } from "bailian-cli-core";
+import { ansi, emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
 const FREE_TIER_API = "zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota";
@@ -76,8 +68,8 @@ function printTable(
   quotas: FreeTierQuota[],
   stopMap: Map<string, boolean>,
   typeMap: Map<string, string>,
-  noColor: boolean,
 ): void {
+  const color = ansi(process.stdout);
   const headers = ["Model", "Type", "Remaining/Total", "Usage", "Expires", "Auto-Stop"];
 
   const rows = quotas.map((quota) => {
@@ -105,14 +97,9 @@ function printTable(
     Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const dim = noColor ? (text: string) => text : (text: string) => `\x1b[2m${text}\x1b[0m`;
-  const bold = noColor ? (text: string) => text : (text: string) => `\x1b[1m${text}\x1b[0m`;
-  const green = noColor ? (text: string) => text : (text: string) => `\x1b[32m${text}\x1b[0m`;
-  const yellow = noColor ? (text: string) => text : (text: string) => `\x1b[33m${text}\x1b[0m`;
-
   const autoStopCol = headers.length - 1;
-  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const separator = widths.map((width) => dim("─".repeat(width))).join("──");
+  const headerLine = headers.map((label, col) => color.bold(padEnd(label, widths[col]))).join("  ");
+  const separator = widths.map((width) => color.dim("─".repeat(width))).join("──");
 
   process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
@@ -120,8 +107,8 @@ function printTable(
   for (const row of rows) {
     const cells = row.map((cell, col) => {
       if (col === autoStopCol) {
-        if (cell === "ON") return green(padEnd(cell, widths[col]));
-        if (cell === "OFF") return yellow(padEnd(cell, widths[col]));
+        if (cell === "ON") return color.green(padEnd(cell, widths[col]));
+        if (cell === "OFF") return color.yellow(padEnd(cell, widths[col]));
       }
       return padEnd(cell, widths[col]);
     });
@@ -166,11 +153,14 @@ interface ModelInfo {
   type: string;
 }
 
-async function fetchAllModels(config: Config, token: string): Promise<ModelInfo[]> {
+async function fetchAllModels(client: Client): Promise<ModelInfo[]> {
   const allModels: Record<string, unknown>[] = [];
   let page = 1;
   while (true) {
-    const result = await fetchModelList(config, token, { pageNo: page, pageSize: 50 });
+    const result = await fetchModelList((api, data) => client.console(api, data), {
+      pageNo: page,
+      pageSize: 50,
+    });
     allModels.push(...result.models);
     if (allModels.length >= result.total) break;
     page++;
@@ -185,32 +175,26 @@ async function fetchAllModels(config: Config, token: string): Promise<ModelInfo[
 
 export default defineCommand({
   description: "Query free-tier quota for models (all models if --model is omitted)",
-  skipDefaultApiKeySetup: true,
+  auth: "console",
   usageArgs: "[--model <model>[,model2,...]] [flags]",
-  options: [
-    {
-      flag: "--model <model>",
+  flags: {
+    model: {
+      type: "string",
+      valueHint: "<model>",
       description: "Model name(s) to query, comma-separated for multiple; omit for all models",
     },
-    {
-      flag: "--expiring <days>",
+    expiring: {
+      type: "string",
+      valueHint: "<days>",
       description: "Only show quotas expiring within N days",
     },
-    {
-      flag: "--sort <field>",
+    sort: {
+      type: "string",
+      valueHint: "<field>",
       description: "Sort by: remaining (ascending), expires (ascending)",
+      choices: ["remaining", "expires"] as const,
     },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
-      description: "Console site: domestic, international",
-    },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+  },
   exampleArgs: [
     "",
     "--model qwen3-max",
@@ -220,18 +204,12 @@ export default defineCommand({
     "--model qwen-turbo --output json",
     "--model qwen3-max --console-region cn-beijing",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const modelFlag = (flags.model as string) || undefined;
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const modelFlag = flags.model || undefined;
     const expiringDays = Number(flags.expiring) || 0;
-    const VALID_SORT_FIELDS = ["remaining", "expires"] as const;
-    const sortField = (flags.sort as string) || undefined;
-    if (sortField && !VALID_SORT_FIELDS.includes(sortField as (typeof VALID_SORT_FIELDS)[number])) {
-      process.stderr.write(
-        `Error: invalid --sort value "${sortField}". Must be one of: ${VALID_SORT_FIELDS.join(", ")}\n`,
-      );
-      process.exit(1);
-    }
-    const format = detectOutputFormat(config.output);
+    const sortField = flags.sort || undefined;
+    const format = detectOutputFormat(settings.output);
 
     let models: string[];
     const typeMap = new Map<string, string>();
@@ -253,7 +231,7 @@ export default defineCommand({
       queryFreeTierQuotaRequest: { models },
     };
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         {
           api: FREE_TIER_API,
@@ -264,10 +242,8 @@ export default defineCommand({
       return;
     }
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
     if (!modelFlag) {
-      const modelInfos = await fetchAllModels(config, credential.token);
+      const modelInfos = await fetchAllModels(ctx.client);
       models = modelInfos.map((info) => info.name);
       for (const info of modelInfos) {
         typeMap.set(info.name, info.type);
@@ -275,7 +251,9 @@ export default defineCommand({
       requestData.queryFreeTierQuotaRequest.models = models;
     } else {
       const searchResults = await Promise.all(
-        models.map((name) => fetchModelList(config, credential.token, { name, pageSize: 50 })),
+        models.map((name) =>
+          fetchModelList((api, data) => ctx.client.console(api, data), { name, pageSize: 50 }),
+        ),
       );
       for (let idx = 0; idx < models.length; idx++) {
         const matched = searchResults[idx].models.find((item) => item.model === models[idx]);
@@ -286,13 +264,9 @@ export default defineCommand({
     }
 
     const [quotaResult, stopResult] = await Promise.all([
-      callConsoleGateway(config, credential.token, {
-        api: FREE_TIER_API,
-        data: requestData,
-      }),
-      callConsoleGateway(config, credential.token, {
-        api: FREE_TIER_ONLY_STATUS_API,
-        data: { queryFreeTierOnlyStatusRequest: { models } },
+      ctx.client.console(FREE_TIER_API, requestData),
+      ctx.client.console(FREE_TIER_ONLY_STATUS_API, {
+        queryFreeTierOnlyStatusRequest: { models },
       }),
     ]);
 
@@ -354,6 +328,6 @@ export default defineCommand({
       return;
     }
 
-    printTable(quotas, stopMap, typeMap, config.noColor);
+    printTable(quotas, stopMap, typeMap);
   },
 });

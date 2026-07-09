@@ -1,13 +1,10 @@
 import {
   defineCommand,
-  callConsoleGateway,
   effectiveConsoleGatewayConfig,
-  resolveConsoleGatewayCredential,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
+  type Client,
 } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { ansi, emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
 const MODEL_LIST_API = "zeldaHttp.dashscopeModel./zelda/api/v1/modelCenter/listFoundationModels";
@@ -92,22 +89,19 @@ function extractResponseData(result: Record<string, unknown>): Record<string, un
   return direct ?? data;
 }
 
-async function fetchAllModelsWithQpm(config: Config, token: string): Promise<ModelWithQpm[]> {
+async function fetchAllModelsWithQpm(client: Client): Promise<ModelWithQpm[]> {
   const allModels: ModelWithQpm[] = [];
   let pageNo = 1;
 
   while (true) {
-    const raw = await callConsoleGateway(config, token, {
-      api: MODEL_LIST_API,
-      data: {
-        input: {
-          pageNo,
-          pageSize: 50,
-          group: false,
-          queryQpmInfo: true,
-          ignoreWorkspaceServiceSite: true,
-          supports: { selfServiceLimitIncrease: true },
-        },
+    const raw = await client.console(MODEL_LIST_API, {
+      input: {
+        pageNo,
+        pageSize: 50,
+        group: false,
+        queryQpmInfo: true,
+        ignoreWorkspaceServiceSite: true,
+        supports: { selfServiceLimitIncrease: true },
       },
     });
 
@@ -124,8 +118,7 @@ async function fetchAllModelsWithQpm(config: Config, token: string): Promise<Mod
 }
 
 async function fetchMonitorData(
-  config: Config,
-  token: string,
+  client: Client,
   modelName: string,
   windowMinutes: number,
 ): Promise<{ rpm: number; tpm: number }> {
@@ -133,22 +126,19 @@ async function fetchMonitorData(
   const startTime = now - windowMinutes * 60 * 1000;
 
   try {
-    const raw = await callConsoleGateway(config, token, {
-      api: MONITOR_API,
-      data: {
-        reqDTO: {
-          monitorType: "Advanced",
-          metricFilters: [
-            { aggMethod: "sum_pm", metricName: "model_total_amount" },
-            { aggMethod: "sum_pm", metricName: "model_call_count" },
-          ],
-          labelFilters: {
-            resourceId: modelName,
-            resourceType: "model",
-          },
-          startTime,
-          endTime: now,
+    const raw = await client.console(MONITOR_API, {
+      reqDTO: {
+        monitorType: "Advanced",
+        metricFilters: [
+          { aggMethod: "sum_pm", metricName: "model_total_amount" },
+          { aggMethod: "sum_pm", metricName: "model_call_count" },
+        ],
+        labelFilters: {
+          resourceId: modelName,
+          resourceType: "model",
         },
+        startTime,
+        endTime: now,
       },
     });
 
@@ -180,12 +170,8 @@ interface CheckRow {
   tpmLimit: number;
 }
 
-function printTable(rows: CheckRow[], noColor: boolean): void {
-  const bold = noColor ? (t: string) => t : (t: string) => `\x1b[1m${t}\x1b[0m`;
-  const dim = noColor ? (t: string) => t : (t: string) => `\x1b[2m${t}\x1b[0m`;
-  const green = noColor ? (t: string) => t : (t: string) => `\x1b[32m${t}\x1b[0m`;
-  const yellow = noColor ? (t: string) => t : (t: string) => `\x1b[33m${t}\x1b[0m`;
-  const red = noColor ? (t: string) => t : (t: string) => `\x1b[31m${t}\x1b[0m`;
+function printTable(rows: CheckRow[]): void {
+  const color = ansi(process.stdout);
 
   const headers = ["Model", "RPM Usage/Limit", "TPM Usage/Limit", "Status"];
 
@@ -212,8 +198,8 @@ function printTable(rows: CheckRow[], noColor: boolean): void {
     Math.max(displayWidth(label), ...tableRows.map((r) => displayWidth(r.cells[col]))),
   );
 
-  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const separator = widths.map((w) => dim("─".repeat(w))).join("──");
+  const headerLine = headers.map((label, col) => color.bold(padEnd(label, widths[col]))).join("  ");
+  const separator = widths.map((w) => color.dim("─".repeat(w))).join("──");
 
   process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
@@ -222,42 +208,34 @@ function printTable(rows: CheckRow[], noColor: boolean): void {
   for (const r of tableRows) {
     const cells = r.cells.map((cell, col) => {
       if (col === statusCol) {
-        if (cell === "Rate Limited") return red(padEnd(cell, widths[col]));
-        if (cell === "Near limit") return yellow(padEnd(cell, widths[col]));
-        if (cell === "Normal") return green(padEnd(cell, widths[col]));
+        if (cell === "Rate Limited") return color.red(padEnd(cell, widths[col]));
+        if (cell === "Near limit") return color.yellow(padEnd(cell, widths[col]));
+        if (cell === "Normal") return color.green(padEnd(cell, widths[col]));
       }
       return padEnd(cell, widths[col]);
     });
     process.stdout.write(cells.join("  ") + "\n");
   }
 
-  process.stdout.write(dim(`\nTotal: ${rows.length} models`) + "\n");
+  process.stdout.write(color.dim(`\nTotal: ${rows.length} models`) + "\n");
 }
 
 export default defineCommand({
   description: "Check current usage against rate limits",
-  skipDefaultApiKeySetup: true,
+  auth: "console",
   usageArgs: "[--model <model>] [flags]",
-  options: [
-    {
-      flag: "--model <model>",
+  flags: {
+    model: {
+      type: "string",
+      valueHint: "<model>",
       description: "Model name(s), comma-separated",
     },
-    {
-      flag: "--period <minutes>",
+    period: {
+      type: "string",
+      valueHint: "<minutes>",
       description: "Query usage for the last N minutes (default: 2)",
     },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
-      description: "Console site: domestic, international",
-    },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+  },
   exampleArgs: [
     "",
     "--model qwen3.6-plus",
@@ -265,30 +243,26 @@ export default defineCommand({
     "--model qwen3.6-plus,qwen-turbo",
     "--output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const modelFlag = (flags.model as string) || undefined;
-    const rawPeriod = Number(flags.period) || 2;
-    if (rawPeriod < 1) {
-      process.stderr.write("Error: --period must be at least 1 minute.\n");
-      process.exit(1);
-    }
-    const windowMinutes = rawPeriod;
-    const format = detectOutputFormat(config.output);
+  validate: (f) =>
+    (Number(f.period) || 2) < 1 ? "--period must be at least 1 minute." : undefined,
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const modelFlag = flags.model || undefined;
+    const windowMinutes = Number(flags.period) || 2;
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         {
           apis: [MODEL_LIST_API, MONITOR_API],
-          ...effectiveConsoleGatewayConfig(config),
+          ...effectiveConsoleGatewayConfig(settings),
         },
         format,
       );
       return;
     }
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
-    let models = await fetchAllModelsWithQpm(config, credential.token);
+    let models = await fetchAllModelsWithQpm(ctx.client);
 
     if (modelFlag) {
       const names = new Set(
@@ -308,7 +282,7 @@ export default defineCommand({
     }
 
     const monitorResults = await Promise.all(
-      models.map((m) => fetchMonitorData(config, credential.token, m.model, windowMinutes)),
+      models.map((m) => fetchMonitorData(ctx.client, m.model, windowMinutes)),
     );
 
     const checkRows: CheckRow[] = models.map((m, idx) => {
@@ -335,6 +309,6 @@ export default defineCommand({
       return;
     }
 
-    printTable(checkRows, config.noColor);
+    printTable(checkRows);
   },
 });

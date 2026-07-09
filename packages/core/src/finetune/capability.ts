@@ -1,4 +1,5 @@
-import type { Config } from "../config/schema.ts";
+import type { Settings } from "../config/schema.ts";
+import { callConsoleGateway, effectiveConsoleGatewayConfig } from "../console/gateway.ts";
 import { fetchModelList } from "../console/models.ts";
 
 /**
@@ -111,10 +112,18 @@ export function listSupportedTrainingTypes(
  * exact `model` equality to avoid e.g. `qwen3-8b` matching `qwen3-8b-v2`).
  */
 export async function fetchModelCapability(
-  config: Config,
+  settings: Settings,
   modelName: string,
 ): Promise<ModelCapability | null> {
-  const result = await fetchModelList(config, "", { name: modelName, pageSize: 20 });
+  // Public model catalog — anonymous gateway call, no console token needed.
+  const eff = effectiveConsoleGatewayConfig(settings);
+  const call = (api: string, data: Record<string, unknown>) =>
+    callConsoleGateway(
+      { region: eff.consoleRegion, site: eff.consoleSite, switchAgent: eff.consoleSwitchAgent },
+      settings.timeout,
+      { api, data },
+    );
+  const result = await fetchModelList(call, { name: modelName, pageSize: 20 });
   const match = result.models.find((item) => (item.model as string | undefined) === modelName);
   return (match as ModelCapability | undefined) ?? null;
 }

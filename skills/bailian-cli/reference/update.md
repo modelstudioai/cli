@@ -21,9 +21,9 @@ Index: [index.md](index.md)
 | **Description** | Update the CLI to the latest version |
 | **Usage**       | `bl update`                          |
 
-#### Options
+#### Flags
 
-_No command-specific options._
+_No command-specific flags._
 
 #### Examples
 

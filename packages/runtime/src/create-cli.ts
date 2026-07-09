@@ -1,25 +1,34 @@
-import { scanCommandPath, parseFlags } from "./args.ts";
+import { parseFlags } from "./args.ts";
 import { CommandRegistry } from "./registry.ts";
-import type { Command } from "bailian-cli-core";
+import { resolve } from "./resolve.ts";
 import {
-  GLOBAL_OPTIONS,
-  loadConfig,
-  resolveCredential,
-  trackCommandExecution,
+  compose,
+  authStage,
+  telemetryStage,
+  versionCheckStage,
+  runCommandStage,
+  type RunContext,
+} from "./middleware.ts";
+import type { AnyCommand, FlagsDef, Identity, ParsedFlags, SourceFlags } from "bailian-cli-core";
+import {
+  CONSOLE_AUTH_FLAGS,
+  GLOBAL_FLAGS,
+  MODEL_AUTH_FLAGS,
+  OPENAPI_AUTH_FLAGS,
+  UsageError,
+  credentialFlagDefs,
+  buildSources,
+  buildSettings,
+  describeAuthState,
+  resolveModelBaseUrl,
+  makeConfigStore,
+  makeAuthStore,
   flushTelemetry,
+  Client,
 } from "bailian-cli-core";
-import { ensureApiKey } from "./utils/ensure-key.ts";
 import { setupProxyFromEnv } from "./proxy.ts";
 import { handleError } from "./error-handler.ts";
-import {
-  checkForUpdate,
-  getPendingUpdateNotification,
-  shouldAutoUpdate,
-  performAutoUpdate,
-} from "./utils/update-checker.ts";
-import { maybeShowStatusBar } from "./output/status-bar.ts";
 import { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
-import { registerCommandHelpPrinter, setExecutingCommandPath } from "./utils/command-help.ts";
 
 /** Per-product identity injected by each CLI entrypoint (bl / rag / …). */
 export interface CliOptions {
@@ -27,158 +36,163 @@ export interface CliOptions {
   binName: string;
   /** Product version for `--version` output, telemetry and update checks. */
   version: string;
-  /** Telemetry client name (e.g. "bailian-cli", "rag-cli"). Defaults to `binName`. */
-  clientName?: string;
+  /** User-Agent / telemetry client name (e.g. "bailian-cli", "rag-cli")。必填,无默认。 */
+  clientName: string;
   /** npm package name for self-update (e.g. "bailian-cli", "bailian-cli-rag"). */
   npmPackage: string;
+  /** Root-help suggestions shown after credentials are configured. */
+  quickStartTasks?: readonly string[];
 }
 
 export interface Cli {
   run(argv?: string[]): Promise<void>;
 }
 
-/**
- * Build a CLI from an injected command set. The runtime is agnostic to *which*
- * commands exist — each product (bailian-cli, rag-cli, …) passes its own map and
- * identity. No module-level singleton: the registry is scoped to this instance.
- */
-export function createCli(commands: Record<string, Command>, opts: CliOptions): Cli {
-  const registry = new CommandRegistry(commands, opts.binName);
-  const clientName = opts.clientName ?? opts.binName;
-  const npmPackage = opts.npmPackage;
-  const version = opts.version;
+/** 从解析结果里挑出给定 key 的子集(全局/命令 flag 分流用)。 */
+function pick(obj: Record<string, unknown>, keys: string[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of keys) if (key in obj) out[key] = obj[key];
+  return out;
+}
 
-  // 必须在任何 fetch 发起前安装（含 update-checker / telemetry）
+/**
+ * 进程级一次性设置：代理初始化、Ctrl+C、stdout EPIPE。
+ * 属进程生命周期行为，装一次即可，不进 per-command 中间件。
+ */
+function installProcessHandlers(binName: string): void {
   try {
     setupProxyFromEnv();
   } catch (err) {
-    handleError(err, opts.binName);
+    handleError(err, binName);
   }
 
-  registerCommandHelpPrinter((commandPath, out) => {
-    registry.printHelp(commandPath, out);
-  });
-
-  // 优雅处理 Ctrl+C
-  // 退出前尝试 best-effort 刷出埋点，让去抖队列中 / 在途的 fetch 请求有机会
-  // 落网络；flush 与较短超时 race，保证 SIGINT 仍然响应及时。
+  // 处理 Ctrl+C
   process.on("SIGINT", () => {
     process.stderr.write("\nInterrupted. Exiting.\n");
     void flushTelemetry(500).finally(() => process.exit(130));
   });
 
-  // 优雅处理 stdout EPIPE（例如管道到提前退出的 `mpv`）
+  // 处理 stdout EPIPE（例如管道到提前退出的 `mpv`）
   process.stdout.on("error", (e: NodeJS.ErrnoException) => {
     if (e.code === "EPIPE") process.exit(0);
     else throw e;
   });
+}
 
-  async function main(): Promise<void> {
-    let argv = process.argv.slice(2);
-    if (argv[0] === "--") argv = argv.slice(1);
+/**
+ * Build a CLI from an injected command set — each product (bl / rag / …) passes
+ * its own commands + identity. `run` resolves argv into a {@link Resolution},
+ * then dispatches it.
+ */
+export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions): Cli {
+  const registry = new CommandRegistry(commands, opts.binName);
+  const { binName, version, npmPackage, clientName } = opts;
+  const identity: Identity = { binName, version, npmPackage, clientName };
 
-    if (argv.includes("--version") || argv.includes("-v")) {
-      process.stdout.write(`${opts.binName} ${version}\n`);
-      process.exit(0);
-    }
+  installProcessHandlers(binName);
 
-    const commandPath = scanCommandPath(argv, GLOBAL_OPTIONS);
+  const runMiddleware = compose([versionCheckStage, telemetryStage, authStage, runCommandStage]);
 
-    if (argv.includes("--help") || argv.includes("-h")) {
-      registry.printHelp(commandPath, process.stderr);
-      process.exit(0);
-    }
+  /** Render help for `path`; root ([]) doubles as the onboarding / login guide. */
+  function renderHelp(path: string[], argv: string[]): void {
+    registry.printHelp(path, process.stderr);
+    if (path.length > 0) return;
 
-    // 未传任何命令：展示帮助信息与登录引导
-    if (commandPath.length === 0) {
-      registry.printHelp([], process.stderr);
-
-      const flags = parseFlags(argv, GLOBAL_OPTIONS);
-      const config = loadConfig(flags);
-      config.clientName = clientName;
-      config.clientVersion = version;
-      config.binName = opts.binName;
-      config.npmPackage = npmPackage;
-
-      const hasKey = !!(
-        config.apiKey ||
-        config.fileApiKey ||
-        config.fileAccessToken ||
-        config.accessTokenEnv
+    let hasKey = false;
+    try {
+      const auth = describeAuthState(
+        buildSources(
+          parseFlags(argv, {
+            ...GLOBAL_FLAGS,
+            ...MODEL_AUTH_FLAGS,
+            ...CONSOLE_AUTH_FLAGS,
+            ...OPENAPI_AUTH_FLAGS,
+          }) as Partial<SourceFlags>,
+        ),
       );
-      if (hasKey) printQuickStart();
-      else printWelcomeBanner(opts.binName);
-      process.exit(0);
+      hasKey = !!(auth.apiKey || auth.console);
+    } catch {
+      /* unparseable global flags on the bare invocation — fall through to welcome */
     }
-
-    // 组路径（例如 `bl speech` 未接子命令）：展示帮助后干净退出
-    if (registry.isGroupPath(commandPath)) {
-      registry.printHelp(commandPath, process.stderr);
-      process.exit(0);
+    if (hasKey) {
+      if (opts.quickStartTasks?.length) printQuickStart(opts.quickStartTasks);
+    } else {
+      printWelcomeBanner(binName);
     }
+  }
 
-    const { command, extra } = registry.resolve(commandPath);
-    const flags = parseFlags(argv, [...GLOBAL_OPTIONS, ...(command.options ?? [])]);
+  async function dispatch(argv: string[]): Promise<void> {
+    const res = resolve(argv, registry);
 
-    if (extra.length > 0) (flags as Record<string, unknown>)._positional = extra;
+    switch (res.kind) {
+      case "version":
+        process.stdout.write(`${binName} ${version}\n`);
+        return;
 
-    const config = loadConfig(flags);
-    config.clientName = clientName;
-    config.clientVersion = version;
-    config.binName = opts.binName;
-    config.npmPackage = npmPackage;
+      case "help":
+        renderHelp(res.path, argv);
+        return;
 
-    // 默认执行 ensureApiKey；自行处理鉴权或仅需 Console/AK-SK 等的命令在 defineCommand 上设 skipDefaultApiKeySetup
-    if (!command.skipDefaultApiKeySetup) {
-      await ensureApiKey(config);
-      try {
-        const credential = await resolveCredential(config);
-        maybeShowStatusBar(config, credential.token, credential);
-      } catch {
-        /* 没有凭证，不展示状态栏 */
+      case "usageError":
+        handleError(res.error, binName);
+        return;
+
+      case "run": {
+        try {
+          // 全局与凭证域 flag 进 sources,命令自有 flag 进 ctx.flags。
+          const credDefs = credentialFlagDefs(res.command);
+          const parsedFlags = parseFlags(res.rest, {
+            ...GLOBAL_FLAGS,
+            ...credDefs,
+            ...res.command.flags,
+          }) as Record<string, unknown>;
+          const globalFlags = pick(parsedFlags, [
+            ...Object.keys(GLOBAL_FLAGS),
+            ...Object.keys(credDefs),
+          ]) as Partial<SourceFlags>;
+          const ownFlags = pick(
+            parsedFlags,
+            Object.keys(res.command.flags ?? {}),
+          ) as ParsedFlags<FlagsDef>;
+          const invalid = res.command.validate?.(ownFlags);
+          if (invalid) throw new UsageError(invalid);
+
+          // 校验通过 → 建源、解析 settings、组 ctx,进中间件执行命令。
+          const sources = buildSources(globalFlags);
+          const settings = buildSettings(sources);
+          const ctx: RunContext = {
+            identity,
+            path: res.path,
+            command: res.command,
+            flags: ownFlags,
+            settings,
+            sources,
+            configStore: () => makeConfigStore(),
+            authStore: () => makeAuthStore(sources),
+            client: new Client({ identity, settings, baseUrl: resolveModelBaseUrl(sources) }),
+          };
+          await runMiddleware(ctx);
+          await flushTelemetry(1000);
+        } catch (err) {
+          // 裸调用（命令后什么都没写）下的 UsageError → 当"还没写完"，打 help、exit 0；
+          // 写了 flag 却无效、或执行时报错 → 报错、exit 2。
+          if (err instanceof UsageError && res.rest.length === 0) {
+            registry.printHelp(res.path, process.stderr);
+            return;
+          }
+          await flushTelemetry(1000);
+          handleError(err, binName);
+        }
+        return;
       }
     }
-
-    const updateCheckPromise = checkForUpdate(version, npmPackage).catch(() => {});
-
-    setExecutingCommandPath(commandPath);
-
-    await trackCommandExecution(config, commandPath, flags, () => command.execute(config, flags));
-
-    await updateCheckPromise;
-    const isUpdateCommand = commandPath.length === 1 && commandPath[0] === "update";
-    const newVersion = getPendingUpdateNotification();
-    if (newVersion && !config.quiet && !isUpdateCommand) {
-      if (shouldAutoUpdate(newVersion, version)) {
-        // 大版本差距且目标为稳定版,自动更新
-        await performAutoUpdate(version, newVersion, npmPackage);
-      } else {
-        // 普通小版本提示
-        const isTTY = process.stderr.isTTY;
-        const yellow = isTTY ? "\x1b[33m" : "";
-        const cyan = isTTY ? "\x1b[36m" : "";
-        const reset = isTTY ? "\x1b[0m" : "";
-        process.stderr.write(`\n  ${yellow}Update available: ${version} → ${newVersion}${reset}\n`);
-        process.stderr.write(`  Run ${cyan}${opts.binName} update${reset} to upgrade\n\n`);
-      }
-    }
-
-    // 进程退出前尽力等待在途的埋点完成。
-    // 使用较短超时兜底，避免慢网拖慢用户感知。
-    await flushTelemetry(1000);
   }
 
   return {
-    run() {
-      return main().catch((err) => {
-        // 在 handleError() 调用 process.exit() 之前刷出在途埋点。
-        // 命令抛出的错误已被 trackCommandExecution 的 finally 块记录，
-        // 但底层 tracker 有 ~500ms 的发送去抖。不主动 flush 的话，
-        // 错误事件会随进程退出丢掉。
-        return flushTelemetry(1000).finally(() =>
-          handleError(err, opts.binName),
-        ) as unknown as void;
-      });
+    run(argv: string[] = process.argv.slice(2)) {
+      return dispatch(argv).catch(
+        (err) => flushTelemetry(1000).finally(() => handleError(err, binName)) as unknown as void,
+      );
     },
   };
 }

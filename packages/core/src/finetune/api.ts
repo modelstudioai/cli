@@ -4,16 +4,15 @@
  * Thin functions over `requestJson`. They return the parsed body verbatim
  * (snake_case) so callers can decide how to surface fields.
  */
-import { requestJson } from "../client/http.ts";
 import {
-  finetuneJobsEndpoint,
-  finetuneJobEndpoint,
-  finetuneCancelEndpoint,
-  finetuneLogsEndpoint,
-  finetuneCheckpointsEndpoint,
-  finetuneExportEndpoint,
+  finetuneJobsPath,
+  finetuneJobPath,
+  finetuneCancelPath,
+  finetuneLogsPath,
+  finetuneCheckpointsPath,
+  finetuneExportPath,
 } from "../client/endpoints.ts";
-import type { Config } from "../config/schema.ts";
+import type { Client } from "../client/client.ts";
 import type {
   CreateFineTuneRequest,
   CreateFineTuneResponse,
@@ -28,13 +27,12 @@ import type {
 
 /** POST /api/v1/fine-tunes */
 export async function createFineTune(
-  config: Config,
+  client: Client,
   body: CreateFineTuneRequest,
   signal?: AbortSignal,
 ): Promise<CreateFineTuneResponse> {
-  const url = finetuneJobsEndpoint(config.baseUrl);
-  return requestJson<CreateFineTuneResponse>(config, {
-    url,
+  return client.requestJson<CreateFineTuneResponse>({
+    path: finetuneJobsPath(),
     method: "POST",
     body,
     signal,
@@ -50,17 +48,17 @@ export interface ListFineTunesParams {
 
 /** GET /api/v1/fine-tunes */
 export async function listFineTunes(
-  config: Config,
+  client: Client,
   params: ListFineTunesParams = {},
 ): Promise<ListFineTunesResponse> {
   const qs = new URLSearchParams();
   if (params.pageNo !== undefined) qs.set("page_no", String(params.pageNo));
   if (params.pageSize !== undefined) qs.set("page_size", String(params.pageSize));
   if (params.status) qs.set("status", params.status);
-  const base = finetuneJobsEndpoint(config.baseUrl);
-  const url = qs.toString() ? `${base}?${qs.toString()}` : base;
-  return requestJson<ListFineTunesResponse>(config, {
-    url,
+  const base = finetuneJobsPath();
+  const path = qs.toString() ? `${base}?${qs.toString()}` : base;
+  return client.requestJson<ListFineTunesResponse>({
+    path,
     method: "GET",
     signal: params.signal,
   });
@@ -68,32 +66,41 @@ export async function listFineTunes(
 
 /** GET /api/v1/fine-tunes/{job_id} */
 export async function getFineTune(
-  config: Config,
+  client: Client,
   jobId: string,
   signal?: AbortSignal,
 ): Promise<GetFineTuneResponse> {
-  const url = finetuneJobEndpoint(config.baseUrl, jobId);
-  return requestJson<GetFineTuneResponse>(config, { url, method: "GET", signal });
+  return client.requestJson<GetFineTuneResponse>({
+    path: finetuneJobPath(jobId),
+    method: "GET",
+    signal,
+  });
 }
 
 /** POST /api/v1/fine-tunes/{job_id}/cancel */
 export async function cancelFineTune(
-  config: Config,
+  client: Client,
   jobId: string,
   signal?: AbortSignal,
 ): Promise<CancelFineTuneResponse> {
-  const url = finetuneCancelEndpoint(config.baseUrl, jobId);
-  return requestJson<CancelFineTuneResponse>(config, { url, method: "POST", signal });
+  return client.requestJson<CancelFineTuneResponse>({
+    path: finetuneCancelPath(jobId),
+    method: "POST",
+    signal,
+  });
 }
 
 /** DELETE /api/v1/fine-tunes/{job_id} */
 export async function deleteFineTune(
-  config: Config,
+  client: Client,
   jobId: string,
   signal?: AbortSignal,
 ): Promise<DeleteFineTuneResponse> {
-  const url = finetuneJobEndpoint(config.baseUrl, jobId);
-  return requestJson<DeleteFineTuneResponse>(config, { url, method: "DELETE", signal });
+  return client.requestJson<DeleteFineTuneResponse>({
+    path: finetuneJobPath(jobId),
+    method: "DELETE",
+    signal,
+  });
 }
 
 export interface GetFineTuneLogsParams {
@@ -104,17 +111,17 @@ export interface GetFineTuneLogsParams {
 
 /** GET /api/v1/fine-tunes/{job_id}/logs */
 export async function getFineTuneLogs(
-  config: Config,
+  client: Client,
   jobId: string,
   params: GetFineTuneLogsParams = {},
 ): Promise<GetFineTuneLogsResponse> {
   const qs = new URLSearchParams();
   if (params.pageNo !== undefined) qs.set("page_no", String(params.pageNo));
   if (params.pageSize !== undefined) qs.set("page_size", String(params.pageSize));
-  const base = finetuneLogsEndpoint(config.baseUrl, jobId);
-  const url = qs.toString() ? `${base}?${qs.toString()}` : base;
-  return requestJson<GetFineTuneLogsResponse>(config, {
-    url,
+  const base = finetuneLogsPath(jobId);
+  const path = qs.toString() ? `${base}?${qs.toString()}` : base;
+  return client.requestJson<GetFineTuneLogsResponse>({
+    path,
     method: "GET",
     signal: params.signal,
   });
@@ -122,12 +129,15 @@ export async function getFineTuneLogs(
 
 /** GET /api/v1/fine-tunes/{job_id}/checkpoints */
 export async function listCheckpoints(
-  config: Config,
+  client: Client,
   jobId: string,
   signal?: AbortSignal,
 ): Promise<ListCheckpointsResponse> {
-  const url = finetuneCheckpointsEndpoint(config.baseUrl, jobId);
-  return requestJson<ListCheckpointsResponse>(config, { url, method: "GET", signal });
+  return client.requestJson<ListCheckpointsResponse>({
+    path: finetuneCheckpointsPath(jobId),
+    method: "GET",
+    signal,
+  });
 }
 
 /**
@@ -138,7 +148,7 @@ export async function listCheckpoints(
  * checkpoint on SUCCEEDED, but explicit export is the canonical path.
  */
 export async function exportCheckpoint(
-  config: Config,
+  client: Client,
   jobId: string,
   checkpoint: string,
   modelName: string,
@@ -146,7 +156,9 @@ export async function exportCheckpoint(
 ): Promise<ExportCheckpointResponse> {
   const qs = new URLSearchParams();
   qs.set("model_name", modelName);
-  const base = finetuneExportEndpoint(config.baseUrl, jobId, checkpoint);
-  const url = `${base}?${qs.toString()}`;
-  return requestJson<ExportCheckpointResponse>(config, { url, method: "GET", signal });
+  return client.requestJson<ExportCheckpointResponse>({
+    path: `${finetuneExportPath(jobId, checkpoint)}?${qs.toString()}`,
+    method: "GET",
+    signal,
+  });
 }

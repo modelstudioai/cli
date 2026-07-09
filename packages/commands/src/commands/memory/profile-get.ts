@@ -1,45 +1,50 @@
 import {
   defineCommand,
-  requestJson,
-  userProfileEndpoint,
+  userProfilePath,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type UserProfileResponse,
 } from "bailian-cli-core";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Get user profile by schema ID and user ID",
+  auth: "apiKey",
   usageArgs: "--schema-id <id> --user-id <id>",
-  options: [
-    { flag: "--schema-id <id>", description: "Profile schema ID (required)", required: true },
-    { flag: "--user-id <id>", description: "User ID (required)", required: true },
-  ],
+  flags: {
+    schemaId: {
+      type: "string",
+      valueHint: "<id>",
+      description: "Profile schema ID (required)",
+      required: true,
+    },
+    userId: {
+      type: "string",
+      valueHint: "<id>",
+      description: "User ID (required)",
+      required: true,
+    },
+  },
   exampleArgs: ["--schema-id schema_xxx --user-id user1"],
-  async run(config: Config, flags: GlobalFlags) {
-    const schemaId = flags.schemaId as string;
-    if (!schemaId) failIfMissing("schema-id", cmdUsage(config, "--schema-id <id> --user-id <id>"));
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const schemaId = flags.schemaId;
+    const userId = flags.userId;
 
-    const userId = flags.userId as string;
-    if (!userId) failIfMissing("user-id", cmdUsage(config, "--schema-id <id> --user-id <id>"));
-
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
     const params = new URLSearchParams({ user_id: userId });
-    const url = `${userProfileEndpoint(config.baseUrl, schemaId)}?${params.toString()}`;
+    const path = `${userProfilePath(schemaId)}?${params.toString()}`;
 
-    if (config.dryRun) {
-      emitResult({ endpoint: url, method: "GET" }, format);
+    if (settings.dryRun) {
+      emitResult({ endpoint: ctx.client.url(path), method: "GET" }, format);
       return;
     }
 
-    const response = await requestJson<UserProfileResponse>(config, {
-      url,
+    const response = await ctx.client.requestJson<UserProfileResponse>({
+      path,
       method: "GET",
     });
 
-    if (config.quiet || format === "rich") {
+    if (settings.quiet || format === "text") {
       if (response.profile?.attributes) {
         for (const attr of response.profile.attributes) {
           emitBare(`${attr.name}: ${attr.value ?? "(empty)"}`);

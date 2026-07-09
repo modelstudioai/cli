@@ -1,10 +1,40 @@
 # Changelog
 
-All notable changes to `bailian-cli` and `bailian-cli-core` are documented here.
+All notable changes to the `bailian-cli` packages are documented here.
 
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The `bailian-cli`, `bailian-cli-core`, `bailian-cli-runtime`, and `bailian-cli-commands` packages share a single version number — they are always released together.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The `bailian-cli`, `bailian-cli-core`, `bailian-cli-runtime`, `bailian-cli-commands`, and `knowledge-studio-cli` packages share a single version number.
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
+
+## [1.7.0] - 2026-07-09
+
+### Added
+
+- `bl auth login --open-api` now stores Alibaba Cloud OpenAPI AK/SK credentials for Token Plan commands; `bl auth status` reports API key, console, and OpenAPI credential state separately, and `bl auth logout --open-api` clears only OpenAPI credentials.
+- `kscli` help and examples now render as Knowledge Studio paths such as `kscli search`, `kscli chat`, and `kscli retrieve`, matching the standalone CLI.
+
+### Changed
+
+- Token Plan commands now use the shared OpenAPI AK/SK credential flow, including persisted credentials and `ALIBABA_CLOUD_ACCESS_KEY_ID` / `ALIBABA_CLOUD_ACCESS_KEY_SECRET` environment variables.
+- Auth flags are now scoped to the commands that can use them. Passing model, console, or OpenAPI credential flags to the wrong command now reports an unknown flag instead of being accepted and ignored.
+- Help and command reference output now show only the flags that apply to each command's auth mode, making model, console, and OpenAPI credentials easier to distinguish.
+- Missing required flags now return usage errors with exit code 2 instead of opening interactive prompts or printing help with exit code 0.
+- Image, video, and speech task commands now use `--async` consistently for returning task IDs without waiting; `--concurrent` is shown only on commands that support parallel requests.
+- Default command output is text unless `--output json`, `DASHSCOPE_OUTPUT=json`, or config explicitly requests JSON.
+- Update checks are throttled to once per day and can surface in non-TTY/agent runs.
+- Proxy setup now reads uppercase `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` only; lowercase proxy environment variables are ignored.
+- `bl auth login` no longer prints the onboarding quick start block after a successful login.
+
+### Removed
+
+- Deprecated AK/SK authentication for `bl knowledge retrieve`; use DashScope API key auth for knowledge commands.
+- Removed `--no-color`, `--non-interactive`, and `--no-wait`. Use `NO_COLOR=1` for plain output and `--async` for task submission without waiting.
+- Removed `--yes` and interactive confirmation prompts from delete/logout commands; use `--dry-run` to preview before running destructive operations.
+
+### Fixed
+
+- Credential-gated `--dry-run` paths now skip auth preflight so commands such as Token Plan can print request details without configured credentials.
+- `--verbose` model requests again print request method, URL, auth source, and response status details.
 
 ## [1.6.1] - 2026-07-03
 

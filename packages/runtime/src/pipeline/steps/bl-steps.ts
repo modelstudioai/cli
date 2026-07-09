@@ -1,5 +1,5 @@
 import { registerStep } from "../dispatcher.ts";
-import { buildPipelineConfig } from "../bl-config.ts";
+import { buildPipelineEnv, type PipelineEnv } from "../bl-config.ts";
 import { isRecord } from "../utils.ts";
 import {
   textChat,
@@ -10,26 +10,25 @@ import {
   speechSynthesize,
   speechRecognize,
 } from "./bl-api.ts";
-import type { Config } from "bailian-cli-core";
 import type { StepDispatcher } from "../dispatcher.ts";
 import type { StepArtifact, StepContext, StepOutputSchema, StepResult } from "../types.ts";
 
 // --- Direct API call dispatch ---
 
 type DirectApiHandler = (
-  config: Config,
+  env: PipelineEnv,
   input: Record<string, unknown>,
   ctx: StepContext,
 ) => Promise<unknown>;
 
 const DIRECT_API_HANDLERS: Record<string, DirectApiHandler> = {
-  "text/chat": (config, input, ctx) => textChat(config, input, ctx),
-  "vision/describe": (config, input, ctx) => visionDescribe(config, input, ctx),
-  "image/generate": (config, input, ctx) => imageGenerate(config, input, ctx),
-  "image/edit": (config, input, ctx) => imageEdit(config, input, ctx),
-  "video/generate": (config, input, ctx) => videoGenerate(config, input, ctx),
-  "speech/synthesize": (config, input, ctx) => speechSynthesize(config, input, ctx),
-  "speech/recognize": (config, input, ctx) => speechRecognize(config, input, ctx),
+  "text/chat": (env, input, ctx) => textChat(env, input, ctx),
+  "vision/describe": (env, input, ctx) => visionDescribe(env, input, ctx),
+  "image/generate": (env, input, ctx) => imageGenerate(env, input, ctx),
+  "image/edit": (env, input, ctx) => imageEdit(env, input, ctx),
+  "video/generate": (env, input, ctx) => videoGenerate(env, input, ctx),
+  "speech/synthesize": (env, input, ctx) => speechSynthesize(env, input, ctx),
+  "speech/recognize": (env, input, ctx) => speechRecognize(env, input, ctx),
 };
 
 // Build result with artifact extraction from the raw API data
@@ -168,8 +167,8 @@ async function executeDirectBlStep(
     throw new Error(`No direct API handler registered for step: ${id}`);
   }
 
-  const config = (ctx.blConfig as Config | undefined) ?? buildPipelineConfig();
-  const data = await handler(config, input, ctx);
+  const env = (ctx.blEnv as PipelineEnv | undefined) ?? buildPipelineEnv();
+  const data = await handler(env, input, ctx);
   const builder = RESULT_BUILDERS[id];
   if (builder) {
     return builder(data);

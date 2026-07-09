@@ -28,6 +28,15 @@ export function monorepoRoot(): string {
   return join(cliPackageRoot, "..", "..");
 }
 
+export function localBin(name: string): string {
+  return join(
+    monorepoRoot(),
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? `${name}.cmd` : name,
+  );
+}
+
 function readE2eRunSessionFromOutputDir(): string | undefined {
   try {
     const p = join(monorepoRoot(), "test", "output", E2E_RUN_SESSION_FILENAME);
@@ -103,8 +112,8 @@ export function isDashScopeE2EReady(): boolean {
 
 /**
  * Console-gateway 命令（quota / usage free / usage stats）的 E2E 就绪检查：
- * 需 `BAILIAN_E2E=1` 且存在 console access_token（环境变量 `DASHSCOPE_ACCESS_TOKEN`
- * 或 `~/.bailian/config.json` 的 `access_token`）。
+ * 需 `BAILIAN_E2E=1` 且存在 console access_token（`~/.bailian/config.json` 的
+ * `access_token`；凭证解析已集中到 authStage，不再读环境变量）。
  *
  * 仅检查 token 是否存在——无法本地判断是否过期。token 过期时 gated 用例仍会执行，
  * 但用 `isConsoleAuthFailure` 把“session 未登录/已过期”的优雅报错视为通过，保持
@@ -112,7 +121,6 @@ export function isDashScopeE2EReady(): boolean {
  */
 export function isConsoleE2EReady(): boolean {
   if (!isBailianE2EEnabled()) return false;
-  if (process.env.DASHSCOPE_ACCESS_TOKEN?.trim()) return true;
   try {
     const config = readConfigFile();
     return typeof config.access_token === "string" && config.access_token.length > 0;
@@ -137,23 +145,11 @@ export function e2eLabelFromMetaUrl(metaUrl: string): string {
   return basename(fileURLToPath(metaUrl), ".ts").replace(/\.e2e\.test$/, "");
 }
 
-/** 知识库用例：须显式索引 ID + API-KEY 或 AK/SK */
+/** 知识库用例：须显式索引 ID + API-KEY */
 export function isKnowledgeE2EReady(): boolean {
   if (!isBailianE2EEnabled()) return false;
   if (!process.env.BAILIAN_E2E_INDEX_ID) return false;
-  const hasApiKey = isDashScopeE2EReady();
-  const hasAkSk =
-    !!process.env.ALIBABA_CLOUD_ACCESS_KEY_ID && !!process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET;
-  return hasApiKey || hasAkSk;
-}
-
-export function isKnowledgeAkSkReady(): boolean {
-  return (
-    isBailianE2EEnabled() &&
-    !!process.env.ALIBABA_CLOUD_ACCESS_KEY_ID &&
-    !!process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET &&
-    !!process.env.BAILIAN_E2E_INDEX_ID
-  );
+  return isDashScopeE2EReady();
 }
 
 export interface RunCliResult {
@@ -163,7 +159,7 @@ export interface RunCliResult {
 }
 
 /**
- * 子进程执行 CLI（等价于在 `packages/cli` 下 `node src/main.ts ...`）。
+ * 子进程执行 CLI（等价于在 `packages/cli` 下 `tsx src/main.ts ...`）。
  * request_id 等诊断信息在 stderr；`--output json` 时 JSON 在 stdout。
  */
 export async function runCli(
@@ -171,7 +167,7 @@ export async function runCli(
   envOverrides: NodeJS.ProcessEnv = {},
 ): Promise<RunCliResult> {
   try {
-    const { stdout, stderr } = await execFileAsync("node", [mainTs, ...args], {
+    const { stdout, stderr } = await execFileAsync(localBin("tsx"), [mainTs, ...args], {
       cwd: cliPackageRoot,
       encoding: "utf8",
       maxBuffer: 32 * 1024 * 1024,

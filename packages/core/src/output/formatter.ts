@@ -1,20 +1,20 @@
 import { formatText } from "./text.ts";
 import { formatJson } from "./json.ts";
 
-export type OutputFormat = "rich" | "json";
+export type OutputFormat = "text" | "json";
 
 export function detectOutputFormat(flagValue?: string): OutputFormat {
-  if (flagValue === "json" || flagValue === "rich") {
+  if (flagValue === "json" || flagValue === "text") {
     return flagValue;
   }
-  return "json";
+  return "text";
 }
 
 export function formatOutput(data: unknown, format: OutputFormat): string {
   switch (format) {
     case "json":
       return formatJson(data);
-    case "rich":
+    case "text":
       return formatText(data);
   }
 }

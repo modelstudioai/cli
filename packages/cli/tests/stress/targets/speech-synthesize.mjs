@@ -45,7 +45,6 @@ export const runStress = defineStressTarget({
     prompt,
     "--out",
     `${runDir}/audio_${String(index + 1).padStart(3, "0")}.mp3`,
-    "--non-interactive",
     "--output",
     "json",
     "--timeout",

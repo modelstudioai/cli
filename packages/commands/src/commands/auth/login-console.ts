@@ -5,13 +5,21 @@ import http from "node:http";
 import {
   BailianError,
   ExitCode,
-  chatEndpoint,
+  chatPath,
   getConfigPath,
-  readConfigFile,
   requestJson,
-  writeConfigFile,
-  type Config,
+  type AuthStore,
+  type ConfigFile,
+  type Identity,
+  type Settings,
 } from "bailian-cli-core";
+
+/** 登录流程的能力面:身份(UA)、有效配置(timeout 等)、auth 域落盘。 */
+export interface LoginDeps {
+  identity: Identity;
+  settings: Settings;
+  authStore: AuthStore;
+}
 
 const CONSOLE_LOGIN_TIMEOUT_MS = 15 * 60 * 1000;
 const MAX_AUTH_CALLBACK_BODY = 65536;
@@ -399,16 +407,17 @@ function canRetry(err: unknown): boolean {
 }
 
 export async function validateAndPersistApiKey(
-  config: Config,
+  deps: LoginDeps,
   key: string,
   baseUrl: string,
 ): Promise<void> {
   process.stderr.write("Testing key... ");
-  const testConfig = { ...config, apiKey: key, baseUrl };
+  const httpDeps = { identity: deps.identity, settings: deps.settings };
   const requestOpts = {
-    url: chatEndpoint(testConfig.baseUrl),
+    url: baseUrl + chatPath(),
     method: "POST",
-    timeout: Math.min(config.timeout, 30),
+    headers: { Authorization: `Bearer ${key}` },
+    timeout: Math.min(deps.settings.timeout, 30),
     body: {
       model: "qwen3.7-max",
       messages: [{ role: "user", content: "hi" }],
@@ -418,7 +427,7 @@ export async function validateAndPersistApiKey(
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      await requestJson<unknown>(testConfig, requestOpts);
+      await requestJson<unknown>(httpDeps, requestOpts);
       break;
     } catch (err) {
       if (attempt >= 3 || !canRetry(err)) {
@@ -433,14 +442,12 @@ export async function validateAndPersistApiKey(
   }
 
   process.stderr.write("Valid\n");
-  const existing = readConfigFile() as Record<string, unknown>;
-  existing.api_key = key;
-  await writeConfigFile(existing);
+  await deps.authStore.login({ api_key: key });
 }
 
 export async function runConsoleLogin(
   consoleOrigin: string,
-  config: Config,
+  deps: LoginDeps,
   opts?: { needApiKey?: boolean },
 ): Promise<void> {
   const state = randomBytes(16).toString("hex");
@@ -480,19 +487,19 @@ export async function runConsoleLogin(
       if (hasConfig || apiKey) {
         try {
           if (hasConfig) {
-            const existing = readConfigFile() as Record<string, unknown>;
-            if (accessToken) existing.access_token = accessToken;
-            if (baseUrl) existing.base_url = baseUrl;
-            if (consoleSite) existing.console_site = consoleSite;
-            if (consoleRegion) existing.console_region = consoleRegion;
-            if (consoleSwitchAgent) existing.console_switch_agent = Number(consoleSwitchAgent);
-            if (workspaceId) existing.workspace_id = workspaceId;
-            await writeConfigFile(existing);
+            await deps.authStore.login({
+              access_token: accessToken || undefined,
+              base_url: baseUrl || undefined,
+              console_site: (consoleSite || undefined) as ConfigFile["console_site"],
+              console_region: consoleRegion || undefined,
+              console_switch_agent: consoleSwitchAgent ? Number(consoleSwitchAgent) : undefined,
+              workspace_id: workspaceId || undefined,
+            });
             process.stderr.write(`Config saved to ${getConfigPath()}\n`);
           }
           if (apiKey) {
-            const testBaseUrl = baseUrl || config.baseUrl;
-            await validateAndPersistApiKey(config, apiKey, testBaseUrl);
+            const testBaseUrl = baseUrl || deps.authStore.resolveBaseUrl();
+            await validateAndPersistApiKey(deps, apiKey, testBaseUrl);
           }
         } catch (err: unknown) {
           callbackError = err;

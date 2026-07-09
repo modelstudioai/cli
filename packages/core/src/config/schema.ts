@@ -18,6 +18,10 @@ export interface ConfigFile {
   api_key?: string;
   /** OAuth-style token from `bl auth login --console` callback; sent as `Authorization: Bearer …` */
   access_token?: string;
+  /** Alibaba Cloud OpenAPI AccessKey ID from `bl auth login --open-api`. */
+  access_key_id?: string;
+  /** Alibaba Cloud OpenAPI AccessKey secret from `bl auth login --open-api`. */
+  access_key_secret?: string;
   base_url?: string;
   /**
    * Dedicated base URL for the intent-detect model (tongyi-intent-detect-v3).
@@ -25,7 +29,7 @@ export interface ConfigFile {
    * main chat endpoint. Falls back to `base_url` when not set.
    */
   intent_detect_base_url?: string;
-  output?: "rich" | "json";
+  output?: "text" | "json";
   output_dir?: string;
   timeout?: number;
   default_text_model?: string;
@@ -33,8 +37,6 @@ export interface ConfigFile {
   default_image_model?: string;
   default_speech_model?: string;
   default_omni_model?: string;
-  access_key_id?: string;
-  access_key_secret?: string;
   workspace_id?: string;
   console_site?: "domestic" | "international";
   console_region?: string;
@@ -42,7 +44,7 @@ export interface ConfigFile {
   telemetry?: boolean;
 }
 
-const VALID_OUTPUTS = new Set<string>(["rich", "json"]);
+const VALID_OUTPUTS = new Set<string>(["text", "json"]);
 const VALID_CONSOLE_SITES = new Set<string>(["domestic", "international"]);
 
 /**
@@ -70,6 +72,17 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     out.access_token = obj.access_token;
   else if (typeof obj.accessToken === "string" && obj.accessToken.length > 0)
     out.access_token = obj.accessToken;
+  if (typeof obj.access_key_id === "string" && obj.access_key_id.length > 0)
+    out.access_key_id = obj.access_key_id;
+  else if (typeof obj.openapi_access_key_id === "string" && obj.openapi_access_key_id.length > 0)
+    out.access_key_id = obj.openapi_access_key_id;
+  if (typeof obj.access_key_secret === "string" && obj.access_key_secret.length > 0)
+    out.access_key_secret = obj.access_key_secret;
+  else if (
+    typeof obj.openapi_access_key_secret === "string" &&
+    obj.openapi_access_key_secret.length > 0
+  )
+    out.access_key_secret = obj.openapi_access_key_secret;
   if (typeof obj.base_url === "string" && isHttpUrl(obj.base_url)) out.base_url = obj.base_url;
   if (typeof obj.intent_detect_base_url === "string" && isHttpUrl(obj.intent_detect_base_url))
     out.intent_detect_base_url = obj.intent_detect_base_url;
@@ -88,10 +101,6 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     out.default_speech_model = obj.default_speech_model;
   if (typeof obj.default_omni_model === "string" && obj.default_omni_model.length > 0)
     out.default_omni_model = obj.default_omni_model;
-  if (typeof obj.access_key_id === "string" && obj.access_key_id.length > 0)
-    out.access_key_id = obj.access_key_id;
-  if (typeof obj.access_key_secret === "string" && obj.access_key_secret.length > 0)
-    out.access_key_secret = obj.access_key_secret;
   if (typeof obj.workspace_id === "string" && obj.workspace_id.length > 0)
     out.workspace_id = obj.workspace_id;
   if (typeof obj.console_site === "string" && VALID_CONSOLE_SITES.has(obj.console_site))
@@ -105,24 +114,33 @@ export function parseConfigFile(raw: unknown): ConfigFile {
   return out;
 }
 
-export interface Config {
-  clientName?: string;
-  clientVersion?: string;
-  /** Product binary name (e.g. "bl", "rag"), injected by createCli for command-facing output. */
-  binName?: string;
-  /** npm package name for self-update (e.g. "bailian-cli", "bailian-cli-rag"), injected by createCli. */
-  npmPackage?: string;
-  apiKey?: string;
-  /** `DASHSCOPE_ACCESS_TOKEN` env (explicit override). */
-  accessTokenEnv?: string;
-  /** `access_token` in config file (console login). */
-  fileAccessToken?: string;
-  fileApiKey?: string;
+/** 静态产品身份,createCli 注入一次(bl/rag 各异,故注入而非模块常量)。 */
+export interface Identity {
+  /** Product binary name, e.g. "bl", "rag". */
+  binName: string;
+  version: string;
+  /** npm package name for self-update, e.g. "bailian-cli". */
+  npmPackage: string;
+  /** User-Agent / telemetry client name. */
+  clientName: string;
+}
+
+/**
+ * 命令唯一会读的配置面(flag/env/file 解析后的有效值)。
+ * 不含身份(Identity)、不含秘密(credential);console 三元组为 dry-run 展示保留,
+ * 真实调用走 ConsoleCredential(同链解析,受控重叠)。
+ */
+export interface Settings {
   configPath?: string;
-  baseUrl: string;
-  /** Dedicated base URL for intent-detect model; falls back to baseUrl at call site. */
+  /** Dedicated base URL for intent-detect model; falls back to the model baseUrl at call site. */
   intentDetectBaseUrl?: string;
-  output: "rich" | "json";
+  output: "text" | "json";
+  /**
+   * Whether `output` came from an explicit source (flag/env/file) rather than
+   * the default. Commands whose default format differs from the global default
+   * (e.g. `advisor recommend` defaults to json) branch on this.
+   */
+  outputExplicit: boolean;
   outputDir?: string;
   timeout: number;
   defaultTextModel?: string;
@@ -130,18 +148,12 @@ export interface Config {
   defaultImageModel?: string;
   defaultSpeechModel?: string;
   defaultOmniModel?: string;
-  accessKeyId?: string;
-  accessKeySecret?: string;
   workspaceId?: string;
-  consoleSite?: "domestic" | "international";
   consoleRegion?: string;
+  consoleSite?: "domestic" | "international";
   consoleSwitchAgent?: number;
   verbose: boolean;
   quiet: boolean;
-  noColor: boolean;
-  yes: boolean;
   dryRun: boolean;
-  nonInteractive: boolean;
-  async: boolean;
   telemetry: boolean;
 }

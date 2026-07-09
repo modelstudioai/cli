@@ -1,6 +1,22 @@
-export type { Command, CommandSpec, OptionDef } from "./command.ts";
-export { defineCommand, GLOBAL_OPTIONS } from "./command.ts";
-export type { GlobalFlags } from "./flags.ts";
+export type {
+  Command,
+  AnyCommand,
+  FlagDef,
+  FlagsDef,
+  ParsedFlags,
+  SourceFlags,
+  AuthRequirement,
+} from "./command.ts";
+export {
+  defineCommand,
+  credentialFlagDefs,
+  GLOBAL_FLAGS,
+  CONCURRENT_FLAG,
+  ASYNC_FLAG,
+  MODEL_AUTH_FLAGS,
+  CONSOLE_AUTH_FLAGS,
+  OPENAPI_AUTH_FLAGS,
+} from "./command.ts";
 export type {
   AppCompletionRequest,
   AppCompletionResponse,
@@ -27,8 +43,6 @@ export type {
   KnowledgeChatMessage,
   KnowledgeChatRequest,
   KnowledgeChatStreamChunk,
-  KnowledgeRetrieveRequest,
-  KnowledgeRetrieveResponse,
   KnowledgeSearchRequest,
   KnowledgeSearchResponse,
   MemoryAddRequest,

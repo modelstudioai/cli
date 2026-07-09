@@ -22,20 +22,22 @@ Index: [index.md](index.md)
 | **Description** | Recognize speech from audio files (FunAudio-ASR) |
 | **Usage**       | `bl speech recognize --url <audio-url> [flags]`  |
 
-#### Options
+#### Flags
 
-| Flag                        | Type    | Required | Description                                             |
-| --------------------------- | ------- | -------- | ------------------------------------------------------- |
-| `--url <url>`               | array   | yes      | Audio file URL or local file path (repeatable, max 100) |
-| `--model <model>`           | string  | no       | Model ID (default: fun-asr)                             |
-| `--language <lang>`         | string  | no       | Language hint (e.g. zh, en, ja)                         |
-| `--diarization`             | boolean | no       | Enable automatic speaker diarization                    |
-| `--speaker-count <n>`       | number  | no       | Expected number of speakers (requires --diarization)    |
-| `--vocabulary-id <id>`      | string  | no       | Hot-word vocabulary ID for improved accuracy            |
-| `--channel-id <n>`          | number  | no       | Audio channel ID (default: 0)                           |
-| `--out <path>`              | string  | no       | Save full transcription result to JSON file             |
-| `--no-wait`                 | boolean | no       | Return task ID immediately without polling              |
-| `--poll-interval <seconds>` | number  | no       | Polling interval in seconds (default: 2)                |
+| Flag                        | Type   | Required | Description                                             |
+| --------------------------- | ------ | -------- | ------------------------------------------------------- |
+| `--url <url>`               | array  | yes      | Audio file URL or local file path (repeatable, max 100) |
+| `--model <model>`           | string | no       | Model ID (default: fun-asr)                             |
+| `--language <lang>`         | string | no       | Language hint (e.g. zh, en, ja)                         |
+| `--diarization`             | switch | no       | Enable automatic speaker diarization                    |
+| `--speaker-count <n>`       | number | no       | Expected number of speakers (requires --diarization)    |
+| `--vocabulary-id <id>`      | string | no       | Hot-word vocabulary ID for improved accuracy            |
+| `--channel-id <n>`          | number | no       | Audio channel ID (default: 0)                           |
+| `--out <path>`              | string | no       | Save full transcription result to JSON file             |
+| `--async`                   | switch | no       | Return async task id without waiting                    |
+| `--poll-interval <seconds>` | number | no       | Polling interval in seconds (default: 2)                |
+| `--api-key <key>`           | string | no       | API key                                                 |
+| `--base-url <url>`          | string | no       | API base URL                                            |
 
 #### Examples
 
@@ -64,7 +66,7 @@ bl speech recognize --url https://example.com/audio.mp3 --out result.json
 ```
 
 ```bash
-bl speech recognize --url https://example.com/audio.mp3 --no-wait --quiet
+bl speech recognize --url https://example.com/audio.mp3 --async --quiet
 ```
 
 ### `bl speech synthesize`
@@ -75,26 +77,29 @@ bl speech recognize --url https://example.com/audio.mp3 --no-wait --quiet
 | **Description** | Synthesize speech from text (CosyVoice TTS)  |
 | **Usage**       | `bl speech synthesize --text <text> [flags]` |
 
-#### Options
+#### Flags
 
-| Flag                   | Type    | Required | Description                                                                                                               |
-| ---------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `--text <text>`        | string  | yes      | Text to synthesize into speech                                                                                            |
-| `--text-file <path>`   | string  | no       | Read text from a file instead of --text                                                                                   |
-| `--model <model>`      | string  | no       | Model ID (default: cosyvoice-v3-flash). System voices available for cosyvoice-v3-flash                                    |
-| `--voice <voice>`      | string  | no       | Voice ID. Use --list-voices to see built-in voices for cosyvoice-v3-flash; for v3.5-flash provide a clone/design voice ID |
-| `--list-voices`        | boolean | no       | List built-in system voices for the selected model and exit (console link shown in output)                                |
-| `--format <format>`    | string  | no       | Audio format: mp3, pcm, wav, opus (default: mp3)                                                                          |
-| `--sample-rate <rate>` | string  | no       | Audio sample rate in Hz (e.g. 24000)                                                                                      |
-| `--volume <volume>`    | string  | no       | Volume 0-100 (default: 50)                                                                                                |
-| `--rate <rate>`        | string  | no       | Speech rate 0.5-2.0 (default: 1.0)                                                                                        |
-| `--pitch <pitch>`      | string  | no       | Pitch multiplier 0.5-2.0 (default: 1.0)                                                                                   |
-| `--seed <seed>`        | string  | no       | Random seed 0-65535 for reproducible synthesis                                                                            |
-| `--language <lang>`    | string  | no       | Language hint (e.g. zh, en, ja, ko, fr, de)                                                                               |
-| `--instruction <text>` | string  | no       | Natural language instruction to control speech style (e.g. "Use a gentle tone"）                                          |
-| `--enable-ssml`        | boolean | no       | Enable SSML markup parsing in input text                                                                                  |
-| `--out <path>`         | string  | no       | Save audio to file (default: auto-generate in temp dir)                                                                   |
-| `--stream`             | boolean | no       | Stream raw PCM audio to stdout (pipe to player)                                                                           |
+| Flag                             | Type   | Required | Description                                                                                                               |
+| -------------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `--text <text>`                  | string | no       | Text to synthesize into speech (or use --text-file)                                                                       |
+| `--text-file <path>`             | string | no       | Read text from a file instead of --text                                                                                   |
+| `--model <model>`                | string | no       | Model ID (default: cosyvoice-v3-flash). System voices available for cosyvoice-v3-flash                                    |
+| `--voice <voice>`                | string | no       | Voice ID. Use --list-voices to see built-in voices for cosyvoice-v3-flash; for v3.5-flash provide a clone/design voice ID |
+| `--list-voices`                  | switch | no       | List built-in system voices for the selected model and exit (console link shown in output)                                |
+| `--format <mp3\|pcm\|wav\|opus>` | string | no       | Audio format: mp3, pcm, wav, opus (default: mp3)                                                                          |
+| `--sample-rate <rate>`           | string | no       | Audio sample rate in Hz (e.g. 24000)                                                                                      |
+| `--volume <volume>`              | string | no       | Volume 0-100 (default: 50)                                                                                                |
+| `--rate <rate>`                  | string | no       | Speech rate 0.5-2.0 (default: 1.0)                                                                                        |
+| `--pitch <pitch>`                | string | no       | Pitch multiplier 0.5-2.0 (default: 1.0)                                                                                   |
+| `--seed <seed>`                  | string | no       | Random seed 0-65535 for reproducible synthesis                                                                            |
+| `--language <lang>`              | string | no       | Language hint (e.g. zh, en, ja, ko, fr, de)                                                                               |
+| `--instruction <text>`           | string | no       | Natural language instruction to control speech style (e.g. "Use a gentle tone"）                                          |
+| `--enable-ssml`                  | switch | no       | Enable SSML markup parsing in input text                                                                                  |
+| `--out <path>`                   | string | no       | Save audio to file (default: auto-generate in temp dir)                                                                   |
+| `--stream`                       | switch | no       | Stream raw PCM audio to stdout (pipe to player)                                                                           |
+| `--concurrent <n>`               | number | no       | Run N parallel requests (default: 1)                                                                                      |
+| `--api-key <key>`                | string | no       | API key                                                                                                                   |
+| `--base-url <url>`               | string | no       | API base URL                                                                                                              |
 
 #### Examples
 

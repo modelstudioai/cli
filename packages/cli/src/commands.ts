@@ -1,4 +1,4 @@
-import type { Command } from "bailian-cli-core";
+import type { AnyCommand } from "bailian-cli-core";
 import {
   authLogin,
   authStatus,
@@ -80,7 +80,7 @@ import {
 // ships no presets, so the map is spelled out here. Kept in its own module
 // (no side effects) so tools like generate-reference.ts can import it without
 // starting the CLI.
-export const commands: Record<string, Command> = {
+export const commands: Record<string, AnyCommand> = {
   "auth login": authLogin,
   "auth status": authStatus,
   "auth logout": authLogout,

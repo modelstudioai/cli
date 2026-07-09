@@ -5,11 +5,22 @@ import {
   getDeployment,
   BailianError,
   ExitCode,
-  type Config,
-  type GlobalFlags,
+  type FlagsDef,
 } from "bailian-cli-core";
-import { failIfMissing, promptConfirm } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
+
+const DELETE_FLAGS = {
+  deployedModel: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Deployed model identifier (required)",
+    required: true,
+  },
+  skipPrecheck: {
+    type: "switch",
+    description: "Skip the local STOPPED/FAILED status precheck",
+  },
+} satisfies FlagsDef;
 
 /**
  * `bl deploy delete` — destroy a deployment.
@@ -20,28 +31,16 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
  */
 export default defineCommand({
   description: "Delete a model deployment (must be STOPPED or FAILED)",
-  usageArgs: "--deployed-model <id> [--yes] [--skip-precheck]",
-  options: [
-    {
-      flag: "--deployed-model <id>",
-      description: "Deployed model identifier (required)",
-      required: true,
-    },
-    { flag: "--yes", description: "Skip the confirmation prompt", type: "boolean" },
-    {
-      flag: "--skip-precheck",
-      description: "Skip the local STOPPED/FAILED status precheck",
-      type: "boolean",
-    },
-  ],
-  exampleArgs: ["--deployed-model dep-...", "--deployed-model dep-... --yes"],
-  async run(config: Config, flags: GlobalFlags) {
-    const deployedModel = flags.deployedModel as string | undefined;
-    if (!deployedModel) failIfMissing("deployed-model", "bl deploy delete --deployed-model <id>");
+  auth: "apiKey",
+  usageArgs: "--deployed-model <id> [--skip-precheck]",
+  flags: DELETE_FLAGS,
+  exampleArgs: ["--deployed-model dep-...", "--deployed-model dep-... --dry-run"],
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const deployedModel = flags.deployedModel;
+    const format = detectOutputFormat(settings.output);
 
-    const format = detectOutputFormat(config.output);
-
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ action: "deploy.delete", deployed_model: deployedModel }, format);
       return;
     }
@@ -50,7 +49,7 @@ export default defineCommand({
     // the server return a generic precondition error.
     if (!flags.skipPrecheck) {
       try {
-        const get = await getDeployment(config, deployedModel!);
+        const get = await getDeployment(ctx.client, deployedModel);
         const deployment = get.output ?? get.data;
         const status = (deployment?.status ?? "").toUpperCase();
         if (status && status !== "STOPPED" && status !== "FAILED") {
@@ -66,25 +65,11 @@ export default defineCommand({
       }
     }
 
-    if (!flags.yes && !config.nonInteractive && !config.quiet) {
-      process.stderr.write(`Delete deployment ${deployedModel}?\n`);
-      const ok = await promptConfirm({ message: "Proceed?", initialValue: false });
-      if (!ok) {
-        emitBare("Cancelled.");
-        return;
-      }
-    } else if (!flags.yes && config.nonInteractive) {
-      throw new BailianError(
-        "Pass --yes to confirm deletion in non-interactive mode.",
-        ExitCode.USAGE,
-      );
-    }
+    const response = await deleteDeployment(ctx.client, deployedModel);
 
-    const response = await deleteDeployment(config, deployedModel!);
-
-    if (config.quiet) {
-      emitBare(deployedModel!);
-    } else if (format === "rich") {
+    if (settings.quiet) {
+      emitBare(deployedModel);
+    } else if (format === "text") {
       emitBare(`Deleted ${deployedModel}.`);
     } else {
       emitResult(response, format);

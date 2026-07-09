@@ -31,32 +31,30 @@ describe("e2e: video generate (i2v)", () => {
 describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
   "e2e: video generate (i2v)（DashScope 视频）",
   () => {
-    test("video generate 缺少 --prompt 时打印子命令帮助并退出 (0)", async () => {
+    test("video generate 缺少 --prompt 时报用法错误并退出 (2)", async () => {
       const { stderr, exitCode } = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "generate",
+        ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.1-i2v",
         "--image",
         "https://example.com/placeholder.png",
-        "--non-interactive",
       ]);
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--prompt|Usage:/i);
     });
 
     test("video generate --dry-run（无 --image）仅输出 request（t2v 路径不调上传）", async () => {
       const { stdout, stderr, exitCode } = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "generate",
+        ...cliTimeoutPrefix(),
         "--dry-run",
         "--model",
         "happyhorse-1.1-t2v",
         "--prompt",
         "干跑无图",
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -82,7 +80,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         outDir,
         "--out-prefix",
         "e2e-gen",
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -91,9 +88,9 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       const imagePath = genData.saved?.[0] ?? png;
 
       const { stdout, stderr, exitCode } = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "generate",
+        ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.1-i2v",
         "--image",
@@ -102,7 +99,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "镜头缓慢推进，小猫微微动一下",
         "--download",
         join(outDir, "e2e-video-i2v.mp4"),
-        "--non-interactive",
         "--output",
         "json",
       ]);

@@ -10,13 +10,8 @@
 import { createReadStream, statSync } from "fs";
 import { basename } from "path";
 import { Readable } from "stream";
-import { request, requestJson } from "../client/http.ts";
-import {
-  datasetUploadEndpoint,
-  datasetListEndpoint,
-  datasetFileEndpoint,
-} from "../client/endpoints.ts";
-import type { Config } from "../config/schema.ts";
+import { datasetUploadPath, datasetListPath, datasetFilePath } from "../client/endpoints.ts";
+import type { Client } from "../client/client.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import type {
@@ -50,7 +45,7 @@ export interface DatasetUploadParams {
  * for small files where streaming overhead isn't worth it.
  */
 export async function uploadDataset(
-  config: Config,
+  client: Client,
   params: DatasetUploadParams,
 ): Promise<DatasetFile> {
   const { filePath, purpose = "fine-tune", signal } = params;
@@ -65,9 +60,8 @@ export async function uploadDataset(
   form.append("file", blob, fileName);
   form.append("purpose", purpose);
 
-  const url = datasetUploadEndpoint(config.baseUrl);
-  const body = await requestJson<DatasetUploadResponse>(config, {
-    url,
+  const body = await client.requestJson<DatasetUploadResponse>({
+    path: datasetUploadPath(),
     method: "POST",
     body: form,
     signal,
@@ -114,17 +108,17 @@ export interface DatasetListParams {
 
 /** GET /api/v1/files */
 export async function listDatasets(
-  config: Config,
+  client: Client,
   params: DatasetListParams = {},
 ): Promise<DatasetListResponse> {
   const qs = new URLSearchParams();
   if (params.pageNo !== undefined) qs.set("page_no", String(params.pageNo));
   if (params.pageSize !== undefined) qs.set("page_size", String(params.pageSize));
   if (params.purpose) qs.set("purpose", params.purpose);
-  const base = datasetListEndpoint(config.baseUrl);
-  const url = qs.toString() ? `${base}?${qs.toString()}` : base;
-  return requestJson<DatasetListResponse>(config, {
-    url,
+  const base = datasetListPath();
+  const path = qs.toString() ? `${base}?${qs.toString()}` : base;
+  return client.requestJson<DatasetListResponse>({
+    path,
     method: "GET",
     signal: params.signal,
   });
@@ -132,23 +126,25 @@ export async function listDatasets(
 
 /** GET /api/v1/files/{file_id} */
 export async function getDataset(
-  config: Config,
+  client: Client,
   fileId: string,
   signal?: AbortSignal,
 ): Promise<DatasetGetResponse> {
-  const url = datasetFileEndpoint(config.baseUrl, fileId);
-  return requestJson<DatasetGetResponse>(config, { url, method: "GET", signal });
+  return client.requestJson<DatasetGetResponse>({
+    path: datasetFilePath(fileId),
+    method: "GET",
+    signal,
+  });
 }
 
 /** DELETE /api/v1/files/{file_id} */
 export async function deleteDataset(
-  config: Config,
+  client: Client,
   fileId: string,
   signal?: AbortSignal,
 ): Promise<DatasetDeleteResponse> {
-  const url = datasetFileEndpoint(config.baseUrl, fileId);
   // The platform sometimes returns 200 with a non-JSON body for DELETE; tolerate that.
-  const res = await request(config, { url, method: "DELETE", signal });
+  const res = await client.request({ path: datasetFilePath(fileId), method: "DELETE", signal });
   try {
     return (await res.json()) as DatasetDeleteResponse;
   } catch {

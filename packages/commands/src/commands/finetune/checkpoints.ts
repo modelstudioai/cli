@@ -2,34 +2,40 @@ import {
   defineCommand,
   detectOutputFormat,
   listCheckpoints,
-  type Config,
-  type GlobalFlags,
+  type FlagsDef,
 } from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
-import { emitResult, emitBare } from "bailian-cli-runtime";
-import { formatTable } from "bailian-cli-runtime";
+import { emitResult, emitBare, formatTable } from "bailian-cli-runtime";
+
+const CHECKPOINTS_FLAGS = {
+  jobId: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Fine-tune job ID (required)",
+    required: true,
+  },
+} satisfies FlagsDef;
 
 export default defineCommand({
   description: "List checkpoints produced by a fine-tune job",
+  auth: "apiKey",
   usageArgs: "--job-id <id>",
-  options: [{ flag: "--job-id <id>", description: "Fine-tune job ID (required)", required: true }],
+  flags: CHECKPOINTS_FLAGS,
   exampleArgs: ["--job-id ft-xxx", "--job-id ft-xxx --output json"],
   notes: [
-    "Use the returned `checkpoint` value with `bl finetune export` to publish",
+    "Use the returned `checkpoint` value with `finetune export` to publish",
     "a deployable model.",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const jobId = flags.jobId as string | undefined;
-    if (!jobId) failIfMissing("job-id", "bl finetune checkpoints --job-id <id>");
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const jobId = flags.jobId;
+    const format = detectOutputFormat(settings.output);
 
-    const format = detectOutputFormat(config.output);
-
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ action: "finetune.checkpoints", job_id: jobId }, format);
       return;
     }
 
-    const response = await listCheckpoints(config, jobId!);
+    const response = await listCheckpoints(ctx.client, jobId);
     const payload = response.output ?? response.data;
     const ckpts = Array.isArray(payload) ? payload : (payload?.checkpoints ?? []);
     const total = Array.isArray(payload) ? payload.length : (payload?.total ?? ckpts.length);

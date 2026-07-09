@@ -95,7 +95,6 @@ export const runStress = defineStressTarget({
     prompt,
     "--out-dir",
     runDir,
-    "--non-interactive",
     "--output",
     "json",
     "--timeout",

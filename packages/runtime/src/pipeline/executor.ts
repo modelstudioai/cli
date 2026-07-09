@@ -1,5 +1,5 @@
 import { PipelineError, toPipelineError } from "./errors.ts";
-import { buildPipelineConfig } from "./bl-config.ts";
+import { buildPipelineEnv } from "./bl-config.ts";
 import { getDefaultStepDispatcher, type StepDispatcher } from "./dispatcher.ts";
 import {
   evaluateCondition,
@@ -134,7 +134,7 @@ async function executePipelineInternal(
     }
   }
 
-  const blConfig = buildPipelineConfig();
+  const blEnv = buildPipelineEnv();
   const plan = buildExecutionPlan(pipeline);
   const concurrency = normalizeConcurrency(options.concurrency);
   const reports: PipelineStepReport[] = [];
@@ -281,7 +281,7 @@ async function executePipelineInternal(
         artifacts,
         emit,
         options,
-        blConfig,
+        blEnv,
         stepDispatcher,
       );
       inFlight.set(planStep.step.id, executing);
@@ -355,7 +355,7 @@ async function executePlanStep(
   artifacts: StepArtifact[],
   emit: (event: PipelineLifecycleEvent) => Promise<void>,
   options: ExecutePipelineOptions,
-  blConfig: unknown,
+  blEnv: unknown,
   stepDispatcher: StepDispatcher,
 ): Promise<PipelineStepReport> {
   const maxAttempts = Math.max(1, Math.floor(planStep.step.retry?.maxAttempts ?? 1));
@@ -417,7 +417,7 @@ async function executePlanStep(
         options,
         stepEvent(planStep),
         emit,
-        blConfig,
+        blEnv,
         stepDispatcher,
       );
       outputs.set(planStep.step.id, output);
@@ -520,7 +520,7 @@ async function executeWithTimeout(
   options: ExecutePipelineOptions,
   planStepEvent: PipelineEventStep,
   emit: (event: PipelineLifecycleEvent) => Promise<void>,
-  blConfig: unknown,
+  blEnv: unknown,
   stepDispatcher: StepDispatcher,
 ): Promise<StepResult> {
   const timeoutSeconds = parseTimeoutSeconds(step.timeout) ?? options.timeoutSeconds;
@@ -546,7 +546,7 @@ async function executeWithTimeout(
     timeoutSeconds,
     blRequestTimeoutSeconds: options.blRequestTimeoutSeconds,
     emitEvent,
-    blConfig,
+    blEnv,
   };
 
   if (!timeoutSeconds) return await stepDispatcher.executeStep(step.type, input, ctx);

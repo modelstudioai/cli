@@ -16,13 +16,9 @@ describe("e2e: advisor recommend", () => {
 });
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", () => {
-  test("advisor recommend without --message prints help and exits", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
-      "advisor",
-      "recommend",
-      "--non-interactive",
-    ]);
-    expect(exitCode).toBe(0);
+  test("advisor recommend without --message errors as usage error (2)", async () => {
+    const { stdout, stderr, exitCode } = await runCli(["advisor", "recommend", "--quiet"]);
+    expect(exitCode).toBe(2);
     expect(`${stdout}\n${stderr}`).toMatch(/--message|Usage:/i);
   });
 
@@ -33,7 +29,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", ()
       "--dry-run",
       "--message",
       "I want to build a customer service bot that understands images",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -73,7 +68,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", ()
       "recommend",
       "--message",
       "low-cost high-concurrency online customer service",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -108,7 +102,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", ()
       "--dry-run",
       "--message",
       "Which model in the deepseek family is best for fast reasoning?",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -129,7 +122,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", ()
       "--dry-run",
       "--message",
       "Which is better for code generation, qwen-max or deepseek-v3?",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -150,7 +142,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", ()
       "--dry-run",
       "--message",
       "Not qwen, recommend a model suitable for text generation",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -181,7 +172,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", ()
       "--dry-run",
       "--message",
       "I want to build a customer service bot that understands images",
-      "--non-interactive",
       "--output",
       "json",
     ]);

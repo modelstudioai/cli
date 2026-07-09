@@ -1,63 +1,45 @@
-import {
-  defineCommand,
-  resolveCredential,
-  detectOutputFormat,
-  type Config,
-  type GlobalFlags,
-  uploadFile,
-} from "bailian-cli-core";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
+import { defineCommand, detectOutputFormat } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Upload a local file to DashScope temporary storage (48h)",
+  auth: "apiKey",
   usageArgs: "--file <path> --model <model>",
-  options: [
-    {
-      flag: "--file <path>",
+  flags: {
+    file: {
+      type: "string",
+      valueHint: "<path>",
       description: "Local file to upload (image, video, audio)",
       required: true,
     },
-    {
-      flag: "--model <model>",
+    model: {
+      type: "string",
+      valueHint: "<model>",
       description: "Target model name (file is bound to this model)",
       required: true,
     },
-  ],
+  },
   exampleArgs: [
     "--file photo.jpg --model qwen3-vl-plus",
     "--file video.mp4 --model wan2.1-t2v-plus",
     "--file audio.wav --model qwen3-asr-flash",
     "--file cat.png --model qwen-image-2.0",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const filePath = flags.file as string | undefined;
-    if (!filePath) {
-      failIfMissing("file", cmdUsage(config, "--file <path> --model <model>"));
-    }
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const filePath = flags.file;
+    const model = flags.model;
 
-    const model = flags.model as string | undefined;
-    if (!model) {
-      failIfMissing("model", cmdUsage(config, "--file <path> --model <model>"));
-    }
+    const format = detectOutputFormat(settings.output);
 
-    const format = detectOutputFormat(config.output);
-
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ action: "upload", file: filePath, model }, format);
       return;
     }
 
-    // Resolve API key for upload
-    const credential = await resolveCredential(config);
+    const ossUrl = await ctx.client.uploadFile(filePath, model);
 
-    const ossUrl = await uploadFile({
-      apiKey: credential.token,
-      model: model!,
-      filePath: filePath!,
-    });
-
-    if (config.quiet) {
+    if (settings.quiet) {
       emitBare(ossUrl);
     } else {
       emitResult(

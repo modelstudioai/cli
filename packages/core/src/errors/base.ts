@@ -45,6 +45,14 @@ export class BailianError extends Error {
   }
 }
 
+/** Invalid usage: unknown command, bad/unknown flag, missing required, failed validation. */
+export class UsageError extends BailianError {
+  constructor(message: string, hint?: string) {
+    super(message, ExitCode.USAGE, hint);
+    this.name = "UsageError";
+  }
+}
+
 function serializeCause(cause: unknown): Record<string, unknown> | undefined {
   if (cause == null) return undefined;
   if (cause instanceof Error) {

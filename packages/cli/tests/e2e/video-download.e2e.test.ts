@@ -36,27 +36,25 @@ describe("e2e: video download", () => {
 describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
   "e2e: video download（DashScope 视频）",
   () => {
-    test("video download 缺少 --task-id 时打印子命令帮助并退出 (0)", async () => {
+    test("video download 缺少 --task-id 时报用法错误并退出 (2)", async () => {
       const { stderr, exitCode } = await runCli([
         "video",
         "download",
         "--out",
         "/tmp/will-not-be-used.mp4",
-        "--non-interactive",
       ]);
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--task-id|Usage:/i);
     });
 
-    test("video download 缺少 --out 时打印子命令帮助并退出 (0)", async () => {
+    test("video download 缺少 --out 时报用法错误并退出 (2)", async () => {
       const { stderr, exitCode } = await runCli([
         "video",
         "download",
         "--task-id",
         PLACEHOLDER_TASK_ID,
-        "--non-interactive",
       ]);
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--out|Usage:/i);
     });
 
@@ -71,7 +69,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         PLACEHOLDER_TASK_ID,
         "--out",
         fakeOut,
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -87,9 +84,9 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       const genMp4 = join(outDir, "e2e-gen-for-download.mp4");
 
       const gen = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "generate",
+        ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.1-t2v",
         "--duration",
@@ -98,7 +95,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "极简几何色块，静态镜头，用于下载测试",
         "--download",
         genMp4,
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -116,14 +112,13 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
 
       const downloadMp4 = join(outDir, "e2e-download.mp4");
       const dl = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "download",
+        ...cliTimeoutPrefix(),
         "--task-id",
         genData.task_id!,
         "--out",
         downloadMp4,
-        "--non-interactive",
         "--output",
         "json",
       ]);

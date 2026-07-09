@@ -1,58 +1,56 @@
 import {
   defineCommand,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
-  BailianError,
-  ExitCode,
+  type FlagsDef,
+  type ParsedFlags,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
-import { padEnd } from "bailian-cli-runtime";
+import { emitResult, emitBare, padEnd } from "bailian-cli-runtime";
 import type { CreateTokenPlanKeyResponse } from "./types.ts";
 import {
-  TOKEN_PLAN_AK_OPTIONS,
-  TOKEN_PLAN_COMMON_QUERY_OPTIONS,
-  TOKEN_PLAN_WORKSPACE_OPTION,
+  TOKEN_PLAN_COMMON_QUERY_FLAGS,
+  TOKEN_PLAN_WORKSPACE_FLAG,
   appendCommonQueryParams,
   callTokenPlanApi,
   prepareTokenPlanRequest,
   requireWorkspaceId,
-  resolveTokenPlanCredentials,
   type TokenPlanQueryParams,
 } from "./utils.ts";
 
 const API_ACTION = "CreateTokenPlanKey";
 const API_PATH = "/tokenplan/api-keys";
 
+const CREATE_KEY_FLAGS = {
+  accountId: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Target member account ID",
+    required: true,
+  },
+  ...TOKEN_PLAN_WORKSPACE_FLAG,
+  description: { type: "string", valueHint: "<text>", description: "API key description" },
+  ...TOKEN_PLAN_COMMON_QUERY_FLAGS,
+} satisfies FlagsDef;
+type CreateKeyFlags = ParsedFlags<typeof CREATE_KEY_FLAGS>;
+
 export default defineCommand({
   description: "Create a Token Plan API key for a seat",
+  auth: "openapi",
   usageArgs: "--account-id <id> --workspace-id <id> [flags]",
-  options: [
-    { flag: "--account-id <id>", description: "Target member account ID", required: true },
-    TOKEN_PLAN_WORKSPACE_OPTION,
-    { flag: "--description <text>", description: "API key description" },
-    ...TOKEN_PLAN_COMMON_QUERY_OPTIONS,
-    ...TOKEN_PLAN_AK_OPTIONS,
-  ],
+  flags: CREATE_KEY_FLAGS,
   exampleArgs: [
     "--account-id acc_123 --workspace-id ws_456",
     "--account-id acc_123 --workspace-id ws_456 --description 'Dev key'",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const format = detectOutputFormat(config.output);
-    const credentials = resolveTokenPlanCredentials(config, flags);
+  async run(ctx) {
+    const { identity, settings, flags } = ctx;
+    const format = detectOutputFormat(settings.output);
 
-    const accountId = flags.accountId as string | undefined;
-    const workspaceId = requireWorkspaceId(config, flags);
-    if (!accountId) {
-      throw new BailianError("Missing required argument --account-id.", ExitCode.USAGE);
-    }
+    const workspaceId = requireWorkspaceId(settings, flags, identity.binName);
+    const queryParams = buildQueryParams(flags, { accountId: flags.accountId, workspaceId });
 
-    const queryParams = buildQueryParams(flags, { accountId, workspaceId });
-
-    if (config.dryRun) {
+    if (settings.dryRun) {
       const { endpoint, queryParams: query } = prepareTokenPlanRequest(
-        config,
+        ctx.client.baseUrl,
         API_PATH,
         queryParams,
       );
@@ -61,15 +59,15 @@ export default defineCommand({
     }
 
     const data = await callTokenPlanApi<CreateTokenPlanKeyResponse>({
-      config,
-      credentials,
+      client: ctx.client,
+      baseUrl: ctx.client.baseUrl,
       action: API_ACTION,
       path: API_PATH,
       method: "POST",
       queryParams,
     });
 
-    if (config.quiet || format === "rich") {
+    if (settings.quiet || format === "text") {
       emitTextKey(data);
     } else {
       emitResult(data, format);
@@ -78,14 +76,14 @@ export default defineCommand({
 });
 
 function buildQueryParams(
-  flags: GlobalFlags,
+  flags: CreateKeyFlags,
   resolved: { accountId: string; workspaceId: string },
 ): TokenPlanQueryParams {
   const params: TokenPlanQueryParams = {};
 
   params.AccountId = resolved.accountId;
   params.WorkspaceId = resolved.workspaceId;
-  if (flags.description) params.Description = flags.description as string;
+  if (flags.description) params.Description = flags.description;
   appendCommonQueryParams(params, flags);
 
   return params;

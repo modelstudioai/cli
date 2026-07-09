@@ -22,12 +22,12 @@ Index: [index.md](index.md)
 | **Description** | Set a config value                          |
 | **Usage**       | `bl config set --key <key> --value <value>` |
 
-#### Options
+#### Flags
 
 | Flag              | Type   | Required | Description                                                                                                                                  |
 | ----------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--key <key>`     | string | no       | Config key (base*url, output, output_dir, timeout, api_key, access_token, default*\*\_model, access_key_id, access_key_secret, workspace_id) |
-| `--value <value>` | string | no       | Value to set                                                                                                                                 |
+| `--key <key>`     | string | yes      | Config key (base*url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, default*\*\_model, workspace_id) |
+| `--value <value>` | string | yes      | Value to set                                                                                                                                 |
 
 #### Examples
 
@@ -51,9 +51,9 @@ bl config set --key base_url --value https://dashscope.aliyuncs.com
 | **Description** | Display current configuration |
 | **Usage**       | `bl config show`              |
 
-#### Options
+#### Flags
 
-_No command-specific options._
+_No command-specific flags._
 
 #### Examples
 

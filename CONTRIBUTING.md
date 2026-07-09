@@ -33,13 +33,7 @@ pnpm install
 
 ### Running the CLI from source
 
-Open two terminals:
-
 ```bash
-# Terminal 1 — watch-build core
-pnpm dev
-
-# Terminal 2 — run any bl command
 pnpm bl auth login --api-key sk-xxxxx
 pnpm bl text chat --message "hello"
 pnpm bl video generate --prompt "a cat walking"

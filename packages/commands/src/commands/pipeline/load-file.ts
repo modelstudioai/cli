@@ -1,11 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
+import { UsageError } from "bailian-cli-core";
 import type { PipelineDefinition } from "bailian-cli-runtime";
 
 export async function loadPipelineFile(filePath: string): Promise<PipelineDefinition> {
   const raw = await readFile(filePath, "utf-8").catch((err: Error) => {
-    process.stderr.write(`Error: cannot read pipeline file: ${err.message}\n`);
-    process.exit(2);
+    throw new UsageError(`cannot read pipeline file: ${err.message}`);
   });
   const ext = extname(filePath).toLowerCase();
   let parsed: unknown;

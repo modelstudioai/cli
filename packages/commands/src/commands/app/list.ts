@@ -1,53 +1,36 @@
-import {
-  defineCommand,
-  callConsoleGateway,
-  resolveConsoleGatewayCredential,
-  detectOutputFormat,
-  type Config,
-  type GlobalFlags,
-} from "bailian-cli-core";
+import { defineCommand, detectOutputFormat } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
 const APP_LIST_API = "zeldaEasy.broadscope-bailian.app-control.list";
 
 export default defineCommand({
   description: "List Bailian applications",
-  skipDefaultApiKeySetup: true,
+  auth: "console",
   usageArgs: "[flags]",
-  options: [
-    {
-      flag: "--name <name>",
+  flags: {
+    name: {
+      type: "string",
+      valueHint: "<name>",
       description: "Filter by app name (keyword search)",
     },
-    {
-      flag: "--page <n>",
+    page: {
+      type: "number",
+      valueHint: "<n>",
       description: "Page number (default: 1)",
-      type: "number",
     },
-    {
-      flag: "--page-size <n>",
+    pageSize: {
+      type: "number",
+      valueHint: "<n>",
       description: "Results per page (default: 30)",
-      type: "number",
     },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
-      description: "Console site: domestic, international",
-    },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+  },
   exampleArgs: ["", "--name customer service", "--page 2 --page-size 10", "--output json"],
-  async run(config: Config, flags: GlobalFlags) {
-    const name = (flags.name as string) || "";
-    const pageNo = (flags.page as number) || 1;
-    const pageSize = (flags.pageSize as number) || 30;
-    const format = detectOutputFormat(config.output);
-
-    const credential = await resolveConsoleGatewayCredential(config);
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const name = flags.name || "";
+    const pageNo = flags.page || 1;
+    const pageSize = flags.pageSize || 30;
+    const format = detectOutputFormat(settings.output);
 
     const data = {
       reqDTO: {
@@ -60,15 +43,12 @@ export default defineCommand({
       },
     };
 
-    if (config.dryRun) {
-      emitResult({ api: APP_LIST_API, data, token: credential.token.slice(0, 8) + "..." }, format);
+    if (settings.dryRun) {
+      emitResult({ api: APP_LIST_API, data }, format);
       return;
     }
 
-    const result = (await callConsoleGateway(config, credential.token, {
-      api: APP_LIST_API,
-      data,
-    })) as any;
+    const result = await ctx.client.console<any>(APP_LIST_API, data);
 
     const list: unknown[] = result?.data?.DataV2?.data?.data?.list ?? [];
     const total: number = result?.data?.DataV2?.data?.data?.total ?? 0;

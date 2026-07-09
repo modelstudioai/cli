@@ -6,12 +6,21 @@
  * Committed to git; consumed by the `bailian-cli` Agent Skill (`npx skills add modelstudioai/cli`).
  *
  * Run: pnpm --filter bailian-cli run generate:reference
- * (Also run via `pnpm run sync:skill-assets` or the repo pre-commit hook; requires built `bailian-cli-core`.)
+ * Also run via `pnpm run sync:skill-assets` or the repo pre-commit hook.
+ * Uses tsx because workspace packages resolve to source locally.
+ * Requires built `bailian-cli-core` for shared flag constants.
  */
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { GLOBAL_OPTIONS, type Command, type OptionDef } from "../packages/core/dist/index.mjs";
+import {
+  CONSOLE_AUTH_FLAGS,
+  GLOBAL_FLAGS,
+  MODEL_AUTH_FLAGS,
+  OPENAPI_AUTH_FLAGS,
+  credentialFlagDefs,
+} from "../packages/core/dist/index.mjs";
+import type { AnyCommand, FlagDef, FlagsDef } from "../packages/core/src/index.ts";
 import { commands } from "../packages/cli/src/commands.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -30,17 +39,29 @@ function topLevel(path: string): string {
   return path.split(" ")[0]!;
 }
 
-function optionType(opt: OptionDef): string {
-  if (opt.type) return opt.type;
-  if (!opt.flag.includes("<") && !opt.flag.includes("[")) return "boolean";
-  return "string";
+/** maxTokens → max-tokens. Flags are keyed by camelCase flag name. */
+function camelToKebab(str: string): string {
+  return str.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 }
 
-function formatOptionsTable(options: OptionDef[] | undefined): string {
-  if (!options?.length) return "_No command-specific options._\n";
-  const rows = options.map((o) => {
-    const req = o.required ? "yes" : "no";
-    return `| \`${escCell(o.flag)}\` | ${escCell(optionType(o))} | ${req} | ${escCell(o.description)} |`;
+/** "--max-tokens <count>" for a value flag, "--quiet" for a switch. */
+function flagDisplay(key: string, def: FlagDef): string {
+  const flag = `--${camelToKebab(key)}`;
+  if (def.type === "switch") return flag;
+  const hint = def.choices ? `<${def.choices.join("|")}>` : def.valueHint;
+  return `${flag} ${hint}`;
+}
+
+function flagType(def: FlagDef): string {
+  return def.type;
+}
+
+function formatFlagsTable(flags: FlagsDef | undefined): string {
+  const entries = Object.entries(flags ?? {});
+  if (!entries.length) return "_No command-specific flags._\n";
+  const rows = entries.map(([key, def]) => {
+    const req = def.type !== "switch" && def.required ? "yes" : "no";
+    return `| \`${escCell(flagDisplay(key, def))}\` | ${escCell(flagType(def))} | ${req} | ${escCell(def.description)} |`;
   });
   return [
     "| Flag | Type | Required | Description |",
@@ -65,7 +86,7 @@ function formatNotes(notes: string[] | undefined): string {
   return notes.map((n) => `- ${n}`).join("\n") + "\n";
 }
 
-function commandSection(path: string, cmd: Command): string {
+function commandSection(path: string, cmd: AnyCommand): string {
   const lines: string[] = [];
   lines.push(`### \`bl ${path}\``, "");
   lines.push(`| Field | Value |`, `| --- | --- |`);
@@ -76,8 +97,9 @@ function commandSection(path: string, cmd: Command): string {
   lines.push(`| **Usage** | \`${escCell(usage)}\` |`);
   lines.push("");
 
-  lines.push("#### Options", "");
-  lines.push(formatOptionsTable(cmd.options));
+  // 与命令 help 的 Flags 区一致:自有 + 该命令可见的凭证域 flag。
+  lines.push("#### Flags", "");
+  lines.push(formatFlagsTable({ ...cmd.flags, ...credentialFlagDefs(cmd) }));
 
   if (cmd.notes?.length) {
     lines.push("#### Notes", "");
@@ -90,8 +112,8 @@ function commandSection(path: string, cmd: Command): string {
   return lines.join("\n");
 }
 
-function groupByTopLevel(entries: [string, Command][]): Map<string, [string, Command][]> {
-  const groups = new Map<string, [string, Command][]>();
+function groupByTopLevel(entries: [string, AnyCommand][]): Map<string, [string, AnyCommand][]> {
+  const groups = new Map<string, [string, AnyCommand][]>();
   for (const entry of entries) {
     const key = topLevel(entry[0]);
     const list = groups.get(key) ?? [];
@@ -104,7 +126,7 @@ function groupByTopLevel(entries: [string, Command][]): Map<string, [string, Com
   return groups;
 }
 
-function buildGroupFile(group: string, groupEntries: [string, Command][]): string {
+function buildGroupFile(group: string, groupEntries: [string, AnyCommand][]): string {
   const lines: string[] = [
     `# \`bl ${group}\` commands`,
     "",
@@ -131,8 +153,8 @@ function buildGroupFile(group: string, groupEntries: [string, Command][]): strin
 }
 
 function buildIndex(
-  entries: [string, Command][],
-  groups: Map<string, [string, Command][]>,
+  entries: [string, AnyCommand][],
+  groups: Map<string, [string, AnyCommand][]>,
 ): string {
   const lines: string[] = [
     "# bailian-cli (`bl`) command reference",
@@ -168,15 +190,34 @@ function buildIndex(
     "",
     "## Global flags",
     "",
-    "Available on every command (in addition to command-specific options):",
+    "Available on every command (in addition to command-specific flags):",
     "",
-    formatOptionsTable(GLOBAL_OPTIONS),
+    formatFlagsTable(GLOBAL_FLAGS),
+    "",
+    "## Model auth flags",
+    "",
+    "Available on model-domain commands (API-key auth); also listed per command below:",
+    "",
+    formatFlagsTable(MODEL_AUTH_FLAGS),
+    "",
+    "## Console auth flags",
+    "",
+    "Available on console-domain commands (console login auth); also listed per command below:",
+    "",
+    formatFlagsTable(CONSOLE_AUTH_FLAGS),
+    "",
+    "## OpenAPI auth flags",
+    "",
+    "Available on OpenAPI-domain commands (AK/SK auth); also listed per command below:",
+    "",
+    formatFlagsTable(OPENAPI_AUTH_FLAGS),
     "",
     "## Notes",
     "",
     "- Console commands (`app list`, `usage free`, `console call`) require `bl auth login --console`.",
     "- Most API commands use `DASHSCOPE_API_KEY` or `bl auth login --api-key`.",
-    "- Default output: **text** in TTY; **json** when piped.",
+    "- Token Plan commands use OpenAPI AK/SK via `bl auth login --open-api` or `ALIBABA_CLOUD_ACCESS_KEY_ID` / `ALIBABA_CLOUD_ACCESS_KEY_SECRET`.",
+    "- Default output: **text** unless explicitly set to `json` with `--output`, `DASHSCOPE_OUTPUT`, or config.",
     "",
   );
 

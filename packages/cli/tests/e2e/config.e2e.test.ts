@@ -10,7 +10,7 @@ describe("e2e: config", () => {
     const { stdout, stderr, exitCode } = await runCli(["config"]);
     expect(exitCode, stderr).toBe(0);
     const out = `${stdout}\n${stderr}`;
-    expect(out).toMatch(/config|show|set|export-schema/i);
+    expect(out).toMatch(/config|show|set/i);
   });
 
   test("config show --help 正常退出", async () => {
@@ -26,13 +26,7 @@ describe("e2e: config", () => {
   });
 
   test("config show --output json", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
-      "config",
-      "show",
-      "--non-interactive",
-      "--output",
-      "json",
-    ]);
+    const { stdout, stderr, exitCode } = await runCli(["config", "show", "--output", "json"]);
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
       config_file?: string;
@@ -44,30 +38,22 @@ describe("e2e: config", () => {
     expect(data.timeout).toBeDefined();
   });
 
-  test("config show --output text --no-color", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
-      "config",
-      "show",
-      "--non-interactive",
-      "--output",
-      "text",
-      "--no-color",
-    ]);
+  test("config show --output text", async () => {
+    const { stdout, stderr, exitCode } = await runCli(["config", "show", "--output", "text"]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toMatch(/config_file|timeout|base_url/i);
   });
 
-  test("config set 缺少 --key / --value 时退出为用法错误 (2)", async () => {
-    const { stderr, exitCode } = await runCli(["config", "set", "--non-interactive"]);
-    expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/--key|--value|required/i);
+  test("config set 缺少 --key / --value 时报用法错误并退出 (2)", async () => {
+    const { stderr, exitCode } = await runCli(["config", "set", "--quiet"]);
+    expect(exitCode, stderr).toBe(2);
+    expect(stderr).toMatch(/--key|--value|Usage:/i);
   });
 
   test("config set 非法 key 时退出为用法错误", async () => {
     const { stderr, exitCode } = await runCli([
       "config",
       "set",
-      "--non-interactive",
       "--key",
       "not-a-real-key",
       "--value",
@@ -81,7 +67,6 @@ describe("e2e: config", () => {
     const { stderr, exitCode } = await runCli([
       "config",
       "set",
-      "--non-interactive",
       "--key",
       "output",
       "--value",
@@ -95,7 +80,6 @@ describe("e2e: config", () => {
     const { stderr, exitCode } = await runCli([
       "config",
       "set",
-      "--non-interactive",
       "--key",
       "timeout",
       "--value",
@@ -110,7 +94,6 @@ describe("e2e: config", () => {
       "config",
       "set",
       "--dry-run",
-      "--non-interactive",
       "--key",
       "output",
       "--value",
@@ -128,7 +111,6 @@ describe("e2e: config", () => {
       "config",
       "set",
       "--dry-run",
-      "--non-interactive",
       "--key",
       "default-text-model",
       "--value",
@@ -139,5 +121,35 @@ describe("e2e: config", () => {
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{ would_set?: { default_text_model?: string } }>(stdout);
     expect(data.would_set?.default_text_model).toBe("qwen3.7-max");
+  });
+
+  test("config set --dry-run 支持 AccessKey 短字段别名", async () => {
+    const { stdout, stderr, exitCode } = await runCli([
+      "config",
+      "set",
+      "--dry-run",
+      "--key",
+      "access-key-id",
+      "--value",
+      "LTAI-config-placeholder",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ would_set?: { access_key_id?: string } }>(stdout);
+    expect(data.would_set?.access_key_id).toBe("LTAI-config-placeholder");
+  });
+
+  test("config set 不接受旧 OpenAPI AccessKey 字段名", async () => {
+    const { stderr, exitCode } = await runCli([
+      "config",
+      "set",
+      "--key",
+      "openapi_access_key_id",
+      "--value",
+      "LTAI-config-placeholder",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/Invalid config key|openapi_access_key_id/);
   });
 });

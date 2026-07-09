@@ -21,13 +21,15 @@ Index: [index.md](index.md)
 | **Description** | Search the web using DashScope MCP WebSearch service |
 | **Usage**       | `bl search web --query <text> [flags]`               |
 
-#### Options
+#### Flags
 
-| Flag             | Type    | Required | Description                            |
-| ---------------- | ------- | -------- | -------------------------------------- |
-| `--query <text>` | string  | yes      | Search query text                      |
-| `--count <n>`    | number  | no       | Number of search results (default: 10) |
-| `--list-tools`   | boolean | no       | List available MCP tools and exit      |
+| Flag               | Type   | Required | Description                            |
+| ------------------ | ------ | -------- | -------------------------------------- |
+| `--query <text>`   | string | no       | Search query text                      |
+| `--count <n>`      | number | no       | Number of search results (default: 10) |
+| `--list-tools`     | switch | no       | List available MCP tools and exit      |
+| `--api-key <key>`  | string | no       | API key                                |
+| `--base-url <url>` | string | no       | API base URL                           |
 
 #### Examples
 

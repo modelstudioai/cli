@@ -1,50 +1,38 @@
-import {
-  defineCommand,
-  clearApiKey,
-  readConfigFile,
-  writeConfigFile,
-  getConfigPath,
-  type Config,
-  type GlobalFlags,
-} from "bailian-cli-core";
+import { defineCommand, getConfigPath } from "bailian-cli-core";
 import { emitBare } from "bailian-cli-runtime";
-
-async function clearConsoleToken(): Promise<boolean> {
-  const file = readConfigFile() as Record<string, unknown>;
-  if (!file.access_token) return false;
-  delete file.access_token;
-  await writeConfigFile(file);
-  return true;
-}
 
 export default defineCommand({
   description: "Clear stored credentials",
-  skipDefaultApiKeySetup: true,
-  usageArgs: "[--console] [--yes] [--dry-run]",
-  options: [
-    {
-      flag: "--console",
+  auth: "none",
+  usageArgs: "[--console | --open-api] [--dry-run]",
+  flags: {
+    console: {
+      type: "switch",
       description: "Only clear the console access_token, keep api_key intact",
-      type: "boolean",
     },
-    { flag: "--yes", description: "Skip confirmation prompt" },
-  ],
-  exampleArgs: ["", "--console", "--dry-run", "--yes"],
-  async run(config: Config, flags: GlobalFlags) {
-    const file = readConfigFile();
+    openApi: {
+      type: "switch",
+      description: "Only clear OpenAPI AK/SK credentials, keep other credentials intact",
+    },
+  },
+  exampleArgs: ["", "--console", "--open-api", "--dry-run"],
+  validate: (f) =>
+    f.console && f.openApi ? "Use only one scope: --console or --open-api" : undefined,
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const store = ctx.authStore();
+    const stored = store.stored();
 
     if (flags.console) {
-      const hasToken = !!file.access_token;
-      if (config.dryRun) {
-        if (hasToken) emitBare("Would clear access_token from ~/.bailian/config.json");
+      if (settings.dryRun) {
+        if (stored.console) emitBare("Would clear access_token from ~/.bailian/config.json");
         else emitBare("No console access_token to clear.");
         emitBare("No changes made.");
         return;
       }
-      if (hasToken) {
-        await clearConsoleToken();
+      if (await store.logout("console")) {
         process.stderr.write(`Cleared access_token from ${getConfigPath()}\n`);
-        if (file.api_key) {
+        if (stored.apiKey) {
           process.stderr.write(
             "api_key is still configured and will be used for authentication.\n",
           );
@@ -55,18 +43,43 @@ export default defineCommand({
       return;
     }
 
-    const hasKey = !!(file.api_key || file.access_token);
+    if (flags.openApi) {
+      if (settings.dryRun) {
+        if (stored.openapi)
+          emitBare("Would clear access_key_id / access_key_secret from ~/.bailian/config.json");
+        else emitBare("No OpenAPI AK/SK credentials to clear.");
+        emitBare("No changes made.");
+        return;
+      }
+      if (await store.logout("openapi")) {
+        process.stderr.write(`Cleared access_key_id / access_key_secret from ${getConfigPath()}\n`);
+        if (stored.apiKey || stored.console) {
+          process.stderr.write(
+            "Other credentials are still configured and will be used for authentication.\n",
+          );
+        }
+      } else {
+        process.stderr.write("No OpenAPI AK/SK credentials to clear.\n");
+      }
+      return;
+    }
 
-    if (config.dryRun) {
-      if (hasKey) emitBare("Would clear api_key / access_token from ~/.bailian/config.json");
+    const hasKey = stored.apiKey || stored.console || stored.openapi;
+
+    if (settings.dryRun) {
+      if (hasKey)
+        emitBare(
+          "Would clear api_key / access_token / access_key_id / access_key_secret from ~/.bailian/config.json",
+        );
       else emitBare("No credentials to clear.");
       emitBare("No changes made.");
       return;
     }
 
-    if (hasKey) {
-      await clearApiKey();
-      process.stderr.write("Cleared api_key / access_token from ~/.bailian/config.json\n");
+    if (await store.logout("all")) {
+      process.stderr.write(
+        "Cleared api_key / access_token / access_key_id / access_key_secret from ~/.bailian/config.json\n",
+      );
     } else {
       process.stderr.write("No credentials to clear.\n");
     }

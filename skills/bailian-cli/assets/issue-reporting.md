@@ -126,7 +126,7 @@ If it still fails with INCLUDE signals → offer reporting.
 
 | Situation                     | Behavior                                                                         |
 | ----------------------------- | -------------------------------------------------------------------------------- |
-| **CI / `--non-interactive`**  | Do **not** ask proactively. Only report if the user explicitly requests it.      |
+| **CI / non-TTY automation**   | Do **not** ask proactively. Only report if the user explicitly requests it.      |
 | **Same error in one session** | Ask **at most once** per distinct failure.                                       |
 | **User declines**             | Stop asking; continue troubleshooting or alternate tools.                        |
 | **Secrets**                   | Never paste raw API keys or tokens into the issue (see [Redaction](#redaction)). |

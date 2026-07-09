@@ -24,25 +24,46 @@ describe("e2e: video edit", () => {
   test("video edit --help 正常退出", async () => {
     const { stderr, exitCode } = await runCli(["video", "edit", "--help"]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/edit|--video|--prompt|model/i);
+    expect(stderr).toMatch(/edit|--video|--prompt|model|--async|--concurrent/i);
+  });
+
+  test("video edit --dry-run 接受 --async 与 --concurrent", async () => {
+    const { stdout, stderr, exitCode } = await runCli([
+      "video",
+      "edit",
+      "--dry-run",
+      "--video",
+      "https://example.com/input.mp4",
+      "--prompt",
+      "整体色调偏暖",
+      "--async",
+      "--concurrent",
+      "2",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ request?: { input?: { media?: Array<{ url?: string }> } } }>(
+      stdout,
+    );
+    expect(data.request?.input?.media?.[0]?.url).toBe("https://example.com/input.mp4");
   });
 });
 
 describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
   "e2e: video edit（DashScope 视频）",
   () => {
-    test("video edit 缺少 --video 时打印子命令帮助并退出 (0)", async () => {
+    test("video edit 缺少 --video 时报用法错误并退出 (2)", async () => {
       const { stderr, exitCode } = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "edit",
+        ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.0-video-edit",
         "--prompt",
         "仅提示词",
-        "--non-interactive",
       ]);
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--video|Usage:/i);
     });
 
@@ -51,16 +72,15 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       const t2vPath = join(outDir, "e2e-video-t2v.mp4");
 
       const t2v = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "generate",
+        ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.0-t2v",
         "--prompt",
         "夕阳下海面波光，海边有两个小朋友在玩耍",
         "--download",
         t2vPath,
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -69,9 +89,9 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       expect(t2vData.status).toBe("SUCCEEDED");
 
       const { stdout, stderr, exitCode } = await runCli([
-        ...cliTimeoutPrefix(),
         "video",
         "edit",
+        ...cliTimeoutPrefix(),
         "--model",
         "happyhorse-1.0-video-edit",
         "--video",
@@ -80,7 +100,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "整体色调偏暖",
         "--download",
         join(outDir, "e2e-video-edit.mp4"),
-        "--non-interactive",
         "--output",
         "json",
       ]);

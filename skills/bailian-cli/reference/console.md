@@ -21,15 +21,16 @@ Index: [index.md](index.md)
 | **Description** | Call a Bailian console API via the CLI gateway      |
 | **Usage**       | `bl console call --api <api> --data <json> [flags]` |
 
-#### Options
+#### Flags
 
 | Flag                           | Type   | Required | Description                                                              |
 | ------------------------------ | ------ | -------- | ------------------------------------------------------------------------ |
 | `--api <api>`                  | string | yes      | API name (e.g. zeldaEasy.broadscope-bailian.memory-library.getLibraries) |
 | `--data <json>`                | string | yes      | Request data as JSON string                                              |
-| `--console-region <region>`    | string | no       | Console region                                                           |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1)                 |
 | `--console-site <site>`        | string | no       | Console site: domestic, international                                    |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID                                                         |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                                 |
 
 #### Examples
 

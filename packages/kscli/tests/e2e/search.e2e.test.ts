@@ -46,7 +46,6 @@ describe.skipIf(!isSearchE2EReady())("e2e: kscli search (live)", () => {
       agentId,
       "--workspace-id",
       workspaceId,
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -74,7 +73,6 @@ describe.skipIf(!isSearchE2EReady())("e2e: kscli search (live)", () => {
       agentId,
       "--workspace-id",
       workspaceId,
-      "--non-interactive",
       "--output",
       "text",
     ]);
@@ -95,7 +93,6 @@ describe.skipIf(!isSearchE2EReady())("e2e: kscli search (live)", () => {
       workspaceId,
       "--query-history",
       '[{"role":"user","content":"什么是大模型"},{"role":"assistant","content":"大模型是大规模语言模型"}]',
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -115,7 +112,6 @@ describe.skipIf(!isSearchE2EReady())("e2e: kscli search (live)", () => {
       "aid-invalid-not-exist",
       "--workspace-id",
       workspaceId,
-      "--non-interactive",
       "--output",
       "json",
     ]);

@@ -2,13 +2,8 @@ import { formatOutput, type OutputFormat } from "bailian-cli-core";
 
 /**
  * Emit the primary result of a command.
- *
- * Design principle:
- *   stdout  → structured data only (JSON when piped, text when TTY)
- *   stderr  → human info (progress, logs, tips) — handled elsewhere
- *
- * This ensures `bl cmd ... | jq .` always receives clean JSON,
- * while interactive users see human-readable text.
+ *   stdout → result (text by default; JSON with --output json)
+ *   stderr → human info (progress, logs, tips) — handled elsewhere
  */
 export function emitResult(data: unknown, format: OutputFormat): void {
   process.stdout.write(formatOutput(data, format) + "\n");

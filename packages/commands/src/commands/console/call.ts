@@ -1,90 +1,60 @@
 import {
   defineCommand,
-  callConsoleGateway,
+  UsageError,
   effectiveConsoleGatewayConfig,
-  resolveConsoleGatewayCredential,
-  CONSOLE_GATEWAY_NO_TOKEN_MESSAGE,
-  BailianError,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Call a Bailian console API via the CLI gateway",
-  skipDefaultApiKeySetup: true,
+  auth: "console",
   usageArgs: "--api <api> --data <json> [flags]",
-  options: [
-    {
-      flag: "--api <api>",
+  flags: {
+    api: {
+      type: "string",
+      valueHint: "<api>",
       description: "API name (e.g. zeldaEasy.broadscope-bailian.memory-library.getLibraries)",
       required: true,
     },
-    {
-      flag: "--data <json>",
+    data: {
+      type: "string",
+      valueHint: "<json>",
       description: "Request data as JSON string",
       required: true,
     },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
-      description: "Console site: domestic, international",
-    },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+  },
   exampleArgs: [
     `--api zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota --data '{"queryFreeTierQuotaRequest":{"models":["qwen3-max"]}}'`,
     `--api some.api.name --data '{"key":"value"}' --console-region cn-beijing`,
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const api = flags.api as string;
-    if (!api) failIfMissing("api", cmdUsage(config, "--api <api> --data <json>"));
-
-    const dataRaw = flags.data as string;
-    if (!dataRaw) failIfMissing("data", cmdUsage(config, "--api <api> --data <json>"));
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const api = flags.api;
+    const dataRaw = flags.data;
 
     let data: Record<string, unknown>;
     try {
       data = JSON.parse(dataRaw) as Record<string, unknown>;
     } catch {
-      process.stderr.write("Error: --data must be valid JSON\n");
-      process.exit(1);
+      throw new UsageError("--data must be valid JSON");
     }
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    let token: string | undefined;
-    try {
-      token = (await resolveConsoleGatewayCredential(config)).token;
-    } catch (err) {
-      if (!(err instanceof BailianError && err.message === CONSOLE_GATEWAY_NO_TOKEN_MESSAGE)) {
-        throw err;
-      }
-    }
-
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         {
           api,
           data,
-          token: token ? token.slice(0, 8) + "..." : null,
-          ...effectiveConsoleGatewayConfig(config),
+          ...effectiveConsoleGatewayConfig(settings),
         },
         format,
       );
       return;
     }
 
-    const result = await callConsoleGateway(config, token, {
-      api,
-      data,
-    });
+    const result = await ctx.client.console(api, data);
 
     emitResult(result, format);
   },

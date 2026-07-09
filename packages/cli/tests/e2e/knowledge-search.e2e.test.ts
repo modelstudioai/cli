@@ -22,32 +22,21 @@ describe("e2e: knowledge search", () => {
     expect(stderr).toMatch(/--query-history/i);
   });
 
-  test("缺少 --query 时打印帮助并退出 (0)", async () => {
-    const { stderr, exitCode } = await runCli([
-      "knowledge",
-      "search",
-      "--agent-id",
-      "aid_test",
-      "--non-interactive",
-    ]);
-    expect(exitCode).toBe(0);
+  test("缺少 --query 时报用法错误并退出 (2)", async () => {
+    const { stderr, exitCode } = await runCli(["knowledge", "search", "--agent-id", "aid_test"]);
+    expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--query|Usage:/i);
   });
 
-  test("缺少 --agent-id 时打印帮助并退出 (0)", async () => {
-    const { stderr, exitCode } = await runCli([
-      "knowledge",
-      "search",
-      "--query",
-      "test",
-      "--non-interactive",
-    ]);
-    expect(exitCode).toBe(0);
+  test("缺少 --agent-id 时报用法错误并退出 (2)", async () => {
+    const { stderr, exitCode } = await runCli(["knowledge", "search", "--query", "test"]);
+    expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--agent-id|Usage:/i);
   });
 
   test("缺少 --workspace-id 时非零退出并提示", async () => {
     const { stderr, exitCode } = await runCli(
+      // 假 key + 隔离配置目录:避免本机 config 的 workspace_id/api_key 漏入
       [
         "knowledge",
         "search",
@@ -55,11 +44,12 @@ describe("e2e: knowledge search", () => {
         "test",
         "--agent-id",
         "aid_test",
-        "--non-interactive",
+        "--api-key",
+        "sk-fake",
         "--output",
         "json",
       ],
-      { BAILIAN_WORKSPACE_ID: "" },
+      { BAILIAN_WORKSPACE_ID: "", BAILIAN_CONFIG_DIR: "/tmp" },
     );
     expect(exitCode).not.toBe(0);
     expect(stderr).toMatch(/workspace.*required/i);
@@ -76,7 +66,6 @@ describe("e2e: knowledge search", () => {
       "aid_test",
       "--workspace-id",
       "ws_test",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -103,7 +92,6 @@ describe("e2e: knowledge search", () => {
       "https://example.com/a.jpg",
       "--image",
       "https://example.com/b.jpg",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -128,7 +116,6 @@ describe("e2e: knowledge search", () => {
       "ws_test",
       "--query-history",
       '[{"role":"user","content":"什么是RAG"},{"role":"assistant","content":"RAG是检索增强生成"}]',
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -153,7 +140,6 @@ describe("e2e: knowledge search", () => {
       "ws_test",
       "--query-history",
       "not-valid-json",
-      "--non-interactive",
       "--output",
       "json",
     ]);

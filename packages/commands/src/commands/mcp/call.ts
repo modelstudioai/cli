@@ -1,22 +1,59 @@
 import {
   defineCommand,
-  McpClient,
-  bailianMcpUrl,
+  UsageError,
+  BailianError,
+  bailianMcpPath,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
+  type FlagsDef,
+  type ParsedFlags,
 } from "bailian-cli-core";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult } from "bailian-cli-runtime";
-import { ensureApiKey } from "bailian-cli-runtime";
+
+const CALL_FLAGS = {
+  target: {
+    type: "string",
+    valueHint: "<server.tool>",
+    description:
+      "Server code and tool name joined by a dot, e.g. market-cmapi00073529.SmartStockSelection",
+    required: true,
+  },
+  arg: {
+    type: "array",
+    valueHint: "<kv>",
+    description: "Tool argument (repeatable). Values parsed as JSON if possible, else string.",
+  },
+  json: {
+    type: "string",
+    valueHint: "<obj>",
+    description: "Full arguments object as JSON; merged with --arg (arg wins).",
+  },
+  query: {
+    type: "string",
+    valueHint: "<text>",
+    description: "Shortcut for --arg query=<text> (mirrors many DashScope MCP tools).",
+  },
+  url: {
+    type: "string",
+    valueHint: "<url>",
+    description: "Override the MCP endpoint URL (for non-Bailian servers)",
+  },
+} satisfies FlagsDef;
+type CallFlags = ParsedFlags<typeof CALL_FLAGS>;
+
+function parseTarget(target: string): { serverCode: string; toolName: string } {
+  const dot = target.indexOf(".");
+  if (dot <= 0 || dot === target.length - 1) {
+    throw new UsageError(`target must be <server-code>.<tool>, got "${target}".`);
+  }
+  return { serverCode: target.slice(0, dot), toolName: target.slice(dot + 1) };
+}
 
 function parseArgFlags(raw: string[]): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const item of raw) {
     const idx = item.indexOf("=");
     if (idx <= 0) {
-      process.stderr.write(`Error: --arg must be in K=V form, got: ${item}\n`);
-      process.exit(1);
+      throw new UsageError(`--arg must be in K=V form, got: ${item}`);
     }
     const key = item.slice(0, idx).trim();
     const rawVal = item.slice(idx + 1);
@@ -29,72 +66,57 @@ function parseArgFlags(raw: string[]): Record<string, unknown> {
   return out;
 }
 
+function parseJsonArg(raw: string): Record<string, unknown> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    throw new UsageError(`--json is not valid JSON — ${(err as Error).message}`);
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new UsageError("--json must decode to an object.");
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function buildToolArgs(flags: CallFlags): Record<string, unknown> {
+  const toolArgs = flags.json ? parseJsonArg(flags.json) : {};
+  Object.assign(toolArgs, parseArgFlags(flags.arg ?? []));
+  if (flags.query !== undefined) toolArgs.query = flags.query;
+  return toolArgs;
+}
+
+function validateCallFlags(flags: CallFlags): string | undefined {
+  try {
+    parseTarget(flags.target);
+    buildToolArgs(flags);
+  } catch (err) {
+    if (err instanceof UsageError) return err.message;
+    throw err;
+  }
+  return undefined;
+}
+
 export default defineCommand({
   description: "Call a tool on an MCP server (tools/call)",
-  skipDefaultApiKeySetup: true,
-  usageArgs: "<server-code>.<tool> [--arg k=v ...] [--json '{...}'] [--url <url>]",
-  options: [
-    {
-      flag: "<server-code>.<tool>",
-      description:
-        "Server code and tool name joined by a dot, e.g. market-cmapi00073529.SmartStockSelection",
-      required: true,
-    },
-    {
-      flag: "--arg <kv>",
-      description: "Tool argument (repeatable). Values parsed as JSON if possible, else string.",
-      type: "array",
-    },
-    {
-      flag: "--json <obj>",
-      description: "Full arguments object as JSON; merged with --arg (arg wins).",
-    },
-    {
-      flag: "--query <text>",
-      description: "Shortcut for --arg query=<text> (mirrors many DashScope MCP tools).",
-    },
-    { flag: "--url <url>", description: "Override the MCP endpoint URL (for non-Bailian servers)" },
-  ],
+  auth: "apiKey",
+  usageArgs: "--target <server.tool> [--arg k=v ...] [--json '{...}'] [--url <url>]",
+  flags: CALL_FLAGS,
   exampleArgs: [
-    'market-cmapi00073529.SmartStockSelection --query "Screen consumer stocks with ROE > 15%"',
-    'market-cmapi00073529.FinQuery --json \'{"q":"Guizhou Maotai","limit":5}\'',
-    "market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 --arg minScale=10",
+    '--target market-cmapi00073529.SmartStockSelection --query "Screen consumer stocks with ROE > 15%"',
+    '--target market-cmapi00073529.FinQuery --json \'{"q":"Guizhou Maotai","limit":5}\'',
+    "--target market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 --arg minScale=10",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const positional =
-      ((flags as Record<string, unknown>)._positional as string[] | undefined) ?? [];
-    const target = positional[0];
-    if (!target) failIfMissing("<server-code>.<tool>", cmdUsage(config, "<server-code>.<tool>"));
+  validate: validateCallFlags,
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const { serverCode, toolName } = parseTarget(flags.target);
+    const toolArgs = buildToolArgs(flags);
 
-    const dot = target!.indexOf(".");
-    if (dot <= 0 || dot === target!.length - 1) {
-      process.stderr.write(`Error: target must be <server-code>.<tool>, got "${target}".\n`);
-      process.exit(1);
-    }
-    const serverCode = target!.slice(0, dot);
-    const toolName = target!.slice(dot + 1);
+    const url = flags.url || ctx.client.url(bailianMcpPath(serverCode));
+    const format = detectOutputFormat(settings.output);
 
-    let toolArgs: Record<string, unknown> = {};
-    if (flags.json) {
-      try {
-        const parsed = JSON.parse(flags.json as string);
-        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-          process.stderr.write("Error: --json must decode to an object.\n");
-          process.exit(1);
-        }
-        toolArgs = parsed as Record<string, unknown>;
-      } catch (err) {
-        process.stderr.write(`Error: --json is not valid JSON — ${(err as Error).message}\n`);
-        process.exit(1);
-      }
-    }
-    Object.assign(toolArgs, parseArgFlags((flags.arg as string[] | undefined) ?? []));
-    if (flags.query !== undefined) toolArgs.query = flags.query;
-
-    const url = (flags.url as string) || bailianMcpUrl(config.baseUrl, serverCode);
-    const format = detectOutputFormat(config.output);
-
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         {
           server: serverCode,
@@ -107,15 +129,13 @@ export default defineCommand({
       return;
     }
 
-    await ensureApiKey(config);
-    const client = new McpClient(config, url);
+    const client = ctx.client.mcp(url);
     await client.initialize();
     const result = await client.callTool(toolName, toolArgs);
 
     if (result.isError) {
       const errText = result.content.map((c) => c.text || "").join("\n");
-      process.stderr.write(`Tool error: ${errText}\n`);
-      process.exit(1);
+      throw new BailianError(`Tool error: ${errText}`);
     }
 
     emitResult(result, format);

@@ -7,29 +7,33 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command          | Description                                                                  |
-| ---------------- | ---------------------------------------------------------------------------- |
-| `bl auth login`  | Authenticate with API key or console browser login (credentials can coexist) |
-| `bl auth logout` | Clear stored credentials                                                     |
-| `bl auth status` | Show current authentication state                                            |
+| Command          | Description                                                                                  |
+| ---------------- | -------------------------------------------------------------------------------------------- |
+| `bl auth login`  | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist) |
+| `bl auth logout` | Clear stored credentials                                                                     |
+| `bl auth status` | Show current authentication state                                                            |
 
 ## Command details
 
 ### `bl auth login`
 
-| Field           | Value                                                                        |
-| --------------- | ---------------------------------------------------------------------------- |
-| **Name**        | `auth login`                                                                 |
-| **Description** | Authenticate with API key or console browser login (credentials can coexist) |
-| **Usage**       | `bl auth login --api-key <key> \| --console`                                 |
+| Field           | Value                                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Name**        | `auth login`                                                                                                 |
+| **Description** | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist)                 |
+| **Usage**       | `bl auth login --api-key <key> \| --console \| --open-api --access-key-id <id> --access-key-secret <secret>` |
 
-#### Options
+#### Flags
 
-| Flag               | Type    | Required | Description                                                                           |
-| ------------------ | ------- | -------- | ------------------------------------------------------------------------------------- |
-| `--api-key <key>`  | string  | no       | DashScope API key to store                                                            |
-| `--base-url <url>` | string  | no       | DashScope API base URL (used with --api-key for validation)                           |
-| `--console`        | boolean | no       | Sign in via browser; use --console-site to choose domestic (default) or international |
+| Flag                           | Type   | Required | Description                                                                           |
+| ------------------------------ | ------ | -------- | ------------------------------------------------------------------------------------- |
+| `--api-key <key>`              | string | no       | DashScope API key to store                                                            |
+| `--base-url <url>`             | string | no       | DashScope API base URL (used with --api-key for validation)                           |
+| `--console`                    | switch | no       | Sign in via browser; use --console-site to choose domestic (default) or international |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                                                 |
+| `--open-api`                   | switch | no       | Store Alibaba Cloud OpenAPI AK/SK credentials                                         |
+| `--access-key-id <id>`         | string | no       | Alibaba Cloud Access Key ID to store                                                  |
+| `--access-key-secret <secret>` | string | no       | Alibaba Cloud Access Key Secret to store                                              |
 
 #### Examples
 
@@ -41,20 +45,24 @@ bl auth login --api-key sk-xxxxx
 bl auth login --console
 ```
 
+```bash
+bl auth login --open-api --access-key-id LTAIxxxxx --access-key-secret xxxxx
+```
+
 ### `bl auth logout`
 
-| Field           | Value                                            |
-| --------------- | ------------------------------------------------ |
-| **Name**        | `auth logout`                                    |
-| **Description** | Clear stored credentials                         |
-| **Usage**       | `bl auth logout [--console] [--yes] [--dry-run]` |
+| Field           | Value                                                  |
+| --------------- | ------------------------------------------------------ |
+| **Name**        | `auth logout`                                          |
+| **Description** | Clear stored credentials                               |
+| **Usage**       | `bl auth logout [--console \| --open-api] [--dry-run]` |
 
-#### Options
+#### Flags
 
-| Flag        | Type    | Required | Description                                              |
-| ----------- | ------- | -------- | -------------------------------------------------------- |
-| `--console` | boolean | no       | Only clear the console access_token, keep api_key intact |
-| `--yes`     | boolean | no       | Skip confirmation prompt                                 |
+| Flag         | Type   | Required | Description                                                         |
+| ------------ | ------ | -------- | ------------------------------------------------------------------- |
+| `--console`  | switch | no       | Only clear the console access_token, keep api_key intact            |
+| `--open-api` | switch | no       | Only clear OpenAPI AK/SK credentials, keep other credentials intact |
 
 #### Examples
 
@@ -67,11 +75,11 @@ bl auth logout --console
 ```
 
 ```bash
-bl auth logout --dry-run
+bl auth logout --open-api
 ```
 
 ```bash
-bl auth logout --yes
+bl auth logout --dry-run
 ```
 
 ### `bl auth status`
@@ -82,13 +90,9 @@ bl auth logout --yes
 | **Description** | Show current authentication state |
 | **Usage**       | `bl auth status`                  |
 
-#### Options
+#### Flags
 
-| Flag                           | Type   | Required | Description                           |
-| ------------------------------ | ------ | -------- | ------------------------------------- |
-| `--console-region <region>`    | string | no       | Console region                        |
-| `--console-site <site>`        | string | no       | Console site: domestic, international |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID                      |
+_No command-specific flags._
 
 #### Examples
 

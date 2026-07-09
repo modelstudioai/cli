@@ -1,10 +1,4 @@
-import {
-  BailianError,
-  ExitCode,
-  detectOutputFormat,
-  type OutputFormat,
-  CONSOLE_GATEWAY_NO_TOKEN_MESSAGE,
-} from "bailian-cli-core";
+import { BailianError, ExitCode, detectOutputFormat, type OutputFormat } from "bailian-cli-core";
 import { API_KEY_PAGE } from "./urls.ts";
 
 const LABEL_WIDTH = 13;
@@ -12,7 +6,7 @@ const LABEL_WIDTH = 13;
 /** Binary name used in error hints; set by handleError() so its helpers can read it. */
 let binName: string;
 
-/** Short reminder; full resolution order matches `loadConfig` in bailian-cli-core. */
+/** Short reminder; full resolution order matches `resolveApiKey` in bailian-cli-core. */
 function baseUrlHint(): string {
   return `If the DashScope host is wrong, check baseUrl (--base-url, ${binName} config show, or DASHSCOPE_BASE_URL).`;
 }
@@ -30,10 +24,9 @@ function alignContinuation(text: string): string {
 
 function enhanceHint(err: BailianError): string | undefined {
   if (err.exitCode === ExitCode.AUTH) {
-    if (
-      err.message === CONSOLE_GATEWAY_NO_TOKEN_MESSAGE ||
-      err.hint?.includes("auth login --console")
-    ) {
+    // Non-model auth domains carry their own credential-specific hints; don't
+    // append model API key onboarding lines to Console/OpenAPI errors.
+    if (isNonModelAuthHint(err.hint)) {
       return err.hint;
     }
     return [
@@ -47,6 +40,16 @@ function enhanceHint(err: BailianError): string | undefined {
       .join("\n");
   }
   return err.hint;
+}
+
+function isNonModelAuthHint(hint: string | undefined): boolean {
+  if (!hint) return false;
+  return (
+    hint.includes("auth login --console") ||
+    hint.includes("auth login --open-api") ||
+    hint.includes("--access-key-id") ||
+    hint.includes("ALIBABA_CLOUD_ACCESS_KEY_")
+  );
 }
 
 export function detectErrorOutputFormat(

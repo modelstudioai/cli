@@ -3,11 +3,6 @@
 > Hand-maintained. Lives in `assets/` (not auto-generated from `catalog.ts`).
 > Entry point: [SKILL.md → Version & updates](../SKILL.md#version--updates-agent--do-first).
 
-**Why this matters for agents:** when `bl` runs interactively it prints an
-`Update available` banner. That banner is **suppressed when `bl` is piped by an
-agent** (non-TTY stderr), so the user never learns their `bl` is outdated. The
-agent must take over that responsibility.
-
 ## Agent pre-flight checklist (MANDATORY)
 
 **Do NOT run any `bl` command until you complete this checklist.** Run it **once per session**, before the first `bl` command. Cache the result — do not re-check before every command.

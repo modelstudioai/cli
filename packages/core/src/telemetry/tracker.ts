@@ -1,6 +1,6 @@
-import type { Config } from "../config/schema.ts";
-import type { GlobalFlags } from "../types/flags.ts";
+import type { Identity, Settings } from "../config/schema.ts";
 import { BailianError } from "../errors/base.ts";
+import type { AuthRequirement } from "../types/command.ts";
 import { createTrackingEvent } from "./event.ts";
 import { localSink, remoteSink } from "./sink.ts";
 
@@ -11,12 +11,8 @@ const GLOBAL_FLAG_KEYS = new Set([
   "quiet",
   "verbose",
   "timeout",
-  "noColor",
-  "yes",
   "dryRun",
   "help",
-  "nonInteractive",
-  "async",
   "console",
 ]);
 
@@ -63,7 +59,6 @@ const PARAM_ALLOWLIST = new Set([
   // Mode / behavior flags
   "mode",
   "download",
-  "noWait",
   "textOnly",
   "promptExtend",
   "enableSsml",
@@ -75,7 +70,7 @@ const PARAM_ALLOWLIST = new Set([
   "diarization",
 ]);
 
-function extractParams(flags: GlobalFlags): Record<string, unknown> {
+function extractParams(flags: Record<string, unknown>): Record<string, unknown> {
   const params: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(flags)) {
     if (key.startsWith("_")) continue;
@@ -87,13 +82,20 @@ function extractParams(flags: GlobalFlags): Record<string, unknown> {
   return params;
 }
 
+/** 遥测只记录命令声明的鉴权域,不接触具体凭证能力。 */
+export interface TrackingDeps {
+  identity: Identity;
+  settings: Settings;
+  authMethod?: AuthRequirement;
+}
+
 export async function trackCommandExecution(
-  config: Config,
+  deps: TrackingDeps,
   commandPath: string[],
-  flags: GlobalFlags,
+  flags: Record<string, unknown>,
   fn: () => Promise<void>,
 ): Promise<void> {
-  if (!config.telemetry) {
+  if (!deps.settings.telemetry) {
     await fn();
     return;
   }
@@ -119,18 +121,13 @@ export async function trackCommandExecution(
   } finally {
     const durationMs = Math.round(performance.now() - start);
 
-    let authMethod: string | undefined;
-    if (config.apiKey) authMethod = "api-key";
-    else if (config.fileApiKey) authMethod = "api-key";
-    else if (config.accessTokenEnv || config.fileAccessToken) authMethod = "access-token";
-
     const event = createTrackingEvent({
       command: commandPath.join(" "),
       durationMs,
       success,
       error: success ? undefined : { message: errorMessage, httpStatus, requestId },
-      cliVersion: config.clientVersion ?? "unknown",
-      authMethod,
+      cliVersion: deps.identity.version,
+      authMethod: deps.authMethod,
       params: extractParams(flags),
     });
 

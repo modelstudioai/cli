@@ -1,21 +1,14 @@
 import {
   defineCommand,
-  requestJson,
-  chatEndpoint,
+  chatPath,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type ChatRequest,
   type ChatResponse,
   type ChatMessageContent,
-  isInteractive,
-  resolveFileUrl,
-  resolveCredential,
   BailianError,
   ExitCode,
   isLocalFile,
 } from "bailian-cli-core";
-import { promptText, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { readFileSync, existsSync } from "fs";
 import { extname } from "path";
@@ -58,17 +51,26 @@ async function toImageUrl(image: string): Promise<string> {
 
 export default defineCommand({
   description: "Describe an image or video using Qwen-VL",
+  auth: "apiKey",
   usageArgs: "--image <path-or-url> [--video <url>] [--prompt <text>]",
-  options: [
-    { flag: "--image <path-or-url>", description: "Local image path or URL" },
-    {
-      flag: "--video <url>",
-      description: "Video file URL or local path (mp4/mov/avi/mkv/webm)",
+  flags: {
+    image: { type: "string", valueHint: "<path-or-url>", description: "Local image path or URL" },
+    video: {
       type: "array",
+      valueHint: "<url>",
+      description: "Video file URL or local path (mp4/mov/avi/mkv/webm)",
     },
-    { flag: "--prompt <text>", description: "Question about the content (default: auto-detected)" },
-    { flag: "--model <model>", description: "Vision model (default: qwen3-vl-plus)" },
-  ],
+    prompt: {
+      type: "string",
+      valueHint: "<text>",
+      description: "Question about the content (default: auto-detected)",
+    },
+    model: {
+      type: "string",
+      valueHint: "<model>",
+      description: "Vision model (default: qwen3-vl-plus)",
+    },
+  },
   exampleArgs: [
     "--image photo.jpg",
     '--image https://example.com/photo.jpg --prompt "What breed is this dog?"',
@@ -76,12 +78,15 @@ export default defineCommand({
     "--video ./local-video.mp4",
     '--image photo.png --prompt "Extract the text" --model qwen3-vl-plus',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    let image = (flags.image ?? (flags._positional as string[] | undefined)?.[0]) as
-      | string
-      | undefined;
-    const videoInputs = (flags.video as string[] | undefined) ?? [];
-    const model = (flags.model as string) || "qwen3-vl-plus";
+  validate: (f) =>
+    !f.image && !(f.video as string[] | undefined)?.length
+      ? "Provide --image or --video."
+      : undefined,
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    let image = flags.image;
+    const videoInputs = flags.video ?? [];
+    const model = flags.model || "qwen3-vl-plus";
 
     // Auto-detect: if --image was given a video file, treat it as --video
     if (image && isVideoInput(image)) {
@@ -91,35 +96,11 @@ export default defineCommand({
 
     const hasVideo = videoInputs.length > 0;
     const defaultPrompt = hasVideo ? "Describe the video." : "Describe the image.";
-    const prompt = (flags.prompt as string) || defaultPrompt;
+    const prompt = flags.prompt || defaultPrompt;
 
-    if (!image && !hasVideo) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({
-          message: "Enter image/video path or URL:",
-        });
-        if (!hint) {
-          process.stderr.write("Vision describe cancelled.\n");
-          process.exit(1);
-        }
-        // Detect if user entered a video
-        if (isVideoInput(hint)) {
-          videoInputs.push(hint);
-        } else {
-          image = hint;
-        }
-      } else {
-        throw new BailianError(
-          "Missing required argument --image or --video.",
-          ExitCode.USAGE,
-          `${cmdUsage(config, "--image <path-or-url>")}\n${cmdUsage(config, "--video <url-or-path>")}`,
-        );
-      }
-    }
+    const format = detectOutputFormat(settings.output);
 
-    const format = detectOutputFormat(config.output);
-
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         { request: { prompt, image, video: videoInputs.length ? videoInputs : undefined, model } },
         format,
@@ -138,8 +119,7 @@ export default defineCommand({
           if (!existsSync(videoInput)) {
             throw new BailianError(`Video file not found: ${videoInput}`, ExitCode.USAGE);
           }
-          const credential = await resolveCredential(config);
-          videoUrl = await resolveFileUrl(videoInput, credential.token, model);
+          videoUrl = await ctx.client.uploadFile(videoInput, model);
         }
 
         contentArray.push({ type: "video_url", video_url: { url: videoUrl } });
@@ -155,8 +135,7 @@ export default defineCommand({
         const { statSync } = await import("fs");
         const fileSize = statSync(image).size;
         if (fileSize > 5 * 1024 * 1024) {
-          const credential = await resolveCredential(config);
-          finalImageUrl = await resolveFileUrl(image, credential.token, model);
+          finalImageUrl = await ctx.client.uploadFile(image, model);
         }
       }
 
@@ -176,16 +155,15 @@ export default defineCommand({
       ],
     };
 
-    const url = chatEndpoint(config.baseUrl);
-    const response = await requestJson<ChatResponse>(config, {
-      url,
+    const response = await ctx.client.requestJson<ChatResponse>({
+      path: chatPath(),
       method: "POST",
       body,
     });
 
     const content = response.choices?.[0]?.message?.content;
 
-    if (format !== "rich") {
+    if (format !== "text") {
       emitResult(response, format);
       return;
     }

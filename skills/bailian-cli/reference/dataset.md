@@ -19,18 +19,19 @@ Index: [index.md](index.md)
 
 ### `bl dataset delete`
 
-| Field           | Value                                      |
-| --------------- | ------------------------------------------ |
-| **Name**        | `dataset delete`                           |
-| **Description** | Delete a dataset file by ID                |
-| **Usage**       | `bl dataset delete --file-id <id> [--yes]` |
+| Field           | Value                              |
+| --------------- | ---------------------------------- |
+| **Name**        | `dataset delete`                   |
+| **Description** | Delete a dataset file by ID        |
+| **Usage**       | `bl dataset delete --file-id <id>` |
 
-#### Options
+#### Flags
 
-| Flag             | Type    | Required | Description                  |
-| ---------------- | ------- | -------- | ---------------------------- |
-| `--file-id <id>` | string  | yes      | Dataset file ID (required)   |
-| `--yes`          | boolean | no       | Skip the confirmation prompt |
+| Flag               | Type   | Required | Description                |
+| ------------------ | ------ | -------- | -------------------------- |
+| `--file-id <id>`   | string | yes      | Dataset file ID (required) |
+| `--api-key <key>`  | string | no       | API key                    |
+| `--base-url <url>` | string | no       | API base URL               |
 
 #### Examples
 
@@ -39,7 +40,7 @@ bl dataset delete --file-id file-id-xxx
 ```
 
 ```bash
-bl dataset delete --file-id file-id-xxx --yes
+bl dataset delete --file-id file-id-xxx --dry-run
 ```
 
 ### `bl dataset get`
@@ -50,11 +51,13 @@ bl dataset delete --file-id file-id-xxx --yes
 | **Description** | Get details of a single dataset file |
 | **Usage**       | `bl dataset get --file-id <id>`      |
 
-#### Options
+#### Flags
 
-| Flag             | Type   | Required | Description                |
-| ---------------- | ------ | -------- | -------------------------- |
-| `--file-id <id>` | string | yes      | Dataset file ID (required) |
+| Flag               | Type   | Required | Description                |
+| ------------------ | ------ | -------- | -------------------------- |
+| `--file-id <id>`   | string | yes      | Dataset file ID (required) |
+| `--api-key <key>`  | string | no       | API key                    |
+| `--base-url <url>` | string | no       | API base URL               |
 
 #### Examples
 
@@ -74,13 +77,15 @@ bl dataset get --file-id file-xxx --output json
 | **Description** | List uploaded dataset files                                         |
 | **Usage**       | `bl dataset list [--page <n>] [--page-size <n>] [--purpose <name>]` |
 
-#### Options
+#### Flags
 
 | Flag               | Type   | Required | Description                                                           |
 | ------------------ | ------ | -------- | --------------------------------------------------------------------- |
 | `--page <n>`       | number | no       | Page number (default: 1)                                              |
 | `--page-size <n>`  | number | no       | Results per page (default: 10, max 100)                               |
 | `--purpose <name>` | string | no       | Filter by purpose (e.g. "fine-tune", "evaluation"). Omit to list all. |
+| `--api-key <key>`  | string | no       | API key                                                               |
+| `--base-url <url>` | string | no       | API base URL                                                          |
 
 #### Examples
 
@@ -108,15 +113,17 @@ bl dataset list --output json
 | **Description** | Upload a dataset file (.jsonl) to Bailian                                                                            |
 | **Usage**       | `bl dataset upload --file <path> [--purpose <name>] [--schema <chatml\|dpo\|cpt>] [--no-validate] [--full-validate]` |
 
-#### Options
+#### Flags
 
-| Flag               | Type    | Required | Description                                                                                                   |
-| ------------------ | ------- | -------- | ------------------------------------------------------------------------------------------------------------- |
-| `--file <path>`    | string  | yes      | Local .jsonl dataset file (≤300MB)                                                                            |
-| `--purpose <name>` | string  | no       | Dataset purpose tag (default: "fine-tune"; e.g. "evaluation")                                                 |
-| `--schema <s>`     | string  | no       | Record schema: "chatml" (SFT), "dpo" (chosen/rejected), or "cpt" (raw text). Default auto-detects per record. |
-| `--no-validate`    | boolean | no       | Skip the local JSONL pre-flight check (not recommended)                                                       |
-| `--full-validate`  | boolean | no       | JSON.parse every line instead of sampling (slower)                                                            |
+| Flag               | Type   | Required | Description                                                                                                   |
+| ------------------ | ------ | -------- | ------------------------------------------------------------------------------------------------------------- |
+| `--file <path>`    | string | yes      | Local .jsonl dataset file (≤300MB)                                                                            |
+| `--purpose <name>` | string | no       | Dataset purpose tag (default: "fine-tune"; e.g. "evaluation")                                                 |
+| `--schema <s>`     | string | no       | Record schema: "chatml" (SFT), "dpo" (chosen/rejected), or "cpt" (raw text). Default auto-detects per record. |
+| `--no-validate`    | switch | no       | Skip the local JSONL pre-flight check (not recommended)                                                       |
+| `--full-validate`  | switch | no       | JSON.parse every line instead of sampling (slower)                                                            |
+| `--api-key <key>`  | string | no       | API key                                                                                                       |
+| `--base-url <url>` | string | no       | API base URL                                                                                                  |
 
 #### Notes
 
@@ -167,13 +174,13 @@ bl dataset upload --file train.jsonl --no-validate
 | **Description** | Locally validate a dataset file (.jsonl) without uploading                          |
 | **Usage**       | `bl dataset validate --file <path> [--full-validate] [--schema <chatml\|dpo\|cpt>]` |
 
-#### Options
+#### Flags
 
-| Flag              | Type    | Required | Description                                                                                                   |
-| ----------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------- |
-| `--file <path>`   | string  | yes      | Local .jsonl dataset file                                                                                     |
-| `--full-validate` | boolean | no       | JSON.parse every line instead of sampling (slower)                                                            |
-| `--schema <s>`    | string  | no       | Record schema: "chatml" (SFT), "dpo" (chosen/rejected), or "cpt" (raw text). Default auto-detects per record. |
+| Flag              | Type   | Required | Description                                                                                                   |
+| ----------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------- |
+| `--file <path>`   | string | yes      | Local .jsonl dataset file                                                                                     |
+| `--full-validate` | switch | no       | JSON.parse every line instead of sampling (slower)                                                            |
+| `--schema <s>`    | string | no       | Record schema: "chatml" (SFT), "dpo" (chosen/rejected), or "cpt" (raw text). Default auto-detects per record. |
 
 #### Notes
 

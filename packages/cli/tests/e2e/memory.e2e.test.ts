@@ -69,16 +69,15 @@ describe("e2e: memory", () => {
 describe.skipIf(!isBailianE2EEnabled() || !isDashScopeE2EReady())(
   "e2e: memory CRUD + search",
   () => {
-    test("memory add 缺少 --user-id 时打印子命令帮助并退出 (0)", async () => {
+    test("memory add 缺少 --user-id 时报用法错误并退出 (2)", async () => {
       const { stderr, exitCode } = await runCli([
         "memory",
         "add",
         ...memoryLibraryCliArgs(),
         "--content",
         "仅内容无用户",
-        "--non-interactive",
       ]);
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--user-id|Usage:/i);
     });
 
@@ -90,9 +89,8 @@ describe.skipIf(!isBailianE2EEnabled() || !isDashScopeE2EReady())(
         ...memoryLibraryCliArgs(),
         "--user-id",
         userId,
-        "--non-interactive",
       ]);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(stderr).toMatch(/messages|content|required/i);
     });
 
@@ -107,7 +105,6 @@ describe.skipIf(!isBailianE2EEnabled() || !isDashScopeE2EReady())(
         userId,
         "--content",
         "dry-run 不入网",
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -132,7 +129,6 @@ describe.skipIf(!isBailianE2EEnabled() || !isDashScopeE2EReady())(
         userId,
         "--content",
         contentA,
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -146,7 +142,6 @@ describe.skipIf(!isBailianE2EEnabled() || !isDashScopeE2EReady())(
         ...memoryLibraryCliArgs(),
         "--user-id",
         userId,
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -172,7 +167,6 @@ describe.skipIf(!isBailianE2EEnabled() || !isDashScopeE2EReady())(
         "vp test",
         "--top-k",
         "5",
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -190,7 +184,6 @@ describe.skipIf(!isBailianE2EEnabled() || !isDashScopeE2EReady())(
         userId,
         "--content",
         contentB,
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -204,7 +197,6 @@ describe.skipIf(!isBailianE2EEnabled() || !isDashScopeE2EReady())(
         nodeId!,
         "--user-id",
         userId,
-        "--non-interactive",
         "--output",
         "json",
       ]);

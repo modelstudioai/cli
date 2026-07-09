@@ -1,42 +1,47 @@
 import {
   defineCommand,
+  BailianError,
   detectOutputFormat,
-  mcpWebSearchEndpoint,
-  type Config,
-  type GlobalFlags,
-  isInteractive,
-  McpClient,
+  mcpWebSearchPath,
+  type FlagsDef,
 } from "bailian-cli-core";
 import { createSpinner } from "bailian-cli-runtime";
-import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult } from "bailian-cli-runtime";
+
+const WEB_SEARCH_FLAGS = {
+  query: { type: "string", valueHint: "<text>", description: "Search query text" },
+  count: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Number of search results (default: 10)",
+  },
+  listTools: { type: "switch", description: "List available MCP tools and exit" },
+} satisfies FlagsDef;
 
 export default defineCommand({
   description: "Search the web using DashScope MCP WebSearch service",
+  auth: "apiKey",
   usageArgs: "--query <text> [flags]",
-  options: [
-    { flag: "--query <text>", description: "Search query text", required: true },
-    { flag: "--count <n>", description: "Number of search results (default: 10)", type: "number" },
-    { flag: "--list-tools", description: "List available MCP tools and exit" },
-  ],
+  flags: WEB_SEARCH_FLAGS,
   exampleArgs: [
     '--query "Alibaba Cloud Bailian latest features"',
     '--query "TypeScript 5.9 new features" --count 5',
     '--query "Today\'s news"',
     "--list-tools",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const mcpUrl = mcpWebSearchEndpoint(config.baseUrl);
-    const format = detectOutputFormat(config.output);
+  validate: (f) => (!f.listTools && !f.query ? "Missing required flag: --query" : undefined),
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const format = detectOutputFormat(settings.output);
 
     // --- List tools mode ---
     if (flags.listTools) {
-      if (config.dryRun) {
-        emitResult({ endpoint: mcpUrl, action: "tools/list" }, format);
+      if (settings.dryRun) {
+        emitResult({ endpoint: ctx.client.url(mcpWebSearchPath()), action: "tools/list" }, format);
         return;
       }
 
-      const client = new McpClient(config, mcpUrl);
+      const client = ctx.client.mcp(mcpWebSearchPath());
       await client.initialize();
       const tools = await client.listTools();
 
@@ -45,29 +50,17 @@ export default defineCommand({
     }
 
     // --- Search mode ---
-    let query = flags.query as string | undefined;
-    if (!query) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({ message: "Enter your search query:" });
-        if (!hint) {
-          process.stderr.write("Search cancelled.\n");
-          process.exit(1);
-        }
-        query = hint;
-      } else {
-        failIfMissing("query", cmdUsage(config, "--query <text>"));
-      }
-    }
+    const query = flags.query;
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         {
-          endpoint: mcpUrl,
+          endpoint: ctx.client.url(mcpWebSearchPath()),
           action: "tools/call",
           tool: "bailian_web_search",
           arguments: {
             query: query!,
-            count: (flags.count as number) || undefined,
+            count: flags.count || undefined,
           },
         },
         format,
@@ -76,31 +69,30 @@ export default defineCommand({
     }
 
     // Initialize MCP client
-    const client = new McpClient(config, mcpUrl);
+    const client = ctx.client.mcp(mcpWebSearchPath());
     const spinner = createSpinner("Initializing search...");
 
-    if (!config.quiet) spinner.start();
+    if (!settings.quiet) spinner.start();
 
     try {
       await client.initialize();
 
-      if (!config.quiet) spinner.update("Searching...");
+      if (!settings.quiet) spinner.update("Searching...");
 
       // Build tool arguments
       const toolArgs: Record<string, unknown> = { query: query! };
-      if (flags.count) toolArgs.count = flags.count as number;
+      if (flags.count) toolArgs.count = flags.count;
 
       // Call the search tool
       const result = await client.callTool("bailian_web_search", toolArgs);
 
-      if (!config.quiet) spinner.stop("Done.");
-
       // Handle error response
       if (result.isError) {
         const errText = result.content.map((c) => c.text || "").join("\n");
-        process.stderr.write(`Search error: ${errText}\n`);
-        process.exit(1);
+        throw new BailianError(`Search error: ${errText}`);
       }
+
+      if (!settings.quiet) spinner.stop("Done.");
 
       // Output results — always structured to stdout
       if (format === "json") {

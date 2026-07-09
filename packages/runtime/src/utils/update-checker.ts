@@ -7,7 +7,7 @@ export const NPM_REGISTRY = "https://registry.npmjs.org";
 export const NPM_PACKAGE = "bailian-cli";
 
 const STATE_FILE = () => join(getConfigDir(), "update-state.json");
-const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4h
+const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
 const FETCH_TIMEOUT_MS = 3000;
 
 /**
@@ -306,19 +306,13 @@ export async function checkForUpdate(
   currentVersion: string,
   npmPackage: string = NPM_PACKAGE,
 ): Promise<void> {
-  // Skip in CI / non-TTY environments
-  if (process.env.CI || !process.stderr.isTTY) return;
-
   const state = readState();
   const now = Date.now();
 
-  // Throttle: skip if checked within the last 4 hours
-  if (state && now - state.lastChecked < CHECK_INTERVAL_MS) {
-    if (state.latestVersion && isNewerVersion(state.latestVersion, currentVersion)) {
-      pendingNotification = state.latestVersion;
-    }
-    return;
-  }
+  // Inside the throttle window (CHECK_INTERVAL_MS since the last fetch): no
+  // network call and no notice. The state file is global, so the notice fires at
+  // most once per window across all processes/sessions — not once per command.
+  if (state && now - state.lastChecked < CHECK_INTERVAL_MS) return;
 
   const latest = await fetchLatestVersion(FETCH_TIMEOUT_MS, npmPackage);
   if (!latest) return;

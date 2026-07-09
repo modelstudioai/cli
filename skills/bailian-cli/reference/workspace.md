@@ -21,14 +21,15 @@ Index: [index.md](index.md)
 | **Description** | List all workspaces         |
 | **Usage**       | `bl workspace list [flags]` |
 
-#### Options
+#### Flags
 
-| Flag                           | Type   | Required | Description                           |
-| ------------------------------ | ------ | -------- | ------------------------------------- |
-| `--list <n>`                   | string | no       | Limit number of results               |
-| `--console-region <region>`    | string | no       | Console region                        |
-| `--console-site <site>`        | string | no       | Console site: domestic, international |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID                      |
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--list <n>`                   | string | no       | Limit number of results                                  |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
 
 #### Examples
 

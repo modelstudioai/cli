@@ -3,20 +3,16 @@
  * Bypasses the CLI command handler layer and calls requestJson/request directly.
  */
 import {
-  requestJson,
-  chatEndpoint,
-  imageEndpoint,
-  imageSyncEndpoint,
-  videoGenerateEndpoint,
-  taskEndpoint,
-  speechSynthesizeEndpoint,
-  speechRecognizeEndpoint,
-  resolveFileUrl,
-  resolveCredential,
+  chatPath,
+  imagePath,
+  imageSyncPath,
+  videoGeneratePath,
+  taskPath,
+  speechSynthesizePath,
+  speechRecognizePath,
   stripUndefined,
   resolveBooleanFlag,
   resolveWatermark,
-  type Config,
   type ChatRequest,
   type ChatResponse,
   type DashScopeImageRequest,
@@ -33,6 +29,7 @@ import {
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { PipelineError } from "../errors.ts";
+import type { PipelineEnv } from "../bl-config.ts";
 import type { StepContext } from "../types.ts";
 import { resolveImageSize } from "../../utils/image-size.ts";
 import { downloadFile } from "../../utils/download.ts";
@@ -51,7 +48,7 @@ export interface TextChatInput {
 }
 
 export async function textChat(
-  config: Config,
+  env: PipelineEnv,
   input: TextChatInput,
   ctx: StepContext,
 ): Promise<ChatResponse> {
@@ -81,9 +78,9 @@ export async function textChat(
     }
   }
 
-  const url = chatEndpoint(config.baseUrl);
-  const response = await requestJson<ChatResponse>(config, {
-    url,
+  const url = chatPath();
+  const response = await env.client.requestJson<ChatResponse>({
+    path: url,
     method: "POST",
     body,
     timeout: ctx.blRequestTimeoutSeconds,
@@ -102,7 +99,7 @@ export interface VisionDescribeInput {
 }
 
 export async function visionDescribe(
-  config: Config,
+  env: PipelineEnv,
   input: VisionDescribeInput,
   ctx: StepContext,
 ): Promise<ChatResponse> {
@@ -118,8 +115,7 @@ export async function visionDescribe(
   if (input.video) {
     let videoUrl = input.video;
     if (isLocalFile(videoUrl)) {
-      const credential = await resolveCredential(config);
-      videoUrl = await resolveFileUrl(videoUrl, credential.token, model, { signal: ctx.signal });
+      videoUrl = await env.client.uploadFile(videoUrl, model, { signal: ctx.signal });
     }
     contentArray.push({ type: "video_url", video_url: { url: videoUrl } });
   }
@@ -128,8 +124,7 @@ export async function visionDescribe(
   for (const img of images) {
     let imageUrl = img;
     if (isLocalFile(img)) {
-      const credential = await resolveCredential(config);
-      imageUrl = await resolveFileUrl(img, credential.token, model, { signal: ctx.signal });
+      imageUrl = await env.client.uploadFile(img, model, { signal: ctx.signal });
     }
     contentArray.push({ type: "image_url", image_url: { url: imageUrl } });
   }
@@ -141,9 +136,9 @@ export async function visionDescribe(
     messages: [{ role: "user", content: contentArray }],
   };
 
-  const url = chatEndpoint(config.baseUrl);
-  return await requestJson<ChatResponse>(config, {
-    url,
+  const url = chatPath();
+  return await env.client.requestJson<ChatResponse>({
+    path: url,
     method: "POST",
     body,
     signal: ctx.signal,
@@ -172,7 +167,7 @@ export interface ImageGenerateInput {
 }
 
 export async function imageGenerate(
-  config: Config,
+  env: PipelineEnv,
   input: ImageGenerateInput,
   ctx: StepContext,
 ): Promise<unknown> {
@@ -208,9 +203,9 @@ export async function imageGenerate(
   };
 
   if (useSync) {
-    const url = imageSyncEndpoint(config.baseUrl);
-    const response = await requestJson<DashScopeImageSyncResponse>(config, {
-      url,
+    const url = imageSyncPath();
+    const response = await env.client.requestJson<DashScopeImageSyncResponse>({
+      path: url,
       method: "POST",
       body,
       signal: ctx.signal,
@@ -223,16 +218,16 @@ export async function imageGenerate(
     return { urls, request_id: response.request_id, ...(saved ? { saved } : {}) };
   } else {
     // Async mode: submit then poll
-    const url = imageEndpoint(config.baseUrl);
-    const asyncResp = await requestJson<DashScopeAsyncResponse>(config, {
-      url,
+    const url = imagePath();
+    const asyncResp = await env.client.requestJson<DashScopeAsyncResponse>({
+      path: url,
       method: "POST",
       body,
       async: true,
       signal: ctx.signal,
     });
     const taskId = asyncResp.output.task_id;
-    const result = await pollTask(config, taskId, ctx);
+    const result = await pollTask(env, taskId, ctx);
     const urls = Array.isArray(result.urls) ? (result.urls as string[]) : [];
     const saved = await maybeDownloadImages(urls, input["out-dir"], input["out-prefix"]);
     if (saved) result.saved = saved;
@@ -257,7 +252,7 @@ export interface ImageEditInput {
 }
 
 export async function imageEdit(
-  config: Config,
+  env: PipelineEnv,
   input: ImageEditInput,
   ctx: StepContext,
 ): Promise<unknown> {
@@ -282,8 +277,7 @@ export async function imageEdit(
   for (const img of images) {
     let imageUrl = img;
     if (isLocalFile(img)) {
-      const credential = await resolveCredential(config);
-      imageUrl = await resolveFileUrl(img, credential.token, model, { signal: ctx.signal });
+      imageUrl = await env.client.uploadFile(img, model, { signal: ctx.signal });
     }
     content.push({ image: imageUrl });
   }
@@ -305,9 +299,9 @@ export async function imageEdit(
   };
 
   if (useSync) {
-    const url = imageSyncEndpoint(config.baseUrl);
-    const response = await requestJson<DashScopeImageSyncResponse>(config, {
-      url,
+    const url = imageSyncPath();
+    const response = await env.client.requestJson<DashScopeImageSyncResponse>({
+      path: url,
       method: "POST",
       body,
       signal: ctx.signal,
@@ -319,16 +313,16 @@ export async function imageEdit(
     const saved = await maybeDownloadImages(urls, input["out-dir"], input["out-prefix"]);
     return { urls, request_id: response.request_id, ...(saved ? { saved } : {}) };
   } else {
-    const url = imageEndpoint(config.baseUrl);
-    const asyncResp = await requestJson<DashScopeAsyncResponse>(config, {
-      url,
+    const url = imagePath();
+    const asyncResp = await env.client.requestJson<DashScopeAsyncResponse>({
+      path: url,
       method: "POST",
       body,
       async: true,
       signal: ctx.signal,
     });
     const taskId = asyncResp.output.task_id;
-    const result = await pollTask(config, taskId, ctx);
+    const result = await pollTask(env, taskId, ctx);
     const urls = Array.isArray(result.urls) ? (result.urls as string[]) : [];
     const saved = await maybeDownloadImages(urls, input["out-dir"], input["out-prefix"]);
     if (saved) result.saved = saved;
@@ -381,7 +375,7 @@ export interface VideoGenerateInput {
 }
 
 export async function videoGenerate(
-  config: Config,
+  env: PipelineEnv,
   input: VideoGenerateInput,
   ctx: StepContext,
 ): Promise<unknown> {
@@ -396,8 +390,7 @@ export async function videoGenerate(
   let resolvedImageUrl: string | undefined;
   if (input.image) {
     if (isLocalFile(input.image)) {
-      const credential = await resolveCredential(config);
-      resolvedImageUrl = await resolveFileUrl(input.image, credential.token, model, {
+      resolvedImageUrl = await env.client.uploadFile(input.image, model, {
         signal: ctx.signal,
       });
     } else {
@@ -425,9 +418,9 @@ export async function videoGenerate(
   };
   stripUndefined(body.parameters as Record<string, unknown>);
 
-  const url = videoGenerateEndpoint(config.baseUrl);
-  const asyncResp = await requestJson<DashScopeAsyncResponse>(config, {
-    url,
+  const url = videoGeneratePath();
+  const asyncResp = await env.client.requestJson<DashScopeAsyncResponse>({
+    path: url,
     method: "POST",
     body,
     async: true,
@@ -438,7 +431,7 @@ export async function videoGenerate(
   const pollIntervalMs = (input["poll-interval"] ?? 10) * 1000;
   const timeoutMs = (ctx.timeoutSeconds ?? 900) * 1000;
 
-  return await pollTaskWithOptions(config, taskId, pollIntervalMs, timeoutMs, ctx);
+  return await pollTaskWithOptions(env, taskId, pollIntervalMs, timeoutMs, ctx);
 }
 
 // --- speech/synthesize ---
@@ -461,7 +454,7 @@ export interface SpeechSynthesizeInput {
 }
 
 export async function speechSynthesize(
-  config: Config,
+  env: PipelineEnv,
   input: SpeechSynthesizeInput,
   ctx: StepContext,
 ): Promise<unknown> {
@@ -496,9 +489,9 @@ export async function speechSynthesize(
   };
   stripUndefined(body.input as Record<string, unknown>);
 
-  const url = speechSynthesizeEndpoint(config.baseUrl);
-  const response = await requestJson<DashScopeTTSResponse>(config, {
-    url,
+  const url = speechSynthesizePath();
+  const response = await env.client.requestJson<DashScopeTTSResponse>({
+    path: url,
     method: "POST",
     body,
     signal: ctx.signal,
@@ -527,7 +520,7 @@ export interface SpeechRecognizeInput {
 }
 
 export async function speechRecognize(
-  config: Config,
+  env: PipelineEnv,
   input: SpeechRecognizeInput,
   ctx: StepContext,
 ): Promise<unknown> {
@@ -542,9 +535,8 @@ export async function speechRecognize(
   const fileUrls: string[] = [];
   for (const u of rawUrls) {
     if (isLocalFile(u)) {
-      const credential = await resolveCredential(config);
       fileUrls.push(
-        await resolveFileUrl(u, credential.token, input.model || "fun-asr", {
+        await env.client.uploadFile(u, input.model || "fun-asr", {
           signal: ctx.signal,
         }),
       );
@@ -567,9 +559,9 @@ export async function speechRecognize(
   };
   stripUndefined(body.parameters as Record<string, unknown>);
 
-  const url = speechRecognizeEndpoint(config.baseUrl);
-  const asyncResp = await requestJson<DashScopeAsyncResponse>(config, {
-    url,
+  const url = speechRecognizePath();
+  const asyncResp = await env.client.requestJson<DashScopeAsyncResponse>({
+    path: url,
     method: "POST",
     body,
     async: true,
@@ -580,7 +572,7 @@ export async function speechRecognize(
   const pollIntervalMs = (input["poll-interval"] ?? 2) * 1000;
   const timeoutMs = (ctx.timeoutSeconds ?? 300) * 1000;
 
-  return await pollTaskWithOptions(config, taskId, pollIntervalMs, timeoutMs, ctx);
+  return await pollTaskWithOptions(env, taskId, pollIntervalMs, timeoutMs, ctx);
 }
 
 // --- Shared: task polling ---
@@ -615,17 +607,17 @@ function flattenTaskResponse(resp: DashScopeTaskResponse): Record<string, unknow
 }
 
 async function pollTask(
-  config: Config,
+  env: PipelineEnv,
   taskId: string,
   ctx?: StepContext,
 ): Promise<Record<string, unknown>> {
   const pollIntervalMs = 3000;
-  const timeoutMs = config.timeout * 1000;
-  return await pollTaskWithOptions(config, taskId, pollIntervalMs, timeoutMs, ctx);
+  const timeoutMs = env.settings.timeout * 1000;
+  return await pollTaskWithOptions(env, taskId, pollIntervalMs, timeoutMs, ctx);
 }
 
 async function pollTaskWithOptions(
-  config: Config,
+  env: PipelineEnv,
   taskId: string,
   pollIntervalMs: number,
   timeoutMs: number,
@@ -644,9 +636,9 @@ async function pollTaskWithOptions(
     await delay(pollIntervalMs, ctx?.signal);
     attempt++;
 
-    const url = taskEndpoint(config.baseUrl, taskId);
-    const result = await requestJson<DashScopeTaskResponse>(config, {
-      url,
+    const url = taskPath(taskId);
+    const result = await env.client.requestJson<DashScopeTaskResponse>({
+      path: url,
       method: "GET",
       signal: ctx?.signal,
     });

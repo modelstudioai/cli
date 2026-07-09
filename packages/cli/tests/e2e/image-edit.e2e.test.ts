@@ -27,33 +27,46 @@ describe("e2e: image edit", () => {
   test("image edit --help 正常退出", async () => {
     const { stderr, exitCode } = await runCli(["image", "edit", "--help"]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/edit|--image|--prompt/i);
+    expect(stderr).toMatch(/edit|--image|--prompt|--async|--concurrent/i);
+  });
+
+  test("image edit --dry-run 接受 async 模型的 --async 与 --concurrent", async () => {
+    const { stdout, stderr, exitCode } = await runCli([
+      "image",
+      "edit",
+      "--dry-run",
+      "--model",
+      "wan2.6-t2i",
+      "--image",
+      "https://example.com/source.png",
+      "--prompt",
+      "Change the background to blue",
+      "--async",
+      "--concurrent",
+      "2",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ mode?: string; request?: { input?: { messages?: unknown[] } } }>(
+      stdout,
+    );
+    expect(data.mode).toBe("async");
+    expect(data.request?.input?.messages?.length).toBeGreaterThan(0);
   });
 });
 
 describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())("e2e: image edit", () => {
-  test("image edit 缺少 --image 时打印子命令帮助并退出 (0)", async () => {
-    const { stderr, exitCode } = await runCli([
-      "image",
-      "edit",
-      "--prompt",
-      "仅提示词",
-      "--non-interactive",
-    ]);
-    expect(exitCode).toBe(0);
+  test("image edit 缺少 --image 时报用法错误并退出 (2)", async () => {
+    const { stderr, exitCode } = await runCli(["image", "edit", "--prompt", "仅提示词"]);
+    expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--image|Usage:/i);
   });
 
-  test("image edit 缺少 --prompt 时打印子命令帮助并退出 (0)", async () => {
+  test("image edit 缺少 --prompt 时报用法错误并退出 (2)", async () => {
     const testPng = join(__dirname, ".smoke-32.png");
-    const { stderr, exitCode } = await runCli([
-      "image",
-      "edit",
-      "--image",
-      testPng,
-      "--non-interactive",
-    ]);
-    expect(exitCode).toBe(0);
+    const { stderr, exitCode } = await runCli(["image", "edit", "--image", testPng]);
+    expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--prompt|Usage:/i);
   });
 
@@ -70,7 +83,6 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())("e2e: ima
       outDir,
       "--out-prefix",
       "e2e-gen",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -93,7 +105,6 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())("e2e: ima
       outDir,
       "--out-prefix",
       "e2e-edit",
-      "--non-interactive",
       "--output",
       "json",
     ]);

@@ -1,137 +1,138 @@
 import {
   defineCommand,
-  requestJson,
-  videoGenerateEndpoint,
-  taskEndpoint,
+  videoGeneratePath,
+  taskPath,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type DashScopeVideoEditRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
-  isInteractive,
   resolveOutputDir,
-  resolveFileUrl,
-  resolveCredential,
   BailianError,
   ExitCode,
   resolveBooleanFlag,
   resolveWatermark,
+  ASYNC_FLAG,
+  CONCURRENT_FLAG,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
-import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
+import { runConcurrent, getConcurrency } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
 export default defineCommand({
   description:
     "Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)",
+  auth: "apiKey",
   usageArgs: "--video <url> --prompt <text> [flags]",
-  options: [
-    { flag: "--model <model>", description: "Model ID (default: happyhorse-1.0-video-edit)" },
-    {
-      flag: "--video <url>",
+  flags: {
+    model: {
+      type: "string",
+      valueHint: "<model>",
+      description: "Model ID (default: happyhorse-1.0-video-edit)",
+    },
+    video: {
+      type: "string",
+      valueHint: "<url>",
       description: "Input video URL or local file (mp4/mov, 2-10s)",
       required: true,
     },
-    {
-      flag: "--prompt <text>",
+    prompt: {
+      type: "string",
+      valueHint: "<text>",
       description: 'Edit instruction (e.g. "Convert the scene to a claymation style")',
     },
-    { flag: "--ref-image <url>", description: "Reference image URL (up to 4, comma-separated)" },
-    {
-      flag: "--negative-prompt <text>",
+    refImage: {
+      type: "string",
+      valueHint: "<url>",
+      description: "Reference image URL (up to 4, comma-separated)",
+    },
+    negativePrompt: {
+      type: "string",
+      valueHint: "<text>",
       description: "Negative prompt to exclude unwanted content",
     },
-    { flag: "--resolution <res>", description: "Resolution: 720P or 1080P (default: 1080P)" },
-    { flag: "--ratio <ratio>", description: "Aspect ratio (16:9, 9:16, 1:1, 4:3, 3:4)" },
-    {
-      flag: "--duration <seconds>",
-      description: "Output video duration in seconds (2-10)",
+    resolution: {
+      type: "string",
+      valueHint: "<res>",
+      description: "Resolution: 720P or 1080P (default: 1080P)",
+    },
+    ratio: {
+      type: "string",
+      valueHint: "<ratio>",
+      description: "Aspect ratio (16:9, 9:16, 1:1, 4:3, 3:4)",
+    },
+    duration: {
       type: "number",
+      valueHint: "<seconds>",
+      description: "Output video duration in seconds (2-10)",
     },
-    {
-      flag: "--audio-setting <mode>",
+    audioSetting: {
+      type: "string",
+      valueHint: "<mode>",
       description: "Audio: auto (default) or origin (keep original)",
+      choices: ["auto", "origin"] as const,
     },
-    {
-      flag: "--prompt-extend <bool>",
+    promptExtend: {
+      type: "boolean",
+      valueHint: "<bool>",
       description: BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT,
     },
-    {
-      flag: "--watermark <bool>",
+    watermark: {
+      type: "boolean",
+      valueHint: "<bool>",
       description: BOOL_FLAG_WATERMARK,
     },
-    { flag: "--seed <n>", description: "Random seed for reproducible generation", type: "number" },
-    { flag: "--download <path>", description: "Save video to file on completion" },
-    { flag: "--no-wait", description: "Return task ID immediately without waiting" },
-    {
-      flag: "--async",
-      description: "Return task ID immediately (agent/CI mode, same as --no-wait)",
-    },
-    {
-      flag: "--poll-interval <seconds>",
-      description: "Polling interval when waiting (default: 15)",
+    seed: {
       type: "number",
+      valueHint: "<n>",
+      description: "Random seed for reproducible generation",
     },
-  ],
+    download: {
+      type: "string",
+      valueHint: "<path>",
+      description: "Save video to file on completion",
+    },
+    ...ASYNC_FLAG,
+    ...CONCURRENT_FLAG,
+    pollInterval: {
+      type: "number",
+      valueHint: "<seconds>",
+      description: "Polling interval when waiting (default: 15)",
+    },
+  },
   exampleArgs: [
     '--video https://example.com/input.mp4 --prompt "Convert the entire scene to claymation style"',
     '--video https://example.com/input.mp4 --prompt "Replace the outfit with the style shown in the image" --ref-image https://example.com/clothes.png',
     '--video https://example.com/input.mp4 --prompt "Convert to anime style" --resolution 720P --download output.mp4',
     '--video https://example.com/input.mp4 --prompt "Put clothes on the kitten in the video" --watermark false',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    // --- Validate video URL ---
-    let videoUrl = flags.video as string | undefined;
-    if (!videoUrl) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({ message: "Enter the video URL to edit:" });
-        if (!hint) {
-          process.stderr.write("Video editing cancelled.\n");
-          process.exit(1);
-        }
-        videoUrl = hint;
-      } else {
-        failIfMissing("video", cmdUsage(config, "--video <url> --prompt <text>"));
-      }
-    }
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const videoUrl = flags.video;
 
-    // --- Prompt ---
-    let prompt = flags.prompt as string | undefined;
-    if (!prompt) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({ message: "Enter your edit instruction:" });
-        if (!hint) {
-          process.stderr.write("Video editing cancelled.\n");
-          process.exit(1);
-        }
-        prompt = hint;
-      }
-      // prompt is optional for video edit per API spec
-    }
+    // prompt is optional for video edit per API spec
+    const prompt = flags.prompt;
 
-    const model = (flags.model as string) || "happyhorse-1.0-video-edit";
-    const format = detectOutputFormat(config.output);
+    const model = flags.model || "happyhorse-1.0-video-edit";
+    const format = detectOutputFormat(settings.output);
 
     // Auto-upload local files
-    const credential = await resolveCredential(config);
-    const resolvedVideoUrl = await resolveFileUrl(videoUrl!, credential.token, model);
+    const resolvedVideoUrl = await ctx.client.uploadFile(videoUrl, model);
     // --- Build media array ---
     const media: DashScopeVideoEditRequest["input"]["media"] = [
       { type: "video", url: resolvedVideoUrl },
     ];
 
     // Support comma-separated reference images
-    const refImageArg = flags.refImage as string | undefined;
+    const refImageArg = flags.refImage;
     if (refImageArg) {
       const images = refImageArg
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
       for (const imgUrl of images) {
-        const resolved = await resolveFileUrl(imgUrl, credential.token, model);
+        const resolved = await ctx.client.uploadFile(imgUrl, model);
         media.push({ type: "reference_image", url: resolved });
       }
     }
@@ -144,85 +145,98 @@ export default defineCommand({
       model,
       input: {
         prompt: prompt || undefined,
-        negative_prompt: (flags.negativePrompt as string) || undefined,
+        negative_prompt: flags.negativePrompt || undefined,
         media,
       },
       parameters: {
-        resolution: (flags.resolution as string) || undefined,
-        ratio: (flags.ratio as string) || undefined,
-        duration: (flags.duration as number) || undefined,
-        audio_setting: (flags.audioSetting as "auto" | "origin") || undefined,
+        resolution: flags.resolution || undefined,
+        ratio: flags.ratio || undefined,
+        duration: flags.duration || undefined,
+        audio_setting: flags.audioSetting || undefined,
         prompt_extend: promptExtend,
         watermark,
-        seed: flags.seed as number | undefined,
+        seed: flags.seed,
       },
     };
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ request: body }, format);
       return;
     }
 
-    // --- Submit async task ---
-    const url = videoGenerateEndpoint(config.baseUrl);
-    const response = await requestJson<DashScopeAsyncResponse>(config, {
-      url,
-      method: "POST",
-      body,
-      async: true,
-    });
+    const concurrent = getConcurrency(flags);
+    const responses = await runConcurrent(
+      concurrent,
+      settings,
+      () =>
+        ctx.client.requestJson<DashScopeAsyncResponse>({
+          path: videoGeneratePath(),
+          method: "POST",
+          body,
+          async: true,
+        }),
+      "tasks",
+    );
 
-    const taskId = response.output.task_id;
+    const taskIds = responses.map((r) => r.output.task_id);
 
-    if (!config.quiet) {
+    if (!settings.quiet) {
       process.stderr.write(`[Model: ${model}]\n`);
       process.stderr.write("Note: Video editing typically takes 5-8 minutes. Please be patient.\n");
     }
 
-    // --no-wait or --async: return task ID immediately
-    if (flags.noWait || config.async) {
-      emitResult({ task_id: taskId }, format);
+    // --async: return task ID(s) immediately
+    if (flags.async) {
+      emitResult(taskIds.length === 1 ? { task_id: taskIds[0] } : { task_ids: taskIds }, format);
       return;
     }
 
     // --- Poll until completion ---
     // Video editing is compute-intensive; default timeout = 600s (10 min)
-    const pollInterval = (flags.pollInterval as number) ?? 15;
-    const pollUrl = taskEndpoint(config.baseUrl, taskId);
-    const editTimeout = Math.max(config.timeout, 600);
+    const pollInterval = flags.pollInterval ?? 15;
+    const editTimeout = Math.max(settings.timeout, 600);
 
-    const result = await poll<DashScopeTaskResponse>(config, {
-      url: pollUrl,
-      intervalSec: pollInterval,
-      timeoutSec: editTimeout,
-      isComplete: (d) => (d as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
-      isFailed: (d) => (d as DashScopeTaskResponse).output.task_status === "FAILED",
-      getStatus: (d) => (d as DashScopeTaskResponse).output.task_status,
-      getErrorMessage: (d) => {
-        const o = (d as DashScopeTaskResponse).output;
-        return o.message || o.code || undefined;
-      },
-    });
+    const results = await Promise.all(
+      taskIds.map((taskId) =>
+        poll<DashScopeTaskResponse>(ctx.client, settings, {
+          url: ctx.client.url(taskPath(taskId)),
+          intervalSec: pollInterval,
+          timeoutSec: editTimeout,
+          isComplete: (d) => (d as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
+          isFailed: (d) => (d as DashScopeTaskResponse).output.task_status === "FAILED",
+          getStatus: (d) => (d as DashScopeTaskResponse).output.task_status,
+          getErrorMessage: (d) => {
+            const o = (d as DashScopeTaskResponse).output;
+            return o.message || o.code || undefined;
+          },
+        }),
+      ),
+    );
 
-    const resultVideoUrl =
-      result.output.video_url || (result.output.results && result.output.results[0]?.url);
+    const videos: Array<{ taskId: string; videoUrl: string }> = [];
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i]!;
+      const videoUrl =
+        result.output.video_url || (result.output.results && result.output.results[0]?.url);
+      if (videoUrl) videos.push({ taskId: taskIds[i]!, videoUrl });
+    }
 
-    if (!resultVideoUrl) {
-      throw new BailianError("Task completed but no video URL returned.", ExitCode.GENERAL);
+    if (videos.length === 0) {
+      throw new BailianError("All tasks completed but no video URLs returned.", ExitCode.GENERAL);
     }
 
     // --download: save to file
     if (flags.download) {
-      const destPath = flags.download as string;
-      const { size } = await downloadFile(resultVideoUrl, destPath, { quiet: config.quiet });
+      const destPath = flags.download;
+      const { size } = await downloadFile(videos[0]!.videoUrl, destPath, { quiet: settings.quiet });
 
-      if (config.quiet) {
+      if (settings.quiet) {
         emitBare(destPath);
       } else {
         emitResult(
           {
-            task_id: taskId,
-            video_url: resultVideoUrl,
+            task_id: videos[0]!.taskId,
+            video_url: videos[0]!.videoUrl,
             status: "SUCCEEDED",
             saved: destPath,
             size: formatBytes(size),
@@ -235,11 +249,20 @@ export default defineCommand({
 
     // Default: auto-download to output directory
     const path = await import("path");
-    const destDir = resolveOutputDir(config, { subDir: "videos" });
-    const destPath = path.join(destDir, `${taskId}.mp4`);
+    const destDir = resolveOutputDir(settings, { subDir: "videos" });
+    const saved: Array<{ task_id: string; video_url: string; saved: string }> = [];
+    await Promise.all(
+      videos.map(async ({ taskId, videoUrl }) => {
+        const destPath = path.join(destDir, `${taskId}.mp4`);
+        await downloadFile(videoUrl, destPath, { quiet: settings.quiet });
+        saved.push({ task_id: taskId, video_url: videoUrl, saved: destPath });
+      }),
+    );
 
-    await downloadFile(resultVideoUrl, destPath, { quiet: config.quiet });
-
-    emitResult({ task_id: taskId, video_url: resultVideoUrl, saved: destPath }, format);
+    if (saved.length === 1) {
+      emitResult(saved[0]!, format);
+    } else {
+      emitResult({ videos: saved, total: saved.length }, format);
+    }
   },
 });

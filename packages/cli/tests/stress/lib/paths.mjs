@@ -16,7 +16,22 @@ export const DEFAULT_CLI_PACKAGE = join(STRESS_ROOT, "..", "..");
 /** monorepo 根目录 */
 export const MONOREPO_ROOT = join(DEFAULT_CLI_PACKAGE, "..", "..");
 
-/** CLI 入口 main.ts（ts-node 或直接 node ts 由项目脚本决定） */
+/** CLI 入口 main.ts（由仓库本地 tsx 执行） */
 export function resolveMainTs(cliPackage = DEFAULT_CLI_PACKAGE) {
   return join(cliPackage, "src", "main.ts");
+}
+
+/** monorepo 本地 bin 路径，避免 `pnpm run` 生命周期日志污染 stdout */
+export function resolveLocalBin(name) {
+  return join(
+    MONOREPO_ROOT,
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? `${name}.cmd` : name,
+  );
+}
+
+/** tsx 可执行文件路径 */
+export function resolveTsxBin() {
+  return resolveLocalBin("tsx");
 }

@@ -1,41 +1,48 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  listDatasets,
-  type Config,
-  type GlobalFlags,
-} from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
-import { formatTable } from "bailian-cli-runtime";
+import { defineCommand, detectOutputFormat, listDatasets, type FlagsDef } from "bailian-cli-core";
+import { emitResult, emitBare, formatTable } from "bailian-cli-runtime";
+
+const LIST_FLAGS = {
+  page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
+  pageSize: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Results per page (default: 10, max 100)",
+  },
+  purpose: {
+    type: "string",
+    valueHint: "<name>",
+    description: 'Filter by purpose (e.g. "fine-tune", "evaluation"). Omit to list all.',
+  },
+} satisfies FlagsDef;
 
 export default defineCommand({
   description: "List uploaded dataset files",
+  auth: "apiKey",
   usageArgs: "[--page <n>] [--page-size <n>] [--purpose <name>]",
-  options: [
-    { flag: "--page <n>", description: "Page number (default: 1)", type: "number" },
-    {
-      flag: "--page-size <n>",
-      description: "Results per page (default: 10, max 100)",
-      type: "number",
-    },
-    {
-      flag: "--purpose <name>",
-      description: 'Filter by purpose (e.g. "fine-tune", "evaluation"). Omit to list all.',
-    },
-  ],
+  flags: LIST_FLAGS,
   exampleArgs: ["", "--purpose fine-tune", "--purpose evaluation --page-size 20", "--output json"],
-  async run(config: Config, flags: GlobalFlags) {
-    const format = detectOutputFormat(config.output);
-    const pageNo = flags.page !== undefined ? (flags.page as number) : undefined;
-    const pageSize = flags.pageSize !== undefined ? (flags.pageSize as number) : undefined;
-    const purpose = (flags.purpose as string | undefined) || undefined;
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
-      emitResult({ action: "dataset.list", page: pageNo, page_size: pageSize, purpose }, format);
+    if (settings.dryRun) {
+      emitResult(
+        {
+          action: "dataset.list",
+          page: flags.page,
+          page_size: flags.pageSize,
+          purpose: flags.purpose,
+        },
+        format,
+      );
       return;
     }
 
-    const response = await listDatasets(config, { pageNo, pageSize, purpose });
+    const response = await listDatasets(ctx.client, {
+      pageNo: flags.page,
+      pageSize: flags.pageSize,
+      purpose: flags.purpose || undefined,
+    });
     const files = response.data?.files ?? [];
     const total = response.data?.total;
 

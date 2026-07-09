@@ -78,7 +78,7 @@ export function parseImageResult(stdout) {
       const ids = data.task_ids ?? [data.task_id];
       return {
         ok: false,
-        error: `仅返回 task_id，未等待生成完成: ${ids.join(", ")}。请勿使用 --no-wait，或检查 ~/.bailian/config.json 是否开启 async`,
+        error: `仅返回 task_id，未等待生成完成: ${ids.join(", ")}。请勿使用 --async，或检查调用参数是否开启 async`,
       };
     }
     return { ok: false, error: "JSON 中无 urls / saved 字段（可能生成未完成）" };
@@ -169,7 +169,7 @@ export function parseVideoResult(stdout) {
       const ids = taskIds ?? [taskId];
       return {
         ok: false,
-        error: `仅返回 task_id，未等待生成完成: ${ids.join(", ")}。请勿使用 --no-wait，或检查 ~/.bailian/config.json 是否开启 async`,
+        error: `仅返回 task_id，未等待生成完成: ${ids.join(", ")}。请勿使用 --async，或检查调用参数是否开启 async`,
       };
     }
     return { ok: false, error: "JSON 中无 video_url / saved 字段（可能生成未完成）" };

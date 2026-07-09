@@ -107,29 +107,13 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
   });
 
   test("usage free --model 单模型文本输出包含表头", async () => {
-    const result = await runCli([
-      "usage",
-      "free",
-      "--model",
-      "qwen3-max",
-      "--output",
-      "text",
-      "--no-color",
-    ]);
+    const result = await runCli(["usage", "free", "--model", "qwen3-max", "--output", "text"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage free --model 文本输出包含模型名", async () => {
-    const result = await runCli([
-      "usage",
-      "free",
-      "--model",
-      "qwen3-max",
-      "--output",
-      "text",
-      "--no-color",
-    ]);
+    const result = await runCli(["usage", "free", "--model", "qwen3-max", "--output", "text"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
@@ -142,50 +126,25 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "qwen3-max,qwen-turbo",
       "--output",
       "text",
-      "--no-color",
     ]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage free --model 文本输出包含正确的 Type 列", async () => {
-    const result = await runCli([
-      "usage",
-      "free",
-      "--model",
-      "qwen3-max",
-      "--output",
-      "text",
-      "--no-color",
-    ]);
+    const result = await runCli(["usage", "free", "--model", "qwen3-max", "--output", "text"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage free --model quotaStatus 为 UNKNOWN 时 Auto-Stop 显示 Unsupported", async () => {
-    const result = await runCli([
-      "usage",
-      "free",
-      "--model",
-      "wan2.7-image",
-      "--output",
-      "text",
-      "--no-color",
-    ]);
+    const result = await runCli(["usage", "free", "--model", "wan2.7-image", "--output", "text"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage free --model quotaStatus 为 UNKNOWN 时额度显示为 -", async () => {
-    const result = await runCli([
-      "usage",
-      "free",
-      "--model",
-      "wan2.7-image",
-      "--output",
-      "text",
-      "--no-color",
-    ]);
+    const result = await runCli(["usage", "free", "--model", "wan2.7-image", "--output", "text"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
@@ -198,22 +157,13 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
       "nonexistent-model-xyz-12345",
       "--output",
       "text",
-      "--no-color",
     ]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage free --model Auto-Stop 显示 ON、OFF 或 Unsupported", async () => {
-    const result = await runCli([
-      "usage",
-      "free",
-      "--model",
-      "qwen3-max",
-      "--output",
-      "text",
-      "--no-color",
-    ]);
+    const result = await runCli(["usage", "free", "--model", "qwen3-max", "--output", "text"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });

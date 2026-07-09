@@ -1,3 +1,5 @@
+import type { AuthRequirement } from "../types/command.ts";
+
 export interface TrackingEvent {
   command: string;
   timestamp: string;
@@ -9,7 +11,7 @@ export interface TrackingEvent {
   cliVersion: string;
   nodeVersion: string;
   os: string;
-  authMethod?: string;
+  authMethod?: AuthRequirement;
   params?: Record<string, unknown>;
 }
 
@@ -19,7 +21,7 @@ export function createTrackingEvent(opts: {
   success: boolean;
   error?: { message?: string; httpStatus?: number; requestId?: string };
   cliVersion: string;
-  authMethod?: string;
+  authMethod?: AuthRequirement;
   params?: Record<string, unknown>;
 }): TrackingEvent {
   const event: TrackingEvent = {

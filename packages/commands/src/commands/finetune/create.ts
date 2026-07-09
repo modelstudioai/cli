@@ -15,23 +15,23 @@ import {
   formatIssue,
   BailianError,
   ExitCode,
-  type Config,
-  type GlobalFlags,
+  type Client,
+  type Settings,
   type CreateFineTuneRequest,
   type FineTuneHyperParameters,
   type DatasetFile,
   type DatasetSchema,
+  type FlagsDef,
 } from "bailian-cli-core";
 import { existsSync, statSync } from "fs";
 import { basename } from "path";
-import { failIfMissing, promptConfirm } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 /**
  * A `--datasets` / `--validations` token is treated as a local file to upload
  * when it resolves to an existing file on disk; otherwise it is forwarded
  * verbatim as a previously-uploaded file-id (the `file-xxx` shape returned by
- * `bl dataset upload`). This lets users skip the manual upload step:
+ * `dataset upload`). This lets users skip the manual upload step:
  * `--datasets ./train.jsonl` uploads then trains in one shot.
  */
 function isLocalPath(token: string): boolean {
@@ -63,7 +63,7 @@ interface ResolvedDataset {
 /**
  * Analyze a comma-separated `--datasets` / `--validations` value WITHOUT
  * uploading: bare file-ids pass through; local paths are validated through the
- * same pipeline as `bl dataset upload` (so structural errors surface here),
+ * same pipeline as `dataset upload` (so structural errors surface here),
  * their sample count and size are captured for the pre-submit gate, and the
  * path itself is recorded in `localPaths` for a later, deferred upload.
  *
@@ -73,7 +73,8 @@ interface ResolvedDataset {
  * validated (the preview never touches the network or the disk beyond stat).
  */
 async function analyzeDatasetTokens(
-  config: Config,
+  settings: Settings,
+  binName: string,
   raw: string,
   label: string,
   schema?: DatasetSchema,
@@ -106,9 +107,9 @@ async function analyzeDatasetTokens(
     fileIds.push(token);
     localPaths.push(token);
 
-    if (config.dryRun) continue;
+    if (settings.dryRun) continue;
 
-    // Local path → validate (same checks as `bl dataset upload`). Upload is
+    // Local path → validate (same checks as `dataset upload`). Upload is
     // deferred to `uploadResolvedLocal` so the gate can run first. The schema
     // (SFT vs DPO) is derived from --training-type so a DPO job validates the
     // chosen/rejected preference pairs here, not on the platform.
@@ -123,13 +124,13 @@ async function analyzeDatasetTokens(
       }
       lines.push(
         "",
-        "Hint: re-run `bl dataset validate --file <path>` for the full report,",
-        "      or upload manually with `bl dataset upload --no-validate` and",
+        `Hint: re-run \`${binName} dataset validate --file <path>\` for the full report,`,
+        `      or upload manually with \`${binName} dataset upload --no-validate\` and`,
         "      pass the resulting file-id here.",
       );
       throw new BailianError(lines.join("\n"), ExitCode.GENERAL);
     }
-    if (result.warnings.length > 0 && !config.quiet) {
+    if (result.warnings.length > 0 && !settings.quiet) {
       process.stderr.write(
         `Dataset validation passed with ${result.warnings.length} warning(s) for ${token}:\n`,
       );
@@ -162,12 +163,12 @@ async function analyzeDatasetTokens(
 /**
  * Upload each local path recorded in `resolved.localPaths`, swapping the
  * placeholder path entries in `resolved.fileIds` for the returned file-ids.
- * Returns the uploaded file records (for the confirmation panel). No-op in
- * dry-run. Validation already happened in `analyzeDatasetTokens`, so this is
- * pure upload.
+ * Returns the uploaded file records. No-op in dry-run. Validation already
+ * happened in `analyzeDatasetTokens`, so this is pure upload.
  */
 async function uploadResolvedLocal(
-  config: Config,
+  client: Client,
+  settings: Settings,
   resolved: ResolvedDataset,
   purpose: string,
   label: string,
@@ -175,7 +176,7 @@ async function uploadResolvedLocal(
   const uploaded: DatasetFile[] = [];
   for (const [index, token] of resolved.fileIds.entries()) {
     if (!isLocalPath(token)) continue;
-    const file: DatasetFile = await uploadDataset(config, { filePath: token, purpose });
+    const file: DatasetFile = await uploadDataset(client, { filePath: token, purpose });
     if (!file.file_id) {
       throw new BailianError(
         `Upload of ${token} succeeded but no file_id was returned.`,
@@ -184,7 +185,7 @@ async function uploadResolvedLocal(
     }
     uploaded.push(file);
     resolved.fileIds[index] = file.file_id;
-    if (!config.quiet) {
+    if (!settings.quiet) {
       process.stderr.write(
         `Uploaded ${basename(token)} → ${file.file_id} (auto from --${label})\n`,
       );
@@ -193,75 +194,83 @@ async function uploadResolvedLocal(
   return uploaded;
 }
 
+const CREATE_FLAGS = {
+  model: {
+    type: "string",
+    valueHint: "<model>",
+    description: "Base model to fine-tune (e.g. qwen3-8b, qwen3-14b)",
+    required: true,
+  },
+  datasets: {
+    type: "string",
+    valueHint: "<ids|paths>",
+    description:
+      "Comma-separated dataset file IDs or local .jsonl paths. Local paths are uploaded (validated) first, then their file-ids are used.",
+    required: true,
+  },
+  validations: {
+    type: "string",
+    valueHint: "<ids|paths>",
+    description:
+      "Comma-separated validation dataset file IDs or local .jsonl paths (auto-uploaded like --datasets).",
+  },
+  modelName: {
+    type: "string",
+    valueHint: "<name>",
+    description: "Output model name (after training)",
+  },
+  suffix: {
+    type: "string",
+    valueHint: "<text>",
+    description: "Output suffix appended by the platform (finetuned_output_suffix)",
+  },
+  trainingType: {
+    type: "string",
+    valueHint: "<t>",
+    description: `Training type: ${TRAINING_TYPES_CLI.join(" | ")} (default: ${DEFAULT_TRAINING_TYPE}). Mapping to the server happens at the interface boundary (e.g. sft-lora -> efficient_sft, dpo -> dpo_full).`,
+  },
+  nEpochs: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Number of epochs (default: 3)",
+  },
+  batchSize: {
+    type: "number",
+    valueHint: "<n>",
+    description:
+      "Per-device batch size (clamped to [8, 1024]). Auto-set to 8 for small datasets (<100KB)",
+  },
+  learningRate: {
+    type: "string",
+    valueHint: "<str>",
+    description: 'Learning rate as a string to preserve precision (e.g. "1.6e-5")',
+  },
+  maxLength: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Max sequence length",
+  },
+} satisfies FlagsDef;
+
 export default defineCommand({
   description: "Create a fine-tune job (sft | sft-lora | dpo | dpo-lora | cpt)",
+  auth: "apiKey",
   usageArgs:
-    "--model <model> --datasets <id|path,...> [--validations <id|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>] [--yes]",
-  options: [
-    {
-      flag: "--model <model>",
-      description: "Base model to fine-tune (e.g. qwen3-8b, qwen3-14b)",
-      required: true,
-    },
-    {
-      flag: "--datasets <ids|paths>",
-      description:
-        "Comma-separated dataset file IDs or local .jsonl paths. Local paths are uploaded (validated) first, then their file-ids are used.",
-      required: true,
-    },
-    {
-      flag: "--validations <ids|paths>",
-      description:
-        "Comma-separated validation dataset file IDs or local .jsonl paths (auto-uploaded like --datasets).",
-    },
-    {
-      flag: "--model-name <name>",
-      description: "Output model name (after training)",
-    },
-    {
-      flag: "--suffix <text>",
-      description: "Output suffix appended by the platform (finetuned_output_suffix)",
-    },
-    {
-      flag: "--training-type <t>",
-      description: `Training type: ${TRAINING_TYPES_CLI.join(" | ")} (default: ${DEFAULT_TRAINING_TYPE}). Mapping to the server happens at the interface boundary (e.g. sft-lora -> efficient_sft, dpo -> dpo_full).`,
-    },
-    {
-      flag: "--n-epochs <n>",
-      description: "Number of epochs (default: 3)",
-      type: "number",
-    },
-    {
-      flag: "--batch-size <n>",
-      description:
-        "Per-device batch size (clamped to [8, 1024]). Auto-set to 8 for small datasets (<100KB)",
-      type: "number",
-    },
-    {
-      flag: "--learning-rate <str>",
-      description: 'Learning rate as a string to preserve precision (e.g. "1.6e-5")',
-    },
-    {
-      flag: "--max-length <n>",
-      description: "Max sequence length",
-      type: "number",
-    },
-    {
-      flag: "--yes",
-      description: "Skip the confirmation prompt",
-      type: "boolean",
-    },
-  ],
+    "--model <model> --datasets <id|path,...> [--validations <id|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>]",
+  flags: CREATE_FLAGS,
   exampleArgs: [
     "--model qwen3-8b --datasets file-xxx",
     "--model qwen3-8b --datasets ./train.jsonl",
     "--model qwen3-8b --datasets ./train.jsonl --validations ./eval.jsonl",
     "--model qwen3-8b --datasets file-aaa,./extra.jsonl",
     "--model qwen3-8b --datasets ./train.jsonl --training-type sft",
-    'bl finetune create --model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4',
-    "--model qwen3-8b --datasets file-xxx --yes --output json",
+    '--model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4',
+    "--model qwen3-8b --datasets file-xxx --output json",
+    "--model qwen3-8b --datasets file-xxx --dry-run",
   ],
   notes: [
+    "Creating a job uploads any local datasets and consumes training quota.",
+    "Use --dry-run to preview the request body without submitting.",
     "Training-type values use the `<method>` / `<method>-lora` convention:",
     "sft (full) | sft-lora (LoRA) | dpo (full) | dpo-lora (LoRA) | cpt. These map",
     "to the server's training_type at the interface boundary, so the rest of the",
@@ -271,27 +280,25 @@ export default defineCommand({
     "training type fails fast with the list the model actually supports.",
     "n_epochs defaults to 3. Other hyper-parameters are platform defaults unless set.",
     "Learning rate is forwarded as a string to avoid JSON-number precision loss.",
-    "--datasets / --validations accept either file-ids (from `bl dataset",
-    "upload`) or local .jsonl paths. Local paths are validated and uploaded",
-    "first, then their file-ids are submitted — a one-step upload-and-train.",
+    "--datasets / --validations accept either file-ids (from `dataset upload`)",
+    "or local .jsonl paths. Local paths are validated and uploaded first, then",
+    "their file-ids are submitted — a one-step upload-and-train.",
     "Dataset record schema is chosen from --training-type: dpo* → {messages,",
     "chosen, rejected}; cpt → {text} (raw pre-training text); else {messages}.",
     "Pre-submit gate: if the training dataset's sample count is not greater",
     "than batch_size, the job is rejected before upload or quota consumption",
     "(the platform would otherwise fail ~10 min in, after data processing).",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const model = flags.model as string | undefined;
-    if (!model) failIfMissing("model", "bl finetune create --model <model>");
-
-    const datasetsRaw = flags.datasets as string | undefined;
-    if (!datasetsRaw) failIfMissing("datasets", "bl finetune create --datasets <ids|paths>");
+  async run(ctx) {
+    const { identity, settings, flags } = ctx;
+    const model = flags.model;
+    const datasetsRaw = flags.datasets;
 
     // Resolve the training type before analyzing datasets so the validator can
     // enforce the right record schema (DPO jobs require chosen/rejected on
     // every record). Whitelist is the single source of truth in core
     // (TRAINING_TYPES_CLI); any other value is rejected up-front.
-    const trainingType = (flags.trainingType as string | undefined) || DEFAULT_TRAINING_TYPE;
+    const trainingType = flags.trainingType || DEFAULT_TRAINING_TYPE;
     if (!isTrainingTypeCli(trainingType)) {
       throw new BailianError(
         `--training-type "${trainingType}" is not supported.`,
@@ -307,36 +314,47 @@ export default defineCommand({
         ? "cpt"
         : "chatml";
 
-    const training = await analyzeDatasetTokens(config, datasetsRaw!, "datasets", datasetSchema);
+    const training = await analyzeDatasetTokens(
+      settings,
+      identity.binName,
+      datasetsRaw,
+      "datasets",
+      datasetSchema,
+    );
     const trainingFileIds = training.fileIds;
 
-    const validationsRaw = flags.validations as string | undefined;
-    const validation = validationsRaw
-      ? await analyzeDatasetTokens(config, validationsRaw, "validations", datasetSchema)
+    const validation = flags.validations
+      ? await analyzeDatasetTokens(
+          settings,
+          identity.binName,
+          flags.validations,
+          "validations",
+          datasetSchema,
+        )
       : undefined;
     const validationFileIds = validation?.fileIds;
 
-    const modelName = flags.modelName as string | undefined;
-    const suffix = flags.suffix as string | undefined;
+    const modelName = flags.modelName;
+    const suffix = flags.suffix;
 
     // Hyper-parameters: inject n_epochs=3 default unless overridden.
     const hp: FineTuneHyperParameters = {};
-    hp.n_epochs = flags.nEpochs !== undefined ? (flags.nEpochs as number) : 3;
-    if (flags.learningRate !== undefined) hp.learning_rate = flags.learningRate as string;
-    if (flags.maxLength !== undefined) hp.max_length = flags.maxLength as number;
+    hp.n_epochs = flags.nEpochs ?? 3;
+    if (flags.learningRate !== undefined) hp.learning_rate = flags.learningRate;
+    if (flags.maxLength !== undefined) hp.max_length = flags.maxLength;
 
     // batch_size: clamp to [8, 1024] (server hard constraint, undocumented).
     // Surface the clamp on stderr instead of silently rewriting the user's
-    // value — otherwise the confirmation panel below would show a number the
-    // user never typed, with no audit trail. (Range observed on common SFT
-    // / SFT-LoRA training types; some bases like qwen3.6-flash report a wider
-    // range, so the warning explicitly mentions "server range".)
+    // value — otherwise the submitted body would carry a number the user never
+    // typed, with no audit trail. (Range observed on common SFT / SFT-LoRA
+    // training types; some bases like qwen3.6-flash report a wider range, so
+    // the warning explicitly mentions "server range".)
     if (flags.batchSize !== undefined) {
-      const requested = flags.batchSize as number;
+      const requested = flags.batchSize;
       let batchSize = requested;
       if (batchSize < 8) batchSize = 8;
       if (batchSize > 1024) batchSize = 1024;
-      if (batchSize !== requested && !config.quiet) {
+      if (batchSize !== requested && !settings.quiet) {
         process.stderr.write(
           `warning: --batch-size ${requested} clamped to ${batchSize} ` +
             `(server range [8, 1024] for the common training types).\n`,
@@ -351,12 +369,11 @@ export default defineCommand({
     // Files < 100KB are conservatively estimated to have < 200 rows.
     // If the first file was just uploaded we already hold its size; otherwise
     // fall back to getDataset.
-    let batchSizeAutoAdjusted = false;
-    if (hp.batch_size === undefined && !config.dryRun) {
+    if (hp.batch_size === undefined && !settings.dryRun) {
       let sizeBytes = training.firstSize ?? 0;
       if (sizeBytes === 0) {
         try {
-          const fileInfo = await getDataset(config, trainingFileIds[0]);
+          const fileInfo = await getDataset(ctx.client, trainingFileIds[0]);
           sizeBytes = fileInfo.data?.size ?? 0;
         } catch {
           // If we can't fetch file info, skip auto-adjustment; platform will use default.
@@ -364,7 +381,6 @@ export default defineCommand({
       }
       if (sizeBytes > 0 && sizeBytes < 100 * 1024) {
         hp.batch_size = 8;
-        batchSizeAutoAdjusted = true;
       }
     }
 
@@ -378,9 +394,9 @@ export default defineCommand({
     // The decision lives in core (`preflightBatchSizeGate`) — a structured,
     // job-level pre-flight that returns a `ValidationIssue` (same shape / stable
     // code as `validateDataset`) so the failure surfaces through the same
-    // `BailianError` + issue convention used by `bl dataset upload`/`validate`.
+    // `BailianError` + issue convention used by `dataset upload`/`validate`.
     // ExitCode.GENERAL matches the existing validation-failed exit code.
-    if (!config.dryRun && training.recordCount !== undefined) {
+    if (!settings.dryRun && training.recordCount !== undefined) {
       // 16 is the platform default when neither the user nor the small-file
       // auto-adjust set a batch_size (see the auto-adjust comment above).
       const effectiveBatchSize = hp.batch_size ?? 16;
@@ -399,12 +415,12 @@ export default defineCommand({
     // be trained against. listFoundationModels is a public API (no console
     // login required); on lookup failure (network / 401 / etc.) we fall back
     // to letting the server decide rather than blocking the submit.
-    if (!config.dryRun) {
+    if (!settings.dryRun) {
       let capability: Awaited<ReturnType<typeof fetchModelCapability>> | undefined;
       try {
-        capability = await fetchModelCapability(config, model!);
+        capability = await fetchModelCapability(settings, model);
       } catch (error) {
-        if (!config.quiet) {
+        if (!settings.quiet) {
           process.stderr.write(
             `warning: model capability lookup failed (${(error as Error).message}); ` +
               "proceeding without local pre-flight.\n",
@@ -423,36 +439,19 @@ export default defineCommand({
       }
     }
 
-    // Non-interactive guard — moved BEFORE upload. In CI / scripted mode the
-    // user must opt in via --yes; otherwise we must not silently consume quota
-    // OR upload any file. (Local validation is still allowed to run.)
-    if (!config.dryRun && !flags.yes && config.nonInteractive) {
-      throw new BailianError(
-        "Pass --yes to confirm fine-tune creation in non-interactive mode.",
-        ExitCode.USAGE,
-      );
-    }
-
     // Upload local paths now that pre-flight (validation, batch-size gate,
-    // capability check, non-interactive guard) has cleared them. This swaps
-    // the placeholder path entries in `training.fileIds` / `validation?.fileIds`
-    // for real file-ids, so the body and confirmation panel below see ids.
-    let uploadedTraining: DatasetFile[] = [];
-    let uploadedValidation: DatasetFile[] = [];
-    if (!config.dryRun) {
-      uploadedTraining = await uploadResolvedLocal(config, training, "fine-tune", "datasets");
+    // capability check) has cleared them. This swaps the
+    // placeholder path entries in `training.fileIds` / `validation?.fileIds`
+    // for real file-ids, so the body below sees ids.
+    if (!settings.dryRun) {
+      await uploadResolvedLocal(ctx.client, settings, training, "fine-tune", "datasets");
       if (validation) {
-        uploadedValidation = await uploadResolvedLocal(
-          config,
-          validation,
-          "fine-tune",
-          "validations",
-        );
+        await uploadResolvedLocal(ctx.client, settings, validation, "fine-tune", "validations");
       }
     }
 
     const body: CreateFineTuneRequest = {
-      model: model!,
+      model,
       training_file_ids: trainingFileIds,
       // Map the CLI training type to the server value at the interface boundary.
       training_type: toServerTrainingType(trainingType),
@@ -464,9 +463,9 @@ export default defineCommand({
     if (modelName) body.model_name = modelName;
     if (suffix) body.finetuned_output_suffix = suffix;
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       const pending = [
         ...training.localPaths.map((path) => ({ field: "datasets", path })),
         ...(validation?.localPaths ?? []).map((path) => ({ field: "validations", path })),
@@ -480,45 +479,12 @@ export default defineCommand({
       return;
     }
 
-    // Confirmation panel — destructive in the sense that it consumes quota.
-    // (Capability check and non-interactive guard already ran pre-upload.)
-    if (!flags.yes && !config.nonInteractive && !config.quiet) {
-      process.stderr.write("Create fine-tune job:\n");
-      process.stderr.write(`  Model:          ${body.model}\n`);
-      process.stderr.write(`  Training type:  ${trainingType}\n`);
-      process.stderr.write(`  Training files: ${trainingFileIds.join(", ")}\n`);
-      if (validationFileIds) {
-        process.stderr.write(`  Validation:     ${validationFileIds.join(", ")}\n`);
-      }
-      for (const file of uploadedTraining) {
-        process.stderr.write(`  Uploaded:       ${file.name} → ${file.file_id}\n`);
-      }
-      for (const file of uploadedValidation) {
-        process.stderr.write(`  Uploaded:       ${file.name} → ${file.file_id} (validation)\n`);
-      }
-      process.stderr.write(`  n_epochs:       ${hp.n_epochs}\n`);
-      if (hp.batch_size !== undefined) {
-        const hint = batchSizeAutoAdjusted ? " (auto: small dataset)" : "";
-        process.stderr.write(`  batch_size:     ${hp.batch_size}${hint}\n`);
-      }
-      if (hp.learning_rate !== undefined)
-        process.stderr.write(`  learning_rate:  ${hp.learning_rate}\n`);
-      if (hp.max_length !== undefined) process.stderr.write(`  max_length:     ${hp.max_length}\n`);
-      if (modelName) process.stderr.write(`  model_name:     ${modelName}\n`);
-      if (suffix) process.stderr.write(`  suffix:         ${suffix}\n`);
-      const ok = await promptConfirm({ message: "Submit this job?", initialValue: false });
-      if (!ok) {
-        emitBare("Cancelled.");
-        return;
-      }
-    }
-
-    const response = await createFineTune(config, body);
+    const response = await createFineTune(ctx.client, body);
     const job = response.output ?? response.data;
 
-    if (config.quiet) {
+    if (settings.quiet) {
       if (job?.job_id) emitBare(job.job_id);
-    } else if (format === "rich") {
+    } else if (format === "text") {
       if (job?.job_id) {
         emitBare(`Created fine-tune job: ${job.job_id}`);
         if (job.status) emitBare(`Status: ${job.status}`);

@@ -21,12 +21,14 @@ Index: [index.md](index.md)
 | **Description** | Upload a local file to DashScope temporary storage (48h) |
 | **Usage**       | `bl file upload --file <path> --model <model>`           |
 
-#### Options
+#### Flags
 
-| Flag              | Type   | Required | Description                                     |
-| ----------------- | ------ | -------- | ----------------------------------------------- |
-| `--file <path>`   | string | yes      | Local file to upload (image, video, audio)      |
-| `--model <model>` | string | yes      | Target model name (file is bound to this model) |
+| Flag               | Type   | Required | Description                                     |
+| ------------------ | ------ | -------- | ----------------------------------------------- |
+| `--file <path>`    | string | yes      | Local file to upload (image, video, audio)      |
+| `--model <model>`  | string | yes      | Target model name (file is bound to this model) |
+| `--api-key <key>`  | string | no       | API key                                         |
+| `--base-url <url>` | string | no       | API base URL                                    |
 
 #### Examples
 

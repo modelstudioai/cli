@@ -1,4 +1,4 @@
-import type { Config } from "../config/schema.ts";
+import type { Settings } from "../config/schema.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 
@@ -35,8 +35,13 @@ function resolveGateway(region: string, site: ConsoleSite): ConsoleGatewayInfo {
   return REGION_GATEWAYS[region]?.[site] ?? REGION_GATEWAYS["cn-beijing"]![site];
 }
 
-/** Resolved console gateway settings (same defaults as {@link callConsoleGateway}). */
-export function effectiveConsoleGatewayConfig(config: Config): {
+/**
+ * Resolved console gateway settings (same defaults as {@link callConsoleGateway}).
+ * 参数只需 settings 的 console 三元组;dry-run 展示分支直接传 settings。
+ */
+export function effectiveConsoleGatewayConfig(
+  config: Pick<Settings, "consoleRegion" | "consoleSite" | "consoleSwitchAgent">,
+): {
   consoleRegion: string;
   consoleSite: ConsoleSite;
   consoleSwitchAgent?: number;
@@ -53,12 +58,6 @@ export interface ConsoleGatewayRequest {
   /** Console API name, e.g. zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota */
   api: string;
   data: Record<string, unknown>;
-  /** Console region (e.g. cn-beijing, ap-southeast-1). Falls back to config.consoleRegion, then "cn-beijing". */
-  region?: string;
-  /** Console site. Falls back to config.consoleSite, then "domestic". */
-  site?: ConsoleSite;
-  /** Switch-agent UID for delegated access. Falls back to config.consoleSwitchAgent. */
-  switchAgent?: number;
 }
 
 function buildGatewayParams(
@@ -87,37 +86,34 @@ function buildGatewayParams(
 
 /**
  * Invoke a Bailian **console** OpenAPI via the CLI gateway (`/cli/api.json`).
- * `token` is the console `access_token` (from `bl auth login --console`); when
- * omitted the request is sent without an Authorization header, which works for
- * public console APIs that don't require a login session.
- *
- * Gateway URL and action are resolved from `region + site` via {@link REGION_GATEWAYS}.
- * Each parameter falls back to the corresponding config value, then to a hardcoded default.
+ * 目标(region/site/switchAgent)与 token 均由调用方解析后传入:Client.console 传
+ * ConsoleCredential;公共目录类 API(如 advisor 的模型目录)可不带 token 匿名调用。
  */
+export interface ConsoleGatewayTarget {
+  region: string;
+  site: ConsoleSite;
+  switchAgent?: number;
+  token?: string;
+}
+
 export async function callConsoleGateway(
-  config: Config,
-  token: string | undefined,
+  target: ConsoleGatewayTarget,
+  timeoutSec: number,
   { api, data }: ConsoleGatewayRequest,
 ): Promise<unknown> {
-  const {
-    consoleRegion: effectiveRegion,
-    consoleSite: effectiveSite,
-    consoleSwitchAgent: effectiveSwitchAgent,
-  } = effectiveConsoleGatewayConfig(config);
-
-  const resolved = resolveGateway(effectiveRegion, effectiveSite);
+  const resolved = resolveGateway(target.region, target.site);
   const gatewayBase = `https://${resolved.csGateway}`;
   const action = resolved.action;
 
-  const params = buildGatewayParams(api, data, effectiveSwitchAgent);
-  const body = new URLSearchParams({ params, region: effectiveRegion });
-  const timeoutMs = config.timeout * 1000;
+  const params = buildGatewayParams(api, data, target.switchAgent);
+  const body = new URLSearchParams({ params, region: target.region });
+  const timeoutMs = timeoutSec * 1000;
 
   const headers: Record<string, string> = {
     Accept: "*/*",
     "Content-Type": "application/x-www-form-urlencoded",
   };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (target.token) headers.Authorization = `Bearer ${target.token}`;
 
   const res = await fetch(
     `${gatewayBase}/cli/api.json?action=${action}&product=${GATEWAY_PRODUCT}&api=${encodeURIComponent(api)}`,

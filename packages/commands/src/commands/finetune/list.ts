@@ -1,41 +1,39 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  listFineTunes,
-  type Config,
-  type GlobalFlags,
-} from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
-import { formatTable } from "bailian-cli-runtime";
+import { defineCommand, detectOutputFormat, listFineTunes, type FlagsDef } from "bailian-cli-core";
+import { emitResult, emitBare, formatTable } from "bailian-cli-runtime";
+
+const LIST_FLAGS = {
+  page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
+  pageSize: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Results per page (default: 10, max 100)",
+  },
+  status: {
+    type: "string",
+    valueHint: "<s>",
+    description: "Filter by status (PENDING / RUNNING / SUCCEEDED / FAILED / CANCELED)",
+  },
+} satisfies FlagsDef;
 
 export default defineCommand({
   description: "List fine-tune jobs",
+  auth: "apiKey",
   usageArgs: "[--page <n>] [--page-size <n>] [--status <s>]",
-  options: [
-    { flag: "--page <n>", description: "Page number (default: 1)", type: "number" },
-    {
-      flag: "--page-size <n>",
-      description: "Results per page (default: 10, max 100)",
-      type: "number",
-    },
-    {
-      flag: "--status <s>",
-      description: "Filter by status (PENDING / RUNNING / SUCCEEDED / FAILED / CANCELED)",
-    },
-  ],
+  flags: LIST_FLAGS,
   exampleArgs: ["", "--status RUNNING", "--page-size 20 --output json"],
-  async run(config: Config, flags: GlobalFlags) {
-    const format = detectOutputFormat(config.output);
-    const pageNo = flags.page !== undefined ? (flags.page as number) : undefined;
-    const pageSize = flags.pageSize !== undefined ? (flags.pageSize as number) : undefined;
-    const status = (flags.status as string | undefined) || undefined;
+  async run(ctx) {
+    const { identity, settings, flags } = ctx;
+    const format = detectOutputFormat(settings.output);
+    const pageNo = flags.page;
+    const pageSize = flags.pageSize;
+    const status = flags.status || undefined;
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ action: "finetune.list", page: pageNo, page_size: pageSize, status }, format);
       return;
     }
 
-    const response = await listFineTunes(config, { pageNo, pageSize, status });
+    const response = await listFineTunes(ctx.client, { pageNo, pageSize, status });
     const payload = response.output ?? response.data;
     const jobs = payload?.jobs ?? [];
     const total = payload?.total;
@@ -77,6 +75,6 @@ export default defineCommand({
     ]);
     for (const line of formatTable(headers, rows)) emitBare(line);
     if (total !== undefined) emitBare(`\nTotal: ${total}`);
-    emitBare("Tip: OUTPUT_MODEL is the input for `bl deploy create --model`");
+    emitBare(`Tip: OUTPUT_MODEL is the input for \`${identity.binName} deploy create --model\``);
   },
 });

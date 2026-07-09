@@ -1,8 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { getConfigDir } from "../config/paths.ts";
-import type { Config } from "../config/schema.ts";
-import { requestJson } from "../client/http.ts";
+import type { Client } from "../client/client.ts";
 import type { ModelProfile } from "./types.ts";
 
 const EMBEDDING_MODEL = "text-embedding-v4";
@@ -41,8 +40,8 @@ export function loadModelEmbeddings(): ModelEmbedding[] | null {
   }
 }
 
-export async function embedQuery(config: Config, text: string): Promise<number[]> {
-  const url = `${config.baseUrl}/compatible-mode/v1/embeddings`;
+export async function embedQuery(client: Client, text: string): Promise<number[]> {
+  const url = "/compatible-mode/v1/embeddings";
   const body = {
     model: EMBEDDING_MODEL,
     input: [text],
@@ -50,15 +49,15 @@ export async function embedQuery(config: Config, text: string): Promise<number[]
     encoding_format: "float",
   };
 
-  const response = await requestJson<{
+  const response = await client.requestJson<{
     data: { index: number; embedding: number[] }[];
-  }>(config, { url, method: "POST", body, timeout: 10000 });
+  }>({ path: url, method: "POST", body, timeout: 10000 });
 
   return response.data[0].embedding;
 }
 
-async function embedBatch(config: Config, texts: string[]): Promise<number[][]> {
-  const url = `${config.baseUrl}/compatible-mode/v1/embeddings`;
+async function embedBatch(client: Client, texts: string[]): Promise<number[][]> {
+  const url = "/compatible-mode/v1/embeddings";
   const body = {
     model: EMBEDDING_MODEL,
     input: texts,
@@ -66,9 +65,9 @@ async function embedBatch(config: Config, texts: string[]): Promise<number[][]> 
     encoding_format: "float",
   };
 
-  const response = await requestJson<{
+  const response = await client.requestJson<{
     data: { index: number; embedding: number[] }[];
-  }>(config, { url, method: "POST", body, timeout: 30000 });
+  }>({ path: url, method: "POST", body, timeout: 30000 });
 
   return response.data
     .sort((left, right) => left.index - right.index)
@@ -147,7 +146,7 @@ function buildModelText(model: ModelProfile, descriptions: Map<string, string>):
 }
 
 export async function buildAndCacheEmbeddings(
-  config: Config,
+  client: Client,
   models: ModelProfile[],
 ): Promise<ModelEmbedding[]> {
   const descriptions = loadGroupDescriptions();
@@ -156,7 +155,7 @@ export async function buildAndCacheEmbeddings(
   const allVectors: number[][] = [];
   for (let batchStart = 0; batchStart < texts.length; batchStart += BATCH_SIZE) {
     const batch = texts.slice(batchStart, batchStart + BATCH_SIZE);
-    const vectors = await embedBatch(config, batch);
+    const vectors = await embedBatch(client, batch);
     allVectors.push(...vectors);
   }
 

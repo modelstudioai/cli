@@ -115,19 +115,18 @@ pnpm run test:stress -- video-edit --reuse-fixtures -- --count 3
 
 ### 子进程调用方式
 
-- **实际执行**：`node packages/cli/src/main.ts <args>`，`cwd` 为 `packages/cli`
+- **实际执行**：仓库本地 `tsx src/main.ts <args>`，`cwd` 为 `packages/cli`
 - **禁止**用 `pnpm run dev` 跑子任务：`pnpm` 会向 stdout 打生命周期日志，污染 JSON 解析
 - **报告中的「完整命令」**：用 `pnpm run dev ...` 展示（`buildDisplayCommand`）
 
 ### 必须带的 CLI 参数（通用）
 
-- `--non-interactive`
 - 除 `speech recognize` 外，压测子进程宜带 `--output json`（语音识别以 `--out` 文件为准 stdout 可能为纯文本）
 - 异步类命令带 `--timeout`、对应 `--poll-interval`
 
 **禁止**对子进程加 `--quiet`（与 `--output json` 并存时可能丢 `urls` / `video_url`）。
 
-**禁止**对视频相关子进程加 `--no-wait`；须阻塞到任务完成（及下载路径正确时落盘）。
+**禁止**对视频相关子进程加 `--async`；须阻塞到任务完成（及下载路径正确时落盘）。
 
 ### 成功 / 失败判定（概要）
 
@@ -192,8 +191,8 @@ pnpm run test:stress -- video-edit --reuse-fixtures -- --count 3
 ### 只改压测脚本时
 
 - [ ] `lib/paths.mjs` 解析的 `CLI_PACKAGE` / `MONOREPO_ROOT` 仍正确
-- [ ] 子进程仍为 `node` + `src/main.ts`，未改回裸 `pnpm run dev` 执行任务
-- [ ] 未对子进程加 `--quiet`，视频未加 `--no-wait`
+- [ ] 子进程仍为仓库本地 `tsx` + `src/main.ts`，未改回裸 `pnpm run dev` 执行任务
+- [ ] 未对子进程加 `--quiet`，视频未加 `--async`
 - [ ] `parsers.mjs` 与文档中的成功判定一致
 - [ ] 根 `package.json` 仅保留 `test:stress` 入口指向 `run.mjs`
 - [ ] `node --check` 对相关 `.mjs` 通过，`pnpm run test:stress -- list` 可运行

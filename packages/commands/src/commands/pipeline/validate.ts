@@ -1,24 +1,26 @@
 import { resolve } from "node:path";
-import { defineCommand, type Config, type GlobalFlags } from "bailian-cli-core";
-import { emitResult, cmdUsage } from "bailian-cli-runtime";
+import { defineCommand } from "bailian-cli-core";
+import { emitResult } from "bailian-cli-runtime";
 import { initPipelineSteps } from "bailian-cli-runtime";
 import { collectPipelineIssues, collectPipelineHints } from "bailian-cli-runtime";
 import { loadPipelineFile } from "./load-file.ts";
 
 export default defineCommand({
   description: "Validate a pipeline definition without executing",
-  skipDefaultApiKeySetup: true,
-  usageArgs: "<file>",
-  options: [],
-  exampleArgs: ["workflow.yaml", "workflow.json --output json"],
-  async run(config: Config, flags: GlobalFlags) {
-    const file = ((flags._positional as string[] | undefined) ?? [])[0] as string | undefined;
-    if (!file) {
-      process.stderr.write(
-        `Error: pipeline file is required\nUsage: ${cmdUsage(config, "<file>")}\n`,
-      );
-      process.exit(2);
-    }
+  auth: "none",
+  usageArgs: "--file <path>",
+  flags: {
+    file: {
+      type: "string",
+      valueHint: "<path>",
+      description: "Pipeline definition file (YAML/JSON)",
+      required: true,
+    },
+  },
+  exampleArgs: ["--file workflow.yaml", "--file workflow.json --output json"],
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const file = flags.file;
 
     initPipelineSteps();
 
@@ -27,7 +29,7 @@ export default defineCommand({
     const issues = collectPipelineIssues(pipeline);
     const hints = issues.length === 0 ? collectPipelineHints(pipeline) : [];
 
-    if (config.output === "json") {
+    if (settings.output === "json") {
       emitResult(
         { valid: issues.length === 0, issues, ...(hints.length > 0 ? { hints } : {}) },
         "json",

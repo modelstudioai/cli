@@ -22,7 +22,6 @@ describe("e2e: quota", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("--model");
     expect(stderr).toContain("--tpm");
-    expect(stderr).toContain("--yes");
   });
 
   test("quota history --help 正常退出", async () => {
@@ -42,7 +41,7 @@ describe("e2e: quota", () => {
 
   test("quota check --period 0 报错最小值", async () => {
     const { stderr, exitCode } = await runCli(["quota", "check", "--period", "0.5"]);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(stderr).toContain("at least 1 minute");
   });
 });
@@ -85,21 +84,13 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota list 文本输出包含英文表头", async () => {
-    const result = await runCli(["quota", "list", "--output", "rich", "--no-color"]);
+    const result = await runCli(["quota", "list", "--output", "text"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("quota list --model 指定模型返回结果", async () => {
-    const result = await runCli([
-      "quota",
-      "list",
-      "--model",
-      "qwen3.6-plus",
-      "--output",
-      "text",
-      "--no-color",
-    ]);
+    const result = await runCli(["quota", "list", "--model", "qwen3.6-plus", "--output", "text"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
@@ -149,7 +140,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   test("quota request TPM 超范围报错", async () => {
     const result = await runCli(["quota", "request", "--model", "qwen3.6-plus", "--tpm", "999"]);
     if (isConsoleAuthFailure(result)) return;
-    expect(result.exitCode).toBe(1);
+    expect(result.exitCode).toBe(2);
     expect(result.stderr).toContain("out of range");
     expect(result.stderr).toContain("Current");
     expect(result.stderr).toContain("Range");
@@ -209,7 +200,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
       "quota",
       "check",
       "--dry-run",
-      "--non-interactive",
       "--output",
       "json",
       "--console-region",
@@ -221,21 +211,13 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota check 文本输出包含英文表头", async () => {
-    const result = await runCli(["quota", "check", "--output", "rich", "--no-color"]);
+    const result = await runCli(["quota", "check", "--output", "text"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("quota check --model 指定单模型", async () => {
-    const result = await runCli([
-      "quota",
-      "check",
-      "--model",
-      "qwen3.6-plus",
-      "--output",
-      "text",
-      "--no-color",
-    ]);
+    const result = await runCli(["quota", "check", "--model", "qwen3.6-plus", "--output", "text"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
@@ -248,7 +230,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
       "qwen3.6-plus,qwen-plus",
       "--output",
       "text",
-      "--no-color",
     ]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);

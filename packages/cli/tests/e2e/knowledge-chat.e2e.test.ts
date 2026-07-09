@@ -31,32 +31,21 @@ describe("e2e: knowledge chat", () => {
     expect(stderr).toMatch(/--workspace-id/i);
   });
 
-  test("缺少 --message 时打印帮助并退出 (0)", async () => {
-    const { stderr, exitCode } = await runCli([
-      "knowledge",
-      "chat",
-      "--agent-id",
-      "aid_test",
-      "--non-interactive",
-    ]);
-    expect(exitCode).toBe(0);
+  test("缺少 --message 时报用法错误并退出 (2)", async () => {
+    const { stderr, exitCode } = await runCli(["knowledge", "chat", "--agent-id", "aid_test"]);
+    expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--message|Usage:/i);
   });
 
-  test("缺少 --agent-id 时打印帮助并退出 (0)", async () => {
-    const { stderr, exitCode } = await runCli([
-      "knowledge",
-      "chat",
-      "--message",
-      "Hello",
-      "--non-interactive",
-    ]);
-    expect(exitCode).toBe(0);
+  test("缺少 --agent-id 时报用法错误并退出 (2)", async () => {
+    const { stderr, exitCode } = await runCli(["knowledge", "chat", "--message", "Hello"]);
+    expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--agent-id|Usage:/i);
   });
 
   test("缺少 --workspace-id 时非零退出并提示", async () => {
     const { stderr, exitCode } = await runCli(
+      // 假 key + 隔离配置目录:避免本机 config 的 workspace_id/api_key 漏入
       [
         "knowledge",
         "chat",
@@ -64,11 +53,12 @@ describe("e2e: knowledge chat", () => {
         "Hello",
         "--agent-id",
         "aid_test",
-        "--non-interactive",
+        "--api-key",
+        "sk-fake",
         "--output",
         "json",
       ],
-      { BAILIAN_WORKSPACE_ID: "" },
+      { BAILIAN_WORKSPACE_ID: "", BAILIAN_CONFIG_DIR: "/tmp" },
     );
     expect(exitCode).not.toBe(0);
     expect(stderr).toMatch(/workspace.*required/i);
@@ -85,7 +75,6 @@ describe("e2e: knowledge chat", () => {
       "aid_test",
       "--workspace-id",
       "ws_test",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -113,7 +102,6 @@ describe("e2e: knowledge chat", () => {
       "aid_test",
       "--workspace-id",
       "ws_test",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -142,7 +130,6 @@ describe("e2e: knowledge chat", () => {
       "ws_test",
       "--image",
       "https://example.com/img.jpg",
-      "--non-interactive",
       "--output",
       "json",
     ]);
@@ -172,7 +159,6 @@ describe("e2e: knowledge chat", () => {
       "https://example.com/a.png",
       "--image",
       "https://example.com/b.png",
-      "--non-interactive",
       "--output",
       "json",
     ]);

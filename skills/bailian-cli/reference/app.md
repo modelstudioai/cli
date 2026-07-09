@@ -22,20 +22,22 @@ Index: [index.md](index.md)
 | **Description** | Call a Bailian application (agent or workflow)      |
 | **Usage**       | `bl app call --app-id <id> --prompt <text> [flags]` |
 
-#### Options
+#### Flags
 
-| Flag                   | Type    | Required | Description                                   |
-| ---------------------- | ------- | -------- | --------------------------------------------- |
-| `--app-id <id>`        | string  | yes      | Application ID (required)                     |
-| `--prompt <text>`      | string  | yes      | Input prompt text                             |
-| `--image <url>`        | array   | no       | Image URL(s) to pass to the app (repeatable)  |
-| `--file-id <id>`       | array   | no       | Pre-uploaded file ID(s) (repeatable)          |
-| `--session-id <id>`    | string  | no       | Session ID for multi-turn conversation        |
-| `--stream`             | boolean | no       | Stream response (default: on in TTY)          |
-| `--pipeline-ids <ids>` | string  | no       | Knowledge base pipeline IDs (comma-separated) |
-| `--memory-id <id>`     | string  | no       | Memory ID for long-term memory                |
-| `--biz-params <json>`  | string  | no       | Business parameters JSON (workflow variables) |
-| `--has-thoughts`       | boolean | no       | Show agent thinking process                   |
+| Flag                   | Type   | Required | Description                                   |
+| ---------------------- | ------ | -------- | --------------------------------------------- |
+| `--app-id <id>`        | string | yes      | Application ID (required)                     |
+| `--prompt <text>`      | string | yes      | Input prompt text                             |
+| `--image <url>`        | array  | no       | Image URL(s) to pass to the app (repeatable)  |
+| `--file-id <id>`       | array  | no       | Pre-uploaded file ID(s) (repeatable)          |
+| `--session-id <id>`    | string | no       | Session ID for multi-turn conversation        |
+| `--stream`             | switch | no       | Stream response (default: on in TTY)          |
+| `--pipeline-ids <ids>` | string | no       | Knowledge base pipeline IDs (comma-separated) |
+| `--memory-id <id>`     | string | no       | Memory ID for long-term memory                |
+| `--biz-params <json>`  | string | no       | Business parameters JSON (workflow variables) |
+| `--has-thoughts`       | switch | no       | Show agent thinking process                   |
+| `--api-key <key>`      | string | no       | API key                                       |
+| `--base-url <url>`     | string | no       | API base URL                                  |
 
 #### Examples
 
@@ -71,16 +73,17 @@ bl app call --app-id abc123 --prompt "Start" --biz-params '{"key":"value"}'
 | **Description** | List Bailian applications |
 | **Usage**       | `bl app list [flags]`     |
 
-#### Options
+#### Flags
 
-| Flag                           | Type   | Required | Description                           |
-| ------------------------------ | ------ | -------- | ------------------------------------- |
-| `--name <name>`                | string | no       | Filter by app name (keyword search)   |
-| `--page <n>`                   | number | no       | Page number (default: 1)              |
-| `--page-size <n>`              | number | no       | Results per page (default: 30)        |
-| `--console-region <region>`    | string | no       | Console region                        |
-| `--console-site <site>`        | string | no       | Console site: domestic, international |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID                      |
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--name <name>`                | string | no       | Filter by app name (keyword search)                      |
+| `--page <n>`                   | number | no       | Page number (default: 1)                                 |
+| `--page-size <n>`              | number | no       | Results per page (default: 30)                           |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
 
 #### Examples
 

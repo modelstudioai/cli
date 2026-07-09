@@ -1,88 +1,101 @@
 import {
   defineCommand,
-  requestJson,
-  videoGenerateEndpoint,
-  taskEndpoint,
+  videoGeneratePath,
+  taskPath,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type DashScopeVideoRefRequest,
   type DashScopeAsyncResponse,
   type DashScopeTaskResponse,
-  isInteractive,
   resolveOutputDir,
-  resolveFileUrl,
-  resolveCredential,
   BailianError,
   ExitCode,
   resolveBooleanFlag,
   resolveWatermark,
+  ASYNC_FLAG,
+  CONCURRENT_FLAG,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
-import { promptText, failIfMissing, cmdUsage } from "bailian-cli-runtime";
+import { runConcurrent, getConcurrency } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
 export default defineCommand({
   description:
     "Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice",
+  auth: "apiKey",
   usageArgs: "--prompt <text> --image <url>... [--ref-video <url>...] [flags]",
-  options: [
-    { flag: "--model <model>", description: "Model ID (default: happyhorse-1.1-r2v)" },
-    {
-      flag: "--prompt <text>",
+  flags: {
+    model: {
+      type: "string",
+      valueHint: "<model>",
+      description: "Model ID (default: happyhorse-1.1-r2v)",
+    },
+    prompt: {
+      type: "string",
+      valueHint: "<text>",
       description: "Video description with reference markers (image1, video1, etc.)",
       required: true,
     },
-    {
-      flag: "--image <url>",
+    image: {
+      type: "array",
+      valueHint: "<url>",
       description: "Reference image URL or local file (repeatable for multiple subjects)",
-      type: "array",
     },
-    {
-      flag: "--ref-video <url>",
+    refVideo: {
+      type: "array",
+      valueHint: "<url>",
       description: "Reference video URL or local file (repeatable)",
-      type: "array",
     },
-    {
-      flag: "--image-voice <url>",
+    imageVoice: {
+      type: "array",
+      valueHint: "<url>",
       description: "Voice URL for corresponding image (pairs by position)",
-      type: "array",
     },
-    {
-      flag: "--video-voice <url>",
+    videoVoice: {
+      type: "array",
+      valueHint: "<url>",
       description: "Voice URL for corresponding ref-video (pairs by position)",
-      type: "array",
     },
-    { flag: "--resolution <res>", description: "Resolution: 720P or 1080P (default: 1080P)" },
-    { flag: "--ratio <ratio>", description: "Aspect ratio (16:9, 9:16, 1:1)" },
-    {
-      flag: "--duration <seconds>",
-      description: "Video duration in seconds (default: 5)",
+    resolution: {
+      type: "string",
+      valueHint: "<res>",
+      description: "Resolution: 720P or 1080P (default: 1080P)",
+    },
+    ratio: { type: "string", valueHint: "<ratio>", description: "Aspect ratio (16:9, 9:16, 1:1)" },
+    duration: {
       type: "number",
+      valueHint: "<seconds>",
+      description: "Video duration in seconds (default: 5)",
     },
-    {
-      flag: "--prompt-extend <bool>",
+    promptExtend: {
+      type: "boolean",
+      valueHint: "<bool>",
       description: BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT,
     },
-    {
-      flag: "--watermark <bool>",
+    watermark: {
+      type: "boolean",
+      valueHint: "<bool>",
       description: BOOL_FLAG_WATERMARK,
     },
-    { flag: "--seed <n>", description: "Random seed for reproducible generation", type: "number" },
-    { flag: "--download <path>", description: "Save video to file on completion" },
-    { flag: "--no-wait", description: "Return task ID immediately without waiting" },
-    {
-      flag: "--async",
-      description: "Return task ID immediately (agent/CI mode, same as --no-wait)",
-    },
-    {
-      flag: "--poll-interval <seconds>",
-      description: "Polling interval when waiting (default: 15)",
+    seed: {
       type: "number",
+      valueHint: "<n>",
+      description: "Random seed for reproducible generation",
     },
-  ],
+    download: {
+      type: "string",
+      valueHint: "<path>",
+      description: "Save video to file on completion",
+    },
+    ...ASYNC_FLAG,
+    ...CONCURRENT_FLAG,
+    pollInterval: {
+      type: "number",
+      valueHint: "<seconds>",
+      description: "Polling interval when waiting (default: 15)",
+    },
+  },
   exampleArgs: [
     '--prompt "Image1 running on the grass" --image person.jpg',
     '--prompt "Video 1 plays guitar, Image 1 walks over" --ref-video scene.mp4 --image person.jpg',
@@ -90,48 +103,29 @@ export default defineCommand({
     '--prompt "Image 1 and Image 2 have a conversation" --image a.jpg --image b.jpg --image-voice va.mp3 --image-voice vb.mp3',
     '--prompt "Image 1 drinks water" --image person.jpg --watermark false',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    // --- Validate prompt ---
-    let prompt = flags.prompt as string | undefined;
-    if (!prompt) {
-      if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({
-          message: "Enter your video prompt (use Image1, Video1 to reference inputs):",
-        });
-        if (!hint) {
-          process.stderr.write("Video generation cancelled.\n");
-          process.exit(1);
-        }
-        prompt = hint;
-      } else {
-        failIfMissing("prompt", cmdUsage(config, "--prompt <text> --image <url>"));
-      }
-    }
+  validate: (f) =>
+    !(f.image as string[] | undefined)?.length && !(f.refVideo as string[] | undefined)?.length
+      ? "Provide at least one --image or --ref-video."
+      : undefined,
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const prompt = flags.prompt;
 
-    const images = (flags.image as string[] | undefined) || [];
-    const refVideos = (flags.refVideo as string[] | undefined) || [];
+    const images = flags.image || [];
+    const refVideos = flags.refVideo || [];
 
-    if (images.length === 0 && refVideos.length === 0) {
-      throw new BailianError(
-        "At least one --image or --ref-video is required.",
-        ExitCode.USAGE,
-        cmdUsage(config, '--prompt "description" --image person.jpg'),
-      );
-    }
+    const imageVoices = flags.imageVoice || [];
+    const videoVoices = flags.videoVoice || [];
 
-    const imageVoices = (flags.imageVoice as string[] | undefined) || [];
-    const videoVoices = (flags.videoVoice as string[] | undefined) || [];
-
-    const model = (flags.model as string) || "happyhorse-1.1-r2v";
-    const format = detectOutputFormat(config.output);
+    const model = flags.model || "happyhorse-1.1-r2v";
+    const format = detectOutputFormat(settings.output);
 
     // --- Resolve file URLs (auto-upload local files) ---
-    const credential = await resolveCredential(config);
     const media: DashScopeVideoRefRequest["input"]["media"] = [];
 
     // Add reference images
     for (let i = 0; i < images.length; i++) {
-      const resolved = await resolveFileUrl(images[i]!, credential.token, model);
+      const resolved = await ctx.client.uploadFile(images[i]!, model);
       const entry: DashScopeVideoRefRequest["input"]["media"][number] = {
         type: "reference_image",
         url: resolved,
@@ -139,7 +133,7 @@ export default defineCommand({
 
       // Pair voice by position
       if (imageVoices[i]) {
-        const resolvedVoice = await resolveFileUrl(imageVoices[i]!, credential.token, model);
+        const resolvedVoice = await ctx.client.uploadFile(imageVoices[i]!, model);
         entry.reference_voice = resolvedVoice;
       }
 
@@ -148,7 +142,7 @@ export default defineCommand({
 
     // Add reference videos
     for (let i = 0; i < refVideos.length; i++) {
-      const resolved = await resolveFileUrl(refVideos[i]!, credential.token, model);
+      const resolved = await ctx.client.uploadFile(refVideos[i]!, model);
       const entry: DashScopeVideoRefRequest["input"]["media"][number] = {
         type: "reference_video",
         url: resolved,
@@ -156,7 +150,7 @@ export default defineCommand({
 
       // Pair voice by position
       if (videoVoices[i]) {
-        const resolvedVoice = await resolveFileUrl(videoVoices[i]!, credential.token, model);
+        const resolvedVoice = await ctx.client.uploadFile(videoVoices[i]!, model);
         entry.reference_voice = resolvedVoice;
       }
 
@@ -170,85 +164,98 @@ export default defineCommand({
     const body: DashScopeVideoRefRequest = {
       model,
       input: {
-        prompt: prompt!,
+        prompt: prompt,
         media,
       },
       parameters: {
-        resolution: (flags.resolution as string) || undefined,
-        ratio: (flags.ratio as string) || undefined,
-        duration: (flags.duration as number) || undefined,
+        resolution: flags.resolution || undefined,
+        ratio: flags.ratio || undefined,
+        duration: flags.duration || undefined,
         prompt_extend: promptExtend,
         watermark,
-        seed: flags.seed as number | undefined,
+        seed: flags.seed,
       },
     };
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ request: body }, format);
       return;
     }
 
-    // --- Submit async task ---
-    const url = videoGenerateEndpoint(config.baseUrl);
-    const response = await requestJson<DashScopeAsyncResponse>(config, {
-      url,
-      method: "POST",
-      body,
-      async: true,
-    });
+    const concurrent = getConcurrency(flags);
+    const responses = await runConcurrent(
+      concurrent,
+      settings,
+      () =>
+        ctx.client.requestJson<DashScopeAsyncResponse>({
+          path: videoGeneratePath(),
+          method: "POST",
+          body,
+          async: true,
+        }),
+      "tasks",
+    );
 
-    const taskId = response.output.task_id;
+    const taskIds = responses.map((r) => r.output.task_id);
 
-    if (!config.quiet) {
+    if (!settings.quiet) {
       process.stderr.write(`[Model: ${model}]\n`);
       process.stderr.write(
         `Note: Reference-to-video typically takes 5-10 minutes. Please be patient.\n`,
       );
     }
 
-    // --no-wait or --async: return task ID immediately
-    if (flags.noWait || config.async) {
-      emitResult({ task_id: taskId }, format);
+    // --async: return task ID(s) immediately
+    if (flags.async) {
+      emitResult(taskIds.length === 1 ? { task_id: taskIds[0] } : { task_ids: taskIds }, format);
       return;
     }
 
     // --- Poll until completion ---
-    const pollInterval = (flags.pollInterval as number) ?? 15;
-    const pollUrl = taskEndpoint(config.baseUrl, taskId);
-    const refTimeout = Math.max(config.timeout, 600);
+    const pollInterval = flags.pollInterval ?? 15;
+    const refTimeout = Math.max(settings.timeout, 600);
 
-    const result = await poll<DashScopeTaskResponse>(config, {
-      url: pollUrl,
-      intervalSec: pollInterval,
-      timeoutSec: refTimeout,
-      isComplete: (d) => (d as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
-      isFailed: (d) => (d as DashScopeTaskResponse).output.task_status === "FAILED",
-      getStatus: (d) => (d as DashScopeTaskResponse).output.task_status,
-      getErrorMessage: (d) => {
-        const o = (d as DashScopeTaskResponse).output;
-        return o.message || o.code || undefined;
-      },
-    });
+    const results = await Promise.all(
+      taskIds.map((taskId) =>
+        poll<DashScopeTaskResponse>(ctx.client, settings, {
+          url: ctx.client.url(taskPath(taskId)),
+          intervalSec: pollInterval,
+          timeoutSec: refTimeout,
+          isComplete: (d) => (d as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
+          isFailed: (d) => (d as DashScopeTaskResponse).output.task_status === "FAILED",
+          getStatus: (d) => (d as DashScopeTaskResponse).output.task_status,
+          getErrorMessage: (d) => {
+            const o = (d as DashScopeTaskResponse).output;
+            return o.message || o.code || undefined;
+          },
+        }),
+      ),
+    );
 
-    const resultVideoUrl =
-      result.output.video_url || (result.output.results && result.output.results[0]?.url);
+    const videos: Array<{ taskId: string; videoUrl: string }> = [];
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i]!;
+      const videoUrl =
+        result.output.video_url || (result.output.results && result.output.results[0]?.url);
+      if (videoUrl) videos.push({ taskId: taskIds[i]!, videoUrl });
+    }
 
-    if (!resultVideoUrl) {
-      throw new BailianError("Task completed but no video URL returned.", ExitCode.GENERAL);
+    if (videos.length === 0) {
+      throw new BailianError("All tasks completed but no video URLs returned.", ExitCode.GENERAL);
     }
 
     // --download: save to file
     if (flags.download) {
-      const destPath = flags.download as string;
-      const { size } = await downloadFile(resultVideoUrl, destPath, { quiet: config.quiet });
+      const destPath = flags.download;
+      const { size } = await downloadFile(videos[0]!.videoUrl, destPath, { quiet: settings.quiet });
 
-      if (config.quiet) {
+      if (settings.quiet) {
         emitBare(destPath);
       } else {
         emitResult(
           {
-            task_id: taskId,
-            video_url: resultVideoUrl,
+            task_id: videos[0]!.taskId,
+            video_url: videos[0]!.videoUrl,
             status: "SUCCEEDED",
             saved: destPath,
             size: formatBytes(size),
@@ -262,11 +269,20 @@ export default defineCommand({
     // Default: auto-download to output directory
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const { join } = await import("path");
-    const destDir = resolveOutputDir(config, { subDir: "videos" });
-    const destPath = join(destDir, `${taskId}.mp4`);
+    const destDir = resolveOutputDir(settings, { subDir: "videos" });
+    const saved: Array<{ task_id: string; video_url: string; saved: string }> = [];
+    await Promise.all(
+      videos.map(async ({ taskId, videoUrl }) => {
+        const destPath = join(destDir, `${taskId}.mp4`);
+        await downloadFile(videoUrl, destPath, { quiet: settings.quiet });
+        saved.push({ task_id: taskId, video_url: videoUrl, saved: destPath });
+      }),
+    );
 
-    await downloadFile(resultVideoUrl, destPath, { quiet: config.quiet });
-
-    emitResult({ task_id: taskId, video_url: resultVideoUrl, saved: destPath }, format);
+    if (saved.length === 1) {
+      emitResult(saved[0]!, format);
+    } else {
+      emitResult({ videos: saved, total: saved.length }, format);
+    }
   },
 });

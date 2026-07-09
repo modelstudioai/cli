@@ -1,6 +1,5 @@
-import { requestJson } from "../client/http.ts";
-import { chatEndpoint, intentDetectEndpoint } from "../client/endpoints.ts";
-import type { Config } from "../config/schema.ts";
+import { chatPath, intentDetectEndpoint } from "../client/endpoints.ts";
+import type { Client } from "../client/client.ts";
 import type { ChatResponse, DashScopeIntentDetectResponse } from "../types/api.ts";
 import { Complexities } from "./types.ts";
 import type { IntentProfile, ModelPreference, PreferenceMode } from "./types.ts";
@@ -87,9 +86,13 @@ function safeStringArray(value: unknown): string[] {
  * plus a `classify_intent` tool_call carrying targets/excludes/complexity.
  * Returns null on any failure; caller falls back to extraction model fields.
  */
-async function detectIntentMode(config: Config, input: string): Promise<IntentDetectResult | null> {
-  const baseUrl = config.intentDetectBaseUrl ?? config.baseUrl;
-  const url = intentDetectEndpoint(baseUrl);
+async function detectIntentMode(
+  client: Client,
+  input: string,
+  intentDetectBaseUrl?: string,
+): Promise<IntentDetectResult | null> {
+  // 意图识别模型可指向独立 region/workspace;未配置时落回模型域 baseUrl。
+  const url = intentDetectEndpoint(intentDetectBaseUrl ?? client.baseUrl);
 
   // Build system prompt following the official template:
   // tools JSON is embedded in the prompt text, NOT passed via request body.
@@ -112,8 +115,8 @@ async function detectIntentMode(config: Config, input: string): Promise<IntentDe
   };
 
   try {
-    const response = await requestJson<DashScopeIntentDetectResponse>(config, {
-      url,
+    const response = await client.requestJson<DashScopeIntentDetectResponse>({
+      path: url,
       method: "POST",
       body,
       timeout: INTENT_DETECT_TIMEOUT,
@@ -178,10 +181,14 @@ function buildModelPreference(
  * detect-v3 takes priority for mode/targets/excludes/complexity;
  * the extraction model fills everything else.
  */
-export async function analyzeIntent(config: Config, input: string): Promise<IntentProfile> {
-  const detectPromise = detectIntentMode(config, input);
+export async function analyzeIntent(
+  client: Client,
+  input: string,
+  opts?: { intentDetectBaseUrl?: string },
+): Promise<IntentProfile> {
+  const detectPromise = detectIntentMode(client, input, opts?.intentDetectBaseUrl);
 
-  const url = chatEndpoint(config.baseUrl);
+  const url = chatPath();
   const body = {
     model: INTENT_EXTRACTION_MODEL,
     messages: [
@@ -192,8 +199,8 @@ export async function analyzeIntent(config: Config, input: string): Promise<Inte
     temperature: 0,
   };
 
-  const extractionPromise = requestJson<ChatResponse>(config, {
-    url,
+  const extractionPromise = client.requestJson<ChatResponse>({
+    path: url,
     method: "POST",
     body,
     timeout: 30,

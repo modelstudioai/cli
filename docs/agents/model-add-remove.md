@@ -12,12 +12,13 @@
 
 ### A. 命令实现
 
-- [ ] `packages/cli/src/commands/<group>/<action>.ts`:
+- [ ] `packages/commands/src/commands/<group>/<action>.ts`:
   - `--model` flag 的 description 里"default:"反映新默认值
-  - 命令内部 `const model = (flags.model as string) || "<default>"` 的 fallback 字符串
+  - 命令内部 `const model = flags.model || settings.defaultXxxModel || "<default>"` 的 fallback 字符串
   - 如果命令维护一个 supported-models 列表(如 `speech/synthesize.ts:MODEL_VOICES`),增删条目
   - 如果不同模型有不同 endpoint / 请求体形状,确保 `if (model.startsWith("xxx"))` 分支覆盖
 - [ ] 模型如有特殊 endpoint,看 `packages/core/src/client/endpoints.ts`
+- [ ] 如果新增的是某产品入口专属能力,确认 `packages/cli/src/commands.ts` 或其它入口 map 是否需要暴露/隐藏
 
 ### B. 类型层
 
@@ -41,9 +42,9 @@
 
 ```sh
 # 默认模型走通
-node packages/cli/src/main.ts <command> --message "test"
+pnpm -F bailian-cli exec tsx src/main.ts <command> --message "test"
 # 显式指定新模型
-node packages/cli/src/main.ts <command> --model <new-model> --message "test"
+pnpm -F bailian-cli exec tsx src/main.ts <command> --model <new-model> --message "test"
 ```
 
 ## 常见漏点

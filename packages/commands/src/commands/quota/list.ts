@@ -1,12 +1,5 @@
-import {
-  defineCommand,
-  callConsoleGateway,
-  resolveConsoleGatewayCredential,
-  detectOutputFormat,
-  type Config,
-  type GlobalFlags,
-} from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { defineCommand, BailianError, detectOutputFormat, type Client } from "bailian-cli-core";
+import { ansi, emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
 const MODEL_LIST_API = "zeldaHttp.dashscopeModel./zelda/api/v1/modelCenter/listFoundationModels";
@@ -66,8 +59,7 @@ function extractResponseData(result: Record<string, unknown>): Record<string, un
 }
 
 async function fetchAllModelsWithQpm(
-  config: Config,
-  token: string,
+  client: Client,
   onlySelfService: boolean,
 ): Promise<ModelWithQpm[]> {
   const allModels: ModelWithQpm[] = [];
@@ -85,10 +77,7 @@ async function fetchAllModelsWithQpm(
       input.supports = { selfServiceLimitIncrease: true };
     }
 
-    const raw = await callConsoleGateway(config, token, {
-      api: MODEL_LIST_API,
-      data: { input },
-    });
+    const raw = await client.console(MODEL_LIST_API, { input });
 
     const resp = extractResponseData(raw as Record<string, unknown>);
     const list = (resp.list as ModelWithQpm[]) ?? [];
@@ -102,9 +91,8 @@ async function fetchAllModelsWithQpm(
   return allModels;
 }
 
-function printTable(models: ModelWithQpm[], noColor: boolean): void {
-  const bold = noColor ? (t: string) => t : (t: string) => `\x1b[1m${t}\x1b[0m`;
-  const dim = noColor ? (t: string) => t : (t: string) => `\x1b[2m${t}\x1b[0m`;
+function printTable(models: ModelWithQpm[]): void {
+  const color = ansi(process.stdout);
 
   const headers = ["Model", "Req/min", "Token/min", "Max TPM"];
 
@@ -136,8 +124,8 @@ function printTable(models: ModelWithQpm[], noColor: boolean): void {
     Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const separator = widths.map((w) => dim("─".repeat(w))).join("──");
+  const headerLine = headers.map((label, col) => color.bold(padEnd(label, widths[col]))).join("  ");
+  const separator = widths.map((w) => color.dim("─".repeat(w))).join("──");
 
   process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
@@ -146,33 +134,24 @@ function printTable(models: ModelWithQpm[], noColor: boolean): void {
     process.stdout.write(row.map((cell, col) => padEnd(cell, widths[col])).join("  ") + "\n");
   }
 
-  process.stdout.write(dim(`\nTotal: ${models.length} models`) + "\n");
+  process.stdout.write(color.dim(`\nTotal: ${models.length} models`) + "\n");
 }
 
 export default defineCommand({
   description: "View model RPM/TPM rate limits",
-  skipDefaultApiKeySetup: true,
+  auth: "console",
   usageArgs: "[--model <model>] [flags]",
-  options: [
-    {
-      flag: "--model <model>",
+  flags: {
+    model: {
+      type: "string",
+      valueHint: "<model>",
       description: "Model name(s), comma-separated",
     },
-    {
-      flag: "--all",
+    all: {
+      type: "switch",
       description: "Show all models, not just self-service ones",
     },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
-      description: "Console site: domestic, international",
-    },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+  },
   exampleArgs: [
     "",
     "--model qwen3.6-plus",
@@ -180,12 +159,13 @@ export default defineCommand({
     "--all",
     "--output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const modelFlag = (flags.model as string) || undefined;
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const modelFlag = flags.model || undefined;
     const showAll = Boolean(flags.all);
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       const input: Record<string, unknown> = {
         pageNo: 1,
         pageSize: 50,
@@ -198,9 +178,7 @@ export default defineCommand({
       return;
     }
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
-    let models = await fetchAllModelsWithQpm(config, credential.token, !showAll);
+    let models = await fetchAllModelsWithQpm(ctx.client, !showAll);
 
     if (modelFlag) {
       const names = new Set(
@@ -211,8 +189,7 @@ export default defineCommand({
       );
       models = models.filter((m) => names.has(m.model));
       if (models.length === 0) {
-        process.stderr.write(`Error: no matching models found for "${modelFlag}".\n`);
-        process.exit(1);
+        throw new BailianError(`no matching models found for "${modelFlag}".`);
       }
     }
 
@@ -239,6 +216,6 @@ export default defineCommand({
       return;
     }
 
-    printTable(models, config.noColor);
+    printTable(models);
   },
 });

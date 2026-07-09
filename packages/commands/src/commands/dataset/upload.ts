@@ -8,43 +8,45 @@ import {
   MAX_DATASET_BYTES,
   BailianError,
   ExitCode,
-  type Config,
-  type GlobalFlags,
   type DatasetFile,
+  type FlagsDef,
 } from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
+
+const UPLOAD_FLAGS = {
+  file: {
+    type: "string",
+    valueHint: "<path>",
+    description: "Local .jsonl dataset file (≤300MB)",
+    required: true,
+  },
+  purpose: {
+    type: "string",
+    valueHint: "<name>",
+    description: 'Dataset purpose tag (default: "fine-tune"; e.g. "evaluation")',
+  },
+  schema: {
+    type: "string",
+    valueHint: "<s>",
+    description:
+      'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), or "cpt" (raw text). Default auto-detects per record.',
+  },
+  noValidate: {
+    type: "switch",
+    description: "Skip the local JSONL pre-flight check (not recommended)",
+  },
+  fullValidate: {
+    type: "switch",
+    description: "JSON.parse every line instead of sampling (slower)",
+  },
+} satisfies FlagsDef;
 
 export default defineCommand({
   description: "Upload a dataset file (.jsonl) to Bailian",
+  auth: "apiKey",
   usageArgs:
     "--file <path> [--purpose <name>] [--schema <chatml|dpo|cpt>] [--no-validate] [--full-validate]",
-  options: [
-    {
-      flag: "--file <path>",
-      description: "Local .jsonl dataset file (≤300MB)",
-      required: true,
-    },
-    {
-      flag: "--purpose <name>",
-      description: 'Dataset purpose tag (default: "fine-tune"; e.g. "evaluation")',
-    },
-    {
-      flag: "--schema <s>",
-      description:
-        'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), or "cpt" (raw text). Default auto-detects per record.',
-    },
-    {
-      flag: "--no-validate",
-      description: "Skip the local JSONL pre-flight check (not recommended)",
-      type: "boolean",
-    },
-    {
-      flag: "--full-validate",
-      description: "JSON.parse every line instead of sampling (slower)",
-      type: "boolean",
-    },
-  ],
+  flags: UPLOAD_FLAGS,
   exampleArgs: [
     "--file train.jsonl",
     "--file dpo.jsonl --schema dpo",
@@ -67,18 +69,15 @@ export default defineCommand({
     "Upload uses the OpenAI-compatible /compatible-mode/v1/files endpoint so",
     "the purpose tag is persisted (the DashScope-native /api/v1/files drops it).",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const filePath = flags.file as string | undefined;
-    if (!filePath) failIfMissing("file", "bl dataset upload --file <path>");
+  async run(ctx) {
+    const { identity, settings, flags } = ctx;
+    const filePath = flags.file;
+    const purpose = flags.purpose || "fine-tune";
+    const schema = parseDatasetSchemaFlag(flags.schema);
+    const format = detectOutputFormat(settings.output);
 
-    const purpose = (flags.purpose as string | undefined) || "fine-tune";
-    const skipValidate = Boolean(flags.noValidate);
-    const fullValidate = Boolean(flags.fullValidate);
-    const schema = parseDatasetSchemaFlag(flags.schema as string | undefined);
-    const format = detectOutputFormat(config.output);
-
-    if (!skipValidate) {
-      const result = await validateDataset(filePath!, { fullValidate, schema });
+    if (!flags.noValidate) {
+      const result = await validateDataset(filePath, { fullValidate: flags.fullValidate, schema });
       if (!result.valid) {
         const lines = [
           `Dataset validation failed for ${filePath}`,
@@ -89,13 +88,13 @@ export default defineCommand({
         }
         lines.push(
           "",
-          "Hint: re-run `bl dataset validate --file <path>` for the full report,",
+          `Hint: re-run \`${identity.binName} dataset validate --file <path>\` for the full report,`,
           "      or pass --no-validate to skip this check at your own risk.",
         );
         throw new BailianError(lines.join("\n"), ExitCode.GENERAL);
       }
       // Surface warnings to stderr but keep going.
-      if (result.warnings.length > 0 && !config.quiet) {
+      if (result.warnings.length > 0 && !settings.quiet) {
         process.stderr.write(
           `Dataset validation passed with ${result.warnings.length} warning(s):\n`,
         );
@@ -107,14 +106,14 @@ export default defineCommand({
       }
     }
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         {
           action: "dataset.upload",
           file: filePath,
           purpose,
           max_bytes: MAX_DATASET_BYTES,
-          validate: !skipValidate,
+          validate: !flags.noValidate,
           schema: schema ?? "auto",
         },
         format,
@@ -122,14 +121,14 @@ export default defineCommand({
       return;
     }
 
-    const uploaded: DatasetFile = await uploadDataset(config, {
-      filePath: filePath!,
+    const uploaded: DatasetFile = await uploadDataset(ctx.client, {
+      filePath,
       purpose,
     });
 
-    if (config.quiet) {
+    if (settings.quiet) {
       emitBare(uploaded.file_id);
-    } else if (format === "rich") {
+    } else if (format === "text") {
       emitBare(`Uploaded ${uploaded.name} → file_id=${uploaded.file_id}`);
     } else {
       emitResult(uploaded, format);

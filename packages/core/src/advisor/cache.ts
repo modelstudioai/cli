@@ -1,4 +1,4 @@
-import type { Config } from "../config/schema.ts";
+import type { Settings } from "../config/schema.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { ApiSource } from "./sources/api.ts";
@@ -11,12 +11,12 @@ export interface GetModelsOptions {
 }
 
 export async function getModels(
-  config: Config,
+  settings: Settings,
   options?: GetModelsOptions,
 ): Promise<ModelProfile[]> {
   const sources: ModelSource[] = [
     new CatalogSource({ onPrepareStart: options?.onPrepareStart }),
-    new ApiSource(config),
+    new ApiSource(settings),
   ];
 
   for (const source of sources) {

@@ -1,38 +1,61 @@
 import {
   defineCommand,
-  request,
-  requestJson,
-  appCompletionEndpoint,
+  UsageError,
+  appCompletionPath,
   parseSSE,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type AppCompletionRequest,
   type AppStreamChunk,
   type AppCompletionResponse,
 } from "bailian-cli-core";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { ansi, emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Call a Bailian application (agent or workflow)",
+  auth: "apiKey",
   usageArgs: "--app-id <id> --prompt <text> [flags]",
-  options: [
-    { flag: "--app-id <id>", description: "Application ID (required)", required: true },
-    { flag: "--prompt <text>", description: "Input prompt text", required: true },
-    {
-      flag: "--image <url>",
-      description: "Image URL(s) to pass to the app (repeatable)",
-      type: "array",
+  flags: {
+    appId: {
+      type: "string",
+      valueHint: "<id>",
+      description: "Application ID (required)",
+      required: true,
     },
-    { flag: "--file-id <id>", description: "Pre-uploaded file ID(s) (repeatable)", type: "array" },
-    { flag: "--session-id <id>", description: "Session ID for multi-turn conversation" },
-    { flag: "--stream", description: "Stream response (default: on in TTY)" },
-    { flag: "--pipeline-ids <ids>", description: "Knowledge base pipeline IDs (comma-separated)" },
-    { flag: "--memory-id <id>", description: "Memory ID for long-term memory" },
-    { flag: "--biz-params <json>", description: "Business parameters JSON (workflow variables)" },
-    { flag: "--has-thoughts", description: "Show agent thinking process" },
-  ],
+    prompt: {
+      type: "string",
+      valueHint: "<text>",
+      description: "Input prompt text",
+      required: true,
+    },
+    image: {
+      type: "array",
+      valueHint: "<url>",
+      description: "Image URL(s) to pass to the app (repeatable)",
+    },
+    fileId: {
+      type: "array",
+      valueHint: "<id>",
+      description: "Pre-uploaded file ID(s) (repeatable)",
+    },
+    sessionId: {
+      type: "string",
+      valueHint: "<id>",
+      description: "Session ID for multi-turn conversation",
+    },
+    stream: { type: "switch", description: "Stream response (default: on in TTY)" },
+    pipelineIds: {
+      type: "string",
+      valueHint: "<ids>",
+      description: "Knowledge base pipeline IDs (comma-separated)",
+    },
+    memoryId: { type: "string", valueHint: "<id>", description: "Memory ID for long-term memory" },
+    bizParams: {
+      type: "string",
+      valueHint: "<json>",
+      description: "Business parameters JSON (workflow variables)",
+    },
+    hasThoughts: { type: "switch", description: "Show agent thinking process" },
+  },
   exampleArgs: [
     '--app-id abc123 --prompt "Hello"',
     '--app-id abc123 --prompt "Describe this image" --image https://example.com/photo.jpg',
@@ -41,16 +64,13 @@ export default defineCommand({
     '--app-id abc123 --prompt "Search for materials" --pipeline-ids pipe1,pipe2',
     '--app-id abc123 --prompt "Start" --biz-params \'{"key":"value"}\'',
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const appId = flags.appId as string;
-    if (!appId) failIfMissing("app-id", cmdUsage(config, "--app-id <id> --prompt <text>"));
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const appId = flags.appId;
+    const prompt = flags.prompt;
 
-    const prompt = flags.prompt as string;
-    if (!prompt) failIfMissing("prompt", cmdUsage(config, "--app-id <id> --prompt <text>"));
-
-    const shouldStream =
-      flags.stream === true || (flags.stream === undefined && process.stdout.isTTY);
-    const format = detectOutputFormat(config.output);
+    const shouldStream = flags.stream || process.stdout.isTTY;
+    const format = detectOutputFormat(settings.output);
 
     const body: AppCompletionRequest = {
       input: { prompt },
@@ -60,17 +80,17 @@ export default defineCommand({
     };
 
     if (flags.sessionId) {
-      body.input.session_id = flags.sessionId as string;
+      body.input.session_id = flags.sessionId;
     }
 
     // Pass image URLs via image_list
-    const imageUrls = flags.image as string[] | undefined;
+    const imageUrls = flags.image;
     if (imageUrls && imageUrls.length > 0) {
       body.input.image_list = imageUrls;
     }
 
     // Pass pre-uploaded file IDs
-    const fileIds = flags.fileId as string[] | undefined;
+    const fileIds = flags.fileId;
     if (fileIds && fileIds.length > 0) {
       body.input.file_ids = fileIds;
     }
@@ -80,7 +100,7 @@ export default defineCommand({
     }
 
     if (flags.pipelineIds) {
-      const ids = (flags.pipelineIds as string)
+      const ids = flags.pipelineIds
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
@@ -88,29 +108,26 @@ export default defineCommand({
     }
 
     if (flags.memoryId) {
-      body.parameters!.memory_id = flags.memoryId as string;
+      body.parameters!.memory_id = flags.memoryId;
     }
 
     if (flags.bizParams) {
       try {
-        body.input.biz_params = JSON.parse(flags.bizParams as string);
+        body.input.biz_params = JSON.parse(flags.bizParams);
       } catch {
-        process.stderr.write("Error: --biz-params must be valid JSON\n");
-        process.exit(1);
+        throw new UsageError("--biz-params must be valid JSON");
       }
     }
 
-    if (config.dryRun) {
-      emitResult({ endpoint: appCompletionEndpoint(config.baseUrl, appId), request: body }, format);
+    if (settings.dryRun) {
+      emitResult({ endpoint: ctx.client.url(appCompletionPath(appId)), request: body }, format);
       return;
     }
 
-    const url = appCompletionEndpoint(config.baseUrl, appId);
-
     if (shouldStream) {
       const headers: Record<string, string> = { "X-DashScope-SSE": "enable" };
-      const res = await request(config, {
-        url,
+      const res = await ctx.client.request({
+        path: appCompletionPath(appId),
         method: "POST",
         body,
         headers,
@@ -119,9 +136,8 @@ export default defineCommand({
 
       let fullText = "";
       let sessionId = "";
-      const writesStreamingStdout = format === "rich";
-      const dim = config.noColor ? "" : "\x1b[2m";
-      const reset = config.noColor ? "" : "\x1b[0m";
+      const writesStreamingStdout = format === "text";
+      const stderrColor = ansi(process.stderr);
 
       for await (const event of parseSSE(res)) {
         if (event.data === "[DONE]") break;
@@ -143,13 +159,14 @@ export default defineCommand({
           // Show thoughts if available
           if (chunk.output?.thoughts && flags.hasThoughts) {
             for (const t of chunk.output.thoughts) {
-              if (t.thought) process.stderr.write(`${dim}[Thinking] ${t.thought}${reset}\n`);
+              if (t.thought)
+                process.stderr.write(`${stderrColor.dim(`[Thinking] ${t.thought}`)}\n`);
               if (t.action_name)
                 process.stderr.write(
-                  `${dim}[Action] ${t.action_name}: ${t.action_input || ""}${reset}\n`,
+                  `${stderrColor.dim(`[Action] ${t.action_name}: ${t.action_input || ""}`)}\n`,
                 );
               if (t.observation)
-                process.stderr.write(`${dim}[Observation] ${t.observation}${reset}\n`);
+                process.stderr.write(`${stderrColor.dim(`[Observation] ${t.observation}`)}\n`);
             }
           }
         } catch {
@@ -158,8 +175,8 @@ export default defineCommand({
       }
 
       // Show session_id for multi-turn conversation
-      if (sessionId && !config.quiet) {
-        process.stderr.write(`${dim}Session ID: ${sessionId}${reset}\n`);
+      if (sessionId && !settings.quiet) {
+        process.stderr.write(`${stderrColor.dim(`Session ID: ${sessionId}`)}\n`);
       }
 
       if (format === "json") {
@@ -168,15 +185,15 @@ export default defineCommand({
         process.stdout.write("\n");
       }
     } else {
-      const response = await requestJson<AppCompletionResponse>(config, {
-        url,
+      const response = await ctx.client.requestJson<AppCompletionResponse>({
+        path: appCompletionPath(appId),
         method: "POST",
         body,
       });
 
       const text = response.output?.text ?? "";
 
-      if (config.quiet || format === "rich") {
+      if (settings.quiet || format === "text") {
         emitBare(text);
       } else {
         emitResult(response, format);

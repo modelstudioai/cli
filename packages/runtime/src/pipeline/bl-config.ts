@@ -1,24 +1,48 @@
-import { loadConfig, type Config, type GlobalFlags } from "bailian-cli-core";
+import {
+  Client,
+  buildSettings,
+  readConfigFile,
+  resolveApiKey,
+  resolveModelBaseUrl,
+  type ApiKeyCredential,
+  type Identity,
+  type ResolutionSources,
+  type Settings,
+} from "bailian-cli-core";
 
-const PIPELINE_FLAGS: GlobalFlags = {
-  output: "json",
-  nonInteractive: true,
-  noColor: true,
-  quiet: true,
-  verbose: false,
-  yes: false,
-  dryRun: false,
-  help: false,
-  async: false,
-};
+/** Pipeline step 的迷你边界:client(带 model 域凭证,若有)+ 有效 settings。 */
+export interface PipelineEnv {
+  client: Client;
+  settings: Settings;
+}
 
 /**
- * Build a Config suitable for in-process API calls from within pipeline steps.
- * Uses the same config resolution (env vars, config file) as the CLI itself,
- * but forces JSON output + non-interactive + quiet mode.
+ * Build the in-process env for pipeline steps. Uses the same source resolution
+ * as the CLI itself (env vars, config file; no CLI flags), but forces JSON
+ * output + quiet mode.
  */
-export function buildPipelineConfig(): Config {
-  const config = loadConfig(PIPELINE_FLAGS);
-  config.clientName = "bailian-cli";
-  return config;
+export function buildPipelineEnv(): PipelineEnv {
+  const sources: ResolutionSources = { flags: {}, file: readConfigFile(), env: process.env };
+  const settings: Settings = {
+    ...buildSettings(sources),
+    output: "json",
+    outputExplicit: true,
+    quiet: true,
+  };
+  const identity: Identity = {
+    binName: "bl",
+    version: "0.0.0-dev",
+    npmPackage: "bailian-cli",
+    clientName: "bailian-cli",
+  };
+  let apiCred: ApiKeyCredential | undefined;
+  try {
+    apiCred = resolveApiKey(sources);
+  } catch {
+    /* 无 key:步骤真正发请求时由 Client 报错 */
+  }
+  return {
+    client: new Client({ identity, settings, baseUrl: resolveModelBaseUrl(sources), apiCred }),
+    settings,
+  };
 }

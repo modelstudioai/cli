@@ -23,14 +23,16 @@ Index: [index.md](index.md)
 | **Description** | Chat with a Bailian knowledge base (RAG Q&A with streaming)  |
 | **Usage**       | `bl knowledge chat --message <text> --agent-id <id> [flags]` |
 
-#### Options
+#### Flags
 
 | Flag                  | Type   | Required | Description                                                                                                                            |
 | --------------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `--message <text>`    | array  | yes      | Message text (repeatable). Supports role:content prefix to set role (e.g. user:hello), defaults to user. Follows OpenAI message format |
+| `--message <text>`    | array  | no       | Message text (repeatable). Supports role:content prefix to set role (e.g. user:hello), defaults to user. Follows OpenAI message format |
 | `--agent-id <id>`     | string | yes      | Q&A service ID (find in console knowledge Q&A page)                                                                                    |
 | `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                                                        |
 | `--image <url>`       | array  | no       | Image URL (repeatable). Attached to the last user message as multimodal content                                                        |
+| `--api-key <key>`     | string | no       | API key                                                                                                                                |
+| `--base-url <url>`    | string | no       | API base URL                                                                                                                           |
 
 #### Notes
 
@@ -61,28 +63,22 @@ bl knowledge chat --message "Describe these images" --image https://example.com/
 | **Description** | Retrieve from a Bailian knowledge base (deprecated, use `search` instead) |
 | **Usage**       | `bl knowledge retrieve --index-id <id> --query <text> [flags]`            |
 
-#### Options
+#### Flags
 
-| Flag                            | Type    | Required | Description                                                  |
-| ------------------------------- | ------- | -------- | ------------------------------------------------------------ |
-| `--index-id <id>`               | string  | yes      | Knowledge base index ID (required)                           |
-| `--query <text>`                | string  | yes      | Search query (required)                                      |
-| `--dense-similarity-top-k <n>`  | number  | no       | Dense retrieval top K                                        |
-| `--sparse-similarity-top-k <n>` | number  | no       | Sparse retrieval top K                                       |
-| `--rerank`                      | boolean | no       | Enable reranking                                             |
-| `--rerank-top-n <n>`            | number  | no       | Rerank top N results                                         |
-| `--rerank-model <name>`         | string  | no       | Rerank model, e.g. qwen3-rerank-hybrid                       |
-| `--rerank-mode <mode>`          | string  | no       | Rerank mode: qa, similar, or custom                          |
-| `--rerank-instruct <text>`      | string  | no       | Custom rerank instruction, when mode=custom                  |
-| `--top-k <n>`                   | number  | no       | Number of results (deprecated, use --rerank-top-n)           |
-| `--workspace-id <id>`           | string  | no       | Bailian workspace ID (only needed for deprecated AK/SK auth) |
-| `--access-key-id <key>`         | string  | no       | Deprecated: use global --api-key instead                     |
-| `--access-key-secret <key>`     | string  | no       | Deprecated: use global --api-key instead                     |
-
-#### Notes
-
-- Authentication: pass `--api-key <key>`. AK/SK auth is deprecated and will be removed in a future version.
-- `--workspace-id` is NOT required when using --api-key.
+| Flag                            | Type   | Required | Description                                        |
+| ------------------------------- | ------ | -------- | -------------------------------------------------- |
+| `--index-id <id>`               | string | yes      | Knowledge base index ID (required)                 |
+| `--query <text>`                | string | yes      | Search query (required)                            |
+| `--dense-similarity-top-k <n>`  | number | no       | Dense retrieval top K                              |
+| `--sparse-similarity-top-k <n>` | number | no       | Sparse retrieval top K                             |
+| `--rerank`                      | switch | no       | Enable reranking                                   |
+| `--rerank-top-n <n>`            | number | no       | Rerank top N results                               |
+| `--rerank-model <name>`         | string | no       | Rerank model, e.g. qwen3-rerank-hybrid             |
+| `--rerank-mode <mode>`          | string | no       | Rerank mode: qa, similar, or custom                |
+| `--rerank-instruct <text>`      | string | no       | Custom rerank instruction, when mode=custom        |
+| `--top-k <n>`                   | number | no       | Number of results (deprecated, use --rerank-top-n) |
+| `--api-key <key>`               | string | no       | API key                                            |
+| `--base-url <url>`              | string | no       | API base URL                                       |
 
 #### Examples
 
@@ -91,7 +87,7 @@ bl knowledge retrieve --index-id idx_xxx --query "How to use Alibaba Cloud Baili
 ```
 
 ```bash
-bl knowledge retrieve --api-key $DASHSCOPE_API_KEY --index-id idx_xxx --query "RAG retrieval" --rerank --rerank-model qwen3-rerank-hybrid
+bl knowledge retrieve --index-id idx_xxx --query "RAG retrieval" --rerank --rerank-model qwen3-rerank-hybrid
 ```
 
 ### `bl knowledge search`
@@ -102,7 +98,7 @@ bl knowledge retrieve --api-key $DASHSCOPE_API_KEY --index-id idx_xxx --query "R
 | **Description** | Search a Bailian knowledge base (RAG semantic retrieval)     |
 | **Usage**       | `bl knowledge search --query <text> --agent-id <id> [flags]` |
 
-#### Options
+#### Flags
 
 | Flag                     | Type   | Required | Description                                                                                                                                                                  |
 | ------------------------ | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -111,6 +107,8 @@ bl knowledge retrieve --api-key $DASHSCOPE_API_KEY --index-id idx_xxx --query "R
 | `--workspace-id <id>`    | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                                                                                              |
 | `--image <url>`          | array  | no       | Image URL for multimodal retrieval (repeatable)                                                                                                                              |
 | `--query-history <json>` | string | no       | User conversation history JSON for context understanding and query rewriting. Format: '[{"role":"user","content":"What is RAG"},{"role":"assistant","content":"RAG is..."}]' |
+| `--api-key <key>`        | string | no       | API key                                                                                                                                                                      |
+| `--base-url <url>`       | string | no       | API base URL                                                                                                                                                                 |
 
 #### Notes
 

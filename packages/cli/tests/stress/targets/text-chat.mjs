@@ -37,7 +37,6 @@ export const runStress = defineStressTarget({
     MODEL,
     "--message",
     prompt,
-    "--non-interactive",
     "--output",
     "json",
     "--timeout",

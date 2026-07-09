@@ -1,38 +1,38 @@
 import {
   defineCommand,
-  requestJson,
-  taskEndpoint,
+  taskPath,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
   type DashScopeTaskResponse,
 } from "bailian-cli-core";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: "Query async task status",
+  auth: "apiKey",
   usageArgs: "--task-id <id>",
-  options: [{ flag: "--task-id <id>", description: "Async task ID" }],
+  flags: {
+    taskId: { type: "string", valueHint: "<id>", description: "Async task ID", required: true },
+  },
   exampleArgs: [
     "--task-id 3b256896-3e70-xxxx-xxxx-xxxxxxxxxxxx",
     "--task-id 3b256896-3e70-xxxx --output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const taskId = flags.taskId as string | undefined;
-    if (!taskId) failIfMissing("task-id", cmdUsage(config, "--task-id <id>"));
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const taskId = flags.taskId;
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ task_id: taskId }, format);
       return;
     }
 
-    const url = taskEndpoint(config.baseUrl, taskId);
-    const response = await requestJson<DashScopeTaskResponse>(config, { url });
+    const response = await ctx.client.requestJson<DashScopeTaskResponse>({
+      path: taskPath(taskId),
+    });
 
-    if (config.quiet) {
+    if (settings.quiet) {
       emitBare(response.output.task_status);
       return;
     }

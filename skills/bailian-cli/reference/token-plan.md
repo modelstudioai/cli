@@ -24,18 +24,18 @@ Index: [index.md](index.md)
 | **Description** | Add a member to a Token Plan organization                              |
 | **Usage**       | `bl token-plan add-member --account-name <name> --org-id <id> [flags]` |
 
-#### Options
+#### Flags
 
-| Flag                           | Type   | Required | Description                                                      |
-| ------------------------------ | ------ | -------- | ---------------------------------------------------------------- |
-| `--account-name <name>`        | string | yes      | Member display name                                              |
-| `--org-id <id>`                | string | yes      | Organization ID                                                  |
-| `--org-role-code <code>`       | string | no       | Organization role: ORG_ADMIN or ORG_MEMBER (default: ORG_MEMBER) |
-| `--spec-type <type>`           | string | no       | Seat tier to assign on creation: standard, pro, or max           |
-| `--caller-uac-account-id <id>` | string | no       | Caller UAC account ID                                            |
-| `--namespace-id <id>`          | string | no       | Product namespace ID (Token Plan default: namespace-1)           |
-| `--access-key-id <key>`        | string | no       | Alibaba Cloud Access Key ID (deprecated)                         |
-| `--access-key-secret <key>`    | string | no       | Alibaba Cloud Access Key Secret (deprecated)                     |
+| Flag                           | Type   | Required | Description                                                            |
+| ------------------------------ | ------ | -------- | ---------------------------------------------------------------------- |
+| `--account-name <name>`        | string | yes      | Member display name                                                    |
+| `--org-id <id>`                | string | yes      | Organization ID                                                        |
+| `--org-role-code <code>`       | string | no       | Organization role: ORG_ADMIN or ORG_MEMBER (default: ORG_MEMBER)       |
+| `--spec-type <type>`           | string | no       | Seat tier to assign on creation: standard, pro, or max                 |
+| `--caller-uac-account-id <id>` | string | no       | Caller UAC account ID                                                  |
+| `--namespace-id <id>`          | string | no       | Product namespace ID (Token Plan default: namespace-1)                 |
+| `--access-key-id <key>`        | string | no       | Alibaba Cloud Access Key ID (env: ALIBABA_CLOUD_ACCESS_KEY_ID)         |
+| `--access-key-secret <key>`    | string | no       | Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET) |
 
 #### Examples
 
@@ -59,18 +59,18 @@ bl token-plan add-member --account-name member1 --org-id org_123 --spec-type sta
 | **Description** | Batch assign Token Plan seats to members                                                      |
 | **Usage**       | `bl token-plan assign-seats --workspace-id <id> --seat-type <type> --account-id <id> [flags]` |
 
-#### Options
+#### Flags
 
-| Flag                           | Type   | Required | Description                                                    |
-| ------------------------------ | ------ | -------- | -------------------------------------------------------------- |
-| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID, config: workspace_id) |
-| `--seat-type <type>`           | string | yes      | Seat tier: standard, pro, or max                               |
-| `--account-id <id>`            | array  | no       | Target member account ID (repeatable)                          |
-| `--caller-uac-account-id <id>` | string | no       | Caller UAC account ID                                          |
-| `--namespace-id <id>`          | string | no       | Product namespace ID (Token Plan default: namespace-1)         |
-| `--locale <locale>`            | string | no       | Language: zh-CN or en-US                                       |
-| `--access-key-id <key>`        | string | no       | Alibaba Cloud Access Key ID (deprecated)                       |
-| `--access-key-secret <key>`    | string | no       | Alibaba Cloud Access Key Secret (deprecated)                   |
+| Flag                           | Type   | Required | Description                                                            |
+| ------------------------------ | ------ | -------- | ---------------------------------------------------------------------- |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID, config: workspace_id)         |
+| `--seat-type <type>`           | string | yes      | Seat tier: standard, pro, or max                                       |
+| `--account-id <id>`            | array  | no       | Target member account ID (repeatable)                                  |
+| `--caller-uac-account-id <id>` | string | no       | Caller UAC account ID                                                  |
+| `--namespace-id <id>`          | string | no       | Product namespace ID (Token Plan default: namespace-1)                 |
+| `--locale <locale>`            | string | no       | Language: zh-CN or en-US                                               |
+| `--access-key-id <key>`        | string | no       | Alibaba Cloud Access Key ID (env: ALIBABA_CLOUD_ACCESS_KEY_ID)         |
+| `--access-key-secret <key>`    | string | no       | Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET) |
 
 #### Examples
 
@@ -90,17 +90,17 @@ bl token-plan assign-seats --workspace-id ws_456 --seat-type pro --account-id ac
 | **Description** | Create a Token Plan API key for a seat                                   |
 | **Usage**       | `bl token-plan create-key --account-id <id> --workspace-id <id> [flags]` |
 
-#### Options
+#### Flags
 
-| Flag                           | Type   | Required | Description                                                    |
-| ------------------------------ | ------ | -------- | -------------------------------------------------------------- |
-| `--account-id <id>`            | string | yes      | Target member account ID                                       |
-| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID, config: workspace_id) |
-| `--description <text>`         | string | no       | API key description                                            |
-| `--caller-uac-account-id <id>` | string | no       | Caller UAC account ID                                          |
-| `--namespace-id <id>`          | string | no       | Product namespace ID (Token Plan default: namespace-1)         |
-| `--access-key-id <key>`        | string | no       | Alibaba Cloud Access Key ID (deprecated)                       |
-| `--access-key-secret <key>`    | string | no       | Alibaba Cloud Access Key Secret (deprecated)                   |
+| Flag                           | Type   | Required | Description                                                            |
+| ------------------------------ | ------ | -------- | ---------------------------------------------------------------------- |
+| `--account-id <id>`            | string | yes      | Target member account ID                                               |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID, config: workspace_id)         |
+| `--description <text>`         | string | no       | API key description                                                    |
+| `--caller-uac-account-id <id>` | string | no       | Caller UAC account ID                                                  |
+| `--namespace-id <id>`          | string | no       | Product namespace ID (Token Plan default: namespace-1)                 |
+| `--access-key-id <key>`        | string | no       | Alibaba Cloud Access Key ID (env: ALIBABA_CLOUD_ACCESS_KEY_ID)         |
+| `--access-key-secret <key>`    | string | no       | Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET) |
 
 #### Examples
 
@@ -120,7 +120,7 @@ bl token-plan create-key --account-id acc_123 --workspace-id ws_456 --descriptio
 | **Description** | List Token Plan subscription seat details |
 | **Usage**       | `bl token-plan list-seats [flags]`        |
 
-#### Options
+#### Flags
 
 | Flag                           | Type   | Required | Description                                                                       |
 | ------------------------------ | ------ | -------- | --------------------------------------------------------------------------------- |
@@ -133,8 +133,8 @@ bl token-plan create-key --account-id acc_123 --workspace-id ws_456 --descriptio
 | `--seat-id <id>`               | string | no       | Filter by seat ID                                                                 |
 | `--seat-type <type>`           | string | no       | Seat tier: standard, pro, or max                                                  |
 | `--query-assigned <bool>`      | string | no       | Filter by assignment: true=assigned, false=unassigned                             |
-| `--access-key-id <key>`        | string | no       | Alibaba Cloud Access Key ID (deprecated)                                          |
-| `--access-key-secret <key>`    | string | no       | Alibaba Cloud Access Key Secret (deprecated)                                      |
+| `--access-key-id <key>`        | string | no       | Alibaba Cloud Access Key ID (env: ALIBABA_CLOUD_ACCESS_KEY_ID)                    |
+| `--access-key-secret <key>`    | string | no       | Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET)            |
 
 #### Examples
 

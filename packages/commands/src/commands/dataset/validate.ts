@@ -6,11 +6,9 @@ import {
   formatIssue,
   BailianError,
   ExitCode,
-  type Config,
-  type GlobalFlags,
   type ValidationResult,
+  type FlagsDef,
 } from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 function formatStats(result: ValidationResult): string[] {
@@ -23,24 +21,31 @@ function formatStats(result: ValidationResult): string[] {
   return out;
 }
 
+const VALIDATE_FLAGS = {
+  file: {
+    type: "string",
+    valueHint: "<path>",
+    description: "Local .jsonl dataset file",
+    required: true,
+  },
+  fullValidate: {
+    type: "switch",
+    description: "JSON.parse every line instead of sampling (slower)",
+  },
+  schema: {
+    type: "string",
+    valueHint: "<s>",
+    description:
+      'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), or "cpt" (raw text). Default auto-detects per record.',
+  },
+} satisfies FlagsDef;
+
 export default defineCommand({
   description: "Locally validate a dataset file (.jsonl) without uploading",
   // 纯本地校验，不触网、不需 API key（与 `pipeline validate` 一致）。
-  skipDefaultApiKeySetup: true,
+  auth: "none",
   usageArgs: "--file <path> [--full-validate] [--schema <chatml|dpo|cpt>]",
-  options: [
-    { flag: "--file <path>", description: "Local .jsonl dataset file", required: true },
-    {
-      flag: "--full-validate",
-      description: "JSON.parse every line instead of sampling (slower)",
-      type: "boolean",
-    },
-    {
-      flag: "--schema <s>",
-      description:
-        'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), or "cpt" (raw text). Default auto-detects per record.',
-    },
-  ],
+  flags: VALIDATE_FLAGS,
   exampleArgs: [
     "--file train.jsonl",
     "--file dpo.jsonl --schema dpo",
@@ -59,20 +64,18 @@ export default defineCommand({
     "that shape on every record (strict), or --schema chatml to ignore the",
     "preference / text fields. Use --full-validate to JSON.parse every line.",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const filePath = flags.file as string | undefined;
-    if (!filePath) failIfMissing("file", "bl dataset validate --file <path>");
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const filePath = flags.file;
+    const schema = parseDatasetSchemaFlag(flags.schema);
+    const format = detectOutputFormat(settings.output);
 
-    const fullValidate = Boolean(flags.fullValidate);
-    const schema = parseDatasetSchemaFlag(flags.schema as string | undefined);
-    const format = detectOutputFormat(config.output);
-
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         {
           action: "dataset.validate",
           file: filePath,
-          full: fullValidate,
+          full: flags.fullValidate,
           schema: schema ?? "auto",
         },
         format,
@@ -80,12 +83,12 @@ export default defineCommand({
       return;
     }
 
-    const result = await validateDataset(filePath!, { fullValidate, schema });
+    const result = await validateDataset(filePath, { fullValidate: flags.fullValidate, schema });
 
     if (format === "json") {
       // For json output we always emit the structured result, exit code conveys validity.
       emitResult(result, format);
-    } else if (config.quiet) {
+    } else if (settings.quiet) {
       emitBare(result.valid ? "ok" : "fail");
     } else {
       const status = result.valid ? "PASSED" : "FAILED";

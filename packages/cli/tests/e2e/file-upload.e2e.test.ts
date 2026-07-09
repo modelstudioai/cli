@@ -25,28 +25,16 @@ describe("e2e: file upload", () => {
 });
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: file upload（DashScope）", () => {
-  test("file upload 缺少 --file 时打印子命令帮助并退出 (0)", async () => {
-    const { stderr, exitCode } = await runCli([
-      "file",
-      "upload",
-      "--model",
-      "qwen3-vl-plus",
-      "--non-interactive",
-    ]);
-    expect(exitCode).toBe(0);
+  test("file upload 缺少 --file 时报用法错误并退出 (2)", async () => {
+    const { stderr, exitCode } = await runCli(["file", "upload", "--model", "qwen3-vl-plus"]);
+    expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--file|Usage:/i);
   });
 
-  test("file upload 缺少 --model 时打印子命令帮助并退出 (0)", async () => {
+  test("file upload 缺少 --model 时报用法错误并退出 (2)", async () => {
     const testFile = join(__dirname, ".smoke-32.png");
-    const { stderr, exitCode } = await runCli([
-      "file",
-      "upload",
-      "--file",
-      testFile,
-      "--non-interactive",
-    ]);
-    expect(exitCode).toBe(0);
+    const { stderr, exitCode } = await runCli(["file", "upload", "--file", testFile]);
+    expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--model|Usage:/i);
   });
 
@@ -59,7 +47,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: file upload（DashScope）", () =>
       testFile,
       "--model",
       "qwen3-vl-plus",
-      "--non-interactive",
       "--output",
       "json",
     ]);

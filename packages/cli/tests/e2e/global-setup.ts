@@ -30,11 +30,6 @@ DASHSCOPE_API_KEY=
 # -------------------------------
 BAILIAN_E2E_VIDEO_TASK_ID=b499a8cb-1fc4-4d43-9495-e23c7f78ae0d
 # -------------------------------
-# 阿里云 AK
-ALIBABA_CLOUD_ACCESS_KEY_ID=
-# 阿里云 SK
-ALIBABA_CLOUD_ACCESS_KEY_SECRET=
-# -------------------------------
 # 知识库 ID
 BAILIAN_WORKSPACE_ID=
 # 索引 ID

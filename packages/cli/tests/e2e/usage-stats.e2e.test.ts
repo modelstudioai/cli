@@ -164,29 +164,13 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
   });
 
   test("usage stats 概览文本输出包含英文标签", async () => {
-    const result = await runCli([
-      "usage",
-      "stats",
-      "--workspace-id",
-      wsId,
-      "--output",
-      "text",
-      "--no-color",
-    ]);
+    const result = await runCli(["usage", "stats", "--workspace-id", wsId, "--output", "text"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage stats 概览文本输出包含 Token 用量", async () => {
-    const result = await runCli([
-      "usage",
-      "stats",
-      "--workspace-id",
-      wsId,
-      "--output",
-      "text",
-      "--no-color",
-    ]);
+    const result = await runCli(["usage", "stats", "--workspace-id", wsId, "--output", "text"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
@@ -201,7 +185,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "qwen3.6-plus",
       "--output",
       "text",
-      "--no-color",
     ]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
@@ -217,7 +200,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "qwen3.6-plus,deepseek-v4-pro",
       "--output",
       "text",
-      "--no-color",
     ]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
@@ -233,7 +215,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "nonexistent-model-xyz-99999",
       "--output",
       "text",
-      "--no-color",
     ]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
@@ -249,7 +230,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "1",
       "--output",
       "text",
-      "--no-color",
     ]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
@@ -265,7 +245,6 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
       "Vision",
       "--output",
       "text",
-      "--no-color",
     ]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);

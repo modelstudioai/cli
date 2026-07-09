@@ -2,53 +2,55 @@ import {
   defineCommand,
   detectOutputFormat,
   listDeployableModels,
-  type Config,
-  type GlobalFlags,
+  type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
-import { formatTable } from "bailian-cli-runtime";
+import { emitResult, emitBare, formatTable } from "bailian-cli-runtime";
+
+const MODELS_FLAGS = {
+  page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
+  pageSize: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Results per page (default: 100)",
+  },
+  // 全局 --version 是保留 flag,目录版本过滤改名 --catalog-version。
+  catalogVersion: {
+    type: "string",
+    valueHint: "<v>",
+    description: "Catalog version filter (default: v1.0; required for new catalog models)",
+  },
+  source: {
+    type: "string",
+    valueHint: "<s>",
+    description: "Model source filter: custom (fine-tuned) | base (catalog) | public",
+  },
+} satisfies FlagsDef;
 
 export default defineCommand({
   description: "List models available for deployment",
-  usageArgs: "[--page <n>] [--page-size <n>] [--version <v>] [--source <custom|public>]",
-  options: [
-    { flag: "--page <n>", description: "Page number (default: 1)", type: "number" },
-    {
-      flag: "--page-size <n>",
-      description: "Results per page (default: 100)",
-      type: "number",
-    },
-    {
-      flag: "--version <v>",
-      description: "Catalog version filter (default: v1.0; required for new catalog models)",
-    },
-    {
-      flag: "--source <s>",
-      description: "Model source filter: custom (fine-tuned) | base (catalog) | public",
-    },
-  ],
+  auth: "apiKey",
+  usageArgs: "[--page <n>] [--page-size <n>] [--catalog-version <v>] [--source <custom|public>]",
+  flags: MODELS_FLAGS,
   exampleArgs: [
     "",
     "--source base",
     "--source custom --page-size 50",
-    "--version v1.0 --output json",
+    "--catalog-version v1.0 --output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const format = detectOutputFormat(config.output);
-    const pageNo = flags.page !== undefined ? (flags.page as number) : undefined;
-    const pageSize = flags.pageSize !== undefined ? (flags.pageSize as number) : undefined;
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const format = detectOutputFormat(settings.output);
     // Default version to v1.0 — without it, the API returns the legacy catalog
-    // (only old fine-tune outputs). Pass --version "" to opt out.
-    const version =
-      flags.version === "" ? undefined : ((flags.version as string | undefined) ?? "v1.0");
-    const modelSource = (flags.source as string | undefined) || undefined;
+    // (only old fine-tune outputs). Pass --catalog-version "" to opt out.
+    const version = flags.catalogVersion === "" ? undefined : (flags.catalogVersion ?? "v1.0");
+    const modelSource = flags.source || undefined;
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         {
           action: "deploy.models",
-          page: pageNo,
-          page_size: pageSize,
+          page: flags.page,
+          page_size: flags.pageSize,
           version,
           model_source: modelSource,
         },
@@ -57,9 +59,9 @@ export default defineCommand({
       return;
     }
 
-    const response = await listDeployableModels(config, {
-      pageNo,
-      pageSize,
+    const response = await listDeployableModels(ctx.client, {
+      pageNo: flags.page,
+      pageSize: flags.pageSize,
       version,
       modelSource,
     });

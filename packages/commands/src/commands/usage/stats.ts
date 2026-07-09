@@ -1,12 +1,12 @@
 import {
   defineCommand,
-  callConsoleGateway,
-  resolveConsoleGatewayCredential,
+  BailianError,
+  ExitCode,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
+  type Settings,
+  type Client,
 } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { ansi, emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
 
 const OVERVIEW_API = "zeldaEasy.bailian-telemetry.model.getModelUsageStatistic";
@@ -66,8 +66,7 @@ const POLL_INTERVAL_MS = 500;
 const MAX_POLLS = 30;
 
 async function pollTelemetryApi(
-  config: Config,
-  token: string,
+  client: Client,
   api: string,
   reqDTO: Record<string, unknown>,
 ): Promise<unknown> {
@@ -78,10 +77,7 @@ async function pollTelemetryApi(
       ? { reqDTO: { ...reqDTO, asyncTaskId: nextTaskId } }
       : { reqDTO };
 
-    const raw = await callConsoleGateway(config, token, {
-      api,
-      data: requestData,
-    });
+    const raw = await client.console(api, requestData);
 
     const resp = extractResponseData(raw as Record<string, unknown>);
 
@@ -96,17 +92,14 @@ async function pollTelemetryApi(
   return null;
 }
 
-function resolveWorkspaceId(config: Config, flagWorkspaceId?: string): string {
-  if (flagWorkspaceId) return flagWorkspaceId;
-  if (config.workspaceId) return config.workspaceId;
+function requireWorkspaceId(settings: Settings, binName: string): string {
+  if (settings.workspaceId) return settings.workspaceId;
 
-  process.stderr.write(
-    `Error: workspace-id is required. Set via --workspace-id, BAILIAN_WORKSPACE_ID, or \`${config.binName} config set workspace_id <id>\`.\n`,
+  throw new BailianError(
+    `workspace-id is required. Set via --workspace-id, BAILIAN_WORKSPACE_ID, or \`${binName} config set workspace_id <id>\`.`,
+    ExitCode.GENERAL,
+    `Run \`${binName} workspace list\` to view available workspaces.`,
   );
-  process.stderr.write(
-    `Hint: run \`${config.binName} workspace list\` to view available workspaces.\n`,
-  );
-  process.exit(1);
 }
 
 function formatNumber(num: number): string {
@@ -188,13 +181,11 @@ function printOverview(
   startTime: number,
   endTime: number,
   days: number,
-  noColor: boolean,
 ): void {
-  const bold = noColor ? (text: string) => text : (text: string) => `\x1b[1m${text}\x1b[0m`;
-  const dim = noColor ? (text: string) => text : (text: string) => `\x1b[2m${text}\x1b[0m`;
+  const color = ansi(process.stdout);
 
   process.stdout.write(
-    `${dim("Time Range Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${dim(`(${days} days)`)}\n\n`,
+    `${color.dim("Time Range Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${color.dim(`(${days} days)`)}\n\n`,
   );
 
   const rows: [string, string][] = [
@@ -210,7 +201,7 @@ function printOverview(
 
   const maxLabel = Math.max(...rows.map(([label]) => displayWidth(label)));
   for (const [label, value] of rows) {
-    process.stdout.write(`${bold(padEnd(label, maxLabel + 2))}${value}\n`);
+    process.stdout.write(`${color.bold(padEnd(label, maxLabel + 2))}${value}\n`);
   }
 }
 
@@ -219,13 +210,11 @@ function printModelTable(
   startTime: number,
   endTime: number,
   days: number,
-  noColor: boolean,
 ): void {
-  const bold = noColor ? (text: string) => text : (text: string) => `\x1b[1m${text}\x1b[0m`;
-  const dim = noColor ? (text: string) => text : (text: string) => `\x1b[2m${text}\x1b[0m`;
+  const color = ansi(process.stdout);
 
   process.stdout.write(
-    `${dim("Time Range Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${dim(`(${days} days)`)}\n\n`,
+    `${color.dim("Time Range Period:")} ${formatDate(startTime)} ~ ${formatDate(endTime)} ${color.dim(`(${days} days)`)}\n\n`,
   );
 
   if (items.length === 0) {
@@ -270,8 +259,8 @@ function printModelTable(
     Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
   );
 
-  const headerLine = headers.map((label, col) => bold(padEnd(label, widths[col]))).join("  ");
-  const separator = widths.map((width) => dim("─".repeat(width))).join("──");
+  const headerLine = headers.map((label, col) => color.bold(padEnd(label, widths[col]))).join("  ");
+  const separator = widths.map((width) => color.dim("─".repeat(width))).join("──");
 
   process.stdout.write(headerLine + "\n");
   process.stdout.write(separator + "\n");
@@ -281,41 +270,30 @@ function printModelTable(
     process.stdout.write(cells.join("  ") + "\n");
   }
 
-  process.stdout.write(dim(`\nTotal: ${items.length} models`) + "\n");
+  process.stdout.write(color.dim(`\nTotal: ${items.length} models`) + "\n");
 }
 
 export default defineCommand({
   description: "Query model usage statistics",
-  skipDefaultApiKeySetup: true,
+  auth: "console",
   usageArgs: "[--model <model>] [--days <days>] [flags]",
-  options: [
-    {
-      flag: "--model <model>",
+  flags: {
+    model: {
+      type: "string",
+      valueHint: "<model>",
       description: "Model name(s), comma-separated; omit for overview",
     },
-    {
-      flag: "--days <days>",
+    days: {
+      type: "string",
+      valueHint: "<days>",
       description: "Number of days (default: 7)",
     },
-    {
-      flag: "--type <type>",
+    type: {
+      type: "string",
+      valueHint: "<type>",
       description: "Model type: Text, Vision, Multimodal, Audio, Embedding",
     },
-    {
-      flag: "--workspace-id <id>",
-      description: "Workspace ID (env: BAILIAN_WORKSPACE_ID)",
-    },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
-      description: "Console site: domestic, international",
-    },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+  },
   exampleArgs: [
     "",
     "--days 30",
@@ -325,14 +303,14 @@ export default defineCommand({
     "--type Text --days 14",
     "--output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const modelFlag = (flags.model as string) || undefined;
+  async run(ctx) {
+    const { identity, settings, flags } = ctx;
+    const modelFlag = flags.model || undefined;
     const daysFlag = Number(flags.days) || 7;
-    const typeFlag = (flags.type as string) || undefined;
-    const format = detectOutputFormat(config.output);
+    const typeFlag = flags.type || undefined;
+    const format = detectOutputFormat(settings.output);
 
-    const flagWorkspaceId = (flags.workspaceId as string) || undefined;
-    const workspaceId = resolveWorkspaceId(config, flagWorkspaceId);
+    const workspaceId = requireWorkspaceId(settings, identity.binName);
 
     const endTime = Date.now();
     const startTime = endTime - daysFlag * 24 * 60 * 60 * 1000;
@@ -359,7 +337,7 @@ export default defineCommand({
       };
       if (typeFlag) baseReqDTO.obsModelType = typeFlag;
 
-      if (config.dryRun) {
+      if (settings.dryRun) {
         emitResult(
           { api: LIST_API, data: { reqDTO: { ...baseReqDTO, model: models.join(",") } } },
           format,
@@ -367,12 +345,8 @@ export default defineCommand({
         return;
       }
 
-      const credential = await resolveConsoleGatewayCredential(config);
-
       const results = await Promise.all(
-        models.map((model) =>
-          pollTelemetryApi(config, credential.token, LIST_API, { ...baseReqDTO, model }),
-        ),
+        models.map((model) => pollTelemetryApi(ctx.client, LIST_API, { ...baseReqDTO, model })),
       );
 
       const allItems: ModelStatisticItem[] = [];
@@ -404,7 +378,7 @@ export default defineCommand({
         return;
       }
 
-      printModelTable(allItems, startTime, endTime, daysFlag, config.noColor);
+      printModelTable(allItems, startTime, endTime, daysFlag);
     } else {
       const reqDTO: Record<string, unknown> = {
         startTime,
@@ -414,17 +388,14 @@ export default defineCommand({
       };
       if (typeFlag) reqDTO.obsModelType = typeFlag;
 
-      if (config.dryRun) {
+      if (settings.dryRun) {
         emitResult({ api: OVERVIEW_API, data: { reqDTO } }, format);
         return;
       }
 
-      const credential = await resolveConsoleGatewayCredential(config);
-
-      const result = await pollTelemetryApi(config, credential.token, OVERVIEW_API, reqDTO);
+      const result = await pollTelemetryApi(ctx.client, OVERVIEW_API, reqDTO);
       if (!result) {
-        process.stderr.write("Error: request timed out.\n");
-        process.exit(1);
+        throw new BailianError("Request timed out.", ExitCode.TIMEOUT);
       }
 
       const stat = extractOverviewData(result);
@@ -463,7 +434,7 @@ export default defineCommand({
         return;
       }
 
-      printOverview(stat, startTime, endTime, daysFlag, config.noColor);
+      printOverview(stat, startTime, endTime, daysFlag);
     }
   },
 });

@@ -4,15 +4,14 @@
  * Thin functions over `requestJson`. They return the parsed body verbatim
  * (snake_case) so callers can decide how to surface fields.
  */
-import { requestJson } from "../client/http.ts";
 import {
-  deploymentsEndpoint,
-  deploymentEndpoint,
-  deploymentScaleEndpoint,
-  deploymentUpdateEndpoint,
-  deploymentsModelsEndpoint,
+  deploymentsPath,
+  deploymentPath,
+  deploymentScalePath,
+  deploymentUpdatePath,
+  deploymentsModelsPath,
 } from "../client/endpoints.ts";
-import type { Config } from "../config/schema.ts";
+import type { Client } from "../client/client.ts";
 import type {
   CreateDeploymentRequest,
   CreateDeploymentResponse,
@@ -28,13 +27,12 @@ import type {
 
 /** POST /api/v1/deployments */
 export async function createDeployment(
-  config: Config,
+  client: Client,
   body: CreateDeploymentRequest,
   signal?: AbortSignal,
 ): Promise<CreateDeploymentResponse> {
-  const url = deploymentsEndpoint(config.baseUrl);
-  return requestJson<CreateDeploymentResponse>(config, {
-    url,
+  return client.requestJson<CreateDeploymentResponse>({
+    path: deploymentsPath(),
     method: "POST",
     body,
     signal,
@@ -50,17 +48,17 @@ export interface ListDeploymentsParams {
 
 /** GET /api/v1/deployments */
 export async function listDeployments(
-  config: Config,
+  client: Client,
   params: ListDeploymentsParams = {},
 ): Promise<ListDeploymentsResponse> {
   const qs = new URLSearchParams();
   if (params.pageNo !== undefined) qs.set("page_no", String(params.pageNo));
   if (params.pageSize !== undefined) qs.set("page_size", String(params.pageSize));
   if (params.status) qs.set("status", params.status);
-  const base = deploymentsEndpoint(config.baseUrl);
-  const url = qs.toString() ? `${base}?${qs.toString()}` : base;
-  return requestJson<ListDeploymentsResponse>(config, {
-    url,
+  const base = deploymentsPath();
+  const path = qs.toString() ? `${base}?${qs.toString()}` : base;
+  return client.requestJson<ListDeploymentsResponse>({
+    path,
     method: "GET",
     signal: params.signal,
   });
@@ -68,13 +66,12 @@ export async function listDeployments(
 
 /** GET /api/v1/deployments/{deployed_model} */
 export async function getDeployment(
-  config: Config,
+  client: Client,
   deployedModel: string,
   signal?: AbortSignal,
 ): Promise<GetDeploymentResponse> {
-  const url = deploymentEndpoint(config.baseUrl, deployedModel);
-  return requestJson<GetDeploymentResponse>(config, {
-    url,
+  return client.requestJson<GetDeploymentResponse>({
+    path: deploymentPath(deployedModel),
     method: "GET",
     signal,
   });
@@ -82,13 +79,12 @@ export async function getDeployment(
 
 /** DELETE /api/v1/deployments/{deployed_model} */
 export async function deleteDeployment(
-  config: Config,
+  client: Client,
   deployedModel: string,
   signal?: AbortSignal,
 ): Promise<DeleteDeploymentResponse> {
-  const url = deploymentEndpoint(config.baseUrl, deployedModel);
-  return requestJson<DeleteDeploymentResponse>(config, {
-    url,
+  return client.requestJson<DeleteDeploymentResponse>({
+    path: deploymentPath(deployedModel),
     method: "DELETE",
     signal,
   });
@@ -106,7 +102,7 @@ export interface ListDeployableModelsParams {
 
 /** GET /api/v1/deployments/models */
 export async function listDeployableModels(
-  config: Config,
+  client: Client,
   params: ListDeployableModelsParams = {},
 ): Promise<ListDeployableModelsResponse> {
   const qs = new URLSearchParams();
@@ -114,10 +110,10 @@ export async function listDeployableModels(
   if (params.pageSize !== undefined) qs.set("page_size", String(params.pageSize));
   if (params.version) qs.set("version", params.version);
   if (params.modelSource) qs.set("model_source", params.modelSource);
-  const base = deploymentsModelsEndpoint(config.baseUrl);
-  const url = qs.toString() ? `${base}?${qs.toString()}` : base;
-  return requestJson<ListDeployableModelsResponse>(config, {
-    url,
+  const base = deploymentsModelsPath();
+  const path = qs.toString() ? `${base}?${qs.toString()}` : base;
+  return client.requestJson<ListDeployableModelsResponse>({
+    path,
     method: "GET",
     signal: params.signal,
   });
@@ -125,14 +121,13 @@ export async function listDeployableModels(
 
 /** PUT /api/v1/deployments/{deployed_model}/scale */
 export async function scaleDeployment(
-  config: Config,
+  client: Client,
   deployedModel: string,
   body: ScaleDeploymentRequest,
   signal?: AbortSignal,
 ): Promise<ScaleDeploymentResponse> {
-  const url = deploymentScaleEndpoint(config.baseUrl, deployedModel);
-  return requestJson<ScaleDeploymentResponse>(config, {
-    url,
+  return client.requestJson<ScaleDeploymentResponse>({
+    path: deploymentScalePath(deployedModel),
     method: "PUT",
     body,
     signal,
@@ -145,14 +140,13 @@ export async function scaleDeployment(
  * Update rate limits. At least one of `rpm_limit` / `tpm_limit` must be set.
  */
 export async function updateDeployment(
-  config: Config,
+  client: Client,
   deployedModel: string,
   body: UpdateDeploymentRequest,
   signal?: AbortSignal,
 ): Promise<UpdateDeploymentResponse> {
-  const url = deploymentUpdateEndpoint(config.baseUrl, deployedModel);
-  return requestJson<UpdateDeploymentResponse>(config, {
-    url,
+  return client.requestJson<UpdateDeploymentResponse>({
+    path: deploymentUpdatePath(deployedModel),
     method: "PUT",
     body,
     signal,

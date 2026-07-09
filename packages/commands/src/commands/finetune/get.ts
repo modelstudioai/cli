@@ -1,30 +1,32 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  getFineTune,
-  type Config,
-  type GlobalFlags,
-} from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
+import { defineCommand, detectOutputFormat, getFineTune, type FlagsDef } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
+
+const GET_FLAGS = {
+  jobId: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Fine-tune job ID (required)",
+    required: true,
+  },
+} satisfies FlagsDef;
 
 export default defineCommand({
   description: "Get details of a single fine-tune job",
+  auth: "apiKey",
   usageArgs: "--job-id <id>",
-  options: [{ flag: "--job-id <id>", description: "Fine-tune job ID (required)", required: true }],
-  exampleArgs: ["bl finetune get --job-id ft-xxx", "bl finetune get --job-id ft-xxx --output json"],
-  async run(config: Config, flags: GlobalFlags) {
-    const jobId = flags.jobId as string | undefined;
-    if (!jobId) failIfMissing("job-id", "bl finetune get --job-id <id>");
+  flags: GET_FLAGS,
+  exampleArgs: ["--job-id ft-xxx", "--job-id ft-xxx --output json"],
+  async run(ctx) {
+    const { identity, settings, flags } = ctx;
+    const jobId = flags.jobId;
+    const format = detectOutputFormat(settings.output);
 
-    const format = detectOutputFormat(config.output);
-
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ action: "finetune.get", job_id: jobId }, format);
       return;
     }
 
-    const response = await getFineTune(config, jobId!);
+    const response = await getFineTune(ctx.client, jobId);
     const job = response.output ?? response.data;
 
     if (!job) {
@@ -68,7 +70,9 @@ export default defineCommand({
       emitBare(`validation_files: ${item.validation_files.join(", ")}`);
     if (item.hyper_params) emitBare(`hyper_params:     ${item.hyper_params}`);
     if (item.output_model)
-      emitBare(`output_model:     ${item.output_model}  (→ bl deploy create --model)`);
+      emitBare(
+        `output_model:     ${item.output_model}  (→ ${identity.binName} deploy create --model)`,
+      );
     if (item.model_name) emitBare(`model_name:       ${item.model_name}`);
     if (item.created_at) emitBare(`created_at:       ${item.created_at}`);
     if (item.updated_at) emitBare(`updated_at:       ${item.updated_at}`);

@@ -1,11 +1,16 @@
-import type { Config } from "../config/schema.ts";
+import type { Identity, Settings } from "../config/schema.ts";
 import type { ApiErrorBody } from "../errors/api.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
-import { resolveCredential } from "../auth/resolver.ts";
 import { mapApiError } from "../errors/api.ts";
 import { maskToken } from "../utils/token.ts";
 import { SOURCE_CONFIG, trackingHeaders } from "./headers.ts";
+
+/** 传输层依赖:UA 用 identity,timeout/verbose 用 settings。凭证由调用方(Client)注头。 */
+export interface HttpDeps {
+  identity: Identity;
+  settings: Settings;
+}
 
 export interface RequestOpts {
   url: string;
@@ -14,7 +19,6 @@ export interface RequestOpts {
   headers?: Record<string, string>;
   timeout?: number;
   stream?: boolean;
-  noAuth?: boolean;
   async?: boolean; // Add X-DashScope-Async: enable header
   signal?: AbortSignal;
 }
@@ -30,13 +34,11 @@ function bodyReferencesOssUrl(body: unknown): boolean {
   return JSON.stringify(body).includes("oss://");
 }
 
-export async function request(config: Config, opts: RequestOpts): Promise<Response> {
+export async function request(deps: HttpDeps, opts: RequestOpts): Promise<Response> {
   const isFormData = typeof FormData !== "undefined" && opts.body instanceof FormData;
 
-  const clientName = config.clientName ?? "bailian-cli-core";
-  const version = config.clientVersion ?? "0.0.0-dev";
   const headers: Record<string, string> = {
-    "User-Agent": `${clientName}/${version}`,
+    "User-Agent": `${deps.identity.clientName}/${deps.identity.version}`,
     ...trackingHeaders(),
     ...opts.headers,
   };
@@ -53,18 +55,14 @@ export async function request(config: Config, opts: RequestOpts): Promise<Respon
     headers["X-DashScope-OssResourceResolve"] = "enable";
   }
 
-  if (!opts.noAuth) {
-    const credential = await resolveCredential(config);
-    headers["Authorization"] = `Bearer ${credential.token}`;
-
-    if (config.verbose) {
-      console.error(`> ${opts.method ?? "GET"} ${opts.url}`);
-      console.error(`> Auth: ${maskToken(credential.token)}`);
-      console.error(`> x-dashscope-source-config: ${SOURCE_CONFIG}`);
-    }
+  if (deps.settings.verbose) {
+    console.error(`> ${opts.method ?? "GET"} ${opts.url}`);
+    const auth = headers["Authorization"];
+    if (auth) console.error(`> Auth: ${maskToken(auth.replace(/^Bearer /, ""))}`);
+    console.error(`> x-dashscope-source-config: ${SOURCE_CONFIG}`);
   }
 
-  const timeoutMs = (opts.timeout ?? config.timeout) * 1000;
+  const timeoutMs = (opts.timeout ?? deps.settings.timeout) * 1000;
 
   const requestSignal = createRequestSignal(timeoutMs, opts.signal);
   const res = await fetch(opts.url, {
@@ -78,7 +76,7 @@ export async function request(config: Config, opts: RequestOpts): Promise<Respon
     signal: requestSignal.signal,
   }).finally(requestSignal.cleanup);
 
-  if (config.verbose) {
+  if (deps.settings.verbose) {
     console.error(`< ${res.status} ${res.statusText}`);
     const reqId = res.headers.get("x-request-id");
     if (reqId) {
@@ -118,8 +116,8 @@ function createRequestSignal(
   return { signal: controller.signal, cleanup };
 }
 
-export async function requestJson<T>(config: Config, opts: RequestOpts): Promise<T> {
-  const res = await request(config, opts);
+export async function requestJson<T>(deps: HttpDeps, opts: RequestOpts): Promise<T> {
+  const res = await request(deps, opts);
   let data: T & { code?: string; message?: string; request_id?: string };
   try {
     data = (await res.json()) as T & { code?: string; message?: string; request_id?: string };

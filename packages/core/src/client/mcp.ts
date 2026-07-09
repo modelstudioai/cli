@@ -6,15 +6,14 @@
  *
  * Protocol flow: initialize → tools/list → tools/call
  *
- * Auth: always sends `Authorization: Bearer <DashScope sk-key>` resolved via
- * `resolveCredential`. Bailian MCPs all accept this; non-Bailian endpoints
+ * Auth: always sends `Authorization: Bearer <DashScope sk-key>` injected by the
+ * caller (Client.mcp). Bailian MCPs all accept this; non-Bailian endpoints
  * are out of scope for this client.
  */
 
-import type { Config } from "../config/schema.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
-import { resolveCredential } from "../auth/resolver.ts";
+import type { HttpDeps } from "./http.ts";
 import { trackingHeaders } from "./headers.ts";
 
 // ---- JSON-RPC 2.0 Types ----
@@ -58,9 +57,8 @@ export interface McpToolResult {
  * The path is `/api/v1/mcps/<serverCode>/mcp`; the `serverCode` is taken
  * verbatim from `bl mcp list` (e.g. `WebSearch`, `market-cmapi00073529`).
  */
-export function bailianMcpUrl(baseUrl: string, serverCode: string): string {
-  const root = baseUrl.replace(/\/$/, "");
-  return `${root}/api/v1/mcps/${serverCode}/mcp`;
+export function bailianMcpPath(serverCode: string): string {
+  return `/api/v1/mcps/${serverCode}/mcp`;
 }
 
 // ---- MCP Client ----
@@ -69,29 +67,31 @@ export class McpClient {
   private url: string;
   private sessionId: string | undefined;
   private nextId = 1;
-  private config: Config;
+  private deps: HttpDeps;
   private authToken: string | undefined;
 
-  constructor(config: Config, url: string) {
-    this.config = config;
+  constructor(deps: HttpDeps, url: string, authToken?: string) {
+    this.deps = deps;
     this.url = url;
+    this.authToken = authToken;
   }
 
   /** Initialize the MCP session. Must be called before any other method. */
   async initialize(): Promise<void> {
-    const credential = await resolveCredential(this.config);
-    this.authToken = credential.token;
+    if (!this.authToken) {
+      throw new BailianError("This command needs a model-domain API key.", ExitCode.AUTH);
+    }
 
     const result = await this.rpc("initialize", {
       protocolVersion: "2025-03-26",
       capabilities: {},
       clientInfo: {
-        name: this.config.clientName ?? "bailian-cli-core",
-        version: this.config.clientVersion ?? "0.0.0-dev",
+        name: this.deps.identity.clientName,
+        version: this.deps.identity.version,
       },
     });
 
-    if (this.config.verbose) {
+    if (this.deps.settings.verbose) {
       console.error(`[MCP] Session initialized: ${this.sessionId ?? "no session"}`);
       console.error(`[MCP] Server: ${JSON.stringify(result)}`);
     }
@@ -147,7 +147,7 @@ export class McpClient {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       Accept: "application/json, text/event-stream",
-      "User-Agent": `${this.config.clientName ?? "bailian-cli-core"}/${this.config.clientVersion ?? "0.0.0-dev"}`,
+      "User-Agent": `${this.deps.identity.clientName}/${this.deps.identity.version}`,
       ...trackingHeaders(),
     };
 
@@ -159,12 +159,12 @@ export class McpClient {
       headers["Mcp-Session-Id"] = this.sessionId;
     }
 
-    if (this.config.verbose) {
+    if (this.deps.settings.verbose) {
       console.error(`> POST ${this.url}`);
       console.error(`> Method: ${(body as { method?: string }).method}`);
     }
 
-    const timeoutMs = this.config.timeout * 1000;
+    const timeoutMs = this.deps.settings.timeout * 1000;
     const res = await fetch(this.url, {
       method: "POST",
       headers,
@@ -172,7 +172,7 @@ export class McpClient {
       signal: AbortSignal.timeout(timeoutMs),
     });
 
-    if (this.config.verbose) {
+    if (this.deps.settings.verbose) {
       console.error(`< ${res.status} ${res.statusText}`);
     }
 

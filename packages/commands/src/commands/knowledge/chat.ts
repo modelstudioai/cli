@@ -1,20 +1,45 @@
 import {
   defineCommand,
-  request,
   knowledgeChatEndpoint,
   parseSSE,
   detectOutputFormat,
   BailianError,
   ExitCode,
-  isInteractive,
-  type Config,
-  type GlobalFlags,
+  type FlagsDef,
+  type ParsedFlags,
   type KnowledgeChatContentPart,
   type KnowledgeChatMessage,
   type KnowledgeChatRequest,
   type KnowledgeChatStreamChunk,
 } from "bailian-cli-core";
-import { failIfMissing, cmdUsage, emitResult, emitBare, promptText } from "bailian-cli-runtime";
+import { ansi, emitResult, emitBare } from "bailian-cli-runtime";
+
+const CHAT_FLAGS = {
+  message: {
+    type: "array",
+    valueHint: "<text>",
+    description:
+      "Message text (repeatable). Supports role:content prefix to set role (e.g. user:hello), defaults to user. Follows OpenAI message format",
+  },
+  agentId: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Q&A service ID (find in console knowledge Q&A page)",
+    required: true,
+  },
+  // 知识库走 workspace 专属域名,--workspace-id 属命令自有 flag(console 凭证域不适用)。
+  workspaceId: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)",
+  },
+  image: {
+    type: "array",
+    valueHint: "<url>",
+    description: "Image URL (repeatable). Attached to the last user message as multimodal content",
+  },
+} satisfies FlagsDef;
+type ChatFlags = ParsedFlags<typeof CHAT_FLAGS>;
 
 /**
  * Parse --message flags into KnowledgeChatMessage[].
@@ -23,12 +48,11 @@ import { failIfMissing, cmdUsage, emitResult, emitBare, promptText } from "baili
  *   2. Role prefix: "user:hello" / "assistant:hi" → {role, content}
  *   3. JSON object: '{"role":"user","content":[...]}' → structured message (advanced)
  */
-function parseMessages(flags: GlobalFlags): KnowledgeChatMessage[] {
+function parseMessages(flags: ChatFlags): KnowledgeChatMessage[] {
   const messages: KnowledgeChatMessage[] = [];
   if (flags.message) {
     const validRoles = new Set(["user", "assistant"]);
-    const msgs = flags.message as string[];
-    for (const m of msgs) {
+    for (const m of flags.message) {
       // Try JSON object first (advanced usage)
       if (m.startsWith("{")) {
         try {
@@ -114,32 +138,9 @@ const STEP_LABELS: Record<string, string> = {
 
 export default defineCommand({
   description: "Chat with a Bailian knowledge base (RAG Q&A with streaming)",
-  skipDefaultApiKeySetup: true,
+  auth: "apiKey",
   usageArgs: "--message <text> --agent-id <id> [flags]",
-  options: [
-    {
-      flag: "--message <text>",
-      description:
-        "Message text (repeatable). Supports role:content prefix to set role (e.g. user:hello), defaults to user. Follows OpenAI message format",
-      required: true,
-      type: "array",
-    },
-    {
-      flag: "--agent-id <id>",
-      description: "Q&A service ID (find in console knowledge Q&A page)",
-      required: true,
-    },
-    {
-      flag: "--workspace-id <id>",
-      description: "Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)",
-    },
-    {
-      flag: "--image <url>",
-      description:
-        "Image URL (repeatable). Attached to the last user message as multimodal content",
-      type: "array",
-    },
-  ],
+  flags: CHAT_FLAGS,
   notes: [
     "Response is returned as SSE stream events. Event lifecycle: tool_calling → tool_return → plan_start → planning → plan_end → generation_start → generating → generation_end. tool_calling → tool_return may loop multiple times.",
     "Auth: uses DashScope API Key (Bearer token). Get yours from the console API Key page.",
@@ -151,43 +152,34 @@ export default defineCommand({
     '--message "user:What is RAG?" --message "assistant:RAG is..." --message "How does it work?" --agent-id aid-xxx --workspace-id ws-xxx',
     '--message "Describe these images" --image https://example.com/a.png --image https://example.com/b.png --agent-id aid-xxx --workspace-id ws-xxx',
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  validate: (f) =>
+    (f.message && f.message.length > 0) || (f.image && f.image.length > 0)
+      ? undefined
+      : "Provide --message (or --image for a pure image query).",
+  async run(ctx) {
+    const { settings, flags } = ctx;
     let messages = parseMessages(flags);
 
-    const imageUrls = flags.image as string[] | undefined;
-    const hasImages = imageUrls && imageUrls.length > 0;
+    const imageUrls = flags.image;
+    const hasImages = !!imageUrls && imageUrls.length > 0;
 
-    if (messages.length === 0) {
-      if (hasImages) {
-        // --image without --message: create an empty user message to hold images
-        messages = [{ role: "user", content: "" }];
-      } else if (isInteractive({ nonInteractive: config.nonInteractive })) {
-        const hint = await promptText({ message: "Enter your message:" });
-        if (!hint) {
-          process.stderr.write("Chat cancelled.\n");
-          process.exit(1);
-        }
-        messages = [{ role: "user", content: hint }];
-      } else {
-        failIfMissing("message", cmdUsage(config, "--message <text> --agent-id <id>"));
-      }
+    // --image without --message: create an empty user message to hold images
+    if (messages.length === 0 && hasImages) {
+      messages = [{ role: "user", content: "" }];
     }
 
-    const agentId = flags.agentId as string;
-    if (!agentId) failIfMissing("agent-id", cmdUsage(config, "--message <text> --agent-id <id>"));
-
-    const workspaceId = (flags.workspaceId as string) || config.workspaceId;
+    const workspaceId = flags.workspaceId || settings.workspaceId;
     if (!workspaceId) {
       throw new BailianError(
         "Workspace ID is required.",
         ExitCode.USAGE,
-        "Pass --workspace-id, set BAILIAN_WORKSPACE_ID env, or configure: kscli config set workspace_id <id>",
+        `Pass --workspace-id, set BAILIAN_WORKSPACE_ID env, or configure: ${ctx.identity.binName} config set workspace_id <id>`,
       );
     }
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
     // API only supports SSE; streamOutput controls whether to print tokens in real-time
-    const streamOutput = format === "rich" && !!process.stdout.isTTY;
+    const streamOutput = format === "text" && !!process.stdout.isTTY;
 
     // Attach --image URLs to messages (multimodal content array)
     if (hasImages) {
@@ -197,7 +189,7 @@ export default defineCommand({
           ExitCode.USAGE,
         );
       }
-      attachImagesToLastUserMessage(messages, imageUrls!);
+      attachImagesToLastUserMessage(messages, imageUrls);
     }
 
     const body: KnowledgeChatRequest = {
@@ -206,7 +198,7 @@ export default defineCommand({
       },
       parameters: {
         agent_options: {
-          agent_id: agentId,
+          agent_id: flags.agentId,
         },
       },
       stream: true,
@@ -214,23 +206,21 @@ export default defineCommand({
 
     const url = knowledgeChatEndpoint(workspaceId);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ endpoint: url, request: body }, format);
       return;
     }
 
-    const res = await request(config, {
-      url,
+    const res = await ctx.client.request({
+      path: url,
       method: "POST",
       body,
       stream: true,
     });
 
     if (streamOutput) {
-      let textContent = "";
-      const dim = config.noColor ? "" : "\x1b[2m";
-      const reset = config.noColor ? "" : "\x1b[0m";
-      const verbose = config.verbose;
+      const color = ansi(process.stdout);
+      const verbose = settings.verbose;
 
       for await (const event of parseSSE(res)) {
         if (event.data === "[DONE]") break;
@@ -262,20 +252,21 @@ export default defineCommand({
             if (msg.extra?.step_change) {
               const label = STEP_LABELS[msg.extra.step_change];
               if (label) {
-                process.stdout.write(`${dim}${label}${reset}\n`);
+                process.stdout.write(`${color.dim(label)}\n`);
               }
             }
 
             // Verbose: dump all events to stderr
             if (verbose && msg.extra?.step_change) {
               process.stderr.write(
-                `${dim}[event] step_change=${msg.extra.step_change} step=${msg.extra?.step ?? ""} group=${msg.extra?.group ?? ""}${reset}\n`,
+                ansi(process.stderr).dim(
+                  `[event] step_change=${msg.extra.step_change} step=${msg.extra?.step ?? ""} group=${msg.extra?.group ?? ""}`,
+                ) + "\n",
               );
             }
 
             // Extract generated content
             if (msg.content) {
-              textContent += msg.content;
               process.stdout.write(msg.content);
             }
 
@@ -327,7 +318,7 @@ export default defineCommand({
         }
       }
 
-      if (config.quiet || format === "rich") {
+      if (settings.quiet || format === "text") {
         emitBare(textContent);
       } else {
         emitResult({ answer: textContent, request_id: requestId }, format);

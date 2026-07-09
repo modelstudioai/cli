@@ -30,7 +30,7 @@ describe("e2e: speech synthesize", () => {
 describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
   "e2e: speech synthesize（DashScope 媒体）",
   () => {
-    test("speech synthesize 缺少 --text 时打印子命令帮助并退出 (0)", async () => {
+    test("speech synthesize 缺少 --text 时报用法错误并退出 (2)", async () => {
       const { stderr, exitCode } = await runCli([
         "speech",
         "synthesize",
@@ -38,9 +38,8 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
         "cosyvoice-v3-flash",
         "--voice",
         "longxiaochun_v3",
-        "--non-interactive",
       ]);
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--text|Usage:/i);
     });
 
@@ -55,7 +54,6 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
         "longxiaochun_v3",
         "--text",
         "干跑",
-        "--non-interactive",
         "--output",
         "json",
       ]);
@@ -81,7 +79,6 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
         "端到端语音测试",
         "--out",
         outMp3,
-        "--non-interactive",
         "--output",
         "json",
       ]);

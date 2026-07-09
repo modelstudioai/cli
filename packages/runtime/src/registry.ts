@@ -1,28 +1,64 @@
-import type { Command } from "bailian-cli-core";
-import { BailianError } from "bailian-cli-core";
-import { ExitCode } from "bailian-cli-core";
-import { GLOBAL_OPTIONS } from "bailian-cli-core";
+import type { AnyCommand, AuthRequirement, FlagDef, FlagsDef } from "bailian-cli-core";
+import { UsageError } from "bailian-cli-core";
+import {
+  CONSOLE_AUTH_FLAGS,
+  GLOBAL_FLAGS,
+  MODEL_AUTH_FLAGS,
+  OPENAPI_AUTH_FLAGS,
+  credentialFlagDefs,
+} from "bailian-cli-core";
+import { camelToKebab } from "./args.ts";
+import { ansi } from "./output/color.ts";
 
-export type { Command, OptionDef } from "bailian-cli-core";
+export type { Command, AnyCommand, FlagDef, FlagsDef } from "bailian-cli-core";
+
+/** "--max-tokens <count>" for a value flag, "--quiet" for a switch. */
+function flagDisplay(key: string, def: FlagDef): string {
+  const flag = `--${camelToKebab(key)}`;
+  if (def.type === "switch") return flag;
+  const hint = def.choices ? `<${def.choices.join("|")}>` : def.valueHint;
+  return `${flag} ${hint}`;
+}
 
 interface CommandNode {
-  command?: Command;
+  command?: AnyCommand;
   children: Map<string, CommandNode>;
 }
+
+/**
+ * What a command path resolves to in the registry. The single judgement that
+ * feeds `resolve()` — no scattered `isGroupPath` + throwing `resolve`.
+ *  - leaf:    landed *exactly* on an executable command (no leftover tokens).
+ *  - group:   landed on a command group with no executable of its own (incl. root []).
+ *  - unknown: the path doesn't exist, or a valid command had unexpected trailing
+ *             tokens (no positionals); `error` carries the message + hint.
+ */
+export type LocateResult =
+  | { kind: "leaf"; command: AnyCommand; matched: string[] }
+  | { kind: "group"; matched: string[] }
+  | { kind: "unknown"; error: UsageError };
 
 export class CommandRegistry {
   private root: CommandNode = { children: new Map() };
   /** Binary name shown in usage/help/error strings (e.g. "bl", "rag"). */
   private readonly cliName: string;
+  private readonly authRequirements = new Set<AuthRequirement>();
 
-  constructor(commands: Record<string, Command>, cliName: string) {
+  constructor(commands: Record<string, AnyCommand>, cliName: string) {
     this.cliName = cliName;
     for (const [path, cmd] of Object.entries(commands)) {
       this.register(path, cmd);
     }
   }
 
-  private register(path: string, command: Command): void {
+  private register(path: string, command: AnyCommand): void {
+    // 同名守卫:命令自有 flag 不得与全局或其可见凭证域 flag 同名。
+    const reserved = { ...GLOBAL_FLAGS, ...credentialFlagDefs(command) };
+    for (const key of Object.keys(command.flags ?? {})) {
+      if (key in reserved) {
+        throw new Error(`Command "${path}" redeclares reserved flag "${key}".`);
+      }
+    }
     const parts = path.split(" ");
     let node = this.root;
     for (const part of parts) {
@@ -32,10 +68,11 @@ export class CommandRegistry {
       node = node.children.get(part)!;
     }
     node.command = command;
+    this.authRequirements.add(command.auth);
   }
 
-  getAllCommands(): Command[] {
-    const commands: Command[] = [];
+  getAllCommands(): AnyCommand[] {
+    const commands: AnyCommand[] = [];
     const traverse = (node: CommandNode) => {
       if (node.command) commands.push(node.command);
       for (const child of node.children.values()) {
@@ -59,17 +96,13 @@ export class CommandRegistry {
     return walk(this.root, []) ?? "<resource> <command>";
   }
 
-  isGroupPath(commandPath: string[]): boolean {
-    let node = this.root;
-    for (const part of commandPath) {
-      const child = node.children.get(part);
-      if (!child) return false;
-      node = child;
-    }
-    return !node.command && node.children.size > 0;
-  }
-
-  resolve(commandPath: string[]): { command: Command; extra: string[] } {
+  /**
+   * Resolve a command path to a leaf / group / unknown outcome. Pure: walks the
+   * trie taking the longest registered prefix as the command. There are no
+   * positionals, so a valid command followed by leftover tokens is `unknown`
+   * (unexpected argument). Never throws — unknown paths return a carried UsageError.
+   */
+  locate(commandPath: string[]): LocateResult {
     let node = this.root;
     const matched: string[] = [];
 
@@ -81,18 +114,23 @@ export class CommandRegistry {
     }
 
     if (node.command) {
-      return { command: node.command, extra: commandPath.slice(matched.length) };
-    }
-
-    // Single child: auto-forward (e.g. `bl config` → `bl config show`)
-    if (matched.length > 0 && node.children.size === 1) {
-      const [, child] = node.children.entries().next().value as [string, CommandNode];
-      if (child.command) {
-        return { command: child.command, extra: commandPath.slice(matched.length) };
+      const leftover = commandPath.slice(matched.length);
+      if (leftover.length === 0) {
+        return { kind: "leaf", command: node.command, matched };
       }
+      return {
+        kind: "unknown",
+        error: new UsageError(
+          `Unexpected argument: ${leftover.join(" ")}`,
+          `${this.cliName} ${matched.join(" ")} --help`,
+        ),
+      };
     }
 
-    // If we matched some path but no command, show help for that group
+    if (matched.length === commandPath.length && node.children.size > 0) {
+      return { kind: "group", matched };
+    }
+
     if (matched.length > 0 && node.children.size > 0) {
       const subcommands = Array.from(node.children.entries())
         .map(([name, n]) => {
@@ -101,18 +139,22 @@ export class CommandRegistry {
           return `  ${matched.join(" ")} ${name} [${subs}]`;
         })
         .join("\n");
-      throw new BailianError(
-        `Unknown command: ${this.cliName} ${commandPath.join(" ")}\n\nAvailable commands:\n${subcommands}`,
-        ExitCode.USAGE,
-        `${this.cliName} ${matched.join(" ")} --help`,
-      );
+      return {
+        kind: "unknown",
+        error: new UsageError(
+          `Unknown command: ${this.cliName} ${commandPath.join(" ")}\n\nAvailable commands:\n${subcommands}`,
+          `${this.cliName} ${matched.join(" ")} --help`,
+        ),
+      };
     }
 
-    throw new BailianError(
-      `Unknown command: ${this.cliName} ${commandPath.join(" ")}`,
-      ExitCode.USAGE,
-      `${this.cliName} --help`,
-    );
+    return {
+      kind: "unknown",
+      error: new UsageError(
+        `Unknown command: ${this.cliName} ${commandPath.join(" ")}`,
+        `${this.cliName} --help`,
+      ),
+    };
   }
 
   private buildResourceLines(a: (s: string) => string, d: (s: string) => string): string {
@@ -135,18 +177,36 @@ export class CommandRegistry {
     return entries.map((e) => `  ${a(e.path.padEnd(maxLen + 2))} ${d(e.desc)}`).join("\n");
   }
 
-  private buildGlobalFlagLines(a: (s: string) => string, d: (s: string) => string): string {
-    const maxLen = Math.max(...GLOBAL_OPTIONS.map((o) => o.flag.length));
-    return GLOBAL_OPTIONS.map((o) => `  ${a(o.flag.padEnd(maxLen + 2))} ${d(o.description)}`).join(
-      "\n",
-    );
+  private buildFlagLines(
+    defs: FlagsDef,
+    a: (s: string) => string,
+    d: (s: string) => string,
+  ): string {
+    const lines = Object.entries(defs).map(([k, def]) => ({
+      flag: flagDisplay(k, def),
+      desc: def.description,
+    }));
+    const maxLen = Math.max(...lines.map((l) => l.flag.length));
+    return lines.map((l) => `  ${a(l.flag.padEnd(maxLen + 2))} ${d(l.desc)}`).join("\n");
   }
 
-  // Color helpers — no-ops when output is not a TTY
-  private bold = (s: string, out: NodeJS.WriteStream) => (out.isTTY ? `\x1b[1m${s}\x1b[0m` : s);
-  private accent = (s: string, out: NodeJS.WriteStream) =>
-    out.isTTY ? `\x1b[38;2;59;130;246m${s}\x1b[0m` : s;
-  private dim = (s: string, out: NodeJS.WriteStream) => (out.isTTY ? `\x1b[2m${s}\x1b[0m` : s);
+  private buildAuthFlagSection(
+    auth: AuthRequirement,
+    label: string,
+    scope: string,
+    defs: FlagsDef,
+    b: (s: string) => string,
+    a: (s: string) => string,
+    d: (s: string) => string,
+  ): string | null {
+    if (!this.authRequirements.has(auth)) return null;
+    return `${b(label)} ${d(scope)}\n${this.buildFlagLines(defs, a, d)}`;
+  }
+
+  // Color helpers — no-ops when output is not a TTY.
+  private bold = (s: string, out: NodeJS.WriteStream) => ansi(out).bold(s);
+  private accent = (s: string, out: NodeJS.WriteStream) => ansi(out).accent(s);
+  private dim = (s: string, out: NodeJS.WriteStream) => ansi(out).dim(s);
 
   printHelp(commandPath: string[], out: NodeJS.WriteStream = process.stdout): void {
     if (commandPath.length === 0) {
@@ -210,16 +270,11 @@ ${d(`  ${this.cliName} pipeline run workflow.yaml --dry-run --output json`)}
       "██████╔╝██║  ██║██║███████╗██║██║  ██║██║ ╚████║",
       "╚═════╝ ╚═╝  ╚═╝╚═╝╚══════╝╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝",
     ];
-    const PURPLE = "\x1b[38;2;97;92;237m";
-    const RESET = "\x1b[0m";
+    const color = ansi(out);
 
     out.write("\n");
     for (const line of LOGO) {
-      if (out.isTTY) {
-        out.write(`${PURPLE}${line}${RESET}\n`);
-      } else {
-        out.write(line + "\n");
-      }
+      out.write(`${color.logo(line)}\n`);
     }
 
     const b = (s: string) => this.bold(s, out);
@@ -227,7 +282,38 @@ ${d(`  ${this.cliName} pipeline run workflow.yaml --dry-run --output json`)}
     const d = (s: string) => this.dim(s, out);
 
     const commandLines = this.buildResourceLines(a, d);
-    const globalFlagLines = this.buildGlobalFlagLines(a, d);
+    const globalFlagLines = this.buildFlagLines(GLOBAL_FLAGS, a, d);
+    const authFlagSections = [
+      this.buildAuthFlagSection(
+        "apiKey",
+        "Model Auth Flags:",
+        "(model-domain commands)",
+        MODEL_AUTH_FLAGS,
+        b,
+        a,
+        d,
+      ),
+      this.buildAuthFlagSection(
+        "console",
+        "Console Auth Flags:",
+        "(console-domain commands)",
+        CONSOLE_AUTH_FLAGS,
+        b,
+        a,
+        d,
+      ),
+      this.buildAuthFlagSection(
+        "openapi",
+        "OpenAPI Auth Flags:",
+        "(openapi-domain commands)",
+        OPENAPI_AUTH_FLAGS,
+        b,
+        a,
+        d,
+      ),
+    ]
+      .filter((section): section is string => section !== null)
+      .join("\n\n");
 
     out.write(`
 ${b("Usage:")} ${this.cliName} <resource> <command> [flags]
@@ -238,13 +324,13 @@ ${commandLines}
 ${b("Global Flags:")}
 ${globalFlagLines}
 
-${b("Getting Help:")}
-  ${d("Add --help after any command to see its full list of options, defaults,")}
+${authFlagSections ? `${authFlagSections}\n\n` : ""}${b("Getting Help:")}
+  ${d("Add --help after any command to see its full list of flags, defaults,")}
   ${d("and usage examples. For example:")} ${this.cliName} ${this.helpExample()} --help
 `);
   }
 
-  private printCommandHelp(cmd: Command, commandPath: string[], out: NodeJS.WriteStream): void {
+  private printCommandHelp(cmd: AnyCommand, commandPath: string[], out: NodeJS.WriteStream): void {
     const b = (s: string) => this.bold(s, out);
     const a = (s: string) => this.accent(s, out);
     const d = (s: string) => this.dim(s, out);
@@ -255,13 +341,23 @@ ${b("Getting Help:")}
 
     out.write(`\n${cmd.description}\n`);
     out.write(`${b("Usage:")} ${prefix}${cmd.usageArgs ? ` ${cmd.usageArgs}` : ""}\n`);
-    if (cmd.options && cmd.options.length > 0) {
-      const maxLen = Math.max(...cmd.options.map((o) => o.flag.length));
-      out.write(`\n${b("Options:")}\n`);
-      for (const opt of cmd.options) {
-        out.write(`  ${a(opt.flag.padEnd(maxLen + 2))} ${d(opt.description)}\n`);
+    const flagEntries = [
+      ...Object.entries(cmd.flags ?? {}),
+      ...Object.entries(credentialFlagDefs(cmd)),
+    ] as [string, FlagDef][];
+    if (flagEntries.length > 0) {
+      const lines = flagEntries.map(([k, def]) => ({
+        flag: flagDisplay(k, def),
+        desc: def.description,
+      }));
+      const maxLen = Math.max(...lines.map((l) => l.flag.length));
+      out.write(`\n${b("Flags:")}\n`);
+      for (const l of lines) {
+        out.write(`  ${a(l.flag.padEnd(maxLen + 2))} ${d(l.desc)}\n`);
       }
     }
+    out.write(`\n${b("Global Flags:")}\n`);
+    out.write(this.buildFlagLines(GLOBAL_FLAGS, a, d) + "\n");
     if (cmd.notes && cmd.notes.length > 0) {
       out.write(`\n${b("Notes:")}\n`);
       for (const note of cmd.notes) {
@@ -274,10 +370,6 @@ ${b("Getting Help:")}
         out.write(`  ${d(ex ? `${prefix} ${ex}` : prefix)}\n`);
       }
     }
-    out.write(
-      `\n${d("Global flags (--api-key, --output, --quiet, etc.) are always available.")}\n`,
-    );
-    out.write(`${d("Run")} ${this.cliName} --help ${d("for the full list.")}\n`);
   }
 
   private printChildren(node: CommandNode, prefix: string, out: NodeJS.WriteStream): void {

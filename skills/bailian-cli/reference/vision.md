@@ -21,7 +21,7 @@ Index: [index.md](index.md)
 | **Description** | Describe an image or video using Qwen-VL                                     |
 | **Usage**       | `bl vision describe --image <path-or-url> [--video <url>] [--prompt <text>]` |
 
-#### Options
+#### Flags
 
 | Flag                    | Type   | Required | Description                                         |
 | ----------------------- | ------ | -------- | --------------------------------------------------- |
@@ -29,6 +29,8 @@ Index: [index.md](index.md)
 | `--video <url>`         | array  | no       | Video file URL or local path (mp4/mov/avi/mkv/webm) |
 | `--prompt <text>`       | string | no       | Question about the content (default: auto-detected) |
 | `--model <model>`       | string | no       | Vision model (default: qwen3-vl-plus)               |
+| `--api-key <key>`       | string | no       | API key                                             |
+| `--base-url <url>`      | string | no       | API base URL                                        |
 
 #### Examples
 

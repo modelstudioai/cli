@@ -14,7 +14,7 @@
 
 - [ ] `package.json` 的 `engines.node` 与 README 的 Node.js 徽章一致
 - [ ] `pnpm-lock.yaml` 同步生成(运行 `pnpm install`)
-- [ ] 三处 `tsconfig.json`(根 + cli + core)的 target / module 设置一致
+- [ ] 各源码包 `tsconfig.json`(根 + core + runtime + commands + cli + kscli)的 target / module 设置一致
 
 ### B. lint / format 规则改动
 
@@ -26,13 +26,15 @@
 
 ### C. 构建配置
 
-- [ ] `packages/cli/vite.config.ts` 和 `packages/core/vite.config.ts` 的 entry / external / dts 设置
-- [ ] cli 的 bundle 必须把 `bailian-cli-core` 当 **external**(不内联),确认 `dist/bailian.mjs` 第一行有 `from "bailian-cli-core"`
-- [ ] cli 的 bundle 第一行必须有 `#!/usr/bin/env node` shebang(`tools/release.mjs check` 会断言)
+- [ ] `packages/*/vite.config.ts` 的 entry / dts / exports 设置符合包类型:
+  - library 包(core/runtime/commands):本地 `exports` 默认指向 `src/index.ts`;`publishConfig.exports` 覆盖发布入口为 `dist/index.mjs`;dts 产物正常生成
+  - binary 包(cli/kscli):entry 指向 `src/main.ts`,有 shebang,`exports: true`
+- [ ] cli / kscli 的 bundle 必须把 workspace 包(`bailian-cli-core` / `bailian-cli-runtime` / `bailian-cli-commands`)当 **external**(不内联),确认 dist 中仍是 package import
+- [ ] cli / kscli 的 binary bundle 第一行必须有 `#!/usr/bin/env node` shebang
 
 ### D. 依赖升级
 
-- [ ] 检查 `bailian-cli-core` 在 cli 的 `dependencies` 里仍是 `"workspace:*"`(不要变成实际版本号 — `tools/release.mjs` 会拦)
+- [ ] 检查 workspace 内部依赖在 `dependencies` 里仍是 `"workspace:*"`(不要手改成实际版本号;发布时由 pack/publish 流程解析)
 - [ ] 升级后跑 `vp check && vp test`
 - [ ] 升级 `@types/node` 时注意 Node API 变化(如 fs.existsSync 行为)
 
@@ -44,7 +46,7 @@
 
 ### F. CI / 发版工具
 
-- [ ] `tools/release.mjs` 中如有版本/规则相关的硬编码,同步更新
+- [ ] `tools/release/` 中如有版本/规则相关的硬编码,同步更新
 - [ ] 比如 `secretPatterns` 添加新的敏感值识别
 
 ## 完成后自查
@@ -54,13 +56,13 @@
 pnpm install --frozen-lockfile
 vp check
 vp test
-node tools/release.mjs check
+node tools/release/check.mjs
 ```
 
 ## 常见漏点
 
 - ✗ 升级 Node engines 但忘了 README 徽章
 - ✗ 改 lint 规则后没全仓 `--fix`,新人 PR 报红一片
-- ✗ 改 cli 的 vite config 把 core 不小心打成 inline,bundle 体积暴涨
+- ✗ 改 cli/kscli 的 vite config 把 core/runtime/commands 不小心打成 inline,bundle 体积暴涨
 - ✗ Oxlint 配置改了但 IDE 缓存还是旧的(IDE 可能要重启 ts server)
 - ✗ 升级依赖一并升 lockfile,改动量大但没拆 commit

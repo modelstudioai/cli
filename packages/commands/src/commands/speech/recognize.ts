@@ -4,52 +4,63 @@ import {
   defineCommand,
   ExitCode,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
+  type Client,
+  type Settings,
   type DashScopeASRRequest,
   type DashScopeASRTaskResult,
   type DashScopeAsyncResponse,
-  resolveFileUrl,
-  resolveCredential,
   trackingHeaders,
   stripUndefined,
-  taskEndpoint,
-  requestJson,
+  taskPath,
+  speechRecognizePath,
   type OutputFormat,
-  speechRecognizeEndpoint,
+  type FlagsDef,
+  type ParsedFlags,
+  ASYNC_FLAG,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
-import { failIfMissing, cmdUsage } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
+
+const RECOGNIZE_FLAGS = {
+  url: {
+    type: "array",
+    valueHint: "<url>",
+    description: "Audio file URL or local file path (repeatable, max 100)",
+    required: true,
+  },
+  model: { type: "string", valueHint: "<model>", description: "Model ID (default: fun-asr)" },
+  language: { type: "string", valueHint: "<lang>", description: "Language hint (e.g. zh, en, ja)" },
+  diarization: { type: "switch", description: "Enable automatic speaker diarization" },
+  speakerCount: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Expected number of speakers (requires --diarization)",
+  },
+  vocabularyId: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Hot-word vocabulary ID for improved accuracy",
+  },
+  channelId: { type: "number", valueHint: "<n>", description: "Audio channel ID (default: 0)" },
+  out: {
+    type: "string",
+    valueHint: "<path>",
+    description: "Save full transcription result to JSON file",
+  },
+  ...ASYNC_FLAG,
+  pollInterval: {
+    type: "number",
+    valueHint: "<seconds>",
+    description: "Polling interval in seconds (default: 2)",
+  },
+} satisfies FlagsDef;
+type RecognizeFlags = ParsedFlags<typeof RECOGNIZE_FLAGS>;
 
 export default defineCommand({
   description: "Recognize speech from audio files (FunAudio-ASR)",
+  auth: "apiKey",
   usageArgs: "--url <audio-url> [flags]",
-  options: [
-    {
-      flag: "--url <url>",
-      description: "Audio file URL or local file path (repeatable, max 100)",
-      required: true,
-      type: "array",
-    },
-    { flag: "--model <model>", description: "Model ID (default: fun-asr)" },
-    { flag: "--language <lang>", description: "Language hint (e.g. zh, en, ja)" },
-    { flag: "--diarization", description: "Enable automatic speaker diarization" },
-    {
-      flag: "--speaker-count <n>",
-      description: "Expected number of speakers (requires --diarization)",
-      type: "number",
-    },
-    { flag: "--vocabulary-id <id>", description: "Hot-word vocabulary ID for improved accuracy" },
-    { flag: "--channel-id <n>", description: "Audio channel ID (default: 0)", type: "number" },
-    { flag: "--out <path>", description: "Save full transcription result to JSON file" },
-    { flag: "--no-wait", description: "Return task ID immediately without polling" },
-    {
-      flag: "--poll-interval <seconds>",
-      description: "Polling interval in seconds (default: 2)",
-      type: "number",
-    },
-  ],
+  flags: RECOGNIZE_FLAGS,
   exampleArgs: [
     "--url https://example.com/audio.mp3",
     "--url https://example.com/a.mp3 --url https://example.com/b.mp3",
@@ -57,22 +68,20 @@ export default defineCommand({
     "--url https://example.com/audio.mp3 --language zh",
     "--url https://example.com/audio.mp3 --vocabulary-id vocab-abc123",
     "--url https://example.com/audio.mp3 --out result.json",
-    "--url https://example.com/audio.mp3 --no-wait --quiet",
+    "--url https://example.com/audio.mp3 --async --quiet",
   ],
-  async run(config: Config, flags: GlobalFlags) {
+  async run(ctx) {
+    const { settings, flags } = ctx;
     // Normalize --url to string[] (supports both single and repeated flags)
     let rawUrls: string[] = [];
     if (Array.isArray(flags.url)) {
-      rawUrls = flags.url as string[];
+      rawUrls = flags.url;
     } else if (typeof flags.url === "string") {
       rawUrls = [flags.url];
     }
-    if (rawUrls.length === 0) {
-      failIfMissing("url", cmdUsage(config, "--url <audio-url>"));
-    }
 
     // Strict validation: --speaker-count requires --diarization
-    const speakerCount = flags.speakerCount as number | undefined;
+    const speakerCount = flags.speakerCount;
     const diarization = flags.diarization === true;
     if (speakerCount !== undefined && !diarization) {
       throw new BailianError(
@@ -81,17 +90,14 @@ export default defineCommand({
       );
     }
 
-    const model = (flags.model as string) || "fun-asr";
-    const format = detectOutputFormat(config.output);
+    const model = flags.model || "fun-asr";
+    const format = detectOutputFormat(settings.output);
 
     // Auto-upload local files in parallel
-    const credential = await resolveCredential(config);
-    const resolvedUrls = await Promise.all(
-      rawUrls.map((u) => resolveFileUrl(u, credential.token, model)),
-    );
-    const channelId = flags.channelId as number | undefined;
-    const language = flags.language as string | undefined;
-    const vocabularyId = flags.vocabularyId as string | undefined;
+    const resolvedUrls = await Promise.all(rawUrls.map((u) => ctx.client.uploadFile(u, model)));
+    const channelId = flags.channelId;
+    const language = flags.language;
+    const vocabularyId = flags.vocabularyId;
 
     const body: DashScopeASRRequest = {
       model,
@@ -110,31 +116,30 @@ export default defineCommand({
     // Remove undefined parameter fields
     stripUndefined(body.parameters as Record<string, unknown>);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ request: body, mode: "async" }, format);
       return;
     }
 
-    if (!config.quiet) {
+    if (!settings.quiet) {
       process.stderr.write(`[Model: ${model}] [Mode: async] [Files: ${resolvedUrls.length}]\n`);
     }
 
-    const url = speechRecognizeEndpoint(config.baseUrl);
-    await handleAsyncMode(config, url, body, flags, format, resolvedUrls.length);
+    await handleAsyncMode(ctx.client, settings, body, flags, format, resolvedUrls.length);
   },
 });
 
 async function handleAsyncMode(
-  config: Config,
-  url: string,
+  client: Client,
+  settings: Settings,
   body: DashScopeASRRequest,
-  flags: GlobalFlags,
+  flags: RecognizeFlags,
   format: OutputFormat,
   fileCount: number,
 ): Promise<void> {
   // Submit async task (always required for fun-asr)
-  const response = await requestJson<DashScopeAsyncResponse>(config, {
-    url,
+  const response = await client.requestJson<DashScopeAsyncResponse>({
+    path: speechRecognizePath(),
     method: "POST",
     body,
     async: true,
@@ -142,20 +147,20 @@ async function handleAsyncMode(
 
   const taskId = response.output.task_id;
 
-  // --no-wait: return task ID immediately
-  if (flags.noWait || config.async) {
+  // --async: return task ID immediately
+  if (flags.async) {
     emitResult({ task_id: taskId }, format);
     return;
   }
 
   // Poll until completion
-  const pollInterval = (flags.pollInterval as number) ?? 2;
-  const pollUrl = taskEndpoint(config.baseUrl, taskId);
+  const pollInterval = flags.pollInterval ?? 2;
+  const pollUrl = client.url(taskPath(taskId));
 
-  const result = await poll<DashScopeASRTaskResult>(config, {
+  const result = await poll<DashScopeASRTaskResult>(client, settings, {
     url: pollUrl,
     intervalSec: pollInterval,
-    timeoutSec: config.timeout,
+    timeoutSec: settings.timeout,
     isComplete: (d) => (d as DashScopeASRTaskResult).output.task_status === "SUCCEEDED",
     isFailed: (d) => (d as DashScopeASRTaskResult).output.task_status === "FAILED",
     getStatus: (d) => (d as DashScopeASRTaskResult).output.task_status,
@@ -237,10 +242,10 @@ async function handleAsyncMode(
 
   // Save to --out file
   if (flags.out) {
-    const outPath = flags.out as string;
+    const outPath = flags.out;
     const outData = allTransData.length === 1 ? allTransData[0] : allTransData;
     writeFileSync(outPath, JSON.stringify(outData, null, 2) + "\n");
-    if (!config.quiet) {
+    if (!settings.quiet) {
       process.stderr.write(`Full result saved to: ${outPath}\n`);
     }
   }

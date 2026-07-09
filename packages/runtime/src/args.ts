@@ -1,186 +1,141 @@
-import type { GlobalFlags } from "bailian-cli-core";
-import type { OptionDef } from "bailian-cli-core";
-import { BailianError, ExitCode } from "bailian-cli-core";
+import type { FlagsDef, ParsedFlags } from "bailian-cli-core";
+import { UsageError } from "bailian-cli-core";
 
 function kebabToCamel(str: string): string {
   return str.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
 }
 
-/** Extract camelCase flag name from an OptionDef.flag string, e.g. '--max-tokens <n>' → 'maxTokens' */
-function flagKey(def: OptionDef): string | null {
-  const m = def.flag.match(/^--([a-z][a-z0-9-]*)/i);
-  return m ? kebabToCamel(m[1]!) : null;
+/** maxTokens → max-tokens. For rendering flags in help / error messages. */
+export function camelToKebab(str: string): string {
+  return str.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 }
 
-/** Boolean when no value placeholder and type is not string/number/array */
-function isBooleanDef(def: OptionDef): boolean {
-  if (def.type === "boolean") return true;
-  if (def.type === "string" || def.type === "number" || def.type === "array") return false;
-  return !def.flag.includes("<") && !def.flag.includes("[");
-}
-
-interface FlagSchema {
-  booleans: Set<string>;
-  numbers: Set<string>;
-  arrays: Set<string>;
-}
-
-function buildAllowedFlagKeys(options: OptionDef[]): Set<string> {
-  const keys = new Set<string>();
-  for (const opt of options) {
-    const key = flagKey(opt);
-    if (key) keys.add(key);
-  }
-  return keys;
-}
-
-function buildSchema(options: OptionDef[]): FlagSchema {
-  const booleans = new Set<string>();
-  const numbers = new Set<string>();
-  const arrays = new Set<string>();
-  for (const opt of options) {
-    const key = flagKey(opt);
-    if (!key) continue;
-    if (isBooleanDef(opt)) booleans.add(key);
-    else if (opt.type === "number") numbers.add(key);
-    else if (opt.type === "array") arrays.add(key);
-  }
-  return { booleans, numbers, arrays };
+export interface ParsePathResult {
+  /** Command path: the leading run of bare tokens, e.g. ["speech", "recognize"]. */
+  path: string[];
+  /** Everything from the first flag onward — handed to parseFlags later. */
+  rest: string[];
+  hasHelpFlag: boolean;
+  hasVersionFlag: boolean;
 }
 
 /**
- * Quick scan: collect positional (non-dash) args to determine the command path.
- * Skips global flags and their values so that e.g. `--output json text chat`
- * correctly produces ['text', 'chat'] instead of ['json', 'text', 'chat'].
+ * First pass — routing only. The command path is the leading run of bare
+ * (non-`-`) tokens; the first flag ends it ("command path first, then flags",
+ * oclif-style). There are no positionals, so nothing bare can legitimately
+ * follow a flag — and no flags precede the path, so this needs no schema.
  */
-export function scanCommandPath(argv: string[], globalOptions: OptionDef[] = []): string[] {
-  const globalSchema = buildSchema(globalOptions);
-  const path: string[] = [];
+export function parsePath(argv: string[]): ParsePathResult {
   let i = 0;
-  while (i < argv.length) {
-    const arg = argv[i]!;
-    if (arg === "--") break;
-
-    if (arg.startsWith("--")) {
-      const eqIdx = arg.indexOf("=");
-      const key = eqIdx !== -1 ? arg.slice(2, eqIdx) : arg.slice(2);
-      const camelKey = kebabToCamel(key);
-
-      if (!globalSchema.booleans.has(camelKey) && eqIdx === -1) {
-        const next = argv[i + 1];
-        // Command-local booleans (e.g. `--console`) are not in GLOBAL_OPTIONS; if the next
-        // token is another flag, do not consume it as this flag's value.
-        if (next === undefined || next.startsWith("-")) {
-          i += 1;
-        } else {
-          i += 2;
-        }
-      } else {
-        i += 1;
-      }
-      continue;
-    }
-
-    if (arg.startsWith("-")) {
-      i++;
-      continue;
-    }
-
-    path.push(arg);
-    i++;
-  }
-  return path;
-}
-
-/**
- * Full flag parse. Types are derived entirely from the provided OptionDef schema:
- *   - boolean: no <value> placeholder in flag string (or type: 'boolean')
- *   - number:  type: 'number'
- *   - array:   type: 'array'  (repeatable via multiple --flag occurrences)
- *   - default: string
- */
-export function parseFlags(argv: string[], options: OptionDef[]): GlobalFlags {
-  const allowedKeys = buildAllowedFlagKeys(options);
-  const schema = buildSchema(options);
-  const flags: GlobalFlags = {
-    quiet: false,
-    verbose: false,
-    noColor: false,
-    yes: false,
-    dryRun: false,
-    help: false,
-    nonInteractive: false,
-    async: false,
+  while (i < argv.length && !argv[i]!.startsWith("-")) i++;
+  const rest = argv.slice(i);
+  return {
+    path: argv.slice(0, i),
+    rest,
+    hasHelpFlag: rest.includes("--help"),
+    hasVersionFlag: rest.includes("--version"),
   };
+}
+
+/**
+ * Second pass — parse the flag region into typed values, driven entirely by the
+ * keyed FlagsDef (key = camelCase flag name). Pure: returns typed flags or
+ * throws UsageError — never prints/exits. The error boundary decides rendering.
+ */
+export function parseFlags<F extends FlagsDef>(rest: string[], defs: F): ParsedFlags<F> {
+  const flags: Record<string, unknown> = {};
+  const seen = new Set<string>();
+  for (const [key, def] of Object.entries(defs)) {
+    if (def.type === "switch") flags[key] = false;
+  }
 
   let i = 0;
-  while (i < argv.length) {
-    const arg = argv[i]!;
+  while (i < rest.length) {
+    const arg = rest[i]!;
 
-    if (arg === "--help" || arg === "-h") {
-      flags.help = true;
+    if (!arg.startsWith("-")) {
+      throw new UsageError(`Unexpected argument: ${arg}`);
+    }
+    if (!arg.startsWith("--")) {
+      throw new UsageError(`Unknown flag "${arg}". Use the --long form.`);
+    }
+
+    const eqIdx = arg.indexOf("=");
+    const rawKey = eqIdx !== -1 ? arg.slice(2, eqIdx) : arg.slice(2);
+    let value: string | undefined = eqIdx !== -1 ? arg.slice(eqIdx + 1) : undefined;
+
+    if (rawKey === "") {
+      throw new UsageError(`Unknown flag "${arg}".`);
+    }
+    const key = kebabToCamel(rawKey);
+    const def = defs[key];
+    if (!def) {
+      throw new UsageError(`Unknown flag "--${rawKey}". Run with --help to see available options.`);
+    }
+
+    if (def.type === "switch") {
+      if (value !== undefined) {
+        throw new UsageError(`Flag --${rawKey} is a switch and takes no value.`);
+      }
+      flags[key] = true;
       i++;
       continue;
     }
-    if (arg === "--") {
-      break;
+
+    if (value === undefined) {
+      const next = rest[i + 1];
+      if (next === undefined || next.startsWith("--")) {
+        throw new UsageError(`Flag --${rawKey} requires a value.`);
+      }
+      value = next;
+      i += 2;
+    } else {
+      i += 1;
     }
 
-    if (arg.startsWith("--")) {
-      const eqIdx = arg.indexOf("=");
-      let key: string;
-      let value: string | undefined;
-
-      if (eqIdx !== -1) {
-        key = arg.slice(2, eqIdx);
-        value = arg.slice(eqIdx + 1);
-      } else {
-        key = arg.slice(2);
-      }
-
-      const camelKey = kebabToCamel(key);
-
-      if (!allowedKeys.has(camelKey)) {
-        throw new BailianError(
-          `Unknown flag "--${key}". Run with --help to see available options.`,
-          ExitCode.USAGE,
-        );
-      }
-
-      // Switch-style flags (--quiet, --dry-run): no value. Value flags need a non-flag next token.
-      if (schema.booleans.has(camelKey)) {
-        (flags as Record<string, unknown>)[camelKey] = true;
-        i++;
-        continue;
-      }
-
-      // --prompt <text>, --watermark <bool>, …
-      if (value === undefined) {
-        i++;
-        const next = argv[i];
-        if (next === undefined || next.startsWith("-")) {
-          throw new BailianError(`Flag --${key} requires a value.`, ExitCode.USAGE);
-        }
-        value = next;
-      }
-
-      if (schema.arrays.has(camelKey)) {
-        const arr = (flags as Record<string, unknown>)[camelKey] as string[] | undefined;
-        if (arr) arr.push(value);
-        else (flags as Record<string, unknown>)[camelKey] = [value];
-      } else if (schema.numbers.has(camelKey)) {
-        const numericValue = Number(value);
-        if (!Number.isFinite(numericValue)) {
-          throw new BailianError(`Flag --${key} requires a finite number.`, ExitCode.USAGE);
-        }
-        (flags as Record<string, unknown>)[camelKey] = numericValue;
-      } else {
-        (flags as Record<string, unknown>)[camelKey] = value;
-      }
+    if (def.choices && !def.choices.includes(value)) {
+      throw new UsageError(`Flag --${rawKey} must be one of: ${def.choices.join(", ")}.`);
     }
 
-    i++;
+    if (def.type === "array") {
+      const arr = flags[key] as string[] | undefined;
+      if (arr) arr.push(value);
+      else flags[key] = [value];
+      continue;
+    }
+
+    if (seen.has(key)) {
+      throw new UsageError(`Flag --${rawKey} given more than once.`);
+    }
+    seen.add(key);
+
+    if (def.type === "number") {
+      const n = Number(value);
+      if (!Number.isFinite(n)) {
+        throw new UsageError(`Flag --${rawKey} requires a finite number.`);
+      }
+      flags[key] = n;
+    } else if (def.type === "boolean") {
+      const v = value.trim().toLowerCase();
+      if (v === "true") flags[key] = true;
+      else if (v === "false") flags[key] = false;
+      else throw new UsageError(`Flag --${rawKey} requires true or false.`);
+    } else {
+      flags[key] = value;
+    }
   }
 
-  return flags;
+  // Required enforcement — declarative, driven by the schema.
+  const missing = Object.entries(defs)
+    .filter(
+      ([key, def]) => def.type !== "switch" && def.required === true && flags[key] === undefined,
+    )
+    .map(([key]) => `--${camelToKebab(key)}`);
+  if (missing.length > 0) {
+    throw new UsageError(
+      `Missing required ${missing.length > 1 ? "flags" : "flag"}: ${missing.join(", ")}`,
+    );
+  }
+
+  return flags as unknown as ParsedFlags<F>;
 }

@@ -2,7 +2,8 @@
 
 ## 触发条件
 
-- 新增/修改 `packages/cli/src` 下的 command（`commands/catalog.ts` 登记、`defineCommand` 实现、options/usage）
+- 新增/修改 `packages/commands/src/commands` 下的 command 实现
+- 新增/修改 `packages/cli/src/commands.ts` 的 `bl` 命令路径 map
 - 新建或扩展 `packages/cli/tests/e2e/*.e2e.test.ts` 用例
 - 为命令补 help / 缺参 / dry-run / 真实集成测试
 
@@ -46,7 +47,7 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 1. **分组 help**：`runCli(["image"])` → `exitCode === 0`，stdout+stderr 含子命令名
 2. **--help**：`runCli([..., "--help"])` → stderr 含主要 flags
-3. **缺参**：`--non-interactive` 且不传 required flag → `exitCode === 2`，stderr 匹配 `--flag|Missing required argument`
+3. **缺参**：带一个无害全局 flag（如 `--quiet`）且不传 required flag → `exitCode === 2`，stderr 匹配 `--flag|Missing required argument`
 4. **--dry-run**：仅当实现在联网/上传/写盘**之前**返回；断言 stdout JSON/文本，不入网
 5. **真实集成**：保留既有用例名称与断言；放在 skip 块**末尾**
 
@@ -59,8 +60,8 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 ## 新增 command 检查清单
 
-- [ ] `commands/catalog.ts` 登记 + `tests/e2e/<topic>.e2e.test.ts`（新建或扩展）
-- [ ] 若改了 `usage` / `options` / `examples`,跑 `pnpm --filter bailian-cli run generate:reference` 更新 `skills/bailian-cli/reference/` 并提交
+- [ ] `packages/commands/src/index.ts` 导出 + `packages/cli/src/commands.ts` 暴露路径 + `tests/e2e/<topic>.e2e.test.ts`（新建或扩展）
+- [ ] 若改了 `usageArgs` / `flags` / `exampleArgs`,跑 `pnpm --filter bailian-cli run generate:reference` 更新 `skills/bailian-cli/reference/` 并提交
 - [ ] 顶层：分组 help + 子命令 `--help`（多子命令则各一条 help）
 - [ ] skip 块：每个 required flag 缺参；可 dry-run 则加一条
 - [ ] 至少一条真实集成（或说明为何仅 smoke）；不破坏已有集成用例顺序
@@ -70,7 +71,7 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 ```ts
 test("foo bar 缺少 --prompt 时退出为用法错误 (2)", async () => {
-  const { stderr, exitCode } = await runCli(["foo", "bar", "--non-interactive"]);
+  const { stderr, exitCode } = await runCli(["foo", "bar", "--quiet"]);
   expect(exitCode).toBe(2);
   expect(stderr).toMatch(/--prompt|Missing required argument/i);
 });
@@ -82,7 +83,6 @@ test("foo bar --dry-run 仅输出计划", async () => {
     "--dry-run",
     "--prompt",
     "x",
-    "--non-interactive",
     "--output",
     "json",
   ]);

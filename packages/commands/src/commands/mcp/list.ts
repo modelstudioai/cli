@@ -1,13 +1,9 @@
 import {
   defineCommand,
-  callConsoleGateway,
   effectiveConsoleGatewayConfig,
-  resolveConsoleGatewayCredential,
   detectOutputFormat,
   BailianError,
   ExitCode,
-  type Config,
-  type GlobalFlags,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
@@ -26,34 +22,30 @@ interface ServerSummary {
 
 export default defineCommand({
   description: "List MCP servers activated under your Bailian account",
-  skipDefaultApiKeySetup: true,
+  auth: "console",
   usageArgs: "[flags]",
-  options: [
-    { flag: "--name <text>", description: "Filter by server name (substring match)" },
-    {
-      flag: "--type <type>",
+  flags: {
+    name: {
+      type: "string",
+      valueHint: "<text>",
+      description: "Filter by server name (substring match)",
+    },
+    type: {
+      type: "string",
+      valueHint: "<type>",
       description: "Server type: OFFICIAL | PRIVATE (default: OFFICIAL)",
     },
-    { flag: "--page <n>", description: "Page number (default: 1)", type: "number" },
-    { flag: "--page-size <n>", description: "Results per page (default: 30)", type: "number" },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
-      description: "Console site: domestic, international",
-    },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+    page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
+    pageSize: { type: "number", valueHint: "<n>", description: "Results per page (default: 30)" },
+  },
   exampleArgs: ["", "--name finance", "--output json"],
-  async run(config: Config, flags: GlobalFlags) {
-    const serverName = (flags.name as string) || "";
-    const type = (flags.type as string) || "OFFICIAL";
-    const pageNo = (flags.page as number) || 1;
-    const pageSize = (flags.pageSize as number) || 30;
-    const format = detectOutputFormat(config.output);
+  async run(ctx) {
+    const { settings, identity, flags } = ctx;
+    const serverName = flags.name || "";
+    const type = flags.type || "OFFICIAL";
+    const pageNo = flags.page || 1;
+    const pageSize = flags.pageSize || 30;
+    const format = detectOutputFormat(settings.output);
 
     const data = {
       reqDTO: {
@@ -66,17 +58,12 @@ export default defineCommand({
       },
     };
 
-    if (config.dryRun) {
-      emitResult({ api: MCP_LIST_API, data, ...effectiveConsoleGatewayConfig(config) }, format);
+    if (settings.dryRun) {
+      emitResult({ api: MCP_LIST_API, data, ...effectiveConsoleGatewayConfig(settings) }, format);
       return;
     }
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
-    const result = (await callConsoleGateway(config, credential.token, {
-      api: MCP_LIST_API,
-      data,
-    })) as Record<string, unknown>;
+    const result = (await ctx.client.console(MCP_LIST_API, data)) as Record<string, unknown>;
 
     const dataField = (result?.data as Record<string, unknown> | undefined) ?? {};
     if (dataField.success === false) {
@@ -84,7 +71,7 @@ export default defineCommand({
       const msg = (dataField.errorMsg as string | undefined) ?? code;
       const hint =
         code === "BailianGateway.Login.NotLogined"
-          ? `Run \`${config.binName} auth login --console\` to refresh your console session.`
+          ? `Run \`${identity.binName} auth login --console\` to refresh your console session.`
           : undefined;
       throw new BailianError(`Console gateway: ${msg}`, ExitCode.AUTH, hint);
     }

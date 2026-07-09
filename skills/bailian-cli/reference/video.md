@@ -25,12 +25,14 @@ Index: [index.md](index.md)
 | **Description** | Download a completed video by task ID           |
 | **Usage**       | `bl video download --task-id <id> --out <path>` |
 
-#### Options
+#### Flags
 
-| Flag             | Type   | Required | Description              |
-| ---------------- | ------ | -------- | ------------------------ |
-| `--task-id <id>` | string | no       | Task ID to download from |
-| `--out <path>`   | string | no       | Output file path         |
+| Flag               | Type   | Required | Description              |
+| ------------------ | ------ | -------- | ------------------------ |
+| `--task-id <id>`   | string | yes      | Task ID to download from |
+| `--out <path>`     | string | yes      | Output file path         |
+| `--api-key <key>`  | string | no       | API key                  |
+| `--base-url <url>` | string | no       | API base URL             |
 
 #### Examples
 
@@ -50,26 +52,28 @@ bl video download --task-id 3b256896-xxxx --out video.mp4 --quiet
 | **Description** | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.) |
 | **Usage**       | `bl video edit --video <url> --prompt <text> [flags]`                                  |
 
-#### Options
+#### Flags
 
-| Flag                        | Type    | Required | Description                                                                             |
-| --------------------------- | ------- | -------- | --------------------------------------------------------------------------------------- |
-| `--model <model>`           | string  | no       | Model ID (default: happyhorse-1.0-video-edit)                                           |
-| `--video <url>`             | string  | yes      | Input video URL or local file (mp4/mov, 2-10s)                                          |
-| `--prompt <text>`           | string  | no       | Edit instruction (e.g. "Convert the scene to a claymation style")                       |
-| `--ref-image <url>`         | string  | no       | Reference image URL (up to 4, comma-separated)                                          |
-| `--negative-prompt <text>`  | string  | no       | Negative prompt to exclude unwanted content                                             |
-| `--resolution <res>`        | string  | no       | Resolution: 720P or 1080P (default: 1080P)                                              |
-| `--ratio <ratio>`           | string  | no       | Aspect ratio (16:9, 9:16, 1:1, 4:3, 3:4)                                                |
-| `--duration <seconds>`      | number  | no       | Output video duration in seconds (2-10)                                                 |
-| `--audio-setting <mode>`    | string  | no       | Audio: auto (default) or origin (keep original)                                         |
-| `--prompt-extend <bool>`    | string  | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default). |
-| `--watermark <bool>`        | string  | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
-| `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                 |
-| `--download <path>`         | string  | no       | Save video to file on completion                                                        |
-| `--no-wait`                 | boolean | no       | Return task ID immediately without waiting                                              |
-| `--async`                   | boolean | no       | Return task ID immediately (agent/CI mode, same as --no-wait)                           |
-| `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 15)                                             |
+| Flag                             | Type    | Required | Description                                                                             |
+| -------------------------------- | ------- | -------- | --------------------------------------------------------------------------------------- |
+| `--model <model>`                | string  | no       | Model ID (default: happyhorse-1.0-video-edit)                                           |
+| `--video <url>`                  | string  | yes      | Input video URL or local file (mp4/mov, 2-10s)                                          |
+| `--prompt <text>`                | string  | no       | Edit instruction (e.g. "Convert the scene to a claymation style")                       |
+| `--ref-image <url>`              | string  | no       | Reference image URL (up to 4, comma-separated)                                          |
+| `--negative-prompt <text>`       | string  | no       | Negative prompt to exclude unwanted content                                             |
+| `--resolution <res>`             | string  | no       | Resolution: 720P or 1080P (default: 1080P)                                              |
+| `--ratio <ratio>`                | string  | no       | Aspect ratio (16:9, 9:16, 1:1, 4:3, 3:4)                                                |
+| `--duration <seconds>`           | number  | no       | Output video duration in seconds (2-10)                                                 |
+| `--audio-setting <auto\|origin>` | string  | no       | Audio: auto (default) or origin (keep original)                                         |
+| `--prompt-extend <bool>`         | boolean | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default). |
+| `--watermark <bool>`             | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
+| `--seed <n>`                     | number  | no       | Random seed for reproducible generation                                                 |
+| `--download <path>`              | string  | no       | Save video to file on completion                                                        |
+| `--async`                        | switch  | no       | Return async task id without waiting                                                    |
+| `--concurrent <n>`               | number  | no       | Run N parallel requests (default: 1)                                                    |
+| `--poll-interval <seconds>`      | number  | no       | Polling interval when waiting (default: 15)                                             |
+| `--api-key <key>`                | string  | no       | API key                                                                                 |
+| `--base-url <url>`               | string  | no       | API base URL                                                                            |
 
 #### Examples
 
@@ -97,7 +101,7 @@ bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the
 | **Description** | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v) |
 | **Usage**       | `bl video generate --prompt <text> [--image <url>] [flags]`                                |
 
-#### Options
+#### Flags
 
 | Flag                        | Type    | Required | Description                                                                             |
 | --------------------------- | ------- | -------- | --------------------------------------------------------------------------------------- |
@@ -108,13 +112,15 @@ bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the
 | `--resolution <res>`        | string  | no       | Resolution: 720P or 1080P (default: 1080P)                                              |
 | `--ratio <ratio>`           | string  | no       | Aspect ratio (e.g. 16:9, 9:16, 1:1)                                                     |
 | `--duration <seconds>`      | number  | no       | Video duration in seconds (default: 5)                                                  |
-| `--prompt-extend <bool>`    | string  | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default). |
-| `--watermark <bool>`        | string  | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
+| `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default). |
+| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
 | `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                 |
 | `--download <path>`         | string  | no       | Save video to file on completion                                                        |
-| `--no-wait`                 | boolean | no       | Return task ID immediately without waiting                                              |
-| `--async`                   | boolean | no       | Return task ID immediately (agent/CI mode, same as --no-wait)                           |
+| `--async`                   | switch  | no       | Return async task id without waiting                                                    |
+| `--concurrent <n>`          | number  | no       | Run N parallel requests (default: 1)                                                    |
 | `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 5)                                              |
+| `--api-key <key>`           | string  | no       | API key                                                                                 |
+| `--base-url <url>`          | string  | no       | API base URL                                                                            |
 
 #### Examples
 
@@ -146,7 +152,7 @@ bl video generate --prompt "A cat playing with a ball" --watermark false
 | **Description** | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
 | **Usage**       | `bl video ref --prompt <text> --image <url>... [--ref-video <url>...] [flags]`                        |
 
-#### Options
+#### Flags
 
 | Flag                        | Type    | Required | Description                                                                             |
 | --------------------------- | ------- | -------- | --------------------------------------------------------------------------------------- |
@@ -159,13 +165,15 @@ bl video generate --prompt "A cat playing with a ball" --watermark false
 | `--resolution <res>`        | string  | no       | Resolution: 720P or 1080P (default: 1080P)                                              |
 | `--ratio <ratio>`           | string  | no       | Aspect ratio (16:9, 9:16, 1:1)                                                          |
 | `--duration <seconds>`      | number  | no       | Video duration in seconds (default: 5)                                                  |
-| `--prompt-extend <bool>`    | string  | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default). |
-| `--watermark <bool>`        | string  | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
+| `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default). |
+| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
 | `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                 |
 | `--download <path>`         | string  | no       | Save video to file on completion                                                        |
-| `--no-wait`                 | boolean | no       | Return task ID immediately without waiting                                              |
-| `--async`                   | boolean | no       | Return task ID immediately (agent/CI mode, same as --no-wait)                           |
+| `--async`                   | switch  | no       | Return async task id without waiting                                                    |
+| `--concurrent <n>`          | number  | no       | Run N parallel requests (default: 1)                                                    |
 | `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 15)                                             |
+| `--api-key <key>`           | string  | no       | API key                                                                                 |
+| `--base-url <url>`          | string  | no       | API base URL                                                                            |
 
 #### Examples
 
@@ -197,11 +205,13 @@ bl video ref --prompt "Image 1 drinks water" --image person.jpg --watermark fals
 | **Description** | Query async task status            |
 | **Usage**       | `bl video task get --task-id <id>` |
 
-#### Options
+#### Flags
 
-| Flag             | Type   | Required | Description   |
-| ---------------- | ------ | -------- | ------------- |
-| `--task-id <id>` | string | no       | Async task ID |
+| Flag               | Type   | Required | Description   |
+| ------------------ | ------ | -------- | ------------- |
+| `--task-id <id>`   | string | yes      | Async task ID |
+| `--api-key <key>`  | string | no       | API key       |
+| `--base-url <url>` | string | no       | API base URL  |
 
 #### Examples
 

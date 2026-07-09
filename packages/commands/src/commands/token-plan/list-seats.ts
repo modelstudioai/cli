@@ -1,64 +1,67 @@
 import {
   defineCommand,
   detectOutputFormat,
-  type Config,
-  type GlobalFlags,
+  type FlagsDef,
+  type ParsedFlags,
   BailianError,
   ExitCode,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
-import { padEnd } from "bailian-cli-runtime";
+import { emitResult, emitBare, padEnd } from "bailian-cli-runtime";
 import type { GetSubscriptionSeatDetailsResponse, TokenPlanSeatDetail } from "./types.ts";
 import {
-  TOKEN_PLAN_AK_OPTIONS,
-  TOKEN_PLAN_COMMON_QUERY_OPTIONS,
+  TOKEN_PLAN_COMMON_QUERY_FLAGS,
   appendCommonQueryParams,
   callTokenPlanApi,
   prepareTokenPlanRequest,
-  resolveTokenPlanCredentials,
   type TokenPlanQueryParams,
 } from "./utils.ts";
 
 const API_ACTION = "GetSubscriptionSeatDetails";
 const API_PATH = "/tokenplan/subscription/seat-detail";
 
+const LIST_SEATS_FLAGS = {
+  pageNo: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
+  pageSize: { type: "number", valueHint: "<n>", description: "Page size (default: 10)" },
+  ...TOKEN_PLAN_COMMON_QUERY_FLAGS,
+  status: {
+    type: "array",
+    valueHint: "<status>",
+    description:
+      "Seat status filter (repeatable): CREATING, NORMAL, LIMIT, RELEASE, STOP, REFUNDED",
+  },
+  statusListStr: {
+    type: "string",
+    valueHint: "<json>",
+    description: "StatusList as JSON string, e.g. '[\"NORMAL\"]'",
+  },
+  seatId: { type: "string", valueHint: "<id>", description: "Filter by seat ID" },
+  seatType: {
+    type: "string",
+    valueHint: "<type>",
+    description: "Seat tier: standard, pro, or max",
+  },
+  queryAssigned: {
+    type: "string",
+    valueHint: "<bool>",
+    description: "Filter by assignment: true=assigned, false=unassigned",
+  },
+} satisfies FlagsDef;
+type ListSeatsFlags = ParsedFlags<typeof LIST_SEATS_FLAGS>;
+
 export default defineCommand({
   description: "List Token Plan subscription seat details",
+  auth: "openapi",
   usageArgs: "[flags]",
-  options: [
-    { flag: "--page-no <n>", description: "Page number (default: 1)", type: "number" },
-    { flag: "--page-size <n>", description: "Page size (default: 10)", type: "number" },
-    ...TOKEN_PLAN_COMMON_QUERY_OPTIONS,
-    {
-      flag: "--status <status>",
-      description:
-        "Seat status filter (repeatable): CREATING, NORMAL, LIMIT, RELEASE, STOP, REFUNDED",
-      type: "array",
-    },
-    {
-      flag: "--status-list-str <json>",
-      description: "StatusList as JSON string, e.g. '[\"NORMAL\"]'",
-    },
-    { flag: "--seat-id <id>", description: "Filter by seat ID" },
-    {
-      flag: "--seat-type <type>",
-      description: "Seat tier: standard, pro, or max",
-    },
-    {
-      flag: "--query-assigned <bool>",
-      description: "Filter by assignment: true=assigned, false=unassigned",
-    },
-    ...TOKEN_PLAN_AK_OPTIONS,
-  ],
+  flags: LIST_SEATS_FLAGS,
   exampleArgs: ["", "--page-size 20 --status NORMAL", "--query-assigned true --seat-type standard"],
-  async run(config: Config, flags: GlobalFlags) {
-    const format = detectOutputFormat(config.output);
-    const credentials = resolveTokenPlanCredentials(config, flags);
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const format = detectOutputFormat(settings.output);
     const queryParams = buildQueryParams(flags);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       const { endpoint, queryParams: query } = prepareTokenPlanRequest(
-        config,
+        ctx.client.baseUrl,
         API_PATH,
         queryParams,
       );
@@ -67,8 +70,8 @@ export default defineCommand({
     }
 
     const data = await callTokenPlanApi<GetSubscriptionSeatDetailsResponse>({
-      config,
-      credentials,
+      client: ctx.client,
+      baseUrl: ctx.client.baseUrl,
       action: API_ACTION,
       path: API_PATH,
       method: "GET",
@@ -76,7 +79,7 @@ export default defineCommand({
     });
 
     const items = data.Data?.Items ?? [];
-    if (config.quiet || format === "rich") {
+    if (settings.quiet || format === "text") {
       emitTextSeats(items, data.Data?.Total, data.Data?.PageNo, data.Data?.PageSize);
     } else {
       emitResult(data, format);
@@ -84,21 +87,20 @@ export default defineCommand({
   },
 });
 
-function buildQueryParams(flags: GlobalFlags): TokenPlanQueryParams {
+function buildQueryParams(flags: ListSeatsFlags): TokenPlanQueryParams {
   const params: TokenPlanQueryParams = {};
 
-  if (flags.pageNo !== undefined) params.PageNo = String(flags.pageNo as number);
-  if (flags.pageSize !== undefined) params.PageSize = String(flags.pageSize as number);
+  if (flags.pageNo !== undefined) params.PageNo = String(flags.pageNo);
+  if (flags.pageSize !== undefined) params.PageSize = String(flags.pageSize);
   appendCommonQueryParams(params, flags);
-  if (flags.statusListStr) params.StatusListStr = flags.statusListStr as string;
+  if (flags.statusListStr) params.StatusListStr = flags.statusListStr;
 
-  const status = flags.status as string[] | undefined;
-  if (status && status.length > 0) {
-    params.StatusList = status;
+  if (flags.status && flags.status.length > 0) {
+    params.StatusList = flags.status;
   }
 
-  if (flags.seatId) params.SeatId = flags.seatId as string;
-  if (flags.seatType) params.SeatType = flags.seatType as string;
+  if (flags.seatId) params.SeatId = flags.seatId;
+  if (flags.seatType) params.SeatType = flags.seatType;
 
   if (typeof flags.queryAssigned === "string" && flags.queryAssigned.length > 0) {
     const val = flags.queryAssigned.toLowerCase();

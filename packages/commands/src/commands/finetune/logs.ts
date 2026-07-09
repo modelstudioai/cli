@@ -2,11 +2,10 @@ import {
   defineCommand,
   detectOutputFormat,
   getFineTuneLogs,
-  type Config,
-  type GlobalFlags,
+  type Client,
   type FineTuneLogEntry,
+  type FlagsDef,
 } from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 /**
@@ -40,7 +39,7 @@ function entryMatches(entry: FineTuneLogEntry | string, keywordLower: string): b
  * complete log rather than a single page.
  */
 async function fetchAllLogs(
-  config: Config,
+  client: Client,
   jobId: string,
   pageSize: number,
 ): Promise<{ entries: Array<FineTuneLogEntry | string>; total: number }> {
@@ -50,7 +49,7 @@ async function fetchAllLogs(
   // Hard cap to avoid an unbounded loop if the server misreports `total`.
   const maxPages = 200;
   for (let i = 0; i < maxPages; i++) {
-    const response = await getFineTuneLogs(config, jobId, { pageNo, pageSize });
+    const response = await getFineTuneLogs(client, jobId, { pageNo, pageSize });
     const payload = response.output ?? response.data;
     const page = payload?.logs ?? [];
     total = payload?.total ?? total;
@@ -64,29 +63,38 @@ async function fetchAllLogs(
   return { entries, total };
 }
 
+const LOGS_FLAGS = {
+  jobId: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Fine-tune job ID (required)",
+    required: true,
+  },
+  page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
+  pageSize: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Lines per page (default: server-defined)",
+  },
+  search: {
+    type: "string",
+    valueHint: "<keyword>",
+    description:
+      "Case-insensitive substring filter. When set, all log pages are fetched and filtered client-side (--page is ignored).",
+  },
+  tail: {
+    type: "number",
+    valueHint: "<n>",
+    description:
+      "Keep only the last N entries. When set, all log pages are fetched and the trailing N are kept (--page is ignored).",
+  },
+} satisfies FlagsDef;
+
 export default defineCommand({
   description: "Fetch training logs for a fine-tune job",
+  auth: "apiKey",
   usageArgs: "--job-id <id> [--page <n>] [--page-size <n>] [--search <keyword>] [--tail <n>]",
-  options: [
-    { flag: "--job-id <id>", description: "Fine-tune job ID (required)", required: true },
-    { flag: "--page <n>", description: "Page number (default: 1)", type: "number" },
-    {
-      flag: "--page-size <n>",
-      description: "Lines per page (default: server-defined)",
-      type: "number",
-    },
-    {
-      flag: "--search <keyword>",
-      description:
-        "Case-insensitive substring filter. When set, all log pages are fetched and filtered client-side (--page is ignored).",
-    },
-    {
-      flag: "--tail <n>",
-      description:
-        "Keep only the last N entries. When set, all log pages are fetched and the trailing N are kept (--page is ignored).",
-      type: "number",
-    },
-  ],
+  flags: LOGS_FLAGS,
   exampleArgs: [
     "--job-id ft-xxx",
     "--job-id ft-xxx --page-size 100 --output json",
@@ -95,17 +103,16 @@ export default defineCommand({
     "--job-id ft-xxx --tail 20",
     "--job-id ft-xxx --search checkpoint --tail 5",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const jobId = flags.jobId as string | undefined;
-    if (!jobId) failIfMissing("job-id", "bl finetune logs --job-id <id>");
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const jobId = flags.jobId;
+    const pageNo = flags.page;
+    const pageSize = flags.pageSize;
+    const search = flags.search || undefined;
+    const tail = flags.tail;
+    const format = detectOutputFormat(settings.output);
 
-    const pageNo = flags.page !== undefined ? (flags.page as number) : undefined;
-    const pageSize = flags.pageSize !== undefined ? (flags.pageSize as number) : undefined;
-    const search = (flags.search as string | undefined) || undefined;
-    const tail = flags.tail !== undefined ? (flags.tail as number) : undefined;
-    const format = detectOutputFormat(config.output);
-
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult(
         {
           action: "finetune.logs",
@@ -123,7 +130,7 @@ export default defineCommand({
     // --search / --tail both need the full log: fan out across every page,
     // then filter (search) and/or take the trailing N (tail) client-side.
     if (search || tail !== undefined) {
-      const { entries, total } = await fetchAllLogs(config, jobId!, pageSize ?? 100);
+      const { entries, total } = await fetchAllLogs(ctx.client, jobId, pageSize ?? 100);
 
       // Apply --search first: narrow to the matching entries.
       let scanned = entries;
@@ -140,7 +147,7 @@ export default defineCommand({
       const result =
         tailApplied !== undefined ? scanned.slice(scanned.length - tailApplied) : scanned;
 
-      if (config.quiet || format === "rich") {
+      if (settings.quiet || format === "text") {
         if (result.length === 0) {
           emitBare(search ? `No logs matched "${search}".` : "No logs returned.");
           return;
@@ -167,11 +174,11 @@ export default defineCommand({
     }
 
     // Default: single page, verbatim response.
-    const response = await getFineTuneLogs(config, jobId!, { pageNo, pageSize });
+    const response = await getFineTuneLogs(ctx.client, jobId, { pageNo, pageSize });
     const payload = response.output ?? response.data;
     const logs = payload?.logs ?? [];
 
-    if (config.quiet || format === "rich") {
+    if (settings.quiet || format === "text") {
       if (logs.length === 0) {
         emitBare("No logs returned.");
         return;

@@ -1,11 +1,10 @@
 import {
   defineCommand,
-  callConsoleGateway,
-  resolveConsoleGatewayCredential,
-  detectOutputFormat,
+  UsageError,
   BailianError,
-  type Config,
-  type GlobalFlags,
+  ExitCode,
+  detectOutputFormat,
+  type Client,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
@@ -51,22 +50,18 @@ function extractResponseData(result: Record<string, unknown>): Record<string, un
 }
 
 async function fetchModelQpmInfo(
-  config: Config,
-  token: string,
+  client: Client,
   modelName: string,
 ): Promise<{ model: string; qpmInfo: Record<string, QpmInfoItem> } | undefined> {
-  const raw = await callConsoleGateway(config, token, {
-    api: MODEL_LIST_API,
-    data: {
-      input: {
-        pageNo: 1,
-        pageSize: 50,
-        name: modelName,
-        group: false,
-        queryQpmInfo: true,
-        ignoreWorkspaceServiceSite: true,
-        supports: { selfServiceLimitIncrease: true },
-      },
+  const raw = await client.console(MODEL_LIST_API, {
+    input: {
+      pageNo: 1,
+      pageSize: 50,
+      name: modelName,
+      group: false,
+      queryQpmInfo: true,
+      ignoreWorkspaceServiceSite: true,
+      supports: { selfServiceLimitIncrease: true },
     },
   });
 
@@ -79,56 +74,35 @@ async function fetchModelQpmInfo(
 
 export default defineCommand({
   description: "Request a temporary quota increase",
-  skipDefaultApiKeySetup: true,
+  auth: "console",
   usageArgs: "--model <model> --tpm <value> [flags]",
-  options: [
-    {
-      flag: "--model <model>",
+  flags: {
+    model: {
+      type: "string",
+      valueHint: "<model>",
       description: "Model name (required)",
       required: true,
     },
-    {
-      flag: "--tpm <value>",
+    tpm: {
+      type: "string",
+      valueHint: "<value>",
       description: "Target TPM value (required)",
       required: true,
     },
-    {
-      flag: "--yes",
-      description: "Skip downgrade confirmation",
-    },
-    { flag: "--console-region <region>", description: "Console region" },
-    {
-      flag: "--console-site <site>",
-      description: "Console site: domestic, international",
-    },
-    {
-      flag: "--console-switch-agent <uid>",
-      description: "Switch agent UID",
-      type: "number",
-    },
-  ],
+  },
   exampleArgs: [
     "--model qwen-turbo --tpm 100000",
-    "--model qwen3.6-plus --tpm 8000000 --yes",
+    "--model qwen3.6-plus --tpm 8000000",
     "--model qwen-turbo --tpm 100000 --output json",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const modelName = flags.model as string;
-    if (!modelName) {
-      process.stderr.write("Error: --model is required.\n");
-      process.exit(1);
-    }
-
+  validate: (f) => (Number(f.tpm) > 0 ? undefined : "--tpm must be a positive number."),
+  async run(ctx) {
+    const { identity, settings, flags } = ctx;
+    const modelName = flags.model;
     const tpmValue = Number(flags.tpm);
-    if (!tpmValue || tpmValue <= 0) {
-      process.stderr.write("Error: --tpm must be a positive number.\n");
-      process.exit(1);
-    }
+    const format = detectOutputFormat(settings.output);
 
-    const autoConfirm = Boolean(flags.yes) || config.yes;
-    const format = detectOutputFormat(config.output);
-
-    if (config.dryRun) {
+    if (settings.dryRun) {
       const requestData = {
         input: {
           model: modelName,
@@ -139,17 +113,13 @@ export default defineCommand({
       return;
     }
 
-    const credential = await resolveConsoleGatewayCredential(config);
-
-    const modelInfo = await fetchModelQpmInfo(config, credential.token, modelName);
+    const modelInfo = await fetchModelQpmInfo(ctx.client, modelName);
     if (!modelInfo) {
-      process.stderr.write(
-        `Error: model "${modelName}" not found or does not support self-service quota increase.\n`,
+      throw new BailianError(
+        `model "${modelName}" not found or does not support self-service quota increase.`,
+        ExitCode.GENERAL,
+        `Run \`${identity.binName} quota list\` to view available models.`,
       );
-      process.stderr.write(
-        `Hint: run \`${config.binName} quota list\` to view available models.\n`,
-      );
-      process.exit(1);
     }
 
     const modelDefault = modelInfo.qpmInfo["model-default"];
@@ -159,12 +129,10 @@ export default defineCommand({
     const maxLimit = minLimit * 2;
 
     if (tpmValue < minLimit || tpmValue > maxLimit) {
-      process.stderr.write(
-        `Error: TPM value ${tpmValue.toLocaleString()} is out of range.\n` +
-          `  Current: ${currentLimit.toLocaleString()}\n` +
-          `  Range:   ${minLimit.toLocaleString()} ~ ${maxLimit.toLocaleString()}\n`,
+      throw new UsageError(
+        `TPM value ${tpmValue.toLocaleString()} is out of range. ` +
+          `Current: ${currentLimit.toLocaleString()}, Range: ${minLimit.toLocaleString()} ~ ${maxLimit.toLocaleString()}.`,
       );
-      process.exit(1);
     }
 
     const requestData = {
@@ -180,16 +148,14 @@ export default defineCommand({
         requestData.input.confirmedDowngrade = true;
       }
       try {
-        return await callConsoleGateway(config, credential.token, {
-          api: UPDATE_LIMITS_API,
-          data: requestData,
-        });
+        return await ctx.client.console(UPDATE_LIMITS_API, requestData);
       } catch (err) {
         if (err instanceof BailianError && err.message.includes("NotLogined")) {
-          process.stderr.write(
-            `Error: session expired. Run \`${config.binName} auth login --console\` to re-authenticate.\n`,
+          throw new BailianError(
+            "session expired.",
+            ExitCode.AUTH,
+            `Run \`${identity.binName} auth login --console\` to re-authenticate.`,
           );
-          process.exit(1);
         }
         throw err;
       }
@@ -202,18 +168,10 @@ export default defineCommand({
       const confirmCode = resp.confirmCode as string;
 
       if (confirmCode === "Refresh_Required") {
-        process.stderr.write("Error: rate limit has been updated externally. Please retry.\n");
-        process.exit(1);
+        throw new BailianError("rate limit has been updated externally. Please retry.");
       }
 
       if (confirmCode === "Downgrade") {
-        if (!autoConfirm) {
-          process.stderr.write(
-            `Warning: target TPM (${tpmValue.toLocaleString()}) is lower than current (${currentLimit.toLocaleString()}).\n` +
-              "Use --yes to confirm downgrade.\n",
-          );
-          process.exit(1);
-        }
         result = await submitRequest(true);
       }
     }

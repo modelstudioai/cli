@@ -1,30 +1,32 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  getDataset,
-  type Config,
-  type GlobalFlags,
-} from "bailian-cli-core";
-import { failIfMissing } from "bailian-cli-runtime";
+import { defineCommand, detectOutputFormat, getDataset, type FlagsDef } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
+
+const GET_FLAGS = {
+  fileId: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Dataset file ID (required)",
+    required: true,
+  },
+} satisfies FlagsDef;
 
 export default defineCommand({
   description: "Get details of a single dataset file",
+  auth: "apiKey",
   usageArgs: "--file-id <id>",
-  options: [{ flag: "--file-id <id>", description: "Dataset file ID (required)", required: true }],
+  flags: GET_FLAGS,
   exampleArgs: ["--file-id file-xxx", "--file-id file-xxx --output json"],
-  async run(config: Config, flags: GlobalFlags) {
-    const fileId = flags.fileId as string | undefined;
-    if (!fileId) failIfMissing("file-id", "bl dataset get --file-id <id>");
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const fileId = flags.fileId;
+    const format = detectOutputFormat(settings.output);
 
-    const format = detectOutputFormat(config.output);
-
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ action: "dataset.get", file_id: fileId }, format);
       return;
     }
 
-    const response = await getDataset(config, fileId!);
+    const response = await getDataset(ctx.client, fileId);
     const file = response.data;
 
     if (!file) {

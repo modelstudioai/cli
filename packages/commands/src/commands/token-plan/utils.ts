@@ -1,41 +1,40 @@
 import {
   REGIONS,
-  maskToken,
-  trackingHeaders,
-  type Config,
-  type GlobalFlags,
-  type OptionDef,
+  buildAcsCanonicalQuery,
+  type Client,
+  type AcsQueryParams,
+  type FlagsDef,
+  type ParsedFlags,
   type Region,
+  type Settings,
   BailianError,
   ExitCode,
 } from "bailian-cli-core";
-import { buildCanonicalQuery, signTokenPlanRequest } from "./ak-sign.ts";
 
 export const TOKEN_PLAN_API_VERSION = "2026-02-10";
 
-export const TOKEN_PLAN_AK_OPTIONS: OptionDef[] = [
-  { flag: "--access-key-id <key>", description: "Alibaba Cloud Access Key ID (deprecated)" },
-  {
-    flag: "--access-key-secret <key>",
-    description: "Alibaba Cloud Access Key Secret (deprecated)",
-  },
-];
-
-export const TOKEN_PLAN_COMMON_QUERY_OPTIONS: OptionDef[] = [
-  {
-    flag: "--caller-uac-account-id <id>",
+export const TOKEN_PLAN_COMMON_QUERY_FLAGS = {
+  callerUacAccountId: {
+    type: "string",
+    valueHint: "<id>",
     description: "Caller UAC account ID",
   },
-  {
-    flag: "--namespace-id <id>",
+  namespaceId: {
+    type: "string",
+    valueHint: "<id>",
     description: "Product namespace ID (Token Plan default: namespace-1)",
   },
-];
+} satisfies FlagsDef;
 
-export const TOKEN_PLAN_WORKSPACE_OPTION: OptionDef = {
-  flag: "--workspace-id <id>",
-  description: "Workspace ID (env: BAILIAN_WORKSPACE_ID, config: workspace_id)",
-};
+export const TOKEN_PLAN_WORKSPACE_FLAG = {
+  workspaceId: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Workspace ID (env: BAILIAN_WORKSPACE_ID, config: workspace_id)",
+  },
+} satisfies FlagsDef;
+
+type TokenPlanCommonQueryFlags = ParsedFlags<typeof TOKEN_PLAN_COMMON_QUERY_FLAGS>;
 
 const MODEL_STUDIO_HOSTS: Partial<Record<Region, string>> = {
   cn: "modelstudio.cn-beijing.aliyuncs.com",
@@ -49,7 +48,7 @@ function resolveRegion(baseUrl: string): Region {
   return "cn";
 }
 
-/** ModelStudio POP OpenAPI host for the given DashScope base URL preset. */
+/** ModelStudio OpenAPI host for the given DashScope base URL preset. */
 function modelStudioHost(baseUrl: string): string {
   const region = resolveRegion(baseUrl);
   return MODEL_STUDIO_HOSTS[region] ?? MODEL_STUDIO_HOSTS.cn!;
@@ -61,101 +60,60 @@ export interface TokenPlanApiResponse {
   Message?: string;
 }
 
-export type TokenPlanQueryParams = Record<string, string | string[] | undefined>;
+export type TokenPlanQueryParams = AcsQueryParams;
 
-export function resolveTokenPlanCredentials(
-  config: Config,
-  flags: GlobalFlags,
-): { accessKeyId: string; accessKeySecret: string } {
-  const accessKeyId = (flags.accessKeyId as string) || config.accessKeyId;
-  const accessKeySecret = (flags.accessKeySecret as string) || config.accessKeySecret;
-
-  if (!accessKeyId || !accessKeySecret) {
-    throw new BailianError(
-      "No credentials found.\n" +
-        "Set ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET.",
-      ExitCode.AUTH,
-    );
-  }
-
-  return { accessKeyId, accessKeySecret };
-}
-
-export function requireWorkspaceId(config: Config, flags: GlobalFlags): string {
-  const workspaceId = (flags.workspaceId as string) || config.workspaceId;
+export function requireWorkspaceId(
+  settings: Settings,
+  flags: { workspaceId?: string },
+  binName: string,
+): string {
+  const workspaceId = flags.workspaceId || settings.workspaceId;
   if (!workspaceId) {
     throw new BailianError(
       "Missing workspace ID.\n" +
-        "Set via: --workspace-id flag, env: BAILIAN_WORKSPACE_ID, or config: bl config set workspace_id <id>",
+        `Set via: --workspace-id flag, env: BAILIAN_WORKSPACE_ID, or config: ${binName} config set workspace_id <id>`,
       ExitCode.USAGE,
     );
   }
   return workspaceId;
 }
 
-export function appendCommonQueryParams(params: TokenPlanQueryParams, flags: GlobalFlags): void {
-  if (flags.callerUacAccountId) params.CallerUacAccountId = flags.callerUacAccountId as string;
-  if (flags.namespaceId) params.NamespaceId = flags.namespaceId as string;
+export function appendCommonQueryParams(
+  params: TokenPlanQueryParams,
+  flags: TokenPlanCommonQueryFlags,
+): void {
+  if (flags.callerUacAccountId) params.CallerUacAccountId = flags.callerUacAccountId;
+  if (flags.namespaceId) params.NamespaceId = flags.namespaceId;
 }
 
 export function prepareTokenPlanRequest(
-  config: Config,
+  baseUrl: string,
   path: string,
   queryParams: TokenPlanQueryParams,
 ): { host: string; endpoint: string; queryString: string; queryParams: TokenPlanQueryParams } {
-  const queryString = buildCanonicalQuery(queryParams);
-  const host = modelStudioHost(config.baseUrl);
+  const queryString = buildAcsCanonicalQuery(queryParams);
+  const host = modelStudioHost(baseUrl);
   const endpoint = `https://${host}${path}${queryString ? `?${queryString}` : ""}`;
   return { host, endpoint, queryString, queryParams };
 }
 
 export async function callTokenPlanApi<T extends TokenPlanApiResponse>(opts: {
-  config: Config;
-  credentials: { accessKeyId: string; accessKeySecret: string };
+  client: Client;
+  /** Model-domain base URL (from ctx.client.baseUrl) — only used to pick the OpenAPI host region. */
+  baseUrl: string;
   action: string;
   path: string;
   method: "GET" | "POST";
   queryParams: TokenPlanQueryParams;
 }): Promise<T> {
-  const { config, credentials, action, path, method, queryParams } = opts;
-  const { host, endpoint, queryString } = prepareTokenPlanRequest(config, path, queryParams);
-
-  const headers = signTokenPlanRequest({
-    accessKeyId: credentials.accessKeyId,
-    accessKeySecret: credentials.accessKeySecret,
+  const { client, baseUrl, action, path, method, queryParams } = opts;
+  const { host } = prepareTokenPlanRequest(baseUrl, path, queryParams);
+  return client.openApiQueryJson<T>({
+    host,
+    path,
     action,
     version: TOKEN_PLAN_API_VERSION,
-    body: "",
-    host,
-    pathname: path,
     method,
-    queryString,
+    queryParams,
   });
-
-  if (config.verbose) {
-    process.stderr.write(`> ${method} ${endpoint}\n`);
-    process.stderr.write(`> AK: ${maskToken(credentials.accessKeyId)}\n`);
-  }
-
-  const timeoutMs = config.timeout * 1000;
-  const res = await fetch(endpoint, {
-    method,
-    headers: { ...headers, ...trackingHeaders() },
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-
-  if (config.verbose) {
-    process.stderr.write(`< ${res.status} ${res.statusText}\n`);
-  }
-
-  const data = (await res.json()) as T;
-
-  if (!res.ok || data.Success === false) {
-    throw new BailianError(
-      `${data.Code || res.status} - ${data.Message || res.statusText}`,
-      ExitCode.GENERAL,
-    );
-  }
-
-  return data;
 }

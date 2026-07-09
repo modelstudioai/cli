@@ -2,14 +2,11 @@ import {
   defineCommand,
   detectOutputFormat,
   maskToken,
-  readConfigFile,
-  writeConfigFile,
   BailianError,
-  type Config,
-  type GlobalFlags,
   ExitCode,
+  type ConfigFile,
 } from "bailian-cli-core";
-import { emitResult, cmdUsage } from "bailian-cli-runtime";
+import { emitResult } from "bailian-cli-runtime";
 
 const VALID_KEYS = [
   "base_url",
@@ -18,13 +15,13 @@ const VALID_KEYS = [
   "timeout",
   "api_key",
   "access_token",
+  "access_key_id",
+  "access_key_secret",
   "default_text_model",
   "default_video_model",
   "default_image_model",
   "default_speech_model",
   "default_omni_model",
-  "access_key_id",
-  "access_key_secret",
   "workspace_id",
 ];
 
@@ -39,44 +36,39 @@ const KEY_ALIASES: Record<string, string> = {
   "output-dir": "output_dir",
   "api-key": "api_key",
   "access-token": "access_token",
+  "access-key-id": "access_key_id",
+  "access-key-secret": "access_key_secret",
   "default-text-model": "default_text_model",
   "default-video-model": "default_video_model",
   "default-image-model": "default_image_model",
   "default-speech-model": "default_speech_model",
   "default-omni-model": "default_omni_model",
-  "access-key-id": "access_key_id",
-  "access-key-secret": "access_key_secret",
   "workspace-id": "workspace_id",
 };
 
 export default defineCommand({
   description: "Set a config value",
-  skipDefaultApiKeySetup: true,
+  auth: "none",
   usageArgs: "--key <key> --value <value>",
-  options: [
-    {
-      flag: "--key <key>",
+  flags: {
+    key: {
+      type: "string",
+      valueHint: "<key>",
       description:
-        "Config key (base_url, output, output_dir, timeout, api_key, access_token, default_*_model, access_key_id, access_key_secret, workspace_id)",
+        "Config key (base_url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, default_*_model, workspace_id)",
+      required: true,
     },
-    { flag: "--value <value>", description: "Value to set" },
-  ],
+    value: { type: "string", valueHint: "<value>", description: "Value to set", required: true },
+  },
   exampleArgs: [
     "--key output --value json",
     "--key timeout --value 600",
     "--key base_url --value https://dashscope.aliyuncs.com",
   ],
-  async run(config: Config, flags: GlobalFlags) {
-    const key = flags.key as string | undefined;
-    const value = flags.value as string | undefined;
-
-    if (!key || value === undefined) {
-      throw new BailianError(
-        "--key and --value are required.",
-        ExitCode.USAGE,
-        cmdUsage(config, "--key <key> --value <value>"),
-      );
-    }
+  async run(ctx) {
+    const { settings, flags } = ctx;
+    const key = flags.key;
+    const value = flags.value;
 
     // Resolve hyphen aliases to underscore keys
     const resolvedKey: string = KEY_ALIASES[key] || key;
@@ -89,9 +81,9 @@ export default defineCommand({
     }
 
     // Validate specific values
-    if (resolvedKey === "output" && !["rich", "json"].includes(value)) {
+    if (resolvedKey === "output" && !["text", "json"].includes(value)) {
       throw new BailianError(
-        `Invalid output format "${value}". Valid values: rich, json`,
+        `Invalid output format "${value}". Valid values: text, json`,
         ExitCode.USAGE,
       );
     }
@@ -106,21 +98,18 @@ export default defineCommand({
       }
     }
 
-    const format = detectOutputFormat(config.output);
+    const format = detectOutputFormat(settings.output);
 
-    if (config.dryRun) {
+    if (settings.dryRun) {
       emitResult({ would_set: { [resolvedKey]: value } }, format);
       return;
     }
 
-    const existing = readConfigFile() as Record<string, unknown>;
-    existing[resolvedKey] = resolvedKey === "timeout" ? Number(value) : value;
-    await writeConfigFile(existing);
+    const coerced = resolvedKey === "timeout" ? Number(value) : value;
+    await ctx.configStore().write({ [resolvedKey]: coerced } as Partial<ConfigFile>);
 
-    if (!config.quiet) {
-      const shown = SECRET_KEYS.has(resolvedKey)
-        ? maskToken(String(existing[resolvedKey]))
-        : existing[resolvedKey];
+    if (!settings.quiet) {
+      const shown = SECRET_KEYS.has(resolvedKey) ? maskToken(String(coerced)) : coerced;
       emitResult({ [resolvedKey]: shown }, format);
     }
   },
