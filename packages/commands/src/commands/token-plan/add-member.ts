@@ -7,12 +7,10 @@ import {
 import { emitResult, emitBare, padEnd } from "bailian-cli-runtime";
 import type { AddOrganizationMemberResponse } from "./types.ts";
 import {
-  TOKEN_PLAN_AK_FLAGS,
   TOKEN_PLAN_COMMON_QUERY_FLAGS,
   appendCommonQueryParams,
   callTokenPlanApi,
   prepareTokenPlanRequest,
-  resolveTokenPlanCredentials,
   type TokenPlanQueryParams,
 } from "./utils.ts";
 
@@ -40,14 +38,12 @@ const ADD_MEMBER_FLAGS = {
     description: "Seat tier to assign on creation: standard, pro, or max",
   },
   ...TOKEN_PLAN_COMMON_QUERY_FLAGS,
-  ...TOKEN_PLAN_AK_FLAGS,
 } satisfies FlagsDef;
 type AddMemberFlags = ParsedFlags<typeof ADD_MEMBER_FLAGS>;
 
 export default defineCommand({
   description: "Add a member to a Token Plan organization",
-  // AK/SK 私有解析(见 utils.ts),不走集中凭证域。
-  auth: "none",
+  auth: "openapi",
   usageArgs: "--account-name <name> --org-id <id> [flags]",
   flags: ADD_MEMBER_FLAGS,
   exampleArgs: [
@@ -70,11 +66,9 @@ export default defineCommand({
       return;
     }
 
-    const credentials = resolveTokenPlanCredentials(flags);
     const data = await callTokenPlanApi<AddOrganizationMemberResponse>({
-      settings,
+      client: ctx.client,
       baseUrl: ctx.client.baseUrl,
-      credentials,
       action: API_ACTION,
       path: API_PATH,
       method: "POST",

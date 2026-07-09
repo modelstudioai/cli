@@ -15,6 +15,7 @@ import {
   CONSOLE_AUTH_FLAGS,
   GLOBAL_FLAGS,
   MODEL_AUTH_FLAGS,
+  OPENAPI_AUTH_FLAGS,
   credentialFlagDefs,
 } from "../packages/core/dist/index.mjs";
 import type { AnyCommand, FlagDef, FlagsDef } from "../packages/core/src/index.ts";
@@ -203,10 +204,17 @@ function buildIndex(
     "",
     formatFlagsTable(CONSOLE_AUTH_FLAGS),
     "",
+    "## OpenAPI auth flags",
+    "",
+    "Available on OpenAPI-domain commands (AK/SK auth); also listed per command below:",
+    "",
+    formatFlagsTable(OPENAPI_AUTH_FLAGS),
+    "",
     "## Notes",
     "",
     "- Console commands (`app list`, `usage free`, `console call`) require `bl auth login --console`.",
     "- Most API commands use `DASHSCOPE_API_KEY` or `bl auth login --api-key`.",
+    "- Token Plan commands use OpenAPI AK/SK via `bl auth login --open-api` or `ALIBABA_CLOUD_ACCESS_KEY_ID` / `ALIBABA_CLOUD_ACCESS_KEY_SECRET`.",
     "- Default output: **text** in TTY; **json** when piped.",
     "",
   );

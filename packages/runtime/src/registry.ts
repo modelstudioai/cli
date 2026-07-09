@@ -4,6 +4,7 @@ import {
   CONSOLE_AUTH_FLAGS,
   GLOBAL_FLAGS,
   MODEL_AUTH_FLAGS,
+  OPENAPI_AUTH_FLAGS,
   credentialFlagDefs,
 } from "bailian-cli-core";
 import { camelToKebab } from "./args.ts";
@@ -269,6 +270,7 @@ ${d(`  ${this.cliName} pipeline run workflow.yaml --dry-run --output json`)}
     const globalFlagLines = this.buildFlagLines(GLOBAL_FLAGS, a, d);
     const modelFlagLines = this.buildFlagLines(MODEL_AUTH_FLAGS, a, d);
     const consoleFlagLines = this.buildFlagLines(CONSOLE_AUTH_FLAGS, a, d);
+    const openapiFlagLines = this.buildFlagLines(OPENAPI_AUTH_FLAGS, a, d);
 
     out.write(`
 ${b("Usage:")} ${this.cliName} <resource> <command> [flags]
@@ -284,6 +286,9 @@ ${modelFlagLines}
 
 ${b("Console Auth Flags:")} ${d("(console-domain commands)")}
 ${consoleFlagLines}
+
+${b("OpenAPI Auth Flags:")} ${d("(openapi-domain commands)")}
+${openapiFlagLines}
 
 ${b("Getting Help:")}
   ${d("Add --help after any command to see its full list of flags, defaults,")}

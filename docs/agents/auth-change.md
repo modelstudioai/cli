@@ -16,7 +16,8 @@ config    ──┘                       │
                                     ├─ buildSettings(sources) → ctx.settings
                                     │
                                     ├─ resolveApiKey(sources)     → model-domain Client
-                                    └─ resolveConsole(sources)    → console-domain Client
+                                    ├─ resolveConsole(sources)    → console-domain Client
+                                    └─ resolveOpenApi(sources)    → OpenAPI Client
 
 defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx)
 ```
@@ -25,22 +26,26 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 
 - `apiKey` — DashScope / OpenAI-compatible 模型域,用 API key 与 model base URL
 - `console` — Bailian Console Gateway,用 console access token + region/site/switchAgent/workspace
+- `openapi` — 阿里云 OpenAPI 签名域,用 AccessKey ID/Secret 调用 Token Plan 等 OpenAPI
 - `none` — 本地命令、登录/配置类命令、无需 credential 的命令
 
-### 双凭证并存（API Key + Console）
+### 多凭证并存
 
-`~/.bailian/config.json` 可同时保存 `api_key` 与 `access_token`。登录任一种方式不得删除另一种:
+`~/.bailian/config.json` 可同时保存 `api_key`、`access_token` 与 `access_key_*`。登录任一种方式不得删除另一种:
 
 - `bl auth login --api-key ...` 只更新 `api_key` / `base_url`
 - `bl auth login --console` 只更新 `access_token` 以及回调携带的 console 作用域字段
+- `bl auth login --open-api ...` 只更新 `access_key_id` / `access_key_secret`
 - `bl auth logout --console` 只清 `access_token`
-- `bl auth logout` 清 `api_key` + `access_token`
+- `bl auth logout --open-api` 只清 `access_key_id` / `access_key_secret`
+- `bl auth logout` 清 `api_key` + `access_token` + `access_key_*`
 
 解析分工:
 
 - `resolveApiKey()` — `auth: "apiKey"` 命令;优先级 `--api-key` > `DASHSCOPE_API_KEY` > config `api_key`
 - `resolveModelBaseUrl()` — model base URL;优先级 `--base-url` > `DASHSCOPE_BASE_URL` > config `base_url` > `REGIONS.cn`
 - `resolveConsole()` — `auth: "console"` 命令;当前 token 来自 config `access_token`,region/site/switchAgent 来自 flag > config > 默认
+- `resolveOpenApi()` — `auth: "openapi"` 命令;优先级 `--access-key-id/--access-key-secret` > `ALIBABA_CLOUD_ACCESS_KEY_ID/ALIBABA_CLOUD_ACCESS_KEY_SECRET` > config `access_key_*`。兼容读取旧字段 `openapi_access_key_*`,新写入只写短字段
 - `describeAuthState()` — `auth status` / banner / telemetry 使用的只读快照
 
 命令不要直接解析 token、env 或 config。业务请求统一走 `ctx.client`;登录/配置命令通过 `ctx.authStore()` / `ctx.configStore()` 的窄接口操作落盘。
@@ -84,12 +89,13 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
   - 新增/调整登录 flag 与流程
   - 持久化只走 `ctx.authStore().login(...)`
 - [ ] `packages/commands/src/commands/auth/status.ts`:
-  - 分别显示 model / console 鉴权状态,并 mask token
+  - 分别显示 model / console / openapi 鉴权状态,并 mask token
 - [ ] `packages/commands/src/commands/auth/logout.ts`:
   - 清理范围与双凭证并存规则一致
 - [ ] 新的业务命令设置正确 `auth`:
   - 模型域请求 → `auth: "apiKey"`
   - Console Gateway → `auth: "console"`
+  - 阿里云 OpenAPI 请求 → `auth: "openapi"`
   - 本地/登录/配置 → `auth: "none"`
 
 ### D. 用户面文档
@@ -110,11 +116,14 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 unset DASHSCOPE_API_KEY DASHSCOPE_ACCESS_TOKEN
 HOME=/tmp/empty node packages/cli/src/main.ts auth status
 
-# flag 注入
-node packages/cli/src/main.ts auth status --api-key sk-xxx
+# flag 注入(凭证域 flag 只在对应业务命令可见,auth status 不接收)
+node packages/cli/src/main.ts text chat --message hi --api-key sk-xxx --dry-run
+node packages/cli/src/main.ts token-plan list-seats --access-key-id ak-xxx --access-key-secret sec-xxx --dry-run
+node packages/cli/src/main.ts auth login --open-api --access-key-id ak-xxx --access-key-secret sec-xxx --dry-run
 
 # env 注入
 DASHSCOPE_API_KEY=sk-xxx node packages/cli/src/main.ts auth status
+ALIBABA_CLOUD_ACCESS_KEY_ID=ak-xxx ALIBABA_CLOUD_ACCESS_KEY_SECRET=sec-xxx node packages/cli/src/main.ts auth status
 ```
 
 Console 登录/网关相关改动:

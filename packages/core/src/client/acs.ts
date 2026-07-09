@@ -1,13 +1,8 @@
-/**
- * ACS3-HMAC-SHA256 signing for ModelStudio Token Plan POP APIs (query-string style).
- *
- * Extends the core ROA signer with canonical query string support required by
- * Token Plan endpoints that pass parameters in the URL query.
- */
-
 import { createHmac, createHash, randomUUID } from "crypto";
 
-export interface TokenPlanAkSignConfig {
+export type AcsQueryParams = Record<string, string | string[] | undefined>;
+
+export interface AcsSignConfig {
   accessKeyId: string;
   accessKeySecret: string;
   action: string;
@@ -16,12 +11,12 @@ export interface TokenPlanAkSignConfig {
   host: string;
   pathname: string;
   method?: string;
-  /** ACS3 canonical query string (sorted, encoded, no leading `?`). Empty for POST body-only APIs. */
+  /** ACS3 canonical query string (sorted, encoded, no leading `?`). */
   queryString?: string;
 }
 
-/** Build ACS3 canonical query string from POP query parameters. */
-export function buildCanonicalQuery(params: Record<string, string | string[] | undefined>): string {
+/** Build ACS3 canonical query string from OpenAPI query parameters. */
+export function buildAcsCanonicalQuery(params: AcsQueryParams): string {
   const pairs: Array<[string, string]> = [];
   for (const [key, value] of Object.entries(params)) {
     if (value === undefined || value === "") continue;
@@ -38,19 +33,11 @@ export function buildCanonicalQuery(params: Record<string, string | string[] | u
   return pairs.map(([k, v]) => `${encodeRFC3986(k)}=${encodeRFC3986(v)}`).join("&");
 }
 
-function encodeRFC3986(str: string): string {
-  return encodeURIComponent(str).replace(
-    /[!'()*]/g,
-    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
-  );
-}
-
-export function signTokenPlanRequest(cfg: TokenPlanAkSignConfig): Record<string, string> {
+export function signAcsRequest(cfg: AcsSignConfig): Record<string, string> {
   const method = cfg.method ?? "POST";
   const now = new Date();
   const dateISO = now.toISOString().replace(/\.\d{3}Z$/, "Z");
   const nonce = randomUUID();
-
   const hashedBody = sha256Hex(cfg.body);
 
   const headers: Record<string, string> = {
@@ -66,13 +53,9 @@ export function signTokenPlanRequest(cfg: TokenPlanAkSignConfig): Record<string,
   const signedHeaderKeys = Object.keys(headers)
     .filter((k) => k === "host" || k === "content-type" || k.startsWith("x-acs-"))
     .sort();
-
   const canonicalHeaders = signedHeaderKeys.map((k) => `${k}:${headers[k]}`).join("\n") + "\n";
-
   const signedHeadersStr = signedHeaderKeys.join(";");
-
   const queryString = cfg.queryString ?? "";
-
   const canonicalRequest = [
     method,
     cfg.pathname,
@@ -85,13 +68,18 @@ export function signTokenPlanRequest(cfg: TokenPlanAkSignConfig): Record<string,
   const algorithm = "ACS3-HMAC-SHA256";
   const hashedCanonical = sha256Hex(canonicalRequest);
   const stringToSign = `${algorithm}\n${hashedCanonical}`;
-
   const signature = hmacSHA256Hex(cfg.accessKeySecret, stringToSign);
 
-  headers["authorization"] =
-    `${algorithm} Credential=${cfg.accessKeyId},SignedHeaders=${signedHeadersStr},Signature=${signature}`;
+  headers.authorization = `${algorithm} Credential=${cfg.accessKeyId},SignedHeaders=${signedHeadersStr},Signature=${signature}`;
 
   return headers;
+}
+
+function encodeRFC3986(str: string): string {
+  return encodeURIComponent(str).replace(
+    /[!'()*]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
 }
 
 function sha256Hex(data: string): string {

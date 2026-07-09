@@ -165,13 +165,17 @@ Required for console capability commands (`app list`, `usage free`, `usage stats
 bl auth login --console
 ```
 
-### Alibaba Cloud AK/SK (Token Plan only)
+### Alibaba Cloud OpenAPI AK/SK (Token Plan only)
 
 Required for the `token-plan` command group. Get your AccessKey from [RAM Console](https://ram.console.aliyun.com/manage/ak).
 
 > Recommended: create a RAM sub-account with minimum privileges instead of using the root account's AK/SK.
 
 ```bash
+# Option 1: Login command (persisted to ~/.bailian/config.json)
+bl auth login --open-api --access-key-id LTAI5t... --access-key-secret ...
+
+# Option 2: Environment variables
 export ALIBABA_CLOUD_ACCESS_KEY_ID=LTAI5t...
 export ALIBABA_CLOUD_ACCESS_KEY_SECRET=...
 export BAILIAN_WORKSPACE_ID=ws-...

@@ -14,6 +14,7 @@ import {
   CONSOLE_AUTH_FLAGS,
   GLOBAL_FLAGS,
   MODEL_AUTH_FLAGS,
+  OPENAPI_AUTH_FLAGS,
   UsageError,
   credentialFlagDefs,
   buildSources,
@@ -103,6 +104,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             ...GLOBAL_FLAGS,
             ...MODEL_AUTH_FLAGS,
             ...CONSOLE_AUTH_FLAGS,
+            ...OPENAPI_AUTH_FLAGS,
           }) as Partial<SourceFlags>,
         ),
       );

@@ -61,7 +61,7 @@ export type ParsedFlags<F extends FlagsDef> = {
   [K in keyof F as IsRequired<F[K]> extends true ? never : K]?: ParsedValue<F[K]>;
 };
 
-export type AuthRequirement = "apiKey" | "console" | "none";
+export type AuthRequirement = "apiKey" | "console" | "openapi" | "none";
 
 // ── Flag 分组:全局(所有命令) + 凭证域(按命令的 auth 可见) ────────────────────
 /** 所有命令都可用的全局 flag。 */
@@ -119,15 +119,33 @@ export const CONSOLE_AUTH_FLAGS = {
   },
 } satisfies FlagsDef;
 
-/** sources 里可能出现的全部 flag(全局 + 两个凭证域)。 */
+/** Alibaba Cloud OpenAPI AK/SK credential flags, visible to `auth: "openapi"` commands. */
+export const OPENAPI_AUTH_FLAGS = {
+  accessKeyId: {
+    type: "string",
+    valueHint: "<key>",
+    description: "Alibaba Cloud Access Key ID (env: ALIBABA_CLOUD_ACCESS_KEY_ID)",
+  },
+  accessKeySecret: {
+    type: "string",
+    valueHint: "<key>",
+    description: "Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET)",
+  },
+} satisfies FlagsDef;
+
+/** sources 里可能出现的全部 flag(全局 + 凭证域)。 */
 export type SourceFlags = ParsedFlags<
-  typeof GLOBAL_FLAGS & typeof MODEL_AUTH_FLAGS & typeof CONSOLE_AUTH_FLAGS
+  typeof GLOBAL_FLAGS &
+    typeof MODEL_AUTH_FLAGS &
+    typeof CONSOLE_AUTH_FLAGS &
+    typeof OPENAPI_AUTH_FLAGS
 >;
 
 /** 该命令可见的凭证域 flag 定义。 */
 export function credentialFlagDefs(cmd: { auth: AuthRequirement }): FlagsDef {
   if (cmd.auth === "apiKey") return MODEL_AUTH_FLAGS;
   if (cmd.auth === "console") return CONSOLE_AUTH_FLAGS;
+  if (cmd.auth === "openapi") return OPENAPI_AUTH_FLAGS;
   return {};
 }
 

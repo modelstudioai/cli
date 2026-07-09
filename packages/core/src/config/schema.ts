@@ -18,6 +18,10 @@ export interface ConfigFile {
   api_key?: string;
   /** OAuth-style token from `bl auth login --console` callback; sent as `Authorization: Bearer …` */
   access_token?: string;
+  /** Alibaba Cloud OpenAPI AccessKey ID from `bl auth login --open-api`. */
+  access_key_id?: string;
+  /** Alibaba Cloud OpenAPI AccessKey secret from `bl auth login --open-api`. */
+  access_key_secret?: string;
   base_url?: string;
   /**
    * Dedicated base URL for the intent-detect model (tongyi-intent-detect-v3).
@@ -68,6 +72,17 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     out.access_token = obj.access_token;
   else if (typeof obj.accessToken === "string" && obj.accessToken.length > 0)
     out.access_token = obj.accessToken;
+  if (typeof obj.access_key_id === "string" && obj.access_key_id.length > 0)
+    out.access_key_id = obj.access_key_id;
+  else if (typeof obj.openapi_access_key_id === "string" && obj.openapi_access_key_id.length > 0)
+    out.access_key_id = obj.openapi_access_key_id;
+  if (typeof obj.access_key_secret === "string" && obj.access_key_secret.length > 0)
+    out.access_key_secret = obj.access_key_secret;
+  else if (
+    typeof obj.openapi_access_key_secret === "string" &&
+    obj.openapi_access_key_secret.length > 0
+  )
+    out.access_key_secret = obj.openapi_access_key_secret;
   if (typeof obj.base_url === "string" && isHttpUrl(obj.base_url)) out.base_url = obj.base_url;
   if (typeof obj.intent_detect_base_url === "string" && isHttpUrl(obj.intent_detect_base_url))
     out.intent_detect_base_url = obj.intent_detect_base_url;

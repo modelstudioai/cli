@@ -5,6 +5,7 @@ export type {
   FlagsDef,
   ParsedFlags,
   SourceFlags,
+  AuthRequirement,
 } from "./command.ts";
 export {
   defineCommand,
@@ -14,6 +15,7 @@ export {
   ASYNC_FLAG,
   MODEL_AUTH_FLAGS,
   CONSOLE_AUTH_FLAGS,
+  OPENAPI_AUTH_FLAGS,
 } from "./command.ts";
 export type {
   AppCompletionRequest,

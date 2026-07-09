@@ -1,6 +1,6 @@
 import { REGIONS } from "../config/schema.ts";
 import type { ResolutionSources } from "../config/loader.ts";
-import type { ApiKeyCredential, ConsoleCredential, AuthState } from "./types.ts";
+import type { ApiKeyCredential, ConsoleCredential, OpenApiCredential, AuthState } from "./types.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 
@@ -48,6 +48,79 @@ export function resolveConsole(s: ResolutionSources): ConsoleCredential {
   };
 }
 
+/** Alibaba Cloud OpenAPI AK/SK credential. Priority: flags > env > config. */
+export function resolveOpenApi(s: ResolutionSources): OpenApiCredential {
+  const flagCred = resolveOpenApiPair(
+    "flag",
+    s.flags.accessKeyId,
+    s.flags.accessKeySecret,
+    s.flags.accessKeyId !== undefined || s.flags.accessKeySecret !== undefined,
+  );
+  if (flagCred) return flagCred;
+
+  const envCred = resolveOpenApiPair(
+    "env",
+    s.env.ALIBABA_CLOUD_ACCESS_KEY_ID,
+    s.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET,
+    Boolean(
+      trimNonEmpty(s.env.ALIBABA_CLOUD_ACCESS_KEY_ID) ||
+      trimNonEmpty(s.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET),
+    ),
+  );
+  if (envCred) return envCred;
+
+  const configCred = resolveOpenApiPair(
+    "config",
+    s.file.access_key_id,
+    s.file.access_key_secret,
+    Boolean(s.file.access_key_id || s.file.access_key_secret),
+  );
+  if (configCred) return configCred;
+
+  throw new BailianError(
+    "No OpenAPI AK/SK credentials found.",
+    ExitCode.AUTH,
+    "Set ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET, pass --access-key-id and --access-key-secret, or run `bl auth login --open-api`.",
+  );
+}
+
+function resolveOpenApiPair(
+  source: OpenApiCredential["source"],
+  rawAccessKeyId: string | undefined,
+  rawAccessKeySecret: string | undefined,
+  provided: boolean,
+): OpenApiCredential | undefined {
+  if (!provided) return undefined;
+
+  const accessKeyId = trimNonEmpty(rawAccessKeyId);
+  const accessKeySecret = trimNonEmpty(rawAccessKeySecret);
+
+  if (!accessKeyId || !accessKeySecret) {
+    throw new BailianError(
+      "Incomplete OpenAPI AK/SK credentials found.",
+      ExitCode.AUTH,
+      openApiPairHint(source),
+    );
+  }
+
+  return { accessKeyId, accessKeySecret, source };
+}
+
+function trimNonEmpty(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function openApiPairHint(source: OpenApiCredential["source"]): string {
+  if (source === "flag") {
+    return "Pass both --access-key-id and --access-key-secret, or remove the partial flags to use env/config credentials.";
+  }
+  if (source === "env") {
+    return "Set both ALIBABA_CLOUD_ACCESS_KEY_ID and ALIBABA_CLOUD_ACCESS_KEY_SECRET, or unset the partial env vars to use config credentials.";
+  }
+  return "Run `bl auth login --open-api --access-key-id <id> --access-key-secret <secret>` again to save a complete pair.";
+}
+
 /** Full auth snapshot from sources — what would resolve per domain (or undefined). */
 export function describeAuthState(s: ResolutionSources): AuthState {
   const state: AuthState = {};
@@ -60,6 +133,11 @@ export function describeAuthState(s: ResolutionSources): AuthState {
     state.console = resolveConsole(s);
   } catch {
     /* no console credential */
+  }
+  try {
+    state.openapi = resolveOpenApi(s);
+  } catch {
+    /* no OpenAPI credential */
   }
   return state;
 }
