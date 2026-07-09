@@ -14,7 +14,7 @@
 
 - [ ] `package.json` 的 `engines.node` 与 README 的 Node.js 徽章一致
 - [ ] `pnpm-lock.yaml` 同步生成(运行 `pnpm install`)
-- [ ] 各源码包 `tsconfig.json`(根 + core + runtime + commands + cli + rag)的 target / module 设置一致
+- [ ] 各源码包 `tsconfig.json`(根 + core + runtime + commands + cli + kscli)的 target / module 设置一致
 
 ### B. lint / format 规则改动
 
@@ -28,9 +28,9 @@
 
 - [ ] `packages/*/vite.config.ts` 的 entry / dts / exports 设置符合包类型:
   - library 包(core/runtime/commands):导出 `dist/index.mjs` + dts + `@bailian-cli/source` dev export
-  - binary 包(cli/rag):entry 指向 `src/main.ts`,有 shebang,`exports: true`
-- [ ] cli / rag 的 bundle 必须把 workspace 包(`bailian-cli-core` / `bailian-cli-runtime` / `bailian-cli-commands`)当 **external**(不内联),确认 dist 中仍是 package import
-- [ ] cli / rag 的 binary bundle 第一行必须有 `#!/usr/bin/env node` shebang
+  - binary 包(cli/kscli):entry 指向 `src/main.ts`,有 shebang,`exports: true`
+- [ ] cli / kscli 的 bundle 必须把 workspace 包(`bailian-cli-core` / `bailian-cli-runtime` / `bailian-cli-commands`)当 **external**(不内联),确认 dist 中仍是 package import
+- [ ] cli / kscli 的 binary bundle 第一行必须有 `#!/usr/bin/env node` shebang
 
 ### D. 依赖升级
 
@@ -63,6 +63,6 @@ node tools/release/check.mjs
 
 - ✗ 升级 Node engines 但忘了 README 徽章
 - ✗ 改 lint 规则后没全仓 `--fix`,新人 PR 报红一片
-- ✗ 改 cli/rag 的 vite config 把 core/runtime/commands 不小心打成 inline,bundle 体积暴涨
+- ✗ 改 cli/kscli 的 vite config 把 core/runtime/commands 不小心打成 inline,bundle 体积暴涨
 - ✗ Oxlint 配置改了但 IDE 缓存还是旧的(IDE 可能要重启 ts server)
 - ✗ 升级依赖一并升 lockfile,改动量大但没拆 commit

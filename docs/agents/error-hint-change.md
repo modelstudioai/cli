@@ -67,7 +67,7 @@ process.exit(err.exitCode)
 ### 3. core 的 hint 必须不含 cli 关切
 
 - ❌ 新增/改动时不写 `bl xxx` 命令名
-- ❌ 新增/改动时不写 `rag xxx` 等产品入口命令名
+- ❌ 新增/改动时不写 `kscli xxx` 等产品入口命令名
 - ❌ 新增/改动时不写控制台 URL 或 region
 - ❌ 新增/改动时不写渠道追踪参数(`source_channel=xxx`)
 - ✅ 只描述抽象做法(如 `"Set DASHSCOPE_API_KEY environment variable, or pass --api-key."`)
@@ -75,9 +75,9 @@ process.exit(err.exitCode)
 
 ### 4. runtime / 产品层可以使用入口名 + URL
 
-- `packages/runtime/src/error-handler.ts` 通过 `binName` 渲染 `bl` / `rag` 等入口名,不要硬编码
+- `packages/runtime/src/error-handler.ts` 通过 `binName` 渲染 `bl` / `kscli` 等入口名,不要硬编码
 - 产品入口 / README / E2E 可以写具体入口命令
-- shared command 实现不写 `bl` / `rag` 前缀;`usageArgs` / `exampleArgs` 只写参数片段
+- shared command 实现不写 `bl` / `kscli` 前缀;`usageArgs` / `exampleArgs` 只写参数片段
 - URL 必须从 `packages/runtime/src/urls.ts` import,不能硬编码
 
 ## 必查清单

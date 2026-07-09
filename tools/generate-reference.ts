@@ -215,7 +215,7 @@ function buildIndex(
     "- Console commands (`app list`, `usage free`, `console call`) require `bl auth login --console`.",
     "- Most API commands use `DASHSCOPE_API_KEY` or `bl auth login --api-key`.",
     "- Token Plan commands use OpenAPI AK/SK via `bl auth login --open-api` or `ALIBABA_CLOUD_ACCESS_KEY_ID` / `ALIBABA_CLOUD_ACCESS_KEY_SECRET`.",
-    "- Default output: **text** in TTY; **json** when piped.",
+    "- Default output: **text** unless explicitly set to `json` with `--output`, `DASHSCOPE_OUTPUT`, or config.",
     "",
   );
 

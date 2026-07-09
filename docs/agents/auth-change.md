@@ -62,7 +62,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
   - 新增 credential 类型 / source / scope 字段
 - [ ] `packages/core/src/auth/resolver.ts`:
   - 新增或调整 resolver,保持优先级注释清晰
-  - 新增/调整 resolver hint 时保持产品无关,不要新增 `bl` / `rag` 硬编码;当前遗留的 `bl auth login` hint 如被触碰,迁到 runtime `enhanceHint`
+  - 新增/调整 resolver hint 时保持产品无关,不要新增 `bl` / `kscli` 硬编码;当前遗留的 `bl auth login` hint 如被触碰,迁到 runtime `enhanceHint`
 - [ ] `packages/core/src/auth/store.ts`:
   - 如果新方式需要持久化,扩展 `AuthStore` / `AuthPersistPatch`
 - [ ] `packages/core/src/config/schema.ts`:
@@ -113,7 +113,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 
 ```sh
 # 各种凭证组合
-unset DASHSCOPE_API_KEY DASHSCOPE_ACCESS_TOKEN
+unset DASHSCOPE_API_KEY ALIBABA_CLOUD_ACCESS_KEY_ID ALIBABA_CLOUD_ACCESS_KEY_SECRET
 HOME=/tmp/empty node packages/cli/src/main.ts auth status
 
 # flag 注入(凭证域 flag 只在对应业务命令可见,auth status 不接收)
@@ -140,4 +140,4 @@ node packages/cli/src/main.ts usage stats --dry-run --output json
 - ✗ `auth login` 写成功但 `auth status` 不识别(两边走的 storage path 不一致)
 - ✗ token mask 显示完整 token,日志泄漏
 - ✗ `auth: "console"` 命令误用 `apiKey` 域,config 只有 API key 时会把 `sk-...` 发到网关
-- ✗ 新增 core resolver hint 时写死产品命令,导致 `rag` 等入口提示错误
+- ✗ 新增 core resolver hint 时写死产品命令,导致 `kscli` 等入口提示错误

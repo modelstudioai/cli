@@ -29,7 +29,7 @@ description: >-
 Auto-generated from the CLI source at build time. Before running an unfamiliar command:
 
 1. Open `reference/index.md` → **Quick index** (or **By group**) to locate the command.
-2. Open the matching `reference/<group>.md` for **Usage**, **Options**, and **Examples**.
+2. Open the matching `reference/<group>.md` for **Usage**, **Flags**, and **Examples**.
 3. Run `bl <command> --help` for the same information in the terminal.
 
 Do not guess flags — use the reference files or `--help`.
@@ -64,7 +64,7 @@ NO_COLOR=1 bl config show --output text
 | Bailian agent / workflow                     | `bl app call`                          | Needs `--app-id`                             |
 | Find app by name                             | `bl app list` then `bl app call`       | Console auth                                 |
 | Memory CRUD / profile                        | `bl memory *`                          | [`reference/memory.md`](reference/memory.md) |
-| Knowledge RAG                                | `bl knowledge retrieve`                | API key + index ID                           |
+| Knowledge RAG                                | `bl knowledge search` / `chat`         | API key + agent/workspace IDs                |
 | Upload file to temp OSS                      | `bl file upload`                       | When you need `oss://` URL explicitly        |
 | Model selection / recommendation             | `bl advisor recommend`                 | Intent → candidate recall → LLM ranking      |
 | MCP tool discovery / call                    | `bl mcp list` / `tools` / `call`       | Bailian MCP marketplace                      |
@@ -180,12 +180,11 @@ bl text chat --message "Write a poem about spring"  # quick smoke test
 2. Pick `code` (app ID); handle `user_prompt_params` via `--biz-params '{"key":"value"}'`
 3. `bl app call --app-id <code> --prompt "..."`
 
-### Tool schemas for agents
+### Command metadata for agents
 
-```bash
-bl config export-schema
-bl config export-schema --command "image generate"
-```
+Use [`reference/index.md`](reference/index.md), the matching `reference/<group>.md`,
+and `bl <command> --help` as the command schema surface. Do not call removed
+schema-export commands.
 
 ---
 
