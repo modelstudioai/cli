@@ -1,10 +1,40 @@
 # 更新日志
 
-`bailian-cli` 和 `bailian-cli-core` 的所有重要变更都记录在此。
+`bailian-cli` 系列包的所有重要变更都记录在此。
 
-格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/spec/v2.0.0.html)。`bailian-cli`、`bailian-cli-core`、`bailian-cli-runtime`、`bailian-cli-commands` 共享一个版本号,总是一起发布。
+格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/spec/v2.0.0.html)。`bailian-cli`、`bailian-cli-core`、`bailian-cli-runtime`、`bailian-cli-commands`、`knowledge-studio-cli` 共享一个版本号。
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
+
+## [1.7.0] - 2026-07-09
+
+### 新增
+
+- `bl auth login --open-api` 现在可以保存阿里云 OpenAPI AK/SK 凭据，供 Token Plan 命令使用；`bl auth status` 会分别展示 API Key、控制台和 OpenAPI 凭据状态，`bl auth logout --open-api` 可只清除 OpenAPI 凭据。
+- `kscli` 的 help 与示例现在展示为 `kscli search`、`kscli chat`、`kscli retrieve` 等 Knowledge Studio 独立入口路径。
+
+### 变更
+
+- Token Plan 命令统一使用 OpenAPI AK/SK 凭据流程，支持登录持久化凭据和 `ALIBABA_CLOUD_ACCESS_KEY_ID` / `ALIBABA_CLOUD_ACCESS_KEY_SECRET` 环境变量。
+- 鉴权 flag 现在只对可使用它们的命令生效。把模型、控制台或 OpenAPI 凭据 flag 传给错误的命令时，现在会报 unknown flag，而不是接受后忽略。
+- help 与命令参考现在只展示当前命令鉴权域适用的 flag，更容易区分模型、控制台和 OpenAPI 凭据。
+- 缺少必填 flag 时现在返回用法错误并以退出码 2 退出，不再进入交互式补全或打印 help 后以退出码 0 退出。
+- 图片、视频、语音任务类命令现在统一用 `--async` 表示提交任务后不等待；`--concurrent` 只在支持并发请求的命令上展示。
+- 命令默认输出为文本；仅在显式设置 `--output json`、`DASHSCOPE_OUTPUT=json` 或配置文件要求 JSON 时输出 JSON。
+- 更新检查节流调整为每天一次，并可在非 TTY / agent 场景展示更新提示。
+- 代理配置现在只读取大写 `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY`，忽略小写代理环境变量。
+- `bl auth login` 成功后不再额外打印 onboarding quick start 内容。
+
+### 已移除
+
+- 移除 `bl knowledge retrieve` 已废弃的 AK/SK 鉴权；知识库命令请使用 DashScope API Key。
+- 移除 `--no-color`、`--non-interactive` 和 `--no-wait`。纯文本输出使用 `NO_COLOR=1`，提交任务后不等待使用 `--async`。
+- 移除删除 / 登出类命令的 `--yes` 与交互式确认提示；执行破坏性操作前请用 `--dry-run` 预览。
+
+### 修复
+
+- 需要凭据的 `--dry-run` 路径现在会跳过鉴权前置检查，例如 Token Plan 可在未配置凭据时先打印请求信息。
+- `--verbose` 的模型请求日志恢复输出请求方法、URL、鉴权来源与响应状态等信息。
 
 ## [1.6.1] - 2026-07-03
 
