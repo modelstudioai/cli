@@ -6,7 +6,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { promisify } from "util";
 import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
-import { cliPackageRoot } from "./helpers.ts";
+import { cliPackageRoot, localBin } from "./helpers.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -54,7 +54,7 @@ beforeAll(async () => {
   proxyUrl = `http://127.0.0.1:${(proxy.address() as AddressInfo).port}`;
 
   scriptDir = mkdtempSync(join(tmpdir(), "bl-proxy-e2e-"));
-  scriptPath = join(scriptDir, "probe.ts");
+  scriptPath = join(scriptDir, "probe.mts");
   writeFileSync(scriptPath, PROBE_SCRIPT);
 });
 
@@ -75,7 +75,7 @@ async function runProbe(
   envOverrides: NodeJS.ProcessEnv,
 ): Promise<{ exitCode: number; stderr: string }> {
   try {
-    await execFileAsync("node", [scriptPath], {
+    await execFileAsync(localBin("tsx"), [scriptPath], {
       cwd: cliPackageRoot,
       encoding: "utf8",
       env: { ...process.env, NODE_NO_WARNINGS: "1", ...PROXY_ENV_CLEARED, ...envOverrides },

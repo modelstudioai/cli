@@ -28,7 +28,7 @@ export function monorepoRoot(): string {
   return join(cliPackageRoot, "..", "..");
 }
 
-function localBin(name: string): string {
+export function localBin(name: string): string {
   return join(
     monorepoRoot(),
     "node_modules",
