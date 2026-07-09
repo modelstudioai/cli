@@ -123,10 +123,7 @@ export default defineCommand({
         accessKeyId: flags.accessKeyId!,
         accessKeySecret: flags.accessKeySecret!,
       });
-      console.log(resp);
-      process.stderr.write("Done\n");
-      const accessToken =
-        typeof resp.Data?.AccessToken === "string" ? resp.Data.AccessToken : undefined;
+      const accessToken = resp.cliAccessToken;
       await store.login({
         access_key_id: flags.accessKeyId,
         access_key_secret: flags.accessKeySecret,
