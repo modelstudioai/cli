@@ -7,13 +7,35 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command          | Description                                                                                  |
-| ---------------- | -------------------------------------------------------------------------------------------- |
-| `bl auth login`  | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist) |
-| `bl auth logout` | Clear stored credentials                                                                     |
-| `bl auth status` | Show current authentication state                                                            |
+| Command                         | Description                                                                                  |
+| ------------------------------- | -------------------------------------------------------------------------------------------- |
+| `bl auth generate-access-token` | Generate a CLI access token using OpenAPI AK/SK                                              |
+| `bl auth login`                 | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist) |
+| `bl auth logout`                | Clear stored credentials                                                                     |
+| `bl auth status`                | Show current authentication state                                                            |
 
 ## Command details
+
+### `bl auth generate-access-token`
+
+| Field           | Value                                                                             |
+| --------------- | --------------------------------------------------------------------------------- |
+| **Name**        | `auth generate-access-token`                                                      |
+| **Description** | Generate a CLI access token using OpenAPI AK/SK                                   |
+| **Usage**       | `bl auth generate-access-token --access-key-id <id> --access-key-secret <secret>` |
+
+#### Flags
+
+| Flag                           | Type   | Required | Description                     |
+| ------------------------------ | ------ | -------- | ------------------------------- |
+| `--access-key-id <id>`         | string | yes      | Alibaba Cloud Access Key ID     |
+| `--access-key-secret <secret>` | string | yes      | Alibaba Cloud Access Key Secret |
+
+#### Examples
+
+```bash
+bl auth generate-access-token --access-key-id LTAIxxxxx --access-key-secret xxxxx
+```
 
 ### `bl auth login`
 

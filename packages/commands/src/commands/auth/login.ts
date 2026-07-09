@@ -5,7 +5,7 @@ import {
   runConsoleLogin,
   validateAndPersistApiKey,
 } from "./login-console.ts";
-import { generateCLIAccessToken } from "./generate-access-token.ts";
+import { generateCLIAccessToken } from "bailian-cli-core";
 
 const LOGIN_MODE_HINT = "Choose exactly one login mode: --api-key, --console, or --open-api";
 

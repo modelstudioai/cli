@@ -6,6 +6,7 @@
 export { default as authLogin } from "./commands/auth/login.ts";
 export { default as authStatus } from "./commands/auth/status.ts";
 export { default as authLogout } from "./commands/auth/logout.ts";
+export { default as authGenerateAccessToken } from "./commands/auth/generate-access-token.ts";
 export { default as textChat } from "./commands/text/chat.ts";
 export { default as textOmni } from "./commands/omni/chat.ts";
 export { default as imageGenerate } from "./commands/image/generate.ts";
