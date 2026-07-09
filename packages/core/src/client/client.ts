@@ -7,6 +7,7 @@ import { buildAcsCanonicalQuery, signAcsRequest, type AcsQueryParams } from "./a
 import { isLocalFile, resolveFileUrl } from "../files/upload.ts";
 import { McpClient } from "./mcp.ts";
 import { callConsoleGateway } from "../console/gateway.ts";
+import { refreshAccessToken } from "../auth/refresh-token.ts";
 import { maskToken } from "../utils/token.ts";
 import { trackingHeaders } from "./headers.ts";
 
@@ -112,15 +113,35 @@ export class Client {
     return new McpClient(this.http, url, this.deps.apiCred?.token);
   }
 
-  console<T>(api: string, data: Record<string, unknown>): Promise<T> {
+  async console<T>(api: string, data: Record<string, unknown>): Promise<T> {
     if (!this.deps.consoleCred) {
       throw new BailianError("This command needs a console access token.", ExitCode.AUTH);
     }
-    // region / site / switchAgent 已解析在 consoleCred 里,gateway 不再回读 config。
-    return callConsoleGateway(this.deps.consoleCred, this.deps.settings.timeout, {
-      api,
-      data,
-    }) as Promise<T>;
+    try {
+      return (await callConsoleGateway(this.deps.consoleCred, this.deps.settings.timeout, {
+        api,
+        data,
+      })) as T;
+    } catch (err) {
+      if (
+        !(err instanceof BailianError) ||
+        err.exitCode !== ExitCode.AUTH ||
+        !err.message.includes("not logged in")
+      ) {
+        throw err;
+      }
+      const newToken = await refreshAccessToken({
+        identity: this.deps.identity,
+        settings: this.deps.settings,
+        baseUrl: this.deps.baseUrl,
+      });
+      if (!newToken) throw err;
+      return (await callConsoleGateway(
+        { ...this.deps.consoleCred, token: newToken },
+        this.deps.settings.timeout,
+        { api, data },
+      )) as T;
+    }
   }
 
   async openApiQueryJson<T extends OpenApiResponse>(opts: ClientOpenApiQueryOpts): Promise<T> {
