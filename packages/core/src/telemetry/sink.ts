@@ -3,8 +3,8 @@ import { join } from "path";
 import { getConfigDir, ensureConfigDir } from "../config/paths.ts";
 import { buildRemoteAemOptions, type TrackingEvent } from "./event.ts";
 import { detectEnv } from "./env.ts";
-import Tracker from "../../lib/remote-telemetry/tracker.js";
-import EventPlugin from "../../lib/remote-telemetry/event-plugin.js";
+import Tracker from "../../lib/remote-telemetry/tracker.cjs";
+import EventPlugin from "../../lib/remote-telemetry/event-plugin.cjs";
 
 const TELEMETRY_FILE = () => join(getConfigDir(), "telemetry.jsonl");
 

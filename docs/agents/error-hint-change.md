@@ -110,14 +110,14 @@ process.exit(err.exitCode)
 
 ```sh
 # 触发对应错误,看 text 输出
-HOME=/tmp/empty node packages/cli/src/main.ts text chat --message "x"
+HOME=/tmp/empty pnpm -F bailian-cli exec tsx src/main.ts text chat --message "x"
 
 # 看 JSON 输出(应包含 cause 字段当 cause 存在时)
-HOME=/tmp/empty node packages/cli/src/main.ts text chat --message "x" --output json
+HOME=/tmp/empty pnpm -F bailian-cli exec tsx src/main.ts text chat --message "x" --output json
 
 # 模拟网络层错误,验证 errno 透传
 DASHSCOPE_BASE_URL=https://nonexistent-host.invalid \
-  node packages/cli/src/main.ts text chat --message hi
+  pnpm -F bailian-cli exec tsx src/main.ts text chat --message hi
 # 预期:"Network request failed: ENOTFOUND ..." + Caused by 链
 ```
 

@@ -27,7 +27,7 @@
 ### C. 构建配置
 
 - [ ] `packages/*/vite.config.ts` 的 entry / dts / exports 设置符合包类型:
-  - library 包(core/runtime/commands):导出 `dist/index.mjs` + dts + `@bailian-cli/source` dev export
+  - library 包(core/runtime/commands):本地 `exports` 默认指向 `src/index.ts`;`publishConfig.exports` 覆盖发布入口为 `dist/index.mjs`;dts 产物正常生成
   - binary 包(cli/kscli):entry 指向 `src/main.ts`,有 shebang,`exports: true`
 - [ ] cli / kscli 的 bundle 必须把 workspace 包(`bailian-cli-core` / `bailian-cli-runtime` / `bailian-cli-commands`)当 **external**(不内联),确认 dist 中仍是 package import
 - [ ] cli / kscli 的 binary bundle 第一行必须有 `#!/usr/bin/env node` shebang

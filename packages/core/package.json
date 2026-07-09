@@ -20,8 +20,8 @@
   "types": "./dist/index.d.mts",
   "exports": {
     ".": {
-      "@bailian-cli/source": "./src/index.ts",
-      "default": "./dist/index.mjs"
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
     },
     "./package.json": "./package.json"
   },

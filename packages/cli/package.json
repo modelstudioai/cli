@@ -40,10 +40,10 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "generate:reference": "node --experimental-strip-types ../../tools/generate-reference.ts && sh -c 'cd ../.. && vp check --fix skills/bailian-cli/reference'",
-    "sync:skill-version": "node --experimental-strip-types ../../tools/sync-skill-metadata.ts",
+    "generate:reference": "tsx ../../tools/generate-reference.ts && sh -c 'cd ../.. && vp check --fix skills/bailian-cli/reference'",
+    "sync:skill-version": "tsx ../../tools/sync-skill-metadata.ts",
     "build": "vp pack",
-    "dev": "node src/main.ts",
+    "dev": "tsx src/main.ts",
     "test": "vp test",
     "check": "vp check"
   },

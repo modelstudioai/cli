@@ -28,6 +28,15 @@ export function monorepoRoot(): string {
   return join(cliPackageRoot, "..", "..");
 }
 
+function localBin(name: string): string {
+  return join(
+    monorepoRoot(),
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? `${name}.cmd` : name,
+  );
+}
+
 function readE2eRunSessionFromOutputDir(): string | undefined {
   try {
     const p = join(monorepoRoot(), "test", "output", E2E_RUN_SESSION_FILENAME);
@@ -150,7 +159,7 @@ export interface RunCliResult {
 }
 
 /**
- * 子进程执行 CLI（等价于在 `packages/cli` 下 `node src/main.ts ...`）。
+ * 子进程执行 CLI（等价于在 `packages/cli` 下 `tsx src/main.ts ...`）。
  * request_id 等诊断信息在 stderr；`--output json` 时 JSON 在 stdout。
  */
 export async function runCli(
@@ -158,7 +167,7 @@ export async function runCli(
   envOverrides: NodeJS.ProcessEnv = {},
 ): Promise<RunCliResult> {
   try {
-    const { stdout, stderr } = await execFileAsync("node", [mainTs, ...args], {
+    const { stdout, stderr } = await execFileAsync(localBin("tsx"), [mainTs, ...args], {
       cwd: cliPackageRoot,
       encoding: "utf8",
       maxBuffer: 32 * 1024 * 1024,

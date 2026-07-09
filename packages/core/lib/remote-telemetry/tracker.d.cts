@@ -4,4 +4,4 @@ declare class RemoteTracker {
   send(gokey: string): Promise<void>;
 }
 
-export default RemoteTracker;
+export = RemoteTracker;

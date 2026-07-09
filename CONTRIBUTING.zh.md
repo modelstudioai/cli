@@ -33,13 +33,7 @@ pnpm install
 
 ### 从源码运行 CLI
 
-开两个终端:
-
 ```bash
-# 终端 1 —— core watch 重建
-pnpm dev
-
-# 终端 2 —— 跑任意 bl 命令
 pnpm bl auth login --api-key sk-xxxxx
 pnpm bl text chat --message "你好"
 pnpm bl video generate --prompt "一只走路的猫"

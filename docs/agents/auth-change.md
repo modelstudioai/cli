@@ -114,23 +114,23 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 ```sh
 # 各种凭证组合
 unset DASHSCOPE_API_KEY ALIBABA_CLOUD_ACCESS_KEY_ID ALIBABA_CLOUD_ACCESS_KEY_SECRET
-HOME=/tmp/empty node packages/cli/src/main.ts auth status
+HOME=/tmp/empty pnpm -F bailian-cli exec tsx src/main.ts auth status
 
 # flag 注入(凭证域 flag 只在对应业务命令可见,auth status 不接收)
-node packages/cli/src/main.ts text chat --message hi --api-key sk-xxx --dry-run
-node packages/cli/src/main.ts token-plan list-seats --access-key-id ak-xxx --access-key-secret sec-xxx --dry-run
-node packages/cli/src/main.ts auth login --open-api --access-key-id ak-xxx --access-key-secret sec-xxx --dry-run
+pnpm -F bailian-cli exec tsx src/main.ts text chat --message hi --api-key sk-xxx --dry-run
+pnpm -F bailian-cli exec tsx src/main.ts token-plan list-seats --access-key-id ak-xxx --access-key-secret sec-xxx --dry-run
+pnpm -F bailian-cli exec tsx src/main.ts auth login --open-api --access-key-id ak-xxx --access-key-secret sec-xxx --dry-run
 
 # env 注入
-DASHSCOPE_API_KEY=sk-xxx node packages/cli/src/main.ts auth status
-ALIBABA_CLOUD_ACCESS_KEY_ID=ak-xxx ALIBABA_CLOUD_ACCESS_KEY_SECRET=sec-xxx node packages/cli/src/main.ts auth status
+DASHSCOPE_API_KEY=sk-xxx pnpm -F bailian-cli exec tsx src/main.ts auth status
+ALIBABA_CLOUD_ACCESS_KEY_ID=ak-xxx ALIBABA_CLOUD_ACCESS_KEY_SECRET=sec-xxx pnpm -F bailian-cli exec tsx src/main.ts auth status
 ```
 
 Console 登录/网关相关改动:
 
 ```sh
-node packages/cli/src/main.ts auth login --console
-node packages/cli/src/main.ts usage stats --dry-run --output json
+pnpm -F bailian-cli exec tsx src/main.ts auth login --console
+pnpm -F bailian-cli exec tsx src/main.ts usage stats --dry-run --output json
 ```
 
 ## 常见漏点

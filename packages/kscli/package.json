@@ -43,7 +43,7 @@
   },
   "scripts": {
     "build": "vp pack",
-    "dev": "node src/main.ts",
+    "dev": "tsx src/main.ts",
     "test": "vp test",
     "check": "vp check"
   },

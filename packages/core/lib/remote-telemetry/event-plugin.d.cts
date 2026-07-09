@@ -1,3 +1,3 @@
 declare const RemoteEventPlugin: unknown;
 
-export default RemoteEventPlugin;
+export = RemoteEventPlugin;

@@ -109,15 +109,15 @@ packages/commands/src/index.ts
 
 ```sh
 pnpm run sync:skill-assets
-node packages/cli/src/main.ts <new-command> --help
-node packages/cli/src/main.ts
+pnpm -F bailian-cli exec tsx src/main.ts <new-command> --help
+pnpm -F bailian-cli exec tsx src/main.ts
 vp test packages/cli/tests/e2e/<topic>.e2e.test.ts
 ```
 
 如改了 `kscli` 入口:
 
 ```sh
-node packages/kscli/src/main.ts <command> --help
+pnpm -F knowledge-studio-cli exec tsx src/main.ts <command> --help
 ```
 
 ## 常见漏点

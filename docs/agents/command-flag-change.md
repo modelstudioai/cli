@@ -45,8 +45,8 @@
 ## 完成后自查
 
 ```sh
-node packages/cli/src/main.ts <command> --help          # 看新 flag 出现在 Flags
-node packages/cli/src/main.ts <command> --new-flag x   # 实测一遍
+pnpm -F bailian-cli exec tsx src/main.ts <command> --help          # 看新 flag 出现在 Flags
+pnpm -F bailian-cli exec tsx src/main.ts <command> --new-flag x   # 实测一遍
 ```
 
 ## 常见漏点
