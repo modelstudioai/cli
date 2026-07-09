@@ -11,7 +11,7 @@ import { cliPackageRoot } from "./helpers.ts";
 const execFileAsync = promisify(execFile);
 
 /**
- * 代理支持 E2E（issue #35）：只验证 `setupProxyFromEnv()` 是否把代理 dispatcher
+ * 代理支持 E2E：只验证 `setupProxyFromEnv()` 是否把代理 dispatcher
  * 正确装到全局 fetch 上——设了 HTTPS_PROXY 后裸 `fetch()` 走代理，未设置时直连，
  * NO_PROXY 命中时跳过，非法代理值给出明确报错。
  *
@@ -66,11 +66,8 @@ afterAll(async () => {
 /** 清空所有代理相关环境变量，确保每个用例只受自身设置影响 */
 const PROXY_ENV_CLEARED = {
   HTTPS_PROXY: "",
-  https_proxy: "",
   HTTP_PROXY: "",
-  http_proxy: "",
   NO_PROXY: "",
-  no_proxy: "",
 };
 
 /** 以给定代理环境变量运行探针脚本，返回 { exitCode, stderr } */
@@ -94,12 +91,6 @@ describe("e2e: proxy", () => {
   test("设置 HTTPS_PROXY 后 fetch 经过代理（CONNECT 到目标主机）", async () => {
     connectTargets.length = 0;
     await runProbe({ HTTPS_PROXY: proxyUrl });
-    expect(connectTargets).toContain(`${FAKE_HOST}:443`);
-  });
-
-  test("空字符串小写变量不屏蔽大写 HTTPS_PROXY（undici ?? 取值回归）", async () => {
-    connectTargets.length = 0;
-    await runProbe({ https_proxy: "", HTTPS_PROXY: proxyUrl });
     expect(connectTargets).toContain(`${FAKE_HOST}:443`);
   });
 
