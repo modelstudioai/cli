@@ -199,7 +199,7 @@ export const sftLoraProfile: TrainingProfile = {
       const wan25 = isWan25(flags.model as string | undefined);
       const hp: Record<string, unknown> = {
         ...VIDEO_HYPER_PARAMS_BASE,
-        batch_size: wan25 ? 2 : 4,
+        batch_size: 4,
         max_pixels: wan25 ? 36864 : 262144,
       };
       // Optional overrides (no clamping — video batch_size is intentionally small).

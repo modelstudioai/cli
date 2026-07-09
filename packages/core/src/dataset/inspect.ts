@@ -21,6 +21,7 @@ import { createInterface } from "readline";
 import { extname } from "path";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
+import { openZipAndFindEntry } from "./validate/zip.ts";
 import type { DataModality } from "../finetune/profiles/types.ts";
 
 /**
@@ -159,8 +160,7 @@ function readFirstNonBlankLine(filePath: string): Promise<string | null> {
  * `validate/zip.ts` — avoids duplicating yauzl boilerplate.
  */
 function readFirstLineFromZipEntry(zipPath: string, entryName: string): Promise<string | null> {
-  return import("./validate/zip.ts")
-    .then(({ openZipAndFindEntry }) => openZipAndFindEntry(zipPath, entryName))
+  return openZipAndFindEntry(zipPath, entryName)
     .then(({ entry, zipfile }) => {
       return new Promise<string | null>((resolve, reject) => {
         zipfile.openReadStream(entry, (streamErr, readStream) => {

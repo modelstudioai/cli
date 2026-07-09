@@ -337,6 +337,16 @@ export default defineCommand({
       .map((token) => token.trim())
       .find((token) => isLocalPath(token));
     const modality: DataModality = firstLocalPath ? await detectModality(firstLocalPath) : "text";
+    // Video generation model fine-tuning is currently not exposed via the CLI.
+    // The core profile/schema implementation is retained, but the entry point
+    // is disabled here so video datasets are not accepted.
+    if (modality === "video" || modality === "video-kf2v") {
+      throw new BailianError(
+        `Video generation model fine-tuning is not supported.`,
+        ExitCode.USAGE,
+        `Detected video data in "${firstLocalPath}". Supported data: text, audio, image.`,
+      );
+    }
 
     const training = await analyzeDatasetTokens(
       settings,

@@ -2,13 +2,12 @@ import {
   defineCommand,
   detectOutputFormat,
   createDeployment,
-  BailianError,
-  ExitCode,
   type CreateDeploymentRequest,
   type FlagsDef,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { pickPlanStrategy, STRATEGIES } from "./plans.ts";
+import { DEFAULT_DEPLOY_PLAN } from "./constants.ts";
 
 const CREATE_FLAGS = {
   model: {
@@ -58,23 +57,6 @@ const CREATE_FLAGS = {
     valueHint: "<n>",
     description: "PTU max thinking-output tokens/min (optional, some models)",
   },
-  aigcUseInputPrompt: {
-    type: "boolean",
-    valueHint: "<bool>",
-    description:
-      "Video LoRA (aigc_config): honor the caller's prompt at inference (default false = use preset template)",
-  },
-  aigcPrompt: {
-    type: "string",
-    valueHint: "<text>",
-    description:
-      "Video LoRA (aigc_config): preset prompt template used when use-input-prompt is false",
-  },
-  aigcLoraPromptDefault: {
-    type: "string",
-    valueHint: "<text>",
-    description: "Video LoRA (aigc_config): default trigger-word phrase for the LoRA",
-  },
 } satisfies FlagsDef;
 
 /**
@@ -99,7 +81,6 @@ export default defineCommand({
     "--model qwen3.6-flash-2026-04-16 --name my-flash --plan ptu --input-tpm 10000 --output-tpm 1000",
     "--model qwen3-8b --name my-qwen3-mu --plan mu",
     "--model qwen3-8b --name my-qwen3 --plan mu --deploy-spec MU1 --capacity 2",
-    '--model wan2.5-i2v-preview-ft-xxx --name my-video-lora --plan lora --aigc-prompt "..." --aigc-lora-prompt-default "..."',
   ],
   notes: [
     "Plan defaults to `lora` (Token-billed). Pass --plan to override.",
@@ -112,9 +93,6 @@ export default defineCommand({
     "Use `bl deploy models --source base` to inspect available templates.",
     "After creation, status starts at PENDING and transitions to RUNNING.",
     "Invoke the deployed model with: bl text chat --model <deployed_model>",
-    "For fine-tuned Wan video (i2v/kf2v) LoRA models, use --plan lora and pass",
-    "--aigc-prompt / --aigc-lora-prompt-default (and optionally",
-    "--aigc-use-input-prompt) to set the deployment's aigc_config.",
     "WARNING: --model is overloaded across commands and refers to DIFFERENT",
     "values. `bl deploy create --model` takes the exported model_name (e.g.",
     "`qwen3-8b-ft-...`), but the create response also returns a `deployed_model`",
@@ -124,7 +102,7 @@ export default defineCommand({
     "Do not reuse the value across the two commands.",
   ],
   validate: (flags) => {
-    const plan = flags.plan || "lora";
+    const plan = flags.plan || DEFAULT_DEPLOY_PLAN;
     const strategy = STRATEGIES[plan];
     if (!strategy) {
       return `Unsupported plan "${plan}". Supported plans: ${Object.keys(STRATEGIES).join(", ")}.`;
@@ -135,7 +113,7 @@ export default defineCommand({
     const { identity, settings, flags } = ctx;
     const model = flags.model;
     const name = flags.name;
-    const plan = flags.plan || "lora";
+    const plan = flags.plan || DEFAULT_DEPLOY_PLAN;
     const format = detectOutputFormat(settings.output);
 
     // Plan-specific behaviour is owned by `plans.ts`. The strategy resolves
@@ -158,33 +136,6 @@ export default defineCommand({
       plan,
       ...resolved.body,
     };
-
-    // AIGC config (fine-tuned Wan video LoRA deployments). Only valid for
-    // plan=lora — reject early for ptu/mu so the user gets a clear CLI error
-    // instead of an opaque server-side rejection.
-    const aigcUseInputPrompt = flags.aigcUseInputPrompt;
-    const aigcPrompt = flags.aigcPrompt;
-    const aigcLoraPromptDefault = flags.aigcLoraPromptDefault;
-    const hasAigcFlags =
-      aigcUseInputPrompt !== undefined ||
-      aigcPrompt !== undefined ||
-      aigcLoraPromptDefault !== undefined;
-    if (hasAigcFlags && plan !== "lora") {
-      throw new BailianError(
-        `--aigc-* flags are only valid for plan=lora (video LoRA deployments). Got plan=${plan}.`,
-        ExitCode.USAGE,
-      );
-    }
-    if (hasAigcFlags) {
-      const aigcConfig: Record<string, unknown> = {
-        use_input_prompt: aigcUseInputPrompt ?? false,
-      };
-      if (aigcPrompt !== undefined) aigcConfig.prompt = aigcPrompt;
-      if (aigcLoraPromptDefault !== undefined) {
-        aigcConfig.lora_prompt_default = aigcLoraPromptDefault;
-      }
-      body.aigc_config = aigcConfig;
-    }
 
     if (settings.dryRun) {
       emitResult({ action: "deploy.create", body }, format);

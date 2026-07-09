@@ -85,9 +85,9 @@ export function parseDatasetSchemaFlag(value: string | undefined): DatasetSchema
   if (v === "chatml" || v === "dpo" || v === "cpt" || v === "tts" || v === "image" || v === "video")
     return v;
   throw new BailianError(
-    `Unsupported --schema "${value}". Supported: chatml, dpo, cpt, tts, image, video.`,
+    `Unsupported --schema "${value}". Supported: chatml, dpo, cpt, tts, image.`,
     ExitCode.USAGE,
-    `Omit --schema to auto-detect per record (chosen/rejected → DPO, text → CPT, wav_fn → TTS, img_path → image, first_frame_path/video_path → video, else ChatML).`,
+    `Omit --schema to auto-detect per record (chosen/rejected → DPO, text → CPT, wav_fn → TTS, img_path → image, else ChatML).`,
   );
 }
 

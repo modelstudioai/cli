@@ -16,11 +16,13 @@
  * `"tts"` for audio). The profile layer decides which schema to use based on
  * the detected modality — this validator is schema-agnostic.
  */
-import { createWriteStream, mkdirSync, rmSync } from "fs";
+import { createReadStream, createWriteStream, mkdirSync, rmSync } from "fs";
+import { createInterface } from "readline";
 import { tmpdir } from "os";
 import { join } from "path";
 import { pipeline } from "stream/promises";
 import { randomBytes } from "crypto";
+import * as yauzl from "yauzl";
 import type { ValidatorSpec, ValidateOpts, ValidationResult, ValidationIssue } from "./types.ts";
 import { makeIssue } from "./common.ts";
 import { jsonlValidator } from "./jsonl.ts";
@@ -39,32 +41,28 @@ import { IMAGE_EXTENSIONS } from "./schemas/image.ts";
 export function openZipAndFindEntry(
   zipPath: string,
   targetName: string,
-): Promise<{ entry: import("yauzl").Entry; zipfile: import("yauzl").ZipFile }> {
+): Promise<{ entry: yauzl.Entry; zipfile: yauzl.ZipFile }> {
   return new Promise((resolve, reject) => {
-    import("yauzl")
-      .then((yauzl) => {
-        yauzl.open(zipPath, { lazyEntries: true }, (err, zipfile) => {
-          if (err || !zipfile) {
-            reject(new Error(`Failed to open ZIP: ${err?.message ?? "unknown error"}`));
-            return;
-          }
+    yauzl.open(zipPath, { lazyEntries: true }, (err, zipfile) => {
+      if (err || !zipfile) {
+        reject(new Error(`Failed to open ZIP: ${err?.message ?? "unknown error"}`));
+        return;
+      }
+      zipfile.readEntry();
+      zipfile.on("entry", (entry) => {
+        const name = entry.fileName.replace(/\\/g, "/");
+        if (name === targetName || name.endsWith(`/${targetName}`)) {
+          resolve({ entry, zipfile });
+        } else {
           zipfile.readEntry();
-          zipfile.on("entry", (entry) => {
-            const name = entry.fileName.replace(/\\/g, "/");
-            if (name === targetName || name.endsWith(`/${targetName}`)) {
-              resolve({ entry, zipfile });
-            } else {
-              zipfile.readEntry();
-            }
-          });
-          zipfile.on("end", () => {
-            zipfile.close();
-            reject(new Error(`Entry "${targetName}" not found in ZIP`));
-          });
-          zipfile.on("error", reject);
-        });
-      })
-      .catch(reject);
+        }
+      });
+      zipfile.on("end", () => {
+        zipfile.close();
+        reject(new Error(`Entry "${targetName}" not found in ZIP`));
+      });
+      zipfile.on("error", reject);
+    });
   });
 }
 
@@ -74,27 +72,23 @@ export function openZipAndFindEntry(
  */
 function collectZipEntries(zipPath: string): Promise<string[]> {
   return new Promise((resolve, reject) => {
-    import("yauzl")
-      .then((yauzl) => {
-        yauzl.open(zipPath, { lazyEntries: true }, (err, zipfile) => {
-          if (err || !zipfile) {
-            reject(new Error(`Failed to open ZIP: ${err?.message ?? "unknown error"}`));
-            return;
-          }
-          const entries: string[] = [];
-          zipfile.readEntry();
-          zipfile.on("entry", (entry) => {
-            entries.push(entry.fileName.replace(/\\/g, "/"));
-            zipfile.readEntry();
-          });
-          zipfile.on("end", () => {
-            zipfile.close();
-            resolve(entries);
-          });
-          zipfile.on("error", reject);
-        });
-      })
-      .catch(reject);
+    yauzl.open(zipPath, { lazyEntries: true }, (err, zipfile) => {
+      if (err || !zipfile) {
+        reject(new Error(`Failed to open ZIP: ${err?.message ?? "unknown error"}`));
+        return;
+      }
+      const entries: string[] = [];
+      zipfile.readEntry();
+      zipfile.on("entry", (entry) => {
+        entries.push(entry.fileName.replace(/\\/g, "/"));
+        zipfile.readEntry();
+      });
+      zipfile.on("end", () => {
+        zipfile.close();
+        resolve(entries);
+      });
+      zipfile.on("error", reject);
+    });
   });
 }
 
@@ -140,8 +134,6 @@ async function collectMediaRefs(
   jsonlPath: string,
   maxLines = 100,
 ): Promise<{ refs: string[]; totalLines: number }> {
-  const { createReadStream } = await import("fs");
-  const { createInterface } = await import("readline");
   const stream = createReadStream(jsonlPath, { encoding: "utf8" });
   const rl = createInterface({ input: stream, crlfDelay: Infinity });
   const refs: string[] = [];

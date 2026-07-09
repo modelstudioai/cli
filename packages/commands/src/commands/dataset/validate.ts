@@ -36,7 +36,7 @@ const VALIDATE_FLAGS = {
     type: "string",
     valueHint: "<s>",
     description:
-      'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), "cpt" (raw text), "tts" (audio), "image" (image generation), or "video" (video generation). Default auto-detects per record.',
+      'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), "cpt" (raw text), "tts" (audio), or "image" (image generation). Default auto-detects per record.',
   },
 } satisfies FlagsDef;
 
@@ -44,7 +44,7 @@ export default defineCommand({
   description: "Locally validate a dataset file (.jsonl or .zip) without uploading",
   // 纯本地校验，不触网、不需 API key（与 `pipeline validate` 一致）。
   auth: "none",
-  usageArgs: "--file <path> [--full-validate] [--schema <chatml|dpo|cpt|tts|image|video>]",
+  usageArgs: "--file <path> [--full-validate] [--schema <chatml|dpo|cpt|tts|image>]",
   flags: VALIDATE_FLAGS,
   exampleArgs: [
     "--file train.jsonl",
@@ -60,19 +60,25 @@ export default defineCommand({
     "Schemas: chatml = {messages:[...]} (SFT); dpo = {messages:[...], chosen,",
     'rejected}; cpt = {text:"..."} (continual pre-training, raw text);',
     'tts = {wav_fn:"train/xxx.wav", text:"..."} (audio fine-tuning);',
-    'image = {img_path:"..."} (image generation); video =',
-    '{first_frame_path:"...", video_path:"..."} (video generation). With no',
-    "--schema, a record carrying wav_fn is validated as TTS, img_path as",
-    "image, video_path / first_frame_path as video, chosen/rejected as DPO,",
-    "text (no messages) as CPT, otherwise ChatML. Pass --schema to require a",
-    "specific shape on every record. ZIP archives (.zip) are validated",
-    "structurally (data.jsonl present, media references resolve) in addition",
-    "to per-record content checks. Use --full-validate to JSON.parse every line.",
+    'image = {img_path:"..."} (image generation). With no --schema, a record',
+    "carrying wav_fn is validated as TTS, img_path as image, chosen/rejected",
+    "as DPO, text (no messages) as CPT, otherwise ChatML. Pass --schema to",
+    "require a specific shape on every record. ZIP archives (.zip) are",
+    "validated structurally (data.jsonl present, media references resolve) in",
+    "addition to per-record content checks. Use --full-validate to JSON.parse",
+    "every line.",
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
     const filePath = flags.file;
     const schema = parseDatasetSchemaFlag(flags.schema);
+    if (schema === "video") {
+      throw new BailianError(
+        `--schema video is not supported.`,
+        ExitCode.USAGE,
+        `Supported schemas: chatml, dpo, cpt, tts, image.`,
+      );
+    }
     const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {

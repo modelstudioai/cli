@@ -14,6 +14,7 @@
  * auto-pick / body assembly) into one strategy entry per plan.
  */
 import { listDeployableModels, BailianError, ExitCode, type Client } from "bailian-cli-core";
+import { DEPLOY_PLAN, BILLING_METHOD, CHARGE_TYPE, DEFAULT_BILLING_METHOD } from "./constants.ts";
 
 /** Plan-relevant subset of `deploy create` flags (parsed flags satisfy this shape). */
 export interface CreatePlanFlags {
@@ -65,7 +66,7 @@ export interface PlanStrategy {
  * the CLI injects `1` as a placeholder.
  */
 const loraStrategy: PlanStrategy = {
-  name: "lora",
+  name: DEPLOY_PLAN.LORA,
   validateFlags() {
     return undefined; /* no required flags */
   },
@@ -81,7 +82,7 @@ const loraStrategy: PlanStrategy = {
  * required.
  */
 const ptuStrategy: PlanStrategy = {
-  name: "ptu",
+  name: DEPLOY_PLAN.PTU,
   validateFlags(flags) {
     if (flags.inputTpm === undefined || flags.outputTpm === undefined) {
       return "--input-tpm and --output-tpm are required for plan=ptu.";
@@ -115,12 +116,12 @@ const ptuStrategy: PlanStrategy = {
  * It is also skipped in dry-run mode to keep `--dry-run` side-effect-free.
  */
 const muStrategy: PlanStrategy = {
-  name: "mu",
+  name: DEPLOY_PLAN.MU,
   validateFlags() {
     return undefined; /* every required field has a default — nothing to assert up-front */
   },
   async resolve(ctx: PlanContext): Promise<PlanResolved> {
-    const billingMethod = ctx.flags.billingMethod || "POST_PAY";
+    const billingMethod = ctx.flags.billingMethod || DEFAULT_BILLING_METHOD;
     let deploySpec = ctx.flags.deploySpec;
     let capacity = ctx.flags.capacity;
 
@@ -140,11 +141,12 @@ const muStrategy: PlanStrategy = {
         });
         const payload = resp.output ?? resp.data;
         const target = (payload?.models ?? []).find((model) => model.model_name === ctx.model);
-        const muPlan = target?.plans?.find((plan) => plan.plan === "mu");
+        const muPlan = target?.plans?.find(({ plan }) => plan === DEPLOY_PLAN.MU);
         const templates = muPlan?.templates ?? [];
         if (templates.length === 0) throw noTemplateError();
         // POST_PAY → post_paid template; fall back to the first available.
-        const wantChargeType = billingMethod === "POST_PAY" ? "post_paid" : "pre_paid";
+        const wantChargeType =
+          billingMethod === BILLING_METHOD.POST_PAY ? CHARGE_TYPE.POST_PAID : CHARGE_TYPE.PRE_PAID;
         const picked =
           templates.find((template) => template.charge_type === wantChargeType) ?? templates[0];
         if (!picked?.deploy_spec && !picked?.template_id) throw noTemplateError();
@@ -178,9 +180,9 @@ const muStrategy: PlanStrategy = {
  * reject anything outside this table with a clear USAGE error.
  */
 export const STRATEGIES: Record<string, PlanStrategy> = {
-  lora: loraStrategy,
-  ptu: ptuStrategy,
-  mu: muStrategy,
+  [DEPLOY_PLAN.LORA]: loraStrategy,
+  [DEPLOY_PLAN.PTU]: ptuStrategy,
+  [DEPLOY_PLAN.MU]: muStrategy,
 };
 
 /** Throws USAGE if `plan` is not in the strategy table. */

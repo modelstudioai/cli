@@ -29,22 +29,19 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag                                | Type    | Required | Description                                                                                            |
-| ----------------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------ |
-| `--model <name>`                    | string  | yes      | Model name (catalog model or fine-tuned output) (required)                                             |
-| `--name <display_name>`             | string  | yes      | Console display name for the deployment (required)                                                     |
-| `--plan <plan>`                     | string  | no       | Billing plan: lora (default, Token-billed) \| ptu (Token-billed) \| mu                                 |
-| `--deploy-spec <id>`                | string  | no       | Deploy spec (only used by plan=mu; auto-picked if omitted)                                             |
-| `--capacity <n>`                    | number  | no       | Resource units (plan=mu only; required by API; defaults to the template's unit)                        |
-| `--billing-method <m>`              | string  | no       | Billing method (plan=mu only; default "POST_PAY", the only supported value)                            |
-| `--input-tpm <n>`                   | number  | no       | PTU max input tokens/min (required for plan=ptu)                                                       |
-| `--output-tpm <n>`                  | number  | no       | PTU max output tokens/min (required for plan=ptu)                                                      |
-| `--thinking-output-tpm <n>`         | number  | no       | PTU max thinking-output tokens/min (optional, some models)                                             |
-| `--aigc-use-input-prompt <bool>`    | boolean | no       | Video LoRA (aigc_config): honor the caller's prompt at inference (default false = use preset template) |
-| `--aigc-prompt <text>`              | string  | no       | Video LoRA (aigc_config): preset prompt template used when use-input-prompt is false                   |
-| `--aigc-lora-prompt-default <text>` | string  | no       | Video LoRA (aigc_config): default trigger-word phrase for the LoRA                                     |
-| `--api-key <key>`                   | string  | no       | API key                                                                                                |
-| `--base-url <url>`                  | string  | no       | API base URL                                                                                           |
+| Flag                        | Type   | Required | Description                                                                     |
+| --------------------------- | ------ | -------- | ------------------------------------------------------------------------------- |
+| `--model <name>`            | string | yes      | Model name (catalog model or fine-tuned output) (required)                      |
+| `--name <display_name>`     | string | yes      | Console display name for the deployment (required)                              |
+| `--plan <plan>`             | string | no       | Billing plan: lora (default, Token-billed) \| ptu (Token-billed) \| mu          |
+| `--deploy-spec <id>`        | string | no       | Deploy spec (only used by plan=mu; auto-picked if omitted)                      |
+| `--capacity <n>`            | number | no       | Resource units (plan=mu only; required by API; defaults to the template's unit) |
+| `--billing-method <m>`      | string | no       | Billing method (plan=mu only; default "POST_PAY", the only supported value)     |
+| `--input-tpm <n>`           | number | no       | PTU max input tokens/min (required for plan=ptu)                                |
+| `--output-tpm <n>`          | number | no       | PTU max output tokens/min (required for plan=ptu)                               |
+| `--thinking-output-tpm <n>` | number | no       | PTU max thinking-output tokens/min (optional, some models)                      |
+| `--api-key <key>`           | string | no       | API key                                                                         |
+| `--base-url <url>`          | string | no       | API base URL                                                                    |
 
 #### Notes
 
@@ -58,9 +55,6 @@ Index: [index.md](index.md)
 - Use `bl deploy models --source base` to inspect available templates.
 - After creation, status starts at PENDING and transitions to RUNNING.
 - Invoke the deployed model with: bl text chat --model <deployed_model>
-- For fine-tuned Wan video (i2v/kf2v) LoRA models, use --plan lora and pass
-- --aigc-prompt / --aigc-lora-prompt-default (and optionally
-- --aigc-use-input-prompt) to set the deployment's aigc_config.
 - WARNING: --model is overloaded across commands and refers to DIFFERENT
 - values. `bl deploy create --model` takes the exported model_name (e.g.
 - `qwen3-8b-ft-...`), but the create response also returns a `deployed_model`
@@ -85,10 +79,6 @@ bl deploy create --model qwen3-8b --name my-qwen3-mu --plan mu
 
 ```bash
 bl deploy create --model qwen3-8b --name my-qwen3 --plan mu --deploy-spec MU1 --capacity 2
-```
-
-```bash
-bl deploy create --model wan2.5-i2v-preview-ft-xxx --name my-video-lora --plan lora --aigc-prompt "..." --aigc-lora-prompt-default "..."
 ```
 
 ### `bl deploy delete`

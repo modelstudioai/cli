@@ -18,7 +18,7 @@ const UPLOAD_FLAGS = {
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Local dataset file (.jsonl or .zip; ≤300MB text, ≤1GB image/video)",
+    description: "Local dataset file (.jsonl or .zip; ≤300MB text, ≤1GB image)",
     required: true,
   },
   purpose: {
@@ -30,7 +30,7 @@ const UPLOAD_FLAGS = {
     type: "string",
     valueHint: "<s>",
     description:
-      'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), "cpt" (raw text), "tts" (audio), "image" (image generation), or "video" (video generation). Default auto-detects per record.',
+      'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), "cpt" (raw text), "tts" (audio), or "image" (image generation). Default auto-detects per record.',
   },
   noValidate: {
     type: "switch",
@@ -46,7 +46,7 @@ export default defineCommand({
   description: "Upload a dataset file (.jsonl or .zip) to Bailian",
   auth: "apiKey",
   usageArgs:
-    "--file <path> [--purpose <name>] [--schema <chatml|dpo|cpt|tts|image|video>] [--no-validate] [--full-validate]",
+    "--file <path> [--purpose <name>] [--schema <chatml|dpo|cpt|tts|image>] [--no-validate] [--full-validate]",
   flags: UPLOAD_FLAGS,
   exampleArgs: [
     "--file train.jsonl",
@@ -58,27 +58,32 @@ export default defineCommand({
     "--file train.jsonl --no-validate",
   ],
   notes: [
-    "Supports .jsonl (text) and .zip (audio/image/video archives with a",
-    "data.jsonl manifest). Six record schemas are recognized: chatml =",
-    "{messages:[...]} (SFT); dpo = {messages:[...], chosen, rejected};",
-    'cpt = {text:"..."} (continual pre-training, raw text); tts =',
-    '{wav_fn:"train/xxx.wav", text:"..."} (audio fine-tuning); image =',
-    '{img_path:"..."} (image generation); video = {first_frame_path:"...",',
-    'video_path:"..."} (video generation). With no --schema, a record',
-    "carrying wav_fn is validated as TTS, img_path as image, video_path /",
-    "first_frame_path as video, chosen/rejected as DPO, text (no messages)",
-    "as CPT, otherwise ChatML. Upload cap: 300MB text, 1GB image/video.",
-    "Upload uses the OpenAI-compatible /compatible-mode/v1/files endpoint so",
-    "the purpose tag is persisted (the DashScope-native /api/v1/files drops it).",
+    "Supports .jsonl (text) and .zip (audio/image archives with a data.jsonl",
+    "manifest). Five record schemas are recognized: chatml = {messages:[...]}",
+    '(SFT); dpo = {messages:[...], chosen, rejected}; cpt = {text:"..."}',
+    '(continual pre-training, raw text); tts = {wav_fn:"train/xxx.wav",',
+    'text:"..."} (audio fine-tuning); image = {img_path:"..."} (image',
+    "generation). With no --schema, a record carrying wav_fn is validated as",
+    "TTS, img_path as image, chosen/rejected as DPO, text (no messages) as CPT,",
+    "otherwise ChatML. Upload cap: 300MB text, 1GB image. Upload uses the",
+    "OpenAI-compatible /compatible-mode/v1/files endpoint so the purpose tag is",
+    "persisted (the DashScope-native /api/v1/files drops it).",
   ],
   async run(ctx) {
     const { identity, settings, flags } = ctx;
     const filePath = flags.file;
     const purpose = flags.purpose || "fine-tune";
     const schema = parseDatasetSchemaFlag(flags.schema);
+    if (schema === "video") {
+      throw new BailianError(
+        `--schema video is not supported.`,
+        ExitCode.USAGE,
+        `Supported schemas: chatml, dpo, cpt, tts, image.`,
+      );
+    }
     const format = detectOutputFormat(settings.output);
-    // Image / video schemas allow larger ZIPs (1 GB vs 300 MB for text).
-    const isMediaSchema = schema === "image" || schema === "video";
+    // Image schema allows larger ZIPs (1 GB vs 300 MB for text).
+    const isMediaSchema = schema === "image";
 
     if (!flags.noValidate) {
       const maxBytes = isMediaSchema ? MAX_MEDIA_ZIP_BYTES : MAX_DATASET_BYTES;
