@@ -5,6 +5,7 @@ import {
   runConsoleLogin,
   validateAndPersistApiKey,
 } from "./login-console.ts";
+import { generateCLIAccessToken } from "./generate-access-token.ts";
 
 const LOGIN_MODE_HINT = "Choose exactly one login mode: --api-key, --console, or --open-api";
 
@@ -110,12 +111,26 @@ export default defineCommand({
 
     if (flags.openApi) {
       if (settings.dryRun) {
-        emitBare("Would save OpenAPI AK/SK credentials.");
+        emitBare("Would save OpenAPI AK/SK credentials and generate CLI access token.");
         return;
       }
+      const resolvedBaseUrl = store.resolveBaseUrl();
+      process.stderr.write("Generating CLI access token... ");
+      const resp = await generateCLIAccessToken({
+        identity,
+        settings,
+        baseUrl: resolvedBaseUrl,
+        accessKeyId: flags.accessKeyId!,
+        accessKeySecret: flags.accessKeySecret!,
+      });
+      console.log(resp);
+      process.stderr.write("Done\n");
+      const accessToken =
+        typeof resp.Data?.AccessToken === "string" ? resp.Data.AccessToken : undefined;
       await store.login({
         access_key_id: flags.accessKeyId,
         access_key_secret: flags.accessKeySecret,
+        access_token: accessToken,
       });
       process.stderr.write(`OpenAPI credentials saved to ${getConfigPath()}\n`);
       return;
