@@ -1,11 +1,14 @@
 import type { Identity, Settings } from "../config/schema.ts";
-import type { ApiKeyCredential, ConsoleCredential } from "../auth/types.ts";
+import type { ApiKeyCredential, ConsoleCredential, OpenApiCredential } from "../auth/types.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { request, requestJson, type HttpDeps, type RequestOpts } from "./http.ts";
+import { buildAcsCanonicalQuery, signAcsRequest, type AcsQueryParams } from "./acs.ts";
 import { isLocalFile, resolveFileUrl } from "../files/upload.ts";
 import { McpClient } from "./mcp.ts";
 import { callConsoleGateway } from "../console/gateway.ts";
+import { maskToken } from "../utils/token.ts";
+import { trackingHeaders } from "./headers.ts";
 
 /** Client 的结构化依赖:身份 + 有效配置 + 各域凭证(按命令的 auth 注入)。 */
 export interface ClientDeps {
@@ -15,11 +18,27 @@ export interface ClientDeps {
   baseUrl: string;
   apiCred?: ApiKeyCredential;
   consoleCred?: ConsoleCredential;
+  openApiCred?: OpenApiCredential;
 }
 
 /** Like {@link RequestOpts} but with a `path` (credential baseUrl prepended) or an absolute URL. */
 export interface ClientRequestOpts extends Omit<RequestOpts, "url" | "noAuth"> {
   path: string;
+}
+
+export interface ClientOpenApiQueryOpts {
+  host: string;
+  path: string;
+  action: string;
+  version: string;
+  method: "GET" | "POST";
+  queryParams: AcsQueryParams;
+}
+
+export interface OpenApiResponse {
+  Success?: boolean;
+  Code?: string;
+  Message?: string;
 }
 
 /**
@@ -42,6 +61,16 @@ export class Client {
       throw new BailianError("This command needs a model-domain API key.", ExitCode.AUTH);
     }
     return this.deps.apiCred;
+  }
+
+  private requireOpenApi(): OpenApiCredential {
+    if (!this.deps.openApiCred) {
+      throw new BailianError(
+        "This command needs Alibaba Cloud OpenAPI AK/SK credentials.",
+        ExitCode.AUTH,
+      );
+    }
+    return this.deps.openApiCred;
   }
 
   /** Model-domain base URL. Readable without a key (e.g. dry-run preview); real requests still need one. */
@@ -92,5 +121,48 @@ export class Client {
       api,
       data,
     }) as Promise<T>;
+  }
+
+  async openApiQueryJson<T extends OpenApiResponse>(opts: ClientOpenApiQueryOpts): Promise<T> {
+    const cred = this.requireOpenApi();
+    const queryString = buildAcsCanonicalQuery(opts.queryParams);
+    const endpoint = `https://${opts.host}${opts.path}${queryString ? `?${queryString}` : ""}`;
+    const headers = signAcsRequest({
+      accessKeyId: cred.accessKeyId,
+      accessKeySecret: cred.accessKeySecret,
+      action: opts.action,
+      version: opts.version,
+      body: "",
+      host: opts.host,
+      pathname: opts.path,
+      method: opts.method,
+      queryString,
+    });
+
+    if (this.deps.settings.verbose) {
+      process.stderr.write(`> ${opts.method} ${endpoint}\n`);
+      process.stderr.write(`> AK: ${maskToken(cred.accessKeyId)}\n`);
+    }
+
+    const timeoutMs = this.deps.settings.timeout * 1000;
+    const res = await fetch(endpoint, {
+      method: opts.method,
+      headers: { ...headers, ...trackingHeaders() },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+
+    if (this.deps.settings.verbose) {
+      process.stderr.write(`< ${res.status} ${res.statusText}\n`);
+    }
+
+    const data = (await res.json()) as T;
+    if (!res.ok || data.Success === false) {
+      throw new BailianError(
+        `${data.Code || res.status} - ${data.Message || res.statusText}`,
+        ExitCode.GENERAL,
+      );
+    }
+
+    return data;
   }
 }

@@ -7,14 +7,12 @@ import {
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import type { BatchAssignSeatsResponse } from "./types.ts";
 import {
-  TOKEN_PLAN_AK_FLAGS,
   TOKEN_PLAN_COMMON_QUERY_FLAGS,
   TOKEN_PLAN_WORKSPACE_FLAG,
   appendCommonQueryParams,
   callTokenPlanApi,
   prepareTokenPlanRequest,
   requireWorkspaceId,
-  resolveTokenPlanCredentials,
   type TokenPlanQueryParams,
 } from "./utils.ts";
 
@@ -36,14 +34,12 @@ const ASSIGN_SEATS_FLAGS = {
   },
   ...TOKEN_PLAN_COMMON_QUERY_FLAGS,
   locale: { type: "string", valueHint: "<locale>", description: "Language: zh-CN or en-US" },
-  ...TOKEN_PLAN_AK_FLAGS,
 } satisfies FlagsDef;
 type AssignSeatsFlags = ParsedFlags<typeof ASSIGN_SEATS_FLAGS>;
 
 export default defineCommand({
   description: "Batch assign Token Plan seats to members",
-  // AK/SK 私有解析(见 utils.ts),不走集中凭证域。
-  auth: "none",
+  auth: "openapi",
   usageArgs: "--workspace-id <id> --seat-type <type> --account-id <id> [flags]",
   flags: ASSIGN_SEATS_FLAGS,
   exampleArgs: [
@@ -69,11 +65,9 @@ export default defineCommand({
       return;
     }
 
-    const credentials = resolveTokenPlanCredentials(flags);
     const data = await callTokenPlanApi<BatchAssignSeatsResponse>({
-      settings,
+      client: ctx.client,
       baseUrl: ctx.client.baseUrl,
-      credentials,
       action: API_ACTION,
       path: API_PATH,
       method: "POST",

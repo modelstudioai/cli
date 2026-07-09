@@ -13,7 +13,7 @@
 core/config/schema.ts                   ← API endpoint / 文档站(region-aware)
   REGIONS{cn, us, intl}     dashscope.aliyuncs.com 等
   DOCS_HOSTS{cn, us, intl}  help.aliyun.com/zh/model-studio
-  BAILIAN_HOST              bailian.cn-beijing.aliyuncs.com (POP API)
+  BAILIAN_HOST              bailian.cn-beijing.aliyuncs.com (OpenAPI)
 
 runtime/src/urls.ts                      ← 用户面控制台 URL(cn-only)
   BAILIAN_CONSOLE_ROOT      bailian.console.aliyun.com

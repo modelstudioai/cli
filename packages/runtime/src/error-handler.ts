@@ -24,9 +24,9 @@ function alignContinuation(text: string): string {
 
 function enhanceHint(err: BailianError): string | undefined {
   if (err.exitCode === ExitCode.AUTH) {
-    // Console-domain auth errors already carry their own `--console` hint; don't
-    // append the api-key onboarding lines.
-    if (err.hint?.includes("auth login --console")) {
+    // Non-model auth domains carry their own credential-specific hints; don't
+    // append model API key onboarding lines to Console/OpenAPI errors.
+    if (isNonModelAuthHint(err.hint)) {
       return err.hint;
     }
     return [
@@ -40,6 +40,16 @@ function enhanceHint(err: BailianError): string | undefined {
       .join("\n");
   }
   return err.hint;
+}
+
+function isNonModelAuthHint(hint: string | undefined): boolean {
+  if (!hint) return false;
+  return (
+    hint.includes("auth login --console") ||
+    hint.includes("auth login --open-api") ||
+    hint.includes("--access-key-id") ||
+    hint.includes("ALIBABA_CLOUD_ACCESS_KEY_")
+  );
 }
 
 export function detectErrorOutputFormat(
