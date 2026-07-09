@@ -2,6 +2,8 @@ import {
   defineCommand,
   detectOutputFormat,
   createDeployment,
+  BailianError,
+  ExitCode,
   type CreateDeploymentRequest,
   type FlagsDef,
 } from "bailian-cli-core";
@@ -26,10 +28,10 @@ const CREATE_FLAGS = {
     valueHint: "<plan>",
     description: "Billing plan: lora (default, Token-billed) | ptu (Token-billed) | mu",
   },
-  templateId: {
+  deploySpec: {
     type: "string",
     valueHint: "<id>",
-    description: "Template id (only used by plan=mu; auto-picked if omitted)",
+    description: "Deploy spec (only used by plan=mu; auto-picked if omitted)",
   },
   capacity: {
     type: "number",
@@ -56,6 +58,23 @@ const CREATE_FLAGS = {
     valueHint: "<n>",
     description: "PTU max thinking-output tokens/min (optional, some models)",
   },
+  aigcUseInputPrompt: {
+    type: "boolean",
+    valueHint: "<bool>",
+    description:
+      "Video LoRA (aigc_config): honor the caller's prompt at inference (default false = use preset template)",
+  },
+  aigcPrompt: {
+    type: "string",
+    valueHint: "<text>",
+    description:
+      "Video LoRA (aigc_config): preset prompt template used when use-input-prompt is false",
+  },
+  aigcLoraPromptDefault: {
+    type: "string",
+    valueHint: "<text>",
+    description: "Video LoRA (aigc_config): default trigger-word phrase for the LoRA",
+  },
 } satisfies FlagsDef;
 
 /**
@@ -73,25 +92,29 @@ export default defineCommand({
   description: "Create a model deployment",
   auth: "apiKey",
   usageArgs:
-    "--model <model_name> --name <display_name> [--plan <plan>] [--template-id <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]",
+    "--model <model_name> --name <display_name> [--plan <plan>] [--deploy-spec <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]",
   flags: CREATE_FLAGS,
   exampleArgs: [
     "--model my-qwen-sft --name my-sft-test",
     "--model qwen3.6-flash-2026-04-16 --name my-flash --plan ptu --input-tpm 10000 --output-tpm 1000",
     "--model qwen3-8b --name my-qwen3-mu --plan mu",
-    "--model qwen3-8b --name my-qwen3 --plan mu --template-id MU1 --capacity 2",
+    "--model qwen3-8b --name my-qwen3 --plan mu --deploy-spec MU1 --capacity 2",
+    '--model wan2.5-i2v-preview-ft-xxx --name my-video-lora --plan lora --aigc-prompt "..." --aigc-lora-prompt-default "..."',
   ],
   notes: [
     "Plan defaults to `lora` (Token-billed). Pass --plan to override.",
     "For plan=ptu (Token-billed, provisioned throughput), --input-tpm and",
     "--output-tpm are required (the platform rejects creation without an",
     "explicit ptu_capacity despite the doc listing defaults).",
-    "For plan=mu, `capacity`, `billing_method` and `template_id` are required.",
-    "billing_method defaults to POST_PAY (only supported value); template_id",
+    "For plan=mu, `capacity`, `billing_method` and `deploy_spec` are required.",
+    "billing_method defaults to POST_PAY (only supported value); deploy_spec",
     "and capacity are auto-picked from GET /deployments/models when omitted.",
     "Use `bl deploy models --source base` to inspect available templates.",
     "After creation, status starts at PENDING and transitions to RUNNING.",
     "Invoke the deployed model with: bl text chat --model <deployed_model>",
+    "For fine-tuned Wan video (i2v/kf2v) LoRA models, use --plan lora and pass",
+    "--aigc-prompt / --aigc-lora-prompt-default (and optionally",
+    "--aigc-use-input-prompt) to set the deployment's aigc_config.",
     "WARNING: --model is overloaded across commands and refers to DIFFERENT",
     "values. `bl deploy create --model` takes the exported model_name (e.g.",
     "`qwen3-8b-ft-...`), but the create response also returns a `deployed_model`",
@@ -135,6 +158,33 @@ export default defineCommand({
       plan,
       ...resolved.body,
     };
+
+    // AIGC config (fine-tuned Wan video LoRA deployments). Only valid for
+    // plan=lora — reject early for ptu/mu so the user gets a clear CLI error
+    // instead of an opaque server-side rejection.
+    const aigcUseInputPrompt = flags.aigcUseInputPrompt;
+    const aigcPrompt = flags.aigcPrompt;
+    const aigcLoraPromptDefault = flags.aigcLoraPromptDefault;
+    const hasAigcFlags =
+      aigcUseInputPrompt !== undefined ||
+      aigcPrompt !== undefined ||
+      aigcLoraPromptDefault !== undefined;
+    if (hasAigcFlags && plan !== "lora") {
+      throw new BailianError(
+        `--aigc-* flags are only valid for plan=lora (video LoRA deployments). Got plan=${plan}.`,
+        ExitCode.USAGE,
+      );
+    }
+    if (hasAigcFlags) {
+      const aigcConfig: Record<string, unknown> = {
+        use_input_prompt: aigcUseInputPrompt ?? false,
+      };
+      if (aigcPrompt !== undefined) aigcConfig.prompt = aigcPrompt;
+      if (aigcLoraPromptDefault !== undefined) {
+        aigcConfig.lora_prompt_default = aigcLoraPromptDefault;
+      }
+      body.aigc_config = aigcConfig;
+    }
 
     if (settings.dryRun) {
       emitResult({ action: "deploy.create", body }, format);

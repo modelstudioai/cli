@@ -6,6 +6,7 @@ import {
   parseDatasetSchemaFlag,
   formatIssue,
   MAX_DATASET_BYTES,
+  MAX_MEDIA_ZIP_BYTES,
   BailianError,
   ExitCode,
   type DatasetFile,
@@ -17,7 +18,7 @@ const UPLOAD_FLAGS = {
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Local .jsonl dataset file (≤300MB)",
+    description: "Local dataset file (.jsonl or .zip; ≤300MB text, ≤1GB image/video)",
     required: true,
   },
   purpose: {
@@ -29,7 +30,7 @@ const UPLOAD_FLAGS = {
     type: "string",
     valueHint: "<s>",
     description:
-      'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), or "cpt" (raw text). Default auto-detects per record.',
+      'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), "cpt" (raw text), "tts" (audio), "image" (image generation), or "video" (video generation). Default auto-detects per record.',
   },
   noValidate: {
     type: "switch",
@@ -42,30 +43,31 @@ const UPLOAD_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Upload a dataset file (.jsonl) to Bailian",
+  description: "Upload a dataset file (.jsonl or .zip) to Bailian",
   auth: "apiKey",
   usageArgs:
-    "--file <path> [--purpose <name>] [--schema <chatml|dpo|cpt>] [--no-validate] [--full-validate]",
+    "--file <path> [--purpose <name>] [--schema <chatml|dpo|cpt|tts|image|video>] [--no-validate] [--full-validate]",
   flags: UPLOAD_FLAGS,
   exampleArgs: [
     "--file train.jsonl",
     "--file dpo.jsonl --schema dpo",
     "--file cpt.jsonl --schema cpt",
+    "--file audio.zip --schema tts",
     "--file eval.jsonl --purpose evaluation",
     "--file train.jsonl --full-validate",
     "--file train.jsonl --no-validate",
   ],
   notes: [
-    "Only .jsonl is supported in this release. Three record schemas are",
-    "recognized: chatml = {messages:[...]} (SFT); dpo = {messages:[...],",
-    "chosen, rejected} where chosen/rejected are single assistant messages;",
-    'cpt = {text:"..."} (continual pre-training, raw text). With no --schema,',
-    "a record carrying chosen/rejected is validated as DPO, one with text (and",
-    "no messages) as CPT, otherwise as ChatML. Pass --schema dpo / cpt to",
-    "require that shape on every record, or --schema chatml to ignore the",
-    "preference / text fields. Other purposes may carry a different schema in",
-    "the future and would be served by a purpose-specific validator.",
-    "The dataset upload cap is 300MB per file.",
+    "Supports .jsonl (text) and .zip (audio/image/video archives with a",
+    "data.jsonl manifest). Six record schemas are recognized: chatml =",
+    "{messages:[...]} (SFT); dpo = {messages:[...], chosen, rejected};",
+    'cpt = {text:"..."} (continual pre-training, raw text); tts =',
+    '{wav_fn:"train/xxx.wav", text:"..."} (audio fine-tuning); image =',
+    '{img_path:"..."} (image generation); video = {first_frame_path:"...",',
+    'video_path:"..."} (video generation). With no --schema, a record',
+    "carrying wav_fn is validated as TTS, img_path as image, video_path /",
+    "first_frame_path as video, chosen/rejected as DPO, text (no messages)",
+    "as CPT, otherwise ChatML. Upload cap: 300MB text, 1GB image/video.",
     "Upload uses the OpenAI-compatible /compatible-mode/v1/files endpoint so",
     "the purpose tag is persisted (the DashScope-native /api/v1/files drops it).",
   ],
@@ -75,9 +77,16 @@ export default defineCommand({
     const purpose = flags.purpose || "fine-tune";
     const schema = parseDatasetSchemaFlag(flags.schema);
     const format = detectOutputFormat(settings.output);
+    // Image / video schemas allow larger ZIPs (1 GB vs 300 MB for text).
+    const isMediaSchema = schema === "image" || schema === "video";
 
     if (!flags.noValidate) {
-      const result = await validateDataset(filePath, { fullValidate: flags.fullValidate, schema });
+      const maxBytes = isMediaSchema ? MAX_MEDIA_ZIP_BYTES : MAX_DATASET_BYTES;
+      const result = await validateDataset(filePath, {
+        fullValidate: flags.fullValidate,
+        schema,
+        maxBytes,
+      });
       if (!result.valid) {
         const lines = [
           `Dataset validation failed for ${filePath}`,
@@ -112,7 +121,7 @@ export default defineCommand({
           action: "dataset.upload",
           file: filePath,
           purpose,
-          max_bytes: MAX_DATASET_BYTES,
+          max_bytes: isMediaSchema ? MAX_MEDIA_ZIP_BYTES : MAX_DATASET_BYTES,
           validate: !flags.noValidate,
           schema: schema ?? "auto",
         },

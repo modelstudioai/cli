@@ -114,6 +114,35 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     });
   });
 
+  test.each([
+    ["sft", "sft"],
+    ["sft-lora", "efficient_sft"],
+    ["dpo", "dpo_full"],
+    ["dpo-lora", "dpo_lora"],
+    ["cpt", "cpt"],
+  ])(
+    "finetune create --training-type %s 经 profile 映射为 server 类型 %s",
+    async (cliType, serverType) => {
+      const { stdout, stderr, exitCode } = await runCli([
+        "finetune",
+        "create",
+        "--model",
+        "qwen3-8b",
+        "--datasets",
+        "file-aaa",
+        "--training-type",
+        cliType,
+        "--dry-run",
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{ action: string; body: { training_type: string } }>(stdout);
+      expect(data.action).toBe("finetune.create");
+      expect(data.body.training_type).toBe(serverType);
+    },
+  );
+
   test("finetune create --training-type 拒绝不支持的训练类型值", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "finetune",

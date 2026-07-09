@@ -4,12 +4,12 @@ import {
   createFineTune,
   getDataset,
   uploadDataset,
-  validateDataset,
+  detectModality,
+  getProfile,
   fetchModelCapability,
   listSupportedTrainingTypes,
   preflightBatchSizeGate,
   isTrainingTypeCli,
-  toServerTrainingType,
   TRAINING_TYPES_CLI,
   DEFAULT_TRAINING_TYPE,
   formatIssue,
@@ -20,7 +20,8 @@ import {
   type CreateFineTuneRequest,
   type FineTuneHyperParameters,
   type DatasetFile,
-  type DatasetSchema,
+  type TrainingProfile,
+  type DataModality,
   type FlagsDef,
 } from "bailian-cli-core";
 import { existsSync, statSync } from "fs";
@@ -77,7 +78,11 @@ async function analyzeDatasetTokens(
   binName: string,
   raw: string,
   label: string,
-  schema?: DatasetSchema,
+  profile: TrainingProfile,
+  _modality: DataModality,
+  model: string,
+  /** Pre-detected modality for a known path (avoids re-opening the file). */
+  knownModality?: { path: string; modality: DataModality },
 ): Promise<ResolvedDataset> {
   const tokens = raw
     .split(",")
@@ -109,11 +114,22 @@ async function analyzeDatasetTokens(
 
     if (settings.dryRun) continue;
 
-    // Local path → validate (same checks as `dataset upload`). Upload is
-    // deferred to `uploadResolvedLocal` so the gate can run first. The schema
-    // (SFT vs DPO) is derived from --training-type so a DPO job validates the
-    // chosen/rejected preference pairs here, not on the platform.
-    const result = await validateDataset(token, { schema });
+    // Detect modality per-file so each dataset is validated under the correct
+    // schema (e.g. a text JSONL and an audio ZIP in the same --datasets list
+    // are each validated with their own record schema). Reuse the caller's
+    // pre-detected modality when available to avoid opening the same file
+    // twice (matters for large ZIPs).
+    const tokenModality =
+      knownModality && knownModality.path === token
+        ? knownModality.modality
+        : await detectModality(token);
+
+    // Local path → validate through the profile. The profile internally routes
+    // to the correct validator based on modality (detected from file content).
+    // Upload is deferred to `uploadResolvedLocal` so the gate can run first.
+    // `model` is forwarded for schema-agnostic cross-checks (e.g. the video
+    // validator verifies a kf2v model is paired with kf2v data).
+    const result = await profile.validate(token, tokenModality, { model });
     if (!result.valid) {
       const lines = [
         `Dataset validation failed for ${token}`,
@@ -306,20 +322,31 @@ export default defineCommand({
         `Supported values: ${TRAINING_TYPES_CLI.join(", ")} (default: ${DEFAULT_TRAINING_TYPE}).`,
       );
     }
-    // dpo / dpo-lora → "dpo" schema (strict chosen/rejected); cpt → "cpt"
-    // (raw {text} records); else ChatML ({messages}).
-    const datasetSchema: DatasetSchema = trainingType.startsWith("dpo")
-      ? "dpo"
-      : trainingType === "cpt"
-        ? "cpt"
-        : "chatml";
+
+    // Profile: single source of truth for how this training type behaves
+    // (validation rules, hyper-parameters, gates, capability check).
+    const profile = getProfile(trainingType);
+
+    // Detect data modality from the first local file path in --datasets. This
+    // drives the profile's internal branching (text vs audio vs image/video
+    // hyper-parameters, gate skips, capability check bypass). Falls back to
+    // "text" when no local file is available (file-id only). Image generation
+    // has a subtype "image-i2i" (first record has input_img) picked here.
+    const firstLocalPath = datasetsRaw
+      .split(",")
+      .map((token) => token.trim())
+      .find((token) => isLocalPath(token));
+    const modality: DataModality = firstLocalPath ? await detectModality(firstLocalPath) : "text";
 
     const training = await analyzeDatasetTokens(
       settings,
       identity.binName,
       datasetsRaw,
       "datasets",
-      datasetSchema,
+      profile,
+      modality,
+      model,
+      firstLocalPath ? { path: firstLocalPath, modality } : undefined,
     );
     const trainingFileIds = training.fileIds;
 
@@ -329,7 +356,9 @@ export default defineCommand({
           identity.binName,
           flags.validations,
           "validations",
-          datasetSchema,
+          profile,
+          modality,
+          model,
         )
       : undefined;
     const validationFileIds = validation?.fileIds;
@@ -337,39 +366,52 @@ export default defineCommand({
     const modelName = flags.modelName;
     const suffix = flags.suffix;
 
-    // Hyper-parameters: inject n_epochs=3 default unless overridden.
-    const hp: FineTuneHyperParameters = {};
-    hp.n_epochs = flags.nEpochs ?? 3;
-    if (flags.learningRate !== undefined) hp.learning_rate = flags.learningRate;
-    if (flags.maxLength !== undefined) hp.max_length = flags.maxLength;
+    // Hyper-parameters: the profile resolves modality-specific defaults
+    // (text: n_epochs/batch_size/learning_rate; audio: lm_max_epoch/fm_max_epoch/...).
+    const hp = profile.resolveHyperParameters(
+      modality,
+      flags as Record<string, unknown>,
+    ) as FineTuneHyperParameters;
 
-    // batch_size: clamp to [8, 1024] (server hard constraint, undocumented).
-    // Surface the clamp on stderr instead of silently rewriting the user's
-    // value — otherwise the submitted body would carry a number the user never
-    // typed, with no audit trail. (Range observed on common SFT / SFT-LoRA
-    // training types; some bases like qwen3.6-flash report a wider range, so
-    // the warning explicitly mentions "server range".)
-    if (flags.batchSize !== undefined) {
+    // Restore the batch-size clamping warning that was lost when the logic moved
+    // into profiles. The profile silently clamps to [8, 1024]; surface it here
+    // so the user has an audit trail. Skip modalities that bypass the batch_size
+    // gate (image/video): their batch_size is a fixed model-family default, not
+    // a clamp of the user's value, so the [8, 1024] "clamped" message would be
+    // self-contradictory (video uses 2/4) and misleading.
+    if (
+      flags.batchSize !== undefined &&
+      hp.batch_size !== undefined &&
+      !settings.quiet &&
+      !profile.shouldSkipGate("batch_size", modality)
+    ) {
       const requested = flags.batchSize;
-      let batchSize = requested;
-      if (batchSize < 8) batchSize = 8;
-      if (batchSize > 1024) batchSize = 1024;
-      if (batchSize !== requested && !settings.quiet) {
+      if (hp.batch_size !== requested) {
         process.stderr.write(
-          `warning: --batch-size ${requested} clamped to ${batchSize} ` +
+          `warning: --batch-size ${requested} clamped to ${hp.batch_size} ` +
             `(server range [8, 1024] for the common training types).\n`,
         );
       }
-      hp.batch_size = batchSize;
+    }
+    // For modalities that skip the batch_size gate (video: fixed 2/4 by model
+    // family), warn the user that their explicit --batch-size was discarded.
+    if (
+      flags.batchSize !== undefined &&
+      !settings.quiet &&
+      profile.shouldSkipGate("batch_size", modality)
+    ) {
+      const requested = flags.batchSize;
+      if (hp.batch_size !== undefined && hp.batch_size !== requested) {
+        process.stderr.write(
+          `warning: --batch-size ${requested} ignored for ${modality} training ` +
+            `(model uses a fixed batch_size of ${hp.batch_size}).\n`,
+        );
+      }
     }
 
-    // Auto batch_size for small datasets: fetch first training file size.
-    // With default split=0.9, validation_set = 0.1 * rows.
-    // Platform default batch_size=16 needs rows > 160; batch_size=8 needs rows > 80.
-    // Files < 100KB are conservatively estimated to have < 200 rows.
-    // If the first file was just uploaded we already hold its size; otherwise
-    // fall back to getDataset.
-    if (hp.batch_size === undefined && !settings.dryRun) {
+    // Auto batch_size for small datasets — only for text data. Audio/image/video
+    // profiles already set their own batch parameters.
+    if (modality === "text" && hp.batch_size === undefined && !settings.dryRun) {
       let sizeBytes = training.firstSize ?? 0;
       if (sizeBytes === 0) {
         try {
@@ -396,7 +438,11 @@ export default defineCommand({
     // code as `validateDataset`) so the failure surfaces through the same
     // `BailianError` + issue convention used by `dataset upload`/`validate`.
     // ExitCode.GENERAL matches the existing validation-failed exit code.
-    if (!settings.dryRun && training.recordCount !== undefined) {
+    if (
+      !settings.dryRun &&
+      training.recordCount !== undefined &&
+      !profile.shouldSkipGate("batch_size", modality)
+    ) {
       // 16 is the platform default when neither the user nor the small-file
       // auto-adjust set a batch_size (see the auto-adjust comment above).
       const effectiveBatchSize = hp.batch_size ?? 16;
@@ -415,7 +461,7 @@ export default defineCommand({
     // be trained against. listFoundationModels is a public API (no console
     // login required); on lookup failure (network / 401 / etc.) we fall back
     // to letting the server decide rather than blocking the submit.
-    if (!settings.dryRun) {
+    if (!settings.dryRun && !profile.shouldSkipCapabilityCheck(modality)) {
       let capability: Awaited<ReturnType<typeof fetchModelCapability>> | undefined;
       try {
         capability = await fetchModelCapability(settings, model);
@@ -453,8 +499,8 @@ export default defineCommand({
     const body: CreateFineTuneRequest = {
       model,
       training_file_ids: trainingFileIds,
-      // Map the CLI training type to the server value at the interface boundary.
-      training_type: toServerTrainingType(trainingType),
+      // Profile maps the CLI training type to the server value at the boundary.
+      training_type: profile.serverTrainingType,
       hyper_parameters: hp,
     };
     if (validationFileIds && validationFileIds.length > 0) {

@@ -32,10 +32,17 @@ export interface ValidateOpts {
    * platform ten minutes in.
    */
   schema?: DatasetSchema;
+
+  /**
+   * Model identifier (`--model`) forwarded for schema-agnostic cross-checks —
+   * e.g. the video validator uses it to verify a `kf2v` model is paired with
+   * first+last-frame data. Optional: absent for bare file-id flows.
+   */
+  model?: string;
 }
 
 /** The schemas a `.jsonl` record can be validated against. */
-export type DatasetSchema = "chatml" | "dpo" | "cpt";
+export type DatasetSchema = "chatml" | "dpo" | "cpt" | "tts" | "image" | "video";
 
 export type ValidationSeverity = "error" | "warning";
 

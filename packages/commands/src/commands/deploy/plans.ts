@@ -18,7 +18,7 @@ import { listDeployableModels, BailianError, ExitCode, type Client } from "baili
 /** Plan-relevant subset of `deploy create` flags (parsed flags satisfy this shape). */
 export interface CreatePlanFlags {
   plan?: string;
-  templateId?: string;
+  deploySpec?: string;
   capacity?: number;
   billingMethod?: string;
   inputTpm?: number;
@@ -101,15 +101,15 @@ const ptuStrategy: PlanStrategy = {
 };
 
 /**
- * `mu` (model-unit-billed). `capacity`, `billing_method` and `template_id` are
+ * `mu` (model-unit-billed). `capacity`, `billing_method` and `deploy_spec` are
  * all required by the API but every one has a CLI-side default:
  *   - billing_method defaults to POST_PAY (the only supported value).
- *   - template_id auto-picks from GET /deployments/models — the one whose
+ *   - deploy_spec auto-picks from GET /deployments/models — the one whose
  *     `charge_type` matches `billing_method`, else the first available.
  *   - capacity defaults to the template's `capacity_unit_per_instance` (the
  *     smallest valid multiple of base_capacity).
  *
- * The catalog lookup is skipped when `--template-id` is supplied explicitly:
+ * The catalog lookup is skipped when `--deploy-spec` is supplied explicitly:
  * fine-tuned custom models may not appear in the `source=base` catalog, and
  * forcing the lookup would otherwise raise a spurious "no template" error.
  * It is also skipped in dry-run mode to keep `--dry-run` side-effect-free.
@@ -121,15 +121,15 @@ const muStrategy: PlanStrategy = {
   },
   async resolve(ctx: PlanContext): Promise<PlanResolved> {
     const billingMethod = ctx.flags.billingMethod || "POST_PAY";
-    let templateId = ctx.flags.templateId;
+    let deploySpec = ctx.flags.deploySpec;
     let capacity = ctx.flags.capacity;
 
-    if (!ctx.dryRun && !templateId) {
+    if (!ctx.dryRun && !deploySpec) {
       const noTemplateError = () =>
         new BailianError(
           `No mu-plan template found for model "${ctx.model}". ` +
             `Run \`${ctx.binName} deploy models --source base\` to inspect available models, ` +
-            `or pass --template-id explicitly.`,
+            `or pass --deploy-spec explicitly.`,
           ExitCode.USAGE,
         );
       try {
@@ -139,23 +139,24 @@ const muStrategy: PlanStrategy = {
           version: "v1.0",
         });
         const payload = resp.output ?? resp.data;
-        const target = (payload?.models ?? []).find((m) => m.model_name === ctx.model);
-        const muPlan = target?.plans?.find((p) => p.plan === "mu");
+        const target = (payload?.models ?? []).find((model) => model.model_name === ctx.model);
+        const muPlan = target?.plans?.find((plan) => plan.plan === "mu");
         const templates = muPlan?.templates ?? [];
         if (templates.length === 0) throw noTemplateError();
         // POST_PAY → post_paid template; fall back to the first available.
         const wantChargeType = billingMethod === "POST_PAY" ? "post_paid" : "pre_paid";
-        const picked = templates.find((t) => t.charge_type === wantChargeType) ?? templates[0];
-        if (!picked?.template_id) throw noTemplateError();
-        templateId = picked.template_id;
+        const picked =
+          templates.find((template) => template.charge_type === wantChargeType) ?? templates[0];
+        if (!picked?.deploy_spec && !picked?.template_id) throw noTemplateError();
+        deploySpec = picked.deploy_spec ?? picked.template_id;
         if (capacity === undefined) {
           capacity = picked.roles?.unified?.capacity_unit_per_instance ?? 1;
         }
-      } catch (e) {
-        if (e instanceof BailianError) throw e;
+      } catch (error) {
+        if (error instanceof BailianError) throw error;
         throw new BailianError(
-          `Failed to auto-pick template for plan=mu: ${(e as Error).message}. ` +
-            `Pass --template-id explicitly.`,
+          `Failed to auto-pick template for plan=mu: ${(error as Error).message}. ` +
+            `Pass --deploy-spec explicitly.`,
           ExitCode.USAGE,
         );
       }
@@ -165,7 +166,7 @@ const muStrategy: PlanStrategy = {
       capacity: capacity ?? 1,
       billing_method: billingMethod,
     };
-    if (templateId) body.template_id = templateId;
+    if (deploySpec) body.deploy_spec = deploySpec;
     return { body };
   },
 };
@@ -184,12 +185,12 @@ export const STRATEGIES: Record<string, PlanStrategy> = {
 
 /** Throws USAGE if `plan` is not in the strategy table. */
 export function pickPlanStrategy(plan: string): PlanStrategy {
-  const s = STRATEGIES[plan];
-  if (!s) {
+  const strategy = STRATEGIES[plan];
+  if (!strategy) {
     throw new BailianError(
       `Unsupported plan "${plan}". Supported plans: ${Object.keys(STRATEGIES).join(", ")}.`,
       ExitCode.USAGE,
     );
   }
-  return s;
+  return strategy;
 }

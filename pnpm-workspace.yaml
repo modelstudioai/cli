@@ -4,6 +4,7 @@ packages:
 
 catalog:
   "@types/node": ^24
+  "@types/yauzl": ^3.4.0
   ajv: ^8.20.0
   boxen: ^8.0.1
   chalk: ^5.6.2
@@ -13,6 +14,7 @@ catalog:
   vite-plus: latest
   vitest: npm:@voidzero-dev/vite-plus-test@latest
   yaml: ^2.8.3
+  yauzl: ^3.4.0
 
 catalogMode: prefer
 overrides:

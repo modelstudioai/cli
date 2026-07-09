@@ -22,8 +22,8 @@ Use this index for the full quick index and global flags.
 | `bl dataset delete`          | Delete a dataset file by ID                                                                                                     | [dataset.md](dataset.md)       |
 | `bl dataset get`             | Get details of a single dataset file                                                                                            | [dataset.md](dataset.md)       |
 | `bl dataset list`            | List uploaded dataset files                                                                                                     | [dataset.md](dataset.md)       |
-| `bl dataset upload`          | Upload a dataset file (.jsonl) to Bailian                                                                                       | [dataset.md](dataset.md)       |
-| `bl dataset validate`        | Locally validate a dataset file (.jsonl) without uploading                                                                      | [dataset.md](dataset.md)       |
+| `bl dataset upload`          | Upload a dataset file (.jsonl or .zip) to Bailian                                                                               | [dataset.md](dataset.md)       |
+| `bl dataset validate`        | Locally validate a dataset file (.jsonl or .zip) without uploading                                                              | [dataset.md](dataset.md)       |
 | `bl deploy create`           | Create a model deployment                                                                                                       | [deploy.md](deploy.md)         |
 | `bl deploy delete`           | Delete a model deployment (must be STOPPED or FAILED)                                                                           | [deploy.md](deploy.md)         |
 | `bl deploy get`              | Get details of a single model deployment                                                                                        | [deploy.md](deploy.md)         |

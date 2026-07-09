@@ -56,6 +56,98 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
     expect(data.body.capacity).toBe(1);
   });
 
+  test("deploy create --dry-run 组装视频 LoRA 的 aigc_config", async () => {
+    const { stdout, stderr, exitCode } = await runCli([
+      "deploy",
+      "create",
+      "--model",
+      "wan2.5-i2v-preview-ft-xxx",
+      "--name",
+      "my-video-lora",
+      "--aigc-prompt",
+      "a cat surfing",
+      "--aigc-lora-prompt-default",
+      "trigger-word",
+      "--aigc-use-input-prompt",
+      "true",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      action: string;
+      body: {
+        plan: string;
+        aigc_config?: {
+          use_input_prompt?: boolean;
+          prompt?: string;
+          lora_prompt_default?: string;
+        };
+      };
+    }>(stdout);
+    expect(data.action).toBe("deploy.create");
+    expect(data.body.plan).toBe("lora");
+    expect(data.body.aigc_config).toEqual({
+      use_input_prompt: true,
+      prompt: "a cat surfing",
+      lora_prompt_default: "trigger-word",
+    });
+  });
+
+  test("deploy create --aigc-* 仅对 plan=lora 有效（plan=ptu 时报错）", async () => {
+    const { stdout, stderr, exitCode } = await runCli([
+      "deploy",
+      "create",
+      "--model",
+      "wan2.5-i2v-preview-ft-xxx",
+      "--name",
+      "my-video-lora",
+      "--plan",
+      "ptu",
+      "--input-tpm",
+      "10000",
+      "--output-tpm",
+      "1000",
+      "--aigc-prompt",
+      "a cat surfing",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stdout + stderr).not.toBe(0);
+    expect(`${stdout}\n${stderr}`).toMatch(/--aigc-\* flags are only valid for plan=lora/);
+  });
+
+  test("deploy create --plan mu --deploy-spec --dry-run 透传 deploy_spec", async () => {
+    const { stdout, stderr, exitCode } = await runCli([
+      "deploy",
+      "create",
+      "--model",
+      "qwen3-8b",
+      "--name",
+      "my-qwen3-mu",
+      "--plan",
+      "mu",
+      "--deploy-spec",
+      "MU1",
+      "--capacity",
+      "2",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      action: string;
+      body: { plan: string; deploy_spec?: string; capacity?: number };
+    }>(stdout);
+    expect(data.action).toBe("deploy.create");
+    expect(data.body.plan).toBe("mu");
+    expect(data.body.deploy_spec).toBe("MU1");
+    expect(data.body.capacity).toBe(2);
+  });
+
   test("deploy scale --dry-run 转发 capacity", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "deploy",

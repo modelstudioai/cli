@@ -76,44 +76,44 @@ export default defineCommand({
     // downstream tooling can drive `bl deploy create --template-id <…>` without
     // a second round-trip. For text: keep the compact one-line summary.
     if (format === "json") {
-      const items = models.map((m) => {
+      const items = models.map((model) => {
         const out: Record<string, unknown> = {
-          model_name: m.model_name ?? "",
+          model_name: model.model_name ?? "",
         };
-        if (m.base_model) out.base_model = m.base_model;
-        if (m.model_source) out.model_source = m.model_source;
-        if (m.supported_plans && m.supported_plans.length > 0) {
-          out.supported_plans = m.supported_plans;
+        if (model.base_model) out.base_model = model.base_model;
+        if (model.model_source) out.model_source = model.model_source;
+        if (model.supported_plans && model.supported_plans.length > 0) {
+          out.supported_plans = model.supported_plans;
         }
-        if (m.plans && m.plans.length > 0) {
-          out.plans = m.plans.map((p) => {
-            const planEntry: Record<string, unknown> = { plan: p.plan ?? "" };
-            if (p.cu_specs && p.cu_specs.length > 0) {
-              planEntry.cu_specs = p.cu_specs;
+        if (model.plans && model.plans.length > 0) {
+          out.plans = model.plans.map((plan) => {
+            const planEntry: Record<string, unknown> = { plan: plan.plan ?? "" };
+            if (plan.cu_specs && plan.cu_specs.length > 0) {
+              planEntry.cu_specs = plan.cu_specs;
             }
-            if (p.templates && p.templates.length > 0) {
+            if (plan.templates && plan.templates.length > 0) {
               // Pull the top 6 fields most useful for `bl deploy create`.
               // Drop noisy/redundant: template_source, template_type,
               // template_version, deploy_spec (typically == template_id).
-              planEntry.templates = p.templates.map((t) => {
+              planEntry.templates = plan.templates.map((template) => {
                 const tpl: Record<string, unknown> = {};
-                if (t.template_id) tpl.template_id = t.template_id;
-                if (t.template_name) tpl.template_name = t.template_name;
-                if (t.charge_type) tpl.charge_type = t.charge_type;
+                if (template.template_id) tpl.template_id = template.template_id;
+                if (template.template_name) tpl.template_name = template.template_name;
+                if (template.charge_type) tpl.charge_type = template.charge_type;
                 // Flatten roles.unified for the common COUPLED case.
-                const unified = t.roles?.unified;
+                const unified = template.roles?.unified;
                 if (unified?.model_unit_spec) tpl.model_unit_spec = unified.model_unit_spec;
                 if (unified?.capacity_unit_per_instance !== undefined)
                   tpl.capacity_unit_per_instance = unified.capacity_unit_per_instance;
                 // Preserve split-role configs (SEPERATED) as-is so callers
                 // can still drive prefill/decode sizing.
-                if (t.roles?.prefill || t.roles?.decode) {
+                if (template.roles?.prefill || template.roles?.decode) {
                   tpl.roles = {
-                    prefill: t.roles?.prefill,
-                    decode: t.roles?.decode,
+                    prefill: template.roles?.prefill,
+                    decode: template.roles?.decode,
                   };
                 }
-                if (t.template_desc) tpl.template_desc = t.template_desc;
+                if (template.template_desc) tpl.template_desc = template.template_desc;
                 return tpl;
               });
             }
@@ -127,19 +127,19 @@ export default defineCommand({
     }
 
     // text / quiet — keep the compact single-line summary table.
-    const textItems = models.map((m) => {
+    const textItems = models.map((model) => {
       let plansSummary = "";
-      if (m.supported_plans && m.supported_plans.length > 0) {
-        plansSummary = m.supported_plans.join(",");
-      } else if (m.plans && m.plans.length > 0) {
-        plansSummary = m.plans
-          .map((p) => {
-            const planName = p.plan ?? "?";
-            if (p.templates && p.templates.length > 0) {
-              return `${planName}(${p.templates.length}t)`;
+      if (model.supported_plans && model.supported_plans.length > 0) {
+        plansSummary = model.supported_plans.join(",");
+      } else if (model.plans && model.plans.length > 0) {
+        plansSummary = model.plans
+          .map((plan) => {
+            const planName = plan.plan ?? "?";
+            if (plan.templates && plan.templates.length > 0) {
+              return `${planName}(${plan.templates.length}t)`;
             }
-            if (p.cu_specs && p.cu_specs.length > 0) {
-              return `${planName}(${p.cu_specs.join("/")})`;
+            if (plan.cu_specs && plan.cu_specs.length > 0) {
+              return `${planName}(${plan.cu_specs.join("/")})`;
             }
             return planName;
           })
@@ -148,9 +148,9 @@ export default defineCommand({
         plansSummary = "-";
       }
       return {
-        model_name: m.model_name ?? "",
-        base_model: m.base_model ?? "",
-        source: m.model_source ?? "",
+        model_name: model.model_name ?? "",
+        base_model: model.base_model ?? "",
+        source: model.model_source ?? "",
         plans: plansSummary,
       };
     });
@@ -160,7 +160,12 @@ export default defineCommand({
       return;
     }
     const headers = ["MODEL_NAME", "BASE_MODEL", "SOURCE", "PLANS"];
-    const rows = textItems.map((i) => [i.model_name, i.base_model, i.source, i.plans]);
+    const rows = textItems.map((item) => [
+      item.model_name,
+      item.base_model,
+      item.source,
+      item.plans,
+    ]);
     for (const line of formatTable(headers, rows)) emitBare(line);
     if (total !== undefined) emitBare(`\nTotal: ${total}`);
   },
