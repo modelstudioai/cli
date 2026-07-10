@@ -246,9 +246,6 @@ importers:
       ajv:
         specifier: 'catalog:'
         version: 8.20.0
-      bailian-cli-commands:
-        specifier: workspace:*
-        version: link:../commands
       e2e:
         specifier: workspace:*
         version: link:../e2e
