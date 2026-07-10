@@ -117,11 +117,15 @@ export class Client {
     if (!this.deps.consoleCred) {
       throw new BailianError("This command needs a console access token.", ExitCode.AUTH);
     }
+    const gwOpts = { api, data };
+    const { timeout } = this.deps.settings;
     try {
-      return (await callConsoleGateway(this.deps.consoleCred, this.deps.settings.timeout, {
-        api,
-        data,
-      })) as T;
+      return (await callConsoleGateway(
+        this.deps.consoleCred,
+        timeout,
+        gwOpts,
+        this.deps.settings,
+      )) as T;
     } catch (err) {
       if (
         !(err instanceof BailianError) ||
@@ -138,8 +142,9 @@ export class Client {
       if (!newToken) throw err;
       return (await callConsoleGateway(
         { ...this.deps.consoleCred, token: newToken },
-        this.deps.settings.timeout,
-        { api, data },
+        timeout,
+        gwOpts,
+        this.deps.settings,
       )) as T;
     }
   }
@@ -151,6 +156,7 @@ export class Client {
     const headers = signAcsRequest({
       accessKeyId: cred.accessKeyId,
       accessKeySecret: cred.accessKeySecret,
+      securityToken: cred.securityToken,
       action: opts.action,
       version: opts.version,
       body: "",

@@ -22,6 +22,8 @@ export interface ConfigFile {
   access_key_id?: string;
   /** Alibaba Cloud OpenAPI AccessKey secret from `bl auth login --open-api`. */
   access_key_secret?: string;
+  /** Alibaba Cloud STS Security Token (optional, for temporary credentials). */
+  security_token?: string;
   base_url?: string;
   /**
    * Dedicated base URL for the intent-detect model (tongyi-intent-detect-v3).
@@ -83,6 +85,8 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     obj.openapi_access_key_secret.length > 0
   )
     out.access_key_secret = obj.openapi_access_key_secret;
+  if (typeof obj.security_token === "string" && obj.security_token.length > 0)
+    out.security_token = obj.security_token;
   if (typeof obj.base_url === "string" && isHttpUrl(obj.base_url)) out.base_url = obj.base_url;
   if (typeof obj.intent_detect_base_url === "string" && isHttpUrl(obj.intent_detect_base_url))
     out.intent_detect_base_url = obj.intent_detect_base_url;

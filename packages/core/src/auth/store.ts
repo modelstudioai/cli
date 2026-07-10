@@ -17,6 +17,7 @@ export type AuthPersistPatch = Pick<
   | "access_token"
   | "access_key_id"
   | "access_key_secret"
+  | "security_token"
   | "base_url"
   | "console_site"
   | "console_region"

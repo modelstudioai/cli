@@ -30,14 +30,15 @@ export async function generateCLIAccessToken(opts: {
   baseUrl: string;
   accessKeyId: string;
   accessKeySecret: string;
+  securityToken?: string;
 }): Promise<any> {
-  const { identity, settings, baseUrl, accessKeyId, accessKeySecret } = opts;
+  const { identity, settings, baseUrl, accessKeyId, accessKeySecret, securityToken } = opts;
 
   const client = new Client({
     identity,
     settings,
     baseUrl,
-    openApiCred: { accessKeyId, accessKeySecret, source: "flag" },
+    openApiCred: { accessKeyId, accessKeySecret, securityToken, source: "flag" },
   });
 
   const host = modelStudioHost(baseUrl);

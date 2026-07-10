@@ -19,14 +19,19 @@ const FLAGS = {
     description: "Alibaba Cloud Access Key Secret",
     required: true,
   },
+  securityToken: {
+    type: "string",
+    valueHint: "<token>",
+    description: "Alibaba Cloud STS Security Token to store (optional)",
+  },
 } satisfies FlagsDef;
 
 export default defineCommand({
   description: "Generate a CLI access token using OpenAPI AK/SK",
   auth: "none",
-  usageArgs: "--access-key-id <id> --access-key-secret <secret>",
+  usageArgs: "--access-key-id <id> --access-key-secret <secret> --security-token <token>",
   flags: FLAGS,
-  exampleArgs: ["--access-key-id LTAIxxxxx --access-key-secret xxxxx"],
+  exampleArgs: ["--access-key-id LTAIxxxxx --access-key-secret xxxxx --security-token <token>"],
   async run(ctx) {
     const { identity, settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
@@ -37,6 +42,7 @@ export default defineCommand({
       baseUrl: ctx.client.baseUrl,
       accessKeyId: flags.accessKeyId,
       accessKeySecret: flags.accessKeySecret,
+      securityToken: flags.securityToken || undefined,
     });
 
     emitResult(resp, format);

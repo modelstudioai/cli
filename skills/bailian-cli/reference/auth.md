@@ -18,23 +18,24 @@ Index: [index.md](index.md)
 
 ### `bl auth generate-access-token`
 
-| Field           | Value                                                                             |
-| --------------- | --------------------------------------------------------------------------------- |
-| **Name**        | `auth generate-access-token`                                                      |
-| **Description** | Generate a CLI access token using OpenAPI AK/SK                                   |
-| **Usage**       | `bl auth generate-access-token --access-key-id <id> --access-key-secret <secret>` |
+| Field           | Value                                                                                                      |
+| --------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Name**        | `auth generate-access-token`                                                                               |
+| **Description** | Generate a CLI access token using OpenAPI AK/SK                                                            |
+| **Usage**       | `bl auth generate-access-token --access-key-id <id> --access-key-secret <secret> --security-token <token>` |
 
 #### Flags
 
-| Flag                           | Type   | Required | Description                     |
-| ------------------------------ | ------ | -------- | ------------------------------- |
-| `--access-key-id <id>`         | string | yes      | Alibaba Cloud Access Key ID     |
-| `--access-key-secret <secret>` | string | yes      | Alibaba Cloud Access Key Secret |
+| Flag                           | Type   | Required | Description                                          |
+| ------------------------------ | ------ | -------- | ---------------------------------------------------- |
+| `--access-key-id <id>`         | string | yes      | Alibaba Cloud Access Key ID                          |
+| `--access-key-secret <secret>` | string | yes      | Alibaba Cloud Access Key Secret                      |
+| `--security-token <token>`     | string | no       | Alibaba Cloud STS Security Token to store (optional) |
 
 #### Examples
 
 ```bash
-bl auth generate-access-token --access-key-id LTAIxxxxx --access-key-secret xxxxx
+bl auth generate-access-token --access-key-id LTAIxxxxx --access-key-secret xxxxx --security-token <token>
 ```
 
 ### `bl auth login`

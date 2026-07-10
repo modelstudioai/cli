@@ -55,6 +55,7 @@ export function resolveOpenApi(s: ResolutionSources): OpenApiCredential {
     s.flags.accessKeyId,
     s.flags.accessKeySecret,
     s.flags.accessKeyId !== undefined || s.flags.accessKeySecret !== undefined,
+    s.flags.securityToken,
   );
   if (flagCred) return flagCred;
 
@@ -66,6 +67,7 @@ export function resolveOpenApi(s: ResolutionSources): OpenApiCredential {
       trimNonEmpty(s.env.ALIBABA_CLOUD_ACCESS_KEY_ID) ||
       trimNonEmpty(s.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET),
     ),
+    s.env.ALIBABA_CLOUD_SECURITY_TOKEN,
   );
   if (envCred) return envCred;
 
@@ -74,6 +76,7 @@ export function resolveOpenApi(s: ResolutionSources): OpenApiCredential {
     s.file.access_key_id,
     s.file.access_key_secret,
     Boolean(s.file.access_key_id || s.file.access_key_secret),
+    s.file.security_token,
   );
   if (configCred) return configCred;
 
@@ -89,6 +92,7 @@ function resolveOpenApiPair(
   rawAccessKeyId: string | undefined,
   rawAccessKeySecret: string | undefined,
   provided: boolean,
+  rawSecurityToken?: string,
 ): OpenApiCredential | undefined {
   if (!provided) return undefined;
 
@@ -103,7 +107,8 @@ function resolveOpenApiPair(
     );
   }
 
-  return { accessKeyId, accessKeySecret, source };
+  const securityToken = trimNonEmpty(rawSecurityToken);
+  return { accessKeyId, accessKeySecret, securityToken, source };
 }
 
 function trimNonEmpty(value: string | undefined): string | undefined {

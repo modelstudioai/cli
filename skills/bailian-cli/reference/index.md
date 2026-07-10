@@ -159,6 +159,7 @@ Available on OpenAPI-domain commands (AK/SK auth); also listed per command below
 | --------------------------- | ------ | -------- | ---------------------------------------------------------------------- |
 | `--access-key-id <key>`     | string | no       | Alibaba Cloud Access Key ID (env: ALIBABA_CLOUD_ACCESS_KEY_ID)         |
 | `--access-key-secret <key>` | string | no       | Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET) |
+| `--security-token <token>`  | string | no       | Alibaba Cloud STS Security Token (env: ALIBABA_CLOUD_SECURITY_TOKEN)   |
 
 ## Notes
 

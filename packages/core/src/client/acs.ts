@@ -5,6 +5,7 @@ export type AcsQueryParams = Record<string, string | string[] | undefined>;
 export interface AcsSignConfig {
   accessKeyId: string;
   accessKeySecret: string;
+  securityToken?: string;
   action: string;
   version: string;
   body: string;
@@ -49,6 +50,7 @@ export function signAcsRequest(cfg: AcsSignConfig): Record<string, string> {
     "x-acs-content-sha256": hashedBody,
     "content-type": "application/json",
   };
+  if (cfg.securityToken) headers["x-acs-security-token"] = cfg.securityToken;
 
   const signedHeaderKeys = Object.keys(headers)
     .filter((k) => k === "host" || k === "content-type" || k.startsWith("x-acs-"))

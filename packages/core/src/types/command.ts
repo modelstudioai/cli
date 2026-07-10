@@ -131,6 +131,11 @@ export const OPENAPI_AUTH_FLAGS = {
     valueHint: "<key>",
     description: "Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET)",
   },
+  securityToken: {
+    type: "string",
+    valueHint: "<token>",
+    description: "Alibaba Cloud STS Security Token (env: ALIBABA_CLOUD_SECURITY_TOKEN)",
+  },
 } satisfies FlagsDef;
 
 /** sources 里可能出现的全部 flag(全局 + 凭证域)。 */

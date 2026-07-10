@@ -100,6 +100,7 @@ export async function callConsoleGateway(
   target: ConsoleGatewayTarget,
   timeoutSec: number,
   { api, data }: ConsoleGatewayRequest,
+  settings?: Pick<Settings, "verbose">,
 ): Promise<unknown> {
   const resolved = resolveGateway(target.region, target.site);
   const gatewayBase = `https://${resolved.csGateway}`;
@@ -115,15 +116,21 @@ export async function callConsoleGateway(
   };
   if (target.token) headers.Authorization = `Bearer ${target.token}`;
 
-  const res = await fetch(
-    `${gatewayBase}/cli/api.json?action=${action}&product=${GATEWAY_PRODUCT}&api=${encodeURIComponent(api)}`,
-    {
-      method: "POST",
-      headers,
-      body: body.toString(),
-      signal: AbortSignal.timeout(timeoutMs),
-    },
-  );
+  const endpoint = `${gatewayBase}/cli/api.json?action=${action}&product=${GATEWAY_PRODUCT}&api=${encodeURIComponent(api)}`;
+  if (settings?.verbose) {
+    process.stderr.write(`> POST ${endpoint}\n`);
+  }
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers,
+    body: body.toString(),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+
+  if (settings?.verbose) {
+    process.stderr.write(`< ${res.status} ${res.statusText}\n`);
+  }
 
   if (!res.ok) {
     const t = await res.text().catch(() => "");
@@ -135,6 +142,9 @@ export async function callConsoleGateway(
   }
 
   const json = (await res.json()) as Record<string, unknown>;
+  if (settings?.verbose) {
+    process.stderr.write(`< ${JSON.stringify(json)}\n`);
+  }
 
   const innerData = json.data as Record<string, unknown> | undefined;
   if (innerData?.success === false && innerData.errorCode) {
