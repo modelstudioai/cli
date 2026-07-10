@@ -136,3 +136,10 @@ export const CONSOLE_FLAGS_DRY_RUN_ROUTES: E2eRouteExports = {
   "mcp list": "mcpList",
   "quota check": "quotaCheck",
 };
+
+export const TOKEN_PLAN_ROUTES: E2eRouteExports = {
+  "token-plan list-seats": "tokenPlanListSeats",
+  "token-plan create-key": "tokenPlanCreateKey",
+  "token-plan assign-seats": "tokenPlanAssignSeats",
+  "token-plan add-member": "tokenPlanAddMember",
+};
