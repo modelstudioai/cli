@@ -22,7 +22,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
   });
 
   test("deploy create --help 正常退出并展示必填项", async () => {
-    const { stderr, exitCode } = await runCli(["deploy", "create", "--help"]);
+    const { stderr, exitCode } = await runCli(["deploy", "text", "create", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--model|--name/i);
   });
@@ -30,6 +30,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
   test("deploy create --dry-run 构造 lora 部署请求体", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "deploy",
+      "text",
       "create",
       "--model",
       "qwen-plus-2025-12-01",
@@ -53,6 +54,65 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
     expect(data.body.model_name).toBe("qwen-plus-2025-12-01");
     expect(data.body.name).toBe("my-qwen-plus");
     expect(data.body.plan).toBe("lora");
+    expect(data.body.capacity).toBe(1);
+  });
+
+  test("deploy create --plan mu --deploy-spec --dry-run 透传 deploy_spec", async () => {
+    const { stdout, stderr, exitCode } = await runCli([
+      "deploy",
+      "text",
+      "create",
+      "--model",
+      "qwen3-8b",
+      "--name",
+      "my-qwen3-mu",
+      "--plan",
+      "mu",
+      "--deploy-spec",
+      "MU1",
+      "--capacity",
+      "2",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      action: string;
+      body: { plan: string; deploy_spec?: string; capacity?: number };
+    }>(stdout);
+    expect(data.action).toBe("deploy.create");
+    expect(data.body.plan).toBe("mu");
+    expect(data.body.deploy_spec).toBe("MU1");
+    expect(data.body.capacity).toBe(2);
+  });
+
+  test("deploy audio create --dry-run 默认 plan=mu（CosyVoice 部署契约）", async () => {
+    // Audio (CosyVoice TTS) outputs deploy model-unit-billed: the modality fixes
+    // the default plan to `mu` (text/image stay `lora`). In dry-run the mu
+    // strategy skips the catalog lookup, so deploy_spec is omitted and capacity
+    // falls back to 1 with billing_method POST_PAY.
+    const { stdout, stderr, exitCode } = await runCli([
+      "deploy",
+      "audio",
+      "create",
+      "--model",
+      "my-cosyvoice-ft",
+      "--name",
+      "my-tts",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      action: string;
+      body: { plan: string; name: string; billing_method?: string; capacity?: number };
+    }>(stdout);
+    expect(data.action).toBe("deploy.create");
+    expect(data.body.plan).toBe("mu");
+    expect(data.body.name).toBe("my-tts");
+    expect(data.body.billing_method).toBe("POST_PAY");
     expect(data.body.capacity).toBe(1);
   });
 

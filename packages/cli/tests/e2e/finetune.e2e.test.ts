@@ -23,7 +23,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   });
 
   test("finetune create --help 正常退出并展示必填项", async () => {
-    const { stderr, exitCode } = await runCli(["finetune", "create", "--help"]);
+    const { stderr, exitCode } = await runCli(["finetune", "text", "create", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--model|--datasets/i);
   });
@@ -31,6 +31,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   test("finetune create --dry-run 构造 SFT 默认请求体", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "finetune",
+      "text",
       "create",
       "--model",
       "qwen3-8b",
@@ -64,6 +65,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   test("finetune create --dry-run 转发训练类型与超参", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "finetune",
+      "text",
       "create",
       "--model",
       "qwen3-8b",
@@ -114,9 +116,40 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     });
   });
 
+  test.each([
+    ["sft", "sft"],
+    ["sft-lora", "efficient_sft"],
+    ["dpo", "dpo_full"],
+    ["dpo-lora", "dpo_lora"],
+    ["cpt", "cpt"],
+  ])(
+    "finetune create --training-type %s 经 profile 映射为 server 类型 %s",
+    async (cliType, serverType) => {
+      const { stdout, stderr, exitCode } = await runCli([
+        "finetune",
+        "text",
+        "create",
+        "--model",
+        "qwen3-8b",
+        "--datasets",
+        "file-aaa",
+        "--training-type",
+        cliType,
+        "--dry-run",
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{ action: string; body: { training_type: string } }>(stdout);
+      expect(data.action).toBe("finetune.create");
+      expect(data.body.training_type).toBe(serverType);
+    },
+  );
+
   test("finetune create --training-type 拒绝不支持的训练类型值", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "finetune",
+      "text",
       "create",
       "--model",
       "qwen3-8b",
@@ -135,6 +168,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     const localPath = join(cliPackageRoot, "tests", "e2e", ".dataset-valid.jsonl");
     const { stdout, stderr, exitCode } = await runCli([
       "finetune",
+      "text",
       "create",
       "--model",
       "qwen3-8b",
@@ -165,6 +199,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   test("finetune create --datasets 为空时拒绝", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "finetune",
+      "text",
       "create",
       "--model",
       "qwen3-8b",
@@ -185,6 +220,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     const localPath = join(cliPackageRoot, "tests", "e2e", ".dataset-valid.jsonl");
     const { stdout, stderr, exitCode } = await runCli([
       "finetune",
+      "text",
       "create",
       "--model",
       "qwen3-8b",
@@ -206,6 +242,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     const localPath = join(cliPackageRoot, "tests", "e2e", ".dataset-valid.jsonl");
     const { stdout, stderr, exitCode } = await runCli([
       "finetune",
+      "text",
       "create",
       "--model",
       "qwen3-8b",
@@ -247,6 +284,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   test("finetune create --dry-run 解析多 datasets 中的空白", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "finetune",
+      "text",
       "create",
       "--model",
       "qwen3-8b",
@@ -261,6 +299,60 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       body: { training_file_ids: string[] };
     }>(stdout);
     expect(data.body.training_file_ids).toEqual(["file-a", "file-b"]);
+  });
+
+  test("finetune audio create --dry-run 用 sft-lora 默认 + audio 超参", async () => {
+    // Audio has no --training-type flag; the command fixes modality=audio and
+    // defaults to sft-lora (efficient_sft) with the fixed CosyVoice hyper-params.
+    const { stdout, stderr, exitCode } = await runCli([
+      "finetune",
+      "audio",
+      "create",
+      "--model",
+      "cosyvoice-v3-flash",
+      "--datasets",
+      "file-audio",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      action: string;
+      body: { training_type: string; hyper_parameters: Record<string, unknown> };
+    }>(stdout);
+    expect(data.action).toBe("finetune.create");
+    expect(data.body.training_type).toBe("efficient_sft");
+    // Audio TTS defaults are fixed (not the text n_epochs/batch_size surface).
+    expect(data.body.hyper_parameters.lm_max_epoch).toBeDefined();
+  });
+
+  test("finetune audio create --help 不暴露文本超参 flag", async () => {
+    // Audio models don't consume --training-type / --n-epochs / --batch-size /
+    // --learning-rate / --max-length, so those flags are not offered.
+    const { stderr, exitCode } = await runCli(["finetune", "audio", "create", "--help"]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--model|--datasets/i);
+    expect(stderr).not.toMatch(/--training-type|--n-epochs|--batch-size|--max-length/);
+  });
+
+  test("finetune image create --dry-run 用 sft-lora 默认", async () => {
+    const { stdout, stderr, exitCode } = await runCli([
+      "finetune",
+      "image",
+      "create",
+      "--model",
+      "wan2.7-image-pro",
+      "--datasets",
+      "file-image",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ action: string; body: { training_type: string } }>(stdout);
+    expect(data.action).toBe("finetune.create");
+    expect(data.body.training_type).toBe("efficient_sft");
   });
 });
 

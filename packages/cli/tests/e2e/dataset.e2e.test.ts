@@ -214,6 +214,83 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
     expect(data.action).toBe("dataset.upload");
     expect(data.schema).toBe("dpo");
   });
+
+  test("dataset upload --schema image --no-validate --dry-run 采用 1GB 媒体上限", async () => {
+    // image schema raises the upload cap to 1 GiB (vs 300 MB for text).
+    // --no-validate keeps this offline (the jsonl fixture is not a real zip).
+    const file = join(__dirname, ".dataset-valid.jsonl");
+    const { stdout, stderr, exitCode } = await runCli([
+      "dataset",
+      "upload",
+      "--file",
+      file,
+      "--schema",
+      "image",
+      "--no-validate",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ action: string; schema: string; max_bytes: number }>(stdout);
+    expect(data.action).toBe("dataset.upload");
+    expect(data.schema).toBe("image");
+    expect(data.max_bytes).toBe(1024 * 1024 * 1024);
+  });
+
+  test.each(["tts", "image"])("dataset upload --dry-run 接受媒体 schema %s", async (schema) => {
+    const file = join(__dirname, ".dataset-valid.jsonl");
+    const { stdout, stderr, exitCode } = await runCli([
+      "dataset",
+      "upload",
+      "--file",
+      file,
+      "--schema",
+      schema,
+      "--no-validate",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ action: string; schema: string }>(stdout);
+    expect(data.action).toBe("dataset.upload");
+    expect(data.schema).toBe(schema);
+  });
+
+  test("dataset validate --schema video 拒绝（视频生成入口已隐藏）", async () => {
+    const file = join(__dirname, ".dataset-valid.jsonl");
+    const { stdout, stderr, exitCode } = await runCli([
+      "dataset",
+      "validate",
+      "--file",
+      file,
+      "--schema",
+      "video",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stdout + stderr).not.toBe(0);
+    expect(`${stdout}\n${stderr}`).toMatch(/--schema video is not supported/);
+  });
+
+  test("dataset upload --schema video 拒绝（视频生成入口已隐藏）", async () => {
+    const file = join(__dirname, ".dataset-valid.jsonl");
+    const { stdout, stderr, exitCode } = await runCli([
+      "dataset",
+      "upload",
+      "--file",
+      file,
+      "--schema",
+      "video",
+      "--no-validate",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stdout + stderr).not.toBe(0);
+    expect(`${stdout}\n${stderr}`).toMatch(/--schema video is not supported/);
+  });
 });
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (DashScope)", () => {

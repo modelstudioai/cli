@@ -169,10 +169,13 @@ describe("parseDatasetSchemaFlag", () => {
     expect(parseDatasetSchemaFlag("  ")).toBeUndefined();
   });
 
-  test("chatml / dpo / cpt pass through", () => {
+  test("chatml / dpo / cpt / tts / image / video pass through", () => {
     expect(parseDatasetSchemaFlag("chatml")).toBe("chatml");
     expect(parseDatasetSchemaFlag("dpo")).toBe("dpo");
     expect(parseDatasetSchemaFlag("cpt")).toBe("cpt");
+    expect(parseDatasetSchemaFlag("tts")).toBe("tts");
+    expect(parseDatasetSchemaFlag("image")).toBe("image");
+    expect(parseDatasetSchemaFlag("video")).toBe("video");
     expect(parseDatasetSchemaFlag("  dpo ")).toBe("dpo");
   });
 
