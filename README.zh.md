@@ -38,7 +38,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 - **MCP 集成** — 统一调度百炼 MCP 服务：列出服务、查看工具、直接在终端调用任意工具
 - **联网搜索** — 实时互联网信息检索，提升回答准确性及时效性
 - **模型推荐** — 描述你的场景，智能推荐最适合的模型；支持限定范围搜索、模型对比和替代发现
-- **微调与部署** — 上传数据集、创建 SFT/LoRA/DPO/CPT 调优任务（`finetune create`）、非阻塞探测任务状态（`finetune watch`）、按模型查训练能力（`finetune capability`），并把训练好的模型部署为推理服务（`deploy create`）
+- **微调与部署** — 上传数据集、创建文本/音频/图像调优任务（`finetune text|audio|image create`；文本涵盖 SFT/LoRA/DPO/CPT）、非阻塞探测任务状态（`finetune watch`）、按模型查训练能力（`finetune capability`），并把训练好的模型部署为推理服务（`deploy text|audio|image create`）
 - **控制台能力** — 浏览百炼应用（`app list`），查询模型免费额度（`usage free`），查看模型用量统计（`usage stats`），管理业务空间（`workspace list`），管理限流与提额（`quota list/request/check/history`）
 - **资产中心** — 管理模型生成资产（`asset-center list/get/download`）、收藏与回收站（`favorite`/`delete`）、容量统计（`stats`/`storage`）、OSS 转存（`oss slr/bind/show/update/unbind`）与转存日志（`transfer list`）
 - **本地文件自动上传** — 所有 URL 参数同时支持本地路径，免费临时存储 48 小时
@@ -113,10 +113,10 @@ bl auth login --console
 
 # 微调与部署 — 从训练到服务的一站式流程
 bl dataset upload --file ./train.jsonl                 # 上传 .jsonl 数据集（先校验）
-bl finetune create --model qwen3-8b --datasets ./train.jsonl --training-type sft-lora  # 本地路径自动上传
+bl finetune text create --model qwen3-8b --datasets ./train.jsonl --training-type sft-lora  # 本地路径自动上传
 bl finetune watch --job-id ft-xxx --output json       # 非阻塞状态探测（退出码 0/1/3 = 成功/失败/进行中）
 bl finetune capability --model qwen3-8b               # 查询模型支持哪些训练方式
-bl deploy create --model qwen3-8b --name my-svc --plan mu  # 把训练好的模型部署为推理服务
+bl deploy text create --model qwen3-8b --name my-svc --plan mu  # 把训练好的模型部署为推理服务
 
 # 浏览应用 / 免费额度 / 用量统计 / 业务空间
 bl app list
@@ -171,13 +171,17 @@ bl text chat --api-key sk-xxxxx --message "你好"
 bl auth login --console
 ```
 
-### 阿里云 AK/SK（仅 Token Plan）
+### 阿里云 OpenAPI AK/SK（仅 Token Plan）
 
 `token-plan` 命令组需要阿里云 AccessKey。前往 [RAM 控制台](https://ram.console.aliyun.com/manage/ak) 获取。
 
 > 建议：创建 RAM 子账号并授予最小权限，避免使用主账号 AK/SK。
 
 ```bash
+# 方式一：登录命令（持久化到 ~/.bailian/config.json）
+bl auth login --open-api --access-key-id LTAI5t... --access-key-secret ...
+
+# 方式二：环境变量
 export ALIBABA_CLOUD_ACCESS_KEY_ID=LTAI5t...
 export ALIBABA_CLOUD_ACCESS_KEY_SECRET=...
 export BAILIAN_WORKSPACE_ID=ws-...

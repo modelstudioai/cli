@@ -22,7 +22,6 @@ describe("e2e: quota", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("--model");
     expect(stderr).toContain("--tpm");
-    expect(stderr).toContain("--yes");
   });
 
   test("quota history --help 正常退出", async () => {

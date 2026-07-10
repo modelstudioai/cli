@@ -18,6 +18,15 @@ export function monorepoRoot(): string {
   return join(kscliPackageRoot, "..", "..");
 }
 
+function localBin(name: string): string {
+  return join(
+    monorepoRoot(),
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? `${name}.cmd` : name,
+  );
+}
+
 // ---- E2E gating helpers ----
 
 // ---- .env loader (cached) ----
@@ -73,14 +82,14 @@ export interface RunCliResult {
 }
 
 /**
- * 子进程执行 kscli（等价于 `node packages/kscli/src/main.ts ...`）。
+ * 子进程执行 kscli（等价于 `tsx packages/kscli/src/main.ts ...`）。
  */
 export async function runKscli(
   args: string[],
   envOverrides: NodeJS.ProcessEnv = {},
 ): Promise<RunCliResult> {
   try {
-    const { stdout, stderr } = await execFileAsync("node", [mainTs, ...args], {
+    const { stdout, stderr } = await execFileAsync(localBin("tsx"), [mainTs, ...args], {
       cwd: kscliPackageRoot,
       encoding: "utf8",
       maxBuffer: 32 * 1024 * 1024,

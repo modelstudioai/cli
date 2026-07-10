@@ -89,11 +89,10 @@ export default defineCommand({
       description: "Target TPM value (required)",
       required: true,
     },
-    yes: { type: "switch", description: "Skip confirmation prompts" },
   },
   exampleArgs: [
     "--model qwen-turbo --tpm 100000",
-    "--model qwen3.6-plus --tpm 8000000 --yes",
+    "--model qwen3.6-plus --tpm 8000000",
     "--model qwen-turbo --tpm 100000 --output json",
   ],
   validate: (f) => (Number(f.tpm) > 0 ? undefined : "--tpm must be a positive number."),
@@ -101,7 +100,6 @@ export default defineCommand({
     const { identity, settings, flags } = ctx;
     const modelName = flags.model;
     const tpmValue = Number(flags.tpm);
-    const autoConfirm = flags.yes;
     const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
@@ -174,13 +172,6 @@ export default defineCommand({
       }
 
       if (confirmCode === "Downgrade") {
-        if (!autoConfirm) {
-          throw new BailianError(
-            `target TPM (${tpmValue.toLocaleString()}) is lower than current (${currentLimit.toLocaleString()}).`,
-            ExitCode.GENERAL,
-            "Use --yes to confirm downgrade.",
-          );
-        }
         result = await submitRequest(true);
       }
     }

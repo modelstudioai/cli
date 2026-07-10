@@ -1,6 +1,6 @@
 {
   "name": "bailian-cli-commands",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "description": "Command library for bailian-cli products (knowledge, memory, media, …). See https://www.npmjs.com/package/bailian-cli for usage.",
   "homepage": "https://bailian.console.aliyun.com/cli",
   "bugs": {
@@ -20,8 +20,8 @@
   "types": "./dist/index.d.mts",
   "exports": {
     ".": {
-      "@bailian-cli/source": "./src/index.ts",
-      "default": "./dist/index.mjs"
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
     },
     "./package.json": "./package.json"
   },

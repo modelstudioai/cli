@@ -16,7 +16,6 @@ const DELETE_FLAGS = {
     description: "Deployed model identifier (required)",
     required: true,
   },
-  yes: { type: "switch", description: "Confirm the deletion (required to delete)" },
   skipPrecheck: {
     type: "switch",
     description: "Skip the local STOPPED/FAILED status precheck",
@@ -33,9 +32,9 @@ const DELETE_FLAGS = {
 export default defineCommand({
   description: "Delete a model deployment (must be STOPPED or FAILED)",
   auth: "apiKey",
-  usageArgs: "--deployed-model <id> --yes [--skip-precheck]",
+  usageArgs: "--deployed-model <id> [--skip-precheck]",
   flags: DELETE_FLAGS,
-  exampleArgs: ["--deployed-model dep-... --yes", "--deployed-model dep-... --dry-run"],
+  exampleArgs: ["--deployed-model dep-...", "--deployed-model dep-... --dry-run"],
   async run(ctx) {
     const { settings, flags } = ctx;
     const deployedModel = flags.deployedModel;
@@ -44,14 +43,6 @@ export default defineCommand({
     if (settings.dryRun) {
       emitResult({ action: "deploy.delete", deployed_model: deployedModel }, format);
       return;
-    }
-
-    if (!flags.yes) {
-      throw new BailianError(
-        `Refusing to delete deployment ${deployedModel} without --yes.`,
-        ExitCode.USAGE,
-        "Pass --yes to confirm the deletion.",
-      );
     }
 
     // Precheck status unless skipped — surface a clear hint instead of letting
@@ -68,8 +59,8 @@ export default defineCommand({
             ExitCode.USAGE,
           );
         }
-      } catch (e) {
-        if (e instanceof BailianError) throw e;
+      } catch (error) {
+        if (error instanceof BailianError) throw error;
         // If the get itself failed (e.g. not found), let the DELETE call surface the real error.
       }
     }

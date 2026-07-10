@@ -71,7 +71,7 @@ export default defineCommand({
     if (item.hyper_params) emitBare(`hyper_params:     ${item.hyper_params}`);
     if (item.output_model)
       emitBare(
-        `output_model:     ${item.output_model}  (→ ${identity.binName} deploy create --model)`,
+        `output_model:     ${item.output_model}  (→ ${identity.binName} deploy text create --model)`,
       );
     if (item.model_name) emitBare(`model_name:       ${item.model_name}`);
     if (item.created_at) emitBare(`created_at:       ${item.created_at}`);

@@ -2,8 +2,6 @@ import {
   defineCommand,
   detectOutputFormat,
   updateDeployment,
-  BailianError,
-  ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
@@ -25,7 +23,6 @@ const UPDATE_FLAGS = {
     valueHint: "<n>",
     description: "Tokens per minute",
   },
-  yes: { type: "switch", description: "Confirm the rate-limit update (required to update)" },
 } satisfies FlagsDef;
 
 /**
@@ -37,11 +34,11 @@ const UPDATE_FLAGS = {
 export default defineCommand({
   description: "Update a deployment's rate limits (rpm_limit / tpm_limit)",
   auth: "apiKey",
-  usageArgs: "--deployed-model <id> --yes [--rpm-limit <n>] [--tpm-limit <n>]",
+  usageArgs: "--deployed-model <id> [--rpm-limit <n>] [--tpm-limit <n>]",
   flags: UPDATE_FLAGS,
   exampleArgs: [
-    "--deployed-model dep-... --rpm-limit 1000 --yes",
-    "--deployed-model dep-... --rpm-limit 1000 --tpm-limit 200000 --yes",
+    "--deployed-model dep-... --rpm-limit 1000",
+    "--deployed-model dep-... --rpm-limit 1000 --tpm-limit 200000",
   ],
   notes: ["At least one of --rpm-limit / --tpm-limit must be provided."],
   validate: (flags) =>
@@ -60,17 +57,6 @@ export default defineCommand({
     if (settings.dryRun) {
       emitResult({ action: "deploy.update", deployed_model: deployedModel, body }, format);
       return;
-    }
-
-    if (!flags.yes) {
-      const parts: string[] = [];
-      if (flags.rpmLimit !== undefined) parts.push(`rpm_limit=${flags.rpmLimit}`);
-      if (flags.tpmLimit !== undefined) parts.push(`tpm_limit=${flags.tpmLimit}`);
-      throw new BailianError(
-        `Refusing to update rate limits for ${deployedModel} (${parts.join(", ")}) without --yes.`,
-        ExitCode.USAGE,
-        "Pass --yes to confirm the rate-limit update.",
-      );
     }
 
     const response = await updateDeployment(ctx.client, deployedModel, body);

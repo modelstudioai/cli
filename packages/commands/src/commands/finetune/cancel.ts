@@ -1,11 +1,4 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  cancelFineTune,
-  BailianError,
-  ExitCode,
-  type FlagsDef,
-} from "bailian-cli-core";
+import { defineCommand, detectOutputFormat, cancelFineTune, type FlagsDef } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const CANCEL_FLAGS = {
@@ -15,15 +8,14 @@ const CANCEL_FLAGS = {
     description: "Fine-tune job ID (required)",
     required: true,
   },
-  yes: { type: "switch", description: "Confirm the cancellation (required to cancel)" },
 } satisfies FlagsDef;
 
 export default defineCommand({
   description: "Cancel a running fine-tune job",
   auth: "apiKey",
-  usageArgs: "--job-id <id> --yes",
+  usageArgs: "--job-id <id>",
   flags: CANCEL_FLAGS,
-  exampleArgs: ["--job-id ft-xxx --yes", "--job-id ft-xxx --dry-run"],
+  exampleArgs: ["--job-id ft-xxx", "--job-id ft-xxx --dry-run"],
   notes: [
     "Only PENDING / RUNNING jobs can be cancelled. Completed / failed / already-",
     "cancelled jobs return a server-side error (passed through verbatim).",
@@ -36,14 +28,6 @@ export default defineCommand({
     if (settings.dryRun) {
       emitResult({ action: "finetune.cancel", job_id: jobId }, format);
       return;
-    }
-
-    if (!flags.yes) {
-      throw new BailianError(
-        `Refusing to cancel fine-tune job ${jobId} without --yes.`,
-        ExitCode.USAGE,
-        "Pass --yes to confirm the cancellation.",
-      );
     }
 
     const response = await cancelFineTune(ctx.client, jobId);

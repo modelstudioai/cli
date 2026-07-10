@@ -13,7 +13,7 @@
 core/config/schema.ts                   ← API endpoint / 文档站(region-aware)
   REGIONS{cn, us, intl}     dashscope.aliyuncs.com 等
   DOCS_HOSTS{cn, us, intl}  help.aliyun.com/zh/model-studio
-  BAILIAN_HOST              bailian.cn-beijing.aliyuncs.com (POP API)
+  BAILIAN_HOST              bailian.cn-beijing.aliyuncs.com (OpenAPI)
 
 runtime/src/urls.ts                      ← 用户面控制台 URL(cn-only)
   BAILIAN_CONSOLE_ROOT      bailian.console.aliyun.com
@@ -61,12 +61,12 @@ grep -rnE "https://dashscope[a-z-]*\.aliyuncs\.com" packages/ --include="*.ts" \
 
 ```sh
 # 验证错误 hint 不再泄漏旧 URL
-HOME=/tmp/empty node packages/cli/src/main.ts text chat --message x
+HOME=/tmp/empty pnpm -F bailian-cli exec tsx src/main.ts text chat --message x
 # 看输出的 Get API Key URL 是否走新值
 
 # 验证 banner / help
-node packages/cli/src/main.ts                     # banner
-node packages/cli/src/main.ts help                # help 命令
+pnpm -F bailian-cli exec tsx src/main.ts                     # banner
+pnpm -F bailian-cli exec tsx src/main.ts help                # help 命令
 ```
 
 ## 常见漏点

@@ -55,7 +55,11 @@ export { default as datasetList } from "./commands/dataset/list.ts";
 export { default as datasetGet } from "./commands/dataset/get.ts";
 export { default as datasetDelete } from "./commands/dataset/delete.ts";
 export { default as datasetValidate } from "./commands/dataset/validate.ts";
-export { default as finetuneCreate } from "./commands/finetune/create.ts";
+export {
+  finetuneTextCreate,
+  finetuneAudioCreate,
+  finetuneImageCreate,
+} from "./commands/finetune/create.ts";
 export { default as finetuneList } from "./commands/finetune/list.ts";
 export { default as finetuneGet } from "./commands/finetune/get.ts";
 export { default as finetuneCancel } from "./commands/finetune/cancel.ts";
@@ -65,7 +69,11 @@ export { default as finetuneCheckpoints } from "./commands/finetune/checkpoints.
 export { default as finetuneExport } from "./commands/finetune/export.ts";
 export { default as finetuneWatch } from "./commands/finetune/watch.ts";
 export { default as finetuneCapability } from "./commands/finetune/capability.ts";
-export { default as deployCreate } from "./commands/deploy/create.ts";
+export {
+  deployTextCreate,
+  deployAudioCreate,
+  deployImageCreate,
+} from "./commands/deploy/create.ts";
 export { default as deployList } from "./commands/deploy/list.ts";
 export { default as deployGet } from "./commands/deploy/get.ts";
 export { default as deployModels } from "./commands/deploy/models.ts";

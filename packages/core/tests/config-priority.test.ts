@@ -1,7 +1,12 @@
 import { expect, test } from "vite-plus/test";
-import type { ConfigFile, Settings } from "../src/config/schema.ts";
+import { parseConfigFile, type ConfigFile, type Settings } from "../src/config/schema.ts";
 import { buildSettings, type ResolutionSources } from "../src/config/loader.ts";
-import { resolveApiKey, resolveConsole, resolveModelBaseUrl } from "../src/auth/resolver.ts";
+import {
+  resolveApiKey,
+  resolveConsole,
+  resolveModelBaseUrl,
+  resolveOpenApi,
+} from "../src/auth/resolver.ts";
 
 // 行为锁定:锁住各字段的 flag/env/file 优先级链,统一为 flag>env>file>默认
 // (baseUrl 原为 flag>file>env,2026-07 前置 commit 翻转)。buildSettings 与
@@ -123,6 +128,125 @@ test("console 凭证:token 仅 file 源;目标 flag > file > 默认;无 token �
     site: "domestic",
   });
   expect(() => resolveConsole(src({}))).toThrow(/console access token/);
+});
+
+test("openapi 凭证:按来源成对解析,flag > env > file;缺 id 或 secret 抛 AUTH", () => {
+  const all = src({
+    flags: { accessKeyId: "ak-flag", accessKeySecret: "secret-flag" },
+    env: {
+      ALIBABA_CLOUD_ACCESS_KEY_ID: "ak-env",
+      ALIBABA_CLOUD_ACCESS_KEY_SECRET: "secret-env",
+    },
+  });
+  expect(resolveOpenApi(all)).toMatchObject({
+    accessKeyId: "ak-flag",
+    accessKeySecret: "secret-flag",
+    source: "flag",
+  });
+
+  const envOnly = src({
+    env: {
+      ALIBABA_CLOUD_ACCESS_KEY_ID: "ak-env",
+      ALIBABA_CLOUD_ACCESS_KEY_SECRET: "secret-env",
+    },
+  });
+  expect(resolveOpenApi(envOnly)).toMatchObject({
+    accessKeyId: "ak-env",
+    accessKeySecret: "secret-env",
+    source: "env",
+  });
+
+  const fileOnly = src({
+    file: {
+      access_key_id: "ak-file",
+      access_key_secret: "secret-file",
+    },
+  });
+  expect(resolveOpenApi(fileOnly)).toMatchObject({
+    accessKeyId: "ak-file",
+    accessKeySecret: "secret-file",
+    source: "config",
+  });
+
+  const legacyFileOnly = src({
+    file: parseConfigFile({
+      openapi_access_key_id: "ak-legacy-file",
+      openapi_access_key_secret: "secret-legacy-file",
+    }),
+  });
+  expect(resolveOpenApi(legacyFileOnly)).toMatchObject({
+    accessKeyId: "ak-legacy-file",
+    accessKeySecret: "secret-legacy-file",
+    source: "config",
+  });
+
+  expect(() =>
+    resolveOpenApi(
+      src({
+        flags: { accessKeyId: "ak-flag" },
+        env: {
+          ALIBABA_CLOUD_ACCESS_KEY_ID: "ak-env",
+          ALIBABA_CLOUD_ACCESS_KEY_SECRET: "secret-env",
+        },
+        file: {
+          access_key_id: "ak-file",
+          access_key_secret: "secret-file",
+        },
+      }),
+    ),
+  ).toThrow(/Incomplete OpenAPI AK\/SK/);
+
+  expect(() =>
+    resolveOpenApi(
+      src({
+        env: { ALIBABA_CLOUD_ACCESS_KEY_SECRET: "secret-env" },
+        file: {
+          access_key_id: "ak-file",
+          access_key_secret: "secret-file",
+        },
+      }),
+    ),
+  ).toThrow(/Incomplete OpenAPI AK\/SK/);
+
+  expect(() =>
+    resolveOpenApi(
+      src({
+        file: {
+          access_key_id: "ak-file",
+        },
+      }),
+    ),
+  ).toThrow(/Incomplete OpenAPI AK\/SK/);
+
+  expect(() => resolveOpenApi(src({}))).toThrow(/No OpenAPI AK\/SK/);
+  expect(() => resolveOpenApi(src({ env: { ALIBABA_CLOUD_ACCESS_KEY_ID: "ak-env" } }))).toThrow(
+    /Incomplete OpenAPI AK\/SK/,
+  );
+});
+
+test("openapi 凭证:低优先级来源缺字段时不影响更高优先级成对凭证", () => {
+  const completeFlagCred = src({
+    flags: { accessKeyId: "ak-flag", accessKeySecret: "secret-flag" },
+    env: { ALIBABA_CLOUD_ACCESS_KEY_SECRET: "secret-env" },
+  });
+  expect(resolveOpenApi(completeFlagCred)).toMatchObject({
+    accessKeyId: "ak-flag",
+    accessKeySecret: "secret-flag",
+    source: "flag",
+  });
+
+  const completeEnvCred = src({
+    env: {
+      ALIBABA_CLOUD_ACCESS_KEY_ID: "ak-env",
+      ALIBABA_CLOUD_ACCESS_KEY_SECRET: "secret-env",
+    },
+    file: { access_key_id: "ak-file" },
+  });
+  expect(resolveOpenApi(completeEnvCred)).toMatchObject({
+    accessKeyId: "ak-env",
+    accessKeySecret: "secret-env",
+    source: "env",
+  });
 });
 
 test("default*Model / outputDir:仅 file 源", () => {

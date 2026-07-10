@@ -75,6 +75,8 @@ export default defineCommand({
     ]);
     for (const line of formatTable(headers, rows)) emitBare(line);
     if (total !== undefined) emitBare(`\nTotal: ${total}`);
-    emitBare(`Tip: OUTPUT_MODEL is the input for \`${identity.binName} deploy create --model\``);
+    emitBare(
+      `Tip: OUTPUT_MODEL is the input for \`${identity.binName} deploy text create --model\``,
+    );
   },
 });

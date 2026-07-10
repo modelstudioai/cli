@@ -144,7 +144,7 @@ export async function listCheckpoints(
  * GET /api/v1/fine-tunes/{job_id}/export/{checkpoint}?model_name={name}
  *
  * Publishes a training checkpoint as a deployable model — required before
- * `bl deploy create` can target it. The platform may auto-export the best
+ * `deploy <modality> create` can target it. The platform may auto-export the best
  * checkpoint on SUCCEEDED, but explicit export is the canonical path.
  */
 export async function exportCheckpoint(

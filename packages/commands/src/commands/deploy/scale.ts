@@ -2,8 +2,6 @@ import {
   defineCommand,
   detectOutputFormat,
   scaleDeployment,
-  BailianError,
-  ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
@@ -30,7 +28,6 @@ const SCALE_FLAGS = {
     valueHint: "<n>",
     description: "PTU only — output tokens per minute",
   },
-  yes: { type: "switch", description: "Confirm the scaling (required to scale)" },
 } satisfies FlagsDef;
 
 /**
@@ -42,11 +39,11 @@ const SCALE_FLAGS = {
 export default defineCommand({
   description: "Scale a deployment's capacity",
   auth: "apiKey",
-  usageArgs: "--deployed-model <id> --capacity <n> --yes [--input-tpm <n>] [--output-tpm <n>]",
+  usageArgs: "--deployed-model <id> --capacity <n> [--input-tpm <n>] [--output-tpm <n>]",
   flags: SCALE_FLAGS,
   exampleArgs: [
-    "--deployed-model qwen-plus-...-b6d61c71 --capacity 8 --yes",
-    "--deployed-model dep-... --capacity 2 --yes",
+    "--deployed-model qwen-plus-...-b6d61c71 --capacity 8",
+    "--deployed-model dep-... --capacity 2",
   ],
   validate: (flags) =>
     flags.capacity === undefined && flags.inputTpm === undefined && flags.outputTpm === undefined
@@ -65,18 +62,6 @@ export default defineCommand({
     if (settings.dryRun) {
       emitResult({ action: "deploy.scale", deployed_model: deployedModel, body }, format);
       return;
-    }
-
-    if (!flags.yes) {
-      const parts: string[] = [];
-      if (flags.capacity !== undefined) parts.push(`capacity=${flags.capacity}`);
-      if (flags.inputTpm !== undefined) parts.push(`input_tpm=${flags.inputTpm}`);
-      if (flags.outputTpm !== undefined) parts.push(`output_tpm=${flags.outputTpm}`);
-      throw new BailianError(
-        `Refusing to scale deployment ${deployedModel} (${parts.join(", ")}) without --yes.`,
-        ExitCode.USAGE,
-        "Pass --yes to confirm the scaling.",
-      );
     }
 
     const response = await scaleDeployment(ctx.client, deployedModel, body);

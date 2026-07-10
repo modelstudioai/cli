@@ -7,14 +7,12 @@ import {
 import { emitResult, emitBare, padEnd } from "bailian-cli-runtime";
 import type { CreateTokenPlanKeyResponse } from "./types.ts";
 import {
-  TOKEN_PLAN_AK_FLAGS,
   TOKEN_PLAN_COMMON_QUERY_FLAGS,
   TOKEN_PLAN_WORKSPACE_FLAG,
   appendCommonQueryParams,
   callTokenPlanApi,
   prepareTokenPlanRequest,
   requireWorkspaceId,
-  resolveTokenPlanCredentials,
   type TokenPlanQueryParams,
 } from "./utils.ts";
 
@@ -31,14 +29,12 @@ const CREATE_KEY_FLAGS = {
   ...TOKEN_PLAN_WORKSPACE_FLAG,
   description: { type: "string", valueHint: "<text>", description: "API key description" },
   ...TOKEN_PLAN_COMMON_QUERY_FLAGS,
-  ...TOKEN_PLAN_AK_FLAGS,
 } satisfies FlagsDef;
 type CreateKeyFlags = ParsedFlags<typeof CREATE_KEY_FLAGS>;
 
 export default defineCommand({
   description: "Create a Token Plan API key for a seat",
-  // AK/SK 私有解析(见 utils.ts),不走集中凭证域。
-  auth: "none",
+  auth: "openapi",
   usageArgs: "--account-id <id> --workspace-id <id> [flags]",
   flags: CREATE_KEY_FLAGS,
   exampleArgs: [
@@ -62,11 +58,9 @@ export default defineCommand({
       return;
     }
 
-    const credentials = resolveTokenPlanCredentials(flags);
     const data = await callTokenPlanApi<CreateTokenPlanKeyResponse>({
-      settings,
+      client: ctx.client,
       baseUrl: ctx.client.baseUrl,
-      credentials,
       action: API_ACTION,
       path: API_PATH,
       method: "POST",

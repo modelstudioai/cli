@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
-import { DEFAULT_CLI_PACKAGE, MONOREPO_ROOT, resolveMainTs } from "./paths.mjs";
+import { DEFAULT_CLI_PACKAGE, MONOREPO_ROOT, resolveMainTs, resolveTsxBin } from "./paths.mjs";
 import { parseStressArgv, optFrom } from "./argv-parse.mjs";
 import { resolveStressCountAndConcurrency } from "./stress-config.mjs";
 import { SubmissionRateLimiter } from "./rate-limit.mjs";
@@ -38,6 +38,7 @@ export function defineStressTarget(config) {
     const globals = ctx?.globals ?? {};
     const CLI_PACKAGE = optFrom(ARGV, "CLI_PACKAGE") || DEFAULT_CLI_PACKAGE;
     const MAIN_TS = resolveMainTs(CLI_PACKAGE);
+    const TSX_BIN = resolveTsxBin();
 
     const canonical = ctx?.canonicalTarget ?? config.canonical;
     const {
@@ -142,9 +143,9 @@ export function defineStressTarget(config) {
       return stressExit(ctx, 1);
     }
     try {
-      await execFileAsync("node", ["--version"], { encoding: "utf8" });
+      await execFileAsync(TSX_BIN, ["--version"], { encoding: "utf8" });
     } catch {
-      console.error("未找到 node。");
+      console.error("未找到仓库本地 tsx，请先运行 pnpm install。");
       return stressExit(ctx, 1);
     }
 
@@ -177,6 +178,7 @@ export function defineStressTarget(config) {
       return executeSingleCli({
         MAIN_TS,
         CLI_PACKAGE,
+        TSX_BIN,
         TIMEOUT_MS,
         MAX_LOG_CAPTURE,
         index,
