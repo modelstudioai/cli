@@ -74,6 +74,7 @@ import {
   tokenPlanCreateKey,
   tokenPlanAssignSeats,
   tokenPlanAddMember,
+  bootstrap,
 } from "bailian-cli-commands";
 
 // Full bailian-cli product: every command, exposed under the `bl` binary.
@@ -156,4 +157,5 @@ export const commands: Record<string, AnyCommand> = {
   "token-plan create-key": tokenPlanCreateKey,
   "token-plan assign-seats": tokenPlanAssignSeats,
   "token-plan add-member": tokenPlanAddMember,
+  bootstrap: bootstrap,
 };
