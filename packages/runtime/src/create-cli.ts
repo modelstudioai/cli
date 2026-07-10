@@ -14,6 +14,7 @@ import {
   CONSOLE_AUTH_FLAGS,
   GLOBAL_FLAGS,
   MODEL_AUTH_FLAGS,
+  OPENAPI_AUTH_FLAGS,
   UsageError,
   credentialFlagDefs,
   buildSources,
@@ -39,6 +40,8 @@ export interface CliOptions {
   clientName: string;
   /** npm package name for self-update (e.g. "bailian-cli", "bailian-cli-rag"). */
   npmPackage: string;
+  /** Root-help suggestions shown after credentials are configured. */
+  quickStartTasks?: readonly string[];
 }
 
 export interface Cli {
@@ -103,6 +106,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             ...GLOBAL_FLAGS,
             ...MODEL_AUTH_FLAGS,
             ...CONSOLE_AUTH_FLAGS,
+            ...OPENAPI_AUTH_FLAGS,
           }) as Partial<SourceFlags>,
         ),
       );
@@ -110,8 +114,11 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     } catch {
       /* unparseable global flags on the bare invocation — fall through to welcome */
     }
-    if (hasKey) printQuickStart();
-    else printWelcomeBanner(binName);
+    if (hasKey) {
+      if (opts.quickStartTasks?.length) printQuickStart(opts.quickStartTasks);
+    } else {
+      printWelcomeBanner(binName);
+    }
   }
 
   async function dispatch(argv: string[]): Promise<void> {

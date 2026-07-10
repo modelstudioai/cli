@@ -5,7 +5,7 @@
 - 增加新的 `bl xxx` 命令
 - 删除已有命令
 - 重命名命令(包括从单级 `bl x` 改成 `bl x y` 或反向)
-- 调整某个 shared command 在 `bl` / `rag` 等产品入口里的暴露路径
+- 调整某个 shared command 在 `bl` / `kscli` 等产品入口里的暴露路径
 
 ## 命令实现与产品路径的关系
 
@@ -17,7 +17,7 @@
     ↓ packages/commands/src/index.ts export { default as knowledgeRetrieve }
 产品入口:
   packages/cli/src/commands.ts  "knowledge retrieve": knowledgeRetrieve  ↔ bl knowledge retrieve
-  packages/rag/src/main.ts      "retrieve": knowledgeRetrieve             ↔ rag retrieve
+  packages/kscli/src/main.ts    "retrieve": knowledgeRetrieve             ↔ kscli retrieve
 ```
 
 常见路径形态:
@@ -32,7 +32,7 @@
 
 ## CLI 命令注册架构(必读)
 
-`packages/commands` 是命令库,只导出单个 command;不内置 path presets,不关心 `bl` / `rag`。每个产品入口传入自己的 command map,`runtime` 负责解析、help、鉴权、遥测、执行。
+`packages/commands` 是命令库,只导出单个 command;不内置 path presets,不关心 `bl` / `kscli`。每个产品入口传入自己的 command map,`runtime` 负责解析、help、鉴权、遥测、执行。
 
 ```
 packages/commands/src/commands/<...>.ts
@@ -42,7 +42,7 @@ packages/commands/src/index.ts
   export { default as xxxCommand } from "./commands/...ts"
         ↓
 ┌──────────────────────────────┬──────────────────────────────┐
-│ packages/cli/src/commands.ts │ packages/rag/src/main.ts     │
+│ packages/cli/src/commands.ts │ packages/kscli/src/main.ts   │
 │ { "text chat": textChat }    │ { "retrieve": knowledge... } │
 └──────────────┬───────────────┴──────────────┬───────────────┘
                ↓                              ↓
@@ -51,10 +51,10 @@ packages/commands/src/index.ts
         tools/generate-reference.ts reads packages/cli/src/commands.ts
 ```
 
-- **`packages/commands/src/commands/<...>.ts`**:命令实现;`usageArgs` / `exampleArgs` 只写参数片段,不写 `bl` / `rag` 前缀
+- **`packages/commands/src/commands/<...>.ts`**:命令实现;`usageArgs` / `exampleArgs` 只写参数片段,不写 `bl` / `kscli` 前缀
 - **`packages/commands/src/index.ts`**:导出命令实现;新增命令必须在这里 re-export
 - **`packages/cli/src/commands.ts`**:`bl` 产品命令 map;新增/删除/重命名 `bl` 命令必须改这里
-- **`packages/rag/src/main.ts`**:`rag` 产品命令 map;只有该入口需要暴露/变更时才改
+- **`packages/kscli/src/main.ts`**:`kscli` 产品命令 map;只有该入口需要暴露/变更时才改
 - **`packages/runtime/src/registry.ts`**:通用 registry,从传入 map 建树;不要在这里登记业务命令
 - **`tools/generate-reference.ts`**:pre-commit / `pnpm run sync:skill-assets` 时读 `packages/cli/src/commands.ts`,写 `skills/bailian-cli/reference/index.md` + `<一级命令>.md`。该目录**纳入 git**,勿手改
 
@@ -66,7 +66,7 @@ packages/commands/src/index.ts
 
 - [ ] 新建/删除/移动对应的 `packages/commands/src/commands/<...>.ts`
 - [ ] `defineCommand` 字段使用当前 schema:
-  - `auth: "apiKey" | "console" | "none"`
+  - `auth: "apiKey" | "console" | "openapi" | "none"`
   - `flags`(camelCase key,由 runtime 渲染为 kebab-case)
   - `usageArgs`(不含 bin/path 前缀)
   - `exampleArgs`(不含 bin/path 前缀)
@@ -81,7 +81,7 @@ packages/commands/src/index.ts
 
 - [ ] `packages/cli/src/commands.ts`:按需增删 `import` 与 `commands` map key
 - [ ] 新 map key 就是 `bl` 下的命令路径;重命名时全仓 grep 旧路径字符串
-- [ ] 如果 `rag` 入口也要暴露/移除该能力,同步 `packages/rag/src/main.ts`
+- [ ] 如果 `kscli` 入口也要暴露/移除该能力,同步 `packages/kscli/src/main.ts`
 - [ ] 不要在 `packages/runtime/src/registry.ts` 或 `create-cli.ts` 里写业务命令表
 
 ### C. 文档层
@@ -97,13 +97,13 @@ packages/commands/src/index.ts
 - [ ] `packages/cli/src/commands.ts` 增删 path 后跑 `node tools/compare-e2e-command-map.ts`（advisory）确认与 harness 一致
 - [ ] bl 产品 path 变更由 `packages/cli/tests/e2e/registry.smoke.e2e.test.ts` 覆盖；kscli 变更同步 `packages/kscli/tests/e2e/registry.smoke.e2e.test.ts`
 - [ ] 删除命令时一并删对应 commands e2e / README 示例 / reference 生成结果 / harness map 条目
-- [ ] 如果 shared command 在不同入口路径下复用,至少确保 commands e2e 覆盖 `bl` path；`rag` / `kscli` 入口改动需补对应 smoke 或说明不测 flat path live
+- [ ] 如果 shared command 在不同入口路径下复用,至少确保 commands e2e 覆盖 `bl` path；`kscli` 入口改动需补对应 smoke 或说明不测 flat path live
 
 ### E. 重命名特殊处理
 
 - [ ] 全仓 grep **旧命令名字符串**,确保以下位置全部更新:
   - `packages/cli/src/commands.ts` map key
-  - `packages/rag/src/main.ts` map key(如适用)
+  - `packages/kscli/src/main.ts` map key(如适用)
   - 用户可见 hint / README / tests
   - `skills/bailian-cli/reference/`(重建后检查并提交)
 - [ ] 检查 `usageArgs` / `exampleArgs` 没有硬编码旧的 `bl <path>` 前缀
@@ -112,16 +112,16 @@ packages/commands/src/index.ts
 
 ```sh
 pnpm run sync:skill-assets
-node packages/cli/src/main.ts <new-command> --help
-node packages/cli/src/main.ts
-vp test packages/commands/tests/e2e/<topic>.e2e.test.ts
+pnpm -F bailian-cli exec tsx src/main.ts <new-command> --help
+pnpm -F bailian-cli exec tsx src/main.ts
+vp test packages/cli/tests/e2e/<topic>.e2e.test.ts
 node tools/compare-e2e-command-map.ts
 ```
 
-如改了 `rag` 入口:
+如改了 `kscli` 入口:
 
 ```sh
-node packages/rag/src/main.ts <command> --help
+pnpm -F knowledge-studio-cli exec tsx src/main.ts <command> --help
 ```
 
 ## 常见漏点
@@ -129,6 +129,6 @@ node packages/rag/src/main.ts <command> --help
 - ✗ 只新增 `packages/commands/src/commands/...` 文件,忘了在 `packages/commands/src/index.ts` 导出
 - ✗ 只导出了命令实现,忘了在 `packages/cli/src/commands.ts` 暴露路径 → `bl --help` 看不到
 - ✗ 手改 `skills/bailian-cli/reference/*.md` → 下次 generate 被覆盖;应改 command metadata 后重新 generate 并提交
-- ✗ 在 `usageArgs` / `exampleArgs` 写死 `bl text chat` → `rag` 等入口复用时 help 错
+- ✗ 在 `usageArgs` / `exampleArgs` 写死 `bl text chat` → `kscli` 等入口复用时 help 错
 - ✗ Console Gateway 命令忘设 `auth: "console"` → console flags / credential 注入都不生效
 - ✗ 单 action 的子组是反模式,新增时优先拍平为两级

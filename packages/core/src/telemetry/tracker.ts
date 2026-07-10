@@ -1,5 +1,6 @@
 import type { Identity, Settings } from "../config/schema.ts";
 import { BailianError } from "../errors/base.ts";
+import type { AuthRequirement } from "../types/command.ts";
 import { createTrackingEvent } from "./event.ts";
 import { localSink, remoteSink } from "./sink.ts";
 
@@ -81,11 +82,11 @@ function extractParams(flags: Record<string, unknown>): Record<string, unknown> 
   return params;
 }
 
-/** 遥测依赖:authMethod 由调用方(telemetryStage)从解析结果算好后传值——遥测不该拿到凭证能力。 */
+/** 遥测只记录命令声明的鉴权域,不接触具体凭证能力。 */
 export interface TrackingDeps {
   identity: Identity;
   settings: Settings;
-  authMethod?: "api-key" | "access-token";
+  authMethod?: AuthRequirement;
 }
 
 export async function trackCommandExecution(

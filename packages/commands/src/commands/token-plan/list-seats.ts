@@ -9,12 +9,10 @@ import {
 import { emitResult, emitBare, padEnd } from "bailian-cli-runtime";
 import type { GetSubscriptionSeatDetailsResponse, TokenPlanSeatDetail } from "./types.ts";
 import {
-  TOKEN_PLAN_AK_FLAGS,
   TOKEN_PLAN_COMMON_QUERY_FLAGS,
   appendCommonQueryParams,
   callTokenPlanApi,
   prepareTokenPlanRequest,
-  resolveTokenPlanCredentials,
   type TokenPlanQueryParams,
 } from "./utils.ts";
 
@@ -47,14 +45,12 @@ const LIST_SEATS_FLAGS = {
     valueHint: "<bool>",
     description: "Filter by assignment: true=assigned, false=unassigned",
   },
-  ...TOKEN_PLAN_AK_FLAGS,
 } satisfies FlagsDef;
 type ListSeatsFlags = ParsedFlags<typeof LIST_SEATS_FLAGS>;
 
 export default defineCommand({
   description: "List Token Plan subscription seat details",
-  // AK/SK 私有解析(见 utils.ts),不走集中凭证域。
-  auth: "none",
+  auth: "openapi",
   usageArgs: "[flags]",
   flags: LIST_SEATS_FLAGS,
   exampleArgs: ["", "--page-size 20 --status NORMAL", "--query-assigned true --seat-type standard"],
@@ -73,11 +69,9 @@ export default defineCommand({
       return;
     }
 
-    const credentials = resolveTokenPlanCredentials(flags);
     const data = await callTokenPlanApi<GetSubscriptionSeatDetailsResponse>({
-      settings,
+      client: ctx.client,
       baseUrl: ctx.client.baseUrl,
-      credentials,
       action: API_ACTION,
       path: API_PATH,
       method: "GET",

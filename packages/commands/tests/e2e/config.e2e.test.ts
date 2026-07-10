@@ -132,4 +132,34 @@ describe("e2e: config", () => {
     const data = parseStdoutJson<{ would_set?: { default_text_model?: string } }>(stdout);
     expect(data.would_set?.default_text_model).toBe("qwen3.7-max");
   });
+
+  test("config set --dry-run 支持 AccessKey 短字段别名", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e([
+      "config",
+      "set",
+      "--dry-run",
+      "--key",
+      "access-key-id",
+      "--value",
+      "LTAI-config-placeholder",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ would_set?: { access_key_id?: string } }>(stdout);
+    expect(data.would_set?.access_key_id).toBe("LTAI-config-placeholder");
+  });
+
+  test("config set 不接受旧 OpenAPI AccessKey 字段名", async () => {
+    const { stderr, exitCode } = await runCommandE2e([
+      "config",
+      "set",
+      "--key",
+      "openapi_access_key_id",
+      "--value",
+      "LTAI-config-placeholder",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/Invalid config key|openapi_access_key_id/);
+  });
 });

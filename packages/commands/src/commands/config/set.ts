@@ -15,6 +15,8 @@ const VALID_KEYS = [
   "timeout",
   "api_key",
   "access_token",
+  "access_key_id",
+  "access_key_secret",
   "default_text_model",
   "default_video_model",
   "default_image_model",
@@ -26,7 +28,7 @@ const VALID_KEYS = [
 // Keys whose values are secrets. Their stored value must never be echoed back in
 // cleartext (CI logs, pipes, shared terminals); show a masked form instead — the
 // same policy `config show` and `auth status` already follow.
-const SECRET_KEYS = new Set(["api_key", "access_token"]);
+const SECRET_KEYS = new Set(["api_key", "access_token", "access_key_id", "access_key_secret"]);
 
 // Allow hyphen-style keys (e.g. default-text-model → default_text_model)
 const KEY_ALIASES: Record<string, string> = {
@@ -34,6 +36,8 @@ const KEY_ALIASES: Record<string, string> = {
   "output-dir": "output_dir",
   "api-key": "api_key",
   "access-token": "access_token",
+  "access-key-id": "access_key_id",
+  "access-key-secret": "access_key_secret",
   "default-text-model": "default_text_model",
   "default-video-model": "default_video_model",
   "default-image-model": "default_image_model",
@@ -51,7 +55,7 @@ export default defineCommand({
       type: "string",
       valueHint: "<key>",
       description:
-        "Config key (base_url, output, output_dir, timeout, api_key, access_token, default_*_model, workspace_id)",
+        "Config key (base_url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, default_*_model, workspace_id)",
       required: true,
     },
     value: { type: "string", valueHint: "<value>", description: "Value to set", required: true },

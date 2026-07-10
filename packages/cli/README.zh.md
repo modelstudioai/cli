@@ -163,13 +163,17 @@ bl text chat --api-key sk-xxxxx --message "你好"
 bl auth login --console
 ```
 
-### 阿里云 AK/SK（仅 Token Plan）
+### 阿里云 OpenAPI AK/SK（仅 Token Plan）
 
 `token-plan` 命令组需要阿里云 AccessKey。前往 [RAM 控制台](https://ram.console.aliyun.com/manage/ak) 获取。
 
 > 建议：创建 RAM 子账号并授予最小权限，避免使用主账号 AK/SK。
 
 ```bash
+# 方式一：登录命令（持久化到 ~/.bailian/config.json）
+bl auth login --open-api --access-key-id LTAI5t... --access-key-secret ...
+
+# 方式二：环境变量
 export ALIBABA_CLOUD_ACCESS_KEY_ID=LTAI5t...
 export ALIBABA_CLOUD_ACCESS_KEY_SECRET=...
 export BAILIAN_WORKSPACE_ID=ws-...

@@ -5,7 +5,6 @@
     "moduleDetection": "force",
     "module": "nodenext",
     "moduleResolution": "nodenext",
-    "customConditions": ["@bailian-cli/source"],
     "resolveJsonModule": true,
     "types": ["node"],
     "strict": true,
@@ -17,5 +16,6 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
-  }
+  },
+  "include": ["src/**/*"]
 }

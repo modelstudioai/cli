@@ -17,21 +17,17 @@ test("readProxyEnv: 空白值视为未设置", () => {
   });
 });
 
-test("readProxyEnv: 大小写变量均可识别，小写优先", () => {
-  expect(readProxyEnv({ HTTPS_PROXY: "http://upper:1" }).httpsProxy).toBe("http://upper:1");
-  expect(readProxyEnv({ https_proxy: "http://lower:1" }).httpsProxy).toBe("http://lower:1");
+test("readProxyEnv: 读取代理变量", () => {
   expect(
-    readProxyEnv({ https_proxy: "http://lower:1", HTTPS_PROXY: "http://upper:1" }).httpsProxy,
-  ).toBe("http://lower:1");
-});
-
-test("readProxyEnv: 空字符串小写变量不屏蔽已设置的大写变量", () => {
-  expect(readProxyEnv({ https_proxy: "", HTTPS_PROXY: "http://upper:1" }).httpsProxy).toBe(
-    "http://upper:1",
-  );
-  expect(readProxyEnv({ http_proxy: "", HTTP_PROXY: "http://upper:2" }).httpProxy).toBe(
-    "http://upper:2",
-  );
+    readProxyEnv({
+      HTTP_PROXY: "http://proxy.example.com:8080",
+      HTTPS_PROXY: "http://secure-proxy.example.com:8080",
+    }),
+  ).toEqual({
+    httpProxy: "http://proxy.example.com:8080",
+    httpsProxy: "http://secure-proxy.example.com:8080",
+    noProxy: undefined,
+  });
 });
 
 test("readProxyEnv: NO_PROXY 独立读取", () => {

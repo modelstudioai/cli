@@ -18,8 +18,16 @@ export interface ConsoleCredential {
   source: CredentialSource;
 }
 
+/** Credential for Alibaba Cloud OpenAPI calls signed with AK/SK. */
+export interface OpenApiCredential {
+  accessKeyId: string;
+  accessKeySecret: string;
+  source: CredentialSource;
+}
+
 /** Full auth snapshot for display (`bl auth status`) — what would resolve per domain. */
 export interface AuthState {
   apiKey?: ApiKeyCredential;
   console?: ConsoleCredential;
+  openapi?: OpenApiCredential;
 }

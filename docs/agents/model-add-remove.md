@@ -42,9 +42,9 @@
 
 ```sh
 # 默认模型走通
-node packages/cli/src/main.ts <command> --message "test"
+pnpm -F bailian-cli exec tsx src/main.ts <command> --message "test"
 # 显式指定新模型
-node packages/cli/src/main.ts <command> --model <new-model> --message "test"
+pnpm -F bailian-cli exec tsx src/main.ts <command> --model <new-model> --message "test"
 ```
 
 ## 常见漏点

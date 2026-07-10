@@ -6,7 +6,9 @@
  * Committed to git; consumed by the `bailian-cli` Agent Skill (`npx skills add modelstudioai/cli`).
  *
  * Run: pnpm --filter bailian-cli run generate:reference
- * (Also run via `pnpm run sync:skill-assets` or the repo pre-commit hook; requires built `bailian-cli-core`.)
+ * Also run via `pnpm run sync:skill-assets` or the repo pre-commit hook.
+ * Uses tsx because workspace packages resolve to source locally.
+ * Requires built `bailian-cli-core` for shared flag constants.
  */
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -15,6 +17,7 @@ import {
   CONSOLE_AUTH_FLAGS,
   GLOBAL_FLAGS,
   MODEL_AUTH_FLAGS,
+  OPENAPI_AUTH_FLAGS,
   credentialFlagDefs,
 } from "../packages/core/dist/index.mjs";
 import type { AnyCommand, FlagDef, FlagsDef } from "../packages/core/src/index.ts";
@@ -203,11 +206,18 @@ function buildIndex(
     "",
     formatFlagsTable(CONSOLE_AUTH_FLAGS),
     "",
+    "## OpenAPI auth flags",
+    "",
+    "Available on OpenAPI-domain commands (AK/SK auth); also listed per command below:",
+    "",
+    formatFlagsTable(OPENAPI_AUTH_FLAGS),
+    "",
     "## Notes",
     "",
     "- Console commands (`app list`, `usage free`, `console call`) require `bl auth login --console`.",
     "- Most API commands use `DASHSCOPE_API_KEY` or `bl auth login --api-key`.",
-    "- Default output: **text** in TTY; **json** when piped.",
+    "- Token Plan commands use OpenAPI AK/SK via `bl auth login --open-api` or `ALIBABA_CLOUD_ACCESS_KEY_ID` / `ALIBABA_CLOUD_ACCESS_KEY_SECRET`.",
+    "- Default output: **text** unless explicitly set to `json` with `--output`, `DASHSCOPE_OUTPUT`, or config.",
     "",
   );
 

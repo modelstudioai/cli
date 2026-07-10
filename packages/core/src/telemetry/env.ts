@@ -3,7 +3,7 @@
  *
  * 1. NODE_ENV=development — Node 圈通用约定,测试同学/CI 可显式声明
  * 2. 当前模块文件路径不在 node_modules 里 — 自动识别从源码运行(pnpm dev /
- *    npm link / 直接 node packages/cli/src/main.ts),避免开发者忘记设环境变量
+ *    npm link / 直接 pnpm -F bailian-cli exec tsx src/main.ts),避免开发者忘记设环境变量
  *    时仍把数据打到 prod
  *
  * 缓存结果,模块加载期算一次就行。

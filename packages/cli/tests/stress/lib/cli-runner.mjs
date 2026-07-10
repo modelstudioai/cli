@@ -1,7 +1,8 @@
 /**
- * 子进程执行 CLI：spawn node main.ts，解析 stdout。
+ * 子进程执行 CLI：spawn 仓库本地 tsx main.ts，解析 stdout。
  */
 import { spawn } from "node:child_process";
+import { resolveTsxBin } from "./paths.mjs";
 import { truncateLog, extractError, isRateLimitFailure } from "./parsers.mjs";
 import { captureTraceIdsFromText, enrichTraceIdsAsync } from "./trace-ids.mjs";
 
@@ -51,12 +52,13 @@ export function executeSingleCli(ctx) {
     parseStdout,
     readFileOptional,
     asrOutPath,
+    TSX_BIN = resolveTsxBin(),
   } = ctx;
 
   const startedAt = Date.now();
 
   return new Promise((resolve) => {
-    const child = spawn("node", [MAIN_TS, ...stressCliArgs(cliArgs)], {
+    const child = spawn(TSX_BIN, [MAIN_TS, ...stressCliArgs(cliArgs)], {
       cwd: CLI_PACKAGE,
       env: process.env,
       stdio: ["ignore", "pipe", "pipe"],

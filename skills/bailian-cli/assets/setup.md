@@ -1,6 +1,6 @@
 # Setup, authentication & configuration
 
-> Hand-maintained. Lives in `assets/` (not auto-generated from `catalog.ts`).
+> Hand-maintained. Lives in `assets/` (not auto-generated from command metadata).
 > Entry point: [SKILL.md → Setup & auth](../SKILL.md#setup--auth).
 
 Read this only when you need to install `bl`, change credentials/endpoint, or
@@ -21,15 +21,17 @@ Verify: `bl --version` (prints `bl X.Y.Z`).
 
 ## Authentication
 
-| Auth          | How                                                                      | Used by                                  |
-| ------------- | ------------------------------------------------------------------------ | ---------------------------------------- |
-| API key       | `export DASHSCOPE_API_KEY=sk-...` or `bl auth login --api-key sk-...`    | Most DashScope API commands              |
-| Console token | `bl auth login --console --console-site domestic` or `... international` | `app list`, `usage free`, `console call` |
+| Auth       | How                                                                                              | Used by                                  |
+| ---------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| API key    | `export DASHSCOPE_API_KEY=sk-...` or `bl auth login --api-key sk-...`                            | Most DashScope API commands              |
+| Console    | `bl auth login --console --console-site domestic` or `... international`                         | `app list`, `usage free`, `console call` |
+| OpenAPI AK | `bl auth login --open-api --access-key-id <id> --access-key-secret <secret>` or Alibaba env vars | `token-plan *`                           |
 
 ```bash
 bl auth status            # check current auth
 bl auth logout            # clear credentials
 bl auth logout --console  # clear console token only
+bl auth logout --open-api # clear OpenAPI AK/SK only
 ```
 
 Get an API key: https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key
@@ -88,7 +90,7 @@ Default: `https://dashscope.aliyuncs.com` (China). Override with any of:
 ## Configuration
 
 - **Config file:** `~/.bailian/config.json`
-- **Env:** `DASHSCOPE_API_KEY`, `DASHSCOPE_BASE_URL`, `DASHSCOPE_OUTPUT`
+- **Env:** `DASHSCOPE_API_KEY`, `DASHSCOPE_BASE_URL`, `DASHSCOPE_OUTPUT`, `ALIBABA_CLOUD_ACCESS_KEY_ID`, `ALIBABA_CLOUD_ACCESS_KEY_SECRET`, `BAILIAN_WORKSPACE_ID`
 
 ```bash
 bl config show
@@ -96,10 +98,5 @@ bl config set --key default-text-model --value qwen3.7-max
 bl config set --key output_dir --value ~/bailian-output
 ```
 
-Valid config keys and the export-schema for agent tool definitions:
-see [`reference/config.md`](../reference/config.md).
-
-```bash
-bl config export-schema                          # all commands as JSON tool schemas
-bl config export-schema --command "image generate"
-```
+Valid config keys are listed in [`reference/config.md`](../reference/config.md)
+and `bl config set --help`.

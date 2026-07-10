@@ -6,15 +6,16 @@ import type {
   ConsoleCredential,
   FlagsDef,
   Identity,
+  OpenApiCredential,
   ParsedFlags,
   ResolutionSources,
   Settings,
 } from "bailian-cli-core";
 import {
   Client,
-  describeAuthState,
   resolveApiKey,
   resolveConsole,
+  resolveOpenApi,
   resolveModelBaseUrl,
   trackCommandExecution,
 } from "bailian-cli-core";
@@ -69,8 +70,8 @@ export function compose(stack: Middleware[]): (ctx: RunContext) => Promise<void>
 
 /**
  * Bake the credential for the command's declared `auth` into `ctx.client`, and
- * gate: no credential → throw before the command runs. dry-run 例外:两域解析失败
- * 都不抛(dry-run 只打印请求,无需凭证;console 的 dry-run 展示读 settings.console*)。
+ * gate: no credential → throw before the command runs. dry-run 例外:凭证解析失败
+ * 不抛(dry-run 只打印请求,无需凭证;console 的 dry-run 展示读 settings.console*)。
  * `auth: "none"` commands keep a credential-less client.
  */
 export const authStage: Middleware = async (ctx, next) => {
@@ -93,16 +94,22 @@ export const authStage: Middleware = async (ctx, next) => {
       if (!settings.dryRun) throw err;
     }
     if (cred) ctx.client = new Client({ ...base, consoleCred: cred });
+  } else if (command.auth === "openapi") {
+    let cred: OpenApiCredential | undefined;
+    try {
+      cred = resolveOpenApi(sources);
+    } catch (err) {
+      if (!settings.dryRun) throw err;
+    }
+    ctx.client = new Client({ ...base, openApiCred: cred });
   }
   await next();
 };
 
 /** Record command execution (start / success / failure) around the command. */
 export const telemetryStage: Middleware = (ctx, next) => {
-  const auth = describeAuthState(ctx.sources);
-  const authMethod = auth.apiKey ? "api-key" : auth.console ? "access-token" : undefined;
   return trackCommandExecution(
-    { identity: ctx.identity, settings: ctx.settings, authMethod },
+    { identity: ctx.identity, settings: ctx.settings, authMethod: ctx.command.auth },
     ctx.path,
     ctx.flags,
     next,

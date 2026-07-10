@@ -11,9 +11,6 @@ export default defineConfig({
     dts: {
       tsgo: true,
     },
-    exports: {
-      devExports: "@bailian-cli/source",
-    },
   },
   lint: {
     options: {

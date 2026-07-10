@@ -1,9 +1,10 @@
-import type { AnyCommand, FlagDef } from "bailian-cli-core";
+import type { AnyCommand, AuthRequirement, FlagDef, FlagsDef } from "bailian-cli-core";
 import { UsageError } from "bailian-cli-core";
 import {
   CONSOLE_AUTH_FLAGS,
   GLOBAL_FLAGS,
   MODEL_AUTH_FLAGS,
+  OPENAPI_AUTH_FLAGS,
   credentialFlagDefs,
 } from "bailian-cli-core";
 import { camelToKebab } from "./args.ts";
@@ -41,6 +42,7 @@ export class CommandRegistry {
   private root: CommandNode = { children: new Map() };
   /** Binary name shown in usage/help/error strings (e.g. "bl", "rag"). */
   private readonly cliName: string;
+  private readonly authRequirements = new Set<AuthRequirement>();
 
   constructor(commands: Record<string, AnyCommand>, cliName: string) {
     this.cliName = cliName;
@@ -66,6 +68,7 @@ export class CommandRegistry {
       node = node.children.get(part)!;
     }
     node.command = command;
+    this.authRequirements.add(command.auth);
   }
 
   getAllCommands(): AnyCommand[] {
@@ -175,7 +178,7 @@ export class CommandRegistry {
   }
 
   private buildFlagLines(
-    defs: Record<string, FlagDef>,
+    defs: FlagsDef,
     a: (s: string) => string,
     d: (s: string) => string,
   ): string {
@@ -185,6 +188,19 @@ export class CommandRegistry {
     }));
     const maxLen = Math.max(...lines.map((l) => l.flag.length));
     return lines.map((l) => `  ${a(l.flag.padEnd(maxLen + 2))} ${d(l.desc)}`).join("\n");
+  }
+
+  private buildAuthFlagSection(
+    auth: AuthRequirement,
+    label: string,
+    scope: string,
+    defs: FlagsDef,
+    b: (s: string) => string,
+    a: (s: string) => string,
+    d: (s: string) => string,
+  ): string | null {
+    if (!this.authRequirements.has(auth)) return null;
+    return `${b(label)} ${d(scope)}\n${this.buildFlagLines(defs, a, d)}`;
   }
 
   // Color helpers — no-ops when output is not a TTY.
@@ -267,8 +283,37 @@ ${d(`  ${this.cliName} pipeline run workflow.yaml --dry-run --output json`)}
 
     const commandLines = this.buildResourceLines(a, d);
     const globalFlagLines = this.buildFlagLines(GLOBAL_FLAGS, a, d);
-    const modelFlagLines = this.buildFlagLines(MODEL_AUTH_FLAGS, a, d);
-    const consoleFlagLines = this.buildFlagLines(CONSOLE_AUTH_FLAGS, a, d);
+    const authFlagSections = [
+      this.buildAuthFlagSection(
+        "apiKey",
+        "Model Auth Flags:",
+        "(model-domain commands)",
+        MODEL_AUTH_FLAGS,
+        b,
+        a,
+        d,
+      ),
+      this.buildAuthFlagSection(
+        "console",
+        "Console Auth Flags:",
+        "(console-domain commands)",
+        CONSOLE_AUTH_FLAGS,
+        b,
+        a,
+        d,
+      ),
+      this.buildAuthFlagSection(
+        "openapi",
+        "OpenAPI Auth Flags:",
+        "(openapi-domain commands)",
+        OPENAPI_AUTH_FLAGS,
+        b,
+        a,
+        d,
+      ),
+    ]
+      .filter((section): section is string => section !== null)
+      .join("\n\n");
 
     out.write(`
 ${b("Usage:")} ${this.cliName} <resource> <command> [flags]
@@ -279,13 +324,7 @@ ${commandLines}
 ${b("Global Flags:")}
 ${globalFlagLines}
 
-${b("Model Auth Flags:")} ${d("(model-domain commands)")}
-${modelFlagLines}
-
-${b("Console Auth Flags:")} ${d("(console-domain commands)")}
-${consoleFlagLines}
-
-${b("Getting Help:")}
+${authFlagSections ? `${authFlagSections}\n\n` : ""}${b("Getting Help:")}
   ${d("Add --help after any command to see its full list of flags, defaults,")}
   ${d("and usage examples. For example:")} ${this.cliName} ${this.helpExample()} --help
 `);

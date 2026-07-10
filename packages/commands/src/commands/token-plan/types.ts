@@ -1,5 +1,3 @@
-// ---- Token Plan / ModelStudio POP (2026-02-10) ----
-
 export interface TokenPlanSeatEquity {
   EquityType?: string;
   CycleInstanceId?: string;
