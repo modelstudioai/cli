@@ -50,6 +50,7 @@
     "@types/node": "catalog:",
     "@typescript/native-preview": "7.0.0-dev.20260328.1",
     "ajv": "catalog:",
+    "e2e": "workspace:*",
     "typescript": "^6.0.2",
     "vite-plus": "0.1.22",
     "yaml": "catalog:"
