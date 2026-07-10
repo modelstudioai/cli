@@ -47,6 +47,7 @@ export const IMAGE_ROUTES: E2eRouteExports = {
 };
 
 export const VIDEO_ROUTES: E2eRouteExports = {
+  "image generate": "imageGenerate",
   "video generate": "videoGenerate",
   "video edit": "videoEdit",
   "video ref": "videoRef",
@@ -72,7 +73,10 @@ export const PIPELINE_ROUTES: E2eRouteExports = {
   "pipeline validate": "pipelineValidate",
 };
 
-export const OMNI_ROUTES: E2eRouteExports = { omni: "textOmni" };
+export const OMNI_ROUTES: E2eRouteExports = {
+  omni: "textOmni",
+  "speech synthesize": "speechSynthesize",
+};
 
 export const FILE_UPLOAD_ROUTES: E2eRouteExports = { "file upload": "fileUpload" };
 
@@ -92,7 +96,9 @@ export const USAGE_ROUTES: E2eRouteExports = {
 };
 
 export const DEPLOY_ROUTES: E2eRouteExports = {
-  "deploy create": "deployCreate",
+  "deploy text create": "deployTextCreate",
+  "deploy audio create": "deployAudioCreate",
+  "deploy image create": "deployImageCreate",
   "deploy list": "deployList",
   "deploy get": "deployGet",
   "deploy models": "deployModels",
@@ -110,7 +116,9 @@ export const DATASET_ROUTES: E2eRouteExports = {
 };
 
 export const FINETUNE_ROUTES: E2eRouteExports = {
-  "finetune create": "finetuneCreate",
+  "finetune text create": "finetuneTextCreate",
+  "finetune audio create": "finetuneAudioCreate",
+  "finetune image create": "finetuneImageCreate",
   "finetune list": "finetuneList",
   "finetune get": "finetuneGet",
   "finetune cancel": "finetuneCancel",
@@ -123,6 +131,7 @@ export const FINETUNE_ROUTES: E2eRouteExports = {
 };
 
 export const CONSOLE_FLAGS_DRY_RUN_ROUTES: E2eRouteExports = {
+  "auth login": "authLogin",
   "console call": "consoleCall",
   "mcp list": "mcpList",
   "quota check": "quotaCheck",

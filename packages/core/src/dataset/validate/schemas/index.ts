@@ -16,11 +16,21 @@ import type { RecordSchemaSpec } from "./types.ts";
 import { chatmlSchema } from "./chatml.ts";
 import { cptSchema } from "./cpt.ts";
 import { dpoSchema } from "./dpo.ts";
+import { ttsSchema } from "./tts.ts";
+import { imageSchema } from "./image.ts";
+import { videoSchema } from "./video.ts";
 
-// Order matters: DPO (chosen/rejected) and CPT (text) before ChatML (the
-// catch-all fallback). Each keys off a distinguishing field so the three
-// partition cleanly — DPO never looks like CPT, etc.
-export const RECORD_SCHEMAS: RecordSchemaSpec[] = [dpoSchema, cptSchema, chatmlSchema];
+// Order matters: TTS (wav_fn), image (img_path), video (first_frame_path/
+// video_path), DPO (chosen/rejected) and CPT (text) before ChatML (the catch-
+// all fallback). Each keys off a distinguishing field so they partition cleanly.
+export const RECORD_SCHEMAS: RecordSchemaSpec[] = [
+  ttsSchema,
+  imageSchema,
+  videoSchema,
+  dpoSchema,
+  cptSchema,
+  chatmlSchema,
+];
 
 /**
  * Pick the right schema for a single parsed record.
