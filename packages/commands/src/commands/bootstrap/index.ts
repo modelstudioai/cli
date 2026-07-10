@@ -4,6 +4,7 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 const API = {
   loginInfo: "zeldaEasy.cornerstone-portal.cs-console.loginInfo",
   initSpace: "zeldaEasy.bailian-dash-workspace.space.initSpace",
+  createUser: "zeldaEasy.bailian-dash-workspace.account.createUser",
   queryBuyResult: "zeldaEasy.bailian-commerce.bill.queryBuyPostpaidResult",
   commodityOrderInfo: "zeldaEasy.bailian-commerce.bill.postpaidCommodityOrderInfo",
   buyCommodity: "zeldaEasy.bailian-commerce.bill.buyPostpaidCommodity",
@@ -51,16 +52,21 @@ export default defineCommand({
             },
             {
               step: 3,
+              api: API.createUser,
+              description: "Create console account user",
+            },
+            {
+              step: 4,
               api: API.queryBuyResult,
               description: "Query postpaid order status",
             },
             {
-              step: 4,
+              step: 5,
               api: API.commodityOrderInfo,
               description: "Query commodity activation status",
             },
             {
-              step: 5,
+              step: 6,
               api: API.buyCommodity,
               description: "Activate postpaid commodities (if needed)",
             },
@@ -72,14 +78,18 @@ export default defineCommand({
     }
 
     const verbose = settings.verbose;
-    const callApi = async (api: string) => {
+    const callApi = async (api: string, data: Record<string, unknown> = {}) => {
       if (verbose) process.stderr.write(`> ${api}\n`);
       try {
-        const resp = await ctx.client.console<any>(api, {});
+        const resp = await ctx.client.console<any>(api, data);
         if (verbose) process.stderr.write(`< ${JSON.stringify(resp)}\n`);
         return resp;
       } catch (err) {
-        if (verbose) process.stderr.write(`< ERROR: ${err instanceof Error ? err.message : err}\n`);
+        if (verbose) {
+          const message =
+            err instanceof BailianError ? (err.rawResponse ?? err.message) : String(err);
+          process.stderr.write(`< ERROR: ${message}\n`);
+        }
         throw err;
       }
     };
@@ -99,12 +109,25 @@ export default defineCommand({
       emitBare("Workspace already initialized.");
     }
 
-    // Step 3-5: Order & commodity flow
+    // Step 3: Create console user
+    const uid = loginData?.aliyun?.uid;
+    if (typeof uid !== "string" || uid.length === 0) {
+      throw new BailianError("Console login info did not include aliyun.uid.", ExitCode.GENERAL);
+    }
+    await callApi(API.createUser, {
+      reqDTO: {
+        outerKey: uid,
+        nickName: uid,
+        userName: uid,
+      },
+    });
+
+    // Step 4-6: Order & commodity flow
     await ensureCommoditiesActive(callApi, format);
   },
 });
 
-type ApiCall = (api: string) => Promise<any>;
+type ApiCall = (api: string, data?: Record<string, unknown>) => Promise<any>;
 
 async function ensureCommoditiesActive(call: ApiCall, format: "text" | "json"): Promise<void> {
   emitBare("Checking service activation status...");

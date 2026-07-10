@@ -9,12 +9,14 @@ export interface ApiErrorContext {
 export interface BailianErrorOptions {
   cause?: unknown;
   api?: ApiErrorContext;
+  rawResponse?: string;
 }
 
 export class BailianError extends Error {
   readonly exitCode: ExitCode;
   readonly hint?: string;
   readonly api?: ApiErrorContext;
+  readonly rawResponse?: string;
 
   constructor(
     message: string,
@@ -27,6 +29,7 @@ export class BailianError extends Error {
     this.exitCode = exitCode;
     this.hint = hint;
     this.api = options?.api;
+    this.rawResponse = options?.rawResponse;
   }
 
   toJSON() {
