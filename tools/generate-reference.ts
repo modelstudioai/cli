@@ -6,7 +6,9 @@
  * Committed to git; consumed by the `bailian-cli` Agent Skill (`npx skills add modelstudioai/cli`).
  *
  * Run: pnpm --filter bailian-cli run generate:reference
- * (Also run via `pnpm run sync:skill-assets` or the repo pre-commit hook; requires built `bailian-cli-core`.)
+ * Also run via `pnpm run sync:skill-assets` or the repo pre-commit hook.
+ * Uses tsx because workspace packages resolve to source locally.
+ * Requires built `bailian-cli-core` for shared flag constants.
  */
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -215,7 +217,7 @@ function buildIndex(
     "- Console commands (`app list`, `usage free`, `console call`) require `bl auth login --console`.",
     "- Most API commands use `DASHSCOPE_API_KEY` or `bl auth login --api-key`.",
     "- Token Plan commands use OpenAPI AK/SK via `bl auth login --open-api` or `ALIBABA_CLOUD_ACCESS_KEY_ID` / `ALIBABA_CLOUD_ACCESS_KEY_SECRET`.",
-    "- Default output: **text** in TTY; **json** when piped.",
+    "- Default output: **text** unless explicitly set to `json` with `--output`, `DASHSCOPE_OUTPUT`, or config.",
     "",
   );
 

@@ -66,12 +66,12 @@ config 文件     ─┘
 
 ```sh
 # 三个来源都试一遍
-node packages/cli/src/main.ts config show --output json | grep <new-field>
-XXX=value node packages/cli/src/main.ts config show --output json | grep <new-field>
-node packages/cli/src/main.ts config show --xxx value --output json | grep <new-field>
+pnpm -F bailian-cli exec tsx src/main.ts config show --output json | grep <new-field>
+XXX=value pnpm -F bailian-cli exec tsx src/main.ts config show --output json | grep <new-field>
+pnpm -F bailian-cli exec tsx src/main.ts config show --xxx value --output json | grep <new-field>
 
 # 写到文件(会改用户 HOME,必要时先用临时 HOME)
-node packages/cli/src/main.ts config set --key <key> --value <value>
+pnpm -F bailian-cli exec tsx src/main.ts config set --key <key> --value <value>
 cat ~/.bailian/config.json
 ```
 

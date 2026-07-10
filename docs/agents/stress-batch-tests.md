@@ -115,7 +115,7 @@ pnpm run test:stress -- video-edit --reuse-fixtures -- --count 3
 
 ### 子进程调用方式
 
-- **实际执行**：`node packages/cli/src/main.ts <args>`，`cwd` 为 `packages/cli`
+- **实际执行**：仓库本地 `tsx src/main.ts <args>`，`cwd` 为 `packages/cli`
 - **禁止**用 `pnpm run dev` 跑子任务：`pnpm` 会向 stdout 打生命周期日志，污染 JSON 解析
 - **报告中的「完整命令」**：用 `pnpm run dev ...` 展示（`buildDisplayCommand`）
 
@@ -191,7 +191,7 @@ pnpm run test:stress -- video-edit --reuse-fixtures -- --count 3
 ### 只改压测脚本时
 
 - [ ] `lib/paths.mjs` 解析的 `CLI_PACKAGE` / `MONOREPO_ROOT` 仍正确
-- [ ] 子进程仍为 `node` + `src/main.ts`，未改回裸 `pnpm run dev` 执行任务
+- [ ] 子进程仍为仓库本地 `tsx` + `src/main.ts`，未改回裸 `pnpm run dev` 执行任务
 - [ ] 未对子进程加 `--quiet`，视频未加 `--async`
 - [ ] `parsers.mjs` 与文档中的成功判定一致
 - [ ] 根 `package.json` 仅保留 `test:stress` 入口指向 `run.mjs`

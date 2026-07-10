@@ -10,14 +10,14 @@ monorepo 现在按"纯逻辑 → 运行时框架 → 命令库 → 产品入口"
 - `packages/runtime` — `bailian-cli-runtime`,通用 CLI 运行时:`createCli`、参数解析、registry/help、middleware、error handler、输出、pipeline
 - `packages/commands` — `bailian-cli-commands`,可复用命令实现库,只导出 command,不决定产品路径
 - `packages/cli` — `bailian-cli`,完整 `bl` 产品入口;`src/commands.ts` 组装 `bl` 暴露的命令路径
-- `packages/rag` — `bailian-cli-rag`,知识库向入口;`src/main.ts` 复用 commands 并重映射为 `rag` 路径
+- `packages/kscli` — `knowledge-studio-cli`,Knowledge Studio 专用入口;`src/main.ts` 复用 commands 并重映射为 `kscli` 路径
 
 ### 关键文件
 
 ```
 packages/cli/src/main.ts          # bl 入口,注入 binName/version/clientName/npmPackage
 packages/cli/src/commands.ts      # bl 产品命令 map,tools/generate-reference.ts 也读它
-packages/rag/src/main.ts          # rag 入口和命令 map
+packages/kscli/src/main.ts        # kscli 入口和命令 map
 
 packages/commands/src/index.ts    # re-export 单个命令实现
 packages/commands/src/commands/   # defineCommand({ auth, flags, usageArgs, exampleArgs, run })
@@ -38,9 +38,9 @@ Skill / 命令手册随 `skills/bailian-cli/` 经 `npx skills add modelstudioai/
 约定:
 
 - 命令实现文件路径仍按能力放置:`packages/commands/src/commands/text/chat.ts`
-- 产品命令路径由入口 map 决定:同一个实现可暴露为 `bl knowledge retrieve` 或 `rag retrieve`
+- 产品命令路径由入口 map 决定:同一个实现可暴露为 `bl knowledge retrieve` 或 `kscli retrieve`
 - `defineCommand` 只写命令元数据与逻辑: `auth`、`flags`、`usageArgs`、`exampleArgs`、`validate`、`run`
-- `usageArgs` / `exampleArgs` 不写 `bl` 或 `rag` 前缀;runtime / reference 生成器按产品路径补前缀
+- `usageArgs` / `exampleArgs` 不写 `bl` 或 `kscli` 前缀;runtime / reference 生成器按产品路径补前缀
 - 不再使用 `catalog.ts` 作为登记处;新增/重命名命令必须同时看命令库导出和产品入口 map
 
 非代码资产:
@@ -75,14 +75,14 @@ Skill / 命令手册随 `skills/bailian-cli/` 经 `npx skills add modelstudioai/
 
 ### 1. 发布包版本号同步
 
-源码包的 `version` 当前保持一致: `packages/core`、`packages/runtime`、`packages/commands`、`packages/cli`、`packages/rag`。做版本 bump 时一动多动。release 工具当前强校验 / 发布范围以 `tools/release/lib/packages.mjs` 为准;把新包纳入发布前必须同步该清单和 [publish.md](docs/agents/publish.md)。
+源码包的 `version` 当前保持一致: `packages/core`、`packages/runtime`、`packages/commands`、`packages/cli`、`packages/kscli`。做版本 bump 时一动多动。release 工具当前强校验 / 发布范围以 `tools/release/lib/packages.mjs` 为准;把新包纳入发布前必须同步该清单和 [publish.md](docs/agents/publish.md)。
 
 ### 2. 分层边界
 
-- `core` 是纯库:不依赖 `runtime` / `commands` / 产品入口;不调 `process.exit`;新增/改动时不硬编码 `bl` / `rag` 命令名、控制台 URL 或渠道追踪参数。当前遗留项见 [error-hint-change.md](docs/agents/error-hint-change.md) 与 [url-change.md](docs/agents/url-change.md),触碰相关代码时顺手收敛
+- `core` 是纯库:不依赖 `runtime` / `commands` / 产品入口;不调 `process.exit`;新增/改动时不硬编码 `bl` / `kscli` 命令名、控制台 URL 或渠道追踪参数。当前遗留项见 [error-hint-change.md](docs/agents/error-hint-change.md) 与 [url-change.md](docs/agents/url-change.md),触碰相关代码时顺手收敛
 - `runtime` 是通用 CLI 框架:可以处理 TTY、help、错误输出、middleware,但不写具体业务命令逻辑
 - `commands` 是命令实现库:不决定产品路径;不在 `usageArgs` / `exampleArgs` / hint 里硬编码产品 bin 前缀
-- `cli` / `rag` 是产品层:负责命令路径 map、产品 identity、README、技能 reference、发版入口
+- `cli` / `kscli` 是产品层:负责命令路径 map、产品 identity、README、技能 reference、发版入口
 - URL 集中在 `packages/runtime/src/urls.ts`(用户面控制台)和 `packages/core/src/config/schema.ts` / client 层(API)
 
 ### 3. 错误处理边界:CLI 不翻译服务端错误

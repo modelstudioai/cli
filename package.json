@@ -26,6 +26,7 @@
     "test:stress": "node packages/cli/tests/stress/run.mjs"
   },
   "devDependencies": {
+    "tsx": "catalog:",
     "vite-plus": "catalog:"
   },
   "engines": {

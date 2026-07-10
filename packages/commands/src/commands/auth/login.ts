@@ -1,5 +1,4 @@
 import { defineCommand, getConfigPath } from "bailian-cli-core";
-import { printQuickStart } from "bailian-cli-runtime";
 import { emitBare } from "bailian-cli-runtime";
 import {
   resolveConsoleOrigin,
@@ -133,6 +132,5 @@ export default defineCommand({
       await store.login({ base_url: baseUrl });
     }
     await validateAndPersistApiKey(deps, key, baseUrl || store.resolveBaseUrl());
-    printQuickStart();
   },
 });
