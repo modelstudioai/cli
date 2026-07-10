@@ -43,7 +43,6 @@ tools/generated
 # Test & scene outputs
 /test/
 packages/cli/scene/**/outputs/
-**/tests/**/*.d.ts
 
 # Environment variables (sensitive data)
 .env
