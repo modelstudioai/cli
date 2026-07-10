@@ -40,6 +40,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 - **模型推荐** — 描述你的场景，智能推荐最适合的模型；支持限定范围搜索、模型对比和替代发现
 - **微调与部署** — 上传数据集、创建 SFT/LoRA/DPO/CPT 调优任务（`finetune create`）、非阻塞探测任务状态（`finetune watch`）、按模型查训练能力（`finetune capability`），并把训练好的模型部署为推理服务（`deploy create`）
 - **控制台能力** — 浏览百炼应用（`app list`），查询模型免费额度（`usage free`），查看模型用量统计（`usage stats`），管理业务空间（`workspace list`），管理限流与提额（`quota list/request/check/history`）
+- **资产中心** — 管理模型生成资产（`asset-center list/get/download`）、收藏与回收站（`favorite`/`delete`）、容量统计（`stats`/`storage`）、OSS 转存（`oss slr/bind/show/update/unbind`）与转存日志（`transfer list`）
 - **本地文件自动上传** — 所有 URL 参数同时支持本地路径，免费临时存储 48 小时
 
 ## 示例:一句话生成一部电影短片
@@ -129,6 +130,13 @@ bl quota check                                        # 当前用量 vs 限流�
 bl quota request --model qwen3.6-plus --tpm 6000000   # 申请临时 TPM 提额
 bl quota history                                      # 查看提额历史记录
 
+# 资产中心 — 浏览、下载与管理模型生成资产（需控制台登录）
+bl asset-center list --type IMAGE
+bl asset-center get <asset-id> --include-download-url
+bl asset-center download --id <asset-id> --out ./image.png
+bl asset-center stats
+bl asset-center storage
+
 # Token Plan 团队版管理（需 AK/SK，见下方认证说明）
 bl token-plan list-seats                                # 查看订阅席位明细
 bl token-plan add-member --account-name dev --org-id org_xxx
@@ -157,7 +165,7 @@ bl text chat --api-key sk-xxxxx --message "你好"
 
 ### 控制台登录（OAuth）
 
-控制台能力命令（`app list`、`usage free`、`usage stats`、`workspace list`、`quota list/request/check/history`）需要使用此登录方式。打开浏览器跳转百炼控制台完成登录。
+控制台能力命令（`app list`、`usage free`、`usage stats`、`workspace list`、`quota list/request/check/history`、`asset-center *`）需要使用此登录方式。打开浏览器跳转百炼控制台完成登录。
 
 ```bash
 bl auth login --console
