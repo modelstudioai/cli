@@ -1,0 +1,25 @@
+{
+  "name": "e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared E2E harness utilities for bailian-cli monorepo (not published).",
+  "type": "module",
+  "exports": {
+    "./gating": "./src/gating.ts",
+    "./runner": "./src/run-subprocess.ts",
+    "./output": "./src/output.ts",
+    "./global-setup": "./src/global-setup.ts",
+    "./monorepo-root": "./src/monorepo-root.ts"
+  },
+  "dependencies": {
+    "bailian-cli-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "^6.0.2",
+    "vite-plus": "0.1.22"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

@@ -92,9 +92,12 @@ packages/commands/src/index.ts
 
 ### D. 测试层
 
-- [ ] 按 [cli-e2e-tests.md](cli-e2e-tests.md) 新建或更新 `packages/cli/tests/e2e/<topic>.e2e.test.ts`
-- [ ] 删除命令时一并删对应 e2e / README 示例 / reference 生成结果
-- [ ] 如果 shared command 在不同入口路径下复用,至少确保 `bl` 入口 e2e 覆盖;`rag` 入口改动需补对应入口测试或手工 smoke
+- [ ] 按 [cli-e2e-tests.md](cli-e2e-tests.md) 新建或更新 `packages/commands/tests/e2e/<topic>.e2e.test.ts`
+- [ ] 同步 `packages/commands/tests/e2e/harness/e2e-command-map.ts` 与 `E2E_COMMAND_EXPORTS`
+- [ ] `packages/cli/src/commands.ts` 增删 path 后跑 `node tools/compare-e2e-command-map.ts`（advisory）确认与 harness 一致
+- [ ] bl 产品 path 变更由 `packages/cli/tests/e2e/registry.smoke.e2e.test.ts` 覆盖；kscli 变更同步 `packages/kscli/tests/e2e/registry.smoke.e2e.test.ts`
+- [ ] 删除命令时一并删对应 commands e2e / README 示例 / reference 生成结果 / harness map 条目
+- [ ] 如果 shared command 在不同入口路径下复用,至少确保 commands e2e 覆盖 `bl` path；`rag` / `kscli` 入口改动需补对应 smoke 或说明不测 flat path live
 
 ### E. 重命名特殊处理
 
@@ -111,7 +114,8 @@ packages/commands/src/index.ts
 pnpm run sync:skill-assets
 node packages/cli/src/main.ts <new-command> --help
 node packages/cli/src/main.ts
-vp test packages/cli/tests/e2e/<topic>.e2e.test.ts
+vp test packages/commands/tests/e2e/<topic>.e2e.test.ts
+node tools/compare-e2e-command-map.ts
 ```
 
 如改了 `rag` 入口:

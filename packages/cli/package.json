@@ -59,6 +59,7 @@
     "ajv": "catalog:",
     "boxen": "catalog:",
     "chalk": "catalog:",
+    "e2e": "workspace:*",
     "typescript": "^6.0.2",
     "undici": "catalog:",
     "vite-plus": "0.1.22",

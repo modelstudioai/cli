@@ -70,6 +70,9 @@ importers:
       chalk:
         specifier: 'catalog:'
         version: 5.6.2
+      e2e:
+        specifier: workspace:*
+        version: link:../e2e
       typescript:
         specifier: ^6.0.2
         version: 6.0.3
@@ -107,6 +110,9 @@ importers:
       '@typescript/native-preview':
         specifier: 7.0.0-dev.20260328.1
         version: 7.0.0-dev.20260328.1
+      e2e:
+        specifier: workspace:*
+        version: link:../e2e
       typescript:
         specifier: ^6.0.2
         version: 6.0.3
@@ -131,6 +137,22 @@ importers:
         version: 6.0.3
       vite-plus:
         specifier: 'catalog:'
+        version: 0.1.22(@types/node@24.12.2)(jiti@2.6.1)(typescript@6.0.3)(vite@8.0.10(@types/node@24.12.2)(jiti@2.6.1)(yaml@2.8.3))(yaml@2.8.3)
+
+  packages/e2e:
+    dependencies:
+      bailian-cli-core:
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.12.2
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+      vite-plus:
+        specifier: 0.1.22
         version: 0.1.22(@types/node@24.12.2)(jiti@2.6.1)(typescript@6.0.3)(vite@8.0.10(@types/node@24.12.2)(jiti@2.6.1)(yaml@2.8.3))(yaml@2.8.3)
 
   packages/kscli:
@@ -163,6 +185,9 @@ importers:
       chalk:
         specifier: 'catalog:'
         version: 5.6.2
+      e2e:
+        specifier: workspace:*
+        version: link:../e2e
       typescript:
         specifier: ^6.0.2
         version: 6.0.3
@@ -203,6 +228,12 @@ importers:
       ajv:
         specifier: 'catalog:'
         version: 8.20.0
+      bailian-cli-commands:
+        specifier: workspace:*
+        version: link:../commands
+      e2e:
+        specifier: workspace:*
+        version: link:../e2e
       typescript:
         specifier: ^6.0.2
         version: 6.0.3
