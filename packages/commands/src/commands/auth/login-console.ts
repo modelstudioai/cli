@@ -25,7 +25,7 @@ const CONSOLE_LOGIN_TIMEOUT_MS = 15 * 60 * 1000;
 const MAX_AUTH_CALLBACK_BODY = 65536;
 
 const CONSOLE_ORIGINS: Record<string, string> = {
-  domestic: "https://bailian.console.aliyun.com",
+  domestic: "https://pre-bailian.console.aliyun.com",
   international: "https://modelstudio.console.alibabacloud.com",
 };
 

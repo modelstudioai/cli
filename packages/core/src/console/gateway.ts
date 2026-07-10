@@ -13,7 +13,7 @@ interface ConsoleGatewayInfo {
 
 const REGION_GATEWAYS: Record<string, Record<ConsoleSite, ConsoleGatewayInfo>> = {
   "cn-beijing": {
-    domestic: { csGateway: "bailian-cs.console.aliyun.com", action: "BroadScopeAspnGateway" },
+    domestic: { csGateway: "pre-bailian-cs.console.aliyun.com", action: "BroadScopeAspnGateway" },
     international: {
       csGateway: "bailian-cs.console.alibabacloud.com",
       action: "BroadScopeAspnGateway",

@@ -9,7 +9,7 @@ import {
 } from "bailian-cli-core";
 import type { AssetHttpBaseRequest, AssetSyncOssStatus, AssetType } from "./types.ts";
 
-const ASSET_SERVICE = "bailianAsset";
+const ASSET_SERVICE = "dashscopeModel";
 const ASSET_BASE = "/zelda/api/v1/bailian/asset";
 export const MAX_ASSET_BATCH_SIZE = 100;
 
