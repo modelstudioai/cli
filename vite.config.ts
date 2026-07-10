@@ -30,4 +30,7 @@ export default defineConfig({
   run: {
     cache: true,
   },
+  fmt: {
+    ignorePatterns: ["**/tests/**/*.d.ts"],
+  },
 });
