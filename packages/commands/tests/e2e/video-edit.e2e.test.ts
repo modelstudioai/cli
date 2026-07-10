@@ -9,26 +9,21 @@ import {
   parseStdoutJson,
   runCommandE2e,
 } from "./helpers.ts";
+import { VIDEO_ROUTES } from "./topic-routes.ts";
 
 /**
  * Video edit E2E
  */
 
 describe("e2e: video edit", () => {
-  test("video 分组展示子命令帮助且成功退出", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["video"]);
-    expect(exitCode, stderr).toBe(0);
-    expect(`${stdout}\n${stderr}`).toMatch(/video|generate|edit|ref|task|download/i);
-  });
-
   test("video edit --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["video", "edit", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, ["video", "edit", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/edit|--video|--prompt|model|--async|--concurrent/i);
   });
 
   test("video edit --dry-run 接受 --async 与 --concurrent", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
       "video",
       "edit",
       "--dry-run",
@@ -54,7 +49,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
   "e2e: video edit（DashScope 视频）",
   () => {
     test("video edit 缺少 --video 时报用法错误并退出 (2)", async () => {
-      const { stderr, exitCode } = await runCommandE2e([
+      const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "edit",
         ...cliTimeoutPrefix(),
@@ -71,7 +66,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
       const t2vPath = join(outDir, "e2e-video-t2v.mp4");
 
-      const t2v = await runCommandE2e([
+      const t2v = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "generate",
         ...cliTimeoutPrefix(),
@@ -88,7 +83,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       const t2vData = parseStdoutJson<{ status?: string; video_url?: string }>(t2v.stdout);
       expect(t2vData.status).toBe("SUCCEEDED");
 
-      const { stdout, stderr, exitCode } = await runCommandE2e([
+      const { stdout, stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "edit",
         ...cliTimeoutPrefix(),

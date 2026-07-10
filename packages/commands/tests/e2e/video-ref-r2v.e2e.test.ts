@@ -9,26 +9,21 @@ import {
   parseStdoutJson,
   runCommandE2e,
 } from "./helpers.ts";
+import { VIDEO_ROUTES } from "./topic-routes.ts";
 
 /**
  * Video ref (r2v)：help / 分组不依赖密钥；参考生成需视频 E2E + DashScope。
  */
 
 describe("e2e: video ref (r2v)", () => {
-  test("video 分组展示子命令帮助且成功退出", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["video"]);
-    expect(exitCode, stderr).toBe(0);
-    expect(`${stdout}\n${stderr}`).toMatch(/video|generate|edit|ref|task|download/i);
-  });
-
   test("video ref --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["video", "ref", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, ["video", "ref", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/ref|--prompt|--image|model|--async|--concurrent/i);
   });
 
   test("video ref --dry-run 接受 --async 与 --concurrent", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
       "video",
       "ref",
       "--dry-run",
@@ -54,7 +49,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
   "e2e: video ref (r2v)（DashScope 视频）",
   () => {
     test("video ref 缺少 --prompt 时报用法错误并退出 (2)", async () => {
-      const { stderr, exitCode } = await runCommandE2e([
+      const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "ref",
         ...cliTimeoutPrefix(),
@@ -68,7 +63,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
     });
 
     test("video ref 缺少 --image 与 --ref-video 时退出为用法错误 (2)", async () => {
-      const { stderr, exitCode } = await runCommandE2e([
+      const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "ref",
         ...cliTimeoutPrefix(),
@@ -83,7 +78,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
 
     test("【happyhorse-1.1-r2v】视频参考生成", async () => {
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
-      const gen = await runCommandE2e([
+      const gen = await runCommandE2e(VIDEO_ROUTES, [
         "image",
         "generate",
         "--model",
@@ -102,7 +97,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       const imagePath = genData.saved?.[0];
       expect(imagePath).toBeTruthy();
 
-      const { stdout, stderr, exitCode } = await runCommandE2e([
+      const { stdout, stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "ref",
         ...cliTimeoutPrefix(),

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import { isChatE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { KNOWLEDGE_CHAT_ROUTES } from "./topic-routes.ts";
 
 interface ContentPart {
   type: string;
@@ -24,7 +25,11 @@ interface DryRunBody {
 
 describe("e2e: knowledge chat", () => {
   test("knowledge chat --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["knowledge", "chat", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
+      "knowledge",
+      "chat",
+      "--help",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--message/i);
     expect(stderr).toMatch(/--agent-id/i);
@@ -32,7 +37,7 @@ describe("e2e: knowledge chat", () => {
   });
 
   test("缺少 --message 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e([
+    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
       "knowledge",
       "chat",
       "--agent-id",
@@ -43,13 +48,19 @@ describe("e2e: knowledge chat", () => {
   });
 
   test("缺少 --agent-id 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["knowledge", "chat", "--message", "Hello"]);
+    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
+      "knowledge",
+      "chat",
+      "--message",
+      "Hello",
+    ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--agent-id|Usage:/i);
   });
 
   test("缺少 --workspace-id 时非零退出并提示", async () => {
     const { stderr, exitCode } = await runCommandE2e(
+      KNOWLEDGE_CHAT_ROUTES,
       // 假 key + 隔离配置目录:避免本机 config 的 workspace_id/api_key 漏入
       [
         "knowledge",
@@ -70,7 +81,7 @@ describe("e2e: knowledge chat", () => {
   });
 
   test("--dry-run 输出 endpoint 和 request body", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
       "knowledge",
       "chat",
       "--dry-run",
@@ -93,7 +104,7 @@ describe("e2e: knowledge chat", () => {
   });
 
   test("--dry-run 多轮消息解析 role:content 前缀", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
       "knowledge",
       "chat",
       "--dry-run",
@@ -123,7 +134,7 @@ describe("e2e: knowledge chat", () => {
   });
 
   test("--dry-run + --image 输出多模态 content 数组", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
       "knowledge",
       "chat",
       "--dry-run",
@@ -152,7 +163,7 @@ describe("e2e: knowledge chat", () => {
   });
 
   test("--dry-run + --image 无 --message 自动创建空 user message", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
       "knowledge",
       "chat",
       "--dry-run",
@@ -194,7 +205,7 @@ describe.skipIf(!isChatE2EReady())("e2e: knowledge chat (live)", () => {
   const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
 
   test("chat (JSON mode) returns answer", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
       "knowledge",
       "chat",
       "--message",
@@ -215,7 +226,7 @@ describe.skipIf(!isChatE2EReady())("e2e: knowledge chat (live)", () => {
   });
 
   test("chat (text mode) returns plain text", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
       "knowledge",
       "chat",
       "--message",
@@ -233,7 +244,7 @@ describe.skipIf(!isChatE2EReady())("e2e: knowledge chat (live)", () => {
   });
 
   test("chat (stream, JSON mode) collects and returns answer", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
       "knowledge",
       "chat",
       "--message",
@@ -254,7 +265,7 @@ describe.skipIf(!isChatE2EReady())("e2e: knowledge chat (live)", () => {
   });
 
   test("chat (stream, text mode) outputs streaming text", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
       "knowledge",
       "chat",
       "--message",
@@ -272,7 +283,7 @@ describe.skipIf(!isChatE2EReady())("e2e: knowledge chat (live)", () => {
   });
 
   test("chat with multi-turn messages returns context-aware answer", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
       "knowledge",
       "chat",
       "--message",
@@ -296,7 +307,7 @@ describe.skipIf(!isChatE2EReady())("e2e: knowledge chat (live)", () => {
   });
 
   test("chat with invalid agent_id fails gracefully", async () => {
-    const { stderr, exitCode } = await runCommandE2e([
+    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
       "knowledge",
       "chat",
       "--message",

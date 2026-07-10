@@ -9,7 +9,8 @@
     "./runner": "./src/run-subprocess.ts",
     "./output": "./src/output.ts",
     "./global-setup": "./src/global-setup.ts",
-    "./monorepo-root": "./src/monorepo-root.ts"
+    "./monorepo-root": "./src/monorepo-root.ts",
+    "./registry-smoke": "./src/registry-smoke.ts"
   },
   "dependencies": {
     "bailian-cli-core": "workspace:*"

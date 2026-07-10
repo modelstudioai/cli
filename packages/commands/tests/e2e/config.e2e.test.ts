@@ -1,32 +1,26 @@
 import { describe, expect, test } from "vite-plus/test";
 import { parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { CONFIG_ROUTES } from "./topic-routes.ts";
 
 /**
  * Config 相关 E2E
  */
 
 describe("e2e: config", () => {
-  test("config 分组展示子命令帮助且成功退出", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["config"]);
-    expect(exitCode, stderr).toBe(0);
-    const out = `${stdout}\n${stderr}`;
-    expect(out).toMatch(/config|show|set/i);
-  });
-
   test("config show --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["config", "show", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "show", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/show|config/i);
   });
 
   test("config set --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["config", "set", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "set", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/set|--key|--value/i);
   });
 
   test("config show --output json", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
       "config",
       "show",
       "--output",
@@ -44,7 +38,7 @@ describe("e2e: config", () => {
   });
 
   test("config show --output text", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
       "config",
       "show",
       "--output",
@@ -55,13 +49,13 @@ describe("e2e: config", () => {
   });
 
   test("config set 缺少 --key / --value 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["config", "set", "--quiet"]);
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "set", "--quiet"]);
     expect(exitCode, stderr).toBe(2);
     expect(stderr).toMatch(/--key|--value|Usage:/i);
   });
 
   test("config set 非法 key 时退出为用法错误", async () => {
-    const { stderr, exitCode } = await runCommandE2e([
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
       "config",
       "set",
       "--key",
@@ -74,7 +68,7 @@ describe("e2e: config", () => {
   });
 
   test("config set 非法 output", async () => {
-    const { stderr, exitCode } = await runCommandE2e([
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
       "config",
       "set",
       "--key",
@@ -87,7 +81,7 @@ describe("e2e: config", () => {
   });
 
   test("config set 非法 timeout", async () => {
-    const { stderr, exitCode } = await runCommandE2e([
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
       "config",
       "set",
       "--key",
@@ -100,7 +94,7 @@ describe("e2e: config", () => {
   });
 
   test("config set --dry-run 不落盘（仅输出 would_set）", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
       "config",
       "set",
       "--dry-run",
@@ -117,7 +111,7 @@ describe("e2e: config", () => {
   });
 
   test("config set --dry-run 支持连字符别名 key", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
       "config",
       "set",
       "--dry-run",
@@ -134,7 +128,7 @@ describe("e2e: config", () => {
   });
 
   test("config set --dry-run 支持 AccessKey 短字段别名", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
       "config",
       "set",
       "--dry-run",
@@ -151,7 +145,7 @@ describe("e2e: config", () => {
   });
 
   test("config set 不接受旧 OpenAPI AccessKey 字段名", async () => {
-    const { stderr, exitCode } = await runCommandE2e([
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
       "config",
       "set",
       "--key",

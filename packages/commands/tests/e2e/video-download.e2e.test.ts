@@ -10,6 +10,7 @@ import {
   parseStdoutJson,
   runCommandE2e,
 } from "./helpers.ts";
+import { VIDEO_ROUTES } from "./topic-routes.ts";
 
 /** dry-run 占位 UUID */
 const PLACEHOLDER_TASK_ID = "00000000-0000-4000-8000-000000000001";
@@ -20,14 +21,8 @@ const PLACEHOLDER_TASK_ID = "00000000-0000-4000-8000-000000000001";
  */
 
 describe("e2e: video download", () => {
-  test("video 分组展示子命令帮助且成功退出", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["video"]);
-    expect(exitCode, stderr).toBe(0);
-    expect(`${stdout}\n${stderr}`).toMatch(/video|generate|edit|ref|task|download/i);
-  });
-
   test("video download --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["video", "download", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, ["video", "download", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/download|--task-id|--out/i);
   });
@@ -37,7 +32,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
   "e2e: video download（DashScope 视频）",
   () => {
     test("video download 缺少 --task-id 时报用法错误并退出 (2)", async () => {
-      const { stderr, exitCode } = await runCommandE2e([
+      const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "download",
         "--out",
@@ -48,7 +43,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
     });
 
     test("video download 缺少 --out 时报用法错误并退出 (2)", async () => {
-      const { stderr, exitCode } = await runCommandE2e([
+      const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "download",
         "--task-id",
@@ -61,7 +56,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
     test("video download --dry-run 仅输出计划且不下载", async () => {
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
       const fakeOut = join(outDir, "e2e-dry-not-written.mp4");
-      const { stdout, stderr, exitCode } = await runCommandE2e([
+      const { stdout, stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "download",
         "--dry-run",
@@ -83,7 +78,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
       const genMp4 = join(outDir, "e2e-gen-for-download.mp4");
 
-      const gen = await runCommandE2e([
+      const gen = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "generate",
         ...cliTimeoutPrefix(),
@@ -111,7 +106,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       expect(existsSync(genMp4)).toBe(true);
 
       const downloadMp4 = join(outDir, "e2e-download.mp4");
-      const dl = await runCommandE2e([
+      const dl = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "download",
         ...cliTimeoutPrefix(),

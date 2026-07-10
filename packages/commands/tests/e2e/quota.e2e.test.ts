@@ -5,17 +5,18 @@ import {
   parseStdoutJson,
   runCommandE2e,
 } from "./helpers.ts";
+import { QUOTA_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: quota", () => {
   test("quota list --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["quota", "list", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, ["quota", "list", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("--model");
     expect(stderr).toContain("--all");
   });
 
   test("quota list --help 包含所有示例", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["quota", "list", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, ["quota", "list", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("bl quota list");
     expect(stderr).toContain("bl quota list --model qwen3.6-plus");
@@ -23,21 +24,21 @@ describe("e2e: quota", () => {
   });
 
   test("quota request --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["quota", "request", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, ["quota", "request", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("--model");
     expect(stderr).toContain("--tpm");
   });
 
   test("quota history --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["quota", "history", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, ["quota", "history", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("--page");
     expect(stderr).toContain("--model");
   });
 
   test("quota check --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["quota", "check", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, ["quota", "check", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("--model");
     expect(stderr).toContain("--period");
@@ -45,7 +46,12 @@ describe("e2e: quota", () => {
   });
 
   test("quota check --period 0 报错最小值", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["quota", "check", "--period", "0.5"]);
+    const { stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, [
+      "quota",
+      "check",
+      "--period",
+      "0.5",
+    ]);
     expect(exitCode).toBe(2);
     expect(stderr).toContain("at least 1 minute");
   });
@@ -53,7 +59,7 @@ describe("e2e: quota", () => {
 
 describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   test("quota list --dry-run 输出请求参数", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
       "list",
       "--dry-run",
@@ -73,7 +79,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota list --dry-run --all 不传 supports 过滤", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
       "list",
       "--all",
@@ -89,13 +95,13 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota list 文本输出包含英文表头", async () => {
-    const result = await runCommandE2e(["quota", "list", "--output", "text"]);
+    const result = await runCommandE2e(QUOTA_ROUTES, ["quota", "list", "--output", "text"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("quota list --model 指定模型返回结果", async () => {
-    const result = await runCommandE2e([
+    const result = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
       "list",
       "--model",
@@ -108,7 +114,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota list --model 不存在的模型报错", async () => {
-    const result = await runCommandE2e([
+    const result = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
       "list",
       "--model",
@@ -122,13 +128,13 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota list JSON 输出包含 model/rpm/tpm/maxTPM", async () => {
-    const result = await runCommandE2e(["quota", "list", "--output", "json"]);
+    const result = await runCommandE2e(QUOTA_ROUTES, ["quota", "list", "--output", "json"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("quota request --dry-run 输出请求参数", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
       "request",
       "--model",
@@ -150,7 +156,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota request TPM 超范围报错", async () => {
-    const result = await runCommandE2e([
+    const result = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
       "request",
       "--model",
@@ -166,7 +172,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota request 不支持提额的模型报错", async () => {
-    const result = await runCommandE2e([
+    const result = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
       "request",
       "--model",
@@ -180,7 +186,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota history --dry-run 输出请求参数", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
       "history",
       "--dry-run",
@@ -198,7 +204,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota check --dry-run 输出 API 信息", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
       "check",
       "--dry-run",
@@ -215,7 +221,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota check --dry-run --console-region 透传", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
       "check",
       "--dry-run",
@@ -230,13 +236,13 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota check 文本输出包含英文表头", async () => {
-    const result = await runCommandE2e(["quota", "check", "--output", "text"]);
+    const result = await runCommandE2e(QUOTA_ROUTES, ["quota", "check", "--output", "text"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("quota check --model 指定单模型", async () => {
-    const result = await runCommandE2e([
+    const result = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
       "check",
       "--model",
@@ -249,7 +255,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota check --model 逗号分隔多模型", async () => {
-    const result = await runCommandE2e([
+    const result = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
       "check",
       "--model",
@@ -262,7 +268,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota check JSON 输出包含用量和限额字段", async () => {
-    const result = await runCommandE2e([
+    const result = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
       "check",
       "--model",
@@ -275,7 +281,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota history --dry-run --page 2 --page-size 20", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
       "history",
       "--page",

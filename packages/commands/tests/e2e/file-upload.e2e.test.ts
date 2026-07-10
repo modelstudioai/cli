@@ -1,21 +1,19 @@
 import { describe, expect, test } from "vite-plus/test";
 import { join } from "path";
 import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e, e2eFixturesDir } from "./helpers.ts";
+import { FILE_UPLOAD_ROUTES } from "./topic-routes.ts";
 
 /**
  * File upload E2E
  */
 
 describe("e2e: file upload", () => {
-  test("file 分组展示子命令帮助且成功退出", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["file"]);
-    expect(exitCode, stderr).toBe(0);
-    const out = `${stdout}\n${stderr}`;
-    expect(out).toMatch(/file|upload/i);
-  });
-
   test("file upload --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["file", "upload", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(FILE_UPLOAD_ROUTES, [
+      "file",
+      "upload",
+      "--help",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/upload|--file|--model/i);
   });
@@ -23,7 +21,7 @@ describe("e2e: file upload", () => {
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: file upload（DashScope）", () => {
   test("file upload 缺少 --file 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e([
+    const { stderr, exitCode } = await runCommandE2e(FILE_UPLOAD_ROUTES, [
       "file",
       "upload",
       "--model",
@@ -35,14 +33,19 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: file upload（DashScope）", () =>
 
   test("file upload 缺少 --model 时报用法错误并退出 (2)", async () => {
     const testFile = join(e2eFixturesDir, ".smoke-32.png");
-    const { stderr, exitCode } = await runCommandE2e(["file", "upload", "--file", testFile]);
+    const { stderr, exitCode } = await runCommandE2e(FILE_UPLOAD_ROUTES, [
+      "file",
+      "upload",
+      "--file",
+      testFile,
+    ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--model|Usage:/i);
   });
 
   test("上传文件成功返回oss临时 URL", async () => {
     const testFile = join(e2eFixturesDir, ".smoke-32.png");
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(FILE_UPLOAD_ROUTES, [
       "file",
       "upload",
       "--file",

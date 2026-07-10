@@ -8,10 +8,11 @@ import {
   parseStdoutJson,
   runCommandE2e,
 } from "./helpers.ts";
+import { OMNI_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: omni", () => {
   test("omni --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["omni", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(OMNI_ROUTES, ["omni", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/omni|--message|--audio|text-only/i);
   });
@@ -21,7 +22,10 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
   "e2e: omni（DashScope 媒体）",
   () => {
     test("omni --list-voices 输出音色列表并退出", async () => {
-      const { stdout, stderr, exitCode } = await runCommandE2e(["omni", "--list-voices"]);
+      const { stdout, stderr, exitCode } = await runCommandE2e(OMNI_ROUTES, [
+        "omni",
+        "--list-voices",
+      ]);
       expect(exitCode, stderr).toBe(0);
       expect(stdout).toMatch(/Omni output voices:/);
       expect(stdout).toMatch(/Tina/);
@@ -30,13 +34,17 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
     });
 
     test("omni 缺少 --message 时报用法错误并退出 (2)", async () => {
-      const { stderr, exitCode } = await runCommandE2e(["omni", "--model", "qwen3.5-omni-flash"]);
+      const { stderr, exitCode } = await runCommandE2e(OMNI_ROUTES, [
+        "omni",
+        "--model",
+        "qwen3.5-omni-flash",
+      ]);
       expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--message|Usage:/i);
     });
 
     test("omni --audio 无法识别扩展名时退出为用法错误 (2)", async () => {
-      const { stderr, exitCode } = await runCommandE2e([
+      const { stderr, exitCode } = await runCommandE2e(OMNI_ROUTES, [
         "omni",
         "--model",
         "qwen3.5-omni-flash",
@@ -51,7 +59,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
     });
 
     test("omni --dry-run --audio 构造 input_audio 而非 audio_url", async () => {
-      const { stdout, stderr, exitCode } = await runCommandE2e([
+      const { stdout, stderr, exitCode } = await runCommandE2e(OMNI_ROUTES, [
         "omni",
         "--dry-run",
         "--model",
@@ -91,7 +99,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
       const clipText = "端到端Omni音频测试";
       const clipWav = join(outDir, "e2e-omni-input.wav");
 
-      const syn = await runCommandE2e([
+      const syn = await runCommandE2e(OMNI_ROUTES, [
         "speech",
         "synthesize",
         "--model",
@@ -109,7 +117,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
       ]);
       expect(syn.exitCode, syn.stderr).toBe(0);
 
-      const omni = await runCommandE2e([
+      const omni = await runCommandE2e(OMNI_ROUTES, [
         "omni",
         "--model",
         "qwen3.5-omni-flash",

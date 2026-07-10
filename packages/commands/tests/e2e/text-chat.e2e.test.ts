@@ -1,19 +1,14 @@
 import { describe, expect, test } from "vite-plus/test";
 import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { TEXT_CHAT_ROUTES } from "./topic-routes.ts";
 
 /**
  * Text chat：help / 分组不依赖密钥；对话需 DashScope。
  */
 
 describe("e2e: text chat", () => {
-  test("text 分组展示子命令帮助且成功退出", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["text"]);
-    expect(exitCode, stderr).toBe(0);
-    expect(`${stdout}\n${stderr}`).toMatch(/text|chat/i);
-  });
-
   test("text chat --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["text", "chat", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(TEXT_CHAT_ROUTES, ["text", "chat", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/chat|--message|model|stream/i);
   });
@@ -21,13 +16,18 @@ describe("e2e: text chat", () => {
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: text chat（DashScope）", () => {
   test("text chat 缺少 --message 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["text", "chat", "--model", "qwen3.7-max"]);
+    const { stderr, exitCode } = await runCommandE2e(TEXT_CHAT_ROUTES, [
+      "text",
+      "chat",
+      "--model",
+      "qwen3.7-max",
+    ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--message|Usage:/i);
   });
 
   test("text chat --dry-run 仅输出 request 且不调对话接口", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(TEXT_CHAT_ROUTES, [
       "text",
       "chat",
       "--dry-run",
@@ -49,7 +49,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: text chat（DashScope）", () => {
   });
 
   test("【qwen3.7-max】文本对话", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(TEXT_CHAT_ROUTES, [
       "text",
       "chat",
       "--model",

@@ -9,20 +9,19 @@ import {
   parseStdoutJson,
   runCommandE2e,
 } from "./helpers.ts";
+import { SPEECH_ROUTES } from "./topic-routes.ts";
 
 /**
  * Speech recognize：help / 分组不依赖密钥；识别流程需媒体 E2E + DashScope。
  */
 
 describe("e2e: speech recognize", () => {
-  test("speech 分组展示子命令帮助且成功退出", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["speech"]);
-    expect(exitCode, stderr).toBe(0);
-    expect(`${stdout}\n${stderr}`).toMatch(/speech|synthesize|recognize/i);
-  });
-
   test("speech recognize --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["speech", "recognize", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+      "speech",
+      "recognize",
+      "--help",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/recognize|--url|model|audio/i);
   });
@@ -32,7 +31,11 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
   "e2e: speech recognize（DashScope 媒体）",
   () => {
     test("speech recognize 缺少 --url 时报用法错误并退出 (2)", async () => {
-      const { stderr, exitCode } = await runCommandE2e(["speech", "recognize", "--quiet"]);
+      const { stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+        "speech",
+        "recognize",
+        "--quiet",
+      ]);
       expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--url|Usage:/i);
     });
@@ -40,7 +43,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
     test("【fun-asr】语音识别", async () => {
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
       const outMp3 = join(outDir, "e2e-tts.mp3");
-      const syn = await runCommandE2e([
+      const syn = await runCommandE2e(SPEECH_ROUTES, [
         "speech",
         "synthesize",
         "--model",
@@ -60,7 +63,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
       expect(audioUrl?.startsWith("http")).toBe(true);
 
       const asrJson = join(outDir, "e2e-asr.json");
-      const rec = await runCommandE2e([
+      const rec = await runCommandE2e(SPEECH_ROUTES, [
         "speech",
         "recognize",
         "--model",

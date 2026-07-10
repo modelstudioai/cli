@@ -2,13 +2,13 @@
 
 ## 架构分层
 
-| 层级            | 路径                                                  | 测什么                                                          |
-| --------------- | ----------------------------------------------------- | --------------------------------------------------------------- |
-| **共享基建**    | `packages/e2e`                                        | gating、子进程 runner、output、globalSetup（`private`，不发布） |
-| **命令 E2E**    | `packages/commands/tests/e2e`                         | help、缺参、dry-run、live（gated）；harness `binName: "bl"`     |
-| **bl smoke**    | `packages/cli/tests/e2e/registry.smoke.e2e.test.ts`   | 产品 map 全部 path `--help`、分组 help、根 help                 |
-| **kscli smoke** | `packages/kscli/tests/e2e/registry.smoke.e2e.test.ts` | 6 条 flat path `--help`；`search --help` 与 harness 一致        |
-| **runtime**     | `packages/runtime/tests`                              | `proxy.e2e`、console 跨域 flag 拒绝                             |
+| 层级            | 路径                                                  | 测什么                                                                                   |
+| --------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **共享基建**    | `packages/e2e`                                        | gating、子进程 runner、output、globalSetup（`private`，不发布）                          |
+| **命令 E2E**    | `packages/commands/tests/e2e`                         | help、缺参、dry-run、live（gated）；每用例最小路由                                       |
+| **bl smoke**    | `packages/cli/tests/e2e/registry.smoke.e2e.test.ts`   | 产品 map 全部 path `--help`、分组 help、根 help                                          |
+| **kscli smoke** | `packages/kscli/tests/e2e/registry.smoke.e2e.test.ts` | 从 `kscli/src/commands.ts` 推导 path/分组；identity（`--version`、`search --help` path） |
+| **runtime**     | `packages/runtime/tests`                              | `proxy.e2e`、console 跨域 flag 拒绝                                                      |
 
 **依赖边界**：`e2e` → `core`；`commands/tests` → `e2e` + `commands/src`；产品 tests → `e2e` + 各自 `src`。**禁止**产品 import `commands/tests/**`（子进程 spawn harness 路径除外）。
 
@@ -17,18 +17,20 @@
 - 新增/修改 `packages/commands/src/commands` 下的 command 实现
 - 新增/修改 `packages/cli/src/commands.ts` 的 `bl` 命令路径 map
 - 新建或扩展 `packages/commands/tests/e2e/<topic>.e2e.test.ts`
-- 新增 bl 产品 path → 同步 `registry.smoke`（自动覆盖 leaf path）与 `harness/e2e-command-map.ts`
+- 新增 bl 产品 path → `registry.smoke` 自动覆盖 leaf path；commands topic 测试在 `topic-routes.ts` 补最小路由
 
 跑测与环境变量见 `.cursor/skills/bailian-cli-e2e/SKILL.md`。
+
+> **规则**：共享 command 行为在 `commands/tests/e2e`；产品 map、identity、CLI-only 命令留在对应产品 `tests/e2e`。
 
 ## 文件与工具
 
 ### commands E2E
 
 - 路径：`packages/commands/tests/e2e/<kebab-topic>.e2e.test.ts`
-- 子进程：`runCommandE2e` from `./helpers.ts`（spawn `harness/main.ts`）
+- 子进程：`runCommandE2e(routes, args)` from `./helpers.ts`（spawn `harness/main.ts`，`routes` 为本 topic 最小 path → export 映射）
 - fixtures：`packages/commands/tests/e2e/fixtures/`
-- map：`harness/e2e-command-map.ts`（自维护，初始从 `cli/commands.ts` 复制）
+- 路由常量：`topic-routes.ts`（按 topic 维护，**非**全量产品 map）
 
 ### 产品 smoke
 
@@ -45,13 +47,12 @@
 ## 双层 describe（固定结构）
 
 ```ts
-// 1) 不 skip：分组 + --help，无密钥、无真实 API
+// 1) 不 skip：--help，无密钥、无真实 API（分组 help 由 bl registry.smoke 覆盖）
 describe("e2e: <topic>", () => {
-  test("<group> 分组展示子命令帮助且成功退出", ...);
   test("<subcommand> --help 正常退出", ...);
 });
 
-// 2) skipIf：缺参 / dry-run / 真实集成；原有集成用例放最后、勿改逻辑
+// 2) skipIf：缺参 / dry-run / 真实集成
 describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
   test("缺少 --<flag> 时退出为用法错误 (2)", ...);
   test("<cmd> --dry-run ...", ...); // 若适用
@@ -71,18 +72,15 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 ## 用例类型
 
-1. **分组 help**：`runCommandE2e(["image"])` → `exitCode === 0`，stdout+stderr 含子命令名
-2. **--help**：`runCommandE2e([..., "--help"])` → stderr 含主要 flags
-3. **缺参**：带一个无害全局 flag（如 `--quiet`）且不传 required flag → `exitCode === 2`，stderr 匹配 `--flag|Missing required argument`
-4. **--dry-run**：仅当实现在联网/上传/写盘**之前**返回；断言 stdout JSON/文本，不入网
-5. **真实集成**：保留既有用例名称与断言；放在 skip 块**末尾**
+1. **--help**：`runCommandE2e(ROUTES, [..., "--help"])` → stderr 含主要 flags
+2. **缺参**：带无害全局 flag（如 `--quiet`）且不传 required flag → `exitCode === 2`
+3. **--dry-run**：实现在联网/上传/写盘**之前**返回；断言 stdout JSON/文本
+4. **真实集成**：放在 skip 块**末尾**
 
-## 契约与防漂移
+## 增删命令同步
 
-- `harness/e2e-command-map.contract.test.ts`：path 唯一、合法 export、白名单、测试 argv 前缀在 map 中
-- Advisory（不阻塞 CI）：`node tools/compare-e2e-command-map.ts` 对比 `cli/commands.ts` 与 harness map
-
-增删命令须同步三处：**实现 export** + **`cli/commands.ts`** + **`e2e-command-map.ts`**（见 [command-add-remove.md](command-add-remove.md)）。
+- **commands export** + **topic 路由**（`topic-routes.ts` 或测试文件内 `ROUTES`）+ **产品 map**（`cli/commands.ts` / `kscli/commands.ts`）
+- 分组 help 由产品 `registry.smoke` 负责，无需在 commands 重复
 
 ## 安全与例外
 
@@ -93,10 +91,10 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 ## 新增 command 检查清单
 
-- [ ] `packages/commands/src/index.ts` 导出 + `packages/cli/src/commands.ts` 暴露路径 + `harness/e2e-command-map.ts` 登记
+- [ ] `packages/commands/src/index.ts` 导出 + `packages/cli/src/commands.ts` 暴露路径 + `topic-routes.ts` 补最小路由
 - [ ] `packages/commands/tests/e2e/<topic>.e2e.test.ts`（新建或扩展）
 - [ ] 若改了 `usageArgs` / `flags` / `exampleArgs`,跑 `pnpm --filter bailian-cli run generate:reference` 更新 `skills/bailian-cli/reference/` 并提交
-- [ ] 顶层：分组 help + 子命令 `--help`（多子命令则各一条 help）
+- [ ] 子命令 `--help`（分组 help 由 bl `registry.smoke` 覆盖）
 - [ ] skip 块：每个 required flag 缺参；可 dry-run 则加一条
 - [ ] 至少一条真实集成（或说明为何仅 smoke）；不破坏已有集成用例顺序
 - [ ] `vp test packages/commands/tests/e2e/<file>` 通过
@@ -108,20 +106,21 @@ pnpm --filter bailian-cli-commands exec vp test packages/commands/tests/e2e/text
 pnpm --filter bailian-cli exec vp test packages/cli/tests/e2e/registry.smoke.e2e.test.ts
 pnpm --filter knowledge-studio-cli exec vp test packages/kscli/tests/e2e/registry.smoke.e2e.test.ts
 pnpm --filter bailian-cli-runtime exec vp test packages/runtime/tests/proxy.e2e.test.ts
-node tools/compare-e2e-command-map.ts
 ```
 
 ## 示例片段
 
 ```ts
+import { FOO_ROUTES } from "./topic-routes.ts";
+
 test("foo bar 缺少 --prompt 时退出为用法错误 (2)", async () => {
-  const { stderr, exitCode } = await runCommandE2e(["foo", "bar", "--quiet"]);
+  const { stderr, exitCode } = await runCommandE2e(FOO_ROUTES, ["foo", "bar", "--quiet"]);
   expect(exitCode).toBe(2);
   expect(stderr).toMatch(/--prompt|Missing required argument/i);
 });
 
 test("foo bar --dry-run 仅输出计划", async () => {
-  const { stdout, stderr, exitCode } = await runCommandE2e([
+  const { stdout, stderr, exitCode } = await runCommandE2e(FOO_ROUTES, [
     "foo",
     "bar",
     "--dry-run",

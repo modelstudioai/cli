@@ -1,15 +1,14 @@
 import { describe, expect, test } from "vite-plus/test";
 import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { ADVISOR_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: advisor recommend", () => {
-  test("advisor shows subcommand groups and exits successfully", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["advisor"]);
-    expect(exitCode, stderr).toBe(0);
-    expect(`${stdout}\n${stderr}`).toMatch(/advisor|recommend/i);
-  });
-
   test("advisor recommend --help exits successfully", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["advisor", "recommend", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(ADVISOR_ROUTES, [
+      "advisor",
+      "recommend",
+      "--help",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/recommend|--message|dry-run/i);
   });
@@ -17,13 +16,17 @@ describe("e2e: advisor recommend", () => {
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", () => {
   test("advisor recommend without --message errors as usage error (2)", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["advisor", "recommend", "--quiet"]);
+    const { stdout, stderr, exitCode } = await runCommandE2e(ADVISOR_ROUTES, [
+      "advisor",
+      "recommend",
+      "--quiet",
+    ]);
     expect(exitCode).toBe(2);
     expect(`${stdout}\n${stderr}`).toMatch(/--message|Usage:/i);
   });
 
   test("advisor recommend --dry-run outputs intent analysis and candidates", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(ADVISOR_ROUTES, [
       "advisor",
       "recommend",
       "--dry-run",
@@ -63,7 +66,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", ()
   }, 60_000);
 
   test("advisor recommend full flow returns results", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(ADVISOR_ROUTES, [
       "advisor",
       "recommend",
       "--message",
@@ -96,7 +99,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", ()
   // ---- Model preference: positive cases ----
 
   test("scoped preference — intent contains modelPreference.mode=scoped when family is specified", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(ADVISOR_ROUTES, [
       "advisor",
       "recommend",
       "--dry-run",
@@ -116,7 +119,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", ()
   }, 60_000);
 
   test("comparison preference — intent contains modelPreference.mode=comparison when comparing models", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(ADVISOR_ROUTES, [
       "advisor",
       "recommend",
       "--dry-run",
@@ -136,7 +139,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", ()
   }, 60_000);
 
   test("excludes preference — intent detects modelPreference when excluding models", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(ADVISOR_ROUTES, [
       "advisor",
       "recommend",
       "--dry-run",
@@ -166,7 +169,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", ()
   // ---- Model preference: negative cases ----
 
   test("no preference — intent has no modelPreference or mode=unconstrained for generic queries", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(ADVISOR_ROUTES, [
       "advisor",
       "recommend",
       "--dry-run",

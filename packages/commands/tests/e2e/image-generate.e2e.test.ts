@@ -7,6 +7,7 @@ import {
   parseStdoutJson,
   runCommandE2e,
 } from "./helpers.ts";
+import { IMAGE_ROUTES } from "./topic-routes.ts";
 
 /**
  * Image generate：先做 help / 分组等常规检测（不依赖密钥、不调生成接口）。
@@ -15,15 +16,8 @@ import {
  */
 
 describe("e2e: image generate", () => {
-  test("image 分组展示子命令帮助且成功退出", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["image"]);
-    expect(exitCode, stderr).toBe(0);
-    const out = `${stdout}\n${stderr}`;
-    expect(out).toMatch(/image|generate|edit/i);
-  });
-
   test("image generate --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["image", "generate", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, ["image", "generate", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/generate|--prompt|--model/i);
   });
@@ -33,7 +27,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
   "e2e: image generate",
   () => {
     test("image generate 缺少 --prompt 时报用法错误并退出 (2)", async () => {
-      const { stderr, exitCode } = await runCommandE2e([
+      const { stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
         "image",
         "generate",
         "--model",
@@ -45,7 +39,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
 
     test("【qwen-image-2.0】图片生成", async () => {
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
-      const { stdout, stderr, exitCode } = await runCommandE2e([
+      const { stdout, stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
         "image",
         "generate",
         "--model",

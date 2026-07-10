@@ -9,20 +9,15 @@ import {
   parseStdoutJson,
   runCommandE2e,
 } from "./helpers.ts";
+import { VIDEO_ROUTES } from "./topic-routes.ts";
 
 /**
  * Video generate (i2v)：help / 分组不依赖密钥；长任务需视频 E2E + DashScope。
  */
 
 describe("e2e: video generate (i2v)", () => {
-  test("video 分组展示子命令帮助且成功退出", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["video"]);
-    expect(exitCode, stderr).toBe(0);
-    expect(`${stdout}\n${stderr}`).toMatch(/video|generate|edit|ref|task|download/i);
-  });
-
   test("video generate --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["video", "generate", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, ["video", "generate", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/generate|--prompt|--image|model/i);
   });
@@ -32,7 +27,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
   "e2e: video generate (i2v)（DashScope 视频）",
   () => {
     test("video generate 缺少 --prompt 时报用法错误并退出 (2)", async () => {
-      const { stderr, exitCode } = await runCommandE2e([
+      const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "generate",
         ...cliTimeoutPrefix(),
@@ -46,7 +41,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
     });
 
     test("video generate --dry-run（无 --image）仅输出 request（t2v 路径不调上传）", async () => {
-      const { stdout, stderr, exitCode } = await runCommandE2e([
+      const { stdout, stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "generate",
         ...cliTimeoutPrefix(),
@@ -69,7 +64,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
     test("【happyhorse-1.1-i2v】图片生成视频", async () => {
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
       const png = join(outDir, "e2e-gen.png");
-      const gen = await runCommandE2e([
+      const gen = await runCommandE2e(VIDEO_ROUTES, [
         "image",
         "generate",
         "--model",
@@ -87,7 +82,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       const genData = parseStdoutJson<{ saved?: string[] }>(gen.stdout);
       const imagePath = genData.saved?.[0] ?? png;
 
-      const { stdout, stderr, exitCode } = await runCommandE2e([
+      const { stdout, stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "generate",
         ...cliTimeoutPrefix(),

@@ -9,27 +9,21 @@ import {
   parseStdoutJson,
   runCommandE2e,
 } from "./helpers.ts";
+import { IMAGE_ROUTES } from "./topic-routes.ts";
 
 /**
  * Image edit E2E
  */
 
 describe("e2e: image edit", () => {
-  test("image 分组展示子命令帮助且成功退出", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["image"]);
-    expect(exitCode, stderr).toBe(0);
-    const out = `${stdout}\n${stderr}`;
-    expect(out).toMatch(/image|generate|edit/i);
-  });
-
   test("image edit --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["image", "edit", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, ["image", "edit", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/edit|--image|--prompt|--async|--concurrent/i);
   });
 
   test("image edit --dry-run 接受 async 模型的 --async 与 --concurrent", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
       "image",
       "edit",
       "--dry-run",
@@ -56,21 +50,31 @@ describe("e2e: image edit", () => {
 
 describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())("e2e: image edit", () => {
   test("image edit 缺少 --image 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["image", "edit", "--prompt", "仅提示词"]);
+    const { stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
+      "image",
+      "edit",
+      "--prompt",
+      "仅提示词",
+    ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--image|Usage:/i);
   });
 
   test("image edit 缺少 --prompt 时报用法错误并退出 (2)", async () => {
     const testPng = join(e2eFixturesDir, ".smoke-32.png");
-    const { stderr, exitCode } = await runCommandE2e(["image", "edit", "--image", testPng]);
+    const { stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
+      "image",
+      "edit",
+      "--image",
+      testPng,
+    ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--prompt|Usage:/i);
   });
 
   test("【qwen-image-2.0】图片编辑", async () => {
     const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
-    const gen = await runCommandE2e([
+    const gen = await runCommandE2e(IMAGE_ROUTES, [
       "image",
       "generate",
       "--model",
@@ -90,7 +94,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())("e2e: ima
 
     expect(imagePath).toBeTruthy();
 
-    const ed = await runCommandE2e([
+    const ed = await runCommandE2e(IMAGE_ROUTES, [
       "image",
       "edit",
       "--model",

@@ -9,6 +9,7 @@ import {
   parseStdoutJson,
 } from "e2e/output";
 import { runNodeMain, type RunCliResult } from "e2e/runner";
+import type { E2eRouteExports } from "./topic-routes.ts";
 
 export {
   cliTimeoutPrefix,
@@ -39,13 +40,26 @@ export const commandsPackageRoot = join(e2eDir, "..", "..");
 /** E2E fixtures 目录 */
 export const e2eFixturesDir = join(e2eDir, "fixtures");
 
-/** 通过 harness 子进程执行 E2E 命令 */
+function serializeRoutes(routes: E2eRouteExports): string {
+  return JSON.stringify(
+    Object.entries(routes).map(([path, exportName]) => ({ path, export: exportName })),
+  );
+}
+
+/**
+ * 通过 harness 子进程执行命令 E2E。
+ * `routes` 为本用例所需的最小 path → export 映射，不维护全量产品 map。
+ */
 export async function runCommandE2e(
+  routes: E2eRouteExports,
   args: string[],
   envOverrides: NodeJS.ProcessEnv = {},
 ): Promise<RunCliResult> {
   return runNodeMain(harnessMainTs, args, {
     cwd: commandsPackageRoot,
-    env: envOverrides,
+    env: {
+      BAILIAN_E2E_ROUTES: serializeRoutes(routes),
+      ...envOverrides,
+    },
   });
 }

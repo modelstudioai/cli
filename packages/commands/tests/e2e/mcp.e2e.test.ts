@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { MCP_ROUTES } from "./topic-routes.ts";
 
 /**
  * `bl mcp` E2E.
@@ -16,40 +17,32 @@ import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.t
  */
 
 describe("e2e: mcp", () => {
-  test("mcp 分组展示子命令帮助且成功退出", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["mcp"]);
-    expect(exitCode, stderr).toBe(0);
-    const out = `${stdout}\n${stderr}`;
-    expect(out).toMatch(/mcp/i);
-    expect(out).toMatch(/list|tools|call/i);
-  });
-
   test("mcp list --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["mcp", "list", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(MCP_ROUTES, ["mcp", "list", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/list|--name|--type|--page/i);
   });
 
   test("mcp tools --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["mcp", "tools", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(MCP_ROUTES, ["mcp", "tools", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/tools|--server|--url/i);
   });
 
   test("mcp call --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["mcp", "call", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(MCP_ROUTES, ["mcp", "call", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/call|--target|--arg|--json/i);
   });
 
   test("mcp list --help 不暴露 --all 入口（市场全量已下线）", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["mcp", "list", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(MCP_ROUTES, ["mcp", "list", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).not.toMatch(/--all/);
   });
 
   test("mcp list --dry-run 仅打印计划且固定 activated=1", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(MCP_ROUTES, [
       "mcp",
       "list",
       "--dry-run",
@@ -87,7 +80,7 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp list --dry-run 自定义 --console-region 透传", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(MCP_ROUTES, [
       "mcp",
       "list",
       "--dry-run",
@@ -102,7 +95,7 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp tools --server <code> --dry-run 输出 /api/v1/mcps/<code>/mcp 形态 URL", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(MCP_ROUTES, [
       "mcp",
       "tools",
       "--server",
@@ -121,7 +114,7 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp tools --url 覆盖 baseUrl 约定", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(MCP_ROUTES, [
       "mcp",
       "tools",
       "--server",
@@ -139,13 +132,13 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp tools 缺少 --server 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["mcp", "tools", "--quiet"]);
+    const { stderr, exitCode } = await runCommandE2e(MCP_ROUTES, ["mcp", "tools", "--quiet"]);
     expect(exitCode, stderr).toBe(2);
     expect(stderr).toMatch(/--server|Usage:/i);
   });
 
   test("mcp call --target <server.tool> --dry-run 输出工具调用计划", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(MCP_ROUTES, [
       "mcp",
       "call",
       "--target",
@@ -171,7 +164,7 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp call --json 与 --arg 合并(arg 覆盖 json),--query 等价 arg.query", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(MCP_ROUTES, [
       "mcp",
       "call",
       "--target",
@@ -207,7 +200,7 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp call --target 缺少 . 时报错且非零退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e([
+    const { stderr, exitCode } = await runCommandE2e(MCP_ROUTES, [
       "mcp",
       "call",
       "--target",
@@ -220,7 +213,7 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp call --arg 非 K=V 形式时报错且非零退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e([
+    const { stderr, exitCode } = await runCommandE2e(MCP_ROUTES, [
       "mcp",
       "call",
       "--target",
@@ -235,7 +228,7 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp call --json 无效 JSON 报错且非零退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e([
+    const { stderr, exitCode } = await runCommandE2e(MCP_ROUTES, [
       "mcp",
       "call",
       "--target",
@@ -250,7 +243,7 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp call 缺少 --target 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["mcp", "call", "--quiet"]);
+    const { stderr, exitCode } = await runCommandE2e(MCP_ROUTES, ["mcp", "call", "--quiet"]);
     expect(exitCode, stderr).toBe(2);
     expect(stderr).toMatch(/--target|Usage:/i);
   });
@@ -261,7 +254,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: mcp (live)", () => {
     // Regression: bailianMcpUrl previously added an `AliyunBailianMCP_` prefix,
     // which made every real call 500. This test asserts the convention-built URL
     // (no --url override) actually reaches a live MCP server end-to-end.
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(MCP_ROUTES, [
       "mcp",
       "tools",
       "--server",

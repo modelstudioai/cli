@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 import { join } from "path";
 import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e, e2eFixturesDir } from "./helpers.ts";
+import { FINETUNE_ROUTES } from "./topic-routes.ts";
 
 /**
  * Fine-tune E2E.
@@ -15,21 +16,18 @@ import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e, e2eFixturesDir } f
  */
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
-  test("finetune 列出子命令", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["finetune"]);
-    expect(exitCode, stderr).toBe(0);
-    const out = `${stdout}\n${stderr}`;
-    expect(out).toMatch(/create|list|get|cancel|delete|logs|checkpoints|export|watch|capability/);
-  });
-
   test("finetune create --help 正常退出并展示必填项", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["finetune", "create", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      "finetune",
+      "create",
+      "--help",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--model|--datasets/i);
   });
 
   test("finetune create --dry-run 构造 SFT 默认请求体", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
       "finetune",
       "create",
       "--model",
@@ -62,7 +60,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   });
 
   test("finetune create --dry-run 转发训练类型与超参", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
       "finetune",
       "create",
       "--model",
@@ -115,7 +113,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   });
 
   test("finetune create --training-type 拒绝不支持的训练类型值", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
       "finetune",
       "create",
       "--model",
@@ -133,7 +131,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
 
   test("finetune create --dry-run 把本地路径标记为 pending 上传且不发起网络请求", async () => {
     const localPath = join(e2eFixturesDir, ".dataset-valid.jsonl");
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
       "finetune",
       "create",
       "--model",
@@ -163,7 +161,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   });
 
   test("finetune create --datasets 为空时拒绝", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
       "finetune",
       "create",
       "--model",
@@ -183,7 +181,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     // so this is fully offline (no key, no network) — the proof is that the
     // error is the gate message AND no "Uploaded …" line ever appears.
     const localPath = join(e2eFixturesDir, ".dataset-valid.jsonl");
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
       "finetune",
       "create",
       "--model",
@@ -204,7 +202,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     // Even with --batch-size 1 (server clamps to 8), 3 samples <= 8 still trips
     // the gate — confirms the gate uses the clamped/effective batch, not the raw.
     const localPath = join(e2eFixturesDir, ".dataset-valid.jsonl");
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
       "finetune",
       "create",
       "--model",
@@ -231,7 +229,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     ["watch", ["--job-id", "ft-xxx"]],
     ["capability", ["--model", "qwen3-8b"]],
   ])("finetune %s --dry-run 发出结构化动作", async (sub, extra) => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
       "finetune",
       sub,
       ...extra,
@@ -245,7 +243,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   });
 
   test("finetune create --dry-run 解析多 datasets 中的空白", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
       "finetune",
       "create",
       "--model",
@@ -273,7 +271,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (DashScope)", () => {
    *     而非进程崩溃），即视为通过。
    */
   test("finetune list --output json 优雅返回（空账号或鉴权失败均通过）", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
       "finetune",
       "list",
       "--page-size",

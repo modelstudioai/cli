@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import { isSearchE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { KNOWLEDGE_SEARCH_ROUTES } from "./topic-routes.ts";
 
 interface DryRunBody {
   endpoint?: string;
@@ -13,7 +14,11 @@ interface DryRunBody {
 
 describe("e2e: knowledge search", () => {
   test("knowledge search --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["knowledge", "search", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
+      "knowledge",
+      "search",
+      "--help",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--query/i);
     expect(stderr).toMatch(/--agent-id/i);
@@ -23,7 +28,7 @@ describe("e2e: knowledge search", () => {
   });
 
   test("缺少 --query 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e([
+    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
       "knowledge",
       "search",
       "--agent-id",
@@ -34,13 +39,19 @@ describe("e2e: knowledge search", () => {
   });
 
   test("缺少 --agent-id 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["knowledge", "search", "--query", "test"]);
+    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
+      "knowledge",
+      "search",
+      "--query",
+      "test",
+    ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--agent-id|Usage:/i);
   });
 
   test("缺少 --workspace-id 时非零退出并提示", async () => {
     const { stderr, exitCode } = await runCommandE2e(
+      KNOWLEDGE_SEARCH_ROUTES,
       // 假 key + 隔离配置目录:避免本机 config 的 workspace_id/api_key 漏入
       [
         "knowledge",
@@ -61,7 +72,7 @@ describe("e2e: knowledge search", () => {
   });
 
   test("--dry-run 输出 endpoint 和 request body", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
       "knowledge",
       "search",
       "--dry-run",
@@ -83,7 +94,7 @@ describe("e2e: knowledge search", () => {
   });
 
   test("--dry-run + --image 输出 images", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
       "knowledge",
       "search",
       "--dry-run",
@@ -109,7 +120,7 @@ describe("e2e: knowledge search", () => {
   });
 
   test("--dry-run + --query-history 输出用户对话历史", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
       "knowledge",
       "search",
       "--dry-run",
@@ -133,7 +144,7 @@ describe("e2e: knowledge search", () => {
   });
 
   test("--dry-run + --query-history 无效 JSON 非零退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e([
+    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
       "knowledge",
       "search",
       "--dry-run",
@@ -173,7 +184,7 @@ describe.skipIf(!isSearchE2EReady())("e2e: knowledge search (live)", () => {
   const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
 
   test("search returns results in JSON mode", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
       "knowledge",
       "search",
       "--query",
@@ -201,7 +212,7 @@ describe.skipIf(!isSearchE2EReady())("e2e: knowledge search (live)", () => {
   });
 
   test("search returns results in text mode", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
       "knowledge",
       "search",
       "--query",
@@ -219,7 +230,7 @@ describe.skipIf(!isSearchE2EReady())("e2e: knowledge search (live)", () => {
   });
 
   test("search with --query-history returns results", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
       "knowledge",
       "search",
       "--query",
@@ -241,7 +252,7 @@ describe.skipIf(!isSearchE2EReady())("e2e: knowledge search (live)", () => {
   });
 
   test("search with invalid agent_id fails gracefully", async () => {
-    const { stderr, exitCode } = await runCommandE2e([
+    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
       "knowledge",
       "search",
       "--query",

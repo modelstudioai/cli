@@ -5,6 +5,7 @@ import {
   parseStdoutJson,
   runCommandE2e,
 } from "./helpers.ts";
+import { MEMORY_ROUTES } from "./topic-routes.ts";
 
 interface MemoryAddBody {
   memory_ids?: string[];
@@ -36,33 +37,31 @@ function memoryLibraryCliArgs(): string[] {
  */
 
 describe("e2e: memory", () => {
-  test("memory 分组展示子命令帮助且成功退出", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["memory"]);
-    expect(exitCode, stderr).toBe(0);
-    const out = `${stdout}\n${stderr}`;
-    expect(out).toMatch(/memory|add|list|search|update|delete|profile/i);
-  });
-
   test("memory add --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["memory", "add", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(MEMORY_ROUTES, ["memory", "add", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/add|--user-id|--content|messages/i);
   });
 
   test("memory list --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["memory", "list", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(MEMORY_ROUTES, ["memory", "list", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/list|--user-id|memory-library/i);
   });
 
   test("memory search --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["memory", "search", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(MEMORY_ROUTES, ["memory", "search", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/search|--query|user-id/i);
   });
 
   test("memory profile create --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["memory", "profile", "create", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(MEMORY_ROUTES, [
+      "memory",
+      "profile",
+      "create",
+      "--help",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/profile|create|user-id/i);
   });
@@ -75,7 +74,7 @@ describe.skipIf(!isBailianE2EEnabled() || !isDashScopeE2EReady())(
   "e2e: memory CRUD + search",
   () => {
     test("memory add 缺少 --user-id 时报用法错误并退出 (2)", async () => {
-      const { stderr, exitCode } = await runCommandE2e([
+      const { stderr, exitCode } = await runCommandE2e(MEMORY_ROUTES, [
         "memory",
         "add",
         ...memoryLibraryCliArgs(),
@@ -88,7 +87,7 @@ describe.skipIf(!isBailianE2EEnabled() || !isDashScopeE2EReady())(
 
     test("memory add 缺少 --messages 与 --content 时报错正常退出", async () => {
       const userId = process.env.BAILIAN_E2E_MEMORY_USER_ID?.trim() || DEFAULT_E2E_MEMORY_USER_ID;
-      const { stderr, exitCode } = await runCommandE2e([
+      const { stderr, exitCode } = await runCommandE2e(MEMORY_ROUTES, [
         "memory",
         "add",
         ...memoryLibraryCliArgs(),
@@ -101,7 +100,7 @@ describe.skipIf(!isBailianE2EEnabled() || !isDashScopeE2EReady())(
 
     test("memory add --dry-run 仅输出计划且不入网", async () => {
       const userId = process.env.BAILIAN_E2E_MEMORY_USER_ID?.trim() || DEFAULT_E2E_MEMORY_USER_ID;
-      const { stdout, stderr, exitCode } = await runCommandE2e([
+      const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_ROUTES, [
         "memory",
         "add",
         "--dry-run",
@@ -126,7 +125,7 @@ describe.skipIf(!isBailianE2EEnabled() || !isDashScopeE2EReady())(
       const contentA = "CLI vp test：记忆写入（可删）";
       const contentB = "CLI vp test：记忆已更新";
 
-      const addRes = await runCommandE2e([
+      const addRes = await runCommandE2e(MEMORY_ROUTES, [
         "memory",
         "add",
         ...memoryLibraryCliArgs(),
@@ -141,7 +140,7 @@ describe.skipIf(!isBailianE2EEnabled() || !isDashScopeE2EReady())(
       const added = parseStdoutJson<MemoryAddBody & { request_id?: string }>(addRes.stdout);
       expect(added.request_id?.length ?? 0, addRes.stdout + addRes.stderr).toBeGreaterThan(0);
 
-      const listRes = await runCommandE2e([
+      const listRes = await runCommandE2e(MEMORY_ROUTES, [
         "memory",
         "list",
         ...memoryLibraryCliArgs(),
@@ -162,7 +161,7 @@ describe.skipIf(!isBailianE2EEnabled() || !isDashScopeE2EReady())(
       const nodeId = listed.memory_nodes![0]!.memory_node_id.trim();
       expect(nodeId.length).toBeGreaterThan(0);
 
-      const searchRes = await runCommandE2e([
+      const searchRes = await runCommandE2e(MEMORY_ROUTES, [
         "memory",
         "search",
         ...memoryLibraryCliArgs(),
@@ -179,7 +178,7 @@ describe.skipIf(!isBailianE2EEnabled() || !isDashScopeE2EReady())(
       const searched = parseStdoutJson<MemorySearchBody>(searchRes.stdout);
       expect(searched.memory_nodes?.length ?? 0).toBeGreaterThan(0);
 
-      const updRes = await runCommandE2e([
+      const updRes = await runCommandE2e(MEMORY_ROUTES, [
         "memory",
         "update",
         ...memoryLibraryCliArgs(),
@@ -194,7 +193,7 @@ describe.skipIf(!isBailianE2EEnabled() || !isDashScopeE2EReady())(
       ]);
       expect(updRes.exitCode, updRes.stderr).toBe(0);
 
-      const delRes = await runCommandE2e([
+      const delRes = await runCommandE2e(MEMORY_ROUTES, [
         "memory",
         "delete",
         ...memoryLibraryCliArgs(),

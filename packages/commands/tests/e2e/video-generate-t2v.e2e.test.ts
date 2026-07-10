@@ -9,20 +9,15 @@ import {
   parseStdoutJson,
   runCommandE2e,
 } from "./helpers.ts";
+import { VIDEO_ROUTES } from "./topic-routes.ts";
 
 /**
  * Video generate (t2v)：help / 分组不依赖密钥；长任务需视频 E2E + DashScope。
  */
 
 describe("e2e: video generate (t2v)", () => {
-  test("video 分组展示子命令帮助且成功退出", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["video"]);
-    expect(exitCode, stderr).toBe(0);
-    expect(`${stdout}\n${stderr}`).toMatch(/video|generate|edit|ref|task|download/i);
-  });
-
   test("video generate --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["video", "generate", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, ["video", "generate", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/generate|--prompt|--model|download|image/i);
   });
@@ -32,7 +27,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
   "e2e: video generate (t2v)（DashScope 视频）",
   () => {
     test("video generate 缺少 --prompt 时报用法错误并退出 (2)", async () => {
-      const { stderr, exitCode } = await runCommandE2e([
+      const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "generate",
         ...cliTimeoutPrefix(),
@@ -44,7 +39,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
     });
 
     test("video generate --dry-run（无 --image）仅输出 request 且不调生成接口", async () => {
-      const { stdout, stderr, exitCode } = await runCommandE2e([
+      const { stdout, stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "generate",
         "--dry-run",
@@ -66,7 +61,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
 
     test("【happyhorse-1.1-t2v】文本生成视频", async () => {
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
-      const { stdout, stderr, exitCode } = await runCommandE2e([
+      const { stdout, stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "generate",
         ...cliTimeoutPrefix(),

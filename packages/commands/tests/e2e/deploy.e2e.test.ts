@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { DEPLOY_ROUTES } from "./topic-routes.ts";
 
 /**
  * Deploy E2E.
@@ -14,21 +15,14 @@ import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.t
  */
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
-  test("deploy 列出子命令", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["deploy"]);
-    expect(exitCode, stderr).toBe(0);
-    const out = `${stdout}\n${stderr}`;
-    expect(out).toMatch(/create|list|get|delete|update|scale|models/);
-  });
-
   test("deploy create --help 正常退出并展示必填项", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["deploy", "create", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(DEPLOY_ROUTES, ["deploy", "create", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--model|--name/i);
   });
 
   test("deploy create --dry-run 构造 lora 部署请求体", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(DEPLOY_ROUTES, [
       "deploy",
       "create",
       "--model",
@@ -57,7 +51,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
   });
 
   test("deploy scale --dry-run 转发 capacity", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(DEPLOY_ROUTES, [
       "deploy",
       "scale",
       "--deployed-model",
@@ -80,7 +74,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
   });
 
   test("deploy update --dry-run 转发 rate limits", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(DEPLOY_ROUTES, [
       "deploy",
       "update",
       "--deployed-model",
@@ -104,7 +98,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
   });
 
   test("deploy scale --dry-run 缺少 capacity/input-tpm/output-tpm 时报错", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(DEPLOY_ROUTES, [
       "deploy",
       "scale",
       "--deployed-model",
@@ -124,7 +118,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
     ["models", ["--source", "custom"]],
     ["delete", ["--deployed-model", "dep-xxx"]],
   ])("deploy %s --dry-run 发出结构化动作", async (sub, extra) => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(DEPLOY_ROUTES, [
       "deploy",
       sub,
       ...extra,
@@ -147,7 +141,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (DashScope)", () => {
    *     而非进程崩溃），即视为通过。
    */
   test("deploy list --output json 优雅返回（空账号或鉴权失败均通过）", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(DEPLOY_ROUTES, [
       "deploy",
       "list",
       "--page-size",

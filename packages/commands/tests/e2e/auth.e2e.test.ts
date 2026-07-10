@@ -1,45 +1,39 @@
 import { describe, expect, test } from "vite-plus/test";
 import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { AUTH_ROUTES } from "./topic-routes.ts";
 
 /**
  * Auth 相关 E2E：只验证 CLI 进程能正常解析参数并退出。
  */
 
 describe("e2e: auth", () => {
-  test("auth 分组展示子命令帮助且退出码为 0", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["auth"]);
-    expect(exitCode, stderr).toBe(0);
-    const out = `${stdout}\n${stderr}`;
-    expect(out).toMatch(/auth|Authentication|login|logout|status/i);
-  });
-
   test("auth login --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["auth", "login", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, ["auth", "login", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/login|api-key/i);
     expect(stderr).toMatch(/--console-site/);
   });
 
   test("auth logout --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["auth", "logout", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, ["auth", "logout", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/logout|dry-run|yes/i);
   });
 
   test("auth status --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["auth", "status", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, ["auth", "status", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/status|output/i);
   });
 
   test("auth login 缺少 --api-key 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["auth", "login", "--quiet"]);
+    const { stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, ["auth", "login", "--quiet"]);
     expect(exitCode, stderr).toBe(2);
     expect(stderr).toMatch(/--api-key|Usage:/i);
   });
 
   test("auth login --dry-run --api-key 不发起校验与落盘", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, [
       "auth",
       "login",
       "--dry-run",
@@ -51,7 +45,7 @@ describe("e2e: auth", () => {
   });
 
   test("auth login --dry-run 覆盖全局参数 --output json --timeout", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, [
       "auth",
       "login",
       "--dry-run",
@@ -67,7 +61,12 @@ describe("e2e: auth", () => {
   });
 
   test("auth login 缺少密钥且 --output json 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["auth", "login", "--output", "json"]);
+    const { stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, [
+      "auth",
+      "login",
+      "--output",
+      "json",
+    ]);
     expect(exitCode).toBe(2);
     const err = JSON.parse(stderr.trim()) as { error?: { code?: number; message?: string } };
     expect(err.error?.code).toBe(2);
@@ -75,14 +74,18 @@ describe("e2e: auth", () => {
   });
 
   test("auth logout --dry-run 不写入配置", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["auth", "logout", "--dry-run"]);
+    const { stdout, stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, [
+      "auth",
+      "logout",
+      "--dry-run",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("No changes made.");
     expect(stderr).not.toContain("Cleared api_key");
   });
 
   test("auth logout --dry-run --quiet", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, [
       "auth",
       "logout",
       "--dry-run",
@@ -93,7 +96,7 @@ describe("e2e: auth", () => {
   });
 
   test("auth logout --dry-run --output json（不清除密钥）", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, [
       "auth",
       "logout",
       "--dry-run",
@@ -106,7 +109,7 @@ describe("e2e: auth", () => {
   });
 
   test.skipIf(!isDashScopeE2EReady())("auth status 文本输出", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, [
       "auth",
       "status",
       "--output",
@@ -119,7 +122,7 @@ describe("e2e: auth", () => {
   });
 
   test.skipIf(!isDashScopeE2EReady())("auth status --output json", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, [
       "auth",
       "status",
       "--output",
@@ -138,6 +141,7 @@ describe("e2e: auth", () => {
     "auth status --output json --quiet(base_url 经 env 指定;凭证域 flag 对 status 不可见)",
     async () => {
       const { stdout, stderr, exitCode } = await runCommandE2e(
+        AUTH_ROUTES,
         ["auth", "status", "--output", "json", "--quiet"],
         { DASHSCOPE_BASE_URL: "https://dashscope.aliyuncs.com" },
       );
@@ -149,7 +153,7 @@ describe("e2e: auth", () => {
   );
 
   test("auth status 不接受凭证域覆盖 flag(--base-url 报 Unknown flag)", async () => {
-    const { stderr, exitCode } = await runCommandE2e([
+    const { stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, [
       "auth",
       "status",
       "--base-url",

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { KNOWLEDGE_ROUTES } from "./topic-routes.ts";
 
 // ---- Types ----
 
@@ -20,15 +21,12 @@ interface DryRunBody {
 // ---- Help & missing args (no credentials needed) ----
 
 describe("e2e: knowledge retrieve", () => {
-  test("knowledge 分组展示子命令帮助且成功退出", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["knowledge"]);
-    expect(exitCode, stderr).toBe(0);
-    const out = `${stdout}\n${stderr}`;
-    expect(out).toMatch(/knowledge|retrieve/i);
-  });
-
   test("knowledge retrieve --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["knowledge", "retrieve", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_ROUTES, [
+      "knowledge",
+      "retrieve",
+      "--help",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--index-id/i);
     expect(stderr).toMatch(/--query/i);
@@ -37,13 +35,18 @@ describe("e2e: knowledge retrieve", () => {
   });
 
   test("缺少 --index-id 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["knowledge", "retrieve", "--query", "test"]);
+    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_ROUTES, [
+      "knowledge",
+      "retrieve",
+      "--query",
+      "test",
+    ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--index-id|Usage:/i);
   });
 
   test("缺少 --query 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e([
+    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_ROUTES, [
       "knowledge",
       "retrieve",
       "--index-id",
@@ -59,6 +62,7 @@ describe("e2e: knowledge retrieve", () => {
 describe.skipIf(!isDashScopeE2EReady())("e2e: knowledge retrieve errors", () => {
   test("无任何凭证时提示缺少密钥并非零退出", async () => {
     const { stderr, exitCode } = await runCommandE2e(
+      KNOWLEDGE_ROUTES,
       ["knowledge", "retrieve", "--index-id", "idx_test", "--query", "test", "--output", "json"],
       {
         DASHSCOPE_API_KEY: "",
@@ -76,6 +80,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: knowledge retrieve errors", () => 
 describe("e2e: knowledge retrieve dry-run", () => {
   test("--dry-run 输出 endpoint 和 snake_case body", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(
+      KNOWLEDGE_ROUTES,
       [
         "knowledge",
         "retrieve",
@@ -98,6 +103,7 @@ describe("e2e: knowledge retrieve dry-run", () => {
 
   test("--dry-run + --top-k 转发到 rerank_top_n 并输出废弃警告", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(
+      KNOWLEDGE_ROUTES,
       [
         "knowledge",
         "retrieve",
@@ -121,6 +127,7 @@ describe("e2e: knowledge retrieve dry-run", () => {
 
   test("--dry-run + --rerank-top-n 优先于 --top-k", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(
+      KNOWLEDGE_ROUTES,
       [
         "knowledge",
         "retrieve",
@@ -145,6 +152,7 @@ describe("e2e: knowledge retrieve dry-run", () => {
 
   test("--dry-run + rerank 参数完整输出", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(
+      KNOWLEDGE_ROUTES,
       [
         "knowledge",
         "retrieve",

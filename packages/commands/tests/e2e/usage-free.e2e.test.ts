@@ -5,23 +5,17 @@ import {
   parseStdoutJson,
   runCommandE2e,
 } from "./helpers.ts";
+import { USAGE_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: usage free", () => {
-  test("usage 分组展示子命令帮助且退出码为 0", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["usage"]);
-    expect(exitCode, stderr).toBe(0);
-    const out = `${stdout}\n${stderr}`;
-    expect(out).toMatch(/usage|free|freetier/i);
-  });
-
   test("usage free --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["usage", "free", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, ["usage", "free", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--model|quota|free-tier/i);
   });
 
   test("usage free --help 包含所有示例", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["usage", "free", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, ["usage", "free", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("bl usage free");
     expect(stderr).toContain("bl usage free --model qwen3-max");
@@ -31,7 +25,7 @@ describe("e2e: usage free", () => {
 
 describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
   test("usage free --dry-run --model 输出请求参数不发起调用", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, [
       "usage",
       "free",
       "--dry-run",
@@ -50,7 +44,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
   });
 
   test("usage free --dry-run --model 逗号分隔多个模型", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, [
       "usage",
       "free",
       "--dry-run",
@@ -67,7 +61,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
   });
 
   test("usage free --dry-run --model 重复模型名自动去重", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, [
       "usage",
       "free",
       "--dry-run",
@@ -84,7 +78,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
   });
 
   test("usage free --dry-run --model 逗号间有空格也能正确解析", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, [
       "usage",
       "free",
       "--dry-run",
@@ -101,7 +95,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
   });
 
   test("usage free --dry-run 不指定 --model 传全量模型列表", async () => {
-    const { stderr, exitCode } = await runCommandE2e([
+    const { stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, [
       "usage",
       "free",
       "--dry-run",
@@ -112,7 +106,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
   });
 
   test("usage free --model 单模型查询返回 JSON 结果", async () => {
-    const result = await runCommandE2e([
+    const result = await runCommandE2e(USAGE_ROUTES, [
       "usage",
       "free",
       "--model",
@@ -125,7 +119,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
   });
 
   test("usage free --model 单模型文本输出包含表头", async () => {
-    const result = await runCommandE2e([
+    const result = await runCommandE2e(USAGE_ROUTES, [
       "usage",
       "free",
       "--model",
@@ -138,7 +132,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
   });
 
   test("usage free --model 文本输出包含模型名", async () => {
-    const result = await runCommandE2e([
+    const result = await runCommandE2e(USAGE_ROUTES, [
       "usage",
       "free",
       "--model",
@@ -151,7 +145,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
   });
 
   test("usage free --model 逗号分隔多模型文本输出包含所有模型", async () => {
-    const result = await runCommandE2e([
+    const result = await runCommandE2e(USAGE_ROUTES, [
       "usage",
       "free",
       "--model",
@@ -164,7 +158,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
   });
 
   test("usage free --model 文本输出包含正确的 Type 列", async () => {
-    const result = await runCommandE2e([
+    const result = await runCommandE2e(USAGE_ROUTES, [
       "usage",
       "free",
       "--model",
@@ -177,7 +171,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
   });
 
   test("usage free --model quotaStatus 为 UNKNOWN 时 Auto-Stop 显示 Unsupported", async () => {
-    const result = await runCommandE2e([
+    const result = await runCommandE2e(USAGE_ROUTES, [
       "usage",
       "free",
       "--model",
@@ -190,7 +184,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
   });
 
   test("usage free --model quotaStatus 为 UNKNOWN 时额度显示为 -", async () => {
-    const result = await runCommandE2e([
+    const result = await runCommandE2e(USAGE_ROUTES, [
       "usage",
       "free",
       "--model",
@@ -203,7 +197,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
   });
 
   test("usage free --model 不存在的模型仍返回表格行", async () => {
-    const result = await runCommandE2e([
+    const result = await runCommandE2e(USAGE_ROUTES, [
       "usage",
       "free",
       "--model",
@@ -216,7 +210,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
   });
 
   test("usage free --model Auto-Stop 显示 ON、OFF 或 Unsupported", async () => {
-    const result = await runCommandE2e([
+    const result = await runCommandE2e(USAGE_ROUTES, [
       "usage",
       "free",
       "--model",
@@ -229,7 +223,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage free（Console）", () => {
   });
 
   test("usage free --model --console-region cn-beijing 指定区域查询", async () => {
-    const result = await runCommandE2e([
+    const result = await runCommandE2e(USAGE_ROUTES, [
       "usage",
       "free",
       "--model",

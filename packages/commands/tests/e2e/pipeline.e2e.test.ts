@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { PIPELINE_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: pipeline", () => {
   let tempDir: string;
@@ -63,30 +64,29 @@ describe("e2e: pipeline", () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  test("pipeline 分组展示子命令帮助且成功退出", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["pipeline"]);
-    expect(exitCode, stderr).toBe(0);
-    const out = `${stdout}\n${stderr}`;
-    expect(out).toMatch(/pipeline|run|validate/i);
-    expect(out).toMatch(/Minimal workflow\.yaml|text\/chat|bl pipeline run workflow\.yaml/i);
-    expect(out).toMatch(/Say hello in one short sentence|--dry-run --output json/i);
-  });
-
   test("pipeline run --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["pipeline", "run", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(PIPELINE_ROUTES, [
+      "pipeline",
+      "run",
+      "--help",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/pipeline run|--input|--input-file|--events|--concurrency/i);
     expect(stderr).not.toMatch(/--session-(?:dir|id)/i);
   });
 
   test("pipeline validate --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["pipeline", "validate", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(PIPELINE_ROUTES, [
+      "pipeline",
+      "validate",
+      "--help",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/pipeline validate|workflow\.json|output json/i);
   });
 
   test("pipeline validate --output json 校验合法 workflow", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(PIPELINE_ROUTES, [
       "pipeline",
       "validate",
       "--file",
@@ -102,6 +102,7 @@ describe("e2e: pipeline", () => {
 
   test("pipeline validate 使用 config 输出格式", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(
+      PIPELINE_ROUTES,
       ["pipeline", "validate", "--file", chatBasicPath],
       {
         DASHSCOPE_OUTPUT: "text",
@@ -112,7 +113,7 @@ describe("e2e: pipeline", () => {
   });
 
   test("pipeline validate 拒绝非法依赖 workflow", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(PIPELINE_ROUTES, [
       "pipeline",
       "validate",
       "--file",
@@ -128,13 +129,17 @@ describe("e2e: pipeline", () => {
   });
 
   test("pipeline run 缺少 --file 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["pipeline", "run", "--quiet"]);
+    const { stderr, exitCode } = await runCommandE2e(PIPELINE_ROUTES, [
+      "pipeline",
+      "run",
+      "--quiet",
+    ]);
     expect(exitCode, stderr).toBe(2);
     expect(stderr).toMatch(/Usage: bl pipeline run --file <path>|--file/i);
   });
 
   test("pipeline run --dry-run --output json 仅输出计划", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(PIPELINE_ROUTES, [
       "pipeline",
       "run",
       "--file",
@@ -168,6 +173,7 @@ describe("e2e: pipeline", () => {
 
   test("pipeline run 使用 config 输出格式", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(
+      PIPELINE_ROUTES,
       ["pipeline", "run", "--file", chatBasicPath, "--input", '{"message":"hello"}', "--dry-run"],
       { DASHSCOPE_OUTPUT: "text" },
     );
@@ -177,7 +183,7 @@ describe("e2e: pipeline", () => {
   });
 
   test("pipeline run --verbose 打印总步数和当前步骤序号", async () => {
-    const { stderr, exitCode } = await runCommandE2e([
+    const { stderr, exitCode } = await runCommandE2e(PIPELINE_ROUTES, [
       "pipeline",
       "run",
       "--file",
@@ -193,7 +199,7 @@ describe("e2e: pipeline", () => {
   });
 
   test("pipeline run --events jsonl 在 dry-run 下输出生命周期事件", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(PIPELINE_ROUTES, [
       "pipeline",
       "run",
       "--file",
@@ -221,7 +227,7 @@ describe("e2e: pipeline", () => {
   });
 
   test("pipeline run 拒绝未知 events format", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(PIPELINE_ROUTES, [
       "pipeline",
       "run",
       "--file",

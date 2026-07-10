@@ -1,22 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
+import { deriveGroupPaths } from "e2e/registry-smoke";
 import { commands } from "../../src/commands.ts";
 import { runCli } from "./helpers.ts";
-
-/** 从命令 map 推导有子命令的分组路径 */
-function deriveGroupPaths(commandPaths: string[]): string[] {
-  const groups = new Set<string>();
-  for (const path of commandPaths) {
-    const parts = path.split(" ");
-    for (let i = 1; i < parts.length; i++) {
-      const prefix = parts.slice(0, i).join(" ");
-      const hasChildren = commandPaths.some(
-        (candidate) => candidate.startsWith(`${prefix} `) && candidate !== prefix,
-      );
-      if (hasChildren) groups.add(prefix);
-    }
-  }
-  return [...groups].sort();
-}
 
 const commandPaths = Object.keys(commands).sort();
 const groupPaths = deriveGroupPaths(commandPaths);

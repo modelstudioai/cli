@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 import { join } from "path";
 import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e, e2eFixturesDir } from "./helpers.ts";
+import { DATASET_ROUTES } from "./topic-routes.ts";
 
 /**
  * Dataset (fine-tune file) E2E.
@@ -16,22 +17,19 @@ import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e, e2eFixturesDir } f
  */
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
-  test("dataset --help 列出子命令", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["dataset"]);
-    expect(exitCode, stderr).toBe(0);
-    const out = `${stdout}\n${stderr}`;
-    expect(out).toMatch(/upload|list|get|delete|validate/);
-  });
-
   test("dataset upload --help 正常退出并展示 --file", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["dataset", "upload", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
+      "dataset",
+      "upload",
+      "--help",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--file|jsonl/i);
   });
 
   test("dataset validate 通过合法 JSONL", async () => {
     const file = join(e2eFixturesDir, ".dataset-valid.jsonl");
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
       "dataset",
       "validate",
       "--file",
@@ -47,7 +45,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
 
   test("dataset validate 拒绝 pretty-printed JSON 并以非零码退出", async () => {
     const file = join(e2eFixturesDir, ".dataset-invalid.jsonl");
-    const { stdout, exitCode } = await runCommandE2e([
+    const { stdout, exitCode } = await runCommandE2e(DATASET_ROUTES, [
       "dataset",
       "validate",
       "--file",
@@ -66,7 +64,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
 
   test("dataset upload --no-validate --dry-run 跳过本地校验", async () => {
     const file = join(e2eFixturesDir, ".dataset-invalid.jsonl");
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
       "dataset",
       "upload",
       "--file",
@@ -86,7 +84,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
     // No --schema: a record carrying chosen/rejected is auto-detected as DPO
     // and the valid fixture passes.
     const file = join(e2eFixturesDir, ".dataset-dpo-valid.jsonl");
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
       "dataset",
       "validate",
       "--file",
@@ -104,7 +102,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
     // No --schema: a record carrying `text` (and no `messages`) is auto-detected
     // as CPT and the valid fixture passes.
     const file = join(e2eFixturesDir, ".dataset-cpt-valid.jsonl");
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
       "dataset",
       "validate",
       "--file",
@@ -120,7 +118,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
 
   test("dataset validate --schema cpt 拒绝缺失 text 的记录", async () => {
     const file = join(e2eFixturesDir, ".dataset-valid.jsonl"); // SFT {messages}, no text
-    const { stdout, exitCode } = await runCommandE2e([
+    const { stdout, exitCode } = await runCommandE2e(DATASET_ROUTES, [
       "dataset",
       "validate",
       "--file",
@@ -140,7 +138,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
 
   test("dataset validate --schema dpo 拒绝缺失 rejected 的记录", async () => {
     const file = join(e2eFixturesDir, ".dataset-dpo-invalid.jsonl");
-    const { stdout, exitCode } = await runCommandE2e([
+    const { stdout, exitCode } = await runCommandE2e(DATASET_ROUTES, [
       "dataset",
       "validate",
       "--file",
@@ -161,7 +159,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
   test("dataset validate --schema chatml 忽略 chosen/rejected（不报 DPO 错误）", async () => {
     // Same invalid-DPO file, but --schema chatml must not run DPO checks.
     const file = join(e2eFixturesDir, ".dataset-dpo-invalid.jsonl");
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
       "dataset",
       "validate",
       "--file",
@@ -179,7 +177,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
 
   test("dataset validate --schema <bad> 以非零码退出", async () => {
     const file = join(e2eFixturesDir, ".dataset-valid.jsonl");
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
       "dataset",
       "validate",
       "--file",
@@ -195,7 +193,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
 
   test("dataset upload --dry-run 转发 --schema", async () => {
     const file = join(e2eFixturesDir, ".dataset-dpo-valid.jsonl");
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
       "dataset",
       "upload",
       "--file",
@@ -215,7 +213,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (DashScope)", () => {
   test("dataset list --output json 返回结构化结果", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e([
+    const { stdout, stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
       "dataset",
       "list",
       "--page-size",

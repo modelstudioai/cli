@@ -8,20 +8,19 @@ import {
   parseStdoutJson,
   runCommandE2e,
 } from "./helpers.ts";
+import { SPEECH_ROUTES } from "./topic-routes.ts";
 
 /**
  * Speech synthesize：help / 分组不依赖密钥；合成本地需媒体 E2E + DashScope。
  */
 
 describe("e2e: speech synthesize", () => {
-  test("speech 分组展示子命令帮助且成功退出", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(["speech"]);
-    expect(exitCode, stderr).toBe(0);
-    expect(`${stdout}\n${stderr}`).toMatch(/speech|synthesize|recognize/i);
-  });
-
   test("speech synthesize --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(["speech", "synthesize", "--help"]);
+    const { stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+      "speech",
+      "synthesize",
+      "--help",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/synthesize|--text|--voice|model/i);
   });
@@ -31,7 +30,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
   "e2e: speech synthesize（DashScope 媒体）",
   () => {
     test("speech synthesize 缺少 --text 时报用法错误并退出 (2)", async () => {
-      const { stderr, exitCode } = await runCommandE2e([
+      const { stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
         "speech",
         "synthesize",
         "--model",
@@ -44,7 +43,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
     });
 
     test("speech synthesize --dry-run 仅输出 request 且不调 TTS", async () => {
-      const { stdout, stderr, exitCode } = await runCommandE2e([
+      const { stdout, stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
         "speech",
         "synthesize",
         "--dry-run",
@@ -68,7 +67,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
     test("【cosyvoice-v3-flash】语音合成", async () => {
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
       const outMp3 = join(outDir, "e2e-tts.mp3");
-      const { stdout, stderr, exitCode } = await runCommandE2e([
+      const { stdout, stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
         "speech",
         "synthesize",
         "--model",
