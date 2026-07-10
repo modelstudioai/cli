@@ -230,9 +230,9 @@ bl finetune delete --job-id ft-xxx --dry-run
 
 #### Notes
 
-- Required before `deploy create` can target a checkpoint. The platform
-- may auto-export the best checkpoint when a job reaches SUCCEEDED — explicit
-- export is the canonical path for non-best checkpoints.
+- Required before `deploy <modality> create` can target a checkpoint. The
+- platform may auto-export the best checkpoint when a job reaches SUCCEEDED —
+- explicit export is the canonical path for non-best checkpoints.
 
 #### Examples
 
@@ -268,24 +268,25 @@ bl finetune get --job-id ft-xxx --output json
 
 ### `bl finetune image create`
 
-| Field           | Value                                                                                                                                                       |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `finetune image create`                                                                                                                                     |
-| **Description** | Create an image generation model fine-tune job (sft-lora)                                                                                                   |
-| **Usage**       | `bl finetune image create --model <model> --datasets <id\|path> [--validations <id\|path>] [--model-name <name>] [--suffix <text>] [--learning-rate <str>]` |
+| Field           | Value                                                                                                                                                                                      |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Name**        | `finetune image create`                                                                                                                                                                    |
+| **Description** | Create an image generation model fine-tune job (sft-lora)                                                                                                                                  |
+| **Usage**       | `bl finetune image create --model <model> --datasets <id\|path> [--validations <id\|path>] [--model-name <name>] [--suffix <text>] [--generation-type <t2i\|i2i>] [--learning-rate <str>]` |
 
 #### Flags
 
-| Flag                         | Type   | Required | Description                                                                                                                                                        |
-| ---------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--model <model>`            | string | yes      | Base model to fine-tune                                                                                                                                            |
-| `--datasets <ids\|paths>`    | string | yes      | Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image). Local paths are uploaded (validated) first, then their file-ids are used. |
-| `--validations <ids\|paths>` | string | no       | Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).                                                                        |
-| `--model-name <name>`        | string | no       | Output model name (after training)                                                                                                                                 |
-| `--suffix <text>`            | string | no       | Output suffix appended by the platform (finetuned_output_suffix)                                                                                                   |
-| `--learning-rate <str>`      | string | no       | Learning rate as a string to preserve precision (e.g. "3e-5")                                                                                                      |
-| `--api-key <key>`            | string | no       | API key                                                                                                                                                            |
-| `--base-url <url>`           | string | no       | API base URL                                                                                                                                                       |
+| Flag                           | Type   | Required | Description                                                                                                                                                         |
+| ------------------------------ | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--model <model>`              | string | yes      | Base model to fine-tune                                                                                                                                             |
+| `--datasets <ids\|paths>`      | string | yes      | Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image). Local paths are uploaded (validated) first, then their file-ids are used.  |
+| `--validations <ids\|paths>`   | string | no       | Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).                                                                         |
+| `--model-name <name>`          | string | no       | Output model name (after training)                                                                                                                                  |
+| `--suffix <text>`              | string | no       | Output suffix appended by the platform (finetuned_output_suffix)                                                                                                    |
+| `--generation-type <t2i\|i2i>` | string | no       | Generation type: t2i (default) \| i2i. Sets generation_type/max_pixels. Required to train I2I from a file-id or with --dry-run (local data auto-detects input_img). |
+| `--learning-rate <str>`        | string | no       | Learning rate as a string to preserve precision (e.g. "3e-5")                                                                                                       |
+| `--api-key <key>`              | string | no       | API key                                                                                                                                                             |
+| `--base-url <url>`             | string | no       | API base URL                                                                                                                                                        |
 
 #### Notes
 
@@ -295,8 +296,10 @@ bl finetune get --job-id ft-xxx --output json
 - or local paths. Local paths are validated and uploaded first, then their
 - file-ids are submitted — a one-step upload-and-train.
 - Image generation training runs sft-lora (efficient_sft) with fixed defaults;
-- only --learning-rate is overridable. T2I vs I2I is auto-detected from the
-- data (records with input_img train I2I), which sets max_pixels accordingly.
+- only --learning-rate is overridable. T2I vs I2I is declared with
+- --generation-type (default t2i), which sets generation_type/max_pixels. For
+- local data the type is auto-detected (records with input_img train I2I);
+- pass --generation-type explicitly to train I2I from a file-id or in --dry-run.
 
 #### Examples
 
@@ -306,6 +309,10 @@ bl finetune image create --model wan2.7-image-pro --datasets ./images.zip
 
 ```bash
 bl finetune image create --model wan2.7-image-pro --datasets file-xxx
+```
+
+```bash
+bl finetune image create --model wan2.7-image-pro --datasets file-xxx --generation-type i2i
 ```
 
 ```bash

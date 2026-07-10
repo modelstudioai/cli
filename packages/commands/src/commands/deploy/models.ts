@@ -73,8 +73,8 @@ export default defineCommand({
     //   - custom (fine-tuned): top-level supported_plans: string[]
     //   - base (catalog):      plans: [{plan, templates?, cu_specs?}]
     // For json: surface the deployment-relevant fields preserved as a tree, so
-    // downstream tooling can drive `bl deploy create --template-id <…>` without
-    // a second round-trip. For text: keep the compact one-line summary.
+    // downstream tooling can drive `bl deploy <modality> create --deploy-spec <…>`
+    // without a second round-trip. For text: keep the compact one-line summary.
     if (format === "json") {
       const items = models.map((model) => {
         const out: Record<string, unknown> = {
@@ -92,7 +92,7 @@ export default defineCommand({
               planEntry.cu_specs = plan.cu_specs;
             }
             if (plan.templates && plan.templates.length > 0) {
-              // Pull the top 6 fields most useful for `bl deploy create`.
+              // Pull the top 6 fields most useful for `bl deploy <modality> create`.
               // Drop noisy/redundant: template_source, template_type,
               // template_version, deploy_spec (typically == template_id).
               planEntry.templates = plan.templates.map((template) => {

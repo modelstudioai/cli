@@ -4,7 +4,8 @@ import {
   createDeployment,
   pickPlanStrategy,
   STRATEGIES,
-  DEFAULT_DEPLOY_PLAN,
+  defaultDeployPlan,
+  type DeployModality,
   type CreateDeploymentRequest,
   type CreatePlanFlags,
   type CommandContext,
@@ -66,7 +67,8 @@ const CREATE_USAGE =
   "--model <model_name> --name <display_name> [--plan <plan>] [--deploy-spec <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]";
 
 const CREATE_NOTES = [
-  "Plan defaults to `lora` (Token-billed). Pass --plan to override.",
+  "Plan defaults to `lora` (Token-billed) for text/image and `mu` (model-unit-",
+  "billed) for audio (CosyVoice TTS). Pass --plan to override.",
   "For plan=ptu (Token-billed, provisioned throughput), --input-tpm and",
   "--output-tpm are required (the platform rejects creation without an",
   "explicit ptu_capacity despite the doc listing defaults).",
@@ -77,22 +79,23 @@ const CREATE_NOTES = [
   "After creation, status starts at PENDING and transitions to RUNNING.",
   "Invoke the deployed model with: bl text chat --model <deployed_model>",
   "WARNING: --model is overloaded across commands and refers to DIFFERENT",
-  "values. `bl deploy create --model` takes the exported model_name (e.g.",
-  "`qwen3-8b-ft-...`), but the create response also returns a `deployed_model`",
-  "field (the deployment instance id, e.g. `qwen3-8b-5ecb5f068d79`). The",
-  "inference call `bl text chat --model` must use the `deployed_model` from",
-  "the create response — NOT the `model_name` you passed to `deploy create`.",
-  "Do not reuse the value across the two commands.",
+  "values. `bl deploy <modality> create --model` takes the exported model_name",
+  "(e.g. `qwen3-8b-ft-...`), but the create response also returns a",
+  "`deployed_model` field (the deployment instance id, e.g.",
+  "`qwen3-8b-5ecb5f068d79`). The inference call `bl text chat --model` must use",
+  "the `deployed_model` from the create response — NOT the `model_name` you",
+  "passed to `deploy <modality> create`. Do not reuse the value across the two",
+  "commands.",
 ];
 
 /**
  * Shared `deploy <modality> create` flag validation. Plan support is
- * server-catalog-driven, not modality-scoped, so validation is identical for
- * every modality: reject an unknown --plan, then defer to the plan strategy's
- * required-flag check.
+ * server-catalog-driven, so validation is identical for every modality: resolve
+ * the effective plan (modality-specific default when --plan is omitted), reject
+ * an unknown --plan, then defer to the plan strategy's required-flag check.
  */
-function validateCreate(flags: CreatePlanFlags): string | undefined {
-  const plan = flags.plan || DEFAULT_DEPLOY_PLAN;
+function validateCreate(modality: DeployModality, flags: CreatePlanFlags): string | undefined {
+  const plan = flags.plan || defaultDeployPlan(modality);
   const strategy = STRATEGIES[plan];
   if (!strategy) {
     return `Unsupported plan "${plan}". Supported plans: ${Object.keys(STRATEGIES).join(", ")}.`;
@@ -102,20 +105,23 @@ function validateCreate(flags: CreatePlanFlags): string | undefined {
 
 /**
  * Shared `deploy <modality> create` implementation. deploy create takes a model
- * by name and a billing plan — it does NOT inspect data modality, so the run
- * logic is identical across text / audio / image. The modality split only
- * changes the command path, description and examples; the parameter surface and
- * run logic are unchanged.
+ * by name and a billing plan — it does NOT inspect data modality for the request
+ * body, so the run logic is identical across text / audio / image. The modality
+ * only fixes the default plan (audio → mu, text/image → lora) and the command
+ * path / description / examples.
  *
  * Plan-specific behaviour (required flags / body assembly / auto-pick) lives in
  * core `plans.ts` (`PlanStrategy` + `STRATEGIES`). This file only handles the
  * shared envelope: dispatch, dry-run, and result formatting.
  */
-async function runCreate(ctx: CommandContext<typeof CREATE_FLAGS>): Promise<void> {
+async function runCreate(
+  modality: DeployModality,
+  ctx: CommandContext<typeof CREATE_FLAGS>,
+): Promise<void> {
   const { identity, settings, flags } = ctx;
   const model = flags.model as string;
   const name = flags.name as string;
-  const plan = (flags.plan as string | undefined) || DEFAULT_DEPLOY_PLAN;
+  const plan = (flags.plan as string | undefined) || defaultDeployPlan(modality);
   const format = detectOutputFormat(settings.output);
 
   // Plan-specific behaviour is owned by core `plans.ts`. The strategy resolves
@@ -175,11 +181,11 @@ export const deployTextCreate = defineCommand({
     "--model qwen3-8b --name my-qwen3 --plan mu --deploy-spec MU1 --capacity 2",
   ],
   notes: CREATE_NOTES,
-  validate: (flags) => validateCreate(flags),
-  run: (ctx) => runCreate(ctx),
+  validate: (flags) => validateCreate("text", flags),
+  run: (ctx) => runCreate("text", ctx),
 });
 
-/** `bl deploy audio create` — deploy an audio (TTS) model. */
+/** `bl deploy audio create` — deploy an audio (TTS) model. Defaults to plan=mu. */
 export const deployAudioCreate = defineCommand({
   description: "Create an audio (TTS) model deployment",
   auth: "apiKey",
@@ -187,12 +193,12 @@ export const deployAudioCreate = defineCommand({
   flags: CREATE_FLAGS,
   exampleArgs: [
     "--model my-cosyvoice-ft --name my-tts",
-    "--model my-cosyvoice-ft --name my-tts-mu --plan mu",
+    "--model my-cosyvoice-ft --name my-tts --deploy-spec dps-xxxx --capacity 1",
     "--model my-cosyvoice-ft --name my-tts --dry-run",
   ],
   notes: CREATE_NOTES,
-  validate: (flags) => validateCreate(flags),
-  run: (ctx) => runCreate(ctx),
+  validate: (flags) => validateCreate("audio", flags),
+  run: (ctx) => runCreate("audio", ctx),
 });
 
 /** `bl deploy image create` — deploy an image generation model. */
@@ -207,6 +213,6 @@ export const deployImageCreate = defineCommand({
     "--model my-wan-ft --name my-wan --dry-run",
   ],
   notes: CREATE_NOTES,
-  validate: (flags) => validateCreate(flags),
-  run: (ctx) => runCreate(ctx),
+  validate: (flags) => validateCreate("image", flags),
+  run: (ctx) => runCreate("image", ctx),
 });

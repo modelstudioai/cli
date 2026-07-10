@@ -87,9 +87,11 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
     expect(data.body.capacity).toBe(2);
   });
 
-  test("deploy audio create --dry-run 构造 lora 部署请求体", async () => {
-    // deploy create does not inspect modality; the split only changes the path.
-    // The audio subcommand shares the full flag surface and run logic.
+  test("deploy audio create --dry-run 默认 plan=mu（CosyVoice 部署契约）", async () => {
+    // Audio (CosyVoice TTS) outputs deploy model-unit-billed: the modality fixes
+    // the default plan to `mu` (text/image stay `lora`). In dry-run the mu
+    // strategy skips the catalog lookup, so deploy_spec is omitted and capacity
+    // falls back to 1 with billing_method POST_PAY.
     const { stdout, stderr, exitCode } = await runCli([
       "deploy",
       "audio",
@@ -103,10 +105,15 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
       "json",
     ]);
     expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{ action: string; body: { plan: string; name: string } }>(stdout);
+    const data = parseStdoutJson<{
+      action: string;
+      body: { plan: string; name: string; billing_method?: string; capacity?: number };
+    }>(stdout);
     expect(data.action).toBe("deploy.create");
-    expect(data.body.plan).toBe("lora");
+    expect(data.body.plan).toBe("mu");
     expect(data.body.name).toBe("my-tts");
+    expect(data.body.billing_method).toBe("POST_PAY");
+    expect(data.body.capacity).toBe(1);
   });
 
   test("deploy scale --dry-run 转发 capacity", async () => {

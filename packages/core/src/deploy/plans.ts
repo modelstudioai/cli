@@ -1,5 +1,5 @@
 /**
- * Per-plan strategy table for `deploy create`.
+ * Per-plan strategy table for `deploy <modality> create`.
  *
  * Each PlanStrategy owns one slice of plan-specific behaviour:
  *   - required-flag checks (returned as validate-style error strings)
@@ -7,7 +7,7 @@
  *     catalog; lora/ptu are pure)
  *   - the plan-specific body fragment for POST /api/v1/deployments
  *
- * The dispatcher in the `deploy create` command only knows about
+ * The dispatcher in the `deploy <modality> create` command only knows about
  * `STRATEGIES[plan]`. Adding a new plan = one new strategy object + one line in
  * `STRATEGIES`. Nothing in the command needs to change. This collapses the
  * places where lora / ptu / mu used to be hard-coded (default value list /
@@ -20,7 +20,7 @@ import { ExitCode } from "../errors/codes.ts";
 import type { Client } from "../client/client.ts";
 import { DEPLOY_PLAN, BILLING_METHOD, CHARGE_TYPE, DEFAULT_BILLING_METHOD } from "./constants.ts";
 
-/** Plan-relevant subset of `deploy create` flags (parsed flags satisfy this shape). */
+/** Plan-relevant subset of `deploy <modality> create` flags (parsed flags satisfy this shape). */
 export interface CreatePlanFlags {
   plan?: string;
   deploySpec?: string;

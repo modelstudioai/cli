@@ -295,10 +295,20 @@ const AUDIO_FLAGS = {
 /**
  * Image (Wan generation) flags: the image model runs sft-lora with fixed
  * defaults; resolveHyperParameters only honors learning_rate, so --learning-rate
- * is the sole extra knob exposed.
+ * is the sole extra numeric knob. --generation-type declares T2I vs I2I
+ * explicitly (the platform expects generation_type as a request field); it is
+ * required to reach I2I from a bare file-id or in --dry-run, where the data
+ * cannot be inspected.
  */
 const IMAGE_FLAGS = {
   ...COMMON_FLAGS,
+  generationType: {
+    type: "string",
+    choices: ["t2i", "i2i"] as const,
+    valueHint: "<t2i|i2i>",
+    description:
+      "Generation type: t2i (default) | i2i. Sets generation_type/max_pixels. Required to train I2I from a file-id or with --dry-run (local data auto-detects input_img).",
+  },
   learningRate: {
     type: "string",
     valueHint: "<str>",
@@ -313,7 +323,7 @@ const AUDIO_USAGE =
   "--model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>]";
 
 const IMAGE_USAGE =
-  "--model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>] [--learning-rate <str>]";
+  "--model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>] [--generation-type <t2i|i2i>] [--learning-rate <str>]";
 
 const COMMON_NOTES = [
   "Creating a job uploads any local datasets and consumes training quota.",
@@ -349,8 +359,10 @@ const AUDIO_NOTES = [
 const IMAGE_NOTES = [
   ...COMMON_NOTES,
   "Image generation training runs sft-lora (efficient_sft) with fixed defaults;",
-  "only --learning-rate is overridable. T2I vs I2I is auto-detected from the",
-  "data (records with input_img train I2I), which sets max_pixels accordingly.",
+  "only --learning-rate is overridable. T2I vs I2I is declared with",
+  "--generation-type (default t2i), which sets generation_type/max_pixels. For",
+  "local data the type is auto-detected (records with input_img train I2I);",
+  "pass --generation-type explicitly to train I2I from a file-id or in --dry-run.",
 ];
 
 /**
@@ -374,6 +386,24 @@ async function runCreate<F extends FlagsDef>(
   const model = flags.model as string;
   const datasetsRaw = flags.datasets as string;
 
+  // CosyVoice audio fine-tuning accepts exactly one training file
+  // (`training_file_ids` supports a single ID per the speech-synthesis
+  // contract). Reject a multi-token --datasets up-front so the job isn't
+  // rejected server-side after an upload.
+  if (commandModality === "audio") {
+    const audioTokens = datasetsRaw
+      .split(",")
+      .map((token) => token.trim())
+      .filter(Boolean);
+    if (audioTokens.length > 1) {
+      throw new BailianError(
+        `Audio (TTS) fine-tuning accepts exactly one training file, got ${audioTokens.length}.`,
+        ExitCode.USAGE,
+        "Merge your recordings into a single .zip (or pass one file-id).",
+      );
+    }
+  }
+
   // Resolve the training type before analyzing datasets so the validator can
   // enforce the right record schema (DPO jobs require chosen/rejected on
   // every record). Whitelist is the single source of truth in core
@@ -392,16 +422,24 @@ async function runCreate<F extends FlagsDef>(
   const profile = getProfile(trainingType);
 
   // Modality is fixed by the subcommand (no content-based detection) — this is
-  // the sole behavioural change of the modality split. Image alone probes a
-  // local file to upgrade T2I → I2I; a bare file-id stays "image".
+  // the sole behavioural change of the modality split. Image alone has a T2I/I2I
+  // sub-variant: an explicit --generation-type is authoritative (the only way to
+  // reach I2I from a bare file-id or in --dry-run, where data can't be
+  // inspected); otherwise a local file is probed to upgrade T2I → I2I, and a
+  // bare file-id stays "image" (T2I).
   const firstLocalPath = datasetsRaw
     .split(",")
     .map((token) => token.trim())
     .find((token) => isLocalPath(token));
   let modality: DataModality = commandModality;
-  if (commandModality === "image" && firstLocalPath && !settings.dryRun) {
-    const detected = await detectModality(firstLocalPath);
-    if (detected === "image-i2i") modality = "image-i2i";
+  if (commandModality === "image") {
+    const generationType = flags.generationType as "t2i" | "i2i" | undefined;
+    if (generationType === "i2i") {
+      modality = "image-i2i";
+    } else if (!generationType && firstLocalPath && !settings.dryRun) {
+      const detected = await detectModality(firstLocalPath);
+      if (detected === "image-i2i") modality = "image-i2i";
+    }
   }
 
   const training = await analyzeDatasetTokens(
@@ -647,6 +685,7 @@ export const finetuneImageCreate = defineCommand({
   exampleArgs: [
     "--model wan2.7-image-pro --datasets ./images.zip",
     "--model wan2.7-image-pro --datasets file-xxx",
+    "--model wan2.7-image-pro --datasets file-xxx --generation-type i2i",
     "--model wan2.7-image-pro --datasets ./images.zip --model-name my-wan",
     "--model wan2.7-image-pro --datasets file-xxx --output json",
     "--model wan2.7-image-pro --datasets ./images.zip --dry-run",

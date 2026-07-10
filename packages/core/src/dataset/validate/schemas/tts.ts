@@ -14,9 +14,6 @@ import { makeIssue } from "../common.ts";
 import type { ValidationIssue } from "../types.ts";
 import type { RecordSchemaSpec } from "./types.ts";
 
-/** Expected audio file extensions (lower-case, with dot). */
-const AUDIO_EXTENSIONS = new Set([".wav", ".mp3", ".flac", ".ogg", ".m4a"]);
-
 function inspectTTSRecord(record: Record<string, unknown>, lineNo: number): ValidationIssue[] {
   const out: ValidationIssue[] = [];
 
@@ -45,16 +42,33 @@ function inspectTTSRecord(record: Record<string, unknown>, lineNo: number): Vali
         }),
       );
     } else {
-      // Check that the path looks like it references an audio file.
-      const dotIndex = wavFn.lastIndexOf(".");
-      const ext = dotIndex >= 0 ? wavFn.slice(dotIndex).toLowerCase() : "";
-      if (!AUDIO_EXTENSIONS.has(ext)) {
+      // CosyVoice requires each wav_fn to reference a `.wav` file placed under
+      // the `train/` directory (matching the expected ZIP layout). Both are
+      // hard server-side requirements, so they are surfaced as errors — a
+      // dataset that violates them passes no useful preflight and would be
+      // rejected on submit.
+      if (!wavFn.startsWith("train/")) {
         out.push(
           makeIssue(
-            "warning",
-            "UNUSUAL_AUDIO_EXT",
-            `"wav_fn" points to a non-standard audio extension "${ext || "(none)"}". ` +
-              `Expected one of: ${[...AUDIO_EXTENSIONS].join(", ")}.`,
+            "error",
+            "WAV_FN_PREFIX",
+            `"wav_fn" must start with "train/" (got "${wavFn}").`,
+            {
+              line: lineNo,
+              path: "wav_fn",
+            },
+          ),
+        );
+      }
+      const dotIndex = wavFn.lastIndexOf(".");
+      const ext = dotIndex >= 0 ? wavFn.slice(dotIndex).toLowerCase() : "";
+      if (ext !== ".wav") {
+        out.push(
+          makeIssue(
+            "error",
+            "INVALID_AUDIO_EXT",
+            `"wav_fn" must reference a .wav file (got "${ext || "(none)"}"). ` +
+              `CosyVoice training audio must be WAV.`,
             { line: lineNo, path: "wav_fn" },
           ),
         );
