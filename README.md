@@ -39,7 +39,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **Web search** — Real-time internet retrieval for up-to-date, accurate answers
 - **Model recommendation** — Describe your scenario and get best-fit model suggestions; supports scoped search, model comparison, and alternative discovery
 - **Fine-tuning & deployment** — Upload datasets, create text/audio/image fine-tune jobs (`finetune text|audio|image create`; text covers SFT/LoRA/DPO/CPT), probe job status non-blockingly (`finetune watch`), query per-model training capability (`finetune capability`), and deploy trained models as endpoints (`deploy text|audio|image create`)
-- **Console capabilities** — Browse Bailian apps (`app list`), check free-tier quota (`usage free`), view model usage statistics (`usage stats`), manage workspaces (`workspace list`), and manage rate limits (`quota list/request/check/history`)
+- **Console capabilities** — Browse Bailian apps (`app list`), review a unified usage view (`usage summary`), check free-tier quota (`usage free`), view model usage statistics (`usage stats`), manage workspaces (`workspace list`), and manage rate limits (`quota list/request/check/history`)
 - **Local file auto-upload** — Every URL parameter accepts a local path; uploaded to free temp storage with 48-hour validity
 
 ## Showcase: One-Sentence Cinematic Video
@@ -121,6 +121,7 @@ bl deploy text create --model qwen3-8b --name my-svc --plan mu  # Deploy the tra
 
 # Browse apps / free-tier quota / usage statistics / workspaces
 bl app list
+bl usage summary                                     # Unified view: free-tier quota + recent usage overview
 bl usage free                                         # Free-tier quota across models (add --model/--expiring/--sort)
 bl usage stats --workspace-id <id>                    # Model usage statistics (add --model for per-model)
 bl workspace list                                     # List all workspaces

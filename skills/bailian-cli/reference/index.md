@@ -61,6 +61,7 @@ Use this index for the full quick index and global flags.
 | `bl memory profile get`      | Get user profile by schema ID and user ID                                                                                       | [memory.md](memory.md)         |
 | `bl memory search`           | Search memory nodes by query or messages                                                                                        | [memory.md](memory.md)         |
 | `bl memory update`           | Update a memory node content                                                                                                    | [memory.md](memory.md)         |
+| `bl model list`              | Browse model families or show detailed model info in the Bailian model marketplace                                              | [model.md](model.md)           |
 | `bl omni`                    | Multimodal chat with text + audio output (Qwen-Omni)                                                                            | [omni.md](omni.md)             |
 | `bl pipeline run`            | Run a pipeline workflow definition                                                                                              | [pipeline.md](pipeline.md)     |
 | `bl pipeline validate`       | Validate a pipeline definition without executing                                                                                | [pipeline.md](pipeline.md)     |
@@ -80,6 +81,7 @@ Use this index for the full quick index and global flags.
 | `bl usage free`              | Query free-tier quota for models (all models if --model is omitted)                                                             | [usage.md](usage.md)           |
 | `bl usage freetier`          | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable                                      | [usage.md](usage.md)           |
 | `bl usage stats`             | Query model usage statistics                                                                                                    | [usage.md](usage.md)           |
+| `bl usage summary`           | Show a unified usage summary: free-tier quota and recent usage overview                                                         | [usage.md](usage.md)           |
 | `bl video download`          | Download a completed video by task ID                                                                                           | [video.md](video.md)           |
 | `bl video edit`              | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                                          | [video.md](video.md)           |
 | `bl video generate`          | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)                                      | [video.md](video.md)           |
@@ -105,6 +107,7 @@ Use this index for the full quick index and global flags.
 | `knowledge`  | `chat`, `retrieve`, `search`                                                                                                             | [knowledge.md](knowledge.md)   |
 | `mcp`        | `call`, `list`, `tools`                                                                                                                  | [mcp.md](mcp.md)               |
 | `memory`     | `add`, `delete`, `list`, `profile create`, `profile get`, `search`, `update`                                                             | [memory.md](memory.md)         |
+| `model`      | `list`                                                                                                                                   | [model.md](model.md)           |
 | `omni`       | `(root)`                                                                                                                                 | [omni.md](omni.md)             |
 | `pipeline`   | `run`, `validate`                                                                                                                        | [pipeline.md](pipeline.md)     |
 | `quota`      | `check`, `history`, `list`, `request`                                                                                                    | [quota.md](quota.md)           |
@@ -113,7 +116,7 @@ Use this index for the full quick index and global flags.
 | `text`       | `chat`                                                                                                                                   | [text.md](text.md)             |
 | `token-plan` | `add-member`, `assign-seats`, `create-key`, `list-seats`                                                                                 | [token-plan.md](token-plan.md) |
 | `update`     | `(root)`                                                                                                                                 | [update.md](update.md)         |
-| `usage`      | `free`, `freetier`, `stats`                                                                                                              | [usage.md](usage.md)           |
+| `usage`      | `free`, `freetier`, `stats`, `summary`                                                                                                   | [usage.md](usage.md)           |
 | `video`      | `download`, `edit`, `generate`, `ref`, `task get`                                                                                        | [video.md](video.md)           |
 | `vision`     | `describe`                                                                                                                               | [vision.md](vision.md)         |
 | `workspace`  | `list`                                                                                                                                   | [workspace.md](workspace.md)   |
