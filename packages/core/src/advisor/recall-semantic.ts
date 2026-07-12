@@ -61,12 +61,28 @@ function normalizeStr(value: string): string {
 function matchesTarget(model: ModelProfile, target: string): boolean {
   const needle = normalizeStr(target);
   if (!needle) return false;
-  // exact normalized match on id/name wins (resolves "qwen max" → "qwen-max")
+
+  // Tier 1: exact normalized match on model id or display name
   if (normalizeStr(model.model) === needle || normalizeStr(model.name) === needle) return true;
-  // otherwise normalized substring across identifier-ish fields
-  return [model.model, model.name, model.family, model.familyName, model.provider].some((field) =>
-    field ? normalizeStr(field).includes(needle) : false,
-  );
+
+  // Tier 2: suffix match for provider-prefix model ids
+  // e.g. "siliconflow/deepseek-v3" → suffix "deepseek-v3" → normalize → "deepseekv3"
+  const modelId = model.model;
+  const slashIdx = modelId.lastIndexOf("/");
+  if (slashIdx >= 0) {
+    const suffix = normalizeStr(modelId.slice(slashIdx + 1));
+    if (suffix === needle) return true;
+  }
+
+  // Tier 3: substring match only on family / familyName
+  // e.g. target "deepseek" matches family "DeepSeek" → normalize → "deepseek"
+  // but target "deepseek-v3" does NOT match family "DeepSeek" because
+  // "deepseekv3".includes("deepseek") is the wrong direction (needle ⊃ field).
+  return [model.family, model.familyName].some((field) => {
+    if (!field) return false;
+    const normalized = normalizeStr(field);
+    return normalized.length > 0 && needle.includes(normalized);
+  });
 }
 
 function matchesAnyTarget(model: ModelProfile, targets: string[]): boolean {
@@ -287,16 +303,18 @@ function recallScoped(
 
 function recallComparison(
   models: ModelProfile[],
-  embeddings: ModelEmbedding[],
-  queryVector: number[],
+  _embeddings: ModelEmbedding[],
+  _queryVector: number[],
   preference: ModelPreference,
-  topK: number,
-  modelMap: Map<string, ModelProfile>,
-  intent?: IntentProfile,
+  _topK: number,
+  _modelMap: Map<string, ModelProfile>,
+  _intent?: IntentProfile,
 ): ScoredCandidate[] {
   const targets = preference.targets ?? [];
 
-  // user-named models are forced in (bypass hard gate), priority 1.0
+  // Comparison mode: only return the user-specified models (bypass hard gate).
+  // No fusion-ranked fillers — the user explicitly asked to compare these models,
+  // so extra candidates would only give the LLM ranker room to substitute them.
   const forced: ScoredCandidate[] = [];
   const forcedIds = new Set<string>();
   for (const profile of models) {
@@ -306,19 +324,7 @@ function recallComparison(
     }
   }
 
-  const remaining = Math.max(0, topK - forced.length);
-  if (remaining > 0) {
-    const candidatePool = models.filter((profile) => !forcedIds.has(profile.model));
-    const poolIds = filterWithFallback(candidatePool, intent);
-    const extra = rankByFusion(embeddings, queryVector, poolIds, remaining, modelMap, intent);
-    for (const cand of extra) {
-      forced.push(cand);
-    }
-  }
-
-  // clamp in case many targets matched beyond topK (forced are first, so they
-  // are preserved up to topK and extras drop first)
-  return forced.slice(0, Math.max(0, topK));
+  return forced;
 }
 
 function recallAlternative(

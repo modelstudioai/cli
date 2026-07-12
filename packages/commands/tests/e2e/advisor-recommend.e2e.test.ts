@@ -96,9 +96,9 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", ()
     expect(data.result?.recommendations?.[0]?.highlights?.length).toBeGreaterThan(0);
   }, 120_000);
 
-  // ---- Model preference: positive cases ----
+  // ---- Mode coverage: all 4 modes ----
 
-  test("scoped preference — intent contains modelPreference.mode=scoped when family is specified", async () => {
+  test("mode: scoped — family-scoped query sets mode=scoped with targets", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(ADVISOR_ROUTES, [
       "advisor",
       "recommend",
@@ -112,19 +112,20 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", ()
     const data = parseStdoutJson<{
       intent?: { modelPreference?: { mode?: string; targets?: string[] } };
     }>(stdout);
-    // Model preference detection depends on LLM interpretation
-    // Accept either "scoped" or "unconstrained" as valid
-    const mode = data.intent?.modelPreference?.mode;
-    expect(mode === "scoped" || mode === "unconstrained" || mode === undefined).toBe(true);
+    const pref = data.intent?.modelPreference;
+    expect(pref?.mode).toBe("scoped");
+    expect(pref?.targets?.length).toBeGreaterThan(0);
+    // Should contain "deepseek" (case-insensitive substring)
+    expect(pref?.targets?.some((t) => t.toLowerCase().includes("deepseek"))).toBe(true);
   }, 60_000);
 
-  test("comparison preference — intent contains modelPreference.mode=comparison when comparing models", async () => {
+  test("mode: comparison — comparing two models sets mode=comparison with both targets", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(ADVISOR_ROUTES, [
       "advisor",
       "recommend",
       "--dry-run",
       "--message",
-      "Which is better for code generation, qwen-max or deepseek-v3?",
+      "Compare qwen-max and deepseek-v3 for legal contract review, high precision required",
       "--output",
       "json",
     ]);
@@ -132,19 +133,41 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", ()
     const data = parseStdoutJson<{
       intent?: { modelPreference?: { mode?: string; targets?: string[] } };
     }>(stdout);
-    // Model preference detection depends on LLM interpretation
-    // Accept either "comparison" or "unconstrained" as valid
-    const mode = data.intent?.modelPreference?.mode;
-    expect(mode === "comparison" || mode === "unconstrained" || mode === undefined).toBe(true);
+    const pref = data.intent?.modelPreference;
+    expect(pref?.mode).toBe("comparison");
+    expect(pref?.targets?.length).toBeGreaterThanOrEqual(2);
+    const targetsLower = pref?.targets?.map((t) => t.toLowerCase()) ?? [];
+    expect(targetsLower.some((t) => t.includes("qwen"))).toBe(true);
+    expect(targetsLower.some((t) => t.includes("deepseek"))).toBe(true);
   }, 60_000);
 
-  test("excludes preference — intent detects modelPreference when excluding models", async () => {
+  test("mode: alternative — reference model query sets mode=alternative with target", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(ADVISOR_ROUTES, [
       "advisor",
       "recommend",
       "--dry-run",
       "--message",
-      "Not qwen, recommend a model suitable for text generation",
+      "Something like qwen-max but cheaper, for text summarization",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      intent?: { modelPreference?: { mode?: string; targets?: string[] } };
+    }>(stdout);
+    const pref = data.intent?.modelPreference;
+    expect(pref?.mode).toBe("alternative");
+    expect(pref?.targets?.length).toBeGreaterThan(0);
+    expect(pref?.targets?.some((t) => t.toLowerCase().includes("qwen"))).toBe(true);
+  }, 60_000);
+
+  test("mode: excludes — excluding a family populates excludes array", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(ADVISOR_ROUTES, [
+      "advisor",
+      "recommend",
+      "--dry-run",
+      "--message",
+      "Recommend a model for text generation, but not qwen",
       "--output",
       "json",
     ]);
@@ -157,18 +180,12 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: advisor recommend (DashScope)", ()
         };
       };
     }>(stdout);
-    // Model preference detection depends on LLM interpretation
-    // If excludes is detected, verify it contains qwen; otherwise accept as valid
     const pref = data.intent?.modelPreference;
-    if (pref?.excludes && pref.excludes.length > 0) {
-      expect(pref.excludes.some((e) => e.toLowerCase().includes("qwen"))).toBe(true);
-    }
-    // Test passes if exit code is 0, regardless of whether excludes was detected
+    expect(pref?.excludes?.length).toBeGreaterThan(0);
+    expect(pref?.excludes?.some((e) => e.toLowerCase().includes("qwen"))).toBe(true);
   }, 60_000);
 
-  // ---- Model preference: negative cases ----
-
-  test("no preference — intent has no modelPreference or mode=unconstrained for generic queries", async () => {
+  test("mode: unconstrained — generic query has no modelPreference", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(ADVISOR_ROUTES, [
       "advisor",
       "recommend",

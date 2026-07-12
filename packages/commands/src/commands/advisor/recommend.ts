@@ -272,9 +272,7 @@ export default defineCommand({
       return result;
     });
 
-    const analyzeIntentPromise = analyzeIntent(ctx.client, userInput, {
-      intentDetectBaseUrl: settings.intentDetectBaseUrl,
-    }).then((result) => {
+    const analyzeIntentPromise = analyzeIntent(ctx.client, userInput).then((result) => {
       intentReady = true;
       if (!modelsReady) {
         spinner.update("Agent: Intent analyzed, loading model data...");
