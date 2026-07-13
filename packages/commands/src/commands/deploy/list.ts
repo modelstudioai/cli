@@ -68,13 +68,13 @@ export default defineCommand({
       return;
     }
     const headers = ["DEPLOYED_MODEL", "MODEL_NAME", "STATUS", "PLAN", "CAPACITY", "CREATED_AT"];
-    const rows = items.map((i) => [
-      i.deployed_model,
-      i.model_name,
-      i.status,
-      i.plan,
-      i.capacity,
-      i.created_at,
+    const rows = items.map((item) => [
+      item.deployed_model,
+      item.model_name,
+      item.status,
+      item.plan,
+      item.capacity,
+      item.created_at,
     ]);
     for (const line of formatTable(headers, rows)) emitBare(line);
     if (total !== undefined) emitBare(`\nTotal: ${total}`);

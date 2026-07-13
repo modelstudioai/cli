@@ -38,7 +38,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **MCP integration** — Orchestrate Bailian MCP servers: list services, inspect tools, and invoke any tool directly from the terminal
 - **Web search** — Real-time internet retrieval for up-to-date, accurate answers
 - **Model recommendation** — Describe your scenario and get best-fit model suggestions; supports scoped search, model comparison, and alternative discovery
-- **Fine-tuning & deployment** — Upload datasets, create SFT/LoRA/DPO/CPT jobs (`finetune create`), probe job status non-blockingly (`finetune watch`), query per-model training capability (`finetune capability`), and deploy trained models as endpoints (`deploy create`)
+- **Fine-tuning & deployment** — Upload datasets, create text/audio/image fine-tune jobs (`finetune text|audio|image create`; text covers SFT/LoRA/DPO/CPT), probe job status non-blockingly (`finetune watch`), query per-model training capability (`finetune capability`), and deploy trained models as endpoints (`deploy text|audio|image create`)
 - **Console capabilities** — Browse Bailian apps (`app list`), check free-tier quota (`usage free`), view model usage statistics (`usage stats`), manage workspaces (`workspace list`), and manage rate limits (`quota list/request/check/history`)
 - **Local file auto-upload** — Every URL parameter accepts a local path; uploaded to free temp storage with 48-hour validity
 
@@ -114,10 +114,10 @@ bl auth login --console
 
 # Fine-tune & deploy — a one-shot train-to-serve workflow
 bl dataset upload --file ./train.jsonl                 # Upload a .jsonl dataset (validated first)
-bl finetune create --model qwen3-8b --datasets ./train.jsonl --training-type sft-lora  # Local paths auto-upload
+bl finetune text create --model qwen3-8b --datasets ./train.jsonl --training-type sft-lora  # Local paths auto-upload
 bl finetune watch --job-id ft-xxx --output json       # Non-blocking status probe (exit 0/1/3 = done/failed/running)
 bl finetune capability --model qwen3-8b               # Which training types a model supports
-bl deploy create --model qwen3-8b --name my-svc --plan mu  # Deploy the trained model as an endpoint
+bl deploy text create --model qwen3-8b --name my-svc --plan mu  # Deploy the trained model as an endpoint
 
 # Browse apps / free-tier quota / usage statistics / workspaces
 bl app list

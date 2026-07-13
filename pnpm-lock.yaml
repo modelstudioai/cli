@@ -9,6 +9,9 @@ catalogs:
     '@types/node':
       specifier: ^24
       version: 24.12.2
+    '@types/yauzl':
+      specifier: ^3.4.0
+      version: 3.4.0
     ajv:
       specifier: ^8.20.0
       version: 8.20.0
@@ -30,6 +33,9 @@ catalogs:
     yaml:
       specifier: ^2.8.3
       version: 2.8.3
+    yauzl:
+      specifier: ^3.4.0
+      version: 3.4.0
 
 overrides:
   vite: npm:@voidzero-dev/vite-plus-core@latest
@@ -76,6 +82,9 @@ importers:
       chalk:
         specifier: 'catalog:'
         version: 5.6.2
+      e2e:
+        specifier: workspace:*
+        version: link:../e2e
       typescript:
         specifier: ^6.0.2
         version: 6.0.3
@@ -113,6 +122,9 @@ importers:
       '@typescript/native-preview':
         specifier: 7.0.0-dev.20260328.1
         version: 7.0.0-dev.20260328.1
+      e2e:
+        specifier: workspace:*
+        version: link:../e2e
       typescript:
         specifier: ^6.0.2
         version: 6.0.3
@@ -125,10 +137,16 @@ importers:
       yaml:
         specifier: ^2.8.3
         version: 2.8.3
+      yauzl:
+        specifier: 'catalog:'
+        version: 3.4.0
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.12.2
+      '@types/yauzl':
+        specifier: 'catalog:'
+        version: 3.4.0
       '@typescript/native-preview':
         specifier: 7.0.0-dev.20260328.1
         version: 7.0.0-dev.20260328.1
@@ -137,6 +155,22 @@ importers:
         version: 6.0.3
       vite-plus:
         specifier: 'catalog:'
+        version: 0.1.22(@types/node@24.12.2)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.0)(typescript@6.0.3)(vite@8.0.10(@types/node@24.12.2)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.0)(yaml@2.8.3))(yaml@2.8.3)
+
+  packages/e2e:
+    dependencies:
+      bailian-cli-core:
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.12.2
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+      vite-plus:
+        specifier: 0.1.22
         version: 0.1.22(@types/node@24.12.2)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.0)(typescript@6.0.3)(vite@8.0.10(@types/node@24.12.2)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.0)(yaml@2.8.3))(yaml@2.8.3)
 
   packages/kscli:
@@ -169,6 +203,9 @@ importers:
       chalk:
         specifier: 'catalog:'
         version: 5.6.2
+      e2e:
+        specifier: workspace:*
+        version: link:../e2e
       typescript:
         specifier: ^6.0.2
         version: 6.0.3
@@ -209,6 +246,9 @@ importers:
       ajv:
         specifier: 'catalog:'
         version: 8.20.0
+      e2e:
+        specifier: workspace:*
+        version: link:../e2e
       typescript:
         specifier: ^6.0.2
         version: 6.0.3
@@ -807,6 +847,9 @@ packages:
   '@types/node@25.6.0':
     resolution: {integrity: sha512-+qIYRKdNYJwY3vRCZMdJbPLJAtGjQBudzZzdzwQYkEPQd+PJGixUL5QfvCLDaULoLv+RhT3LDkwEfKaAkgSmNQ==}
 
+  '@types/yauzl@3.4.0':
+    resolution: {integrity: sha512-NRPn5w6h8dhcnmx3YIRQcqMywY/+nND/uOkJessedcrowO3C0AssHp3tMJpxKAwOhFOo0OV1y9VtsC5hbKKBAw==}
+
   '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260328.1':
     resolution: {integrity: sha512-BmJGDWC0bSQ2w5O/E+Mw9eTv9RklJ3vjshu7UdD92bUMxc4V4dkBhYj5r0qxbl4f+VFNX7fXvcDDI+9o+Kb6yw==}
     cpu: [arm64]
@@ -1188,6 +1231,9 @@ packages:
       oxlint-tsgolint:
         optional: true
 
+  pend@1.2.0:
+    resolution: {integrity: sha512-F3asv42UuXchdzt+xXqfW1OGlVBe+mxa2mqI0pg5yAHZPvFmY3Y6drSf/GQ1A86WgWEN9Kzh/WrgKa6iGcHXLg==}
+
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
@@ -1364,6 +1410,10 @@ packages:
     resolution: {integrity: sha512-AvbaCLOO2Otw/lW5bmh9d/WEdcDFdQp2Z2ZUH3pX9U2ihyUY0nvLv7J6TrWowklRGPYbB/IuIMfYgxaCPg5Bpg==}
     engines: {node: '>= 14.6'}
     hasBin: true
+
+  yauzl@3.4.0:
+    resolution: {integrity: sha512-jIH9yLR9wqr0wOS0TpBvo/g/2UgZH5qePVbjgRliiF0BYvOZyaBknKsF+x9Iht0O6sqgnB93rCICdOZFecJuDw==}
+    engines: {node: '>=12'}
 
 snapshots:
 
@@ -1693,7 +1743,10 @@ snapshots:
   '@types/node@25.6.0':
     dependencies:
       undici-types: 7.19.2
-    optional: true
+
+  '@types/yauzl@3.4.0':
+    dependencies:
+      '@types/node': 25.6.0
 
   '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260328.1':
     optional: true
@@ -2064,6 +2117,8 @@ snapshots:
       '@oxlint/binding-win32-x64-msvc': 1.63.0
       oxlint-tsgolint: 0.22.1
 
+  pend@1.2.0: {}
+
   picocolors@1.1.1: {}
 
   picomatch@4.0.4: {}
@@ -2163,8 +2218,7 @@ snapshots:
 
   undici-types@7.16.0: {}
 
-  undici-types@7.19.2:
-    optional: true
+  undici-types@7.19.2: {}
 
   undici@8.4.1: {}
 
@@ -2309,3 +2363,7 @@ snapshots:
   ws@8.20.0: {}
 
   yaml@2.8.3: {}
+
+  yauzl@3.4.0:
+    dependencies:
+      pend: 1.2.0

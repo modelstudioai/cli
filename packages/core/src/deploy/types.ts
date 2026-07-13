@@ -119,8 +119,8 @@ export interface CreateDeploymentRequest {
   plan: string;
   /** Required by API even for token-billed (lora) plans where it is ignored — CLI injects 1. */
   capacity?: number;
-  /** Optional template id for advanced configurations. */
-  template_id?: string;
+  /** Deploy spec id (e.g. "MU1", "dps-..."), sent as `deploy_spec` in POST body. */
+  deploy_spec?: string;
   /**
    * PTU capacity (provisioned throughput limits). Only effective when
    * `plan === "ptu"`. The doc says this defaults to 10000/1000 when omitted,
@@ -128,8 +128,27 @@ export interface CreateDeploymentRequest {
    * info"), so the CLI treats it as required for ptu.
    */
   ptu_capacity?: PtuCapacity;
+  /**
+   * AIGC generation config for fine-tuned Wan video (i2v/kf2v) LoRA deployments.
+   * Ignored by non-video plans. See `AigcConfig`.
+   */
+  aigc_config?: AigcConfig;
   /** Future-compat: arbitrary additional fields are forwarded as-is. */
   [k: string]: unknown;
+}
+
+/**
+ * AIGC generation config — used when deploying fine-tuned Wan video (i2v/kf2v)
+ * LoRA models. Controls how prompts are applied at inference time:
+ *   - use_input_prompt=false: ignore the caller's prompt, use the preset
+ *     `prompt` template instead (the common LoRA case).
+ *   - use_input_prompt=true: honor the caller's prompt.
+ * `lora_prompt_default` is the default trigger-word phrase appended for the LoRA.
+ */
+export interface AigcConfig {
+  use_input_prompt?: boolean;
+  prompt?: string;
+  lora_prompt_default?: string;
 }
 
 /** PTU throughput limits — only used when `plan === "ptu"`. */

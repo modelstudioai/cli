@@ -40,10 +40,12 @@
     "check": "vp check"
   },
   "dependencies": {
-    "yaml": "^2.8.3"
+    "yaml": "^2.8.3",
+    "yauzl": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@types/yauzl": "catalog:",
     "@typescript/native-preview": "7.0.0-dev.20260328.1",
     "typescript": "^6.0.2",
     "vite-plus": "catalog:"

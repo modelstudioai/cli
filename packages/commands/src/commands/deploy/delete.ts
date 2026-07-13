@@ -59,8 +59,8 @@ export default defineCommand({
             ExitCode.USAGE,
           );
         }
-      } catch (e) {
-        if (e instanceof BailianError) throw e;
+      } catch (error) {
+        if (error instanceof BailianError) throw error;
         // If the get itself failed (e.g. not found), let the DELETE call surface the real error.
       }
     }

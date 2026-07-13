@@ -7,25 +7,27 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command            | Description                                               |
-| ------------------ | --------------------------------------------------------- |
-| `bl deploy create` | Create a model deployment                                 |
-| `bl deploy delete` | Delete a model deployment (must be STOPPED or FAILED)     |
-| `bl deploy get`    | Get details of a single model deployment                  |
-| `bl deploy list`   | List model deployments                                    |
-| `bl deploy models` | List models available for deployment                      |
-| `bl deploy scale`  | Scale a deployment's capacity                             |
-| `bl deploy update` | Update a deployment's rate limits (rpm_limit / tpm_limit) |
+| Command                  | Description                                               |
+| ------------------------ | --------------------------------------------------------- |
+| `bl deploy audio create` | Create an audio (TTS) model deployment                    |
+| `bl deploy delete`       | Delete a model deployment (must be STOPPED or FAILED)     |
+| `bl deploy get`          | Get details of a single model deployment                  |
+| `bl deploy image create` | Create an image generation model deployment               |
+| `bl deploy list`         | List model deployments                                    |
+| `bl deploy models`       | List models available for deployment                      |
+| `bl deploy scale`        | Scale a deployment's capacity                             |
+| `bl deploy text create`  | Create a text model deployment                            |
+| `bl deploy update`       | Update a deployment's rate limits (rpm_limit / tpm_limit) |
 
 ## Command details
 
-### `bl deploy create`
+### `bl deploy audio create`
 
-| Field           | Value                                                                                                                                                                                                       |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `deploy create`                                                                                                                                                                                             |
-| **Description** | Create a model deployment                                                                                                                                                                                   |
-| **Usage**       | `bl deploy create --model <model_name> --name <display_name> [--plan <plan>] [--template-id <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]` |
+| Field           | Value                                                                                                                                                                                                             |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**        | `deploy audio create`                                                                                                                                                                                             |
+| **Description** | Create an audio (TTS) model deployment                                                                                                                                                                            |
+| **Usage**       | `bl deploy audio create --model <model_name> --name <display_name> [--plan <plan>] [--deploy-spec <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]` |
 
 #### Flags
 
@@ -34,7 +36,7 @@ Index: [index.md](index.md)
 | `--model <name>`            | string | yes      | Model name (catalog model or fine-tuned output) (required)                      |
 | `--name <display_name>`     | string | yes      | Console display name for the deployment (required)                              |
 | `--plan <plan>`             | string | no       | Billing plan: lora (default, Token-billed) \| ptu (Token-billed) \| mu          |
-| `--template-id <id>`        | string | no       | Template id (only used by plan=mu; auto-picked if omitted)                      |
+| `--deploy-spec <id>`        | string | no       | Deploy spec (only used by plan=mu; auto-picked if omitted)                      |
 | `--capacity <n>`            | number | no       | Resource units (plan=mu only; required by API; defaults to the template's unit) |
 | `--billing-method <m>`      | string | no       | Billing method (plan=mu only; default "POST_PAY", the only supported value)     |
 | `--input-tpm <n>`           | number | no       | PTU max input tokens/min (required for plan=ptu)                                |
@@ -45,40 +47,38 @@ Index: [index.md](index.md)
 
 #### Notes
 
-- Plan defaults to `lora` (Token-billed). Pass --plan to override.
+- Plan defaults to `lora` (Token-billed) for text/image and `mu` (model-unit-
+- billed) for audio (CosyVoice TTS). Pass --plan to override.
 - For plan=ptu (Token-billed, provisioned throughput), --input-tpm and
 - --output-tpm are required (the platform rejects creation without an
 - explicit ptu_capacity despite the doc listing defaults).
-- For plan=mu, `capacity`, `billing_method` and `template_id` are required.
-- billing_method defaults to POST_PAY (only supported value); template_id
+- For plan=mu, `capacity`, `billing_method` and `deploy_spec` are required.
+- billing_method defaults to POST_PAY (only supported value); deploy_spec
 - and capacity are auto-picked from GET /deployments/models when omitted.
 - Use `bl deploy models --source base` to inspect available templates.
 - After creation, status starts at PENDING and transitions to RUNNING.
 - Invoke the deployed model with: bl text chat --model <deployed_model>
 - WARNING: --model is overloaded across commands and refers to DIFFERENT
-- values. `bl deploy create --model` takes the exported model_name (e.g.
-- `qwen3-8b-ft-...`), but the create response also returns a `deployed_model`
-- field (the deployment instance id, e.g. `qwen3-8b-5ecb5f068d79`). The
-- inference call `bl text chat --model` must use the `deployed_model` from
-- the create response — NOT the `model_name` you passed to `deploy create`.
-- Do not reuse the value across the two commands.
+- values. `bl deploy <modality> create --model` takes the exported model_name
+- (e.g. `qwen3-8b-ft-...`), but the create response also returns a
+- `deployed_model` field (the deployment instance id, e.g.
+- `qwen3-8b-5ecb5f068d79`). The inference call `bl text chat --model` must use
+- the `deployed_model` from the create response — NOT the `model_name` you
+- passed to `deploy <modality> create`. Do not reuse the value across the two
+- commands.
 
 #### Examples
 
 ```bash
-bl deploy create --model my-qwen-sft --name my-sft-test
+bl deploy audio create --model my-cosyvoice-ft --name my-tts
 ```
 
 ```bash
-bl deploy create --model qwen3.6-flash-2026-04-16 --name my-flash --plan ptu --input-tpm 10000 --output-tpm 1000
+bl deploy audio create --model my-cosyvoice-ft --name my-tts --deploy-spec dps-xxxx --capacity 1
 ```
 
 ```bash
-bl deploy create --model qwen3-8b --name my-qwen3-mu --plan mu
-```
-
-```bash
-bl deploy create --model qwen3-8b --name my-qwen3 --plan mu --template-id MU1 --capacity 2
+bl deploy audio create --model my-cosyvoice-ft --name my-tts --dry-run
 ```
 
 ### `bl deploy delete`
@@ -132,6 +132,66 @@ bl deploy get --deployed-model qwen-plus-2025-12-01-b6d61c71
 
 ```bash
 bl deploy get --deployed-model qwen-plus-2025-12-01-b6d61c71 --output json
+```
+
+### `bl deploy image create`
+
+| Field           | Value                                                                                                                                                                                                             |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**        | `deploy image create`                                                                                                                                                                                             |
+| **Description** | Create an image generation model deployment                                                                                                                                                                       |
+| **Usage**       | `bl deploy image create --model <model_name> --name <display_name> [--plan <plan>] [--deploy-spec <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]` |
+
+#### Flags
+
+| Flag                        | Type   | Required | Description                                                                     |
+| --------------------------- | ------ | -------- | ------------------------------------------------------------------------------- |
+| `--model <name>`            | string | yes      | Model name (catalog model or fine-tuned output) (required)                      |
+| `--name <display_name>`     | string | yes      | Console display name for the deployment (required)                              |
+| `--plan <plan>`             | string | no       | Billing plan: lora (default, Token-billed) \| ptu (Token-billed) \| mu          |
+| `--deploy-spec <id>`        | string | no       | Deploy spec (only used by plan=mu; auto-picked if omitted)                      |
+| `--capacity <n>`            | number | no       | Resource units (plan=mu only; required by API; defaults to the template's unit) |
+| `--billing-method <m>`      | string | no       | Billing method (plan=mu only; default "POST_PAY", the only supported value)     |
+| `--input-tpm <n>`           | number | no       | PTU max input tokens/min (required for plan=ptu)                                |
+| `--output-tpm <n>`          | number | no       | PTU max output tokens/min (required for plan=ptu)                               |
+| `--thinking-output-tpm <n>` | number | no       | PTU max thinking-output tokens/min (optional, some models)                      |
+| `--api-key <key>`           | string | no       | API key                                                                         |
+| `--base-url <url>`          | string | no       | API base URL                                                                    |
+
+#### Notes
+
+- Plan defaults to `lora` (Token-billed) for text/image and `mu` (model-unit-
+- billed) for audio (CosyVoice TTS). Pass --plan to override.
+- For plan=ptu (Token-billed, provisioned throughput), --input-tpm and
+- --output-tpm are required (the platform rejects creation without an
+- explicit ptu_capacity despite the doc listing defaults).
+- For plan=mu, `capacity`, `billing_method` and `deploy_spec` are required.
+- billing_method defaults to POST_PAY (only supported value); deploy_spec
+- and capacity are auto-picked from GET /deployments/models when omitted.
+- Use `bl deploy models --source base` to inspect available templates.
+- After creation, status starts at PENDING and transitions to RUNNING.
+- Invoke the deployed model with: bl text chat --model <deployed_model>
+- WARNING: --model is overloaded across commands and refers to DIFFERENT
+- values. `bl deploy <modality> create --model` takes the exported model_name
+- (e.g. `qwen3-8b-ft-...`), but the create response also returns a
+- `deployed_model` field (the deployment instance id, e.g.
+- `qwen3-8b-5ecb5f068d79`). The inference call `bl text chat --model` must use
+- the `deployed_model` from the create response — NOT the `model_name` you
+- passed to `deploy <modality> create`. Do not reuse the value across the two
+- commands.
+
+#### Examples
+
+```bash
+bl deploy image create --model my-wan-ft --name my-wan
+```
+
+```bash
+bl deploy image create --model my-wan-ft --name my-wan-mu --plan mu
+```
+
+```bash
+bl deploy image create --model my-wan-ft --name my-wan --dry-run
 ```
 
 ### `bl deploy list`
@@ -230,6 +290,70 @@ bl deploy scale --deployed-model qwen-plus-...-b6d61c71 --capacity 8
 
 ```bash
 bl deploy scale --deployed-model dep-... --capacity 2
+```
+
+### `bl deploy text create`
+
+| Field           | Value                                                                                                                                                                                                            |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**        | `deploy text create`                                                                                                                                                                                             |
+| **Description** | Create a text model deployment                                                                                                                                                                                   |
+| **Usage**       | `bl deploy text create --model <model_name> --name <display_name> [--plan <plan>] [--deploy-spec <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]` |
+
+#### Flags
+
+| Flag                        | Type   | Required | Description                                                                     |
+| --------------------------- | ------ | -------- | ------------------------------------------------------------------------------- |
+| `--model <name>`            | string | yes      | Model name (catalog model or fine-tuned output) (required)                      |
+| `--name <display_name>`     | string | yes      | Console display name for the deployment (required)                              |
+| `--plan <plan>`             | string | no       | Billing plan: lora (default, Token-billed) \| ptu (Token-billed) \| mu          |
+| `--deploy-spec <id>`        | string | no       | Deploy spec (only used by plan=mu; auto-picked if omitted)                      |
+| `--capacity <n>`            | number | no       | Resource units (plan=mu only; required by API; defaults to the template's unit) |
+| `--billing-method <m>`      | string | no       | Billing method (plan=mu only; default "POST_PAY", the only supported value)     |
+| `--input-tpm <n>`           | number | no       | PTU max input tokens/min (required for plan=ptu)                                |
+| `--output-tpm <n>`          | number | no       | PTU max output tokens/min (required for plan=ptu)                               |
+| `--thinking-output-tpm <n>` | number | no       | PTU max thinking-output tokens/min (optional, some models)                      |
+| `--api-key <key>`           | string | no       | API key                                                                         |
+| `--base-url <url>`          | string | no       | API base URL                                                                    |
+
+#### Notes
+
+- Plan defaults to `lora` (Token-billed) for text/image and `mu` (model-unit-
+- billed) for audio (CosyVoice TTS). Pass --plan to override.
+- For plan=ptu (Token-billed, provisioned throughput), --input-tpm and
+- --output-tpm are required (the platform rejects creation without an
+- explicit ptu_capacity despite the doc listing defaults).
+- For plan=mu, `capacity`, `billing_method` and `deploy_spec` are required.
+- billing_method defaults to POST_PAY (only supported value); deploy_spec
+- and capacity are auto-picked from GET /deployments/models when omitted.
+- Use `bl deploy models --source base` to inspect available templates.
+- After creation, status starts at PENDING and transitions to RUNNING.
+- Invoke the deployed model with: bl text chat --model <deployed_model>
+- WARNING: --model is overloaded across commands and refers to DIFFERENT
+- values. `bl deploy <modality> create --model` takes the exported model_name
+- (e.g. `qwen3-8b-ft-...`), but the create response also returns a
+- `deployed_model` field (the deployment instance id, e.g.
+- `qwen3-8b-5ecb5f068d79`). The inference call `bl text chat --model` must use
+- the `deployed_model` from the create response — NOT the `model_name` you
+- passed to `deploy <modality> create`. Do not reuse the value across the two
+- commands.
+
+#### Examples
+
+```bash
+bl deploy text create --model my-qwen-sft --name my-sft-test
+```
+
+```bash
+bl deploy text create --model qwen3.6-flash-2026-04-16 --name my-flash --plan ptu --input-tpm 10000 --output-tpm 1000
+```
+
+```bash
+bl deploy text create --model qwen3-8b --name my-qwen3-mu --plan mu
+```
+
+```bash
+bl deploy text create --model qwen3-8b --name my-qwen3 --plan mu --deploy-spec MU1 --capacity 2
 ```
 
 ### `bl deploy update`

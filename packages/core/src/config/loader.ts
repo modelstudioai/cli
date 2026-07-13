@@ -125,8 +125,6 @@ export function buildSettings(s: ResolutionSources): Settings {
   return {
     configPath: s.configPath ?? getConfigPath(),
     configName: s.configName,
-    intentDetectBaseUrl:
-      file.intent_detect_base_url || env.DASHSCOPE_INTENT_DETECT_BASE_URL || undefined,
     output: detectOutputFormat(flags.output || env.DASHSCOPE_OUTPUT || file.output),
     outputExplicit: Boolean(flags.output || env.DASHSCOPE_OUTPUT || file.output),
     outputDir: file.output_dir || undefined,
