@@ -39,7 +39,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **Web search** — Real-time internet retrieval for up-to-date, accurate answers
 - **Model recommendation** — Describe your scenario and get best-fit model suggestions; supports scoped search, model comparison, and alternative discovery
 - **Fine-tuning & deployment** — Upload datasets, create text/audio/image fine-tune jobs (`finetune text|audio|image create`; text covers SFT/LoRA/DPO/CPT), probe job status non-blockingly (`finetune watch`), query per-model training capability (`finetune capability`), and deploy trained models as endpoints (`deploy text|audio|image create`)
-- **Console capabilities** — Browse Bailian apps (`app list`), review a unified usage view (`usage summary`), check free-tier quota (`usage free`), view model usage statistics (`usage stats`), manage workspaces (`workspace list`), and manage rate limits (`quota list/request/check/history`)
+- **Console capabilities** — Browse the model marketplace (`model list`) and Bailian apps (`app list`), review a unified usage view (`usage summary`), check free-tier quota (`usage free`), view model usage statistics (`usage stats`), manage workspaces (`workspace list`), and manage rate limits (`quota list/request/check/history`)
 - **Local file auto-upload** — Every URL parameter accepts a local path; uploaded to free temp storage with 48-hour validity
 
 ## Showcase: One-Sentence Cinematic Video
@@ -115,11 +115,12 @@ bl auth login --console
 # Fine-tune & deploy — a one-shot train-to-serve workflow
 bl dataset upload --file ./train.jsonl                 # Upload a .jsonl dataset (validated first)
 bl finetune text create --model qwen3-8b --datasets ./train.jsonl --training-type sft-lora  # Local paths auto-upload
-bl finetune watch --job-id ft-xxx --output json       # Non-blocking status probe (exit 0/1/3 = done/failed/running)
+bl finetune watch --job-id ft-xxx --output json       # Non-blocking probe (running/succeeded return 0; failed/canceled report an error)
 bl finetune capability --model qwen3-8b               # Which training types a model supports
 bl deploy text create --model qwen3-8b --name my-svc --plan mu  # Deploy the trained model as an endpoint
 
-# Browse apps / free-tier quota / usage statistics / workspaces
+# Browse models / apps / free-tier quota / usage statistics / workspaces
+bl model list                                        # Browse model families and pricing
 bl app list
 bl usage summary                                     # Unified view: free-tier quota + recent usage overview
 bl usage free                                         # Free-tier quota across models (add --model/--expiring/--sort)
@@ -160,7 +161,7 @@ bl text chat --api-key sk-xxxxx --message "Hello"
 
 ### Console Login (OAuth)
 
-Required for console capability commands (`app list`, `usage free`, `usage stats`, `workspace list`, `quota list/request/check/history`). Opens the Bailian console in your browser to sign in.
+Required for console capability commands (`model list`, `app list`, `usage summary/free/stats`, `workspace list`, `quota list/request/check/history`). Opens the Bailian console in your browser to sign in.
 
 ```bash
 bl auth login --console

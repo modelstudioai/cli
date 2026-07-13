@@ -12,12 +12,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - **`bl model list`** — browse the Bailian model marketplace: list model families or show full details for a single family (`--model`), with filters for provider, capability, feature, and context-window, pagination (`--page` / `--page-size`), pricing, and `--enrich` for richer metadata.
 - **`bl usage summary`** — a unified usage view combining free-tier quota and a recent usage overview; `--days` sets the overview window (default 7).
+- **Command Pack host support** — added support for allowlisted internal command extensions.
 - **Audio & image fine-tuning** — `bl finetune audio create` (CosyVoice TTS) and `bl finetune image create` (Wan image generation) join the existing text flow. `bl finetune image create` supports `--generation-type t2i|i2i` to select text-to-image or image-to-image training.
 - **Audio & image deployment** — `bl deploy audio create` and `bl deploy image create` deploy fine-tuned TTS and image models as endpoints.
+- **Multimodal dataset validation** — `bl dataset upload` and `bl dataset validate` now accept `.zip` archives with `tts` and `image` schemas, validate referenced media files, and allow image archives up to 1 GB.
 
 ### Changed
 
 - **Fine-tune and deploy commands are now split by modality (BREAKING)**: `bl finetune create` → `bl finetune text create`, and `bl deploy create` → `bl deploy text create`. Update any scripts that use the old paths.
+- **Deployment option renamed (BREAKING)**: `--template-id` → `--deploy-spec` on deployment creation commands.
+- **Fine-tune status exit behavior changed (BREAKING)**: `bl finetune watch` no longer reserves exit code 3 for running jobs. Running and succeeded jobs return 0; failed and canceled jobs use normal CLI errors.
 - `bl deploy audio create` now defaults to `--plan mu` (model-unit billing, per the CosyVoice deployment contract); text and image continue to default to `lora`.
 - `bl finetune audio create` now validates CosyVoice training data: audio files must be `.wav`, each `wav_fn` must start with `train/`, and exactly one training file is accepted.
 - `bl quota list` and `bl quota check` now report real RPM/TPM usage against limits, adding `RPM Left` / `TPM Left` columns with remaining-quota progress bars sourced from monitoring data.
@@ -27,6 +31,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Removed
 
 - **Removed the `tongyi-intent-detect-v3` integration (BREAKING)** used by `bl advisor recommend`, along with the `intent_detect_base_url` config field and the `DASHSCOPE_INTENT_DETECT_BASE_URL` environment variable.
+
+### Fixed
+
+- Skill command-reference generation now reads product command maps directly from source and produces stable formatting during release checks.
 
 ## [1.7.0] - 2026-07-09
 
