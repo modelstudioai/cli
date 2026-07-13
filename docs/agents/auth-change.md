@@ -48,7 +48,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 - `resolveOpenApi()` — `auth: "openapi"` 命令;优先级 `--access-key-id/--access-key-secret` > `ALIBABA_CLOUD_ACCESS_KEY_ID/ALIBABA_CLOUD_ACCESS_KEY_SECRET` > config `access_key_*`。兼容读取旧字段 `openapi_access_key_*`,新写入只写短字段
 - `describeAuthState()` — `auth status` / banner / telemetry 使用的只读快照
 
-命令不要直接解析 token、env 或 config。业务请求统一走 `ctx.client`;登录/配置命令通过 `ctx.authStore()` / `ctx.configStore()` 的窄接口操作落盘。
+命令不要直接解析 token、env 或 config。业务请求统一走 `ctx.client`;登录/配置命令通过 `ctx.authStore` / `ctx.configStore` 的窄接口操作落盘。
 
 ## 必查清单
 
@@ -87,7 +87,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 
 - [ ] `packages/commands/src/commands/auth/login.ts`:
   - 新增/调整登录 flag 与流程
-  - 持久化只走 `ctx.authStore().login(...)`
+  - 持久化只走 `ctx.authStore.login(...)`
 - [ ] `packages/commands/src/commands/auth/status.ts`:
   - 分别显示 model / console / openapi 鉴权状态,并 mask token
 - [ ] `packages/commands/src/commands/auth/logout.ts`:

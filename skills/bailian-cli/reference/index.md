@@ -65,6 +65,10 @@ Use this index for the full quick index and global flags.
 | `bl omni`                    | Multimodal chat with text + audio output (Qwen-Omni)                                                                            | [omni.md](omni.md)             |
 | `bl pipeline run`            | Run a pipeline workflow definition                                                                                              | [pipeline.md](pipeline.md)     |
 | `bl pipeline validate`       | Validate a pipeline definition without executing                                                                                | [pipeline.md](pipeline.md)     |
+| `bl plugin install`          | Install or upgrade an allowlisted Command Pack                                                                                  | [plugin.md](plugin.md)         |
+| `bl plugin link`             | Link an allowlisted local Command Pack for development                                                                          | [plugin.md](plugin.md)         |
+| `bl plugin list`             | List installed Command Packs and their load status                                                                              | [plugin.md](plugin.md)         |
+| `bl plugin remove`           | Remove an installed Command Pack                                                                                                | [plugin.md](plugin.md)         |
 | `bl quota check`             | Check current usage against rate limits                                                                                         | [quota.md](quota.md)           |
 | `bl quota history`           | View quota change history                                                                                                       | [quota.md](quota.md)           |
 | `bl quota list`              | View model RPM/TPM rate limits                                                                                                  | [quota.md](quota.md)           |
@@ -110,6 +114,7 @@ Use this index for the full quick index and global flags.
 | `model`      | `list`                                                                                                                                   | [model.md](model.md)           |
 | `omni`       | `(root)`                                                                                                                                 | [omni.md](omni.md)             |
 | `pipeline`   | `run`, `validate`                                                                                                                        | [pipeline.md](pipeline.md)     |
+| `plugin`     | `install`, `link`, `list`, `remove`                                                                                                      | [plugin.md](plugin.md)         |
 | `quota`      | `check`, `history`, `list`, `request`                                                                                                    | [quota.md](quota.md)           |
 | `search`     | `web`                                                                                                                                    | [search.md](search.md)         |
 | `speech`     | `recognize`, `synthesize`                                                                                                                | [speech.md](speech.md)         |

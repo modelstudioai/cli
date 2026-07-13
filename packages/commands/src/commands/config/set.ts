@@ -106,7 +106,7 @@ export default defineCommand({
     }
 
     const coerced = resolvedKey === "timeout" ? Number(value) : value;
-    await ctx.configStore().write({ [resolvedKey]: coerced } as Partial<ConfigFile>);
+    await ctx.configStore.write({ [resolvedKey]: coerced } as Partial<ConfigFile>);
 
     if (!settings.quiet) {
       const shown = SECRET_KEYS.has(resolvedKey) ? maskToken(String(coerced)) : coerced;

@@ -5,6 +5,13 @@
 export { createCli } from "./create-cli.ts";
 export type { Cli, CliOptions } from "./create-cli.ts";
 
+// Command Pack product policy
+export type {
+  CommandPackCredentialAccess,
+  CommandPackDefinition,
+  CommandPackPolicy,
+} from "./command-packs/types.ts";
+
 // Command routing
 export { CommandRegistry } from "./registry.ts";
 export type { Command, FlagDef, LocateResult } from "./registry.ts";

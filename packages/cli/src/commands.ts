@@ -79,6 +79,10 @@ import {
   tokenPlanCreateKey,
   tokenPlanAssignSeats,
   tokenPlanAddMember,
+  pluginInstall,
+  pluginLink,
+  pluginList,
+  pluginRemove,
 } from "bailian-cli-commands";
 
 // Full bailian-cli product: every command, exposed under the `bl` binary.
@@ -166,4 +170,8 @@ export const commands: Record<string, AnyCommand> = {
   "token-plan create-key": tokenPlanCreateKey,
   "token-plan assign-seats": tokenPlanAssignSeats,
   "token-plan add-member": tokenPlanAddMember,
+  "plugin install": pluginInstall,
+  "plugin link": pluginLink,
+  "plugin list": pluginList,
+  "plugin remove": pluginRemove,
 };
