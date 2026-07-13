@@ -40,7 +40,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "generate:reference": "tsx ../../tools/generate-reference.ts",
+    "generate:reference": "tsx ../../tools/generate-reference.ts && sh -c 'cd ../.. && vp check --fix skills/bailian-cli/reference'",
     "sync:skill-version": "tsx ../../tools/sync-skill-metadata.ts",
     "build": "vp pack",
     "dev": "tsx src/main.ts",
