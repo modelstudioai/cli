@@ -11,8 +11,8 @@
 
 - `packages/core/src/types/command-pack.ts`：稳定的协议元数据和导出类型，不知道具体产品或白名单。
 - `packages/runtime/src/command-packs/`：所有 CLI 共用的加载、校验、API 适配、产品隔离安装目录和 manager 实现。
-- `packages/runtime/src/create-cli.ts`：始终接收静态 command map，按 `CliOptions.commandPacks` 统一合并 pack，并把已绑定产品 identity/policy 的 manager 注入 `ctx.commandPacks()`。
-- `packages/commands/src/commands/plugin/`：普通共享管理命令，只依赖 `ctx.commandPacks()`，不 import 任何产品 policy。
+- `packages/runtime/src/create-cli.ts`：始终接收静态 command map，按 `CliOptions.commandPacks` 统一合并 pack，并把已绑定产品 identity/policy 的 manager 注入 `ctx.commandPacks`。
+- `packages/commands/src/commands/plugin/`：普通共享管理命令，只依赖 `ctx.commandPacks`，不 import 任何产品 policy。
 - `packages/cli/src/command-pack-policy.ts`：`bl` 支持的包、命令前缀和凭据授权。
 - `kscli` 当前不传 `commandPacks`，使用 runtime 的默认空 policy。
 - 当前只有 `bl` 从 `bailian-cli-commands` 导入并登记 `plugin *`；使用默认空 policy 的产品不提前暴露管理命令。
@@ -33,7 +33,7 @@
 - [ ] 普通网络请求走 `ctx.client`；基础 Context 提供 `identity/settings/flags/client/output/errors`，不提供原始凭据。
 - [ ] `ctx.credentials.apiKey()` 仅限 policy 显式声明 `credentialAccess: ["apiKey"]`，且命令自身为 `auth: "apiKey"`。
 - [ ] 不向 Command Pack 暴露原始 Console Token、OpenAPI AK/SK、`authStore` 或 `configStore`。
-- [ ] 不向 Command Pack 暴露宿主的 `commandPacks()` manager，避免 pack 安装或删除其他 pack。
+- [ ] 不向 Command Pack 暴露宿主的 `commandPacks` manager，避免 pack 安装或删除其他 pack。
 - [ ] 单包失败必须 fail-open：保留内置命令和其他合法 pack。
 - [ ] 破坏协议前优先在适配层兼容；确实无法兼容时才提升 `apiVersion`。
 

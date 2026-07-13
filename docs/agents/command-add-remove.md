@@ -72,8 +72,8 @@ packages/commands/src/index.ts
   - `exampleArgs`(不含 bin/path 前缀)
   - `validate`(跨 flag 校验)
   - 普通业务命令的 `run(ctx)` 只读 `ctx.flags` / `ctx.settings` / `ctx.client`
-  - `commands/auth/**` 可用 `ctx.authStore()`,`commands/config/**` 可用 `ctx.configStore()`;不要把这些 store accessor 扩散到普通业务命令
-  - `commands/plugin/**` 可用 `ctx.commandPacks()`;产品 policy 由 runtime 绑定,命令不要自行 import 产品入口
+  - `commands/auth/**` 可用 `ctx.authStore`,`commands/config/**` 可用 `ctx.configStore`;不要把这些持久化能力扩散到普通业务命令
+  - `commands/plugin/**` 可用 `ctx.commandPacks`;产品 policy 由 runtime 绑定,命令不要自行 import 产品入口
 - [ ] `packages/commands/src/index.ts`:新增或移除对应 export
 - [ ] 如果命令调用 Console Gateway,设置 `auth: "console"`;不要重复声明 console 凭证域 flags
 - [ ] 如果命令不需要网络或自己管理配置/登录,设置 `auth: "none"`;不要绕过 runtime auth stage
