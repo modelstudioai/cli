@@ -1,0 +1,58 @@
+const ping = {
+  description: "Ping the Command Pack fixture",
+  auth: "none",
+  flags: {
+    message: {
+      type: "string",
+      valueHint: "<text>",
+      required: true,
+      description: "Message returned by the fixture",
+    },
+  },
+  usageArgs: "--message <text>",
+  exampleArgs: ['--message "hello"'],
+  async run(ctx) {
+    process.stdout.write(`command-pack:${ctx.flags.message}\n`);
+  },
+};
+
+const credential = {
+  description: "Read an API key through the Command Pack host adapter",
+  auth: "apiKey",
+  async run(ctx) {
+    const apiKey = ctx.credentials.apiKey();
+    process.stdout.write(`credential-source:${apiKey.source}\n`);
+  },
+};
+
+const credentialDenied = {
+  description: "Verify credential access also requires command auth",
+  auth: "none",
+  async run(ctx) {
+    ctx.credentials.apiKey();
+  },
+};
+
+const output = {
+  description: "Exercise the Command Pack output helper",
+  auth: "none",
+  async run(ctx) {
+    ctx.output.result({ source: "command-pack", ok: true }, { text: "command-pack-output" });
+  },
+};
+
+const fail = {
+  description: "Exercise the Command Pack semantic error helper",
+  auth: "none",
+  async run(ctx) {
+    throw ctx.errors.usage("Command Pack fixture usage error.", "Use agent fail only in tests.");
+  },
+};
+
+export default {
+  "agent credential": credential,
+  "agent credential-denied": credentialDenied,
+  "agent fail": fail,
+  "agent output": output,
+  "agent ping": ping,
+};

@@ -3,6 +3,7 @@ import type {
   ApiKeyCredential,
   AuthStore,
   ConfigStore,
+  CommandPackManager,
   ConsoleCredential,
   FlagsDef,
   Identity,
@@ -49,6 +50,8 @@ export interface RunContext {
   configStore(): ConfigStore;
   /** 惰性访问器,lint 限定 commands/auth/** 使用。 */
   authStore(): AuthStore;
+  /** 绑定当前产品的 Command Pack 管理器；仅限 commands/plugin/** 使用。 */
+  commandPacks(): CommandPackManager;
   /** Network surface with the credential baked in — set by {@link authStage}. */
   client: Client;
 }

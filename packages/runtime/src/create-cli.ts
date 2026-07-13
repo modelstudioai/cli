@@ -29,6 +29,9 @@ import {
 import { setupProxyFromEnv } from "./proxy.ts";
 import { handleError } from "./error-handler.ts";
 import { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
+import { loadCommandPacks } from "./command-packs/load.ts";
+import { createCommandPackManager } from "./command-packs/manager.ts";
+import type { CommandPackPolicy } from "./command-packs/types.ts";
 
 /** Per-product identity injected by each CLI entrypoint (bl / rag / …). */
 export interface CliOptions {
@@ -42,6 +45,8 @@ export interface CliOptions {
   npmPackage: string;
   /** Root-help suggestions shown after credentials are configured. */
   quickStartTasks?: readonly string[];
+  /** Command Packs accepted by this product. Omit when the product supports none. */
+  commandPacks?: CommandPackPolicy;
 }
 
 export interface Cli {
@@ -85,16 +90,27 @@ function installProcessHandlers(binName: string): void {
  * then dispatches it.
  */
 export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions): Cli {
-  const registry = new CommandRegistry(commands, opts.binName);
   const { binName, version, npmPackage, clientName } = opts;
   const identity: Identity = { binName, version, npmPackage, clientName };
+  const commandPackPolicy = opts.commandPacks ?? { supported: {} };
+  const commandPackManager = createCommandPackManager(identity, commandPackPolicy);
+  let registryPromise: Promise<CommandRegistry> | undefined;
 
   installProcessHandlers(binName);
 
   const runMiddleware = compose([versionCheckStage, telemetryStage, authStage, runCommandStage]);
 
+  function getRegistry(): Promise<CommandRegistry> {
+    if (!registryPromise) {
+      registryPromise = loadCommandPacks(commands, identity, commandPackPolicy).then(
+        (loaded) => new CommandRegistry(loaded.commands, binName),
+      );
+    }
+    return registryPromise;
+  }
+
   /** Render help for `path`; root ([]) doubles as the onboarding / login guide. */
-  function renderHelp(path: string[], argv: string[]): void {
+  function renderHelp(registry: CommandRegistry, path: string[], argv: string[]): void {
     registry.printHelp(path, process.stderr);
     if (path.length > 0) return;
 
@@ -121,7 +137,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     }
   }
 
-  async function dispatch(argv: string[]): Promise<void> {
+  async function dispatch(registry: CommandRegistry, argv: string[]): Promise<void> {
     const res = resolve(argv, registry);
 
     switch (res.kind) {
@@ -130,7 +146,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         return;
 
       case "help":
-        renderHelp(res.path, argv);
+        renderHelp(registry, res.path, argv);
         return;
 
       case "usageError":
@@ -169,6 +185,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             sources,
             configStore: () => makeConfigStore(),
             authStore: () => makeAuthStore(sources),
+            commandPacks: () => commandPackManager,
             client: new Client({ identity, settings, baseUrl: resolveModelBaseUrl(sources) }),
           };
           await runMiddleware(ctx);
@@ -190,9 +207,11 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
 
   return {
     run(argv: string[] = process.argv.slice(2)) {
-      return dispatch(argv).catch(
-        (err) => flushTelemetry(1000).finally(() => handleError(err, binName)) as unknown as void,
-      );
+      return getRegistry()
+        .then((registry) => dispatch(registry, argv))
+        .catch(
+          (err) => flushTelemetry(1000).finally(() => handleError(err, binName)) as unknown as void,
+        );
     },
   };
 }

@@ -18,6 +18,24 @@ export {
   OPENAPI_AUTH_FLAGS,
 } from "./command.ts";
 export type {
+  CommandPack,
+  CommandPackApiKeyContext,
+  CommandPackCommand,
+  CommandPackContext,
+  CommandPackCredentials,
+  CommandPackErrorOptions,
+  CommandPackErrors,
+  CommandPackMeta,
+  CommandPackOutput,
+  CommandPackOutputOptions,
+} from "./command-pack.ts";
+export { COMMAND_PACK_API_VERSION } from "./command-pack.ts";
+export type {
+  CommandPackManager,
+  CommandPackMutationResult,
+  CommandPackReport,
+} from "./command-pack-manager.ts";
+export type {
   AppCompletionRequest,
   AppCompletionResponse,
   AppStreamChunk,
