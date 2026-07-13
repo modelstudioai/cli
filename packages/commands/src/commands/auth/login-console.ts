@@ -6,7 +6,6 @@ import {
   BailianError,
   ExitCode,
   chatPath,
-  getConfigPath,
   requestJson,
   type AuthStore,
   type ConfigFile,
@@ -23,6 +22,9 @@ export interface LoginDeps {
 
 const CONSOLE_LOGIN_TIMEOUT_MS = 15 * 60 * 1000;
 const MAX_AUTH_CALLBACK_BODY = 65536;
+// Regex for double newline (\r\n\r\n or \n\n); built via RegExp to avoid
+// literal multi-line splitting in source.
+const REGEX_DOUBLE_NEWLINE = new RegExp("\r\n\r\n|\n\n");
 
 const CONSOLE_ORIGINS: Record<string, string> = {
   domestic: "https://bailian.console.aliyun.com",
@@ -76,7 +78,7 @@ function parseAccessTokenFromMultipart(raw: string, boundaryValue: string): stri
   for (let i = 1; i < segments.length; i++) {
     const part = segments[i]!;
     if (!/name\s*=\s*["'](?:access_token|accessToken)["']/i.test(part)) continue;
-    const sep = part.match(/\r\n\r\n|\n\n/);
+    const sep = part.match(REGEX_DOUBLE_NEWLINE);
     if (!sep || sep.index === undefined) continue;
     let value = part.slice(sep.index + sep[0].length);
     value = value
@@ -495,7 +497,7 @@ export async function runConsoleLogin(
               console_switch_agent: consoleSwitchAgent ? Number(consoleSwitchAgent) : undefined,
               workspace_id: workspaceId || undefined,
             });
-            process.stderr.write(`Config saved to ${getConfigPath()}\n`);
+            process.stderr.write(`Config saved to ${deps.authStore.path}\n`);
           }
           if (apiKey) {
             const testBaseUrl = baseUrl || deps.authStore.resolveBaseUrl();

@@ -167,7 +167,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             flags: ownFlags,
             settings,
             sources,
-            configStore: () => makeConfigStore(),
+            configStore: () => makeConfigStore(sources.configName),
             authStore: () => makeAuthStore(sources),
             client: new Client({ identity, settings, baseUrl: resolveModelBaseUrl(sources) }),
           };

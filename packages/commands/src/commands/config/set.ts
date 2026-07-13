@@ -101,7 +101,14 @@ export default defineCommand({
     const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult({ would_set: { [resolvedKey]: value } }, format);
+      emitResult(
+        {
+          would_set: { [resolvedKey]: value },
+          config: settings.configName ?? "default",
+          config_file: ctx.configStore().path,
+        },
+        format,
+      );
       return;
     }
 
@@ -110,7 +117,14 @@ export default defineCommand({
 
     if (!settings.quiet) {
       const shown = SECRET_KEYS.has(resolvedKey) ? maskToken(String(coerced)) : coerced;
-      emitResult({ [resolvedKey]: shown }, format);
+      emitResult(
+        {
+          [resolvedKey]: shown,
+          config: settings.configName ?? "default",
+          config_file: ctx.configStore().path,
+        },
+        format,
+      );
     }
   },
 });

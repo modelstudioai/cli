@@ -1,16 +1,45 @@
 import { readFileSync, writeFileSync, renameSync, existsSync } from "fs";
-import { parseConfigFile, type ConfigFile, type Settings } from "./schema.ts";
+import { CONFIG_FILE_KEYS, parseConfigFile, type ConfigFile, type Settings } from "./schema.ts";
 import { ensureConfigDir, getConfigPath } from "./paths.ts";
 import { detectOutputFormat } from "../output/formatter.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import type { SourceFlags } from "../types/command.ts";
 
-export function readConfigFile(): ConfigFile {
+const CONFIG_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
+
+/**
+ * 校验并规范化 `--config <name>`：`undefined`/""/"default" 都视为未指定（等价顶层默认配置）。
+ * 合法命名只允许字母、数字、`-`/`_`，且不能与 `ConfigFile` 顶层字段同名（避免写入时与默认配置字段歧义）。
+ */
+export function normalizeConfigName(name?: unknown): string | undefined {
+  if (name === undefined || name === "" || name === "default") return undefined;
+  if (typeof name !== "string" || !CONFIG_NAME_PATTERN.test(name)) {
+    const display = typeof name === "string" ? name : JSON.stringify(name);
+    throw new BailianError(
+      `Invalid config name "${display}".`,
+      ExitCode.USAGE,
+      "Use letters, numbers, '-' or '_', starting with a letter or number.",
+    );
+  }
+  if ((CONFIG_FILE_KEYS as readonly string[]).includes(name)) {
+    throw new BailianError(
+      `Invalid config name "${name}". It conflicts with a config key.`,
+      ExitCode.USAGE,
+    );
+  }
+  return name;
+}
+
+/** 读完整 config.json 原始对象（不经过 `parseConfigFile` 过滤），保留其他命名配置 block。 */
+function readRawConfigObject(): Record<string, unknown> {
   const path = getConfigPath();
   if (!existsSync(path)) return {};
   try {
-    return parseConfigFile(JSON.parse(readFileSync(path, "utf-8")));
+    const raw = JSON.parse(readFileSync(path, "utf-8")) as unknown;
+    return raw && typeof raw === "object" && !Array.isArray(raw)
+      ? (raw as Record<string, unknown>)
+      : {};
   } catch (err) {
     const e = err as Error;
     if (e instanceof SyntaxError || e.message.includes("JSON")) {
@@ -20,11 +49,34 @@ export function readConfigFile(): ConfigFile {
   }
 }
 
-export async function writeConfigFile(data: Record<string, unknown>): Promise<void> {
+function readRawConfigBlock(raw: Record<string, unknown>, configName?: string): unknown {
+  if (!configName) return raw;
+  const block = raw[configName];
+  return block && typeof block === "object" && !Array.isArray(block) ? block : {};
+}
+
+export function readConfigFile(configName?: string): ConfigFile {
+  const raw = readRawConfigObject();
+  return parseConfigFile(readRawConfigBlock(raw, configName));
+}
+
+export async function writeConfigFile(
+  data: Record<string, unknown>,
+  configName?: string,
+): Promise<void> {
+  const raw = readRawConfigObject();
+  if (configName) {
+    raw[configName] = data;
+  } else {
+    for (const key of Object.keys(raw)) {
+      if ((CONFIG_FILE_KEYS as readonly string[]).includes(key)) delete raw[key];
+    }
+    Object.assign(raw, data);
+  }
   await ensureConfigDir();
   const path = getConfigPath();
   const tmp = path + ".tmp";
-  writeFileSync(tmp, JSON.stringify(data, null, 2) + "\n", { mode: 0o600 });
+  writeFileSync(tmp, JSON.stringify(raw, null, 2) + "\n", { mode: 0o600 });
   renameSync(tmp, path);
 }
 
@@ -36,10 +88,21 @@ export interface ResolutionSources {
   flags: Partial<SourceFlags>;
   file: ConfigFile;
   env: NodeJS.ProcessEnv;
+  /** 当前命名配置名(`--config <name>` 解析后);未指定或 `default` 时为 undefined。 */
+  configName?: string;
+  /** 实际 config.json 路径(不受 configName 影响,一直是同一个文件)。 */
+  configPath?: string;
 }
 
 export function buildSources(flags: Partial<SourceFlags>): ResolutionSources {
-  return { flags, file: readConfigFile(), env: process.env };
+  const configName = normalizeConfigName(flags.config);
+  return {
+    flags,
+    file: readConfigFile(configName),
+    env: process.env,
+    configName,
+    configPath: getConfigPath(),
+  };
 }
 
 /**
@@ -60,7 +123,8 @@ export function buildSettings(s: ResolutionSources): Settings {
   }
 
   return {
-    configPath: getConfigPath(),
+    configPath: s.configPath ?? getConfigPath(),
+    configName: s.configName,
     intentDetectBaseUrl:
       file.intent_detect_base_url || env.DASHSCOPE_INTENT_DETECT_BASE_URL || undefined,
     output: detectOutputFormat(flags.output || env.DASHSCOPE_OUTPUT || file.output),

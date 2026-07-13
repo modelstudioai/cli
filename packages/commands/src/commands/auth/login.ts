@@ -1,4 +1,4 @@
-import { defineCommand, getConfigPath } from "bailian-cli-core";
+import { defineCommand } from "bailian-cli-core";
 import { emitBare } from "bailian-cli-runtime";
 import {
   resolveConsoleOrigin,
@@ -129,7 +129,7 @@ export default defineCommand({
         access_key_secret: flags.accessKeySecret,
         access_token: accessToken,
       });
-      process.stderr.write(`OpenAPI credentials saved to ${getConfigPath()}\n`);
+      process.stderr.write(`OpenAPI credentials saved to ${store.path}\n`);
       return;
     }
 

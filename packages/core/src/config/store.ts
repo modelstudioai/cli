@@ -13,26 +13,30 @@ export interface ConfigStore {
   /** 删除指定键。 */
   unset(keys: (keyof ConfigFile)[]): Promise<void>;
   path: string;
+  configName?: string;
 }
 
-export function makeConfigStore(): ConfigStore {
+export function makeConfigStore(configName?: string): ConfigStore {
   return {
-    read: () => readConfigFile(),
+    read: () => readConfigFile(configName),
     async write(patch) {
-      const existing = readConfigFile() as Record<string, unknown>;
+      const existing = readConfigFile(configName) as Record<string, unknown>;
       for (const [key, value] of Object.entries(patch)) {
         if (value === undefined) delete existing[key];
         else existing[key] = value;
       }
-      await writeConfigFile(existing);
+      await writeConfigFile(existing, configName);
     },
     async unset(keys) {
-      const existing = readConfigFile() as Record<string, unknown>;
+      const existing = readConfigFile(configName) as Record<string, unknown>;
       for (const key of keys) delete existing[key];
-      await writeConfigFile(existing);
+      await writeConfigFile(existing, configName);
     },
     get path() {
       return getConfigPath();
+    },
+    get configName() {
+      return configName;
     },
   };
 }

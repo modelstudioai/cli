@@ -71,6 +71,11 @@ export const GLOBAL_FLAGS = {
   quiet: { type: "switch", description: "Suppress non-essential output" },
   verbose: { type: "switch", description: "Print HTTP request/response details" },
   dryRun: { type: "switch", description: "Dry run mode" },
+  config: {
+    type: "string",
+    valueHint: "<name>",
+    description: "Use named config credentials",
+  },
   help: { type: "switch", description: "Show help" },
   version: { type: "switch", description: "Print version" },
 } satisfies FlagsDef;

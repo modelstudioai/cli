@@ -46,6 +46,29 @@ export interface ConfigFile {
   telemetry?: boolean;
 }
 
+export const CONFIG_FILE_KEYS = [
+  "api_key",
+  "access_token",
+  "access_key_id",
+  "access_key_secret",
+  "security_token",
+  "base_url",
+  "intent_detect_base_url",
+  "output",
+  "output_dir",
+  "timeout",
+  "default_text_model",
+  "default_video_model",
+  "default_image_model",
+  "default_speech_model",
+  "default_omni_model",
+  "workspace_id",
+  "console_site",
+  "console_region",
+  "console_switch_agent",
+  "telemetry",
+] as const satisfies readonly (keyof ConfigFile)[];
+
 const VALID_OUTPUTS = new Set<string>(["text", "json"]);
 const VALID_CONSOLE_SITES = new Set<string>(["domestic", "international"]);
 
@@ -136,6 +159,7 @@ export interface Identity {
  */
 export interface Settings {
   configPath?: string;
+  configName?: string;
   /** Dedicated base URL for intent-detect model; falls back to the model baseUrl at call site. */
   intentDetectBaseUrl?: string;
   output: "text" | "json";

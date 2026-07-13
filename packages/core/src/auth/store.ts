@@ -1,6 +1,7 @@
 import type { ConfigFile } from "../config/schema.ts";
 import type { ResolutionSources } from "../config/loader.ts";
 import { readConfigFile, writeConfigFile } from "../config/loader.ts";
+import { getConfigPath } from "../config/paths.ts";
 import type { AuthState } from "./types.ts";
 import { describeAuthState, resolveModelBaseUrl } from "./resolver.ts";
 
@@ -40,13 +41,18 @@ export interface AuthStore {
   login(patch: AuthPersistPatch): Promise<void>;
   /** 清凭证:console/openapi 只删对应域;all 清全部登录凭证。返回是否有变更。 */
   logout(scope: "console" | "openapi" | "all"): Promise<boolean>;
+  /** 实际写入的 config.json 路径(不受命名配置影响,一直是同一个文件)。 */
+  path: string;
+  /** 当前命名配置名(`--config <name>` 解析后);未指定或 `default` 时为 undefined。 */
+  configName?: string;
 }
 
 export function makeAuthStore(sources: ResolutionSources): AuthStore {
+  const configName = sources.configName;
   return {
     describe: () => describeAuthState(sources),
     stored() {
-      const file = readConfigFile();
+      const file = readConfigFile(configName);
       return {
         apiKey: !!file.api_key,
         console: !!file.access_token,
@@ -55,20 +61,26 @@ export function makeAuthStore(sources: ResolutionSources): AuthStore {
     },
     resolveBaseUrl: () => resolveModelBaseUrl(sources),
     async login(patch) {
-      const existing = readConfigFile() as Record<string, unknown>;
+      const existing = readConfigFile(configName) as Record<string, unknown>;
       for (const [key, value] of Object.entries(patch)) {
         if (value !== undefined) existing[key] = value;
       }
-      await writeConfigFile(existing);
+      await writeConfigFile(existing, configName);
     },
     async logout(scope) {
-      const existing = readConfigFile() as Record<string, unknown>;
+      const existing = readConfigFile(configName) as Record<string, unknown>;
       const keys = LOGOUT_KEYS[scope];
       const had = keys.some((key) => existing[key] !== undefined);
       if (!had) return false;
       for (const key of keys) delete existing[key];
-      await writeConfigFile(existing);
+      await writeConfigFile(existing, configName);
       return true;
+    },
+    get path() {
+      return sources.configPath ?? getConfigPath();
+    },
+    get configName() {
+      return configName;
     },
   };
 }

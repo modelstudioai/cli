@@ -35,11 +35,15 @@ export default defineCommand({
       : undefined;
 
     const authenticated = !!(apiKey || consoleCred || openapi);
+    const configName = settings.configName ?? "default";
+    const configFile = ctx.authStore().path;
 
     if (!authenticated) {
       emitResult(
         {
           authenticated: false,
+          config: configName,
+          config_file: configFile,
           message: "Not authenticated.",
           hint: [
             `API key (model):   ${identity.binName} auth login --api-key <key> or DASHSCOPE_API_KEY`,
@@ -54,10 +58,21 @@ export default defineCommand({
     }
 
     if (format !== "text") {
-      emitResult({ authenticated: true, api_key: apiKey, console: consoleCred, openapi }, format);
+      emitResult(
+        {
+          authenticated: true,
+          config: configName,
+          config_file: configFile,
+          api_key: apiKey,
+          console: consoleCred,
+          openapi,
+        },
+        format,
+      );
       return;
     }
 
+    emitBare(`Config: ${configName} (${configFile})`);
     emitBare("Authentication Status:");
     if (apiKey) {
       emitBare(`  API key (model):  ${apiKey.source}  ${apiKey.masked}`);

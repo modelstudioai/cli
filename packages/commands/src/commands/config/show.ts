@@ -16,6 +16,7 @@ export default defineCommand({
       base_url: client.baseUrl,
       output: settings.output,
       timeout: settings.timeout,
+      config: settings.configName ?? "default",
       config_file: store.path,
     };
 

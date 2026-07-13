@@ -4,6 +4,13 @@ import { join } from "path";
 import { expect, test } from "vite-plus/test";
 import { makeConfigStore } from "../src/config/store.ts";
 import { makeAuthStore } from "../src/auth/store.ts";
+import {
+  buildSources,
+  normalizeConfigName,
+  readConfigFile,
+  writeConfigFile,
+} from "../src/config/loader.ts";
+import { getConfigPath } from "../src/config/paths.ts";
 
 /** 在隔离的临时配置目录里执行,结束后恢复环境。 */
 async function inTempConfigDir(fn: () => Promise<void>): Promise<void> {
@@ -62,5 +69,68 @@ test("AuthStore:login 合并落盘,logout 按域清理并报告变更", async ()
 
     // 非凭证键不受 logout 影响
     expect(makeConfigStore().read().workspace_id).toBe("ws-1");
+  });
+});
+
+test("ConfigStore:命名 config 与默认配置隔离且写入保留其它 block", async () => {
+  await inTempConfigDir(async () => {
+    await writeConfigFile({ api_key: "sk-default", output: "json" });
+    await writeConfigFile({ api_key: "sk-prod", output: "text" }, "prod");
+
+    const dev = makeConfigStore("dev");
+    await dev.write({ api_key: "sk-dev", timeout: 120 });
+
+    expect(makeConfigStore().read()).toMatchObject({ api_key: "sk-default", output: "json" });
+    expect(dev.read()).toMatchObject({ api_key: "sk-dev", timeout: 120 });
+    expect(makeConfigStore("prod").read()).toMatchObject({ api_key: "sk-prod", output: "text" });
+    expect(readConfigFile("dev")).not.toMatchObject({ output: "json" });
+    expect(dev.path).toBe(getConfigPath());
+  });
+});
+
+test("AuthStore:login/logout 只影响当前命名 config", async () => {
+  await inTempConfigDir(async () => {
+    await writeConfigFile({ api_key: "sk-default", access_token: "tok-default" });
+    const sources = buildSources({ config: "dev" });
+    const store = makeAuthStore(sources);
+
+    await store.login({ api_key: "sk-dev", access_token: "tok-dev", workspace_id: "ws-dev" });
+    expect(makeConfigStore().read()).toMatchObject({
+      api_key: "sk-default",
+      access_token: "tok-default",
+    });
+    expect(makeConfigStore("dev").read()).toMatchObject({
+      api_key: "sk-dev",
+      access_token: "tok-dev",
+      workspace_id: "ws-dev",
+    });
+
+    expect(await store.logout("console")).toBe(true);
+    expect(makeConfigStore("dev").read().access_token).toBeUndefined();
+    expect(makeConfigStore().read().access_token).toBe("tok-default");
+  });
+});
+
+test("config name 校验拒绝路径穿越和 ConfigFile 字段冲突", () => {
+  expect(normalizeConfigName("dev_1")).toBe("dev_1");
+  expect(normalizeConfigName("default")).toBeUndefined();
+  expect(() => normalizeConfigName("../evil")).toThrow(/Invalid config name/);
+  expect(() => normalizeConfigName("api_key")).toThrow(/conflicts with a config key/);
+});
+
+test("buildSources 暴露命名 config 且 default 等价顶层", async () => {
+  await inTempConfigDir(async () => {
+    await writeConfigFile({ api_key: "sk-default", output: "json" });
+    await writeConfigFile({ access_token: "tok-dev" }, "dev");
+
+    const defaultSources = buildSources({ config: "default" });
+    expect(defaultSources.configName).toBeUndefined();
+    expect(defaultSources.file.api_key).toBe("sk-default");
+
+    const devSources = buildSources({ config: "dev" });
+    expect(devSources.configName).toBe("dev");
+    expect(devSources.configPath).toBe(getConfigPath());
+    expect(devSources.file.access_token).toBe("tok-dev");
+    expect(devSources.file.api_key).toBeUndefined();
   });
 });
