@@ -19,6 +19,7 @@ export { default as videoDownload } from "./commands/video/download.ts";
 export { default as visionDescribe } from "./commands/vision/describe.ts";
 export { default as configShow } from "./commands/config/show.ts";
 export { default as configSet } from "./commands/config/set.ts";
+export { default as configUi } from "./commands/config/ui.ts";
 export { default as update } from "./commands/update.ts";
 export { default as appCall } from "./commands/app/call.ts";
 export { default as appList } from "./commands/app/list.ts";

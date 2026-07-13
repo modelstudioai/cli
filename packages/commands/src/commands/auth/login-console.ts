@@ -1,4 +1,3 @@
-import { execFile } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import http from "node:http";
 
@@ -12,6 +11,7 @@ import {
   type Identity,
   type Settings,
 } from "bailian-cli-core";
+import { listenLocalServer, openInBrowser } from "../shared/local-server.ts";
 
 /** 登录流程的能力面:身份(UA)、有效配置(timeout 等)、auth 域落盘。 */
 export interface LoginDeps {
@@ -361,32 +361,7 @@ async function extractCredentialsFromRequest(
 }
 
 function listenServerOnFreeLocalPort(server: http.Server): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const onErr = (e: Error) => reject(e);
-    server.once("error", onErr);
-    server.listen({ port: 0, host: "127.0.0.1", exclusive: true }, () => {
-      server.off("error", onErr);
-      const addr = server.address();
-      if (!addr || typeof addr === "string") {
-        reject(new Error("Expected TCP socket address"));
-        return;
-      }
-      resolve(addr.port);
-    });
-  });
-}
-
-function openInBrowser(url: string): Promise<void> {
-  const platform = process.platform;
-  const cmd = platform === "darwin" ? "open" : platform === "win32" ? "cmd" : "xdg-open";
-  const args = platform === "win32" ? ["/c", "start", "", url] : [url];
-
-  return new Promise((resolve, reject) => {
-    execFile(cmd, args, { windowsHide: true }, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
+  return listenLocalServer(server);
 }
 
 const RETRY_DELAY_BASE_MS = 500;

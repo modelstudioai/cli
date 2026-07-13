@@ -7,10 +7,11 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command          | Description                   |
-| ---------------- | ----------------------------- |
-| `bl config set`  | Set a config value            |
-| `bl config show` | Display current configuration |
+| Command          | Description                                   |
+| ---------------- | --------------------------------------------- |
+| `bl config set`  | Set a config value                            |
+| `bl config show` | Display current configuration                 |
+| `bl config ui`   | Open a local web UI to manage config profiles |
 
 ## Command details
 
@@ -24,10 +25,10 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag              | Type   | Required | Description                                                                                                                                  |
-| ----------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--key <key>`     | string | yes      | Config key (base*url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, default*\*\_model, workspace_id) |
-| `--value <value>` | string | yes      | Value to set                                                                                                                                 |
+| Flag              | Type   | Required | Description                                                                                                                                                  |
+| ----------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--key <key>`     | string | yes      | Config key (base*url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, security_token, default*\*\_model, workspace_id) |
+| `--value <value>` | string | yes      | Value to set                                                                                                                                                 |
 
 #### Examples
 
@@ -63,4 +64,33 @@ bl config show
 
 ```bash
 bl config show --output json
+```
+
+### `bl config ui`
+
+| Field           | Value                                         |
+| --------------- | --------------------------------------------- |
+| **Name**        | `config ui`                                   |
+| **Description** | Open a local web UI to manage config profiles |
+| **Usage**       | `bl config ui [--port <port>] [--no-open]`    |
+
+#### Flags
+
+| Flag            | Type   | Required | Description                                   |
+| --------------- | ------ | -------- | --------------------------------------------- |
+| `--port <port>` | number | no       | Port to listen on (default: random free port) |
+| `--no-open`     | switch | no       | Do not open the browser automatically         |
+
+#### Examples
+
+```bash
+bl config ui
+```
+
+```bash
+bl config ui --port 8787
+```
+
+```bash
+bl config ui --config staging --no-open
 ```

@@ -73,11 +73,48 @@ export async function writeConfigFile(
     }
     Object.assign(raw, data);
   }
+  await writeRawConfigObject(raw);
+}
+
+async function writeRawConfigObject(raw: Record<string, unknown>): Promise<void> {
   await ensureConfigDir();
   const path = getConfigPath();
   const tmp = path + ".tmp";
   writeFileSync(tmp, JSON.stringify(raw, null, 2) + "\n", { mode: 0o600 });
   renameSync(tmp, path);
+}
+
+/** 全量配置快照：顶层默认配置 + 各命名 profile。 */
+export interface ConfigProfiles {
+  /** 顶层默认配置（parseConfigFile 过滤后）。 */
+  default: ConfigFile;
+  /** 命名配置 name -> 配置。 */
+  named: Record<string, ConfigFile>;
+}
+
+/**
+ * 读取全部 profile：顶层默认配置与各命名 block。
+ * 命名 block = raw 中不属于 `CONFIG_FILE_KEYS`、且值为普通对象的项。
+ */
+export function readConfigProfiles(): ConfigProfiles {
+  const raw = readRawConfigObject();
+  const named: Record<string, ConfigFile> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if ((CONFIG_FILE_KEYS as readonly string[]).includes(key)) continue;
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      named[key] = parseConfigFile(value);
+    }
+  }
+  return { default: parseConfigFile(raw), named };
+}
+
+/** 删除一个命名 profile block；存在才删并回写，返回是否有变更。 */
+export async function deleteConfigProfile(name: string): Promise<boolean> {
+  const raw = readRawConfigObject();
+  if (!(name in raw)) return false;
+  delete raw[name];
+  await writeRawConfigObject(raw);
+  return true;
 }
 
 /**

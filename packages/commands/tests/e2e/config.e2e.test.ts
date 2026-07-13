@@ -19,6 +19,26 @@ describe("e2e: config", () => {
     expect(stderr).toMatch(/set|--key|--value/i);
   });
 
+  test("config ui --help 正常退出", async () => {
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "ui", "--help"]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/ui|--port|--no-open|web/i);
+  });
+
+  test("config ui --dry-run 打印计划不起服务", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+      "config",
+      "ui",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ host?: string; routes?: string[] }>(stdout);
+    expect(data.host).toBe("127.0.0.1");
+    expect(Array.isArray(data.routes)).toBe(true);
+  });
+
   test("config show --output json", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
       "config",

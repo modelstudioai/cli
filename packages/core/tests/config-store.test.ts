@@ -9,6 +9,8 @@ import {
   normalizeConfigName,
   readConfigFile,
   writeConfigFile,
+  readConfigProfiles,
+  deleteConfigProfile,
 } from "../src/config/loader.ts";
 import { getConfigPath } from "../src/config/paths.ts";
 
@@ -116,6 +118,28 @@ test("config name 校验拒绝路径穿越和 ConfigFile 字段冲突", () => {
   expect(normalizeConfigName("default")).toBeUndefined();
   expect(() => normalizeConfigName("../evil")).toThrow(/Invalid config name/);
   expect(() => normalizeConfigName("api_key")).toThrow(/conflicts with a config key/);
+});
+
+test("readConfigProfiles 分离 default 与 named,deleteConfigProfile 只删指定 block", async () => {
+  await inTempConfigDir(async () => {
+    await writeConfigFile({ api_key: "sk-default", output: "json" });
+    await writeConfigFile({ api_key: "sk-prod" }, "prod");
+    await writeConfigFile({ access_token: "tok-dev" }, "dev");
+
+    const profiles = readConfigProfiles();
+    expect(profiles.default).toMatchObject({ api_key: "sk-default", output: "json" });
+    expect(Object.keys(profiles.named).sort()).toEqual(["dev", "prod"]);
+    expect(profiles.named.prod).toMatchObject({ api_key: "sk-prod" });
+    expect(profiles.named.dev).toMatchObject({ access_token: "tok-dev" });
+
+    expect(await deleteConfigProfile("prod")).toBe(true);
+    const after = readConfigProfiles();
+    expect(after.named.prod).toBeUndefined();
+    expect(after.named.dev).toMatchObject({ access_token: "tok-dev" });
+    expect(after.default).toMatchObject({ api_key: "sk-default" });
+    // 再次删除不存在的 block 返回 false
+    expect(await deleteConfigProfile("prod")).toBe(false);
+  });
 });
 
 test("buildSources 暴露命名 config 且 default 等价顶层", async () => {
