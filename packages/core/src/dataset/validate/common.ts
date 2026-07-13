@@ -18,6 +18,13 @@ import type { DatasetSchema, ValidationIssue, ValidationStats } from "./types.ts
  */
 export const MAX_DATASET_BYTES = 300 * 1024 * 1024;
 
+/**
+ * Image / video ZIP size cap — 1 GB per the platform docs (vs 300 MB for
+ * text / audio). Used by `bl dataset upload` for media schemas and by the
+ * `sft-lora` training profile for image / video validation.
+ */
+export const MAX_MEDIA_ZIP_BYTES = 1024 * 1024 * 1024;
+
 export interface PreflightResult {
   bytes: number;
   ext: string;
@@ -75,11 +82,12 @@ export function emptyStats(): ValidationStats {
 export function parseDatasetSchemaFlag(value: string | undefined): DatasetSchema | undefined {
   if (value === undefined || value.trim() === "") return undefined;
   const v = value.trim();
-  if (v === "chatml" || v === "dpo" || v === "cpt") return v;
+  if (v === "chatml" || v === "dpo" || v === "cpt" || v === "tts" || v === "image" || v === "video")
+    return v;
   throw new BailianError(
-    `Unsupported --schema "${value}". Supported: chatml, dpo, cpt.`,
+    `Unsupported --schema "${value}". Supported: chatml, dpo, cpt, tts, image.`,
     ExitCode.USAGE,
-    `Omit --schema to auto-detect per record (chosen/rejected → DPO, text → CPT, else ChatML).`,
+    `Omit --schema to auto-detect per record (chosen/rejected → DPO, text → CPT, wav_fn → TTS, img_path → image, else ChatML).`,
   );
 }
 

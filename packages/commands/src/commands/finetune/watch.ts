@@ -1,15 +1,16 @@
-import { defineCommand, detectOutputFormat, getFineTune, type FlagsDef } from "bailian-cli-core";
+import {
+  defineCommand,
+  detectOutputFormat,
+  getFineTune,
+  BailianError,
+  ExitCode,
+  type FlagsDef,
+} from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const DEFAULT_INTERVAL_SEC = 10;
 const MIN_INTERVAL_SEC = 1;
 const TERMINAL_STATUSES = new Set(["SUCCEEDED", "FAILED", "CANCELED"]);
-/** SIGINT exit code (128 + signal 2). */
-const EXIT_INTERRUPTED = 130;
-const EXIT_FAILED = 1;
-const EXIT_TIMEOUT = 2;
-/** Non-terminal status: the job is still running. Distinct from failure. */
-const EXIT_RUNNING = 3;
 
 function nowStamp(): string {
   const date = new Date();
@@ -23,18 +24,6 @@ function formatElapsed(milliseconds: number): string {
   const seconds = totalSeconds % 60;
   if (minutes === 0) return `${seconds}s`;
   return `${minutes}m ${seconds}s`;
-}
-
-/**
- * Exit code for a status value:
- *   SUCCEEDED            -> 0
- *   FAILED / CANCELED    -> 1
- *   anything else        -> 3 (still running)
- */
-function exitCodeForStatus(status: string): number {
-  if (status === "SUCCEEDED") return 0;
-  if (TERMINAL_STATUSES.has(status)) return EXIT_FAILED;
-  return EXIT_RUNNING;
 }
 
 /**
@@ -101,9 +90,9 @@ export default defineCommand({
     "Default (no --follow) is a NON-BLOCKING single status probe: one fetch, then",
     "return immediately. This is the mode meant for agents / scripts — the caller",
     "owns the polling cadence, so the CLI never holds the terminal.",
-    "Exit codes (both modes): 0 SUCCEEDED | 1 FAILED/CANCELED | 2 --poll-timeout",
-    "exceeded (--follow) | 3 still running (non-terminal, default mode) | 130",
-    "interrupted (Ctrl-C).",
+    "A terminal FAILED/CANCELED status raises a normal CLI error (non-zero exit);",
+    "a SUCCEEDED or still-running status returns 0. With --follow, exceeding",
+    "--poll-timeout raises a timeout error.",
     "Use --follow for the blocking, human-terminal-follow experience; use the",
     "default mode when driving the loop yourself (e.g. from an agent).",
     "For per-step training output (not status), use `finetune logs`.",
@@ -130,32 +119,34 @@ export default defineCommand({
       return;
     }
 
-    // Exit codes here are a public probe contract (0 succeeded / 1 failed / 2
-    // timeout / 3 still running / 130 interrupted) — deliberately routed via
-    // process.exit instead of the central error handler.
-
     // ---- Default: non-blocking single status probe -------------------------
+    // A terminal FAILED/CANCELED status is surfaced as a BailianError (the
+    // central handler prints it and exits non-zero); SUCCEEDED and still-running
+    // both return normally. No process.exit / custom exit-code contract.
     if (!follow) {
       const response = await getFineTune(ctx.client, jobId);
       const job = response.output ?? response.data;
       const status = String(job?.status ?? "").toUpperCase();
       const terminal = TERMINAL_STATUSES.has(status);
-      const code = exitCodeForStatus(status);
 
       if (settings.quiet) {
         // Just the status word — ideal for `status=$(... finetune watch ... --quiet)`.
         emitBare(status || "UNKNOWN");
       } else if (format === "text") {
         emitBare(`${nowStamp()}  ${jobId}  ${status || "UNKNOWN"}`);
-        if (terminal) {
-          const mark = status === "SUCCEEDED" ? "✓" : "✗";
-          emitBare(`${mark} ${jobId}  ${status}`);
-        }
+        if (status === "SUCCEEDED") emitBare(`✓ ${jobId}  ${status}`);
       } else {
         // json: a compact, purpose-built status probe.
         emitResult({ job_id: jobId, status: status || "UNKNOWN", terminal }, format);
       }
-      process.exit(code);
+
+      if (terminal && status !== "SUCCEEDED") {
+        throw new BailianError(
+          `Fine-tune job ${jobId} ended in status ${status}.`,
+          ExitCode.GENERAL,
+        );
+      }
+      return;
     }
 
     // ---- --follow: blocking poll loop (legacy behavior) -------------------
@@ -182,28 +173,35 @@ export default defineCommand({
           const elapsed = Date.now() - startedAt;
           if (format !== "text" || settings.quiet) {
             emitResult(response, format);
-          } else {
-            const mark = status === "SUCCEEDED" ? "✓" : "✗";
-            emitBare(`\n${mark} ${jobId}  ${status}  (elapsed ${formatElapsed(elapsed)})`);
+          } else if (status === "SUCCEEDED") {
+            emitBare(`\n✓ ${jobId}  ${status}  (elapsed ${formatElapsed(elapsed)})`);
           }
-          process.exit(exitCodeForStatus(status));
+          if (status !== "SUCCEEDED") {
+            throw new BailianError(
+              `Fine-tune job ${jobId} ended in status ${status} (elapsed ${formatElapsed(elapsed)}).`,
+              ExitCode.GENERAL,
+            );
+          }
+          return;
         }
 
         if (pollTimeoutSec !== undefined && (Date.now() - startedAt) / 1000 >= pollTimeoutSec) {
-          if (format === "text" && !settings.quiet) {
-            emitBare(
-              `\n⏼ ${jobId}  timed out after ${formatElapsed(Date.now() - startedAt)} (last status: ${status || "UNKNOWN"})`,
-            );
-          }
-          process.exit(EXIT_TIMEOUT);
+          throw new BailianError(
+            `Watching fine-tune job ${jobId} timed out after ` +
+              `${formatElapsed(Date.now() - startedAt)} (last status: ${status || "UNKNOWN"}).`,
+            ExitCode.TIMEOUT,
+          );
         }
 
         await sleep(intervalSec * 1000, controller.signal);
       }
     } catch (error) {
+      // Ctrl-C aborts the poll loop: report and return normally (no custom code).
+      // Any other error (including the BailianError thrown above) propagates to
+      // the central handler.
       if (controller.signal.aborted) {
         emitBare("\nInterrupted.");
-        process.exit(EXIT_INTERRUPTED);
+        return;
       }
       throw error;
     } finally {

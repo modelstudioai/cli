@@ -22,25 +22,29 @@ Use this index for the full quick index and global flags.
 | `bl dataset delete`          | Delete a dataset file by ID                                                                                                     | [dataset.md](dataset.md)       |
 | `bl dataset get`             | Get details of a single dataset file                                                                                            | [dataset.md](dataset.md)       |
 | `bl dataset list`            | List uploaded dataset files                                                                                                     | [dataset.md](dataset.md)       |
-| `bl dataset upload`          | Upload a dataset file (.jsonl) to Bailian                                                                                       | [dataset.md](dataset.md)       |
-| `bl dataset validate`        | Locally validate a dataset file (.jsonl) without uploading                                                                      | [dataset.md](dataset.md)       |
-| `bl deploy create`           | Create a model deployment                                                                                                       | [deploy.md](deploy.md)         |
+| `bl dataset upload`          | Upload a dataset file (.jsonl or .zip) to Bailian                                                                               | [dataset.md](dataset.md)       |
+| `bl dataset validate`        | Locally validate a dataset file (.jsonl or .zip) without uploading                                                              | [dataset.md](dataset.md)       |
+| `bl deploy audio create`     | Create an audio (TTS) model deployment                                                                                          | [deploy.md](deploy.md)         |
 | `bl deploy delete`           | Delete a model deployment (must be STOPPED or FAILED)                                                                           | [deploy.md](deploy.md)         |
 | `bl deploy get`              | Get details of a single model deployment                                                                                        | [deploy.md](deploy.md)         |
+| `bl deploy image create`     | Create an image generation model deployment                                                                                     | [deploy.md](deploy.md)         |
 | `bl deploy list`             | List model deployments                                                                                                          | [deploy.md](deploy.md)         |
 | `bl deploy models`           | List models available for deployment                                                                                            | [deploy.md](deploy.md)         |
 | `bl deploy scale`            | Scale a deployment's capacity                                                                                                   | [deploy.md](deploy.md)         |
+| `bl deploy text create`      | Create a text model deployment                                                                                                  | [deploy.md](deploy.md)         |
 | `bl deploy update`           | Update a deployment's rate limits (rpm_limit / tpm_limit)                                                                       | [deploy.md](deploy.md)         |
 | `bl file upload`             | Upload a local file to DashScope temporary storage (48h)                                                                        | [file.md](file.md)             |
+| `bl finetune audio create`   | Create an audio TTS model fine-tune job (sft-lora)                                                                              | [finetune.md](finetune.md)     |
 | `bl finetune cancel`         | Cancel a running fine-tune job                                                                                                  | [finetune.md](finetune.md)     |
 | `bl finetune capability`     | Query fine-tune training capability — by model (which training types it supports) or by training type (which models support it) | [finetune.md](finetune.md)     |
 | `bl finetune checkpoints`    | List checkpoints produced by a fine-tune job                                                                                    | [finetune.md](finetune.md)     |
-| `bl finetune create`         | Create a fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                              | [finetune.md](finetune.md)     |
 | `bl finetune delete`         | Delete a fine-tune job record                                                                                                   | [finetune.md](finetune.md)     |
 | `bl finetune export`         | Publish a checkpoint as a deployable model                                                                                      | [finetune.md](finetune.md)     |
 | `bl finetune get`            | Get details of a single fine-tune job                                                                                           | [finetune.md](finetune.md)     |
+| `bl finetune image create`   | Create an image generation model fine-tune job (sft-lora)                                                                       | [finetune.md](finetune.md)     |
 | `bl finetune list`           | List fine-tune jobs                                                                                                             | [finetune.md](finetune.md)     |
 | `bl finetune logs`           | Fetch training logs for a fine-tune job                                                                                         | [finetune.md](finetune.md)     |
+| `bl finetune text create`    | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                   | [finetune.md](finetune.md)     |
 | `bl finetune watch`          | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                      | [finetune.md](finetune.md)     |
 | `bl image edit`              | Edit an existing image with text instructions (Qwen-Image)                                                                      | [image.md](image.md)           |
 | `bl image generate`          | Generate images (Qwen-Image / wan2.x)                                                                                           | [image.md](image.md)           |
@@ -90,34 +94,34 @@ Use this index for the full quick index and global flags.
 
 ## By group
 
-| Group        | Commands                                                                                            | Reference                      |
-| ------------ | --------------------------------------------------------------------------------------------------- | ------------------------------ |
-| `advisor`    | `recommend`                                                                                         | [advisor.md](advisor.md)       |
-| `app`        | `call`, `list`                                                                                      | [app.md](app.md)               |
-| `auth`       | `login`, `logout`, `status`                                                                         | [auth.md](auth.md)             |
-| `config`     | `set`, `show`                                                                                       | [config.md](config.md)         |
-| `console`    | `call`                                                                                              | [console.md](console.md)       |
-| `dataset`    | `delete`, `get`, `list`, `upload`, `validate`                                                       | [dataset.md](dataset.md)       |
-| `deploy`     | `create`, `delete`, `get`, `list`, `models`, `scale`, `update`                                      | [deploy.md](deploy.md)         |
-| `file`       | `upload`                                                                                            | [file.md](file.md)             |
-| `finetune`   | `cancel`, `capability`, `checkpoints`, `create`, `delete`, `export`, `get`, `list`, `logs`, `watch` | [finetune.md](finetune.md)     |
-| `image`      | `edit`, `generate`                                                                                  | [image.md](image.md)           |
-| `knowledge`  | `chat`, `retrieve`, `search`                                                                        | [knowledge.md](knowledge.md)   |
-| `mcp`        | `call`, `list`, `tools`                                                                             | [mcp.md](mcp.md)               |
-| `memory`     | `add`, `delete`, `list`, `profile create`, `profile get`, `search`, `update`                        | [memory.md](memory.md)         |
-| `omni`       | `(root)`                                                                                            | [omni.md](omni.md)             |
-| `pipeline`   | `run`, `validate`                                                                                   | [pipeline.md](pipeline.md)     |
-| `plugin`     | `install`, `link`, `list`, `remove`                                                                 | [plugin.md](plugin.md)         |
-| `quota`      | `check`, `history`, `list`, `request`                                                               | [quota.md](quota.md)           |
-| `search`     | `web`                                                                                               | [search.md](search.md)         |
-| `speech`     | `recognize`, `synthesize`                                                                           | [speech.md](speech.md)         |
-| `text`       | `chat`                                                                                              | [text.md](text.md)             |
-| `token-plan` | `add-member`, `assign-seats`, `create-key`, `list-seats`                                            | [token-plan.md](token-plan.md) |
-| `update`     | `(root)`                                                                                            | [update.md](update.md)         |
-| `usage`      | `free`, `freetier`, `stats`                                                                         | [usage.md](usage.md)           |
-| `video`      | `download`, `edit`, `generate`, `ref`, `task get`                                                   | [video.md](video.md)           |
-| `vision`     | `describe`                                                                                          | [vision.md](vision.md)         |
-| `workspace`  | `list`                                                                                              | [workspace.md](workspace.md)   |
+| Group        | Commands                                                                                                                                 | Reference                      |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| `advisor`    | `recommend`                                                                                                                              | [advisor.md](advisor.md)       |
+| `app`        | `call`, `list`                                                                                                                           | [app.md](app.md)               |
+| `auth`       | `login`, `logout`, `status`                                                                                                              | [auth.md](auth.md)             |
+| `config`     | `set`, `show`                                                                                                                            | [config.md](config.md)         |
+| `console`    | `call`                                                                                                                                   | [console.md](console.md)       |
+| `dataset`    | `delete`, `get`, `list`, `upload`, `validate`                                                                                            | [dataset.md](dataset.md)       |
+| `deploy`     | `audio create`, `delete`, `get`, `image create`, `list`, `models`, `scale`, `text create`, `update`                                      | [deploy.md](deploy.md)         |
+| `file`       | `upload`                                                                                                                                 | [file.md](file.md)             |
+| `finetune`   | `audio create`, `cancel`, `capability`, `checkpoints`, `delete`, `export`, `get`, `image create`, `list`, `logs`, `text create`, `watch` | [finetune.md](finetune.md)     |
+| `image`      | `edit`, `generate`                                                                                                                       | [image.md](image.md)           |
+| `knowledge`  | `chat`, `retrieve`, `search`                                                                                                             | [knowledge.md](knowledge.md)   |
+| `mcp`        | `call`, `list`, `tools`                                                                                                                  | [mcp.md](mcp.md)               |
+| `memory`     | `add`, `delete`, `list`, `profile create`, `profile get`, `search`, `update`                                                             | [memory.md](memory.md)         |
+| `omni`       | `(root)`                                                                                                                                 | [omni.md](omni.md)             |
+| `pipeline`   | `run`, `validate`                                                                                                                        | [pipeline.md](pipeline.md)     |
+| `plugin`     | `install`, `link`, `list`, `remove`                                                                                                      | [plugin.md](plugin.md)         |
+| `quota`      | `check`, `history`, `list`, `request`                                                                                                    | [quota.md](quota.md)           |
+| `search`     | `web`                                                                                                                                    | [search.md](search.md)         |
+| `speech`     | `recognize`, `synthesize`                                                                                                                | [speech.md](speech.md)         |
+| `text`       | `chat`                                                                                                                                   | [text.md](text.md)             |
+| `token-plan` | `add-member`, `assign-seats`, `create-key`, `list-seats`                                                                                 | [token-plan.md](token-plan.md) |
+| `update`     | `(root)`                                                                                                                                 | [update.md](update.md)         |
+| `usage`      | `free`, `freetier`, `stats`                                                                                                              | [usage.md](usage.md)           |
+| `video`      | `download`, `edit`, `generate`, `ref`, `task get`                                                                                        | [video.md](video.md)           |
+| `vision`     | `describe`                                                                                                                               | [vision.md](vision.md)         |
+| `workspace`  | `list`                                                                                                                                   | [workspace.md](workspace.md)   |
 
 ## Global flags
 

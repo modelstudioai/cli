@@ -2,7 +2,7 @@ import { defineConfig } from "vite-plus";
 
 export default defineConfig({
   test: {
-    globalSetup: "./packages/cli/tests/e2e/global-setup.ts",
+    globalSetup: "./packages/e2e/src/global-setup.ts",
     testTimeout: 60_000,
     hookTimeout: 60_000,
   },

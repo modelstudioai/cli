@@ -1,0 +1,117 @@
+import { describe, expect, test } from "vite-plus/test";
+import { join } from "path";
+import {
+  e2eFixturesDir,
+  e2eLabelFromMetaUrl,
+  isBailianE2EMediaEnabled,
+  isDashScopeE2EReady,
+  makeE2eOutputDir,
+  parseStdoutJson,
+  runCommandE2e,
+} from "./helpers.ts";
+import { IMAGE_ROUTES } from "./topic-routes.ts";
+
+/**
+ * Image edit E2E
+ */
+
+describe("e2e: image edit", () => {
+  test("image edit --help 正常退出", async () => {
+    const { stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, ["image", "edit", "--help"]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/edit|--image|--prompt|--async|--concurrent/i);
+  });
+
+  test("image edit --dry-run 接受 async 模型的 --async 与 --concurrent", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
+      "image",
+      "edit",
+      "--dry-run",
+      "--model",
+      "wan2.6-t2i",
+      "--image",
+      "https://example.com/source.png",
+      "--prompt",
+      "Change the background to blue",
+      "--async",
+      "--concurrent",
+      "2",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ mode?: string; request?: { input?: { messages?: unknown[] } } }>(
+      stdout,
+    );
+    expect(data.mode).toBe("async");
+    expect(data.request?.input?.messages?.length).toBeGreaterThan(0);
+  });
+});
+
+describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())("e2e: image edit", () => {
+  test("image edit 缺少 --image 时报用法错误并退出 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
+      "image",
+      "edit",
+      "--prompt",
+      "仅提示词",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--image|Usage:/i);
+  });
+
+  test("image edit 缺少 --prompt 时报用法错误并退出 (2)", async () => {
+    const testPng = join(e2eFixturesDir, ".smoke-32.png");
+    const { stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
+      "image",
+      "edit",
+      "--image",
+      testPng,
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--prompt|Usage:/i);
+  });
+
+  test("【qwen-image-2.0】图片编辑", async () => {
+    const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
+    const gen = await runCommandE2e(IMAGE_ROUTES, [
+      "image",
+      "generate",
+      "--model",
+      "qwen-image-2.0",
+      "--prompt",
+      "一只简笔画小猫，白底",
+      "--out-dir",
+      outDir,
+      "--out-prefix",
+      "e2e-gen",
+      "--output",
+      "json",
+    ]);
+    expect(gen.exitCode, gen.stderr).toBe(0);
+    const genData = parseStdoutJson<{ urls?: string[] }>(gen.stdout);
+    const imagePath = genData.urls?.[0];
+
+    expect(imagePath).toBeTruthy();
+
+    const ed = await runCommandE2e(IMAGE_ROUTES, [
+      "image",
+      "edit",
+      "--model",
+      "qwen-image-2.0",
+      "--image",
+      imagePath!,
+      "--prompt",
+      "把背景改成浅蓝色",
+      "--out-dir",
+      outDir,
+      "--out-prefix",
+      "e2e-edit",
+      "--output",
+      "json",
+    ]);
+    expect(ed.exitCode, ed.stderr).toBe(0);
+    const edData = parseStdoutJson<{ saved?: string[] }>(ed.stdout);
+    expect(edData.saved?.length ?? 0).toBeGreaterThan(0);
+  }, 600_000);
+});

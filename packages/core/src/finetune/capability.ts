@@ -57,11 +57,6 @@ export function isTrainingTypeCli(value: string): value is TrainingTypeCli {
   return value in TRAINING_TYPE_MAP;
 }
 
-/** Map a CLI training type to the server `training_type` for the request body. */
-export function toServerTrainingType(value: TrainingTypeCli): string {
-  return TRAINING_TYPE_MAP[value].server;
-}
-
 /** The (method, variant) pair a CLI training type resolves to. */
 export function trainingTypeMethodVariant(value: TrainingTypeCli): {
   method: string;

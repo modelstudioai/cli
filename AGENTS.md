@@ -107,6 +107,17 @@ CLI 只为「自己能权威解释的错误」发出语义化信号,服务端的
 
 如果命令调用 Console Gateway,`defineCommand` 必须设置 `auth: "console"`。runtime 会基于 `CONSOLE_AUTH_FLAGS` 自动在 help 中展示 `--console-region`、`--console-site`、`--console-switch-agent`、`--workspace-id`,并由 `authStage` 解析/注入 console credential。命令不要重复声明这些凭证域 flag,也不要手动从 env/config 解析 token。
 
+### 5. 禁止单字母变量命名
+
+所有变量、参数、回调形参必须使用有语义的命名,不允许单字母(如 `i`、`m`、`p`、`t`、`e`、`s`)。具体表现:
+
+- 回调参数: `.map((m) => ...)` → `.map((model) => ...)`, `.find((t) => ...)` → `.find((template) => ...)`
+- catch 变量: `catch (e)` → `catch (error)`
+- for-of 循环: `for (const i of items)` → `for (const item of items)`
+- 临时变量: `const s = ...` → `const strategy = ...`
+
+例外: 仅当作用域极小(≤3 行)且语义从上下文完全明确时,可使用 `k`/`v`(Object.entries 的 key/value)。
+
 ## 完成改动后的快速验证
 
 ```sh

@@ -1,8 +1,5 @@
 export { DEFAULT_INTENT } from "./defaults.ts";
 export {
-  INTENT_DETECT_MODEL,
-  INTENT_DETECT_TOOL,
-  buildIntentDetectSystemPrompt,
   INTENT_EXTRACTION_MODEL,
   INTENT_SYSTEM_PROMPT,
   JSON_RETRY_HINT,

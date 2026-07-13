@@ -16,10 +16,11 @@ import { extname } from "path";
 import { BailianError } from "../../errors/base.ts";
 import { ExitCode } from "../../errors/codes.ts";
 import { jsonlValidator } from "./jsonl.ts";
+import { zipValidator } from "./zip.ts";
 import { preflight, MAX_DATASET_BYTES } from "./common.ts";
 import type { ValidatorSpec, ValidateOpts, ValidationResult } from "./types.ts";
 
-const REGISTRY: ValidatorSpec[] = [jsonlValidator];
+const REGISTRY: ValidatorSpec[] = [jsonlValidator, zipValidator];
 
 /** Lookup the validator that handles a given file extension. */
 export function pickValidator(filePath: string): ValidatorSpec {

@@ -34,9 +34,9 @@ export default defineCommand({
   flags: EXPORT_FLAGS,
   exampleArgs: ["--job-id ft-xxx --checkpoint ckpt-3 --model-name my-qwen-sft"],
   notes: [
-    "Required before `deploy create` can target a checkpoint. The platform",
-    "may auto-export the best checkpoint when a job reaches SUCCEEDED — explicit",
-    "export is the canonical path for non-best checkpoints.",
+    "Required before `deploy <modality> create` can target a checkpoint. The",
+    "platform may auto-export the best checkpoint when a job reaches SUCCEEDED —",
+    "explicit export is the canonical path for non-best checkpoints.",
   ],
   async run(ctx) {
     const { identity, settings, flags } = ctx;
@@ -66,7 +66,9 @@ export default defineCommand({
       emitBare(exported);
     } else if (format === "text") {
       emitBare(`Exported ${jobId} / ${checkpoint} → model_name=${exported}`);
-      emitBare(`Next: ${identity.binName} deploy create --model ${exported} --name <display-name>`);
+      emitBare(
+        `Next: ${identity.binName} deploy text create --model ${exported} --name <display-name>`,
+      );
     } else {
       emitResult(response, format);
     }
