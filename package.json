@@ -16,7 +16,7 @@
     "ready": "vp check && vp run -r test && vp run -r build",
     "prepare": "vp config",
     "check": "vp check",
-    "sync:skill-assets": "pnpm --filter bailian-cli run generate:reference && pnpm --filter bailian-cli run sync:skill-version",
+    "sync:skill-assets": "pnpm --filter bailian-cli run generate:reference && pnpm --filter bailian-cli run sync:skill-version && vp check --fix skills/bailian-cli/reference",
     "dev": "pnpm -F bailian-cli-core dev",
     "bl": "pnpm -F bailian-cli dev",
     "kscli": "pnpm -F knowledge-studio-cli dev",
