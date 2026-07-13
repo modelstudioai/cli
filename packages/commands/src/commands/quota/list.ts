@@ -1,8 +1,15 @@
-import { defineCommand, BailianError, detectOutputFormat, type Client } from "bailian-cli-core";
-import { ansi, emitResult } from "bailian-cli-runtime";
-import { displayWidth, padEnd } from "bailian-cli-runtime";
+import {
+  defineCommand,
+  BailianError,
+  ExitCode,
+  detectOutputFormat,
+  unwrapResponse,
+  MODEL_LIST_API,
+  type Client,
+} from "bailian-cli-core";
+import { emitResult, renderBoxTable } from "bailian-cli-runtime";
 
-const MODEL_LIST_API = "zeldaHttp.dashscopeModel./zelda/api/v1/modelCenter/listFoundationModels";
+const MONITOR_API = "zeldaEasy.bailian-telemetry.monitor.getMonitorData";
 
 interface QpmInfoItem {
   count_limit: number;
@@ -16,6 +23,17 @@ interface QpmInfoItem {
 interface ModelWithQpm {
   model: string;
   qpmInfo?: Record<string, QpmInfoItem>;
+}
+
+interface MonitorPoint {
+  value: number;
+  timestamp: number;
+}
+
+interface MonitorMetric {
+  aggMethod: string;
+  metricName: string;
+  points: MonitorPoint[];
 }
 
 function calculateRPM(item: QpmInfoItem | undefined, fallbackPeriod?: number): number {
@@ -36,32 +54,59 @@ function formatNumber(num: number): string {
   return num.toLocaleString("en-US");
 }
 
-function getNestedRecord(
-  obj: Record<string, unknown>,
-  key: string,
-): Record<string, unknown> | undefined {
-  const val = obj[key];
-  if (val && typeof val === "object" && !Array.isArray(val)) return val as Record<string, unknown>;
-  return undefined;
-}
-
-function extractResponseData(result: Record<string, unknown>): Record<string, unknown> {
-  const data = getNestedRecord(result, "data");
-  if (!data) return result;
-  const dataV2 = getNestedRecord(data, "DataV2");
-  if (dataV2) {
-    const inner = getNestedRecord(dataV2, "data");
-    const innerData = inner ? getNestedRecord(inner, "data") : undefined;
-    return innerData ?? inner ?? dataV2;
-  }
-  const direct = getNestedRecord(data, "data");
-  return direct ?? data;
-}
-
-async function fetchAllModelsWithQpm(
+async function fetchMonitorData(
   client: Client,
-  onlySelfService: boolean,
-): Promise<ModelWithQpm[]> {
+  modelName: string,
+  windowMinutes: number,
+): Promise<{ rpm: number; tpm: number }> {
+  const now = Date.now();
+  const startTime = now - windowMinutes * 60 * 1000;
+
+  try {
+    const raw = await client.console(MONITOR_API, {
+      reqDTO: {
+        monitorType: "Advanced",
+        metricFilters: [
+          { aggMethod: "sum_pm", metricName: "model_total_amount" },
+          { aggMethod: "sum_pm", metricName: "model_call_count" },
+        ],
+        labelFilters: {
+          resourceId: modelName,
+          resourceType: "model",
+        },
+        startTime,
+        endTime: now,
+      },
+    });
+
+    const resp = unwrapResponse(raw as Record<string, unknown>);
+    const metrics = (resp.data ?? resp) as MonitorMetric[] | Record<string, unknown>;
+    if (!Array.isArray(metrics)) {
+      return { rpm: 0, tpm: 0 };
+    }
+
+    let rpm = 0;
+    let tpm = 0;
+
+    for (const metric of metrics) {
+      if (metric.aggMethod !== "sum_pm" || !metric.points?.length) continue;
+      const lastValue = metric.points[metric.points.length - 1].value ?? 0;
+      if (metric.metricName === "model_call_count") rpm = Math.round(lastValue);
+      if (metric.metricName === "model_total_amount") tpm = Math.round(lastValue);
+    }
+
+    return { rpm, tpm };
+  } catch (error) {
+    // Re-throw authentication errors (BailianError with ExitCode.AUTH);
+    // other errors are treated as "no data" and show "-" in the table.
+    if (error instanceof BailianError && error.exitCode === ExitCode.AUTH) {
+      throw error;
+    }
+    return { rpm: -1, tpm: -1 };
+  }
+}
+
+async function fetchAllModelsWithQpm(client: Client): Promise<ModelWithQpm[]> {
   const allModels: ModelWithQpm[] = [];
   let pageNo = 1;
 
@@ -72,14 +117,12 @@ async function fetchAllModelsWithQpm(
       group: false,
       queryQpmInfo: true,
       ignoreWorkspaceServiceSite: true,
+      supports: { selfServiceLimitIncrease: true },
     };
-    if (onlySelfService) {
-      input.supports = { selfServiceLimitIncrease: true };
-    }
 
     const raw = await client.console(MODEL_LIST_API, { input });
 
-    const resp = extractResponseData(raw as Record<string, unknown>);
+    const resp = unwrapResponse(raw as Record<string, unknown>);
     const list = (resp.list as ModelWithQpm[]) ?? [];
     const total = (resp.total as number) ?? 0;
 
@@ -91,50 +134,37 @@ async function fetchAllModelsWithQpm(
   return allModels;
 }
 
-function printTable(models: ModelWithQpm[]): void {
-  const color = ansi(process.stdout);
+interface ListRow {
+  model: string;
+  rpm: string;
+  tpm: string;
+  rpmQuotaLeft: number | null;
+  tpmQuotaLeft: number | null;
+  rpmQuotaLabel: string | null;
+  tpmQuotaLabel: string | null;
+}
 
-  const headers = ["Model", "Req/min", "Token/min", "Max TPM"];
+function printTable(rows: ListRow[]): void {
+  const headers = ["Model", "Req/min", "Token/min", "RPM Left", "TPM Left"];
 
-  const rows = models.map((m) => {
-    const qpm = m.qpmInfo;
-    const modelDefault = qpm?.["model-default"];
-    const userSpec = qpm?.["user-spec"];
+  const rpmPercents = rows.map((r) => r.rpmQuotaLeft);
+  const rpmLabels = rows.map((r) => r.rpmQuotaLabel);
+  const tpmPercents = rows.map((r) => r.tpmQuotaLeft);
+  const tpmLabels = rows.map((r) => r.tpmQuotaLabel);
 
-    const defaultRPM = calculateRPM(modelDefault);
-    const defaultTPM = calculateTPM(modelDefault);
-    const currentRPM = calculateRPM(userSpec, modelDefault?.count_limit_period) || defaultRPM;
-    const currentTPM = calculateTPM(userSpec, modelDefault?.usage_limit_period) || defaultTPM;
-    const maxTPM = defaultTPM * 2;
+  const tableRows = rows.map((r) => [r.model, r.rpm, r.tpm, "", ""]);
 
-    return [
-      m.model,
-      currentRPM > 0 ? formatNumber(currentRPM) : "-",
-      currentTPM > 0 ? formatNumber(currentTPM) : "-",
-      maxTPM > 0 ? formatNumber(maxTPM) : "-",
-    ];
+  const lines = renderBoxTable({
+    headers,
+    rows: tableRows,
+    align: ["left", "right", "right", "left", "left"],
+    barColumns: [
+      { index: 3, percents: rpmPercents, labels: rpmLabels, width: 15 },
+      { index: 4, percents: tpmPercents, labels: tpmLabels, width: 15 },
+    ],
   });
 
-  if (rows.length === 0) {
-    process.stdout.write("No models found.\n");
-    return;
-  }
-
-  const widths = headers.map((label, col) =>
-    Math.max(displayWidth(label), ...rows.map((row) => displayWidth(row[col]))),
-  );
-
-  const headerLine = headers.map((label, col) => color.bold(padEnd(label, widths[col]))).join("  ");
-  const separator = widths.map((w) => color.dim("─".repeat(w))).join("──");
-
-  process.stdout.write(headerLine + "\n");
-  process.stdout.write(separator + "\n");
-
-  for (const row of rows) {
-    process.stdout.write(row.map((cell, col) => padEnd(cell, widths[col])).join("  ") + "\n");
-  }
-
-  process.stdout.write(color.dim(`\nTotal: ${models.length} models`) + "\n");
+  for (const line of lines) process.stdout.write(line + "\n");
 }
 
 export default defineCommand({
@@ -147,22 +177,11 @@ export default defineCommand({
       valueHint: "<model>",
       description: "Model name(s), comma-separated",
     },
-    all: {
-      type: "switch",
-      description: "Show all models, not just self-service ones",
-    },
   },
-  exampleArgs: [
-    "",
-    "--model qwen3.6-plus",
-    "--model qwen3.6-plus,qwen-turbo",
-    "--all",
-    "--output json",
-  ],
+  exampleArgs: ["", "--model qwen3.6-plus", "--model qwen3.6-plus,qwen-turbo", "--output json"],
   async run(ctx) {
     const { settings, flags } = ctx;
     const modelFlag = flags.model || undefined;
-    const showAll = Boolean(flags.all);
     const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
@@ -172,13 +191,22 @@ export default defineCommand({
         group: false,
         queryQpmInfo: true,
         ignoreWorkspaceServiceSite: true,
+        supports: { selfServiceLimitIncrease: true },
       };
-      if (!showAll) input.supports = { selfServiceLimitIncrease: true };
-      emitResult({ api: MODEL_LIST_API, data: { input } }, format);
+      emitResult(
+        {
+          apis: [
+            MODEL_LIST_API,
+            { api: MONITOR_API, note: "called per-model for text output with gauges" },
+          ],
+          modelListInput: { input },
+        },
+        format,
+      );
       return;
     }
 
-    let models = await fetchAllModelsWithQpm(ctx.client, !showAll);
+    let models = await fetchAllModelsWithQpm(ctx.client);
 
     if (modelFlag) {
       const names = new Set(
@@ -203,19 +231,67 @@ export default defineCommand({
         const defaultTPM = calculateTPM(modelDefault);
         const currentRPM = calculateRPM(userSpec, modelDefault?.count_limit_period) || defaultRPM;
         const currentTPM = calculateTPM(userSpec, modelDefault?.usage_limit_period) || defaultTPM;
-        const maxTPM = defaultTPM * 2;
 
         return {
           model: m.model,
           rpm: currentRPM > 0 ? currentRPM : null,
           tpm: currentTPM > 0 ? currentTPM : null,
-          maxTPM: maxTPM > 0 ? maxTPM : null,
         };
       });
       emitResult(items, format);
       return;
     }
 
-    printTable(models);
+    // For text output with gauges, we need monitor data
+    const monitorResults = await Promise.all(
+      models.map((m) => fetchMonitorData(ctx.client, m.model, 2)),
+    );
+
+    const rows: ListRow[] = models.map((m, idx) => {
+      const qpm = m.qpmInfo;
+      const modelDefault = qpm?.["model-default"];
+      const userSpec = qpm?.["user-spec"];
+
+      const defaultRPM = calculateRPM(modelDefault);
+      const defaultTPM = calculateTPM(modelDefault);
+      const currentRPM = calculateRPM(userSpec, modelDefault?.count_limit_period) || defaultRPM;
+      const currentTPM = calculateTPM(userSpec, modelDefault?.usage_limit_period) || defaultTPM;
+
+      const rpmUsage = monitorResults[idx].rpm;
+      const tpmUsage = monitorResults[idx].tpm;
+
+      // RPM Quota Left = 1 - (rpmUsage / currentRPM) in percentage
+      let rpmQuotaPercent: number | null = null;
+      let rpmQuotaLabel: string | null = null;
+      if (rpmUsage >= 0 && currentRPM > 0) {
+        rpmQuotaPercent = Math.max(0, 100 - (rpmUsage / currentRPM) * 100);
+        rpmQuotaLabel = rpmQuotaPercent.toFixed(1) + "%";
+      }
+
+      // TPM Quota Left = 1 - (tpmUsage / currentTPM) in percentage
+      let tpmQuotaPercent: number | null = null;
+      let tpmQuotaLabel: string | null = null;
+      if (tpmUsage >= 0 && currentTPM > 0) {
+        tpmQuotaPercent = Math.max(0, 100 - (tpmUsage / currentTPM) * 100);
+        tpmQuotaLabel = tpmQuotaPercent.toFixed(1) + "%";
+      }
+
+      return {
+        model: m.model,
+        rpm: currentRPM > 0 ? formatNumber(currentRPM) : "-",
+        tpm: currentTPM > 0 ? formatNumber(currentTPM) : "-",
+        rpmQuotaLeft: rpmQuotaPercent,
+        tpmQuotaLeft: tpmQuotaPercent,
+        rpmQuotaLabel,
+        tpmQuotaLabel,
+      };
+    });
+
+    if (rows.length === 0) {
+      process.stdout.write("No models found.\n");
+      return;
+    }
+
+    printTable(rows);
   },
 });
