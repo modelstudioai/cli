@@ -4,8 +4,7 @@ import {
   detectOutputFormat,
   type Client,
 } from "bailian-cli-core";
-import { ansi, emitResult } from "bailian-cli-runtime";
-import { displayWidth, padEnd } from "bailian-cli-runtime";
+import { ansi, emitResult, renderBoxTable } from "bailian-cli-runtime";
 
 const MODEL_LIST_API = "zeldaHttp.dashscopeModel./zelda/api/v1/modelCenter/listFoundationModels";
 const MONITOR_API = "zeldaEasy.bailian-telemetry.monitor.getMonitorData";
@@ -47,24 +46,6 @@ function calculateTPM(item: QpmInfoItem | undefined, fallbackPeriod?: number): n
   const period = item.usage_limit_period || fallbackPeriod;
   if (!period) return 0;
   return Math.floor((item.usage_limit * 60) / period);
-}
-
-function formatNumber(num: number): string {
-  return num.toLocaleString("en-US");
-}
-
-function formatRatio(usage: number, limit: number): string {
-  if (limit <= 0) return "-";
-  const pct = Math.round((usage / limit) * 100);
-  return `${formatNumber(usage)}/${formatNumber(limit)} (${pct}%)`;
-}
-
-function getStatus(usage: number, limit: number): string {
-  if (limit <= 0) return "-";
-  const pct = (usage / limit) * 100;
-  if (pct >= 100) return "Rate Limited";
-  if (pct >= 80) return "Near limit";
-  return "Normal";
 }
 
 function getNestedRecord(
@@ -157,7 +138,11 @@ async function fetchMonitorData(
     }
 
     return { rpm, tpm };
-  } catch {
+  } catch (error) {
+    // Re-throw console authentication errors, but catch other errors
+    if (error instanceof Error && error.message?.includes("Console session")) {
+      throw error;
+    }
     return { rpm: -1, tpm: -1 };
   }
 }
@@ -168,16 +153,24 @@ interface CheckRow {
   rpmLimit: number;
   tpmUsage: number;
   tpmLimit: number;
+  rpmQuotaLeft: number | null;
+  tpmQuotaLeft: number | null;
+  rpmQuotaLabel: string | null;
+  tpmQuotaLabel: string | null;
 }
 
 function printTable(rows: CheckRow[]): void {
   const color = ansi(process.stdout);
+  const headers = ["Model", "RPM Used/Limit", "TPM Used/Limit", "Status", "RPM Left", "TPM Left"];
 
-  const headers = ["Model", "RPM Usage/Limit", "TPM Usage/Limit", "Status"];
+  const rpmPercents = rows.map((r) => r.rpmQuotaLeft);
+  const rpmLabels = rows.map((r) => r.rpmQuotaLabel);
+  const tpmPercents = rows.map((r) => r.tpmQuotaLeft);
+  const tpmLabels = rows.map((r) => r.tpmQuotaLabel);
 
   const tableRows = rows.map((r) => {
-    const rpmStr = r.rpmUsage < 0 ? "-" : formatRatio(r.rpmUsage, r.rpmLimit);
-    const tpmStr = r.tpmUsage < 0 ? "-" : formatRatio(r.tpmUsage, r.tpmLimit);
+    const rpmStr = r.rpmUsage < 0 ? "-" : `${r.rpmUsage}/${r.rpmLimit}`;
+    const tpmStr = r.tpmUsage < 0 ? "-" : `${r.tpmUsage}/${r.tpmLimit}`;
     const maxPct = Math.max(
       r.rpmLimit > 0 ? (r.rpmUsage / r.rpmLimit) * 100 : 0,
       r.tpmLimit > 0 ? (r.tpmUsage / r.tpmLimit) * 100 : 0,
@@ -185,39 +178,34 @@ function printTable(rows: CheckRow[]): void {
     const status =
       r.rpmUsage < 0
         ? "-"
-        : getStatus(Math.max(r.rpmUsage, r.tpmUsage), Math.max(r.rpmLimit, r.tpmLimit));
-    return { cells: [r.model, rpmStr, tpmStr, status], maxPct };
+        : maxPct >= 100
+          ? "Rate Limited"
+          : maxPct >= 80
+            ? "Near limit"
+            : "Normal";
+    return [r.model, rpmStr, tpmStr, status, "", ""];
   });
 
-  if (tableRows.length === 0) {
-    process.stdout.write("No models found.\n");
-    return;
-  }
-
-  const widths = headers.map((label, col) =>
-    Math.max(displayWidth(label), ...tableRows.map((r) => displayWidth(r.cells[col]))),
-  );
-
-  const headerLine = headers.map((label, col) => color.bold(padEnd(label, widths[col]))).join("  ");
-  const separator = widths.map((w) => color.dim("─".repeat(w))).join("──");
-
-  process.stdout.write(headerLine + "\n");
-  process.stdout.write(separator + "\n");
-
-  const statusCol = 3;
-  for (const r of tableRows) {
-    const cells = r.cells.map((cell, col) => {
-      if (col === statusCol) {
-        if (cell === "Rate Limited") return color.red(padEnd(cell, widths[col]));
-        if (cell === "Near limit") return color.yellow(padEnd(cell, widths[col]));
-        if (cell === "Normal") return color.green(padEnd(cell, widths[col]));
+  const lines = renderBoxTable({
+    headers,
+    rows: tableRows,
+    align: ["left", "right", "right", "left", "left", "left"],
+    barColumns: [
+      { index: 4, percents: rpmPercents, labels: rpmLabels, width: 15 },
+      { index: 5, percents: tpmPercents, labels: tpmLabels, width: 15 },
+    ],
+    cellColor: (rowIndex, colIndex, value) => {
+      if (colIndex === 3) {
+        // Status 列着色
+        if (value === "Rate Limited") return color.red(value);
+        if (value === "Near limit") return color.yellow(value);
+        if (value === "Normal") return color.green(value);
       }
-      return padEnd(cell, widths[col]);
-    });
-    process.stdout.write(cells.join("  ") + "\n");
-  }
+      return undefined;
+    },
+  });
 
-  process.stdout.write(color.dim(`\nTotal: ${rows.length} models`) + "\n");
+  for (const line of lines) process.stdout.write(line + "\n");
 }
 
 export default defineCommand({
@@ -295,12 +283,35 @@ export default defineCommand({
       const tpmLimit =
         calculateTPM(userSpec, modelDefault?.usage_limit_period) || calculateTPM(modelDefault);
 
+      const rpmUsage = monitorResults[idx].rpm;
+      const tpmUsage = monitorResults[idx].tpm;
+
+      // RPM Quota Left = 1 - (rpmUsage / rpmLimit) in percentage
+      let rpmQuotaPercent: number | null = null;
+      let rpmQuotaLabel: string | null = null;
+      if (rpmUsage >= 0 && rpmLimit > 0) {
+        rpmQuotaPercent = Math.max(0, 100 - (rpmUsage / rpmLimit) * 100);
+        rpmQuotaLabel = rpmQuotaPercent.toFixed(1) + "%";
+      }
+
+      // TPM Quota Left = 1 - (tpmUsage / tpmLimit) in percentage
+      let tpmQuotaPercent: number | null = null;
+      let tpmQuotaLabel: string | null = null;
+      if (tpmUsage >= 0 && tpmLimit > 0) {
+        tpmQuotaPercent = Math.max(0, 100 - (tpmUsage / tpmLimit) * 100);
+        tpmQuotaLabel = tpmQuotaPercent.toFixed(1) + "%";
+      }
+
       return {
         model: m.model,
-        rpmUsage: monitorResults[idx].rpm,
+        rpmUsage,
         rpmLimit,
-        tpmUsage: monitorResults[idx].tpm,
+        tpmUsage,
         tpmLimit,
+        rpmQuotaLeft: rpmQuotaPercent,
+        tpmQuotaLeft: tpmQuotaPercent,
+        rpmQuotaLabel,
+        tpmQuotaLabel,
       };
     });
 

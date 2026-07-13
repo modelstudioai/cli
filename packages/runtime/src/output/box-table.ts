@@ -118,7 +118,10 @@ export interface BoxTableOptions {
   rows: string[][];
   /** Per-column alignment; defaults to left. */
   align?: ("left" | "right")[];
+  /** Single gauge column (legacy; use barColumns for multiple). */
   barColumn?: BarColumn;
+  /** Multiple gauge columns (overrides barColumn if provided). */
+  barColumns?: BarColumn[];
   /** Return a colored variant of a plain cell value (must keep the same visible width). */
   cellColor?: (rowIndex: number, colIndex: number, value: string) => string | undefined;
   /** Stream used for color capability detection (default process.stdout). */
@@ -173,14 +176,19 @@ export function renderBoxTable(options: BoxTableOptions): string[] {
   const out = options.out ?? process.stdout;
   const level = colorLevel(out);
   const align = options.align ?? [];
-  const barCol = options.barColumn;
-  const barWidth = barCol?.width ?? DEFAULT_BAR_WIDTH;
+
+  // Support both single barColumn (legacy) and multiple barColumns (new)
+  const barColumns = options.barColumns ?? (options.barColumn ? [options.barColumn] : []);
 
   const columnCount = options.headers.length;
 
-  // Precompute bar cells so widths use their plain representation.
-  const barCells: RenderedCell[] = [];
-  if (barCol) {
+  // Precompute bar cells for all gauge columns
+  type BarCellsMap = Record<number, RenderedCell[]>;
+  const allBarCells: BarCellsMap = {};
+
+  for (const barCol of barColumns) {
+    const barWidth = barCol.width ?? DEFAULT_BAR_WIDTH;
+    const barCells: RenderedCell[] = [];
     for (let rowIndex = 0; rowIndex < options.rows.length; rowIndex++) {
       const percent = barCol.percents[rowIndex] ?? null;
       const explicitLabel = barCol.labels?.[rowIndex];
@@ -192,10 +200,11 @@ export function renderBoxTable(options: BoxTableOptions): string[] {
             : `${Number.isInteger(percent) ? percent : percent.toFixed(1)}%`;
       barCells.push(buildBarCell(percent, label, barWidth, level));
     }
+    allBarCells[barCol.index] = barCells;
   }
 
   const plainCell = (rowIndex: number, colIndex: number): string => {
-    if (barCol && colIndex === barCol.index) return barCells[rowIndex].plain;
+    if (allBarCells[colIndex]) return allBarCells[colIndex][rowIndex].plain;
     return options.rows[rowIndex][colIndex] ?? "";
   };
 
@@ -236,8 +245,9 @@ export function renderBoxTable(options: BoxTableOptions): string[] {
     const cells: string[] = [];
     for (let colIndex = 0; colIndex < columnCount; colIndex++) {
       const width = widths[colIndex];
-      if (barCol && colIndex === barCol.index) {
-        const bar = barCells[rowIndex];
+      // Check if this column is a gauge column
+      if (allBarCells[colIndex]) {
+        const bar = allBarCells[colIndex][rowIndex];
         const gap = width - displayWidth(bar.plain);
         cells.push(gap > 0 ? bar.colored + " ".repeat(gap) : bar.colored);
         continue;
