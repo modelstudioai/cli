@@ -15,7 +15,7 @@ export default defineCommand({
   },
   exampleArgs: ["--package @ali/bailian-plugin-agent", "--package @ali/bailian-plugin-agent@beta"],
   async run(ctx) {
-    const installed = await ctx.commandPacks().install(ctx.flags.package);
+    const installed = await ctx.commandPacks.install(ctx.flags.package);
     emitResult({ installed }, detectOutputFormat(ctx.settings.output));
   },
 });

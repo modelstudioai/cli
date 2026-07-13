@@ -183,9 +183,9 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             flags: ownFlags,
             settings,
             sources,
-            configStore: () => makeConfigStore(),
-            authStore: () => makeAuthStore(sources),
-            commandPacks: () => commandPackManager,
+            configStore: makeConfigStore(),
+            authStore: makeAuthStore(sources),
+            commandPacks: commandPackManager,
             client: new Client({ identity, settings, baseUrl: resolveModelBaseUrl(sources) }),
           };
           await runMiddleware(ctx);

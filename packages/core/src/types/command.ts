@@ -165,12 +165,12 @@ export interface CommandContext<F extends FlagsDef = FlagsDef> {
   flags: ParsedFlags<F>;
   /** Network surface; the credential for the command's `auth` is pre-injected. */
   client: Client;
-  /** 惰性访问器,lint 限定 commands/config/** 使用。 */
-  configStore(): ConfigStore;
-  /** 惰性访问器,lint 限定 commands/auth/** 使用。 */
-  authStore(): AuthStore;
-  /** 绑定当前产品的 Command Pack 管理器；仅限 commands/plugin/** 使用。 */
-  commandPacks(): CommandPackManager;
+  /** 配置持久化能力；lint 限定 commands/config/** 使用。 */
+  configStore: ConfigStore;
+  /** 鉴权持久化能力；lint 限定 commands/auth/** 使用。 */
+  authStore: AuthStore;
+  /** Command Pack 管理能力；lint 限定 commands/plugin/** 使用。 */
+  commandPacks: CommandPackManager;
 }
 
 // ── Command ──────────────────────────────────────────────────────────────────

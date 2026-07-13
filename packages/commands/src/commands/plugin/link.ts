@@ -15,7 +15,7 @@ export default defineCommand({
   },
   exampleArgs: ["--path ../bailian-plugin-agent"],
   async run(ctx) {
-    const linked = await ctx.commandPacks().link(ctx.flags.path);
+    const linked = await ctx.commandPacks.link(ctx.flags.path);
     emitResult({ linked }, detectOutputFormat(ctx.settings.output));
   },
 });

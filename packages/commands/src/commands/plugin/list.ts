@@ -6,7 +6,7 @@ export default defineCommand({
   auth: "none",
   exampleArgs: ["", "--output json"],
   async run(ctx) {
-    const reports = await ctx.commandPacks().list();
+    const reports = await ctx.commandPacks.list();
     const format = detectOutputFormat(ctx.settings.output);
     if (format === "json") {
       emitResult({ command_packs: reports }, format);

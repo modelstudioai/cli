@@ -15,7 +15,7 @@ export default defineCommand({
   },
   exampleArgs: ["--name @ali/bailian-plugin-agent"],
   async run(ctx) {
-    await ctx.commandPacks().remove(ctx.flags.name);
+    await ctx.commandPacks.remove(ctx.flags.name);
     emitResult({ removed: ctx.flags.name }, detectOutputFormat(ctx.settings.output));
   },
 });

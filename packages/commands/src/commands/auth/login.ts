@@ -87,7 +87,7 @@ export default defineCommand({
   },
   async run(ctx) {
     const { identity, settings, flags } = ctx;
-    const store = ctx.authStore();
+    const store = ctx.authStore;
     const deps = { identity, settings, authStore: store };
     const key = flags.apiKey;
     const baseUrl = flags.baseUrl || undefined;

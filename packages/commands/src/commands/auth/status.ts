@@ -9,7 +9,7 @@ export default defineCommand({
   async run(ctx) {
     const { identity, settings } = ctx;
     const format = detectOutputFormat(settings.output);
-    const auth = ctx.authStore().describe();
+    const auth = ctx.authStore.describe();
 
     const apiKey = auth.apiKey
       ? {
