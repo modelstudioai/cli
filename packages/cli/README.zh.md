@@ -39,7 +39,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 - **联网搜索** — 实时互联网信息检索，提升回答准确性及时效性
 - **模型推荐** — 描述你的场景，智能推荐最适合的模型；支持限定范围搜索、模型对比和替代发现
 - **微调与部署** — 上传数据集、创建文本/音频/图像调优任务（`finetune text|audio|image create`；文本涵盖 SFT/LoRA/DPO/CPT）、非阻塞探测任务状态（`finetune watch`）、按模型查训练能力（`finetune capability`），并把训练好的模型部署为推理服务（`deploy text|audio|image create`）
-- **控制台能力** — 浏览百炼应用（`app list`），查询模型免费额度（`usage free`），查看模型用量统计（`usage stats`），管理业务空间（`workspace list`），管理限流与提额（`quota list/request/check/history`）
+- **控制台能力** — 浏览百炼应用（`app list`），查看统一用量视图（`usage summary`），查询模型免费额度（`usage free`），查看模型用量统计（`usage stats`），管理业务空间（`workspace list`），管理限流与提额（`quota list/request/check/history`）
 - **本地文件自动上传** — 所有 URL 参数同时支持本地路径，免费临时存储 48 小时
 
 ## 示例:一句话生成一部电影短片
@@ -119,6 +119,7 @@ bl deploy text create --model qwen3-8b --name my-svc --plan mu  # 把训练好�
 
 # 浏览应用 / 免费额度 / 用量统计 / 业务空间
 bl app list
+bl usage summary                                     # 统一视图：免费额度 + 近期用量概览
 bl usage free                                         # 各模型免费额度（可加 --model/--expiring/--sort）
 bl usage stats --workspace-id <id>                    # 模型用量统计（加 --model 查单模型）
 bl workspace list                                     # 列出所有业务空间
