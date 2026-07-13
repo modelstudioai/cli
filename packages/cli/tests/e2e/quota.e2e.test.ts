@@ -6,7 +6,6 @@ describe("e2e: quota", () => {
     const { stderr, exitCode } = await runCli(["quota", "list", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("--model");
-    expect(stderr).toContain("--all");
   });
 
   test("quota list --help 包含所有示例", async () => {
@@ -14,7 +13,6 @@ describe("e2e: quota", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("bl quota list");
     expect(stderr).toContain("bl quota list --model qwen3.6-plus");
-    expect(stderr).toContain("bl quota list --all");
   });
 
   test("quota request --help 正常退出", async () => {
@@ -57,30 +55,14 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
     ]);
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
-      api?: string;
-      data?: {
+      apis?: (string | { api: string; note?: string })[];
+      modelListInput?: {
         input?: { queryQpmInfo?: boolean; supports?: { selfServiceLimitIncrease?: boolean } };
       };
     }>(stdout);
-    expect(data.api).toContain("listFoundationModels");
-    expect(data.data?.input?.queryQpmInfo).toBe(true);
-    expect(data.data?.input?.supports?.selfServiceLimitIncrease).toBe(true);
-  });
-
-  test("quota list --dry-run --all 不传 supports 过滤", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
-      "quota",
-      "list",
-      "--all",
-      "--dry-run",
-      "--output",
-      "json",
-    ]);
-    expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{
-      data?: { input?: { supports?: unknown } };
-    }>(stdout);
-    expect(data.data?.input?.supports).toBeUndefined();
+    expect(data.apis?.[0]).toContain("listFoundationModels");
+    expect(data.modelListInput?.input?.queryQpmInfo).toBe(true);
+    expect(data.modelListInput?.input?.supports?.selfServiceLimitIncrease).toBe(true);
   });
 
   test("quota list 文本输出包含英文表头", async () => {
@@ -109,7 +91,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
     expect(result.stderr).toContain("no matching models found");
   });
 
-  test("quota list JSON 输出包含 model/rpm/tpm/maxTPM", async () => {
+  test("quota list JSON 输出包含 model/rpm/tpm", async () => {
     const result = await runCli(["quota", "list", "--output", "json"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);

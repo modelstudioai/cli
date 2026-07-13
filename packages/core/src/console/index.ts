@@ -15,4 +15,7 @@ export {
   fetchModelGroups,
   fetchModelDetail,
   fetchPredictConfig,
+  unwrapResponse,
+  MODEL_LIST_API,
+  PREDICT_CONFIG_API,
 } from "./models.ts";

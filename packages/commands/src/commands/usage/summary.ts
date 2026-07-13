@@ -15,6 +15,7 @@ import {
   printUsageOverview,
   quotaRemainingPercent,
   type FreeTierQuota,
+  type OverviewStatistic,
 } from "./shared.ts";
 
 /** Free-tier rows shown in the summary before the "+N more" hint. */
@@ -88,7 +89,7 @@ export default defineCommand({
     const stopMap = new Map(stopStatuses.map((status) => [status.model, status.freeTierOnly]));
 
     // --- Usage overview (requires workspace) ---
-    let overview: ReturnType<typeof extractOverviewData>;
+    let overview: OverviewStatistic | undefined;
     if (workspaceId) {
       const result = await pollTelemetryApi(ctx.client, OVERVIEW_API, {
         startTime,

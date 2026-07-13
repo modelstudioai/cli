@@ -1,5 +1,6 @@
 import {
   defineCommand,
+  detectOutputFormat,
   fetchModelDetail,
   fetchModelGroups,
   fetchPredictConfig,
@@ -303,12 +304,11 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = settings.outputExplicit ? settings.output : "json";
+    const format = detectOutputFormat(settings.output);
     const modelKey = flags.model;
-    const isDetailMode = Boolean(modelKey);
 
     // ── Detail mode ──
-    if (isDetailMode) {
+    if (modelKey) {
       const shouldEnrich = Boolean(flags.enrich);
 
       if (settings.dryRun) {
@@ -316,7 +316,7 @@ export default defineCommand({
         return;
       }
 
-      const detail = await fetchModelDetail(ctx.client.console.bind(ctx.client), modelKey!);
+      const detail = await fetchModelDetail(ctx.client.console.bind(ctx.client), modelKey);
 
       if (!detail) {
         emitBare(`Model "${modelKey}" not found.`);

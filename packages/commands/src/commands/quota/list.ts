@@ -1,7 +1,14 @@
-import { defineCommand, BailianError, detectOutputFormat, type Client } from "bailian-cli-core";
+import {
+  defineCommand,
+  BailianError,
+  ExitCode,
+  detectOutputFormat,
+  unwrapResponse,
+  MODEL_LIST_API,
+  type Client,
+} from "bailian-cli-core";
 import { emitResult, renderBoxTable } from "bailian-cli-runtime";
 
-const MODEL_LIST_API = "zeldaHttp.dashscopeModel./zelda/api/v1/modelCenter/listFoundationModels";
 const MONITOR_API = "zeldaEasy.bailian-telemetry.monitor.getMonitorData";
 
 interface QpmInfoItem {
@@ -72,7 +79,7 @@ async function fetchMonitorData(
       },
     });
 
-    const resp = extractResponseData(raw as Record<string, unknown>);
+    const resp = unwrapResponse(raw as Record<string, unknown>);
     const metrics = (resp.data ?? resp) as MonitorMetric[] | Record<string, unknown>;
     if (!Array.isArray(metrics)) {
       return { rpm: 0, tpm: 0 };
@@ -90,35 +97,13 @@ async function fetchMonitorData(
 
     return { rpm, tpm };
   } catch (error) {
-    // Re-throw console authentication errors, but catch other errors
-    if (error instanceof Error && error.message?.includes("Console session")) {
+    // Re-throw authentication errors (BailianError with ExitCode.AUTH);
+    // other errors are treated as "no data" and show "-" in the table.
+    if (error instanceof BailianError && error.exitCode === ExitCode.AUTH) {
       throw error;
     }
-    // Return -1 to indicate no data (same as check.ts for consistency)
     return { rpm: -1, tpm: -1 };
   }
-}
-
-function getNestedRecord(
-  obj: Record<string, unknown>,
-  key: string,
-): Record<string, unknown> | undefined {
-  const val = obj[key];
-  if (val && typeof val === "object" && !Array.isArray(val)) return val as Record<string, unknown>;
-  return undefined;
-}
-
-function extractResponseData(result: Record<string, unknown>): Record<string, unknown> {
-  const data = getNestedRecord(result, "data");
-  if (!data) return result;
-  const dataV2 = getNestedRecord(data, "DataV2");
-  if (dataV2) {
-    const inner = getNestedRecord(dataV2, "data");
-    const innerData = inner ? getNestedRecord(inner, "data") : undefined;
-    return innerData ?? inner ?? dataV2;
-  }
-  const direct = getNestedRecord(data, "data");
-  return direct ?? data;
 }
 
 async function fetchAllModelsWithQpm(client: Client): Promise<ModelWithQpm[]> {
@@ -137,7 +122,7 @@ async function fetchAllModelsWithQpm(client: Client): Promise<ModelWithQpm[]> {
 
     const raw = await client.console(MODEL_LIST_API, { input });
 
-    const resp = extractResponseData(raw as Record<string, unknown>);
+    const resp = unwrapResponse(raw as Record<string, unknown>);
     const list = (resp.list as ModelWithQpm[]) ?? [];
     const total = (resp.total as number) ?? 0;
 
@@ -153,7 +138,6 @@ interface ListRow {
   model: string;
   rpm: string;
   tpm: string;
-  maxTpm: string;
   rpmQuotaLeft: number | null;
   tpmQuotaLeft: number | null;
   rpmQuotaLabel: string | null;
@@ -193,22 +177,11 @@ export default defineCommand({
       valueHint: "<model>",
       description: "Model name(s), comma-separated",
     },
-    all: {
-      type: "switch",
-      description: "Show all models, not just self-service ones",
-    },
   },
-  exampleArgs: [
-    "",
-    "--model qwen3.6-plus",
-    "--model qwen3.6-plus,qwen-turbo",
-    "--all",
-    "--output json",
-  ],
+  exampleArgs: ["", "--model qwen3.6-plus", "--model qwen3.6-plus,qwen-turbo", "--output json"],
   async run(ctx) {
     const { settings, flags } = ctx;
     const modelFlag = flags.model || undefined;
-    const showAll = Boolean(flags.all);
     const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
@@ -218,9 +191,18 @@ export default defineCommand({
         group: false,
         queryQpmInfo: true,
         ignoreWorkspaceServiceSite: true,
+        supports: { selfServiceLimitIncrease: true },
       };
-      if (!showAll) input.supports = { selfServiceLimitIncrease: true };
-      emitResult({ api: MODEL_LIST_API, data: { input } }, format);
+      emitResult(
+        {
+          apis: [
+            MODEL_LIST_API,
+            { api: MONITOR_API, note: "called per-model for text output with gauges" },
+          ],
+          modelListInput: { input },
+        },
+        format,
+      );
       return;
     }
 
@@ -249,13 +231,11 @@ export default defineCommand({
         const defaultTPM = calculateTPM(modelDefault);
         const currentRPM = calculateRPM(userSpec, modelDefault?.count_limit_period) || defaultRPM;
         const currentTPM = calculateTPM(userSpec, modelDefault?.usage_limit_period) || defaultTPM;
-        const maxTPM = defaultTPM * 2;
 
         return {
           model: m.model,
           rpm: currentRPM > 0 ? currentRPM : null,
           tpm: currentTPM > 0 ? currentTPM : null,
-          maxTPM: maxTPM > 0 ? maxTPM : null,
         };
       });
       emitResult(items, format);
@@ -276,7 +256,6 @@ export default defineCommand({
       const defaultTPM = calculateTPM(modelDefault);
       const currentRPM = calculateRPM(userSpec, modelDefault?.count_limit_period) || defaultRPM;
       const currentTPM = calculateTPM(userSpec, modelDefault?.usage_limit_period) || defaultTPM;
-      const maxTPM = defaultTPM * 2;
 
       const rpmUsage = monitorResults[idx].rpm;
       const tpmUsage = monitorResults[idx].tpm;
@@ -301,7 +280,6 @@ export default defineCommand({
         model: m.model,
         rpm: currentRPM > 0 ? formatNumber(currentRPM) : "-",
         tpm: currentTPM > 0 ? formatNumber(currentTPM) : "-",
-        maxTpm: maxTPM > 0 ? formatNumber(maxTPM) : "-",
         rpmQuotaLeft: rpmQuotaPercent,
         tpmQuotaLeft: tpmQuotaPercent,
         rpmQuotaLabel,

@@ -118,9 +118,7 @@ export interface BoxTableOptions {
   rows: string[][];
   /** Per-column alignment; defaults to left. */
   align?: ("left" | "right")[];
-  /** Single gauge column (legacy; use barColumns for multiple). */
-  barColumn?: BarColumn;
-  /** Multiple gauge columns (overrides barColumn if provided). */
+  /** One or more gauge columns rendered as progress bars. */
   barColumns?: BarColumn[];
   /** Return a colored variant of a plain cell value (must keep the same visible width). */
   cellColor?: (rowIndex: number, colIndex: number, value: string) => string | undefined;
@@ -177,8 +175,7 @@ export function renderBoxTable(options: BoxTableOptions): string[] {
   const level = colorLevel(out);
   const align = options.align ?? [];
 
-  // Support both single barColumn (legacy) and multiple barColumns (new)
-  const barColumns = options.barColumns ?? (options.barColumn ? [options.barColumn] : []);
+  const barColumns = options.barColumns ?? [];
 
   const columnCount = options.headers.length;
 

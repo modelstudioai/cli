@@ -1,5 +1,6 @@
-const MODEL_LIST_API = "zeldaHttp.dashscopeModel./zelda/api/v1/modelCenter/listFoundationModels";
-const PREDICT_CONFIG_API = "zeldaEasy.bmp.modelPredictRpcService.getPredictParamConfig";
+export const MODEL_LIST_API =
+  "zeldaHttp.dashscopeModel./zelda/api/v1/modelCenter/listFoundationModels";
+export const PREDICT_CONFIG_API = "zeldaEasy.bmp.modelPredictRpcService.getPredictParamConfig";
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -8,7 +9,7 @@ const PREDICT_CONFIG_API = "zeldaEasy.bmp.modelPredictRpcService.getPredictParam
 type ConsoleCall = (api: string, data: Record<string, unknown>) => Promise<unknown>;
 
 /** Unwrap the DataV2 double-envelope that console gateway returns. */
-function unwrapResponse(result: Record<string, unknown>): Record<string, unknown> {
+export function unwrapResponse(result: Record<string, unknown>): Record<string, unknown> {
   const data = result.data as Record<string, unknown> | undefined;
   if (!data) return result;
   const dataV2 = data.DataV2 as Record<string, unknown> | undefined;

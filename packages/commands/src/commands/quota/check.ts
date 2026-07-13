@@ -1,12 +1,15 @@
 import {
   defineCommand,
+  BailianError,
+  ExitCode,
   effectiveConsoleGatewayConfig,
   detectOutputFormat,
+  unwrapResponse,
+  MODEL_LIST_API,
   type Client,
 } from "bailian-cli-core";
 import { ansi, emitResult, renderBoxTable } from "bailian-cli-runtime";
 
-const MODEL_LIST_API = "zeldaHttp.dashscopeModel./zelda/api/v1/modelCenter/listFoundationModels";
 const MONITOR_API = "zeldaEasy.bailian-telemetry.monitor.getMonitorData";
 
 interface QpmInfoItem {
@@ -48,28 +51,6 @@ function calculateTPM(item: QpmInfoItem | undefined, fallbackPeriod?: number): n
   return Math.floor((item.usage_limit * 60) / period);
 }
 
-function getNestedRecord(
-  obj: Record<string, unknown>,
-  key: string,
-): Record<string, unknown> | undefined {
-  const val = obj[key];
-  if (val && typeof val === "object" && !Array.isArray(val)) return val as Record<string, unknown>;
-  return undefined;
-}
-
-function extractResponseData(result: Record<string, unknown>): Record<string, unknown> {
-  const data = getNestedRecord(result, "data");
-  if (!data) return result;
-  const dataV2 = getNestedRecord(data, "DataV2");
-  if (dataV2) {
-    const inner = getNestedRecord(dataV2, "data");
-    const innerData = inner ? getNestedRecord(inner, "data") : undefined;
-    return innerData ?? inner ?? dataV2;
-  }
-  const direct = getNestedRecord(data, "data");
-  return direct ?? data;
-}
-
 async function fetchAllModelsWithQpm(client: Client): Promise<ModelWithQpm[]> {
   const allModels: ModelWithQpm[] = [];
   let pageNo = 1;
@@ -86,7 +67,7 @@ async function fetchAllModelsWithQpm(client: Client): Promise<ModelWithQpm[]> {
       },
     });
 
-    const resp = extractResponseData(raw as Record<string, unknown>);
+    const resp = unwrapResponse(raw as Record<string, unknown>);
     const list = (resp.list as ModelWithQpm[]) ?? [];
     const total = (resp.total as number) ?? 0;
 
@@ -123,7 +104,7 @@ async function fetchMonitorData(
       },
     });
 
-    const resp = extractResponseData(raw as Record<string, unknown>);
+    const resp = unwrapResponse(raw as Record<string, unknown>);
     const metrics = (resp.data ?? resp) as MonitorMetric[] | Record<string, unknown>;
     if (!Array.isArray(metrics)) return { rpm: 0, tpm: 0 };
 
@@ -139,8 +120,9 @@ async function fetchMonitorData(
 
     return { rpm, tpm };
   } catch (error) {
-    // Re-throw console authentication errors, but catch other errors
-    if (error instanceof Error && error.message?.includes("Console session")) {
+    // Re-throw authentication errors (BailianError with ExitCode.AUTH);
+    // other errors are treated as "no data" and show "-" in the table.
+    if (error instanceof BailianError && error.exitCode === ExitCode.AUTH) {
       throw error;
     }
     return { rpm: -1, tpm: -1 };

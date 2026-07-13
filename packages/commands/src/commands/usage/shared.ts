@@ -2,6 +2,7 @@ import {
   fetchModelList,
   BailianError,
   ExitCode,
+  unwrapResponse,
   type Client,
   type Settings,
 } from "bailian-cli-core";
@@ -33,32 +34,12 @@ export function requireWorkspaceId(settings: Settings, binName: string): string 
   );
 }
 
-// ---------------------------------------------------------------------------
-// Response unwrapping (shared DataV2 envelope handling)
-// ---------------------------------------------------------------------------
-
-function getNestedRecord(
-  obj: Record<string, unknown>,
-  key: string,
-): Record<string, unknown> | undefined {
-  const val = obj[key];
-  if (val && typeof val === "object" && !Array.isArray(val)) return val as Record<string, unknown>;
-  return undefined;
-}
-
+/**
+ * @deprecated Use `unwrapResponse` from bailian-cli-core instead.
+ * Kept here only for internal backward-compat with callers that already import this.
+ */
 export function extractResponseData(result: Record<string, unknown>): Record<string, unknown> {
-  const data = getNestedRecord(result, "data");
-  if (!data) return result;
-
-  const dataV2 = getNestedRecord(data, "DataV2");
-  if (dataV2) {
-    const inner = getNestedRecord(dataV2, "data");
-    const innerData = inner ? getNestedRecord(inner, "data") : undefined;
-    return innerData ?? inner ?? dataV2;
-  }
-
-  const direct = getNestedRecord(data, "data");
-  return direct ?? data;
+  return unwrapResponse(result);
 }
 
 // ---------------------------------------------------------------------------
@@ -226,7 +207,7 @@ export function printFreeTierTable(options: FreeTierTableOptions): void {
     headers,
     rows,
     align: ["left", "left", "right", "right", "left", "left"],
-    barColumn: { index: 4, percents, labels: barLabels },
+    barColumns: [{ index: 4, percents, labels: barLabels }],
     cellColor: (_rowIndex, colIndex, value) => {
       if (colIndex !== autoStopCol) return undefined;
       if (value === "ON") return color.green(value);
