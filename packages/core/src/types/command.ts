@@ -2,6 +2,7 @@ import type { Identity, Settings } from "../config/schema.ts";
 import type { ConfigStore } from "../config/store.ts";
 import type { AuthStore } from "../auth/store.ts";
 import type { Client } from "../client/client.ts";
+import type { CommandPackManager } from "./command-pack-manager.ts";
 
 // ── Flag definitions ─────────────────────────────────────────────────────────
 // Flags are keyed by camelCase name (the key IS the parsed flag name, e.g.
@@ -164,10 +165,12 @@ export interface CommandContext<F extends FlagsDef = FlagsDef> {
   flags: ParsedFlags<F>;
   /** Network surface; the credential for the command's `auth` is pre-injected. */
   client: Client;
-  /** 惰性访问器,lint 限定 commands/config/** 使用。 */
-  configStore(): ConfigStore;
-  /** 惰性访问器,lint 限定 commands/auth/** 使用。 */
-  authStore(): AuthStore;
+  /** 配置持久化能力；lint 限定 commands/config/** 使用。 */
+  configStore: ConfigStore;
+  /** 鉴权持久化能力；lint 限定 commands/auth/** 使用。 */
+  authStore: AuthStore;
+  /** Command Pack 管理能力；lint 限定 commands/plugin/** 使用。 */
+  commandPacks: CommandPackManager;
 }
 
 // ── Command ──────────────────────────────────────────────────────────────────

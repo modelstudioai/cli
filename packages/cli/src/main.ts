@@ -1,5 +1,6 @@
 import { createCli } from "bailian-cli-runtime";
 import { commands } from "./commands.ts";
+import { commandPackPolicy } from "./command-pack-policy.ts";
 import pkg from "../package.json" with { type: "json" };
 
 const quickStartTasks = [
@@ -15,4 +16,5 @@ void createCli(commands, {
   clientName: "bailian-cli",
   npmPackage: "bailian-cli",
   quickStartTasks,
+  commandPacks: commandPackPolicy,
 }).run();
