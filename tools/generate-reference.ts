@@ -7,8 +7,7 @@
  *
  * Run: pnpm --filter bailian-cli run generate:reference
  * Also run via `pnpm run sync:skill-assets` or the repo pre-commit hook.
- * Uses tsx because workspace packages resolve to source locally.
- * Requires built `bailian-cli-core` for shared flag constants.
+ * Uses tsx and reads workspace packages from source
  */
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -19,8 +18,10 @@ import {
   MODEL_AUTH_FLAGS,
   OPENAPI_AUTH_FLAGS,
   credentialFlagDefs,
-} from "../packages/core/dist/index.mjs";
-import type { AnyCommand, FlagDef, FlagsDef } from "../packages/core/src/index.ts";
+  type AnyCommand,
+  type FlagDef,
+  type FlagsDef,
+} from "../packages/core/src/index.ts";
 import { commands } from "../packages/cli/src/commands.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

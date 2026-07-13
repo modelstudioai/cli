@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-# Regenerate skill reference + SKILL metadata (needs bailian-cli-core dist).
+# Regenerate skill reference + SKILL metadata from source (no package build).
 pnpm run sync:skill-assets
 
 # Stage generator output so it is included in this commit.
