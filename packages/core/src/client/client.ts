@@ -36,6 +36,17 @@ export interface ClientOpenApiQueryOpts {
   queryParams: AcsQueryParams;
 }
 
+export interface ClientOpenApiJsonOpts {
+  host: string;
+  path: string;
+  action: string;
+  version: string;
+  method: "GET" | "POST";
+  /** JSON request body; omit for query-only calls (signed as an empty body). */
+  body?: unknown;
+  queryParams?: AcsQueryParams;
+}
+
 export interface OpenApiResponse {
   Success?: boolean;
   Code?: string;
@@ -149,9 +160,14 @@ export class Client {
     }
   }
 
-  async openApiQueryJson<T extends OpenApiResponse>(opts: ClientOpenApiQueryOpts): Promise<T> {
+  openApiQueryJson<T extends OpenApiResponse>(opts: ClientOpenApiQueryOpts): Promise<T> {
+    return this.openApiJson<T>(opts);
+  }
+
+  async openApiJson<T extends OpenApiResponse>(opts: ClientOpenApiJsonOpts): Promise<T> {
     const cred = this.requireOpenApi();
-    const queryString = buildAcsCanonicalQuery(opts.queryParams);
+    const bodyStr = opts.body === undefined ? "" : JSON.stringify(opts.body);
+    const queryString = opts.queryParams ? buildAcsCanonicalQuery(opts.queryParams) : "";
     const endpoint = `https://${opts.host}${opts.path}${queryString ? `?${queryString}` : ""}`;
     const headers = signAcsRequest({
       accessKeyId: cred.accessKeyId,
@@ -159,7 +175,7 @@ export class Client {
       securityToken: cred.securityToken,
       action: opts.action,
       version: opts.version,
-      body: "",
+      body: bodyStr,
       host: opts.host,
       pathname: opts.path,
       method: opts.method,
@@ -168,21 +184,38 @@ export class Client {
 
     if (this.deps.settings.verbose) {
       process.stderr.write(`> ${opts.method} ${endpoint}\n`);
+      process.stderr.write(`> x-acs-action: ${opts.action} (version ${opts.version})\n`);
       process.stderr.write(`> AK: ${maskToken(cred.accessKeyId)}\n`);
+      if (cred.securityToken) {
+        process.stderr.write(`> STS token: ${maskToken(cred.securityToken)}\n`);
+      }
+      if (queryString) process.stderr.write(`> query: ${queryString}\n`);
+      if (bodyStr) process.stderr.write(`> body: ${bodyStr}\n`);
     }
 
     const timeoutMs = this.deps.settings.timeout * 1000;
     const res = await fetch(endpoint, {
       method: opts.method,
       headers: { ...headers, ...trackingHeaders() },
+      body: bodyStr || undefined,
       signal: AbortSignal.timeout(timeoutMs),
     });
 
+    const rawText = await res.text();
     if (this.deps.settings.verbose) {
       process.stderr.write(`< ${res.status} ${res.statusText}\n`);
+      process.stderr.write(`< ${rawText}\n`);
     }
 
-    const data = (await res.json()) as T;
+    let data: T;
+    try {
+      data = JSON.parse(rawText) as T;
+    } catch {
+      throw new BailianError(
+        `${res.status} ${res.statusText} - ${rawText.slice(0, 500)}`,
+        ExitCode.GENERAL,
+      );
+    }
     if (!res.ok || data.Success === false) {
       throw new BailianError(
         `${data.Code || res.status} - ${data.Message || res.statusText}`,

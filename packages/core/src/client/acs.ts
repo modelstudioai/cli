@@ -1,6 +1,6 @@
 import { createHmac, createHash, randomUUID } from "crypto";
 
-export type AcsQueryParams = Record<string, string | string[] | undefined>;
+export type AcsQueryParams = Record<string, string | string[] | undefined | number>;
 
 export interface AcsSignConfig {
   accessKeyId: string;
@@ -18,7 +18,7 @@ export interface AcsSignConfig {
 
 /** Build ACS3 canonical query string from OpenAPI query parameters. */
 export function buildAcsCanonicalQuery(params: AcsQueryParams): string {
-  const pairs: Array<[string, string]> = [];
+  const pairs: Array<[string, string | number | undefined]> = [];
   for (const [key, value] of Object.entries(params)) {
     if (value === undefined || value === "") continue;
     if (Array.isArray(value)) {
@@ -31,7 +31,9 @@ export function buildAcsCanonicalQuery(params: AcsQueryParams): string {
     }
   }
   pairs.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-  return pairs.map(([k, v]) => `${encodeRFC3986(k)}=${encodeRFC3986(v)}`).join("&");
+  return pairs
+    .map(([key, value]) => `${encodeRFC3986(key)}=${encodeRFC3986(String(value))}`)
+    .join("&");
 }
 
 export function signAcsRequest(cfg: AcsSignConfig): Record<string, string> {

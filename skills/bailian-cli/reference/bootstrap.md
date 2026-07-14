@@ -15,21 +15,22 @@ Index: [index.md](index.md)
 
 ### `bl bootstrap`
 
-| Field           | Value                                                       |
-| --------------- | ----------------------------------------------------------- |
-| **Name**        | `bootstrap`                                                 |
-| **Description** | Initialize Bailian workspace and activate postpaid services |
-| **Usage**       | `bl bootstrap`                                              |
+| Field           | Value                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------- |
+| **Name**        | `bootstrap`                                                                                 |
+| **Description** | Initialize Bailian workspace and activate postpaid services                                 |
+| **Usage**       | `bl bootstrap --access-key-id <id> --access-key-secret <secret> [--security-token <token>]` |
 
 #### Flags
 
-| Flag                           | Type   | Required | Description                                              |
-| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
-| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
-| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
-| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
+| Flag                           | Type   | Required | Description                                 |
+| ------------------------------ | ------ | -------- | ------------------------------------------- |
+| `--access-key-id <id>`         | string | no       | Alibaba Cloud Access Key ID                 |
+| `--access-key-secret <secret>` | string | no       | Alibaba Cloud Access Key Secret             |
+| `--security-token <token>`     | string | no       | Alibaba Cloud STS Security Token (optional) |
 
 #### Examples
 
-_No examples._
+```bash
+bl bootstrap --access-key-id LTAIxxxxx --access-key-secret xxxxx
+```
