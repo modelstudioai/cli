@@ -6,6 +6,12 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.8.1] - 2026-07-14
+
+### 变更
+
+- 扩展 Command Pack 白名单，允许加载额外的内部命令扩展。
+
 ## [1.8.0] - 2026-07-13
 
 ### 新增
