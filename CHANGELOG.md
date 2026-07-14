@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.8.1] - 2026-07-14
+
+### Changed
+
+- Expanded the Command Pack allowlist to accept an additional internal command extension.
+
 ## [1.8.0] - 2026-07-13
 
 ### Added
