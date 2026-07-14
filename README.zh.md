@@ -39,7 +39,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 - **联网搜索** — 实时互联网信息检索，提升回答准确性及时效性
 - **模型推荐** — 描述你的场景，智能推荐最适合的模型；支持限定范围搜索、模型对比和替代发现
 - **微调与部署** — 上传数据集、创建文本/音频/图像调优任务（`finetune text|audio|image create`；文本涵盖 SFT/LoRA/DPO/CPT）、非阻塞探测任务状态（`finetune watch`）、按模型查训练能力（`finetune capability`），并把训练好的模型部署为推理服务（`deploy text|audio|image create`）
-- **控制台能力** — 浏览百炼应用（`app list`），查询模型免费额度（`usage free`），查看模型用量统计（`usage stats`），管理业务空间（`workspace list`），管理限流与提额（`quota list/request/check/history`）
+- **控制台能力** — 浏览模型市场（`model list`）和百炼应用（`app list`），查看统一用量视图（`usage summary`），查询模型免费额度（`usage free`），查看模型用量统计（`usage stats`），管理业务空间（`workspace list`），管理限流与提额（`quota list/request/check/history`）
 - **本地文件自动上传** — 所有 URL 参数同时支持本地路径，免费临时存储 48 小时
 
 ## 示例:一句话生成一部电影短片
@@ -113,12 +113,14 @@ bl auth login --console
 # 微调与部署 — 从训练到服务的一站式流程
 bl dataset upload --file ./train.jsonl                 # 上传 .jsonl 数据集（先校验）
 bl finetune text create --model qwen3-8b --datasets ./train.jsonl --training-type sft-lora  # 本地路径自动上传
-bl finetune watch --job-id ft-xxx --output json       # 非阻塞状态探测（退出码 0/1/3 = 成功/失败/进行中）
+bl finetune watch --job-id ft-xxx --output json       # 非阻塞探测（运行中/成功返回 0；失败/取消报错）
 bl finetune capability --model qwen3-8b               # 查询模型支持哪些训练方式
 bl deploy text create --model qwen3-8b --name my-svc --plan mu  # 把训练好的模型部署为推理服务
 
-# 浏览应用 / 免费额度 / 用量统计 / 业务空间
+# 浏览模型 / 应用 / 免费额度 / 用量统计 / 业务空间
+bl model list                                        # 浏览模型系列与价格信息
 bl app list
+bl usage summary                                     # 统一视图：免费额度 + 近期用量概览
 bl usage free                                         # 各模型免费额度（可加 --model/--expiring/--sort）
 bl usage stats --workspace-id <id>                    # 模型用量统计（加 --model 查单模型）
 bl workspace list                                     # 列出所有业务空间
@@ -157,7 +159,7 @@ bl text chat --api-key sk-xxxxx --message "你好"
 
 ### 控制台登录（OAuth）
 
-控制台能力命令（`app list`、`usage free`、`usage stats`、`workspace list`、`quota list/request/check/history`）需要使用此登录方式。打开浏览器跳转百炼控制台完成登录。
+控制台能力命令（`model list`、`app list`、`usage summary/free/stats`、`workspace list`、`quota list/request/check/history`）需要使用此登录方式。打开浏览器跳转百炼控制台完成登录。
 
 ```bash
 bl auth login --console

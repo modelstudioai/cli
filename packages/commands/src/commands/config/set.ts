@@ -37,14 +37,14 @@ export default defineCommand({
         {
           would_set: { [resolvedKey]: value },
           config: settings.configName ?? "default",
-          config_file: ctx.configStore().path,
+          config_file: ctx.configStore.path,
         },
         format,
       );
       return;
     }
 
-    await ctx.configStore().write({ [resolvedKey]: coerced } as Partial<ConfigFile>);
+    await ctx.configStore.write({ [resolvedKey]: coerced } as Partial<ConfigFile>);
 
     if (!settings.quiet) {
       const shown = SECRET_KEYS.has(resolvedKey) ? maskToken(String(coerced)) : coerced;
@@ -52,7 +52,7 @@ export default defineCommand({
         {
           [resolvedKey]: shown,
           config: settings.configName ?? "default",
-          config_file: ctx.configStore().path,
+          config_file: ctx.configStore.path,
         },
         format,
       );

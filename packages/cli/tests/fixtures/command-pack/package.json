@@ -1,0 +1,12 @@
+{
+  "name": "@ali/bailian-plugin-agent",
+  "version": "0.0.0-test",
+  "private": true,
+  "type": "module",
+  "bailianCli": {
+    "type": "command-pack",
+    "apiVersion": 1,
+    "entry": "./commands.mjs",
+    "minCliVersion": "1.7.0"
+  }
+}

@@ -9,7 +9,7 @@ export default defineCommand({
   async run(ctx) {
     const { identity, settings } = ctx;
     const format = detectOutputFormat(settings.output);
-    const auth = ctx.authStore().describe();
+    const auth = ctx.authStore.describe();
 
     const apiKey = auth.apiKey
       ? {
@@ -36,7 +36,7 @@ export default defineCommand({
 
     const authenticated = !!(apiKey || consoleCred || openapi);
     const configName = settings.configName ?? "default";
-    const configFile = ctx.authStore().path;
+    const configFile = ctx.authStore.path;
 
     if (!authenticated) {
       emitResult(

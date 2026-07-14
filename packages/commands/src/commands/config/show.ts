@@ -7,7 +7,7 @@ export default defineCommand({
   exampleArgs: ["", "--output json"],
   async run(ctx) {
     const { settings, client } = ctx;
-    const store = ctx.configStore();
+    const store = ctx.configStore;
     const file = store.read();
     const format = detectOutputFormat(settings.output);
 

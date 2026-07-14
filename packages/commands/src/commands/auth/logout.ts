@@ -20,7 +20,7 @@ export default defineCommand({
     f.console && f.openApi ? "Use only one scope: --console or --open-api" : undefined,
   async run(ctx) {
     const { settings, flags } = ctx;
-    const store = ctx.authStore();
+    const store = ctx.authStore;
     const stored = store.stored();
 
     if (flags.console) {

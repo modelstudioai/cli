@@ -41,9 +41,11 @@ import {
   usageFree,
   usageFreetier,
   usageStats,
+  usageSummary,
   pipelineRun,
   pipelineValidate,
   advisorRecommend,
+  modelList,
   workspaceList,
   quotaList,
   quotaRequest,
@@ -80,6 +82,10 @@ import {
   tokenPlanAssignSeats,
   tokenPlanAddMember,
   bootstrap,
+  pluginInstall,
+  pluginLink,
+  pluginList,
+  pluginRemove,
 } from "bailian-cli-commands";
 
 // Full bailian-cli product: every command, exposed under the `bl` binary.
@@ -129,9 +135,11 @@ export const commands: Record<string, AnyCommand> = {
   "usage free": usageFree,
   "usage freetier": usageFreetier,
   "usage stats": usageStats,
+  "usage summary": usageSummary,
   "pipeline run": pipelineRun,
   "pipeline validate": pipelineValidate,
   "advisor recommend": advisorRecommend,
+  "model list": modelList,
   "workspace list": workspaceList,
   "quota list": quotaList,
   "quota request": quotaRequest,
@@ -168,4 +176,8 @@ export const commands: Record<string, AnyCommand> = {
   "token-plan assign-seats": tokenPlanAssignSeats,
   "token-plan add-member": tokenPlanAddMember,
   bootstrap: bootstrap,
+  "plugin install": pluginInstall,
+  "plugin link": pluginLink,
+  "plugin list": pluginList,
+  "plugin remove": pluginRemove,
 };
