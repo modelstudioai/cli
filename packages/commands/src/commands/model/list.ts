@@ -304,7 +304,7 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
     const modelKey = flags.model;
 
     // ── Detail mode ──
