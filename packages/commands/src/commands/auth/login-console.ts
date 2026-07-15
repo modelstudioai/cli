@@ -4,14 +4,14 @@ import http from "node:http";
 import {
   BailianError,
   ExitCode,
-  chatPath,
-  requestJson,
+  type AuthPersistPatch,
   type AuthStore,
   type ConfigFile,
   type Identity,
   type Settings,
 } from "bailian-cli-core";
 import { listenLocalServer, openInBrowser } from "../shared/local-server.ts";
+import { validateAndPersistApiKey } from "./login-api-key.ts";
 
 /** 登录流程的能力面:身份(UA)、有效配置(timeout 等)、auth 域落盘。 */
 export interface LoginDeps {
@@ -364,64 +364,6 @@ function listenServerOnFreeLocalPort(server: http.Server): Promise<number> {
   return listenLocalServer(server);
 }
 
-const RETRY_DELAY_BASE_MS = 500;
-
-function canRetry(err: unknown): boolean {
-  if (err instanceof BailianError) {
-    if (err.exitCode === ExitCode.NETWORK || err.exitCode === ExitCode.TIMEOUT) return true;
-    const status = err.api?.httpStatus;
-    return status === 401 || (status !== undefined && status >= 500);
-  }
-  if (err instanceof Error) {
-    return (
-      err.name === "AbortError" ||
-      err.name === "TimeoutError" ||
-      err.message.includes("timed out") ||
-      err.message === "fetch failed"
-    );
-  }
-  return false;
-}
-
-export async function validateAndPersistApiKey(
-  deps: LoginDeps,
-  key: string,
-  baseUrl: string,
-): Promise<void> {
-  process.stderr.write("Testing key... ");
-  const httpDeps = { identity: deps.identity, settings: deps.settings };
-  const requestOpts = {
-    url: baseUrl + chatPath(),
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}` },
-    timeout: Math.min(deps.settings.timeout, 30),
-    body: {
-      model: "qwen3.7-max",
-      messages: [{ role: "user", content: "hi" }],
-      max_tokens: 1,
-    },
-  };
-
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      await requestJson<unknown>(httpDeps, requestOpts);
-      break;
-    } catch (err) {
-      if (attempt >= 3 || !canRetry(err)) {
-        process.stderr.write("Failed\n");
-        throw new BailianError("API key validation failed", ExitCode.AUTH, "Invalid API key.", {
-          cause: err,
-        });
-      }
-      const delayMs = RETRY_DELAY_BASE_MS * 2 ** (attempt - 1);
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-    }
-  }
-
-  process.stderr.write("Valid\n");
-  await deps.authStore.login({ api_key: key });
-}
-
 export async function runConsoleLogin(
   consoleOrigin: string,
   deps: LoginDeps,
@@ -463,20 +405,27 @@ export async function runConsoleLogin(
 
       if (hasConfig || apiKey) {
         try {
-          if (hasConfig) {
-            await deps.authStore.login({
-              access_token: accessToken || undefined,
-              base_url: baseUrl || undefined,
-              console_site: (consoleSite || undefined) as ConfigFile["console_site"],
-              console_region: consoleRegion || undefined,
-              console_switch_agent: consoleSwitchAgent ? Number(consoleSwitchAgent) : undefined,
-              workspace_id: workspaceId || undefined,
-            });
-            process.stderr.write(`Config saved to ${deps.authStore.path}\n`);
-          }
+          const callbackPatch: AuthPersistPatch = {
+            access_token: accessToken || undefined,
+            console_site: (consoleSite || undefined) as ConfigFile["console_site"],
+            console_region: consoleRegion || undefined,
+            console_switch_agent: consoleSwitchAgent ? Number(consoleSwitchAgent) : undefined,
+            workspace_id: workspaceId || undefined,
+          };
           if (apiKey) {
             const testBaseUrl = baseUrl || deps.authStore.resolveBaseUrl();
-            await validateAndPersistApiKey(deps, apiKey, testBaseUrl);
+            await validateAndPersistApiKey(deps, apiKey, {
+              baseUrl: testBaseUrl,
+              persistBaseUrl: baseUrl || undefined,
+              persistPatch: callbackPatch,
+            });
+            process.stderr.write(`Config saved to ${deps.authStore.path}\n`);
+          } else if (hasConfig) {
+            await deps.authStore.login({
+              ...callbackPatch,
+              base_url: baseUrl || undefined,
+            });
+            process.stderr.write(`Config saved to ${deps.authStore.path}\n`);
           }
         } catch (err: unknown) {
           callbackError = err;

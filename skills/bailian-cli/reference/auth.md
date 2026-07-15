@@ -50,8 +50,8 @@ bl auth generate-access-token --access-key-id LTAIxxxxx --access-key-secret xxxx
 
 | Flag                           | Type   | Required | Description                                                                           |
 | ------------------------------ | ------ | -------- | ------------------------------------------------------------------------------------- |
-| `--api-key <key>`              | string | no       | DashScope API key to store                                                            |
-| `--base-url <url>`             | string | no       | DashScope API base URL (used with --api-key for validation)                           |
+| `--api-key <key>`              | string | no       | Model API key to store                                                                |
+| `--base-url <url>`             | string | no       | Model API base URL (used with --api-key for validation)                               |
 | `--console`                    | switch | no       | Sign in via browser; use --console-site to choose domestic (default) or international |
 | `--console-site <site>`        | string | no       | Console site: domestic, international                                                 |
 | `--open-api`                   | switch | no       | Store Alibaba Cloud OpenAPI AK/SK credentials                                         |
@@ -62,6 +62,10 @@ bl auth generate-access-token --access-key-id LTAIxxxxx --access-key-secret xxxx
 
 ```bash
 bl auth login --api-key sk-xxxxx
+```
+
+```bash
+bl auth login --config token-plan --api-key sk-sp-xxxxx
 ```
 
 ```bash

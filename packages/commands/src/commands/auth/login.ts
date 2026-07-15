@@ -1,11 +1,7 @@
-import { defineCommand } from "bailian-cli-core";
+import { defineCommand, generateCLIAccessToken, getModelProfilePreset } from "bailian-cli-core";
 import { emitBare } from "bailian-cli-runtime";
-import {
-  resolveConsoleOrigin,
-  runConsoleLogin,
-  validateAndPersistApiKey,
-} from "./login-console.ts";
-import { generateCLIAccessToken } from "bailian-cli-core";
+import { validateAndPersistApiKey } from "./login-api-key.ts";
+import { resolveConsoleOrigin, runConsoleLogin } from "./login-console.ts";
 
 const LOGIN_MODE_HINT = "Choose exactly one login mode: --api-key, --console, or --open-api";
 
@@ -20,11 +16,11 @@ export default defineCommand({
   usageArgs:
     "--api-key <key> | --console | --open-api --access-key-id <id> --access-key-secret <secret>",
   flags: {
-    apiKey: { type: "string", valueHint: "<key>", description: "DashScope API key to store" },
+    apiKey: { type: "string", valueHint: "<key>", description: "Model API key to store" },
     baseUrl: {
       type: "string",
       valueHint: "<url>",
-      description: "DashScope API base URL (used with --api-key for validation)",
+      description: "Model API base URL (used with --api-key for validation)",
     },
     console: {
       type: "switch",
@@ -53,6 +49,7 @@ export default defineCommand({
   },
   exampleArgs: [
     "--api-key sk-xxxxx",
+    "--config token-plan --api-key sk-sp-xxxxx",
     "--console",
     "--open-api --access-key-id LTAIxxxxx --access-key-secret xxxxx",
   ],
@@ -140,9 +137,15 @@ export default defineCommand({
       emitBare("Would validate and save API key.");
       return;
     }
-    if (baseUrl) {
-      await store.login({ base_url: baseUrl });
-    }
-    await validateAndPersistApiKey(deps, key, baseUrl || store.resolveBaseUrl());
+    const profilePreset = getModelProfilePreset(settings.configName);
+    const storedBaseUrl = store.stored().baseUrl;
+    const resolvedBaseUrl = baseUrl || store.resolveBaseUrl(profilePreset?.baseUrl);
+    const persistBaseUrl = baseUrl || (!storedBaseUrl ? profilePreset?.baseUrl : undefined);
+    await validateAndPersistApiKey(deps, key, {
+      baseUrl: resolvedBaseUrl,
+      persistBaseUrl,
+      defaultTextModel: profilePreset?.defaultTextModel,
+      defaultImageModel: profilePreset?.defaultImageModel,
+    });
   },
 });

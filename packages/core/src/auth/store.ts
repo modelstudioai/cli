@@ -24,6 +24,8 @@ export type AuthPersistPatch = Pick<
   | "console_region"
   | "console_switch_agent"
   | "workspace_id"
+  | "default_text_model"
+  | "default_image_model"
 >;
 
 /**
@@ -33,10 +35,10 @@ export type AuthPersistPatch = Pick<
 export interface AuthStore {
   /** 各域"将会解析出"的凭证快照(auth status 用)。 */
   describe(): AuthState;
-  /** 磁盘上当前是否存有各域凭证(区别于 describe:只看 file,不含 flag/env 源)。 */
-  stored(): { apiKey: boolean; console: boolean; openapi: boolean };
-  /** model 域 baseUrl 链(flag > env > file > 默认);验证 API key 等无凭证场景用。 */
-  resolveBaseUrl(): string;
+  /** 磁盘上当前是否存有各域凭证及 model baseUrl(区别于 describe:只看 file,不含 flag/env 源)。 */
+  stored(): { apiKey: boolean; console: boolean; openapi: boolean; baseUrl?: string };
+  /** model 域 baseUrl 链(flag > env > config file > fallback)。 */
+  resolveBaseUrl(fallback?: string): string;
   /** 登录落盘:合并写入,undefined 键忽略。 */
   login(patch: AuthPersistPatch): Promise<void>;
   /** 清凭证:console/openapi 只删对应域;all 清全部登录凭证。返回是否有变更。 */
@@ -57,9 +59,10 @@ export function makeAuthStore(sources: ResolutionSources): AuthStore {
         apiKey: !!file.api_key,
         console: !!file.access_token,
         openapi: !!(file.access_key_id || file.access_key_secret),
+        baseUrl: file.base_url,
       };
     },
-    resolveBaseUrl: () => resolveModelBaseUrl(sources),
+    resolveBaseUrl: (fallback) => resolveModelBaseUrl(sources, fallback),
     async login(patch) {
       const existing = readConfigFile(configName) as Record<string, unknown>;
       for (const [key, value] of Object.entries(patch)) {

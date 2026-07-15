@@ -7,9 +7,9 @@ import { ExitCode } from "../errors/codes.ts";
 // Resolve the credential for a command's declared domain (model = api-key,
 // console = access-token), by priority, or throw. Read only from sources.
 
-/** Model-domain baseUrl(flag > env > file > cn)——无需 key 也可解析;login 验证等用。 */
-export function resolveModelBaseUrl(s: ResolutionSources): string {
-  return s.flags.baseUrl || s.env.DASHSCOPE_BASE_URL || s.file.base_url || REGIONS.cn;
+/** Model-domain baseUrl(flag > env > config file > fallback);无需 key 也可解析。 */
+export function resolveModelBaseUrl(s: ResolutionSources, fallback: string = REGIONS.cn): string {
+  return s.flags.baseUrl || s.env.DASHSCOPE_BASE_URL || s.file.base_url || fallback;
 }
 
 /**

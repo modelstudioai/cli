@@ -1,4 +1,6 @@
-import { readFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
 import { join } from "path";
 import { describe, expect, test } from "vite-plus/test";
 import {
@@ -8,6 +10,42 @@ import {
   runCommandE2e,
 } from "./helpers.ts";
 import { AUTH_ROUTES } from "./topic-routes.ts";
+
+interface ValidationServer {
+  baseUrl: string;
+  requests: Array<{ path: string; body: Record<string, unknown> }>;
+  close(): Promise<void>;
+}
+
+async function startValidationServer(statusCode = 200): Promise<ValidationServer> {
+  const requests: ValidationServer["requests"] = [];
+  const server = http.createServer((request, response) => {
+    const chunks: Buffer[] = [];
+    request.on("data", (chunk: Buffer) => chunks.push(chunk));
+    request.on("end", () => {
+      const rawBody = Buffer.concat(chunks).toString("utf8");
+      requests.push({
+        path: request.url ?? "",
+        body: rawBody ? (JSON.parse(rawBody) as Record<string, unknown>) : {},
+      });
+      response.writeHead(statusCode, { "Content-Type": "application/json" });
+      if (statusCode >= 400) {
+        response.end(JSON.stringify({ code: "InvalidApiKey", message: "invalid key" }));
+        return;
+      }
+      response.end(
+        JSON.stringify({ choices: [{ message: { role: "assistant", content: "ok" } }] }),
+      );
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address() as AddressInfo;
+  return {
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    requests,
+    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
+  };
+}
 
 /**
  * Auth 相关 E2E：只验证 CLI 进程能正常解析参数并退出。
@@ -106,6 +144,130 @@ describe("e2e: auth", () => {
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toContain("Would validate and save API key.");
+  });
+
+  test("auth login --api-key 验证后原子保存凭证和 Base URL", async () => {
+    const validationServer = await startValidationServer();
+    const configDir = makeE2eOutputDir("auth-api-key-login");
+    try {
+      const login = await runCommandE2e(
+        AUTH_ROUTES,
+        [
+          "auth",
+          "login",
+          "--api-key",
+          "sk-e2e-placeholder",
+          "--base-url",
+          validationServer.baseUrl,
+        ],
+        {
+          BAILIAN_CONFIG_DIR: configDir,
+          DASHSCOPE_API_KEY: "",
+          DASHSCOPE_BASE_URL: "",
+        },
+      );
+      expect(login.exitCode, login.stderr).toBe(0);
+      expect(validationServer.requests).toHaveLength(1);
+      expect(validationServer.requests[0]).toMatchObject({
+        path: "/compatible-mode/v1/chat/completions",
+        body: {
+          model: "qwen3.7-max",
+          stream: false,
+          enable_thinking: false,
+        },
+      });
+
+      const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
+        string,
+        unknown
+      >;
+      expect(config.api_key).toBe("sk-e2e-placeholder");
+      expect(config.base_url).toBe(validationServer.baseUrl);
+    } finally {
+      await validationServer.close();
+    }
+  });
+
+  test("auth login --config token-plan 物化并重置内置预设", async () => {
+    const validationServer = await startValidationServer();
+    const configDir = makeE2eOutputDir("auth-token-plan-preset-login");
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify(
+        {
+          "token-plan": {
+            default_text_model: "custom-text-model",
+            default_image_model: "custom-image-model",
+          },
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+
+    try {
+      const login = await runCommandE2e(
+        AUTH_ROUTES,
+        ["auth", "login", "--config", "token-plan", "--api-key", "sk-sp-e2e-placeholder"],
+        {
+          BAILIAN_CONFIG_DIR: configDir,
+          DASHSCOPE_API_KEY: "sk-env-must-not-be-persisted",
+          DASHSCOPE_BASE_URL: validationServer.baseUrl,
+        },
+      );
+      expect(login.exitCode, login.stderr).toBe(0);
+      expect(validationServer.requests).toHaveLength(1);
+      expect(validationServer.requests[0]).toMatchObject({
+        path: "/compatible-mode/v1/chat/completions",
+        body: {
+          model: "qwen3.7-max",
+          stream: false,
+          enable_thinking: false,
+        },
+      });
+
+      const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
+        string,
+        unknown
+      >;
+      expect(config.api_key).toBeUndefined();
+      expect(config["token-plan"]).toMatchObject({
+        api_key: "sk-sp-e2e-placeholder",
+        base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
+        default_text_model: "qwen3.7-max",
+        default_image_model: "qwen-image-2.0",
+      });
+      expect((config["token-plan"] as Record<string, unknown>).base_url).not.toBe(
+        validationServer.baseUrl,
+      );
+      expect((config["token-plan"] as Record<string, unknown>).api_key).not.toBe(
+        "sk-env-must-not-be-persisted",
+      );
+    } finally {
+      await validationServer.close();
+    }
+  });
+
+  test("auth login --api-key 验证失败不留下半配置", async () => {
+    const validationServer = await startValidationServer(400);
+    const configDir = makeE2eOutputDir("auth-api-key-login-failure");
+    try {
+      const login = await runCommandE2e(
+        AUTH_ROUTES,
+        ["auth", "login", "--api-key", "sk-invalid", "--base-url", validationServer.baseUrl],
+        {
+          BAILIAN_CONFIG_DIR: configDir,
+          DASHSCOPE_API_KEY: "",
+          DASHSCOPE_BASE_URL: "",
+        },
+      );
+      expect(login.exitCode).not.toBe(0);
+      expect(login.stderr).toMatch(/invalid key/);
+      expect(login.stderr).not.toMatch(/API key validation failed|Invalid API key/);
+      expect(existsSync(join(configDir, "config.json"))).toBe(false);
+    } finally {
+      await validationServer.close();
+    }
   });
 
   test("auth login --dry-run 覆盖全局参数 --output json --timeout", async () => {

@@ -21,11 +21,12 @@ Verify: `bl --version` (prints `bl X.Y.Z`).
 
 ## Authentication
 
-| Auth       | How                                                                                              | Used by                                  |
-| ---------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------- |
-| API key    | `export DASHSCOPE_API_KEY=sk-...` or `bl auth login --api-key sk-...`                            | Most DashScope API commands              |
-| Console    | `bl auth login --console --console-site domestic` or `... international`                         | `app list`, `usage free`, `console call` |
-| OpenAPI AK | `bl auth login --open-api --access-key-id <id> --access-key-secret <secret>` or Alibaba env vars | `token-plan *`                           |
+| Auth               | How                                                                                              | Used by                                       |
+| ------------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| API key            | `export DASHSCOPE_API_KEY=sk-...` or `bl auth login --api-key sk-...`                            | Most DashScope API commands                   |
+| Token Plan API key | `bl auth login --config token-plan --api-key sk-sp-...`                                          | Token Plan text and image model consumption   |
+| Console            | `bl auth login --console --console-site domestic` or `... international`                         | `app list`, `usage free`, `console call`      |
+| OpenAPI AK         | `bl auth login --open-api --access-key-id <id> --access-key-secret <secret>` or Alibaba env vars | Token Plan management commands (`token-plan`) |
 
 ```bash
 bl auth status            # check current auth
@@ -35,6 +36,24 @@ bl auth logout --open-api # clear OpenAPI AK/SK only
 ```
 
 Get an API key: https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key
+
+### Token Plan model consumption
+
+Use the `PlainApiKey` returned by `bl token-plan create-key` as a model API key. It is separate from the OpenAPI AK/SK used by Token Plan management commands.
+
+```bash
+bl auth login --config token-plan --api-key sk-sp-xxx
+bl text chat --config token-plan --message "Hello"
+bl image generate --config token-plan --prompt "A cat"
+```
+
+The built-in `token-plan` profile defaults to:
+
+- Base URL: `https://token-plan.cn-beijing.maas.aliyuncs.com`
+- Text model: `qwen3.7-max`
+- Image model: `qwen-image-2.0`
+
+The usual priority applies to this profile too: per-command `--api-key` / `--base-url`, then `DASHSCOPE_API_KEY` / `DASHSCOPE_BASE_URL`, then the selected profile. Unset environment overrides when you want to use the credentials saved in `token-plan`.
 
 ### Console site selection
 
