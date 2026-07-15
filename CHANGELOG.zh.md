@@ -6,6 +6,16 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.8.2] - 2026-07-15
+
+### 变更
+
+- `bl model list` 现在默认以 JSON 输出；需要表格视图请传 `--output text`。
+
+### 修复
+
+- `bl model list --enrich` 现在能正确返回每个模型的输入参数 schema（predictConfig）；此前因未解包控制台网关响应信封而始终为空。
+
 ## [1.8.1] - 2026-07-14
 
 ### 变更
