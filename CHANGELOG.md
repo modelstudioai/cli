@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.8.2] - 2026-07-15
+
+### Changed
+
+- `bl model list` now defaults to JSON output; pass `--output text` for the table view.
+
+### Fixed
+
+- `bl model list --enrich` now returns each model's input parameter schema (predictConfig); it was previously always empty because the console gateway response envelope was not unwrapped.
+
 ## [1.8.1] - 2026-07-14
 
 ### Changed
