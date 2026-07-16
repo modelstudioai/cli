@@ -3,6 +3,7 @@ import {
   chatPath,
   parseSSE,
   detectOutputFormat,
+  readTextFromPathOrStdin,
   type ChatMessage,
   type ChatRequest,
   type ChatResponse,
@@ -69,9 +70,7 @@ function parseMessages(flags: ChatFlags): ParsedMessages {
   }
 
   if (flags.messagesFile) {
-    const filePath = flags.messagesFile;
-    const raw =
-      filePath === "-" ? readFileSync("/dev/stdin", "utf-8") : readFileSync(filePath, "utf-8");
+    const raw = readTextFromPathOrStdin(flags.messagesFile);
     const parsed = JSON.parse(raw) as Array<{ role: string; content: string }>;
     for (const m of parsed) {
       if (m.role === "system") {
