@@ -37,14 +37,23 @@ test("token-plan Profile 预设保持固定", () => {
   });
 });
 
-test("baseUrl:flag > env > file > 默认(原为 flag>file>env,已归一)", () => {
-  const flags = { baseUrl: "https://flag.example.com" };
-  const env = { DASHSCOPE_BASE_URL: "https://env.example.com" };
-  const file: ConfigFile = { base_url: "https://file.example.com" };
+test("baseUrl:flag > env > file > 默认，所有来源统一归一化", () => {
+  const flags = { baseUrl: "https://flag.example.com/compatible-mode/v1?source=flag" };
+  const env = { DASHSCOPE_BASE_URL: "https://env.example.com/apps/anthropic#env" };
+  const file: ConfigFile = { base_url: "https://file.example.com/gateway/" };
   expect(resolveModelBaseUrl(src({ flags, env, file }))).toBe("https://flag.example.com");
   expect(resolveModelBaseUrl(src({ env, file }))).toBe("https://env.example.com");
-  expect(resolveModelBaseUrl(src({ file }))).toBe("https://file.example.com");
+  expect(resolveModelBaseUrl(src({ file }))).toBe("https://file.example.com/gateway");
   expect(resolveModelBaseUrl(src({}))).toBe("https://dashscope.aliyuncs.com");
+});
+
+test("baseUrl:非法 flag/env 在 resolver 边界报 usage error", () => {
+  expect(() => resolveModelBaseUrl(src({ flags: { baseUrl: "not-a-url" } }))).toThrow(
+    /Invalid model base URL/,
+  );
+  expect(() =>
+    resolveModelBaseUrl(src({ env: { DASHSCOPE_BASE_URL: "file:///tmp/model" } })),
+  ).toThrow(/Invalid model base URL/);
 });
 
 test("命名 config 仍保持 flag > env > selected file", () => {

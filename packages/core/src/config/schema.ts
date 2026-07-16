@@ -1,3 +1,5 @@
+import { normalizeModelBaseUrl } from "./model-base-url.ts";
+
 export const REGIONS = {
   cn: "https://dashscope.aliyuncs.com",
   us: "https://dashscope-us.aliyuncs.com",
@@ -71,12 +73,11 @@ const VALID_CONSOLE_SITES = new Set<string>(["domestic", "international"]);
  * sends the Bearer token to these origins, so a bare `startsWith("http")` check
  * (which also accepts e.g. "httpfoo://…") is too loose.
  */
-function isHttpUrl(value: string): boolean {
+function parseModelBaseUrl(value: string): string | undefined {
   try {
-    const u = new URL(value);
-    return u.protocol === "http:" || u.protocol === "https:";
+    return normalizeModelBaseUrl(value);
   } catch {
-    return false;
+    return undefined;
   }
 }
 
@@ -103,7 +104,10 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     out.access_key_secret = obj.openapi_access_key_secret;
   if (typeof obj.security_token === "string" && obj.security_token.length > 0)
     out.security_token = obj.security_token;
-  if (typeof obj.base_url === "string" && isHttpUrl(obj.base_url)) out.base_url = obj.base_url;
+  if (typeof obj.base_url === "string") {
+    const baseUrl = parseModelBaseUrl(obj.base_url);
+    if (baseUrl) out.base_url = baseUrl;
+  }
   if (typeof obj.output === "string" && VALID_OUTPUTS.has(obj.output))
     out.output = obj.output as ConfigFile["output"];
   if (typeof obj.output_dir === "string" && obj.output_dir.length > 0)

@@ -1,4 +1,5 @@
 import { REGIONS } from "../config/schema.ts";
+import { normalizeModelBaseUrl } from "../config/model-base-url.ts";
 import type { ResolutionSources } from "../config/loader.ts";
 import type { ApiKeyCredential, ConsoleCredential, OpenApiCredential, AuthState } from "./types.ts";
 import { BailianError } from "../errors/base.ts";
@@ -9,7 +10,9 @@ import { ExitCode } from "../errors/codes.ts";
 
 /** Model-domain baseUrl(flag > env > config file > fallback);无需 key 也可解析。 */
 export function resolveModelBaseUrl(s: ResolutionSources, fallback: string = REGIONS.cn): string {
-  return s.flags.baseUrl || s.env.DASHSCOPE_BASE_URL || s.file.base_url || fallback;
+  return normalizeModelBaseUrl(
+    s.flags.baseUrl || s.env.DASHSCOPE_BASE_URL || s.file.base_url || fallback,
+  );
 }
 
 /**

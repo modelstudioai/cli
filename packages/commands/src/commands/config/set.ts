@@ -35,7 +35,7 @@ export default defineCommand({
     if (settings.dryRun) {
       emitResult(
         {
-          would_set: { [resolvedKey]: value },
+          would_set: { [resolvedKey]: coerced },
           config: settings.configName ?? "default",
           config_file: ctx.configStore.path,
         },

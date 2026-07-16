@@ -2,6 +2,7 @@ import type { ConfigFile } from "../config/schema.ts";
 import type { ResolutionSources } from "../config/loader.ts";
 import { readConfigFile, writeConfigFile } from "../config/loader.ts";
 import { getConfigPath } from "../config/paths.ts";
+import { normalizeModelBaseUrl } from "../config/model-base-url.ts";
 import type { AuthState } from "./types.ts";
 import { describeAuthState, resolveModelBaseUrl } from "./resolver.ts";
 
@@ -64,7 +65,9 @@ export function makeAuthStore(sources: ResolutionSources): AuthStore {
     async login(patch) {
       const existing = readConfigFile(configName) as Record<string, unknown>;
       for (const [key, value] of Object.entries(patch)) {
-        if (value !== undefined) existing[key] = value;
+        if (value !== undefined) {
+          existing[key] = key === "base_url" ? normalizeModelBaseUrl(String(value)) : value;
+        }
       }
       await writeConfigFile(existing, configName);
     },

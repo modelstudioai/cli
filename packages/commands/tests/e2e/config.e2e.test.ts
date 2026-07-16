@@ -205,6 +205,43 @@ describe("e2e: config", () => {
     expect(stderr).toMatch(/Invalid timeout|positive/i);
   });
 
+  test("config set 归一化 Base URL 并拒绝非法协议", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "bl-config-base-url-"));
+    try {
+      const setResult = await runCommandE2e(
+        CONFIG_ROUTES,
+        [
+          "config",
+          "set",
+          "--key",
+          "base_url",
+          "--value",
+          "https://proxy.example.com/bailian/compatible-mode/v1/?x=1#fragment",
+          "--output",
+          "json",
+        ],
+        { BAILIAN_CONFIG_DIR: configDir },
+      );
+      expect(setResult.exitCode, setResult.stderr).toBe(0);
+      expect(parseStdoutJson<{ base_url?: string }>(setResult.stdout).base_url).toBe(
+        "https://proxy.example.com/bailian",
+      );
+      expect(JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")).base_url).toBe(
+        "https://proxy.example.com/bailian",
+      );
+
+      const invalidResult = await runCommandE2e(
+        CONFIG_ROUTES,
+        ["config", "set", "--key", "base_url", "--value", "ftp://example.com/models"],
+        { BAILIAN_CONFIG_DIR: configDir },
+      );
+      expect(invalidResult.exitCode).toBe(2);
+      expect(invalidResult.stderr).toMatch(/Invalid model base URL/);
+    } finally {
+      rmSync(configDir, { recursive: true, force: true });
+    }
+  });
+
   test("config set --dry-run 不落盘（仅输出 would_set）", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
       "config",
@@ -237,6 +274,23 @@ describe("e2e: config", () => {
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{ would_set?: { default_text_model?: string } }>(stdout);
     expect(data.would_set?.default_text_model).toBe("qwen3.7-max");
+  });
+
+  test("config set --dry-run 展示归一化后的 Base URL", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+      "config",
+      "set",
+      "--dry-run",
+      "--key",
+      "base-url",
+      "--value",
+      "https://proxy.example.com/apps/anthropic/?x=1#fragment",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ would_set?: { base_url?: string } }>(stdout);
+    expect(data.would_set?.base_url).toBe("https://proxy.example.com");
   });
 
   test("config set --dry-run 支持 AccessKey 短字段别名", async () => {

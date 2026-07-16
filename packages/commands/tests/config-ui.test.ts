@@ -1,10 +1,11 @@
 import http from "node:http";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vite-plus/test";
 import {
   activateConfigProfile,
+  getConfigPath,
   makeConfigStore,
   writeConfigFile,
   readConfigFile,
@@ -98,10 +99,23 @@ test("鉴权：错误 token 401、非 loopback Host 403", async () => {
 test("POST /api/profile 写命名 profile（timeout 强制为 number），空串清除键", async () => {
   await withServer(async (port) => {
     const save = await httpJson(port, "POST", `/api/profile?token=${TOKEN}`, {
-      body: { name: "stage", data: { api_key: "sk-stage", timeout: "90" } },
+      body: {
+        name: "stage",
+        data: {
+          api_key: "sk-stage",
+          timeout: "90",
+          base_url: "https://proxy.example.com/team/compatible-mode/v1/?x=1#fragment",
+        },
+      },
     });
     expect(save.status).toBe(200);
-    expect(readConfigFile("stage")).toMatchObject({ api_key: "sk-stage", timeout: 90 });
+    expect(readConfigFile("stage")).toMatchObject({
+      api_key: "sk-stage",
+      timeout: 90,
+      base_url: "https://proxy.example.com/team",
+    });
+    const rawConfig = JSON.parse(readFileSync(getConfigPath(), "utf8"));
+    expect(rawConfig.stage.base_url).toBe("https://proxy.example.com/team");
 
     // 空串清除 api_key（整块替换）
     const clear = await httpJson(port, "POST", `/api/profile?token=${TOKEN}`, {

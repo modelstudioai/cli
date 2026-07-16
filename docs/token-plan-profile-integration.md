@@ -1,6 +1,6 @@
 # Token Plan Profile 与激活配置接入方案
 
-> 状态：Token Plan 模型消费 MVP 与 Config 激活状态已实现；通用 Base URL 归一化待实现。
+> 状态：Token Plan 模型消费、Config 激活状态与通用 Base URL 归一化均已实现。
 >
 > 目标分支：`feat/cli-access-token`。
 
@@ -96,7 +96,7 @@ bl auth login \
 https://proxy.example.com/bailian
 ```
 
-紧急交付阶段以“不传 `--base-url`”的推荐登录路径为准，直接使用 `token-plan` 预设中的 canonical 根地址。完整的 SDK Base URL、自定义代理前缀和其他输入来源归一化在独立的通用 Base URL commit 中完成。在该 commit 合入前，如需显式覆盖，用户必须传入已经规范化的根地址，不能传 `/compatible-mode/v1` 或 `/apps/anthropic` 后缀。
+推荐路径仍是不传 `--base-url`，直接使用 `token-plan` 预设中的 canonical 根地址。显式覆盖时可以传服务根地址、自定义代理前缀，或带 `/compatible-mode/v1`、`/apps/anthropic` 的 SDK Base URL；CLI 会在验证和落盘前统一归一化。
 
 ### 2. 单次选择 Config
 
@@ -273,7 +273,7 @@ Selected Profile
 
 ## 通用模型 Base URL 归一化
 
-Base URL 归一化是独立的通用能力，必须在 Token Plan 接入前完成，不能只针对 Token Plan hostname 实现。
+Base URL 归一化是独立的通用能力，不针对 Token Plan hostname 做特判。
 
 ### 语义
 
@@ -480,7 +480,7 @@ feat(config): add active profile selection
 
 激活项选择的是完整 Config，而不是只选择模型消费凭证。激活 `token-plan` 后，Token Plan 管控命令也会从该 Profile 解析 OpenAPI AK/SK，Console 命令也会从该 Profile 解析 Console 凭证。如果相应凭证仍保存在顶层 `default`，用户需要为单次命令显式传入 `--config default`，或将对应凭证域登录到 `token-plan`；CLI 不为不同鉴权域做隐式跨 Profile 回退。
 
-### Commit 5：通用模型 Base URL 归一化（待实现）
+### Commit 5：通用模型 Base URL 归一化（已实现）
 
 建议提交信息：
 

@@ -8,6 +8,7 @@ import {
   type ConfigProfiles,
 } from "./loader.ts";
 import { getConfigPath } from "./paths.ts";
+import { normalizeModelBaseUrl } from "./model-base-url.ts";
 
 /**
  * config 命令族的持久化能力面(lint 限定 commands/config/** 使用)。
@@ -35,7 +36,7 @@ export function makeConfigStore(configName?: string): ConfigStore {
       const existing = readConfigFile(configName) as Record<string, unknown>;
       for (const [key, value] of Object.entries(patch)) {
         if (value === undefined) delete existing[key];
-        else existing[key] = value;
+        else existing[key] = key === "base_url" ? normalizeModelBaseUrl(String(value)) : value;
       }
       await writeConfigFile(existing, configName);
     },

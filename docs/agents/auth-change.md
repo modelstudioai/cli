@@ -43,7 +43,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 解析分工:
 
 - `resolveApiKey()` — `auth: "apiKey"` 命令;优先级 `--api-key` > `DASHSCOPE_API_KEY` > config `api_key`
-- `resolveModelBaseUrl()` — model base URL;优先级 `--base-url` > `DASHSCOPE_BASE_URL` > config `base_url` > `REGIONS.cn`
+- `resolveModelBaseUrl()` — model base URL;优先级 `--base-url` > `DASHSCOPE_BASE_URL` > config `base_url` > `REGIONS.cn`，返回前统一去除 query、fragment、尾斜杠和已知 SDK/API Base 后缀，同时保留自定义网关前缀
 - `--config` 只选择 config 文件 block，不提升该 block 的字段优先级；内置套餐 Profile（当前为 `token-plan`）的预设仅在登录时物化写入，运行时继续走统一的 flag > env > selected config file > 默认值
 - `resolveConsole()` — `auth: "console"` 命令;当前 token 来自 config `access_token`,region/site/switchAgent 来自 flag > config > 默认
 - `resolveOpenApi()` — `auth: "openapi"` 命令;优先级 `--access-key-id/--access-key-secret` > `ALIBABA_CLOUD_ACCESS_KEY_ID/ALIBABA_CLOUD_ACCESS_KEY_SECRET` > config `access_key_*`。兼容读取旧字段 `openapi_access_key_*`,新写入只写短字段

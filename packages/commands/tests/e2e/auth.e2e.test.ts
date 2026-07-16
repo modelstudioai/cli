@@ -175,20 +175,28 @@ describe("e2e: auth", () => {
     expect(stdout).toContain("Would validate and save API key.");
   });
 
+  test("auth login --dry-run 仍校验显式 Base URL", async () => {
+    const { stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, [
+      "auth",
+      "login",
+      "--dry-run",
+      "--api-key",
+      "sk-e2e-dry-run-placeholder",
+      "--base-url",
+      "ftp://example.com/models",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/Invalid model base URL/);
+  });
+
   test("auth login --api-key 验证后原子保存凭证和 Base URL", async () => {
     const validationServer = await startValidationServer();
     const configDir = makeE2eOutputDir("auth-api-key-login");
+    const sdkBaseUrl = `${validationServer.baseUrl}/compatible-mode/v1/?source=login#fragment`;
     try {
       const login = await runCommandE2e(
         AUTH_ROUTES,
-        [
-          "auth",
-          "login",
-          "--api-key",
-          "sk-e2e-placeholder",
-          "--base-url",
-          validationServer.baseUrl,
-        ],
+        ["auth", "login", "--api-key", "sk-e2e-placeholder", "--base-url", sdkBaseUrl],
         {
           BAILIAN_CONFIG_DIR: configDir,
           DASHSCOPE_API_KEY: "",
@@ -212,6 +220,47 @@ describe("e2e: auth", () => {
       >;
       expect(config.api_key).toBe("sk-e2e-placeholder");
       expect(config.base_url).toBe(validationServer.baseUrl);
+    } finally {
+      await validationServer.close();
+    }
+  });
+
+  test("auth login --config token-plan 接受 Anthropic SDK Base URL", async () => {
+    const validationServer = await startValidationServer();
+    const configDir = makeE2eOutputDir("auth-token-plan-anthropic-base-url");
+    try {
+      const login = await runCommandE2e(
+        AUTH_ROUTES,
+        [
+          "auth",
+          "login",
+          "--config",
+          "token-plan",
+          "--api-key",
+          "sk-sp-e2e-placeholder",
+          "--base-url",
+          `${validationServer.baseUrl}/apps/anthropic?source=sdk#fragment`,
+        ],
+        {
+          BAILIAN_CONFIG_DIR: configDir,
+          DASHSCOPE_API_KEY: "",
+          DASHSCOPE_BASE_URL: "",
+        },
+      );
+      expect(login.exitCode, login.stderr).toBe(0);
+      expect(validationServer.requests).toHaveLength(1);
+      expect(validationServer.requests[0].path).toBe("/compatible-mode/v1/chat/completions");
+
+      const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
+        string,
+        unknown
+      >;
+      expect(config["token-plan"]).toMatchObject({
+        api_key: "sk-sp-e2e-placeholder",
+        base_url: validationServer.baseUrl,
+        default_text_model: "qwen3.7-max",
+        default_image_model: "qwen-image-2.0",
+      });
     } finally {
       await validationServer.close();
     }

@@ -1,4 +1,4 @@
-import { BailianError, ExitCode } from "bailian-cli-core";
+import { BailianError, ExitCode, normalizeModelBaseUrl } from "bailian-cli-core";
 
 /** Config keys that `config set` / `config ui` accept for read/write. */
 export const VALID_KEYS = [
@@ -83,6 +83,8 @@ export function validateAndCoerce(key: string, value: string): string | number {
     }
     return num;
   }
+
+  if (resolvedKey === "base_url") return normalizeModelBaseUrl(value);
 
   return value;
 }

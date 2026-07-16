@@ -48,6 +48,26 @@ test("ConfigStore:write 合并写入,undefined 键删除,unset 删键", async ()
   });
 });
 
+test("ConfigStore/AuthStore 写入前归一化 model Base URL", async () => {
+  await inTempConfigDir(async () => {
+    const configStore = makeConfigStore();
+    await configStore.write({
+      base_url: "https://proxy.example.com/bailian/compatible-mode/v1/?query=one#fragment",
+    });
+    expect(readConfigFile().base_url).toBe("https://proxy.example.com/bailian");
+    expect(JSON.parse(readFileSync(getConfigPath(), "utf8")).base_url).toBe(
+      "https://proxy.example.com/bailian",
+    );
+
+    const authStore = makeAuthStore(buildSources({}));
+    await authStore.login({ base_url: "https://token.example.com/apps/anthropic/" });
+    expect(readConfigFile().base_url).toBe("https://token.example.com");
+    expect(JSON.parse(readFileSync(getConfigPath(), "utf8")).base_url).toBe(
+      "https://token.example.com",
+    );
+  });
+});
+
 test("AuthStore:login 合并落盘,logout 按域清理并报告变更", async () => {
   await inTempConfigDir(async () => {
     const store = makeAuthStore({ flags: {}, file: {}, env: {} });

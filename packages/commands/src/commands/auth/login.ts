@@ -1,4 +1,9 @@
-import { defineCommand, generateCLIAccessToken, getModelProfilePreset } from "bailian-cli-core";
+import {
+  defineCommand,
+  generateCLIAccessToken,
+  getModelProfilePreset,
+  normalizeModelBaseUrl,
+} from "bailian-cli-core";
 import { emitBare } from "bailian-cli-runtime";
 import { validateAndPersistApiKey } from "./login-api-key.ts";
 import { resolveConsoleOrigin, runConsoleLogin } from "./login-console.ts";
@@ -88,7 +93,7 @@ export default defineCommand({
     const store = ctx.authStore;
     const deps = { identity, settings, authStore: store };
     const key = flags.apiKey;
-    const baseUrl = flags.baseUrl || undefined;
+    const baseUrl = flags.baseUrl ? normalizeModelBaseUrl(flags.baseUrl) : undefined;
 
     if (flags.console) {
       if (settings.dryRun) {

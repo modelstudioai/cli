@@ -3,6 +3,7 @@ import {
   ExitCode,
   chatPath,
   requestJson,
+  normalizeModelBaseUrl,
   type AuthPersistPatch,
   type AuthStore,
   type Identity,
@@ -49,8 +50,12 @@ export async function validateAndPersistApiKey(
 ): Promise<void> {
   process.stderr.write("Testing key... ");
   const httpDeps = { identity: deps.identity, settings: deps.settings };
+  const baseUrl = normalizeModelBaseUrl(profile.baseUrl);
+  const persistBaseUrl = profile.persistBaseUrl
+    ? normalizeModelBaseUrl(profile.persistBaseUrl)
+    : undefined;
   const requestOpts = {
-    url: profile.baseUrl + chatPath(),
+    url: baseUrl + chatPath(),
     method: "POST",
     headers: { Authorization: `Bearer ${key}` },
     timeout: Math.min(deps.settings.timeout, 30),
@@ -81,7 +86,7 @@ export async function validateAndPersistApiKey(
   await deps.authStore.login({
     ...profile.persistPatch,
     api_key: key,
-    base_url: profile.persistBaseUrl,
+    base_url: persistBaseUrl,
     default_text_model: profile.defaultTextModel,
     default_image_model: profile.defaultImageModel,
   });
