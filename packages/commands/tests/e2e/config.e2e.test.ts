@@ -81,6 +81,29 @@ describe("e2e: config", () => {
     expect(stdout).toMatch(/config_file|timeout|base_url/i);
   });
 
+  test("config show 脱敏 security_token", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "bl-config-show-secret-"));
+    try {
+      const securityToken = "sts-sensitive-token";
+      writeFileSync(
+        join(configDir, "config.json"),
+        JSON.stringify({ security_token: securityToken }, null, 2) + "\n",
+      );
+
+      const { stdout, stderr, exitCode } = await runCommandE2e(
+        CONFIG_ROUTES,
+        ["config", "show", "--output", "json"],
+        { BAILIAN_CONFIG_DIR: configDir },
+      );
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{ security_token?: string }>(stdout);
+      expect(data.security_token).toBe("sts-...oken");
+      expect(stdout).not.toContain(securityToken);
+    } finally {
+      rmSync(configDir, { recursive: true, force: true });
+    }
+  });
+
   test("config set 缺少 --key / --value 时报用法错误并退出 (2)", async () => {
     const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "set", "--quiet"]);
     expect(exitCode, stderr).toBe(2);
