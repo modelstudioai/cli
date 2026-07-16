@@ -1,6 +1,6 @@
 {
   "name": "knowledge-studio-cli",
-  "version": "1.8.2",
+  "version": "1.8.3",
   "description": "Lightweight RAG CLI for Aliyun Model Studio — focused on knowledge-base retrieval.",
   "keywords": [
     "alibaba-cloud",

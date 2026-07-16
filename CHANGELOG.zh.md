@@ -6,6 +6,12 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.8.3] - 2026-07-16
+
+### 修复
+
+- 修复 Windows 上 `bl text chat --messages-file -` 将标准输入当作 `/dev/stdin` 文件路径读取的问题；通过管道传入的 JSON 消息现在可以从标准输入正常读取。（#103）
+
 ## [1.8.2] - 2026-07-15
 
 ### 变更
