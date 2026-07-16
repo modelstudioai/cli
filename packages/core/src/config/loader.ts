@@ -7,6 +7,11 @@ import { ExitCode } from "../errors/codes.ts";
 import type { SourceFlags } from "../types/command.ts";
 
 const CONFIG_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
+const ACTIVE_CONFIG_KEY = "active_config";
+
+function isConfigBlock(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
 
 /**
  * 校验并规范化 `--config <name>`：`undefined`/""/"default" 都视为未指定（等价顶层默认配置）。
@@ -22,7 +27,7 @@ export function normalizeConfigName(name?: unknown): string | undefined {
       "Use letters, numbers, '-' or '_', starting with a letter or number.",
     );
   }
-  if ((CONFIG_FILE_KEYS as readonly string[]).includes(name)) {
+  if ((CONFIG_FILE_KEYS as readonly string[]).includes(name) || name === ACTIVE_CONFIG_KEY) {
     throw new BailianError(
       `Invalid config name "${name}". It conflicts with a config key.`,
       ExitCode.USAGE,
@@ -49,10 +54,26 @@ function readRawConfigObject(): Record<string, unknown> {
   }
 }
 
+/** 读取顶层激活元数据；按需校验命名 Profile 必须实际存在。 */
+function readStoredActiveConfigName(
+  raw: Record<string, unknown>,
+  requireExisting: boolean,
+): string | undefined {
+  const activeConfigName = normalizeConfigName(raw[ACTIVE_CONFIG_KEY]);
+  if (activeConfigName && requireExisting && !isConfigBlock(raw[activeConfigName])) {
+    throw new BailianError(
+      `Active config "${activeConfigName}" does not exist.`,
+      ExitCode.USAGE,
+      "Use --config default to select the default config, then activate an existing profile.",
+    );
+  }
+  return activeConfigName;
+}
+
 function readRawConfigBlock(raw: Record<string, unknown>, configName?: string): unknown {
   if (!configName) return raw;
   const block = raw[configName];
-  return block && typeof block === "object" && !Array.isArray(block) ? block : {};
+  return isConfigBlock(block) ? block : {};
 }
 
 export function readConfigFile(configName?: string): ConfigFile {
@@ -90,6 +111,8 @@ export interface ConfigProfiles {
   default: ConfigFile;
   /** 命名配置 name -> 配置。 */
   named: Record<string, ConfigFile>;
+  /** 当前持久化激活项；default 表示顶层配置。 */
+  active: string;
 }
 
 /**
@@ -100,19 +123,55 @@ export function readConfigProfiles(): ConfigProfiles {
   const raw = readRawConfigObject();
   const named: Record<string, ConfigFile> = {};
   for (const [key, value] of Object.entries(raw)) {
-    if ((CONFIG_FILE_KEYS as readonly string[]).includes(key)) continue;
-    if (value && typeof value === "object" && !Array.isArray(value)) {
+    if ((CONFIG_FILE_KEYS as readonly string[]).includes(key) || key === ACTIVE_CONFIG_KEY)
+      continue;
+    if (isConfigBlock(value)) {
       named[key] = parseConfigFile(value);
     }
   }
-  return { default: parseConfigFile(raw), named };
+  return {
+    default: parseConfigFile(raw),
+    named,
+    active: readStoredActiveConfigName(raw, true) ?? "default",
+  };
+}
+
+function resolveConfigProfileActivation(raw: Record<string, unknown>, name?: unknown): string {
+  const configName = normalizeConfigName(name);
+  if (configName && !isConfigBlock(raw[configName])) {
+    throw new BailianError(
+      `Config "${configName}" does not exist.`,
+      ExitCode.USAGE,
+      "Create or log in to the profile before activating it.",
+    );
+  }
+  return configName ?? "default";
+}
+
+/** 校验激活目标并返回规范化展示名；不写配置。 */
+export function validateConfigProfileActivation(name?: unknown): string {
+  return resolveConfigProfileActivation(readRawConfigObject(), name);
+}
+
+/** 将已存在的命名 Profile（或 default）设为持久化激活项。 */
+export async function activateConfigProfile(name?: unknown): Promise<string> {
+  const raw = readRawConfigObject();
+  const active = resolveConfigProfileActivation(raw, name);
+  raw[ACTIVE_CONFIG_KEY] = active;
+  await writeRawConfigObject(raw);
+  return active;
 }
 
 /** 删除一个命名 profile block；存在才删并回写，返回是否有变更。 */
-export async function deleteConfigProfile(name: string): Promise<boolean> {
+export async function deleteConfigProfile(name?: unknown): Promise<boolean> {
+  const configName = normalizeConfigName(name);
+  if (!configName) {
+    throw new BailianError("Cannot delete the default profile.", ExitCode.USAGE);
+  }
   const raw = readRawConfigObject();
-  if (!(name in raw)) return false;
-  delete raw[name];
+  if (!isConfigBlock(raw[configName])) return false;
+  delete raw[configName];
+  if (readStoredActiveConfigName(raw, false) === configName) raw[ACTIVE_CONFIG_KEY] = "default";
   await writeRawConfigObject(raw);
   return true;
 }
@@ -132,10 +191,13 @@ export interface ResolutionSources {
 }
 
 export function buildSources(flags: Partial<SourceFlags>): ResolutionSources {
-  const configName = normalizeConfigName(flags.config);
+  const raw = readRawConfigObject();
+  const configExplicit = flags.config !== undefined;
+  const activeConfigName = readStoredActiveConfigName(raw, !configExplicit);
+  const configName = configExplicit ? normalizeConfigName(flags.config) : activeConfigName;
   return {
     flags,
-    file: readConfigFile(configName),
+    file: parseConfigFile(readRawConfigBlock(raw, configName)),
     env: process.env,
     configName,
     configPath: getConfigPath(),

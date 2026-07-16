@@ -1,6 +1,6 @@
 # Token Plan Profile 与激活配置接入方案
 
-> 状态：Token Plan 模型消费 MVP 已实现；Config 激活状态和通用 Base URL 归一化待实现。
+> 状态：Token Plan 模型消费 MVP 与 Config 激活状态已实现；通用 Base URL 归一化待实现。
 >
 > 目标分支：`feat/cli-access-token`。
 
@@ -163,7 +163,7 @@ token-plan   *
 
 - 未传 `--config`：展示当前激活的 Config。
 - 传 `--config <name>`：展示指定 Config，不改变激活状态。
-- 输出中包含 `config`、`active` 和 `config_file`。
+- 输出中包含最终选择的 `config` 和 `config_file`；激活状态统一由 `config list` / `config ui` 展示。
 
 `config ui` 应展示当前激活项，并提供激活操作。
 
@@ -453,7 +453,7 @@ feat(cli): enable token-plan text and image consumption
 - [ ] 增加 `auth login --config token-plan --api-key ...`、文本消费和图片消费示例。
 - [ ] 与届时实际上线范围核对模型名称、服务地域、限制条件和用户措辞。
 
-### Commit 4：Config 激活状态与切换命令（待实现）
+### Commit 4：Config 激活状态与切换命令（已实现）
 
 建议提交信息：
 
@@ -468,11 +468,17 @@ feat(config): add active profile selection
 - 保证 `--config default` 能显式覆盖激活项。
 - 新增 `bl config list`。
 - 新增 `bl config use --name <name>`。
-- `config show`、`auth status` 和 `config ui` 展示激活状态。
+- `config show`、`auth status` 展示最终选择项，`config list` 和 `config ui` 展示激活状态。
 - 删除激活 Profile 时处理状态一致性。
 - 验证激活 `token-plan` 后不传 `--config` 的文本和图片请求。
 - 验证临时 `--config default` 不改变激活状态。
 - 更新命令导出、`packages/cli/src/commands.ts`、E2E 和生成 reference。
+
+实现选择：删除当前激活的命名 Profile 时，在同一次配置文件写入中将 `active_config` 重置为 `default`。`auth login --config <name>` 和所有显式 `--config` 仍只作用于本次命令，不修改激活状态。
+
+相关写入交互统一为：`auth login`、`auth logout` 和 `config set` 未传 `--config` 时作用于当前激活项；显式指定名称时作用于该名称。写命令可在成功落盘时创建不存在的 Profile，读命令不创建。Console access token 自动刷新同样限定在当前选中的 Profile，不得回退读写顶层 default。
+
+激活项选择的是完整 Config，而不是只选择模型消费凭证。激活 `token-plan` 后，Token Plan 管控命令也会从该 Profile 解析 OpenAPI AK/SK，Console 命令也会从该 Profile 解析 Console 凭证。如果相应凭证仍保存在顶层 `default`，用户需要为单次命令显式传入 `--config default`，或将对应凭证域登录到 `token-plan`；CLI 不为不同鉴权域做隐式跨 Profile 回退。
 
 ### Commit 5：通用模型 Base URL 归一化（待实现）
 
@@ -532,7 +538,7 @@ vp check
 vp test
 ```
 
-完成改动后，应评估“Profile 预设与激活状态”是否需要沉淀为新的 `docs/agents/config-profile-change.md` 场景清单。
+“Profile 预设与激活状态”的维护要求已沉淀到 `docs/agents/config-profile-change.md`。
 
 ## 最终结论
 

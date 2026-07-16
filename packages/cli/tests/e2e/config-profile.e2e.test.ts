@@ -89,6 +89,9 @@ describe("e2e: named config", () => {
 
       const devStatus = await runCli(["auth", "status", "--config", "dev", "--output", "json"], {
         BAILIAN_CONFIG_DIR: dir,
+        DASHSCOPE_API_KEY: "",
+        ALIBABA_CLOUD_ACCESS_KEY_ID: "",
+        ALIBABA_CLOUD_ACCESS_KEY_SECRET: "",
       });
       expect(devStatus.exitCode, devStatus.stderr).toBe(0);
       const devData = parseStdoutJson<Record<string, unknown>>(devStatus.stdout);
@@ -97,6 +100,9 @@ describe("e2e: named config", () => {
 
       const defaultStatus = await runCli(["auth", "status", "--output", "json"], {
         BAILIAN_CONFIG_DIR: dir,
+        DASHSCOPE_API_KEY: "",
+        ALIBABA_CLOUD_ACCESS_KEY_ID: "",
+        ALIBABA_CLOUD_ACCESS_KEY_SECRET: "",
       });
       expect(defaultStatus.exitCode, defaultStatus.stderr).toBe(0);
       const defaultData = parseStdoutJson<Record<string, unknown>>(defaultStatus.stdout);
@@ -107,7 +113,12 @@ describe("e2e: named config", () => {
 
   test("--config default 等价默认配置", async () => {
     await withTempConfigDir(async (dir) => {
-      writeConfig(dir, { output: "json", api_key: "sk-default" });
+      writeConfig(dir, {
+        active_config: "token-plan",
+        output: "json",
+        api_key: "sk-default",
+        "token-plan": { output: "text", api_key: "sk-token" },
+      });
       const { stdout, stderr, exitCode } = await runCli(
         ["config", "show", "--config", "default", "--output", "json"],
         { BAILIAN_CONFIG_DIR: dir },
@@ -115,7 +126,13 @@ describe("e2e: named config", () => {
       expect(exitCode, stderr).toBe(0);
       const data = parseStdoutJson<Record<string, unknown>>(stdout);
       expect(data.config).toBe("default");
+      expect(data.active).toBeUndefined();
       expect(data.api_key).toBeDefined();
+      const raw = JSON.parse(readFileSync(join(dir, "config.json"), "utf8")) as Record<
+        string,
+        unknown
+      >;
+      expect(raw.active_config).toBe("token-plan");
     });
   });
 
@@ -123,5 +140,25 @@ describe("e2e: named config", () => {
     const { stderr, exitCode } = await runCli(["auth", "status", "--config", "../evil"]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/Invalid config name/);
+  });
+
+  test("auth status 文本输出分行展示选中 Config 和配置文件", async () => {
+    await withTempConfigDir(async (dir) => {
+      writeConfig(dir, {
+        active_config: "token-plan",
+        "token-plan": { api_key: "sk-token" },
+      });
+
+      const result = await runCli(["auth", "status", "--output", "text"], {
+        BAILIAN_CONFIG_DIR: dir,
+        DASHSCOPE_API_KEY: "",
+        ALIBABA_CLOUD_ACCESS_KEY_ID: "",
+        ALIBABA_CLOUD_ACCESS_KEY_SECRET: "",
+      });
+      expect(result.exitCode, result.stderr).toBe(0);
+      expect(result.stdout).toContain("Config: token-plan\n");
+      expect(result.stdout).toContain(`Config file: ${join(dir, "config.json")}\n`);
+      expect(result.stdout).not.toContain("Active config:");
+    });
   });
 });

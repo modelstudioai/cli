@@ -1,3 +1,6 @@
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 import { describe, expect, test } from "vite-plus/test";
 import { parseStdoutJson, runCommandE2e } from "./helpers.ts";
 import { CONFIG_ROUTES } from "./topic-routes.ts";
@@ -17,6 +20,16 @@ describe("e2e: config", () => {
     const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "set", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/set|--key|--value/i);
+  });
+
+  test("config list/use --help 正常退出", async () => {
+    const listResult = await runCommandE2e(CONFIG_ROUTES, ["config", "list", "--help"]);
+    expect(listResult.exitCode, listResult.stderr).toBe(0);
+    expect(listResult.stderr).toMatch(/list|active|profile/i);
+
+    const useResult = await runCommandE2e(CONFIG_ROUTES, ["config", "use", "--help"]);
+    expect(useResult.exitCode, useResult.stderr).toBe(0);
+    expect(useResult.stderr).toMatch(/use|--name|active/i);
   });
 
   test("config ui --help 正常退出", async () => {
@@ -72,6 +85,85 @@ describe("e2e: config", () => {
     const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "set", "--quiet"]);
     expect(exitCode, stderr).toBe(2);
     expect(stderr).toMatch(/--key|--value|Usage:/i);
+  });
+
+  test("config use 缺少 --name 时报用法错误并退出 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "use", "--quiet"]);
+    expect(exitCode, stderr).toBe(2);
+    expect(stderr).toMatch(/--name|Usage:/i);
+  });
+
+  test("config use 持久化激活项，config list 展示激活状态", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "bl-config-use-"));
+    try {
+      const configPath = join(configDir, "config.json");
+      writeFileSync(configPath, JSON.stringify({ dev: { output: "json" } }, null, 2) + "\n");
+      const env = { BAILIAN_CONFIG_DIR: configDir };
+
+      const useResult = await runCommandE2e(
+        CONFIG_ROUTES,
+        ["config", "use", "--name", "dev", "--output", "json"],
+        env,
+      );
+      expect(useResult.exitCode, useResult.stderr).toBe(0);
+      expect(parseStdoutJson<{ active_config?: string }>(useResult.stdout).active_config).toBe(
+        "dev",
+      );
+      expect(JSON.parse(readFileSync(configPath, "utf8")).active_config).toBe("dev");
+
+      const listResult = await runCommandE2e(
+        CONFIG_ROUTES,
+        ["config", "list", "--output", "json"],
+        env,
+      );
+      expect(listResult.exitCode, listResult.stderr).toBe(0);
+      const listData = parseStdoutJson<{
+        active_config?: string;
+        profiles?: string[];
+      }>(listResult.stdout);
+      expect(listData.active_config).toBe("dev");
+      expect(listData.profiles).toEqual(["default", "dev"]);
+    } finally {
+      rmSync(configDir, { recursive: true, force: true });
+    }
+  });
+
+  test("config use --dry-run 校验目标但不修改激活项", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "bl-config-use-dry-run-"));
+    try {
+      const configPath = join(configDir, "config.json");
+      writeFileSync(configPath, JSON.stringify({ dev: { output: "json" } }, null, 2) + "\n");
+      const result = await runCommandE2e(
+        CONFIG_ROUTES,
+        ["config", "use", "--name", "dev", "--dry-run", "--output", "json"],
+        { BAILIAN_CONFIG_DIR: configDir },
+      );
+      expect(result.exitCode, result.stderr).toBe(0);
+      expect(parseStdoutJson<{ would_activate?: string }>(result.stdout).would_activate).toBe(
+        "dev",
+      );
+      expect(JSON.parse(readFileSync(configPath, "utf8")).active_config).toBeUndefined();
+    } finally {
+      rmSync(configDir, { recursive: true, force: true });
+    }
+  });
+
+  test("config use 拒绝不存在的 Profile 且不写入状态", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "bl-config-use-missing-"));
+    try {
+      const configPath = join(configDir, "config.json");
+      writeFileSync(configPath, JSON.stringify({ output: "text" }, null, 2) + "\n");
+      const result = await runCommandE2e(
+        CONFIG_ROUTES,
+        ["config", "use", "--name", "missing", "--output", "json"],
+        { BAILIAN_CONFIG_DIR: configDir },
+      );
+      expect(result.exitCode).toBe(2);
+      expect(result.stderr).toMatch(/does not exist/);
+      expect(JSON.parse(readFileSync(configPath, "utf8")).active_config).toBeUndefined();
+    } finally {
+      rmSync(configDir, { recursive: true, force: true });
+    }
   });
 
   test("config set 非法 key 时退出为用法错误", async () => {

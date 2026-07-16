@@ -47,6 +47,18 @@ bl text chat --config token-plan --message "Hello"
 bl image generate --config token-plan --prompt "A cat"
 ```
 
+To make Token Plan the default Profile for commands that omit `--config`, activate it explicitly after login:
+
+```bash
+bl config use --name token-plan
+bl text chat --message "Hello"
+bl image generate --prompt "A cat"
+```
+
+`auth login --config token-plan` saves that Profile but does not activate it. Use `bl config list` to inspect the active Profile, `bl config use --name default` to switch back, or `--config default` for a one-command override. Config selection follows explicit `--config` > persisted `active_config` > `default`; credential and endpoint fields inside the selected Profile still follow flag > environment > config.
+
+Activation selects the entire Config for every credential domain, not only model consumption. After activating `token-plan`, Token Plan management and Console commands also read their OpenAPI or Console credentials from that Profile. If those credentials remain in `default`, invoke the command with `--config default` or log the corresponding credential domain into `token-plan`.
+
 The built-in `token-plan` profile defaults to:
 
 - Base URL: `https://token-plan.cn-beijing.maas.aliyuncs.com`
@@ -113,6 +125,9 @@ Default: `https://dashscope.aliyuncs.com` (China). Override with any of:
 
 ```bash
 bl config show
+bl config list
+bl config use --name <existing-profile>
+bl config use --name default
 bl config set --key default-text-model --value qwen3.7-max
 bl config set --key output_dir --value ~/bailian-output
 ```

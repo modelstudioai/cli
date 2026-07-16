@@ -62,7 +62,8 @@ export async function refreshAccessToken(opts: {
   settings: Settings;
   baseUrl: string;
 }): Promise<string | null> {
-  const config = readConfigFile();
+  const configName = opts.settings.configName;
+  const config = readConfigFile(configName);
   const accessKeyId = config.access_key_id;
   const accessKeySecret = config.access_key_secret;
   if (!accessKeyId || !accessKeySecret) return null;
@@ -82,9 +83,9 @@ export async function refreshAccessToken(opts: {
   const token: string | undefined = resp.cliAccessToken;
   if (!token) return null;
 
-  const existing = readConfigFile() as Record<string, unknown>;
+  const existing = readConfigFile(configName) as Record<string, unknown>;
   existing.access_token = token;
-  await writeConfigFile(existing);
+  await writeConfigFile(existing, configName);
 
   return token;
 }

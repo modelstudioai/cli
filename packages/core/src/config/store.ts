@@ -1,5 +1,12 @@
 import type { ConfigFile } from "./schema.ts";
-import { readConfigFile, writeConfigFile } from "./loader.ts";
+import {
+  activateConfigProfile,
+  readConfigFile,
+  readConfigProfiles,
+  validateConfigProfileActivation,
+  writeConfigFile,
+  type ConfigProfiles,
+} from "./loader.ts";
 import { getConfigPath } from "./paths.ts";
 
 /**
@@ -12,8 +19,13 @@ export interface ConfigStore {
   write(patch: Partial<ConfigFile>): Promise<void>;
   /** 删除指定键。 */
   unset(keys: (keyof ConfigFile)[]): Promise<void>;
+  /** 读取所有 Profile 与持久化激活项。 */
+  profiles(): ConfigProfiles;
+  /** 激活已存在的命名 Profile；undefined/default 激活顶层配置。 */
+  activate(name?: unknown): Promise<string>;
+  /** 校验激活目标并返回规范化展示名，不落盘。 */
+  validateActivation(name?: unknown): string;
   path: string;
-  configName?: string;
 }
 
 export function makeConfigStore(configName?: string): ConfigStore {
@@ -32,11 +44,11 @@ export function makeConfigStore(configName?: string): ConfigStore {
       for (const key of keys) delete existing[key];
       await writeConfigFile(existing, configName);
     },
+    profiles: () => readConfigProfiles(),
+    activate: (name) => activateConfigProfile(name),
+    validateActivation: (name) => validateConfigProfileActivation(name),
     get path() {
       return getConfigPath();
-    },
-    get configName() {
-      return configName;
     },
   };
 }

@@ -16,7 +16,7 @@ export const PAGE_HTML = `<!doctype html>
   #profileList { list-style: none; margin: 0 0 12px; padding: 0; }
   #profileList li { padding: 8px 10px; border-radius: 6px; cursor: pointer; word-break: break-all; }
   #profileList li:hover { background: #f0f3f6; }
-  #profileList li.active { background: #0969da; color: #fff; }
+  #profileList li.selected { background: #0969da; color: #fff; }
   main { flex: 1; padding: 24px 32px; max-width: 720px; }
   #editorHead { display: flex; align-items: center; justify-content: space-between; }
   h2 { font-size: 18px; margin: 0 0 4px; }
@@ -51,13 +51,14 @@ export const PAGE_HTML = `<!doctype html>
     <form id="form" onsubmit="return false"></form>
     <div class="actions">
       <button id="saveBtn">Save</button>
+      <button id="useBtn">Save &amp; Activate</button>
       <span id="status" class="muted"></span>
     </div>
   </main>
 </div>
 <script>
   var token = new URLSearchParams(location.search).get('token') || '';
-  var KEYS = [], SECRETS = [], DATA = { default: {}, named: {} }, CURRENT = '';
+  var KEYS = [], SECRETS = [], DATA = { default: {}, named: {} }, CURRENT = '', ACTIVE = 'default';
 
   function api(path, opts) {
     var sep = path.indexOf('?') >= 0 ? '&' : '?';
@@ -79,8 +80,9 @@ export const PAGE_HTML = `<!doctype html>
       KEYS = j.keys || [];
       SECRETS = j.secretKeys || [];
       DATA = { default: j.default || {}, named: j.named || {} };
+      ACTIVE = j.activeProfile || 'default';
       document.getElementById('cfgFile').textContent = j.configFile || '';
-      CURRENT = (j.activeProfile && DATA.named[j.activeProfile]) ? j.activeProfile : '';
+      CURRENT = ACTIVE === 'default' ? '' : ACTIVE;
       renderProfiles();
       renderForm();
     }).catch(function (e) { setStatus('Load failed: ' + e, true); });
@@ -92,8 +94,9 @@ export const PAGE_HTML = `<!doctype html>
     var names = [''].concat(Object.keys(DATA.named));
     names.forEach(function (name) {
       var li = document.createElement('li');
-      li.textContent = name === '' ? 'default' : name;
-      if (name === CURRENT) li.className = 'active';
+      var displayName = name === '' ? 'default' : name;
+      li.textContent = displayName + (displayName === ACTIVE ? '  *' : '');
+      if (name === CURRENT) li.className = 'selected';
       li.onclick = function () { CURRENT = name; renderProfiles(); renderForm(); setStatus(''); };
       ul.appendChild(li);
     });
@@ -104,6 +107,10 @@ export const PAGE_HTML = `<!doctype html>
     form.innerHTML = '';
     document.getElementById('currentName').textContent = CURRENT === '' ? 'default (top-level)' : CURRENT;
     document.getElementById('deleteBtn').style.display = CURRENT === '' ? 'none' : '';
+    var selectedName = CURRENT === '' ? 'default' : CURRENT;
+    var useBtn = document.getElementById('useBtn');
+    useBtn.disabled = selectedName === ACTIVE;
+    useBtn.textContent = selectedName === ACTIVE ? 'Active' : 'Save & Activate';
     var data = profileData(CURRENT);
     KEYS.forEach(function (key) {
       var row = document.createElement('div');
@@ -150,29 +157,83 @@ export const PAGE_HTML = `<!doctype html>
     return data;
   }
 
+  function saveProfile(name, data) {
+    var profileData = data === undefined ? collect() : data;
+    var body = JSON.stringify({ name: name, data: profileData });
+    return api('/api/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body
+    })
+      .then(function (response) {
+        return response.json().then(function (json) { return { ok: response.ok, json: json }; });
+      })
+      .then(function (result) {
+        if (!result.ok) {
+          throw new Error((result.json && result.json.error) || 'error');
+        }
+        var saved = result.json.saved || {};
+        if (name === '') DATA.default = saved; else DATA.named[name] = saved;
+        return saved;
+      });
+  }
+
   function save() {
     var name = CURRENT;
-    var body = JSON.stringify({ name: name, data: collect() });
-    api('/api/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body })
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-      .then(function (res) {
-        if (!res.ok) { setStatus('Save failed: ' + ((res.j && res.j.error) || 'error'), true); return; }
-        var saved = res.j.saved || {};
-        if (name === '') DATA.default = saved; else DATA.named[name] = saved;
+    saveProfile(name)
+      .then(function () {
         renderForm();
         setStatus('Saved.');
       })
-      .catch(function (e) { setStatus('Save failed: ' + e, true); });
+      .catch(function (error) { setStatus('Save failed: ' + error.message, true); });
   }
 
   function newProfile() {
     var name = prompt('New profile name (letters, numbers, - or _):');
     if (!name) return;
-    if (DATA.named[name] === undefined) DATA.named[name] = {};
-    CURRENT = name;
-    renderProfiles();
-    renderForm();
-    setStatus('Unsaved new profile. Fill fields and Save.');
+    if (DATA.named[name] !== undefined) {
+      CURRENT = name;
+      renderProfiles();
+      renderForm();
+      setStatus('Profile already exists.');
+      return;
+    }
+    setStatus('Creating profile...');
+    saveProfile(name, {})
+      .then(function () {
+        CURRENT = name;
+        renderProfiles();
+        renderForm();
+        setStatus('Profile created and saved.');
+      })
+      .catch(function (error) { setStatus('Create failed: ' + error.message, true); });
+  }
+
+  function saveAndActivateProfile() {
+    var name = CURRENT === '' ? 'default' : CURRENT;
+    var profileName = CURRENT;
+    setStatus('Saving...');
+    saveProfile(profileName)
+      .then(function () {
+        return api('/api/active', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name })
+        });
+      })
+      .then(function (response) {
+        return response.json().then(function (json) { return { ok: response.ok, json: json }; });
+      })
+      .then(function (result) {
+        if (!result.ok) {
+          throw new Error('Saved, but activation failed: ' + ((result.json && result.json.error) || 'error'));
+        }
+        ACTIVE = result.json.activeProfile || 'default';
+        renderProfiles();
+        renderForm();
+        setStatus('Saved and activated.');
+      })
+      .catch(function (error) { setStatus(error.message || String(error), true); });
   }
 
   function deleteProfile() {
@@ -183,8 +244,9 @@ export const PAGE_HTML = `<!doctype html>
         if (!r.ok) return r.json().then(function (j) { throw new Error(j.error || 'error'); });
         return r.json();
       })
-      .then(function () {
+      .then(function (result) {
         delete DATA.named[CURRENT];
+        ACTIVE = result.activeProfile || 'default';
         CURRENT = '';
         renderProfiles();
         renderForm();
@@ -195,6 +257,7 @@ export const PAGE_HTML = `<!doctype html>
 
   document.getElementById('saveBtn').onclick = save;
   document.getElementById('newBtn').onclick = newProfile;
+  document.getElementById('useBtn').onclick = saveAndActivateProfile;
   document.getElementById('deleteBtn').onclick = deleteProfile;
   load();
 </script>

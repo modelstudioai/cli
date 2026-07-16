@@ -248,6 +248,51 @@ describe("e2e: auth", () => {
     }
   });
 
+  test("auth login 未传 --config 时写当前激活 Config", async () => {
+    const validationServer = await startValidationServer();
+    const configDir = makeE2eOutputDir("auth-active-profile-login");
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify(
+        {
+          active_config: "dev",
+          dev: { base_url: validationServer.baseUrl },
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+
+    const env = {
+      BAILIAN_CONFIG_DIR: configDir,
+      DASHSCOPE_API_KEY: "",
+      DASHSCOPE_BASE_URL: "",
+    };
+    try {
+      const activeLogin = await runCommandE2e(
+        AUTH_ROUTES,
+        ["auth", "login", "--api-key", "sk-active-placeholder"],
+        env,
+      );
+      expect(activeLogin.exitCode, activeLogin.stderr).toBe(0);
+
+      expect(validationServer.requests).toHaveLength(1);
+
+      const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
+        string,
+        unknown
+      >;
+      expect(config.api_key).toBeUndefined();
+      expect(config.active_config).toBe("dev");
+      expect(config.dev).toMatchObject({
+        api_key: "sk-active-placeholder",
+        base_url: validationServer.baseUrl,
+      });
+    } finally {
+      await validationServer.close();
+    }
+  });
+
   test("auth login --api-key 验证失败不留下半配置", async () => {
     const validationServer = await startValidationServer(400);
     const configDir = makeE2eOutputDir("auth-api-key-login-failure");

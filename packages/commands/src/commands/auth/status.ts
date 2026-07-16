@@ -72,7 +72,8 @@ export default defineCommand({
       return;
     }
 
-    emitBare(`Config: ${configName} (${configFile})`);
+    emitBare(`Config: ${configName}`);
+    emitBare(`Config file: ${configFile}`);
     emitBare("Authentication Status:");
     if (apiKey) {
       emitBare(`  API key (model):  ${apiKey.source}  ${apiKey.masked}`);

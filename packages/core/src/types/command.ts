@@ -75,7 +75,7 @@ export const GLOBAL_FLAGS = {
   config: {
     type: "string",
     valueHint: "<name>",
-    description: "Use named config credentials",
+    description: "Use a config profile for this command",
   },
   help: { type: "switch", description: "Show help" },
   version: { type: "switch", description: "Print version" },

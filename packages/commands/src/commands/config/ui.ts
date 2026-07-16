@@ -7,10 +7,9 @@ import {
   BailianError,
   ExitCode,
   normalizeConfigName,
-  readConfigProfiles,
   writeConfigFile,
   deleteConfigProfile,
-  getConfigPath,
+  type ConfigStore,
   type FlagsDef,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
@@ -78,7 +77,7 @@ function buildProfilePatch(data: Record<string, unknown>): Record<string, string
  * - Host header must be a loopback name (anti DNS-rebinding).
  * - every request must carry `?token=` matching the session token.
  */
-export function createConfigUiServer(token: string, activeProfile: string | null): http.Server {
+export function createConfigUiServer(token: string, configStore: ConfigStore): http.Server {
   return http.createServer(async (req, res) => {
     try {
       const host = (req.headers.host || "").split(":")[0];
@@ -105,15 +104,34 @@ export function createConfigUiServer(token: string, activeProfile: string | null
       }
 
       if (path === "/api/config" && method === "GET") {
-        const profiles = readConfigProfiles();
+        const profiles = configStore.profiles();
         sendJson(res, 200, {
-          configFile: getConfigPath(),
+          configFile: configStore.path,
           keys: VALID_KEYS,
           secretKeys: [...SECRET_KEYS],
-          activeProfile,
+          activeProfile: profiles.active,
           default: profiles.default,
           named: profiles.named,
         });
+        return;
+      }
+
+      if (path === "/api/active" && method === "POST") {
+        const raw = await readBody(req);
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          sendJson(res, 400, { error: "invalid JSON body" });
+          return;
+        }
+        const body = parsed as { name?: unknown };
+        try {
+          const activeProfile = await configStore.activate(body.name);
+          sendJson(res, 200, { activeProfile });
+        } catch (err) {
+          sendJson(res, 400, { error: errMessage(err) });
+        }
         return;
       }
 
@@ -146,19 +164,12 @@ export function createConfigUiServer(token: string, activeProfile: string | null
       }
 
       if (path === "/api/profile" && method === "DELETE") {
-        let normalized: string | undefined;
         try {
-          normalized = normalizeConfigName(u.searchParams.get("name") ?? undefined);
+          const deleted = await deleteConfigProfile(u.searchParams.get("name") ?? undefined);
+          sendJson(res, 200, { deleted, activeProfile: configStore.profiles().active });
         } catch (err) {
           sendJson(res, 400, { error: errMessage(err) });
-          return;
         }
-        if (!normalized) {
-          sendJson(res, 400, { error: "Cannot delete the default profile." });
-          return;
-        }
-        const deleted = await deleteConfigProfile(normalized);
-        sendJson(res, 200, { deleted });
         return;
       }
 
@@ -176,7 +187,7 @@ export default defineCommand({
   auth: "none",
   usageArgs: "[--port <port>] [--no-open]",
   flags: FLAGS,
-  exampleArgs: ["", "--port 8787", "--config staging --no-open"],
+  exampleArgs: ["", "--port 8787", "--no-open"],
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
@@ -186,11 +197,12 @@ export default defineCommand({
         {
           host: "127.0.0.1",
           port: flags.port ?? "random free port",
-          config_file: getConfigPath(),
+          config_file: ctx.configStore.path,
           routes: [
             "GET /              -> web UI",
             "GET /api/config    -> read all profiles",
             "POST /api/profile  -> save a profile",
+            "POST /api/active   -> activate a profile",
             "DELETE /api/profile -> delete a named profile",
           ],
         },
@@ -200,8 +212,7 @@ export default defineCommand({
     }
 
     const token = randomBytes(16).toString("hex");
-    const activeProfile = settings.configName ?? null;
-    const server = createConfigUiServer(token, activeProfile);
+    const server = createConfigUiServer(token, ctx.configStore);
 
     let port: number;
     try {
