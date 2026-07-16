@@ -7,6 +7,7 @@ import {
   BailianError,
   ExitCode,
   normalizeConfigName,
+  readConfigFile,
   writeConfigFile,
   deleteConfigProfile,
   type ConfigStore,
@@ -70,6 +71,19 @@ function buildProfilePatch(data: Record<string, unknown>): Record<string, string
     cleaned[resolveKey(k)] = validateAndCoerce(k, value);
   }
   return cleaned;
+}
+
+/** Preserve valid Config fields that the UI does not expose or manage. */
+function mergeUnmanagedProfileFields(
+  existing: Record<string, unknown>,
+  managedPatch: Record<string, string | number>,
+): Record<string, unknown> {
+  const managedKeys = new Set<string>(VALID_KEYS);
+  const merged: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(existing)) {
+    if (!managedKeys.has(key)) merged[key] = value;
+  }
+  return { ...merged, ...managedPatch };
 }
 
 /**
@@ -158,8 +172,10 @@ export function createConfigUiServer(token: string, configStore: ConfigStore): h
           sendJson(res, 400, { error: errMessage(err) });
           return;
         }
-        await writeConfigFile(cleaned, normalized);
-        sendJson(res, 200, { saved: cleaned });
+        const existing = readConfigFile(normalized) as Record<string, unknown>;
+        const saved = mergeUnmanagedProfileFields(existing, cleaned);
+        await writeConfigFile(saved, normalized);
+        sendJson(res, 200, { saved });
         return;
       }
 

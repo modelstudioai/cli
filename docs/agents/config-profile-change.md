@@ -44,6 +44,7 @@
 - `config list` 标识所有 Profile 与当前激活项。
 - `config show`、`auth status` 只输出本次最终选择的 `config` 和 `config_file`，不重复携带激活状态。
 - `config ui` 从持久化元数据读取激活项，提供显式激活操作，并在删除激活项后刷新为 `default`。
+- `config ui` 保存时只替换 UI 管理的字段；Profile 中未展示但仍属于 `ConfigFile` 的合法字段必须保留，不能因打开并保存 UI 而丢失。
 - 同步 E2E topic routes、Skill setup 和自动生成 reference。
 
 ## 6. 最小测试矩阵
@@ -57,6 +58,7 @@
 - 登录、退出、`config set` 分别覆盖“当前激活项”和“显式不存在名称成功后创建”。
 - Console token 自动刷新不从其他 Profile 借用 AK/SK，也不把新 token 写入其他 Profile。
 - `config list/show/use/ui`、`auth status` 和依赖默认模型的消费命令覆盖对应 E2E。
+- `config ui` 覆盖保存时保留未管理字段，并继续允许空值清除 UI 管理字段。
 
 ## 7. 完成检查
 

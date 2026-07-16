@@ -128,6 +128,47 @@ test("POST /api/profile 写命名 profile（timeout 强制为 number），空串
   });
 });
 
+test("POST /api/profile 保留 UI 未管理字段，同时替换 UI 管理字段", async () => {
+  await withServer(async (port) => {
+    await writeConfigFile(
+      {
+        api_key: "sk-old",
+        output: "json",
+        console_site: "international",
+        console_region: "ap-southeast-1",
+        console_switch_agent: 42,
+        telemetry: false,
+      },
+      "stage",
+    );
+
+    const save = await httpJson(port, "POST", `/api/profile?token=${TOKEN}`, {
+      body: { name: "stage", data: { api_key: "sk-new" } },
+    });
+    expect(save.status).toBe(200);
+
+    const profile = readConfigFile("stage");
+    expect(profile).toMatchObject({
+      api_key: "sk-new",
+      console_site: "international",
+      console_region: "ap-southeast-1",
+      console_switch_agent: 42,
+      telemetry: false,
+    });
+    expect(profile.output).toBeUndefined();
+
+    const rawConfig = JSON.parse(readFileSync(getConfigPath(), "utf8"));
+    expect(rawConfig.stage).toMatchObject({
+      api_key: "sk-new",
+      console_site: "international",
+      console_region: "ap-southeast-1",
+      console_switch_agent: 42,
+      telemetry: false,
+    });
+    expect(rawConfig.stage.output).toBeUndefined();
+  });
+});
+
 test("New profile 立即保存空 Profile，其他配置读取可以看到", async () => {
   await withServer(async (port) => {
     const create = await httpJson(port, "POST", `/api/profile?token=${TOKEN}`, {
