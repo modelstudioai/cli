@@ -28,6 +28,15 @@ export function isConsoleE2EReady(): boolean {
   }
 }
 
+/** OpenAPI AK/SK 真实 E2E 就绪检查：只使用 `.env` / 进程环境中的完整凭证对。 */
+export function isOpenApiE2EReady(): boolean {
+  if (!isBailianE2EEnabled()) return false;
+  return Boolean(
+    process.env.ALIBABA_CLOUD_ACCESS_KEY_ID?.trim() &&
+    process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET?.trim(),
+  );
+}
+
 /** 语音与图像（可设 `BAILIAN_E2E_MEDIA=0` 跳过） */
 export function isBailianE2EMediaEnabled(): boolean {
   if (process.env.BAILIAN_E2E_MEDIA === "0") return false;

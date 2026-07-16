@@ -1,10 +1,12 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
+import { tmpdir } from "os";
 import { join } from "path";
 import { describe, expect, test } from "vite-plus/test";
 import {
   isDashScopeE2EReady,
+  isOpenApiE2EReady,
   makeE2eOutputDir,
   parseStdoutJson,
   runCommandE2e,
@@ -47,9 +49,7 @@ async function startValidationServer(statusCode = 200): Promise<ValidationServer
   };
 }
 
-/**
- * Auth 相关 E2E：只验证 CLI 进程能正常解析参数并退出。
- */
+/** Auth E2E：本地参数/持久化契约默认执行；真实鉴权请求按对应 readiness gate 执行。 */
 
 describe("e2e: auth", () => {
   test("auth login --help 正常退出", async () => {
@@ -114,6 +114,35 @@ describe("e2e: auth", () => {
     ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/Provide --access-key-id and --access-key-secret with --open-api/);
+  });
+
+  test("auth login --open-api --dry-run 使用 placeholder 时不请求服务端、不写配置", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "bl-auth-openapi-dry-run-"));
+    try {
+      const { stdout, stderr, exitCode } = await runCommandE2e(
+        AUTH_ROUTES,
+        [
+          "auth",
+          "login",
+          "--open-api",
+          "--access-key-id",
+          "LTAI-e2e-placeholder",
+          "--access-key-secret",
+          "secret-e2e-placeholder",
+          "--dry-run",
+        ],
+        {
+          BAILIAN_CONFIG_DIR: configDir,
+          ALIBABA_CLOUD_ACCESS_KEY_ID: "",
+          ALIBABA_CLOUD_ACCESS_KEY_SECRET: "",
+        },
+      );
+      expect(exitCode, stderr).toBe(0);
+      expect(stdout).toContain("Would save OpenAPI AK/SK credentials");
+      expect(existsSync(join(configDir, "config.json"))).toBe(false);
+    } finally {
+      rmSync(configDir, { recursive: true, force: true });
+    }
   });
 
   test("auth logout --help 正常退出", async () => {
@@ -458,57 +487,73 @@ describe("e2e: auth", () => {
     expect(denied.stderr).toMatch(/Unknown flag.*--access-key-id/);
   });
 
-  test("auth login --open-api 持久化 OpenAPI AK/SK 并支持单独 logout", async () => {
-    const configDir = makeE2eOutputDir("auth-openapi-login");
-    const env = {
-      BAILIAN_CONFIG_DIR: configDir,
-      ALIBABA_CLOUD_ACCESS_KEY_ID: "",
-      ALIBABA_CLOUD_ACCESS_KEY_SECRET: "",
-    };
+  test.skipIf(!isOpenApiE2EReady())(
+    "auth login --open-api 使用环境中的真实 AK/SK，持久化后支持单独 logout",
+    async () => {
+      const accessKeyId = process.env.ALIBABA_CLOUD_ACCESS_KEY_ID!.trim();
+      const accessKeySecret = process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET!.trim();
+      const configDir = mkdtempSync(join(tmpdir(), "bl-auth-openapi-login-"));
+      const env = {
+        BAILIAN_CONFIG_DIR: configDir,
+        ALIBABA_CLOUD_ACCESS_KEY_ID: "",
+        ALIBABA_CLOUD_ACCESS_KEY_SECRET: "",
+      };
 
-    const login = await runCommandE2e(
-      AUTH_ROUTES,
-      [
-        "auth",
-        "login",
-        "--open-api",
-        "--access-key-id",
-        "LTAI-e2e-login-placeholder",
-        "--access-key-secret",
-        "secret-e2e-login-placeholder",
-      ],
-      env,
-    );
-    expect(login.exitCode, login.stderr).toBe(0);
-    expect(login.stderr).toMatch(/OpenAPI credentials saved/);
+      try {
+        const login = await runCommandE2e(
+          AUTH_ROUTES,
+          [
+            "auth",
+            "login",
+            "--open-api",
+            "--access-key-id",
+            accessKeyId,
+            "--access-key-secret",
+            accessKeySecret,
+          ],
+          env,
+        );
+        expect(login.exitCode, login.stderr).toBe(0);
+        expect(login.stderr).toMatch(/OpenAPI credentials saved/);
 
-    const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
-      string,
-      unknown
-    >;
-    expect(config.access_key_id).toBe("LTAI-e2e-login-placeholder");
-    expect(config.access_key_secret).toBe("secret-e2e-login-placeholder");
-    expect(config.openapi_access_key_id).toBeUndefined();
-    expect(config.openapi_access_key_secret).toBeUndefined();
+        const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
+          string,
+          unknown
+        >;
+        // 只断言布尔结果，避免失败 diff 把真实凭证打印到测试日志。
+        expect(config.access_key_id === accessKeyId).toBe(true);
+        expect(config.access_key_secret === accessKeySecret).toBe(true);
+        expect(config.openapi_access_key_id).toBeUndefined();
+        expect(config.openapi_access_key_secret).toBeUndefined();
 
-    const status = await runCommandE2e(AUTH_ROUTES, ["auth", "status", "--output", "json"], env);
-    expect(status.exitCode, status.stderr).toBe(0);
-    const data = parseStdoutJson<{
-      authenticated?: boolean;
-      openapi?: { source?: string; access_key_id?: string; access_key_secret?: string };
-    }>(status.stdout);
-    expect(data.authenticated).toBe(true);
-    expect(data.openapi?.source).toBe("config");
-    expect(data.openapi?.access_key_id).not.toBe("LTAI-e2e-login-placeholder");
-    expect(data.openapi?.access_key_secret).not.toBe("secret-e2e-login-placeholder");
+        const status = await runCommandE2e(
+          AUTH_ROUTES,
+          ["auth", "status", "--output", "json"],
+          env,
+        );
+        expect(status.exitCode, status.stderr).toBe(0);
+        const data = parseStdoutJson<{
+          authenticated?: boolean;
+          openapi?: { source?: string; access_key_id?: string; access_key_secret?: string };
+        }>(status.stdout);
+        expect(data.authenticated).toBe(true);
+        expect(data.openapi?.source).toBe("config");
+        expect(data.openapi?.access_key_id === accessKeyId).toBe(false);
+        expect(data.openapi?.access_key_secret === accessKeySecret).toBe(false);
 
-    const logout = await runCommandE2e(AUTH_ROUTES, ["auth", "logout", "--open-api"], env);
-    expect(logout.exitCode, logout.stderr).toBe(0);
-    expect(logout.stderr).toMatch(/Cleared access_key_id/);
+        const logout = await runCommandE2e(AUTH_ROUTES, ["auth", "logout", "--open-api"], env);
+        expect(logout.exitCode, logout.stderr).toBe(0);
+        expect(logout.stderr).toMatch(/Cleared access_key_id/);
 
-    const after = await runCommandE2e(AUTH_ROUTES, ["auth", "status", "--output", "json"], env);
-    expect(after.exitCode, after.stderr).toBe(0);
-    const afterData = parseStdoutJson<{ authenticated?: boolean; openapi?: unknown }>(after.stdout);
-    expect(afterData.openapi).toBeUndefined();
-  });
+        const after = await runCommandE2e(AUTH_ROUTES, ["auth", "status", "--output", "json"], env);
+        expect(after.exitCode, after.stderr).toBe(0);
+        const afterData = parseStdoutJson<{ authenticated?: boolean; openapi?: unknown }>(
+          after.stdout,
+        );
+        expect(afterData.openapi).toBeUndefined();
+      } finally {
+        rmSync(configDir, { recursive: true, force: true });
+      }
+    },
+  );
 });
