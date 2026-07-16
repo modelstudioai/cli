@@ -7,8 +7,8 @@ import { describeAuthState, resolveModelBaseUrl } from "./resolver.ts";
 
 const LOGOUT_KEYS = {
   console: ["access_token"],
-  openapi: ["access_key_id", "access_key_secret"],
-  all: ["api_key", "access_token", "access_key_id", "access_key_secret"],
+  openapi: ["access_key_id", "access_key_secret", "security_token"],
+  all: ["api_key", "access_token", "access_key_id", "access_key_secret", "security_token"],
 } as const;
 
 /** 登录允许落盘的键:凭证本体 + 登录回调携带的连接/作用域字段。 */
@@ -45,8 +45,6 @@ export interface AuthStore {
   logout(scope: "console" | "openapi" | "all"): Promise<boolean>;
   /** 实际写入的 config.json 路径(不受命名配置影响,一直是同一个文件)。 */
   path: string;
-  /** 当前命名配置名(`--config <name>` 解析后);未指定或 `default` 时为 undefined。 */
-  configName?: string;
 }
 
 export function makeAuthStore(sources: ResolutionSources): AuthStore {
@@ -58,7 +56,7 @@ export function makeAuthStore(sources: ResolutionSources): AuthStore {
       return {
         apiKey: !!file.api_key,
         console: !!file.access_token,
-        openapi: !!(file.access_key_id || file.access_key_secret),
+        openapi: !!(file.access_key_id || file.access_key_secret || file.security_token),
         baseUrl: file.base_url,
       };
     },
@@ -81,9 +79,6 @@ export function makeAuthStore(sources: ResolutionSources): AuthStore {
     },
     get path() {
       return sources.configPath ?? getConfigPath();
-    },
-    get configName() {
-      return configName;
     },
   };
 }

@@ -86,10 +86,10 @@ bl auth login --open-api --access-key-id LTAIxxxxx --access-key-secret xxxxx
 
 #### Flags
 
-| Flag         | Type   | Required | Description                                                         |
-| ------------ | ------ | -------- | ------------------------------------------------------------------- |
-| `--console`  | switch | no       | Only clear the console access_token, keep api_key intact            |
-| `--open-api` | switch | no       | Only clear OpenAPI AK/SK credentials, keep other credentials intact |
+| Flag         | Type   | Required | Description                                                             |
+| ------------ | ------ | -------- | ----------------------------------------------------------------------- |
+| `--console`  | switch | no       | Only clear the console access_token, keep api_key intact                |
+| `--open-api` | switch | no       | Only clear OpenAPI AK/SK/STS credentials, keep other credentials intact |
 
 #### Examples
 

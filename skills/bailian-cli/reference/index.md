@@ -18,9 +18,11 @@ Use this index for the full quick index and global flags.
 | `bl auth logout`                | Clear stored credentials                                                                                                        | [auth.md](auth.md)             |
 | `bl auth status`                | Show current authentication state                                                                                               | [auth.md](auth.md)             |
 | `bl bootstrap`                  | Initialize Bailian workspace and activate postpaid services                                                                     | [bootstrap.md](bootstrap.md)   |
+| `bl config list`                | List config profiles and show the active profile                                                                                | [config.md](config.md)         |
 | `bl config set`                 | Set a config value                                                                                                              | [config.md](config.md)         |
 | `bl config show`                | Display current configuration                                                                                                   | [config.md](config.md)         |
 | `bl config ui`                  | Open a local web UI to manage config profiles                                                                                   | [config.md](config.md)         |
+| `bl config use`                 | Set the active config profile                                                                                                   | [config.md](config.md)         |
 | `bl console call`               | Call a Bailian console API via the CLI gateway                                                                                  | [console.md](console.md)       |
 | `bl dataset delete`             | Delete a dataset file by ID                                                                                                     | [dataset.md](dataset.md)       |
 | `bl dataset get`                | Get details of a single dataset file                                                                                            | [dataset.md](dataset.md)       |
@@ -105,7 +107,7 @@ Use this index for the full quick index and global flags.
 | `app`        | `call`, `list`                                                                                                                           | [app.md](app.md)               |
 | `auth`       | `generate-access-token`, `login`, `logout`, `status`                                                                                     | [auth.md](auth.md)             |
 | `bootstrap`  | `(root)`                                                                                                                                 | [bootstrap.md](bootstrap.md)   |
-| `config`     | `set`, `show`, `ui`                                                                                                                      | [config.md](config.md)         |
+| `config`     | `list`, `set`, `show`, `ui`, `use`                                                                                                       | [config.md](config.md)         |
 | `console`    | `call`                                                                                                                                   | [console.md](console.md)       |
 | `dataset`    | `delete`, `get`, `list`, `upload`, `validate`                                                                                            | [dataset.md](dataset.md)       |
 | `deploy`     | `audio create`, `delete`, `get`, `image create`, `list`, `models`, `scale`, `text create`, `update`                                      | [deploy.md](deploy.md)         |
@@ -134,16 +136,16 @@ Use this index for the full quick index and global flags.
 
 Available on every command (in addition to command-specific flags):
 
-| Flag                  | Type   | Required | Description                         |
-| --------------------- | ------ | -------- | ----------------------------------- |
-| `--output <format>`   | string | no       | Output format: text, json           |
-| `--timeout <seconds>` | number | no       | Request timeout                     |
-| `--quiet`             | switch | no       | Suppress non-essential output       |
-| `--verbose`           | switch | no       | Print HTTP request/response details |
-| `--dry-run`           | switch | no       | Dry run mode                        |
-| `--config <name>`     | string | no       | Use named config credentials        |
-| `--help`              | switch | no       | Show help                           |
-| `--version`           | switch | no       | Print version                       |
+| Flag                  | Type   | Required | Description                           |
+| --------------------- | ------ | -------- | ------------------------------------- |
+| `--output <format>`   | string | no       | Output format: text, json             |
+| `--timeout <seconds>` | number | no       | Request timeout                       |
+| `--quiet`             | switch | no       | Suppress non-essential output         |
+| `--verbose`           | switch | no       | Print HTTP request/response details   |
+| `--dry-run`           | switch | no       | Dry run mode                          |
+| `--config <name>`     | string | no       | Use a config profile for this command |
+| `--help`              | switch | no       | Show help                             |
+| `--version`           | switch | no       | Print version                         |
 
 ## Model auth flags
 

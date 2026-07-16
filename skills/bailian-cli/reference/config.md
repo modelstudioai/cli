@@ -7,13 +7,37 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command          | Description                                   |
-| ---------------- | --------------------------------------------- |
-| `bl config set`  | Set a config value                            |
-| `bl config show` | Display current configuration                 |
-| `bl config ui`   | Open a local web UI to manage config profiles |
+| Command          | Description                                      |
+| ---------------- | ------------------------------------------------ |
+| `bl config list` | List config profiles and show the active profile |
+| `bl config set`  | Set a config value                               |
+| `bl config show` | Display current configuration                    |
+| `bl config ui`   | Open a local web UI to manage config profiles    |
+| `bl config use`  | Set the active config profile                    |
 
 ## Command details
+
+### `bl config list`
+
+| Field           | Value                                            |
+| --------------- | ------------------------------------------------ |
+| **Name**        | `config list`                                    |
+| **Description** | List config profiles and show the active profile |
+| **Usage**       | `bl config list`                                 |
+
+#### Flags
+
+_No command-specific flags._
+
+#### Examples
+
+```bash
+bl config list
+```
+
+```bash
+bl config list --output json
+```
 
 ### `bl config set`
 
@@ -92,5 +116,29 @@ bl config ui --port 8787
 ```
 
 ```bash
-bl config ui --config staging --no-open
+bl config ui --no-open
+```
+
+### `bl config use`
+
+| Field           | Value                         |
+| --------------- | ----------------------------- |
+| **Name**        | `config use`                  |
+| **Description** | Set the active config profile |
+| **Usage**       | `bl config use --name <name>` |
+
+#### Flags
+
+| Flag            | Type   | Required | Description                       |
+| --------------- | ------ | -------- | --------------------------------- |
+| `--name <name>` | string | yes      | Existing profile name, or default |
+
+#### Examples
+
+```bash
+bl config use --name token-plan
+```
+
+```bash
+bl config use --name default
 ```
