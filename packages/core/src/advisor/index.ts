@@ -7,6 +7,7 @@ export { recallCandidates } from "./recall.ts";
 export { recallSemantic, isSemanticAvailable } from "./recall-semantic.ts";
 export type { RecommendOptions } from "./recommend.ts";
 export { buildDocLink, rankModels } from "./recommend.ts";
+export { maybeSyncWikiData } from "./sync.ts";
 export type { ModelSource } from "./sources/types.ts";
 export type {
   Budget,

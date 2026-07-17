@@ -1,6 +1,5 @@
-import { cpSync, existsSync, mkdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { getConfigDir } from "../../config/paths.ts";
 import type { ModelPrice, ModelProfile, QpmLimit } from "../types.ts";
 import type { ModelSource } from "./types.ts";
@@ -13,12 +12,9 @@ function getCatalogDir(): string {
 }
 
 function getCatalogPath(): string {
-  return join(getCatalogDir(), MODELS_FILE);
-}
-
-function getMonorepoModelsDir(): string {
-  const coreDir = dirname(fileURLToPath(import.meta.url));
-  return join(coreDir, "../../../../../skills/bailian-docs-llm-wiki/models");
+  // Full-package layout keeps the `models/` subdir (raw/, wiki/, models/, …),
+  // so models.jsonl lives at <skill>/models/models.jsonl — not at the skill root.
+  return join(getCatalogDir(), "models", MODELS_FILE);
 }
 
 function fromJsonlRecord(raw: Record<string, unknown>): ModelProfile | null {
@@ -62,41 +58,24 @@ function readJsonlModels(filePath: string): ModelProfile[] {
   return models;
 }
 
-function installFromMonorepo(): boolean {
-  const src = getMonorepoModelsDir();
-  if (!existsSync(join(src, MODELS_FILE))) return false;
-  const dest = getCatalogDir();
-  try {
-    mkdirSync(dest, { recursive: true });
-    cpSync(src, dest, { recursive: true });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export interface CatalogSourceOptions {
   onPrepareStart?: () => void;
 }
 
 export class CatalogSource implements ModelSource {
   readonly name = "catalog";
-  private options: CatalogSourceOptions;
 
-  constructor(options?: CatalogSourceOptions) {
-    this.options = options ?? {};
-  }
+  // Options retained for API compatibility. Data is now always provisioned by
+  // the CLI postinstall hook and refreshed by advisor sync, so the previous
+  // `onPrepareStart` install callback is obsolete.
+  constructor(_options?: CatalogSourceOptions) {}
 
   available(): boolean {
     return existsSync(getCatalogPath());
   }
 
   async load(): Promise<ModelProfile[]> {
-    if (!this.available()) {
-      this.options.onPrepareStart?.();
-      const installed = installFromMonorepo();
-      if (!installed) return [];
-    }
+    if (!this.available()) return [];
     return readJsonlModels(getCatalogPath());
   }
 }
