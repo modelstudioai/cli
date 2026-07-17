@@ -10,21 +10,14 @@
 
 ### 新增
 
-- **CLI Access Token 自动化** —— 新增 `bl auth generate-access-token`；OpenAPI 登录可获取并保存 Console Access Token，Console 请求可使用已保存的 AK/SK 自动刷新过期 Token。
-- **`bl workspace init`** —— 通过一条工作流初始化百炼工作空间、创建控制台用户并开通所需的后付费服务。
-- **命名 Config Profile** —— 新增相互隔离的命名 Profile、持久化激活状态，以及用于管理 Profile 的 `bl config list`、`bl config use` 和 `bl config ui`。
-- **Token Plan 模型 Profile** —— `bl auth login --config token-plan --api-key ...` 会物化 Token Plan 内置接入地址与默认模型配置，供模型命令直接使用。
-- **STS 凭证** —— OpenAPI 鉴权现支持可选 Security Token，并在签名请求中自动携带。
-
-### 变更
-
-- `bl auth login --config <name>` 成功后会自动激活该 Profile；验证失败和 dry-run 不改变当前激活项。
-- 模型 Base URL 现在会在命令行参数、环境变量和 Config Profile 各来源中统一归一化。
+- **支持 Token Plan** —— 登录后即可直接调用支持的模型，无需手动配置接入地址。
+- **命名 Config Profile** —— 支持创建、切换和管理相互隔离的配置，登录后会自动激活当前 Profile。
+- **Console Access Token 自动化** —— 支持生成并自动刷新 Console Access Token。
+- **`bl workspace init`** —— 一站式完成百炼工作空间初始化和所需服务开通。
 
 ### 修复
 
-- `bl config show` 现在会脱敏全部支持的密钥字段。
-- 配置更新会保留未管理字段，退出登录会完整清理包括 STS Security Token 在内的 OpenAPI 凭证。
+- 提升配置安全性与一致性，包括密钥脱敏和自定义配置字段保留。
 
 ## [1.8.3] - 2026-07-16
 
