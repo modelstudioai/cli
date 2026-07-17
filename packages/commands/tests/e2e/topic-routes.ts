@@ -15,6 +15,9 @@ export const TEXT_CHAT_ROUTES: E2eRouteExports = { "text chat": "textChat" };
 export const CONFIG_ROUTES: E2eRouteExports = {
   "config show": "configShow",
   "config set": "configSet",
+  "config list": "configList",
+  "config use": "configUse",
+  "config ui": "configUi",
 };
 
 export const MEMORY_ROUTES: E2eRouteExports = {

@@ -6,6 +6,19 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.9.0] - 2026-07-17
+
+### 新增
+
+- **支持 Token Plan** —— 登录后即可直接调用支持的模型，无需手动配置接入地址。
+- **命名 Config Profile** —— 支持创建、切换和管理相互隔离的配置，登录后会自动激活当前 Profile。
+- **Console Access Token 自动化** —— 支持生成并自动刷新 Console Access Token。
+- **`bl workspace init`** —— 一站式完成百炼工作空间初始化和所需服务开通。
+
+### 修复
+
+- 提升配置安全性与一致性，包括密钥脱敏和自定义配置字段保留。
+
 ## [1.8.3] - 2026-07-16
 
 ### 修复

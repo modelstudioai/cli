@@ -72,6 +72,11 @@ export const GLOBAL_FLAGS = {
   quiet: { type: "switch", description: "Suppress non-essential output" },
   verbose: { type: "switch", description: "Print HTTP request/response details" },
   dryRun: { type: "switch", description: "Dry run mode" },
+  config: {
+    type: "string",
+    valueHint: "<name>",
+    description: "Use a config profile for this command",
+  },
   help: { type: "switch", description: "Show help" },
   version: { type: "switch", description: "Print version" },
 } satisfies FlagsDef;
@@ -131,6 +136,11 @@ export const OPENAPI_AUTH_FLAGS = {
     type: "string",
     valueHint: "<key>",
     description: "Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET)",
+  },
+  securityToken: {
+    type: "string",
+    valueHint: "<token>",
+    description: "Alibaba Cloud STS Security Token (env: ALIBABA_CLOUD_SECURITY_TOKEN)",
   },
 } satisfies FlagsDef;
 

@@ -7,29 +7,94 @@ import {
   resolveModelBaseUrl,
   resolveOpenApi,
 } from "../src/auth/resolver.ts";
+import { getModelProfilePreset } from "../src/config/profile-presets.ts";
 
-// 行为锁定:锁住各字段的 flag/env/file 优先级链,统一为 flag>env>file>默认
-// (baseUrl 原为 flag>file>env,2026-07 前置 commit 翻转)。buildSettings 与
-// resolver 都是纯函数,sources 直接构造,无需环境隔离。
+// 行为锁定:所有配置字段统一保持 flag>env>selected file>默认。`--config` 只选择
+// file block,不提升该 block 的字段优先级。Profile 预设只在登录写入阶段使用。
+// buildSettings 与 resolver 都是纯函数,sources 直接构造,无需环境隔离。
 
 function src(s: {
   flags?: ResolutionSources["flags"];
   env?: Record<string, string>;
   file?: ConfigFile;
+  configName?: string;
 }): ResolutionSources {
-  return { flags: s.flags ?? {}, file: s.file ?? {}, env: s.env ?? {} };
+  return {
+    flags: s.flags ?? {},
+    file: s.file ?? {},
+    env: s.env ?? {},
+    configName: s.configName,
+  };
 }
 
 const resolve = (s: Parameters<typeof src>[0]): Settings => buildSettings(src(s));
 
-test("baseUrl:flag > env > file > 默认(原为 flag>file>env,已归一)", () => {
-  const flags = { baseUrl: "https://flag.example.com" };
-  const env = { DASHSCOPE_BASE_URL: "https://env.example.com" };
-  const file: ConfigFile = { base_url: "https://file.example.com" };
+test("token-plan Profile 预设保持固定", () => {
+  expect(getModelProfilePreset("token-plan")).toEqual({
+    baseUrl: "https://token-plan.cn-beijing.maas.aliyuncs.com",
+    defaultTextModel: "qwen3.7-max",
+    defaultImageModel: "qwen-image-2.0",
+  });
+});
+
+test("baseUrl:flag > env > file > 默认，所有来源统一归一化", () => {
+  const flags = { baseUrl: "https://flag.example.com/compatible-mode/v1?source=flag" };
+  const env = { DASHSCOPE_BASE_URL: "https://env.example.com/apps/anthropic#env" };
+  const file: ConfigFile = { base_url: "https://file.example.com/gateway/" };
   expect(resolveModelBaseUrl(src({ flags, env, file }))).toBe("https://flag.example.com");
   expect(resolveModelBaseUrl(src({ env, file }))).toBe("https://env.example.com");
-  expect(resolveModelBaseUrl(src({ file }))).toBe("https://file.example.com");
+  expect(resolveModelBaseUrl(src({ file }))).toBe("https://file.example.com/gateway");
   expect(resolveModelBaseUrl(src({}))).toBe("https://dashscope.aliyuncs.com");
+});
+
+test("baseUrl:非法 flag/env 在 resolver 边界报 usage error", () => {
+  expect(() => resolveModelBaseUrl(src({ flags: { baseUrl: "not-a-url" } }))).toThrow(
+    /Invalid model base URL/,
+  );
+  expect(() =>
+    resolveModelBaseUrl(src({ env: { DASHSCOPE_BASE_URL: "file:///tmp/model" } })),
+  ).toThrow(/Invalid model base URL/);
+});
+
+test("命名 config 仍保持 flag > env > selected file", () => {
+  const env = {
+    DASHSCOPE_BASE_URL: "https://env.example.com",
+    DASHSCOPE_API_KEY: "sk-env",
+  };
+  const sources = src({
+    configName: "token-plan",
+    env,
+    file: {
+      api_key: "sk-token-plan",
+      base_url: "https://profile.example.com",
+      default_text_model: "custom-text",
+      default_image_model: "custom-image",
+    },
+  });
+  expect(resolveModelBaseUrl(sources)).toBe("https://env.example.com");
+  expect(resolveApiKey(sources)).toMatchObject({
+    token: "sk-env",
+    baseUrl: "https://env.example.com",
+    source: "env",
+  });
+  expect(buildSettings(sources)).toMatchObject({
+    defaultTextModel: "custom-text",
+    defaultImageModel: "custom-image",
+  });
+  expect(
+    resolveApiKey(
+      src({
+        configName: "token-plan",
+        flags: { apiKey: "sk-flag", baseUrl: "https://flag.example.com" },
+        env,
+        file: sources.file,
+      }),
+    ),
+  ).toMatchObject({
+    token: "sk-flag",
+    baseUrl: "https://flag.example.com",
+    source: "flag",
+  });
 });
 
 test("output:flag > env > file > text", () => {

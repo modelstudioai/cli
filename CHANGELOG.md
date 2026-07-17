@@ -6,6 +6,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.9.0] - 2026-07-17
+
+### Added
+
+- **Token Plan support** — log in and call supported models directly without manually configuring the endpoint.
+- **Named Config Profiles** — create, switch, and manage isolated configurations; logging in to a named Profile activates it automatically.
+- **Console Access Token automation** — generate and automatically refresh Console Access Tokens.
+- **`bl workspace init`** — initialize a Bailian workspace and activate the required services in one workflow.
+
+### Fixed
+
+- Improved configuration safety and consistency, including secret masking and preservation of custom configuration fields.
+
 ## [1.8.3] - 2026-07-16
 
 ### Fixed

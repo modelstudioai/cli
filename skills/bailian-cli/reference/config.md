@@ -7,12 +7,37 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command          | Description                   |
-| ---------------- | ----------------------------- |
-| `bl config set`  | Set a config value            |
-| `bl config show` | Display current configuration |
+| Command          | Description                                      |
+| ---------------- | ------------------------------------------------ |
+| `bl config list` | List config profiles and show the active profile |
+| `bl config set`  | Set a config value                               |
+| `bl config show` | Display current configuration                    |
+| `bl config ui`   | Open a local web UI to manage config profiles    |
+| `bl config use`  | Set the active config profile                    |
 
 ## Command details
+
+### `bl config list`
+
+| Field           | Value                                            |
+| --------------- | ------------------------------------------------ |
+| **Name**        | `config list`                                    |
+| **Description** | List config profiles and show the active profile |
+| **Usage**       | `bl config list`                                 |
+
+#### Flags
+
+_No command-specific flags._
+
+#### Examples
+
+```bash
+bl config list
+```
+
+```bash
+bl config list --output json
+```
 
 ### `bl config set`
 
@@ -24,10 +49,10 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag              | Type   | Required | Description                                                                                                                                  |
-| ----------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--key <key>`     | string | yes      | Config key (base*url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, default*\*\_model, workspace_id) |
-| `--value <value>` | string | yes      | Value to set                                                                                                                                 |
+| Flag              | Type   | Required | Description                                                                                                                                                  |
+| ----------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--key <key>`     | string | yes      | Config key (base*url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, security_token, default*\*\_model, workspace_id) |
+| `--value <value>` | string | yes      | Value to set                                                                                                                                                 |
 
 #### Examples
 
@@ -63,4 +88,57 @@ bl config show
 
 ```bash
 bl config show --output json
+```
+
+### `bl config ui`
+
+| Field           | Value                                         |
+| --------------- | --------------------------------------------- |
+| **Name**        | `config ui`                                   |
+| **Description** | Open a local web UI to manage config profiles |
+| **Usage**       | `bl config ui [--port <port>] [--no-open]`    |
+
+#### Flags
+
+| Flag            | Type   | Required | Description                                   |
+| --------------- | ------ | -------- | --------------------------------------------- |
+| `--port <port>` | number | no       | Port to listen on (default: random free port) |
+| `--no-open`     | switch | no       | Do not open the browser automatically         |
+
+#### Examples
+
+```bash
+bl config ui
+```
+
+```bash
+bl config ui --port 8787
+```
+
+```bash
+bl config ui --no-open
+```
+
+### `bl config use`
+
+| Field           | Value                         |
+| --------------- | ----------------------------- |
+| **Name**        | `config use`                  |
+| **Description** | Set the active config profile |
+| **Usage**       | `bl config use --name <name>` |
+
+#### Flags
+
+| Flag            | Type   | Required | Description                       |
+| --------------- | ------ | -------- | --------------------------------- |
+| `--name <name>` | string | yes      | Existing profile name, or default |
+
+#### Examples
+
+```bash
+bl config use --name token-plan
+```
+
+```bash
+bl config use --name default
 ```

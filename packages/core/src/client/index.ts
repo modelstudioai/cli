@@ -21,7 +21,19 @@ export {
 export { CHANNEL, SOURCE_CONFIG, TAGS, trackingHeaders } from "./headers.ts";
 export type { RequestOpts } from "./http.ts";
 export { request, requestJson } from "./http.ts";
-export { Client, type ClientRequestOpts, type ClientOpenApiQueryOpts } from "./client.ts";
+export {
+  Client,
+  type ClientRequestOpts,
+  type ClientOpenApiQueryOpts,
+  type ClientOpenApiJsonOpts,
+} from "./client.ts";
+export {
+  createBailianControlUser,
+  listBailianControlWorkspaces,
+  resetBailianControlPolicies4Agent,
+  type BailianControlAuth,
+  type CreateUserReqDTO,
+} from "./bailian-control.ts";
 export {
   buildAcsCanonicalQuery,
   signAcsRequest,
