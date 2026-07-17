@@ -6,6 +6,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.9.0] - 2026-07-17
+
+### Added
+
+- **CLI access-token automation** — added `bl auth generate-access-token`; OpenAPI login can obtain and persist a Console access token, and Console requests can refresh an expired token with stored AK/SK credentials.
+- **`bl bootstrap`** — initializes a Bailian workspace, creates the Console user, and activates required postpaid services in one workflow.
+- **Named Config Profiles** — added isolated named profiles, persistent activation, and `bl config list`, `bl config use`, and `bl config ui` for profile management.
+- **Token Plan model Profile** — `bl auth login --config token-plan --api-key ...` materializes the built-in Token Plan endpoint and default model settings for model calls.
+- **STS credentials** — OpenAPI authentication now accepts and signs requests with an optional security token.
+
+### Changed
+
+- Successful `bl auth login --config <name>` now activates that Profile automatically; failed validation and dry runs leave the active Profile unchanged.
+- Model Base URLs are normalized consistently across flags, environment variables, and Config Profiles.
+
+### Fixed
+
+- `bl config show` now masks all supported secret fields.
+- Config updates preserve unmanaged fields, and logout clears the complete OpenAPI credential set including STS security tokens.
+
 ## [1.8.1] - 2026-07-14
 
 ### Changed
