@@ -30,7 +30,7 @@ Verify: `bl --version` (prints `bl X.Y.Z`).
 
 ```bash
 bl auth status            # check current auth
-bl auth logout            # clear credentials
+bl auth logout            # clear credentials and the model Base URL
 bl auth logout --console  # clear console token only
 bl auth logout --open-api # clear OpenAPI AK/SK only
 ```

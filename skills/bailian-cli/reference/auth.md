@@ -11,7 +11,7 @@ Index: [index.md](index.md)
 | ------------------------------- | -------------------------------------------------------------------------------------------- |
 | `bl auth generate-access-token` | Generate a CLI access token using OpenAPI AK/SK                                              |
 | `bl auth login`                 | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist) |
-| `bl auth logout`                | Clear stored credentials                                                                     |
+| `bl auth logout`                | Clear stored credentials; full logout also clears the model Base URL                         |
 | `bl auth status`                | Show current authentication state                                                            |
 
 ## Command details
@@ -78,11 +78,11 @@ bl auth login --open-api --access-key-id LTAIxxxxx --access-key-secret xxxxx
 
 ### `bl auth logout`
 
-| Field           | Value                                                  |
-| --------------- | ------------------------------------------------------ |
-| **Name**        | `auth logout`                                          |
-| **Description** | Clear stored credentials                               |
-| **Usage**       | `bl auth logout [--console \| --open-api] [--dry-run]` |
+| Field           | Value                                                                |
+| --------------- | -------------------------------------------------------------------- |
+| **Name**        | `auth logout`                                                        |
+| **Description** | Clear stored credentials; full logout also clears the model Base URL |
+| **Usage**       | `bl auth logout [--console \| --open-api] [--dry-run]`               |
 
 #### Flags
 
