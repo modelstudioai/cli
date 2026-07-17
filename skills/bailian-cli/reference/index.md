@@ -17,7 +17,6 @@ Use this index for the full quick index and global flags.
 | `bl auth login`                 | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist)                                    | [auth.md](auth.md)             |
 | `bl auth logout`                | Clear stored credentials                                                                                                        | [auth.md](auth.md)             |
 | `bl auth status`                | Show current authentication state                                                                                               | [auth.md](auth.md)             |
-| `bl bootstrap`                  | Initialize Bailian workspace and activate postpaid services                                                                     | [bootstrap.md](bootstrap.md)   |
 | `bl config list`                | List config profiles and show the active profile                                                                                | [config.md](config.md)         |
 | `bl config set`                 | Set a config value                                                                                                              | [config.md](config.md)         |
 | `bl config show`                | Display current configuration                                                                                                   | [config.md](config.md)         |
@@ -97,6 +96,7 @@ Use this index for the full quick index and global flags.
 | `bl video ref`                  | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice                           | [video.md](video.md)           |
 | `bl video task get`             | Query async task status                                                                                                         | [video.md](video.md)           |
 | `bl vision describe`            | Describe an image or video using Qwen-VL                                                                                        | [vision.md](vision.md)         |
+| `bl workspace init`             | Initialize Bailian workspace and activate postpaid services                                                                     | [workspace.md](workspace.md)   |
 | `bl workspace list`             | List all workspaces                                                                                                             | [workspace.md](workspace.md)   |
 
 ## By group
@@ -106,7 +106,6 @@ Use this index for the full quick index and global flags.
 | `advisor`    | `recommend`                                                                                                                              | [advisor.md](advisor.md)       |
 | `app`        | `call`, `list`                                                                                                                           | [app.md](app.md)               |
 | `auth`       | `generate-access-token`, `login`, `logout`, `status`                                                                                     | [auth.md](auth.md)             |
-| `bootstrap`  | `(root)`                                                                                                                                 | [bootstrap.md](bootstrap.md)   |
 | `config`     | `list`, `set`, `show`, `ui`, `use`                                                                                                       | [config.md](config.md)         |
 | `console`    | `call`                                                                                                                                   | [console.md](console.md)       |
 | `dataset`    | `delete`, `get`, `list`, `upload`, `validate`                                                                                            | [dataset.md](dataset.md)       |
@@ -130,7 +129,7 @@ Use this index for the full quick index and global flags.
 | `usage`      | `free`, `freetier`, `stats`, `summary`                                                                                                   | [usage.md](usage.md)           |
 | `video`      | `download`, `edit`, `generate`, `ref`, `task get`                                                                                        | [video.md](video.md)           |
 | `vision`     | `describe`                                                                                                                               | [vision.md](vision.md)         |
-| `workspace`  | `list`                                                                                                                                   | [workspace.md](workspace.md)   |
+| `workspace`  | `init`, `list`                                                                                                                           | [workspace.md](workspace.md)   |
 
 ## Global flags
 

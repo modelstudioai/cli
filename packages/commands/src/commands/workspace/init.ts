@@ -139,7 +139,7 @@ export default defineCommand({
     const { accessKeyId, accessKeySecret } = flags;
     if (!accessKeyId || !accessKeySecret) {
       throw new BailianError(
-        "bootstrap requires --access-key-id and --access-key-secret.",
+        "workspace init requires --access-key-id and --access-key-secret.",
         ExitCode.USAGE,
       );
     }
@@ -224,8 +224,8 @@ export default defineCommand({
         },
       });
     } catch (err) {
-      // Re-running bootstrap is idempotent: an already-existing user is not
-      // fatal, so swallow it and continue with the remaining steps.
+      // Re-running workspace init is idempotent: an already-existing user is
+      // not fatal, so swallow it and continue with the remaining steps.
       if (!(err instanceof BailianError) || !/already exists/i.test(err.message)) {
         throw err;
       }

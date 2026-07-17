@@ -11,7 +11,7 @@
 ### 新增
 
 - **CLI Access Token 自动化** —— 新增 `bl auth generate-access-token`；OpenAPI 登录可获取并保存 Console Access Token，Console 请求可使用已保存的 AK/SK 自动刷新过期 Token。
-- **`bl bootstrap`** —— 通过一条工作流初始化百炼工作空间、创建控制台用户并开通所需的后付费服务。
+- **`bl workspace init`** —— 通过一条工作流初始化百炼工作空间、创建控制台用户并开通所需的后付费服务。
 - **命名 Config Profile** —— 新增相互隔离的命名 Profile、持久化激活状态，以及用于管理 Profile 的 `bl config list`、`bl config use` 和 `bl config ui`。
 - **Token Plan 模型 Profile** —— `bl auth login --config token-plan --api-key ...` 会物化 Token Plan 内置接入地址与默认模型配置，供模型命令直接使用。
 - **STS 凭证** —— OpenAPI 鉴权现支持可选 Security Token，并在签名请求中自动携带。

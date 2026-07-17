@@ -90,7 +90,7 @@ export { default as tokenPlanListSeats } from "./commands/token-plan/list-seats.
 export { default as tokenPlanCreateKey } from "./commands/token-plan/create-key.ts";
 export { default as tokenPlanAssignSeats } from "./commands/token-plan/assign-seats.ts";
 export { default as tokenPlanAddMember } from "./commands/token-plan/add-member.ts";
-export { default as bootstrap } from "./commands/bootstrap/index.ts";
+export { default as workspaceInit } from "./commands/workspace/init.ts";
 export { default as pluginInstall } from "./commands/plugin/install.ts";
 export { default as pluginLink } from "./commands/plugin/link.ts";
 export { default as pluginList } from "./commands/plugin/list.ts";
