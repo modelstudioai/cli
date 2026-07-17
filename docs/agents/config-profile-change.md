@@ -17,7 +17,8 @@
 
 - 解析阶段用局部变量保留“是否显式传入 `--config`”的信息；完成 Config 选择后不进入 `Settings`。
 - `--config default` 必须显式选择顶层配置并绕过命名激活项。
-- `--config` 和 `auth login --config ...` 不得隐式修改持久化激活状态。
+- 普通命令的显式 `--config` 只覆盖本次选择，不修改持久化激活状态；例外是
+  `auth login --config ...`，凭证验证并落盘成功后自动激活该 Profile。
 - 激活状态只选择配置 block，不改变字段优先级；字段仍为 flag > env > selected config > 默认值。
 - Pipeline 等进程内调用链也要复用统一的 `buildSources()`，避免绕过激活状态。
 - Console access token 自动刷新等后台读写必须携带 `settings.configName`，不得直接读写顶层 default。
@@ -25,7 +26,8 @@
 ## 3. 保持读写命令交互一致
 
 - `auth login`、`config set` 等写命令未传 `--config` 时修改当前激活项。
-- 写命令显式指定不存在的 `--config <name>` 时，仅在业务操作成功并实际落盘时创建 Profile。
+- `auth login --config <name>` 显式指定不存在的 Profile 时，仅在凭证验证成功并实际落盘时
+  创建和激活；`config set --config <name>` 可创建但不自动激活。
 - `config show`、`auth status` 和业务消费等读命令不得因为显式指定不存在的名称而创建 Profile。
 - `auth logout` 默认只清理当前激活项；显式 `--config` 只清理指定项。
 - 按凭证域退出时必须清理该域的完整字段集合，例如 OpenAPI 同时清理 AK、SK 和 STS `security_token`。
@@ -56,6 +58,8 @@
 - 悬空 `active_config` 明确失败。
 - 删除激活 Profile 后切回 `default`。
 - 登录、退出、`config set` 分别覆盖“当前激活项”和“显式不存在名称成功后创建”。
+- 显式 `auth login --config <name>` 成功后激活该 Profile，失败或 dry-run 不创建、不切换；
+  `--config default` 成功后切回 `default`。
 - Console token 自动刷新不从其他 Profile 借用 AK/SK，也不把新 token 写入其他 Profile。
 - `config list/show/use/ui`、`auth status` 和依赖默认模型的消费命令覆盖对应 E2E。
 - `config ui` 覆盖保存时保留未管理字段，并继续允许空值清除 UI 管理字段。

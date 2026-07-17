@@ -15,7 +15,12 @@ import { AUTH_ROUTES } from "./topic-routes.ts";
 
 interface ValidationServer {
   baseUrl: string;
-  requests: Array<{ path: string; body: Record<string, unknown> }>;
+  requests: Array<{
+    path: string;
+    body: Record<string, unknown>;
+    authorization?: string;
+    sourceConfig?: string;
+  }>;
   close(): Promise<void>;
 }
 
@@ -29,6 +34,8 @@ async function startValidationServer(statusCode = 200): Promise<ValidationServer
       requests.push({
         path: request.url ?? "",
         body: rawBody ? (JSON.parse(rawBody) as Record<string, unknown>) : {},
+        authorization: request.headers.authorization,
+        sourceConfig: request.headers["x-dashscope-source-config"] as string | undefined,
       });
       response.writeHead(statusCode, { "Content-Type": "application/json" });
       if (statusCode >= 400) {
@@ -207,6 +214,8 @@ describe("e2e: auth", () => {
       expect(validationServer.requests).toHaveLength(1);
       expect(validationServer.requests[0]).toMatchObject({
         path: "/compatible-mode/v1/chat/completions",
+        authorization: "Bearer sk-e2e-placeholder",
+        sourceConfig: expect.any(String),
         body: {
           model: "qwen3.7-max",
           stream: false,
@@ -297,6 +306,8 @@ describe("e2e: auth", () => {
       expect(validationServer.requests).toHaveLength(1);
       expect(validationServer.requests[0]).toMatchObject({
         path: "/compatible-mode/v1/chat/completions",
+        authorization: "Bearer sk-sp-e2e-placeholder",
+        sourceConfig: expect.any(String),
         body: {
           model: "qwen3.7-max",
           stream: false,
@@ -309,6 +320,7 @@ describe("e2e: auth", () => {
         unknown
       >;
       expect(config.api_key).toBeUndefined();
+      expect(config.active_config).toBe("token-plan");
       expect(config["token-plan"]).toMatchObject({
         api_key: "sk-sp-e2e-placeholder",
         base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
@@ -377,7 +389,16 @@ describe("e2e: auth", () => {
     try {
       const login = await runCommandE2e(
         AUTH_ROUTES,
-        ["auth", "login", "--api-key", "sk-invalid", "--base-url", validationServer.baseUrl],
+        [
+          "auth",
+          "login",
+          "--config",
+          "failed-profile",
+          "--api-key",
+          "sk-invalid",
+          "--base-url",
+          validationServer.baseUrl,
+        ],
         {
           BAILIAN_CONFIG_DIR: configDir,
           DASHSCOPE_API_KEY: "",

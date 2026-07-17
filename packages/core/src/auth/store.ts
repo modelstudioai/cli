@@ -40,7 +40,7 @@ export interface AuthStore {
   stored(): { apiKey: boolean; console: boolean; openapi: boolean; baseUrl?: string };
   /** model 域 baseUrl 链(flag > env > config file > fallback)。 */
   resolveBaseUrl(fallback?: string): string;
-  /** 登录落盘:合并写入,undefined 键忽略。 */
+  /** 登录落盘:合并写入,undefined 键忽略；显式 --config 成功后同时激活目标 Profile。 */
   login(patch: AuthPersistPatch): Promise<void>;
   /** 清凭证:console/openapi 只删对应域;all 清全部登录凭证。返回是否有变更。 */
   logout(scope: "console" | "openapi" | "all"): Promise<boolean>;
@@ -50,6 +50,7 @@ export interface AuthStore {
 
 export function makeAuthStore(sources: ResolutionSources): AuthStore {
   const configName = sources.configName;
+  const activateAfterLogin = sources.flags.config !== undefined;
   return {
     describe: () => describeAuthState(sources),
     stored() {
@@ -69,7 +70,7 @@ export function makeAuthStore(sources: ResolutionSources): AuthStore {
           existing[key] = key === "base_url" ? normalizeModelBaseUrl(String(value)) : value;
         }
       }
-      await writeConfigFile(existing, configName);
+      await writeConfigFile(existing, configName, { activate: activateAfterLogin });
     },
     async logout(scope) {
       const existing = readConfigFile(configName) as Record<string, unknown>;

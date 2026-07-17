@@ -72,6 +72,7 @@ CLI 应解析并保存以下配置：
 
 ```json
 {
+  "active_config": "token-plan",
   "token-plan": {
     "api_key": "<TOKEN_PLAN_API_KEY>",
     "base_url": "https://token-plan.cn-beijing.maas.aliyuncs.com",
@@ -80,6 +81,9 @@ CLI 应解析并保存以下配置：
   }
 }
 ```
+
+凭证验证和配置落盘成功后，CLI 在同一次配置文件写入中将 `token-plan` 设为激活项；验证失败和
+dry-run 不创建、不切换 Profile。
 
 用户仍可显式覆盖 Base URL，用于代理、测试或未来新增地域：
 
@@ -109,7 +113,7 @@ bl image generate --config token-plan --prompt "一只猫"
 
 ### 3. 激活 Config
 
-新增命令：
+登录时显式选择的 Profile 会自动激活；之后也可以主动切换：
 
 ```sh
 bl config use --name token-plan
@@ -225,7 +229,8 @@ Config 激活只改变配置文件 block 的选择，`--config` 本身不提升�
 - 配置文件中的 `active_config` 指向不存在的 Profile：命令失败并提示切回 `default`，不得静默使用其他凭证。
 - 删除当前激活的 Profile：删除操作同时切回 `default`，或者要求用户先切换；不能保留悬空引用。
 - `config use --name token-plan` 只切换状态，不创建 Profile，也不执行登录。
-- `auth login --config token-plan` 只写入指定 Profile，不自动激活，避免登录命令产生隐藏的全局状态变化。
+- `auth login --config token-plan` 在凭证验证并落盘成功后自动激活该 Profile；验证失败和
+  dry-run 不创建、不切换。
 
 ## `token-plan` 内置 Profile 预设
 
@@ -474,7 +479,10 @@ feat(config): add active profile selection
 - 验证临时 `--config default` 不改变激活状态。
 - 更新命令导出、`packages/cli/src/commands.ts`、E2E 和生成 reference。
 
-实现选择：删除当前激活的命名 Profile 时，在同一次配置文件写入中将 `active_config` 重置为 `default`。`auth login --config <name>` 和所有显式 `--config` 仍只作用于本次命令，不修改激活状态。
+实现选择：删除当前激活的命名 Profile 时，在同一次配置文件写入中将 `active_config` 重置为
+`default`。普通命令的显式 `--config` 仍只作用于本次命令；`auth login --config <name>` 是
+例外，在凭证验证和落盘成功的同一次配置写入中激活目标 Profile。`--config default` 登录成功后
+切回默认配置。
 
 相关写入交互统一为：`auth login`、`auth logout` 和 `config set` 未传 `--config` 时作用于当前激活项；显式指定名称时作用于该名称。写命令可在成功落盘时创建不存在的 Profile，读命令不创建。Console access token 自动刷新同样限定在当前选中的 Profile，不得回退读写顶层 default。
 
@@ -552,4 +560,6 @@ Token Plan 模型消费最终表现为一个可激活的内置 Profile：
   -> 文本/图片 endpoint
 ```
 
-用户既可以通过 `--config token-plan` 单次使用，也可以通过 `bl config use --name token-plan` 将其设为默认激活配置。整个过程不引入 Token Plan 模式，也不复制现有模型调用实现。
+用户执行 `auth login --config token-plan` 成功后，该 Profile 会成为默认激活配置；仍可通过
+显式 `--config` 做单次覆盖，或使用 `bl config use --name <name>` 主动切换。整个过程不引入
+Token Plan 模式，也不复制现有模型调用实现。

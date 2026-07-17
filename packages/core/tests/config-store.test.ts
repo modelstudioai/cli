@@ -106,7 +106,7 @@ test("AuthStore:login 合并落盘,logout 按域清理并报告变更", async ()
   });
 });
 
-test("AuthStore:未传 --config 时写当前激活项，显式不存在名称在登录成功后创建", async () => {
+test("AuthStore:未传 --config 时写当前激活项，显式配置在登录成功后创建并激活", async () => {
   await inTempConfigDir(async () => {
     await writeConfigFile({ api_key: "sk-default" });
     await writeConfigFile({ access_token: "tok-dev" }, "dev");
@@ -124,6 +124,12 @@ test("AuthStore:未传 --config 时写当前激活项，显式不存在名称在
     const newStore = makeAuthStore(buildSources({ config: "new-profile" }));
     await newStore.login({ access_token: "tok-new" });
     expect(readConfigFile("new-profile").access_token).toBe("tok-new");
+    expect(readConfigProfiles().active).toBe("new-profile");
+
+    const defaultStore = makeAuthStore(buildSources({ config: "default" }));
+    await defaultStore.login({ api_key: "sk-default-updated" });
+    expect(readConfigFile().api_key).toBe("sk-default-updated");
+    expect(readConfigProfiles().active).toBe("default");
 
     expect(await activeStore.logout("console")).toBe(true);
     expect(readConfigFile("dev").access_token).toBeUndefined();

@@ -81,9 +81,11 @@ export function readConfigFile(configName?: string): ConfigFile {
   return parseConfigFile(readRawConfigBlock(raw, configName));
 }
 
+/** 写入所选 Profile；登录流程可在同一次原子写入中将显式 Profile 设为激活项。 */
 export async function writeConfigFile(
   data: Record<string, unknown>,
   configName?: string,
+  options: { activate?: boolean } = {},
 ): Promise<void> {
   const raw = readRawConfigObject();
   if (configName) {
@@ -93,6 +95,9 @@ export async function writeConfigFile(
       if ((CONFIG_FILE_KEYS as readonly string[]).includes(key)) delete raw[key];
     }
     Object.assign(raw, data);
+  }
+  if (options.activate) {
+    raw[ACTIVE_CONFIG_KEY] = configName ?? "default";
   }
   await writeRawConfigObject(raw);
 }
