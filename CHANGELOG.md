@@ -26,6 +26,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `bl config show` now masks all supported secret fields.
 - Config updates preserve unmanaged fields, and logout clears the complete OpenAPI credential set including STS security tokens.
 
+## [1.8.3] - 2026-07-16
+
+### Fixed
+
+- Fixed `bl text chat --messages-file -` failing on Windows by treating standard input as a `/dev/stdin` file path; piped JSON messages are now read from standard input correctly. (#103)
+
+## [1.8.2] - 2026-07-15
+
+### Changed
+
+- `bl model list` now defaults to JSON output; pass `--output text` for the table view.
+
+### Fixed
+
+- `bl model list --enrich` now returns each model's input parameter schema (predictConfig); it was previously always empty because the console gateway response envelope was not unwrapped.
+
 ## [1.8.1] - 2026-07-14
 
 ### Changed

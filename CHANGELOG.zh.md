@@ -26,6 +26,22 @@
 - `bl config show` 现在会脱敏全部支持的密钥字段。
 - 配置更新会保留未管理字段，退出登录会完整清理包括 STS Security Token 在内的 OpenAPI 凭证。
 
+## [1.8.3] - 2026-07-16
+
+### 修复
+
+- 修复 Windows 上 `bl text chat --messages-file -` 将标准输入当作 `/dev/stdin` 文件路径读取的问题；通过管道传入的 JSON 消息现在可以从标准输入正常读取。（#103）
+
+## [1.8.2] - 2026-07-15
+
+### 变更
+
+- `bl model list` 现在默认以 JSON 输出；需要表格视图请传 `--output text`。
+
+### 修复
+
+- `bl model list --enrich` 现在能正确返回每个模型的输入参数 schema（predictConfig）；此前因未解包控制台网关响应信封而始终为空。
+
 ## [1.8.1] - 2026-07-14
 
 ### 变更
