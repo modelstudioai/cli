@@ -17,6 +17,7 @@ Use this index for the full quick index and global flags.
 | `bl auth login`                 | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist)                                    | [auth.md](auth.md)             |
 | `bl auth logout`                | Clear stored credentials                                                                                                        | [auth.md](auth.md)             |
 | `bl auth status`                | Show current authentication state                                                                                               | [auth.md](auth.md)             |
+| `bl config agent`               | Configure a coding agent to use DashScope API                                                                                   | [config.md](config.md)         |
 | `bl config list`                | List config profiles and show the active profile                                                                                | [config.md](config.md)         |
 | `bl config set`                 | Set a config value                                                                                                              | [config.md](config.md)         |
 | `bl config show`                | Display current configuration                                                                                                   | [config.md](config.md)         |
@@ -106,7 +107,7 @@ Use this index for the full quick index and global flags.
 | `advisor`    | `recommend`                                                                                                                              | [advisor.md](advisor.md)       |
 | `app`        | `call`, `list`                                                                                                                           | [app.md](app.md)               |
 | `auth`       | `generate-access-token`, `login`, `logout`, `status`                                                                                     | [auth.md](auth.md)             |
-| `config`     | `list`, `set`, `show`, `ui`, `use`                                                                                                       | [config.md](config.md)         |
+| `config`     | `agent`, `list`, `set`, `show`, `ui`, `use`                                                                                              | [config.md](config.md)         |
 | `console`    | `call`                                                                                                                                   | [console.md](console.md)       |
 | `dataset`    | `delete`, `get`, `list`, `upload`, `validate`                                                                                            | [dataset.md](dataset.md)       |
 | `deploy`     | `audio create`, `delete`, `get`, `image create`, `list`, `models`, `scale`, `text create`, `update`                                      | [deploy.md](deploy.md)         |

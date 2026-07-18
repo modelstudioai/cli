@@ -22,6 +22,7 @@ export { default as configSet } from "./commands/config/set.ts";
 export { default as configList } from "./commands/config/list.ts";
 export { default as configUse } from "./commands/config/use.ts";
 export { default as configUi } from "./commands/config/ui.ts";
+export { default as configAgent } from "./commands/config/agent/index.ts";
 export { default as update } from "./commands/update.ts";
 export { default as appCall } from "./commands/app/call.ts";
 export { default as appList } from "./commands/app/list.ts";

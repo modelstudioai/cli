@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { describe, expect, test } from "vite-plus/test";
@@ -344,5 +344,142 @@ describe("e2e: config", () => {
     ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/Invalid config key|openapi_access_key_id/);
+  });
+
+  test("config agent --help 正常退出", async () => {
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "agent", "--help"]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/agent|--base-url|--model/i);
+  });
+
+  test("config agent 缺少 --api-key 时报用法错误并退出 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+      "config",
+      "agent",
+      "--agent",
+      "claude-code",
+      "--base-url",
+      "https://dashscope.aliyuncs.com/apps/anthropic",
+      "--model",
+      "qwen3-max",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--api-key|Usage:/i);
+  });
+
+  test("config agent 非法 --agent 时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+      "config",
+      "agent",
+      "--agent",
+      "not-an-agent",
+      "--base-url",
+      "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "--api-key",
+      "sk-placeholder",
+      "--model",
+      "qwen3-max",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/not-an-agent|claude-code|agent/i);
+  });
+
+  test("config agent --dry-run 输出脱敏信息且不写盘", async () => {
+    const home = mkdtempSync(join(tmpdir(), "bl-config-agent-dry-"));
+    try {
+      const { stdout, stderr, exitCode } = await runCommandE2e(
+        CONFIG_ROUTES,
+        [
+          "config",
+          "agent",
+          "--agent",
+          "claude-code",
+          "--base-url",
+          "https://dashscope.aliyuncs.com/apps/anthropic",
+          "--api-key",
+          "sk-secret-placeholder",
+          "--model",
+          "qwen3-max",
+          "--dry-run",
+          "--output",
+          "json",
+        ],
+        { HOME: home },
+      );
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{
+        agent?: string;
+        base_url?: string;
+        model?: string;
+        api_key?: string;
+      }>(stdout);
+      expect(data.agent).toBe("claude-code");
+      expect(data.base_url).toBe("https://dashscope.aliyuncs.com/apps/anthropic");
+      expect(data.model).toBe("qwen3-max");
+      expect(stdout).not.toContain("sk-secret-placeholder");
+      expect(existsSync(join(home, ".claude", "settings.json"))).toBe(false);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test("config agent codex 写入 config.toml 与 auth.json（cc-switch 对齐结构）", async () => {
+    const home = mkdtempSync(join(tmpdir(), "bl-config-agent-codex-"));
+    try {
+      const { stderr, exitCode } = await runCommandE2e(
+        CONFIG_ROUTES,
+        [
+          "config",
+          "agent",
+          "--agent",
+          "codex",
+          "--base-url",
+          "https://dashscope.aliyuncs.com/compatible-mode/v1",
+          "--api-key",
+          "sk-codex-placeholder",
+          "--model",
+          "qwen3-coder-plus",
+        ],
+        { HOME: home },
+      );
+      expect(exitCode, stderr).toBe(0);
+      const toml = readFileSync(join(home, ".codex", "config.toml"), "utf8");
+      expect(toml).toContain('model_provider = "bailian-cli"');
+      expect(toml).toContain("requires_openai_auth = true");
+      expect(toml).toContain('wire_api = "responses"');
+      const auth = JSON.parse(readFileSync(join(home, ".codex", "auth.json"), "utf8"));
+      expect(auth.OPENAI_API_KEY).toBe("sk-codex-placeholder");
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test("config agent hermes 写入 custom_providers 结构", async () => {
+    const home = mkdtempSync(join(tmpdir(), "bl-config-agent-hermes-"));
+    try {
+      const { stderr, exitCode } = await runCommandE2e(
+        CONFIG_ROUTES,
+        [
+          "config",
+          "agent",
+          "--agent",
+          "hermes",
+          "--base-url",
+          "https://dashscope.aliyuncs.com/compatible-mode/v1",
+          "--api-key",
+          "sk-hermes-placeholder",
+          "--model",
+          "qwen3-coder-plus",
+        ],
+        { HOME: home },
+      );
+      expect(exitCode, stderr).toBe(0);
+      const yamlText = readFileSync(join(home, ".hermes", "config.yaml"), "utf8");
+      expect(yamlText).toContain("custom_providers");
+      expect(yamlText).toContain("bailian-cli");
+      expect(yamlText).toContain("api_mode: chat_completions");
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
   });
 });
