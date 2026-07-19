@@ -1,5 +1,10 @@
 import { platform } from "os";
-import { defineCommand, detectOutputFormat, maskToken, type FlagsDef } from "bailian-cli-core";
+import {
+  defineCommand,
+  detectOutputFormat,
+  maskToken,
+  type FlagsDef,
+} from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { AGENTS, VALID_AGENT_NAMES, type WriteParams } from "./writers.ts";
 
@@ -11,13 +16,29 @@ const FLAGS = {
     required: true,
     choices: VALID_AGENT_NAMES,
   },
-  baseUrl: { type: "string", valueHint: "<url>", description: "API base URL", required: true },
-  apiKey: { type: "string", valueHint: "<key>", description: "API key", required: true },
+  baseUrl: {
+    type: "string",
+    valueHint: "<url>",
+    description: "API base URL",
+    required: true,
+  },
+  apiKey: {
+    type: "string",
+    valueHint: "<key>",
+    description: "API key",
+    required: true,
+  },
   model: {
     type: "string",
     valueHint: "<model>",
     description: "Default model name",
     required: true,
+  },
+  contextWindow: {
+    type: "number",
+    valueHint: "<tokens>",
+    description:
+      "Context window in tokens (openclaw only; omit to use the agent default)",
   },
 } satisfies FlagsDef;
 
@@ -53,13 +74,21 @@ export default defineCommand({
           base_url: baseUrl,
           api_key: maskToken(apiKey),
           model,
+          ...(flags.contextWindow !== undefined
+            ? { context_window: flags.contextWindow }
+            : {}),
         },
         format,
       );
       return;
     }
 
-    const params: WriteParams = { baseUrl, apiKey, model };
+    const params: WriteParams = {
+      baseUrl,
+      apiKey,
+      model,
+      contextWindow: flags.contextWindow,
+    };
     const summary = agentDef.write(params);
 
     if (!settings.quiet) {

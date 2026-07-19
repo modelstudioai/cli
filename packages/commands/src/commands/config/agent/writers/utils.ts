@@ -1,11 +1,22 @@
-import { dirname } from "path";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, copyFileSync } from "fs";
+import { dirname, join } from "path";
+import { homedir } from "os";
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  renameSync,
+  copyFileSync,
+} from "fs";
+import { BailianError, ExitCode } from "bailian-cli-core";
 
 /** Parameters shared by every agent writer. */
 export interface WriteParams {
   baseUrl: string;
   apiKey: string;
   model: string;
+  /** Optional context window (tokens); only some agents record it. */
+  contextWindow?: number;
 }
 
 /** What a writer reports back after configuring an agent. */
@@ -20,13 +31,37 @@ export interface AgentDef {
   write(params: WriteParams): WriteSummary;
 }
 
-/** Read a JSON object file, returning `{}` when missing or unparseable. */
+/** Codex config root: `$CODEX_HOME` when set, else `~/.codex`. */
+export function codexHome(): string {
+  const override = process.env.CODEX_HOME?.trim();
+  return override && override.length > 0 ? override : join(homedir(), ".codex");
+}
+
+/** Claude Code config dir: `$CLAUDE_CONFIG_DIR` when set, else `~/.claude`. */
+export function claudeConfigDir(): string {
+  const override = process.env.CLAUDE_CONFIG_DIR?.trim();
+  return override && override.length > 0
+    ? override
+    : join(homedir(), ".claude");
+}
+
+/**
+ * Read a JSON object file. Missing file → `{}` (a fresh config). An existing
+ * file that fails to parse throws instead of silently returning `{}` — that
+ * would drop the user's content when we write the merged result back.
+ */
 export function readJson(path: string): Record<string, unknown> {
   if (!existsSync(path)) return {};
   try {
     return JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
-  } catch {
-    return {};
+  } catch (error) {
+    throw new BailianError(
+      `Failed to parse existing config: ${path}`,
+      ExitCode.GENERAL,
+      `Fix or back up the file, then retry. Underlying error: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
   }
 }
 

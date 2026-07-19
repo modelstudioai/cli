@@ -1,11 +1,17 @@
 import { homedir } from "os";
 import { join } from "path";
-import { backup, readJson, writeJsonAtomic, type AgentDef } from "./utils.ts";
+import {
+  backup,
+  readJson,
+  writeJsonAtomic,
+  claudeConfigDir,
+  type AgentDef,
+} from "./utils.ts";
 
 export default {
   label: "Claude Code",
   write({ baseUrl, apiKey, model }) {
-    const settingsPath = join(homedir(), ".claude", "settings.json");
+    const settingsPath = join(claudeConfigDir(), "settings.json");
     const onboardingPath = join(homedir(), ".claude.json");
 
     // settings.json — merge env. Base URL + auth token connect Claude Code to

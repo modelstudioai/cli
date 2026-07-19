@@ -1,14 +1,21 @@
 import { homedir } from "os";
 import { join } from "path";
-import { backup, readJson, writeJsonAtomic, isAnthropicEndpoint, type AgentDef } from "./utils.ts";
+import {
+  backup,
+  readJson,
+  writeJsonAtomic,
+  isAnthropicEndpoint,
+  type AgentDef,
+} from "./utils.ts";
 
-const ENV_KEY = "BAILIAN_CLI_API_KEY";
+const ENV_KEY = "BAILIAN_API_KEY";
 
 /**
  * Qwen Code keys `modelProviders` and `security.auth.selectedType` by the SDK
  * protocol (an AuthType string), not by a free-form provider id — the runtime
- * resolver indexes credentials/defaults by protocol. The `bailian-cli` brand
- * therefore lives in the model entry `name` and the env var name.
+ * resolver indexes credentials/defaults by protocol. Structure follows the
+ * Alibaba Cloud Model Studio doc: the API key lives in `env` (read via the
+ * provider entry's `envKey`); `security.auth` only records the selected type.
  */
 export default {
   label: "Qwen Code",
@@ -24,32 +31,40 @@ export default {
     env[ENV_KEY] = apiKey;
     settings.env = env;
 
-    // modelProviders[<protocol>] — upsert the bailian-cli model entry.
+    // modelProviders[<protocol>] — upsert the model entry.
     const providers = (settings.modelProviders ?? {}) as Record<
       string,
       Array<Record<string, unknown>>
     >;
-    const entries = (providers[protocol] ?? []) as Array<Record<string, unknown>>;
+    const entries = (providers[protocol] ?? []) as Array<
+      Record<string, unknown>
+    >;
+    const displayName = `[Bailian] ${model}`;
     const existing = entries.find(
       (entry) => entry.id === model && (entry.baseUrl ?? "") === baseUrl,
     );
     if (existing) {
-      existing.name = "bailian-cli";
+      existing.name = displayName;
       existing.baseUrl = baseUrl;
       existing.envKey = ENV_KEY;
     } else {
-      entries.push({ id: model, name: "bailian-cli", baseUrl, envKey: ENV_KEY });
+      entries.push({ id: model, name: displayName, baseUrl, envKey: ENV_KEY });
     }
     providers[protocol] = entries;
     settings.modelProviders = providers;
 
-    // security.auth — select the protocol and carry the OpenAI-compatible creds.
+    // security.auth — only the selected protocol (no deprecated apiKey/baseUrl).
     const security = (settings.security ?? {}) as Record<string, unknown>;
-    security.auth = { selectedType: protocol, apiKey, baseUrl };
+    const auth = (security.auth ?? {}) as Record<string, unknown>;
+    auth.selectedType = protocol;
+    security.auth = auth;
     settings.security = security;
 
-    // model — active model, disambiguated by baseUrl.
-    settings.model = { name: model, baseUrl };
+    // model + settings version (per Model Studio doc).
+    const modelConfig = (settings.model ?? {}) as Record<string, unknown>;
+    modelConfig.name = model;
+    settings.model = modelConfig;
+    settings.$version = 3;
 
     writeJsonAtomic(settingsPath, settings);
 

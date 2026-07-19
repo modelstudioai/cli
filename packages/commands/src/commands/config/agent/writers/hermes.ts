@@ -2,10 +2,19 @@ import { homedir } from "os";
 import { join } from "path";
 import { existsSync, readFileSync } from "fs";
 import yaml from "yaml";
-import { backup, writeTextAtomic, isAnthropicEndpoint, type AgentDef } from "./utils.ts";
+import { BailianError, ExitCode } from "bailian-cli-core";
+import {
+  backup,
+  writeTextAtomic,
+  isAnthropicEndpoint,
+  type AgentDef,
+} from "./utils.ts";
 
-const PROVIDER_NAME = "bailian-cli";
-
+/**
+ * Hermes config follows the Alibaba Cloud Model Studio doc: a flat `model`
+ * block carries the endpoint inline. Anthropic-compatible endpoints set
+ * `api_mode: anthropic_messages`; OpenAI-compatible endpoints omit `api_mode`.
+ */
 export default {
   label: "Hermes Agent",
   write({ baseUrl, apiKey, model }) {
@@ -16,32 +25,30 @@ export default {
     let config: Record<string, unknown> = {};
     if (existsSync(configPath)) {
       try {
-        config = (yaml.parse(readFileSync(configPath, "utf-8")) ?? {}) as Record<string, unknown>;
-      } catch {
-        config = {};
+        config = (yaml.parse(readFileSync(configPath, "utf-8")) ??
+          {}) as Record<string, unknown>;
+      } catch (error) {
+        throw new BailianError(
+          `Failed to parse existing config: ${configPath}`,
+          ExitCode.GENERAL,
+          `Fix or back up the file, then retry. Underlying error: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
       }
     }
 
-    const apiMode = isAnthropicEndpoint(baseUrl) ? "anthropic_messages" : "chat_completions";
-    const providerEntry = {
-      name: PROVIDER_NAME,
+    const modelBlock: Record<string, unknown> = {
+      default: model,
+      provider: "custom",
       base_url: baseUrl,
       api_key: apiKey,
-      api_mode: apiMode,
-      models: [{ id: model, name: model }],
     };
+    // Anthropic endpoints require api_mode; OpenAI-compatible ones omit it.
+    if (isAnthropicEndpoint(baseUrl))
+      modelBlock.api_mode = "anthropic_messages";
 
-    // custom_providers — upsert the bailian-cli entry by name.
-    const providers = Array.isArray(config.custom_providers)
-      ? (config.custom_providers as Array<Record<string, unknown>>)
-      : [];
-    const index = providers.findIndex((entry) => entry.name === PROVIDER_NAME);
-    if (index >= 0) providers[index] = providerEntry;
-    else providers.push(providerEntry);
-    config.custom_providers = providers;
-
-    // model — select the bailian-cli provider and default model.
-    config.model = { default: model, provider: PROVIDER_NAME };
+    config.model = modelBlock;
 
     writeTextAtomic(configPath, yaml.stringify(config));
 

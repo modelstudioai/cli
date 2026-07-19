@@ -1,4 +1,11 @@
-import { mkdtempSync, rmSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "fs";
+import {
+  mkdtempSync,
+  rmSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  readdirSync,
+} from "fs";
 import { tmpdir, homedir } from "os";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
@@ -12,7 +19,7 @@ import yaml from "yaml";
 
 /**
  * Agent writer 单元测试：直接调用 writer，用临时 HOME 隔离文件系统。
- * writer 是纯文件 I/O，在进程内测试比 e2e 子进程更快、覆盖更全。
+ * 结构以阿里云百炼官方文档为准。
  */
 
 const OAI_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
@@ -20,18 +27,27 @@ const ANTHROPIC_URL = "https://dashscope.aliyuncs.com/apps/anthropic";
 
 let home = "";
 let prevHome: string | undefined;
+let prevCodexHome: string | undefined;
+let prevClaudeDir: string | undefined;
 
 beforeEach(() => {
   home = mkdtempSync(join(tmpdir(), "bl-agent-writer-"));
   prevHome = process.env.HOME;
+  prevCodexHome = process.env.CODEX_HOME;
+  prevClaudeDir = process.env.CLAUDE_CONFIG_DIR;
   process.env.HOME = home;
-  // homedir() 在 POSIX 读 $HOME；断言隔离生效。
+  delete process.env.CODEX_HOME;
+  delete process.env.CLAUDE_CONFIG_DIR;
   expect(homedir()).toBe(home);
 });
 
 afterEach(() => {
   if (prevHome === undefined) delete process.env.HOME;
   else process.env.HOME = prevHome;
+  if (prevCodexHome === undefined) delete process.env.CODEX_HOME;
+  else process.env.CODEX_HOME = prevCodexHome;
+  if (prevClaudeDir === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+  else process.env.CLAUDE_CONFIG_DIR = prevClaudeDir;
   rmSync(home, { recursive: true, force: true });
 });
 
@@ -41,7 +57,6 @@ function readJsonAt(...segments: string[]): Record<string, unknown> {
 
 describe("config agent writers", () => {
   test("claude-code 写入 env 与 onboarding，并合并已有 env", () => {
-    // 预置一个无关 env 键，验证合并保留
     mkdirSync(join(home, ".claude"), { recursive: true });
     writeFileSync(
       join(home, ".claude", "settings.json"),
@@ -70,51 +85,96 @@ describe("config agent writers", () => {
     expect(readJsonAt(".claude.json").hasCompletedOnboarding).toBe(true);
   });
 
-  test("qwen-code compatible-mode 走 openai 协议", () => {
-    qwenCode.write({ baseUrl: OAI_URL, apiKey: "sk-q", model: "qwen3-coder-plus" });
+  test("claude-code 尊重 CLAUDE_CONFIG_DIR", () => {
+    const dir = join(home, "custom-claude");
+    process.env.CLAUDE_CONFIG_DIR = dir;
+    claudeCode.write({
+      baseUrl: ANTHROPIC_URL,
+      apiKey: "sk-a",
+      model: "qwen3-max",
+    });
+    const settings = JSON.parse(
+      readFileSync(join(dir, "settings.json"), "utf8"),
+    );
+    expect((settings.env as Record<string, string>).ANTHROPIC_BASE_URL).toBe(
+      ANTHROPIC_URL,
+    );
+  });
+
+  test("qwen-code compatible-mode 走 openai 协议（官方结构）", () => {
+    qwenCode.write({
+      baseUrl: OAI_URL,
+      apiKey: "sk-q",
+      model: "qwen3-coder-plus",
+    });
     const settings = readJsonAt(".qwen", "settings.json");
-    const security = settings.security as { auth: Record<string, string> };
+    const security = settings.security as { auth: Record<string, unknown> };
     expect(security.auth.selectedType).toBe("openai");
-    expect(security.auth.apiKey).toBe("sk-q");
-    expect(security.auth.baseUrl).toBe(OAI_URL);
-    expect((settings.env as Record<string, string>).BAILIAN_CLI_API_KEY).toBe("sk-q");
-    expect((settings.model as Record<string, string>).name).toBe("qwen3-coder-plus");
-    const providers = settings.modelProviders as Record<string, Array<Record<string, unknown>>>;
+    // 不写已废弃的 apiKey/baseUrl
+    expect(security.auth.apiKey).toBeUndefined();
+    expect(security.auth.baseUrl).toBeUndefined();
+    expect(settings.$version).toBe(3);
+    expect((settings.env as Record<string, string>).BAILIAN_API_KEY).toBe(
+      "sk-q",
+    );
+    expect(settings.model).toEqual({ name: "qwen3-coder-plus" });
+    const providers = settings.modelProviders as Record<
+      string,
+      Array<Record<string, unknown>>
+    >;
     expect(providers.openai[0]).toMatchObject({
       id: "qwen3-coder-plus",
-      name: "bailian-cli",
+      name: "[Bailian] qwen3-coder-plus",
       baseUrl: OAI_URL,
-      envKey: "BAILIAN_CLI_API_KEY",
+      envKey: "BAILIAN_API_KEY",
     });
   });
 
   test("qwen-code anthropic 端点走 anthropic 协议", () => {
-    qwenCode.write({ baseUrl: ANTHROPIC_URL, apiKey: "sk-q", model: "qwen3-max" });
+    qwenCode.write({
+      baseUrl: ANTHROPIC_URL,
+      apiKey: "sk-q",
+      model: "qwen3-max",
+    });
     const settings = readJsonAt(".qwen", "settings.json");
-    expect((settings.security as { auth: { selectedType: string } }).auth.selectedType).toBe(
-      "anthropic",
-    );
+    expect(
+      (settings.security as { auth: { selectedType: string } }).auth
+        .selectedType,
+    ).toBe("anthropic");
     const providers = settings.modelProviders as Record<string, unknown>;
     expect(Array.isArray(providers.anthropic)).toBe(true);
     expect(providers.openai).toBeUndefined();
   });
 
   test("qwen-code 对相同 id+baseUrl 的 provider 项做 upsert 而非追加", () => {
-    qwenCode.write({ baseUrl: OAI_URL, apiKey: "sk-1", model: "qwen3-coder-plus" });
-    qwenCode.write({ baseUrl: OAI_URL, apiKey: "sk-2", model: "qwen3-coder-plus" });
+    qwenCode.write({
+      baseUrl: OAI_URL,
+      apiKey: "sk-1",
+      model: "qwen3-coder-plus",
+    });
+    qwenCode.write({
+      baseUrl: OAI_URL,
+      apiKey: "sk-2",
+      model: "qwen3-coder-plus",
+    });
     const settings = readJsonAt(".qwen", "settings.json");
-    const openaiEntries = (settings.modelProviders as Record<string, unknown[]>).openai;
+    const openaiEntries = (settings.modelProviders as Record<string, unknown[]>)
+      .openai;
     expect(openaiEntries).toHaveLength(1);
   });
 
-  test("opencode 按端点选 npm，含 setCacheKey，合并保留其它 provider", () => {
+  test("opencode 按端点选 npm（无 setCacheKey），合并保留其它 provider", () => {
     mkdirSync(join(home, ".config", "opencode"), { recursive: true });
     writeFileSync(
       join(home, ".config", "opencode", "opencode.json"),
       JSON.stringify({ provider: { other: { name: "Other" } } }),
     );
 
-    opencode.write({ baseUrl: ANTHROPIC_URL, apiKey: "sk-o", model: "qwen3-max" });
+    opencode.write({
+      baseUrl: ANTHROPIC_URL,
+      apiKey: "sk-o",
+      model: "qwen3-max",
+    });
     const config = readJsonAt(".config", "opencode", "opencode.json");
     const provider = config.provider as Record<string, Record<string, unknown>>;
     expect(provider.other).toBeDefined();
@@ -122,10 +182,11 @@ describe("config agent writers", () => {
     const options = provider["bailian-cli"].options as Record<string, unknown>;
     expect(options.baseURL).toBe(ANTHROPIC_URL);
     expect(options.apiKey).toBe("sk-o");
-    expect(options.setCacheKey).toBe(true);
-    expect((provider["bailian-cli"].models as Record<string, unknown>)["qwen3-max"]).toBeDefined();
+    expect(options.setCacheKey).toBeUndefined();
+    expect(
+      (provider["bailian-cli"].models as Record<string, unknown>)["qwen3-max"],
+    ).toBeDefined();
 
-    // 非 anthropic 端点用 openai-compatible
     opencode.write({ baseUrl: OAI_URL, apiKey: "sk-o", model: "qwen3-max" });
     expect(
       (
@@ -137,61 +198,103 @@ describe("config agent writers", () => {
     ).toBe("@ai-sdk/openai-compatible");
   });
 
-  test("openclaw 写入 provider、api 与 primary", () => {
-    openclaw.write({ baseUrl: OAI_URL, apiKey: "sk-c", model: "qwen3-coder-plus" });
+  test("opencode 存在 .jsonc 时写入 .jsonc", () => {
+    mkdirSync(join(home, ".config", "opencode"), { recursive: true });
+    writeFileSync(join(home, ".config", "opencode", "opencode.jsonc"), "{}\n");
+    const summary = opencode.write({
+      baseUrl: OAI_URL,
+      apiKey: "sk-o",
+      model: "qwen3-max",
+    });
+    expect(summary.paths[0].endsWith("opencode.jsonc")).toBe(true);
+  });
+
+  test("openclaw 不传 contextWindow 时不写该字段", () => {
+    openclaw.write({
+      baseUrl: OAI_URL,
+      apiKey: "sk-c",
+      model: "qwen3-coder-plus",
+    });
     const config = readJsonAt(".openclaw", "openclaw.json");
     const models = config.models as Record<string, unknown>;
     expect(models.mode).toBe("merge");
-    const bailian = (models.providers as Record<string, Record<string, unknown>>)["bailian-cli"];
+    const bailian = (
+      models.providers as Record<string, Record<string, unknown>>
+    )["bailian-cli"];
     expect(bailian.api).toBe("openai-completions");
-    expect((bailian.models as Array<{ id: string }>)[0].id).toBe("qwen3-coder-plus");
-    const agents = config.agents as { defaults: { model: { primary: string } } };
+    const entry = (bailian.models as Array<Record<string, unknown>>)[0];
+    expect(entry.id).toBe("qwen3-coder-plus");
+    expect(entry.contextWindow).toBeUndefined();
+    const agents = config.agents as {
+      defaults: { model: { primary: string }; models: Record<string, unknown> };
+    };
     expect(agents.defaults.model.primary).toBe("bailian-cli/qwen3-coder-plus");
-
-    // anthropic 端点用 anthropic-messages
-    openclaw.write({ baseUrl: ANTHROPIC_URL, apiKey: "sk-c", model: "qwen3-max" });
-    const config2 = readJsonAt(".openclaw", "openclaw.json");
     expect(
-      ((config2.models as Record<string, unknown>).providers as Record<string, { api: string }>)[
-        "bailian-cli"
-      ].api,
-    ).toBe("anthropic-messages");
+      agents.defaults.models["bailian-cli/qwen3-coder-plus"],
+    ).toBeDefined();
   });
 
-  test("hermes 写入 custom_providers 与 model，合并保留其它 provider", () => {
+  test("openclaw 传 contextWindow 时写入该字段；anthropic 端点用 anthropic-messages", () => {
+    openclaw.write({
+      baseUrl: ANTHROPIC_URL,
+      apiKey: "sk-c",
+      model: "qwen3-max",
+      contextWindow: 262144,
+    });
+    const config = readJsonAt(".openclaw", "openclaw.json");
+    const bailian = (
+      (config.models as Record<string, unknown>).providers as Record<
+        string,
+        Record<string, unknown>
+      >
+    )["bailian-cli"];
+    expect(bailian.api).toBe("anthropic-messages");
+    expect(
+      (bailian.models as Array<Record<string, unknown>>)[0].contextWindow,
+    ).toBe(262144);
+  });
+
+  test("hermes 官方扁平 model.* 结构；anthropic 端点带 api_mode", () => {
     mkdirSync(join(home, ".hermes"), { recursive: true });
     writeFileSync(
       join(home, ".hermes", "config.yaml"),
-      yaml.stringify({ custom_providers: [{ name: "other", base_url: "https://x" }] }),
+      yaml.stringify({ agent: { max_turns: 5 } }),
     );
 
-    hermes.write({ baseUrl: OAI_URL, apiKey: "sk-h", model: "qwen3-coder-plus" });
-    const config = yaml.parse(readFileSync(join(home, ".hermes", "config.yaml"), "utf8"));
-    expect(config.model).toEqual({ default: "qwen3-coder-plus", provider: "bailian-cli" });
-    const names = (config.custom_providers as Array<{ name: string }>).map((p) => p.name);
-    expect(names).toContain("other");
-    const entry = (config.custom_providers as Array<Record<string, unknown>>).find(
-      (provider) => provider.name === "bailian-cli",
-    )!;
-    expect(entry.base_url).toBe(OAI_URL);
-    expect(entry.api_key).toBe("sk-h");
-    expect(entry.api_mode).toBe("chat_completions");
-
-    // anthropic 端点用 anthropic_messages
-    hermes.write({ baseUrl: ANTHROPIC_URL, apiKey: "sk-h", model: "qwen3-max" });
-    const config2 = yaml.parse(readFileSync(join(home, ".hermes", "config.yaml"), "utf8"));
-    const entry2 = (config2.custom_providers as Array<Record<string, unknown>>).find(
-      (provider) => provider.name === "bailian-cli",
-    )!;
-    expect(entry2.api_mode).toBe("anthropic_messages");
-    // upsert：bailian-cli 项不重复
-    expect(
-      (config2.custom_providers as Array<{ name: string }>).filter((p) => p.name === "bailian-cli"),
-    ).toHaveLength(1);
+    hermes.write({
+      baseUrl: ANTHROPIC_URL,
+      apiKey: "sk-h",
+      model: "qwen3-max",
+    });
+    const config = yaml.parse(
+      readFileSync(join(home, ".hermes", "config.yaml"), "utf8"),
+    );
+    // 合并保留其它顶层键
+    expect(config.agent).toEqual({ max_turns: 5 });
+    expect(config.model).toEqual({
+      default: "qwen3-max",
+      provider: "custom",
+      base_url: ANTHROPIC_URL,
+      api_key: "sk-h",
+      api_mode: "anthropic_messages",
+    });
+    expect(config.custom_providers).toBeUndefined();
   });
 
-  test("codex 写入 config.toml 与 auth.json（cc-switch 对齐结构，合并保留）", () => {
-    // 预置 config.toml 无关顶层键与另一个 provider，验证非破坏性合并
+  test("hermes OpenAI 兼容端点省略 api_mode", () => {
+    hermes.write({
+      baseUrl: OAI_URL,
+      apiKey: "sk-h",
+      model: "qwen3-coder-plus",
+    });
+    const config = yaml.parse(
+      readFileSync(join(home, ".hermes", "config.yaml"), "utf8"),
+    );
+    expect(config.model.api_mode).toBeUndefined();
+    expect(config.model.base_url).toBe(OAI_URL);
+  });
+
+  test("codex 官方 env_key 结构；合并保留其它配置", () => {
     mkdirSync(join(home, ".codex"), { recursive: true });
     writeFileSync(
       join(home, ".codex", "config.toml"),
@@ -200,24 +303,31 @@ describe("config agent writers", () => {
         "",
         "[model_providers.other]",
         'name = "other"',
-        'base_url = "https://other.example.com/v1"',
         "",
       ].join("\n"),
     );
-    // 预置 auth.json 无关键，验证合并保留
-    writeFileSync(join(home, ".codex", "auth.json"), JSON.stringify({ EXISTING: "keep" }));
+    writeFileSync(
+      join(home, ".codex", "auth.json"),
+      JSON.stringify({ EXISTING: "keep" }),
+    );
 
-    codex.write({ baseUrl: OAI_URL, apiKey: "sk-x", model: "qwen3-coder-plus" });
+    codex.write({
+      baseUrl: OAI_URL,
+      apiKey: "sk-x",
+      model: "qwen3-coder-plus",
+    });
     const toml = readFileSync(join(home, ".codex", "config.toml"), "utf8");
     expect(toml).toContain('model_provider = "bailian-cli"');
     expect(toml).toContain('model = "qwen3-coder-plus"');
-    expect(toml).toContain('model_reasoning_effort = "high"');
-    expect(toml).toContain("disable_response_storage = true");
     expect(toml).toContain("[model_providers.bailian-cli]");
     expect(toml).toContain(`base_url = "${OAI_URL}"`);
+    expect(toml).toContain('env_key = "OPENAI_API_KEY"');
     expect(toml).toContain('wire_api = "responses"');
-    expect(toml).toContain("requires_openai_auth = true");
-    // 合并：保留用户已有的无关配置
+    // 不再包含 cc-switch 专有字段
+    expect(toml).not.toContain("requires_openai_auth");
+    expect(toml).not.toContain("model_reasoning_effort");
+    expect(toml).not.toContain("disable_response_storage");
+    // 合并保留
     expect(toml).toContain('approval_policy = "on-request"');
     expect(toml).toContain("[model_providers.other]");
 
@@ -226,14 +336,44 @@ describe("config agent writers", () => {
     expect(auth.EXISTING).toBe("keep");
   });
 
+  test("codex 尊重 CODEX_HOME", () => {
+    const dir = join(home, "custom-codex");
+    process.env.CODEX_HOME = dir;
+    codex.write({
+      baseUrl: OAI_URL,
+      apiKey: "sk-x",
+      model: "qwen3-coder-plus",
+    });
+    expect(readFileSync(join(dir, "config.toml"), "utf8")).toContain(
+      'model_provider = "bailian-cli"',
+    );
+    expect(
+      JSON.parse(readFileSync(join(dir, "auth.json"), "utf8")).OPENAI_API_KEY,
+    ).toBe("sk-x");
+  });
+
   test("已存在的配置文件会被备份为 .bak.<epoch>", () => {
     mkdirSync(join(home, ".openclaw"), { recursive: true });
-    writeFileSync(join(home, ".openclaw", "openclaw.json"), JSON.stringify({ pre: 1 }));
+    writeFileSync(
+      join(home, ".openclaw", "openclaw.json"),
+      JSON.stringify({ pre: 1 }),
+    );
 
     openclaw.write({ baseUrl: OAI_URL, apiKey: "sk-c", model: "qwen3-max" });
     const backups = readdirSync(join(home, ".openclaw")).filter((name) =>
       name.startsWith("openclaw.json.bak."),
     );
     expect(backups).toHaveLength(1);
+  });
+
+  test("已有配置解析失败时抛错，不覆盖原文件", () => {
+    mkdirSync(join(home, ".openclaw"), { recursive: true });
+    const path = join(home, ".openclaw", "openclaw.json");
+    writeFileSync(path, "{ this is not valid json");
+    expect(() =>
+      openclaw.write({ baseUrl: OAI_URL, apiKey: "sk-c", model: "qwen3-max" }),
+    ).toThrow(/Failed to parse/);
+    // 原文件保持不变
+    expect(readFileSync(path, "utf8")).toBe("{ this is not valid json");
   });
 });

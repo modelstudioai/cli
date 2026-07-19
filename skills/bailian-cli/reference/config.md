@@ -34,6 +34,7 @@ Index: [index.md](index.md)
 | `--base-url <url>`                                                    | string | yes      | API base URL                                                            |
 | `--api-key <key>`                                                     | string | yes      | API key                                                                 |
 | `--model <model>`                                                     | string | yes      | Default model name                                                      |
+| `--context-window <tokens>`                                           | number | no       | Context window in tokens (openclaw only; omit to use the agent default) |
 
 #### Examples
 
