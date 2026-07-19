@@ -1,4 +1,4 @@
-import { defineCommand, getConfigPath } from "bailian-cli-core";
+import { defineCommand } from "bailian-cli-core";
 import { emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
@@ -12,7 +12,7 @@ export default defineCommand({
     },
     openApi: {
       type: "switch",
-      description: "Only clear OpenAPI AK/SK credentials, keep other credentials intact",
+      description: "Only clear OpenAPI AK/SK/STS credentials, keep other credentials intact",
     },
   },
   exampleArgs: ["", "--console", "--open-api", "--dry-run"],
@@ -25,13 +25,13 @@ export default defineCommand({
 
     if (flags.console) {
       if (settings.dryRun) {
-        if (stored.console) emitBare("Would clear access_token from ~/.bailian/config.json");
+        if (stored.console) emitBare(`Would clear access_token from ${store.path}`);
         else emitBare("No console access_token to clear.");
         emitBare("No changes made.");
         return;
       }
       if (await store.logout("console")) {
-        process.stderr.write(`Cleared access_token from ${getConfigPath()}\n`);
+        process.stderr.write(`Cleared access_token from ${store.path}\n`);
         if (stored.apiKey) {
           process.stderr.write(
             "api_key is still configured and will be used for authentication.\n",
@@ -46,13 +46,17 @@ export default defineCommand({
     if (flags.openApi) {
       if (settings.dryRun) {
         if (stored.openapi)
-          emitBare("Would clear access_key_id / access_key_secret from ~/.bailian/config.json");
+          emitBare(
+            `Would clear access_key_id / access_key_secret / security_token from ${store.path}`,
+          );
         else emitBare("No OpenAPI AK/SK credentials to clear.");
         emitBare("No changes made.");
         return;
       }
       if (await store.logout("openapi")) {
-        process.stderr.write(`Cleared access_key_id / access_key_secret from ${getConfigPath()}\n`);
+        process.stderr.write(
+          `Cleared access_key_id / access_key_secret / security_token from ${store.path}\n`,
+        );
         if (stored.apiKey || stored.console) {
           process.stderr.write(
             "Other credentials are still configured and will be used for authentication.\n",
@@ -69,7 +73,7 @@ export default defineCommand({
     if (settings.dryRun) {
       if (hasKey)
         emitBare(
-          "Would clear api_key / access_token / access_key_id / access_key_secret from ~/.bailian/config.json",
+          `Would clear api_key / access_token / access_key_id / access_key_secret / security_token from ${store.path}`,
         );
       else emitBare("No credentials to clear.");
       emitBare("No changes made.");
@@ -78,7 +82,7 @@ export default defineCommand({
 
     if (await store.logout("all")) {
       process.stderr.write(
-        "Cleared api_key / access_token / access_key_id / access_key_secret from ~/.bailian/config.json\n",
+        `Cleared api_key / access_token / access_key_id / access_key_secret / security_token from ${store.path}\n`,
       );
     } else {
       process.stderr.write("No credentials to clear.\n");

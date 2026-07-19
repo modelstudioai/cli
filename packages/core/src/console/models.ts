@@ -244,7 +244,7 @@ export async function fetchPredictConfig(
   modelId: string,
 ): Promise<PredictConfigEntry[] | null> {
   const result = (await call(PREDICT_CONFIG_API, { modelId })) as Record<string, unknown>;
-  const raw = result.predictConfig;
+  const raw = unwrapResponse(result).predictConfig;
   if (!raw) return null;
 
   if (typeof raw === "string") {

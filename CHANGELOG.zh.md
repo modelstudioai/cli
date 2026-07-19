@@ -6,6 +6,41 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.9.0] - 2026-07-17
+
+### 新增
+
+- **支持 Token Plan** —— 登录后即可直接调用支持的模型，无需手动配置接入地址。
+- **命名 Config Profile** —— 支持创建、切换和管理相互隔离的配置，登录后会自动激活当前 Profile。
+- **Console Access Token 自动化** —— 支持生成并自动刷新 Console Access Token。
+- **`bl workspace init`** —— 一站式完成百炼工作空间初始化和所需服务开通。
+
+### 修复
+
+- 提升配置安全性与一致性，包括密钥脱敏和自定义配置字段保留。
+
+## [1.8.3] - 2026-07-16
+
+### 修复
+
+- 修复 Windows 上 `bl text chat --messages-file -` 将标准输入当作 `/dev/stdin` 文件路径读取的问题；通过管道传入的 JSON 消息现在可以从标准输入正常读取。（#103）
+
+## [1.8.2] - 2026-07-15
+
+### 变更
+
+- `bl model list` 现在默认以 JSON 输出；需要表格视图请传 `--output text`。
+
+### 修复
+
+- `bl model list --enrich` 现在能正确返回每个模型的输入参数 schema（predictConfig）；此前因未解包控制台网关响应信封而始终为空。
+
+## [1.8.1] - 2026-07-14
+
+### 变更
+
+- 扩展 Command Pack 白名单，允许加载额外的内部命令扩展。
+
 ## [1.8.0] - 2026-07-13
 
 ### 新增

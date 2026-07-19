@@ -54,8 +54,9 @@ try {
     log(`${pkg.name}@${version}: ${exists ? "already published" : "to publish"}`);
   }
   if (packages.every((pkg) => published.get(pkg.key))) {
-    log("\nall packages already published; nothing to do.");
-    process.exit(0);
+    throw new Error(
+      `version ${version} is already published for all target packages; bump the package versions before retrying.`,
+    );
   }
 
   // Publish in dependency order (core → runtime → commands → cli [→ kscli]).
