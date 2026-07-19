@@ -30,6 +30,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 - **视频生成与编辑** — happyhorse-1.1 系列，支持文生 / 图生 / 参考生（最多 9 张图参考）/ 自然语言视频编辑
 - **语音合成与识别** — CosyVoice 实时流式合成，5-20s 样本即可克隆；FunAudio-ASR 覆盖 30 种语种，含汉语七大方言与 20+ 口音官话
 - **图像与视频理解** — Qwen-VL：长视频解析、复杂图表与文档识别、视觉推理、多语种 OCR
+- **Coding Agent 配置** — 使用 `bl config agent` 将 Claude Code、Qwen Code、OpenCode、OpenClaw、Hermes Agent 或 Codex 配置为使用 DashScope
 
 > **注意：** 以下功能目前仅对中国站（aliyun.com）账号开放，国际站 / 全球站账号暂不支持。
 
@@ -88,6 +89,12 @@ bl auth login --console
 
 # 或使用 API key 认证
 bl auth login --api-key sk-xxxxx
+
+# 或使用 Token Plan（已内置 Base URL，登录时自动测试 Key）
+bl auth login --config token-plan --api-key sk-sp-xxxxx
+
+# 配置 Coding Agent 使用 DashScope
+bl config agent --agent codex --base-url https://dashscope.aliyuncs.com/compatible-mode/v1 --api-key sk-xxxxx --model qwen3-coder-plus
 
 # 和通义千问对话
 bl text chat --message "你好，介绍一下阿里云百炼平台"
@@ -157,6 +164,15 @@ bl auth login --api-key sk-xxxxx
 bl text chat --api-key sk-xxxxx --message "你好"
 ```
 
+### Token Plan API Key
+
+前往 [Token Plan 订阅详情](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview) 获取或复制 API Key。
+CLI 已内置 Token Plan 的默认 Base URL；登录命令会先测试 Key，通过后才保存并激活 `token-plan` 配置。
+
+```bash
+bl auth login --config token-plan --api-key sk-sp-xxxxx
+```
+
 ### 控制台登录（OAuth）
 
 控制台能力命令（`model list`、`app list`、`usage summary/free/stats`、`workspace list`、`quota list/request/check/history`）需要使用此登录方式。打开浏览器跳转百炼控制台完成登录。
@@ -207,6 +223,7 @@ bl update
 | 通义千问模型列表        | https://help.aliyun.com/zh/model-studio/getting-started/models                            |
 | 阿里云百炼控制台        | https://bailian.console.aliyun.com/?source_channel=cli_github                             |
 | 获取 API Key            | https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key |
+| 获取 Token Plan API Key | https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview         |
 | 获取 AccessKey          | https://ram.console.aliyun.com/manage/ak                                                  |
 
 ## 更新日志
