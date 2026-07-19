@@ -30,6 +30,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **Video generation & editing** — happyhorse-1.1 series: text-/image-/reference-to-video and natural-language video editing (up to 9-image reference)
 - **Speech synthesis & recognition** — CosyVoice streaming TTS, voice cloning from 5–20s samples; FunAudio-ASR covers 30 languages including 7 Chinese dialects and 20+ Mandarin accents
 - **Image & video understanding** — Qwen-VL: long-form video analysis, chart/document parsing, visual reasoning, multilingual OCR
+- **Coding agent setup** — Configure Claude Code, Qwen Code, OpenCode, OpenClaw, Hermes Agent, or Codex to use DashScope with `bl config agent`
 
 > **Note:** The features below are currently available only to China site (aliyun.com) account holders and are not yet supported for international / global site accounts.
 
@@ -93,6 +94,9 @@ bl auth login --api-key sk-xxxxx
 
 # Or use Token Plan (Base URL built in; the key is tested during login)
 bl auth login --config token-plan --api-key sk-sp-xxxxx
+
+# Configure a coding agent to use DashScope
+bl config agent --agent codex --base-url https://dashscope.aliyuncs.com/compatible-mode/v1 --api-key sk-xxxxx --model qwen3-coder-plus
 
 # Chat with Qwen
 bl text chat --message "What is DashScope?"

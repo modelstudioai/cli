@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.10.0] - 2026-07-19
+
+### Added
+
+- **`bl config agent`** — configure Claude Code, Qwen Code, OpenCode, OpenClaw, Hermes Agent, or Codex to use DashScope in one command.
+
+### Changed
+
+- The Bailian CLI Skill now routes only matching Bailian and multimodal tasks to `bl`, and asks for consent before provider-neutral remote or billable calls.
+
+### Fixed
+
+- Full `bl auth logout` now clears the model Base URL so later logins cannot inherit a stale custom or Token Plan endpoint.
+
 ## [1.9.0] - 2026-07-17
 
 ### Added
