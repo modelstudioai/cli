@@ -91,6 +91,9 @@ bl auth login --console
 # Or authenticate with an API key
 bl auth login --api-key sk-xxxxx
 
+# Or use Token Plan (Base URL built in; the key is tested during login)
+bl auth login --config token-plan --api-key sk-sp-xxxxx
+
 # Chat with Qwen
 bl text chat --message "What is DashScope?"
 
@@ -159,6 +162,15 @@ bl auth login --api-key sk-xxxxx
 bl text chat --api-key sk-xxxxx --message "Hello"
 ```
 
+### Token Plan API Key
+
+Get or copy the API key from the [Token Plan subscription overview](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview).
+The CLI has the default Token Plan Base URL built in. Login tests the key first, then saves and activates the `token-plan` config only when validation succeeds.
+
+```bash
+bl auth login --config token-plan --api-key sk-sp-xxxxx
+```
+
 ### Console Login (OAuth)
 
 Required for console capability commands (`model list`, `app list`, `usage summary/free/stats`, `workspace list`, `quota list/request/check/history`). Opens the Bailian console in your browser to sign in.
@@ -209,6 +221,7 @@ Config file location: `~/.bailian/config.json`
 | Qwen Model List              | https://help.aliyun.com/zh/model-studio/getting-started/models                            |
 | Aliyun Model Studio Console  | https://bailian.console.aliyun.com/?source_channel=cli_github                             |
 | Get API Key                  | https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key |
+| Get Token Plan API Key       | https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview         |
 | Get AccessKey                | https://ram.console.aliyun.com/manage/ak                                                  |
 
 ## Changelog

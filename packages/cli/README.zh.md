@@ -89,6 +89,9 @@ bl auth login --console
 # 或使用 API key 认证
 bl auth login --api-key sk-xxxxx
 
+# 或使用 Token Plan（已内置 Base URL，登录时自动测试 Key）
+bl auth login --config token-plan --api-key sk-sp-xxxxx
+
 # 和通义千问对话
 bl text chat --message "你好，介绍一下阿里云百炼平台"
 
@@ -157,6 +160,15 @@ bl auth login --api-key sk-xxxxx
 bl text chat --api-key sk-xxxxx --message "你好"
 ```
 
+### Token Plan API Key
+
+前往 [Token Plan 订阅详情](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview) 获取或复制 API Key。
+CLI 已内置 Token Plan 的默认 Base URL；登录命令会先测试 Key，通过后才保存并激活 `token-plan` 配置。
+
+```bash
+bl auth login --config token-plan --api-key sk-sp-xxxxx
+```
+
 ### 控制台登录（OAuth）
 
 控制台能力命令（`model list`、`app list`、`usage summary/free/stats`、`workspace list`、`quota list/request/check/history`）需要使用此登录方式。打开浏览器跳转百炼控制台完成登录。
@@ -207,6 +219,7 @@ bl update
 | 通义千问模型列表        | https://help.aliyun.com/zh/model-studio/getting-started/models                            |
 | 阿里云百炼控制台        | https://bailian.console.aliyun.com/?source_channel=cli_github                             |
 | 获取 API Key            | https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key |
+| 获取 Token Plan API Key | https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview         |
 | 获取 AccessKey          | https://ram.console.aliyun.com/manage/ak                                                  |
 
 ## 更新日志

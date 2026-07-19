@@ -35,17 +35,22 @@ bl auth logout --console  # clear console token only
 bl auth logout --open-api # clear OpenAPI AK/SK only
 ```
 
-Get an API key: https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key
+- Get a DashScope API key: https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key
+- Get a Token Plan API key: https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview
 
 ### Token Plan model consumption
 
-Use the `PlainApiKey` returned by `bl token-plan create-key` as a model API key. It is separate from the OpenAPI AK/SK used by Token Plan management commands.
+Get or copy the Token Plan API key from the [subscription overview](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview). A `PlainApiKey` returned by `bl token-plan create-key` is the same credential type. It is separate from the OpenAPI AK/SK used by Token Plan management commands.
 
 ```bash
 bl auth login --config token-plan --api-key sk-sp-xxx
 bl text chat --message "Hello"
 bl image generate --prompt "A cat"
 ```
+
+The built-in Profile supplies the Token Plan Base URL. `auth login` tests the key first, then saves
+and activates the Profile only when validation succeeds; do not ask the user to configure the Base
+URL or run a duplicate smoke test.
 
 Successful login automatically activates the explicitly selected Profile. Use `bl config list` to
 inspect it, and switch back when needed:
