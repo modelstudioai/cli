@@ -6,6 +6,20 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.10.0] - 2026-07-19
+
+### 新增
+
+- **`bl config agent`** —— 一键配置 Claude Code、Qwen Code、OpenCode、OpenClaw、Hermes Agent 和 Codex 接入百炼模型服务。
+
+### 变更
+
+- 百炼 CLI Skill 现在只将匹配的百炼任务与多模态任务路由到 `bl`，并会在调用与平台无关的远程或计费能力前征求同意。
+
+### 修复
+
+- 完整执行 `bl auth logout` 时会同时清除模型 Base URL，避免后续登录继承失效的自定义或 Token Plan 接入地址。
+
 ## [1.9.0] - 2026-07-17
 
 ### 新增
