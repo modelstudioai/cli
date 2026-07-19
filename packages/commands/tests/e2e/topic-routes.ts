@@ -18,6 +18,7 @@ export const CONFIG_ROUTES: E2eRouteExports = {
   "config list": "configList",
   "config use": "configUse",
   "config ui": "configUi",
+  "config agent": "configAgent",
 };
 
 export const MEMORY_ROUTES: E2eRouteExports = {

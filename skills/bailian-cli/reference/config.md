@@ -7,15 +7,47 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command          | Description                                      |
-| ---------------- | ------------------------------------------------ |
-| `bl config list` | List config profiles and show the active profile |
-| `bl config set`  | Set a config value                               |
-| `bl config show` | Display current configuration                    |
-| `bl config ui`   | Open a local web UI to manage config profiles    |
-| `bl config use`  | Set the active config profile                    |
+| Command           | Description                                      |
+| ----------------- | ------------------------------------------------ |
+| `bl config agent` | Configure a coding agent to use DashScope API    |
+| `bl config list`  | List config profiles and show the active profile |
+| `bl config set`   | Set a config value                               |
+| `bl config show`  | Display current configuration                    |
+| `bl config ui`    | Open a local web UI to manage config profiles    |
+| `bl config use`   | Set the active config profile                    |
 
 ## Command details
+
+### `bl config agent`
+
+| Field           | Value                                                                             |
+| --------------- | --------------------------------------------------------------------------------- |
+| **Name**        | `config agent`                                                                    |
+| **Description** | Configure a coding agent to use DashScope API                                     |
+| **Usage**       | `bl config agent --agent <name> --base-url <url> --api-key <key> --model <model>` |
+
+#### Flags
+
+| Flag                                                                  | Type   | Required | Description                                                             |
+| --------------------------------------------------------------------- | ------ | -------- | ----------------------------------------------------------------------- |
+| `--agent <claude-code\|qwen-code\|opencode\|openclaw\|hermes\|codex>` | string | yes      | Target agent: claude-code, qwen-code, opencode, openclaw, hermes, codex |
+| `--base-url <url>`                                                    | string | yes      | API base URL                                                            |
+| `--api-key <key>`                                                     | string | yes      | API key                                                                 |
+| `--model <model>`                                                     | string | yes      | Default model name                                                      |
+
+#### Examples
+
+```bash
+bl config agent --agent claude-code --base-url https://dashscope.aliyuncs.com/apps/anthropic --api-key sk-xxxxx --model qwen3-max
+```
+
+```bash
+bl config agent --agent qwen-code --base-url https://dashscope.aliyuncs.com/compatible-mode/v1 --api-key sk-xxxxx --model qwen3-coder-plus
+```
+
+```bash
+bl config agent --agent codex --base-url https://dashscope.aliyuncs.com/compatible-mode/v1 --api-key sk-xxxxx --model qwen3-coder-plus
+```
 
 ### `bl config list`
 

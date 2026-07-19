@@ -44,6 +44,7 @@
     "bailian-cli-runtime": "workspace:*",
     "boxen": "catalog:",
     "chalk": "catalog:",
+    "smol-toml": "catalog:",
     "yaml": "catalog:"
   },
   "devDependencies": {
