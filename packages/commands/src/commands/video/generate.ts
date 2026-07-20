@@ -103,8 +103,9 @@ export default defineCommand({
 
     const model =
       flags.model ||
-      settings.defaultVideoModel ||
-      (flags.image ? "happyhorse-1.1-i2v" : "happyhorse-1.1-t2v");
+      (flags.image
+        ? settings.defaultImageToVideoModel || "happyhorse-1.1-i2v"
+        : settings.defaultVideoModel || "happyhorse-1.1-t2v");
     const format = detectOutputFormat(settings.output);
 
     const imageUrl = flags.image;

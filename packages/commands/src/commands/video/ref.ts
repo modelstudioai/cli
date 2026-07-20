@@ -117,7 +117,7 @@ export default defineCommand({
     const imageVoices = flags.imageVoice || [];
     const videoVoices = flags.videoVoice || [];
 
-    const model = flags.model || "happyhorse-1.1-r2v";
+    const model = flags.model || settings.defaultReferenceToVideoModel || "happyhorse-1.1-r2v";
     const format = detectOutputFormat(settings.output);
 
     // --- Resolve file URLs (auto-upload local files) ---

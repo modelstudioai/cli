@@ -27,7 +27,7 @@ token-plan assign-seats
 token-plan add-member
 ```
 
-这些命令属于管理面，继续使用 OpenAPI AK/SK。本方案增加的是模型消费面：用户把 `create-key` 获得的 `PlainApiKey` 保存到 Profile，然后通过现有文本和图片命令调用模型。
+这些命令属于管理面，继续使用 OpenAPI AK/SK。本方案增加的是模型消费面：用户把 `create-key` 获得的 `PlainApiKey` 保存到 Profile，然后通过现有文本、图片和视频命令调用模型。
 
 ```text
 OpenAPI AK/SK
@@ -42,7 +42,7 @@ OpenAPI AK/SK
 - 将 Token Plan 模型 API Key 作为普通 `apiKey` credential 使用。
 - 将 `token-plan` 作为内置命名 Profile 管理。
 - 支持 Config 激活状态和默认切换。
-- 复用现有文本、图片命令与 Client。
+- 复用现有文本、图片、视频命令与 Client。
 - 对所有来源的模型 Base URL 做统一归一化。
 - 登录验证成功后原子保存 API Key 和 Base URL。
 - 服务端错误保持原消息，不在 CLI 内翻译。
@@ -52,7 +52,7 @@ OpenAPI AK/SK
 - 不重写现有 Token Plan 管控命令。
 - 不把模型消费 API Key 合并到 OpenAPI AK/SK 鉴权域。
 - 不新增 Token Plan 专用 Client。
-- 基础阶段不承诺视频、语音和音频模型消费。
+- 基础阶段不承诺语音和音频模型消费。
 - 暂不维护会阻断请求的本地模型白名单。
 - 暂不把服务端错误翻译成 CLI 自定义错误。
 
@@ -76,7 +76,10 @@ CLI 应解析并保存以下配置：
   "token-plan": {
     "api_key": "<TOKEN_PLAN_API_KEY>",
     "base_url": "https://token-plan.cn-beijing.maas.aliyuncs.com",
-    "default_text_model": "qwen3.7-max",
+    "default_text_model": "qwen3.8-max-preview",
+    "default_video_model": "happyhorse-1.1-t2v",
+    "default_image_to_video_model": "happyhorse-1.1-i2v",
+    "default_reference_to_video_model": "happyhorse-1.1-r2v",
     "default_image_model": "qwen-image-2.0"
   }
 }
@@ -237,8 +240,11 @@ Config 激活只改变配置文件 block 的选择，`--config` 本身不提升�
 `token-plan` 是允许用户选择的内置 Profile 名，不应加入非法名称列表。它提供以下默认值：
 
 ```text
-base_url:           https://token-plan.cn-beijing.maas.aliyuncs.com
-default_text_model: qwen3.7-max
+base_url:            https://token-plan.cn-beijing.maas.aliyuncs.com
+default_text_model:  qwen3.8-max-preview
+default_video_model: happyhorse-1.1-t2v
+default_image_to_video_model: happyhorse-1.1-i2v
+default_reference_to_video_model: happyhorse-1.1-r2v
 default_image_model: qwen-image-2.0
 ```
 
@@ -253,7 +259,7 @@ Token Plan Base URL 预设只在登录写入阶段提供最低优先级的缺省
 
 登录成功时应把显式 Base URL 或缺失的预设 Base URL，以及默认模型写入 Profile，使 `config show --config token-plan` 能看到完整配置。环境变量不复制进 Profile。运行时不再合并预设；如果手工删除字段，则按统一的环境变量、配置文件和系统默认值链继续解析。
 
-默认模型采用更简单的固定策略：每次执行 `auth login --config token-plan`，都将 `default_text_model` 重置为 `qwen3.7-max`，将 `default_image_model` 重置为 `qwen-image-2.0`。登录不保留用户之前写入的其他 Profile 默认模型；用户需要临时调用其他 Token Plan 模型时，通过具体模型命令的 `--model` 覆盖，不修改这两个内置默认值。
+默认模型采用更简单的固定策略：每次执行 `auth login --config token-plan`，都将 `default_text_model` 重置为 `qwen3.8-max-preview`，将 `default_video_model` 重置为 `happyhorse-1.1-t2v`，将 `default_image_to_video_model` 重置为 `happyhorse-1.1-i2v`，将 `default_reference_to_video_model` 重置为 `happyhorse-1.1-r2v`，将 `default_image_model` 重置为 `qwen-image-2.0`。登录不保留用户之前写入的其他 Profile 默认模型；用户需要临时调用其他 Token Plan 模型时，通过具体模型命令的 `--model` 覆盖，不修改这些内置默认值。
 
 预设建议通过集中 registry 表达，不在 resolver、命令和 Client 中散落名称判断：
 
@@ -261,7 +267,10 @@ Token Plan Base URL 预设只在登录写入阶段提供最低优先级的缺省
 const MODEL_PROFILE_PRESETS = {
   "token-plan": {
     baseUrl: "https://token-plan.cn-beijing.maas.aliyuncs.com",
-    defaultTextModel: "qwen3.7-max",
+    defaultTextModel: "qwen3.8-max-preview",
+    defaultVideoModel: "happyhorse-1.1-t2v",
+    defaultImageToVideoModel: "happyhorse-1.1-i2v",
+    defaultReferenceToVideoModel: "happyhorse-1.1-r2v",
     defaultImageModel: "qwen-image-2.0",
   },
 };
@@ -363,20 +372,23 @@ image: <base_url>/api/v1/services/aigc/.../generation
 }
 ```
 
-登录验证使用的模型必须在目标 Profile 中可用。基础阶段 Token Plan 预设使用 `qwen3.7-max`；后续如不同订阅计划的模型集合分化，应将验证模型纳入 Profile 预设，而不是继续在登录函数里硬编码唯一模型。
+登录验证使用的模型必须在目标 Profile 中可用。Token Plan 预设使用 `qwen3.8-max-preview`；后续如不同订阅计划的模型集合分化，应将验证模型纳入 Profile 预设，而不是继续在登录函数里硬编码唯一模型。
 
 ## 模型消费范围
 
 基础阶段承诺：
 
-| 能力           | 默认模型         | 调用方式                           |
-| -------------- | ---------------- | ---------------------------------- |
-| 文本生成和推理 | `qwen3.7-max`    | OpenAI Compatible Chat Completions |
-| 图片生成和编辑 | `qwen-image-2.0` | DashScope 原生图片接口             |
+| 能力           | 默认模型              | 调用方式                           |
+| -------------- | --------------------- | ---------------------------------- |
+| 文本生成和推理 | `qwen3.8-max-preview` | OpenAI Compatible Chat Completions |
+| 图片生成和编辑 | `qwen-image-2.0`      | DashScope 原生图片接口             |
+| 文生视频       | `happyhorse-1.1-t2v`  | DashScope 原生视频接口             |
+| 图生视频       | `happyhorse-1.1-i2v`  | `bl video generate --image`        |
+| 参考生视频     | `happyhorse-1.1-r2v`  | `bl video ref`                     |
 
-Token Plan 当前模型快照中还包含其他文本、视觉理解和图片模型，但该列表可能由后端调整。基础接入不维护阻断请求的本地白名单；用户可通过具体模型命令的 `--model` 临时覆盖本次请求，但再次登录时 Profile 默认模型仍重置为内置版本。
+Token Plan 当前模型快照中还包含其他文本、视觉理解、图片和视频模型，但该列表可能由后端调整。基础接入不维护阻断请求的本地白名单；用户可通过具体模型命令的 `--model` 临时覆盖本次请求，但再次登录时 Profile 默认模型仍重置为内置版本。
 
-视频、语音和音频不作为本阶段支持承诺。现有命令仍保持通用实现，但 Token Plan Profile 的验收不包含这些模态。
+语音和音频不作为本阶段支持承诺。现有命令仍保持通用实现，但 Token Plan Profile 的验收不包含这些模态。
 
 ## 错误处理
 
@@ -408,9 +420,9 @@ feat(core): add token-plan model profile preset
 完成内容：
 
 - 将 `token-plan` 注册为内置、可选择的 Profile 名。
-- 提供 canonical 默认 Base URL、文本模型和图片模型。
+- 提供 canonical 默认 Base URL、文本模型、图片模型和视频模型。
 - Base URL 登录验证遵循 flag > 环境变量 > 已保存 Profile > 预设；环境变量不复制进 Profile。
-- Profile 缺少 Base URL 时物化预设地址；每次 Token Plan 登录都重置并写入内置默认文本和图片模型。
+- Profile 缺少 Base URL 时物化预设地址；每次 Token Plan 登录都重置并写入内置默认文本、图片和视频模型。
 - 运行时 loader/resolver 不再合并预设。
 - 不新增 AuthRequirement，不修改 Token Plan 管控命令。
 - 补充预设值单元测试；不重复增加 Token Plan 专属消费 E2E。
@@ -431,23 +443,23 @@ feat(auth): support token-plan API key login
 - 使用 Token Plan 预设文本模型验证 API Key。
 - 登录验证前不写配置。
 - 验证成功后一次写入 API Key、canonical Base URL 和默认模型。
-- 每次登录都将默认模型重置为 `qwen3.7-max` 和 `qwen-image-2.0`。
+- 每次登录都将默认模型重置为 `qwen3.8-max-preview`、`qwen-image-2.0`、`happyhorse-1.1-t2v`、`happyhorse-1.1-i2v` 和 `happyhorse-1.1-r2v`。
 - 验证失败不留下半配置。
 - 补充一个最小 Token Plan 登录 E2E，覆盖命名 Profile 落盘、环境变量不复制、预设 Base URL 物化和默认模型重置；通用 API Key 登录 E2E 继续覆盖成功原子保存和失败不写半配置。
 - 该 commit 暂不承诺自动归一化用户显式输入的 SDK Base URL。
 
-### Commit 3：Token Plan 文本与图片消费验收（已实现）
+### Commit 3：Token Plan 文本、图片与视频消费验收（已实现）
 
 建议提交信息：
 
 ```text
-feat(cli): enable token-plan text and image consumption
+feat(cli): enable token-plan text, image, and video consumption
 ```
 
 完成内容：
 
-- Token Plan 消费复用现有 API Key、文本和图片调用链，不重复增加专属 E2E。
-- 发布前按需人工验证 `auth login --config token-plan --api-key ...`、文本和图片调用。
+- Token Plan 消费复用现有 API Key、文本、图片和视频调用链，不重复增加专属 E2E。
+- 发布前按需人工验证 `auth login --config token-plan --api-key ...`、文本、图片和视频调用。
 - 更新 Token Plan 消费方案文档和 Skill reference。
 - 到该 commit 为止即可先交付显式 `--config token-plan` 的紧急消费能力。
 
@@ -475,7 +487,7 @@ feat(config): add active profile selection
 - 新增 `bl config use --name <name>`。
 - `config show`、`auth status` 展示最终选择项，`config list` 和 `config ui` 展示激活状态。
 - 删除激活 Profile 时处理状态一致性。
-- 验证激活 `token-plan` 后不传 `--config` 的文本和图片请求。
+- 验证激活 `token-plan` 后不传 `--config` 的文本、图片和视频请求。
 - 验证临时 `--config default` 不改变激活状态。
 - 更新命令导出、`packages/cli/src/commands.ts`、E2E 和生成 reference。
 
@@ -533,9 +545,10 @@ fix(core): normalize model base URLs across all sources
 - `token-plan` 登录初始化时缺省写入官方根地址。
 - 显式 Base URL 覆盖预设并经过通用归一化。
 - 登录验证失败不写入任何 Token Plan 半配置。
-- 文本默认使用 `qwen3.7-max`。
+- 文本默认使用 `qwen3.8-max-preview`。
 - 图片默认使用 `qwen-image-2.0`。
-- 文本和图片均复用现有 `apiKey` Client。
+- 视频默认使用 `happyhorse-1.1-t2v`；图生和参考生入口分别使用 `happyhorse-1.1-i2v` 和 `happyhorse-1.1-r2v`。
+- 文本、图片和视频均复用现有 `apiKey` Client。
 - 管控命令继续使用 OpenAPI AK/SK，不受模型 Profile 影响。
 
 ## 完成后检查

@@ -299,6 +299,44 @@ describe("e2e: config", () => {
     expect(data.would_set?.default_text_model).toBe("qwen3.7-max");
   });
 
+  test("config set --dry-run 支持图生视频默认模型别名", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+      "config",
+      "set",
+      "--dry-run",
+      "--key",
+      "default-image-to-video-model",
+      "--value",
+      "happyhorse-1.1-i2v",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      would_set?: { default_image_to_video_model?: string };
+    }>(stdout);
+    expect(data.would_set?.default_image_to_video_model).toBe("happyhorse-1.1-i2v");
+  });
+
+  test("config set --dry-run 支持参考生视频默认模型别名", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+      "config",
+      "set",
+      "--dry-run",
+      "--key",
+      "default-reference-to-video-model",
+      "--value",
+      "happyhorse-1.1-r2v",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      would_set?: { default_reference_to_video_model?: string };
+    }>(stdout);
+    expect(data.would_set?.default_reference_to_video_model).toBe("happyhorse-1.1-r2v");
+  });
+
   test("config set --dry-run 展示归一化后的 Base URL", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
       "config",

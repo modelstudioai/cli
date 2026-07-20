@@ -32,6 +32,8 @@ export interface ConfigFile {
   timeout?: number;
   default_text_model?: string;
   default_video_model?: string;
+  default_image_to_video_model?: string;
+  default_reference_to_video_model?: string;
   default_image_model?: string;
   default_speech_model?: string;
   default_omni_model?: string;
@@ -54,6 +56,8 @@ export const CONFIG_FILE_KEYS = [
   "timeout",
   "default_text_model",
   "default_video_model",
+  "default_image_to_video_model",
+  "default_reference_to_video_model",
   "default_image_model",
   "default_speech_model",
   "default_omni_model",
@@ -117,6 +121,16 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     out.default_text_model = obj.default_text_model;
   if (typeof obj.default_video_model === "string" && obj.default_video_model.length > 0)
     out.default_video_model = obj.default_video_model;
+  if (
+    typeof obj.default_image_to_video_model === "string" &&
+    obj.default_image_to_video_model.length > 0
+  )
+    out.default_image_to_video_model = obj.default_image_to_video_model;
+  if (
+    typeof obj.default_reference_to_video_model === "string" &&
+    obj.default_reference_to_video_model.length > 0
+  )
+    out.default_reference_to_video_model = obj.default_reference_to_video_model;
   if (typeof obj.default_image_model === "string" && obj.default_image_model.length > 0)
     out.default_image_model = obj.default_image_model;
   if (typeof obj.default_speech_model === "string" && obj.default_speech_model.length > 0)
@@ -166,6 +180,8 @@ export interface Settings {
   timeout: number;
   defaultTextModel?: string;
   defaultVideoModel?: string;
+  defaultImageToVideoModel?: string;
+  defaultReferenceToVideoModel?: string;
   defaultImageModel?: string;
   defaultSpeechModel?: string;
   defaultOmniModel?: string;

@@ -235,6 +235,8 @@ export function buildSettings(s: ResolutionSources): Settings {
     timeout,
     defaultTextModel: file.default_text_model,
     defaultVideoModel: file.default_video_model,
+    defaultImageToVideoModel: file.default_image_to_video_model,
+    defaultReferenceToVideoModel: file.default_reference_to_video_model,
     defaultImageModel: file.default_image_model,
     defaultSpeechModel: file.default_speech_model,
     defaultOmniModel: file.default_omni_model,
