@@ -67,14 +67,14 @@
 
 ### 2.3 OSS 转存
 
-| PRD # | 能力          | CLI 命令                                                 | API Action                     | 备注                          |
-| ----- | ------------- | -------------------------------------------------------- | ------------------------------ | ----------------------------- |
-| 8     | SLR 授权      | `bl asset oss slr status` / `bl asset oss slr authorize` | `checkOssSLR` / `createOssSLR` | 授权前先查状态                |
-| 9     | 绑定 OSS      | `bl asset oss bind`                                      | `createAssetTransferPolicy`    | 配置 bucket / path / 转存策略 |
-| 10    | 查看 OSS 配置 | `bl asset oss show`                                      | `getAssetTransferPolicy`       |                               |
-| 11    | 修改 OSS 配置 | `bl asset oss update`                                    | `updateAssetTransferPolicy`    | 需 `--policy-id`              |
-| 12    | 解绑 OSS      | `bl asset oss unbind`                                    | `deleteAssetTransferPolicy`    |                               |
-| 13    | 查看转存日志  | `bl asset transfer list`（待定）                         | **文档缺失**                   | 见 §6 风险项                  |
+| PRD # | 能力          | CLI 命令                         | API Action                  | 备注                          |
+| ----- | ------------- | -------------------------------- | --------------------------- | ----------------------------- |
+| 8     | SLR 授权      | `bl asset oss slr authorize`     | `createOssSLR`              | 一键授权，直接调用 create     |
+| 9     | 绑定 OSS      | `bl asset oss bind`              | `createAssetTransferPolicy` | 配置 bucket / path / 转存策略 |
+| 10    | 查看 OSS 配置 | `bl asset oss show`              | `getAssetTransferPolicy`    |                               |
+| 11    | 修改 OSS 配置 | `bl asset oss update`            | `updateAssetTransferPolicy` | 需 `--policy-id`              |
+| 12    | 解绑 OSS      | `bl asset oss unbind`            | `deleteAssetTransferPolicy` |                               |
+| 13    | 查看转存日志  | `bl asset transfer list`（待定） | **文档缺失**                | 见 §6 风险项                  |
 
 **辅助命令（绑定 UX，API 已有）：**
 
@@ -141,7 +141,6 @@ asset-center/
 ├── models-list.ts          # 可选 P1
 ├── service-status.ts       # 可选 P1
 └── oss/
-    ├── slr-status.ts
     ├── slr-authorize.ts
     ├── bind.ts
     ├── show.ts
@@ -364,11 +363,7 @@ CLI 用法：`--id asset-001 --id asset-002` 或多次重复。实现时在 `val
 
 ### 5.8 `bl asset oss slr authorize`
 
-流程：
-
-1. 调用 `checkOssSLR`
-2. 若 `authorized === true`，text 输出 "Already authorized." 并 exit 0
-3. 否则调用 `createOssSLR`
+直接调用 `createOssSLR`，一键完成 SLR 授权。
 
 ---
 
@@ -456,7 +451,7 @@ asset list | get | favorite | unfavorite | delete | restore | download | stats |
 ### Phase 2 — OSS 转存（P1）
 
 ```
-asset oss slr status | authorize
+asset oss slr authorize
 asset oss bind | show | update | unbind
 asset oss regions | buckets | folders list
 asset models list | service status

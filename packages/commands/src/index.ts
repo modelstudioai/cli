@@ -93,7 +93,6 @@ export { default as assetDownload } from "./commands/asset-center/download.ts";
 export { default as assetStats } from "./commands/asset-center/stats.ts";
 export { default as assetStorage } from "./commands/asset-center/storage.ts";
 export { default as assetTransferList } from "./commands/asset-center/transfer-list.ts";
-export { default as assetOssSlrStatus } from "./commands/asset-center/oss/slr-status.ts";
 export { default as assetOssSlrAuthorize } from "./commands/asset-center/oss/slr-authorize.ts";
 export { default as assetOssBind } from "./commands/asset-center/oss/bind.ts";
 export { default as assetOssShow } from "./commands/asset-center/oss/show.ts";

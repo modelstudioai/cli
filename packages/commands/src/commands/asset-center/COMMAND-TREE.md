@@ -43,8 +43,7 @@ bl asset
 │
 └── oss                           # OSS 转存子组
     ├── slr
-    │   ├── status                # 检查 SLR 授权状态
-    │   └── authorize             # 创建 SLR 授权
+    │   └── authorize             # 一键 SLR 授权
     ├── bind                      # 创建转存策略（绑定 OSS）
     ├── show                      # 查看当前转存策略
     ├── update                    # 更新转存策略
@@ -79,7 +78,6 @@ bl asset
 | `"asset service enable"`    | `assetServiceEnable`   | 3     |
 | `"asset service disable"`   | `assetServiceDisable`  | 3     |
 | `"asset transfer list"`     | `assetTransferList`    | 3     |
-| `"asset oss slr status"`    | `assetOssSlrStatus`    | 2     |
 | `"asset oss slr authorize"` | `assetOssSlrAuthorize` | 2     |
 | `"asset oss bind"`          | `assetOssBind`         | 2     |
 | `"asset oss show"`          | `assetOssShow`         | 2     |
@@ -370,36 +368,19 @@ Overage:    ¥0.12/GB/month
 
 ### 5.2 Phase 2 命令 — OSS 子组
 
-#### `bl asset oss slr status`
-
-```
-Description:  Check whether OSS service-linked role is authorized
-
-Usage:  bl asset oss slr status
-
-Examples:
-  bl asset oss slr status
-  bl asset oss slr status --output json
-```
-
-**PRD 映射：** #8 SLR 授权（检查步骤）
-
----
-
 #### `bl asset oss slr authorize`
 
 ```
-Description:  Create OSS service-linked role authorization
+Description:  Authorize OSS service-linked role (one-click)
 
 Usage:  bl asset oss slr authorize
 
 Examples:
   bl asset oss slr authorize
+  bl asset oss slr authorize --output json
 ```
 
-行为：已授权则跳过并提示；未授权则调用 create。
-
-**PRD 映射：** #8 SLR 授权（执行步骤）
+**PRD 映射：** #8 SLR 一键授权
 
 ---
 
@@ -594,22 +575,22 @@ bl asset stats --sync-failed
 
 ## 6. PRD 覆盖矩阵
 
-| PRD # | 功能          | CLI 命令                             | Phase | 状态                               |
-| ----- | ------------- | ------------------------------------ | ----- | ---------------------------------- |
-| 1     | 查看资产列表  | `asset list`                         | 1     | ✅ 可开发                          |
-| 2     | 查看资产详情  | `asset get`                          | 1     | ✅ 可开发                          |
-| 3     | 收藏/取消收藏 | `asset favorite` / `unfavorite`      | 1     | ✅ 可开发                          |
-| 4     | 删除资产      | `asset delete`                       | 1     | ✅ 可开发                          |
-| 5     | 批量删除      | `asset delete`（多 `--id`）          | 1     | ✅ 可开发                          |
-| 6     | 下载资产      | `asset download`                     | 1     | ✅ 可开发                          |
-| 7     | 查看资产统计  | `asset stats`                        | 1     | ✅ 可开发（转存失败用 workaround） |
-| 8     | SLR 授权      | `asset oss slr status` + `authorize` | 2     | ✅ 可开发                          |
-| 9     | 绑定 OSS      | `asset oss bind`                     | 2     | ✅ 可开发                          |
-| 10    | 查看 OSS 配置 | `asset oss show`                     | 2     | ✅ 可开发                          |
-| 11    | 修改 OSS 配置 | `asset oss update`                   | 2     | ✅ 可开发                          |
-| 12    | 解绑 OSS      | `asset oss unbind`                   | 2     | ✅ 可开发                          |
-| 13    | 查看转存日志  | `asset transfer list`                | 3     | ⛔ API 缺失                        |
-| 14    | 查看容量信息  | `asset storage`                      | 1     | ✅ 可开发                          |
+| PRD # | 功能          | CLI 命令                        | Phase | 状态                               |
+| ----- | ------------- | ------------------------------- | ----- | ---------------------------------- |
+| 1     | 查看资产列表  | `asset list`                    | 1     | ✅ 可开发                          |
+| 2     | 查看资产详情  | `asset get`                     | 1     | ✅ 可开发                          |
+| 3     | 收藏/取消收藏 | `asset favorite` / `unfavorite` | 1     | ✅ 可开发                          |
+| 4     | 删除资产      | `asset delete`                  | 1     | ✅ 可开发                          |
+| 5     | 批量删除      | `asset delete`（多 `--id`）     | 1     | ✅ 可开发                          |
+| 6     | 下载资产      | `asset download`                | 1     | ✅ 可开发                          |
+| 7     | 查看资产统计  | `asset stats`                   | 1     | ✅ 可开发（转存失败用 workaround） |
+| 8     | SLR 授权      | `asset oss slr authorize`       | 2     | ✅ 可开发                          |
+| 9     | 绑定 OSS      | `asset oss bind`                | 2     | ✅ 可开发                          |
+| 10    | 查看 OSS 配置 | `asset oss show`                | 2     | ✅ 可开发                          |
+| 11    | 修改 OSS 配置 | `asset oss update`              | 2     | ✅ 可开发                          |
+| 12    | 解绑 OSS      | `asset oss unbind`              | 2     | ✅ 可开发                          |
+| 13    | 查看转存日志  | `asset transfer list`           | 3     | ⛔ API 缺失                        |
+| 14    | 查看容量信息  | `asset storage`                 | 1     | ✅ 可开发                          |
 
 ---
 
@@ -650,7 +631,6 @@ bl asset download --id asset-001 --out ./image.png
 ### 7.4 OSS 转存配置
 
 ```bash
-bl asset oss slr status
 bl asset oss slr authorize
 bl asset oss regions list
 bl asset oss buckets list --region cn-hangzhou

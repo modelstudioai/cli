@@ -133,7 +133,7 @@ bl quota history                                      # 查看提额历史记录
 # 资产中心 — 浏览、下载与管理模型生成资产（需控制台登录）
 bl asset-center list --type IMAGE
 bl asset-center get <asset-id> --include-download-url
-bl asset-center download --id <asset-id> --out ./image.png
+bl asset-center download --id <asset-id>
 bl asset-center stats
 bl asset-center storage
 

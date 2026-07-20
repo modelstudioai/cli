@@ -5,7 +5,7 @@ import {
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { downloadFile, emitResult, emitBare, formatBytes } from "bailian-cli-runtime";
+import { emitResult, emitBare, padEnd } from "bailian-cli-runtime";
 import type { AssetDownloadResponse } from "./types.ts";
 import { ASSET_API, callAssetApi, dryRunPayload } from "./utils.ts";
 
@@ -13,33 +13,26 @@ const DOWNLOAD_FLAGS = {
   id: {
     type: "string",
     valueHint: "<asset-id>",
-    description: "Asset ID to download",
-    required: true,
-  },
-  out: {
-    type: "string",
-    valueHint: "<path>",
-    description: "Output file path",
+    description: "Asset ID to get download URL for",
     required: true,
   },
 } satisfies FlagsDef;
 
 /**
- * `bl asset-center download` — 下载单个资产到本地文件。
+ * `bl asset-center download` — 通过资产 ID 获取签名下载链接。
  *
- * 通过 batchGetAssetDownloadUrl 获取签名 URL，再写入 --out 指定路径。
+ * 调用 batchGetAssetDownloadUrl，输出 download URL，不落盘。
  */
 export default defineCommand({
-  description: "Download an asset by ID to a local file",
+  description: "Get a signed download URL for an asset by ID",
   auth: "console",
-  usageArgs: "--id <asset-id> --out <path>",
+  usageArgs: "--id <asset-id>",
   flags: DOWNLOAD_FLAGS,
-  exampleArgs: ["--id asset-001 --out ./image.png", "--id asset-001 --out ./image.png --quiet"],
+  exampleArgs: ["--id asset-001", "--id asset-001 --output json", "--id asset-001 --quiet"],
   async run(ctx) {
     const { settings, identity, flags } = ctx;
     const format = detectOutputFormat(settings.output);
     const assetId = flags.id;
-    const outPath = flags.out;
     const body = { assetIdList: [assetId] };
 
     if (settings.dryRun) {
@@ -47,7 +40,6 @@ export default defineCommand({
         {
           asset_id: assetId,
           action: "download",
-          out: outPath,
           ...dryRunPayload(settings, identity.binName, ASSET_API.batchGetAssetDownloadUrl, body),
         },
         format,
@@ -68,13 +60,17 @@ export default defineCommand({
       throw new BailianError(`No download URL available for ${assetId}.`, ExitCode.GENERAL);
     }
 
-    const { size } = await downloadFile(url, outPath, { quiet: settings.quiet });
-
     if (settings.quiet) {
-      emitBare(outPath);
+      emitBare(url);
       return;
     }
 
-    emitResult({ saved: outPath, size: formatBytes(size) }, format);
+    if (format === "json") {
+      emitResult({ asset_id: assetId, download_url: url }, format);
+      return;
+    }
+
+    emitBare(`${padEnd("AssetId", 16)} ${assetId}`);
+    emitBare(`${padEnd("DownloadUrl", 16)} ${url}`);
   },
 });

@@ -4,12 +4,10 @@ import type { AssetOssSlrResponse } from "../types.ts";
 import { ASSET_API, callAssetApi, dryRunPayload } from "../utils.ts";
 
 /**
- * `bl asset-center oss slr authorize` — 创建 OSS SLR 授权。
- *
- * 已授权时跳过并提示；未授权时调用 createOssSLR。
+ * `bl asset-center oss slr authorize` — 一键授权 OSS 服务关联角色（SLR）。
  */
 export default defineCommand({
-  description: "Create OSS service-linked role authorization",
+  description: "Authorize OSS service-linked role (one-click)",
   auth: "console",
   usageArgs: "[flags]",
   exampleArgs: ["", "--output json"],
@@ -19,23 +17,6 @@ export default defineCommand({
 
     if (settings.dryRun) {
       emitResult(dryRunPayload(settings, identity.binName, ASSET_API.createOssSLR, {}), format);
-      return;
-    }
-
-    const status = await callAssetApi<AssetOssSlrResponse>(
-      ctx.client,
-      settings,
-      identity.binName,
-      ASSET_API.checkOssSLR,
-      {},
-    );
-
-    if (status.authorized) {
-      if (settings.quiet || format === "text") {
-        emitBare("OSS SLR is already authorized.");
-      } else {
-        emitResult({ authorized: true, created: false }, format);
-      }
       return;
     }
 
@@ -50,7 +31,7 @@ export default defineCommand({
     if (settings.quiet || format === "text") {
       emitBare(data.success ? "OSS SLR authorized." : "OSS SLR authorization failed.");
     } else {
-      emitResult({ authorized: true, created: true, success: data.success ?? false }, format);
+      emitResult({ success: data.success ?? false }, format);
     }
   },
 });

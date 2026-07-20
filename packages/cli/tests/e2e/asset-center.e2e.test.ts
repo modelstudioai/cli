@@ -40,8 +40,8 @@ describe("e2e: asset-center", () => {
   test("asset-center download --help 正常退出", async () => {
     const { stderr, exitCode } = await runCli(["asset-center", "download", "--help"]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toContain("--out");
     expect(stderr).toContain("--id");
+    expect(stderr).not.toContain("--out");
   });
 
   test("asset-center stats --help 正常退出", async () => {
@@ -83,16 +83,10 @@ describe.skipIf(!isConsoleE2EReady())("e2e: asset-center（Console）", () => {
     expect(stderr).toMatch(/--id|Missing required argument/i);
   });
 
-  test("asset-center download 缺少 --out 时退出为用法错误 (2)", async () => {
-    const { stderr, exitCode } = await runCli([
-      "asset-center",
-      "download",
-      "--id",
-      "asset-001",
-      "--quiet",
-    ]);
+  test("asset-center download 缺少 --id 时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCli(["asset-center", "download", "--quiet"]);
     expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/--out|Missing required argument/i);
+    expect(stderr).toMatch(/--id|Missing required argument/i);
   });
 
   test("asset-center oss bind policy=BEFORE_DAYS 缺 --before-days 报错", async () => {
@@ -156,19 +150,19 @@ describe.skipIf(!isConsoleE2EReady())("e2e: asset-center（Console）", () => {
     expect(data.api).toContain("getStorageQuota");
   });
 
-  test("asset-center oss slr status --dry-run 输出请求参数", async () => {
+  test("asset-center oss slr authorize --dry-run 输出请求参数", async () => {
     const { stdout, stderr, exitCode } = await runCli([
       "asset-center",
       "oss",
       "slr",
-      "status",
+      "authorize",
       "--dry-run",
       "--output",
       "json",
     ]);
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{ api?: string }>(stdout);
-    expect(data.api).toContain("checkOssSLR");
+    expect(data.api).toContain("createOssSLR");
   });
 
   test("【console】asset-center list 真实调用或鉴权失败优雅退出", async () => {

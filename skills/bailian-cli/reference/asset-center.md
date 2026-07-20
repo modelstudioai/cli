@@ -10,14 +10,13 @@ Index: [index.md](index.md)
 | Command                             | Description                                                    |
 | ----------------------------------- | -------------------------------------------------------------- |
 | `bl asset-center delete`            | Delete assets (soft delete to recycle bin by default)          |
-| `bl asset-center download`          | Download an asset by ID to a local file                        |
+| `bl asset-center download`          | Get a signed download URL for an asset by ID                   |
 | `bl asset-center favorite`          | Add assets to favorites                                        |
 | `bl asset-center get`               | Get full details of a model-generated asset                    |
 | `bl asset-center list`              | List model-generated assets with filters and cursor pagination |
 | `bl asset-center oss bind`          | Create OSS transfer policy (bind bucket for asset transfer)    |
 | `bl asset-center oss show`          | View current OSS transfer policy                               |
-| `bl asset-center oss slr authorize` | Create OSS service-linked role authorization                   |
-| `bl asset-center oss slr status`    | Check whether OSS service-linked role is authorized            |
+| `bl asset-center oss slr authorize` | Authorize OSS service-linked role (one-click)                  |
 | `bl asset-center oss unbind`        | Delete OSS transfer policy (unbind)                            |
 | `bl asset-center oss update`        | Update an existing OSS transfer policy                         |
 | `bl asset-center stats`             | Count model-generated assets by type                           |
@@ -62,18 +61,17 @@ bl asset-center delete --id asset-001 --permanent
 
 ### `bl asset-center download`
 
-| Field           | Value                                                   |
-| --------------- | ------------------------------------------------------- |
-| **Name**        | `asset-center download`                                 |
-| **Description** | Download an asset by ID to a local file                 |
-| **Usage**       | `bl asset-center download --id <asset-id> --out <path>` |
+| Field           | Value                                        |
+| --------------- | -------------------------------------------- |
+| **Name**        | `asset-center download`                      |
+| **Description** | Get a signed download URL for an asset by ID |
+| **Usage**       | `bl asset-center download --id <asset-id>`   |
 
 #### Flags
 
 | Flag                           | Type   | Required | Description                                              |
 | ------------------------------ | ------ | -------- | -------------------------------------------------------- |
-| `--id <asset-id>`              | string | yes      | Asset ID to download                                     |
-| `--out <path>`                 | string | yes      | Output file path                                         |
+| `--id <asset-id>`              | string | yes      | Asset ID to get download URL for                         |
 | `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
 | `--console-site <site>`        | string | no       | Console site: domestic, international                    |
 | `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
@@ -82,11 +80,15 @@ bl asset-center delete --id asset-001 --permanent
 #### Examples
 
 ```bash
-bl asset-center download --id asset-001 --out ./image.png
+bl asset-center download --id asset-001
 ```
 
 ```bash
-bl asset-center download --id asset-001 --out ./image.png --quiet
+bl asset-center download --id asset-001 --output json
+```
+
+```bash
+bl asset-center download --id asset-001 --quiet
 ```
 
 ### `bl asset-center favorite`
@@ -266,11 +268,11 @@ bl asset-center oss show --policy-id policy-abc123 --output json
 
 ### `bl asset-center oss slr authorize`
 
-| Field           | Value                                        |
-| --------------- | -------------------------------------------- |
-| **Name**        | `asset-center oss slr authorize`             |
-| **Description** | Create OSS service-linked role authorization |
-| **Usage**       | `bl asset-center oss slr authorize [flags]`  |
+| Field           | Value                                         |
+| --------------- | --------------------------------------------- |
+| **Name**        | `asset-center oss slr authorize`              |
+| **Description** | Authorize OSS service-linked role (one-click) |
+| **Usage**       | `bl asset-center oss slr authorize [flags]`   |
 
 #### Flags
 
@@ -289,33 +291,6 @@ bl asset-center oss slr authorize
 
 ```bash
 bl asset-center oss slr authorize --output json
-```
-
-### `bl asset-center oss slr status`
-
-| Field           | Value                                               |
-| --------------- | --------------------------------------------------- |
-| **Name**        | `asset-center oss slr status`                       |
-| **Description** | Check whether OSS service-linked role is authorized |
-| **Usage**       | `bl asset-center oss slr status [flags]`            |
-
-#### Flags
-
-| Flag                           | Type   | Required | Description                                              |
-| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
-| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
-| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
-| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
-
-#### Examples
-
-```bash
-bl asset-center oss slr status
-```
-
-```bash
-bl asset-center oss slr status --output json
 ```
 
 ### `bl asset-center oss unbind`

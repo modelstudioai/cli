@@ -135,7 +135,7 @@ bl quota history                                      # View quota-change histor
 # Asset center — browse, download, and manage model-generated assets (requires console login)
 bl asset-center list --type IMAGE
 bl asset-center get <asset-id> --include-download-url
-bl asset-center download --id <asset-id> --out ./image.png
+bl asset-center download --id <asset-id>
 bl asset-center stats
 bl asset-center storage
 

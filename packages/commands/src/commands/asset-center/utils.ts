@@ -22,7 +22,6 @@ export const ASSET_API = {
   batchGetAssetDownloadUrl: assetApi("batchGetAssetDownloadUrl"),
   countModelGeneratedAsset: assetApi("countModelGeneratedAsset"),
   getStorageQuota: assetApi("getStorageQuota"),
-  checkOssSLR: assetApi("checkOssSLR"),
   createOssSLR: assetApi("createOssSLR"),
   createAssetTransferPolicy: assetApi("createAssetTransferPolicy"),
   getAssetTransferPolicy: assetApi("getAssetTransferPolicy"),

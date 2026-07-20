@@ -8,115 +8,130 @@ Use this index for the full quick index and global flags.
 
 ## Quick index
 
-| Command                      | Description                                                                                                                     | Detail                         |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| `bl advisor recommend`       | Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking)                                  | [advisor.md](advisor.md)       |
-| `bl app call`                | Call a Bailian application (agent or workflow)                                                                                  | [app.md](app.md)               |
-| `bl app list`                | List Bailian applications                                                                                                       | [app.md](app.md)               |
-| `bl auth login`              | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist)                                    | [auth.md](auth.md)             |
-| `bl auth logout`             | Clear stored credentials                                                                                                        | [auth.md](auth.md)             |
-| `bl auth status`             | Show current authentication state                                                                                               | [auth.md](auth.md)             |
-| `bl config set`              | Set a config value                                                                                                              | [config.md](config.md)         |
-| `bl config show`             | Display current configuration                                                                                                   | [config.md](config.md)         |
-| `bl console call`            | Call a Bailian console API via the CLI gateway                                                                                  | [console.md](console.md)       |
-| `bl dataset delete`          | Delete a dataset file by ID                                                                                                     | [dataset.md](dataset.md)       |
-| `bl dataset get`             | Get details of a single dataset file                                                                                            | [dataset.md](dataset.md)       |
-| `bl dataset list`            | List uploaded dataset files                                                                                                     | [dataset.md](dataset.md)       |
-| `bl dataset upload`          | Upload a dataset file (.jsonl or .zip) to Bailian                                                                               | [dataset.md](dataset.md)       |
-| `bl dataset validate`        | Locally validate a dataset file (.jsonl or .zip) without uploading                                                              | [dataset.md](dataset.md)       |
-| `bl deploy audio create`     | Create an audio (TTS) model deployment                                                                                          | [deploy.md](deploy.md)         |
-| `bl deploy delete`           | Delete a model deployment (must be STOPPED or FAILED)                                                                           | [deploy.md](deploy.md)         |
-| `bl deploy get`              | Get details of a single model deployment                                                                                        | [deploy.md](deploy.md)         |
-| `bl deploy image create`     | Create an image generation model deployment                                                                                     | [deploy.md](deploy.md)         |
-| `bl deploy list`             | List model deployments                                                                                                          | [deploy.md](deploy.md)         |
-| `bl deploy models`           | List models available for deployment                                                                                            | [deploy.md](deploy.md)         |
-| `bl deploy scale`            | Scale a deployment's capacity                                                                                                   | [deploy.md](deploy.md)         |
-| `bl deploy text create`      | Create a text model deployment                                                                                                  | [deploy.md](deploy.md)         |
-| `bl deploy update`           | Update a deployment's rate limits (rpm_limit / tpm_limit)                                                                       | [deploy.md](deploy.md)         |
-| `bl file upload`             | Upload a local file to DashScope temporary storage (48h)                                                                        | [file.md](file.md)             |
-| `bl finetune audio create`   | Create an audio TTS model fine-tune job (sft-lora)                                                                              | [finetune.md](finetune.md)     |
-| `bl finetune cancel`         | Cancel a running fine-tune job                                                                                                  | [finetune.md](finetune.md)     |
-| `bl finetune capability`     | Query fine-tune training capability — by model (which training types it supports) or by training type (which models support it) | [finetune.md](finetune.md)     |
-| `bl finetune checkpoints`    | List checkpoints produced by a fine-tune job                                                                                    | [finetune.md](finetune.md)     |
-| `bl finetune delete`         | Delete a fine-tune job record                                                                                                   | [finetune.md](finetune.md)     |
-| `bl finetune export`         | Publish a checkpoint as a deployable model                                                                                      | [finetune.md](finetune.md)     |
-| `bl finetune get`            | Get details of a single fine-tune job                                                                                           | [finetune.md](finetune.md)     |
-| `bl finetune image create`   | Create an image generation model fine-tune job (sft-lora)                                                                       | [finetune.md](finetune.md)     |
-| `bl finetune list`           | List fine-tune jobs                                                                                                             | [finetune.md](finetune.md)     |
-| `bl finetune logs`           | Fetch training logs for a fine-tune job                                                                                         | [finetune.md](finetune.md)     |
-| `bl finetune text create`    | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                   | [finetune.md](finetune.md)     |
-| `bl finetune watch`          | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                      | [finetune.md](finetune.md)     |
-| `bl image edit`              | Edit an existing image with text instructions (Qwen-Image)                                                                      | [image.md](image.md)           |
-| `bl image generate`          | Generate images (Qwen-Image / wan2.x)                                                                                           | [image.md](image.md)           |
-| `bl knowledge chat`          | Chat with a Bailian knowledge base (RAG Q&A with streaming)                                                                     | [knowledge.md](knowledge.md)   |
-| `bl knowledge retrieve`      | Retrieve from a Bailian knowledge base (deprecated, use `search` instead)                                                       | [knowledge.md](knowledge.md)   |
-| `bl knowledge search`        | Search a Bailian knowledge base (RAG semantic retrieval)                                                                        | [knowledge.md](knowledge.md)   |
-| `bl mcp call`                | Call a tool on an MCP server (tools/call)                                                                                       | [mcp.md](mcp.md)               |
-| `bl mcp list`                | List MCP servers activated under your Bailian account                                                                           | [mcp.md](mcp.md)               |
-| `bl mcp tools`               | List tools exposed by an MCP server (tools/list)                                                                                | [mcp.md](mcp.md)               |
-| `bl memory add`              | Add memory from messages or custom content                                                                                      | [memory.md](memory.md)         |
-| `bl memory delete`           | Delete a memory node                                                                                                            | [memory.md](memory.md)         |
-| `bl memory list`             | List memory nodes for a user                                                                                                    | [memory.md](memory.md)         |
-| `bl memory profile create`   | Create a user profile schema for memory profiling                                                                               | [memory.md](memory.md)         |
-| `bl memory profile get`      | Get user profile by schema ID and user ID                                                                                       | [memory.md](memory.md)         |
-| `bl memory search`           | Search memory nodes by query or messages                                                                                        | [memory.md](memory.md)         |
-| `bl memory update`           | Update a memory node content                                                                                                    | [memory.md](memory.md)         |
-| `bl omni`                    | Multimodal chat with text + audio output (Qwen-Omni)                                                                            | [omni.md](omni.md)             |
-| `bl pipeline run`            | Run a pipeline workflow definition                                                                                              | [pipeline.md](pipeline.md)     |
-| `bl pipeline validate`       | Validate a pipeline definition without executing                                                                                | [pipeline.md](pipeline.md)     |
-| `bl quota check`             | Check current usage against rate limits                                                                                         | [quota.md](quota.md)           |
-| `bl quota history`           | View quota change history                                                                                                       | [quota.md](quota.md)           |
-| `bl quota list`              | View model RPM/TPM rate limits                                                                                                  | [quota.md](quota.md)           |
-| `bl quota request`           | Request a temporary quota increase                                                                                              | [quota.md](quota.md)           |
-| `bl search web`              | Search the web using DashScope MCP WebSearch service                                                                            | [search.md](search.md)         |
-| `bl speech recognize`        | Recognize speech from audio files (FunAudio-ASR)                                                                                | [speech.md](speech.md)         |
-| `bl speech synthesize`       | Synthesize speech from text (CosyVoice TTS)                                                                                     | [speech.md](speech.md)         |
-| `bl text chat`               | Send a chat completion (OpenAI compatible, DashScope)                                                                           | [text.md](text.md)             |
-| `bl token-plan add-member`   | Add a member to a Token Plan organization                                                                                       | [token-plan.md](token-plan.md) |
-| `bl token-plan assign-seats` | Batch assign Token Plan seats to members                                                                                        | [token-plan.md](token-plan.md) |
-| `bl token-plan create-key`   | Create a Token Plan API key for a seat                                                                                          | [token-plan.md](token-plan.md) |
-| `bl token-plan list-seats`   | List Token Plan subscription seat details                                                                                       | [token-plan.md](token-plan.md) |
-| `bl update`                  | Update the CLI to the latest version                                                                                            | [update.md](update.md)         |
-| `bl usage free`              | Query free-tier quota for models (all models if --model is omitted)                                                             | [usage.md](usage.md)           |
-| `bl usage freetier`          | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable                                      | [usage.md](usage.md)           |
-| `bl usage stats`             | Query model usage statistics                                                                                                    | [usage.md](usage.md)           |
-| `bl video download`          | Download a completed video by task ID                                                                                           | [video.md](video.md)           |
-| `bl video edit`              | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                                          | [video.md](video.md)           |
-| `bl video generate`          | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)                                      | [video.md](video.md)           |
-| `bl video ref`               | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice                           | [video.md](video.md)           |
-| `bl video task get`          | Query async task status                                                                                                         | [video.md](video.md)           |
-| `bl vision describe`         | Describe an image or video using Qwen-VL                                                                                        | [vision.md](vision.md)         |
-| `bl workspace list`          | List all workspaces                                                                                                             | [workspace.md](workspace.md)   |
+| Command                             | Description                                                                                                                     | Detail                             |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `bl advisor recommend`              | Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking)                                  | [advisor.md](advisor.md)           |
+| `bl app call`                       | Call a Bailian application (agent or workflow)                                                                                  | [app.md](app.md)                   |
+| `bl app list`                       | List Bailian applications                                                                                                       | [app.md](app.md)                   |
+| `bl asset-center delete`            | Delete assets (soft delete to recycle bin by default)                                                                           | [asset-center.md](asset-center.md) |
+| `bl asset-center download`          | Get a signed download URL for an asset by ID                                                                                    | [asset-center.md](asset-center.md) |
+| `bl asset-center favorite`          | Add assets to favorites                                                                                                         | [asset-center.md](asset-center.md) |
+| `bl asset-center get`               | Get full details of a model-generated asset                                                                                     | [asset-center.md](asset-center.md) |
+| `bl asset-center list`              | List model-generated assets with filters and cursor pagination                                                                  | [asset-center.md](asset-center.md) |
+| `bl asset-center oss bind`          | Create OSS transfer policy (bind bucket for asset transfer)                                                                     | [asset-center.md](asset-center.md) |
+| `bl asset-center oss show`          | View current OSS transfer policy                                                                                                | [asset-center.md](asset-center.md) |
+| `bl asset-center oss slr authorize` | Authorize OSS service-linked role (one-click)                                                                                   | [asset-center.md](asset-center.md) |
+| `bl asset-center oss unbind`        | Delete OSS transfer policy (unbind)                                                                                             | [asset-center.md](asset-center.md) |
+| `bl asset-center oss update`        | Update an existing OSS transfer policy                                                                                          | [asset-center.md](asset-center.md) |
+| `bl asset-center stats`             | Count model-generated assets by type                                                                                            | [asset-center.md](asset-center.md) |
+| `bl asset-center storage`           | View storage quota, usage, and overage pricing                                                                                  | [asset-center.md](asset-center.md) |
+| `bl asset-center transfer list`     | List asset OSS transfer records (filtered by sync status)                                                                       | [asset-center.md](asset-center.md) |
+| `bl asset-center unfavorite`        | Remove assets from favorites                                                                                                    | [asset-center.md](asset-center.md) |
+| `bl auth login`                     | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist)                                    | [auth.md](auth.md)                 |
+| `bl auth logout`                    | Clear stored credentials                                                                                                        | [auth.md](auth.md)                 |
+| `bl auth status`                    | Show current authentication state                                                                                               | [auth.md](auth.md)                 |
+| `bl config set`                     | Set a config value                                                                                                              | [config.md](config.md)             |
+| `bl config show`                    | Display current configuration                                                                                                   | [config.md](config.md)             |
+| `bl console call`                   | Call a Bailian console API via the CLI gateway                                                                                  | [console.md](console.md)           |
+| `bl dataset delete`                 | Delete a dataset file by ID                                                                                                     | [dataset.md](dataset.md)           |
+| `bl dataset get`                    | Get details of a single dataset file                                                                                            | [dataset.md](dataset.md)           |
+| `bl dataset list`                   | List uploaded dataset files                                                                                                     | [dataset.md](dataset.md)           |
+| `bl dataset upload`                 | Upload a dataset file (.jsonl or .zip) to Bailian                                                                               | [dataset.md](dataset.md)           |
+| `bl dataset validate`               | Locally validate a dataset file (.jsonl or .zip) without uploading                                                              | [dataset.md](dataset.md)           |
+| `bl deploy audio create`            | Create an audio (TTS) model deployment                                                                                          | [deploy.md](deploy.md)             |
+| `bl deploy delete`                  | Delete a model deployment (must be STOPPED or FAILED)                                                                           | [deploy.md](deploy.md)             |
+| `bl deploy get`                     | Get details of a single model deployment                                                                                        | [deploy.md](deploy.md)             |
+| `bl deploy image create`            | Create an image generation model deployment                                                                                     | [deploy.md](deploy.md)             |
+| `bl deploy list`                    | List model deployments                                                                                                          | [deploy.md](deploy.md)             |
+| `bl deploy models`                  | List models available for deployment                                                                                            | [deploy.md](deploy.md)             |
+| `bl deploy scale`                   | Scale a deployment's capacity                                                                                                   | [deploy.md](deploy.md)             |
+| `bl deploy text create`             | Create a text model deployment                                                                                                  | [deploy.md](deploy.md)             |
+| `bl deploy update`                  | Update a deployment's rate limits (rpm_limit / tpm_limit)                                                                       | [deploy.md](deploy.md)             |
+| `bl file upload`                    | Upload a local file to DashScope temporary storage (48h)                                                                        | [file.md](file.md)                 |
+| `bl finetune audio create`          | Create an audio TTS model fine-tune job (sft-lora)                                                                              | [finetune.md](finetune.md)         |
+| `bl finetune cancel`                | Cancel a running fine-tune job                                                                                                  | [finetune.md](finetune.md)         |
+| `bl finetune capability`            | Query fine-tune training capability — by model (which training types it supports) or by training type (which models support it) | [finetune.md](finetune.md)         |
+| `bl finetune checkpoints`           | List checkpoints produced by a fine-tune job                                                                                    | [finetune.md](finetune.md)         |
+| `bl finetune delete`                | Delete a fine-tune job record                                                                                                   | [finetune.md](finetune.md)         |
+| `bl finetune export`                | Publish a checkpoint as a deployable model                                                                                      | [finetune.md](finetune.md)         |
+| `bl finetune get`                   | Get details of a single fine-tune job                                                                                           | [finetune.md](finetune.md)         |
+| `bl finetune image create`          | Create an image generation model fine-tune job (sft-lora)                                                                       | [finetune.md](finetune.md)         |
+| `bl finetune list`                  | List fine-tune jobs                                                                                                             | [finetune.md](finetune.md)         |
+| `bl finetune logs`                  | Fetch training logs for a fine-tune job                                                                                         | [finetune.md](finetune.md)         |
+| `bl finetune text create`           | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                   | [finetune.md](finetune.md)         |
+| `bl finetune watch`                 | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                      | [finetune.md](finetune.md)         |
+| `bl image edit`                     | Edit an existing image with text instructions (Qwen-Image)                                                                      | [image.md](image.md)               |
+| `bl image generate`                 | Generate images (Qwen-Image / wan2.x)                                                                                           | [image.md](image.md)               |
+| `bl knowledge chat`                 | Chat with a Bailian knowledge base (RAG Q&A with streaming)                                                                     | [knowledge.md](knowledge.md)       |
+| `bl knowledge retrieve`             | Retrieve from a Bailian knowledge base (deprecated, use `search` instead)                                                       | [knowledge.md](knowledge.md)       |
+| `bl knowledge search`               | Search a Bailian knowledge base (RAG semantic retrieval)                                                                        | [knowledge.md](knowledge.md)       |
+| `bl mcp call`                       | Call a tool on an MCP server (tools/call)                                                                                       | [mcp.md](mcp.md)                   |
+| `bl mcp list`                       | List MCP servers activated under your Bailian account                                                                           | [mcp.md](mcp.md)                   |
+| `bl mcp tools`                      | List tools exposed by an MCP server (tools/list)                                                                                | [mcp.md](mcp.md)                   |
+| `bl memory add`                     | Add memory from messages or custom content                                                                                      | [memory.md](memory.md)             |
+| `bl memory delete`                  | Delete a memory node                                                                                                            | [memory.md](memory.md)             |
+| `bl memory list`                    | List memory nodes for a user                                                                                                    | [memory.md](memory.md)             |
+| `bl memory profile create`          | Create a user profile schema for memory profiling                                                                               | [memory.md](memory.md)             |
+| `bl memory profile get`             | Get user profile by schema ID and user ID                                                                                       | [memory.md](memory.md)             |
+| `bl memory search`                  | Search memory nodes by query or messages                                                                                        | [memory.md](memory.md)             |
+| `bl memory update`                  | Update a memory node content                                                                                                    | [memory.md](memory.md)             |
+| `bl omni`                           | Multimodal chat with text + audio output (Qwen-Omni)                                                                            | [omni.md](omni.md)                 |
+| `bl pipeline run`                   | Run a pipeline workflow definition                                                                                              | [pipeline.md](pipeline.md)         |
+| `bl pipeline validate`              | Validate a pipeline definition without executing                                                                                | [pipeline.md](pipeline.md)         |
+| `bl quota check`                    | Check current usage against rate limits                                                                                         | [quota.md](quota.md)               |
+| `bl quota history`                  | View quota change history                                                                                                       | [quota.md](quota.md)               |
+| `bl quota list`                     | View model RPM/TPM rate limits                                                                                                  | [quota.md](quota.md)               |
+| `bl quota request`                  | Request a temporary quota increase                                                                                              | [quota.md](quota.md)               |
+| `bl search web`                     | Search the web using DashScope MCP WebSearch service                                                                            | [search.md](search.md)             |
+| `bl speech recognize`               | Recognize speech from audio files (FunAudio-ASR)                                                                                | [speech.md](speech.md)             |
+| `bl speech synthesize`              | Synthesize speech from text (CosyVoice TTS)                                                                                     | [speech.md](speech.md)             |
+| `bl text chat`                      | Send a chat completion (OpenAI compatible, DashScope)                                                                           | [text.md](text.md)                 |
+| `bl token-plan add-member`          | Add a member to a Token Plan organization                                                                                       | [token-plan.md](token-plan.md)     |
+| `bl token-plan assign-seats`        | Batch assign Token Plan seats to members                                                                                        | [token-plan.md](token-plan.md)     |
+| `bl token-plan create-key`          | Create a Token Plan API key for a seat                                                                                          | [token-plan.md](token-plan.md)     |
+| `bl token-plan list-seats`          | List Token Plan subscription seat details                                                                                       | [token-plan.md](token-plan.md)     |
+| `bl update`                         | Update the CLI to the latest version                                                                                            | [update.md](update.md)             |
+| `bl usage free`                     | Query free-tier quota for models (all models if --model is omitted)                                                             | [usage.md](usage.md)               |
+| `bl usage freetier`                 | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable                                      | [usage.md](usage.md)               |
+| `bl usage stats`                    | Query model usage statistics                                                                                                    | [usage.md](usage.md)               |
+| `bl video download`                 | Download a completed video by task ID                                                                                           | [video.md](video.md)               |
+| `bl video edit`                     | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                                          | [video.md](video.md)               |
+| `bl video generate`                 | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)                                      | [video.md](video.md)               |
+| `bl video ref`                      | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice                           | [video.md](video.md)               |
+| `bl video task get`                 | Query async task status                                                                                                         | [video.md](video.md)               |
+| `bl vision describe`                | Describe an image or video using Qwen-VL                                                                                        | [vision.md](vision.md)             |
+| `bl workspace list`                 | List all workspaces                                                                                                             | [workspace.md](workspace.md)       |
 
 ## By group
 
-| Group        | Commands                                                                                                                                 | Reference                      |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| `advisor`    | `recommend`                                                                                                                              | [advisor.md](advisor.md)       |
-| `app`        | `call`, `list`                                                                                                                           | [app.md](app.md)               |
-| `auth`       | `login`, `logout`, `status`                                                                                                              | [auth.md](auth.md)             |
-| `config`     | `set`, `show`                                                                                                                            | [config.md](config.md)         |
-| `console`    | `call`                                                                                                                                   | [console.md](console.md)       |
-| `dataset`    | `delete`, `get`, `list`, `upload`, `validate`                                                                                            | [dataset.md](dataset.md)       |
-| `deploy`     | `audio create`, `delete`, `get`, `image create`, `list`, `models`, `scale`, `text create`, `update`                                      | [deploy.md](deploy.md)         |
-| `file`       | `upload`                                                                                                                                 | [file.md](file.md)             |
-| `finetune`   | `audio create`, `cancel`, `capability`, `checkpoints`, `delete`, `export`, `get`, `image create`, `list`, `logs`, `text create`, `watch` | [finetune.md](finetune.md)     |
-| `image`      | `edit`, `generate`                                                                                                                       | [image.md](image.md)           |
-| `knowledge`  | `chat`, `retrieve`, `search`                                                                                                             | [knowledge.md](knowledge.md)   |
-| `mcp`        | `call`, `list`, `tools`                                                                                                                  | [mcp.md](mcp.md)               |
-| `memory`     | `add`, `delete`, `list`, `profile create`, `profile get`, `search`, `update`                                                             | [memory.md](memory.md)         |
-| `omni`       | `(root)`                                                                                                                                 | [omni.md](omni.md)             |
-| `pipeline`   | `run`, `validate`                                                                                                                        | [pipeline.md](pipeline.md)     |
-| `quota`      | `check`, `history`, `list`, `request`                                                                                                    | [quota.md](quota.md)           |
-| `search`     | `web`                                                                                                                                    | [search.md](search.md)         |
-| `speech`     | `recognize`, `synthesize`                                                                                                                | [speech.md](speech.md)         |
-| `text`       | `chat`                                                                                                                                   | [text.md](text.md)             |
-| `token-plan` | `add-member`, `assign-seats`, `create-key`, `list-seats`                                                                                 | [token-plan.md](token-plan.md) |
-| `update`     | `(root)`                                                                                                                                 | [update.md](update.md)         |
-| `usage`      | `free`, `freetier`, `stats`                                                                                                              | [usage.md](usage.md)           |
-| `video`      | `download`, `edit`, `generate`, `ref`, `task get`                                                                                        | [video.md](video.md)           |
-| `vision`     | `describe`                                                                                                                               | [vision.md](vision.md)         |
-| `workspace`  | `list`                                                                                                                                   | [workspace.md](workspace.md)   |
+| Group          | Commands                                                                                                                                                                    | Reference                          |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `advisor`      | `recommend`                                                                                                                                                                 | [advisor.md](advisor.md)           |
+| `app`          | `call`, `list`                                                                                                                                                              | [app.md](app.md)                   |
+| `asset-center` | `delete`, `download`, `favorite`, `get`, `list`, `oss bind`, `oss show`, `oss slr authorize`, `oss unbind`, `oss update`, `stats`, `storage`, `transfer list`, `unfavorite` | [asset-center.md](asset-center.md) |
+| `auth`         | `login`, `logout`, `status`                                                                                                                                                 | [auth.md](auth.md)                 |
+| `config`       | `set`, `show`                                                                                                                                                               | [config.md](config.md)             |
+| `console`      | `call`                                                                                                                                                                      | [console.md](console.md)           |
+| `dataset`      | `delete`, `get`, `list`, `upload`, `validate`                                                                                                                               | [dataset.md](dataset.md)           |
+| `deploy`       | `audio create`, `delete`, `get`, `image create`, `list`, `models`, `scale`, `text create`, `update`                                                                         | [deploy.md](deploy.md)             |
+| `file`         | `upload`                                                                                                                                                                    | [file.md](file.md)                 |
+| `finetune`     | `audio create`, `cancel`, `capability`, `checkpoints`, `delete`, `export`, `get`, `image create`, `list`, `logs`, `text create`, `watch`                                    | [finetune.md](finetune.md)         |
+| `image`        | `edit`, `generate`                                                                                                                                                          | [image.md](image.md)               |
+| `knowledge`    | `chat`, `retrieve`, `search`                                                                                                                                                | [knowledge.md](knowledge.md)       |
+| `mcp`          | `call`, `list`, `tools`                                                                                                                                                     | [mcp.md](mcp.md)                   |
+| `memory`       | `add`, `delete`, `list`, `profile create`, `profile get`, `search`, `update`                                                                                                | [memory.md](memory.md)             |
+| `omni`         | `(root)`                                                                                                                                                                    | [omni.md](omni.md)                 |
+| `pipeline`     | `run`, `validate`                                                                                                                                                           | [pipeline.md](pipeline.md)         |
+| `quota`        | `check`, `history`, `list`, `request`                                                                                                                                       | [quota.md](quota.md)               |
+| `search`       | `web`                                                                                                                                                                       | [search.md](search.md)             |
+| `speech`       | `recognize`, `synthesize`                                                                                                                                                   | [speech.md](speech.md)             |
+| `text`         | `chat`                                                                                                                                                                      | [text.md](text.md)                 |
+| `token-plan`   | `add-member`, `assign-seats`, `create-key`, `list-seats`                                                                                                                    | [token-plan.md](token-plan.md)     |
+| `update`       | `(root)`                                                                                                                                                                    | [update.md](update.md)             |
+| `usage`        | `free`, `freetier`, `stats`                                                                                                                                                 | [usage.md](usage.md)               |
+| `video`        | `download`, `edit`, `generate`, `ref`, `task get`                                                                                                                           | [video.md](video.md)               |
+| `vision`       | `describe`                                                                                                                                                                  | [vision.md](vision.md)             |
+| `workspace`    | `list`                                                                                                                                                                      | [workspace.md](workspace.md)       |
 
 ## Global flags
 
