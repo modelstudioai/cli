@@ -81,6 +81,24 @@ test("GET /api/config 返回全部 profile、明文密钥与持久化激活项",
     expect(res.json.default).toMatchObject({ api_key: "sk-default", output: "json" });
     expect(res.json.named.dev).toMatchObject({ api_key: "sk-dev", access_token: "tok-dev" });
     expect(res.json.secretKeys).toContain("api_key");
+    // Console/telemetry fields are editable via the UI (full ConfigFile surface).
+    expect(res.json.keys).toContain("console_site");
+    expect(res.json.keys).toContain("telemetry");
+    expect(res.json.enums.console_site).toEqual(["domestic", "international"]);
+    expect(res.json.booleanKeys).toContain("telemetry");
+    // Default field hints are surfaced as prefilled values in the UI.
+    expect(res.json.fieldDefaults.default_image_model).toBe("qwen-image-2.0");
+    expect(res.json.fieldDefaults.default_text_model).toBe("qwen3.7-max");
+    expect(res.json.fieldDefaults.output_dir).toContain("bailian-output");
+    expect(res.json.fieldDefaults.timeout).toBe("300");
+    // Per-category model catalog (click-to-fill suggestions) is exposed too.
+    expect(res.json.modelCatalog.default_image_model[0]).toMatchObject({ id: "qwen-image-2.0" });
+    expect(res.json.modelCatalog.default_video_model.map((m: { id: string }) => m.id)).toContain(
+      "happyhorse-1.1-i2v",
+    );
+    expect(res.json.modelCatalog.default_speech_model.map((m: { id: string }) => m.id)).toContain(
+      "fun-asr",
+    );
   });
 });
 
@@ -128,44 +146,42 @@ test("POST /api/profile 写命名 profile（timeout 强制为 number），空串
   });
 });
 
-test("POST /api/profile 保留 UI 未管理字段，同时替换 UI 管理字段", async () => {
+test("POST /api/profile 可编辑 console/telemetry 字段并按类型持久化", async () => {
   await withServer(async (port) => {
-    await writeConfigFile(
-      {
-        api_key: "sk-old",
-        output: "json",
-        console_site: "international",
-        console_region: "ap-southeast-1",
-        console_switch_agent: 42,
-        telemetry: false,
-      },
-      "stage",
-    );
-
     const save = await httpJson(port, "POST", `/api/profile?token=${TOKEN}`, {
-      body: { name: "stage", data: { api_key: "sk-new" } },
+      body: {
+        name: "stage",
+        data: {
+          api_key: "sk-stage",
+          console_site: "international",
+          console_region: "ap-southeast-1",
+          console_switch_agent: "42",
+          telemetry: "false",
+        },
+      },
     });
     expect(save.status).toBe(200);
 
     const profile = readConfigFile("stage");
     expect(profile).toMatchObject({
-      api_key: "sk-new",
+      api_key: "sk-stage",
       console_site: "international",
       console_region: "ap-southeast-1",
       console_switch_agent: 42,
       telemetry: false,
     });
-    expect(profile.output).toBeUndefined();
 
     const rawConfig = JSON.parse(readFileSync(getConfigPath(), "utf8"));
-    expect(rawConfig.stage).toMatchObject({
-      api_key: "sk-new",
-      console_site: "international",
-      console_region: "ap-southeast-1",
-      console_switch_agent: 42,
-      telemetry: false,
+    // Coerced to the right JSON types, not left as strings.
+    expect(rawConfig.stage.console_switch_agent).toBe(42);
+    expect(rawConfig.stage.telemetry).toBe(false);
+
+    // Invalid enum value is rejected.
+    const bad = await httpJson(port, "POST", `/api/profile?token=${TOKEN}`, {
+      body: { name: "stage", data: { console_site: "mars" } },
     });
-    expect(rawConfig.stage.output).toBeUndefined();
+    expect(bad.status).toBe(400);
+    expect(String(bad.json.error)).toMatch(/console_site/);
   });
 });
 

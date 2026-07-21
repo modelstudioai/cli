@@ -1,5 +1,7 @@
 import http from "node:http";
 import { randomBytes } from "node:crypto";
+import { createReadStream, existsSync, statSync, unlinkSync } from "node:fs";
+import { extname } from "node:path";
 
 import {
   defineCommand,
@@ -14,9 +16,21 @@ import {
   type FlagsDef,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
-import { listenLocalServer, openInBrowser } from "../shared/local-server.ts";
+import { listenLocalServer, openInBrowser, openPath } from "../shared/local-server.ts";
 import { PAGE_HTML } from "./ui-html.ts";
-import { VALID_KEYS, SECRET_KEYS, resolveKey, validateAndCoerce } from "./shared.ts";
+import {
+  UI_VALID_KEYS,
+  UI_ENUM_KEYS,
+  UI_BOOLEAN_KEYS,
+  UI_MODEL_DEFAULTS,
+  UI_MODEL_CATALOG,
+  SECRET_KEYS,
+  resolveKey,
+  validateAndCoerceUi,
+} from "./shared.ts";
+import { listSkills, listMcpServers, listAgents, getSkillDetail } from "./inventory.ts";
+import { launchAgent, agentLaunchable } from "./agent-launch.ts";
+import { listAssets, resolveAssetPath, defaultOutputBase, contentType } from "./assets.ts";
 
 const FLAGS = {
   port: {
@@ -60,15 +74,17 @@ function readBody(req: http.IncomingMessage): Promise<string> {
 }
 
 /** Build the request cleaned/validated config block from a posted `data` map. */
-function buildProfilePatch(data: Record<string, unknown>): Record<string, string | number> {
-  const cleaned: Record<string, string | number> = {};
+function buildProfilePatch(
+  data: Record<string, unknown>,
+): Record<string, string | number | boolean> {
+  const cleaned: Record<string, string | number | boolean> = {};
   for (const [k, v] of Object.entries(data)) {
     let value = "";
     if (typeof v === "string") value = v;
     else if (typeof v === "number" || typeof v === "boolean") value = String(v);
     // null/undefined/objects fall through as "" and clear the key
     if (value === "") continue;
-    cleaned[resolveKey(k)] = validateAndCoerce(k, value);
+    cleaned[resolveKey(k)] = validateAndCoerceUi(k, value);
   }
   return cleaned;
 }
@@ -76,9 +92,9 @@ function buildProfilePatch(data: Record<string, unknown>): Record<string, string
 /** Preserve valid Config fields that the UI does not expose or manage. */
 function mergeUnmanagedProfileFields(
   existing: Record<string, unknown>,
-  managedPatch: Record<string, string | number>,
+  managedPatch: Record<string, string | number | boolean>,
 ): Record<string, unknown> {
-  const managedKeys = new Set<string>(VALID_KEYS);
+  const managedKeys = new Set<string>(UI_VALID_KEYS);
   const merged: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(existing)) {
     if (!managedKeys.has(key)) merged[key] = value;
@@ -91,7 +107,11 @@ function mergeUnmanagedProfileFields(
  * - Host header must be a loopback name (anti DNS-rebinding).
  * - every request must carry `?token=` matching the session token.
  */
-export function createConfigUiServer(token: string, configStore: ConfigStore): http.Server {
+export function createConfigUiServer(
+  token: string,
+  configStore: ConfigStore,
+  outputBase: string = defaultOutputBase(),
+): http.Server {
   return http.createServer(async (req, res) => {
     try {
       const host = (req.headers.host || "").split(":")[0];
@@ -121,12 +141,119 @@ export function createConfigUiServer(token: string, configStore: ConfigStore): h
         const profiles = configStore.profiles();
         sendJson(res, 200, {
           configFile: configStore.path,
-          keys: VALID_KEYS,
+          keys: UI_VALID_KEYS,
           secretKeys: [...SECRET_KEYS],
+          enums: UI_ENUM_KEYS,
+          booleanKeys: [...UI_BOOLEAN_KEYS],
+          fieldDefaults: {
+            ...UI_MODEL_DEFAULTS,
+            output_dir: defaultOutputBase(),
+            timeout: "300",
+          },
+          modelCatalog: UI_MODEL_CATALOG,
           activeProfile: profiles.active,
           default: profiles.default,
           named: profiles.named,
         });
+        return;
+      }
+
+      if (path === "/api/skills" && method === "GET") {
+        sendJson(res, 200, { skills: listSkills() });
+        return;
+      }
+
+      if (path === "/api/skill" && method === "GET") {
+        const detail = getSkillDetail(u.searchParams.get("id") ?? "");
+        if (!detail) {
+          sendJson(res, 404, { error: "not found" });
+          return;
+        }
+        sendJson(res, 200, detail);
+        return;
+      }
+
+      if (path === "/api/mcp" && method === "GET") {
+        sendJson(res, 200, { servers: listMcpServers() });
+        return;
+      }
+
+      if (path === "/api/agents" && method === "GET") {
+        // Augment each agent with `launchable`: whether its CLI binary is on
+        // PATH. "Connected" only means bl is wired into the agent's config, so
+        // the UI uses this to avoid offering a launch that would instantly fail.
+        const agents = listAgents();
+        const launchable = await Promise.all(agents.map((a) => agentLaunchable(a.id)));
+        sendJson(res, 200, {
+          agents: agents.map((a, i) => ({ ...a, launchable: launchable[i] })),
+        });
+        return;
+      }
+
+      if (path === "/api/assets" && method === "GET") {
+        sendJson(res, 200, listAssets(outputBase));
+        return;
+      }
+
+      if (path === "/api/asset/file" && method === "GET") {
+        const abs = resolveAssetPath(outputBase, u.searchParams.get("path") ?? "");
+        if (!abs || !existsSync(abs) || !statSync(abs).isFile()) {
+          sendJson(res, 404, { error: "not found" });
+          return;
+        }
+        res.writeHead(200, {
+          "Content-Type": contentType(extname(abs)),
+          "Content-Length": statSync(abs).size,
+          "Cache-Control": "no-store",
+        });
+        const stream = createReadStream(abs);
+        stream.on("error", () => {
+          if (!res.headersSent) res.writeHead(500);
+          res.end();
+        });
+        stream.pipe(res);
+        return;
+      }
+
+      if (path === "/api/asset" && method === "DELETE") {
+        const rel = u.searchParams.get("path") ?? "";
+        const abs = resolveAssetPath(outputBase, rel);
+        if (!abs || !existsSync(abs) || !statSync(abs).isFile()) {
+          sendJson(res, 404, { error: "not found" });
+          return;
+        }
+        try {
+          unlinkSync(abs);
+          sendJson(res, 200, { deleted: rel });
+        } catch (err) {
+          sendJson(res, 400, { error: errMessage(err) });
+        }
+        return;
+      }
+
+      if (path === "/api/asset/open" && method === "POST") {
+        const rel = u.searchParams.get("path") ?? "";
+        const abs = resolveAssetPath(outputBase, rel);
+        if (!abs || !existsSync(abs) || !statSync(abs).isFile()) {
+          sendJson(res, 404, { error: "not found" });
+          return;
+        }
+        try {
+          await openPath(abs);
+          sendJson(res, 200, { opened: rel });
+        } catch (err) {
+          sendJson(res, 400, { error: errMessage(err) });
+        }
+        return;
+      }
+
+      if (path === "/api/agent/launch" && method === "POST") {
+        try {
+          const result = await launchAgent(u.searchParams.get("id") ?? "");
+          sendJson(res, 200, result);
+        } catch (err) {
+          sendJson(res, 400, { error: errMessage(err) });
+        }
         return;
       }
 
@@ -164,7 +291,7 @@ export function createConfigUiServer(token: string, configStore: ConfigStore): h
           return;
         }
         let normalized: string | undefined;
-        let cleaned: Record<string, string | number>;
+        let cleaned: Record<string, string | number | boolean>;
         try {
           normalized = normalizeConfigName(body.name);
           cleaned = buildProfilePatch(body.data as Record<string, unknown>);
@@ -217,9 +344,18 @@ export default defineCommand({
           routes: [
             "GET /              -> web UI",
             "GET /api/config    -> read all profiles",
+            "GET /api/skills    -> list installed agent skills",
+            "GET /api/skill     -> read one skill's SKILL.md detail",
+            "GET /api/mcp       -> list local MCP servers",
+            "GET /api/agents    -> list coding agent frameworks",
+            "GET /api/assets   -> list generated assets",
+            "GET /api/asset/file -> stream one asset file",
+            "POST /api/asset/open -> open one asset with the OS default app",
+            "POST /api/agent/launch -> launch a coding agent CLI in a new terminal",
             "POST /api/profile  -> save a profile",
             "POST /api/active   -> activate a profile",
             "DELETE /api/profile -> delete a named profile",
+            "DELETE /api/asset  -> delete one asset file",
           ],
         },
         format,
@@ -228,7 +364,8 @@ export default defineCommand({
     }
 
     const token = randomBytes(16).toString("hex");
-    const server = createConfigUiServer(token, ctx.configStore);
+    const outputBase = settings.outputDir || defaultOutputBase();
+    const server = createConfigUiServer(token, ctx.configStore, outputBase);
 
     let port: number;
     try {
