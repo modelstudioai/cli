@@ -5,7 +5,7 @@
 **The official command-line interface for Aliyun Model Studio (DashScope) AI Platform**
 
 [![npm version](https://img.shields.io/npm/v/bailian-cli?color=0969da&label=npm)](https://www.npmjs.com/package/bailian-cli)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D22.12-brightgreen)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18.17-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
@@ -81,7 +81,7 @@ npm install -g bailian-cli
 npx skills add modelstudioai/cli --all -g
 ```
 
-> Requires Node.js >= 22.12.
+> Requires Node.js >= 18.17.
 
 ## Quick Start
 

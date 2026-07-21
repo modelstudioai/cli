@@ -28,8 +28,8 @@ catalogs:
       specifier: ^4.23.0
       version: 4.23.0
     undici:
-      specifier: ^8.4.1
-      version: 8.4.1
+      specifier: ^6.27.0
+      version: 6.27.0
     vite-plus:
       specifier: latest
       version: 0.1.22
@@ -93,7 +93,7 @@ importers:
         version: 6.0.3
       undici:
         specifier: 'catalog:'
-        version: 8.4.1
+        version: 6.27.0
       vite-plus:
         specifier: 0.1.22
         version: 0.1.22(@types/node@24.12.2)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.0)(typescript@6.0.3)(vite@8.0.10(@types/node@24.12.2)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.0)(yaml@2.8.3))(yaml@2.8.3)
@@ -217,7 +217,7 @@ importers:
         version: 6.0.3
       undici:
         specifier: 'catalog:'
-        version: 8.4.1
+        version: 6.27.0
       vite-plus:
         specifier: 0.1.22
         version: 0.1.22(@types/node@24.12.2)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.0)(typescript@6.0.3)(vite@8.0.10(@types/node@24.12.2)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.0)(yaml@2.8.3))(yaml@2.8.3)
@@ -238,7 +238,7 @@ importers:
         version: 5.6.2
       undici:
         specifier: 'catalog:'
-        version: 8.4.1
+        version: 6.27.0
     devDependencies:
       '@clack/prompts':
         specifier: ^0.7.0
@@ -1344,9 +1344,9 @@ packages:
   undici-types@7.19.2:
     resolution: {integrity: sha512-qYVnV5OEm2AW8cJMCpdV20CDyaN3g0AjDlOGf1OW4iaDEx8MwdtChUp4zu4H0VP3nDRF/8RKWH+IPp9uW0YGZg==}
 
-  undici@8.4.1:
-    resolution: {integrity: sha512-RNHlB4fxZK0IrkhBsxhlbx7s8kFWwr7rzzOqj5nvZugw3ig3RsB7KW3zVlV0eu8POl+rx5d1hmL7rRg0z1owow==}
-    engines: {node: '>=22.19.0'}
+  undici@6.27.0:
+    resolution: {integrity: sha512-YmfV3YnEDzXRC5lZ2jWtWWHKGUm1zIt8AhesR1tens+HTNv+YZlN/dp6G727LOvMJ8xjP9Be7Y2Sdr96LDm+pg==}
+    engines: {node: '>=18.17'}
 
   vite-plus@0.1.22:
     resolution: {integrity: sha512-fCCmEKjI+Hv74PdL/MKcrBkdYPHFNcqD5568KxwN0sa4SGxtcbs55i/577LxKs0w5zIjuLRZZ0zQPu9MO+9itg==}
@@ -2232,7 +2232,7 @@ snapshots:
 
   undici-types@7.19.2: {}
 
-  undici@8.4.1: {}
+  undici@6.27.0: {}
 
   vite-plus@0.1.22(@types/node@24.12.2)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.0)(typescript@6.0.3)(vite@8.0.10(@types/node@24.12.2)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.0)(yaml@2.8.3))(yaml@2.8.3):
     dependencies:

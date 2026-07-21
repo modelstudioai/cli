@@ -12,7 +12,7 @@
 
 ### A. 版本一致性
 
-- [ ] `package.json` 的 `engines.node` 与 README 的 Node.js 徽章一致
+- [ ] 发布包（`cli` 等）的 `engines.node` 与 README 的 Node.js 徽章一致；根/e2e 开发要求（`>=22.12`）与 CONTRIBUTING 一致
 - [ ] `pnpm-lock.yaml` 同步生成(运行 `pnpm install`)
 - [ ] 各源码包 `tsconfig.json`(根 + core + runtime + commands + cli + kscli)的 target / module 设置一致
 
