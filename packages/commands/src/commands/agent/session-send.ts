@@ -1,6 +1,6 @@
 import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-core";
 import { sendSessionMessagePolling, sendSessionMessageStreaming } from "@openagentpack/sdk";
-import { buildAgentRuntime } from "./_engine/config-loader.ts";
+import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 import { renderCollectedEvents, streamAndRenderEvents } from "./_engine/session-render.ts";
@@ -23,8 +23,15 @@ const SESSION_SEND_FLAGS = {
     valueHint: "<path>",
     description: "Config file path (default: agents.yaml)",
   },
-  provider: { type: "string", valueHint: "<name>", description: "Target provider" },
-  noStream: { type: "switch", description: "Use polling instead of SSE streaming" },
+  provider: {
+    type: "string",
+    valueHint: "<name>",
+    description: "Target provider",
+  },
+  noStream: {
+    type: "switch",
+    description: "Use polling instead of SSE streaming",
+  },
 } satisfies FlagsDef;
 
 export default defineCommand({
@@ -33,6 +40,7 @@ export default defineCommand({
   usageArgs: "--session-id <id> --message <text> [--no-stream] [--file <path>]",
   flags: SESSION_SEND_FLAGS,
   exampleArgs: ['--session-id sess_abc123 --message "continue"'],
+  notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
@@ -41,7 +49,7 @@ export default defineCommand({
 
     await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(file);
+        const runtime = await buildAgentRuntime(ctx, file);
         if (flags.noStream) {
           const result = await sendSessionMessagePolling(runtime, flags.sessionId, flags.message, {
             provider: flags.provider,

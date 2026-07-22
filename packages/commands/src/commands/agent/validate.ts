@@ -7,7 +7,7 @@ import {
 } from "bailian-cli-core";
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { resolveProjectConfig, validateProjectConfig } from "@openagentpack/sdk";
-import { ensureCredentials } from "./_engine/credentials.ts";
+import { CREDENTIALS_NOTE, ensureCredentials } from "./_engine/credentials.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 
 const VALIDATE_FLAGS = {
@@ -24,6 +24,7 @@ export default defineCommand({
   usageArgs: "[--file <path>]",
   flags: VALIDATE_FLAGS,
   exampleArgs: ["", "--file agents.yaml"],
+  notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);

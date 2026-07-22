@@ -1,6 +1,6 @@
 import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-core";
 import { startSessionRun, startSessionRunPolling } from "@openagentpack/sdk";
-import { buildAgentRuntime } from "./_engine/config-loader.ts";
+import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 import {
@@ -31,15 +31,26 @@ const SESSION_RUN_FLAGS = {
     valueHint: "<name>",
     description: "Override agent's declared environment",
   },
-  vault: { type: "string", valueHint: "<name>", description: "Override agent's declared vault" },
+  vault: {
+    type: "string",
+    valueHint: "<name>",
+    description: "Override agent's declared vault",
+  },
   memoryStores: {
     type: "string",
     valueHint: "<names>",
     description: "Override agent's memory stores (comma-separated)",
   },
   title: { type: "string", valueHint: "<title>", description: "Session title" },
-  provider: { type: "string", valueHint: "<name>", description: "Target provider" },
-  noStream: { type: "switch", description: "Use polling instead of SSE streaming" },
+  provider: {
+    type: "string",
+    valueHint: "<name>",
+    description: "Target provider",
+  },
+  noStream: {
+    type: "switch",
+    description: "Use polling instead of SSE streaming",
+  },
 } satisfies FlagsDef;
 
 export default defineCommand({
@@ -48,6 +59,7 @@ export default defineCommand({
   usageArgs: "--prompt <text> [--agent <name>] [--no-stream] [--file <path>]",
   flags: SESSION_RUN_FLAGS,
   exampleArgs: ['--prompt "hello"', '--agent assistant --prompt "summarize this repo"'],
+  notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
@@ -65,7 +77,7 @@ export default defineCommand({
 
     await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(file);
+        const runtime = await buildAgentRuntime(ctx, file);
         if (flags.noStream) {
           const run = await startSessionRunPolling(runtime, flags.prompt, runOptions);
           if (!asJson) process.stderr.write(`Session created: ${run.session.id}\n`);

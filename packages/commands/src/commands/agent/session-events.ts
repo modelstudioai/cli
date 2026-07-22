@@ -2,7 +2,7 @@ import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-co
 import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
 import { listSessionEvents } from "@openagentpack/sdk";
 import { sanitizeSessionEvents } from "@openagentpack/sdk/session-events";
-import { buildAgentRuntime } from "./_engine/config-loader.ts";
+import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 import { fetchAllPages } from "./_engine/pagination.ts";
@@ -19,9 +19,20 @@ const SESSION_EVENTS_FLAGS = {
     valueHint: "<path>",
     description: "Config file path (default: agents.yaml)",
   },
-  provider: { type: "string", valueHint: "<name>", description: "Target provider" },
-  limit: { type: "number", valueHint: "<n>", description: "Maximum number of events to fetch" },
-  all: { type: "switch", description: "Fetch all pages by following the cursor" },
+  provider: {
+    type: "string",
+    valueHint: "<name>",
+    description: "Target provider",
+  },
+  limit: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Maximum number of events to fetch",
+  },
+  all: {
+    type: "switch",
+    description: "Fetch all pages by following the cursor",
+  },
 } satisfies FlagsDef;
 
 export default defineCommand({
@@ -30,6 +41,7 @@ export default defineCommand({
   usageArgs: "--session-id <id> [--limit <n>] [--all] [--file <path>]",
   flags: SESSION_EVENTS_FLAGS,
   exampleArgs: ["--session-id sess_abc123", "--session-id sess_abc123 --all"],
+  notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
@@ -37,14 +49,18 @@ export default defineCommand({
 
     const { items: events, hasMore } = await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(file);
+        const runtime = await buildAgentRuntime(ctx, file);
         return fetchAllPages(async (page) => {
           const result = await listSessionEvents(runtime, flags.sessionId, {
             provider: flags.provider,
             limit: flags.limit,
             page_token: page,
           });
-          return { items: result.events, hasMore: result.has_more, nextPage: result.next_page };
+          return {
+            items: result.events,
+            hasMore: result.has_more,
+            nextPage: result.next_page,
+          };
         }, flags.all);
       }),
     );

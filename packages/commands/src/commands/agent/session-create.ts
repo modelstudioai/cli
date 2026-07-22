@@ -1,7 +1,7 @@
 import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-core";
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { createSessionForAgent } from "@openagentpack/sdk";
-import { buildAgentRuntime } from "./_engine/config-loader.ts";
+import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 import { parseMemoryStores } from "./_engine/session-render.ts";
@@ -22,7 +22,11 @@ const SESSION_CREATE_FLAGS = {
     valueHint: "<name>",
     description: "Override agent's declared environment",
   },
-  vault: { type: "string", valueHint: "<name>", description: "Override agent's declared vault" },
+  vault: {
+    type: "string",
+    valueHint: "<name>",
+    description: "Override agent's declared vault",
+  },
   memoryStores: {
     type: "string",
     valueHint: "<names>",
@@ -42,6 +46,7 @@ export default defineCommand({
   usageArgs: "[--agent <name>] [--environment <name>] [--title <title>] [--file <path>]",
   flags: SESSION_CREATE_FLAGS,
   exampleArgs: ["", "--agent assistant", "--agent assistant --title 'debug run'"],
+  notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
@@ -49,7 +54,7 @@ export default defineCommand({
 
     const run = await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(file);
+        const runtime = await buildAgentRuntime(ctx, file);
         return createSessionForAgent(runtime, {
           agent: flags.agent,
           provider: flags.provider,

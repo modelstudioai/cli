@@ -8,7 +8,7 @@ import {
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { destroyPlannedProjectResources, planDestroyProjectContext } from "@openagentpack/sdk";
 import { formatResourceLabel } from "./_engine/address-utils.ts";
-import { buildAgentRuntime } from "./_engine/config-loader.ts";
+import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 
@@ -34,6 +34,7 @@ export default defineCommand({
   usageArgs: "[--file <path>] [--yes] [--cascade]",
   flags: DESTROY_FLAGS,
   exampleArgs: ["--yes", "--yes --cascade"],
+  notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
@@ -41,7 +42,7 @@ export default defineCommand({
 
     const planned = await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(file);
+        const runtime = await buildAgentRuntime(ctx, file);
         return planDestroyProjectContext(runtime);
       }),
     );

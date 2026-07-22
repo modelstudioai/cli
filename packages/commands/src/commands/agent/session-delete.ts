@@ -1,7 +1,7 @@
 import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-core";
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { deleteSession } from "@openagentpack/sdk";
-import { buildAgentRuntime } from "./_engine/config-loader.ts";
+import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 
@@ -17,7 +17,11 @@ const SESSION_DELETE_FLAGS = {
     valueHint: "<path>",
     description: "Config file path (default: agents.yaml)",
   },
-  provider: { type: "string", valueHint: "<name>", description: "Target provider" },
+  provider: {
+    type: "string",
+    valueHint: "<name>",
+    description: "Target provider",
+  },
 } satisfies FlagsDef;
 
 export default defineCommand({
@@ -26,6 +30,7 @@ export default defineCommand({
   usageArgs: "--session-id <id> [--provider <name>] [--file <path>]",
   flags: SESSION_DELETE_FLAGS,
   exampleArgs: ["--session-id sess_abc123"],
+  notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
@@ -33,7 +38,7 @@ export default defineCommand({
 
     await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(file);
+        const runtime = await buildAgentRuntime(ctx, file);
         await deleteSession(runtime, flags.sessionId, flags.provider);
       }),
     );

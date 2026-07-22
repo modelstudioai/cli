@@ -8,7 +8,11 @@ import {
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { planProjectContext } from "@openagentpack/sdk";
 import { formatResourceLabel } from "./_engine/address-utils.ts";
-import { assertProviderConfigured, buildAgentRuntime } from "./_engine/config-loader.ts";
+import {
+  assertProviderConfigured,
+  buildAgentRuntime,
+  CREDENTIALS_NOTE,
+} from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 import { renderAgentFeedback } from "./_engine/feedback.ts";
@@ -40,6 +44,7 @@ export default defineCommand({
   usageArgs: "[--file <path>] [--provider <name>] [--no-refresh] [--refresh-only]",
   flags: PLAN_FLAGS,
   exampleArgs: ["", "--provider bailian", "--no-refresh"],
+  notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
@@ -47,7 +52,7 @@ export default defineCommand({
 
     const planned = await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(file);
+        const runtime = await buildAgentRuntime(ctx, file);
         assertProviderConfigured(runtime, flags.provider);
         return planProjectContext(runtime, {
           provider: flags.provider,

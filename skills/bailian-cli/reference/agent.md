@@ -46,6 +46,11 @@ Index: [index.md](index.md)
 | `--no-refresh`      | switch | no       | Skip refreshing state from remote before planning                    |
 | `--concurrency <n>` | number | no       | Max independent resources to apply in parallel (default 6, max 10)   |
 
+#### Notes
+
+- Credentials come from the env vars referenced in agents.yaml (e.g. ${DASHSCOPE_API_KEY}, ${BAILIAN_WORKSPACE_ID}).
+- For the bailian provider, bl fills these from your login as a fallback: `bl auth login` (API key) and `bl config set workspace_id <id>`.
+
 #### Examples
 
 ```bash
@@ -71,6 +76,11 @@ bl agent apply --provider bailian --yes
 | `--file <path>` | string | no       | Config file path (default: agents.yaml)                                    |
 | `--yes`         | switch | no       | Confirm and destroy without an interactive prompt (required)               |
 | `--cascade`     | switch | no       | Auto-delete dependent resources (e.g. sessions referencing an environment) |
+
+#### Notes
+
+- Credentials come from the env vars referenced in agents.yaml (e.g. ${DASHSCOPE_API_KEY}, ${BAILIAN_WORKSPACE_ID}).
+- For the bailian provider, bl fills these from your login as a fallback: `bl auth login` (API key) and `bl config set workspace_id <id>`.
 
 #### Examples
 
@@ -130,6 +140,11 @@ bl agent init --provider all
 | `--no-refresh`      | switch | no       | Skip refreshing state from remote before planning              |
 | `--refresh-only`    | switch | no       | Refresh state and show drift without planning remote mutations |
 
+#### Notes
+
+- Credentials come from the env vars referenced in agents.yaml (e.g. ${DASHSCOPE_API_KEY}, ${BAILIAN_WORKSPACE_ID}).
+- For the bailian provider, bl fills these from your login as a fallback: `bl auth login` (API key) and `bl config set workspace_id <id>`.
+
 #### Examples
 
 ```bash
@@ -164,6 +179,11 @@ bl agent plan --no-refresh
 | `--title <title>`         | string | no       | Session title                                                |
 | `--provider <name>`       | string | no       | Target provider (multi-provider agents)                      |
 
+#### Notes
+
+- Credentials come from the env vars referenced in agents.yaml (e.g. ${DASHSCOPE_API_KEY}, ${BAILIAN_WORKSPACE_ID}).
+- For the bailian provider, bl fills these from your login as a fallback: `bl auth login` (API key) and `bl config set workspace_id <id>`.
+
 #### Examples
 
 ```bash
@@ -194,6 +214,11 @@ bl agent session create --agent assistant --title 'debug run'
 | `--file <path>`     | string | no       | Config file path (default: agents.yaml) |
 | `--provider <name>` | string | no       | Target provider                         |
 
+#### Notes
+
+- Credentials come from the env vars referenced in agents.yaml (e.g. ${DASHSCOPE_API_KEY}, ${BAILIAN_WORKSPACE_ID}).
+- For the bailian provider, bl fills these from your login as a fallback: `bl auth login` (API key) and `bl config set workspace_id <id>`.
+
 #### Examples
 
 ```bash
@@ -217,6 +242,11 @@ bl agent session delete --session-id sess_abc123
 | `--provider <name>` | string | no       | Target provider                         |
 | `--limit <n>`       | number | no       | Maximum number of events to fetch       |
 | `--all`             | switch | no       | Fetch all pages by following the cursor |
+
+#### Notes
+
+- Credentials come from the env vars referenced in agents.yaml (e.g. ${DASHSCOPE_API_KEY}, ${BAILIAN_WORKSPACE_ID}).
+- For the bailian provider, bl fills these from your login as a fallback: `bl auth login` (API key) and `bl config set workspace_id <id>`.
 
 #### Examples
 
@@ -244,6 +274,11 @@ bl agent session events --session-id sess_abc123 --all
 | `--file <path>`     | string | no       | Config file path (default: agents.yaml) |
 | `--provider <name>` | string | no       | Target provider                         |
 
+#### Notes
+
+- Credentials come from the env vars referenced in agents.yaml (e.g. ${DASHSCOPE_API_KEY}, ${BAILIAN_WORKSPACE_ID}).
+- For the bailian provider, bl fills these from your login as a fallback: `bl auth login` (API key) and `bl config set workspace_id <id>`.
+
 #### Examples
 
 ```bash
@@ -266,6 +301,11 @@ bl agent session get --session-id sess_abc123
 | `--agent <name>`    | string | no       | Filter by agent name                    |
 | `--all`             | switch | no       | Fetch all pages by following the cursor |
 | `--provider <name>` | string | no       | Target provider                         |
+
+#### Notes
+
+- Credentials come from the env vars referenced in agents.yaml (e.g. ${DASHSCOPE_API_KEY}, ${BAILIAN_WORKSPACE_ID}).
+- For the bailian provider, bl fills these from your login as a fallback: `bl auth login` (API key) and `bl config set workspace_id <id>`.
 
 #### Examples
 
@@ -303,6 +343,11 @@ bl agent session list --all
 | `--provider <name>`       | string | no       | Target provider                                              |
 | `--no-stream`             | switch | no       | Use polling instead of SSE streaming                         |
 
+#### Notes
+
+- Credentials come from the env vars referenced in agents.yaml (e.g. ${DASHSCOPE_API_KEY}, ${BAILIAN_WORKSPACE_ID}).
+- For the bailian provider, bl fills these from your login as a fallback: `bl auth login` (API key) and `bl config set workspace_id <id>`.
+
 #### Examples
 
 ```bash
@@ -331,6 +376,11 @@ bl agent session run --agent assistant --prompt "summarize this repo"
 | `--provider <name>` | string | no       | Target provider                         |
 | `--no-stream`       | switch | no       | Use polling instead of SSE streaming    |
 
+#### Notes
+
+- Credentials come from the env vars referenced in agents.yaml (e.g. ${DASHSCOPE_API_KEY}, ${BAILIAN_WORKSPACE_ID}).
+- For the bailian provider, bl fills these from your login as a fallback: `bl auth login` (API key) and `bl config set workspace_id <id>`.
+
 #### Examples
 
 ```bash
@@ -354,6 +404,11 @@ bl agent session send --session-id sess_abc123 --message "continue"
 | `--resource-version <n>`         | number | no       | Resource version (for versioned resources like agents) |
 | `--file <path>`                  | string | no       | Config file path (default: agents.yaml)                |
 
+#### Notes
+
+- Credentials come from the env vars referenced in agents.yaml (e.g. ${DASHSCOPE_API_KEY}, ${BAILIAN_WORKSPACE_ID}).
+- For the bailian provider, bl fills these from your login as a fallback: `bl auth login` (API key) and `bl config set workspace_id <id>`.
+
 #### Examples
 
 ```bash
@@ -373,6 +428,11 @@ bl agent state import --address bailian.agent.assistant --remote-id agent-abc123
 | Flag            | Type   | Required | Description                             |
 | --------------- | ------ | -------- | --------------------------------------- |
 | `--file <path>` | string | no       | Config file path (default: agents.yaml) |
+
+#### Notes
+
+- Credentials come from the env vars referenced in agents.yaml (e.g. ${DASHSCOPE_API_KEY}, ${BAILIAN_WORKSPACE_ID}).
+- For the bailian provider, bl fills these from your login as a fallback: `bl auth login` (API key) and `bl config set workspace_id <id>`.
 
 #### Examples
 
@@ -399,6 +459,11 @@ bl agent state list --file agents.yaml
 | `--address <provider.type.name>` | string | yes      | Resource state address (required)       |
 | `--file <path>`                  | string | no       | Config file path (default: agents.yaml) |
 
+#### Notes
+
+- Credentials come from the env vars referenced in agents.yaml (e.g. ${DASHSCOPE_API_KEY}, ${BAILIAN_WORKSPACE_ID}).
+- For the bailian provider, bl fills these from your login as a fallback: `bl auth login` (API key) and `bl config set workspace_id <id>`.
+
 #### Examples
 
 ```bash
@@ -420,6 +485,11 @@ bl agent state rm --address bailian.agent.assistant
 | `--address <provider.type.name>` | string | yes      | Resource state address (required)       |
 | `--file <path>`                  | string | no       | Config file path (default: agents.yaml) |
 
+#### Notes
+
+- Credentials come from the env vars referenced in agents.yaml (e.g. ${DASHSCOPE_API_KEY}, ${BAILIAN_WORKSPACE_ID}).
+- For the bailian provider, bl fills these from your login as a fallback: `bl auth login` (API key) and `bl config set workspace_id <id>`.
+
 #### Examples
 
 ```bash
@@ -439,6 +509,11 @@ bl agent state show --address bailian.agent.assistant
 | Flag            | Type   | Required | Description                             |
 | --------------- | ------ | -------- | --------------------------------------- |
 | `--file <path>` | string | no       | Config file path (default: agents.yaml) |
+
+#### Notes
+
+- Credentials come from the env vars referenced in agents.yaml (e.g. ${DASHSCOPE_API_KEY}, ${BAILIAN_WORKSPACE_ID}).
+- For the bailian provider, bl fills these from your login as a fallback: `bl auth login` (API key) and `bl config set workspace_id <id>`.
 
 #### Examples
 

@@ -50,6 +50,10 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 
 命令不要直接解析 token、env 或 config。业务请求统一走 `ctx.client`;登录/配置命令通过 `ctx.authStore` / `ctx.configStore` 的窄接口操作落盘。
 
+### 例外:agent 命令的 SDK 凭证桥接
+
+`bl agent *` 命令声明 `auth: "none"`,凭证由 `@openagentpack/sdk` 自主从 env 解析(agents.yaml 的 `${DASHSCOPE_API_KEY}` / `${BAILIAN_WORKSPACE_ID}` 插值)。为让 bl 登录态复用,`packages/commands/src/commands/agent/_engine/credentials.ts` 的 `bridgeBailianCredentials()` 会**直接 `readConfigFile()`**,把 config 的 `api_key` / `workspace_id` 作为最低优先级兜底填入对应 env,仅填空值,不覆盖已有。这是唯一允许命令层直接读 config 的场景(SDK 只认 env,不走 `ctx.client`);优先级链:`~/.agents/config.json` > shell env > `.env` > `~/.bailian/config.json`。
+
 ## 必查清单
 
 ### A. core 层(类型 + 解析)

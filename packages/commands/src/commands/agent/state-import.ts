@@ -1,7 +1,7 @@
 import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-core";
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { importResource, parseStateAddress } from "@openagentpack/sdk";
-import { buildAgentRuntime } from "./_engine/config-loader.ts";
+import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 
@@ -37,6 +37,7 @@ export default defineCommand({
     "--address <provider.type.name> --remote-id <id> [--resource-version <n>] [--file <path>]",
   flags: STATE_IMPORT_FLAGS,
   exampleArgs: ["--address bailian.agent.assistant --remote-id agent-abc123"],
+  notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
@@ -44,8 +45,10 @@ export default defineCommand({
 
     await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(file);
-        const parsed = parseStateAddress(flags.address, { requireProvider: true });
+        const runtime = await buildAgentRuntime(ctx, file);
+        const parsed = parseStateAddress(flags.address, {
+          requireProvider: true,
+        });
         await importResource(runtime, parsed, flags.remoteId, {
           resourceVersion: flags.resourceVersion,
         });
