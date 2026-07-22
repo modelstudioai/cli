@@ -23,6 +23,13 @@ export interface ConfigFile {
   /** Alibaba Cloud OpenAPI AccessKey secret from `bl auth login --open-api`. */
   access_key_secret?: string;
   base_url?: string;
+  /**
+   * Bailian AgentStudio API base URL for `bl agent` commands, e.g.
+   * `https://<workspace>.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio`.
+   * Distinct from `base_url` (the DashScope model API): the agent path bridges
+   * this to the SDK's `BAILIAN_BASE_URL`, so a workspace_id is not required.
+   */
+  agentstudio_base_url?: string;
   output?: "text" | "json";
   output_dir?: string;
   timeout?: number;
@@ -78,6 +85,8 @@ export function parseConfigFile(raw: unknown): ConfigFile {
   )
     out.access_key_secret = obj.openapi_access_key_secret;
   if (typeof obj.base_url === "string" && isHttpUrl(obj.base_url)) out.base_url = obj.base_url;
+  if (typeof obj.agentstudio_base_url === "string" && isHttpUrl(obj.agentstudio_base_url))
+    out.agentstudio_base_url = obj.agentstudio_base_url;
   if (typeof obj.output === "string" && VALID_OUTPUTS.has(obj.output))
     out.output = obj.output as ConfigFile["output"];
   if (typeof obj.output_dir === "string" && obj.output_dir.length > 0)

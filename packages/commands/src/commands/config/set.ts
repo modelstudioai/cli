@@ -23,6 +23,7 @@ const VALID_KEYS = [
   "default_speech_model",
   "default_omni_model",
   "workspace_id",
+  "agentstudio_base_url",
 ];
 
 // Keys whose values are secrets. Their stored value must never be echoed back in
@@ -44,6 +45,7 @@ const KEY_ALIASES: Record<string, string> = {
   "default-speech-model": "default_speech_model",
   "default-omni-model": "default_omni_model",
   "workspace-id": "workspace_id",
+  "agentstudio-base-url": "agentstudio_base_url",
 };
 
 export default defineCommand({
@@ -55,10 +57,15 @@ export default defineCommand({
       type: "string",
       valueHint: "<key>",
       description:
-        "Config key (base_url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, default_*_model, workspace_id)",
+        "Config key (base_url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, default_*_model, workspace_id, agentstudio_base_url)",
       required: true,
     },
-    value: { type: "string", valueHint: "<value>", description: "Value to set", required: true },
+    value: {
+      type: "string",
+      valueHint: "<value>",
+      description: "Value to set",
+      required: true,
+    },
   },
   exampleArgs: [
     "--key output --value json",
@@ -106,7 +113,9 @@ export default defineCommand({
     }
 
     const coerced = resolvedKey === "timeout" ? Number(value) : value;
-    await ctx.configStore.write({ [resolvedKey]: coerced } as Partial<ConfigFile>);
+    await ctx.configStore.write({
+      [resolvedKey]: coerced,
+    } as Partial<ConfigFile>);
 
     if (!settings.quiet) {
       const shown = SECRET_KEYS.has(resolvedKey) ? maskToken(String(coerced)) : coerced;

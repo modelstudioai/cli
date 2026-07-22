@@ -11,16 +11,17 @@ let bootstrapped = false;
  * that loads agents.yaml. `bl` prefix is safe: agent commands ship on `bl` only.
  */
 export const CREDENTIALS_NOTE = [
-  "Credentials come from the env vars referenced in agents.yaml (e.g. ${DASHSCOPE_API_KEY}, ${BAILIAN_WORKSPACE_ID}).",
-  "For the bailian provider, bl fills these from your login as a fallback: `bl auth login` (API key) and `bl config set workspace_id <id>`.",
+  "Credentials come from the env vars referenced in agents.yaml (e.g. ${DASHSCOPE_API_KEY}, ${BAILIAN_BASE_URL}).",
+  "For the bailian provider, bl fills these from your login as a fallback: `bl auth login --api-key <key> --agentstudio-base-url <url>`.",
 ];
 
 /**
  * Bridge bl's own login state into the env vars the OpenAgentPack SDK reads for
- * the bailian provider. bl persists `api_key` / `workspace_id` in
- * `~/.bailian/config.json` (via `bl auth login` / `bl config set`); mirror them
- * onto `DASHSCOPE_API_KEY` / `BAILIAN_WORKSPACE_ID` so users don't have to
- * re-declare the same credentials for `bl agent *`.
+ * the bailian provider. bl persists `api_key` / `agentstudio_base_url` in
+ * `~/.bailian/config.json` (via `bl auth login`); mirror them onto
+ * `DASHSCOPE_API_KEY` / `BAILIAN_BASE_URL` so users don't have to re-declare the
+ * same credentials for `bl agent *`. `workspace_id` is still bridged for configs
+ * that predate the base_url flow (the SDK accepts either).
  *
  * Lowest priority: only fills a var that is still unset, so anything already in
  * the environment (shell export, `.env`, or `~/.agents/config.json` — which the
@@ -32,6 +33,9 @@ export function bridgeBailianCredentials(): void {
   const file = readConfigFile();
   if (!process.env.DASHSCOPE_API_KEY?.trim() && file.api_key) {
     process.env.DASHSCOPE_API_KEY = file.api_key;
+  }
+  if (!process.env.BAILIAN_BASE_URL?.trim() && file.agentstudio_base_url) {
+    process.env.BAILIAN_BASE_URL = file.agentstudio_base_url;
   }
   if (!process.env.BAILIAN_WORKSPACE_ID?.trim() && file.workspace_id) {
     process.env.BAILIAN_WORKSPACE_ID = file.workspace_id;

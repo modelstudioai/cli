@@ -19,11 +19,21 @@ export default defineCommand({
   usageArgs:
     "--api-key <key> | --console | --open-api --access-key-id <id> --access-key-secret <secret>",
   flags: {
-    apiKey: { type: "string", valueHint: "<key>", description: "DashScope API key to store" },
+    apiKey: {
+      type: "string",
+      valueHint: "<key>",
+      description: "DashScope API key to store",
+    },
     baseUrl: {
       type: "string",
       valueHint: "<url>",
       description: "DashScope API base URL (used with --api-key for validation)",
+    },
+    agentstudioBaseUrl: {
+      type: "string",
+      valueHint: "<url>",
+      description:
+        "Bailian AgentStudio base URL for `bl agent` commands (sets BAILIAN_BASE_URL; used with --api-key)",
     },
     console: {
       type: "switch",
@@ -64,6 +74,9 @@ export default defineCommand({
     // `auth login` explicit and avoids silently ignoring flags from another mode.
     if (!apiKeyMode && hasValue(f.baseUrl)) {
       return "Use --base-url only with --api-key";
+    }
+    if (!apiKeyMode && hasValue(f.agentstudioBaseUrl)) {
+      return "Use --agentstudio-base-url only with --api-key";
     }
     if (!consoleMode && hasValue(f.consoleSite)) {
       return "Use --console-site only with --console";
@@ -130,6 +143,9 @@ export default defineCommand({
     }
     if (baseUrl) {
       await store.login({ base_url: baseUrl });
+    }
+    if (flags.agentstudioBaseUrl) {
+      await store.login({ agentstudio_base_url: flags.agentstudioBaseUrl });
     }
     await validateAndPersistApiKey(deps, key, baseUrl || store.resolveBaseUrl());
   },
