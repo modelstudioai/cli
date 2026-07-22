@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.10.1] - 2026-07-22
+
+### Changed
+
+- Token Plan defaults now use the current text, image, and dedicated text-to-video, image-to-video, and reference-to-video models.
+- The Bailian CLI Skill now distinguishes Bailian-specific tasks from ordinary host-agent work more accurately and avoids repeated consent prompts within an approved workflow.
+- Published CLI packages now support Node.js 18.17 and later, lowering the previous minimum requirement from Node.js 22.12.
+
+### Fixed
+
+- Token Plan now handles local images correctly for image editing, image-to-video, reference-to-video, and vision understanding without requiring a separately hosted URL.
+
 ## [1.10.0] - 2026-07-19
 
 ### Added
