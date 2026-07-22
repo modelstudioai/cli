@@ -11,7 +11,7 @@ catalog:
   smol-toml: ^1.4.2
   tsx: ^4.23.0
   typescript: ^5
-  undici: ^8.4.1
+  undici: ^6.27.0
   vite: npm:@voidzero-dev/vite-plus-core@latest
   vite-plus: latest
   vitest: npm:@voidzero-dev/vite-plus-test@latest

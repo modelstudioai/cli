@@ -56,7 +56,7 @@
     "yaml": "catalog:"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=18.17.0"
   },
   "inlinedDependencies": {
     "ajv": "8.20.0",
