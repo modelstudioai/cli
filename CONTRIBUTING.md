@@ -6,7 +6,8 @@ Developer guide for `bailian-cli` — the official CLI for Aliyun Model Studio (
 
 ## Prerequisites
 
-- Node.js ≥ 22.12
+- Node.js ≥ 22.12 (required for developing this repo)
+- End users installing the published CLI only need Node.js >= 18.17
 - pnpm 10.33.2 (`npm i -g pnpm@10.33.2`)
 - A DashScope API key for running e2e tests
 

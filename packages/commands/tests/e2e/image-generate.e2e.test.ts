@@ -1,4 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   e2eLabelFromMetaUrl,
   isBailianE2EMediaEnabled,
@@ -20,6 +22,44 @@ describe("e2e: image generate", () => {
     const { stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, ["image", "generate", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/generate|--prompt|--model/i);
+  });
+
+  test("Token Plan 默认使用 wan2.7-image 同步接口", async () => {
+    const configDir = makeE2eOutputDir("image-generate-token-plan-default");
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify({
+        "token-plan": {
+          api_key: "sk-sp-e2e-placeholder",
+          base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
+          default_image_model: "wan2.7-image",
+        },
+      }),
+    );
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      IMAGE_ROUTES,
+      [
+        "image",
+        "generate",
+        "--config",
+        "token-plan",
+        "--prompt",
+        "一只猫",
+        "--dry-run",
+        "--output",
+        "json",
+      ],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ mode?: string; request?: { model?: string } }>(stdout);
+    expect(data.mode).toBe("sync");
+    expect(data.request?.model).toBe("wan2.7-image");
   });
 });
 

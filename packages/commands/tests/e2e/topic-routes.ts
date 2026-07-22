@@ -15,6 +15,10 @@ export const TEXT_CHAT_ROUTES: E2eRouteExports = { "text chat": "textChat" };
 export const CONFIG_ROUTES: E2eRouteExports = {
   "config show": "configShow",
   "config set": "configSet",
+  "config list": "configList",
+  "config use": "configUse",
+  "config ui": "configUi",
+  "config agent": "configAgent",
 };
 
 export const MEMORY_ROUTES: E2eRouteExports = {
@@ -54,6 +58,8 @@ export const VIDEO_ROUTES: E2eRouteExports = {
   "video task get": "videoTaskGet",
   "video download": "videoDownload",
 };
+
+export const VISION_ROUTES: E2eRouteExports = { "vision describe": "visionDescribe" };
 
 export const SPEECH_ROUTES: E2eRouteExports = {
   "speech synthesize": "speechSynthesize",

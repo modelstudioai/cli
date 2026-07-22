@@ -1,10 +1,12 @@
-import { defineCommand, getConfigPath } from "bailian-cli-core";
-import { emitBare } from "bailian-cli-runtime";
 import {
-  resolveConsoleOrigin,
-  runConsoleLogin,
-  validateAndPersistApiKey,
-} from "./login-console.ts";
+  defineCommand,
+  generateCLIAccessToken,
+  getModelProfilePreset,
+  normalizeModelBaseUrl,
+} from "bailian-cli-core";
+import { emitBare } from "bailian-cli-runtime";
+import { validateAndPersistApiKey } from "./login-api-key.ts";
+import { resolveConsoleOrigin, runConsoleLogin } from "./login-console.ts";
 
 const LOGIN_MODE_HINT = "Choose exactly one login mode: --api-key, --console, or --open-api";
 
@@ -19,15 +21,11 @@ export default defineCommand({
   usageArgs:
     "--api-key <key> | --console | --open-api --access-key-id <id> --access-key-secret <secret>",
   flags: {
-    apiKey: {
-      type: "string",
-      valueHint: "<key>",
-      description: "DashScope API key to store",
-    },
+    apiKey: { type: "string", valueHint: "<key>", description: "Model API key to store" },
     baseUrl: {
       type: "string",
       valueHint: "<url>",
-      description: "DashScope API base URL (used with --api-key for validation)",
+      description: "Model API base URL (used with --api-key for validation)",
     },
     agentstudioBaseUrl: {
       type: "string",
@@ -62,6 +60,7 @@ export default defineCommand({
   },
   exampleArgs: [
     "--api-key sk-xxxxx",
+    "--config token-plan --api-key sk-sp-xxxxx",
     "--console",
     "--open-api --access-key-id LTAIxxxxx --access-key-secret xxxxx",
   ],
@@ -103,7 +102,7 @@ export default defineCommand({
     const store = ctx.authStore;
     const deps = { identity, settings, authStore: store };
     const key = flags.apiKey;
-    const baseUrl = flags.baseUrl || undefined;
+    const baseUrl = flags.baseUrl ? normalizeModelBaseUrl(flags.baseUrl) : undefined;
 
     if (flags.console) {
       if (settings.dryRun) {
@@ -123,14 +122,25 @@ export default defineCommand({
 
     if (flags.openApi) {
       if (settings.dryRun) {
-        emitBare("Would save OpenAPI AK/SK credentials.");
+        emitBare("Would save OpenAPI AK/SK credentials and generate CLI access token.");
         return;
       }
+      const resolvedBaseUrl = store.resolveBaseUrl();
+      process.stderr.write("Generating CLI access token... ");
+      const resp = await generateCLIAccessToken({
+        identity,
+        settings,
+        baseUrl: resolvedBaseUrl,
+        accessKeyId: flags.accessKeyId!,
+        accessKeySecret: flags.accessKeySecret!,
+      });
+      const accessToken = resp.cliAccessToken;
       await store.login({
         access_key_id: flags.accessKeyId,
         access_key_secret: flags.accessKeySecret,
+        access_token: accessToken,
       });
-      process.stderr.write(`OpenAPI credentials saved to ${getConfigPath()}\n`);
+      process.stderr.write(`OpenAPI credentials saved to ${store.path}\n`);
       return;
     }
 
@@ -141,12 +151,21 @@ export default defineCommand({
       emitBare("Would validate and save API key.");
       return;
     }
-    if (baseUrl) {
-      await store.login({ base_url: baseUrl });
-    }
-    if (flags.agentstudioBaseUrl) {
-      await store.login({ agentstudio_base_url: flags.agentstudioBaseUrl });
-    }
-    await validateAndPersistApiKey(deps, key, baseUrl || store.resolveBaseUrl());
+    const profilePreset = getModelProfilePreset(settings.configName);
+    const storedBaseUrl = store.stored().baseUrl;
+    const resolvedBaseUrl = baseUrl || store.resolveBaseUrl(profilePreset?.baseUrl);
+    const persistBaseUrl = baseUrl || (!storedBaseUrl ? profilePreset?.baseUrl : undefined);
+    await validateAndPersistApiKey(deps, key, {
+      baseUrl: resolvedBaseUrl,
+      persistBaseUrl,
+      persistPatch: flags.agentstudioBaseUrl
+        ? { agentstudio_base_url: flags.agentstudioBaseUrl }
+        : undefined,
+      defaultTextModel: profilePreset?.defaultTextModel,
+      defaultVideoModel: profilePreset?.defaultVideoModel,
+      defaultImageToVideoModel: profilePreset?.defaultImageToVideoModel,
+      defaultReferenceToVideoModel: profilePreset?.defaultReferenceToVideoModel,
+      defaultImageModel: profilePreset?.defaultImageModel,
+    });
   },
 });

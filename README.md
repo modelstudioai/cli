@@ -5,7 +5,7 @@
 **The official command-line interface for Aliyun Model Studio (DashScope) AI Platform**
 
 [![npm version](https://img.shields.io/npm/v/bailian-cli?color=0969da&label=npm)](https://www.npmjs.com/package/bailian-cli)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D22.12-brightgreen)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18.17-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
@@ -30,6 +30,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **Video generation & editing** — happyhorse-1.1 series: text-/image-/reference-to-video and natural-language video editing (up to 9-image reference)
 - **Speech synthesis & recognition** — CosyVoice streaming TTS, voice cloning from 5–20s samples; FunAudio-ASR covers 30 languages including 7 Chinese dialects and 20+ Mandarin accents
 - **Image & video understanding** — Qwen-VL: long-form video analysis, chart/document parsing, visual reasoning, multilingual OCR
+- **Coding agent setup** — Configure Claude Code, Qwen Code, OpenCode, OpenClaw, Hermes Agent, or Codex to use DashScope with `bl config agent`
 
 > **Note:** The features below are currently available only to China site (aliyun.com) account holders and are not yet supported for international / global site accounts.
 
@@ -80,7 +81,7 @@ npm install -g bailian-cli
 npx skills add modelstudioai/cli --all -g
 ```
 
-> Requires Node.js >= 22.12.
+> Requires Node.js >= 18.17.
 
 ## Quick Start
 
@@ -90,6 +91,12 @@ bl auth login --console
 
 # Or authenticate with an API key
 bl auth login --api-key sk-xxxxx
+
+# Or use Token Plan (Base URL built in; the key is tested during login)
+bl auth login --config token-plan --api-key sk-sp-xxxxx
+
+# Configure a coding agent to use DashScope
+bl config agent --agent codex --base-url https://dashscope.aliyuncs.com/compatible-mode/v1 --api-key sk-xxxxx --model qwen3-coder-plus
 
 # Chat with Qwen
 bl text chat --message "What is DashScope?"
@@ -159,6 +166,15 @@ bl auth login --api-key sk-xxxxx
 bl text chat --api-key sk-xxxxx --message "Hello"
 ```
 
+### Token Plan API Key
+
+Get or copy the API key from the [Token Plan subscription overview](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview).
+The CLI has the default Token Plan Base URL built in. Login tests the key first, then saves and activates the `token-plan` config only when validation succeeds.
+
+```bash
+bl auth login --config token-plan --api-key sk-sp-xxxxx
+```
+
 ### Console Login (OAuth)
 
 Required for console capability commands (`model list`, `app list`, `usage summary/free/stats`, `workspace list`, `quota list/request/check/history`). Opens the Bailian console in your browser to sign in.
@@ -209,6 +225,7 @@ Config file location: `~/.bailian/config.json`
 | Qwen Model List              | https://help.aliyun.com/zh/model-studio/getting-started/models                            |
 | Aliyun Model Studio Console  | https://bailian.console.aliyun.com/?source_channel=cli_github                             |
 | Get API Key                  | https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key |
+| Get Token Plan API Key       | https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview         |
 | Get AccessKey                | https://ram.console.aliyun.com/manage/ak                                                  |
 
 ## Changelog

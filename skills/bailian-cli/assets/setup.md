@@ -21,20 +21,64 @@ Verify: `bl --version` (prints `bl X.Y.Z`).
 
 ## Authentication
 
-| Auth       | How                                                                                              | Used by                                  |
-| ---------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------- |
-| API key    | `export DASHSCOPE_API_KEY=sk-...` or `bl auth login --api-key sk-...`                            | Most DashScope API commands              |
-| Console    | `bl auth login --console --console-site domestic` or `... international`                         | `app list`, `usage free`, `console call` |
-| OpenAPI AK | `bl auth login --open-api --access-key-id <id> --access-key-secret <secret>` or Alibaba env vars | `token-plan *`                           |
+| Auth               | How                                                                                              | Used by                                       |
+| ------------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| API key            | `export DASHSCOPE_API_KEY=sk-...` or `bl auth login --api-key sk-...`                            | Most DashScope API commands                   |
+| Token Plan API key | `bl auth login --config token-plan --api-key sk-sp-...`                                          | Token Plan text, image, and video consumption |
+| Console            | `bl auth login --console --console-site domestic` or `... international`                         | `app list`, `usage free`, `console call`      |
+| OpenAPI AK         | `bl auth login --open-api --access-key-id <id> --access-key-secret <secret>` or Alibaba env vars | Token Plan management commands (`token-plan`) |
 
 ```bash
 bl auth status            # check current auth
-bl auth logout            # clear credentials
+bl auth logout            # clear credentials and the model Base URL
 bl auth logout --console  # clear console token only
 bl auth logout --open-api # clear OpenAPI AK/SK only
 ```
 
-Get an API key: https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key
+- Get a DashScope API key: https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key
+- Get a Token Plan API key: https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview
+
+### Token Plan model consumption
+
+Get or copy the Token Plan API key from the [subscription overview](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview). A `PlainApiKey` returned by `bl token-plan create-key` is the same credential type. It is separate from the OpenAPI AK/SK used by Token Plan management commands.
+
+```bash
+bl auth login --config token-plan --api-key sk-sp-xxx
+bl text chat --message "Hello"
+bl image generate --prompt "A cat"
+bl video generate --prompt "A horse running through a field"
+```
+
+The built-in Profile supplies the Token Plan Base URL. `auth login` tests the key first, then saves
+and activates the Profile only when validation succeeds; do not ask the user to configure the Base
+URL or run a duplicate smoke test.
+
+Successful login automatically activates the explicitly selected Profile. Use `bl config list` to
+inspect it, and switch back when needed:
+
+```bash
+bl config list
+bl config use --name default
+```
+
+`auth login --config token-plan` creates or updates that Profile and activates it only after the
+credential is validated and saved. Failed login and `--dry-run` do not switch Profiles. Use
+`--config default` for a one-command override. Config selection follows explicit `--config` >
+persisted `active_config` > `default`; credential and endpoint fields inside the selected Profile
+still follow flag > environment > config.
+
+Activation selects the entire Config for every credential domain, not only model consumption. After activating `token-plan`, Token Plan management and Console commands also read their OpenAPI or Console credentials from that Profile. If those credentials remain in `default`, invoke the command with `--config default` or log the corresponding credential domain into `token-plan`.
+
+The built-in `token-plan` profile defaults to:
+
+- Base URL: `https://token-plan.cn-beijing.maas.aliyuncs.com`
+- Text model: `qwen3.8-max-preview`
+- Image model: `wan2.7-image`
+- Text-to-video model (`default_video_model`): `happyhorse-1.1-t2v`
+- Image-to-video model (`default_image_to_video_model`): `happyhorse-1.1-i2v`
+- Reference-to-video model (`default_reference_to_video_model`): `happyhorse-1.1-r2v`
+
+The usual priority applies to this profile too: per-command `--api-key` / `--base-url`, then `DASHSCOPE_API_KEY` / `DASHSCOPE_BASE_URL`, then the selected profile. Unset environment overrides when you want to use the credentials saved in `token-plan`.
 
 ### Console site selection
 
@@ -94,6 +138,9 @@ Default: `https://dashscope.aliyuncs.com` (China). Override with any of:
 
 ```bash
 bl config show
+bl config list
+bl config use --name <existing-profile>
+bl config use --name default
 bl config set --key default-text-model --value qwen3.7-max
 bl config set --key output_dir --value ~/bailian-output
 ```

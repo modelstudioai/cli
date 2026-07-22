@@ -1,3 +1,5 @@
+import { normalizeModelBaseUrl } from "./model-base-url.ts";
+
 export const REGIONS = {
   cn: "https://dashscope.aliyuncs.com",
   us: "https://dashscope-us.aliyuncs.com",
@@ -22,6 +24,8 @@ export interface ConfigFile {
   access_key_id?: string;
   /** Alibaba Cloud OpenAPI AccessKey secret from `bl auth login --open-api`. */
   access_key_secret?: string;
+  /** Alibaba Cloud STS Security Token (optional, for temporary credentials). */
+  security_token?: string;
   base_url?: string;
   /**
    * Bailian AgentStudio API base URL for `bl agent` commands, e.g.
@@ -35,6 +39,8 @@ export interface ConfigFile {
   timeout?: number;
   default_text_model?: string;
   default_video_model?: string;
+  default_image_to_video_model?: string;
+  default_reference_to_video_model?: string;
   default_image_model?: string;
   default_speech_model?: string;
   default_omni_model?: string;
@@ -45,6 +51,30 @@ export interface ConfigFile {
   telemetry?: boolean;
 }
 
+export const CONFIG_FILE_KEYS = [
+  "api_key",
+  "access_token",
+  "access_key_id",
+  "access_key_secret",
+  "security_token",
+  "base_url",
+  "output",
+  "output_dir",
+  "timeout",
+  "default_text_model",
+  "default_video_model",
+  "default_image_to_video_model",
+  "default_reference_to_video_model",
+  "default_image_model",
+  "default_speech_model",
+  "default_omni_model",
+  "workspace_id",
+  "console_site",
+  "console_region",
+  "console_switch_agent",
+  "telemetry",
+] as const satisfies readonly (keyof ConfigFile)[];
+
 const VALID_OUTPUTS = new Set<string>(["text", "json"]);
 const VALID_CONSOLE_SITES = new Set<string>(["domestic", "international"]);
 
@@ -54,10 +84,24 @@ const VALID_CONSOLE_SITES = new Set<string>(["domestic", "international"]);
  * sends the Bearer token to these origins, so a bare `startsWith("http")` check
  * (which also accepts e.g. "httpfoo://…") is too loose.
  */
+function parseModelBaseUrl(value: string): string | undefined {
+  try {
+    return normalizeModelBaseUrl(value);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * A syntactically valid absolute http(s) URL. Used to validate
+ * `agentstudio_base_url`, which is an AgentStudio API endpoint (with its own
+ * `/api/v1/agentstudio` path) and must NOT go through model-URL suffix
+ * stripping like `base_url`.
+ */
 function isHttpUrl(value: string): boolean {
   try {
-    const u = new URL(value);
-    return u.protocol === "http:" || u.protocol === "https:";
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
   } catch {
     return false;
   }
@@ -84,7 +128,12 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     obj.openapi_access_key_secret.length > 0
   )
     out.access_key_secret = obj.openapi_access_key_secret;
-  if (typeof obj.base_url === "string" && isHttpUrl(obj.base_url)) out.base_url = obj.base_url;
+  if (typeof obj.security_token === "string" && obj.security_token.length > 0)
+    out.security_token = obj.security_token;
+  if (typeof obj.base_url === "string") {
+    const baseUrl = parseModelBaseUrl(obj.base_url);
+    if (baseUrl) out.base_url = baseUrl;
+  }
   if (typeof obj.agentstudio_base_url === "string" && isHttpUrl(obj.agentstudio_base_url))
     out.agentstudio_base_url = obj.agentstudio_base_url;
   if (typeof obj.output === "string" && VALID_OUTPUTS.has(obj.output))
@@ -96,6 +145,16 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     out.default_text_model = obj.default_text_model;
   if (typeof obj.default_video_model === "string" && obj.default_video_model.length > 0)
     out.default_video_model = obj.default_video_model;
+  if (
+    typeof obj.default_image_to_video_model === "string" &&
+    obj.default_image_to_video_model.length > 0
+  )
+    out.default_image_to_video_model = obj.default_image_to_video_model;
+  if (
+    typeof obj.default_reference_to_video_model === "string" &&
+    obj.default_reference_to_video_model.length > 0
+  )
+    out.default_reference_to_video_model = obj.default_reference_to_video_model;
   if (typeof obj.default_image_model === "string" && obj.default_image_model.length > 0)
     out.default_image_model = obj.default_image_model;
   if (typeof obj.default_speech_model === "string" && obj.default_speech_model.length > 0)
@@ -133,6 +192,7 @@ export interface Identity {
  */
 export interface Settings {
   configPath?: string;
+  configName?: string;
   output: "text" | "json";
   /**
    * Whether `output` came from an explicit source (flag/env/file) rather than
@@ -144,6 +204,8 @@ export interface Settings {
   timeout: number;
   defaultTextModel?: string;
   defaultVideoModel?: string;
+  defaultImageToVideoModel?: string;
+  defaultReferenceToVideoModel?: string;
   defaultImageModel?: string;
   defaultSpeechModel?: string;
   defaultOmniModel?: string;

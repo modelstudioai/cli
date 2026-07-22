@@ -22,6 +22,7 @@ export interface ConsoleCredential {
 export interface OpenApiCredential {
   accessKeyId: string;
   accessKeySecret: string;
+  securityToken?: string;
   source: CredentialSource;
 }
 

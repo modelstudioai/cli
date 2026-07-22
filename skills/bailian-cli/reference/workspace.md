@@ -7,11 +7,34 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command             | Description         |
-| ------------------- | ------------------- |
-| `bl workspace list` | List all workspaces |
+| Command             | Description                                                 |
+| ------------------- | ----------------------------------------------------------- |
+| `bl workspace init` | Initialize Bailian workspace and activate postpaid services |
+| `bl workspace list` | List all workspaces                                         |
 
 ## Command details
+
+### `bl workspace init`
+
+| Field           | Value                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------ |
+| **Name**        | `workspace init`                                                                                 |
+| **Description** | Initialize Bailian workspace and activate postpaid services                                      |
+| **Usage**       | `bl workspace init --access-key-id <id> --access-key-secret <secret> [--security-token <token>]` |
+
+#### Flags
+
+| Flag                           | Type   | Required | Description                                 |
+| ------------------------------ | ------ | -------- | ------------------------------------------- |
+| `--access-key-id <id>`         | string | no       | Alibaba Cloud Access Key ID                 |
+| `--access-key-secret <secret>` | string | no       | Alibaba Cloud Access Key Secret             |
+| `--security-token <token>`     | string | no       | Alibaba Cloud STS Security Token (optional) |
+
+#### Examples
+
+```bash
+bl workspace init --access-key-id LTAIxxxxx --access-key-secret xxxxx
+```
 
 ### `bl workspace list`
 

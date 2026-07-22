@@ -22,7 +22,19 @@ export { CHANNEL, SOURCE_CONFIG, TAGS, trackingHeaders } from "./headers.ts";
 export type { HttpDeps, RequestOpts } from "./http.ts";
 export { request, requestJson } from "./http.ts";
 export { createInstrumentedFetch, type FetchImplementation } from "./instrumented-fetch.ts";
-export { Client, type ClientRequestOpts, type ClientOpenApiQueryOpts } from "./client.ts";
+export {
+  Client,
+  type ClientRequestOpts,
+  type ClientOpenApiQueryOpts,
+  type ClientOpenApiJsonOpts,
+} from "./client.ts";
+export {
+  createBailianControlUser,
+  listBailianControlWorkspaces,
+  resetBailianControlPolicies4Agent,
+  type BailianControlAuth,
+  type CreateUserReqDTO,
+} from "./bailian-control.ts";
 export {
   buildAcsCanonicalQuery,
   signAcsRequest,

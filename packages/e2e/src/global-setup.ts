@@ -29,6 +29,9 @@ BAILIAN_E2E_VIDEO=1
 DASHSCOPE_BASE_URL=
 # DashScope API Key
 DASHSCOPE_API_KEY=
+# Alibaba Cloud OpenAPI AccessKey
+ALIBABA_CLOUD_ACCESS_KEY_ID=
+ALIBABA_CLOUD_ACCESS_KEY_SECRET=
 # -------------------------------
 BAILIAN_E2E_VIDEO_TASK_ID=b499a8cb-1fc4-4d43-9495-e23c7f78ae0d
 # -------------------------------

@@ -13,6 +13,7 @@ import {
   resolveWatermark,
   ASYNC_FLAG,
   CONCURRENT_FLAG,
+  redactDataUri,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
@@ -117,23 +118,23 @@ export default defineCommand({
     const imageVoices = flags.imageVoice || [];
     const videoVoices = flags.videoVoice || [];
 
-    const model = flags.model || "happyhorse-1.1-r2v";
+    const model = flags.model || settings.defaultReferenceToVideoModel || "happyhorse-1.1-r2v";
     const format = detectOutputFormat(settings.output);
 
     // --- Resolve file URLs (auto-upload local files) ---
     const media: DashScopeVideoRefRequest["input"]["media"] = [];
 
     // Add reference images
-    for (let i = 0; i < images.length; i++) {
-      const resolved = await ctx.client.uploadFile(images[i]!, model);
+    for (let imageIndex = 0; imageIndex < images.length; imageIndex++) {
+      const resolved = await ctx.client.resolveImageInput(images[imageIndex]!, model);
       const entry: DashScopeVideoRefRequest["input"]["media"][number] = {
         type: "reference_image",
         url: resolved,
       };
 
       // Pair voice by position
-      if (imageVoices[i]) {
-        const resolvedVoice = await ctx.client.uploadFile(imageVoices[i]!, model);
+      if (imageVoices[imageIndex]) {
+        const resolvedVoice = await ctx.client.uploadFile(imageVoices[imageIndex]!, model);
         entry.reference_voice = resolvedVoice;
       }
 
@@ -141,16 +142,16 @@ export default defineCommand({
     }
 
     // Add reference videos
-    for (let i = 0; i < refVideos.length; i++) {
-      const resolved = await ctx.client.uploadFile(refVideos[i]!, model);
+    for (let videoIndex = 0; videoIndex < refVideos.length; videoIndex++) {
+      const resolved = await ctx.client.uploadFile(refVideos[videoIndex]!, model);
       const entry: DashScopeVideoRefRequest["input"]["media"][number] = {
         type: "reference_video",
         url: resolved,
       };
 
       // Pair voice by position
-      if (videoVoices[i]) {
-        const resolvedVoice = await ctx.client.uploadFile(videoVoices[i]!, model);
+      if (videoVoices[videoIndex]) {
+        const resolvedVoice = await ctx.client.uploadFile(videoVoices[videoIndex]!, model);
         entry.reference_voice = resolvedVoice;
       }
 
@@ -178,7 +179,18 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      emitResult({ request: body }, format);
+      const previewBody = {
+        ...body,
+        input: {
+          ...body.input,
+          media: body.input.media.map((item) => ({
+            ...item,
+            url: redactDataUri(item.url),
+            reference_voice: item.reference_voice ? redactDataUri(item.reference_voice) : undefined,
+          })),
+        },
+      };
+      emitResult({ request: previewBody }, format);
       return;
     }
 
@@ -233,11 +245,11 @@ export default defineCommand({
     );
 
     const videos: Array<{ taskId: string; videoUrl: string }> = [];
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i]!;
+    for (let resultIndex = 0; resultIndex < results.length; resultIndex++) {
+      const result = results[resultIndex]!;
       const videoUrl =
         result.output.video_url || (result.output.results && result.output.results[0]?.url);
-      if (videoUrl) videos.push({ taskId: taskIds[i]!, videoUrl });
+      if (videoUrl) videos.push({ taskId: taskIds[resultIndex]!, videoUrl });
     }
 
     if (videos.length === 0) {

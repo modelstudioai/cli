@@ -1,7 +1,7 @@
 import {
   Client,
+  buildSources,
   buildSettings,
-  readConfigFile,
   resolveApiKey,
   resolveModelBaseUrl,
   type ApiKeyCredential,
@@ -22,7 +22,7 @@ export interface PipelineEnv {
  * output + quiet mode.
  */
 export function buildPipelineEnv(): PipelineEnv {
-  const sources: ResolutionSources = { flags: {}, file: readConfigFile(), env: process.env };
+  const sources: ResolutionSources = buildSources({});
   const settings: Settings = {
     ...buildSettings(sources),
     output: "json",

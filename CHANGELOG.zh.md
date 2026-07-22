@@ -6,6 +6,45 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.10.1] - 2026-07-22
+
+### 变更
+
+- Token Plan 默认模型已更新为当前文本、图片，以及文生视频、图生视频和参考生视频的专用模型。
+- 百炼 CLI Skill 现在能更准确地区分百炼专属任务与普通宿主 Agent 任务，并避免在已授权的工作流中重复征求同意。
+- 已发布的 CLI 包现在支持 Node.js 18.17 及以上版本，最低版本要求由 Node.js 22.12 下调至 18.17。
+
+### 修复
+
+- Token Plan 现在能在图片编辑、图生视频、参考生视频和视觉理解中正确处理本地图片，无需另行托管为 URL。
+
+## [1.10.0] - 2026-07-19
+
+### 新增
+
+- **`bl config agent`** —— 一键配置 Claude Code、Qwen Code、OpenCode、OpenClaw、Hermes Agent 和 Codex 接入百炼模型服务。
+
+### 变更
+
+- 百炼 CLI Skill 现在只将匹配的百炼任务与多模态任务路由到 `bl`，并会在调用与平台无关的远程或计费能力前征求同意。
+
+### 修复
+
+- 完整执行 `bl auth logout` 时会同时清除模型 Base URL，避免后续登录继承失效的自定义或 Token Plan 接入地址。
+
+## [1.9.0] - 2026-07-17
+
+### 新增
+
+- **支持 Token Plan** —— 登录后即可直接调用支持的模型，无需手动配置接入地址。
+- **命名 Config Profile** —— 支持创建、切换和管理相互隔离的配置，登录后会自动激活当前 Profile。
+- **Console Access Token 自动化** —— 支持生成并自动刷新 Console Access Token。
+- **`bl workspace init`** —— 一站式完成百炼工作空间初始化和所需服务开通。
+
+### 修复
+
+- 提升配置安全性与一致性，包括密钥脱敏和自定义配置字段保留。
+
 ## [1.8.3] - 2026-07-16
 
 ### 修复

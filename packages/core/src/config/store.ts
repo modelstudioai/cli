@@ -1,6 +1,14 @@
 import type { ConfigFile } from "./schema.ts";
-import { readConfigFile, writeConfigFile } from "./loader.ts";
+import {
+  activateConfigProfile,
+  readConfigFile,
+  readConfigProfiles,
+  validateConfigProfileActivation,
+  writeConfigFile,
+  type ConfigProfiles,
+} from "./loader.ts";
 import { getConfigPath } from "./paths.ts";
+import { normalizeModelBaseUrl } from "./model-base-url.ts";
 
 /**
  * config 命令族的持久化能力面(lint 限定 commands/config/** 使用)。
@@ -12,25 +20,34 @@ export interface ConfigStore {
   write(patch: Partial<ConfigFile>): Promise<void>;
   /** 删除指定键。 */
   unset(keys: (keyof ConfigFile)[]): Promise<void>;
+  /** 读取所有 Profile 与持久化激活项。 */
+  profiles(): ConfigProfiles;
+  /** 激活已存在的命名 Profile；undefined/default 激活顶层配置。 */
+  activate(name?: unknown): Promise<string>;
+  /** 校验激活目标并返回规范化展示名，不落盘。 */
+  validateActivation(name?: unknown): string;
   path: string;
 }
 
-export function makeConfigStore(): ConfigStore {
+export function makeConfigStore(configName?: string): ConfigStore {
   return {
-    read: () => readConfigFile(),
+    read: () => readConfigFile(configName),
     async write(patch) {
-      const existing = readConfigFile() as Record<string, unknown>;
+      const existing = readConfigFile(configName) as Record<string, unknown>;
       for (const [key, value] of Object.entries(patch)) {
         if (value === undefined) delete existing[key];
-        else existing[key] = value;
+        else existing[key] = key === "base_url" ? normalizeModelBaseUrl(String(value)) : value;
       }
-      await writeConfigFile(existing);
+      await writeConfigFile(existing, configName);
     },
     async unset(keys) {
-      const existing = readConfigFile() as Record<string, unknown>;
+      const existing = readConfigFile(configName) as Record<string, unknown>;
       for (const key of keys) delete existing[key];
-      await writeConfigFile(existing);
+      await writeConfigFile(existing, configName);
     },
+    profiles: () => readConfigProfiles(),
+    activate: (name) => activateConfigProfile(name),
+    validateActivation: (name) => validateConfigProfileActivation(name),
     get path() {
       return getConfigPath();
     },

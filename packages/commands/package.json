@@ -1,6 +1,6 @@
 {
   "name": "bailian-cli-commands",
-  "version": "1.8.3",
+  "version": "1.10.1",
   "description": "Command library for bailian-cli products (knowledge, memory, media, …). See https://www.npmjs.com/package/bailian-cli for usage.",
   "homepage": "https://bailian.console.aliyun.com/cli",
   "bugs": {
@@ -45,6 +45,7 @@
     "bailian-cli-runtime": "workspace:*",
     "boxen": "catalog:",
     "chalk": "catalog:",
+    "smol-toml": "catalog:",
     "yaml": "catalog:"
   },
   "devDependencies": {
@@ -55,6 +56,6 @@
     "vite-plus": "0.1.22"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=18.17.0"
   }
 }

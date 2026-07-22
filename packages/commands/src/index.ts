@@ -6,6 +6,7 @@
 export { default as authLogin } from "./commands/auth/login.ts";
 export { default as authStatus } from "./commands/auth/status.ts";
 export { default as authLogout } from "./commands/auth/logout.ts";
+export { default as authGenerateAccessToken } from "./commands/auth/generate-access-token.ts";
 export { default as textChat } from "./commands/text/chat.ts";
 export { default as textOmni } from "./commands/omni/chat.ts";
 export { default as imageGenerate } from "./commands/image/generate.ts";
@@ -18,6 +19,10 @@ export { default as videoDownload } from "./commands/video/download.ts";
 export { default as visionDescribe } from "./commands/vision/describe.ts";
 export { default as configShow } from "./commands/config/show.ts";
 export { default as configSet } from "./commands/config/set.ts";
+export { default as configList } from "./commands/config/list.ts";
+export { default as configUse } from "./commands/config/use.ts";
+export { default as configUi } from "./commands/config/ui.ts";
+export { default as configAgent } from "./commands/config/agent/index.ts";
 export { default as update } from "./commands/update.ts";
 export { default as appCall } from "./commands/app/call.ts";
 export { default as appList } from "./commands/app/list.ts";
@@ -102,6 +107,7 @@ export { default as agentSessionDelete } from "./commands/agent/session-delete.t
 export { default as agentSessionRun } from "./commands/agent/session-run.ts";
 export { default as agentSessionSend } from "./commands/agent/session-send.ts";
 export { default as agentSessionEvents } from "./commands/agent/session-events.ts";
+export { default as workspaceInit } from "./commands/workspace/init.ts";
 export { default as pluginInstall } from "./commands/plugin/install.ts";
 export { default as pluginLink } from "./commands/plugin/link.ts";
 export { default as pluginList } from "./commands/plugin/list.ts";
