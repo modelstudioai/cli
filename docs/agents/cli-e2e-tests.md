@@ -85,7 +85,8 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 ## 安全与例外
 
-- **禁止真实破坏性操作**：`auth logout` 只用 `--dry-run`；`config set` 只用 `--dry-run`
+- **禁止破坏真实用户配置**：`auth logout` 默认只用 `--dry-run`；需要验证实际落盘时，必须通过
+  `BAILIAN_CONFIG_DIR` 指向隔离 fixture；`config set` 只用 `--dry-run`
 - **不加 dry-run**：`dryRun` 在 `resolveFileUrl` / `resolveCredential` / 上传**之后**的命令（如 `image edit`、`speech recognize` 带 `--url`）
 - **`--list-voices` 等旁路**：先于 `--text` 校验的 flag，缺参用例勿带该 flag
 - 新增 required option → 至少一条缺参用例；改 dry-run 输出 → 更新对应断言

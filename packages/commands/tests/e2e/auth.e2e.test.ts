@@ -487,6 +487,38 @@ describe("e2e: auth", () => {
     expect(stderr).not.toContain("Cleared api_key");
   });
 
+  test("auth logout 清除当前 Config 的全部凭证和 Base URL，保留普通配置", async () => {
+    const configDir = makeE2eOutputDir("auth-logout-all");
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify(
+        {
+          api_key: "sk-e2e-placeholder",
+          base_url: "https://model.example.com",
+          access_token: "console-token-placeholder",
+          access_key_id: "LTAI-e2e-placeholder",
+          access_key_secret: "secret-e2e-placeholder",
+          security_token: "sts-e2e-placeholder",
+          output: "json",
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+
+    const { stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, ["auth", "logout"], {
+      BAILIAN_CONFIG_DIR: configDir,
+    });
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toContain("api_key / base_url / access_token");
+
+    const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
+      string,
+      unknown
+    >;
+    expect(config).toEqual({ output: "json" });
+  });
+
   test.skipIf(!isDashScopeE2EReady())("auth status 文本输出", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, [
       "auth",

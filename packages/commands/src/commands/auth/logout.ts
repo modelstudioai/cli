@@ -2,7 +2,7 @@ import { defineCommand } from "bailian-cli-core";
 import { emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description: "Clear stored credentials",
+  description: "Clear stored credentials; full logout also clears the model Base URL",
   auth: "none",
   usageArgs: "[--console | --open-api] [--dry-run]",
   flags: {
@@ -68,24 +68,24 @@ export default defineCommand({
       return;
     }
 
-    const hasKey = stored.apiKey || stored.console || stored.openapi;
+    const hasStoredAuth = stored.apiKey || stored.console || stored.openapi || !!stored.baseUrl;
 
     if (settings.dryRun) {
-      if (hasKey)
+      if (hasStoredAuth)
         emitBare(
-          `Would clear api_key / access_token / access_key_id / access_key_secret / security_token from ${store.path}`,
+          `Would clear api_key / base_url / access_token / access_key_id / access_key_secret / security_token from ${store.path}`,
         );
-      else emitBare("No credentials to clear.");
+      else emitBare("No credentials or model Base URL to clear.");
       emitBare("No changes made.");
       return;
     }
 
     if (await store.logout("all")) {
       process.stderr.write(
-        `Cleared api_key / access_token / access_key_id / access_key_secret / security_token from ${store.path}\n`,
+        `Cleared api_key / base_url / access_token / access_key_id / access_key_secret / security_token from ${store.path}\n`,
       );
     } else {
-      process.stderr.write("No credentials to clear.\n");
+      process.stderr.write("No credentials or model Base URL to clear.\n");
     }
   },
 });

@@ -38,7 +38,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 - `bl auth login --open-api ...` 只更新 `access_key_id` / `access_key_secret`
 - `bl auth logout --console` 只清 `access_token`
 - `bl auth logout --open-api` 只清 `access_key_id` / `access_key_secret` / `security_token`
-- `bl auth logout` 清 `api_key` + `access_token` + `access_key_*`
+- `bl auth logout` 清 `api_key` + `base_url` + `access_token` + `access_key_*`
 
 解析分工:
 

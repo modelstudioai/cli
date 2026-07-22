@@ -73,6 +73,7 @@ test("AuthStore:login 合并落盘,logout 按域清理并报告变更", async ()
     const store = makeAuthStore({ flags: {}, file: {}, env: {} });
     await store.login({
       api_key: "sk-1",
+      base_url: "https://model.example.com/compatible-mode/v1",
       access_token: "tok-1",
       access_key_id: "ak-1",
       access_key_secret: "secret-1",
@@ -82,6 +83,7 @@ test("AuthStore:login 合并落盘,logout 按域清理并报告变更", async ()
     });
     expect(makeConfigStore().read()).toMatchObject({
       api_key: "sk-1",
+      base_url: "https://model.example.com",
       access_token: "tok-1",
       workspace_id: "ws-1",
       console_site: "international",
@@ -90,15 +92,18 @@ test("AuthStore:login 合并落盘,logout 按域清理并报告变更", async ()
     expect(await store.logout("console")).toBe(true);
     expect(makeConfigStore().read().access_token).toBeUndefined();
     expect(makeConfigStore().read().api_key).toBe("sk-1");
+    expect(makeConfigStore().read().base_url).toBe("https://model.example.com");
 
     expect(await store.logout("openapi")).toBe(true);
     expect(makeConfigStore().read()).toMatchObject({ api_key: "sk-1" });
+    expect(makeConfigStore().read().base_url).toBe("https://model.example.com");
     expect(makeConfigStore().read().access_key_id).toBeUndefined();
     expect(makeConfigStore().read().access_key_secret).toBeUndefined();
     expect(makeConfigStore().read().security_token).toBeUndefined();
 
     expect(await store.logout("all")).toBe(true);
     expect(makeConfigStore().read().api_key).toBeUndefined();
+    expect(makeConfigStore().read().base_url).toBeUndefined();
     expect(await store.logout("all")).toBe(false);
 
     // 非凭证键不受 logout 影响

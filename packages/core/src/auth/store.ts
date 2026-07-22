@@ -9,7 +9,14 @@ import { describeAuthState, resolveModelBaseUrl } from "./resolver.ts";
 const LOGOUT_KEYS = {
   console: ["access_token"],
   openapi: ["access_key_id", "access_key_secret", "security_token"],
-  all: ["api_key", "access_token", "access_key_id", "access_key_secret", "security_token"],
+  all: [
+    "api_key",
+    "base_url",
+    "access_token",
+    "access_key_id",
+    "access_key_secret",
+    "security_token",
+  ],
 } as const;
 
 /** 登录允许落盘的键:凭证本体 + 登录回调携带的连接/作用域字段。 */
@@ -45,7 +52,7 @@ export interface AuthStore {
   resolveBaseUrl(fallback?: string): string;
   /** 登录落盘:合并写入,undefined 键忽略；显式 --config 成功后同时激活目标 Profile。 */
   login(patch: AuthPersistPatch): Promise<void>;
-  /** 清凭证:console/openapi 只删对应域;all 清全部登录凭证。返回是否有变更。 */
+  /** 清凭证:console/openapi 只删对应域;all 清全部登录凭证和 model baseUrl。返回是否有变更。 */
   logout(scope: "console" | "openapi" | "all"): Promise<boolean>;
   /** 实际写入的 config.json 路径(不受命名配置影响,一直是同一个文件)。 */
   path: string;
