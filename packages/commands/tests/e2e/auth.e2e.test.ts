@@ -271,7 +271,7 @@ describe("e2e: auth", () => {
         default_video_model: "happyhorse-1.1-t2v",
         default_image_to_video_model: "happyhorse-1.1-i2v",
         default_reference_to_video_model: "happyhorse-1.1-r2v",
-        default_image_model: "qwen-image-2.0",
+        default_image_model: "wan2.7-image",
       });
     } finally {
       await validationServer.close();
@@ -334,7 +334,7 @@ describe("e2e: auth", () => {
         default_video_model: "happyhorse-1.1-t2v",
         default_image_to_video_model: "happyhorse-1.1-i2v",
         default_reference_to_video_model: "happyhorse-1.1-r2v",
-        default_image_model: "qwen-image-2.0",
+        default_image_model: "wan2.7-image",
       });
       expect((config["token-plan"] as Record<string, unknown>).base_url).not.toBe(
         validationServer.baseUrl,

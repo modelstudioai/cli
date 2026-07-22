@@ -13,6 +13,7 @@ import {
   resolveWatermark,
   ASYNC_FLAG,
   CONCURRENT_FLAG,
+  redactDataUri,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { downloadFile, formatBytes } from "bailian-cli-runtime";
@@ -113,7 +114,7 @@ export default defineCommand({
     // Auto-upload local image file for i2v
     let resolvedImageUrl: string | undefined;
     if (imageUrl) {
-      resolvedImageUrl = await ctx.client.uploadFile(imageUrl, model);
+      resolvedImageUrl = await ctx.client.resolveImageInput(imageUrl, model);
     }
 
     const watermark = resolveWatermark(flags.watermark);
@@ -140,7 +141,16 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      emitResult({ request: body }, format);
+      const previewBody = resolvedImageUrl
+        ? {
+            ...body,
+            input: {
+              ...body.input,
+              media: [{ type: "first_frame" as const, url: redactDataUri(resolvedImageUrl) }],
+            },
+          }
+        : body;
+      emitResult({ request: previewBody }, format);
       return;
     }
 

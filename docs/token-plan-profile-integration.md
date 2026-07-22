@@ -80,7 +80,7 @@ CLI 应解析并保存以下配置：
     "default_video_model": "happyhorse-1.1-t2v",
     "default_image_to_video_model": "happyhorse-1.1-i2v",
     "default_reference_to_video_model": "happyhorse-1.1-r2v",
-    "default_image_model": "qwen-image-2.0"
+    "default_image_model": "wan2.7-image"
   }
 }
 ```
@@ -245,7 +245,7 @@ default_text_model:  qwen3.8-max-preview
 default_video_model: happyhorse-1.1-t2v
 default_image_to_video_model: happyhorse-1.1-i2v
 default_reference_to_video_model: happyhorse-1.1-r2v
-default_image_model: qwen-image-2.0
+default_image_model: wan2.7-image
 ```
 
 Token Plan Base URL 预设只在登录写入阶段提供最低优先级的缺省值：
@@ -259,7 +259,7 @@ Token Plan Base URL 预设只在登录写入阶段提供最低优先级的缺省
 
 登录成功时应把显式 Base URL 或缺失的预设 Base URL，以及默认模型写入 Profile，使 `config show --config token-plan` 能看到完整配置。环境变量不复制进 Profile。运行时不再合并预设；如果手工删除字段，则按统一的环境变量、配置文件和系统默认值链继续解析。
 
-默认模型采用更简单的固定策略：每次执行 `auth login --config token-plan`，都将 `default_text_model` 重置为 `qwen3.8-max-preview`，将 `default_video_model` 重置为 `happyhorse-1.1-t2v`，将 `default_image_to_video_model` 重置为 `happyhorse-1.1-i2v`，将 `default_reference_to_video_model` 重置为 `happyhorse-1.1-r2v`，将 `default_image_model` 重置为 `qwen-image-2.0`。登录不保留用户之前写入的其他 Profile 默认模型；用户需要临时调用其他 Token Plan 模型时，通过具体模型命令的 `--model` 覆盖，不修改这些内置默认值。
+默认模型采用更简单的固定策略：每次执行 `auth login --config token-plan`，都将 `default_text_model` 重置为 `qwen3.8-max-preview`，将 `default_video_model` 重置为 `happyhorse-1.1-t2v`，将 `default_image_to_video_model` 重置为 `happyhorse-1.1-i2v`，将 `default_reference_to_video_model` 重置为 `happyhorse-1.1-r2v`，将 `default_image_model` 重置为 `wan2.7-image`。登录不保留用户之前写入的其他 Profile 默认模型；用户需要临时调用其他 Token Plan 模型时，通过具体模型命令的 `--model` 覆盖，不修改这些内置默认值。
 
 预设建议通过集中 registry 表达，不在 resolver、命令和 Client 中散落名称判断：
 
@@ -271,7 +271,7 @@ const MODEL_PROFILE_PRESETS = {
     defaultVideoModel: "happyhorse-1.1-t2v",
     defaultImageToVideoModel: "happyhorse-1.1-i2v",
     defaultReferenceToVideoModel: "happyhorse-1.1-r2v",
-    defaultImageModel: "qwen-image-2.0",
+    defaultImageModel: "wan2.7-image",
   },
 };
 ```
@@ -381,12 +381,28 @@ image: <base_url>/api/v1/services/aigc/.../generation
 | 能力           | 默认模型              | 调用方式                           |
 | -------------- | --------------------- | ---------------------------------- |
 | 文本生成和推理 | `qwen3.8-max-preview` | OpenAI Compatible Chat Completions |
-| 图片生成和编辑 | `qwen-image-2.0`      | DashScope 原生图片接口             |
+| 图片生成和编辑 | `wan2.7-image`        | DashScope 多模态图片接口           |
 | 文生视频       | `happyhorse-1.1-t2v`  | DashScope 原生视频接口             |
 | 图生视频       | `happyhorse-1.1-i2v`  | `bl video generate --image`        |
 | 参考生视频     | `happyhorse-1.1-r2v`  | `bl video ref`                     |
 
 Token Plan 当前模型快照中还包含其他文本、视觉理解、图片和视频模型，但该列表可能由后端调整。基础接入不维护阻断请求的本地白名单；用户可通过具体模型命令的 `--model` 临时覆盖本次请求，但再次登录时 Profile 默认模型仍重置为内置版本。
+
+### 当前模型与本地图片兼容范围
+
+| 模型                                | 图片输入能力   | CLI 本地图片处理                                           |
+| ----------------------------------- | -------------- | ---------------------------------------------------------- |
+| `qwen3.8-max-preview`               | 视觉理解       | Token Plan 下转换为 Base64 Data URI                        |
+| `qwen3.7-plus`                      | 视觉理解       | Token Plan 下转换为 Base64 Data URI                        |
+| `qwen3.7-max`                       | 纯文本         | 不涉及图片上传                                             |
+| `qwen3.6-flash`                     | 视觉理解       | Token Plan 下转换为 Base64 Data URI                        |
+| `wan2.7-image` / `wan2.7-image-pro` | 图片生成与编辑 | 文生图不需要输入图片；编辑本地图片时转换为 Base64 Data URI |
+| `happyhorse-1.1-i2v`                | 图生视频       | 首帧本地图片转换为 Base64 Data URI                         |
+| `happyhorse-1.1-t2v`                | 文生视频       | 不涉及图片上传                                             |
+| `happyhorse-1.1-r2v`                | 参考生视频     | 参考本地图片转换为 Base64 Data URI                         |
+| `deepseek-v4-pro` / `glm-5.2`       | 纯文本         | 不涉及图片上传                                             |
+
+Token Plan 图片兼容只处理官方明确支持 Base64 的图片字段；参考视频和参考音频仍要求可访问 URL。普通 API Key 保持各命令既有行为：图片编辑和视频入口继续使用临时 OSS，视觉理解的小图继续使用原有 Base64 路径。
 
 语音和音频不作为本阶段支持承诺。现有命令仍保持通用实现，但 Token Plan Profile 的验收不包含这些模态。
 
@@ -443,7 +459,7 @@ feat(auth): support token-plan API key login
 - 使用 Token Plan 预设文本模型验证 API Key。
 - 登录验证前不写配置。
 - 验证成功后一次写入 API Key、canonical Base URL 和默认模型。
-- 每次登录都将默认模型重置为 `qwen3.8-max-preview`、`qwen-image-2.0`、`happyhorse-1.1-t2v`、`happyhorse-1.1-i2v` 和 `happyhorse-1.1-r2v`。
+- 每次登录都将默认模型重置为 `qwen3.8-max-preview`、`wan2.7-image`、`happyhorse-1.1-t2v`、`happyhorse-1.1-i2v` 和 `happyhorse-1.1-r2v`。
 - 验证失败不留下半配置。
 - 补充一个最小 Token Plan 登录 E2E，覆盖命名 Profile 落盘、环境变量不复制、预设 Base URL 物化和默认模型重置；通用 API Key 登录 E2E 继续覆盖成功原子保存和失败不写半配置。
 - 该 commit 暂不承诺自动归一化用户显式输入的 SDK Base URL。
@@ -546,7 +562,7 @@ fix(core): normalize model base URLs across all sources
 - 显式 Base URL 覆盖预设并经过通用归一化。
 - 登录验证失败不写入任何 Token Plan 半配置。
 - 文本默认使用 `qwen3.8-max-preview`。
-- 图片默认使用 `qwen-image-2.0`。
+- 图片默认使用 `wan2.7-image`。
 - 视频默认使用 `happyhorse-1.1-t2v`；图生和参考生入口分别使用 `happyhorse-1.1-i2v` 和 `happyhorse-1.1-r2v`。
 - 文本、图片和视频均复用现有 `apiKey` Client。
 - 管控命令继续使用 OpenAPI AK/SK，不受模型 Profile 影响。

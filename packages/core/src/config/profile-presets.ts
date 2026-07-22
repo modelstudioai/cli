@@ -14,7 +14,7 @@ const MODEL_PROFILE_PRESETS: Readonly<Record<string, ModelProfilePreset>> = {
     defaultVideoModel: "happyhorse-1.1-t2v",
     defaultImageToVideoModel: "happyhorse-1.1-i2v",
     defaultReferenceToVideoModel: "happyhorse-1.1-r2v",
-    defaultImageModel: "qwen-image-2.0",
+    defaultImageModel: "wan2.7-image",
   },
 };
 

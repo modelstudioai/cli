@@ -22,6 +22,7 @@ import {
   resolveWatermark,
   ASYNC_FLAG,
   CONCURRENT_FLAG,
+  redactDataUri,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { downloadFile } from "bailian-cli-runtime";
@@ -31,10 +32,15 @@ import { resolveImageSize } from "bailian-cli-runtime";
 import { join } from "path";
 import { BOOL_FLAG_PROMPT_EXTEND_CLI_TRUE, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
-const SYNC_MODEL_PREFIXES = ["qwen-image-2.0", "qwen-image-max"];
+const SYNC_MODEL_PREFIXES = ["qwen-image-2.0", "qwen-image-max", "wan2.7-image"];
+const PROMPT_EXTEND_DEFAULT_PREFIXES = ["qwen-image-2.0", "qwen-image-max"];
 
 function isSyncModel(model: string): boolean {
-  return SYNC_MODEL_PREFIXES.some((p) => model.startsWith(p));
+  return SYNC_MODEL_PREFIXES.some((prefix) => model.startsWith(prefix));
+}
+
+function enablesPromptExtendByDefault(model: string): boolean {
+  return PROMPT_EXTEND_DEFAULT_PREFIXES.some((prefix) => model.startsWith(prefix));
 }
 
 const EDIT_FLAGS = {
@@ -98,7 +104,7 @@ const EDIT_FLAGS = {
 type EditFlags = ParsedFlags<typeof EDIT_FLAGS>;
 
 export default defineCommand({
-  description: "Edit an existing image with text instructions (Qwen-Image)",
+  description: "Edit an existing image with text instructions (Qwen-Image / Wan 2.7)",
   auth: "apiKey",
   usageArgs: "--image <url> --prompt <text> [flags]",
   flags: EDIT_FLAGS,
@@ -107,6 +113,7 @@ export default defineCommand({
     '--image https://example.com/logo.png --prompt "Change color to blue" --n 3',
     '--image ./a.png --image ./b.png --prompt "Merge two images into one collage"',
     '--image https://example.com/photo.png --prompt "Remove the person" --model qwen-image-2.0-pro',
+    '--image ./photo.png --prompt "Change the style" --model wan2.7-image',
     '--image ./photo.png --prompt "Replace the background with a beach" --watermark false',
   ],
   async run(ctx) {
@@ -125,13 +132,13 @@ export default defineCommand({
 
     // Auto-upload local files (resolve all images in parallel)
     const resolvedImages = await Promise.all(
-      rawImages.map((img) => ctx.client.uploadFile(img, model)),
+      rawImages.map((image) => ctx.client.resolveImageInput(image, model)),
     );
     const n = flags.n ?? 1;
 
     const promptExtend = resolveBooleanFlag(
       flags.promptExtend,
-      useSync ? true : undefined,
+      enablesPromptExtendByDefault(model) ? true : undefined,
       "prompt-extend",
     );
 
@@ -169,7 +176,18 @@ export default defineCommand({
     const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult({ request: body, mode: useSync ? "sync" : "async" }, format);
+      const previewBody = {
+        ...body,
+        input: {
+          messages: body.input.messages.map((message) => ({
+            ...message,
+            content: message.content.map((item) =>
+              item.image ? { ...item, image: redactDataUri(item.image) } : item,
+            ),
+          })),
+        },
+      };
+      emitResult({ request: previewBody, mode: useSync ? "sync" : "async" }, format);
       return;
     }
 

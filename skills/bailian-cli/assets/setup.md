@@ -68,7 +68,7 @@ The built-in `token-plan` profile defaults to:
 
 - Base URL: `https://token-plan.cn-beijing.maas.aliyuncs.com`
 - Text model: `qwen3.8-max-preview`
-- Image model: `qwen-image-2.0`
+- Image model: `wan2.7-image`
 - Text-to-video model (`default_video_model`): `happyhorse-1.1-t2v`
 - Image-to-video model (`default_image_to_video_model`): `happyhorse-1.1-i2v`
 - Reference-to-video model (`default_reference_to_video_model`): `happyhorse-1.1-r2v`

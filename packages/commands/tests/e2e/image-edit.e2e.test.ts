@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
-import { join } from "path";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   e2eFixturesDir,
   e2eLabelFromMetaUrl,
@@ -45,6 +46,55 @@ describe("e2e: image edit", () => {
     );
     expect(data.mode).toBe("async");
     expect(data.request?.input?.messages?.length).toBeGreaterThan(0);
+  });
+
+  test("Token Plan 使用 Base64 传入 wan2.7-image 本地图片", async () => {
+    const configDir = makeE2eOutputDir("image-edit-token-plan-local-image");
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify({
+        "token-plan": {
+          api_key: "sk-sp-e2e-placeholder",
+          base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
+          default_image_model: "wan2.7-image",
+        },
+      }),
+    );
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      IMAGE_ROUTES,
+      [
+        "image",
+        "edit",
+        "--config",
+        "token-plan",
+        "--image",
+        join(e2eFixturesDir, ".smoke-32.png"),
+        "--prompt",
+        "改成蓝色",
+        "--dry-run",
+        "--output",
+        "json",
+      ],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      mode?: string;
+      request?: {
+        model?: string;
+        input?: { messages?: Array<{ content?: Array<{ image?: string }> }> };
+      };
+    }>(stdout);
+    expect(data.mode).toBe("sync");
+    expect(data.request?.model).toBe("wan2.7-image");
+    expect(data.request?.input?.messages?.[0]?.content?.[0]?.image).toBe(
+      "data:image/png;base64,<omitted>",
+    );
   });
 });
 
