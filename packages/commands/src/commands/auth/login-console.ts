@@ -1,18 +1,17 @@
-import { execFile } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import http from "node:http";
 
 import {
   BailianError,
   ExitCode,
-  chatPath,
-  getConfigPath,
-  requestJson,
+  type AuthPersistPatch,
   type AuthStore,
   type ConfigFile,
   type Identity,
   type Settings,
 } from "bailian-cli-core";
+import { listenLocalServer, openInBrowser } from "../shared/local-server.ts";
+import { validateAndPersistApiKey } from "./login-api-key.ts";
 
 /** 登录流程的能力面:身份(UA)、有效配置(timeout 等)、auth 域落盘。 */
 export interface LoginDeps {
@@ -23,6 +22,9 @@ export interface LoginDeps {
 
 const CONSOLE_LOGIN_TIMEOUT_MS = 15 * 60 * 1000;
 const MAX_AUTH_CALLBACK_BODY = 65536;
+// Regex for double newline (\r\n\r\n or \n\n); built via RegExp to avoid
+// literal multi-line splitting in source.
+const REGEX_DOUBLE_NEWLINE = new RegExp("\r\n\r\n|\n\n");
 
 const CONSOLE_ORIGINS: Record<string, string> = {
   domestic: "https://pre-bailian.console.aliyun.com",
@@ -76,7 +78,7 @@ function parseAccessTokenFromMultipart(raw: string, boundaryValue: string): stri
   for (let i = 1; i < segments.length; i++) {
     const part = segments[i]!;
     if (!/name\s*=\s*["'](?:access_token|accessToken)["']/i.test(part)) continue;
-    const sep = part.match(/\r\n\r\n|\n\n/);
+    const sep = part.match(REGEX_DOUBLE_NEWLINE);
     if (!sep || sep.index === undefined) continue;
     let value = part.slice(sep.index + sep[0].length);
     value = value
@@ -359,90 +361,7 @@ async function extractCredentialsFromRequest(
 }
 
 function listenServerOnFreeLocalPort(server: http.Server): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const onErr = (e: Error) => reject(e);
-    server.once("error", onErr);
-    server.listen({ port: 0, host: "127.0.0.1", exclusive: true }, () => {
-      server.off("error", onErr);
-      const addr = server.address();
-      if (!addr || typeof addr === "string") {
-        reject(new Error("Expected TCP socket address"));
-        return;
-      }
-      resolve(addr.port);
-    });
-  });
-}
-
-function openInBrowser(url: string): Promise<void> {
-  const platform = process.platform;
-  const cmd = platform === "darwin" ? "open" : platform === "win32" ? "cmd" : "xdg-open";
-  const args = platform === "win32" ? ["/c", "start", "", url] : [url];
-
-  return new Promise((resolve, reject) => {
-    execFile(cmd, args, { windowsHide: true }, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-}
-
-const RETRY_DELAY_BASE_MS = 500;
-
-function canRetry(err: unknown): boolean {
-  if (err instanceof BailianError) {
-    if (err.exitCode === ExitCode.NETWORK || err.exitCode === ExitCode.TIMEOUT) return true;
-    const status = err.api?.httpStatus;
-    return status === 401 || (status !== undefined && status >= 500);
-  }
-  if (err instanceof Error) {
-    return (
-      err.name === "AbortError" ||
-      err.name === "TimeoutError" ||
-      err.message.includes("timed out") ||
-      err.message === "fetch failed"
-    );
-  }
-  return false;
-}
-
-export async function validateAndPersistApiKey(
-  deps: LoginDeps,
-  key: string,
-  baseUrl: string,
-): Promise<void> {
-  process.stderr.write("Testing key... ");
-  const httpDeps = { identity: deps.identity, settings: deps.settings };
-  const requestOpts = {
-    url: baseUrl + chatPath(),
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}` },
-    timeout: Math.min(deps.settings.timeout, 30),
-    body: {
-      model: "qwen3.7-max",
-      messages: [{ role: "user", content: "hi" }],
-      max_tokens: 1,
-    },
-  };
-
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      await requestJson<unknown>(httpDeps, requestOpts);
-      break;
-    } catch (err) {
-      if (attempt >= 3 || !canRetry(err)) {
-        process.stderr.write("Failed\n");
-        throw new BailianError("API key validation failed", ExitCode.AUTH, "Invalid API key.", {
-          cause: err,
-        });
-      }
-      const delayMs = RETRY_DELAY_BASE_MS * 2 ** (attempt - 1);
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-    }
-  }
-
-  process.stderr.write("Valid\n");
-  await deps.authStore.login({ api_key: key });
+  return listenLocalServer(server);
 }
 
 export async function runConsoleLogin(
@@ -486,20 +405,27 @@ export async function runConsoleLogin(
 
       if (hasConfig || apiKey) {
         try {
-          if (hasConfig) {
-            await deps.authStore.login({
-              access_token: accessToken || undefined,
-              base_url: baseUrl || undefined,
-              console_site: (consoleSite || undefined) as ConfigFile["console_site"],
-              console_region: consoleRegion || undefined,
-              console_switch_agent: consoleSwitchAgent ? Number(consoleSwitchAgent) : undefined,
-              workspace_id: workspaceId || undefined,
-            });
-            process.stderr.write(`Config saved to ${getConfigPath()}\n`);
-          }
+          const callbackPatch: AuthPersistPatch = {
+            access_token: accessToken || undefined,
+            console_site: (consoleSite || undefined) as ConfigFile["console_site"],
+            console_region: consoleRegion || undefined,
+            console_switch_agent: consoleSwitchAgent ? Number(consoleSwitchAgent) : undefined,
+            workspace_id: workspaceId || undefined,
+          };
           if (apiKey) {
             const testBaseUrl = baseUrl || deps.authStore.resolveBaseUrl();
-            await validateAndPersistApiKey(deps, apiKey, testBaseUrl);
+            await validateAndPersistApiKey(deps, apiKey, {
+              baseUrl: testBaseUrl,
+              persistBaseUrl: baseUrl || undefined,
+              persistPatch: callbackPatch,
+            });
+            process.stderr.write(`Config saved to ${deps.authStore.path}\n`);
+          } else if (hasConfig) {
+            await deps.authStore.login({
+              ...callbackPatch,
+              base_url: baseUrl || undefined,
+            });
+            process.stderr.write(`Config saved to ${deps.authStore.path}\n`);
           }
         } catch (err: unknown) {
           callbackError = err;

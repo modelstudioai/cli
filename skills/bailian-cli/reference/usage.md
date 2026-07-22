@@ -12,6 +12,7 @@ Index: [index.md](index.md)
 | `bl usage free`     | Query free-tier quota for models (all models if --model is omitted)                        |
 | `bl usage freetier` | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable |
 | `bl usage stats`    | Query model usage statistics                                                               |
+| `bl usage summary`  | Show a unified usage summary: free-tier quota and recent usage overview                    |
 
 ## Command details
 
@@ -30,6 +31,7 @@ Index: [index.md](index.md)
 | `--model <model>`              | string | no       | Model name(s) to query, comma-separated for multiple; omit for all models |
 | `--expiring <days>`            | string | no       | Only show quotas expiring within N days                                   |
 | `--sort <remaining\|expires>`  | string | no       | Sort by: remaining (ascending), expires (ascending)                       |
+| `--all`                        | switch | no       | Show all models instead of the top rows                                   |
 | `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1)                  |
 | `--console-site <site>`        | string | no       | Console site: domestic, international                                     |
 | `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                                     |
@@ -55,6 +57,10 @@ bl usage free --expiring 30
 
 ```bash
 bl usage free --sort remaining
+```
+
+```bash
+bl usage free --all
 ```
 
 ```bash
@@ -160,4 +166,36 @@ bl usage stats --type Text --days 14
 
 ```bash
 bl usage stats --output json
+```
+
+### `bl usage summary`
+
+| Field           | Value                                                                   |
+| --------------- | ----------------------------------------------------------------------- |
+| **Name**        | `usage summary`                                                         |
+| **Description** | Show a unified usage summary: free-tier quota and recent usage overview |
+| **Usage**       | `bl usage summary [--days <days>] [flags]`                              |
+
+#### Flags
+
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--days <days>`                | string | no       | Number of days for the usage overview (default: 7)       |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
+
+#### Examples
+
+```bash
+bl usage summary
+```
+
+```bash
+bl usage summary --days 30
+```
+
+```bash
+bl usage summary --output json
 ```

@@ -1,6 +1,13 @@
 import { expect, test } from "vite-plus/test";
 import type { Identity, Settings } from "../src/index.ts";
-import { BailianError, ExitCode, McpClient, mapApiError, request } from "../src/index.ts";
+import {
+  BailianError,
+  ExitCode,
+  McpClient,
+  callConsoleGateway,
+  mapApiError,
+  request,
+} from "../src/index.ts";
 import { parseConfigFile } from "../src/config/schema.ts";
 import {
   parseBooleanValue,
@@ -8,7 +15,10 @@ import {
   resolveWatermark,
 } from "../src/utils/boolean-flag.ts";
 
-function testDeps(identity: Partial<Identity> = {}): { identity: Identity; settings: Settings } {
+function testDeps(identity: Partial<Identity> = {}): {
+  identity: Identity;
+  settings: Settings;
+} {
   return {
     identity: {
       binName: "bl",
@@ -83,7 +93,10 @@ test("BailianError propagates cause via options-bag and exposes it in toJSON", (
 
 test("toJSON splits service-error metadata into structured fields", () => {
   const err = mapApiError(404, {
-    error: { message: "The model `qwen3.7` does not exist", type: "invalid_request_error" },
+    error: {
+      message: "The model `qwen3.7` does not exist",
+      type: "invalid_request_error",
+    },
     request_id: "c55e1acc",
   });
   expect(err.toJSON()).toEqual({
@@ -95,6 +108,96 @@ test("toJSON splits service-error metadata into structured fields", () => {
       request_id: "c55e1acc",
     },
   });
+});
+
+test("callConsoleGateway verbose prints structured request payload", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalWrite = process.stderr.write.bind(process.stderr);
+  let stderr = "";
+  let requestBody: string | undefined;
+
+  globalThis.fetch = async (_url, init) => {
+    requestBody = init?.body as string | undefined;
+    return new Response(JSON.stringify({ data: { success: true, value: "response-body" } }), {
+      status: 200,
+      statusText: "OK",
+      headers: { "Content-Type": "application/json" },
+    });
+  };
+  process.stderr.write = ((chunk: string | Uint8Array) => {
+    stderr += String(chunk);
+    return true;
+  }) as typeof process.stderr.write;
+
+  try {
+    await callConsoleGateway(
+      {
+        region: "ap-southeast-1",
+        site: "international",
+        switchAgent: 123,
+        token: "token",
+      },
+      30,
+      {
+        api: "test.api",
+        data: { workspaceId: "ws-1", cornerstoneParam: { custom: "value" } },
+      },
+      { verbose: true },
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    process.stderr.write = originalWrite;
+  }
+
+  expect(requestBody).toBeDefined();
+  expect(stderr).toContain('> payload {\n  "params": {');
+  expect(stderr).toContain('  "region": "ap-southeast-1"');
+  expect(stderr).toContain('    "Api": "test.api"');
+  expect(stderr).toContain('      "workspaceId": "ws-1"');
+  expect(stderr).toContain('        "switchUserType": 3');
+  expect(stderr).toContain('        "switchAgent": 123');
+  expect(stderr).toContain('        "custom": "value"');
+  expect(stderr).toContain("< 200 OK");
+  expect(stderr).not.toContain("response-body");
+});
+
+test("callConsoleGateway keeps readable message and raw gateway response separately", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalWrite = process.stderr.write.bind(process.stderr);
+  const responseBody = {
+    data: {
+      success: false,
+      errorCode: "BailianGateway.Team.NotAuthorised",
+      errorMsg: "team not authorised",
+    },
+  };
+
+  globalThis.fetch = async () =>
+    new Response(JSON.stringify(responseBody), {
+      status: 200,
+      statusText: "OK",
+      headers: { "Content-Type": "application/json" },
+    });
+
+  process.stderr.write = (() => true) as typeof process.stderr.write;
+
+  try {
+    await expect(
+      callConsoleGateway(
+        { region: "cn-beijing", site: "domestic", token: "token" },
+        30,
+        { api: "test.api", data: {} },
+        { verbose: true },
+      ),
+    ).rejects.toMatchObject({
+      message: "Console gateway error: BailianGateway.Team.NotAuthorised",
+      rawResponse: JSON.stringify(responseBody),
+      exitCode: ExitCode.GENERAL,
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+    process.stderr.write = originalWrite;
+  }
 });
 
 test("request uses injected client identity for User-Agent", async () => {
@@ -160,7 +263,9 @@ test("McpClient uses injected client identity for initialize and User-Agent", as
     userAgents.push(headers?.["User-Agent"] ?? "");
     const body = init?.body;
     if (typeof body === "string") bodies.push(JSON.parse(body));
-    return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }), { status: 200 });
+    return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }), {
+      status: 200,
+    });
   };
 
   try {
@@ -213,6 +318,10 @@ test("parseConfigFile accepts only well-formed http(s) base_url", () => {
   expect(parseConfigFile({ base_url: "http://localhost:8080" }).base_url).toBe(
     "http://localhost:8080",
   );
+  expect(
+    parseConfigFile({ base_url: "https://proxy.example.com/team/compatible-mode/v1?x=1#y" })
+      .base_url,
+  ).toBe("https://proxy.example.com/team");
   // Previously accepted because the value merely "starts with http".
   expect(parseConfigFile({ base_url: "httpfoo://evil" }).base_url).toBeUndefined();
   expect(parseConfigFile({ base_url: "not a url" }).base_url).toBeUndefined();

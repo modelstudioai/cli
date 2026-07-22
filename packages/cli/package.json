@@ -1,6 +1,6 @@
 {
   "name": "bailian-cli",
-  "version": "1.7.0",
+  "version": "1.10.1",
   "description": "CLI for Aliyun Model Studio (DashScope) AI Platform.",
   "keywords": [
     "agent",
@@ -59,12 +59,13 @@
     "ajv": "catalog:",
     "boxen": "catalog:",
     "chalk": "catalog:",
+    "e2e": "workspace:*",
     "typescript": "^6.0.2",
     "undici": "catalog:",
     "vite-plus": "0.1.22",
     "yaml": "catalog:"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=18.17.0"
   }
 }

@@ -4,9 +4,10 @@ import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { request, requestJson, type HttpDeps, type RequestOpts } from "./http.ts";
 import { buildAcsCanonicalQuery, signAcsRequest, type AcsQueryParams } from "./acs.ts";
-import { isLocalFile, resolveFileUrl } from "../files/upload.ts";
+import { imageFileToDataUri, isLocalFile, resolveFileUrl } from "../files/upload.ts";
 import { McpClient } from "./mcp.ts";
 import { callConsoleGateway } from "../console/gateway.ts";
+import { refreshAccessToken } from "../auth/refresh-token.ts";
 import { maskToken } from "../utils/token.ts";
 import { trackingHeaders } from "./headers.ts";
 
@@ -33,6 +34,17 @@ export interface ClientOpenApiQueryOpts {
   version: string;
   method: "GET" | "POST";
   queryParams: AcsQueryParams;
+}
+
+export interface ClientOpenApiJsonOpts {
+  host: string;
+  path: string;
+  action: string;
+  version: string;
+  method: "GET" | "POST";
+  /** JSON request body; omit for query-only calls (signed as an empty body). */
+  body?: unknown;
+  queryParams?: AcsQueryParams;
 }
 
 export interface OpenApiResponse {
@@ -106,33 +118,90 @@ export class Client {
     return resolveFileUrl(source, this.requireApi().token, model, opts);
   }
 
+  /**
+   * Resolve an image input while keeping Token Plan's upload limitation isolated.
+   * Token Plan local images are sent as Data URIs; every other connection keeps
+   * the established temporary OSS upload flow. URLs and existing Data URIs pass through.
+   */
+  resolveImageInput(
+    source: string,
+    model: string,
+    opts: { signal?: AbortSignal } = {},
+  ): Promise<string> {
+    if (!isLocalFile(source)) return Promise.resolve(source);
+    if (this.usesTokenPlanEndpoint()) {
+      return Promise.resolve(imageFileToDataUri(source));
+    }
+    return this.uploadFile(source, model, { signal: opts.signal });
+  }
+
+  usesTokenPlanEndpoint(): boolean {
+    if (this.deps.settings.configName === "token-plan") return true;
+    try {
+      return /^token-plan\.[a-z0-9-]+\.maas\.aliyuncs\.com$/i.test(new URL(this.baseUrl).hostname);
+    } catch {
+      return false;
+    }
+  }
+
   /** Open an MCP client. Accepts a path (prepended with the model baseUrl) or an absolute URL. */
   mcp(pathOrUrl: string): McpClient {
     const url = /^https?:\/\//.test(pathOrUrl) ? pathOrUrl : this.requireApi().baseUrl + pathOrUrl;
     return new McpClient(this.http, url, this.deps.apiCred?.token);
   }
 
-  console<T>(api: string, data: Record<string, unknown>): Promise<T> {
+  async console<T>(api: string, data: Record<string, unknown>): Promise<T> {
     if (!this.deps.consoleCred) {
       throw new BailianError("This command needs a console access token.", ExitCode.AUTH);
     }
-    // region / site / switchAgent 已解析在 consoleCred 里,gateway 不再回读 config。
-    return callConsoleGateway(this.deps.consoleCred, this.deps.settings.timeout, {
-      api,
-      data,
-    }) as Promise<T>;
+    const gwOpts = { api, data };
+    const { timeout } = this.deps.settings;
+    try {
+      return (await callConsoleGateway(
+        this.deps.consoleCred,
+        timeout,
+        gwOpts,
+        this.deps.settings,
+      )) as T;
+    } catch (err) {
+      if (
+        !(err instanceof BailianError) ||
+        err.exitCode !== ExitCode.AUTH ||
+        !err.message.includes("not logged in")
+      ) {
+        throw err;
+      }
+      const newToken = await refreshAccessToken({
+        identity: this.deps.identity,
+        settings: this.deps.settings,
+        baseUrl: this.deps.baseUrl,
+      });
+      if (!newToken) throw err;
+      return (await callConsoleGateway(
+        { ...this.deps.consoleCred, token: newToken },
+        timeout,
+        gwOpts,
+        this.deps.settings,
+      )) as T;
+    }
   }
 
-  async openApiQueryJson<T extends OpenApiResponse>(opts: ClientOpenApiQueryOpts): Promise<T> {
+  openApiQueryJson<T extends OpenApiResponse>(opts: ClientOpenApiQueryOpts): Promise<T> {
+    return this.openApiJson<T>(opts);
+  }
+
+  async openApiJson<T extends OpenApiResponse>(opts: ClientOpenApiJsonOpts): Promise<T> {
     const cred = this.requireOpenApi();
-    const queryString = buildAcsCanonicalQuery(opts.queryParams);
+    const bodyStr = opts.body === undefined ? "" : JSON.stringify(opts.body);
+    const queryString = opts.queryParams ? buildAcsCanonicalQuery(opts.queryParams) : "";
     const endpoint = `https://${opts.host}${opts.path}${queryString ? `?${queryString}` : ""}`;
     const headers = signAcsRequest({
       accessKeyId: cred.accessKeyId,
       accessKeySecret: cred.accessKeySecret,
+      securityToken: cred.securityToken,
       action: opts.action,
       version: opts.version,
-      body: "",
+      body: bodyStr,
       host: opts.host,
       pathname: opts.path,
       method: opts.method,
@@ -141,21 +210,38 @@ export class Client {
 
     if (this.deps.settings.verbose) {
       process.stderr.write(`> ${opts.method} ${endpoint}\n`);
+      process.stderr.write(`> x-acs-action: ${opts.action} (version ${opts.version})\n`);
       process.stderr.write(`> AK: ${maskToken(cred.accessKeyId)}\n`);
+      if (cred.securityToken) {
+        process.stderr.write(`> STS token: ${maskToken(cred.securityToken)}\n`);
+      }
+      if (queryString) process.stderr.write(`> query: ${queryString}\n`);
+      if (bodyStr) process.stderr.write(`> body: ${bodyStr}\n`);
     }
 
     const timeoutMs = this.deps.settings.timeout * 1000;
     const res = await fetch(endpoint, {
       method: opts.method,
       headers: { ...headers, ...trackingHeaders() },
+      body: bodyStr || undefined,
       signal: AbortSignal.timeout(timeoutMs),
     });
 
+    const rawText = await res.text();
     if (this.deps.settings.verbose) {
       process.stderr.write(`< ${res.status} ${res.statusText}\n`);
+      process.stderr.write(`< ${rawText}\n`);
     }
 
-    const data = (await res.json()) as T;
+    let data: T;
+    try {
+      data = JSON.parse(rawText) as T;
+    } catch {
+      throw new BailianError(
+        `${res.status} ${res.statusText} - ${rawText.slice(0, 500)}`,
+        ExitCode.GENERAL,
+      );
+    }
     if (!res.ok || data.Success === false) {
       throw new BailianError(
         `${data.Code || res.status} - ${data.Message || res.statusText}`,

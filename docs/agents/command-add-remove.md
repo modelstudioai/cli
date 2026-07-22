@@ -72,7 +72,8 @@ packages/commands/src/index.ts
   - `exampleArgs`(不含 bin/path 前缀)
   - `validate`(跨 flag 校验)
   - 普通业务命令的 `run(ctx)` 只读 `ctx.flags` / `ctx.settings` / `ctx.client`
-  - `commands/auth/**` 可用 `ctx.authStore()`,`commands/config/**` 可用 `ctx.configStore()`;不要把这些 store accessor 扩散到普通业务命令
+  - `commands/auth/**` 可用 `ctx.authStore`,`commands/config/**` 可用 `ctx.configStore`;不要把这些持久化能力扩散到普通业务命令
+  - `commands/plugin/**` 可用 `ctx.commandPacks`;产品 policy 由 runtime 绑定,命令不要自行 import 产品入口
 - [ ] `packages/commands/src/index.ts`:新增或移除对应 export
 - [ ] 如果命令调用 Console Gateway,设置 `auth: "console"`;不要重复声明 console 凭证域 flags
 - [ ] 如果命令不需要网络或自己管理配置/登录,设置 `auth: "none"`;不要绕过 runtime auth stage
@@ -92,15 +93,17 @@ packages/commands/src/index.ts
 
 ### D. 测试层
 
-- [ ] 按 [cli-e2e-tests.md](cli-e2e-tests.md) 新建或更新 `packages/cli/tests/e2e/<topic>.e2e.test.ts`
-- [ ] 删除命令时一并删对应 e2e / README 示例 / reference 生成结果
-- [ ] 如果 shared command 在不同入口路径下复用,至少确保 `bl` 入口 e2e 覆盖;`kscli` 入口改动需补对应入口测试或手工 smoke
+- [ ] 按 [cli-e2e-tests.md](cli-e2e-tests.md) 新建或更新 `packages/commands/tests/e2e/<topic>.e2e.test.ts`
+- [ ] 同步 `packages/commands/tests/e2e/topic-routes.ts`（该 topic 的最小 path → export 映射）
+- [ ] bl 产品 path 变更由 `registry.smoke` 自动覆盖；kscli 变更同步 `kscli/src/commands.ts` 与 `registry.smoke`
+- [ ] 删除命令时一并删对应 commands e2e / README 示例 / reference / topic 路由条目
+- [ ] 如果 shared command 在不同入口路径下复用,至少确保 commands e2e 覆盖 `bl` path；`kscli` 入口改动需补对应 smoke 或说明不测 flat path live
 
 ### E. 重命名特殊处理
 
 - [ ] 全仓 grep **旧命令名字符串**,确保以下位置全部更新:
   - `packages/cli/src/commands.ts` map key
-  - `packages/kscli/src/main.ts` map key(如适用)
+  - `packages/kscli/src/commands.ts` map key(如适用)
   - 用户可见 hint / README / tests
   - `skills/bailian-cli/reference/`(重建后检查并提交)
 - [ ] 检查 `usageArgs` / `exampleArgs` 没有硬编码旧的 `bl <path>` 前缀
@@ -111,7 +114,7 @@ packages/commands/src/index.ts
 pnpm run sync:skill-assets
 pnpm -F bailian-cli exec tsx src/main.ts <new-command> --help
 pnpm -F bailian-cli exec tsx src/main.ts
-vp test packages/cli/tests/e2e/<topic>.e2e.test.ts
+vp test packages/commands/tests/e2e/<topic>.e2e.test.ts
 ```
 
 如改了 `kscli` 入口:

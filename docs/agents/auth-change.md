@@ -37,18 +37,21 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 - `bl auth login --console` 只更新 `access_token` 以及回调携带的 console 作用域字段
 - `bl auth login --open-api ...` 只更新 `access_key_id` / `access_key_secret`
 - `bl auth logout --console` 只清 `access_token`
-- `bl auth logout --open-api` 只清 `access_key_id` / `access_key_secret`
-- `bl auth logout` 清 `api_key` + `access_token` + `access_key_*`
+- `bl auth logout --open-api` 只清 `access_key_id` / `access_key_secret` / `security_token`
+- `bl auth logout` 清 `api_key` + `base_url` + `access_token` + `access_key_*`
 
 解析分工:
 
 - `resolveApiKey()` — `auth: "apiKey"` 命令;优先级 `--api-key` > `DASHSCOPE_API_KEY` > config `api_key`
-- `resolveModelBaseUrl()` — model base URL;优先级 `--base-url` > `DASHSCOPE_BASE_URL` > config `base_url` > `REGIONS.cn`
+- `resolveModelBaseUrl()` — model base URL;优先级 `--base-url` > `DASHSCOPE_BASE_URL` > config `base_url` > `REGIONS.cn`，返回前统一去除 query、fragment、尾斜杠和已知 SDK/API Base 后缀，同时保留自定义网关前缀
+- `--config` 只选择 config 文件 block，不提升该 block 的字段优先级；内置套餐 Profile（当前为 `token-plan`）的预设仅在登录时物化写入，运行时继续走统一的 flag > env > selected config file > 默认值
+- 显式 `auth login --config <name>` 在凭证验证并落盘成功后自动激活目标 Profile；未传
+  `--config` 时继续写当前激活项，失败和 dry-run 不切换
 - `resolveConsole()` — `auth: "console"` 命令;当前 token 来自 config `access_token`,region/site/switchAgent 来自 flag > config > 默认
 - `resolveOpenApi()` — `auth: "openapi"` 命令;优先级 `--access-key-id/--access-key-secret` > `ALIBABA_CLOUD_ACCESS_KEY_ID/ALIBABA_CLOUD_ACCESS_KEY_SECRET` > config `access_key_*`。兼容读取旧字段 `openapi_access_key_*`,新写入只写短字段
 - `describeAuthState()` — `auth status` / banner / telemetry 使用的只读快照
 
-命令不要直接解析 token、env 或 config。业务请求统一走 `ctx.client`;登录/配置命令通过 `ctx.authStore()` / `ctx.configStore()` 的窄接口操作落盘。
+命令不要直接解析 token、env 或 config。业务请求统一走 `ctx.client`;登录/配置命令通过 `ctx.authStore` / `ctx.configStore` 的窄接口操作落盘。
 
 ## 必查清单
 
@@ -87,7 +90,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 
 - [ ] `packages/commands/src/commands/auth/login.ts`:
   - 新增/调整登录 flag 与流程
-  - 持久化只走 `ctx.authStore().login(...)`
+  - 持久化只走 `ctx.authStore.login(...)`
 - [ ] `packages/commands/src/commands/auth/status.ts`:
   - 分别显示 model / console / openapi 鉴权状态,并 mask token
 - [ ] `packages/commands/src/commands/auth/logout.ts`:

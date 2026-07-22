@@ -1,215 +1,52 @@
-import { execFile } from "child_process";
-import { mkdirSync, readFileSync } from "fs";
-import { promisify } from "util";
-import { basename, dirname, join } from "path";
+import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { readConfigFile } from "bailian-cli-core";
+import {
+  cliTimeoutPrefix,
+  cliTimeoutSeconds,
+  e2eLabelFromMetaUrl,
+  isConsoleAuthFailure,
+  makeE2eOutputDir,
+  parseStdoutJson,
+} from "e2e/output";
+import { runNodeMain, type RunCliResult } from "e2e/runner";
+import {
+  isBailianE2EEnabled,
+  isBailianE2EMediaEnabled,
+  isBailianE2EVideoEnabled,
+  isChatE2EReady,
+  isConsoleE2EReady,
+  isDashScopeE2EReady,
+  isSearchE2EReady,
+} from "e2e/gating";
+import { monorepoRoot } from "e2e/monorepo-root";
 
-const execFileAsync = promisify(execFile);
+export {
+  cliTimeoutPrefix,
+  cliTimeoutSeconds,
+  e2eLabelFromMetaUrl,
+  isBailianE2EEnabled,
+  isBailianE2EMediaEnabled,
+  isBailianE2EVideoEnabled,
+  isChatE2EReady,
+  isConsoleAuthFailure,
+  isConsoleE2EReady,
+  isDashScopeE2EReady,
+  isSearchE2EReady,
+  makeE2eOutputDir,
+  monorepoRoot,
+  parseStdoutJson,
+};
+export type { RunCliResult };
 
-/**
- * Vitest `global-setup.ts` 写入 `test/output/` 下本文件名，供各 worker 进程读取同一会话 id。
- * （仅模块内变量无法跨 Vitest 多进程 worker 共享。）
- */
-export const E2E_RUN_SESSION_FILENAME = ".e2e-run-session";
-
-/**
- * 单次 `vp test` / Vitest 运行共用的 E2E 输出会话目录名（惰性缓存于当前进程）。
- */
-let e2eOutputSessionId: string | undefined;
-
-/** `packages/cli` 根目录（含 `src/main.ts`） */
+/** `packages/cli` 根目录 */
 export const cliPackageRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const mainTs = join(cliPackageRoot, "src", "main.ts");
 
-/** Monorepo 根（含根 `package.json`） */
-export function monorepoRoot(): string {
-  return join(cliPackageRoot, "..", "..");
-}
-
-export function localBin(name: string): string {
-  return join(
-    monorepoRoot(),
-    "node_modules",
-    ".bin",
-    process.platform === "win32" ? `${name}.cmd` : name,
-  );
-}
-
-function readE2eRunSessionFromOutputDir(): string | undefined {
-  try {
-    const p = join(monorepoRoot(), "test", "output", E2E_RUN_SESSION_FILENAME);
-    const t = readFileSync(p, "utf8").trim();
-    return t.length > 0 ? t : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function getE2eOutputSessionId(): string {
-  if (!e2eOutputSessionId) {
-    const fromEnv = process.env.BAILIAN_E2E_RUN_ID?.trim();
-    if (fromEnv) {
-      e2eOutputSessionId = fromEnv.replace(/[^a-zA-Z0-9._-]+/g, "-");
-    } else {
-      const fromFile = readE2eRunSessionFromOutputDir();
-      if (fromFile) {
-        e2eOutputSessionId = fromFile.replace(/[^a-zA-Z0-9._-]+/g, "-");
-      } else {
-        e2eOutputSessionId = `e2e-run-${Date.now()}-${process.pid}`;
-      }
-    }
-  }
-  return e2eOutputSessionId;
-}
-
-/**
- * 在 `test/output/<会话>/` 下创建用例子目录。
- * 会话 id 优先 `BAILIAN_E2E_RUN_ID`，否则读 Vitest globalSetup 写入的 `test/output/.e2e-run-session`，
- * 再否则回退为单进程 id（非 Vitest 直接跑用例时）。
- * 若已设 `BAILIAN_E2E_OUT` 则直接使用（不再套会话目录）。
- */
-export function makeE2eOutputDir(label: string): string {
-  const fromEnv = process.env.BAILIAN_E2E_OUT?.trim();
-  if (fromEnv) {
-    mkdirSync(fromEnv, { recursive: true });
-    return fromEnv;
-  }
-  const safe = label.replace(/[^a-zA-Z0-9._-]+/g, "-");
-  const sessionDir = join(monorepoRoot(), "test", "output", getE2eOutputSessionId());
-  mkdirSync(sessionDir, { recursive: true });
-  const dir = join(sessionDir, `e2e-vp-${safe}-${Date.now()}`);
-  mkdirSync(dir, { recursive: true });
-  return dir;
-}
-
-/** 全局 `--timeout` 秒数（视频等长任务） */
-export function cliTimeoutSeconds(): string {
-  return process.env.BAILIAN_E2E_TIMEOUT_SEC?.trim() || "3600";
-}
-
-export function cliTimeoutPrefix(): string[] {
-  return ["--timeout", cliTimeoutSeconds()];
-}
-
-/** 显式开启后才跑真实网络 E2E，避免默认 `vp test` 依赖密钥或打外网 */
-export function isBailianE2EEnabled(): boolean {
-  return process.env.BAILIAN_E2E === "1";
-}
-
-/** 可调 DashScope 的 API Key：环境变量优先，否则读 ~/.bailian/config.json */
-export function isDashScopeE2EReady(): boolean {
-  if (!isBailianE2EEnabled()) return false;
-  if (process.env.DASHSCOPE_API_KEY?.trim()) return true;
-  try {
-    const f = readConfigFile();
-    return typeof f.api_key === "string" && f.api_key.length > 0;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Console-gateway 命令（quota / usage free / usage stats）的 E2E 就绪检查：
- * 需 `BAILIAN_E2E=1` 且存在 console access_token（`~/.bailian/config.json` 的
- * `access_token`；凭证解析已集中到 authStage，不再读环境变量）。
- *
- * 仅检查 token 是否存在——无法本地判断是否过期。token 过期时 gated 用例仍会执行，
- * 但用 `isConsoleAuthFailure` 把“session 未登录/已过期”的优雅报错视为通过，保持
- * 与 deploy/dataset “无 key / 有效 key / 失效 key 均绿”的一致策略。
- */
-export function isConsoleE2EReady(): boolean {
-  if (!isBailianE2EEnabled()) return false;
-  try {
-    const config = readConfigFile();
-    return typeof config.access_token === "string" && config.access_token.length > 0;
-  } catch {
-    return false;
-  }
-}
-
-/** 语音与图像（可设 `BAILIAN_E2E_MEDIA=0` 在仅跑文本/记忆/知识库时跳过） */
-export function isBailianE2EMediaEnabled(): boolean {
-  if (process.env.BAILIAN_E2E_MEDIA === "0") return false;
-  return isBailianE2EEnabled();
-}
-
-/** 文生视频 / 图生视频 / 参考视频 / 视频编辑（耗时长，默认关闭） */
-export function isBailianE2EVideoEnabled(): boolean {
-  return isBailianE2EEnabled() && process.env.BAILIAN_E2E_VIDEO === "1";
-}
-
-/** 从 `import.meta.url` 生成 OUT 子目录标签，避免并行用例目录冲突 */
-export function e2eLabelFromMetaUrl(metaUrl: string): string {
-  return basename(fileURLToPath(metaUrl), ".ts").replace(/\.e2e\.test$/, "");
-}
-
-/** 知识库用例：须显式索引 ID + API-KEY */
-export function isKnowledgeE2EReady(): boolean {
-  if (!isBailianE2EEnabled()) return false;
-  if (!process.env.BAILIAN_E2E_INDEX_ID) return false;
-  return isDashScopeE2EReady();
-}
-
-export interface RunCliResult {
-  stdout: string;
-  stderr: string;
-  exitCode: number;
-}
-
-/**
- * 子进程执行 CLI（等价于在 `packages/cli` 下 `tsx src/main.ts ...`）。
- * request_id 等诊断信息在 stderr；`--output json` 时 JSON 在 stdout。
- */
+/** 子进程执行 bl CLI */
 export async function runCli(
   args: string[],
   envOverrides: NodeJS.ProcessEnv = {},
 ): Promise<RunCliResult> {
-  try {
-    const { stdout, stderr } = await execFileAsync(localBin("tsx"), [mainTs, ...args], {
-      cwd: cliPackageRoot,
-      encoding: "utf8",
-      maxBuffer: 32 * 1024 * 1024,
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: "1",
-        DO_NOT_TRACK: "1",
-        ...envOverrides,
-      },
-    });
-    return { stdout: stdout ?? "", stderr: stderr ?? "", exitCode: 0 };
-  } catch (err: unknown) {
-    const e = err as {
-      stdout?: string;
-      stderr?: string;
-      code?: number;
-    };
-    return {
-      stdout: e.stdout ?? "",
-      stderr: e.stderr ?? "",
-      exitCode: typeof e.code === "number" ? e.code : 1,
-    };
-  }
-}
-
-export function parseStdoutJson<T = unknown>(stdout: string): T {
-  const t = stdout.trim();
-  // Extract JSON object — stdout may contain [perf] console.time lines before JSON
-  const jsonMatch = t.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error(`No JSON object found in stdout: ${t.slice(0, 200)}`);
-  return JSON.parse(jsonMatch[0]) as T;
-}
-
-/**
- * 判断一次 CLI 运行是否因 console session 未登录/已过期而失败。
- *
- * Console E2E 用例的 readiness 闸（`isConsoleE2EReady`）只能判断 token 是否存在，
- * 无法判断是否过期；token 失效时 gated 用例仍会执行并拿到鉴权错误。本函数让用例
- * 参考 deploy/dataset 的做法：只要 CLI 把鉴权错误优雅上抛（非零退出 + stderr 说明
- * session 失效），即视为通过，而不是强求 exit 0 的成功输出。
- */
-export function isConsoleAuthFailure(result: RunCliResult): boolean {
-  if (result.exitCode === 0) return false;
-  return /not logged in|has expired|NotLogined|Run `bl auth login/i.test(result.stderr);
+  return runNodeMain(mainTs, args, { cwd: cliPackageRoot, env: envOverrides });
 }

@@ -108,51 +108,6 @@ export interface StreamChunk {
   };
 }
 
-// ---- Intent Detect (DashScope Native) ----
-
-/**
- * Request body for `tongyi-intent-detect-v3` via the DashScope-native
- * text-generation endpoint. Uses `{ model, input, parameters }` shape —
- * NOT the OpenAI `{ model, messages }` shape.
- */
-export interface DashScopeIntentDetectRequest {
-  model: string;
-  input: {
-    messages: Array<{
-      role: "system" | "user" | "assistant";
-      content: string;
-    }>;
-  };
-  parameters?: {
-    result_format?: "message";
-    max_tokens?: number;
-    temperature?: number;
-  };
-}
-
-/**
- * Response envelope from the DashScope-native text-generation endpoint with
- * `result_format: "message"`. The model's output lives under `output.choices`,
- * mirroring the OpenAI shape but nested one level deeper.
- */
-export interface DashScopeIntentDetectResponse {
-  output: {
-    choices?: Array<{
-      finish_reason: string;
-      message: {
-        role: string;
-        content: string;
-      };
-    }>;
-  };
-  usage?: {
-    total_tokens?: number;
-    input_tokens?: number;
-    output_tokens?: number;
-  };
-  request_id: string;
-}
-
 // ---- Image (DashScope) ----
 
 export interface DashScopeImageRequest {

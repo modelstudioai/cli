@@ -5,7 +5,7 @@
 **The official command-line interface for Aliyun Model Studio (DashScope) AI Platform**
 
 [![npm version](https://img.shields.io/npm/v/bailian-cli?color=0969da&label=npm)](https://www.npmjs.com/package/bailian-cli)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D22.12-brightgreen)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18.17-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
@@ -30,6 +30,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **Video generation & editing** — happyhorse-1.1 series: text-/image-/reference-to-video and natural-language video editing (up to 9-image reference)
 - **Speech synthesis & recognition** — CosyVoice streaming TTS, voice cloning from 5–20s samples; FunAudio-ASR covers 30 languages including 7 Chinese dialects and 20+ Mandarin accents
 - **Image & video understanding** — Qwen-VL: long-form video analysis, chart/document parsing, visual reasoning, multilingual OCR
+- **Coding agent setup** — Configure Claude Code, Qwen Code, OpenCode, OpenClaw, Hermes Agent, or Codex to use DashScope with `bl config agent`
 
 > **Note:** The features below are currently available only to China site (aliyun.com) account holders and are not yet supported for international / global site accounts.
 
@@ -39,7 +40,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **Web search** — Real-time internet retrieval for up-to-date, accurate answers
 - **Model recommendation** — Describe your scenario and get best-fit model suggestions; supports scoped search, model comparison, and alternative discovery
 - **Fine-tuning & deployment** — Upload datasets, create text/audio/image fine-tune jobs (`finetune text|audio|image create`; text covers SFT/LoRA/DPO/CPT), probe job status non-blockingly (`finetune watch`), query per-model training capability (`finetune capability`), and deploy trained models as endpoints (`deploy text|audio|image create`)
-- **Console capabilities** — Browse Bailian apps (`app list`), check free-tier quota (`usage free`), view model usage statistics (`usage stats`), manage workspaces (`workspace list`), and manage rate limits (`quota list/request/check/history`)
+- **Console capabilities** — Browse the model marketplace (`model list`) and Bailian apps (`app list`), review a unified usage view (`usage summary`), check free-tier quota (`usage free`), view model usage statistics (`usage stats`), manage workspaces (`workspace list`), and manage rate limits (`quota list/request/check/history`)
 - **Local file auto-upload** — Every URL parameter accepts a local path; uploaded to free temp storage with 48-hour validity
 
 ## Showcase: One-Sentence Cinematic Video
@@ -80,7 +81,7 @@ npm install -g bailian-cli
 npx skills add modelstudioai/cli --all -g
 ```
 
-> Requires Node.js >= 22.12.
+> Requires Node.js >= 18.17.
 
 ## Quick Start
 
@@ -90,6 +91,12 @@ bl auth login --console
 
 # Or authenticate with an API key
 bl auth login --api-key sk-xxxxx
+
+# Or use Token Plan (Base URL built in; the key is tested during login)
+bl auth login --config token-plan --api-key sk-sp-xxxxx
+
+# Configure a coding agent to use DashScope
+bl config agent --agent codex --base-url https://dashscope.aliyuncs.com/compatible-mode/v1 --api-key sk-xxxxx --model qwen3-coder-plus
 
 # Chat with Qwen
 bl text chat --message "What is DashScope?"
@@ -115,12 +122,14 @@ bl auth login --console
 # Fine-tune & deploy — a one-shot train-to-serve workflow
 bl dataset upload --file ./train.jsonl                 # Upload a .jsonl dataset (validated first)
 bl finetune text create --model qwen3-8b --datasets ./train.jsonl --training-type sft-lora  # Local paths auto-upload
-bl finetune watch --job-id ft-xxx --output json       # Non-blocking status probe (exit 0/1/3 = done/failed/running)
+bl finetune watch --job-id ft-xxx --output json       # Non-blocking probe (running/succeeded return 0; failed/canceled report an error)
 bl finetune capability --model qwen3-8b               # Which training types a model supports
 bl deploy text create --model qwen3-8b --name my-svc --plan mu  # Deploy the trained model as an endpoint
 
-# Browse apps / free-tier quota / usage statistics / workspaces
+# Browse models / apps / free-tier quota / usage statistics / workspaces
+bl model list                                        # Browse model families and pricing
 bl app list
+bl usage summary                                     # Unified view: free-tier quota + recent usage overview
 bl usage free                                         # Free-tier quota across models (add --model/--expiring/--sort)
 bl usage stats --workspace-id <id>                    # Model usage statistics (add --model for per-model)
 bl workspace list                                     # List all workspaces
@@ -157,9 +166,18 @@ bl auth login --api-key sk-xxxxx
 bl text chat --api-key sk-xxxxx --message "Hello"
 ```
 
+### Token Plan API Key
+
+Get or copy the API key from the [Token Plan subscription overview](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview).
+The CLI has the default Token Plan Base URL built in. Login tests the key first, then saves and activates the `token-plan` config only when validation succeeds.
+
+```bash
+bl auth login --config token-plan --api-key sk-sp-xxxxx
+```
+
 ### Console Login (OAuth)
 
-Required for console capability commands (`app list`, `usage free`, `usage stats`, `workspace list`, `quota list/request/check/history`). Opens the Bailian console in your browser to sign in.
+Required for console capability commands (`model list`, `app list`, `usage summary/free/stats`, `workspace list`, `quota list/request/check/history`). Opens the Bailian console in your browser to sign in.
 
 ```bash
 bl auth login --console
@@ -207,6 +225,7 @@ Config file location: `~/.bailian/config.json`
 | Qwen Model List              | https://help.aliyun.com/zh/model-studio/getting-started/models                            |
 | Aliyun Model Studio Console  | https://bailian.console.aliyun.com/?source_channel=cli_github                             |
 | Get API Key                  | https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key |
+| Get Token Plan API Key       | https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview         |
 | Get AccessKey                | https://ram.console.aliyun.com/manage/ak                                                  |
 
 ## Changelog

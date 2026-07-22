@@ -13,7 +13,10 @@ interface ConsoleGatewayInfo {
 
 const REGION_GATEWAYS: Record<string, Record<ConsoleSite, ConsoleGatewayInfo>> = {
   "cn-beijing": {
-    domestic: { csGateway: "pre-bailian-cs.console.aliyun.com", action: "BroadScopeAspnGateway" },
+    domestic: {
+      csGateway: "bailian-cs.console.aliyun.com",
+      action: "BroadScopeAspnGateway",
+    },
     international: {
       csGateway: "bailian-cs.console.alibabacloud.com",
       action: "BroadScopeAspnGateway",
@@ -74,6 +77,7 @@ function buildGatewayParams(
         protocol: "V2",
         console: "ONE_CONSOLE",
         productCode: "p_efm",
+        switchUserType: 3,
         consoleSite: "BAILIAN_ALIYUN",
         ...(switchAgent != null ? { switchAgent } : {}),
         ...(typeof data.cornerstoneParam === "object" && data.cornerstoneParam !== null
@@ -100,6 +104,7 @@ export async function callConsoleGateway(
   target: ConsoleGatewayTarget,
   timeoutSec: number,
   { api, data }: ConsoleGatewayRequest,
+  settings?: Pick<Settings, "verbose">,
 ): Promise<unknown> {
   const resolved = resolveGateway(target.region, target.site);
   const gatewayBase = `https://${resolved.csGateway}`;
@@ -115,15 +120,24 @@ export async function callConsoleGateway(
   };
   if (target.token) headers.Authorization = `Bearer ${target.token}`;
 
-  const res = await fetch(
-    `${gatewayBase}/cli/api.json?action=${action}&product=${GATEWAY_PRODUCT}&api=${encodeURIComponent(api)}`,
-    {
-      method: "POST",
-      headers,
-      body: body.toString(),
-      signal: AbortSignal.timeout(timeoutMs),
-    },
-  );
+  const endpoint = `${gatewayBase}/cli/api.json?action=${action}&product=${GATEWAY_PRODUCT}&api=${encodeURIComponent(api)}`;
+  if (settings?.verbose) {
+    process.stderr.write(`> POST ${endpoint}\n`);
+    process.stderr.write(
+      `> payload ${JSON.stringify({ params: JSON.parse(params), region: target.region }, null, 2)}\n`,
+    );
+  }
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers,
+    body: body.toString(),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+
+  if (settings?.verbose) {
+    process.stderr.write(`< ${res.status} ${res.statusText}\n`);
+  }
 
   if (!res.ok) {
     const t = await res.text().catch(() => "");
@@ -138,11 +152,11 @@ export async function callConsoleGateway(
 
   const innerData = json.data as Record<string, unknown> | undefined;
   if (innerData?.success === false && innerData.errorCode) {
+    const rawResponse = JSON.stringify(json);
     const rawErrorCode = innerData.errorCode;
     const errorCode =
       typeof rawErrorCode === "string" ? rawErrorCode : JSON.stringify(rawErrorCode);
     const notLogined = errorCode.includes("NotLogined");
-    const errorMsg = typeof innerData.errorMsg === "string" ? innerData.errorMsg : undefined;
     throw new BailianError(
       notLogined
         ? "Console session is not logged in or has expired."
@@ -150,9 +164,8 @@ export async function callConsoleGateway(
       notLogined ? ExitCode.AUTH : ExitCode.GENERAL,
       notLogined
         ? "Run `bl auth login --console` to sign in or refresh your console session."
-        : errorMsg && errorMsg !== errorCode
-          ? errorMsg
-          : undefined,
+        : undefined,
+      { rawResponse },
     );
   }
 

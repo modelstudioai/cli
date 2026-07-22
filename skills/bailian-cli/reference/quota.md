@@ -112,7 +112,6 @@ bl quota history --output json
 | Flag                           | Type   | Required | Description                                              |
 | ------------------------------ | ------ | -------- | -------------------------------------------------------- |
 | `--model <model>`              | string | no       | Model name(s), comma-separated                           |
-| `--all`                        | switch | no       | Show all models, not just self-service ones              |
 | `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
 | `--console-site <site>`        | string | no       | Console site: domestic, international                    |
 | `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
@@ -130,10 +129,6 @@ bl quota list --model qwen3.6-plus
 
 ```bash
 bl quota list --model qwen3.6-plus,qwen-turbo
-```
-
-```bash
-bl quota list --all
 ```
 
 ```bash

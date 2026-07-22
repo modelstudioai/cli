@@ -6,6 +6,97 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.10.1] - 2026-07-22
+
+### 变更
+
+- Token Plan 默认模型已更新为当前文本、图片，以及文生视频、图生视频和参考生视频的专用模型。
+- 百炼 CLI Skill 现在能更准确地区分百炼专属任务与普通宿主 Agent 任务，并避免在已授权的工作流中重复征求同意。
+- 已发布的 CLI 包现在支持 Node.js 18.17 及以上版本，最低版本要求由 Node.js 22.12 下调至 18.17。
+
+### 修复
+
+- Token Plan 现在能在图片编辑、图生视频、参考生视频和视觉理解中正确处理本地图片，无需另行托管为 URL。
+
+## [1.10.0] - 2026-07-19
+
+### 新增
+
+- **`bl config agent`** —— 一键配置 Claude Code、Qwen Code、OpenCode、OpenClaw、Hermes Agent 和 Codex 接入百炼模型服务。
+
+### 变更
+
+- 百炼 CLI Skill 现在只将匹配的百炼任务与多模态任务路由到 `bl`，并会在调用与平台无关的远程或计费能力前征求同意。
+
+### 修复
+
+- 完整执行 `bl auth logout` 时会同时清除模型 Base URL，避免后续登录继承失效的自定义或 Token Plan 接入地址。
+
+## [1.9.0] - 2026-07-17
+
+### 新增
+
+- **支持 Token Plan** —— 登录后即可直接调用支持的模型，无需手动配置接入地址。
+- **命名 Config Profile** —— 支持创建、切换和管理相互隔离的配置，登录后会自动激活当前 Profile。
+- **Console Access Token 自动化** —— 支持生成并自动刷新 Console Access Token。
+- **`bl workspace init`** —— 一站式完成百炼工作空间初始化和所需服务开通。
+
+### 修复
+
+- 提升配置安全性与一致性，包括密钥脱敏和自定义配置字段保留。
+
+## [1.8.3] - 2026-07-16
+
+### 修复
+
+- 修复 Windows 上 `bl text chat --messages-file -` 将标准输入当作 `/dev/stdin` 文件路径读取的问题；通过管道传入的 JSON 消息现在可以从标准输入正常读取。（#103）
+
+## [1.8.2] - 2026-07-15
+
+### 变更
+
+- `bl model list` 现在默认以 JSON 输出；需要表格视图请传 `--output text`。
+
+### 修复
+
+- `bl model list --enrich` 现在能正确返回每个模型的输入参数 schema（predictConfig）；此前因未解包控制台网关响应信封而始终为空。
+
+## [1.8.1] - 2026-07-14
+
+### 变更
+
+- 扩展 Command Pack 白名单，允许加载额外的内部命令扩展。
+
+## [1.8.0] - 2026-07-13
+
+### 新增
+
+- **`bl model list`** —— 浏览百炼模型市场：列出模型家族，或用 `--model` 查看单个家族的完整详情；支持按 provider、能力、特性、上下文窗口过滤，分页（`--page` / `--page-size`）、价格展示，以及 `--enrich` 获取更丰富的元数据。
+- **`bl usage summary`** —— 统一用量视图，一屏合并免费额度与近期用量概览；`--days` 设置概览时间窗口（默认 7 天）。
+- **Command Pack 宿主支持** —— 新增面向白名单内部命令扩展包的加载能力。
+- **音频与图像精调** —— 在原有文本流程之外新增 `bl finetune audio create`（CosyVoice 语音合成）与 `bl finetune image create`（万相图像生成）。`bl finetune image create` 支持 `--generation-type t2i|i2i` 显式选择文生图或图生图训练。
+- **音频与图像部署** —— `bl deploy audio create` 与 `bl deploy image create` 可将精调后的语音合成与图像模型部署为推理接入点。
+- **多模态数据集校验** —— `bl dataset upload` 与 `bl dataset validate` 现在支持使用 `tts`、`image` schema 的 `.zip` 压缩包，可校验包内引用的媒体文件，图像数据压缩包上限提升至 1 GB。
+
+### 变更
+
+- **精调与部署命令按模态拆分（BREAKING）**：`bl finetune create` → `bl finetune text create`，`bl deploy create` → `bl deploy text create`。请更新使用旧路径的脚本。
+- **部署参数重命名（BREAKING）**：部署创建命令的 `--template-id` 更名为 `--deploy-spec`。
+- **精调状态退出行为变更（BREAKING）**：`bl finetune watch` 不再使用退出码 3 表示任务运行中；运行中与成功均返回 0，失败与取消使用 CLI 的常规错误流程。
+- `bl deploy audio create` 默认使用 `--plan mu`（按模型单元计费，符合 CosyVoice 部署契约）；文本与图像仍默认 `lora`。
+- `bl finetune audio create` 现在会校验 CosyVoice 训练数据：音频必须为 `.wav`，每条 `wav_fn` 必须以 `train/` 开头，且只接受一个训练文件。
+- `bl quota list` 与 `bl quota check` 现在会基于监控数据展示真实的 RPM/TPM 用量与限额，新增 `RPM Left` / `TPM Left` 列及剩余额度进度条。
+- `bl usage free` 的输出现在与 `bl usage summary` 共用渲染逻辑，免费额度表格更一致。
+- `bl advisor recommend` 不再依赖独立的意图识别模型来分析你的需求。
+
+### 已移除
+
+- **移除 `bl advisor recommend` 使用的 `tongyi-intent-detect-v3` 集成（BREAKING）**，同时移除 `intent_detect_base_url` 配置字段与 `DASHSCOPE_INTENT_DETECT_BASE_URL` 环境变量。
+
+### 修复
+
+- Skill 命令参考文档生成现在直接读取产品命令源码，并在发布检查中保持稳定格式。
+
 ## [1.7.0] - 2026-07-09
 
 ### 新增

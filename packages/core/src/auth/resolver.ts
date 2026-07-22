@@ -1,4 +1,5 @@
 import { REGIONS } from "../config/schema.ts";
+import { normalizeModelBaseUrl } from "../config/model-base-url.ts";
 import type { ResolutionSources } from "../config/loader.ts";
 import type { ApiKeyCredential, ConsoleCredential, OpenApiCredential, AuthState } from "./types.ts";
 import { BailianError } from "../errors/base.ts";
@@ -7,9 +8,11 @@ import { ExitCode } from "../errors/codes.ts";
 // Resolve the credential for a command's declared domain (model = api-key,
 // console = access-token), by priority, or throw. Read only from sources.
 
-/** Model-domain baseUrl(flag > env > file > cn)——无需 key 也可解析;login 验证等用。 */
-export function resolveModelBaseUrl(s: ResolutionSources): string {
-  return s.flags.baseUrl || s.env.DASHSCOPE_BASE_URL || s.file.base_url || REGIONS.cn;
+/** Model-domain baseUrl(flag > env > config file > fallback);无需 key 也可解析。 */
+export function resolveModelBaseUrl(s: ResolutionSources, fallback: string = REGIONS.cn): string {
+  return normalizeModelBaseUrl(
+    s.flags.baseUrl || s.env.DASHSCOPE_BASE_URL || s.file.base_url || fallback,
+  );
 }
 
 /**
@@ -55,6 +58,7 @@ export function resolveOpenApi(s: ResolutionSources): OpenApiCredential {
     s.flags.accessKeyId,
     s.flags.accessKeySecret,
     s.flags.accessKeyId !== undefined || s.flags.accessKeySecret !== undefined,
+    s.flags.securityToken,
   );
   if (flagCred) return flagCred;
 
@@ -66,6 +70,7 @@ export function resolveOpenApi(s: ResolutionSources): OpenApiCredential {
       trimNonEmpty(s.env.ALIBABA_CLOUD_ACCESS_KEY_ID) ||
       trimNonEmpty(s.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET),
     ),
+    s.env.ALIBABA_CLOUD_SECURITY_TOKEN,
   );
   if (envCred) return envCred;
 
@@ -74,6 +79,7 @@ export function resolveOpenApi(s: ResolutionSources): OpenApiCredential {
     s.file.access_key_id,
     s.file.access_key_secret,
     Boolean(s.file.access_key_id || s.file.access_key_secret),
+    s.file.security_token,
   );
   if (configCred) return configCred;
 
@@ -89,6 +95,7 @@ function resolveOpenApiPair(
   rawAccessKeyId: string | undefined,
   rawAccessKeySecret: string | undefined,
   provided: boolean,
+  rawSecurityToken?: string,
 ): OpenApiCredential | undefined {
   if (!provided) return undefined;
 
@@ -103,7 +110,8 @@ function resolveOpenApiPair(
     );
   }
 
-  return { accessKeyId, accessKeySecret, source };
+  const securityToken = trimNonEmpty(rawSecurityToken);
+  return { accessKeyId, accessKeySecret, securityToken, source };
 }
 
 function trimNonEmpty(value: string | undefined): string | undefined {

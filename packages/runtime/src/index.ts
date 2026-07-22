@@ -5,6 +5,13 @@
 export { createCli } from "./create-cli.ts";
 export type { Cli, CliOptions } from "./create-cli.ts";
 
+// Command Pack product policy
+export type {
+  CommandPackCredentialAccess,
+  CommandPackDefinition,
+  CommandPackPolicy,
+} from "./command-packs/types.ts";
+
 // Command routing
 export { CommandRegistry } from "./registry.ts";
 export type { Command, FlagDef, LocateResult } from "./registry.ts";
@@ -22,11 +29,18 @@ export { handleError } from "./error-handler.ts";
 export { CLI_VERSION } from "./version.ts";
 
 // Console URLs referenced by commands (e.g. auth/status, banner)
-export { BAILIAN_CONSOLE_ROOT, BAILIAN_CONSOLE, API_KEY_PAGE, VOICE_TTS_PAGE } from "./urls.ts";
+export {
+  BAILIAN_CONSOLE_ROOT,
+  BAILIAN_CONSOLE,
+  API_KEY_PAGE,
+  TOKEN_PLAN_PAGE,
+  VOICE_TTS_PAGE,
+} from "./urls.ts";
 
 // Output facilities consumed by commands
 export { emitResult, emitBare } from "./output/output.ts";
 export { formatTable } from "./output/table.ts";
+export { renderBoxTable, type BoxTableOptions, type BarColumn } from "./output/box-table.ts";
 export { createSpinner, createProgressBar } from "./output/progress.ts";
 export { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
 export { maybeShowStatusBar } from "./output/status-bar.ts";

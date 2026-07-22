@@ -27,11 +27,16 @@ Use this index for the full quick index and global flags.
 | `bl asset-center storage`           | View storage quota, usage, and overage pricing                                                                                  | [asset-center.md](asset-center.md) |
 | `bl asset-center transfer list`     | List asset OSS transfer records (filtered by sync status)                                                                       | [asset-center.md](asset-center.md) |
 | `bl asset-center unfavorite`        | Remove assets from favorites                                                                                                    | [asset-center.md](asset-center.md) |
+| `bl auth generate-access-token`     | Generate a CLI access token using OpenAPI AK/SK                                                                                 | [auth.md](auth.md)                 |
 | `bl auth login`                     | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist)                                    | [auth.md](auth.md)                 |
-| `bl auth logout`                    | Clear stored credentials                                                                                                        | [auth.md](auth.md)                 |
+| `bl auth logout`                    | Clear stored credentials; full logout also clears the model Base URL                                                            | [auth.md](auth.md)                 |
 | `bl auth status`                    | Show current authentication state                                                                                               | [auth.md](auth.md)                 |
+| `bl config agent`                   | Configure a coding agent to use DashScope API                                                                                   | [config.md](config.md)             |
+| `bl config list`                    | List config profiles and show the active profile                                                                                | [config.md](config.md)             |
 | `bl config set`                     | Set a config value                                                                                                              | [config.md](config.md)             |
 | `bl config show`                    | Display current configuration                                                                                                   | [config.md](config.md)             |
+| `bl config ui`                      | Open a local web UI to manage config profiles                                                                                   | [config.md](config.md)             |
+| `bl config use`                     | Set the active config profile                                                                                                   | [config.md](config.md)             |
 | `bl console call`                   | Call a Bailian console API via the CLI gateway                                                                                  | [console.md](console.md)           |
 | `bl dataset delete`                 | Delete a dataset file by ID                                                                                                     | [dataset.md](dataset.md)           |
 | `bl dataset get`                    | Get details of a single dataset file                                                                                            | [dataset.md](dataset.md)           |
@@ -60,7 +65,7 @@ Use this index for the full quick index and global flags.
 | `bl finetune logs`                  | Fetch training logs for a fine-tune job                                                                                         | [finetune.md](finetune.md)         |
 | `bl finetune text create`           | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                   | [finetune.md](finetune.md)         |
 | `bl finetune watch`                 | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                      | [finetune.md](finetune.md)         |
-| `bl image edit`                     | Edit an existing image with text instructions (Qwen-Image)                                                                      | [image.md](image.md)               |
+| `bl image edit`                     | Edit an existing image with text instructions (Qwen-Image / Wan 2.7)                                                            | [image.md](image.md)               |
 | `bl image generate`                 | Generate images (Qwen-Image / wan2.x)                                                                                           | [image.md](image.md)               |
 | `bl knowledge chat`                 | Chat with a Bailian knowledge base (RAG Q&A with streaming)                                                                     | [knowledge.md](knowledge.md)       |
 | `bl knowledge retrieve`             | Retrieve from a Bailian knowledge base (deprecated, use `search` instead)                                                       | [knowledge.md](knowledge.md)       |
@@ -75,9 +80,14 @@ Use this index for the full quick index and global flags.
 | `bl memory profile get`             | Get user profile by schema ID and user ID                                                                                       | [memory.md](memory.md)             |
 | `bl memory search`                  | Search memory nodes by query or messages                                                                                        | [memory.md](memory.md)             |
 | `bl memory update`                  | Update a memory node content                                                                                                    | [memory.md](memory.md)             |
+| `bl model list`                     | Browse model families or show detailed model info in the Bailian model marketplace                                              | [model.md](model.md)               |
 | `bl omni`                           | Multimodal chat with text + audio output (Qwen-Omni)                                                                            | [omni.md](omni.md)                 |
 | `bl pipeline run`                   | Run a pipeline workflow definition                                                                                              | [pipeline.md](pipeline.md)         |
 | `bl pipeline validate`              | Validate a pipeline definition without executing                                                                                | [pipeline.md](pipeline.md)         |
+| `bl plugin install`                 | Install or upgrade an allowlisted Command Pack                                                                                  | [plugin.md](plugin.md)             |
+| `bl plugin link`                    | Link an allowlisted local Command Pack for development                                                                          | [plugin.md](plugin.md)             |
+| `bl plugin list`                    | List installed Command Packs and their load status                                                                              | [plugin.md](plugin.md)             |
+| `bl plugin remove`                  | Remove an installed Command Pack                                                                                                | [plugin.md](plugin.md)             |
 | `bl quota check`                    | Check current usage against rate limits                                                                                         | [quota.md](quota.md)               |
 | `bl quota history`                  | View quota change history                                                                                                       | [quota.md](quota.md)               |
 | `bl quota list`                     | View model RPM/TPM rate limits                                                                                                  | [quota.md](quota.md)               |
@@ -94,12 +104,14 @@ Use this index for the full quick index and global flags.
 | `bl usage free`                     | Query free-tier quota for models (all models if --model is omitted)                                                             | [usage.md](usage.md)               |
 | `bl usage freetier`                 | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable                                      | [usage.md](usage.md)               |
 | `bl usage stats`                    | Query model usage statistics                                                                                                    | [usage.md](usage.md)               |
+| `bl usage summary`                  | Show a unified usage summary: free-tier quota and recent usage overview                                                         | [usage.md](usage.md)               |
 | `bl video download`                 | Download a completed video by task ID                                                                                           | [video.md](video.md)               |
 | `bl video edit`                     | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                                          | [video.md](video.md)               |
 | `bl video generate`                 | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)                                      | [video.md](video.md)               |
 | `bl video ref`                      | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice                           | [video.md](video.md)               |
 | `bl video task get`                 | Query async task status                                                                                                         | [video.md](video.md)               |
 | `bl vision describe`                | Describe an image or video using Qwen-VL                                                                                        | [vision.md](vision.md)             |
+| `bl workspace init`                 | Initialize Bailian workspace and activate postpaid services                                                                     | [workspace.md](workspace.md)       |
 | `bl workspace list`                 | List all workspaces                                                                                                             | [workspace.md](workspace.md)       |
 
 ## By group
@@ -109,8 +121,8 @@ Use this index for the full quick index and global flags.
 | `advisor`      | `recommend`                                                                                                                                                                 | [advisor.md](advisor.md)           |
 | `app`          | `call`, `list`                                                                                                                                                              | [app.md](app.md)                   |
 | `asset-center` | `delete`, `download`, `favorite`, `get`, `list`, `oss bind`, `oss show`, `oss slr authorize`, `oss unbind`, `oss update`, `stats`, `storage`, `transfer list`, `unfavorite` | [asset-center.md](asset-center.md) |
-| `auth`         | `login`, `logout`, `status`                                                                                                                                                 | [auth.md](auth.md)                 |
-| `config`       | `set`, `show`                                                                                                                                                               | [config.md](config.md)             |
+| `auth`         | `generate-access-token`, `login`, `logout`, `status`                                                                                                                        | [auth.md](auth.md)                 |
+| `config`       | `agent`, `list`, `set`, `show`, `ui`, `use`                                                                                                                                 | [config.md](config.md)             |
 | `console`      | `call`                                                                                                                                                                      | [console.md](console.md)           |
 | `dataset`      | `delete`, `get`, `list`, `upload`, `validate`                                                                                                                               | [dataset.md](dataset.md)           |
 | `deploy`       | `audio create`, `delete`, `get`, `image create`, `list`, `models`, `scale`, `text create`, `update`                                                                         | [deploy.md](deploy.md)             |
@@ -120,32 +132,35 @@ Use this index for the full quick index and global flags.
 | `knowledge`    | `chat`, `retrieve`, `search`                                                                                                                                                | [knowledge.md](knowledge.md)       |
 | `mcp`          | `call`, `list`, `tools`                                                                                                                                                     | [mcp.md](mcp.md)                   |
 | `memory`       | `add`, `delete`, `list`, `profile create`, `profile get`, `search`, `update`                                                                                                | [memory.md](memory.md)             |
+| `model`        | `list`                                                                                                                                                                      | [model.md](model.md)               |
 | `omni`         | `(root)`                                                                                                                                                                    | [omni.md](omni.md)                 |
 | `pipeline`     | `run`, `validate`                                                                                                                                                           | [pipeline.md](pipeline.md)         |
+| `plugin`       | `install`, `link`, `list`, `remove`                                                                                                                                         | [plugin.md](plugin.md)             |
 | `quota`        | `check`, `history`, `list`, `request`                                                                                                                                       | [quota.md](quota.md)               |
 | `search`       | `web`                                                                                                                                                                       | [search.md](search.md)             |
 | `speech`       | `recognize`, `synthesize`                                                                                                                                                   | [speech.md](speech.md)             |
 | `text`         | `chat`                                                                                                                                                                      | [text.md](text.md)                 |
 | `token-plan`   | `add-member`, `assign-seats`, `create-key`, `list-seats`                                                                                                                    | [token-plan.md](token-plan.md)     |
 | `update`       | `(root)`                                                                                                                                                                    | [update.md](update.md)             |
-| `usage`        | `free`, `freetier`, `stats`                                                                                                                                                 | [usage.md](usage.md)               |
+| `usage`        | `free`, `freetier`, `stats`, `summary`                                                                                                                                      | [usage.md](usage.md)               |
 | `video`        | `download`, `edit`, `generate`, `ref`, `task get`                                                                                                                           | [video.md](video.md)               |
 | `vision`       | `describe`                                                                                                                                                                  | [vision.md](vision.md)             |
-| `workspace`    | `list`                                                                                                                                                                      | [workspace.md](workspace.md)       |
+| `workspace`    | `init`, `list`                                                                                                                                                              | [workspace.md](workspace.md)       |
 
 ## Global flags
 
 Available on every command (in addition to command-specific flags):
 
-| Flag                  | Type   | Required | Description                         |
-| --------------------- | ------ | -------- | ----------------------------------- |
-| `--output <format>`   | string | no       | Output format: text, json           |
-| `--timeout <seconds>` | number | no       | Request timeout                     |
-| `--quiet`             | switch | no       | Suppress non-essential output       |
-| `--verbose`           | switch | no       | Print HTTP request/response details |
-| `--dry-run`           | switch | no       | Dry run mode                        |
-| `--help`              | switch | no       | Show help                           |
-| `--version`           | switch | no       | Print version                       |
+| Flag                  | Type   | Required | Description                           |
+| --------------------- | ------ | -------- | ------------------------------------- |
+| `--output <format>`   | string | no       | Output format: text, json             |
+| `--timeout <seconds>` | number | no       | Request timeout                       |
+| `--quiet`             | switch | no       | Suppress non-essential output         |
+| `--verbose`           | switch | no       | Print HTTP request/response details   |
+| `--dry-run`           | switch | no       | Dry run mode                          |
+| `--config <name>`     | string | no       | Use a config profile for this command |
+| `--help`              | switch | no       | Show help                             |
+| `--version`           | switch | no       | Print version                         |
 
 ## Model auth flags
 
@@ -175,6 +190,7 @@ Available on OpenAPI-domain commands (AK/SK auth); also listed per command below
 | --------------------------- | ------ | -------- | ---------------------------------------------------------------------- |
 | `--access-key-id <key>`     | string | no       | Alibaba Cloud Access Key ID (env: ALIBABA_CLOUD_ACCESS_KEY_ID)         |
 | `--access-key-secret <key>` | string | no       | Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET) |
+| `--security-token <token>`  | string | no       | Alibaba Cloud STS Security Token (env: ALIBABA_CLOUD_SECURITY_TOKEN)   |
 
 ## Notes
 

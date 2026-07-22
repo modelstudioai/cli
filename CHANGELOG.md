@@ -6,6 +6,97 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.10.1] - 2026-07-22
+
+### Changed
+
+- Token Plan defaults now use the current text, image, and dedicated text-to-video, image-to-video, and reference-to-video models.
+- The Bailian CLI Skill now distinguishes Bailian-specific tasks from ordinary host-agent work more accurately and avoids repeated consent prompts within an approved workflow.
+- Published CLI packages now support Node.js 18.17 and later, lowering the previous minimum requirement from Node.js 22.12.
+
+### Fixed
+
+- Token Plan now handles local images correctly for image editing, image-to-video, reference-to-video, and vision understanding without requiring a separately hosted URL.
+
+## [1.10.0] - 2026-07-19
+
+### Added
+
+- **`bl config agent`** — configure Claude Code, Qwen Code, OpenCode, OpenClaw, Hermes Agent, or Codex to use DashScope in one command.
+
+### Changed
+
+- The Bailian CLI Skill now routes only matching Bailian and multimodal tasks to `bl`, and asks for consent before provider-neutral remote or billable calls.
+
+### Fixed
+
+- Full `bl auth logout` now clears the model Base URL so later logins cannot inherit a stale custom or Token Plan endpoint.
+
+## [1.9.0] - 2026-07-17
+
+### Added
+
+- **Token Plan support** — log in and call supported models directly without manually configuring the endpoint.
+- **Named Config Profiles** — create, switch, and manage isolated configurations; logging in to a named Profile activates it automatically.
+- **Console Access Token automation** — generate and automatically refresh Console Access Tokens.
+- **`bl workspace init`** — initialize a Bailian workspace and activate the required services in one workflow.
+
+### Fixed
+
+- Improved configuration safety and consistency, including secret masking and preservation of custom configuration fields.
+
+## [1.8.3] - 2026-07-16
+
+### Fixed
+
+- Fixed `bl text chat --messages-file -` failing on Windows by treating standard input as a `/dev/stdin` file path; piped JSON messages are now read from standard input correctly. (#103)
+
+## [1.8.2] - 2026-07-15
+
+### Changed
+
+- `bl model list` now defaults to JSON output; pass `--output text` for the table view.
+
+### Fixed
+
+- `bl model list --enrich` now returns each model's input parameter schema (predictConfig); it was previously always empty because the console gateway response envelope was not unwrapped.
+
+## [1.8.1] - 2026-07-14
+
+### Changed
+
+- Expanded the Command Pack allowlist to accept an additional internal command extension.
+
+## [1.8.0] - 2026-07-13
+
+### Added
+
+- **`bl model list`** — browse the Bailian model marketplace: list model families or show full details for a single family (`--model`), with filters for provider, capability, feature, and context-window, pagination (`--page` / `--page-size`), pricing, and `--enrich` for richer metadata.
+- **`bl usage summary`** — a unified usage view combining free-tier quota and a recent usage overview; `--days` sets the overview window (default 7).
+- **Command Pack host support** — added support for allowlisted internal command extensions.
+- **Audio & image fine-tuning** — `bl finetune audio create` (CosyVoice TTS) and `bl finetune image create` (Wan image generation) join the existing text flow. `bl finetune image create` supports `--generation-type t2i|i2i` to select text-to-image or image-to-image training.
+- **Audio & image deployment** — `bl deploy audio create` and `bl deploy image create` deploy fine-tuned TTS and image models as endpoints.
+- **Multimodal dataset validation** — `bl dataset upload` and `bl dataset validate` now accept `.zip` archives with `tts` and `image` schemas, validate referenced media files, and allow image archives up to 1 GB.
+
+### Changed
+
+- **Fine-tune and deploy commands are now split by modality (BREAKING)**: `bl finetune create` → `bl finetune text create`, and `bl deploy create` → `bl deploy text create`. Update any scripts that use the old paths.
+- **Deployment option renamed (BREAKING)**: `--template-id` → `--deploy-spec` on deployment creation commands.
+- **Fine-tune status exit behavior changed (BREAKING)**: `bl finetune watch` no longer reserves exit code 3 for running jobs. Running and succeeded jobs return 0; failed and canceled jobs use normal CLI errors.
+- `bl deploy audio create` now defaults to `--plan mu` (model-unit billing, per the CosyVoice deployment contract); text and image continue to default to `lora`.
+- `bl finetune audio create` now validates CosyVoice training data: audio files must be `.wav`, each `wav_fn` must start with `train/`, and exactly one training file is accepted.
+- `bl quota list` and `bl quota check` now report real RPM/TPM usage against limits, adding `RPM Left` / `TPM Left` columns with remaining-quota progress bars sourced from monitoring data.
+- `bl usage free` output now shares its rendering with `bl usage summary` for consistent free-tier tables.
+- `bl advisor recommend` no longer depends on a dedicated intent-detection model to analyze your request.
+
+### Removed
+
+- **Removed the `tongyi-intent-detect-v3` integration (BREAKING)** used by `bl advisor recommend`, along with the `intent_detect_base_url` config field and the `DASHSCOPE_INTENT_DETECT_BASE_URL` environment variable.
+
+### Fixed
+
+- Skill command-reference generation now reads product command maps directly from source and produces stable formatting during release checks.
+
 ## [1.7.0] - 2026-07-09
 
 ### Added

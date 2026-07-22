@@ -2,6 +2,7 @@ import type { Identity, Settings } from "../config/schema.ts";
 import type { ConfigStore } from "../config/store.ts";
 import type { AuthStore } from "../auth/store.ts";
 import type { Client } from "../client/client.ts";
+import type { CommandPackManager } from "./command-pack-manager.ts";
 
 // ── Flag definitions ─────────────────────────────────────────────────────────
 // Flags are keyed by camelCase name (the key IS the parsed flag name, e.g.
@@ -71,6 +72,11 @@ export const GLOBAL_FLAGS = {
   quiet: { type: "switch", description: "Suppress non-essential output" },
   verbose: { type: "switch", description: "Print HTTP request/response details" },
   dryRun: { type: "switch", description: "Dry run mode" },
+  config: {
+    type: "string",
+    valueHint: "<name>",
+    description: "Use a config profile for this command",
+  },
   help: { type: "switch", description: "Show help" },
   version: { type: "switch", description: "Print version" },
 } satisfies FlagsDef;
@@ -131,6 +137,11 @@ export const OPENAPI_AUTH_FLAGS = {
     valueHint: "<key>",
     description: "Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET)",
   },
+  securityToken: {
+    type: "string",
+    valueHint: "<token>",
+    description: "Alibaba Cloud STS Security Token (env: ALIBABA_CLOUD_SECURITY_TOKEN)",
+  },
 } satisfies FlagsDef;
 
 /** sources 里可能出现的全部 flag(全局 + 凭证域)。 */
@@ -164,10 +175,12 @@ export interface CommandContext<F extends FlagsDef = FlagsDef> {
   flags: ParsedFlags<F>;
   /** Network surface; the credential for the command's `auth` is pre-injected. */
   client: Client;
-  /** 惰性访问器,lint 限定 commands/config/** 使用。 */
-  configStore(): ConfigStore;
-  /** 惰性访问器,lint 限定 commands/auth/** 使用。 */
-  authStore(): AuthStore;
+  /** 配置持久化能力；lint 限定 commands/config/** 使用。 */
+  configStore: ConfigStore;
+  /** 鉴权持久化能力；lint 限定 commands/auth/** 使用。 */
+  authStore: AuthStore;
+  /** Command Pack 管理能力；lint 限定 commands/plugin/** 使用。 */
+  commandPacks: CommandPackManager;
 }
 
 // ── Command ──────────────────────────────────────────────────────────────────

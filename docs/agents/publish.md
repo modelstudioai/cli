@@ -29,8 +29,9 @@
 1. 确保当前 release tooling 覆盖的包(`tools/release/lib/packages.mjs`)已升到目标版本且一致;当前基础集合为 `packages/core` / `packages/runtime` / `packages/commands` / `packages/cli`，`knowledge-studio-cli` 发布会额外包含 `packages/kscli`
 2. 在 GitHub 触发 Publish workflow，package 选目标包集合，mode 选 `stable`
 3. 需要 production environment 审批人批准
-4. CI 自动：自检 → 构建 → 发布到 latest → 打 git tag
-5. 对应脚本：`tools/release/publish-stable.mjs`
+4. CI 自动：自检 → 构建 → 检查 npm 已发布版本 → 发布到 latest → 打 git tag
+5. 如果所选发布集合的当前版本已全部存在于 npm，stable 发布会失败并提示先升级版本号；如果只有部分包已发布，CI 会继续补发缺失包
+6. 对应脚本：`tools/release/publish-stable.mjs`
 
 ## 自检（`tools/release/check.mjs`）
 
@@ -92,14 +93,15 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 
 ## 常见漏点（基于历史踩坑）
 
-| 漏点                                                     | 后果                                                                               |
-| -------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| 只升部分包,漏升 runtime/commands/kscli                   | 当前 check.mjs 按所选发布集合校验,但未选择 `knowledge-studio-cli` 时不会覆盖 kscli |
-| 新增发布包但没加 `tools/release/lib/packages.mjs`        | CI 不会 bump/publish/校验该包                                                      |
-| cli 升版号但 core 没升                                   | check.mjs 会拦下                                                                   |
-| 发版漏更 CHANGELOG，或分类写成规范外的 `优化`/`Improved` | 用户看不到本次变更，分类与历史不一致                                               |
-| `1.0.0` 当 beta 直接发                                   | 占了 `latest` tag，所有用户被强升，撤回成本极高                                    |
-| README 写的 bin 名实际 `package.json.bin` 没注册         | 用户复制命令报 `command not found`                                                 |
-| Node 徽章 `>=18`、engines `>=22.12` 不一致               | 用户在 Node 18 上 `npm i` 被 engine 警告或直接失败                                 |
-| npm Trusted Publisher 的 workflow filename 改了没同步    | OIDC 匹配不上，publish 报 404                                                      |
-| CI 用 Node 22（npm 10）跑 publish                        | npm 10 不支持 OIDC token 交换，publish 报 404                                      |
+| 漏点                                                                | 后果                                                                               |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| 只升部分包,漏升 runtime/commands/kscli                              | 当前 check.mjs 按所选发布集合校验,但未选择 `knowledge-studio-cli` 时不会覆盖 kscli |
+| 新增发布包但没加 `tools/release/lib/packages.mjs`                   | CI 不会 bump/publish/校验该包                                                      |
+| cli 升版号但 core 没升                                              | check.mjs 会拦下                                                                   |
+| 发版漏更 CHANGELOG，或分类写成规范外的 `优化`/`Improved`            | 用户看不到本次变更，分类与历史不一致                                               |
+| `1.0.0` 当 beta 直接发                                              | 占了 `latest` tag，所有用户被强升，撤回成本极高                                    |
+| README 写的 bin 名实际 `package.json.bin` 没注册                    | 用户复制命令报 `command not found`                                                 |
+| Node 徽章与 `cli/package.json.engines` 不一致（当前应为 `>=18.17`） | 用户在声明外的 Node 上 `npm i` 被 engine 警告或直接失败                            |
+| npm Trusted Publisher 的 workflow filename 改了没同步               | OIDC 匹配不上，publish 报 404                                                      |
+| CI 用 Node 22（npm 10）跑 publish                                   | npm 10 不支持 OIDC token 交换，publish 报 404                                      |
+| stable 发布前没有升级版本号                                         | 所选发布集合的版本已全部存在于 npm，CI 明确报错并要求先升级版本号                  |

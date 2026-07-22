@@ -12,7 +12,7 @@
 
 ### A. 版本一致性
 
-- [ ] `package.json` 的 `engines.node` 与 README 的 Node.js 徽章一致
+- [ ] 发布包（`cli` 等）的 `engines.node` 与 README 的 Node.js 徽章一致；根/e2e 开发要求（`>=22.12`）与 CONTRIBUTING 一致
 - [ ] `pnpm-lock.yaml` 同步生成(运行 `pnpm install`)
 - [ ] 各源码包 `tsconfig.json`(根 + core + runtime + commands + cli + kscli)的 target / module 设置一致
 
@@ -42,7 +42,7 @@
 
 - [ ] `.vite-hooks/pre-commit` 改动后,`pnpm install` 重新软链(走 `prepare: vp config`)
 - [ ] 增加 hook 时,确认在干净 clone 后能自动激活
-- [ ] pre-commit 会跑 `pnpm run sync:skill-assets`(先 build core,再 `generate:reference` + `sync:skill-version`)并 `git add` skill 资产,最后 `vp staged`
+- [ ] pre-commit 会跑 `pnpm run sync:skill-assets`(`generate:reference` 含格式化 + `sync:skill-version`,直接读源码、无需先 build)并 `git add` skill 资产,最后 `vp staged`
 
 ### F. CI / 发版工具
 
