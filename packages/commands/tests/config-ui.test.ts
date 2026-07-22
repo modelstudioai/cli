@@ -81,6 +81,8 @@ test("GET /api/config 返回全部 profile、明文密钥与持久化激活项",
     expect(res.json.default).toMatchObject({ api_key: "sk-default", output: "json" });
     expect(res.json.named.dev).toMatchObject({ api_key: "sk-dev", access_token: "tok-dev" });
     expect(res.json.secretKeys).toContain("api_key");
+    expect(res.json.keys).toContain("default_image_to_video_model");
+    expect(res.json.keys).toContain("default_reference_to_video_model");
   });
 });
 

@@ -51,7 +51,7 @@ Use this index for the full quick index and global flags.
 | `bl finetune logs`              | Fetch training logs for a fine-tune job                                                                                         | [finetune.md](finetune.md)     |
 | `bl finetune text create`       | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                   | [finetune.md](finetune.md)     |
 | `bl finetune watch`             | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                      | [finetune.md](finetune.md)     |
-| `bl image edit`                 | Edit an existing image with text instructions (Qwen-Image)                                                                      | [image.md](image.md)           |
+| `bl image edit`                 | Edit an existing image with text instructions (Qwen-Image / Wan 2.7)                                                            | [image.md](image.md)           |
 | `bl image generate`             | Generate images (Qwen-Image / wan2.x)                                                                                           | [image.md](image.md)           |
 | `bl knowledge chat`             | Chat with a Bailian knowledge base (RAG Q&A with streaming)                                                                     | [knowledge.md](knowledge.md)   |
 | `bl knowledge retrieve`         | Retrieve from a Bailian knowledge base (deprecated, use `search` instead)                                                       | [knowledge.md](knowledge.md)   |

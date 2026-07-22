@@ -24,7 +24,7 @@ Verify: `bl --version` (prints `bl X.Y.Z`).
 | Auth               | How                                                                                              | Used by                                       |
 | ------------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------- |
 | API key            | `export DASHSCOPE_API_KEY=sk-...` or `bl auth login --api-key sk-...`                            | Most DashScope API commands                   |
-| Token Plan API key | `bl auth login --config token-plan --api-key sk-sp-...`                                          | Token Plan text and image model consumption   |
+| Token Plan API key | `bl auth login --config token-plan --api-key sk-sp-...`                                          | Token Plan text, image, and video consumption |
 | Console            | `bl auth login --console --console-site domestic` or `... international`                         | `app list`, `usage free`, `console call`      |
 | OpenAPI AK         | `bl auth login --open-api --access-key-id <id> --access-key-secret <secret>` or Alibaba env vars | Token Plan management commands (`token-plan`) |
 
@@ -46,6 +46,7 @@ Get or copy the Token Plan API key from the [subscription overview](https://bail
 bl auth login --config token-plan --api-key sk-sp-xxx
 bl text chat --message "Hello"
 bl image generate --prompt "A cat"
+bl video generate --prompt "A horse running through a field"
 ```
 
 The built-in Profile supplies the Token Plan Base URL. `auth login` tests the key first, then saves
@@ -71,8 +72,11 @@ Activation selects the entire Config for every credential domain, not only model
 The built-in `token-plan` profile defaults to:
 
 - Base URL: `https://token-plan.cn-beijing.maas.aliyuncs.com`
-- Text model: `qwen3.7-max`
-- Image model: `qwen-image-2.0`
+- Text model: `qwen3.8-max-preview`
+- Image model: `wan2.7-image`
+- Text-to-video model (`default_video_model`): `happyhorse-1.1-t2v`
+- Image-to-video model (`default_image_to_video_model`): `happyhorse-1.1-i2v`
+- Reference-to-video model (`default_reference_to_video_model`): `happyhorse-1.1-r2v`
 
 The usual priority applies to this profile too: per-command `--api-key` / `--base-url`, then `DASHSCOPE_API_KEY` / `DASHSCOPE_BASE_URL`, then the selected profile. Unset environment overrides when you want to use the credentials saved in `token-plan`.
 

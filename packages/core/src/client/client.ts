@@ -4,7 +4,7 @@ import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { request, requestJson, type HttpDeps, type RequestOpts } from "./http.ts";
 import { buildAcsCanonicalQuery, signAcsRequest, type AcsQueryParams } from "./acs.ts";
-import { isLocalFile, resolveFileUrl } from "../files/upload.ts";
+import { imageFileToDataUri, isLocalFile, resolveFileUrl } from "../files/upload.ts";
 import { McpClient } from "./mcp.ts";
 import { callConsoleGateway } from "../console/gateway.ts";
 import { refreshAccessToken } from "../auth/refresh-token.ts";
@@ -116,6 +116,32 @@ export class Client {
   uploadFile(source: string, model: string, opts: { signal?: AbortSignal } = {}): Promise<string> {
     if (!isLocalFile(source)) return Promise.resolve(source);
     return resolveFileUrl(source, this.requireApi().token, model, opts);
+  }
+
+  /**
+   * Resolve an image input while keeping Token Plan's upload limitation isolated.
+   * Token Plan local images are sent as Data URIs; every other connection keeps
+   * the established temporary OSS upload flow. URLs and existing Data URIs pass through.
+   */
+  resolveImageInput(
+    source: string,
+    model: string,
+    opts: { signal?: AbortSignal } = {},
+  ): Promise<string> {
+    if (!isLocalFile(source)) return Promise.resolve(source);
+    if (this.usesTokenPlanEndpoint()) {
+      return Promise.resolve(imageFileToDataUri(source));
+    }
+    return this.uploadFile(source, model, { signal: opts.signal });
+  }
+
+  usesTokenPlanEndpoint(): boolean {
+    if (this.deps.settings.configName === "token-plan") return true;
+    try {
+      return /^token-plan\.[a-z0-9-]+\.maas\.aliyuncs\.com$/i.test(new URL(this.baseUrl).hostname);
+    } catch {
+      return false;
+    }
   }
 
   /** Open an MCP client. Accepts a path (prepended with the model baseUrl) or an absolute URL. */

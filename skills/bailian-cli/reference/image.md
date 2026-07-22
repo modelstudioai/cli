@@ -7,20 +7,20 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command             | Description                                                |
-| ------------------- | ---------------------------------------------------------- |
-| `bl image edit`     | Edit an existing image with text instructions (Qwen-Image) |
-| `bl image generate` | Generate images (Qwen-Image / wan2.x)                      |
+| Command             | Description                                                          |
+| ------------------- | -------------------------------------------------------------------- |
+| `bl image edit`     | Edit an existing image with text instructions (Qwen-Image / Wan 2.7) |
+| `bl image generate` | Generate images (Qwen-Image / wan2.x)                                |
 
 ## Command details
 
 ### `bl image edit`
 
-| Field           | Value                                                      |
-| --------------- | ---------------------------------------------------------- |
-| **Name**        | `image edit`                                               |
-| **Description** | Edit an existing image with text instructions (Qwen-Image) |
-| **Usage**       | `bl image edit --image <url> --prompt <text> [flags]`      |
+| Field           | Value                                                                |
+| --------------- | -------------------------------------------------------------------- |
+| **Name**        | `image edit`                                                         |
+| **Description** | Edit an existing image with text instructions (Qwen-Image / Wan 2.7) |
+| **Usage**       | `bl image edit --image <url> --prompt <text> [flags]`                |
 
 #### Flags
 
@@ -59,6 +59,10 @@ bl image edit --image ./a.png --image ./b.png --prompt "Merge two images into on
 
 ```bash
 bl image edit --image https://example.com/photo.png --prompt "Remove the person" --model qwen-image-2.0-pro
+```
+
+```bash
+bl image edit --image ./photo.png --prompt "Change the style" --model wan2.7-image
 ```
 
 ```bash

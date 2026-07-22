@@ -31,11 +31,16 @@ import { BOOL_FLAG_PROMPT_EXTEND_IMAGE_GENERATE, BOOL_FLAG_WATERMARK } from "bai
 
 import { join } from "path";
 
-// qwen-image-2.0 series uses the sync multimodal-generation endpoint
-const SYNC_MODEL_PREFIXES = ["qwen-image-2.0", "qwen-image-max"];
+// Qwen-Image 2.0 and Wan 2.7 use the sync multimodal-generation endpoint.
+const SYNC_MODEL_PREFIXES = ["qwen-image-2.0", "qwen-image-max", "wan2.7-image"];
+const PROMPT_EXTEND_DEFAULT_PREFIXES = ["qwen-image-2.0", "qwen-image-max"];
 
 function isSyncModel(model: string): boolean {
-  return SYNC_MODEL_PREFIXES.some((p) => model.startsWith(p));
+  return SYNC_MODEL_PREFIXES.some((prefix) => model.startsWith(prefix));
+}
+
+function enablesPromptExtendByDefault(model: string): boolean {
+  return PROMPT_EXTEND_DEFAULT_PREFIXES.some((prefix) => model.startsWith(prefix));
 }
 
 const GENERATE_FLAGS = {
@@ -121,7 +126,7 @@ export default defineCommand({
 
     const promptExtend = resolveBooleanFlag(
       flags.promptExtend,
-      useSync ? true : undefined,
+      enablesPromptExtendByDefault(model) ? true : undefined,
       "prompt-extend",
     );
 

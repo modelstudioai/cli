@@ -267,8 +267,11 @@ describe("e2e: auth", () => {
       expect(config["token-plan"]).toMatchObject({
         api_key: "sk-sp-e2e-placeholder",
         base_url: validationServer.baseUrl,
-        default_text_model: "qwen3.7-max",
-        default_image_model: "qwen-image-2.0",
+        default_text_model: "qwen3.8-max-preview",
+        default_video_model: "happyhorse-1.1-t2v",
+        default_image_to_video_model: "happyhorse-1.1-i2v",
+        default_reference_to_video_model: "happyhorse-1.1-r2v",
+        default_image_model: "wan2.7-image",
       });
     } finally {
       await validationServer.close();
@@ -284,6 +287,9 @@ describe("e2e: auth", () => {
         {
           "token-plan": {
             default_text_model: "custom-text-model",
+            default_video_model: "custom-video-model",
+            default_image_to_video_model: "custom-image-to-video-model",
+            default_reference_to_video_model: "custom-reference-to-video-model",
             default_image_model: "custom-image-model",
           },
         },
@@ -309,9 +315,9 @@ describe("e2e: auth", () => {
         authorization: "Bearer sk-sp-e2e-placeholder",
         sourceConfig: expect.any(String),
         body: {
-          model: "qwen3.7-max",
+          model: "qwen3.8-max-preview",
           stream: false,
-          enable_thinking: false,
+          enable_thinking: true,
         },
       });
 
@@ -324,8 +330,11 @@ describe("e2e: auth", () => {
       expect(config["token-plan"]).toMatchObject({
         api_key: "sk-sp-e2e-placeholder",
         base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
-        default_text_model: "qwen3.7-max",
-        default_image_model: "qwen-image-2.0",
+        default_text_model: "qwen3.8-max-preview",
+        default_video_model: "happyhorse-1.1-t2v",
+        default_image_to_video_model: "happyhorse-1.1-i2v",
+        default_reference_to_video_model: "happyhorse-1.1-r2v",
+        default_image_model: "wan2.7-image",
       });
       expect((config["token-plan"] as Record<string, unknown>).base_url).not.toBe(
         validationServer.baseUrl,

@@ -20,6 +20,9 @@ interface ApiKeyLoginProfile {
   baseUrl: string;
   persistBaseUrl?: string;
   defaultTextModel?: string;
+  defaultVideoModel?: string;
+  defaultImageToVideoModel?: string;
+  defaultReferenceToVideoModel?: string;
   defaultImageModel?: string;
   persistPatch?: AuthPersistPatch;
 }
@@ -54,17 +57,18 @@ export async function validateAndPersistApiKey(
   const persistBaseUrl = profile.persistBaseUrl
     ? normalizeModelBaseUrl(profile.persistBaseUrl)
     : undefined;
+  const validationModel = profile.defaultTextModel || "qwen3.7-max";
   const requestOpts = {
     url: baseUrl + chatPath(),
     method: "POST",
     headers: { Authorization: `Bearer ${key}` },
     timeout: Math.min(deps.settings.timeout, 30),
     body: {
-      model: profile.defaultTextModel || "qwen3.7-max",
+      model: validationModel,
       messages: [{ role: "user", content: "hi" }],
       max_tokens: 1,
       stream: false,
-      enable_thinking: false,
+      enable_thinking: validationModel === "qwen3.8-max-preview",
     },
   };
 
@@ -88,6 +92,9 @@ export async function validateAndPersistApiKey(
     api_key: key,
     base_url: persistBaseUrl,
     default_text_model: profile.defaultTextModel,
+    default_video_model: profile.defaultVideoModel,
+    default_image_to_video_model: profile.defaultImageToVideoModel,
+    default_reference_to_video_model: profile.defaultReferenceToVideoModel,
     default_image_model: profile.defaultImageModel,
   });
 }

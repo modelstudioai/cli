@@ -6,7 +6,7 @@
  *   X-DashScope-OssResourceResolve: enable
  */
 import { existsSync, readFileSync, statSync } from "fs";
-import { basename } from "path";
+import { basename, extname } from "path";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { trackingHeaders } from "../client/headers.ts";
@@ -110,6 +110,49 @@ export interface UploadOptions {
   model: string;
   filePath: string;
   signal?: AbortSignal;
+}
+
+const IMAGE_MIME_TYPES: Readonly<Record<string, string>> = {
+  ".bmp": "image/bmp",
+  ".heic": "image/heic",
+  ".jpe": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".jpg": "image/jpeg",
+  ".png": "image/png",
+  ".tif": "image/tiff",
+  ".tiff": "image/tiff",
+  ".webp": "image/webp",
+};
+
+/** Encode a local image as a Data URI. */
+export function imageFileToDataUri(filePath: string): string {
+  if (!existsSync(filePath)) {
+    throw new BailianError(`File not found: ${filePath}`, ExitCode.USAGE);
+  }
+
+  const stat = statSync(filePath);
+  if (!stat.isFile()) {
+    throw new BailianError(`Not a file: ${filePath}`, ExitCode.USAGE);
+  }
+
+  const extension = extname(filePath).toLowerCase();
+  const mimeType = IMAGE_MIME_TYPES[extension];
+  if (!mimeType) {
+    throw new BailianError(
+      `Unsupported image format "${extension || "unknown"}".`,
+      ExitCode.USAGE,
+      "Use an image file with a recognized extension.",
+    );
+  }
+
+  const encoded = readFileSync(filePath).toString("base64");
+  return `data:${mimeType};base64,${encoded}`;
+}
+
+/** Keep dry-run output readable and avoid echoing the complete inline image. */
+export function redactDataUri(input: string): string {
+  const match = /^data:([^;,]+);base64,/i.exec(input);
+  return match ? `data:${match[1]};base64,<omitted>` : input;
 }
 
 /**

@@ -33,6 +33,9 @@ export type AuthPersistPatch = Pick<
   | "console_switch_agent"
   | "workspace_id"
   | "default_text_model"
+  | "default_video_model"
+  | "default_image_to_video_model"
+  | "default_reference_to_video_model"
   | "default_image_model"
 >;
 

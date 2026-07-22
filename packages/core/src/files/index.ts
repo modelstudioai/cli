@@ -1,1 +1,7 @@
-export { uploadFile, isLocalFile, resolveFileUrl } from "./upload.ts";
+export {
+  uploadFile,
+  isLocalFile,
+  resolveFileUrl,
+  imageFileToDataUri,
+  redactDataUri,
+} from "./upload.ts";

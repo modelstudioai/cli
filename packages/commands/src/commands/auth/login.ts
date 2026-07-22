@@ -150,6 +150,9 @@ export default defineCommand({
       baseUrl: resolvedBaseUrl,
       persistBaseUrl,
       defaultTextModel: profilePreset?.defaultTextModel,
+      defaultVideoModel: profilePreset?.defaultVideoModel,
+      defaultImageToVideoModel: profilePreset?.defaultImageToVideoModel,
+      defaultReferenceToVideoModel: profilePreset?.defaultReferenceToVideoModel,
       defaultImageModel: profilePreset?.defaultImageModel,
     });
   },
