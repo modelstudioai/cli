@@ -32,6 +32,8 @@ const { entry, outfile, target } = parseArgs(process.argv.slice(2));
 
 const result = await Bun.build({
   entrypoints: [entry],
+  // Bundler defaults to "browser"; CLI needs Node/Bun builtins.
+  target: "bun",
   define: {
     "process.env.BAILIAN_COMPILED": JSON.stringify("1"),
   },
