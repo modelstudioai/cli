@@ -1,11 +1,4 @@
-import {
-  mkdtempSync,
-  rmSync,
-  readFileSync,
-  writeFileSync,
-  mkdirSync,
-  readdirSync,
-} from "fs";
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "fs";
 import { tmpdir, homedir } from "os";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
@@ -90,12 +83,8 @@ describe("config agent writers", () => {
         apiKey: "sk-a",
         model: "qwen3-max",
       });
-      const settings = JSON.parse(
-        readFileSync(join(customDir, "settings.json"), "utf8"),
-      );
-      expect(
-        (settings.env as Record<string, string>).ANTHROPIC_AUTH_TOKEN,
-      ).toBe("sk-a");
+      const settings = JSON.parse(readFileSync(join(customDir, "settings.json"), "utf8"));
+      expect((settings.env as Record<string, string>).ANTHROPIC_AUTH_TOKEN).toBe("sk-a");
     } finally {
       delete process.env.CLAUDE_CONFIG_DIR;
     }
@@ -110,22 +99,70 @@ describe("config agent writers", () => {
     const settings = readJsonAt(".qwen", "settings.json");
     expect(settings.$version).toBe(3);
     const security = settings.security as { auth: Record<string, unknown> };
-    // security.auth 只携带 selectedType；凭证在 env + envKey 里
-    expect(security.auth).toEqual({ selectedType: "openai" });
-    expect((settings.env as Record<string, string>).BAILIAN_CLI_API_KEY).toBe(
-      "sk-q",
-    );
-    expect(settings.model).toEqual({ name: "qwen3-coder-plus" });
-    const providers = settings.modelProviders as Record<
-      string,
-      Array<Record<string, unknown>>
-    >;
+    // security.auth 携带 selectedType 以及凭证兜底（apiKey/baseUrl），
+    // 避免系统 OPENAI_API_KEY 抢占
+    expect(security.auth).toEqual({
+      selectedType: "openai",
+      apiKey: "sk-q",
+      baseUrl: OAI_URL,
+    });
+    expect((settings.env as Record<string, string>).BAILIAN_CLI_API_KEY).toBe("sk-q");
+    // model.name 必须与 baseUrl 一同写入（同 id provider 消歧契约）
+    expect(settings.model).toEqual({
+      name: "qwen3-coder-plus",
+      baseUrl: OAI_URL,
+    });
+    const providers = settings.modelProviders as Record<string, Array<Record<string, unknown>>>;
+    // name 是模型显示名（非 provider 品牌常量），品牌只在 envKey 里
     expect(providers.openai[0]).toMatchObject({
       id: "qwen3-coder-plus",
-      name: "bailian-cli",
+      name: "[Bailian] qwen3-coder-plus",
       baseUrl: OAI_URL,
       envKey: "BAILIAN_CLI_API_KEY",
     });
+  });
+
+  test("qwen-code upsert 时治愈旧的 bailian-cli name 但保留用户自定义 name", () => {
+    mkdirSync(join(home, ".qwen"), { recursive: true });
+    writeFileSync(
+      join(home, ".qwen", "settings.json"),
+      JSON.stringify({
+        modelProviders: {
+          openai: [
+            {
+              id: "qwen3-coder-plus",
+              name: "bailian-cli",
+              baseUrl: OAI_URL,
+              envKey: "OLD",
+            },
+            {
+              id: "my-model",
+              name: "My Custom",
+              baseUrl: OAI_URL,
+              envKey: "OLD",
+            },
+          ],
+        },
+      }),
+    );
+
+    // 旧 sentinel 被治愈为显示名
+    qwenCode.write({
+      baseUrl: OAI_URL,
+      apiKey: "sk-q",
+      model: "qwen3-coder-plus",
+    });
+    // 用户自定义 name 不被覆盖
+    qwenCode.write({ baseUrl: OAI_URL, apiKey: "sk-q", model: "my-model" });
+
+    const settings = readJsonAt(".qwen", "settings.json");
+    const entries = (settings.modelProviders as Record<string, Array<Record<string, unknown>>>)
+      .openai;
+    const healed = entries.find((entry) => entry.id === "qwen3-coder-plus")!;
+    expect(healed.name).toBe("[Bailian] qwen3-coder-plus");
+    expect(healed.envKey).toBe("BAILIAN_CLI_API_KEY");
+    const custom = entries.find((entry) => entry.id === "my-model")!;
+    expect(custom.name).toBe("My Custom");
   });
 
   test("qwen-code anthropic 端点走 anthropic 协议", () => {
@@ -135,10 +172,9 @@ describe("config agent writers", () => {
       model: "qwen3-max",
     });
     const settings = readJsonAt(".qwen", "settings.json");
-    expect(
-      (settings.security as { auth: { selectedType: string } }).auth
-        .selectedType,
-    ).toBe("anthropic");
+    expect((settings.security as { auth: { selectedType: string } }).auth.selectedType).toBe(
+      "anthropic",
+    );
     const providers = settings.modelProviders as Record<string, unknown>;
     expect(Array.isArray(providers.anthropic)).toBe(true);
     expect(providers.openai).toBeUndefined();
@@ -156,8 +192,7 @@ describe("config agent writers", () => {
       model: "qwen3-coder-plus",
     });
     const settings = readJsonAt(".qwen", "settings.json");
-    const openaiEntries = (settings.modelProviders as Record<string, unknown[]>)
-      .openai;
+    const openaiEntries = (settings.modelProviders as Record<string, unknown[]>).openai;
     expect(openaiEntries).toHaveLength(1);
   });
 
@@ -205,9 +240,7 @@ describe("config agent writers", () => {
     expect(options.baseURL).toBe(ANTHROPIC_URL);
     expect(options.apiKey).toBe("sk-o");
     expect(options.setCacheKey).toBe(true);
-    expect(
-      (provider["bailian-cli"].models as Record<string, unknown>)["qwen3-max"],
-    ).toBeDefined();
+    expect((provider["bailian-cli"].models as Record<string, unknown>)["qwen3-max"]).toBeDefined();
 
     // 非 anthropic 端点用 openai-compatible
     opencode.write({ baseUrl: OAI_URL, apiKey: "sk-o", model: "qwen3-max" });
@@ -230,9 +263,7 @@ describe("config agent writers", () => {
     const config = readJsonAt(".openclaw", "openclaw.json");
     const models = config.models as Record<string, unknown>;
     expect(models.mode).toBe("merge");
-    const bailian = (
-      models.providers as Record<string, Record<string, unknown>>
-    )["bailian-cli"];
+    const bailian = (models.providers as Record<string, Record<string, unknown>>)["bailian-cli"];
     expect(bailian.api).toBe("openai-completions");
     const entry = (bailian.models as Array<Record<string, unknown>>)[0];
     expect(entry.id).toBe("qwen3-coder-plus");
@@ -258,8 +289,7 @@ describe("config agent writers", () => {
       contextWindow: 1000000,
     });
     const config2 = readJsonAt(".openclaw", "openclaw.json");
-    const providers2 = (config2.models as Record<string, unknown>)
-      .providers as Record<
+    const providers2 = (config2.models as Record<string, unknown>).providers as Record<
       string,
       { api: string; models: Array<Record<string, unknown>> }
     >;
@@ -281,9 +311,7 @@ describe("config agent writers", () => {
       apiKey: "sk-h",
       model: "qwen3-coder-plus",
     });
-    const config = yaml.parse(
-      readFileSync(join(home, ".hermes", "config.yaml"), "utf8"),
-    );
+    const config = yaml.parse(readFileSync(join(home, ".hermes", "config.yaml"), "utf8"));
     // OpenAI 兼容端点：按官方文档省略 api_mode；无关顶层键不受影响
     expect(config.model).toEqual({
       default: "qwen3-coder-plus",
@@ -299,9 +327,7 @@ describe("config agent writers", () => {
       apiKey: "sk-h",
       model: "qwen3-max",
     });
-    const config2 = yaml.parse(
-      readFileSync(join(home, ".hermes", "config.yaml"), "utf8"),
-    );
+    const config2 = yaml.parse(readFileSync(join(home, ".hermes", "config.yaml"), "utf8"));
     expect(config2.model).toEqual({
       default: "qwen3-max",
       provider: "custom",
@@ -326,10 +352,7 @@ describe("config agent writers", () => {
       ].join("\n"),
     );
     // 预置 auth.json 无关键，验证合并保留
-    writeFileSync(
-      join(home, ".codex", "auth.json"),
-      JSON.stringify({ EXISTING: "keep" }),
-    );
+    writeFileSync(join(home, ".codex", "auth.json"), JSON.stringify({ EXISTING: "keep" }));
 
     codex.write({
       baseUrl: OAI_URL,
@@ -367,10 +390,7 @@ describe("config agent writers", () => {
 
   test("已存在的配置文件会被备份为 .bak.<epoch>", () => {
     mkdirSync(join(home, ".openclaw"), { recursive: true });
-    writeFileSync(
-      join(home, ".openclaw", "openclaw.json"),
-      JSON.stringify({ pre: 1 }),
-    );
+    writeFileSync(join(home, ".openclaw", "openclaw.json"), JSON.stringify({ pre: 1 }));
 
     openclaw.write({ baseUrl: OAI_URL, apiKey: "sk-c", model: "qwen3-max" });
     const backups = readdirSync(join(home, ".openclaw")).filter((name) =>
