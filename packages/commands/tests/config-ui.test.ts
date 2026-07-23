@@ -114,10 +114,10 @@ test("POST /api/profile 写命名 profile（timeout 强制为 number），空串
     expect(readConfigFile("stage")).toMatchObject({
       api_key: "sk-stage",
       timeout: 90,
-      base_url: "https://proxy.example.com/team",
+      base_url: "https://proxy.example.com",
     });
     const rawConfig = JSON.parse(readFileSync(getConfigPath(), "utf8"));
-    expect(rawConfig.stage.base_url).toBe("https://proxy.example.com/team");
+    expect(rawConfig.stage.base_url).toBe("https://proxy.example.com");
 
     // 空串清除 api_key（整块替换）
     const clear = await httpJson(port, "POST", `/api/profile?token=${TOKEN}`, {

@@ -321,7 +321,7 @@ test("parseConfigFile accepts only well-formed http(s) base_url", () => {
   expect(
     parseConfigFile({ base_url: "https://proxy.example.com/team/compatible-mode/v1?x=1#y" })
       .base_url,
-  ).toBe("https://proxy.example.com/team");
+  ).toBe("https://proxy.example.com");
   // Previously accepted because the value merely "starts with http".
   expect(parseConfigFile({ base_url: "httpfoo://evil" }).base_url).toBeUndefined();
   expect(parseConfigFile({ base_url: "not a url" }).base_url).toBeUndefined();

@@ -1,12 +1,10 @@
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 
-const KNOWN_API_BASE_SUFFIXES = ["/compatible-mode/v1", "/apps/anthropic"] as const;
-
 /**
- * Normalize a model-service base URL while preserving custom gateway prefixes.
- * CLI endpoints append their own API paths, so known SDK/API base suffixes must
- * not remain in the stored or resolved base URL.
+ * Normalize a model-service base URL to its origin.
+ * CLI endpoints append their own API paths, so user-provided paths, query
+ * parameters, and fragments must not remain in the stored or resolved base URL.
  */
 export function normalizeModelBaseUrl(input: string): string {
   const trimmed = input.trim();
@@ -21,19 +19,7 @@ export function normalizeModelBaseUrl(input: string): string {
     throw invalidModelBaseUrl(input);
   }
 
-  parsed.search = "";
-  parsed.hash = "";
-
-  let pathname = parsed.pathname.replace(/\/+$/, "");
-  const knownSuffix = KNOWN_API_BASE_SUFFIXES.find(
-    (suffix) => pathname === suffix || pathname.endsWith(suffix),
-  );
-  if (knownSuffix) {
-    pathname = pathname.slice(0, -knownSuffix.length).replace(/\/+$/, "");
-  }
-  parsed.pathname = pathname || "/";
-
-  return parsed.toString().replace(/\/$/, "");
+  return parsed.origin;
 }
 
 function invalidModelBaseUrl(input: string): BailianError {
