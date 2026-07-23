@@ -20,7 +20,7 @@ export const CREDENTIALS_NOTE = [
  * the bailian provider. bl persists `api_key` / `agentstudio_base_url` in
  * `~/.bailian/config.json` (via `bl auth login`); mirror them onto
  * `DASHSCOPE_API_KEY` / `BAILIAN_BASE_URL` so users don't have to re-declare the
- * same credentials for `bl agent *`. `workspace_id` is still bridged for configs
+ * same credentials for `bl managed-agent *`. `workspace_id` is still bridged for configs
  * that predate the base_url flow (the SDK accepts either).
  *
  * Lowest priority: only fills a var that is still unset, so anything already in

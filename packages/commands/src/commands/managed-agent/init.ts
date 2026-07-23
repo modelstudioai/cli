@@ -140,7 +140,7 @@ export default defineCommand({
           "Credentials: run `bl auth login --api-key <key> --agentstudio-base-url <url>`, or set DASHSCOPE_API_KEY / BAILIAN_BASE_URL.",
         );
       }
-      emitBare("Next: edit agents.yaml, then run `bl agent plan`.");
+      emitBare("Next: edit agents.yaml, then run `bl managed-agent plan`.");
     }
   },
 });

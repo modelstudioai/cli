@@ -21,7 +21,11 @@ export default defineCommand({
   usageArgs:
     "--api-key <key> | --console | --open-api --access-key-id <id> --access-key-secret <secret>",
   flags: {
-    apiKey: { type: "string", valueHint: "<key>", description: "Model API key to store" },
+    apiKey: {
+      type: "string",
+      valueHint: "<key>",
+      description: "Model API key to store",
+    },
     baseUrl: {
       type: "string",
       valueHint: "<url>",
@@ -31,7 +35,7 @@ export default defineCommand({
       type: "string",
       valueHint: "<url>",
       description:
-        "Bailian AgentStudio base URL for `bl agent` commands (sets BAILIAN_BASE_URL; used with --api-key)",
+        "Bailian AgentStudio base URL for `bl managed-agent` commands (sets BAILIAN_BASE_URL; used with --api-key)",
     },
     console: {
       type: "switch",

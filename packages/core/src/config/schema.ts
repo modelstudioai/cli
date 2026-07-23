@@ -28,7 +28,7 @@ export interface ConfigFile {
   security_token?: string;
   base_url?: string;
   /**
-   * Bailian AgentStudio API base URL for `bl agent` commands, e.g.
+   * Bailian AgentStudio API base URL for `bl managed-agent` commands, e.g.
    * `https://<workspace>.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio`.
    * Distinct from `base_url` (the DashScope model API): the agent path bridges
    * this to the SDK's `BAILIAN_BASE_URL`, so a workspace_id is not required.

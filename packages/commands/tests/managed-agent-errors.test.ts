@@ -1,7 +1,7 @@
 import { UserError } from "@openagentpack/sdk";
 import { BailianError, ExitCode } from "bailian-cli-core";
 import { expect, test } from "vite-plus/test";
-import { withAgentErrors } from "../src/commands/agent/_engine/errors.ts";
+import { withAgentErrors } from "../src/commands/managed-agent/_engine/errors.ts";
 
 /**
  * Structural stand-in for the SDK's internal `ApiError` (not exported by the

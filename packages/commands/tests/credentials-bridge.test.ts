@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { expect, test } from "vite-plus/test";
-import { bridgeBailianCredentials } from "../src/commands/agent/_engine/credentials.ts";
+import { bridgeBailianCredentials } from "../src/commands/managed-agent/_engine/credentials.ts";
 
 /**
  * bridgeBailianCredentials 把 ~/.bailian/config.json 的 api_key / agentstudio_base_url

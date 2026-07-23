@@ -1,4 +1,4 @@
-# `bl agent` commands
+# `bl managed-agent` commands
 
 > Auto-generated from `packages/cli/src/commands.ts`. Do not edit by hand.
 > Regenerate: `pnpm --filter bailian-cli run generate:reference`.
@@ -7,34 +7,34 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                   | Description                                                   |
-| ------------------------- | ------------------------------------------------------------- |
-| `bl agent apply`          | Apply planned changes to create/update/delete agent resources |
-| `bl agent destroy`        | Destroy all managed agent resources tracked in state          |
-| `bl agent init`           | Create a new agents.yaml template                             |
-| `bl agent plan`           | Show what changes would be applied to agent infrastructure    |
-| `bl agent session create` | Create a new session for an agent                             |
-| `bl agent session delete` | Delete a session                                              |
-| `bl agent session events` | List event history for a session                              |
-| `bl agent session get`    | Get details of a session                                      |
-| `bl agent session list`   | List sessions from the provider                               |
-| `bl agent session run`    | Create a session, send a message, and stream the response     |
-| `bl agent session send`   | Send a message to an existing session and stream the response |
-| `bl agent state import`   | Import an existing remote resource into agents state          |
-| `bl agent state list`     | List resources tracked in agents state                        |
-| `bl agent state rm`       | Remove a resource from state without destroying it remotely   |
-| `bl agent state show`     | Show details of a resource in agents state                    |
-| `bl agent validate`       | Validate an agents.yaml configuration (offline)               |
+| Command                           | Description                                                   |
+| --------------------------------- | ------------------------------------------------------------- |
+| `bl managed-agent apply`          | Apply planned changes to create/update/delete agent resources |
+| `bl managed-agent destroy`        | Destroy all managed agent resources tracked in state          |
+| `bl managed-agent init`           | Create a new agents.yaml template                             |
+| `bl managed-agent plan`           | Show what changes would be applied to agent infrastructure    |
+| `bl managed-agent session create` | Create a new session for an agent                             |
+| `bl managed-agent session delete` | Delete a session                                              |
+| `bl managed-agent session events` | List event history for a session                              |
+| `bl managed-agent session get`    | Get details of a session                                      |
+| `bl managed-agent session list`   | List sessions from the provider                               |
+| `bl managed-agent session run`    | Create a session, send a message, and stream the response     |
+| `bl managed-agent session send`   | Send a message to an existing session and stream the response |
+| `bl managed-agent state import`   | Import an existing remote resource into agents state          |
+| `bl managed-agent state list`     | List resources tracked in agents state                        |
+| `bl managed-agent state rm`       | Remove a resource from state without destroying it remotely   |
+| `bl managed-agent state show`     | Show details of a resource in agents state                    |
+| `bl managed-agent validate`       | Validate an agents.yaml configuration (offline)               |
 
 ## Command details
 
-### `bl agent apply`
+### `bl managed-agent apply`
 
-| Field           | Value                                                                            |
-| --------------- | -------------------------------------------------------------------------------- |
-| **Name**        | `agent apply`                                                                    |
-| **Description** | Apply planned changes to create/update/delete agent resources                    |
-| **Usage**       | `bl agent apply [--file <path>] [--provider <name>] [--yes] [--concurrency <n>]` |
+| Field           | Value                                                                                    |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| **Name**        | `managed-agent apply`                                                                    |
+| **Description** | Apply planned changes to create/update/delete agent resources                            |
+| **Usage**       | `bl managed-agent apply [--file <path>] [--provider <name>] [--yes] [--concurrency <n>]` |
 
 #### Flags
 
@@ -54,20 +54,20 @@ Index: [index.md](index.md)
 #### Examples
 
 ```bash
-bl agent apply --yes
+bl managed-agent apply --yes
 ```
 
 ```bash
-bl agent apply --provider bailian --yes
+bl managed-agent apply --provider bailian --yes
 ```
 
-### `bl agent destroy`
+### `bl managed-agent destroy`
 
-| Field           | Value                                                  |
-| --------------- | ------------------------------------------------------ |
-| **Name**        | `agent destroy`                                        |
-| **Description** | Destroy all managed agent resources tracked in state   |
-| **Usage**       | `bl agent destroy [--file <path>] [--yes] [--cascade]` |
+| Field           | Value                                                          |
+| --------------- | -------------------------------------------------------------- |
+| **Name**        | `managed-agent destroy`                                        |
+| **Description** | Destroy all managed agent resources tracked in state           |
+| **Usage**       | `bl managed-agent destroy [--file <path>] [--yes] [--cascade]` |
 
 #### Flags
 
@@ -85,20 +85,20 @@ bl agent apply --provider bailian --yes
 #### Examples
 
 ```bash
-bl agent destroy --yes
+bl managed-agent destroy --yes
 ```
 
 ```bash
-bl agent destroy --yes --cascade
+bl managed-agent destroy --yes --cascade
 ```
 
-### `bl agent init`
+### `bl managed-agent init`
 
-| Field           | Value                                                                               |
-| --------------- | ----------------------------------------------------------------------------------- |
-| **Name**        | `agent init`                                                                        |
-| **Description** | Create a new agents.yaml template                                                   |
-| **Usage**       | `bl agent init [--provider <name>] [--agent-name <name>] [--file <path>] [--force]` |
+| Field           | Value                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------- |
+| **Name**        | `managed-agent init`                                                                        |
+| **Description** | Create a new agents.yaml template                                                           |
+| **Usage**       | `bl managed-agent init [--provider <name>] [--agent-name <name>] [--file <path>] [--force]` |
 
 #### Flags
 
@@ -112,24 +112,24 @@ bl agent destroy --yes --cascade
 #### Examples
 
 ```bash
-bl agent init
+bl managed-agent init
 ```
 
 ```bash
-bl agent init --provider bailian --agent-name assistant
+bl managed-agent init --provider bailian --agent-name assistant
 ```
 
 ```bash
-bl agent init --provider all
+bl managed-agent init --provider all
 ```
 
-### `bl agent plan`
+### `bl managed-agent plan`
 
-| Field           | Value                                                                               |
-| --------------- | ----------------------------------------------------------------------------------- |
-| **Name**        | `agent plan`                                                                        |
-| **Description** | Show what changes would be applied to agent infrastructure                          |
-| **Usage**       | `bl agent plan [--file <path>] [--provider <name>] [--no-refresh] [--refresh-only]` |
+| Field           | Value                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------- |
+| **Name**        | `managed-agent plan`                                                                        |
+| **Description** | Show what changes would be applied to agent infrastructure                                  |
+| **Usage**       | `bl managed-agent plan [--file <path>] [--provider <name>] [--no-refresh] [--refresh-only]` |
 
 #### Flags
 
@@ -148,24 +148,24 @@ bl agent init --provider all
 #### Examples
 
 ```bash
-bl agent plan
+bl managed-agent plan
 ```
 
 ```bash
-bl agent plan --provider bailian
+bl managed-agent plan --provider bailian
 ```
 
 ```bash
-bl agent plan --no-refresh
+bl managed-agent plan --no-refresh
 ```
 
-### `bl agent session create`
+### `bl managed-agent session create`
 
-| Field           | Value                                                                                               |
-| --------------- | --------------------------------------------------------------------------------------------------- |
-| **Name**        | `agent session create`                                                                              |
-| **Description** | Create a new session for an agent                                                                   |
-| **Usage**       | `bl agent session create [--agent <name>] [--environment <name>] [--title <title>] [--file <path>]` |
+| Field           | Value                                                                                                       |
+| --------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Name**        | `managed-agent session create`                                                                              |
+| **Description** | Create a new session for an agent                                                                           |
+| **Usage**       | `bl managed-agent session create [--agent <name>] [--environment <name>] [--title <title>] [--file <path>]` |
 
 #### Flags
 
@@ -187,24 +187,24 @@ bl agent plan --no-refresh
 #### Examples
 
 ```bash
-bl agent session create
+bl managed-agent session create
 ```
 
 ```bash
-bl agent session create --agent assistant
+bl managed-agent session create --agent assistant
 ```
 
 ```bash
-bl agent session create --agent assistant --title 'debug run'
+bl managed-agent session create --agent assistant --title 'debug run'
 ```
 
-### `bl agent session delete`
+### `bl managed-agent session delete`
 
-| Field           | Value                                                                           |
-| --------------- | ------------------------------------------------------------------------------- |
-| **Name**        | `agent session delete`                                                          |
-| **Description** | Delete a session                                                                |
-| **Usage**       | `bl agent session delete --session-id <id> [--provider <name>] [--file <path>]` |
+| Field           | Value                                                                                   |
+| --------------- | --------------------------------------------------------------------------------------- |
+| **Name**        | `managed-agent session delete`                                                          |
+| **Description** | Delete a session                                                                        |
+| **Usage**       | `bl managed-agent session delete --session-id <id> [--provider <name>] [--file <path>]` |
 
 #### Flags
 
@@ -222,16 +222,16 @@ bl agent session create --agent assistant --title 'debug run'
 #### Examples
 
 ```bash
-bl agent session delete --session-id sess_abc123
+bl managed-agent session delete --session-id sess_abc123
 ```
 
-### `bl agent session events`
+### `bl managed-agent session events`
 
-| Field           | Value                                                                             |
-| --------------- | --------------------------------------------------------------------------------- |
-| **Name**        | `agent session events`                                                            |
-| **Description** | List event history for a session                                                  |
-| **Usage**       | `bl agent session events --session-id <id> [--limit <n>] [--all] [--file <path>]` |
+| Field           | Value                                                                                     |
+| --------------- | ----------------------------------------------------------------------------------------- |
+| **Name**        | `managed-agent session events`                                                            |
+| **Description** | List event history for a session                                                          |
+| **Usage**       | `bl managed-agent session events --session-id <id> [--limit <n>] [--all] [--file <path>]` |
 
 #### Flags
 
@@ -251,20 +251,20 @@ bl agent session delete --session-id sess_abc123
 #### Examples
 
 ```bash
-bl agent session events --session-id sess_abc123
+bl managed-agent session events --session-id sess_abc123
 ```
 
 ```bash
-bl agent session events --session-id sess_abc123 --all
+bl managed-agent session events --session-id sess_abc123 --all
 ```
 
-### `bl agent session get`
+### `bl managed-agent session get`
 
-| Field           | Value                                                                        |
-| --------------- | ---------------------------------------------------------------------------- |
-| **Name**        | `agent session get`                                                          |
-| **Description** | Get details of a session                                                     |
-| **Usage**       | `bl agent session get --session-id <id> [--provider <name>] [--file <path>]` |
+| Field           | Value                                                                                |
+| --------------- | ------------------------------------------------------------------------------------ |
+| **Name**        | `managed-agent session get`                                                          |
+| **Description** | Get details of a session                                                             |
+| **Usage**       | `bl managed-agent session get --session-id <id> [--provider <name>] [--file <path>]` |
 
 #### Flags
 
@@ -282,16 +282,16 @@ bl agent session events --session-id sess_abc123 --all
 #### Examples
 
 ```bash
-bl agent session get --session-id sess_abc123
+bl managed-agent session get --session-id sess_abc123
 ```
 
-### `bl agent session list`
+### `bl managed-agent session list`
 
-| Field           | Value                                                                                |
-| --------------- | ------------------------------------------------------------------------------------ |
-| **Name**        | `agent session list`                                                                 |
-| **Description** | List sessions from the provider                                                      |
-| **Usage**       | `bl agent session list [--agent <name>] [--all] [--provider <name>] [--file <path>]` |
+| Field           | Value                                                                                        |
+| --------------- | -------------------------------------------------------------------------------------------- |
+| **Name**        | `managed-agent session list`                                                                 |
+| **Description** | List sessions from the provider                                                              |
+| **Usage**       | `bl managed-agent session list [--agent <name>] [--all] [--provider <name>] [--file <path>]` |
 
 #### Flags
 
@@ -310,24 +310,24 @@ bl agent session get --session-id sess_abc123
 #### Examples
 
 ```bash
-bl agent session list
+bl managed-agent session list
 ```
 
 ```bash
-bl agent session list --agent assistant
+bl managed-agent session list --agent assistant
 ```
 
 ```bash
-bl agent session list --all
+bl managed-agent session list --all
 ```
 
-### `bl agent session run`
+### `bl managed-agent session run`
 
-| Field           | Value                                                                                 |
-| --------------- | ------------------------------------------------------------------------------------- |
-| **Name**        | `agent session run`                                                                   |
-| **Description** | Create a session, send a message, and stream the response                             |
-| **Usage**       | `bl agent session run --prompt <text> [--agent <name>] [--no-stream] [--file <path>]` |
+| Field           | Value                                                                                         |
+| --------------- | --------------------------------------------------------------------------------------------- |
+| **Name**        | `managed-agent session run`                                                                   |
+| **Description** | Create a session, send a message, and stream the response                                     |
+| **Usage**       | `bl managed-agent session run --prompt <text> [--agent <name>] [--no-stream] [--file <path>]` |
 
 #### Flags
 
@@ -351,20 +351,20 @@ bl agent session list --all
 #### Examples
 
 ```bash
-bl agent session run --prompt "hello"
+bl managed-agent session run --prompt "hello"
 ```
 
 ```bash
-bl agent session run --agent assistant --prompt "summarize this repo"
+bl managed-agent session run --agent assistant --prompt "summarize this repo"
 ```
 
-### `bl agent session send`
+### `bl managed-agent session send`
 
-| Field           | Value                                                                                    |
-| --------------- | ---------------------------------------------------------------------------------------- |
-| **Name**        | `agent session send`                                                                     |
-| **Description** | Send a message to an existing session and stream the response                            |
-| **Usage**       | `bl agent session send --session-id <id> --message <text> [--no-stream] [--file <path>]` |
+| Field           | Value                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------ |
+| **Name**        | `managed-agent session send`                                                                     |
+| **Description** | Send a message to an existing session and stream the response                                    |
+| **Usage**       | `bl managed-agent session send --session-id <id> --message <text> [--no-stream] [--file <path>]` |
 
 #### Flags
 
@@ -384,16 +384,16 @@ bl agent session run --agent assistant --prompt "summarize this repo"
 #### Examples
 
 ```bash
-bl agent session send --session-id sess_abc123 --message "continue"
+bl managed-agent session send --session-id sess_abc123 --message "continue"
 ```
 
-### `bl agent state import`
+### `bl managed-agent state import`
 
-| Field           | Value                                                                                                            |
-| --------------- | ---------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `agent state import`                                                                                             |
-| **Description** | Import an existing remote resource into agents state                                                             |
-| **Usage**       | `bl agent state import --address <provider.type.name> --remote-id <id> [--resource-version <n>] [--file <path>]` |
+| Field           | Value                                                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **Name**        | `managed-agent state import`                                                                                             |
+| **Description** | Import an existing remote resource into agents state                                                                     |
+| **Usage**       | `bl managed-agent state import --address <provider.type.name> --remote-id <id> [--resource-version <n>] [--file <path>]` |
 
 #### Flags
 
@@ -412,16 +412,16 @@ bl agent session send --session-id sess_abc123 --message "continue"
 #### Examples
 
 ```bash
-bl agent state import --address bailian.agent.assistant --remote-id agent-abc123
+bl managed-agent state import --address bailian.agent.assistant --remote-id agent-abc123
 ```
 
-### `bl agent state list`
+### `bl managed-agent state list`
 
-| Field           | Value                                  |
-| --------------- | -------------------------------------- |
-| **Name**        | `agent state list`                     |
-| **Description** | List resources tracked in agents state |
-| **Usage**       | `bl agent state list [--file <path>]`  |
+| Field           | Value                                         |
+| --------------- | --------------------------------------------- |
+| **Name**        | `managed-agent state list`                    |
+| **Description** | List resources tracked in agents state        |
+| **Usage**       | `bl managed-agent state list [--file <path>]` |
 
 #### Flags
 
@@ -437,20 +437,20 @@ bl agent state import --address bailian.agent.assistant --remote-id agent-abc123
 #### Examples
 
 ```bash
-bl agent state list
+bl managed-agent state list
 ```
 
 ```bash
-bl agent state list --file agents.yaml
+bl managed-agent state list --file agents.yaml
 ```
 
-### `bl agent state rm`
+### `bl managed-agent state rm`
 
-| Field           | Value                                                              |
-| --------------- | ------------------------------------------------------------------ |
-| **Name**        | `agent state rm`                                                   |
-| **Description** | Remove a resource from state without destroying it remotely        |
-| **Usage**       | `bl agent state rm --address <provider.type.name> [--file <path>]` |
+| Field           | Value                                                                      |
+| --------------- | -------------------------------------------------------------------------- |
+| **Name**        | `managed-agent state rm`                                                   |
+| **Description** | Remove a resource from state without destroying it remotely                |
+| **Usage**       | `bl managed-agent state rm --address <provider.type.name> [--file <path>]` |
 
 #### Flags
 
@@ -467,16 +467,16 @@ bl agent state list --file agents.yaml
 #### Examples
 
 ```bash
-bl agent state rm --address bailian.agent.assistant
+bl managed-agent state rm --address bailian.agent.assistant
 ```
 
-### `bl agent state show`
+### `bl managed-agent state show`
 
-| Field           | Value                                                                |
-| --------------- | -------------------------------------------------------------------- |
-| **Name**        | `agent state show`                                                   |
-| **Description** | Show details of a resource in agents state                           |
-| **Usage**       | `bl agent state show --address <provider.type.name> [--file <path>]` |
+| Field           | Value                                                                        |
+| --------------- | ---------------------------------------------------------------------------- |
+| **Name**        | `managed-agent state show`                                                   |
+| **Description** | Show details of a resource in agents state                                   |
+| **Usage**       | `bl managed-agent state show --address <provider.type.name> [--file <path>]` |
 
 #### Flags
 
@@ -493,16 +493,16 @@ bl agent state rm --address bailian.agent.assistant
 #### Examples
 
 ```bash
-bl agent state show --address bailian.agent.assistant
+bl managed-agent state show --address bailian.agent.assistant
 ```
 
-### `bl agent validate`
+### `bl managed-agent validate`
 
 | Field           | Value                                           |
 | --------------- | ----------------------------------------------- |
-| **Name**        | `agent validate`                                |
+| **Name**        | `managed-agent validate`                        |
 | **Description** | Validate an agents.yaml configuration (offline) |
-| **Usage**       | `bl agent validate [--file <path>]`             |
+| **Usage**       | `bl managed-agent validate [--file <path>]`     |
 
 #### Flags
 
@@ -518,9 +518,9 @@ bl agent state show --address bailian.agent.assistant
 #### Examples
 
 ```bash
-bl agent validate
+bl managed-agent validate
 ```
 
 ```bash
-bl agent validate --file agents.yaml
+bl managed-agent validate --file agents.yaml
 ```

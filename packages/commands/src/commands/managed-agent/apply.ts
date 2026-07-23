@@ -95,7 +95,7 @@ export default defineCommand({
       throw new BailianError(
         `Refusing to apply ${actionable.length} change(s) (${creates} create, ${updates} update, ${deletes.length} destroy) without confirmation.`,
         ExitCode.USAGE,
-        "Review with `bl agent plan`, then re-run with --yes to apply.",
+        "Review with `bl managed-agent plan`, then re-run with --yes to apply.",
       );
     }
 
