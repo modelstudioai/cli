@@ -10,7 +10,7 @@
  *   --mode channel → writes <channel>.json only (does not touch latest.json)
  */
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -154,6 +154,9 @@ function compileOne({ bunTarget, os, arch, exe }, version, outdir, entry) {
   }
   if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
+  // Bun 1.2.19 writes windows-x64 .exe with mode 000 on Unix hosts (oven-sh/bun#21308).
+  // chmod so sha256 / gh upload can open the file; harmless for other targets.
+  chmodSync(outfile, 0o755);
   return { fileName, outfile, os, arch, sha256: sha256File(outfile) };
 }
 
