@@ -16,3 +16,4 @@ export * from "./types/index.ts";
 export * from "./utils/index.ts";
 export * from "./telemetry/index.ts";
 export * from "./advisor/index.ts";
+export * from "./install/index.ts";

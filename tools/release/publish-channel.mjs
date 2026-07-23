@@ -13,6 +13,7 @@ import {
   writePackageJson,
 } from "./lib/packages.mjs";
 import { assertChannel } from "./lib/validate.mjs";
+import { releaseBinaryArtifacts } from "./lib/binary-release.mjs";
 
 function log(msg = "") {
   process.stdout.write(`${msg}\n`);
@@ -27,12 +28,14 @@ const { values } = parseArgs({
     channel: { type: "string" },
     "dry-run": { type: "boolean", default: false },
     knowledge: { type: "boolean", default: false },
+    "skip-binary": { type: "boolean", default: false },
   },
   allowPositionals: false,
 });
 const channel = values.channel;
 const dryRun = values["dry-run"];
 const knowledge = values.knowledge;
+const skipBinary = values["skip-binary"];
 const packages = knowledge ? ALL_PACKAGES : PACKAGES;
 assertChannel(channel);
 
@@ -76,9 +79,9 @@ try {
     log(`${pkg.name}@${betaVersion}: ${exists ? "already published" : "to publish"}`);
   }
   if (packages.every((pkg) => published.get(pkg.key))) {
-    log("\nall packages already published; nothing to do.");
+    log("\nall packages already published; nothing to do for npm.");
   } else {
-    // Publish in dependency order (core → runtime → commands → cli [→ kscli]).
+    // 1) npm (dependency order: core → runtime → commands → cli [→ kscli])
     for (const pkg of packages) {
       if (published.get(pkg.key)) continue;
       step(`publish ${pkg.name}@${betaVersion} (tag=${channel}, provenance)`);
@@ -86,7 +89,17 @@ try {
     }
   }
 
-  log(`\nchannel release complete: ${channel}@${betaVersion}`);
+  // 2) binary GitHub Release — must run before finally restores package.json versions
+  if (skipBinary) {
+    log("\n[skip-binary] skipping Bun binary build/upload");
+  } else {
+    step(
+      `publish binary GitHub Release (mode=channel, channel=${channel}, version=${betaVersion})`,
+    );
+    releaseBinaryArtifacts({ mode: "channel", channel, dryRun });
+  }
+
+  log(`\nchannel release complete: ${channel}@${betaVersion} (npm + binary)`);
 } catch (error) {
   process.stderr.write(`\nrelease publish-channel failed: ${error.message}\n`);
   process.exitCode = 1;

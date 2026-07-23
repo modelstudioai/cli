@@ -77,11 +77,17 @@ No timeline scrubbing. No frame-by-frame editing. Just one sentence → one vide
 ## Installation
 
 ```bash
+# Recommended — no Node required
+curl -fsSL https://bailian-cli.oss-cn-hangzhou.aliyuncs.com/bailian-cli/install.sh | bash
+
+# Windows (PowerShell)
+irm https://bailian-cli.oss-cn-hangzhou.aliyuncs.com/bailian-cli/install.ps1 | iex
+
+# Node users / developers (Node.js >= 18.17)
 npm install -g bailian-cli
-npx skills add modelstudioai/cli --all -g
 ```
 
-> Requires Node.js >= 18.17.
+> Binary install does not require Node.js. `npm install -g` remains fully supported.
 
 ## Quick Start
 

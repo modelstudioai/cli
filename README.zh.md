@@ -75,11 +75,17 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 ## 安装
 
 ```bash
+# 推荐 — 无需本机 Node.js
+curl -fsSL https://bailian-cli.oss-cn-hangzhou.aliyuncs.com/bailian-cli/install.sh | bash
+
+# Windows（PowerShell）
+irm https://bailian-cli.oss-cn-hangzhou.aliyuncs.com/bailian-cli/install.ps1 | iex
+
+# Node 用户 / 开发者（需要 Node.js >= 18.17）
 npm install -g bailian-cli
-npx skills add modelstudioai/cli --all -g
 ```
 
-> 需要预先安装 Node.js >= 18.17。
+> 二进制安装不依赖 Node.js。`npm install -g` 长期保留。
 
 ## 快速开始
 

@@ -29,11 +29,11 @@ concurrency:
 jobs:
   publish-stable:
     if: inputs.mode == 'stable'
-    name: publish stable (${{ inputs.package }}) to npm + tag
+    name: publish stable (${{ inputs.package }}) to npm + binary + tag
     runs-on: ubuntu-latest
     environment: production # Required Reviewers gate
     permissions:
-      contents: write # push lightweight tag to origin
+      contents: write # push tag + create GitHub Release with binary assets
       id-token: write # OIDC for npm Trusted Publishing + provenance
     steps:
       - uses: actions/checkout@v6
@@ -57,15 +57,23 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.19"
+
       - name: publish-stable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: HTTP trigger for external FC (GitHub Release → OSS). Leave unset to skip.
+          BAILIAN_OSS_SYNC_WEBHOOK: ${{ secrets.BAILIAN_OSS_SYNC_WEBHOOK }}
         run: node tools/release/publish-stable.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }}
 
   publish-channel:
     if: inputs.mode == 'channel'
-    name: publish channel (${{ inputs.package }}) to npm
+    name: publish channel (${{ inputs.package }}) to npm + binary
     runs-on: ubuntu-latest
     permissions:
-      contents: read # no tag, no Release; just publish
+      contents: write # create prerelease GitHub Release with binary assets
       id-token: write # OIDC for npm Trusted Publishing + provenance
     steps:
       - uses: actions/checkout@v6
@@ -89,5 +97,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.19"
+
       - name: publish-channel
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BAILIAN_OSS_SYNC_WEBHOOK: ${{ secrets.BAILIAN_OSS_SYNC_WEBHOOK }}
         run: node tools/release/publish-channel.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }} --channel "${{ inputs.channel }}"

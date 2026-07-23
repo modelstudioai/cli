@@ -1,27 +1,39 @@
-# 发布（npm publish）
+# 发布（npm + GitHub Release 二进制）
 
 ## 触发条件
 
-- 准备发布 channel（beta/mcp/plugin 等）或正式版到 npm
-- 准备打 git tag
+- 准备发布 channel（mcp/plugin 等）或正式版到 npm **与** GitHub Releases 二进制
+- 准备打 git tag（仅 stable）
 
-## 发布方式：GitHub Actions + npm OIDC
+## 发布方式：GitHub Actions 总入口
 
 发版**必须**通过 CI 完成，不要本地手动 `pnpm publish`。
 
 入口：GitHub Actions → **Publish** workflow（`.github/workflows/publish.yml`）→ Run workflow。
 
+**编排关系（重要）：**
+
+```text
+publish-stable.mjs / publish-channel.mjs   ← 唯一发版入口
+        ├─ npm（pnpm publish）
+        └─ binary（lib/binary-release → lib/binary-build + gh release）
+```
+
+`tools/release/lib/binary-release.mjs` / `binary-build.mjs` 是实现，一般不要单独当发版入口（调试可用）。详细约定见 [binary-distribution 方案](../proposals/binary-distribution.md)。
+
 两种模式：
 
-| 模式    | 用途                           | 触发方式                                           |
-| ------- | ------------------------------ | -------------------------------------------------- |
-| channel | 发 channel 版本到指定 dist-tag | 选 mode=channel，填 dist-tag 名称（如 mcp/plugin） |
-| stable  | 正式发版到 latest              | 选 mode=stable，需 production environment 审批     |
+| 模式    | 用途                                                     | 触发方式                                           |
+| ------- | -------------------------------------------------------- | -------------------------------------------------- |
+| channel | npm dist-tag + GitHub prerelease + 滚动 `channel-<name>` | 选 mode=channel，填 dist-tag 名称（如 mcp/plugin） |
+| stable  | npm latest + GitHub Release `v<ver>`（含 install 脚本）  | 选 mode=stable，需 production environment 审批     |
+
+可选 flag：`--skip-binary`（仅发 npm，紧急逃生）。
 
 ### channel 发布
 
 1. 在 GitHub 触发 Publish workflow，package 选 `bailian-cli` 或 `knowledge-studio-cli`，mode 选 `channel`，channel 填 dist-tag 名（如 `mcp`）
-2. CI 自动：生成 `0.0.0-beta-<sha7>-<date>` 版本号 → 临时 bump 对应包集合 → 自检 → 构建 → 发布到指定 dist-tag
+2. CI 自动：生成 `0.0.0-beta-<sha7>-<date>` → 临时 bump → 自检 → **npm 发到 dist-tag** → **Bun 编二进制并创建 GitHub prerelease + 滚动 channel manifest** → 还原 package.json
 3. 对应脚本：`tools/release/publish-channel.mjs`
 
 ### stable 发布
@@ -29,9 +41,10 @@
 1. 确保当前 release tooling 覆盖的包(`tools/release/lib/packages.mjs`)已升到目标版本且一致;当前基础集合为 `packages/core` / `packages/runtime` / `packages/commands` / `packages/cli`，`knowledge-studio-cli` 发布会额外包含 `packages/kscli`
 2. 在 GitHub 触发 Publish workflow，package 选目标包集合，mode 选 `stable`
 3. 需要 production environment 审批人批准
-4. CI 自动：自检 → 构建 → 检查 npm 已发布版本 → 发布到 latest → 打 git tag
+4. CI 自动：自检 → **npm 发到 latest** → **推送 git tag `v<ver>`** → **Bun 编二进制并创建/更新 GitHub Release** → 完成
 5. 如果所选发布集合的当前版本已全部存在于 npm，stable 发布会失败并提示先升级版本号；如果只有部分包已发布，CI 会继续补发缺失包
 6. 对应脚本：`tools/release/publish-stable.mjs`
+7. 二进制上传使用 `GITHUB_TOKEN`（`gh release`），**不需要** OSS AccessKey
 
 ## 自检（`tools/release/check.mjs`）
 
@@ -59,7 +72,9 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 ## CI 基础设施
 
 - **认证**：npm OIDC Trusted Publishing（无 token），需要 `id-token: write` 权限
+- **GitHub Release**：`contents: write` + `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`（stable / channel 均需）
 - **Node 版本**：24（npm 11.5+ 才支持 OIDC token 交换）
+- **Bun**：`oven-sh/setup-bun`，版本钉死在 workflow 中
 - **Actions 版本**：checkout/setup-node/pnpm-action 均为 v6（Node 24 兼容）
 - **npm 配置**：当前 release tooling 发布的包(`bailian-cli-core` / `bailian-cli-runtime` / `bailian-cli-commands` / `bailian-cli` / `knowledge-studio-cli`)的 Trusted Publisher 指向 `modelstudioai/cli` 的 `publish.yml`;新增发布包时同步 npm Trusted Publisher
 
@@ -90,6 +105,7 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 
 - [ ] 验证 npm 上能装：`npm view bailian-cli@<tag> version`;如发布 `knowledge-studio-cli`，同时 `npm view knowledge-studio-cli@<tag> version`
 - [ ] 试装一次：`npm i -g bailian-cli@<tag> && bl --version`;如发布 `knowledge-studio-cli`，同时 `npm i -g knowledge-studio-cli@<tag> && kscli --version`
+- [ ] （若本次含二进制）GitHub Release 页可见资产，`install.sh` / `latest.json` 经 FC 同步到 OSS 后可访问；清单见 [binary-distribution.md](binary-distribution.md)
 
 ## 常见漏点（基于历史踩坑）
 
@@ -105,3 +121,5 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 | npm Trusted Publisher 的 workflow filename 改了没同步               | OIDC 匹配不上，publish 报 404                                                      |
 | CI 用 Node 22（npm 10）跑 publish                                   | npm 10 不支持 OIDC token 交换，publish 报 404                                      |
 | stable 发布前没有升级版本号                                         | 所选发布集合的版本已全部存在于 npm，CI 明确报错并要求先升级版本号                  |
+| channel job 缺少 `contents: write`                                  | `gh release create` 失败                                                           |
+| stable 未先推 tag 就建 Release                                      | `--verify-tag` 失败                                                                |
