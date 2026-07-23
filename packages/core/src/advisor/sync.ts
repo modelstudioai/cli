@@ -3,7 +3,7 @@
  *
  * `bl advisor recommend` 执行时调用 `maybeSyncWikiData()`：
  *   1. 12h throttle：距上次检查不足 12h 直接跳过
- *   2. 拉 FC 签名 URL → 下载 manifest.json 比对版本
+ *   2. 从公共读 OSS 下载 manifest.json 比对版本
  *   3. 版本相同 → 仅刷新 lastChecked
  *   4. 版本不同 → 下载 tar.br → 校验 sha256 → brotli 解压 + tar-stream 解包
  *      到同盘临时目录 → renameSync 原子替换 → 写 state
@@ -30,8 +30,8 @@ import { createBrotliDecompress } from "node:zlib";
 import tar from "tar-stream";
 import { getConfigDir } from "../config/paths.ts";
 
-/** FC 匿名签名函数入口，返回 OSS 预签名 URL（硬编码，不走 env）。 */
-const FC_SIGN_URL = "https://signature-gmqkxxozrl.cn-hangzhou.fcapp.run";
+/** 公共读 OSS 目录，直链下载（硬编码，不走 env）。 */
+const OSS_BASE_URL = "https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/bailian-docs-llm-wiki";
 const SKILL_DIR_NAME = "skills/bailian-docs-llm-wiki";
 const STATE_FILE_NAME = "wiki-sync-state.json";
 const MODELS_FILE = "models.jsonl";
@@ -90,20 +90,6 @@ function writeState(state: SyncState): void {
     writeFileSync(getStatePath(), JSON.stringify(state));
   } catch {
     /* 非关键：state 写失败下次会重新检查 */
-  }
-}
-
-/** 拉全部 OSS 预签名 URL：`{ urls: { "manifest.json": "...", "wiki-doc-full.tar.br": "..." } }` */
-async function fetchSignedUrls(): Promise<Record<string, string> | null> {
-  try {
-    const res = await fetch(FC_SIGN_URL, {
-      signal: AbortSignal.timeout(MANIFEST_TIMEOUT_MS),
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { urls?: Record<string, string> };
-    return data.urls ?? null;
-  } catch {
-    return null;
   }
 }
 
@@ -182,25 +168,23 @@ export async function maybeSyncWikiData(): Promise<boolean> {
     return false;
   }
 
-  // 2. 拿签名 URL + manifest
-  const urls = await fetchSignedUrls();
-  if (!urls?.[MANIFEST_KEY]) return false; // 失败不写 lastChecked，下次重试
-
-  const manifest = await fetchManifest(urls[MANIFEST_KEY]);
-  if (!manifest?.version) return false;
+  // 2. 拉 manifest
+  const manifest = await fetchManifest(`${OSS_BASE_URL}/${MANIFEST_KEY}`);
+  if (!manifest?.version) return false; // 失败不写 lastChecked，下次重试
 
   // 3. 版本相同且本地数据存在：仅刷新 lastChecked，无需重新下载。
-  //    若数据缺失，即便版本相同也要继续走下载补齐（落到第 4 步）。
-  if (state && manifest.version === state.version && catalogDataExists()) {
-    writeState({ lastChecked: now, version: state.version });
+  //    覆盖两种状态：(a) state.version === manifest.version → 直接命中；
+  //    (b) state 缺失但数据完好（用户或意外只删了 state）→ 用 manifest 版本
+  //    写回 state，避免无谓的 2MB 下载+解压。
+  //    数据缺失或版本落后时落到第 4 步全量下载补齐。
+  const dataOk = catalogDataExists();
+  if (dataOk && (!state || state.version === manifest.version)) {
+    writeState({ lastChecked: now, version: manifest.version });
     return false;
   }
 
   // 4. 版本不同：下载 + 校验 + 解包 + 原子替换
-  const assetUrl = urls[ASSET_KEY];
-  if (!assetUrl) return false;
-
-  const tarBuf = await downloadBuffer(assetUrl);
+  const tarBuf = await downloadBuffer(`${OSS_BASE_URL}/${ASSET_KEY}`);
   if (!tarBuf) return false;
 
   // sha256 校验

@@ -5,12 +5,11 @@
  * 保证用户首次使用 `bl advisor recommend` 时数据已就位。
  *
  * 流程：
- *   1. fetch FC 签名函数 → 拿 OSS 预签名 URL
- *   2. 下载 manifest.json + wiki-doc-full.tar.br（~2.15MB）
- *   3. 校验 sha256
- *   4. Node 原生 brotli 解压 + tar-stream 解包到同盘临时目录
- *   5. renameSync 原子替换到 ~/.bailian/skills/bailian-docs-llm-wiki/
- *   6. 写 ~/.bailian/wiki-sync-state.json
+ *   1. 从公共读 OSS 直链下载 manifest.json + wiki-doc-full.tar.br（~2.15MB）
+ *   2. 校验 sha256
+ *   3. Node 原生 brotli 解压 + tar-stream 解包到同盘临时目录
+ *   4. renameSync 原子替换到 ~/.bailian/skills/bailian-docs-llm-wiki/
+ *   5. 写 ~/.bailian/wiki-sync-state.json
  *
  * 设计约束：
  *   - 无条件覆盖：每次 install 都全量替换，不比对已有版本
@@ -34,7 +33,7 @@ import { pipeline } from "node:stream/promises";
 import { createBrotliDecompress } from "node:zlib";
 import tar from "tar-stream";
 
-const FC_SIGN_URL = "https://signature-gmqkxxozrl.cn-hangzhou.fcapp.run";
+const OSS_BASE_URL = "https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/bailian-docs-llm-wiki";
 const CONFIG_DIR_NAME = ".bailian";
 const SKILL_DIR_NAME = "skills/bailian-docs-llm-wiki";
 const STATE_FILE_NAME = "wiki-sync-state.json";
@@ -106,25 +105,18 @@ function atomicSwap(tmpDir, catalogDir) {
 }
 
 async function main() {
-  // 1. 拿全部签名 URL
-  const signResp = await fetchJson(FC_SIGN_URL, MANIFEST_TIMEOUT_MS);
-  const urls = signResp?.urls;
-  if (!urls?.[MANIFEST_KEY] || !urls?.[ASSET_KEY]) {
-    throw new Error("签名函数未返回所需 URL");
-  }
-
-  // 2. 下载 manifest
-  const manifest = await fetchJson(urls[MANIFEST_KEY], MANIFEST_TIMEOUT_MS);
+  // 1. 下载 manifest
+  const manifest = await fetchJson(`${OSS_BASE_URL}/${MANIFEST_KEY}`, MANIFEST_TIMEOUT_MS);
   if (!manifest?.version) throw new Error("manifest 无 version");
 
-  // 3. 下载 tar.br + 校验
-  const tarBuf = await downloadBuffer(urls[ASSET_KEY]);
+  // 2. 下载 tar.br + 校验
+  const tarBuf = await downloadBuffer(`${OSS_BASE_URL}/${ASSET_KEY}`);
   const sha256 = createHash("sha256").update(tarBuf).digest("hex");
   if (manifest.asset?.sha256 && sha256 !== manifest.asset.sha256) {
     throw new Error("sha256 校验失败");
   }
 
-  // 4. 解包到同盘临时目录 + 原子替换
+  // 3. 解包到同盘临时目录 + 原子替换
   const catalogDir = getCatalogDir();
   const tmpDir = `${catalogDir}.tmp-${process.pid}-${Date.now()}`;
   try {
@@ -136,7 +128,7 @@ async function main() {
     throw err;
   }
 
-  // 5. 写 state
+  // 4. 写 state
   try {
     writeFileSync(
       getStatePath(),
