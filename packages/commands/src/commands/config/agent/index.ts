@@ -11,13 +11,35 @@ const FLAGS = {
     required: true,
     choices: VALID_AGENT_NAMES,
   },
-  baseUrl: { type: "string", valueHint: "<url>", description: "API base URL", required: true },
-  apiKey: { type: "string", valueHint: "<key>", description: "API key", required: true },
+  baseUrl: {
+    type: "string",
+    valueHint: "<url>",
+    description: "API base URL",
+    required: true,
+  },
+  apiKey: {
+    type: "string",
+    valueHint: "<key>",
+    description: "API key",
+    required: true,
+  },
   model: {
     type: "string",
     valueHint: "<model>",
     description: "Default model name",
     required: true,
+  },
+  contextWindow: {
+    type: "number",
+    valueHint: "<tokens>",
+    description: "OpenClaw only: model context window in tokens (default: 256000)",
+  },
+  wireApi: {
+    type: "string",
+    valueHint: "<api>",
+    description:
+      'Codex only: wire protocol — "chat" works with every model; "responses" for models supporting the Responses API (default: chat)',
+    choices: ["chat", "responses"],
   },
 } satisfies FlagsDef;
 
@@ -34,7 +56,7 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const agentName = flags.agent;
-    const { baseUrl, apiKey, model } = flags;
+    const { baseUrl, apiKey, model, contextWindow, wireApi } = flags;
     const agentDef = AGENTS[agentName];
     const format = detectOutputFormat(settings.output);
 
@@ -59,7 +81,13 @@ export default defineCommand({
       return;
     }
 
-    const params: WriteParams = { baseUrl, apiKey, model };
+    const params: WriteParams = {
+      baseUrl,
+      apiKey,
+      model,
+      contextWindow,
+      wireApi,
+    };
     const summary = agentDef.write(params);
 
     if (!settings.quiet) {

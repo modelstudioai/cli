@@ -2,13 +2,19 @@ import { homedir } from "os";
 import { join } from "path";
 import { existsSync, readFileSync } from "fs";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
-import { backup, readJson, writeJsonAtomic, writeTextAtomic, type AgentDef } from "./utils.ts";
+import {
+  backup,
+  readJson,
+  writeJsonAtomic,
+  writeTextAtomic,
+  type AgentDef,
+} from "./utils.ts";
 
 const PROVIDER_KEY = "bailian-cli";
 
 export default {
   label: "Codex",
-  write({ baseUrl, apiKey, model }) {
+  write({ baseUrl, apiKey, model, wireApi: wireApiParam }) {
     const configPath = join(homedir(), ".codex", "config.toml");
 
     // config.toml — merge into existing config so unrelated settings
@@ -17,7 +23,10 @@ export default {
     let config: Record<string, unknown> = {};
     if (existsSync(configPath)) {
       try {
-        config = parseToml(readFileSync(configPath, "utf-8")) as Record<string, unknown>;
+        config = parseToml(readFileSync(configPath, "utf-8")) as Record<
+          string,
+          unknown
+        >;
       } catch {
         config = {};
       }
@@ -25,8 +34,10 @@ export default {
 
     config.model_provider = PROVIDER_KEY;
     config.model = model;
-    config.model_reasoning_effort = "high";
-    config.disable_response_storage = true;
+
+    // wire_api: "responses" for models supporting the Responses API (e.g.
+    // qwen3.7/3.8 series); "chat" works with every model via Chat Completions.
+    const wireApi = wireApiParam === "responses" ? "responses" : "chat";
 
     const providers = (config.model_providers ?? {}) as Record<string, unknown>;
     const existing = (providers[PROVIDER_KEY] ?? {}) as Record<string, unknown>;
@@ -34,14 +45,17 @@ export default {
       ...existing,
       name: PROVIDER_KEY,
       base_url: baseUrl,
-      wire_api: "responses",
+      // env_key is the official-doc credential mechanism: Codex resolves the
+      // key from the OPENAI_API_KEY env var, falling back to auth.json below.
+      env_key: "OPENAI_API_KEY",
+      wire_api: wireApi,
       requires_openai_auth: true,
     };
     config.model_providers = providers;
 
     writeTextAtomic(configPath, stringifyToml(config) + "\n");
 
-    // auth.json — Codex reads OPENAI_API_KEY from here.
+    // auth.json — Codex reads OPENAI_API_KEY from here when the env var is unset.
     const authPath = join(homedir(), ".codex", "auth.json");
     backup(authPath);
     const auth = readJson(authPath);

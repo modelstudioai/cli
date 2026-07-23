@@ -1,11 +1,22 @@
 import { dirname } from "path";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, copyFileSync } from "fs";
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  renameSync,
+  copyFileSync,
+} from "fs";
 
 /** Parameters shared by every agent writer. */
 export interface WriteParams {
   baseUrl: string;
   apiKey: string;
   model: string;
+  /** OpenClaw model entry context window (tokens). */
+  contextWindow?: number;
+  /** Codex provider wire protocol: "responses" or "chat". */
+  wireApi?: string;
 }
 
 /** What a writer reports back after configuring an agent. */
@@ -20,11 +31,109 @@ export interface AgentDef {
   write(params: WriteParams): WriteSummary;
 }
 
+/**
+ * Strip JSONC syntax (line / block comments and trailing commas) so the result
+ * parses with `JSON.parse`. String contents are preserved verbatim.
+ */
+export function stripJsonc(text: string): string {
+  // Pass 1 — drop comments (string contents preserved verbatim).
+  let uncommented = "";
+  let index = 0;
+  let inString = false;
+  while (index < text.length) {
+    const char = text[index];
+    const next = text[index + 1];
+    if (inString) {
+      uncommented += char;
+      if (char === "\\") {
+        uncommented += next ?? "";
+        index += 2;
+        continue;
+      }
+      if (char === '"') inString = false;
+      index += 1;
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+      uncommented += char;
+      index += 1;
+      continue;
+    }
+    if (char === "/" && next === "/") {
+      while (index < text.length && text[index] !== "\n") index += 1;
+      continue;
+    }
+    if (char === "/" && next === "*") {
+      index += 2;
+      while (
+        index < text.length &&
+        !(text[index] === "*" && text[index + 1] === "/")
+      )
+        index += 1;
+      index += 2;
+      continue;
+    }
+    uncommented += char;
+    index += 1;
+  }
+
+  // Pass 2 — drop trailing commas (a comma whose next non-whitespace char
+  // closes an object/array). Runs after comment removal so a trailing comment
+  // cannot hide the closing bracket.
+  let output = "";
+  index = 0;
+  inString = false;
+  while (index < uncommented.length) {
+    const char = uncommented[index];
+    if (inString) {
+      output += char;
+      if (char === "\\") {
+        output += uncommented[index + 1] ?? "";
+        index += 2;
+        continue;
+      }
+      if (char === '"') inString = false;
+      index += 1;
+      continue;
+    }
+    if (char === '"') inString = true;
+    if (char === ",") {
+      let lookahead = index + 1;
+      while (
+        lookahead < uncommented.length &&
+        /\s/.test(uncommented[lookahead])
+      )
+        lookahead += 1;
+      if (uncommented[lookahead] === "}" || uncommented[lookahead] === "]") {
+        index += 1;
+        continue;
+      }
+    }
+    output += char;
+    index += 1;
+  }
+  return output;
+}
+
 /** Read a JSON object file, returning `{}` when missing or unparseable. */
 export function readJson(path: string): Record<string, unknown> {
   if (!existsSync(path)) return {};
   try {
     return JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+/** Like {@link readJson}, but tolerates JSONC (comments / trailing commas). */
+export function readJsonc(path: string): Record<string, unknown> {
+  if (!existsSync(path)) return {};
+  try {
+    return JSON.parse(stripJsonc(readFileSync(path, "utf-8"))) as Record<
+      string,
+      unknown
+    >;
   } catch {
     return {};
   }

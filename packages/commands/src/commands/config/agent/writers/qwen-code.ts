@@ -1,6 +1,12 @@
 import { homedir } from "os";
 import { join } from "path";
-import { backup, readJson, writeJsonAtomic, isAnthropicEndpoint, type AgentDef } from "./utils.ts";
+import {
+  backup,
+  readJson,
+  writeJsonAtomic,
+  isAnthropicEndpoint,
+  type AgentDef,
+} from "./utils.ts";
 
 const ENV_KEY = "BAILIAN_CLI_API_KEY";
 
@@ -19,6 +25,9 @@ export default {
     backup(settingsPath);
     const settings = readJson(settingsPath);
 
+    // $version — Qwen Code v3 settings schema (official Model Studio doc shape).
+    settings.$version = 3;
+
     // env — API key read by the provider entry's envKey.
     const env = (settings.env ?? {}) as Record<string, string>;
     env[ENV_KEY] = apiKey;
@@ -29,7 +38,9 @@ export default {
       string,
       Array<Record<string, unknown>>
     >;
-    const entries = (providers[protocol] ?? []) as Array<Record<string, unknown>>;
+    const entries = (providers[protocol] ?? []) as Array<
+      Record<string, unknown>
+    >;
     const existing = entries.find(
       (entry) => entry.id === model && (entry.baseUrl ?? "") === baseUrl,
     );
@@ -38,18 +49,25 @@ export default {
       existing.baseUrl = baseUrl;
       existing.envKey = ENV_KEY;
     } else {
-      entries.push({ id: model, name: "bailian-cli", baseUrl, envKey: ENV_KEY });
+      entries.push({
+        id: model,
+        name: "bailian-cli",
+        baseUrl,
+        envKey: ENV_KEY,
+      });
     }
     providers[protocol] = entries;
     settings.modelProviders = providers;
 
-    // security.auth — select the protocol and carry the OpenAI-compatible creds.
+    // security.auth — select the protocol only. Credentials live in env (via
+    // each provider entry's envKey); writing apiKey/baseUrl here is not part of
+    // the v3 schema.
     const security = (settings.security ?? {}) as Record<string, unknown>;
-    security.auth = { selectedType: protocol, apiKey, baseUrl };
+    security.auth = { selectedType: protocol };
     settings.security = security;
 
-    // model — active model, disambiguated by baseUrl.
-    settings.model = { name: model, baseUrl };
+    // model — active model id, resolved inside modelProviders[protocol].
+    settings.model = { name: model };
 
     writeJsonAtomic(settingsPath, settings);
 

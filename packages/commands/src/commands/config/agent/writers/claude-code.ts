@@ -5,7 +5,10 @@ import { backup, readJson, writeJsonAtomic, type AgentDef } from "./utils.ts";
 export default {
   label: "Claude Code",
   write({ baseUrl, apiKey, model }) {
-    const settingsPath = join(homedir(), ".claude", "settings.json");
+    // Claude Code honors CLAUDE_CONFIG_DIR for its settings location.
+    const configDir =
+      process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
+    const settingsPath = join(configDir, "settings.json");
     const onboardingPath = join(homedir(), ".claude.json");
 
     // settings.json — merge env. Base URL + auth token connect Claude Code to
@@ -15,6 +18,9 @@ export default {
     const env = (settings.env ?? {}) as Record<string, string>;
     env.ANTHROPIC_BASE_URL = baseUrl;
     env.ANTHROPIC_AUTH_TOKEN = apiKey;
+    // AUTH_TOKEN and API_KEY are mutually exclusive credential fields — drop a
+    // stale ANTHROPIC_API_KEY so it cannot shadow the token we just wrote.
+    delete env.ANTHROPIC_API_KEY;
     env.ANTHROPIC_MODEL = model;
     env.ANTHROPIC_DEFAULT_HAIKU_MODEL = model;
     env.ANTHROPIC_DEFAULT_SONNET_MODEL = model;
