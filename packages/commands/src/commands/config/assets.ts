@@ -1,8 +1,10 @@
 // Read/manage the local assets that `bl` writes into the output directory
 // (default ~/bailian-output, overridable via the `output_dir` config key).
-// Generated media is organized into per-type subdirectories: images/, videos/,
-// speech/, omni/. This module discovers those files, classifies them, and
-// provides safe path resolution for serving/deleting individual assets.
+// Generated media may live directly under the base or in any subfolder (bl's
+// own images/, videos/, speech/, omni/, or user-created folders). This module
+// recursively discovers every file under the base, classifies each by type,
+// derives its category from the top-level folder, and provides safe path
+// resolution for serving/deleting individual assets.
 import { readdirSync, statSync, existsSync, type Dirent } from "node:fs";
 import { homedir } from "node:os";
 import { join, extname, relative, resolve, sep } from "node:path";
@@ -23,8 +25,8 @@ export interface AssetInfo {
   ext: string;
 }
 
-/** Category subdirectories that `bl` writes generated media into. */
-const CATEGORY_DIRS = ["images", "videos", "speech", "omni"] as const;
+/** Max directory depth to descend from the output base when scanning. */
+const MAX_SCAN_DEPTH = 8;
 
 const KIND_BY_EXT: Record<string, AssetKind> = {
   ".png": "image",
@@ -101,9 +103,11 @@ function walk(dir: string, depth: number, out: string[]): void {
 }
 
 /**
- * List generated assets under `base`, newest first. Scans each known category
- * subdirectory plus any loose files directly under the base (grouped as
- * "other"). Returns the resolved base so callers can surface it in the UI.
+ * List generated assets under `base`, newest first. Recursively scans every
+ * subfolder under the base (plus loose files at the root), so assets in bl's
+ * own category dirs and any user-created folders are all discovered. Each
+ * file's `category` is its top-level folder name, or "other" for root files.
+ * Returns the resolved base so callers can surface it in the UI.
  */
 export function listAssets(base: string = defaultOutputBase()): {
   base: string;
@@ -112,44 +116,30 @@ export function listAssets(base: string = defaultOutputBase()): {
   const assets: AssetInfo[] = [];
   if (!existsSync(base)) return { base, assets };
 
-  const seen = new Set<string>();
-  const addFile = (full: string, category: string): void => {
-    if (seen.has(full)) return;
-    seen.add(full);
+  const files: string[] = [];
+  walk(base, MAX_SCAN_DEPTH, files);
+
+  for (const full of files) {
     let st;
     try {
       st = statSync(full);
     } catch {
-      return;
+      continue;
     }
-    if (!st.isFile()) return;
+    if (!st.isFile()) continue;
+    const rel = relative(base, full);
+    const segments = rel.split(sep);
+    const category = segments.length > 1 ? segments[0]! : "other";
     const ext = extname(full);
     assets.push({
       name: full.split(sep).pop() ?? full,
       category,
       kind: kindOf(ext),
-      relPath: relative(base, full),
+      relPath: rel,
       size: st.size,
       mtime: st.mtimeMs,
       ext: ext.replace(/^\./, "").toLowerCase(),
     });
-  };
-
-  for (const cat of CATEGORY_DIRS) {
-    const files: string[] = [];
-    walk(join(base, cat), 4, files);
-    for (const f of files) addFile(f, cat);
-  }
-
-  // Loose files placed directly under the base directory.
-  let rootEntries: Dirent[] = [];
-  try {
-    rootEntries = readdirSync(base, { withFileTypes: true });
-  } catch {
-    rootEntries = [];
-  }
-  for (const e of rootEntries) {
-    if (e.isFile() || e.isSymbolicLink()) addFile(join(base, e.name), "other");
   }
 
   assets.sort((a, b) => b.mtime - a.mtime);

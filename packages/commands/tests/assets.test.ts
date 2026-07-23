@@ -38,6 +38,28 @@ test("listAssets 按分类归类并识别类型", () => {
   });
 });
 
+test("listAssets 递归扫描任意子文件夹（非预设分类目录）", () => {
+  withBase((base) => {
+    put(base, "news-articles/report.md");
+    put(base, "custom/deep/nested/pic.png");
+    put(base, "images/a.png");
+
+    const { assets } = listAssets(base);
+    const byName = Object.fromEntries(assets.map((a) => [a.name, a]));
+    // Arbitrary top-level folder becomes the category.
+    expect(byName["report.md"]).toMatchObject({
+      category: "news-articles",
+      kind: "other",
+      ext: "md",
+    });
+    // Deeply nested file is discovered; category is its top-level folder.
+    expect(byName["pic.png"]).toMatchObject({ category: "custom", kind: "image" });
+    expect(byName["pic.png"]!.relPath).toBe(join("custom", "deep", "nested", "pic.png"));
+    // Known category dirs still work.
+    expect(byName["a.png"]).toMatchObject({ category: "images", kind: "image" });
+  });
+});
+
 test("listAssets 按生成时间倒序排列", () => {
   withBase((base) => {
     const older = put(base, "images/old.png");

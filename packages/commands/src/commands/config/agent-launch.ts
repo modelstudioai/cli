@@ -22,6 +22,25 @@ export function agentCommand(id: string): string | undefined {
   return Object.prototype.hasOwnProperty.call(AGENT_COMMANDS, id) ? AGENT_COMMANDS[id] : undefined;
 }
 
+/**
+ * Per-agent argv that passes an initial task prompt while keeping the agent
+ * interactive in the terminal. Only verified contracts are listed; an agent
+ * absent here cannot be dispatched a prompt (its bare launch still works).
+ *   - qwen-code:   `qwen -i "<prompt>"`   (execute prompt, stay interactive)
+ *   - claude-code: `claude "<prompt>"`    (positional initial prompt)
+ *   - codex:       `codex "<prompt>"`     (positional initial prompt)
+ */
+const AGENT_PROMPT_ARGV: Record<string, (prompt: string) => string[]> = {
+  "qwen-code": (p) => ["-i", p],
+  "claude-code": (p) => [p],
+  codex: (p) => [p],
+};
+
+/** Whether a known agent supports being dispatched an initial task prompt. */
+export function agentSupportsPrompt(id: string): boolean {
+  return Object.prototype.hasOwnProperty.call(AGENT_PROMPT_ARGV, id);
+}
+
 /** Resolve whether a binary is reachable on PATH (via `which`/`where`). */
 function onPath(bin: string): Promise<boolean> {
   const cmd = process.platform === "win32" ? "where" : "which";
@@ -82,16 +101,31 @@ export interface LaunchResult {
 }
 
 /**
- * Launch a known coding agent's local CLI in a new terminal window.
- * Rejects when the id is unknown, the binary is missing from PATH, or the
- * platform terminal could not be opened.
+ * Launch a known coding agent's local CLI in a new terminal window. When
+ * `prompt` is provided, it is passed as a single quoted argument using the
+ * agent's verified prompt contract so the agent starts with that task.
+ * Rejects when the id is unknown, the binary is missing from PATH, the agent
+ * does not support prompt dispatch, or the platform terminal could not open.
  */
-export async function launchAgent(id: string, cwd: string = process.cwd()): Promise<LaunchResult> {
+export async function launchAgent(
+  id: string,
+  cwd: string = process.cwd(),
+  prompt?: string,
+): Promise<LaunchResult> {
   const command = agentCommand(id);
   if (!command) throw new Error(`Unknown agent: ${id}`);
   if (!(await onPath(command))) {
     throw new Error(`\`${command}\` was not found on your PATH — install ${id} first.`);
   }
-  await spawnTerminal(command, cwd);
-  return { launched: true, command };
+  let fullCommand = command;
+  const task = (prompt ?? "").trim();
+  if (task) {
+    const build = AGENT_PROMPT_ARGV[id];
+    if (!build) throw new Error(`${id} does not support dispatching a task prompt.`);
+    // shQuote keeps the whole prompt as one shell argument (no injection); the
+    // platform terminal layer escapes the resulting command line separately.
+    fullCommand = [command, ...build(task).map(shQuote)].join(" ");
+  }
+  await spawnTerminal(fullCommand, cwd);
+  return { launched: true, command: fullCommand };
 }

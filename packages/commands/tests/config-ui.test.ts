@@ -91,6 +91,7 @@ test("GET /api/config 返回全部 profile、明文密钥与持久化激活项",
     expect(res.json.fieldDefaults.default_text_model).toBe("qwen3.7-max");
     expect(res.json.fieldDefaults.output_dir).toContain("bailian-output");
     expect(res.json.fieldDefaults.timeout).toBe("300");
+    expect(res.json.fieldDefaults.base_url).toBe("https://dashscope.aliyuncs.com");
     // Per-category model catalog (click-to-fill suggestions) is exposed too.
     expect(res.json.modelCatalog.default_image_model[0]).toMatchObject({ id: "qwen-image-2.0" });
     expect(res.json.modelCatalog.default_video_model.map((m: { id: string }) => m.id)).toContain(
@@ -99,6 +100,24 @@ test("GET /api/config 返回全部 profile、明文密钥与持久化激活项",
     expect(res.json.modelCatalog.default_speech_model.map((m: { id: string }) => m.id)).toContain(
       "fun-asr",
     );
+  });
+});
+
+test("GET /api/auth/status 无 bridge 时返回未认证；login/logout 返回 400", async () => {
+  await withServer(async (port) => {
+    // The test harness builds the server without an auth bridge, so the auth
+    // endpoints degrade safely instead of throwing.
+    const status = await httpJson(port, "GET", `/api/auth/status?token=${TOKEN}`);
+    expect(status.status).toBe(200);
+    expect(status.json.authenticated).toBe(false);
+    expect(status.json.methods).toEqual({ apiKey: false, console: false, openapi: false });
+    expect(status.json.primary).toBe(null);
+
+    const login = await httpJson(port, "POST", `/api/auth/login?token=${TOKEN}`);
+    expect(login.status).toBe(400);
+
+    const logout = await httpJson(port, "POST", `/api/auth/logout?token=${TOKEN}`);
+    expect(logout.status).toBe(400);
   });
 });
 

@@ -151,6 +151,7 @@ test("listAgents 报告安装与已连接 bailian-cli 的状态", () => {
       installed: true,
       configured: true,
       model: "qwen3-max",
+      origin: "local",
     });
     expect(byId.codex).toMatchObject({ installed: true, configured: false, model: "gpt-5" });
     expect(byId.opencode).toMatchObject({ installed: false, configured: false });
