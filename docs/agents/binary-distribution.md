@@ -61,3 +61,9 @@ vp check
 | FC 未跑完用户就 curl   | OSS 404 / 半包            |
 | 矩阵变更未通知脚本方   | 装错 arch / 永久失败      |
 | webhook 配错当发版失败 | 不应；webhook 失败只 warn |
+| 用 `Bun.build({ compile })` 代替 CLI | Bun ≤1.2.19 可能 exit 0 但不写 outfile → `sha256` ENOENT |
+
+## 编译实现注意
+
+- `binary-compile.mjs` 必须走 **`bun build --compile --outfile …`**，不要用 `Bun.build({ compile })`（CI 钉 `1.2.19` 时 API 会假成功）。
+- 编译后校验 outfile 存在再算 SHA256。

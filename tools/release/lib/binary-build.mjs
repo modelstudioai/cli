@@ -150,8 +150,10 @@ function compileOne({ bunTarget, os, arch, exe }, version, outdir, entry) {
   );
   if (result.status !== 0) {
     process.stderr.write(result.stderr || result.stdout || "");
-    throw new Error(`Bun.build compile failed for ${bunTarget}`);
+    throw new Error(`Bun compile failed for ${bunTarget}`);
   }
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
   return { fileName, outfile, os, arch, sha256: sha256File(outfile) };
 }
 
