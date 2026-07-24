@@ -18,5 +18,11 @@ export const API_KEY_PAGE = `${BAILIAN_CONSOLE}/?tab=app#/api-key`;
 /** Direct deep link to the Token Plan subscription overview and API key entry. */
 export const TOKEN_PLAN_PAGE = `${BAILIAN_CONSOLE_ROOT}/cn-beijing?tab=plan#/efm/subscription/overview`;
 
+/**
+ * MCP marketplace detail for the built-in WebSearch server.
+ * Users must activate (or re-activate for Streamable HTTP) before `search web` works.
+ */
+export const MCP_WEBSEARCH_PAGE = `${BAILIAN_CONSOLE}?tab=mcp#/mcp-market/detail/WebSearch`;
+
 /** Voice TTS experience center — browse system and custom voices. */
 export const VOICE_TTS_PAGE = "https://help.aliyun.com/zh/model-studio/cosyvoice-voice-list";
