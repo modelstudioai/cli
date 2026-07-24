@@ -43,6 +43,23 @@ export default defineCommand({
     const format = detectOutputFormat(settings.output);
     const file = flags.file ?? "agents.yaml";
 
+    if (settings.dryRun) {
+      // Validate the address shape locally so dry-run still catches usage errors.
+      await withAgentErrors(async () => {
+        parseStateAddress(flags.address, { requireProvider: true });
+      });
+      emitResult(
+        {
+          would_import: flags.address,
+          remote_id: flags.remoteId,
+          resource_version: flags.resourceVersion,
+          config_file: file,
+        },
+        format,
+      );
+      return;
+    }
+
     await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, file);

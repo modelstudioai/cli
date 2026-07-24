@@ -1,4 +1,5 @@
 import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-core";
+import { emitResult } from "bailian-cli-runtime";
 import { sendSessionMessagePolling, sendSessionMessageStreaming } from "@openagentpack/sdk";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
@@ -46,6 +47,22 @@ export default defineCommand({
     const format = detectOutputFormat(settings.output);
     const file = flags.file ?? "agents.yaml";
     const asJson = format === "json";
+
+    if (settings.dryRun) {
+      emitResult(
+        {
+          would_send: {
+            session_id: flags.sessionId,
+            message: flags.message,
+            provider: flags.provider ?? "auto",
+            mode: flags.noStream ? "polling" : "streaming",
+          },
+          config_file: file,
+        },
+        format,
+      );
+      return;
+    }
 
     await withAgentErrors(() =>
       withStdoutProtected(async () => {

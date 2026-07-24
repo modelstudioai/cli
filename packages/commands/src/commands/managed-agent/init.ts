@@ -118,10 +118,29 @@ export default defineCommand({
       );
     }
 
+    const gitignorePath = ".gitignore";
+
+    if (settings.dryRun) {
+      let wouldUpdateGitignore = true;
+      if (existsSync(gitignorePath)) {
+        const content = await readFile(gitignorePath, "utf8");
+        wouldUpdateGitignore = !content.includes("agents.state.json");
+      }
+      emitResult(
+        {
+          would_create: file,
+          provider,
+          agent: agentName,
+          would_update_gitignore: wouldUpdateGitignore,
+        },
+        format,
+      );
+      return;
+    }
+
     const template = buildTemplate({ provider, agentName });
     await writeFile(file, template, "utf8");
 
-    const gitignorePath = ".gitignore";
     if (existsSync(gitignorePath)) {
       const content = await readFile(gitignorePath, "utf8");
       if (!content.includes("agents.state.json")) {

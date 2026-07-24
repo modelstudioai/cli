@@ -1,4 +1,5 @@
 import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-core";
+import { emitResult } from "bailian-cli-runtime";
 import { startSessionRun, startSessionRunPolling } from "@openagentpack/sdk";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
@@ -74,6 +75,26 @@ export default defineCommand({
       memoryStores: parseMemoryStores(flags.memoryStores),
       title: flags.title,
     };
+
+    if (settings.dryRun) {
+      emitResult(
+        {
+          would_run: {
+            prompt: flags.prompt,
+            agent: flags.agent ?? "auto",
+            provider: flags.provider ?? "auto",
+            environment: flags.environment,
+            vault: flags.vault,
+            memory_stores: runOptions.memoryStores,
+            title: flags.title,
+            mode: flags.noStream ? "polling" : "streaming",
+          },
+          config_file: file,
+        },
+        format,
+      );
+      return;
+    }
 
     await withAgentErrors(() =>
       withStdoutProtected(async () => {

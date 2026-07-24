@@ -40,6 +40,18 @@ export default defineCommand({
     const format = detectOutputFormat(settings.output);
     const file = flags.file ?? "agents.yaml";
 
+    if (settings.dryRun) {
+      emitResult(
+        {
+          would_destroy: { cascade: Boolean(flags.cascade) },
+          config_file: file,
+          hint: "Run `managed-agent state list` to see the resources tracked in state.",
+        },
+        format,
+      );
+      return;
+    }
+
     const planned = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, file);

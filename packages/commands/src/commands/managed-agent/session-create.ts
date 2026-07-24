@@ -52,6 +52,24 @@ export default defineCommand({
     const format = detectOutputFormat(settings.output);
     const file = flags.file ?? "agents.yaml";
 
+    if (settings.dryRun) {
+      emitResult(
+        {
+          would_create_session: {
+            agent: flags.agent ?? "auto",
+            provider: flags.provider ?? "auto",
+            environment: flags.environment,
+            vault: flags.vault,
+            memory_stores: parseMemoryStores(flags.memoryStores),
+            title: flags.title,
+          },
+          config_file: file,
+        },
+        format,
+      );
+      return;
+    }
+
     const run = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, file);

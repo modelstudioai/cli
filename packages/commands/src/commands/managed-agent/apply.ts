@@ -55,6 +55,22 @@ export default defineCommand({
     const format = detectOutputFormat(settings.output);
     const file = flags.file ?? "agents.yaml";
 
+    if (settings.dryRun) {
+      emitResult(
+        {
+          would_apply: {
+            provider: flags.provider ?? "all",
+            refresh: !flags.noRefresh,
+            concurrency: flags.concurrency,
+          },
+          config_file: file,
+          hint: "Run `managed-agent plan` to preview the exact resource changes.",
+        },
+        format,
+      );
+      return;
+    }
+
     const planned = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, file);
