@@ -103,6 +103,26 @@ test("inject:base_url 已带后缀不重复拼;非空字面量 base_url 保留",
   expect(literal.bailian.base_url).toBe("https://custom.example.com/api/v1/agentstudio");
 });
 
+test("inject:base_url 尾斜杠被规范化,不产生双斜杠", () => {
+  const providers = { bailian: { api_key: "", base_url: "" } };
+  injectProviderCredentials(
+    providers,
+    makeHost({ apiCred: bailianCred("t", "https://dashscope.aliyuncs.com/") }),
+  );
+  expect(providers.bailian.base_url).toBe("https://dashscope.aliyuncs.com/api/v1/agentstudio");
+});
+
+test("inject:已带后缀且尾斜杠的 base_url 去斜杠后原样保留", () => {
+  const providers = { bailian: { api_key: "", base_url: "" } };
+  injectProviderCredentials(
+    providers,
+    makeHost({
+      apiCred: bailianCred("t", "https://x.maas.aliyuncs.com/api/v1/agentstudio/"),
+    }),
+  );
+  expect(providers.bailian.base_url).toBe("https://x.maas.aliyuncs.com/api/v1/agentstudio");
+});
+
 test("inject:workspace_id 引用且为空时用 settings 填充;有字面量则保留", () => {
   const empty = { bailian: { api_key: "", workspace_id: "" } };
   injectProviderCredentials(

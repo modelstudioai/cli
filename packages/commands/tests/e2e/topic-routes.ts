@@ -158,6 +158,7 @@ export const TOKEN_PLAN_ROUTES: E2eRouteExports = {
 
 export const MANAGED_AGENT_ROUTES: E2eRouteExports = {
   "managed-agent init": "managedAgentInit",
+  "managed-agent validate": "managedAgentValidate",
   "managed-agent apply": "managedAgentApply",
   "managed-agent destroy": "managedAgentDestroy",
   "managed-agent state rm": "managedAgentStateRm",

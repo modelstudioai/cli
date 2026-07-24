@@ -94,9 +94,12 @@ export function injectProviderCredentials(
   if (cred) {
     block.api_key = cred.token;
     if ("base_url" in block && !block.base_url) {
-      block.base_url = cred.baseUrl.endsWith(AGENTSTUDIO_API_PATH)
-        ? cred.baseUrl
-        : `${cred.baseUrl}${AGENTSTUDIO_API_PATH}`;
+      // Defensive normalization: the auth chain already normalizes base_url to
+      // an origin, but never let a trailing slash produce "//api/v1/agentstudio".
+      const origin = cred.baseUrl.replace(/\/+$/, "");
+      block.base_url = origin.endsWith(AGENTSTUDIO_API_PATH)
+        ? origin
+        : `${origin}${AGENTSTUDIO_API_PATH}`;
     }
   }
   if ("workspace_id" in block && !block.workspace_id && host.settings.workspaceId) {
