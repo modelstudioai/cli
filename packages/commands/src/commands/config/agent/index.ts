@@ -66,6 +66,9 @@ export default defineCommand({
       emitBare(`${agentDef.label} configured successfully.`);
       for (const path of summary.paths) emitBare(`  Written: ${path}`);
       emitBare(`  ${summary.nextStep}`);
+      for (const warning of summary.warnings ?? []) {
+        process.stderr.write(`Warning: ${warning}\n`);
+      }
     }
   },
 });

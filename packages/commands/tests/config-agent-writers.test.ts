@@ -75,14 +75,14 @@ describe("config agent writers", () => {
     const settings = readJsonAt(".qwen", "settings.json");
     const security = settings.security as { auth: Record<string, string> };
     expect(security.auth.selectedType).toBe("openai");
-    expect(security.auth.apiKey).toBe("sk-q");
-    expect(security.auth.baseUrl).toBe(OAI_URL);
+    expect(security.auth.apiKey).toBeUndefined();
+    expect(security.auth.baseUrl).toBeUndefined();
     expect((settings.env as Record<string, string>).BAILIAN_CLI_API_KEY).toBe("sk-q");
     expect((settings.model as Record<string, string>).name).toBe("qwen3-coder-plus");
     const providers = settings.modelProviders as Record<string, Array<Record<string, unknown>>>;
     expect(providers.openai[0]).toMatchObject({
       id: "qwen3-coder-plus",
-      name: "bailian-cli",
+      name: "qwen3-coder-plus (bailian-cli)",
       baseUrl: OAI_URL,
       envKey: "BAILIAN_CLI_API_KEY",
     });
@@ -99,12 +99,76 @@ describe("config agent writers", () => {
     expect(providers.openai).toBeUndefined();
   });
 
-  test("qwen-code 对相同 id+baseUrl 的 provider 项做 upsert 而非追加", () => {
+  test("qwen-code 对自有 provider 项按 id upsert 而非追加", () => {
     qwenCode.write({ baseUrl: OAI_URL, apiKey: "sk-1", model: "qwen3-coder-plus" });
     qwenCode.write({ baseUrl: OAI_URL, apiKey: "sk-2", model: "qwen3-coder-plus" });
     const settings = readJsonAt(".qwen", "settings.json");
     const openaiEntries = (settings.modelProviders as Record<string, unknown[]>).openai;
     expect(openaiEntries).toHaveLength(1);
+    expect((settings.env as Record<string, string>).BAILIAN_CLI_API_KEY).toBe("sk-2");
+  });
+
+  test("qwen-code 不劫持已有 Token Plan 同 id 条目的 name/envKey", () => {
+    mkdirSync(join(home, ".qwen"), { recursive: true });
+    writeFileSync(
+      join(home, ".qwen", "settings.json"),
+      JSON.stringify({
+        env: { BAILIAN_TOKEN_PLAN_API_KEY: "sk-token-plan" },
+        modelProviders: {
+          openai: [
+            {
+              id: "qwen3.8-max-preview",
+              name: "[Token Plan 个人版] qwen3.8-max-preview",
+              baseUrl: "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+              envKey: "BAILIAN_TOKEN_PLAN_API_KEY",
+              generationConfig: { extra_body: { enable_thinking: true } },
+            },
+          ],
+        },
+      }),
+    );
+
+    const tokenPlanUrl = "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1";
+    const summary = qwenCode.write({
+      baseUrl: tokenPlanUrl,
+      apiKey: "sk-bailian",
+      model: "qwen3.8-max-preview",
+    });
+
+    const settings = readJsonAt(".qwen", "settings.json");
+    const openaiEntries = (
+      settings.modelProviders as Record<string, Array<Record<string, unknown>>>
+    ).openai;
+    expect(openaiEntries).toHaveLength(1);
+    expect(openaiEntries[0]).toMatchObject({
+      id: "qwen3.8-max-preview",
+      name: "[Token Plan 个人版] qwen3.8-max-preview",
+      envKey: "BAILIAN_TOKEN_PLAN_API_KEY",
+      generationConfig: { extra_body: { enable_thinking: true } },
+    });
+    expect((settings.env as Record<string, string>).BAILIAN_TOKEN_PLAN_API_KEY).toBe(
+      "sk-token-plan",
+    );
+    expect((settings.env as Record<string, string>).BAILIAN_CLI_API_KEY).toBe("sk-bailian");
+    expect(summary.warnings?.some((warning) => warning.includes("already exists"))).toBe(true);
+  });
+
+  test("qwen-code 在进程环境变量覆盖 settings.env 时给出警告", () => {
+    const previous = process.env.BAILIAN_CLI_API_KEY;
+    process.env.BAILIAN_CLI_API_KEY = "sk-from-shell";
+    try {
+      const summary = qwenCode.write({
+        baseUrl: OAI_URL,
+        apiKey: "sk-from-settings",
+        model: "qwen3-coder-plus",
+      });
+      expect(summary.warnings?.some((warning) => warning.includes("overrides settings.json"))).toBe(
+        true,
+      );
+    } finally {
+      if (previous === undefined) delete process.env.BAILIAN_CLI_API_KEY;
+      else process.env.BAILIAN_CLI_API_KEY = previous;
+    }
   });
 
   test("opencode 按端点选 npm，含 setCacheKey，合并保留其它 provider", () => {

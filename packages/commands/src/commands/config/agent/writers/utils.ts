@@ -12,6 +12,8 @@ export interface WriteParams {
 export interface WriteSummary {
   paths: string[];
   nextStep: string;
+  /** Non-fatal issues the command should surface to the user. */
+  warnings?: string[];
 }
 
 /** An agent configuration writer: a human label plus a `write` that applies it. */
