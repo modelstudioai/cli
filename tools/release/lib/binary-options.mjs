@@ -1,5 +1,9 @@
 /**
  * Shared mode / channel / manifest naming for binary-build and binary-release.
+ *
+ * Stable releases no longer write `latest.json` (OSS `channels/latest.json` is
+ * maintained outside this repo / by FC). Channel mode still writes `<channel>.json`
+ * onto the rolling `channel-<name>` GitHub Release.
  */
 import { assertChannel } from "./validate.mjs";
 
@@ -23,7 +27,8 @@ export function normalizeModeChannel(mode = "stable", channel = null) {
   return { mode: "stable", channel: null };
 }
 
-/** Manifest basename written to dist-bin / uploaded to Releases. */
-export function manifestFileName(mode, channel) {
-  return mode === "stable" ? "latest.json" : `${channel}.json`;
+/** Channel rolling-manifest basename (`mcp.json`, …). Stable has none. */
+export function channelManifestFileName(channel) {
+  if (!channel) throw new Error("channelManifestFileName requires a channel name");
+  return `${channel}.json`;
 }

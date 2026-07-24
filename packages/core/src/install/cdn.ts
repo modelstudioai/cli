@@ -21,7 +21,8 @@ export function getCliCdnBase(): string {
 
 /**
  * Channel manifest on OSS (after FC sync): `{base}/channels/{channel}.json`
- * Formal releases use `latest.json` (default).
+ * Formal installs still read `channels/latest.json` on OSS; this repo no longer
+ * attaches `latest.json` to GitHub Releases (FC / ops maintain OSS latest).
  */
 export function channelManifestUrl(channel = "latest"): string {
   return `${getCliCdnBase()}/channels/${channel}.json`;
@@ -66,7 +67,18 @@ export function detectBinaryPlatform(): { os: string; arch: string; fileSuffix: 
   return { os, arch: normalizedArch, fileSuffix };
 }
 
+/** Release download asset: `bl-<ver>-<os>-<arch>.zip`. */
 export function binaryAssetFileName(
+  version: string,
+  os: string,
+  arch: string,
+  _exe = false,
+): string {
+  return `bl-${version}-${os}-${arch}.zip`;
+}
+
+/** Uncompressed binary name inside the zip. */
+export function binaryInnerFileName(
   version: string,
   os: string,
   arch: string,

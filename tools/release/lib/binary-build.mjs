@@ -1,22 +1,23 @@
 /**
- * Build standalone `bl` binaries with Bun --compile.
+ * Build standalone `bl` binaries with Bun --compile, then pack each as a
+ * per-platform `.zip` via binary-zip.mjs (Release / OSS download asset).
  *
  * Used by lib/binary-release.mjs (and publish-stable / publish-channel orchestrators).
  * Debug:
  *   node tools/release/lib/binary-build.mjs --mode stable --host
  *
  * Manifests:
- *   --mode stable  → writes latest.json only
- *   --mode channel → writes <channel>.json only (does not touch latest.json)
+ *   --mode stable  → no release manifest (latest.json removed)
+ *   --mode channel → writes <channel>.json only
  */
-import { createHash } from "node:crypto";
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { parseArgs } from "node:util";
 import { ROOT, readPackageJson, PACKAGES } from "./packages.mjs";
-import { manifestFileName, normalizeModeChannel } from "./binary-options.mjs";
+import { channelManifestFileName, normalizeModeChannel } from "./binary-options.mjs";
+import { ensureZip, zipOne } from "./binary-zip.mjs";
 
 const BINARY_COMPILE = fileURLToPath(new URL("./binary-compile.mjs", import.meta.url));
 const CLI_ENTRY = join(ROOT, "packages/cli/src/main.ts");
@@ -32,12 +33,17 @@ export const BINARY_TARGETS = [
   { bunTarget: "bun-windows-x64", os: "windows", arch: "x64", exe: true },
 ];
 
-/** Asset basename for a matrix row: `bl-<ver>-<os>-<arch>[.exe]`. */
-export function binaryAssetName(version, { os, arch, exe }) {
+/** Uncompressed binary basename inside the zip: `bl-<ver>-<os>-<arch>[.exe]`. */
+export function binaryInnerName(version, { os, arch, exe }) {
   return `bl-${version}-${os}-${arch}${exe ? ".exe" : ""}`;
 }
 
-/** Full matrix basenames for a version (order matches BINARY_TARGETS). */
+/** Release asset basename: `bl-<ver>-<os>-<arch>.zip`. */
+export function binaryAssetName(version, { os, arch }) {
+  return `bl-${version}-${os}-${arch}.zip`;
+}
+
+/** Full matrix zip basenames for a version (order matches BINARY_TARGETS). */
 export function matrixAssetNames(version) {
   return BINARY_TARGETS.map((target) => binaryAssetName(version, target));
 }
@@ -124,19 +130,14 @@ function ensureBun() {
   return result.stdout.trim();
 }
 
-function sha256File(path) {
-  return createHash("sha256").update(readFileSync(path)).digest("hex");
-}
-
 function compileOne({ bunTarget, os, arch, exe }, version, outdir, entry) {
-  const fileName = binaryAssetName(version, { os, arch, exe });
-  const outfile = join(outdir, fileName);
-  log(`compile ${bunTarget} → ${fileName}`);
+  const innerName = binaryInnerName(version, { os, arch, exe });
+  const innerPath = join(outdir, innerName);
+  log(`compile ${bunTarget} → ${innerName}`);
 
-  // binary-compile.mjs shells out to `bun build --compile` (CLI); this file stays Node.
   const result = spawnSync(
     "bun",
-    [BINARY_COMPILE, "--entry", entry, "--outfile", outfile, "--target", bunTarget],
+    [BINARY_COMPILE, "--entry", entry, "--outfile", innerPath, "--target", bunTarget],
     { cwd: ROOT, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] },
   );
   if (result.status !== 0) {
@@ -146,9 +147,8 @@ function compileOne({ bunTarget, os, arch, exe }, version, outdir, entry) {
   if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
   // Bun 1.2.19 writes windows-x64 .exe with mode 000 on Unix hosts (oven-sh/bun#21308).
-  // chmod so sha256 / gh upload can open the file; harmless for other targets.
-  chmodSync(outfile, 0o755);
-  return { fileName, outfile, os, arch, sha256: sha256File(outfile) };
+  chmodSync(innerPath, 0o755);
+  return { innerName, innerPath, os, arch, exe };
 }
 
 function writeChecksums(outdir, artifacts) {
@@ -157,56 +157,56 @@ function writeChecksums(outdir, artifacts) {
 }
 
 /**
- * Write latest.json (stable) or <channel>.json (channel).
- * Asset entries carry file + sha256 only — no baked download URL.
- * Consumers (bl update / install scripts) resolve via BAILIAN_CLI_CDN +
- * `{base}/releases/{version}/{file}` (see packages/core releaseAssetUrl).
+ * Channel-only: write `<channel>.json` with per-platform zip file + sha256.
+ * Stable no longer emits latest.json.
  */
-function writeManifest(outdir, version, artifacts, mode, channel) {
+function writeChannelManifest(outdir, version, artifacts, channel) {
   const assets = Object.fromEntries(
     artifacts.map((item) => [
       `${item.os}-${item.arch}`,
       {
         file: item.fileName,
         sha256: item.sha256,
+        inner: item.innerName,
       },
     ]),
   );
   const manifest = {
     name: "bailian-cli",
-    channel: mode === "stable" ? "latest" : channel,
+    channel,
     version,
     releasedAt: new Date().toISOString(),
     assets,
   };
-  const name = manifestFileName(mode, channel);
+  const name = channelManifestFileName(channel);
   writeJson(join(outdir, name), manifest);
-  return [name];
+  return name;
 }
 
 function cliVersion() {
   return readPackageJson(PACKAGES.find((pkg) => pkg.key === "cli")).version;
 }
 
-/** Run `--version` on the artifact matching the host platform, if any was built. */
-function smokeTestHostBinary(artifacts, outdir) {
+/** Run `--version` on the host platform's uncompressed binary, if present. */
+function smokeTestHostBinary(compiled, outdir) {
   const hostOs = process.platform === "win32" ? "windows" : process.platform;
-  const host = artifacts.find((item) => item.os === hostOs && item.arch === process.arch);
+  const host = compiled.find((item) => item.os === hostOs && item.arch === process.arch);
   if (!host) return;
-  const binary = join(outdir, host.fileName);
-  log(`smoke test ${host.fileName} --version`);
+  const binary = join(outdir, host.innerName);
+  log(`smoke test ${host.innerName} --version`);
   const result = spawnSync(binary, ["--version"], { encoding: "utf-8" });
   if (result.status !== 0) {
     process.stderr.write(result.stderr || result.stdout || "");
-    throw new Error(`smoke test failed: ${host.fileName} --version`);
+    throw new Error(`smoke test failed: ${host.innerName} --version`);
   }
 }
 
-/** Compile binaries into `outdir` and write checksums + manifest. */
+/** Compile binaries into `outdir`, zip per platform, write checksums (+ channel manifest). */
 export function buildBinaryArtifacts(rawOptions = {}) {
   const options = normalizeBuildOptions(rawOptions);
   const { outdir, mode, channel } = options;
   const bunVersion = ensureBun();
+  ensureZip();
   const version = cliVersion();
   const targets = resolveTargets(options);
 
@@ -216,17 +216,31 @@ export function buildBinaryArtifacts(rawOptions = {}) {
   log(`mode ${mode}${channel ? ` channel=${channel}` : ""}`);
   log(`outdir ${outdir}`);
 
-  const artifacts = targets.map((target) => compileOne(target, version, outdir, CLI_ENTRY));
+  const compiled = targets.map((target) => compileOne(target, version, outdir, CLI_ENTRY));
+  smokeTestHostBinary(compiled, outdir);
+  const artifacts = compiled.map((item) =>
+    zipOne(item, { outdir, zipFileName: binaryAssetName(version, item), log }),
+  );
   writeChecksums(outdir, artifacts);
-  const manifests = writeManifest(outdir, version, artifacts, mode, channel);
-  smokeTestHostBinary(artifacts, outdir);
 
-  log(`\nBuilt ${artifacts.length} binary(ies):`);
-  for (const item of artifacts) {
-    log(`  ${item.fileName}  ${item.sha256.slice(0, 12)}…`);
+  const extras = ["SHA256SUMS"];
+  if (mode === "channel") {
+    extras.push(writeChannelManifest(outdir, version, artifacts, channel));
   }
-  log(`Also wrote SHA256SUMS, ${manifests.join(", ")}`);
-  return { version, mode, channel, outdir, artifacts, manifests };
+
+  log(`\nBuilt ${artifacts.length} zip(s):`);
+  for (const item of artifacts) {
+    log(`  ${item.fileName}  ${item.sha256.slice(0, 12)}… (inner ${item.innerName})`);
+  }
+  log(`Also wrote ${extras.join(", ")}`);
+  return {
+    version,
+    mode,
+    channel,
+    outdir,
+    artifacts,
+    manifests: extras.filter((name) => name.endsWith(".json")),
+  };
 }
 
 if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {

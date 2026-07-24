@@ -3,6 +3,7 @@ import {
   detectInstallMethod,
   isCompiledBinary,
   binaryAssetFileName,
+  binaryInnerFileName,
 } from "../src/install/index.ts";
 
 test("isCompiledBinary respects BAILIAN_COMPILED", () => {
@@ -23,7 +24,12 @@ test("detectInstallMethod respects BAILIAN_INSTALL_METHOD", () => {
   else process.env.BAILIAN_INSTALL_METHOD = previous;
 });
 
-test("binaryAssetFileName formats windows exe", () => {
-  expect(binaryAssetFileName("1.2.3", "windows", "x64", true)).toBe("bl-1.2.3-windows-x64.exe");
-  expect(binaryAssetFileName("1.2.3", "darwin", "arm64", false)).toBe("bl-1.2.3-darwin-arm64");
+test("binaryAssetFileName uses per-platform zip", () => {
+  expect(binaryAssetFileName("1.2.3", "windows", "x64", true)).toBe("bl-1.2.3-windows-x64.zip");
+  expect(binaryAssetFileName("1.2.3", "darwin", "arm64", false)).toBe("bl-1.2.3-darwin-arm64.zip");
+});
+
+test("binaryInnerFileName keeps exe suffix inside zip", () => {
+  expect(binaryInnerFileName("1.2.3", "windows", "x64", true)).toBe("bl-1.2.3-windows-x64.exe");
+  expect(binaryInnerFileName("1.2.3", "darwin", "arm64", false)).toBe("bl-1.2.3-darwin-arm64");
 });

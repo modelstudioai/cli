@@ -108,7 +108,7 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 
 - [ ] 验证 npm 上能装：`npm view bailian-cli@<tag> version`;如发布 `knowledge-studio-cli`，同时 `npm view knowledge-studio-cli@<tag> version`
 - [ ] 试装一次：`npm i -g bailian-cli@<tag> && bl --version`;如发布 `knowledge-studio-cli`，同时 `npm i -g knowledge-studio-cli@<tag> && kscli --version`
-- [ ] （若本次含二进制）GitHub Release 页可见资产，`install.sh` / `latest.json` 经 FC 同步到 OSS 后可访问；清单见 [binary-distribution.md](binary-distribution.md)
+- [ ] （若本次含二进制）GitHub Release 可见 `bl-*.zip` + `SHA256SUMS`；OSS 侧 `channels/latest.json` 与 install 脚本由 FC/仓外维护；清单见 [binary-distribution.md](binary-distribution.md)
 
 ## 常见漏点（基于历史踩坑）
 

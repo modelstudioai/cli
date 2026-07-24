@@ -2,8 +2,8 @@
  * Publish bailian-cli binary assets to GitHub Releases.
  *
  * stable:  release `v<version>` (tag must already be on origin; --verify-tag)
- *          assets: bl-*, SHA256SUMS, latest.json
- * channel: versioned prerelease `v<betaVersion>` (assets: bl-*, SHA256SUMS)
+ *          assets: bl-*.zip, SHA256SUMS  (no latest.json)
+ * channel: versioned prerelease `v<betaVersion>` (assets: bl-*.zip, SHA256SUMS)
  *          + rolling prerelease tag `channel-<name>` holding only `<name>.json`
  *
  * Same commit/day channel publishes share one `v<betaVersion>` Release (identical
@@ -23,7 +23,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs as parseCliArgs } from "node:util";
 import { ROOT, readPackageJson, PACKAGES } from "./packages.mjs";
 import { buildBinaryArtifacts, matrixAssetNames } from "./binary-build.mjs";
-import { manifestFileName, normalizeModeChannel } from "./binary-options.mjs";
+import { channelManifestFileName, normalizeModeChannel } from "./binary-options.mjs";
 import { ensureGh, GITHUB_REPOSITORY, upsertRelease } from "./gh-release.mjs";
 import { notifyOssSyncWebhook } from "./oss-sync-webhook.mjs";
 
@@ -59,10 +59,6 @@ function versionBinaryAssets(dir, version, files) {
 }
 
 function uploadStable({ dir, version, files, dryRun }) {
-  const assets = [
-    ...versionBinaryAssets(dir, version, files),
-    join(dir, manifestFileName("stable", null)),
-  ];
   const section = extractChangelogSection(version);
 
   upsertRelease({
@@ -70,7 +66,7 @@ function uploadStable({ dir, version, files, dryRun }) {
     title: `v${version}`,
     verifyTag: true,
     notes: section || undefined,
-    assets,
+    assets: versionBinaryAssets(dir, version, files),
     dryRun,
   });
 }
@@ -91,7 +87,7 @@ function uploadChannel({ dir, version, channel, files, dryRun }) {
     title: `channel: ${channel}`,
     prerelease: true,
     notes: `Rolling manifest for the \`${channel}\` channel. Latest beta: ${version}.`,
-    assets: [join(dir, manifestFileName("channel", channel))],
+    assets: [join(dir, channelManifestFileName(channel))],
     dryRun,
   });
 }
@@ -99,14 +95,13 @@ function uploadChannel({ dir, version, channel, files, dryRun }) {
 /** Dry-run path when dist-bin is absent: plan tags/assets without compiling. */
 function planDryRunWithoutArtifacts({ version, mode, channel }) {
   const matrix = matrixAssetNames(version);
-  const manifestName = manifestFileName(mode, channel);
   if (mode === "stable") {
     upsertRelease({
       tag: `v${version}`,
       title: `v${version}`,
       verifyTag: true,
       notes: extractChangelogSection(version) || undefined,
-      assets: [...matrix, "SHA256SUMS", manifestName],
+      assets: [...matrix, "SHA256SUMS"],
       dryRun: true,
     });
     return;
@@ -124,7 +119,7 @@ function planDryRunWithoutArtifacts({ version, mode, channel }) {
     title: `channel: ${channel}`,
     prerelease: true,
     notes: `Rolling manifest for the \`${channel}\` channel. Latest beta: ${version}.`,
-    assets: [manifestName],
+    assets: [channelManifestFileName(channel)],
     dryRun: true,
   });
 }
@@ -173,14 +168,16 @@ export function releaseBinaryArtifacts(rawOptions = {}) {
   }
 
   const files = readdirSync(dir).filter((name) => !name.startsWith("."));
-  const manifestName = manifestFileName(mode, channel);
-  if (!files.includes(manifestName)) {
-    throw new Error(
-      `Missing ${manifestName} in ${dir}. Rebuild with matching --mode/--channel (found: ${files.join(", ") || "(empty)"}).`,
-    );
-  }
   if (!files.includes("SHA256SUMS")) {
     throw new Error(`Missing SHA256SUMS in ${dir}`);
+  }
+  if (mode === "channel") {
+    const manifestName = channelManifestFileName(channel);
+    if (!files.includes(manifestName)) {
+      throw new Error(
+        `Missing ${manifestName} in ${dir}. Rebuild with matching --mode/--channel (found: ${files.join(", ") || "(empty)"}).`,
+      );
+    }
   }
 
   process.stdout.write(`artifacts in ${dir}:\n`);

@@ -18,7 +18,7 @@ on:
           - channel
           - stable
       channel:
-        description: "dist-tag (channel mode only, e.g. mcp/plugin/advisor)"
+        description: "Required when mode=channel. dist-tag name, e.g. mcp / plugin / release-test (lowercase, digits, dashes)"
         required: false
         type: string
 
@@ -55,6 +55,9 @@ jobs:
             | sudo tar -xz -C /usr/local/bin gitleaks
           gitleaks version
 
+      - name: Ensure zip (per-platform binary archives)
+        run: sudo apt-get update && sudo apt-get install -y zip
+
       - run: pnpm install --frozen-lockfile
 
       # Binary compile uses `bun build --compile` CLI (not Bun.build API).
@@ -78,6 +81,12 @@ jobs:
       contents: write # create prerelease GitHub Release with binary assets
       id-token: write # OIDC for npm Trusted Publishing + provenance
     steps:
+      - name: Require channel input
+        if: ${{ inputs.channel == '' }}
+        run: |
+          echo "::error::mode=channel requires the workflow input \"channel\" (e.g. mcp, plugin, release-test). Leave mode=stable if you do not need a dist-tag."
+          exit 1
+
       - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v6
@@ -96,6 +105,9 @@ jobs:
             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
             | sudo tar -xz -C /usr/local/bin gitleaks
           gitleaks version
+
+      - name: Ensure zip (per-platform binary archives)
+        run: sudo apt-get update && sudo apt-get install -y zip
 
       - run: pnpm install --frozen-lockfile
 

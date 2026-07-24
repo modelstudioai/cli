@@ -1,11 +1,13 @@
-import { mkdir, rename, unlink, writeFile, chmod } from "node:fs/promises";
+import { mkdir, rename, unlink, writeFile, chmod, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { createHash } from "node:crypto";
 import {
   binaryAssetFileName,
+  binaryInnerFileName,
   channelManifestUrl,
   detectBinaryPlatform,
+  extractZipEntryToFile,
   getConfigDir,
   releaseAssetUrl,
   writeInstallMethodSync,
@@ -13,7 +15,7 @@ import {
 
 export interface ChannelManifest {
   version: string;
-  assets?: Record<string, { file?: string; sha256?: string; url?: string }>;
+  assets?: Record<string, { file?: string; sha256?: string; url?: string; inner?: string }>;
 }
 
 export async function fetchBinaryChannelVersion(
@@ -81,31 +83,36 @@ function sha256(buffer: Buffer): string {
 
 /**
  * Download and install a newer standalone binary in place of the current install.
+ * Assets are per-platform `.zip` files; checksum applies to the zip.
  * Returns the installed version string.
  */
 export async function performBinaryUpdate(targetVersion: string): Promise<string> {
   const { os, arch, fileSuffix } = detectBinaryPlatform();
+  const exe = fileSuffix === ".exe";
   const manifest = await fetchBinaryChannelManifest("latest");
   const assetKey = `${os}-${arch}`;
   const assetMeta = manifest?.assets?.[assetKey];
-  const fileName =
-    assetMeta?.file ?? binaryAssetFileName(targetVersion, os, arch, fileSuffix === ".exe");
+  const zipName = assetMeta?.file ?? binaryAssetFileName(targetVersion, os, arch, exe);
+  const innerName = assetMeta?.inner ?? binaryInnerFileName(targetVersion, os, arch, exe);
   const expectedSha = assetMeta?.sha256;
-  const url = assetMeta?.url ?? releaseAssetUrl(targetVersion, fileName);
+  const url = assetMeta?.url ?? releaseAssetUrl(targetVersion, zipName);
 
-  const tmpPath = join(shareRoot(), ".tmp", fileName);
-  const buffer = await downloadToFile(url, tmpPath);
+  const tmpZip = join(shareRoot(), ".tmp", zipName);
+  const buffer = await downloadToFile(url, tmpZip);
   const actualSha = sha256(buffer);
   if (expectedSha && expectedSha !== actualSha) {
-    await unlink(tmpPath).catch(() => {});
-    throw new Error(`Checksum mismatch for ${fileName}`);
+    await unlink(tmpZip).catch(() => {});
+    throw new Error(`Checksum mismatch for ${zipName}`);
   }
 
   const versionDir = join(shareRoot(), "versions", targetVersion);
   await mkdir(versionDir, { recursive: true });
   const binaryName = process.platform === "win32" ? "bl.exe" : "bl";
   const finalPath = join(versionDir, binaryName);
-  await rename(tmpPath, finalPath);
+  const tmpBinary = join(shareRoot(), ".tmp", binaryName);
+  await extractZipEntryToFile(tmpZip, tmpBinary, innerName);
+  await unlink(tmpZip).catch(() => {});
+  await rename(tmpBinary, finalPath);
   if (process.platform !== "win32") {
     await chmod(finalPath, 0o755);
   }
@@ -113,8 +120,9 @@ export async function performBinaryUpdate(targetVersion: string): Promise<string
   const binDir = binRoot();
   await mkdir(binDir, { recursive: true });
   if (process.platform === "win32") {
-    await writeFile(join(binDir, "bl.exe"), buffer);
-    await writeFile(join(binDir, "bailian.exe"), buffer);
+    const installed = await readFile(finalPath);
+    await writeFile(join(binDir, "bl.exe"), installed);
+    await writeFile(join(binDir, "bailian.exe"), installed);
   } else {
     const { symlink } = await import("node:fs/promises");
     for (const name of ["bl", "bailian"] as const) {
