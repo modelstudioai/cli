@@ -20,6 +20,7 @@ runtime/src/urls.ts                      ← 用户面控制台 URL(cn-only)
   BAILIAN_CONSOLE           BAILIAN_CONSOLE_ROOT/cn-beijing
   API_KEY_PAGE              BAILIAN_CONSOLE/?tab=app#/api-key
   TOKEN_PLAN_PAGE           BAILIAN_CONSOLE_ROOT/cn-beijing?tab=plan#/efm/subscription/overview
+  MCP_WEBSEARCH_PAGE        BAILIAN_CONSOLE?tab=mcp#/mcp-market/detail/WebSearch
 
 core/files/upload.ts                     ← 文件上传 endpoint(cn-pinned)
   UPLOAD_API                ${REGIONS.cn}/api/v1/uploads
