@@ -1,63 +1,61 @@
 /**
- * sync.ts —— Wiki 数据同步（第二层：recommend 触发）
+ * sync.ts — Wiki data sync (layer 2: triggered by recommend)
  *
- * `bl advisor recommend` 执行时调用 `maybeSyncWikiData()`：
- *   1. 12h throttle：距上次检查不足 12h 直接跳过
- *   2. 从公共读 OSS 下载 manifest.json 比对版本
- *   3. 版本相同 → 仅刷新 lastChecked
- *   4. 版本不同 → 下载 tar.br → 校验 sha256 → brotli 解压 + tar-stream 解包
- *      到同盘临时目录 → renameSync 原子替换 → 写 state
+ * Called via `maybeSyncWikiData()` during `bl advisor recommend`:
+ *   1. 12h throttle: skip if last check was less than 12h ago
+ *   2. Download skills/index.json from public-read OSS, compare bailian-docs-llm-wiki entry version
+ *   3. Same version → only refresh lastChecked
+ *   4. Different version → download skills/bailian-docs-llm-wiki/skill.tar.br → brotli decompress +
+ *      tar-stream extract (per-entry path safety check) to same-volume temp dir → renameSync atomic swap
+ *      → write state + skill-lock.json record (same ledger as bl skill add; list shows installed)
  *
- * 与 postinstall.js（第一层，npm install 无条件覆盖）互补。二者都用
- * Node 原生 brotli + tar-stream extract()，与 Crawler 端 tar.pack() 对称。
+ * Protocol: unified skill publishing protocol (FC publish-skills, all skills are isomorphic), entry point is
+ * skills/index.json, one skill.tar.br per skill (brotli q6).
  *
- * 失败策略：任何一步失败都静默返回且不更新 lastChecked，下次 recommend 立即重试。
+ * Complements postinstall.js (layer 1, unconditional overwrite on npm install). Extraction and atomic swap
+ * reuse skills/extract.ts (same as bl skill installer), symmetric with publisher tar.pack().
+ *
+ * Failure strategy: any step failure silently returns without updating lastChecked; next recommend retries immediately.
  */
-import { createHash } from "node:crypto";
-import {
-  createWriteStream,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import { dirname, join } from "node:path";
-import { Readable } from "node:stream";
-import { pipeline } from "node:stream/promises";
-import { createBrotliDecompress } from "node:zlib";
-import tar from "tar-stream";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { getConfigDir } from "../config/paths.ts";
+import { atomicSwap, extractTarBr } from "../skills/extract.ts";
+import { readSkillLock, upsertSkillLockEntry } from "../skills/lock.ts";
 
-/** 公共读 OSS 目录，直链下载（硬编码，不走 env）。 */
-const OSS_BASE_URL = "https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/bailian-docs-llm-wiki";
+/** Public-read OSS skill registry root (hardcoded, does not use env). */
+const REGISTRY_BASE_URL = "https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/skills";
+const WIKI_SKILL_NAME = "bailian-docs-llm-wiki";
 const SKILL_DIR_NAME = "skills/bailian-docs-llm-wiki";
 const STATE_FILE_NAME = "wiki-sync-state.json";
 const MODELS_FILE = "models.jsonl";
-const MANIFEST_KEY = "manifest.json";
-const ASSET_KEY = "wiki-doc-full.tar.br";
+const INDEX_KEY = "index.json";
+const ASSET_NAME = "skill.tar.br";
 
 const THROTTLE_MS = 12 * 60 * 60 * 1000; // 12h
-const MANIFEST_TIMEOUT_MS = 3000;
+const INDEX_TIMEOUT_MS = 3000;
 const DOWNLOAD_TIMEOUT_MS = 30000;
 
 interface SyncState {
   lastChecked: number;
-  version: string;
+  /** Content fingerprint of the last synced revision; the change-detection token */
+  contentHash: string;
 }
 
-interface Manifest {
-  name: string;
-  version: string;
+/** A single skill entry in skills/index.json (unified publishing protocol) */
+interface IndexSkillEntry {
+  /** Reserved for the skill's own semantic version; not used for change detection */
+  version?: string;
   publishedAt?: string;
-  asset: {
-    name: string;
-    url?: string;
-    sha256: string;
-    size: number;
-    compression: string;
-  };
+  description?: string;
+  contentHash?: string;
+  compression?: string;
+}
+
+interface SkillsIndex {
+  version: number;
+  updatedAt?: string;
+  skills: Record<string, IndexSkillEntry>;
 }
 
 function getCatalogDir(): string {
@@ -65,9 +63,9 @@ function getCatalogDir(): string {
 }
 
 /**
- * 本地 Wiki 数据是否已就绪。以 `models.jsonl` 作为存在信号，与
- * `CatalogSource.available()` 判定一致：只要 advisor 真正消费的文件在，
- * 就认为数据可用。
+ * Whether local Wiki data is ready. Uses `models.jsonl` as the existence signal, consistent with
+ * `CatalogSource.available()`: as long as the file advisor actually consumes exists,
+ * the data is considered available.
  */
 function catalogDataExists(): boolean {
   return existsSync(join(getCatalogDir(), "models", MODELS_FILE));
@@ -89,15 +87,48 @@ function writeState(state: SyncState): void {
   try {
     writeFileSync(getStatePath(), JSON.stringify(state));
   } catch {
-    /* 非关键：state 写失败下次会重新检查 */
+    /* Non-critical: if state write fails, next run will re-check */
   }
 }
 
-async function fetchManifest(url: string): Promise<Manifest | null> {
+/**
+ * Record this sync in skill-lock.json so the wiki skill shares the same ledger as bl skill
+ * (list shows installed instead of untracked; update can manage subsequent upgrades).
+ * Bookkeeping in the silent channel must be best-effort: failure does not affect sync results.
+ */
+function recordWikiInLock(entry: IndexSkillEntry): void {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(MANIFEST_TIMEOUT_MS) });
+    upsertSkillLockEntry(WIKI_SKILL_NAME, {
+      ...(entry.contentHash ? { contentHash: entry.contentHash } : {}),
+      ...(entry.publishedAt ? { publishedAt: entry.publishedAt } : {}),
+      installedAt: new Date().toISOString(),
+      sourceType: "oss",
+      ...(entry.description ? { description: entry.description } : {}),
+    });
+  } catch {
+    /* Bookkeeping failure does not block sync; next sync or bl skill add will fill it in */
+  }
+}
+
+/** Whether lock already has a wiki record matching the remote content fingerprint (avoids rewriting lock on every 12h check) */
+function wikiLockUpToDate(contentHash: string): boolean {
+  try {
+    return readSkillLock().skills[WIKI_SKILL_NAME]?.contentHash === contentHash;
+  } catch {
+    return false;
+  }
+}
+
+/** Fetch skills/index.json and extract the wiki skill entry; returns null on any failure */
+async function fetchIndexEntry(): Promise<IndexSkillEntry | null> {
+  try {
+    const res = await fetch(`${REGISTRY_BASE_URL}/${INDEX_KEY}`, {
+      signal: AbortSignal.timeout(INDEX_TIMEOUT_MS),
+    });
     if (!res.ok) return null;
-    return (await res.json()) as Manifest;
+    const index = (await res.json()) as SkillsIndex;
+    if (typeof index?.version !== "number" || !index.skills) return null;
+    return index.skills[WIKI_SKILL_NAME] ?? null;
   } catch {
     return null;
   }
@@ -113,98 +144,57 @@ async function downloadBuffer(url: string): Promise<Buffer | null> {
   }
 }
 
-/** brotli 解压 + tar-stream 解包到 destDir（与 Crawler tar.pack() 对称）。 */
-async function extractTarBr(tarBrBuffer: Buffer, destDir: string): Promise<void> {
-  const extract = tar.extract();
-
-  extract.on("entry", (header, stream, next) => {
-    const filePath = join(destDir, header.name);
-    if (header.type === "directory") {
-      mkdirSync(filePath, { recursive: true });
-      stream.resume();
-      stream.on("end", next);
-      return;
-    }
-    mkdirSync(dirname(filePath), { recursive: true });
-    const ws = createWriteStream(filePath);
-    stream.pipe(ws);
-    ws.on("finish", next);
-    ws.on("error", next);
-  });
-
-  await pipeline(Readable.from(tarBrBuffer), createBrotliDecompress(), extract);
-}
-
 /**
- * 原子替换：把 tmpDir 解包好的内容替换到 catalogDir。
- * tmpDir 必须与 catalogDir 同盘（同一 parent 下），renameSync 才是原子的。
- */
-function atomicSwap(tmpDir: string, catalogDir: string): void {
-  mkdirSync(dirname(catalogDir), { recursive: true });
-  const backup = `${catalogDir}.old-${Date.now()}`;
-  if (existsSync(catalogDir)) renameSync(catalogDir, backup);
-  try {
-    renameSync(tmpDir, catalogDir);
-  } catch (err) {
-    // 替换失败 → 回滚旧目录，避免留下空洞
-    if (existsSync(backup) && !existsSync(catalogDir)) renameSync(backup, catalogDir);
-    throw err;
-  }
-  if (existsSync(backup)) rmSync(backup, { recursive: true, force: true });
-}
-
-/**
- * 检查并同步 Wiki 数据。静默执行，任何异常都不抛出。
- * @returns 是否实际更新了数据（用于测试/调试）
+ * Check and sync Wiki data. Runs silently; never throws.
+ * @returns Whether data was actually updated (for testing/debugging)
  */
 export async function maybeSyncWikiData(): Promise<boolean> {
   const state = readState();
   const now = Date.now();
 
-  // 1. throttle gate：仅当「在 12h 窗口内」且「本地数据确实存在」时才跳过。
-  //    数据缺失（用户手动删除、postinstall 失败但 state 残留等）时无视 throttle，
-  //    立即走同步补齐，避免 advisor 拿不到数据。
+  // 1. throttle gate: only skip when "within the 12h window" AND "local data actually exists".
+  //    If data is missing (user deleted manually, postinstall failed but state remains, etc.),
+  //    ignore throttle and sync immediately to ensure advisor has data.
   if (state && now - state.lastChecked < THROTTLE_MS && catalogDataExists()) {
     return false;
   }
 
-  // 2. 拉 manifest
-  const manifest = await fetchManifest(`${OSS_BASE_URL}/${MANIFEST_KEY}`);
-  if (!manifest?.version) return false; // 失败不写 lastChecked，下次重试
+  // 2. Fetch skills/index.json and get the wiki entry
+  const entry = await fetchIndexEntry();
+  if (!entry?.contentHash) return false; // On failure, do not write lastChecked; retry next time
 
-  // 3. 版本相同且本地数据存在：仅刷新 lastChecked，无需重新下载。
-  //    覆盖两种状态：(a) state.version === manifest.version → 直接命中；
-  //    (b) state 缺失但数据完好（用户或意外只删了 state）→ 用 manifest 版本
-  //    写回 state，避免无谓的 2MB 下载+解压。
-  //    数据缺失或版本落后时落到第 4 步全量下载补齐。
+  // 3. Same content and local data exists: only refresh lastChecked, no re-download needed.
+  //    Covers two cases: (a) state.contentHash === entry.contentHash → direct hit;
+  //    (b) state missing but data intact (user or accident only deleted state) → write the fingerprint
+  //    back to state, avoiding unnecessary download+extract.
+  //    If data is missing or the fingerprint differs, falls through to step 4 for full download.
   const dataOk = catalogDataExists();
-  if (dataOk && (!state || state.version === manifest.version)) {
-    writeState({ lastChecked: now, version: manifest.version });
+  if (dataOk && (!state || state.contentHash === entry.contentHash)) {
+    writeState({ lastChecked: now, contentHash: entry.contentHash });
+    // Data and content are ready but lock record is missing/stale (e.g. postinstall landed before this mechanism) → backfill
+    if (!wikiLockUpToDate(entry.contentHash)) recordWikiInLock(entry);
     return false;
   }
 
-  // 4. 版本不同：下载 + 校验 + 解包 + 原子替换
-  const tarBuf = await downloadBuffer(`${OSS_BASE_URL}/${ASSET_KEY}`);
+  // 4. Different content: download + extract (with entry path safety check) + atomic swap
+  const tarBuf = await downloadBuffer(`${REGISTRY_BASE_URL}/${WIKI_SKILL_NAME}/${ASSET_NAME}`);
   if (!tarBuf) return false;
 
-  // sha256 校验
-  const sha256 = createHash("sha256").update(tarBuf).digest("hex");
-  if (manifest.asset?.sha256 && sha256 !== manifest.asset.sha256) return false;
-
   const catalogDir = getCatalogDir();
-  // 同盘临时目录：extract 到这里再 rename，跨盘 rename 会 EXDEV
+  // Same-volume temp dir: extract here then rename; cross-device rename would EXDEV
   const tmpDir = `${catalogDir}.tmp-${process.pid}-${Date.now()}`;
   try {
     mkdirSync(tmpDir, { recursive: true });
     await extractTarBr(tarBuf, tmpDir);
     atomicSwap(tmpDir, catalogDir);
   } catch {
-    // 解包/替换失败 → 清理临时目录，不动现有数据，不写 state
+    // Extract/swap failed → clean up temp dir, leave existing data untouched, do not write state
     if (existsSync(tmpDir)) rmSync(tmpDir, { recursive: true, force: true });
     return false;
   }
 
-  // 5. 成功：写 state
-  writeState({ lastChecked: now, version: manifest.version });
+  // 5. Success: write state + skill-lock.json record (unified bl skill ledger)
+  writeState({ lastChecked: now, contentHash: entry.contentHash });
+  recordWikiInLock(entry);
   return true;
 }

@@ -90,3 +90,7 @@ export { default as pluginInstall } from "./commands/plugin/install.ts";
 export { default as pluginLink } from "./commands/plugin/link.ts";
 export { default as pluginList } from "./commands/plugin/list.ts";
 export { default as pluginRemove } from "./commands/plugin/remove.ts";
+export { default as skillAdd } from "./commands/skill/add.ts";
+export { default as skillUpdate } from "./commands/skill/update.ts";
+export { default as skillRemove } from "./commands/skill/remove.ts";
+export { default as skillList } from "./commands/skill/list.ts";

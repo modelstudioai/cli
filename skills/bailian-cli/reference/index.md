@@ -74,6 +74,10 @@ Use this index for the full quick index and global flags.
 | `bl quota list`              | View model RPM/TPM rate limits                                                                                                  | [quota.md](quota.md)           |
 | `bl quota request`           | Request a temporary quota increase                                                                                              | [quota.md](quota.md)           |
 | `bl search web`              | Search the web using DashScope MCP WebSearch service                                                                            | [search.md](search.md)         |
+| `bl skill add`               | Install skills from the Bailian skill registry into local agents                                                                | [skill.md](skill.md)           |
+| `bl skill list`              | List registry skills and diff against local installs                                                                            | [skill.md](skill.md)           |
+| `bl skill remove`            | Remove locally installed skills (registry is untouched)                                                                         | [skill.md](skill.md)           |
+| `bl skill update`            | Update installed skills to the latest registry versions                                                                         | [skill.md](skill.md)           |
 | `bl speech recognize`        | Recognize speech from audio files (FunAudio-ASR)                                                                                | [speech.md](speech.md)         |
 | `bl speech synthesize`       | Synthesize speech from text (CosyVoice TTS)                                                                                     | [speech.md](speech.md)         |
 | `bl text chat`               | Send a chat completion (OpenAI compatible, DashScope)                                                                           | [text.md](text.md)             |
@@ -117,6 +121,7 @@ Use this index for the full quick index and global flags.
 | `plugin`     | `install`, `link`, `list`, `remove`                                                                                                      | [plugin.md](plugin.md)         |
 | `quota`      | `check`, `history`, `list`, `request`                                                                                                    | [quota.md](quota.md)           |
 | `search`     | `web`                                                                                                                                    | [search.md](search.md)         |
+| `skill`      | `add`, `list`, `remove`, `update`                                                                                                        | [skill.md](skill.md)           |
 | `speech`     | `recognize`, `synthesize`                                                                                                                | [speech.md](speech.md)         |
 | `text`       | `chat`                                                                                                                                   | [text.md](text.md)             |
 | `token-plan` | `add-member`, `assign-seats`, `create-key`, `list-seats`                                                                                 | [token-plan.md](token-plan.md) |

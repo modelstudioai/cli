@@ -1,27 +1,29 @@
 /**
- * postinstall.js —— Wiki 数据同步（第一层：npm install 触发）
+ * postinstall.js — Wiki data sync (layer 1: triggered by npm install)
  *
- * npm/pnpm 装完 bailian-cli 后自动执行：无条件下载全量 Wiki 数据包并覆盖本地目录，
- * 保证用户首次使用 `bl advisor recommend` 时数据已就位。
+ * Runs automatically after npm/pnpm installs bailian-cli: unconditionally downloads the full Wiki data
+ * package and overwrites the local directory, ensuring data is in place the first time the user runs
+ * `bl advisor recommend`.
  *
- * 流程：
- *   1. 从公共读 OSS 直链下载 manifest.json + wiki-doc-full.tar.br（~2.15MB）
- *   2. 校验 sha256
- *   3. Node 原生 brotli 解压 + tar-stream 解包到同盘临时目录
- *   4. renameSync 原子替换到 ~/.bailian/skills/bailian-docs-llm-wiki/
- *   5. 写 ~/.bailian/wiki-sync-state.json
+ * Flow (unified skill publishing protocol: skills/index.json + one skill.tar.br per skill):
+ *   1. Download skills/index.json from public-read OSS, get the bailian-docs-llm-wiki entry
+ *   2. Download skills/bailian-docs-llm-wiki/skill.tar.br (brotli q6, ~2.3MB)
+ *   3. Node built-in brotli decompress + tar-stream extract (per-entry path safety check) to same-volume temp dir
+ *   4. renameSync atomic swap into ~/.bailian/skills/bailian-docs-llm-wiki/
+ *   5. Write ~/.bailian/wiki-sync-state.json
+ *   6. Write ~/.bailian/skills/skill-lock.json record (same ledger as bl skill)
  *
- * 设计约束：
- *   - 无条件覆盖：每次 install 都全量替换，不比对已有版本
- *   - 失败静默：任何一步失败 → console.warn → process.exit(0)，绝不阻塞安装
- *   - 独立实现：不 import bailian-cli-core，避免打包后 ESM 路径问题
- *   - 依赖 Node 原生模块 + tar-stream（与 sync.ts / Crawler oss-upload.mjs 一致）
+ * Design constraints:
+ *   - Unconditional overwrite: every install fully replaces, no version comparison
+ *   - Silent failure: any step failure → console.warn → process.exit(0), never blocks install
+ *   - Standalone implementation: does not import bailian-cli-core, avoiding ESM path issues after bundling
+ *   - Depends on Node built-in modules + tar-stream (consistent with sync.ts / publisher skills-publish.mjs)
  */
-import { createHash } from "node:crypto";
 import {
   createWriteStream,
   existsSync,
   mkdirSync,
+  readFileSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -33,14 +35,15 @@ import { pipeline } from "node:stream/promises";
 import { createBrotliDecompress } from "node:zlib";
 import tar from "tar-stream";
 
-const OSS_BASE_URL = "https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/bailian-docs-llm-wiki";
+const REGISTRY_BASE_URL = "https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/skills";
+const WIKI_SKILL_NAME = "bailian-docs-llm-wiki";
 const CONFIG_DIR_NAME = ".bailian";
 const SKILL_DIR_NAME = "skills/bailian-docs-llm-wiki";
 const STATE_FILE_NAME = "wiki-sync-state.json";
-const MANIFEST_KEY = "manifest.json";
-const ASSET_KEY = "wiki-doc-full.tar.br";
+const INDEX_KEY = "index.json";
+const ASSET_NAME = "skill.tar.br";
 
-const MANIFEST_TIMEOUT_MS = 3000;
+const INDEX_TIMEOUT_MS = 3000;
 const DOWNLOAD_TIMEOUT_MS = 30000;
 
 function getConfigDir() {
@@ -56,6 +59,35 @@ function getStatePath() {
   return join(getConfigDir(), STATE_FILE_NAME);
 }
 
+function getSkillLockPath() {
+  return join(getConfigDir(), "skills", "skill-lock.json");
+}
+
+/**
+ * Record this sync in skill-lock.json (same ledger as bl skill; list shows installed).
+ * Semantics aligned with upsertSkillLockEntry in core/src/skills/lock.ts: shallow-merge with the existing
+ * entry, preserving fields like links written by bl skill add; rebuild as empty table if lock is corrupted/unrecognized.
+ * best-effort: failure does not affect data sync results.
+ */
+function upsertSkillLock(name, entry) {
+  try {
+    let lock = { version: 1, skills: {} };
+    try {
+      const parsed = JSON.parse(readFileSync(getSkillLockPath(), "utf-8"));
+      if (parsed?.version === 1 && parsed.skills && typeof parsed.skills === "object") {
+        lock = parsed;
+      }
+    } catch {
+      /* absent/corrupted → empty table */
+    }
+    lock.skills[name] = { ...lock.skills[name], ...entry };
+    mkdirSync(dirname(getSkillLockPath()), { recursive: true });
+    writeFileSync(getSkillLockPath(), JSON.stringify(lock, null, 2) + "\n");
+  } catch {
+    /* Bookkeeping failure does not block install; advisor-side sync will backfill */
+  }
+}
+
 async function fetchJson(url, timeoutMs) {
   const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -68,11 +100,21 @@ async function downloadBuffer(url) {
   return Buffer.from(await res.arrayBuffer());
 }
 
-/** brotli 解压 + tar-stream 解包到 destDir（与 Crawler tar.pack() 对称）。 */
+/** tar 条目路径必须是相对路径且不含 ..，防止 tar-slip 逃逸解包目录 */
+function isSafeEntryName(name) {
+  if (name.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(name)) return false;
+  return !name.split("/").includes("..");
+}
+
+/** Brotli decompress + tar-stream extract into destDir (symmetric with publisher tar.pack()). */
 async function extractTarBr(tarBrBuffer, destDir) {
   const extract = tar.extract();
 
   extract.on("entry", (header, stream, next) => {
+    if (!isSafeEntryName(header.name)) {
+      next(new Error(`unsafe tar entry: ${header.name}`));
+      return;
+    }
     const filePath = join(destDir, header.name);
     if (header.type === "directory") {
       mkdirSync(filePath, { recursive: true });
@@ -90,7 +132,7 @@ async function extractTarBr(tarBrBuffer, destDir) {
   await pipeline(Readable.from(tarBrBuffer), createBrotliDecompress(), extract);
 }
 
-/** 原子替换：tmpDir（同盘）→ catalogDir。 */
+/** Atomic swap: tmpDir (same volume) → catalogDir. */
 function atomicSwap(tmpDir, catalogDir) {
   mkdirSync(dirname(catalogDir), { recursive: true });
   const backup = `${catalogDir}.old-${Date.now()}`;
@@ -105,18 +147,16 @@ function atomicSwap(tmpDir, catalogDir) {
 }
 
 async function main() {
-  // 1. 下载 manifest
-  const manifest = await fetchJson(`${OSS_BASE_URL}/${MANIFEST_KEY}`, MANIFEST_TIMEOUT_MS);
-  if (!manifest?.version) throw new Error("manifest 无 version");
+  // 1. Download skills/index.json and get the wiki entry
+  const index = await fetchJson(`${REGISTRY_BASE_URL}/${INDEX_KEY}`, INDEX_TIMEOUT_MS);
+  const entry = index?.skills?.[WIKI_SKILL_NAME];
+  if (!entry?.contentHash)
+    throw new Error("no bailian-docs-llm-wiki entry (or contentHash) in index.json");
 
-  // 2. 下载 tar.br + 校验
-  const tarBuf = await downloadBuffer(`${OSS_BASE_URL}/${ASSET_KEY}`);
-  const sha256 = createHash("sha256").update(tarBuf).digest("hex");
-  if (manifest.asset?.sha256 && sha256 !== manifest.asset.sha256) {
-    throw new Error("sha256 校验失败");
-  }
+  // 2. Download skill.tar.br (per-entry path safety check during extraction)
+  const tarBuf = await downloadBuffer(`${REGISTRY_BASE_URL}/${WIKI_SKILL_NAME}/${ASSET_NAME}`);
 
-  // 3. 解包到同盘临时目录 + 原子替换
+  // 3. Extract to same-volume temp dir + atomic swap
   const catalogDir = getCatalogDir();
   const tmpDir = `${catalogDir}.tmp-${process.pid}-${Date.now()}`;
   try {
@@ -128,24 +168,35 @@ async function main() {
     throw err;
   }
 
-  // 4. 写 state
+  // 4. Write state
   try {
     writeFileSync(
       getStatePath(),
-      JSON.stringify({ lastChecked: Date.now(), version: manifest.version }),
+      JSON.stringify({ lastChecked: Date.now(), contentHash: entry.contentHash }),
     );
   } catch {
-    /* state 写失败不影响：首次 recommend 会重新检查 */
+    /* state write failure has no impact: first recommend will re-check */
   }
 
-  process.stdout.write(`bailian-cli: wiki 数据已就绪 (v${manifest.version})\n`);
+  // 5. skill-lock.json record: wiki shares the same ledger as bl skill
+  upsertSkillLock(WIKI_SKILL_NAME, {
+    contentHash: entry.contentHash,
+    ...(entry.publishedAt ? { publishedAt: entry.publishedAt } : {}),
+    installedAt: new Date().toISOString(),
+    sourceType: "oss",
+    ...(entry.description ? { description: entry.description } : {}),
+  });
+
+  process.stdout.write(`bailian-cli: wiki data ready (${entry.publishedAt ?? "latest"})\n`);
 }
 
 main().catch((err) => {
-  // 无条件放行：安装期网络/权限问题不应阻塞 npm install，
-  // 首次 `bl advisor recommend` 时 sync.ts 会兜底同步。
+  // Unconditional pass-through: install-time network/permission issues should not block npm install;
+  // sync.ts will fall back to syncing on the first `bl advisor recommend`.
   const msg = err instanceof Error ? err.message : String(err);
-  process.stderr.write(`bailian-cli: wiki 数据预下载跳过 (${msg})，首次使用时将自动同步。\n`);
+  process.stderr.write(
+    `bailian-cli: wiki data pre-download skipped (${msg}); will sync automatically on first use.\n`,
+  );
   // Force a success exit code so a download failure never fails `npm install`.
   // eslint-disable-next-line unicorn/no-process-exit
   process.exit(0);

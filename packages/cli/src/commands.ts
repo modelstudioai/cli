@@ -83,6 +83,10 @@ import {
   pluginLink,
   pluginList,
   pluginRemove,
+  skillAdd,
+  skillUpdate,
+  skillRemove,
+  skillList,
 } from "bailian-cli-commands";
 
 // Full bailian-cli product: every command, exposed under the `bl` binary.
@@ -174,4 +178,8 @@ export const commands: Record<string, AnyCommand> = {
   "plugin link": pluginLink,
   "plugin list": pluginList,
   "plugin remove": pluginRemove,
+  "skill add": skillAdd,
+  "skill update": skillUpdate,
+  "skill remove": skillRemove,
+  "skill list": skillList,
 };
