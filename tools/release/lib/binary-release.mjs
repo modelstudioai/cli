@@ -91,7 +91,7 @@ function uploadChannel({ dir, version, channel, files, dryRun }) {
     title: `channel: ${channel}`,
     prerelease: true,
     notes: `Rolling manifest for the \`${channel}\` channel. Latest beta: ${version}.`,
-    assets: [join(dir, `${channel}.json`)],
+    assets: [join(dir, manifestFileName("channel", channel))],
     dryRun,
   });
 }
