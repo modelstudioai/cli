@@ -16,10 +16,13 @@
 ```text
 publish-stable.mjs / publish-channel.mjs   ← 唯一发版入口
         ├─ npm（pnpm publish）
-        └─ binary（lib/binary-release → lib/binary-build + gh release）
+        └─ binary（lib/binary-release
+              → binary-build
+              → gh-release
+              → oss-sync-webhook）
 ```
 
-`tools/release/lib/binary-release.mjs` / `binary-build.mjs` 是实现，一般不要单独当发版入口（调试可用）。详细约定见 [binary-distribution 方案](../proposals/binary-distribution.md)。
+`tools/release/lib/binary-release.mjs` 等是实现，一般不要单独当发版入口（调试可用）。详细约定见 [binary-distribution](binary-distribution.md)。
 
 两种模式：
 

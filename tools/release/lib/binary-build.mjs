@@ -16,12 +16,11 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { parseArgs } from "node:util";
 import { ROOT, readPackageJson, PACKAGES } from "./packages.mjs";
-import { assertChannel } from "./validate.mjs";
+import { manifestFileName, normalizeModeChannel } from "./binary-options.mjs";
 
 const BINARY_COMPILE = fileURLToPath(new URL("./binary-compile.mjs", import.meta.url));
 const CLI_ENTRY = join(ROOT, "packages/cli/src/main.ts");
 const DEFAULT_OUTDIR = join(ROOT, "dist-bin");
-const DEFAULT_CDN = "https://github.com/modelstudioai/cli/releases";
 const USAGE =
   "Usage: node tools/release/lib/binary-build.mjs [--mode stable|channel] [--channel <name>] [--host] [--target <bun-target>] [--outdir <dir>]\n";
 
@@ -33,16 +32,22 @@ export const BINARY_TARGETS = [
   { bunTarget: "bun-windows-x64", os: "windows", arch: "x64", exe: true },
 ];
 
+/** Asset basename for a matrix row: `bl-<ver>-<os>-<arch>[.exe]`. */
+export function binaryAssetName(version, { os, arch, exe }) {
+  return `bl-${version}-${os}-${arch}${exe ? ".exe" : ""}`;
+}
+
+/** Full matrix basenames for a version (order matches BINARY_TARGETS). */
+export function matrixAssetNames(version) {
+  return BINARY_TARGETS.map((target) => binaryAssetName(version, target));
+}
+
 function log(message = "") {
   process.stdout.write(`${message}\n`);
 }
 
 function writeJson(path, value) {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
-}
-
-function cdnBase() {
-  return (process.env.BAILIAN_CLI_CDN || DEFAULT_CDN).replace(/\/$/, "");
 }
 
 function parseCliArgs(argv) {
@@ -78,22 +83,12 @@ function normalizeBuildOptions({
   mode = "stable",
   channel = null,
 }) {
-  if (mode !== "stable" && mode !== "channel") {
-    throw new Error(`--mode must be stable or channel, got: ${mode}`);
-  }
-  if (mode === "channel") {
-    if (!channel) throw new Error("--mode channel requires --channel <name>");
-    assertChannel(channel);
-    if (channel === "stable") {
-      throw new Error(`--channel cannot be "stable"; use --mode stable`);
-    }
-  }
+  const modeChannel = normalizeModeChannel(mode, channel);
   return {
     outdir: outdir ?? DEFAULT_OUTDIR,
     onlyTarget,
     hostOnly: Boolean(hostOnly),
-    mode,
-    channel: mode === "channel" ? channel : null,
+    ...modeChannel,
   };
 }
 
@@ -133,16 +128,12 @@ function sha256File(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
-function assetFileName(version, os, arch, exe) {
-  return `bl-${version}-${os}-${arch}${exe ? ".exe" : ""}`;
-}
-
 function compileOne({ bunTarget, os, arch, exe }, version, outdir, entry) {
-  const fileName = assetFileName(version, os, arch, exe);
+  const fileName = binaryAssetName(version, { os, arch, exe });
   const outfile = join(outdir, fileName);
   log(`compile ${bunTarget} → ${fileName}`);
 
-  // Bun.build() lives in binary-compile.mjs (must run under Bun); this file stays Node.
+  // binary-compile.mjs shells out to `bun build --compile` (CLI); this file stays Node.
   const result = spawnSync(
     "bun",
     [BINARY_COMPILE, "--entry", entry, "--outfile", outfile, "--target", bunTarget],
@@ -165,15 +156,19 @@ function writeChecksums(outdir, artifacts) {
   writeFileSync(join(outdir, "SHA256SUMS"), `${lines.join("\n")}\n`);
 }
 
-function writeChannelManifest(outdir, version, artifacts, mode, channel) {
-  const base = cdnBase();
+/**
+ * Write latest.json (stable) or <channel>.json (channel).
+ * Asset entries carry file + sha256 only — no baked download URL.
+ * Consumers (bl update / install scripts) resolve via BAILIAN_CLI_CDN +
+ * `{base}/releases/{version}/{file}` (see packages/core releaseAssetUrl).
+ */
+function writeManifest(outdir, version, artifacts, mode, channel) {
   const assets = Object.fromEntries(
     artifacts.map((item) => [
       `${item.os}-${item.arch}`,
       {
         file: item.fileName,
         sha256: item.sha256,
-        url: `${base}/download/v${version}/${item.fileName}`,
       },
     ]),
   );
@@ -184,9 +179,9 @@ function writeChannelManifest(outdir, version, artifacts, mode, channel) {
     releasedAt: new Date().toISOString(),
     assets,
   };
-  const names = mode === "stable" ? ["latest.json"] : [`${channel}.json`];
-  for (const name of names) writeJson(join(outdir, name), manifest);
-  return names;
+  const name = manifestFileName(mode, channel);
+  writeJson(join(outdir, name), manifest);
+  return [name];
 }
 
 function cliVersion() {
@@ -207,7 +202,7 @@ function smokeTestHostBinary(artifacts, outdir) {
   }
 }
 
-/** Compile binaries into `outdir` and write checksums + channel manifest. */
+/** Compile binaries into `outdir` and write checksums + manifest. */
 export function buildBinaryArtifacts(rawOptions = {}) {
   const options = normalizeBuildOptions(rawOptions);
   const { outdir, mode, channel } = options;
@@ -223,7 +218,7 @@ export function buildBinaryArtifacts(rawOptions = {}) {
 
   const artifacts = targets.map((target) => compileOne(target, version, outdir, CLI_ENTRY));
   writeChecksums(outdir, artifacts);
-  const manifests = writeChannelManifest(outdir, version, artifacts, mode, channel);
+  const manifests = writeManifest(outdir, version, artifacts, mode, channel);
   smokeTestHostBinary(artifacts, outdir);
 
   log(`\nBuilt ${artifacts.length} binary(ies):`);

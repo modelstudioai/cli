@@ -2,9 +2,8 @@
  * Single-target Bun compile helper. Must be run with Bun on PATH:
  *   bun tools/release/lib/binary-compile.mjs --entry <path> --outfile <path> --target <bun-target>
  *
- * Uses `bun build --compile` (CLI), not `Bun.build({ compile })`.
- * Bun ≤1.2.19's Build API can report success without writing `compile.outfile`
- * (API support landed properly around 1.2.21). CLI works on the pinned CI version.
+ * Uses `bun build --compile` (CLI). The Bun.build({ compile }) API on ≤1.2.19
+ * can exit 0 without writing outfile; CI pins 1.2.19 so we stay on the CLI.
  *
  * Called by binary-build.mjs (Node orchestration stays on Node).
  */
@@ -61,9 +60,6 @@ if (result.status !== 0) {
 }
 
 if (!existsSync(outfile)) {
-  console.error(
-    `bun build --compile exited 0 but outfile missing: ${outfile}\n` +
-      `(Bun Build API compile.outfile is unreliable on some versions; this helper uses the CLI.)`,
-  );
+  console.error(`bun build --compile exited 0 but outfile missing: ${outfile}`);
   process.exit(1);
 }

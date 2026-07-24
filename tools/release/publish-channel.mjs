@@ -91,7 +91,7 @@ try {
 
   // 2) binary GitHub Release — must run before finally restores package.json versions
   if (skipBinary) {
-    log("\n[skip-binary] skipping Bun binary build/upload");
+    log("\n[skip-binary] skipping binary GitHub Release");
   } else {
     step(
       `publish binary GitHub Release (mode=channel, channel=${channel}, version=${betaVersion})`,
@@ -99,9 +99,12 @@ try {
     releaseBinaryArtifacts({ mode: "channel", channel, dryRun });
   }
 
-  log(`\nchannel release complete: ${channel}@${betaVersion} (npm + binary)`);
+  const parts = ["npm"];
+  if (!skipBinary) parts.push("binary");
+  log(`\nchannel release complete: ${channel}@${betaVersion} (${parts.join(" + ")})`);
 } catch (error) {
   process.stderr.write(`\nrelease publish-channel failed: ${error.message}\n`);
+  // Use exitCode (not process.exit) so `finally` can restore package.json bumps.
   process.exitCode = 1;
 } finally {
   restoreOriginals();

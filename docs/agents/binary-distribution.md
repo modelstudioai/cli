@@ -31,8 +31,9 @@ Publish workflow
 ### A. 本仓库构建 / Release
 
 - [ ] `node tools/release/lib/binary-build.mjs --mode stable --host`
-- [ ] `dist-bin/` 含矩阵二进制、`SHA256SUMS`、`latest.json`（channel 为 `<name>.json`）
-- [ ] dry-run：`node tools/release/lib/binary-release.mjs --mode stable --skip-build --dry-run`
+- [ ] `dist-bin/` 含**完整**矩阵二进制、`SHA256SUMS`、`latest.json`（channel 为 `<name>.json`）
+- [ ] manifest asset 只有 `file` + `sha256`（无硬编码 `url`；客户端按 OSS `{base}/releases/{version}/{file}` 拼）
+- [ ] dry-run：`node tools/release/lib/binary-release.mjs --mode stable --dry-run`（不编译）
 - [ ] Release **不含** 生产 install 脚本
 
 ### B. 仓外（联调时确认）
@@ -53,19 +54,31 @@ node tools/release/lib/binary-release.mjs --mode stable --skip-build --dry-run
 vp check
 ```
 
+实现分层（均在 `tools/release/lib/`）：
+
+- `binary-build.mjs` / `binary-compile.mjs` — 编译 + manifest
+- `binary-options.mjs` — 共享 `--mode` / `--channel` 校验
+- `binary-release.mjs` — 编排（stable/channel 上传哪些资产）
+- `gh-release.mjs` — `gh release` create / clobber / verify
+- `oss-sync-webhook.mjs` — 可选 FC 通知
+
 ## 常见漏点
 
-| 漏点                   | 后果                      |
-| ---------------------- | ------------------------- |
-| 只发 npm、未建 Release | FC 无源可同步             |
-| FC 未跑完用户就 curl   | OSS 404 / 半包            |
-| 矩阵变更未通知脚本方   | 装错 arch / 永久失败      |
-| webhook 配错当发版失败 | 不应；webhook 失败只 warn |
-| 用 `Bun.build({ compile })` 代替 CLI | Bun ≤1.2.19 可能 exit 0 但不写 outfile → `sha256` ENOENT |
-| 编译后未 `chmod` windows `.exe` | Bun 1.2.19 在 Unix 上写出 mode `000` → `sha256` / upload `EACCES` |
+| 漏点                                 | 后果                                                              |
+| ------------------------------------ | ----------------------------------------------------------------- |
+| 只发 npm、未建 Release               | FC 无源可同步                                                     |
+| FC 未跑完用户就 curl                 | OSS 404 / 半包                                                    |
+| 矩阵变更未通知脚本方                 | 装错 arch / 永久失败                                              |
+| webhook 配错当发版失败               | 不应；webhook 失败只 warn                                         |
+| 用 `Bun.build({ compile })` 代替 CLI | Bun ≤1.2.19 可能 exit 0 但不写 outfile → `sha256` ENOENT          |
+| 编译后未 `chmod` windows `.exe`      | Bun 1.2.19 在 Unix 上写出 mode `000` → `sha256` / upload `EACCES` |
+| manifest 写死 GitHub `url`           | FC 同步后 `bl update` 仍打 GitHub，绕开 OSS                       |
+| `--dry-run` 仍全量 compile           | 本地验证极慢；dry-run 应只规划 gh / webhook                       |
+| 用 `--host` 产物去 upload            | 半包上架；release 路径会校验完整矩阵                              |
 
 ## 编译实现注意
 
 - `binary-compile.mjs` 必须走 **`bun build --compile --outfile …`**，不要用 `Bun.build({ compile })`（CI 钉 `1.2.19` 时 API 会假成功）。
 - 编译后校验 outfile 存在再算 SHA256。
 - 每个产物在哈希前 `chmod 0755`（规避 Bun 1.2.19 windows cross-compile 无权限，见 oven-sh/bun#21308）。
+- channel 同日同 commit 共用一个 `v0.0.0-beta-…` Release；滚动 tag `channel-<name>` 只挂 `<name>.json`。

@@ -1,13 +1,16 @@
 /**
- * Publish bailian-cli binary assets to GitHub Releases via the `gh` CLI.
+ * Publish bailian-cli binary assets to GitHub Releases.
  *
  * stable:  release `v<version>` (tag must already be on origin; --verify-tag)
  *          assets: bl-*, SHA256SUMS, latest.json
  * channel: versioned prerelease `v<betaVersion>` (assets: bl-*, SHA256SUMS)
  *          + rolling prerelease tag `channel-<name>` holding only `<name>.json`
  *
- * Re-runs are idempotent: existing releases get `gh release upload --clobber`.
- * Optionally POSTs BAILIAN_OSS_SYNC_WEBHOOK so an external FC can mirror to OSS.
+ * Same commit/day channel publishes share one `v<betaVersion>` Release (identical
+ * binaries); only the rolling `channel-<name>` manifest differs per channel.
+ *
+ * Re-runs are idempotent via `gh release upload --clobber` (see gh-release.mjs).
+ * Optionally notifies BAILIAN_OSS_SYNC_WEBHOOK (see oss-sync-webhook.mjs).
  *
  * Called by publish-stable.mjs / publish-channel.mjs.
  * Debug:
@@ -15,90 +18,16 @@
  *   node tools/release/lib/binary-release.mjs --mode channel --channel beta --dry-run
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseArgs as parseCliArgs } from "node:util";
 import { ROOT, readPackageJson, PACKAGES } from "./packages.mjs";
-import { BINARY_TARGETS, buildBinaryArtifacts } from "./binary-build.mjs";
-import { run, runCapture, tryRun } from "./proc.mjs";
-import { assertChannel } from "./validate.mjs";
+import { buildBinaryArtifacts, matrixAssetNames } from "./binary-build.mjs";
+import { manifestFileName, normalizeModeChannel } from "./binary-options.mjs";
+import { ensureGh, GITHUB_REPOSITORY, upsertRelease } from "./gh-release.mjs";
+import { notifyOssSyncWebhook } from "./oss-sync-webhook.mjs";
 
-const REPO = process.env.GITHUB_REPOSITORY || "modelstudioai/cli";
-
-function parseArgs(argv) {
-  let dir = join(ROOT, "dist-bin");
-  let dryRun = false;
-  let mode = "stable";
-  let channel = null;
-  let skipBuild = false;
-  for (let index = 0; index < argv.length; index++) {
-    const arg = argv[index];
-    if (arg === "--dir") dir = resolve(argv[++index]);
-    else if (arg === "--dry-run") dryRun = true;
-    else if (arg === "--mode") mode = argv[++index];
-    else if (arg === "--channel") channel = argv[++index];
-    else if (arg === "--skip-build") skipBuild = true;
-    else if (arg === "--help" || arg === "-h") {
-      process.stdout.write(
-        "Usage: node tools/release/lib/binary-release.mjs --mode stable|channel [--channel <name>] [--dir dist-bin] [--skip-build] [--dry-run]\n",
-      );
-      process.exit(0);
-    } else throw new Error(`Unknown argument: ${arg}`);
-  }
-  return normalizeOptions({ dir, dryRun, mode, channel, skipBuild });
-}
-
-function normalizeOptions({ dir, dryRun, mode, channel, skipBuild = false }) {
-  if (mode !== "stable" && mode !== "channel") {
-    throw new Error(`--mode must be stable or channel, got: ${mode}`);
-  }
-  if (mode === "channel") {
-    if (!channel) throw new Error("--mode channel requires --channel <name>");
-    assertChannel(channel);
-    if (channel === "stable") {
-      throw new Error(`--channel cannot be "stable"; use --mode stable`);
-    }
-  }
-  return {
-    dir: dir ?? join(ROOT, "dist-bin"),
-    dryRun: Boolean(dryRun),
-    mode,
-    channel: mode === "channel" ? channel : null,
-    skipBuild: Boolean(skipBuild),
-  };
-}
-
-function requiredManifestName(mode, channel) {
-  return mode === "stable" ? "latest.json" : `${channel}.json`;
-}
-
-function ensureGh() {
-  if (tryRun("gh", ["--version"]).status !== 0) {
-    throw new Error("gh CLI not found on PATH. Install from https://cli.github.com");
-  }
-}
-
-function releaseExists(tag) {
-  return tryRun("gh", ["release", "view", tag, "--repo", REPO]).status === 0;
-}
-
-function verifyReleaseAssets(tag, assetPaths) {
-  const output = runCapture("gh", [
-    "release",
-    "view",
-    tag,
-    "--repo",
-    REPO,
-    "--json",
-    "assets",
-    "--jq",
-    ".assets[].name",
-  ]);
-  const uploaded = new Set(output.split("\n").filter(Boolean));
-  const missing = assetPaths.map((path) => basename(path)).filter((name) => !uploaded.has(name));
-  if (missing.length > 0) {
-    throw new Error(`release ${tag} is missing assets after upload: ${missing.join(", ")}`);
-  }
-}
+const DEFAULT_DIR = join(ROOT, "dist-bin");
 
 /** Extract the `## [<version>]` section from CHANGELOG.md, or null when absent. */
 function extractChangelogSection(version) {
@@ -111,62 +40,34 @@ function extractChangelogSection(version) {
   return section ? `${section}\n` : null;
 }
 
-function printPlanned(tag, assets, extraArgs) {
-  process.stdout.write(`[dry-run] gh release view ${tag} --repo ${REPO}\n`);
-  process.stdout.write(
-    `[dry-run]   exists  → gh release upload ${tag} --repo ${REPO} --clobber <assets>\n`,
-  );
-  process.stdout.write(
-    `[dry-run]   missing → gh release create ${tag} --repo ${REPO} ${extraArgs.join(" ")} <assets>\n`,
-  );
-  for (const asset of assets) process.stdout.write(`[dry-run]   asset: ${asset}\n`);
+function assertFullMatrix(files, version) {
+  const missing = matrixAssetNames(version).filter((name) => !files.includes(name));
+  if (missing.length > 0) {
+    throw new Error(
+      `Incomplete binary matrix in dist-bin (missing: ${missing.join(", ")}). ` +
+        `Rebuild the full matrix before upload (do not use --host / partial --target for release).`,
+    );
+  }
 }
 
-/**
- * Create a release with assets, or clobber-upload onto an existing one.
- * options: { tag, title, prerelease, verifyTag, notes, notesFile, assets, dryRun }
- */
-function upsertRelease({ tag, title, prerelease, verifyTag, notes, notesFile, assets, dryRun }) {
-  const createArgs = ["--title", title];
-  if (prerelease) createArgs.push("--prerelease", "--target", "main");
-  if (verifyTag) createArgs.push("--verify-tag");
-  if (notesFile) createArgs.push("--notes-file", notesFile);
-  else if (notes) createArgs.push("--notes", notes);
-  else createArgs.push("--generate-notes");
-
-  if (dryRun) {
-    printPlanned(tag, assets, createArgs);
-    return;
-  }
-
-  if (releaseExists(tag)) {
-    process.stdout.write(`release ${tag} exists; uploading assets with --clobber\n`);
-    run("gh", ["release", "upload", tag, "--repo", REPO, "--clobber", ...assets]);
-  } else {
-    run("gh", ["release", "create", tag, "--repo", REPO, ...createArgs, ...assets]);
-  }
-  verifyReleaseAssets(tag, assets);
+function versionBinaryAssets(dir, version, files) {
+  assertFullMatrix(files, version);
+  const matrixNames = new Set(matrixAssetNames(version));
+  return files
+    .filter((name) => matrixNames.has(name) || name === "SHA256SUMS")
+    .map((name) => join(dir, name));
 }
 
 function uploadStable({ dir, version, files, dryRun }) {
-  const tag = `v${version}`;
-  const matrixNames = new Set(
-    BINARY_TARGETS.map(
-      (target) => `bl-${version}-${target.os}-${target.arch}${target.exe ? ".exe" : ""}`,
-    ),
-  );
-  // Binaries + checksums + latest.json only. Production install.sh/ps1 are maintained
-  // outside this repo and served from OSS after an external FC sync.
-  const wanted = files.filter(
-    (name) => matrixNames.has(name) || name === "SHA256SUMS" || name === "latest.json",
-  );
-  const assets = wanted.map((name) => join(dir, name));
-
+  const assets = [
+    ...versionBinaryAssets(dir, version, files),
+    join(dir, manifestFileName("stable", null)),
+  ];
   const section = extractChangelogSection(version);
 
   upsertRelease({
-    tag,
-    title: tag,
+    tag: `v${version}`,
+    title: `v${version}`,
     verifyTag: true,
     notes: section || undefined,
     assets,
@@ -175,20 +76,13 @@ function uploadStable({ dir, version, files, dryRun }) {
 }
 
 function uploadChannel({ dir, version, channel, files, dryRun }) {
-  const matrixNames = new Set(
-    BINARY_TARGETS.map(
-      (target) => `bl-${version}-${target.os}-${target.arch}${target.exe ? ".exe" : ""}`,
-    ),
-  );
-  const binaries = files
-    .filter((name) => matrixNames.has(name) || name === "SHA256SUMS")
-    .map((name) => join(dir, name));
+  // Versioned tag is shared across channels built from the same beta version string.
   upsertRelease({
     tag: `v${version}`,
     title: `v${version}`,
     prerelease: true,
     notes: `Beta build for the \`${channel}\` channel.`,
-    assets: binaries,
+    assets: versionBinaryAssets(dir, version, files),
     dryRun,
   });
 
@@ -202,65 +96,74 @@ function uploadChannel({ dir, version, channel, files, dryRun }) {
   });
 }
 
-/**
- * Optional hook for an external FC that mirrors GitHub Releases → OSS.
- * Set BAILIAN_OSS_SYNC_WEBHOOK to an HTTP endpoint; unset → no-op.
- */
-function notifyOssSyncWebhook({ version, mode, channel, dryRun }) {
-  const webhook = process.env.BAILIAN_OSS_SYNC_WEBHOOK?.trim();
-  if (!webhook) {
-    process.stdout.write(
-      "\n[info] BAILIAN_OSS_SYNC_WEBHOOK unset; skip notifying external OSS sync FC\n",
-    );
+/** Dry-run path when dist-bin is absent: plan tags/assets without compiling. */
+function planDryRunWithoutArtifacts({ version, mode, channel }) {
+  const matrix = matrixAssetNames(version);
+  const manifestName = manifestFileName(mode, channel);
+  if (mode === "stable") {
+    upsertRelease({
+      tag: `v${version}`,
+      title: `v${version}`,
+      verifyTag: true,
+      notes: extractChangelogSection(version) || undefined,
+      assets: [...matrix, "SHA256SUMS", manifestName],
+      dryRun: true,
+    });
     return;
   }
-  const tag = mode === "stable" ? `v${version}` : `v${version}`;
-  const body = {
-    repo: REPO,
-    mode,
-    channel,
-    version,
-    tag,
-    rollingChannelTag: mode === "channel" ? `channel-${channel}` : null,
-  };
-  if (dryRun) {
-    process.stdout.write(`[dry-run] POST ${webhook}\n${JSON.stringify(body, null, 2)}\n`);
-    return;
-  }
-  process.stdout.write(`\n==> notify OSS sync FC: ${webhook}\n`);
-  const result = tryRun("curl", [
-    "-fsS",
-    "-X",
-    "POST",
-    "-H",
-    "Content-Type: application/json",
-    "-d",
-    JSON.stringify(body),
-    webhook,
-  ]);
-  if (result.status !== 0) {
-    process.stdout.write(
-      `[warn] OSS sync webhook failed (release already published): ${result.stderr || result.stdout}\n`,
-    );
-    return;
-  }
-  if (result.stdout) process.stdout.write(`${result.stdout}\n`);
+  upsertRelease({
+    tag: `v${version}`,
+    title: `v${version}`,
+    prerelease: true,
+    notes: `Beta build for the \`${channel}\` channel.`,
+    assets: [...matrix, "SHA256SUMS"],
+    dryRun: true,
+  });
+  upsertRelease({
+    tag: `channel-${channel}`,
+    title: `channel: ${channel}`,
+    prerelease: true,
+    notes: `Rolling manifest for the \`${channel}\` channel. Latest beta: ${version}.`,
+    assets: [manifestName],
+    dryRun: true,
+  });
 }
 
 /**
- * Build (unless skipped) and upload binary artifacts to GitHub Releases.
+ * Build (unless skipped / dry-run) and upload binary artifacts to GitHub Releases.
  * Called by publish-stable / publish-channel orchestrators.
+ *
+ * `--dry-run` never compiles; it plans gh release steps. Prebuilt `dist-bin` is
+ * optional (used only to list real paths when present).
  */
-export function releaseBinaryArtifacts(rawOptions) {
-  const { dir, dryRun, mode, channel, skipBuild } = normalizeOptions(rawOptions);
+export function releaseBinaryArtifacts(rawOptions = {}) {
+  const { mode, channel } = normalizeModeChannel(rawOptions.mode, rawOptions.channel);
+  const dir = rawOptions.dir ? resolve(rawOptions.dir) : DEFAULT_DIR;
+  const dryRun = Boolean(rawOptions.dryRun);
+  const skipBuild = Boolean(rawOptions.skipBuild);
   const cliPkg = readPackageJson(PACKAGES.find((pkg) => pkg.key === "cli"));
   const version = cliPkg.version;
 
-  if (!skipBuild) {
+  if (dryRun) {
+    process.stdout.write(
+      `\n[dry-run] skipping binary build (mode=${mode}${channel ? ` channel=${channel}` : ""})\n`,
+    );
+  } else if (!skipBuild) {
     process.stdout.write(
       `\n==> build binary (mode=${mode}${channel ? ` channel=${channel}` : ""})\n`,
     );
     buildBinaryArtifacts({ mode, channel, outdir: dir });
+  }
+
+  process.stdout.write(`repo ${GITHUB_REPOSITORY}\n`);
+  process.stdout.write(`version ${version}\n`);
+  process.stdout.write(`mode ${mode}${channel ? ` channel=${channel}` : ""}\n`);
+
+  if (dryRun && !existsSync(dir)) {
+    process.stdout.write(`[dry-run] ${dir} missing; planning expected assets\n`);
+    planDryRunWithoutArtifacts({ version, mode, channel });
+    notifyOssSyncWebhook({ version, mode, channel, dryRun });
+    return { version, mode, channel, dryRun };
   }
 
   if (!existsSync(dir)) {
@@ -270,7 +173,7 @@ export function releaseBinaryArtifacts(rawOptions) {
   }
 
   const files = readdirSync(dir).filter((name) => !name.startsWith("."));
-  const manifestName = requiredManifestName(mode, channel);
+  const manifestName = manifestFileName(mode, channel);
   if (!files.includes(manifestName)) {
     throw new Error(
       `Missing ${manifestName} in ${dir}. Rebuild with matching --mode/--channel (found: ${files.join(", ") || "(empty)"}).`,
@@ -280,11 +183,11 @@ export function releaseBinaryArtifacts(rawOptions) {
     throw new Error(`Missing SHA256SUMS in ${dir}`);
   }
 
-  process.stdout.write(`repo ${REPO}\n`);
-  process.stdout.write(`version ${version}\n`);
-  process.stdout.write(`mode ${mode}${channel ? ` channel=${channel}` : ""}\n`);
   process.stdout.write(`artifacts in ${dir}:\n`);
   for (const name of files) process.stdout.write(`  ${name}\n`);
+
+  // Validate matrix before touching gh, so --skip-build mistakes fail without network/CLI.
+  assertFullMatrix(files, version);
 
   if (dryRun) {
     process.stdout.write("\n[dry-run] skipping GitHub Release upload\n");
@@ -304,8 +207,32 @@ export function releaseBinaryArtifacts(rawOptions) {
 }
 
 if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
+  const USAGE =
+    "Usage: node tools/release/lib/binary-release.mjs --mode stable|channel [--channel <name>] [--dir dist-bin] [--skip-build] [--dry-run]\n";
   try {
-    releaseBinaryArtifacts(parseArgs(process.argv.slice(2)));
+    const { values } = parseCliArgs({
+      args: process.argv.slice(2),
+      options: {
+        dir: { type: "string" },
+        "dry-run": { type: "boolean", default: false },
+        mode: { type: "string", default: "stable" },
+        channel: { type: "string" },
+        "skip-build": { type: "boolean", default: false },
+        help: { type: "boolean", short: "h", default: false },
+      },
+      allowPositionals: false,
+    });
+    if (values.help) {
+      process.stdout.write(USAGE);
+      process.exit(0);
+    }
+    releaseBinaryArtifacts({
+      dir: values.dir ? resolve(values.dir) : undefined,
+      dryRun: values["dry-run"],
+      mode: values.mode,
+      channel: values.channel ?? null,
+      skipBuild: values["skip-build"],
+    });
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exit(1);

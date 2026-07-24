@@ -83,13 +83,15 @@ try {
 
   // 3) binary GitHub Release (same version; orchestrated here, not a separate release entry)
   if (skipBinary) {
-    log("\n[skip-binary] skipping Bun binary build/upload");
+    log("\n[skip-binary] skipping binary GitHub Release");
   } else {
     step(`publish binary GitHub Release (mode=stable, version=${version})`);
     releaseBinaryArtifacts({ mode: "stable", dryRun });
   }
 
-  log("\nstable release complete (npm + binary).");
+  const parts = ["npm"];
+  if (!skipBinary) parts.push("binary");
+  log(`\nstable release complete (${parts.join(" + ")}).`);
 } catch (error) {
   process.stderr.write(`\nrelease publish-stable failed: ${error.message}\n`);
   process.exit(1);
