@@ -1,5 +1,6 @@
 import { dirname } from "path";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, copyFileSync } from "fs";
+import { BailianError, ExitCode } from "bailian-cli-core";
 
 /** Parameters shared by every agent writer. */
 export interface WriteParams {
@@ -58,4 +59,48 @@ export function backup(path: string): void {
 /** Whether a base URL targets the Anthropic-messages compatible endpoint. */
 export function isAnthropicEndpoint(baseUrl: string): boolean {
   return baseUrl.includes("/apps/anthropic");
+}
+
+/**
+ * Claude Code speaks Anthropic Messages only. Users often paste the OpenAI
+ * compatible-mode URL; rewrite that to `/apps/anthropic` when possible, otherwise
+ * fail with a clear USAGE error before writing a broken config.
+ */
+export function resolveClaudeCodeBaseUrl(baseUrl: string): {
+  url: string;
+  rewrittenFrom?: string;
+} {
+  const trimmed = baseUrl.trim().replace(/\/+$/, "");
+
+  if (isAnthropicEndpoint(trimmed)) {
+    return { url: trimmed };
+  }
+
+  if (trimmed.includes("/compatible-mode")) {
+    const rewritten = trimmed.replace(/\/compatible-mode(?:\/v\d+)?/, "/apps/anthropic");
+    return { url: rewritten, rewrittenFrom: baseUrl.trim() };
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    const host = parsed.hostname;
+    const isDashScopeHost =
+      host.includes("dashscope") ||
+      host.includes("maas.aliyuncs.com") ||
+      host.includes("token-plan");
+    if (isDashScopeHost && (parsed.pathname === "/" || parsed.pathname === "")) {
+      return {
+        url: `${parsed.origin}/apps/anthropic`,
+        rewrittenFrom: baseUrl.trim(),
+      };
+    }
+  } catch {
+    // Fall through to the USAGE error below.
+  }
+
+  throw new BailianError(
+    `Claude Code requires an Anthropic-compatible base URL, got "${baseUrl}".`,
+    ExitCode.USAGE,
+    "Use a URL ending in /apps/anthropic (not /compatible-mode/v1). Example: https://dashscope.aliyuncs.com/apps/anthropic",
+  );
 }

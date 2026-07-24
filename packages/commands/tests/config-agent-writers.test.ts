@@ -70,6 +70,54 @@ describe("config agent writers", () => {
     expect(readJsonAt(".claude.json").hasCompletedOnboarding).toBe(true);
   });
 
+  test("claude-code 将 compatible-mode URL 改写为 apps/anthropic", () => {
+    const tokenPlanOpenAi = "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1";
+    const summary = claudeCode.write({
+      baseUrl: tokenPlanOpenAi,
+      apiKey: "sk-a",
+      model: "qwen3.8-max-preview",
+    });
+    const env = readJsonAt(".claude", "settings.json").env as Record<string, string>;
+    expect(env.ANTHROPIC_BASE_URL).toBe(
+      "https://token-plan.cn-beijing.maas.aliyuncs.com/apps/anthropic",
+    );
+    expect(summary.warnings?.some((warning) => warning.includes("Rewrote base URL"))).toBe(true);
+  });
+
+  test("claude-code 保留已有分层模型，不整表覆盖", () => {
+    mkdirSync(join(home, ".claude"), { recursive: true });
+    writeFileSync(
+      join(home, ".claude", "settings.json"),
+      JSON.stringify({
+        env: {
+          ANTHROPIC_DEFAULT_HAIKU_MODEL: "qwen3.6-flash",
+          CLAUDE_CODE_SUBAGENT_MODEL: "qwen3.7-max",
+        },
+      }),
+    );
+
+    claudeCode.write({
+      baseUrl: ANTHROPIC_URL,
+      apiKey: "sk-a",
+      model: "qwen3.8-max-preview",
+    });
+    const env = readJsonAt(".claude", "settings.json").env as Record<string, string>;
+    expect(env.ANTHROPIC_MODEL).toBe("qwen3.8-max-preview");
+    expect(env.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBe("qwen3.6-flash");
+    expect(env.CLAUDE_CODE_SUBAGENT_MODEL).toBe("qwen3.7-max");
+    expect(env.ANTHROPIC_DEFAULT_SONNET_MODEL).toBe("qwen3.8-max-preview");
+  });
+
+  test("claude-code 拒绝无法改写为 Anthropic 的 base URL", () => {
+    expect(() =>
+      claudeCode.write({
+        baseUrl: "https://api.openai.com/v1",
+        apiKey: "sk-a",
+        model: "qwen3-max",
+      }),
+    ).toThrow(/Anthropic-compatible base URL/);
+  });
+
   test("qwen-code compatible-mode 走 openai 协议", () => {
     qwenCode.write({ baseUrl: OAI_URL, apiKey: "sk-q", model: "qwen3-coder-plus" });
     const settings = readJsonAt(".qwen", "settings.json");
@@ -201,7 +249,7 @@ describe("config agent writers", () => {
     ).toBe("@ai-sdk/openai-compatible");
   });
 
-  test("openclaw 写入 provider、api 与 primary", () => {
+  test("openclaw 写入 provider、api、primary，并登记 defaults.models", () => {
     openclaw.write({ baseUrl: OAI_URL, apiKey: "sk-c", model: "qwen3-coder-plus" });
     const config = readJsonAt(".openclaw", "openclaw.json");
     const models = config.models as Record<string, unknown>;
@@ -209,8 +257,11 @@ describe("config agent writers", () => {
     const bailian = (models.providers as Record<string, Record<string, unknown>>)["bailian-cli"];
     expect(bailian.api).toBe("openai-completions");
     expect((bailian.models as Array<{ id: string }>)[0].id).toBe("qwen3-coder-plus");
-    const agents = config.agents as { defaults: { model: { primary: string } } };
+    const agents = config.agents as {
+      defaults: { model: { primary: string }; models: Record<string, unknown> };
+    };
     expect(agents.defaults.model.primary).toBe("bailian-cli/qwen3-coder-plus");
+    expect(agents.defaults.models["bailian-cli/qwen3-coder-plus"]).toEqual({});
 
     // anthropic 端点用 anthropic-messages
     openclaw.write({ baseUrl: ANTHROPIC_URL, apiKey: "sk-c", model: "qwen3-max" });
@@ -220,6 +271,57 @@ describe("config agent writers", () => {
         "bailian-cli"
       ].api,
     ).toBe("anthropic-messages");
+    expect(
+      (config2.agents as { defaults: { model: { primary: string } } }).defaults.model.primary,
+    ).toBe("bailian-cli/qwen3-max");
+  });
+
+  test("openclaw 不抢占已有 token-plan primary", () => {
+    mkdirSync(join(home, ".openclaw"), { recursive: true });
+    writeFileSync(
+      join(home, ".openclaw", "openclaw.json"),
+      JSON.stringify({
+        models: {
+          mode: "merge",
+          providers: {
+            "bailian-token-plan": {
+              baseUrl: "https://token-plan.cn-beijing.maas.aliyuncs.com/apps/anthropic",
+              apiKey: "sk-token-plan",
+              api: "anthropic-messages",
+              models: [{ id: "qwen3.8-max-preview", name: "qwen3.8-max-preview" }],
+            },
+          },
+        },
+        agents: {
+          defaults: {
+            model: { primary: "bailian-token-plan/qwen3.8-max-preview" },
+            models: { "bailian-token-plan/qwen3.8-max-preview": {} },
+          },
+        },
+      }),
+    );
+
+    const summary = openclaw.write({
+      baseUrl: "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+      apiKey: "sk-bailian",
+      model: "qwen3.8-max-preview",
+    });
+
+    const config = readJsonAt(".openclaw", "openclaw.json");
+    const agents = config.agents as {
+      defaults: { model: { primary: string }; models: Record<string, unknown> };
+    };
+    expect(agents.defaults.model.primary).toBe("bailian-token-plan/qwen3.8-max-preview");
+    expect(agents.defaults.models["bailian-cli/qwen3.8-max-preview"]).toEqual({});
+    expect(
+      (config.models as { providers: Record<string, unknown> }).providers["bailian-token-plan"],
+    ).toBeDefined();
+    expect(
+      (config.models as { providers: Record<string, unknown> }).providers["bailian-cli"],
+    ).toBeDefined();
+    expect(summary.warnings?.some((warning) => warning.includes("Left existing primary"))).toBe(
+      true,
+    );
   });
 
   test("hermes 写入 custom_providers 与 model，合并保留其它 provider", () => {
