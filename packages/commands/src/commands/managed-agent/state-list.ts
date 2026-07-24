@@ -14,7 +14,7 @@ const STATE_LIST_FLAGS = {
 
 export default defineCommand({
   description: "List resources tracked in agents state",
-  auth: "none",
+  auth: "apiKey",
   usageArgs: "[--file <path>]",
   flags: STATE_LIST_FLAGS,
   exampleArgs: ["", "--file agents.yaml"],

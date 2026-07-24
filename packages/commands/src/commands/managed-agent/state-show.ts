@@ -27,7 +27,7 @@ const STATE_SHOW_FLAGS = {
 
 export default defineCommand({
   description: "Show details of a resource in agents state",
-  auth: "none",
+  auth: "apiKey",
   usageArgs: "--address <provider.type.name> [--file <path>]",
   flags: STATE_SHOW_FLAGS,
   exampleArgs: ["--address bailian.agent.assistant"],

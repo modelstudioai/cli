@@ -27,7 +27,7 @@ const STATE_RM_FLAGS = {
 
 export default defineCommand({
   description: "Remove a resource from state without destroying it remotely",
-  auth: "none",
+  auth: "apiKey",
   usageArgs: "--address <provider.type.name> [--file <path>]",
   flags: STATE_RM_FLAGS,
   exampleArgs: ["--address bailian.agent.assistant"],

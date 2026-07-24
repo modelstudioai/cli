@@ -42,7 +42,7 @@ const SESSION_CREATE_FLAGS = {
 
 export default defineCommand({
   description: "Create a new session for an agent",
-  auth: "none",
+  auth: "apiKey",
   usageArgs: "[--agent <name>] [--environment <name>] [--title <title>] [--file <path>]",
   flags: SESSION_CREATE_FLAGS,
   exampleArgs: ["", "--agent assistant", "--agent assistant --title 'debug run'"],

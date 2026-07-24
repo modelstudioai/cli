@@ -26,7 +26,7 @@ const SESSION_GET_FLAGS = {
 
 export default defineCommand({
   description: "Get details of a session",
-  auth: "none",
+  auth: "apiKey",
   usageArgs: "--session-id <id> [--provider <name>] [--file <path>]",
   flags: SESSION_GET_FLAGS,
   exampleArgs: ["--session-id sess_abc123"],

@@ -18,7 +18,7 @@ agents.state.json
 const PROVIDERS = ["bailian", "claude", "qoder", "ark", "all"] as const;
 
 const PROVIDER_BLOCKS: Record<string, string> = {
-  bailian: `  bailian:\n    # bl auth login --api-key <key> sets DASHSCOPE_API_KEY; --agentstudio-base-url <url> sets BAILIAN_BASE_URL\n    api_key: \${DASHSCOPE_API_KEY}\n    base_url: \${BAILIAN_BASE_URL}`,
+  bailian: `  bailian:\n    # bl auth login --api-key <key> sets DASHSCOPE_API_KEY; --base-url <url> sets BAILIAN_BASE_URL\n    api_key: \${DASHSCOPE_API_KEY}\n    base_url: \${BAILIAN_BASE_URL}`,
   claude: `  claude:\n    api_key: \${ANTHROPIC_API_KEY}`,
   qoder: `  qoder:\n    api_key: \${QODER_PAT}\n    gateway: "https://api.qoder.com/api/v1/cloud"`,
   ark: `  ark:\n    api_key: \${ARK_API_KEY}`,
@@ -99,7 +99,7 @@ const INIT_FLAGS = {
 
 export default defineCommand({
   description: "Create a new agents.yaml template",
-  auth: "none",
+  auth: "apiKey",
   usageArgs: "[--provider <name>] [--agent-name <name>] [--file <path>] [--force]",
   flags: INIT_FLAGS,
   exampleArgs: ["", "--provider bailian --agent-name assistant", "--provider all"],
@@ -137,7 +137,7 @@ export default defineCommand({
       emitBare(`Created ${file}`);
       if (provider === "bailian" || provider === "all") {
         emitBare(
-          "Credentials: run `bl auth login --api-key <key> --agentstudio-base-url <url>`, or set DASHSCOPE_API_KEY / BAILIAN_BASE_URL.",
+          "Credentials: run `bl auth login --api-key <key> --base-url <url>`, or set DASHSCOPE_API_KEY / BAILIAN_BASE_URL.",
         );
       }
       emitBare("Next: edit agents.yaml, then run `bl managed-agent plan`.");

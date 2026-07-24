@@ -19,7 +19,6 @@ export const VALID_KEYS = [
   "default_speech_model",
   "default_omni_model",
   "workspace_id",
-  "agentstudio_base_url",
 ] as const;
 
 // Keys whose values are secrets. `config set` / `config show` mask these; the
@@ -50,7 +49,6 @@ export const KEY_ALIASES: Record<string, string> = {
   "default-speech-model": "default_speech_model",
   "default-omni-model": "default_omni_model",
   "workspace-id": "workspace_id",
-  "agentstudio-base-url": "agentstudio_base_url",
 };
 
 /** Resolve a hyphen alias to its underscore config key. */

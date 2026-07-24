@@ -30,7 +30,7 @@ const SESSION_LIST_FLAGS = {
 
 export default defineCommand({
   description: "List sessions from the provider",
-  auth: "none",
+  auth: "apiKey",
   usageArgs: "[--agent <name>] [--all] [--provider <name>] [--file <path>]",
   flags: SESSION_LIST_FLAGS,
   exampleArgs: ["", "--agent assistant", "--all"],

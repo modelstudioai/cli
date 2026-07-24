@@ -26,7 +26,7 @@ const SESSION_DELETE_FLAGS = {
 
 export default defineCommand({
   description: "Delete a session",
-  auth: "none",
+  auth: "apiKey",
   usageArgs: "--session-id <id> [--provider <name>] [--file <path>]",
   flags: SESSION_DELETE_FLAGS,
   exampleArgs: ["--session-id sess_abc123"],

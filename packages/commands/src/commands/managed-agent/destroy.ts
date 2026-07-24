@@ -30,7 +30,7 @@ const DESTROY_FLAGS = {
 
 export default defineCommand({
   description: "Destroy all managed agent resources tracked in state",
-  auth: "none",
+  auth: "apiKey",
   usageArgs: "[--file <path>] [--yes] [--cascade]",
   flags: DESTROY_FLAGS,
   exampleArgs: ["--yes", "--yes --cascade"],

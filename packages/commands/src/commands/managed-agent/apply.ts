@@ -45,7 +45,7 @@ const APPLY_FLAGS = {
 
 export default defineCommand({
   description: "Apply planned changes to create/update/delete agent resources",
-  auth: "none",
+  auth: "apiKey",
   usageArgs: "[--file <path>] [--provider <name>] [--yes] [--concurrency <n>]",
   flags: APPLY_FLAGS,
   exampleArgs: ["--yes", "--provider bailian --yes"],

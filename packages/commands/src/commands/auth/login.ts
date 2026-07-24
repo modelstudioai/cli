@@ -31,12 +31,6 @@ export default defineCommand({
       valueHint: "<url>",
       description: "Model API base URL (used with --api-key for validation)",
     },
-    agentstudioBaseUrl: {
-      type: "string",
-      valueHint: "<url>",
-      description:
-        "Bailian AgentStudio base URL for `bl managed-agent` commands (sets BAILIAN_BASE_URL; used with --api-key)",
-    },
     console: {
       type: "switch",
       description:
@@ -77,9 +71,6 @@ export default defineCommand({
     // `auth login` explicit and avoids silently ignoring flags from another mode.
     if (!apiKeyMode && hasValue(f.baseUrl)) {
       return "Use --base-url only with --api-key";
-    }
-    if (!apiKeyMode && hasValue(f.agentstudioBaseUrl)) {
-      return "Use --agentstudio-base-url only with --api-key";
     }
     if (!consoleMode && hasValue(f.consoleSite)) {
       return "Use --console-site only with --console";
@@ -162,9 +153,6 @@ export default defineCommand({
     await validateAndPersistApiKey(deps, key, {
       baseUrl: resolvedBaseUrl,
       persistBaseUrl,
-      persistPatch: flags.agentstudioBaseUrl
-        ? { agentstudio_base_url: flags.agentstudioBaseUrl }
-        : undefined,
       defaultTextModel: profilePreset?.defaultTextModel,
       defaultVideoModel: profilePreset?.defaultVideoModel,
       defaultImageToVideoModel: profilePreset?.defaultImageToVideoModel,

@@ -55,7 +55,7 @@ const SESSION_RUN_FLAGS = {
 
 export default defineCommand({
   description: "Create a session, send a message, and stream the response",
-  auth: "none",
+  auth: "apiKey",
   usageArgs: "--prompt <text> [--agent <name>] [--no-stream] [--file <path>]",
   flags: SESSION_RUN_FLAGS,
   exampleArgs: ['--prompt "hello"', '--agent assistant --prompt "summarize this repo"'],

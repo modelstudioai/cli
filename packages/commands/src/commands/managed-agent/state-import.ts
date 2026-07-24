@@ -32,7 +32,7 @@ const STATE_IMPORT_FLAGS = {
 
 export default defineCommand({
   description: "Import an existing remote resource into agents state",
-  auth: "none",
+  auth: "apiKey",
   usageArgs:
     "--address <provider.type.name> --remote-id <id> [--resource-version <n>] [--file <path>]",
   flags: STATE_IMPORT_FLAGS,

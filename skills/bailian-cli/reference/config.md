@@ -81,10 +81,10 @@ bl config list --output json
 
 #### Flags
 
-| Flag              | Type   | Required | Description                                                                                                                                                                        |
-| ----------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--key <key>`     | string | yes      | Config key (base*url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, security_token, default*\*\_model, workspace_id, agentstudio_base_url) |
-| `--value <value>` | string | yes      | Value to set                                                                                                                                                                       |
+| Flag              | Type   | Required | Description                                                                                                                                                  |
+| ----------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--key <key>`     | string | yes      | Config key (base*url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, security_token, default*\*\_model, workspace_id) |
+| `--value <value>` | string | yes      | Value to set                                                                                                                                                 |
 
 #### Examples
 

@@ -28,7 +28,6 @@ export type AuthPersistPatch = Pick<
   | "access_key_secret"
   | "security_token"
   | "base_url"
-  | "agentstudio_base_url"
   | "console_site"
   | "console_region"
   | "console_switch_agent"

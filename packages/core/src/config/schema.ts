@@ -27,13 +27,6 @@ export interface ConfigFile {
   /** Alibaba Cloud STS Security Token (optional, for temporary credentials). */
   security_token?: string;
   base_url?: string;
-  /**
-   * Bailian AgentStudio API base URL for `bl managed-agent` commands, e.g.
-   * `https://<workspace>.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio`.
-   * Distinct from `base_url` (the DashScope model API): the agent path bridges
-   * this to the SDK's `BAILIAN_BASE_URL`, so a workspace_id is not required.
-   */
-  agentstudio_base_url?: string;
   output?: "text" | "json";
   output_dir?: string;
   timeout?: number;
@@ -92,21 +85,6 @@ function parseModelBaseUrl(value: string): string | undefined {
   }
 }
 
-/**
- * A syntactically valid absolute http(s) URL. Used to validate
- * `agentstudio_base_url`, which is an AgentStudio API endpoint (with its own
- * `/api/v1/agentstudio` path) and must NOT go through model-URL suffix
- * stripping like `base_url`.
- */
-function isHttpUrl(value: string): boolean {
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
 export function parseConfigFile(raw: unknown): ConfigFile {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   const obj = raw as Record<string, unknown>;
@@ -134,8 +112,6 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     const baseUrl = parseModelBaseUrl(obj.base_url);
     if (baseUrl) out.base_url = baseUrl;
   }
-  if (typeof obj.agentstudio_base_url === "string" && isHttpUrl(obj.agentstudio_base_url))
-    out.agentstudio_base_url = obj.agentstudio_base_url;
   if (typeof obj.output === "string" && VALID_OUTPUTS.has(obj.output))
     out.output = obj.output as ConfigFile["output"];
   if (typeof obj.output_dir === "string" && obj.output_dir.length > 0)

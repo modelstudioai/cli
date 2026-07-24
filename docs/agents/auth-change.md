@@ -53,9 +53,18 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 
 命令不要直接解析 token、env 或 config。业务请求统一走 `ctx.client`;登录/配置命令通过 `ctx.authStore` / `ctx.configStore` 的窄接口操作落盘。
 
-### 例外:agent 命令的 SDK 凭证桥接
+### 例外:agent 命令的 SDK 凭证内存注入
 
-`bl managed-agent *` 命令声明 `auth: "none"`,凭证由 `@openagentpack/sdk` 自主从 env 解析(agents.yaml 的 `${DASHSCOPE_API_KEY}` / `${BAILIAN_WORKSPACE_ID}` 插值)。为让 bl 登录态复用,`packages/commands/src/commands/managed-agent/_engine/credentials.ts` 的 `bridgeBailianCredentials()` 会**直接 `readConfigFile()`**,把 config 的 `api_key` / `workspace_id` 作为最低优先级兜底填入对应 env,仅填空值,不覆盖已有。这是唯一允许命令层直接读 config 的场景(SDK 只认 env,不走 `ctx.client`);优先级链:`~/.agents/config.json` > shell env > `.env` > `~/.bailian/config.json`。
+`bl managed-agent *` 的全部命令声明 `auth: "apiKey"`(含纯本地脚手架 `init` —— 统一登录门槛,无例外),bailian 凭证由 authStage 经 `resolveApiKey(sources)` 权威解析(flag > env > active profile config,缺失时抛统一 AUTH 错误)。
+
+凭证不再以真实值写入 `process.env`,而是经 `packages/commands/src/commands/managed-agent/_engine/` 的**内存注入管道**(`resolveAgentProjectConfig`)注入 SDK,管道四步:
+
+1. `prepareProviderEnv()` — 先 `bootstrapRuntimeCredentialsSync()`(SDK 把 `.env` / `~/.agents/config.json` 灌进 env,服务 claude/ark/qoder 等非 bailian provider),再把全部凭证类 env(`CREDENTIAL_ENV_KEYS`,含别名)中仍为 undefined 的占位为 `""`,使 agents.yaml 插值不因缺变量抛错
+2. `resolveProjectConfig` — 插值发生:bailian 插值拿到占位空串,claude/ark 拿到真实 env 值
+3. `injectProviderCredentials()` — 用 `ctx.client.exportApiCredential()`(lint 限定 `managed-agent/_engine/**` 可用)覆写内存 config 对象的 bailian 块:`api_key` 无条件覆写;`base_url`(拼 `/api/v1/agentstudio` 后缀)/`workspace_id`(取 `settings.workspaceId`)仅在引用且为空时填充
+4. `scrubCredentialEnv()` + `assertProviderCredentials()` — 从 `process.env` 删除全部凭证变量(真实凭证此后只存于 config 对象 → provider adapter 实例内存,不驻留 env / 不被子进程继承);任一已声明 provider 的 `api_key` 为空 → CLI 权威 `AUTH` 错误 + provider 专属 hint(取代 SDK 原始插值/zod 报错)
+
+`bl auth login` 仅管理 bailian(DashScope)凭证;claude/ark/qoder 的 key 从 env(shell / `.env` / `~/.agents/config.json`)经插值进入 config 对象,同样被清扫。禁止命令层直接 `readConfigFile` 裸读凭证;bailian 字段以 CLI 鉴权链为唯一信源。
 
 ## 必查清单
 

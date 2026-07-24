@@ -36,7 +36,7 @@ const SESSION_SEND_FLAGS = {
 
 export default defineCommand({
   description: "Send a message to an existing session and stream the response",
-  auth: "none",
+  auth: "apiKey",
   usageArgs: "--session-id <id> --message <text> [--no-stream] [--file <path>]",
   flags: SESSION_SEND_FLAGS,
   exampleArgs: ['--session-id sess_abc123 --message "continue"'],

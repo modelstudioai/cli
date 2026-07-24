@@ -40,7 +40,7 @@ const PLAN_FLAGS = {
 
 export default defineCommand({
   description: "Show what changes would be applied to agent infrastructure",
-  auth: "none",
+  auth: "apiKey",
   usageArgs: "[--file <path>] [--provider <name>] [--no-refresh] [--refresh-only]",
   flags: PLAN_FLAGS,
   exampleArgs: ["", "--provider bailian", "--no-refresh"],
