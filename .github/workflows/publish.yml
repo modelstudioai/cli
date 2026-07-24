@@ -69,8 +69,15 @@ jobs:
       - name: publish-stable
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Optional: HTTP trigger for external FC (GitHub Release → OSS). Leave unset to skip.
-          BAILIAN_OSS_SYNC_WEBHOOK: ${{ secrets.BAILIAN_OSS_SYNC_WEBHOOK }}
+          # OSS release channel runs fully in CI: upload + reconcile + manifest.json.
+          # All values come from repo Settings: credentials via Secrets, the rest
+          # via Variables. Leave the secrets unset to skip the OSS channel entirely.
+          BAILIAN_OSS_AK: ${{ secrets.BAILIAN_OSS_AK }}
+          BAILIAN_OSS_SK: ${{ secrets.BAILIAN_OSS_SK }}
+          BAILIAN_OSS_BUCKET: ${{ vars.BAILIAN_OSS_BUCKET }}
+          BAILIAN_OSS_REGION: ${{ vars.BAILIAN_OSS_REGION }}
+          BAILIAN_OSS_ENDPOINT: ${{ vars.BAILIAN_OSS_ENDPOINT }}
+          BAILIAN_RELEASE_PREFIX: ${{ vars.BAILIAN_RELEASE_PREFIX }}
         run: node tools/release/publish-stable.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }}
 
   publish-channel:
@@ -120,5 +127,11 @@ jobs:
       - name: publish-channel
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BAILIAN_OSS_SYNC_WEBHOOK: ${{ secrets.BAILIAN_OSS_SYNC_WEBHOOK }}
+          # OSS release channel — same Settings-injected values as stable.
+          BAILIAN_OSS_AK: ${{ secrets.BAILIAN_OSS_AK }}
+          BAILIAN_OSS_SK: ${{ secrets.BAILIAN_OSS_SK }}
+          BAILIAN_OSS_BUCKET: ${{ vars.BAILIAN_OSS_BUCKET }}
+          BAILIAN_OSS_REGION: ${{ vars.BAILIAN_OSS_REGION }}
+          BAILIAN_OSS_ENDPOINT: ${{ vars.BAILIAN_OSS_ENDPOINT }}
+          BAILIAN_RELEASE_PREFIX: ${{ vars.BAILIAN_RELEASE_PREFIX }}
         run: node tools/release/publish-channel.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }} --channel "${{ inputs.channel }}"

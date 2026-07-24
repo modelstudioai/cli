@@ -86,7 +86,7 @@ try {
     log("\n[skip-binary] skipping binary GitHub Release");
   } else {
     step(`publish binary GitHub Release (mode=stable, version=${version})`);
-    releaseBinaryArtifacts({ mode: "stable", dryRun });
+    await releaseBinaryArtifacts({ mode: "stable", dryRun });
   }
 
   const parts = ["npm"];

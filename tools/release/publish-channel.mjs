@@ -96,7 +96,7 @@ try {
     step(
       `publish binary GitHub Release (mode=channel, channel=${channel}, version=${betaVersion})`,
     );
-    releaseBinaryArtifacts({ mode: "channel", channel, dryRun });
+    await releaseBinaryArtifacts({ mode: "channel", channel, dryRun });
   }
 
   const parts = ["npm"];

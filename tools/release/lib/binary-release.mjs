@@ -10,7 +10,9 @@
  * binaries); only the rolling `channel-<name>` manifest differs per channel.
  *
  * Re-runs are idempotent via `gh release upload --clobber` (see gh-release.mjs).
- * Optionally notifies BAILIAN_OSS_SYNC_WEBHOOK (see oss-sync-webhook.mjs).
+ * After the GitHub upload the same assets are pushed straight to OSS from the
+ * runner, HEAD-reconciled, and (stable only) release/manifest.json is updated —
+ * all in-process, no external FC (see oss-direct-upload.mjs).
  *
  * Called by publish-stable.mjs / publish-channel.mjs.
  * Debug:
@@ -18,14 +20,14 @@
  *   node tools/release/lib/binary-release.mjs --mode channel --channel beta --dry-run
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs as parseCliArgs } from "node:util";
 import { ROOT, readPackageJson, PACKAGES } from "./packages.mjs";
 import { buildBinaryArtifacts, matrixAssetNames } from "./binary-build.mjs";
 import { channelManifestFileName, normalizeModeChannel } from "./binary-options.mjs";
 import { ensureGh, GITHUB_REPOSITORY, upsertRelease } from "./gh-release.mjs";
-import { notifyOssSyncWebhook } from "./oss-sync-webhook.mjs";
+import { maintainReleaseManifest, mirrorReleaseAssetsToOss } from "./oss-direct-upload.mjs";
 
 const DEFAULT_DIR = join(ROOT, "dist-bin");
 
@@ -125,13 +127,30 @@ function planDryRunWithoutArtifacts({ version, mode, channel }) {
 }
 
 /**
+ * Build the OSS mirror plan — the same tag/asset pairs as the GitHub Release
+ * upload. `files == null` means dry-run planning without artifacts on disk,
+ * so bare basenames stand in for real paths.
+ */
+function ossMirrorPlans({ dir, version, mode, channel, files }) {
+  const paths = files
+    ? versionBinaryAssets(dir, version, files)
+    : [...matrixAssetNames(version), "SHA256SUMS"];
+  const plans = [{ tag: `v${version}`, paths }];
+  if (mode === "channel") {
+    const manifest = channelManifestFileName(channel);
+    plans.push({ tag: `channel-${channel}`, paths: [files ? join(dir, manifest) : manifest] });
+  }
+  return plans;
+}
+
+/**
  * Build (unless skipped / dry-run) and upload binary artifacts to GitHub Releases.
  * Called by publish-stable / publish-channel orchestrators.
  *
  * `--dry-run` never compiles; it plans gh release steps. Prebuilt `dist-bin` is
  * optional (used only to list real paths when present).
  */
-export function releaseBinaryArtifacts(rawOptions = {}) {
+export async function releaseBinaryArtifacts(rawOptions = {}) {
   const { mode, channel } = normalizeModeChannel(rawOptions.mode, rawOptions.channel);
   const dir = rawOptions.dir ? resolve(rawOptions.dir) : DEFAULT_DIR;
   const dryRun = Boolean(rawOptions.dryRun);
@@ -157,7 +176,15 @@ export function releaseBinaryArtifacts(rawOptions = {}) {
   if (dryRun && !existsSync(dir)) {
     process.stdout.write(`[dry-run] ${dir} missing; planning expected assets\n`);
     planDryRunWithoutArtifacts({ version, mode, channel });
-    notifyOssSyncWebhook({ version, mode, channel, dryRun });
+    const plans = ossMirrorPlans({ dir, version, mode, channel, files: null });
+    await mirrorReleaseAssetsToOss({ plans, dryRun: true });
+    if (mode === "stable") {
+      await maintainReleaseManifest({
+        tag: `v${version}`,
+        assetNames: plans[0].paths.map((path) => basename(path)),
+        dryRun: true,
+      });
+    }
     return { version, mode, channel, dryRun };
   }
 
@@ -198,7 +225,18 @@ export function releaseBinaryArtifacts(rawOptions = {}) {
     uploadChannel({ dir, version, channel, files, dryRun });
   }
 
-  notifyOssSyncWebhook({ version, mode, channel, dryRun });
+  // Push the exact Release assets straight to OSS from the runner, then
+  // HEAD-reconcile. Stable releases additionally maintain release/manifest.json
+  // (newer-version guard). Throws on failure — CI is the only OSS writer.
+  const plans = ossMirrorPlans({ dir, version, mode, channel, files });
+  const mirror = await mirrorReleaseAssetsToOss({ plans, dryRun });
+  if (mode === "stable" && !mirror.skipped) {
+    await maintainReleaseManifest({
+      tag: `v${version}`,
+      assetNames: plans[0].paths.map((path) => basename(path)),
+      dryRun,
+    });
+  }
 
   return { version, mode, channel, dryRun };
 }
@@ -223,7 +261,7 @@ if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
       process.stdout.write(USAGE);
       process.exit(0);
     }
-    releaseBinaryArtifacts({
+    await releaseBinaryArtifacts({
       dir: values.dir ? resolve(values.dir) : undefined,
       dryRun: values["dry-run"],
       mode: values.mode,
