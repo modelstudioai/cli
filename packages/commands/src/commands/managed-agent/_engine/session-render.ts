@@ -3,15 +3,42 @@ import {
   isTerminalSessionStatus,
   type ProviderSessionEvent,
 } from "@openagentpack/sdk";
-import { sanitizeSessionEvent, sanitizeSessionEvents } from "@openagentpack/sdk/session-events";
+import { sanitizeSessionEvents } from "@openagentpack/sdk/session-events";
 
 /** Skip user echo + thinking noise in live rendering (mirrors OpenAgentPack CLI). */
 function shouldRenderLiveEvent(event: ProviderSessionEvent): boolean {
   return event.type !== "thinking" && !(event.type === "message" && event.role === "user");
 }
 
-function writeJsonLine(value: unknown): void {
-  process.stdout.write(`${JSON.stringify(value)}\n`);
+function renderTerminalStatus(status: string, json: boolean): void {
+  if (json) return;
+  process.stderr.write(`\n[session ${status}]\n`);
+}
+
+/**
+ * Consume an SSE stream. Text mode renders live (assistant text → stdout,
+ * diagnostics → stderr). JSON mode collects every event and emits exactly one
+ * JSON document at the end — `--output json` guarantees a single valid JSON
+ * result on stdout (mirrors `text chat --stream --output json`).
+ */
+export async function streamAndRenderEvents(
+  events: AsyncIterable<ProviderSessionEvent>,
+  json: boolean,
+): Promise<void> {
+  const collected: ProviderSessionEvent[] = [];
+  for await (const event of events) {
+    if (json) collected.push(event);
+    else renderEvent(event);
+    if (event.type === "status" && isTerminalSessionStatus(event.status)) {
+      renderTerminalStatus(event.status ?? "", json);
+      break;
+    }
+  }
+  if (json) {
+    process.stdout.write(
+      `${JSON.stringify({ events: sanitizeSessionEvents(collected) }, null, 2)}\n`,
+    );
+  }
 }
 
 /** Assistant text → stdout (data channel); everything else → stderr (diagnostics). */
@@ -29,26 +56,6 @@ function renderEvent(event: ProviderSessionEvent): void {
     if (event.status === "running") process.stderr.write("\n[session running]\n");
   } else if (event.type === "error") {
     process.stderr.write(`\n[error] ${event.content ?? "unknown error"}\n`);
-  }
-}
-
-function renderTerminalStatus(status: string, json: boolean): void {
-  if (json) return;
-  process.stderr.write(`\n[session ${status}]\n`);
-}
-
-/** Consume an SSE stream, rendering live (text) or as JSONL (json). */
-export async function streamAndRenderEvents(
-  events: AsyncIterable<ProviderSessionEvent>,
-  json: boolean,
-): Promise<void> {
-  for await (const event of events) {
-    if (json) writeJsonLine(sanitizeSessionEvent(event));
-    else renderEvent(event);
-    if (event.type === "status" && isTerminalSessionStatus(event.status)) {
-      renderTerminalStatus(event.status ?? "", json);
-      break;
-    }
   }
 }
 

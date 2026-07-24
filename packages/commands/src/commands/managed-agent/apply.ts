@@ -85,16 +85,24 @@ export default defineCommand({
     );
 
     const plan = planned.plan;
+    // In --output json, stdout must stay a single-JSON data channel: diagnostics
+    // and the action preview are progress info → stderr; text mode keeps stdout.
+    const emitProgress = (line: string): void => {
+      if (format === "json") process.stderr.write(`${line}\n`);
+      else emitBare(line);
+    };
     if (plan.diagnostics.some((diag) => diag.severity === "error")) {
       for (const diag of plan.diagnostics) {
-        if (diag.severity === "error") emitBare(`[error] ${diag.code}: ${diag.message}`);
+        if (diag.severity === "error") emitProgress(`[error] ${diag.code}: ${diag.message}`);
       }
       throw new BailianError("Cannot apply: resolve the errors above first.", ExitCode.GENERAL);
     }
 
     const actionable = plan.actions.filter((action) => action.action !== "no-op");
     if (actionable.length === 0) {
-      emitBare("No changes. Infrastructure is up-to-date.");
+      if (format === "json")
+        emitResult({ succeeded: 0, failed: 0, skipped: 0, results: [] }, format);
+      else emitBare("No changes. Infrastructure is up-to-date.");
       return;
     }
 
@@ -104,7 +112,7 @@ export default defineCommand({
 
     for (const action of actionable) {
       const icon = action.action === "create" ? "+" : action.action === "update" ? "~" : "-";
-      emitBare(`  ${icon} ${formatResourceLabel(action.address)}`);
+      emitProgress(`  ${icon} ${formatResourceLabel(action.address)}`);
     }
 
     if (!flags.yes) {

@@ -61,12 +61,17 @@ export default defineCommand({
 
     const resources = planned.resources;
     if (resources.length === 0) {
-      emitBare("No resources in state. Nothing to destroy.");
+      if (format === "json") emitResult({ destroyed: 0, total: 0 }, format);
+      else emitBare("No resources in state. Nothing to destroy.");
       return;
     }
 
+    // In --output json, stdout must stay a single-JSON data channel: the
+    // resource preview is progress info → stderr; text mode keeps stdout.
     for (const resource of resources) {
-      emitBare(`  - ${formatResourceLabel(resource.address)} [${resource.remote_id}]`);
+      const line = `  - ${formatResourceLabel(resource.address)} [${resource.remote_id}]`;
+      if (format === "json") process.stderr.write(`${line}\n`);
+      else emitBare(line);
     }
 
     if (!flags.yes) {
