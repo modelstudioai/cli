@@ -43,7 +43,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 解析分工:
 
 - `resolveApiKey()` — `auth: "apiKey"` 命令;优先级 `--api-key` > `DASHSCOPE_API_KEY` > config `api_key`
-- `resolveModelBaseUrl()` — model base URL;优先级 `--base-url` > `DASHSCOPE_BASE_URL` > config `base_url` > `REGIONS.cn`，返回前统一去除 query、fragment、尾斜杠和已知 SDK/API Base 后缀，同时保留自定义网关前缀
+- `resolveModelBaseUrl()` — model base URL;优先级 `--base-url` > `DASHSCOPE_BASE_URL` > config `base_url` > `REGIONS.cn`，返回前统一归一化为 URL origin（仅保留协议、host 和显式端口，去除 path、query、fragment）
 - `--config` 只选择 config 文件 block，不提升该 block 的字段优先级；内置套餐 Profile（当前为 `token-plan`）的预设仅在登录时物化写入，运行时继续走统一的 flag > env > selected config file > 默认值
 - 显式 `auth login --config <name>` 在凭证验证并落盘成功后自动激活目标 Profile；未传
   `--config` 时继续写当前激活项，失败和 dry-run 不切换

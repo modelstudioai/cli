@@ -98,7 +98,7 @@ npx skills add modelstudioai/cli --all -g
 ### Agent 安全约束
 
 - **禁止**把真实 API Key 写入仓库、日志、Skill、聊天记录的可公开部分。
-- CI / 非交互环境：使用 `bl ... --non-interactive`；通过密钥管理或环境变量注入，勿在脚本中硬编码 Key。
+- CI / 非交互环境：显式传入必填参数并使用 `--output json` 获取机器可读结果；如需纯文本输出，设置 `NO_COLOR=1`。通过密钥管理或环境变量注入，勿在脚本中硬编码 Key。
 
 ---
 
