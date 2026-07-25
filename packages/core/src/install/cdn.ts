@@ -1,11 +1,17 @@
 /**
- * End-user binary download base (OSS mirror).
- * GitHub Releases remain the publish source of truth; an external FC syncs assets here.
- * Production install.sh / install.ps1 are maintained outside this repo and read OSS only.
+ * End-user binary download base (OSS). CI publishes release assets and rolling
+ * channel manifests here directly (tools/release/lib/oss-direct-upload.mjs);
+ * no external FC is involved.
+ *
+ * Layout under the base:
+ *   v<version>/<asset>.zip —— immutable per-version binaries + SHA256SUMS
+ *   manifest.json          —— stable pointer { latest, releasedAt, assets }
+ *   latest.json            —— stable rolling manifest (os-arch keyed, sha256)
+ *   <channel>.json         —— per-channel rolling manifests (beta versions)
  *
  * Override with `BAILIAN_CLI_CDN`.
  */
-export const DEFAULT_CLI_CDN_BASE = "https://bailian-cli.oss-cn-hangzhou.aliyuncs.com/bailian-cli";
+export const DEFAULT_CLI_CDN_BASE = "https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/release";
 
 /** GitHub Releases base — used when writing manifests attached to gh release assets. */
 export const GITHUB_RELEASES_BASE = "https://github.com/modelstudioai/cli/releases";
@@ -20,16 +26,18 @@ export function getCliCdnBase(): string {
 }
 
 /**
- * Channel manifest on OSS (after FC sync): `{base}/channels/{channel}.json`
- * Formal installs still read `channels/latest.json` on OSS; this repo no longer
- * attaches `latest.json` to GitHub Releases (FC / ops maintain OSS latest).
+ * Rolling channel manifest at the CDN base root: `{base}/{channel}.json`.
+ * `latest.json` (stable) and `<channel>.json` (betas) share the same shape;
+ * both are written by CI on publish.
  */
 export function channelManifestUrl(channel = "latest"): string {
-  return `${getCliCdnBase()}/channels/${channel}.json`;
+  return `${getCliCdnBase()}/${channel}.json`;
 }
 
+/** Immutable per-version asset: `{base}/v{version}/{fileName}`. */
 export function releaseAssetUrl(version: string, fileName: string): string {
-  return `${getCliCdnBase()}/releases/${version}/${fileName}`;
+  const tag = version.startsWith("v") ? version : `v${version}`;
+  return `${getCliCdnBase()}/${tag}/${fileName}`;
 }
 
 /** Platform triple used in asset names: `bl-<ver>-<os>-<arch>[.exe]`. */

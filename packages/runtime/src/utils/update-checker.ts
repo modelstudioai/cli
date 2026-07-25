@@ -1,6 +1,11 @@
 import { join } from "path";
 import { readFileSync, writeFileSync } from "fs";
-import { getConfigDir, trackingHeaders, getInstallMethod } from "bailian-cli-core";
+import {
+  DEFAULT_INSTALL_SCRIPT_URL,
+  getConfigDir,
+  trackingHeaders,
+  getInstallMethod,
+} from "bailian-cli-core";
 
 export const NPM_REGISTRY = "https://registry.npmjs.org";
 /** Default npm package; products override per-call via the `npmPackage` argument. */
@@ -257,7 +262,7 @@ export async function performAutoUpdate(
     } catch (err) {
       process.stderr.write(`  ${yellow}⚠ Auto-update failed: ${errorMessage(err)}${reset}\n`);
       process.stderr.write(
-        `  ${yellow}  Re-run:${reset} ${cyan}curl -fsSL https://bailian-cli.oss-cn-hangzhou.aliyuncs.com/bailian-cli/install.sh | bash${reset}\n\n`,
+        `  ${yellow}  Re-run:${reset} ${cyan}curl -fsSL ${DEFAULT_INSTALL_SCRIPT_URL} | bash${reset}\n\n`,
       );
       return false;
     }

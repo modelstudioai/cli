@@ -2,6 +2,7 @@ import { execSync } from "child_process";
 import { writeFileSync } from "fs";
 import { join } from "path";
 import {
+  DEFAULT_INSTALL_SCRIPT_URL,
   defineCommand,
   getConfigDir,
   getInstallMethod,
@@ -101,9 +102,7 @@ export default defineCommand({
         const message = error instanceof Error ? error.message : String(error);
         process.stderr.write(`\nAutomatic binary update failed: ${message}\n`);
         process.stderr.write("Re-run the install script:\n");
-        process.stderr.write(
-          "  curl -fsSL https://bailian-cli.oss-cn-hangzhou.aliyuncs.com/bailian-cli/install.sh | bash\n\n",
-        );
+        process.stderr.write(`  curl -fsSL ${DEFAULT_INSTALL_SCRIPT_URL} | bash\n\n`);
       }
       return;
     }

@@ -138,7 +138,9 @@ function ossMirrorPlans({ dir, version, mode, channel, files }) {
   const plans = [{ tag: `v${version}`, paths }];
   if (mode === "channel") {
     const manifest = channelManifestFileName(channel);
-    plans.push({ tag: `channel-${channel}`, paths: [files ? join(dir, manifest) : manifest] });
+    // Rolling channel manifest lives at the OSS prefix root, next to
+    // manifest.json / latest.json — one flat json per channel.
+    plans.push({ tag: "", paths: [files ? join(dir, manifest) : manifest] });
   }
   return plans;
 }
@@ -182,6 +184,7 @@ export async function releaseBinaryArtifacts(rawOptions = {}) {
       await maintainReleaseManifest({
         tag: `v${version}`,
         assetNames: plans[0].paths.map((path) => basename(path)),
+        channelJsonPath: null,
         dryRun: true,
       });
     }
@@ -198,13 +201,11 @@ export async function releaseBinaryArtifacts(rawOptions = {}) {
   if (!files.includes("SHA256SUMS")) {
     throw new Error(`Missing SHA256SUMS in ${dir}`);
   }
-  if (mode === "channel") {
-    const manifestName = channelManifestFileName(channel);
-    if (!files.includes(manifestName)) {
-      throw new Error(
-        `Missing ${manifestName} in ${dir}. Rebuild with matching --mode/--channel (found: ${files.join(", ") || "(empty)"}).`,
-      );
-    }
+  const rollingManifest = channelManifestFileName(mode === "channel" ? channel : "latest");
+  if (!files.includes(rollingManifest)) {
+    throw new Error(
+      `Missing ${rollingManifest} in ${dir}. Rebuild with matching --mode/--channel (found: ${files.join(", ") || "(empty)"}).`,
+    );
   }
 
   process.stdout.write(`artifacts in ${dir}:\n`);
@@ -234,6 +235,7 @@ export async function releaseBinaryArtifacts(rawOptions = {}) {
     await maintainReleaseManifest({
       tag: `v${version}`,
       assetNames: plans[0].paths.map((path) => basename(path)),
+      channelJsonPath: join(dir, rollingManifest),
       dryRun,
     });
   }

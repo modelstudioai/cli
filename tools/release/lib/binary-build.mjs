@@ -7,8 +7,9 @@
  *   node tools/release/lib/binary-build.mjs --mode stable --host
  *
  * Manifests:
- *   --mode stable  → no release manifest (latest.json removed)
- *   --mode channel → writes <channel>.json only
+ *   --mode stable  → writes latest.json (rolling manifest of the implicit
+ *                    "latest" channel; OSS prefix root only, not a GH asset)
+ *   --mode channel → writes <channel>.json
  */
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -156,10 +157,7 @@ function writeChecksums(outdir, artifacts) {
   writeFileSync(join(outdir, "SHA256SUMS"), `${lines.join("\n")}\n`);
 }
 
-/**
- * Channel-only: write `<channel>.json` with per-platform zip file + sha256.
- * Stable no longer emits latest.json.
- */
+/** Write the rolling channel manifest (`latest.json` / `<channel>.json`) with per-platform zip file + sha256. */
 function writeChannelManifest(outdir, version, artifacts, channel) {
   const assets = Object.fromEntries(
     artifacts.map((item) => [
@@ -224,9 +222,9 @@ export function buildBinaryArtifacts(rawOptions = {}) {
   writeChecksums(outdir, artifacts);
 
   const extras = ["SHA256SUMS"];
-  if (mode === "channel") {
-    extras.push(writeChannelManifest(outdir, version, artifacts, channel));
-  }
+  extras.push(
+    writeChannelManifest(outdir, version, artifacts, mode === "channel" ? channel : "latest"),
+  );
 
   log(`\nBuilt ${artifacts.length} zip(s):`);
   for (const item of artifacts) {

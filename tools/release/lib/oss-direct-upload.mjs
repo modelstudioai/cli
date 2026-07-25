@@ -4,13 +4,13 @@
  * No external FC is involved anymore; CI is the single writer.
  *
  * Flow:
- *   - Every mode uploads its assets to `<prefix>/<tag>/<basename>` (channel
- *     builds include the rolling `channel-<name>/<name>.json`).
+ *   - Every mode uploads its assets to `<prefix>/<tag>/<basename>`; rolling
+ *     channel manifests (`<channel>.json`) go to the prefix root (empty tag).
  *   - After upload, every object is HEAD-verified against the local byte size
  *     (reconciliation — the runner has the ground-truth artifacts on disk).
  *   - Stable only: when the tag is a NEWER version than manifest.latest
- *     (compareVersions), rewrite `<prefix>/manifest.json`. Channel/prerelease
- *     never touches it — same semantics the FC sync-release used to enforce.
+ *     (compareVersions), rewrite `<prefix>/manifest.json` and the rolling
+ *     `<prefix>/latest.json`. Channel/prerelease never touches either.
  *
  * Zero-dependency: OSS V1 header signature (HMAC-SHA1) over plain fetch.
  *
@@ -132,12 +132,16 @@ function buildManifest(tag, releasedAt, assetNames, cfg) {
  * Signed OSS request (V1 header signature). Keys here are [A-Za-z0-9._/-] only,
  * so no URL encoding is needed and the signed resource matches the request path.
  */
-async function ossRequest(method, key, { creds, cfg, body = null, contentType = "" }) {
+async function ossRequest(
+  method,
+  key,
+  { creds, cfg, body = null, contentType = "", extraHeaders = {} },
+) {
   const date = new Date().toUTCString();
   const contentMd5 = body ? createHash("md5").update(body).digest("base64") : "";
   const canonical = `${method}\n${contentMd5}\n${contentType}\n${date}\n/${cfg.bucket}/${key}`;
   const signature = createHmac("sha1", creds.sk).update(canonical).digest("base64");
-  const headers = { Date: date, Authorization: `OSS ${creds.ak}:${signature}` };
+  const headers = { Date: date, Authorization: `OSS ${creds.ak}:${signature}`, ...extraHeaders };
   if (contentType) headers["Content-Type"] = contentType;
   if (contentMd5) headers["Content-MD5"] = contentMd5;
   const options = { method, headers };
@@ -169,12 +173,23 @@ async function putWithRetry(params, attempts = 3) {
   }
 }
 
-/** Remote object byte size; null when the object does not exist. */
+/**
+ * Remote object byte size; null when the object does not exist.
+ * Forces the identity encoding: for compressible types (e.g. JSON) OSS gzips
+ * the transfer and undici then strips the content-length header, which would
+ * otherwise read as a bogus size 0 here.
+ */
 async function headObjectSize(key, creds, cfg) {
-  const res = await ossRequest("HEAD", key, { creds, cfg });
+  const res = await ossRequest("HEAD", key, {
+    creds,
+    cfg,
+    extraHeaders: { "Accept-Encoding": "identity" },
+  });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`OSS HEAD ${key} failed: HTTP ${res.status}`);
-  return Number(res.headers.get("content-length"));
+  const length = res.headers.get("content-length");
+  if (length == null) throw new Error(`OSS HEAD ${key} returned no content-length`);
+  return Number(length);
 }
 
 /** GET + parse a JSON object; null when missing or corrupt. */
@@ -210,8 +225,12 @@ export async function mirrorReleaseAssetsToOss({ plans, dryRun = false }) {
   }
   const { creds, cfg } = ctx;
 
+  // An empty tag means the object lives at the prefix root (rolling manifests).
   const jobs = plans.flatMap(({ tag, paths }) =>
-    paths.map((path) => ({ path, key: `${cfg.prefix}/${tag}/${basename(path)}` })),
+    paths.map((path) => ({
+      path,
+      key: [cfg.prefix, tag, basename(path)].filter(Boolean).join("/"),
+    })),
   );
   if (jobs.length === 0) return { uploaded: 0, skipped: true };
 
@@ -273,14 +292,24 @@ export async function mirrorReleaseAssetsToOss({ plans, dryRun = false }) {
 }
 
 /**
- * Maintain `<prefix>/manifest.json` for STABLE releases only: rewrite it when
- * `tag` is a newer version than the current `latest` (first write included).
- * Same update rule the FC sync-release used to apply.
+ * Maintain the STABLE pointers at the prefix root: rewrite `manifest.json`
+ * (and, when `channelJsonPath` is given, the rolling `latest.json`) when `tag`
+ * is a newer version than the current `latest` (first write included).
  *
- * @param {{ tag: string, assetNames: string[], dryRun?: boolean }} options
+ * @param {{
+ *   tag: string,
+ *   assetNames: string[],
+ *   channelJsonPath?: string | null,
+ *   dryRun?: boolean,
+ * }} options
  * @returns {Promise<{ updated: boolean, latest: string | null }>}
  */
-export async function maintainReleaseManifest({ tag, assetNames, dryRun = false }) {
+export async function maintainReleaseManifest({
+  tag,
+  assetNames,
+  channelJsonPath = null,
+  dryRun = false,
+}) {
   const ctx = ossContext();
   if (!ctx) {
     process.stdout.write("[info] BAILIAN_OSS_AK/SK unset; skip manifest.json maintenance\n");
@@ -291,7 +320,7 @@ export async function maintainReleaseManifest({ tag, assetNames, dryRun = false 
 
   if (dryRun) {
     process.stdout.write(
-      `[dry-run] manifest: GET oss://${cfg.bucket}/${key} → rewrite when ${tag} > latest (assets: ${assetNames.length})\n`,
+      `[dry-run] manifest: GET oss://${cfg.bucket}/${key} → rewrite manifest.json + latest.json when ${tag} > latest (assets: ${assetNames.length})\n`,
     );
     return { updated: false, latest: null };
   }
@@ -313,5 +342,15 @@ export async function maintainReleaseManifest({ tag, assetNames, dryRun = false 
     contentType: "application/json",
   });
   process.stdout.write(`manifest.json → latest=${tag} (was ${currentLatest ?? "none"})\n`);
+  if (channelJsonPath) {
+    await putObject({
+      creds,
+      cfg,
+      key: `${cfg.prefix}/latest.json`,
+      body: readFileSync(channelJsonPath),
+      contentType: "application/json",
+    });
+    process.stdout.write(`latest.json → ${tag}\n`);
+  }
   return { updated: true, latest: tag };
 }
