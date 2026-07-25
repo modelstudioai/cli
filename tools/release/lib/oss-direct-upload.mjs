@@ -20,32 +20,47 @@
  *   - Once enabled, any upload/reconcile/manifest failure THROWS and fails the
  *     release step — re-running the workflow is idempotent (uploads overwrite).
  *
- * Environment variables (all injected from GitHub repo Settings — Secrets for
- * credentials, Variables for the rest; never hardcode values in the workflow):
+ * Environment variables (all injected from GitHub repo Settings → Secrets;
+ * no OSS defaults are hardcoded in this repo):
  *   BAILIAN_OSS_AK / BAILIAN_OSS_SK —— RAM AccessKey; needs oss:PutObject and
- *                                      oss:GetObject on `<prefix>/*`
- *   BAILIAN_OSS_BUCKET              —— target bucket, default bailian-wiki
- *   BAILIAN_OSS_REGION              —— region, default oss-cn-hangzhou
- *   BAILIAN_OSS_ENDPOINT            —— optional request endpoint override,
- *                                      e.g. oss-accelerate.aliyuncs.com; public
- *                                      manifest URLs always use the region endpoint
- *   BAILIAN_RELEASE_PREFIX          —— object prefix, default release
+ *                                      oss:GetObject on the release prefix
+ *   BAILIAN_OSS_BUCKET / BAILIAN_OSS_REGION / BAILIAN_RELEASE_PREFIX
+ *                                   —— required once the channel is enabled
+ *   BAILIAN_OSS_ENDPOINT            —— optional request endpoint override;
+ *                                      public manifest URLs always use the
+ *                                      region endpoint
  */
 import { createHash, createHmac } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
 import { basename } from "node:path";
 
-const OSS_CONFIG = {
-  bucket: process.env.BAILIAN_OSS_BUCKET || "bailian-wiki",
-  region: process.env.BAILIAN_OSS_REGION || "oss-cn-hangzhou",
-  endpoint: process.env.BAILIAN_OSS_ENDPOINT || "",
-  prefix: process.env.BAILIAN_RELEASE_PREFIX || "release",
-};
-
-function ossCredentials() {
+/**
+ * Resolve the OSS context from the environment. Returns null when the channel
+ * is disabled (no credentials). Throws when credentials are present but the
+ * non-credential configuration is incomplete — a misconfigured release must
+ * fail loudly instead of uploading to a guessed location.
+ */
+function ossContext() {
   const ak = process.env.BAILIAN_OSS_AK?.trim();
   const sk = process.env.BAILIAN_OSS_SK?.trim();
-  return ak && sk ? { ak, sk } : null;
+  if (!ak || !sk) return null;
+  const cfg = {
+    bucket: process.env.BAILIAN_OSS_BUCKET?.trim() || "",
+    region: process.env.BAILIAN_OSS_REGION?.trim() || "",
+    endpoint: process.env.BAILIAN_OSS_ENDPOINT?.trim() || "",
+    prefix: process.env.BAILIAN_RELEASE_PREFIX?.trim() || "",
+  };
+  const missing = [
+    ["BAILIAN_OSS_BUCKET", cfg.bucket],
+    ["BAILIAN_OSS_REGION", cfg.region],
+    ["BAILIAN_RELEASE_PREFIX", cfg.prefix],
+  ]
+    .filter(([, value]) => !value)
+    .map(([name]) => name);
+  if (missing.length > 0) {
+    throw new Error(`OSS channel misconfigured; missing env: ${missing.join(", ")}`);
+  }
+  return { creds: { ak, sk }, cfg };
 }
 
 /** Virtual-hosted-style request host: <bucket>.<endpoint-or-region>. */
@@ -186,20 +201,19 @@ async function getObjectJson(key, creds, cfg) {
  * @returns {Promise<{ uploaded: number, skipped: boolean }>}
  */
 export async function mirrorReleaseAssetsToOss({ plans, dryRun = false }) {
-  const creds = ossCredentials();
-  const cfg = OSS_CONFIG;
-
-  const jobs = plans.flatMap(({ tag, paths }) =>
-    paths.map((path) => ({ path, key: `${cfg.prefix}/${tag}/${basename(path)}` })),
-  );
-  if (jobs.length === 0) return { uploaded: 0, skipped: true };
-
-  if (!creds) {
+  const ctx = ossContext();
+  if (!ctx) {
     process.stdout.write(
       "\n[warn] BAILIAN_OSS_AK/SK unset; skip the OSS release channel entirely\n",
     );
     return { uploaded: 0, skipped: true };
   }
+  const { creds, cfg } = ctx;
+
+  const jobs = plans.flatMap(({ tag, paths }) =>
+    paths.map((path) => ({ path, key: `${cfg.prefix}/${tag}/${basename(path)}` })),
+  );
+  if (jobs.length === 0) return { uploaded: 0, skipped: true };
 
   process.stdout.write(
     `\n==> OSS upload: ${jobs.length} object(s) → ${cfg.bucket} (${cfg.endpoint || cfg.region})\n`,
@@ -267,14 +281,13 @@ export async function mirrorReleaseAssetsToOss({ plans, dryRun = false }) {
  * @returns {Promise<{ updated: boolean, latest: string | null }>}
  */
 export async function maintainReleaseManifest({ tag, assetNames, dryRun = false }) {
-  const creds = ossCredentials();
-  const cfg = OSS_CONFIG;
-  const key = `${cfg.prefix}/manifest.json`;
-
-  if (!creds) {
+  const ctx = ossContext();
+  if (!ctx) {
     process.stdout.write("[info] BAILIAN_OSS_AK/SK unset; skip manifest.json maintenance\n");
     return { updated: false, latest: null };
   }
+  const { creds, cfg } = ctx;
+  const key = `${cfg.prefix}/manifest.json`;
 
   if (dryRun) {
     process.stdout.write(
