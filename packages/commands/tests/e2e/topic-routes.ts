@@ -164,7 +164,9 @@ export const MANAGED_AGENT_ROUTES: E2eRouteExports = {
   "managed-agent state rm": "managedAgentStateRm",
   "managed-agent state import": "managedAgentStateImport",
   "managed-agent session create": "managedAgentSessionCreate",
+  "managed-agent session get": "managedAgentSessionGet",
   "managed-agent session delete": "managedAgentSessionDelete",
   "managed-agent session run": "managedAgentSessionRun",
   "managed-agent session send": "managedAgentSessionSend",
+  "managed-agent skill-list": "managedAgentSkillList",
 };

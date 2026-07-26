@@ -20,6 +20,7 @@ Index: [index.md](index.md)
 | `bl managed-agent session list`   | List sessions from the provider                               |
 | `bl managed-agent session run`    | Create a session, send a message, and stream the response     |
 | `bl managed-agent session send`   | Send a message to an existing session and stream the response |
+| `bl managed-agent skill-list`     | List skills from the provider's skill catalog                 |
 | `bl managed-agent state import`   | Import an existing remote resource into agents state          |
 | `bl managed-agent state list`     | List resources tracked in agents state                        |
 | `bl managed-agent state rm`       | Remove a resource from state without destroying it remotely   |
@@ -417,6 +418,50 @@ bl managed-agent session run --agent assistant --prompt "summarize this repo"
 
 ```bash
 bl managed-agent session send --session-id sess_abc123 --message "continue"
+```
+
+### `bl managed-agent skill-list`
+
+| Field           | Value                                                                                              |
+| --------------- | -------------------------------------------------------------------------------------------------- |
+| **Name**        | `managed-agent skill-list`                                                                         |
+| **Description** | List skills from the provider's skill catalog                                                      |
+| **Usage**       | `bl managed-agent skill-list [--source custom\|official\|all] [--provider <name>] [--file <path>]` |
+
+#### Flags
+
+| Flag                | Type   | Required | Description                                                                                                  |
+| ------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------ |
+| `--file <path>`     | string | no       | Config file path (default: agents.yaml)                                                                      |
+| `--source <source>` | string | no       | Skill catalog: custom (workspace-uploaded, default), official (built-in), or all (both catalogs in one call) |
+| `--provider <name>` | string | no       | Target provider                                                                                              |
+| `--api-key <key>`   | string | no       | API key                                                                                                      |
+| `--base-url <url>`  | string | no       | API base URL                                                                                                 |
+
+#### Notes
+
+- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+- Providers without a skill listing API (e.g. ark) return an empty list.
+- For agent-driven skill selection, use `--source all --output json`: one call returns both catalogs with per-skill `source` and `description` fields to pick from.
+
+#### Examples
+
+```bash
+bl managed-agent skill-list
+```
+
+```bash
+bl managed-agent skill-list --source official
+```
+
+```bash
+bl managed-agent skill-list --source all --output json
+```
+
+```bash
+bl managed-agent skill-list --source custom --provider bailian
 ```
 
 ### `bl managed-agent state import`

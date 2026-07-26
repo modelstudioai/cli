@@ -107,6 +107,7 @@ export { default as managedAgentSessionDelete } from "./commands/managed-agent/s
 export { default as managedAgentSessionRun } from "./commands/managed-agent/session-run.ts";
 export { default as managedAgentSessionSend } from "./commands/managed-agent/session-send.ts";
 export { default as managedAgentSessionEvents } from "./commands/managed-agent/session-events.ts";
+export { default as managedAgentSkillList } from "./commands/managed-agent/skill-list.ts";
 export { default as workspaceInit } from "./commands/workspace/init.ts";
 export { default as pluginInstall } from "./commands/plugin/install.ts";
 export { default as pluginLink } from "./commands/plugin/link.ts";

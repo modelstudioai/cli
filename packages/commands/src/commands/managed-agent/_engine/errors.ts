@@ -38,9 +38,11 @@ function parseSdkResponseBody(raw: string): ApiErrorBody {
  * bl's error handler produces the right exit code and hint formatting.
  * SDK `UserError` → USAGE; SDK `ApiError` (server HTTP error) → GENERAL via
  * `mapApiError` (server message passed through verbatim, with
- * httpStatus/apiCode/requestId metadata for --output json); any other Error →
- * GENERAL (message passed through, per bl's "don't translate server errors"
- * boundary).
+ * httpStatus/apiCode/requestId metadata for --output json); fetch transport
+ * failures (`TypeError: fetch failed`) are rethrown untouched so the runtime
+ * error handler maps them to NETWORK with an errno-specific hint, matching the
+ * native client path; any other Error → GENERAL (message passed through, per
+ * bl's "don't translate server errors" boundary).
  */
 export async function withAgentErrors<T>(fn: () => Promise<T>): Promise<T> {
   try {
@@ -51,6 +53,9 @@ export async function withAgentErrors<T>(fn: () => Promise<T>): Promise<T> {
     if (error instanceof Error && isSdkApiError(error)) {
       throw mapApiError(error.statusCode, parseSdkResponseBody(error.responseBody));
     }
+    // DNS/TCP/TLS failures from the SDK's fetch: keep the original TypeError so
+    // the runtime error handler classifies it as NETWORK (exit 6) + errno hint.
+    if (error instanceof TypeError && error.message === "fetch failed") throw error;
     if (error instanceof Error) throw new BailianError(error.message, ExitCode.GENERAL);
     throw error;
   }

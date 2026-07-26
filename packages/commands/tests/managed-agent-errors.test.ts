@@ -86,3 +86,17 @@ test("plain Error maps to GENERAL with message passed through", async () => {
   expect(mapped.message).toBe("boom");
   expect(mapped.api).toBeUndefined();
 });
+
+test("fetch transport TypeError is rethrown untouched for the runtime NETWORK mapping", async () => {
+  const transportError = new TypeError("fetch failed", {
+    cause: Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:1"), {
+      code: "ECONNREFUSED",
+    }),
+  });
+  try {
+    await withAgentErrors(() => Promise.reject(transportError));
+    throw new Error("expected withAgentErrors to throw");
+  } catch (error) {
+    expect(error).toBe(transportError);
+  }
+});

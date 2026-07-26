@@ -43,6 +43,44 @@ describe("e2e: managed-agent", () => {
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--message|Missing required/i);
   });
+
+  test("managed-agent skill-list --help 正常退出", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "skill-list",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--source|--provider|--file/i);
+  });
+
+  test("managed-agent skill-list 非法 --source 时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "skill-list",
+      "--source",
+      "builtin",
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--source must be one of: custom, official/i);
+  });
+
+  test("managed-agent skill-list --source all 通过参数校验（缺配置文件时才失败）", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "skill-list",
+      "--source",
+      "all",
+      "--file",
+      "agents.e2e-missing.yaml",
+      "--quiet",
+    ]);
+    // all 是合法值：不应报 --source 用法错误，而是走到配置加载后因文件缺失退出
+    expect(exitCode).toBe(2);
+    expect(stderr).not.toMatch(/--source must be one of/i);
+    expect(stderr).toMatch(/File not found.*agents\.e2e-missing\.yaml/i);
+  });
 });
 
 describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => {

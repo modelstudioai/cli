@@ -1,8 +1,9 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "vite-plus/test";
-import { e2eFixturesDir, runCommandE2e } from "./helpers.ts";
+import { e2eFixturesDir, parseStdoutJson, runCommandE2e } from "./helpers.ts";
 import { MANAGED_AGENT_ROUTES } from "./topic-routes.ts";
 
 /**
@@ -42,6 +43,21 @@ function makeConfigEnv(config: Record<string, unknown>): NodeJS.ProcessEnv {
 
 function validateArgs(file: string): string[] {
   return ["managed-agent", "validate", "--file", file, "--quiet"];
+}
+
+/** 分配一个刚释放的本地端口，连接必然 ECONNREFUSED，用于网络错误场景。 */
+async function closedPort(): Promise<number> {
+  const server = createServer();
+  try {
+    await new Promise<void>((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
+    const address = server.address();
+    if (!address || typeof address === "string") {
+      throw new Error("failed to allocate a closed port");
+    }
+    return address.port;
+  } finally {
+    await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
+  }
 }
 
 describe("e2e: managed-agent 凭证链（config 写入 / Profile / logout / 错误映射）", () => {
@@ -95,5 +111,34 @@ describe("e2e: managed-agent 凭证链（config 写入 / Profile / logout / 错�
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/agents/i);
     expect(stderr).not.toMatch(/"code":\s*"invalid_type"/);
+  });
+
+  test("validate --output json 成功路径 stdout 为单个合法 JSON", async () => {
+    const env = makeConfigEnv({ api_key: "sk-e2e-config-write" });
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      ROUTES,
+      ["managed-agent", "validate", "--file", AGENTS_YAML, "--output", "json"],
+      env,
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ valid?: boolean; diagnostics?: unknown[] }>(stdout);
+    expect(data.valid).toBe(true);
+    expect(Array.isArray(data.diagnostics)).toBe(true);
+  });
+
+  test("SDK fetch 连不上时映射为 NETWORK (6) + errno hint，不降级成 GENERAL", async () => {
+    const port = await closedPort();
+    const env = makeConfigEnv({
+      api_key: "sk-e2e-network",
+      base_url: `http://127.0.0.1:${port}`,
+    });
+    const { stderr, exitCode } = await runCommandE2e(
+      ROUTES,
+      ["managed-agent", "session", "get", "--session-id", "sess_net", "--file", AGENTS_YAML],
+      env,
+    );
+    expect(exitCode).toBe(6);
+    expect(stderr).toMatch(/Network request failed/i);
+    expect(stderr).toMatch(/ECONNREFUSED|refused/i);
   });
 });

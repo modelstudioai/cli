@@ -105,6 +105,7 @@ import {
   managedAgentSessionRun,
   managedAgentSessionSend,
   managedAgentSessionEvents,
+  managedAgentSkillList,
 } from "bailian-cli-commands";
 
 // Full bailian-cli product: every command, exposed under the `bl` binary.
@@ -218,4 +219,5 @@ export const commands: Record<string, AnyCommand> = {
   "managed-agent session run": managedAgentSessionRun,
   "managed-agent session send": managedAgentSessionSend,
   "managed-agent session events": managedAgentSessionEvents,
+  "managed-agent skill-list": managedAgentSkillList,
 };
