@@ -12,7 +12,7 @@ import {
   writeSkillLock,
 } from "bailian-cli-core";
 import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
-import { parseSkillNames } from "./shared.ts";
+import { parseSkillNames, runWithConcurrency } from "./shared.ts";
 
 interface AddOutcome {
   name: string;
@@ -24,26 +24,6 @@ interface AddOutcome {
 
 /** Max number of skills downloading/installing at the same time. */
 const INSTALL_CONCURRENCY = 3;
-
-/**
- * Run async task factories with a bounded concurrency pool.
- * Returns results in the same order as the input tasks array.
- */
-async function runWithConcurrency<T>(tasks: Array<() => Promise<T>>, limit: number): Promise<T[]> {
-  const results: T[] = new Array(tasks.length);
-  let nextIndex = 0;
-
-  async function worker(): Promise<void> {
-    while (nextIndex < tasks.length) {
-      const currentIndex = nextIndex++;
-      results[currentIndex] = await tasks[currentIndex]();
-    }
-  }
-
-  const workers = Array.from({ length: Math.min(limit, tasks.length) }, () => worker());
-  await Promise.all(workers);
-  return results;
-}
 
 export default defineCommand({
   description: "Install skills from the Bailian skill registry into local agents",
@@ -106,24 +86,28 @@ export default defineCommand({
 
     if (format === "json") {
       emitResult(
-        { registry: getSkillRegistryBaseUrl(), agents: agents.map((a) => a.id), skills: results },
+        {
+          registry: getSkillRegistryBaseUrl(),
+          agents: agents.map((agent) => agent.id),
+          skills: results,
+        },
         format,
       );
     } else if (results.length === 0) {
       emitBare("Skill registry is empty; no skills to install.");
     } else {
-      const rows = results.map((r) => [
-        r.name,
-        r.status,
-        r.publishedAt ? r.publishedAt.slice(0, 10) : "-",
-        r.status === "installed" ? r.agents?.join(", ") || "-" : (r.reason ?? "-"),
+      const rows = results.map((result) => [
+        result.name,
+        result.status,
+        result.publishedAt ? result.publishedAt.slice(0, 10) : "-",
+        result.status === "installed" ? result.agents?.join(", ") || "-" : (result.reason ?? "-"),
       ]);
       for (const line of formatTable(["NAME", "STATUS", "PUBLISHED", "AGENTS / REASON"], rows)) {
         emitBare(line);
       }
     }
 
-    const failed = results.filter((r) => r.status === "failed");
+    const failed = results.filter((result) => result.status === "failed");
     if (failed.length > 0) {
       throw new BailianError(
         `${failed.length}/${results.length} skill(s) failed to install`,

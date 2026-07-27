@@ -100,9 +100,9 @@ bl skill remove --name all
 
 #### Flags
 
-| Flag                     | Type   | Required | Description                                                                                   |
-| ------------------------ | ------ | -------- | --------------------------------------------------------------------------------------------- |
-| `--name <all\|name,...>` | string | no       | Skills to update: all (default, only changed ones) or comma-separated names (force reinstall) |
+| Flag                     | Type   | Required | Description                                                                                                 |
+| ------------------------ | ------ | -------- | ----------------------------------------------------------------------------------------------------------- |
+| `--name <all\|name,...>` | string | no       | Skills to update: all (default, only changed ones) or comma-separated names (force update installed skills) |
 
 #### Examples
 

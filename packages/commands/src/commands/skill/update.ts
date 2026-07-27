@@ -13,7 +13,7 @@ import {
   writeSkillLock,
 } from "bailian-cli-core";
 import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
-import { parseSkillNames } from "./shared.ts";
+import { parseSkillNames, runWithConcurrency } from "./shared.ts";
 
 interface UpdateOutcome {
   name: string;
@@ -21,6 +21,9 @@ interface UpdateOutcome {
   publishedAt?: string;
   reason?: string;
 }
+
+/** Max number of skills downloading/installing at the same time. */
+const UPDATE_CONCURRENCY = 3;
 
 export default defineCommand({
   description: "Update installed skills to the latest registry versions",
@@ -31,7 +34,7 @@ export default defineCommand({
       type: "string",
       valueHint: "<all|name,...>",
       description:
-        "Skills to update: all (default, only changed ones) or comma-separated names (force reinstall)",
+        "Skills to update: all (default, only changed ones) or comma-separated names (force update installed skills)",
     },
   },
   exampleArgs: ["", "--name spark-video"],
@@ -63,16 +66,25 @@ export default defineCommand({
         targets.push(name);
       }
     } else {
-      // Explicit names = force reinstall (equivalent to add if not yet installed)
-      targets.push(...requested);
+      // Explicit names: only update skills that are already installed; reject uninstalled ones
+      for (const name of requested) {
+        if (!lock.skills[name]) {
+          results.push({
+            name,
+            status: "failed",
+            reason: "not installed; run bl skill add --name " + name + " first",
+          });
+          continue;
+        }
+        targets.push(name);
+      }
     }
 
     const agents = detectInstalledAgents();
-    for (const name of targets) {
+    const tasks = targets.map((name) => async (): Promise<UpdateOutcome> => {
       const entry = index.skills[name];
       if (!entry) {
-        results.push({ name, status: "failed", reason: "skill not found in registry" });
-        continue;
+        return { name, status: "failed", reason: "skill not found in registry" };
       }
       try {
         await installSkill(name, entry);
@@ -86,15 +98,17 @@ export default defineCommand({
           ...(entry.description ? { description: entry.description } : {}),
           links: effective.map((link) => link.path),
         };
-        results.push({ name, status: "updated", publishedAt: entry.publishedAt });
+        return { name, status: "updated", publishedAt: entry.publishedAt };
       } catch (err) {
-        results.push({
+        return {
           name,
           status: "failed",
           reason: err instanceof Error ? err.message : String(err),
-        });
+        };
       }
-    }
+    });
+    const updateResults = await runWithConcurrency(tasks, UPDATE_CONCURRENCY);
+    results.push(...updateResults);
     writeSkillLock(lock);
 
     if (format === "json") {
@@ -102,18 +116,18 @@ export default defineCommand({
     } else if (results.length === 0) {
       emitBare("No skills installed locally; run bl skill add first.");
     } else {
-      const rows = results.map((r) => [
-        r.name,
-        r.status,
-        r.publishedAt ? r.publishedAt.slice(0, 10) : "-",
-        r.reason ?? "-",
+      const rows = results.map((result) => [
+        result.name,
+        result.status,
+        result.publishedAt ? result.publishedAt.slice(0, 10) : "-",
+        result.reason ?? "-",
       ]);
       for (const line of formatTable(["NAME", "STATUS", "PUBLISHED", "REASON"], rows)) {
         emitBare(line);
       }
     }
 
-    const failed = results.filter((r) => r.status === "failed");
+    const failed = results.filter((result) => result.status === "failed");
     if (failed.length > 0) {
       throw new BailianError(
         `${failed.length} skill(s) failed to update`,
