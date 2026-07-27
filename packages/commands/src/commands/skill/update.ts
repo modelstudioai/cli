@@ -120,10 +120,20 @@ export default defineCommand({
         result.name,
         result.status,
         result.publishedAt ? result.publishedAt.slice(0, 10) : "-",
-        result.reason ?? "-",
       ]);
-      for (const line of formatTable(["NAME", "STATUS", "PUBLISHED", "REASON"], rows)) {
+      for (const line of formatTable(["NAME", "STATUS", "PUBLISHED"], rows)) {
         emitBare(line);
+      }
+
+      // Footnotes for skipped / failed entries
+      const annotated = results.filter(
+        (result) => (result.status === "skipped" || result.status === "failed") && result.reason,
+      );
+      if (annotated.length > 0) {
+        emitBare("");
+        for (const result of annotated) {
+          emitBare(`  ${result.name}: ${result.reason}`);
+        }
       }
     }
 
