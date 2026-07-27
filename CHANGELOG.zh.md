@@ -6,6 +6,16 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.10.2] - 2026-07-27
+
+### 新增
+
+- **`bl managed-agent`** —— 通过 CLI 管理百炼 AgentStudio 智能体：
+  - `init` / `validate` / `plan` / `apply` / `destroy` —— 基于本地配置的声明式智能体生命周期管理，支持 `--dry-run` 离线预览。
+  - `state list` / `state show` / `state rm` / `state import` —— 查看和管理本地智能体状态。
+  - `session create` / `session list` / `session get` / `session delete` / `session run` / `session send` / `session events` —— 完整的会话操作，支持结构化的 `--output json` 输出。
+  - `skill-list` —— 浏览自定义与官方来源的可用技能（`--source all`）。
+
 ## [1.10.1] - 2026-07-22
 
 ### 变更

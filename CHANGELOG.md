@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.10.2] - 2026-07-27
+
+### Added
+
+- **`bl managed-agent`** — manage Bailian AgentStudio agents through the CLI:
+  - `init` / `validate` / `plan` / `apply` / `destroy` — declarative agent lifecycle from a local config, with `--dry-run` support for offline previews.
+  - `state list` / `state show` / `state rm` / `state import` — inspect and manage local agent state.
+  - `session create` / `session list` / `session get` / `session delete` / `session run` / `session send` / `session events` — full session operations, with structured `--output json` envelopes.
+  - `skill-list` — browse available skills from custom and official sources (`--source all`).
+
 ## [1.10.1] - 2026-07-22
 
 ### Changed
