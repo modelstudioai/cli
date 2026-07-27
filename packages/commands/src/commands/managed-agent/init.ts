@@ -99,7 +99,7 @@ const INIT_FLAGS = {
 
 export default defineCommand({
   description: "Create a new agents.yaml template",
-  auth: "apiKey",
+  auth: "none",
   usageArgs: "[--provider <name>] [--agent-name <name>] [--file <path>] [--force]",
   flags: INIT_FLAGS,
   exampleArgs: ["", "--provider bailian --agent-name assistant", "--provider all"],

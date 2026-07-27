@@ -51,7 +51,16 @@ export interface CredentialHost {
 export const CREDENTIALS_NOTE = [
   "Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).",
   "Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.",
+  "Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.",
   "Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.",
+];
+
+/**
+ * Shared `--help` note for commands that never talk to a provider: they load
+ * agents.yaml / local state only, so no login or provider key is required.
+ */
+export const OFFLINE_NOTE = [
+  "Runs fully offline against local files: no login or provider credentials required.",
 ];
 
 /**
@@ -72,15 +81,18 @@ export function prepareProviderEnv(): void {
 /**
  * Override the bailian provider block with bl's authStage-resolved credential, so
  * the bailian API key is authoritatively the CLI auth chain's — never a config
- * file bare-read or a stale env value. `api_key` is replaced unconditionally;
- * `base_url` / `workspace_id` are filled only when the block references them and
- * the interpolated value is empty (a literal in agents.yaml is respected).
+ * file bare-read or a stale env value. `api_key` is replaced unconditionally
+ * when a credential resolved; `base_url` / `workspace_id` are filled only when
+ * the block references them and the interpolated value is empty (a literal in
+ * agents.yaml is respected).
  *
  * `base_url` carries {@link AGENTSTUDIO_API_PATH} because the SDK appends resource
  * paths onto it verbatim; a value already ending in the suffix is left as-is.
- * With no credential (only under --dry-run: authStage hard-gates otherwise) the
- * bailian block is left untouched. Non-bailian blocks keep their interpolated
- * (env-sourced) values.
+ * It is filled even without a credential — `client.baseUrl` is readable
+ * credential-less (defaults to the CLI's model-domain base URL) — so offline /
+ * out-of-scope runs still satisfy the SDK's "workspace_id or base_url" schema.
+ * With no credential the `api_key` is left untouched: an in-scope empty key is
+ * rejected by {@link assertProviderCredentials}, out-of-scope ones may stay empty.
  */
 export function injectProviderCredentials(
   providers: Record<string, unknown>,
@@ -91,16 +103,14 @@ export function injectProviderCredentials(
   const block = bailian as Record<string, unknown>;
 
   const cred = host.client.exportApiCredential();
-  if (cred) {
-    block.api_key = cred.token;
-    if ("base_url" in block && !block.base_url) {
-      // Defensive normalization: the auth chain already normalizes base_url to
-      // an origin, but never let a trailing slash produce "//api/v1/agentstudio".
-      const origin = cred.baseUrl.replace(/\/+$/, "");
-      block.base_url = origin.endsWith(AGENTSTUDIO_API_PATH)
-        ? origin
-        : `${origin}${AGENTSTUDIO_API_PATH}`;
-    }
+  if (cred) block.api_key = cred.token;
+  if ("base_url" in block && !block.base_url) {
+    // Defensive normalization: the auth chain already normalizes base_url to
+    // an origin, but never let a trailing slash produce "//api/v1/agentstudio".
+    const origin = host.client.baseUrl.replace(/\/+$/, "");
+    block.base_url = origin.endsWith(AGENTSTUDIO_API_PATH)
+      ? origin
+      : `${origin}${AGENTSTUDIO_API_PATH}`;
   }
   if ("workspace_id" in block && !block.workspace_id && host.settings.workspaceId) {
     block.workspace_id = host.settings.workspaceId;
@@ -121,15 +131,55 @@ export function scrubCredentialEnv(): void {
 }
 
 /**
- * After injection, fail with a CLI-authoritative AUTH error if any configured
+ * The SDK interpolates `${VAR}` into the raw YAML text, so an empty env var
+ * leaves `api_key:` with nothing after it — YAML parses that as null. Normalize
+ * every null provider field back to "" so the pipeline stays uniform: an empty
+ * api_key is caught by {@link assertProviderCredentials} when the provider is
+ * in scope, and out-of-scope blocks still satisfy the SDK's string schemas
+ * instead of failing zod with "received null" before the run even starts.
+ */
+export function normalizeInterpolatedProviderBlocks(providers: Record<string, unknown>): void {
+  for (const raw of Object.values(providers)) {
+    if (!raw || typeof raw !== "object") continue;
+    const block = raw as Record<string, unknown>;
+    for (const [fieldName, value] of Object.entries(block)) {
+      if (value === null) block[fieldName] = "";
+    }
+  }
+}
+
+/**
+ * The providers a run targets when no explicit `--provider` narrows it: the
+ * config's default provider, or every configured provider when the default is
+ * absent or "all". Mirrors the SDK's config-based `resolveTargetProviders`
+ * (not exported from the SDK's public surface).
+ */
+export function resolveTargetProviderNames(config: {
+  providers: Record<string, unknown>;
+  defaults?: { provider?: string };
+}): string[] {
+  const defaultProvider = config.defaults?.provider;
+  if (!defaultProvider || defaultProvider === "all") return Object.keys(config.providers);
+  return [defaultProvider];
+}
+
+/**
+ * After injection, fail with a CLI-authoritative AUTH error if a required
  * provider's `api_key` resolved empty (missing env var, or no bl login for
  * bailian). Replaces the SDK's raw `Environment variable '...' is not set` /
- * zod config error with a clean message plus a provider-specific hint. Validates
- * every declared provider, so a project is only runnable once all its providers'
- * keys are available.
+ * zod config error with a clean message plus a provider-specific hint.
+ * `required` limits the check to the providers this run actually involves
+ * (← --provider / state address / config default chain); providers outside
+ * that scope may keep empty keys — a project stays runnable per provider.
+ * Names without a matching config block are skipped: "provider not
+ * configured" is the engine's error to raise, not a credential problem.
  */
-export function assertProviderCredentials(providers: Record<string, unknown>): void {
-  for (const [name, raw] of Object.entries(providers)) {
+export function assertProviderCredentials(
+  providers: Record<string, unknown>,
+  required?: readonly string[],
+): void {
+  for (const name of required ?? Object.keys(providers)) {
+    const raw = providers[name];
     if (!raw || typeof raw !== "object") continue;
     const block = raw as Record<string, unknown>;
     if (!("api_key" in block)) continue;

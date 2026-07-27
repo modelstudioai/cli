@@ -7,7 +7,7 @@ import {
 } from "bailian-cli-core";
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { validateProjectConfig } from "@openagentpack/sdk";
-import { CREDENTIALS_NOTE, resolveAgentProjectConfig } from "./_engine/config-loader.ts";
+import { OFFLINE_NOTE, resolveAgentProjectConfig } from "./_engine/config-loader.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 
 const VALIDATE_FLAGS = {
@@ -20,18 +20,20 @@ const VALIDATE_FLAGS = {
 
 export default defineCommand({
   description: "Validate an agents.yaml configuration (offline)",
-  auth: "apiKey",
+  auth: "none",
   usageArgs: "[--file <path>]",
   flags: VALIDATE_FLAGS,
   exampleArgs: ["", "--file agents.yaml"],
-  notes: CREDENTIALS_NOTE,
+  notes: OFFLINE_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
     const file = flags.file ?? "agents.yaml";
 
     const diagnostics = await withAgentErrors(async () => {
-      const { config } = await resolveAgentProjectConfig(ctx, file);
+      const { config } = await resolveAgentProjectConfig(ctx, file, {
+        credentials: "none",
+      });
       return validateProjectConfig(config);
     });
 

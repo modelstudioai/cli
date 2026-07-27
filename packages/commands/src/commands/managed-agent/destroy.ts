@@ -31,6 +31,8 @@ const DESTROY_FLAGS = {
 export default defineCommand({
   description: "Destroy all managed agent resources tracked in state",
   auth: "apiKey",
+  // Provider-aware gate: only the run's target providers need credentials.
+  authOptional: true,
   usageArgs: "[--file <path>] [--yes] [--cascade]",
   flags: DESTROY_FLAGS,
   exampleArgs: ["--yes", "--yes --cascade"],
@@ -54,7 +56,9 @@ export default defineCommand({
 
     const planned = await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(ctx, file);
+        const runtime = await buildAgentRuntime(ctx, file, {
+          credentials: "targets",
+        });
         return planDestroyProjectContext(runtime);
       }),
     );

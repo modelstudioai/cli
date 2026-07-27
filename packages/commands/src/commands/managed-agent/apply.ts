@@ -46,6 +46,8 @@ const APPLY_FLAGS = {
 export default defineCommand({
   description: "Apply planned changes to create/update/delete agent resources",
   auth: "apiKey",
+  // Provider-aware gate: only the providers this apply targets need credentials.
+  authOptional: true,
   usageArgs: "[--file <path>] [--provider <name>] [--yes] [--concurrency <n>]",
   flags: APPLY_FLAGS,
   exampleArgs: ["--yes", "--provider bailian --yes"],
@@ -73,7 +75,9 @@ export default defineCommand({
 
     const planned = await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(ctx, file);
+        const runtime = await buildAgentRuntime(ctx, file, {
+          credentials: flags.provider ?? "targets",
+        });
         assertProviderConfigured(runtime, flags.provider);
         return planProjectContext(runtime, {
           provider: flags.provider,

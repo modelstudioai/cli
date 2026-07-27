@@ -8,8 +8,9 @@ import { MANAGED_AGENT_ROUTES } from "./topic-routes.ts";
 
 /**
  * managed-agent 凭证链 e2e：验证 bl 自有配置体系（config 写入 / 命名 Profile /
- * logout）与错误映射如何流入 SDK 引擎。全部离线：`managed-agent validate` 会走
- * authStage 凭证解析 + 引擎注入 + agents.yaml 校验，但不发任何网络请求。
+ * logout）与错误映射如何流入 SDK 引擎。全部离线：凭证门禁用 `managed-agent plan`
+ * 验证（provider-aware：空 state 不发网络请求，但仍按目标 provider 校验凭证）；
+ * `validate` / `state list` / `plan --no-refresh` 属离线命令，无凭证也必须可用。
  * 配置一律通过 BAILIAN_CONFIG_DIR 指向临时目录，绝不触碰真实用户配置。
  */
 
@@ -20,6 +21,7 @@ const ROUTES = {
 
 const AGENTS_YAML = join(e2eFixturesDir, "managed-agent", "agents.yaml");
 const AGENTS_YAML_INVALID = join(e2eFixturesDir, "managed-agent", "agents-invalid.yaml");
+const AGENTS_YAML_MULTI = join(e2eFixturesDir, "managed-agent", "agents-multi.yaml");
 
 const tempDirs: string[] = [];
 
@@ -45,6 +47,16 @@ function validateArgs(file: string): string[] {
   return ["managed-agent", "validate", "--file", file, "--quiet"];
 }
 
+/** plan 是凭证门禁命令：空 state 下不发网络，但仍按目标 provider 校验凭证。 */
+function planArgs(file: string): string[] {
+  return ["managed-agent", "plan", "--file", file, "--quiet"];
+}
+
+/** 隔离宿主机的 ~/.agents/config.json，避免它强制覆盖 provider 凭证 env。 */
+function isolatedAgentsConfigEnv(): NodeJS.ProcessEnv {
+  return { AGENTS_CONFIG_PATH: join(tmpdir(), "bl-e2e-no-agents-config.json") };
+}
+
 /** 分配一个刚释放的本地端口，连接必然 ECONNREFUSED，用于网络错误场景。 */
 async function closedPort(): Promise<number> {
   const server = createServer();
@@ -61,9 +73,9 @@ async function closedPort(): Promise<number> {
 }
 
 describe("e2e: managed-agent 凭证链（config 写入 / Profile / logout / 错误映射）", () => {
-  test("config.json 写入的 api_key 流入引擎，validate 离线通过", async () => {
+  test("config.json 写入的 api_key 流入引擎，plan 离线通过", async () => {
     const env = makeConfigEnv({ api_key: "sk-e2e-config-write" });
-    const { stderr, exitCode } = await runCommandE2e(ROUTES, validateArgs(AGENTS_YAML), env);
+    const { stderr, exitCode } = await runCommandE2e(ROUTES, planArgs(AGENTS_YAML), env);
     expect(exitCode, stderr).toBe(0);
   });
 
@@ -72,7 +84,7 @@ describe("e2e: managed-agent 凭证链（config 写入 / Profile / logout / 错�
       work: { api_key: "sk-e2e-profile-work" },
       active_config: "work",
     });
-    const { stderr, exitCode } = await runCommandE2e(ROUTES, validateArgs(AGENTS_YAML), env);
+    const { stderr, exitCode } = await runCommandE2e(ROUTES, planArgs(AGENTS_YAML), env);
     expect(exitCode, stderr).toBe(0);
   });
 
@@ -82,27 +94,27 @@ describe("e2e: managed-agent 凭证链（config 写入 / Profile / logout / 错�
       empty: {},
       active_config: "empty",
     });
-    const { stderr, exitCode } = await runCommandE2e(ROUTES, validateArgs(AGENTS_YAML), env);
+    const { stderr, exitCode } = await runCommandE2e(ROUTES, planArgs(AGENTS_YAML), env);
     expect(exitCode).toBe(3);
     expect(stderr).toMatch(/auth login|API key/i);
   });
 
-  test("auth logout 清除凭证后 validate 报 AUTH，而非用残留凭证", async () => {
+  test("auth logout 清除凭证后 plan 报 AUTH，而非用残留凭证", async () => {
     const env = makeConfigEnv({ api_key: "sk-e2e-before-logout" });
 
-    const before = await runCommandE2e(ROUTES, validateArgs(AGENTS_YAML), env);
+    const before = await runCommandE2e(ROUTES, planArgs(AGENTS_YAML), env);
     expect(before.exitCode, before.stderr).toBe(0);
 
     const logout = await runCommandE2e(ROUTES, ["auth", "logout"], env);
     expect(logout.exitCode, logout.stderr).toBe(0);
 
-    const after = await runCommandE2e(ROUTES, validateArgs(AGENTS_YAML), env);
+    const after = await runCommandE2e(ROUTES, planArgs(AGENTS_YAML), env);
     expect(after.exitCode).toBe(3);
     expect(after.stderr).toMatch(/auth login|API key/i);
   });
 
   test("agents.yaml schema 错误映射为 USAGE (2)，不透传原始 zod dump", async () => {
-    const env = makeConfigEnv({ api_key: "sk-e2e-config-write" });
+    const env = makeConfigEnv({});
     const { stderr, exitCode } = await runCommandE2e(
       ROUTES,
       validateArgs(AGENTS_YAML_INVALID),
@@ -140,5 +152,66 @@ describe("e2e: managed-agent 凭证链（config 写入 / Profile / logout / 错�
     expect(exitCode).toBe(6);
     expect(stderr).toMatch(/Network request failed/i);
     expect(stderr).toMatch(/ECONNREFUSED|refused/i);
+  });
+});
+
+describe("e2e: managed-agent 鉴权分层（离线命令免登录 / provider-aware 按需校验）", () => {
+  test("validate 无任何凭证也离线通过 (0)", async () => {
+    const env = makeConfigEnv({});
+    const { stderr, exitCode } = await runCommandE2e(ROUTES, validateArgs(AGENTS_YAML), env);
+    expect(exitCode, stderr).toBe(0);
+  });
+
+  test("state list 无任何凭证也离线通过 (0)，stdout 为合法 JSON", async () => {
+    const env = makeConfigEnv({});
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      ROUTES,
+      ["managed-agent", "state", "list", "--file", AGENTS_YAML, "--output", "json"],
+      env,
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ resources?: unknown[] }>(stdout);
+    expect(Array.isArray(data.resources)).toBe(true);
+  });
+
+  test("plan --no-refresh 无任何凭证也离线通过 (0)", async () => {
+    const env = makeConfigEnv({});
+    const { stderr, exitCode } = await runCommandE2e(
+      ROUTES,
+      [...planArgs(AGENTS_YAML), "--no-refresh"],
+      env,
+    );
+    expect(exitCode, stderr).toBe(0);
+  });
+
+  test("多 provider 下 plan --provider claude 只需 claude 凭证，bailian 未登录不阻塞 (0)", async () => {
+    const env = {
+      ...makeConfigEnv({}),
+      ...isolatedAgentsConfigEnv(),
+      ANTHROPIC_API_KEY: "sk-ant-e2e-scope",
+      CLAUDE_API_KEY: "",
+    };
+    const { stderr, exitCode } = await runCommandE2e(
+      ROUTES,
+      [...planArgs(AGENTS_YAML_MULTI), "--provider", "claude"],
+      env,
+    );
+    expect(exitCode, stderr).toBe(0);
+  });
+
+  test("plan --provider claude 缺 claude key 时报 AUTH (3)，hint 指向 ANTHROPIC_API_KEY", async () => {
+    const env = {
+      ...makeConfigEnv({ api_key: "sk-e2e-bailian-present" }),
+      ...isolatedAgentsConfigEnv(),
+      ANTHROPIC_API_KEY: "",
+      CLAUDE_API_KEY: "",
+    };
+    const { stderr, exitCode } = await runCommandE2e(
+      ROUTES,
+      [...planArgs(AGENTS_YAML_MULTI), "--provider", "claude"],
+      env,
+    );
+    expect(exitCode).toBe(3);
+    expect(stderr).toMatch(/ANTHROPIC_API_KEY/);
   });
 });

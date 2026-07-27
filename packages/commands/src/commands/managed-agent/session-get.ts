@@ -27,6 +27,8 @@ const SESSION_GET_FLAGS = {
 export default defineCommand({
   description: "Get details of a session",
   auth: "apiKey",
+  // Provider-aware gate: only the session's provider needs credentials.
+  authOptional: true,
   usageArgs: "--session-id <id> [--provider <name>] [--file <path>]",
   flags: SESSION_GET_FLAGS,
   exampleArgs: ["--session-id sess_abc123"],
@@ -38,7 +40,9 @@ export default defineCommand({
 
     const session = await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(ctx, file);
+        const runtime = await buildAgentRuntime(ctx, file, {
+          credentials: flags.provider ?? "targets",
+        });
         return getSession(runtime, flags.sessionId, flags.provider);
       }),
     );

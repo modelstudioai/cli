@@ -27,6 +27,8 @@ const SESSION_DELETE_FLAGS = {
 export default defineCommand({
   description: "Delete a session",
   auth: "apiKey",
+  // Provider-aware gate: only the session's provider needs credentials.
+  authOptional: true,
   usageArgs: "--session-id <id> [--provider <name>] [--file <path>]",
   flags: SESSION_DELETE_FLAGS,
   exampleArgs: ["--session-id sess_abc123"],
@@ -50,7 +52,9 @@ export default defineCommand({
 
     await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(ctx, file);
+        const runtime = await buildAgentRuntime(ctx, file, {
+          credentials: flags.provider ?? "targets",
+        });
         await deleteSession(runtime, flags.sessionId, flags.provider);
       }),
     );

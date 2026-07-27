@@ -1,6 +1,6 @@
 import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-core";
 import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
-import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
+import { buildAgentRuntime, OFFLINE_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 
@@ -14,11 +14,11 @@ const STATE_LIST_FLAGS = {
 
 export default defineCommand({
   description: "List resources tracked in agents state",
-  auth: "apiKey",
+  auth: "none",
   usageArgs: "[--file <path>]",
   flags: STATE_LIST_FLAGS,
   exampleArgs: ["", "--file agents.yaml"],
-  notes: CREDENTIALS_NOTE,
+  notes: OFFLINE_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
@@ -26,7 +26,9 @@ export default defineCommand({
 
     const resources = await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(ctx, file);
+        const runtime = await buildAgentRuntime(ctx, file, {
+          credentials: "none",
+        });
         return runtime.state.listResources();
       }),
     );

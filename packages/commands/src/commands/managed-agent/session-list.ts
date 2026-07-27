@@ -31,6 +31,8 @@ const SESSION_LIST_FLAGS = {
 export default defineCommand({
   description: "List sessions from the provider",
   auth: "apiKey",
+  // Provider-aware gate: only the session's provider needs credentials.
+  authOptional: true,
   usageArgs: "[--agent <name>] [--all] [--provider <name>] [--file <path>]",
   flags: SESSION_LIST_FLAGS,
   exampleArgs: ["", "--agent assistant", "--all"],
@@ -42,7 +44,9 @@ export default defineCommand({
 
     const { items: summaries, hasMore } = await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(ctx, file);
+        const runtime = await buildAgentRuntime(ctx, file, {
+          credentials: flags.provider ?? "targets",
+        });
         return fetchAllPages(async (page) => {
           const result = await listSessionSummaries(runtime, {
             agent: flags.agent,

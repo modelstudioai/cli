@@ -53,6 +53,7 @@ Index: [index.md](index.md)
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -87,6 +88,7 @@ bl managed-agent apply --provider bailian --yes
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -115,8 +117,6 @@ bl managed-agent destroy --yes --cascade
 | `--agent-name <name>`                           | string | no       | Name of the first agent (default: assistant)                  |
 | `--file <path>`                                 | string | no       | Output config path (default: agents.yaml)                     |
 | `--force`                                       | switch | no       | Overwrite an existing config file                             |
-| `--api-key <key>`                               | string | no       | API key                                                       |
-| `--base-url <url>`                              | string | no       | API base URL                                                  |
 
 #### Examples
 
@@ -155,6 +155,7 @@ bl managed-agent init --provider all
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -197,6 +198,7 @@ bl managed-agent plan --no-refresh
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -235,6 +237,7 @@ bl managed-agent session create --agent assistant --title 'debug run'
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -267,6 +270,7 @@ bl managed-agent session delete --session-id sess_abc123
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -301,6 +305,7 @@ bl managed-agent session events --session-id sess_abc123 --all
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -332,6 +337,7 @@ bl managed-agent session get --session-id sess_abc123
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -376,6 +382,7 @@ bl managed-agent session list --all
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -412,6 +419,7 @@ bl managed-agent session run --agent assistant --prompt "summarize this repo"
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -442,6 +450,7 @@ bl managed-agent session send --session-id sess_abc123 --message "continue"
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Providers without a skill listing API (e.g. ark) return an empty list.
 - For agent-driven skill selection, use `--source all --output json`: one call returns both catalogs with per-skill `source` and `description` fields to pick from.
@@ -488,6 +497,7 @@ bl managed-agent skill-list --source custom --provider bailian
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -506,17 +516,13 @@ bl managed-agent state import --address bailian.agent.assistant --remote-id agen
 
 #### Flags
 
-| Flag               | Type   | Required | Description                             |
-| ------------------ | ------ | -------- | --------------------------------------- |
-| `--file <path>`    | string | no       | Config file path (default: agents.yaml) |
-| `--api-key <key>`  | string | no       | API key                                 |
-| `--base-url <url>` | string | no       | API base URL                            |
+| Flag            | Type   | Required | Description                             |
+| --------------- | ------ | -------- | --------------------------------------- |
+| `--file <path>` | string | no       | Config file path (default: agents.yaml) |
 
 #### Notes
 
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
-- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+- Runs fully offline against local files: no login or provider credentials required.
 
 #### Examples
 
@@ -542,14 +548,10 @@ bl managed-agent state list --file agents.yaml
 | -------------------------------- | ------ | -------- | --------------------------------------- |
 | `--address <provider.type.name>` | string | yes      | Resource state address (required)       |
 | `--file <path>`                  | string | no       | Config file path (default: agents.yaml) |
-| `--api-key <key>`                | string | no       | API key                                 |
-| `--base-url <url>`               | string | no       | API base URL                            |
 
 #### Notes
 
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
-- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+- Runs fully offline against local files: no login or provider credentials required.
 
 #### Examples
 
@@ -571,14 +573,10 @@ bl managed-agent state rm --address bailian.agent.assistant
 | -------------------------------- | ------ | -------- | --------------------------------------- |
 | `--address <provider.type.name>` | string | yes      | Resource state address (required)       |
 | `--file <path>`                  | string | no       | Config file path (default: agents.yaml) |
-| `--api-key <key>`                | string | no       | API key                                 |
-| `--base-url <url>`               | string | no       | API base URL                            |
 
 #### Notes
 
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
-- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+- Runs fully offline against local files: no login or provider credentials required.
 
 #### Examples
 
@@ -596,17 +594,13 @@ bl managed-agent state show --address bailian.agent.assistant
 
 #### Flags
 
-| Flag               | Type   | Required | Description                             |
-| ------------------ | ------ | -------- | --------------------------------------- |
-| `--file <path>`    | string | no       | Config file path (default: agents.yaml) |
-| `--api-key <key>`  | string | no       | API key                                 |
-| `--base-url <url>` | string | no       | API base URL                            |
+| Flag            | Type   | Required | Description                             |
+| --------------- | ------ | -------- | --------------------------------------- |
+| `--file <path>` | string | no       | Config file path (default: agents.yaml) |
 
 #### Notes
 
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
-- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+- Runs fully offline against local files: no login or provider credentials required.
 
 #### Examples
 

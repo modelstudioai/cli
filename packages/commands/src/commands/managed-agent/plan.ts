@@ -41,6 +41,9 @@ const PLAN_FLAGS = {
 export default defineCommand({
   description: "Show what changes would be applied to agent infrastructure",
   auth: "apiKey",
+  // Provider-aware gate: --no-refresh plans fully offline; a refreshing run
+  // only needs credentials for the providers it targets (see CredentialScope).
+  authOptional: true,
   usageArgs: "[--file <path>] [--provider <name>] [--no-refresh] [--refresh-only]",
   flags: PLAN_FLAGS,
   exampleArgs: ["", "--provider bailian", "--no-refresh"],
@@ -52,7 +55,10 @@ export default defineCommand({
 
     const planned = await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(ctx, file);
+        // --no-refresh never talks to a provider → no credentials required.
+        const runtime = await buildAgentRuntime(ctx, file, {
+          credentials: flags.noRefresh ? "none" : (flags.provider ?? "targets"),
+        });
         assertProviderConfigured(runtime, flags.provider);
         return planProjectContext(runtime, {
           provider: flags.provider,

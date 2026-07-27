@@ -5,8 +5,10 @@ import { MANAGED_AGENT_ROUTES } from "./topic-routes.ts";
 /**
  * managed-agent：help / 缺参不依赖密钥；所有 mutation 命令的 --dry-run
  * 必须在构建 SDK runtime（凭证注入 / 联网 / 写盘）之前短路，因此同样不需要密钥。
+ * 鉴权分层：离线命令（init/validate/state list|show|rm）auth: "none"；联网命令
+ * provider-aware，只校验本次涉及的 provider（见 managed-agent-auth-chain e2e）。
  * 真实集成（apply/destroy/session 流程）依赖工作区内的 agents.yaml 与远端资源，
- * 属于批量场景，暂仅覆盖 dry-run 契约。
+ * 属批量场景，暂仅覆盖 dry-run 契约。
  */
 
 describe("e2e: managed-agent", () => {
@@ -67,21 +69,17 @@ describe("e2e: managed-agent", () => {
   });
 
   test("managed-agent skill-list --source all 通过参数校验（缺配置文件时才失败）", async () => {
-    // auth: "apiKey" 的凭证解析先于 run() 执行；注入假 key 让用例不依赖环境凭证，
-    // 命令仍会在配置加载阶段因文件缺失短路，不产生任何网络请求。
-    const { stderr, exitCode } = await runCommandE2e(
-      MANAGED_AGENT_ROUTES,
-      [
-        "managed-agent",
-        "skill-list",
-        "--source",
-        "all",
-        "--file",
-        "agents.e2e-missing.yaml",
-        "--quiet",
-      ],
-      { DASHSCOPE_API_KEY: "sk-e2e-skill-list" },
-    );
+    // provider-aware 鉴权不再前置硬门禁：无需注入假 key，命令在配置加载阶段
+    // 因文件缺失短路，不产生任何网络请求。
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "skill-list",
+      "--source",
+      "all",
+      "--file",
+      "agents.e2e-missing.yaml",
+      "--quiet",
+    ]);
     // all 是合法值：不应报 --source 用法错误，而是走到配置加载后因文件缺失退出
     expect(exitCode).toBe(2);
     expect(stderr).not.toMatch(/--source must be one of/i);

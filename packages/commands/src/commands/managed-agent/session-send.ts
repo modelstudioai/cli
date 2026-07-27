@@ -38,6 +38,8 @@ const SESSION_SEND_FLAGS = {
 export default defineCommand({
   description: "Send a message to an existing session and stream the response",
   auth: "apiKey",
+  // Provider-aware gate: only the session's provider needs credentials.
+  authOptional: true,
   usageArgs: "--session-id <id> --message <text> [--no-stream] [--file <path>]",
   flags: SESSION_SEND_FLAGS,
   exampleArgs: ['--session-id sess_abc123 --message "continue"'],
@@ -66,7 +68,9 @@ export default defineCommand({
 
     await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(ctx, file);
+        const runtime = await buildAgentRuntime(ctx, file, {
+          credentials: flags.provider ?? "targets",
+        });
         if (flags.noStream) {
           const result = await sendSessionMessagePolling(runtime, flags.sessionId, flags.message, {
             provider: flags.provider,

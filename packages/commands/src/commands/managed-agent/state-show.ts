@@ -7,7 +7,7 @@ import {
 } from "bailian-cli-core";
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { parseStateAddress } from "@openagentpack/sdk";
-import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
+import { buildAgentRuntime, OFFLINE_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 
@@ -27,11 +27,11 @@ const STATE_SHOW_FLAGS = {
 
 export default defineCommand({
   description: "Show details of a resource in agents state",
-  auth: "apiKey",
+  auth: "none",
   usageArgs: "--address <provider.type.name> [--file <path>]",
   flags: STATE_SHOW_FLAGS,
   exampleArgs: ["--address bailian.agent.assistant"],
-  notes: CREDENTIALS_NOTE,
+  notes: OFFLINE_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
@@ -39,7 +39,9 @@ export default defineCommand({
 
     const found = await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(ctx, file);
+        const runtime = await buildAgentRuntime(ctx, file, {
+          credentials: "none",
+        });
         const parsed = parseStateAddress(flags.address, {
           requireProvider: false,
         });

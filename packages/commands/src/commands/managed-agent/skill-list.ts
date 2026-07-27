@@ -30,6 +30,8 @@ const SKILL_LIST_FLAGS = {
 export default defineCommand({
   description: "List skills from the provider's skill catalog",
   auth: "apiKey",
+  // Provider-aware gate: only the resolved catalog provider needs credentials.
+  authOptional: true,
   usageArgs: "[--source custom|official|all] [--provider <name>] [--file <path>]",
   flags: SKILL_LIST_FLAGS,
   exampleArgs: [
@@ -56,7 +58,9 @@ export default defineCommand({
 
     const skills = await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(ctx, file);
+        const runtime = await buildAgentRuntime(ctx, file, {
+          credentials: flags.provider ?? "targets",
+        });
         if (source !== "all") {
           return listSkills(runtime, { provider: flags.provider, source });
         }

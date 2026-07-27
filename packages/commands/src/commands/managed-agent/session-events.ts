@@ -38,6 +38,8 @@ const SESSION_EVENTS_FLAGS = {
 export default defineCommand({
   description: "List event history for a session",
   auth: "apiKey",
+  // Provider-aware gate: only the session's provider needs credentials.
+  authOptional: true,
   usageArgs: "--session-id <id> [--limit <n>] [--all] [--file <path>]",
   flags: SESSION_EVENTS_FLAGS,
   exampleArgs: ["--session-id sess_abc123", "--session-id sess_abc123 --all"],
@@ -49,7 +51,9 @@ export default defineCommand({
 
     const { items: events, hasMore } = await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(ctx, file);
+        const runtime = await buildAgentRuntime(ctx, file, {
+          credentials: flags.provider ?? "targets",
+        });
         return fetchAllPages(async (page) => {
           const result = await listSessionEvents(runtime, flags.sessionId, {
             provider: flags.provider,

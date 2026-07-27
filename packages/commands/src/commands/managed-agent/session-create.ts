@@ -43,6 +43,8 @@ const SESSION_CREATE_FLAGS = {
 export default defineCommand({
   description: "Create a new session for an agent",
   auth: "apiKey",
+  // Provider-aware gate: only the session's provider needs credentials.
+  authOptional: true,
   usageArgs: "[--agent <name>] [--environment <name>] [--title <title>] [--file <path>]",
   flags: SESSION_CREATE_FLAGS,
   exampleArgs: ["", "--agent assistant", "--agent assistant --title 'debug run'"],
@@ -72,7 +74,9 @@ export default defineCommand({
 
     const run = await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(ctx, file);
+        const runtime = await buildAgentRuntime(ctx, file, {
+          credentials: flags.provider ?? "targets",
+        });
         return createSessionForAgent(runtime, {
           agent: flags.agent,
           provider: flags.provider,
