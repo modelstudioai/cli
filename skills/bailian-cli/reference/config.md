@@ -28,14 +28,14 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag                                                                  | Type   | Required | Description                                                                                                                    |
-| --------------------------------------------------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `--agent <claude-code\|qwen-code\|opencode\|openclaw\|hermes\|codex>` | string | yes      | Target agent: claude-code, qwen-code, opencode, openclaw, hermes, codex                                                        |
-| `--base-url <url>`                                                    | string | yes      | API base URL                                                                                                                   |
-| `--api-key <key>`                                                     | string | yes      | API key                                                                                                                        |
-| `--model <model>`                                                     | string | yes      | Default model name                                                                                                             |
-| `--context-window <tokens>`                                           | number | no       | OpenClaw only: model context window in tokens (default: 256000)                                                                |
-| `--wire-api <chat\|responses>`                                        | string | no       | Codex only: wire protocol — "chat" works with every model; "responses" for models supporting the Responses API (default: chat) |
+| Flag                                                                  | Type   | Required | Description                                                                                   |
+| --------------------------------------------------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------- |
+| `--agent <claude-code\|qwen-code\|opencode\|openclaw\|hermes\|codex>` | string | yes      | Target agent: claude-code, qwen-code, opencode, openclaw, hermes, codex                       |
+| `--base-url <url>`                                                    | string | yes      | API base URL                                                                                  |
+| `--api-key <key>`                                                     | string | yes      | API key                                                                                       |
+| `--model <model>`                                                     | string | yes      | Default model name                                                                            |
+| `--context-window <tokens>`                                           | number | no       | OpenClaw only: model context window in tokens (default: 256000)                               |
+| `--wire-api <chat\|responses>`                                        | string | no       | Codex only: wire protocol (default: responses). "chat" only works with legacy Codex <= 0.80.0 |
 
 #### Examples
 

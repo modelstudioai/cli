@@ -214,7 +214,11 @@ describe("config agent writers", () => {
   });
 
   test("qwen-code anthropic 端点走 anthropic 协议", () => {
-    qwenCode.write({ baseUrl: ANTHROPIC_URL, apiKey: "sk-q", model: "qwen3-max" });
+    qwenCode.write({
+      baseUrl: ANTHROPIC_URL,
+      apiKey: "sk-q",
+      model: "qwen3-max",
+    });
     const settings = readJsonAt(".qwen", "settings.json");
     expect((settings.security as { auth: { selectedType: string } }).auth.selectedType).toBe(
       "anthropic",
@@ -225,8 +229,16 @@ describe("config agent writers", () => {
   });
 
   test("qwen-code 对自有 provider 项按 id upsert 而非追加", () => {
-    qwenCode.write({ baseUrl: OAI_URL, apiKey: "sk-1", model: "qwen3-coder-plus" });
-    qwenCode.write({ baseUrl: OAI_URL, apiKey: "sk-2", model: "qwen3-coder-plus" });
+    qwenCode.write({
+      baseUrl: OAI_URL,
+      apiKey: "sk-1",
+      model: "qwen3-coder-plus",
+    });
+    qwenCode.write({
+      baseUrl: OAI_URL,
+      apiKey: "sk-2",
+      model: "qwen3-coder-plus",
+    });
     const settings = readJsonAt(".qwen", "settings.json");
     const openaiEntries = (settings.modelProviders as Record<string, unknown[]>).openai;
     expect(openaiEntries).toHaveLength(1);
@@ -327,7 +339,11 @@ describe("config agent writers", () => {
       JSON.stringify({ provider: { other: { name: "Other" } } }),
     );
 
-    opencode.write({ baseUrl: ANTHROPIC_URL, apiKey: "sk-o", model: "qwen3-max" });
+    opencode.write({
+      baseUrl: ANTHROPIC_URL,
+      apiKey: "sk-o",
+      model: "qwen3-max",
+    });
     const config = readJsonAt(".config", "opencode", "opencode.json");
     const provider = config.provider as Record<string, Record<string, unknown>>;
     expect(provider.other).toBeDefined();
@@ -351,7 +367,11 @@ describe("config agent writers", () => {
   });
 
   test("openclaw 写入 provider、api、primary，并登记 defaults.models", () => {
-    openclaw.write({ baseUrl: OAI_URL, apiKey: "sk-c", model: "qwen3-coder-plus" });
+    openclaw.write({
+      baseUrl: OAI_URL,
+      apiKey: "sk-c",
+      model: "qwen3-coder-plus",
+    });
     const config = readJsonAt(".openclaw", "openclaw.json");
     const models = config.models as Record<string, unknown>;
     expect(models.mode).toBe("merge");
@@ -496,19 +516,21 @@ describe("config agent writers", () => {
     // 预置 auth.json 无关键，验证合并保留
     writeFileSync(join(home, ".codex", "auth.json"), JSON.stringify({ EXISTING: "keep" }));
 
-    codex.write({
+    const summary = codex.write({
       baseUrl: OAI_URL,
       apiKey: "sk-x",
       model: "qwen3-coder-plus",
     });
+    // 默认路径无警告
+    expect(summary.warnings).toBeUndefined();
     const toml = readFileSync(join(home, ".codex", "config.toml"), "utf8");
     expect(toml).toContain('model_provider = "bailian-cli"');
     expect(toml).toContain('model = "qwen3-coder-plus"');
     expect(toml).toContain("[model_providers.bailian-cli]");
     expect(toml).toContain(`base_url = "${OAI_URL}"`);
     expect(toml).toContain('env_key = "OPENAI_API_KEY"');
-    // 未传 --wire-api 时默认 chat（所有模型可用）
-    expect(toml).toContain('wire_api = "chat"');
+    // 未传 --wire-api 时默认 responses（新版 Codex 已不支持 chat）
+    expect(toml).toContain('wire_api = "responses"');
     expect(toml).toContain("requires_openai_auth = true");
     // 合并：保留用户已有的无关配置
     expect(toml).toContain('approval_policy = "on-request"');
@@ -518,16 +540,17 @@ describe("config agent writers", () => {
     expect(auth.OPENAI_API_KEY).toBe("sk-x");
     expect(auth.EXISTING).toBe("keep");
 
-    // --wire-api responses：支持 Responses API 的模型
-    codex.write({
+    // --wire-api chat：仅旧版 Codex <= 0.80.0 可用，附带警告
+    const summary2 = codex.write({
       baseUrl: OAI_URL,
       apiKey: "sk-x",
-      model: "qwen3.7-plus",
-      wireApi: "responses",
+      model: "glm-5",
+      wireApi: "chat",
     });
+    expect(summary2.warnings?.some((warning) => warning.includes("0.80.0"))).toBe(true);
     const toml2 = readFileSync(join(home, ".codex", "config.toml"), "utf8");
-    expect(toml2).toContain('wire_api = "responses"');
-    expect(toml2).toContain('model = "qwen3.7-plus"');
+    expect(toml2).toContain('wire_api = "chat"');
+    expect(toml2).toContain('model = "glm-5"');
   });
 
   test("已存在的配置文件会被备份为 .bak.<epoch>", () => {

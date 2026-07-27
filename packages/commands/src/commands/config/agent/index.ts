@@ -38,7 +38,7 @@ const FLAGS = {
     type: "string",
     valueHint: "<api>",
     description:
-      'Codex only: wire protocol — "chat" works with every model; "responses" for models supporting the Responses API (default: chat)',
+      'Codex only: wire protocol (default: responses). "chat" only works with legacy Codex <= 0.80.0',
     choices: ["chat", "responses"],
   },
 } satisfies FlagsDef;
