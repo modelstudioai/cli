@@ -11,7 +11,6 @@ import {
   injectProviderCredentials,
   normalizeInterpolatedProviderBlocks,
   prepareProviderEnv,
-  resolveTargetProviderNames,
   scrubCredentialEnv,
 } from "./credentials.ts";
 import { loadFileState } from "./file-state-manager.ts";
@@ -20,15 +19,12 @@ import { type HostContext, installSdkTransport } from "./transport.ts";
 export { CREDENTIALS_NOTE, OFFLINE_NOTE } from "./credentials.ts";
 
 /**
- * Which providers this run requires a non-empty key for:
- *   - "targets" (default) — the run's target providers per the config's
- *     default provider chain (mirrors the SDK's plan/apply targeting)
+ * Whether this run requires provider keys:
+ *   - "all" (default) — online command: every provider declared in agents.yaml
+ *     must have a non-empty key after injection
  *   - "none" — offline command (local config/state only), skip the check
- *   - "all" — every configured provider (`--provider all`)
- *   - any other name — the run was narrowed to that provider
- *     (`--provider <name>` / a provider-qualified state address)
  */
-export type CredentialScope = "targets" | "none" | "all" | (string & {});
+export type CredentialScope = "all" | "none";
 
 interface AgentConfigOptions {
   resolveEnv?: boolean;
@@ -46,8 +42,8 @@ interface AgentConfigOptions {
  *   3. override the bailian block with the CLI auth chain's credential (in-memory)
  *   4. scrub all credential vars from process.env (real values now live only in
  *      the config object → provider adapters, never the environment)
- *   5. fail with a CLI-authoritative AUTH error if a provider within this run's
- *      {@link CredentialScope} has an empty key (offline commands pass "none")
+ *   5. fail with a CLI-authoritative AUTH error if any provider's key is empty
+ *      (offline commands pass `credentials: "none"` to skip the check)
  */
 export async function resolveAgentProjectConfig(
   host: CredentialHost,
@@ -59,16 +55,8 @@ export async function resolveAgentProjectConfig(
   normalizeInterpolatedProviderBlocks(resolved.config.providers);
   injectProviderCredentials(resolved.config.providers, host);
   scrubCredentialEnv();
-  const scope = options.credentials ?? "targets";
-  if (scope !== "none") {
-    assertProviderCredentials(
-      resolved.config.providers,
-      scope === "targets"
-        ? resolveTargetProviderNames(resolved.config)
-        : scope === "all"
-          ? Object.keys(resolved.config.providers)
-          : [scope],
-    );
+  if ((options.credentials ?? "all") !== "none") {
+    assertProviderCredentials(resolved.config.providers);
   }
   return resolved;
 }

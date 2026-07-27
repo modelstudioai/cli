@@ -9,8 +9,8 @@ import { MANAGED_AGENT_ROUTES } from "./topic-routes.ts";
 /**
  * managed-agent 凭证链 e2e：验证 bl 自有配置体系（config 写入 / 命名 Profile /
  * logout）与错误映射如何流入 SDK 引擎。全部离线：凭证门禁用 `managed-agent plan`
- * 验证（provider-aware：空 state 不发网络请求，但仍按目标 provider 校验凭证）；
- * `validate` / `state list` / `plan --no-refresh` 属离线命令，无凭证也必须可用。
+ * 验证（空 state 不发网络请求，但 auth: "apiKey" 硬门禁 + 引擎全量 provider key
+ * 断言照常生效）；`validate` / `state list` 属离线命令，无凭证也必须可用。
  * 配置一律通过 BAILIAN_CONFIG_DIR 指向临时目录，绝不触碰真实用户配置。
  */
 
@@ -47,7 +47,7 @@ function validateArgs(file: string): string[] {
   return ["managed-agent", "validate", "--file", file, "--quiet"];
 }
 
-/** plan 是凭证门禁命令：空 state 下不发网络，但仍按目标 provider 校验凭证。 */
+/** plan 是凭证门禁命令：空 state 下不发网络，但 authStage + 引擎断言照常生效。 */
 function planArgs(file: string): string[] {
   return ["managed-agent", "plan", "--file", file, "--quiet"];
 }
@@ -184,7 +184,7 @@ describe("e2e: managed-agent 凭证链（config 写入 / Profile / logout / 错�
   });
 });
 
-describe("e2e: managed-agent 鉴权分层（离线命令免登录 / provider-aware 按需校验）", () => {
+describe("e2e: managed-agent 鉴权分层（离线命令免登录 / 联网命令统一 apiKey 门禁）", () => {
   test("validate 无任何凭证也离线通过 (0)", async () => {
     const env = makeConfigEnv({});
     const { stderr, exitCode } = await runCommandE2e(ROUTES, validateArgs(AGENTS_YAML), env);
@@ -203,17 +203,33 @@ describe("e2e: managed-agent 鉴权分层（离线命令免登录 / provider-awa
     expect(Array.isArray(data.resources)).toBe(true);
   });
 
-  test("plan --no-refresh 无任何凭证也离线通过 (0)", async () => {
+  test("plan --no-refresh 无登录时仍被 apiKey 硬门禁拦住 (3)", async () => {
     const env = makeConfigEnv({});
     const { stderr, exitCode } = await runCommandE2e(
       ROUTES,
       [...planArgs(AGENTS_YAML), "--no-refresh"],
       env,
     );
+    expect(exitCode).toBe(3);
+    expect(stderr).toMatch(/auth login|API key/i);
+  });
+
+  test("已登录 bailian 时，多 provider 配置下 plan --no-refresh 离线通过，不查其他 provider key (0)", async () => {
+    const env = {
+      ...makeConfigEnv({ api_key: "sk-e2e-no-refresh" }),
+      ...isolatedAgentsConfigEnv(),
+      ANTHROPIC_API_KEY: "",
+      CLAUDE_API_KEY: "",
+    };
+    const { stderr, exitCode } = await runCommandE2e(
+      ROUTES,
+      [...planArgs(AGENTS_YAML_MULTI), "--no-refresh"],
+      env,
+    );
     expect(exitCode, stderr).toBe(0);
   });
 
-  test("多 provider 下 plan --provider claude 只需 claude 凭证，bailian 未登录不阻塞 (0)", async () => {
+  test("统一登录门禁：只配 claude key 未登录 bailian 时，plan --provider claude 仍报 AUTH (3)", async () => {
     const env = {
       ...makeConfigEnv({}),
       ...isolatedAgentsConfigEnv(),
@@ -225,10 +241,11 @@ describe("e2e: managed-agent 鉴权分层（离线命令免登录 / provider-awa
       [...planArgs(AGENTS_YAML_MULTI), "--provider", "claude"],
       env,
     );
-    expect(exitCode, stderr).toBe(0);
+    expect(exitCode).toBe(3);
+    expect(stderr).toMatch(/auth login|API key/i);
   });
 
-  test("plan --provider claude 缺 claude key 时报 AUTH (3)，hint 指向 ANTHROPIC_API_KEY", async () => {
+  test("已登录但缺 claude key 时，全量断言拦住并给 ANTHROPIC_API_KEY hint (3)", async () => {
     const env = {
       ...makeConfigEnv({ api_key: "sk-e2e-bailian-present" }),
       ...isolatedAgentsConfigEnv(),

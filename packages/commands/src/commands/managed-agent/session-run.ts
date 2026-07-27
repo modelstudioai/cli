@@ -57,8 +57,6 @@ const SESSION_RUN_FLAGS = {
 export default defineCommand({
   description: "Create a session, send a message, and stream the response",
   auth: "apiKey",
-  // Provider-aware gate: only the session's provider needs credentials.
-  authOptional: true,
   usageArgs: "--prompt <text> [--agent <name>] [--no-stream] [--file <path>]",
   flags: SESSION_RUN_FLAGS,
   exampleArgs: ['--prompt "hello"', '--agent assistant --prompt "summarize this repo"'],
@@ -103,9 +101,7 @@ export default defineCommand({
 
     await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        const runtime = await buildAgentRuntime(ctx, file, {
-          credentials: flags.provider ?? "targets",
-        });
+        const runtime = await buildAgentRuntime(ctx, file);
         if (flags.noStream) {
           const run = await startSessionRunPolling(runtime, flags.prompt, runOptions);
           if (!asJson) process.stderr.write(`Session created: ${run.session.id}\n`);

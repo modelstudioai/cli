@@ -75,8 +75,6 @@ export function compose(stack: Middleware[]): (ctx: RunContext) => Promise<void>
  * Bake the credential for the command's declared `auth` into `ctx.client`, and
  * gate: no credential → throw before the command runs. dry-run 例外:凭证解析失败
  * 不抛(dry-run 只打印请求,无需凭证;console 的 dry-run 展示读 settings.console*)。
- * `authOptional` 例外:凭证可用则注入,缺失不在此处抛 —— 命令自行按实际涉及范围
- * 校验(如 managed-agent 只校验本次运行涉及的 provider)。
  * `auth: "none"` commands keep a credential-less client.
  */
 export const authStage: Middleware = async (ctx, next) => {
@@ -86,13 +84,12 @@ export const authStage: Middleware = async (ctx, next) => {
     settings,
     baseUrl: resolveModelBaseUrl(sources),
   };
-  const tolerateMissing = settings.dryRun || command.authOptional === true;
   if (command.auth === "apiKey") {
     let cred: ApiKeyCredential | undefined;
     try {
       cred = resolveApiKey(sources);
     } catch (err) {
-      if (!tolerateMissing) throw err;
+      if (!settings.dryRun) throw err;
     }
     ctx.client = new Client({ ...base, apiCred: cred });
     if (cred) maybeShowStatusBar(settings, cred.token, cred);
@@ -101,7 +98,7 @@ export const authStage: Middleware = async (ctx, next) => {
     try {
       cred = resolveConsole(sources);
     } catch (err) {
-      if (!tolerateMissing) throw err;
+      if (!settings.dryRun) throw err;
     }
     if (cred) ctx.client = new Client({ ...base, consoleCred: cred });
   } else if (command.auth === "openapi") {
@@ -109,7 +106,7 @@ export const authStage: Middleware = async (ctx, next) => {
     try {
       cred = resolveOpenApi(sources);
     } catch (err) {
-      if (!tolerateMissing) throw err;
+      if (!settings.dryRun) throw err;
     }
     ctx.client = new Client({ ...base, openApiCred: cred });
   }

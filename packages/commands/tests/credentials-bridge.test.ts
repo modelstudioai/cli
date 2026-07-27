@@ -13,15 +13,14 @@ import {
   type CredentialHost,
   injectProviderCredentials,
   prepareProviderEnv,
-  resolveTargetProviderNames,
   scrubCredentialEnv,
 } from "../src/commands/managed-agent/_engine/credentials.ts";
 
 /**
  * 凭证内存注入管道:injectProviderCredentials 把 authStage 解析进 Client 的凭证
  * 权威覆写 bailian 配置块(不落 env),scrubCredentialEnv 清空所有凭证 env,
- * assertProviderCredentials 按本次运行涉及的 provider 范围对空 key 给 CLI 权威
- * AUTH 错误。用快照隔离凭证 env。
+ * assertProviderCredentials 对任一已声明 provider 的空 key 给 CLI 权威 AUTH
+ * 错误(离线命令跳过断言)。用快照隔离凭证 env。
  */
 const TRACKED_ENV = [
   "DASHSCOPE_API_KEY",
@@ -190,33 +189,6 @@ test("assert:bailian key 为空(dry-run/未登录)抛 AUTH 且 hint 指向 bl au
   const err = thrown as { exitCode?: number; hint?: string };
   expect(err.exitCode).toBe(ExitCode.AUTH);
   expect(err.hint).toContain("bl auth login");
-});
-
-test("assert:required 限定范围后,范围外 provider 的空 key 不拦截", () => {
-  const providers = {
-    bailian: { api_key: "" },
-    claude: { api_key: "sk-ant" },
-  };
-  // 本次只涉及 claude(如 --provider claude):bailian 未登录不应阻塞
-  expect(() => assertProviderCredentials(providers, ["claude"])).not.toThrow();
-  // 反向:范围内的空 key 仍拦截
-  expect(() => assertProviderCredentials(providers, ["bailian"])).toThrow();
-});
-
-test("assert:required 里未配置的 provider 名被跳过(由引擎报未配置错误)", () => {
-  expect(() => assertProviderCredentials({ bailian: { api_key: "" } }, ["qoder"])).not.toThrow();
-});
-
-test("targets:默认 provider 链镜像 SDK —— default 为单个时只涉及它,缺失/all 时为全部", () => {
-  const providers = { bailian: {}, claude: {} };
-  expect(resolveTargetProviderNames({ providers, defaults: { provider: "claude" } })).toEqual([
-    "claude",
-  ]);
-  expect(resolveTargetProviderNames({ providers })).toEqual(["bailian", "claude"]);
-  expect(resolveTargetProviderNames({ providers, defaults: { provider: "all" } })).toEqual([
-    "bailian",
-    "claude",
-  ]);
 });
 
 test("scrub:所有凭证 env 变量被删除", () => {

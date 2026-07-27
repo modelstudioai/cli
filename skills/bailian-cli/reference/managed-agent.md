@@ -53,7 +53,6 @@ Index: [index.md](index.md)
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
-- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -88,7 +87,6 @@ bl managed-agent apply --provider bailian --yes
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
-- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -155,9 +153,8 @@ bl managed-agent init --provider all
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
-- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
-- --no-refresh and --dry-run plan offline from local config and state: no credentials, no remote requests, no state writes.
+- --no-refresh and --dry-run plan offline from local config and state: no remote requests, no state writes, provider keys are not checked.
 
 #### Examples
 
@@ -199,7 +196,6 @@ bl managed-agent plan --no-refresh
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
-- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -238,7 +234,6 @@ bl managed-agent session create --agent assistant --title 'debug run'
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
-- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -271,7 +266,6 @@ bl managed-agent session delete --session-id sess_abc123
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
-- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -306,7 +300,6 @@ bl managed-agent session events --session-id sess_abc123 --all
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
-- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -338,7 +331,6 @@ bl managed-agent session get --session-id sess_abc123
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
-- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -383,7 +375,6 @@ bl managed-agent session list --all
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
-- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - --output json emits one envelope: { session_id, provider, agent, events } — read session_id to chain `session send/get/events/delete`.
 
@@ -421,7 +412,6 @@ bl managed-agent session run --agent assistant --prompt "summarize this repo"
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
-- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -452,7 +442,6 @@ bl managed-agent session send --session-id sess_abc123 --message "continue"
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
-- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Providers without a skill listing API (e.g. ark) return an empty list.
 - For agent-driven skill selection, use `--source all --output json`: one call returns both catalogs with per-skill `source` and `description` fields to pick from.
@@ -499,7 +488,6 @@ bl managed-agent skill-list --source custom --provider bailian
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
-- Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples

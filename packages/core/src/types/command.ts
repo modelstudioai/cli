@@ -207,14 +207,6 @@ export interface Command<F extends FlagsDef = FlagsDef> {
   description: string;
   /** Credential this command requires. See {@link AuthRequirement}. */
   auth: AuthRequirement;
-  /**
-   * Soften the auth gate: authStage still resolves the `auth` domain's
-   * credential into `ctx.client` when available, but a missing credential no
-   * longer fails before `run`. For commands that enforce their own scoped
-   * credential requirements (e.g. managed-agent commands, where a run may only
-   * involve third-party providers and must not be blocked on a Bailian key).
-   */
-  authOptional?: boolean;
   /** Usage line arg portion, e.g. "--prompt <text> [flags]". Manually written. */
   usageArgs?: string;
   /** Example arg strings (without the `<bin> <path>` prefix). */

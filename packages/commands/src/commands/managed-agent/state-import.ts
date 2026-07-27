@@ -33,8 +33,6 @@ const STATE_IMPORT_FLAGS = {
 export default defineCommand({
   description: "Import an existing remote resource into agents state",
   auth: "apiKey",
-  // Provider-aware gate: only the address's provider needs credentials.
-  authOptional: true,
   usageArgs:
     "--address <provider.type.name> --remote-id <id> [--resource-version <n>] [--file <path>]",
   flags: STATE_IMPORT_FLAGS,
@@ -64,13 +62,11 @@ export default defineCommand({
 
     await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        // Parse first: the address names the one provider this import touches.
+        // Parse first so a malformed address fails fast, before any config I/O.
         const parsed = parseStateAddress(flags.address, {
           requireProvider: true,
         });
-        const runtime = await buildAgentRuntime(ctx, file, {
-          credentials: parsed.provider ?? "targets",
-        });
+        const runtime = await buildAgentRuntime(ctx, file);
         await importResource(runtime, parsed, flags.remoteId, {
           resourceVersion: flags.resourceVersion,
         });

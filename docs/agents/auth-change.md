@@ -55,18 +55,18 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 
 ### 例外:agent 命令的分层鉴权与 SDK 凭证内存注入
 
-`bl managed-agent *` 按调用链分两层，不再全命令硬门禁:
+`bl managed-agent *` 按调用链分两层:
 
-- **离线命令** — `init`、`validate`、`state list/show/rm`:`auth: "none"`，只读写本地文件，无需登录;引擎侧传 `credentials: "none"` 跳过凭证断言（`plan --no-refresh` 与 `plan --dry-run` 同样传 `"none"` 并强制 `refresh: false`：不联网、不回写 state）
-- **provider-aware 命令** — `plan`(默认)、`apply`、`destroy`、`state import`、`skill-list`、全部 `session *`:仍声明 `auth: "apiKey"` 但加 `authOptional: true` —— authStage 照常经 `resolveApiKey(sources)` 解析 bailian 凭证(flag > env > active profile config)并注入 `ctx.client`，但缺失不在 authStage 抛;真正的门禁在引擎层 `assertProviderCredentials`，只校验本次运行涉及的 provider（`CredentialScope`:`--provider` / state 地址里的 provider / 配置默认 provider 链）。配了四个 provider 只跑 claude 时，缺 bailian key 不阻塞。
+- **离线命令** — `init`、`validate`、`state list/show/rm`:`auth: "none"`，只读写本地文件，无需登录;引擎侧传 `credentials: "none"` 跳过凭证断言
+- **联网命令** — `plan`、`apply`、`destroy`、`state import`、`skill-list`、全部 `session *`:统一声明 `auth: "apiKey"` 硬门禁 —— 无论目标 provider 是谁，authStage 都经 `resolveApiKey(sources)` 解析 bailian 凭证(flag > env > active profile config)，缺失报统一 AUTH;引擎层 `assertProviderCredentials` 再对 agents.yaml 里**全部已声明 provider** 的空 key 拦截并给 provider 专属 hint。例外:`plan --no-refresh` / `plan --dry-run` 传 `credentials: "none"` 并强制 `refresh: false`（不联网、不回写 state，不查 provider key），其中 `--dry-run` 连登录也不要求（authStage 的 dry-run 豁免），`--no-refresh` 仍需登录。
 
 凭证不以真实值写入 `process.env`，而是经 `packages/commands/src/commands/managed-agent/_engine/` 的**内存注入管道**(`resolveAgentProjectConfig`)注入 SDK，管道五步:
 
 1. `prepareProviderEnv()` — 先 `bootstrapRuntimeCredentialsSync()`(SDK 把 `.env` / `~/.agents/config.json` 灌进 env，服务 claude/ark/qoder 等非 bailian provider)，再把全部凭证类 env(`CREDENTIAL_ENV_KEYS`，含别名)中仍为 undefined 的占位为 `""`，使 agents.yaml 插值不因缺变量抛错
-2. `resolveProjectConfig` — 插值发生:bailian 插值拿到占位空串，claude/ark 拿到真实 env 值;随后 `normalizeInterpolatedProviderBlocks()` 把插值为空导致的 YAML `null` 归一为 `""`(避免范围外 provider 在 SDK zod 层报 "received null")
+2. `resolveProjectConfig` — 插值发生:bailian 插值拿到占位空串，claude/ark 拿到真实 env 值;随后 `normalizeInterpolatedProviderBlocks()` 把插值为空导致的 YAML `null` 归一为 `""`(避免离线命令下空 key 在 SDK zod 层报 "received null")
 3. `injectProviderCredentials()` — 用 `ctx.client.exportApiCredential()`(lint 限定 `managed-agent/_engine/**` 可用)覆写内存 config 对象的 bailian 块:有凭证时 `api_key` 无条件覆写;`base_url`(拼 `/api/v1/agentstudio` 后缀，无凭证时用 client 默认域名补齐以满足 schema)/`workspace_id`(取 `settings.workspaceId`)仅在引用且为空时填充
 4. `scrubCredentialEnv()` — 从 `process.env` 删除全部凭证变量(真实凭证此后只存于 config 对象 → provider adapter 实例内存，不驻留 env / 不被子进程继承)
-5. `assertProviderCredentials(providers, required)` — 按 `CredentialScope` 算出的 `required` 范围校验:范围内 provider 的 `api_key` 为空 → CLI 权威 `AUTH` 错误 + provider 专属 hint(取代 SDK 原始插值/zod 报错);范围外 provider 允许空 key
+5. `assertProviderCredentials(providers)` — 任一已声明 provider 的 `api_key` 为空 → CLI 权威 `AUTH` 错误 + provider 专属 hint(取代 SDK 原始插值/zod 报错);离线命令传 `credentials: "none"` 整体跳过
 
 `bl auth login` 仅管理 bailian(DashScope)凭证;claude/ark/qoder 的 key 从 env(shell / `.env` / `~/.agents/config.json`)经插值进入 config 对象，同样被清扫。禁止命令层直接 `readConfigFile` 裸读凭证;bailian 字段以 CLI 鉴权链为唯一信源。
 
