@@ -63,8 +63,8 @@ const EDIT_FLAGS = {
   },
   size: {
     type: "string",
-    valueHint: "<W*H>",
-    description: "Output image size: ratio (3:4, 16:9) or pixels (2048*2048)",
+    valueHint: "<W*H|WxH>",
+    description: "Output image size: ratio (3:4, 16:9) or pixels (2048*2048 or 1024x1024)",
   },
   n: {
     type: "number",

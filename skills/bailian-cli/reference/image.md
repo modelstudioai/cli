@@ -24,24 +24,24 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag                        | Type    | Required | Description                                                             |
-| --------------------------- | ------- | -------- | ----------------------------------------------------------------------- |
-| `--image <url>`             | array   | yes      | Source image URL or local file path (repeatable for multi-image merge)  |
-| `--prompt <text>`           | string  | yes      | Edit instruction text                                                   |
-| `--model <model>`           | string  | no       | Model ID (default: qwen-image-2.0)                                      |
-| `--size <W*H>`              | string  | no       | Output image size: ratio (3:4, 16:9) or pixels (2048\*2048)             |
-| `--n <count>`               | number  | no       | Number of images (default: 1, max: 6)                                   |
-| `--seed <n>`                | number  | no       | Random seed for reproducible results                                    |
-| `--negative-prompt <text>`  | string  | no       | Negative prompt to exclude unwanted content                             |
-| `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag to use CLI default (true). |
-| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).     |
-| `--out-dir <dir>`           | string  | no       | Download images to directory                                            |
-| `--out-prefix <prefix>`     | string  | no       | Filename prefix (default: edited)                                       |
-| `--async`                   | switch  | no       | Return async task id without waiting                                    |
-| `--concurrent <n>`          | number  | no       | Run N parallel requests (default: 1)                                    |
-| `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 3)                              |
-| `--api-key <key>`           | string  | no       | API key                                                                 |
-| `--base-url <url>`          | string  | no       | API base URL                                                            |
+| Flag                        | Type    | Required | Description                                                              |
+| --------------------------- | ------- | -------- | ------------------------------------------------------------------------ |
+| `--image <url>`             | array   | yes      | Source image URL or local file path (repeatable for multi-image merge)   |
+| `--prompt <text>`           | string  | yes      | Edit instruction text                                                    |
+| `--model <model>`           | string  | no       | Model ID (default: qwen-image-2.0)                                       |
+| `--size <W*H\|WxH>`         | string  | no       | Output image size: ratio (3:4, 16:9) or pixels (2048\*2048 or 1024x1024) |
+| `--n <count>`               | number  | no       | Number of images (default: 1, max: 6)                                    |
+| `--seed <n>`                | number  | no       | Random seed for reproducible results                                     |
+| `--negative-prompt <text>`  | string  | no       | Negative prompt to exclude unwanted content                              |
+| `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag to use CLI default (true).  |
+| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).      |
+| `--out-dir <dir>`           | string  | no       | Download images to directory                                             |
+| `--out-prefix <prefix>`     | string  | no       | Filename prefix (default: edited)                                        |
+| `--async`                   | switch  | no       | Return async task id without waiting                                     |
+| `--concurrent <n>`          | number  | no       | Run N parallel requests (default: 1)                                     |
+| `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 3)                               |
+| `--api-key <key>`           | string  | no       | API key                                                                  |
+| `--base-url <url>`          | string  | no       | API base URL                                                             |
 
 #### Examples
 
@@ -83,7 +83,7 @@ bl image edit --image ./photo.png --prompt "Replace the background with a beach"
 | --------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `--prompt <text>`           | string  | yes      | Image description                                                                                                        |
 | `--model <model>`           | string  | no       | Model ID (default: qwen-image-2.0)                                                                                       |
-| `--size <W*H>`              | string  | no       | Image size: ratio (3:4, 16:9, 1:1) or pixels (2048\*2048)                                                                |
+| `--size <W*H\|WxH>`         | string  | no       | Image size: ratio (3:4, 16:9, 1:1) or pixels (2048\*2048 or 1024x1024)                                                   |
 | `--n <count>`               | number  | no       | Number of images per request (default: 1, max: 6)                                                                        |
 | `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                                                  |
 | `--negative-prompt <text>`  | string  | no       | Negative prompt to exclude unwanted content                                                                              |

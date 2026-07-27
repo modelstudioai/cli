@@ -52,8 +52,8 @@ const GENERATE_FLAGS = {
   },
   size: {
     type: "string",
-    valueHint: "<W*H>",
-    description: "Image size: ratio (3:4, 16:9, 1:1) or pixels (2048*2048)",
+    valueHint: "<W*H|WxH>",
+    description: "Image size: ratio (3:4, 16:9, 1:1) or pixels (2048*2048 or 1024x1024)",
   },
   n: {
     type: "number",
