@@ -24,10 +24,15 @@ export {
   isLegacyImage2ImageModel,
   isLegacyText2ImageModel,
   isSyncMultimodalImageModel,
+  isWanxFunctionImageEditModel,
   resolveImageEditApi,
   resolveImageGenerateApi,
+  resolveImageSizeProfile,
+  resolvePromptExtendDefault,
   type ImageApiKind,
   type ImageApiRoute,
+  type ImageInputStyle,
+  type ImageSizeProfile,
 } from "./image-routes.ts";
 export { CHANNEL, SOURCE_CONFIG, TAGS, trackingHeaders } from "./headers.ts";
 export type { RequestOpts } from "./http.ts";

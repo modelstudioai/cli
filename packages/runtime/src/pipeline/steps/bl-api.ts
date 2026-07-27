@@ -177,12 +177,12 @@ export async function imageGenerate(
 
   const promptExtend = resolveBooleanFlag(
     input["prompt-extend"],
-    route.useSync ? true : undefined,
+    route.promptExtendDefault,
     "prompt-extend",
   );
 
   const parameters: NonNullable<DashScopeImageRequest["parameters"]> = {
-    size: resolveImageSize(input.size, route.useSync),
+    size: resolveImageSize(input.size, route.sizeProfile),
     n,
     seed: input.seed,
     prompt_extend: promptExtend,
@@ -252,6 +252,7 @@ export interface ImageEditInput {
   "negative-prompt"?: string;
   "prompt-extend"?: boolean | string;
   watermark?: boolean | string;
+  function?: string;
   "out-dir"?: string;
   "out-prefix"?: string;
 }
@@ -274,7 +275,7 @@ export async function imageEdit(
 
   const promptExtend = resolveBooleanFlag(
     input["prompt-extend"],
-    route.useSync ? true : undefined,
+    route.promptExtendDefault,
     "prompt-extend",
   );
 
@@ -288,7 +289,7 @@ export async function imageEdit(
   }
 
   const parameters: NonNullable<DashScopeImageRequest["parameters"]> = {
-    size: resolveImageSize(input.size, route.useSync),
+    size: resolveImageSize(input.size, route.sizeProfile),
     n,
     seed: input.seed,
     prompt_extend: promptExtend,
@@ -296,7 +297,25 @@ export async function imageEdit(
   };
 
   let body: DashScopeImageRequest;
-  if (route.inputStyle === "prompt-images") {
+  if (route.inputStyle === "function-base-image") {
+    const baseImageUrl = resolvedImages[0];
+    if (!baseImageUrl) {
+      throw new PipelineError(
+        "missing_input",
+        "image/edit with wanx*-imageedit requires at least one image",
+        { step: "image/edit" },
+      );
+    }
+    body = {
+      model,
+      input: {
+        function: input.function || "description_edit",
+        prompt: input.prompt,
+        base_image_url: baseImageUrl,
+      },
+      parameters,
+    };
+  } else if (route.inputStyle === "prompt-images") {
     body = {
       model,
       input: {

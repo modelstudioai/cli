@@ -96,6 +96,78 @@ describe("e2e: image edit", () => {
       "data:image/png;base64,<omitted>",
     );
   });
+
+  test("wan2.5-i2i-preview dry-run 走 prompt+images", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
+      "image",
+      "edit",
+      "--model",
+      "wan2.5-i2i-preview",
+      "--image",
+      "https://example.com/source.png",
+      "--prompt",
+      "Place on a table",
+      "--size",
+      "1:1",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      mode?: string;
+      path?: string;
+      request?: {
+        input?: { prompt?: string; images?: string[]; messages?: unknown };
+        parameters?: { size?: string };
+      };
+    }>(stdout);
+    expect(data.mode).toBe("async");
+    expect(data.path).toBe("/api/v1/services/aigc/image2image/image-synthesis");
+    expect(data.request?.input?.prompt).toBe("Place on a table");
+    expect(data.request?.input?.images).toEqual(["https://example.com/source.png"]);
+    expect(data.request?.input?.messages).toBeUndefined();
+    expect(data.request?.parameters?.size).toBe("1280*1280");
+  });
+
+  test("wanx2.1-imageedit dry-run 走 function + base_image_url", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
+      "image",
+      "edit",
+      "--model",
+      "wanx2.1-imageedit",
+      "--image",
+      "https://example.com/source.png",
+      "--prompt",
+      "转换成绘本风格",
+      "--function",
+      "stylization_all",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      mode?: string;
+      path?: string;
+      request?: {
+        input?: {
+          function?: string;
+          prompt?: string;
+          base_image_url?: string;
+          images?: unknown;
+          messages?: unknown;
+        };
+      };
+    }>(stdout);
+    expect(data.mode).toBe("async");
+    expect(data.path).toBe("/api/v1/services/aigc/image2image/image-synthesis");
+    expect(data.request?.input?.function).toBe("stylization_all");
+    expect(data.request?.input?.prompt).toBe("转换成绘本风格");
+    expect(data.request?.input?.base_image_url).toBe("https://example.com/source.png");
+    expect(data.request?.input?.images).toBeUndefined();
+    expect(data.request?.input?.messages).toBeUndefined();
+  });
 });
 
 describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())("e2e: image edit", () => {

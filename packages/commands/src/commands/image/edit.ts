@@ -31,12 +31,6 @@ import { resolveImageSize } from "bailian-cli-runtime";
 import { join } from "path";
 import { BOOL_FLAG_PROMPT_EXTEND_CLI_TRUE, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
-const PROMPT_EXTEND_DEFAULT_PREFIXES = ["qwen-image-2.0", "qwen-image-max"];
-
-function enablesPromptExtendByDefault(model: string): boolean {
-  return PROMPT_EXTEND_DEFAULT_PREFIXES.some((prefix) => model.startsWith(prefix));
-}
-
 const EDIT_FLAGS = {
   image: {
     type: "array",
@@ -70,6 +64,12 @@ const EDIT_FLAGS = {
     type: "string",
     valueHint: "<text>",
     description: "Negative prompt to exclude unwanted content",
+  },
+  function: {
+    type: "string",
+    valueHint: "<name>",
+    description:
+      "wanx*-imageedit function (default: description_edit). Examples: stylization_all, description_edit",
   },
   promptExtend: {
     type: "boolean",
@@ -109,6 +109,7 @@ export default defineCommand({
     '--image https://example.com/photo.png --prompt "Remove the person" --model qwen-image-2.0-pro',
     '--image ./photo.png --prompt "Change the style" --model wan2.7-image',
     '--image ./photo.png --prompt "Place the subject on a table" --model wan2.5-i2i-preview',
+    '--image ./photo.png --prompt "转换成绘本风格" --model wanx2.1-imageedit --function stylization_all',
     '--image ./photo.png --prompt "Replace the background with a beach" --watermark false',
   ],
   async run(ctx) {
@@ -133,14 +134,14 @@ export default defineCommand({
 
     const promptExtend = resolveBooleanFlag(
       flags.promptExtend,
-      enablesPromptExtendByDefault(model) ? true : undefined,
+      route.promptExtendDefault,
       "prompt-extend",
     );
 
     const watermark = resolveWatermark(flags.watermark);
 
     const parameters: NonNullable<DashScopeImageRequest["parameters"]> = {
-      size: resolveImageSize(flags.size, route.useSync),
+      size: resolveImageSize(flags.size, route.sizeProfile),
       n,
       seed: flags.seed,
       prompt_extend: promptExtend,
@@ -148,7 +149,24 @@ export default defineCommand({
     };
 
     let body: DashScopeImageRequest;
-    if (route.inputStyle === "prompt-images") {
+    if (route.inputStyle === "function-base-image") {
+      const baseImageUrl = resolvedImages[0];
+      if (!baseImageUrl) {
+        throw new BailianError(
+          "wanx*-imageedit requires at least one --image as base_image_url.",
+          ExitCode.USAGE,
+        );
+      }
+      body = {
+        model,
+        input: {
+          function: flags.function || "description_edit",
+          prompt,
+          base_image_url: baseImageUrl,
+        },
+        parameters,
+      };
+    } else if (route.inputStyle === "prompt-images") {
       body = {
         model,
         input: {
@@ -186,26 +204,39 @@ export default defineCommand({
     const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      const previewBody =
-        "messages" in body.input
-          ? {
-              ...body,
-              input: {
-                messages: body.input.messages.map((message) => ({
-                  ...message,
-                  content: message.content.map((item) =>
-                    item.image ? { ...item, image: redactDataUri(item.image) } : item,
-                  ),
-                })),
-              },
-            }
-          : {
-              ...body,
-              input: {
-                ...body.input,
-                images: body.input.images?.map((imageUrl) => redactDataUri(imageUrl)),
-              },
-            };
+      let previewBody: DashScopeImageRequest = body;
+      if ("messages" in body.input) {
+        previewBody = {
+          ...body,
+          input: {
+            messages: body.input.messages.map((message) => ({
+              ...message,
+              content: message.content.map((item) =>
+                item.image ? { ...item, image: redactDataUri(item.image) } : item,
+              ),
+            })),
+          },
+        };
+      } else if ("images" in body.input) {
+        previewBody = {
+          ...body,
+          input: {
+            ...body.input,
+            images: body.input.images?.map((imageUrl) => redactDataUri(imageUrl)),
+          },
+        };
+      } else if ("base_image_url" in body.input) {
+        previewBody = {
+          ...body,
+          input: {
+            ...body.input,
+            base_image_url: redactDataUri(body.input.base_image_url),
+            mask_image_url: body.input.mask_image_url
+              ? redactDataUri(body.input.mask_image_url)
+              : undefined,
+          },
+        };
+      }
       emitResult(
         { request: previewBody, mode: route.useSync ? "sync" : "async", path: route.path },
         format,

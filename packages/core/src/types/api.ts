@@ -124,6 +124,13 @@ export interface DashScopeImageRequest {
         /** Required by image2image models such as wan2.5-i2i-preview. */
         images?: string[];
         negative_prompt?: string;
+      }
+    | {
+        /** Required by wanx*-imageedit models. */
+        function: string;
+        prompt: string;
+        base_image_url: string;
+        mask_image_url?: string;
       };
   parameters?: {
     size?: string;
@@ -132,6 +139,7 @@ export interface DashScopeImageRequest {
     prompt_extend?: boolean;
     watermark?: boolean;
     negative_prompt?: string;
+    strength?: number;
   };
 }
 

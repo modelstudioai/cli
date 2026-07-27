@@ -107,6 +107,65 @@ describe("e2e: image generate", () => {
     expect(data.request?.model).toBe("qwen-image-plus");
   });
 
+  test("qwen-image-plus 默认 1:1 映射为 1328*1328", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
+      "image",
+      "generate",
+      "--model",
+      "qwen-image-plus",
+      "--prompt",
+      "一只猫",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      request?: { parameters?: { size?: string; prompt_extend?: boolean } };
+    }>(stdout);
+    expect(data.request?.parameters?.size).toBe("1328*1328");
+  });
+
+  test("z-image-turbo 默认 prompt_extend 为 false", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
+      "image",
+      "generate",
+      "--model",
+      "z-image-turbo",
+      "--prompt",
+      "一只猫",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      request?: { parameters?: { size?: string; prompt_extend?: boolean } };
+    }>(stdout);
+    expect(data.request?.parameters?.prompt_extend).toBe(false);
+    expect(data.request?.parameters?.size).toBe("1024*1024");
+  });
+
+  test("wanx-v1 默认 1:1 映射为 1024*1024", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
+      "image",
+      "generate",
+      "--model",
+      "wanx-v1",
+      "--prompt",
+      "一只猫",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      request?: { parameters?: { size?: string }; input?: { prompt?: string } };
+    }>(stdout);
+    expect(data.request?.parameters?.size).toBe("1024*1024");
+    expect(data.request?.input?.prompt).toBe("一只猫");
+  });
+
   test("wanx2.0-t2i-turbo dry-run 走 text2image prompt 路径", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
       "image",

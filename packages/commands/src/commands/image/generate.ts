@@ -30,12 +30,6 @@ import { BOOL_FLAG_PROMPT_EXTEND_IMAGE_GENERATE, BOOL_FLAG_WATERMARK } from "bai
 
 import { join } from "path";
 
-const PROMPT_EXTEND_DEFAULT_PREFIXES = ["qwen-image-2.0", "qwen-image-max"];
-
-function enablesPromptExtendByDefault(model: string): boolean {
-  return PROMPT_EXTEND_DEFAULT_PREFIXES.some((prefix) => model.startsWith(prefix));
-}
-
 const GENERATE_FLAGS = {
   prompt: { type: "string", valueHint: "<text>", description: "Image description", required: true },
   model: {
@@ -115,13 +109,13 @@ export default defineCommand({
     const route = resolveImageGenerateApi(model);
     const defaultSize = "1:1";
     const sizeInput = flags.size || defaultSize;
-    const size = resolveImageSize(sizeInput, route.useSync);
+    const size = resolveImageSize(sizeInput, route.sizeProfile);
     const n = flags.n ?? 1;
     const concurrent = getConcurrency(flags);
 
     const promptExtend = resolveBooleanFlag(
       flags.promptExtend,
-      enablesPromptExtendByDefault(model) ? true : undefined,
+      route.promptExtendDefault,
       "prompt-extend",
     );
 
