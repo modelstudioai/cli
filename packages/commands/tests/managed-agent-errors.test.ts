@@ -39,6 +39,22 @@ test("SDK UserError maps to USAGE", async () => {
   expect(mapped.message).toBe("bad agents.yaml");
 });
 
+test("SDK polling-timeout UserError maps to TIMEOUT (5), not USAGE", async () => {
+  // 消息形状来自 SDK session-runtime 的 assertNotTimedOut —— 客户端等待超时，
+  // 按 bl 错误边界必须归 TIMEOUT，不能告诉自动化调用方“参数错误”。
+  const mapped = await catchMapped(
+    new UserError("Session did not complete within the timeout (600 seconds)."),
+  );
+  expect(mapped.exitCode).toBe(ExitCode.TIMEOUT);
+  expect(mapped.message).toBe("Session did not complete within the timeout (600 seconds).");
+  expect(mapped.hint).toMatch(/session get/);
+});
+
+test("提及 timeout 但非轮询超时句式的 UserError 仍归 USAGE", async () => {
+  const mapped = await catchMapped(new UserError("Invalid timeout value in agents.yaml"));
+  expect(mapped.exitCode).toBe(ExitCode.USAGE);
+});
+
 test("SDK ApiError with DashScope-style JSON body surfaces clean message and api metadata", async () => {
   const body = JSON.stringify({
     code: "InvalidParameter",

@@ -34,22 +34,46 @@ function parseSdkResponseBody(raw: string): ApiErrorBody {
 }
 
 /**
+ * The SDK's session polling deadline surfaces as a plain `UserError` (no
+ * dedicated timeout class as of SDK 0.3.x), so it is recognized by its stable
+ * message shape: "Session did not complete within the timeout (N seconds)."
+ * (session-runtime's assertNotTimedOut — the SDK's only timeout UserError).
+ * It is a client-side wait limit, not a usage mistake → per bl's error
+ * boundary it must exit TIMEOUT, not USAGE.
+ */
+function isSdkPollingTimeout(error: UserError): boolean {
+  return /did not complete within the timeout/i.test(error.message);
+}
+
+/**
  * Run an SDK-backed operation, translating SDK error types into BailianError so
  * bl's error handler produces the right exit code and hint formatting.
- * SDK `UserError` → USAGE; SDK `ApiError` (server HTTP error) → GENERAL via
- * `mapApiError` (server message passed through verbatim, with
- * httpStatus/apiCode/requestId metadata for --output json); fetch transport
- * failures (`TypeError: fetch failed`) are rethrown untouched so the runtime
- * error handler maps them to NETWORK with an errno-specific hint, matching the
- * native client path; any other Error → GENERAL (message passed through, per
- * bl's "don't translate server errors" boundary).
+ * SDK `UserError` → USAGE — except the polling-deadline UserError, which is a
+ * client-side timeout → TIMEOUT with a wait-longer hint; SDK `ApiError`
+ * (server HTTP error) → GENERAL via `mapApiError` (server message passed
+ * through verbatim, with httpStatus/apiCode/requestId metadata for
+ * --output json); fetch transport failures (`TypeError: fetch failed`) are
+ * rethrown untouched so the runtime error handler maps them to NETWORK with an
+ * errno-specific hint, matching the native client path; any other Error →
+ * GENERAL (message passed through, per bl's "don't translate server errors"
+ * boundary).
  */
 export async function withAgentErrors<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } catch (error) {
     if (error instanceof BailianError) throw error;
-    if (error instanceof UserError) throw new BailianError(error.message, ExitCode.USAGE);
+    if (error instanceof UserError) {
+      if (isSdkPollingTimeout(error)) {
+        throw new BailianError(
+          error.message,
+          ExitCode.TIMEOUT,
+          // `bl` prefix is safe: agent commands ship on `bl` only.
+          "The session may still be running — check `bl managed-agent session get --session-id <id>` or `session events`.",
+        );
+      }
+      throw new BailianError(error.message, ExitCode.USAGE);
+    }
     if (error instanceof Error && isSdkApiError(error)) {
       throw mapApiError(error.statusCode, parseSdkResponseBody(error.responseBody));
     }
