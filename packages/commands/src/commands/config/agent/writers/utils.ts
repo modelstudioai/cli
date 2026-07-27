@@ -1,12 +1,6 @@
 import { dirname } from "path";
-import {
-  existsSync,
-  readFileSync,
-  writeFileSync,
-  mkdirSync,
-  renameSync,
-  copyFileSync,
-} from "fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, copyFileSync } from "fs";
+import { BailianError, ExitCode } from "bailian-cli-core";
 
 /** Parameters shared by every agent writer. */
 export interface WriteParams {
@@ -23,6 +17,8 @@ export interface WriteParams {
 export interface WriteSummary {
   paths: string[];
   nextStep: string;
+  /** Non-fatal issues the command should surface to the user. */
+  warnings?: string[];
 }
 
 /** An agent configuration writer: a human label plus a `write` that applies it. */
@@ -66,11 +62,7 @@ export function stripJsonc(text: string): string {
     }
     if (char === "/" && next === "*") {
       index += 2;
-      while (
-        index < text.length &&
-        !(text[index] === "*" && text[index + 1] === "/")
-      )
-        index += 1;
+      while (index < text.length && !(text[index] === "*" && text[index + 1] === "/")) index += 1;
       index += 2;
       continue;
     }
@@ -100,11 +92,7 @@ export function stripJsonc(text: string): string {
     if (char === '"') inString = true;
     if (char === ",") {
       let lookahead = index + 1;
-      while (
-        lookahead < uncommented.length &&
-        /\s/.test(uncommented[lookahead])
-      )
-        lookahead += 1;
+      while (lookahead < uncommented.length && /\s/.test(uncommented[lookahead])) lookahead += 1;
       if (uncommented[lookahead] === "}" || uncommented[lookahead] === "]") {
         index += 1;
         continue;
@@ -130,10 +118,7 @@ export function readJson(path: string): Record<string, unknown> {
 export function readJsonc(path: string): Record<string, unknown> {
   if (!existsSync(path)) return {};
   try {
-    return JSON.parse(stripJsonc(readFileSync(path, "utf-8"))) as Record<
-      string,
-      unknown
-    >;
+    return JSON.parse(stripJsonc(readFileSync(path, "utf-8"))) as Record<string, unknown>;
   } catch {
     return {};
   }
@@ -165,4 +150,48 @@ export function backup(path: string): void {
 /** Whether a base URL targets the Anthropic-messages compatible endpoint. */
 export function isAnthropicEndpoint(baseUrl: string): boolean {
   return baseUrl.includes("/apps/anthropic");
+}
+
+/**
+ * Claude Code speaks Anthropic Messages only. Users often paste the OpenAI
+ * compatible-mode URL; rewrite that to `/apps/anthropic` when possible, otherwise
+ * fail with a clear USAGE error before writing a broken config.
+ */
+export function resolveClaudeCodeBaseUrl(baseUrl: string): {
+  url: string;
+  rewrittenFrom?: string;
+} {
+  const trimmed = baseUrl.trim().replace(/\/+$/, "");
+
+  if (isAnthropicEndpoint(trimmed)) {
+    return { url: trimmed };
+  }
+
+  if (trimmed.includes("/compatible-mode")) {
+    const rewritten = trimmed.replace(/\/compatible-mode(?:\/v\d+)?/, "/apps/anthropic");
+    return { url: rewritten, rewrittenFrom: baseUrl.trim() };
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    const host = parsed.hostname;
+    const isDashScopeHost =
+      host.includes("dashscope") ||
+      host.includes("maas.aliyuncs.com") ||
+      host.includes("token-plan");
+    if (isDashScopeHost && (parsed.pathname === "/" || parsed.pathname === "")) {
+      return {
+        url: `${parsed.origin}/apps/anthropic`,
+        rewrittenFrom: baseUrl.trim(),
+      };
+    }
+  } catch {
+    // Fall through to the USAGE error below.
+  }
+
+  throw new BailianError(
+    `Claude Code requires an Anthropic-compatible base URL, got "${baseUrl}".`,
+    ExitCode.USAGE,
+    "Use a URL ending in /apps/anthropic (not /compatible-mode/v1). Example: https://dashscope.aliyuncs.com/apps/anthropic",
+  );
 }

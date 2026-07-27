@@ -4,13 +4,27 @@ import { backup, readJson, writeJsonAtomic, isAnthropicEndpoint, type AgentDef }
 
 const ENV_KEY = "BAILIAN_CLI_API_KEY";
 
+function displayName(model: string): string {
+  return `[Bailian] ${model}`;
+}
+
+/** Entries we previously wrote, or still own via envKey / display brand. */
+function isBailianCliEntry(entry: Record<string, unknown>): boolean {
+  if (entry.envKey === ENV_KEY) return true;
+  const name = typeof entry.name === "string" ? entry.name : "";
+  return name === "bailian-cli" || name.startsWith("[Bailian]");
+}
+
 /**
  * Qwen Code keys `modelProviders` and `security.auth.selectedType` by the SDK
  * protocol (an AuthType string), not by a free-form provider id — the runtime
  * resolver indexes credentials/defaults by protocol. The `bailian-cli` brand
- * therefore lives only in the env var name (`BAILIAN_CLI_API_KEY`); each model
- * entry's `name` stays a human display label (Qwen Code keys models by
- * id + baseUrl, never by name).
+ * therefore lives in the env var name (`BAILIAN_CLI_API_KEY`) and the display
+ * label (`[Bailian] …`); Qwen Code keys models by id (+ baseUrl), never by name.
+ *
+ * Qwen Code does not support duplicate model `id`s (only the first loads), so
+ * we must never overwrite a pre-existing Token Plan / third-party entry that
+ * shares the same id.
  *
  * Credentials are written to BOTH `env` (via the entry's `envKey`) and
  * `security.auth` — the resolver reads `security.auth.apiKey/baseUrl` as a
@@ -24,6 +38,7 @@ export default {
   write({ baseUrl, apiKey, model }) {
     const settingsPath = join(homedir(), ".qwen", "settings.json");
     const protocol = isAnthropicEndpoint(baseUrl) ? "anthropic" : "openai";
+    const warnings: string[] = [];
 
     backup(settingsPath);
     const settings = readJson(settingsPath);
@@ -32,33 +47,48 @@ export default {
     settings.$version = 3;
 
     // env — API key read by the provider entry's envKey.
+    // Qwen Code treats settings.json `env` as lowest priority; a process/shell
+    // value for the same key wins and can make the first launch fail.
     const env = (settings.env ?? {}) as Record<string, string>;
     env[ENV_KEY] = apiKey;
     settings.env = env;
 
-    // modelProviders[<protocol>] — upsert this model's entry, keyed by
-    // id + baseUrl (the identity Qwen Code's registry uses). `name` is the
-    // model's DISPLAY label; keep an existing custom name, and heal the old
-    // "bailian-cli" sentinel a previous version wrote (it collided across every
-    // configured model in the picker).
+    const processEnvValue = process.env[ENV_KEY];
+    if (processEnvValue !== undefined && processEnvValue !== apiKey) {
+      warnings.push(
+        `Shell/environment ${ENV_KEY} is set and overrides settings.json. ` +
+          `Unset it (e.g. \`unset ${ENV_KEY}\`) so the key written here takes effect.`,
+      );
+    }
+
+    // modelProviders[<protocol>] — upsert only bailian-cli-owned entries.
     const providers = (settings.modelProviders ?? {}) as Record<
       string,
       Array<Record<string, unknown>>
     >;
     const entries = (providers[protocol] ?? []) as Array<Record<string, unknown>>;
-    const displayName = `[Bailian] ${model}`;
-    const existing = entries.find(
-      (entry) => entry.id === model && (entry.baseUrl ?? "") === baseUrl,
-    );
-    if (existing) {
-      existing.baseUrl = baseUrl;
-      existing.envKey = ENV_KEY;
-      const currentName = typeof existing.name === "string" ? existing.name.trim() : "";
-      if (!currentName || currentName === "bailian-cli") existing.name = displayName;
+    const owned = entries.find((entry) => isBailianCliEntry(entry) && entry.id === model);
+    const conflicting = entries.find((entry) => !isBailianCliEntry(entry) && entry.id === model);
+
+    if (owned) {
+      owned.baseUrl = baseUrl;
+      owned.envKey = ENV_KEY;
+      const currentName = typeof owned.name === "string" ? owned.name.trim() : "";
+      if (!currentName || currentName === "bailian-cli") owned.name = displayName(model);
+    } else if (conflicting) {
+      const existingName =
+        typeof conflicting.name === "string" && conflicting.name.length > 0
+          ? conflicting.name
+          : String(conflicting.id);
+      warnings.push(
+        `Model id "${model}" already exists as "${existingName}"; left unchanged ` +
+          `(Qwen Code loads only the first entry per id). Remove or rename that ` +
+          `entry if you want bailian-cli to own this model.`,
+      );
     } else {
       entries.push({
         id: model,
-        name: displayName,
+        name: displayName(model),
         baseUrl,
         envKey: ENV_KEY,
       });
@@ -83,6 +113,7 @@ export default {
     return {
       paths: [settingsPath],
       nextStep: "Run `qwen` to start using Qwen Code with DashScope.",
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
   },
 } satisfies AgentDef;

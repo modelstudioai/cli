@@ -90,6 +90,54 @@ describe("config agent writers", () => {
     }
   });
 
+  test("claude-code 将 compatible-mode URL 改写为 apps/anthropic", () => {
+    const tokenPlanOpenAi = "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1";
+    const summary = claudeCode.write({
+      baseUrl: tokenPlanOpenAi,
+      apiKey: "sk-a",
+      model: "qwen3.8-max-preview",
+    });
+    const env = readJsonAt(".claude", "settings.json").env as Record<string, string>;
+    expect(env.ANTHROPIC_BASE_URL).toBe(
+      "https://token-plan.cn-beijing.maas.aliyuncs.com/apps/anthropic",
+    );
+    expect(summary.warnings?.some((warning) => warning.includes("Rewrote base URL"))).toBe(true);
+  });
+
+  test("claude-code 保留已有分层模型，不整表覆盖", () => {
+    mkdirSync(join(home, ".claude"), { recursive: true });
+    writeFileSync(
+      join(home, ".claude", "settings.json"),
+      JSON.stringify({
+        env: {
+          ANTHROPIC_DEFAULT_HAIKU_MODEL: "qwen3.6-flash",
+          CLAUDE_CODE_SUBAGENT_MODEL: "qwen3.7-max",
+        },
+      }),
+    );
+
+    claudeCode.write({
+      baseUrl: ANTHROPIC_URL,
+      apiKey: "sk-a",
+      model: "qwen3.8-max-preview",
+    });
+    const env = readJsonAt(".claude", "settings.json").env as Record<string, string>;
+    expect(env.ANTHROPIC_MODEL).toBe("qwen3.8-max-preview");
+    expect(env.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBe("qwen3.6-flash");
+    expect(env.CLAUDE_CODE_SUBAGENT_MODEL).toBe("qwen3.7-max");
+    expect(env.ANTHROPIC_DEFAULT_SONNET_MODEL).toBe("qwen3.8-max-preview");
+  });
+
+  test("claude-code 拒绝无法改写为 Anthropic 的 base URL", () => {
+    expect(() =>
+      claudeCode.write({
+        baseUrl: "https://api.openai.com/v1",
+        apiKey: "sk-a",
+        model: "qwen3-max",
+      }),
+    ).toThrow(/Anthropic-compatible base URL/);
+  });
+
   test("qwen-code compatible-mode 走 openai 协议（官方 v3 结构）", () => {
     qwenCode.write({
       baseUrl: OAI_URL,
@@ -133,13 +181,13 @@ describe("config agent writers", () => {
               id: "qwen3-coder-plus",
               name: "bailian-cli",
               baseUrl: OAI_URL,
-              envKey: "OLD",
+              envKey: "BAILIAN_CLI_API_KEY",
             },
             {
               id: "my-model",
               name: "My Custom",
               baseUrl: OAI_URL,
-              envKey: "OLD",
+              envKey: "BAILIAN_CLI_API_KEY",
             },
           ],
         },
@@ -166,11 +214,7 @@ describe("config agent writers", () => {
   });
 
   test("qwen-code anthropic 端点走 anthropic 协议", () => {
-    qwenCode.write({
-      baseUrl: ANTHROPIC_URL,
-      apiKey: "sk-q",
-      model: "qwen3-max",
-    });
+    qwenCode.write({ baseUrl: ANTHROPIC_URL, apiKey: "sk-q", model: "qwen3-max" });
     const settings = readJsonAt(".qwen", "settings.json");
     expect((settings.security as { auth: { selectedType: string } }).auth.selectedType).toBe(
       "anthropic",
@@ -180,20 +224,76 @@ describe("config agent writers", () => {
     expect(providers.openai).toBeUndefined();
   });
 
-  test("qwen-code 对相同 id+baseUrl 的 provider 项做 upsert 而非追加", () => {
-    qwenCode.write({
-      baseUrl: OAI_URL,
-      apiKey: "sk-1",
-      model: "qwen3-coder-plus",
-    });
-    qwenCode.write({
-      baseUrl: OAI_URL,
-      apiKey: "sk-2",
-      model: "qwen3-coder-plus",
-    });
+  test("qwen-code 对自有 provider 项按 id upsert 而非追加", () => {
+    qwenCode.write({ baseUrl: OAI_URL, apiKey: "sk-1", model: "qwen3-coder-plus" });
+    qwenCode.write({ baseUrl: OAI_URL, apiKey: "sk-2", model: "qwen3-coder-plus" });
     const settings = readJsonAt(".qwen", "settings.json");
     const openaiEntries = (settings.modelProviders as Record<string, unknown[]>).openai;
     expect(openaiEntries).toHaveLength(1);
+    expect((settings.env as Record<string, string>).BAILIAN_CLI_API_KEY).toBe("sk-2");
+  });
+
+  test("qwen-code 不劫持已有 Token Plan 同 id 条目的 name/envKey", () => {
+    mkdirSync(join(home, ".qwen"), { recursive: true });
+    writeFileSync(
+      join(home, ".qwen", "settings.json"),
+      JSON.stringify({
+        env: { BAILIAN_TOKEN_PLAN_API_KEY: "sk-token-plan" },
+        modelProviders: {
+          openai: [
+            {
+              id: "qwen3.8-max-preview",
+              name: "[Token Plan 个人版] qwen3.8-max-preview",
+              baseUrl: "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+              envKey: "BAILIAN_TOKEN_PLAN_API_KEY",
+              generationConfig: { extra_body: { enable_thinking: true } },
+            },
+          ],
+        },
+      }),
+    );
+
+    const tokenPlanUrl = "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1";
+    const summary = qwenCode.write({
+      baseUrl: tokenPlanUrl,
+      apiKey: "sk-bailian",
+      model: "qwen3.8-max-preview",
+    });
+
+    const settings = readJsonAt(".qwen", "settings.json");
+    const openaiEntries = (
+      settings.modelProviders as Record<string, Array<Record<string, unknown>>>
+    ).openai;
+    expect(openaiEntries).toHaveLength(1);
+    expect(openaiEntries[0]).toMatchObject({
+      id: "qwen3.8-max-preview",
+      name: "[Token Plan 个人版] qwen3.8-max-preview",
+      envKey: "BAILIAN_TOKEN_PLAN_API_KEY",
+      generationConfig: { extra_body: { enable_thinking: true } },
+    });
+    expect((settings.env as Record<string, string>).BAILIAN_TOKEN_PLAN_API_KEY).toBe(
+      "sk-token-plan",
+    );
+    expect((settings.env as Record<string, string>).BAILIAN_CLI_API_KEY).toBe("sk-bailian");
+    expect(summary.warnings?.some((warning) => warning.includes("already exists"))).toBe(true);
+  });
+
+  test("qwen-code 在进程环境变量覆盖 settings.env 时给出警告", () => {
+    const previous = process.env.BAILIAN_CLI_API_KEY;
+    process.env.BAILIAN_CLI_API_KEY = "sk-from-shell";
+    try {
+      const summary = qwenCode.write({
+        baseUrl: OAI_URL,
+        apiKey: "sk-from-settings",
+        model: "qwen3-coder-plus",
+      });
+      expect(summary.warnings?.some((warning) => warning.includes("overrides settings.json"))).toBe(
+        true,
+      );
+    } finally {
+      if (previous === undefined) delete process.env.BAILIAN_CLI_API_KEY;
+      else process.env.BAILIAN_CLI_API_KEY = previous;
+    }
   });
 
   test("opencode 容忍 JSONC（注释与尾逗号）", () => {
@@ -227,11 +327,7 @@ describe("config agent writers", () => {
       JSON.stringify({ provider: { other: { name: "Other" } } }),
     );
 
-    opencode.write({
-      baseUrl: ANTHROPIC_URL,
-      apiKey: "sk-o",
-      model: "qwen3-max",
-    });
+    opencode.write({ baseUrl: ANTHROPIC_URL, apiKey: "sk-o", model: "qwen3-max" });
     const config = readJsonAt(".config", "opencode", "opencode.json");
     const provider = config.provider as Record<string, Record<string, unknown>>;
     expect(provider.other).toBeDefined();
@@ -254,12 +350,8 @@ describe("config agent writers", () => {
     ).toBe("@ai-sdk/openai-compatible");
   });
 
-  test("openclaw 写入 provider、api 与 primary", () => {
-    openclaw.write({
-      baseUrl: OAI_URL,
-      apiKey: "sk-c",
-      model: "qwen3-coder-plus",
-    });
+  test("openclaw 写入 provider、api、primary，并登记 defaults.models", () => {
+    openclaw.write({ baseUrl: OAI_URL, apiKey: "sk-c", model: "qwen3-coder-plus" });
     const config = readJsonAt(".openclaw", "openclaw.json");
     const models = config.models as Record<string, unknown>;
     expect(models.mode).toBe("merge");
@@ -267,7 +359,6 @@ describe("config agent writers", () => {
     expect(bailian.api).toBe("openai-completions");
     const entry = (bailian.models as Array<Record<string, unknown>>)[0];
     expect(entry.id).toBe("qwen3-coder-plus");
-    // 未传 --context-window 时使用安全默认值，不再硬编码 1M
     expect(entry.contextWindow).toBe(256000);
     expect(entry.cost).toEqual({
       input: 0,
@@ -295,6 +386,57 @@ describe("config agent writers", () => {
     >;
     expect(providers2["bailian-cli"].api).toBe("anthropic-messages");
     expect(providers2["bailian-cli"].models[0].contextWindow).toBe(1000000);
+    expect(
+      (config2.agents as { defaults: { model: { primary: string } } }).defaults.model.primary,
+    ).toBe("bailian-cli/qwen3-max");
+  });
+
+  test("openclaw 不抢占已有 token-plan primary", () => {
+    mkdirSync(join(home, ".openclaw"), { recursive: true });
+    writeFileSync(
+      join(home, ".openclaw", "openclaw.json"),
+      JSON.stringify({
+        models: {
+          mode: "merge",
+          providers: {
+            "bailian-token-plan": {
+              baseUrl: "https://token-plan.cn-beijing.maas.aliyuncs.com/apps/anthropic",
+              apiKey: "sk-token-plan",
+              api: "anthropic-messages",
+              models: [{ id: "qwen3.8-max-preview", name: "qwen3.8-max-preview" }],
+            },
+          },
+        },
+        agents: {
+          defaults: {
+            model: { primary: "bailian-token-plan/qwen3.8-max-preview" },
+            models: { "bailian-token-plan/qwen3.8-max-preview": {} },
+          },
+        },
+      }),
+    );
+
+    const summary = openclaw.write({
+      baseUrl: "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+      apiKey: "sk-bailian",
+      model: "qwen3.8-max-preview",
+    });
+
+    const config = readJsonAt(".openclaw", "openclaw.json");
+    const agents = config.agents as {
+      defaults: { model: { primary: string }; models: Record<string, unknown> };
+    };
+    expect(agents.defaults.model.primary).toBe("bailian-token-plan/qwen3.8-max-preview");
+    expect(agents.defaults.models["bailian-cli/qwen3.8-max-preview"]).toEqual({});
+    expect(
+      (config.models as { providers: Record<string, unknown> }).providers["bailian-token-plan"],
+    ).toBeDefined();
+    expect(
+      (config.models as { providers: Record<string, unknown> }).providers["bailian-cli"],
+    ).toBeDefined();
+    expect(summary.warnings?.some((warning) => warning.includes("Left existing primary"))).toBe(
+      true,
+    );
   });
 
   test("hermes 写入官方扁平 model.* 结构，保留其它顶层键", () => {
