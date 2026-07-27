@@ -3,6 +3,8 @@ export {
   chatPath,
   imagePath,
   imageSyncPath,
+  imageText2ImagePath,
+  image2ImagePath,
   knowledgeChatEndpoint,
   knowledgeRetrievePath,
   knowledgeSearchEndpoint,
@@ -18,6 +20,15 @@ export {
   userProfilePath,
   videoGeneratePath,
 } from "./endpoints.ts";
+export {
+  isLegacyImage2ImageModel,
+  isLegacyText2ImageModel,
+  isSyncMultimodalImageModel,
+  resolveImageEditApi,
+  resolveImageGenerateApi,
+  type ImageApiKind,
+  type ImageApiRoute,
+} from "./image-routes.ts";
 export { CHANNEL, SOURCE_CONFIG, TAGS, trackingHeaders } from "./headers.ts";
 export type { RequestOpts } from "./http.ts";
 export { request, requestJson } from "./http.ts";

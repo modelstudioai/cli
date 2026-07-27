@@ -61,6 +61,78 @@ describe("e2e: image generate", () => {
     expect(data.mode).toBe("sync");
     expect(data.request?.model).toBe("wan2.7-image");
   });
+
+  test("z-image-turbo dry-run 走 sync multimodal", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
+      "image",
+      "generate",
+      "--model",
+      "z-image-turbo",
+      "--prompt",
+      "一只猫",
+      "--size",
+      "1024*1024",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ mode?: string; request?: { model?: string } }>(stdout);
+    expect(data.mode).toBe("sync");
+    expect(data.request?.model).toBe("z-image-turbo");
+  });
+
+  test("qwen-image-plus dry-run 走 sync multimodal", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
+      "image",
+      "generate",
+      "--model",
+      "qwen-image-plus",
+      "--prompt",
+      "一只猫",
+      "--size",
+      "1328*1328",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      mode?: string;
+      path?: string;
+      request?: { model?: string };
+    }>(stdout);
+    expect(data.mode).toBe("sync");
+    expect(data.path).toBe("/api/v1/services/aigc/multimodal-generation/generation");
+    expect(data.request?.model).toBe("qwen-image-plus");
+  });
+
+  test("wanx2.0-t2i-turbo dry-run 走 text2image prompt 路径", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
+      "image",
+      "generate",
+      "--model",
+      "wanx2.0-t2i-turbo",
+      "--prompt",
+      "一只猫",
+      "--size",
+      "1024*1024",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      mode?: string;
+      path?: string;
+      request?: { model?: string; input?: { prompt?: string; messages?: unknown } };
+    }>(stdout);
+    expect(data.mode).toBe("async");
+    expect(data.path).toBe("/api/v1/services/aigc/text2image/image-synthesis");
+    expect(data.request?.model).toBe("wanx2.0-t2i-turbo");
+    expect(data.request?.input?.prompt).toBe("一只猫");
+    expect(data.request?.input?.messages).toBeUndefined();
+  });
 });
 
 describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(

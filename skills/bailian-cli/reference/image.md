@@ -66,6 +66,10 @@ bl image edit --image ./photo.png --prompt "Change the style" --model wan2.7-ima
 ```
 
 ```bash
+bl image edit --image ./photo.png --prompt "Place the subject on a table" --model wan2.5-i2i-preview
+```
+
+```bash
 bl image edit --image ./photo.png --prompt "Replace the background with a beach" --watermark false
 ```
 
@@ -125,6 +129,14 @@ bl image generate --prompt "An alien in the space" --watermark false
 
 ```bash
 bl image generate --prompt "sunset" --model wan2.6-t2i --async --quiet
+```
+
+```bash
+bl image generate --prompt "plush doll" --model z-image-turbo --size 1024*1024
+```
+
+```bash
+bl image generate --prompt "sunset" --model wanx2.0-t2i-turbo --size 1024*1024
 ```
 
 ```bash
