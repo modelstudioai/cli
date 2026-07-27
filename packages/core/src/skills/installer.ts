@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
-import { atomicSwap, extractTarBr } from "./extract.ts";
+import { atomicSwap, computeDirContentHash, extractTarBr } from "./extract.ts";
 import { getSkillsDir } from "./lock.ts";
 import { downloadSkillAsset } from "./registry.ts";
 import { isSafeSkillName } from "./sanitize.ts";
@@ -34,6 +34,7 @@ function assertSafeName(name: string): void {
 export async function installSkillFromBuffer(
   name: string,
   tarBrBuffer: Buffer,
+  expectedContentHash?: string,
 ): Promise<InstalledSkill> {
   assertSafeName(name);
   const skillsDir = getSkillsDir();
@@ -43,6 +44,18 @@ export async function installSkillFromBuffer(
   try {
     mkdirSync(tmpDir, { recursive: true });
     await extractTarBr(tarBrBuffer, tmpDir);
+    // Integrity check before touching canonical: recompute the publisher fingerprint over
+    // the extracted files; on mismatch the current installation is left untouched
+    if (expectedContentHash?.startsWith("sha256:")) {
+      const actualContentHash = computeDirContentHash(tmpDir);
+      if (actualContentHash !== expectedContentHash) {
+        throw new BailianError(
+          `Skill ${name} failed integrity check: index says ${expectedContentHash}, archive is ${actualContentHash}`,
+          ExitCode.GENERAL,
+          "Downloaded archive does not match the index fingerprint (registry may be mid-publish); retry later",
+        );
+      }
+    }
     const meta = validateSkillDir(tmpDir, name);
     atomicSwap(tmpDir, dest);
     return { name, path: dest, meta };
@@ -60,8 +73,8 @@ export async function installSkill(name: string, entry: SkillIndexEntry): Promis
       "Upgrade bailian-cli to the latest version and retry",
     );
   }
-  const buffer = await downloadSkillAsset(name);
-  return installSkillFromBuffer(name, buffer);
+  const buffer = await downloadSkillAsset(name, entry);
+  return installSkillFromBuffer(name, buffer, entry.contentHash);
 }
 
 /** Remove the skill directory under canonical; returns whether it was actually deleted (dir absent → false) */

@@ -11,7 +11,8 @@
  *       upsertSkillLockEntry: write lock WITH links so bl skill remove can reclaim correctly)
  *
  * Protocol: unified skill publishing protocol (FC publish-skills, all skills are isomorphic), entry point is
- * skills/index.json, one skill.tar.br per skill (brotli q6).
+ * skills/index.json, one content-addressed object per skill (sha256-<hex>.tar.br, brotli q6;
+ * legacy fallback skill.tar.br).
  *
  * Complements postinstall.js (layer 1, unconditional overwrite on npm install). Install, extraction,
  * validation, fan-out and lock writing all reuse the skills/ module (same as bl skill add), symmetric
@@ -45,7 +46,6 @@ interface SyncState {
 }
 
 interface SkillsIndex {
-  version: number;
   updatedAt?: string;
   skills: Record<string, SkillIndexEntry>;
 }
@@ -121,7 +121,7 @@ async function fetchIndexEntry(): Promise<SkillIndexEntry | null> {
     });
     if (!res.ok) return null;
     const index = (await res.json()) as SkillsIndex;
-    if (typeof index?.version !== "number" || !index.skills) return null;
+    if (!index?.skills || typeof index.skills !== "object") return null;
     return index.skills[WIKI_SKILL_NAME] ?? null;
   } catch {
     return null;

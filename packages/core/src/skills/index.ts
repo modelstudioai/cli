@@ -7,7 +7,12 @@ export type {
   SkillStatus,
   SkillStatusRow,
 } from "./types.ts";
-export { getSkillRegistryBaseUrl, fetchSkillsIndex, downloadSkillAsset } from "./registry.ts";
+export {
+  getSkillRegistryBaseUrl,
+  fetchSkillsIndex,
+  downloadSkillAsset,
+  resolveAssetFileName,
+} from "./registry.ts";
 export {
   getSkillsDir,
   getSkillLockPath,
@@ -18,7 +23,7 @@ export {
 } from "./lock.ts";
 export { sanitizeSkillName, isSafeSkillName } from "./sanitize.ts";
 export { validateSkillDir, type SkillMeta } from "./validate.ts";
-export { extractTarBr, atomicSwap, isSafeEntryName } from "./extract.ts";
+export { extractTarBr, atomicSwap, isSafeEntryName, computeDirContentHash } from "./extract.ts";
 export {
   getAgentTargets,
   detectInstalledAgents,

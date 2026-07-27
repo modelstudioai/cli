@@ -7,7 +7,6 @@ const PUB = "2026-07-23T00:00:00+08:00";
 
 function makeIndex(skills: Record<string, string>): SkillsIndex {
   return {
-    version: 1,
     skills: Object.fromEntries(
       Object.entries(skills).map(([name, contentHash]) => [
         name,

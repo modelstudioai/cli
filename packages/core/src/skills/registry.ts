@@ -1,6 +1,6 @@
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
-import type { SkillsIndex } from "./types.ts";
+import type { SkillIndexEntry, SkillsIndex } from "./types.ts";
 
 /**
  * Skill registry client: public-read OSS, pure HTTPS GET, zero credentials (usable with auth: "none").
@@ -8,8 +8,6 @@ import type { SkillsIndex } from "./types.ts";
  * for canary/private mirror scenarios.
  */
 const DEFAULT_REGISTRY_BASE_URL = "https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/skills";
-/** index.json protocol version supported by this client */
-const SUPPORTED_INDEX_VERSION = 1;
 
 const INDEX_TIMEOUT_MS = 10_000;
 const ASSET_TIMEOUT_MS = 120_000;
@@ -69,19 +67,24 @@ export async function fetchSkillsIndex(): Promise<SkillsIndex> {
       "Retry later or contact the publisher",
     );
   }
-  if (index.version !== SUPPORTED_INDEX_VERSION) {
-    throw new BailianError(
-      `Skill index protocol version ${index.version} is not supported by this CLI`,
-      ExitCode.GENERAL,
-      "Upgrade bailian-cli to the latest version and retry",
-    );
-  }
   return index;
 }
 
+/**
+ * Strict shape check for entry.object (defense against a hostile/corrupted index —
+ * anything not matching falls back to the legacy fixed key, never into the URL path).
+ */
+const OBJECT_FILE_RE = /^sha256-[0-9a-f]{64}\.tar\.br$/;
+
+/** Resolve which file to download for a skill: content-addressed object, else legacy fixed key */
+export function resolveAssetFileName(entry?: SkillIndexEntry): string {
+  const object = entry?.object;
+  return object && OBJECT_FILE_RE.test(object) ? object : "skill.tar.br";
+}
+
 /** Download the tar.br archive for a single skill (one skill = one GET) */
-export async function downloadSkillAsset(name: string): Promise<Buffer> {
-  const url = `${getSkillRegistryBaseUrl()}/${name}/skill.tar.br`;
+export async function downloadSkillAsset(name: string, entry?: SkillIndexEntry): Promise<Buffer> {
+  const url = `${getSkillRegistryBaseUrl()}/${name}/${resolveAssetFileName(entry)}`;
   let res: Response;
   try {
     res = await fetch(url, { signal: AbortSignal.timeout(ASSET_TIMEOUT_MS) });

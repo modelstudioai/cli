@@ -3,7 +3,16 @@
  * Symmetric with the publisher (FC skills-publish.mjs: tar.pack + brotli); uses only Node built-in
  * zlib + tar-stream, no extra decompression dependencies.
  */
-import { createWriteStream, existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
+import {
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+} from "node:fs";
+import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -44,6 +53,31 @@ export async function extractTarBr(tarBrBuffer: Buffer, destDir: string): Promis
   });
 
   await pipeline(Readable.from(tarBrBuffer), createBrotliDecompress(), extract);
+}
+
+/**
+ * Recompute the publisher's deterministic content hash over an extracted directory:
+ * regular files sorted by "/"-separated relative path (code-unit order, same as the
+ * publisher's byte-order sort for ASCII paths), sha256 accumulating relPath + bytes.
+ * Symmetric with computeContentHash in FC skills-publish.mjs.
+ */
+export function computeDirContentHash(dir: string): string {
+  const relPaths: string[] = [];
+  const walk = (sub: string): void => {
+    for (const dirent of readdirSync(sub ? join(dir, sub) : dir, { withFileTypes: true })) {
+      const rel = sub ? `${sub}/${dirent.name}` : dirent.name;
+      if (dirent.isDirectory()) walk(rel);
+      else if (dirent.isFile()) relPaths.push(rel);
+    }
+  };
+  walk("");
+  relPaths.sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+  const hash = createHash("sha256");
+  for (const rel of relPaths) {
+    hash.update(rel);
+    hash.update(readFileSync(join(dir, rel)));
+  }
+  return `sha256:${hash.digest("hex")}`;
 }
 
 /**

@@ -5,9 +5,10 @@
  * package and overwrites the local directory, ensuring data is in place the first time the user runs
  * `bl advisor recommend`.
  *
- * Flow (unified skill publishing protocol: skills/index.json + one skill.tar.br per skill):
+ * Flow (unified skill publishing protocol: skills/index.json + one content-addressed object per skill):
  *   1. Download skills/index.json from public-read OSS, get the bailian-docs-llm-wiki entry
- *   2. Download skills/bailian-docs-llm-wiki/skill.tar.br (brotli q6, ~2.3MB)
+ *   2. Download skills/bailian-docs-llm-wiki/<entry.object> (sha256-<hex>.tar.br, brotli q6, ~2.3MB);
+ *      legacy fallback to skill.tar.br when the entry has no valid object field
  *   3. Node built-in brotli decompress + tar-stream extract (per-entry path safety check) to same-volume temp dir
  *   4. renameSync atomic swap into ~/.bailian/skills/bailian-docs-llm-wiki/
  *   5. Write ~/.bailian/wiki-sync-state.json
@@ -41,7 +42,10 @@ const CONFIG_DIR_NAME = ".bailian";
 const SKILL_DIR_NAME = "skills/bailian-docs-llm-wiki";
 const STATE_FILE_NAME = "wiki-sync-state.json";
 const INDEX_KEY = "index.json";
-const ASSET_NAME = "skill.tar.br";
+/** Legacy fixed asset key (entries without a valid content-addressed object field) */
+const LEGACY_ASSET_NAME = "skill.tar.br";
+/** Same strict shape check as core registry.ts: only a valid object name may enter the URL */
+const OBJECT_FILE_RE = /^sha256-[0-9a-f]{64}\.tar\.br$/;
 
 const INDEX_TIMEOUT_MS = 3000;
 const DOWNLOAD_TIMEOUT_MS = 30000;
@@ -153,8 +157,10 @@ async function main() {
   if (!entry?.contentHash)
     throw new Error("no bailian-docs-llm-wiki entry (or contentHash) in index.json");
 
-  // 2. Download skill.tar.br (per-entry path safety check during extraction)
-  const tarBuf = await downloadBuffer(`${REGISTRY_BASE_URL}/${WIKI_SKILL_NAME}/${ASSET_NAME}`);
+  // 2. Download the skill archive: content-addressed object first, legacy fixed key as fallback
+  const assetName =
+    entry.object && OBJECT_FILE_RE.test(entry.object) ? entry.object : LEGACY_ASSET_NAME;
+  const tarBuf = await downloadBuffer(`${REGISTRY_BASE_URL}/${WIKI_SKILL_NAME}/${assetName}`);
 
   // 3. Extract to same-volume temp dir + atomic swap
   const catalogDir = getCatalogDir();

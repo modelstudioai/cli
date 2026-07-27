@@ -2,8 +2,10 @@
  * Data structures for the unified skill publishing protocol (symmetric with FC publisher skills-publish.mjs).
  *
  * Remote layout (public-read OSS, the sole data source for `bl skill`):
- *   <registry>/index.json               — skill catalog (SkillsIndex)
- *   <registry>/<name>/skill.tar.br      — one object per skill (tar + brotli, atomic publish)
+ *   <registry>/index.json                       — skill catalog (SkillsIndex)
+ *   <registry>/<name>/sha256-<hex>.tar.br       — content-addressed skill object (tar + brotli);
+ *     entry.object names the exact file, so index.json is the single atomic commit point.
+ *     Legacy fallback: <registry>/<name>/skill.tar.br (entries without object)
  *
  * Local layout:
  *   ~/.bailian/skills/<name>/           — canonical install directory
@@ -22,11 +24,14 @@ export interface SkillIndexEntry {
   contentHash?: string;
   /** Compression format identifier, currently always "tar.br" */
   compression?: string;
+  /**
+   * Content-addressed object file name under <registry>/<name>/, e.g. "sha256-<hex>.tar.br".
+   * Absent on legacy entries — client falls back to the fixed key "skill.tar.br".
+   */
+  object?: string;
 }
 
 export interface SkillsIndex {
-  /** Protocol schema version, currently 1; client should error and prompt upgrade on unrecognized versions */
-  version: number;
   updatedAt?: string;
   /** key = skill name (i.e. OSS directory name, download path, local install dir name) */
   skills: Record<string, SkillIndexEntry>;

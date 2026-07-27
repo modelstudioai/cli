@@ -1,4 +1,5 @@
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "fs";
+import { createHash } from "crypto";
 import { tmpdir } from "os";
 import { join } from "path";
 import { brotliCompressSync } from "zlib";
@@ -96,5 +97,42 @@ test("installer: invalid skill name rejected outright", async () => {
   await inTempConfigDir(async () => {
     const buf = await buildTarBr({ "SKILL.md": VALID_SKILL_MD });
     await expect(installSkillFromBuffer("../escape", buf)).rejects.toThrow(/Invalid skill name/);
+  });
+});
+
+/** Same accumulation as publisher computeContentHash: sorted rel path + bytes */
+function expectedHashOf(files: Record<string, string>): string {
+  const hash = createHash("sha256");
+  for (const rel of Object.keys(files).sort()) {
+    hash.update(rel);
+    hash.update(Buffer.from(files[rel]));
+  }
+  return `sha256:${hash.digest("hex")}`;
+}
+
+test("installer: matching contentHash passes integrity check", async () => {
+  await inTempConfigDir(async () => {
+    const files = { "SKILL.md": VALID_SKILL_MD, "references/usage.md": "# usage\n" };
+    const installed = await installSkillFromBuffer(
+      "demo",
+      await buildTarBr(files),
+      expectedHashOf(files),
+    );
+    expect(installed.name).toBe("demo");
+    expect(existsSync(join(getSkillsDir(), "demo", "SKILL.md"))).toBe(true);
+  });
+});
+
+test("installer: contentHash mismatch → rejected, previous install preserved", async () => {
+  await inTempConfigDir(async () => {
+    await installSkillFromBuffer("demo", await buildTarBr({ "SKILL.md": VALID_SKILL_MD }));
+    const tampered = await buildTarBr({ "SKILL.md": VALID_SKILL_MD, "extra.md": "tampered\n" });
+    await expect(
+      installSkillFromBuffer("demo", tampered, expectedHashOf({ "SKILL.md": VALID_SKILL_MD })),
+    ).rejects.toThrow(/integrity check/);
+    // Old version untouched, temp dir cleaned up
+    expect(readFileSync(join(getSkillsDir(), "demo", "SKILL.md"), "utf-8")).toBe(VALID_SKILL_MD);
+    expect(existsSync(join(getSkillsDir(), "demo", "extra.md"))).toBe(false);
+    expect(readdirSync(getSkillsDir()).filter((e) => e !== "demo")).toEqual([]);
   });
 });
