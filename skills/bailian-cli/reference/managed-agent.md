@@ -157,6 +157,7 @@ bl managed-agent init --provider all
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+- --no-refresh and --dry-run plan offline from local config and state: no credentials, no remote requests, no state writes.
 
 #### Examples
 

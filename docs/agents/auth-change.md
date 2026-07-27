@@ -57,7 +57,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 
 `bl managed-agent *` 按调用链分两层，不再全命令硬门禁:
 
-- **离线命令** — `init`、`validate`、`state list/show/rm`:`auth: "none"`，只读写本地文件，无需登录;引擎侧传 `credentials: "none"` 跳过凭证断言（`plan --no-refresh` 同样传 `"none"`）
+- **离线命令** — `init`、`validate`、`state list/show/rm`:`auth: "none"`，只读写本地文件，无需登录;引擎侧传 `credentials: "none"` 跳过凭证断言（`plan --no-refresh` 与 `plan --dry-run` 同样传 `"none"` 并强制 `refresh: false`：不联网、不回写 state）
 - **provider-aware 命令** — `plan`(默认)、`apply`、`destroy`、`state import`、`skill-list`、全部 `session *`:仍声明 `auth: "apiKey"` 但加 `authOptional: true` —— authStage 照常经 `resolveApiKey(sources)` 解析 bailian 凭证(flag > env > active profile config)并注入 `ctx.client`，但缺失不在 authStage 抛;真正的门禁在引擎层 `assertProviderCredentials`，只校验本次运行涉及的 provider（`CredentialScope`:`--provider` / state 地址里的 provider / 配置默认 provider 链）。配了四个 provider 只跑 claude 时，缺 bailian key 不阻塞。
 
 凭证不以真实值写入 `process.env`，而是经 `packages/commands/src/commands/managed-agent/_engine/` 的**内存注入管道**(`resolveAgentProjectConfig`)注入 SDK，管道五步:

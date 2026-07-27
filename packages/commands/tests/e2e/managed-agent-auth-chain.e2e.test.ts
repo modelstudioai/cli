@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -55,6 +55,35 @@ function planArgs(file: string): string[] {
 /** 隔离宿主机的 ~/.agents/config.json，避免它强制覆盖 provider 凭证 env。 */
 function isolatedAgentsConfigEnv(): NodeJS.ProcessEnv {
   return { AGENTS_CONFIG_PATH: join(tmpdir(), "bl-e2e-no-agents-config.json") };
+}
+
+/**
+ * 在临时目录里搭一套非空 state 的项目：agents.yaml 复用单 provider fixture，
+ * agents.state.json 预置一条已追踪资源 —— 非空 state 是触发 plan 默认 refresh
+ * 路径的前提，用于验证 --dry-run 强制离线。目录纳入 tempDirs 自动清理。
+ */
+function makeStatefulProject(): { configPath: string; statePath: string } {
+  const dir = mkdtempSync(join(tmpdir(), "bl-managed-agent-dry-run-"));
+  tempDirs.push(dir);
+  const configPath = join(dir, "agents.yaml");
+  const statePath = join(dir, "agents.state.json");
+  writeFileSync(configPath, readFileSync(AGENTS_YAML, "utf8"));
+  writeFileSync(
+    statePath,
+    `${JSON.stringify(
+      {
+        resources: [
+          {
+            address: { provider: "bailian", type: "agent", name: "assistant" },
+            remote_id: "agent-e2e-dry-run",
+          },
+        ],
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  return { configPath, statePath };
 }
 
 /** 分配一个刚释放的本地端口，连接必然 ECONNREFUSED，用于网络错误场景。 */
@@ -213,5 +242,40 @@ describe("e2e: managed-agent 鉴权分层（离线命令免登录 / provider-awa
     );
     expect(exitCode).toBe(3);
     expect(stderr).toMatch(/ANTHROPIC_API_KEY/);
+  });
+});
+
+describe("e2e: plan --dry-run 离线契约（不联网 / 不写 state / 免凭证）", () => {
+  test("无任何凭证时 plan --dry-run 不报 AUTH，离线出 plan (0)", async () => {
+    const env = makeConfigEnv({});
+    const { stderr, exitCode } = await runCommandE2e(
+      ROUTES,
+      [...planArgs(AGENTS_YAML), "--dry-run"],
+      env,
+    );
+    expect(exitCode, stderr).toBe(0);
+  });
+
+  test("有凭证且 state 非空时，--dry-run 跳过 refresh：不发请求、state 文件不变；同环境不加 --dry-run 则证明会联网", async () => {
+    const { configPath, statePath } = makeStatefulProject();
+    // base_url 指向必然 ECONNREFUSED 的本地端口：一旦 refresh 真发请求必现形。
+    // refresh 对 API 错误优雅降级(不影响退出码)，因此用 stderr 的
+    // "Failed to refresh" 告警作为「发过请求」的观测信号。
+    const port = await closedPort();
+    const env = makeConfigEnv({
+      api_key: "sk-e2e-dry-run",
+      base_url: `http://127.0.0.1:${port}`,
+    });
+    const stateBefore = readFileSync(statePath, "utf8");
+
+    // 对照组：不加 --dry-run，默认 refresh 路径真实访问远端 → 出现 refresh 失败告警。
+    const withoutDryRun = await runCommandE2e(ROUTES, planArgs(configPath), env);
+    expect(withoutDryRun.stderr).toMatch(/Failed to refresh/i);
+
+    // --dry-run：同环境必须完全离线成功，无任何 refresh 痕迹，且不回写 state 文件。
+    const withDryRun = await runCommandE2e(ROUTES, [...planArgs(configPath), "--dry-run"], env);
+    expect(withDryRun.exitCode, withDryRun.stderr).toBe(0);
+    expect(withDryRun.stderr).not.toMatch(/Failed to refresh/i);
+    expect(readFileSync(statePath, "utf8")).toBe(stateBefore);
   });
 });

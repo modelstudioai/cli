@@ -41,28 +41,34 @@ const PLAN_FLAGS = {
 export default defineCommand({
   description: "Show what changes would be applied to agent infrastructure",
   auth: "apiKey",
-  // Provider-aware gate: --no-refresh plans fully offline; a refreshing run
-  // only needs credentials for the providers it targets (see CredentialScope).
+  // Provider-aware gate: --no-refresh / --dry-run plan fully offline; a
+  // refreshing run only needs credentials for the providers it targets
+  // (see CredentialScope).
   authOptional: true,
   usageArgs: "[--file <path>] [--provider <name>] [--no-refresh] [--refresh-only]",
   flags: PLAN_FLAGS,
   exampleArgs: ["", "--provider bailian", "--no-refresh"],
-  notes: CREDENTIALS_NOTE,
+  notes: [
+    ...CREDENTIALS_NOTE,
+    "--no-refresh and --dry-run plan offline from local config and state: no credentials, no remote requests, no state writes.",
+  ],
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
     const file = flags.file ?? "agents.yaml";
+    // Offline mode never talks to a provider and never saves refreshed state:
+    // --no-refresh by explicit request, --dry-run by contract (read-only run).
+    const offline = Boolean(flags.noRefresh) || settings.dryRun;
 
     const planned = await withAgentErrors(() =>
       withStdoutProtected(async () => {
-        // --no-refresh never talks to a provider → no credentials required.
         const runtime = await buildAgentRuntime(ctx, file, {
-          credentials: flags.noRefresh ? "none" : (flags.provider ?? "targets"),
+          credentials: offline ? "none" : (flags.provider ?? "targets"),
         });
         assertProviderConfigured(runtime, flags.provider);
         return planProjectContext(runtime, {
           provider: flags.provider,
-          refresh: !flags.noRefresh,
+          refresh: !offline,
           quiet: format === "json",
           onFeedback: format === "json" ? undefined : renderAgentFeedback,
         });
