@@ -4,6 +4,9 @@ import {
   parseSSE,
   detectOutputFormat,
   readTextFromPathOrStdin,
+  applyChatEnableThinking,
+  resolveChatEnableThinking,
+  withEnableThinkingRetry,
   type ChatMessage,
   type ChatRequest,
   type ChatResponse,
@@ -124,7 +127,8 @@ export default defineCommand({
     const { system, messages } = parseMessages(flags);
 
     const model = flags.model || settings.defaultTextModel || "qwen3.7-max";
-    const shouldStream = flags.stream || process.stdout.isTTY;
+    // Coerce isTTY (may be undefined) so stream:false is serialized.
+    const shouldStream = Boolean(flags.stream || process.stdout.isTTY);
     const format = detectOutputFormat(settings.output);
 
     // Build messages array with system prompt
@@ -144,16 +148,13 @@ export default defineCommand({
     if (flags.temperature !== undefined) body.temperature = flags.temperature;
     if (flags.topP !== undefined) body.top_p = flags.topP;
 
-    if (flags.enableThinking) {
-      body.enable_thinking = true;
-      if (flags.thinkingBudget !== undefined) {
-        body.thinking_budget = flags.thinkingBudget;
-      }
-    } else if (!shouldStream) {
-      // DashScope qwen3 models default to enable_thinking=true server-side, but
-      // non-streaming calls require it to be explicitly false. Stream calls
-      // support thinking, so leave the field unset there (server handles it).
-      body.enable_thinking = false;
+    const enableThinking = resolveChatEnableThinking({
+      enableThinking: flags.enableThinking,
+      stream: shouldStream,
+    });
+    applyChatEnableThinking(body, enableThinking);
+    if (enableThinking === true && flags.thinkingBudget !== undefined) {
+      body.thinking_budget = flags.thinkingBudget;
     }
 
     if (flags.tool) {
@@ -229,10 +230,15 @@ export default defineCommand({
         resultOut.write("\n");
       }
     } else {
-      const response = await ctx.client.requestJson<ChatResponse>({
-        path: chatPath(),
-        method: "POST",
-        body,
+      const response = await withEnableThinkingRetry({
+        initial: enableThinking,
+        apply: (value) => applyChatEnableThinking(body, value),
+        run: () =>
+          ctx.client.requestJson<ChatResponse>({
+            path: chatPath(),
+            method: "POST",
+            body,
+          }),
       });
 
       const text = response.choices?.[0]?.message?.content ?? "";
