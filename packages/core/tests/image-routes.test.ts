@@ -27,6 +27,7 @@ test("legacy text2image covers wan2.5/2.2/2.1 t2i and wanx but not wan2.6-t2i/im
   expect(isLegacyText2ImageModel("wan2.1-t2i-turbo")).toBe(true);
   expect(isLegacyText2ImageModel("wanx2.0-t2i-turbo")).toBe(true);
   expect(isLegacyText2ImageModel("wanx-v1")).toBe(true);
+  expect(isLegacyText2ImageModel("wanx-v1-0521")).toBe(true);
   expect(isLegacyText2ImageModel("wan2.6-t2i")).toBe(false);
   expect(isLegacyText2ImageModel("wan2.6-image")).toBe(false);
   expect(isLegacyText2ImageModel("wan2.7-image")).toBe(false);
@@ -48,6 +49,7 @@ test("size profiles are model-specific, not sync/async", () => {
   expect(resolveImageSizeProfile("z-image-turbo")).toBe("z-image");
   expect(resolveImageSizeProfile("wan2.6-t2i")).toBe("wan26");
   expect(resolveImageSizeProfile("wanx-v1")).toBe("wanx-v1");
+  expect(resolveImageSizeProfile("wanx-v1-0521")).toBe("wanx-v1");
   expect(resolveImageSizeProfile("wan2.5-i2i-preview")).toBe("wan25-i2i");
   expect(resolveImageSizeProfile("wan2.2-t2i-plus")).toBe("wan-legacy");
 });
@@ -71,6 +73,13 @@ test("resolveImageGenerateApi picks path, input style, and size profile", () => 
   expect(resolveImageGenerateApi("wanx-v1")).toMatchObject({
     sizeProfile: "wanx-v1",
     inputStyle: "prompt",
+  });
+  expect(resolveImageGenerateApi("wanx-v1-0521")).toMatchObject({
+    kind: "async-text2image",
+    path: "/api/v1/services/aigc/text2image/image-synthesis",
+    inputStyle: "prompt",
+    useSync: false,
+    sizeProfile: "wanx-v1",
   });
   expect(resolveImageGenerateApi("wan2.6-t2i")).toMatchObject({
     kind: "async-image-generation",

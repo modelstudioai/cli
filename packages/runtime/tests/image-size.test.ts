@@ -15,6 +15,12 @@ test("wanx-v1 profile maps 1:1 to 1024*1024", () => {
   expect(resolveImageSize("16:9", "wanx-v1")).toBe("1280*720");
 });
 
+test("wan26 profile maps 16:9 and 9:16 to ≥1280*1280 total pixels", () => {
+  expect(resolveImageSize("16:9", "wan26")).toBe("1696*960");
+  expect(resolveImageSize("9:16", "wan26")).toBe("960*1696");
+  expect(resolveImageSize("1:1", "wan26")).toBe("1280*1280");
+});
+
 test("wan2.5-i2i profile maps 1:1 to 1280*1280", () => {
   expect(resolveImageSize("1:1", "wan25-i2i")).toBe("1280*1280");
 });

@@ -46,11 +46,11 @@ export const Z_IMAGE_RATIO_MAP: Record<string, string> = {
   "2:3": "832*1248",
 };
 
-/** wan2.6-t2i / wan2.6-image / wan2.5-t2i — ~1280 class. */
+/** wan2.6-t2i / wan2.6-image / wan2.5-t2i — total pixels ≥ 1280*1280. */
 export const WAN26_RATIO_MAP: Record<string, string> = {
   "1:1": "1280*1280",
-  "16:9": "1280*720",
-  "9:16": "720*1280",
+  "16:9": "1696*960",
+  "9:16": "960*1696",
   "4:3": "1472*1104",
   "3:4": "1104*1472",
 };

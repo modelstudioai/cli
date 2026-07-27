@@ -83,12 +83,17 @@ function isSyncEditModel(model: string): boolean {
   return startsWithAny(model, SYNC_EDIT_PREFIXES);
 }
 
+/** wanx-v1 and dated aliases (e.g. wanx-v1-0521) use the legacy text2image API. */
+function isWanxV1Model(model: string): boolean {
+  return /^wanx-v1(?:-|$)/i.test(model);
+}
+
 /** wan2.5 / wan2.2 / wan2.1 / wanx text-to-image models use the legacy prompt API. */
 export function isLegacyText2ImageModel(model: string): boolean {
   if (model.startsWith("wan2.6-t2i") || model.startsWith("wan2.6-image")) return false;
   if (isSyncGenerateModel(model)) return false;
   if (/^wan2\.[0-5][^-]*-t2i/i.test(model)) return true;
-  if (/^wanx-v1$/i.test(model)) return true;
+  if (isWanxV1Model(model)) return true;
   if (/^wanx/i.test(model) && /t2i|text2image/i.test(model)) return true;
   return false;
 }
@@ -120,7 +125,7 @@ export function resolveImageSizeProfile(model: string): ImageSizeProfile {
   ) {
     return "wan26";
   }
-  if (/^wanx-v1$/i.test(model)) return "wanx-v1";
+  if (isWanxV1Model(model)) return "wanx-v1";
   if (/wan2\.5-i2i/i.test(model)) return "wan25-i2i";
   if (isLegacyText2ImageModel(model)) return "wan-legacy";
   return "wan26";
