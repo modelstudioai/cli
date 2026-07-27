@@ -42,6 +42,7 @@ export default defineCommand({
     ...CREDENTIALS_NOTE,
     "Providers without a skill listing API (e.g. ark) return an empty list.",
     "For agent-driven skill selection, use `--source all --output json`: one call returns both catalogs with per-skill `source` and `description` fields to pick from.",
+    "When generating a task that needs a suitable skill, call this command to match official or custom skills before wiring them into the task.",
   ],
   validate: (f) =>
     f.source && !SKILL_SOURCES.includes(f.source as SkillSource)
