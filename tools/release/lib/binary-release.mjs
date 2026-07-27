@@ -27,7 +27,11 @@ import { ROOT, readPackageJson, PACKAGES } from "./packages.mjs";
 import { buildBinaryArtifacts, matrixAssetNames } from "./binary-build.mjs";
 import { channelManifestFileName, normalizeModeChannel } from "./binary-options.mjs";
 import { ensureGh, GITHUB_REPOSITORY, upsertRelease } from "./gh-release.mjs";
-import { maintainReleaseManifest, mirrorReleaseAssetsToOss } from "./oss-direct-upload.mjs";
+import {
+  maintainReleaseManifest,
+  mirrorReleaseAssetsToOss,
+  syncStaticFilesToOss,
+} from "./oss-direct-upload.mjs";
 
 const DEFAULT_DIR = join(ROOT, "dist-bin");
 
@@ -179,6 +183,10 @@ export async function releaseBinaryArtifacts(rawOptions = {}) {
     process.stdout.write(`[dry-run] ${dir} missing; planning expected assets\n`);
     planDryRunWithoutArtifacts({ version, mode, channel });
     const plans = ossMirrorPlans({ dir, version, mode, channel, files: null });
+    await syncStaticFilesToOss({
+      filePaths: [join(ROOT, "CHANGELOG.md"), join(ROOT, "CHANGELOG.zh.md")],
+      dryRun: true,
+    });
     await mirrorReleaseAssetsToOss({ plans, dryRun: true });
     if (mode === "stable") {
       await maintainReleaseManifest({
@@ -226,6 +234,11 @@ export async function releaseBinaryArtifacts(rawOptions = {}) {
     uploadChannel({ dir, version, channel, files, dryRun });
   }
 
+  // Sync changelogs (and other static files) to OSS before the binary mirror.
+  await syncStaticFilesToOss({
+    filePaths: [join(ROOT, "CHANGELOG.md"), join(ROOT, "CHANGELOG.zh.md")],
+    dryRun,
+  });
   // Push the exact Release assets straight to OSS from the runner, then
   // HEAD-reconcile. Stable releases additionally maintain release/manifest.json
   // (newer-version guard). Throws on failure — CI is the only OSS writer.
