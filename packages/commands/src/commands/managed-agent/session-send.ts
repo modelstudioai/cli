@@ -75,7 +75,9 @@ export default defineCommand({
           const result = await sendSessionMessagePolling(runtime, flags.sessionId, flags.message, {
             provider: flags.provider,
           });
-          renderCollectedEvents(result, asJson);
+          renderCollectedEvents(result, asJson, {
+            session_id: flags.sessionId,
+          });
         } else {
           const events = await sendSessionMessageStreaming(
             runtime,
@@ -85,7 +87,9 @@ export default defineCommand({
               provider: flags.provider,
             },
           );
-          await streamAndRenderEvents(events, asJson);
+          await streamAndRenderEvents(events, asJson, {
+            session_id: flags.sessionId,
+          });
         }
       }),
     );

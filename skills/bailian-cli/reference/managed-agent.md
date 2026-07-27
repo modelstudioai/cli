@@ -385,6 +385,7 @@ bl managed-agent session list --all
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Only the providers this run involves (--provider, or the config's default provider chain) need credentials; other configured providers are not checked.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+- --output json emits one envelope: { session_id, provider, agent, events } — read session_id to chain `session send/get/events/delete`.
 
 #### Examples
 

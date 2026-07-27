@@ -62,7 +62,10 @@ export default defineCommand({
   usageArgs: "--prompt <text> [--agent <name>] [--no-stream] [--file <path>]",
   flags: SESSION_RUN_FLAGS,
   exampleArgs: ['--prompt "hello"', '--agent assistant --prompt "summarize this repo"'],
-  notes: CREDENTIALS_NOTE,
+  notes: [
+    ...CREDENTIALS_NOTE,
+    "--output json emits one envelope: { session_id, provider, agent, events } — read session_id to chain `session send/get/events/delete`.",
+  ],
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
@@ -106,11 +109,19 @@ export default defineCommand({
         if (flags.noStream) {
           const run = await startSessionRunPolling(runtime, flags.prompt, runOptions);
           if (!asJson) process.stderr.write(`Session created: ${run.session.id}\n`);
-          renderCollectedEvents(run, asJson);
+          renderCollectedEvents(run, asJson, {
+            session_id: run.session.id,
+            provider: run.provider,
+            agent: run.agentName,
+          });
         } else {
           const run = await startSessionRun(runtime, flags.prompt, runOptions);
           if (!asJson) process.stderr.write(`Session created: ${run.session.id}\n`);
-          await streamAndRenderEvents(run.events, asJson);
+          await streamAndRenderEvents(run.events, asJson, {
+            session_id: run.session.id,
+            provider: run.provider,
+            agent: run.agentName,
+          });
         }
       }),
     );

@@ -16,14 +16,28 @@ function renderTerminalStatus(status: string, json: boolean): void {
 }
 
 /**
+ * Session identity echoed at the head of the `--output json` envelope so
+ * callers can read the (possibly just-created) session id from stdout and
+ * chain `session send/get/events/delete` — without scraping stderr.
+ * Undefined fields are dropped by JSON.stringify.
+ */
+export interface SessionRenderContext {
+  session_id?: string;
+  provider?: string;
+  agent?: string;
+}
+
+/**
  * Consume an SSE stream. Text mode renders live (assistant text → stdout,
  * diagnostics → stderr). JSON mode collects every event and emits exactly one
  * JSON document at the end — `--output json` guarantees a single valid JSON
- * result on stdout (mirrors `text chat --stream --output json`).
+ * result on stdout (mirrors `text chat --stream --output json`). `context`
+ * prefixes the envelope with the session identity.
  */
 export async function streamAndRenderEvents(
   events: AsyncIterable<ProviderSessionEvent>,
   json: boolean,
+  context: SessionRenderContext = {},
 ): Promise<void> {
   const collected: ProviderSessionEvent[] = [];
   for await (const event of events) {
@@ -36,7 +50,7 @@ export async function streamAndRenderEvents(
   }
   if (json) {
     process.stdout.write(
-      `${JSON.stringify({ events: sanitizeSessionEvents(collected) }, null, 2)}\n`,
+      `${JSON.stringify({ ...context, events: sanitizeSessionEvents(collected) }, null, 2)}\n`,
     );
   }
 }
@@ -59,12 +73,17 @@ function renderEvent(event: ProviderSessionEvent): void {
   }
 }
 
-/** Render a polled (non-streaming) collected result. */
-export function renderCollectedEvents(result: CollectedSessionEvents, json: boolean): void {
+/** Render a polled (non-streaming) collected result. `context` prefixes the JSON envelope. */
+export function renderCollectedEvents(
+  result: CollectedSessionEvents,
+  json: boolean,
+  context: SessionRenderContext = {},
+): void {
   if (json) {
     process.stdout.write(
       `${JSON.stringify(
         {
+          ...context,
           events: sanitizeSessionEvents(result.result.events),
           has_more: result.result.has_more,
           next_page: result.result.next_page,
