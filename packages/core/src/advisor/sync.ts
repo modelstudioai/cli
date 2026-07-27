@@ -5,23 +5,27 @@
  *   1. 12h throttle: skip if last check was less than 12h ago
  *   2. Download skills/index.json from public-read OSS, compare bailian-docs-llm-wiki entry version
  *   3. Same version → only refresh lastChecked
- *   4. Different version → download skills/bailian-docs-llm-wiki/skill.tar.br → brotli decompress +
- *      tar-stream extract (per-entry path safety check) to same-volume temp dir → renameSync atomic swap
- *      → write state + skill-lock.json record (same ledger as bl skill add; list shows installed)
+ *   4. Different version → delegate to the shared skill install pipeline
+ *      (installSkill: download + extract + SKILL.md validate + atomic swap;
+ *       linkSkillToAgents: fan-out symlinks to detected agents;
+ *       upsertSkillLockEntry: write lock WITH links so bl skill remove can reclaim correctly)
  *
  * Protocol: unified skill publishing protocol (FC publish-skills, all skills are isomorphic), entry point is
  * skills/index.json, one skill.tar.br per skill (brotli q6).
  *
- * Complements postinstall.js (layer 1, unconditional overwrite on npm install). Extraction and atomic swap
- * reuse skills/extract.ts (same as bl skill installer), symmetric with publisher tar.pack().
+ * Complements postinstall.js (layer 1, unconditional overwrite on npm install). Install, extraction,
+ * validation, fan-out and lock writing all reuse the skills/ module (same as bl skill add), symmetric
+ * with publisher tar.pack().
  *
  * Failure strategy: any step failure silently returns without updating lastChecked; next recommend retries immediately.
  */
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getConfigDir } from "../config/paths.ts";
-import { atomicSwap, extractTarBr } from "../skills/extract.ts";
+import { detectInstalledAgents, linkSkillToAgents } from "../skills/agents.ts";
+import { installSkill } from "../skills/installer.ts";
 import { readSkillLock, upsertSkillLockEntry } from "../skills/lock.ts";
+import type { SkillIndexEntry } from "../skills/types.ts";
 
 /** Public-read OSS skill registry root (hardcoded, does not use env). */
 const REGISTRY_BASE_URL = "https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/skills";
@@ -30,11 +34,9 @@ const SKILL_DIR_NAME = "skills/bailian-docs-llm-wiki";
 const STATE_FILE_NAME = "wiki-sync-state.json";
 const MODELS_FILE = "models.jsonl";
 const INDEX_KEY = "index.json";
-const ASSET_NAME = "skill.tar.br";
 
 const THROTTLE_MS = 12 * 60 * 60 * 1000; // 12h
 const INDEX_TIMEOUT_MS = 3000;
-const DOWNLOAD_TIMEOUT_MS = 30000;
 
 interface SyncState {
   lastChecked: number;
@@ -42,20 +44,10 @@ interface SyncState {
   contentHash: string;
 }
 
-/** A single skill entry in skills/index.json (unified publishing protocol) */
-interface IndexSkillEntry {
-  /** Reserved for the skill's own semantic version; not used for change detection */
-  version?: string;
-  publishedAt?: string;
-  description?: string;
-  contentHash?: string;
-  compression?: string;
-}
-
 interface SkillsIndex {
   version: number;
   updatedAt?: string;
-  skills: Record<string, IndexSkillEntry>;
+  skills: Record<string, SkillIndexEntry>;
 }
 
 function getCatalogDir(): string {
@@ -93,10 +85,11 @@ function writeState(state: SyncState): void {
 
 /**
  * Record this sync in skill-lock.json so the wiki skill shares the same ledger as bl skill
- * (list shows installed instead of untracked; update can manage subsequent upgrades).
+ * (list shows installed instead of untracked; update/remove can manage it correctly).
+ * Includes fan-out links so bl skill remove can reclaim agent symlinks.
  * Bookkeeping in the silent channel must be best-effort: failure does not affect sync results.
  */
-function recordWikiInLock(entry: IndexSkillEntry): void {
+function recordWikiInLock(entry: SkillIndexEntry, links: string[]): void {
   try {
     upsertSkillLockEntry(WIKI_SKILL_NAME, {
       ...(entry.contentHash ? { contentHash: entry.contentHash } : {}),
@@ -104,6 +97,7 @@ function recordWikiInLock(entry: IndexSkillEntry): void {
       installedAt: new Date().toISOString(),
       sourceType: "oss",
       ...(entry.description ? { description: entry.description } : {}),
+      links,
     });
   } catch {
     /* Bookkeeping failure does not block sync; next sync or bl skill add will fill it in */
@@ -120,7 +114,7 @@ function wikiLockUpToDate(contentHash: string): boolean {
 }
 
 /** Fetch skills/index.json and extract the wiki skill entry; returns null on any failure */
-async function fetchIndexEntry(): Promise<IndexSkillEntry | null> {
+async function fetchIndexEntry(): Promise<SkillIndexEntry | null> {
   try {
     const res = await fetch(`${REGISTRY_BASE_URL}/${INDEX_KEY}`, {
       signal: AbortSignal.timeout(INDEX_TIMEOUT_MS),
@@ -129,16 +123,6 @@ async function fetchIndexEntry(): Promise<IndexSkillEntry | null> {
     const index = (await res.json()) as SkillsIndex;
     if (typeof index?.version !== "number" || !index.skills) return null;
     return index.skills[WIKI_SKILL_NAME] ?? null;
-  } catch {
-    return null;
-  }
-}
-
-async function downloadBuffer(url: string): Promise<Buffer | null> {
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS) });
-    if (!res.ok) return null;
-    return Buffer.from(await res.arrayBuffer());
   } catch {
     return null;
   }
@@ -172,29 +156,26 @@ export async function maybeSyncWikiData(): Promise<boolean> {
   if (dataOk && (!state || state.contentHash === entry.contentHash)) {
     writeState({ lastChecked: now, contentHash: entry.contentHash });
     // Data and content are ready but lock record is missing/stale (e.g. postinstall landed before this mechanism) → backfill
-    if (!wikiLockUpToDate(entry.contentHash)) recordWikiInLock(entry);
+    if (!wikiLockUpToDate(entry.contentHash)) recordWikiInLock(entry, []);
     return false;
   }
 
-  // 4. Different content: download + extract (with entry path safety check) + atomic swap
-  const tarBuf = await downloadBuffer(`${REGISTRY_BASE_URL}/${WIKI_SKILL_NAME}/${ASSET_NAME}`);
-  if (!tarBuf) return false;
-
-  const catalogDir = getCatalogDir();
-  // Same-volume temp dir: extract here then rename; cross-device rename would EXDEV
-  const tmpDir = `${catalogDir}.tmp-${process.pid}-${Date.now()}`;
+  // 4. Different content or missing data: delegate to the shared skill install pipeline
+  //    (download → extract → SKILL.md validate → atomic swap → fan-out → lock with links)
   try {
-    mkdirSync(tmpDir, { recursive: true });
-    await extractTarBr(tarBuf, tmpDir);
-    atomicSwap(tmpDir, catalogDir);
+    await installSkill(WIKI_SKILL_NAME, entry);
+    const agents = detectInstalledAgents();
+    const linkResults = linkSkillToAgents(WIKI_SKILL_NAME, agents);
+    const effectiveLinks = linkResults
+      .filter((link) => link.mode !== "skipped")
+      .map((link) => link.path);
+    recordWikiInLock(entry, effectiveLinks);
   } catch {
-    // Extract/swap failed → clean up temp dir, leave existing data untouched, do not write state
-    if (existsSync(tmpDir)) rmSync(tmpDir, { recursive: true, force: true });
+    // Install failed → clean exit, leave existing data untouched, do not write state; next recommend retries
     return false;
   }
 
-  // 5. Success: write state + skill-lock.json record (unified bl skill ledger)
+  // 5. Success: write state
   writeState({ lastChecked: now, contentHash: entry.contentHash });
-  recordWikiInLock(entry);
   return true;
 }

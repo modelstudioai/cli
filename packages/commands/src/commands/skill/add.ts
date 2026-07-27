@@ -22,35 +22,58 @@ interface AddOutcome {
   reason?: string;
 }
 
+/** Max number of skills downloading/installing at the same time. */
+const INSTALL_CONCURRENCY = 3;
+
+/**
+ * Run async task factories with a bounded concurrency pool.
+ * Returns results in the same order as the input tasks array.
+ */
+async function runWithConcurrency<T>(tasks: Array<() => Promise<T>>, limit: number): Promise<T[]> {
+  const results: T[] = new Array(tasks.length);
+  let nextIndex = 0;
+
+  async function worker(): Promise<void> {
+    while (nextIndex < tasks.length) {
+      const currentIndex = nextIndex++;
+      results[currentIndex] = await tasks[currentIndex]();
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(limit, tasks.length) }, () => worker());
+  await Promise.all(workers);
+  return results;
+}
+
 export default defineCommand({
   description: "Install skills from the Bailian skill registry into local agents",
   auth: "none",
-  usageArgs: "[--name <all|name,...>]",
+  usageArgs: "--name <all|name,...>",
   flags: {
     name: {
       type: "string",
       valueHint: "<all|name,...>",
-      description: "Skills to install: all (default) or comma-separated skill names",
+      description: "Skills to install: all or comma-separated skill names",
+      required: true,
     },
   },
-  exampleArgs: ["", "--name all", "--name spark-video,bailian-model-recommend"],
+  exampleArgs: ["--name all", "--name spark-video,bailian-model-recommend"],
   async run(ctx) {
     const format = detectOutputFormat(ctx.settings.output);
-    const requested = parseSkillNames(ctx.flags.name, true);
+    const requested = parseSkillNames(ctx.flags.name, false);
     const index = await fetchSkillsIndex();
     const remoteNames = Object.keys(index.skills);
     const names = requested === "all" ? remoteNames : requested;
 
     const lock = readSkillLock();
     const agents = detectInstalledAgents();
-    const results: AddOutcome[] = [];
 
-    // collect-then-throw: a single skill failure only affects itself; successful ones are written to disk and lock as usual
-    for (const name of names) {
+    // collect-then-throw: a single skill failure only affects itself; successful ones are written to disk and lock as usual.
+    // Skills install concurrently (bounded by INSTALL_CONCURRENCY) — each writes to a disjoint canonical dir, unique tmpDir, and distinct lock key.
+    const tasks = names.map((name) => async (): Promise<AddOutcome> => {
       const entry = index.skills[name];
       if (!entry) {
-        results.push({ name, status: "failed", reason: "skill not found in registry" });
-        continue;
+        return { name, status: "failed", reason: "skill not found in registry" };
       }
       try {
         await installSkill(name, entry);
@@ -64,20 +87,21 @@ export default defineCommand({
           ...(entry.description ? { description: entry.description } : {}),
           links: effective.map((link) => link.path),
         };
-        results.push({
+        return {
           name,
           status: "installed",
           publishedAt: entry.publishedAt,
           agents: effective.map((link) => link.agent),
-        });
+        };
       } catch (err) {
-        results.push({
+        return {
           name,
           status: "failed",
           reason: err instanceof Error ? err.message : String(err),
-        });
+        };
       }
-    }
+    });
+    const results = await runWithConcurrency(tasks, INSTALL_CONCURRENCY);
     writeSkillLock(lock);
 
     if (format === "json") {

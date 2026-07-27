@@ -22,19 +22,15 @@ Index: [index.md](index.md)
 | --------------- | ---------------------------------------------------------------- |
 | **Name**        | `skill add`                                                      |
 | **Description** | Install skills from the Bailian skill registry into local agents |
-| **Usage**       | `bl skill add [--name <all\|name,...>]`                          |
+| **Usage**       | `bl skill add --name <all\|name,...>`                            |
 
 #### Flags
 
-| Flag                     | Type   | Required | Description                                                     |
-| ------------------------ | ------ | -------- | --------------------------------------------------------------- |
-| `--name <all\|name,...>` | string | no       | Skills to install: all (default) or comma-separated skill names |
+| Flag                     | Type   | Required | Description                                           |
+| ------------------------ | ------ | -------- | ----------------------------------------------------- |
+| `--name <all\|name,...>` | string | yes      | Skills to install: all or comma-separated skill names |
 
 #### Examples
-
-```bash
-bl skill add
-```
 
 ```bash
 bl skill add --name all

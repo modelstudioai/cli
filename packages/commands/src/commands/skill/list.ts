@@ -48,10 +48,10 @@ export default defineCommand({
     const table = rows.map((row) => [
       row.name,
       row.status,
-      row.publishedAt ? row.publishedAt.slice(0, 10) : "-",
+      row.publishedAt ? row.publishedAt.slice(0, 19).replace("T", " ") : "-",
       truncate(row.description),
     ]);
-    for (const line of formatTable(["NAME", "STATUS", "UpdatedAt", "DESCRIPTION"], table)) {
+    for (const line of formatTable(["NAME", "STATUS", "UPDATEDAT", "DESCRIPTION"], table)) {
       emitBare(line);
     }
   },
