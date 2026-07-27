@@ -7,15 +7,14 @@ import { expect, test } from "vite-plus/test";
  * 1) bl 全部发布包的 engines.node 必须一致（版本 bump 一动多动的另一面）。
  * 2) 外部运行时依赖 @openagentpack/sdk 的 engines 下限不得高于 bl 的下限，
  *    否则 Node 18/20 用户安装 bailian-cli 会触发 EBADENGINE / engine-strict 失败。
- *    当前固定的 beta 版本是已知冲突（上游降级已合入，等发版后 bump），用版本号
- *    白名单做棘轮：一旦升级依赖版本，本检查自动强制生效。
+ *    历史上出现过冲突版本，用版本号白名单做棘轮：一旦升级依赖版本，本检查自动强制生效。
  */
 
 const repoRoot = join(import.meta.dirname, "..", "..", "..");
 const BL_PACKAGES = ["core", "runtime", "commands", "cli", "kscli"] as const;
 
-/** 上游 engines 降级发版前的已知冲突版本；bump 依赖后请勿把新版本加进来。 */
-const KNOWN_SDK_ENGINE_CONFLICT_VERSIONS = new Set(["0.3.0-beta-8d9edcd-20260722"]);
+/** 上游 engines 冲突版本白名单；当前依赖版本已对齐，请勿把新版本加进来。 */
+const KNOWN_SDK_ENGINE_CONFLICT_VERSIONS = new Set<string>([]);
 
 interface PackageManifest {
   name: string;
