@@ -317,7 +317,7 @@ describe("e2e: auth", () => {
         body: {
           model: "qwen3.8-max-preview",
           stream: false,
-          enable_thinking: true,
+          enable_thinking: false,
         },
       });
 
