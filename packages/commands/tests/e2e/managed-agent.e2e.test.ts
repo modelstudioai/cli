@@ -67,15 +67,21 @@ describe("e2e: managed-agent", () => {
   });
 
   test("managed-agent skill-list --source all 通过参数校验（缺配置文件时才失败）", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
-      "managed-agent",
-      "skill-list",
-      "--source",
-      "all",
-      "--file",
-      "agents.e2e-missing.yaml",
-      "--quiet",
-    ]);
+    // auth: "apiKey" 的凭证解析先于 run() 执行；注入假 key 让用例不依赖环境凭证，
+    // 命令仍会在配置加载阶段因文件缺失短路，不产生任何网络请求。
+    const { stderr, exitCode } = await runCommandE2e(
+      MANAGED_AGENT_ROUTES,
+      [
+        "managed-agent",
+        "skill-list",
+        "--source",
+        "all",
+        "--file",
+        "agents.e2e-missing.yaml",
+        "--quiet",
+      ],
+      { DASHSCOPE_API_KEY: "sk-e2e-skill-list" },
+    );
     // all 是合法值：不应报 --source 用法错误，而是走到配置加载后因文件缺失退出
     expect(exitCode).toBe(2);
     expect(stderr).not.toMatch(/--source must be one of/i);
