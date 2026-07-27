@@ -98,8 +98,16 @@ export default defineCommand({
     if (format === "json") {
       emitResult({ destroyed: result.destroyed, total: result.resources.length }, format);
     } else {
-      emitBare(
-        `\nDestroy complete. ${result.destroyed}/${result.resources.length} resources removed.`,
+      const status = result.partial ? "Destroy incomplete" : "Destroy complete";
+      emitBare(`\n${status}. ${result.destroyed}/${result.resources.length} resources removed.`);
+    }
+
+    if (result.partial) {
+      const firstFailure = result.results.find((item) => item.status !== "success");
+      throw new BailianError(
+        firstFailure?.error ||
+          `Destroy incomplete: ${result.destroyed}/${result.resources.length} resources removed.`,
+        ExitCode.GENERAL,
       );
     }
   },

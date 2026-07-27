@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "vite-plus/test";
 import type { CollectedSessionEvents, ProviderSessionEvent } from "@openagentpack/sdk";
+import { BailianError, ExitCode } from "bailian-cli-core";
 import {
   renderCollectedEvents,
   streamAndRenderEvents,
@@ -41,6 +42,14 @@ async function* fakeEventStream(): AsyncIterable<ProviderSessionEvent> {
   yield { type: "status", status: "completed" } as ProviderSessionEvent;
 }
 
+async function* fakeFailedEventStream(): AsyncIterable<ProviderSessionEvent> {
+  yield {
+    type: "error",
+    content: "provider quota exceeded",
+  } as ProviderSessionEvent;
+  yield { type: "status", status: "failed" } as ProviderSessionEvent;
+}
+
 function fakeCollected(): CollectedSessionEvents {
   return {
     terminalStatus: "completed",
@@ -58,6 +67,32 @@ function fakeCollected(): CollectedSessionEvents {
   } as CollectedSessionEvents;
 }
 
+function fakeFailedCollected(): CollectedSessionEvents {
+  return {
+    terminalStatus: "failed",
+    result: {
+      events: [
+        {
+          type: "error",
+          content: "provider quota exceeded",
+        } as ProviderSessionEvent,
+      ],
+      has_more: false,
+      next_page: undefined,
+    },
+  } as CollectedSessionEvents;
+}
+
+async function catchSessionFailure(run: () => Promise<void> | void): Promise<BailianError> {
+  try {
+    await run();
+  } catch (error) {
+    expect(error).toBeInstanceOf(BailianError);
+    return error as BailianError;
+  }
+  throw new Error("expected failed session to throw");
+}
+
 test("stream json:信封携带 session_id/provider/agent + events", async () => {
   await streamAndRenderEvents(fakeEventStream(), true, {
     session_id: "sess_stream",
@@ -69,6 +104,22 @@ test("stream json:信封携带 session_id/provider/agent + events", async () => 
   expect(data.provider).toBe("bailian");
   expect(data.agent).toBe("assistant");
   expect(Array.isArray(data.events)).toBe(true);
+  expect((data.events as unknown[]).length).toBe(2);
+});
+
+test("streaming failed:保留 JSON 信封并以服务端 error 消息抛 GENERAL", async () => {
+  const error = await catchSessionFailure(() =>
+    streamAndRenderEvents(fakeFailedEventStream(), true, {
+      session_id: "sess_failed_stream",
+      provider: "bailian",
+      agent: "assistant",
+    }),
+  );
+  expect(error.exitCode).toBe(ExitCode.GENERAL);
+  expect(error.message).toBe("provider quota exceeded");
+
+  const data = capturedJson();
+  expect(data.session_id).toBe("sess_failed_stream");
   expect((data.events as unknown[]).length).toBe(2);
 });
 
@@ -84,6 +135,22 @@ test("polling json:信封携带 session_id/provider/agent，并保留 has_more/n
   expect(data.agent).toBe("assistant");
   expect(data.has_more).toBe(false);
   expect(Array.isArray(data.events)).toBe(true);
+});
+
+test("polling failed:保留 JSON 信封并以服务端 error 消息抛 GENERAL", async () => {
+  const error = await catchSessionFailure(() =>
+    renderCollectedEvents(fakeFailedCollected(), true, {
+      session_id: "sess_failed_poll",
+      provider: "claude",
+      agent: "assistant",
+    }),
+  );
+  expect(error.exitCode).toBe(ExitCode.GENERAL);
+  expect(error.message).toBe("provider quota exceeded");
+
+  const data = capturedJson();
+  expect(data.session_id).toBe("sess_failed_poll");
+  expect((data.events as unknown[]).length).toBe(1);
 });
 
 test("json:不传 context 时信封形状不变(无 session_id 键)", () => {

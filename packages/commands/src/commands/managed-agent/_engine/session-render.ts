@@ -4,6 +4,7 @@ import {
   type ProviderSessionEvent,
 } from "@openagentpack/sdk";
 import { sanitizeSessionEvents } from "@openagentpack/sdk/session-events";
+import { BailianError, ExitCode } from "bailian-cli-core";
 
 /** Skip user echo + thinking noise in live rendering (mirrors OpenAgentPack CLI). */
 function shouldRenderLiveEvent(event: ProviderSessionEvent): boolean {
@@ -13,6 +14,19 @@ function shouldRenderLiveEvent(event: ProviderSessionEvent): boolean {
 function renderTerminalStatus(status: string, json: boolean): void {
   if (json) return;
   process.stderr.write(`\n[session ${status}]\n`);
+}
+
+function findLastSessionError(events: readonly ProviderSessionEvent[]): string | undefined {
+  for (let index = events.length - 1; index >= 0; index--) {
+    const event = events[index];
+    if (event?.type === "error" && event.content?.trim()) return event.content;
+  }
+  return undefined;
+}
+
+function throwIfSessionFailed(status: string | undefined, message?: string): void {
+  if (status !== "failed") return;
+  throw new BailianError(message ?? "Session failed.", ExitCode.GENERAL);
 }
 
 /**
@@ -40,10 +54,14 @@ export async function streamAndRenderEvents(
   context: SessionRenderContext = {},
 ): Promise<void> {
   const collected: ProviderSessionEvent[] = [];
+  let terminalStatus: string | undefined;
+  let errorMessage: string | undefined;
   for await (const event of events) {
     if (json) collected.push(event);
     else renderEvent(event);
+    if (event.type === "error" && event.content?.trim()) errorMessage = event.content;
     if (event.type === "status" && isTerminalSessionStatus(event.status)) {
+      terminalStatus = event.status;
       renderTerminalStatus(event.status ?? "", json);
       break;
     }
@@ -53,6 +71,7 @@ export async function streamAndRenderEvents(
       `${JSON.stringify({ ...context, events: sanitizeSessionEvents(collected) }, null, 2)}\n`,
     );
   }
+  throwIfSessionFailed(terminalStatus, errorMessage);
 }
 
 /** Assistant text → stdout (data channel); everything else → stderr (diagnostics). */
@@ -92,10 +111,11 @@ export function renderCollectedEvents(
         2,
       )}\n`,
     );
-    return;
+  } else {
+    for (const event of result.result.events) renderEvent(event);
+    renderTerminalStatus(result.terminalStatus, json);
   }
-  for (const event of result.result.events) renderEvent(event);
-  renderTerminalStatus(result.terminalStatus, json);
+  throwIfSessionFailed(result.terminalStatus, findLastSessionError(result.result.events));
 }
 
 /** Split a comma-separated --memory-stores value. */
