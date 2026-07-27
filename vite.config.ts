@@ -13,6 +13,11 @@ const commandCapabilityRestrictions = [
     property: "commandPacks",
     message: "commandPacks is only available to commands/plugin/**.",
   },
+  {
+    property: "exportApiCredential",
+    message:
+      "exportApiCredential is only available to commands/managed-agent/_engine/** (embedded-SDK credential delegation).",
+  },
 ] as const;
 
 type CommandCapabilityRestriction = (typeof commandCapabilityRestrictions)[number];
@@ -56,15 +61,27 @@ export default defineConfig({
       },
       {
         files: ["packages/commands/src/commands/config/**/*.ts"],
-        rules: { "no-restricted-properties": restrictCommandCapabilities("configStore") },
+        rules: {
+          "no-restricted-properties": restrictCommandCapabilities("configStore"),
+        },
       },
       {
         files: ["packages/commands/src/commands/auth/**/*.ts"],
-        rules: { "no-restricted-properties": restrictCommandCapabilities("authStore") },
+        rules: {
+          "no-restricted-properties": restrictCommandCapabilities("authStore"),
+        },
       },
       {
         files: ["packages/commands/src/commands/plugin/**/*.ts"],
-        rules: { "no-restricted-properties": restrictCommandCapabilities("commandPacks") },
+        rules: {
+          "no-restricted-properties": restrictCommandCapabilities("commandPacks"),
+        },
+      },
+      {
+        files: ["packages/commands/src/commands/managed-agent/_engine/**/*.ts"],
+        rules: {
+          "no-restricted-properties": restrictCommandCapabilities("exportApiCredential"),
+        },
       },
     ],
   },

@@ -90,6 +90,17 @@ export class Client {
     return this.deps.apiCred?.baseUrl ?? this.deps.baseUrl;
   }
 
+  /**
+   * Export the model-domain credential for delegation to an embedded SDK that
+   * owns its own transport (e.g. @openagentpack/sdk). Deliberate escape hatch:
+   * regular commands keep calling {@link request}/{@link requestJson} and never
+   * handle tokens — lint restricts callers to managed-agent/_engine. Undefined
+   * when no credential resolved (authStage tolerates that only under dry-run).
+   */
+  exportApiCredential(): ApiKeyCredential | undefined {
+    return this.deps.apiCred;
+  }
+
   /** Full URL for a model-domain {@link path}; build request/display URLs only through this. */
   url(path: string): string {
     return this.baseUrl + path;

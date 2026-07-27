@@ -79,7 +79,11 @@ export function compose(stack: Middleware[]): (ctx: RunContext) => Promise<void>
  */
 export const authStage: Middleware = async (ctx, next) => {
   const { command, settings, sources } = ctx;
-  const base = { identity: ctx.identity, settings, baseUrl: resolveModelBaseUrl(sources) };
+  const base = {
+    identity: ctx.identity,
+    settings,
+    baseUrl: resolveModelBaseUrl(sources),
+  };
   if (command.auth === "apiKey") {
     let cred: ApiKeyCredential | undefined;
     try {
@@ -112,7 +116,11 @@ export const authStage: Middleware = async (ctx, next) => {
 /** Record command execution (start / success / failure) around the command. */
 export const telemetryStage: Middleware = (ctx, next) => {
   return trackCommandExecution(
-    { identity: ctx.identity, settings: ctx.settings, authMethod: ctx.command.auth },
+    {
+      identity: ctx.identity,
+      settings: ctx.settings,
+      authMethod: ctx.command.auth,
+    },
     ctx.path,
     ctx.flags,
     next,
