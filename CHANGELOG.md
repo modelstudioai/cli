@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.11.1] - 2026-07-28
+
+### Added
+
+- `bl image edit` now supports `--function` for specifying edit operations with Wanx image-edit models such as `wanx2.1-imageedit`.
+
+### Fixed
+
+- Fixed image generation and editing failures and incorrect size parameters for some image models, improving compatibility with Qwen-Image, Wan/Wanx, Z-Image, and dated `wanx-v1` variants.
+
 ## [1.11.0] - 2026-07-28
 
 ### Added

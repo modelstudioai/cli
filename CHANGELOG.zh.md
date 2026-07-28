@@ -6,6 +6,16 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.11.1] - 2026-07-28
+
+### 新增
+
+- `bl image edit` 新增 `--function` 参数，支持为万相图片编辑模型（如 `wanx2.1-imageedit`）指定编辑功能。
+
+### 修复
+
+- 修复部分图片模型在图片生成与编辑时的调用失败和尺寸参数错误，并完善 Qwen-Image、Wan/Wanx、Z-Image 系列及 `wanx-v1` 日期版本的兼容性。
+
 ## [1.11.0] - 2026-07-28
 
 ### 新增
