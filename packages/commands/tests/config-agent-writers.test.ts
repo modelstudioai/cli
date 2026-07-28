@@ -8,6 +8,7 @@ import opencode from "../src/commands/config/agent/writers/opencode.ts";
 import openclaw from "../src/commands/config/agent/writers/openclaw.ts";
 import hermes from "../src/commands/config/agent/writers/hermes.ts";
 import codex from "../src/commands/config/agent/writers/codex.ts";
+import { resolveRegionBaseUrl } from "../src/commands/config/agent/writers/utils.ts";
 import yaml from "yaml";
 
 /**
@@ -154,7 +155,7 @@ describe("config agent writers", () => {
       apiKey: "sk-q",
       baseUrl: OAI_URL,
     });
-    expect((settings.env as Record<string, string>).BAILIAN_CLI_API_KEY).toBe("sk-q");
+    expect((settings.env as Record<string, string>).DASHSCOPE_API_KEY).toBe("sk-q");
     // model.name 必须与 baseUrl 一同写入（同 id provider 消歧契约）
     expect(settings.model).toEqual({
       name: "qwen3-coder-plus",
@@ -166,7 +167,7 @@ describe("config agent writers", () => {
       id: "qwen3-coder-plus",
       name: "[Bailian] qwen3-coder-plus",
       baseUrl: OAI_URL,
-      envKey: "BAILIAN_CLI_API_KEY",
+      envKey: "DASHSCOPE_API_KEY",
     });
   });
 
@@ -181,13 +182,13 @@ describe("config agent writers", () => {
               id: "qwen3-coder-plus",
               name: "bailian-cli",
               baseUrl: OAI_URL,
-              envKey: "BAILIAN_CLI_API_KEY",
+              envKey: "DASHSCOPE_API_KEY",
             },
             {
               id: "my-model",
               name: "My Custom",
               baseUrl: OAI_URL,
-              envKey: "BAILIAN_CLI_API_KEY",
+              envKey: "DASHSCOPE_API_KEY",
             },
           ],
         },
@@ -208,7 +209,7 @@ describe("config agent writers", () => {
       .openai;
     const healed = entries.find((entry) => entry.id === "qwen3-coder-plus")!;
     expect(healed.name).toBe("[Bailian] qwen3-coder-plus");
-    expect(healed.envKey).toBe("BAILIAN_CLI_API_KEY");
+    expect(healed.envKey).toBe("DASHSCOPE_API_KEY");
     const custom = entries.find((entry) => entry.id === "my-model")!;
     expect(custom.name).toBe("My Custom");
   });
@@ -242,7 +243,7 @@ describe("config agent writers", () => {
     const settings = readJsonAt(".qwen", "settings.json");
     const openaiEntries = (settings.modelProviders as Record<string, unknown[]>).openai;
     expect(openaiEntries).toHaveLength(1);
-    expect((settings.env as Record<string, string>).BAILIAN_CLI_API_KEY).toBe("sk-2");
+    expect((settings.env as Record<string, string>).DASHSCOPE_API_KEY).toBe("sk-2");
   });
 
   test("qwen-code 不劫持已有 Token Plan 同 id 条目的 name/envKey", () => {
@@ -286,13 +287,13 @@ describe("config agent writers", () => {
     expect((settings.env as Record<string, string>).BAILIAN_TOKEN_PLAN_API_KEY).toBe(
       "sk-token-plan",
     );
-    expect((settings.env as Record<string, string>).BAILIAN_CLI_API_KEY).toBe("sk-bailian");
+    expect((settings.env as Record<string, string>).DASHSCOPE_API_KEY).toBe("sk-bailian");
     expect(summary.warnings?.some((warning) => warning.includes("already exists"))).toBe(true);
   });
 
   test("qwen-code 在进程环境变量覆盖 settings.env 时给出警告", () => {
-    const previous = process.env.BAILIAN_CLI_API_KEY;
-    process.env.BAILIAN_CLI_API_KEY = "sk-from-shell";
+    const previous = process.env.DASHSCOPE_API_KEY;
+    process.env.DASHSCOPE_API_KEY = "sk-from-shell";
     try {
       const summary = qwenCode.write({
         baseUrl: OAI_URL,
@@ -303,8 +304,8 @@ describe("config agent writers", () => {
         true,
       );
     } finally {
-      if (previous === undefined) delete process.env.BAILIAN_CLI_API_KEY;
-      else process.env.BAILIAN_CLI_API_KEY = previous;
+      if (previous === undefined) delete process.env.DASHSCOPE_API_KEY;
+      else process.env.DASHSCOPE_API_KEY = previous;
     }
   });
 
@@ -562,5 +563,20 @@ describe("config agent writers", () => {
       name.startsWith("openclaw.json.bak."),
     );
     expect(backups).toHaveLength(1);
+  });
+
+  test("resolveRegionBaseUrl 将 region 转为 Token Plan compatible-mode URL", () => {
+    expect(resolveRegionBaseUrl("cn-beijing")).toBe(
+      "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+    );
+    expect(resolveRegionBaseUrl("ap-southeast-1")).toBe(
+      "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
+    );
+  });
+
+  test("resolveRegionBaseUrl 拒绝非法 region", () => {
+    expect(() => resolveRegionBaseUrl("cn beijing")).toThrow(/Invalid --region/);
+    expect(() => resolveRegionBaseUrl("CN-Beijing")).toThrow(/Invalid --region/);
+    expect(() => resolveRegionBaseUrl("")).toThrow(/Invalid --region/);
   });
 });

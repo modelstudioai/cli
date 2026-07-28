@@ -20,8 +20,7 @@ export default {
   label: "Claude Code",
   write({ baseUrl, apiKey, model }) {
     // Claude Code honors CLAUDE_CONFIG_DIR for its settings location.
-    const configDir =
-      process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
+    const configDir = process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
     const settingsPath = join(configDir, "settings.json");
     const onboardingPath = join(homedir(), ".claude.json");
     const warnings: string[] = [];

@@ -1,12 +1,6 @@
 import { homedir } from "os";
 import { join } from "path";
-import {
-  backup,
-  readJson,
-  writeJsonAtomic,
-  isAnthropicEndpoint,
-  type AgentDef,
-} from "./utils.ts";
+import { backup, readJson, writeJsonAtomic, isAnthropicEndpoint, type AgentDef } from "./utils.ts";
 
 // Safe default when --context-window is not given: most Model Studio models
 // offer ≥256K context; users can raise it per model via the flag.

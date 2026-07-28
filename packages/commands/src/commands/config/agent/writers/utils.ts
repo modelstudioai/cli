@@ -195,3 +195,21 @@ export function resolveClaudeCodeBaseUrl(baseUrl: string): {
     "Use a URL ending in /apps/anthropic (not /compatible-mode/v1). Example: https://dashscope.aliyuncs.com/apps/anthropic",
   );
 }
+
+/**
+ * Convert a Model Studio region id into a Token Plan base URL, used in place of
+ * --base-url. Produces the OpenAI-compatible endpoint; the claude-code writer
+ * rewrites it to /apps/anthropic on its own, and the other writers consume the
+ * compatible-mode URL directly.
+ */
+export function resolveRegionBaseUrl(region: string): string {
+  const normalized = region.trim();
+  if (!/^[a-z0-9-]+$/.test(normalized)) {
+    throw new BailianError(
+      `Invalid --region "${region}".`,
+      ExitCode.USAGE,
+      "Use a Model Studio region id, e.g. cn-beijing or ap-southeast-1.",
+    );
+  }
+  return `https://token-plan.${normalized}.maas.aliyuncs.com/compatible-mode/v1`;
+}
