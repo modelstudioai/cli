@@ -79,6 +79,7 @@ jobs:
           BAILIAN_OSS_REGION: ${{ secrets.BAILIAN_OSS_REGION }}
           BAILIAN_OSS_ENDPOINT: ${{ secrets.BAILIAN_OSS_ENDPOINT }}
           BAILIAN_RELEASE_PREFIX: ${{ secrets.BAILIAN_RELEASE_PREFIX }}
+          BAILIAN_STATIC_PREFIX: ${{ secrets.BAILIAN_STATIC_PREFIX }}
         run: node tools/release/publish-stable.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }}
 
   publish-channel:
@@ -135,4 +136,5 @@ jobs:
           BAILIAN_OSS_REGION: ${{ secrets.BAILIAN_OSS_REGION }}
           BAILIAN_OSS_ENDPOINT: ${{ secrets.BAILIAN_OSS_ENDPOINT }}
           BAILIAN_RELEASE_PREFIX: ${{ secrets.BAILIAN_RELEASE_PREFIX }}
+          BAILIAN_STATIC_PREFIX: ${{ secrets.BAILIAN_STATIC_PREFIX }}
         run: node tools/release/publish-channel.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }} --channel "${{ inputs.channel }}"
