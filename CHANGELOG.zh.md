@@ -6,6 +6,24 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.11.0] - 2026-07-28
+
+### 新增
+
+- **`bl managed-agent`** —— 通过统一 CLI 声明式管理 Managed Agent 基础设施；百炼 Provider 对接 AgentStudio，并支持 Claude、Qoder 和 Ark：
+  - `init` / `validate` / `plan` / `apply` / `destroy` —— 基于 `agents.yaml` 初始化、校验、预览和执行资源变更，以及销毁已托管资源。
+  - `state list` / `state show` / `state rm` / `state import` —— 查看和管理本地资源状态，包括纳管已有远端资源或仅解除本地跟踪。
+  - `session create` / `session list` / `session get` / `session delete` / `session run` / `session send` / `session events` —— 完整的会话生命周期操作，支持流式响应和结构化的 `--output json` 输出。
+  - `skill-list` —— 浏览自定义与官方 Skill；使用 `--source all` 可一次返回两个来源。
+
+### 变更
+
+- 模型 Base URL 现在统一仅保留 URL Origin；传入的路径、查询参数和 Fragment 不再参与后续 API 请求路径拼接。
+
+### 修复
+
+- 安装指南不再推荐已移除的 `--non-interactive`，改为说明显式传入必填参数，并使用 `--output json` 或 `NO_COLOR=1` 适配非交互环境。
+
 ## [1.10.1] - 2026-07-22
 
 ### 变更
