@@ -32,7 +32,7 @@ const resolve = (s: Parameters<typeof src>[0]): Settings => buildSettings(src(s)
 test("token-plan Profile 预设保持固定", () => {
   expect(getModelProfilePreset("token-plan")).toEqual({
     baseUrl: "https://token-plan.cn-beijing.maas.aliyuncs.com",
-    defaultTextModel: "qwen3.7-plus",
+    defaultTextModel: "qwen3.8-max-preview",
     defaultVideoModel: "happyhorse-1.1-t2v",
     defaultImageToVideoModel: "happyhorse-1.1-i2v",
     defaultReferenceToVideoModel: "happyhorse-1.1-r2v",

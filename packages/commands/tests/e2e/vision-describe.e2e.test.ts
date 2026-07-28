@@ -13,7 +13,7 @@ describe("e2e: vision describe", () => {
         "token-plan": {
           api_key: "sk-sp-e2e-placeholder",
           base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
-          default_text_model: "qwen3.7-plus",
+          default_text_model: "qwen3.8-max-preview",
         },
       }),
     );
@@ -40,6 +40,6 @@ describe("e2e: vision describe", () => {
 
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{ request?: { model?: string } }>(stdout);
-    expect(data.request?.model).toBe("qwen3.7-plus");
+    expect(data.request?.model).toBe("qwen3.8-max-preview");
   });
 });
