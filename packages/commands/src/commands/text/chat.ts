@@ -4,9 +4,6 @@ import {
   parseSSE,
   detectOutputFormat,
   readTextFromPathOrStdin,
-  applyChatEnableThinkingWithBudget,
-  resolveChatEnableThinking,
-  withEnableThinkingRetry,
   type ChatMessage,
   type ChatRequest,
   type ChatResponse,
@@ -127,8 +124,7 @@ export default defineCommand({
     const { system, messages } = parseMessages(flags);
 
     const model = flags.model || settings.defaultTextModel || "qwen3.7-max";
-    // Coerce isTTY (may be undefined) so stream:false is serialized.
-    const shouldStream = Boolean(flags.stream || process.stdout.isTTY);
+    const shouldStream = flags.stream || process.stdout.isTTY;
     const format = detectOutputFormat(settings.output);
 
     // Build messages array with system prompt
@@ -148,14 +144,12 @@ export default defineCommand({
     if (flags.temperature !== undefined) body.temperature = flags.temperature;
     if (flags.topP !== undefined) body.top_p = flags.topP;
 
-    const enableThinking = resolveChatEnableThinking({
-      enableThinking: flags.enableThinking,
-      stream: shouldStream,
-    });
-    const applyThinking = (value: boolean | undefined) => {
-      applyChatEnableThinkingWithBudget(body, value, flags.thinkingBudget);
-    };
-    applyThinking(enableThinking);
+    if (flags.enableThinking) {
+      body.enable_thinking = true;
+      if (flags.thinkingBudget !== undefined) {
+        body.thinking_budget = flags.thinkingBudget;
+      }
+    }
 
     if (flags.tool) {
       const tools = flags.tool.map((t) => {
@@ -230,15 +224,10 @@ export default defineCommand({
         resultOut.write("\n");
       }
     } else {
-      const response = await withEnableThinkingRetry({
-        initial: enableThinking,
-        apply: applyThinking,
-        run: () =>
-          ctx.client.requestJson<ChatResponse>({
-            path: chatPath(),
-            method: "POST",
-            body,
-          }),
+      const response = await ctx.client.requestJson<ChatResponse>({
+        path: chatPath(),
+        method: "POST",
+        body,
       });
 
       const text = response.choices?.[0]?.message?.content ?? "";

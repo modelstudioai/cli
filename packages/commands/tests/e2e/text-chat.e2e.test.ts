@@ -34,7 +34,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: text chat（DashScope）", () => {
       "--model",
       "qwen3.7-max",
       "--message",
-      "dry-run",
+      "干跑",
       "--max-tokens",
       "8",
       "--output",
@@ -42,17 +42,10 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: text chat（DashScope）", () => {
     ]);
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
-      request?: {
-        model?: string;
-        messages?: Array<{ content?: string }>;
-        enable_thinking?: boolean;
-        stream?: boolean;
-      };
+      request?: { model?: string; messages?: Array<{ content?: string }> };
     }>(stdout);
     expect(data.request?.model).toBe("qwen3.7-max");
-    expect(data.request?.messages?.some((message) => message.content === "dry-run")).toBe(true);
-    expect(data.request?.stream).toBe(false);
-    expect(data.request?.enable_thinking).toBe(false);
+    expect(data.request?.messages?.some((m) => m.content === "干跑")).toBe(true);
   });
 
   test("【qwen3.7-max】文本对话", async () => {

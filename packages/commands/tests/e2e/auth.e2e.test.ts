@@ -219,7 +219,6 @@ describe("e2e: auth", () => {
         body: {
           model: "qwen3.7-max",
           stream: false,
-          enable_thinking: false,
         },
       });
 
@@ -267,7 +266,7 @@ describe("e2e: auth", () => {
       expect(config["token-plan"]).toMatchObject({
         api_key: "sk-sp-e2e-placeholder",
         base_url: validationServer.baseUrl,
-        default_text_model: "qwen3.8-max-preview",
+        default_text_model: "qwen3.7-plus",
         default_video_model: "happyhorse-1.1-t2v",
         default_image_to_video_model: "happyhorse-1.1-i2v",
         default_reference_to_video_model: "happyhorse-1.1-r2v",
@@ -315,9 +314,8 @@ describe("e2e: auth", () => {
         authorization: "Bearer sk-sp-e2e-placeholder",
         sourceConfig: expect.any(String),
         body: {
-          model: "qwen3.8-max-preview",
+          model: "qwen3.7-plus",
           stream: false,
-          enable_thinking: false,
         },
       });
 
@@ -330,7 +328,7 @@ describe("e2e: auth", () => {
       expect(config["token-plan"]).toMatchObject({
         api_key: "sk-sp-e2e-placeholder",
         base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
-        default_text_model: "qwen3.8-max-preview",
+        default_text_model: "qwen3.7-plus",
         default_video_model: "happyhorse-1.1-t2v",
         default_image_to_video_model: "happyhorse-1.1-i2v",
         default_reference_to_video_model: "happyhorse-1.1-r2v",

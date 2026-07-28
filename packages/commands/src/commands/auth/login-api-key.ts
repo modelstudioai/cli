@@ -4,9 +4,6 @@ import {
   chatPath,
   requestJson,
   normalizeModelBaseUrl,
-  applyChatEnableThinking,
-  resolveChatEnableThinking,
-  withEnableThinkingRetry,
   type AuthPersistPatch,
   type AuthStore,
   type Identity,
@@ -61,48 +58,31 @@ export async function validateAndPersistApiKey(
     ? normalizeModelBaseUrl(profile.persistBaseUrl)
     : undefined;
   const validationModel = profile.defaultTextModel || "qwen3.7-max";
-  const body: {
-    model: string;
-    messages: Array<{ role: string; content: string }>;
-    max_tokens: number;
-    stream: boolean;
-    enable_thinking?: boolean;
-  } = {
-    model: validationModel,
-    messages: [{ role: "user", content: "hi" }],
-    max_tokens: 1,
-    stream: false,
-  };
-
   const requestOpts = {
     url: baseUrl + chatPath(),
     method: "POST",
     headers: { Authorization: `Bearer ${key}` },
     timeout: Math.min(deps.settings.timeout, 30),
-    body,
+    body: {
+      model: validationModel,
+      messages: [{ role: "user", content: "hi" }],
+      max_tokens: 1,
+      stream: false,
+    },
   };
 
-  try {
-    await withEnableThinkingRetry({
-      // Validation requests are always non-streaming.
-      initial: resolveChatEnableThinking({ stream: false }),
-      apply: (value) => applyChatEnableThinking(body, value),
-      run: async () => {
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          try {
-            await requestJson<unknown>(httpDeps, requestOpts);
-            return;
-          } catch (error) {
-            if (attempt >= 3 || !canRetry(error)) throw error;
-            const delayMs = RETRY_DELAY_BASE_MS * 2 ** (attempt - 1);
-            await new Promise((resolve) => setTimeout(resolve, delayMs));
-          }
-        }
-      },
-    });
-  } catch (error) {
-    process.stderr.write("Failed\n");
-    throw error;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await requestJson<unknown>(httpDeps, requestOpts);
+      break;
+    } catch (error) {
+      if (attempt >= 3 || !canRetry(error)) {
+        process.stderr.write("Failed\n");
+        throw error;
+      }
+      const delayMs = RETRY_DELAY_BASE_MS * 2 ** (attempt - 1);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
   }
 
   process.stderr.write("Valid\n");

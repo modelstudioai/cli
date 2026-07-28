@@ -14,6 +14,5 @@ export * from "./finetune/index.ts";
 export * from "./deploy/index.ts";
 export * from "./types/index.ts";
 export * from "./utils/index.ts";
-export * from "./models/index.ts";
 export * from "./telemetry/index.ts";
 export * from "./advisor/index.ts";
