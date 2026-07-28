@@ -6,6 +6,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.11.0] - 2026-07-28
+
+### Added
+
+- **`bl managed-agent`** — declaratively manage Managed Agent infrastructure through a unified CLI. The Bailian provider connects to AgentStudio, with Claude, Qoder, and Ark providers also supported:
+  - `init` / `validate` / `plan` / `apply` / `destroy` — initialize and validate `agents.yaml`, preview and apply resource changes, and destroy managed resources.
+  - `state list` / `state show` / `state rm` / `state import` — inspect and manage local resource state, including adopting an existing remote resource or removing it from local state without destroying it remotely.
+  - `session create` / `session list` / `session get` / `session delete` / `session run` / `session send` / `session events` — manage the full session lifecycle with streaming responses and structured `--output json` output.
+  - `skill-list` — browse custom and official skills; use `--source all` to return both catalogs in one call.
+
+### Changed
+
+- Model Base URLs are now normalized to the URL origin; paths, query parameters, and fragments supplied in the Base URL are no longer included when constructing API request paths.
+
+### Fixed
+
+- The installation guide no longer recommends the removed `--non-interactive` flag and now documents explicit required arguments, `--output json`, and `NO_COLOR=1` for non-interactive environments.
+
 ## [1.10.1] - 2026-07-22
 
 ### Changed
