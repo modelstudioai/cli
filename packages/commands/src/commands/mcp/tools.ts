@@ -1,5 +1,6 @@
 import { defineCommand, bailianMcpPath, detectOutputFormat } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
+import { rethrowWithMcpActivateHint } from "./activate-hint.ts";
 
 export default defineCommand({
   description: "List tools exposed by an MCP server (tools/list)",
@@ -36,8 +37,15 @@ export default defineCommand({
     }
 
     const client = ctx.client.mcp(url);
-    await client.initialize();
-    const tools = await client.listTools();
-    emitResult({ server: code, url, tools }, format);
+    try {
+      await client.initialize();
+      const tools = await client.listTools();
+      emitResult({ server: code, url, tools }, format);
+    } catch (error) {
+      if (!flags.url) {
+        rethrowWithMcpActivateHint(error, code);
+      }
+      throw error;
+    }
   },
 });

@@ -4,7 +4,7 @@ import {
   parseSSE,
   detectOutputFormat,
   readTextFromPathOrStdin,
-  applyChatEnableThinking,
+  applyChatEnableThinkingWithBudget,
   resolveChatEnableThinking,
   withEnableThinkingRetry,
   type ChatMessage,
@@ -152,10 +152,10 @@ export default defineCommand({
       enableThinking: flags.enableThinking,
       stream: shouldStream,
     });
-    applyChatEnableThinking(body, enableThinking);
-    if (enableThinking === true && flags.thinkingBudget !== undefined) {
-      body.thinking_budget = flags.thinkingBudget;
-    }
+    const applyThinking = (value: boolean | undefined) => {
+      applyChatEnableThinkingWithBudget(body, value, flags.thinkingBudget);
+    };
+    applyThinking(enableThinking);
 
     if (flags.tool) {
       const tools = flags.tool.map((t) => {
@@ -232,7 +232,7 @@ export default defineCommand({
     } else {
       const response = await withEnableThinkingRetry({
         initial: enableThinking,
-        apply: (value) => applyChatEnableThinking(body, value),
+        apply: applyThinking,
         run: () =>
           ctx.client.requestJson<ChatResponse>({
             path: chatPath(),

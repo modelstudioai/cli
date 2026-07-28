@@ -53,6 +53,18 @@ export function applyChatEnableThinking(
   body.enable_thinking = true;
 }
 
+/** Set `enable_thinking` and optionally write `thinking_budget` when enabled. */
+export function applyChatEnableThinkingWithBudget(
+  body: { enable_thinking?: boolean; thinking_budget?: number },
+  value: boolean | undefined,
+  thinkingBudget?: number,
+): void {
+  applyChatEnableThinking(body, value);
+  if (value === true && thinkingBudget !== undefined) {
+    body.thinking_budget = thinkingBudget;
+  }
+}
+
 function errorMessageOf(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);

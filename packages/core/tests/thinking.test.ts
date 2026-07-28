@@ -2,6 +2,7 @@ import { expect, test } from "vite-plus/test";
 import {
   adjustEnableThinkingAfterError,
   applyChatEnableThinking,
+  applyChatEnableThinkingWithBudget,
   resolveChatEnableThinking,
   withEnableThinkingRetry,
 } from "../src/models/thinking.ts";
@@ -121,6 +122,43 @@ test("withEnableThinkingRetry：must-be-false 时从 omit 重试为 false", asyn
   expect(result).toBe("ok");
   expect(calls).toBe(2);
   expect(values).toEqual([undefined, false]);
+});
+
+test("applyChatEnableThinkingWithBudget：仅在 enable_thinking=true 时写入 budget", () => {
+  const body: { enable_thinking?: boolean; thinking_budget?: number } = {};
+  applyChatEnableThinkingWithBudget(body, false, 2048);
+  expect(body.enable_thinking).toBe(false);
+  expect(body).not.toHaveProperty("thinking_budget");
+
+  applyChatEnableThinkingWithBudget(body, undefined, 2048);
+  expect(body).not.toHaveProperty("enable_thinking");
+  expect(body).not.toHaveProperty("thinking_budget");
+
+  applyChatEnableThinkingWithBudget(body, true, 2048);
+  expect(body.enable_thinking).toBe(true);
+  expect(body.thinking_budget).toBe(2048);
+});
+
+test("withEnableThinkingRetry：restricted-to-true 重试时保留 thinking_budget", async () => {
+  const body: { enable_thinking?: boolean; thinking_budget?: number } = {};
+  let calls = 0;
+
+  const result = await withEnableThinkingRetry({
+    initial: false,
+    apply: (value) => applyChatEnableThinkingWithBudget(body, value, 2048),
+    run: async () => {
+      calls += 1;
+      if (calls === 1) {
+        throw new Error("The value of the enable_thinking parameter is restricted to True.");
+      }
+      return "ok";
+    },
+  });
+
+  expect(result).toBe("ok");
+  expect(calls).toBe(2);
+  expect(body.enable_thinking).toBe(true);
+  expect(body.thinking_budget).toBe(2048);
 });
 
 test("withEnableThinkingRetry：无关错误原样抛出", async () => {
