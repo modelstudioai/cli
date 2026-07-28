@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.11.2] - 2026-07-28
+
+### Changed
+
+- MCP tools and WebSearch now provide activation guidance and direct marketplace links when Bailian reports that the corresponding service is not activated. WebSearch also guides users with legacy SSE connections to reactivate the service using Streamable HTTP.
+
+### Fixed
+
+- Fixed text chat and API Key validation compatibility failures caused by sending unsupported `enable_thinking` values. Text chat now sends the parameter only when thinking is explicitly enabled, while validation uses a compatible model without sending it.
+
 ## [1.11.1] - 2026-07-28
 
 ### Added
