@@ -144,7 +144,10 @@ function skillRoots(home: string): Array<{ source: string; dir: string }> {
     { source: "openclaw", dir: join(home, ".openclaw", "workspace", "skills") },
     { source: "hermes", dir: join(home, ".hermes", "skills") },
     { source: "gemini", dir: join(home, ".gemini", "skills") },
-    { source: "antigravity", dir: join(home, ".gemini", "antigravity", "skills") },
+    {
+      source: "antigravity",
+      dir: join(home, ".gemini", "antigravity", "skills"),
+    },
     { source: "windsurf", dir: join(home, ".windsurf", "skills") },
     { source: "windsurf", dir: join(home, ".codeium", "windsurf", "skills") },
     { source: "qoderwork", dir: join(home, ".qoderwork", "skills") },
@@ -228,21 +231,43 @@ export function getSkillDetail(id: string, home: string = homedir()): SkillDetai
 // ---- Skill install (upload a .zip and unpack it into a skill root) ----
 
 /** Allow-listed skill install targets: source id -> label + path segments. */
-const SKILL_INSTALL_TARGETS: Array<{ source: string; label: string; sub: string[] }> = [
-  { source: "global", label: "All agents (~/.agents/skills)", sub: [".agents", "skills"] },
+const SKILL_INSTALL_TARGETS: Array<{
+  source: string;
+  label: string;
+  sub: string[];
+}> = [
+  {
+    source: "global",
+    label: "All agents (~/.agents/skills)",
+    sub: [".agents", "skills"],
+  },
   { source: "claude-code", label: "Claude Code", sub: [".claude", "skills"] },
   { source: "qwen-code", label: "Qwen Code", sub: [".qwen", "skills"] },
   { source: "codex", label: "Codex", sub: [".codex", "skills"] },
-  { source: "opencode", label: "OpenCode", sub: [".config", "opencode", "skills"] },
+  {
+    source: "opencode",
+    label: "OpenCode",
+    sub: [".config", "opencode", "skills"],
+  },
   { source: "openclaw", label: "OpenClaw", sub: [".openclaw", "skills"] },
   { source: "qoderwork", label: "QoderWork", sub: [".qoderwork", "skills"] },
-  { source: "windsurf", label: "Windsurf", sub: [".codeium", "windsurf", "skills"] },
+  {
+    source: "windsurf",
+    label: "Windsurf",
+    sub: [".codeium", "windsurf", "skills"],
+  },
   { source: "gemini", label: "Gemini", sub: [".gemini", "skills"] },
 ];
 
 /** The list of install targets exposed to the UI (source + human label). */
-export function skillInstallTargets(): Array<{ source: string; label: string }> {
-  return SKILL_INSTALL_TARGETS.map((t) => ({ source: t.source, label: t.label }));
+export function skillInstallTargets(): Array<{
+  source: string;
+  label: string;
+}> {
+  return SKILL_INSTALL_TARGETS.map((t) => ({
+    source: t.source,
+    label: t.label,
+  }));
 }
 
 function skillInstallRoot(source: string, home: string): string | null {
@@ -511,7 +536,11 @@ function mcpWriteTarget(source: string, scope: string, home: string): McpWriteTa
       projectScoped: false,
     };
   if (source === "cursor")
-    return { file: join(home, ".cursor", "mcp.json"), mapKey: "mcpServers", projectScoped: false };
+    return {
+      file: join(home, ".cursor", "mcp.json"),
+      mapKey: "mcpServers",
+      projectScoped: false,
+    };
   if (source === "windsurf")
     return {
       file: join(home, ".codeium", "windsurf", "mcp_config.json"),
@@ -537,7 +566,11 @@ function mcpWriteTarget(source: string, scope: string, home: string): McpWriteTa
       projectScoped: false,
     };
   if (source === "claude-desktop")
-    return { file: claudeDesktopConfigPath(home), mapKey: "mcpServers", projectScoped: false };
+    return {
+      file: claudeDesktopConfigPath(home),
+      mapKey: "mcpServers",
+      projectScoped: false,
+    };
   return null;
 }
 
@@ -643,9 +676,14 @@ const AGENT_PROBES: AgentProbe[] = [
   {
     id: "claude-code",
     label: "Claude Code",
-    paths: (h) => [join(h, ".claude", "settings.json"), join(h, ".claude.json")],
+    // The agent writer honors CLAUDE_CONFIG_DIR, so probe the same location.
+    paths: (h) => [
+      join(process.env.CLAUDE_CONFIG_DIR || join(h, ".claude"), "settings.json"),
+      join(h, ".claude.json"),
+    ],
     detect: (h) => {
-      const env = asRecord(readJsonSafe(join(h, ".claude", "settings.json"))?.env);
+      const configDir = process.env.CLAUDE_CONFIG_DIR || join(h, ".claude");
+      const env = asRecord(readJsonSafe(join(configDir, "settings.json"))?.env);
       const baseUrl =
         env && typeof env.ANTHROPIC_BASE_URL === "string" ? env.ANTHROPIC_BASE_URL : undefined;
       const model =
@@ -660,9 +698,19 @@ const AGENT_PROBES: AgentProbe[] = [
     detect: (h) => {
       const settings = readJsonSafe(join(h, ".qwen", "settings.json"));
       const providers = asRecord(settings?.modelProviders);
+      // The writer brands entries either "bailian-cli" (legacy) or with a
+      // "[Bailian] <model>" display name.
       const hasBailian = providers
         ? Object.values(providers).some(
-            (list) => Array.isArray(list) && list.some((e) => asRecord(e)?.name === "bailian-cli"),
+            (list) =>
+              Array.isArray(list) &&
+              list.some((entry) => {
+                const name = asRecord(entry)?.name;
+                return (
+                  typeof name === "string" &&
+                  (name === "bailian-cli" || name.startsWith("[Bailian]"))
+                );
+              }),
           )
         : false;
       const model = asRecord(settings?.model);
@@ -718,10 +766,21 @@ const AGENT_PROBES: AgentProbe[] = [
         return { configured: false };
       }
       const providers = Array.isArray(config?.custom_providers) ? config.custom_providers : [];
-      const configured = providers.some((p) => asRecord(p)?.name === "bailian-cli");
+      const legacyConfigured = providers.some(
+        (provider) => asRecord(provider)?.name === "bailian-cli",
+      );
+      // The writer now emits the official flat `model.*` block (provider
+      // "custom" + a DashScope/Token Plan base_url); keep detecting legacy
+      // custom_providers entries written by older CLI versions.
       const model = asRecord(config?.model);
+      const flatConfigured = Boolean(
+        model &&
+        model.provider === "custom" &&
+        typeof model.base_url === "string" &&
+        model.base_url.includes("aliyuncs.com"),
+      );
       return {
-        configured,
+        configured: legacyConfigured || flatConfigured,
         model: model && typeof model.default === "string" ? model.default : undefined,
       };
     },
@@ -937,7 +996,11 @@ export function getAgentDetail(id: string, home: string = homedir()): AgentDetai
   const settings: AgentSettingsFile[] = installed
     ? paths
         .filter((p) => existsSync(p))
-        .map((p) => ({ path: p, lang: langForPath(p), text: readText(p) ?? "" }))
+        .map((p) => ({
+          path: p,
+          lang: langForPath(p),
+          text: readText(p) ?? "",
+        }))
         .filter((s) => s.text.trim())
     : [];
   return {

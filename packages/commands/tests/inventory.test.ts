@@ -110,15 +110,27 @@ test("listMcpServers 汇总 codex(toml) 与 claude(json) 的 MCP 定义", () => 
       ".claude.json",
       JSON.stringify({
         mcpServers: { web: { url: "https://example.com/mcp", type: "sse" } },
-        projects: { "/proj": { mcpServers: { local: { command: "python", args: ["s.py"] } } } },
+        projects: {
+          "/proj": {
+            mcpServers: { local: { command: "python", args: ["s.py"] } },
+          },
+        },
       }),
     );
 
     const servers = listMcpServers(home);
     const byName = Object.fromEntries(servers.map((s) => [s.name, s]));
-    expect(byName.repl).toMatchObject({ source: "codex", transport: "stdio", origin: "local" });
+    expect(byName.repl).toMatchObject({
+      source: "codex",
+      transport: "stdio",
+      origin: "local",
+    });
     expect(byName.repl.detail).toContain("node repl.js");
-    expect(byName.web).toMatchObject({ source: "claude-code", transport: "sse", scope: "global" });
+    expect(byName.web).toMatchObject({
+      source: "claude-code",
+      transport: "sse",
+      scope: "global",
+    });
     expect(byName.local).toMatchObject({
       source: "claude-code",
       transport: "stdio",
@@ -139,10 +151,35 @@ test("listAgents 报告安装与已连接 bailian-cli 的状态", () => {
     write(
       home,
       ".claude/settings.json",
-      JSON.stringify({ env: { ANTHROPIC_BASE_URL: "https://x", ANTHROPIC_MODEL: "qwen3-max" } }),
+      JSON.stringify({
+        env: { ANTHROPIC_BASE_URL: "https://x", ANTHROPIC_MODEL: "qwen3-max" },
+      }),
     );
     // Codex: installed but NOT configured (no bailian-cli provider).
     write(home, ".codex/config.toml", 'model = "gpt-5"\n');
+    // Qwen Code: configured via the new "[Bailian] <model>" display name.
+    write(
+      home,
+      ".qwen/settings.json",
+      JSON.stringify({
+        modelProviders: {
+          openai: [{ id: "qwen3-coder-plus", name: "[Bailian] qwen3-coder-plus" }],
+        },
+        model: { name: "qwen3-coder-plus" },
+      }),
+    );
+    // Hermes: configured via the official flat model block (no custom_providers).
+    write(
+      home,
+      ".hermes/config.yaml",
+      [
+        "model:",
+        "  default: qwen3-max",
+        "  provider: custom",
+        "  base_url: https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "  api_key: sk-test",
+      ].join("\n"),
+    );
 
     const agents = listAgents(home);
     const byId = Object.fromEntries(agents.map((a) => [a.id, a]));
@@ -153,8 +190,25 @@ test("listAgents 报告安装与已连接 bailian-cli 的状态", () => {
       model: "qwen3-max",
       origin: "local",
     });
-    expect(byId.codex).toMatchObject({ installed: true, configured: false, model: "gpt-5" });
-    expect(byId.opencode).toMatchObject({ installed: false, configured: false });
+    expect(byId.codex).toMatchObject({
+      installed: true,
+      configured: false,
+      model: "gpt-5",
+    });
+    expect(byId["qwen-code"]).toMatchObject({
+      installed: true,
+      configured: true,
+      model: "qwen3-coder-plus",
+    });
+    expect(byId.hermes).toMatchObject({
+      installed: true,
+      configured: true,
+      model: "qwen3-max",
+    });
+    expect(byId.opencode).toMatchObject({
+      installed: false,
+      configured: false,
+    });
     // Always reports all six known frameworks.
     expect(agents).toHaveLength(6);
   });
