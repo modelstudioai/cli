@@ -6,6 +6,16 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.11.2] - 2026-07-28
+
+### 变更
+
+- MCP 工具或 WebSearch 因对应服务未开通而不可用时，CLI 现在会提供开通指引和市场直达链接；对于使用旧版 SSE 连接的 WebSearch，还会提示重新开通以切换至 Streamable HTTP。
+
+### 修复
+
+- 修复文本对话与 API Key 登录校验因传递不受支持的 `enable_thinking` 参数值而产生的兼容性错误。文本对话仅在用户明确开启思考模式时传递该参数，登录校验则改用兼容模型且不再传递该参数。
+
 ## [1.11.1] - 2026-07-28
 
 ### 新增
