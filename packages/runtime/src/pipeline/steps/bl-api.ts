@@ -4,8 +4,8 @@
  */
 import {
   chatPath,
-  imagePath,
-  imageSyncPath,
+  resolveImageEditApi,
+  resolveImageGenerateApi,
   videoGeneratePath,
   taskPath,
   speechSynthesizePath,
@@ -147,12 +147,6 @@ export async function visionDescribe(
 
 // --- image/generate ---
 
-const SYNC_MODEL_PREFIXES = ["qwen-image-2.0", "qwen-image-max"];
-
-function isSyncImageModel(model: string): boolean {
-  return SYNC_MODEL_PREFIXES.some((p) => model.startsWith(p));
-}
-
 export interface ImageGenerateInput {
   prompt?: string;
   model?: string;
@@ -178,61 +172,72 @@ export async function imageGenerate(
   }
 
   const model = input.model || "qwen-image-2.0";
-  const useSync = isSyncImageModel(model);
+  const route = resolveImageGenerateApi(model);
   const n = input.n ?? 1;
 
   const promptExtend = resolveBooleanFlag(
     input["prompt-extend"],
-    useSync ? true : undefined,
+    route.promptExtendDefault,
     "prompt-extend",
   );
 
-  const body: DashScopeImageRequest = {
-    model,
-    input: {
-      messages: [{ role: "user", content: [{ text: input.prompt }] }],
-    },
-    parameters: {
-      size: resolveImageSize(input.size, useSync),
-      n,
-      seed: input.seed,
-      prompt_extend: promptExtend,
-      watermark: resolveWatermark(input.watermark),
-      negative_prompt: input["negative-prompt"] || undefined,
-    },
+  const parameters: NonNullable<DashScopeImageRequest["parameters"]> = {
+    size: resolveImageSize(input.size, route.sizeProfile),
+    n,
+    seed: input.seed,
+    prompt_extend: promptExtend,
+    watermark: resolveWatermark(input.watermark),
   };
 
-  if (useSync) {
-    const url = imageSyncPath();
+  const body: DashScopeImageRequest =
+    route.inputStyle === "prompt"
+      ? {
+          model,
+          input: {
+            prompt: input.prompt,
+            negative_prompt: input["negative-prompt"] || undefined,
+          },
+          parameters,
+        }
+      : {
+          model,
+          input: {
+            messages: [{ role: "user", content: [{ text: input.prompt }] }],
+          },
+          parameters: {
+            ...parameters,
+            negative_prompt: input["negative-prompt"] || undefined,
+          },
+        };
+
+  if (route.useSync) {
     const response = await env.client.requestJson<DashScopeImageSyncResponse>({
-      path: url,
+      path: route.path,
       method: "POST",
       body,
       signal: ctx.signal,
     });
     const urls = response.output.choices
-      .flatMap((c) => c.message?.content || [])
+      .flatMap((choice) => choice.message?.content || [])
       .map((item) => item.image)
       .filter(Boolean);
     const saved = await maybeDownloadImages(urls, input["out-dir"], input["out-prefix"]);
     return { urls, request_id: response.request_id, ...(saved ? { saved } : {}) };
-  } else {
-    // Async mode: submit then poll
-    const url = imagePath();
-    const asyncResp = await env.client.requestJson<DashScopeAsyncResponse>({
-      path: url,
-      method: "POST",
-      body,
-      async: true,
-      signal: ctx.signal,
-    });
-    const taskId = asyncResp.output.task_id;
-    const result = await pollTask(env, taskId, ctx);
-    const urls = Array.isArray(result.urls) ? (result.urls as string[]) : [];
-    const saved = await maybeDownloadImages(urls, input["out-dir"], input["out-prefix"]);
-    if (saved) result.saved = saved;
-    return result;
   }
+
+  const asyncResp = await env.client.requestJson<DashScopeAsyncResponse>({
+    path: route.path,
+    method: "POST",
+    body,
+    async: true,
+    signal: ctx.signal,
+  });
+  const taskId = asyncResp.output.task_id;
+  const result = await pollTask(env, taskId, ctx);
+  const urls = Array.isArray(result.urls) ? (result.urls as string[]) : [];
+  const saved = await maybeDownloadImages(urls, input["out-dir"], input["out-prefix"]);
+  if (saved) result.saved = saved;
+  return result;
 }
 
 // --- image/edit ---
@@ -247,6 +252,7 @@ export interface ImageEditInput {
   "negative-prompt"?: string;
   "prompt-extend"?: boolean | string;
   watermark?: boolean | string;
+  function?: string;
   "out-dir"?: string;
   "out-prefix"?: string;
 }
@@ -264,70 +270,106 @@ export async function imageEdit(
 
   const images = Array.isArray(input.image) ? input.image : input.image ? [input.image] : [];
   const model = input.model || "qwen-image-2.0";
-  const useSync = isSyncImageModel(model);
+  const route = resolveImageEditApi(model);
   const n = input.n ?? 1;
 
   const promptExtend = resolveBooleanFlag(
     input["prompt-extend"],
-    useSync ? true : undefined,
+    route.promptExtendDefault,
     "prompt-extend",
   );
 
-  const content: Array<{ text?: string; image?: string }> = [];
-  for (const img of images) {
-    let imageUrl = img;
-    if (isLocalFile(img)) {
-      imageUrl = await env.client.uploadFile(img, model, { signal: ctx.signal });
+  const resolvedImages: string[] = [];
+  for (const image of images) {
+    let imageUrl = image;
+    if (isLocalFile(image)) {
+      imageUrl = await env.client.uploadFile(image, model, { signal: ctx.signal });
     }
-    content.push({ image: imageUrl });
+    resolvedImages.push(imageUrl);
   }
-  content.push({ text: input.prompt });
 
-  const body: DashScopeImageRequest = {
-    model,
-    input: {
-      messages: [{ role: "user", content }],
-    },
-    parameters: {
-      size: resolveImageSize(input.size, useSync),
-      n,
-      seed: input.seed,
-      prompt_extend: promptExtend,
-      watermark: resolveWatermark(input.watermark),
-      negative_prompt: input["negative-prompt"] || undefined,
-    },
+  const parameters: NonNullable<DashScopeImageRequest["parameters"]> = {
+    size: resolveImageSize(input.size, route.sizeProfile),
+    n,
+    seed: input.seed,
+    prompt_extend: promptExtend,
+    watermark: resolveWatermark(input.watermark),
   };
 
-  if (useSync) {
-    const url = imageSyncPath();
+  let body: DashScopeImageRequest;
+  if (route.inputStyle === "function-base-image") {
+    const baseImageUrl = resolvedImages[0];
+    if (!baseImageUrl) {
+      throw new PipelineError(
+        "missing_input",
+        "image/edit with wanx*-imageedit requires at least one image",
+        { step: "image/edit" },
+      );
+    }
+    body = {
+      model,
+      input: {
+        function: input.function || "description_edit",
+        prompt: input.prompt,
+        base_image_url: baseImageUrl,
+      },
+      parameters,
+    };
+  } else if (route.inputStyle === "prompt-images") {
+    body = {
+      model,
+      input: {
+        prompt: input.prompt,
+        images: resolvedImages,
+        negative_prompt: input["negative-prompt"] || undefined,
+      },
+      parameters,
+    };
+  } else {
+    const content: Array<{ text?: string; image?: string }> = resolvedImages.map((imageUrl) => ({
+      image: imageUrl,
+    }));
+    content.push({ text: input.prompt });
+    body = {
+      model,
+      input: {
+        messages: [{ role: "user", content }],
+      },
+      parameters: {
+        ...parameters,
+        negative_prompt: input["negative-prompt"] || undefined,
+      },
+    };
+  }
+
+  if (route.useSync) {
     const response = await env.client.requestJson<DashScopeImageSyncResponse>({
-      path: url,
+      path: route.path,
       method: "POST",
       body,
       signal: ctx.signal,
     });
     const urls = response.output.choices
-      .flatMap((c) => c.message?.content || [])
+      .flatMap((choice) => choice.message?.content || [])
       .map((item) => item.image)
       .filter(Boolean);
     const saved = await maybeDownloadImages(urls, input["out-dir"], input["out-prefix"]);
     return { urls, request_id: response.request_id, ...(saved ? { saved } : {}) };
-  } else {
-    const url = imagePath();
-    const asyncResp = await env.client.requestJson<DashScopeAsyncResponse>({
-      path: url,
-      method: "POST",
-      body,
-      async: true,
-      signal: ctx.signal,
-    });
-    const taskId = asyncResp.output.task_id;
-    const result = await pollTask(env, taskId, ctx);
-    const urls = Array.isArray(result.urls) ? (result.urls as string[]) : [];
-    const saved = await maybeDownloadImages(urls, input["out-dir"], input["out-prefix"]);
-    if (saved) result.saved = saved;
-    return result;
   }
+
+  const asyncResp = await env.client.requestJson<DashScopeAsyncResponse>({
+    path: route.path,
+    method: "POST",
+    body,
+    async: true,
+    signal: ctx.signal,
+  });
+  const taskId = asyncResp.output.task_id;
+  const result = await pollTask(env, taskId, ctx);
+  const urls = Array.isArray(result.urls) ? (result.urls as string[]) : [];
+  const saved = await maybeDownloadImages(urls, input["out-dir"], input["out-prefix"]);
+  if (saved) result.saved = saved;
+  return result;
 }
 
 /**
