@@ -1,19 +1,16 @@
 #!/usr/bin/env bash
-# Binary install script for the OSS release layout (see packages/core/src/install/cdn.ts).
+# Binary install script for the OSS release
 #
-#   curl -fsSL https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/release/install.sh | bash
-#   BAILIAN_CHANNEL=latest bash install.sh
-#   BAILIAN_CHANNEL=sync-release bash install.sh
-#   BAILIAN_VERSION=1.10.1 bash install.sh
+#   curl -fsSL https://bailian.aliyun.com/install.sh | bash
+#   bash install.sh --channel sync-release          # local / channel verify
+#   bash install.sh --version 1.10.1
+#   curl -fsSL …/install.sh | bash -s -- --channel sync-release
 #
-# Layout:
-#   {CDN}/{channel}.json              —— rolling manifest (version + assets)
-#   {CDN}/v{version}/{file}.zip       —— per-platform zip
 set -euo pipefail
 
 CDN_BASE="${BAILIAN_CLI_CDN:-https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/release}"
 CDN_BASE="${CDN_BASE%/}"
-CHANNEL="${BAILIAN_CHANNEL:-latest}"
+CHANNEL="${BAILIAN_CHANNEL:-}"
 VERSION="${BAILIAN_VERSION:-}"
 BIN_DIR="${BAILIAN_BIN_DIR:-${HOME}/.local/bin}"
 SHARE_DIR="${BAILIAN_SHARE_DIR:-${HOME}/.local/share/bailian-cli}"
@@ -22,9 +19,60 @@ CONFIG_DIR="${BAILIAN_CONFIG_DIR:-${HOME}/.bailian}"
 ZIP_FILE=""
 ZIP_SHA256=""
 INNER_NAME=""
+MANIFEST_LABEL="manifest.json"
 
 log() { printf '%s\n' "$*" >&2; }
 die() { log "error: $*"; exit 1; }
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: install.sh [--channel <name>] [--version <ver>] [--cdn <url>] [--help]
+
+  --channel <name>   Install from {CDN}/{name}.json (default: manifest.json)
+  --version <ver>    Pin a release version (checksum via SHA256SUMS if needed)
+  --cdn <url>        Override CDN base (default / BAILIAN_CLI_CDN)
+  --help             Show this help
+
+Env fallbacks: BAILIAN_CHANNEL, BAILIAN_VERSION, BAILIAN_CLI_CDN,
+               BAILIAN_BIN_DIR, BAILIAN_SHARE_DIR, BAILIAN_CONFIG_DIR
+EOF
+}
+
+parse_args() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --channel|-c)
+        [[ $# -ge 2 ]] || die "$1 requires a value"
+        CHANNEL="$2"
+        shift 2
+        ;;
+      --version)
+        [[ $# -ge 2 ]] || die "$1 requires a value"
+        VERSION="$2"
+        shift 2
+        ;;
+      --cdn)
+        [[ $# -ge 2 ]] || die "$1 requires a value"
+        CDN_BASE="${2%/}"
+        shift 2
+        ;;
+      --help|-h)
+        usage
+        exit 0
+        ;;
+      --)
+        shift
+        break
+        ;;
+      -*)
+        die "unknown option: $1 (try --help)"
+        ;;
+      *)
+        die "unexpected argument: $1 (try --help)"
+        ;;
+    esac
+  done
+}
 
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
@@ -141,7 +189,13 @@ resolve_asset() {
   need_cmd curl
   local manifest_path parsed manifest_url
   manifest_path="$(mktemp)"
-  manifest_url="${CDN_BASE}/${CHANNEL}.json"
+  if [[ -n "${CHANNEL}" && "${CHANNEL}" != "latest" && "${CHANNEL}" != "stable" ]]; then
+    MANIFEST_LABEL="${CHANNEL}.json"
+    manifest_url="${CDN_BASE}/${CHANNEL}.json"
+  else
+    MANIFEST_LABEL="manifest.json"
+    manifest_url="${CDN_BASE}/manifest.json"
+  fi
   log "Fetching ${manifest_url}"
   if ! curl -fsSL "${manifest_url}" -o "${manifest_path}"; then
     rm -f "${manifest_path}"
@@ -150,7 +204,7 @@ resolve_asset() {
 
   if ! parsed="$(parse_manifest_asset "${manifest_path}" "${PLATFORM_KEY}" "${VERSION}")"; then
     rm -f "${manifest_path}"
-    die "failed to parse asset metadata from ${CHANNEL}.json for ${PLATFORM_KEY}"
+    die "failed to parse asset metadata from ${MANIFEST_LABEL} for ${PLATFORM_KEY}"
   fi
   rm -f "${manifest_path}"
 
@@ -160,7 +214,7 @@ resolve_asset() {
   INNER_NAME="$(printf '%s\n' "${parsed}" | cut -f4)"
 
   [[ -n "${VERSION}" && -n "${ZIP_FILE}" && -n "${INNER_NAME}" ]] \
-    || die "incomplete asset metadata from ${CHANNEL}.json"
+    || die "incomplete asset metadata from ${MANIFEST_LABEL}"
 }
 
 sha256_file() {
@@ -253,11 +307,12 @@ warn_npm_conflict() {
 }
 
 main() {
+  parse_args "$@"
   need_cmd curl
   need_cmd uname
   detect_os_arch
   resolve_asset
-  log "Installing bailian-cli ${VERSION} (${PLATFORM_KEY}) from ${CDN_BASE} [${CHANNEL}]"
+  log "Installing bailian-cli ${VERSION} (${PLATFORM_KEY}) from ${CDN_BASE} [${MANIFEST_LABEL}]"
   download_and_install
   warn_npm_conflict
   warn_path

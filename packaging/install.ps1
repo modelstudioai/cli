@@ -1,19 +1,18 @@
-# Binary install script for the OSS release layout (see packages/core/src/install/cdn.ts).
+# Binary install script for the OSS release
 #
-#   irm https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/release/install.ps1 | iex
-#   $env:BAILIAN_CHANNEL = "sync-release"; irm ... | iex
-#   $env:BAILIAN_VERSION = "1.10.1"; irm ... | iex
+#   irm https://bailian.aliyun.com/install.ps1 | iex
+#   .\install.ps1 -Channel sync-release          # local / channel verify
+#   .\install.ps1 -Version 1.10.1
 #
-# Layout:
-#   {CDN}/{channel}.json              — rolling manifest (version + assets)
-#   {CDN}/v{version}/{file}.zip       — per-platform zip
-param()
+param(
+  [string]$Channel = $env:BAILIAN_CHANNEL,
+  [string]$Version = $env:BAILIAN_VERSION,
+  [string]$Cdn = $env:BAILIAN_CLI_CDN
+)
 
 $ErrorActionPreference = "Stop"
 
-$CdnBase = if ($env:BAILIAN_CLI_CDN) { $env:BAILIAN_CLI_CDN.TrimEnd("/") } else { "https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/release" }
-$Channel = if ($env:BAILIAN_CHANNEL) { $env:BAILIAN_CHANNEL } else { "latest" }
-$Version = $env:BAILIAN_VERSION
+$CdnBase = if ($Cdn) { $Cdn.TrimEnd("/") } else { "https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/release" }
 $InstallRoot = if ($env:BAILIAN_SHARE_DIR) { $env:BAILIAN_SHARE_DIR } else { Join-Path $env:LOCALAPPDATA "bailian-cli" }
 $ConfigDir = if ($env:BAILIAN_CONFIG_DIR) { $env:BAILIAN_CONFIG_DIR } else { Join-Path $env:USERPROFILE ".bailian" }
 
@@ -32,7 +31,13 @@ if ($Arch -eq "arm64") {
 }
 $PlatformKey = "windows-$Arch"
 
-$ManifestUrl = "$CdnBase/$Channel.json"
+if (-not [string]::IsNullOrWhiteSpace($Channel) -and $Channel -ne "latest" -and $Channel -ne "stable") {
+  $ManifestLabel = "$Channel.json"
+  $ManifestUrl = "$CdnBase/$Channel.json"
+} else {
+  $ManifestLabel = "manifest.json"
+  $ManifestUrl = "$CdnBase/manifest.json"
+}
 Write-Log "Fetching $ManifestUrl"
 $Manifest = Invoke-RestMethod -Uri $ManifestUrl
 
@@ -41,7 +46,7 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
   $Version = $Manifest.version
 }
 if ([string]::IsNullOrWhiteSpace($Version)) {
-  throw "Could not parse version from $Channel channel manifest"
+  throw "Could not parse version from $ManifestLabel"
 }
 
 $ZipFile = $null
@@ -126,7 +131,7 @@ try {
     Write-Log "Added $ShimDir to your user PATH. Open a new terminal to use bl."
   }
 
-  Write-Log "Installed: $Target (bailian-cli $Version) [$Channel]"
+  Write-Log "Installed: $Target (bailian-cli $Version) [$ManifestLabel]"
   Write-Log "Done. Run: bl --help"
 }
 finally {

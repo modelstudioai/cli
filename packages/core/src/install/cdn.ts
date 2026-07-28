@@ -5,9 +5,9 @@
  *
  * Layout under the base:
  *   v<version>/<asset>.zip —— immutable per-version binaries + SHA256SUMS
- *   manifest.json          —— stable pointer; same rolling-manifest shape as latest.json
- *   latest.json            —— stable rolling manifest (os-arch keyed, sha256)
- *   <channel>.json         —— per-channel rolling manifests (beta versions)
+ *   manifest.json          —— stable install/update pointer (rolling-manifest shape)
+ *   latest.json            —— stable alias; same body as manifest.json
+ *   <channel>.json         —— per-channel rolling manifests (betas / local verify)
  *
  * Override with `BAILIAN_CLI_CDN`.
  */
@@ -16,8 +16,9 @@ export const DEFAULT_CLI_CDN_BASE = "https://bailian-wiki.oss-cn-hangzhou.aliyun
 /** GitHub Releases base — used when writing manifests attached to gh release assets. */
 export const GITHUB_RELEASES_BASE = "https://github.com/modelstudioai/cli/releases";
 
-export const DEFAULT_INSTALL_SCRIPT_URL = `${DEFAULT_CLI_CDN_BASE}/install.sh`;
-export const DEFAULT_INSTALL_PS1_URL = `${DEFAULT_CLI_CDN_BASE}/install.ps1`;
+/** User-facing install entry (docs / update hints); asset downloads still use getCliCdnBase(). */
+export const DEFAULT_INSTALL_SCRIPT_URL = "https://bailian.aliyun.com/install.sh";
+export const DEFAULT_INSTALL_PS1_URL = "https://bailian.aliyun.com/install.ps1";
 
 export function getCliCdnBase(): string {
   const fromEnv = process.env.BAILIAN_CLI_CDN?.trim();
@@ -26,12 +27,17 @@ export function getCliCdnBase(): string {
 }
 
 /**
- * Rolling channel manifest at the CDN base root: `{base}/{channel}.json`.
- * `latest.json` (stable) and `<channel>.json` (betas) share the same shape;
- * both are written by CI on publish.
+ * Rolling manifest URL at the CDN base root.
+ * Stable (`latest` / `stable` / empty) → `manifest.json`.
+ * Named channel → `{channel}.json` (e.g. sync-release for local verify).
+ * All share the same rolling-manifest shape from binary-build.
  */
 export function channelManifestUrl(channel = "latest"): string {
-  return `${getCliCdnBase()}/${channel}.json`;
+  const normalized = channel.trim();
+  if (!normalized || normalized === "latest" || normalized === "stable") {
+    return `${getCliCdnBase()}/manifest.json`;
+  }
+  return `${getCliCdnBase()}/${normalized}.json`;
 }
 
 /** Immutable per-version asset: `{base}/v{version}/{fileName}`. */

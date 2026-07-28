@@ -33,3 +33,20 @@ test("binaryInnerFileName keeps exe suffix inside zip", () => {
   expect(binaryInnerFileName("1.2.3", "windows", "x64", true)).toBe("bl-1.2.3-windows-x64.exe");
   expect(binaryInnerFileName("1.2.3", "darwin", "arm64", false)).toBe("bl-1.2.3-darwin-arm64");
 });
+
+test("channelManifestUrl maps stable to manifest.json", async () => {
+  const { channelManifestUrl } = await import("../src/install/cdn.ts");
+  const previous = process.env.BAILIAN_CLI_CDN;
+  delete process.env.BAILIAN_CLI_CDN;
+  expect(channelManifestUrl()).toBe(
+    "https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/release/manifest.json",
+  );
+  expect(channelManifestUrl("latest")).toBe(
+    "https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/release/manifest.json",
+  );
+  expect(channelManifestUrl("sync-release")).toBe(
+    "https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/release/sync-release.json",
+  );
+  if (previous === undefined) delete process.env.BAILIAN_CLI_CDN;
+  else process.env.BAILIAN_CLI_CDN = previous;
+});
