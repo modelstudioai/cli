@@ -1,7 +1,5 @@
 import {
   defineCommand,
-  imagePath,
-  imageSyncPath,
   taskPath,
   detectOutputFormat,
   type Client,
@@ -19,6 +17,7 @@ import {
   generateFilename,
   resolveBooleanFlag,
   resolveWatermark,
+  resolveImageGenerateApi,
   ASYNC_FLAG,
   CONCURRENT_FLAG,
 } from "bailian-cli-core";
@@ -30,18 +29,6 @@ import { resolveImageSize } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_IMAGE_GENERATE, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
 import { join } from "path";
-
-// Qwen-Image 2.0 and Wan 2.7 use the sync multimodal-generation endpoint.
-const SYNC_MODEL_PREFIXES = ["qwen-image-2.0", "qwen-image-max", "wan2.7-image"];
-const PROMPT_EXTEND_DEFAULT_PREFIXES = ["qwen-image-2.0", "qwen-image-max"];
-
-function isSyncModel(model: string): boolean {
-  return SYNC_MODEL_PREFIXES.some((prefix) => model.startsWith(prefix));
-}
-
-function enablesPromptExtendByDefault(model: string): boolean {
-  return PROMPT_EXTEND_DEFAULT_PREFIXES.some((prefix) => model.startsWith(prefix));
-}
 
 const GENERATE_FLAGS = {
   prompt: { type: "string", valueHint: "<text>", description: "Image description", required: true },
@@ -109,6 +96,8 @@ export default defineCommand({
     '--prompt "Logo" --watermark false',
     '--prompt "An alien in the space" --watermark false',
     '--prompt "sunset" --model wan2.6-t2i --async --quiet',
+    '--prompt "plush doll" --model z-image-turbo --size 1024*1024',
+    '--prompt "sunset" --model wanx2.0-t2i-turbo --size 1024*1024',
     '--prompt "Pro quality" --model qwen-image-2.0-pro',
     '--prompt "Product shots" --n 2 --concurrent 3  # 6 images in parallel',
   ],
@@ -117,73 +106,90 @@ export default defineCommand({
     const prompt = flags.prompt;
 
     const model = flags.model || settings.defaultImageModel || "qwen-image-2.0";
-    const useSync = isSyncModel(model);
-    const defaultSize = useSync ? "1:1" : "1:1";
+    const route = resolveImageGenerateApi(model);
+    const defaultSize = "1:1";
     const sizeInput = flags.size || defaultSize;
-    const size = resolveImageSize(sizeInput, useSync);
+    const size = resolveImageSize(sizeInput, route.sizeProfile);
     const n = flags.n ?? 1;
     const concurrent = getConcurrency(flags);
 
     const promptExtend = resolveBooleanFlag(
       flags.promptExtend,
-      enablesPromptExtendByDefault(model) ? true : undefined,
+      route.promptExtendDefault,
       "prompt-extend",
     );
 
     const watermark = resolveWatermark(flags.watermark);
 
-    const body: DashScopeImageRequest = {
-      model,
-      input: {
-        messages: [{ role: "user", content: [{ text: prompt }] }],
-      },
-      parameters: {
-        size,
-        n,
-        seed: flags.seed,
-        prompt_extend: promptExtend,
-        watermark,
-        negative_prompt: flags.negativePrompt || undefined,
-      },
+    const parameters: NonNullable<DashScopeImageRequest["parameters"]> = {
+      size,
+      n,
+      seed: flags.seed,
+      prompt_extend: promptExtend,
+      watermark,
     };
+
+    const body: DashScopeImageRequest =
+      route.inputStyle === "prompt"
+        ? {
+            model,
+            input: {
+              prompt,
+              negative_prompt: flags.negativePrompt || undefined,
+            },
+            parameters,
+          }
+        : {
+            model,
+            input: {
+              messages: [{ role: "user", content: [{ text: prompt }] }],
+            },
+            parameters: {
+              ...parameters,
+              negative_prompt: flags.negativePrompt || undefined,
+            },
+          };
 
     const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult({ request: body, mode: useSync ? "sync" : "async" }, format);
+      emitResult(
+        { request: body, mode: route.useSync ? "sync" : "async", path: route.path },
+        format,
+      );
       return;
     }
 
     if (!settings.quiet) {
-      process.stderr.write(`[Model: ${model}] [Mode: ${useSync ? "sync" : "async"}]\n`);
+      process.stderr.write(`[Model: ${model}] [Mode: ${route.useSync ? "sync" : "async"}]\n`);
     }
 
-    if (useSync) {
-      await handleSyncMode(ctx.client, settings, model, body, flags, format, concurrent);
+    if (route.useSync) {
+      await handleSyncMode(ctx.client, settings, route.path, body, flags, format, concurrent);
     } else {
-      await handleAsyncMode(ctx.client, settings, model, body, flags, format, concurrent);
+      await handleAsyncMode(ctx.client, settings, route.path, body, flags, format, concurrent);
     }
   },
 });
 
-// ---- Sync mode: qwen-image-2.0 series ----
+// ---- Sync mode: qwen-image / wan2.7-image / z-image ----
 
 async function handleSyncMode(
   client: Client,
   settings: Settings,
-  _model: string,
+  path: string,
   body: DashScopeImageRequest,
   flags: GenerateFlags,
   format: string,
   concurrent: number,
 ): Promise<void> {
   const results = await runConcurrent(concurrent, settings, () =>
-    client.requestJson<DashScopeImageSyncResponse>({ path: imageSyncPath(), method: "POST", body }),
+    client.requestJson<DashScopeImageSyncResponse>({ path, method: "POST", body }),
   );
 
   const imageUrls = results
-    .flatMap((r) => r.output.choices || [])
-    .flatMap((c) => c.message?.content || [])
+    .flatMap((result) => result.output.choices || [])
+    .flatMap((choice) => choice.message?.content || [])
     .map((item) => item.image)
     .filter(Boolean);
 
@@ -194,12 +200,12 @@ async function handleSyncMode(
   await saveImages(imageUrls, flags, settings, format);
 }
 
-// ---- Async mode: wan2.x / qwen-image-plus ----
+// ---- Async mode: wan2.6-t2i / wan2.6-image / legacy text2image ----
 
 async function handleAsyncMode(
   client: Client,
   settings: Settings,
-  _model: string,
+  path: string,
   body: DashScopeImageRequest,
   flags: GenerateFlags,
   format: string,
@@ -210,14 +216,14 @@ async function handleAsyncMode(
     settings,
     () =>
       client.requestJson<DashScopeAsyncResponse>({
-        path: imagePath(),
+        path,
         method: "POST",
         body,
         async: true,
       }),
     "tasks",
   );
-  const taskIds = responses.map((r) => r.output.task_id);
+  const taskIds = responses.map((response) => response.output.task_id);
 
   // --async: return all task IDs immediately
   if (flags.async) {
@@ -234,12 +240,12 @@ async function handleAsyncMode(
       url: pollUrl,
       intervalSec: pollInterval,
       timeoutSec: settings.timeout,
-      isComplete: (d) => (d as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
-      isFailed: (d) => (d as DashScopeTaskResponse).output.task_status === "FAILED",
-      getStatus: (d) => (d as DashScopeTaskResponse).output.task_status,
-      getErrorMessage: (d) => {
-        const o = (d as DashScopeTaskResponse).output;
-        return o.message || o.code || undefined;
+      isComplete: (data) => (data as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
+      isFailed: (data) => (data as DashScopeTaskResponse).output.task_status === "FAILED",
+      getStatus: (data) => (data as DashScopeTaskResponse).output.task_status,
+      getErrorMessage: (data) => {
+        const output = (data as DashScopeTaskResponse).output;
+        return output.message || output.code || undefined;
       },
     });
   });
@@ -250,13 +256,13 @@ async function handleAsyncMode(
   for (const result of results) {
     if (result.output.choices) {
       const urls = result.output.choices
-        .flatMap((c) => c.message?.content || [])
+        .flatMap((choice) => choice.message?.content || [])
         .map((item) => item.image)
         .filter(Boolean);
       imageUrls.push(...urls);
     }
     if (result.output.results) {
-      const urls = result.output.results.map((r) => r.url).filter(Boolean);
+      const urls = result.output.results.map((item) => item.url).filter(Boolean);
       if (urls.length > 0 && imageUrls.length === 0) {
         imageUrls.push(...urls);
       }
@@ -298,8 +304,8 @@ async function saveImages(
   // Parallel download all images
   const items =
     imageUrls.length > 1
-      ? imageUrls.map((url, i) => {
-          const filename = `${prefix}_${String(i + 1).padStart(3, "0")}.png`;
+      ? imageUrls.map((url, index) => {
+          const filename = `${prefix}_${String(index + 1).padStart(3, "0")}.png`;
           return { url, destPath: join(outDir, filename) };
         })
       : [{ url: imageUrls[0], destPath: join(outDir, `${prefix}.png`) }];

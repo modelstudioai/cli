@@ -14,7 +14,12 @@ export default defineCommand({
         "Config key (base_url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, security_token, default_*_model, workspace_id)",
       required: true,
     },
-    value: { type: "string", valueHint: "<value>", description: "Value to set", required: true },
+    value: {
+      type: "string",
+      valueHint: "<value>",
+      description: "Value to set",
+      required: true,
+    },
   },
   exampleArgs: [
     "--key output --value json",
@@ -44,7 +49,9 @@ export default defineCommand({
       return;
     }
 
-    await ctx.configStore.write({ [resolvedKey]: coerced } as Partial<ConfigFile>);
+    await ctx.configStore.write({
+      [resolvedKey]: coerced,
+    } as Partial<ConfigFile>);
 
     if (!settings.quiet) {
       const shown = SECRET_KEYS.has(resolvedKey) ? maskToken(String(coerced)) : coerced;

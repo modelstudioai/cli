@@ -34,6 +34,8 @@ export {
   BAILIAN_CONSOLE,
   API_KEY_PAGE,
   TOKEN_PLAN_PAGE,
+  MCP_WEBSEARCH_PAGE,
+  mcpMarketplaceDetailPage,
   VOICE_TTS_PAGE,
 } from "./urls.ts";
 

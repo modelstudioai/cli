@@ -46,7 +46,7 @@ test("baseUrl:flag > env > file > 默认，所有来源统一归一化", () => {
   const file: ConfigFile = { base_url: "https://file.example.com/gateway/" };
   expect(resolveModelBaseUrl(src({ flags, env, file }))).toBe("https://flag.example.com");
   expect(resolveModelBaseUrl(src({ env, file }))).toBe("https://env.example.com");
-  expect(resolveModelBaseUrl(src({ file }))).toBe("https://file.example.com/gateway");
+  expect(resolveModelBaseUrl(src({ file }))).toBe("https://file.example.com");
   expect(resolveModelBaseUrl(src({}))).toBe("https://dashscope.aliyuncs.com");
 });
 

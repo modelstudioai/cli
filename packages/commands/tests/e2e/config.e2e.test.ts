@@ -247,10 +247,10 @@ describe("e2e: config", () => {
       );
       expect(setResult.exitCode, setResult.stderr).toBe(0);
       expect(parseStdoutJson<{ base_url?: string }>(setResult.stdout).base_url).toBe(
-        "https://proxy.example.com/bailian",
+        "https://proxy.example.com",
       );
       expect(JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")).base_url).toBe(
-        "https://proxy.example.com/bailian",
+        "https://proxy.example.com",
       );
 
       const invalidResult = await runCommandE2e(
