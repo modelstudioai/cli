@@ -5,7 +5,7 @@
 **阿里云 Model Studio 轻量级 RAG 命令行工具 — 专注知识库检索。**
 
 [![npm version](https://img.shields.io/npm/v/knowledge-studio-cli?color=0969da&label=npm)](https://www.npmjs.com/package/knowledge-studio-cli)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D22.12-brightgreen)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18.17-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
@@ -23,7 +23,7 @@
 npm install -g knowledge-studio-cli
 ```
 
-> 需要 Node.js >= 22.12。
+> 需要 Node.js >= 18.17。
 
 ## 快速开始
 

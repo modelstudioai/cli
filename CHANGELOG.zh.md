@@ -6,6 +6,74 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.12.0] - 2026-07-28
+
+### 新增
+
+- **`bl config agent --key` / `--region`** —— 百炼控制台生成的命令可直接运行：`--key` 接收控制台编码后的 API Key 并在本地解码（与 `--api-key` 二选一）；`--region` 根据地域名自动派生 Token Plan 接入地址（与 `--base-url` 二选一）。
+- **`bl config agent --context-window`** —— 设置写入 OpenClaw 配置的上下文窗口大小（默认 256000）。
+- **`bl config agent --wire-api`** —— 选择写入 Codex 配置的通信协议；`chat` 仅保留给 Codex 0.80.0 及更早版本（会显示警告）。
+
+### 变更
+
+- `bl config agent` 配置 Codex 时默认写入 `wire_api = "responses"`，以适配已不再支持 `chat` 的新版 Codex。
+- `bl config agent` 配置 Qwen Code 时改用 `DASHSCOPE_API_KEY` 环境变量，不再使用 `BAILIAN_CLI_API_KEY`。
+
+### 修复
+
+- `bl config agent` 写入的配置现已与各 Agent 官方格式对齐：Claude Code 尊重 `CLAUDE_CONFIG_DIR` 并清理残留的 `ANTHROPIC_API_KEY`；Qwen Code 采用 v3 配置 schema 并正确写入凭证，避免被系统级 `OPENAI_API_KEY` 干扰；OpenCode 支持带注释和尾部逗号的 JSONC 配置文件；OpenClaw 会将主模型注册进模型白名单并补齐计费元数据；Hermes 改用官方扁平 `model.*` 结构；Codex 写入官方 `env_key` 并支持 `auth.json` 兜底。
+- `bl config agent` 写入配置时现会保留用户已有配置：合并而非覆盖，避免重复添加 provider 条目，并保留用户自定义的显示名。
+
+## [1.11.2] - 2026-07-28
+
+### 变更
+
+- MCP 工具或 WebSearch 因对应服务未开通而不可用时，CLI 现在会提供开通指引和市场直达链接；对于使用旧版 SSE 连接的 WebSearch，还会提示重新开通以切换至 Streamable HTTP。
+
+### 修复
+
+- 修复文本对话与 API Key 登录校验因传递不受支持的 `enable_thinking` 参数值而产生的兼容性错误。文本对话仅在用户明确开启思考模式时传递该参数，登录校验则改用兼容模型且不再传递该参数。
+
+## [1.11.1] - 2026-07-28
+
+### 新增
+
+- `bl image edit` 新增 `--function` 参数，支持为万相图片编辑模型（如 `wanx2.1-imageedit`）指定编辑功能。
+
+### 修复
+
+- 修复部分图片模型在图片生成与编辑时的调用失败和尺寸参数错误，并完善 Qwen-Image、Wan/Wanx、Z-Image 系列及 `wanx-v1` 日期版本的兼容性。
+
+## [1.11.0] - 2026-07-28
+
+### 新增
+
+- **`bl managed-agent`** —— 通过统一 CLI 声明式管理 Managed Agent 基础设施；百炼 Provider 对接 AgentStudio，并支持 Claude、Qoder 和 Ark：
+  - `init` / `validate` / `plan` / `apply` / `destroy` —— 基于 `agents.yaml` 初始化、校验、预览和执行资源变更，以及销毁已托管资源。
+  - `state list` / `state show` / `state rm` / `state import` —— 查看和管理本地资源状态，包括纳管已有远端资源或仅解除本地跟踪。
+  - `session create` / `session list` / `session get` / `session delete` / `session run` / `session send` / `session events` —— 完整的会话生命周期操作，支持流式响应和结构化的 `--output json` 输出。
+  - `skill-list` —— 浏览自定义与官方 Skill；使用 `--source all` 可一次返回两个来源。
+
+### 变更
+
+- 模型 Base URL 现在统一仅保留 URL Origin；传入的路径、查询参数和 Fragment 不再参与后续 API 请求路径拼接。
+
+### 修复
+
+- 安装指南不再推荐已移除的 `--non-interactive`，改为说明显式传入必填参数，并使用 `--output json` 或 `NO_COLOR=1` 适配非交互环境。
+
+## [1.10.1] - 2026-07-22
+
+### 变更
+
+- Token Plan 默认模型已更新为当前文本、图片，以及文生视频、图生视频和参考生视频的专用模型。
+- 百炼 CLI Skill 现在能更准确地区分百炼专属任务与普通宿主 Agent 任务，并避免在已授权的工作流中重复征求同意。
+- 已发布的 CLI 包现在支持 Node.js 18.17 及以上版本，最低版本要求由 Node.js 22.12 下调至 18.17。
+
+### 修复
+
+- Token Plan 现在能在图片编辑、图生视频、参考生视频和视觉理解中正确处理本地图片，无需另行托管为 URL。
+
 ## [1.10.0] - 2026-07-19
 
 ### 新增

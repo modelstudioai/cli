@@ -21,7 +21,11 @@ export default defineCommand({
   usageArgs:
     "--api-key <key> | --console | --open-api --access-key-id <id> --access-key-secret <secret>",
   flags: {
-    apiKey: { type: "string", valueHint: "<key>", description: "Model API key to store" },
+    apiKey: {
+      type: "string",
+      valueHint: "<key>",
+      description: "Model API key to store",
+    },
     baseUrl: {
       type: "string",
       valueHint: "<url>",
@@ -150,6 +154,9 @@ export default defineCommand({
       baseUrl: resolvedBaseUrl,
       persistBaseUrl,
       defaultTextModel: profilePreset?.defaultTextModel,
+      defaultVideoModel: profilePreset?.defaultVideoModel,
+      defaultImageToVideoModel: profilePreset?.defaultImageToVideoModel,
+      defaultReferenceToVideoModel: profilePreset?.defaultReferenceToVideoModel,
       defaultImageModel: profilePreset?.defaultImageModel,
     });
   },

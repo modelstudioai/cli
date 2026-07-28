@@ -7,7 +7,7 @@
 **原则**：先执行检查；若 **Node / 包管理器 / 网络** 任一不满足下文要求，Agent 应 **在本机终端内主动完成安装或配置**（例如升级 Node、切换镜像、配置 `npm` 代理等），再继续 `bailian-cli` 安装。仅在无权限或环境无法自动化时，再向用户说明原因并请其配合。
 
 1. **Node.js**
-   - 要求 **≥ 22.12.0**，执行 `node -v` 确认。
+   - 要求 **≥ 18.17.0**，执行 `node -v` 确认。
    - 未安装或版本不足：由 Agent 自行安装或升级 Node。
 
 2. **npm**（**唯一**允许的包管理器）
@@ -98,7 +98,7 @@ npx skills add modelstudioai/cli --all -g
 ### Agent 安全约束
 
 - **禁止**把真实 API Key 写入仓库、日志、Skill、聊天记录的可公开部分。
-- CI / 非交互环境：使用 `bl ... --non-interactive`；通过密钥管理或环境变量注入，勿在脚本中硬编码 Key。
+- CI / 非交互环境：显式传入必填参数并使用 `--output json` 获取机器可读结果；如需纯文本输出，设置 `NO_COLOR=1`。通过密钥管理或环境变量注入，勿在脚本中硬编码 Key。
 
 ---
 
@@ -119,7 +119,7 @@ bl auth status --output json
 | 现象                    | 可能原因             | 建议动作                                                        |
 | ----------------------- | -------------------- | --------------------------------------------------------------- |
 | `bl: command not found` | 全局 bin 不在 PATH   | 检查 `npm prefix -g` 与 PATH                                    |
-| 安装报错 engines        | Node 版本过低        | 升级到 ≥ 22.12                                                  |
+| 安装报错 engines        | Node 版本过低        | 升级到 ≥ 18.17                                                  |
 | 401 / 鉴权失败          | 未 login 或 Key 无效 | 按 Key 类型重新执行普通或 Token Plan 登录命令                   |
 | 企业网络无法访问 npm    | 代理 / 镜像          | 配置 registry 或代理后再装                                      |
 | 本机只有 pnpm、没有 npm | Agent 误用 pnpm 安装 | 先装/修好 **npm**，再用 `npm install -g bailian-cli`；勿用 pnpm |

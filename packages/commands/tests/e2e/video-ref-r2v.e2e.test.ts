@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
 import {
@@ -42,6 +43,92 @@ describe("e2e: video ref (r2v)", () => {
       stdout,
     );
     expect(data.request?.input?.media?.[0]?.url).toBe("https://example.com/person.png");
+  });
+
+  test("Token Plan 使用独立的参考生视频默认模型", async () => {
+    const configDir = makeE2eOutputDir("video-r2v-token-plan-default");
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify(
+        {
+          "token-plan": {
+            api_key: "sk-sp-e2e-placeholder",
+            base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
+            default_reference_to_video_model: "custom-reference-to-video-model",
+          },
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      VIDEO_ROUTES,
+      [
+        "video",
+        "ref",
+        "--config",
+        "token-plan",
+        "--dry-run",
+        "--prompt",
+        "Image 1 waves",
+        "--image",
+        "https://example.com/person.png",
+        "--output",
+        "json",
+      ],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ request?: { model?: string } }>(stdout);
+    expect(data.request?.model).toBe("custom-reference-to-video-model");
+  });
+
+  test("Token Plan 参考生视频将本地参考图转换为 Base64", async () => {
+    const configDir = makeE2eOutputDir("video-r2v-token-plan-local-image");
+    const imagePath = join(configDir, "reference.png");
+    writeFileSync(imagePath, Buffer.from([1, 2, 3]));
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify({
+        "token-plan": {
+          api_key: "sk-sp-e2e-placeholder",
+          base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
+          default_reference_to_video_model: "happyhorse-1.1-r2v",
+        },
+      }),
+    );
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      VIDEO_ROUTES,
+      [
+        "video",
+        "ref",
+        "--config",
+        "token-plan",
+        "--dry-run",
+        "--image",
+        imagePath,
+        "--prompt",
+        "Image 1 waves",
+        "--output",
+        "json",
+      ],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      request?: { input?: { media?: Array<{ url?: string }> } };
+    }>(stdout);
+    expect(data.request?.input?.media?.[0]?.url).toBe("data:image/png;base64,<omitted>");
   });
 });
 

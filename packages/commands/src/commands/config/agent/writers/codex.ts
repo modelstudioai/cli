@@ -8,8 +8,9 @@ const PROVIDER_KEY = "bailian-cli";
 
 export default {
   label: "Codex",
-  write({ baseUrl, apiKey, model }) {
+  write({ baseUrl, apiKey, model, wireApi: wireApiParam }) {
     const configPath = join(homedir(), ".codex", "config.toml");
+    const warnings: string[] = [];
 
     // config.toml — merge into existing config so unrelated settings
     // (mcp_servers, approval_policy, other providers, ...) are preserved.
@@ -25,8 +26,19 @@ export default {
 
     config.model_provider = PROVIDER_KEY;
     config.model = model;
-    config.model_reasoning_effort = "high";
-    config.disable_response_storage = true;
+
+    // wire_api — current Codex releases only load `wire_api = "responses"`
+    // ("chat" is rejected at config load, see openai/codex discussion #7782).
+    // "chat" remains an explicit opt-in for users pinned to legacy Codex
+    // <= 0.80.0 (the Model Studio path for models without Responses support).
+    const wireApi = wireApiParam === "chat" ? "chat" : "responses";
+    if (wireApi === "chat") {
+      warnings.push(
+        'Current Codex releases refuse to load `wire_api = "chat"`; ' +
+          "only use --wire-api chat with legacy Codex <= 0.80.0 " +
+          "(e.g. `npm install -g @openai/codex@0.80.0`).",
+      );
+    }
 
     const providers = (config.model_providers ?? {}) as Record<string, unknown>;
     const existing = (providers[PROVIDER_KEY] ?? {}) as Record<string, unknown>;
@@ -34,14 +46,17 @@ export default {
       ...existing,
       name: PROVIDER_KEY,
       base_url: baseUrl,
-      wire_api: "responses",
+      // env_key is the official-doc credential mechanism: Codex resolves the
+      // key from the OPENAI_API_KEY env var, falling back to auth.json below.
+      env_key: "OPENAI_API_KEY",
+      wire_api: wireApi,
       requires_openai_auth: true,
     };
     config.model_providers = providers;
 
     writeTextAtomic(configPath, stringifyToml(config) + "\n");
 
-    // auth.json — Codex reads OPENAI_API_KEY from here.
+    // auth.json — Codex reads OPENAI_API_KEY from here when the env var is unset.
     const authPath = join(homedir(), ".codex", "auth.json");
     backup(authPath);
     const auth = readJson(authPath);
@@ -51,6 +66,7 @@ export default {
     return {
       paths: [configPath, authPath],
       nextStep: "Run `codex` to start using Codex with DashScope.",
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
   },
 } satisfies AgentDef;

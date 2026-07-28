@@ -32,8 +32,11 @@ const resolve = (s: Parameters<typeof src>[0]): Settings => buildSettings(src(s)
 test("token-plan Profile 预设保持固定", () => {
   expect(getModelProfilePreset("token-plan")).toEqual({
     baseUrl: "https://token-plan.cn-beijing.maas.aliyuncs.com",
-    defaultTextModel: "qwen3.7-max",
-    defaultImageModel: "qwen-image-2.0",
+    defaultTextModel: "qwen3.8-max-preview",
+    defaultVideoModel: "happyhorse-1.1-t2v",
+    defaultImageToVideoModel: "happyhorse-1.1-i2v",
+    defaultReferenceToVideoModel: "happyhorse-1.1-r2v",
+    defaultImageModel: "wan2.7-image",
   });
 });
 
@@ -43,7 +46,7 @@ test("baseUrl:flag > env > file > 默认，所有来源统一归一化", () => {
   const file: ConfigFile = { base_url: "https://file.example.com/gateway/" };
   expect(resolveModelBaseUrl(src({ flags, env, file }))).toBe("https://flag.example.com");
   expect(resolveModelBaseUrl(src({ env, file }))).toBe("https://env.example.com");
-  expect(resolveModelBaseUrl(src({ file }))).toBe("https://file.example.com/gateway");
+  expect(resolveModelBaseUrl(src({ file }))).toBe("https://file.example.com");
   expect(resolveModelBaseUrl(src({}))).toBe("https://dashscope.aliyuncs.com");
 });
 
@@ -316,10 +319,18 @@ test("openapi 凭证:低优先级来源缺字段时不影响更高优先级成�
 
 test("default*Model / outputDir:仅 file 源", () => {
   const c = resolve({
-    file: { default_text_model: "qwen-max", default_video_model: "wan-x", output_dir: "/tmp/out" },
+    file: parseConfigFile({
+      default_text_model: "qwen-max",
+      default_video_model: "wan-t2v",
+      default_image_to_video_model: "wan-i2v",
+      default_reference_to_video_model: "wan-r2v",
+      output_dir: "/tmp/out",
+    }),
   });
   expect(c.defaultTextModel).toBe("qwen-max");
-  expect(c.defaultVideoModel).toBe("wan-x");
+  expect(c.defaultVideoModel).toBe("wan-t2v");
+  expect(c.defaultImageToVideoModel).toBe("wan-i2v");
+  expect(c.defaultReferenceToVideoModel).toBe("wan-r2v");
   expect(c.outputDir).toBe("/tmp/out");
   expect(resolve({}).defaultTextModel).toBeUndefined();
 });

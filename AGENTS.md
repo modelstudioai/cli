@@ -68,6 +68,7 @@ Skill / 命令手册随 `skills/bailian-cli/` 经 `npx skills add modelstudioai/
 | 鉴权扩展       | 加 OAuth / SSO / 换 token 来源               | [docs/agents/auth-change.md](docs/agents/auth-change.md)                     |
 | 配置项扩展     | 新 env var 或 `~/.bailian/config.json` 字段  | [docs/agents/config-add.md](docs/agents/config-add.md)                       |
 | Profile / 激活 | 改命名 Profile、预设或 `active_config`       | [docs/agents/config-profile-change.md](docs/agents/config-profile-change.md) |
+| 安装文档       | 改安装、鉴权、验证流程或线上 install 页面    | [docs/agents/install-doc-change.md](docs/agents/install-doc-change.md)       |
 | 发布           | channel / stable 发布到 npm（CI 驱动）       | [docs/agents/publish.md](docs/agents/publish.md)                             |
 | Change Log     | 发版说明 / 历史版本说明                      | [docs/agents/changelog-write.md](docs/agents/changelog-write.md)             |
 | 工具链调整     | lint 规则 / 构建配置 / 依赖升级              | [docs/agents/lint-toolchain.md](docs/agents/lint-toolchain.md)               |
