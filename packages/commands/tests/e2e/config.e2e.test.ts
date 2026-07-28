@@ -295,7 +295,9 @@ describe("e2e: config", () => {
       "json",
     ]);
     expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{ would_set?: { default_text_model?: string } }>(stdout);
+    const data = parseStdoutJson<{
+      would_set?: { default_text_model?: string };
+    }>(stdout);
     expect(data.would_set?.default_text_model).toBe("qwen3.7-max");
   });
 
@@ -390,7 +392,7 @@ describe("e2e: config", () => {
     expect(stderr).toMatch(/agent|--base-url|--model/i);
   });
 
-  test("config agent 缺少 --api-key 时报用法错误并退出 (2)", async () => {
+  test("config agent 缺少 --api-key/--key 时报用法错误并退出 (2)", async () => {
     const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
       "config",
       "agent",
@@ -402,7 +404,146 @@ describe("e2e: config", () => {
       "qwen3-max",
     ]);
     expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/--api-key|Usage:/i);
+    expect(stderr).toMatch(/--api-key|--key|Usage:/i);
+  });
+
+  test("config agent --api-key 与 --key 同传时报用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+      "config",
+      "agent",
+      "--agent",
+      "claude-code",
+      "--base-url",
+      "https://dashscope.aliyuncs.com/apps/anthropic",
+      "--api-key",
+      "sk-placeholder",
+      "--key",
+      "o1_AbC123kaQ9JHCXF2GepMW4oJTD7ODPw_Hx",
+      "--model",
+      "qwen3-max",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/mutually exclusive|--api-key/i);
+  });
+
+  test("config agent --key 非法值时报用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+      "config",
+      "agent",
+      "--agent",
+      "claude-code",
+      "--base-url",
+      "https://dashscope.aliyuncs.com/apps/anthropic",
+      "--key",
+      "not-an-encoded-key",
+      "--model",
+      "qwen3-max",
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/Invalid obfuscated API key|o1_/i);
+  });
+
+  test("config agent --key 合法值 --dry-run 解码成功且输出脱敏", async () => {
+    const home = mkdtempSync(join(tmpdir(), "bl-config-agent-key-"));
+    try {
+      const { stdout, stderr, exitCode } = await runCommandE2e(
+        CONFIG_ROUTES,
+        [
+          "config",
+          "agent",
+          "--agent",
+          "claude-code",
+          "--base-url",
+          "https://dashscope.aliyuncs.com/apps/anthropic",
+          "--key",
+          // encode("sk-e2e-key-placeholder", salt "AbC123") 的固定产物
+          "o1_AbC123kaQ9JHCXF2GepMW4oJTD7ODPw_Hx",
+          "--model",
+          "qwen3-max",
+          "--dry-run",
+          "--output",
+          "json",
+        ],
+        { HOME: home },
+      );
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{ agent?: string; api_key?: string }>(stdout);
+      expect(data.agent).toBe("claude-code");
+      // 解码后的真实 key 不得明文出现，且脱敏值非空
+      expect(stdout).not.toContain("sk-e2e-key-placeholder");
+      expect(data.api_key).toBeTruthy();
+      expect(existsSync(join(home, ".claude", "settings.json"))).toBe(false);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test("config agent --region 转为 base URL，--dry-run 成功", async () => {
+    const home = mkdtempSync(join(tmpdir(), "bl-config-agent-region-"));
+    try {
+      const { stdout, stderr, exitCode } = await runCommandE2e(
+        CONFIG_ROUTES,
+        [
+          "config",
+          "agent",
+          "--agent",
+          "qwen-code",
+          "--region",
+          "cn-beijing",
+          "--api-key",
+          "sk-region-placeholder",
+          "--model",
+          "qwen3.8-max-preview",
+          "--dry-run",
+          "--output",
+          "json",
+        ],
+        { HOME: home },
+      );
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{ agent?: string; base_url?: string }>(stdout);
+      expect(data.agent).toBe("qwen-code");
+      expect(data.base_url).toBe(
+        "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+      );
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test("config agent --base-url 与 --region 同传时报用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+      "config",
+      "agent",
+      "--agent",
+      "qwen-code",
+      "--base-url",
+      "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "--region",
+      "cn-beijing",
+      "--api-key",
+      "sk-placeholder",
+      "--model",
+      "qwen3-coder-plus",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/mutually exclusive|--base-url|--region/i);
+  });
+
+  test("config agent 既缺 --base-url 又缺 --region 时报用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+      "config",
+      "agent",
+      "--agent",
+      "qwen-code",
+      "--api-key",
+      "sk-placeholder",
+      "--model",
+      "qwen3-coder-plus",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--base-url|--region|Usage:/i);
   });
 
   test("config agent 非法 --agent 时退出为用法错误 (2)", async () => {
@@ -461,7 +602,7 @@ describe("e2e: config", () => {
     }
   });
 
-  test("config agent codex 写入 config.toml 与 auth.json（cc-switch 对齐结构）", async () => {
+  test("config agent codex 写入 config.toml 与 auth.json（官方 env_key 结构）", async () => {
     const home = mkdtempSync(join(tmpdir(), "bl-config-agent-codex-"));
     try {
       const { stderr, exitCode } = await runCommandE2e(
@@ -483,7 +624,9 @@ describe("e2e: config", () => {
       expect(exitCode, stderr).toBe(0);
       const toml = readFileSync(join(home, ".codex", "config.toml"), "utf8");
       expect(toml).toContain('model_provider = "bailian-cli"');
+      expect(toml).toContain('env_key = "OPENAI_API_KEY"');
       expect(toml).toContain("requires_openai_auth = true");
+      // 默认即 responses（新版 Codex 已不支持 chat）
       expect(toml).toContain('wire_api = "responses"');
       const auth = JSON.parse(readFileSync(join(home, ".codex", "auth.json"), "utf8"));
       expect(auth.OPENAI_API_KEY).toBe("sk-codex-placeholder");
@@ -492,7 +635,7 @@ describe("e2e: config", () => {
     }
   });
 
-  test("config agent hermes 写入 custom_providers 结构", async () => {
+  test("config agent hermes 写入官方扁平 model.* 结构", async () => {
     const home = mkdtempSync(join(tmpdir(), "bl-config-agent-hermes-"));
     try {
       const { stderr, exitCode } = await runCommandE2e(
@@ -513,9 +656,12 @@ describe("e2e: config", () => {
       );
       expect(exitCode, stderr).toBe(0);
       const yamlText = readFileSync(join(home, ".hermes", "config.yaml"), "utf8");
-      expect(yamlText).toContain("custom_providers");
-      expect(yamlText).toContain("bailian-cli");
-      expect(yamlText).toContain("api_mode: chat_completions");
+      expect(yamlText).toContain("default: qwen3-coder-plus");
+      expect(yamlText).toContain("provider: custom");
+      expect(yamlText).toContain("base_url: https://dashscope.aliyuncs.com/compatible-mode/v1");
+      expect(yamlText).toContain("api_key: sk-hermes-placeholder");
+      // OpenAI 兼容端点不写 api_mode
+      expect(yamlText).not.toContain("api_mode");
     } finally {
       rmSync(home, { recursive: true, force: true });
     }

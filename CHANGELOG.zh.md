@@ -6,6 +6,24 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.12.0] - 2026-07-28
+
+### 新增
+
+- **`bl config agent --key` / `--region`** —— 百炼控制台生成的命令可直接运行：`--key` 接收控制台编码后的 API Key 并在本地解码（与 `--api-key` 二选一）；`--region` 根据地域名自动派生 Token Plan 接入地址（与 `--base-url` 二选一）。
+- **`bl config agent --context-window`** —— 设置写入 OpenClaw 配置的上下文窗口大小（默认 256000）。
+- **`bl config agent --wire-api`** —— 选择写入 Codex 配置的通信协议；`chat` 仅保留给 Codex 0.80.0 及更早版本（会显示警告）。
+
+### 变更
+
+- `bl config agent` 配置 Codex 时默认写入 `wire_api = "responses"`，以适配已不再支持 `chat` 的新版 Codex。
+- `bl config agent` 配置 Qwen Code 时改用 `DASHSCOPE_API_KEY` 环境变量，不再使用 `BAILIAN_CLI_API_KEY`。
+
+### 修复
+
+- `bl config agent` 写入的配置现已与各 Agent 官方格式对齐：Claude Code 尊重 `CLAUDE_CONFIG_DIR` 并清理残留的 `ANTHROPIC_API_KEY`；Qwen Code 采用 v3 配置 schema 并正确写入凭证，避免被系统级 `OPENAI_API_KEY` 干扰；OpenCode 支持带注释和尾部逗号的 JSONC 配置文件；OpenClaw 会将主模型注册进模型白名单并补齐计费元数据；Hermes 改用官方扁平 `model.*` 结构；Codex 写入官方 `env_key` 并支持 `auth.json` 兜底。
+- `bl config agent` 写入配置时现会保留用户已有配置：合并而非覆盖，避免重复添加 provider 条目，并保留用户自定义的显示名。
+
 ## [1.11.2] - 2026-07-28
 
 ### 变更
