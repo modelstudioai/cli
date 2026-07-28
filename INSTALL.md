@@ -8,13 +8,21 @@
 curl -fsSL https://bailian.aliyun.com/install.sh | bash
 ```
 
-可选：默认读 `manifest.json`（正式版）；`bash install.sh --channel sync-release` 读 channel 清单做验证；`--version` 钉版本；`--cdn` / `BAILIAN_CLI_CDN` 覆盖资源 CDN 根。
+可选：正式安装读 CDN 上的 `manifest.json`。预发 / channel 验证示例：
+
+```bash
+curl -fsSL https://bailian.aliyun.com/install.sh | bash -s -- --channel sync-release
+```
+
+也可用 `--version` / `--cdn`（或环境变量 `BAILIAN_CLI_CDN`）覆盖资源根。安装脚本本身不在本仓库维护。
 
 Windows PowerShell：
 
 ```powershell
 irm https://bailian.aliyun.com/install.ps1 | iex
 ```
+
+带参时先落盘再执行（`irm | iex` 不便传参），或使用仓外静态资源文档中的预发入口。
 
 校验：
 

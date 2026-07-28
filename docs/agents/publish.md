@@ -47,7 +47,6 @@ publish-stable.mjs / publish-channel.mjs   ← 唯一发版入口
 4. CI 自动：自检 → **npm 发到 latest** → **推送 git tag `v<ver>`** → **Bun 编二进制并创建/更新 GitHub Release** → 完成
 5. 如果所选发布集合的当前版本已全部存在于 npm，stable 发布会失败并提示先升级版本号；如果只有部分包已发布，CI 会继续补发缺失包
 6. 对应脚本：`tools/release/publish-stable.mjs`
-7. 二进制上传使用 `GITHUB_TOKEN`（`gh release`），**不需要** OSS AccessKey
 
 ## 自检（`tools/release/check.mjs`）
 
@@ -108,7 +107,6 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 
 - [ ] 验证 npm 上能装：`npm view bailian-cli@<tag> version`;如发布 `knowledge-studio-cli`，同时 `npm view knowledge-studio-cli@<tag> version`
 - [ ] 试装一次：`npm i -g bailian-cli@<tag> && bl --version`;如发布 `knowledge-studio-cli`，同时 `npm i -g knowledge-studio-cli@<tag> && kscli --version`
-- [ ] （若本次含二进制）GitHub Release 可见 `bl-*.zip` + `SHA256SUMS`；OSS 侧 `latest.json` / `<channel>.json`、`v<ver>/*` 与 `install.sh`/`install.ps1` 已由 CI 直传
 
 ## 常见漏点（基于历史踩坑）
 
