@@ -2,7 +2,7 @@ import { homedir } from "os";
 import { join } from "path";
 import { backup, readJson, writeJsonAtomic, isAnthropicEndpoint, type AgentDef } from "./utils.ts";
 
-const ENV_KEY = "BAILIAN_CLI_API_KEY";
+const ENV_KEY = "DASHSCOPE_API_KEY";
 
 function displayName(model: string): string {
   return `[Bailian] ${model}`;
