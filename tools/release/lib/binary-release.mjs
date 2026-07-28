@@ -11,7 +11,8 @@
  *
  * Re-runs are idempotent via `gh release upload --clobber` (see gh-release.mjs).
  * After the GitHub upload the same assets are pushed straight to OSS from the
- * runner, HEAD-reconciled, and (stable only) release/manifest.json is updated —
+ * runner, HEAD-reconciled, and (stable only) release/manifest.json + latest.json
+ * are rewritten with the SAME rolling-manifest body as channel `<channel>.json` —
  * all in-process, no external FC (see oss-direct-upload.mjs).
  *
  * Called by publish-stable.mjs / publish-channel.mjs.
@@ -20,7 +21,7 @@
  *   node tools/release/lib/binary-release.mjs --mode channel --channel beta --dry-run
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs as parseCliArgs } from "node:util";
 import { ROOT, readPackageJson, PACKAGES } from "./packages.mjs";
@@ -191,7 +192,6 @@ export async function releaseBinaryArtifacts(rawOptions = {}) {
     if (mode === "stable") {
       await maintainReleaseManifest({
         tag: `v${version}`,
-        assetNames: plans[0].paths.map((path) => basename(path)),
         channelJsonPath: null,
         dryRun: true,
       });
@@ -247,7 +247,6 @@ export async function releaseBinaryArtifacts(rawOptions = {}) {
   if (mode === "stable" && !mirror.skipped) {
     await maintainReleaseManifest({
       tag: `v${version}`,
-      assetNames: plans[0].paths.map((path) => basename(path)),
       channelJsonPath: join(dir, rollingManifest),
       dryRun,
     });

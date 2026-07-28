@@ -8,9 +8,11 @@
  *     channel manifests (`<channel>.json`) go to the prefix root (empty tag).
  *   - After upload, every object is HEAD-verified against the local byte size
  *     (reconciliation — the runner has the ground-truth artifacts on disk).
- *   - Stable only: when the tag is a NEWER version than manifest.latest
+ *   - Stable only: when the tag is a NEWER version than the current manifest
  *     (compareVersions), rewrite `<prefix>/manifest.json` and the rolling
- *     `<prefix>/latest.json`. Channel/prerelease never touches either.
+ *     `<prefix>/latest.json` — both carry the SAME rolling-manifest body
+ *     written by binary-build.mjs, so manifest.json shares the channel
+ *     `<channel>.json` shape. Channel/prerelease never touches either.
  *
  * Zero-dependency: OSS V1 header signature (HMAC-SHA1) over plain fetch.
  *
@@ -101,36 +103,6 @@ export function compareVersions(a, b) {
   return 0;
 }
 
-/** Format now (or a given time) as an Asia/Shanghai +08:00 string. */
-function toBeijing(input) {
-  const d = input ? new Date(input) : new Date();
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  }).formatToParts(d);
-  const g = (t) => parts.find((p) => p.type === t)?.value ?? "00";
-  return `${g("year")}-${g("month")}-${g("day")}T${g("hour")}:${g("minute")}:${g("second")}+08:00`;
-}
-
-/**
- * Build the manifest.json contents. Public URLs always use the durable region
- * endpoint (never the acceleration endpoint used for uploads).
- */
-function buildManifest(tag, releasedAt, assetNames, cfg) {
-  const base = `https://${cfg.bucket}.${cfg.region}.aliyuncs.com/${cfg.prefix}/${tag}`;
-  const assets = {};
-  for (const name of [...assetNames].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))) {
-    assets[name] = `${base}/${encodeURIComponent(name)}`;
-  }
-  return { latest: tag, releasedAt, assets };
-}
-
 /**
  * Signed OSS request (V1 header signature). Keys here are [A-Za-z0-9._/-] only,
  * so no URL encoding is needed and the signed resource matches the request path.
@@ -218,7 +190,7 @@ async function getObjectJson(key, creds, cfg) {
  * @returns {Promise<T[]>}
  */
 async function runWithConcurrency(tasks, limit) {
-  const results = new Array(tasks.length);
+  const results = Array.from({ length: tasks.length });
   let nextIndex = 0;
 
   async function worker() {
@@ -346,23 +318,20 @@ export async function mirrorReleaseAssetsToOss({ plans, dryRun = false }) {
 
 /**
  * Maintain the STABLE pointers at the prefix root: rewrite `manifest.json`
- * (and, when `channelJsonPath` is given, the rolling `latest.json`) when `tag`
- * is a newer version than the current `latest` (first write included).
+ * and the rolling `latest.json` when `tag` is a newer version than the
+ * current manifest (first write included). Both objects carry the SAME
+ * rolling-manifest body produced by binary-build.mjs (`channelJsonPath`):
+ * `{ name, channel, version, releasedAt, assets: { "<os>-<arch>": { file, sha256, inner } } }`
+ * — identical in shape to the channel `<channel>.json` manifests.
  *
  * @param {{
  *   tag: string,
- *   assetNames: string[],
  *   channelJsonPath?: string | null,
  *   dryRun?: boolean,
- * }} options
+ * }} options `channelJsonPath` is required outside dry-run.
  * @returns {Promise<{ updated: boolean, latest: string | null }>}
  */
-export async function maintainReleaseManifest({
-  tag,
-  assetNames,
-  channelJsonPath = null,
-  dryRun = false,
-}) {
+export async function maintainReleaseManifest({ tag, channelJsonPath = null, dryRun = false }) {
   const ctx = ossContext();
   if (!ctx) {
     process.stdout.write("[info] BAILIAN_OSS_AK/SK unset; skip manifest.json maintenance\n");
@@ -373,38 +342,40 @@ export async function maintainReleaseManifest({
 
   if (dryRun) {
     process.stdout.write(
-      `[dry-run] manifest: GET oss://${cfg.bucket}/${key} → rewrite manifest.json + latest.json when ${tag} > latest (assets: ${assetNames.length})\n`,
+      `[dry-run] manifest: GET oss://${cfg.bucket}/${key} → rewrite manifest.json + latest.json from ${channelJsonPath ?? "<rolling manifest>"} when ${tag} > latest\n`,
     );
     return { updated: false, latest: null };
   }
+  if (!channelJsonPath) {
+    throw new Error("maintainReleaseManifest requires channelJsonPath outside dry-run");
+  }
 
   const current = await getObjectJson(key, creds, cfg);
-  const currentLatest = typeof current?.latest === "string" ? current.latest : null;
+  // Rolling-manifest shape carries `version`; fall back to the legacy
+  // `{ latest }` pointer shape so the first migrated write still compares.
+  const currentLatest =
+    typeof current?.version === "string"
+      ? current.version
+      : typeof current?.latest === "string"
+        ? current.latest
+        : null;
   const newer = currentLatest == null || compareVersions(tag, currentLatest) > 0;
   if (!newer) {
     process.stdout.write(`manifest unchanged: latest=${currentLatest} is not older than ${tag}\n`);
     return { updated: false, latest: currentLatest };
   }
 
-  const manifest = buildManifest(tag, toBeijing(), assetNames, cfg);
+  const body = readFileSync(channelJsonPath);
+  await putObject({ creds, cfg, key, body, contentType: "application/json" });
+  process.stdout.write(`manifest.json → latest=${tag} (was ${currentLatest ?? "none"})\n`);
   await putObject({
     creds,
     cfg,
-    key,
-    body: Buffer.from(JSON.stringify(manifest, null, 2)),
+    key: `${cfg.prefix}/latest.json`,
+    body,
     contentType: "application/json",
   });
-  process.stdout.write(`manifest.json → latest=${tag} (was ${currentLatest ?? "none"})\n`);
-  if (channelJsonPath) {
-    await putObject({
-      creds,
-      cfg,
-      key: `${cfg.prefix}/latest.json`,
-      body: readFileSync(channelJsonPath),
-      contentType: "application/json",
-    });
-    process.stdout.write(`latest.json → ${tag}\n`);
-  }
+  process.stdout.write(`latest.json → ${tag}\n`);
   return { updated: true, latest: tag };
 }
 

@@ -5,7 +5,7 @@
  *
  * Layout under the base:
  *   v<version>/<asset>.zip —— immutable per-version binaries + SHA256SUMS
- *   manifest.json          —— stable pointer { latest, releasedAt, assets }
+ *   manifest.json          —— stable pointer; same rolling-manifest shape as latest.json
  *   latest.json            —— stable rolling manifest (os-arch keyed, sha256)
  *   <channel>.json         —— per-channel rolling manifests (beta versions)
  *
