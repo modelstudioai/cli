@@ -76,10 +76,10 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 
 ```bash
 # 推荐 — 无需本机 Node.js
-curl -fsSL https://bailian-cli.oss-cn-hangzhou.aliyuncs.com/bailian-cli/install.sh | bash
+curl -fsSL https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/release/install.sh | bash
 
 # Windows（PowerShell）
-irm https://bailian-cli.oss-cn-hangzhou.aliyuncs.com/bailian-cli/install.ps1 | iex
+irm https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/release/install.ps1 | iex
 
 # Node 用户 / 开发者（需要 Node.js >= 18.17）
 npm install -g bailian-cli

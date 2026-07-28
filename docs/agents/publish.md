@@ -19,10 +19,10 @@ publish-stable.mjs / publish-channel.mjs   ← 唯一发版入口
         └─ binary（lib/binary-release
               → binary-build
               → gh-release
-              → oss-sync-webhook）
+              → oss-direct-upload）
 ```
 
-`tools/release/lib/binary-release.mjs` 等是实现，一般不要单独当发版入口（调试可用）。详细约定见 [binary-distribution](binary-distribution.md)。
+`tools/release/lib/binary-release.mjs` 等是实现，一般不要单独当发版入口（调试可用）。
 
 两种模式：
 
@@ -108,7 +108,7 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 
 - [ ] 验证 npm 上能装：`npm view bailian-cli@<tag> version`;如发布 `knowledge-studio-cli`，同时 `npm view knowledge-studio-cli@<tag> version`
 - [ ] 试装一次：`npm i -g bailian-cli@<tag> && bl --version`;如发布 `knowledge-studio-cli`，同时 `npm i -g knowledge-studio-cli@<tag> && kscli --version`
-- [ ] （若本次含二进制）GitHub Release 可见 `bl-*.zip` + `SHA256SUMS`；OSS 侧 `channels/latest.json` 与 install 脚本由 FC/仓外维护；清单见 [binary-distribution.md](binary-distribution.md)
+- [ ] （若本次含二进制）GitHub Release 可见 `bl-*.zip` + `SHA256SUMS`；OSS 侧 `latest.json` / `<channel>.json`、`v<ver>/*` 与 `install.sh`/`install.ps1` 已由 CI 直传
 
 ## 常见漏点（基于历史踩坑）
 

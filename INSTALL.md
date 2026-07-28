@@ -5,13 +5,15 @@
 ## 1. 推荐：二进制安装（无需 Node）
 
 ```bash
-curl -fsSL https://bailian-cli.oss-cn-hangzhou.aliyuncs.com/bailian-cli/install.sh | bash
+curl -fsSL https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/release/install.sh | bash
 ```
+
+可选：`BAILIAN_CHANNEL`（默认 `latest`）、`BAILIAN_VERSION`（钉版本）、`BAILIAN_CLI_CDN`（覆盖 CDN 根）。
 
 Windows PowerShell：
 
 ```powershell
-irm https://bailian-cli.oss-cn-hangzhou.aliyuncs.com/bailian-cli/install.ps1 | iex
+irm https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/release/install.ps1 | iex
 ```
 
 校验：
