@@ -1,12 +1,6 @@
 import { homedir } from "os";
 import { join } from "path";
-import {
-  backup,
-  readJson,
-  writeJsonAtomic,
-  isAnthropicEndpoint,
-  type AgentDef,
-} from "./utils.ts";
+import { backup, readJson, writeJsonAtomic, isAnthropicEndpoint, type AgentDef } from "./utils.ts";
 
 // Safe default when --context-window is not given: most Model Studio models
 // offer ≥256K context; users can raise it per model via the flag.
@@ -22,9 +16,7 @@ function readPrimary(defaults: Record<string, unknown>): string | undefined {
   const model = defaults.model;
   if (!model || typeof model !== "object") return undefined;
   const primary = (model as Record<string, unknown>).primary;
-  return typeof primary === "string" && primary.trim() !== ""
-    ? primary.trim()
-    : undefined;
+  return typeof primary === "string" && primary.trim() !== "" ? primary.trim() : undefined;
 }
 
 export default {
@@ -43,9 +35,7 @@ export default {
     const models = (config.models ?? {}) as Record<string, unknown>;
     models.mode = "merge";
     const providers = (models.providers ?? {}) as Record<string, unknown>;
-    const api = isAnthropicEndpoint(baseUrl)
-      ? "anthropic-messages"
-      : "openai-completions";
+    const api = isAnthropicEndpoint(baseUrl) ? "anthropic-messages" : "openai-completions";
     providers[PROVIDER_ID] = {
       baseUrl,
       apiKey,

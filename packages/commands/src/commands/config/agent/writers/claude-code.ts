@@ -9,11 +9,7 @@ import {
 } from "./utils.ts";
 
 /** Fill a tier/default model env only when the user has not set it yet. */
-function setModelEnvIfAbsent(
-  env: Record<string, string>,
-  key: string,
-  model: string,
-): void {
+function setModelEnvIfAbsent(env: Record<string, string>, key: string, model: string): void {
   const current = env[key];
   if (current === undefined || current.trim() === "") {
     env[key] = model;

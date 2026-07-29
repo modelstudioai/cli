@@ -10,11 +10,7 @@ import {
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { AGENTS, VALID_AGENT_NAMES, type WriteParams } from "./writers.ts";
 import { decodeTokenPlanKey } from "./decode-key.ts";
-import {
-  resolveRegionBaseUrl,
-  findLatestBackup,
-  restoreLatestBackup,
-} from "./writers/utils.ts";
+import { resolveRegionBaseUrl, findLatestBackup, restoreLatestBackup } from "./writers/utils.ts";
 
 const FLAGS = {
   agent: {
@@ -54,8 +50,7 @@ const FLAGS = {
   contextWindow: {
     type: "number",
     valueHint: "<tokens>",
-    description:
-      "OpenClaw only: model context window in tokens (default: 256000)",
+    description: "OpenClaw only: model context window in tokens (default: 256000)",
   },
   wireApi: {
     type: "string",
@@ -85,27 +80,17 @@ export default defineCommand({
   ],
   validate(flags) {
     if (flags.restore) {
-      const writeFlags = [
-        flags.baseUrl,
-        flags.region,
-        flags.apiKey,
-        flags.key,
-        flags.model,
-      ];
+      const writeFlags = [flags.baseUrl, flags.region, flags.apiKey, flags.key, flags.model];
       if (writeFlags.some((value) => value !== undefined)) {
         return "--restore cannot be combined with --base-url/--region/--api-key/--key/--model";
       }
       return undefined;
     }
     if (!flags.model) return "--model is required";
-    if (!flags.baseUrl && !flags.region)
-      return "one of --base-url or --region is required";
-    if (flags.baseUrl && flags.region)
-      return "--base-url and --region are mutually exclusive";
-    if (!flags.apiKey && !flags.key)
-      return "one of --api-key or --key is required";
-    if (flags.apiKey && flags.key)
-      return "--api-key and --key are mutually exclusive";
+    if (!flags.baseUrl && !flags.region) return "one of --base-url or --region is required";
+    if (flags.baseUrl && flags.region) return "--base-url and --region are mutually exclusive";
+    if (!flags.apiKey && !flags.key) return "one of --api-key or --key is required";
+    if (flags.apiKey && flags.key) return "--api-key and --key are mutually exclusive";
     return undefined;
   },
   async run(ctx) {
@@ -146,8 +131,7 @@ export default defineCommand({
       if (!settings.quiet) {
         emitBare(`${agentDef.label} config restored from backup.`);
         for (const result of results) {
-          if (result.backupPath)
-            emitBare(`  Restored: ${result.path} <- ${result.backupPath}`);
+          if (result.backupPath) emitBare(`  Restored: ${result.path} <- ${result.backupPath}`);
           else emitBare(`  Skipped (no backup): ${result.path}`);
         }
       }
@@ -158,9 +142,7 @@ export default defineCommand({
     const model = flags.model!;
     // --region is a Token Plan convenience: convert it into a base URL and use
     // it exactly as --base-url would be.
-    const baseUrl = flags.region
-      ? resolveRegionBaseUrl(flags.region)
-      : flags.baseUrl!;
+    const baseUrl = flags.region ? resolveRegionBaseUrl(flags.region) : flags.baseUrl!;
     // --key carries the web console's obfuscated form; decode it up front so
     // even --dry-run validates the token.
     const apiKey = flags.key ? decodeTokenPlanKey(flags.key) : flags.apiKey!;

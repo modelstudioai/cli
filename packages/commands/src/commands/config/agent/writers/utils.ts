@@ -72,11 +72,7 @@ export function stripJsonc(text: string): string {
     }
     if (char === "/" && next === "*") {
       index += 2;
-      while (
-        index < text.length &&
-        !(text[index] === "*" && text[index + 1] === "/")
-      )
-        index += 1;
+      while (index < text.length && !(text[index] === "*" && text[index + 1] === "/")) index += 1;
       index += 2;
       continue;
     }
@@ -106,11 +102,7 @@ export function stripJsonc(text: string): string {
     if (char === '"') inString = true;
     if (char === ",") {
       let lookahead = index + 1;
-      while (
-        lookahead < uncommented.length &&
-        /\s/.test(uncommented[lookahead])
-      )
-        lookahead += 1;
+      while (lookahead < uncommented.length && /\s/.test(uncommented[lookahead])) lookahead += 1;
       if (uncommented[lookahead] === "}" || uncommented[lookahead] === "]") {
         index += 1;
         continue;
@@ -136,10 +128,7 @@ export function readJson(path: string): Record<string, unknown> {
 export function readJsonc(path: string): Record<string, unknown> {
   if (!existsSync(path)) return {};
   try {
-    return JSON.parse(stripJsonc(readFileSync(path, "utf-8"))) as Record<
-      string,
-      unknown
-    >;
+    return JSON.parse(stripJsonc(readFileSync(path, "utf-8"))) as Record<string, unknown>;
   } catch {
     return {};
   }
@@ -179,8 +168,7 @@ export function findLatestBackup(path: string): string | undefined {
     const suffix = entry.slice(prefix.length);
     if (!/^\d+$/.test(suffix)) continue;
     const timestamp = Number(suffix);
-    if (!latest || timestamp > latest.timestamp)
-      latest = { name: entry, timestamp };
+    if (!latest || timestamp > latest.timestamp) latest = { name: entry, timestamp };
   }
   return latest ? join(dir, latest.name) : undefined;
 }
@@ -225,10 +213,7 @@ export function resolveClaudeCodeBaseUrl(baseUrl: string): {
   }
 
   if (trimmed.includes("/compatible-mode")) {
-    const rewritten = trimmed.replace(
-      /\/compatible-mode(?:\/v\d+)?/,
-      "/apps/anthropic",
-    );
+    const rewritten = trimmed.replace(/\/compatible-mode(?:\/v\d+)?/, "/apps/anthropic");
     return { url: rewritten, rewrittenFrom: baseUrl.trim() };
   }
 
@@ -239,10 +224,7 @@ export function resolveClaudeCodeBaseUrl(baseUrl: string): {
       host.includes("dashscope") ||
       host.includes("maas.aliyuncs.com") ||
       host.includes("token-plan");
-    if (
-      isDashScopeHost &&
-      (parsed.pathname === "/" || parsed.pathname === "")
-    ) {
+    if (isDashScopeHost && (parsed.pathname === "/" || parsed.pathname === "")) {
       return {
         url: `${parsed.origin}/apps/anthropic`,
         rewrittenFrom: baseUrl.trim(),

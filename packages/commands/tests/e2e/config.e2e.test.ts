@@ -1,11 +1,4 @@
-import {
-  mkdtempSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-  existsSync,
-} from "fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { describe, expect, test } from "vite-plus/test";
@@ -18,49 +11,29 @@ import { CONFIG_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: config", () => {
   test("config show --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
-      "config",
-      "show",
-      "--help",
-    ]);
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "show", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/show|config/i);
   });
 
   test("config set --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
-      "config",
-      "set",
-      "--help",
-    ]);
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "set", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/set|--key|--value/i);
   });
 
   test("config list/use --help 正常退出", async () => {
-    const listResult = await runCommandE2e(CONFIG_ROUTES, [
-      "config",
-      "list",
-      "--help",
-    ]);
+    const listResult = await runCommandE2e(CONFIG_ROUTES, ["config", "list", "--help"]);
     expect(listResult.exitCode, listResult.stderr).toBe(0);
     expect(listResult.stderr).toMatch(/list|active|profile/i);
 
-    const useResult = await runCommandE2e(CONFIG_ROUTES, [
-      "config",
-      "use",
-      "--help",
-    ]);
+    const useResult = await runCommandE2e(CONFIG_ROUTES, ["config", "use", "--help"]);
     expect(useResult.exitCode, useResult.stderr).toBe(0);
     expect(useResult.stderr).toMatch(/use|--name|active/i);
   });
 
   test("config ui --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
-      "config",
-      "ui",
-      "--help",
-    ]);
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "ui", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/ui|--port|--no-open|web/i);
   });
@@ -132,21 +105,13 @@ describe("e2e: config", () => {
   });
 
   test("config set 缺少 --key / --value 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
-      "config",
-      "set",
-      "--quiet",
-    ]);
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "set", "--quiet"]);
     expect(exitCode, stderr).toBe(2);
     expect(stderr).toMatch(/--key|--value|Usage:/i);
   });
 
   test("config use 缺少 --name 时报用法错误并退出 (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
-      "config",
-      "use",
-      "--quiet",
-    ]);
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "use", "--quiet"]);
     expect(exitCode, stderr).toBe(2);
     expect(stderr).toMatch(/--name|Usage:/i);
   });
@@ -155,10 +120,7 @@ describe("e2e: config", () => {
     const configDir = mkdtempSync(join(tmpdir(), "bl-config-use-"));
     try {
       const configPath = join(configDir, "config.json");
-      writeFileSync(
-        configPath,
-        JSON.stringify({ dev: { output: "json" } }, null, 2) + "\n",
-      );
+      writeFileSync(configPath, JSON.stringify({ dev: { output: "json" } }, null, 2) + "\n");
       const env = { BAILIAN_CONFIG_DIR: configDir };
 
       const useResult = await runCommandE2e(
@@ -167,13 +129,10 @@ describe("e2e: config", () => {
         env,
       );
       expect(useResult.exitCode, useResult.stderr).toBe(0);
-      expect(
-        parseStdoutJson<{ active_config?: string }>(useResult.stdout)
-          .active_config,
-      ).toBe("dev");
-      expect(JSON.parse(readFileSync(configPath, "utf8")).active_config).toBe(
+      expect(parseStdoutJson<{ active_config?: string }>(useResult.stdout).active_config).toBe(
         "dev",
       );
+      expect(JSON.parse(readFileSync(configPath, "utf8")).active_config).toBe("dev");
 
       const listResult = await runCommandE2e(
         CONFIG_ROUTES,
@@ -196,23 +155,17 @@ describe("e2e: config", () => {
     const configDir = mkdtempSync(join(tmpdir(), "bl-config-use-dry-run-"));
     try {
       const configPath = join(configDir, "config.json");
-      writeFileSync(
-        configPath,
-        JSON.stringify({ dev: { output: "json" } }, null, 2) + "\n",
-      );
+      writeFileSync(configPath, JSON.stringify({ dev: { output: "json" } }, null, 2) + "\n");
       const result = await runCommandE2e(
         CONFIG_ROUTES,
         ["config", "use", "--name", "dev", "--dry-run", "--output", "json"],
         { BAILIAN_CONFIG_DIR: configDir },
       );
       expect(result.exitCode, result.stderr).toBe(0);
-      expect(
-        parseStdoutJson<{ would_activate?: string }>(result.stdout)
-          .would_activate,
-      ).toBe("dev");
-      expect(
-        JSON.parse(readFileSync(configPath, "utf8")).active_config,
-      ).toBeUndefined();
+      expect(parseStdoutJson<{ would_activate?: string }>(result.stdout).would_activate).toBe(
+        "dev",
+      );
+      expect(JSON.parse(readFileSync(configPath, "utf8")).active_config).toBeUndefined();
     } finally {
       rmSync(configDir, { recursive: true, force: true });
     }
@@ -222,10 +175,7 @@ describe("e2e: config", () => {
     const configDir = mkdtempSync(join(tmpdir(), "bl-config-use-missing-"));
     try {
       const configPath = join(configDir, "config.json");
-      writeFileSync(
-        configPath,
-        JSON.stringify({ output: "text" }, null, 2) + "\n",
-      );
+      writeFileSync(configPath, JSON.stringify({ output: "text" }, null, 2) + "\n");
       const result = await runCommandE2e(
         CONFIG_ROUTES,
         ["config", "use", "--name", "missing", "--output", "json"],
@@ -233,9 +183,7 @@ describe("e2e: config", () => {
       );
       expect(result.exitCode).toBe(2);
       expect(result.stderr).toMatch(/does not exist/);
-      expect(
-        JSON.parse(readFileSync(configPath, "utf8")).active_config,
-      ).toBeUndefined();
+      expect(JSON.parse(readFileSync(configPath, "utf8")).active_config).toBeUndefined();
     } finally {
       rmSync(configDir, { recursive: true, force: true });
     }
@@ -298,24 +246,16 @@ describe("e2e: config", () => {
         { BAILIAN_CONFIG_DIR: configDir },
       );
       expect(setResult.exitCode, setResult.stderr).toBe(0);
-      expect(
-        parseStdoutJson<{ base_url?: string }>(setResult.stdout).base_url,
-      ).toBe("https://proxy.example.com");
-      expect(
-        JSON.parse(readFileSync(join(configDir, "config.json"), "utf8"))
-          .base_url,
-      ).toBe("https://proxy.example.com");
+      expect(parseStdoutJson<{ base_url?: string }>(setResult.stdout).base_url).toBe(
+        "https://proxy.example.com",
+      );
+      expect(JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")).base_url).toBe(
+        "https://proxy.example.com",
+      );
 
       const invalidResult = await runCommandE2e(
         CONFIG_ROUTES,
-        [
-          "config",
-          "set",
-          "--key",
-          "base_url",
-          "--value",
-          "ftp://example.com/models",
-        ],
+        ["config", "set", "--key", "base_url", "--value", "ftp://example.com/models"],
         { BAILIAN_CONFIG_DIR: configDir },
       );
       expect(invalidResult.exitCode).toBe(2);
@@ -377,9 +317,7 @@ describe("e2e: config", () => {
     const data = parseStdoutJson<{
       would_set?: { default_image_to_video_model?: string };
     }>(stdout);
-    expect(data.would_set?.default_image_to_video_model).toBe(
-      "happyhorse-1.1-i2v",
-    );
+    expect(data.would_set?.default_image_to_video_model).toBe("happyhorse-1.1-i2v");
   });
 
   test("config set --dry-run 支持参考生视频默认模型别名", async () => {
@@ -398,9 +336,7 @@ describe("e2e: config", () => {
     const data = parseStdoutJson<{
       would_set?: { default_reference_to_video_model?: string };
     }>(stdout);
-    expect(data.would_set?.default_reference_to_video_model).toBe(
-      "happyhorse-1.1-r2v",
-    );
+    expect(data.would_set?.default_reference_to_video_model).toBe("happyhorse-1.1-r2v");
   });
 
   test("config set --dry-run 展示归一化后的 Base URL", async () => {
@@ -433,9 +369,7 @@ describe("e2e: config", () => {
       "json",
     ]);
     expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{ would_set?: { access_key_id?: string } }>(
-      stdout,
-    );
+    const data = parseStdoutJson<{ would_set?: { access_key_id?: string } }>(stdout);
     expect(data.would_set?.access_key_id).toBe("LTAI-config-placeholder");
   });
 
@@ -453,11 +387,7 @@ describe("e2e: config", () => {
   });
 
   test("config agent --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
-      "config",
-      "agent",
-      "--help",
-    ]);
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "agent", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/agent|--base-url|--model/i);
   });
@@ -538,9 +468,7 @@ describe("e2e: config", () => {
         { HOME: home },
       );
       expect(exitCode, stderr).toBe(0);
-      const data = parseStdoutJson<{ agent?: string; api_key?: string }>(
-        stdout,
-      );
+      const data = parseStdoutJson<{ agent?: string; api_key?: string }>(stdout);
       expect(data.agent).toBe("claude-code");
       // 解码后的真实 key 不得明文出现，且脱敏值非空
       expect(stdout).not.toContain("sk-e2e-key-placeholder");
@@ -574,9 +502,7 @@ describe("e2e: config", () => {
         { HOME: home },
       );
       expect(exitCode, stderr).toBe(0);
-      const data = parseStdoutJson<{ agent?: string; base_url?: string }>(
-        stdout,
-      );
+      const data = parseStdoutJson<{ agent?: string; base_url?: string }>(stdout);
       expect(data.agent).toBe("qwen-code");
       expect(data.base_url).toBe(
         "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
@@ -663,16 +589,7 @@ describe("e2e: config", () => {
     try {
       const { stdout, stderr, exitCode } = await runCommandE2e(
         CONFIG_ROUTES,
-        [
-          "config",
-          "agent",
-          "--agent",
-          "opencode",
-          "--restore",
-          "--dry-run",
-          "--output",
-          "json",
-        ],
+        ["config", "agent", "--agent", "opencode", "--restore", "--dry-run", "--output", "json"],
         { HOME: home },
       );
       expect(exitCode, stderr).toBe(0);
@@ -769,9 +686,7 @@ describe("e2e: config", () => {
         api_key?: string;
       }>(stdout);
       expect(data.agent).toBe("claude-code");
-      expect(data.base_url).toBe(
-        "https://dashscope.aliyuncs.com/apps/anthropic",
-      );
+      expect(data.base_url).toBe("https://dashscope.aliyuncs.com/apps/anthropic");
       expect(data.model).toBe("qwen3-max");
       expect(stdout).not.toContain("sk-secret-placeholder");
       expect(existsSync(join(home, ".claude", "settings.json"))).toBe(false);
@@ -806,9 +721,7 @@ describe("e2e: config", () => {
       expect(toml).toContain("requires_openai_auth = true");
       // 默认即 responses（新版 Codex 已不支持 chat）
       expect(toml).toContain('wire_api = "responses"');
-      const auth = JSON.parse(
-        readFileSync(join(home, ".codex", "auth.json"), "utf8"),
-      );
+      const auth = JSON.parse(readFileSync(join(home, ".codex", "auth.json"), "utf8"));
       expect(auth.OPENAI_API_KEY).toBe("sk-codex-placeholder");
     } finally {
       rmSync(home, { recursive: true, force: true });
@@ -835,15 +748,10 @@ describe("e2e: config", () => {
         { HOME: home },
       );
       expect(exitCode, stderr).toBe(0);
-      const yamlText = readFileSync(
-        join(home, ".hermes", "config.yaml"),
-        "utf8",
-      );
+      const yamlText = readFileSync(join(home, ".hermes", "config.yaml"), "utf8");
       expect(yamlText).toContain("default: qwen3-coder-plus");
       expect(yamlText).toContain("provider: custom");
-      expect(yamlText).toContain(
-        "base_url: https://dashscope.aliyuncs.com/compatible-mode/v1",
-      );
+      expect(yamlText).toContain("base_url: https://dashscope.aliyuncs.com/compatible-mode/v1");
       expect(yamlText).toContain("api_key: sk-hermes-placeholder");
       // OpenAI 兼容端点不写 api_mode
       expect(yamlText).not.toContain("api_mode");

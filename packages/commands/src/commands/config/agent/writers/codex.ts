@@ -2,21 +2,12 @@ import { homedir } from "os";
 import { join } from "path";
 import { existsSync, readFileSync } from "fs";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
-import {
-  backup,
-  readJson,
-  writeJsonAtomic,
-  writeTextAtomic,
-  type AgentDef,
-} from "./utils.ts";
+import { backup, readJson, writeJsonAtomic, writeTextAtomic, type AgentDef } from "./utils.ts";
 
 const PROVIDER_KEY = "bailian-cli";
 
 function configPaths(): string[] {
-  return [
-    join(homedir(), ".codex", "config.toml"),
-    join(homedir(), ".codex", "auth.json"),
-  ];
+  return [join(homedir(), ".codex", "config.toml"), join(homedir(), ".codex", "auth.json")];
 }
 
 export default {
@@ -32,10 +23,7 @@ export default {
     let config: Record<string, unknown> = {};
     if (existsSync(configPath)) {
       try {
-        config = parseToml(readFileSync(configPath, "utf-8")) as Record<
-          string,
-          unknown
-        >;
+        config = parseToml(readFileSync(configPath, "utf-8")) as Record<string, unknown>;
       } catch {
         config = {};
       }
