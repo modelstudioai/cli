@@ -23,31 +23,24 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getConfigDir } from "../config/paths.ts";
-import { detectInstalledAgents, linkSkillToAgents } from "../skills/agents.ts";
-import { installSkill } from "../skills/installer.ts";
+import { buildSkillLockEntry, installSkillWithFanout } from "../skills/installer.ts";
 import { readSkillLock, upsertSkillLockEntry } from "../skills/lock.ts";
-import type { SkillIndexEntry } from "../skills/types.ts";
+import { fetchSkillsIndex } from "../skills/registry.ts";
+import type { SkillIndexEntry, SkillLockEntry } from "../skills/types.ts";
 
-/** Public-read OSS skill registry root (hardcoded, does not use env). */
-const REGISTRY_BASE_URL = "https://bailian-wiki.oss-cn-hangzhou.aliyuncs.com/skills";
 const WIKI_SKILL_NAME = "bailian-docs-llm-wiki";
 const SKILL_DIR_NAME = "skills/bailian-docs-llm-wiki";
 const STATE_FILE_NAME = "wiki-sync-state.json";
 const MODELS_FILE = "models.jsonl";
-const INDEX_KEY = "index.json";
 
 const THROTTLE_MS = 12 * 60 * 60 * 1000; // 12h
+/** Tighter than the interactive default: the silent channel must not stall `bl advisor recommend` */
 const INDEX_TIMEOUT_MS = 3000;
 
 interface SyncState {
   lastChecked: number;
   /** Content fingerprint of the last synced revision; the change-detection token */
   contentHash: string;
-}
-
-interface SkillsIndex {
-  updatedAt?: string;
-  skills: Record<string, SkillIndexEntry>;
 }
 
 function getCatalogDir(): string {
@@ -89,16 +82,9 @@ function writeState(state: SyncState): void {
  * Includes fan-out links so bl skill remove can reclaim agent symlinks.
  * Bookkeeping in the silent channel must be best-effort: failure does not affect sync results.
  */
-function recordWikiInLock(entry: SkillIndexEntry, links: string[]): void {
+function recordWikiInLock(lockEntry: SkillLockEntry): void {
   try {
-    upsertSkillLockEntry(WIKI_SKILL_NAME, {
-      ...(entry.contentHash ? { contentHash: entry.contentHash } : {}),
-      ...(entry.publishedAt ? { publishedAt: entry.publishedAt } : {}),
-      installedAt: new Date().toISOString(),
-      sourceType: "oss",
-      ...(entry.description ? { description: entry.description } : {}),
-      links,
-    });
+    upsertSkillLockEntry(WIKI_SKILL_NAME, lockEntry);
   } catch {
     /* Bookkeeping failure does not block sync; next sync or bl skill add will fill it in */
   }
@@ -113,15 +99,10 @@ function wikiLockUpToDate(contentHash: string): boolean {
   }
 }
 
-/** Fetch skills/index.json and extract the wiki skill entry; returns null on any failure */
+/** Fetch skills/index.json via the shared registry client and extract the wiki skill entry; returns null on any failure */
 async function fetchIndexEntry(): Promise<SkillIndexEntry | null> {
   try {
-    const res = await fetch(`${REGISTRY_BASE_URL}/${INDEX_KEY}`, {
-      signal: AbortSignal.timeout(INDEX_TIMEOUT_MS),
-    });
-    if (!res.ok) return null;
-    const index = (await res.json()) as SkillsIndex;
-    if (!index?.skills || typeof index.skills !== "object") return null;
+    const index = await fetchSkillsIndex(INDEX_TIMEOUT_MS);
     return index.skills[WIKI_SKILL_NAME] ?? null;
   } catch {
     return null;
@@ -156,20 +137,15 @@ export async function maybeSyncWikiData(): Promise<boolean> {
   if (dataOk && (!state || state.contentHash === entry.contentHash)) {
     writeState({ lastChecked: now, contentHash: entry.contentHash });
     // Data and content are ready but lock record is missing/stale (e.g. postinstall landed before this mechanism) → backfill
-    if (!wikiLockUpToDate(entry.contentHash)) recordWikiInLock(entry, []);
+    if (!wikiLockUpToDate(entry.contentHash)) recordWikiInLock(buildSkillLockEntry(entry, []));
     return false;
   }
 
   // 4. Different content or missing data: delegate to the shared skill install pipeline
   //    (download → extract → SKILL.md validate → atomic swap → fan-out → lock with links)
   try {
-    await installSkill(WIKI_SKILL_NAME, entry);
-    const agents = detectInstalledAgents();
-    const linkResults = linkSkillToAgents(WIKI_SKILL_NAME, agents);
-    const effectiveLinks = linkResults
-      .filter((link) => link.mode !== "skipped")
-      .map((link) => link.path);
-    recordWikiInLock(entry, effectiveLinks);
+    const record = await installSkillWithFanout(WIKI_SKILL_NAME, entry);
+    recordWikiInLock(record.lockEntry);
   } catch {
     // Install failed → clean exit, leave existing data untouched, do not write state; next recommend retries
     return false;

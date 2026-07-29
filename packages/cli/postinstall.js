@@ -116,7 +116,11 @@ async function extractTarBr(tarBrBuffer, destDir) {
 
   extract.on("entry", (header, stream, next) => {
     if (!isSafeEntryName(header.name)) {
-      next(new Error(`unsafe tar entry: ${header.name}`));
+      // Same semantics as core skills/extract.ts: destroy so the pipeline rejects with this
+      // error; silence the entry stream to avoid its companion error becoming unhandled
+      stream.on("error", () => {});
+      stream.resume();
+      extract.destroy(new Error(`unsafe tar entry: ${header.name}`));
       return;
     }
     const filePath = join(destDir, header.name);

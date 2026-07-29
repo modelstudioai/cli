@@ -20,12 +20,13 @@ export function getSkillRegistryBaseUrl(): string {
 /**
  * Fetch the remote skill index. No local caching — the diff comparison is always
  * "live remote index vs local skill-lock.json".
+ * Silent background channels (advisor sync) may pass a tighter timeout than the interactive default.
  */
-export async function fetchSkillsIndex(): Promise<SkillsIndex> {
+export async function fetchSkillsIndex(timeoutMs: number = INDEX_TIMEOUT_MS): Promise<SkillsIndex> {
   const url = `${getSkillRegistryBaseUrl()}/index.json`;
   let res: Response;
   try {
-    res = await fetch(url, { signal: AbortSignal.timeout(INDEX_TIMEOUT_MS) });
+    res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
   } catch (err) {
     throw new BailianError(
       `Cannot access skill registry: ${url}`,

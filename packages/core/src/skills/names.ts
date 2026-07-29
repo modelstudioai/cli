@@ -1,4 +1,4 @@
-import { UsageError } from "bailian-cli-core";
+import { UsageError } from "../errors/base.ts";
 
 /**
  * Parse --name: `all` or a comma-separated list of skill names (deduplicated, trimmed).
@@ -27,27 +27,4 @@ export function parseSkillNames(raw: string | undefined, defaultAll: boolean): s
     return "all";
   }
   return parts;
-}
-
-/**
- * Run async task factories with a bounded concurrency pool.
- * Returns results in the same order as the input tasks array.
- */
-export async function runWithConcurrency<T>(
-  tasks: Array<() => Promise<T>>,
-  limit: number,
-): Promise<T[]> {
-  const results: T[] = new Array(tasks.length);
-  let nextIndex = 0;
-
-  async function worker(): Promise<void> {
-    while (nextIndex < tasks.length) {
-      const currentIndex = nextIndex++;
-      results[currentIndex] = await tasks[currentIndex]();
-    }
-  }
-
-  const workers = Array.from({ length: Math.min(limit, tasks.length) }, () => worker());
-  await Promise.all(workers);
-  return results;
 }

@@ -4,13 +4,13 @@ import {
   defineCommand,
   detectOutputFormat,
   listSkillDirsOnDisk,
+  parseSkillNames,
   readSkillLock,
   removeSkillDir,
   unlinkSkillFromAgents,
   writeSkillLock,
 } from "bailian-cli-core";
 import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
-import { parseSkillNames } from "./shared.ts";
 
 interface RemoveOutcome {
   name: string;

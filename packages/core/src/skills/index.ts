@@ -22,6 +22,7 @@ export {
   upsertSkillLockEntry,
 } from "./lock.ts";
 export { sanitizeSkillName, isSafeSkillName } from "./sanitize.ts";
+export { parseSkillNames } from "./names.ts";
 export { validateSkillDir, type SkillMeta } from "./validate.ts";
 export { extractTarBr, atomicSwap, isSafeEntryName, computeDirContentHash } from "./extract.ts";
 export {
@@ -35,7 +36,10 @@ export {
 export {
   installSkill,
   installSkillFromBuffer,
+  installSkillWithFanout,
+  buildSkillLockEntry,
   removeSkillDir,
   type InstalledSkill,
+  type SkillInstallRecord,
 } from "./installer.ts";
 export { listSkillDirsOnDisk, computeSkillStatuses } from "./status.ts";

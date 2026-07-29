@@ -6,14 +6,14 @@ import {
   detectInstalledAgents,
   fetchSkillsIndex,
   getSkillRegistryBaseUrl,
-  installSkill,
-  linkSkillToAgents,
+  installSkillWithFanout,
   listSkillDirsOnDisk,
+  parseSkillNames,
   readSkillLock,
+  runWithConcurrency,
   writeSkillLock,
 } from "bailian-cli-core";
 import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
-import { parseSkillNames, runWithConcurrency } from "./shared.ts";
 
 interface UpdateOutcome {
   name: string;
@@ -87,17 +87,8 @@ export default defineCommand({
         return { name, status: "failed", reason: "skill not found in registry" };
       }
       try {
-        await installSkill(name, entry);
-        const links = linkSkillToAgents(name, agents);
-        const effective = links.filter((link) => link.mode !== "skipped");
-        lock.skills[name] = {
-          ...(entry.contentHash ? { contentHash: entry.contentHash } : {}),
-          ...(entry.publishedAt ? { publishedAt: entry.publishedAt } : {}),
-          installedAt: new Date().toISOString(),
-          sourceType: "oss",
-          ...(entry.description ? { description: entry.description } : {}),
-          links: effective.map((link) => link.path),
-        };
+        const record = await installSkillWithFanout(name, entry, agents);
+        lock.skills[name] = record.lockEntry;
         return { name, status: "updated", publishedAt: entry.publishedAt };
       } catch (err) {
         return {

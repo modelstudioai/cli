@@ -143,3 +143,10 @@ export const TOKEN_PLAN_ROUTES: E2eRouteExports = {
   "token-plan assign-seats": "tokenPlanAssignSeats",
   "token-plan add-member": "tokenPlanAddMember",
 };
+
+export const SKILL_ROUTES: E2eRouteExports = {
+  "skill add": "skillAdd",
+  "skill update": "skillUpdate",
+  "skill remove": "skillRemove",
+  "skill list": "skillList",
+};

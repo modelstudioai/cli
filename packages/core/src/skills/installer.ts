@@ -2,12 +2,13 @@ import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
+import { detectInstalledAgents, linkSkillToAgents, type AgentTarget } from "./agents.ts";
 import { atomicSwap, computeDirContentHash, extractTarBr } from "./extract.ts";
 import { getSkillsDir } from "./lock.ts";
 import { downloadSkillAsset } from "./registry.ts";
 import { isSafeSkillName } from "./sanitize.ts";
 import { validateSkillDir, type SkillMeta } from "./validate.ts";
-import type { SkillIndexEntry } from "./types.ts";
+import type { SkillIndexEntry, SkillLockEntry } from "./types.ts";
 
 /**
  * Skill installer: download → extract to tmpdir (with tar-slip check) → validate SKILL.md →
@@ -84,4 +85,49 @@ export function removeSkillDir(name: string): boolean {
   if (!existsSync(dest)) return false;
   rmSync(dest, { recursive: true, force: true });
   return true;
+}
+
+/**
+ * Build a skill-lock entry from an index entry + effective fan-out link paths.
+ * Single source of truth for the "installation fact" shape shared by bl skill add/update,
+ * advisor wiki sync, and any future install channel.
+ */
+export function buildSkillLockEntry(entry: SkillIndexEntry, links: string[]): SkillLockEntry {
+  return {
+    ...(entry.contentHash ? { contentHash: entry.contentHash } : {}),
+    ...(entry.publishedAt ? { publishedAt: entry.publishedAt } : {}),
+    installedAt: new Date().toISOString(),
+    sourceType: "oss",
+    ...(entry.description ? { description: entry.description } : {}),
+    links,
+  };
+}
+
+export interface SkillInstallRecord {
+  /** Ready-to-persist lock entry (links = effective fan-out paths) */
+  lockEntry: SkillLockEntry;
+  /** Ids of agents that actually received a link/copy (skipped ones excluded) */
+  linkedAgents: string[];
+}
+
+/**
+ * Full install workflow for one skill: install into canonical, fan out to agents, and build
+ * the lock entry recording effective links. Callers decide how to persist the lock entry
+ * (batch writeSkillLock for commands, best-effort upsertSkillLockEntry for silent channels).
+ */
+export async function installSkillWithFanout(
+  name: string,
+  entry: SkillIndexEntry,
+  agents: AgentTarget[] = detectInstalledAgents(),
+): Promise<SkillInstallRecord> {
+  await installSkill(name, entry);
+  const links = linkSkillToAgents(name, agents);
+  const effective = links.filter((link) => link.mode !== "skipped");
+  return {
+    lockEntry: buildSkillLockEntry(
+      entry,
+      effective.map((link) => link.path),
+    ),
+    linkedAgents: effective.map((link) => link.agent),
+  };
 }
