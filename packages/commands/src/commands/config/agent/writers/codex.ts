@@ -2,14 +2,28 @@ import { homedir } from "os";
 import { join } from "path";
 import { existsSync, readFileSync } from "fs";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
-import { backup, readJson, writeJsonAtomic, writeTextAtomic, type AgentDef } from "./utils.ts";
+import {
+  backup,
+  readJson,
+  writeJsonAtomic,
+  writeTextAtomic,
+  type AgentDef,
+} from "./utils.ts";
 
 const PROVIDER_KEY = "bailian-cli";
 
+function configPaths(): string[] {
+  return [
+    join(homedir(), ".codex", "config.toml"),
+    join(homedir(), ".codex", "auth.json"),
+  ];
+}
+
 export default {
   label: "Codex",
+  configPaths,
   write({ baseUrl, apiKey, model, wireApi: wireApiParam }) {
-    const configPath = join(homedir(), ".codex", "config.toml");
+    const [configPath, authPath] = configPaths();
     const warnings: string[] = [];
 
     // config.toml — merge into existing config so unrelated settings
@@ -18,7 +32,10 @@ export default {
     let config: Record<string, unknown> = {};
     if (existsSync(configPath)) {
       try {
-        config = parseToml(readFileSync(configPath, "utf-8")) as Record<string, unknown>;
+        config = parseToml(readFileSync(configPath, "utf-8")) as Record<
+          string,
+          unknown
+        >;
       } catch {
         config = {};
       }
@@ -57,7 +74,6 @@ export default {
     writeTextAtomic(configPath, stringifyToml(config) + "\n");
 
     // auth.json — Codex reads OPENAI_API_KEY from here when the env var is unset.
-    const authPath = join(homedir(), ".codex", "auth.json");
     backup(authPath);
     const auth = readJson(authPath);
     auth.OPENAI_API_KEY = apiKey;

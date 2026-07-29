@@ -2,19 +2,30 @@ import { homedir } from "os";
 import { join } from "path";
 import { existsSync, readFileSync } from "fs";
 import yaml from "yaml";
-import { backup, writeTextAtomic, isAnthropicEndpoint, type AgentDef } from "./utils.ts";
+import {
+  backup,
+  writeTextAtomic,
+  isAnthropicEndpoint,
+  type AgentDef,
+} from "./utils.ts";
+
+function configPaths(): string[] {
+  return [join(homedir(), ".hermes", "config.yaml")];
+}
 
 export default {
   label: "Hermes Agent",
+  configPaths,
   write({ baseUrl, apiKey, model }) {
-    const configPath = join(homedir(), ".hermes", "config.yaml");
+    const [configPath] = configPaths();
 
     backup(configPath);
 
     let config: Record<string, unknown> = {};
     if (existsSync(configPath)) {
       try {
-        config = (yaml.parse(readFileSync(configPath, "utf-8")) ?? {}) as Record<string, unknown>;
+        config = (yaml.parse(readFileSync(configPath, "utf-8")) ??
+          {}) as Record<string, unknown>;
       } catch {
         config = {};
       }

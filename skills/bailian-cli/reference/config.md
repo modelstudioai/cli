@@ -20,11 +20,11 @@ Index: [index.md](index.md)
 
 ### `bl config agent`
 
-| Field           | Value                                                                                                                         |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `config agent`                                                                                                                |
-| **Description** | Configure a coding agent to use DashScope API                                                                                 |
-| **Usage**       | `bl config agent --agent <name> (--base-url <url> \| --region <region>) (--api-key <key> \| --key <encoded>) --model <model>` |
+| Field           | Value                                                                                                                                        |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**        | `config agent`                                                                                                                               |
+| **Description** | Configure a coding agent to use DashScope API                                                                                                |
+| **Usage**       | `bl config agent --agent <name> ((--base-url <url> \| --region <region>) (--api-key <key> \| --key <encoded>) --model <model> \| --restore)` |
 
 #### Flags
 
@@ -35,9 +35,10 @@ Index: [index.md](index.md)
 | `--region <region>`                                                   | string | no       | Model Studio region (e.g. cn-beijing, ap-southeast-1); converted into --base-url. Token Plan only |
 | `--api-key <key>`                                                     | string | no       | API key                                                                                           |
 | `--key <encoded>`                                                     | string | no       | Obfuscated API key from the web console (starts with "o1\_"); decoded into --api-key              |
-| `--model <model>`                                                     | string | yes      | Default model name                                                                                |
+| `--model <model>`                                                     | string | no       | Default model name                                                                                |
 | `--context-window <tokens>`                                           | number | no       | OpenClaw only: model context window in tokens (default: 256000)                                   |
 | `--wire-api <chat\|responses>`                                        | string | no       | Codex only: wire protocol (default: responses). "chat" only works with legacy Codex <= 0.80.0     |
+| `--restore`                                                           | switch | no       | Restore the agent's config files from the latest .bak backup created by this command              |
 
 #### Examples
 
@@ -51,6 +52,10 @@ bl config agent --agent qwen-code --base-url https://dashscope.aliyuncs.com/comp
 
 ```bash
 bl config agent --agent codex --base-url https://dashscope.aliyuncs.com/compatible-mode/v1 --api-key sk-xxxxx --model qwen3-coder-plus
+```
+
+```bash
+bl config agent --agent claude-code --restore
 ```
 
 ### `bl config list`

@@ -1,11 +1,21 @@
 import { homedir } from "os";
 import { join } from "path";
-import { backup, readJson, writeJsonAtomic, isAnthropicEndpoint, type AgentDef } from "./utils.ts";
+import {
+  backup,
+  readJson,
+  writeJsonAtomic,
+  isAnthropicEndpoint,
+  type AgentDef,
+} from "./utils.ts";
 
 const ENV_KEY = "DASHSCOPE_API_KEY";
 
 function displayName(model: string): string {
   return `[Bailian] ${model}`;
+}
+
+function configPaths(): string[] {
+  return [join(homedir(), ".qwen", "settings.json")];
 }
 
 /** Entries we previously wrote, or still own via envKey / display brand. */
@@ -35,8 +45,9 @@ function isBailianCliEntry(entry: Record<string, unknown>): boolean {
  */
 export default {
   label: "Qwen Code",
+  configPaths,
   write({ baseUrl, apiKey, model }) {
-    const settingsPath = join(homedir(), ".qwen", "settings.json");
+    const [settingsPath] = configPaths();
     const protocol = isAnthropicEndpoint(baseUrl) ? "anthropic" : "openai";
     const warnings: string[] = [];
 
@@ -66,15 +77,23 @@ export default {
       string,
       Array<Record<string, unknown>>
     >;
-    const entries = (providers[protocol] ?? []) as Array<Record<string, unknown>>;
-    const owned = entries.find((entry) => isBailianCliEntry(entry) && entry.id === model);
-    const conflicting = entries.find((entry) => !isBailianCliEntry(entry) && entry.id === model);
+    const entries = (providers[protocol] ?? []) as Array<
+      Record<string, unknown>
+    >;
+    const owned = entries.find(
+      (entry) => isBailianCliEntry(entry) && entry.id === model,
+    );
+    const conflicting = entries.find(
+      (entry) => !isBailianCliEntry(entry) && entry.id === model,
+    );
 
     if (owned) {
       owned.baseUrl = baseUrl;
       owned.envKey = ENV_KEY;
-      const currentName = typeof owned.name === "string" ? owned.name.trim() : "";
-      if (!currentName || currentName === "bailian-cli") owned.name = displayName(model);
+      const currentName =
+        typeof owned.name === "string" ? owned.name.trim() : "";
+      if (!currentName || currentName === "bailian-cli")
+        owned.name = displayName(model);
     } else if (conflicting) {
       const existingName =
         typeof conflicting.name === "string" && conflicting.name.length > 0

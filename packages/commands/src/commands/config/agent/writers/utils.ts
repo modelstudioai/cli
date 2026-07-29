@@ -1,5 +1,13 @@
-import { dirname } from "path";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, copyFileSync } from "fs";
+import { basename, dirname, join } from "path";
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  renameSync,
+  copyFileSync,
+  readdirSync,
+} from "fs";
 import { BailianError, ExitCode } from "bailian-cli-core";
 
 /** Parameters shared by every agent writer. */
@@ -24,6 +32,8 @@ export interface WriteSummary {
 /** An agent configuration writer: a human label plus a `write` that applies it. */
 export interface AgentDef {
   label: string;
+  /** Config files this writer manages, in write order. Used by `--restore`. */
+  configPaths(): string[];
   write(params: WriteParams): WriteSummary;
 }
 
@@ -62,7 +72,11 @@ export function stripJsonc(text: string): string {
     }
     if (char === "/" && next === "*") {
       index += 2;
-      while (index < text.length && !(text[index] === "*" && text[index + 1] === "/")) index += 1;
+      while (
+        index < text.length &&
+        !(text[index] === "*" && text[index + 1] === "/")
+      )
+        index += 1;
       index += 2;
       continue;
     }
@@ -92,7 +106,11 @@ export function stripJsonc(text: string): string {
     if (char === '"') inString = true;
     if (char === ",") {
       let lookahead = index + 1;
-      while (lookahead < uncommented.length && /\s/.test(uncommented[lookahead])) lookahead += 1;
+      while (
+        lookahead < uncommented.length &&
+        /\s/.test(uncommented[lookahead])
+      )
+        lookahead += 1;
       if (uncommented[lookahead] === "}" || uncommented[lookahead] === "]") {
         index += 1;
         continue;
@@ -118,7 +136,10 @@ export function readJson(path: string): Record<string, unknown> {
 export function readJsonc(path: string): Record<string, unknown> {
   if (!existsSync(path)) return {};
   try {
-    return JSON.parse(stripJsonc(readFileSync(path, "utf-8"))) as Record<string, unknown>;
+    return JSON.parse(stripJsonc(readFileSync(path, "utf-8"))) as Record<
+      string,
+      unknown
+    >;
   } catch {
     return {};
   }
@@ -147,6 +168,42 @@ export function backup(path: string): void {
   copyFileSync(path, `${path}.bak.${timestamp}`);
 }
 
+/** Locate the newest `.bak.<epoch>` sibling created by {@link backup}, if any. */
+export function findLatestBackup(path: string): string | undefined {
+  const dir = dirname(path);
+  if (!existsSync(dir)) return undefined;
+  const prefix = basename(path) + ".bak.";
+  let latest: { name: string; timestamp: number } | undefined;
+  for (const entry of readdirSync(dir)) {
+    if (!entry.startsWith(prefix)) continue;
+    const suffix = entry.slice(prefix.length);
+    if (!/^\d+$/.test(suffix)) continue;
+    const timestamp = Number(suffix);
+    if (!latest || timestamp > latest.timestamp)
+      latest = { name: entry, timestamp };
+  }
+  return latest ? join(dir, latest.name) : undefined;
+}
+
+/** Outcome of restoring one config file: which backup was used, if any. */
+export interface RestoreResult {
+  path: string;
+  backupPath?: string;
+}
+
+/**
+ * Restore `path` from its newest `.bak.<epoch>` backup (atomically, keeping the
+ * backup in place so the operation stays repeatable). No-op when no backup exists.
+ */
+export function restoreLatestBackup(path: string): RestoreResult {
+  const backupPath = findLatestBackup(path);
+  if (!backupPath) return { path };
+  const tmp = path + ".tmp";
+  copyFileSync(backupPath, tmp);
+  renameSync(tmp, path);
+  return { path, backupPath };
+}
+
 /** Whether a base URL targets the Anthropic-messages compatible endpoint. */
 export function isAnthropicEndpoint(baseUrl: string): boolean {
   return baseUrl.includes("/apps/anthropic");
@@ -168,7 +225,10 @@ export function resolveClaudeCodeBaseUrl(baseUrl: string): {
   }
 
   if (trimmed.includes("/compatible-mode")) {
-    const rewritten = trimmed.replace(/\/compatible-mode(?:\/v\d+)?/, "/apps/anthropic");
+    const rewritten = trimmed.replace(
+      /\/compatible-mode(?:\/v\d+)?/,
+      "/apps/anthropic",
+    );
     return { url: rewritten, rewrittenFrom: baseUrl.trim() };
   }
 
@@ -179,7 +239,10 @@ export function resolveClaudeCodeBaseUrl(baseUrl: string): {
       host.includes("dashscope") ||
       host.includes("maas.aliyuncs.com") ||
       host.includes("token-plan");
-    if (isDashScopeHost && (parsed.pathname === "/" || parsed.pathname === "")) {
+    if (
+      isDashScopeHost &&
+      (parsed.pathname === "/" || parsed.pathname === "")
+    ) {
       return {
         url: `${parsed.origin}/apps/anthropic`,
         rewrittenFrom: baseUrl.trim(),

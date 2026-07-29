@@ -1,11 +1,22 @@
 import { homedir } from "os";
 import { join } from "path";
-import { backup, readJsonc, writeJsonAtomic, isAnthropicEndpoint, type AgentDef } from "./utils.ts";
+import {
+  backup,
+  readJsonc,
+  writeJsonAtomic,
+  isAnthropicEndpoint,
+  type AgentDef,
+} from "./utils.ts";
+
+function configPaths(): string[] {
+  return [join(homedir(), ".config", "opencode", "opencode.json")];
+}
 
 export default {
   label: "OpenCode",
+  configPaths,
   write({ baseUrl, apiKey, model }) {
-    const configPath = join(homedir(), ".config", "opencode", "opencode.json");
+    const [configPath] = configPaths();
 
     // opencode.json is JSONC — tolerate comments and trailing commas on read.
     backup(configPath);
@@ -14,7 +25,9 @@ export default {
     if (!config.$schema) config.$schema = "https://opencode.ai/config.json";
 
     const provider = (config.provider ?? {}) as Record<string, unknown>;
-    const npm = isAnthropicEndpoint(baseUrl) ? "@ai-sdk/anthropic" : "@ai-sdk/openai-compatible";
+    const npm = isAnthropicEndpoint(baseUrl)
+      ? "@ai-sdk/anthropic"
+      : "@ai-sdk/openai-compatible";
     provider["bailian-cli"] = {
       npm,
       name: "Alibaba Cloud Model Studio",

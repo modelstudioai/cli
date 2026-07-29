@@ -9,20 +9,28 @@ import {
 } from "./utils.ts";
 
 /** Fill a tier/default model env only when the user has not set it yet. */
-function setModelEnvIfAbsent(env: Record<string, string>, key: string, model: string): void {
+function setModelEnvIfAbsent(
+  env: Record<string, string>,
+  key: string,
+  model: string,
+): void {
   const current = env[key];
   if (current === undefined || current.trim() === "") {
     env[key] = model;
   }
 }
 
+function configPaths(): string[] {
+  // Claude Code honors CLAUDE_CONFIG_DIR for its settings location.
+  const configDir = process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
+  return [join(configDir, "settings.json"), join(homedir(), ".claude.json")];
+}
+
 export default {
   label: "Claude Code",
+  configPaths,
   write({ baseUrl, apiKey, model }) {
-    // Claude Code honors CLAUDE_CONFIG_DIR for its settings location.
-    const configDir = process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
-    const settingsPath = join(configDir, "settings.json");
-    const onboardingPath = join(homedir(), ".claude.json");
+    const [settingsPath, onboardingPath] = configPaths();
     const warnings: string[] = [];
 
     const resolved = resolveClaudeCodeBaseUrl(baseUrl);
