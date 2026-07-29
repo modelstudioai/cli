@@ -36,6 +36,7 @@ Index: [index.md](index.md)
 | `--namespace-id <id>`          | string | no       | Product namespace ID (Token Plan default: namespace-1)                 |
 | `--access-key-id <key>`        | string | no       | Alibaba Cloud Access Key ID (env: ALIBABA_CLOUD_ACCESS_KEY_ID)         |
 | `--access-key-secret <key>`    | string | no       | Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET) |
+| `--security-token <token>`     | string | no       | Alibaba Cloud STS Security Token (env: ALIBABA_CLOUD_SECURITY_TOKEN)   |
 
 #### Examples
 
@@ -71,6 +72,7 @@ bl token-plan add-member --account-name member1 --org-id org_123 --spec-type sta
 | `--locale <locale>`            | string | no       | Language: zh-CN or en-US                                               |
 | `--access-key-id <key>`        | string | no       | Alibaba Cloud Access Key ID (env: ALIBABA_CLOUD_ACCESS_KEY_ID)         |
 | `--access-key-secret <key>`    | string | no       | Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET) |
+| `--security-token <token>`     | string | no       | Alibaba Cloud STS Security Token (env: ALIBABA_CLOUD_SECURITY_TOKEN)   |
 
 #### Examples
 
@@ -101,6 +103,7 @@ bl token-plan assign-seats --workspace-id ws_456 --seat-type pro --account-id ac
 | `--namespace-id <id>`          | string | no       | Product namespace ID (Token Plan default: namespace-1)                 |
 | `--access-key-id <key>`        | string | no       | Alibaba Cloud Access Key ID (env: ALIBABA_CLOUD_ACCESS_KEY_ID)         |
 | `--access-key-secret <key>`    | string | no       | Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET) |
+| `--security-token <token>`     | string | no       | Alibaba Cloud STS Security Token (env: ALIBABA_CLOUD_SECURITY_TOKEN)   |
 
 #### Examples
 
@@ -135,6 +138,7 @@ bl token-plan create-key --account-id acc_123 --workspace-id ws_456 --descriptio
 | `--query-assigned <bool>`      | string | no       | Filter by assignment: true=assigned, false=unassigned                             |
 | `--access-key-id <key>`        | string | no       | Alibaba Cloud Access Key ID (env: ALIBABA_CLOUD_ACCESS_KEY_ID)                    |
 | `--access-key-secret <key>`    | string | no       | Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET)            |
+| `--security-token <token>`     | string | no       | Alibaba Cloud STS Security Token (env: ALIBABA_CLOUD_SECURITY_TOKEN)              |
 
 #### Examples
 

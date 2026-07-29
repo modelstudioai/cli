@@ -7,13 +7,24 @@ export function chatPath(): string {
 }
 
 // ---- Image Generation (DashScope) ----
+/** Async image API used by wan2.6-t2i / wan2.6-image (T2I) and similar message-format models. */
 export function imagePath(): string {
   return "/api/v1/services/aigc/image-generation/generation";
 }
 
-// Synchronous image generation (qwen-image-2.0 / qwen-image-max series)
+/** Sync multimodal API (qwen-image / wan2.7-image / z-image generate; also wan2.6-image edit). */
 export function imageSyncPath(): string {
   return "/api/v1/services/aigc/multimodal-generation/generation";
+}
+
+/** Legacy async text-to-image API (wan2.5/2.2/2.1-t2i, wanx-*-t2i). */
+export function imageText2ImagePath(): string {
+  return "/api/v1/services/aigc/text2image/image-synthesis";
+}
+
+/** Legacy async image-to-image / edit API (wan2.5-i2i, *imageedit*). */
+export function image2ImagePath(): string {
+  return "/api/v1/services/aigc/image2image/image-synthesis";
 }
 
 // ---- Video Generation (DashScope) ----

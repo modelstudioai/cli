@@ -1,4 +1,4 @@
-import { readConfigFile } from "bailian-cli-core";
+import { buildSources } from "bailian-cli-core";
 
 /** 显式开启后才跑真实网络 E2E */
 export function isBailianE2EEnabled(): boolean {
@@ -10,8 +10,8 @@ export function isDashScopeE2EReady(): boolean {
   if (!isBailianE2EEnabled()) return false;
   if (process.env.DASHSCOPE_API_KEY?.trim()) return true;
   try {
-    const f = readConfigFile();
-    return typeof f.api_key === "string" && f.api_key.length > 0;
+    const config = buildSources({}).file;
+    return typeof config.api_key === "string" && config.api_key.length > 0;
   } catch {
     return false;
   }
@@ -21,11 +21,20 @@ export function isDashScopeE2EReady(): boolean {
 export function isConsoleE2EReady(): boolean {
   if (!isBailianE2EEnabled()) return false;
   try {
-    const config = readConfigFile();
+    const config = buildSources({}).file;
     return typeof config.access_token === "string" && config.access_token.length > 0;
   } catch {
     return false;
   }
+}
+
+/** OpenAPI AK/SK 真实 E2E 就绪检查：只使用 `.env` / 进程环境中的完整凭证对。 */
+export function isOpenApiE2EReady(): boolean {
+  if (!isBailianE2EEnabled()) return false;
+  return Boolean(
+    process.env.ALIBABA_CLOUD_ACCESS_KEY_ID?.trim() &&
+    process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET?.trim(),
+  );
 }
 
 /** 语音与图像（可设 `BAILIAN_E2E_MEDIA=0` 跳过） */

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
-import { join } from "path";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   e2eFixturesDir,
   e2eLabelFromMetaUrl,
@@ -45,6 +46,127 @@ describe("e2e: image edit", () => {
     );
     expect(data.mode).toBe("async");
     expect(data.request?.input?.messages?.length).toBeGreaterThan(0);
+  });
+
+  test("Token Plan 使用 Base64 传入 wan2.7-image 本地图片", async () => {
+    const configDir = makeE2eOutputDir("image-edit-token-plan-local-image");
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify({
+        "token-plan": {
+          api_key: "sk-sp-e2e-placeholder",
+          base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
+          default_image_model: "wan2.7-image",
+        },
+      }),
+    );
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      IMAGE_ROUTES,
+      [
+        "image",
+        "edit",
+        "--config",
+        "token-plan",
+        "--image",
+        join(e2eFixturesDir, ".smoke-32.png"),
+        "--prompt",
+        "改成蓝色",
+        "--dry-run",
+        "--output",
+        "json",
+      ],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      mode?: string;
+      request?: {
+        model?: string;
+        input?: { messages?: Array<{ content?: Array<{ image?: string }> }> };
+      };
+    }>(stdout);
+    expect(data.mode).toBe("sync");
+    expect(data.request?.model).toBe("wan2.7-image");
+    expect(data.request?.input?.messages?.[0]?.content?.[0]?.image).toBe(
+      "data:image/png;base64,<omitted>",
+    );
+  });
+
+  test("wan2.5-i2i-preview dry-run 走 prompt+images", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
+      "image",
+      "edit",
+      "--model",
+      "wan2.5-i2i-preview",
+      "--image",
+      "https://example.com/source.png",
+      "--prompt",
+      "Place on a table",
+      "--size",
+      "1:1",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      mode?: string;
+      path?: string;
+      request?: {
+        input?: { prompt?: string; images?: string[]; messages?: unknown };
+        parameters?: { size?: string };
+      };
+    }>(stdout);
+    expect(data.mode).toBe("async");
+    expect(data.path).toBe("/api/v1/services/aigc/image2image/image-synthesis");
+    expect(data.request?.input?.prompt).toBe("Place on a table");
+    expect(data.request?.input?.images).toEqual(["https://example.com/source.png"]);
+    expect(data.request?.input?.messages).toBeUndefined();
+    expect(data.request?.parameters?.size).toBe("1280*1280");
+  });
+
+  test("wanx2.1-imageedit dry-run 走 function + base_image_url", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
+      "image",
+      "edit",
+      "--model",
+      "wanx2.1-imageedit",
+      "--image",
+      "https://example.com/source.png",
+      "--prompt",
+      "转换成绘本风格",
+      "--function",
+      "stylization_all",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      mode?: string;
+      path?: string;
+      request?: {
+        input?: {
+          function?: string;
+          prompt?: string;
+          base_image_url?: string;
+          images?: unknown;
+          messages?: unknown;
+        };
+      };
+    }>(stdout);
+    expect(data.mode).toBe("async");
+    expect(data.path).toBe("/api/v1/services/aigc/image2image/image-synthesis");
+    expect(data.request?.input?.function).toBe("stylization_all");
+    expect(data.request?.input?.prompt).toBe("转换成绘本风格");
+    expect(data.request?.input?.base_image_url).toBe("https://example.com/source.png");
+    expect(data.request?.input?.images).toBeUndefined();
+    expect(data.request?.input?.messages).toBeUndefined();
   });
 });
 

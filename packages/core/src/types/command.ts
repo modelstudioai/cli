@@ -67,11 +67,27 @@ export type AuthRequirement = "apiKey" | "console" | "openapi" | "none";
 // ── Flag 分组:全局(所有命令) + 凭证域(按命令的 auth 可见) ────────────────────
 /** 所有命令都可用的全局 flag。 */
 export const GLOBAL_FLAGS = {
-  output: { type: "string", valueHint: "<format>", description: "Output format: text, json" },
-  timeout: { type: "number", valueHint: "<seconds>", description: "Request timeout" },
+  output: {
+    type: "string",
+    valueHint: "<format>",
+    description: "Output format: text, json",
+  },
+  timeout: {
+    type: "number",
+    valueHint: "<seconds>",
+    description: "Request timeout",
+  },
   quiet: { type: "switch", description: "Suppress non-essential output" },
-  verbose: { type: "switch", description: "Print HTTP request/response details" },
+  verbose: {
+    type: "switch",
+    description: "Print HTTP request/response details",
+  },
   dryRun: { type: "switch", description: "Dry run mode" },
+  config: {
+    type: "string",
+    valueHint: "<name>",
+    description: "Use a config profile for this command",
+  },
   help: { type: "switch", description: "Show help" },
   version: { type: "switch", description: "Print version" },
 } satisfies FlagsDef;
@@ -87,7 +103,10 @@ export const CONCURRENT_FLAG = {
 
 /** Command-scoped flag for task-based commands that can return without polling. */
 export const ASYNC_FLAG = {
-  async: { type: "switch", description: "Return async task id without waiting" },
+  async: {
+    type: "switch",
+    description: "Return async task id without waiting",
+  },
 } satisfies FlagsDef;
 
 /** Model 域凭证/连接 flag,`auth: "apiKey"` 命令可见。 */
@@ -131,6 +150,11 @@ export const OPENAPI_AUTH_FLAGS = {
     type: "string",
     valueHint: "<key>",
     description: "Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET)",
+  },
+  securityToken: {
+    type: "string",
+    valueHint: "<token>",
+    description: "Alibaba Cloud STS Security Token (env: ALIBABA_CLOUD_SECURITY_TOKEN)",
   },
 } satisfies FlagsDef;
 

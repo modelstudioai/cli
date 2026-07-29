@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
 import {
@@ -20,6 +21,96 @@ describe("e2e: video generate (i2v)", () => {
     const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, ["video", "generate", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/generate|--prompt|--image|model/i);
+  });
+
+  test("Token Plan 使用独立的图生视频默认模型", async () => {
+    const configDir = makeE2eOutputDir("video-i2v-token-plan-default");
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify(
+        {
+          "token-plan": {
+            api_key: "sk-sp-e2e-placeholder",
+            base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
+            default_video_model: "happyhorse-1.1-t2v",
+            default_image_to_video_model: "custom-image-to-video-model",
+          },
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      VIDEO_ROUTES,
+      [
+        "video",
+        "generate",
+        "--config",
+        "token-plan",
+        "--dry-run",
+        "--image",
+        "https://example.com/placeholder.png",
+        "--prompt",
+        "干跑校验",
+        "--output",
+        "json",
+      ],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      request?: { model?: string; input?: { media?: Array<{ type?: string }> } };
+    }>(stdout);
+    expect(data.request?.model).toBe("custom-image-to-video-model");
+    expect(data.request?.input?.media?.[0]?.type).toBe("first_frame");
+  });
+
+  test("Token Plan 图生视频将本地首帧转换为 Base64", async () => {
+    const configDir = makeE2eOutputDir("video-i2v-token-plan-local-image");
+    const imagePath = join(configDir, "first-frame.png");
+    writeFileSync(imagePath, Buffer.from([1, 2, 3]));
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify({
+        "token-plan": {
+          api_key: "sk-sp-e2e-placeholder",
+          base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
+          default_image_to_video_model: "happyhorse-1.1-i2v",
+        },
+      }),
+    );
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      VIDEO_ROUTES,
+      [
+        "video",
+        "generate",
+        "--config",
+        "token-plan",
+        "--dry-run",
+        "--image",
+        imagePath,
+        "--prompt",
+        "让画面动起来",
+        "--output",
+        "json",
+      ],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      request?: { input?: { media?: Array<{ url?: string }> } };
+    }>(stdout);
+    expect(data.request?.input?.media?.[0]?.url).toBe("data:image/png;base64,<omitted>");
   });
 });
 

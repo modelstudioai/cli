@@ -7,7 +7,7 @@
 **原则**：先执行检查；若 **Node / 包管理器 / 网络** 任一不满足下文要求，Agent 应 **在本机终端内主动完成安装或配置**（例如升级 Node、切换镜像、配置 `npm` 代理等），再继续 `bailian-cli` 安装。仅在无权限或环境无法自动化时，再向用户说明原因并请其配合。
 
 1. **Node.js**
-   - 要求 **≥ 22.12.0**，执行 `node -v` 确认。
+   - 要求 **≥ 18.17.0**，执行 `node -v` 确认。
    - 未安装或版本不足：由 Agent 自行安装或升级 Node。
 
 2. **npm**（**唯一**允许的包管理器）
@@ -69,7 +69,7 @@ npx skills add modelstudioai/cli --all -g
 
 > 此方式同时打通 `app list`、`usage free` 等控制台能力，并自动配置 API Key 调用所需的鉴权信息。
 
-### 备选：由 Agent 引导用户输入 API Key 后登录
+### 备选一：由 Agent 引导用户输入普通 API Key 后登录
 
 适用于无法拉起浏览器的对话式安装（远程 SSH、CI 调试、纯终端环境等）：
 
@@ -80,6 +80,15 @@ npx skills add modelstudioai/cli --all -g
 3. 用户提供了 Key 之后，在**用户本机终端**执行（Agent 用终端工具跑，勿把 Key 写进回复正文）：`bl auth login --api-key <用户提供的_Key>`
 4. 登录成功后执行 `bl auth status --output json` 确认；汇报时只使用 masked 字段，**禁止**回显完整 Key。
 
+### 备选二：使用 Token Plan API Key
+
+- 获取入口：[Token Plan 订阅详情](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview)
+
+1. 请用户从订阅详情页获取或复制 Token Plan API Key，勿要求用户发到公开渠道。
+2. 在用户本机终端执行：`bl auth login --config token-plan --api-key <用户提供的_Key>`。
+3. `token-plan` Profile 已内置默认 Base URL；登录命令会先测试 Key，通过后才保存并激活该 Profile，无需另行配置或重复测试。
+4. 执行 `bl auth status --config token-plan --output json` 确认；汇报时只使用 masked 字段。
+
 ### 其他方式
 
 - **环境变量**（不落盘到配置文件）：在 shell 中配置 API Key 环境变量；变量名见 `bl auth status --help`，勿在对话中向用户解释底层命名。
@@ -89,20 +98,19 @@ npx skills add modelstudioai/cli --all -g
 ### Agent 安全约束
 
 - **禁止**把真实 API Key 写入仓库、日志、Skill、聊天记录的可公开部分。
-- CI / 非交互环境：使用 `bl ... --non-interactive`；通过密钥管理或环境变量注入，勿在脚本中硬编码 Key。
+- CI / 非交互环境：显式传入必填参数并使用 `--output json` 获取机器可读结果；如需纯文本输出，设置 `NO_COLOR=1`。通过密钥管理或环境变量注入，勿在脚本中硬编码 Key。
 
 ---
 
-## 4. 最小功能验证
+## 4. 配置验证
 
-在鉴权配置完成后执行：
+API Key 登录命令本身已经完成可用性测试，通过后只需确认配置状态：
 
 ```bash
 bl auth status --output json
-bl text chat --message "ping" --non-interactive --output json
 ```
 
-若失败：根据 stderr / JSON 中的 `hint` 或 `message` 排查（网络、Key 无效、`base_url` 等）。DashScope 端点：使用 `--base-url` / `bl config set --key base_url` / `DASHSCOPE_BASE_URL`，默认中国大陆 `https://dashscope.aliyuncs.com`。
+无需再执行重复的模型调用测试。若登录失败，根据 stderr / JSON 中的 `hint` 或 `message` 排查（网络、Key 无效、`base_url` 等）。DashScope 端点：使用 `--base-url` / `bl config set --key base_url` / `DASHSCOPE_BASE_URL`，默认中国大陆 `https://dashscope.aliyuncs.com`。
 
 ---
 
@@ -111,7 +119,7 @@ bl text chat --message "ping" --non-interactive --output json
 | 现象                    | 可能原因             | 建议动作                                                        |
 | ----------------------- | -------------------- | --------------------------------------------------------------- |
 | `bl: command not found` | 全局 bin 不在 PATH   | 检查 `npm prefix -g` 与 PATH                                    |
-| 安装报错 engines        | Node 版本过低        | 升级到 ≥ 22.12                                                  |
-| 401 / 鉴权失败          | 未 login 或 Key 无效 | 引导用户更新 Key 并 `bl auth login --api-key`                   |
+| 安装报错 engines        | Node 版本过低        | 升级到 ≥ 18.17                                                  |
+| 401 / 鉴权失败          | 未 login 或 Key 无效 | 按 Key 类型重新执行普通或 Token Plan 登录命令                   |
 | 企业网络无法访问 npm    | 代理 / 镜像          | 配置 registry 或代理后再装                                      |
 | 本机只有 pnpm、没有 npm | Agent 误用 pnpm 安装 | 先装/修好 **npm**，再用 `npm install -g bailian-cli`；勿用 pnpm |

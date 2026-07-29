@@ -8,17 +8,12 @@ import {
   BailianError,
   ExitCode,
   isLocalFile,
+  imageFileToDataUri,
+  redactDataUri,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
-import { readFileSync, existsSync } from "fs";
+import { existsSync, statSync } from "fs";
 import { extname } from "path";
-
-const IMAGE_MIME_TYPES: Record<string, string> = {
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".png": "image/png",
-  ".webp": "image/webp",
-};
 
 const VIDEO_EXTENSIONS = new Set([".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv", ".wmv"]);
 
@@ -35,18 +30,7 @@ async function toImageUrl(image: string): Promise<string> {
   if (image.startsWith("data:")) return image;
   if (image.startsWith("http://") || image.startsWith("https://")) return image;
   if (image.startsWith("oss://")) return image;
-
-  // Local file → data URI (for small files < 10MB, fallback)
-  if (!existsSync(image)) throw new BailianError(`File not found: ${image}`, ExitCode.USAGE);
-  const ext = extname(image).toLowerCase();
-  const mime = IMAGE_MIME_TYPES[ext];
-  if (!mime)
-    throw new BailianError(
-      `Unsupported image format "${ext}". Supported: jpg, jpeg, png, webp`,
-      ExitCode.USAGE,
-    );
-  const buf = readFileSync(image);
-  return `data:${mime};base64,${buf.toString("base64")}`;
+  return imageFileToDataUri(image);
 }
 
 export default defineCommand({
@@ -86,7 +70,10 @@ export default defineCommand({
     const { settings, flags } = ctx;
     let image = flags.image;
     const videoInputs = flags.video ?? [];
-    const model = flags.model || "qwen3-vl-plus";
+    const model =
+      flags.model ||
+      (ctx.client.usesTokenPlanEndpoint() ? settings.defaultTextModel : undefined) ||
+      "qwen3-vl-plus";
 
     // Auto-detect: if --image was given a video file, treat it as --video
     if (image && isVideoInput(image)) {
@@ -102,7 +89,14 @@ export default defineCommand({
 
     if (settings.dryRun) {
       emitResult(
-        { request: { prompt, image, video: videoInputs.length ? videoInputs : undefined, model } },
+        {
+          request: {
+            prompt,
+            image: image ? redactDataUri(image) : undefined,
+            video: videoInputs.length ? videoInputs.map(redactDataUri) : undefined,
+            model,
+          },
+        },
         format,
       );
       return;
@@ -132,10 +126,9 @@ export default defineCommand({
 
       let finalImageUrl = imageUrl;
       if (isLocalFile(image) && imageUrl.startsWith("data:")) {
-        const { statSync } = await import("fs");
         const fileSize = statSync(image).size;
         if (fileSize > 5 * 1024 * 1024) {
-          finalImageUrl = await ctx.client.uploadFile(image, model);
+          finalImageUrl = await ctx.client.resolveImageInput(image, model);
         }
       }
 

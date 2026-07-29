@@ -13,3 +13,4 @@ export type {
   AuthState,
   CredentialSource,
 } from "./types.ts";
+export { generateCLIAccessToken, refreshAccessToken } from "./refresh-token.ts";

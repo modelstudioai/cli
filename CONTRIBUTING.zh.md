@@ -6,8 +6,9 @@
 
 ## 环境要求
 
-- Node.js ≥ 22.12
-- pnpm 10.33.2(`npm i -g pnpm@10.33.2`)
+- 参与本仓库开发：Node.js ≥ 22.12
+- 仅安装/使用已发布的 CLI：Node.js >= 18.17
+- pnpm 10.33.2（`npm i -g pnpm@10.33.2`）
 - 跑 e2e 需要一个百炼 API Key
 
 ## 仓库结构

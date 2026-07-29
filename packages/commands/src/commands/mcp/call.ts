@@ -8,6 +8,7 @@ import {
   type ParsedFlags,
 } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
+import { rethrowWithMcpActivateHint } from "./activate-hint.ts";
 
 const CALL_FLAGS = {
   target: {
@@ -130,14 +131,21 @@ export default defineCommand({
     }
 
     const client = ctx.client.mcp(url);
-    await client.initialize();
-    const result = await client.callTool(toolName, toolArgs);
+    try {
+      await client.initialize();
+      const result = await client.callTool(toolName, toolArgs);
 
-    if (result.isError) {
-      const errText = result.content.map((c) => c.text || "").join("\n");
-      throw new BailianError(`Tool error: ${errText}`);
+      if (result.isError) {
+        const errText = result.content.map((c) => c.text || "").join("\n");
+        throw new BailianError(`Tool error: ${errText}`);
+      }
+
+      emitResult(result, format);
+    } catch (error) {
+      if (!flags.url) {
+        rethrowWithMcpActivateHint(error, serverCode);
+      }
+      throw error;
     }
-
-    emitResult(result, format);
   },
 });

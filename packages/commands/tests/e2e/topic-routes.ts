@@ -15,6 +15,10 @@ export const TEXT_CHAT_ROUTES: E2eRouteExports = { "text chat": "textChat" };
 export const CONFIG_ROUTES: E2eRouteExports = {
   "config show": "configShow",
   "config set": "configSet",
+  "config list": "configList",
+  "config use": "configUse",
+  "config ui": "configUi",
+  "config agent": "configAgent",
 };
 
 export const MEMORY_ROUTES: E2eRouteExports = {
@@ -55,6 +59,10 @@ export const VIDEO_ROUTES: E2eRouteExports = {
   "video download": "videoDownload",
 };
 
+export const VISION_ROUTES: E2eRouteExports = {
+  "vision describe": "visionDescribe",
+};
+
 export const SPEECH_ROUTES: E2eRouteExports = {
   "speech synthesize": "speechSynthesize",
   "speech recognize": "speechRecognize",
@@ -78,9 +86,13 @@ export const OMNI_ROUTES: E2eRouteExports = {
   "speech synthesize": "speechSynthesize",
 };
 
-export const FILE_UPLOAD_ROUTES: E2eRouteExports = { "file upload": "fileUpload" };
+export const FILE_UPLOAD_ROUTES: E2eRouteExports = {
+  "file upload": "fileUpload",
+};
 
-export const ADVISOR_ROUTES: E2eRouteExports = { "advisor recommend": "advisorRecommend" };
+export const ADVISOR_ROUTES: E2eRouteExports = {
+  "advisor recommend": "advisorRecommend",
+};
 
 export const QUOTA_ROUTES: E2eRouteExports = {
   "quota list": "quotaList",
@@ -149,4 +161,21 @@ export const SKILL_ROUTES: E2eRouteExports = {
   "skill update": "skillUpdate",
   "skill remove": "skillRemove",
   "skill list": "skillList",
+};
+
+export const MANAGED_AGENT_ROUTES: E2eRouteExports = {
+  "managed-agent init": "managedAgentInit",
+  "managed-agent validate": "managedAgentValidate",
+  "managed-agent plan": "managedAgentPlan",
+  "managed-agent apply": "managedAgentApply",
+  "managed-agent destroy": "managedAgentDestroy",
+  "managed-agent state list": "managedAgentStateList",
+  "managed-agent state rm": "managedAgentStateRm",
+  "managed-agent state import": "managedAgentStateImport",
+  "managed-agent session create": "managedAgentSessionCreate",
+  "managed-agent session get": "managedAgentSessionGet",
+  "managed-agent session delete": "managedAgentSessionDelete",
+  "managed-agent session run": "managedAgentSessionRun",
+  "managed-agent session send": "managedAgentSessionSend",
+  "managed-agent skill-list": "managedAgentSkillList",
 };

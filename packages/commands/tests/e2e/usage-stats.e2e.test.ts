@@ -6,12 +6,12 @@ import {
   runCommandE2e,
 } from "./helpers.ts";
 import { USAGE_ROUTES } from "./topic-routes.ts";
-import { readConfigFile } from "bailian-cli-core";
+import { buildSources } from "bailian-cli-core";
 
 function getStaticWorkspaceId(): string | undefined {
   if (process.env.BAILIAN_WORKSPACE_ID?.trim()) return process.env.BAILIAN_WORKSPACE_ID.trim();
   try {
-    const config = readConfigFile();
+    const config = buildSources({}).file;
     if (config.workspace_id) return config.workspace_id;
   } catch {}
   return undefined;

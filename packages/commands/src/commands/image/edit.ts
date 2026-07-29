@@ -1,7 +1,5 @@
 import {
   defineCommand,
-  imagePath,
-  imageSyncPath,
   taskPath,
   detectOutputFormat,
   resolveOutputDir,
@@ -20,8 +18,10 @@ import {
   BailianError,
   resolveBooleanFlag,
   resolveWatermark,
+  resolveImageEditApi,
   ASYNC_FLAG,
   CONCURRENT_FLAG,
+  redactDataUri,
 } from "bailian-cli-core";
 import { poll } from "bailian-cli-runtime";
 import { downloadFile } from "bailian-cli-runtime";
@@ -30,12 +30,6 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveImageSize } from "bailian-cli-runtime";
 import { join } from "path";
 import { BOOL_FLAG_PROMPT_EXTEND_CLI_TRUE, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
-
-const SYNC_MODEL_PREFIXES = ["qwen-image-2.0", "qwen-image-max"];
-
-function isSyncModel(model: string): boolean {
-  return SYNC_MODEL_PREFIXES.some((p) => model.startsWith(p));
-}
 
 const EDIT_FLAGS = {
   image: {
@@ -71,6 +65,12 @@ const EDIT_FLAGS = {
     valueHint: "<text>",
     description: "Negative prompt to exclude unwanted content",
   },
+  function: {
+    type: "string",
+    valueHint: "<name>",
+    description:
+      "wanx*-imageedit function (default: description_edit). Examples: stylization_all, description_edit",
+  },
   promptExtend: {
     type: "boolean",
     valueHint: "<bool>",
@@ -98,7 +98,7 @@ const EDIT_FLAGS = {
 type EditFlags = ParsedFlags<typeof EDIT_FLAGS>;
 
 export default defineCommand({
-  description: "Edit an existing image with text instructions (Qwen-Image)",
+  description: "Edit an existing image with text instructions (Qwen-Image / Wan 2.7)",
   auth: "apiKey",
   usageArgs: "--image <url> --prompt <text> [flags]",
   flags: EDIT_FLAGS,
@@ -107,6 +107,9 @@ export default defineCommand({
     '--image https://example.com/logo.png --prompt "Change color to blue" --n 3',
     '--image ./a.png --image ./b.png --prompt "Merge two images into one collage"',
     '--image https://example.com/photo.png --prompt "Remove the person" --model qwen-image-2.0-pro',
+    '--image ./photo.png --prompt "Change the style" --model wan2.7-image',
+    '--image ./photo.png --prompt "Place the subject on a table" --model wan2.5-i2i-preview',
+    '--image ./photo.png --prompt "转换成绘本风格" --model wanx2.1-imageedit --function stylization_all',
     '--image ./photo.png --prompt "Replace the background with a beach" --watermark false',
   ],
   async run(ctx) {
@@ -121,47 +124,79 @@ export default defineCommand({
     const prompt = flags.prompt;
 
     const model = flags.model || settings.defaultImageModel || "qwen-image-2.0";
-    const useSync = isSyncModel(model);
+    const route = resolveImageEditApi(model);
 
     // Auto-upload local files (resolve all images in parallel)
     const resolvedImages = await Promise.all(
-      rawImages.map((img) => ctx.client.uploadFile(img, model)),
+      rawImages.map((image) => ctx.client.resolveImageInput(image, model)),
     );
     const n = flags.n ?? 1;
 
     const promptExtend = resolveBooleanFlag(
       flags.promptExtend,
-      useSync ? true : undefined,
+      route.promptExtendDefault,
       "prompt-extend",
     );
 
-    // Build content: all images first, then text prompt
-    const contentItems: Array<{ image?: string; text?: string }> = resolvedImages.map(
-      (u: string) => ({ image: u }),
-    );
-    contentItems.push({ text: prompt });
-
     const watermark = resolveWatermark(flags.watermark);
 
-    const body: DashScopeImageRequest = {
-      model,
-      input: {
-        messages: [
-          {
-            role: "user",
-            content: contentItems,
-          },
-        ],
-      },
-      parameters: {
-        size: resolveImageSize(flags.size, useSync),
-        n,
-        seed: flags.seed,
-        prompt_extend: promptExtend,
-        watermark,
-        negative_prompt: flags.negativePrompt || undefined,
-      },
+    const parameters: NonNullable<DashScopeImageRequest["parameters"]> = {
+      size: resolveImageSize(flags.size, route.sizeProfile),
+      n,
+      seed: flags.seed,
+      prompt_extend: promptExtend,
+      watermark,
     };
+
+    let body: DashScopeImageRequest;
+    if (route.inputStyle === "function-base-image") {
+      const baseImageUrl = resolvedImages[0];
+      if (!baseImageUrl) {
+        throw new BailianError(
+          "wanx*-imageedit requires at least one --image as base_image_url.",
+          ExitCode.USAGE,
+        );
+      }
+      body = {
+        model,
+        input: {
+          function: flags.function || "description_edit",
+          prompt,
+          base_image_url: baseImageUrl,
+        },
+        parameters,
+      };
+    } else if (route.inputStyle === "prompt-images") {
+      body = {
+        model,
+        input: {
+          prompt,
+          images: resolvedImages,
+          negative_prompt: flags.negativePrompt || undefined,
+        },
+        parameters,
+      };
+    } else {
+      const contentItems: Array<{ image?: string; text?: string }> = resolvedImages.map(
+        (imageUrl: string) => ({ image: imageUrl }),
+      );
+      contentItems.push({ text: prompt });
+      body = {
+        model,
+        input: {
+          messages: [
+            {
+              role: "user",
+              content: contentItems,
+            },
+          ],
+        },
+        parameters: {
+          ...parameters,
+          negative_prompt: flags.negativePrompt || undefined,
+        },
+      };
+    }
 
     // Remove undefined parameters
     stripUndefined(body.parameters as Record<string, unknown>);
@@ -169,22 +204,58 @@ export default defineCommand({
     const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult({ request: body, mode: useSync ? "sync" : "async" }, format);
+      let previewBody: DashScopeImageRequest = body;
+      if ("messages" in body.input) {
+        previewBody = {
+          ...body,
+          input: {
+            messages: body.input.messages.map((message) => ({
+              ...message,
+              content: message.content.map((item) =>
+                item.image ? { ...item, image: redactDataUri(item.image) } : item,
+              ),
+            })),
+          },
+        };
+      } else if ("images" in body.input) {
+        previewBody = {
+          ...body,
+          input: {
+            ...body.input,
+            images: body.input.images?.map((imageUrl) => redactDataUri(imageUrl)),
+          },
+        };
+      } else if ("base_image_url" in body.input) {
+        previewBody = {
+          ...body,
+          input: {
+            ...body.input,
+            base_image_url: redactDataUri(body.input.base_image_url),
+            mask_image_url: body.input.mask_image_url
+              ? redactDataUri(body.input.mask_image_url)
+              : undefined,
+          },
+        };
+      }
+      emitResult(
+        { request: previewBody, mode: route.useSync ? "sync" : "async", path: route.path },
+        format,
+      );
       return;
     }
 
     if (!settings.quiet) {
       process.stderr.write(
-        `[Model: ${model}] [Mode: ${useSync ? "sync" : "async"}] [Images: ${resolvedImages.length}]\n`,
+        `[Model: ${model}] [Mode: ${route.useSync ? "sync" : "async"}] [Images: ${resolvedImages.length}]\n`,
       );
     }
 
     const concurrent = getConcurrency(flags);
 
-    if (useSync) {
-      await handleSyncMode(ctx.client, settings, body, flags, format, concurrent);
+    if (route.useSync) {
+      await handleSyncMode(ctx.client, settings, route.path, body, flags, format, concurrent);
     } else {
-      await handleAsyncMode(ctx.client, settings, body, flags, format, concurrent);
+      await handleAsyncMode(ctx.client, settings, route.path, body, flags, format, concurrent);
     }
   },
 });
@@ -192,6 +263,7 @@ export default defineCommand({
 async function handleSyncMode(
   client: Client,
   settings: Settings,
+  path: string,
   body: DashScopeImageRequest,
   flags: EditFlags,
   format: OutputFormat,
@@ -199,15 +271,15 @@ async function handleSyncMode(
 ): Promise<void> {
   const results = await runConcurrent(concurrent, settings, () =>
     client.requestJson<DashScopeImageSyncResponse>({
-      path: imageSyncPath(),
+      path,
       method: "POST",
       body,
     }),
   );
 
   const imageUrls = results
-    .flatMap((r) => r.output.choices || [])
-    .flatMap((c) => c.message?.content || [])
+    .flatMap((result) => result.output.choices || [])
+    .flatMap((choice) => choice.message?.content || [])
     .map((item) => item.image)
     .filter(Boolean);
 
@@ -221,6 +293,7 @@ async function handleSyncMode(
 async function handleAsyncMode(
   client: Client,
   settings: Settings,
+  path: string,
   body: DashScopeImageRequest,
   flags: EditFlags,
   format: OutputFormat,
@@ -231,14 +304,14 @@ async function handleAsyncMode(
     settings,
     () =>
       client.requestJson<DashScopeAsyncResponse>({
-        path: imagePath(),
+        path,
         method: "POST",
         body,
         async: true,
       }),
     "tasks",
   );
-  const taskIds = responses.map((r) => r.output.task_id);
+  const taskIds = responses.map((response) => response.output.task_id);
 
   if (flags.async) {
     emitResult({ task_ids: taskIds }, format);
@@ -251,12 +324,12 @@ async function handleAsyncMode(
       url: client.url(taskPath(taskId)),
       intervalSec: pollInterval,
       timeoutSec: settings.timeout,
-      isComplete: (d) => (d as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
-      isFailed: (d) => (d as DashScopeTaskResponse).output.task_status === "FAILED",
-      getStatus: (d) => (d as DashScopeTaskResponse).output.task_status,
-      getErrorMessage: (d) => {
-        const o = (d as DashScopeTaskResponse).output;
-        return o.message || o.code || undefined;
+      isComplete: (data) => (data as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
+      isFailed: (data) => (data as DashScopeTaskResponse).output.task_status === "FAILED",
+      getStatus: (data) => (data as DashScopeTaskResponse).output.task_status,
+      getErrorMessage: (data) => {
+        const output = (data as DashScopeTaskResponse).output;
+        return output.message || output.code || undefined;
       },
     }),
   );
@@ -267,13 +340,13 @@ async function handleAsyncMode(
   for (const result of results) {
     if (result.output.choices) {
       const urls = result.output.choices
-        .flatMap((c) => c.message?.content || [])
+        .flatMap((choice) => choice.message?.content || [])
         .map((item) => item.image)
         .filter(Boolean);
       imageUrls.push(...urls);
     }
     if (result.output.results) {
-      const urls = result.output.results.map((r) => r.url).filter(Boolean);
+      const urls = result.output.results.map((item) => item.url).filter(Boolean);
       if (urls.length > 0 && imageUrls.length === 0) {
         imageUrls.push(...urls);
       }
@@ -303,8 +376,8 @@ async function saveImages(
   // Parallel download all images
   const items =
     imageUrls.length > 1
-      ? imageUrls.map((url, i) => {
-          const filename = `${prefix}_${String(i + 1).padStart(3, "0")}.png`;
+      ? imageUrls.map((url, index) => {
+          const filename = `${prefix}_${String(index + 1).padStart(3, "0")}.png`;
           return { url, destPath: join(outDir, filename) };
         })
       : [{ url: imageUrls[0], destPath: join(outDir, `${prefix}.png`) }];

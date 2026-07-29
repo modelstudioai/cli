@@ -1,4 +1,4 @@
-import { API_KEY_PAGE } from "../urls.ts";
+import { API_KEY_PAGE, TOKEN_PLAN_PAGE } from "../urls.ts";
 import { ansi } from "./color.ts";
 
 export function printWelcomeBanner(cliName: string): void {
@@ -7,6 +7,11 @@ export function printWelcomeBanner(cliName: string): void {
   process.stderr.write("  Get started in 2 steps:\n");
   process.stderr.write(`  1. Get your API Key:  ${API_KEY_PAGE}\n`);
   process.stderr.write(`  2. Login:             ${cliName} auth login --api-key <your-key>\n\n`);
+  process.stderr.write("  Token Plan:\n");
+  process.stderr.write(`  1. Get your API Key:  ${TOKEN_PLAN_PAGE}\n`);
+  process.stderr.write(
+    `  2. Login:             ${cliName} auth login --config token-plan --api-key <your-key>\n\n`,
+  );
 }
 
 export function printQuickStart(tasks: readonly string[]): void {

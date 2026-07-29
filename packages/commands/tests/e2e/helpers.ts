@@ -28,6 +28,7 @@ export {
   isChatE2EReady,
   isConsoleE2EReady,
   isDashScopeE2EReady,
+  isOpenApiE2EReady,
   isSearchE2EReady,
 } from "e2e/gating";
 
