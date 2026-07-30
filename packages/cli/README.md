@@ -78,10 +78,10 @@ No timeline scrubbing. No frame-by-frame editing. Just one sentence → one vide
 
 ```bash
 # Recommended — no Node required
-curl -fsSL https://bailian.aliyun.com/install.sh | bash
+curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
 
 # Windows (PowerShell)
-irm https://bailian.aliyun.com/install.ps1 | iex
+irm https://bailian.aliyun.com/cli/install.ps1 | iex
 
 # Node users / developers (Node.js >= 18.17)
 npm install -g bailian-cli

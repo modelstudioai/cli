@@ -17,8 +17,8 @@ export const DEFAULT_CLI_CDN_BASE = "https://bailian-wiki.oss-cn-hangzhou.aliyun
 export const GITHUB_RELEASES_BASE = "https://github.com/modelstudioai/cli/releases";
 
 /** User-facing install entry (docs / update hints); asset downloads still use getCliCdnBase(). */
-export const DEFAULT_INSTALL_SCRIPT_URL = "https://bailian.aliyun.com/install.sh";
-export const DEFAULT_INSTALL_PS1_URL = "https://bailian.aliyun.com/install.ps1";
+export const DEFAULT_INSTALL_SCRIPT_URL = "https://bailian.aliyun.com/cli/install.sh";
+export const DEFAULT_INSTALL_PS1_URL = "https://bailian.aliyun.com/cli/install.ps1";
 
 export function getCliCdnBase(): string {
   const fromEnv = process.env.BAILIAN_CLI_CDN?.trim();
