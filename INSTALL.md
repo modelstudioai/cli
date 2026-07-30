@@ -35,7 +35,7 @@ which bl   # Windows: where.exe bl
 
 > CDN / GitHub Release 未就绪或下载失败时，回退到下方 npm 安装。
 
-## 2. 备选：npm 安装（需要 Node.js >= 18.17）
+## 2. 备选：npm 安装（要求 **≥ 18.17.0**）
 
 1. `node -v` 确认版本。
 2. `npm -v` 确认可用（**仅允许 npm** 全局安装，不要用 pnpm/yarn）。
@@ -69,7 +69,9 @@ npx skills add modelstudioai/cli --all -g
 ### Agent 安全约束
 
 - **禁止**把真实 API Key 写入仓库、日志、Skill、聊天记录的可公开部分。
-- CI / 非交互环境：使用 `bl ... --non-interactive`；通过密钥管理或环境变量注入。
+- CI / 非交互环境：显式传入必填参数并使用 `--output json` 获取机器可读结果；如需纯文本输出，设置 `NO_COLOR=1`。通过密钥管理或环境变量注入，勿在脚本中硬编码 Key。
+
+---
 
 ## 4. 配置验证
 
@@ -84,4 +86,4 @@ bl auth status --output json
 | `bl: command not found` | bin 不在 PATH                | 检查 `~/.local/bin` 或 `npm prefix -g` |
 | curl 安装 404           | GitHub Release 资产未上传    | 改用 `npm install -g bailian-cli`      |
 | `plugin` 需要 npm       | 二进制安装无本机 npm         | 安装 Node，或改用 npm 版 CLI           |
-| 安装报错 engines        | Node 版本过低（仅 npm 路径） | 升级到 ≥ 18.17                         |
+| 安装报错 engines        | Node 版本过低（仅 npm 路径） | 升级到 ≥ 18.17.0                       |

@@ -57,7 +57,7 @@ export async function validateAndPersistApiKey(
   const persistBaseUrl = profile.persistBaseUrl
     ? normalizeModelBaseUrl(profile.persistBaseUrl)
     : undefined;
-  const validationModel = profile.defaultTextModel || "qwen3.7-max";
+  const validationModel = "qwen3.7-max";
   const requestOpts = {
     url: baseUrl + chatPath(),
     method: "POST",
@@ -68,7 +68,6 @@ export async function validateAndPersistApiKey(
       messages: [{ role: "user", content: "hi" }],
       max_tokens: 1,
       stream: false,
-      enable_thinking: validationModel === "qwen3.8-max-preview",
     },
   };
 

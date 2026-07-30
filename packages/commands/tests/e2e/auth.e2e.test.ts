@@ -219,7 +219,6 @@ describe("e2e: auth", () => {
         body: {
           model: "qwen3.7-max",
           stream: false,
-          enable_thinking: false,
         },
       });
 
@@ -315,9 +314,8 @@ describe("e2e: auth", () => {
         authorization: "Bearer sk-sp-e2e-placeholder",
         sourceConfig: expect.any(String),
         body: {
-          model: "qwen3.8-max-preview",
+          model: "qwen3.7-max",
           stream: false,
-          enable_thinking: true,
         },
       });
 

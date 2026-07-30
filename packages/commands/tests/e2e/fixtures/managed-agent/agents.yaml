@@ -1,0 +1,24 @@
+version: "1"
+
+providers:
+  bailian:
+    api_key: ${DASHSCOPE_API_KEY}
+    base_url: ${BAILIAN_BASE_URL}
+
+defaults:
+  provider: bailian
+
+environments:
+  dev:
+    config:
+      type: cloud
+      networking:
+        type: unrestricted
+
+agents:
+  assistant:
+    description: "E2E auth-chain fixture"
+    model: qwen3.7-max
+    instructions: |
+      You are a helpful assistant.
+    environment: dev
