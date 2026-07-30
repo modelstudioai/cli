@@ -31,8 +31,6 @@ bl --version
 which bl   # Windows: where.exe bl
 ```
 
-若 `command not found`：把 `~/.local/bin`（Windows 为 `%LOCALAPPDATA%\bailian-cli\bin`）加入 PATH 后开新终端。
-
 > CDN / GitHub Release 未就绪或下载失败时，回退到下方 npm 安装。
 
 ## 2. 备选：npm 安装（要求 **≥ 18.17.0**）
