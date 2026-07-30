@@ -56,23 +56,23 @@ Skill / 命令手册随 `skills/bailian-cli/` 经 `npx skills add modelstudioai/
 
 按当前任务从下表挑一条进入对应文档:
 
-| 场景           | 何时进入                                                 | 详见                                                                         |
-| -------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| 命令增删改     | 增加 / 删除 / 重命名 `bl xxx` 或入口命令路径             | [docs/agents/command-add-remove.md](docs/agents/command-add-remove.md)       |
-| E2E 测试维护   | 新增/改命令或 e2e 用例、补 help/缺参/dry-run             | [docs/agents/cli-e2e-tests.md](docs/agents/cli-e2e-tests.md)                 |
-| 批量压测       | 改/跑多能力并发压测、`test:stress`、fixtures             | [docs/agents/stress-batch-tests.md](docs/agents/stress-batch-tests.md)       |
-| 选项变更       | 给已有命令加 `--flag` 或改默认值                         | [docs/agents/command-flag-change.md](docs/agents/command-flag-change.md)     |
-| 模型上下架     | 增加新模型 / 改默认模型 / 废弃旧模型                     | [docs/agents/model-add-remove.md](docs/agents/model-add-remove.md)           |
-| 错误文案变更   | 改 `BailianError` 的 message 或 hint                     | [docs/agents/error-hint-change.md](docs/agents/error-hint-change.md)         |
-| URL / 渠道变更 | 控制台域名 / 文档站 / 追踪参数                           | [docs/agents/url-change.md](docs/agents/url-change.md)                       |
-| 鉴权扩展       | 加 OAuth / SSO / 换 token 来源                           | [docs/agents/auth-change.md](docs/agents/auth-change.md)                     |
-| 配置项扩展     | 新 env var 或 `~/.bailian/config.json` 字段              | [docs/agents/config-add.md](docs/agents/config-add.md)                       |
-| Profile / 激活 | 改命名 Profile、预设或 `active_config`                   | [docs/agents/config-profile-change.md](docs/agents/config-profile-change.md) |
-| 安装文档       | 改安装、鉴权、验证流程或线上 install 页面                | [docs/agents/install-doc-change.md](docs/agents/install-doc-change.md)       |
+| 场景           | 何时进入                                                                         | 详见                                                                         |
+| -------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 命令增删改     | 增加 / 删除 / 重命名 `bl xxx` 或入口命令路径                                     | [docs/agents/command-add-remove.md](docs/agents/command-add-remove.md)       |
+| E2E 测试维护   | 新增/改命令或 e2e 用例、补 help/缺参/dry-run                                     | [docs/agents/cli-e2e-tests.md](docs/agents/cli-e2e-tests.md)                 |
+| 批量压测       | 改/跑多能力并发压测、`test:stress`、fixtures                                     | [docs/agents/stress-batch-tests.md](docs/agents/stress-batch-tests.md)       |
+| 选项变更       | 给已有命令加 `--flag` 或改默认值                                                 | [docs/agents/command-flag-change.md](docs/agents/command-flag-change.md)     |
+| 模型上下架     | 增加新模型 / 改默认模型 / 废弃旧模型                                             | [docs/agents/model-add-remove.md](docs/agents/model-add-remove.md)           |
+| 错误文案变更   | 改 `BailianError` 的 message 或 hint                                             | [docs/agents/error-hint-change.md](docs/agents/error-hint-change.md)         |
+| URL / 渠道变更 | 控制台域名 / 文档站 / 追踪参数                                                   | [docs/agents/url-change.md](docs/agents/url-change.md)                       |
+| 鉴权扩展       | 加 OAuth / SSO / 换 token 来源                                                   | [docs/agents/auth-change.md](docs/agents/auth-change.md)                     |
+| 配置项扩展     | 新 env var 或 `~/.bailian/config.json` 字段                                      | [docs/agents/config-add.md](docs/agents/config-add.md)                       |
+| Profile / 激活 | 改命名 Profile、预设或 `active_config`                                           | [docs/agents/config-profile-change.md](docs/agents/config-profile-change.md) |
+| 安装文档       | 改安装、鉴权、验证流程或线上 install 页面                                        | [docs/agents/install-doc-change.md](docs/agents/install-doc-change.md)       |
 | 发布           | channel / stable 发 npm + 二进制（Bun / GitHub Release / OSS）；安装脚本仓外维护 | [docs/agents/publish.md](docs/agents/publish.md)                             |
-| Change Log     | 发版说明 / 历史版本说明                                  | [docs/agents/changelog-write.md](docs/agents/changelog-write.md)             |
-| 工具链调整     | lint 规则 / 构建配置 / 依赖升级                          | [docs/agents/lint-toolchain.md](docs/agents/lint-toolchain.md)               |
-| Command Pack   | 扩展包 / 白名单 / plugin 管理命令                        | [docs/agents/command-pack.md](docs/agents/command-pack.md)                   |
+| Change Log     | 发版说明 / 历史版本说明                                                          | [docs/agents/changelog-write.md](docs/agents/changelog-write.md)             |
+| 工具链调整     | lint 规则 / 构建配置 / 依赖升级                                                  | [docs/agents/lint-toolchain.md](docs/agents/lint-toolchain.md)               |
+| Command Pack   | 扩展包 / 白名单 / plugin 管理命令                                                | [docs/agents/command-pack.md](docs/agents/command-pack.md)                   |
 
 如果当前任务无法对应任何场景,先按经验完成,然后**回来评估这是不是一类新场景** —— 是就新增 `docs/agents/<scenario>.md`,把清单沉淀下来。
 
