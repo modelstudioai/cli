@@ -35,7 +35,9 @@ const { values } = parseArgs({
 const channel = values.channel;
 const dryRun = values["dry-run"];
 const knowledge = values.knowledge;
-const skipBinary = values["skip-binary"];
+// knowledge-studio-cli channel publishes are npm-only: binary artifacts are `bl`
+// and must not overwrite CDN sync-release.json used by bailian-cli install verify.
+const skipBinary = values["skip-binary"] || knowledge;
 const packages = knowledge ? ALL_PACKAGES : PACKAGES;
 assertChannel(channel);
 
@@ -89,18 +91,22 @@ try {
     }
   }
 
-  // 2) binary GitHub Release — must run before finally restores package.json versions
+  // 2) binary GitHub Release — must run before finally restores package.json versions.
+  // Channel binary always refreshes OSS sync-release.json (npm tag is independent).
   if (skipBinary) {
-    log("\n[skip-binary] skipping binary GitHub Release");
+    const reason = knowledge
+      ? "[knowledge] skipping binary (npm-only; does not touch sync-release.json)"
+      : "[skip-binary] skipping binary GitHub Release";
+    log(`\n${reason}`);
   } else {
     step(
-      `publish binary GitHub Release (mode=channel, channel=${channel}, version=${betaVersion})`,
+      `publish binary GitHub Release (mode=channel, npm-tag=${channel}, CDN=sync-release, version=${betaVersion})`,
     );
     await releaseBinaryArtifacts({ mode: "channel", channel, dryRun });
   }
 
   const parts = ["npm"];
-  if (!skipBinary) parts.push("binary");
+  if (!skipBinary) parts.push("binary/sync-release");
   log(`\nchannel release complete: ${channel}@${betaVersion} (${parts.join(" + ")})`);
 } catch (error) {
   process.stderr.write(`\nrelease publish-channel failed: ${error.message}\n`);

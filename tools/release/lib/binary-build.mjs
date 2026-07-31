@@ -7,9 +7,8 @@
  *   node tools/release/lib/binary-build.mjs --mode stable --host
  *
  * Manifests:
- *   --mode stable  → writes latest.json (rolling manifest of the implicit
- *                    "latest" channel; OSS prefix root only, not a GH asset)
- *   --mode channel → writes <channel>.json
+ *   --mode stable  → writes latest.json (fed into OSS manifest.json + latest.json)
+ *   --mode channel → always writes sync-release.json (npm --channel is dist-tag only)
  */
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -17,7 +16,11 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { parseArgs } from "node:util";
 import { ROOT, readPackageJson, PACKAGES } from "./packages.mjs";
-import { channelManifestFileName, normalizeModeChannel } from "./binary-options.mjs";
+import {
+  normalizeModeChannel,
+  rollingManifestChannelId,
+  rollingManifestFileName,
+} from "./binary-options.mjs";
 import { ensureZip, zipOne } from "./binary-zip.mjs";
 
 const BINARY_COMPILE = fileURLToPath(new URL("./binary-compile.mjs", import.meta.url));
@@ -157,8 +160,9 @@ function writeChecksums(outdir, artifacts) {
   writeFileSync(join(outdir, "SHA256SUMS"), `${lines.join("\n")}\n`);
 }
 
-/** Write the rolling channel manifest (`latest.json` / `<channel>.json`) with per-platform zip file + sha256. */
-function writeChannelManifest(outdir, version, artifacts, channel) {
+/** Write the rolling channel manifest (`latest.json` / `sync-release.json`) with per-platform zip + sha256. */
+function writeChannelManifest(outdir, version, artifacts, mode) {
+  const channel = rollingManifestChannelId(mode);
   const assets = Object.fromEntries(
     artifacts.map((item) => [
       `${item.os}-${item.arch}`,
@@ -176,7 +180,7 @@ function writeChannelManifest(outdir, version, artifacts, channel) {
     releasedAt: new Date().toISOString(),
     assets,
   };
-  const name = channelManifestFileName(channel);
+  const name = rollingManifestFileName(mode);
   writeJson(join(outdir, name), manifest);
   return name;
 }
@@ -222,9 +226,7 @@ export function buildBinaryArtifacts(rawOptions = {}) {
   writeChecksums(outdir, artifacts);
 
   const extras = ["SHA256SUMS"];
-  extras.push(
-    writeChannelManifest(outdir, version, artifacts, mode === "channel" ? channel : "latest"),
-  );
+  extras.push(writeChannelManifest(outdir, version, artifacts, mode));
 
   log(`\nBuilt ${artifacts.length} zip(s):`);
   for (const item of artifacts) {

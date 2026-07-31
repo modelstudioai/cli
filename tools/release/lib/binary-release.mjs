@@ -2,18 +2,19 @@
  * Publish bailian-cli binary assets to GitHub Releases.
  *
  * stable:  release `v<version>` (tag must already be on origin; --verify-tag)
- *          assets: bl-*.zip, SHA256SUMS  (no latest.json)
+ *          assets: bl-*.zip, SHA256SUMS  (no latest.json on the GH release)
+ *          OSS: rewrite release/manifest.json + latest.json from build latest.json
  * channel: versioned prerelease `v<betaVersion>` (assets: bl-*.zip, SHA256SUMS)
- *          + rolling prerelease tag `channel-<name>` holding only `<name>.json`
+ *          + rolling prerelease `channel-sync-release` holding only sync-release.json
+ *          OSS: always overwrite prefix-root sync-release.json
  *
- * Same commit/day channel publishes share one `v<betaVersion>` Release (identical
- * binaries); only the rolling `channel-<name>` manifest differs per channel.
+ * Workflow `--channel` is the npm dist-tag (and versioned release notes); it does
+ * not choose the CDN rolling filename. Same commit/day channel publishes share one
+ * `v<betaVersion>` Release (identical binaries).
  *
  * Re-runs are idempotent via `gh release upload --clobber` (see gh-release.mjs).
  * After the GitHub upload the same assets are pushed straight to OSS from the
- * runner, HEAD-reconciled, and (stable only) release/manifest.json + latest.json
- * are rewritten with the SAME rolling-manifest body as channel `<channel>.json` —
- * all in-process, no external FC (see oss-direct-upload.mjs).
+ * runner and HEAD-reconciled — all in-process, no external FC (see oss-direct-upload.mjs).
  *
  * Called by publish-stable.mjs / publish-channel.mjs.
  * Debug:
@@ -26,7 +27,12 @@ import { fileURLToPath } from "node:url";
 import { parseArgs as parseCliArgs } from "node:util";
 import { ROOT, readPackageJson, PACKAGES } from "./packages.mjs";
 import { buildBinaryArtifacts, matrixAssetNames } from "./binary-build.mjs";
-import { channelManifestFileName, normalizeModeChannel } from "./binary-options.mjs";
+import {
+  normalizeModeChannel,
+  rollingChannelReleaseTag,
+  rollingManifestFileName,
+  SYNC_RELEASE_CHANNEL,
+} from "./binary-options.mjs";
 import { ensureGh, GITHUB_REPOSITORY, upsertRelease } from "./gh-release.mjs";
 import {
   maintainReleaseManifest,
@@ -79,22 +85,23 @@ function uploadStable({ dir, version, files, dryRun }) {
 }
 
 function uploadChannel({ dir, version, channel, files, dryRun }) {
-  // Versioned tag is shared across channels built from the same beta version string.
+  // Versioned tag is shared across npm dist-tags built from the same beta version.
   upsertRelease({
     tag: `v${version}`,
     title: `v${version}`,
     prerelease: true,
-    notes: `Beta build for the \`${channel}\` channel.`,
+    notes: `Beta build (npm dist-tag \`${channel}\`). CDN rolling pointer: ${SYNC_RELEASE_CHANNEL}.json.`,
     assets: versionBinaryAssets(dir, version, files),
     dryRun,
   });
 
+  const rollingTag = rollingChannelReleaseTag("channel");
   upsertRelease({
-    tag: `channel-${channel}`,
-    title: `channel: ${channel}`,
+    tag: rollingTag,
+    title: `channel: ${SYNC_RELEASE_CHANNEL}`,
     prerelease: true,
-    notes: `Rolling manifest for the \`${channel}\` channel. Latest beta: ${version}.`,
-    assets: [join(dir, channelManifestFileName(channel))],
+    notes: `Rolling CDN manifest (${SYNC_RELEASE_CHANNEL}.json). Latest beta: ${version} (npm dist-tag \`${channel}\`).`,
+    assets: [join(dir, rollingManifestFileName("channel"))],
     dryRun,
   });
 }
@@ -117,16 +124,16 @@ function planDryRunWithoutArtifacts({ version, mode, channel }) {
     tag: `v${version}`,
     title: `v${version}`,
     prerelease: true,
-    notes: `Beta build for the \`${channel}\` channel.`,
+    notes: `Beta build (npm dist-tag \`${channel}\`). CDN rolling pointer: ${SYNC_RELEASE_CHANNEL}.json.`,
     assets: [...matrix, "SHA256SUMS"],
     dryRun: true,
   });
   upsertRelease({
-    tag: `channel-${channel}`,
-    title: `channel: ${channel}`,
+    tag: rollingChannelReleaseTag("channel"),
+    title: `channel: ${SYNC_RELEASE_CHANNEL}`,
     prerelease: true,
-    notes: `Rolling manifest for the \`${channel}\` channel. Latest beta: ${version}.`,
-    assets: [channelManifestFileName(channel)],
+    notes: `Rolling CDN manifest (${SYNC_RELEASE_CHANNEL}.json). Latest beta: ${version} (npm dist-tag \`${channel}\`).`,
+    assets: [rollingManifestFileName("channel")],
     dryRun: true,
   });
 }
@@ -136,15 +143,14 @@ function planDryRunWithoutArtifacts({ version, mode, channel }) {
  * upload. `files == null` means dry-run planning without artifacts on disk,
  * so bare basenames stand in for real paths.
  */
-function ossMirrorPlans({ dir, version, mode, channel, files }) {
+function ossMirrorPlans({ dir, version, mode, files }) {
   const paths = files
     ? versionBinaryAssets(dir, version, files)
     : [...matrixAssetNames(version), "SHA256SUMS"];
   const plans = [{ tag: `v${version}`, paths }];
   if (mode === "channel") {
-    const manifest = channelManifestFileName(channel);
-    // Rolling channel manifest lives at the OSS prefix root, next to
-    // manifest.json / latest.json — one flat json per channel.
+    const manifest = rollingManifestFileName("channel");
+    // Always sync-release.json at the OSS prefix root (next to manifest.json).
     plans.push({ tag: "", paths: [files ? join(dir, manifest) : manifest] });
   }
   return plans;
@@ -183,7 +189,7 @@ export async function releaseBinaryArtifacts(rawOptions = {}) {
   if (dryRun && !existsSync(dir)) {
     process.stdout.write(`[dry-run] ${dir} missing; planning expected assets\n`);
     planDryRunWithoutArtifacts({ version, mode, channel });
-    const plans = ossMirrorPlans({ dir, version, mode, channel, files: null });
+    const plans = ossMirrorPlans({ dir, version, mode, files: null });
     await syncStaticFilesToOss({
       filePaths: [join(ROOT, "CHANGELOG.md"), join(ROOT, "CHANGELOG.zh.md")],
       dryRun: true,
@@ -209,10 +215,10 @@ export async function releaseBinaryArtifacts(rawOptions = {}) {
   if (!files.includes("SHA256SUMS")) {
     throw new Error(`Missing SHA256SUMS in ${dir}`);
   }
-  const rollingManifest = channelManifestFileName(mode === "channel" ? channel : "latest");
+  const rollingManifest = rollingManifestFileName(mode);
   if (!files.includes(rollingManifest)) {
     throw new Error(
-      `Missing ${rollingManifest} in ${dir}. Rebuild with matching --mode/--channel (found: ${files.join(", ") || "(empty)"}).`,
+      `Missing ${rollingManifest} in ${dir}. Rebuild with matching --mode (found: ${files.join(", ") || "(empty)"}).`,
     );
   }
 
@@ -242,7 +248,7 @@ export async function releaseBinaryArtifacts(rawOptions = {}) {
   // Push the exact Release assets straight to OSS from the runner, then
   // HEAD-reconcile. Stable releases additionally maintain release/manifest.json
   // (newer-version guard). Throws on failure — CI is the only OSS writer.
-  const plans = ossMirrorPlans({ dir, version, mode, channel, files });
+  const plans = ossMirrorPlans({ dir, version, mode, files });
   const mirror = await mirrorReleaseAssetsToOss({ plans, dryRun });
   if (mode === "stable" && !mirror.skipped) {
     await maintainReleaseManifest({

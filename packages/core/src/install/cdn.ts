@@ -7,7 +7,11 @@
  *   v<version>/<asset>.zip —— immutable per-version binaries + SHA256SUMS
  *   manifest.json          —— stable install/update pointer (rolling-manifest shape)
  *   latest.json            —— stable alias; same body as manifest.json
- *   <channel>.json         —— per-channel rolling manifests (betas / local verify)
+ *   sync-release.json      —— official channel/verify rolling pointer (all bailian-cli
+ *                            channel publishes overwrite this; npm dist-tag is separate)
+ *
+ * Legacy `{name}.json` files may still exist on CDN; install may resolve them, but
+ * release tooling no longer creates per-dist-tag manifests.
  *
  * Override with `BAILIAN_CLI_CDN`.
  */
@@ -29,7 +33,8 @@ export function getCliCdnBase(): string {
 /**
  * Rolling manifest URL at the CDN base root.
  * Stable (`latest` / `stable` / empty) → `manifest.json`.
- * Named channel → `{channel}.json` (e.g. sync-release for local verify).
+ * Official verify line → `sync-release.json` (`channel=sync-release`).
+ * Other names still map to `{channel}.json` for backward compatibility only.
  * All share the same rolling-manifest shape from binary-build.
  */
 export function channelManifestUrl(channel = "latest"): string {

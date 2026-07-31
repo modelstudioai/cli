@@ -8,7 +8,7 @@
 curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
 ```
 
-可选：正式安装读 CDN 上的 `manifest.json`。预发 / channel 验证示例：
+可选：正式安装读 CDN 上的 `manifest.json`。预发 / channel 验证一律读 `sync-release.json`（bailian-cli 的 channel 发版都会覆盖它）：
 
 ```bash
 curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash -s -- --channel sync-release
@@ -19,10 +19,14 @@ curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash -s -- --channel sync
 Windows PowerShell：
 
 ```powershell
+# 正式（manifest.json）
 irm https://bailian.aliyun.com/cli/install.ps1 | iex
+
+# channel / 预发验证（sync-release.json）
+$env:BAILIAN_CHANNEL = 'sync-release'; irm 'https://bailian.aliyun.com/cli/install.ps1' | iex
 ```
 
-带参时先落盘再执行（`irm | iex` 不便传参），或使用仓外静态资源文档中的预发入口。
+带其它参时先落盘再执行（`irm | iex` 不便传参），或使用仓外静态资源文档中的预发入口。
 
 二进制安装布局为 `versions/<ver>/` + `current` 指针；`bl update` 只切换指针并清理旧版本（保留当前与上一版）。更新进程退出后，下次执行 `bl` 即使用新版本（无需「重启应用」）。
 

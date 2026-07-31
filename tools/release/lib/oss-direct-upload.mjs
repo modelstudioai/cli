@@ -4,15 +4,14 @@
  * No external FC is involved anymore; CI is the single writer.
  *
  * Flow:
- *   - Every mode uploads its assets to `<prefix>/<tag>/<basename>`; rolling
- *     channel manifests (`<channel>.json`) go to the prefix root (empty tag).
+ *   - Every mode uploads its assets to `<prefix>/<tag>/<basename>`; channel
+ *     mode also uploads `sync-release.json` to the prefix root (empty tag).
  *   - After upload, every object is HEAD-verified against the local byte size
  *     (reconciliation — the runner has the ground-truth artifacts on disk).
  *   - Stable only: when the tag is a NEWER version than the current manifest
  *     (compareVersions), rewrite `<prefix>/manifest.json` and the rolling
  *     `<prefix>/latest.json` — both carry the SAME rolling-manifest body
- *     written by binary-build.mjs, so manifest.json shares the channel
- *     `<channel>.json` shape. Channel/prerelease never touches either.
+ *     written by binary-build.mjs. Channel mode never touches those two files.
  *
  * Zero-dependency: OSS V1 header signature (HMAC-SHA1) over plain fetch.
  *

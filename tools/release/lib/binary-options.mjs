@@ -1,12 +1,20 @@
 /**
  * Shared mode / channel / manifest naming for binary-build and binary-release.
  *
- * Every mode writes a rolling channel manifest: stable writes `latest.json`
- * (uploaded to the OSS prefix root only, never attached to the GitHub Release),
- * channel writes `<channel>.json` (attached to the rolling `channel-<name>`
- * GitHub Release and uploaded to the OSS prefix root).
+ * Rolling CDN pointers (bailian-cli binary):
+ *   - stable  → build writes `latest.json`; OSS maintains `manifest.json` (+ `latest.json`)
+ *   - channel → always `sync-release.json` on OSS / GH rolling release `channel-sync-release`
+ *
+ * The workflow `--channel` value remains the npm dist-tag (and versioned GH release notes).
+ * It does not choose the CDN rolling filename.
  */
 import { assertChannel } from "./validate.mjs";
+
+/** Official bailian-cli channel/verify rolling manifest name on CDN. */
+export const SYNC_RELEASE_CHANNEL = "sync-release";
+
+/** Stable build-local rolling manifest (fed into maintainReleaseManifest). */
+export const STABLE_ROLLING_CHANNEL = "latest";
 
 /**
  * @param {string} mode
@@ -28,8 +36,40 @@ export function normalizeModeChannel(mode = "stable", channel = null) {
   return { mode: "stable", channel: null };
 }
 
-/** Rolling-manifest basename: `latest.json` for stable, `<channel>.json` otherwise. */
+/**
+ * Rolling-manifest basename for a logical channel id inside a build artifact.
+ * Prefer {@link rollingManifestFileName} for mode-aware naming.
+ */
 export function channelManifestFileName(channel) {
   if (!channel) throw new Error("channelManifestFileName requires a channel name");
   return `${channel}.json`;
+}
+
+/**
+ * Rolling manifest basename written by binary-build / uploaded to OSS root.
+ * - stable → `latest.json`
+ * - channel → always `sync-release.json` (ignores npm dist-tag name)
+ *
+ * @param {"stable" | "channel"} mode
+ * @returns {string}
+ */
+export function rollingManifestFileName(mode) {
+  if (mode === "stable") return channelManifestFileName(STABLE_ROLLING_CHANNEL);
+  if (mode === "channel") return channelManifestFileName(SYNC_RELEASE_CHANNEL);
+  throw new Error(`rollingManifestFileName: unknown mode ${mode}`);
+}
+
+/** Channel id embedded in the rolling manifest JSON body. */
+export function rollingManifestChannelId(mode) {
+  if (mode === "stable") return STABLE_ROLLING_CHANNEL;
+  if (mode === "channel") return SYNC_RELEASE_CHANNEL;
+  throw new Error(`rollingManifestChannelId: unknown mode ${mode}`);
+}
+
+/** GitHub rolling prerelease tag that holds only the CDN channel pointer. */
+export function rollingChannelReleaseTag(mode) {
+  if (mode !== "channel") {
+    throw new Error("rollingChannelReleaseTag is only valid for mode=channel");
+  }
+  return `channel-${SYNC_RELEASE_CHANNEL}`;
 }

@@ -26,20 +26,28 @@ publish-stable.mjs / publish-channel.mjs   ← 唯一发版入口
 
 两种模式：
 
-| 模式    | 用途                                                     | 触发方式                                                                                                                                              |
-| ------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| channel | npm dist-tag + GitHub prerelease + 滚动 `channel-<name>` | 选 mode=channel，填 channel 名。**仅 `bailian-cli` 二进制安装验证**用 `sync-release`；`knowledge-studio-cli` 与 mcp/plugin 等仍按各自 dist-tag 名填写 |
-| stable  | npm latest + GitHub Release `v<ver>`（含 install 脚本）  | 选 mode=stable，需 production environment 审批                                                                                                        |
+| 模式    | 用途                                                                                    | 触发方式                                     |
+| ------- | --------------------------------------------------------------------------------------- | -------------------------------------------- |
+| channel | npm dist-tag +（仅 bailian-cli）二进制 + CDN **一律**覆盖 `sync-release.json`           | mode=channel，channel 填 **npm dist-tag** 名 |
+| stable  | npm latest + GitHub Release `v<ver>` + CDN **`manifest.json`**（及 `latest.json` 别名） | mode=stable，需 production environment 审批  |
 
 可选 flag：`--skip-binary`（仅发 npm，紧急逃生）。
 
+### CDN 滚动指针（bailian-cli）
+
+| 发布模式 | CDN 指针                           | 本机安装 / 更新                                                   |
+| -------- | ---------------------------------- | ----------------------------------------------------------------- |
+| channel  | 始终覆盖 `sync-release.json`       | `BAILIAN_CHANNEL=sync-release` / `install --channel sync-release` |
+| stable   | `manifest.json`（+ `latest.json`） | 默认安装 / `bl update`（无 channel）                              |
+
+workflow 的 `channel` 输入**只决定 npm dist-tag**（如 `mcp` / `plugin` / `sync-release`），**不再**生成 `release-test.json` 这类旁路文件。
+
 ### channel 发布
 
-1. 在 GitHub 触发 Publish workflow，package 选目标包，mode 选 `channel`，channel 填名称：
-   - **`bailian-cli` 二进制安装验证**：填 `sync-release`（更新 CDN `sync-release.json`；本机 `BAILIAN_CHANNEL=sync-release` / `install.sh --channel sync-release`）。填什么就写什么 `{channel}.json`；发 `release-test` **不会**更新 `sync-release.json`
-   - **`knowledge-studio-cli`**：不要用 `sync-release`（那是 `bl` 安装脚本/CDN 约定）；按 npm dist-tag 需要填 `mcp` / `plugin` 等即可，行为与改文档前一致
-   - 其它 npm dist-tag（任一 package）：填 `mcp` / `plugin` 等
-2. CI 自动：生成 `0.0.0-beta-<sha7>-<date>` → 临时 bump → 自检 → **npm 发到 dist-tag** → **Bun 编二进制并创建 GitHub prerelease + 滚动 `{channel}.json`** → 还原 package.json
+1. 在 GitHub 触发 Publish workflow，mode 选 `channel`，channel 填 npm dist-tag 名：
+   - **`bailian-cli`**：npm 发到该 tag；二进制同时刷新 CDN `sync-release.json`（与 tag 名无关）。本机验证：`BAILIAN_CHANNEL=sync-release`
+   - **`knowledge-studio-cli`**：仅 npm（自动跳过 binary，不碰 `sync-release.json`）
+2. CI 自动：生成 `0.0.0-beta-<sha7>-<date>` → 临时 bump → 自检 → **npm 发到 dist-tag** →（bailian-cli）**Bun 编二进制 + GH prerelease + 覆盖 `sync-release.json`** → 还原 package.json
 3. 对应脚本：`tools/release/publish-channel.mjs`
 
 ### stable 发布
@@ -47,7 +55,7 @@ publish-stable.mjs / publish-channel.mjs   ← 唯一发版入口
 1. 确保当前 release tooling 覆盖的包(`tools/release/lib/packages.mjs`)已升到目标版本且一致;当前基础集合为 `packages/core` / `packages/runtime` / `packages/commands` / `packages/cli`，`knowledge-studio-cli` 发布会额外包含 `packages/kscli`
 2. 在 GitHub 触发 Publish workflow，package 选目标包集合，mode 选 `stable`
 3. 需要 production environment 审批人批准
-4. CI 自动：自检 → **npm 发到 latest** → **推送 git tag `v<ver>`** → **Bun 编二进制并创建/更新 GitHub Release** → 完成
+4. CI 自动：自检 → **npm 发到 latest** → **推送 git tag `v<ver>`** → **Bun 编二进制并创建/更新 GitHub Release** →（bailian-cli）维护 CDN **`manifest.json`** → 完成
 5. 如果所选发布集合的当前版本已全部存在于 npm，stable 发布会失败并提示先升级版本号；如果只有部分包已发布，CI 会继续补发缺失包
 6. 对应脚本：`tools/release/publish-stable.mjs`
 
