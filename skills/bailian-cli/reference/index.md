@@ -103,7 +103,7 @@ Use this index for the full quick index and global flags.
 | `bl token-plan assign-seats`      | Batch assign Token Plan seats to members                                                                                        | [token-plan.md](token-plan.md)       |
 | `bl token-plan create-key`        | Create a Token Plan API key for a seat                                                                                          | [token-plan.md](token-plan.md)       |
 | `bl token-plan list-seats`        | List Token Plan subscription seat details                                                                                       | [token-plan.md](token-plan.md)       |
-| `bl update`                       | Update the CLI to the latest version                                                                                            | [update.md](update.md)               |
+| `bl update`                       | Update the CLI to the latest or a specified version                                                                             | [update.md](update.md)               |
 | `bl usage free`                   | Query free-tier quota for models (all models if --model is omitted)                                                             | [usage.md](usage.md)                 |
 | `bl usage freetier`               | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable                                      | [usage.md](usage.md)                 |
 | `bl usage stats`                  | Query model usage statistics                                                                                                    | [usage.md](usage.md)                 |

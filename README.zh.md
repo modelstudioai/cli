@@ -216,6 +216,9 @@ bl config set --key timeout --value 600
 
 # 自更新到最新版本
 bl update
+
+# 安装指定版本
+bl update --to 0.1.14
 ```
 
 配置文件位置：`~/.bailian/config.json`

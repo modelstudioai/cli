@@ -10,6 +10,10 @@ export const AUTH_ROUTES: E2eRouteExports = {
   "auth logout": "authLogout",
 };
 
+export const UPDATE_ROUTES: E2eRouteExports = {
+  update: "update",
+};
+
 export const TEXT_CHAT_ROUTES: E2eRouteExports = { "text chat": "textChat" };
 
 export const CONFIG_ROUTES: E2eRouteExports = {

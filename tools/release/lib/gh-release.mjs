@@ -74,7 +74,13 @@ export function upsertRelease({
   repo = GITHUB_REPOSITORY,
 }) {
   const createArgs = ["--title", title];
-  if (prerelease) createArgs.push("--prerelease", "--target", "main");
+  if (prerelease) {
+    createArgs.push("--prerelease");
+    // Point the tag at the commit that produced the assets (workflow HEAD),
+    // not a hard-coded main tip that may diverge from a feature-branch build.
+    const target = process.env.GITHUB_SHA || "HEAD";
+    createArgs.push("--target", target);
+  }
   if (verifyTag) createArgs.push("--verify-tag");
   if (notesFile) createArgs.push("--notes-file", notesFile);
   else if (notes) createArgs.push("--notes", notes);

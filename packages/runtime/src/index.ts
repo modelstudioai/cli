@@ -68,9 +68,19 @@ export {
   NPM_REGISTRY,
 } from "./utils/update-checker.ts";
 export {
+  ensureBinaryPathEntries,
   fetchBinaryChannelVersion,
   fetchBinaryChannelManifest,
+  getBinaryBinRoot,
+  getBinaryCurrentPath,
+  getBinaryShareRoot,
+  getBinaryVersionsDir,
+  normalizeBinaryVersion,
   performBinaryUpdate,
+  pruneBinaryVersions,
+  readCurrentVersionDir,
+  resolveBinaryDownloadSpec,
+  switchCurrentToVersion,
 } from "./utils/binary-update.ts";
 export {
   BOOL_FLAG_WATERMARK,

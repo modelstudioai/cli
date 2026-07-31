@@ -1,9 +1,12 @@
 export {
+  BINARY_PRODUCT_CLIENT_NAME,
   detectInstallMethod,
   getInstallMethod,
+  getUpdateInstallMethod,
   isCompiledBinary,
   writeInstallMethodSync,
   type InstallMethod,
+  type InstallMethodIdentity,
 } from "./method.ts";
 export {
   DEFAULT_CLI_CDN_BASE,

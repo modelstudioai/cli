@@ -1,10 +1,12 @@
 import { join } from "path";
 import { readFileSync, writeFileSync } from "fs";
 import {
+  BailianError,
+  DEFAULT_INSTALL_PS1_URL,
   DEFAULT_INSTALL_SCRIPT_URL,
   getConfigDir,
   trackingHeaders,
-  getInstallMethod,
+  getUpdateInstallMethod,
 } from "bailian-cli-core";
 
 export const NPM_REGISTRY = "https://registry.npmjs.org";
@@ -219,6 +221,7 @@ export async function performAutoUpdate(
   currentVersion: string,
   latestVersion: string,
   npmPackage: string = NPM_PACKAGE,
+  clientName: string = NPM_PACKAGE,
 ): Promise<boolean> {
   const isTTY = process.stderr.isTTY;
   const green = isTTY ? "\x1b[32m" : "";
@@ -227,7 +230,7 @@ export async function performAutoUpdate(
   const dim = isTTY ? "\x1b[2m" : "";
   const reset = isTTY ? "\x1b[0m" : "";
 
-  const method = getInstallMethod();
+  const method = getUpdateInstallMethod({ clientName, npmPackage });
   if (method === "brew" || method === "winget") {
     return false;
   }
@@ -261,9 +264,13 @@ export async function performAutoUpdate(
       return true;
     } catch (err) {
       process.stderr.write(`  ${yellow}⚠ Auto-update failed: ${errorMessage(err)}${reset}\n`);
-      process.stderr.write(
-        `  ${yellow}  Re-run:${reset} ${cyan}curl -fsSL ${DEFAULT_INSTALL_SCRIPT_URL} | bash${reset}\n\n`,
-      );
+      const reinstall =
+        err instanceof BailianError && err.hint
+          ? err.hint.replace(/^Re-run:\s*/i, "")
+          : process.platform === "win32"
+            ? `irm ${DEFAULT_INSTALL_PS1_URL} | iex`
+            : `curl -fsSL ${DEFAULT_INSTALL_SCRIPT_URL} | bash`;
+      process.stderr.write(`  ${yellow}  Re-run:${reset} ${cyan}${reinstall}${reset}\n\n`);
       return false;
     }
   }
@@ -320,13 +327,14 @@ export async function performAutoUpdate(
 export async function checkForUpdate(
   currentVersion: string,
   npmPackage: string = NPM_PACKAGE,
+  clientName: string = NPM_PACKAGE,
 ): Promise<void> {
   const state = readState();
   const now = Date.now();
 
   if (state && now - state.lastChecked < CHECK_INTERVAL_MS) return;
 
-  const method = getInstallMethod();
+  const method = getUpdateInstallMethod({ clientName, npmPackage });
   let latest: string | null = null;
   if (method === "binary") {
     try {
