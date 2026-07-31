@@ -62,7 +62,11 @@ export function makeAuthStore(sources: ResolutionSources): AuthStore {
   const configName = sources.configName;
   const activateAfterLogin = sources.flags.config !== undefined;
   return {
-    describe: () => describeAuthState(sources),
+    // Read the config block live (not the startup `sources.file` snapshot) so
+    // long-lived processes like `config ui` reflect a fresh login without a
+    // restart. For one-shot commands this reads the same content the snapshot
+    // held, so behavior is unchanged.
+    describe: () => describeAuthState({ ...sources, file: readConfigFile(configName) }),
     stored() {
       const file = readConfigFile(configName);
       return {

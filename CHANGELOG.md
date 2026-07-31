@@ -6,6 +6,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.13.0] - 2026-07-30
+
+### Added
+
+- **`bl config ui` Skills / MCP / Agents / Assets inventory** — browse installed skills, MCP servers, coding agents, and generated assets in the local Web UI with click-to-open detail drawers:
+  - Skills: render `SKILL.md` as Markdown (GFM tables supported), show local vs remote origin badges, and install a skill by uploading a `.zip` archive into any supported agent's skills root.
+  - MCP: view and edit JSON configuration with secret masking and mask-preserving writes; create, update, and delete MCP entries across Claude Code, Qwen Code, OpenCode, Cursor, Windsurf, Gemini, Qoder Work, OpenClaw, and Claude Desktop.
+  - Agents: quick-launch coding agents directly from the UI (gated on the CLI binary being on PATH).
+  - Assets: categorized, time-sorted browser with preview, open-locally, and delete.
+- **Model catalog suggestion chips** — per-category model names surfaced as click-to-fill chips under each `default_*_model` field in the config UI.
+- **Profiles tile grid** — profiles displayed as a tile grid with an add-tile and a design-consistent new-profile modal.
+
+### Changed
+
+- Config UI layout: collapsible grouped sidebar with icons and persistent state, responsive breakpoint, wider main area, sticky view headers, and right-side drawers for editing.
+
+### Fixed
+
+- Symlinked skill directories are now correctly identified as an installed source.
+- Config file detection now supports environment-variable-based paths and legacy configuration schemes.
+
 ## [1.12.0] - 2026-07-28
 
 ### Added
