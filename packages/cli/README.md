@@ -216,8 +216,9 @@ bl config set --key base_url --value https://dashscope-us.aliyuncs.com
 bl config set --key default_text_model --value qwen-turbo
 bl config set --key timeout --value 600
 
-# Self-update to latest version
+# Self-update to latest or a specific version
 bl update
+bl update --to 0.1.14
 ```
 
 Config file location: `~/.bailian/config.json`
