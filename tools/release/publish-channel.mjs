@@ -60,8 +60,8 @@ function restoreOriginals() {
 try {
   step("compute channel version");
   const sha = headSha7();
-  const date = utcDateStamp();
-  const betaVersion = `0.0.0-beta-${sha}-${date}`;
+  const stamp = utcDateStamp(); // YYYYMMDDHHMM (UTC)
+  const betaVersion = `0.0.0-beta-${sha}-${stamp}`;
   log(`channel=${channel}  version=${betaVersion}`);
 
   step("temporarily bump package.json (not committed)");
