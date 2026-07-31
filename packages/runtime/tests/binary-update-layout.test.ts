@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { expect, test } from "vite-plus/test";
 import {
   ensureBinaryPathEntries,
+  ensureWindowsBinJunction,
   getBinaryBinRoot,
   getBinaryCurrentPath,
   getBinaryShareRoot,
@@ -141,5 +142,24 @@ test("ensureBinaryPathEntries wires PATH entries through current", async () => {
       expect(blLink).toBe(join(getBinaryCurrentPath(), "bl"));
       expect(bailianLink).toBe(join(getBinaryCurrentPath(), "bl"));
     }
+  });
+});
+
+test("ensureWindowsBinJunction migrates a real bin directory via rename", async () => {
+  await withTempBinaryRoots(async () => {
+    seedVersion("3.0.0");
+    await switchCurrentToVersion("3.0.0");
+
+    const binRoot = getBinaryBinRoot();
+    mkdirSync(binRoot, { recursive: true });
+    writeFileSync(join(binRoot, "bl.exe"), "old-copy");
+
+    await ensureWindowsBinJunction(binRoot);
+
+    const target = readlinkSync(binRoot);
+    expect(target.replaceAll("\\", "/").toLowerCase()).toBe(
+      getBinaryCurrentPath().replaceAll("\\", "/").toLowerCase(),
+    );
+    expect(existsSync(`${binRoot}.migrating.${process.pid}`)).toBe(false);
   });
 });

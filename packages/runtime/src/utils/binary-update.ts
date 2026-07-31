@@ -269,9 +269,26 @@ export async function ensureBinaryPathEntries(version: string): Promise<void> {
   }
 }
 
-async function ensureWindowsBinJunction(binDir: string): Promise<void> {
+function errnoCode(error: unknown): string {
+  if (error && typeof error === "object" && "code" in error) {
+    return String((error as { code?: unknown }).code ?? "");
+  }
+  return "";
+}
+
+/**
+ * Ensure `shareRoot/bin` is a junction → `current`.
+ *
+ * Install scripts / older layouts may leave a real `bin/` directory with
+ * `bl.exe` inside. Deleting that directory fails with EACCES while this
+ * process is the running image — rename-away first (Windows allows that),
+ * then create the junction. Stale `bin.migrating-*` dirs are best-effort GC.
+ */
+export async function ensureWindowsBinJunction(binDir: string): Promise<void> {
   const currentPath = getBinaryCurrentPath();
-  const { symlink } = await import("node:fs/promises");
+  const { symlink, rename } = await import("node:fs/promises");
+
+  let migratedAside: string | null = null;
 
   try {
     const stats = await lstat(binDir);
@@ -288,18 +305,33 @@ async function ensureWindowsBinJunction(binDir: string): Promise<void> {
         return;
       }
       await unlink(binDir);
-      await symlink(currentPath, binDir, "junction");
-      return;
+    } else if (stats.isDirectory()) {
+      // Prefer rename over rm: a running bl.exe inside bin locks delete/rm,
+      // but rename of the directory usually succeeds on Windows.
+      migratedAside = `${binDir}.migrating.${process.pid}`;
+      try {
+        await rename(binDir, migratedAside);
+      } catch (renameError) {
+        // Fallback: empty / unlocked real dirs can still be removed.
+        try {
+          await rm(binDir, { recursive: true, force: true });
+          migratedAside = null;
+        } catch (rmError) {
+          const code = errnoCode(renameError) || errnoCode(rmError) || "EACCES";
+          throw new Error(
+            `Failed to migrate ${binDir} to a junction pointing at current (${code}). ` +
+              `Close other bl sessions and re-run update, or re-run the install script once.`,
+            { cause: rmError },
+          );
+        }
+      }
+    } else {
+      await unlink(binDir).catch(() => rm(binDir, { recursive: true, force: true }));
     }
-    // Real directory from older installs: replace with junction to current.
-    // May fail if a running exe inside bin is locked — surface a clear error.
-    await rm(binDir, { recursive: true, force: true });
   } catch (error) {
-    const code =
-      error && typeof error === "object" && "code" in error
-        ? String((error as { code?: unknown }).code)
-        : "";
+    const code = errnoCode(error);
     if (code && code !== "ENOENT") {
+      if (error instanceof Error && error.message.includes("Failed to migrate")) throw error;
       throw new Error(
         `Failed to migrate ${binDir} to a junction pointing at current (${code}). ` +
           `Close other bl sessions and re-run update, or re-run the install script once.`,
@@ -310,6 +342,11 @@ async function ensureWindowsBinJunction(binDir: string): Promise<void> {
 
   await mkdir(dirname(binDir), { recursive: true });
   await symlink(currentPath, binDir, "junction");
+
+  if (migratedAside) {
+    // Best-effort: locked exes may keep the aside dir until process exit.
+    await rm(migratedAside, { recursive: true, force: true }).catch(() => {});
+  }
 }
 
 /**
