@@ -18,7 +18,7 @@ on:
           - channel
           - stable
       channel:
-        description: "Required when mode=channel. dist-tag name, e.g. mcp / plugin / release-test (lowercase, digits, dashes)"
+        description: "Required when mode=channel. dist-tag / rolling manifest name (lowercase, digits, dashes). bailian-cli binary install verify: sync-release; knowledge-studio-cli / other tags: mcp, plugin, etc."
         required: false
         type: string
 
@@ -93,7 +93,7 @@ jobs:
       - name: Require channel input
         if: ${{ inputs.channel == '' }}
         run: |
-          echo "::error::mode=channel requires the workflow input \"channel\" (e.g. mcp, plugin, release-test). Leave mode=stable if you do not need a dist-tag."
+          echo "::error::mode=channel requires the workflow input \"channel\" (bailian-cli install verify: sync-release; knowledge-studio-cli / others: e.g. mcp, plugin). Leave mode=stable if you do not need a dist-tag."
           exit 1
 
       - uses: actions/checkout@v6
