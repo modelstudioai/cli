@@ -4,7 +4,7 @@ import {
   scaleDeployment,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
 
 const SCALE_FLAGS = {
   deployedModel: {
@@ -72,6 +72,7 @@ export default defineCommand({
     } else if (format === "text") {
       const cap = deployment?.capacity !== undefined ? ` (capacity=${deployment.capacity})` : "";
       emitBare(`Scaled ${deployedModel}${cap}.`);
+      emitRequestId(response.request_id, settings.quiet);
     } else {
       emitResult(response, format);
     }

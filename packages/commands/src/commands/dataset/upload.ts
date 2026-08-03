@@ -9,10 +9,9 @@ import {
   MAX_MEDIA_ZIP_BYTES,
   BailianError,
   ExitCode,
-  type DatasetFile,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
 
 const UPLOAD_FLAGS = {
   file: {
@@ -135,17 +134,19 @@ export default defineCommand({
       return;
     }
 
-    const uploaded: DatasetFile = await uploadDataset(ctx.client, {
+    const uploaded = await uploadDataset(ctx.client, {
       filePath,
       purpose,
     });
+    const { request_id, ...file } = uploaded;
 
     if (settings.quiet) {
-      emitBare(uploaded.file_id);
+      emitBare(file.file_id);
     } else if (format === "text") {
-      emitBare(`Uploaded ${uploaded.name} → file_id=${uploaded.file_id}`);
+      emitBare(`Uploaded ${file.name} → file_id=${file.file_id}`);
+      emitRequestId(request_id, settings.quiet);
     } else {
-      emitResult(uploaded, format);
+      emitResult({ ...file, request_id }, format);
     }
   },
 });

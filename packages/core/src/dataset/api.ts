@@ -47,7 +47,7 @@ export interface DatasetUploadParams {
 export async function uploadDataset(
   client: Client,
   params: DatasetUploadParams,
-): Promise<DatasetFile> {
+): Promise<DatasetFile & { request_id?: string }> {
   const { filePath, purpose = "fine-tune", signal } = params;
   const stat = statSync(filePath);
   const fileName = basename(filePath);
@@ -75,6 +75,7 @@ export async function uploadDataset(
       size: body.bytes ?? stat.size,
       purpose: body.purpose ?? purpose,
       gmt_create: body.created_at ? new Date(body.created_at * 1000).toISOString() : undefined,
+      request_id: body.request_id,
     };
   }
   // No id in response → upload reported HTTP 200 but produced no usable record
