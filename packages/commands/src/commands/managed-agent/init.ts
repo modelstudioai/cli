@@ -25,7 +25,7 @@ const PROVIDER_BLOCKS: Record<string, string> = {
 };
 
 const SINGLE_MODEL: Record<string, string> = {
-  bailian: `    model: qwen3.7-max`,
+  bailian: `    model: qwen3.8-max`,
   claude: `    model: claude-sonnet-4-6`,
   qoder: `    model: ultimate`,
   ark: `    model: doubao-seed-2-1-pro-260628`,
@@ -39,7 +39,7 @@ function buildTemplate(options: { provider: string; agentName: string }): string
 
   const modelBlock =
     options.provider === "all"
-      ? `    model:\n      bailian: qwen3.7-max\n      claude: claude-sonnet-4-6\n      qoder: ultimate\n      ark: doubao-seed-2-1-pro-260628`
+      ? `    model:\n      bailian: qwen3.8-max\n      claude: claude-sonnet-4-6\n      qoder: ultimate\n      ark: doubao-seed-2-1-pro-260628`
       : SINGLE_MODEL[options.provider]!;
 
   const toolBlock =

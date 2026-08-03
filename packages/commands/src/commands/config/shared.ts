@@ -60,7 +60,7 @@ export const UI_BOOLEAN_KEYS = new Set<string>(["telemetry"]);
 // are surfaced as input placeholders so users can see the effective default
 // without persisting a value that would pin the model.
 export const UI_MODEL_DEFAULTS: Record<string, string> = {
-  default_text_model: "qwen3.7-max",
+  default_text_model: "qwen3.8-max",
   default_image_model: "qwen-image-2.0",
   default_video_model: "happyhorse-1.1-t2v",
   default_speech_model: "cosyvoice-v3-flash",
@@ -80,7 +80,7 @@ export interface ModelOption {
 // Only names present in the codebase are listed here — no invented models.
 export const UI_MODEL_CATALOG: Record<string, ModelOption[]> = {
   default_text_model: [
-    { id: "qwen3.7-max", role: "text/chat default" },
+    { id: "qwen3.8-max", role: "text/chat default" },
     { id: "qwen3-coder-plus", role: "coding-oriented (agent config)" },
     { id: "qwen-flash", role: "fast · advisor ranking" },
     { id: "qwen3.6-flash", role: "fast · advisor intent" },
