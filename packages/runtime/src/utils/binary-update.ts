@@ -94,6 +94,21 @@ export function normalizeBinaryVersion(raw: string): string {
   return trimmed;
 }
 
+/**
+ * Semver core + optional pre-release / build metadata.
+ * Accepts this repo's channel betas (`0.0.0-beta-<sha7>-<YYYYMMDDHHMM>`) and
+ * ordinary releases (`1.13.0`, `1.4.2-beta.1`). Optional leading `v` is allowed.
+ */
+const UPDATE_TARGET_VERSION_RE =
+  /^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
+
+/** True if `raw` is a usable `--to` target after trim (optional `v` prefix). */
+export function isValidUpdateTargetVersion(raw: string): boolean {
+  const trimmed = raw.trim();
+  if (!trimmed) return false;
+  return UPDATE_TARGET_VERSION_RE.test(trimmed);
+}
+
 async function fetchSha256FromVersionSums(
   version: string,
   fileName: string,

@@ -14,6 +14,7 @@ import {
   ansi,
   fetchLatestVersion,
   fetchBinaryChannelVersion,
+  isValidUpdateTargetVersion,
   normalizeBinaryVersion,
   performBinaryUpdate,
   type AnsiStyles,
@@ -73,8 +74,10 @@ export default defineCommand({
   },
   exampleArgs: ["", "--to 0.1.14"],
   validate(flags) {
-    if (flags.to !== undefined && !flags.to.trim()) {
-      return "--to requires a non-empty version";
+    if (flags.to === undefined) return undefined;
+    if (!flags.to.trim()) return "--to requires a non-empty version";
+    if (!isValidUpdateTargetVersion(flags.to)) {
+      return `--to must be a semver version (e.g. 1.13.0, v1.13.0, 0.0.0-beta-<sha>-<YYYYMMDDHHMM>), got: ${flags.to.trim()}`;
     }
     return undefined;
   },

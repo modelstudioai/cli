@@ -20,4 +20,14 @@ describe("e2e: update", () => {
     const { stderr, exitCode } = await runCommandE2e(UPDATE_ROUTES, ["update", "--to"]);
     expect(exitCode, stderr).toBe(2);
   });
+
+  test("update --to 非法版本时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(UPDATE_ROUTES, [
+      "update",
+      "--to",
+      "not-a-version",
+    ]);
+    expect(exitCode, stderr).toBe(2);
+    expect(stderr).toMatch(/semver|--to/i);
+  });
 });

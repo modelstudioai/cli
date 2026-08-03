@@ -75,6 +75,7 @@ export {
   getBinaryCurrentPath,
   getBinaryShareRoot,
   getBinaryVersionsDir,
+  isValidUpdateTargetVersion,
   normalizeBinaryVersion,
   performBinaryUpdate,
   pruneBinaryVersions,

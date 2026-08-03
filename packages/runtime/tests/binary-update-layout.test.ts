@@ -9,6 +9,7 @@ import {
   getBinaryCurrentPath,
   getBinaryShareRoot,
   getBinaryVersionsDir,
+  isValidUpdateTargetVersion,
   normalizeBinaryVersion,
   pruneBinaryVersions,
   readCurrentVersionDir,
@@ -81,6 +82,27 @@ test("normalizeBinaryVersion strips release-style v prefix", () => {
   expect(normalizeBinaryVersion("v1.2.3")).toBe("1.2.3");
   expect(normalizeBinaryVersion("1.2.3")).toBe("1.2.3");
   expect(normalizeBinaryVersion(" 0.1.14-channel.1 ")).toBe("0.1.14-channel.1");
+});
+
+test("isValidUpdateTargetVersion accepts semver and channel betas", () => {
+  expect(isValidUpdateTargetVersion("1.13.0")).toBe(true);
+  expect(isValidUpdateTargetVersion("v1.13.0")).toBe(true);
+  expect(isValidUpdateTargetVersion("1.4.2-beta.1")).toBe(true);
+  expect(isValidUpdateTargetVersion("0.0.0-beta-be3033b-202607311142")).toBe(true);
+  expect(isValidUpdateTargetVersion("v0.0.0-beta-be3033b-202607311142")).toBe(true);
+  expect(isValidUpdateTargetVersion("latest")).toBe(false);
+  expect(isValidUpdateTargetVersion("1.2")).toBe(false);
+  expect(isValidUpdateTargetVersion("foo")).toBe(false);
+  expect(isValidUpdateTargetVersion("")).toBe(false);
+  // Path-traversal / path-separator inputs must never reach versions/<ver>/
+  expect(isValidUpdateTargetVersion("../../../..")).toBe(false);
+  expect(isValidUpdateTargetVersion("..\\..\\..")).toBe(false);
+  expect(isValidUpdateTargetVersion("1.2.3/../x")).toBe(false);
+  expect(isValidUpdateTargetVersion("1.2.3\\..\\x")).toBe(false);
+  expect(isValidUpdateTargetVersion("/etc/passwd")).toBe(false);
+  expect(isValidUpdateTargetVersion("versions/../../tmp")).toBe(false);
+  expect(isValidUpdateTargetVersion("1.2.3/")).toBe(false);
+  expect(isValidUpdateTargetVersion("..")).toBe(false);
 });
 
 test("resolveBinaryDownloadSpec targets version assets, not latest manifest url", async () => {
