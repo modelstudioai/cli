@@ -21,7 +21,7 @@ agents:
   assistant:
     description: "E2E multi-provider fixture"
     model:
-      bailian: qwen3.7-max
+      bailian: qwen3.8-max
       claude: claude-sonnet-4-6
     instructions: |
       You are a helpful assistant.

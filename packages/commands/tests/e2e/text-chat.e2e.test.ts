@@ -20,7 +20,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: text chat（DashScope）", () => {
       "text",
       "chat",
       "--model",
-      "qwen3.7-max",
+      "qwen3.8-max",
     ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--message|Usage:/i);
@@ -32,7 +32,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: text chat（DashScope）", () => {
       "chat",
       "--dry-run",
       "--model",
-      "qwen3.7-max",
+      "qwen3.8-max",
       "--message",
       "干跑",
       "--max-tokens",
@@ -44,16 +44,16 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: text chat（DashScope）", () => {
     const data = parseStdoutJson<{
       request?: { model?: string; messages?: Array<{ content?: string }> };
     }>(stdout);
-    expect(data.request?.model).toBe("qwen3.7-max");
+    expect(data.request?.model).toBe("qwen3.8-max");
     expect(data.request?.messages?.some((m) => m.content === "干跑")).toBe(true);
   });
 
-  test("【qwen3.7-max】文本对话", async () => {
+  test("【qwen3.8-max】文本对话", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(TEXT_CHAT_ROUTES, [
       "text",
       "chat",
       "--model",
-      "qwen3.7-max",
+      "qwen3.8-max",
       "--message",
       "只回复一个字：好",
       "--max-tokens",

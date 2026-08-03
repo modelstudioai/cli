@@ -90,7 +90,7 @@ test("GET /api/config 返回全部 profile、明文密钥与持久化激活项",
     expect(res.json.booleanKeys).toContain("telemetry");
     // Default field hints are surfaced as prefilled values in the UI.
     expect(res.json.fieldDefaults.default_image_model).toBe("qwen-image-2.0");
-    expect(res.json.fieldDefaults.default_text_model).toBe("qwen3.7-max");
+    expect(res.json.fieldDefaults.default_text_model).toBe("qwen3.8-max");
     expect(res.json.fieldDefaults.output_dir).toContain("bailian-output");
     expect(res.json.fieldDefaults.timeout).toBe("300");
     expect(res.json.fieldDefaults.base_url).toBe("https://dashscope.aliyuncs.com");

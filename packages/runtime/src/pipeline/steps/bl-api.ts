@@ -58,7 +58,7 @@ export async function textChat(
     });
   }
 
-  const model = input.model || "qwen3.7-max";
+  const model = input.model || "qwen3.8-max";
   const messages: Array<{ role: string; content: string }> = [];
   if (input.system) messages.push({ role: "system", content: input.system });
   messages.push({ role: "user", content: input.message });

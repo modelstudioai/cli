@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.13.1] - 2026-08-03
+
+### Changed
+
+- **Default text model upgraded to Qwen3.8-Max** — `bl text chat`, pipelines, API key validation, the config UI, and Managed Agent init templates now default to `qwen3.8-max`; Token Plan also moves from the preview model to the stable release.
+
 ## [1.13.0] - 2026-07-30
 
 ### Added
