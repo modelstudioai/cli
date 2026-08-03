@@ -4,7 +4,7 @@ import {
   listCheckpoints,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare, formatTable } from "bailian-cli-runtime";
+import { emitResult, emitBare, emitRequestId, formatTable } from "bailian-cli-runtime";
 
 const CHECKPOINTS_FLAGS = {
   jobId: {
@@ -47,7 +47,7 @@ export default defineCommand({
     }));
 
     if (format === "json") {
-      emitResult({ items, total }, format);
+      emitResult({ items, total, request_id: response.request_id }, format);
       return;
     }
 
@@ -60,5 +60,6 @@ export default defineCommand({
     const rows = items.map((i) => [i.checkpoint, i.step, i.status]);
     for (const line of formatTable(headers, rows)) emitBare(line);
     emitBare(`\nTotal: ${total}`);
+    emitRequestId(response.request_id, settings.quiet);
   },
 });

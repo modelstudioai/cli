@@ -16,3 +16,15 @@ export function emitResult(data: unknown, format: OutputFormat): void {
 export function emitBare(value: string): void {
   process.stdout.write(value + "\n");
 }
+
+/**
+ * Surface a server request id for text-mode output. Written to stderr (the
+ * diagnostic channel) so it never corrupts the primary stdout result, mirroring
+ * the request_id line the verbose HTTP logger prints. No-op when the id is
+ * absent (e.g. dry-run) or in --quiet mode (which owes callers a bare scalar).
+ * JSON output surfaces request_id inside the payload instead of calling this.
+ */
+export function emitRequestId(requestId: string | undefined, quiet: boolean): void {
+  if (!requestId || quiet) return;
+  process.stderr.write(`request_id: ${requestId}\n`);
+}

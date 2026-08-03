@@ -46,3 +46,6 @@ packages/cli/scene/**/outputs/
 
 # Environment variables (sensitive data)
 .env
+
+# Local scratch / plan drafts (never commit)
+.scratch/

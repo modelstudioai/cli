@@ -40,11 +40,13 @@
     "check": "vp check"
   },
   "dependencies": {
+    "tar-stream": "catalog:",
     "yaml": "^2.8.3",
     "yauzl": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@types/tar-stream": "catalog:",
     "@types/yauzl": "catalog:",
     "@typescript/native-preview": "7.0.0-dev.20260328.1",
     "typescript": "^6.0.2",

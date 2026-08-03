@@ -4,7 +4,7 @@ import {
   exportCheckpoint,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
 
 const EXPORT_FLAGS = {
   jobId: {
@@ -69,6 +69,7 @@ export default defineCommand({
       emitBare(
         `Next: ${identity.binName} deploy text create --model ${exported} --name <display-name>`,
       );
+      emitRequestId(response.request_id, settings.quiet);
     } else {
       emitResult(response, format);
     }
