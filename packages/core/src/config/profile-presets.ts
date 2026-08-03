@@ -10,7 +10,7 @@ interface ModelProfilePreset {
 const MODEL_PROFILE_PRESETS: Readonly<Record<string, ModelProfilePreset>> = {
   "token-plan": {
     baseUrl: "https://token-plan.cn-beijing.maas.aliyuncs.com",
-    defaultTextModel: "qwen3.8-max-preview",
+    defaultTextModel: "qwen3.8-max",
     defaultVideoModel: "happyhorse-1.1-t2v",
     defaultImageToVideoModel: "happyhorse-1.1-i2v",
     defaultReferenceToVideoModel: "happyhorse-1.1-r2v",

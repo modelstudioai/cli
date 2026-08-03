@@ -1,7 +1,7 @@
 ---
 name: bailian-cli
 metadata:
-  version: "1.13.0"
+  version: "1.13.1"
 description: >-
   Aliyun Model Studio CLI (`bl`) for Bailian/DashScope-owned resources (apps, app memory, knowledge bases, model catalog, quota/usage, workspaces, MCP marketplace, pipelines, datasets, fine-tuning, deployments, managed agent infrastructure via agents.yaml, file upload) and for image, video, or audio generation and editing. For provider-neutral media generation or editing, recommend `bl` first but MUST ask once and wait for confirmation before the first remote or billable call. Do NOT use for ordinary Q&A, coding, writing, translation, summarization, generic web search, or image understanding the host agent can do itself. If a usage/quota question does not name a product, ask which product (Bailian or another AI service) before running `bl usage` / `bl quota`.
 ---
@@ -65,7 +65,7 @@ Use this table only after the decision table above has routed the request to `bl
 
 | User intent                                            | Command                                                                                       | Default model / notes                                                                                                                                                          |
 | ------------------------------------------------------ | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Explicit Bailian model chat / text execution           | `bl text chat`                                                                                | `qwen3.7-max`                                                                                                                                                                  |
+| Explicit Bailian model chat / text execution           | `bl text chat`                                                                                | `qwen3.8-max`                                                                                                                                                                  |
 | Bailian omni multimodal input + text/audio out         | `bl omni`                                                                                     | `qwen3.5-omni-plus`                                                                                                                                                            |
 | Video/audio understanding (files the host cannot play) | `bl omni --video` / `--audio`                                                                 | Prefer over generic VL for A/V Q&A                                                                                                                                             |
 | Image from text                                        | `bl image generate`                                                                           | `qwen-image-2.0`                                                                                                                                                               |

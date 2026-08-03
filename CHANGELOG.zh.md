@@ -6,6 +6,12 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.13.1] - 2026-08-03
+
+### 变更
+
+- **默认文本模型升级至 Qwen3.8-Max** — `bl text chat`、Pipeline、API Key 登录校验、配置 UI 和 Managed Agent 初始化模板现在默认使用 `qwen3.8-max`；Token Plan 也由预览版切换至正式版。
+
 ## [1.13.0] - 2026-07-30
 
 ### 新增

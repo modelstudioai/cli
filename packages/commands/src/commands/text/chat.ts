@@ -15,7 +15,7 @@ import { ansi, emitResult, emitBare } from "bailian-cli-runtime";
 import { readFileSync } from "fs";
 
 const CHAT_FLAGS = {
-  model: { type: "string", valueHint: "<model>", description: "Model ID (default: qwen3.7-max)" },
+  model: { type: "string", valueHint: "<model>", description: "Model ID (default: qwen3.8-max)" },
   message: {
     type: "array",
     valueHint: "<text>",
@@ -123,7 +123,7 @@ export default defineCommand({
     const { settings, flags } = ctx;
     const { system, messages } = parseMessages(flags);
 
-    const model = flags.model || settings.defaultTextModel || "qwen3.7-max";
+    const model = flags.model || settings.defaultTextModel || "qwen3.8-max";
     const shouldStream = flags.stream || process.stdout.isTTY;
     const format = detectOutputFormat(settings.output);
 
