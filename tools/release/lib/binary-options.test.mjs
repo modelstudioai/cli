@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, expect, test } from "vite-plus/test";
 import {
   channelManifestFileName,
   normalizeModeChannel,
@@ -11,30 +10,30 @@ import {
 } from "./binary-options.mjs";
 
 describe("rolling CDN manifest naming", () => {
-  it("keeps sync-release and latest constants", () => {
-    assert.equal(SYNC_RELEASE_CHANNEL, "sync-release");
-    assert.equal(STABLE_ROLLING_CHANNEL, "latest");
+  test("keeps sync-release and latest constants", () => {
+    expect(SYNC_RELEASE_CHANNEL).toBe("sync-release");
+    expect(STABLE_ROLLING_CHANNEL).toBe("latest");
   });
 
-  it("channel mode always rolls sync-release.json regardless of npm dist-tag", () => {
+  test("channel mode always rolls sync-release.json regardless of npm dist-tag", () => {
     const { mode, channel } = normalizeModeChannel("channel", "mcp");
-    assert.equal(mode, "channel");
-    assert.equal(channel, "mcp");
-    assert.equal(rollingManifestFileName(mode), "sync-release.json");
-    assert.equal(rollingManifestChannelId(mode), "sync-release");
-    assert.equal(rollingChannelReleaseTag(mode), "channel-sync-release");
+    expect(mode).toBe("channel");
+    expect(channel).toBe("mcp");
+    expect(rollingManifestFileName(mode)).toBe("sync-release.json");
+    expect(rollingManifestChannelId(mode)).toBe("sync-release");
+    expect(rollingChannelReleaseTag(mode)).toBe("channel-sync-release");
   });
 
-  it("stable mode rolls latest.json for maintainReleaseManifest input", () => {
+  test("stable mode rolls latest.json for maintainReleaseManifest input", () => {
     const { mode, channel } = normalizeModeChannel("stable", null);
-    assert.equal(mode, "stable");
-    assert.equal(channel, null);
-    assert.equal(rollingManifestFileName(mode), "latest.json");
-    assert.equal(rollingManifestChannelId(mode), "latest");
+    expect(mode).toBe("stable");
+    expect(channel).toBeNull();
+    expect(rollingManifestFileName(mode)).toBe("latest.json");
+    expect(rollingManifestChannelId(mode)).toBe("latest");
   });
 
-  it("channelManifestFileName still formats arbitrary names for helpers", () => {
-    assert.equal(channelManifestFileName("release-test"), "release-test.json");
-    assert.equal(channelManifestFileName(SYNC_RELEASE_CHANNEL), "sync-release.json");
+  test("channelManifestFileName still formats arbitrary names for helpers", () => {
+    expect(channelManifestFileName("release-test")).toBe("release-test.json");
+    expect(channelManifestFileName(SYNC_RELEASE_CHANNEL)).toBe("sync-release.json");
   });
 });
