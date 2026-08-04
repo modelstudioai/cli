@@ -34,7 +34,7 @@ export function pushTag(tag, remote = "origin") {
   run("git", ["push", remote, tag]);
 }
 
+/** UTC stamp for channel beta versions: `YYYYMMDDHHMM` (minute resolution). */
 export function utcDateStamp() {
-  const iso = runCapture("date", ["-u", "+%Y%m%d"]);
-  return iso;
+  return runCapture("date", ["-u", "+%Y%m%d%H%M"]);
 }

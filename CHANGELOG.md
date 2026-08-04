@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.14.0] - 2026-08-04
+
+### Added
+
+- **Standalone installation without Node.js** — binary packages are available for macOS on Apple Silicon and Intel, Linux x64, and Windows x64; npm installation remains supported.
+- **Exact-version updates** — binary and npm installations can use `bl update --to <version>` to update or switch to a specified version.
+
+### Changed
+
+- **Binary self-updates** — binary installations now check and download updates through a dedicated release channel. `bl update` no longer replaces the running executable, and the next invocation automatically uses the new version.
+
 ## [1.13.1] - 2026-08-03
 
 ### Changed

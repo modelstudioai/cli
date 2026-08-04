@@ -1,10 +1,11 @@
 import { existsSync } from "node:fs";
 import { mkdir, open, stat, unlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   BailianError,
   ExitCode,
+  isCompiledBinary,
   type CommandPackManager,
   type CommandPackReport,
   type Identity,
@@ -96,6 +97,17 @@ async function ensureSandboxAt(dir: string): Promise<void> {
 }
 
 async function runNpm(args: string[], cwd: string): Promise<void> {
+  const npmCheck = spawnSync("npm", ["--version"], { encoding: "utf-8" });
+  if (npmCheck.status !== 0) {
+    const hint = isCompiledBinary()
+      ? "Command Packs need a local npm. Install Node.js, or use `npm install -g bailian-cli` instead of the binary install."
+      : "Install Node.js / npm and retry.";
+    throw new BailianError(
+      "npm is required to install, link, or remove Command Packs, but was not found on PATH.",
+      ExitCode.GENERAL,
+      hint,
+    );
+  }
   await new Promise<void>((resolvePromise, reject) => {
     const child = spawn("npm", args, {
       cwd,
