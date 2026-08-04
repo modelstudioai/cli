@@ -22,11 +22,15 @@ export function listenLocalServer(server: http.Server, port = 0): Promise<number
   });
 }
 
-/** Open a URL in the user's default browser (best-effort, cross-platform). */
-export function openInBrowser(url: string): Promise<void> {
+/**
+ * Open a local file, directory, or URL with the OS default handler
+ * (best-effort, cross-platform). Arguments are passed to `execFile` as an array
+ * so the target is never interpreted by a shell.
+ */
+export function openPath(target: string): Promise<void> {
   const platform = process.platform;
   const cmd = platform === "darwin" ? "open" : platform === "win32" ? "cmd" : "xdg-open";
-  const args = platform === "win32" ? ["/c", "start", "", url] : [url];
+  const args = platform === "win32" ? ["/c", "start", "", target] : [target];
 
   return new Promise((resolve, reject) => {
     execFile(cmd, args, { windowsHide: true }, (err) => {
@@ -34,4 +38,9 @@ export function openInBrowser(url: string): Promise<void> {
       else resolve();
     });
   });
+}
+
+/** Open a URL in the user's default browser (best-effort, cross-platform). */
+export function openInBrowser(url: string): Promise<void> {
+  return openPath(url);
 }

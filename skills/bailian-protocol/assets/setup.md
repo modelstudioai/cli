@@ -80,7 +80,7 @@ Activation selects the entire Config for every credential domain, not only model
 The built-in `token-plan` profile defaults to:
 
 - Base URL: `https://token-plan.cn-beijing.maas.aliyuncs.com`
-- Text model: `qwen3.8-max-preview`
+- Text model: `qwen3.8-max`
 - Image model: `wan2.7-image`
 - Text-to-video model (`default_video_model`): `happyhorse-1.1-t2v`
 - Image-to-video model (`default_image_to_video_model`): `happyhorse-1.1-i2v`
@@ -149,7 +149,7 @@ bl config show
 bl config list
 bl config use --name <existing-profile>
 bl config use --name default
-bl config set --key default-text-model --value qwen3.7-max
+bl config set --key default-text-model --value qwen3.8-max
 bl config set --key output_dir --value ~/bailian-output
 ```
 

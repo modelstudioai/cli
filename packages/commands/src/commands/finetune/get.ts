@@ -1,5 +1,5 @@
 import { defineCommand, detectOutputFormat, getFineTune, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
 
 const GET_FLAGS = {
   jobId: {
@@ -56,7 +56,7 @@ export default defineCommand({
     };
 
     if (format === "json") {
-      emitResult(item, format);
+      emitResult({ ...item, request_id: response.request_id }, format);
       return;
     }
 
@@ -76,5 +76,6 @@ export default defineCommand({
     if (item.model_name) emitBare(`model_name:       ${item.model_name}`);
     if (item.created_at) emitBare(`created_at:       ${item.created_at}`);
     if (item.updated_at) emitBare(`updated_at:       ${item.updated_at}`);
+    emitRequestId(response.request_id, settings.quiet);
   },
 });

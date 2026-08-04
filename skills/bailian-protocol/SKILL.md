@@ -1,7 +1,7 @@
 ---
 name: bailian-protocol
 metadata:
-  version: "1.10.1"
+  version: "1.13.1"
   requires:
     bins: ["bl"]
 description: >-

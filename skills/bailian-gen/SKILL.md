@@ -1,7 +1,7 @@
 ---
 name: bailian-gen
 metadata:
-  version: "1.10.1"
+  version: "1.13.1"
   requires:
     bins: ["bl"]
   companions: ["bailian-protocol"]

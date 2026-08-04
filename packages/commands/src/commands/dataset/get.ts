@@ -1,5 +1,5 @@
 import { defineCommand, detectOutputFormat, getDataset, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
 
 const GET_FLAGS = {
   fileId: {
@@ -46,7 +46,7 @@ export default defineCommand({
     };
 
     if (format === "json") {
-      emitResult(item, format);
+      emitResult({ ...item, request_id: response.request_id }, format);
       return;
     }
 
@@ -58,5 +58,6 @@ export default defineCommand({
     if (item.purpose) emitBare(`purpose:      ${item.purpose}`);
     if (item.created_at) emitBare(`created_at:   ${item.created_at}`);
     if (item.description) emitBare(`description:  ${item.description}`);
+    emitRequestId(response.request_id, settings.quiet);
   },
 });

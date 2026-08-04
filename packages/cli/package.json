@@ -1,6 +1,6 @@
 {
   "name": "bailian-cli",
-  "version": "1.10.1",
+  "version": "1.13.1",
   "description": "CLI for Aliyun Model Studio (DashScope) AI Platform.",
   "keywords": [
     "agent",
@@ -25,7 +25,8 @@
   },
   "files": [
     "dist",
-    "README.zh.md"
+    "README.zh.md",
+    "postinstall.js"
   ],
   "type": "module",
   "exports": {
@@ -45,12 +46,14 @@
     "build": "vp pack",
     "dev": "tsx src/main.ts",
     "test": "vp test",
-    "check": "vp check"
+    "check": "vp check",
+    "postinstall": "node postinstall.js"
   },
   "dependencies": {
     "bailian-cli-commands": "workspace:*",
     "bailian-cli-core": "workspace:*",
-    "bailian-cli-runtime": "workspace:*"
+    "bailian-cli-runtime": "workspace:*",
+    "tar-stream": "catalog:"
   },
   "devDependencies": {
     "@clack/prompts": "^0.7.0",

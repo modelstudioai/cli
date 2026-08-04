@@ -36,7 +36,11 @@ export default defineConfig({
     hookTimeout: 60_000,
   },
   staged: {
-    "*.{js,mjs,cjs,ts,mts,cts,jsx,tsx,json,yaml,yml,md}": "vp check --fix",
+    // 用函数形式返回命令：不把匹配到的文件名插值进 argv，改为跑一次全量检查。
+    // 逐文件传参会让 `vp check` 的 node 进程 argv 携带仓库内的文件名,
+    // 命中终端安全软件按 argv 子串匹配的进程管控规则时整个进程被 SIGKILL,
+    // 导致 pre-commit 无法完成。全量检查覆盖面更广,也不依赖文件名。
+    "*.{js,mjs,cjs,ts,mts,cts,jsx,tsx,json,yaml,yml,md}": () => "vp check --fix",
   },
   lint: {
     options: { typeAware: true, typeCheck: true },

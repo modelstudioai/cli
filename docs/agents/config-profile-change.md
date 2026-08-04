@@ -46,7 +46,9 @@
 - `config list` 标识所有 Profile 与当前激活项。
 - `config show`、`auth status` 只输出本次最终选择的 `config` 和 `config_file`，不重复携带激活状态。
 - `config ui` 从持久化元数据读取激活项，提供显式激活操作，并在删除激活项后刷新为 `default`。
-- `config ui` 保存时只替换 UI 管理的字段；Profile 中未展示但仍属于 `ConfigFile` 的合法字段必须保留，不能因打开并保存 UI 而丢失。
+- `config ui` 展示并可编辑完整 `ConfigFile`（含 `console_*`、`telemetry`），保存时按类型（数字/布尔/枚举）归一化写回；`config set` 仍只暴露较窄的 `VALID_KEYS`。UI 未管理的顶层元数据（如 `active_config`）不进入 Profile block，仍由写盘逻辑单独保留。
+- `config ui` 只读展示本地 agent 生态：Skills 跨全部 agent skill 目录（`~/.agents/skills` 及各 agent 的 `skills/`，含软链接）按 id 聚合并标注安装来源；MCP、Agents 从各 agent 本地配置读取。
+- `config ui` 提供 Assets 资产管理：扫描 `output_dir`（默认 `~/bailian-output`）下的 `images/videos/speech/omni` 分类及根目录散落文件，按分类与生成时间（mtime）标记，支持按分类筛选、内联预览（图/视频/音频）与删除单个文件；文件读取与删除均通过限定在输出目录内的路径校验（防目录穿越）。
 - 同步 E2E topic routes、Skill setup 和自动生成 reference。
 
 ## 6. 最小测试矩阵
@@ -62,7 +64,8 @@
   `--config default` 成功后切回 `default`。
 - Console token 自动刷新不从其他 Profile 借用 AK/SK，也不把新 token 写入其他 Profile。
 - `config list/show/use/ui`、`auth status` 和依赖默认模型的消费命令覆盖对应 E2E。
-- `config ui` 覆盖保存时保留未管理字段，并继续允许空值清除 UI 管理字段。
+- `config ui` 覆盖保存时保留顶层元数据（如 `active_config`），继续允许空值清除字段，并覆盖 `console_*`/`telemetry` 的类型归一化与枚举校验。
+- Assets:`listAssets` 覆盖分类归类、时间倒序、目录缺失返回空；`resolveAssetPath` 覆盖目录穿越拦截;`contentType` 覆盖常见扩展名映射。
 
 ## 7. 完成检查
 

@@ -6,7 +6,7 @@ import {
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
 
 const DEFAULT_INTERVAL_SEC = 10;
 const MIN_INTERVAL_SEC = 1;
@@ -135,9 +135,13 @@ export default defineCommand({
       } else if (format === "text") {
         emitBare(`${nowStamp()}  ${jobId}  ${status || "UNKNOWN"}`);
         if (status === "SUCCEEDED") emitBare(`✓ ${jobId}  ${status}`);
+        emitRequestId(response.request_id, settings.quiet);
       } else {
         // json: a compact, purpose-built status probe.
-        emitResult({ job_id: jobId, status: status || "UNKNOWN", terminal }, format);
+        emitResult(
+          { job_id: jobId, status: status || "UNKNOWN", terminal, request_id: response.request_id },
+          format,
+        );
       }
 
       if (terminal && status !== "SUCCEEDED") {
@@ -175,6 +179,7 @@ export default defineCommand({
             emitResult(response, format);
           } else if (status === "SUCCEEDED") {
             emitBare(`\n✓ ${jobId}  ${status}  (elapsed ${formatElapsed(elapsed)})`);
+            emitRequestId(response.request_id, settings.quiet);
           }
           if (status !== "SUCCEEDED") {
             throw new BailianError(

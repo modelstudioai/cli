@@ -4,7 +4,7 @@ import {
   updateDeployment,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
 
 const UPDATE_FLAGS = {
   deployedModel: {
@@ -70,6 +70,7 @@ export default defineCommand({
       if (deployment?.tpm_limit !== undefined) parts.push(`tpm_limit=${deployment.tpm_limit}`);
       const summary = parts.length ? ` (${parts.join(", ")})` : "";
       emitBare(`Updated ${deployedModel}${summary}.`);
+      emitRequestId(response.request_id, settings.quiet);
     } else {
       emitResult(response, format);
     }

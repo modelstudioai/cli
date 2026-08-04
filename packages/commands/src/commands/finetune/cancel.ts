@@ -1,5 +1,5 @@
 import { defineCommand, detectOutputFormat, cancelFineTune, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
 
 const CANCEL_FLAGS = {
   jobId: {
@@ -38,6 +38,7 @@ export default defineCommand({
     } else if (format === "text") {
       const status = job?.status ? ` (status=${job.status})` : "";
       emitBare(`Cancelled ${jobId}${status}.`);
+      emitRequestId(response.request_id, settings.quiet);
     } else {
       emitResult(response, format);
     }

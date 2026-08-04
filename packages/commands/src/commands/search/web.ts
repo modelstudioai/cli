@@ -5,8 +5,8 @@ import {
   mcpWebSearchPath,
   type FlagsDef,
 } from "bailian-cli-core";
-import { createSpinner } from "bailian-cli-runtime";
-import { emitResult } from "bailian-cli-runtime";
+import { createSpinner, emitResult } from "bailian-cli-runtime";
+import { rethrowWithWebSearchActivateHint } from "./web-activate-hint.ts";
 
 const WEB_SEARCH_FLAGS = {
   query: { type: "string", valueHint: "<text>", description: "Search query text" },
@@ -41,11 +41,14 @@ export default defineCommand({
         return;
       }
 
-      const client = ctx.client.mcp(mcpWebSearchPath());
-      await client.initialize();
-      const tools = await client.listTools();
-
-      emitResult({ tools }, format);
+      try {
+        const client = ctx.client.mcp(mcpWebSearchPath());
+        await client.initialize();
+        const tools = await client.listTools();
+        emitResult({ tools }, format);
+      } catch (error) {
+        rethrowWithWebSearchActivateHint(error);
+      }
       return;
     }
 
@@ -123,7 +126,7 @@ export default defineCommand({
       }
     } catch (error) {
       spinner.stop("Failed.");
-      throw error;
+      rethrowWithWebSearchActivateHint(error);
     }
   },
 });
