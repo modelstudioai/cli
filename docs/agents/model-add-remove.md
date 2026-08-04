@@ -26,7 +26,7 @@
 
 ### C. 命令手册
 
-- [ ] 若 `--model` 的 description 含 default,改命令后跑 `pnpm --filter bailian-cli run generate:reference` 更新 `skills/bailian-cli/reference/<group>.md` 并提交
+- [ ] 若 `--model` 的 description 含 default,改命令后跑 `pnpm --filter bailian-cli run generate:reference` 更新对应 `skills/<skill>/reference/<group>.md` 并提交
 
 ### D. 用户面文档
 

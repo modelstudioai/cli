@@ -56,7 +56,7 @@ git diff --name-only <base>...<head>
 
 - [ ] **新命令 / 新 flag** 已同步到用户面文档:
   - [README.md](README.md) + [README.zh.md](README.zh.md)(中英文都要,常漏 `_CN`)
-  - `skills/bailian-cli/reference/` + `skills/bailian-cli/SKILL.md` 通过 `pnpm run sync:skill-assets` 更新并提交
+  - 各 `skills/<skill>/reference/` + 对应 `SKILL.md` 通过 `pnpm run sync:skill-assets` 更新并提交
 - [ ] **`bl <cmd> --help`** 文案完整:`description` / `examples` 都填了
 - [ ] **demo / quickstart**:用户可调用的新命令至少有一个示例
 - [ ] **行为变化的老命令**:在 commit message / CHANGELOG 注明用户感知的差异

@@ -35,7 +35,7 @@ packages/core/src/auth/            # apiKey / console credential 解析与落盘
 packages/core/src/client/          # HTTP client / endpoints / console gateway
 ```
 
-Skill / 命令手册随 `skills/bailian-cli/` 经 `npx skills add modelstudioai/cli` 安装。`tools/generate-reference.ts` 从 **`packages/cli/src/commands.ts`** 生成 `skills/bailian-cli/reference/`(纳入 git);`tools/sync-skill-metadata.ts` 从 `packages/cli/package.json` 同步 `skills/bailian-cli/SKILL.md` 的 `metadata.version`。两者由根脚本 `pnpm run sync:skill-assets` 和 `.vite-hooks/pre-commit` 执行。
+Skill / 命令手册随 `skills/bailian-*/` 经 `npx skills add modelstudioai/cli` 安装。共享协议在 `skills/bailian-base/`；业务 skill（`bailian-cli` / `bailian-gen` / `bailian-finetune` / `bailian-managed-agent`）依赖它作为 companion。`tools/generate-reference.ts` 从 **`packages/cli/src/commands.ts`** 按一级命令归属表分流写入各 `skills/<skill>/reference/`(纳入 git);`tools/sync-skill-metadata.ts` 从 `packages/cli/package.json` 同步各 `skills/*/SKILL.md` 的 `metadata.version`。两者由根脚本 `pnpm run sync:skill-assets` 和 `.vite-hooks/pre-commit` 执行。
 
 约定:
 
@@ -48,8 +48,8 @@ Skill / 命令手册随 `skills/bailian-cli/` 经 `npx skills add modelstudioai/
 非代码资产:
 
 - `tools/release/` — 发版自动化（CI 驱动,见 `.github/workflows/publish.yml`）
-- `tools/generate-reference.ts` — 从 `packages/cli/src/commands.ts` 生成 `skills/bailian-cli/reference/`
-- `tools/sync-skill-metadata.ts` — 同步 `skills/bailian-cli/SKILL.md` 的 `metadata.version`
+- `tools/generate-reference.ts` — 从 `packages/cli/src/commands.ts` 按归属表生成各 `skills/<skill>/reference/`
+- `tools/sync-skill-metadata.ts` — 同步各 `skills/*/SKILL.md` 的 `metadata.version`（含 `bailian-base`）
 - `README.md` / `README.zh.md` — npm 和 GitHub 主页
 
 ## 业务场景索引

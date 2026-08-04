@@ -56,7 +56,7 @@ packages/commands/src/index.ts
 - **`packages/cli/src/commands.ts`**:`bl` 产品命令 map;新增/删除/重命名 `bl` 命令必须改这里
 - **`packages/kscli/src/main.ts`**:`kscli` 产品命令 map;只有该入口需要暴露/变更时才改
 - **`packages/runtime/src/registry.ts`**:通用 registry,从传入 map 建树;不要在这里登记业务命令
-- **`tools/generate-reference.ts`**:pre-commit / `pnpm run sync:skill-assets` 时读 `packages/cli/src/commands.ts`,写 `skills/bailian-cli/reference/index.md` + `<一级命令>.md`。该目录**纳入 git**,勿手改
+- **`tools/generate-reference.ts`**:pre-commit / `pnpm run sync:skill-assets` 时读 `packages/cli/src/commands.ts`,按 `GROUP_OWNER_SKILL` 归属表分流写到各 `skills/<skill>/reference/index.md` + `<一级命令>.md`。未显式归属的一级组默认进 `bailian-cli`。各目录**纳入 git**,勿手改。新增一级命令组若应归领域 skill,记得改归属表。
 
 已删除/勿再引用:旧的 `packages/cli/src/commands/catalog.ts`、旧的 `packages/cli/src/commands/index.ts` catalog re-export、`packages/cli/src/registry.ts`、`skipDefaultApiKeySetup`、`ensureApiKey` 启动拦截、`config/export-schema.ts`。
 
@@ -87,9 +87,9 @@ packages/commands/src/index.ts
 
 ### C. 文档层
 
-- [ ] 运行 `pnpm run sync:skill-assets`(或正常 `git commit` 走 pre-commit),刷新 `skills/bailian-cli/reference/` 与 `SKILL.md` 的 `metadata.version` 并提交
+- [ ] 运行 `pnpm run sync:skill-assets`(或正常 `git commit` 走 pre-commit),刷新各 `skills/<skill>/reference/` 与 `SKILL.md` 的 `metadata.version` 并提交
 - [ ] `README.md` / `README.zh.md`:Quick Start、命令一览、认证说明(用户向,与 help 对齐)
-- [ ] `skills/bailian-cli/SKILL.md`:若安装说明或能力边界有变,同步更新
+- [ ] 相关 `skills/<skill>/SKILL.md`:若安装说明或能力边界有变,同步更新;新一级命令组若属领域 skill,同步改 `tools/generate-reference.ts` 的 `GROUP_OWNER_SKILL`
 
 ### D. 测试层
 
@@ -105,7 +105,7 @@ packages/commands/src/index.ts
   - `packages/cli/src/commands.ts` map key
   - `packages/kscli/src/commands.ts` map key(如适用)
   - 用户可见 hint / README / tests
-  - `skills/bailian-cli/reference/`(重建后检查并提交)
+  - `skills/*/reference/`(重建后检查并提交)
 - [ ] 检查 `usageArgs` / `exampleArgs` 没有硬编码旧的 `bl <path>` 前缀
 
 ## 完成后自查
@@ -127,7 +127,8 @@ pnpm -F knowledge-studio-cli exec tsx src/main.ts <command> --help
 
 - ✗ 只新增 `packages/commands/src/commands/...` 文件,忘了在 `packages/commands/src/index.ts` 导出
 - ✗ 只导出了命令实现,忘了在 `packages/cli/src/commands.ts` 暴露路径 → `bl --help` 看不到
-- ✗ 手改 `skills/bailian-cli/reference/*.md` → 下次 generate 被覆盖;应改 command metadata 后重新 generate 并提交
+- ✗ 手改 `skills/*/reference/*.md` → 下次 generate 被覆盖;应改 command metadata 后重新 generate 并提交
+- ✗ 新一级命令组忘改 `tools/generate-reference.ts` 的 `GROUP_OWNER_SKILL` → reference 会落到 hub `bailian-cli`(未必是预期)
 - ✗ 在 `usageArgs` / `exampleArgs` 写死 `bl text chat` → `kscli` 等入口复用时 help 错
 - ✗ Console Gateway 命令忘设 `auth: "console"` → console flags / credential 注入都不生效
 - ✗ 单 action 的子组是反模式,新增时优先拍平为两级

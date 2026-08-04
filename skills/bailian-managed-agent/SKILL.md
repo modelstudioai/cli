@@ -2,6 +2,9 @@
 name: bailian-managed-agent
 metadata:
   version: "1.10.1"
+  requires:
+    bins: ["bl"]
+  companions: ["bailian-base"]
 description: >-
   阿里云百炼托管 Agent 声明式基础设施入口：用户要初始化 agents.yaml、校验或预览 agent 配置变更、
   创建/更新/销毁百炼托管 Agent、和托管 agent 对话、查会话事件历史、导入或取消跟踪远端资源时使用
@@ -9,11 +12,12 @@ description: >-
   apply / destroy 变更远端资源且必须带 `--yes`，务必先 plan 给用户看 diff 再让其确认。
   反触发：调用已上线的百炼应用/智能体走 bailian-app-call 或 `bl app`；宿主 agent 自身的记忆、技能、
   子代理不走本 skill；生图生视频走 bailian-gen。
+  安装本 skill 时必须同时安装 companion bailian-base。
 ---
 
 # Bailian managed agent IaC (`bl managed-agent`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-cli/SKILL.md`](../bailian-cli/SKILL.md): Version & updates (pre-flight checklist) and CLI errors: report an issue. Command details are authoritative in [`../bailian-cli/reference/managed-agent.md`](../bailian-cli/reference/managed-agent.md) and `bl managed-agent --help` — do not guess flags.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-base/SKILL.md`](../bailian-base/SKILL.md): Version & updates (pre-flight checklist) and CLI errors: report an issue. Command details are authoritative in [`reference/managed-agent.md`](reference/managed-agent.md) and `bl managed-agent --help` — do not guess flags. Companion: install with `bailian-base`.**
 
 ## Safety guardrail (the most important rule)
 
@@ -55,6 +59,8 @@ description: >-
 
 ## Common hand-offs
 
-- Just calling an already published Bailian app/assistant → bailian-app-call, or `bl app list` / `call` via [`../bailian-cli/SKILL.md`](../bailian-cli/SKILL.md).
-- Choosing the model referenced in agents.yaml → bailian-model-recommend.
-- Deployment quota / billing questions → `bl quota` / `bl usage` via [`../bailian-cli/SKILL.md`](../bailian-cli/SKILL.md).
+软 hand-off（按 skill **名**；已安装则 Read，否则 `--help` / 提示安装该 skill + companion `bailian-base`）：
+
+- Call an already published Bailian app/assistant → `bailian-app-call`, or skill `bailian-cli` (`bl app list` / `call`; fallback: `bl app --help`).
+- Choosing the model referenced in agents.yaml → `bailian-model-recommend`.
+- Deployment quota / billing questions → skill `bailian-cli` (fallback: `bl quota` / `bl usage --help`).

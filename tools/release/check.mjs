@@ -61,8 +61,19 @@ export async function runCheck(options = {}) {
     "diff",
     "--exit-code",
     "--",
-    ...(channel ? [] : ["skills/bailian-cli/SKILL.md"]),
+    ...(channel
+      ? []
+      : [
+          "skills/bailian-base/SKILL.md",
+          "skills/bailian-cli/SKILL.md",
+          "skills/bailian-gen/SKILL.md",
+          "skills/bailian-finetune/SKILL.md",
+          "skills/bailian-managed-agent/SKILL.md",
+        ]),
     "skills/bailian-cli/reference/",
+    "skills/bailian-gen/reference/",
+    "skills/bailian-finetune/reference/",
+    "skills/bailian-managed-agent/reference/",
   ]);
 
   step("build bailian-cli");

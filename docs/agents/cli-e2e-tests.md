@@ -95,7 +95,7 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 - [ ] `packages/commands/src/index.ts` 导出 + `packages/cli/src/commands.ts` 暴露路径 + `topic-routes.ts` 补最小路由
 - [ ] `packages/commands/tests/e2e/<topic>.e2e.test.ts`（新建或扩展）
-- [ ] 若改了 `usageArgs` / `flags` / `exampleArgs`,跑 `pnpm --filter bailian-cli run generate:reference` 更新 `skills/bailian-cli/reference/` 并提交
+- [ ] 若改了 `usageArgs` / `flags` / `exampleArgs`,跑 `pnpm --filter bailian-cli run generate:reference` 更新各 `skills/<skill>/reference/` 并提交
 - [ ] 子命令 `--help`（分组 help 由 bl `registry.smoke` 覆盖）
 - [ ] skip 块：每个 required flag 缺参；可 dry-run 则加一条
 - [ ] 至少一条真实集成（或说明为何仅 smoke）；不破坏已有集成用例顺序
