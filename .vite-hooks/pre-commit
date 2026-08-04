@@ -6,7 +6,7 @@ pnpm run sync:skill-assets
 
 # Stage generator output so it is included in this commit.
 git add \
-  skills/bailian-base/SKILL.md \
+  skills/bailian-protocol/SKILL.md \
   skills/bailian-cli/SKILL.md \
   skills/bailian-cli/reference \
   skills/bailian-gen/SKILL.md \

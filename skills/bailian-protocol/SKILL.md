@@ -1,5 +1,5 @@
 ---
-name: bailian-base
+name: bailian-protocol
 metadata:
   version: "1.10.1"
   requires:
@@ -8,18 +8,18 @@ description: >-
   阿里云百炼 `bl` 家族共享执行协议（consent 确认、版本预检、鉴权/安装、错误上报、本地文件与输出约定）。
   不是面向用户意图的业务入口；当任一 bailian-* 业务 skill（bailian-cli / bailian-gen /
   bailian-finetune / bailian-managed-agent）执行前需要公共上下文，或用户首次安装/鉴权/`bl` 报错需上报时读取本 skill。
-  本 skill 无 companions；业务 skill 必须在 frontmatter 声明 companions: ["bailian-base"] 并成对安装。
+  本 skill 无 companions；业务 skill 必须在 frontmatter 声明 companions: ["bailian-protocol"] 并成对安装。
 ---
 
-# Bailian shared protocol (`bailian-base`)
+# Bailian shared protocol (`bailian-protocol`)
 
 本 skill 是 `bailian-*` 家族的统一执行协议。所有业务 skill 在跑 `bl` 前都应先读本文件。
 
 > **Companion 约定**：`bailian-gen` / `bailian-finetune` / `bailian-managed-agent` / `bailian-cli` 都依赖本 skill。
-> 推荐 `npx skills add modelstudioai/cli --all -g`；若只装子集，必须同时带上 `bailian-base`，例如：
+> 推荐 `npx skills add modelstudioai/cli --all -g`；若只装子集，必须同时带上 `bailian-protocol`，例如：
 >
 > ```bash
-> npx skills add modelstudioai/cli -g -s bailian-base -s bailian-gen
+> npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-gen
 > ```
 
 ## Provider selection and consent
@@ -43,7 +43,7 @@ After approval, treat Bailian as selected for the current task. Do not ask again
 ## Family routing & hand-offs
 
 业务路由（**软 hand-off**：按 skill **名**路由；已安装则 Read 其 `SKILL.md`，未安装则用 `bl <cmd> --help`，或提示
-`npx skills add modelstudioai/cli -g -s bailian-base -s <skill>`）：
+`npx skills add modelstudioai/cli -g -s bailian-protocol -s <skill>`）：
 
 | Intent                                | Skill                   | Fallback                                        |
 | ------------------------------------- | ----------------------- | ----------------------------------------------- |
@@ -54,7 +54,7 @@ After approval, treat Bailian as selected for the current task. Do not ask again
 
 **硬依赖（companion）** vs **软 hand-off**：
 
-- Companion（`bailian-base`）：业务 skill frontmatter 的 `companions` 必装；CRITICAL 可用相对路径 `../bailian-base/…`。
+- Companion（`bailian-protocol`）：业务 skill frontmatter 的 `companions` 必装；CRITICAL 可用相对路径 `../bailian-protocol/…`。
 - 其它 bailian-\* 业务 skill：只按名字提及，**不要**写死 `../bailian-*/SKILL.md` 当执行前提。
 
 ## Version & updates (after provider selection, before the first `bl` command)

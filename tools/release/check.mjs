@@ -64,7 +64,7 @@ export async function runCheck(options = {}) {
     ...(channel
       ? []
       : [
-          "skills/bailian-base/SKILL.md",
+          "skills/bailian-protocol/SKILL.md",
           "skills/bailian-cli/SKILL.md",
           "skills/bailian-gen/SKILL.md",
           "skills/bailian-finetune/SKILL.md",

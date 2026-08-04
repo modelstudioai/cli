@@ -1,4 +1,4 @@
-# bailian-base
+# bailian-protocol
 
 Shared execution protocol for the **bailian-\*** Agent Skill family (consent, versioning, setup/auth, issue reporting).
 
@@ -8,10 +8,10 @@ Business skills (`bailian-cli`, `bailian-gen`, `bailian-finetune`, `bailian-mana
 npx skills add modelstudioai/cli --all -g
 ```
 
-Or install a subset with `bailian-base` included, e.g.:
+Or install a subset with `bailian-protocol` included, e.g.:
 
 ```bash
-npx skills add modelstudioai/cli -g -s bailian-base -s bailian-gen
+npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-gen
 ```
 
 For CLI installation and command examples, see the [main README](../../README.md).

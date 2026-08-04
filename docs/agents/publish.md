@@ -37,17 +37,17 @@
 
 两种模式都会先跑 `check.mjs`，覆盖以下检查：
 
-| 检查项                           | 说明                                                                                                        |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `pnpm install --frozen-lockfile` | lockfile 一致性                                                                                             |
-| README 同步                      | `packages/cli/README.md` 与根 README 一致                                                                   |
-| 版本号一致                       | `tools/release/lib/packages.mjs` 中待发布包集合 version 相同                                                |
-| `workspace:*` 替换               | 发布包间 workspace 依赖解析为真实版本号                                                                     |
-| 构建                             | 基础发布构建 core/runtime/commands 依赖和 cli;`--knowledge` 额外构建 `knowledge-studio-cli`                 |
-| 生成资产                         | 重建各 `skills/<skill>/reference/`;非 channel 模式还同步各 `skills/*/SKILL.md` version（含 `bailian-base`） |
-| pnpm pack                        | 打 tarball                                                                                                  |
-| publint                          | 包元数据校验                                                                                                |
-| gitleaks                         | 敏感信息扫描                                                                                                |
+| 检查项                           | 说明                                                                                                            |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `pnpm install --frozen-lockfile` | lockfile 一致性                                                                                                 |
+| README 同步                      | `packages/cli/README.md` 与根 README 一致                                                                       |
+| 版本号一致                       | `tools/release/lib/packages.mjs` 中待发布包集合 version 相同                                                    |
+| `workspace:*` 替换               | 发布包间 workspace 依赖解析为真实版本号                                                                         |
+| 构建                             | 基础发布构建 core/runtime/commands 依赖和 cli;`--knowledge` 额外构建 `knowledge-studio-cli`                     |
+| 生成资产                         | 重建各 `skills/<skill>/reference/`;非 channel 模式还同步各 `skills/*/SKILL.md` version（含 `bailian-protocol`） |
+| pnpm pack                        | 打 tarball                                                                                                      |
+| publint                          | 包元数据校验                                                                                                    |
+| gitleaks                         | 敏感信息扫描                                                                                                    |
 
 本地可以 dry-run 验证：
 

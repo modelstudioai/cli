@@ -1,6 +1,6 @@
 # Report a CLI bug (GitHub Issue)
 
-> Hand-maintained. Lives in `bailian-base/assets/` (not auto-generated from command metadata).
+> Hand-maintained. Lives in `bailian-protocol/assets/` (not auto-generated from command metadata).
 > Entry point: [SKILL.md → CLI errors: report an issue](../SKILL.md#cli-errors-report-an-issue).
 
 When `bl` fails, the agent first helps the user fix the problem. If the failure looks like a **CLI bug** (not usage, auth, quota, or other user/service-side errors), ask whether to open a GitHub Issue for the Bailian CLI team.

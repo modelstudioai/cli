@@ -53,10 +53,10 @@ CLI 校验通过后，在本机终端执行：
 npx skills add modelstudioai/cli --all -g
 ```
 
-推荐 `--all`（含 companion `bailian-base`）。若只装单个业务 skill，必须同时带上 `bailian-base`，例如：
+推荐 `--all`（含 companion `bailian-protocol`）。若只装单个业务 skill，必须同时带上 `bailian-protocol`，例如：
 
 ```bash
-npx skills add modelstudioai/cli -g -s bailian-base -s bailian-gen
+npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-gen
 ```
 
 安装成功后，用中文简要说明已安装的 skills 及用户可做什么。

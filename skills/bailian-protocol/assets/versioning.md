@@ -1,13 +1,13 @@
 # Version alignment & auto-update (agent)
 
-> Hand-maintained. Lives in `bailian-base/assets/` (not auto-generated from command metadata).
+> Hand-maintained. Lives in `bailian-protocol/assets/` (not auto-generated from command metadata).
 > Entry point: [SKILL.md → Version & updates](../SKILL.md#version--updates-after-provider-selection-before-the-first-bl-command).
 
 ## Agent pre-flight checklist (MANDATORY)
 
 **Do NOT run any `bl` command until you complete this checklist.** Run it **once per session**, before the first `bl` command. Cache the result — do not re-check before every command.
 
-1. Read `metadata.version` from the installed `bailian-base/SKILL.md` frontmatter (all `bailian-*` skills share the same version).
+1. Read `metadata.version` from the installed `bailian-protocol/SKILL.md` frontmatter (all `bailian-*` skills share the same version).
 2. Check the installed CLI version:
    ```bash
    bl --version
@@ -42,7 +42,7 @@ npm install -g bailian-cli
 npx skills add modelstudioai/cli --all -g
 ```
 
-If you only need one business skill, still install companion `bailian-base` with it (see [SKILL.md companion note](../SKILL.md)).
+If you only need one business skill, still install companion `bailian-protocol` with it (see [SKILL.md companion note](../SKILL.md)).
 
 ## Mention it in the task summary
 

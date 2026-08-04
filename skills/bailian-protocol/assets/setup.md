@@ -1,6 +1,6 @@
 # Setup, authentication & configuration
 
-> Hand-maintained. Lives in `bailian-base/assets/` (not auto-generated from command metadata).
+> Hand-maintained. Lives in `bailian-protocol/assets/` (not auto-generated from command metadata).
 > Entry point: [SKILL.md → Setup & auth](../SKILL.md#setup--auth).
 
 Read this only when you need to install `bl`, change credentials/endpoint, or
@@ -13,14 +13,14 @@ inspect config keys. Day-to-day command routing lives in the business skills
 
 ```bash
 npm install -g bailian-cli
-# Recommended: install the full bailian-* skill family (includes bailian-base)
+# Recommended: install the full bailian-* skill family (includes bailian-protocol)
 npx skills add modelstudioai/cli --all -g
 
-# Subset install: always include companion bailian-base with any business skill
-# npx skills add modelstudioai/cli -g -s bailian-base -s bailian-gen
-# npx skills add modelstudioai/cli -g -s bailian-base -s bailian-finetune
-# npx skills add modelstudioai/cli -g -s bailian-base -s bailian-managed-agent
-# npx skills add modelstudioai/cli -g -s bailian-base -s bailian-cli
+# Subset install: always include companion bailian-protocol with any business skill
+# npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-gen
+# npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-finetune
+# npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-managed-agent
+# npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-cli
 ```
 
 Verify: `bl --version` (prints `bl X.Y.Z`).

@@ -4,7 +4,7 @@ metadata:
   version: "1.10.1"
   requires:
     bins: ["bl"]
-  companions: ["bailian-base"]
+  companions: ["bailian-protocol"]
 description: >-
   阿里云百炼模型精调训练入口：用户要精调、微调、训练自己的模型（fine-tune，支持 SFT / SFT-LoRA / DPO / DPO-LoRA / CPT，
   覆盖文本、语音、图像）、校验或上传训练数据集、看训练进度和日志、挑 checkpoint、导出精调产物、
@@ -12,12 +12,12 @@ description: >-
   upload 拿 file-id → finetune create 建任务 → watch 看进度 → export 导出 → deploy 上线，需要 API key；
   写操作先用 `--dry-run` 预览。反触发：用户点名火山方舟/ark 的精调不走本 skill；只是要选哪个模型走
   bailian-model-recommend；用现成模型生图生视频走 bailian-gen；百炼其他资源管理走 bailian-cli。
-  安装本 skill 时必须同时安装 companion bailian-base。
+  安装本 skill 时必须同时安装 companion bailian-protocol。
 ---
 
 # Bailian fine-tuning pipeline (`bl dataset` / `bl finetune` / `bl deploy`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-base/SKILL.md`](../bailian-base/SKILL.md): Version & updates (pre-flight checklist), Setup & auth, and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) (dataset / finetune / deploy) and `bl <command> --help` — do not guess flags. The whole pipeline requires an API key. Companion: install with `bailian-base`.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Version & updates (pre-flight checklist), Setup & auth, and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) (dataset / finetune / deploy) and `bl <command> --help` — do not guess flags. The whole pipeline requires an API key. Companion: install with `bailian-protocol`.**
 
 ## End-to-end workflow (follow in order)
 
@@ -36,7 +36,7 @@ description: >-
 - Deployment plans: audio defaults to `--plan mu`; text/image default to `lora`.
 - Preview write operations (create / delete / cancel / scale) with `--dry-run` first, and confirm with the user before deleting a job or dataset.
 
-## Command overview
+## When to use which command
 
 | Intent                          | Command                                                                                          |
 | ------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -48,6 +48,8 @@ description: >-
 | Cancel / delete a job           | `bl finetune cancel` / `delete`                                                                  |
 | Trainable capability lookup     | `bl finetune capability`                                                                         |
 | Deploy / lifecycle              | `bl deploy text\|audio\|image create`, `list` / `get` / `update` / `scale` / `delete` / `models` |
+
+Flags, usage, and examples: see [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags.
 
 ## Quick examples
 
@@ -62,8 +64,13 @@ bl deploy text create --model my-qwen-sft --name my-svc
 
 ## Common hand-offs
 
-软 hand-off（按 skill **名**；已安装则 Read，否则 `--help` / 提示安装该 skill + companion `bailian-base`）：
+软 hand-off（按 skill **名**；已安装则 Read，否则 `--help` / 提示安装该 skill + companion `bailian-protocol`）：
 
 - After deployment, try the model or generate content → skill `bailian-gen` (media) or `bl text chat` (fallback: `bl image\|video\|text --help`).
 - Unsure which base model to pick → `bailian-model-recommend` / `bl advisor recommend`.
 - Training quota / usage questions → skill `bailian-cli` (fallback: `bl quota` / `bl usage --help`).
+
+## references
+
+- [bailian-protocol](../bailian-protocol/SKILL.md) — authentication and global parameters (mandatory)
+- [reference/](reference/index.md) — command details

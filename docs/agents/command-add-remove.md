@@ -90,6 +90,7 @@ packages/commands/src/index.ts
 - [ ] 运行 `pnpm run sync:skill-assets`(或正常 `git commit` 走 pre-commit),刷新各 `skills/<skill>/reference/` 与 `SKILL.md` 的 `metadata.version` 并提交
 - [ ] `README.md` / `README.zh.md`:Quick Start、命令一览、认证说明(用户向,与 help 对齐)
 - [ ] 相关 `skills/<skill>/SKILL.md`:若安装说明或能力边界有变,同步更新;新一级命令组若属领域 skill,同步改 `tools/generate-reference.ts` 的 `GROUP_OWNER_SKILL`
+- [ ] **拥有方** skill 的「When to use which command」(或等价路由表)补上新意图;hub `bailian-cli` 仅加/改 hand-off 行,**不要**把领域子命令与默认模型抄进 hub 表(约定见 [skill-change.md](skill-change.md))
 
 ### D. 测试层
 
@@ -129,6 +130,7 @@ pnpm -F knowledge-studio-cli exec tsx src/main.ts <command> --help
 - ✗ 只导出了命令实现,忘了在 `packages/cli/src/commands.ts` 暴露路径 → `bl --help` 看不到
 - ✗ 手改 `skills/*/reference/*.md` → 下次 generate 被覆盖;应改 command metadata 后重新 generate 并提交
 - ✗ 新一级命令组忘改 `tools/generate-reference.ts` 的 `GROUP_OWNER_SKILL` → reference 会落到 hub `bailian-cli`(未必是预期)
+- ✗ 只改 reference / hub,忘改拥有方 skill 路由表;或把领域命令明细重新抄回 `bailian-cli` SKILL → 与 [skill-change.md](skill-change.md) 分层冲突
 - ✗ 在 `usageArgs` / `exampleArgs` 写死 `bl text chat` → `kscli` 等入口复用时 help 错
 - ✗ Console Gateway 命令忘设 `auth: "console"` → console flags / credential 注入都不生效
 - ✗ 单 action 的子组是反模式,新增时优先拍平为两级
