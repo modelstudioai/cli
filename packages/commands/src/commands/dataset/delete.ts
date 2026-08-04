@@ -1,5 +1,5 @@
 import { defineCommand, detectOutputFormat, deleteDataset, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
 
 const DELETE_FLAGS = {
   fileId: {
@@ -30,6 +30,7 @@ export default defineCommand({
 
     if (settings.quiet || format === "text") {
       emitBare(`Deleted ${fileId}.`);
+      emitRequestId(response.request_id, settings.quiet);
     } else {
       emitResult(response, format);
     }

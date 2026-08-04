@@ -1,5 +1,5 @@
 import { defineCommand, detectOutputFormat, getDeployment, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
 
 const GET_FLAGS = {
   deployedModel: {
@@ -58,7 +58,7 @@ export default defineCommand({
     if (deployment.gmt_modified) item.updated_at = deployment.gmt_modified;
 
     if (format === "json") {
-      emitResult(item, format);
+      emitResult({ ...item, request_id: response.request_id }, format);
       return;
     }
 
@@ -69,5 +69,6 @@ export default defineCommand({
       const display = typeof value === "string" ? value : JSON.stringify(value);
       emitBare(`${label(key)}${display}`);
     }
+    emitRequestId(response.request_id, settings.quiet);
   },
 });

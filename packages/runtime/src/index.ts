@@ -40,7 +40,7 @@ export {
 } from "./urls.ts";
 
 // Output facilities consumed by commands
-export { emitResult, emitBare } from "./output/output.ts";
+export { emitResult, emitBare, emitRequestId } from "./output/output.ts";
 export { formatTable } from "./output/table.ts";
 export { renderBoxTable, type BoxTableOptions, type BarColumn } from "./output/box-table.ts";
 export { createSpinner, createProgressBar } from "./output/progress.ts";

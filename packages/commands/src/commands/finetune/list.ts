@@ -1,5 +1,5 @@
 import { defineCommand, detectOutputFormat, listFineTunes, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare, formatTable } from "bailian-cli-runtime";
+import { emitResult, emitBare, emitRequestId, formatTable } from "bailian-cli-runtime";
 
 const LIST_FLAGS = {
   page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
@@ -48,7 +48,7 @@ export default defineCommand({
     }));
 
     if (format === "json") {
-      emitResult({ items, total }, format);
+      emitResult({ items, total, request_id: response.request_id }, format);
       return;
     }
 
@@ -78,5 +78,6 @@ export default defineCommand({
     emitBare(
       `Tip: OUTPUT_MODEL is the input for \`${identity.binName} deploy text create --model\``,
     );
+    emitRequestId(response.request_id, settings.quiet);
   },
 });

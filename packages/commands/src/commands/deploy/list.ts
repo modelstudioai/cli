@@ -4,7 +4,7 @@ import {
   listDeployments,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare, formatTable } from "bailian-cli-runtime";
+import { emitResult, emitBare, emitRequestId, formatTable } from "bailian-cli-runtime";
 
 const LIST_FLAGS = {
   page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
@@ -58,7 +58,7 @@ export default defineCommand({
     }));
 
     if (format === "json") {
-      emitResult({ items, total }, format);
+      emitResult({ items, total, request_id: response.request_id }, format);
       return;
     }
 
@@ -78,5 +78,6 @@ export default defineCommand({
     ]);
     for (const line of formatTable(headers, rows)) emitBare(line);
     if (total !== undefined) emitBare(`\nTotal: ${total}`);
+    emitRequestId(response.request_id, settings.quiet);
   },
 });

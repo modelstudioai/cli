@@ -27,7 +27,7 @@ import {
 } from "bailian-cli-core";
 import { existsSync, statSync } from "fs";
 import { basename } from "path";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
 
 /**
  * A `--datasets` / `--validations` token is treated as a local file to upload
@@ -631,6 +631,7 @@ async function runCreate<F extends FlagsDef>(
     if (job?.job_id) {
       emitBare(`Created fine-tune job: ${job.job_id}`);
       if (job.status) emitBare(`Status: ${job.status}`);
+      emitRequestId(response.request_id, settings.quiet);
     } else {
       emitResult(response, format);
     }

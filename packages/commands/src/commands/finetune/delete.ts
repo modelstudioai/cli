@@ -1,5 +1,5 @@
 import { defineCommand, detectOutputFormat, deleteFineTune, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
 
 const DELETE_FLAGS = {
   jobId: {
@@ -36,6 +36,7 @@ export default defineCommand({
       emitBare(jobId);
     } else if (format === "text") {
       emitBare(`Deleted ${jobId}.`);
+      emitRequestId(response.request_id, settings.quiet);
     } else {
       emitResult(response, format);
     }
