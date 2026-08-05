@@ -14,6 +14,8 @@ export {
   memorySearchPath,
   mcpWebSearchPath,
   profileSchemaPath,
+  ragEndpoint,
+  RAG_PATHS,
   speechRecognizePath,
   speechSynthesizePath,
   taskPath,

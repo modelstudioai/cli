@@ -63,3 +63,14 @@ export function isChatE2EReady(): boolean {
     !!process.env.BAILIAN_E2E_CHAT_AGENT_ID?.trim() && !!process.env.BAILIAN_WORKSPACE_ID?.trim()
   );
 }
+
+/** Knowledge admin commands (kb/doc/chunk/service/category/file) E2E readiness */
+export function isKbAdminE2EReady(): boolean {
+  if (!isDashScopeE2EReady()) return false;
+  return !!process.env.BAILIAN_WORKSPACE_ID?.trim();
+}
+
+/** connector has no delete API, so live artifacts cannot be cleaned up — only enable explicitly for a full manual regression */
+export function isConnectorE2EReady(): boolean {
+  return isKbAdminE2EReady() && process.env.BAILIAN_E2E_CONNECTOR === "1";
+}

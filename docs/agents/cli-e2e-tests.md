@@ -6,6 +6,7 @@
 | --------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | **共享基建**    | `packages/e2e`                                        | gating、子进程 runner、output、globalSetup（`private`，不发布）                          |
 | **命令 E2E**    | `packages/commands/tests/e2e`                         | help、缺参、dry-run、live（gated）；每用例最小路由                                       |
+| **Journey E2E** | `packages/commands/tests/e2e/knowledge/journeys`      | 用户旅程全链路（跨命令回路 + 标记词召回闭环），全部 live gated；见 `journeys/README.md`  |
 | **bl smoke**    | `packages/cli/tests/e2e/registry.smoke.e2e.test.ts`   | 产品 map 全部 path `--help`、分组 help、根 help                                          |
 | **kscli smoke** | `packages/kscli/tests/e2e/registry.smoke.e2e.test.ts` | 从 `kscli/src/commands.ts` 推导 path/分组；identity（`--version`、`search --help` path） |
 | **runtime**     | `packages/runtime/tests`                              | `proxy.e2e`、console 跨域 flag 拒绝                                                      |
@@ -27,7 +28,7 @@
 
 ### commands E2E
 
-- 路径：`packages/commands/tests/e2e/<kebab-topic>.e2e.test.ts`
+- 路径：`packages/commands/tests/e2e/<kebab-topic>.e2e.test.ts`；knowledge 领域集中在 `packages/commands/tests/e2e/knowledge/` 子目录（新增 knowledge 命令测试放这里）
 - 子进程：`runCommandE2e(routes, args)` from `./helpers.ts`（spawn `harness/main.ts`，`routes` 为本 topic 最小 path → export 映射）
 - fixtures：`packages/commands/tests/e2e/fixtures/`
 - 路由常量：`topic-routes.ts`（按 topic 维护，**非**全量产品 map）
@@ -77,6 +78,14 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 2. **缺参**：带无害全局 flag（如 `--quiet`）且不传 required flag → `exitCode === 2`
 3. **--dry-run**：实现在联网/上传/写盘**之前**返回；断言 stdout JSON/文本
 4. **真实集成**：放在 skip 块**末尾**
+
+## Journey 层（用户旅程全链路）
+
+- **定位**：命令 E2E 验单命令契约；journey 验“用户带着目标跨命令走通回路”，结构性断言不在 journey 重复
+- **闭环断言**：fixture 埋独特标记词，以“标记词能否被召回”判定回路闭合；硬断言 fail，软断言 `recordSoft` 落报告人工复核
+- **日志产物**：`createJourneyReporter` 在 `test/output/<session>/` 落盘 `journey-report.md`、分步 stdout/stderr、`resources.json`（未清理资源警示）
+- **入口**：`pnpm run test:journey`；旅程清单与约定见 [journeys/README.md](../../packages/commands/tests/e2e/knowledge/journeys/README.md)
+- **新增命令时**：评估是否属于某条旅程的环节，是则纳入对应 journey 并更新 README 映射表
 
 ## 增删命令同步
 

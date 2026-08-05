@@ -411,6 +411,8 @@ export interface DashScopeKnowledgeRetrieveResponse {
 export interface KnowledgeSearchRequest {
   query: string;
   agent_id: string;
+  /** "beta" targets the debug draft; a numeric version targets that published version; defaults to the latest published version */
+  agent_version?: string;
   images?: string[];
   query_history?: Array<{ role: "user" | "assistant"; content: string }>;
 }
@@ -461,6 +463,8 @@ export interface KnowledgeChatRequest {
   parameters: {
     agent_options: {
       agent_id: string;
+      /** "beta" targets the debug draft; a numeric version targets that published version; defaults to the latest published version */
+      agent_version?: string;
       user?: {
         user_id?: string;
         workspace_id?: string;

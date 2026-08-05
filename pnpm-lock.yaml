@@ -46,10 +46,6 @@ catalogs:
       specifier: ^3.4.0
       version: 3.4.0
 
-overrides:
-  vite: npm:@voidzero-dev/vite-plus-core@latest
-  vitest: npm:@voidzero-dev/vite-plus-test@latest
-
 importers:
 
   .:

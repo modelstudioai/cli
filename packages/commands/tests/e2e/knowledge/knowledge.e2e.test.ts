@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
-import { KNOWLEDGE_ROUTES } from "./topic-routes.ts";
+import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "../helpers.ts";
+import { KNOWLEDGE_ROUTES } from "../topic-routes.ts";
 
 // ---- Types ----
 

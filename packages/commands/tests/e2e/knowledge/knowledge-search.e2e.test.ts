@@ -1,12 +1,13 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isSearchE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
-import { KNOWLEDGE_SEARCH_ROUTES } from "./topic-routes.ts";
+import { isSearchE2EReady, parseStdoutJson, runCommandE2e } from "../helpers.ts";
+import { KNOWLEDGE_SEARCH_ROUTES } from "../topic-routes.ts";
 
 interface DryRunBody {
   endpoint?: string;
   request?: {
     query?: string;
     agent_id?: string;
+    agent_version?: string;
     images?: string[];
     query_history?: Array<{ role: string; content: string }>;
   };
@@ -52,7 +53,7 @@ describe("e2e: knowledge search", () => {
   test("缺少 --workspace-id 时非零退出并提示", async () => {
     const { stderr, exitCode } = await runCommandE2e(
       KNOWLEDGE_SEARCH_ROUTES,
-      // 假 key + 隔离配置目录:避免本机 config 的 workspace_id/api_key 漏入
+      // Fake key + isolated config dir: keep the local config's workspace_id/api_key from leaking in
       [
         "knowledge",
         "search",
@@ -91,6 +92,29 @@ describe("e2e: knowledge search", () => {
     expect(data.endpoint).toMatch(/api\/v1\/indices\/knowledge\/search/);
     expect(data.request?.query).toBe("什么是RAG");
     expect(data.request?.agent_id).toBe("aid_test");
+    // Without --agent-version the field is not sent (default behavior unchanged: latest published version)
+    expect(data.request).not.toHaveProperty("agent_version");
+  });
+
+  test("--dry-run + --agent-version 落在 body 顶层", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
+      "knowledge",
+      "search",
+      "--dry-run",
+      "--query",
+      "什么是RAG",
+      "--agent-id",
+      "aid_test",
+      "--agent-version",
+      "beta",
+      "--workspace-id",
+      "ws_test",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<DryRunBody>(stdout);
+    expect(data.request?.agent_version).toBe("beta");
   });
 
   test("--dry-run + --image 输出 images", async () => {

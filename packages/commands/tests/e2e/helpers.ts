@@ -26,8 +26,10 @@ export {
   isBailianE2EMediaEnabled,
   isBailianE2EVideoEnabled,
   isChatE2EReady,
+  isConnectorE2EReady,
   isConsoleE2EReady,
   isDashScopeE2EReady,
+  isKbAdminE2EReady,
   isOpenApiE2EReady,
   isSearchE2EReady,
 } from "e2e/gating";
