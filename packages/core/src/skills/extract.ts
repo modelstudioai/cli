@@ -21,6 +21,11 @@ import tar from "tar-stream";
 
 /** tar 条目路径必须是相对路径且不含 ..，防止 tar-slip 逃逸解包目录 */
 export function isSafeEntryName(name: string): boolean {
+  // Reject backslashes outright: on Windows path.join expands backslash-separated
+  // ".." segments and a leading "\" resolves to the drive root, so such names can
+  // escape the extraction dir even though they pass the "/"-based checks below.
+  // The publisher always packs with "/" separators, so this never rejects legit archives.
+  if (name.includes("\\") || name.includes("\0")) return false;
   if (name.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(name)) return false;
   return !name.split("/").includes("..");
 }

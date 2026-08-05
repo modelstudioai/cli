@@ -56,7 +56,12 @@ export default defineCommand({
         return { name, status: "failed", reason: "skill not found in registry" };
       }
       try {
-        const record = await installSkillWithFanout(name, entry, agents);
+        const record = await installSkillWithFanout(
+          name,
+          entry,
+          agents,
+          lock.skills[name]?.links ?? [],
+        );
         lock.skills[name] = record.lockEntry;
         return {
           name,
