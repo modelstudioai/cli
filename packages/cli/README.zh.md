@@ -83,6 +83,9 @@ irm https://bailian.aliyun.com/cli/install.ps1 | iex
 
 # Node 用户 / 开发者（需要 Node.js >= 18.17）
 npm install -g bailian-cli
+
+# Agent skills
+npx skills add modelstudioai/cli --all -g
 ```
 
 > 二进制安装不依赖 Node.js。`npm install -g` 长期保留。

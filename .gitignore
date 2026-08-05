@@ -38,6 +38,7 @@ tools/generated
 .claude/scheduled_tasks.lock
 .cursor/
 .qwen/
+.qoder
 .playwright-mcp/
 .pnpm-store/
 

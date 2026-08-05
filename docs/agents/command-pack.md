@@ -43,7 +43,7 @@
 - [ ] `packages/cli/tests/e2e/command-packs.e2e.test.ts` 覆盖 help、link、执行、output/errors、凭据授权、list、remove。
 - [ ] `packages/kscli/tests/e2e/command-packs.e2e.test.ts` 覆盖统一 host 和 runtime 默认空 policy 下不暴露管理命令。
 - [ ] fixture 的包名必须在测试白名单内，且构建入口不依赖工作区运行时解析。
-- [ ] 更新生成的 `skills/bailian-cli/reference/plugin.md`；公开 `README.md` / `README.zh.md` 等正式对外发布时再补。
+- [ ] 更新生成的 `skills/bailian-cli/reference/plugin.md`（或归属表指定的 skill reference）；公开 `README.md` / `README.zh.md` 等正式对外发布时再补。
 
 验证：
 

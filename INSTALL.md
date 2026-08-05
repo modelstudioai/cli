@@ -57,6 +57,19 @@ npm install -g bailian-cli
 npx skills add modelstudioai/cli --all -g
 ```
 
+**Supported：** 始终使用 `--all -g`，一次装齐整套 `bailian-*`（含共享协议 `bailian-protocol`）。Agent Skills / `npx skills` **不会**按 metadata 自动拉依赖。
+
+**Advanced / 不推荐：** 子集 `-s` 时 skills CLI 不会自动带上 `bailian-protocol`；若坚持子集，必须手动同时指定，例如：
+
+```bash
+# Advanced: you MUST include bailian-protocol yourself — installer does not pull it
+npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-gen
+```
+
+安装成功后，用中文简要说明已安装的 skills 及用户可做什么。
+
+---
+
 ## 3. 鉴权（安装后必做才能调 API）
 
 ### 推荐：浏览器登录（控制台会话）

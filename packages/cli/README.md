@@ -85,6 +85,9 @@ irm https://bailian.aliyun.com/cli/install.ps1 | iex
 
 # Node users / developers (Node.js >= 18.17)
 npm install -g bailian-cli
+
+# Agent skills
+npx skills add modelstudioai/cli --all -g
 ```
 
 > Binary install does not require Node.js. `npm install -g` remains fully supported.

@@ -26,7 +26,8 @@
 
 ### C. 命令手册
 
-- [ ] 若 `--model` 的 description 含 default,改命令后跑 `pnpm --filter bailian-cli run generate:reference` 更新 `skills/bailian-cli/reference/<group>.md` 并提交
+- [ ] 若 `--model` 的 description 含 default,改命令后跑 `pnpm --filter bailian-cli run generate:reference` 更新对应 `skills/<skill>/reference/<group>.md` 并提交
+- [ ] 同步**拥有该命令的领域 skill**「When to use which command」表中的 Default model(现主要是 `bailian-gen`;精调相关看 `bailian-finetune` 正文示例)。hub `bailian-cli` 已瘦身,一般**不必**再写领域默认模型(见 [skill-change.md](skill-change.md))
 
 ### D. 用户面文档
 
@@ -49,6 +50,7 @@ pnpm -F bailian-cli exec tsx src/main.ts <command> --model <new-model> --message
 
 ## 常见漏点
 
-- ✗ 改了命令默认模型,但 SKILL.md frontmatter 仍写老型号 → AI agent 调用时仍按老型号宣传
+- ✗ 改了命令默认模型,但 SKILL.md frontmatter 或领域路由表 Default model 仍写老型号 → AI agent 调用时仍按老型号宣传
+- ✗ 只改了 `reference/` / flag description,忘改 `bailian-gen`(等) SKILL 路由表
 - ✗ 废弃模型时只删了代码,e2e 测试还在跑,CI 红
 - ✗ 新模型 endpoint 不一致,但只改了 default,没加 endpoint 分支判断

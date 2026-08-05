@@ -1,6 +1,6 @@
 # Report a CLI bug (GitHub Issue)
 
-> Hand-maintained. Lives in `assets/` (not auto-generated from `catalog.ts`).
+> Hand-maintained. Lives in `bailian-protocol/assets/` (not auto-generated from command metadata).
 > Entry point: [SKILL.md → CLI errors: report an issue](../SKILL.md#cli-errors-report-an-issue).
 
 When `bl` fails, the agent first helps the user fix the problem. If the failure looks like a **CLI bug** (not usage, auth, quota, or other user/service-side errors), ask whether to open a GitHub Issue for the Bailian CLI team.
@@ -114,7 +114,7 @@ Offer reporting when **none** of EXCLUDE applies **and** any of the following ho
 
 ### Before offering to report
 
-1. Align versions: [SKILL.md → Version & updates](../SKILL.md#version--updates-agent--do-first) — run `bl update` and `npx skills add modelstudioai/cli --all -g -y` if mismatched.
+1. Align versions: [SKILL.md → Version & updates](../SKILL.md#version--updates-after-provider-selection-before-the-first-bl-command) — run `bl update` and `npx skills add modelstudioai/cli --all -g -y` if mismatched.
 2. Confirm `bl auth status` is healthy (for commands that need auth).
 3. Retry once with `--verbose` if stderr was thin.
 
