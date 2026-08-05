@@ -22,7 +22,8 @@ const CHUNK_ADD_FLAGS = {
   docId: {
     type: "string",
     valueHint: "<id>",
-    description: "Attach the chunk to this document (document-type knowledge bases)",
+    description:
+      "Owning document ID; required for table/image knowledge bases (the server rejects field-channel chunks without it), optional for document-type",
   },
   content: {
     type: "string",
@@ -73,6 +74,7 @@ export default defineCommand({
   flags: CHUNK_ADD_FLAGS,
   notes: [
     "Document / table / image knowledge bases are supported; audio-video ones are not.",
+    "Table/image knowledge bases require --doc-id — verified live: the server returns HTTP 500 (dataId不能为空) without it. Use the document-level id from the doc list command; the per-row doc_id in chunk list metadata is rejected (Index.InvalidParameter).",
     "The API is idempotent but rate-limited to 10 calls per second — throttle batch scripts.",
     "The response carries no chunk id; list chunks afterwards to find the new one.",
     "For table/image knowledge bases use --field with Excel column headers as keys; values are passed through as strings.",

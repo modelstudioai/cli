@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isSearchE2EReady, parseStdoutJson, runCommandE2e } from "../helpers.ts";
+import {
+  isMultimodalSearchE2EReady,
+  isSearchE2EReady,
+  isTableSearchE2EReady,
+  parseStdoutJson,
+  runCommandE2e,
+} from "../helpers.ts";
 import { KNOWLEDGE_SEARCH_ROUTES } from "../topic-routes.ts";
 
 interface DryRunBody {
@@ -293,3 +299,65 @@ describe.skipIf(!isSearchE2EReady())("e2e: knowledge search (live)", () => {
     expect(stderr).toBeTruthy();
   });
 });
+
+// Long-lived console-created fixtures (multimodal / table services cannot be
+// created via the CLI — see .env BAILIAN_E2E_IMAGE_SEARCH_AGENT_ID etc.)
+describe.skipIf(!isMultimodalSearchE2EReady())(
+  "e2e: knowledge search --image live (常驻 fixture)",
+  () => {
+    const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
+    const imageSearchAgentId = process.env.BAILIAN_E2E_IMAGE_SEARCH_AGENT_ID!;
+
+    test("多模态服务接受 --image 并返回 Success", async () => {
+      // Recall is not asserted: hits depend on the fixture base's image contents.
+      // The functional contract under test: the images param is accepted end-to-end.
+      const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
+        "knowledge",
+        "search",
+        "--query",
+        "图里有什么",
+        "--agent-id",
+        imageSearchAgentId,
+        "--workspace-id",
+        workspaceId,
+        "--image",
+        "https://dashscope.oss-cn-beijing.aliyuncs.com/images/dog_and_girl.jpeg",
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<SearchResponse>(stdout);
+      expect(data.code).toBe("Success");
+      expect(Array.isArray(data.data.nodes)).toBe(true);
+    }, 60_000);
+  },
+);
+
+describe.skipIf(!isTableSearchE2EReady())(
+  "e2e: knowledge search 表格库 live (常驻 fixture)",
+  () => {
+    const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
+    const tableSearchAgentId = process.env.BAILIAN_E2E_TABLE_SEARCH_AGENT_ID!;
+
+    test("表格行召回: 命中 fixture 已知单元格值", async () => {
+      // “颜色填充” is a known ZH-column cell in the fixture table (nop0ludera)
+      const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
+        "knowledge",
+        "search",
+        "--query",
+        "颜色填充",
+        "--agent-id",
+        tableSearchAgentId,
+        "--workspace-id",
+        workspaceId,
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<SearchResponse>(stdout);
+      expect(data.code).toBe("Success");
+      expect(data.data.nodes.length).toBeGreaterThan(0);
+      expect(data.data.nodes.map((node) => node.text).join("\n")).toContain("颜色填充");
+    }, 60_000);
+  },
+);

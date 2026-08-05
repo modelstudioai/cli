@@ -206,7 +206,7 @@ bl knowledge chat --message "Describe these images" --image https://example.com/
 | Flag                    | Type   | Required | Description                                                                                                                                               |
 | ----------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--index-id <id>`       | string | yes      | Knowledge base ID                                                                                                                                         |
-| `--doc-id <id>`         | string | no       | Attach the chunk to this document (document-type knowledge bases)                                                                                         |
+| `--doc-id <id>`         | string | no       | Owning document ID; required for table/image knowledge bases (the server rejects field-channel chunks without it), optional for document-type             |
 | `--content <text>`      | string | no       | Chunk body text, up to 6000 chars (document-type); alternative to --content-file                                                                          |
 | `--content-file <path>` | string | no       | Read chunk body from a UTF-8 plain text file (.md/.txt etc.)                                                                                              |
 | `--title <text>`        | string | no       | Chunk title, up to 50 chars (document-type)                                                                                                               |
@@ -219,6 +219,7 @@ bl knowledge chat --message "Describe these images" --image https://example.com/
 #### Notes
 
 - Document / table / image knowledge bases are supported; audio-video ones are not.
+- Table/image knowledge bases require --doc-id — verified live: the server returns HTTP 500 (dataId不能为空) without it. Use the document-level id from the doc list command; the per-row doc_id in chunk list metadata is rejected (Index.InvalidParameter).
 - The API is idempotent but rate-limited to 10 calls per second — throttle batch scripts.
 - The response carries no chunk id; list chunks afterwards to find the new one.
 - For table/image knowledge bases use --field with Excel column headers as keys; values are passed through as strings.
@@ -366,6 +367,7 @@ bl knowledge chunk update --index-id idx-xxx --chunk-id chunk-xxx --doc-id file-
 #### Notes
 
 - Store type defaults to platform (managed storage); custom uses your authorized OSS bucket.
+- Custom buckets must carry the bucket tag bailian-connector-access=ReadAndWrite (Bailian's tag-based access control); without it the server rejects creation with a misleading 'setBucketCORS failed' error.
 - There is no collection delete API — create collections deliberately.
 
 #### Examples
@@ -538,6 +540,7 @@ bl knowledge doc delete --index-id idx-xxx --doc-id file-a --doc-id file-b --yes
 
 - The bucket must be authorized to the platform service role beforehand; permission errors from the server are passed through with a pointer to check AliyunServiceRoleForBailian in the RAM console.
 - File names are derived from the OSS key basename.
+- --overwrite replaces the previously imported file and issues a NEW fileId (the old one becomes invalid) — verified live.
 
 #### Examples
 

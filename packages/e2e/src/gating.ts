@@ -74,3 +74,41 @@ export function isKbAdminE2EReady(): boolean {
 export function isConnectorE2EReady(): boolean {
   return isKbAdminE2EReady() && process.env.BAILIAN_E2E_CONNECTOR === "1";
 }
+
+// ---- Long-lived knowledge fixtures (created manually in the console; the CLI
+// cannot create table/image-type bases or multimodal services itself) ----
+
+/** 表格型知识库 fixture（chunk --field live 闭环） */
+export function isTableKbE2EReady(): boolean {
+  return isKbAdminE2EReady() && !!process.env.BAILIAN_E2E_TABLE_INDEX_ID?.trim();
+}
+
+/** 图片型知识库 fixture（图片 chunk 回读） */
+export function isImageKbE2EReady(): boolean {
+  return isKbAdminE2EReady() && !!process.env.BAILIAN_E2E_IMAGE_INDEX_ID?.trim();
+}
+
+/** 多模态检索服务 fixture（search --image live） */
+export function isMultimodalSearchE2EReady(): boolean {
+  return isKbAdminE2EReady() && !!process.env.BAILIAN_E2E_IMAGE_SEARCH_AGENT_ID?.trim();
+}
+
+/** 多模态问答服务 fixture（chat --image live） */
+export function isMultimodalChatE2EReady(): boolean {
+  return isKbAdminE2EReady() && !!process.env.BAILIAN_E2E_IMAGE_CHAT_AGENT_ID?.trim();
+}
+
+/** 表格库检索服务 fixture（表格行召回 live） */
+export function isTableSearchE2EReady(): boolean {
+  return isKbAdminE2EReady() && !!process.env.BAILIAN_E2E_TABLE_SEARCH_AGENT_ID?.trim();
+}
+
+/** 已授权 OSS bucket fixture（doc import-oss live；需提前在 RAM 授权并放好固定测试文件） */
+export function isOssImportE2EReady(): boolean {
+  return (
+    isKbAdminE2EReady() &&
+    !!process.env.BAILIAN_E2E_OSS_BUCKET?.trim() &&
+    !!process.env.BAILIAN_E2E_OSS_REGION?.trim() &&
+    !!process.env.BAILIAN_E2E_OSS_KEY?.trim()
+  );
+}

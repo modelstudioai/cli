@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isChatE2EReady, parseStdoutJson, runCommandE2e } from "../helpers.ts";
+import {
+  isChatE2EReady,
+  isMultimodalChatE2EReady,
+  parseStdoutJson,
+  runCommandE2e,
+} from "../helpers.ts";
 import { KNOWLEDGE_CHAT_ROUTES } from "../topic-routes.ts";
 
 interface ContentPart {
@@ -389,3 +394,34 @@ describe.skipIf(!isChatE2EReady())("e2e: knowledge chat (live)", () => {
     expect(stderr).toBeTruthy();
   });
 });
+
+// Long-lived console-created fixture (multimodal Q&A services cannot be created
+// via the CLI — see .env BAILIAN_E2E_IMAGE_CHAT_AGENT_ID)
+describe.skipIf(!isMultimodalChatE2EReady())(
+  "e2e: knowledge chat --image live (常驻 fixture)",
+  () => {
+    const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
+    const imageChatAgentId = process.env.BAILIAN_E2E_IMAGE_CHAT_AGENT_ID!;
+
+    test("多模态问答接受 --image 并返回非空回答", async () => {
+      const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
+        "knowledge",
+        "chat",
+        "--message",
+        "图里有什么",
+        "--image",
+        "https://dashscope.oss-cn-beijing.aliyuncs.com/images/dog_and_girl.jpeg",
+        "--agent-id",
+        imageChatAgentId,
+        "--workspace-id",
+        workspaceId,
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<ChatJsonResult>(stdout);
+      expect(data.answer).toBeTruthy();
+      expect(data.answer.length).toBeGreaterThan(0);
+    }, 120_000);
+  },
+);

@@ -47,6 +47,7 @@ export default defineCommand({
   flags: COLLECTION_CREATE_FLAGS,
   notes: [
     "Store type defaults to platform (managed storage); custom uses your authorized OSS bucket.",
+    "Custom buckets must carry the bucket tag bailian-connector-access=ReadAndWrite (Bailian's tag-based access control); without it the server rejects creation with a misleading 'setBucketCORS failed' error.",
     "There is no collection delete API — create collections deliberately.",
   ],
   exampleArgs: [
@@ -71,7 +72,9 @@ export default defineCommand({
     const format = detectOutputFormat(settings.output);
 
     const storeType = (flags.storeType ?? "platform").toUpperCase();
-    // The server contract still uses connector* fields; only the CLI-facing term is collection
+    // The server contract still uses connector* fields; only the CLI-facing term is collection.
+    // CUSTOM fields are regionId/bucketName per api/connector/add-connector.md (live-verified;
+    // the earlier ossRegionId/ossBucket naming was an implementation error, rejected with InvalidParameter).
     const body = {
       connectorType: "FILE",
       connectorName: flags.name,
@@ -79,7 +82,7 @@ export default defineCommand({
       fileConnectorConfig: {
         storeType,
         ...(storeType === "CUSTOM"
-          ? { ossRegionId: flags.ossRegion, ossBucket: flags.ossBucket }
+          ? { regionId: flags.ossRegion, bucketName: flags.ossBucket }
           : {}),
       },
     };

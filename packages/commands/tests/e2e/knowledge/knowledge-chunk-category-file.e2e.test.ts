@@ -5,7 +5,14 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
-import { isKbAdminE2EReady, parseStdoutJson, runCommandE2e } from "../helpers.ts";
+import {
+  isImageKbE2EReady,
+  isKbAdminE2EReady,
+  isOssImportE2EReady,
+  isTableKbE2EReady,
+  parseStdoutJson,
+  runCommandE2e,
+} from "../helpers.ts";
 import {
   KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
   KNOWLEDGE_KB_DELETE_ROUTES,
@@ -690,7 +697,7 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
     expect(connectorConfig?.storeType).toBe("PLATFORM");
   });
 
-  test("collection create: custom dry-run 断言 ossRegionId/ossBucket 键名映射", async () => {
+  test("collection create: custom dry-run 断言 regionId/bucketName 键名映射", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "collection",
@@ -710,11 +717,15 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<DryRunBody>(stdout);
     const connectorConfig = data.request?.fileConnectorConfig as
-      | { storeType?: string; ossRegionId?: string; ossBucket?: string }
+      | { storeType?: string; regionId?: string; bucketName?: string }
       | undefined;
     expect(connectorConfig?.storeType).toBe("CUSTOM");
-    expect(connectorConfig?.ossRegionId).toBe("cn-beijing");
-    expect(connectorConfig?.ossBucket).toBe("my-bucket");
+    // CUSTOM fields are regionId/bucketName per add-connector.md — the earlier
+    // ossRegionId/ossBucket implementation was rejected live with InvalidParameter
+    expect(connectorConfig?.regionId).toBe("cn-beijing");
+    expect(connectorConfig?.bucketName).toBe("my-bucket");
+    expect(connectorConfig).not.toHaveProperty("ossRegionId");
+    expect(connectorConfig).not.toHaveProperty("ossBucket");
   });
 
   test("collection get: 都缺 / 都传 均 USAGE (2)", async () => {
@@ -1343,3 +1354,278 @@ describe.skipIf(!isKbAdminE2EReady())(
     }, 600_000);
   },
 );
+
+interface ChunkListNodes {
+  data?: { nodes?: Array<{ metadata?: Record<string, unknown> }> };
+}
+
+// Long-lived console-created fixture: the CLI can only create document-type bases,
+// so the field channel (table/image bases) rides on BAILIAN_E2E_TABLE_INDEX_ID.
+describe.skipIf(!isTableKbE2EReady())("e2e: chunk --field 表格库 live (常驻 fixture)", () => {
+  const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
+  const tableIndexId = process.env.BAILIAN_E2E_TABLE_INDEX_ID!;
+
+  test("field 闭环: 取 doc_id → add --field → list 回读命中 → delete", async () => {
+    // Gotcha (verified live): dataId must be the document-level id from doc list;
+    // the per-row doc_id in chunk metadata (with a _<row> suffix) is rejected with
+    // Index.InvalidParameter
+    const docListRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      "knowledge",
+      "doc",
+      "list",
+      "--index-id",
+      tableIndexId,
+      "--workspace-id",
+      workspaceId,
+      "--quiet",
+    ]);
+    expect(docListRun.exitCode, docListRun.stderr).toBe(0);
+    const tableDocId = docListRun.stdout.trim().split("\n")[0];
+    expect(tableDocId, "表格 fixture 库应至少有 1 个文档").toBeTruthy();
+
+    // Server gotcha (verified live): table bases reject field chunks without --doc-id
+    // — HTTP 500 "dataId不能为空", passed through verbatim as a server error
+    const noDocIdRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      "knowledge",
+      "chunk",
+      "add",
+      "--index-id",
+      tableIndexId,
+      "--field",
+      "ZH=missing-doc-id-probe",
+      "--workspace-id",
+      workspaceId,
+    ]);
+    expect(noDocIdRun.exitCode).not.toBe(0);
+
+    // add a row via the field channel (ZH/KO are the fixture table's Excel headers)
+    const marker = `e2e-field-${Date.now()}`;
+    const addRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      "knowledge",
+      "chunk",
+      "add",
+      "--index-id",
+      tableIndexId,
+      "--doc-id",
+      tableDocId!,
+      "--field",
+      `ZH=${marker}`,
+      "--field",
+      "KO=e2e-probe",
+      "--workspace-id",
+      workspaceId,
+    ]);
+    expect(addRun.exitCode, addRun.stderr).toBe(0);
+
+    // read back by sweeping pages until the marker row shows up, grab its chunk id
+    let markerChunkId = "";
+    for (let pageNumber = 1; pageNumber <= 5 && !markerChunkId; pageNumber++) {
+      const pageRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+        "knowledge",
+        "chunk",
+        "list",
+        "--index-id",
+        tableIndexId,
+        "--page-number",
+        String(pageNumber),
+        "--page-size",
+        "100",
+        "--workspace-id",
+        workspaceId,
+        "--output",
+        "json",
+      ]);
+      expect(pageRun.exitCode, pageRun.stderr).toBe(0);
+      const pageNodes = parseStdoutJson<ChunkListNodes>(pageRun.stdout).data?.nodes ?? [];
+      const match = pageNodes.find((node) => node.metadata?.ZH === marker);
+      if (match) markerChunkId = (match.metadata?._id as string | undefined) ?? "";
+      if (pageNodes.length < 100) break;
+    }
+    expect(markerChunkId, `field 新增行未在 list 中回读到 (marker=${marker})`).toBeTruthy();
+
+    // clean up the exact row we added — the fixture base itself is never touched
+    const deleteRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      "knowledge",
+      "chunk",
+      "delete",
+      "--index-id",
+      tableIndexId,
+      "--chunk-id",
+      markerChunkId,
+      "--yes",
+      "--workspace-id",
+      workspaceId,
+    ]);
+    expect(deleteRun.exitCode, deleteRun.stderr).toBe(0);
+  }, 120_000);
+});
+
+describe.skipIf(!isImageKbE2EReady())("e2e: 图片库 chunk 回读 live (常驻 fixture)", () => {
+  const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
+  const imageIndexId = process.env.BAILIAN_E2E_IMAGE_INDEX_ID!;
+
+  test("chunk list 返回 image_url 数组与可见性标志", async () => {
+    const listRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      "knowledge",
+      "chunk",
+      "list",
+      "--index-id",
+      imageIndexId,
+      "--page-size",
+      "2",
+      "--workspace-id",
+      workspaceId,
+      "--output",
+      "json",
+    ]);
+    expect(listRun.exitCode, listRun.stderr).toBe(0);
+    const nodes = parseStdoutJson<ChunkListNodes>(listRun.stdout).data?.nodes ?? [];
+    expect(nodes.length).toBeGreaterThan(0);
+    // Image-type chunks carry image_url arrays (shape verified against the live fixture)
+    const firstMeta = nodes[0]?.metadata ?? {};
+    expect(Array.isArray(firstMeta.image_url)).toBe(true);
+    expect((firstMeta.image_url as string[]).length).toBeGreaterThan(0);
+    expect(typeof firstMeta.is_displayed_chunk_content).toBe("boolean");
+  }, 60_000);
+});
+
+// Requires a bucket pre-authorized to the platform service role with a fixed test
+// object in place (see .env BAILIAN_E2E_OSS_BUCKET/REGION/KEY)
+describe.skipIf(!isOssImportE2EReady())("e2e: doc import-oss live (授权 bucket fixture)", () => {
+  const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
+  const ossBucket = process.env.BAILIAN_E2E_OSS_BUCKET!;
+  const ossRegion = process.env.BAILIAN_E2E_OSS_REGION!;
+  const ossKey = process.env.BAILIAN_E2E_OSS_KEY!;
+
+  test("导入 → overwrite 重导(新 fileId, 旧 id 作废) → file delete 自清理", async () => {
+    // 1) first import returns a fileId (locks the addFileResultList response shape:
+    //    the docs' flat fileIds field is not returned — live-verified)
+    const importRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      "knowledge",
+      "doc",
+      "import-oss",
+      "--bucket",
+      ossBucket,
+      "--region",
+      ossRegion,
+      "--oss-key",
+      ossKey,
+      "--workspace-id",
+      workspaceId,
+      "--quiet",
+    ]);
+    expect(importRun.exitCode, importRun.stderr).toBe(0);
+    const firstFileId = importRun.stdout.trim();
+    expect(firstFileId).toMatch(/^file_/);
+
+    // 2) re-import with --overwrite: the server replaces the file and issues a NEW
+    //    fileId; the old one becomes invalid (live-verified semantics)
+    const overwriteRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      "knowledge",
+      "doc",
+      "import-oss",
+      "--bucket",
+      ossBucket,
+      "--region",
+      ossRegion,
+      "--oss-key",
+      ossKey,
+      "--overwrite",
+      "--workspace-id",
+      workspaceId,
+      "--quiet",
+    ]);
+    expect(overwriteRun.exitCode, overwriteRun.stderr).toBe(0);
+    const overwriteFileId = overwriteRun.stdout.trim();
+    expect(overwriteFileId).toMatch(/^file_/);
+    expect(overwriteFileId).not.toBe(firstFileId);
+
+    // the pre-overwrite id is gone — file get on it fails
+    const staleGetRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      "knowledge",
+      "file",
+      "get",
+      "--file-id",
+      firstFileId,
+      "--workspace-id",
+      workspaceId,
+    ]);
+    expect(staleGetRun.exitCode).not.toBe(0);
+
+    // 3) clean up the surviving imported file
+    const deleteRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      "knowledge",
+      "file",
+      "delete",
+      "--file-id",
+      overwriteFileId,
+      "--yes",
+      "--workspace-id",
+      workspaceId,
+    ]);
+    expect(deleteRun.exitCode, deleteRun.stderr).toBe(0);
+  }, 120_000);
+
+  test("collection create custom live: 幂等复用固定名自有存储集合", async () => {
+    // No collection delete API — fixed-name idempotent reuse, same pattern as the
+    // platform collection test. Requires the bucket tag
+    // bailian-connector-access=ReadAndWrite (tag-based access control).
+    const connectorName = "e2e-test-custom-conn"; // exactly 20 chars (server name limit)
+    const firstGetRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      "knowledge",
+      "collection",
+      "get",
+      "--name",
+      connectorName,
+      "--workspace-id",
+      workspaceId,
+      "--quiet",
+    ]);
+    let connectorId = firstGetRun.exitCode === 0 ? firstGetRun.stdout.trim() : "";
+
+    if (!connectorId) {
+      const createRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+        "knowledge",
+        "collection",
+        "create",
+        "--name",
+        connectorName,
+        "--description",
+        "e2e fixture custom connector (own OSS bucket, reused across runs)",
+        "--store-type",
+        "custom",
+        "--oss-region",
+        process.env.BAILIAN_E2E_OSS_REGION!,
+        "--oss-bucket",
+        process.env.BAILIAN_E2E_OSS_BUCKET!,
+        "--workspace-id",
+        workspaceId,
+        "--quiet",
+      ]);
+      expect(createRun.exitCode, createRun.stderr).toBe(0);
+      connectorId = createRun.stdout.trim();
+    }
+    expect(connectorId).toBeTruthy();
+
+    // get by id: identity fields only — live-verified getConnector does NOT echo
+    // fileConnectorConfig (storeType/regionId/bucketName are absent from readback)
+    const getRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      "knowledge",
+      "collection",
+      "get",
+      "--collection-id",
+      connectorId,
+      "--workspace-id",
+      workspaceId,
+      "--output",
+      "json",
+    ]);
+    expect(getRun.exitCode, getRun.stderr).toBe(0);
+    const customDetail = parseStdoutJson<{
+      data: { connectorId?: string; connectorName?: string; connectorType?: string };
+    }>(getRun.stdout);
+    expect(customDetail.data.connectorId).toBe(connectorId);
+    expect(customDetail.data.connectorName).toBe(connectorName);
+    expect(customDetail.data.connectorType).toBe("FILE");
+  }, 60_000);
+});

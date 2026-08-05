@@ -54,6 +54,7 @@ export default defineCommand({
   notes: [
     "The bucket must be authorized to the platform service role beforehand; permission errors from the server are passed through with a pointer to check AliyunServiceRoleForBailian in the RAM console.",
     "File names are derived from the OSS key basename.",
+    "--overwrite replaces the previously imported file and issues a NEW fileId (the old one becomes invalid) — verified live.",
   ],
   exampleArgs: [
     "--bucket my-bucket --region cn-beijing --oss-key docs/a.pdf --workspace-id ws-xxx",
@@ -94,14 +95,21 @@ export default defineCommand({
       body,
     });
 
-    const fileIds = response.data?.fileIds ?? [];
+    // Live-verified shape: results come back as addFileResultList (the docs' flat
+    // fileIds field is not returned); per-file status is SUCCESS on success
+    const results = response.data?.addFileResultList ?? [];
+    const fileIds = results
+      .map((result) => result.fileId)
+      .filter((fileId): fileId is string => !!fileId);
     if (settings.quiet) {
       for (const fileId of fileIds) emitBare(fileId);
       return;
     }
     if (format === "text") {
       emitBare(`imported: ${fileIds.length} file(s)`);
-      for (const fileId of fileIds) emitBare(`  ${fileId}`);
+      for (const result of results) {
+        emitBare(`  ${result.fileId ?? "-"}  ${result.status ?? "-"}  ${result.ossKey ?? ""}`);
+      }
       return;
     }
     emitResult(response, format);

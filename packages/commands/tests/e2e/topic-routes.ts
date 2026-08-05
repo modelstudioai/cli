@@ -262,6 +262,7 @@ export const KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES: E2eRouteExports = {
   "knowledge collection get": "knowledgeCollectionGet",
   "knowledge doc import-oss": "knowledgeDocImportOss",
   "knowledge list": "knowledgeKbList", // live grabs a real index id
+  "knowledge doc list": "knowledgeDocList", // table fixture: resolve the document-level dataId
   "knowledge doc upload": "knowledgeDocUpload", // live produces a fileId
   "knowledge doc delete": "knowledgeDocDelete", // live verifies document-level delete semantics
 };

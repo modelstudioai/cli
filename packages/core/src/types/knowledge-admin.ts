@@ -332,8 +332,9 @@ export interface RagConnectorInfo {
   connectorType?: string;
   fileConnectorConfig?: {
     storeType?: string;
-    ossRegionId?: string;
-    ossBucket?: string;
+    /** CUSTOM request fields: regionId/bucketName (per add-connector.md, live-verified) */
+    regionId?: string;
+    bucketName?: string;
     [key: string]: unknown;
   };
   [key: string]: unknown;
@@ -341,9 +342,16 @@ export interface RagConnectorInfo {
 export type RagAddConnectorResponse = RagConnectorResponse<RagConnectorInfo>;
 export type RagGetConnectorResponse = RagConnectorResponse<RagConnectorInfo>;
 
-/** POST addFilesFromAuthorizedOss */
+/** POST addFilesFromAuthorizedOss — live shape is addFileResultList (the docs' fileIds is not returned) */
+export interface RagOssImportFileResult {
+  fileId?: string;
+  ossKey?: string;
+  status?: string;
+  msg?: string;
+  [key: string]: unknown;
+}
 export interface RagOssImportData {
-  fileIds?: string[];
+  addFileResultList?: RagOssImportFileResult[];
   [key: string]: unknown;
 }
 export type RagOssImportResponse = RagConnectorResponse<RagOssImportData>;

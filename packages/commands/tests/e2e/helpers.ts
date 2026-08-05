@@ -29,9 +29,15 @@ export {
   isConnectorE2EReady,
   isConsoleE2EReady,
   isDashScopeE2EReady,
+  isImageKbE2EReady,
   isKbAdminE2EReady,
+  isMultimodalChatE2EReady,
+  isMultimodalSearchE2EReady,
   isOpenApiE2EReady,
+  isOssImportE2EReady,
   isSearchE2EReady,
+  isTableKbE2EReady,
+  isTableSearchE2EReady,
 } from "e2e/gating";
 
 const e2eDir = dirname(fileURLToPath(import.meta.url));
