@@ -65,6 +65,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl usage freetier`             | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable     | [usage.md](usage.md)           |
 | `bl usage stats`                | Query model usage statistics                                                                   | [usage.md](usage.md)           |
 | `bl usage summary`              | Show a unified usage summary: free-tier quota and recent usage overview                        | [usage.md](usage.md)           |
+| `bl usage token-plan`           | Show Token Plan quota usage as core JSON or a human-readable view                              | [usage.md](usage.md)           |
 | `bl workspace init`             | Initialize Bailian workspace and activate postpaid services                                    | [workspace.md](workspace.md)   |
 | `bl workspace list`             | List all workspaces                                                                            | [workspace.md](workspace.md)   |
 
@@ -90,7 +91,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `text`       | `chat`                                                                       | [text.md](text.md)             |
 | `token-plan` | `add-member`, `assign-seats`, `create-key`, `list-seats`                     | [token-plan.md](token-plan.md) |
 | `update`     | `(root)`                                                                     | [update.md](update.md)         |
-| `usage`      | `free`, `freetier`, `stats`, `summary`                                       | [usage.md](usage.md)           |
+| `usage`      | `free`, `freetier`, `stats`, `summary`, `token-plan`                         | [usage.md](usage.md)           |
 | `workspace`  | `init`, `list`                                                               | [workspace.md](workspace.md)   |
 
 ## Global flags
