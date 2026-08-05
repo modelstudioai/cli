@@ -5,7 +5,6 @@ import {
   DEFAULT_INSTALL_PS1_URL,
   DEFAULT_INSTALL_SCRIPT_URL,
   getConfigDir,
-  trackingHeaders,
   getUpdateInstallMethod,
 } from "bailian-cli-core";
 
@@ -165,10 +164,7 @@ export async function fetchLatestVersion(
   try {
     const encoded = npmPackage.replace("/", "%2f");
     const res = await fetch(`${NPM_REGISTRY}/${encoded}/latest`, {
-      headers: {
-        Accept: "application/json",
-        ...trackingHeaders(),
-      },
+      headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) return null;

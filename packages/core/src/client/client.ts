@@ -126,7 +126,10 @@ export class Client {
   /** Resolve a file arg: upload a local path to OSS (returns oss:// URL), or pass a URL through. */
   uploadFile(source: string, model: string, opts: { signal?: AbortSignal } = {}): Promise<string> {
     if (!isLocalFile(source)) return Promise.resolve(source);
-    return resolveFileUrl(source, this.requireApi().token, model, opts);
+    return resolveFileUrl(source, this.requireApi().token, model, {
+      ...opts,
+      identity: this.deps.identity,
+    });
   }
 
   /**
@@ -233,7 +236,7 @@ export class Client {
     const timeoutMs = this.deps.settings.timeout * 1000;
     const res = await fetch(endpoint, {
       method: opts.method,
-      headers: { ...headers, ...trackingHeaders() },
+      headers: { ...headers, ...trackingHeaders(this.deps.identity) },
       body: bodyStr || undefined,
       signal: AbortSignal.timeout(timeoutMs),
     });

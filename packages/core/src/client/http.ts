@@ -4,7 +4,7 @@ import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { mapApiError } from "../errors/api.ts";
 import { maskToken } from "../utils/token.ts";
-import { SOURCE_CONFIG, trackingHeaders } from "./headers.ts";
+import { sourceConfig, trackingHeaders } from "./headers.ts";
 
 /** 传输层依赖:UA 用 identity,timeout/verbose 用 settings。凭证由调用方(Client)注头。 */
 export interface HttpDeps {
@@ -39,7 +39,7 @@ export async function request(deps: HttpDeps, opts: RequestOpts): Promise<Respon
 
   const headers: Record<string, string> = {
     "User-Agent": `${deps.identity.clientName}/${deps.identity.version}`,
-    ...trackingHeaders(),
+    ...trackingHeaders(deps.identity),
     ...opts.headers,
   };
 
@@ -59,7 +59,7 @@ export async function request(deps: HttpDeps, opts: RequestOpts): Promise<Respon
     console.error(`> ${opts.method ?? "GET"} ${opts.url}`);
     const auth = headers["Authorization"];
     if (auth) console.error(`> Auth: ${maskToken(auth.replace(/^Bearer /, ""))}`);
-    console.error(`> x-dashscope-source-config: ${SOURCE_CONFIG}`);
+    console.error(`> x-dashscope-source-config: ${sourceConfig(deps.identity)}`);
   }
 
   const timeoutMs = (opts.timeout ?? deps.settings.timeout) * 1000;

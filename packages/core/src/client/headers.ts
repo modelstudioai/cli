@@ -1,23 +1,31 @@
 /**
  * Shared HTTP request headers for all outgoing requests.
  *
- * Centralises the `x-dashscope-source-config` header so every fetch call
- * (both via the central http client and the bypass paths) uses the
- * same values from a single source of truth.
+ * Centralises the `x-dashscope-source-config` header so Bailian/DashScope API
+ * transports use the same product identity. Generic npm, OSS, and result-file
+ * transfers deliberately do not send this gateway-consumed metadata.
  */
+
+import type { Identity } from "../config/schema.ts";
 
 export const CHANNEL = "bailian-cli";
 
-export const TAGS = { t1: "public", t2: "" };
+export type TrackingIdentity = Pick<Identity, "binName" | "version">;
 
-export const SOURCE_CONFIG = JSON.stringify({
-  channel: CHANNEL,
-  tags: TAGS,
-});
+export function sourceConfig(identity: TrackingIdentity): string {
+  return JSON.stringify({
+    channel: CHANNEL,
+    tags: {
+      t1: "public",
+      t2: identity.binName,
+      t3: identity.version,
+    },
+  });
+}
 
-/** Standard tracking headers required on every outbound request. */
-export function trackingHeaders(): Record<string, string> {
+/** Tracking headers for Bailian/DashScope API requests. */
+export function trackingHeaders(identity: TrackingIdentity): Record<string, string> {
   return {
-    "x-dashscope-source-config": SOURCE_CONFIG,
+    "x-dashscope-source-config": sourceConfig(identity),
   };
 }

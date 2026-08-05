@@ -23,6 +23,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getConfigDir } from "../config/paths.ts";
+import { detectInstalledAgents, fanOutSkillToAgents } from "../skills/agents.ts";
 import { buildSkillLockEntry, installSkillWithFanout } from "../skills/installer.ts";
 import { readSkillLock, upsertSkillLockEntry } from "../skills/lock.ts";
 import { fetchSkillsIndex } from "../skills/registry.ts";
@@ -90,12 +91,17 @@ function recordWikiInLock(lockEntry: SkillLockEntry): void {
   }
 }
 
-/** Whether lock already has a wiki record matching the remote content fingerprint (avoids rewriting lock on every 12h check) */
-function wikiLockUpToDate(contentHash: string): boolean {
+/**
+ * Whether the lock still needs a wiki backfill: content fingerprint mismatch, or the
+ * record carries no fan-out links (postinstall writes contentHash only and never fans
+ * out, so agents would otherwise never see the wiki skill until content changes).
+ */
+function wikiLockNeedsBackfill(contentHash: string): boolean {
   try {
-    return readSkillLock().skills[WIKI_SKILL_NAME]?.contentHash === contentHash;
+    const locked = readSkillLock().skills[WIKI_SKILL_NAME];
+    return locked?.contentHash !== contentHash || !Array.isArray(locked.links);
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -136,15 +142,25 @@ export async function maybeSyncWikiData(): Promise<boolean> {
   const dataOk = catalogDataExists();
   if (dataOk && (!state || state.contentHash === entry.contentHash)) {
     writeState({ lastChecked: now, contentHash: entry.contentHash });
-    // Data and content are ready but lock record is missing/stale (e.g. postinstall landed before this mechanism) → backfill
-    if (!wikiLockUpToDate(entry.contentHash)) recordWikiInLock(buildSkillLockEntry(entry, []));
+    // Lock record missing/stale (e.g. postinstall wrote canonical only, without fan-out) → backfill
+    if (wikiLockNeedsBackfill(entry.contentHash)) {
+      const previousLinks = readSkillLock().skills[WIKI_SKILL_NAME]?.links ?? [];
+      const fanout = fanOutSkillToAgents(WIKI_SKILL_NAME, detectInstalledAgents(), previousLinks);
+      recordWikiInLock(buildSkillLockEntry(entry, fanout.links));
+    }
     return false;
   }
 
   // 4. Different content or missing data: delegate to the shared skill install pipeline
   //    (download → extract → SKILL.md validate → atomic swap → fan-out → lock with links)
   try {
-    const record = await installSkillWithFanout(WIKI_SKILL_NAME, entry);
+    const previousLinks = readSkillLock().skills[WIKI_SKILL_NAME]?.links ?? [];
+    const record = await installSkillWithFanout(
+      WIKI_SKILL_NAME,
+      entry,
+      detectInstalledAgents(),
+      previousLinks,
+    );
     recordWikiInLock(record.lockEntry);
   } catch {
     // Install failed → clean exit, leave existing data untouched, do not write state; next recommend retries
