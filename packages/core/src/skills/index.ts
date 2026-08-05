@@ -29,9 +29,11 @@ export {
   getAgentTargets,
   detectInstalledAgents,
   linkSkillToAgents,
+  fanOutSkillToAgents,
   unlinkSkillFromAgents,
   type AgentTarget,
   type LinkResult,
+  type FanoutOutcome,
 } from "./agents.ts";
 export {
   installSkill,

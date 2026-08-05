@@ -4,6 +4,7 @@ import {
   defineCommand,
   detectOutputFormat,
   detectInstalledAgents,
+  fanOutSkillToAgents,
   fetchSkillsIndex,
   getSkillRegistryBaseUrl,
   installSkillWithFanout,
@@ -45,6 +46,7 @@ export default defineCommand({
     const lock = readSkillLock();
     const disk = new Set(listSkillDirsOnDisk());
 
+    const agents = detectInstalledAgents();
     const results: UpdateOutcome[] = [];
     const targets: string[] = [];
     if (requested === "all") {
@@ -60,6 +62,11 @@ export default defineCommand({
           continue;
         }
         if (entry.contentHash === locked.contentHash && disk.has(name)) {
+          // Self-healing: content unchanged, but still fill fan-out links for agents
+          // detected since the last install (and refresh recorded copies); the merged
+          // ledger keeps paths of unvisited agents reclaimable by bl skill remove
+          const fanout = fanOutSkillToAgents(name, agents, locked.links ?? []);
+          lock.skills[name] = { ...locked, links: fanout.links };
           results.push({ name, status: "up-to-date", publishedAt: locked.publishedAt });
           continue;
         }
@@ -80,14 +87,18 @@ export default defineCommand({
       }
     }
 
-    const agents = detectInstalledAgents();
     const tasks = targets.map((name) => async (): Promise<UpdateOutcome> => {
       const entry = index.skills[name];
       if (!entry) {
         return { name, status: "failed", reason: "skill not found in registry" };
       }
       try {
-        const record = await installSkillWithFanout(name, entry, agents);
+        const record = await installSkillWithFanout(
+          name,
+          entry,
+          agents,
+          lock.skills[name]?.links ?? [],
+        );
         lock.skills[name] = record.lockEntry;
         return { name, status: "updated", publishedAt: entry.publishedAt };
       } catch (err) {

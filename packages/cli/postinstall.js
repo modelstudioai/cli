@@ -9,7 +9,8 @@
  *   1. Download skills/index.json from public-read OSS, get the bailian-docs-llm-wiki entry
  *   2. Download skills/bailian-docs-llm-wiki/<entry.object> (sha256-<hex>.tar.br, brotli q6, ~2.3MB);
  *      legacy fallback to skill.tar.br when the entry has no valid object field
- *   3. Node built-in brotli decompress + tar-stream extract (per-entry path safety check) to same-volume temp dir
+ *   3. Node built-in brotli decompress + tar-stream extract (per-entry path safety check) to same-volume temp dir,
+ *      then recompute contentHash over the extracted files and reject on mismatch (symmetric with core installer)
  *   4. renameSync atomic swap into ~/.bailian/skills/bailian-docs-llm-wiki/
  *   5. Write ~/.bailian/wiki-sync-state.json
  *   6. Write ~/.bailian/skills/skill-lock.json record (same ledger as bl skill)
@@ -20,10 +21,12 @@
  *   - Standalone implementation: does not import bailian-cli-core, avoiding ESM path issues after bundling
  *   - Depends on Node built-in modules + tar-stream (consistent with sync.ts / publisher skills-publish.mjs)
  */
+import { createHash } from "node:crypto";
 import {
   createWriteStream,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   renameSync,
   rmSync,
@@ -106,6 +109,9 @@ async function downloadBuffer(url) {
 
 /** tar 条目路径必须是相对路径且不含 ..，防止 tar-slip 逃逸解包目录 */
 function isSafeEntryName(name) {
+  // Symmetric with core skills/extract.ts: backslashes can escape the extraction
+  // dir on Windows (path.join expands "\.." segments, leading "\" hits drive root)
+  if (name.includes("\\") || name.includes("\0")) return false;
   if (name.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(name)) return false;
   return !name.split("/").includes("..");
 }
@@ -140,6 +146,30 @@ async function extractTarBr(tarBrBuffer, destDir) {
   await pipeline(Readable.from(tarBrBuffer), createBrotliDecompress(), extract);
 }
 
+/**
+ * Recompute the publisher's deterministic content hash over an extracted directory
+ * (same accumulation as core skills/extract.ts computeDirContentHash): regular files
+ * sorted by "/"-separated relative path, sha256 over relPath + bytes.
+ */
+function computeDirContentHash(dir) {
+  const relPaths = [];
+  const walk = (sub) => {
+    for (const dirent of readdirSync(sub ? join(dir, sub) : dir, { withFileTypes: true })) {
+      const rel = sub ? `${sub}/${dirent.name}` : dirent.name;
+      if (dirent.isDirectory()) walk(rel);
+      else if (dirent.isFile()) relPaths.push(rel);
+    }
+  };
+  walk("");
+  relPaths.sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+  const hash = createHash("sha256");
+  for (const rel of relPaths) {
+    hash.update(rel);
+    hash.update(readFileSync(join(dir, rel)));
+  }
+  return `sha256:${hash.digest("hex")}`;
+}
+
 /** Atomic swap: tmpDir (same volume) → catalogDir. */
 function atomicSwap(tmpDir, catalogDir) {
   mkdirSync(dirname(catalogDir), { recursive: true });
@@ -166,12 +196,22 @@ async function main() {
     entry.object && OBJECT_FILE_RE.test(entry.object) ? entry.object : LEGACY_ASSET_NAME;
   const tarBuf = await downloadBuffer(`${REGISTRY_BASE_URL}/${WIKI_SKILL_NAME}/${assetName}`);
 
-  // 3. Extract to same-volume temp dir + atomic swap
+  // 3. Extract to same-volume temp dir + integrity check + atomic swap
   const catalogDir = getCatalogDir();
   const tmpDir = `${catalogDir}.tmp-${process.pid}-${Date.now()}`;
   try {
     mkdirSync(tmpDir, { recursive: true });
     await extractTarBr(tarBuf, tmpDir);
+    // Symmetric with layer 2 (core installer): reject archive/index fingerprint mismatch
+    // before touching the canonical dir
+    if (entry.contentHash.startsWith("sha256:")) {
+      const actualContentHash = computeDirContentHash(tmpDir);
+      if (actualContentHash !== entry.contentHash) {
+        throw new Error(
+          `content hash mismatch: index says ${entry.contentHash}, archive is ${actualContentHash}`,
+        );
+      }
+    }
     atomicSwap(tmpDir, catalogDir);
   } catch (err) {
     if (existsSync(tmpDir)) rmSync(tmpDir, { recursive: true, force: true });
