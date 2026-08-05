@@ -50,7 +50,7 @@ export function createInstrumentedFetch(deps: HttpDeps): FetchImplementation {
       headers.set("User-Agent", `${deps.identity.clientName}/${deps.identity.version}`);
     }
     if (isAlibabaCloudHost(url)) {
-      for (const [name, value] of Object.entries(trackingHeaders())) {
+      for (const [name, value] of Object.entries(trackingHeaders(deps.identity))) {
         headers.set(name, value);
       }
     }

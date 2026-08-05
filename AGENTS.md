@@ -66,6 +66,7 @@ Skill / 命令手册随 `skills/bailian-*/` 经 `npx skills add modelstudioai/cl
 | Skill 文案 / 路由 | 改 SKILL 路由、安装约定、hand-off、hub/领域边界 | [docs/agents/skill-change.md](docs/agents/skill-change.md)                   |
 | 错误文案变更      | 改 `BailianError` 的 message 或 hint            | [docs/agents/error-hint-change.md](docs/agents/error-hint-change.md)         |
 | URL / 渠道变更    | 控制台域名 / 文档站 / 追踪参数                  | [docs/agents/url-change.md](docs/agents/url-change.md)                       |
+| 埋点变更          | 改 AEM 命令事件、后端渠道 header、User-Agent    | [docs/agents/telemetry-change.md](docs/agents/telemetry-change.md)           |
 | 鉴权扩展          | 加 OAuth / SSO / 换 token 来源                  | [docs/agents/auth-change.md](docs/agents/auth-change.md)                     |
 | 配置项扩展        | 新 env var 或 `~/.bailian/config.json` 字段     | [docs/agents/config-add.md](docs/agents/config-add.md)                       |
 | Profile / 激活    | 改命名 Profile、预设或 `active_config`          | [docs/agents/config-profile-change.md](docs/agents/config-profile-change.md) |

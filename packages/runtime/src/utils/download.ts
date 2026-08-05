@@ -1,6 +1,6 @@
 import { createWriteStream, mkdirSync, unlinkSync } from "fs";
 import { dirname } from "path";
-import { BailianError, ExitCode, trackingHeaders } from "bailian-cli-core";
+import { BailianError, ExitCode } from "bailian-cli-core";
 import { createProgressBar } from "../output/progress.ts";
 import type { ReadableStreamReadResult } from "stream/web";
 
@@ -9,9 +9,7 @@ export async function downloadFile(
   destPath: string,
   opts?: { quiet?: boolean },
 ): Promise<{ size: number }> {
-  const res = await fetch(url, {
-    headers: trackingHeaders(),
-  });
+  const res = await fetch(url);
 
   if (!res.ok) {
     throw new BailianError(`Download failed: HTTP ${res.status}`, ExitCode.GENERAL);

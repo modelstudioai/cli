@@ -1,6 +1,6 @@
 import { expect, test } from "vite-plus/test";
 import type { Identity, Settings } from "../src/index.ts";
-import { createInstrumentedFetch, SOURCE_CONFIG } from "../src/index.ts";
+import { createInstrumentedFetch, sourceConfig } from "../src/index.ts";
 
 const identity: Identity = {
   binName: "bl",
@@ -51,7 +51,12 @@ test("adds UA and tracking header on Alibaba Cloud hosts", async () => {
     { method: "POST", headers: { Authorization: "Bearer k" } },
   );
   expect(headers.get("user-agent")).toBe("bailian-cli/1.2.3");
-  expect(headers.get("x-dashscope-source-config")).toBe(SOURCE_CONFIG);
+  expect(headers.get("x-dashscope-source-config")).toBe(
+    JSON.stringify({
+      channel: "bailian-cli",
+      tags: { t1: "public", t2: "bl", t3: "1.2.3" },
+    }),
+  );
   expect(headers.get("authorization")).toBe("Bearer k");
 });
 
@@ -81,4 +86,13 @@ test("passes non-URL-parseable inputs through without tracking headers", async (
   const { url, headers } = await capture("/relative/path");
   expect(url).toBe("/relative/path");
   expect(headers.get("x-dashscope-source-config")).toBeNull();
+});
+
+test("uses kscli identity and version in source config", () => {
+  expect(sourceConfig({ binName: "kscli", version: "1.13.1" })).toBe(
+    JSON.stringify({
+      channel: "bailian-cli",
+      tags: { t1: "public", t2: "kscli", t3: "1.13.1" },
+    }),
+  );
 });

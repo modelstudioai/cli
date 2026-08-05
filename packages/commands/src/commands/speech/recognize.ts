@@ -9,7 +9,6 @@ import {
   type DashScopeASRRequest,
   type DashScopeASRTaskResult,
   type DashScopeAsyncResponse,
-  trackingHeaders,
   stripUndefined,
   taskPath,
   speechRecognizePath,
@@ -201,9 +200,7 @@ async function handleAsyncMode(
     }
 
     // Fetch transcription JSON
-    const transRes = await fetch(subResult.transcription_url, {
-      headers: trackingHeaders(),
-    });
+    const transRes = await fetch(subResult.transcription_url);
     if (!transRes.ok) {
       throw new BailianError(
         `Failed to download transcription: HTTP ${transRes.status}`,
