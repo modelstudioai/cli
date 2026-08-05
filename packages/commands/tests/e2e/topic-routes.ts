@@ -294,6 +294,7 @@ export const JOURNEY_J2_ROUTES: E2eRouteExports = {
   "knowledge doc status": "knowledgeDocStatus",
   "knowledge doc tag": "knowledgeDocTag",
   "knowledge doc delete": "knowledgeDocDelete",
+  "knowledge stats": "knowledgeKbStats",
 };
 
 export const JOURNEY_J3_ROUTES: E2eRouteExports = {

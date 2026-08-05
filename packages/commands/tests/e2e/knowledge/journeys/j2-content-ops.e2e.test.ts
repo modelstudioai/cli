@@ -4,7 +4,7 @@
 // Note: there is no "append documents to an existing base" command (kb update takes
 // no doc-id), so incremental semantics are expressed as a two-document create + deleting one.
 import { describe, expect, test } from "vite-plus/test";
-import { isKbAdminE2EReady } from "../../helpers.ts";
+import { isKbAdminE2EReady, parseStdoutJson } from "../../helpers.ts";
 import { JOURNEY_J2_ROUTES } from "../../topic-routes.ts";
 import {
   cleanupKbFixture,
@@ -66,6 +66,30 @@ describe.skipIf(!isKbAdminE2EReady())("journey J2: 内容运维 (live, 自清理
       ]);
       expect(docStatusRun.exitCode, docStatusRun.stderr).toBe(0);
       expect(docStatusRun.stdout.trim()).toBe("COMPLETED");
+
+      // 2.5) knowledge stats — monitor endpoint returns valid structure (hard)
+      const statsRun = await reporter.runStep("kb stats", JOURNEY_J2_ROUTES, [
+        "knowledge",
+        "stats",
+        "--index-id",
+        kb.indexId,
+        "--workspace-id",
+        workspaceId,
+        "--output",
+        "json",
+      ]);
+      expect(statsRun.exitCode, statsRun.stderr).toBe(0);
+      const statsData = parseStdoutJson<{
+        data?: {
+          storageMonitorData?: { indexStorageLimit?: number };
+          qpsMonitorData?: { monitorData?: unknown[] };
+        };
+      }>(statsRun.stdout);
+      expect(typeof statsData.data?.storageMonitorData?.indexStorageLimit).toBe("number");
+      expect(Array.isArray(statsData.data?.qpsMonitorData?.monitorData)).toBe(true);
+      reporter.recordNote(
+        `storage limit=${statsData.data?.storageMonitorData?.indexStorageLimit} qps windows=${statsData.data?.qpsMonitorData?.monitorData?.length ?? 0}`,
+      );
 
       // 3) doc tag on doc2 (tagging succeeds: hard; tag read-back: soft — server-side
       // display lag or the API not echoing tags are both tolerable)
