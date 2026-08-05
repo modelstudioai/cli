@@ -77,11 +77,20 @@ No timeline scrubbing. No frame-by-frame editing. Just one sentence → one vide
 ## Installation
 
 ```bash
+# Recommended — no Node required
+curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
+
+# Windows (PowerShell)
+irm https://bailian.aliyun.com/cli/install.ps1 | iex
+
+# Node users / developers (Node.js >= 18.17)
 npm install -g bailian-cli
+
+# Agent skills
 npx skills add modelstudioai/cli --all -g
 ```
 
-> Requires Node.js >= 18.17.
+> Binary install does not require Node.js. `npm install -g` remains fully supported.
 
 ## Quick Start
 
@@ -210,8 +219,9 @@ bl config set --key base_url --value https://dashscope-us.aliyuncs.com
 bl config set --key default_text_model --value qwen-turbo
 bl config set --key timeout --value 600
 
-# Self-update to latest version
+# Self-update to latest or a specific version
 bl update
+bl update --to 0.1.14
 ```
 
 Config file location: `~/.bailian/config.json`

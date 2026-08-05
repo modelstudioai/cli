@@ -1,10 +1,11 @@
 # Setup, authentication & configuration
 
-> Hand-maintained. Lives in `assets/` (not auto-generated from command metadata).
+> Hand-maintained. Lives in `bailian-protocol/assets/` (not auto-generated from command metadata).
 > Entry point: [SKILL.md → Setup & auth](../SKILL.md#setup--auth).
 
 Read this only when you need to install `bl`, change credentials/endpoint, or
-inspect config keys. Day-to-day command routing lives in `SKILL.md`.
+inspect config keys. Day-to-day command routing lives in the business skills
+(`bailian-cli` / `bailian-gen` / …).
 
 ---
 
@@ -12,7 +13,14 @@ inspect config keys. Day-to-day command routing lives in `SKILL.md`.
 
 ```bash
 npm install -g bailian-cli
+# Recommended: install the full bailian-* skill family (includes bailian-protocol)
 npx skills add modelstudioai/cli --all -g
+
+# Advanced / not recommended: skills CLI does not auto-pull bailian-protocol
+# npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-gen
+# npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-finetune
+# npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-managed-agent
+# npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-cli
 ```
 
 Verify: `bl --version` (prints `bl X.Y.Z`).
@@ -145,5 +153,5 @@ bl config set --key default-text-model --value qwen3.8-max
 bl config set --key output_dir --value ~/bailian-output
 ```
 
-Valid config keys are listed in [`reference/config.md`](../reference/config.md)
-and `bl config set --help`.
+Valid config keys: run `bl config set --help`, or if `bailian-cli` is installed read its `reference/config.md`.
+Do not assume sibling skill paths exist.

@@ -1,15 +1,19 @@
 /**
- * Generator: reads the bl product command map (`packages/cli/src/commands.ts`) and writes:
- *   - `skills/bailian-cli/reference/index.md` — quick index, global flags, notes
- *   - `skills/bailian-cli/reference/<group>.md` — per top-level command group details
+ * Generator: reads the bl product command map (`packages/cli/src/commands.ts`) and writes
+ * per-skill reference trees:
+ *   - `skills/<skill>/reference/index.md` — skill-scoped quick index + global flags
+ *   - `skills/<skill>/reference/<group>.md` — per top-level command group details
  *
- * Committed to git; consumed by the `bailian-cli` Agent Skill (`npx skills add modelstudioai/cli`).
+ * Ownership of each top-level command group is declared in `GROUP_OWNER_SKILL` below.
+ * Unmapped groups fall back to `bailian-cli` (hub) so new commands never block generation.
+ *
+ * Committed to git; consumed by bailian-* Agent Skills (`npx skills add modelstudioai/cli`).
  *
  * Run: pnpm --filter bailian-cli run generate:reference
  * Also run via `pnpm run sync:skill-assets` or the repo pre-commit hook.
  * Uses tsx and reads workspace packages from source
  */
-import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -25,8 +29,30 @@ import {
 import { commands } from "../packages/cli/src/commands.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REF_DIR = join(__dirname, "../skills/bailian-cli/reference");
-const INDEX_PATH = join(REF_DIR, "index.md");
+const SKILLS_DIR = join(__dirname, "../skills");
+
+/** Default owner when a top-level group is not listed in GROUP_OWNER_SKILL. */
+const DEFAULT_OWNER_SKILL = "bailian-cli";
+
+/**
+ * Top-level command group → owning skill.
+ * When adding a new top-level `bl <group>`, either add it here or accept the hub fallback.
+ */
+const GROUP_OWNER_SKILL: Readonly<Record<string, string>> = {
+  // bailian-gen — media generation / A/V understanding
+  image: "bailian-gen",
+  video: "bailian-gen",
+  speech: "bailian-gen",
+  omni: "bailian-gen",
+  vision: "bailian-gen",
+  // bailian-finetune — training pipeline
+  dataset: "bailian-finetune",
+  finetune: "bailian-finetune",
+  deploy: "bailian-finetune",
+  // bailian-managed-agent — agents.yaml IaC
+  "managed-agent": "bailian-managed-agent",
+  // everything else → bailian-cli (hub)
+};
 
 const GENERATED_BANNER =
   "> Auto-generated from `packages/cli/src/commands.ts`. Do not edit by hand.\n" +
@@ -127,6 +153,10 @@ function groupByTopLevel(entries: [string, AnyCommand][]): Map<string, [string, 
   return groups;
 }
 
+function ownerSkillForGroup(group: string): string {
+  return GROUP_OWNER_SKILL[group] ?? DEFAULT_OWNER_SKILL;
+}
+
 function buildGroupFile(group: string, groupEntries: [string, AnyCommand][]): string {
   const lines: string[] = [
     `# \`bl ${group}\` commands`,
@@ -154,16 +184,18 @@ function buildGroupFile(group: string, groupEntries: [string, AnyCommand][]): st
 }
 
 function buildIndex(
+  skillName: string,
   entries: [string, AnyCommand][],
   groups: Map<string, [string, AnyCommand][]>,
 ): string {
   const lines: string[] = [
-    "# bailian-cli (`bl`) command reference",
+    `# \`${skillName}\` command reference`,
     "",
     GENERATED_BANNER,
     "",
     "Command **details** are in sibling `<group>.md` files in this directory.",
-    "Use this index for the full quick index and global flags.",
+    "This index only covers groups owned by this skill. Other `bl` groups live in sibling bailian-* skills.",
+    "Use this index for the skill-scoped quick index and global flags.",
     "",
     "## Quick index",
     "",
@@ -225,31 +257,70 @@ function buildIndex(
   return lines.join("\n");
 }
 
+function clearGeneratedMarkdown(refDir: string): void {
+  if (!existsSync(refDir)) return;
+  for (const name of readdirSync(refDir)) {
+    if (name.endsWith(".md")) {
+      rmSync(join(refDir, name));
+    }
+  }
+}
+
+function writeSkillReference(
+  skillName: string,
+  skillGroups: Map<string, [string, AnyCommand][]>,
+): { groupCount: number; commandCount: number } {
+  const refDir = join(SKILLS_DIR, skillName, "reference");
+  mkdirSync(refDir, { recursive: true });
+  clearGeneratedMarkdown(refDir);
+
+  const entries: [string, AnyCommand][] = [];
+  for (const group of [...skillGroups.keys()].sort((a, b) => a.localeCompare(b))) {
+    const groupEntries = skillGroups.get(group)!;
+    entries.push(...groupEntries);
+    writeFileSync(join(refDir, `${group}.md`), buildGroupFile(group, groupEntries), "utf-8");
+  }
+  entries.sort(([a], [b]) => a.localeCompare(b));
+
+  writeFileSync(join(refDir, "index.md"), buildIndex(skillName, entries, skillGroups), "utf-8");
+
+  return { groupCount: skillGroups.size, commandCount: entries.length };
+}
+
 function writeReference(): void {
   const entries = Object.entries(commands).sort(([a], [b]) => a.localeCompare(b));
   const groups = groupByTopLevel(entries);
 
-  mkdirSync(REF_DIR, { recursive: true });
+  // skillName → (group → entries)
+  const bySkill = new Map<string, Map<string, [string, AnyCommand][]>>();
 
-  // Remove stale generated files from previous runs
-  for (const name of readdirSync(REF_DIR)) {
-    if (name.endsWith(".md")) {
-      rmSync(join(REF_DIR, name));
+  for (const [group, groupEntries] of groups) {
+    const skillName = ownerSkillForGroup(group);
+    const skillMap = bySkill.get(skillName) ?? new Map<string, [string, AnyCommand][]>();
+    skillMap.set(group, groupEntries);
+    bySkill.set(skillName, skillMap);
+  }
+
+  // Clear reference dirs for known owner skills that ended up empty (should not happen,
+  // but keeps stale files from previous ownership maps from lingering).
+  const knownSkills = new Set<string>([
+    DEFAULT_OWNER_SKILL,
+    ...Object.values(GROUP_OWNER_SKILL),
+    ...bySkill.keys(),
+  ]);
+  for (const skillName of knownSkills) {
+    if (!bySkill.has(skillName)) {
+      clearGeneratedMarkdown(join(SKILLS_DIR, skillName, "reference"));
     }
   }
 
-  const groupNames: string[] = [];
-  for (const group of [...groups.keys()].sort((a, b) => a.localeCompare(b))) {
-    const outPath = join(REF_DIR, `${group}.md`);
-    writeFileSync(outPath, buildGroupFile(group, groups.get(group)!), "utf-8");
-    groupNames.push(group);
+  const summaries: string[] = [];
+  for (const skillName of [...bySkill.keys()].sort((a, b) => a.localeCompare(b))) {
+    const result = writeSkillReference(skillName, bySkill.get(skillName)!);
+    summaries.push(`${skillName}: ${result.groupCount} groups / ${result.commandCount} commands`);
   }
 
-  writeFileSync(INDEX_PATH, buildIndex(entries, groups), "utf-8");
-
-  console.log(
-    `Wrote ${INDEX_PATH} + ${groupNames.length} group files (${entries.length} commands)`,
-  );
+  console.log(`Wrote skill references:\n  - ${summaries.join("\n  - ")}`);
 }
 
 writeReference();

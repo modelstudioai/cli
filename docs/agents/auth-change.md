@@ -121,7 +121,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 ### D. 用户面文档
 
 - [ ] `README.md` / `README.zh.md` "Authentication" 段落
-- [ ] `skills/bailian-cli/reference/` 通过 `pnpm run sync:skill-assets` 重建
+- [ ] 各 `skills/<skill>/reference/` 通过 `pnpm run sync:skill-assets` 重建
 
 ### E. 测试
 

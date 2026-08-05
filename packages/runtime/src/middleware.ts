@@ -133,7 +133,11 @@ export const telemetryStage: Middleware = (ctx, next) => {
  * if `next()` throws, the notice is skipped (no update nag on failure).
  */
 export const versionCheckStage: Middleware = async (ctx, next) => {
-  const pending = checkForUpdate(ctx.identity.version, ctx.identity.npmPackage).catch(() => {});
+  const pending = checkForUpdate(
+    ctx.identity.version,
+    ctx.identity.npmPackage,
+    ctx.identity.clientName,
+  ).catch(() => {});
   await next();
   await pending;
 
@@ -142,7 +146,12 @@ export const versionCheckStage: Middleware = async (ctx, next) => {
   if (newVersion && !ctx.settings.quiet && !isUpdateCommand) {
     if (shouldAutoUpdate(newVersion, ctx.identity.version)) {
       // 大版本差距且目标为稳定版,自动更新
-      await performAutoUpdate(ctx.identity.version, newVersion, ctx.identity.npmPackage);
+      await performAutoUpdate(
+        ctx.identity.version,
+        newVersion,
+        ctx.identity.npmPackage,
+        ctx.identity.clientName,
+      );
     } else {
       const color = ansi(process.stderr);
       process.stderr.write(
