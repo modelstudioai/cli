@@ -54,7 +54,16 @@ export function loadAndValidatePackages({ packages } = {}) {
   return { coreJson, cliJson };
 }
 
-const RESERVED_CHANNELS = new Set(["latest", "beta", "alpha", "next", "rc", "canary", "dev"]);
+const RESERVED_CHANNELS = new Set([
+  "latest",
+  "manifest", // would collide with manifest.json at the OSS prefix root
+  "beta",
+  "alpha",
+  "next",
+  "rc",
+  "canary",
+  "dev",
+]);
 const CHANNEL_FORMAT = /^[a-z][a-z0-9-]{1,30}$/;
 
 export function assertChannel(channel) {

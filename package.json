@@ -25,6 +25,7 @@
     "wiki:crawl": "node tools/wiki-crawler/index.mjs",
     "test:stress": "node packages/cli/tests/stress/run.mjs"
   },
+  "dependencies": {},
   "devDependencies": {
     "tsx": "catalog:",
     "vite-plus": "catalog:"

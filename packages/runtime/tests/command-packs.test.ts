@@ -58,6 +58,11 @@ fs.appendFileSync(
   }) + "\\n",
 );
 
+if (args[0] === "--version") {
+  process.stdout.write("10.0.0\\n");
+  process.exit(0);
+}
+
 const manifestPath = path.join(cwd, "package.json");
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 manifest.dependencies ??= {};
@@ -205,8 +210,9 @@ test("installs once on success and restores the previous version after validatio
             env: Record<string, string | null>;
           },
       );
-    expect(successfulCalls).toHaveLength(1);
-    expect(successfulCalls[0]?.env).toEqual({
+    // runNpm probes `npm --version` before each install/uninstall.
+    expect(successfulCalls.map((call) => call.args[0])).toEqual(["--version", "install"]);
+    expect(successfulCalls[1]?.env).toEqual({
       registry: "https://registry.example.test",
       catalog: null,
       recursive: null,
@@ -228,14 +234,11 @@ test("installs once on success and restores the previous version after validatio
             env: Record<string, string | null>;
           },
       );
-    expect(rollbackCalls).toHaveLength(2);
-    expect(rollbackCalls[0]?.args.slice(0, 2)).toEqual([
-      "install",
-      "@ali/bailian-plugin-agent@broken",
-    ]);
-    expect(rollbackCalls[1]?.args.slice(0, 2)).toEqual([
-      "install",
-      "@ali/bailian-plugin-agent@1.0.0",
+    expect(rollbackCalls.map((call) => call.args.slice(0, 2))).toEqual([
+      ["--version"],
+      ["install", "@ali/bailian-plugin-agent@broken"],
+      ["--version"],
+      ["install", "@ali/bailian-plugin-agent@1.0.0"],
     ]);
 
     const manifest = JSON.parse(

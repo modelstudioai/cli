@@ -1,6 +1,13 @@
 import { join } from "path";
 import { readFileSync, writeFileSync } from "fs";
-import { getConfigDir, trackingHeaders } from "bailian-cli-core";
+import {
+  BailianError,
+  DEFAULT_INSTALL_PS1_URL,
+  DEFAULT_INSTALL_SCRIPT_URL,
+  getConfigDir,
+  trackingHeaders,
+  getUpdateInstallMethod,
+} from "bailian-cli-core";
 
 export const NPM_REGISTRY = "https://registry.npmjs.org";
 /** Default npm package; products override per-call via the `npmPackage` argument. */
@@ -207,13 +214,14 @@ function errorMessage(err: unknown): string {
 }
 
 /**
- * Perform auto-update: install latest version globally and update agent skill.
+ * Perform auto-update for npm or binary installs.
  * Returns true if update succeeded, false otherwise.
  */
 export async function performAutoUpdate(
   currentVersion: string,
   latestVersion: string,
   npmPackage: string = NPM_PACKAGE,
+  clientName: string = NPM_PACKAGE,
 ): Promise<boolean> {
   const isTTY = process.stderr.isTTY;
   const green = isTTY ? "\x1b[32m" : "";
@@ -221,6 +229,11 @@ export async function performAutoUpdate(
   const cyan = isTTY ? "\x1b[36m" : "";
   const dim = isTTY ? "\x1b[2m" : "";
   const reset = isTTY ? "\x1b[0m" : "";
+
+  const method = getUpdateInstallMethod({ clientName, npmPackage });
+  if (method === "brew" || method === "winget") {
+    return false;
+  }
 
   const [latestMajor] = parseVersion(latestVersion);
   const [currentMajor] = parseVersion(currentVersion);
@@ -240,17 +253,34 @@ export async function performAutoUpdate(
   process.stderr.write(`  ${dim}Auto-updating to keep your CLI up to date...${reset}\n`);
   process.stderr.write(`  ${yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${reset}\n\n`);
 
+  if (method === "binary") {
+    try {
+      const { performBinaryUpdate } = await import("./binary-update.ts");
+      const newVer = await performBinaryUpdate(latestVersion);
+      writeState({ lastChecked: Date.now(), latestVersion: newVer });
+      process.stderr.write(`  ${green}✓ Update complete: ${currentVersion} → ${newVer}${reset}\n`);
+      process.stderr.write(`  ${dim}Run ${cyan}bl --version${reset}${dim} to verify.${reset}\n\n`);
+      pendingNotification = null;
+      return true;
+    } catch (err) {
+      process.stderr.write(`  ${yellow}⚠ Auto-update failed: ${errorMessage(err)}${reset}\n`);
+      const reinstall =
+        err instanceof BailianError && err.hint
+          ? err.hint.replace(/^Re-run:\s*/i, "")
+          : process.platform === "win32"
+            ? `irm ${DEFAULT_INSTALL_PS1_URL} | iex`
+            : `curl -fsSL ${DEFAULT_INSTALL_SCRIPT_URL} | bash`;
+      process.stderr.write(`  ${yellow}  Re-run:${reset} ${cyan}${reinstall}${reset}\n\n`);
+      return false;
+    }
+  }
+
   const cmd = `npm install -g ${npmPackage}@latest`;
 
   try {
     const { execSync } = await import("child_process");
     execSync(cmd, { stdio: "inherit" });
 
-    // Verify the actually-installed version by reading the global package.json.
-    // We must NOT rely on `bl --version`: the user may run via npx, a local
-    // install, or a custom bin name, in which case `bl` on PATH points at the
-    // wrong binary (or nothing at all). Reading the installed package directly
-    // is correct regardless of how the CLI was invoked.
     let newVer: string | null = null;
     try {
       const globalRoot = execSync("npm root -g", { encoding: "utf-8" }).trim();
@@ -264,8 +294,6 @@ export async function performAutoUpdate(
       );
     }
 
-    // Update cached state. writeState swallows errors internally: state caching
-    // is non-critical and must never break the CLI startup path.
     writeState({ lastChecked: Date.now(), latestVersion: newVer ?? latestVersion });
 
     process.stderr.write(
@@ -273,26 +301,20 @@ export async function performAutoUpdate(
     );
     process.stderr.write(`  ${dim}Run ${cyan}bl --version${reset}${dim} to verify.${reset}\n\n`);
 
-    // Update agent skill
     try {
       process.stderr.write(`  ${dim}Syncing agent skill...${reset}\n`);
       execSync(`npx skills add modelstudioai/cli --all -g -y`, { stdio: "inherit" });
       process.stderr.write(`  ${green}✓ Agent skill updated.${reset}\n\n`);
     } catch (err) {
-      // Surface the reason the skill sync failed rather than swallowing it
-      // silently, but keep degradation: the CLI itself already updated.
       process.stderr.write(`  ${yellow}⚠ Agent skill sync failed: ${errorMessage(err)}${reset}\n`);
       process.stderr.write(
         `  ${yellow}  Run manually: npx skills add modelstudioai/cli --all -g -y${reset}\n\n`,
       );
     }
 
-    // Clear pending notification
     pendingNotification = null;
     return true;
   } catch (err) {
-    // npm install failure — most commonly EACCES (global installs often need
-    // elevated permissions). Tell the user *why* it failed, not just *that*.
     process.stderr.write(`  ${yellow}⚠ Auto-update failed: ${errorMessage(err)}${reset}\n`);
     process.stderr.write(
       `  ${yellow}  If this is a permissions error (EACCES), retry with sudo or fix npm perms.${reset}\n`,
@@ -305,16 +327,26 @@ export async function performAutoUpdate(
 export async function checkForUpdate(
   currentVersion: string,
   npmPackage: string = NPM_PACKAGE,
+  clientName: string = NPM_PACKAGE,
 ): Promise<void> {
   const state = readState();
   const now = Date.now();
 
-  // Inside the throttle window (CHECK_INTERVAL_MS since the last fetch): no
-  // network call and no notice. The state file is global, so the notice fires at
-  // most once per window across all processes/sessions — not once per command.
   if (state && now - state.lastChecked < CHECK_INTERVAL_MS) return;
 
-  const latest = await fetchLatestVersion(FETCH_TIMEOUT_MS, npmPackage);
+  const method = getUpdateInstallMethod({ clientName, npmPackage });
+  let latest: string | null = null;
+  if (method === "binary") {
+    try {
+      const { fetchBinaryChannelVersion } = await import("./binary-update.ts");
+      latest = await fetchBinaryChannelVersion("latest", FETCH_TIMEOUT_MS);
+    } catch {
+      latest = null;
+    }
+    if (!latest) latest = await fetchLatestVersion(FETCH_TIMEOUT_MS, npmPackage);
+  } else {
+    latest = await fetchLatestVersion(FETCH_TIMEOUT_MS, npmPackage);
+  }
   if (!latest) return;
 
   writeState({ lastChecked: now, latestVersion: latest });

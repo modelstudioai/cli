@@ -6,6 +6,17 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.14.0] - 2026-08-04
+
+### 新增
+
+- **免 Node.js 的二进制安装** — 支持 macOS Apple Silicon / Intel、Linux x64 和 Windows x64；npm 安装方式继续保留。
+- **指定版本更新** — 二进制和 npm 安装均可通过 `bl update --to <version>` 更新或切换到指定版本。
+
+### 变更
+
+- **二进制自更新** — 二进制安装现在通过独立的发布通道检查和下载更新；执行 `bl update` 时不会覆盖正在运行的程序，下次运行自动使用新版本。
+
 ## [1.13.1] - 2026-08-03
 
 ### 变更

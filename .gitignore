@@ -10,6 +10,7 @@ lerna-debug.log*
 # Dependencies & build output
 node_modules
 dist
+dist-bin
 dist-ssr
 tools/generated
 .node-version

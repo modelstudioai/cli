@@ -18,7 +18,7 @@ on:
           - channel
           - stable
       channel:
-        description: "dist-tag (channel mode only, e.g. mcp/plugin/advisor)"
+        description: "Required when mode=channel. npm dist-tag only (lowercase, digits, dashes), e.g. mcp / plugin / sync-release. bailian-cli binary CDN always overwrites sync-release.json; knowledge-studio-cli is npm-only."
         required: false
         type: string
 
@@ -29,11 +29,11 @@ concurrency:
 jobs:
   publish-stable:
     if: inputs.mode == 'stable'
-    name: publish stable (${{ inputs.package }}) to npm + tag
+    name: publish stable (${{ inputs.package }}) to npm + binary + tag
     runs-on: ubuntu-latest
     environment: production # Required Reviewers gate
     permissions:
-      contents: write # push lightweight tag to origin
+      contents: write # push tag + create GitHub Release with binary assets
       id-token: write # OIDC for npm Trusted Publishing + provenance
     steps:
       - uses: actions/checkout@v6
@@ -55,19 +55,47 @@ jobs:
             | sudo tar -xz -C /usr/local/bin gitleaks
           gitleaks version
 
+      - name: Ensure zip (per-platform binary archives)
+        run: sudo apt-get update && sudo apt-get install -y zip
+
       - run: pnpm install --frozen-lockfile
 
+      # Binary compile uses `bun build --compile` CLI (not Bun.build API).
+      # Keep this pin in sync with any local smoke tests of binary-compile.mjs.
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.19"
+
       - name: publish-stable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # OSS release channel runs fully in CI: upload + reconcile + manifest.json.
+          # All values come from repo Settings → Secrets — no OSS defaults live in
+          # code. Leave AK/SK unset to skip the OSS channel; once enabled,
+          # bucket/region/prefix are required.
+          BAILIAN_OSS_AK: ${{ secrets.BAILIAN_OSS_AK }}
+          BAILIAN_OSS_SK: ${{ secrets.BAILIAN_OSS_SK }}
+          BAILIAN_OSS_BUCKET: ${{ secrets.BAILIAN_OSS_BUCKET }}
+          BAILIAN_OSS_REGION: ${{ secrets.BAILIAN_OSS_REGION }}
+          BAILIAN_OSS_ENDPOINT: ${{ secrets.BAILIAN_OSS_ENDPOINT }}
+          BAILIAN_RELEASE_PREFIX: ${{ secrets.BAILIAN_RELEASE_PREFIX }}
+          BAILIAN_STATIC_PREFIX: ${{ secrets.BAILIAN_STATIC_PREFIX }}
         run: node tools/release/publish-stable.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }}
 
   publish-channel:
     if: inputs.mode == 'channel'
-    name: publish channel (${{ inputs.package }}) to npm
+    name: publish channel (${{ inputs.package }}) to npm + binary
     runs-on: ubuntu-latest
     permissions:
-      contents: read # no tag, no Release; just publish
+      contents: write # create prerelease GitHub Release with binary assets
       id-token: write # OIDC for npm Trusted Publishing + provenance
     steps:
+      - name: Require channel input
+        if: ${{ inputs.channel == '' }}
+        run: |
+          echo "::error::mode=channel requires the workflow input \"channel\" (npm dist-tag, e.g. mcp / plugin / sync-release). Leave mode=stable if you do not need a dist-tag."
+          exit 1
+
       - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v6
@@ -87,7 +115,26 @@ jobs:
             | sudo tar -xz -C /usr/local/bin gitleaks
           gitleaks version
 
+      - name: Ensure zip (per-platform binary archives)
+        run: sudo apt-get update && sudo apt-get install -y zip
+
       - run: pnpm install --frozen-lockfile
 
+      # Binary compile uses `bun build --compile` CLI (not Bun.build API).
+      # Keep this pin in sync with any local smoke tests of binary-compile.mjs.
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.19"
+
       - name: publish-channel
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # OSS release channel — same Settings-injected values as stable.
+          BAILIAN_OSS_AK: ${{ secrets.BAILIAN_OSS_AK }}
+          BAILIAN_OSS_SK: ${{ secrets.BAILIAN_OSS_SK }}
+          BAILIAN_OSS_BUCKET: ${{ secrets.BAILIAN_OSS_BUCKET }}
+          BAILIAN_OSS_REGION: ${{ secrets.BAILIAN_OSS_REGION }}
+          BAILIAN_OSS_ENDPOINT: ${{ secrets.BAILIAN_OSS_ENDPOINT }}
+          BAILIAN_RELEASE_PREFIX: ${{ secrets.BAILIAN_RELEASE_PREFIX }}
+          BAILIAN_STATIC_PREFIX: ${{ secrets.BAILIAN_STATIC_PREFIX }}
         run: node tools/release/publish-channel.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }} --channel "${{ inputs.channel }}"
