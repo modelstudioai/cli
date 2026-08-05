@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
@@ -104,11 +104,13 @@ describe("e2e: knowledge doc upload", () => {
       "json",
     ]);
     expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{ steps: DryRunStep[] }>(stdout);
+    const data = parseStdoutJson<{ steps: DryRunStep[]; skipped: string[] }>(stdout);
     expect(data.steps).toHaveLength(3);
     const leaseRequest = data.steps[0]!.request as { sizeBytes?: unknown; category?: string };
     expect(typeof leaseRequest.sizeBytes).toBe("string"); // gotcha: sizeBytes must be a string
     expect(leaseRequest.category).toBe("cate_test");
+    // Single file path → no skipped entries
+    expect(data.skipped).toEqual([]);
   });
 
   test("--dry-run 带 --index-id 输出 4 步且 job 请求含显式 sourceType", async () => {
@@ -129,7 +131,7 @@ describe("e2e: knowledge doc upload", () => {
       "json",
     ]);
     expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{ steps: DryRunStep[] }>(stdout);
+    const data = parseStdoutJson<{ steps: DryRunStep[]; skipped: string[] }>(stdout);
     expect(data.steps).toHaveLength(4);
     const jobRequest = data.steps[3]!.request as {
       indexId?: string;
@@ -140,6 +142,56 @@ describe("e2e: knowledge doc upload", () => {
     expect(jobRequest.dataSource?.sourceType).toBe("DATA_CENTER_FILE");
     expect(jobRequest.indexId).toBe("idx_test");
     expect(jobRequest).not.toHaveProperty("documentIds");
+  });
+
+  test("--file <dir> dry-run 展开目录且 skipped 包含不支持的文件", async () => {
+    const dirFixture = mkdtempSync(join(tmpdir(), "doc-upload-dir-e2e-"));
+    writeFileSync(join(dirFixture, "readme.md"), "# dir fixture\n");
+    writeFileSync(join(dirFixture, "data.csv"), "a,b,c");
+    writeFileSync(join(dirFixture, "config.json"), "{}"); // unsupported
+    const subDir = join(dirFixture, "sub");
+    mkdirSync(subDir);
+    writeFileSync(join(subDir, "notes.txt"), "hello");
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_DOC_UPLOAD_ROUTES, [
+      "knowledge",
+      "doc",
+      "upload",
+      "--file",
+      dirFixture,
+      "--category-id",
+      "cate_test",
+      "--workspace-id",
+      "ws_test",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ steps: DryRunStep[]; skipped: string[] }>(stdout);
+    // 3 supported files × 3 steps each = 9 steps
+    expect(data.steps).toHaveLength(9);
+    // config.json is the only unsupported file
+    expect(data.skipped).toHaveLength(1);
+    expect(data.skipped[0]).toMatch(/config\.json$/);
+  });
+
+  test("--file <dir> 仅含不支持的文件报 USAGE", async () => {
+    const unsupportedDir = mkdtempSync(join(tmpdir(), "doc-upload-unsupported-"));
+    writeFileSync(join(unsupportedDir, "data.json"), "{}");
+    writeFileSync(join(unsupportedDir, "script.py"), "print(1)");
+
+    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_DOC_UPLOAD_ROUTES, [
+      "knowledge",
+      "doc",
+      "upload",
+      "--file",
+      unsupportedDir,
+      "--workspace-id",
+      "ws_test",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/No supported files found/i);
   });
 });
 

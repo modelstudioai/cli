@@ -25,13 +25,14 @@ import {
   pollImportJob,
   withPartialSuccessHint,
 } from "./shared.ts";
-import { checkUploadFile } from "./upload-support.ts";
+import { checkUploadFile, expandUploadPaths } from "./upload-support.ts";
 
 const DOC_UPLOAD_FLAGS = {
   file: {
     type: "array",
     valueHint: "<path>",
-    description: "Local file path (repeatable). Extension and size validated before upload",
+    description:
+      "Local file or directory path (repeatable). Directories are scanned recursively; unsupported formats are skipped",
     required: true,
   },
   indexId: {
@@ -67,18 +68,22 @@ interface UploadedFile {
 }
 
 export default defineCommand({
-  description: "Upload local files to the data center and optionally import into a knowledge base",
+  description:
+    "Upload local files or directories to the data center and optionally import into a knowledge base",
   auth: "apiKey",
   usageArgs: "--file <path> [flags]",
   flags: DOC_UPLOAD_FLAGS,
   notes: [
     "Pipeline: apply upload lease → PUT to OSS → register file → (with --index-id) create import job.",
     "Without --category-id the workspace default category is resolved automatically.",
+    "Directories are scanned recursively; node_modules, .git, and similar are skipped automatically.",
     "Multiple files are processed sequentially; on failure, already-registered file ids are listed in the error hint.",
   ],
   exampleArgs: [
     "--file ./a.md --workspace-id ws-xxx",
     "--file ./a.md --file ./b.pdf --index-id idx-xxx --wait",
+    "--file ./docs/ --workspace-id ws-xxx",
+    "--file ./docs/ --dry-run --verbose",
   ],
   validate(flags) {
     if (flags.wait && !flags.indexId) return "--wait requires --index-id";
@@ -89,9 +94,20 @@ export default defineCommand({
     const workspaceId = resolveWorkspaceId(ctx);
     const format = detectOutputFormat(settings.output);
 
+    // Expand directories into individual file paths; unsupported extensions are
+    // collected into `skipped` rather than throwing (directory-scan semantics)
+    const { files: expandedFiles, skipped } = expandUploadPaths(flags.file);
+    if (expandedFiles.length === 0) {
+      throw new BailianError(
+        "No supported files found",
+        ExitCode.USAGE,
+        `Supported formats: .pdf .doc .docx .ppt .pptx .xls .xlsx .csv .md .txt .html .png .jpg .jpeg .bmp .gif`,
+      );
+    }
+
     // Local pre-flight validation also runs in dry-run (rehearsal semantics: surface
     // file problems early); exceeding a soft limit only warns
-    const checkedFiles = flags.file.map((filePath) => {
+    const checkedFiles = expandedFiles.map((filePath) => {
       const checked = checkUploadFile(filePath);
       if (checked.warning) process.stderr.write(`Warning: ${checked.warning}\n`);
       return { filePath, sizeBytes: checked.sizeBytes };
@@ -140,7 +156,7 @@ export default defineCommand({
           } as unknown,
         });
       }
-      emitResult({ steps }, format);
+      emitResult({ steps, skipped }, format);
       return;
     }
 
@@ -278,12 +294,25 @@ export default defineCommand({
       }
       if (ingestionId) emitBare(`job: ${ingestionId}`);
       if (finalStatus) emitBare(`status: ${finalStatus}`);
+      // Summary line: always show counts; list skipped files only with --verbose
+      const summaryParts = [`Uploaded ${uploaded.length} file${uploaded.length !== 1 ? "s" : ""}`];
+      if (skipped.length > 0) {
+        summaryParts.push(`skipped ${skipped.length} unsupported`);
+      }
+      emitBare(`\n${summaryParts.join(", ")}.`);
+      if (settings.verbose && skipped.length > 0) {
+        emitBare("Skipped files:");
+        for (const skippedPath of skipped) {
+          emitBare(`  ${basename(skippedPath)}`);
+        }
+      }
       return;
     }
     // An orchestration command has no single response to pass through — emit a custom stable shape
     emitResult(
       {
         files: uploaded.map((item) => ({ path: item.path, fileId: item.fileId })),
+        skipped,
         ...(flags.indexId ? { index_id: flags.indexId } : {}),
         ...(ingestionId ? { ingestion_id: ingestionId } : {}),
         ...(finalStatus ? { final_status: finalStatus } : {}),

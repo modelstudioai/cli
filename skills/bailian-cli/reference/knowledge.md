@@ -7,42 +7,42 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                          | Description                                                                       |
-| -------------------------------- | --------------------------------------------------------------------------------- |
-| `bl knowledge category add`      | Create a data-center category                                                     |
-| `bl knowledge category delete`   | Delete a data-center category                                                     |
-| `bl knowledge category list`     | List data-center categories                                                       |
-| `bl knowledge chat`              | Chat with a Bailian knowledge base (RAG Q&A with streaming)                       |
-| `bl knowledge chunk add`         | Add a chunk directly to a knowledge base                                          |
-| `bl knowledge chunk delete`      | Delete chunks from a knowledge base (irreversible)                                |
-| `bl knowledge chunk list`        | List chunks in a knowledge base with content and status                           |
-| `bl knowledge chunk update`      | Update chunk content or toggle its retrieval visibility                           |
-| `bl knowledge collection create` | Create a FILE data collection                                                     |
-| `bl knowledge collection get`    | Show data collection details                                                      |
-| `bl knowledge create`            | Create a knowledge base and import data-center files or categories                |
-| `bl knowledge delete`            | Delete a knowledge base with all its documents and chunks                         |
-| `bl knowledge doc delete`        | Delete documents and their chunks from a knowledge base                           |
-| `bl knowledge doc import-oss`    | Batch import files from an authorized OSS bucket into the data center             |
-| `bl knowledge doc list`          | List documents in a knowledge base with parse/index status                        |
-| `bl knowledge doc status`        | Check knowledge base import job status                                            |
-| `bl knowledge doc tag`           | Batch update tags on data-center files                                            |
-| `bl knowledge doc upload`        | Upload local files to the data center and optionally import into a knowledge base |
-| `bl knowledge file delete`       | Permanently delete a file from the data center                                    |
-| `bl knowledge file get`          | Show data-center file details (size, MD5, tags, timestamps)                       |
-| `bl knowledge file list`         | List files in a data-center category                                              |
-| `bl knowledge info`              | Show knowledge base configuration details                                         |
-| `bl knowledge list`              | List knowledge bases in the workspace                                             |
-| `bl knowledge retrieve`          | Retrieve from a Bailian knowledge base (deprecated, use `search` instead)         |
-| `bl knowledge search`            | Search a Bailian knowledge base (RAG semantic retrieval)                          |
-| `bl knowledge service copy`      | Copy a service into a new draft (name gets a copy\_ prefix)                       |
-| `bl knowledge service create`    | Create a retrieval / Q&A service (initial status: draft, version: beta)           |
-| `bl knowledge service delete`    | Delete a retrieval / Q&A service (soft delete, idempotent)                        |
-| `bl knowledge service deploy`    | Publish the beta draft of a service as a new version                              |
-| `bl knowledge service get`       | Show service (agent) details including per-version configuration                  |
-| `bl knowledge service list`      | List retrieval / Q&A services (agents) in the workspace                           |
-| `bl knowledge service update`    | Update service name, description or draft configuration                           |
-| `bl knowledge stats`             | Show knowledge base storage and QPS monitoring data                               |
-| `bl knowledge update`            | Update knowledge base name, description or rerank threshold                       |
+| Command                          | Description                                                                                      |
+| -------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `bl knowledge category add`      | Create a data-center category                                                                    |
+| `bl knowledge category delete`   | Delete a data-center category                                                                    |
+| `bl knowledge category list`     | List data-center categories                                                                      |
+| `bl knowledge chat`              | Chat with a Bailian knowledge base (RAG Q&A with streaming)                                      |
+| `bl knowledge chunk add`         | Add a chunk directly to a knowledge base                                                         |
+| `bl knowledge chunk delete`      | Delete chunks from a knowledge base (irreversible)                                               |
+| `bl knowledge chunk list`        | List chunks in a knowledge base with content and status                                          |
+| `bl knowledge chunk update`      | Update chunk content or toggle its retrieval visibility                                          |
+| `bl knowledge collection create` | Create a FILE data collection                                                                    |
+| `bl knowledge collection get`    | Show data collection details                                                                     |
+| `bl knowledge create`            | Create a knowledge base and import data-center files or categories                               |
+| `bl knowledge delete`            | Delete a knowledge base with all its documents and chunks                                        |
+| `bl knowledge doc delete`        | Delete documents and their chunks from a knowledge base                                          |
+| `bl knowledge doc import-oss`    | Batch import files from an authorized OSS bucket into the data center                            |
+| `bl knowledge doc list`          | List documents in a knowledge base with parse/index status                                       |
+| `bl knowledge doc status`        | Check knowledge base import job status                                                           |
+| `bl knowledge doc tag`           | Batch update tags on data-center files                                                           |
+| `bl knowledge doc upload`        | Upload local files or directories to the data center and optionally import into a knowledge base |
+| `bl knowledge file delete`       | Permanently delete a file from the data center                                                   |
+| `bl knowledge file get`          | Show data-center file details (size, MD5, tags, timestamps)                                      |
+| `bl knowledge file list`         | List files in a data-center category                                                             |
+| `bl knowledge info`              | Show knowledge base configuration details                                                        |
+| `bl knowledge list`              | List knowledge bases in the workspace                                                            |
+| `bl knowledge retrieve`          | Retrieve from a Bailian knowledge base (deprecated, use `search` instead)                        |
+| `bl knowledge search`            | Search a Bailian knowledge base (RAG semantic retrieval)                                         |
+| `bl knowledge service copy`      | Copy a service into a new draft (name gets a copy\_ prefix)                                      |
+| `bl knowledge service create`    | Create a retrieval / Q&A service (initial status: draft, version: beta)                          |
+| `bl knowledge service delete`    | Delete a retrieval / Q&A service (soft delete, idempotent)                                       |
+| `bl knowledge service deploy`    | Publish the beta draft of a service as a new version                                             |
+| `bl knowledge service get`       | Show service (agent) details including per-version configuration                                 |
+| `bl knowledge service list`      | List retrieval / Q&A services (agents) in the workspace                                          |
+| `bl knowledge service update`    | Update service name, description or draft configuration                                          |
+| `bl knowledge stats`             | Show knowledge base storage and QPS monitoring data                                              |
+| `bl knowledge update`            | Update knowledge base name, description or rerank threshold                                      |
 
 ## Command details
 
@@ -660,30 +660,31 @@ bl knowledge doc tag --doc-id file-a --doc-id file-b --tag final --mode overwrit
 
 ### `bl knowledge doc upload`
 
-| Field           | Value                                                                             |
-| --------------- | --------------------------------------------------------------------------------- |
-| **Name**        | `knowledge doc upload`                                                            |
-| **Description** | Upload local files to the data center and optionally import into a knowledge base |
-| **Usage**       | `bl knowledge doc upload --file <path> [flags]`                                   |
+| Field           | Value                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------ |
+| **Name**        | `knowledge doc upload`                                                                           |
+| **Description** | Upload local files or directories to the data center and optionally import into a knowledge base |
+| **Usage**       | `bl knowledge doc upload --file <path> [flags]`                                                  |
 
 #### Flags
 
-| Flag                        | Type   | Required | Description                                                                |
-| --------------------------- | ------ | -------- | -------------------------------------------------------------------------- |
-| `--file <path>`             | array  | yes      | Local file path (repeatable). Extension and size validated before upload   |
-| `--index-id <id>`           | string | no       | Import into this knowledge base after registration (one job for all files) |
-| `--category-id <id>`        | string | no       | Target data-center category; defaults to the workspace default category    |
-| `--tag <text>`              | array  | no       | File tag (repeatable), applied to every uploaded file                      |
-| `--wait`                    | switch | no       | Poll the import job to a terminal state (needs --index-id)                 |
-| `--poll-interval <seconds>` | number | no       | Polling interval when waiting (default: 5)                                 |
-| `--workspace-id <id>`       | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)            |
-| `--api-key <key>`           | string | no       | API key                                                                    |
-| `--base-url <url>`          | string | no       | API base URL                                                               |
+| Flag                        | Type   | Required | Description                                                                                                     |
+| --------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------- |
+| `--file <path>`             | array  | yes      | Local file or directory path (repeatable). Directories are scanned recursively; unsupported formats are skipped |
+| `--index-id <id>`           | string | no       | Import into this knowledge base after registration (one job for all files)                                      |
+| `--category-id <id>`        | string | no       | Target data-center category; defaults to the workspace default category                                         |
+| `--tag <text>`              | array  | no       | File tag (repeatable), applied to every uploaded file                                                           |
+| `--wait`                    | switch | no       | Poll the import job to a terminal state (needs --index-id)                                                      |
+| `--poll-interval <seconds>` | number | no       | Polling interval when waiting (default: 5)                                                                      |
+| `--workspace-id <id>`       | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                                 |
+| `--api-key <key>`           | string | no       | API key                                                                                                         |
+| `--base-url <url>`          | string | no       | API base URL                                                                                                    |
 
 #### Notes
 
 - Pipeline: apply upload lease → PUT to OSS → register file → (with --index-id) create import job.
 - Without --category-id the workspace default category is resolved automatically.
+- Directories are scanned recursively; node_modules, .git, and similar are skipped automatically.
 - Multiple files are processed sequentially; on failure, already-registered file ids are listed in the error hint.
 
 #### Examples
@@ -694,6 +695,14 @@ bl knowledge doc upload --file ./a.md --workspace-id ws-xxx
 
 ```bash
 bl knowledge doc upload --file ./a.md --file ./b.pdf --index-id idx-xxx --wait
+```
+
+```bash
+bl knowledge doc upload --file ./docs/ --workspace-id ws-xxx
+```
+
+```bash
+bl knowledge doc upload --file ./docs/ --dry-run --verbose
 ```
 
 ### `bl knowledge file delete`

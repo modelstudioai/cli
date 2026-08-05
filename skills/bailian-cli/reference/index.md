@@ -9,95 +9,95 @@ Use this index for the skill-scoped quick index and global flags.
 
 ## Quick index
 
-| Command                          | Description                                                                                    | Detail                         |
-| -------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------ |
-| `bl advisor recommend`           | Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking) | [advisor.md](advisor.md)       |
-| `bl app call`                    | Call a Bailian application (agent or workflow)                                                 | [app.md](app.md)               |
-| `bl app list`                    | List Bailian applications                                                                      | [app.md](app.md)               |
-| `bl auth generate-access-token`  | Generate a CLI access token using OpenAPI AK/SK                                                | [auth.md](auth.md)             |
-| `bl auth login`                  | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist)   | [auth.md](auth.md)             |
-| `bl auth logout`                 | Clear stored credentials; full logout also clears the model Base URL                           | [auth.md](auth.md)             |
-| `bl auth status`                 | Show current authentication state                                                              | [auth.md](auth.md)             |
-| `bl config agent`                | Configure a coding agent to use DashScope API                                                  | [config.md](config.md)         |
-| `bl config list`                 | List config profiles and show the active profile                                               | [config.md](config.md)         |
-| `bl config set`                  | Set a config value                                                                             | [config.md](config.md)         |
-| `bl config show`                 | Display current configuration                                                                  | [config.md](config.md)         |
-| `bl config ui`                   | Open a local web UI to manage config profiles                                                  | [config.md](config.md)         |
-| `bl config use`                  | Set the active config profile                                                                  | [config.md](config.md)         |
-| `bl console call`                | Call a Bailian console API via the CLI gateway                                                 | [console.md](console.md)       |
-| `bl file upload`                 | Upload a local file to DashScope temporary storage (48h)                                       | [file.md](file.md)             |
-| `bl knowledge category add`      | Create a data-center category                                                                  | [knowledge.md](knowledge.md)   |
-| `bl knowledge category delete`   | Delete a data-center category                                                                  | [knowledge.md](knowledge.md)   |
-| `bl knowledge category list`     | List data-center categories                                                                    | [knowledge.md](knowledge.md)   |
-| `bl knowledge chat`              | Chat with a Bailian knowledge base (RAG Q&A with streaming)                                    | [knowledge.md](knowledge.md)   |
-| `bl knowledge chunk add`         | Add a chunk directly to a knowledge base                                                       | [knowledge.md](knowledge.md)   |
-| `bl knowledge chunk delete`      | Delete chunks from a knowledge base (irreversible)                                             | [knowledge.md](knowledge.md)   |
-| `bl knowledge chunk list`        | List chunks in a knowledge base with content and status                                        | [knowledge.md](knowledge.md)   |
-| `bl knowledge chunk update`      | Update chunk content or toggle its retrieval visibility                                        | [knowledge.md](knowledge.md)   |
-| `bl knowledge collection create` | Create a FILE data collection                                                                  | [knowledge.md](knowledge.md)   |
-| `bl knowledge collection get`    | Show data collection details                                                                   | [knowledge.md](knowledge.md)   |
-| `bl knowledge create`            | Create a knowledge base and import data-center files or categories                             | [knowledge.md](knowledge.md)   |
-| `bl knowledge delete`            | Delete a knowledge base with all its documents and chunks                                      | [knowledge.md](knowledge.md)   |
-| `bl knowledge doc delete`        | Delete documents and their chunks from a knowledge base                                        | [knowledge.md](knowledge.md)   |
-| `bl knowledge doc import-oss`    | Batch import files from an authorized OSS bucket into the data center                          | [knowledge.md](knowledge.md)   |
-| `bl knowledge doc list`          | List documents in a knowledge base with parse/index status                                     | [knowledge.md](knowledge.md)   |
-| `bl knowledge doc status`        | Check knowledge base import job status                                                         | [knowledge.md](knowledge.md)   |
-| `bl knowledge doc tag`           | Batch update tags on data-center files                                                         | [knowledge.md](knowledge.md)   |
-| `bl knowledge doc upload`        | Upload local files to the data center and optionally import into a knowledge base              | [knowledge.md](knowledge.md)   |
-| `bl knowledge file delete`       | Permanently delete a file from the data center                                                 | [knowledge.md](knowledge.md)   |
-| `bl knowledge file get`          | Show data-center file details (size, MD5, tags, timestamps)                                    | [knowledge.md](knowledge.md)   |
-| `bl knowledge file list`         | List files in a data-center category                                                           | [knowledge.md](knowledge.md)   |
-| `bl knowledge info`              | Show knowledge base configuration details                                                      | [knowledge.md](knowledge.md)   |
-| `bl knowledge list`              | List knowledge bases in the workspace                                                          | [knowledge.md](knowledge.md)   |
-| `bl knowledge retrieve`          | Retrieve from a Bailian knowledge base (deprecated, use `search` instead)                      | [knowledge.md](knowledge.md)   |
-| `bl knowledge search`            | Search a Bailian knowledge base (RAG semantic retrieval)                                       | [knowledge.md](knowledge.md)   |
-| `bl knowledge service copy`      | Copy a service into a new draft (name gets a copy\_ prefix)                                    | [knowledge.md](knowledge.md)   |
-| `bl knowledge service create`    | Create a retrieval / Q&A service (initial status: draft, version: beta)                        | [knowledge.md](knowledge.md)   |
-| `bl knowledge service delete`    | Delete a retrieval / Q&A service (soft delete, idempotent)                                     | [knowledge.md](knowledge.md)   |
-| `bl knowledge service deploy`    | Publish the beta draft of a service as a new version                                           | [knowledge.md](knowledge.md)   |
-| `bl knowledge service get`       | Show service (agent) details including per-version configuration                               | [knowledge.md](knowledge.md)   |
-| `bl knowledge service list`      | List retrieval / Q&A services (agents) in the workspace                                        | [knowledge.md](knowledge.md)   |
-| `bl knowledge service update`    | Update service name, description or draft configuration                                        | [knowledge.md](knowledge.md)   |
-| `bl knowledge stats`             | Show knowledge base storage and QPS monitoring data                                            | [knowledge.md](knowledge.md)   |
-| `bl knowledge update`            | Update knowledge base name, description or rerank threshold                                    | [knowledge.md](knowledge.md)   |
-| `bl mcp call`                    | Call a tool on an MCP server (tools/call)                                                      | [mcp.md](mcp.md)               |
-| `bl mcp list`                    | List MCP servers activated under your Bailian account                                          | [mcp.md](mcp.md)               |
-| `bl mcp tools`                   | List tools exposed by an MCP server (tools/list)                                               | [mcp.md](mcp.md)               |
-| `bl memory add`                  | Add memory from messages or custom content                                                     | [memory.md](memory.md)         |
-| `bl memory delete`               | Delete a memory node                                                                           | [memory.md](memory.md)         |
-| `bl memory list`                 | List memory nodes for a user                                                                   | [memory.md](memory.md)         |
-| `bl memory profile create`       | Create a user profile schema for memory profiling                                              | [memory.md](memory.md)         |
-| `bl memory profile get`          | Get user profile by schema ID and user ID                                                      | [memory.md](memory.md)         |
-| `bl memory search`               | Search memory nodes by query or messages                                                       | [memory.md](memory.md)         |
-| `bl memory update`               | Update a memory node content                                                                   | [memory.md](memory.md)         |
-| `bl model list`                  | Browse model families or show detailed model info in the Bailian model marketplace             | [model.md](model.md)           |
-| `bl pipeline run`                | Run a pipeline workflow definition                                                             | [pipeline.md](pipeline.md)     |
-| `bl pipeline validate`           | Validate a pipeline definition without executing                                               | [pipeline.md](pipeline.md)     |
-| `bl plugin install`              | Install or upgrade an allowlisted Command Pack                                                 | [plugin.md](plugin.md)         |
-| `bl plugin link`                 | Link an allowlisted local Command Pack for development                                         | [plugin.md](plugin.md)         |
-| `bl plugin list`                 | List installed Command Packs and their load status                                             | [plugin.md](plugin.md)         |
-| `bl plugin remove`               | Remove an installed Command Pack                                                               | [plugin.md](plugin.md)         |
-| `bl quota check`                 | Check current usage against rate limits                                                        | [quota.md](quota.md)           |
-| `bl quota history`               | View quota change history                                                                      | [quota.md](quota.md)           |
-| `bl quota list`                  | View model RPM/TPM rate limits                                                                 | [quota.md](quota.md)           |
-| `bl quota request`               | Request a temporary quota increase                                                             | [quota.md](quota.md)           |
-| `bl search web`                  | Search the web using DashScope MCP WebSearch service                                           | [search.md](search.md)         |
-| `bl skill add`                   | Install skills from the Bailian skill registry into local agents                               | [skill.md](skill.md)           |
-| `bl skill list`                  | List registry skills and diff against local installs                                           | [skill.md](skill.md)           |
-| `bl skill remove`                | Remove locally installed skills (registry is untouched)                                        | [skill.md](skill.md)           |
-| `bl skill update`                | Update installed skills to the latest registry versions                                        | [skill.md](skill.md)           |
-| `bl text chat`                   | Send a chat completion (OpenAI compatible, DashScope)                                          | [text.md](text.md)             |
-| `bl token-plan add-member`       | Add a member to a Token Plan organization                                                      | [token-plan.md](token-plan.md) |
-| `bl token-plan assign-seats`     | Batch assign Token Plan seats to members                                                       | [token-plan.md](token-plan.md) |
-| `bl token-plan create-key`       | Create a Token Plan API key for a seat                                                         | [token-plan.md](token-plan.md) |
-| `bl token-plan list-seats`       | List Token Plan subscription seat details                                                      | [token-plan.md](token-plan.md) |
-| `bl update`                      | Update the CLI to the latest or a specified version                                            | [update.md](update.md)         |
-| `bl usage free`                  | Query free-tier quota for models (all models if --model is omitted)                            | [usage.md](usage.md)           |
-| `bl usage freetier`              | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable     | [usage.md](usage.md)           |
-| `bl usage stats`                 | Query model usage statistics                                                                   | [usage.md](usage.md)           |
-| `bl usage summary`               | Show a unified usage summary: free-tier quota and recent usage overview                        | [usage.md](usage.md)           |
-| `bl workspace init`              | Initialize Bailian workspace and activate postpaid services                                    | [workspace.md](workspace.md)   |
-| `bl workspace list`              | List all workspaces                                                                            | [workspace.md](workspace.md)   |
+| Command                          | Description                                                                                      | Detail                         |
+| -------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------ |
+| `bl advisor recommend`           | Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking)   | [advisor.md](advisor.md)       |
+| `bl app call`                    | Call a Bailian application (agent or workflow)                                                   | [app.md](app.md)               |
+| `bl app list`                    | List Bailian applications                                                                        | [app.md](app.md)               |
+| `bl auth generate-access-token`  | Generate a CLI access token using OpenAPI AK/SK                                                  | [auth.md](auth.md)             |
+| `bl auth login`                  | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist)     | [auth.md](auth.md)             |
+| `bl auth logout`                 | Clear stored credentials; full logout also clears the model Base URL                             | [auth.md](auth.md)             |
+| `bl auth status`                 | Show current authentication state                                                                | [auth.md](auth.md)             |
+| `bl config agent`                | Configure a coding agent to use DashScope API                                                    | [config.md](config.md)         |
+| `bl config list`                 | List config profiles and show the active profile                                                 | [config.md](config.md)         |
+| `bl config set`                  | Set a config value                                                                               | [config.md](config.md)         |
+| `bl config show`                 | Display current configuration                                                                    | [config.md](config.md)         |
+| `bl config ui`                   | Open a local web UI to manage config profiles                                                    | [config.md](config.md)         |
+| `bl config use`                  | Set the active config profile                                                                    | [config.md](config.md)         |
+| `bl console call`                | Call a Bailian console API via the CLI gateway                                                   | [console.md](console.md)       |
+| `bl file upload`                 | Upload a local file to DashScope temporary storage (48h)                                         | [file.md](file.md)             |
+| `bl knowledge category add`      | Create a data-center category                                                                    | [knowledge.md](knowledge.md)   |
+| `bl knowledge category delete`   | Delete a data-center category                                                                    | [knowledge.md](knowledge.md)   |
+| `bl knowledge category list`     | List data-center categories                                                                      | [knowledge.md](knowledge.md)   |
+| `bl knowledge chat`              | Chat with a Bailian knowledge base (RAG Q&A with streaming)                                      | [knowledge.md](knowledge.md)   |
+| `bl knowledge chunk add`         | Add a chunk directly to a knowledge base                                                         | [knowledge.md](knowledge.md)   |
+| `bl knowledge chunk delete`      | Delete chunks from a knowledge base (irreversible)                                               | [knowledge.md](knowledge.md)   |
+| `bl knowledge chunk list`        | List chunks in a knowledge base with content and status                                          | [knowledge.md](knowledge.md)   |
+| `bl knowledge chunk update`      | Update chunk content or toggle its retrieval visibility                                          | [knowledge.md](knowledge.md)   |
+| `bl knowledge collection create` | Create a FILE data collection                                                                    | [knowledge.md](knowledge.md)   |
+| `bl knowledge collection get`    | Show data collection details                                                                     | [knowledge.md](knowledge.md)   |
+| `bl knowledge create`            | Create a knowledge base and import data-center files or categories                               | [knowledge.md](knowledge.md)   |
+| `bl knowledge delete`            | Delete a knowledge base with all its documents and chunks                                        | [knowledge.md](knowledge.md)   |
+| `bl knowledge doc delete`        | Delete documents and their chunks from a knowledge base                                          | [knowledge.md](knowledge.md)   |
+| `bl knowledge doc import-oss`    | Batch import files from an authorized OSS bucket into the data center                            | [knowledge.md](knowledge.md)   |
+| `bl knowledge doc list`          | List documents in a knowledge base with parse/index status                                       | [knowledge.md](knowledge.md)   |
+| `bl knowledge doc status`        | Check knowledge base import job status                                                           | [knowledge.md](knowledge.md)   |
+| `bl knowledge doc tag`           | Batch update tags on data-center files                                                           | [knowledge.md](knowledge.md)   |
+| `bl knowledge doc upload`        | Upload local files or directories to the data center and optionally import into a knowledge base | [knowledge.md](knowledge.md)   |
+| `bl knowledge file delete`       | Permanently delete a file from the data center                                                   | [knowledge.md](knowledge.md)   |
+| `bl knowledge file get`          | Show data-center file details (size, MD5, tags, timestamps)                                      | [knowledge.md](knowledge.md)   |
+| `bl knowledge file list`         | List files in a data-center category                                                             | [knowledge.md](knowledge.md)   |
+| `bl knowledge info`              | Show knowledge base configuration details                                                        | [knowledge.md](knowledge.md)   |
+| `bl knowledge list`              | List knowledge bases in the workspace                                                            | [knowledge.md](knowledge.md)   |
+| `bl knowledge retrieve`          | Retrieve from a Bailian knowledge base (deprecated, use `search` instead)                        | [knowledge.md](knowledge.md)   |
+| `bl knowledge search`            | Search a Bailian knowledge base (RAG semantic retrieval)                                         | [knowledge.md](knowledge.md)   |
+| `bl knowledge service copy`      | Copy a service into a new draft (name gets a copy\_ prefix)                                      | [knowledge.md](knowledge.md)   |
+| `bl knowledge service create`    | Create a retrieval / Q&A service (initial status: draft, version: beta)                          | [knowledge.md](knowledge.md)   |
+| `bl knowledge service delete`    | Delete a retrieval / Q&A service (soft delete, idempotent)                                       | [knowledge.md](knowledge.md)   |
+| `bl knowledge service deploy`    | Publish the beta draft of a service as a new version                                             | [knowledge.md](knowledge.md)   |
+| `bl knowledge service get`       | Show service (agent) details including per-version configuration                                 | [knowledge.md](knowledge.md)   |
+| `bl knowledge service list`      | List retrieval / Q&A services (agents) in the workspace                                          | [knowledge.md](knowledge.md)   |
+| `bl knowledge service update`    | Update service name, description or draft configuration                                          | [knowledge.md](knowledge.md)   |
+| `bl knowledge stats`             | Show knowledge base storage and QPS monitoring data                                              | [knowledge.md](knowledge.md)   |
+| `bl knowledge update`            | Update knowledge base name, description or rerank threshold                                      | [knowledge.md](knowledge.md)   |
+| `bl mcp call`                    | Call a tool on an MCP server (tools/call)                                                        | [mcp.md](mcp.md)               |
+| `bl mcp list`                    | List MCP servers activated under your Bailian account                                            | [mcp.md](mcp.md)               |
+| `bl mcp tools`                   | List tools exposed by an MCP server (tools/list)                                                 | [mcp.md](mcp.md)               |
+| `bl memory add`                  | Add memory from messages or custom content                                                       | [memory.md](memory.md)         |
+| `bl memory delete`               | Delete a memory node                                                                             | [memory.md](memory.md)         |
+| `bl memory list`                 | List memory nodes for a user                                                                     | [memory.md](memory.md)         |
+| `bl memory profile create`       | Create a user profile schema for memory profiling                                                | [memory.md](memory.md)         |
+| `bl memory profile get`          | Get user profile by schema ID and user ID                                                        | [memory.md](memory.md)         |
+| `bl memory search`               | Search memory nodes by query or messages                                                         | [memory.md](memory.md)         |
+| `bl memory update`               | Update a memory node content                                                                     | [memory.md](memory.md)         |
+| `bl model list`                  | Browse model families or show detailed model info in the Bailian model marketplace               | [model.md](model.md)           |
+| `bl pipeline run`                | Run a pipeline workflow definition                                                               | [pipeline.md](pipeline.md)     |
+| `bl pipeline validate`           | Validate a pipeline definition without executing                                                 | [pipeline.md](pipeline.md)     |
+| `bl plugin install`              | Install or upgrade an allowlisted Command Pack                                                   | [plugin.md](plugin.md)         |
+| `bl plugin link`                 | Link an allowlisted local Command Pack for development                                           | [plugin.md](plugin.md)         |
+| `bl plugin list`                 | List installed Command Packs and their load status                                               | [plugin.md](plugin.md)         |
+| `bl plugin remove`               | Remove an installed Command Pack                                                                 | [plugin.md](plugin.md)         |
+| `bl quota check`                 | Check current usage against rate limits                                                          | [quota.md](quota.md)           |
+| `bl quota history`               | View quota change history                                                                        | [quota.md](quota.md)           |
+| `bl quota list`                  | View model RPM/TPM rate limits                                                                   | [quota.md](quota.md)           |
+| `bl quota request`               | Request a temporary quota increase                                                               | [quota.md](quota.md)           |
+| `bl search web`                  | Search the web using DashScope MCP WebSearch service                                             | [search.md](search.md)         |
+| `bl skill add`                   | Install skills from the Bailian skill registry into local agents                                 | [skill.md](skill.md)           |
+| `bl skill list`                  | List registry skills and diff against local installs                                             | [skill.md](skill.md)           |
+| `bl skill remove`                | Remove locally installed skills (registry is untouched)                                          | [skill.md](skill.md)           |
+| `bl skill update`                | Update installed skills to the latest registry versions                                          | [skill.md](skill.md)           |
+| `bl text chat`                   | Send a chat completion (OpenAI compatible, DashScope)                                            | [text.md](text.md)             |
+| `bl token-plan add-member`       | Add a member to a Token Plan organization                                                        | [token-plan.md](token-plan.md) |
+| `bl token-plan assign-seats`     | Batch assign Token Plan seats to members                                                         | [token-plan.md](token-plan.md) |
+| `bl token-plan create-key`       | Create a Token Plan API key for a seat                                                           | [token-plan.md](token-plan.md) |
+| `bl token-plan list-seats`       | List Token Plan subscription seat details                                                        | [token-plan.md](token-plan.md) |
+| `bl update`                      | Update the CLI to the latest or a specified version                                              | [update.md](update.md)         |
+| `bl usage free`                  | Query free-tier quota for models (all models if --model is omitted)                              | [usage.md](usage.md)           |
+| `bl usage freetier`              | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable       | [usage.md](usage.md)           |
+| `bl usage stats`                 | Query model usage statistics                                                                     | [usage.md](usage.md)           |
+| `bl usage summary`               | Show a unified usage summary: free-tier quota and recent usage overview                          | [usage.md](usage.md)           |
+| `bl workspace init`              | Initialize Bailian workspace and activate postpaid services                                      | [workspace.md](workspace.md)   |
+| `bl workspace list`              | List all workspaces                                                                              | [workspace.md](workspace.md)   |
 
 ## By group
 

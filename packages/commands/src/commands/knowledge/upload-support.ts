@@ -1,8 +1,8 @@
 // Local pre-flight validation for file uploads (doc upload).
 // Default category: the lease/addFile `category` parameter accepts the literal
 // "default" (verified against the live API), so no listCategory resolution is needed.
-import { readFileSync, statSync } from "node:fs";
-import { basename, extname } from "node:path";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { basename, extname, join } from "node:path";
 import { BailianError, ExitCode } from "bailian-cli-core";
 
 const MB = 1024 * 1024;
@@ -36,6 +36,105 @@ export const UPLOAD_FORMAT_RULES: Record<string, UploadFormatRule> = {
   ".txt": { maxBytes: 10 * MB, enforce: "warn" },
   ".html": { maxBytes: 10 * MB, enforce: "warn" },
 };
+
+/** Returns true when the extension is in the upload format allowlist. */
+export function isSupportedExtension(filePath: string): boolean {
+  const extension = extname(filePath).toLowerCase();
+  return extension in UPLOAD_FORMAT_RULES;
+}
+
+/**
+ * Directory names skipped when expanding a directory path (recursive scan).
+ * Covers common tooling artifacts that should never contain user documents.
+ */
+const IGNORED_DIRECTORIES = new Set([
+  "node_modules",
+  ".git",
+  ".svn",
+  ".hg",
+  "__pycache__",
+  ".venv",
+  "venv",
+  ".env",
+  ".tox",
+  "dist",
+  "build",
+  ".cache",
+  ".next",
+  ".nuxt",
+]);
+
+export interface ExpandResult {
+  files: string[];
+  skipped: string[];
+}
+
+/**
+ * Expand an array of paths into individual file paths.
+ * - Regular files are included as-is.
+ * - Directories are recursively scanned; files with unsupported extensions are
+ *   collected into `skipped` instead of throwing.
+ * - Common tooling directories (node_modules, .git, …) are silently skipped.
+ * - A non-existent path throws USAGE so the user gets a clear error.
+ */
+export function expandUploadPaths(paths: string[]): ExpandResult {
+  const files: string[] = [];
+  const skipped: string[] = [];
+
+  function walkDirectory(directoryPath: string): void {
+    let entries: import("node:fs").Dirent[];
+    try {
+      entries = readdirSync(directoryPath, { withFileTypes: true });
+    } catch (error) {
+      const errno = (error as { code?: string }).code ?? "unknown";
+      throw new BailianError(
+        `Cannot read directory: ${directoryPath}`,
+        ExitCode.GENERAL,
+        `File system error (${errno}) — check the path and permissions.`,
+      );
+    }
+    for (const entry of entries) {
+      const entryFullPath = join(directoryPath, entry.name);
+      if (entry.isDirectory()) {
+        if (!IGNORED_DIRECTORIES.has(entry.name)) {
+          walkDirectory(entryFullPath);
+        }
+        continue;
+      }
+      if (entry.isFile()) {
+        if (isSupportedExtension(entry.name)) {
+          files.push(entryFullPath);
+        } else {
+          skipped.push(entryFullPath);
+        }
+      }
+      // Symlinks: withFileTypes follows symlinks for isFile/isDirectory,
+      // so they are handled by the branches above.
+    }
+  }
+
+  for (const inputPath of paths) {
+    let pathStat: import("node:fs").Stats;
+    try {
+      pathStat = statSync(inputPath);
+    } catch (error) {
+      const errno = (error as { code?: string }).code ?? "unknown";
+      throw new BailianError(
+        `Cannot read path: ${inputPath}`,
+        ExitCode.GENERAL,
+        `File system error (${errno}) — check the path and permissions.`,
+      );
+    }
+    if (pathStat.isDirectory()) {
+      walkDirectory(inputPath);
+    } else if (pathStat.isFile()) {
+      files.push(inputPath);
+    }
+    // Other types (socket, block device, etc.) are silently ignored.
+  }
+
+  return { files, skipped };
+}
 
 /** Local pre-flight check before reading the file: extension allowlist + hard/soft size limits. File I/O failure → GENERAL + errno hint. */
 export function checkUploadFile(filePath: string): { sizeBytes: number; warning?: string } {
