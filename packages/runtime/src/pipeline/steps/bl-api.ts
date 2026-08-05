@@ -171,7 +171,7 @@ export async function imageGenerate(
     });
   }
 
-  const model = input.model || "qwen-image-2.0";
+  const model = input.model || "qwen-image-3.0";
   const route = resolveImageGenerateApi(model);
   const n = input.n ?? 1;
 
@@ -269,7 +269,7 @@ export async function imageEdit(
   }
 
   const images = Array.isArray(input.image) ? input.image : input.image ? [input.image] : [];
-  const model = input.model || "qwen-image-2.0";
+  const model = input.model || "qwen-image-3.0";
   const route = resolveImageEditApi(model);
   const n = input.n ?? 1;
 

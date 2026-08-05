@@ -202,19 +202,19 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
         "image",
         "generate",
         "--model",
-        "qwen-image-2.0",
+        "qwen-image-3.0",
       ]);
       expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--prompt|Usage:/i);
     });
 
-    test("【qwen-image-2.0】图片生成", async () => {
+    test("【qwen-image-3.0】图片生成", async () => {
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
       const { stdout, stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, [
         "image",
         "generate",
         "--model",
-        "qwen-image-2.0",
+        "qwen-image-3.0",
         "--prompt",
         "一只简笔画小猫，白底",
         "--out-dir",

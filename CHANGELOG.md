@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.14.1] - 2026-08-05
+
+### Added
+
+- **Focused Bailian Skills** — `npx skills add modelstudioai/cli --all -g` now installs dedicated skills for media generation, fine-tuning, Managed Agent, and shared execution rules, improving task routing while reducing irrelevant context.
+
+### Changed
+
+- **Default image model upgraded to Qwen-Image 3.0** — image generation, image editing, pipelines, the config UI, and related documentation now default to `qwen-image-3.0` for API Key users.
+- **Broader coding-agent compatibility** — Skill installation and updates now detect more coding agents, preserve existing installation links, and automatically backfill skills into newly detected agents.
+
 ## [1.14.0] - 2026-08-04
 
 ### Added

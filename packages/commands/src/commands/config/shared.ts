@@ -61,7 +61,7 @@ export const UI_BOOLEAN_KEYS = new Set<string>(["telemetry"]);
 // without persisting a value that would pin the model.
 export const UI_MODEL_DEFAULTS: Record<string, string> = {
   default_text_model: "qwen3.8-max",
-  default_image_model: "qwen-image-2.0",
+  default_image_model: "qwen-image-3.0",
   default_video_model: "happyhorse-1.1-t2v",
   default_speech_model: "cosyvoice-v3-flash",
   default_omni_model: "qwen3.5-omni-plus",
@@ -86,7 +86,8 @@ export const UI_MODEL_CATALOG: Record<string, ModelOption[]> = {
     { id: "qwen3.6-flash", role: "fast · advisor intent" },
   ],
   default_image_model: [
-    { id: "qwen-image-2.0", role: "image/generate default · sync" },
+    { id: "qwen-image-3.0", role: "image/generate default · sync" },
+    { id: "qwen-image-2.0", role: "image/generate · sync" },
     { id: "qwen-image-max", role: "image/generate · sync" },
     { id: "qwen-image-edit-2.0", role: "image/edit · sync" },
     { id: "wanx2.x", role: "image/generate · async series" },

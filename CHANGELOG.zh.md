@@ -6,6 +6,17 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.14.1] - 2026-08-05
+
+### 新增
+
+- **百炼 Skill 按领域拆分** —— 通过 `npx skills add modelstudioai/cli --all -g` 可统一安装图片与视频生成、模型微调、Managed Agent 和共享执行协议等专用 Skill，提升任务路由准确性并减少无关上下文。
+
+### 变更
+
+- **默认图片模型升级至 Qwen-Image 3.0** —— 普通 API Key 用户的图片生成、图片编辑、Pipeline、配置 UI 和相关文档现在默认使用 `qwen-image-3.0`。
+- **扩展 Coding Agent 兼容范围** —— Skill 安装与更新现在能够识别更多 Coding Agent，保留已有安装链接，并自动将 Skill 补充到新识别的 Agent。
+
 ## [1.14.0] - 2026-08-04
 
 ### 新增

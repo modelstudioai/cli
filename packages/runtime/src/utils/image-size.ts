@@ -8,7 +8,7 @@ import type { ImageSizeProfile } from "bailian-cli-core";
  * Do not infer size from sync/async — that mismatches model constraints.
  */
 
-/** qwen-image-2.0 / qwen-image-edit recommended high-res presets. */
+/** qwen-image-2.0 / qwen-image-edit recommended high-res presets（3.0 经 profile 复用此表）. */
 export const QWEN_IMAGE_20_RATIO_MAP: Record<string, string> = {
   "16:9": "2688*1536",
   "9:16": "1536*2688",

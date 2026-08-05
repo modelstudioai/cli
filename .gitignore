@@ -37,6 +37,7 @@ tools/generated
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 .cursor/
+.qoder/
 .qwen/
 .qoder
 .playwright-mcp/
