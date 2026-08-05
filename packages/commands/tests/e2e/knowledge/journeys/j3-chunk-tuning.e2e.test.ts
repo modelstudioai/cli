@@ -12,6 +12,7 @@ import {
   cleanupKbFixture,
   createJourneyReporter,
   createKbWithDocs,
+  nodesRecallMarker,
   pollUntil,
   uniqueMarker,
   type KbFixture,
@@ -75,7 +76,7 @@ describe.skipIf(!isKbAdminE2EReady())("journey J3: 检索精修 (live, 自清理
       ];
       const baseline = await pollUntil(
         () => reporter.runStep("retrieve baseline", JOURNEY_J3_ROUTES, retrieveArgs),
-        (run) => run.exitCode === 0 && run.stdout.includes(marker),
+        (run) => run.exitCode === 0 && nodesRecallMarker(run.stdout, marker),
         { timeoutMs: 180_000, intervalMs: 15_000 },
       );
       expect(baseline.satisfied, `基线未召回标记词 ${marker}`).toBe(true);

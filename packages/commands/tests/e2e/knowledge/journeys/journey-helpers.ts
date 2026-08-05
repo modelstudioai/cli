@@ -377,6 +377,29 @@ export async function cleanupKbFixture(
   }
 }
 
+// ---- Marker-recall predicate (strict) ----
+
+/**
+ * Positive recall check for retrieve/search JSON output: the marker must appear
+ * inside a returned node's text (not merely anywhere in the raw output — doc_name
+ * or other metadata echoing the marker must not count as recall).
+ * Negative assertions ("marker gone") should keep scanning the whole stdout:
+ * absence from the entire output is the stronger guarantee.
+ */
+export function nodesRecallMarker(stdout: string, marker: string): boolean {
+  try {
+    const payload = JSON.parse(stdout) as {
+      data?: { nodes?: Array<{ text?: string; metadata?: { content?: string } }> };
+    };
+    return (payload.data?.nodes ?? []).some((node) =>
+      (node.metadata?.content ?? node.text ?? "").includes(marker),
+    );
+  } catch {
+    // Mid-poll runs may fail before emitting JSON — treat as "not recalled yet"
+    return false;
+  }
+}
+
 // ---- Backfill required retrieval parameters for search services (server gotcha) ----
 // The minimal kb_search_configs created by service create --index-id is missing
 // required fields like rerank_min_score / dense_similarity_top_k, so the search

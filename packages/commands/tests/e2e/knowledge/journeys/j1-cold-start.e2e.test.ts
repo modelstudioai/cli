@@ -10,6 +10,7 @@ import {
   cleanupKbFixture,
   createJourneyReporter,
   createKbWithDocs,
+  nodesRecallMarker,
   patchSearchServiceRetrievalConfig,
   pollUntil,
   uniqueMarker,
@@ -44,7 +45,7 @@ describe.skipIf(!isKbAdminE2EReady())("journey J1: 冷启动首答 (live, 自清
             "--output",
             "json",
           ]),
-        (run) => run.exitCode === 0 && run.stdout.includes(marker),
+        (run) => run.exitCode === 0 && nodesRecallMarker(run.stdout, marker),
         { timeoutMs: 180_000, intervalMs: 15_000 },
       );
       reporter.recordNote(`retrieve 轮询 ${retrievePoll.attempts} 次`);
@@ -100,7 +101,7 @@ describe.skipIf(!isKbAdminE2EReady())("journey J1: 冷启动首答 (live, 自清
             "--output",
             "json",
           ]),
-        (run) => run.exitCode === 0 && run.stdout.includes(marker),
+        (run) => run.exitCode === 0 && nodesRecallMarker(run.stdout, marker),
         { timeoutMs: 120_000, intervalMs: 15_000 },
       );
       reporter.recordNote(`search 轮询 ${searchPoll.attempts} 次`);

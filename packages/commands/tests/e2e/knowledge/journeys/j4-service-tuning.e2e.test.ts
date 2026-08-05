@@ -1,6 +1,12 @@
-// J4 service tuning: draft (beta) usable → config change persisted → released version usable after deploy.
+// J4 service tuning: draft (beta) usable → config change persisted → released version carries the change after deploy.
 // create + service create (search, initial draft/beta) → search --agent-version beta recalls (hard)
-// → service update --description → service get asserts the change (hard) → deploy → released search recalls (hard).
+// → service update --description/--temperature (scalar merge path) → get (beta) asserts (hard)
+// → service update --config-file tweaking kb_search_configs (whole-replace path) → get (beta) asserts
+//   the nested change AND that the replace kept the scalar tuning (hard) → deploy
+// → get (released version) asserts both changes landed in the published version (hard) → released search recalls (hard).
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
 import { isKbAdminE2EReady, parseStdoutJson } from "../../helpers.ts";
 import { JOURNEY_J4_ROUTES } from "../../topic-routes.ts";
@@ -8,6 +14,7 @@ import {
   cleanupKbFixture,
   createJourneyReporter,
   createKbWithDocs,
+  nodesRecallMarker,
   patchSearchServiceRetrievalConfig,
   pollUntil,
   uniqueMarker,
@@ -17,7 +24,7 @@ import {
 describe.skipIf(!isKbAdminE2EReady())("journey J4: 问答服务调优 (live, 自清理)", () => {
   const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
 
-  test("draft 可用 → update 落库 → deploy → 正式版可用", async () => {
+  test("draft 可用 → update 落库 → deploy → 正式版详情携带修改且可用", async () => {
     const reporter = createJourneyReporter(import.meta.url);
     const marker = uniqueMarker("j4");
     const fixture: Partial<KbFixture> = {};
@@ -71,25 +78,33 @@ describe.skipIf(!isKbAdminE2EReady())("journey J4: 问答服务调优 (live, 自
       ];
       const betaPoll = await pollUntil(
         () => reporter.runStep("search (beta)", JOURNEY_J4_ROUTES, betaSearchArgs),
-        (run) => run.exitCode === 0 && run.stdout.includes(marker),
+        (run) => run.exitCode === 0 && nodesRecallMarker(run.stdout, marker),
         { timeoutMs: 180_000, intervalMs: 15_000 },
       );
       reporter.recordNote(`beta search 轮询 ${betaPoll.attempts} 次`);
       expect(betaPoll.satisfied, `search(beta) 未召回标记词 ${marker}`).toBe(true);
 
-      // 3) update the description (top-level scalar, valid for the search scene too) → get asserts persistence (hard)
+      // 3) tune the draft: description (top-level) + temperature (config-level scalar,
+      //    read-merge-write keeps the backfilled retrieval params) → get asserts both (hard)
       const newDescription = `journey j4 tuned at ${Date.now()}`;
-      const updateRun = await reporter.runStep("service update --description", JOURNEY_J4_ROUTES, [
-        "knowledge",
-        "service",
-        "update",
-        "--agent-id",
-        agentId,
-        "--description",
-        newDescription,
-        "--workspace-id",
-        workspaceId,
-      ]);
+      const tunedTemperature = 0.55;
+      const updateRun = await reporter.runStep(
+        "service update --description --temperature",
+        JOURNEY_J4_ROUTES,
+        [
+          "knowledge",
+          "service",
+          "update",
+          "--agent-id",
+          agentId,
+          "--description",
+          newDescription,
+          "--temperature",
+          String(tunedTemperature),
+          "--workspace-id",
+          workspaceId,
+        ],
+      );
       expect(updateRun.exitCode, updateRun.stderr).toBe(0);
 
       const getRun = await reporter.runStep("service get (beta)", JOURNEY_J4_ROUTES, [
@@ -106,10 +121,88 @@ describe.skipIf(!isKbAdminE2EReady())("journey J4: 问答服务调优 (live, 自
         "json",
       ]);
       expect(getRun.exitCode, getRun.stderr).toBe(0);
-      const getData = parseStdoutJson<{ data?: { agent_desc?: string } }>(getRun.stdout);
+      const getData = parseStdoutJson<{
+        data?: {
+          agent_desc?: string;
+          agent_details?: Array<{
+            agent_config?: { temperature?: number } & Record<string, unknown>;
+          }>;
+        };
+      }>(getRun.stdout);
       expect(getData.data?.agent_desc).toBe(newDescription);
+      expect(getData.data?.agent_details?.[0]?.agent_config?.temperature).toBe(tunedTemperature);
 
-      // 4) deploy → released search (without --agent-version) recalls (hard)
+      // 3.5) complex nested tuning via --config-file (whole-replace path, distinct
+      //      from the scalar merge path above): read the current beta config, tweak
+      //      kb_search_configs, write it back — then assert the nested change landed
+      //      AND the replace kept the scalar tuning intact
+      const tunedDenseTopK = 66; // distinctive value, still recall-safe (loose top-k)
+      const betaConfig = getData.data?.agent_details?.[0]?.agent_config as
+        | ({ kb_search_configs?: Array<Record<string, unknown>> } & Record<string, unknown>)
+        | undefined;
+      expect(betaConfig?.kb_search_configs?.length, "beta 配置应含 kb_search_configs").toBeTruthy();
+      for (const kbConfig of betaConfig!.kb_search_configs!) {
+        kbConfig.dense_similarity_top_k = tunedDenseTopK;
+      }
+      const configDir = mkdtempSync(join(tmpdir(), "j4-config-"));
+      const configFile = join(configDir, "agent-config.json");
+      writeFileSync(configFile, JSON.stringify(betaConfig));
+      const configUpdateRun = await reporter.runStep(
+        "service update --config-file (kb_search_configs)",
+        JOURNEY_J4_ROUTES,
+        [
+          "knowledge",
+          "service",
+          "update",
+          "--agent-id",
+          agentId,
+          "--config-file",
+          configFile,
+          "--workspace-id",
+          workspaceId,
+        ],
+      );
+      expect(configUpdateRun.exitCode, configUpdateRun.stderr).toBe(0);
+
+      const betaAfterConfigRun = await reporter.runStep(
+        "service get (beta, after config-file)",
+        JOURNEY_J4_ROUTES,
+        [
+          "knowledge",
+          "service",
+          "get",
+          "--agent-id",
+          agentId,
+          "--agent-version",
+          "beta",
+          "--workspace-id",
+          workspaceId,
+          "--output",
+          "json",
+        ],
+      );
+      expect(betaAfterConfigRun.exitCode, betaAfterConfigRun.stderr).toBe(0);
+      const betaAfterConfig = parseStdoutJson<{
+        data?: {
+          agent_details?: Array<{
+            agent_config?: {
+              temperature?: number;
+              kb_search_configs?: Array<{ dense_similarity_top_k?: number }>;
+            };
+          }>;
+        };
+      }>(betaAfterConfigRun.stdout).data?.agent_details?.[0]?.agent_config;
+      expect(
+        betaAfterConfig?.kb_search_configs?.[0]?.dense_similarity_top_k,
+        "kb_search_configs 嵌套修改未落库",
+      ).toBe(tunedDenseTopK);
+      expect(betaAfterConfig?.temperature, "config-file 整体替换不应冲掉已调优的 temperature").toBe(
+        tunedTemperature,
+      );
+
+      // 4) deploy → the published version's detail must carry the tuned config (hard):
+      //    search alone only proves the released service responds, not that the
+      //    change actually shipped
       const deployRun = await reporter.runStep("service deploy", JOURNEY_J4_ROUTES, [
         "knowledge",
         "service",
@@ -122,8 +215,52 @@ describe.skipIf(!isKbAdminE2EReady())("journey J4: 问答服务调优 (live, 自
         "--quiet",
       ]);
       expect(deployRun.exitCode, deployRun.stderr).toBe(0);
-      reporter.recordNote(`deploy 版本号: ${deployRun.stdout.trim().split("\n").pop() ?? "?"}`);
+      const deployedVersion = deployRun.stdout.trim().split("\n").pop() ?? "";
+      expect(deployedVersion, "deploy 应输出新版本号").toBeTruthy();
+      reporter.recordNote(`deploy 版本号: ${deployedVersion}`);
 
+      const releasedGetRun = await reporter.runStep(
+        `service get (released v${deployedVersion})`,
+        JOURNEY_J4_ROUTES,
+        [
+          "knowledge",
+          "service",
+          "get",
+          "--agent-id",
+          agentId,
+          "--agent-version",
+          deployedVersion,
+          "--workspace-id",
+          workspaceId,
+          "--output",
+          "json",
+        ],
+      );
+      expect(releasedGetRun.exitCode, releasedGetRun.stderr).toBe(0);
+      const releasedData = parseStdoutJson<{
+        data?: {
+          agent_details?: Array<{
+            agent_version?: string;
+            agent_config?: {
+              temperature?: number;
+              kb_search_configs?: Array<{ dense_similarity_top_k?: number }>;
+            };
+          }>;
+        };
+      }>(releasedGetRun.stdout);
+      const releasedDetail = releasedData.data?.agent_details?.find(
+        (detail) => detail.agent_version === deployedVersion,
+      );
+      expect(releasedDetail, `get 应返回已发布版本 ${deployedVersion} 的详情`).toBeTruthy();
+      expect(releasedDetail?.agent_config?.temperature, "调优的 temperature 未进入正式版配置").toBe(
+        tunedTemperature,
+      );
+      expect(
+        releasedDetail?.agent_config?.kb_search_configs?.[0]?.dense_similarity_top_k,
+        "调优的 kb_search_configs 未进入正式版配置",
+      ).toBe(tunedDenseTopK);
+
+      // 5) released search (without --agent-version) recalls (hard)
       const releasedPoll = await pollUntil(
         () =>
           reporter.runStep("search (released)", JOURNEY_J4_ROUTES, [
@@ -138,7 +275,7 @@ describe.skipIf(!isKbAdminE2EReady())("journey J4: 问答服务调优 (live, 自
             "--output",
             "json",
           ]),
-        (run) => run.exitCode === 0 && run.stdout.includes(marker),
+        (run) => run.exitCode === 0 && nodesRecallMarker(run.stdout, marker),
         { timeoutMs: 120_000, intervalMs: 15_000 },
       );
       reporter.recordNote(`正式版 search 轮询 ${releasedPoll.attempts} 次`);

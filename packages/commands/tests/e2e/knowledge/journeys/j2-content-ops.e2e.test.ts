@@ -10,6 +10,7 @@ import {
   cleanupKbFixture,
   createJourneyReporter,
   createKbWithDocs,
+  nodesRecallMarker,
   pollUntil,
   uniqueMarker,
   type KbFixture,
@@ -113,7 +114,7 @@ describe.skipIf(!isKbAdminE2EReady())("journey J2: 内容运维 (live, 自清理
               "--output",
               "json",
             ]),
-          (run) => run.exitCode === 0 && run.stdout.includes(marker),
+          (run) => run.exitCode === 0 && nodesRecallMarker(run.stdout, marker),
           { timeoutMs: 180_000, intervalMs: 15_000 },
         );
       const pollA = await retrieveMarker(markerA, "retrieve markerA");
@@ -165,7 +166,10 @@ describe.skipIf(!isKbAdminE2EReady())("journey J2: 内容运维 (live, 自清理
         "json",
       ]);
       expect(stillA.exitCode, stillA.stderr).toBe(0);
-      expect(stillA.stdout, `doc delete 误伤: ${markerA} 不再召回`).toContain(markerA);
+      expect(
+        nodesRecallMarker(stillA.stdout, markerA),
+        `doc delete 误伤: ${markerA} 不再召回`,
+      ).toBe(true);
     } finally {
       await cleanupKbFixture(reporter, JOURNEY_J2_ROUTES, fixture, workspaceId);
       reporter.finalize();

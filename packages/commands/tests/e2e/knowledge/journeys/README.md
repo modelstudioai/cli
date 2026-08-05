@@ -10,7 +10,7 @@
 | J1  | 冷启动：建库并获得首个答案           | `j1-cold-start.e2e.test.ts`                                                             | retrieve/search(beta) 召回标记词（硬）；chat 回答引用标记词（软）                                                       |
 | J2  | 内容运维：文档增删的可见性           | `j2-content-ops.e2e.test.ts`                                                            | 双标记词命中 → 删除其一后 markerB 消失且 markerA 仍在（硬）                                                             |
 | J3  | 检索精修：chunk 排除生效             | `j3-chunk-tuning.e2e.test.ts`                                                           | exclude 后排除标志生效（硬）；include 恢复（软）。retrieve 不过滤被排除 chunk，以 `is_displayed_chunk_content` 标志为准 |
-| J4  | 服务调优：草稿→修改→发布             | `j4-service-tuning.e2e.test.ts`                                                         | beta 草稿可用、update 落库、发布后正式版可用（硬）                                                                      |
+| J4  | 服务调优：草稿→修改→发布             | `j4-service-tuning.e2e.test.ts`                                                         | beta 草稿可用、update 落库、发布后正式版详情携带修改且可用（硬）                                                        |
 | J5  | 数据面治理：collection/category/file | `j5-data-plane.e2e.test.ts`                                                             | 自建类目内文件可见/可删，类目删后消失（硬）                                                                             |
 | J6  | 退场清理：删库验证消失               | 复用 [`../knowledge-kb-delete.e2e.test.ts`](../knowledge-kb-delete.e2e.test.ts) live 链 | delete 后 list 不再包含（硬）                                                                                           |
 
