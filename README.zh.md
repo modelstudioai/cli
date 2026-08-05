@@ -76,16 +76,11 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 
 ```bash
 npm install -g bailian-cli
-# 推荐：安装完整 bailian-* skill 家族（含 companion bailian-protocol）
+# 推荐：安装完整 bailian-* skill 家族（含 bailian-protocol）
 npx skills add modelstudioai/cli --all -g
 ```
 
-子集安装时，业务 skill 必须同时带上 companion `bailian-protocol`：
-
-```bash
-npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-gen
-npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-cli
-```
+> 官方支持路径为 `--all -g`。`npx skills` **不会**按 metadata 自动安装依赖。子集 `-s` 为高级用法 / 不推荐；若坚持子集，须自行带上 `bailian-protocol`（例如 `-s bailian-protocol -s bailian-gen`）。
 
 > 需要预先安装 Node.js >= 18.17。
 

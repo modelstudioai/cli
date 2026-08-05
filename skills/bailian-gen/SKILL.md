@@ -4,7 +4,6 @@ metadata:
   version: "1.13.1"
   requires:
     bins: ["bl"]
-  companions: ["bailian-protocol"]
 description: >-
   阿里云百炼图片/视频/语音生成入口（**默认生成技能**）：用户要生图、画图、生成照片、生成图片、AI 绘画、海报、头像、插画、
   文生图（text-to-image）、图生图、改图、修图、多图合成、生成视频、文生视频、图生视频、参考生视频、视频编辑、风格转换、
@@ -14,12 +13,12 @@ description: >-
   图片和语音同步返回并落地本地文件，视频是异步任务、用 `--download` 或轮询取回；本地文件直接传路径，CLI 自动上传。
   反触发：宿主自己能做的图片理解、普通问答、编程、写作、翻译不走本技能；百炼应用/知识库/用量/额度走 bailian-cli；
   精调训练走 bailian-finetune。
-  安装本 skill 时必须同时安装 companion bailian-protocol。
+  官方安装：`npx skills add modelstudioai/cli --all -g`（与共享协议 bailian-protocol 同装）。
 ---
 
 # Bailian media generation (`bl image` / `bl video` / `bl speech` / `bl omni`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent (one-time ask templates), Version & updates (pre-flight checklist), and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) and `bl <command> --help` — do not guess flags. Companion: install with `bailian-protocol`.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent (one-time ask templates), Version & updates (pre-flight checklist), and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) and `bl <command> --help` — do not guess flags. If that protocol file is missing, stop and run `npx skills add modelstudioai/cli --all -g`; do not guess auth/consent.**
 
 ## Consent (short version; full rules in bailian-protocol)
 
@@ -77,13 +76,13 @@ If one or more `bl` commands actually ran, proactively add a one-line summary in
 
 ## Common hand-offs
 
-软 hand-off（按 skill **名**；已安装则 Read，否则 `--help` / 提示安装该 skill + companion `bailian-protocol`）：
+软 hand-off（按 skill **名**；已安装则 Read，否则 `--help` / 提示 `npx skills add modelstudioai/cli --all -g`）：
 
-- Generation failed and it is not a usage/auth/content-filter issue → follow the issue-reporting flow in companion `bailian-protocol` ([`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md#cli-errors-report-an-issue)) and ask once whether to report.
+- Generation failed and it is not a usage/auth/content-filter issue → follow the issue-reporting flow in `bailian-protocol` ([`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md#cli-errors-report-an-issue)) and ask once whether to report.
 - Managing Bailian apps / knowledge bases / usage → skill `bailian-cli` (fallback: `bl app\|knowledge\|usage --help`).
 - Train a dedicated model on user data → skill `bailian-finetune` (fallback: `bl dataset\|finetune\|deploy --help`).
 
 ## references
 
-- [bailian-protocol](../bailian-protocol/SKILL.md) — authentication and global parameters (mandatory)
+- [bailian-protocol](../bailian-protocol/SKILL.md) — shared protocol (install via `--all -g`)
 - [reference/](reference/index.md) — command details

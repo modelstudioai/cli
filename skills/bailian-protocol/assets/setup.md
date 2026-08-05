@@ -16,7 +16,7 @@ npm install -g bailian-cli
 # Recommended: install the full bailian-* skill family (includes bailian-protocol)
 npx skills add modelstudioai/cli --all -g
 
-# Subset install: always include companion bailian-protocol with any business skill
+# Advanced / not recommended: skills CLI does not auto-pull bailian-protocol
 # npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-gen
 # npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-finetune
 # npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-managed-agent

@@ -42,7 +42,7 @@ npm install -g bailian-cli
 npx skills add modelstudioai/cli --all -g
 ```
 
-If you only need one business skill, still install companion `bailian-protocol` with it (see [SKILL.md companion note](../SKILL.md)).
+Do not install a single business skill alone — use `--all -g` so `bailian-protocol` is present.
 
 ## Mention it in the task summary
 

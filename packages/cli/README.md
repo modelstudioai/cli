@@ -78,16 +78,11 @@ No timeline scrubbing. No frame-by-frame editing. Just one sentence → one vide
 
 ```bash
 npm install -g bailian-cli
-# Recommended: full bailian-* skill family (includes companion bailian-protocol)
+# Recommended: full bailian-* skill family (includes bailian-protocol)
 npx skills add modelstudioai/cli --all -g
 ```
 
-Subset install — always include companion `bailian-protocol` with any business skill:
-
-```bash
-npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-gen
-npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-cli
-```
+> Supported install is `--all -g`. The skills CLI does **not** auto-install skill dependencies. Subset `-s` installs are advanced / not recommended; if you use them, you must include `bailian-protocol` yourself (e.g. `-s bailian-protocol -s bailian-gen`).
 
 > Requires Node.js >= 18.17.
 
