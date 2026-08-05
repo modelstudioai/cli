@@ -29,8 +29,8 @@ description: >-
 
 | User intent                                   | Command                            | Default model                                  |
 | --------------------------------------------- | ---------------------------------- | ---------------------------------------------- |
-| Text-to-image                                 | `bl image generate`                | `qwen-image-2.0`                               |
-| Image edit / multi-image merge                | `bl image edit` (repeat `--image`) | `qwen-image-2.0`                               |
+| Text-to-image                                 | `bl image generate`                | `qwen-image-3.0`                               |
+| Image edit / multi-image merge                | `bl image edit` (repeat `--image`) | `qwen-image-3.0`                               |
 | Text-to-video / image-to-video                | `bl video generate`                | `happyhorse-1.1-t2v` / `-i2v` (with `--image`) |
 | Video edit / style transfer                   | `bl video edit`                    | `happyhorse-1.0-video-edit`                    |
 | Reference-to-video + voice                    | `bl video ref`                     | `happyhorse-1.1-r2v`                           |

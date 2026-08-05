@@ -26,7 +26,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 
 - **Text chat** — Qwen3.8-max: major gains in agentic coding, frontend coding, and vibe coding
 - **Multimodal (Omni)** — Full omni-modal support across text + image + audio + video
-- **Image generation & editing** — Qwen-Image 2.0: pro text rendering, photorealism, strong semantic adherence, multi-image composition
+- **Image generation & editing** — Qwen-Image 3.0: pro text rendering, photorealism, strong semantic adherence, multi-image composition
 - **Video generation & editing** — happyhorse-1.1 series: text-/image-/reference-to-video and natural-language video editing (up to 9-image reference)
 - **Speech synthesis & recognition** — CosyVoice streaming TTS, voice cloning from 5–20s samples; FunAudio-ASR covers 30 languages including 7 Chinese dialects and 20+ Mandarin accents
 - **Image & video understanding** — Qwen-VL: long-form video analysis, chart/document parsing, visual reasoning, multilingual OCR

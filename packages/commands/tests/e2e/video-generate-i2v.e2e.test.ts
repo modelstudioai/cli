@@ -159,7 +159,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "image",
         "generate",
         "--model",
-        "qwen-image-2.0",
+        "qwen-image-3.0",
         "--prompt",
         "一只简笔画小猫，白底",
         "--out-dir",
