@@ -13,15 +13,18 @@ afterEach(() => {
 });
 
 function makeUsageResponse(
-  per5HourPercentage: number,
+  per5HourPercentage?: number,
   per1WeekPercentage = per5HourPercentage,
 ): Record<string, unknown> {
-  const usage: Record<string, number> = {
-    per5HourPercentage,
-    per1WeekPercentage,
-  };
-  if (per5HourPercentage !== 0) usage.per5HourResetTime = 1_786_000_000_000;
-  if (per1WeekPercentage !== 0) usage.per1WeekResetTime = 1_786_100_000_000;
+  const usage: Record<string, number> = {};
+  if (per5HourPercentage !== undefined) {
+    usage.per5HourPercentage = per5HourPercentage;
+    if (per5HourPercentage !== 0) usage.per5HourResetTime = 1_786_000_000_000;
+  }
+  if (per1WeekPercentage !== undefined) {
+    usage.per1WeekPercentage = per1WeekPercentage;
+    if (per1WeekPercentage !== 0) usage.per1WeekResetTime = 1_786_100_000_000;
+  }
 
   return {
     data: {
@@ -89,5 +92,58 @@ describe("usage token-plan view", () => {
     const renderedOutput = output.join("");
     expect(renderedOutput).toContain("Resets: not applicable (no usage yet)");
     expect(renderedOutput).toMatch(/Resets: \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/);
+  });
+
+  test("renders missing quota windows as possibly unlimited", async () => {
+    const output: string[] = [];
+    vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+      output.push(String(chunk));
+      return true;
+    });
+
+    await tokenPlanUsage.run({
+      client: { console: vi.fn().mockResolvedValue(makeUsageResponse()) },
+      flags: { json: false, view: true },
+      settings: { dryRun: false },
+    } as never);
+
+    const renderedOutput = output.join("");
+    expect(renderedOutput).toContain("5小时限额当前可能无限制，请到百炼 Token Plan 控制台核实。");
+    expect(renderedOutput).toContain("1周限额当前可能无限制，请到百炼 Token Plan 控制台核实。");
+  });
+
+  test("renders only the missing quota window as possibly unlimited", async () => {
+    const output: string[] = [];
+    vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+      output.push(String(chunk));
+      return true;
+    });
+
+    await tokenPlanUsage.run({
+      client: { console: vi.fn().mockResolvedValue(makeUsageResponse(undefined, 0.5)) },
+      flags: { json: false, view: true },
+      settings: { dryRun: false },
+    } as never);
+
+    const renderedOutput = output.join("");
+    expect(renderedOutput).toContain("5小时限额当前可能无限制，请到百炼 Token Plan 控制台核实。");
+    expect(renderedOutput).not.toContain("1周限额当前可能无限制，请到百炼 Token Plan 控制台核实。");
+    expect(renderedOutput).toMatch(/Resets: \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/);
+  });
+
+  test("returns an empty JSON object when no quota fields are available", async () => {
+    const output: string[] = [];
+    vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+      output.push(String(chunk));
+      return true;
+    });
+
+    await tokenPlanUsage.run({
+      client: { console: vi.fn().mockResolvedValue(makeUsageResponse()) },
+      flags: { json: true, view: false },
+      settings: { dryRun: false },
+    } as never);
+
+    expect(output.join("").trim()).toBe("{}");
   });
 });

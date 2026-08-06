@@ -55,7 +55,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage token-plan（Console）", () =
     expect(data.data).toEqual({});
   });
 
-  test("usage token-plan --json 返回百分比与可用的重置时间", async () => {
+  test("usage token-plan --json 返回可用的额度字段", async () => {
     const result = await runCommandE2e(USAGE_ROUTES, ["usage", "token-plan", "--json"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
@@ -65,12 +65,18 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage token-plan（Console）", () =
       per1WeekPercentage?: number;
       per1WeekResetTime?: number;
     }>(result.stdout);
-    expect(data.per5HourPercentage).toBeTypeOf("number");
-    expect(data.per1WeekPercentage).toBeTypeOf("number");
-    if (data.per5HourPercentage === 0) expect(data.per5HourResetTime).toBeUndefined();
-    else expect(data.per5HourResetTime).toBeTypeOf("number");
-    if (data.per1WeekPercentage === 0) expect(data.per1WeekResetTime).toBeUndefined();
-    else expect(data.per1WeekResetTime).toBeTypeOf("number");
+    const quotas = [
+      [data.per5HourPercentage, data.per5HourResetTime],
+      [data.per1WeekPercentage, data.per1WeekResetTime],
+    ];
+    for (const [percentage, resetTime] of quotas) {
+      if (percentage === undefined) expect(resetTime).toBeUndefined();
+      else if (percentage === 0) expect(resetTime).toBeUndefined();
+      else {
+        expect(percentage).toBeTypeOf("number");
+        expect(resetTime).toBeTypeOf("number");
+      }
+    }
   });
 
   test("usage token-plan --view 渲染生成时间与两个额度窗口", async () => {

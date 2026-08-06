@@ -6,24 +6,14 @@ const BOX_WIDTH = 76;
 const PROGRESS_WIDTH = 32;
 
 interface TokenPlanUsage {
-  per5HourPercentage: number;
+  per5HourPercentage?: number;
   per5HourResetTime?: number;
-  per1WeekPercentage: number;
+  per1WeekPercentage?: number;
   per1WeekResetTime?: number;
 }
 
 function readUsage(result: unknown): TokenPlanUsage {
   const response = unwrapResponse(result as Record<string, unknown>);
-  const percentages = [response.per5HourPercentage, response.per1WeekPercentage];
-
-  if (
-    !percentages.every(
-      (percentage) => typeof percentage === "number" && Number.isFinite(percentage),
-    )
-  ) {
-    throw new BailianError("Token Plan usage response has an unexpected format.", ExitCode.GENERAL);
-  }
-
   const usage = {
     per5HourPercentage: response.per5HourPercentage,
     per5HourResetTime: response.per5HourResetTime,
@@ -31,17 +21,20 @@ function readUsage(result: unknown): TokenPlanUsage {
     per1WeekResetTime: response.per1WeekResetTime,
   };
 
-  const resetTimes = [
+  const quotas = [
     [usage.per5HourPercentage, usage.per5HourResetTime],
     [usage.per1WeekPercentage, usage.per1WeekResetTime],
   ];
-  const hasValidResetTimes = resetTimes.every(
+  const hasValidQuotas = quotas.every(
     ([percentage, resetTime]) =>
-      (percentage === 0 && resetTime === undefined) ||
-      (typeof resetTime === "number" && Number.isFinite(resetTime)),
+      (percentage === undefined && resetTime === undefined) ||
+      (typeof percentage === "number" &&
+        Number.isFinite(percentage) &&
+        ((percentage === 0 && resetTime === undefined) ||
+          (typeof resetTime === "number" && Number.isFinite(resetTime)))),
   );
 
-  if (!hasValidResetTimes) {
+  if (!hasValidQuotas) {
     throw new BailianError("Token Plan usage response has an unexpected format.", ExitCode.GENERAL);
   }
 
@@ -101,11 +94,21 @@ function printView(usage: TokenPlanUsage, generatedAt: number): void {
     const padding = Math.max(0, BOX_WIDTH - displayWidth(` ${visibleContent}`));
     process.stdout.write(`│ ${content}${" ".repeat(padding)}│\n`);
   };
-  const writeQuota = (label: string, percentage: number, resetTime: number | undefined) => {
+  const writeQuota = (
+    label: string,
+    unlimitedMessage: string,
+    percentage: number | undefined,
+    resetTime: number | undefined,
+  ) => {
+    writeLine(color.bold(label), label);
+    if (percentage === undefined) {
+      writeLine(color.dim(unlimitedMessage), unlimitedMessage);
+      return;
+    }
+
     const percentageText = formatPercentage(percentage);
     const bar = progressBar(percentage);
     const style = progressStyle(percentage, color.green, color.yellow, color.red);
-    writeLine(color.bold(label), label);
     writeLine(`${percentageText} used   ${style(bar)}`, `${percentageText} used   ${bar}`);
     if (resetTime === undefined) {
       writeLine(
@@ -124,9 +127,19 @@ function printView(usage: TokenPlanUsage, generatedAt: number): void {
   const generatedAtText = `Generated at: ${formatDateTime(generatedAt)} (local time)`;
   writeLine(color.dim(generatedAtText), generatedAtText);
   process.stdout.write(`├${"─".repeat(BOX_WIDTH)}┤\n`);
-  writeQuota("5-hour quota", usage.per5HourPercentage, usage.per5HourResetTime);
+  writeQuota(
+    "5-hour quota",
+    "5小时限额当前可能无限制，请到百炼 Token Plan 控制台核实。",
+    usage.per5HourPercentage,
+    usage.per5HourResetTime,
+  );
   process.stdout.write(`├${"─".repeat(BOX_WIDTH)}┤\n`);
-  writeQuota("1-week quota", usage.per1WeekPercentage, usage.per1WeekResetTime);
+  writeQuota(
+    "1-week quota",
+    "1周限额当前可能无限制，请到百炼 Token Plan 控制台核实。",
+    usage.per1WeekPercentage,
+    usage.per1WeekResetTime,
+  );
   process.stdout.write(`└${"─".repeat(BOX_WIDTH)}┘\n`);
 }
 
