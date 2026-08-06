@@ -1,10 +1,5 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  scaleDeployment,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { defineCommand, scaleDeployment, type FlagsDef } from "bailian-cli-core";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const SCALE_FLAGS = {
   deployedModel: {
@@ -52,7 +47,6 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const deployedModel = flags.deployedModel;
-    const format = detectOutputFormat(settings.output);
 
     const body: Record<string, unknown> = {};
     if (flags.capacity !== undefined) body.capacity = flags.capacity;
@@ -60,21 +54,16 @@ export default defineCommand({
     if (flags.outputTpm !== undefined) body.output_tpm = flags.outputTpm;
 
     if (settings.dryRun) {
-      emitResult({ action: "deploy.scale", deployed_model: deployedModel, body }, format);
+      emitResult({ action: "deploy.scale", deployed_model: deployedModel, body }, "json");
       return;
     }
 
     const response = await scaleDeployment(ctx.client, deployedModel, body);
-    const deployment = response.output ?? response.data;
 
     if (settings.quiet) {
       emitBare(deployedModel);
-    } else if (format === "text") {
-      const cap = deployment?.capacity !== undefined ? ` (capacity=${deployment.capacity})` : "";
-      emitBare(`Scaled ${deployedModel}${cap}.`);
-      emitRequestId(response.request_id, settings.quiet);
     } else {
-      emitResult(response, format);
+      emitResult(response, "json");
     }
   },
 });

@@ -1,6 +1,5 @@
 import {
   defineCommand,
-  detectOutputFormat,
   createFineTune,
   getDataset,
   uploadDataset,
@@ -27,7 +26,7 @@ import {
 } from "bailian-cli-core";
 import { existsSync, statSync } from "fs";
 import { basename } from "path";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 
 /**
  * A `--datasets` / `--validations` token is treated as a local file to upload
@@ -606,8 +605,6 @@ async function runCreate<F extends FlagsDef>(
   if (modelName) body.model_name = modelName;
   if (suffix) body.finetuned_output_suffix = suffix;
 
-  const format = detectOutputFormat(settings.output);
-
   if (settings.dryRun) {
     const pending = [
       ...training.localPaths.map((path) => ({ field: "datasets", path })),
@@ -617,7 +614,7 @@ async function runCreate<F extends FlagsDef>(
       pending.length > 0
         ? { action: "finetune.create", body, pending_uploads: pending }
         : { action: "finetune.create", body },
-      format,
+      "json",
     );
     return;
   }
@@ -627,16 +624,8 @@ async function runCreate<F extends FlagsDef>(
 
   if (settings.quiet) {
     if (job?.job_id) emitBare(job.job_id);
-  } else if (format === "text") {
-    if (job?.job_id) {
-      emitBare(`Created fine-tune job: ${job.job_id}`);
-      if (job.status) emitBare(`Status: ${job.status}`);
-      emitRequestId(response.request_id, settings.quiet);
-    } else {
-      emitResult(response, format);
-    }
   } else {
-    emitResult(response, format);
+    emitResult(response, "json");
   }
 }
 

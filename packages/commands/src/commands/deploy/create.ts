@@ -1,6 +1,5 @@
 import {
   defineCommand,
-  detectOutputFormat,
   createDeployment,
   pickPlanStrategy,
   STRATEGIES,
@@ -11,7 +10,7 @@ import {
   type CommandContext,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const CREATE_FLAGS = {
   model: {
@@ -122,7 +121,6 @@ async function runCreate(
   const model = flags.model as string;
   const name = flags.name as string;
   const plan = (flags.plan as string | undefined) || defaultDeployPlan(modality);
-  const format = detectOutputFormat(settings.output);
 
   // Plan-specific behaviour is owned by core `plans.ts`. The strategy resolves
   // the plan-specific body fragment (mu may auto-pick a template from the
@@ -146,7 +144,7 @@ async function runCreate(
   };
 
   if (settings.dryRun) {
-    emitResult({ action: "deploy.create", body }, format);
+    emitResult({ action: "deploy.create", body }, "json");
     return;
   }
 
@@ -155,17 +153,8 @@ async function runCreate(
 
   if (settings.quiet) {
     emitBare(deployment?.deployed_model ?? "");
-  } else if (format === "text") {
-    emitBare(`Created deployment.`);
-    if (deployment?.deployed_model) emitBare(`  deployed_model:  ${deployment.deployed_model}`);
-    if (deployment?.status) emitBare(`  status:          ${deployment.status}`);
-    if (deployment?.plan) emitBare(`  plan:            ${deployment.plan}`);
-    emitBare(
-      `\nNext: track readiness with: ${identity.binName} deploy get --deployed-model ${deployment?.deployed_model ?? "<id>"}`,
-    );
-    emitRequestId(response.request_id, settings.quiet);
   } else {
-    emitResult(response, format);
+    emitResult(response, "json");
   }
 }
 

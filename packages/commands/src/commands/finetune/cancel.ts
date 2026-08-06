@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat, cancelFineTune, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { defineCommand, cancelFineTune, type FlagsDef } from "bailian-cli-core";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const CANCEL_FLAGS = {
   jobId: {
@@ -23,24 +23,18 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const jobId = flags.jobId;
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult({ action: "finetune.cancel", job_id: jobId }, format);
+      emitResult({ action: "finetune.cancel", job_id: jobId }, "json");
       return;
     }
 
     const response = await cancelFineTune(ctx.client, jobId);
-    const job = response.output ?? response.data;
 
     if (settings.quiet) {
       emitBare(jobId);
-    } else if (format === "text") {
-      const status = job?.status ? ` (status=${job.status})` : "";
-      emitBare(`Cancelled ${jobId}${status}.`);
-      emitRequestId(response.request_id, settings.quiet);
     } else {
-      emitResult(response, format);
+      emitResult(response, "json");
     }
   },
 });

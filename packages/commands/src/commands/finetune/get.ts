@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat, getFineTune, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { defineCommand, getFineTune, type FlagsDef } from "bailian-cli-core";
+import { emitResult } from "bailian-cli-runtime";
 
 const GET_FLAGS = {
   jobId: {
@@ -17,12 +17,11 @@ export default defineCommand({
   flags: GET_FLAGS,
   exampleArgs: ["--job-id ft-xxx", "--job-id ft-xxx --output json"],
   async run(ctx) {
-    const { identity, settings, flags } = ctx;
+    const { settings, flags } = ctx;
     const jobId = flags.jobId;
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult({ action: "finetune.get", job_id: jobId }, format);
+      emitResult({ action: "finetune.get", job_id: jobId }, "json");
       return;
     }
 
@@ -30,16 +29,20 @@ export default defineCommand({
     const job = response.output ?? response.data;
 
     if (!job) {
-      emitBare(`No data returned for ${jobId}`);
+      emitResult({ job_id: jobId, error: "No data returned" }, "json");
       return;
     }
 
-    const hp = job.hyper_parameters;
+    const hyperParameters = job.hyper_parameters;
     const hyperParts: string[] = [];
-    if (hp?.n_epochs !== undefined) hyperParts.push(`n_epochs=${hp.n_epochs}`);
-    if (hp?.batch_size !== undefined) hyperParts.push(`batch_size=${hp.batch_size}`);
-    if (hp?.learning_rate !== undefined) hyperParts.push(`learning_rate=${hp.learning_rate}`);
-    if (hp?.max_length !== undefined) hyperParts.push(`max_length=${hp.max_length}`);
+    if (hyperParameters?.n_epochs !== undefined)
+      hyperParts.push(`n_epochs=${hyperParameters.n_epochs}`);
+    if (hyperParameters?.batch_size !== undefined)
+      hyperParts.push(`batch_size=${hyperParameters.batch_size}`);
+    if (hyperParameters?.learning_rate !== undefined)
+      hyperParts.push(`learning_rate=${hyperParameters.learning_rate}`);
+    if (hyperParameters?.max_length !== undefined)
+      hyperParts.push(`max_length=${hyperParameters.max_length}`);
 
     const item = {
       job_id: job.job_id ?? jobId,
@@ -53,29 +56,10 @@ export default defineCommand({
       model_name: job.model_name ?? "",
       created_at: job.create_time ?? job.gmt_create ?? "",
       updated_at: job.end_time ?? job.gmt_modified ?? "",
+      usage: typeof job.usage === "number" ? String(job.usage) : "",
+      charge_type: typeof job.charge_type === "string" ? job.charge_type : "",
     };
 
-    if (format === "json") {
-      emitResult({ ...item, request_id: response.request_id }, format);
-      return;
-    }
-
-    // text / quiet
-    emitBare(`job_id:           ${item.job_id}`);
-    if (item.base_model) emitBare(`base_model:       ${item.base_model}`);
-    if (item.status) emitBare(`status:           ${item.status}`);
-    if (item.training_type) emitBare(`training_type:    ${item.training_type}`);
-    if (item.training_files.length) emitBare(`training_files:   ${item.training_files.join(", ")}`);
-    if (item.validation_files.length)
-      emitBare(`validation_files: ${item.validation_files.join(", ")}`);
-    if (item.hyper_params) emitBare(`hyper_params:     ${item.hyper_params}`);
-    if (item.output_model)
-      emitBare(
-        `output_model:     ${item.output_model}  (→ ${identity.binName} deploy text create --model)`,
-      );
-    if (item.model_name) emitBare(`model_name:       ${item.model_name}`);
-    if (item.created_at) emitBare(`created_at:       ${item.created_at}`);
-    if (item.updated_at) emitBare(`updated_at:       ${item.updated_at}`);
-    emitRequestId(response.request_id, settings.quiet);
+    emitResult({ ...item, request_id: response.request_id }, "json");
   },
 });

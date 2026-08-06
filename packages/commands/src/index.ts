@@ -87,6 +87,8 @@ export { default as deployModels } from "./commands/deploy/models.ts";
 export { default as deployScale } from "./commands/deploy/scale.ts";
 export { default as deployUpdate } from "./commands/deploy/update.ts";
 export { default as deployDelete } from "./commands/deploy/delete.ts";
+export { default as deployPause } from "./commands/deploy/pause.ts";
+export { default as deployResume } from "./commands/deploy/resume.ts";
 export { default as tokenPlanListSeats } from "./commands/token-plan/list-seats.ts";
 export { default as tokenPlanCreateKey } from "./commands/token-plan/create-key.ts";
 export { default as tokenPlanAssignSeats } from "./commands/token-plan/assign-seats.ts";

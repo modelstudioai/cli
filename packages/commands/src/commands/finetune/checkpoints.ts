@@ -1,10 +1,5 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  listCheckpoints,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId, formatTable } from "bailian-cli-runtime";
+import { defineCommand, listCheckpoints, type FlagsDef } from "bailian-cli-core";
+import { emitResult } from "bailian-cli-runtime";
 
 const CHECKPOINTS_FLAGS = {
   jobId: {
@@ -15,6 +10,8 @@ const CHECKPOINTS_FLAGS = {
   },
 } satisfies FlagsDef;
 
+const EXPIRY_WARN_THRESHOLD_MS = 72 * 60 * 60 * 1000; // 72 hours
+
 export default defineCommand({
   description: "List checkpoints produced by a fine-tune job",
   auth: "apiKey",
@@ -22,16 +19,15 @@ export default defineCommand({
   flags: CHECKPOINTS_FLAGS,
   exampleArgs: ["--job-id ft-xxx", "--job-id ft-xxx --output json"],
   notes: [
-    "Use the returned `checkpoint` value with `finetune export` to publish",
-    "a deployable model.",
+    "`model_name` (shown for SUCCEEDED checkpoints) is the direct input for `deploy create --model`.",
+    "Checkpoints expire ~15 days after creation; `expire_time` shows the deadline. Export or deploy before expiry.",
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
     const jobId = flags.jobId;
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult({ action: "finetune.checkpoints", job_id: jobId }, format);
+      emitResult({ action: "finetune.checkpoints", job_id: jobId }, "json");
       return;
     }
 
@@ -44,22 +40,26 @@ export default defineCommand({
       checkpoint: item.checkpoint ?? item.checkpoint_id ?? "",
       step: item.step !== undefined ? String(item.step) : "",
       status: item.status ?? "",
+      model_name: item.model_name ?? "",
+      expire_time: item.expire_time ?? "",
     }));
 
-    if (format === "json") {
-      emitResult({ items, total, request_id: response.request_id }, format);
-      return;
-    }
+    emitResult({ items, total, request_id: response.request_id }, "json");
 
-    // text / quiet
-    if (items.length === 0) {
-      emitBare("No checkpoints found.");
-      return;
+    // Near-expiry warning: check if any non-expired checkpoint is within 72h of expiry.
+    const now = Date.now();
+    const expiringSoon = items.filter((item) => {
+      if (!item.expire_time) return false;
+      const deadline = new Date(item.expire_time).getTime();
+      if (Number.isNaN(deadline)) return false;
+      const remaining = deadline - now;
+      return remaining > 0 && remaining < EXPIRY_WARN_THRESHOLD_MS;
+    });
+    if (expiringSoon.length > 0) {
+      process.stderr.write(
+        `\n[warning] ${expiringSoon.length} checkpoint(s) will expire within 72 hours. ` +
+          "Export or deploy before expiry to avoid losing the model artifact.\n",
+      );
     }
-    const headers = ["CHECKPOINT", "STEP", "STATUS"];
-    const rows = items.map((i) => [i.checkpoint, i.step, i.status]);
-    for (const line of formatTable(headers, rows)) emitBare(line);
-    emitBare(`\nTotal: ${total}`);
-    emitRequestId(response.request_id, settings.quiet);
   },
 });

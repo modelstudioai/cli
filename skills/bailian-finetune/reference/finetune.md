@@ -166,8 +166,8 @@ bl finetune capability --training-type sft --quiet
 
 #### Notes
 
-- Use the returned `checkpoint` value with `finetune export` to publish
-- a deployable model.
+- `model_name` (shown for SUCCEEDED checkpoints) is the direct input for `deploy create --model`.
+- Checkpoints expire ~15 days after creation; `expire_time` shows the deadline. Export or deploy before expiry.
 
 #### Examples
 

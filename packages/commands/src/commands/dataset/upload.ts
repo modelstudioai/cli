@@ -1,6 +1,5 @@
 import {
   defineCommand,
-  detectOutputFormat,
   uploadDataset,
   validateDataset,
   parseDatasetSchemaFlag,
@@ -11,7 +10,7 @@ import {
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const UPLOAD_FLAGS = {
   file: {
@@ -80,7 +79,6 @@ export default defineCommand({
         `Supported schemas: chatml, dpo, cpt, tts, image.`,
       );
     }
-    const format = detectOutputFormat(settings.output);
     // Image schema allows larger ZIPs (1 GB vs 300 MB for text).
     const isMediaSchema = schema === "image";
 
@@ -129,7 +127,7 @@ export default defineCommand({
           validate: !flags.noValidate,
           schema: schema ?? "auto",
         },
-        format,
+        "json",
       );
       return;
     }
@@ -142,11 +140,8 @@ export default defineCommand({
 
     if (settings.quiet) {
       emitBare(file.file_id);
-    } else if (format === "text") {
-      emitBare(`Uploaded ${file.name} → file_id=${file.file_id}`);
-      emitRequestId(request_id, settings.quiet);
     } else {
-      emitResult({ ...file, request_id }, format);
+      emitResult({ ...file, request_id }, "json");
     }
   },
 });

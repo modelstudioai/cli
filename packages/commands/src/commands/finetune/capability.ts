@@ -1,6 +1,5 @@
 import {
   defineCommand,
-  detectOutputFormat,
   fetchModelList,
   fetchModelCapability,
   listSupportedTrainingTypes,
@@ -41,17 +40,6 @@ async function fetchAllFoundationModels(settings: Settings): Promise<ModelCapabi
     all.push(...result.models);
   }
   return all as ModelCapability[];
-}
-
-const VARIANT_LABEL: Record<string, string> = {
-  full: "full-parameter",
-  lora: "LoRA",
-};
-
-function describeTrainingType(value: string): string {
-  if (!isTrainingTypeCli(value)) return value;
-  const { method, variant } = trainingTypeMethodVariant(value);
-  return `${VARIANT_LABEL[variant] ?? variant} ${method.toUpperCase()}`;
 }
 
 const CAPABILITY_FLAGS = {
@@ -95,7 +83,6 @@ export default defineCommand({
     const { settings, flags } = ctx;
     const model = flags.model || undefined;
     const trainingType = flags.trainingType || undefined;
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
       emitResult(
@@ -104,7 +91,7 @@ export default defineCommand({
           model,
           training_type: trainingType,
         },
-        format,
+        "json",
       );
       return;
     }
@@ -113,7 +100,7 @@ export default defineCommand({
     if (model) {
       const capability = await fetchModelCapability(settings, model);
       if (!capability) {
-        emitBare(`No foundation model found matching "${model}".`);
+        emitResult({ model, error: `No foundation model found matching "${model}".` }, "json");
         return;
       }
       const supported = listSupportedTrainingTypes(capability);
@@ -121,23 +108,15 @@ export default defineCommand({
         for (const value of supported) emitBare(value);
         return;
       }
-      if (format !== "text") {
-        emitResult(
-          {
-            model: capability.model ?? model,
-            supported,
-            supports: capability.supports,
-            trainingTypes: capability.trainingTypes,
-          },
-          format,
-        );
-        return;
-      }
-      emitBare(`${capability.model ?? model}`);
-      emitBare(supported.length ? "Supported training types:" : "No supported training types.");
-      for (const value of supported) {
-        emitBare(`  ${value.padEnd(10)} ${describeTrainingType(value)}`);
-      }
+      emitResult(
+        {
+          model: capability.model ?? model,
+          supported,
+          supports: capability.supports,
+          trainingTypes: capability.trainingTypes,
+        },
+        "json",
+      );
       return;
     }
 
@@ -162,20 +141,15 @@ export default defineCommand({
       for (const entry of matched) emitBare(entry.model);
       return;
     }
-    if (format !== "text") {
-      emitResult(
-        {
-          training_type: trainingType,
-          method,
-          variant,
-          count: matched.length,
-          models: matched,
-        },
-        format,
-      );
-      return;
-    }
-    emitBare(`Models supporting ${trainingType} (${method} / ${variant}): ${matched.length}`);
-    for (const entry of matched) emitBare(`  ${entry.model}`);
+    emitResult(
+      {
+        training_type: trainingType,
+        method,
+        variant,
+        count: matched.length,
+        models: matched,
+      },
+      "json",
+    );
   },
 });

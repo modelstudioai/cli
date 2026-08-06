@@ -7,17 +7,19 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                  | Description                                               |
-| ------------------------ | --------------------------------------------------------- |
-| `bl deploy audio create` | Create an audio (TTS) model deployment                    |
-| `bl deploy delete`       | Delete a model deployment (must be STOPPED or FAILED)     |
-| `bl deploy get`          | Get details of a single model deployment                  |
-| `bl deploy image create` | Create an image generation model deployment               |
-| `bl deploy list`         | List model deployments                                    |
-| `bl deploy models`       | List models available for deployment                      |
-| `bl deploy scale`        | Scale a deployment's capacity                             |
-| `bl deploy text create`  | Create a text model deployment                            |
-| `bl deploy update`       | Update a deployment's rate limits (rpm_limit / tpm_limit) |
+| Command                  | Description                                                   |
+| ------------------------ | ------------------------------------------------------------- |
+| `bl deploy audio create` | Create an audio (TTS) model deployment                        |
+| `bl deploy delete`       | Delete a model deployment (must be STOPPED or FAILED)         |
+| `bl deploy get`          | Get details of a single model deployment                      |
+| `bl deploy image create` | Create an image generation model deployment                   |
+| `bl deploy list`         | List model deployments                                        |
+| `bl deploy models`       | List models available for deployment                          |
+| `bl deploy pause`        | Pause a running model deployment (stops billing for mu/ptu)   |
+| `bl deploy resume`       | Resume a paused model deployment (brings service back online) |
+| `bl deploy scale`        | Scale a deployment's capacity                                 |
+| `bl deploy text create`  | Create a text model deployment                                |
+| `bl deploy update`       | Update a deployment's rate limits (rpm_limit / tpm_limit)     |
 
 ## Command details
 
@@ -261,6 +263,82 @@ bl deploy models --source custom --page-size 50
 
 ```bash
 bl deploy models --catalog-version v1.0 --output json
+```
+
+### `bl deploy pause`
+
+| Field           | Value                                                       |
+| --------------- | ----------------------------------------------------------- |
+| **Name**        | `deploy pause`                                              |
+| **Description** | Pause a running model deployment (stops billing for mu/ptu) |
+| **Usage**       | `bl deploy pause --deployed-model <id> [--skip-precheck]`   |
+
+#### Flags
+
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--deployed-model <id>`        | string | yes      | Deployed model identifier (required)                     |
+| `--skip-precheck`              | switch | no       | Skip the local RUNNING/PENDING status precheck           |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
+
+#### Notes
+
+- While paused, billing ceases for mu/ptu plans. Use `deploy resume` to bring it back online or `deploy delete` to remove.
+- Precheck verifies status is RUNNING/PENDING before issuing the pause; pass --skip-precheck to bypass.
+
+#### Examples
+
+```bash
+bl deploy pause --deployed-model dep-...
+```
+
+```bash
+bl deploy pause --deployed-model dep-... --skip-precheck
+```
+
+```bash
+bl deploy pause --deployed-model dep-... --dry-run
+```
+
+### `bl deploy resume`
+
+| Field           | Value                                                         |
+| --------------- | ------------------------------------------------------------- |
+| **Name**        | `deploy resume`                                               |
+| **Description** | Resume a paused model deployment (brings service back online) |
+| **Usage**       | `bl deploy resume --deployed-model <id> [--skip-precheck]`    |
+
+#### Flags
+
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--deployed-model <id>`        | string | yes      | Deployed model identifier (required)                     |
+| `--skip-precheck`              | switch | no       | Skip the local STOPPED status precheck                   |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
+
+#### Notes
+
+- Precheck verifies status is STOPPED before issuing the resume; pass --skip-precheck to bypass.
+- For mu/ptu plans, billing resumes once the service is back online.
+
+#### Examples
+
+```bash
+bl deploy resume --deployed-model dep-...
+```
+
+```bash
+bl deploy resume --deployed-model dep-... --skip-precheck
+```
+
+```bash
+bl deploy resume --deployed-model dep-... --dry-run
 ```
 
 ### `bl deploy scale`

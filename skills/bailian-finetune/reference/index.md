@@ -22,6 +22,8 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl deploy image create`   | Create an image generation model deployment                                                                                     | [deploy.md](deploy.md)     |
 | `bl deploy list`           | List model deployments                                                                                                          | [deploy.md](deploy.md)     |
 | `bl deploy models`         | List models available for deployment                                                                                            | [deploy.md](deploy.md)     |
+| `bl deploy pause`          | Pause a running model deployment (stops billing for mu/ptu)                                                                     | [deploy.md](deploy.md)     |
+| `bl deploy resume`         | Resume a paused model deployment (brings service back online)                                                                   | [deploy.md](deploy.md)     |
 | `bl deploy scale`          | Scale a deployment's capacity                                                                                                   | [deploy.md](deploy.md)     |
 | `bl deploy text create`    | Create a text model deployment                                                                                                  | [deploy.md](deploy.md)     |
 | `bl deploy update`         | Update a deployment's rate limits (rpm_limit / tpm_limit)                                                                       | [deploy.md](deploy.md)     |
@@ -43,7 +45,7 @@ Use this index for the skill-scoped quick index and global flags.
 | Group      | Commands                                                                                                                                 | Reference                  |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
 | `dataset`  | `delete`, `get`, `list`, `upload`, `validate`                                                                                            | [dataset.md](dataset.md)   |
-| `deploy`   | `audio create`, `delete`, `get`, `image create`, `list`, `models`, `scale`, `text create`, `update`                                      | [deploy.md](deploy.md)     |
+| `deploy`   | `audio create`, `delete`, `get`, `image create`, `list`, `models`, `pause`, `resume`, `scale`, `text create`, `update`                   | [deploy.md](deploy.md)     |
 | `finetune` | `audio create`, `cancel`, `capability`, `checkpoints`, `delete`, `export`, `get`, `image create`, `list`, `logs`, `text create`, `watch` | [finetune.md](finetune.md) |
 
 ## Global flags
