@@ -27,7 +27,7 @@ const MAX_AUTH_CALLBACK_BODY = 65536;
 const REGEX_DOUBLE_NEWLINE = new RegExp("\r\n\r\n|\n\n");
 
 const CONSOLE_ORIGINS: Record<string, string> = {
-  domestic: "https://pre-bailian.console.aliyun.com",
+  domestic: "https://bailian.console.aliyun.com",
   international: "https://modelstudio.console.alibabacloud.com",
 };
 
