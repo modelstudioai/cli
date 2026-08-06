@@ -3,6 +3,8 @@ export {
   chatPath,
   imagePath,
   imageSyncPath,
+  imageText2ImagePath,
+  image2ImagePath,
   knowledgeChatEndpoint,
   knowledgeRetrievePath,
   knowledgeSearchEndpoint,
@@ -18,9 +20,24 @@ export {
   userProfilePath,
   videoGeneratePath,
 } from "./endpoints.ts";
-export { CHANNEL, SOURCE_CONFIG, TAGS, trackingHeaders } from "./headers.ts";
-export type { RequestOpts } from "./http.ts";
+export {
+  isLegacyImage2ImageModel,
+  isLegacyText2ImageModel,
+  isSyncMultimodalImageModel,
+  isWanxFunctionImageEditModel,
+  resolveImageEditApi,
+  resolveImageGenerateApi,
+  resolveImageSizeProfile,
+  resolvePromptExtendDefault,
+  type ImageApiKind,
+  type ImageApiRoute,
+  type ImageInputStyle,
+  type ImageSizeProfile,
+} from "./image-routes.ts";
+export { CHANNEL, sourceConfig, trackingHeaders, type TrackingIdentity } from "./headers.ts";
+export type { HttpDeps, RequestOpts } from "./http.ts";
 export { request, requestJson } from "./http.ts";
+export { createInstrumentedFetch, type FetchImplementation } from "./instrumented-fetch.ts";
 export {
   Client,
   type ClientRequestOpts,

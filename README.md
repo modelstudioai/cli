@@ -24,9 +24,9 @@ _Built for AI Agents. Every command works as a structured tool call._
 
 Equip your AI Agent out-of-the-box with these capabilities, composable across complex tasks:
 
-- **Text chat** — Qwen3.7-max: major gains in agentic coding, frontend coding, and vibe coding
+- **Text chat** — Qwen3.8-max: major gains in agentic coding, frontend coding, and vibe coding
 - **Multimodal (Omni)** — Full omni-modal support across text + image + audio + video
-- **Image generation & editing** — Qwen-Image 2.0: pro text rendering, photorealism, strong semantic adherence, multi-image composition
+- **Image generation & editing** — Qwen-Image 3.0: pro text rendering, photorealism, strong semantic adherence, multi-image composition
 - **Video generation & editing** — happyhorse-1.1 series: text-/image-/reference-to-video and natural-language video editing (up to 9-image reference)
 - **Speech synthesis & recognition** — CosyVoice streaming TTS, voice cloning from 5–20s samples; FunAudio-ASR covers 30 languages including 7 Chinese dialects and 20+ Mandarin accents
 - **Image & video understanding** — Qwen-VL: long-form video analysis, chart/document parsing, visual reasoning, multilingual OCR
@@ -78,11 +78,20 @@ No timeline scrubbing. No frame-by-frame editing. Just one sentence → one vide
 ## Installation
 
 ```bash
+# Recommended — no Node required
+curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
+
+# Windows (PowerShell)
+irm https://bailian.aliyun.com/cli/install.ps1 | iex
+
+# Node users / developers (Node.js >= 18.17)
 npm install -g bailian-cli
+
+# Agent skills
 npx skills add modelstudioai/cli --all -g
 ```
 
-> Requires Node.js >= 18.17.
+> Binary install does not require Node.js. `npm install -g` remains fully supported.
 
 ## Quick Start
 
@@ -218,8 +227,9 @@ bl config set --key base_url --value https://dashscope-us.aliyuncs.com
 bl config set --key default_text_model --value qwen-turbo
 bl config set --key timeout --value 600
 
-# Self-update to latest version
+# Self-update to latest or a specific version
 bl update
+bl update --to 0.1.14
 ```
 
 Config file location: `~/.bailian/config.json`

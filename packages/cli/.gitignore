@@ -3,3 +3,6 @@ dist
 *.log
 .DS_Store
 outputs/
+# agents
+agents.state.json
+.env

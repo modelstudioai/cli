@@ -5,6 +5,7 @@ import { runCheck } from "./check.mjs";
 import { createTag, currentBranch, isWorkingTreeClean, pushTag, tagExists } from "./lib/git.mjs";
 import { npmViewExists, pnpmPublish } from "./lib/npm.mjs";
 import { ALL_PACKAGES, PACKAGES } from "./lib/packages.mjs";
+import { releaseBinaryArtifacts } from "./lib/binary-release.mjs";
 
 function log(msg = "") {
   process.stdout.write(`${msg}\n`);
@@ -18,11 +19,13 @@ const { values } = parseArgs({
   options: {
     "dry-run": { type: "boolean", default: false },
     knowledge: { type: "boolean", default: false },
+    "skip-binary": { type: "boolean", default: false },
   },
   allowPositionals: false,
 });
 const dryRun = values["dry-run"];
 const knowledge = values.knowledge;
+const skipBinary = values["skip-binary"];
 const packages = knowledge ? ALL_PACKAGES : PACKAGES;
 
 try {
@@ -59,20 +62,18 @@ try {
     );
   }
 
-  // Publish in dependency order (core → runtime → commands → cli [→ kscli]).
+  // 1) npm (dependency order: core → runtime → commands → cli [→ kscli])
   for (const pkg of packages) {
     if (published.get(pkg.key)) continue;
     step(`publish ${pkg.name}@${version} (tag=latest, provenance)`);
     pnpmPublish(pkg, { tag: "latest", provenance: true, dryRun });
   }
 
+  // 2) git tag — must be on origin before the GitHub Release step (--verify-tag)
+  const tag = `v${version}`;
   if (dryRun) {
     log("\n[dry-run] skipping git tag");
-    process.exit(0);
-  }
-
-  const tag = `v${version}`;
-  if (tagExists(tag)) {
+  } else if (tagExists(tag)) {
     log(`tag ${tag} already exists; skipping tag push`);
   } else {
     step(`tag ${tag} and push`);
@@ -80,7 +81,17 @@ try {
     pushTag(tag);
   }
 
-  log("\nstable release complete.");
+  // 3) binary GitHub Release (same version; orchestrated here, not a separate release entry)
+  if (skipBinary) {
+    log("\n[skip-binary] skipping binary GitHub Release");
+  } else {
+    step(`publish binary GitHub Release (mode=stable, version=${version})`);
+    await releaseBinaryArtifacts({ mode: "stable", dryRun });
+  }
+
+  const parts = ["npm"];
+  if (!skipBinary) parts.push("binary");
+  log(`\nstable release complete (${parts.join(" + ")}).`);
 } catch (error) {
   process.stderr.write(`\nrelease publish-stable failed: ${error.message}\n`);
   process.exit(1);

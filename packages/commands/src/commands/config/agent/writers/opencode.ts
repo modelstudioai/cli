@@ -1,14 +1,15 @@
 import { homedir } from "os";
 import { join } from "path";
-import { backup, readJson, writeJsonAtomic, isAnthropicEndpoint, type AgentDef } from "./utils.ts";
+import { backup, readJsonc, writeJsonAtomic, isAnthropicEndpoint, type AgentDef } from "./utils.ts";
 
 export default {
   label: "OpenCode",
   write({ baseUrl, apiKey, model }) {
     const configPath = join(homedir(), ".config", "opencode", "opencode.json");
 
+    // opencode.json is JSONC — tolerate comments and trailing commas on read.
     backup(configPath);
-    const config = readJson(configPath);
+    const config = readJsonc(configPath);
 
     if (!config.$schema) config.$schema = "https://opencode.ai/config.json";
 

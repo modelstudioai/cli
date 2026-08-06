@@ -10,6 +10,7 @@ lerna-debug.log*
 # Dependencies & build output
 node_modules
 dist
+dist-bin
 dist-ssr
 tools/generated
 .node-version
@@ -36,7 +37,9 @@ tools/generated
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 .cursor/
+.qoder/
 .qwen/
+.qoder
 .playwright-mcp/
 .pnpm-store/
 
@@ -46,3 +49,6 @@ packages/cli/scene/**/outputs/
 
 # Environment variables (sensitive data)
 .env
+
+# Local scratch / plan drafts (never commit)
+.scratch/

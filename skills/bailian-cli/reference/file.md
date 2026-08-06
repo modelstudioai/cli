@@ -45,5 +45,5 @@ bl file upload --file audio.wav --model qwen3-asr-flash
 ```
 
 ```bash
-bl file upload --file cat.png --model qwen-image-2.0
+bl file upload --file cat.png --model qwen-image-3.0
 ```

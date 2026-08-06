@@ -5,6 +5,15 @@ set -eu
 pnpm run sync:skill-assets
 
 # Stage generator output so it is included in this commit.
-git add skills/bailian-cli/reference skills/bailian-cli/SKILL.md
+git add \
+  skills/bailian-protocol/SKILL.md \
+  skills/bailian-cli/SKILL.md \
+  skills/bailian-cli/reference \
+  skills/bailian-gen/SKILL.md \
+  skills/bailian-gen/reference \
+  skills/bailian-finetune/SKILL.md \
+  skills/bailian-finetune/reference \
+  skills/bailian-managed-agent/SKILL.md \
+  skills/bailian-managed-agent/reference
 
 vp staged

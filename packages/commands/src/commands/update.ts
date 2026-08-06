@@ -1,22 +1,31 @@
 import { execSync } from "child_process";
 import { writeFileSync } from "fs";
 import { join } from "path";
-import { defineCommand, getConfigDir } from "bailian-cli-core";
-import { ansi, fetchLatestVersion, type AnsiStyles } from "bailian-cli-runtime";
+import {
+  BailianError,
+  DEFAULT_INSTALL_PS1_URL,
+  DEFAULT_INSTALL_SCRIPT_URL,
+  defineCommand,
+  getConfigDir,
+  getUpdateInstallMethod,
+  type InstallMethod,
+} from "bailian-cli-core";
+import {
+  ansi,
+  fetchLatestVersion,
+  fetchBinaryChannelVersion,
+  isValidUpdateTargetVersion,
+  normalizeBinaryVersion,
+  performBinaryUpdate,
+  type AnsiStyles,
+} from "bailian-cli-runtime";
 
 const SKILL_SOURCE = "modelstudioai/cli";
 const SKILL_INSTALL_CMD = `npx skills add ${SKILL_SOURCE} --all -g -y`;
 
-/** Build the install command for the given npm package. */
-function detectInstallCommand(npmPackage: string): { cmd: string; label: string } {
-  return { cmd: `npm install -g ${npmPackage}@latest`, label: "npm" };
-}
-
 function updateAgentSkill(color: AnsiStyles): void {
   process.stderr.write("\nUpdating agent skill...\n");
   try {
-    // Reinstall (not `skills update`) into ~/.agents/skills/ and sync to all agent apps.
-    // `--all` on `skills add` means --skill '*' --agent '*' -y (Cursor, Claude Code, etc.).
     execSync(SKILL_INSTALL_CMD, { stdio: "inherit" });
     process.stderr.write(`${color.green("\u2713 Agent skill updated.")}\n`);
   } catch {
@@ -26,56 +35,140 @@ function updateAgentSkill(color: AnsiStyles): void {
   }
 }
 
+function writeUpdateState(version: string): void {
+  try {
+    const stateFile = join(getConfigDir(), "update-state.json");
+    writeFileSync(stateFile, JSON.stringify({ lastChecked: Date.now(), latestVersion: version }));
+  } catch {
+    /* ignore */
+  }
+}
+
+async function resolveLatest(method: InstallMethod, npmPackage: string): Promise<string | null> {
+  if (method === "binary") {
+    return (
+      (await fetchBinaryChannelVersion("latest", 5000)) ??
+      (await fetchLatestVersion(5000, npmPackage))
+    );
+  }
+  return fetchLatestVersion(5000, npmPackage);
+}
+
+function binaryReinstallHint(): string {
+  if (process.platform === "win32") {
+    return `  irm ${DEFAULT_INSTALL_PS1_URL} | iex\n`;
+  }
+  return `  curl -fsSL ${DEFAULT_INSTALL_SCRIPT_URL} | bash\n`;
+}
+
 export default defineCommand({
-  description: "Update the CLI to the latest version",
+  description: "Update the CLI to the latest or a specified version",
   auth: "none",
-  exampleArgs: [""],
+  usageArgs: "[--to <version>]",
+  flags: {
+    to: {
+      type: "string",
+      valueHint: "<version>",
+      description: "Install this exact version instead of the latest",
+    },
+  },
+  exampleArgs: ["", "--to 0.1.14"],
+  validate(flags) {
+    if (flags.to === undefined) return undefined;
+    if (!flags.to.trim()) return "--to requires a non-empty version";
+    if (!isValidUpdateTargetVersion(flags.to)) {
+      return `--to must be a semver version (e.g. 1.13.0, v1.13.0, 0.0.0-beta-<sha>-<YYYYMMDDHHMM>), got: ${flags.to.trim()}`;
+    }
+    return undefined;
+  },
   async run(ctx) {
     const { identity } = ctx;
     const npmPackage = identity.npmPackage;
     const binName = identity.binName;
     const currentVersion = identity.version;
     const color = ansi(process.stderr);
+    const method = getUpdateInstallMethod(identity);
+    const requestedTo = ctx.flags.to?.trim();
+    const pinnedVersion = requestedTo ? normalizeBinaryVersion(requestedTo) : undefined;
 
     process.stderr.write(`Current version: ${color.yellow(currentVersion)}\n`);
+    process.stderr.write(`Install method: ${color.dim(method)}\n`);
+    if (pinnedVersion) {
+      process.stderr.write(`Target version: ${color.green(pinnedVersion)}\n`);
+    } else {
+      process.stderr.write("Checking for updates...\n");
+    }
 
-    // Check latest version first
-    process.stderr.write("Checking for updates...\n");
-    const latest = await fetchLatestVersion(5000, npmPackage);
-
-    if (latest && latest === currentVersion) {
-      process.stderr.write(`${color.green(`\u2713 Already up to date (${currentVersion}).`)}\n`);
-      updateAgentSkill(color);
+    if (method === "brew" || method === "winget") {
+      const cmd =
+        method === "brew" ? "brew upgrade bailian-cli" : "winget upgrade Aliyun.BailianCLI";
+      process.stderr.write(
+        `${color.yellow(`This CLI was installed via ${method}. Update with:`)}\n  ${cmd}\n`,
+      );
+      if (pinnedVersion) {
+        process.stderr.write(
+          `${color.dim(`Note: --to is not supported for ${method} installs.`)}\n`,
+        );
+      }
       return;
     }
 
-    if (latest) {
-      process.stderr.write(`Latest version: ${color.green(latest)}\n\n`);
+    const targetVersion = pinnedVersion ?? (await resolveLatest(method, npmPackage));
+
+    if (!targetVersion) {
+      process.stderr.write(`${color.yellow("Could not determine the latest version.")}\n`);
+      return;
     }
 
-    const { cmd, label } = detectInstallCommand(npmPackage);
-    process.stderr.write(`Updating ${npmPackage} via ${label}...\n\n`);
+    if (targetVersion === currentVersion) {
+      const message = pinnedVersion
+        ? `\u2713 Already at ${currentVersion}.`
+        : `\u2713 Already up to date (${currentVersion}).`;
+      process.stderr.write(`${color.green(message)}\n`);
+      if (method === "npm") updateAgentSkill(color);
+      return;
+    }
+
+    if (!pinnedVersion) {
+      process.stderr.write(`Latest version: ${color.green(targetVersion)}\n\n`);
+    } else {
+      process.stderr.write("\n");
+    }
+
+    if (method === "binary") {
+      process.stderr.write(`Updating via binary channel...\n\n`);
+      try {
+        const newVer = await performBinaryUpdate(targetVersion);
+        process.stderr.write(
+          `\n${color.green(`\u2713 Update complete: ${currentVersion} \u2192 ${newVer}`)}\n`,
+        );
+        writeUpdateState(newVer);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const reinstall =
+          error instanceof BailianError && error.hint
+            ? error.hint.replace(/^Re-run:\s*/i, "")
+            : binaryReinstallHint().trim();
+        process.stderr.write(`\nAutomatic binary update failed: ${message}\n`);
+        process.stderr.write("Re-run the install script:\n");
+        process.stderr.write(`  ${reinstall}\n\n`);
+      }
+      return;
+    }
+
+    const npmSpec = pinnedVersion ? `${npmPackage}@${pinnedVersion}` : `${npmPackage}@latest`;
+    const cmd = `npm install -g ${npmSpec}`;
+    process.stderr.write(`Updating ${npmPackage} via npm...\n\n`);
 
     try {
       execSync(cmd, { stdio: "inherit" });
-      // Verify the installed version after update
       try {
         const rawVer = execSync(`${binName} --version 2>/dev/null`, { encoding: "utf-8" }).trim();
-        // `<bin> --version` outputs "<bin> X.Y.Z" — extract just the version number
         const newVer = rawVer.replace(new RegExp(`^${binName}\\s+`), "");
         process.stderr.write(
           `\n${color.green(`\u2713 Update complete: ${currentVersion} \u2192 ${newVer}`)}\n`,
         );
-        // Update the cached state so the post-run notification doesn't fire
-        try {
-          const stateFile = join(getConfigDir(), "update-state.json");
-          writeFileSync(
-            stateFile,
-            JSON.stringify({ lastChecked: Date.now(), latestVersion: newVer }),
-          );
-        } catch {
-          /* ignore */
-        }
+        writeUpdateState(newVer);
       } catch {
         process.stderr.write(`\n${color.green("\u2713 Update complete.")}\n`);
       }

@@ -13,6 +13,11 @@ const commandCapabilityRestrictions = [
     property: "commandPacks",
     message: "commandPacks is only available to commands/plugin/**.",
   },
+  {
+    property: "exportApiCredential",
+    message:
+      "exportApiCredential is only available to commands/managed-agent/_engine/** (embedded-SDK credential delegation).",
+  },
 ] as const;
 
 type CommandCapabilityRestriction = (typeof commandCapabilityRestrictions)[number];
@@ -31,7 +36,11 @@ export default defineConfig({
     hookTimeout: 60_000,
   },
   staged: {
-    "*.{js,mjs,cjs,ts,mts,cts,jsx,tsx,json,yaml,yml,md}": "vp check --fix",
+    // 用函数形式返回命令：不把匹配到的文件名插值进 argv，改为跑一次全量检查。
+    // 逐文件传参会让 `vp check` 的 node 进程 argv 携带仓库内的文件名,
+    // 命中终端安全软件按 argv 子串匹配的进程管控规则时整个进程被 SIGKILL,
+    // 导致 pre-commit 无法完成。全量检查覆盖面更广,也不依赖文件名。
+    "*.{js,mjs,cjs,ts,mts,cts,jsx,tsx,json,yaml,yml,md}": () => "vp check --fix",
   },
   lint: {
     options: { typeAware: true, typeCheck: true },
@@ -56,15 +65,27 @@ export default defineConfig({
       },
       {
         files: ["packages/commands/src/commands/config/**/*.ts"],
-        rules: { "no-restricted-properties": restrictCommandCapabilities("configStore") },
+        rules: {
+          "no-restricted-properties": restrictCommandCapabilities("configStore"),
+        },
       },
       {
         files: ["packages/commands/src/commands/auth/**/*.ts"],
-        rules: { "no-restricted-properties": restrictCommandCapabilities("authStore") },
+        rules: {
+          "no-restricted-properties": restrictCommandCapabilities("authStore"),
+        },
       },
       {
         files: ["packages/commands/src/commands/plugin/**/*.ts"],
-        rules: { "no-restricted-properties": restrictCommandCapabilities("commandPacks") },
+        rules: {
+          "no-restricted-properties": restrictCommandCapabilities("commandPacks"),
+        },
+      },
+      {
+        files: ["packages/commands/src/commands/managed-agent/_engine/**/*.ts"],
+        rules: {
+          "no-restricted-properties": restrictCommandCapabilities("exportApiCredential"),
+        },
       },
     ],
   },

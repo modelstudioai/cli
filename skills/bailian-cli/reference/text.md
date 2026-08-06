@@ -25,7 +25,7 @@ Index: [index.md](index.md)
 
 | Flag                     | Type   | Required | Description                                                                 |
 | ------------------------ | ------ | -------- | --------------------------------------------------------------------------- |
-| `--model <model>`        | string | no       | Model ID (default: qwen3.7-max)                                             |
+| `--model <model>`        | string | no       | Model ID (default: qwen3.8-max)                                             |
 | `--message <text>`       | array  | no       | Message text (repeatable, prefix role: to set role); or use --messages-file |
 | `--messages-file <path>` | string | no       | JSON file with messages array (use - for stdin)                             |
 | `--system <text>`        | string | no       | System prompt                                                               |

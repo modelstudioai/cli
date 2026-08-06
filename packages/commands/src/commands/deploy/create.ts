@@ -11,7 +11,7 @@ import {
   type CommandContext,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
 
 const CREATE_FLAGS = {
   model: {
@@ -163,6 +163,7 @@ async function runCreate(
     emitBare(
       `\nNext: track readiness with: ${identity.binName} deploy get --deployed-model ${deployment?.deployed_model ?? "<id>"}`,
     );
+    emitRequestId(response.request_id, settings.quiet);
   } else {
     emitResult(response, format);
   }

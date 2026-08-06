@@ -32,7 +32,7 @@ const resolve = (s: Parameters<typeof src>[0]): Settings => buildSettings(src(s)
 test("token-plan Profile 预设保持固定", () => {
   expect(getModelProfilePreset("token-plan")).toEqual({
     baseUrl: "https://token-plan.cn-beijing.maas.aliyuncs.com",
-    defaultTextModel: "qwen3.8-max-preview",
+    defaultTextModel: "qwen3.8-max",
     defaultVideoModel: "happyhorse-1.1-t2v",
     defaultImageToVideoModel: "happyhorse-1.1-i2v",
     defaultReferenceToVideoModel: "happyhorse-1.1-r2v",
@@ -46,7 +46,7 @@ test("baseUrl:flag > env > file > 默认，所有来源统一归一化", () => {
   const file: ConfigFile = { base_url: "https://file.example.com/gateway/" };
   expect(resolveModelBaseUrl(src({ flags, env, file }))).toBe("https://flag.example.com");
   expect(resolveModelBaseUrl(src({ env, file }))).toBe("https://env.example.com");
-  expect(resolveModelBaseUrl(src({ file }))).toBe("https://file.example.com/gateway");
+  expect(resolveModelBaseUrl(src({ file }))).toBe("https://file.example.com");
   expect(resolveModelBaseUrl(src({}))).toBe("https://dashscope.aliyuncs.com");
 });
 

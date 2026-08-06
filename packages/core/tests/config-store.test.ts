@@ -54,9 +54,9 @@ test("ConfigStore/AuthStore 写入前归一化 model Base URL", async () => {
     await configStore.write({
       base_url: "https://proxy.example.com/bailian/compatible-mode/v1/?query=one#fragment",
     });
-    expect(readConfigFile().base_url).toBe("https://proxy.example.com/bailian");
+    expect(readConfigFile().base_url).toBe("https://proxy.example.com");
     expect(JSON.parse(readFileSync(getConfigPath(), "utf8")).base_url).toBe(
-      "https://proxy.example.com/bailian",
+      "https://proxy.example.com",
     );
 
     const authStore = makeAuthStore(buildSources({}));

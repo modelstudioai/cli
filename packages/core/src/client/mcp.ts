@@ -148,7 +148,7 @@ export class McpClient {
       "Content-Type": "application/json",
       Accept: "application/json, text/event-stream",
       "User-Agent": `${this.deps.identity.clientName}/${this.deps.identity.version}`,
-      ...trackingHeaders(),
+      ...trackingHeaders(this.deps.identity),
     };
 
     if (this.authToken) {

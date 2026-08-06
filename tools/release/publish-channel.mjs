@@ -13,6 +13,7 @@ import {
   writePackageJson,
 } from "./lib/packages.mjs";
 import { assertChannel } from "./lib/validate.mjs";
+import { releaseBinaryArtifacts } from "./lib/binary-release.mjs";
 
 function log(msg = "") {
   process.stdout.write(`${msg}\n`);
@@ -27,12 +28,16 @@ const { values } = parseArgs({
     channel: { type: "string" },
     "dry-run": { type: "boolean", default: false },
     knowledge: { type: "boolean", default: false },
+    "skip-binary": { type: "boolean", default: false },
   },
   allowPositionals: false,
 });
 const channel = values.channel;
 const dryRun = values["dry-run"];
 const knowledge = values.knowledge;
+// knowledge-studio-cli channel publishes are npm-only: binary artifacts are `bl`
+// and must not overwrite CDN sync-release.json used by bailian-cli install verify.
+const skipBinary = values["skip-binary"] || knowledge;
 const packages = knowledge ? ALL_PACKAGES : PACKAGES;
 assertChannel(channel);
 
@@ -55,8 +60,8 @@ function restoreOriginals() {
 try {
   step("compute channel version");
   const sha = headSha7();
-  const date = utcDateStamp();
-  const betaVersion = `0.0.0-beta-${sha}-${date}`;
+  const stamp = utcDateStamp(); // YYYYMMDDHHMM (UTC)
+  const betaVersion = `0.0.0-beta-${sha}-${stamp}`;
   log(`channel=${channel}  version=${betaVersion}`);
 
   step("temporarily bump package.json (not committed)");
@@ -76,9 +81,9 @@ try {
     log(`${pkg.name}@${betaVersion}: ${exists ? "already published" : "to publish"}`);
   }
   if (packages.every((pkg) => published.get(pkg.key))) {
-    log("\nall packages already published; nothing to do.");
+    log("\nall packages already published; nothing to do for npm.");
   } else {
-    // Publish in dependency order (core → runtime → commands → cli [→ kscli]).
+    // 1) npm (dependency order: core → runtime → commands → cli [→ kscli])
     for (const pkg of packages) {
       if (published.get(pkg.key)) continue;
       step(`publish ${pkg.name}@${betaVersion} (tag=${channel}, provenance)`);
@@ -86,9 +91,26 @@ try {
     }
   }
 
-  log(`\nchannel release complete: ${channel}@${betaVersion}`);
+  // 2) binary GitHub Release — must run before finally restores package.json versions.
+  // Channel binary always refreshes OSS sync-release.json (npm tag is independent).
+  if (skipBinary) {
+    const reason = knowledge
+      ? "[knowledge] skipping binary (npm-only; does not touch sync-release.json)"
+      : "[skip-binary] skipping binary GitHub Release";
+    log(`\n${reason}`);
+  } else {
+    step(
+      `publish binary GitHub Release (mode=channel, npm-tag=${channel}, CDN=sync-release, version=${betaVersion})`,
+    );
+    await releaseBinaryArtifacts({ mode: "channel", channel, dryRun });
+  }
+
+  const parts = ["npm"];
+  if (!skipBinary) parts.push("binary/sync-release");
+  log(`\nchannel release complete: ${channel}@${betaVersion} (${parts.join(" + ")})`);
 } catch (error) {
   process.stderr.write(`\nrelease publish-channel failed: ${error.message}\n`);
+  // Use exitCode (not process.exit) so `finally` can restore package.json bumps.
   process.exitCode = 1;
 } finally {
   restoreOriginals();

@@ -20,6 +20,8 @@ runtime/src/urls.ts                      ← 用户面控制台 URL(cn-only)
   BAILIAN_CONSOLE           BAILIAN_CONSOLE_ROOT/cn-beijing
   API_KEY_PAGE              BAILIAN_CONSOLE/?tab=app#/api-key
   TOKEN_PLAN_PAGE           BAILIAN_CONSOLE_ROOT/cn-beijing?tab=plan#/efm/subscription/overview
+  MCP_WEBSEARCH_PAGE        mcpMarketplaceDetailPage("WebSearch")
+  mcpMarketplaceDetailPage    BAILIAN_CONSOLE?tab=mcp#/mcp-market/detail/<serverCode>
 
 core/files/upload.ts                     ← 文件上传 endpoint(cn-pinned)
   UPLOAD_API                ${REGIONS.cn}/api/v1/uploads
@@ -49,7 +51,7 @@ grep -rnE "https://dashscope[a-z-]*\.aliyuncs\.com" packages/ --include="*.ts" \
 
 ### B. 非 TS 文件(只能人工同步,无法 import)
 
-- [ ] `skills/bailian-cli/reference/` 各 `<group>.md` 中 API/控制台 URL(`generate:reference` 重建后核对并提交)
+- [ ] `skills/*/reference/` 各 `<group>.md` 中 API/控制台 URL(`generate:reference` 重建后核对并提交)
 - [ ] `README.md` / `README.zh.md` 中所有 URL
 
 ### C. 渠道追踪参数

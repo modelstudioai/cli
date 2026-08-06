@@ -1,0 +1,7 @@
+version: "1"
+
+providers:
+  bailian:
+    api_key: ${DASHSCOPE_API_KEY}
+
+agents: "not-a-map"

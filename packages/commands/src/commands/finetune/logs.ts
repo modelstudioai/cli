@@ -6,7 +6,7 @@ import {
   type FineTuneLogEntry,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare } from "bailian-cli-runtime";
+import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
 
 /**
  * Render a single log entry as a single line (mirrors the flatten logic used
@@ -187,6 +187,7 @@ export default defineCommand({
         emitBare(renderEntry(entry));
       }
       if (payload?.total !== undefined) emitBare(`\nTotal: ${payload.total}`);
+      emitRequestId(response.request_id, settings.quiet);
     } else {
       emitResult(response, format);
     }

@@ -24,9 +24,9 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 
 让您的 AI Agent 开箱即具备以下能力，并可在复杂任务中自动组合调用：
 
-- **文本对话** — Qwen3.7-max：Agentic coding、前端编程、Vibe coding 等能力显著增强
+- **文本对话** — Qwen3.8-max：Agentic coding、前端编程、Vibe coding 等能力显著增强
 - **全模态对话** — 文本 + 图像 + 音频 + 视频全模态支持
-- **图像生成与编辑** — Qwen-Image 2.0：专业文字渲染、真实质感、强语义遵循、多图合成
+- **图像生成与编辑** — Qwen-Image 3.0：专业文字渲染、真实质感、强语义遵循、多图合成
 - **视频生成与编辑** — happyhorse-1.1 系列，支持文生 / 图生 / 参考生（最多 9 张图参考）/ 自然语言视频编辑
 - **语音合成与识别** — CosyVoice 实时流式合成，5-20s 样本即可克隆；FunAudio-ASR 覆盖 30 种语种，含汉语七大方言与 20+ 口音官话
 - **图像与视频理解** — Qwen-VL：长视频解析、复杂图表与文档识别、视觉推理、多语种 OCR
@@ -76,11 +76,20 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 ## 安装
 
 ```bash
+# 推荐 — 无需本机 Node.js
+curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
+
+# Windows（PowerShell）
+irm https://bailian.aliyun.com/cli/install.ps1 | iex
+
+# Node 用户 / 开发者（需要 Node.js >= 18.17）
 npm install -g bailian-cli
+
+# Agent skills
 npx skills add modelstudioai/cli --all -g
 ```
 
-> 需要预先安装 Node.js >= 18.17。
+> 二进制安装不依赖 Node.js。`npm install -g` 长期保留。
 
 ## 快速开始
 
@@ -218,6 +227,9 @@ bl config set --key timeout --value 600
 
 # 自更新到最新版本
 bl update
+
+# 安装指定版本
+bl update --to 0.1.14
 ```
 
 配置文件位置：`~/.bailian/config.json`

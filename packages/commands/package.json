@@ -1,6 +1,6 @@
 {
   "name": "bailian-cli-commands",
-  "version": "1.10.1",
+  "version": "1.14.1",
   "description": "Command library for bailian-cli products (knowledge, memory, media, …). See https://www.npmjs.com/package/bailian-cli for usage.",
   "homepage": "https://bailian.console.aliyun.com/cli",
   "bugs": {
@@ -40,6 +40,7 @@
     "check": "vp check"
   },
   "dependencies": {
+    "@openagentpack/sdk": "0.3.1",
     "bailian-cli-core": "workspace:*",
     "bailian-cli-runtime": "workspace:*",
     "boxen": "catalog:",

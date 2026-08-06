@@ -6,6 +6,7 @@ import {
   type GetModelsOptions,
   getModels,
   type IntentProfile,
+  maybeSyncWikiData,
   type PipelineStep,
   type RecommendedModel,
   type RecommendResult,
@@ -248,6 +249,12 @@ export default defineCommand({
     const { settings, flags } = ctx;
     const userInput = flags.message;
     const top = 3;
+
+    // Keep the local wiki catalog fresh: throttled (12h) version check against
+    // the remote manifest, silently replaces data when a newer version exists.
+    // Never throws — a sync failure must not block recommendation.
+    await maybeSyncWikiData();
+
     // Default to JSON for structured output; render boxen cards only when the
     // user explicitly asked for text output.
     const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";

@@ -24,24 +24,25 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag                        | Type    | Required | Description                                                             |
-| --------------------------- | ------- | -------- | ----------------------------------------------------------------------- |
-| `--image <url>`             | array   | yes      | Source image URL or local file path (repeatable for multi-image merge)  |
-| `--prompt <text>`           | string  | yes      | Edit instruction text                                                   |
-| `--model <model>`           | string  | no       | Model ID (default: qwen-image-2.0)                                      |
-| `--size <W*H>`              | string  | no       | Output image size: ratio (3:4, 16:9) or pixels (2048\*2048)             |
-| `--n <count>`               | number  | no       | Number of images (default: 1, max: 6)                                   |
-| `--seed <n>`                | number  | no       | Random seed for reproducible results                                    |
-| `--negative-prompt <text>`  | string  | no       | Negative prompt to exclude unwanted content                             |
-| `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag to use CLI default (true). |
-| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).     |
-| `--out-dir <dir>`           | string  | no       | Download images to directory                                            |
-| `--out-prefix <prefix>`     | string  | no       | Filename prefix (default: edited)                                       |
-| `--async`                   | switch  | no       | Return async task id without waiting                                    |
-| `--concurrent <n>`          | number  | no       | Run N parallel requests (default: 1)                                    |
-| `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 3)                              |
-| `--api-key <key>`           | string  | no       | API key                                                                 |
-| `--base-url <url>`          | string  | no       | API base URL                                                            |
+| Flag                        | Type    | Required | Description                                                                                        |
+| --------------------------- | ------- | -------- | -------------------------------------------------------------------------------------------------- |
+| `--image <url>`             | array   | yes      | Source image URL or local file path (repeatable for multi-image merge)                             |
+| `--prompt <text>`           | string  | yes      | Edit instruction text                                                                              |
+| `--model <model>`           | string  | no       | Model ID (default: qwen-image-3.0)                                                                 |
+| `--size <W*H>`              | string  | no       | Output image size: ratio (3:4, 16:9) or pixels (2048\*2048)                                        |
+| `--n <count>`               | number  | no       | Number of images (default: 1, max: 6)                                                              |
+| `--seed <n>`                | number  | no       | Random seed for reproducible results                                                               |
+| `--negative-prompt <text>`  | string  | no       | Negative prompt to exclude unwanted content                                                        |
+| `--function <name>`         | string  | no       | wanx\*-imageedit function (default: description_edit). Examples: stylization_all, description_edit |
+| `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag to use CLI default (true).                            |
+| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                                |
+| `--out-dir <dir>`           | string  | no       | Download images to directory                                                                       |
+| `--out-prefix <prefix>`     | string  | no       | Filename prefix (default: edited)                                                                  |
+| `--async`                   | switch  | no       | Return async task id without waiting                                                               |
+| `--concurrent <n>`          | number  | no       | Run N parallel requests (default: 1)                                                               |
+| `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 3)                                                         |
+| `--api-key <key>`           | string  | no       | API key                                                                                            |
+| `--base-url <url>`          | string  | no       | API base URL                                                                                       |
 
 #### Examples
 
@@ -66,6 +67,14 @@ bl image edit --image ./photo.png --prompt "Change the style" --model wan2.7-ima
 ```
 
 ```bash
+bl image edit --image ./photo.png --prompt "Place the subject on a table" --model wan2.5-i2i-preview
+```
+
+```bash
+bl image edit --image ./photo.png --prompt "转换成绘本风格" --model wanx2.1-imageedit --function stylization_all
+```
+
+```bash
 bl image edit --image ./photo.png --prompt "Replace the background with a beach" --watermark false
 ```
 
@@ -82,7 +91,7 @@ bl image edit --image ./photo.png --prompt "Replace the background with a beach"
 | Flag                        | Type    | Required | Description                                                                                                              |
 | --------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `--prompt <text>`           | string  | yes      | Image description                                                                                                        |
-| `--model <model>`           | string  | no       | Model ID (default: qwen-image-2.0)                                                                                       |
+| `--model <model>`           | string  | no       | Model ID (default: qwen-image-3.0)                                                                                       |
 | `--size <W*H>`              | string  | no       | Image size: ratio (3:4, 16:9, 1:1) or pixels (2048\*2048)                                                                |
 | `--n <count>`               | number  | no       | Number of images per request (default: 1, max: 6)                                                                        |
 | `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                                                  |
@@ -125,6 +134,14 @@ bl image generate --prompt "An alien in the space" --watermark false
 
 ```bash
 bl image generate --prompt "sunset" --model wan2.6-t2i --async --quiet
+```
+
+```bash
+bl image generate --prompt "plush doll" --model z-image-turbo --size 1024*1024
+```
+
+```bash
+bl image generate --prompt "sunset" --model wanx2.0-t2i-turbo --size 1024*1024
 ```
 
 ```bash

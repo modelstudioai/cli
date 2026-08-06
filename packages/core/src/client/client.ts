@@ -90,6 +90,17 @@ export class Client {
     return this.deps.apiCred?.baseUrl ?? this.deps.baseUrl;
   }
 
+  /**
+   * Export the model-domain credential for delegation to an embedded SDK that
+   * owns its own transport (e.g. @openagentpack/sdk). Deliberate escape hatch:
+   * regular commands keep calling {@link request}/{@link requestJson} and never
+   * handle tokens — lint restricts callers to managed-agent/_engine. Undefined
+   * when no credential resolved (authStage tolerates that only under dry-run).
+   */
+  exportApiCredential(): ApiKeyCredential | undefined {
+    return this.deps.apiCred;
+  }
+
   /** Full URL for a model-domain {@link path}; build request/display URLs only through this. */
   url(path: string): string {
     return this.baseUrl + path;
@@ -115,7 +126,10 @@ export class Client {
   /** Resolve a file arg: upload a local path to OSS (returns oss:// URL), or pass a URL through. */
   uploadFile(source: string, model: string, opts: { signal?: AbortSignal } = {}): Promise<string> {
     if (!isLocalFile(source)) return Promise.resolve(source);
-    return resolveFileUrl(source, this.requireApi().token, model, opts);
+    return resolveFileUrl(source, this.requireApi().token, model, {
+      ...opts,
+      identity: this.deps.identity,
+    });
   }
 
   /**
@@ -222,7 +236,7 @@ export class Client {
     const timeoutMs = this.deps.settings.timeout * 1000;
     const res = await fetch(endpoint, {
       method: opts.method,
-      headers: { ...headers, ...trackingHeaders() },
+      headers: { ...headers, ...trackingHeaders(this.deps.identity) },
       body: bodyStr || undefined,
       signal: AbortSignal.timeout(timeoutMs),
     });

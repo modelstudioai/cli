@@ -34,11 +34,13 @@ export {
   BAILIAN_CONSOLE,
   API_KEY_PAGE,
   TOKEN_PLAN_PAGE,
+  MCP_WEBSEARCH_PAGE,
+  mcpMarketplaceDetailPage,
   VOICE_TTS_PAGE,
 } from "./urls.ts";
 
 // Output facilities consumed by commands
-export { emitResult, emitBare } from "./output/output.ts";
+export { emitResult, emitBare, emitRequestId } from "./output/output.ts";
 export { formatTable } from "./output/table.ts";
 export { renderBoxTable, type BoxTableOptions, type BarColumn } from "./output/box-table.ts";
 export { createSpinner, createProgressBar } from "./output/progress.ts";
@@ -65,6 +67,22 @@ export {
   NPM_PACKAGE,
   NPM_REGISTRY,
 } from "./utils/update-checker.ts";
+export {
+  ensureBinaryPathEntries,
+  fetchBinaryChannelVersion,
+  fetchBinaryChannelManifest,
+  getBinaryBinRoot,
+  getBinaryCurrentPath,
+  getBinaryShareRoot,
+  getBinaryVersionsDir,
+  isValidUpdateTargetVersion,
+  normalizeBinaryVersion,
+  performBinaryUpdate,
+  pruneBinaryVersions,
+  readCurrentVersionDir,
+  resolveBinaryDownloadSpec,
+  switchCurrentToVersion,
+} from "./utils/binary-update.ts";
 export {
   BOOL_FLAG_WATERMARK,
   BOOL_FLAG_PROMPT_EXTEND_CLI_TRUE,
