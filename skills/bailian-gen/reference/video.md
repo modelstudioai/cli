@@ -108,6 +108,7 @@ bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the
 | `--model <model>`           | string  | no       | Model ID (default: happyhorse-1.1-t2v, or happyhorse-1.1-i2v with --image)              |
 | `--prompt <text>`           | string  | yes      | Video description                                                                       |
 | `--image <url>`             | string  | no       | Input image URL for image-to-video generation                                           |
+| `--last-frame <url>`        | string  | no       | Last frame image URL (with --image, enables kf2v first+last frame mode)                 |
 | `--negative-prompt <text>`  | string  | no       | Negative prompt to exclude unwanted content                                             |
 | `--resolution <res>`        | string  | no       | Resolution: 720P or 1080P (default: 1080P)                                              |
 | `--ratio <ratio>`           | string  | no       | Aspect ratio (e.g. 16:9, 9:16, 1:1)                                                     |

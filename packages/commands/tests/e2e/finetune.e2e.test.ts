@@ -365,6 +365,104 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     expect(data.action).toBe("finetune.create");
     expect(data.body.training_type).toBe("efficient_sft");
   });
+
+  test("finetune video create --help 暴露视频超参且不含文本超参", async () => {
+    // Video exposes --n-epochs / --batch-size / --learning-rate; the text-only
+    // --training-type / --max-length surface is not offered.
+    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      "finetune",
+      "video",
+      "create",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--base-model/);
+    expect(stderr).toMatch(/--n-epochs/);
+    expect(stderr).toMatch(/--batch-size/);
+    expect(stderr).toMatch(/--learning-rate/);
+    expect(stderr).not.toMatch(/--training-type|--max-length/);
+  });
+
+  test("finetune video create --datasets 缺失时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      "finetune",
+      "video",
+      "create",
+      "--base-model",
+      "wan2.7-i2v",
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--datasets|Missing required/i);
+  });
+
+  test.each([
+    // Model-family-specific defaults resolved by the sft-lora video profile.
+    ["wan2.7-i2v", 1, 102400],
+    ["wan2.5-i2v-preview", 4, 36864],
+    ["wan2.2-kf2v-flash", 4, 262144],
+  ])(
+    "finetune video create --dry-run %s 解析 batch_size=%i / max_pixels=%i",
+    async (baseModel, batchSize, maxPixels) => {
+      const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+        "finetune",
+        "video",
+        "create",
+        "--base-model",
+        baseModel,
+        "--datasets",
+        "file-video",
+        "--dry-run",
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{
+        action: string;
+        body: {
+          model: string;
+          training_type: string;
+          hyper_parameters: Record<string, unknown>;
+        };
+      }>(stdout);
+      expect(data.action).toBe("finetune.create");
+      expect(data.body.model).toBe(baseModel);
+      expect(data.body.training_type).toBe("efficient_sft");
+      expect(data.body.hyper_parameters.batch_size).toBe(batchSize);
+      expect(data.body.hyper_parameters.max_pixels).toBe(maxPixels);
+      expect(data.body.hyper_parameters.learning_rate).toBe("2e-5");
+      expect(data.body.hyper_parameters.lora_rank).toBe(32);
+    },
+  );
+
+  test("finetune video create --dry-run 转发超参覆盖且不做 clamp", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      "finetune",
+      "video",
+      "create",
+      "--base-model",
+      "wan2.7-i2v",
+      "--datasets",
+      "file-video",
+      "--n-epochs",
+      "100",
+      "--batch-size",
+      "2",
+      "--learning-rate",
+      "1e-5",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      body: { hyper_parameters: Record<string, unknown> };
+    }>(stdout);
+    // Video overrides are forwarded verbatim (no [8, 1024] text clamp).
+    expect(data.body.hyper_parameters.n_epochs).toBe(100);
+    expect(data.body.hyper_parameters.batch_size).toBe(2);
+    expect(data.body.hyper_parameters.learning_rate).toBe("1e-5");
+  });
 });
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (DashScope)", () => {

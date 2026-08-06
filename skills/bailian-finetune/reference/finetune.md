@@ -21,6 +21,7 @@ Index: [index.md](index.md)
 | `bl finetune logs`         | Fetch training logs for a fine-tune job                                                                                         |
 | `bl finetune price`        | Estimate the training cost for a fine-tune job (token billing)                                                                  |
 | `bl finetune text create`  | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                   |
+| `bl finetune video create` | Create a video generation model fine-tune job (Wan i2v/kf2v, efficient_sft)                                                     |
 | `bl finetune watch`        | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                      |
 
 ## Command details
@@ -529,6 +530,60 @@ bl finetune text create --base-model qwen3-8b --datasets file-xxx --output json
 
 ```bash
 bl finetune text create --base-model qwen3-8b --datasets file-xxx --dry-run
+```
+
+### `bl finetune video create`
+
+| Field           | Value                                                                                                                                                                                                |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**        | `finetune video create`                                                                                                                                                                              |
+| **Description** | Create a video generation model fine-tune job (Wan i2v/kf2v, efficient_sft)                                                                                                                          |
+| **Usage**       | `bl finetune video create --base-model <model> --datasets <id\|path> [--validations <id\|path>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>]` |
+
+#### Flags
+
+| Flag                         | Type   | Required | Description                                                                                                                                                        |
+| ---------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--base-model <model>`       | string | yes      | Base model to fine-tune (e.g. qwen3-8b; not the output model name)                                                                                                 |
+| `--datasets <ids\|paths>`    | string | yes      | Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image). Local paths are uploaded (validated) first, then their file-ids are used. |
+| `--validations <ids\|paths>` | string | no       | Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).                                                                        |
+| `--model-name <name>`        | string | no       | Output model name (after training)                                                                                                                                 |
+| `--suffix <text>`            | string | no       | Output suffix appended by the platform (finetuned_output_suffix)                                                                                                   |
+| `--n-epochs <n>`             | number | no       | Training epochs (default: 50)                                                                                                                                      |
+| `--batch-size <n>`           | number | no       | Batch size (default: model-specific, 1 for wan2.7, 4 for wan2.5/2.2)                                                                                               |
+| `--learning-rate <str>`      | string | no       | Learning rate as a string to preserve precision (default: "2e-5")                                                                                                  |
+| `--api-key <key>`            | string | no       | API key                                                                                                                                                            |
+| `--base-url <url>`           | string | no       | API base URL                                                                                                                                                       |
+
+#### Notes
+
+- Creating a job uploads any local datasets and consumes training quota.
+- Use --dry-run to preview the request body without submitting.
+- --datasets / --validations accept either file-ids (from `dataset upload`)
+- or local paths. Local paths are validated and uploaded first, then their
+- file-ids are submitted — a one-step upload-and-train.
+- Video generation training (Wan i2v/kf2v) runs efficient_sft with model-
+- specific defaults: wan2.7 (batch_size=1, max_pixels=102400), wan2.5/2.2
+- (batch_size=4, max_pixels per model). Override with --batch-size/--n-epochs.
+- Datasets are .zip archives with data.jsonl + frame images + videos.
+- Recommended: ≥10 training samples, 20-100 for stable results.
+
+#### Examples
+
+```bash
+bl finetune video create --base-model wan2.7-i2v --datasets file-xxx
+```
+
+```bash
+bl finetune video create --base-model wan2.7-i2v --datasets ./i2v-data.zip
+```
+
+```bash
+bl finetune video create --base-model wan2.2-kf2v-flash --datasets file-xxx --n-epochs 100
+```
+
+```bash
+bl finetune video create --base-model wan2.7-i2v --datasets file-xxx --dry-run
 ```
 
 ### `bl finetune watch`

@@ -77,9 +77,14 @@ async function fetchTrainingPrice(
 }
 
 /**
- * Compute the actual training fee from the model catalog.
+ * Compute the actual training fee from the model catalog's "ft" price entry.
  * Returns null when the price is unavailable (network error, model not in
- * catalog, or no "ft" entry in the prices array). Never throws.
+ * catalog, or no "ft" entry). Never throws.
+ *
+ * Only uses the public model catalog (model metadata) — does NOT call
+ * console-domain pricing APIs (modelCenter.getModelPrice). Models whose
+ * catalog entry lacks a "ft" price (e.g. CosyVoice) will simply omit the
+ * training_cost field until the platform adds it to the catalog.
  */
 export async function computeActualFee(
   settings: Settings,
@@ -91,7 +96,7 @@ export async function computeActualFee(
     const unitPrice = Number(ftEntry?.price);
     if (!Number.isFinite(unitPrice) || unitPrice <= 0) return null;
     const priceUnit = ftEntry?.priceUnit ?? "每百万tokens";
-    // price is yuan per million tokens.
+    // Catalog price is yuan per million tokens.
     const cost = (usageTokens / 1_000_000) * unitPrice;
     return { cost: Number(cost.toFixed(4)), unitPrice, priceUnit };
   } catch {

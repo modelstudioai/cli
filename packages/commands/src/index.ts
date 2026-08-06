@@ -66,6 +66,7 @@ export {
   finetuneTextCreate,
   finetuneAudioCreate,
   finetuneImageCreate,
+  finetuneVideoCreate,
 } from "./commands/finetune/create.ts";
 export { default as finetuneList } from "./commands/finetune/list.ts";
 export { default as finetuneGet } from "./commands/finetune/get.ts";

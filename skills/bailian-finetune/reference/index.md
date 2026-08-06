@@ -39,15 +39,16 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl finetune logs`         | Fetch training logs for a fine-tune job                                                                                         | [finetune.md](finetune.md) |
 | `bl finetune price`        | Estimate the training cost for a fine-tune job (token billing)                                                                  | [finetune.md](finetune.md) |
 | `bl finetune text create`  | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                   | [finetune.md](finetune.md) |
+| `bl finetune video create` | Create a video generation model fine-tune job (Wan i2v/kf2v, efficient_sft)                                                     | [finetune.md](finetune.md) |
 | `bl finetune watch`        | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                      | [finetune.md](finetune.md) |
 
 ## By group
 
-| Group      | Commands                                                                                                                                          | Reference                  |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `dataset`  | `delete`, `get`, `list`, `upload`, `validate`                                                                                                     | [dataset.md](dataset.md)   |
-| `deploy`   | `audio create`, `delete`, `get`, `image create`, `list`, `models`, `pause`, `resume`, `scale`, `text create`, `update`                            | [deploy.md](deploy.md)     |
-| `finetune` | `audio create`, `cancel`, `capability`, `checkpoints`, `delete`, `export`, `get`, `image create`, `list`, `logs`, `price`, `text create`, `watch` | [finetune.md](finetune.md) |
+| Group      | Commands                                                                                                                                                          | Reference                  |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `dataset`  | `delete`, `get`, `list`, `upload`, `validate`                                                                                                                     | [dataset.md](dataset.md)   |
+| `deploy`   | `audio create`, `delete`, `get`, `image create`, `list`, `models`, `pause`, `resume`, `scale`, `text create`, `update`                                            | [deploy.md](deploy.md)     |
+| `finetune` | `audio create`, `cancel`, `capability`, `checkpoints`, `delete`, `export`, `get`, `image create`, `list`, `logs`, `price`, `text create`, `video create`, `watch` | [finetune.md](finetune.md) |
 
 ## Global flags
 

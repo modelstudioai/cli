@@ -75,20 +75,24 @@ const IMAGE_HYPER_PARAMS_I2I: Record<string, unknown> = {
  *
  * Shared across all video models; `batch_size` and `max_pixels` differ by model
  * family (resolved per model in `resolveHyperParameters`):
- *   - wan2.5 (e.g. wan2.5-i2v-preview): batch_size 2, max_pixels 36864
- *   - wan2.2 (i2v-flash / kf2v-flash):  batch_size 4, max_pixels 262144
+ *   - wan2.7 (e.g. wan2.7-i2v):           batch_size 1, max_pixels 102400
+ *   - wan2.5 (e.g. wan2.5-i2v-preview):   batch_size 4, max_pixels 36864
+ *   - wan2.2 (i2v-flash / kf2v-flash):    batch_size 4, max_pixels 262144
  *
  * `learning_rate` is a string to avoid JSON-number precision loss (consistent
  * with the image defaults). `split` (0.9) + `max_split_val_dataset_sample`
  * (5) drive the automatic train/validation split when no explicit
  * validation_file_ids are provided.
+ *
+ * Values aligned with the official user guide (2026-07):
+ *   n_epochs 50, eval_epochs 20 (≥ n_epochs/10).
  */
 const VIDEO_HYPER_PARAMS_BASE: Record<string, unknown> = {
-  n_epochs: 400,
+  n_epochs: 50,
   learning_rate: "2e-5",
-  split: 0.9,
+  split: 0.5,
   max_split_val_dataset_sample: 5,
-  eval_epochs: 50,
+  eval_epochs: 20,
   save_total_limit: 10,
   lora_rank: 32,
   lora_alpha: 32,
@@ -107,6 +111,11 @@ function isVideo(modality: DataModality): boolean {
 /** wan2.5 family uses smaller batch_size / max_pixels than wan2.2. */
 function isWan25(model: string | undefined): boolean {
   return typeof model === "string" && /wan2\.5/i.test(model);
+}
+
+/** wan2.7 family uses batch_size 1 and max_pixels 102400. */
+function isWan27(model: string | undefined): boolean {
+  return typeof model === "string" && /wan2\.7/i.test(model);
 }
 
 export const sftLoraProfile: TrainingProfile = {
@@ -195,15 +204,18 @@ export const sftLoraProfile: TrainingProfile = {
     }
     if (isVideo(modality)) {
       // Video: shared defaults + model-family-specific batch_size / max_pixels.
-      // wan2.5 uses batch_size 2 / max_pixels 36864; wan2.2 uses 4 / 262144.
-      const wan25 = isWan25(flags.model as string | undefined);
+      //   wan2.7: batch_size 1, max_pixels 102400
+      //   wan2.5: batch_size 4, max_pixels 36864
+      //   wan2.2: batch_size 4, max_pixels 262144
+      const model = (flags.model ?? flags.baseModel) as string | undefined;
       const hp: Record<string, unknown> = {
         ...VIDEO_HYPER_PARAMS_BASE,
-        batch_size: 4,
-        max_pixels: wan25 ? 36864 : 262144,
+        batch_size: isWan27(model) ? 1 : 4,
+        max_pixels: isWan27(model) ? 102400 : isWan25(model) ? 36864 : 262144,
       };
       // Optional overrides (no clamping — video batch_size is intentionally small).
       if (flags.nEpochs !== undefined) hp.n_epochs = flags.nEpochs as number;
+      if (flags.batchSize !== undefined) hp.batch_size = flags.batchSize as number;
       if (flags.learningRate !== undefined) hp.learning_rate = flags.learningRate as string;
       return hp;
     }

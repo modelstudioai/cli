@@ -112,6 +112,62 @@ describe("e2e: video generate (i2v)", () => {
     }>(stdout);
     expect(data.request?.input?.media?.[0]?.url).toBe("data:image/png;base64,<omitted>");
   });
+
+  test.each([
+    // wan2.1~2.6 (legacy) use flat img_url; wan2.7+ and happyhorse use media[].
+    ["wan2.5-i2v-preview", "img_url"],
+    ["wan2.6-i2v", "img_url"],
+    ["wan2.7-i2v", "media"],
+    ["happyhorse-1.1-i2v", "media"],
+  ])("video generate --dry-run %s 首帧走 %s 字段", async (model, field) => {
+    const configDir = makeE2eOutputDir(`video-i2v-input-shape-${model}`);
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify({
+        "token-plan": {
+          api_key: "sk-sp-e2e-placeholder",
+          base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
+        },
+      }),
+    );
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      VIDEO_ROUTES,
+      [
+        "video",
+        "generate",
+        "--config",
+        "token-plan",
+        "--dry-run",
+        "--model",
+        model,
+        "--image",
+        "https://example.com/placeholder.png",
+        "--prompt",
+        "干跑校验",
+        "--output",
+        "json",
+      ],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      request?: {
+        input?: { img_url?: string; media?: Array<{ type?: string; url?: string }> };
+      };
+    }>(stdout);
+    if (field === "img_url") {
+      expect(data.request?.input?.img_url).toBe("https://example.com/placeholder.png");
+      expect(data.request?.input?.media).toBeUndefined();
+    } else {
+      expect(data.request?.input?.media?.[0]?.type).toBe("first_frame");
+      expect(data.request?.input?.img_url).toBeUndefined();
+    }
+  });
 });
 
 describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(

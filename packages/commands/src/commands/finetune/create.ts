@@ -207,7 +207,7 @@ async function uploadResolvedLocal(
 }
 
 /** The modality a `finetune <modality> create` subcommand is bound to. */
-type CommandModality = "text" | "audio" | "image";
+type CommandModality = "text" | "audio" | "image" | "video";
 
 /**
  * Flags shared by every `finetune <modality> create` subcommand: what to train
@@ -323,6 +323,34 @@ const AUDIO_USAGE =
 
 const IMAGE_USAGE =
   "--base-model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>] [--generation-type <t2i|i2i>] [--learning-rate <str>]";
+
+/**
+ * Video (Wan i2v/kf2v) flags: exposes the three hyper-parameters that the
+ * video API supports and users may want to override. Defaults are model-specific
+ * (resolved by the sft-lora profile: wan2.7 → batch_size 1 / max_pixels 102400,
+ * wan2.5 → 4 / 36864, wan2.2 → 4 / 262144).
+ */
+const VIDEO_FLAGS = {
+  ...COMMON_FLAGS,
+  nEpochs: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Training epochs (default: 50)",
+  },
+  batchSize: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Batch size (default: model-specific, 1 for wan2.7, 4 for wan2.5/2.2)",
+  },
+  learningRate: {
+    type: "string",
+    valueHint: "<str>",
+    description: 'Learning rate as a string to preserve precision (default: "2e-5")',
+  },
+} satisfies FlagsDef;
+
+const VIDEO_USAGE =
+  "--base-model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>]";
 
 const COMMON_NOTES = [
   "Creating a job uploads any local datasets and consumes training quota.",
@@ -682,4 +710,29 @@ export const finetuneImageCreate = defineCommand({
   ],
   notes: IMAGE_NOTES,
   run: (ctx) => runCreate("image", ctx),
+});
+
+const VIDEO_NOTES = [
+  ...COMMON_NOTES,
+  "Video generation training (Wan i2v/kf2v) runs efficient_sft with model-",
+  "specific defaults: wan2.7 (batch_size=1, max_pixels=102400), wan2.5/2.2",
+  "(batch_size=4, max_pixels per model). Override with --batch-size/--n-epochs.",
+  "Datasets are .zip archives with data.jsonl + frame images + videos.",
+  "Recommended: ≥10 training samples, 20-100 for stable results.",
+];
+
+/** `bl finetune video create` — fine-tune a video generation model. Datasets are `.zip`. */
+export const finetuneVideoCreate = defineCommand({
+  description: "Create a video generation model fine-tune job (Wan i2v/kf2v, efficient_sft)",
+  auth: "apiKey",
+  usageArgs: VIDEO_USAGE,
+  flags: VIDEO_FLAGS,
+  exampleArgs: [
+    "--base-model wan2.7-i2v --datasets file-xxx",
+    "--base-model wan2.7-i2v --datasets ./i2v-data.zip",
+    "--base-model wan2.2-kf2v-flash --datasets file-xxx --n-epochs 100",
+    "--base-model wan2.7-i2v --datasets file-xxx --dry-run",
+  ],
+  notes: VIDEO_NOTES,
+  run: (ctx) => runCreate("video", ctx),
 });
