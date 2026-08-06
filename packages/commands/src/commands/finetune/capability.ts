@@ -43,7 +43,7 @@ async function fetchAllFoundationModels(settings: Settings): Promise<ModelCapabi
 }
 
 const CAPABILITY_FLAGS = {
-  model: {
+  baseModel: {
     type: "string",
     valueHint: "<m>",
     description: "List training types supported by this base model.",
@@ -59,29 +59,30 @@ export default defineCommand({
   description:
     "Query fine-tune training capability — by model (which training types it supports) or by training type (which models support it)",
   auth: "none",
-  usageArgs: "--model <m> | --training-type <t>",
+  usageArgs: "--base-model <m> | --training-type <t>",
   flags: CAPABILITY_FLAGS,
   exampleArgs: [
-    "--model qwen3-8b",
+    "--base-model qwen3-8b",
     "--training-type sft-lora",
     "--training-type cpt --output json",
     "--training-type sft --quiet",
   ],
   notes: [
-    "Exactly one of --model / --training-type is required.",
+    "Exactly one of --base-model / --training-type is required.",
     "Training-type values use the `<method>` / `<method>-lora` convention:",
     "sft | sft-lora | dpo | dpo-lora | cpt. (cpt has no -lora variant server-side.)",
     "Queries listFoundationModels, a public API — no console login needed.",
   ],
   validate: (f) => {
-    if (f.model && f.trainingType)
-      return "--model and --training-type are mutually exclusive; pass one.";
-    if (!f.model && !f.trainingType) return "one of --model / --training-type is required.";
+    if (f.baseModel && f.trainingType)
+      return "--base-model and --training-type are mutually exclusive; pass one.";
+    if (!f.baseModel && !f.trainingType)
+      return "one of --base-model / --training-type is required.";
     return undefined;
   },
   async run(ctx) {
     const { settings, flags } = ctx;
-    const model = flags.model || undefined;
+    const model = flags.baseModel || undefined;
     const trainingType = flags.trainingType || undefined;
 
     if (settings.dryRun) {

@@ -6,6 +6,7 @@ import {
   type FlagsDef,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
+import { computeActualFee } from "./fee.ts";
 
 const DEFAULT_INTERVAL_SEC = 10;
 const MIN_INTERVAL_SEC = 1;
@@ -131,10 +132,23 @@ export default defineCommand({
         // Just the status word — ideal for `status=$(... finetune watch ... --quiet)`.
         emitBare(status || "UNKNOWN");
       } else {
-        emitResult(
-          { job_id: jobId, status: status || "UNKNOWN", terminal, request_id: response.request_id },
-          "json",
-        );
+        const output: Record<string, unknown> = {
+          job_id: jobId,
+          status: status || "UNKNOWN",
+          terminal,
+          request_id: response.request_id,
+        };
+        // Enrich terminal output with actual fee when usage is reported.
+        const usageTokens = typeof job?.usage === "number" ? job.usage : undefined;
+        if (terminal && usageTokens && usageTokens > 0 && job?.model) {
+          output.usage_tokens = usageTokens;
+          const fee = await computeActualFee(settings, job.model as string, usageTokens);
+          if (fee) {
+            output.training_cost = fee.cost;
+            output.cost_basis = `${fee.unitPrice} 元/${fee.priceUnit}`;
+          }
+        }
+        emitResult(output, "json");
       }
 
       if (terminal && status !== "SUCCEEDED") {
@@ -171,7 +185,18 @@ export default defineCommand({
           if (settings.quiet) {
             emitBare(status || "UNKNOWN");
           } else {
-            emitResult(response, "json");
+            // Enrich the raw response with actual fee when usage is available.
+            const usageTokens = typeof job?.usage === "number" ? job.usage : undefined;
+            const enriched: Record<string, unknown> = { ...response };
+            if (usageTokens && usageTokens > 0 && job?.model) {
+              const fee = await computeActualFee(settings, job.model as string, usageTokens);
+              if (fee) {
+                enriched.training_cost = fee.cost;
+                enriched.usage_tokens = usageTokens;
+                enriched.cost_basis = `${fee.unitPrice} 元/${fee.priceUnit}`;
+              }
+            }
+            emitResult(enriched, "json");
           }
           if (status !== "SUCCEEDED") {
             throw new BailianError(

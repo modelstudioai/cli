@@ -215,10 +215,10 @@ type CommandModality = "text" | "audio" | "image";
  * output. Every modality's model consumes these.
  */
 const COMMON_FLAGS = {
-  model: {
+  baseModel: {
     type: "string",
     valueHint: "<model>",
-    description: "Base model to fine-tune",
+    description: "Base model to fine-tune (e.g. qwen3-8b; not the output model name)",
     required: true,
   },
   datasets: {
@@ -316,13 +316,13 @@ const IMAGE_FLAGS = {
 } satisfies FlagsDef;
 
 const TEXT_USAGE =
-  "--model <model> --datasets <id|path,...> [--validations <id|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>]";
+  "--base-model <model> --datasets <id|path,...> [--validations <id|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>]";
 
 const AUDIO_USAGE =
-  "--model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>]";
+  "--base-model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>]";
 
 const IMAGE_USAGE =
-  "--model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>] [--generation-type <t2i|i2i>] [--learning-rate <str>]";
+  "--base-model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>] [--generation-type <t2i|i2i>] [--learning-rate <str>]";
 
 const COMMON_NOTES = [
   "Creating a job uploads any local datasets and consumes training quota.",
@@ -382,7 +382,7 @@ async function runCreate<F extends FlagsDef>(
 ): Promise<void> {
   const { identity, settings } = ctx;
   const flags = ctx.flags as Record<string, unknown>;
-  const model = flags.model as string;
+  const model = flags.baseModel as string;
   const datasetsRaw = flags.datasets as string;
 
   // CosyVoice audio fine-tuning accepts exactly one training file
@@ -636,14 +636,14 @@ export const finetuneTextCreate = defineCommand({
   usageArgs: TEXT_USAGE,
   flags: TEXT_FLAGS,
   exampleArgs: [
-    "--model qwen3-8b --datasets file-xxx",
-    "--model qwen3-8b --datasets ./train.jsonl",
-    "--model qwen3-8b --datasets ./train.jsonl --validations ./eval.jsonl",
-    "--model qwen3-8b --datasets file-aaa,./extra.jsonl",
-    "--model qwen3-8b --datasets ./train.jsonl --training-type sft",
-    '--model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4',
-    "--model qwen3-8b --datasets file-xxx --output json",
-    "--model qwen3-8b --datasets file-xxx --dry-run",
+    "--base-model qwen3-8b --datasets file-xxx",
+    "--base-model qwen3-8b --datasets ./train.jsonl",
+    "--base-model qwen3-8b --datasets ./train.jsonl --validations ./eval.jsonl",
+    "--base-model qwen3-8b --datasets file-aaa,./extra.jsonl",
+    "--base-model qwen3-8b --datasets ./train.jsonl --training-type sft",
+    '--base-model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4',
+    "--base-model qwen3-8b --datasets file-xxx --output json",
+    "--base-model qwen3-8b --datasets file-xxx --dry-run",
   ],
   notes: TEXT_NOTES,
   run: (ctx) => runCreate("text", ctx),
@@ -656,11 +656,11 @@ export const finetuneAudioCreate = defineCommand({
   usageArgs: AUDIO_USAGE,
   flags: AUDIO_FLAGS,
   exampleArgs: [
-    "--model cosyvoice-v3-flash --datasets ./audio.zip",
-    "--model cosyvoice-v3-flash --datasets file-xxx",
-    "--model cosyvoice-v3-flash --datasets ./audio.zip --model-name my-tts",
-    "--model cosyvoice-v3-flash --datasets file-xxx --output json",
-    "--model cosyvoice-v3-flash --datasets ./audio.zip --dry-run",
+    "--base-model cosyvoice-v3-flash --datasets ./audio.zip",
+    "--base-model cosyvoice-v3-flash --datasets file-xxx",
+    "--base-model cosyvoice-v3-flash --datasets ./audio.zip --model-name my-tts",
+    "--base-model cosyvoice-v3-flash --datasets file-xxx --output json",
+    "--base-model cosyvoice-v3-flash --datasets ./audio.zip --dry-run",
   ],
   notes: AUDIO_NOTES,
   run: (ctx) => runCreate("audio", ctx),
@@ -673,12 +673,12 @@ export const finetuneImageCreate = defineCommand({
   usageArgs: IMAGE_USAGE,
   flags: IMAGE_FLAGS,
   exampleArgs: [
-    "--model wan2.7-image-pro --datasets ./images.zip",
-    "--model wan2.7-image-pro --datasets file-xxx",
-    "--model wan2.7-image-pro --datasets file-xxx --generation-type i2i",
-    "--model wan2.7-image-pro --datasets ./images.zip --model-name my-wan",
-    "--model wan2.7-image-pro --datasets file-xxx --output json",
-    "--model wan2.7-image-pro --datasets ./images.zip --dry-run",
+    "--base-model wan2.7-image-pro --datasets ./images.zip",
+    "--base-model wan2.7-image-pro --datasets file-xxx",
+    "--base-model wan2.7-image-pro --datasets file-xxx --generation-type i2i",
+    "--base-model wan2.7-image-pro --datasets ./images.zip --model-name my-wan",
+    "--base-model wan2.7-image-pro --datasets file-xxx --output json",
+    "--base-model wan2.7-image-pro --datasets ./images.zip --dry-run",
   ],
   notes: IMAGE_NOTES,
   run: (ctx) => runCreate("image", ctx),

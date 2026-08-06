@@ -1,5 +1,6 @@
 import { defineCommand, getFineTune, type FlagsDef } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
+import { computeActualFee } from "./fee.ts";
 
 const GET_FLAGS = {
   jobId: {
@@ -44,7 +45,9 @@ export default defineCommand({
     if (hyperParameters?.max_length !== undefined)
       hyperParts.push(`max_length=${hyperParameters.max_length}`);
 
-    const item = {
+    const usageTokens = typeof job.usage === "number" ? job.usage : undefined;
+
+    const item: Record<string, unknown> = {
       job_id: job.job_id ?? jobId,
       base_model: job.model ?? "",
       status: job.status ?? "",
@@ -56,9 +59,19 @@ export default defineCommand({
       model_name: job.model_name ?? "",
       created_at: job.create_time ?? job.gmt_create ?? "",
       updated_at: job.end_time ?? job.gmt_modified ?? "",
-      usage: typeof job.usage === "number" ? String(job.usage) : "",
+      usage_tokens: usageTokens ?? "",
       charge_type: typeof job.charge_type === "string" ? job.charge_type : "",
     };
+
+    // Actual fee: only when the platform reports a concrete token count
+    // (SUCCEEDED / CANCELED). Best-effort — silently omitted on lookup failure.
+    if (usageTokens !== undefined && usageTokens > 0 && job.model) {
+      const fee = await computeActualFee(settings, job.model, usageTokens);
+      if (fee) {
+        item.training_cost = fee.cost;
+        item.cost_basis = `${fee.unitPrice} 元/${fee.priceUnit}`;
+      }
+    }
 
     emitResult({ ...item, request_id: response.request_id }, "json");
   },

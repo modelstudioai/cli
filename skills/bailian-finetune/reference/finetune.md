@@ -19,6 +19,7 @@ Index: [index.md](index.md)
 | `bl finetune image create` | Create an image generation model fine-tune job (sft-lora)                                                                       |
 | `bl finetune list`         | List fine-tune jobs                                                                                                             |
 | `bl finetune logs`         | Fetch training logs for a fine-tune job                                                                                         |
+| `bl finetune price`        | Estimate the training cost for a fine-tune job (token billing)                                                                  |
 | `bl finetune text create`  | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                   |
 | `bl finetune watch`        | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                      |
 
@@ -26,17 +27,17 @@ Index: [index.md](index.md)
 
 ### `bl finetune audio create`
 
-| Field           | Value                                                                                                                               |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `finetune audio create`                                                                                                             |
-| **Description** | Create an audio TTS model fine-tune job (sft-lora)                                                                                  |
-| **Usage**       | `bl finetune audio create --model <model> --datasets <id\|path> [--validations <id\|path>] [--model-name <name>] [--suffix <text>]` |
+| Field           | Value                                                                                                                                    |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**        | `finetune audio create`                                                                                                                  |
+| **Description** | Create an audio TTS model fine-tune job (sft-lora)                                                                                       |
+| **Usage**       | `bl finetune audio create --base-model <model> --datasets <id\|path> [--validations <id\|path>] [--model-name <name>] [--suffix <text>]` |
 
 #### Flags
 
 | Flag                         | Type   | Required | Description                                                                                                                                                        |
 | ---------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--model <model>`            | string | yes      | Base model to fine-tune                                                                                                                                            |
+| `--base-model <model>`       | string | yes      | Base model to fine-tune (e.g. qwen3-8b; not the output model name)                                                                                                 |
 | `--datasets <ids\|paths>`    | string | yes      | Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image). Local paths are uploaded (validated) first, then their file-ids are used. |
 | `--validations <ids\|paths>` | string | no       | Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).                                                                        |
 | `--model-name <name>`        | string | no       | Output model name (after training)                                                                                                                                 |
@@ -58,23 +59,23 @@ Index: [index.md](index.md)
 #### Examples
 
 ```bash
-bl finetune audio create --model cosyvoice-v3-flash --datasets ./audio.zip
+bl finetune audio create --base-model cosyvoice-v3-flash --datasets ./audio.zip
 ```
 
 ```bash
-bl finetune audio create --model cosyvoice-v3-flash --datasets file-xxx
+bl finetune audio create --base-model cosyvoice-v3-flash --datasets file-xxx
 ```
 
 ```bash
-bl finetune audio create --model cosyvoice-v3-flash --datasets ./audio.zip --model-name my-tts
+bl finetune audio create --base-model cosyvoice-v3-flash --datasets ./audio.zip --model-name my-tts
 ```
 
 ```bash
-bl finetune audio create --model cosyvoice-v3-flash --datasets file-xxx --output json
+bl finetune audio create --base-model cosyvoice-v3-flash --datasets file-xxx --output json
 ```
 
 ```bash
-bl finetune audio create --model cosyvoice-v3-flash --datasets ./audio.zip --dry-run
+bl finetune audio create --base-model cosyvoice-v3-flash --datasets ./audio.zip --dry-run
 ```
 
 ### `bl finetune cancel`
@@ -114,18 +115,18 @@ bl finetune cancel --job-id ft-xxx --dry-run
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | **Name**        | `finetune capability`                                                                                                           |
 | **Description** | Query fine-tune training capability — by model (which training types it supports) or by training type (which models support it) |
-| **Usage**       | `bl finetune capability --model <m> \| --training-type <t>`                                                                     |
+| **Usage**       | `bl finetune capability --base-model <m> \| --training-type <t>`                                                                |
 
 #### Flags
 
 | Flag                  | Type   | Required | Description                                                                           |
 | --------------------- | ------ | -------- | ------------------------------------------------------------------------------------- |
-| `--model <m>`         | string | no       | List training types supported by this base model.                                     |
+| `--base-model <m>`    | string | no       | List training types supported by this base model.                                     |
 | `--training-type <t>` | string | no       | List models supporting this training type: sft \| sft-lora \| dpo \| dpo-lora \| cpt. |
 
 #### Notes
 
-- Exactly one of --model / --training-type is required.
+- Exactly one of --base-model / --training-type is required.
 - Training-type values use the `<method>` / `<method>-lora` convention:
 - sft | sft-lora | dpo | dpo-lora | cpt. (cpt has no -lora variant server-side.)
 - Queries listFoundationModels, a public API — no console login needed.
@@ -133,7 +134,7 @@ bl finetune cancel --job-id ft-xxx --dry-run
 #### Examples
 
 ```bash
-bl finetune capability --model qwen3-8b
+bl finetune capability --base-model qwen3-8b
 ```
 
 ```bash
@@ -166,7 +167,7 @@ bl finetune capability --training-type sft --quiet
 
 #### Notes
 
-- `model_name` (shown for SUCCEEDED checkpoints) is the direct input for `deploy create --model`.
+- `model_name` (shown for SUCCEEDED checkpoints) is the direct input for `deploy create --model-name`.
 - Checkpoints expire ~15 days after creation; `expire_time` shows the deadline. Export or deploy before expiry.
 
 #### Examples
@@ -268,17 +269,17 @@ bl finetune get --job-id ft-xxx --output json
 
 ### `bl finetune image create`
 
-| Field           | Value                                                                                                                                                                                      |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Name**        | `finetune image create`                                                                                                                                                                    |
-| **Description** | Create an image generation model fine-tune job (sft-lora)                                                                                                                                  |
-| **Usage**       | `bl finetune image create --model <model> --datasets <id\|path> [--validations <id\|path>] [--model-name <name>] [--suffix <text>] [--generation-type <t2i\|i2i>] [--learning-rate <str>]` |
+| Field           | Value                                                                                                                                                                                           |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**        | `finetune image create`                                                                                                                                                                         |
+| **Description** | Create an image generation model fine-tune job (sft-lora)                                                                                                                                       |
+| **Usage**       | `bl finetune image create --base-model <model> --datasets <id\|path> [--validations <id\|path>] [--model-name <name>] [--suffix <text>] [--generation-type <t2i\|i2i>] [--learning-rate <str>]` |
 
 #### Flags
 
 | Flag                           | Type   | Required | Description                                                                                                                                                         |
 | ------------------------------ | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--model <model>`              | string | yes      | Base model to fine-tune                                                                                                                                             |
+| `--base-model <model>`         | string | yes      | Base model to fine-tune (e.g. qwen3-8b; not the output model name)                                                                                                  |
 | `--datasets <ids\|paths>`      | string | yes      | Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image). Local paths are uploaded (validated) first, then their file-ids are used.  |
 | `--validations <ids\|paths>`   | string | no       | Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).                                                                         |
 | `--model-name <name>`          | string | no       | Output model name (after training)                                                                                                                                  |
@@ -304,46 +305,47 @@ bl finetune get --job-id ft-xxx --output json
 #### Examples
 
 ```bash
-bl finetune image create --model wan2.7-image-pro --datasets ./images.zip
+bl finetune image create --base-model wan2.7-image-pro --datasets ./images.zip
 ```
 
 ```bash
-bl finetune image create --model wan2.7-image-pro --datasets file-xxx
+bl finetune image create --base-model wan2.7-image-pro --datasets file-xxx
 ```
 
 ```bash
-bl finetune image create --model wan2.7-image-pro --datasets file-xxx --generation-type i2i
+bl finetune image create --base-model wan2.7-image-pro --datasets file-xxx --generation-type i2i
 ```
 
 ```bash
-bl finetune image create --model wan2.7-image-pro --datasets ./images.zip --model-name my-wan
+bl finetune image create --base-model wan2.7-image-pro --datasets ./images.zip --model-name my-wan
 ```
 
 ```bash
-bl finetune image create --model wan2.7-image-pro --datasets file-xxx --output json
+bl finetune image create --base-model wan2.7-image-pro --datasets file-xxx --output json
 ```
 
 ```bash
-bl finetune image create --model wan2.7-image-pro --datasets ./images.zip --dry-run
+bl finetune image create --base-model wan2.7-image-pro --datasets ./images.zip --dry-run
 ```
 
 ### `bl finetune list`
 
-| Field           | Value                                                            |
-| --------------- | ---------------------------------------------------------------- |
-| **Name**        | `finetune list`                                                  |
-| **Description** | List fine-tune jobs                                              |
-| **Usage**       | `bl finetune list [--page <n>] [--page-size <n>] [--status <s>]` |
+| Field           | Value                                                                                   |
+| --------------- | --------------------------------------------------------------------------------------- |
+| **Name**        | `finetune list`                                                                         |
+| **Description** | List fine-tune jobs                                                                     |
+| **Usage**       | `bl finetune list [--page <n>] [--page-size <n>] [--status <s>] [--base-model <model>]` |
 
 #### Flags
 
-| Flag               | Type   | Required | Description                                                          |
-| ------------------ | ------ | -------- | -------------------------------------------------------------------- |
-| `--page <n>`       | number | no       | Page number (default: 1)                                             |
-| `--page-size <n>`  | number | no       | Results per page (default: 10, max 100)                              |
-| `--status <s>`     | string | no       | Filter by status (PENDING / RUNNING / SUCCEEDED / FAILED / CANCELED) |
-| `--api-key <key>`  | string | no       | API key                                                              |
-| `--base-url <url>` | string | no       | API base URL                                                         |
+| Flag                   | Type   | Required | Description                                                          |
+| ---------------------- | ------ | -------- | -------------------------------------------------------------------- |
+| `--page <n>`           | number | no       | Page number (default: 1)                                             |
+| `--page-size <n>`      | number | no       | Results per page (default: 10, max 100)                              |
+| `--status <s>`         | string | no       | Filter by status (PENDING / RUNNING / SUCCEEDED / FAILED / CANCELED) |
+| `--base-model <model>` | string | no       | Filter by base model ID (server-side)                                |
+| `--api-key <key>`      | string | no       | API key                                                              |
+| `--base-url <url>`     | string | no       | API base URL                                                         |
 
 #### Examples
 
@@ -356,7 +358,11 @@ bl finetune list --status RUNNING
 ```
 
 ```bash
-bl finetune list --page-size 20 --output json
+bl finetune list --base-model qwen3-8b
+```
+
+```bash
+bl finetune list --page-size 20
 ```
 
 ### `bl finetune logs`
@@ -405,19 +411,60 @@ bl finetune logs --job-id ft-xxx --tail 20
 bl finetune logs --job-id ft-xxx --search checkpoint --tail 5
 ```
 
+### `bl finetune price`
+
+| Field           | Value                                                                                               |
+| --------------- | --------------------------------------------------------------------------------------------------- |
+| **Name**        | `finetune price`                                                                                    |
+| **Description** | Estimate the training cost for a fine-tune job (token billing)                                      |
+| **Usage**       | `bl finetune price --base-model <model> --datasets <ids> [--training-type <type>] [--n-epochs <n>]` |
+
+#### Flags
+
+| Flag                           | Type   | Required | Description                                                        |
+| ------------------------------ | ------ | -------- | ------------------------------------------------------------------ |
+| `--base-model <model>`         | string | yes      | Base model to fine-tune (e.g. qwen3-8b; not the output model name) |
+| `--datasets <ids>`             | string | yes      | Training dataset file IDs, comma-separated (required)              |
+| `--training-type <type>`       | string | no       | Training type: sft \| dpo \| cpt (default: sft)                    |
+| `--n-epochs <n>`               | number | no       | Number of training epochs (default: 3)                             |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1)           |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                              |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                              |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                           |
+
+#### Notes
+
+- Estimate only — the server computes token usage from the datasets; final cost is subject to the bill.
+- Covers token billing for sft / dpo / cpt. Training-unit (MTU) billing is not supported by this command.
+- Hyper-parameters other than --n-epochs are fixed at representative defaults for estimation.
+
+#### Examples
+
+```bash
+bl finetune price --base-model qwen3-8b --datasets file-ft-xxx
+```
+
+```bash
+bl finetune price --base-model qwen3-8b --datasets file-ft-xxx,file-ft-yyy --n-epochs 2
+```
+
+```bash
+bl finetune price --base-model qwen3-8b --datasets file-ft-xxx --training-type cpt
+```
+
 ### `bl finetune text create`
 
-| Field           | Value                                                                                                                                                                                                                                                                           |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `finetune text create`                                                                                                                                                                                                                                                          |
-| **Description** | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                                                                                                                                                                   |
-| **Usage**       | `bl finetune text create --model <model> --datasets <id\|path,...> [--validations <id\|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft\|sft-lora\|dpo\|dpo-lora\|cpt>]` |
+| Field           | Value                                                                                                                                                                                                                                                                                |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Name**        | `finetune text create`                                                                                                                                                                                                                                                               |
+| **Description** | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                                                                                                                                                                        |
+| **Usage**       | `bl finetune text create --base-model <model> --datasets <id\|path,...> [--validations <id\|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft\|sft-lora\|dpo\|dpo-lora\|cpt>]` |
 
 #### Flags
 
 | Flag                         | Type   | Required | Description                                                                                                                                                                              |
 | ---------------------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--model <model>`            | string | yes      | Base model to fine-tune                                                                                                                                                                  |
+| `--base-model <model>`       | string | yes      | Base model to fine-tune (e.g. qwen3-8b; not the output model name)                                                                                                                       |
 | `--datasets <ids\|paths>`    | string | yes      | Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image). Local paths are uploaded (validated) first, then their file-ids are used.                       |
 | `--validations <ids\|paths>` | string | no       | Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).                                                                                              |
 | `--model-name <name>`        | string | no       | Output model name (after training)                                                                                                                                                       |
@@ -453,35 +500,35 @@ bl finetune logs --job-id ft-xxx --search checkpoint --tail 5
 #### Examples
 
 ```bash
-bl finetune text create --model qwen3-8b --datasets file-xxx
+bl finetune text create --base-model qwen3-8b --datasets file-xxx
 ```
 
 ```bash
-bl finetune text create --model qwen3-8b --datasets ./train.jsonl
+bl finetune text create --base-model qwen3-8b --datasets ./train.jsonl
 ```
 
 ```bash
-bl finetune text create --model qwen3-8b --datasets ./train.jsonl --validations ./eval.jsonl
+bl finetune text create --base-model qwen3-8b --datasets ./train.jsonl --validations ./eval.jsonl
 ```
 
 ```bash
-bl finetune text create --model qwen3-8b --datasets file-aaa,./extra.jsonl
+bl finetune text create --base-model qwen3-8b --datasets file-aaa,./extra.jsonl
 ```
 
 ```bash
-bl finetune text create --model qwen3-8b --datasets ./train.jsonl --training-type sft
+bl finetune text create --base-model qwen3-8b --datasets ./train.jsonl --training-type sft
 ```
 
 ```bash
-bl finetune text create --model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4
+bl finetune text create --base-model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4
 ```
 
 ```bash
-bl finetune text create --model qwen3-8b --datasets file-xxx --output json
+bl finetune text create --base-model qwen3-8b --datasets file-xxx --output json
 ```
 
 ```bash
-bl finetune text create --model qwen3-8b --datasets file-xxx --dry-run
+bl finetune text create --base-model qwen3-8b --datasets file-xxx --dry-run
 ```
 
 ### `bl finetune watch`

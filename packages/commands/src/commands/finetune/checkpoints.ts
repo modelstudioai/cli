@@ -19,7 +19,7 @@ export default defineCommand({
   flags: CHECKPOINTS_FLAGS,
   exampleArgs: ["--job-id ft-xxx", "--job-id ft-xxx --output json"],
   notes: [
-    "`model_name` (shown for SUCCEEDED checkpoints) is the direct input for `deploy create --model`.",
+    "`model_name` (shown for SUCCEEDED checkpoints) is the direct input for `deploy create --model-name`.",
     "Checkpoints expire ~15 days after creation; `expire_time` shows the deadline. Export or deploy before expiry.",
   ],
   async run(ctx) {

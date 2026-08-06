@@ -13,26 +13,35 @@ const LIST_FLAGS = {
     valueHint: "<s>",
     description: "Filter by status (PENDING / RUNNING / SUCCEEDED / FAILED / CANCELED)",
   },
+  baseModel: {
+    type: "string",
+    valueHint: "<model>",
+    description: "Filter by base model ID (server-side)",
+  },
 } satisfies FlagsDef;
 
 export default defineCommand({
   description: "List fine-tune jobs",
   auth: "apiKey",
-  usageArgs: "[--page <n>] [--page-size <n>] [--status <s>]",
+  usageArgs: "[--page <n>] [--page-size <n>] [--status <s>] [--base-model <model>]",
   flags: LIST_FLAGS,
-  exampleArgs: ["", "--status RUNNING", "--page-size 20 --output json"],
+  exampleArgs: ["", "--status RUNNING", "--base-model qwen3-8b", "--page-size 20"],
   async run(ctx) {
     const { settings, flags } = ctx;
     const pageNo = flags.page;
     const pageSize = flags.pageSize;
     const status = flags.status || undefined;
+    const model = flags.baseModel || undefined;
 
     if (settings.dryRun) {
-      emitResult({ action: "finetune.list", page: pageNo, page_size: pageSize, status }, "json");
+      emitResult(
+        { action: "finetune.list", page: pageNo, page_size: pageSize, status, model },
+        "json",
+      );
       return;
     }
 
-    const response = await listFineTunes(ctx.client, { pageNo, pageSize, status });
+    const response = await listFineTunes(ctx.client, { pageNo, pageSize, status, model });
     const payload = response.output ?? response.data;
     const jobs = payload?.jobs ?? [];
     const total = payload?.total;

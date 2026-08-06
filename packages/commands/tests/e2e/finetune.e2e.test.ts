@@ -31,7 +31,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       "--help",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/--model|--datasets/i);
+    expect(stderr).toMatch(/--base-model|--datasets/i);
   });
 
   test("finetune create --dry-run 构造 SFT 默认请求体", async () => {
@@ -39,7 +39,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       "finetune",
       "text",
       "create",
-      "--model",
+      "--base-model",
       "qwen3-8b",
       "--datasets",
       "file-aaa,file-bbb",
@@ -73,7 +73,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       "finetune",
       "text",
       "create",
-      "--model",
+      "--base-model",
       "qwen3-8b",
       "--datasets",
       "file-aaa",
@@ -135,7 +135,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
         "finetune",
         "text",
         "create",
-        "--model",
+        "--base-model",
         "qwen3-8b",
         "--datasets",
         "file-aaa",
@@ -157,7 +157,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       "finetune",
       "text",
       "create",
-      "--model",
+      "--base-model",
       "qwen3-8b",
       "--datasets",
       "file-aaa",
@@ -176,7 +176,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       "finetune",
       "text",
       "create",
-      "--model",
+      "--base-model",
       "qwen3-8b",
       "--datasets",
       `${localPath},file-bbb`,
@@ -207,7 +207,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       "finetune",
       "text",
       "create",
-      "--model",
+      "--base-model",
       "qwen3-8b",
       "--datasets",
       " , ",
@@ -228,7 +228,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       "finetune",
       "text",
       "create",
-      "--model",
+      "--base-model",
       "qwen3-8b",
       "--datasets",
       localPath,
@@ -250,7 +250,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       "finetune",
       "text",
       "create",
-      "--model",
+      "--base-model",
       "qwen3-8b",
       "--datasets",
       localPath,
@@ -272,7 +272,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     ["cancel", ["--job-id", "ft-xxx"]],
     ["delete", ["--job-id", "ft-xxx"]],
     ["watch", ["--job-id", "ft-xxx"]],
-    ["capability", ["--model", "qwen3-8b"]],
+    ["capability", ["--base-model", "qwen3-8b"]],
   ])("finetune %s --dry-run 发出结构化动作", async (sub, extra) => {
     const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
       "finetune",
@@ -292,7 +292,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       "finetune",
       "text",
       "create",
-      "--model",
+      "--base-model",
       "qwen3-8b",
       "--datasets",
       " file-a , ,file-b ",
@@ -314,7 +314,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       "finetune",
       "audio",
       "create",
-      "--model",
+      "--base-model",
       "cosyvoice-v3-flash",
       "--datasets",
       "file-audio",
@@ -343,7 +343,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       "--help",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/--model|--datasets/i);
+    expect(stderr).toMatch(/--base-model|--datasets/i);
     expect(stderr).not.toMatch(/--training-type|--n-epochs|--batch-size|--max-length/);
   });
 
@@ -352,7 +352,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
       "finetune",
       "image",
       "create",
-      "--model",
+      "--base-model",
       "wan2.7-image-pro",
       "--datasets",
       "file-image",

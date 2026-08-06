@@ -76,6 +76,7 @@ export { default as finetuneCheckpoints } from "./commands/finetune/checkpoints.
 export { default as finetuneExport } from "./commands/finetune/export.ts";
 export { default as finetuneWatch } from "./commands/finetune/watch.ts";
 export { default as finetuneCapability } from "./commands/finetune/capability.ts";
+export { default as finetunePrice } from "./commands/finetune/price.ts";
 export {
   deployTextCreate,
   deployAudioCreate,
