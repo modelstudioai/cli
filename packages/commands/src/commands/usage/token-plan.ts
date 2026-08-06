@@ -7,13 +7,23 @@ const PROGRESS_WIDTH = 32;
 
 interface TokenPlanUsage {
   per5HourPercentage: number;
-  per5HourResetTime: number;
+  per5HourResetTime?: number;
   per1WeekPercentage: number;
-  per1WeekResetTime: number;
+  per1WeekResetTime?: number;
 }
 
 function readUsage(result: unknown): TokenPlanUsage {
   const response = unwrapResponse(result as Record<string, unknown>);
+  const percentages = [response.per5HourPercentage, response.per1WeekPercentage];
+
+  if (
+    !percentages.every(
+      (percentage) => typeof percentage === "number" && Number.isFinite(percentage),
+    )
+  ) {
+    throw new BailianError("Token Plan usage response has an unexpected format.", ExitCode.GENERAL);
+  }
+
   const usage = {
     per5HourPercentage: response.per5HourPercentage,
     per5HourResetTime: response.per5HourResetTime,
@@ -21,7 +31,17 @@ function readUsage(result: unknown): TokenPlanUsage {
     per1WeekResetTime: response.per1WeekResetTime,
   };
 
-  if (!Object.values(usage).every((value) => typeof value === "number" && Number.isFinite(value))) {
+  const resetTimes = [
+    [usage.per5HourPercentage, usage.per5HourResetTime],
+    [usage.per1WeekPercentage, usage.per1WeekResetTime],
+  ];
+  const hasValidResetTimes = resetTimes.every(
+    ([percentage, resetTime]) =>
+      (percentage === 0 && resetTime === undefined) ||
+      (typeof resetTime === "number" && Number.isFinite(resetTime)),
+  );
+
+  if (!hasValidResetTimes) {
     throw new BailianError("Token Plan usage response has an unexpected format.", ExitCode.GENERAL);
   }
 
@@ -81,18 +101,22 @@ function printView(usage: TokenPlanUsage, generatedAt: number): void {
     const padding = Math.max(0, BOX_WIDTH - displayWidth(` ${visibleContent}`));
     process.stdout.write(`│ ${content}${" ".repeat(padding)}│\n`);
   };
-  const writeQuota = (label: string, percentage: number, resetTime: number) => {
+  const writeQuota = (label: string, percentage: number, resetTime: number | undefined) => {
     const percentageText = formatPercentage(percentage);
     const bar = progressBar(percentage);
     const style = progressStyle(percentage, color.green, color.yellow, color.red);
     writeLine(color.bold(label), label);
     writeLine(`${percentageText} used   ${style(bar)}`, `${percentageText} used   ${bar}`);
-    writeLine(
-      color.dim(
-        `Resets: ${formatDateTime(resetTime)}  (in ${formatRemainingTime(resetTime, generatedAt)})`,
-      ),
-      `Resets: ${formatDateTime(resetTime)}  (in ${formatRemainingTime(resetTime, generatedAt)})`,
-    );
+    if (resetTime === undefined) {
+      writeLine(
+        color.dim("Resets: not applicable (no usage yet)"),
+        "Resets: not applicable (no usage yet)",
+      );
+      return;
+    }
+
+    const resetText = `Resets: ${formatDateTime(resetTime)}  (in ${formatRemainingTime(resetTime, generatedAt)})`;
+    writeLine(color.dim(resetText), resetText);
   };
 
   process.stdout.write(`┌${"─".repeat(BOX_WIDTH)}┐\n`);
