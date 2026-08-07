@@ -41,6 +41,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **Model recommendation** — Describe your scenario and get best-fit model suggestions; supports scoped search, model comparison, and alternative discovery
 - **Fine-tuning & deployment** — Upload datasets, create text/audio/image fine-tune jobs (`finetune text|audio|image create`; text covers SFT/LoRA/DPO/CPT), probe job status non-blockingly (`finetune watch`), query per-model training capability (`finetune capability`), and deploy trained models as endpoints (`deploy text|audio|image create`)
 - **Console capabilities** — Browse the model marketplace (`model list`) and Bailian apps (`app list`), review a unified usage view (`usage summary`), check free-tier quota (`usage free`), view model usage statistics (`usage stats`), manage workspaces (`workspace list`), and manage rate limits (`quota list/request/check/history`)
+- **Asset center** — Browse and manage model-generated assets (`asset-center list/get/download`), favorites and recycle bin (`favorite`/`delete`), and storage quota (`stats`/`storage`)
 - **Local file auto-upload** — Every URL parameter accepts a local path; uploaded to free temp storage with 48-hour validity
 
 ## Showcase: One-Sentence Cinematic Video
@@ -149,6 +150,13 @@ bl quota check                                        # Current usage vs rate li
 bl quota request --model qwen3.6-plus --tpm 6000000   # Request a temporary TPM increase
 bl quota history                                      # View quota-change history
 
+# Asset center — browse, download, and manage model-generated assets (requires console login)
+bl asset-center list --type IMAGE
+bl asset-center get <asset-id> --include-download-url
+bl asset-center download --id <asset-id>
+bl asset-center stats
+bl asset-center storage
+
 # Token Plan team management (requires AK/SK, see auth below)
 bl token-plan list-seats                                # View subscription seat details
 bl token-plan add-member --account-name dev --org-id org_xxx
@@ -186,7 +194,7 @@ bl auth login --config token-plan --api-key sk-sp-xxxxx
 
 ### Console Login (OAuth)
 
-Required for console capability commands (`model list`, `app list`, `usage summary/free/stats`, `workspace list`, `quota list/request/check/history`). Opens the Bailian console in your browser to sign in.
+Required for console capability commands (`model list`, `app list`, `usage summary/free/stats`, `workspace list`, `quota list/request/check/history`, `asset-center *`). Opens the Bailian console in your browser to sign in.
 
 ```bash
 bl auth login --console
