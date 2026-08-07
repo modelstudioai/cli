@@ -15,5 +15,3 @@ For CLI installation and command examples, see the [main README](../../README.md
 ## License
 
 Apache-2.0
-
-<!-- sync pipeline verification -->
