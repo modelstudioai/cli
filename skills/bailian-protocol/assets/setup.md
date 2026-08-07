@@ -15,7 +15,7 @@ inspect config keys. Day-to-day command routing lives in the business skills
 # Recommended binary install (no Node), or: npm install -g bailian-cli
 curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
 # Install the full bailian-* skill family (includes bailian-protocol)
-bl skill add --name all
+bl skill init
 
 # Advanced / subset (comma-separated names; include bailian-protocol when needed)
 # bl skill add --name bailian-protocol,bailian-gen

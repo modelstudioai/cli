@@ -86,7 +86,7 @@ Please read https://bailian.aliyun.com/cli/install.md and install the Aliyun Mod
 
 ```bash
 npm install -g bailian-cli
-npx skills add modelstudioai/cli --all -g
+bl skill init
 ```
 
 > Requires Node.js >= 18.17.

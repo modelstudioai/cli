@@ -1444,7 +1444,7 @@ export const PAGE_HTML = `<!doctype html>
   function renderSkills() {
     var body = document.getElementById('skillsBody');
     var pager = document.getElementById('skillsPager');
-    if (!SKILLS.length) { pager.innerHTML = ''; renderEmpty(body, 'No skills installed.', 'Install with <code>bl skill add --name all</code>'); return; }
+    if (!SKILLS.length) { pager.innerHTML = ''; renderEmpty(body, 'No skills installed.', 'Install with <code>bl skill init</code>'); return; }
     var list = SKILLS.filter(function (s) { return skillMatches(s, SKILL_Q); });
     if (!list.length) { pager.innerHTML = ''; renderEmpty(body, 'No skills match "' + SKILL_Q + '".', ''); return; }
     var info = pageSlice(list, SKILL_PAGE, getPageSize('skills')); SKILL_PAGE = info.page;

@@ -128,8 +128,8 @@ function countFiles(dir: string, budget = 500): number {
 }
 
 /**
- * Skill directories to scan, keyed by the module that owns them. `bl skill
- * add --name all` fans skills out into each installed agent, so the same skill can
+ * Skill directories to scan, keyed by the module that owns them. `bl skill init` /
+ * `bl skill add` fans skills out into each installed agent, so the same skill can
  * live in several of these roots at once.
  */
 function skillRoots(home: string): Array<{ source: string; dir: string }> {

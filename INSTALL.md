@@ -54,10 +54,10 @@ npm install -g bailian-cli
 安装 skills（CLI 内置，无需 Git / npx skills）：
 
 ```bash
-bl skill add --name all
+bl skill init
 ```
 
-**Supported：** `--name all` 一次装齐整套 `bailian-*`（含共享协议 `bailian-protocol`）。
+**Supported：** `bl skill init` 一次装齐 registry 中全部 `bailian-*`（含共享协议 `bailian-protocol`）。
 
 **Advanced / 按需子集：**
 

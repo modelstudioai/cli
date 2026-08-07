@@ -85,7 +85,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 
 ```bash
 npm install -g bailian-cli
-npx skills add modelstudioai/cli --all -g
+bl skill init
 ```
 
 > 需要预先安装 Node.js >= 18.17。

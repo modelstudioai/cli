@@ -20,7 +20,7 @@ import {
   type AnsiStyles,
 } from "bailian-cli-runtime";
 
-const SKILL_INSTALL_CMD = "bl skill add --name all";
+const SKILL_INSTALL_CMD = "bl skill init";
 
 function updateAgentSkill(color: AnsiStyles): void {
   process.stderr.write("\nUpdating agent skill...\n");

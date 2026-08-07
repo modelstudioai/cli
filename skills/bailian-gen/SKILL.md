@@ -13,12 +13,12 @@ description: >-
   图片和语音同步返回并落地本地文件，视频是异步任务、用 `--download` 或轮询取回；本地文件直接传路径，CLI 自动上传。
   反触发：宿主自己能做的图片理解、普通问答、编程、写作、翻译不走本技能；百炼应用/知识库/用量/额度走 bailian-cli；
   精调训练走 bailian-finetune。
-  官方安装：`bl skill add --name all`（与共享协议 bailian-protocol 同装）。
+  官方安装：`bl skill init`（与共享协议 bailian-protocol 同装）。
 ---
 
 # Bailian media generation (`bl image` / `bl video` / `bl speech` / `bl omni`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent (one-time ask templates), Version & updates (pre-flight checklist), and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) and `bl <command> --help` — do not guess flags. If that protocol file is missing, stop and run `bl skill add --name all`; do not guess auth/consent.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent (one-time ask templates), Version & updates (pre-flight checklist), and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) and `bl <command> --help` — do not guess flags. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
 
 ## Consent (short version; full rules in bailian-protocol)
 
@@ -76,7 +76,7 @@ If one or more `bl` commands actually ran, proactively add a one-line summary in
 
 ## Common hand-offs
 
-软 hand-off（按 skill **名**；已安装则 Read，否则 `--help` / 提示 `bl skill add --name all`）：
+软 hand-off（按 skill **名**；已安装则 Read，否则 `--help` / 提示 `bl skill init`）：
 
 - Generation failed and it is not a usage/auth/content-filter issue → follow the issue-reporting flow in `bailian-protocol` ([`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md#cli-errors-report-an-issue)) and ask once whether to report.
 - Managing Bailian apps / knowledge bases / usage → skill `bailian-cli` (fallback: `bl app\|knowledge\|usage --help`).
@@ -84,5 +84,5 @@ If one or more `bl` commands actually ran, proactively add a one-line summary in
 
 ## references
 
-- [bailian-protocol](../bailian-protocol/SKILL.md) — shared protocol (install via `bl skill add --name all`)
+- [bailian-protocol](../bailian-protocol/SKILL.md) — shared protocol (install via `bl skill init`)
 - [reference/](reference/index.md) — command details
