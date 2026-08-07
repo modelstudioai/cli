@@ -17,12 +17,14 @@ describe("e2e: skill", () => {
   test("skill add --help exits successfully", async () => {
     const { stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, ["skill", "add", "--help"]);
     expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--all/);
     expect(stderr).toMatch(/--name/);
   });
 
   test("skill update --help exits successfully", async () => {
     const { stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, ["skill", "update", "--help"]);
     expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--all/);
     expect(stderr).toMatch(/--name/);
   });
 
@@ -37,18 +39,37 @@ describe("e2e: skill", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/list|registry/i);
   });
+
+  test("skill init --help exits successfully", async () => {
+    const { stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, ["skill", "init", "--help"]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/bailian/i);
+  });
 });
 
 // Local-only cases: auth "none" + validation happens before any network access, no gating needed
 describe("e2e: skill (local, no credentials)", () => {
-  test("skill add without --name errors as usage error (2)", async () => {
+  test("skill add without --all or --name errors as usage error (2)", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, [
       "skill",
       "add",
       "--quiet",
     ]);
     expect(exitCode).toBe(2);
-    expect(`${stdout}\n${stderr}`).toMatch(/--name|Usage:/i);
+    expect(`${stdout}\n${stderr}`).toMatch(/--all|--name|Usage:/i);
+  });
+
+  test("skill add with both --all and --name errors as usage error (2)", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, [
+      "skill",
+      "add",
+      "--all",
+      "--name",
+      "spark-video",
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(`${stdout}\n${stderr}`).toMatch(/--all|--name|either/i);
   });
 
   test("skill remove without --name errors as usage error (2)", async () => {
@@ -59,19 +80,6 @@ describe("e2e: skill (local, no credentials)", () => {
     ]);
     expect(exitCode).toBe(2);
     expect(`${stdout}\n${stderr}`).toMatch(/--name|Usage:/i);
-  });
-
-  test("skill add rejects mixing all with specific names (2)", async () => {
-    // parseSkillNames throws UsageError before fetchSkillsIndex — offline-safe
-    const { stdout, stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, [
-      "skill",
-      "add",
-      "--name",
-      "all,spark-video",
-      "--quiet",
-    ]);
-    expect(exitCode).toBe(2);
-    expect(`${stdout}\n${stderr}`).toMatch(/all/i);
   });
 
   test("skill remove of a not-installed skill fails with reason (1)", async () => {
