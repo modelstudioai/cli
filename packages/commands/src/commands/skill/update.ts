@@ -2,7 +2,6 @@ import {
   BailianError,
   ExitCode,
   defineCommand,
-  detectOutputFormat,
   detectInstalledAgents,
   fanOutSkillToAgents,
   fetchSkillsIndex,
@@ -40,7 +39,7 @@ export default defineCommand({
   },
   exampleArgs: ["", "--name spark-video"],
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
+    const format = ctx.settings.outputExplicit ? ctx.settings.output : "json";
     const requested = parseSkillNames(ctx.flags.name, true);
     const index = await fetchSkillsIndex();
     const lock = readSkillLock();
