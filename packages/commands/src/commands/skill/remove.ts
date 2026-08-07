@@ -2,7 +2,6 @@ import {
   BailianError,
   ExitCode,
   defineCommand,
-  detectOutputFormat,
   listSkillDirsOnDisk,
   parseSkillNames,
   readSkillLock,
@@ -34,7 +33,7 @@ export default defineCommand({
   exampleArgs: ["--name spark-video", "--name all"],
   async run(ctx) {
     // Purely local operation: no remote access, works offline
-    const format = detectOutputFormat(ctx.settings.output);
+    const format = ctx.settings.outputExplicit ? ctx.settings.output : "json";
     const requested = parseSkillNames(ctx.flags.name, false);
     const lock = readSkillLock();
     const names = requested === "all" ? Object.keys(lock.skills) : requested;

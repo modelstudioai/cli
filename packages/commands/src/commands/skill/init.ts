@@ -6,14 +6,13 @@ import {
   fetchSkillsIndex,
   getSkillRegistryBaseUrl,
   installSkillWithFanout,
-  parseSkillNames,
   readSkillLock,
   runWithConcurrency,
   writeSkillLock,
 } from "bailian-cli-core";
 import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
 
-interface AddOutcome {
+interface InitOutcome {
   name: string;
   status: "installed" | "failed";
   publishedAt?: string;
@@ -21,48 +20,33 @@ interface AddOutcome {
   reason?: string;
 }
 
+/** Prefix used to identify first-party Bailian skills in the registry. */
+const BAILIAN_PREFIX = "bailian-";
+
 /** Max number of skills downloading/installing at the same time. */
-const INSTALL_CONCURRENCY = 3;
+const INIT_CONCURRENCY = 3;
 
 export default defineCommand({
-  description: "Install skills from the Bailian skill registry into local agents",
+  description: "Install all bailian-* skills (one-shot bootstrap for new environments)",
   auth: "none",
-  usageArgs: "--all | --name <name,...>",
-  flags: {
-    all: {
-      type: "switch",
-      description: "Install all skills from the registry",
-    },
-    name: {
-      type: "string",
-      valueHint: "<name,...>",
-      description: "Comma-separated skill names to install",
-    },
-  },
-  validate(flags) {
-    if (flags.all && flags.name) return "Use either --all or --name, not both";
-    if (!flags.all && !flags.name)
-      return "Specify --all to install everything or --name <name,...> for specific skills";
-    return undefined;
-  },
-  exampleArgs: ["--all", "--name spark-video,bailian-model-recommend"],
+  usageArgs: "",
+  exampleArgs: [""],
+  notes: [
+    "Fetches the registry index and installs every skill whose name starts with bailian-",
+    "Equivalent to: bl skill add --all (filtered to bailian-* skills)",
+  ],
   async run(ctx) {
     const format = ctx.settings.outputExplicit ? ctx.settings.output : "json";
     const index = await fetchSkillsIndex();
-    const remoteNames = Object.keys(index.skills);
-    const parsed = ctx.flags.all ? "all" : parseSkillNames(ctx.flags.name, false);
-    const names = parsed === "all" ? remoteNames : parsed;
+
+    // Discover all bailian-* skills from the live registry index
+    const names = Object.keys(index.skills).filter((name) => name.startsWith(BAILIAN_PREFIX));
 
     const lock = readSkillLock();
     const agents = detectInstalledAgents();
 
-    // collect-then-throw: a single skill failure only affects itself; successful ones are written to disk and lock as usual.
-    // Skills install concurrently (bounded by INSTALL_CONCURRENCY) — each writes to a disjoint canonical dir, unique tmpDir, and distinct lock key.
-    const tasks = names.map((name) => async (): Promise<AddOutcome> => {
+    const tasks = names.map((name) => async (): Promise<InitOutcome> => {
       const entry = index.skills[name];
-      if (!entry) {
-        return { name, status: "failed", reason: "skill not found in registry" };
-      }
       try {
         const record = await installSkillWithFanout(
           name,
@@ -85,7 +69,7 @@ export default defineCommand({
         };
       }
     });
-    const results = await runWithConcurrency(tasks, INSTALL_CONCURRENCY);
+    const results = await runWithConcurrency(tasks, INIT_CONCURRENCY);
     writeSkillLock(lock);
 
     if (format === "json") {
@@ -98,7 +82,7 @@ export default defineCommand({
         format,
       );
     } else if (results.length === 0) {
-      emitBare("Skill registry is empty; no skills to install.");
+      emitBare("No bailian-* skills found in the registry.");
     } else {
       const rows = results.map((result) => [
         result.name,
@@ -116,7 +100,7 @@ export default defineCommand({
       throw new BailianError(
         `${failed.length}/${results.length} skill(s) failed to install`,
         ExitCode.GENERAL,
-        "Check the reason for failed skills in the output; network failures can be retried with bl skill add",
+        "Check the reason for failed skills in the output; network failures can be retried with bl skill init",
       );
     }
   },
