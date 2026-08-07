@@ -85,7 +85,7 @@ irm https://bailian.aliyun.com/cli/install.ps1 | iex
 npm install -g bailian-cli
 
 # Agent skills
-npx skills add modelstudioai/cli --all -g
+bl skill add --name all
 ```
 
 > 二进制安装不依赖 Node.js。`npm install -g` 长期保留。

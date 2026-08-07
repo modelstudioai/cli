@@ -12,15 +12,16 @@ inspect config keys. Day-to-day command routing lives in the business skills
 ## Install
 
 ```bash
-npm install -g bailian-cli
-# Recommended: install the full bailian-* skill family (includes bailian-protocol)
-npx skills add modelstudioai/cli --all -g
+# Recommended binary install (no Node), or: npm install -g bailian-cli
+curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
+# Install the full bailian-* skill family (includes bailian-protocol)
+bl skill add --name all
 
-# Advanced / not recommended: skills CLI does not auto-pull bailian-protocol
-# npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-gen
-# npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-finetune
-# npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-managed-agent
-# npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-cli
+# Advanced / subset (comma-separated names; include bailian-protocol when needed)
+# bl skill add --name bailian-protocol,bailian-gen
+# bl skill add --name bailian-protocol,bailian-finetune
+# bl skill add --name bailian-protocol,bailian-managed-agent
+# bl skill add --name bailian-protocol,bailian-cli
 ```
 
 Verify: `bl --version` (prints `bl X.Y.Z`).

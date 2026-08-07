@@ -16,7 +16,7 @@
 3. Compare the two versions (ignore the `bl` prefix; compare only `X.Y.Z`):
    - If `metadata.version` ≠ `bl --version`, refresh skills before doing anything else:
      ```bash
-     npx skills add modelstudioai/cli --all -g -y
+     bl skill add --name all
      ```
    - Do not trust a stale `reference/` when versions mismatch — flags may be wrong.
 4. Check the latest published CLI version:
@@ -26,7 +26,7 @@
 5. If the installed `bl` is **older** than the latest npm version, **STOP** the current task and **ask the user** (report skill version, installed CLI version, and npm latest):
    > A newer version of bl is available (current: X.Y.Z, latest: A.B.C). Upgrade before continuing?
    - **Do NOT auto-upgrade silently** — the user decides.
-   - If the user agrees: run `bl update`, then continue. (`bl update` upgrades `bailian-cli` via npm and, on success, also runs `npx skills add modelstudioai/cli --all -g -y` to keep skills in lockstep across all agent apps.)
+   - If the user agrees: run `bl update`, then continue. (`bl update` upgrades `bailian-cli` via npm and, on success, also runs `bl skill add --name all` to keep skills in lockstep across all agent apps.)
    - If the user declines: continue with the current version and note it in the summary.
    - If `npm view` / `bl update` fails (offline, registry blocked, permission): continue with the current `bl` and tell the user it could not be updated.
 6. Only proceed with the user's actual task after the above is resolved.
@@ -38,11 +38,13 @@
 If `bl --version` fails, install the CLI and skills:
 
 ```bash
-npm install -g bailian-cli
-npx skills add modelstudioai/cli --all -g
+# Recommended — no Node required
+curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
+# Or: npm install -g bailian-cli
+bl skill add --name all
 ```
 
-Do not install a single business skill alone — use `--all -g` so `bailian-protocol` is present.
+Do not install a single business skill alone — use `--name all` so `bailian-protocol` is present.
 
 ## Mention it in the task summary
 

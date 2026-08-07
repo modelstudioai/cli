@@ -5,10 +5,10 @@ Shared execution protocol for the **bailian-\*** Agent Skill family (consent, ve
 Business skills (`bailian-cli`, `bailian-gen`, `bailian-finetune`, `bailian-managed-agent`) read this skill before running `bl`. **Supported install** is the full family:
 
 ```bash
-npx skills add modelstudioai/cli --all -g
+bl skill add --name all
 ```
 
-The Agent Skills / `npx skills` installer does **not** auto-resolve skill dependencies. Prefer `--all -g` over subset `-s` installs.
+Use `bl skill add --name all`. Subset installs should explicitly include `bailian-protocol` when needed.
 
 For CLI installation and command examples, see the [main README](../../README.md).
 

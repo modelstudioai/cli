@@ -299,13 +299,11 @@ export async function performAutoUpdate(
 
     try {
       process.stderr.write(`  ${dim}Syncing agent skill...${reset}\n`);
-      execSync(`npx skills add modelstudioai/cli --all -g -y`, { stdio: "inherit" });
+      execSync(`bl skill add --name all`, { stdio: "inherit" });
       process.stderr.write(`  ${green}✓ Agent skill updated.${reset}\n\n`);
     } catch (err) {
       process.stderr.write(`  ${yellow}⚠ Agent skill sync failed: ${errorMessage(err)}${reset}\n`);
-      process.stderr.write(
-        `  ${yellow}  Run manually: npx skills add modelstudioai/cli --all -g -y${reset}\n\n`,
-      );
+      process.stderr.write(`  ${yellow}  Run manually: bl skill add --name all${reset}\n\n`);
     }
 
     pendingNotification = null;

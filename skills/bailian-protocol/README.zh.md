@@ -5,10 +5,10 @@
 业务 skill（`bailian-cli` / `bailian-gen` / `bailian-finetune` / `bailian-managed-agent`）在跑 `bl` 前应读取本 skill。**官方安装**为整包：
 
 ```bash
-npx skills add modelstudioai/cli --all -g
+bl skill add --name all
 ```
 
-Agent Skills / `npx skills` **不会**自动解析 skill 依赖。请优先使用 `--all -g`，避免只装单个业务 skill。
+请使用 `bl skill add --name all`。子集安装时如需要请显式带上 `bailian-protocol`。
 
 CLI 安装与命令示例见[主 README](../../README.zh.md)。
 

@@ -7,7 +7,7 @@
  * Ownership of each top-level command group is declared in `GROUP_OWNER_SKILL` below.
  * Unmapped groups fall back to `bailian-cli` (hub) so new commands never block generation.
  *
- * Committed to git; consumed by bailian-* Agent Skills (`npx skills add modelstudioai/cli`).
+ * Committed to git; consumed by bailian-* Agent Skills (`bl skill add --name all`).
  *
  * Run: pnpm --filter bailian-cli run generate:reference
  * Also run via `pnpm run sync:skill-assets` or the repo pre-commit hook.

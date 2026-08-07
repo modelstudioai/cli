@@ -11,12 +11,12 @@ description: >-
   apply / destroy 变更远端资源且必须带 `--yes`，务必先 plan 给用户看 diff 再让其确认。
   反触发：调用已上线的百炼应用/智能体走 bailian-app-call 或 `bl app`；宿主 agent 自身的记忆、技能、
   子代理不走本 skill；生图生视频走 bailian-gen。
-  官方安装：`npx skills add modelstudioai/cli --all -g`（与共享协议 bailian-protocol 同装）。
+  官方安装：`bl skill add --name all`（与共享协议 bailian-protocol 同装）。
 ---
 
 # Bailian managed agent IaC (`bl managed-agent`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Version & updates (pre-flight checklist) and CLI errors: report an issue. Command details are authoritative in [`reference/managed-agent.md`](reference/managed-agent.md) and `bl managed-agent --help` — do not guess flags. If that protocol file is missing, stop and run `npx skills add modelstudioai/cli --all -g`; do not guess auth/consent.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Version & updates (pre-flight checklist) and CLI errors: report an issue. Command details are authoritative in [`reference/managed-agent.md`](reference/managed-agent.md) and `bl managed-agent --help` — do not guess flags. If that protocol file is missing, stop and run `bl skill add --name all`; do not guess auth/consent.**
 
 ## Safety guardrail (the most important rule)
 
@@ -60,7 +60,7 @@ Flags, usage, and examples: see [`reference/`](reference/index.md) or `bl <comma
 
 ## Common hand-offs
 
-软 hand-off（按 skill **名**；已安装则 Read，否则 `--help` / 提示 `npx skills add modelstudioai/cli --all -g`）：
+软 hand-off（按 skill **名**；已安装则 Read，否则 `--help` / 提示 `bl skill add --name all`）：
 
 - Call an already published Bailian app/assistant → `bailian-app-call`, or skill `bailian-cli` (`bl app list` / `call`; fallback: `bl app --help`).
 - Choosing the model referenced in agents.yaml → `bailian-model-recommend`.
@@ -68,5 +68,5 @@ Flags, usage, and examples: see [`reference/`](reference/index.md) or `bl <comma
 
 ## references
 
-- [bailian-protocol](../bailian-protocol/SKILL.md) — shared protocol (install via `--all -g`)
+- [bailian-protocol](../bailian-protocol/SKILL.md) — shared protocol (install via `bl skill add --name all`)
 - [reference/](reference/index.md) — command details

@@ -8,7 +8,7 @@ description: >-
   阿里云百炼 `bl` 家族共享执行协议（consent 确认、版本预检、鉴权/安装、错误上报、本地文件与输出约定）。
   不是面向用户意图的业务入口；当任一 bailian-* 业务 skill（bailian-cli / bailian-gen /
   bailian-finetune / bailian-managed-agent）执行前需要公共上下文，或用户首次安装/鉴权/`bl` 报错需上报时读取本 skill。
-  官方安装为整包：`npx skills add modelstudioai/cli --all -g`（与业务 skill 同装）；Agent Skills / `npx skills` 不会按 metadata 自动拉依赖。
+  官方安装为整包：`bl skill add --name all`（与业务 skill 同装）。
 ---
 
 # Bailian shared protocol (`bailian-protocol`)
@@ -18,10 +18,10 @@ description: >-
 > **Install（supported）：** 整包装齐，含本 skill 与全部业务 skill：
 >
 > ```bash
-> npx skills add modelstudioai/cli --all -g
+> bl skill add --name all
 > ```
 >
-> Agent Skills / `npx skills` **不会**解析 frontmatter 依赖字段。子集 `-s` 为 advanced / 不推荐；若坚持子集，必须**手动**同时带上 `bailian-protocol`，否则业务 skill 的相对路径 Read 会失败。
+> 子集安装请显式带上 `bailian-protocol`（例如 `bl skill add --name bailian-protocol,bailian-gen`），否则业务 skill 的相对路径 Read 会失败。
 
 ## Provider selection and consent
 
@@ -44,7 +44,7 @@ After approval, treat Bailian as selected for the current task. Do not ask again
 ## Family routing & hand-offs
 
 业务路由（**软 hand-off**：按 skill **名**路由；已安装则 Read 其 `SKILL.md`，未安装则用 `bl <cmd> --help`，或提示整包安装
-`npx skills add modelstudioai/cli --all -g`）：
+`bl skill add --name all`）：
 
 | Intent                                | Skill                   | Fallback                                        |
 | ------------------------------------- | ----------------------- | ----------------------------------------------- |
@@ -55,7 +55,7 @@ After approval, treat Bailian as selected for the current task. Do not ask again
 
 **共享协议** vs **软 hand-off**：
 
-- `bailian-protocol`：靠 `--all -g` 与业务 skill 同装；CRITICAL 可用相对路径 `../bailian-protocol/…`。读不到则停止跑 `bl`，提示整包安装。
+- `bailian-protocol`：靠 `bl skill add --name all` 与业务 skill 同装；CRITICAL 可用相对路径 `../bailian-protocol/…`。读不到则停止跑 `bl`，提示整包安装。
 - 其它 bailian-\* 业务 skill：只按名字提及，**不要**写死 `../bailian-*/SKILL.md` 当执行前提。
 
 ## Version & updates (after provider selection, before the first `bl` command)

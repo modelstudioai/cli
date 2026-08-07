@@ -20,8 +20,7 @@ import {
   type AnsiStyles,
 } from "bailian-cli-runtime";
 
-const SKILL_SOURCE = "modelstudioai/cli";
-const SKILL_INSTALL_CMD = `npx skills add ${SKILL_SOURCE} --all -g -y`;
+const SKILL_INSTALL_CMD = "bl skill add --name all";
 
 function updateAgentSkill(color: AnsiStyles): void {
   process.stderr.write("\nUpdating agent skill...\n");

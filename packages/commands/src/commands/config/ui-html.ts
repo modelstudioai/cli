@@ -548,7 +548,7 @@ export const PAGE_HTML = `<!doctype html>
     <section id="view-skills" class="view">
       <div class="view-head">
         <h2 class="view-title">Installed <span class="grad">Skills</span></h2>
-        <p class="view-sub">Agent skills discovered across every local agent module (~/.agents/skills plus each agent's skills folder). Installed via <code style="font-family:var(--mono)">npx skills add</code>.</p>
+        <p class="view-sub">Agent skills discovered across every local agent module (~/.agents/skills plus each agent's skills folder). Installed via <code style="font-family:var(--mono)">bl skill add</code>.</p>
       </div>
       <div class="toolbar"><input id="skillSearch" class="search" type="search" placeholder="Search skills…" autocomplete="off"><button id="addSkillBtn" class="btn-dark" type="button">+ Add skill</button></div>
       <div id="skillsBody"><div class="loading">Loading…</div></div>
@@ -1444,7 +1444,7 @@ export const PAGE_HTML = `<!doctype html>
   function renderSkills() {
     var body = document.getElementById('skillsBody');
     var pager = document.getElementById('skillsPager');
-    if (!SKILLS.length) { pager.innerHTML = ''; renderEmpty(body, 'No skills installed.', 'Install with <code>npx skills add modelstudioai/cli --all -g</code>'); return; }
+    if (!SKILLS.length) { pager.innerHTML = ''; renderEmpty(body, 'No skills installed.', 'Install with <code>bl skill add --name all</code>'); return; }
     var list = SKILLS.filter(function (s) { return skillMatches(s, SKILL_Q); });
     if (!list.length) { pager.innerHTML = ''; renderEmpty(body, 'No skills match "' + SKILL_Q + '".', ''); return; }
     var info = pageSlice(list, SKILL_PAGE, getPageSize('skills')); SKILL_PAGE = info.page;
