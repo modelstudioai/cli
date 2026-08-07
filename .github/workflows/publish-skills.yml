@@ -24,4 +24,4 @@ jobs:
     steps:
       - name: Trigger FC publish-skills
         run: |
-          curl -sf -X POST "${{ secrets.FC_PUBLISH_TRIGGER_URL }}/publish-skills?repo=modelstudioai/cli&branch=${{ github.ref_name }}"
+          curl -sf -X POST "${{ secrets.FC_TRIGGER_URL }}/publish-skills?repo=modelstudioai/cli&branch=${{ github.ref_name }}"
