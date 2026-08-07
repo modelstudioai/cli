@@ -429,34 +429,34 @@ describe.skipIf(!isConsoleE2EReady())("e2e: asset-center（Console …）", () =
 
 当前 `packages/cli/src/commands.ts` 注册的命令组：
 
-| 命令组         | 子命令示例                                                                               | auth 域          |
-| -------------- | ---------------------------------------------------------------------------------------- | ---------------- |
-| `auth`         | login, status, logout                                                                    | none / console   |
-| `text`         | chat                                                                                     | apiKey           |
-| `omni`         | （全模态对话）                                                                           | apiKey           |
-| `image`        | generate, edit                                                                           | apiKey           |
-| `video`        | generate, edit, ref, task get, download                                                  | apiKey           |
-| `vision`       | describe                                                                                 | apiKey           |
-| `speech`       | synthesize, recognize                                                                    | apiKey           |
-| `knowledge`    | retrieve, search, chat                                                                   | apiKey           |
-| `memory`       | add, search, list, update, delete, profile create/get                                    | apiKey           |
-| `app`          | call, list                                                                               | apiKey / console |
-| `mcp`          | call, list, tools                                                                        | apiKey           |
-| `search`       | web                                                                                      | apiKey           |
-| `file`         | upload                                                                                   | apiKey           |
-| `config`       | show, set                                                                                | none             |
-| `console`      | call                                                                                     | console          |
-| `usage`        | free, freetier, stats                                                                    | console          |
-| `workspace`    | list                                                                                     | console          |
-| `quota`        | list, request, history, check                                                            | console          |
-| `dataset`      | upload, list, get, delete, validate                                                      | console          |
-| `finetune`     | create, list, get, cancel, delete, logs, checkpoints, export, watch, capability          | console          |
-| `deploy`       | create, list, get, models, scale, update, delete                                         | console          |
-| `token-plan`   | list-seats, create-key, assign-seats, add-member                                         | console          |
-| `asset-center` | list, get, favorite, unfavorite, delete, download, stats, storage, transfer list, oss \* | console          |
-| `pipeline`     | run, validate                                                                            | apiKey           |
-| `advisor`      | recommend                                                                                | apiKey           |
-| `update`       | （自更新）                                                                               | none             |
+| 命令组         | 子命令示例                                                                      | auth 域          |
+| -------------- | ------------------------------------------------------------------------------- | ---------------- |
+| `auth`         | login, status, logout                                                           | none / console   |
+| `text`         | chat                                                                            | apiKey           |
+| `omni`         | （全模态对话）                                                                  | apiKey           |
+| `image`        | generate, edit                                                                  | apiKey           |
+| `video`        | generate, edit, ref, task get, download                                         | apiKey           |
+| `vision`       | describe                                                                        | apiKey           |
+| `speech`       | synthesize, recognize                                                           | apiKey           |
+| `knowledge`    | retrieve, search, chat                                                          | apiKey           |
+| `memory`       | add, search, list, update, delete, profile create/get                           | apiKey           |
+| `app`          | call, list                                                                      | apiKey / console |
+| `mcp`          | call, list, tools                                                               | apiKey           |
+| `search`       | web                                                                             | apiKey           |
+| `file`         | upload                                                                          | apiKey           |
+| `config`       | show, set                                                                       | none             |
+| `console`      | call                                                                            | console          |
+| `usage`        | free, freetier, stats                                                           | console          |
+| `workspace`    | list                                                                            | console          |
+| `quota`        | list, request, history, check                                                   | console          |
+| `dataset`      | upload, list, get, delete, validate                                             | console          |
+| `finetune`     | create, list, get, cancel, delete, logs, checkpoints, export, watch, capability | console          |
+| `deploy`       | create, list, get, models, scale, update, delete                                | console          |
+| `token-plan`   | list-seats, create-key, assign-seats, add-member                                | console          |
+| `asset-center` | list, get, favorite, unfavorite, delete, download, stats, storage               | console          |
+| `pipeline`     | run, validate                                                                   | apiKey           |
+| `advisor`      | recommend                                                                       | apiKey           |
+| `update`       | （自更新）                                                                      | none             |
 
 ---
 
@@ -530,7 +530,7 @@ pnpm run release:check       # 发版前校验
 
 1. **命令实现 ≠ 产品路径** — 同一 `knowledgeRetrieve` 可以是 `bl knowledge retrieve` 或 `kscli retrieve`。
 2. **defineCommand 是契约** — `auth` + `flags` + `run(ctx)` 是命令的全部接口；凭证和网络细节下沉到 core/runtime。
-3. **registry 从 map 建树** — `"asset-center oss bind"` 自动变成三级命令组，help 动态生成。
+3. **registry 从 map 建树** — `"asset-center list"` 等 path 自动变成命令组，help 动态生成。
 4. **flags 用 camelCase 定义** — runtime 渲染为 `--kebab-case`；`ParsedFlags<typeof FLAGS>` 提供类型安全。
 5. **dry-run 是全局 flag** — `--dry-run` 在 auth stage 有例外处理，命令在 `run` 开头判断 `ctx.settings.dryRun`。
 6. **本地路径即 URL** — 所有接受 URL 的参数同时支持本地文件路径，core `files/upload` 自动上传。

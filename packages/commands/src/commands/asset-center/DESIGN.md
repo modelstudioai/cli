@@ -7,13 +7,12 @@
 
 ### 1.1 背景
 
-百炼资产中心（Asset Center）提供模型生成资产的存储、检索、收藏、删除、OSS 转存与容量管理能力。产品 PRD 要求 CLI 覆盖以下四大模块：
+百炼资产中心（Asset Center）提供模型生成资产的存储、检索、收藏、删除与容量管理能力。产品 PRD 要求 CLI 覆盖以下模块：
 
 | 模块     | PRD 能力                                        |
 | -------- | ----------------------------------------------- |
 | 资产管理 | 列表、详情、收藏/取消收藏、删除、批量删除、下载 |
-| 资产统计 | 总量、按类型统计、转存失败数                    |
-| OSS 转存 | SLR 授权、绑定/查看/修改/解绑 OSS、转存日志     |
+| 资产统计 | 总量、按类型统计                                |
 | 容量     | 已用容量、免费额度、超额单价                    |
 
 后端接口通过 **Zelda HTTP 网关** 暴露，Base Path 为 `/zelda/api/v1/bailian/asset`，详见 [api-doc.md](./api-doc.md)。
@@ -29,7 +28,6 @@
 
 - 不在 `rag` 入口暴露（首期与 `deploy` / `finetune` 一致，仅 `bl`）
 - 不暴露 `sendMqMessage` 等内部 MQ 接口
-- 不实现交互式 OSS 绑定向导（Phase 3 可选增强）
 - 不在 `core` / `runtime` 层硬编码 `bl` 命令名或控制台 URL
 
 ---
@@ -65,25 +63,6 @@
 - **Phase 1 方案**：`bl asset stats --sync-failed` 额外发起一次 count 查询，输出 `sync_failed_count`
 - **Phase 3 备选**：等后端在 stats 响应中增加专用字段后收敛
 
-### 2.3 OSS 转存
-
-| PRD # | 能力          | CLI 命令                         | API Action                  | 备注                          |
-| ----- | ------------- | -------------------------------- | --------------------------- | ----------------------------- |
-| 8     | SLR 授权      | `bl asset oss slr authorize`     | `createOssSLR`              | 一键授权，直接调用 create     |
-| 9     | 绑定 OSS      | `bl asset oss bind`              | `createAssetTransferPolicy` | 配置 bucket / path / 转存策略 |
-| 10    | 查看 OSS 配置 | `bl asset oss show`              | `getAssetTransferPolicy`    |                               |
-| 11    | 修改 OSS 配置 | `bl asset oss update`            | `updateAssetTransferPolicy` | 需 `--policy-id`              |
-| 12    | 解绑 OSS      | `bl asset oss unbind`            | `deleteAssetTransferPolicy` |                               |
-| 13    | 查看转存日志  | `bl asset transfer list`（待定） | **文档缺失**                | 见 §6 风险项                  |
-
-**辅助命令（绑定 UX，API 已有）：**
-
-| CLI 命令                    | API Action          |
-| --------------------------- | ------------------- |
-| `bl asset oss regions list` | `listOssRegion`     |
-| `bl asset oss buckets list` | `listUserBuckets`   |
-| `bl asset oss folders list` | `listBucketFolders` |
-
 ### 2.4 容量
 
 | PRD # | 能力         | CLI 命令           | API Action        |
@@ -116,7 +95,7 @@ packages/runtime (createCli / authStage / registry)
 
 约定：
 
-- 实现文件按能力组织在本目录及 `oss/` 子目录
+- 实现文件按能力组织在本目录
 - `usageArgs` / `exampleArgs` 不含 `bl` 前缀
 - 所有 asset 命令 `auth: "console"`；不重复声明 `CONSOLE_AUTH_FLAGS`（runtime 自动注入）
 
@@ -134,21 +113,9 @@ asset-center/
 ├── favorite.ts
 ├── unfavorite.ts
 ├── delete.ts
-├── restore.ts
 ├── download.ts
 ├── stats.ts
-├── storage.ts
-├── models-list.ts          # 可选 P1
-├── service-status.ts       # 可选 P1
-└── oss/
-    ├── slr-authorize.ts
-    ├── bind.ts
-    ├── show.ts
-    ├── update.ts
-    ├── unbind.ts
-    ├── regions-list.ts
-    ├── buckets-list.ts
-    └── folders-list.ts
+└── storage.ts
 ```
 
 ### 3.3 共享层 `utils.ts`
@@ -279,12 +246,10 @@ CLI 用法：`--id asset-001 --id asset-002` 或多次重复。实现时在 `val
 
 ### 4.5 条件校验（`validate`）
 
-| 命令         | 规则                                                                                    |
-| ------------ | --------------------------------------------------------------------------------------- |
-| `oss bind`   | `policy=BEFORE_DAYS` 时 `--before-days` 必填；`ossPathPrefix` 不能为空且不能以 `/` 开头 |
-| `oss update` | 至少提供一个可更新字段                                                                  |
-| `delete`     | `--permanent` 映射 `PERMANENT_DELETE`；默认 `SOFT_DELETE`                               |
-| 所有 batch   | `assetIdList.length <= 100`                                                             |
+| 命令       | 规则                                                      |
+| ---------- | --------------------------------------------------------- |
+| `delete`   | `--permanent` 映射 `PERMANENT_DELETE`；默认 `SOFT_DELETE` |
+| 所有 batch | `assetIdList.length <= 100`                               |
 
 ---
 
@@ -343,39 +308,16 @@ CLI 用法：`--id asset-001 --id asset-002` 或多次重复。实现时在 `val
 | `--sync-failed`                       | 额外查询 `syncOssDataStatus: SYNC_FAILED` 计数 |
 | `--type` / `--model` / `--keyword` 等 | 与 list 相同筛选维度（可选）                   |
 
-### 5.6 `bl asset oss bind`
-
-| Flag                      | API 字段              | 必填                      |
-| ------------------------- | --------------------- | ------------------------- |
-| `--bucket`                | `ossBucket`           | ✅                        |
-| `--region`                | `ossBucketRegion`     | ✅                        |
-| `--path-prefix`           | `ossPathPrefix`       | ✅                        |
-| `--policy`                | `transferPolicy`      | ✅，`ALL` / `BEFORE_DAYS` |
-| `--before-days`           | `transferBeforeDays`  | policy=BEFORE_DAYS 时 ✅  |
-| `--delete-after-transfer` | `deleteAfterTransfer` | 否                        |
-
-### 5.7 `bl asset oss update`
-
-| Flag                                 | 说明     |
-| ------------------------------------ | -------- |
-| `--policy-id`                        | required |
-| 其余与 bind 相同，均可选（部分更新） |
-
-### 5.8 `bl asset oss slr authorize`
-
-直接调用 `createOssSLR`，一键完成 SLR 授权。
-
 ---
 
 ## 6. 风险与待确认项
 
 ### 6.1 P0 — 编码前必须对齐
 
-| #   | 问题                                                                      | 影响           | 建议动作                                                        |
-| --- | ------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------- |
-| 1   | Console API 注册名（`zeldaHttp.{service}./zelda/api/v1/bailian/asset/*`） | 无法调用       | `bl console call` spike；与后端确认 service 名                  |
-| 2   | `tenantId` / `mainAccountUid` 由谁填充                                    | 所有接口必填   | 确认网关是否从 session 自动注入；否则扩展 config 或新增解析 API |
-| 3   | 转存日志 API 缺失（PRD #13）                                              | 无法交付该子项 | 向后端索要接口；临时用 `asset list --sync-status SYNC_FAILED`   |
+| #   | 问题                                                                      | 影响         | 建议动作                                                        |
+| --- | ------------------------------------------------------------------------- | ------------ | --------------------------------------------------------------- |
+| 1   | Console API 注册名（`zeldaHttp.{service}./zelda/api/v1/bailian/asset/*`） | 无法调用     | `bl console call` spike；与后端确认 service 名                  |
+| 2   | `tenantId` / `mainAccountUid` 由谁填充                                    | 所有接口必填 | 确认网关是否从 session 自动注入；否则扩展 config 或新增解析 API |
 
 ### 6.2 P1 — 产品设计
 
@@ -448,23 +390,13 @@ asset list | get | favorite | unfavorite | delete | restore | download | stats |
 
 **前置：** §6.1 #1 #2 确认。
 
-### Phase 2 — OSS 转存（P1）
+### Phase 2+ — 可选扩展
 
 ```
-asset oss slr authorize
-asset oss bind | show | update | unbind
-asset oss regions | buckets | folders list
-asset models list | service status
+asset models list | service status | service enable/disable
 ```
 
-### Phase 3 — 补齐（P2）
-
-- 转存日志（等 API）
-- `asset service enable/disable`
-- OSS 交互式绑定向导
-- README + 完整真实 E2E
-
----
+> OSS 转存相关命令（`asset-center oss *` / `transfer list`）已取消，不再排期。
 
 ## 11. 参考
 

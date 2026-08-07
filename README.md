@@ -41,7 +41,7 @@ Equip your AI Agent out-of-the-box with these capabilities, composable across co
 - **Model recommendation** — Describe your scenario and get best-fit model suggestions; supports scoped search, model comparison, and alternative discovery
 - **Fine-tuning & deployment** — Upload datasets, create text/audio/image fine-tune jobs (`finetune text|audio|image create`; text covers SFT/LoRA/DPO/CPT), probe job status non-blockingly (`finetune watch`), query per-model training capability (`finetune capability`), and deploy trained models as endpoints (`deploy text|audio|image create`)
 - **Console capabilities** — Browse the model marketplace (`model list`) and Bailian apps (`app list`), review a unified usage view (`usage summary`), check free-tier quota (`usage free`), view model usage statistics (`usage stats`), manage workspaces (`workspace list`), and manage rate limits (`quota list/request/check/history`)
-- **Asset center** — Browse and manage model-generated assets (`asset-center list/get/download`), favorites and recycle bin (`favorite`/`delete`), storage quota (`stats`/`storage`), OSS transfer (`oss slr/bind/show/update/unbind`), and transfer logs (`transfer list`)
+- **Asset center** — Browse and manage model-generated assets (`asset-center list/get/download`), favorites and recycle bin (`favorite`/`delete`), and storage quota (`stats`/`storage`)
 - **Local file auto-upload** — Every URL parameter accepts a local path; uploaded to free temp storage with 48-hour validity
 
 ## Showcase: One-Sentence Cinematic Video

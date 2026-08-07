@@ -7,22 +7,16 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                             | Description                                                    |
-| ----------------------------------- | -------------------------------------------------------------- |
-| `bl asset-center delete`            | Delete assets (soft delete to recycle bin by default)          |
-| `bl asset-center download`          | Get a signed download URL for an asset by ID                   |
-| `bl asset-center favorite`          | Add assets to favorites                                        |
-| `bl asset-center get`               | Get full details of a model-generated asset                    |
-| `bl asset-center list`              | List model-generated assets with filters and cursor pagination |
-| `bl asset-center oss bind`          | Create OSS transfer policy (bind bucket for asset transfer)    |
-| `bl asset-center oss show`          | View current OSS transfer policy                               |
-| `bl asset-center oss slr authorize` | Authorize OSS service-linked role (one-click)                  |
-| `bl asset-center oss unbind`        | Delete OSS transfer policy (unbind)                            |
-| `bl asset-center oss update`        | Update an existing OSS transfer policy                         |
-| `bl asset-center stats`             | Count model-generated assets by type                           |
-| `bl asset-center storage`           | View storage quota, usage, and overage pricing                 |
-| `bl asset-center transfer list`     | List asset OSS transfer records (filtered by sync status)      |
-| `bl asset-center unfavorite`        | Remove assets from favorites                                   |
+| Command                      | Description                                                    |
+| ---------------------------- | -------------------------------------------------------------- |
+| `bl asset-center delete`     | Delete assets (soft delete to recycle bin by default)          |
+| `bl asset-center download`   | Get a signed download URL for an asset by ID                   |
+| `bl asset-center favorite`   | Add assets to favorites                                        |
+| `bl asset-center get`        | Get full details of a model-generated asset                    |
+| `bl asset-center list`       | List model-generated assets with filters and cursor pagination |
+| `bl asset-center stats`      | Count model-generated assets by type                           |
+| `bl asset-center storage`    | View storage quota, usage, and overage pricing                 |
+| `bl asset-center unfavorite` | Remove assets from favorites                                   |
 
 ## Command details
 
@@ -205,152 +199,6 @@ bl asset-center list --recycle-bin
 bl asset-center list --keyword landscape --output json
 ```
 
-### `bl asset-center oss bind`
-
-| Field           | Value                                                                                                         |
-| --------------- | ------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `asset-center oss bind`                                                                                       |
-| **Description** | Create OSS transfer policy (bind bucket for asset transfer)                                                   |
-| **Usage**       | `bl asset-center oss bind --bucket <name> --region <region> --path-prefix <prefix> --policy <policy> [flags]` |
-
-#### Flags
-
-| Flag                           | Type   | Required | Description                                                          |
-| ------------------------------ | ------ | -------- | -------------------------------------------------------------------- |
-| `--bucket <name>`              | string | yes      | OSS bucket name                                                      |
-| `--region <region>`            | string | yes      | OSS bucket region (e.g. cn-hangzhou)                                 |
-| `--path-prefix <prefix>`       | string | yes      | OSS path prefix (must not start with /)                              |
-| `--policy <ALL\|BEFORE_DAYS>`  | string | yes      | Transfer policy: ALL or BEFORE_DAYS                                  |
-| `--before-days <n>`            | number | no       | Transfer assets older than N days (required when policy=BEFORE_DAYS) |
-| `--delete-after-transfer`      | switch | no       | Delete from platform after transfer completes                        |
-| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1)             |
-| `--console-site <site>`        | string | no       | Console site: domestic, international                                |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                                |
-| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                             |
-
-#### Examples
-
-```bash
-bl asset-center oss bind --bucket my-bucket --region cn-hangzhou --path-prefix bailian-assets/ --policy ALL
-```
-
-```bash
-bl asset-center oss bind --bucket my-bucket --region cn-hangzhou --path-prefix bailian/ --policy BEFORE_DAYS --before-days 30
-```
-
-### `bl asset-center oss show`
-
-| Field           | Value                                                 |
-| --------------- | ----------------------------------------------------- |
-| **Name**        | `asset-center oss show`                               |
-| **Description** | View current OSS transfer policy                      |
-| **Usage**       | `bl asset-center oss show [--policy-id <id>] [flags]` |
-
-#### Flags
-
-| Flag                           | Type   | Required | Description                                              |
-| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
-| `--policy-id <id>`             | string | no       | Policy ID (optional; omit to query by workspace)         |
-| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
-| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
-| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
-
-#### Examples
-
-```bash
-bl asset-center oss show
-```
-
-```bash
-bl asset-center oss show --policy-id policy-abc123 --output json
-```
-
-### `bl asset-center oss slr authorize`
-
-| Field           | Value                                         |
-| --------------- | --------------------------------------------- |
-| **Name**        | `asset-center oss slr authorize`              |
-| **Description** | Authorize OSS service-linked role (one-click) |
-| **Usage**       | `bl asset-center oss slr authorize [flags]`   |
-
-#### Flags
-
-| Flag                           | Type   | Required | Description                                              |
-| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
-| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
-| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
-| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
-
-#### Examples
-
-```bash
-bl asset-center oss slr authorize
-```
-
-```bash
-bl asset-center oss slr authorize --output json
-```
-
-### `bl asset-center oss unbind`
-
-| Field           | Value                                         |
-| --------------- | --------------------------------------------- |
-| **Name**        | `asset-center oss unbind`                     |
-| **Description** | Delete OSS transfer policy (unbind)           |
-| **Usage**       | `bl asset-center oss unbind --policy-id <id>` |
-
-#### Flags
-
-| Flag                           | Type   | Required | Description                                              |
-| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
-| `--policy-id <id>`             | string | yes      | Transfer policy ID                                       |
-| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
-| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
-| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
-
-#### Examples
-
-```bash
-bl asset-center oss unbind --policy-id policy-abc123
-```
-
-### `bl asset-center oss update`
-
-| Field           | Value                                                 |
-| --------------- | ----------------------------------------------------- |
-| **Name**        | `asset-center oss update`                             |
-| **Description** | Update an existing OSS transfer policy                |
-| **Usage**       | `bl asset-center oss update --policy-id <id> [flags]` |
-
-#### Flags
-
-| Flag                           | Type   | Required | Description                                              |
-| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
-| `--policy-id <id>`             | string | yes      | Transfer policy ID                                       |
-| `--bucket <name>`              | string | no       | OSS bucket name                                          |
-| `--region <region>`            | string | no       | OSS bucket region                                        |
-| `--path-prefix <prefix>`       | string | no       | OSS path prefix (must not start with /)                  |
-| `--policy <ALL\|BEFORE_DAYS>`  | string | no       | Transfer policy: ALL or BEFORE_DAYS                      |
-| `--before-days <n>`            | number | no       | Transfer days threshold                                  |
-| `--delete-after-transfer`      | switch | no       | Delete from platform after transfer completes            |
-| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
-| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
-| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
-| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
-
-#### Examples
-
-```bash
-bl asset-center oss update --policy-id policy-abc123 --policy ALL
-```
-
-```bash
-bl asset-center oss update --policy-id policy-abc123 --delete-after-transfer
-```
-
 ### `bl asset-center stats`
 
 | Field           | Value                                |
@@ -416,40 +264,6 @@ bl asset-center storage
 
 ```bash
 bl asset-center storage --output json
-```
-
-### `bl asset-center transfer list`
-
-| Field           | Value                                                       |
-| --------------- | ----------------------------------------------------------- |
-| **Name**        | `asset-center transfer list`                                |
-| **Description** | List asset OSS transfer records (filtered by sync status)   |
-| **Usage**       | `bl asset-center transfer list [--status <status>] [flags]` |
-
-#### Flags
-
-| Flag                                                           | Type   | Required | Description                                              |
-| -------------------------------------------------------------- | ------ | -------- | -------------------------------------------------------- |
-| `--status <NOT_SYNCED\|IN_SYNCING\|SYNC_SUCCESS\|SYNC_FAILED>` | string | no       | OSS sync status filter                                   |
-| `--page-size <n>`                                              | number | no       | Results per page (default: 10, max: 100)                 |
-| `--next-token <token>`                                         | number | no       | Cursor for the next page                                 |
-| `--console-region <region>`                                    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
-| `--console-site <site>`                                        | string | no       | Console site: domestic, international                    |
-| `--console-switch-agent <uid>`                                 | number | no       | Switch agent UID for delegated access                    |
-| `--workspace-id <id>`                                          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
-
-#### Examples
-
-```bash
-bl asset-center transfer list
-```
-
-```bash
-bl asset-center transfer list --status SYNC_FAILED
-```
-
-```bash
-bl asset-center transfer list --status IN_SYNCING --page-size 20 --output json
 ```
 
 ### `bl asset-center unfavorite`

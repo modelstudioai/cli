@@ -22,11 +22,6 @@ export const ASSET_API = {
   batchGetAssetDownloadUrl: assetApi("batchGetAssetDownloadUrl"),
   countModelGeneratedAsset: assetApi("countModelGeneratedAsset"),
   getStorageQuota: assetApi("getStorageQuota"),
-  createOssSLR: assetApi("createOssSLR"),
-  createAssetTransferPolicy: assetApi("createAssetTransferPolicy"),
-  getAssetTransferPolicy: assetApi("getAssetTransferPolicy"),
-  updateAssetTransferPolicy: assetApi("updateAssetTransferPolicy"),
-  deleteAssetTransferPolicy: assetApi("deleteAssetTransferPolicy"),
 } as const;
 
 export const ASSET_ID_FLAG = {

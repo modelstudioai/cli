@@ -70,26 +70,3 @@ export interface AssetStorageQuotaResponse {
   usedStorageSize?: number;
   extraStoragePrice?: string;
 }
-
-export interface AssetOssSlrResponse {
-  authorized?: boolean;
-  success?: boolean;
-}
-
-export interface AssetTransferPolicy {
-  policyId?: string;
-  transferPolicy?: string;
-  transferBeforeDays?: number;
-  ossBucket?: string;
-  ossBucketRegion?: string;
-  ossPathPrefix?: string;
-  deleteAfterTransfer?: boolean;
-}
-
-export interface AssetTransferPolicyCreateResponse {
-  policyId?: string;
-}
-
-export interface AssetTransferPolicyMutationResponse {
-  success?: boolean;
-}

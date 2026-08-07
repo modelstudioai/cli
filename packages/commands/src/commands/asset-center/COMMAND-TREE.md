@@ -38,22 +38,6 @@ bl asset
 │   ├── enable                    # [P2]
 │   └── disable                   # [P2]
 │
-├── transfer                      # [待定] 转存日志（等后端 API）
-│   └── list
-│
-└── oss                           # OSS 转存子组
-    ├── slr
-    │   └── authorize             # 一键 SLR 授权
-    ├── bind                      # 创建转存策略（绑定 OSS）
-    ├── show                      # 查看当前转存策略
-    ├── update                    # 更新转存策略
-    ├── unbind                    # 删除转存策略（解绑）
-    ├── regions
-    │   └── list                  # 列出可用 OSS 地域
-    ├── buckets
-    │   └── list                  # 列出用户 bucket
-    └── folders
-        └── list                  # 列出 bucket 下文件夹
 ```
 
 ---
@@ -62,30 +46,21 @@ bl asset
 
 `packages/cli/src/commands.ts` 中预期注册（camelCase export → kebab path）：
 
-| Map Key                     | Export 名（建议）      | Phase |
-| --------------------------- | ---------------------- | ----- |
-| `"asset list"`              | `assetList`            | 1     |
-| `"asset get"`               | `assetGet`             | 1     |
-| `"asset favorite"`          | `assetFavorite`        | 1     |
-| `"asset unfavorite"`        | `assetUnfavorite`      | 1     |
-| `"asset delete"`            | `assetDelete`          | 1     |
-| `"asset restore"`           | `assetRestore`         | 1     |
-| `"asset download"`          | `assetDownload`        | 1     |
-| `"asset stats"`             | `assetStats`           | 1     |
-| `"asset storage"`           | `assetStorage`         | 1     |
-| `"asset models list"`       | `assetModelsList`      | 2     |
-| `"asset service status"`    | `assetServiceStatus`   | 2     |
-| `"asset service enable"`    | `assetServiceEnable`   | 3     |
-| `"asset service disable"`   | `assetServiceDisable`  | 3     |
-| `"asset transfer list"`     | `assetTransferList`    | 3     |
-| `"asset oss slr authorize"` | `assetOssSlrAuthorize` | 2     |
-| `"asset oss bind"`          | `assetOssBind`         | 2     |
-| `"asset oss show"`          | `assetOssShow`         | 2     |
-| `"asset oss update"`        | `assetOssUpdate`       | 2     |
-| `"asset oss unbind"`        | `assetOssUnbind`       | 2     |
-| `"asset oss regions list"`  | `assetOssRegionsList`  | 2     |
-| `"asset oss buckets list"`  | `assetOssBucketsList`  | 2     |
-| `"asset oss folders list"`  | `assetOssFoldersList`  | 2     |
+| Map Key                   | Export 名（建议）     | Phase |
+| ------------------------- | --------------------- | ----- |
+| `"asset list"`            | `assetList`           | 1     |
+| `"asset get"`             | `assetGet`            | 1     |
+| `"asset favorite"`        | `assetFavorite`       | 1     |
+| `"asset unfavorite"`      | `assetUnfavorite`     | 1     |
+| `"asset delete"`          | `assetDelete`         | 1     |
+| `"asset restore"`         | `assetRestore`        | 1     |
+| `"asset download"`        | `assetDownload`       | 1     |
+| `"asset stats"`           | `assetStats`          | 1     |
+| `"asset storage"`         | `assetStorage`        | 1     |
+| `"asset models list"`     | `assetModelsList`     | 2     |
+| `"asset service status"`  | `assetServiceStatus`  | 2     |
+| `"asset service enable"`  | `assetServiceEnable`  | 3     |
+| `"asset service disable"` | `assetServiceDisable` | 3     |
 
 ---
 
@@ -109,29 +84,8 @@ Commands:
   storage      View storage quota and usage
   models       Model configuration helpers
   service      Asset center service subscription
-  transfer     Asset transfer logs
-  oss          OSS transfer policy management
 
 Run `bl asset <command> --help` for details.
-```
-
-### 4.2 OSS 子分组
-
-```
-$ bl asset oss
-OSS transfer policy commands.
-
-Commands:
-  slr          Service-linked role authorization
-  bind         Create OSS transfer policy
-  show         View current transfer policy
-  update       Update transfer policy
-  unbind       Delete transfer policy
-  regions      List supported OSS regions
-  buckets      List user OSS buckets
-  folders      List folders in a bucket
-
-Run `bl asset oss <command> --help` for details.
 ```
 
 ---
@@ -366,159 +320,6 @@ Overage:    ¥0.12/GB/month
 
 ---
 
-### 5.2 Phase 2 命令 — OSS 子组
-
-#### `bl asset oss slr authorize`
-
-```
-Description:  Authorize OSS service-linked role (one-click)
-
-Usage:  bl asset oss slr authorize
-
-Examples:
-  bl asset oss slr authorize
-  bl asset oss slr authorize --output json
-```
-
-**PRD 映射：** #8 SLR 一键授权
-
----
-
-#### `bl asset oss bind`
-
-```
-Description:  Create OSS transfer policy (bind bucket for asset transfer)
-
-Usage:  bl asset oss bind --bucket <name> --region <region> --path-prefix <prefix> --policy <policy> [flags]
-
-Flags:
-  --bucket <name>               OSS bucket name (required)
-  --region <region>             OSS bucket region, e.g. cn-hangzhou (required)
-  --path-prefix <prefix>        OSS path prefix, must not start with / (required)
-  --policy <policy>             Transfer policy: ALL or BEFORE_DAYS (required)
-  --before-days <n>             Transfer assets older than N days (required when policy=BEFORE_DAYS)
-  --delete-after-transfer       Delete from platform after transfer completes
-
-Examples:
-  bl asset oss bind --bucket my-bucket --region cn-hangzhou --path-prefix bailian-assets/ --policy ALL
-  bl asset oss bind --bucket my-bucket --region cn-hangzhou --path-prefix bailian/ --policy BEFORE_DAYS --before-days 30
-```
-
-**PRD 映射：** #9 绑定 OSS
-
----
-
-#### `bl asset oss show`
-
-```
-Description:  View current OSS transfer policy
-
-Usage:  bl asset oss show [--policy-id <id>]
-
-Flags:
-  --policy-id <id>              Policy ID (optional; omit to query by workspace)
-
-Examples:
-  bl asset oss show
-  bl asset oss show --policy-id policy-abc123 --output json
-```
-
-**PRD 映射：** #10 查看 OSS 配置
-
----
-
-#### `bl asset oss update`
-
-```
-Description:  Update an existing OSS transfer policy
-
-Usage:  bl asset oss update --policy-id <id> [flags]
-
-Flags:
-  --policy-id <id>              Policy ID (required)
-  --bucket <name>               OSS bucket name
-  --region <region>             OSS bucket region
-  --path-prefix <prefix>        OSS path prefix
-  --policy <policy>             Transfer policy: ALL or BEFORE_DAYS
-  --before-days <n>             Transfer days threshold
-  --delete-after-transfer       Delete from platform after transfer
-
-Examples:
-  bl asset oss update --policy-id policy-abc123 --policy ALL
-  bl asset oss update --policy-id policy-abc123 --delete-after-transfer
-```
-
-**PRD 映射：** #11 修改 OSS 配置
-
----
-
-#### `bl asset oss unbind`
-
-```
-Description:  Delete OSS transfer policy (unbind)
-
-Usage:  bl asset oss unbind --policy-id <id>
-
-Flags:
-  --policy-id <id>              Policy ID (required)
-
-Examples:
-  bl asset oss unbind --policy-id policy-abc123
-```
-
-**PRD 映射：** #12 解绑 OSS
-
----
-
-#### `bl asset oss regions list`
-
-```
-Description:  List supported OSS regions
-
-Usage:  bl asset oss regions list
-
-Examples:
-  bl asset oss regions list
-  bl asset oss regions list --output json
-```
-
----
-
-#### `bl asset oss buckets list`
-
-```
-Description:  List user OSS buckets in a region
-
-Usage:  bl asset oss buckets list --region <region>
-
-Flags:
-  --region <region>             Bucket region (required)
-
-Examples:
-  bl asset oss buckets list --region cn-hangzhou
-```
-
----
-
-#### `bl asset oss folders list`
-
-```
-Description:  List folders under a prefix in an OSS bucket
-
-Usage:  bl asset oss folders list --bucket <name> --region <region> [--prefix <prefix>]
-
-Flags:
-  --bucket <name>               Bucket name (required)
-  --region <region>             Bucket region (required)
-  --prefix <prefix>             Folder prefix, e.g. documents/
-
-Examples:
-  bl asset oss folders list --bucket my-bucket --region cn-hangzhou
-  bl asset oss folders list --bucket my-bucket --region cn-hangzhou --prefix documents/
-```
-
----
-
 ### 5.3 Phase 2/3 可选命令
 
 #### `bl asset models list`
@@ -549,28 +350,6 @@ Examples:
 
 ---
 
-#### `bl asset transfer list`（待定）
-
-```
-Description:  List asset transfer logs with pagination
-
-Status:  BLOCKED — API not in api-doc.md yet
-
-Expected flags (draft):
-  --page-size <n>
-  --next-token <token>
-  --status <status>             Transfer status filter
-```
-
-**PRD 映射：** #13 查看转存日志
-
-**临时替代：**
-
-```bash
-bl asset list --sync-status SYNC_FAILED
-bl asset stats --sync-failed
-```
-
 ---
 
 ## 6. PRD 覆盖矩阵
@@ -584,12 +363,6 @@ bl asset stats --sync-failed
 | 5     | 批量删除      | `asset delete`（多 `--id`）     | 1     | ✅ 可开发                          |
 | 6     | 下载资产      | `asset download`                | 1     | ✅ 可开发                          |
 | 7     | 查看资产统计  | `asset stats`                   | 1     | ✅ 可开发（转存失败用 workaround） |
-| 8     | SLR 授权      | `asset oss slr authorize`       | 2     | ✅ 可开发                          |
-| 9     | 绑定 OSS      | `asset oss bind`                | 2     | ✅ 可开发                          |
-| 10    | 查看 OSS 配置 | `asset oss show`                | 2     | ✅ 可开发                          |
-| 11    | 修改 OSS 配置 | `asset oss update`              | 2     | ✅ 可开发                          |
-| 12    | 解绑 OSS      | `asset oss unbind`              | 2     | ✅ 可开发                          |
-| 13    | 查看转存日志  | `asset transfer list`           | 3     | ⛔ API 缺失                        |
 | 14    | 查看容量信息  | `asset storage`                 | 1     | ✅ 可开发                          |
 
 ---
@@ -628,24 +401,6 @@ bl asset restore --id asset-001
 bl asset download --id asset-001 --out ./image.png
 ```
 
-### 7.4 OSS 转存配置
-
-```bash
-bl asset oss slr authorize
-bl asset oss regions list
-bl asset oss buckets list --region cn-hangzhou
-bl asset oss folders list --bucket my-bucket --region cn-hangzhou --prefix bailian/
-bl asset oss bind \
-  --bucket my-bucket \
-  --region cn-hangzhou \
-  --path-prefix bailian-assets/ \
-  --policy BEFORE_DAYS \
-  --before-days 30
-bl asset oss show
-bl asset oss update --policy-id policy-abc123 --policy ALL
-bl asset oss unbind --policy-id policy-abc123
-```
-
 ### 7.5 脚本翻页（JSON）
 
 ```bash
@@ -664,7 +419,7 @@ bl asset list --page-size 50 --next-token 1000 --output json
 | `bl app list`                  | console gateway 调用、dry-run 输出 `{ api, data }` |
 | `bl dataset list`              | text 表格 + json items 结构                        |
 | `bl deploy list/get/create`    | 产品域子命令命名、多级 path                        |
-| `bl memory profile get/create` | 三级 path 子组（`asset oss slr status` 同级模式）  |
+| `bl memory profile get/create` | 三级 path 子组                                     |
 | `bl quota list`                | `zeldaHttp.*` API 名、响应 extract                 |
 | `bl video download`            | `--out` 落盘                                       |
 | `bl usage stats`               | `requireWorkspaceId`、console E2E 模式             |
@@ -673,6 +428,7 @@ bl asset list --page-size 50 --next-token 1000 --output json
 
 ## 9. 变更记录
 
-| 日期       | 版本 | 说明                                  |
-| ---------- | ---- | ------------------------------------- |
-| 2026-07-09 | 0.1  | 初稿：命令树、PRD 映射、分 Phase 规格 |
+| 日期       | 版本 | 说明                                           |
+| ---------- | ---- | ---------------------------------------------- |
+| 2026-07-09 | 0.1  | 初稿：命令树、PRD 映射、分 Phase 规格          |
+| 2026-08-07 | 0.2  | 取消 OSS 转存命令（`oss *` / `transfer list`） |
