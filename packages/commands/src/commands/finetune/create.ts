@@ -1,6 +1,5 @@
 import {
   defineCommand,
-  detectOutputFormat,
   createFineTune,
   getDataset,
   uploadDataset,
@@ -27,7 +26,7 @@ import {
 } from "bailian-cli-core";
 import { existsSync, statSync } from "fs";
 import { basename } from "path";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 
 /**
  * A `--datasets` / `--validations` token is treated as a local file to upload
@@ -208,7 +207,7 @@ async function uploadResolvedLocal(
 }
 
 /** The modality a `finetune <modality> create` subcommand is bound to. */
-type CommandModality = "text" | "audio" | "image";
+type CommandModality = "text" | "audio" | "image" | "video";
 
 /**
  * Flags shared by every `finetune <modality> create` subcommand: what to train
@@ -216,10 +215,10 @@ type CommandModality = "text" | "audio" | "image";
  * output. Every modality's model consumes these.
  */
 const COMMON_FLAGS = {
-  model: {
+  baseModel: {
     type: "string",
     valueHint: "<model>",
-    description: "Base model to fine-tune",
+    description: "Base model to fine-tune (e.g. qwen3-8b; not the output model name)",
     required: true,
   },
   datasets: {
@@ -317,13 +316,41 @@ const IMAGE_FLAGS = {
 } satisfies FlagsDef;
 
 const TEXT_USAGE =
-  "--model <model> --datasets <id|path,...> [--validations <id|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>]";
+  "--base-model <model> --datasets <id|path,...> [--validations <id|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>]";
 
 const AUDIO_USAGE =
-  "--model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>]";
+  "--base-model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>]";
 
 const IMAGE_USAGE =
-  "--model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>] [--generation-type <t2i|i2i>] [--learning-rate <str>]";
+  "--base-model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>] [--generation-type <t2i|i2i>] [--learning-rate <str>]";
+
+/**
+ * Video (Wan i2v/kf2v) flags: exposes the three hyper-parameters that the
+ * video API supports and users may want to override. Defaults are model-specific
+ * (resolved by the sft-lora profile: wan2.7 → batch_size 1 / max_pixels 102400,
+ * wan2.5 → 4 / 36864, wan2.2 → 4 / 262144).
+ */
+const VIDEO_FLAGS = {
+  ...COMMON_FLAGS,
+  nEpochs: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Training epochs (default: 50)",
+  },
+  batchSize: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Batch size (default: model-specific, 1 for wan2.7, 4 for wan2.5/2.2)",
+  },
+  learningRate: {
+    type: "string",
+    valueHint: "<str>",
+    description: 'Learning rate as a string to preserve precision (default: "2e-5")',
+  },
+} satisfies FlagsDef;
+
+const VIDEO_USAGE =
+  "--base-model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>]";
 
 const COMMON_NOTES = [
   "Creating a job uploads any local datasets and consumes training quota.",
@@ -383,7 +410,7 @@ async function runCreate<F extends FlagsDef>(
 ): Promise<void> {
   const { identity, settings } = ctx;
   const flags = ctx.flags as Record<string, unknown>;
-  const model = flags.model as string;
+  const model = flags.baseModel as string;
   const datasetsRaw = flags.datasets as string;
 
   // CosyVoice audio fine-tuning accepts exactly one training file
@@ -606,8 +633,6 @@ async function runCreate<F extends FlagsDef>(
   if (modelName) body.model_name = modelName;
   if (suffix) body.finetuned_output_suffix = suffix;
 
-  const format = detectOutputFormat(settings.output);
-
   if (settings.dryRun) {
     const pending = [
       ...training.localPaths.map((path) => ({ field: "datasets", path })),
@@ -617,7 +642,7 @@ async function runCreate<F extends FlagsDef>(
       pending.length > 0
         ? { action: "finetune.create", body, pending_uploads: pending }
         : { action: "finetune.create", body },
-      format,
+      "json",
     );
     return;
   }
@@ -627,16 +652,8 @@ async function runCreate<F extends FlagsDef>(
 
   if (settings.quiet) {
     if (job?.job_id) emitBare(job.job_id);
-  } else if (format === "text") {
-    if (job?.job_id) {
-      emitBare(`Created fine-tune job: ${job.job_id}`);
-      if (job.status) emitBare(`Status: ${job.status}`);
-      emitRequestId(response.request_id, settings.quiet);
-    } else {
-      emitResult(response, format);
-    }
   } else {
-    emitResult(response, format);
+    emitResult(response, "json");
   }
 }
 
@@ -647,14 +664,14 @@ export const finetuneTextCreate = defineCommand({
   usageArgs: TEXT_USAGE,
   flags: TEXT_FLAGS,
   exampleArgs: [
-    "--model qwen3-8b --datasets file-xxx",
-    "--model qwen3-8b --datasets ./train.jsonl",
-    "--model qwen3-8b --datasets ./train.jsonl --validations ./eval.jsonl",
-    "--model qwen3-8b --datasets file-aaa,./extra.jsonl",
-    "--model qwen3-8b --datasets ./train.jsonl --training-type sft",
-    '--model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4',
-    "--model qwen3-8b --datasets file-xxx --output json",
-    "--model qwen3-8b --datasets file-xxx --dry-run",
+    "--base-model qwen3-8b --datasets file-xxx",
+    "--base-model qwen3-8b --datasets ./train.jsonl",
+    "--base-model qwen3-8b --datasets ./train.jsonl --validations ./eval.jsonl",
+    "--base-model qwen3-8b --datasets file-aaa,./extra.jsonl",
+    "--base-model qwen3-8b --datasets ./train.jsonl --training-type sft",
+    '--base-model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4',
+    "--base-model qwen3-8b --datasets file-xxx --output json",
+    "--base-model qwen3-8b --datasets file-xxx --dry-run",
   ],
   notes: TEXT_NOTES,
   run: (ctx) => runCreate("text", ctx),
@@ -667,11 +684,11 @@ export const finetuneAudioCreate = defineCommand({
   usageArgs: AUDIO_USAGE,
   flags: AUDIO_FLAGS,
   exampleArgs: [
-    "--model cosyvoice-v3-flash --datasets ./audio.zip",
-    "--model cosyvoice-v3-flash --datasets file-xxx",
-    "--model cosyvoice-v3-flash --datasets ./audio.zip --model-name my-tts",
-    "--model cosyvoice-v3-flash --datasets file-xxx --output json",
-    "--model cosyvoice-v3-flash --datasets ./audio.zip --dry-run",
+    "--base-model cosyvoice-v3-flash --datasets ./audio.zip",
+    "--base-model cosyvoice-v3-flash --datasets file-xxx",
+    "--base-model cosyvoice-v3-flash --datasets ./audio.zip --model-name my-tts",
+    "--base-model cosyvoice-v3-flash --datasets file-xxx --output json",
+    "--base-model cosyvoice-v3-flash --datasets ./audio.zip --dry-run",
   ],
   notes: AUDIO_NOTES,
   run: (ctx) => runCreate("audio", ctx),
@@ -684,13 +701,38 @@ export const finetuneImageCreate = defineCommand({
   usageArgs: IMAGE_USAGE,
   flags: IMAGE_FLAGS,
   exampleArgs: [
-    "--model wan2.7-image-pro --datasets ./images.zip",
-    "--model wan2.7-image-pro --datasets file-xxx",
-    "--model wan2.7-image-pro --datasets file-xxx --generation-type i2i",
-    "--model wan2.7-image-pro --datasets ./images.zip --model-name my-wan",
-    "--model wan2.7-image-pro --datasets file-xxx --output json",
-    "--model wan2.7-image-pro --datasets ./images.zip --dry-run",
+    "--base-model wan2.7-image-pro --datasets ./images.zip",
+    "--base-model wan2.7-image-pro --datasets file-xxx",
+    "--base-model wan2.7-image-pro --datasets file-xxx --generation-type i2i",
+    "--base-model wan2.7-image-pro --datasets ./images.zip --model-name my-wan",
+    "--base-model wan2.7-image-pro --datasets file-xxx --output json",
+    "--base-model wan2.7-image-pro --datasets ./images.zip --dry-run",
   ],
   notes: IMAGE_NOTES,
   run: (ctx) => runCreate("image", ctx),
+});
+
+const VIDEO_NOTES = [
+  ...COMMON_NOTES,
+  "Video generation training (Wan i2v/kf2v) runs efficient_sft with model-",
+  "specific defaults: wan2.7 (batch_size=1, max_pixels=102400), wan2.5/2.2",
+  "(batch_size=4, max_pixels per model). Override with --batch-size/--n-epochs.",
+  "Datasets are .zip archives with data.jsonl + frame images + videos.",
+  "Recommended: ≥10 training samples, 20-100 for stable results.",
+];
+
+/** `bl finetune video create` — fine-tune a video generation model. Datasets are `.zip`. */
+export const finetuneVideoCreate = defineCommand({
+  description: "Create a video generation model fine-tune job (Wan i2v/kf2v, efficient_sft)",
+  auth: "apiKey",
+  usageArgs: VIDEO_USAGE,
+  flags: VIDEO_FLAGS,
+  exampleArgs: [
+    "--base-model wan2.7-i2v --datasets file-xxx",
+    "--base-model wan2.7-i2v --datasets ./i2v-data.zip",
+    "--base-model wan2.2-kf2v-flash --datasets file-xxx --n-epochs 100",
+    "--base-model wan2.7-i2v --datasets file-xxx --dry-run",
+  ],
+  notes: VIDEO_NOTES,
+  run: (ctx) => runCreate("video", ctx),
 });

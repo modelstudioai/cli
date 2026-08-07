@@ -130,10 +130,10 @@ bl auth login --console
 
 # Fine-tune & deploy — a one-shot train-to-serve workflow
 bl dataset upload --file ./train.jsonl                 # Upload a .jsonl dataset (validated first)
-bl finetune text create --model qwen3-8b --datasets ./train.jsonl --training-type sft-lora  # Local paths auto-upload
+bl finetune text create --base-model qwen3-8b --datasets ./train.jsonl --training-type sft-lora  # Local paths auto-upload
 bl finetune watch --job-id ft-xxx --output json       # Non-blocking probe (running/succeeded return 0; failed/canceled report an error)
-bl finetune capability --model qwen3-8b               # Which training types a model supports
-bl deploy text create --model qwen3-8b --name my-svc --plan mu  # Deploy the trained model as an endpoint
+bl finetune capability --base-model qwen3-8b          # Which training types a model supports
+bl deploy text create --model-name qwen3-8b --display-name my-svc --plan mu  # Deploy the trained model as an endpoint
 
 # Browse models / apps / free-tier quota / usage statistics / workspaces
 bl model list                                        # Browse model families and pricing

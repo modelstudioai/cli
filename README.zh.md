@@ -128,10 +128,10 @@ bl auth login --console
 
 # 微调与部署 — 从训练到服务的一站式流程
 bl dataset upload --file ./train.jsonl                 # 上传 .jsonl 数据集（先校验）
-bl finetune text create --model qwen3-8b --datasets ./train.jsonl --training-type sft-lora  # 本地路径自动上传
+bl finetune text create --base-model qwen3-8b --datasets ./train.jsonl --training-type sft-lora  # 本地路径自动上传
 bl finetune watch --job-id ft-xxx --output json       # 非阻塞探测（运行中/成功返回 0；失败/取消报错）
-bl finetune capability --model qwen3-8b               # 查询模型支持哪些训练方式
-bl deploy text create --model qwen3-8b --name my-svc --plan mu  # 把训练好的模型部署为推理服务
+bl finetune capability --base-model qwen3-8b          # 查询模型支持哪些训练方式
+bl deploy text create --model-name qwen3-8b --display-name my-svc --plan mu  # 把训练好的模型部署为推理服务
 
 # 浏览模型 / 应用 / 免费额度 / 用量统计 / 业务空间
 bl model list                                        # 浏览模型系列与价格信息

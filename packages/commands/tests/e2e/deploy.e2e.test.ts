@@ -30,7 +30,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
       "--help",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/--model|--name/i);
+    expect(stderr).toMatch(/--model-name|--display-name/i);
   });
 
   test("deploy create --dry-run 构造 lora 部署请求体", async () => {
@@ -38,9 +38,9 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
       "deploy",
       "text",
       "create",
-      "--model",
+      "--model-name",
       "qwen-plus-2025-12-01",
-      "--name",
+      "--display-name",
       "my-qwen-plus",
       "--dry-run",
       "--output",
@@ -68,9 +68,9 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
       "deploy",
       "text",
       "create",
-      "--model",
+      "--model-name",
       "qwen3-8b",
-      "--name",
+      "--display-name",
       "my-qwen3-mu",
       "--plan",
       "mu",
@@ -102,9 +102,9 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
       "deploy",
       "audio",
       "create",
-      "--model",
+      "--model-name",
       "my-cosyvoice-ft",
-      "--name",
+      "--display-name",
       "my-tts",
       "--dry-run",
       "--output",

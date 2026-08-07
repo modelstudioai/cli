@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat, deleteFineTune, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { defineCommand, deleteFineTune, type FlagsDef } from "bailian-cli-core";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const DELETE_FLAGS = {
   jobId: {
@@ -23,10 +23,9 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const jobId = flags.jobId;
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult({ action: "finetune.delete", job_id: jobId }, format);
+      emitResult({ action: "finetune.delete", job_id: jobId }, "json");
       return;
     }
 
@@ -34,11 +33,8 @@ export default defineCommand({
 
     if (settings.quiet) {
       emitBare(jobId);
-    } else if (format === "text") {
-      emitBare(`Deleted ${jobId}.`);
-      emitRequestId(response.request_id, settings.quiet);
     } else {
-      emitResult(response, format);
+      emitResult(response, "json");
     }
   },
 });
