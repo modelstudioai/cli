@@ -42,6 +42,8 @@ export default defineCommand({
   flags: DOC_DELETE_FLAGS,
   notes: [
     "Removes documents from the knowledge base index only; the source files remain in the data center.",
+    "Use the doc_id from `knowledge doc list --quiet`, not the fileId from `knowledge doc upload`. For documents created via `knowledge create --doc-id`, the doc_id equals the fileId; for documents imported via `knowledge doc upload --index-id`, the doc_id may include a workspace suffix.",
+    "Deletion is asynchronous: the server returns Success immediately, but the document may still appear in `knowledge doc list` for up to ~30s until the change propagates.",
     "The output lists the ids actually deleted as reported by the server.",
   ],
   exampleArgs: [

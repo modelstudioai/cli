@@ -218,6 +218,22 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc tag (live)", () => {
     const data = parseStdoutJson<{ code: string }>(tagRun.stdout);
     expect(data.code).toBe("Success");
 
+    // Verify the tag actually landed on the server via an independent read-back
+    const tagGetRun = await runCommandE2e(KNOWLEDGE_DOC_TAG_ROUTES, [
+      "knowledge",
+      "file",
+      "get",
+      "--file-id",
+      fileId,
+      "--workspace-id",
+      workspaceId,
+      "--output",
+      "json",
+    ]);
+    expect(tagGetRun.exitCode, tagGetRun.stderr).toBe(0);
+    const tagGetDetail = parseStdoutJson<{ data: { tags?: string[] } }>(tagGetRun.stdout);
+    expect(tagGetDetail.data?.tags ?? []).toContain("e2e-tag");
+
     // overwrite mode replaces the tag set live (append above covered the default)
     const overwriteRun = await runCommandE2e(KNOWLEDGE_DOC_TAG_ROUTES, [
       "knowledge",
@@ -237,6 +253,26 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc tag (live)", () => {
     expect(overwriteRun.exitCode, overwriteRun.stderr).toBe(0);
     const overwriteData = parseStdoutJson<{ code: string }>(overwriteRun.stdout);
     expect(overwriteData.code).toBe("Success");
+
+    // Verify overwrite replaced the tag set — old tag gone, new tag present
+    const overwriteGetRun = await runCommandE2e(KNOWLEDGE_DOC_TAG_ROUTES, [
+      "knowledge",
+      "file",
+      "get",
+      "--file-id",
+      fileId,
+      "--workspace-id",
+      workspaceId,
+      "--output",
+      "json",
+    ]);
+    expect(overwriteGetRun.exitCode, overwriteGetRun.stderr).toBe(0);
+    const overwriteGetDetail = parseStdoutJson<{ data: { tags?: string[] } }>(
+      overwriteGetRun.stdout,
+    );
+    const overwriteTags = overwriteGetDetail.data?.tags ?? [];
+    expect(overwriteTags).toContain("e2e-tag-final");
+    expect(overwriteTags).not.toContain("e2e-tag");
 
     // Clean up the uploaded data-center file
     const fileDeleteRun = await runCommandE2e(KNOWLEDGE_DOC_TAG_ROUTES, [

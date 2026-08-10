@@ -1072,6 +1072,20 @@ describe.skipIf(!isKbAdminE2EReady())(
           workspaceId,
         ]);
         expect(deleteRun.exitCode, deleteRun.stderr).toBe(0);
+
+        // Verify the file is actually gone from the data center via read-back
+        const postFileListRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+          "knowledge",
+          "file",
+          "list",
+          "--category-id",
+          categoryId,
+          "--workspace-id",
+          workspaceId,
+          "--quiet",
+        ]);
+        expect(postFileListRun.exitCode, postFileListRun.stderr).toBe(0);
+        expect(postFileListRun.stdout.trim()).not.toContain(fileId);
       } finally {
         // Clean up the self-created category (doubles as live coverage of category delete)
         const categoryDeleteRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
@@ -1085,6 +1099,20 @@ describe.skipIf(!isKbAdminE2EReady())(
           workspaceId,
         ]);
         expect(categoryDeleteRun.exitCode, categoryDeleteRun.stderr).toBe(0);
+
+        // Verify the category is actually gone from the server via read-back
+        const postCategoryListRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+          "knowledge",
+          "category",
+          "list",
+          "--name",
+          categoryName,
+          "--workspace-id",
+          workspaceId,
+          "--quiet",
+        ]);
+        expect(postCategoryListRun.exitCode, postCategoryListRun.stderr).toBe(0);
+        expect(postCategoryListRun.stdout.trim()).not.toContain(categoryId);
       }
       // kb create --wait adds a full import phase — generous timeout
     }, 600_000);
@@ -1176,6 +1204,31 @@ describe.skipIf(!isKbAdminE2EReady())(
         ]);
         expect(updateRun.exitCode, updateRun.stderr).toBe(0);
 
+        // Verify the content update landed on the server via independent read-back
+        const updateVerifyRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+          "knowledge",
+          "chunk",
+          "list",
+          "--index-id",
+          indexId,
+          "--workspace-id",
+          workspaceId,
+          "--output",
+          "json",
+        ]);
+        expect(updateVerifyRun.exitCode, updateVerifyRun.stderr).toBe(0);
+        const updateVerifyData = parseStdoutJson<{
+          data?: {
+            nodes?: Array<{ metadata?: { _id?: string; content?: string }; text?: string }>;
+          };
+        }>(updateVerifyRun.stdout);
+        const updatedChunk = updateVerifyData.data?.nodes?.find(
+          (node) => node.metadata?._id === targetChunkId,
+        );
+        expect(updatedChunk?.metadata?.content ?? updatedChunk?.text).toBe(
+          "e2e updated chunk content",
+        );
+
         // update toggling --exclude only (no content — exercises the fetchChunkContent read-back path live)
         const excludeRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
           "knowledge",
@@ -1192,6 +1245,29 @@ describe.skipIf(!isKbAdminE2EReady())(
           workspaceId,
         ]);
         expect(excludeRun.exitCode, excludeRun.stderr).toBe(0);
+
+        // Verify the exclude flag landed on the server via independent read-back
+        const excludeVerifyRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+          "knowledge",
+          "chunk",
+          "list",
+          "--index-id",
+          indexId,
+          "--workspace-id",
+          workspaceId,
+          "--output",
+          "json",
+        ]);
+        expect(excludeVerifyRun.exitCode, excludeVerifyRun.stderr).toBe(0);
+        const excludeVerifyData = parseStdoutJson<{
+          data?: {
+            nodes?: Array<{ metadata?: { _id?: string; is_displayed_chunk_content?: boolean } }>;
+          };
+        }>(excludeVerifyRun.stdout);
+        const excludedChunk = excludeVerifyData.data?.nodes?.find(
+          (node) => node.metadata?._id === targetChunkId,
+        );
+        expect(excludedChunk?.metadata?.is_displayed_chunk_content).toBe(false);
 
         // kb stats on this base doubles as live coverage of the monitor endpoint
         // (the only indices endpoint not touched by the chain)
@@ -1298,8 +1374,47 @@ describe.skipIf(!isKbAdminE2EReady())(
           ),
         );
 
+        // Verify the chunks are actually gone from the server via independent read-back
+        const postDeleteListRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+          "knowledge",
+          "chunk",
+          "list",
+          "--index-id",
+          indexId,
+          "--workspace-id",
+          workspaceId,
+          "--quiet",
+        ]);
+        expect(postDeleteListRun.exitCode, postDeleteListRun.stderr).toBe(0);
+        expect(postDeleteListRun.stdout.trim()).toBe("");
+
         // doc delete verifies document-level delete semantics (only unlinks from this
-        // base, unlike file delete)
+        // base, unlike file delete). The --doc-id must be the full doc_id from doc
+        // list (e.g. "file_xxx_<workspaceId>"), NOT the bare fileId ("file_xxx") —
+        // passing the bare fileId returns Success but does not actually remove the
+        // document.
+        const preDocListRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+          "knowledge",
+          "doc",
+          "list",
+          "--index-id",
+          indexId,
+          "--workspace-id",
+          workspaceId,
+          "--output",
+          "json",
+        ]);
+        expect(preDocListRun.exitCode, preDocListRun.stderr).toBe(0);
+        const preDocListData = parseStdoutJson<{
+          data?: { rows?: Array<{ doc_id?: string; doc_name?: string }> };
+        }>(preDocListRun.stdout);
+        const docRow = preDocListData.data?.rows?.find((row) => row.doc_id?.startsWith(fileId));
+        expect(
+          docRow,
+          `expected doc list to contain a doc_id starting with "${fileId}"`,
+        ).toBeTruthy();
+        const fullDocId = docRow!.doc_id!;
+
         const docDeleteRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
           "knowledge",
           "doc",
@@ -1307,13 +1422,41 @@ describe.skipIf(!isKbAdminE2EReady())(
           "--index-id",
           indexId,
           "--doc-id",
-          fileId,
+          fullDocId,
           "--yes",
           "--workspace-id",
           workspaceId,
         ]);
         expect(docDeleteRun.exitCode, docDeleteRun.stderr).toBe(0);
-        expect(docDeleteRun.stdout).toMatch(new RegExp(fileId));
+        expect(docDeleteRun.stdout).toMatch(new RegExp(fullDocId));
+
+        // Verify the document is actually gone from the server via independent read-back.
+        // doc delete is asynchronous — the server returns Success immediately but the
+        // document disappears from doc list after a propagation delay (same pattern as
+        // IndexStatusError on kb delete). Poll until the doc_id is gone or timeout.
+        let docGone = false;
+        for (let retry = 0; retry < 6; retry++) {
+          await new Promise((resolve) => setTimeout(resolve, 10_000));
+          const postDocListRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+            "knowledge",
+            "doc",
+            "list",
+            "--index-id",
+            indexId,
+            "--workspace-id",
+            workspaceId,
+            "--quiet",
+          ]);
+          expect(postDocListRun.exitCode, postDocListRun.stderr).toBe(0);
+          if (!postDocListRun.stdout.trim().includes(fullDocId)) {
+            docGone = true;
+            break;
+          }
+        }
+        expect(
+          docGone,
+          `doc delete returned Success but the document is still in doc list after 60s`,
+        ).toBe(true);
       } finally {
         // Clean up the throwaway base + data-center file (same IndexStatusError retry as the kb delete chain)
         await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [

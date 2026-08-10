@@ -220,6 +220,7 @@ export const KNOWLEDGE_KB_DELETE_ROUTES: E2eRouteExports = {
   "knowledge delete": "knowledgeKbDelete",
   "knowledge create": "knowledgeKbCreate", // live self-cleaning chain
   "knowledge update": "knowledgeKbUpdate", // live update step in the chain
+  "knowledge info": "knowledgeKbInfo", // live: verify update landed on the server
   "knowledge list": "knowledgeKbList",
   "knowledge doc upload": "knowledgeDocUpload",
   "knowledge doc list": "knowledgeDocList", // live: verify imported file is visible in the KB
@@ -233,6 +234,7 @@ export const KNOWLEDGE_DOC_DELETE_ROUTES: E2eRouteExports = {
 export const KNOWLEDGE_DOC_TAG_ROUTES: E2eRouteExports = {
   "knowledge doc tag": "knowledgeDocTag",
   "knowledge doc upload": "knowledgeDocUpload", // live uploads first to grab a real fileId
+  "knowledge file get": "knowledgeFileGet", // live: verify tags landed on the server
   "knowledge file delete": "knowledgeFileDelete", // live cleanup of data-center files
 };
 

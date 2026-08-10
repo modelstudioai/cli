@@ -647,5 +647,24 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 生命周期 (live
       ]);
       expect(deleteRun.exitCode, deleteRun.stderr).toBe(0);
     }
+
+    // 6.5) Verify both agents are gone from the server — not just that delete
+    //      returned Success, but that a fresh list filtered by agent_id finds nothing
+    for (const idToVerify of [copiedAgentId, agentId]) {
+      const postDeleteListRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "list",
+        "--scene",
+        "chat",
+        "--agent-id",
+        idToVerify,
+        "--workspace-id",
+        workspaceId,
+        "--quiet",
+      ]);
+      expect(postDeleteListRun.exitCode, postDeleteListRun.stderr).toBe(0);
+      expect(postDeleteListRun.stdout.trim()).toBe("");
+    }
   }, 300_000);
 });

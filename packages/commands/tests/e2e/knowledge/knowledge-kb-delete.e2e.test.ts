@@ -113,13 +113,14 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge kb 写链路 (live, 自清
       expect(indexId).toBeTruthy();
 
       // 2.5) Live update coverage: name / description / rerank threshold in one call
+      const updatedName = `e2e-upd-${Date.now() % 100000000}`;
       const updateRun = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
         "knowledge",
         "update",
         "--index-id",
         indexId,
         "--name",
-        `e2e-upd-${Date.now() % 100000000}`,
+        updatedName,
         "--description",
         "e2e chain updated description",
         "--rerank-min-score",
@@ -129,6 +130,28 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge kb 写链路 (live, 自清
       ]);
       expect(updateRun.exitCode, updateRun.stderr).toBe(0);
       expect(updateRun.stdout).toMatch(/updated/);
+
+      // 2.6) Verify the update actually landed on the server — not just that the
+      //      command returned Success, but that a fresh read-back shows the new values
+      const infoRun = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
+        "knowledge",
+        "info",
+        "--index-id",
+        indexId,
+        "--workspace-id",
+        workspaceId,
+        "--output",
+        "json",
+      ]);
+      expect(infoRun.exitCode, infoRun.stderr).toBe(0);
+      const infoData = parseStdoutJson<{
+        name?: string;
+        description?: string;
+        rerankMinScore?: number;
+      }>(infoRun.stdout);
+      expect(infoData.name).toBe(updatedName);
+      expect(infoData.description).toBe("e2e chain updated description");
+      expect(infoData.rerankMinScore).toBe(0.3);
 
       // 2.7) Live coverage of the upload → import orchestration (doc upload --index-id --wait):
       //      the journeys always upload bare files and import via kb create, so this is the
