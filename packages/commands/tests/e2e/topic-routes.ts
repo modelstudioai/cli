@@ -170,6 +170,8 @@ export const SKILL_ROUTES: E2eRouteExports = {
 export const MANAGED_AGENT_ROUTES: E2eRouteExports = {
   "managed-agent init": "managedAgentInit",
   "managed-agent validate": "managedAgentValidate",
+  "managed-agent sync": "managedAgentSync",
+  "managed-agent migrate": "managedAgentMigrate",
   "managed-agent plan": "managedAgentPlan",
   "managed-agent apply": "managedAgentApply",
   "managed-agent destroy": "managedAgentDestroy",

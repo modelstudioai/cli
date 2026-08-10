@@ -14,6 +14,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl managed-agent apply`          | Apply planned changes to create/update/delete agent resources | [managed-agent.md](managed-agent.md) |
 | `bl managed-agent destroy`        | Destroy all managed agent resources tracked in state          | [managed-agent.md](managed-agent.md) |
 | `bl managed-agent init`           | Create a new agents.yaml template                             | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent migrate`        | Merge a synced config into a bailian agents.yaml              | [managed-agent.md](managed-agent.md) |
 | `bl managed-agent plan`           | Show what changes would be applied to agent infrastructure    | [managed-agent.md](managed-agent.md) |
 | `bl managed-agent session create` | Create a new session for an agent                             | [managed-agent.md](managed-agent.md) |
 | `bl managed-agent session delete` | Delete a session                                              | [managed-agent.md](managed-agent.md) |
@@ -27,13 +28,14 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl managed-agent state list`     | List resources tracked in agents state                        | [managed-agent.md](managed-agent.md) |
 | `bl managed-agent state rm`       | Remove a resource from state without destroying it remotely   | [managed-agent.md](managed-agent.md) |
 | `bl managed-agent state show`     | Show details of a resource in agents state                    | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent sync`           | Export remote bailian resources into a local synced config    | [managed-agent.md](managed-agent.md) |
 | `bl managed-agent validate`       | Validate an agents.yaml configuration (offline)               | [managed-agent.md](managed-agent.md) |
 
 ## By group
 
-| Group           | Commands                                                                                                                                                                                                                                 | Reference                            |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| `managed-agent` | `apply`, `destroy`, `init`, `plan`, `session create`, `session delete`, `session events`, `session get`, `session list`, `session run`, `session send`, `skill-list`, `state import`, `state list`, `state rm`, `state show`, `validate` | [managed-agent.md](managed-agent.md) |
+| Group           | Commands                                                                                                                                                                                                                                                    | Reference                            |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `managed-agent` | `apply`, `destroy`, `init`, `migrate`, `plan`, `session create`, `session delete`, `session events`, `session get`, `session list`, `session run`, `session send`, `skill-list`, `state import`, `state list`, `state rm`, `state show`, `sync`, `validate` | [managed-agent.md](managed-agent.md) |
 
 ## Global flags
 

@@ -1,0 +1,15 @@
+version: "1"
+
+providers:
+  claude:
+    api_key: ${ANTHROPIC_API_KEY}
+
+defaults:
+  provider: claude
+
+agents:
+  assistant:
+    description: "E2E claude-target fixture"
+    model: claude-sonnet-4-6
+    instructions: |
+      You are a helpful assistant.

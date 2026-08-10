@@ -12,6 +12,7 @@ Index: [index.md](index.md)
 | `bl managed-agent apply`          | Apply planned changes to create/update/delete agent resources |
 | `bl managed-agent destroy`        | Destroy all managed agent resources tracked in state          |
 | `bl managed-agent init`           | Create a new agents.yaml template                             |
+| `bl managed-agent migrate`        | Merge a synced config into a bailian agents.yaml              |
 | `bl managed-agent plan`           | Show what changes would be applied to agent infrastructure    |
 | `bl managed-agent session create` | Create a new session for an agent                             |
 | `bl managed-agent session delete` | Delete a session                                              |
@@ -25,6 +26,7 @@ Index: [index.md](index.md)
 | `bl managed-agent state list`     | List resources tracked in agents state                        |
 | `bl managed-agent state rm`       | Remove a resource from state without destroying it remotely   |
 | `bl managed-agent state show`     | Show details of a resource in agents state                    |
+| `bl managed-agent sync`           | Export remote bailian resources into a local synced config    |
 | `bl managed-agent validate`       | Validate an agents.yaml configuration (offline)               |
 
 ## Command details
@@ -128,6 +130,40 @@ bl managed-agent init --provider bailian --agent-name assistant
 
 ```bash
 bl managed-agent init --provider all
+```
+
+### `bl managed-agent migrate`
+
+| Field           | Value                                                    |
+| --------------- | -------------------------------------------------------- |
+| **Name**        | `managed-agent migrate`                                  |
+| **Description** | Merge a synced config into a bailian agents.yaml         |
+| **Usage**       | `bl managed-agent migrate [--from <path>] [--to <path>]` |
+
+#### Flags
+
+| Flag               | Type   | Required | Description                                                 |
+| ------------------ | ------ | -------- | ----------------------------------------------------------- |
+| `--from <path>`    | string | no       | Synced config to migrate from (default: agents.synced.yaml) |
+| `--to <path>`      | string | no       | Target agents.yaml to merge into (default: agents.yaml)     |
+| `--api-key <key>`  | string | no       | API key                                                     |
+| `--base-url <url>` | string | no       | API base URL                                                |
+
+#### Notes
+
+- The merge itself runs against local files; bl's unified apiKey gate still applies — login via `bl auth login`, pass --api-key, or set DASHSCOPE_API_KEY.
+- Only a bailian-target agents.yaml is supported: migrated resources are re-pointed to provider bailian, with models/tools/environments normalized to Bailian-supported values.
+- Resources whose YAML key already exists in the target are skipped, never overwritten.
+- Run `bl managed-agent plan` afterwards to review the merged config before apply.
+
+#### Examples
+
+```bash
+bl managed-agent migrate
+```
+
+```bash
+bl managed-agent migrate --from agents.synced.yaml --to agents.yaml
 ```
 
 ### `bl managed-agent plan`
@@ -572,6 +608,67 @@ bl managed-agent state rm --address bailian.agent.assistant
 
 ```bash
 bl managed-agent state show --address bailian.agent.assistant
+```
+
+### `bl managed-agent sync`
+
+| Field           | Value                                                                                                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**        | `managed-agent sync`                                                                                                                                                            |
+| **Description** | Export remote bailian resources into a local synced config                                                                                                                      |
+| **Usage**       | `bl managed-agent sync [--types <list>] [--agent-id\|--environment-id\|--vault-id\|--file-id\|--skill-id <id>] [--file <path>] [--out <path>] [--force] [--skip-missing-files]` |
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                                                                   |
+| ----------------------- | ------ | -------- | --------------------------------------------------------------------------------------------- |
+| `--file <path>`         | string | no       | Config file path (default: agents.yaml)                                                       |
+| `--out <path>`          | string | no       | Output path for the synced config (default: agents.synced.yaml)                               |
+| `--types <list>`        | string | no       | Comma-separated resource types to sync: environment, vault, file, skill, agent (default: all) |
+| `--agent-id <id>`       | string | no       | Sync a single agent by its remote ID (plus the skills it references)                          |
+| `--environment-id <id>` | string | no       | Sync a single environment by its remote ID                                                    |
+| `--vault-id <id>`       | string | no       | Sync a single vault by its remote ID                                                          |
+| `--file-id <id>`        | string | no       | Sync a single file resource by its remote ID                                                  |
+| `--skill-id <id>`       | string | no       | Sync a single skill by its remote ID (overrides --agent-id skill narrowing)                   |
+| `--force`               | switch | no       | Overwrite an existing output file                                                             |
+| `--skip-missing-files`  | switch | no       | Drop file resources whose local source is missing instead of keeping them                     |
+| `--api-key <key>`       | string | no       | API key                                                                                       |
+| `--base-url <url>`      | string | no       | API base URL                                                                                  |
+
+#### Notes
+
+- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+- Syncs from the bailian provider only: remote AgentStudio resources (environments, vaults, files, skills, agents) are exported into a local synced config for review.
+- --types narrows the export to the listed resource types (plural spellings accepted); sessions are runtime instances, not syncable resources.
+- With --agent-id, the agents group keeps only that agent (yaml key = remote agent ID) and its referenced custom skills are synced along — the skill group is exported even when --types omits it; official skill references need no local entry.
+- Bailian binds environments/vaults/files at the session level, not on the agent, so --agent-id keeps those groups as shared infrastructure.
+- Each --environment-id/--vault-id/--file-id/--skill-id narrows its own resource group to the single remote resource (yaml key resolved from the remote listing); combine with --types for a minimal output.
+- Requires an agents.yaml with a bailian provider block — run `bl managed-agent init` first.
+- Secrets are never exported: vault credentials keep ${ENV} placeholders; set those env vars locally before apply.
+- Merge the synced config into agents.yaml with `bl managed-agent migrate`.
+
+#### Examples
+
+```bash
+bl managed-agent sync
+```
+
+```bash
+bl managed-agent sync --types agent,skill
+```
+
+```bash
+bl managed-agent sync --agent-id agent-abc123
+```
+
+```bash
+bl managed-agent sync --skill-id skill-xyz --types skill
+```
+
+```bash
+bl managed-agent sync --force --skip-missing-files
 ```
 
 ### `bl managed-agent validate`

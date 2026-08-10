@@ -93,6 +93,8 @@ export { default as tokenPlanAssignSeats } from "./commands/token-plan/assign-se
 export { default as tokenPlanAddMember } from "./commands/token-plan/add-member.ts";
 export { default as managedAgentInit } from "./commands/managed-agent/init.ts";
 export { default as managedAgentValidate } from "./commands/managed-agent/validate.ts";
+export { default as managedAgentSync } from "./commands/managed-agent/sync.ts";
+export { default as managedAgentMigrate } from "./commands/managed-agent/migrate.ts";
 export { default as managedAgentPlan } from "./commands/managed-agent/plan.ts";
 export { default as managedAgentApply } from "./commands/managed-agent/apply.ts";
 export { default as managedAgentDestroy } from "./commands/managed-agent/destroy.ts";

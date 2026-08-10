@@ -1,0 +1,30 @@
+version: "1"
+
+providers:
+  bailian:
+    api_key: ${DASHSCOPE_API_KEY}
+    base_url: ${BAILIAN_BASE_URL}
+
+environments:
+  dev:
+    config:
+      type: cloud
+      networking:
+        type: unrestricted
+    provider: bailian
+
+agents:
+  assistant:
+    description: "E2E synced fixture (already exists in target)"
+    model: qwen3.7-max
+    instructions: |
+      You are a helpful assistant.
+    environment: dev
+    provider: bailian
+  reviewer:
+    description: "E2E synced fixture (new agent)"
+    model: qwen3.7-max
+    instructions: |
+      You review code.
+    environment: dev
+    provider: bailian

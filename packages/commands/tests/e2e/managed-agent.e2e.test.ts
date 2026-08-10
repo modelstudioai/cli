@@ -1,5 +1,6 @@
+import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { e2eFixturesDir, parseStdoutJson, runCommandE2e } from "./helpers.ts";
 import { MANAGED_AGENT_ROUTES } from "./topic-routes.ts";
 
 /**
@@ -243,5 +244,193 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
     const data = parseStdoutJson<{ would_import?: string; remote_id?: string }>(stdout);
     expect(data.would_import).toBe("bailian.agent.assistant");
     expect(data.remote_id).toBe("agent-e2e");
+  });
+});
+
+describe("e2e: managed-agent sync / migrate（bailian-only）", () => {
+  const fixturesDir = join(e2eFixturesDir, "managed-agent");
+  const agentsYaml = join(fixturesDir, "agents.yaml");
+  const agentsSyncedYaml = join(fixturesDir, "agents-synced.yaml");
+  const agentsClaudeYaml = join(fixturesDir, "agents-claude.yaml");
+
+  test("managed-agent sync --help 正常退出", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "sync",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--out|--force|--skip-missing-files/i);
+    expect(stderr).toMatch(/--agent-id/i);
+    expect(stderr).toMatch(/--types/i);
+    expect(stderr).toMatch(/--environment-id/i);
+    expect(stderr).toMatch(/--vault-id/i);
+    expect(stderr).toMatch(/--file-id/i);
+    expect(stderr).toMatch(/--skill-id/i);
+  });
+
+  test("sync 非法 --types 时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "sync",
+      "--types",
+      "agent,sessions",
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--types contains unsupported values: sessions/i);
+  });
+
+  test("sync --agent-id 搭配不含 agent 的 --types 时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "sync",
+      "--agent-id",
+      "agent-e2e",
+      "--types",
+      "skill",
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--agent-id requires --types to include agent/i);
+  });
+
+  test("sync --vault-id 搭配不含 vault 的 --types 时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "sync",
+      "--vault-id",
+      "vault-e2e",
+      "--types",
+      "agent",
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--vault-id requires --types to include vault/i);
+  });
+
+  test("sync 输出文件已存在且未 --force 时退出为用法错误 (2)", async () => {
+    // auth: "apiKey" 的凭证解析先于 run() 执行；注入假 key 让用例不依赖环境凭证，
+    // 命令仍会在覆盖写守卫处短路（先于构建 SDK runtime），不产生任何网络请求。
+    const { stderr, exitCode } = await runCommandE2e(
+      MANAGED_AGENT_ROUTES,
+      ["managed-agent", "sync", "--out", agentsYaml, "--quiet"],
+      { DASHSCOPE_API_KEY: "sk-e2e-sync" },
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/already exists/i);
+  });
+
+  test("sync --dry-run 仅回显计划，即使 --out 已存在也不报错", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "sync",
+      "--dry-run",
+      "--agent-id",
+      "agent-e2e",
+      "--skill-id",
+      "skill-e2e",
+      "--types",
+      "agents,skills",
+      "--out",
+      agentsYaml,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      would_sync?: {
+        provider?: string;
+        out?: string;
+        agent_id?: string;
+        skill_id?: string;
+        types?: string[];
+      };
+    }>(stdout);
+    expect(data.would_sync?.provider).toBe("bailian");
+    expect(data.would_sync?.out).toBe(agentsYaml);
+    expect(data.would_sync?.agent_id).toBe("agent-e2e");
+    expect(data.would_sync?.skill_id).toBe("skill-e2e");
+    // 复数拼写归一化为 SDK 的单数资源类型
+    expect(data.would_sync?.types).toEqual(["agent", "skill"]);
+  });
+
+  test("sync --agent-id 时 --types 自动补充 skill（关联技能联动导出）", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "sync",
+      "--dry-run",
+      "--agent-id",
+      "agent-e2e",
+      "--types",
+      "agent",
+      "--out",
+      "agents.synced.e2e-missing.yaml",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ would_sync?: { types?: string[] } }>(stdout);
+    expect(data.would_sync?.types).toEqual(["agent", "skill"]);
+  });
+
+  test("managed-agent migrate --help 正常退出", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "migrate",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--from|--to/i);
+  });
+
+  test("migrate 目标文件缺失时退出为用法错误 (2)", async () => {
+    // auth: "apiKey" 的凭证解析先于 run() 执行；注入假 key 让用例不依赖环境凭证，
+    // 命令仍会在目标文件守卫处短路，不产生任何网络请求。
+    const { stderr, exitCode } = await runCommandE2e(
+      MANAGED_AGENT_ROUTES,
+      [
+        "managed-agent",
+        "migrate",
+        "--from",
+        agentsSyncedYaml,
+        "--to",
+        "agents.e2e-missing.yaml",
+        "--quiet",
+      ],
+      { DASHSCOPE_API_KEY: "sk-e2e-migrate" },
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/Target file .*agents\.e2e-missing\.yaml.*not found/i);
+  });
+
+  test("migrate 目标 provider 非 bailian 时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(
+      MANAGED_AGENT_ROUTES,
+      ["managed-agent", "migrate", "--from", agentsSyncedYaml, "--to", agentsClaudeYaml, "--quiet"],
+      { DASHSCOPE_API_KEY: "sk-e2e-migrate" },
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/only targets the bailian provider/i);
+  });
+
+  test("migrate --dry-run 仅回显计划，目标缺失也不报错", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "migrate",
+      "--dry-run",
+      "--from",
+      agentsSyncedYaml,
+      "--to",
+      "agents.e2e-missing.yaml",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      would_migrate?: { from?: string; to?: string };
+    }>(stdout);
+    expect(data.would_migrate?.from).toBe(agentsSyncedYaml);
+    expect(data.would_migrate?.to).toBe("agents.e2e-missing.yaml");
   });
 });
