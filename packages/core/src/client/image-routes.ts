@@ -10,7 +10,7 @@ import { image2ImagePath, imagePath, imageSyncPath, imageText2ImagePath } from "
  * - async text2image + prompt: wan2.5/2.2/2.1-t2i*, wanx*-t2i*
  *
  * Edit (I2I):
- * - sync multimodal + messages(+images): qwen-image-2.0*, qwen-image-edit*, wan2.6-image*, wan2.7-image*
+ * - sync multimodal + messages(+images): qwen-image-3.0*, qwen-image-2.0*, qwen-image-edit*, wan2.6-image*, wan2.7-image*
  *   (pure T2I models such as z-image / qwen-image-plus / qwen-image-max are NOT edit models)
  * - async image2image + prompt/images: wan2.5-i2i*
  * - async image2image + function/base_image_url: *imageedit* (e.g. wanx2.1-imageedit)
@@ -60,6 +60,7 @@ const SYNC_GENERATE_PREFIXES = ["qwen-image", "wan2.7-image", "z-image"] as cons
  * Pure T2I models (z-image / qwen-image-plus / qwen-image-max) are excluded.
  */
 const SYNC_EDIT_PREFIXES = [
+  "qwen-image-3.0",
   "qwen-image-2.0",
   "qwen-image-edit",
   "wan2.7-image",
@@ -109,7 +110,12 @@ export function isWanxFunctionImageEditModel(model: string): boolean {
 }
 
 export function resolveImageSizeProfile(model: string): ImageSizeProfile {
-  if (model.startsWith("qwen-image-2.0") || model.startsWith("qwen-image-edit")) {
+  // 3.0 暂复用 2.0 高分比例表（CLI ratio→像素便捷映射）；不做独立 3.0 profile。
+  if (
+    model.startsWith("qwen-image-3.0") ||
+    model.startsWith("qwen-image-2.0") ||
+    model.startsWith("qwen-image-edit")
+  ) {
     return "qwen-image-2.0";
   }
   // Remaining qwen-image* (plus / max / bare qwen-image) share the fixed table.
@@ -133,7 +139,13 @@ export function resolveImageSizeProfile(model: string): ImageSizeProfile {
 
 /** Official / CLI defaults for prompt_extend when the flag is omitted. */
 export function resolvePromptExtendDefault(model: string): boolean | undefined {
-  if (model.startsWith("qwen-image-2.0") || model.startsWith("qwen-image-max")) return true;
+  if (
+    model.startsWith("qwen-image-3.0") ||
+    model.startsWith("qwen-image-2.0") ||
+    model.startsWith("qwen-image-max")
+  ) {
+    return true;
+  }
   // Z-Image docs default prompt_extend to false.
   if (model.startsWith("z-image")) return false;
   return undefined;

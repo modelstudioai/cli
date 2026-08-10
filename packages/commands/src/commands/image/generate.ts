@@ -35,7 +35,7 @@ const GENERATE_FLAGS = {
   model: {
     type: "string",
     valueHint: "<model>",
-    description: "Model ID (default: qwen-image-2.0)",
+    description: "Model ID (default: qwen-image-3.0)",
   },
   size: {
     type: "string",
@@ -105,7 +105,7 @@ export default defineCommand({
     const { settings, flags } = ctx;
     const prompt = flags.prompt;
 
-    const model = flags.model || settings.defaultImageModel || "qwen-image-2.0";
+    const model = flags.model || settings.defaultImageModel || "qwen-image-3.0";
     const route = resolveImageGenerateApi(model);
     const defaultSize = "1:1";
     const sizeInput = flags.size || defaultSize;

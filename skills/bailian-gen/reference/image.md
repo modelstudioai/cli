@@ -28,7 +28,7 @@ Index: [index.md](index.md)
 | --------------------------- | ------- | -------- | -------------------------------------------------------------------------------------------------- |
 | `--image <url>`             | array   | yes      | Source image URL or local file path (repeatable for multi-image merge)                             |
 | `--prompt <text>`           | string  | yes      | Edit instruction text                                                                              |
-| `--model <model>`           | string  | no       | Model ID (default: qwen-image-2.0)                                                                 |
+| `--model <model>`           | string  | no       | Model ID (default: qwen-image-3.0)                                                                 |
 | `--size <W*H>`              | string  | no       | Output image size: ratio (3:4, 16:9) or pixels (2048\*2048)                                        |
 | `--n <count>`               | number  | no       | Number of images (default: 1, max: 6)                                                              |
 | `--seed <n>`                | number  | no       | Random seed for reproducible results                                                               |
@@ -91,7 +91,7 @@ bl image edit --image ./photo.png --prompt "Replace the background with a beach"
 | Flag                        | Type    | Required | Description                                                                                                              |
 | --------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `--prompt <text>`           | string  | yes      | Image description                                                                                                        |
-| `--model <model>`           | string  | no       | Model ID (default: qwen-image-2.0)                                                                                       |
+| `--model <model>`           | string  | no       | Model ID (default: qwen-image-3.0)                                                                                       |
 | `--size <W*H>`              | string  | no       | Image size: ratio (3:4, 16:9, 1:1) or pixels (2048\*2048)                                                                |
 | `--n <count>`               | number  | no       | Number of images per request (default: 1, max: 6)                                                                        |
 | `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                                                  |

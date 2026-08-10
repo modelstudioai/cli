@@ -194,13 +194,13 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())("e2e: ima
     expect(stderr).toMatch(/--prompt|Usage:/i);
   });
 
-  test("【qwen-image-2.0】图片编辑", async () => {
+  test("【qwen-image-3.0】图片编辑", async () => {
     const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
     const gen = await runCommandE2e(IMAGE_ROUTES, [
       "image",
       "generate",
       "--model",
-      "qwen-image-2.0",
+      "qwen-image-3.0",
       "--prompt",
       "一只简笔画小猫，白底",
       "--out-dir",
@@ -220,7 +220,7 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())("e2e: ima
       "image",
       "edit",
       "--model",
-      "qwen-image-2.0",
+      "qwen-image-3.0",
       "--image",
       imagePath!,
       "--prompt",
