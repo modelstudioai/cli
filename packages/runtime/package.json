@@ -40,10 +40,12 @@
     "check": "vp check"
   },
   "dependencies": {
+    "@modelcontextprotocol/server": "catalog:",
     "bailian-cli-core": "workspace:*",
     "boxen": "catalog:",
     "chalk": "catalog:",
-    "undici": "catalog:"
+    "undici": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@clack/prompts": "^0.7.0",

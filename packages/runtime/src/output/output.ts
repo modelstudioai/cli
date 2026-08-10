@@ -1,12 +1,21 @@
 import { formatOutput, type OutputFormat } from "bailian-cli-core";
+import { appendCapturedOutput, isCapturingOutput } from "../mcp-server/output-capture.ts";
 
 /**
  * Emit the primary result of a command.
  *   stdout → result (text by default; JSON with --output json)
  *   stderr → human info (progress, logs, tips) — handled elsewhere
+ *
+ * When MCP STDIO capture is active, writes go to an in-memory buffer instead
+ * of process.stdout so the JSON-RPC stream stays intact.
  */
 export function emitResult(data: unknown, format: OutputFormat): void {
-  process.stdout.write(formatOutput(data, format) + "\n");
+  const line = formatOutput(data, format) + "\n";
+  if (isCapturingOutput()) {
+    appendCapturedOutput(line);
+    return;
+  }
+  process.stdout.write(line);
 }
 
 /**
@@ -14,7 +23,12 @@ export function emitResult(data: unknown, format: OutputFormat): void {
  * Used in --quiet mode or when the result is a single scalar.
  */
 export function emitBare(value: string): void {
-  process.stdout.write(value + "\n");
+  const line = value + "\n";
+  if (isCapturingOutput()) {
+    appendCapturedOutput(line);
+    return;
+  }
+  process.stdout.write(line);
 }
 
 /**

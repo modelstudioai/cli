@@ -83,6 +83,24 @@ export class CommandRegistry {
     return commands;
   }
 
+  /** All executable leaf paths with their commands (space-separated path keys). */
+  getLeafEntries(): Array<{ path: string; command: AnyCommand }> {
+    const entries: Array<{ path: string; command: AnyCommand }> = [];
+    const collect = (node: CommandNode, prefix: string) => {
+      for (const [name, child] of node.children) {
+        const fullPath = prefix ? `${prefix} ${name}` : name;
+        if (child.command) {
+          entries.push({ path: fullPath, command: child.command });
+        }
+        if (child.children.size > 0) {
+          collect(child, fullPath);
+        }
+      }
+    };
+    collect(this.root, "");
+    return entries;
+  }
+
   /** First registered command path, for the "Getting Help" example (e.g. "knowledge retrieve"). */
   private helpExample(): string {
     const walk = (node: CommandNode, path: string[]): string | null => {

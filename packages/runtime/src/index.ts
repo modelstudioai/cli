@@ -95,3 +95,15 @@ export { initPipelineSteps } from "./pipeline/init.ts";
 export { executePipeline, streamPipelineEvents } from "./pipeline/executor.ts";
 export { collectPipelineIssues, collectPipelineHints } from "./pipeline/validation.ts";
 export type { PipelineDefinition, PipelineLifecycleEvent } from "./pipeline/types.ts";
+
+// Local STDIO MCP server (bl mcp serve)
+export { serveMcpStdio } from "./mcp-server/serve.ts";
+export type { ServeMcpStdioOptions } from "./mcp-server/serve.ts";
+export {
+  buildToolDescriptors,
+  flagsToInputSchema,
+  flagsToZodObject,
+  pathToToolName,
+} from "./mcp-server/schema.ts";
+export type { JsonSchemaObject, McpToolDescriptor } from "./mcp-server/schema.ts";
+export { withCapturedOutput } from "./mcp-server/output-capture.ts";

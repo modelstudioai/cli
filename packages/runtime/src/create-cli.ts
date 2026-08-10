@@ -1,4 +1,4 @@
-import { parseFlags } from "./args.ts";
+import { parseFlags, parsePath } from "./args.ts";
 import { CommandRegistry } from "./registry.ts";
 import { resolve } from "./resolve.ts";
 import {
@@ -32,6 +32,8 @@ import { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
 import { loadCommandPacks } from "./command-packs/load.ts";
 import { createCommandPackManager } from "./command-packs/manager.ts";
 import type { CommandPackPolicy } from "./command-packs/types.ts";
+import { printMcpServeHelp } from "./mcp-server/help.ts";
+import { serveMcpStdio } from "./mcp-server/serve.ts";
 
 /** Per-product identity injected by each CLI entrypoint (bl / rag / …). */
 export interface CliOptions {
@@ -112,6 +114,11 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
   /** Render help for `path`; root ([]) doubles as the onboarding / login guide. */
   function renderHelp(registry: CommandRegistry, path: string[], argv: string[]): void {
     registry.printHelp(path, process.stderr);
+    if (path.length === 1 && path[0] === "mcp") {
+      process.stderr.write(
+        `\nAlso available (runtime built-in):\n  mcp serve    Start a local STDIO MCP server exposing all CLI commands as tools\n`,
+      );
+    }
     if (path.length > 0) return;
 
     let hasKey = false;
@@ -138,6 +145,28 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
   }
 
   async function dispatch(registry: CommandRegistry, argv: string[]): Promise<void> {
+    const parsed = parsePath(argv);
+    // Handle --version before path-specific dispatch (including mcp serve).
+    if (parsed.hasVersionFlag) {
+      process.stdout.write(`${binName} ${version}\n`);
+      return;
+    }
+
+    // Runtime built-in: local STDIO MCP host. Not a defineCommand leaf — needs the
+    // full registry to mount tools, so it lives here instead of packages/commands.
+    if (parsed.path[0] === "mcp" && parsed.path[1] === "serve") {
+      if (parsed.hasHelpFlag) {
+        printMcpServeHelp(binName);
+        return;
+      }
+      await serveMcpStdio({
+        identity,
+        leaves: registry.getLeafEntries(),
+        commandPacks: commandPackManager,
+      });
+      return;
+    }
+
     const res = resolve(argv, registry);
 
     switch (res.kind) {
