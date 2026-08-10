@@ -60,6 +60,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl quota request`              | Request a temporary quota increase                                                             | [quota.md](quota.md)               |
 | `bl search web`                 | Search the web using DashScope MCP WebSearch service                                           | [search.md](search.md)             |
 | `bl skill add`                  | Install skills from the Bailian skill registry into local agents                               | [skill.md](skill.md)               |
+| `bl skill init`                 | Install all bailian-\* skills (one-shot bootstrap for new environments)                        | [skill.md](skill.md)               |
 | `bl skill list`                 | List registry skills and diff against local installs                                           | [skill.md](skill.md)               |
 | `bl skill remove`               | Remove locally installed skills (registry is untouched)                                        | [skill.md](skill.md)               |
 | `bl skill update`               | Update installed skills to the latest registry versions                                        | [skill.md](skill.md)               |
@@ -95,7 +96,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `plugin`       | `install`, `link`, `list`, `remove`                                               | [plugin.md](plugin.md)             |
 | `quota`        | `check`, `history`, `list`, `request`                                             | [quota.md](quota.md)               |
 | `search`       | `web`                                                                             | [search.md](search.md)             |
-| `skill`        | `add`, `list`, `remove`, `update`                                                 | [skill.md](skill.md)               |
+| `skill`        | `add`, `init`, `list`, `remove`, `update`                                         | [skill.md](skill.md)               |
 | `text`         | `chat`                                                                            | [text.md](text.md)                 |
 | `token-plan`   | `add-member`, `assign-seats`, `create-key`, `list-seats`                          | [token-plan.md](token-plan.md)     |
 | `update`       | `(root)`                                                                          | [update.md](update.md)             |

@@ -22,29 +22,16 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 
 ## 功能特性
 
-让您的 AI Agent 开箱即具备以下能力，并可在复杂任务中自动组合调用：
+- **模型生成** — 文本、图像、视频、语音全模态生成，支持编辑与参考生成
+- **素材理解** — 图像、文档、音频、长视频的解析与问答
+- **应用编排** — 调用百炼已发布的 Managed Agent、智能体和工作流，接入知识库、记忆库、联网搜索与 MCP 工具
+- **模型训推** — 数据集校验上传、模型精调、专属模型部署上线
+- **账号运维** — 授权登录、界面化配置、模型市场、用量与额度、限流提额、团队席位管理
+- **套餐接入** — 支持 Token Plan 等订阅计划一键接到 CLI 和常见 Coding Agent
 
-- **文本对话** — Qwen3.8-max：Agentic coding、前端编程、Vibe coding 等能力显著增强
-- **全模态对话** — 文本 + 图像 + 音频 + 视频全模态支持
-- **图像生成与编辑** — Qwen-Image 3.0：专业文字渲染、真实质感、强语义遵循、多图合成
-- **视频生成与编辑** — happyhorse-1.1 系列，支持文生 / 图生 / 参考生（最多 9 张图参考）/ 自然语言视频编辑
-- **语音合成与识别** — CosyVoice 实时流式合成，5-20s 样本即可克隆；FunAudio-ASR 覆盖 30 种语种，含汉语七大方言与 20+ 口音官话
-- **图像与视频理解** — Qwen-VL：长视频解析、复杂图表与文档识别、视觉推理、多语种 OCR
-- **Coding Agent 配置** — 使用 `bl config agent` 将 Claude Code、Qwen Code、OpenCode、OpenClaw、Hermes Agent 或 Codex 配置为使用 DashScope
+> **注意：** 应用编排、模型训推、账号运维和套餐接入目前仅支持中国站（aliyun.com）账号，暂不支持国际站 / 全球站账号。
 
-> **注意：** 以下功能目前仅对中国站（aliyun.com）账号开放，国际站 / 全球站账号暂不支持。
-
-- **知识库与记忆库** — 多模态 RAG 检索 + 跨会话记忆，提供个性化连贯对话体验
-- **应用调用** — 调用已发布在阿里云百炼平台上的智能体与工作流应用
-- **MCP 集成** — 统一调度百炼 MCP 服务：列出服务、查看工具、直接在终端调用任意工具
-- **联网搜索** — 实时互联网信息检索，提升回答准确性及时效性
-- **模型推荐** — 描述你的场景，智能推荐最适合的模型；支持限定范围搜索、模型对比和替代发现
-- **微调与部署** — 上传数据集、创建文本/音频/图像调优任务（`finetune text|audio|image create`；文本涵盖 SFT/LoRA/DPO/CPT）、非阻塞探测任务状态（`finetune watch`）、按模型查训练能力（`finetune capability`），并把训练好的模型部署为推理服务（`deploy text|audio|image create`）
-- **控制台能力** — 浏览模型市场（`model list`）和百炼应用（`app list`），查看统一用量视图（`usage summary`），查询模型免费额度（`usage free`），查看模型用量统计（`usage stats`），管理业务空间（`workspace list`），管理限流与提额（`quota list/request/check/history`）
-- **资产中心** — 管理模型生成资产（`asset-center list/get/download`）、收藏与回收站（`favorite`/`delete`）、容量统计（`stats`/`storage`）
-- **本地文件自动上传** — 所有 URL 参数同时支持本地路径，免费临时存储 48 小时
-
-## 示例:一句话生成一部电影短片
+## 示例 1：一句话生成一部电影短片
 
 <p align="center">
   <a href="https://cloud.video.taobao.com/vod/dS2F4huqbw5Nfe5L3wwb3grz2q2DNYD3retq8dU-iHo.mp4">
@@ -54,137 +41,80 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 
 <p align="center"><i>👆 点击封面播放完整 2 分钟演示</i></p>
 
-一部完整的 **2 分钟、16:9 电影感短片** —— 由一句自然语言端到端生成,**全程零手动剪辑**。这个示例展示了 AI Agent 如何把三个基础能力编排成一条多步创作流水线:
+一部完整的 **2 分钟、16:9 电影感短片** —— 由一句自然语言端到端生成，**全程零手动剪辑**。这个示例展示了 AI Agent 如何把三个基础能力编排成一条多步创作流水线：
 
-- **[Qwen Code](https://github.com/QwenLM/qwen-code)** —— Agentic coding 模型,解析用户意图、驱动整个工作流
-- **[阿里云百炼 CLI](https://github.com/modelstudioai/cli/)** —— 调用 **HappyHorse 1.1**,百炼的文生/图生/参考生视频模型
+- **[Qwen Code](https://github.com/QwenLM/qwen-code)** —— Agentic coding 模型，解析用户意图、驱动整个工作流
+- **[阿里云百炼 CLI](https://github.com/modelstudioai/cli/)** —— 调用 **HappyHorse 1.1**，百炼的文生/图生/参考生视频模型
 - **[spark-video Skill](https://github.com/JohnKeating1997/spark-video)** —— 负责场景拆分、分镜设计、镜头连贯性和最终拼接
 
 ### 唯一的提示词
 
-> _"帮我生成一段日系影视风格,高中女生的青涩初恋故事,剧情高甜,让人看了想谈恋爱,2 分钟左右的视频,尺寸是 16:9"_
+> _“帮我生成一段日系影视风格，高中女生的青涩初恋故事，剧情高甜，让人看了想谈恋爱，2 分钟左右的视频，尺寸是 16:9。”_
 
-### 工作流程
+## 示例 2：一句话构建短片导演 Managed Agent
 
-1. **Qwen Code** 解析需求、规划叙事节奏,决定要调用哪些工具。
-2. **spark-video Skill** 把故事拆成镜头、为每个镜头写提示词,并保证视觉连贯性(角色、光线、色调、镜头语言)。
-3. **`bl video generate`** 把每个镜头并行下发给 **HappyHorse 1.1**。
-4. Skill 把所有片段拼成最终的 16:9 / 约 2 分钟成片。
+<p align="center">
+  <a href="https://cloud.video.taobao.com/vod/2v0GYLbJSQb2saj4iopTJDW3iRIHsintYlK-wTKbhqE.mp4">
+    <img src="https://img.alicdn.com/imgextra/i4/6000000001674/O1CN01xhzixhxltbH3LxWu_!!6000000001674-0-tbvideo.jpg" alt="点击播放演示视频" width="720" />
+  </a>
+</p>
 
-没有时间线拖拽,没有逐帧剪辑。一句话 → 一部短片。
+<p align="center"><i>👆 点击封面播放完整演示</i></p>
+
+一句话构建一个可复用的云端短片导演，用于分镜设计、分镜图生成和视频创作：
+
+- **[Qwen Code](https://github.com/QwenLM/qwen-code)** —— 理解需求并生成 Agent 配置
+- **[阿里云百炼 CLI](https://github.com/modelstudioai/cli/)** —— 校验配置、预览变更并完成部署
+- **[Managed Agent](https://bailian.console.aliyun.com/cn-beijing/?tab=managed-agents#/managed-agents/quick-start)** —— 在云端运行导演角色及其 Skill 和工具
+
+### 唯一的提示词
+
+> _“帮我构建一个 managedagent 应用，能够实现短片拍摄，导演专家生成视频，然后也能进行设计对应的分镜图。”_
 
 ## 安装
 
+**Agent 安装（推荐）**
+
+把下面这句话发给你的 Agent，它会自行判断环境并完成安装与校验：
+
+```text
+请阅读：https://bailian.aliyun.com/cli/install.md 并按照说明为我安装阿里云百炼 CLI
+```
+
+**手动安装（npm）**
+
 ```bash
-# 推荐 — 无需本机 Node.js
-curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
-
-# Windows（PowerShell）
-irm https://bailian.aliyun.com/cli/install.ps1 | iex
-
-# Node 用户 / 开发者（需要 Node.js >= 18.17）
 npm install -g bailian-cli
-
-# Agent skills
 npx skills add modelstudioai/cli --all -g
 ```
 
-> 二进制安装不依赖 Node.js。`npm install -g` 长期保留。
+> 需要预先安装 Node.js >= 18.17。
 
 ## 快速开始
 
-```bash
-# 认证（推荐浏览器登录）
-bl auth login --console
+安装完成后，直接在 AI Agent 中描述你的任务，无需手动拼接命令。
 
-# 或使用 API key 认证
-bl auth login --api-key sk-xxxxx
-
-# 或使用 Token Plan（已内置 Base URL，登录时自动测试 Key）
-bl auth login --config token-plan --api-key sk-sp-xxxxx
-
-# 配置 Coding Agent 使用 DashScope
-bl config agent --agent codex --base-url https://dashscope.aliyuncs.com/compatible-mode/v1 --api-key sk-xxxxx --model qwen3-coder-plus
-
-# 和通义千问对话
-bl text chat --message "你好，介绍一下阿里云百炼平台"
-
-# 多模态对话（文本 + 图片 + 音频 + 视频）
-bl omni --message "描述这张图片" --image ./photo.jpg
-
-# 生成图片
-bl image generate --prompt "一只穿太空服的猫在火星上" --out-dir ./images/
-
-# 图生视频（本地文件自动上传）
-bl video generate --image ./cat.png --prompt "让画面中的猫动起来" --download cat.mp4
-
-# 模型推荐 — 根据场景推荐最适合的模型
-bl advisor recommend --message "我要做一个能理解图片的客服机器人"
-
-# 对比特定模型
-bl advisor recommend --message "qwen-max 和 deepseek-v3 哪个更适合做代码生成"
-
-# 浏览器登录（控制台能力相关命令需要）
-bl auth login --console
-
-# 微调与部署 — 从训练到服务的一站式流程
-bl dataset upload --file ./train.jsonl                 # 上传 .jsonl 数据集（先校验）
-bl finetune text create --model qwen3-8b --datasets ./train.jsonl --training-type sft-lora  # 本地路径自动上传
-bl finetune watch --job-id ft-xxx --output json       # 非阻塞探测（运行中/成功返回 0；失败/取消报错）
-bl finetune capability --model qwen3-8b               # 查询模型支持哪些训练方式
-bl deploy text create --model qwen3-8b --name my-svc --plan mu  # 把训练好的模型部署为推理服务
-
-# 浏览模型 / 应用 / 免费额度 / 用量统计 / 业务空间
-bl model list                                        # 浏览模型系列与价格信息
-bl app list
-bl usage summary                                     # 统一视图：免费额度 + 近期用量概览
-bl usage free                                         # 各模型免费额度（可加 --model/--expiring/--sort）
-bl usage stats --workspace-id <id>                    # 模型用量统计（加 --model 查单模型）
-bl workspace list                                     # 列出所有业务空间
-
-# 限流管理与提额（list / check / request / history）
-bl quota list                                         # 查看 RPM/TPM 限额（加 --model 过滤）
-bl quota check                                        # 当前用量 vs 限流阈值（加 --model/--period）
-bl quota request --model qwen3.6-plus --tpm 6000000   # 申请临时 TPM 提额
-bl quota history                                      # 查看提额历史记录
-
-# 资产中心 — 浏览、下载与管理模型生成资产（需控制台登录）
-bl asset-center list --type IMAGE
-bl asset-center get <asset-id> --include-download-url
-bl asset-center download --id <asset-id>
-bl asset-center stats
-bl asset-center storage
-
-# Token Plan 团队版管理（需 AK/SK，见下方认证说明）
-bl token-plan list-seats                                # 查看订阅席位明细
-bl token-plan add-member --account-name dev --org-id org_xxx
-bl token-plan assign-seats --workspace-id ws_xxx --seat-type standard --account-id acc_xxx
-bl token-plan create-key --account-id acc_xxx --workspace-id ws_xxx
-```
+| 场景             | 可以这样对 Agent 说                                                     |
+| ---------------- | ----------------------------------------------------------------------- |
+| Managed Agent    | “帮我创建一个能够生成短片分镜和视频的 Managed Agent。”                  |
+| 图片和视频生成   | “生成一张穿着太空服的猫站在火星上的图片，再把它制作成一段视频。”        |
+| 用量与额度       | “查看最近的模型用量、免费额度和限流情况。”                              |
+| 模型选型         | “推荐一个适合图片理解和智能客服的模型。”                                |
+| 了解 Bailian CLI | “介绍一下 Bailian CLI 能帮我完成哪些任务，并根据我的需求推荐使用方式。” |
 
 > 更多案例与使用场景：[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)
 
 ## 认证方式
 
-### DashScope API Key
+### API Key
 
 大部分命令均需要 API Key。前往 [DashScope 控制台](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key) 获取。
 
 ```bash
-# 方式一：环境变量
-export DASHSCOPE_API_KEY=sk-xxxxx
-
-# 方式二：登录命令（持久化到 ~/.bailian/config.json）
 bl auth login --api-key sk-xxxxx
-
-# 方式三：命令行参数
-bl text chat --api-key sk-xxxxx --message "你好"
 ```
 
-### Token Plan API Key
-
-前往 [Token Plan 订阅详情](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview) 获取或复制 API Key。
-CLI 已内置 Token Plan 的默认 Base URL；登录命令会先测试 Key，通过后才保存并激活 `token-plan` 配置。
+Token Plan 的 API Key 前往 [Token Plan 订阅详情](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview) 获取或复制。
 
 ```bash
 bl auth login --config token-plan --api-key sk-sp-xxxxx
@@ -192,26 +122,20 @@ bl auth login --config token-plan --api-key sk-sp-xxxxx
 
 ### 控制台登录（OAuth）
 
-控制台能力命令（`model list`、`app list`、`usage summary/free/stats`、`workspace list`、`quota list/request/check/history`、`asset-center *`）需要使用此登录方式。打开浏览器跳转百炼控制台完成登录。
+控制台能力命令（模型列表、应用列表、MCP 列表、工作空间、用量查询、限流提额、资产中心、控制台直调）需要使用此登录方式。打开浏览器跳转百炼控制台完成登录。
 
 ```bash
 bl auth login --console
 ```
 
-### 阿里云 OpenAPI AK/SK（仅 Token Plan）
+### 阿里云 OpenAPI AK/SK
 
-`token-plan` 命令组需要阿里云 AccessKey。前往 [RAM 控制台](https://ram.console.aliyun.com/manage/ak) 获取。
+Token Plan 的席位与成员管理需要阿里云 AccessKey。前往 [RAM 控制台](https://ram.console.aliyun.com/manage/ak) 获取。
 
 > 建议：创建 RAM 子账号并授予最小权限，避免使用主账号 AK/SK。
 
 ```bash
-# 方式一：登录命令（持久化到 ~/.bailian/config.json）
 bl auth login --open-api --access-key-id LTAI5t... --access-key-secret ...
-
-# 方式二：环境变量
-export ALIBABA_CLOUD_ACCESS_KEY_ID=LTAI5t...
-export ALIBABA_CLOUD_ACCESS_KEY_SECRET=...
-export BAILIAN_WORKSPACE_ID=ws-...
 ```
 
 ## 配置
@@ -220,19 +144,30 @@ export BAILIAN_WORKSPACE_ID=ws-...
 # 查看当前配置
 bl config show
 
-# 设置默认值
-bl config set --key base_url --value https://dashscope-us.aliyuncs.com
-bl config set --key default_text_model --value qwen-turbo
-bl config set --key timeout --value 600
+# 查看全部配置档
+bl config list
 
-# 自更新到最新版本
-bl update
-
-# 安装指定版本
-bl update --to 0.1.14
+# 切换配置档
+bl config use --name token-plan
 ```
 
 配置文件位置：`~/.bailian/config.json`
+
+## 更新
+
+```bash
+bl update
+```
+
+升级 CLI 至最新版本，并同步更新已安装的 Agent Skills。每个版本的变更详情记录在 [CHANGELOG.zh.md](https://github.com/modelstudioai/cli/blob/main/CHANGELOG.zh.md)。
+
+## 参与贡献
+
+欢迎提 Issue、Feature Request 和 PR。开发环境搭建、仓库结构、新增/修改命令的工作流请见 [CONTRIBUTING.zh.md](https://github.com/modelstudioai/cli/blob/main/CONTRIBUTING.zh.md)。
+
+欢迎扫码加入阿里云百炼 CLI 钉钉用户交流群，获取使用答疑、问题排查、Bug 反馈和使用经验交流支持。
+
+<img src="https://img.alicdn.com/imgextra/i3/O1CN015uuhYGb6j0L12xJZ_!!6000000006304-2-tps-516-485.png" alt="阿里云百炼 CLI 钉钉用户交流群" width="240" />
 
 ## 相关链接
 
@@ -245,11 +180,3 @@ bl update --to 0.1.14
 | 获取 API Key            | https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key |
 | 获取 Token Plan API Key | https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview         |
 | 获取 AccessKey          | https://ram.console.aliyun.com/manage/ak                                                  |
-
-## 更新日志
-
-每个版本的变更详情记录在 [CHANGELOG.zh.md](https://github.com/modelstudioai/cli/blob/main/CHANGELOG.zh.md)。
-
-## 参与贡献
-
-欢迎提 Issue、Feature Request 和 PR。开发环境搭建、仓库结构、新增/修改命令的工作流请见 [CONTRIBUTING.zh.md](https://github.com/modelstudioai/cli/blob/main/CONTRIBUTING.zh.md)。
