@@ -113,7 +113,7 @@ describe("e2e: knowledge doc upload", () => {
     expect(data.skipped).toEqual([]);
   });
 
-  test("--dry-run 带 --index-id 输出 4 步且 job 请求含显式 sourceType", async () => {
+  test("--dry-run 带 --index-id 输出 4 步且 job 请求含扁平 docIds", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_DOC_UPLOAD_ROUTES, [
       "knowledge",
       "doc",
@@ -135,13 +135,15 @@ describe("e2e: knowledge doc upload", () => {
     expect(data.steps).toHaveLength(4);
     const jobRequest = data.steps[3]!.request as {
       indexId?: string;
-      dataSource?: { sourceType?: string; fileIds?: string[] };
+      sourceType?: string;
+      docIds?: string[];
     };
-    // Live-verified gotcha: job/create requires the nested dataSource shape, and
-    // omitting sourceType would import the entire data center
-    expect(jobRequest.dataSource?.sourceType).toBe("DATA_CENTER_FILE");
+    // Live-verified: the field name is docIds (not documentIds as in the
+    // public docs); omitting sourceType would import the entire data center.
+    expect(jobRequest.sourceType).toBe("DATA_CENTER_FILE");
+    expect(jobRequest.docIds).toEqual(["<fileId>"]);
     expect(jobRequest.indexId).toBe("idx_test");
-    expect(jobRequest).not.toHaveProperty("documentIds");
+    expect(jobRequest).not.toHaveProperty("dataSource");
   });
 
   test("--file <dir> dry-run 展开目录且 skipped 包含不支持的文件", async () => {

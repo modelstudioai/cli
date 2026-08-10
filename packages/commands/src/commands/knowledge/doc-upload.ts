@@ -149,10 +149,10 @@ export default defineCommand({
           endpoint: ragEndpoint(workspaceId, RAG_PATHS.indexJobCreate),
           request: {
             indexId: flags.indexId,
-            // Gotcha (live-verified): job/create requires the nested dataSource shape;
-            // the public docs' flat documentIds body returns Index.InvalidParameter.
-            // Omitting sourceType would import the entire data center.
-            dataSource: { sourceType: "DATA_CENTER_FILE", fileIds: ["<fileId>"] },
+            // Live-verified: the field name is docIds (not documentIds as in the
+            // public docs); omitting sourceType would import the entire data center.
+            sourceType: "DATA_CENTER_FILE",
+            docIds: ["<fileId>"],
           } as unknown,
         });
       }
@@ -259,11 +259,10 @@ export default defineCommand({
         method: "POST",
         body: {
           indexId: flags.indexId,
-          // Live-verified shape: nested dataSource (the docs' flat documentIds is rejected)
-          dataSource: {
-            sourceType: "DATA_CENTER_FILE",
-            fileIds: uploaded.map((item) => item.fileId),
-          },
+          // Live-verified: the field name is docIds (not documentIds as in the
+          // public docs); omitting sourceType would import the entire data center.
+          sourceType: "DATA_CENTER_FILE",
+          docIds: uploaded.map((item) => item.fileId),
         },
       });
       ingestionId = job.data?.ingestionId;

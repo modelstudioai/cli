@@ -2,7 +2,7 @@
 // (import orchestration) → delete → list to verify removal.
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
 import { isKbAdminE2EReady, parseStdoutJson, runCommandE2e } from "../helpers.ts";
 import { deleteKbWithRetry } from "./journeys/journey-helpers.ts";
@@ -132,7 +132,9 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge kb 写链路 (live, 自清
 
       // 2.7) Live coverage of the upload → import orchestration (doc upload --index-id --wait):
       //      the journeys always upload bare files and import via kb create, so this is the
-      //      only place the createImportJob step runs live
+      //      only place the createImportJob step runs live. Using --output json (not --quiet)
+      //      so we can assert final_status and ingestion_id — a regression in the job/create
+      //      request body (e.g. wrong field name) is caught by the server returning HTTP 400.
       const importFilePath = join(fixtureDir, `chain-import-${Date.now()}.md`);
       writeFileSync(importFilePath, "# kb chain e2e import fixture\n");
       const importUploadRun = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
@@ -146,12 +148,46 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge kb 写链路 (live, 自清
         "--wait",
         "--workspace-id",
         workspaceId,
-        "--quiet",
+        "--output",
+        "json",
       ]);
       expect(importUploadRun.exitCode, importUploadRun.stderr).toBe(0);
-      const importedFileId = importUploadRun.stdout.trim();
+      const importData = parseStdoutJson<{
+        files: Array<{ fileId: string }>;
+        ingestion_id?: string;
+        final_status?: string;
+      }>(importUploadRun.stdout);
+      // These assertions verify the full pipeline completed: ingestion_id proves the
+      // job was created, and final_status COMPLETED proves parsing finished successfully.
+      expect(importData.ingestion_id).toBeTruthy();
+      expect(importData.final_status).toBe("COMPLETED");
+      const importedFileId = importData.files?.[0]?.fileId;
       expect(importedFileId).toMatch(/^file_/);
       fixtureFileIds.push(importedFileId);
+
+      // 2.8) Verify the imported file is actually visible in the KB — final_status
+      //      COMPLETED only proves the job finished; an independent doc list query
+      //      confirms the file was registered as a document in the index
+      const importedFileName = basename(importFilePath);
+      const docListRun = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
+        "knowledge",
+        "doc",
+        "list",
+        "--index-id",
+        indexId,
+        "--workspace-id",
+        workspaceId,
+        "--output",
+        "json",
+      ]);
+      expect(docListRun.exitCode, docListRun.stderr).toBe(0);
+      const docListData = parseStdoutJson<{
+        data?: { rows?: Array<{ doc_name?: string; status?: string }> };
+      }>(docListRun.stdout);
+      const importedDoc = docListData.data?.rows?.find((row) =>
+        row.doc_name?.includes(importedFileName),
+      );
+      expect(importedDoc, `expected doc list to contain file "${importedFileName}"`).toBeTruthy();
 
       // 3) Delete the base (--yes non-interactive; deleteKbWithRetry retries on
       //    IndexStatusError: readiness can lag briefly even after the import completes)
