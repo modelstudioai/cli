@@ -168,7 +168,6 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge kb 写链路 (live, 自清
       // 2.8) Verify the imported file is actually visible in the KB — final_status
       //      COMPLETED only proves the job finished; an independent doc list query
       //      confirms the file was registered as a document in the index
-      const importedFileName = basename(importFilePath);
       const docListRun = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
         "knowledge",
         "doc",
@@ -184,10 +183,12 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge kb 写链路 (live, 自清
       const docListData = parseStdoutJson<{
         data?: { rows?: Array<{ doc_name?: string; status?: string }> };
       }>(docListRun.stdout);
+      // doc_name drops the file extension (e.g. "foo.md" → "foo"); match by stem
+      const importedFileStem = basename(importFilePath).replace(/\.[^.]+$/, "");
       const importedDoc = docListData.data?.rows?.find((row) =>
-        row.doc_name?.includes(importedFileName),
+        row.doc_name?.includes(importedFileStem),
       );
-      expect(importedDoc, `expected doc list to contain file "${importedFileName}"`).toBeTruthy();
+      expect(importedDoc, `expected doc list to contain file "${importedFileStem}"`).toBeTruthy();
 
       // 3) Delete the base (--yes non-interactive; deleteKbWithRetry retries on
       //    IndexStatusError: readiness can lag briefly even after the import completes)
