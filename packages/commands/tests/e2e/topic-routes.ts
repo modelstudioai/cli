@@ -222,6 +222,7 @@ export const KNOWLEDGE_KB_DELETE_ROUTES: E2eRouteExports = {
   "knowledge update": "knowledgeKbUpdate", // live update step in the chain
   "knowledge list": "knowledgeKbList",
   "knowledge doc upload": "knowledgeDocUpload",
+  "knowledge doc list": "knowledgeDocList", // live: verify imported file is visible in the KB
   "knowledge file delete": "knowledgeFileDelete", // live cleanup of data-center files
 };
 
