@@ -18,6 +18,22 @@ function inspectDPORecord(record: Record<string, unknown>, lineNo: number): Vali
   const messages = record.messages;
   if (!Array.isArray(messages) || messages.length === 0) return out;
 
+  // DPO convention: messages should end with a user message (the prompt that
+  // chosen/rejected respond to). If the last message is assistant, it's likely
+  // a structural mistake.
+  const lastMsg = messages[messages.length - 1] as Record<string, unknown> | null;
+  if (lastMsg && lastMsg.role !== "user") {
+    out.push(
+      makeIssue(
+        "warning",
+        "DPO_LAST_MSG_NOT_USER",
+        `DPO "messages" should end with a "user" message (the prompt for chosen/rejected). ` +
+          `Got "${String(lastMsg.role)}" as the last message.`,
+        { line: lineNo, path: `messages[${messages.length - 1}].role` },
+      ),
+    );
+  }
+
   const hasChosen = "chosen" in record;
   const hasRejected = "rejected" in record;
 

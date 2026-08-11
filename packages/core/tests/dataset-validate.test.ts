@@ -56,8 +56,6 @@ describe("validateDataset — DPO schema", () => {
   });
 
   test('schema "dpo" requires both chosen and rejected on every record', async () => {
-    // A record with neither chosen nor rejected is SFT-shaped; under --schema dpo
-    // it must be flagged as missing both preferences.
     const p = file("sft_under_dpo.jsonl", [SFT_OK]);
     const r = await validateDataset(p, { fullValidate: true, schema: "dpo" });
     expect(r.valid).toBe(false);
@@ -107,6 +105,15 @@ describe("validateDataset — DPO schema", () => {
     const r = await validateDataset(p, { fullValidate: true, schema: "dpo" });
     expect(r.valid).toBe(true);
   });
+
+  test("DPO messages ending with assistant → DPO_LAST_MSG_NOT_USER warning", async () => {
+    const p = file("dpo_last_asst.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"yo"}],"chosen":{"role":"assistant","content":"good"},"rejected":{"role":"assistant","content":"bad"}}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true, schema: "dpo" });
+    expect(r.valid).toBe(true);
+    expect(codes(r).warnings).toContain("DPO_LAST_MSG_NOT_USER");
+  });
 });
 
 describe("validateDataset — CPT schema", () => {
@@ -142,8 +149,6 @@ describe("validateDataset — CPT schema", () => {
   });
 
   test("auto-detect routes a {text} record to CPT, not ChatML", async () => {
-    // A CPT record has no `messages`; under auto-detect it must NOT produce a
-    // ChatML MISSING_MESSAGES error — it should be validated as CPT and pass.
     const p = file("cpt_auto.jsonl", [CPT_OK]);
     const r = await validateDataset(p, { fullValidate: true });
     expect(r.valid).toBe(true);
@@ -151,14 +156,277 @@ describe("validateDataset — CPT schema", () => {
   });
 
   test("SFT record with a stray text field still routes to ChatML", async () => {
-    // {messages, text} is ambiguous; CPT detect requires text AND no messages,
-    // so this falls through to ChatML and validates as SFT (text ignored).
     const p = file("mixed.jsonl", [
       '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"yo"}],"text":"noise"}',
     ]);
     const r = await validateDataset(p, { fullValidate: true });
     expect(r.valid).toBe(true);
     expect(codes(r).errors).toEqual([]);
+  });
+});
+
+describe("validateDataset — content array format", () => {
+  test("content as [{text}] array passes validation", async () => {
+    const p = file("content_arr.jsonl", [
+      '{"messages":[{"role":"system","content":[{"text":"sys"}]},{"role":"user","content":[{"text":"hi"}]},{"role":"assistant","content":[{"text":"hello"}]}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+    expect(codes(r).errors).toEqual([]);
+  });
+
+  test("content as plain string still passes (legacy format)", async () => {
+    const p = file("content_str.jsonl", [SFT_OK]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+  });
+
+  test("content array with image item passes (VL multimodal)", async () => {
+    const p = file("content_img.jsonl", [
+      '{"messages":[{"role":"user","content":[{"text":"describe"},{"image":"img1.jpg"}]},{"role":"assistant","content":[{"text":"a cat"}]}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+  });
+
+  test("content array with video string item passes", async () => {
+    const p = file("content_vid.jsonl", [
+      '{"messages":[{"role":"user","content":[{"text":"describe"},{"video":"vid1.mp4"}]},{"role":"assistant","content":[{"text":"a car"}]}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+  });
+
+  test("content array with video frame list passes", async () => {
+    const p = file("content_frames.jsonl", [
+      '{"messages":[{"role":"user","content":[{"text":"describe"},{"video":["0.jpg","1.jpg","2.jpg"]}]},{"role":"assistant","content":[{"text":"frames"}]}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+  });
+
+  test("content array with invalid item (no text/image/video) → error", async () => {
+    const p = file("content_bad_item.jsonl", [
+      '{"messages":[{"role":"user","content":[{"foo":"bar"}]},{"role":"assistant","content":"ok"}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("CONTENT_ITEM_NO_KNOWN_FIELD");
+  });
+
+  test("content as number → INVALID_CONTENT error", async () => {
+    const p = file("content_num.jsonl", [
+      '{"messages":[{"role":"user","content":42},{"role":"assistant","content":"ok"}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("INVALID_CONTENT");
+  });
+
+  test("empty content array → EMPTY_CONTENT_ARRAY error", async () => {
+    const p = file("content_empty_arr.jsonl", [
+      '{"messages":[{"role":"user","content":[]},{"role":"assistant","content":"ok"}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("EMPTY_CONTENT_ARRAY");
+  });
+
+  test("DPO with content array format passes", async () => {
+    const p = file("dpo_arr.jsonl", [
+      '{"messages":[{"role":"user","content":[{"text":"hi"}]}],"chosen":{"role":"assistant","content":[{"text":"good"}]},"rejected":{"role":"assistant","content":[{"text":"bad"}]}}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true, schema: "dpo" });
+    expect(r.valid).toBe(true);
+  });
+});
+
+describe("validateDataset — tool calling (function calling)", () => {
+  const TOOL_OK = JSON.stringify({
+    tools: [
+      {
+        type: "function",
+        function: {
+          name: "get_weather",
+          description: "get weather",
+          parameters: {
+            type: "object",
+            properties: { city: { type: "string" } },
+            required: ["city"],
+          },
+        },
+      },
+    ],
+    messages: [
+      { role: "user", content: [{ text: "weather in Beijing" }] },
+      {
+        role: "assistant",
+        content: [{ text: "let me check" }],
+        tool_calls: [
+          {
+            id: "call_1",
+            type: "function",
+            function: { name: "get_weather", arguments: '{"city":"Beijing"}' },
+          },
+        ],
+      },
+      { role: "tool", tool_call_id: "call_1", content: [{ text: '{"weather":"sunny"}' }] },
+      { role: "assistant", content: [{ text: "It is sunny." }] },
+    ],
+  });
+
+  test("valid tool calling record passes", async () => {
+    const p = file("tool_ok.jsonl", [TOOL_OK]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+    expect(codes(r).errors).toEqual([]);
+  });
+
+  test("tool role is accepted (no INVALID_ROLE)", async () => {
+    const p = file("tool_role.jsonl", [TOOL_OK]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(codes(r).errors).not.toContain("INVALID_ROLE");
+  });
+
+  test("tool message without tool_call_id → TOOL_MISSING_CALL_ID", async () => {
+    const p = file("tool_no_id.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"","tool_calls":[{"id":"c1","type":"function","function":{"name":"f","arguments":"{}"}}]},{"role":"tool","content":"result"},{"role":"assistant","content":"done"}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("TOOL_MISSING_CALL_ID");
+  });
+
+  test("tool_call_id unmatched → TOOL_CALL_ID_UNMATCHED warning", async () => {
+    const p = file("tool_unmatched.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"","tool_calls":[{"id":"c1","type":"function","function":{"name":"f","arguments":"{}"}}]},{"role":"tool","tool_call_id":"WRONG_ID","content":"result"},{"role":"assistant","content":"done"}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+    expect(codes(r).warnings).toContain("TOOL_CALL_ID_UNMATCHED");
+  });
+
+  test("tool_calls with missing function name → TOOL_CALL_FN_NO_NAME", async () => {
+    const p = file("tool_no_fn_name.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"","tool_calls":[{"id":"c1","type":"function","function":{"arguments":"{}"}}]},{"role":"tool","tool_call_id":"c1","content":"r"},{"role":"assistant","content":"ok"}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("TOOL_CALL_FN_NO_NAME");
+  });
+
+  test("assistant with tool_calls but no content is valid", async () => {
+    const p = file("tool_no_content.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","tool_calls":[{"id":"c1","type":"function","function":{"name":"f","arguments":"{}"}}]},{"role":"tool","tool_call_id":"c1","content":"r"},{"role":"assistant","content":"ok"}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+    expect(codes(r).errors).not.toContain("MISSING_CONTENT");
+  });
+});
+
+describe("validateDataset — thinking tags", () => {
+  test("think tag in last assistant is valid", async () => {
+    const p = file("think_ok.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"<think>\\nreasoning\\n</think>\\n\\nanswer"}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+    expect(codes(r).warnings).not.toContain("THINK_TAG_NOT_LAST");
+  });
+
+  test("think tag in non-last assistant → THINK_TAG_NOT_LAST warning", async () => {
+    const p = file("think_mid.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"<think>\\nearly\\n</think>\\n\\nmid"},{"role":"user","content":"more"},{"role":"assistant","content":"final"}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+    expect(codes(r).warnings).toContain("THINK_TAG_NOT_LAST");
+  });
+
+  test("think tag in content array format detected", async () => {
+    const p = file("think_arr.jsonl", [
+      '{"messages":[{"role":"user","content":[{"text":"hi"}]},{"role":"assistant","content":[{"text":"<think>\\nreason\\n</think>\\n\\nans"}]},{"role":"user","content":[{"text":"more"}]},{"role":"assistant","content":[{"text":"final"}]}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+    expect(codes(r).warnings).toContain("THINK_TAG_NOT_LAST");
+  });
+});
+
+describe("validateDataset — OpenAI migration guards", () => {
+  test("message-level name field → UNSUPPORTED_FIELD_NAME warning", async () => {
+    const p = file("openai_name.jsonl", [
+      '{"messages":[{"role":"user","content":"hi","name":"alice"},{"role":"assistant","content":"hello"}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+    expect(codes(r).warnings).toContain("UNSUPPORTED_FIELD_NAME");
+  });
+
+  test("message-level weight field → UNSUPPORTED_FIELD_WEIGHT warning", async () => {
+    const p = file("openai_weight.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"hello","weight":0.5}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+    expect(codes(r).warnings).toContain("UNSUPPORTED_FIELD_WEIGHT");
+  });
+
+  test("record-level weight field → UNSUPPORTED_FIELD_WEIGHT warning", async () => {
+    const p = file("record_weight.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"hello"}],"weight":1}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+    expect(codes(r).warnings).toContain("UNSUPPORTED_FIELD_WEIGHT");
+  });
+});
+
+describe("validateDataset — loss_weight", () => {
+  test("valid loss_weight (0.5) passes", async () => {
+    const p = file("lw_ok.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"hello"}],"loss_weight":0.5}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+    expect(codes(r).errors).not.toContain("INVALID_LOSS_WEIGHT");
+  });
+
+  test("loss_weight out of range (1.5) → INVALID_LOSS_WEIGHT", async () => {
+    const p = file("lw_bad.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"hello"}],"loss_weight":1.5}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("INVALID_LOSS_WEIGHT");
+  });
+
+  test("loss_weight negative → INVALID_LOSS_WEIGHT", async () => {
+    const p = file("lw_neg.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"hello"}],"loss_weight":-0.1}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("INVALID_LOSS_WEIGHT");
+  });
+
+  test("loss_weight non-number → INVALID_LOSS_WEIGHT", async () => {
+    const p = file("lw_str.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"hello"}],"loss_weight":"high"}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("INVALID_LOSS_WEIGHT");
+  });
+
+  test("loss_weight boundary values 0 and 1 pass", async () => {
+    const p = file("lw_boundary.jsonl", [
+      '{"messages":[{"role":"user","content":"a"},{"role":"assistant","content":"b"}],"loss_weight":0}',
+      '{"messages":[{"role":"user","content":"c"},{"role":"assistant","content":"d"}],"loss_weight":1}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
   });
 });
 

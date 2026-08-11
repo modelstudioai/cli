@@ -3,14 +3,15 @@
  *
  * A training data ZIP must have:
  *   - `data.jsonl` at the root — the manifest mapping media files to labels.
- *   - A `train/` subfolder (or media files at the root) referenced by the
- *     manifest entries.
+ *     The platform requires data.jsonl to be directly visible when opening the
+ *     ZIP (no wrapping folder).
+ *   - Media files referenced by the manifest entries.
  *
  * This validator owns the **ZIP-level structural checks** (entries present,
- * references resolve). The **per-record JSONL content validation** is delegated
- * to the existing `jsonlValidator` — we extract `data.jsonl` to a temp file,
- * run the full pipeline (quickScan + deepCheck + schema dispatch), and stitch
- * the results together.
+ * references resolve, filename constraints). The **per-record JSONL content
+ * validation** is delegated to the existing `jsonlValidator` — we extract
+ * `data.jsonl` to a temp file, run the full pipeline (quickScan + deepCheck +
+ * schema dispatch), and stitch the results together.
  *
  * The schema for `data.jsonl` records is passed via `opts.schema` (typically
  * `"tts"` for audio). The profile layer decides which schema to use based on
@@ -90,6 +91,121 @@ function collectZipEntries(zipPath: string): Promise<string[]> {
       zipfile.on("error", reject);
     });
   });
+}
+
+/**
+ * Platform filename constraints:
+ * - Allowed charset: ASCII letters (a-z, A-Z), digits (0-9), underscore (_), hyphen (-)
+ * - Filename (without extension) ≤ 120 characters
+ * - Filenames must be globally unique (ignoring extension)
+ */
+const FILENAME_CHARSET_RE = /^[a-zA-Z0-9_-]+$/;
+const MAX_FILENAME_BASE_LENGTH = 120;
+
+/** Extract the base name (no extension) from a path segment. */
+function basenameNoExt(segment: string): string {
+  const dot = segment.lastIndexOf(".");
+  return dot > 0 ? segment.slice(0, dot) : segment;
+}
+
+/**
+ * Validate ZIP entry filenames against platform constraints.
+ * Returns issues for charset violations, over-length names, and duplicates.
+ */
+function validateZipFilenames(entries: string[]): ValidationIssue[] {
+  const out: ValidationIssue[] = [];
+  const seenBasenames = new Map<string, string>(); // basename (no ext) → first full path
+  const MAX_REPORTED = 10;
+
+  for (const entry of entries) {
+    // Skip directory entries
+    if (entry.endsWith("/")) continue;
+
+    // Check each path segment (folder names + file name)
+    const segments = entry.split("/").filter((s) => s.length > 0);
+    for (const segment of segments) {
+      // Strip extension for the charset check on the base part
+      const base = basenameNoExt(segment);
+      const ext = segment.slice(base.length); // includes dot, e.g. ".jpg"
+
+      // Charset check on base name (extension checked separately)
+      if (base.length > 0 && !FILENAME_CHARSET_RE.test(base)) {
+        if (out.length < MAX_REPORTED) {
+          out.push(
+            makeIssue(
+              "error",
+              "INVALID_FILENAME_CHARSET",
+              `File/folder name "${segment}" contains invalid characters. ` +
+                `Only a-z, A-Z, 0-9, underscore (_), and hyphen (-) are allowed.`,
+              { path: entry },
+            ),
+          );
+        }
+      }
+
+      // Extension charset (allow dot + alphanumeric)
+      if (ext.length > 0 && !/^\.[a-zA-Z0-9]+$/.test(ext)) {
+        if (out.length < MAX_REPORTED) {
+          out.push(
+            makeIssue(
+              "error",
+              "INVALID_FILENAME_CHARSET",
+              `File extension "${ext}" in "${segment}" contains invalid characters.`,
+              { path: entry },
+            ),
+          );
+        }
+      }
+    }
+
+    // Filename length check (base name without extension)
+    const fileName = segments[segments.length - 1] ?? "";
+    const baseName = basenameNoExt(fileName);
+    if (baseName.length > MAX_FILENAME_BASE_LENGTH) {
+      if (out.length < MAX_REPORTED) {
+        out.push(
+          makeIssue(
+            "error",
+            "FILENAME_TOO_LONG",
+            `Filename "${fileName}" (without extension) exceeds ${MAX_FILENAME_BASE_LENGTH} characters ` +
+              `(got ${baseName.length}). Shorten the name and re-upload.`,
+            { path: entry },
+          ),
+        );
+      }
+    }
+
+    // Global uniqueness check (ignoring extension, case-sensitive)
+    if (baseName.length > 0) {
+      const existing = seenBasenames.get(baseName);
+      if (existing !== undefined) {
+        if (out.length < MAX_REPORTED) {
+          out.push(
+            makeIssue(
+              "error",
+              "DUPLICATE_FILENAME",
+              `Filename "${fileName}" conflicts with "${existing}" — names must be globally unique ` +
+                `(ignoring extension) even across different folders.`,
+              { path: entry },
+            ),
+          );
+        }
+      } else {
+        seenBasenames.set(baseName, entry);
+      }
+    }
+  }
+
+  if (out.length >= MAX_REPORTED) {
+    out.push(
+      makeIssue(
+        "warning",
+        "FILENAME_ISSUES_TRUNCATED",
+        `More filename issues exist but reporting is capped at ${MAX_REPORTED}.`,
+      ),
+    );
+  }
+  return out;
 }
 
 /**
@@ -201,19 +317,37 @@ export const zipValidator: ValidatorSpec = {
       };
     }
 
-    // --- 2. Check for data.jsonl ---
-    const hasDataJsonl = entries.some(
-      (entry) => entry === "data.jsonl" || entry.endsWith("/data.jsonl"),
-    );
-    if (!hasDataJsonl) {
-      errors.push(
-        makeIssue(
-          "error",
-          "MISSING_DATA_JSONL",
-          `ZIP archive must contain "data.jsonl" at the root. ` +
-            `This file maps media files (e.g. .wav) to their labels.`,
-        ),
-      );
+    // --- 2. Check for data.jsonl (must be at ZIP root) ---
+    const hasRootDataJsonl = entries.some((entry) => entry === "data.jsonl");
+    const nestedDataJsonl =
+      !hasRootDataJsonl && entries.find((entry) => entry.endsWith("/data.jsonl"));
+    if (!hasRootDataJsonl) {
+      if (nestedDataJsonl) {
+        errors.push(
+          makeIssue(
+            "error",
+            "DATA_JSONL_NOT_AT_ROOT",
+            `"data.jsonl" must be at the ZIP root (found "${nestedDataJsonl}"). ` +
+              `Re-package so that opening the ZIP shows data.jsonl directly, without a wrapping folder.`,
+          ),
+        );
+      } else {
+        errors.push(
+          makeIssue(
+            "error",
+            "MISSING_DATA_JSONL",
+            `ZIP archive must contain "data.jsonl" at the root. ` +
+              `This file maps media files (e.g. .wav, .jpg) to their labels.`,
+          ),
+        );
+      }
+    }
+
+    // --- 2b. Filename constraints (charset, length, uniqueness) ---
+    const filenameIssues = validateZipFilenames(entries);
+    for (const issue of filenameIssues) {
+      if (issue.severity === "error") errors.push(issue);
+      else warnings.push(issue);
     }
 
     // --- 3. Check for train/ directory (modality-aware) ---
@@ -265,8 +399,8 @@ export const zipValidator: ValidatorSpec = {
       }
     }
 
-    // If data.jsonl is missing, we can't do JSONL content validation.
-    if (!hasDataJsonl) {
+    // If data.jsonl is missing entirely, we can't do JSONL content validation.
+    if (!hasRootDataJsonl && !nestedDataJsonl) {
       return {
         valid: false,
         format: "zip",
@@ -278,9 +412,11 @@ export const zipValidator: ValidatorSpec = {
     }
 
     // --- 4. Extract data.jsonl to a temp file and run jsonlValidator ---
-    const dataJsonlEntry = entries.find(
-      (entry) => entry === "data.jsonl" || entry.endsWith("/data.jsonl"),
-    )!;
+    // Prefer root data.jsonl; fall back to nested for content validation even
+    // though we already reported the root-placement error above.
+    const dataJsonlEntry = hasRootDataJsonl
+      ? "data.jsonl"
+      : entries.find((entry) => entry.endsWith("/data.jsonl"))!;
     const tmpDir = join(tmpdir(), `bl-zip-${randomBytes(6).toString("hex")}`);
     mkdirSync(tmpDir, { recursive: true });
     const tmpJsonl = join(tmpDir, "data.jsonl");

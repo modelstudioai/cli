@@ -5,6 +5,7 @@ import {
   parseDatasetSchemaFlag,
   formatIssue,
   MAX_DATASET_BYTES,
+  MAX_CPT_BYTES,
   MAX_MEDIA_ZIP_BYTES,
   BailianError,
   ExitCode,
@@ -16,7 +17,7 @@ const UPLOAD_FLAGS = {
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Local dataset file (.jsonl or .zip; ≤300MB text, ≤1GB image)",
+    description: "Local dataset file (.jsonl or .zip; ≤200MB SFT/DPO, ≤300MB CPT, ≤2GB media zip)",
     required: true,
   },
   purpose: {
@@ -57,13 +58,14 @@ export default defineCommand({
   ],
   notes: [
     "Supports .jsonl (text) and .zip (audio/image archives with a data.jsonl",
-    "manifest). Five record schemas are recognized: chatml = {messages:[...]}",
+    "manifest). Six record schemas are recognized: chatml = {messages:[...]}",
     '(SFT); dpo = {messages:[...], chosen, rejected}; cpt = {text:"..."}',
     '(continual pre-training, raw text); tts = {wav_fn:"train/xxx.wav",',
     'text:"..."} (audio fine-tuning); image = {img_path:"..."} (image',
-    "generation). With no --schema, a record carrying wav_fn is validated as",
-    "TTS, img_path as image, chosen/rejected as DPO, text (no messages) as CPT,",
-    "otherwise ChatML. Upload cap: 300MB text, 1GB image. Upload uses the",
+    "generation); video = {first_frame_path:...} (video generation). With no",
+    "--schema, a record carrying wav_fn is validated as TTS, img_path as image,",
+    "chosen/rejected as DPO, text (no messages) as CPT, otherwise ChatML.",
+    "Upload cap: 200MB SFT/DPO text, 300MB CPT, 2GB media zip. Upload uses the",
     "OpenAI-compatible /compatible-mode/v1/files endpoint so the purpose tag is",
     "persisted (the DashScope-native /api/v1/files drops it).",
   ],
@@ -72,11 +74,15 @@ export default defineCommand({
     const filePath = flags.file;
     const purpose = flags.purpose || "fine-tune";
     const schema = parseDatasetSchemaFlag(flags.schema);
-    // Image and video schemas allow larger ZIPs (1 GB vs 300 MB for text).
+    // Size caps differ per training type: SFT/DPO 200MB, CPT 300MB, media ZIP 2GB.
     const isMediaSchema = schema === "image" || schema === "video";
+    const maxBytes = isMediaSchema
+      ? MAX_MEDIA_ZIP_BYTES
+      : schema === "cpt"
+        ? MAX_CPT_BYTES
+        : MAX_DATASET_BYTES;
 
     if (!flags.noValidate) {
-      const maxBytes = isMediaSchema ? MAX_MEDIA_ZIP_BYTES : MAX_DATASET_BYTES;
       const result = await validateDataset(filePath, {
         fullValidate: flags.fullValidate,
         schema,
@@ -116,7 +122,7 @@ export default defineCommand({
           action: "dataset.upload",
           file: filePath,
           purpose,
-          max_bytes: isMediaSchema ? MAX_MEDIA_ZIP_BYTES : MAX_DATASET_BYTES,
+          max_bytes: maxBytes,
           validate: !flags.noValidate,
           schema: schema ?? "auto",
         },
