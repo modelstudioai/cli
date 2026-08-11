@@ -77,18 +77,16 @@ bl knowledge search --query <text> --agent-id <id> [flags]
 
 **参数**
 
-| 参数                        | 类型   | 必填 | 说明                                                                                                                                      |
-| --------------------------- | ------ | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `--query <text>`            | string | 是   | 检索查询文本（不可为空）                                                                                                                  |
-| `--agent-id <id>`           | string | 是   | 检索服务 ID（在控制台知识检索页面获取，或通过 `service list` 查看）                                                                       |
-| `--agent-version <version>` | string | 否   | 服务版本：`beta`（调试草稿）或已发布版本号；默认调用最新已发布版本                                                                        |
-| `--image <url>`             | array  | 否   | 图片 URL（可重复），用于多模态检索                                                                                                        |
-| `--query-history <json>`    | string | 否   | 用户对话历史 JSON，用于上下文理解和查询改写。格式：`[{"role":"user","content":"What is RAG"},{"role":"assistant","content":"RAG is..."}]` |
+| 参数                        | 类型   | 必填 | 说明                                                                |
+| --------------------------- | ------ | ---- | ------------------------------------------------------------------- |
+| `--query <text>`            | string | 是   | 检索查询文本（不可为空）                                            |
+| `--agent-id <id>`           | string | 是   | 检索服务 ID（在控制台知识检索页面获取，或通过 `service list` 查看） |
+| `--agent-version <version>` | string | 否   | 服务版本：`beta`（调试草稿）或已发布版本号；默认调用最新已发布版本  |
+| `--image <url>`             | array  | 否   | 图片 URL（可重复），用于多模态检索                                  |
 
 **参数约束**
 
 - `--query` 不可为空（API 要求 `minLength: 1`）
-- `--query-history` 必须是合法 JSON 数组
 
 **输出**
 
@@ -109,8 +107,7 @@ json 模式：返回 API 原始响应，`data.nodes[]` 包含检索结果。
 **注意事项**
 
 - 检索范围和策略（多知识库加权、路由、rerank 等）由 `--agent-id` 对应的服务配置驱动。只需 `--query` 和 `--agent-id` 即可调用。
-- `--query-history` 传入前序对话轮次，服务端基于上下文改写查询以提升检索相关性。
-- `--agent-version beta` 调用草稿配置进行调试，部署前验证效果。
+- `--agent-version beta` 调试草稿配置进行调试，部署前验证效果。
 - 与 `retrieve` 的区别：`search` 通过 agent_id 间接驱动检索策略（支持多知识库、路由、rerank 等），`retrieve` 直接操作 index_id 且功能较少。
 
 **示例**
@@ -121,9 +118,6 @@ bl knowledge search --query "What is RAG?" --agent-id aid-xxx --workspace-id ws-
 
 # 多模态检索（带图片）
 bl knowledge search --query "describe this image" --agent-id aid-xxx --workspace-id ws-xxx --image https://example.com/img.jpg
-
-# 带对话历史的多轮检索
-bl knowledge search --query "How does it work" --agent-id aid-xxx --workspace-id ws-xxx --query-history '[{"role":"user","content":"What is RAG"},{"role":"assistant","content":"RAG is retrieval-augmented generation"}]'
 
 # 调试草稿版本
 bl knowledge search --query "test" --agent-id aid-xxx --agent-version beta --workspace-id ws-xxx

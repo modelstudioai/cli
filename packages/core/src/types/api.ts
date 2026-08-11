@@ -414,7 +414,6 @@ export interface KnowledgeSearchRequest {
   /** "beta" targets the debug draft; a numeric version targets that published version; defaults to the latest published version */
   agent_version?: string;
   images?: string[];
-  query_history?: Array<{ role: "user" | "assistant"; content: string }>;
 }
 
 export interface KnowledgeSearchResponse {

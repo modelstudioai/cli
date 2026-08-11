@@ -15,7 +15,6 @@ interface DryRunBody {
     agent_id?: string;
     agent_version?: string;
     images?: string[];
-    query_history?: Array<{ role: string; content: string }>;
   };
 }
 
@@ -31,7 +30,6 @@ describe("e2e: knowledge search", () => {
     expect(stderr).toMatch(/--agent-id/i);
     expect(stderr).toMatch(/--workspace-id/i);
     expect(stderr).toMatch(/--image/i);
-    expect(stderr).toMatch(/--query-history/i);
   });
 
   test("缺少 --query 时报用法错误并退出 (2)", async () => {
@@ -148,50 +146,6 @@ describe("e2e: knowledge search", () => {
       "https://example.com/b.jpg",
     ]);
   });
-
-  test("--dry-run + --query-history 输出用户对话历史", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
-      "knowledge",
-      "search",
-      "--dry-run",
-      "--query",
-      "它怎么工作",
-      "--agent-id",
-      "aid_test",
-      "--workspace-id",
-      "ws_test",
-      "--query-history",
-      '[{"role":"user","content":"什么是RAG"},{"role":"assistant","content":"RAG是检索增强生成"}]',
-      "--output",
-      "json",
-    ]);
-    expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<DryRunBody>(stdout);
-    expect(data.request?.query_history).toEqual([
-      { role: "user", content: "什么是RAG" },
-      { role: "assistant", content: "RAG是检索增强生成" },
-    ]);
-  });
-
-  test("--dry-run + --query-history 无效 JSON 非零退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
-      "knowledge",
-      "search",
-      "--dry-run",
-      "--query",
-      "test",
-      "--agent-id",
-      "aid_test",
-      "--workspace-id",
-      "ws_test",
-      "--query-history",
-      "not-valid-json",
-      "--output",
-      "json",
-    ]);
-    expect(exitCode).not.toBe(0);
-    expect(stderr).toMatch(/query-history.*valid JSON/i);
-  });
 });
 
 interface SearchResponse {
@@ -257,28 +211,6 @@ describe.skipIf(!isSearchE2EReady())("e2e: knowledge search (live)", () => {
 
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toMatch(/\[1\].*score/);
-  });
-
-  test("search with --query-history returns results", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
-      "knowledge",
-      "search",
-      "--query",
-      "它怎么工作",
-      "--agent-id",
-      agentId,
-      "--workspace-id",
-      workspaceId,
-      "--query-history",
-      '[{"role":"user","content":"什么是大模型"},{"role":"assistant","content":"大模型是大规模语言模型"}]',
-      "--output",
-      "json",
-    ]);
-
-    expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<SearchResponse>(stdout);
-    expect(data.code).toBe("Success");
-    expect(data.data.nodes.length).toBeGreaterThan(0);
   });
 
   test("search with invalid agent_id fails gracefully", async () => {

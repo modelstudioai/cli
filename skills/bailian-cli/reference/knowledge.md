@@ -907,23 +907,21 @@ bl knowledge retrieve --index-id idx_xxx --query "RAG retrieval" --rerank --rera
 
 #### Flags
 
-| Flag                        | Type   | Required | Description                                                                                                                                                                  |
-| --------------------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--query <text>`            | string | yes      | Search query text (required, cannot be empty)                                                                                                                                |
-| `--agent-id <id>`           | string | yes      | Retrieval service ID (find in console knowledge retrieval page)                                                                                                              |
-| `--workspace-id <id>`       | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                                                                                              |
-| `--agent-version <version>` | string | no       | Service version to call: beta (draft for debugging) or a published number; default is the latest published version                                                           |
-| `--image <url>`             | array  | no       | Image URL for multimodal retrieval (repeatable)                                                                                                                              |
-| `--query-history <json>`    | string | no       | User conversation history JSON for context understanding and query rewriting. Format: '[{"role":"user","content":"What is RAG"},{"role":"assistant","content":"RAG is..."}]' |
-| `--api-key <key>`           | string | no       | API key                                                                                                                                                                      |
-| `--base-url <url>`          | string | no       | API base URL                                                                                                                                                                 |
+| Flag                        | Type   | Required | Description                                                                                                        |
+| --------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------ |
+| `--query <text>`            | string | yes      | Search query text (required, cannot be empty)                                                                      |
+| `--agent-id <id>`           | string | yes      | Retrieval service ID (find in console knowledge retrieval page)                                                    |
+| `--workspace-id <id>`       | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                                    |
+| `--agent-version <version>` | string | no       | Service version to call: beta (draft for debugging) or a published number; default is the latest published version |
+| `--image <url>`             | array  | no       | Image URL for multimodal retrieval (repeatable)                                                                    |
+| `--api-key <key>`           | string | no       | API key                                                                                                            |
+| `--base-url <url>`          | string | no       | API base URL                                                                                                       |
 
 #### Notes
 
 - Retrieval scope and strategy (multi-index weighting, routing, reranking, etc.) are driven by the agent_id service config. Only query and agent_id are required.
 - Auth: uses DashScope API Key (Bearer token). Get yours from the console API Key page.
 - `--workspace-id` can be set via BAILIAN_WORKSPACE_ID env or `kscli config set workspace_id <id>`.
-- `--query-history` passes prior conversation turns; the server rewrites the query based on context to improve retrieval relevance.
 - `--agent-version beta` calls the draft config for debugging before it is deployed.
 
 #### Examples
@@ -934,10 +932,6 @@ bl knowledge search --query "What is RAG?" --agent-id aid-xxx --workspace-id ws-
 
 ```bash
 bl knowledge search --api-key $DASHSCOPE_API_KEY --query "test search" --agent-id aid-xxx --workspace-id ws-xxx --image https://example.com/img.jpg
-```
-
-```bash
-bl knowledge search --query "How does it work" --agent-id aid-xxx --workspace-id ws-xxx --query-history '[{"role":"user","content":"What is RAG"},{"role":"assistant","content":"RAG is retrieval-augmented generation"}]'
 ```
 
 ### `bl knowledge service copy`
