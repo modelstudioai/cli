@@ -28,7 +28,7 @@ const UPLOAD_FLAGS = {
     type: "string",
     valueHint: "<s>",
     description:
-      'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), "cpt" (raw text), "tts" (audio), or "image" (image generation). Default auto-detects per record.',
+      'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), "cpt" (raw text), "tts" (audio), "image" (image generation), or "video" (video generation). Default auto-detects per record.',
   },
   noValidate: {
     type: "switch",
@@ -44,7 +44,7 @@ export default defineCommand({
   description: "Upload a dataset file (.jsonl or .zip) to Bailian",
   auth: "apiKey",
   usageArgs:
-    "--file <path> [--purpose <name>] [--schema <chatml|dpo|cpt|tts|image>] [--no-validate] [--full-validate]",
+    "--file <path> [--purpose <name>] [--schema <chatml|dpo|cpt|tts|image|video>] [--no-validate] [--full-validate]",
   flags: UPLOAD_FLAGS,
   exampleArgs: [
     "--file train.jsonl",
@@ -72,15 +72,8 @@ export default defineCommand({
     const filePath = flags.file;
     const purpose = flags.purpose || "fine-tune";
     const schema = parseDatasetSchemaFlag(flags.schema);
-    if (schema === "video") {
-      throw new BailianError(
-        `--schema video is not supported.`,
-        ExitCode.USAGE,
-        `Supported schemas: chatml, dpo, cpt, tts, image.`,
-      );
-    }
-    // Image schema allows larger ZIPs (1 GB vs 300 MB for text).
-    const isMediaSchema = schema === "image";
+    // Image and video schemas allow larger ZIPs (1 GB vs 300 MB for text).
+    const isMediaSchema = schema === "image" || schema === "video";
 
     if (!flags.noValidate) {
       const maxBytes = isMediaSchema ? MAX_MEDIA_ZIP_BYTES : MAX_DATASET_BYTES;
