@@ -21,12 +21,13 @@ const KB_STATS_FLAGS = {
   start: {
     type: "string",
     valueHint: "<time>",
-    description: "Range start: Unix seconds or ISO date (default: 24 hours ago)",
+    description:
+      "Range start: Unix seconds or ISO date, must be in the past (default: 24 hours ago)",
   },
   end: {
     type: "string",
     valueHint: "<time>",
-    description: "Range end: Unix seconds or ISO date (default: now)",
+    description: "Range end: Unix seconds or ISO date, must be in the past (default: now)",
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
@@ -56,6 +57,7 @@ export default defineCommand({
   notes: [
     "Defaults to the last 24 hours when --start/--end are omitted.",
     "Timestamps are normalized to epoch seconds as required by the server.",
+    "Future timestamps are rejected for --start and clamped to now for --end, since the monitor API only returns past data.",
   ],
   exampleArgs: [
     "--index-id idx-xxx --workspace-id ws-xxx",
@@ -70,7 +72,21 @@ export default defineCommand({
     const startTimestamp = flags.start
       ? toEpochSecondsString(flags.start)
       : String(nowSeconds - 24 * 3600);
-    const endTimestamp = flags.end ? toEpochSecondsString(flags.end) : String(nowSeconds);
+    let endTimestamp = flags.end ? toEpochSecondsString(flags.end) : String(nowSeconds);
+
+    // The monitor API rejects future timestamps with a misleading
+    // "missing or invalid" error — validate here with a clear message.
+    if (Number(startTimestamp) > nowSeconds) {
+      throw new BailianError(
+        `Start time is in the future; the monitor API only accepts past or current timestamps.`,
+        ExitCode.USAGE,
+        "Use a start date/time at or before now, or omit --start to default to 24 hours ago.",
+      );
+    }
+    const clampedEnd = Number(endTimestamp) > nowSeconds;
+    if (clampedEnd) {
+      endTimestamp = String(nowSeconds);
+    }
 
     const body = { indexId: flags.indexId, startTimestamp, endTimestamp };
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.indexMonitor);
@@ -89,6 +105,9 @@ export default defineCommand({
     if (settings.quiet || format !== "text") {
       emitResult(response, format === "text" ? "json" : format);
       return;
+    }
+    if (clampedEnd) {
+      emitBare("note: end time was in the future, clamped to now.");
     }
     // Shape verified against the live API: the monitor fields are objects, not arrays
     const storage = response.data?.storageMonitorData;

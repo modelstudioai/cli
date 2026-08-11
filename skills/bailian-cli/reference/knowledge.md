@@ -1207,19 +1207,20 @@ bl knowledge service update --agent-id aid-xxx --agent-version 1 --version-desc 
 
 #### Flags
 
-| Flag                  | Type   | Required | Description                                                     |
-| --------------------- | ------ | -------- | --------------------------------------------------------------- |
-| `--index-id <id>`     | string | yes      | Knowledge base ID                                               |
-| `--start <time>`      | string | no       | Range start: Unix seconds or ISO date (default: 24 hours ago)   |
-| `--end <time>`        | string | no       | Range end: Unix seconds or ISO date (default: now)              |
-| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
-| `--api-key <key>`     | string | no       | API key                                                         |
-| `--base-url <url>`    | string | no       | API base URL                                                    |
+| Flag                  | Type   | Required | Description                                                                        |
+| --------------------- | ------ | -------- | ---------------------------------------------------------------------------------- |
+| `--index-id <id>`     | string | yes      | Knowledge base ID                                                                  |
+| `--start <time>`      | string | no       | Range start: Unix seconds or ISO date, must be in the past (default: 24 hours ago) |
+| `--end <time>`        | string | no       | Range end: Unix seconds or ISO date, must be in the past (default: now)            |
+| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                    |
+| `--api-key <key>`     | string | no       | API key                                                                            |
+| `--base-url <url>`    | string | no       | API base URL                                                                       |
 
 #### Notes
 
 - Defaults to the last 24 hours when --start/--end are omitted.
 - Timestamps are normalized to epoch seconds as required by the server.
+- Future timestamps are rejected for --start and clamped to now for --end, since the monitor API only returns past data.
 
 #### Examples
 

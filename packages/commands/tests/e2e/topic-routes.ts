@@ -244,6 +244,10 @@ export const KNOWLEDGE_DOC_TAG_ROUTES: E2eRouteExports = {
   "knowledge file delete": "knowledgeFileDelete", // live cleanup of data-center files
 };
 
+export const KNOWLEDGE_KB_STATS_ROUTES: E2eRouteExports = {
+  "knowledge stats": "knowledgeKbStats",
+};
+
 export const KNOWLEDGE_SERVICE_ROUTES: E2eRouteExports = {
   "knowledge service list": "knowledgeServiceList",
   "knowledge service get": "knowledgeServiceGet",
