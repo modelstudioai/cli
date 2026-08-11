@@ -16,9 +16,14 @@ export function printWelcomeBanner(cliName: string): void {
 
 export function printQuickStart(tasks: readonly string[]): void {
   const color = ansi(process.stderr);
-  process.stderr.write("\n🎯 Try these with your AI coding assistant:\n\n");
-  tasks.forEach((task, i) => {
-    process.stderr.write(`${color.dim(String(i + 1))}  ${task}\n`);
+  process.stderr.write("\n🎯 试试让你的 AI 编程助手完成这些任务：\n");
+  process.stderr.write(`   ${color.dim("Try these with your AI coding assistant:")}\n\n`);
+  tasks.forEach((task, index) => {
+    const [chinese, ...englishLines] = task.split("\n");
+    process.stderr.write(`${color.dim(String(index + 1))}  ${chinese}\n`);
+    englishLines.forEach((english) => {
+      process.stderr.write(`${color.dim(english)}\n`);
+    });
   });
   process.stderr.write("\n");
 }
