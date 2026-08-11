@@ -45,8 +45,12 @@ export default defineCommand({
     });
 
     const file = response.data;
-    if (settings.quiet || format !== "text") {
-      emitResult(response, format === "text" ? "json" : format);
+    if (settings.quiet) {
+      emitBare(file?.fileId ?? "");
+      return;
+    }
+    if (format !== "text") {
+      emitResult(response, format);
       return;
     }
     emitBare(`id: ${file?.fileId ?? "-"}`);

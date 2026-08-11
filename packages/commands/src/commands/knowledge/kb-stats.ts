@@ -102,8 +102,8 @@ export default defineCommand({
       body,
     });
 
-    if (settings.quiet || format !== "text") {
-      emitResult(response, format === "text" ? "json" : format);
+    if (format !== "text") {
+      emitResult(response, format);
       return;
     }
     if (clampedEnd) {

@@ -92,8 +92,12 @@ export default defineCommand({
 
     const row = await fetchIndexDetail(ctx.client, workspaceId, flags.indexId);
 
-    if (settings.quiet || format !== "text") {
-      emitResult(row, format === "text" ? "json" : format);
+    if (settings.quiet) {
+      emitBare(row.id ?? "");
+      return;
+    }
+    if (format !== "text") {
+      emitResult(row, format);
       return;
     }
 

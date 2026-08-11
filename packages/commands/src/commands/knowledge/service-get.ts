@@ -77,8 +77,12 @@ export default defineCommand({
     });
 
     const data = response.data;
-    if (settings.quiet || format !== "text") {
-      emitResult(response, format === "text" ? "json" : format);
+    if (settings.quiet) {
+      emitBare(data?.agent_id ?? "");
+      return;
+    }
+    if (format !== "text") {
+      emitResult(response, format);
       return;
     }
     emitBare("Basic:");
