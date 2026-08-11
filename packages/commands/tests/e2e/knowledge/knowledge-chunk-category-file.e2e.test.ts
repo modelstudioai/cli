@@ -1498,6 +1498,358 @@ describe.skipIf(!isKbAdminE2EReady())(
   },
 );
 
+// Live parameter coverage: file-list 4 params + category-list 2 params +
+// chunk add/update --content-file + chunk list --doc-id. All in one self-cleaning
+// chain to minimize API calls.
+describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (live, 自清理)", () => {
+  const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
+
+  test("file list(name/file-id/max-result/next-token) + category list(parent-id/collection-id) + chunk add/update --content-file + chunk list --doc-id", async () => {
+    // ── setup: create category → upload file ──
+    const categoryName = `e2e-param-${Date.now() % 100000000}`;
+    const categoryAddRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      "knowledge",
+      "category",
+      "add",
+      "--name",
+      categoryName,
+      "--workspace-id",
+      workspaceId,
+      "--quiet",
+    ]);
+    expect(categoryAddRun.exitCode, categoryAddRun.stderr).toBe(0);
+    const categoryId = categoryAddRun.stdout.trim();
+    expect(categoryId).toMatch(/^cate_/);
+
+    const fixtureDir = mkdtempSync(join(tmpdir(), "param-e2e-"));
+    const filePath = join(fixtureDir, `param-${Date.now()}.md`);
+    writeFileSync(filePath, "# e2e param file\n");
+    const uploadRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      "knowledge",
+      "doc",
+      "upload",
+      "--file",
+      filePath,
+      "--category-id",
+      categoryId,
+      "--workspace-id",
+      workspaceId,
+      "--quiet",
+    ]);
+    expect(uploadRun.exitCode, uploadRun.stderr).toBe(0);
+    const fileId = uploadRun.stdout.trim();
+    let indexId: string | undefined;
+
+    try {
+      // ── P2: file list --name (模糊匹配) ──
+      const fileListByNameRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+        "knowledge",
+        "file",
+        "list",
+        "--category-id",
+        categoryId,
+        "--name",
+        "param-",
+        "--workspace-id",
+        workspaceId,
+        "--quiet",
+      ]);
+      expect(fileListByNameRun.exitCode, fileListByNameRun.stderr).toBe(0);
+      expect(fileListByNameRun.stdout.trim().split("\n")).toContain(fileId);
+
+      // ── P2: file list --file-id ──
+      const fileListByFileIdRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+        "knowledge",
+        "file",
+        "list",
+        "--category-id",
+        categoryId,
+        "--file-id",
+        fileId,
+        "--workspace-id",
+        workspaceId,
+        "--quiet",
+      ]);
+      expect(fileListByFileIdRun.exitCode, fileListByFileIdRun.stderr).toBe(0);
+      expect(fileListByFileIdRun.stdout.trim().split("\n")).toContain(fileId);
+
+      // ── P2: file list --max-result 1 ──
+      const fileListMaxResultRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+        "knowledge",
+        "file",
+        "list",
+        "--category-id",
+        categoryId,
+        "--max-result",
+        "1",
+        "--workspace-id",
+        workspaceId,
+        "--quiet",
+      ]);
+      expect(fileListMaxResultRun.exitCode, fileListMaxResultRun.stderr).toBe(0);
+      const maxResultLines = fileListMaxResultRun.stdout.trim().split("\n").filter(Boolean);
+      expect(maxResultLines.length).toBeLessThanOrEqual(1);
+
+      // ── P2: file list --next-token (if paginated) ──
+      const fileListJsonRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+        "knowledge",
+        "file",
+        "list",
+        "--category-id",
+        categoryId,
+        "--max-result",
+        "1",
+        "--workspace-id",
+        workspaceId,
+        "--output",
+        "json",
+      ]);
+      expect(fileListJsonRun.exitCode, fileListJsonRun.stderr).toBe(0);
+      const fileListData = parseStdoutJson<{
+        data?: { nextToken?: string };
+      }>(fileListJsonRun.stdout);
+      const fileNextToken = fileListData.data?.nextToken;
+      if (fileNextToken) {
+        const fileListNextTokenRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+          "knowledge",
+          "file",
+          "list",
+          "--category-id",
+          categoryId,
+          "--next-token",
+          fileNextToken,
+          "--workspace-id",
+          workspaceId,
+          "--quiet",
+        ]);
+        expect(fileListNextTokenRun.exitCode, fileListNextTokenRun.stderr).toBe(0);
+      }
+
+      // ── P3: category list --parent-id (using existing categoryId) ──
+      const listByParentRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+        "knowledge",
+        "category",
+        "list",
+        "--parent-id",
+        categoryId,
+        "--workspace-id",
+        workspaceId,
+        "--quiet",
+      ]);
+      expect(listByParentRun.exitCode, listByParentRun.stderr).toBe(0);
+
+      // ── P3: category list --collection-id (no-error verification) ──
+      const listByCollectionRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+        "knowledge",
+        "category",
+        "list",
+        "--collection-id",
+        "col_nonexistent_e2e",
+        "--workspace-id",
+        workspaceId,
+        "--quiet",
+      ]);
+      expect(listByCollectionRun.exitCode, listByCollectionRun.stderr).toBe(0);
+
+      // ── create kb for chunk tests ──
+      const kbCreateRun = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
+        "knowledge",
+        "create",
+        "--name",
+        `e2e-pk-${Date.now() % 100000000}`.slice(0, 20),
+        "--doc-id",
+        fileId,
+        "--workspace-id",
+        workspaceId,
+        "--wait",
+        "--quiet",
+      ]);
+      expect(kbCreateRun.exitCode, kbCreateRun.stderr).toBe(0);
+      indexId = kbCreateRun.stdout.trim().split("\n")[0]!;
+      expect(indexId).toBeTruthy();
+
+      try {
+        // ── P4: chunk add --content-file ──
+        const chunkContentFile = join(fixtureDir, `chunk-${Date.now()}.txt`);
+        const chunkMarker = `e2e chunk content file marker ${Date.now()}`;
+        writeFileSync(chunkContentFile, chunkMarker);
+
+        const chunkAddFileRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+          "knowledge",
+          "chunk",
+          "add",
+          "--index-id",
+          indexId,
+          "--doc-id",
+          fileId,
+          "--content-file",
+          chunkContentFile,
+          "--workspace-id",
+          workspaceId,
+        ]);
+        expect(chunkAddFileRun.exitCode, chunkAddFileRun.stderr).toBe(0);
+
+        // chunk list read-back: verify content came from file
+        const chunkListAfterAddRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+          "knowledge",
+          "chunk",
+          "list",
+          "--index-id",
+          indexId,
+          "--workspace-id",
+          workspaceId,
+          "--output",
+          "json",
+        ]);
+        expect(chunkListAfterAddRun.exitCode, chunkListAfterAddRun.stderr).toBe(0);
+        const chunkListAfterAddData = parseStdoutJson<{
+          data?: {
+            nodes?: Array<{
+              metadata?: { _id?: string; content?: string };
+              text?: string;
+            }>;
+          };
+        }>(chunkListAfterAddRun.stdout);
+        const addedChunk = chunkListAfterAddData.data?.nodes?.find(
+          (node) => (node.metadata?.content ?? node.text) === chunkMarker,
+        );
+        expect(addedChunk?.metadata?.content ?? addedChunk?.text).toBe(chunkMarker);
+        const addedChunkId = addedChunk?.metadata?._id;
+        expect(addedChunkId).toBeTruthy();
+
+        // ── P6: chunk list --doc-id ──
+        const chunkListByDocRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+          "knowledge",
+          "chunk",
+          "list",
+          "--index-id",
+          indexId,
+          "--doc-id",
+          fileId,
+          "--workspace-id",
+          workspaceId,
+          "--output",
+          "json",
+        ]);
+        expect(chunkListByDocRun.exitCode, chunkListByDocRun.stderr).toBe(0);
+        const chunkListByDocData = parseStdoutJson<{
+          data?: {
+            nodes?: Array<{
+              metadata?: { doc_id?: string };
+            }>;
+          };
+        }>(chunkListByDocRun.stdout);
+        // All returned chunks should belong to the specified doc
+        for (const node of chunkListByDocData.data?.nodes ?? []) {
+          expect(node.metadata?.doc_id).toContain(fileId);
+        }
+
+        // ── P4: chunk update --content-file ──
+        if (addedChunkId) {
+          const updateContentFile = join(fixtureDir, `chunk-update-${Date.now()}.txt`);
+          const updateMarker = `e2e chunk update content file marker ${Date.now()}`;
+          writeFileSync(updateContentFile, updateMarker);
+
+          const chunkUpdateFileRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+            "knowledge",
+            "chunk",
+            "update",
+            "--index-id",
+            indexId,
+            "--chunk-id",
+            addedChunkId,
+            "--doc-id",
+            fileId,
+            "--content-file",
+            updateContentFile,
+            "--workspace-id",
+            workspaceId,
+          ]);
+          expect(chunkUpdateFileRun.exitCode, chunkUpdateFileRun.stderr).toBe(0);
+
+          // chunk list read-back: verify content changed
+          const chunkListAfterUpdateRun = await runCommandE2e(
+            KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
+            [
+              "knowledge",
+              "chunk",
+              "list",
+              "--index-id",
+              indexId,
+              "--workspace-id",
+              workspaceId,
+              "--output",
+              "json",
+            ],
+          );
+          expect(chunkListAfterUpdateRun.exitCode, chunkListAfterUpdateRun.stderr).toBe(0);
+          const chunkListAfterUpdateData = parseStdoutJson<{
+            data?: {
+              nodes?: Array<{
+                metadata?: { _id?: string; content?: string };
+                text?: string;
+              }>;
+            };
+          }>(chunkListAfterUpdateRun.stdout);
+          const updatedChunk = chunkListAfterUpdateData.data?.nodes?.find(
+            (node) => node.metadata?._id === addedChunkId,
+          );
+          expect(updatedChunk?.metadata?.content ?? updatedChunk?.text).toBe(updateMarker);
+        }
+      } finally {
+        // cleanup kb (retry for IndexStatusError)
+        if (indexId) {
+          let cleanupRun = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
+            "knowledge",
+            "delete",
+            "--index-id",
+            indexId,
+            "--yes",
+            "--workspace-id",
+            workspaceId,
+          ]);
+          for (let retry = 0; retry < 5 && cleanupRun.exitCode !== 0; retry++) {
+            if (!cleanupRun.stderr.includes("IndexStatusError")) break;
+            await new Promise((resolve) => setTimeout(resolve, 10_000));
+            cleanupRun = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
+              "knowledge",
+              "delete",
+              "--index-id",
+              indexId,
+              "--yes",
+              "--workspace-id",
+              workspaceId,
+            ]);
+          }
+        }
+      }
+    } finally {
+      // cleanup file + category
+      await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+        "knowledge",
+        "file",
+        "delete",
+        "--file-id",
+        fileId,
+        "--yes",
+        "--workspace-id",
+        workspaceId,
+      ]);
+      await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+        "knowledge",
+        "category",
+        "delete",
+        "--category-id",
+        categoryId,
+        "--yes",
+        "--workspace-id",
+        workspaceId,
+      ]);
+    }
+    // kb create --wait adds a full import phase — generous timeout
+  }, 600_000);
+});
+
 interface ChunkListNodes {
   data?: { nodes?: Array<{ metadata?: Record<string, unknown> }> };
 }
@@ -1771,4 +2123,103 @@ describe.skipIf(!isOssImportE2EReady())("e2e: doc import-oss live (授权 bucket
     expect(customDetail.data.connectorName).toBe(connectorName);
     expect(customDetail.data.connectorType).toBe("FILE");
   }, 60_000);
+
+  test("import-oss --category-id --tag → file list + file get 读回验证", async () => {
+    // P5: verify --category-id and --tag params land on the server via read-back
+    const categoryName = `e2e-oss-cat-${Date.now() % 100000000}`;
+    const categoryAddRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      "knowledge",
+      "category",
+      "add",
+      "--name",
+      categoryName,
+      "--workspace-id",
+      workspaceId,
+      "--quiet",
+    ]);
+    expect(categoryAddRun.exitCode, categoryAddRun.stderr).toBe(0);
+    const categoryId = categoryAddRun.stdout.trim();
+    expect(categoryId).toMatch(/^cate_/);
+
+    try {
+      const importRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+        "knowledge",
+        "doc",
+        "import-oss",
+        "--bucket",
+        ossBucket,
+        "--region",
+        ossRegion,
+        "--oss-key",
+        ossKey,
+        "--category-id",
+        categoryId,
+        "--tag",
+        "e2e-oss-tag",
+        "--workspace-id",
+        workspaceId,
+        "--quiet",
+      ]);
+      expect(importRun.exitCode, importRun.stderr).toBe(0);
+      const fileId = importRun.stdout.trim();
+      expect(fileId).toMatch(/^file_/);
+
+      try {
+        // file list --category-id read-back: file is under the category
+        const fileListRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+          "knowledge",
+          "file",
+          "list",
+          "--category-id",
+          categoryId,
+          "--workspace-id",
+          workspaceId,
+          "--quiet",
+        ]);
+        expect(fileListRun.exitCode, fileListRun.stderr).toBe(0);
+        expect(fileListRun.stdout.trim().split("\n")).toContain(fileId);
+
+        // file get read-back: tags contain "e2e-oss-tag"
+        const fileGetRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+          "knowledge",
+          "file",
+          "get",
+          "--file-id",
+          fileId,
+          "--workspace-id",
+          workspaceId,
+          "--output",
+          "json",
+        ]);
+        expect(fileGetRun.exitCode, fileGetRun.stderr).toBe(0);
+        const fileDetail = parseStdoutJson<{
+          data: { category?: string; tags?: unknown };
+        }>(fileGetRun.stdout);
+        expect(fileDetail.data.category).toBe(categoryId);
+        expect(JSON.stringify(fileDetail.data.tags ?? "")).toContain("e2e-oss-tag");
+      } finally {
+        await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+          "knowledge",
+          "file",
+          "delete",
+          "--file-id",
+          fileId,
+          "--yes",
+          "--workspace-id",
+          workspaceId,
+        ]);
+      }
+    } finally {
+      await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+        "knowledge",
+        "category",
+        "delete",
+        "--category-id",
+        categoryId,
+        "--yes",
+        "--workspace-id",
+        workspaceId,
+      ]);
+    }
+  }, 120_000);
 });

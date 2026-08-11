@@ -39,6 +39,7 @@ export const KNOWLEDGE_ROUTES: E2eRouteExports = {
   "knowledge retrieve": "knowledgeRetrieve",
   "knowledge search": "knowledgeSearch",
   "knowledge chat": "knowledgeChat",
+  "knowledge list": "knowledgeKbList", // live: grab a real index id for retrieve
 };
 
 export const KNOWLEDGE_SEARCH_ROUTES: E2eRouteExports = {
@@ -201,11 +202,16 @@ export const KNOWLEDGE_DOC_LIST_ROUTES: E2eRouteExports = {
 
 export const KNOWLEDGE_DOC_STATUS_ROUTES: E2eRouteExports = {
   "knowledge doc status": "knowledgeDocStatus",
+  "knowledge doc upload": "knowledgeDocUpload", // live: produce a real job_id
+  "knowledge create": "knowledgeKbCreate", // live: create a throwaway base
+  "knowledge delete": "knowledgeKbDelete", // live: cleanup the throwaway base
+  "knowledge file delete": "knowledgeFileDelete", // live: cleanup data-center files
 };
 
 export const KNOWLEDGE_DOC_UPLOAD_ROUTES: E2eRouteExports = {
   "knowledge doc upload": "knowledgeDocUpload",
   "knowledge file delete": "knowledgeFileDelete", // live cleanup of data-center files
+  "knowledge list": "knowledgeKbList", // live: grab a real index id for --index-id --wait
 };
 
 export const KNOWLEDGE_KB_CREATE_ROUTES: E2eRouteExports = {

@@ -240,4 +240,57 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc upload (live)", () => 
       expect(fileDeleteRun.exitCode, fileDeleteRun.stderr).toBe(0);
     }
   }, 120_000);
+
+  test("upload --index-id --wait --poll-interval 3 (不报错验证)", async () => {
+    // P6: --poll-interval — local behavior param, verify no error
+    // Grab a real index id from the workspace
+    const listRun = await runCommandE2e(KNOWLEDGE_DOC_UPLOAD_ROUTES, [
+      "knowledge",
+      "list",
+      "--workspace-id",
+      workspaceId,
+      "--quiet",
+    ]);
+    expect(listRun.exitCode, listRun.stderr).toBe(0);
+    const indexId = listRun.stdout.trim().split("\n")[0];
+    if (!indexId) return;
+
+    const pollFilePath = join(fixtureDir, `poll-${Date.now()}.md`);
+    writeFileSync(pollFilePath, "# e2e poll interval fixture\n");
+    const uploadRun = await runCommandE2e(KNOWLEDGE_DOC_UPLOAD_ROUTES, [
+      "knowledge",
+      "doc",
+      "upload",
+      "--file",
+      pollFilePath,
+      "--index-id",
+      indexId,
+      "--wait",
+      "--poll-interval",
+      "3",
+      "--workspace-id",
+      workspaceId,
+      "--output",
+      "json",
+    ]);
+    expect(uploadRun.exitCode, uploadRun.stderr).toBe(0);
+
+    // Cleanup the uploaded file
+    const importData = parseStdoutJson<{
+      files: Array<{ fileId: string }>;
+    }>(uploadRun.stdout);
+    const pollFileId = importData.files?.[0]?.fileId;
+    if (pollFileId) {
+      await runCommandE2e(KNOWLEDGE_DOC_UPLOAD_ROUTES, [
+        "knowledge",
+        "file",
+        "delete",
+        "--file-id",
+        pollFileId,
+        "--yes",
+        "--workspace-id",
+        workspaceId,
+      ]);
+    }
+  }, 120_000);
 });

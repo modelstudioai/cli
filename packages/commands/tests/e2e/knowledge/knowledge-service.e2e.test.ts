@@ -668,3 +668,356 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 生命周期 (live
     }
   }, 300_000);
 });
+
+// Live parameter coverage: every write parameter gets a read-back assertion
+// via `service get --output json`. Read-back fields are confirmed present in
+// the get response by the existing lifecycle test and printDetail().
+describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 参数全覆盖 (live, 自清理)", () => {
+  const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
+
+  test("create --description → update(name/model/policy×2/version-desc) → list(status×3/scene/name/index-id) → deploy → published update --version-desc → delete", async () => {
+    const serviceName = `e2e-svc-param-${Date.now() % 100000000}`;
+    let agentId: string | undefined;
+
+    try {
+      // ── P6: service-create --description ──
+      const createRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "create",
+        "--name",
+        serviceName,
+        "--scene",
+        "chat",
+        "--description",
+        "e2e param coverage",
+        "--workspace-id",
+        workspaceId,
+        "--quiet",
+      ]);
+      expect(createRun.exitCode, createRun.stderr).toBe(0);
+      agentId = createRun.stdout.trim().split("\n").pop()!;
+      expect(agentId).toMatch(/^aid-/);
+
+      // get 读回验证 --description (agent_desc)
+      const createGetRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "get",
+        "--agent-id",
+        agentId,
+        "--workspace-id",
+        workspaceId,
+        "--output",
+        "json",
+      ]);
+      expect(createGetRun.exitCode, createGetRun.stderr).toBe(0);
+      const createGetData = parseStdoutJson<{
+        data?: { agent_desc?: string };
+      }>(createGetRun.stdout);
+      expect(createGetData.data?.agent_desc).toBe("e2e param coverage");
+
+      // ── P1: list --status draft 验证新建 agent 可见 ──
+      const listDraftRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "list",
+        "--scene",
+        "chat",
+        "--status",
+        "draft",
+        "--agent-id",
+        agentId,
+        "--workspace-id",
+        workspaceId,
+        "--quiet",
+      ]);
+      expect(listDraftRun.exitCode, listDraftRun.stderr).toBe(0);
+      expect(listDraftRun.stdout.trim().split("\n")).toContain(agentId);
+
+      // ── P1: list --scene search (live 合法值) ──
+      const listSearchSceneRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "list",
+        "--scene",
+        "search",
+        "--workspace-id",
+        workspaceId,
+        "--quiet",
+      ]);
+      expect(listSearchSceneRun.exitCode, listSearchSceneRun.stderr).toBe(0);
+
+      // ── P1: list --name 精确过滤 ──
+      const listNameRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "list",
+        "--scene",
+        "chat",
+        "--name",
+        serviceName,
+        "--workspace-id",
+        workspaceId,
+        "--quiet",
+      ]);
+      expect(listNameRun.exitCode, listNameRun.stderr).toBe(0);
+      expect(listNameRun.stdout.trim().split("\n")).toContain(agentId);
+
+      // ── P1: list --index-id (不报错验证; 无 kb fixture) ──
+      const listIndexIdRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "list",
+        "--scene",
+        "search",
+        "--index-id",
+        "idx_nonexistent_e2e",
+        "--workspace-id",
+        workspaceId,
+        "--quiet",
+      ]);
+      expect(listIndexIdRun.exitCode, listIndexIdRun.stderr).toBe(0);
+
+      // ── P0 组1: update --name --version-desc --model → get 读回 3 个 scalar ──
+      const newName = `${serviceName}-renamed`;
+      const updateScalarRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "update",
+        "--agent-id",
+        agentId,
+        "--name",
+        newName,
+        "--version-desc",
+        "beta-v1",
+        "--model",
+        "qwen-plus",
+        "--workspace-id",
+        workspaceId,
+      ]);
+      expect(updateScalarRun.exitCode, updateScalarRun.stderr).toBe(0);
+
+      const scalarGetRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "get",
+        "--agent-id",
+        agentId,
+        "--agent-version",
+        "beta",
+        "--workspace-id",
+        workspaceId,
+        "--output",
+        "json",
+      ]);
+      expect(scalarGetRun.exitCode, scalarGetRun.stderr).toBe(0);
+      const scalarGetData = parseStdoutJson<{
+        data?: {
+          agent_name?: string;
+          agent_details?: Array<{
+            agent_version_desc?: string;
+            agent_config?: { agent_model?: string };
+          }>;
+        };
+      }>(scalarGetRun.stdout);
+      expect(scalarGetData.data?.agent_name).toBe(newName);
+      expect(scalarGetData.data?.agent_details?.[0]?.agent_config?.agent_model).toBe("qwen-plus");
+      expect(scalarGetData.data?.agent_details?.[0]?.agent_version_desc).toBe("beta-v1");
+
+      // ── P0 组2: update --policy turbo → get 读回 ──
+      const updateTurboRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "update",
+        "--agent-id",
+        agentId,
+        "--policy",
+        "turbo",
+        "--workspace-id",
+        workspaceId,
+      ]);
+      expect(updateTurboRun.exitCode, updateTurboRun.stderr).toBe(0);
+
+      const turboGetRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "get",
+        "--agent-id",
+        agentId,
+        "--agent-version",
+        "beta",
+        "--workspace-id",
+        workspaceId,
+        "--output",
+        "json",
+      ]);
+      expect(turboGetRun.exitCode, turboGetRun.stderr).toBe(0);
+      const turboData = parseStdoutJson<{
+        data?: {
+          agent_details?: Array<{
+            agent_config?: { agent_policy?: string };
+          }>;
+        };
+      }>(turboGetRun.stdout);
+      expect(turboData.data?.agent_details?.[0]?.agent_config?.agent_policy).toBe("turbo");
+
+      // ── P0 组3: update --policy agentic → get 读回 ──
+      // 注: --max-llm-calls 10 仅作为 agentic 切换的前置条件，不做读回验证
+      const updateAgenticRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "update",
+        "--agent-id",
+        agentId,
+        "--policy",
+        "agentic",
+        "--max-llm-calls",
+        "10",
+        "--workspace-id",
+        workspaceId,
+      ]);
+      expect(updateAgenticRun.exitCode, updateAgenticRun.stderr).toBe(0);
+
+      const agenticGetRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "get",
+        "--agent-id",
+        agentId,
+        "--agent-version",
+        "beta",
+        "--workspace-id",
+        workspaceId,
+        "--output",
+        "json",
+      ]);
+      expect(agenticGetRun.exitCode, agenticGetRun.stderr).toBe(0);
+      const agenticData = parseStdoutJson<{
+        data?: {
+          agent_details?: Array<{
+            agent_config?: { agent_policy?: string };
+          }>;
+        };
+      }>(agenticGetRun.stdout);
+      expect(agenticData.data?.agent_details?.[0]?.agent_config?.agent_policy).toBe("agentic");
+
+      // ── deploy → P1: list --status deployed ──
+      const deployRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "deploy",
+        "--agent-id",
+        agentId,
+        "--yes",
+        "--workspace-id",
+        workspaceId,
+        "--quiet",
+      ]);
+      expect(deployRun.exitCode, deployRun.stderr).toBe(0);
+
+      const listDeployedRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "list",
+        "--scene",
+        "chat",
+        "--status",
+        "deployed",
+        "--agent-id",
+        agentId,
+        "--workspace-id",
+        workspaceId,
+        "--quiet",
+      ]);
+      expect(listDeployedRun.exitCode, listDeployedRun.stderr).toBe(0);
+      expect(listDeployedRun.stdout.trim().split("\n")).toContain(agentId);
+
+      // ── P0 组4: update --agent-version 1 --version-desc (published version) ──
+      const updatePublishedRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "update",
+        "--agent-id",
+        agentId,
+        "--agent-version",
+        "1",
+        "--version-desc",
+        "published-v1-desc",
+        "--workspace-id",
+        workspaceId,
+      ]);
+      expect(updatePublishedRun.exitCode, updatePublishedRun.stderr).toBe(0);
+
+      // get --agent-version 1 读回验证 --version-desc
+      const publishedGetRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "get",
+        "--agent-id",
+        agentId,
+        "--agent-version",
+        "1",
+        "--workspace-id",
+        workspaceId,
+        "--output",
+        "json",
+      ]);
+      expect(publishedGetRun.exitCode, publishedGetRun.stderr).toBe(0);
+      const publishedData = parseStdoutJson<{
+        data?: {
+          agent_details?: Array<{ agent_version_desc?: string }>;
+        };
+      }>(publishedGetRun.stdout);
+      expect(publishedData.data?.agent_details?.[0]?.agent_version_desc).toBe("published-v1-desc");
+
+      // ── delete → P1: list --status deleted ──
+      const deleteRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "delete",
+        "--agent-id",
+        agentId,
+        "--yes",
+        "--workspace-id",
+        workspaceId,
+      ]);
+      expect(deleteRun.exitCode, deleteRun.stderr).toBe(0);
+
+      const listDeletedRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "list",
+        "--scene",
+        "chat",
+        "--status",
+        "deleted",
+        "--agent-id",
+        agentId,
+        "--workspace-id",
+        workspaceId,
+        "--quiet",
+      ]);
+      expect(listDeletedRun.exitCode, listDeletedRun.stderr).toBe(0);
+      // 软验证: deleted 状态下 agent 应出现在列表中;
+      // 若服务端不返回 deleted 列表则仅验证不报错
+      if (listDeletedRun.stdout.trim()) {
+        expect(listDeletedRun.stdout.trim().split("\n")).toContain(agentId);
+      }
+    } finally {
+      // 兜底清理
+      if (agentId) {
+        await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+          "knowledge",
+          "service",
+          "delete",
+          "--agent-id",
+          agentId,
+          "--yes",
+          "--workspace-id",
+          workspaceId,
+        ]);
+      }
+    }
+  }, 300_000);
+});

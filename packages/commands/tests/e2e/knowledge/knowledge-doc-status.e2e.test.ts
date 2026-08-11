@@ -1,5 +1,8 @@
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCommandE2e } from "../helpers.ts";
+import { isKbAdminE2EReady, parseStdoutJson, runCommandE2e } from "../helpers.ts";
 import { KNOWLEDGE_DOC_STATUS_ROUTES } from "../topic-routes.ts";
 
 // Live coverage depends on a real job_id produced by doc upload; it is exercised
@@ -92,4 +95,140 @@ describe("e2e: knowledge doc status", () => {
     expect(data.endpoint).toMatch(/page_number=2/);
     expect(data.endpoint).toMatch(/page_size=50/);
   });
+});
+
+// Live: --wait + --poll-interval on a real job_id produced by upload --index-id --wait
+describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc status (live, 自清理)", () => {
+  const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
+
+  test("status --wait --poll-interval → 返回 COMPLETED", async () => {
+    const fixtureDir = mkdtempSync(join(tmpdir(), "doc-status-e2e-"));
+    const filePathA = join(fixtureDir, `status-a-${Date.now()}.md`);
+    writeFileSync(filePathA, "# doc status e2e fixture A\n");
+
+    // 1) Upload file A to data center
+    const uploadRunA = await runCommandE2e(KNOWLEDGE_DOC_STATUS_ROUTES, [
+      "knowledge",
+      "doc",
+      "upload",
+      "--file",
+      filePathA,
+      "--workspace-id",
+      workspaceId,
+      "--quiet",
+    ]);
+    expect(uploadRunA.exitCode, uploadRunA.stderr).toBe(0);
+    const fileIdA = uploadRunA.stdout.trim();
+    expect(fileIdA).toMatch(/^file_/);
+
+    let indexId = "";
+    let fileIdB = "";
+    try {
+      // 2) Create a throwaway base (gives us an index_id)
+      const createRun = await runCommandE2e(KNOWLEDGE_DOC_STATUS_ROUTES, [
+        "knowledge",
+        "create",
+        "--name",
+        `e2e-st-${Date.now() % 100000000}`,
+        "--doc-id",
+        fileIdA,
+        "--workspace-id",
+        workspaceId,
+        "--wait",
+        "--quiet",
+      ]);
+      expect(createRun.exitCode, createRun.stderr).toBe(0);
+      indexId = createRun.stdout.trim().split("\n")[0]!;
+      expect(indexId).toBeTruthy();
+
+      // 3) Upload file B to the base (--index-id --wait --output json) → ingestion_id
+      const filePathB = join(fixtureDir, `status-b-${Date.now()}.md`);
+      writeFileSync(filePathB, "# doc status e2e fixture B\n");
+      const uploadRunB = await runCommandE2e(KNOWLEDGE_DOC_STATUS_ROUTES, [
+        "knowledge",
+        "doc",
+        "upload",
+        "--file",
+        filePathB,
+        "--index-id",
+        indexId,
+        "--wait",
+        "--poll-interval",
+        "3",
+        "--workspace-id",
+        workspaceId,
+        "--output",
+        "json",
+      ]);
+      expect(uploadRunB.exitCode, uploadRunB.stderr).toBe(0);
+      const importData = parseStdoutJson<{
+        files: Array<{ fileId: string }>;
+        ingestion_id?: string;
+        final_status?: string;
+      }>(uploadRunB.stdout);
+      const jobId = importData.ingestion_id;
+      expect(jobId).toBeTruthy();
+      fileIdB = importData.files?.[0]?.fileId ?? "";
+
+      // 4) status --wait --poll-interval: verify COMPLETED
+      //    (upload --wait already ensured completion, so this should return immediately)
+      const statusRun = await runCommandE2e(KNOWLEDGE_DOC_STATUS_ROUTES, [
+        "knowledge",
+        "doc",
+        "status",
+        "--index-id",
+        indexId,
+        "--job-id",
+        jobId!,
+        "--wait",
+        "--poll-interval",
+        "3",
+        "--workspace-id",
+        workspaceId,
+        "--output",
+        "json",
+      ]);
+      expect(statusRun.exitCode, statusRun.stderr).toBe(0);
+      const statusData = parseStdoutJson<{
+        data?: { final_status?: string };
+      }>(statusRun.stdout);
+      expect(statusData.data?.final_status).toBe("COMPLETED");
+    } finally {
+      // Cleanup base + data-center files
+      if (fileIdB) {
+        await runCommandE2e(KNOWLEDGE_DOC_STATUS_ROUTES, [
+          "knowledge",
+          "file",
+          "delete",
+          "--file-id",
+          fileIdB,
+          "--yes",
+          "--workspace-id",
+          workspaceId,
+        ]);
+      }
+      if (indexId) {
+        await runCommandE2e(KNOWLEDGE_DOC_STATUS_ROUTES, [
+          "knowledge",
+          "delete",
+          "--index-id",
+          indexId,
+          "--yes",
+          "--workspace-id",
+          workspaceId,
+        ]);
+      }
+      await runCommandE2e(KNOWLEDGE_DOC_STATUS_ROUTES, [
+        "knowledge",
+        "file",
+        "delete",
+        "--file-id",
+        fileIdA,
+        "--yes",
+        "--workspace-id",
+        workspaceId,
+      ]);
+    }
+    // kb create --wait adds a full import phase — generous timeout
+  }, 600_000);
 });

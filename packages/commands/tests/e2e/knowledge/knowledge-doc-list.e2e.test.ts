@@ -93,5 +93,25 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc list (live)", () => {
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{ code: string }>(stdout);
     expect(data.code).toBe("Success");
+
+    // P6: --page-number + --page-size
+    const pagedRun = await runCommandE2e(KNOWLEDGE_DOC_LIST_ROUTES, [
+      "knowledge",
+      "doc",
+      "list",
+      "--index-id",
+      firstIndexId,
+      "--page-number",
+      "1",
+      "--page-size",
+      "10",
+      "--workspace-id",
+      workspaceId,
+      "--output",
+      "json",
+    ]);
+    expect(pagedRun.exitCode, pagedRun.stderr).toBe(0);
+    const pagedData = parseStdoutJson<{ code: string }>(pagedRun.stdout);
+    expect(pagedData.code).toBe("Success");
   });
 });

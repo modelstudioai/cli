@@ -124,4 +124,51 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge kb list (live)", () => {
     const lines = quietRun.stdout.trim().split("\n").filter(Boolean);
     expect(lines.length).toBe(rows.length);
   });
+
+  test("--name 过滤 + --page-number/--page-size 分页", async () => {
+    // P6: --name
+    const jsonRun = await runCommandE2e(KNOWLEDGE_KB_LIST_ROUTES, [
+      "knowledge",
+      "list",
+      "--workspace-id",
+      workspaceId,
+      "--output",
+      "json",
+    ]);
+    expect(jsonRun.exitCode, jsonRun.stderr).toBe(0);
+    const allRows = parseStdoutJson<KbListResponse>(jsonRun.stdout).data.rows;
+    if (allRows.length === 0) return;
+
+    const firstName = allRows[0]!.name;
+    const nameRun = await runCommandE2e(KNOWLEDGE_KB_LIST_ROUTES, [
+      "knowledge",
+      "list",
+      "--name",
+      firstName,
+      "--workspace-id",
+      workspaceId,
+      "--output",
+      "json",
+    ]);
+    expect(nameRun.exitCode, nameRun.stderr).toBe(0);
+    const nameData = parseStdoutJson<KbListResponse>(nameRun.stdout);
+    expect(nameData.data.rows.some((row) => row.name === firstName)).toBe(true);
+
+    // P6: --page-number + --page-size
+    const pagedRun = await runCommandE2e(KNOWLEDGE_KB_LIST_ROUTES, [
+      "knowledge",
+      "list",
+      "--page-number",
+      "1",
+      "--page-size",
+      "1",
+      "--workspace-id",
+      workspaceId,
+      "--output",
+      "json",
+    ]);
+    expect(pagedRun.exitCode, pagedRun.stderr).toBe(0);
+    const pagedData = parseStdoutJson<KbListResponse>(pagedRun.stdout);
+    expect(pagedData.data.rows.length).toBeLessThanOrEqual(1);
+  });
 });

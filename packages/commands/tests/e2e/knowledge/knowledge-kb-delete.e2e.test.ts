@@ -106,6 +106,8 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge kb 写链路 (live, 自清
         "--workspace-id",
         workspaceId,
         "--wait",
+        "--poll-interval",
+        "3",
         "--quiet",
       ]);
       expect(createRun.exitCode, createRun.stderr).toBe(0);
