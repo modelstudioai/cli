@@ -166,6 +166,7 @@ export const SKILL_ROUTES: E2eRouteExports = {
   "skill update": "skillUpdate",
   "skill remove": "skillRemove",
   "skill list": "skillList",
+  "skill init": "skillInit",
 };
 
 export const MANAGED_AGENT_ROUTES: E2eRouteExports = {

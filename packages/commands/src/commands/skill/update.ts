@@ -28,19 +28,27 @@ const UPDATE_CONCURRENCY = 3;
 export default defineCommand({
   description: "Update installed skills to the latest registry versions",
   auth: "none",
-  usageArgs: "[--name <all|name,...>]",
+  usageArgs: "[--all] [--name <name,...>]",
   flags: {
+    all: {
+      type: "switch",
+      description: "Update all installed skills (default when neither --all nor --name is given)",
+    },
     name: {
       type: "string",
-      valueHint: "<all|name,...>",
-      description:
-        "Skills to update: all (default, only changed ones) or comma-separated names (force update installed skills)",
+      valueHint: "<name,...>",
+      description: "Comma-separated skill names to update (must be already installed)",
     },
   },
-  exampleArgs: ["", "--name spark-video"],
+  validate(flags) {
+    if (flags.all && flags.name) return "Use either --all or --name, not both";
+    return undefined;
+  },
+  exampleArgs: ["", "--all", "--name spark-video"],
   async run(ctx) {
     const format = ctx.settings.outputExplicit ? ctx.settings.output : "json";
-    const requested = parseSkillNames(ctx.flags.name, true);
+    const updateAll = ctx.flags.all || !ctx.flags.name;
+    const requested = updateAll ? "all" : parseSkillNames(ctx.flags.name, false);
     const index = await fetchSkillsIndex();
     const lock = readSkillLock();
     const disk = new Set(listSkillDirsOnDisk());
