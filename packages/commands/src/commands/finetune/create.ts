@@ -468,6 +468,10 @@ async function runCreate<F extends FlagsDef>(
       if (detected === "image-i2i") modality = "image-i2i";
     }
   }
+  if (commandModality === "video" && firstLocalPath && !settings.dryRun) {
+    const detected = await detectModality(firstLocalPath);
+    if (detected === "video-kf2v") modality = "video-kf2v";
+  }
 
   const training = await analyzeDatasetTokens(
     settings,
