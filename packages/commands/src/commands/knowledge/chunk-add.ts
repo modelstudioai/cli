@@ -121,7 +121,9 @@ export default defineCommand({
       field = parseFieldEntries(flags.field);
     } else {
       const content =
-        flags.contentFile !== undefined ? readUtf8TextFile(flags.contentFile) : flags.content;
+        flags.contentFile !== undefined
+          ? readUtf8TextFile(flags.contentFile, "--content")
+          : flags.content;
       if (typeof content === "string" && content.length > 6000) {
         throw new BailianError("Chunk content must be at most 6000 characters", ExitCode.USAGE);
       }

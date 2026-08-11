@@ -122,7 +122,9 @@ export default defineCommand({
     // dry-run also reads the file and validates (rehearsal semantics); the read-back
     // request is only made outside dry-run and when no new content is given
     let content =
-      flags.contentFile !== undefined ? readUtf8TextFile(flags.contentFile) : flags.content;
+      flags.contentFile !== undefined
+        ? readUtf8TextFile(flags.contentFile, "--content")
+        : flags.content;
     if (content !== undefined && (content.length < 10 || content.length > 6000)) {
       throw new BailianError("Chunk content must be 10-6000 characters", ExitCode.USAGE);
     }

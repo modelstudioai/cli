@@ -192,22 +192,33 @@ const DOCUMENT_EXTENSIONS = new Set([
 ]);
 
 /**
- * Read a UTF-8 plain-text file (--content-file for chunk add/update).
+ * Read a UTF-8 plain-text file.
  * Support is defined by content, not extension: any UTF-8 text is valid.
  * Strict decode failure → USAGE, with a hint pointing to the document upload
  * flow when the extension is a document format; file I/O failure → GENERAL + errno.
+ *
+ * @param inlineAlternativeFlag When provided, an ENOENT on a value that looks
+ *   like inline text (no path separator / no extension) appends a hint pointing
+ *   the user to this flag instead. Pass the inline-text flag name (e.g.
+ *   `"--content"`) only from commands that have a file-vs-inline choice.
  */
-export function readUtf8TextFile(filePath: string): string {
+export function readUtf8TextFile(filePath: string, inlineAlternativeFlag?: string): string {
   let fileBuffer: Buffer;
   try {
     fileBuffer = readFileSync(filePath);
   } catch (error) {
     const errno = (error as { code?: string }).code ?? "unknown";
-    throw new BailianError(
-      `Cannot read file: ${filePath}`,
-      ExitCode.GENERAL,
-      `File system error (${errno}) — check the path and permissions.`,
-    );
+    let hint = `File system error (${errno}) — check the path and permissions.`;
+    if (
+      inlineAlternativeFlag &&
+      errno === "ENOENT" &&
+      !extname(filePath) &&
+      !filePath.includes("/") &&
+      !filePath.includes("\\")
+    ) {
+      hint += ` If you meant to pass text content directly, use ${inlineAlternativeFlag} instead of --content-file.`;
+    }
+    throw new BailianError(`Cannot read file: ${filePath}`, ExitCode.GENERAL, hint);
   }
   try {
     return new TextDecoder("utf-8", { fatal: true }).decode(fileBuffer);
