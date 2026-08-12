@@ -109,17 +109,35 @@ function basenameNoExt(segment: string): string {
 }
 
 /**
+ * macOS Finder/zip metadata entries (`__MACOSX/` resource forks, `.DS_Store`,
+ * AppleDouble `._*` files). They are packaging noise, not training data:
+ * exclude them from filename constraints and media counting so Mac-created
+ * archives don't fail on artifacts the user never sees.
+ */
+function isZipMetadataEntry(entry: string): boolean {
+  if (entry === "__MACOSX" || entry.startsWith("__MACOSX/")) return true;
+  const lastSegment =
+    entry
+      .split("/")
+      .filter((segment) => segment.length > 0)
+      .pop() ?? "";
+  return lastSegment === ".DS_Store" || lastSegment.startsWith("._");
+}
+
+/**
  * Validate ZIP entry filenames against platform constraints.
  * Returns issues for charset violations, over-length names, and duplicates.
+ * Exported for direct unit testing (not re-exported by the barrel).
  */
-function validateZipFilenames(entries: string[]): ValidationIssue[] {
+export function validateZipFilenames(entries: string[]): ValidationIssue[] {
   const out: ValidationIssue[] = [];
   const seenBasenames = new Map<string, string>(); // basename (no ext) → first full path
   const MAX_REPORTED = 10;
 
   for (const entry of entries) {
-    // Skip directory entries
+    // Skip directory entries and macOS packaging metadata
     if (entry.endsWith("/")) continue;
+    if (isZipMetadataEntry(entry)) continue;
 
     // Check each path segment (folder names + file name)
     const segments = entry.split("/").filter((s) => s.length > 0);
@@ -383,6 +401,7 @@ export const zipValidator: ValidatorSpec = {
       const imageFiles = entries.filter((entry) => {
         if (entry === "data.jsonl" || entry.endsWith("/data.jsonl")) return false;
         if (entry.endsWith("/")) return false; // directory entries
+        if (isZipMetadataEntry(entry)) return false; // __MACOSX/._x.jpg is not an image
         const dot = entry.lastIndexOf(".");
         const ext = dot >= 0 ? entry.slice(dot).toLowerCase() : "";
         return IMAGE_EXTENSIONS.has(ext);

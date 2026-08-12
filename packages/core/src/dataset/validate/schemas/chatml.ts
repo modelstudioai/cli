@@ -20,6 +20,69 @@ import type { RecordSchemaSpec } from "./types.ts";
 
 const VALID_ROLES = new Set(["system", "user", "assistant", "tool"]);
 
+/** Platform bounds for video sampling rate params (`fps` / `sample_fps`). */
+const VIDEO_FPS_MIN = 0.1;
+const VIDEO_FPS_MAX = 10;
+
+/**
+ * Validate the sampling/clipping params carried by a video content item.
+ * Mode rules (platform spec):
+ *  - path mode (video: string): `fps`, `video_start`, `video_end` allowed; `sample_fps` is not
+ *  - frame-list mode (video: string[]): `sample_fps` allowed; `fps` / `video_start` / `video_end` are not
+ * `fps` / `sample_fps` must be numbers within [0.1, 10] when present.
+ */
+function inspectVideoParams(
+  item: Record<string, unknown>,
+  isFrameList: boolean,
+  lineNo: number,
+  itemPath: string,
+): ValidationIssue[] {
+  const out: ValidationIssue[] = [];
+  const checkFpsRange = (field: "fps" | "sample_fps"): void => {
+    if (!(field in item)) return;
+    const value = item[field];
+    if (typeof value !== "number" || value < VIDEO_FPS_MIN || value > VIDEO_FPS_MAX) {
+      out.push(
+        makeIssue(
+          "error",
+          "INVALID_VIDEO_FPS",
+          `"${field}" must be a number between ${VIDEO_FPS_MIN} and ${VIDEO_FPS_MAX} (got ${JSON.stringify(value)}).`,
+          { line: lineNo, path: `${itemPath}.${field}` },
+        ),
+      );
+    }
+  };
+  checkFpsRange("fps");
+  checkFpsRange("sample_fps");
+
+  const wrongModeFields = isFrameList ? ["fps", "video_start", "video_end"] : ["sample_fps"];
+  const modeName = isFrameList ? "frame-list" : "file-path";
+  for (const field of wrongModeFields) {
+    if (field in item) {
+      out.push(
+        makeIssue(
+          "warning",
+          "VIDEO_PARAM_MODE_MISMATCH",
+          `"${field}" does not apply to ${modeName} video mode and will be ignored by the platform.`,
+          { line: lineNo, path: `${itemPath}.${field}` },
+        ),
+      );
+    }
+  }
+
+  for (const field of ["video_start", "video_end"] as const) {
+    if (field in item && !isFrameList && typeof item[field] !== "number") {
+      out.push(
+        makeIssue("error", "INVALID_VIDEO_CLIP_TIME", `"${field}" must be a number (seconds).`, {
+          line: lineNo,
+          path: `${itemPath}.${field}`,
+        }),
+      );
+    }
+  }
+  return out;
+}
+
 /**
  * Validate a content field that may be:
  *  - A plain string (legacy format)
@@ -112,19 +175,22 @@ export function inspectContentField(
             { line: lineNo, path: `${itemPath}.video` },
           ),
         );
-      } else if (Array.isArray(video)) {
-        for (let frameIdx = 0; frameIdx < video.length; frameIdx++) {
-          if (typeof video[frameIdx] !== "string") {
-            out.push(
-              makeIssue(
-                "error",
-                "INVALID_VIDEO_FRAME",
-                `Video frame list item at index ${frameIdx} must be a string.`,
-                { line: lineNo, path: `${itemPath}.video[${frameIdx}]` },
-              ),
-            );
+      } else {
+        if (Array.isArray(video)) {
+          for (let frameIdx = 0; frameIdx < video.length; frameIdx++) {
+            if (typeof video[frameIdx] !== "string") {
+              out.push(
+                makeIssue(
+                  "error",
+                  "INVALID_VIDEO_FRAME",
+                  `Video frame list item at index ${frameIdx} must be a string.`,
+                  { line: lineNo, path: `${itemPath}.video[${frameIdx}]` },
+                ),
+              );
+            }
           }
         }
+        out.push(...inspectVideoParams(obj, Array.isArray(video), lineNo, itemPath));
       }
     }
   }
@@ -283,13 +349,13 @@ export function inspectMessageObject(
     out.push(...inspectToolCalls(record.tool_calls, lineNo, `${path}.tool_calls`));
   }
 
-  // OpenAI migration guard: name / weight are not supported by Bailian
+  // OpenAI migration guard: the platform rejects data carrying name / weight
   if ("name" in record) {
     out.push(
       makeIssue(
-        "warning",
+        "error",
         "UNSUPPORTED_FIELD_NAME",
-        `Field "name" is not supported by Bailian. Remove it when migrating from OpenAI/Azure.`,
+        `Field "name" is not supported by Bailian and must be removed when migrating from OpenAI/Azure.`,
         { line: lineNo, path: `${path}.name` },
       ),
     );
@@ -297,9 +363,10 @@ export function inspectMessageObject(
   if ("weight" in record) {
     out.push(
       makeIssue(
-        "warning",
+        "error",
         "UNSUPPORTED_FIELD_WEIGHT",
-        `Field "weight" is not supported by Bailian. Remove it when migrating from OpenAI/Azure.`,
+        `Field "weight" is not supported by Bailian and must be removed when migrating from OpenAI/Azure. ` +
+          `All assistant outputs are trained; per-line importance uses "loss_weight" (invite-only).`,
         { line: lineNo, path: `${path}.weight` },
       ),
     );
@@ -419,12 +486,15 @@ export function inspectChatMLRecord(
     );
   }
 
-  // tool_call_id correspondence: every tool response should reference a known call id
+  // tool_call_id correspondence must be one-to-one (platform spec):
+  // every tool response must reference a known call id (hard error), and every
+  // tool_call should receive a response (advisory — trailing calls are dubious
+  // in training data but we cannot rule out platform-side tolerance).
   for (const responseId of toolResponseIds) {
     if (!toolCallIds.has(responseId)) {
       out.push(
         makeIssue(
-          "warning",
+          "error",
           "TOOL_CALL_ID_UNMATCHED",
           `tool message references tool_call_id "${responseId}" which does not match any assistant tool_calls[].id.`,
           { line: lineNo, path: "messages" },
@@ -432,20 +502,37 @@ export function inspectChatMLRecord(
       );
     }
   }
+  for (const callId of toolCallIds) {
+    if (!toolResponseIds.has(callId)) {
+      out.push(
+        makeIssue(
+          "warning",
+          "TOOL_CALL_NO_RESPONSE",
+          `assistant tool_calls[].id "${callId}" has no matching tool response message.`,
+          { line: lineNo, path: "messages" },
+        ),
+      );
+    }
+  }
 
-  // thinking tag check: <think>…</think>` should only appear in the last assistant message
+  // thinking tag check: <think>…</think> should only appear in the last
+  // assistant message. Exemption (platform spec, tool+thinking combo): an
+  // assistant that carries tool_calls may legitimately hold a <think> block
+  // even when it is not the last assistant message.
   if (lastAssistantIdx >= 0) {
     for (let idx = 0; idx < messages.length; idx++) {
       if (idx === lastAssistantIdx) continue;
       const msg = messages[idx] as Record<string, unknown> | null;
       if (msg?.role !== "assistant") continue;
+      if (msg && Array.isArray(msg.tool_calls)) continue;
       const content = msg?.content;
       if (contentHasThinkTag(content)) {
         out.push(
           makeIssue(
             "warning",
             "THINK_TAG_NOT_LAST",
-            `Thinking tags (<think>…</think>) should only appear in the last assistant message, found at messages[${idx}].`,
+            `Thinking tags (<think>…</think>) should only appear in the last assistant message ` +
+              `(or an assistant message carrying tool_calls), found at messages[${idx}].`,
             { line: lineNo, path: `messages[${idx}].content` },
           ),
         );
@@ -453,39 +540,50 @@ export function inspectChatMLRecord(
     }
   }
 
-  // loss_weight validation (record-level, invite-only parameter)
-  if ("loss_weight" in record) {
-    const lossWeight = record.loss_weight;
-    if (typeof lossWeight !== "number" || lossWeight < 0 || lossWeight > 1) {
+  // loss_weight validation (invite-only parameter).
+  // Range is enforced wherever the field appears (record level and message
+  // level); placement follows the spec: only the LAST assistant message line
+  // supports loss_weight — misplaced occurrences are advisory (invite-only
+  // semantics are account-specific, so we do not hard-fail).
+  const checkLossWeightRange = (value: unknown, path: string): void => {
+    if (typeof value !== "number" || value < 0 || value > 1) {
       out.push(
         makeIssue(
           "error",
           "INVALID_LOSS_WEIGHT",
-          `"loss_weight" must be a number between 0.0 and 1.0 (got ${JSON.stringify(lossWeight)}).`,
-          { line: lineNo, path: "loss_weight" },
+          `"loss_weight" must be a number between 0.0 and 1.0 (got ${JSON.stringify(value)}).`,
+          { line: lineNo, path },
+        ),
+      );
+    }
+  };
+  if ("loss_weight" in record) {
+    checkLossWeightRange(record.loss_weight, "loss_weight");
+  }
+  for (let idx = 0; idx < messages.length; idx++) {
+    const msg = messages[idx] as Record<string, unknown> | null;
+    if (!msg || !("loss_weight" in msg)) continue;
+    checkLossWeightRange(msg.loss_weight, `messages[${idx}].loss_weight`);
+    if (!(msg.role === "assistant" && idx === lastAssistantIdx)) {
+      out.push(
+        makeIssue(
+          "warning",
+          "LOSS_WEIGHT_PLACEMENT",
+          `"loss_weight" is only supported on the last assistant message; found at messages[${idx}] (role "${String(msg.role)}").`,
+          { line: lineNo, path: `messages[${idx}].loss_weight` },
         ),
       );
     }
   }
 
-  // OpenAI migration guard at record level
-  if ("name" in record && !("messages" in record)) {
-    // Only warn at record level if it's not inside messages (messages handled above)
-    out.push(
-      makeIssue(
-        "warning",
-        "UNSUPPORTED_FIELD_NAME",
-        `Record-level field "name" is not supported by Bailian.`,
-        { line: lineNo, path: "name" },
-      ),
-    );
-  }
+  // OpenAI migration guard at record level (message-level occurrences are
+  // handled by inspectMessageObject above)
   if ("weight" in record) {
     out.push(
       makeIssue(
-        "warning",
+        "error",
         "UNSUPPORTED_FIELD_WEIGHT",
-        `Record-level field "weight" is not supported by Bailian. Remove it when migrating from OpenAI/Azure.`,
+        `Record-level field "weight" is not supported by Bailian and must be removed when migrating from OpenAI/Azure.`,
         { line: lineNo, path: "weight" },
       ),
     );

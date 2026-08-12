@@ -18,16 +18,70 @@ function inspectDPORecord(record: Record<string, unknown>, lineNo: number): Vali
   const messages = record.messages;
   if (!Array.isArray(messages) || messages.length === 0) return out;
 
-  // DPO convention: messages should end with a user message (the prompt that
-  // chosen/rejected respond to). If the last message is assistant, it's likely
-  // a structural mistake.
+  /** image / video content items are outside the DPO support matrix */
+  const mediaIssues = (content: unknown, basePath: string): ValidationIssue[] => {
+    if (!Array.isArray(content)) return [];
+    const found: ValidationIssue[] = [];
+    for (let itemIdx = 0; itemIdx < content.length; itemIdx++) {
+      const item = content[itemIdx] as Record<string, unknown> | null;
+      if (!item || typeof item !== "object") continue;
+      for (const mediaField of ["image", "video"] as const) {
+        if (mediaField in item) {
+          found.push(
+            makeIssue(
+              "error",
+              "DPO_UNSUPPORTED_ELEMENT",
+              `DPO training data does not support ${mediaField} inputs; found at ${basePath}.content[${itemIdx}].`,
+              { line: lineNo, path: `${basePath}.content[${itemIdx}].${mediaField}` },
+            ),
+          );
+        }
+      }
+    }
+    return found;
+  };
+
+  // Support matrix (platform spec): DPO is text + thinking ONLY — no image /
+  // video inputs and no tool calling. Reject multimodal items and tool fields
+  // that the SFT-oriented ChatML inspector would otherwise accept.
+  if ("tools" in record) {
+    out.push(
+      makeIssue(
+        "error",
+        "DPO_UNSUPPORTED_ELEMENT",
+        `DPO training data does not support tool calling; remove the "tools" definition.`,
+        { line: lineNo, path: "tools" },
+      ),
+    );
+  }
+  for (let idx = 0; idx < messages.length; idx++) {
+    const msg = messages[idx] as Record<string, unknown> | null;
+    if (!msg) continue;
+    const msgPath = `messages[${idx}]`;
+    if (msg.role === "tool" || "tool_calls" in msg) {
+      out.push(
+        makeIssue(
+          "error",
+          "DPO_UNSUPPORTED_ELEMENT",
+          `DPO training data does not support tool calling; found ${
+            msg.role === "tool" ? `role "tool"` : `"tool_calls"`
+          } at ${msgPath}.`,
+          { line: lineNo, path: msgPath },
+        ),
+      );
+    }
+    out.push(...mediaIssues(msg.content, msgPath));
+  }
+
+  // DPO trains the preference for the LAST user input — messages ending with
+  // any other role make the chosen/rejected pair semantically meaningless.
   const lastMsg = messages[messages.length - 1] as Record<string, unknown> | null;
   if (lastMsg && lastMsg.role !== "user") {
     out.push(
       makeIssue(
-        "warning",
+        "error",
         "DPO_LAST_MSG_NOT_USER",
-        `DPO "messages" should end with a "user" message (the prompt for chosen/rejected). ` +
+        `DPO "messages" must end with a "user" message (the prompt for chosen/rejected). ` +
           `Got "${String(lastMsg.role)}" as the last message.`,
         { line: lineNo, path: `messages[${messages.length - 1}].role` },
       ),
@@ -55,6 +109,7 @@ function inspectDPORecord(record: Record<string, unknown>, lineNo: number): Vali
   }
   if (hasChosen) {
     out.push(...inspectMessageObject(record.chosen, lineNo, "chosen"));
+    out.push(...mediaIssues((record.chosen as Record<string, unknown> | null)?.content, "chosen"));
     const role = (record.chosen as Record<string, unknown> | null)?.role;
     if (typeof role === "string" && role !== "assistant") {
       out.push(
@@ -69,6 +124,9 @@ function inspectDPORecord(record: Record<string, unknown>, lineNo: number): Vali
   }
   if (hasRejected) {
     out.push(...inspectMessageObject(record.rejected, lineNo, "rejected"));
+    out.push(
+      ...mediaIssues((record.rejected as Record<string, unknown> | null)?.content, "rejected"),
+    );
     const role = (record.rejected as Record<string, unknown> | null)?.role;
     if (typeof role === "string" && role !== "assistant") {
       out.push(

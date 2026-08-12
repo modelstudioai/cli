@@ -106,13 +106,41 @@ describe("validateDataset — DPO schema", () => {
     expect(r.valid).toBe(true);
   });
 
-  test("DPO messages ending with assistant → DPO_LAST_MSG_NOT_USER warning", async () => {
+  test("DPO messages ending with assistant → DPO_LAST_MSG_NOT_USER error", async () => {
     const p = file("dpo_last_asst.jsonl", [
       '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"yo"}],"chosen":{"role":"assistant","content":"good"},"rejected":{"role":"assistant","content":"bad"}}',
     ]);
     const r = await validateDataset(p, { fullValidate: true, schema: "dpo" });
-    expect(r.valid).toBe(true);
-    expect(codes(r).warnings).toContain("DPO_LAST_MSG_NOT_USER");
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("DPO_LAST_MSG_NOT_USER");
+  });
+
+  test("DPO with image content item → DPO_UNSUPPORTED_ELEMENT error", async () => {
+    const p = file("dpo_image.jsonl", [
+      '{"messages":[{"role":"user","content":[{"text":"look"},{"image":"a.jpg"}]}],"chosen":{"role":"assistant","content":[{"text":"good"}]},"rejected":{"role":"assistant","content":[{"text":"bad"}]}}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true, schema: "dpo" });
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("DPO_UNSUPPORTED_ELEMENT");
+  });
+
+  test("DPO with tools / tool_calls → DPO_UNSUPPORTED_ELEMENT error", async () => {
+    const p = file("dpo_tools.jsonl", [
+      '{"tools":[{"type":"function","function":{"name":"f","parameters":{}}}],"messages":[{"role":"user","content":"hi"}],"chosen":{"role":"assistant","content":"good"},"rejected":{"role":"assistant","content":"bad"}}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true, schema: "dpo" });
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("DPO_UNSUPPORTED_ELEMENT");
+  });
+
+  test("DPO chosen carrying an image item → DPO_UNSUPPORTED_ELEMENT error", async () => {
+    const p = file("dpo_chosen_image.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"}],"chosen":{"role":"assistant","content":[{"text":"good"},{"image":"x.png"}]},"rejected":{"role":"assistant","content":"bad"}}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true, schema: "dpo" });
+    expect(r.valid).toBe(false);
+    const err = r.errors.find((e) => e.code === "DPO_UNSUPPORTED_ELEMENT");
+    expect(err?.path).toContain("chosen");
   });
 });
 
@@ -297,13 +325,23 @@ describe("validateDataset — tool calling (function calling)", () => {
     expect(codes(r).errors).toContain("TOOL_MISSING_CALL_ID");
   });
 
-  test("tool_call_id unmatched → TOOL_CALL_ID_UNMATCHED warning", async () => {
+  test("tool_call_id unmatched → TOOL_CALL_ID_UNMATCHED error", async () => {
     const p = file("tool_unmatched.jsonl", [
       '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"","tool_calls":[{"id":"c1","type":"function","function":{"name":"f","arguments":"{}"}}]},{"role":"tool","tool_call_id":"WRONG_ID","content":"result"},{"role":"assistant","content":"done"}]}',
     ]);
     const r = await validateDataset(p, { fullValidate: true });
-    expect(r.valid).toBe(true);
-    expect(codes(r).warnings).toContain("TOOL_CALL_ID_UNMATCHED");
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("TOOL_CALL_ID_UNMATCHED");
+    // The orphaned call side is advisory
+    expect(codes(r).warnings).toContain("TOOL_CALL_NO_RESPONSE");
+  });
+
+  test("tool_calls without a tool response → TOOL_CALL_NO_RESPONSE warning", async () => {
+    const p = file("tool_no_resp.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"","tool_calls":[{"id":"c1","type":"function","function":{"name":"f","arguments":"{}"}}]},{"role":"assistant","content":"done"}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(codes(r).warnings).toContain("TOOL_CALL_NO_RESPONSE");
   });
 
   test("tool_calls with missing function name → TOOL_CALL_FN_NO_NAME", async () => {
@@ -352,34 +390,68 @@ describe("validateDataset — thinking tags", () => {
     expect(r.valid).toBe(true);
     expect(codes(r).warnings).toContain("THINK_TAG_NOT_LAST");
   });
+
+  test("official tool+thinking combo: think in non-last assistant WITH tool_calls is exempt", async () => {
+    // Mirrors the platform spec's 工具与思考组合 example: the assistant that
+    // issues tool_calls carries the <think> block, the final assistant answers.
+    const p = file("think_tool_combo.jsonl", [
+      JSON.stringify({
+        tools: [
+          {
+            type: "function",
+            function: { name: "get_weather", description: "d", parameters: { type: "object" } },
+          },
+        ],
+        messages: [
+          { role: "user", content: [{ text: "weather in Beijing?" }] },
+          {
+            role: "assistant",
+            content: [{ text: "<think>\nneed the weather tool\n</think>\n" }],
+            tool_calls: [
+              {
+                id: "call_1",
+                type: "function",
+                function: { name: "get_weather", arguments: '{"city":"Beijing"}' },
+              },
+            ],
+          },
+          { role: "tool", tool_call_id: "call_1", content: [{ text: '{"weather":"sunny"}' }] },
+          { role: "assistant", content: [{ text: "It is sunny in Beijing." }] },
+        ],
+      }),
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+    expect(codes(r).warnings).not.toContain("THINK_TAG_NOT_LAST");
+  });
 });
 
 describe("validateDataset — OpenAI migration guards", () => {
-  test("message-level name field → UNSUPPORTED_FIELD_NAME warning", async () => {
+  test("message-level name field → UNSUPPORTED_FIELD_NAME error", async () => {
     const p = file("openai_name.jsonl", [
       '{"messages":[{"role":"user","content":"hi","name":"alice"},{"role":"assistant","content":"hello"}]}',
     ]);
     const r = await validateDataset(p, { fullValidate: true });
-    expect(r.valid).toBe(true);
-    expect(codes(r).warnings).toContain("UNSUPPORTED_FIELD_NAME");
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("UNSUPPORTED_FIELD_NAME");
   });
 
-  test("message-level weight field → UNSUPPORTED_FIELD_WEIGHT warning", async () => {
+  test("message-level weight field → UNSUPPORTED_FIELD_WEIGHT error", async () => {
     const p = file("openai_weight.jsonl", [
       '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"hello","weight":0.5}]}',
     ]);
     const r = await validateDataset(p, { fullValidate: true });
-    expect(r.valid).toBe(true);
-    expect(codes(r).warnings).toContain("UNSUPPORTED_FIELD_WEIGHT");
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("UNSUPPORTED_FIELD_WEIGHT");
   });
 
-  test("record-level weight field → UNSUPPORTED_FIELD_WEIGHT warning", async () => {
+  test("record-level weight field → UNSUPPORTED_FIELD_WEIGHT error", async () => {
     const p = file("record_weight.jsonl", [
       '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"hello"}],"weight":1}',
     ]);
     const r = await validateDataset(p, { fullValidate: true });
-    expect(r.valid).toBe(true);
-    expect(codes(r).warnings).toContain("UNSUPPORTED_FIELD_WEIGHT");
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("UNSUPPORTED_FIELD_WEIGHT");
   });
 });
 
@@ -427,6 +499,91 @@ describe("validateDataset — loss_weight", () => {
     ]);
     const r = await validateDataset(p, { fullValidate: true });
     expect(r.valid).toBe(true);
+  });
+
+  test("message-level loss_weight on the LAST assistant passes without warning", async () => {
+    const p = file("lw_msg_last.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"hello","loss_weight":0.8}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+    expect(codes(r).warnings).not.toContain("LOSS_WEIGHT_PLACEMENT");
+  });
+
+  test("message-level loss_weight on a non-last assistant → LOSS_WEIGHT_PLACEMENT warning", async () => {
+    const p = file("lw_msg_mid.jsonl", [
+      '{"messages":[{"role":"user","content":"a"},{"role":"assistant","content":"b","loss_weight":0.8},{"role":"user","content":"c"},{"role":"assistant","content":"d"}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(codes(r).warnings).toContain("LOSS_WEIGHT_PLACEMENT");
+  });
+
+  test("message-level loss_weight out of range → INVALID_LOSS_WEIGHT", async () => {
+    const p = file("lw_msg_range.jsonl", [
+      '{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"hello","loss_weight":2}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("INVALID_LOSS_WEIGHT");
+  });
+});
+
+describe("validateDataset — video content params", () => {
+  test("path-mode video with in-range fps and clip times passes", async () => {
+    const p = file("video_path_ok.jsonl", [
+      '{"messages":[{"role":"user","content":[{"text":"desc"},{"video":"v.mp4","fps":3.0,"video_start":0.0,"video_end":3.0}]},{"role":"assistant","content":[{"text":"ok"}]}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+    expect(codes(r).warnings).not.toContain("VIDEO_PARAM_MODE_MISMATCH");
+  });
+
+  test("fps out of [0.1, 10] → INVALID_VIDEO_FPS error", async () => {
+    const p = file("video_fps_bad.jsonl", [
+      '{"messages":[{"role":"user","content":[{"text":"desc"},{"video":"v.mp4","fps":30}]},{"role":"assistant","content":[{"text":"ok"}]}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(false);
+    expect(codes(r).errors).toContain("INVALID_VIDEO_FPS");
+  });
+
+  test("sample_fps on path-mode video → VIDEO_PARAM_MODE_MISMATCH warning", async () => {
+    const p = file("video_mode_mix.jsonl", [
+      '{"messages":[{"role":"user","content":[{"text":"desc"},{"video":"v.mp4","sample_fps":2.0}]},{"role":"assistant","content":[{"text":"ok"}]}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(codes(r).warnings).toContain("VIDEO_PARAM_MODE_MISMATCH");
+  });
+
+  test("frame-list video with sample_fps passes; fps there is flagged", async () => {
+    const p = file("video_frames.jsonl", [
+      '{"messages":[{"role":"user","content":[{"text":"desc"},{"video":["0.jpg","1.jpg"],"sample_fps":5.0}]},{"role":"assistant","content":[{"text":"ok"}]}]}',
+      '{"messages":[{"role":"user","content":[{"text":"desc"},{"video":["0.jpg"],"fps":2.0}]},{"role":"assistant","content":[{"text":"ok"}]}]}',
+    ]);
+    const r = await validateDataset(p, { fullValidate: true });
+    expect(r.valid).toBe(true);
+    expect(codes(r).warnings).toContain("VIDEO_PARAM_MODE_MISMATCH");
+  });
+});
+
+describe("validateZipFilenames — macOS metadata entries", () => {
+  test("__MACOSX / .DS_Store / ._resource-fork entries are ignored", async () => {
+    const { validateZipFilenames } = await import("../src/dataset/validate/zip.ts");
+    const issues = validateZipFilenames([
+      "data.jsonl",
+      "image_1.jpg",
+      "__MACOSX/._image_1.jpg",
+      "__MACOSX/",
+      ".DS_Store",
+      "train/._clip.wav",
+    ]);
+    expect(issues).toEqual([]);
+  });
+
+  test("real charset violations are still reported", async () => {
+    const { validateZipFilenames } = await import("../src/dataset/validate/zip.ts");
+    const issues = validateZipFilenames(["data.jsonl", "图片1.jpg"]);
+    expect(issues.map((issue) => issue.code)).toContain("INVALID_FILENAME_CHARSET");
   });
 });
 
