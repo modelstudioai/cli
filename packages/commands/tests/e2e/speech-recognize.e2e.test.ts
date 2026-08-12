@@ -83,6 +83,7 @@ describe("e2e: speech recognize", () => {
   });
 
   test("speech recognize realtime 模型报用法错误", async () => {
+    // 使用 --dry-run：跳过 auth，避免 CI 无密钥时先以 AUTH(3) 退出
     const { stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
       "speech",
       "recognize",
@@ -90,6 +91,7 @@ describe("e2e: speech recognize", () => {
       "qwen3-asr-flash-realtime",
       "--url",
       "https://example.com/a.wav",
+      "--dry-run",
       "--quiet",
     ]);
     expect(exitCode).toBe(2);
