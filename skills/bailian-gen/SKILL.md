@@ -39,6 +39,8 @@ description: >-
 | A/V understanding (files the host can't play) | `bl omni --video` / `--audio`      | `qwen3.5-omni-plus`                            |
 | Image/video describe (user names Bailian)     | `bl vision describe`               | `qwen-vl-max`; host-first for plain image Q&A  |
 
+For ASR model selection, keep `fun-asr` for long recordings, repeated files, speaker diarization, or asynchronous task IDs. For one local or remote audio file up to five minutes, use `--model fun-asr-flash-2026-06-15` or `--model qwen-audio-3.0-asr-flash` when the user requests the corresponding low-latency model. Flash recognition is synchronous and accepts exactly one file per call.
+
 Flags, usage, and examples: see [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags.
 
 ## Local files (mandatory)

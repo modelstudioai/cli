@@ -14,6 +14,7 @@ export {
   memorySearchPath,
   mcpWebSearchPath,
   profileSchemaPath,
+  speechRecognizeFlashPath,
   speechRecognizePath,
   speechSynthesizePath,
   taskPath,

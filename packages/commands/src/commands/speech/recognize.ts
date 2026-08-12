@@ -1,4 +1,5 @@
 import { writeFileSync } from "fs";
+import { extname } from "node:path";
 import {
   BailianError,
   defineCommand,
@@ -11,6 +12,7 @@ import {
   type DashScopeAsyncResponse,
   stripUndefined,
   taskPath,
+  speechRecognizeFlashPath,
   speechRecognizePath,
   type OutputFormat,
   type FlagsDef,
@@ -24,7 +26,7 @@ const RECOGNIZE_FLAGS = {
   url: {
     type: "array",
     valueHint: "<url>",
-    description: "Audio file URL or local file path (repeatable, max 100)",
+    description: "Audio URL or local path (repeatable for async models, max 100)",
     required: true,
   },
   model: { type: "string", valueHint: "<model>", description: "Model ID (default: fun-asr)" },
@@ -55,6 +57,32 @@ const RECOGNIZE_FLAGS = {
 } satisfies FlagsDef;
 type RecognizeFlags = ParsedFlags<typeof RECOGNIZE_FLAGS>;
 
+interface DashScopeFlashASRResponse {
+  output?: {
+    text?: string;
+    sentence?: { text?: string };
+    output?: { sentence?: { text?: string } };
+  };
+  request_id?: string;
+  usage?: Record<string, unknown>;
+}
+
+function isSynchronousFlashModel(model: string): boolean {
+  return /^(?:fun-asr-flash|qwen-audio-3\.0-asr-flash)(?:-\d{4}-\d{2}-\d{2})?$/.test(model);
+}
+
+function inferAudioFormat(source: string): string {
+  const dataType = /^data:audio\/([^;,]+)/i.exec(source)?.[1]?.toLowerCase();
+  if (dataType) {
+    if (dataType === "mpeg") return "mp3";
+    if (dataType === "x-wav") return "wav";
+    return dataType;
+  }
+
+  const pathPart = source.split(/[?#]/, 1)[0] ?? source;
+  return extname(pathPart).slice(1).toLowerCase() || "wav";
+}
+
 export default defineCommand({
   description: "Recognize speech from audio files (FunAudio-ASR)",
   auth: "apiKey",
@@ -68,6 +96,8 @@ export default defineCommand({
     "--url https://example.com/audio.mp3 --vocabulary-id vocab-abc123",
     "--url https://example.com/audio.mp3 --out result.json",
     "--url https://example.com/audio.mp3 --async --quiet",
+    "--model fun-asr-flash-2026-06-15 --url ./meeting.wav --language zh",
+    "--model qwen-audio-3.0-asr-flash --url ./meeting.wav --out result.json",
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
@@ -91,6 +121,57 @@ export default defineCommand({
 
     const model = flags.model || "fun-asr";
     const format = detectOutputFormat(settings.output);
+
+    if (isSynchronousFlashModel(model)) {
+      if (rawUrls.length !== 1) {
+        throw new BailianError(
+          `${model} accepts exactly one audio file per request.`,
+          ExitCode.USAGE,
+        );
+      }
+      if (
+        diarization ||
+        flags.channelId !== undefined ||
+        flags.async ||
+        flags.pollInterval !== undefined
+      ) {
+        throw new BailianError(
+          `${model} uses synchronous recognition and does not support --diarization, --channel-id, --async, or --poll-interval. Use fun-asr or a filetrans model for those options.`,
+          ExitCode.USAGE,
+        );
+      }
+
+      const resolvedUrl = await ctx.client.uploadFile(rawUrls[0]!, model);
+      const body = {
+        model,
+        input: {
+          messages: [
+            {
+              role: "user",
+              content: [{ type: "input_audio", input_audio: { data: resolvedUrl } }],
+            },
+          ],
+        },
+        parameters: {
+          format: inferAudioFormat(rawUrls[0]!),
+          language_hints: flags.language ? [flags.language] : undefined,
+          vocabulary_id: flags.vocabularyId,
+        },
+      };
+      stripUndefined(body.parameters as Record<string, unknown>);
+      const path = speechRecognizeFlashPath();
+
+      if (settings.dryRun) {
+        emitResult({ request: body, mode: "sync", path }, format);
+        return;
+      }
+
+      if (!settings.quiet) {
+        process.stderr.write(`[Model: ${model}] [Mode: sync] [Files: 1]\n`);
+      }
+      await handleSyncFlashMode(ctx.client, settings, path, body, flags, format);
+      return;
+    }
 
     // Auto-upload local files in parallel
     const resolvedUrls = await Promise.all(rawUrls.map((u) => ctx.client.uploadFile(u, model)));
@@ -116,7 +197,7 @@ export default defineCommand({
     stripUndefined(body.parameters as Record<string, unknown>);
 
     if (settings.dryRun) {
-      emitResult({ request: body, mode: "async" }, format);
+      emitResult({ request: body, mode: "async", path: speechRecognizePath() }, format);
       return;
     }
 
@@ -127,6 +208,39 @@ export default defineCommand({
     await handleAsyncMode(ctx.client, settings, body, flags, format, resolvedUrls.length);
   },
 });
+
+async function handleSyncFlashMode(
+  client: Client,
+  settings: Settings,
+  path: string,
+  body: Record<string, unknown>,
+  flags: RecognizeFlags,
+  format: OutputFormat,
+): Promise<void> {
+  const response = await client.requestJson<DashScopeFlashASRResponse>({
+    path,
+    method: "POST",
+    headers: { "X-DashScope-SSE": "disable" },
+    body,
+  });
+
+  const text =
+    response.output?.text ??
+    response.output?.sentence?.text ??
+    response.output?.output?.sentence?.text;
+  if (text) {
+    emitBare(text);
+  } else {
+    emitResult(response, format);
+  }
+
+  if (flags.out) {
+    writeFileSync(flags.out, JSON.stringify(response, null, 2) + "\n");
+    if (!settings.quiet) {
+      process.stderr.write(`Full result saved to: ${flags.out}\n`);
+    }
+  }
+}
 
 async function handleAsyncMode(
   client: Client,

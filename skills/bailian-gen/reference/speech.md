@@ -24,20 +24,20 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag                        | Type   | Required | Description                                             |
-| --------------------------- | ------ | -------- | ------------------------------------------------------- |
-| `--url <url>`               | array  | yes      | Audio file URL or local file path (repeatable, max 100) |
-| `--model <model>`           | string | no       | Model ID (default: fun-asr)                             |
-| `--language <lang>`         | string | no       | Language hint (e.g. zh, en, ja)                         |
-| `--diarization`             | switch | no       | Enable automatic speaker diarization                    |
-| `--speaker-count <n>`       | number | no       | Expected number of speakers (requires --diarization)    |
-| `--vocabulary-id <id>`      | string | no       | Hot-word vocabulary ID for improved accuracy            |
-| `--channel-id <n>`          | number | no       | Audio channel ID (default: 0)                           |
-| `--out <path>`              | string | no       | Save full transcription result to JSON file             |
-| `--async`                   | switch | no       | Return async task id without waiting                    |
-| `--poll-interval <seconds>` | number | no       | Polling interval in seconds (default: 2)                |
-| `--api-key <key>`           | string | no       | API key                                                 |
-| `--base-url <url>`          | string | no       | API base URL                                            |
+| Flag                        | Type   | Required | Description                                                    |
+| --------------------------- | ------ | -------- | -------------------------------------------------------------- |
+| `--url <url>`               | array  | yes      | Audio URL or local path (repeatable for async models, max 100) |
+| `--model <model>`           | string | no       | Model ID (default: fun-asr)                                    |
+| `--language <lang>`         | string | no       | Language hint (e.g. zh, en, ja)                                |
+| `--diarization`             | switch | no       | Enable automatic speaker diarization                           |
+| `--speaker-count <n>`       | number | no       | Expected number of speakers (requires --diarization)           |
+| `--vocabulary-id <id>`      | string | no       | Hot-word vocabulary ID for improved accuracy                   |
+| `--channel-id <n>`          | number | no       | Audio channel ID (default: 0)                                  |
+| `--out <path>`              | string | no       | Save full transcription result to JSON file                    |
+| `--async`                   | switch | no       | Return async task id without waiting                           |
+| `--poll-interval <seconds>` | number | no       | Polling interval in seconds (default: 2)                       |
+| `--api-key <key>`           | string | no       | API key                                                        |
+| `--base-url <url>`          | string | no       | API base URL                                                   |
 
 #### Examples
 
@@ -67,6 +67,14 @@ bl speech recognize --url https://example.com/audio.mp3 --out result.json
 
 ```bash
 bl speech recognize --url https://example.com/audio.mp3 --async --quiet
+```
+
+```bash
+bl speech recognize --model fun-asr-flash-2026-06-15 --url ./meeting.wav --language zh
+```
+
+```bash
+bl speech recognize --model qwen-audio-3.0-asr-flash --url ./meeting.wav --out result.json
 ```
 
 ### `bl speech synthesize`

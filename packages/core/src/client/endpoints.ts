@@ -69,6 +69,11 @@ export function speechRecognizePath(): string {
   return "/api/v1/services/audio/asr/transcription";
 }
 
+/** Synchronous HTTP endpoint used by Fun-ASR-Flash and Qwen-Audio ASR Flash. */
+export function speechRecognizeFlashPath(): string {
+  return "/api/v1/services/aigc/multimodal-generation/generation";
+}
+
 // ---- Memory Profile (DashScope v2) ----
 export function profileSchemaPath(): string {
   return "/api/v2/apps/memory/profile_schemas";
