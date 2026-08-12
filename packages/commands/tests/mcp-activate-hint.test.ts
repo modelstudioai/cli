@@ -38,6 +38,36 @@ describe("mcp-activate-hint", () => {
     expect(mcpActivateHint("WebSearch")).toMatch(/SSE|Streamable HTTP/i);
   });
 
+  test("WebSearch + 405 streamableHttp 补重开通 hint", () => {
+    const original = new BailianError(
+      "MCP request failed: 405 Method Not Allowed - current mcp not support streamableHttp",
+      ExitCode.GENERAL,
+    );
+    try {
+      rethrowWithMcpActivateHint(original, "WebSearch");
+      expect.unreachable("should throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(BailianError);
+      const wrapped = error as BailianError;
+      expect(wrapped.message).toBe(original.message);
+      expect(wrapped.hint).toMatch(/SSE|Streamable HTTP|Activate|re-activate/i);
+      expect(wrapped.hint).toContain(mcpMarketplaceDetailPage("WebSearch"));
+    }
+  });
+
+  test("非 WebSearch 的 405 streamableHttp 不补 hint（由 fallback 处理）", () => {
+    const original = new BailianError(
+      "MCP request failed: 405 Method Not Allowed - current mcp not support streamableHttp",
+      ExitCode.GENERAL,
+    );
+    try {
+      rethrowWithMcpActivateHint(original, "WebParser");
+      expect.unreachable("should throw");
+    } catch (error) {
+      expect(error).toBe(original);
+    }
+  });
+
   test("rethrow 保留原 message，补 hint", () => {
     const serverCode = "market-cmapi00073529";
     const original = new BailianError(

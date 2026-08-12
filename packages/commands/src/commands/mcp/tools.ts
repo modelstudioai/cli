@@ -28,24 +28,27 @@ export default defineCommand({
     const { settings, flags } = ctx;
     const code = flags.server;
 
-    const url = flags.url || ctx.client.url(bailianMcpPath(code));
+    const previewUrl = flags.url || ctx.client.url(bailianMcpPath(code));
     const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult({ server: code, url, action: "tools/list" }, format);
+      emitResult({ server: code, url: previewUrl, action: "tools/list" }, format);
       return;
     }
 
-    const client = ctx.client.mcp(url);
+    let client: { close?(): void } | undefined;
     try {
-      await client.initialize();
-      const tools = await client.listTools();
-      emitResult({ server: code, url, tools }, format);
+      const connected = await ctx.client.connectBailianMcp(code, flags.url);
+      client = connected.client;
+      const tools = await connected.client.listTools();
+      emitResult({ server: code, url: connected.url, tools }, format);
     } catch (error) {
       if (!flags.url) {
         rethrowWithMcpActivateHint(error, code);
       }
       throw error;
+    } finally {
+      client?.close?.();
     }
   },
 });

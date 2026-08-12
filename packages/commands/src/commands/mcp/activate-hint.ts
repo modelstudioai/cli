@@ -1,4 +1,4 @@
-import { BailianError } from "bailian-cli-core";
+import { BailianError, isStreamableHttpUnsupported } from "bailian-cli-core";
 import { mcpMarketplaceDetailPage } from "bailian-cli-runtime";
 
 /** Detect MCP-not-activated / invalid 404 errors (CLI-wrapped server message). */
@@ -26,14 +26,28 @@ export function mcpActivateHint(serverCode: string): string {
 /**
  * For not-activated errors, keep the original message / exitCode and append a hint only.
  * Do not replace the server error message.
+ * WebSearch + 405 streamableHttp: do not fall back; attach a re-activate / upgrade hint.
  */
 export function rethrowWithMcpActivateHint(error: unknown, serverCode: string): never {
-  if (isMcpNotActivated(error) && error instanceof BailianError && !error.hint) {
+  if (!(error instanceof BailianError) || error.hint) {
+    throw error;
+  }
+
+  if (isMcpNotActivated(error)) {
     throw new BailianError(error.message, error.exitCode, mcpActivateHint(serverCode), {
       cause: error,
       api: error.api,
       rawResponse: error.rawResponse,
     });
   }
+
+  if (serverCode === "WebSearch" && isStreamableHttpUnsupported(error)) {
+    throw new BailianError(error.message, error.exitCode, mcpActivateHint(serverCode), {
+      cause: error,
+      api: error.api,
+      rawResponse: error.rawResponse,
+    });
+  }
+
   throw error;
 }

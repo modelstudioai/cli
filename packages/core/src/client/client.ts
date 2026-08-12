@@ -5,7 +5,13 @@ import { ExitCode } from "../errors/codes.ts";
 import { request, requestJson, type HttpDeps, type RequestOpts } from "./http.ts";
 import { buildAcsCanonicalQuery, signAcsRequest, type AcsQueryParams } from "./acs.ts";
 import { imageFileToDataUri, isLocalFile, resolveFileUrl } from "../files/upload.ts";
-import { McpClient } from "./mcp.ts";
+import {
+  bailianMcpPath,
+  bailianMcpSsePath,
+  connectBailianMcpWithFallback,
+  McpClient,
+  type McpConnectedClient,
+} from "./mcp.ts";
 import { callConsoleGateway } from "../console/gateway.ts";
 import { refreshAccessToken } from "../auth/refresh-token.ts";
 import { maskToken } from "../utils/token.ts";
@@ -162,6 +168,25 @@ export class Client {
   mcp(pathOrUrl: string): McpClient {
     const url = /^https?:\/\//.test(pathOrUrl) ? pathOrUrl : this.requireApi().baseUrl + pathOrUrl;
     return new McpClient(this.http, url, this.deps.apiCred?.token);
+  }
+
+  /**
+   * Connect to a Bailian MCP: try Streamable HTTP, then SSE on 405+streamableHttp (except WebSearch).
+   * `urlOverride` maps to `--url` and uses Streamable only (no fallback).
+   */
+  connectBailianMcp(
+    serverCode: string,
+    urlOverride?: string,
+  ): Promise<{ client: McpConnectedClient; url: string }> {
+    this.requireApi();
+    return connectBailianMcpWithFallback({
+      deps: this.http,
+      authToken: this.deps.apiCred?.token,
+      httpUrl: this.url(bailianMcpPath(serverCode)),
+      sseUrl: this.url(bailianMcpSsePath(serverCode)),
+      serverCode,
+      urlOverride,
+    });
   }
 
   async console<T>(api: string, data: Record<string, unknown>): Promise<T> {

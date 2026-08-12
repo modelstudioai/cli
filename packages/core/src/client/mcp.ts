@@ -15,6 +15,7 @@ import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import type { HttpDeps } from "./http.ts";
 import { trackingHeaders } from "./headers.ts";
+import { McpSseClient } from "./mcp-sse.ts";
 
 // ---- JSON-RPC 2.0 Types ----
 
@@ -59,6 +60,72 @@ export interface McpToolResult {
  */
 export function bailianMcpPath(serverCode: string): string {
   return `/api/v1/mcps/${serverCode}/mcp`;
+}
+
+/** Classic SSE path: `/api/v1/mcps/<serverCode>/sse`. */
+export function bailianMcpSsePath(serverCode: string): string {
+  return `/api/v1/mcps/${serverCode}/sse`;
+}
+
+/** True when the error is a 405 that indicates Streamable HTTP is unsupported (SSE fallback). */
+export function isStreamableHttpUnsupported(error: unknown): boolean {
+  if (!(error instanceof BailianError)) return false;
+  const message = error.message;
+  return /405\b/i.test(message) && /streamableHttp/i.test(message);
+}
+
+export type McpConnectedClient = {
+  initialize(): Promise<void>;
+  listTools(): Promise<McpTool[]>;
+  callTool(name: string, args: Record<string, unknown>): Promise<McpToolResult>;
+  close?(): void;
+};
+
+export type ConnectBailianMcpOptions = {
+  deps: HttpDeps;
+  authToken: string | undefined;
+  /** Full Streamable HTTP URL (/mcp). */
+  httpUrl: string;
+  /** Full classic SSE URL (/sse). */
+  sseUrl: string;
+  serverCode: string;
+  /** Explicit `--url` override: Streamable only, no SSE fallback. */
+  urlOverride?: string;
+};
+
+/**
+ * Connect via Streamable HTTP first; on 405+streamableHttp (except WebSearch), fall back to SSE.
+ * For WebSearch, rethrow the original error so commands can attach a re-activate hint.
+ */
+export async function connectBailianMcpWithFallback(
+  options: ConnectBailianMcpOptions,
+): Promise<{ client: McpConnectedClient; url: string }> {
+  const { deps, authToken, httpUrl, sseUrl, serverCode, urlOverride } = options;
+
+  if (urlOverride) {
+    const client = new McpClient(deps, urlOverride, authToken);
+    await client.initialize();
+    return { client, url: urlOverride };
+  }
+
+  const httpClient = new McpClient(deps, httpUrl, authToken);
+  try {
+    await httpClient.initialize();
+    return { client: httpClient, url: httpUrl };
+  } catch (error) {
+    if (!isStreamableHttpUnsupported(error) || serverCode === "WebSearch") {
+      throw error;
+    }
+  }
+
+  const sseClient = new McpSseClient(deps, sseUrl, authToken);
+  try {
+    await sseClient.initialize();
+    return { client: sseClient, url: sseUrl };
+  } catch (error) {
+    sseClient.close();
+    throw error;
+  }
 }
 
 // ---- MCP Client ----
