@@ -35,7 +35,7 @@ Index: [index.md](index.md)
 #### Examples
 
 ```bash
-bl console call --api zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota --data '{"queryFreeTierQuotaRequest":{"models":["qwen3-max"]}}'
+bl console call --api zeldaEasy.bailian-commerce.freeTrial.queryFreeTierQuota --data '{"queryFreeTierQuotaRequest":{"models":["qwen3-max"]}}'
 ```
 
 ```bash
