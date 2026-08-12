@@ -533,7 +533,8 @@ export interface DashScopeTTSStreamChunk {
 export interface DashScopeASRRequest {
   model: string;
   input: {
-    file_urls: string[];
+    file_urls?: string[];
+    file_url?: string;
   };
   parameters?: {
     channel_id?: number[];

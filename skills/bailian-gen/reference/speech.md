@@ -7,37 +7,37 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                | Description                                      |
-| ---------------------- | ------------------------------------------------ |
-| `bl speech recognize`  | Recognize speech from audio files (FunAudio-ASR) |
-| `bl speech synthesize` | Synthesize speech from text (CosyVoice TTS)      |
+| Command                | Description                                                       |
+| ---------------------- | ----------------------------------------------------------------- |
+| `bl speech recognize`  | Recognize speech from audio files (FunAudio-ASR / Qwen-ASR Flash) |
+| `bl speech synthesize` | Synthesize speech from text (CosyVoice TTS)                       |
 
 ## Command details
 
 ### `bl speech recognize`
 
-| Field           | Value                                            |
-| --------------- | ------------------------------------------------ |
-| **Name**        | `speech recognize`                               |
-| **Description** | Recognize speech from audio files (FunAudio-ASR) |
-| **Usage**       | `bl speech recognize --url <audio-url> [flags]`  |
+| Field           | Value                                                             |
+| --------------- | ----------------------------------------------------------------- |
+| **Name**        | `speech recognize`                                                |
+| **Description** | Recognize speech from audio files (FunAudio-ASR / Qwen-ASR Flash) |
+| **Usage**       | `bl speech recognize --url <audio-url> [flags]`                   |
 
 #### Flags
 
-| Flag                        | Type   | Required | Description                                             |
-| --------------------------- | ------ | -------- | ------------------------------------------------------- |
-| `--url <url>`               | array  | yes      | Audio file URL or local file path (repeatable, max 100) |
-| `--model <model>`           | string | no       | Model ID (default: fun-asr)                             |
-| `--language <lang>`         | string | no       | Language hint (e.g. zh, en, ja)                         |
-| `--diarization`             | switch | no       | Enable automatic speaker diarization                    |
-| `--speaker-count <n>`       | number | no       | Expected number of speakers (requires --diarization)    |
-| `--vocabulary-id <id>`      | string | no       | Hot-word vocabulary ID for improved accuracy            |
-| `--channel-id <n>`          | number | no       | Audio channel ID (default: 0)                           |
-| `--out <path>`              | string | no       | Save full transcription result to JSON file             |
-| `--async`                   | switch | no       | Return async task id without waiting                    |
-| `--poll-interval <seconds>` | number | no       | Polling interval in seconds (default: 2)                |
-| `--api-key <key>`           | string | no       | API key                                                 |
-| `--base-url <url>`          | string | no       | API base URL                                            |
+| Flag                        | Type   | Required | Description                                                                                                                                 |
+| --------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--url <url>`               | array  | yes      | Audio file URL or local file path (repeatable, max 100)                                                                                     |
+| `--model <model>`           | string | no       | Model ID (default: fun-asr). Async: fun-asr / _-filetrans / paraformer-_; sync: qwen3-asr-flash* / fun-asr-flash* / qwen-audio-\*-asr-flash |
+| `--language <lang>`         | string | no       | Language hint (e.g. zh, en, ja). Async & input-audio sync: language_hints; qwen3 sync: asr_options.language                                 |
+| `--diarization`             | switch | no       | Enable automatic speaker diarization                                                                                                        |
+| `--speaker-count <n>`       | number | no       | Expected number of speakers (requires --diarization)                                                                                        |
+| `--vocabulary-id <id>`      | string | no       | Hot-word vocabulary ID for improved accuracy                                                                                                |
+| `--channel-id <n>`          | number | no       | Audio channel ID (default: 0)                                                                                                               |
+| `--out <path>`              | string | no       | Save full transcription result to JSON file                                                                                                 |
+| `--async`                   | switch | no       | Return async task id without waiting                                                                                                        |
+| `--poll-interval <seconds>` | number | no       | Polling interval in seconds (default: 2)                                                                                                    |
+| `--api-key <key>`           | string | no       | API key                                                                                                                                     |
+| `--base-url <url>`          | string | no       | API base URL                                                                                                                                |
 
 #### Examples
 
@@ -67,6 +67,10 @@ bl speech recognize --url https://example.com/audio.mp3 --out result.json
 
 ```bash
 bl speech recognize --url https://example.com/audio.mp3 --async --quiet
+```
+
+```bash
+bl speech recognize --url https://example.com/audio.mp3 --model qwen-audio-3.0-asr-flash --language en
 ```
 
 ### `bl speech synthesize`

@@ -16,6 +16,32 @@ import { SPEECH_ROUTES } from "./topic-routes.ts";
  */
 
 describe("e2e: speech recognize", () => {
+  async function runRecognizeDryRun(args: string[]) {
+    const { stdout, stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+      "speech",
+      "recognize",
+      ...args,
+      "--dry-run",
+      "--output",
+      "json",
+      "--quiet",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    return parseStdoutJson<{
+      mode?: string;
+      path?: string;
+      request?: {
+        model?: string;
+        parameters?: { format?: string; language_hints?: string[] };
+        input?: {
+          file_url?: string;
+          file_urls?: string[];
+          messages?: Array<{ content?: Array<{ type?: string }> }>;
+        };
+      };
+    }>(stdout);
+  }
+
   test("speech recognize --help 正常退出", async () => {
     const { stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
       "speech",
@@ -24,6 +50,50 @@ describe("e2e: speech recognize", () => {
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/recognize|--url|model|audio/i);
+  });
+
+  test("speech recognize sync-flash dry-run 走 multimodal-generation", async () => {
+    const body = await runRecognizeDryRun([
+      "--model",
+      "qwen-audio-3.0-asr-flash",
+      "--url",
+      "https://dashscope.oss-cn-beijing.aliyuncs.com/samples/audio/paraformer/hello_world_female2.wav",
+      "--language",
+      "en",
+    ]);
+    expect(body.mode).toBe("sync");
+    expect(body.path).toBe("/api/v1/services/aigc/multimodal-generation/generation");
+    expect(body.request?.model).toBe("qwen-audio-3.0-asr-flash");
+    expect(body.request?.parameters?.format).toBe("wav");
+    expect(body.request?.parameters?.language_hints).toEqual(["en"]);
+    expect(body.request?.input?.messages?.[0]?.content?.[0]?.type).toBe("input_audio");
+  });
+
+  test("speech recognize qwen3 filetrans dry-run 使用 file_url 单数字段", async () => {
+    const body = await runRecognizeDryRun([
+      "--model",
+      "qwen3-asr-flash-filetrans",
+      "--url",
+      "https://dashscope.oss-cn-beijing.aliyuncs.com/samples/audio/paraformer/hello_world_female2.wav",
+    ]);
+    expect(body.mode).toBe("async");
+    expect(body.path).toBe("/api/v1/services/audio/asr/transcription");
+    expect(body.request?.input?.file_url?.startsWith("https://")).toBe(true);
+    expect(body.request?.input?.file_urls).toBeUndefined();
+  });
+
+  test("speech recognize realtime 模型报用法错误", async () => {
+    const { stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+      "speech",
+      "recognize",
+      "--model",
+      "qwen3-asr-flash-realtime",
+      "--url",
+      "https://example.com/a.wav",
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/realtime|WebSocket|unsupported/i);
   });
 });
 

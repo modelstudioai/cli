@@ -10,6 +10,9 @@ import {
   taskPath,
   speechSynthesizePath,
   speechRecognizePath,
+  resolveAsrApi,
+  buildAsrFlashRequest,
+  extractAsrFlashText,
   stripUndefined,
   resolveBooleanFlag,
   resolveWatermark,
@@ -573,24 +576,91 @@ export async function speechRecognize(
     });
   }
 
+  const model = input.model || "fun-asr";
+  const route = resolveAsrApi(model);
+  if (route.kind === "unsupported") {
+    throw new PipelineError(
+      "invalid_input",
+      route.unsupportedReason ?? `Unsupported ASR model: ${model}`,
+      {
+        step: "speech/recognize",
+      },
+    );
+  }
+
+  if (route.kind === "sync-flash") {
+    if (rawUrls.length !== 1) {
+      throw new PipelineError(
+        "invalid_input",
+        `Model "${model}" is a sync Flash ASR model and accepts exactly one url (got ${rawUrls.length})`,
+        { step: "speech/recognize" },
+      );
+    }
+    if (
+      input.diarization ||
+      input["speaker-count"] !== undefined ||
+      input["vocabulary-id"] !== undefined ||
+      input["channel-id"] !== undefined
+    ) {
+      throw new PipelineError(
+        "invalid_input",
+        `Model "${model}" uses sync Flash ASR and does not support diarization / speaker-count / vocabulary-id / channel-id`,
+        { step: "speech/recognize" },
+      );
+    }
+  }
+  if (
+    route.kind === "async-filetrans" &&
+    route.asyncInputStyle === "file_url" &&
+    rawUrls.length !== 1
+  ) {
+    throw new PipelineError(
+      "invalid_input",
+      `Model "${model}" accepts exactly one url (got ${rawUrls.length})`,
+      { step: "speech/recognize" },
+    );
+  }
+
   // Resolve local files to upload URLs
   const fileUrls: string[] = [];
-  for (const u of rawUrls) {
-    if (isLocalFile(u)) {
+  for (const audioUrl of rawUrls) {
+    if (isLocalFile(audioUrl)) {
       fileUrls.push(
-        await env.client.uploadFile(u, input.model || "fun-asr", {
+        await env.client.uploadFile(audioUrl, model, {
           signal: ctx.signal,
         }),
       );
     } else {
-      fileUrls.push(u);
+      fileUrls.push(audioUrl);
     }
   }
 
-  const model = input.model || "fun-asr";
+  if (route.kind === "sync-flash") {
+    const flashFamily = route.flashFamily!;
+    const body = buildAsrFlashRequest({
+      model,
+      audioUrl: fileUrls[0]!,
+      language: input.language,
+      flashFamily,
+    });
+    const response = await env.client.requestJson<Record<string, unknown>>({
+      path: route.path,
+      method: "POST",
+      body,
+      signal: ctx.signal,
+    });
+    return {
+      text: extractAsrFlashText(response, flashFamily),
+      model,
+      mode: "sync",
+      raw: response,
+    };
+  }
+
   const body: DashScopeASRRequest = {
     model,
-    input: { file_urls: fileUrls },
+    input:
+      route.asyncInputStyle === "file_url" ? { file_url: fileUrls[0]! } : { file_urls: fileUrls },
     parameters: {
       channel_id: input["channel-id"] !== undefined ? [input["channel-id"]] : undefined,
       language_hints: input.language ? [input.language] : undefined,
@@ -601,9 +671,8 @@ export async function speechRecognize(
   };
   stripUndefined(body.parameters as Record<string, unknown>);
 
-  const url = speechRecognizePath();
   const asyncResp = await env.client.requestJson<DashScopeAsyncResponse>({
-    path: url,
+    path: speechRecognizePath(),
     method: "POST",
     body,
     async: true,
