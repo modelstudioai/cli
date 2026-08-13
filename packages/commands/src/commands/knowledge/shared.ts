@@ -74,17 +74,42 @@ export function failedImportDocs(response: RagIndexJobStatusResponse): RagIndexJ
   );
 }
 
-/** Per-document failure summary: server message passed through verbatim + per-document detail */
+/**
+ * Whether every document has reached a terminal state (FINISH or *FAILED).
+ * Used to stop polling before ingestion_status becomes COMPLETED — the server
+ * may leave the job on RUNNING indefinitely even after all documents finish.
+ */
+function allDocsTerminal(response: RagIndexJobStatusResponse): boolean {
+  const rows = response.data?.rows ?? [];
+  if (rows.length === 0) return false;
+  const totalCount = response.data?.total_count;
+  if (typeof totalCount === "number" && rows.length < totalCount) return false;
+  return rows.every((doc) => {
+    const code = doc.code ?? doc.status ?? "";
+    return code === "FINISH" || code.includes("FAILED");
+  });
+}
+
+/** Per-document failure summary: lists both failed and succeeded documents so the user knows the full picture. */
 export function importJobFailureMessage(
   response: RagIndexJobStatusResponse,
   fallbackMessage: string,
 ): string {
-  const detail = failedImportDocs(response)
+  const rows = response.data?.rows ?? [];
+  const failed = failedImportDocs(response);
+  const failedIds = new Set(failed.map((doc) => doc.doc_id));
+  const succeeded = rows.filter((doc) => !failedIds.has(doc.doc_id));
+
+  const failedDetail = failed
     .map((doc) => `${doc.doc_name ?? doc.doc_id ?? "?"}: ${doc.message ?? doc.code ?? "unknown"}`)
     .join("; ");
-  const base =
-    typeof response.message === "string" && response.message ? response.message : fallbackMessage;
-  return detail ? `${base} (${detail})` : base;
+  const succeededDetail = succeeded.map((doc) => doc.doc_name ?? doc.doc_id ?? "?").join(", ");
+
+  const parts: string[] = [];
+  if (failedDetail) parts.push(`failed: ${failedDetail}`);
+  if (succeededDetail) parts.push(`succeeded: ${succeededDetail}`);
+
+  return parts.length > 0 ? `${fallbackMessage} (${parts.join("; ")})` : fallbackMessage;
 }
 
 /** Build the index_job/status query string (both index_id and job_id are required) */
@@ -96,10 +121,13 @@ export function importJobStatusUrl(workspaceId: string, indexId: string, jobId: 
 }
 
 /**
- * Poll the import job until the overall state is COMPLETED.
- * The overall state has no FAILED value, so isFailed is always false — failures
- * are determined by the caller after return via `failedImportDocs` (semantics:
- * the job finished, but some documents failed to parse).
+ * Poll the import job until the overall state is COMPLETED or every document
+ * has reached a terminal state (FINISH or FAILED). The overall state has no
+ * FAILED value, so isFailed is always false — failures are determined by the
+ * caller after return via `failedImportDocs`. The server may leave
+ * ingestion_status on RUNNING indefinitely after documents finish, so checking
+ * rows[] mid-poll avoids a misleading timeout; callers re-check failedImportDocs
+ * after return, keeping the error path uniform.
  */
 export async function pollImportJob(
   client: Client,
@@ -110,9 +138,21 @@ export async function pollImportJob(
     url: options.statusUrl,
     intervalSec: options.intervalSec,
     timeoutSec: settings.timeout,
-    isComplete: (data) => importJobStatus(data) === "COMPLETED",
+    isComplete: (data) => {
+      const response = data as RagIndexJobStatusResponse;
+      return importJobStatus(response) === "COMPLETED" || allDocsTerminal(response);
+    },
     isFailed: () => false,
-    getStatus: (data) => importJobStatus(data),
+    getStatus: (data) => {
+      const response = data as RagIndexJobStatusResponse;
+      const status = importJobStatus(response);
+      const failedCount = failedImportDocs(response).length;
+      const total = response.data?.total_count;
+      if (typeof total === "number" && total > 0) {
+        return `${status} (${failedCount}/${total} failed)`;
+      }
+      return failedCount > 0 ? `${status} (${failedCount} failed)` : status;
+    },
   });
 }
 
