@@ -1,5 +1,8 @@
 const ping = {
-  description: "Ping the Command Pack fixture",
+  description: {
+    "en-US": "Ping the Command Pack fixture",
+    "zh-CN": "调用 Command Pack 测试命令",
+  },
   auth: "none",
   flags: {
     message: {

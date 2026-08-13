@@ -147,6 +147,10 @@ test("loads an API 1 Command Pack and preserves its command contract", async () 
   ]);
   expect(commands["agent credential"]?.auth).toBe("apiKey");
   expect(commands["agent ping"]?.auth).toBe("none");
+  expect(commands["agent ping"]?.description).toEqual({
+    "en-US": "Ping the Command Pack fixture",
+    "zh-CN": "调用 Command Pack 测试命令",
+  });
   expect(commands["agent ping"]?.flags?.message).toMatchObject({ required: true, type: "string" });
 });
 
