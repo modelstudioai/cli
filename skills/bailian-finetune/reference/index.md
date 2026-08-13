@@ -9,34 +9,34 @@ Use this index for the skill-scoped quick index and global flags.
 
 ## Quick index
 
-| Command                    | Description                                                                                                                     | Detail                     |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `bl dataset delete`        | Delete a dataset file by ID                                                                                                     | [dataset.md](dataset.md)   |
-| `bl dataset get`           | Get details of a single dataset file                                                                                            | [dataset.md](dataset.md)   |
-| `bl dataset list`          | List uploaded dataset files                                                                                                     | [dataset.md](dataset.md)   |
-| `bl dataset upload`        | Upload a dataset file (.jsonl or .zip) to Bailian                                                                               | [dataset.md](dataset.md)   |
-| `bl dataset validate`      | Locally validate a dataset file (.jsonl or .zip) without uploading                                                              | [dataset.md](dataset.md)   |
-| `bl deploy audio create`   | Create an audio (TTS) model deployment                                                                                          | [deploy.md](deploy.md)     |
-| `bl deploy delete`         | Delete a model deployment (must be STOPPED or FAILED)                                                                           | [deploy.md](deploy.md)     |
-| `bl deploy get`            | Get details of a single model deployment                                                                                        | [deploy.md](deploy.md)     |
-| `bl deploy image create`   | Create an image generation model deployment                                                                                     | [deploy.md](deploy.md)     |
-| `bl deploy list`           | List model deployments                                                                                                          | [deploy.md](deploy.md)     |
-| `bl deploy models`         | List models available for deployment                                                                                            | [deploy.md](deploy.md)     |
-| `bl deploy scale`          | Scale a deployment's capacity                                                                                                   | [deploy.md](deploy.md)     |
-| `bl deploy text create`    | Create a text model deployment                                                                                                  | [deploy.md](deploy.md)     |
-| `bl deploy update`         | Update a deployment's rate limits (rpm_limit / tpm_limit)                                                                       | [deploy.md](deploy.md)     |
-| `bl finetune audio create` | Create an audio TTS model fine-tune job (sft-lora)                                                                              | [finetune.md](finetune.md) |
-| `bl finetune cancel`       | Cancel a running fine-tune job                                                                                                  | [finetune.md](finetune.md) |
-| `bl finetune capability`   | Query fine-tune training capability — by model (which training types it supports) or by training type (which models support it) | [finetune.md](finetune.md) |
-| `bl finetune checkpoints`  | List checkpoints produced by a fine-tune job                                                                                    | [finetune.md](finetune.md) |
-| `bl finetune delete`       | Delete a fine-tune job record                                                                                                   | [finetune.md](finetune.md) |
-| `bl finetune export`       | Publish a checkpoint as a deployable model                                                                                      | [finetune.md](finetune.md) |
-| `bl finetune get`          | Get details of a single fine-tune job                                                                                           | [finetune.md](finetune.md) |
-| `bl finetune image create` | Create an image generation model fine-tune job (sft-lora)                                                                       | [finetune.md](finetune.md) |
-| `bl finetune list`         | List fine-tune jobs                                                                                                             | [finetune.md](finetune.md) |
-| `bl finetune logs`         | Fetch training logs for a fine-tune job                                                                                         | [finetune.md](finetune.md) |
-| `bl finetune text create`  | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                   | [finetune.md](finetune.md) |
-| `bl finetune watch`        | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                      | [finetune.md](finetune.md) |
+| Command                    | Authentication | Description                                                                                                                     | Detail                     |
+| -------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `bl dataset delete`        | API Key        | Delete a dataset file by ID                                                                                                     | [dataset.md](dataset.md)   |
+| `bl dataset get`           | API Key        | Get details of a single dataset file                                                                                            | [dataset.md](dataset.md)   |
+| `bl dataset list`          | API Key        | List uploaded dataset files                                                                                                     | [dataset.md](dataset.md)   |
+| `bl dataset upload`        | API Key        | Upload a dataset file (.jsonl or .zip) to Bailian                                                                               | [dataset.md](dataset.md)   |
+| `bl dataset validate`      | No Auth        | Locally validate a dataset file (.jsonl or .zip) without uploading                                                              | [dataset.md](dataset.md)   |
+| `bl deploy audio create`   | API Key        | Create an audio (TTS) model deployment                                                                                          | [deploy.md](deploy.md)     |
+| `bl deploy delete`         | API Key        | Delete a model deployment (must be STOPPED or FAILED)                                                                           | [deploy.md](deploy.md)     |
+| `bl deploy get`            | API Key        | Get details of a single model deployment                                                                                        | [deploy.md](deploy.md)     |
+| `bl deploy image create`   | API Key        | Create an image generation model deployment                                                                                     | [deploy.md](deploy.md)     |
+| `bl deploy list`           | API Key        | List model deployments                                                                                                          | [deploy.md](deploy.md)     |
+| `bl deploy models`         | API Key        | List models available for deployment                                                                                            | [deploy.md](deploy.md)     |
+| `bl deploy scale`          | API Key        | Scale a deployment's capacity                                                                                                   | [deploy.md](deploy.md)     |
+| `bl deploy text create`    | API Key        | Create a text model deployment                                                                                                  | [deploy.md](deploy.md)     |
+| `bl deploy update`         | API Key        | Update a deployment's rate limits (rpm_limit / tpm_limit)                                                                       | [deploy.md](deploy.md)     |
+| `bl finetune audio create` | API Key        | Create an audio TTS model fine-tune job (sft-lora)                                                                              | [finetune.md](finetune.md) |
+| `bl finetune cancel`       | API Key        | Cancel a running fine-tune job                                                                                                  | [finetune.md](finetune.md) |
+| `bl finetune capability`   | No Auth        | Query fine-tune training capability — by model (which training types it supports) or by training type (which models support it) | [finetune.md](finetune.md) |
+| `bl finetune checkpoints`  | API Key        | List checkpoints produced by a fine-tune job                                                                                    | [finetune.md](finetune.md) |
+| `bl finetune delete`       | API Key        | Delete a fine-tune job record                                                                                                   | [finetune.md](finetune.md) |
+| `bl finetune export`       | API Key        | Publish a checkpoint as a deployable model                                                                                      | [finetune.md](finetune.md) |
+| `bl finetune get`          | API Key        | Get details of a single fine-tune job                                                                                           | [finetune.md](finetune.md) |
+| `bl finetune image create` | API Key        | Create an image generation model fine-tune job (sft-lora)                                                                       | [finetune.md](finetune.md) |
+| `bl finetune list`         | API Key        | List fine-tune jobs                                                                                                             | [finetune.md](finetune.md) |
+| `bl finetune logs`         | API Key        | Fetch training logs for a fine-tune job                                                                                         | [finetune.md](finetune.md) |
+| `bl finetune text create`  | API Key        | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                   | [finetune.md](finetune.md) |
+| `bl finetune watch`        | API Key        | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                      | [finetune.md](finetune.md) |
 
 ## By group
 

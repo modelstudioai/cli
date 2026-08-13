@@ -9,25 +9,25 @@ Use this index for the skill-scoped quick index and global flags.
 
 ## Quick index
 
-| Command                           | Description                                                   | Detail                               |
-| --------------------------------- | ------------------------------------------------------------- | ------------------------------------ |
-| `bl managed-agent apply`          | Apply planned changes to create/update/delete agent resources | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent destroy`        | Destroy all managed agent resources tracked in state          | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent init`           | Create a new agents.yaml template                             | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent plan`           | Show what changes would be applied to agent infrastructure    | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent session create` | Create a new session for an agent                             | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent session delete` | Delete a session                                              | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent session events` | List event history for a session                              | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent session get`    | Get details of a session                                      | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent session list`   | List sessions from the provider                               | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent session run`    | Create a session, send a message, and stream the response     | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent session send`   | Send a message to an existing session and stream the response | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent skill-list`     | List skills from the provider's skill catalog                 | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent state import`   | Import an existing remote resource into agents state          | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent state list`     | List resources tracked in agents state                        | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent state rm`       | Remove a resource from state without destroying it remotely   | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent state show`     | Show details of a resource in agents state                    | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent validate`       | Validate an agents.yaml configuration (offline)               | [managed-agent.md](managed-agent.md) |
+| Command                           | Authentication | Description                                                   | Detail                               |
+| --------------------------------- | -------------- | ------------------------------------------------------------- | ------------------------------------ |
+| `bl managed-agent apply`          | API Key        | Apply planned changes to create/update/delete agent resources | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent destroy`        | API Key        | Destroy all managed agent resources tracked in state          | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent init`           | No Auth        | Create a new agents.yaml template                             | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent plan`           | API Key        | Show what changes would be applied to agent infrastructure    | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent session create` | API Key        | Create a new session for an agent                             | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent session delete` | API Key        | Delete a session                                              | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent session events` | API Key        | List event history for a session                              | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent session get`    | API Key        | Get details of a session                                      | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent session list`   | API Key        | List sessions from the provider                               | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent session run`    | API Key        | Create a session, send a message, and stream the response     | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent session send`   | API Key        | Send a message to an existing session and stream the response | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent skill-list`     | API Key        | List skills from the provider's skill catalog                 | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent state import`   | API Key        | Import an existing remote resource into agents state          | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent state list`     | No Auth        | List resources tracked in agents state                        | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent state rm`       | No Auth        | Remove a resource from state without destroying it remotely   | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent state show`     | No Auth        | Show details of a resource in agents state                    | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent validate`       | No Auth        | Validate an agents.yaml configuration (offline)               | [managed-agent.md](managed-agent.md) |
 
 ## By group
 

@@ -7,25 +7,26 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                    | Description                                       |
-| -------------------------- | ------------------------------------------------- |
-| `bl memory add`            | Add memory from messages or custom content        |
-| `bl memory delete`         | Delete a memory node                              |
-| `bl memory list`           | List memory nodes for a user                      |
-| `bl memory profile create` | Create a user profile schema for memory profiling |
-| `bl memory profile get`    | Get user profile by schema ID and user ID         |
-| `bl memory search`         | Search memory nodes by query or messages          |
-| `bl memory update`         | Update a memory node content                      |
+| Command                    | Authentication | Description                                       |
+| -------------------------- | -------------- | ------------------------------------------------- |
+| `bl memory add`            | API Key        | Add memory from messages or custom content        |
+| `bl memory delete`         | API Key        | Delete a memory node                              |
+| `bl memory list`           | API Key        | List memory nodes for a user                      |
+| `bl memory profile create` | API Key        | Create a user profile schema for memory profiling |
+| `bl memory profile get`    | API Key        | Get user profile by schema ID and user ID         |
+| `bl memory search`         | API Key        | Search memory nodes by query or messages          |
+| `bl memory update`         | API Key        | Update a memory node content                      |
 
 ## Command details
 
 ### `bl memory add`
 
-| Field           | Value                                                                         |
-| --------------- | ----------------------------------------------------------------------------- |
-| **Name**        | `memory add`                                                                  |
-| **Description** | Add memory from messages or custom content                                    |
-| **Usage**       | `bl memory add --user-id <id> [--messages <json>] [--content <text>] [flags]` |
+| Field              | Value                                                                         |
+| ------------------ | ----------------------------------------------------------------------------- |
+| **Name**           | `memory add`                                                                  |
+| **Description**    | Add memory from messages or custom content                                    |
+| **Authentication** | API Key                                                                       |
+| **Usage**          | `bl memory add --user-id <id> [--messages <json>] [--content <text>] [flags]` |
 
 #### Flags
 
@@ -55,11 +56,12 @@ bl memory add --user-id user1 --content "Lives in Beijing" --profile-schema sche
 
 ### `bl memory delete`
 
-| Field           | Value                                            |
-| --------------- | ------------------------------------------------ |
-| **Name**        | `memory delete`                                  |
-| **Description** | Delete a memory node                             |
-| **Usage**       | `bl memory delete --node-id <id> --user-id <id>` |
+| Field              | Value                                            |
+| ------------------ | ------------------------------------------------ |
+| **Name**           | `memory delete`                                  |
+| **Description**    | Delete a memory node                             |
+| **Authentication** | API Key                                          |
+| **Usage**          | `bl memory delete --node-id <id> --user-id <id>` |
 
 #### Flags
 
@@ -79,11 +81,12 @@ bl memory delete --node-id node_xxx --user-id user1
 
 ### `bl memory list`
 
-| Field           | Value                                   |
-| --------------- | --------------------------------------- |
-| **Name**        | `memory list`                           |
-| **Description** | List memory nodes for a user            |
-| **Usage**       | `bl memory list --user-id <id> [flags]` |
+| Field              | Value                                   |
+| ------------------ | --------------------------------------- |
+| **Name**           | `memory list`                           |
+| **Description**    | List memory nodes for a user            |
+| **Authentication** | API Key                                 |
+| **Usage**          | `bl memory list --user-id <id> [flags]` |
 
 #### Flags
 
@@ -108,11 +111,12 @@ bl memory list --user-id user1 --page-size 20 --page 2
 
 ### `bl memory profile create`
 
-| Field           | Value                                                                |
-| --------------- | -------------------------------------------------------------------- |
-| **Name**        | `memory profile create`                                              |
-| **Description** | Create a user profile schema for memory profiling                    |
-| **Usage**       | `bl memory profile create --name <name> --attributes <json> [flags]` |
+| Field              | Value                                                                |
+| ------------------ | -------------------------------------------------------------------- |
+| **Name**           | `memory profile create`                                              |
+| **Description**    | Create a user profile schema for memory profiling                    |
+| **Authentication** | API Key                                                              |
+| **Usage**          | `bl memory profile create --name <name> --attributes <json> [flags]` |
 
 #### Flags
 
@@ -132,11 +136,12 @@ bl memory profile create --name "user_basic" --attributes '[{"name":"age","descr
 
 ### `bl memory profile get`
 
-| Field           | Value                                                   |
-| --------------- | ------------------------------------------------------- |
-| **Name**        | `memory profile get`                                    |
-| **Description** | Get user profile by schema ID and user ID               |
-| **Usage**       | `bl memory profile get --schema-id <id> --user-id <id>` |
+| Field              | Value                                                   |
+| ------------------ | ------------------------------------------------------- |
+| **Name**           | `memory profile get`                                    |
+| **Description**    | Get user profile by schema ID and user ID               |
+| **Authentication** | API Key                                                 |
+| **Usage**          | `bl memory profile get --schema-id <id> --user-id <id>` |
 
 #### Flags
 
@@ -155,11 +160,12 @@ bl memory profile get --schema-id schema_xxx --user-id user1
 
 ### `bl memory search`
 
-| Field           | Value                                                      |
-| --------------- | ---------------------------------------------------------- |
-| **Name**        | `memory search`                                            |
-| **Description** | Search memory nodes by query or messages                   |
-| **Usage**       | `bl memory search --user-id <id> [--query <text>] [flags]` |
+| Field              | Value                                                      |
+| ------------------ | ---------------------------------------------------------- |
+| **Name**           | `memory search`                                            |
+| **Description**    | Search memory nodes by query or messages                   |
+| **Authentication** | API Key                                                    |
+| **Usage**          | `bl memory search --user-id <id> [--query <text>] [flags]` |
 
 #### Flags
 
@@ -185,11 +191,12 @@ bl memory search --user-id user1 --messages '[{"role":"user","content":"recommen
 
 ### `bl memory update`
 
-| Field           | Value                                                             |
-| --------------- | ----------------------------------------------------------------- |
-| **Name**        | `memory update`                                                   |
-| **Description** | Update a memory node content                                      |
-| **Usage**       | `bl memory update --node-id <id> --user-id <id> --content <text>` |
+| Field              | Value                                                             |
+| ------------------ | ----------------------------------------------------------------- |
+| **Name**           | `memory update`                                                   |
+| **Description**    | Update a memory node content                                      |
+| **Authentication** | API Key                                                           |
+| **Usage**          | `bl memory update --node-id <id> --user-id <id> --content <text>` |
 
 #### Flags
 

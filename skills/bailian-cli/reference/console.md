@@ -7,19 +7,20 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command           | Description                                    |
-| ----------------- | ---------------------------------------------- |
-| `bl console call` | Call a Bailian console API via the CLI gateway |
+| Command           | Authentication | Description                                    |
+| ----------------- | -------------- | ---------------------------------------------- |
+| `bl console call` | Console        | Call a Bailian console API via the CLI gateway |
 
 ## Command details
 
 ### `bl console call`
 
-| Field           | Value                                               |
-| --------------- | --------------------------------------------------- |
-| **Name**        | `console call`                                      |
-| **Description** | Call a Bailian console API via the CLI gateway      |
-| **Usage**       | `bl console call --api <api> --data <json> [flags]` |
+| Field              | Value                                               |
+| ------------------ | --------------------------------------------------- |
+| **Name**           | `console call`                                      |
+| **Description**    | Call a Bailian console API via the CLI gateway      |
+| **Authentication** | Console                                             |
+| **Usage**          | `bl console call --api <api> --data <json> [flags]` |
 
 #### Flags
 

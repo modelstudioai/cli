@@ -7,22 +7,23 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                      | Description                               |
-| ---------------------------- | ----------------------------------------- |
-| `bl token-plan add-member`   | Add a member to a Token Plan organization |
-| `bl token-plan assign-seats` | Batch assign Token Plan seats to members  |
-| `bl token-plan create-key`   | Create a Token Plan API key for a seat    |
-| `bl token-plan list-seats`   | List Token Plan subscription seat details |
+| Command                      | Authentication | Description                               |
+| ---------------------------- | -------------- | ----------------------------------------- |
+| `bl token-plan add-member`   | AK/SK          | Add a member to a Token Plan organization |
+| `bl token-plan assign-seats` | AK/SK          | Batch assign Token Plan seats to members  |
+| `bl token-plan create-key`   | AK/SK          | Create a Token Plan API key for a seat    |
+| `bl token-plan list-seats`   | AK/SK          | List Token Plan subscription seat details |
 
 ## Command details
 
 ### `bl token-plan add-member`
 
-| Field           | Value                                                                  |
-| --------------- | ---------------------------------------------------------------------- |
-| **Name**        | `token-plan add-member`                                                |
-| **Description** | Add a member to a Token Plan organization                              |
-| **Usage**       | `bl token-plan add-member --account-name <name> --org-id <id> [flags]` |
+| Field              | Value                                                                  |
+| ------------------ | ---------------------------------------------------------------------- |
+| **Name**           | `token-plan add-member`                                                |
+| **Description**    | Add a member to a Token Plan organization                              |
+| **Authentication** | AK/SK                                                                  |
+| **Usage**          | `bl token-plan add-member --account-name <name> --org-id <id> [flags]` |
 
 #### Flags
 
@@ -54,11 +55,12 @@ bl token-plan add-member --account-name member1 --org-id org_123 --spec-type sta
 
 ### `bl token-plan assign-seats`
 
-| Field           | Value                                                                                         |
-| --------------- | --------------------------------------------------------------------------------------------- |
-| **Name**        | `token-plan assign-seats`                                                                     |
-| **Description** | Batch assign Token Plan seats to members                                                      |
-| **Usage**       | `bl token-plan assign-seats --workspace-id <id> --seat-type <type> --account-id <id> [flags]` |
+| Field              | Value                                                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| **Name**           | `token-plan assign-seats`                                                                     |
+| **Description**    | Batch assign Token Plan seats to members                                                      |
+| **Authentication** | AK/SK                                                                                         |
+| **Usage**          | `bl token-plan assign-seats --workspace-id <id> --seat-type <type> --account-id <id> [flags]` |
 
 #### Flags
 
@@ -86,11 +88,12 @@ bl token-plan assign-seats --workspace-id ws_456 --seat-type pro --account-id ac
 
 ### `bl token-plan create-key`
 
-| Field           | Value                                                                    |
-| --------------- | ------------------------------------------------------------------------ |
-| **Name**        | `token-plan create-key`                                                  |
-| **Description** | Create a Token Plan API key for a seat                                   |
-| **Usage**       | `bl token-plan create-key --account-id <id> --workspace-id <id> [flags]` |
+| Field              | Value                                                                    |
+| ------------------ | ------------------------------------------------------------------------ |
+| **Name**           | `token-plan create-key`                                                  |
+| **Description**    | Create a Token Plan API key for a seat                                   |
+| **Authentication** | AK/SK                                                                    |
+| **Usage**          | `bl token-plan create-key --account-id <id> --workspace-id <id> [flags]` |
 
 #### Flags
 
@@ -117,11 +120,12 @@ bl token-plan create-key --account-id acc_123 --workspace-id ws_456 --descriptio
 
 ### `bl token-plan list-seats`
 
-| Field           | Value                                     |
-| --------------- | ----------------------------------------- |
-| **Name**        | `token-plan list-seats`                   |
-| **Description** | List Token Plan subscription seat details |
-| **Usage**       | `bl token-plan list-seats [flags]`        |
+| Field              | Value                                     |
+| ------------------ | ----------------------------------------- |
+| **Name**           | `token-plan list-seats`                   |
+| **Description**    | List Token Plan subscription seat details |
+| **Authentication** | AK/SK                                     |
+| **Usage**          | `bl token-plan list-seats [flags]`        |
 
 #### Flags
 
