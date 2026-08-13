@@ -48,6 +48,7 @@ export type {
   ChatTool,
   DashScopeASRRequest,
   DashScopeASRTaskResult,
+  DashScopeASRTranscriptionItem,
   DashScopeAsyncResponse,
   DashScopeImageRequest,
   DashScopeImageSyncResponse,

@@ -7,27 +7,28 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                  | Description                                               |
-| ------------------------ | --------------------------------------------------------- |
-| `bl deploy audio create` | Create an audio (TTS) model deployment                    |
-| `bl deploy delete`       | Delete a model deployment (must be STOPPED or FAILED)     |
-| `bl deploy get`          | Get details of a single model deployment                  |
-| `bl deploy image create` | Create an image generation model deployment               |
-| `bl deploy list`         | List model deployments                                    |
-| `bl deploy models`       | List models available for deployment                      |
-| `bl deploy scale`        | Scale a deployment's capacity                             |
-| `bl deploy text create`  | Create a text model deployment                            |
-| `bl deploy update`       | Update a deployment's rate limits (rpm_limit / tpm_limit) |
+| Command                  | Authentication | Description                                               |
+| ------------------------ | -------------- | --------------------------------------------------------- |
+| `bl deploy audio create` | API Key        | Create an audio (TTS) model deployment                    |
+| `bl deploy delete`       | API Key        | Delete a model deployment (must be STOPPED or FAILED)     |
+| `bl deploy get`          | API Key        | Get details of a single model deployment                  |
+| `bl deploy image create` | API Key        | Create an image generation model deployment               |
+| `bl deploy list`         | API Key        | List model deployments                                    |
+| `bl deploy models`       | API Key        | List models available for deployment                      |
+| `bl deploy scale`        | API Key        | Scale a deployment's capacity                             |
+| `bl deploy text create`  | API Key        | Create a text model deployment                            |
+| `bl deploy update`       | API Key        | Update a deployment's rate limits (rpm_limit / tpm_limit) |
 
 ## Command details
 
 ### `bl deploy audio create`
 
-| Field           | Value                                                                                                                                                                                                             |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `deploy audio create`                                                                                                                                                                                             |
-| **Description** | Create an audio (TTS) model deployment                                                                                                                                                                            |
-| **Usage**       | `bl deploy audio create --model <model_name> --name <display_name> [--plan <plan>] [--deploy-spec <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]` |
+| Field              | Value                                                                                                                                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `deploy audio create`                                                                                                                                                                                             |
+| **Description**    | Create an audio (TTS) model deployment                                                                                                                                                                            |
+| **Authentication** | API Key                                                                                                                                                                                                           |
+| **Usage**          | `bl deploy audio create --model <model_name> --name <display_name> [--plan <plan>] [--deploy-spec <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]` |
 
 #### Flags
 
@@ -83,11 +84,12 @@ bl deploy audio create --model my-cosyvoice-ft --name my-tts --dry-run
 
 ### `bl deploy delete`
 
-| Field           | Value                                                      |
-| --------------- | ---------------------------------------------------------- |
-| **Name**        | `deploy delete`                                            |
-| **Description** | Delete a model deployment (must be STOPPED or FAILED)      |
-| **Usage**       | `bl deploy delete --deployed-model <id> [--skip-precheck]` |
+| Field              | Value                                                      |
+| ------------------ | ---------------------------------------------------------- |
+| **Name**           | `deploy delete`                                            |
+| **Description**    | Delete a model deployment (must be STOPPED or FAILED)      |
+| **Authentication** | API Key                                                    |
+| **Usage**          | `bl deploy delete --deployed-model <id> [--skip-precheck]` |
 
 #### Flags
 
@@ -110,11 +112,12 @@ bl deploy delete --deployed-model dep-... --dry-run
 
 ### `bl deploy get`
 
-| Field           | Value                                    |
-| --------------- | ---------------------------------------- |
-| **Name**        | `deploy get`                             |
-| **Description** | Get details of a single model deployment |
-| **Usage**       | `bl deploy get --deployed-model <id>`    |
+| Field              | Value                                    |
+| ------------------ | ---------------------------------------- |
+| **Name**           | `deploy get`                             |
+| **Description**    | Get details of a single model deployment |
+| **Authentication** | API Key                                  |
+| **Usage**          | `bl deploy get --deployed-model <id>`    |
 
 #### Flags
 
@@ -136,11 +139,12 @@ bl deploy get --deployed-model qwen-plus-2025-12-01-b6d61c71 --output json
 
 ### `bl deploy image create`
 
-| Field           | Value                                                                                                                                                                                                             |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `deploy image create`                                                                                                                                                                                             |
-| **Description** | Create an image generation model deployment                                                                                                                                                                       |
-| **Usage**       | `bl deploy image create --model <model_name> --name <display_name> [--plan <plan>] [--deploy-spec <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]` |
+| Field              | Value                                                                                                                                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `deploy image create`                                                                                                                                                                                             |
+| **Description**    | Create an image generation model deployment                                                                                                                                                                       |
+| **Authentication** | API Key                                                                                                                                                                                                           |
+| **Usage**          | `bl deploy image create --model <model_name> --name <display_name> [--plan <plan>] [--deploy-spec <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]` |
 
 #### Flags
 
@@ -196,11 +200,12 @@ bl deploy image create --model my-wan-ft --name my-wan --dry-run
 
 ### `bl deploy list`
 
-| Field           | Value                                                          |
-| --------------- | -------------------------------------------------------------- |
-| **Name**        | `deploy list`                                                  |
-| **Description** | List model deployments                                         |
-| **Usage**       | `bl deploy list [--page <n>] [--page-size <n>] [--status <s>]` |
+| Field              | Value                                                          |
+| ------------------ | -------------------------------------------------------------- |
+| **Name**           | `deploy list`                                                  |
+| **Description**    | List model deployments                                         |
+| **Authentication** | API Key                                                        |
+| **Usage**          | `bl deploy list [--page <n>] [--page-size <n>] [--status <s>]` |
 
 #### Flags
 
@@ -228,11 +233,12 @@ bl deploy list --page-size 20 --output json
 
 ### `bl deploy models`
 
-| Field           | Value                                                                                                 |
-| --------------- | ----------------------------------------------------------------------------------------------------- |
-| **Name**        | `deploy models`                                                                                       |
-| **Description** | List models available for deployment                                                                  |
-| **Usage**       | `bl deploy models [--page <n>] [--page-size <n>] [--catalog-version <v>] [--source <custom\|public>]` |
+| Field              | Value                                                                                                 |
+| ------------------ | ----------------------------------------------------------------------------------------------------- |
+| **Name**           | `deploy models`                                                                                       |
+| **Description**    | List models available for deployment                                                                  |
+| **Authentication** | API Key                                                                                               |
+| **Usage**          | `bl deploy models [--page <n>] [--page-size <n>] [--catalog-version <v>] [--source <custom\|public>]` |
 
 #### Flags
 
@@ -265,11 +271,12 @@ bl deploy models --catalog-version v1.0 --output json
 
 ### `bl deploy scale`
 
-| Field           | Value                                                                                       |
-| --------------- | ------------------------------------------------------------------------------------------- |
-| **Name**        | `deploy scale`                                                                              |
-| **Description** | Scale a deployment's capacity                                                               |
-| **Usage**       | `bl deploy scale --deployed-model <id> --capacity <n> [--input-tpm <n>] [--output-tpm <n>]` |
+| Field              | Value                                                                                       |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Name**           | `deploy scale`                                                                              |
+| **Description**    | Scale a deployment's capacity                                                               |
+| **Authentication** | API Key                                                                                     |
+| **Usage**          | `bl deploy scale --deployed-model <id> --capacity <n> [--input-tpm <n>] [--output-tpm <n>]` |
 
 #### Flags
 
@@ -294,11 +301,12 @@ bl deploy scale --deployed-model dep-... --capacity 2
 
 ### `bl deploy text create`
 
-| Field           | Value                                                                                                                                                                                                            |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `deploy text create`                                                                                                                                                                                             |
-| **Description** | Create a text model deployment                                                                                                                                                                                   |
-| **Usage**       | `bl deploy text create --model <model_name> --name <display_name> [--plan <plan>] [--deploy-spec <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]` |
+| Field              | Value                                                                                                                                                                                                            |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `deploy text create`                                                                                                                                                                                             |
+| **Description**    | Create a text model deployment                                                                                                                                                                                   |
+| **Authentication** | API Key                                                                                                                                                                                                          |
+| **Usage**          | `bl deploy text create --model <model_name> --name <display_name> [--plan <plan>] [--deploy-spec <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]` |
 
 #### Flags
 
@@ -358,11 +366,12 @@ bl deploy text create --model qwen3-8b --name my-qwen3 --plan mu --deploy-spec M
 
 ### `bl deploy update`
 
-| Field           | Value                                                                        |
-| --------------- | ---------------------------------------------------------------------------- |
-| **Name**        | `deploy update`                                                              |
-| **Description** | Update a deployment's rate limits (rpm_limit / tpm_limit)                    |
-| **Usage**       | `bl deploy update --deployed-model <id> [--rpm-limit <n>] [--tpm-limit <n>]` |
+| Field              | Value                                                                        |
+| ------------------ | ---------------------------------------------------------------------------- |
+| **Name**           | `deploy update`                                                              |
+| **Description**    | Update a deployment's rate limits (rpm_limit / tpm_limit)                    |
+| **Authentication** | API Key                                                                      |
+| **Usage**          | `bl deploy update --deployed-model <id> [--rpm-limit <n>] [--tpm-limit <n>]` |
 
 #### Flags
 

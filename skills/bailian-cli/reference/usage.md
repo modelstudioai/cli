@@ -19,11 +19,12 @@ Index: [index.md](index.md)
 
 ### `bl usage free`
 
-| Field           | Value                                                               |
-| --------------- | ------------------------------------------------------------------- |
-| **Name**        | `usage free`                                                        |
-| **Description** | Query free-tier quota for models (all models if --model is omitted) |
-| **Usage**       | `bl usage free [--model <model>[,model2,...]] [flags]`              |
+| Field              | Value                                                               |
+| ------------------ | ------------------------------------------------------------------- |
+| **Name**           | `usage free`                                                        |
+| **Description**    | Query free-tier quota for models (all models if --model is omitted) |
+| **Authentication** | Console                                                             |
+| **Usage**          | `bl usage free [--model <model>[,model2,...]] [flags]`              |
 
 #### Flags
 
@@ -74,11 +75,12 @@ bl usage free --model qwen3-max --console-region cn-beijing
 
 ### `bl usage freetier`
 
-| Field           | Value                                                                                      |
-| --------------- | ------------------------------------------------------------------------------------------ |
-| **Name**        | `usage freetier`                                                                           |
-| **Description** | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable |
-| **Usage**       | `bl usage freetier <--model <model>[,model2,...] \| --all> [--off] [flags]`                |
+| Field              | Value                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| **Name**           | `usage freetier`                                                                           |
+| **Description**    | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable |
+| **Authentication** | Console                                                                                    |
+| **Usage**          | `bl usage freetier <--model <model>[,model2,...] \| --all> [--off] [flags]`                |
 
 #### Flags
 
@@ -121,11 +123,12 @@ bl usage freetier --off --all
 
 ### `bl usage stats`
 
-| Field           | Value                                                      |
-| --------------- | ---------------------------------------------------------- |
-| **Name**        | `usage stats`                                              |
-| **Description** | Query model usage statistics                               |
-| **Usage**       | `bl usage stats [--model <model>] [--days <days>] [flags]` |
+| Field              | Value                                                      |
+| ------------------ | ---------------------------------------------------------- |
+| **Name**           | `usage stats`                                              |
+| **Description**    | Query model usage statistics                               |
+| **Authentication** | Console                                                    |
+| **Usage**          | `bl usage stats [--model <model>] [--days <days>] [flags]` |
 
 #### Flags
 
@@ -171,11 +174,12 @@ bl usage stats --output json
 
 ### `bl usage summary`
 
-| Field           | Value                                                                   |
-| --------------- | ----------------------------------------------------------------------- |
-| **Name**        | `usage summary`                                                         |
-| **Description** | Show a unified usage summary: free-tier quota and recent usage overview |
-| **Usage**       | `bl usage summary [--days <days>] [flags]`                              |
+| Field              | Value                                                                   |
+| ------------------ | ----------------------------------------------------------------------- |
+| **Name**           | `usage summary`                                                         |
+| **Description**    | Show a unified usage summary: free-tier quota and recent usage overview |
+| **Authentication** | Console                                                                 |
+| **Usage**          | `bl usage summary [--days <days>] [flags]`                              |
 
 #### Flags
 

@@ -7,35 +7,36 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                           | Description                                                   |
-| --------------------------------- | ------------------------------------------------------------- |
-| `bl managed-agent apply`          | Apply planned changes to create/update/delete agent resources |
-| `bl managed-agent destroy`        | Destroy all managed agent resources tracked in state          |
-| `bl managed-agent init`           | Create a new agents.yaml template                             |
-| `bl managed-agent plan`           | Show what changes would be applied to agent infrastructure    |
-| `bl managed-agent session create` | Create a new session for an agent                             |
-| `bl managed-agent session delete` | Delete a session                                              |
-| `bl managed-agent session events` | List event history for a session                              |
-| `bl managed-agent session get`    | Get details of a session                                      |
-| `bl managed-agent session list`   | List sessions from the provider                               |
-| `bl managed-agent session run`    | Create a session, send a message, and stream the response     |
-| `bl managed-agent session send`   | Send a message to an existing session and stream the response |
-| `bl managed-agent skill-list`     | List skills from the provider's skill catalog                 |
-| `bl managed-agent state import`   | Import an existing remote resource into agents state          |
-| `bl managed-agent state list`     | List resources tracked in agents state                        |
-| `bl managed-agent state rm`       | Remove a resource from state without destroying it remotely   |
-| `bl managed-agent state show`     | Show details of a resource in agents state                    |
-| `bl managed-agent validate`       | Validate an agents.yaml configuration (offline)               |
+| Command                           | Authentication | Description                                                   |
+| --------------------------------- | -------------- | ------------------------------------------------------------- |
+| `bl managed-agent apply`          | API Key        | Apply planned changes to create/update/delete agent resources |
+| `bl managed-agent destroy`        | API Key        | Destroy all managed agent resources tracked in state          |
+| `bl managed-agent init`           | No Auth        | Create a new agents.yaml template                             |
+| `bl managed-agent plan`           | API Key        | Show what changes would be applied to agent infrastructure    |
+| `bl managed-agent session create` | API Key        | Create a new session for an agent                             |
+| `bl managed-agent session delete` | API Key        | Delete a session                                              |
+| `bl managed-agent session events` | API Key        | List event history for a session                              |
+| `bl managed-agent session get`    | API Key        | Get details of a session                                      |
+| `bl managed-agent session list`   | API Key        | List sessions from the provider                               |
+| `bl managed-agent session run`    | API Key        | Create a session, send a message, and stream the response     |
+| `bl managed-agent session send`   | API Key        | Send a message to an existing session and stream the response |
+| `bl managed-agent skill-list`     | API Key        | List skills from the provider's skill catalog                 |
+| `bl managed-agent state import`   | API Key        | Import an existing remote resource into agents state          |
+| `bl managed-agent state list`     | No Auth        | List resources tracked in agents state                        |
+| `bl managed-agent state rm`       | No Auth        | Remove a resource from state without destroying it remotely   |
+| `bl managed-agent state show`     | No Auth        | Show details of a resource in agents state                    |
+| `bl managed-agent validate`       | No Auth        | Validate an agents.yaml configuration (offline)               |
 
 ## Command details
 
 ### `bl managed-agent apply`
 
-| Field           | Value                                                                                    |
-| --------------- | ---------------------------------------------------------------------------------------- |
-| **Name**        | `managed-agent apply`                                                                    |
-| **Description** | Apply planned changes to create/update/delete agent resources                            |
-| **Usage**       | `bl managed-agent apply [--file <path>] [--provider <name>] [--yes] [--concurrency <n>]` |
+| Field              | Value                                                                                    |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent apply`                                                                    |
+| **Description**    | Apply planned changes to create/update/delete agent resources                            |
+| **Authentication** | API Key                                                                                  |
+| **Usage**          | `bl managed-agent apply [--file <path>] [--provider <name>] [--yes] [--concurrency <n>]` |
 
 #### Flags
 
@@ -67,11 +68,12 @@ bl managed-agent apply --provider bailian --yes
 
 ### `bl managed-agent destroy`
 
-| Field           | Value                                                          |
-| --------------- | -------------------------------------------------------------- |
-| **Name**        | `managed-agent destroy`                                        |
-| **Description** | Destroy all managed agent resources tracked in state           |
-| **Usage**       | `bl managed-agent destroy [--file <path>] [--yes] [--cascade]` |
+| Field              | Value                                                          |
+| ------------------ | -------------------------------------------------------------- |
+| **Name**           | `managed-agent destroy`                                        |
+| **Description**    | Destroy all managed agent resources tracked in state           |
+| **Authentication** | API Key                                                        |
+| **Usage**          | `bl managed-agent destroy [--file <path>] [--yes] [--cascade]` |
 
 #### Flags
 
@@ -101,11 +103,12 @@ bl managed-agent destroy --yes --cascade
 
 ### `bl managed-agent init`
 
-| Field           | Value                                                                                       |
-| --------------- | ------------------------------------------------------------------------------------------- |
-| **Name**        | `managed-agent init`                                                                        |
-| **Description** | Create a new agents.yaml template                                                           |
-| **Usage**       | `bl managed-agent init [--provider <name>] [--agent-name <name>] [--file <path>] [--force]` |
+| Field              | Value                                                                                       |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent init`                                                                        |
+| **Description**    | Create a new agents.yaml template                                                           |
+| **Authentication** | No Auth                                                                                     |
+| **Usage**          | `bl managed-agent init [--provider <name>] [--agent-name <name>] [--file <path>] [--force]` |
 
 #### Flags
 
@@ -132,11 +135,12 @@ bl managed-agent init --provider all
 
 ### `bl managed-agent plan`
 
-| Field           | Value                                                                                       |
-| --------------- | ------------------------------------------------------------------------------------------- |
-| **Name**        | `managed-agent plan`                                                                        |
-| **Description** | Show what changes would be applied to agent infrastructure                                  |
-| **Usage**       | `bl managed-agent plan [--file <path>] [--provider <name>] [--no-refresh] [--refresh-only]` |
+| Field              | Value                                                                                       |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent plan`                                                                        |
+| **Description**    | Show what changes would be applied to agent infrastructure                                  |
+| **Authentication** | API Key                                                                                     |
+| **Usage**          | `bl managed-agent plan [--file <path>] [--provider <name>] [--no-refresh] [--refresh-only]` |
 
 #### Flags
 
@@ -172,11 +176,12 @@ bl managed-agent plan --no-refresh
 
 ### `bl managed-agent session create`
 
-| Field           | Value                                                                                                       |
-| --------------- | ----------------------------------------------------------------------------------------------------------- |
-| **Name**        | `managed-agent session create`                                                                              |
-| **Description** | Create a new session for an agent                                                                           |
-| **Usage**       | `bl managed-agent session create [--agent <name>] [--environment <name>] [--title <title>] [--file <path>]` |
+| Field              | Value                                                                                                       |
+| ------------------ | ----------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent session create`                                                                              |
+| **Description**    | Create a new session for an agent                                                                           |
+| **Authentication** | API Key                                                                                                     |
+| **Usage**          | `bl managed-agent session create [--agent <name>] [--environment <name>] [--title <title>] [--file <path>]` |
 
 #### Flags
 
@@ -214,11 +219,12 @@ bl managed-agent session create --agent assistant --title 'debug run'
 
 ### `bl managed-agent session delete`
 
-| Field           | Value                                                                                   |
-| --------------- | --------------------------------------------------------------------------------------- |
-| **Name**        | `managed-agent session delete`                                                          |
-| **Description** | Delete a session                                                                        |
-| **Usage**       | `bl managed-agent session delete --session-id <id> [--provider <name>] [--file <path>]` |
+| Field              | Value                                                                                   |
+| ------------------ | --------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent session delete`                                                          |
+| **Description**    | Delete a session                                                                        |
+| **Authentication** | API Key                                                                                 |
+| **Usage**          | `bl managed-agent session delete --session-id <id> [--provider <name>] [--file <path>]` |
 
 #### Flags
 
@@ -244,11 +250,12 @@ bl managed-agent session delete --session-id sess_abc123
 
 ### `bl managed-agent session events`
 
-| Field           | Value                                                                                     |
-| --------------- | ----------------------------------------------------------------------------------------- |
-| **Name**        | `managed-agent session events`                                                            |
-| **Description** | List event history for a session                                                          |
-| **Usage**       | `bl managed-agent session events --session-id <id> [--limit <n>] [--all] [--file <path>]` |
+| Field              | Value                                                                                     |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent session events`                                                            |
+| **Description**    | List event history for a session                                                          |
+| **Authentication** | API Key                                                                                   |
+| **Usage**          | `bl managed-agent session events --session-id <id> [--limit <n>] [--all] [--file <path>]` |
 
 #### Flags
 
@@ -280,11 +287,12 @@ bl managed-agent session events --session-id sess_abc123 --all
 
 ### `bl managed-agent session get`
 
-| Field           | Value                                                                                |
-| --------------- | ------------------------------------------------------------------------------------ |
-| **Name**        | `managed-agent session get`                                                          |
-| **Description** | Get details of a session                                                             |
-| **Usage**       | `bl managed-agent session get --session-id <id> [--provider <name>] [--file <path>]` |
+| Field              | Value                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------ |
+| **Name**           | `managed-agent session get`                                                          |
+| **Description**    | Get details of a session                                                             |
+| **Authentication** | API Key                                                                              |
+| **Usage**          | `bl managed-agent session get --session-id <id> [--provider <name>] [--file <path>]` |
 
 #### Flags
 
@@ -310,11 +318,12 @@ bl managed-agent session get --session-id sess_abc123
 
 ### `bl managed-agent session list`
 
-| Field           | Value                                                                                        |
-| --------------- | -------------------------------------------------------------------------------------------- |
-| **Name**        | `managed-agent session list`                                                                 |
-| **Description** | List sessions from the provider                                                              |
-| **Usage**       | `bl managed-agent session list [--agent <name>] [--all] [--provider <name>] [--file <path>]` |
+| Field              | Value                                                                                        |
+| ------------------ | -------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent session list`                                                                 |
+| **Description**    | List sessions from the provider                                                              |
+| **Authentication** | API Key                                                                                      |
+| **Usage**          | `bl managed-agent session list [--agent <name>] [--all] [--provider <name>] [--file <path>]` |
 
 #### Flags
 
@@ -349,11 +358,12 @@ bl managed-agent session list --all
 
 ### `bl managed-agent session run`
 
-| Field           | Value                                                                                         |
-| --------------- | --------------------------------------------------------------------------------------------- |
-| **Name**        | `managed-agent session run`                                                                   |
-| **Description** | Create a session, send a message, and stream the response                                     |
-| **Usage**       | `bl managed-agent session run --prompt <text> [--agent <name>] [--no-stream] [--file <path>]` |
+| Field              | Value                                                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent session run`                                                                   |
+| **Description**    | Create a session, send a message, and stream the response                                     |
+| **Authentication** | API Key                                                                                       |
+| **Usage**          | `bl managed-agent session run --prompt <text> [--agent <name>] [--no-stream] [--file <path>]` |
 
 #### Flags
 
@@ -390,11 +400,12 @@ bl managed-agent session run --agent assistant --prompt "summarize this repo"
 
 ### `bl managed-agent session send`
 
-| Field           | Value                                                                                            |
-| --------------- | ------------------------------------------------------------------------------------------------ |
-| **Name**        | `managed-agent session send`                                                                     |
-| **Description** | Send a message to an existing session and stream the response                                    |
-| **Usage**       | `bl managed-agent session send --session-id <id> --message <text> [--no-stream] [--file <path>]` |
+| Field              | Value                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| **Name**           | `managed-agent session send`                                                                     |
+| **Description**    | Send a message to an existing session and stream the response                                    |
+| **Authentication** | API Key                                                                                          |
+| **Usage**          | `bl managed-agent session send --session-id <id> --message <text> [--no-stream] [--file <path>]` |
 
 #### Flags
 
@@ -422,11 +433,12 @@ bl managed-agent session send --session-id sess_abc123 --message "continue"
 
 ### `bl managed-agent skill-list`
 
-| Field           | Value                                                                                              |
-| --------------- | -------------------------------------------------------------------------------------------------- |
-| **Name**        | `managed-agent skill-list`                                                                         |
-| **Description** | List skills from the provider's skill catalog                                                      |
-| **Usage**       | `bl managed-agent skill-list [--source custom\|official\|all] [--provider <name>] [--file <path>]` |
+| Field              | Value                                                                                              |
+| ------------------ | -------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent skill-list`                                                                         |
+| **Description**    | List skills from the provider's skill catalog                                                      |
+| **Authentication** | API Key                                                                                            |
+| **Usage**          | `bl managed-agent skill-list [--source custom\|official\|all] [--provider <name>] [--file <path>]` |
 
 #### Flags
 
@@ -467,11 +479,12 @@ bl managed-agent skill-list --source custom --provider bailian
 
 ### `bl managed-agent state import`
 
-| Field           | Value                                                                                                                    |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| **Name**        | `managed-agent state import`                                                                                             |
-| **Description** | Import an existing remote resource into agents state                                                                     |
-| **Usage**       | `bl managed-agent state import --address <provider.type.name> --remote-id <id> [--resource-version <n>] [--file <path>]` |
+| Field              | Value                                                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| **Name**           | `managed-agent state import`                                                                                             |
+| **Description**    | Import an existing remote resource into agents state                                                                     |
+| **Authentication** | API Key                                                                                                                  |
+| **Usage**          | `bl managed-agent state import --address <provider.type.name> --remote-id <id> [--resource-version <n>] [--file <path>]` |
 
 #### Flags
 
@@ -498,11 +511,12 @@ bl managed-agent state import --address bailian.agent.assistant --remote-id agen
 
 ### `bl managed-agent state list`
 
-| Field           | Value                                         |
-| --------------- | --------------------------------------------- |
-| **Name**        | `managed-agent state list`                    |
-| **Description** | List resources tracked in agents state        |
-| **Usage**       | `bl managed-agent state list [--file <path>]` |
+| Field              | Value                                         |
+| ------------------ | --------------------------------------------- |
+| **Name**           | `managed-agent state list`                    |
+| **Description**    | List resources tracked in agents state        |
+| **Authentication** | No Auth                                       |
+| **Usage**          | `bl managed-agent state list [--file <path>]` |
 
 #### Flags
 
@@ -526,11 +540,12 @@ bl managed-agent state list --file agents.yaml
 
 ### `bl managed-agent state rm`
 
-| Field           | Value                                                                      |
-| --------------- | -------------------------------------------------------------------------- |
-| **Name**        | `managed-agent state rm`                                                   |
-| **Description** | Remove a resource from state without destroying it remotely                |
-| **Usage**       | `bl managed-agent state rm --address <provider.type.name> [--file <path>]` |
+| Field              | Value                                                                      |
+| ------------------ | -------------------------------------------------------------------------- |
+| **Name**           | `managed-agent state rm`                                                   |
+| **Description**    | Remove a resource from state without destroying it remotely                |
+| **Authentication** | No Auth                                                                    |
+| **Usage**          | `bl managed-agent state rm --address <provider.type.name> [--file <path>]` |
 
 #### Flags
 
@@ -551,11 +566,12 @@ bl managed-agent state rm --address bailian.agent.assistant
 
 ### `bl managed-agent state show`
 
-| Field           | Value                                                                        |
-| --------------- | ---------------------------------------------------------------------------- |
-| **Name**        | `managed-agent state show`                                                   |
-| **Description** | Show details of a resource in agents state                                   |
-| **Usage**       | `bl managed-agent state show --address <provider.type.name> [--file <path>]` |
+| Field              | Value                                                                        |
+| ------------------ | ---------------------------------------------------------------------------- |
+| **Name**           | `managed-agent state show`                                                   |
+| **Description**    | Show details of a resource in agents state                                   |
+| **Authentication** | No Auth                                                                      |
+| **Usage**          | `bl managed-agent state show --address <provider.type.name> [--file <path>]` |
 
 #### Flags
 
@@ -576,11 +592,12 @@ bl managed-agent state show --address bailian.agent.assistant
 
 ### `bl managed-agent validate`
 
-| Field           | Value                                           |
-| --------------- | ----------------------------------------------- |
-| **Name**        | `managed-agent validate`                        |
-| **Description** | Validate an agents.yaml configuration (offline) |
-| **Usage**       | `bl managed-agent validate [--file <path>]`     |
+| Field              | Value                                           |
+| ------------------ | ----------------------------------------------- |
+| **Name**           | `managed-agent validate`                        |
+| **Description**    | Validate an agents.yaml configuration (offline) |
+| **Authentication** | No Auth                                         |
+| **Usage**          | `bl managed-agent validate [--file <path>]`     |
 
 #### Flags
 
