@@ -15,6 +15,7 @@ import {
   resolveAsrApi,
   buildAsrFlashRequest,
   buildAsyncAsrLanguageFields,
+  collectAsrTranscriptionItems,
   extractAsrFlashText,
   type AsrApiRoute,
   type AsrFlashFamily,
@@ -79,7 +80,7 @@ function assertSyncFlashFlagsAllowed(
   const unsupported: string[] = [];
   if (flags.diarization === true) unsupported.push("--diarization");
   if (flags.speakerCount !== undefined) unsupported.push("--speaker-count");
-  // qwen3 sync Flash 不走 vocabulary_id；input-audio Flash（fun-asr-flash* / qwen-audio-*-asr-flash）官方支持
+  // qwen3 sync Flash does not use vocabulary_id; input-audio Flash (fun-asr-flash* / qwen-audio-*-asr-flash) does
   if (flashFamily === "qwen3" && flags.vocabularyId !== undefined) {
     unsupported.push("--vocabulary-id");
   }
@@ -308,7 +309,7 @@ async function handleAsyncMode(
     },
   });
 
-  const results = result.output.results ?? [];
+  const results = collectAsrTranscriptionItems(result.output);
 
   if (results.length === 0) {
     emitResult({ task_id: taskId, status: result.output.task_status }, format);

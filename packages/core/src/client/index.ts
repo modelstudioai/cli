@@ -37,6 +37,7 @@ export {
 export {
   buildAsrFlashRequest,
   buildAsyncAsrLanguageFields,
+  collectAsrTranscriptionItems,
   extractAsrFlashText,
   inferAudioFormatHint,
   resolveAsrApi,

@@ -97,7 +97,7 @@ describe("e2e: speech recognize", () => {
   });
 
   test("speech recognize realtime 模型报用法错误", async () => {
-    // 使用 --dry-run：跳过 auth，避免 CI 无密钥时先以 AUTH(3) 退出
+    // Use --dry-run to skip auth so CI without API keys still hits USAGE(2)
     const { stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
       "speech",
       "recognize",
@@ -187,6 +187,87 @@ describe("e2e: speech recognize", () => {
 
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/exactly one --url|sync Flash/i);
+  });
+
+  test("speech recognize qwen3-filetrans 轮询成功后下载 result.transcription_url", async () => {
+    const server = http.createServer((request, response) => {
+      const url = request.url ?? "";
+      const chunks: Buffer[] = [];
+      request.on("data", (chunk: Buffer) => chunks.push(chunk));
+      request.on("end", () => {
+        response.writeHead(200, { "Content-Type": "application/json" });
+        if (url.startsWith("/api/v1/services/audio/asr/transcription")) {
+          response.end(
+            JSON.stringify({
+              output: { task_id: "task-qwen3", task_status: "PENDING" },
+              request_id: "req-submit",
+            }),
+          );
+          return;
+        }
+        if (url.startsWith("/api/v1/tasks/")) {
+          const address = server.address() as AddressInfo;
+          response.end(
+            JSON.stringify({
+              output: {
+                task_id: "task-qwen3",
+                task_status: "SUCCEEDED",
+                result: {
+                  transcription_url: `http://127.0.0.1:${address.port}/transcription.json`,
+                },
+              },
+              request_id: "req-poll",
+            }),
+          );
+          return;
+        }
+        if (url.startsWith("/transcription.json")) {
+          response.end(
+            JSON.stringify({
+              file_url: "https://example.com/a.wav",
+              transcripts: [{ text: "你好世界", sentences: [{ text: "你好世界" }] }],
+            }),
+          );
+          return;
+        }
+        response.writeHead(404);
+        response.end(JSON.stringify({ message: `unexpected path: ${url}` }));
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address() as AddressInfo;
+    const outDir = makeE2eOutputDir("speech-recognize-qwen3-filetrans");
+    const outPath = join(outDir, "result.json");
+
+    try {
+      const { stdout, stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+        "speech",
+        "recognize",
+        "--model",
+        "qwen3-asr-flash-filetrans",
+        "--url",
+        "https://example.com/a.wav",
+        "--language",
+        "zh",
+        "--api-key",
+        "sk-e2e-placeholder",
+        "--base-url",
+        `http://127.0.0.1:${address.port}`,
+        "--poll-interval",
+        "1",
+        "--out",
+        outPath,
+        "--quiet",
+      ]);
+
+      expect(exitCode, stderr).toBe(0);
+      expect(stdout).toContain("你好世界");
+      expect(JSON.parse(readFileSync(outPath, "utf8"))).toMatchObject({
+        transcripts: [{ text: "你好世界" }],
+      });
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
   });
 });
 

@@ -13,6 +13,7 @@ import {
   resolveAsrApi,
   buildAsrFlashRequest,
   buildAsyncAsrLanguageFields,
+  collectAsrTranscriptionItems,
   extractAsrFlashText,
   stripUndefined,
   resolveBooleanFlag,
@@ -27,6 +28,7 @@ import {
   type DashScopeTTSRequest,
   type DashScopeTTSResponse,
   type DashScopeASRRequest,
+  type DashScopeASRTaskResult,
   type ChatMessageContent,
   isLocalFile,
 } from "bailian-cli-core";
@@ -600,7 +602,7 @@ export async function speechRecognize(
     const unsupportedFlags: string[] = [];
     if (input.diarization) unsupportedFlags.push("diarization");
     if (input["speaker-count"] !== undefined) unsupportedFlags.push("speaker-count");
-    // input-audio Flash 官方支持 vocabulary_id；qwen3 sync Flash 不支持
+    // input-audio Flash supports vocabulary_id; qwen3 sync Flash does not
     if (route.flashFamily === "qwen3" && input["vocabulary-id"] !== undefined) {
       unsupportedFlags.push("vocabulary-id");
     }
@@ -693,7 +695,65 @@ export async function speechRecognize(
   const pollIntervalMs = (input["poll-interval"] ?? 2) * 1000;
   const timeoutMs = (ctx.timeoutSeconds ?? 300) * 1000;
 
-  return await pollTaskWithOptions(env, taskId, pollIntervalMs, timeoutMs, ctx);
+  // ASR polling reads original output, avoids generic flatten (avoids transcription_url polluting media urls)
+  const asrTask = await pollAsrTaskWithOptions(env, taskId, pollIntervalMs, timeoutMs, ctx);
+  const transcriptionItems = collectAsrTranscriptionItems(asrTask.output);
+
+  const base: Record<string, unknown> = {
+    task_id: asrTask.output.task_id,
+    task_status: asrTask.output.task_status,
+    request_id: asrTask.request_id,
+    mode: "async",
+    model,
+  };
+  if (asrTask.output.results) base.results = asrTask.output.results;
+  if (asrTask.output.result) {
+    base.result = asrTask.output.result;
+    if (typeof asrTask.output.result.transcription_url === "string") {
+      base.transcription_url = asrTask.output.result.transcription_url;
+    }
+  }
+  if (asrTask.output.task_metrics) base.task_metrics = asrTask.output.task_metrics;
+  if (asrTask.usage) base.usage = asrTask.usage;
+
+  if (transcriptionItems.length === 0) {
+    return base;
+  }
+
+  const texts: string[] = [];
+  const transcripts: Record<string, unknown>[] = [];
+  for (const item of transcriptionItems) {
+    if (!item.transcription_url) continue;
+    const transRes = await fetch(item.transcription_url, { signal: ctx.signal });
+    if (!transRes.ok) {
+      throw new PipelineError(
+        "async_task_failed",
+        `Failed to download transcription: HTTP ${transRes.status}`,
+        { step: "speech/recognize", details: { taskId, url: item.transcription_url } },
+      );
+    }
+    const transData = (await transRes.json()) as Record<string, unknown>;
+    transcripts.push(transData);
+    const transcriptList = transData.transcripts as
+      | Array<{ text?: string; sentences?: Array<{ text?: string }> }>
+      | undefined;
+    if (!transcriptList?.length) continue;
+    for (const transcript of transcriptList) {
+      if (transcript.sentences?.length) {
+        for (const sentence of transcript.sentences) {
+          if (sentence.text) texts.push(sentence.text);
+        }
+      } else if (transcript.text) {
+        texts.push(transcript.text);
+      }
+    }
+  }
+
+  return {
+    ...base,
+    text: texts.join("\n"),
+    transcripts,
+  };
 }
 
 // --- Shared: task polling ---
@@ -719,7 +779,7 @@ function flattenTaskResponse(resp: DashScopeTaskResponse): Record<string, unknow
     if (urls.length > 0) flat.urls = urls;
   }
   if (output.results) {
-    const urls = output.results.map((r) => r.url).filter(Boolean);
+    const urls = output.results.map((item) => item.url).filter(Boolean);
     if (urls.length > 0 && !flat.urls) flat.urls = urls;
   }
   if (output.task_metrics) flat.task_metrics = output.task_metrics;
@@ -737,13 +797,13 @@ async function pollTask(
   return await pollTaskWithOptions(env, taskId, pollIntervalMs, timeoutMs, ctx);
 }
 
-async function pollTaskWithOptions(
+async function pollUntilSucceeded(
   env: PipelineEnv,
   taskId: string,
   pollIntervalMs: number,
   timeoutMs: number,
   ctx?: StepContext,
-): Promise<Record<string, unknown>> {
+): Promise<DashScopeTaskResponse> {
   const started = Date.now();
   let attempt = 0;
 
@@ -766,7 +826,7 @@ async function pollTaskWithOptions(
     const status = result.output.task_status;
 
     if (status === "SUCCEEDED") {
-      return flattenTaskResponse(result);
+      return result;
     }
 
     if (status === "FAILED") {
@@ -795,6 +855,33 @@ async function pollTaskWithOptions(
       );
     }
   }
+}
+
+async function pollTaskWithOptions(
+  env: PipelineEnv,
+  taskId: string,
+  pollIntervalMs: number,
+  timeoutMs: number,
+  ctx?: StepContext,
+): Promise<Record<string, unknown>> {
+  return flattenTaskResponse(await pollUntilSucceeded(env, taskId, pollIntervalMs, timeoutMs, ctx));
+}
+
+/** ASR task polling: preserve original output (includes results[] / result.transcription_url). */
+async function pollAsrTaskWithOptions(
+  env: PipelineEnv,
+  taskId: string,
+  pollIntervalMs: number,
+  timeoutMs: number,
+  ctx?: StepContext,
+): Promise<DashScopeASRTaskResult> {
+  return (await pollUntilSucceeded(
+    env,
+    taskId,
+    pollIntervalMs,
+    timeoutMs,
+    ctx,
+  )) as DashScopeASRTaskResult;
 }
 
 function delay(ms: number, signal?: AbortSignal): Promise<void> {

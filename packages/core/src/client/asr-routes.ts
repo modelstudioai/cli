@@ -136,7 +136,7 @@ export function resolveAsrApi(model: string): AsrApiRoute {
 
 /** Infer audio container hint for input-audio Flash `parameters.format`. */
 export function inferAudioFormatHint(audioUrl: string): string {
-  // data URI：data:audio/mpeg;base64,... → mp3；data:audio/x-wav;... → wav
+  // data URI: data:audio/mpeg;base64,... → mp3; data:audio/x-wav;... → wav
   const dataType = /^data:audio\/([^;,]+)/i.exec(audioUrl)?.[1]?.toLowerCase();
   if (dataType) {
     if (dataType === "mpeg") return "mp3";
@@ -156,14 +156,14 @@ export interface BuildAsrFlashRequestOpts {
   model: string;
   audioUrl: string;
   language?: string;
-  /** 预编译热词 ID；仅 input-audio Flash（fun-asr-flash* / qwen-audio-*-asr-flash）官方支持 */
+  /** Precompiled hotword vocabulary ID; supported for input-audio Flash (fun-asr-flash* / qwen-audio-*-asr-flash). */
   vocabularyId?: string;
   flashFamily: AsrFlashFamily;
 }
 
 /**
- * 按异步路由的 language 字段风格构造语种参数。
- * qwen3-asr-flash-filetrans* → `language`；其余异步模型 → `language_hints`。
+ * Build language fields for async ASR routes.
+ * qwen3-asr-flash-filetrans* → `language`; other async models → `language_hints`.
  */
 export function buildAsyncAsrLanguageFields(
   languageStyle: "language_hints" | "language",
@@ -181,7 +181,7 @@ export function buildAsrFlashRequest(opts: BuildAsrFlashRequestOpts): Record<str
   const { model, audioUrl, language, vocabularyId, flashFamily } = opts;
 
   if (flashFamily === "input-audio") {
-    // 与官方 Qwen-Audio / Fun-ASR-Flash 文档一致：语种走 language_hints，热词走 vocabulary_id
+    // Match official Qwen-Audio / Fun-ASR-Flash docs: language_hints + vocabulary_id
     const parameters: Record<string, unknown> = {
       format: inferAudioFormatHint(audioUrl),
       sample_rate: "16000",
@@ -293,4 +293,35 @@ export function extractAsrFlashText(
     }
   }
   return texts.join("");
+}
+
+/**
+ * Normalize async ASR task transcription items:
+ * - classic models: `output.results[]`
+ * - qwen3-asr-flash-filetrans*: `output.result.transcription_url`
+ */
+export function collectAsrTranscriptionItems(output: {
+  results?: Array<{
+    file_url?: string;
+    transcription_url?: string;
+    subtask_status?: string;
+    code?: string;
+    message?: string;
+  }>;
+  result?: { transcription_url?: string };
+}): Array<{
+  file_url?: string;
+  transcription_url?: string;
+  subtask_status?: string;
+  code?: string;
+  message?: string;
+}> {
+  if (output.results && output.results.length > 0) {
+    return output.results;
+  }
+  const transcriptionUrl = output.result?.transcription_url;
+  if (typeof transcriptionUrl === "string" && transcriptionUrl.length > 0) {
+    return [{ transcription_url: transcriptionUrl, subtask_status: "SUCCEEDED" }];
+  }
+  return [];
 }

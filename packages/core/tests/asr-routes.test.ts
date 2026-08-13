@@ -2,6 +2,7 @@ import { expect, test } from "vite-plus/test";
 import {
   buildAsrFlashRequest,
   buildAsyncAsrLanguageFields,
+  collectAsrTranscriptionItems,
   extractAsrFlashText,
   inferAudioFormatHint,
   resolveAsrApi,
@@ -193,4 +194,20 @@ test("extractAsrFlashText reads qwen3 choices and input-audio text fields", () =
       "input-audio",
     ),
   ).toBe("nested sentence");
+});
+
+test("collectAsrTranscriptionItems prefers results[] then singular result", () => {
+  expect(
+    collectAsrTranscriptionItems({
+      results: [{ transcription_url: "https://example.com/a.json", file_url: "https://a.wav" }],
+    }),
+  ).toEqual([{ transcription_url: "https://example.com/a.json", file_url: "https://a.wav" }]);
+
+  expect(
+    collectAsrTranscriptionItems({
+      result: { transcription_url: "https://example.com/qwen3.json" },
+    }),
+  ).toEqual([{ transcription_url: "https://example.com/qwen3.json", subtask_status: "SUCCEEDED" }]);
+
+  expect(collectAsrTranscriptionItems({})).toEqual([]);
 });
