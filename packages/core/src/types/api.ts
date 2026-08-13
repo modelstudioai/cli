@@ -533,33 +533,46 @@ export interface DashScopeTTSStreamChunk {
 export interface DashScopeASRRequest {
   model: string;
   input: {
-    file_urls: string[];
+    file_urls?: string[];
+    file_url?: string;
   };
   parameters?: {
     channel_id?: number[];
+    /** Classic async models (fun-asr / paraformer / qwen-audio filetrans, etc.) */
     language_hints?: string[];
+    /** qwen3-asr-flash-filetrans* uses singular `language` */
+    language?: string;
     diarization_enabled?: boolean;
     speaker_count?: number;
     vocabulary_id?: string;
   };
 }
 
+export interface DashScopeASRTranscriptionItem {
+  file_url?: string;
+  transcription_url?: string;
+  subtask_status?: string;
+  code?: string;
+  message?: string;
+}
+
 export interface DashScopeASRTaskResult {
   output: {
     task_id: string;
     task_status: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "UNKNOWN";
-    results?: Array<{
-      file_url?: string;
+    /** Multi-file async results (fun-asr / paraformer / qwen-audio filetrans, etc.) */
+    results?: DashScopeASRTranscriptionItem[];
+    /** Singular result returned by qwen3-asr-flash-filetrans* on success */
+    result?: {
       transcription_url?: string;
-      subtask_status?: string;
-      code?: string;
-      message?: string;
-    }>;
+    };
     task_metrics?: {
       TOTAL: number;
       SUCCEEDED: number;
       FAILED: number;
     };
+    code?: string;
+    message?: string;
   };
   usage?: Record<string, unknown>;
   request_id: string;

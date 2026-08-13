@@ -10,6 +10,11 @@ import {
   taskPath,
   speechSynthesizePath,
   speechRecognizePath,
+  resolveAsrApi,
+  buildAsrFlashRequest,
+  buildAsyncAsrLanguageFields,
+  collectAsrTranscriptionItems,
+  extractAsrFlashText,
   stripUndefined,
   resolveBooleanFlag,
   resolveWatermark,
@@ -23,6 +28,7 @@ import {
   type DashScopeTTSRequest,
   type DashScopeTTSResponse,
   type DashScopeASRRequest,
+  type DashScopeASRTaskResult,
   type ChatMessageContent,
   isLocalFile,
 } from "bailian-cli-core";
@@ -573,27 +579,103 @@ export async function speechRecognize(
     });
   }
 
+  const model = input.model || "fun-asr";
+  const route = resolveAsrApi(model);
+  if (route.kind === "unsupported") {
+    throw new PipelineError(
+      "invalid_input",
+      route.unsupportedReason ?? `Unsupported ASR model: ${model}`,
+      {
+        step: "speech/recognize",
+      },
+    );
+  }
+
+  if (route.kind === "sync-flash") {
+    if (rawUrls.length !== 1) {
+      throw new PipelineError(
+        "invalid_input",
+        `Model "${model}" is a sync Flash ASR model and accepts exactly one url (got ${rawUrls.length})`,
+        { step: "speech/recognize" },
+      );
+    }
+    const unsupportedFlags: string[] = [];
+    if (input.diarization) unsupportedFlags.push("diarization");
+    if (input["speaker-count"] !== undefined) unsupportedFlags.push("speaker-count");
+    // input-audio Flash supports vocabulary_id; qwen3 sync Flash does not
+    if (route.flashFamily === "qwen3" && input["vocabulary-id"] !== undefined) {
+      unsupportedFlags.push("vocabulary-id");
+    }
+    if (input["channel-id"] !== undefined) unsupportedFlags.push("channel-id");
+    if (unsupportedFlags.length > 0) {
+      throw new PipelineError(
+        "invalid_input",
+        `Model "${model}" uses sync Flash ASR and does not support: ${unsupportedFlags.join(", ")}`,
+        { step: "speech/recognize" },
+      );
+    }
+  }
+  if (
+    route.kind === "async-filetrans" &&
+    route.asyncInputStyle === "file_url" &&
+    rawUrls.length !== 1
+  ) {
+    throw new PipelineError(
+      "invalid_input",
+      `Model "${model}" accepts exactly one url (got ${rawUrls.length})`,
+      { step: "speech/recognize" },
+    );
+  }
+
   // Resolve local files to upload URLs
   const fileUrls: string[] = [];
-  for (const u of rawUrls) {
-    if (isLocalFile(u)) {
+  for (const audioUrl of rawUrls) {
+    if (isLocalFile(audioUrl)) {
       fileUrls.push(
-        await env.client.uploadFile(u, input.model || "fun-asr", {
+        await env.client.uploadFile(audioUrl, model, {
           signal: ctx.signal,
         }),
       );
     } else {
-      fileUrls.push(u);
+      fileUrls.push(audioUrl);
     }
   }
 
-  const model = input.model || "fun-asr";
+  if (route.kind === "sync-flash") {
+    const flashFamily = route.flashFamily!;
+    const body = buildAsrFlashRequest({
+      model,
+      audioUrl: fileUrls[0]!,
+      language: input.language,
+      vocabularyId: input["vocabulary-id"],
+      flashFamily,
+    });
+    const response = await env.client.requestJson<Record<string, unknown>>({
+      path: route.path,
+      method: "POST",
+      headers: { "X-DashScope-SSE": "disable" },
+      body,
+      signal: ctx.signal,
+    });
+    return {
+      text: extractAsrFlashText(response, flashFamily),
+      model,
+      mode: "sync",
+      raw: response,
+    };
+  }
+
+  const languageFields = buildAsyncAsrLanguageFields(
+    route.asyncLanguageStyle ?? "language_hints",
+    input.language,
+  );
   const body: DashScopeASRRequest = {
     model,
-    input: { file_urls: fileUrls },
+    input:
+      route.asyncInputStyle === "file_url" ? { file_url: fileUrls[0]! } : { file_urls: fileUrls },
     parameters: {
       channel_id: input["channel-id"] !== undefined ? [input["channel-id"]] : undefined,
-      language_hints: input.language ? [input.language] : undefined,
+      ...languageFields,
       diarization_enabled: input.diarization,
       speaker_count: input["speaker-count"],
       vocabulary_id: input["vocabulary-id"],
@@ -601,9 +683,8 @@ export async function speechRecognize(
   };
   stripUndefined(body.parameters as Record<string, unknown>);
 
-  const url = speechRecognizePath();
   const asyncResp = await env.client.requestJson<DashScopeAsyncResponse>({
-    path: url,
+    path: speechRecognizePath(),
     method: "POST",
     body,
     async: true,
@@ -614,7 +695,65 @@ export async function speechRecognize(
   const pollIntervalMs = (input["poll-interval"] ?? 2) * 1000;
   const timeoutMs = (ctx.timeoutSeconds ?? 300) * 1000;
 
-  return await pollTaskWithOptions(env, taskId, pollIntervalMs, timeoutMs, ctx);
+  // ASR polling reads original output, avoids generic flatten (avoids transcription_url polluting media urls)
+  const asrTask = await pollAsrTaskWithOptions(env, taskId, pollIntervalMs, timeoutMs, ctx);
+  const transcriptionItems = collectAsrTranscriptionItems(asrTask.output);
+
+  const base: Record<string, unknown> = {
+    task_id: asrTask.output.task_id,
+    task_status: asrTask.output.task_status,
+    request_id: asrTask.request_id,
+    mode: "async",
+    model,
+  };
+  if (asrTask.output.results) base.results = asrTask.output.results;
+  if (asrTask.output.result) {
+    base.result = asrTask.output.result;
+    if (typeof asrTask.output.result.transcription_url === "string") {
+      base.transcription_url = asrTask.output.result.transcription_url;
+    }
+  }
+  if (asrTask.output.task_metrics) base.task_metrics = asrTask.output.task_metrics;
+  if (asrTask.usage) base.usage = asrTask.usage;
+
+  if (transcriptionItems.length === 0) {
+    return base;
+  }
+
+  const texts: string[] = [];
+  const transcripts: Record<string, unknown>[] = [];
+  for (const item of transcriptionItems) {
+    if (!item.transcription_url) continue;
+    const transRes = await fetch(item.transcription_url, { signal: ctx.signal });
+    if (!transRes.ok) {
+      throw new PipelineError(
+        "async_task_failed",
+        `Failed to download transcription: HTTP ${transRes.status}`,
+        { step: "speech/recognize", details: { taskId, url: item.transcription_url } },
+      );
+    }
+    const transData = (await transRes.json()) as Record<string, unknown>;
+    transcripts.push(transData);
+    const transcriptList = transData.transcripts as
+      | Array<{ text?: string; sentences?: Array<{ text?: string }> }>
+      | undefined;
+    if (!transcriptList?.length) continue;
+    for (const transcript of transcriptList) {
+      if (transcript.sentences?.length) {
+        for (const sentence of transcript.sentences) {
+          if (sentence.text) texts.push(sentence.text);
+        }
+      } else if (transcript.text) {
+        texts.push(transcript.text);
+      }
+    }
+  }
+
+  return {
+    ...base,
+    text: texts.join("\n"),
+    transcripts,
+  };
 }
 
 // --- Shared: task polling ---
@@ -640,7 +779,7 @@ function flattenTaskResponse(resp: DashScopeTaskResponse): Record<string, unknow
     if (urls.length > 0) flat.urls = urls;
   }
   if (output.results) {
-    const urls = output.results.map((r) => r.url).filter(Boolean);
+    const urls = output.results.map((item) => item.url).filter(Boolean);
     if (urls.length > 0 && !flat.urls) flat.urls = urls;
   }
   if (output.task_metrics) flat.task_metrics = output.task_metrics;
@@ -658,13 +797,13 @@ async function pollTask(
   return await pollTaskWithOptions(env, taskId, pollIntervalMs, timeoutMs, ctx);
 }
 
-async function pollTaskWithOptions(
+async function pollUntilSucceeded(
   env: PipelineEnv,
   taskId: string,
   pollIntervalMs: number,
   timeoutMs: number,
   ctx?: StepContext,
-): Promise<Record<string, unknown>> {
+): Promise<DashScopeTaskResponse> {
   const started = Date.now();
   let attempt = 0;
 
@@ -687,7 +826,7 @@ async function pollTaskWithOptions(
     const status = result.output.task_status;
 
     if (status === "SUCCEEDED") {
-      return flattenTaskResponse(result);
+      return result;
     }
 
     if (status === "FAILED") {
@@ -716,6 +855,33 @@ async function pollTaskWithOptions(
       );
     }
   }
+}
+
+async function pollTaskWithOptions(
+  env: PipelineEnv,
+  taskId: string,
+  pollIntervalMs: number,
+  timeoutMs: number,
+  ctx?: StepContext,
+): Promise<Record<string, unknown>> {
+  return flattenTaskResponse(await pollUntilSucceeded(env, taskId, pollIntervalMs, timeoutMs, ctx));
+}
+
+/** ASR task polling: preserve original output (includes results[] / result.transcription_url). */
+async function pollAsrTaskWithOptions(
+  env: PipelineEnv,
+  taskId: string,
+  pollIntervalMs: number,
+  timeoutMs: number,
+  ctx?: StepContext,
+): Promise<DashScopeASRTaskResult> {
+  return (await pollUntilSucceeded(
+    env,
+    taskId,
+    pollIntervalMs,
+    timeoutMs,
+    ctx,
+  )) as DashScopeASRTaskResult;
 }
 
 function delay(ms: number, signal?: AbortSignal): Promise<void> {
