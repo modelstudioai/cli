@@ -92,6 +92,9 @@ test("inferAudioFormatHint reads extension from url", () => {
   expect(inferAudioFormatHint("oss://bucket/path/file.WAV")).toBe("wav");
   expect(inferAudioFormatHint("https://example.com/a.mpeg?x=1")).toBe("mp3");
   expect(inferAudioFormatHint("https://example.com/noext")).toBe("wav");
+  expect(inferAudioFormatHint("data:audio/mpeg;base64,AAA")).toBe("mp3");
+  expect(inferAudioFormatHint("data:audio/x-wav;base64,AAA")).toBe("wav");
+  expect(inferAudioFormatHint("data:audio/ogg;codecs=opus;base64,AAA")).toBe("ogg");
 });
 
 test("buildAsrFlashRequest shapes qwen3 and input-audio bodies", () => {
@@ -168,4 +171,26 @@ test("extractAsrFlashText reads qwen3 choices and input-audio text fields", () =
       "input-audio",
     ),
   ).toBe("Hello World");
+
+  expect(
+    extractAsrFlashText(
+      {
+        output: {
+          sentence: { text: "top-level sentence" },
+        },
+      },
+      "input-audio",
+    ),
+  ).toBe("top-level sentence");
+
+  expect(
+    extractAsrFlashText(
+      {
+        output: {
+          output: { sentence: { text: "nested sentence" } },
+        },
+      },
+      "input-audio",
+    ),
+  ).toBe("nested sentence");
 });

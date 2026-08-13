@@ -248,6 +248,7 @@ async function handleSyncFlashMode(
   const response = await client.requestJson<Record<string, unknown>>({
     path: route.path,
     method: "POST",
+    headers: { "X-DashScope-SSE": "disable" },
     body,
   });
 

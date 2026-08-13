@@ -136,7 +136,15 @@ export function resolveAsrApi(model: string): AsrApiRoute {
 
 /** Infer audio container hint for input-audio Flash `parameters.format`. */
 export function inferAudioFormatHint(audioUrl: string): string {
-  const pathPart = audioUrl.split("?")[0] ?? audioUrl;
+  // data URI：data:audio/mpeg;base64,... → mp3；data:audio/x-wav;... → wav
+  const dataType = /^data:audio\/([^;,]+)/i.exec(audioUrl)?.[1]?.toLowerCase();
+  if (dataType) {
+    if (dataType === "mpeg") return "mp3";
+    if (dataType === "x-wav" || dataType === "wave") return "wav";
+    return dataType;
+  }
+
+  const pathPart = audioUrl.split(/[?#]/, 1)[0] ?? audioUrl;
   const match = pathPart.match(/\.([a-zA-Z0-9]+)$/);
   const extension = match?.[1]?.toLowerCase();
   if (!extension) return "wav";
@@ -232,7 +240,8 @@ export function buildAsrFlashRequest(opts: BuildAsrFlashRequestOpts): Record<str
 
 /**
  * Extract recognition text from a sync Flash ASR response.
- * Qwen3 uses choices[].message.content; input-audio Flash uses output.text.
+ * Qwen3 uses choices[].message.content; input-audio Flash uses output.text /
+ * output.sentence.text / output.output.sentence.text.
  */
 export function extractAsrFlashText(
   response: Record<string, unknown>,
@@ -245,10 +254,14 @@ export function extractAsrFlashText(
     if (typeof output.text === "string" && output.text.length > 0) {
       return output.text;
     }
+    const topSentence = output.sentence as Record<string, unknown> | undefined;
+    if (typeof topSentence?.text === "string" && topSentence.text.length > 0) {
+      return topSentence.text;
+    }
     const nested = output.output as Record<string, unknown> | undefined;
-    const sentence = nested?.sentence as Record<string, unknown> | undefined;
-    if (typeof sentence?.text === "string") {
-      return sentence.text;
+    const nestedSentence = nested?.sentence as Record<string, unknown> | undefined;
+    if (typeof nestedSentence?.text === "string") {
+      return nestedSentence.text;
     }
     return "";
   }

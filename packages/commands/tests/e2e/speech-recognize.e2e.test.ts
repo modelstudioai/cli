@@ -1,4 +1,6 @@
 import { readFileSync } from "node:fs";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
 import {
@@ -108,6 +110,83 @@ describe("e2e: speech recognize", () => {
     ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/realtime|WebSocket|unsupported/i);
+  });
+
+  test("speech recognize flash 真实请求走 sync endpoint 并落盘 --out", async () => {
+    let requestPath = "";
+    let requestBody: Record<string, unknown> = {};
+    let sseHeader: string | undefined;
+    const server = http.createServer((request, response) => {
+      const chunks: Buffer[] = [];
+      request.on("data", (chunk: Buffer) => chunks.push(chunk));
+      request.on("end", () => {
+        requestPath = request.url ?? "";
+        requestBody = JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<string, unknown>;
+        sseHeader = request.headers["x-dashscope-sse"] as string | undefined;
+        response.writeHead(200, { "Content-Type": "application/json" });
+        response.end(
+          JSON.stringify({
+            output: { text: "flash recognition works" },
+            request_id: "request-146",
+          }),
+        );
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address() as AddressInfo;
+    const outDir = makeE2eOutputDir("speech-recognize-flash-sync");
+    const outPath = join(outDir, "result.json");
+
+    try {
+      const { stdout, stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+        "speech",
+        "recognize",
+        "--model",
+        "fun-asr-flash-2026-06-15",
+        "--url",
+        "https://example.com/sample.wav",
+        "--api-key",
+        "sk-e2e-placeholder",
+        "--base-url",
+        `http://127.0.0.1:${address.port}`,
+        "--out",
+        outPath,
+        "--quiet",
+      ]);
+
+      expect(exitCode, stderr).toBe(0);
+      expect(stdout).toContain("flash recognition works");
+      expect(requestPath).toBe("/api/v1/services/aigc/multimodal-generation/generation");
+      expect(sseHeader).toBe("disable");
+      expect(requestBody).toMatchObject({
+        model: "fun-asr-flash-2026-06-15",
+        parameters: { format: "wav" },
+      });
+      expect(JSON.parse(readFileSync(outPath, "utf8"))).toMatchObject({
+        output: { text: "flash recognition works" },
+        request_id: "request-146",
+      });
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  test("speech recognize flash 多 --url 在发请求前报用法错误", async () => {
+    const { stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+      "speech",
+      "recognize",
+      "--model",
+      "qwen-audio-3.0-asr-flash",
+      "--url",
+      "https://example.com/a.wav",
+      "--url",
+      "https://example.com/b.wav",
+      "--dry-run",
+      "--quiet",
+    ]);
+
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/exactly one --url|sync Flash/i);
   });
 });
 

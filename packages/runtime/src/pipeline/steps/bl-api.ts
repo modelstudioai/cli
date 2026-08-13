@@ -651,6 +651,7 @@ export async function speechRecognize(
     const response = await env.client.requestJson<Record<string, unknown>>({
       path: route.path,
       method: "POST",
+      headers: { "X-DashScope-SSE": "disable" },
       body,
       signal: ctx.signal,
     });
