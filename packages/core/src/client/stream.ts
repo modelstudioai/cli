@@ -20,6 +20,8 @@ export async function* parseSSE(response: Response): AsyncGenerator<ServerSentEv
   const MAX_SSE_BUFFER = 16 * 1024 * 1024; // 16 MiB
 
   try {
+    let event: Partial<ServerSentEvent> = {};
+
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -31,8 +33,6 @@ export async function* parseSSE(response: Response): AsyncGenerator<ServerSentEv
 
       const lines = buffer.split("\n");
       buffer = lines.pop() || "";
-
-      let event: Partial<ServerSentEvent> = {};
 
       for (const line of lines) {
         if (line === "") {

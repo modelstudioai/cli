@@ -53,7 +53,6 @@ test("bailianMcp 路径与 isStreamableHttpUnsupported", () => {
       ),
     ),
   ).toBe(true);
-  // 裸 405 也应触发降级，不依赖英文文案
   expect(
     isStreamableHttpUnsupported(new BailianError("MCP request failed: 405 Method Not Allowed")),
   ).toBe(true);
@@ -61,6 +60,10 @@ test("bailianMcp 路径与 isStreamableHttpUnsupported", () => {
     false,
   );
   expect(isStreamableHttpUnsupported(new Error("405 streamableHttp"))).toBe(false);
+  // JSON-RPC business 405 must not trigger HTTP transport fallback
+  expect(isStreamableHttpUnsupported(new BailianError("MCP error (405): Method Not Allowed"))).toBe(
+    false,
+  );
 
   expect(
     isUrlOverrideSseFallbackCandidate(new BailianError("MCP request failed: 404 Not Found")),
@@ -70,6 +73,9 @@ test("bailianMcp 路径与 isStreamableHttpUnsupported", () => {
       new BailianError("MCP request failed: 405 Method Not Allowed"),
     ),
   ).toBe(true);
+  expect(isUrlOverrideSseFallbackCandidate(new BailianError("MCP error (404): not found"))).toBe(
+    false,
+  );
 });
 
 test("resolveSameOriginMessageUrl：同源通过、跨域拒绝", () => {
@@ -118,7 +124,7 @@ test("connectBailianMcpWithFallback：成功走 Streamable；405 降级 SSE", as
     globalThis.fetch = originalFetch;
   }
 
-  // 裸 405（无 streamableHttp 文案）→ SSE
+  // Bare HTTP 405 (no streamableHttp body text) → SSE
   let sseController: ReadableStreamDefaultController<Uint8Array> | undefined;
   const encoder = new TextEncoder();
   const urls: string[] = [];
@@ -207,7 +213,7 @@ test("connectBailianMcpWithFallback：WebSearch 不降级；urlOverride 同 URL 
     globalThis.fetch = originalFetch;
   }
 
-  // urlOverride：POST 405 后应对同一 URL 发 GET SSE
+  // urlOverride: after POST 405, fall back with GET SSE on the same URL
   urls.length = 0;
   let sseController: ReadableStreamDefaultController<Uint8Array> | undefined;
   const encoder = new TextEncoder();
@@ -292,7 +298,7 @@ test("McpSseClient：流结束后立刻失败 pending（不干等到 timeout）"
   globalThis.fetch = async (input, init) => {
     const url = requestUrl(input);
     if ((init?.method ?? "GET") === "GET" || url.endsWith("/sse")) {
-      // 发完 endpoint 后立刻关流
+      // Close the stream immediately after the endpoint event
       const stream = new ReadableStream<Uint8Array>({
         start(controller) {
           controller.enqueue(
@@ -335,7 +341,7 @@ test("McpSseClient：string JSON-RPC id 可匹配；仅认 event:endpoint", asyn
       const stream = new ReadableStream<Uint8Array>({
         start(controller) {
           sseController = controller;
-          // 无名事件不应被当成 endpoint
+          // Untyped events must not be treated as endpoint
           controller.enqueue(
             encoder.encode(`data:${JSON.stringify({ jsonrpc: "2.0", id: 99, result: {} })}\n\n`),
           );
@@ -354,7 +360,7 @@ test("McpSseClient：string JSON-RPC id 可匹配；仅认 event:endpoint", asyn
       const body = typeof init?.body === "string" ? JSON.parse(init.body) : {};
       queueMicrotask(() => {
         if (body.id != null && sseController) {
-          // 以 string id 回传
+          // Echo id as a string
           sseController.enqueue(encoder.encode(jsonRpcResult(String(body.id), {})));
         }
       });
@@ -438,6 +444,66 @@ test("McpSseClient.close 可中止挂起 GET", async () => {
     await initPromise;
     expect(aborted).toBe(true);
   } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("McpSseClient：等待响应头受 --timeout 约束", async () => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async (_input, init) => {
+    const signal = init?.signal;
+    return new Promise((_resolve, reject) => {
+      if (!signal) {
+        reject(new Error("missing signal"));
+        return;
+      }
+      if (signal.aborted) {
+        reject(new DOMException("This operation was aborted.", "AbortError"));
+        return;
+      }
+      signal.addEventListener(
+        "abort",
+        () => reject(new DOMException("This operation was aborted.", "AbortError")),
+        { once: true },
+      );
+    });
+  };
+
+  try {
+    const client = new McpSseClient(
+      testDeps({ timeout: 1 }),
+      "https://example.test/sse",
+      "sk-test",
+    );
+    const started = Date.now();
+    await expect(client.initialize()).rejects.toThrow(/timed out waiting for response headers/i);
+    expect(Date.now() - started).toBeLessThan(2500);
+    client.close();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("McpSseClient：非 2xx 不产生 unhandledRejection", async () => {
+  const originalFetch = globalThis.fetch;
+  const unhandled: unknown[] = [];
+  const onUnhandled = (reason: unknown) => {
+    unhandled.push(reason);
+  };
+  process.on("unhandledRejection", onUnhandled);
+
+  globalThis.fetch = async () =>
+    new Response("boom", { status: 500, statusText: "Internal Server Error" });
+
+  try {
+    const client = new McpSseClient(testDeps(), "https://example.test/sse", "sk-test");
+    await expect(client.initialize()).rejects.toThrow(/MCP request failed:\s*500/i);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(unhandled).toEqual([]);
+    client.close();
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
     globalThis.fetch = originalFetch;
   }
 });

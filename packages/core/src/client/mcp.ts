@@ -70,20 +70,20 @@ export function bailianMcpSsePath(serverCode: string): string {
 
 /**
  * True when Streamable HTTP is unsupported and classic SSE fallback should be tried.
- * 以 HTTP 405 为准，不依赖服务端英文文案（避免文案变更导致降级失效）。
- * Bailian 的 404（未开通）不在此列，避免误降级。
+ * Match HTTP wrapper text `MCP request failed: 405` only — not JSON-RPC `MCP error (405)`.
+ * Bailian HTTP 404 (not activated) is intentionally excluded.
  */
 export function isStreamableHttpUnsupported(error: unknown): boolean {
   if (!(error instanceof BailianError)) return false;
-  return /405\b/i.test(error.message);
+  return /MCP request failed:\s*405\b/i.test(error.message);
 }
 
 /**
- * `--url` 覆盖时的 SSE 降级条件（官方 backwards-compat：同 URL 上 405/404 后尝试 GET SSE）。
+ * SSE fallback for `--url` (official backwards-compat: same URL, HTTP 405/404 then GET SSE).
  */
 export function isUrlOverrideSseFallbackCandidate(error: unknown): boolean {
   if (!(error instanceof BailianError)) return false;
-  return /405\b/i.test(error.message) || /404\b/i.test(error.message);
+  return /MCP request failed:\s*(405|404)\b/i.test(error.message);
 }
 
 export type McpConnectedClient = {
@@ -242,7 +242,7 @@ export class McpClient {
   }
 
   /**
-   * 按 Content-Type 读取 JSON-RPC 响应：支持 application/json 与 text/event-stream。
+   * Read a JSON-RPC response by Content-Type: application/json or text/event-stream.
    */
   private async readJsonRpcResponse(
     response: Response,
