@@ -538,7 +538,10 @@ export interface DashScopeASRRequest {
   };
   parameters?: {
     channel_id?: number[];
+    /** fun-asr / paraformer / qwen-audio filetrans 等经典异步模型 */
     language_hints?: string[];
+    /** qwen3-asr-flash-filetrans* 使用单数字段 language */
+    language?: string;
     diarization_enabled?: boolean;
     speaker_count?: number;
     vocabulary_id?: string;

@@ -12,6 +12,7 @@ import {
   speechRecognizePath,
   resolveAsrApi,
   buildAsrFlashRequest,
+  buildAsyncAsrLanguageFields,
   extractAsrFlashText,
   stripUndefined,
   resolveBooleanFlag,
@@ -596,15 +597,18 @@ export async function speechRecognize(
         { step: "speech/recognize" },
       );
     }
-    if (
-      input.diarization ||
-      input["speaker-count"] !== undefined ||
-      input["vocabulary-id"] !== undefined ||
-      input["channel-id"] !== undefined
-    ) {
+    const unsupportedFlags: string[] = [];
+    if (input.diarization) unsupportedFlags.push("diarization");
+    if (input["speaker-count"] !== undefined) unsupportedFlags.push("speaker-count");
+    // input-audio Flash 官方支持 vocabulary_id；qwen3 sync Flash 不支持
+    if (route.flashFamily === "qwen3" && input["vocabulary-id"] !== undefined) {
+      unsupportedFlags.push("vocabulary-id");
+    }
+    if (input["channel-id"] !== undefined) unsupportedFlags.push("channel-id");
+    if (unsupportedFlags.length > 0) {
       throw new PipelineError(
         "invalid_input",
-        `Model "${model}" uses sync Flash ASR and does not support diarization / speaker-count / vocabulary-id / channel-id`,
+        `Model "${model}" uses sync Flash ASR and does not support: ${unsupportedFlags.join(", ")}`,
         { step: "speech/recognize" },
       );
     }
@@ -641,6 +645,7 @@ export async function speechRecognize(
       model,
       audioUrl: fileUrls[0]!,
       language: input.language,
+      vocabularyId: input["vocabulary-id"],
       flashFamily,
     });
     const response = await env.client.requestJson<Record<string, unknown>>({
@@ -657,13 +662,17 @@ export async function speechRecognize(
     };
   }
 
+  const languageFields = buildAsyncAsrLanguageFields(
+    route.asyncLanguageStyle ?? "language_hints",
+    input.language,
+  );
   const body: DashScopeASRRequest = {
     model,
     input:
       route.asyncInputStyle === "file_url" ? { file_url: fileUrls[0]! } : { file_urls: fileUrls },
     parameters: {
       channel_id: input["channel-id"] !== undefined ? [input["channel-id"]] : undefined,
-      language_hints: input.language ? [input.language] : undefined,
+      ...languageFields,
       diarization_enabled: input.diarization,
       speaker_count: input["speaker-count"],
       vocabulary_id: input["vocabulary-id"],

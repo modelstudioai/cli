@@ -36,6 +36,7 @@ export {
 } from "./image-routes.ts";
 export {
   buildAsrFlashRequest,
+  buildAsyncAsrLanguageFields,
   extractAsrFlashText,
   inferAudioFormatHint,
   resolveAsrApi,

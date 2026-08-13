@@ -28,7 +28,7 @@ Index: [index.md](index.md)
 | --------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--url <url>`               | array  | yes      | Audio file URL or local file path (repeatable, max 100)                                                                                     |
 | `--model <model>`           | string | no       | Model ID (default: fun-asr). Async: fun-asr / _-filetrans / paraformer-_; sync: qwen3-asr-flash* / fun-asr-flash* / qwen-audio-\*-asr-flash |
-| `--language <lang>`         | string | no       | Language hint (e.g. zh, en, ja). Async & input-audio sync: language_hints; qwen3 sync: asr_options.language                                 |
+| `--language <lang>`         | string | no       | Language hint (e.g. zh, en, ja). Classic async/input-audio: language_hints; qwen3-filetrans: language; qwen3 sync: asr_options.language     |
 | `--diarization`             | switch | no       | Enable automatic speaker diarization                                                                                                        |
 | `--speaker-count <n>`       | number | no       | Expected number of speakers (requires --diarization)                                                                                        |
 | `--vocabulary-id <id>`      | string | no       | Hot-word vocabulary ID for improved accuracy                                                                                                |

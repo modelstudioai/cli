@@ -31,6 +31,12 @@ export interface AsrApiRoute {
    * - `file_url`: qwen3-asr-flash-filetrans family
    */
   asyncInputStyle?: "file_urls" | "file_url";
+  /**
+   * Async transcription language field style.
+   * - `language_hints`: fun-asr / paraformer / qwen-audio filetrans...
+   * - `language`: qwen3-asr-flash-filetrans*
+   */
+  asyncLanguageStyle?: "language_hints" | "language";
   flashFamily?: AsrFlashFamily;
   /** Human-readable reason when kind is unsupported. */
   unsupportedReason?: string;
@@ -90,11 +96,13 @@ export function resolveAsrApi(model: string): AsrApiRoute {
   }
 
   if (isFiletransModel(model)) {
+    const isQwen3Filetrans = isQwen3FiletransModel(model);
     return {
       kind: "async-filetrans",
       path: speechRecognizePath(),
       useSync: false,
-      asyncInputStyle: isQwen3FiletransModel(model) ? "file_url" : "file_urls",
+      asyncInputStyle: isQwen3Filetrans ? "file_url" : "file_urls",
+      asyncLanguageStyle: isQwen3Filetrans ? "language" : "language_hints",
     };
   }
 
@@ -122,6 +130,7 @@ export function resolveAsrApi(model: string): AsrApiRoute {
     path: speechRecognizePath(),
     useSync: false,
     asyncInputStyle: "file_urls",
+    asyncLanguageStyle: "language_hints",
   };
 }
 
@@ -139,21 +148,41 @@ export interface BuildAsrFlashRequestOpts {
   model: string;
   audioUrl: string;
   language?: string;
+  /** 预编译热词 ID；仅 input-audio Flash（fun-asr-flash* / qwen-audio-*-asr-flash）官方支持 */
+  vocabularyId?: string;
   flashFamily: AsrFlashFamily;
+}
+
+/**
+ * 按异步路由的 language 字段风格构造语种参数。
+ * qwen3-asr-flash-filetrans* → `language`；其余异步模型 → `language_hints`。
+ */
+export function buildAsyncAsrLanguageFields(
+  languageStyle: "language_hints" | "language",
+  language?: string,
+): { language_hints?: string[]; language?: string } {
+  if (!language) return {};
+  if (languageStyle === "language") {
+    return { language };
+  }
+  return { language_hints: [language] };
 }
 
 /** Build a sync multimodal ASR request body for Flash models. */
 export function buildAsrFlashRequest(opts: BuildAsrFlashRequestOpts): Record<string, unknown> {
-  const { model, audioUrl, language, flashFamily } = opts;
+  const { model, audioUrl, language, vocabularyId, flashFamily } = opts;
 
   if (flashFamily === "input-audio") {
-    // 与官方 Qwen-Audio / Fun-ASR-Flash 文档一致：语种走 language_hints
+    // 与官方 Qwen-Audio / Fun-ASR-Flash 文档一致：语种走 language_hints，热词走 vocabulary_id
     const parameters: Record<string, unknown> = {
       format: inferAudioFormatHint(audioUrl),
       sample_rate: "16000",
     };
     if (language) {
       parameters.language_hints = [language];
+    }
+    if (vocabularyId) {
+      parameters.vocabulary_id = vocabularyId;
     }
     return {
       model,

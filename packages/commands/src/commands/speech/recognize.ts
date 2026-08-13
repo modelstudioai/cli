@@ -14,6 +14,7 @@ import {
   speechRecognizePath,
   resolveAsrApi,
   buildAsrFlashRequest,
+  buildAsyncAsrLanguageFields,
   extractAsrFlashText,
   type AsrApiRoute,
   type AsrFlashFamily,
@@ -42,7 +43,7 @@ const RECOGNIZE_FLAGS = {
     type: "string",
     valueHint: "<lang>",
     description:
-      "Language hint (e.g. zh, en, ja). Async & input-audio sync: language_hints; qwen3 sync: asr_options.language",
+      "Language hint (e.g. zh, en, ja). Classic async/input-audio: language_hints; qwen3-filetrans: language; qwen3 sync: asr_options.language",
   },
   diarization: { type: "switch", description: "Enable automatic speaker diarization" },
   speakerCount: {
@@ -70,11 +71,18 @@ const RECOGNIZE_FLAGS = {
 } satisfies FlagsDef;
 type RecognizeFlags = ParsedFlags<typeof RECOGNIZE_FLAGS>;
 
-function assertSyncFlashFlagsAllowed(flags: RecognizeFlags, model: string): void {
+function assertSyncFlashFlagsAllowed(
+  flags: RecognizeFlags,
+  model: string,
+  flashFamily: AsrFlashFamily,
+): void {
   const unsupported: string[] = [];
   if (flags.diarization === true) unsupported.push("--diarization");
   if (flags.speakerCount !== undefined) unsupported.push("--speaker-count");
-  if (flags.vocabularyId !== undefined) unsupported.push("--vocabulary-id");
+  // qwen3 sync Flash 不走 vocabulary_id；input-audio Flash（fun-asr-flash* / qwen-audio-*-asr-flash）官方支持
+  if (flashFamily === "qwen3" && flags.vocabularyId !== undefined) {
+    unsupported.push("--vocabulary-id");
+  }
   if (flags.channelId !== undefined) unsupported.push("--channel-id");
   if (flags.async === true) unsupported.push("--async");
   if (flags.pollInterval !== undefined) unsupported.push("--poll-interval");
@@ -133,7 +141,7 @@ export default defineCommand({
     }
 
     if (route.kind === "sync-flash") {
-      assertSyncFlashFlagsAllowed(flags, model);
+      assertSyncFlashFlagsAllowed(flags, model, route.flashFamily!);
       if (rawUrls.length !== 1) {
         throw new BailianError(
           `Model "${model}" is a sync Flash ASR model and accepts exactly one --url (got ${rawUrls.length}).\n` +
@@ -173,8 +181,11 @@ export default defineCommand({
     }
 
     const channelId = flags.channelId;
-    const language = flags.language;
     const vocabularyId = flags.vocabularyId;
+    const languageFields = buildAsyncAsrLanguageFields(
+      route.asyncLanguageStyle ?? "language_hints",
+      flags.language,
+    );
 
     const body: DashScopeASRRequest = {
       model,
@@ -184,7 +195,7 @@ export default defineCommand({
           : { file_urls: resolvedUrls },
       parameters: {
         channel_id: channelId !== undefined ? [channelId] : [0],
-        language_hints: language ? [language] : undefined,
+        ...languageFields,
         diarization_enabled: diarization ? true : undefined,
         speaker_count: speakerCount,
         vocabulary_id: vocabularyId,
@@ -221,6 +232,7 @@ async function handleSyncFlashMode(
     model,
     audioUrl,
     language: flags.language,
+    vocabularyId: flags.vocabularyId,
     flashFamily,
   });
 

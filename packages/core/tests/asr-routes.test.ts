@@ -1,6 +1,7 @@
 import { expect, test } from "vite-plus/test";
 import {
   buildAsrFlashRequest,
+  buildAsyncAsrLanguageFields,
   extractAsrFlashText,
   inferAudioFormatHint,
   resolveAsrApi,
@@ -24,6 +25,7 @@ test("resolveAsrApi routes model families correctly", () => {
         useSync: false,
         path: "/api/v1/services/audio/asr/transcription",
         asyncInputStyle: "file_url",
+        asyncLanguageStyle: "language",
       },
     },
     {
@@ -32,6 +34,7 @@ test("resolveAsrApi routes model families correctly", () => {
         kind: "async-filetrans",
         useSync: false,
         asyncInputStyle: "file_urls",
+        asyncLanguageStyle: "language_hints",
       },
     },
     {
@@ -112,6 +115,7 @@ test("buildAsrFlashRequest shapes qwen3 and input-audio bodies", () => {
       model: "qwen-audio-3.0-asr-flash",
       audioUrl: "https://example.com/a.wav",
       language: "en",
+      vocabularyId: "vocab-abc",
       flashFamily: "input-audio",
     }),
   ).toEqual({
@@ -124,8 +128,21 @@ test("buildAsrFlashRequest shapes qwen3 and input-audio bodies", () => {
         },
       ],
     },
-    parameters: { format: "wav", sample_rate: "16000", language_hints: ["en"] },
+    parameters: {
+      format: "wav",
+      sample_rate: "16000",
+      language_hints: ["en"],
+      vocabulary_id: "vocab-abc",
+    },
   });
+});
+
+test("buildAsyncAsrLanguageFields maps language by async style", () => {
+  expect(buildAsyncAsrLanguageFields("language_hints", "zh")).toEqual({
+    language_hints: ["zh"],
+  });
+  expect(buildAsyncAsrLanguageFields("language", "zh")).toEqual({ language: "zh" });
+  expect(buildAsyncAsrLanguageFields("language", undefined)).toEqual({});
 });
 
 test("extractAsrFlashText reads qwen3 choices and input-audio text fields", () => {

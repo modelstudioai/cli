@@ -32,7 +32,12 @@ describe("e2e: speech recognize", () => {
       path?: string;
       request?: {
         model?: string;
-        parameters?: { format?: string; language_hints?: string[] };
+        parameters?: {
+          format?: string;
+          language_hints?: string[];
+          language?: string;
+          vocabulary_id?: string;
+        };
         input?: {
           file_url?: string;
           file_urls?: string[];
@@ -60,26 +65,33 @@ describe("e2e: speech recognize", () => {
       "https://dashscope.oss-cn-beijing.aliyuncs.com/samples/audio/paraformer/hello_world_female2.wav",
       "--language",
       "en",
+      "--vocabulary-id",
+      "vocab-e2e",
     ]);
     expect(body.mode).toBe("sync");
     expect(body.path).toBe("/api/v1/services/aigc/multimodal-generation/generation");
     expect(body.request?.model).toBe("qwen-audio-3.0-asr-flash");
     expect(body.request?.parameters?.format).toBe("wav");
     expect(body.request?.parameters?.language_hints).toEqual(["en"]);
+    expect(body.request?.parameters?.vocabulary_id).toBe("vocab-e2e");
     expect(body.request?.input?.messages?.[0]?.content?.[0]?.type).toBe("input_audio");
   });
 
-  test("speech recognize qwen3 filetrans dry-run 使用 file_url 单数字段", async () => {
+  test("speech recognize qwen3 filetrans dry-run 使用 file_url 与 language", async () => {
     const body = await runRecognizeDryRun([
       "--model",
       "qwen3-asr-flash-filetrans",
       "--url",
       "https://dashscope.oss-cn-beijing.aliyuncs.com/samples/audio/paraformer/hello_world_female2.wav",
+      "--language",
+      "zh",
     ]);
     expect(body.mode).toBe("async");
     expect(body.path).toBe("/api/v1/services/audio/asr/transcription");
     expect(body.request?.input?.file_url?.startsWith("https://")).toBe(true);
     expect(body.request?.input?.file_urls).toBeUndefined();
+    expect(body.request?.parameters?.language).toBe("zh");
+    expect(body.request?.parameters?.language_hints).toBeUndefined();
   });
 
   test("speech recognize realtime 模型报用法错误", async () => {
