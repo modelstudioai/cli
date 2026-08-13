@@ -25,6 +25,7 @@ import {
   type AnyCommand,
   type FlagDef,
   type FlagsDef,
+  type LocalizedText,
 } from "../packages/core/src/index.ts";
 import { commands } from "../packages/cli/src/commands.ts";
 
@@ -62,6 +63,11 @@ function escCell(s: string): string {
   return s.replace(/\|/g, "\\|").replace(/\n/g, " ").trim();
 }
 
+/** Skill references are English artifacts; localized CLI text keeps English here. */
+function referenceText(text: LocalizedText): string {
+  return typeof text === "string" ? text : text["en-US"];
+}
+
 function topLevel(path: string): string {
   return path.split(" ")[0]!;
 }
@@ -88,7 +94,7 @@ function formatFlagsTable(flags: FlagsDef | undefined): string {
   if (!entries.length) return "_No command-specific flags._\n";
   const rows = entries.map(([key, def]) => {
     const req = def.type !== "switch" && def.required ? "yes" : "no";
-    return `| \`${escCell(flagDisplay(key, def))}\` | ${escCell(flagType(def))} | ${req} | ${escCell(def.description)} |`;
+    return `| \`${escCell(flagDisplay(key, def))}\` | ${escCell(flagType(def))} | ${req} | ${escCell(referenceText(def.description))} |`;
   });
   return [
     "| Flag | Type | Required | Description |",
@@ -118,7 +124,7 @@ function commandSection(path: string, cmd: AnyCommand): string {
   lines.push(`### \`bl ${path}\``, "");
   lines.push(`| Field | Value |`, `| --- | --- |`);
   lines.push(`| **Name** | \`${escCell(path)}\` |`);
-  lines.push(`| **Description** | ${escCell(cmd.description)} |`);
+  lines.push(`| **Description** | ${escCell(referenceText(cmd.description))} |`);
   // Commands store argument-only usage; the `bl <path>` prefix is added here.
   const usage = `bl ${path}${cmd.usageArgs ? ` ${cmd.usageArgs}` : ""}`;
   lines.push(`| **Usage** | \`${escCell(usage)}\` |`);
@@ -172,7 +178,7 @@ function buildGroupFile(group: string, groupEntries: [string, AnyCommand][]): st
   ];
 
   for (const [path, cmd] of groupEntries) {
-    lines.push(`| \`bl ${path}\` | ${escCell(cmd.description)} |`);
+    lines.push(`| \`bl ${path}\` | ${escCell(referenceText(cmd.description))} |`);
   }
 
   lines.push("", "## Command details", "");
@@ -205,7 +211,9 @@ function buildIndex(
 
   for (const [path, cmd] of entries) {
     const group = topLevel(path);
-    lines.push(`| \`bl ${path}\` | ${escCell(cmd.description)} | [${group}.md](${group}.md) |`);
+    lines.push(
+      `| \`bl ${path}\` | ${escCell(referenceText(cmd.description))} | [${group}.md](${group}.md) |`,
+    );
   }
 
   lines.push("", "## By group", "", "| Group | Commands | Reference |", "| --- | --- | --- |");

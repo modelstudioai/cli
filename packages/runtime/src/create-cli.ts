@@ -12,6 +12,7 @@ import {
 import type { AnyCommand, FlagsDef, Identity, ParsedFlags, SourceFlags } from "bailian-cli-core";
 import {
   CONSOLE_AUTH_FLAGS,
+  DEFAULT_LANGUAGE,
   GLOBAL_FLAGS,
   MODEL_AUTH_FLAGS,
   OPENAPI_AUTH_FLAGS,
@@ -28,10 +29,11 @@ import {
 } from "bailian-cli-core";
 import { setupProxyFromEnv } from "./proxy.ts";
 import { handleError } from "./error-handler.ts";
-import { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
+import { printQuickStart } from "./output/banner.ts";
 import { loadCommandPacks } from "./command-packs/load.ts";
 import { createCommandPackManager } from "./command-packs/manager.ts";
 import type { CommandPackPolicy } from "./command-packs/types.ts";
+import { createTranslator } from "./i18n.ts";
 
 /** Per-product identity injected by each CLI entrypoint (bl / rag / …). */
 export interface CliOptions {
@@ -58,6 +60,20 @@ function pick(obj: Record<string, unknown>, keys: string[]): Record<string, unkn
   const out: Record<string, unknown> = {};
   for (const key of keys) if (key in obj) out[key] = obj[key];
   return out;
+}
+
+/** Read only the existing `--config` flag so locale follows the selected Profile before dispatch. */
+function pickConfigFlag(argv: string[]): Partial<SourceFlags> {
+  for (let argumentIndex = 0; argumentIndex < argv.length; argumentIndex++) {
+    const argument = argv[argumentIndex];
+    if (argument === "--config") {
+      return { config: argv[argumentIndex + 1] };
+    }
+    if (argument?.startsWith("--config=")) {
+      return { config: argument.slice("--config=".length) };
+    }
+  }
+  return {};
 }
 
 /**
@@ -94,19 +110,26 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
   const identity: Identity = { binName, version, npmPackage, clientName };
   const commandPackPolicy = opts.commandPacks ?? { supported: {} };
   const commandPackManager = createCommandPackManager(identity, commandPackPolicy);
-  let registryPromise: Promise<CommandRegistry> | undefined;
+  let loadedCommandPacksPromise: ReturnType<typeof loadCommandPacks> | undefined;
 
   installProcessHandlers(binName);
 
   const runMiddleware = compose([versionCheckStage, telemetryStage, authStage, runCommandStage]);
 
-  function getRegistry(): Promise<CommandRegistry> {
-    if (!registryPromise) {
-      registryPromise = loadCommandPacks(commands, identity, commandPackPolicy).then(
-        (loaded) => new CommandRegistry(loaded.commands, binName),
-      );
+  function getLoadedCommandPacks(): ReturnType<typeof loadCommandPacks> {
+    if (!loadedCommandPacksPromise) {
+      loadedCommandPacksPromise = loadCommandPacks(commands, identity, commandPackPolicy);
     }
-    return registryPromise;
+    return loadedCommandPacksPromise;
+  }
+
+  async function getRegistry(argv: string[]): Promise<CommandRegistry> {
+    const localeSources = buildSources(pickConfigFlag(argv));
+    const [translator, loaded] = await Promise.all([
+      createTranslator(localeSources.file.language ?? DEFAULT_LANGUAGE),
+      getLoadedCommandPacks(),
+    ]);
+    return new CommandRegistry(loaded.commands, binName, translator);
   }
 
   /** Render help for `path`; root ([]) doubles as the onboarding / login guide. */
@@ -133,7 +156,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     if (hasKey) {
       if (opts.quickStartTasks?.length) printQuickStart(opts.quickStartTasks);
     } else {
-      printWelcomeBanner(binName);
+      registry.printWelcome();
     }
   }
 
@@ -207,7 +230,8 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
 
   return {
     run(argv: string[] = process.argv.slice(2)) {
-      return getRegistry()
+      return Promise.resolve()
+        .then(() => getRegistry(argv))
         .then((registry) => dispatch(registry, argv))
         .catch(
           (err) => flushTelemetry(1000).finally(() => handleError(err, binName)) as unknown as void,

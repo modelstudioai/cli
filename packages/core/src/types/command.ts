@@ -4,6 +4,8 @@ import type { AuthStore } from "../auth/store.ts";
 import type { Client } from "../client/client.ts";
 import type { CommandPackManager } from "./command-pack-manager.ts";
 
+export type LocalizedText = string | { readonly "en-US": string; readonly "zh-CN": string };
+
 // ── Flag definitions ─────────────────────────────────────────────────────────
 // Flags are keyed by camelCase name (the key IS the parsed flag name, e.g.
 // `maxTokens` ↔ `--max-tokens`). The flag's type drives both runtime parsing
@@ -12,12 +14,12 @@ import type { CommandPackManager } from "./command-pack-manager.ts";
 /** A presence flag: `--quiet`. No value; absent → false. */
 export interface SwitchFlag {
   type: "switch";
-  description: string;
+  description: LocalizedText;
 }
 /** A value flag: `--prompt <text>`, `--n <count>`, `--watermark true|false`. */
 export interface ValueFlag {
   type: "string" | "number" | "boolean" | "array";
-  description: string;
+  description: LocalizedText;
   valueHint: string;
   required?: boolean;
   /**
@@ -70,26 +72,44 @@ export const GLOBAL_FLAGS = {
   output: {
     type: "string",
     valueHint: "<format>",
-    description: "Output format: text, json",
+    description: { "en-US": "Output format: text, json", "zh-CN": "输出格式：text、json" },
   },
   timeout: {
     type: "number",
     valueHint: "<seconds>",
-    description: "Request timeout",
+    description: { "en-US": "Request timeout", "zh-CN": "请求超时时间" },
   },
-  quiet: { type: "switch", description: "Suppress non-essential output" },
+  quiet: {
+    type: "switch",
+    description: { "en-US": "Suppress non-essential output", "zh-CN": "隐藏非必要输出" },
+  },
   verbose: {
     type: "switch",
-    description: "Print HTTP request/response details",
+    description: {
+      "en-US": "Print HTTP request/response details",
+      "zh-CN": "打印 HTTP 请求和响应详情",
+    },
   },
-  dryRun: { type: "switch", description: "Dry run mode" },
+  dryRun: {
+    type: "switch",
+    description: { "en-US": "Dry run mode", "zh-CN": "仅预览，不实际执行" },
+  },
   config: {
     type: "string",
     valueHint: "<name>",
-    description: "Use a config profile for this command",
+    description: {
+      "en-US": "Use a config profile for this command",
+      "zh-CN": "为当前命令使用指定配置 Profile",
+    },
   },
-  help: { type: "switch", description: "Show help" },
-  version: { type: "switch", description: "Print version" },
+  help: {
+    type: "switch",
+    description: { "en-US": "Show help", "zh-CN": "显示帮助信息" },
+  },
+  version: {
+    type: "switch",
+    description: { "en-US": "Print version", "zh-CN": "显示版本信息" },
+  },
 } satisfies FlagsDef;
 
 /** Command-scoped flag for commands that support parallel API calls. */
@@ -111,8 +131,16 @@ export const ASYNC_FLAG = {
 
 /** Model 域凭证/连接 flag,`auth: "apiKey"` 命令可见。 */
 export const MODEL_AUTH_FLAGS = {
-  apiKey: { type: "string", valueHint: "<key>", description: "API key" },
-  baseUrl: { type: "string", valueHint: "<url>", description: "API base URL" },
+  apiKey: {
+    type: "string",
+    valueHint: "<key>",
+    description: { "en-US": "API key", "zh-CN": "API Key" },
+  },
+  baseUrl: {
+    type: "string",
+    valueHint: "<url>",
+    description: { "en-US": "API base URL", "zh-CN": "API Base URL" },
+  },
 } satisfies FlagsDef;
 
 /** Console 域目标/作用域 flag,`auth: "console"` 命令可见。 */
@@ -120,22 +148,34 @@ export const CONSOLE_AUTH_FLAGS = {
   consoleRegion: {
     type: "string",
     valueHint: "<region>",
-    description: "Console gateway region (e.g. cn-beijing, ap-southeast-1)",
+    description: {
+      "en-US": "Console gateway region (e.g. cn-beijing, ap-southeast-1)",
+      "zh-CN": "控制台网关地域（例如 cn-beijing、ap-southeast-1）",
+    },
   },
   consoleSite: {
     type: "string",
     valueHint: "<site>",
-    description: "Console site: domestic, international",
+    description: {
+      "en-US": "Console site: domestic, international",
+      "zh-CN": "控制台站点：domestic、international",
+    },
   },
   consoleSwitchAgent: {
     type: "number",
     valueHint: "<uid>",
-    description: "Switch agent UID for delegated access",
+    description: {
+      "en-US": "Switch agent UID for delegated access",
+      "zh-CN": "切换代理访问的 UID",
+    },
   },
   workspaceId: {
     type: "string",
     valueHint: "<id>",
-    description: "Workspace ID (env: BAILIAN_WORKSPACE_ID)",
+    description: {
+      "en-US": "Workspace ID (env: BAILIAN_WORKSPACE_ID)",
+      "zh-CN": "Workspace ID（环境变量：BAILIAN_WORKSPACE_ID）",
+    },
   },
 } satisfies FlagsDef;
 
@@ -144,17 +184,26 @@ export const OPENAPI_AUTH_FLAGS = {
   accessKeyId: {
     type: "string",
     valueHint: "<key>",
-    description: "Alibaba Cloud Access Key ID (env: ALIBABA_CLOUD_ACCESS_KEY_ID)",
+    description: {
+      "en-US": "Alibaba Cloud Access Key ID (env: ALIBABA_CLOUD_ACCESS_KEY_ID)",
+      "zh-CN": "阿里云 Access Key ID（环境变量：ALIBABA_CLOUD_ACCESS_KEY_ID）",
+    },
   },
   accessKeySecret: {
     type: "string",
     valueHint: "<key>",
-    description: "Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET)",
+    description: {
+      "en-US": "Alibaba Cloud Access Key Secret (env: ALIBABA_CLOUD_ACCESS_KEY_SECRET)",
+      "zh-CN": "阿里云 Access Key Secret（环境变量：ALIBABA_CLOUD_ACCESS_KEY_SECRET）",
+    },
   },
   securityToken: {
     type: "string",
     valueHint: "<token>",
-    description: "Alibaba Cloud STS Security Token (env: ALIBABA_CLOUD_SECURITY_TOKEN)",
+    description: {
+      "en-US": "Alibaba Cloud STS Security Token (env: ALIBABA_CLOUD_SECURITY_TOKEN)",
+      "zh-CN": "阿里云 STS Security Token（环境变量：ALIBABA_CLOUD_SECURITY_TOKEN）",
+    },
   },
 } satisfies FlagsDef;
 
@@ -204,7 +253,7 @@ export interface CommandContext<F extends FlagsDef = FlagsDef> {
  * {@link AnyCommand}; the precise typing lives at the `defineCommand` call site.
  */
 export interface Command<F extends FlagsDef = FlagsDef> {
-  description: string;
+  description: LocalizedText;
   /** Credential this command requires. See {@link AuthRequirement}. */
   auth: AuthRequirement;
   /** Usage line arg portion, e.g. "--prompt <text> [flags]". Manually written. */

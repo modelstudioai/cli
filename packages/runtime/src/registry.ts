@@ -1,4 +1,10 @@
-import type { AnyCommand, AuthRequirement, FlagDef, FlagsDef } from "bailian-cli-core";
+import type {
+  AnyCommand,
+  AuthRequirement,
+  FlagDef,
+  FlagsDef,
+  LocalizedText,
+} from "bailian-cli-core";
 import { UsageError } from "bailian-cli-core";
 import {
   CONSOLE_AUTH_FLAGS,
@@ -8,6 +14,8 @@ import {
   credentialFlagDefs,
 } from "bailian-cli-core";
 import { camelToKebab } from "./args.ts";
+import type { Translator } from "./i18n.ts";
+import { printWelcomeBanner } from "./output/banner.ts";
 import { ansi } from "./output/color.ts";
 
 export type { Command, AnyCommand, FlagDef, FlagsDef } from "bailian-cli-core";
@@ -24,6 +32,32 @@ interface CommandNode {
   command?: AnyCommand;
   children: Map<string, CommandNode>;
 }
+
+const HELP_TEXT = {
+  usage: { "en-US": "Usage:", "zh-CN": "用法：" },
+  commands: { "en-US": "Commands:", "zh-CN": "命令：" },
+  flags: { "en-US": "Flags:", "zh-CN": "选项：" },
+  globalFlags: { "en-US": "Global Flags:", "zh-CN": "全局选项：" },
+  modelAuthFlags: { "en-US": "Model Auth Flags:", "zh-CN": "模型鉴权选项：" },
+  modelAuthScope: { "en-US": "(model-domain commands)", "zh-CN": "（模型域命令）" },
+  consoleAuthFlags: { "en-US": "Console Auth Flags:", "zh-CN": "控制台鉴权选项：" },
+  consoleAuthScope: { "en-US": "(console-domain commands)", "zh-CN": "（控制台域命令）" },
+  openApiAuthFlags: { "en-US": "OpenAPI Auth Flags:", "zh-CN": "OpenAPI 鉴权选项：" },
+  openApiAuthScope: { "en-US": "(openapi-domain commands)", "zh-CN": "（OpenAPI 域命令）" },
+  gettingHelp: { "en-US": "Getting Help:", "zh-CN": "获取帮助：" },
+  gettingHelpDescription1: {
+    "en-US": "Add --help after any command to see its full list of flags, defaults,",
+    "zh-CN": "在任意命令后添加 --help，查看完整的选项和默认值，",
+  },
+  gettingHelpDescription2: {
+    "en-US": "and usage examples. For example:",
+    "zh-CN": "以及用法示例。例如：",
+  },
+  notes: { "en-US": "Notes:", "zh-CN": "说明：" },
+  examples: { "en-US": "Examples:", "zh-CN": "示例：" },
+  minimalWorkflow: { "en-US": "Minimal workflow.yaml:", "zh-CN": "最小 workflow.yaml：" },
+  tryIt: { "en-US": "Try it:", "zh-CN": "试一试：" },
+} satisfies Record<string, LocalizedText>;
 
 /**
  * What a command path resolves to in the registry. The single judgement that
@@ -42,13 +76,19 @@ export class CommandRegistry {
   private root: CommandNode = { children: new Map() };
   /** Binary name shown in usage/help/error strings (e.g. "bl", "rag"). */
   private readonly cliName: string;
+  private readonly translator?: Translator;
   private readonly authRequirements = new Set<AuthRequirement>();
 
-  constructor(commands: Record<string, AnyCommand>, cliName: string) {
+  constructor(commands: Record<string, AnyCommand>, cliName: string, translator?: Translator) {
     this.cliName = cliName;
+    this.translator = translator;
     for (const [path, cmd] of Object.entries(commands)) {
       this.register(path, cmd);
     }
+  }
+
+  private localize(text: LocalizedText): string {
+    return this.translator?.localize(text) ?? (typeof text === "string" ? text : text["en-US"]);
   }
 
   private register(path: string, command: AnyCommand): void {
@@ -134,7 +174,8 @@ export class CommandRegistry {
     if (matched.length > 0 && node.children.size > 0) {
       const subcommands = Array.from(node.children.entries())
         .map(([name, n]) => {
-          if (n.command) return `  ${matched.join(" ")} ${name}    ${n.command.description}`;
+          if (n.command)
+            return `  ${matched.join(" ")} ${name}    ${this.localize(n.command.description)}`;
           const subs = Array.from(n.children.keys()).join(", ");
           return `  ${matched.join(" ")} ${name} [${subs}]`;
         })
@@ -164,7 +205,7 @@ export class CommandRegistry {
       for (const [name, child] of node.children) {
         const fullPath = prefix ? `${prefix} ${name}` : name;
         if (child.command) {
-          entries.push({ path: fullPath, desc: child.command.description });
+          entries.push({ path: fullPath, desc: this.localize(child.command.description) });
         }
         if (child.children.size > 0) {
           collect(child, fullPath);
@@ -184,7 +225,7 @@ export class CommandRegistry {
   ): string {
     const lines = Object.entries(defs).map(([k, def]) => ({
       flag: flagDisplay(k, def),
-      desc: def.description,
+      desc: this.localize(def.description),
     }));
     const maxLen = Math.max(...lines.map((l) => l.flag.length));
     return lines.map((l) => `  ${a(l.flag.padEnd(maxLen + 2))} ${d(l.desc)}`).join("\n");
@@ -231,8 +272,10 @@ export class CommandRegistry {
 
     // Group help (e.g. `bl auth --help`)
     const prefix = commandPath.join(" ");
-    out.write(`\n${this.bold("Usage:", out)} ${this.cliName} ${prefix} <command> [flags]\n\n`);
-    out.write(`${this.bold("Commands:", out)}\n`);
+    out.write(
+      `\n${this.bold(this.localize(HELP_TEXT.usage), out)} ${this.cliName} ${prefix} <command> [flags]\n\n`,
+    );
+    out.write(`${this.bold(this.localize(HELP_TEXT.commands), out)}\n`);
     this.printChildren(node, prefix, out);
     if (prefix === "pipeline") {
       this.printPipelineQuickStart(out);
@@ -240,12 +283,16 @@ export class CommandRegistry {
     out.write("\n");
   }
 
+  printWelcome(): void {
+    printWelcomeBanner(this.cliName, this.translator);
+  }
+
   private printPipelineQuickStart(out: NodeJS.WriteStream): void {
     const b = (s: string) => this.bold(s, out);
     const d = (s: string) => this.dim(s, out);
 
     out.write(`
-${b("Minimal workflow.yaml:")}
+${b(this.localize(HELP_TEXT.minimalWorkflow))}
 ${d("  version: workflow/v1")}
 ${d("  steps:")}
 ${d("    - id: chat")}
@@ -254,7 +301,7 @@ ${d("      input:")}
 ${d('        message: "Who are you?"')}
 ${d('        system: "You are a concise assistant."')}
 
-${b("Try it:")}
+${b(this.localize(HELP_TEXT.tryIt))}
 ${d(`  ${this.cliName} pipeline validate workflow.yaml`)}
 ${d(`  ${this.cliName} pipeline run workflow.yaml --dry-run --output json`)}
 `);
@@ -286,8 +333,8 @@ ${d(`  ${this.cliName} pipeline run workflow.yaml --dry-run --output json`)}
     const authFlagSections = [
       this.buildAuthFlagSection(
         "apiKey",
-        "Model Auth Flags:",
-        "(model-domain commands)",
+        this.localize(HELP_TEXT.modelAuthFlags),
+        this.localize(HELP_TEXT.modelAuthScope),
         MODEL_AUTH_FLAGS,
         b,
         a,
@@ -295,8 +342,8 @@ ${d(`  ${this.cliName} pipeline run workflow.yaml --dry-run --output json`)}
       ),
       this.buildAuthFlagSection(
         "console",
-        "Console Auth Flags:",
-        "(console-domain commands)",
+        this.localize(HELP_TEXT.consoleAuthFlags),
+        this.localize(HELP_TEXT.consoleAuthScope),
         CONSOLE_AUTH_FLAGS,
         b,
         a,
@@ -304,8 +351,8 @@ ${d(`  ${this.cliName} pipeline run workflow.yaml --dry-run --output json`)}
       ),
       this.buildAuthFlagSection(
         "openapi",
-        "OpenAPI Auth Flags:",
-        "(openapi-domain commands)",
+        this.localize(HELP_TEXT.openApiAuthFlags),
+        this.localize(HELP_TEXT.openApiAuthScope),
         OPENAPI_AUTH_FLAGS,
         b,
         a,
@@ -316,17 +363,17 @@ ${d(`  ${this.cliName} pipeline run workflow.yaml --dry-run --output json`)}
       .join("\n\n");
 
     out.write(`
-${b("Usage:")} ${this.cliName} <resource> <command> [flags]
+${b(this.localize(HELP_TEXT.usage))} ${this.cliName} <resource> <command> [flags]
 
-${b("Commands:")}
+${b(this.localize(HELP_TEXT.commands))}
 ${commandLines}
 
-${b("Global Flags:")}
+${b(this.localize(HELP_TEXT.globalFlags))}
 ${globalFlagLines}
 
-${authFlagSections ? `${authFlagSections}\n\n` : ""}${b("Getting Help:")}
-  ${d("Add --help after any command to see its full list of flags, defaults,")}
-  ${d("and usage examples. For example:")} ${this.cliName} ${this.helpExample()} --help
+${authFlagSections ? `${authFlagSections}\n\n` : ""}${b(this.localize(HELP_TEXT.gettingHelp))}
+  ${d(this.localize(HELP_TEXT.gettingHelpDescription1))}
+  ${d(this.localize(HELP_TEXT.gettingHelpDescription2))} ${this.cliName} ${this.helpExample()} --help
 `);
   }
 
@@ -339,33 +386,34 @@ ${authFlagSections ? `${authFlagSections}\n\n` : ""}${b("Getting Help:")}
     // same command shows the right invocation under any product (bl / rag / …).
     const prefix = [this.cliName, ...commandPath].join(" ");
 
-    out.write(`\n${cmd.description}\n`);
-    out.write(`${b("Usage:")} ${prefix}${cmd.usageArgs ? ` ${cmd.usageArgs}` : ""}\n`);
-    const flagEntries = [
-      ...Object.entries(cmd.flags ?? {}),
-      ...Object.entries(credentialFlagDefs(cmd)),
-    ] as [string, FlagDef][];
+    out.write(`\n${this.localize(cmd.description)}\n`);
+    out.write(
+      `${b(this.localize(HELP_TEXT.usage))} ${prefix}${cmd.usageArgs ? ` ${cmd.usageArgs}` : ""}\n`,
+    );
+    const ownFlagEntries = Object.entries(cmd.flags ?? {}) as [string, FlagDef][];
+    const credentialFlagEntries = Object.entries(credentialFlagDefs(cmd)) as [string, FlagDef][];
+    const flagEntries = [...ownFlagEntries, ...credentialFlagEntries];
     if (flagEntries.length > 0) {
-      const lines = flagEntries.map(([k, def]) => ({
-        flag: flagDisplay(k, def),
-        desc: def.description,
+      const lines = flagEntries.map(([key, def]) => ({
+        flag: flagDisplay(key, def),
+        desc: this.localize(def.description),
       }));
       const maxLen = Math.max(...lines.map((l) => l.flag.length));
-      out.write(`\n${b("Flags:")}\n`);
+      out.write(`\n${b(this.localize(HELP_TEXT.flags))}\n`);
       for (const l of lines) {
         out.write(`  ${a(l.flag.padEnd(maxLen + 2))} ${d(l.desc)}\n`);
       }
     }
-    out.write(`\n${b("Global Flags:")}\n`);
+    out.write(`\n${b(this.localize(HELP_TEXT.globalFlags))}\n`);
     out.write(this.buildFlagLines(GLOBAL_FLAGS, a, d) + "\n");
     if (cmd.notes && cmd.notes.length > 0) {
-      out.write(`\n${b("Notes:")}\n`);
+      out.write(`\n${b(this.localize(HELP_TEXT.notes))}\n`);
       for (const note of cmd.notes) {
         out.write(`  ${note}\n`);
       }
     }
     if (cmd.exampleArgs && cmd.exampleArgs.length > 0) {
-      out.write(`\n${b("Examples:")}\n`);
+      out.write(`\n${b(this.localize(HELP_TEXT.examples))}\n`);
       for (const ex of cmd.exampleArgs) {
         out.write(`  ${d(ex ? `${prefix} ${ex}` : prefix)}\n`);
       }
@@ -377,7 +425,10 @@ ${authFlagSections ? `${authFlagSections}\n\n` : ""}${b("Getting Help:")}
     const collect = (n: CommandNode, p: string) => {
       for (const [name, child] of n.children) {
         if (child.command)
-          entries.push({ fullName: `${p} ${name}`, description: child.command.description });
+          entries.push({
+            fullName: `${p} ${name}`,
+            description: this.localize(child.command.description),
+          });
         if (child.children.size > 0) collect(child, `${p} ${name}`);
       }
     };

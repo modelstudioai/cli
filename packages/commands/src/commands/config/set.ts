@@ -11,7 +11,7 @@ export default defineCommand({
       type: "string",
       valueHint: "<key>",
       description:
-        "Config key (base_url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, security_token, default_*_model, workspace_id)",
+        "Config key (language, base_url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, security_token, default_*_model, workspace_id)",
       required: true,
     },
     value: {
@@ -22,6 +22,7 @@ export default defineCommand({
     },
   },
   exampleArgs: [
+    "--key language --value zh-CN",
     "--key output --value json",
     "--key timeout --value 600",
     "--key base_url --value https://dashscope.aliyuncs.com",
