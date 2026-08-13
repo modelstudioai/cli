@@ -1,5 +1,5 @@
 import { API_KEY_PAGE, TOKEN_PLAN_PAGE } from "../urls.ts";
-import type { LocalizedText } from "bailian-cli-core";
+import { DEFAULT_LANGUAGE, type Language, type LocalizedText } from "bailian-cli-core";
 import type { Translator } from "../i18n.ts";
 import { ansi } from "./color.ts";
 
@@ -36,16 +36,26 @@ export function printWelcomeBanner(cliName: string, translator?: Translator): vo
   );
 }
 
-export function printQuickStart(tasks: readonly string[]): void {
+export function printQuickStart(
+  tasks: readonly string[],
+  language: Language = DEFAULT_LANGUAGE,
+): void {
   const color = ansi(process.stderr);
-  process.stderr.write("\n🎯 试试让你的 AI 编程助手完成这些任务：\n");
-  process.stderr.write(`   ${color.dim("Try these with your AI coding assistant:")}\n\n`);
+  const chineseHeading = "试试让你的 AI 编程助手完成这些任务：";
+  const englishHeading = "Try these with your AI coding assistant:";
+  const englishFirst = language === "en-US";
+  const primaryHeading = englishFirst ? englishHeading : chineseHeading;
+  const secondaryHeading = englishFirst ? chineseHeading : englishHeading;
+
+  process.stderr.write(`\n🎯 ${color.white(primaryHeading)}\n`);
+  process.stderr.write(`   ${color.dim(secondaryHeading)}\n\n`);
   tasks.forEach((task, index) => {
     const [chinese, ...englishLines] = task.split("\n");
-    process.stderr.write(`${color.dim(String(index + 1))}  ${chinese}\n`);
-    englishLines.forEach((english) => {
-      process.stderr.write(`${color.dim(english)}\n`);
-    });
+    const english = englishLines.join("\n").trimStart();
+    const primary = englishFirst ? english : chinese;
+    const secondary = englishFirst ? chinese : english;
+    process.stderr.write(`${color.dim(String(index + 1))}  ${color.white(primary)}\n`);
+    process.stderr.write(`   ${color.dim(secondary)}\n`);
   });
   process.stderr.write("\n");
 }

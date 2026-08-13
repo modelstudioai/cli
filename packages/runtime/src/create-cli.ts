@@ -29,7 +29,6 @@ import {
 } from "bailian-cli-core";
 import { setupProxyFromEnv } from "./proxy.ts";
 import { handleError } from "./error-handler.ts";
-import { printQuickStart } from "./output/banner.ts";
 import { loadCommandPacks } from "./command-packs/load.ts";
 import { createCommandPackManager } from "./command-packs/manager.ts";
 import type { CommandPackPolicy } from "./command-packs/types.ts";
@@ -154,7 +153,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
       /* unparseable global flags on the bare invocation — fall through to welcome */
     }
     if (hasKey) {
-      if (opts.quickStartTasks?.length) printQuickStart(opts.quickStartTasks);
+      if (opts.quickStartTasks?.length) registry.printQuickStart(opts.quickStartTasks);
     } else {
       registry.printWelcome();
     }

@@ -15,7 +15,7 @@ import {
 } from "bailian-cli-core";
 import { camelToKebab } from "./args.ts";
 import type { Translator } from "./i18n.ts";
-import { printWelcomeBanner } from "./output/banner.ts";
+import { printQuickStart, printWelcomeBanner } from "./output/banner.ts";
 import { ansi } from "./output/color.ts";
 
 export type { Command, AnyCommand, FlagDef, FlagsDef } from "bailian-cli-core";
@@ -285,6 +285,10 @@ export class CommandRegistry {
 
   printWelcome(): void {
     printWelcomeBanner(this.cliName, this.translator);
+  }
+
+  printQuickStart(tasks: readonly string[]): void {
+    printQuickStart(tasks, this.translator?.language);
   }
 
   private printPipelineQuickStart(out: NodeJS.WriteStream): void {
