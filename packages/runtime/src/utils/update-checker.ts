@@ -209,6 +209,25 @@ function errorMessage(err: unknown): string {
   return String(err);
 }
 
+async function syncAgentSkillsAfterUpdate(
+  dim: string,
+  green: string,
+  yellow: string,
+  reset: string,
+): Promise<void> {
+  try {
+    process.stderr.write(`  ${dim}Syncing agent skill...${reset}\n`);
+    const { execSync } = await import("child_process");
+    execSync("bl skill init", { stdio: "inherit" });
+    process.stderr.write(`  ${green}\u2713 Agent skill updated.${reset}\n\n`);
+  } catch (error) {
+    process.stderr.write(
+      `  ${yellow}\u26a0 Agent skill sync failed: ${errorMessage(error)}${reset}\n`,
+    );
+    process.stderr.write(`  ${yellow}  Run manually: bl skill init${reset}\n\n`);
+  }
+}
+
 /**
  * Perform auto-update for npm or binary installs.
  * Returns true if update succeeded, false otherwise.
@@ -256,6 +275,7 @@ export async function performAutoUpdate(
       writeState({ lastChecked: Date.now(), latestVersion: newVer });
       process.stderr.write(`  ${green}✓ Update complete: ${currentVersion} → ${newVer}${reset}\n`);
       process.stderr.write(`  ${dim}Run ${cyan}bl --version${reset}${dim} to verify.${reset}\n\n`);
+      await syncAgentSkillsAfterUpdate(dim, green, yellow, reset);
       pendingNotification = null;
       return true;
     } catch (err) {
@@ -297,14 +317,7 @@ export async function performAutoUpdate(
     );
     process.stderr.write(`  ${dim}Run ${cyan}bl --version${reset}${dim} to verify.${reset}\n\n`);
 
-    try {
-      process.stderr.write(`  ${dim}Syncing agent skill...${reset}\n`);
-      execSync(`bl skill init`, { stdio: "inherit" });
-      process.stderr.write(`  ${green}✓ Agent skill updated.${reset}\n\n`);
-    } catch (err) {
-      process.stderr.write(`  ${yellow}⚠ Agent skill sync failed: ${errorMessage(err)}${reset}\n`);
-      process.stderr.write(`  ${yellow}  Run manually: bl skill init${reset}\n\n`);
-    }
+    await syncAgentSkillsAfterUpdate(dim, green, yellow, reset);
 
     pendingNotification = null;
     return true;

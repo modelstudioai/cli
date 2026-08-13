@@ -142,6 +142,7 @@ export default defineCommand({
           `\n${color.green(`\u2713 Update complete: ${currentVersion} \u2192 ${newVer}`)}\n`,
         );
         writeUpdateState(newVer);
+        updateAgentSkill(color);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         const reinstall =
