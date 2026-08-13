@@ -145,6 +145,7 @@ export default defineCommand({
           importJobFailureMessage(statusResponse, "Initial import reported document failures."),
           ExitCode.GENERAL,
           `Knowledge base created: ${pipelineId}`,
+          { api: { requestId: statusResponse.request_id } },
         );
       }
     }
