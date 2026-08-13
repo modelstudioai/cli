@@ -7,19 +7,20 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command         | Description                                                                        |
-| --------------- | ---------------------------------------------------------------------------------- |
-| `bl model list` | Browse model families or show detailed model info in the Bailian model marketplace |
+| Command         | Authentication | Description                                                                        |
+| --------------- | -------------- | ---------------------------------------------------------------------------------- |
+| `bl model list` | Console        | Browse model families or show detailed model info in the Bailian model marketplace |
 
 ## Command details
 
 ### `bl model list`
 
-| Field           | Value                                                                                                                           |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `model list`                                                                                                                    |
-| **Description** | Browse model families or show detailed model info in the Bailian model marketplace                                              |
-| **Usage**       | `bl model list [--model <model>] [--page <n>] [--page-size <n>] [--provider <p>] [--capability <c>] [--feature <f>] [--enrich]` |
+| Field              | Value                                                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `model list`                                                                                                                    |
+| **Description**    | Browse model families or show detailed model info in the Bailian model marketplace                                              |
+| **Authentication** | Console                                                                                                                         |
+| **Usage**          | `bl model list [--model <model>] [--page <n>] [--page-size <n>] [--provider <p>] [--capability <c>] [--feature <f>] [--enrich]` |
 
 #### Flags
 

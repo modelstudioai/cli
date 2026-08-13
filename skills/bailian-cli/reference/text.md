@@ -7,19 +7,20 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command        | Description                                           |
-| -------------- | ----------------------------------------------------- |
-| `bl text chat` | Send a chat completion (OpenAI compatible, DashScope) |
+| Command        | Authentication | Description                                           |
+| -------------- | -------------- | ----------------------------------------------------- |
+| `bl text chat` | API Key        | Send a chat completion (OpenAI compatible, DashScope) |
 
 ## Command details
 
 ### `bl text chat`
 
-| Field           | Value                                                 |
-| --------------- | ----------------------------------------------------- |
-| **Name**        | `text chat`                                           |
-| **Description** | Send a chat completion (OpenAI compatible, DashScope) |
-| **Usage**       | `bl text chat --message <text> [flags]`               |
+| Field              | Value                                                 |
+| ------------------ | ----------------------------------------------------- |
+| **Name**           | `text chat`                                           |
+| **Description**    | Send a chat completion (OpenAI compatible, DashScope) |
+| **Authentication** | API Key                                               |
+| **Usage**          | `bl text chat --message <text> [flags]`               |
 
 #### Flags
 

@@ -7,20 +7,21 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command       | Description                                    |
-| ------------- | ---------------------------------------------- |
-| `bl app call` | Call a Bailian application (agent or workflow) |
-| `bl app list` | List Bailian applications                      |
+| Command       | Authentication | Description                                    |
+| ------------- | -------------- | ---------------------------------------------- |
+| `bl app call` | API Key        | Call a Bailian application (agent or workflow) |
+| `bl app list` | Console        | List Bailian applications                      |
 
 ## Command details
 
 ### `bl app call`
 
-| Field           | Value                                               |
-| --------------- | --------------------------------------------------- |
-| **Name**        | `app call`                                          |
-| **Description** | Call a Bailian application (agent or workflow)      |
-| **Usage**       | `bl app call --app-id <id> --prompt <text> [flags]` |
+| Field              | Value                                               |
+| ------------------ | --------------------------------------------------- |
+| **Name**           | `app call`                                          |
+| **Description**    | Call a Bailian application (agent or workflow)      |
+| **Authentication** | API Key                                             |
+| **Usage**          | `bl app call --app-id <id> --prompt <text> [flags]` |
 
 #### Flags
 
@@ -67,11 +68,12 @@ bl app call --app-id abc123 --prompt "Start" --biz-params '{"key":"value"}'
 
 ### `bl app list`
 
-| Field           | Value                     |
-| --------------- | ------------------------- |
-| **Name**        | `app list`                |
-| **Description** | List Bailian applications |
-| **Usage**       | `bl app list [flags]`     |
+| Field              | Value                     |
+| ------------------ | ------------------------- |
+| **Name**           | `app list`                |
+| **Description**    | List Bailian applications |
+| **Authentication** | Console                   |
+| **Usage**          | `bl app list [flags]`     |
 
 #### Flags
 

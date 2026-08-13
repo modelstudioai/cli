@@ -7,21 +7,22 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command        | Description                                           |
-| -------------- | ----------------------------------------------------- |
-| `bl mcp call`  | Call a tool on an MCP server (tools/call)             |
-| `bl mcp list`  | List MCP servers activated under your Bailian account |
-| `bl mcp tools` | List tools exposed by an MCP server (tools/list)      |
+| Command        | Authentication | Description                                           |
+| -------------- | -------------- | ----------------------------------------------------- |
+| `bl mcp call`  | API Key        | Call a tool on an MCP server (tools/call)             |
+| `bl mcp list`  | Console        | List MCP servers activated under your Bailian account |
+| `bl mcp tools` | API Key        | List tools exposed by an MCP server (tools/list)      |
 
 ## Command details
 
 ### `bl mcp call`
 
-| Field           | Value                                                                               |
-| --------------- | ----------------------------------------------------------------------------------- |
-| **Name**        | `mcp call`                                                                          |
-| **Description** | Call a tool on an MCP server (tools/call)                                           |
-| **Usage**       | `bl mcp call --target <server.tool> [--arg k=v ...] [--json '{...}'] [--url <url>]` |
+| Field              | Value                                                                               |
+| ------------------ | ----------------------------------------------------------------------------------- |
+| **Name**           | `mcp call`                                                                          |
+| **Description**    | Call a tool on an MCP server (tools/call)                                           |
+| **Authentication** | API Key                                                                             |
+| **Usage**          | `bl mcp call --target <server.tool> [--arg k=v ...] [--json '{...}'] [--url <url>]` |
 
 #### Flags
 
@@ -51,11 +52,12 @@ bl mcp call --target market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 
 
 ### `bl mcp list`
 
-| Field           | Value                                                 |
-| --------------- | ----------------------------------------------------- |
-| **Name**        | `mcp list`                                            |
-| **Description** | List MCP servers activated under your Bailian account |
-| **Usage**       | `bl mcp list [flags]`                                 |
+| Field              | Value                                                 |
+| ------------------ | ----------------------------------------------------- |
+| **Name**           | `mcp list`                                            |
+| **Description**    | List MCP servers activated under your Bailian account |
+| **Authentication** | Console                                               |
+| **Usage**          | `bl mcp list [flags]`                                 |
 
 #### Flags
 
@@ -86,11 +88,12 @@ bl mcp list --output json
 
 ### `bl mcp tools`
 
-| Field           | Value                                            |
-| --------------- | ------------------------------------------------ |
-| **Name**        | `mcp tools`                                      |
-| **Description** | List tools exposed by an MCP server (tools/list) |
-| **Usage**       | `bl mcp tools --server <code> [--url <url>]`     |
+| Field              | Value                                            |
+| ------------------ | ------------------------------------------------ |
+| **Name**           | `mcp tools`                                      |
+| **Description**    | List tools exposed by an MCP server (tools/list) |
+| **Authentication** | API Key                                          |
+| **Usage**          | `bl mcp tools --server <code> [--url <url>]`     |
 
 #### Flags
 
