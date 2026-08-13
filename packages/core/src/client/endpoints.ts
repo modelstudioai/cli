@@ -100,6 +100,10 @@ export function mcpWebSearchPath(): string {
   return "/api/v1/mcps/WebSearch/mcp";
 }
 
+export function mcpYouComSearchPath(): string {
+  return "/api/v1/mcps/YouComSearch/mcp";
+}
+
 // ---- Datasets / Fine-tune Files ----
 
 /**

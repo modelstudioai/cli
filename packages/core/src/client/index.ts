@@ -13,6 +13,7 @@ export {
   memoryNodePath,
   memorySearchPath,
   mcpWebSearchPath,
+  mcpYouComSearchPath,
   profileSchemaPath,
   speechRecognizePath,
   speechSynthesizePath,
@@ -59,5 +60,6 @@ export {
 } from "./acs.ts";
 export type { McpTool, McpToolResult } from "./mcp.ts";
 export { McpClient, bailianMcpPath } from "./mcp.ts";
+export { YouComMcpClient } from "./youcom-mcp.ts";
 export type { ServerSentEvent } from "./stream.ts";
 export { parseSSE } from "./stream.ts";
