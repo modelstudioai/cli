@@ -1,5 +1,12 @@
-import { BailianError, ExitCode, defineCommand, unwrapResponse } from "bailian-cli-core";
-import { ansi, displayWidth, emitResult, type TextStyle } from "bailian-cli-runtime";
+import { defineCommand, detectOutputFormat, unwrapResponse } from "bailian-cli-core";
+import {
+  ansi,
+  displayWidth,
+  emitResult,
+  type AnsiStyles,
+  type TextStyle,
+} from "bailian-cli-runtime";
+import { formatDateTime } from "./shared.ts";
 
 const TOKEN_PLAN_USAGE_API = "zeldaHttp.apikeyMgr./tokenplan/personal/api/v2/usage";
 const BOX_WIDTH = 76;
@@ -12,48 +19,34 @@ interface TokenPlanUsage {
   per1WeekResetTime?: number;
 }
 
+interface QuotaWindow {
+  percentage?: number;
+  resetTime?: number;
+}
+
+/** Accept only finite numbers; anything else counts as absent (possibly unlimited). */
+function readNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
 function readUsage(result: unknown): TokenPlanUsage {
   const response = unwrapResponse(result as Record<string, unknown>);
-  const usage = {
-    per5HourPercentage: response.per5HourPercentage,
-    per5HourResetTime: response.per5HourResetTime,
-    per1WeekPercentage: response.per1WeekPercentage,
-    per1WeekResetTime: response.per1WeekResetTime,
-  };
+  const usage: TokenPlanUsage = {};
 
-  const quotas = [
-    [usage.per5HourPercentage, usage.per5HourResetTime],
-    [usage.per1WeekPercentage, usage.per1WeekResetTime],
-  ];
-  const hasValidQuotas = quotas.every(
-    ([percentage, resetTime]) =>
-      (percentage === undefined && resetTime === undefined) ||
-      (typeof percentage === "number" &&
-        Number.isFinite(percentage) &&
-        ((percentage === 0 && resetTime === undefined) ||
-          (typeof resetTime === "number" && Number.isFinite(resetTime)))),
-  );
+  const per5HourPercentage = readNumber(response.per5HourPercentage);
+  if (per5HourPercentage !== undefined) usage.per5HourPercentage = per5HourPercentage;
+  const per5HourResetTime = readNumber(response.per5HourResetTime);
+  if (per5HourResetTime !== undefined) usage.per5HourResetTime = per5HourResetTime;
+  const per1WeekPercentage = readNumber(response.per1WeekPercentage);
+  if (per1WeekPercentage !== undefined) usage.per1WeekPercentage = per1WeekPercentage;
+  const per1WeekResetTime = readNumber(response.per1WeekResetTime);
+  if (per1WeekResetTime !== undefined) usage.per1WeekResetTime = per1WeekResetTime;
 
-  if (!hasValidQuotas) {
-    throw new BailianError("Token Plan usage response has an unexpected format.", ExitCode.GENERAL);
-  }
-
-  return usage as TokenPlanUsage;
+  return usage;
 }
 
 function formatPercentage(ratio: number): string {
   return `${(ratio * 100).toFixed(2)}%`;
-}
-
-function formatDateTime(timestamp: number): string {
-  const date = new Date(timestamp);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hour = String(date.getHours()).padStart(2, "0");
-  const minute = String(date.getMinutes()).padStart(2, "0");
-  const second = String(date.getSeconds()).padStart(2, "0");
-  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
 }
 
 function formatRemainingTime(resetTime: number, now: number): string {
@@ -77,102 +70,74 @@ function progressBar(ratio: number): string {
   return `[${"█".repeat(filled)}${"░".repeat(PROGRESS_WIDTH - filled)}]`;
 }
 
-function progressStyle(
-  percentage: number,
-  green: TextStyle,
-  yellow: TextStyle,
-  red: TextStyle,
-): TextStyle {
-  if (percentage >= 0.9) return red;
-  if (percentage >= 0.75) return yellow;
-  return green;
+function progressStyle(percentage: number, color: AnsiStyles): TextStyle {
+  if (percentage >= 0.9) return color.red;
+  if (percentage >= 0.75) return color.yellow;
+  return color.green;
 }
 
 function printView(usage: TokenPlanUsage, generatedAt: number): void {
   const color = ansi(process.stdout);
-  const writeLine = (content = "", visibleContent = content) => {
-    const padding = Math.max(0, BOX_WIDTH - displayWidth(` ${visibleContent}`));
-    process.stdout.write(`│ ${content}${" ".repeat(padding)}│\n`);
+  const writeLine = (text = "", style?: TextStyle) => {
+    const padding = Math.max(0, BOX_WIDTH - displayWidth(` ${text}`));
+    process.stdout.write(`│ ${style ? style(text) : text}${" ".repeat(padding)}│\n`);
   };
-  const writeQuota = (
-    label: string,
-    unlimitedMessage: string,
-    percentage: number | undefined,
-    resetTime: number | undefined,
-  ) => {
-    writeLine(color.bold(label), label);
-    if (percentage === undefined) {
-      writeLine(color.dim(unlimitedMessage), unlimitedMessage);
+  const writeQuota = (label: string, unlimitedMessage: string, window: QuotaWindow) => {
+    writeLine(label, color.bold);
+    if (window.percentage === undefined) {
+      writeLine(unlimitedMessage, color.dim);
       return;
     }
 
-    const percentageText = formatPercentage(percentage);
-    const bar = progressBar(percentage);
-    const style = progressStyle(percentage, color.green, color.yellow, color.red);
-    writeLine(`${percentageText} used   ${style(bar)}`, `${percentageText} used   ${bar}`);
-    if (resetTime === undefined) {
-      writeLine(
-        color.dim("Resets: not applicable (no usage yet)"),
-        "Resets: not applicable (no usage yet)",
-      );
+    const percentageText = formatPercentage(window.percentage);
+    const bar = progressBar(window.percentage);
+    writeLine(`${percentageText} used   ${bar}`, progressStyle(window.percentage, color));
+    if (window.resetTime === undefined) {
+      writeLine("Resets: not applicable (no usage yet)", color.dim);
       return;
     }
 
-    const resetText = `Resets: ${formatDateTime(resetTime)}  (in ${formatRemainingTime(resetTime, generatedAt)})`;
-    writeLine(color.dim(resetText), resetText);
+    const resetText = `Resets: ${formatDateTime(window.resetTime)}  (in ${formatRemainingTime(window.resetTime, generatedAt)})`;
+    writeLine(resetText, color.dim);
   };
 
   process.stdout.write(`┌${"─".repeat(BOX_WIDTH)}┐\n`);
-  writeLine(color.cyan("Token Plan Usage"), "Token Plan Usage");
-  const generatedAtText = `Generated at: ${formatDateTime(generatedAt)} (local time)`;
-  writeLine(color.dim(generatedAtText), generatedAtText);
+  writeLine("Token Plan Usage", color.cyan);
+  writeLine(`Generated at: ${formatDateTime(generatedAt)} (local time)`, color.dim);
   process.stdout.write(`├${"─".repeat(BOX_WIDTH)}┤\n`);
   writeQuota(
     "5-hour quota",
-    "5小时限额当前可能无限制，请到百炼 Token Plan 控制台核实。",
-    usage.per5HourPercentage,
-    usage.per5HourResetTime,
+    "The 5-hour limit may be unlimited; verify in the Bailian Token Plan console.",
+    { percentage: usage.per5HourPercentage, resetTime: usage.per5HourResetTime },
   );
   process.stdout.write(`├${"─".repeat(BOX_WIDTH)}┤\n`);
   writeQuota(
     "1-week quota",
-    "1周限额当前可能无限制，请到百炼 Token Plan 控制台核实。",
-    usage.per1WeekPercentage,
-    usage.per1WeekResetTime,
+    "The 1-week limit may be unlimited; verify in the Bailian Token Plan console.",
+    { percentage: usage.per1WeekPercentage, resetTime: usage.per1WeekResetTime },
   );
   process.stdout.write(`└${"─".repeat(BOX_WIDTH)}┘\n`);
 }
 
 export default defineCommand({
-  description: "Show Token Plan quota usage as core JSON or a human-readable view",
+  description: "Show Token Plan quota usage",
   auth: "console",
-  usageArgs: "<--json | --view> [flags]",
-  flags: {
-    json: {
-      type: "switch",
-      description: "Output only the four core usage fields as JSON",
-    },
-    view: {
-      type: "switch",
-      description: "Render a compact human-readable quota view",
-    },
-  },
-  exampleArgs: ["--json", "--view"],
-  validate: (flags) =>
-    flags.json === flags.view ? "Choose exactly one of --json or --view." : undefined,
+  usageArgs: "[flags]",
+  exampleArgs: ["", "--output json"],
   async run(ctx) {
-    const { flags, settings } = ctx;
+    const { settings } = ctx;
+    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult({ api: TOKEN_PLAN_USAGE_API, data: {} }, "json");
+      emitResult({ api: TOKEN_PLAN_USAGE_API, data: {} }, format);
       return;
     }
 
     const result = await ctx.client.console(TOKEN_PLAN_USAGE_API, {});
     const usage = readUsage(result);
 
-    if (flags.json) {
-      emitResult(usage, "json");
+    if (format === "json") {
+      emitResult(usage, format);
       return;
     }
 

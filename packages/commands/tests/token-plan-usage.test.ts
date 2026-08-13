@@ -12,6 +12,23 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+function captureStdout(): string[] {
+  const output: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    output.push(String(chunk));
+    return true;
+  });
+  return output;
+}
+
+async function runTokenPlan(response: Record<string, unknown>, output?: string): Promise<void> {
+  await tokenPlanUsage.run({
+    client: { console: vi.fn().mockResolvedValue(response) },
+    flags: {},
+    settings: { dryRun: false, output },
+  } as never);
+}
+
 function makeUsageResponse(
   per5HourPercentage?: number,
   per1WeekPercentage = per5HourPercentage,
@@ -26,6 +43,10 @@ function makeUsageResponse(
     if (per1WeekPercentage !== 0) usage.per1WeekResetTime = 1_786_100_000_000;
   }
 
+  return wrapResponse(usage);
+}
+
+function wrapResponse(usage: Record<string, unknown>): Record<string, unknown> {
   return {
     data: {
       DataV2: {
@@ -45,49 +66,25 @@ describe("usage token-plan view", () => {
   ])("uses ANSI color %s for %s", async (percentage, colorCode) => {
     delete process.env.NO_COLOR;
     Object.defineProperty(process.stdout, "isTTY", { configurable: true, value: true });
-    const output: string[] = [];
-    vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
-      output.push(String(chunk));
-      return true;
-    });
+    const output = captureStdout();
 
-    await tokenPlanUsage.run({
-      client: { console: vi.fn().mockResolvedValue(makeUsageResponse(percentage)) },
-      flags: { json: false, view: true },
-      settings: { dryRun: false },
-    } as never);
+    await runTokenPlan(makeUsageResponse(percentage));
 
-    expect(output.join("")).toContain(`\u001B[${colorCode}m[`);
+    expect(output.join("")).toContain(`\u001B[${colorCode}m`);
   });
 
   test("accepts missing reset times when the quota usage is zero", async () => {
-    const output: string[] = [];
-    vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
-      output.push(String(chunk));
-      return true;
-    });
+    const output = captureStdout();
 
-    await tokenPlanUsage.run({
-      client: { console: vi.fn().mockResolvedValue(makeUsageResponse(0)) },
-      flags: { json: false, view: true },
-      settings: { dryRun: false },
-    } as never);
+    await runTokenPlan(makeUsageResponse(0));
 
     expect(output.join("")).toContain("Resets: not applicable (no usage yet)");
   });
 
   test("allows one unused quota window without masking another reset time", async () => {
-    const output: string[] = [];
-    vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
-      output.push(String(chunk));
-      return true;
-    });
+    const output = captureStdout();
 
-    await tokenPlanUsage.run({
-      client: { console: vi.fn().mockResolvedValue(makeUsageResponse(0, 0.5)) },
-      flags: { json: false, view: true },
-      settings: { dryRun: false },
-    } as never);
+    await runTokenPlan(makeUsageResponse(0, 0.5));
 
     const renderedOutput = output.join("");
     expect(renderedOutput).toContain("Resets: not applicable (no usage yet)");
@@ -95,55 +92,91 @@ describe("usage token-plan view", () => {
   });
 
   test("renders missing quota windows as possibly unlimited", async () => {
-    const output: string[] = [];
-    vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
-      output.push(String(chunk));
-      return true;
-    });
+    const output = captureStdout();
 
-    await tokenPlanUsage.run({
-      client: { console: vi.fn().mockResolvedValue(makeUsageResponse()) },
-      flags: { json: false, view: true },
-      settings: { dryRun: false },
-    } as never);
+    await runTokenPlan(makeUsageResponse());
 
     const renderedOutput = output.join("");
-    expect(renderedOutput).toContain("5小时限额当前可能无限制，请到百炼 Token Plan 控制台核实。");
-    expect(renderedOutput).toContain("1周限额当前可能无限制，请到百炼 Token Plan 控制台核实。");
+    expect(renderedOutput).toContain(
+      "The 5-hour limit may be unlimited; verify in the Bailian Token Plan console.",
+    );
+    expect(renderedOutput).toContain(
+      "The 1-week limit may be unlimited; verify in the Bailian Token Plan console.",
+    );
   });
 
   test("renders only the missing quota window as possibly unlimited", async () => {
-    const output: string[] = [];
-    vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
-      output.push(String(chunk));
-      return true;
-    });
+    const output = captureStdout();
 
-    await tokenPlanUsage.run({
-      client: { console: vi.fn().mockResolvedValue(makeUsageResponse(undefined, 0.5)) },
-      flags: { json: false, view: true },
-      settings: { dryRun: false },
-    } as never);
+    await runTokenPlan(makeUsageResponse(undefined, 0.5));
 
     const renderedOutput = output.join("");
-    expect(renderedOutput).toContain("5小时限额当前可能无限制，请到百炼 Token Plan 控制台核实。");
-    expect(renderedOutput).not.toContain("1周限额当前可能无限制，请到百炼 Token Plan 控制台核实。");
+    expect(renderedOutput).toContain(
+      "The 5-hour limit may be unlimited; verify in the Bailian Token Plan console.",
+    );
+    expect(renderedOutput).not.toContain(
+      "The 1-week limit may be unlimited; verify in the Bailian Token Plan console.",
+    );
     expect(renderedOutput).toMatch(/Resets: \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/);
   });
 
-  test("returns an empty JSON object when no quota fields are available", async () => {
-    const output: string[] = [];
-    vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
-      output.push(String(chunk));
-      return true;
-    });
+  test("renders a window with a missing percentage as possibly unlimited even when its reset time is present", async () => {
+    const output = captureStdout();
 
-    await tokenPlanUsage.run({
-      client: { console: vi.fn().mockResolvedValue(makeUsageResponse()) },
-      flags: { json: true, view: false },
-      settings: { dryRun: false },
-    } as never);
+    await runTokenPlan(wrapResponse({ per5HourResetTime: 1_786_000_000_000 }));
+
+    expect(output.join("")).toContain(
+      "The 5-hour limit may be unlimited; verify in the Bailian Token Plan console.",
+    );
+  });
+
+  test("treats non-numeric quota fields as absent instead of failing", async () => {
+    const output = captureStdout();
+
+    await runTokenPlan(
+      wrapResponse({ per5HourPercentage: "not-a-number", per1WeekPercentage: Number.NaN }),
+    );
+
+    const renderedOutput = output.join("");
+    expect(renderedOutput).toContain(
+      "The 5-hour limit may be unlimited; verify in the Bailian Token Plan console.",
+    );
+    expect(renderedOutput).toContain(
+      "The 1-week limit may be unlimited; verify in the Bailian Token Plan console.",
+    );
+  });
+});
+
+describe("usage token-plan json", () => {
+  test("outputs the four core usage fields with --output json", async () => {
+    const output = captureStdout();
+
+    await runTokenPlan(makeUsageResponse(0.5, 0.25), "json");
+
+    expect(JSON.parse(output.join(""))).toEqual({
+      per5HourPercentage: 0.5,
+      per5HourResetTime: 1_786_000_000_000,
+      per1WeekPercentage: 0.25,
+      per1WeekResetTime: 1_786_100_000_000,
+    });
+  });
+
+  test("returns an empty JSON object when no quota fields are available", async () => {
+    const output = captureStdout();
+
+    await runTokenPlan(makeUsageResponse(), "json");
 
     expect(output.join("").trim()).toBe("{}");
+  });
+
+  test("omits non-numeric quota fields from the JSON output", async () => {
+    const output = captureStdout();
+
+    await runTokenPlan(
+      wrapResponse({ per5HourPercentage: "not-a-number", per1WeekPercentage: 0 }),
+      "json",
+    );
+
+    expect(JSON.parse(output.join(""))).toEqual({ per1WeekPercentage: 0 });
   });
 });

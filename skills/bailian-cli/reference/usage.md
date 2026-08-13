@@ -13,7 +13,7 @@ Index: [index.md](index.md)
 | `bl usage freetier`   | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable |
 | `bl usage stats`      | Query model usage statistics                                                               |
 | `bl usage summary`    | Show a unified usage summary: free-tier quota and recent usage overview                    |
-| `bl usage token-plan` | Show Token Plan quota usage as core JSON or a human-readable view                          |
+| `bl usage token-plan` | Show Token Plan quota usage                                                                |
 
 ## Command details
 
@@ -203,18 +203,16 @@ bl usage summary --output json
 
 ### `bl usage token-plan`
 
-| Field           | Value                                                             |
-| --------------- | ----------------------------------------------------------------- |
-| **Name**        | `usage token-plan`                                                |
-| **Description** | Show Token Plan quota usage as core JSON or a human-readable view |
-| **Usage**       | `bl usage token-plan <--json \| --view> [flags]`                  |
+| Field           | Value                         |
+| --------------- | ----------------------------- |
+| **Name**        | `usage token-plan`            |
+| **Description** | Show Token Plan quota usage   |
+| **Usage**       | `bl usage token-plan [flags]` |
 
 #### Flags
 
 | Flag                           | Type   | Required | Description                                              |
 | ------------------------------ | ------ | -------- | -------------------------------------------------------- |
-| `--json`                       | switch | no       | Output only the four core usage fields as JSON           |
-| `--view`                       | switch | no       | Render a compact human-readable quota view               |
 | `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
 | `--console-site <site>`        | string | no       | Console site: domestic, international                    |
 | `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
@@ -223,9 +221,9 @@ bl usage summary --output json
 #### Examples
 
 ```bash
-bl usage token-plan --json
+bl usage token-plan
 ```
 
 ```bash
-bl usage token-plan --view
+bl usage token-plan --output json
 ```
