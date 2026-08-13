@@ -7,20 +7,21 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                | Description                                      |
-| ---------------------- | ------------------------------------------------ |
-| `bl speech recognize`  | Recognize speech from audio files (FunAudio-ASR) |
-| `bl speech synthesize` | Synthesize speech from text (CosyVoice TTS)      |
+| Command                | Authentication | Description                                      |
+| ---------------------- | -------------- | ------------------------------------------------ |
+| `bl speech recognize`  | API Key        | Recognize speech from audio files (FunAudio-ASR) |
+| `bl speech synthesize` | API Key        | Synthesize speech from text (CosyVoice TTS)      |
 
 ## Command details
 
 ### `bl speech recognize`
 
-| Field           | Value                                            |
-| --------------- | ------------------------------------------------ |
-| **Name**        | `speech recognize`                               |
-| **Description** | Recognize speech from audio files (FunAudio-ASR) |
-| **Usage**       | `bl speech recognize --url <audio-url> [flags]`  |
+| Field              | Value                                            |
+| ------------------ | ------------------------------------------------ |
+| **Name**           | `speech recognize`                               |
+| **Description**    | Recognize speech from audio files (FunAudio-ASR) |
+| **Authentication** | API Key                                          |
+| **Usage**          | `bl speech recognize --url <audio-url> [flags]`  |
 
 #### Flags
 
@@ -71,11 +72,12 @@ bl speech recognize --url https://example.com/audio.mp3 --async --quiet
 
 ### `bl speech synthesize`
 
-| Field           | Value                                        |
-| --------------- | -------------------------------------------- |
-| **Name**        | `speech synthesize`                          |
-| **Description** | Synthesize speech from text (CosyVoice TTS)  |
-| **Usage**       | `bl speech synthesize --text <text> [flags]` |
+| Field              | Value                                        |
+| ------------------ | -------------------------------------------- |
+| **Name**           | `speech synthesize`                          |
+| **Description**    | Synthesize speech from text (CosyVoice TTS)  |
+| **Authentication** | API Key                                      |
+| **Usage**          | `bl speech synthesize --text <text> [flags]` |
 
 #### Flags
 

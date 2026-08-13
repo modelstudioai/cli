@@ -29,12 +29,14 @@ Verify: `bl --version` (prints `bl X.Y.Z`).
 
 ## Authentication
 
+For the exact command-to-auth mapping, read the owning skill's `reference/index.md` or run `bl <command> --help`.
+
 | Auth               | How                                                                                              | Used by                                       |
 | ------------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------- |
 | API key            | `export DASHSCOPE_API_KEY=sk-...` or `bl auth login --api-key sk-...`                            | Most DashScope API commands                   |
 | Token Plan API key | `bl auth login --config token-plan --api-key sk-sp-...`                                          | Token Plan text, image, and video consumption |
 | Console            | `bl auth login --console --console-site domestic` or `... international`                         | `app list`, `usage free`, `console call`      |
-| OpenAPI AK         | `bl auth login --open-api --access-key-id <id> --access-key-secret <secret>` or Alibaba env vars | Token Plan management commands (`token-plan`) |
+| OpenAPI AK/SK      | `bl auth login --open-api --access-key-id <id> --access-key-secret <secret>` or Alibaba env vars | Token Plan management commands (`token-plan`) |
 
 ```bash
 bl auth status            # check current auth
@@ -45,6 +47,8 @@ bl auth logout --open-api # clear OpenAPI AK/SK only
 
 - Get a DashScope API key: https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key
 - Get a Token Plan API key: https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview
+- Get an Alibaba Cloud AccessKey for OpenAPI AK/SK: https://ram.console.aliyun.com/manage/ak
+- Console login: China site https://bailian.console.aliyun.com or international site https://modelstudio.console.alibabacloud.com
 
 ### Token Plan model consumption
 

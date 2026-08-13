@@ -7,24 +7,25 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command           | Description                                      |
-| ----------------- | ------------------------------------------------ |
-| `bl config agent` | Configure a coding agent to use DashScope API    |
-| `bl config list`  | List config profiles and show the active profile |
-| `bl config set`   | Set a config value                               |
-| `bl config show`  | Display current configuration                    |
-| `bl config ui`    | Open a local web UI to manage config profiles    |
-| `bl config use`   | Set the active config profile                    |
+| Command           | Authentication | Description                                      |
+| ----------------- | -------------- | ------------------------------------------------ |
+| `bl config agent` | No Auth        | Configure a coding agent to use DashScope API    |
+| `bl config list`  | No Auth        | List config profiles and show the active profile |
+| `bl config set`   | No Auth        | Set a config value                               |
+| `bl config show`  | No Auth        | Display current configuration                    |
+| `bl config ui`    | No Auth        | Open a local web UI to manage config profiles    |
+| `bl config use`   | No Auth        | Set the active config profile                    |
 
 ## Command details
 
 ### `bl config agent`
 
-| Field           | Value                                                                                                                         |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `config agent`                                                                                                                |
-| **Description** | Configure a coding agent to use DashScope API                                                                                 |
-| **Usage**       | `bl config agent --agent <name> (--base-url <url> \| --region <region>) (--api-key <key> \| --key <encoded>) --model <model>` |
+| Field              | Value                                                                                                                         |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `config agent`                                                                                                                |
+| **Description**    | Configure a coding agent to use DashScope API                                                                                 |
+| **Authentication** | No Auth                                                                                                                       |
+| **Usage**          | `bl config agent --agent <name> (--base-url <url> \| --region <region>) (--api-key <key> \| --key <encoded>) --model <model>` |
 
 #### Flags
 
@@ -55,11 +56,12 @@ bl config agent --agent codex --base-url https://dashscope.aliyuncs.com/compatib
 
 ### `bl config list`
 
-| Field           | Value                                            |
-| --------------- | ------------------------------------------------ |
-| **Name**        | `config list`                                    |
-| **Description** | List config profiles and show the active profile |
-| **Usage**       | `bl config list`                                 |
+| Field              | Value                                            |
+| ------------------ | ------------------------------------------------ |
+| **Name**           | `config list`                                    |
+| **Description**    | List config profiles and show the active profile |
+| **Authentication** | No Auth                                          |
+| **Usage**          | `bl config list`                                 |
 
 #### Flags
 
@@ -77,11 +79,12 @@ bl config list --output json
 
 ### `bl config set`
 
-| Field           | Value                                       |
-| --------------- | ------------------------------------------- |
-| **Name**        | `config set`                                |
-| **Description** | Set a config value                          |
-| **Usage**       | `bl config set --key <key> --value <value>` |
+| Field              | Value                                       |
+| ------------------ | ------------------------------------------- |
+| **Name**           | `config set`                                |
+| **Description**    | Set a config value                          |
+| **Authentication** | No Auth                                     |
+| **Usage**          | `bl config set --key <key> --value <value>` |
 
 #### Flags
 
@@ -106,11 +109,12 @@ bl config set --key base_url --value https://dashscope.aliyuncs.com
 
 ### `bl config show`
 
-| Field           | Value                         |
-| --------------- | ----------------------------- |
-| **Name**        | `config show`                 |
-| **Description** | Display current configuration |
-| **Usage**       | `bl config show`              |
+| Field              | Value                         |
+| ------------------ | ----------------------------- |
+| **Name**           | `config show`                 |
+| **Description**    | Display current configuration |
+| **Authentication** | No Auth                       |
+| **Usage**          | `bl config show`              |
 
 #### Flags
 
@@ -128,11 +132,12 @@ bl config show --output json
 
 ### `bl config ui`
 
-| Field           | Value                                         |
-| --------------- | --------------------------------------------- |
-| **Name**        | `config ui`                                   |
-| **Description** | Open a local web UI to manage config profiles |
-| **Usage**       | `bl config ui [--port <port>] [--no-open]`    |
+| Field              | Value                                         |
+| ------------------ | --------------------------------------------- |
+| **Name**           | `config ui`                                   |
+| **Description**    | Open a local web UI to manage config profiles |
+| **Authentication** | No Auth                                       |
+| **Usage**          | `bl config ui [--port <port>] [--no-open]`    |
 
 #### Flags
 
@@ -157,11 +162,12 @@ bl config ui --no-open
 
 ### `bl config use`
 
-| Field           | Value                         |
-| --------------- | ----------------------------- |
-| **Name**        | `config use`                  |
-| **Description** | Set the active config profile |
-| **Usage**       | `bl config use --name <name>` |
+| Field              | Value                         |
+| ------------------ | ----------------------------- |
+| **Name**           | `config use`                  |
+| **Description**    | Set the active config profile |
+| **Authentication** | No Auth                       |
+| **Usage**          | `bl config use --name <name>` |
 
 #### Flags
 
