@@ -206,7 +206,7 @@ bl knowledge chat --message "Describe these images" --image https://example.com/
 | Flag                    | Type   | Required | Description                                                                                                                                               |
 | ----------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--index-id <id>`       | string | yes      | Knowledge base ID                                                                                                                                         |
-| `--doc-id <id>`         | string | no       | Owning document ID; required for table/image knowledge bases (the server rejects field-channel chunks without it), optional for document-type             |
+| `--doc-id <id>`         | string | no       | Owning document ID from the doc list command; required in practice — the server returns HTTP 500 (dataId不能为空) without it even for unstructured KBs    |
 | `--content <text>`      | string | no       | Chunk body text, up to 6000 chars (document-type); alternative to --content-file                                                                          |
 | `--content-file <path>` | string | no       | Read chunk body from a UTF-8 plain text file (.md/.txt etc.)                                                                                              |
 | `--title <text>`        | string | no       | Chunk title, up to 50 chars (document-type)                                                                                                               |
@@ -219,7 +219,8 @@ bl knowledge chat --message "Describe these images" --image https://example.com/
 #### Notes
 
 - Document / table / image knowledge bases are supported; audio-video ones are not.
-- Table/image knowledge bases require --doc-id — verified live: the server returns HTTP 500 (dataId不能为空) without it. Use the document-level id from the doc list command; the per-row doc_id in chunk list metadata is rejected (Index.InvalidParameter).
+- --doc-id is required in practice — verified live: even unstructured (document-type) KBs return HTTP 500 (dataId不能为空) without it. Use the document-level id from the doc list command; the per-row doc_id in chunk list metadata is rejected (Index.InvalidParameter).
+- Adding a text content chunk to an image-type document (jpg) triggers HTTP 500 (Index.SystemError) — the server does not support text chunks on image documents. Target a text-type document (docx/pdf/txt) instead.
 - The API is idempotent but rate-limited to 10 calls per second — throttle batch scripts.
 - The response carries no chunk id; list chunks afterwards to find the new one.
 - For table/image knowledge bases use --field with Excel column headers as keys; values are passed through as strings.
