@@ -7,19 +7,20 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command              | Description                              |
-| -------------------- | ---------------------------------------- |
-| `bl vision describe` | Describe an image or video using Qwen-VL |
+| Command              | Authentication | Description                              |
+| -------------------- | -------------- | ---------------------------------------- |
+| `bl vision describe` | API Key        | Describe an image or video using Qwen-VL |
 
 ## Command details
 
 ### `bl vision describe`
 
-| Field           | Value                                                                        |
-| --------------- | ---------------------------------------------------------------------------- |
-| **Name**        | `vision describe`                                                            |
-| **Description** | Describe an image or video using Qwen-VL                                     |
-| **Usage**       | `bl vision describe --image <path-or-url> [--video <url>] [--prompt <text>]` |
+| Field              | Value                                                                        |
+| ------------------ | ---------------------------------------------------------------------------- |
+| **Name**           | `vision describe`                                                            |
+| **Description**    | Describe an image or video using Qwen-VL                                     |
+| **Authentication** | API Key                                                                      |
+| **Usage**          | `bl vision describe --image <path-or-url> [--video <url>] [--prompt <text>]` |
 
 #### Flags
 

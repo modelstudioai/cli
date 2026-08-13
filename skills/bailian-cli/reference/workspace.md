@@ -7,20 +7,21 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command             | Description                                                 |
-| ------------------- | ----------------------------------------------------------- |
-| `bl workspace init` | Initialize Bailian workspace and activate postpaid services |
-| `bl workspace list` | List all workspaces                                         |
+| Command             | Authentication | Description                                                 |
+| ------------------- | -------------- | ----------------------------------------------------------- |
+| `bl workspace init` | No Auth        | Initialize Bailian workspace and activate postpaid services |
+| `bl workspace list` | Console        | List all workspaces                                         |
 
 ## Command details
 
 ### `bl workspace init`
 
-| Field           | Value                                                                                            |
-| --------------- | ------------------------------------------------------------------------------------------------ |
-| **Name**        | `workspace init`                                                                                 |
-| **Description** | Initialize Bailian workspace and activate postpaid services                                      |
-| **Usage**       | `bl workspace init --access-key-id <id> --access-key-secret <secret> [--security-token <token>]` |
+| Field              | Value                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| **Name**           | `workspace init`                                                                                 |
+| **Description**    | Initialize Bailian workspace and activate postpaid services                                      |
+| **Authentication** | No Auth                                                                                          |
+| **Usage**          | `bl workspace init --access-key-id <id> --access-key-secret <secret> [--security-token <token>]` |
 
 #### Flags
 
@@ -38,11 +39,12 @@ bl workspace init --access-key-id LTAIxxxxx --access-key-secret xxxxx
 
 ### `bl workspace list`
 
-| Field           | Value                       |
-| --------------- | --------------------------- |
-| **Name**        | `workspace list`            |
-| **Description** | List all workspaces         |
-| **Usage**       | `bl workspace list [flags]` |
+| Field              | Value                       |
+| ------------------ | --------------------------- |
+| **Name**           | `workspace list`            |
+| **Description**    | List all workspaces         |
+| **Authentication** | Console                     |
+| **Usage**          | `bl workspace list [flags]` |
 
 #### Flags
 
