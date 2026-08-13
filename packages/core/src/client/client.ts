@@ -171,8 +171,8 @@ export class Client {
   }
 
   /**
-   * Connect to a Bailian MCP: try Streamable HTTP, then SSE on 405+streamableHttp (except WebSearch).
-   * `urlOverride` maps to `--url` and uses Streamable only (no fallback).
+   * Connect to a Bailian MCP: try Streamable HTTP, then SSE on 405 (except WebSearch).
+   * `urlOverride` maps to `--url`: Streamable first, then classic SSE on the same URL (405/404).
    */
   connectBailianMcp(
     serverCode: string,

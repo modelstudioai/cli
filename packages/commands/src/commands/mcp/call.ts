@@ -36,7 +36,8 @@ const CALL_FLAGS = {
   url: {
     type: "string",
     valueHint: "<url>",
-    description: "Override the MCP endpoint URL (for non-Bailian servers)",
+    description:
+      "Override the MCP endpoint URL (non-Bailian). Tries Streamable HTTP first, then classic SSE on the same URL.",
   },
 } satisfies FlagsDef;
 type CallFlags = ParsedFlags<typeof CALL_FLAGS>;

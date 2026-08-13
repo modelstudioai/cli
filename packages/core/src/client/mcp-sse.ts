@@ -24,6 +24,11 @@ type PendingResolver = {
   reject: (reason: unknown) => void;
 };
 
+/** 用字符串键匹配 JSON-RPC id（兼容 number / string 回传）。 */
+function pendingKey(id: number | string): string {
+  return String(id);
+}
+
 export class McpSseClient {
   private sseUrl: string;
   private messageUrl: string | undefined;
@@ -31,11 +36,13 @@ export class McpSseClient {
   private deps: HttpDeps;
   private authToken: string | undefined;
   private abortController: AbortController | undefined;
-  private pending = new Map<number, PendingResolver>();
+  private pending = new Map<string, PendingResolver>();
   private endpointReady: Promise<void>;
   private resolveEndpoint: (() => void) | undefined;
   private rejectEndpoint: ((reason: unknown) => void) | undefined;
   private closed = false;
+  /** SSE GET 已结束（非主动 close）时置位，后续 RPC 立即失败。 */
+  private streamEnded = false;
 
   constructor(deps: HttpDeps, sseUrl: string, authToken?: string) {
     this.deps = deps;
@@ -87,10 +94,21 @@ export class McpSseClient {
     if (this.closed) return;
     this.closed = true;
     this.abortController?.abort();
+    this.failPending(new BailianError("MCP SSE session closed.", ExitCode.GENERAL));
+    this.messageUrl = undefined;
+  }
+
+  private failPending(reason: unknown): void {
     for (const [, waiter] of this.pending) {
-      waiter.reject(new BailianError("MCP SSE session closed.", ExitCode.GENERAL));
+      waiter.reject(reason);
     }
     this.pending.clear();
+  }
+
+  private markStreamEnded(reason: BailianError): void {
+    this.streamEnded = true;
+    this.messageUrl = undefined;
+    this.failPending(reason);
   }
 
   private async openSse(): Promise<void> {
@@ -145,10 +163,10 @@ export class McpSseClient {
               ExitCode.GENERAL,
             );
       this.rejectEndpoint?.(reason);
-      for (const [, waiter] of this.pending) {
-        waiter.reject(reason);
+      // consumeSse 在正常结束路径已 markStreamEnded；此处覆盖解析/读取异常。
+      if (!this.streamEnded) {
+        this.markStreamEnded(reason);
       }
-      this.pending.clear();
     });
 
     const timeoutMs = this.deps.settings.timeout * 1000;
@@ -167,7 +185,8 @@ export class McpSseClient {
     for await (const event of parseSSE(response)) {
       if (this.closed) break;
 
-      if (event.event === "endpoint" || (!event.event && !this.messageUrl)) {
+      // 规范要求首事件为 event: endpoint；不接受无名事件以免误把 JSON 当 URL。
+      if (event.event === "endpoint") {
         const raw = event.data.trim();
         if (!raw) continue;
         // Only accept same-origin message URLs so we never forward the Bearer token cross-origin.
@@ -178,6 +197,7 @@ export class McpSseClient {
         continue;
       }
 
+      // 缺省 event 类型在 SSE 中等同 message。
       if (event.event === "message" || event.event === undefined) {
         let payload: JsonRpcResponse;
         try {
@@ -185,13 +205,16 @@ export class McpSseClient {
         } catch {
           continue;
         }
-        if (typeof payload.id !== "number") continue;
-        const waiter = this.pending.get(payload.id);
+        if (typeof payload.id !== "number" && typeof payload.id !== "string") continue;
+        const key = pendingKey(payload.id);
+        const waiter = this.pending.get(key);
         if (!waiter) continue;
-        this.pending.delete(payload.id);
+        this.pending.delete(key);
         waiter.resolve(payload);
       }
     }
+
+    if (this.closed) return;
 
     if (!this.messageUrl) {
       const error = new BailianError(
@@ -201,10 +224,19 @@ export class McpSseClient {
       this.rejectEndpoint?.(error);
       throw error;
     }
+
+    // 已拿到 endpoint 后流仍结束：标记会话死亡并唤醒 pending；不再 throw，
+    // 避免 void consumeSse().catch 之外再冒出未处理 rejection。
+    this.markStreamEnded(new BailianError("MCP SSE stream ended unexpectedly.", ExitCode.GENERAL));
   }
 
   private async rpc(method: string, params?: Record<string, unknown>): Promise<unknown> {
+    if (this.closed || this.streamEnded) {
+      throw new BailianError("MCP SSE stream ended unexpectedly.", ExitCode.GENERAL);
+    }
+
     const id = this.nextId++;
+    const key = pendingKey(id);
     const body = {
       jsonrpc: "2.0" as const,
       id,
@@ -214,8 +246,10 @@ export class McpSseClient {
 
     const timeoutMs = this.deps.settings.timeout * 1000;
     const responsePromise = new Promise<JsonRpcResponse>((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      this.pending.set(key, { resolve, reject });
     });
+    // 流可能在 Promise.race 之前结束并 reject pending，先挂上 catch 避免 unhandledRejection。
+    void responsePromise.catch(() => undefined);
     const responseTimeout = cancellableTimeoutReject(
       timeoutMs,
       `MCP SSE timed out waiting for response to ${method}.`,
@@ -223,6 +257,9 @@ export class McpSseClient {
 
     try {
       await this.postMessage(body);
+      if (this.closed || this.streamEnded) {
+        throw new BailianError("MCP SSE stream ended unexpectedly.", ExitCode.GENERAL);
+      }
       const data = await Promise.race([responsePromise, responseTimeout.promise]);
       if (data.error) {
         throw new BailianError(
@@ -232,7 +269,7 @@ export class McpSseClient {
       }
       return data.result;
     } catch (error) {
-      this.pending.delete(id);
+      this.pending.delete(key);
       throw error;
     } finally {
       responseTimeout.cancel();
@@ -249,6 +286,9 @@ export class McpSseClient {
   }
 
   private async postMessage(body: unknown): Promise<void> {
+    if (this.closed || this.streamEnded) {
+      throw new BailianError("MCP SSE stream ended unexpectedly.", ExitCode.GENERAL);
+    }
     if (!this.messageUrl) {
       throw new BailianError("MCP SSE message endpoint is not ready.", ExitCode.GENERAL);
     }

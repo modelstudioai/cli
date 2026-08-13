@@ -68,6 +68,7 @@ export {
   bailianMcpPath,
   bailianMcpSsePath,
   isStreamableHttpUnsupported,
+  isUrlOverrideSseFallbackCandidate,
   connectBailianMcpWithFallback,
 } from "./mcp.ts";
 export type { ServerSentEvent } from "./stream.ts";
