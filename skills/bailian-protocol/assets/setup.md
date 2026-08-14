@@ -11,13 +11,33 @@ inspect config keys. Day-to-day command routing lives in the business skills
 
 ## Install
 
-```bash
-# Recommended binary install (no Node), or: npm install -g bailian-cli
-curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
-# Install the full bailian-* skill family (includes bailian-protocol)
-bl skill init
+**prefer npm** (Node.js **≥ 18.17.0**); use the binary installer only when Node/npm is unavailable.
 
-# Advanced / subset (comma-separated names; include bailian-protocol when needed)
+### 1. Recommended: npm
+
+```bash
+# node -v ≥ 18.17.0; global install via npm only (do not use pnpm/yarn)
+npm install -g bailian-cli
+bl skill init
+```
+
+### 2. Fallback: binary (no Node)
+
+When there is no usable Node/npm, or Node is too old for the npm path:
+
+```bash
+curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
+# The script runs bl skill init after installing the CLI; if that fails, run it manually
+```
+
+Windows PowerShell: `irm https://bailian.aliyun.com/cli/install.ps1 | iex`
+
+### Skills
+
+- **Supported:** `bl skill init` (installs every `bailian-*`, including `bailian-protocol`)
+- **Advanced / subset** (include protocol when needed):
+
+```bash
 # bl skill add --name bailian-protocol,bailian-gen
 # bl skill add --name bailian-protocol,bailian-finetune
 # bl skill add --name bailian-protocol,bailian-managed-agent

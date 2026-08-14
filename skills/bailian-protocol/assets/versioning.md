@@ -35,13 +35,15 @@
 
 ## Missing `bl`
 
-If `bl --version` fails, install the CLI and skills:
+If `bl --version` fails, install the CLI and skills (same order as [setup.md → Install](setup.md#install) / root `INSTALL.md`: **npm first**):
 
 ```bash
-# Recommended — no Node required
-curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
-# Or: npm install -g bailian-cli
+# Recommended — Node.js ≥ 18.17.0; npm only (do not use pnpm/yarn)
+npm install -g bailian-cli
 bl skill init
+
+# Fallback — no usable Node/npm:
+# curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
 ```
 
 Do not install a single business skill alone — use `bl skill init` so `bailian-protocol` is present.

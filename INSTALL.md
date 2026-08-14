@@ -1,8 +1,38 @@
 # 阿里云百炼CLI 安装说明（供 AI Agent 阅读）
 
-本文档面向 **AI Agent**：按下列步骤为用户安装并校验 **阿里云百炼CLI**（命令 `bl` / `bailian`）。**优先**使用二进制一键安装（无需 Node）；若环境已有 Node / 需要 Command Pack，再用 npm。不要臆造版本号或路径；以用户环境为准。
+本文档面向 **AI Agent**：按下列步骤为用户安装并校验 **阿里云百炼CLI**（命令 `bl` / `bailian`）。**优先**在已有 Node.js（**≥ 18.17.0**）的环境用 npm 安装；若没有可用 Node / npm，再走二进制一键安装。不要臆造版本号或路径；以用户环境为准。
 
-## 1. 推荐：二进制安装（无需 Node）
+## 1. 推荐：npm 安装（要求 **≥ 18.17.0**）
+
+1. `node -v` 确认版本 ≥ 18.17.0。
+2. `npm -v` 确认可用（**仅允许 npm** 全局安装，不要用 pnpm/yarn）。
+3. 执行：
+
+```bash
+npm install -g bailian-cli
+```
+
+4. 校验：`bl --version`。
+
+安装 skills（CLI 内置，无需 Git / npx skills）：
+
+```bash
+bl skill init
+```
+
+**Supported：** `bl skill init` 一次装齐 registry 中全部 `bailian-*`（含共享协议 `bailian-protocol`）。
+
+**Advanced / 按需子集：**
+
+```bash
+bl skill add --name bailian-protocol,bailian-gen
+```
+
+安装成功后，用中文简要说明已安装的 skills 及用户可做什么。
+
+## 2. 备选：二进制安装（无需 Node）
+
+当环境没有 Node / npm，或 Node 版本过低无法走 npm 时，使用二进制安装脚本。脚本安装 CLI 成功后会自动执行 `bl skill init`。
 
 ```bash
 curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
@@ -37,35 +67,9 @@ bl --version
 which bl   # Windows: where.exe bl
 ```
 
-> CDN / GitHub Release 未就绪或下载失败时，回退到下方 npm 安装。
+若自动 skill 安装失败，再手动执行：`bl skill init`。
 
-## 2. 备选：npm 安装（要求 **≥ 18.17.0**）
-
-1. `node -v` 确认版本。
-2. `npm -v` 确认可用（**仅允许 npm** 全局安装，不要用 pnpm/yarn）。
-3. 执行：
-
-```bash
-npm install -g bailian-cli
-```
-
-4. 校验：`bl --version`。
-
-安装 skills（CLI 内置，无需 Git / npx skills）：
-
-```bash
-bl skill init
-```
-
-**Supported：** `bl skill init` 一次装齐 registry 中全部 `bailian-*`（含共享协议 `bailian-protocol`）。
-
-**Advanced / 按需子集：**
-
-```bash
-bl skill add --name bailian-protocol,bailian-gen
-```
-
-安装成功后，用中文简要说明已安装的 skills 及用户可做什么。
+> CDN / GitHub Release 未就绪或下载失败时，若本机已有合格 Node，回退到上方 npm 安装。
 
 ---
 
