@@ -5,13 +5,13 @@ const DELETE_FLAGS = {
   fileId: {
     type: "string",
     valueHint: "<id>",
-    description: "Dataset file ID (required)",
+    description: { "en-US": "Dataset file ID (required)", "zh-CN": "数据集文件 ID（必填）" },
     required: true,
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Delete a dataset file by ID",
+  description: { "en-US": "Delete a dataset file by ID", "zh-CN": "通过 ID 删除数据集文件" },
   auth: "apiKey",
   usageArgs: "--file-id <id>",
   flags: DELETE_FLAGS,

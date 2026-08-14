@@ -10,18 +10,21 @@ const UPDATE_FLAGS = {
   deployedModel: {
     type: "string",
     valueHint: "<id>",
-    description: "Deployed model identifier (required)",
+    description: {
+      "en-US": "Deployed model identifier (required)",
+      "zh-CN": "已部署模型标识（必填）",
+    },
     required: true,
   },
   rpmLimit: {
     type: "number",
     valueHint: "<n>",
-    description: "Requests per minute",
+    description: { "en-US": "Requests per minute", "zh-CN": "每分钟请求数" },
   },
   tpmLimit: {
     type: "number",
     valueHint: "<n>",
-    description: "Tokens per minute",
+    description: { "en-US": "Tokens per minute", "zh-CN": "每分钟 Token 数" },
   },
 } satisfies FlagsDef;
 
@@ -32,7 +35,10 @@ const UPDATE_FLAGS = {
  * Body: at least one of `rpm_limit` (requests/min) or `tpm_limit` (tokens/min).
  */
 export default defineCommand({
-  description: "Update a deployment's rate limits (rpm_limit / tpm_limit)",
+  description: {
+    "en-US": "Update a deployment's rate limits (rpm_limit / tpm_limit)",
+    "zh-CN": "更新部署的限流配置（rpm_limit / tpm_limit）",
+  },
   auth: "apiKey",
   usageArgs: "--deployed-model <id> [--rpm-limit <n>] [--tpm-limit <n>]",
   flags: UPDATE_FLAGS,
@@ -40,7 +46,12 @@ export default defineCommand({
     "--deployed-model dep-... --rpm-limit 1000",
     "--deployed-model dep-... --rpm-limit 1000 --tpm-limit 200000",
   ],
-  notes: ["At least one of --rpm-limit / --tpm-limit must be provided."],
+  notes: [
+    {
+      "en-US": "At least one of --rpm-limit / --tpm-limit must be provided.",
+      "zh-CN": "--rpm-limit / --tpm-limit 至少需要提供一个。",
+    },
+  ],
   validate: (flags) =>
     flags.rpmLimit === undefined && flags.tpmLimit === undefined
       ? "Provide at least one of --rpm-limit / --tpm-limit."

@@ -10,26 +10,35 @@ const SESSION_LIST_FLAGS = {
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Config file path (default: agents.yaml)",
+    description: {
+      "en-US": "Config file path (default: agents.yaml)",
+      "zh-CN": "配置文件路径（默认：agents.yaml）",
+    },
   },
   agent: {
     type: "string",
     valueHint: "<name>",
-    description: "Filter by agent name",
+    description: { "en-US": "Filter by agent name", "zh-CN": "按 Agent 名称筛选" },
   },
   all: {
     type: "switch",
-    description: "Fetch all pages by following the cursor",
+    description: {
+      "en-US": "Fetch all pages by following the cursor",
+      "zh-CN": "跟随 Cursor 获取全部分页",
+    },
   },
   provider: {
     type: "string",
     valueHint: "<name>",
-    description: "Target provider",
+    description: { "en-US": "Target provider", "zh-CN": "目标 Provider" },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "List sessions from the provider",
+  description: {
+    "en-US": "List sessions from the provider",
+    "zh-CN": "列出 Provider 中的 Session",
+  },
   auth: "apiKey",
   usageArgs: "[--agent <name>] [--all] [--provider <name>] [--file <path>]",
   flags: SESSION_LIST_FLAGS,

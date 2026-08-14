@@ -274,24 +274,30 @@ function printModelTable(
 }
 
 export default defineCommand({
-  description: "Query model usage statistics",
+  description: { "en-US": "Query model usage statistics", "zh-CN": "查询模型用量统计" },
   auth: "console",
   usageArgs: "[--model <model>] [--days <days>] [flags]",
   flags: {
     model: {
       type: "string",
       valueHint: "<model>",
-      description: "Model name(s), comma-separated; omit for overview",
+      description: {
+        "en-US": "Model name(s), comma-separated; omit for overview",
+        "zh-CN": "模型名称，多个名称以逗号分隔；省略时查看概览",
+      },
     },
     days: {
       type: "string",
       valueHint: "<days>",
-      description: "Number of days (default: 7)",
+      description: { "en-US": "Number of days (default: 7)", "zh-CN": "天数（默认：7）" },
     },
     type: {
       type: "string",
       valueHint: "<type>",
-      description: "Model type: Text, Vision, Multimodal, Audio, Embedding",
+      description: {
+        "en-US": "Model type: Text, Vision, Multimodal, Audio, Embedding",
+        "zh-CN": "模型类型：Text、Vision、Multimodal、Audio、Embedding",
+      },
     },
   },
   exampleArgs: [

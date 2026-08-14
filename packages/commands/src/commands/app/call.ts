@@ -11,50 +11,84 @@ import {
 import { ansi, emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description: "Call a Bailian application (agent or workflow)",
+  description: {
+    "en-US": "Call a Bailian application (agent or workflow)",
+    "zh-CN": "调用百炼应用（智能体或工作流）",
+  },
   auth: "apiKey",
   usageArgs: "--app-id <id> --prompt <text> [flags]",
   flags: {
     appId: {
       type: "string",
       valueHint: "<id>",
-      description: "Application ID (required)",
+      description: { "en-US": "Application ID (required)", "zh-CN": "应用 ID（必填）" },
       required: true,
     },
     prompt: {
       type: "string",
       valueHint: "<text>",
-      description: "Input prompt text",
+      description: { "en-US": "Input prompt text", "zh-CN": "输入提示词文本" },
       required: true,
     },
     image: {
       type: "array",
       valueHint: "<url>",
-      description: "Image URL(s) to pass to the app (repeatable)",
+      description: {
+        "en-US": "Image URL(s) to pass to the app (repeatable)",
+        "zh-CN": "传给应用的图片 URL（可重复）",
+      },
     },
     fileId: {
       type: "array",
       valueHint: "<id>",
-      description: "Pre-uploaded file ID(s) (repeatable)",
+      description: {
+        "en-US": "Pre-uploaded file ID(s) (repeatable)",
+        "zh-CN": "已上传的文件 ID（可重复）",
+      },
     },
     sessionId: {
       type: "string",
       valueHint: "<id>",
-      description: "Session ID for multi-turn conversation",
+      description: {
+        "en-US": "Session ID for multi-turn conversation",
+        "zh-CN": "多轮对话的 Session ID",
+      },
     },
-    stream: { type: "switch", description: "Stream response (default: on in TTY)" },
+    stream: {
+      type: "switch",
+      description: {
+        "en-US": "Stream response (default: on in TTY)",
+        "zh-CN": "流式输出响应（TTY 中默认开启）",
+      },
+    },
     pipelineIds: {
       type: "string",
       valueHint: "<ids>",
-      description: "Knowledge base pipeline IDs (comma-separated)",
+      description: {
+        "en-US": "Knowledge base pipeline IDs (comma-separated)",
+        "zh-CN": "知识库 Pipeline ID（以逗号分隔）",
+      },
     },
-    memoryId: { type: "string", valueHint: "<id>", description: "Memory ID for long-term memory" },
+    memoryId: {
+      type: "string",
+      valueHint: "<id>",
+      description: {
+        "en-US": "Memory ID for long-term memory",
+        "zh-CN": "长期记忆使用的 Memory ID",
+      },
+    },
     bizParams: {
       type: "string",
       valueHint: "<json>",
-      description: "Business parameters JSON (workflow variables)",
+      description: {
+        "en-US": "Business parameters JSON (workflow variables)",
+        "zh-CN": "业务参数 JSON（工作流变量）",
+      },
     },
-    hasThoughts: { type: "switch", description: "Show agent thinking process" },
+    hasThoughts: {
+      type: "switch",
+      description: { "en-US": "Show agent thinking process", "zh-CN": "显示智能体思考过程" },
+    },
   },
   exampleArgs: [
     '--app-id abc123 --prompt "Hello"',

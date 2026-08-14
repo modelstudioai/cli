@@ -114,9 +114,9 @@ function formatExamples(path: string, exampleArgs: string[] | undefined): string
   );
 }
 
-function formatNotes(notes: string[] | undefined): string {
+function formatNotes(notes: LocalizedText[] | undefined): string {
   if (!notes?.length) return "";
-  return notes.map((n) => `- ${n}`).join("\n") + "\n";
+  return notes.map((note) => `- ${referenceText(note)}`).join("\n") + "\n";
 }
 
 function commandSection(path: string, cmd: AnyCommand): string {

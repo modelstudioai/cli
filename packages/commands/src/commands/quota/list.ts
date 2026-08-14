@@ -168,14 +168,17 @@ function printTable(rows: ListRow[]): void {
 }
 
 export default defineCommand({
-  description: "View model RPM/TPM rate limits",
+  description: { "en-US": "View model RPM/TPM rate limits", "zh-CN": "查看模型 RPM/TPM 限流额度" },
   auth: "console",
   usageArgs: "[--model <model>] [flags]",
   flags: {
     model: {
       type: "string",
       valueHint: "<model>",
-      description: "Model name(s), comma-separated",
+      description: {
+        "en-US": "Model name(s), comma-separated",
+        "zh-CN": "模型名称，多个名称以逗号分隔",
+      },
     },
   },
   exampleArgs: ["", "--model qwen3.6-plus", "--model qwen3.6-plus,qwen-turbo", "--output json"],

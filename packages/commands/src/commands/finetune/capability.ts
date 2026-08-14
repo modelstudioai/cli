@@ -58,18 +58,27 @@ const CAPABILITY_FLAGS = {
   model: {
     type: "string",
     valueHint: "<m>",
-    description: "List training types supported by this base model.",
+    description: {
+      "en-US": "List training types supported by this base model.",
+      "zh-CN": "列出该基础模型支持的训练类型。",
+    },
   },
   trainingType: {
     type: "string",
     valueHint: "<t>",
-    description: `List models supporting this training type: ${TRAINING_TYPES_CLI.join(" | ")}.`,
+    description: {
+      "en-US": `List models supporting this training type: ${TRAINING_TYPES_CLI.join(" | ")}.`,
+      "zh-CN": `列出支持该训练类型的模型：${TRAINING_TYPES_CLI.join(" | ")}。`,
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description:
-    "Query fine-tune training capability — by model (which training types it supports) or by training type (which models support it)",
+  description: {
+    "en-US":
+      "Query fine-tune training capability — by model (which training types it supports) or by training type (which models support it)",
+    "zh-CN": "查询微调训练能力：按模型查询其支持的训练类型，或按训练类型查询支持它的模型",
+  },
   auth: "none",
   usageArgs: "--model <m> | --training-type <t>",
   flags: CAPABILITY_FLAGS,
@@ -80,10 +89,20 @@ export default defineCommand({
     "--training-type sft --quiet",
   ],
   notes: [
-    "Exactly one of --model / --training-type is required.",
-    "Training-type values use the `<method>` / `<method>-lora` convention:",
-    "sft | sft-lora | dpo | dpo-lora | cpt. (cpt has no -lora variant server-side.)",
-    "Queries listFoundationModels, a public API — no console login needed.",
+    {
+      "en-US": "Exactly one of --model / --training-type is required.",
+      "zh-CN": "--model / --training-type 必须且只能指定一个。",
+    },
+    {
+      "en-US":
+        "Training-type values use the `<method>` / `<method>-lora` convention: sft | sft-lora | dpo | dpo-lora | cpt. (cpt has no -lora variant server-side.)",
+      "zh-CN":
+        "训练类型遵循 `<method>` / `<method>-lora` 命名约定：sft | sft-lora | dpo | dpo-lora | cpt。（服务端的 cpt 没有 -lora 变体。）",
+    },
+    {
+      "en-US": "Queries listFoundationModels, a public API — no console login needed.",
+      "zh-CN": "查询公开 API listFoundationModels，无需登录控制台。",
+    },
   ],
   validate: (f) => {
     if (f.model && f.trainingType)

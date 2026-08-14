@@ -21,32 +21,52 @@ const PLAN_FLAGS = {
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Config file path (default: agents.yaml)",
+    description: {
+      "en-US": "Config file path (default: agents.yaml)",
+      "zh-CN": "配置文件路径（默认：agents.yaml）",
+    },
   },
   provider: {
     type: "string",
     valueHint: "<name>",
-    description: "Target provider (default: all configured)",
+    description: {
+      "en-US": "Target provider (default: all configured)",
+      "zh-CN": "目标 Provider（默认：全部已配置项）",
+    },
   },
   noRefresh: {
     type: "switch",
-    description: "Skip refreshing state from remote before planning",
+    description: {
+      "en-US": "Skip refreshing state from remote before planning",
+      "zh-CN": "规划前跳过从远端刷新状态",
+    },
   },
   refreshOnly: {
     type: "switch",
-    description: "Refresh state and show drift without planning remote mutations",
+    description: {
+      "en-US": "Refresh state and show drift without planning remote mutations",
+      "zh-CN": "刷新状态并显示漂移，不规划远端变更",
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Show what changes would be applied to agent infrastructure",
+  description: {
+    "en-US": "Show what changes would be applied to agent infrastructure",
+    "zh-CN": "显示将应用到 Agent 基础设施的变更",
+  },
   auth: "apiKey",
   usageArgs: "[--file <path>] [--provider <name>] [--no-refresh] [--refresh-only]",
   flags: PLAN_FLAGS,
   exampleArgs: ["", "--provider bailian", "--no-refresh"],
   notes: [
     ...CREDENTIALS_NOTE,
-    "--no-refresh and --dry-run plan offline from local config and state: no remote requests, no state writes, provider keys are not checked.",
+    {
+      "en-US":
+        "--no-refresh and --dry-run plan offline from local config and state: no remote requests, no state writes, provider keys are not checked.",
+      "zh-CN":
+        "--no-refresh 和 --dry-run 基于本地配置与 State 离线规划：不发送远端请求、不写入 State，也不检查 Provider Key。",
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

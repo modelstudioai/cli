@@ -10,23 +10,35 @@ const SCALE_FLAGS = {
   deployedModel: {
     type: "string",
     valueHint: "<id>",
-    description: "Deployed model identifier (required)",
+    description: {
+      "en-US": "Deployed model identifier (required)",
+      "zh-CN": "已部署模型标识（必填）",
+    },
     required: true,
   },
   capacity: {
     type: "number",
     valueHint: "<n>",
-    description: "New capacity in plan units (must be a multiple of base_capacity)",
+    description: {
+      "en-US": "New capacity in plan units (must be a multiple of base_capacity)",
+      "zh-CN": "以方案单元表示的新容量（必须是 base_capacity 的整数倍）",
+    },
   },
   inputTpm: {
     type: "number",
     valueHint: "<n>",
-    description: "PTU only — input tokens per minute",
+    description: {
+      "en-US": "PTU only — input tokens per minute",
+      "zh-CN": "仅 PTU：每分钟输入 Token 数",
+    },
   },
   outputTpm: {
     type: "number",
     valueHint: "<n>",
-    description: "PTU only — output tokens per minute",
+    description: {
+      "en-US": "PTU only — output tokens per minute",
+      "zh-CN": "仅 PTU：每分钟输出 Token 数",
+    },
   },
 } satisfies FlagsDef;
 
@@ -37,7 +49,7 @@ const SCALE_FLAGS = {
  * integer multiple of `base_capacity` (visible via `bl deploy get`).
  */
 export default defineCommand({
-  description: "Scale a deployment's capacity",
+  description: { "en-US": "Scale a deployment's capacity", "zh-CN": "调整部署容量" },
   auth: "apiKey",
   usageArgs: "--deployed-model <id> --capacity <n> [--input-tpm <n>] [--output-tpm <n>]",
   flags: SCALE_FLAGS,

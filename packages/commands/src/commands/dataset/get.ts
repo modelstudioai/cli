@@ -5,13 +5,16 @@ const GET_FLAGS = {
   fileId: {
     type: "string",
     valueHint: "<id>",
-    description: "Dataset file ID (required)",
+    description: { "en-US": "Dataset file ID (required)", "zh-CN": "数据集文件 ID（必填）" },
     required: true,
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Get details of a single dataset file",
+  description: {
+    "en-US": "Get details of a single dataset file",
+    "zh-CN": "获取单个数据集文件的详情",
+  },
   auth: "apiKey",
   usageArgs: "--file-id <id>",
   flags: GET_FLAGS,

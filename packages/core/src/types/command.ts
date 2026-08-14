@@ -266,7 +266,8 @@ export interface Command<F extends FlagsDef = FlagsDef> {
   usageArgs?: string;
   /** Example arg strings (without the `<bin> <path>` prefix). */
   exampleArgs?: string[];
-  notes?: string[];
+  /** Additional help paragraphs rendered below flags. */
+  notes?: LocalizedText[];
   flags?: F;
   /**
    * Cross-flag validation, after parsing and before run. Return an error message

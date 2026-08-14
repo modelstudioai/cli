@@ -17,29 +17,44 @@ import {
 const TOP_N = 15;
 
 export default defineCommand({
-  description: "Query free-tier quota for models (all models if --model is omitted)",
+  description: {
+    "en-US": "Query free-tier quota for models (all models if --model is omitted)",
+    "zh-CN": "查询模型免费额度（省略 --model 时查询全部模型）",
+  },
   auth: "console",
   usageArgs: "[--model <model>[,model2,...]] [flags]",
   flags: {
     model: {
       type: "string",
       valueHint: "<model>",
-      description: "Model name(s) to query, comma-separated for multiple; omit for all models",
+      description: {
+        "en-US": "Model name(s) to query, comma-separated for multiple; omit for all models",
+        "zh-CN": "要查询的模型名称；多个名称以逗号分隔，省略时查询全部模型",
+      },
     },
     expiring: {
       type: "string",
       valueHint: "<days>",
-      description: "Only show quotas expiring within N days",
+      description: {
+        "en-US": "Only show quotas expiring within N days",
+        "zh-CN": "仅显示将在 N 天内到期的额度",
+      },
     },
     sort: {
       type: "string",
       valueHint: "<field>",
-      description: "Sort by: remaining (ascending), expires (ascending)",
+      description: {
+        "en-US": "Sort by: remaining (ascending), expires (ascending)",
+        "zh-CN": "排序方式：remaining（剩余额度升序）、expires（到期时间升序）",
+      },
       choices: ["remaining", "expires"] as const,
     },
     all: {
       type: "switch",
-      description: "Show all models instead of the top rows",
+      description: {
+        "en-US": "Show all models instead of the top rows",
+        "zh-CN": "显示全部模型，而不只显示前几行",
+      },
     },
   },
   exampleArgs: [

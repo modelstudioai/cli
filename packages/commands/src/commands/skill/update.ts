@@ -26,18 +26,27 @@ interface UpdateOutcome {
 const UPDATE_CONCURRENCY = 3;
 
 export default defineCommand({
-  description: "Update installed skills to the latest registry versions",
+  description: {
+    "en-US": "Update installed skills to the latest registry versions",
+    "zh-CN": "将已安装的 Skill 更新到 Registry 最新版本",
+  },
   auth: "none",
   usageArgs: "[--all] [--name <name,...>]",
   flags: {
     all: {
       type: "switch",
-      description: "Update all installed skills (default when neither --all nor --name is given)",
+      description: {
+        "en-US": "Update all installed skills (default when neither --all nor --name is given)",
+        "zh-CN": "更新全部已安装 Skill（未指定 --all 或 --name 时的默认行为）",
+      },
     },
     name: {
       type: "string",
       valueHint: "<name,...>",
-      description: "Comma-separated skill names to update (must be already installed)",
+      description: {
+        "en-US": "Comma-separated skill names to update (must be already installed)",
+        "zh-CN": "要更新的 Skill 名称，以逗号分隔（必须已安装）",
+      },
     },
   },
   validate(flags) {

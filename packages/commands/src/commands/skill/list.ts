@@ -16,11 +16,19 @@ function truncate(text: string | undefined): string {
 }
 
 export default defineCommand({
-  description: "List registry skills and diff against local installs",
+  description: {
+    "en-US": "List registry skills and diff against local installs",
+    "zh-CN": "列出 Registry Skill，并与本地安装结果比较",
+  },
   auth: "none",
   exampleArgs: ["", "--output json"],
   notes: [
-    "STATUS: installed | outdated | not-installed | missing (lock has it, dir deleted) | untracked (dir exists, not managed)",
+    {
+      "en-US":
+        "STATUS: installed | outdated | not-installed | missing (lock has it, dir deleted) | untracked (dir exists, not managed)",
+      "zh-CN":
+        "STATUS：installed | outdated | not-installed | missing（Lock 中存在但目录已删除）| untracked（目录存在但未被管理）",
+    },
   ],
   async run(ctx) {
     const format = ctx.settings.outputExplicit ? ctx.settings.output : "json";

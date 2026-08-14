@@ -219,31 +219,44 @@ const COMMON_FLAGS = {
   model: {
     type: "string",
     valueHint: "<model>",
-    description: "Base model to fine-tune",
+    description: { "en-US": "Base model to fine-tune", "zh-CN": "要微调的基础模型" },
     required: true,
   },
   datasets: {
     type: "string",
     valueHint: "<ids|paths>",
-    description:
-      "Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image). Local paths are uploaded (validated) first, then their file-ids are used.",
+    description: {
+      "en-US":
+        "Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image). Local paths are uploaded (validated) first, then their file-ids are used.",
+      "zh-CN":
+        "数据集文件 ID 或本地路径，以逗号分隔（文本使用 .jsonl，音频/图片使用 .zip）。本地路径会先验证并上传，再使用对应的 file-id。",
+    },
     required: true,
   },
   validations: {
     type: "string",
     valueHint: "<ids|paths>",
-    description:
-      "Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).",
+    description: {
+      "en-US":
+        "Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).",
+      "zh-CN": "验证数据集文件 ID 或本地路径，以逗号分隔（与 --datasets 一样自动上传）。",
+    },
   },
   modelName: {
     type: "string",
     valueHint: "<name>",
-    description: "Output model name (after training)",
+    description: {
+      "en-US": "Output model name (after training)",
+      "zh-CN": "训练完成后的输出模型名称",
+    },
   },
   suffix: {
     type: "string",
     valueHint: "<text>",
-    description: "Output suffix appended by the platform (finetuned_output_suffix)",
+    description: {
+      "en-US": "Output suffix appended by the platform (finetuned_output_suffix)",
+      "zh-CN": "平台追加的输出后缀（finetuned_output_suffix）",
+    },
   },
 } satisfies FlagsDef;
 
@@ -258,28 +271,37 @@ const TEXT_FLAGS = {
   trainingType: {
     type: "string",
     valueHint: "<t>",
-    description: `Training type: ${TRAINING_TYPES_CLI.join(" | ")} (default: ${DEFAULT_TRAINING_TYPE}). Mapping to the server happens at the interface boundary (e.g. sft-lora -> efficient_sft, dpo -> dpo_full).`,
+    description: {
+      "en-US": `Training type: ${TRAINING_TYPES_CLI.join(" | ")} (default: ${DEFAULT_TRAINING_TYPE}). Mapping to the server happens at the interface boundary (e.g. sft-lora -> efficient_sft, dpo -> dpo_full).`,
+      "zh-CN": `训练类型：${TRAINING_TYPES_CLI.join(" | ")}（默认：${DEFAULT_TRAINING_TYPE}）。在接口边界转换为服务端值（例如 sft-lora -> efficient_sft、dpo -> dpo_full）。`,
+    },
   },
   nEpochs: {
     type: "number",
     valueHint: "<n>",
-    description: "Number of epochs (default: 3)",
+    description: { "en-US": "Number of epochs (default: 3)", "zh-CN": "训练轮数（默认：3）" },
   },
   batchSize: {
     type: "number",
     valueHint: "<n>",
-    description:
-      "Per-device batch size (clamped to [8, 1024]). Auto-set to 8 for small datasets (<100KB)",
+    description: {
+      "en-US":
+        "Per-device batch size (clamped to [8, 1024]). Auto-set to 8 for small datasets (<100KB)",
+      "zh-CN": "单设备 Batch Size（限制在 [8, 1024]）。小数据集（<100KB）自动设为 8",
+    },
   },
   learningRate: {
     type: "string",
     valueHint: "<str>",
-    description: 'Learning rate as a string to preserve precision (e.g. "1.6e-5")',
+    description: {
+      "en-US": 'Learning rate as a string to preserve precision (e.g. "1.6e-5")',
+      "zh-CN": '以字符串形式指定学习率以保留精度（例如 "1.6e-5"）',
+    },
   },
   maxLength: {
     type: "number",
     valueHint: "<n>",
-    description: "Max sequence length",
+    description: { "en-US": "Max sequence length", "zh-CN": "最大序列长度" },
   },
 } satisfies FlagsDef;
 
@@ -306,13 +328,20 @@ const IMAGE_FLAGS = {
     type: "string",
     choices: ["t2i", "i2i"] as const,
     valueHint: "<t2i|i2i>",
-    description:
-      "Generation type: t2i (default) | i2i. Sets generation_type/max_pixels. Required to train I2I from a file-id or with --dry-run (local data auto-detects input_img).",
+    description: {
+      "en-US":
+        "Generation type: t2i (default) | i2i. Sets generation_type/max_pixels. Required to train I2I from a file-id or with --dry-run (local data auto-detects input_img).",
+      "zh-CN":
+        "生成类型：t2i（默认）| i2i。用于设置 generation_type/max_pixels。通过 file-id 训练 I2I 或使用 --dry-run 时必填（本地数据会自动识别 input_img）。",
+    },
   },
   learningRate: {
     type: "string",
     valueHint: "<str>",
-    description: 'Learning rate as a string to preserve precision (e.g. "3e-5")',
+    description: {
+      "en-US": 'Learning rate as a string to preserve precision (e.g. "3e-5")',
+      "zh-CN": '以字符串形式指定学习率以保留精度（例如 "3e-5"）',
+    },
   },
 } satisfies FlagsDef;
 
@@ -326,43 +355,70 @@ const IMAGE_USAGE =
   "--model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>] [--generation-type <t2i|i2i>] [--learning-rate <str>]";
 
 const COMMON_NOTES = [
-  "Creating a job uploads any local datasets and consumes training quota.",
-  "Use --dry-run to preview the request body without submitting.",
-  "--datasets / --validations accept either file-ids (from `dataset upload`)",
-  "or local paths. Local paths are validated and uploaded first, then their",
-  "file-ids are submitted — a one-step upload-and-train.",
+  {
+    "en-US": "Creating a job uploads any local datasets and consumes training quota.",
+    "zh-CN": "创建任务会上传所有本地数据集并消耗训练额度。",
+  },
+  {
+    "en-US": "Use --dry-run to preview the request body without submitting.",
+    "zh-CN": "使用 --dry-run 预览请求体，不实际提交。",
+  },
+  {
+    "en-US":
+      "--datasets / --validations accept either file-ids (from `dataset upload`) or local paths. Local paths are validated and uploaded first, then their file-ids are submitted — a one-step upload-and-train.",
+    "zh-CN":
+      "--datasets / --validations 可接受 file-id（来自 `dataset upload`）或本地路径。本地路径会先验证并上传，再提交对应的 file-id，实现一步上传并训练。",
+  },
 ];
 
 const TEXT_NOTES = [
   ...COMMON_NOTES,
-  "Training-type values use the `<method>` / `<method>-lora` convention:",
-  "sft (full) | sft-lora (LoRA) | dpo (full) | dpo-lora (LoRA) | cpt. These map",
-  "to the server's training_type at the interface boundary, so the rest of the",
-  "CLI never sees the raw server strings.",
-  "Before submitting (non dry-run) the job, the model's training capability is",
-  "checked via listFoundationModels (no console login required); an unsupported",
-  "training type fails fast with the list the model actually supports.",
-  "n_epochs defaults to 3. Other hyper-parameters are platform defaults unless set.",
-  "Learning rate is forwarded as a string to avoid JSON-number precision loss.",
-  "Pre-submit gate: if the training dataset's sample count is not greater",
-  "than batch_size, the job is rejected before upload or quota consumption",
-  "(the platform would otherwise fail ~10 min in, after data processing).",
+  {
+    "en-US":
+      "Training-type values use the `<method>` / `<method>-lora` convention: sft (full) | sft-lora (LoRA) | dpo (full) | dpo-lora (LoRA) | cpt. These map to the server's training_type at the interface boundary, so the rest of the CLI never sees the raw server strings.",
+    "zh-CN":
+      "训练类型遵循 `<method>` / `<method>-lora` 命名约定：sft（全量）| sft-lora（LoRA）| dpo（全量）| dpo-lora（LoRA）| cpt。这些值会在接口边界映射为服务端 training_type，因此 CLI 的其他部分不会接触服务端原始字符串。",
+  },
+  {
+    "en-US":
+      "Before submitting (non dry-run) the job, the model's training capability is checked via listFoundationModels (no console login required); an unsupported training type fails fast with the list the model actually supports.",
+    "zh-CN":
+      "提交任务前（非 dry-run），会通过 listFoundationModels 检查模型训练能力（无需登录控制台）；如果训练类型不受支持，会立即失败并列出该模型实际支持的训练类型。",
+  },
+  {
+    "en-US": "n_epochs defaults to 3. Other hyper-parameters are platform defaults unless set.",
+    "zh-CN": "n_epochs 默认为 3。其他超参数未设置时使用平台默认值。",
+  },
+  {
+    "en-US": "Learning rate is forwarded as a string to avoid JSON-number precision loss.",
+    "zh-CN": "学习率以字符串形式传递，避免 JSON 数字精度损失。",
+  },
+  {
+    "en-US":
+      "Pre-submit gate: if the training dataset's sample count is not greater than batch_size, the job is rejected before upload or quota consumption (the platform would otherwise fail ~10 min in, after data processing).",
+    "zh-CN":
+      "提交前检查：如果训练数据集的样本数不大于 batch_size，会在上传或消耗额度前拒绝任务（否则平台会在数据处理约 10 分钟后才失败）。",
+  },
 ];
 
 const AUDIO_NOTES = [
   ...COMMON_NOTES,
-  "Audio TTS training runs sft-lora (efficient_sft) with fixed CosyVoice",
-  "hyper-parameter defaults; there are no training-type or hyper-parameter",
-  "knobs to set.",
+  {
+    "en-US":
+      "Audio TTS training runs sft-lora (efficient_sft) with fixed CosyVoice hyper-parameter defaults; there are no training-type or hyper-parameter knobs to set.",
+    "zh-CN":
+      "音频 TTS 训练使用 sft-lora（efficient_sft）和固定的 CosyVoice 超参数默认值；没有可设置的训练类型或超参数选项。",
+  },
 ];
 
 const IMAGE_NOTES = [
   ...COMMON_NOTES,
-  "Image generation training runs sft-lora (efficient_sft) with fixed defaults;",
-  "only --learning-rate is overridable. T2I vs I2I is declared with",
-  "--generation-type (default t2i), which sets generation_type/max_pixels. For",
-  "local data the type is auto-detected (records with input_img train I2I);",
-  "pass --generation-type explicitly to train I2I from a file-id or in --dry-run.",
+  {
+    "en-US":
+      "Image generation training runs sft-lora (efficient_sft) with fixed defaults; only --learning-rate is overridable. T2I vs I2I is declared with --generation-type (default t2i), which sets generation_type/max_pixels. For local data the type is auto-detected (records with input_img train I2I); pass --generation-type explicitly to train I2I from a file-id or in --dry-run.",
+    "zh-CN":
+      "图片生成训练使用 sft-lora（efficient_sft）和固定默认值；仅 --learning-rate 可覆盖。通过 --generation-type（默认 t2i）声明 T2I 或 I2I，并设置 generation_type/max_pixels。本地数据会自动识别类型（包含 input_img 的记录训练 I2I）；通过 file-id 训练 I2I 或使用 --dry-run 时，请显式传入 --generation-type。",
+  },
 ];
 
 /**
@@ -642,7 +698,10 @@ async function runCreate<F extends FlagsDef>(
 
 /** `bl finetune text create` — fine-tune a text model. Datasets are `.jsonl`. */
 export const finetuneTextCreate = defineCommand({
-  description: "Create a text model fine-tune job (sft | sft-lora | dpo | dpo-lora | cpt)",
+  description: {
+    "en-US": "Create a text model fine-tune job (sft | sft-lora | dpo | dpo-lora | cpt)",
+    "zh-CN": "创建文本模型微调任务（sft | sft-lora | dpo | dpo-lora | cpt）",
+  },
   auth: "apiKey",
   usageArgs: TEXT_USAGE,
   flags: TEXT_FLAGS,
@@ -662,7 +721,10 @@ export const finetuneTextCreate = defineCommand({
 
 /** `bl finetune audio create` — fine-tune an audio TTS model. Datasets are `.zip`. */
 export const finetuneAudioCreate = defineCommand({
-  description: "Create an audio TTS model fine-tune job (sft-lora)",
+  description: {
+    "en-US": "Create an audio TTS model fine-tune job (sft-lora)",
+    "zh-CN": "创建音频 TTS 模型微调任务（sft-lora）",
+  },
   auth: "apiKey",
   usageArgs: AUDIO_USAGE,
   flags: AUDIO_FLAGS,
@@ -679,7 +741,10 @@ export const finetuneAudioCreate = defineCommand({
 
 /** `bl finetune image create` — fine-tune an image generation model. Datasets are `.zip`. */
 export const finetuneImageCreate = defineCommand({
-  description: "Create an image generation model fine-tune job (sft-lora)",
+  description: {
+    "en-US": "Create an image generation model fine-tune job (sft-lora)",
+    "zh-CN": "创建图片生成模型微调任务（sft-lora）",
+  },
   auth: "apiKey",
   usageArgs: IMAGE_USAGE,
   flags: IMAGE_FLAGS,

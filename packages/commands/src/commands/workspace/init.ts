@@ -26,17 +26,23 @@ const FLAGS = {
   accessKeyId: {
     type: "string",
     valueHint: "<id>",
-    description: "Alibaba Cloud Access Key ID",
+    description: { "en-US": "Alibaba Cloud Access Key ID", "zh-CN": "阿里云 Access Key ID" },
   },
   accessKeySecret: {
     type: "string",
     valueHint: "<secret>",
-    description: "Alibaba Cloud Access Key Secret",
+    description: {
+      "en-US": "Alibaba Cloud Access Key Secret",
+      "zh-CN": "阿里云 Access Key Secret",
+    },
   },
   securityToken: {
     type: "string",
     valueHint: "<token>",
-    description: "Alibaba Cloud STS Security Token (optional)",
+    description: {
+      "en-US": "Alibaba Cloud STS Security Token (optional)",
+      "zh-CN": "阿里云 STS Security Token（可选）",
+    },
   },
 } satisfies FlagsDef;
 
@@ -71,7 +77,10 @@ interface CommodityItem {
 }
 
 export default defineCommand({
-  description: "Initialize Bailian workspace and activate postpaid services",
+  description: {
+    "en-US": "Initialize Bailian workspace and activate postpaid services",
+    "zh-CN": "初始化百炼 Workspace 并开通后付费服务",
+  },
   auth: "none",
   usageArgs: "--access-key-id <id> --access-key-secret <secret> [--security-token <token>]",
   flags: FLAGS,

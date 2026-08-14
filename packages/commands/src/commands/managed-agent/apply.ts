@@ -21,30 +21,48 @@ const APPLY_FLAGS = {
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Config file path (default: agents.yaml)",
+    description: {
+      "en-US": "Config file path (default: agents.yaml)",
+      "zh-CN": "配置文件路径（默认：agents.yaml）",
+    },
   },
   provider: {
     type: "string",
     valueHint: "<name>",
-    description: "Target provider (default: all configured)",
+    description: {
+      "en-US": "Target provider (default: all configured)",
+      "zh-CN": "目标 Provider（默认：全部已配置项）",
+    },
   },
   yes: {
     type: "switch",
-    description: "Confirm and apply without an interactive prompt (required to mutate)",
+    description: {
+      "en-US": "Confirm and apply without an interactive prompt (required to mutate)",
+      "zh-CN": "无需交互提示直接确认并应用（执行变更时必填）",
+    },
   },
   noRefresh: {
     type: "switch",
-    description: "Skip refreshing state from remote before planning",
+    description: {
+      "en-US": "Skip refreshing state from remote before planning",
+      "zh-CN": "规划前跳过从远端刷新状态",
+    },
   },
   concurrency: {
     type: "number",
     valueHint: "<n>",
-    description: "Max independent resources to apply in parallel (default 6, max 10)",
+    description: {
+      "en-US": "Max independent resources to apply in parallel (default 6, max 10)",
+      "zh-CN": "最大并行应用资源数（默认：6，最多：10）",
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Apply planned changes to create/update/delete agent resources",
+  description: {
+    "en-US": "Apply planned changes to create/update/delete agent resources",
+    "zh-CN": "应用规划的变更，创建、更新或删除 Agent 资源",
+  },
   auth: "apiKey",
   usageArgs: "[--file <path>] [--provider <name>] [--yes] [--concurrency <n>]",
   flags: APPLY_FLAGS,

@@ -16,20 +16,32 @@ const DESTROY_FLAGS = {
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Config file path (default: agents.yaml)",
+    description: {
+      "en-US": "Config file path (default: agents.yaml)",
+      "zh-CN": "配置文件路径（默认：agents.yaml）",
+    },
   },
   yes: {
     type: "switch",
-    description: "Confirm and destroy without an interactive prompt (required)",
+    description: {
+      "en-US": "Confirm and destroy without an interactive prompt (required)",
+      "zh-CN": "无需交互提示直接确认并销毁（必填）",
+    },
   },
   cascade: {
     type: "switch",
-    description: "Auto-delete dependent resources (e.g. sessions referencing an environment)",
+    description: {
+      "en-US": "Auto-delete dependent resources (e.g. sessions referencing an environment)",
+      "zh-CN": "自动删除依赖资源（例如引用某个环境的 Session）",
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Destroy all managed agent resources tracked in state",
+  description: {
+    "en-US": "Destroy all managed agent resources tracked in state",
+    "zh-CN": "销毁 State 中跟踪的全部托管 Agent 资源",
+  },
   auth: "apiKey",
   usageArgs: "[--file <path>] [--yes] [--cascade]",
   flags: DESTROY_FLAGS,

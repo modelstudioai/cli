@@ -14,55 +14,82 @@ const SESSION_RUN_FLAGS = {
   prompt: {
     type: "string",
     valueHint: "<text>",
-    description: "Prompt to send (required)",
+    description: { "en-US": "Prompt to send (required)", "zh-CN": "要发送的 Prompt（必填）" },
     required: true,
   },
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Config file path (default: agents.yaml)",
+    description: {
+      "en-US": "Config file path (default: agents.yaml)",
+      "zh-CN": "配置文件路径（默认：agents.yaml）",
+    },
   },
   agent: {
     type: "string",
     valueHint: "<name>",
-    description: "Agent name (auto-detected when only one agent is configured)",
+    description: {
+      "en-US": "Agent name (auto-detected when only one agent is configured)",
+      "zh-CN": "Agent 名称（仅配置一个 Agent 时自动识别）",
+    },
   },
   environment: {
     type: "string",
     valueHint: "<name>",
-    description: "Override agent's declared environment",
+    description: {
+      "en-US": "Override agent's declared environment",
+      "zh-CN": "覆盖 Agent 声明的环境",
+    },
   },
   vault: {
     type: "string",
     valueHint: "<name>",
-    description: "Override agent's declared vault",
+    description: { "en-US": "Override agent's declared vault", "zh-CN": "覆盖 Agent 声明的 Vault" },
   },
   memoryStores: {
     type: "string",
     valueHint: "<names>",
-    description: "Override agent's memory stores (comma-separated)",
+    description: {
+      "en-US": "Override agent's memory stores (comma-separated)",
+      "zh-CN": "覆盖 Agent 的 Memory Store（以逗号分隔）",
+    },
   },
-  title: { type: "string", valueHint: "<title>", description: "Session title" },
+  title: {
+    type: "string",
+    valueHint: "<title>",
+    description: { "en-US": "Session title", "zh-CN": "Session 标题" },
+  },
   provider: {
     type: "string",
     valueHint: "<name>",
-    description: "Target provider",
+    description: { "en-US": "Target provider", "zh-CN": "目标 Provider" },
   },
   noStream: {
     type: "switch",
-    description: "Use polling instead of SSE streaming",
+    description: {
+      "en-US": "Use polling instead of SSE streaming",
+      "zh-CN": "使用轮询代替 SSE 流式传输",
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Create a session, send a message, and stream the response",
+  description: {
+    "en-US": "Create a session, send a message, and stream the response",
+    "zh-CN": "创建 Session、发送消息并流式输出响应",
+  },
   auth: "apiKey",
   usageArgs: "--prompt <text> [--agent <name>] [--no-stream] [--file <path>]",
   flags: SESSION_RUN_FLAGS,
   exampleArgs: ['--prompt "hello"', '--agent assistant --prompt "summarize this repo"'],
   notes: [
     ...CREDENTIALS_NOTE,
-    "--output json emits one envelope: { session_id, provider, agent, events } — read session_id to chain `session send/get/events/delete`.",
+    {
+      "en-US":
+        "--output json emits one envelope: { session_id, provider, agent, events } — read session_id to chain `session send/get/events/delete`.",
+      "zh-CN":
+        "--output json 输出一个 Envelope：{ session_id, provider, agent, events }。读取 session_id 后可串联调用 `session send/get/events/delete`。",
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

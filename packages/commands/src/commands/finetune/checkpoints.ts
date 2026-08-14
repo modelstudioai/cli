@@ -10,20 +10,26 @@ const CHECKPOINTS_FLAGS = {
   jobId: {
     type: "string",
     valueHint: "<id>",
-    description: "Fine-tune job ID (required)",
+    description: { "en-US": "Fine-tune job ID (required)", "zh-CN": "微调任务 ID（必填）" },
     required: true,
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "List checkpoints produced by a fine-tune job",
+  description: {
+    "en-US": "List checkpoints produced by a fine-tune job",
+    "zh-CN": "列出微调任务生成的 Checkpoint",
+  },
   auth: "apiKey",
   usageArgs: "--job-id <id>",
   flags: CHECKPOINTS_FLAGS,
   exampleArgs: ["--job-id ft-xxx", "--job-id ft-xxx --output json"],
   notes: [
-    "Use the returned `checkpoint` value with `finetune export` to publish",
-    "a deployable model.",
+    {
+      "en-US":
+        "Use the returned `checkpoint` value with `finetune export` to publish a deployable model.",
+      "zh-CN": "将返回的 `checkpoint` 值传给 `finetune export`，以发布可部署模型。",
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

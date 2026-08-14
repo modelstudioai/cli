@@ -6,14 +6,20 @@ import { collectPipelineIssues, collectPipelineHints } from "bailian-cli-runtime
 import { loadPipelineFile } from "./load-file.ts";
 
 export default defineCommand({
-  description: "Validate a pipeline definition without executing",
+  description: {
+    "en-US": "Validate a pipeline definition without executing",
+    "zh-CN": "验证 Pipeline 定义但不执行",
+  },
   auth: "none",
   usageArgs: "--file <path>",
   flags: {
     file: {
       type: "string",
       valueHint: "<path>",
-      description: "Pipeline definition file (YAML/JSON)",
+      description: {
+        "en-US": "Pipeline definition file (YAML/JSON)",
+        "zh-CN": "Pipeline 定义文件（YAML/JSON）",
+      },
       required: true,
     },
   },

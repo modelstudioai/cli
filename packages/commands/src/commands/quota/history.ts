@@ -82,24 +82,24 @@ function printTable(records: LimitApplicationItem[], total: number): void {
 }
 
 export default defineCommand({
-  description: "View quota change history",
+  description: { "en-US": "View quota change history", "zh-CN": "查看额度变更历史" },
   auth: "console",
   usageArgs: "[flags]",
   flags: {
     page: {
       type: "string",
       valueHint: "<n>",
-      description: "Page number (default: 1)",
+      description: { "en-US": "Page number (default: 1)", "zh-CN": "页码（默认：1）" },
     },
     pageSize: {
       type: "string",
       valueHint: "<n>",
-      description: "Page size (default: 10)",
+      description: { "en-US": "Page size (default: 10)", "zh-CN": "每页数量（默认：10）" },
     },
     model: {
       type: "string",
       valueHint: "<model>",
-      description: "Filter by model name",
+      description: { "en-US": "Filter by model name", "zh-CN": "按模型名称筛选" },
     },
   },
   exampleArgs: ["", "--page 2", "--page-size 20", "--model qwen-turbo", "--output json"],

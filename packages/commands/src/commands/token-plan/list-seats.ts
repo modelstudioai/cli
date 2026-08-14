@@ -20,36 +20,62 @@ const API_ACTION = "GetSubscriptionSeatDetails";
 const API_PATH = "/tokenplan/subscription/seat-detail";
 
 const LIST_SEATS_FLAGS = {
-  pageNo: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
-  pageSize: { type: "number", valueHint: "<n>", description: "Page size (default: 10)" },
+  pageNo: {
+    type: "number",
+    valueHint: "<n>",
+    description: { "en-US": "Page number (default: 1)", "zh-CN": "页码（默认：1）" },
+  },
+  pageSize: {
+    type: "number",
+    valueHint: "<n>",
+    description: { "en-US": "Page size (default: 10)", "zh-CN": "每页数量（默认：10）" },
+  },
   ...TOKEN_PLAN_COMMON_QUERY_FLAGS,
   status: {
     type: "array",
     valueHint: "<status>",
-    description:
-      "Seat status filter (repeatable): CREATING, NORMAL, LIMIT, RELEASE, STOP, REFUNDED",
+    description: {
+      "en-US": "Seat status filter (repeatable): CREATING, NORMAL, LIMIT, RELEASE, STOP, REFUNDED",
+      "zh-CN": "席位状态筛选（可重复）：CREATING、NORMAL、LIMIT、RELEASE、STOP、REFUNDED",
+    },
   },
   statusListStr: {
     type: "string",
     valueHint: "<json>",
-    description: "StatusList as JSON string, e.g. '[\"NORMAL\"]'",
+    description: {
+      "en-US": "StatusList as JSON string, e.g. '[\"NORMAL\"]'",
+      "zh-CN": "JSON 字符串格式的 StatusList，例如 '[\"NORMAL\"]'",
+    },
   },
-  seatId: { type: "string", valueHint: "<id>", description: "Filter by seat ID" },
+  seatId: {
+    type: "string",
+    valueHint: "<id>",
+    description: { "en-US": "Filter by seat ID", "zh-CN": "按席位 ID 筛选" },
+  },
   seatType: {
     type: "string",
     valueHint: "<type>",
-    description: "Seat tier: standard, pro, or max",
+    description: {
+      "en-US": "Seat tier: standard, pro, or max",
+      "zh-CN": "席位档位：standard、pro 或 max",
+    },
   },
   queryAssigned: {
     type: "string",
     valueHint: "<bool>",
-    description: "Filter by assignment: true=assigned, false=unassigned",
+    description: {
+      "en-US": "Filter by assignment: true=assigned, false=unassigned",
+      "zh-CN": "按分配状态筛选：true=已分配，false=未分配",
+    },
   },
 } satisfies FlagsDef;
 type ListSeatsFlags = ParsedFlags<typeof LIST_SEATS_FLAGS>;
 
 export default defineCommand({
-  description: "List Token Plan subscription seat details",
+  description: {
+    "en-US": "List Token Plan subscription seat details",
+    "zh-CN": "列出 Token Plan 订阅席位详情",
+  },
   auth: "openapi",
   usageArgs: "[flags]",
   flags: LIST_SEATS_FLAGS,

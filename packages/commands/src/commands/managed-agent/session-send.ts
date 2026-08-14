@@ -10,33 +10,42 @@ const SESSION_SEND_FLAGS = {
   sessionId: {
     type: "string",
     valueHint: "<id>",
-    description: "Session ID (required)",
+    description: { "en-US": "Session ID (required)", "zh-CN": "Session ID（必填）" },
     required: true,
   },
   message: {
     type: "string",
     valueHint: "<text>",
-    description: "Message to send (required)",
+    description: { "en-US": "Message to send (required)", "zh-CN": "要发送的消息（必填）" },
     required: true,
   },
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Config file path (default: agents.yaml)",
+    description: {
+      "en-US": "Config file path (default: agents.yaml)",
+      "zh-CN": "配置文件路径（默认：agents.yaml）",
+    },
   },
   provider: {
     type: "string",
     valueHint: "<name>",
-    description: "Target provider",
+    description: { "en-US": "Target provider", "zh-CN": "目标 Provider" },
   },
   noStream: {
     type: "switch",
-    description: "Use polling instead of SSE streaming",
+    description: {
+      "en-US": "Use polling instead of SSE streaming",
+      "zh-CN": "使用轮询代替 SSE 流式传输",
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Send a message to an existing session and stream the response",
+  description: {
+    "en-US": "Send a message to an existing session and stream the response",
+    "zh-CN": "向已有 Session 发送消息并流式输出响应",
+  },
   auth: "apiKey",
   usageArgs: "--session-id <id> --message <text> [--no-stream] [--file <path>]",
   flags: SESSION_SEND_FLAGS,

@@ -413,7 +413,7 @@ ${authFlagSections ? `${authFlagSections}\n\n` : ""}${b(this.localize(HELP_TEXT.
     if (cmd.notes && cmd.notes.length > 0) {
       out.write(`\n${b(this.localize(HELP_TEXT.notes))}\n`);
       for (const note of cmd.notes) {
-        out.write(`  ${note}\n`);
+        out.write(`  ${this.localize(note)}\n`);
       }
     }
     if (cmd.exampleArgs && cmd.exampleArgs.length > 0) {

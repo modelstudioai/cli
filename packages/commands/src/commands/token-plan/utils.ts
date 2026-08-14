@@ -17,12 +17,15 @@ export const TOKEN_PLAN_COMMON_QUERY_FLAGS = {
   callerUacAccountId: {
     type: "string",
     valueHint: "<id>",
-    description: "Caller UAC account ID",
+    description: { "en-US": "Caller UAC account ID", "zh-CN": "调用方 UAC 账号 ID" },
   },
   namespaceId: {
     type: "string",
     valueHint: "<id>",
-    description: "Product namespace ID (Token Plan default: namespace-1)",
+    description: {
+      "en-US": "Product namespace ID (Token Plan default: namespace-1)",
+      "zh-CN": "产品 Namespace ID（Token Plan 默认：namespace-1）",
+    },
   },
 } satisfies FlagsDef;
 
@@ -30,7 +33,10 @@ export const TOKEN_PLAN_WORKSPACE_FLAG = {
   workspaceId: {
     type: "string",
     valueHint: "<id>",
-    description: "Workspace ID (env: BAILIAN_WORKSPACE_ID, config: workspace_id)",
+    description: {
+      "en-US": "Workspace ID (env: BAILIAN_WORKSPACE_ID, config: workspace_id)",
+      "zh-CN": "Workspace ID（环境变量：BAILIAN_WORKSPACE_ID，配置项：workspace_id）",
+    },
   },
 } satisfies FlagsDef;
 

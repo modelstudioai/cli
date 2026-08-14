@@ -12,23 +12,33 @@ const SKILL_LIST_FLAGS = {
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Config file path (default: agents.yaml)",
+    description: {
+      "en-US": "Config file path (default: agents.yaml)",
+      "zh-CN": "配置文件路径（默认：agents.yaml）",
+    },
   },
   source: {
     type: "string",
     valueHint: "<source>",
-    description:
-      "Skill catalog: custom (workspace-uploaded, default), official (built-in), or all (both catalogs in one call)",
+    description: {
+      "en-US":
+        "Skill catalog: custom (workspace-uploaded, default), official (built-in), or all (both catalogs in one call)",
+      "zh-CN":
+        "Skill Catalog：custom（Workspace 上传，默认）、official（内置）或 all（一次调用获取两类 Catalog）",
+    },
   },
   provider: {
     type: "string",
     valueHint: "<name>",
-    description: "Target provider",
+    description: { "en-US": "Target provider", "zh-CN": "目标 Provider" },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "List skills from the provider's skill catalog",
+  description: {
+    "en-US": "List skills from the provider's skill catalog",
+    "zh-CN": "列出 Provider Skill Catalog 中的 Skill",
+  },
   auth: "apiKey",
   usageArgs: "[--source custom|official|all] [--provider <name>] [--file <path>]",
   flags: SKILL_LIST_FLAGS,
@@ -40,9 +50,21 @@ export default defineCommand({
   ],
   notes: [
     ...CREDENTIALS_NOTE,
-    "Providers without a skill listing API (e.g. ark) return an empty list.",
-    "For agent-driven skill selection, use `--source all --output json`: one call returns both catalogs with per-skill `source` and `description` fields to pick from.",
-    "When generating a task that needs a suitable skill, call this command to match official or custom skills before wiring them into the task.",
+    {
+      "en-US": "Providers without a skill listing API (e.g. ark) return an empty list.",
+      "zh-CN": "没有 Skill 列表 API 的 Provider（例如 ark）会返回空列表。",
+    },
+    {
+      "en-US":
+        "For agent-driven skill selection, use `--source all --output json`: one call returns both catalogs with per-skill `source` and `description` fields to pick from.",
+      "zh-CN":
+        "由 Agent 选择 Skill 时，请使用 `--source all --output json`：一次调用返回两类 Catalog，并为每个 Skill 提供 `source` 和 `description` 字段用于选择。",
+    },
+    {
+      "en-US":
+        "When generating a task that needs a suitable skill, call this command to match official or custom skills before wiring them into the task.",
+      "zh-CN": "生成需要合适 Skill 的任务时，先调用此命令匹配官方或自定义 Skill，再将其接入任务。",
+    },
   ],
   validate: (f) =>
     f.source && !SKILL_SOURCES.includes(f.source as SkillSource)

@@ -191,19 +191,28 @@ function printTable(rows: CheckRow[]): void {
 }
 
 export default defineCommand({
-  description: "Check current usage against rate limits",
+  description: {
+    "en-US": "Check current usage against rate limits",
+    "zh-CN": "根据限流额度检查当前用量",
+  },
   auth: "console",
   usageArgs: "[--model <model>] [flags]",
   flags: {
     model: {
       type: "string",
       valueHint: "<model>",
-      description: "Model name(s), comma-separated",
+      description: {
+        "en-US": "Model name(s), comma-separated",
+        "zh-CN": "模型名称，多个名称以逗号分隔",
+      },
     },
     period: {
       type: "string",
       valueHint: "<minutes>",
-      description: "Query usage for the last N minutes (default: 2)",
+      description: {
+        "en-US": "Query usage for the last N minutes (default: 2)",
+        "zh-CN": "查询最近 N 分钟的用量（默认：2）",
+      },
     },
   },
   exampleArgs: [

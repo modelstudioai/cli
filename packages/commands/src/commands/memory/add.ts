@@ -11,28 +11,49 @@ import {
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const ADD_FLAGS = {
-  userId: { type: "string", valueHint: "<id>", description: "User ID (required)", required: true },
+  userId: {
+    type: "string",
+    valueHint: "<id>",
+    description: { "en-US": "User ID (required)", "zh-CN": "用户 ID（必填）" },
+    required: true,
+  },
   messages: {
     type: "string",
     valueHint: "<json>",
-    description: 'Messages JSON array: [{"role":"user","content":"..."},...]',
+    description: {
+      "en-US": 'Messages JSON array: [{"role":"user","content":"..."},...]',
+      "zh-CN": '消息 JSON 数组：[{"role":"user","content":"..."},...]',
+    },
   },
-  content: { type: "string", valueHint: "<text>", description: "Custom content text to memorize" },
+  content: {
+    type: "string",
+    valueHint: "<text>",
+    description: { "en-US": "Custom content text to memorize", "zh-CN": "要记忆的自定义内容文本" },
+  },
   profileSchema: {
     type: "string",
     valueHint: "<id>",
-    description: "Profile schema ID for user profiling",
+    description: {
+      "en-US": "Profile schema ID for user profiling",
+      "zh-CN": "用于用户画像的 Profile Schema ID",
+    },
   },
   memoryLibraryId: {
     type: "string",
     valueHint: "<id>",
-    description: "Memory library ID (isolate memory space)",
+    description: {
+      "en-US": "Memory library ID (isolate memory space)",
+      "zh-CN": "记忆库 ID（用于隔离记忆空间）",
+    },
   },
 } satisfies FlagsDef;
 type AddFlags = ParsedFlags<typeof ADD_FLAGS>;
 
 export default defineCommand({
-  description: "Add memory from messages or custom content",
+  description: {
+    "en-US": "Add memory from messages or custom content",
+    "zh-CN": "从消息或自定义内容添加记忆",
+  },
   auth: "apiKey",
   usageArgs: "--user-id <id> [--messages <json>] [--content <text>] [flags]",
   flags: ADD_FLAGS,

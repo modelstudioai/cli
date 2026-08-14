@@ -73,20 +73,20 @@ async function fetchModelQpmInfo(
 }
 
 export default defineCommand({
-  description: "Request a temporary quota increase",
+  description: { "en-US": "Request a temporary quota increase", "zh-CN": "申请临时提升额度" },
   auth: "console",
   usageArgs: "--model <model> --tpm <value> [flags]",
   flags: {
     model: {
       type: "string",
       valueHint: "<model>",
-      description: "Model name (required)",
+      description: { "en-US": "Model name (required)", "zh-CN": "模型名称（必填）" },
       required: true,
     },
     tpm: {
       type: "string",
       valueHint: "<value>",
-      description: "Target TPM value (required)",
+      description: { "en-US": "Target TPM value (required)", "zh-CN": "目标 TPM 值（必填）" },
       required: true,
     },
   },

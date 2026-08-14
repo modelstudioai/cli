@@ -5,13 +5,19 @@ const GET_FLAGS = {
   deployedModel: {
     type: "string",
     valueHint: "<id>",
-    description: "Deployed model identifier (required)",
+    description: {
+      "en-US": "Deployed model identifier (required)",
+      "zh-CN": "已部署模型标识（必填）",
+    },
     required: true,
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Get details of a single model deployment",
+  description: {
+    "en-US": "Get details of a single model deployment",
+    "zh-CN": "获取单个模型部署的详情",
+  },
   auth: "apiKey",
   usageArgs: "--deployed-model <id>",
   flags: GET_FLAGS,

@@ -226,15 +226,18 @@ function isEmptyResult(result: RecommendResult): boolean {
 }
 
 export default defineCommand({
-  description:
-    "Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking)",
+  description: {
+    "en-US":
+      "Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking)",
+    "zh-CN": "为你的使用场景推荐最佳模型（意图分析 → 候选召回 → LLM 排序）",
+  },
   auth: "apiKey",
   usageArgs: "--message <text> [flags]",
   flags: {
     message: {
       type: "string",
       valueHint: "<text>",
-      description: "Describe your requirements",
+      description: { "en-US": "Describe your requirements", "zh-CN": "描述你的需求" },
       required: true,
     },
   },

@@ -18,34 +18,60 @@ const LIST_FLAGS = {
   model: {
     type: "string",
     valueHint: "<model>",
-    description: "Show full details of a specific model family (switches to detail mode)",
+    description: {
+      "en-US": "Show full details of a specific model family (switches to detail mode)",
+      "zh-CN": "显示指定模型系列的完整详情（切换到详情模式）",
+    },
   },
-  page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
-  pageSize: { type: "number", valueHint: "<n>", description: "Results per page (default: 10)" },
+  page: {
+    type: "number",
+    valueHint: "<n>",
+    description: { "en-US": "Page number (default: 1)", "zh-CN": "页码（默认：1）" },
+  },
+  pageSize: {
+    type: "number",
+    valueHint: "<n>",
+    description: { "en-US": "Results per page (default: 10)", "zh-CN": "每页结果数（默认：10）" },
+  },
   provider: {
     type: "array",
     valueHint: "<p>",
-    description: "Filter by provider (repeatable, e.g. --provider alibaba --provider deepseek)",
+    description: {
+      "en-US": "Filter by provider (repeatable, e.g. --provider alibaba --provider deepseek)",
+      "zh-CN": "按提供商筛选（可重复，例如 --provider alibaba --provider deepseek）",
+    },
   },
   capability: {
     type: "array",
     valueHint: "<c>",
-    description: "Filter by capability code (TG, Reasoning, VU, IG, VG, TTS, ASR, …)",
+    description: {
+      "en-US": "Filter by capability code (TG, Reasoning, VU, IG, VG, TTS, ASR, …)",
+      "zh-CN": "按能力代码筛选（TG、Reasoning、VU、IG、VG、TTS、ASR 等）",
+    },
   },
   feature: {
     type: "array",
     valueHint: "<f>",
-    description: "Filter by feature (function-calling, web-search, structured-outputs, …)",
+    description: {
+      "en-US": "Filter by feature (function-calling, web-search, structured-outputs, …)",
+      "zh-CN": "按特性筛选（function-calling、web-search、structured-outputs 等）",
+    },
   },
   contextWindow: {
     type: "array",
     valueHint: "<w>",
-    description: "Filter by context window range bucket",
+    description: {
+      "en-US": "Filter by context window range bucket",
+      "zh-CN": "按上下文窗口范围筛选",
+    },
   },
   enrich: {
     type: "switch",
-    description:
-      "Also fetch input parameter schema (predictConfig) for trunk models (detail mode only)",
+    description: {
+      "en-US":
+        "Also fetch input parameter schema (predictConfig) for trunk models (detail mode only)",
+      "zh-CN": "同时获取主干模型的输入参数 Schema（predictConfig，仅详情模式）",
+    },
   },
 } satisfies FlagsDef;
 
@@ -289,7 +315,10 @@ function printPredictConfigTable(entries: PredictConfigEntry[]): void {
 // ---------------------------------------------------------------------------
 
 export default defineCommand({
-  description: "Browse model families or show detailed model info in the Bailian model marketplace",
+  description: {
+    "en-US": "Browse model families or show detailed model info in the Bailian model marketplace",
+    "zh-CN": "浏览百炼模型市场中的模型系列，或查看模型详细信息",
+  },
   auth: "console",
   usageArgs:
     "[--model <model>] [--page <n>] [--page-size <n>] [--provider <p>] [--capability <c>] [--feature <f>] [--enrich]",

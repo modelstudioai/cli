@@ -48,12 +48,8 @@ Index: [index.md](index.md)
 
 - Creating a job uploads any local datasets and consumes training quota.
 - Use --dry-run to preview the request body without submitting.
-- --datasets / --validations accept either file-ids (from `dataset upload`)
-- or local paths. Local paths are validated and uploaded first, then their
-- file-ids are submitted — a one-step upload-and-train.
-- Audio TTS training runs sft-lora (efficient_sft) with fixed CosyVoice
-- hyper-parameter defaults; there are no training-type or hyper-parameter
-- knobs to set.
+- --datasets / --validations accept either file-ids (from `dataset upload`) or local paths. Local paths are validated and uploaded first, then their file-ids are submitted — a one-step upload-and-train.
+- Audio TTS training runs sft-lora (efficient_sft) with fixed CosyVoice hyper-parameter defaults; there are no training-type or hyper-parameter knobs to set.
 
 #### Examples
 
@@ -95,8 +91,7 @@ bl finetune audio create --model cosyvoice-v3-flash --datasets ./audio.zip --dry
 
 #### Notes
 
-- Only PENDING / RUNNING jobs can be cancelled. Completed / failed / already-
-- cancelled jobs return a server-side error (passed through verbatim).
+- Only PENDING / RUNNING jobs can be cancelled. Completed / failed / already-cancelled jobs return a server-side error (passed through verbatim).
 
 #### Examples
 
@@ -126,8 +121,7 @@ bl finetune cancel --job-id ft-xxx --dry-run
 #### Notes
 
 - Exactly one of --model / --training-type is required.
-- Training-type values use the `<method>` / `<method>-lora` convention:
-- sft | sft-lora | dpo | dpo-lora | cpt. (cpt has no -lora variant server-side.)
+- Training-type values use the `<method>` / `<method>-lora` convention: sft | sft-lora | dpo | dpo-lora | cpt. (cpt has no -lora variant server-side.)
 - Queries listFoundationModels, a public API — no console login needed.
 
 #### Examples
@@ -166,8 +160,7 @@ bl finetune capability --training-type sft --quiet
 
 #### Notes
 
-- Use the returned `checkpoint` value with `finetune export` to publish
-- a deployable model.
+- Use the returned `checkpoint` value with `finetune export` to publish a deployable model.
 
 #### Examples
 
@@ -197,8 +190,7 @@ bl finetune checkpoints --job-id ft-xxx --output json
 
 #### Notes
 
-- Cancel a RUNNING job first via `finetune cancel` — the platform refuses
-- to delete jobs that are still in flight.
+- Cancel a RUNNING job first via `finetune cancel` — the platform refuses to delete jobs that are still in flight.
 
 #### Examples
 
@@ -230,9 +222,7 @@ bl finetune delete --job-id ft-xxx --dry-run
 
 #### Notes
 
-- Required before `deploy <modality> create` can target a checkpoint. The
-- platform may auto-export the best checkpoint when a job reaches SUCCEEDED —
-- explicit export is the canonical path for non-best checkpoints.
+- Required before `deploy <modality> create` can target a checkpoint. The platform may auto-export the best checkpoint when a job reaches SUCCEEDED — explicit export is the canonical path for non-best checkpoints.
 
 #### Examples
 
@@ -292,14 +282,8 @@ bl finetune get --job-id ft-xxx --output json
 
 - Creating a job uploads any local datasets and consumes training quota.
 - Use --dry-run to preview the request body without submitting.
-- --datasets / --validations accept either file-ids (from `dataset upload`)
-- or local paths. Local paths are validated and uploaded first, then their
-- file-ids are submitted — a one-step upload-and-train.
-- Image generation training runs sft-lora (efficient_sft) with fixed defaults;
-- only --learning-rate is overridable. T2I vs I2I is declared with
-- --generation-type (default t2i), which sets generation_type/max_pixels. For
-- local data the type is auto-detected (records with input_img train I2I);
-- pass --generation-type explicitly to train I2I from a file-id or in --dry-run.
+- --datasets / --validations accept either file-ids (from `dataset upload`) or local paths. Local paths are validated and uploaded first, then their file-ids are submitted — a one-step upload-and-train.
+- Image generation training runs sft-lora (efficient_sft) with fixed defaults; only --learning-rate is overridable. T2I vs I2I is declared with --generation-type (default t2i), which sets generation_type/max_pixels. For local data the type is auto-detected (records with input_img train I2I); pass --generation-type explicitly to train I2I from a file-id or in --dry-run.
 
 #### Examples
 
@@ -434,21 +418,12 @@ bl finetune logs --job-id ft-xxx --search checkpoint --tail 5
 
 - Creating a job uploads any local datasets and consumes training quota.
 - Use --dry-run to preview the request body without submitting.
-- --datasets / --validations accept either file-ids (from `dataset upload`)
-- or local paths. Local paths are validated and uploaded first, then their
-- file-ids are submitted — a one-step upload-and-train.
-- Training-type values use the `<method>` / `<method>-lora` convention:
-- sft (full) | sft-lora (LoRA) | dpo (full) | dpo-lora (LoRA) | cpt. These map
-- to the server's training_type at the interface boundary, so the rest of the
-- CLI never sees the raw server strings.
-- Before submitting (non dry-run) the job, the model's training capability is
-- checked via listFoundationModels (no console login required); an unsupported
-- training type fails fast with the list the model actually supports.
+- --datasets / --validations accept either file-ids (from `dataset upload`) or local paths. Local paths are validated and uploaded first, then their file-ids are submitted — a one-step upload-and-train.
+- Training-type values use the `<method>` / `<method>-lora` convention: sft (full) | sft-lora (LoRA) | dpo (full) | dpo-lora (LoRA) | cpt. These map to the server's training_type at the interface boundary, so the rest of the CLI never sees the raw server strings.
+- Before submitting (non dry-run) the job, the model's training capability is checked via listFoundationModels (no console login required); an unsupported training type fails fast with the list the model actually supports.
 - n_epochs defaults to 3. Other hyper-parameters are platform defaults unless set.
 - Learning rate is forwarded as a string to avoid JSON-number precision loss.
-- Pre-submit gate: if the training dataset's sample count is not greater
-- than batch_size, the job is rejected before upload or quota consumption
-- (the platform would otherwise fail ~10 min in, after data processing).
+- Pre-submit gate: if the training dataset's sample count is not greater than batch_size, the job is rejected before upload or quota consumption (the platform would otherwise fail ~10 min in, after data processing).
 
 #### Examples
 
@@ -505,14 +480,9 @@ bl finetune text create --model qwen3-8b --datasets file-xxx --dry-run
 
 #### Notes
 
-- Default (no --follow) is a NON-BLOCKING single status probe: one fetch, then
-- return immediately. This is the mode meant for agents / scripts — the caller
-- owns the polling cadence, so the CLI never holds the terminal.
-- A terminal FAILED/CANCELED status raises a normal CLI error (non-zero exit);
-- a SUCCEEDED or still-running status returns 0. With --follow, exceeding
-- --poll-timeout raises a timeout error.
-- Use --follow for the blocking, human-terminal-follow experience; use the
-- default mode when driving the loop yourself (e.g. from an agent).
+- Default (no --follow) is a NON-BLOCKING single status probe: one fetch, then return immediately. This is the mode meant for agents / scripts — the caller owns the polling cadence, so the CLI never holds the terminal.
+- A terminal FAILED/CANCELED status raises a normal CLI error (non-zero exit); a SUCCEEDED or still-running status returns 0. With --follow, exceeding --poll-timeout raises a timeout error.
+- Use --follow for the blocking, human-terminal-follow experience; use the default mode when driving the loop yourself (e.g. from an agent).
 - For per-step training output (not status), use `finetune logs`.
 
 #### Examples

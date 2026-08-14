@@ -9,21 +9,31 @@ import {
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description: "Create a user profile schema for memory profiling",
+  description: {
+    "en-US": "Create a user profile schema for memory profiling",
+    "zh-CN": "创建用于记忆画像的用户 Profile Schema",
+  },
   auth: "apiKey",
   usageArgs: "--name <name> --attributes <json> [flags]",
   flags: {
     name: {
       type: "string",
       valueHint: "<name>",
-      description: "Schema name (required)",
+      description: { "en-US": "Schema name (required)", "zh-CN": "Schema 名称（必填）" },
       required: true,
     },
-    description: { type: "string", valueHint: "<text>", description: "Schema description" },
+    description: {
+      type: "string",
+      valueHint: "<text>",
+      description: { "en-US": "Schema description", "zh-CN": "Schema 描述" },
+    },
     attributes: {
       type: "string",
       valueHint: "<json>",
-      description: 'Attributes JSON array: [{"name":"age","description":"age"}]',
+      description: {
+        "en-US": 'Attributes JSON array: [{"name":"age","description":"age"}]',
+        "zh-CN": '属性 JSON 数组：[{"name":"age","description":"age"}]',
+      },
       required: true,
     },
   },

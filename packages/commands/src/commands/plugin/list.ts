@@ -2,7 +2,10 @@ import { defineCommand, detectOutputFormat } from "bailian-cli-core";
 import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description: "List installed Command Packs and their load status",
+  description: {
+    "en-US": "List installed Command Packs and their load status",
+    "zh-CN": "列出已安装的 Command Pack 及其加载状态",
+  },
   auth: "none",
   exampleArgs: ["", "--output json"],
   async run(ctx) {

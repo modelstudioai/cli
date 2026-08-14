@@ -49,9 +49,23 @@ export interface CredentialHost {
  * safe: agent commands ship on `bl` only.
  */
 export const CREDENTIALS_NOTE = [
-  "Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).",
-  "Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.",
-  "Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.",
+  {
+    "en-US":
+      "Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).",
+    "zh-CN":
+      "百炼凭证来自 bl 鉴权链：--api-key > DASHSCOPE_API_KEY > `bl auth login`（当前激活的配置 Profile）。",
+  },
+  {
+    "en-US":
+      "Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.",
+    "zh-CN":
+      "其他 Provider 读取 agents.yaml 中引用的环境变量（例如 ${ANTHROPIC_API_KEY}），包括 .env 和 ~/.agents/config.json。",
+  },
+  {
+    "en-US":
+      "Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.",
+    "zh-CN": "解析后的凭证仅在内存中注入 SDK，并从环境中清除；不会持久保留在进程环境变量中。",
+  },
 ];
 
 /**
@@ -59,7 +73,10 @@ export const CREDENTIALS_NOTE = [
  * agents.yaml / local state only, so no login or provider key is required.
  */
 export const OFFLINE_NOTE = [
-  "Runs fully offline against local files: no login or provider credentials required.",
+  {
+    "en-US": "Runs fully offline against local files: no login or provider credentials required.",
+    "zh-CN": "完全离线处理本地文件：无需登录或提供 Provider 凭证。",
+  },
 ];
 
 /**

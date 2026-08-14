@@ -2,21 +2,31 @@ import { defineCommand, detectOutputFormat, listDatasets, type FlagsDef } from "
 import { emitResult, emitBare, emitRequestId, formatTable } from "bailian-cli-runtime";
 
 const LIST_FLAGS = {
-  page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
+  page: {
+    type: "number",
+    valueHint: "<n>",
+    description: { "en-US": "Page number (default: 1)", "zh-CN": "页码（默认：1）" },
+  },
   pageSize: {
     type: "number",
     valueHint: "<n>",
-    description: "Results per page (default: 10, max 100)",
+    description: {
+      "en-US": "Results per page (default: 10, max 100)",
+      "zh-CN": "每页结果数（默认：10，最多：100）",
+    },
   },
   purpose: {
     type: "string",
     valueHint: "<name>",
-    description: 'Filter by purpose (e.g. "fine-tune", "evaluation"). Omit to list all.',
+    description: {
+      "en-US": 'Filter by purpose (e.g. "fine-tune", "evaluation"). Omit to list all.',
+      "zh-CN": '按用途筛选（例如 "fine-tune"、"evaluation"）。省略时列出全部。',
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "List uploaded dataset files",
+  description: { "en-US": "List uploaded dataset files", "zh-CN": "列出已上传的数据集文件" },
   auth: "apiKey",
   usageArgs: "[--page <n>] [--page-size <n>] [--purpose <name>]",
   flags: LIST_FLAGS,

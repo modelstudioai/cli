@@ -38,6 +38,12 @@ test("registry renders runtime help copy with the selected language", async () =
       "en-US": "Test command",
       "zh-CN": "测试命令",
     },
+    notes: [
+      {
+        "en-US": "Test note",
+        "zh-CN": "测试说明",
+      },
+    ],
     auth: "none",
     run: async () => {},
   });
@@ -58,4 +64,8 @@ test("registry renders runtime help copy with the selected language", async () =
   expect(output).toContain("全局选项：");
   expect(output).toContain("显示帮助信息");
   expect(output).toContain("获取帮助：");
+
+  output = "";
+  registry.printHelp(["test"], stream);
+  expect(output).toContain("测试说明");
 });

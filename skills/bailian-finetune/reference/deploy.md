@@ -47,25 +47,14 @@ Index: [index.md](index.md)
 
 #### Notes
 
-- Plan defaults to `lora` (Token-billed) for text/image and `mu` (model-unit-
-- billed) for audio (CosyVoice TTS). Pass --plan to override.
-- For plan=ptu (Token-billed, provisioned throughput), --input-tpm and
-- --output-tpm are required (the platform rejects creation without an
-- explicit ptu_capacity despite the doc listing defaults).
+- Plan defaults to `lora` (Token-billed) for text/image and `mu` (model-unit-billed) for audio (CosyVoice TTS). Pass --plan to override.
+- For plan=ptu (Token-billed, provisioned throughput), --input-tpm and --output-tpm are required (the platform rejects creation without an explicit ptu_capacity despite the doc listing defaults).
 - For plan=mu, `capacity`, `billing_method` and `deploy_spec` are required.
-- billing_method defaults to POST_PAY (only supported value); deploy_spec
-- and capacity are auto-picked from GET /deployments/models when omitted.
+- billing_method defaults to POST_PAY (only supported value); deploy_spec and capacity are auto-picked from GET /deployments/models when omitted.
 - Use `bl deploy models --source base` to inspect available templates.
 - After creation, status starts at PENDING and transitions to RUNNING.
-- Invoke the deployed model with: bl text chat --model <deployed_model>
-- WARNING: --model is overloaded across commands and refers to DIFFERENT
-- values. `bl deploy <modality> create --model` takes the exported model_name
-- (e.g. `qwen3-8b-ft-...`), but the create response also returns a
-- `deployed_model` field (the deployment instance id, e.g.
-- `qwen3-8b-5ecb5f068d79`). The inference call `bl text chat --model` must use
-- the `deployed_model` from the create response — NOT the `model_name` you
-- passed to `deploy <modality> create`. Do not reuse the value across the two
-- commands.
+- Invoke the deployed model with: `bl text chat --model <deployed_model>`.
+- WARNING: --model is overloaded across commands and refers to DIFFERENT values. `bl deploy <modality> create --model` takes the exported model_name (e.g. `qwen3-8b-ft-...`), but the create response also returns a `deployed_model` field (the deployment instance id, e.g. `qwen3-8b-5ecb5f068d79`). The inference call `bl text chat --model` must use the `deployed_model` from the create response — NOT the `model_name` you passed to `deploy <modality> create`. Do not reuse the value across the two commands.
 
 #### Examples
 
@@ -160,25 +149,14 @@ bl deploy get --deployed-model qwen-plus-2025-12-01-b6d61c71 --output json
 
 #### Notes
 
-- Plan defaults to `lora` (Token-billed) for text/image and `mu` (model-unit-
-- billed) for audio (CosyVoice TTS). Pass --plan to override.
-- For plan=ptu (Token-billed, provisioned throughput), --input-tpm and
-- --output-tpm are required (the platform rejects creation without an
-- explicit ptu_capacity despite the doc listing defaults).
+- Plan defaults to `lora` (Token-billed) for text/image and `mu` (model-unit-billed) for audio (CosyVoice TTS). Pass --plan to override.
+- For plan=ptu (Token-billed, provisioned throughput), --input-tpm and --output-tpm are required (the platform rejects creation without an explicit ptu_capacity despite the doc listing defaults).
 - For plan=mu, `capacity`, `billing_method` and `deploy_spec` are required.
-- billing_method defaults to POST_PAY (only supported value); deploy_spec
-- and capacity are auto-picked from GET /deployments/models when omitted.
+- billing_method defaults to POST_PAY (only supported value); deploy_spec and capacity are auto-picked from GET /deployments/models when omitted.
 - Use `bl deploy models --source base` to inspect available templates.
 - After creation, status starts at PENDING and transitions to RUNNING.
-- Invoke the deployed model with: bl text chat --model <deployed_model>
-- WARNING: --model is overloaded across commands and refers to DIFFERENT
-- values. `bl deploy <modality> create --model` takes the exported model_name
-- (e.g. `qwen3-8b-ft-...`), but the create response also returns a
-- `deployed_model` field (the deployment instance id, e.g.
-- `qwen3-8b-5ecb5f068d79`). The inference call `bl text chat --model` must use
-- the `deployed_model` from the create response — NOT the `model_name` you
-- passed to `deploy <modality> create`. Do not reuse the value across the two
-- commands.
+- Invoke the deployed model with: `bl text chat --model <deployed_model>`.
+- WARNING: --model is overloaded across commands and refers to DIFFERENT values. `bl deploy <modality> create --model` takes the exported model_name (e.g. `qwen3-8b-ft-...`), but the create response also returns a `deployed_model` field (the deployment instance id, e.g. `qwen3-8b-5ecb5f068d79`). The inference call `bl text chat --model` must use the `deployed_model` from the create response — NOT the `model_name` you passed to `deploy <modality> create`. Do not reuse the value across the two commands.
 
 #### Examples
 
@@ -318,25 +296,14 @@ bl deploy scale --deployed-model dep-... --capacity 2
 
 #### Notes
 
-- Plan defaults to `lora` (Token-billed) for text/image and `mu` (model-unit-
-- billed) for audio (CosyVoice TTS). Pass --plan to override.
-- For plan=ptu (Token-billed, provisioned throughput), --input-tpm and
-- --output-tpm are required (the platform rejects creation without an
-- explicit ptu_capacity despite the doc listing defaults).
+- Plan defaults to `lora` (Token-billed) for text/image and `mu` (model-unit-billed) for audio (CosyVoice TTS). Pass --plan to override.
+- For plan=ptu (Token-billed, provisioned throughput), --input-tpm and --output-tpm are required (the platform rejects creation without an explicit ptu_capacity despite the doc listing defaults).
 - For plan=mu, `capacity`, `billing_method` and `deploy_spec` are required.
-- billing_method defaults to POST_PAY (only supported value); deploy_spec
-- and capacity are auto-picked from GET /deployments/models when omitted.
+- billing_method defaults to POST_PAY (only supported value); deploy_spec and capacity are auto-picked from GET /deployments/models when omitted.
 - Use `bl deploy models --source base` to inspect available templates.
 - After creation, status starts at PENDING and transitions to RUNNING.
-- Invoke the deployed model with: bl text chat --model <deployed_model>
-- WARNING: --model is overloaded across commands and refers to DIFFERENT
-- values. `bl deploy <modality> create --model` takes the exported model_name
-- (e.g. `qwen3-8b-ft-...`), but the create response also returns a
-- `deployed_model` field (the deployment instance id, e.g.
-- `qwen3-8b-5ecb5f068d79`). The inference call `bl text chat --model` must use
-- the `deployed_model` from the create response — NOT the `model_name` you
-- passed to `deploy <modality> create`. Do not reuse the value across the two
-- commands.
+- Invoke the deployed model with: `bl text chat --model <deployed_model>`.
+- WARNING: --model is overloaded across commands and refers to DIFFERENT values. `bl deploy <modality> create --model` takes the exported model_name (e.g. `qwen3-8b-ft-...`), but the create response also returns a `deployed_model` field (the deployment instance id, e.g. `qwen3-8b-5ecb5f068d79`). The inference call `bl text chat --model` must use the `deployed_model` from the create response — NOT the `model_name` you passed to `deploy <modality> create`. Do not reuse the value across the two commands.
 
 #### Examples
 

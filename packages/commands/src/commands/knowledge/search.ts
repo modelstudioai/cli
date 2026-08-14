@@ -14,44 +14,81 @@ const SEARCH_FLAGS = {
   query: {
     type: "string",
     valueHint: "<text>",
-    description: "Search query text (required, cannot be empty)",
+    description: {
+      "en-US": "Search query text (required, cannot be empty)",
+      "zh-CN": "搜索查询文本（必填且不能为空）",
+    },
     required: true,
   },
   agentId: {
     type: "string",
     valueHint: "<id>",
-    description: "Retrieval service ID (find in console knowledge retrieval page)",
+    description: {
+      "en-US": "Retrieval service ID (find in console knowledge retrieval page)",
+      "zh-CN": "检索服务 ID（可在控制台知识库检索页面查看）",
+    },
     required: true,
   },
   // 知识库走 workspace 专属域名,--workspace-id 属命令自有 flag(console 凭证域不适用)。
   workspaceId: {
     type: "string",
     valueHint: "<id>",
-    description: "Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)",
+    description: {
+      "en-US": "Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)",
+      "zh-CN": "API Endpoint URL 使用的 Workspace ID（也可设置 BAILIAN_WORKSPACE_ID）",
+    },
   },
   image: {
     type: "array",
     valueHint: "<url>",
-    description: "Image URL for multimodal retrieval (repeatable)",
+    description: {
+      "en-US": "Image URL for multimodal retrieval (repeatable)",
+      "zh-CN": "多模态检索使用的图片 URL（可重复）",
+    },
   },
   queryHistory: {
     type: "string",
     valueHint: "<json>",
-    description:
-      'User conversation history JSON for context understanding and query rewriting. Format: \'[{"role":"user","content":"What is RAG"},{"role":"assistant","content":"RAG is..."}]\'',
+    description: {
+      "en-US":
+        'User conversation history JSON for context understanding and query rewriting. Format: \'[{"role":"user","content":"What is RAG"},{"role":"assistant","content":"RAG is..."}]\'',
+      "zh-CN":
+        '用于上下文理解和查询改写的用户对话历史 JSON。格式：\'[{"role":"user","content":"What is RAG"},{"role":"assistant","content":"RAG is..."}]\'',
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Search a Bailian knowledge base (RAG semantic retrieval)",
+  description: {
+    "en-US": "Search a Bailian knowledge base (RAG semantic retrieval)",
+    "zh-CN": "搜索百炼知识库（RAG 语义检索）",
+  },
   auth: "apiKey",
   usageArgs: "--query <text> --agent-id <id> [flags]",
   flags: SEARCH_FLAGS,
   notes: [
-    "Retrieval scope and strategy (multi-index weighting, routing, reranking, etc.) are driven by the agent_id service config. Only query and agent_id are required.",
-    "Auth: uses DashScope API Key (Bearer token). Get yours from the console API Key page.",
-    "`--workspace-id` can be set via BAILIAN_WORKSPACE_ID env or `kscli config set workspace_id <id>`.",
-    "`--query-history` passes prior conversation turns; the server rewrites the query based on context to improve retrieval relevance.",
+    {
+      "en-US":
+        "Retrieval scope and strategy (multi-index weighting, routing, reranking, etc.) are driven by the agent_id service config. Only query and agent_id are required.",
+      "zh-CN":
+        "检索范围与策略（多索引权重、路由、重排序等）由 agent_id 服务配置决定。仅 query 和 agent_id 必填。",
+    },
+    {
+      "en-US":
+        "Auth: uses DashScope API Key (Bearer token). Get yours from the console API Key page.",
+      "zh-CN": "鉴权：使用 DashScope API Key（Bearer Token）。可在控制台 API Key 页面获取。",
+    },
+    {
+      "en-US":
+        "`--workspace-id` can be set via BAILIAN_WORKSPACE_ID env or `kscli config set workspace_id <id>`.",
+      "zh-CN":
+        "`--workspace-id` 可通过 BAILIAN_WORKSPACE_ID 环境变量或 `kscli config set workspace_id <id>` 设置。",
+    },
+    {
+      "en-US":
+        "`--query-history` passes prior conversation turns; the server rewrites the query based on context to improve retrieval relevance.",
+      "zh-CN": "`--query-history` 用于传入历史对话；服务端会根据上下文改写查询，以提高检索相关性。",
+    },
   ],
   exampleArgs: [
     '--query "What is RAG?" --agent-id aid-xxx --workspace-id ws-xxx',
