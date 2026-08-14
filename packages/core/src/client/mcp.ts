@@ -70,12 +70,11 @@ export function bailianMcpSsePath(serverCode: string): string {
 
 /**
  * True when Streamable HTTP is unsupported and classic SSE fallback should be tried.
- * Match HTTP wrapper text `MCP request failed: 405` only — not JSON-RPC `MCP error (405)`.
- * Bailian HTTP 404 (not activated) is intentionally excluded.
+ * Anchored to HTTP wrapper text only (not JSON-RPC / nested copies). Bailian 404 excluded.
  */
 export function isStreamableHttpUnsupported(error: unknown): boolean {
   if (!(error instanceof BailianError)) return false;
-  return /MCP request failed:\s*405\b/i.test(error.message);
+  return /^MCP request failed:\s*405\b/i.test(error.message);
 }
 
 /**
@@ -83,7 +82,7 @@ export function isStreamableHttpUnsupported(error: unknown): boolean {
  */
 export function isUrlOverrideSseFallbackCandidate(error: unknown): boolean {
   if (!(error instanceof BailianError)) return false;
-  return /MCP request failed:\s*(405|404)\b/i.test(error.message);
+  return /^MCP request failed:\s*(405|404)\b/i.test(error.message);
 }
 
 export type McpConnectedClient = {

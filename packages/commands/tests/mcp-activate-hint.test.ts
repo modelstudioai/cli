@@ -26,6 +26,12 @@ describe("mcp-activate-hint", () => {
       false,
     );
     expect(isMcpNotActivated(new Error("MCP不存在或未开通"))).toBe(false);
+    // Nested wrapper phrase must not match (anchored at start).
+    expect(
+      isMcpNotActivated(
+        new BailianError("MCP error (-32000): MCP request failed: 404 Not Found - 未开通"),
+      ),
+    ).toBe(false);
   });
 
   test("hint 含对应 server 的 MCP 广场深链", () => {

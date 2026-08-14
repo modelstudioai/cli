@@ -114,8 +114,7 @@ export class McpSseClient {
   private async openSse(): Promise<void> {
     if (this.abortController) return;
 
-    // use shared abortController：header wait use timer abort；after getting header, clearTimeout,
-    // the long-lived stream is only ended by close()/session abort (compatible with Node 18, no AbortSignal.any).
+    // One abortController for header/error-body wait; clear timer before the long-lived stream.
     this.abortController = new AbortController();
     const timeoutMs = this.deps.settings.timeout * 1000;
     let headerTimedOut = false;
@@ -146,6 +145,8 @@ export class McpSseClient {
       });
     } catch (error) {
       clearTimeout(headerTimer);
+      // Allow a later initialize() to openSse again on this instance.
+      this.abortController = undefined;
       if (this.closed) {
         throw new BailianError("MCP SSE session closed.", ExitCode.GENERAL);
       }
@@ -155,26 +156,42 @@ export class McpSseClient {
       throw new BailianError(
         `MCP SSE request failed: ${error instanceof Error ? error.message : String(error)}`,
         ExitCode.NETWORK,
+        undefined,
+        { cause: error },
       );
     }
-    // 已收到响应头：取消 header 等待，后续仅由 abortController 结束流。
-    clearTimeout(headerTimer);
 
     if (this.deps.settings.verbose) {
       console.error(`< ${response.status} ${response.statusText}`);
     }
 
     if (!response.ok) {
+      // Keep headerTimer until error body is read (or times out).
       let errMsg = `MCP request failed: ${response.status} ${response.statusText}`;
       try {
         const errBody = await response.text();
         if (errBody) errMsg += ` - ${errBody.slice(0, 500)}`;
-      } catch {
-        /* ignore */
+      } catch (error) {
+        clearTimeout(headerTimer);
+        this.abortController = undefined;
+        if (this.closed) {
+          throw new BailianError("MCP SSE session closed.", ExitCode.GENERAL);
+        }
+        if (headerTimedOut) {
+          throw new BailianError(
+            "MCP SSE timed out reading error response body.",
+            ExitCode.TIMEOUT,
+          );
+        }
+        throw new BailianError(errMsg, ExitCode.GENERAL, undefined, { cause: error });
       }
-      // Throw only — do not rejectEndpoint; this path never awaits endpointReady.
+      clearTimeout(headerTimer);
+      this.abortController = undefined;
+      // Do not rejectEndpoint — openSse never awaits endpointReady on this path.
       throw new BailianError(errMsg, ExitCode.GENERAL);
     }
+
+    clearTimeout(headerTimer);
 
     void this.consumeSse(response).catch((error) => {
       if (this.closed) return;
@@ -247,8 +264,7 @@ export class McpSseClient {
       throw error;
     }
 
-    // Stream ended after endpoint: mark session dead and wake pending; do not throw,
-    // so void consumeSse().catch does not surface an extra unhandled rejection.
+    // After endpoint: mark dead and wake pending; don't throw (avoid unhandledRejection).
     this.markStreamEnded(new BailianError("MCP SSE stream ended unexpectedly.", ExitCode.GENERAL));
   }
 
@@ -332,12 +348,24 @@ export class McpSseClient {
     }
 
     const timeoutMs = this.deps.settings.timeout * 1000;
-    const res = await fetch(this.messageUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    // Combine per-RPC timeout with session abort so close() cancels in-flight POSTs.
+    const requestSignal = createLinkedAbortSignal(timeoutMs, this.abortController?.signal);
+    let res: Response;
+    try {
+      res = await fetch(this.messageUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        signal: requestSignal.signal,
+      });
+    } catch (error) {
+      if (this.closed) {
+        throw new BailianError("MCP SSE session closed.", ExitCode.GENERAL);
+      }
+      throw error;
+    } finally {
+      requestSignal.cleanup();
+    }
 
     if (this.deps.settings.verbose) {
       console.error(`< ${res.status} ${res.statusText}`);
@@ -405,4 +433,24 @@ function cancellableTimeoutReject(
       }
     },
   };
+}
+
+/** Timeout + optional parent abort without AbortSignal.any (Node 18). */
+function createLinkedAbortSignal(
+  timeoutMs: number,
+  parentSignal?: AbortSignal,
+): { signal: AbortSignal; cleanup: () => void } {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const abortFromParent = () => controller.abort(parentSignal?.reason);
+  const cleanup = () => {
+    clearTimeout(timeout);
+    parentSignal?.removeEventListener("abort", abortFromParent);
+  };
+
+  if (parentSignal?.aborted) abortFromParent();
+  else parentSignal?.addEventListener("abort", abortFromParent, { once: true });
+  controller.signal.addEventListener("abort", cleanup, { once: true });
+
+  return { signal: controller.signal, cleanup };
 }

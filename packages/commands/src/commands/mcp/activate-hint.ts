@@ -5,7 +5,7 @@ import { mcpMarketplaceDetailPage } from "bailian-cli-runtime";
 export function isMcpNotActivated(error: unknown): boolean {
   if (!(error instanceof BailianError)) return false;
   const message = error.message;
-  if (!/MCP request failed:\s*404\b/i.test(message)) return false;
+  if (!/^MCP request failed:\s*404\b/i.test(message)) return false;
   return /未开通|MCP不存在|MCP_IS_INVALID/i.test(message);
 }
 

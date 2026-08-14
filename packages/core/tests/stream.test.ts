@@ -52,3 +52,28 @@ test("parseSSE：跨 chunk 保留 id，且多事件连续正确", async () => {
     { data: '{"n":2}', event: "message" },
   ]);
 });
+
+test("parseSSE：CRLF 行尾可解析 endpoint", async () => {
+  const events = await collectEvents(["event: endpoint\r\ndata: /message\r\n\r\n"]);
+  expect(events).toEqual([{ data: "/message", event: "endpoint" }]);
+});
+
+test("parseSSE：纯 CR 行尾可解析 endpoint", async () => {
+  const events = await collectEvents(["event: endpoint\rdata: /message\r\r"]);
+  expect(events).toEqual([{ data: "/message", event: "endpoint" }]);
+});
+
+test("parseSSE：跨 chunk 的 CRLF（\\r|\\n）不丢事件", async () => {
+  const events = await collectEvents(["event: endpoint\r", "\ndata: /message\r\n\r\n"]);
+  expect(events).toEqual([{ data: "/message", event: "endpoint" }]);
+});
+
+test("parseSSE：EOF without blank line keeps event type", async () => {
+  const events = await collectEvents(["event: endpoint\ndata: /message"]);
+  expect(events).toEqual([{ data: "/message", event: "endpoint" }]);
+});
+
+test("parseSSE：EOF data-only flush keeps prior behavior", async () => {
+  const events = await collectEvents(["data: plain"]);
+  expect(events).toEqual([{ data: "plain" }]);
+});
