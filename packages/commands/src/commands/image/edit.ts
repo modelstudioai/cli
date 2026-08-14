@@ -35,41 +35,67 @@ const EDIT_FLAGS = {
   image: {
     type: "array",
     valueHint: "<url>",
-    description: "Source image URL or local file path (repeatable for multi-image merge)",
+    description: {
+      "en-US": "Source image URL or local file path (repeatable for multi-image merge)",
+      "zh-CN": "源图片 URL 或本地文件路径（多图融合时可重复）",
+    },
     required: true,
   },
   prompt: {
     type: "string",
     valueHint: "<text>",
-    description: "Edit instruction text",
+    description: { "en-US": "Edit instruction text", "zh-CN": "编辑指令文本" },
     required: true,
   },
   model: {
     type: "string",
     valueHint: "<model>",
-    description: "Model ID (default: qwen-image-3.0)",
+    description: {
+      "en-US": "Model ID (default: qwen-image-3.0)",
+      "zh-CN": "模型 ID（默认：qwen-image-3.0）",
+    },
   },
   size: {
     type: "string",
     valueHint: "<W*H>",
-    description: "Output image size: ratio (3:4, 16:9) or pixels (2048*2048)",
+    description: {
+      "en-US": "Output image size: ratio (3:4, 16:9) or pixels (2048*2048)",
+      "zh-CN": "输出图片尺寸：比例（3:4、16:9）或像素（2048*2048）",
+    },
   },
   n: {
     type: "number",
     valueHint: "<count>",
-    description: "Number of images (default: 1, max: 6)",
+    description: {
+      "en-US": "Number of images (default: 1, max: 6)",
+      "zh-CN": "图片数量（默认：1，最多：6）",
+    },
   },
-  seed: { type: "number", valueHint: "<n>", description: "Random seed for reproducible results" },
+  seed: {
+    type: "number",
+    valueHint: "<n>",
+    description: {
+      "en-US": "Random seed for reproducible results",
+      "zh-CN": "用于复现结果的随机种子",
+    },
+  },
   negativePrompt: {
     type: "string",
     valueHint: "<text>",
-    description: "Negative prompt to exclude unwanted content",
+    description: {
+      "en-US": "Negative prompt to exclude unwanted content",
+      "zh-CN": "负向提示词，用于排除不需要的内容",
+    },
   },
   function: {
     type: "string",
     valueHint: "<name>",
-    description:
-      "wanx*-imageedit function (default: description_edit). Examples: stylization_all, description_edit",
+    description: {
+      "en-US":
+        "wanx*-imageedit function (default: description_edit). Examples: stylization_all, description_edit",
+      "zh-CN":
+        "wanx*-imageedit 功能（默认：description_edit）。例如：stylization_all、description_edit",
+    },
   },
   promptExtend: {
     type: "boolean",
@@ -81,24 +107,37 @@ const EDIT_FLAGS = {
     valueHint: "<bool>",
     description: BOOL_FLAG_WATERMARK,
   },
-  outDir: { type: "string", valueHint: "<dir>", description: "Download images to directory" },
+  outDir: {
+    type: "string",
+    valueHint: "<dir>",
+    description: { "en-US": "Download images to directory", "zh-CN": "将图片下载到指定目录" },
+  },
   outPrefix: {
     type: "string",
     valueHint: "<prefix>",
-    description: "Filename prefix (default: edited)",
+    description: {
+      "en-US": "Filename prefix (default: edited)",
+      "zh-CN": "文件名前缀（默认：edited）",
+    },
   },
   ...ASYNC_FLAG,
   ...CONCURRENT_FLAG,
   pollInterval: {
     type: "number",
     valueHint: "<seconds>",
-    description: "Polling interval when waiting (default: 3)",
+    description: {
+      "en-US": "Polling interval when waiting (default: 3)",
+      "zh-CN": "等待任务时的轮询间隔（默认：3 秒）",
+    },
   },
 } satisfies FlagsDef;
 type EditFlags = ParsedFlags<typeof EDIT_FLAGS>;
 
 export default defineCommand({
-  description: "Edit an existing image with text instructions (Qwen-Image / Wan 2.7)",
+  description: {
+    "en-US": "Edit an existing image with text instructions (Qwen-Image / Wan 2.7)",
+    "zh-CN": "使用文本指令编辑现有图片（Qwen-Image / Wan 2.7）",
+  },
   auth: "apiKey",
   usageArgs: "--image <url> --prompt <text> [flags]",
   flags: EDIT_FLAGS,

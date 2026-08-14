@@ -22,52 +22,86 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description:
-    "Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice",
+  description: {
+    "en-US":
+      "Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice",
+    "zh-CN": "参考生视频（happyhorse-1.1-r2v / wan2.6-r2v）：支持多主体、多镜头和语音",
+  },
   auth: "apiKey",
   usageArgs: "--prompt <text> --image <url>... [--ref-video <url>...] [flags]",
   flags: {
     model: {
       type: "string",
       valueHint: "<model>",
-      description: "Model ID (default: happyhorse-1.1-r2v)",
+      description: {
+        "en-US": "Model ID (default: happyhorse-1.1-r2v)",
+        "zh-CN": "模型 ID（默认：happyhorse-1.1-r2v）",
+      },
     },
     prompt: {
       type: "string",
       valueHint: "<text>",
-      description: "Video description with reference markers (image1, video1, etc.)",
+      description: {
+        "en-US": "Video description with reference markers (image1, video1, etc.)",
+        "zh-CN": "包含引用标记的视频描述（image1、video1 等）",
+      },
       required: true,
     },
     image: {
       type: "array",
       valueHint: "<url>",
-      description: "Reference image URL or local file (repeatable for multiple subjects)",
+      description: {
+        "en-US": "Reference image URL or local file (repeatable for multiple subjects)",
+        "zh-CN": "参考图片 URL 或本地文件（多个主体时可重复）",
+      },
     },
     refVideo: {
       type: "array",
       valueHint: "<url>",
-      description: "Reference video URL or local file (repeatable)",
+      description: {
+        "en-US": "Reference video URL or local file (repeatable)",
+        "zh-CN": "参考视频 URL 或本地文件（可重复）",
+      },
     },
     imageVoice: {
       type: "array",
       valueHint: "<url>",
-      description: "Voice URL for corresponding image (pairs by position)",
+      description: {
+        "en-US": "Voice URL for corresponding image (pairs by position)",
+        "zh-CN": "对应图片的语音 URL（按位置配对）",
+      },
     },
     videoVoice: {
       type: "array",
       valueHint: "<url>",
-      description: "Voice URL for corresponding ref-video (pairs by position)",
+      description: {
+        "en-US": "Voice URL for corresponding ref-video (pairs by position)",
+        "zh-CN": "对应参考视频的语音 URL（按位置配对）",
+      },
     },
     resolution: {
       type: "string",
       valueHint: "<res>",
-      description: "Resolution: 720P or 1080P (default: 1080P)",
+      description: {
+        "en-US": "Resolution: 720P or 1080P (default: 1080P)",
+        "zh-CN": "分辨率：720P 或 1080P（默认：1080P）",
+      },
     },
-    ratio: { type: "string", valueHint: "<ratio>", description: "Aspect ratio (16:9, 9:16, 1:1)" },
+    ratio: {
+      type: "string",
+      valueHint: "<ratio>",
+      description: {
+        "en-US": "Aspect ratio (16:9, 9:16, 1:1)",
+        "zh-CN": "宽高比（16:9、9:16、1:1）",
+      },
+    },
     duration: {
       type: "number",
       valueHint: "<seconds>",
-      description: "Video duration in seconds (default: 5)",
+      description: {
+        "en-US": "Video duration in seconds (default: 5)",
+        "zh-CN": "视频时长，单位为秒（默认：5）",
+      },
     },
     promptExtend: {
       type: "boolean",
@@ -82,19 +116,28 @@ export default defineCommand({
     seed: {
       type: "number",
       valueHint: "<n>",
-      description: "Random seed for reproducible generation",
+      description: {
+        "en-US": "Random seed for reproducible generation",
+        "zh-CN": "用于复现生成结果的随机种子",
+      },
     },
     download: {
       type: "string",
       valueHint: "<path>",
-      description: "Save video to file on completion",
+      description: {
+        "en-US": "Save video to file on completion",
+        "zh-CN": "完成后将视频保存到文件",
+      },
     },
     ...ASYNC_FLAG,
     ...CONCURRENT_FLAG,
     pollInterval: {
       type: "number",
       valueHint: "<seconds>",
-      description: "Polling interval when waiting (default: 15)",
+      description: {
+        "en-US": "Polling interval when waiting (default: 15)",
+        "zh-CN": "等待任务时的轮询间隔（默认：15 秒）",
+      },
     },
   },
   exampleArgs: [

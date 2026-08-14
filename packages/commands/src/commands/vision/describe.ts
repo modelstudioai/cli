@@ -34,25 +34,41 @@ async function toImageUrl(image: string): Promise<string> {
 }
 
 export default defineCommand({
-  description: "Describe an image or video using Qwen-VL",
+  description: {
+    "en-US": "Describe an image or video using Qwen-VL",
+    "zh-CN": "使用 Qwen-VL 描述图片或视频",
+  },
   auth: "apiKey",
   usageArgs: "--image <path-or-url> [--video <url>] [--prompt <text>]",
   flags: {
-    image: { type: "string", valueHint: "<path-or-url>", description: "Local image path or URL" },
+    image: {
+      type: "string",
+      valueHint: "<path-or-url>",
+      description: { "en-US": "Local image path or URL", "zh-CN": "本地图片路径或 URL" },
+    },
     video: {
       type: "array",
       valueHint: "<url>",
-      description: "Video file URL or local path (mp4/mov/avi/mkv/webm)",
+      description: {
+        "en-US": "Video file URL or local path (mp4/mov/avi/mkv/webm)",
+        "zh-CN": "视频文件 URL 或本地路径（mp4/mov/avi/mkv/webm）",
+      },
     },
     prompt: {
       type: "string",
       valueHint: "<text>",
-      description: "Question about the content (default: auto-detected)",
+      description: {
+        "en-US": "Question about the content (default: auto-detected)",
+        "zh-CN": "针对内容的问题（默认：自动识别）",
+      },
     },
     model: {
       type: "string",
       valueHint: "<model>",
-      description: "Vision model (default: qwen3-vl-plus)",
+      description: {
+        "en-US": "Vision model (default: qwen3-vl-plus)",
+        "zh-CN": "视觉模型（默认：qwen3-vl-plus）",
+      },
     },
   },
   exampleArgs: [

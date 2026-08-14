@@ -2,20 +2,29 @@ import { defineCommand, detectOutputFormat } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description: "Upload a local file to DashScope temporary storage (48h)",
+  description: {
+    "en-US": "Upload a local file to DashScope temporary storage (48h)",
+    "zh-CN": "将本地文件上传到 DashScope 临时存储（保留 48 小时）",
+  },
   auth: "apiKey",
   usageArgs: "--file <path> --model <model>",
   flags: {
     file: {
       type: "string",
       valueHint: "<path>",
-      description: "Local file to upload (image, video, audio)",
+      description: {
+        "en-US": "Local file to upload (image, video, audio)",
+        "zh-CN": "要上传的本地文件（图片、视频或音频）",
+      },
       required: true,
     },
     model: {
       type: "string",
       valueHint: "<model>",
-      description: "Target model name (file is bound to this model)",
+      description: {
+        "en-US": "Target model name (file is bound to this model)",
+        "zh-CN": "目标模型名称（文件将与该模型绑定）",
+      },
       required: true,
     },
   },

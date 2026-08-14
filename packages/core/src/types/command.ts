@@ -117,7 +117,10 @@ export const CONCURRENT_FLAG = {
   concurrent: {
     type: "number",
     valueHint: "<n>",
-    description: "Run N parallel requests (default: 1)",
+    description: {
+      "en-US": "Run N parallel requests (default: 1)",
+      "zh-CN": "并行发送 N 个请求（默认：1）",
+    },
   },
 } satisfies FlagsDef;
 
@@ -125,7 +128,10 @@ export const CONCURRENT_FLAG = {
 export const ASYNC_FLAG = {
   async: {
     type: "switch",
-    description: "Return async task id without waiting",
+    description: {
+      "en-US": "Return async task id without waiting",
+      "zh-CN": "直接返回异步任务 ID，不等待任务完成",
+    },
   },
 } satisfies FlagsDef;
 
