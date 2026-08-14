@@ -6,6 +6,23 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.15.0] - 2026-08-14
+
+### 新增
+
+- **百炼原生 Managed Agent Deployment** —— `agents.yaml` 中声明的 `deployments` 现在会创建原生 AgentStudio 资源，支持服务端 Cron 调度、本地文件资源上传、通过 `destroy` 归档，以及在下次 `apply` 时迁移旧版模拟 Deployment state。
+- **Skill Registry 管理** —— 新增 `bl skill add`、`bl skill list`、`bl skill update` 和 `bl skill remove`，支持向检测到的编码 Agent 安装 Skill、核对状态、原子更新及卸载 Registry Skill。
+
+### 变更
+
+- **命令输出 Request ID** —— 数据集、模型部署和模型精调命令现在会在文本及 JSON 输出中展示服务端 Request ID，便于故障排查。
+- **Skill 分包与路由** —— 百炼 Skill 拆分为共享协议、生成、精调、Managed Agent 和 CLI Hub 等领域；支持的安装方式统一为 `npx skills add modelstudioai/cli --all -g`，一次安装完整 Skill 家族。
+- **Advisor 知识更新** —— npm 安装时会预下载模型推荐知识包，并在需要时自动刷新；下载失败不会阻断 CLI 安装。
+
+### 内部
+
+- 百炼和 DashScope API 请求现在会携带 CLI 二进制名称及版本来源标签。
+
 ## [1.14.0] - 2026-08-04
 
 ### 新增

@@ -24,12 +24,12 @@ catalogs:
     chalk:
       specifier: ^5.6.2
       version: 5.6.2
-    tar-stream:
-      specifier: ^3.2.0
-      version: 3.2.0
     smol-toml:
       specifier: ^1.4.2
       version: 1.7.0
+    tar-stream:
+      specifier: ^3.2.0
+      version: 3.2.0
     tsx:
       specifier: ^4.23.0
       version: 4.23.0
@@ -113,8 +113,8 @@ importers:
   packages/commands:
     dependencies:
       '@openagentpack/sdk':
-        specifier: 0.3.1
-        version: 0.3.1
+        specifier: 0.3.2
+        version: 0.3.2
       bailian-cli-core:
         specifier: workspace:*
         version: link:../core
@@ -464,8 +464,8 @@ packages:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
 
-  '@openagentpack/sdk@0.3.1':
-    resolution: {integrity: sha512-/5LDwtNSjd9wyYGK4Lg7soqMyoI98BxhUGL3wzN5qO5HfmZBJP0YyElOnjhHyPHbLRWF7RYmfeVdA/oyEBJWTg==}
+  '@openagentpack/sdk@0.3.2':
+    resolution: {integrity: sha512-FvMHtIMIVLASGlt5q4kYSpD7BK+LWwN8vwnsckmD1SvPlWc9wayzA04DXU98IM74Ep5/HAqIKmNL8JAMQoeX1g==}
     engines: {node: '>=18.17.0'}
 
   '@oxc-project/runtime@0.129.0':
@@ -1674,7 +1674,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  '@openagentpack/sdk@0.3.1':
+  '@openagentpack/sdk@0.3.2':
     dependencies:
       jszip: 3.10.1
       yaml: 2.9.0

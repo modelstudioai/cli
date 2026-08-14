@@ -6,6 +6,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.15.0] - 2026-08-14
+
+### Added
+
+- **Native Bailian Managed Agent Deployments** — `deployments` declared in `agents.yaml` now materialize as native AgentStudio resources, with server-side cron schedules, local file resource uploads, archival through `destroy`, and migration of legacy emulated state on the next `apply`.
+- **Skill registry management** — added `bl skill add`, `bl skill list`, `bl skill update`, and `bl skill remove` for installing, reconciling, atomically updating, and removing registry skills across detected coding agents.
+
+### Changed
+
+- **Request IDs in command output** — dataset, model deployment, and fine-tuning commands now expose server request IDs in text and JSON output for troubleshooting.
+- **Skill packaging and routing** — Bailian skills are split into the shared protocol, generation, fine-tuning, Managed Agent, and CLI hub domains. The supported installation flow now installs the complete family with `npx skills add modelstudioai/cli --all -g`.
+- **Advisor knowledge refresh** — the model advisor knowledge package is pre-fetched during npm installation and automatically refreshed when needed; download failures do not block CLI installation.
+
+### Internal
+
+- Bailian and DashScope API requests now include CLI binary and version source-attribution tags.
+
 ## [1.14.0] - 2026-08-04
 
 ### Added

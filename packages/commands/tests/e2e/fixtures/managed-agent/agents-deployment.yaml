@@ -1,0 +1,39 @@
+version: "1"
+
+providers:
+  bailian:
+    api_key: ${DASHSCOPE_API_KEY}
+    base_url: ${BAILIAN_BASE_URL}
+
+defaults:
+  provider: bailian
+
+environments:
+  dev:
+    config:
+      type: cloud
+      networking:
+        type: unrestricted
+
+agents:
+  reporter:
+    description: "Deployment integration fixture"
+    model: qwen3.7-max
+    instructions: |
+      Generate a concise engineering report from the mounted template.
+    environment: dev
+
+deployments:
+  daily-report:
+    agent: reporter
+    description: "Native Bailian deployment"
+    schedule:
+      expression: "0 9 * * *"
+      timezone: UTC
+    initial_events:
+      - type: user.message
+        content: "Generate today's engineering report."
+    resources:
+      - type: file
+        source: ./report-template.md
+        mount_path: /mnt/report-template.md
