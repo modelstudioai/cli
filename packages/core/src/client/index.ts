@@ -37,6 +37,18 @@ export {
   type ImageSizeProfile,
 } from "./image-routes.ts";
 export {
+  buildAsrFlashRequest,
+  buildAsyncAsrLanguageFields,
+  collectAsrTranscriptionItems,
+  extractAsrFlashText,
+  inferAudioFormatHint,
+  resolveAsrApi,
+  type AsrApiKind,
+  type AsrApiRoute,
+  type AsrFlashFamily,
+  type BuildAsrFlashRequestOpts,
+} from "./asr-routes.ts";
+export {
   CHANNEL,
   OPEN_API_SOURCE,
   sourceConfig,

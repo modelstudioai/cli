@@ -7,22 +7,23 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                         | Description                                                                                  |
-| ------------------------------- | -------------------------------------------------------------------------------------------- |
-| `bl auth generate-access-token` | Generate a CLI access token using OpenAPI AK/SK                                              |
-| `bl auth login`                 | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist) |
-| `bl auth logout`                | Clear stored credentials; full logout also clears the model Base URL                         |
-| `bl auth status`                | Show current authentication state                                                            |
+| Command                         | Authentication | Description                                                                                  |
+| ------------------------------- | -------------- | -------------------------------------------------------------------------------------------- |
+| `bl auth generate-access-token` | No Auth        | Generate a CLI access token using OpenAPI AK/SK                                              |
+| `bl auth login`                 | No Auth        | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist) |
+| `bl auth logout`                | No Auth        | Clear stored credentials; full logout also clears the model Base URL                         |
+| `bl auth status`                | No Auth        | Show current authentication state                                                            |
 
 ## Command details
 
 ### `bl auth generate-access-token`
 
-| Field           | Value                                                                                                      |
-| --------------- | ---------------------------------------------------------------------------------------------------------- |
-| **Name**        | `auth generate-access-token`                                                                               |
-| **Description** | Generate a CLI access token using OpenAPI AK/SK                                                            |
-| **Usage**       | `bl auth generate-access-token --access-key-id <id> --access-key-secret <secret> --security-token <token>` |
+| Field              | Value                                                                                                      |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| **Name**           | `auth generate-access-token`                                                                               |
+| **Description**    | Generate a CLI access token using OpenAPI AK/SK                                                            |
+| **Authentication** | No Auth                                                                                                    |
+| **Usage**          | `bl auth generate-access-token --access-key-id <id> --access-key-secret <secret> --security-token <token>` |
 
 #### Flags
 
@@ -40,11 +41,12 @@ bl auth generate-access-token --access-key-id LTAIxxxxx --access-key-secret xxxx
 
 ### `bl auth login`
 
-| Field           | Value                                                                                                        |
-| --------------- | ------------------------------------------------------------------------------------------------------------ |
-| **Name**        | `auth login`                                                                                                 |
-| **Description** | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist)                 |
-| **Usage**       | `bl auth login --api-key <key> \| --console \| --open-api --access-key-id <id> --access-key-secret <secret>` |
+| Field              | Value                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------------ |
+| **Name**           | `auth login`                                                                                                 |
+| **Description**    | Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist)                 |
+| **Authentication** | No Auth                                                                                                      |
+| **Usage**          | `bl auth login --api-key <key> \| --console \| --open-api --access-key-id <id> --access-key-secret <secret>` |
 
 #### Flags
 
@@ -78,11 +80,12 @@ bl auth login --open-api --access-key-id LTAIxxxxx --access-key-secret xxxxx
 
 ### `bl auth logout`
 
-| Field           | Value                                                                |
-| --------------- | -------------------------------------------------------------------- |
-| **Name**        | `auth logout`                                                        |
-| **Description** | Clear stored credentials; full logout also clears the model Base URL |
-| **Usage**       | `bl auth logout [--console \| --open-api] [--dry-run]`               |
+| Field              | Value                                                                |
+| ------------------ | -------------------------------------------------------------------- |
+| **Name**           | `auth logout`                                                        |
+| **Description**    | Clear stored credentials; full logout also clears the model Base URL |
+| **Authentication** | No Auth                                                              |
+| **Usage**          | `bl auth logout [--console \| --open-api] [--dry-run]`               |
 
 #### Flags
 
@@ -111,11 +114,12 @@ bl auth logout --dry-run
 
 ### `bl auth status`
 
-| Field           | Value                             |
-| --------------- | --------------------------------- |
-| **Name**        | `auth status`                     |
-| **Description** | Show current authentication state |
-| **Usage**       | `bl auth status`                  |
+| Field              | Value                             |
+| ------------------ | --------------------------------- |
+| **Name**           | `auth status`                     |
+| **Description**    | Show current authentication state |
+| **Authentication** | No Auth                           |
+| **Usage**          | `bl auth status`                  |
 
 #### Flags
 

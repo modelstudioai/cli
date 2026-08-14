@@ -7,52 +7,53 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                          | Description                                                                                      |
-| -------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `bl knowledge category add`      | Create a data-center category                                                                    |
-| `bl knowledge category delete`   | Delete a data-center category                                                                    |
-| `bl knowledge category list`     | List data-center categories                                                                      |
-| `bl knowledge chat`              | Chat with a Bailian knowledge base (RAG Q&A with streaming)                                      |
-| `bl knowledge chunk add`         | Add a chunk directly to a knowledge base                                                         |
-| `bl knowledge chunk delete`      | Delete chunks from a knowledge base (irreversible)                                               |
-| `bl knowledge chunk list`        | List chunks in a knowledge base with content and status                                          |
-| `bl knowledge chunk update`      | Update chunk content or toggle its retrieval visibility                                          |
-| `bl knowledge collection create` | Create a FILE data collection                                                                    |
-| `bl knowledge collection get`    | Show data collection details                                                                     |
-| `bl knowledge create`            | Create a knowledge base and import data-center files or categories                               |
-| `bl knowledge delete`            | Delete a knowledge base with all its documents and chunks                                        |
-| `bl knowledge doc delete`        | Delete documents and their chunks from a knowledge base                                          |
-| `bl knowledge doc import-oss`    | Batch import files from an authorized OSS bucket into the data center                            |
-| `bl knowledge doc list`          | List documents in a knowledge base with parse/index status                                       |
-| `bl knowledge doc status`        | Check knowledge base import job status                                                           |
-| `bl knowledge doc tag`           | Batch update tags on data-center files                                                           |
-| `bl knowledge doc upload`        | Upload local files or directories to the data center and optionally import into a knowledge base |
-| `bl knowledge file delete`       | Permanently delete a file from the data center                                                   |
-| `bl knowledge file get`          | Show data-center file details (size, MD5, tags, timestamps)                                      |
-| `bl knowledge file list`         | List files in a data-center category                                                             |
-| `bl knowledge info`              | Show knowledge base configuration details                                                        |
-| `bl knowledge list`              | List knowledge bases in the workspace                                                            |
-| `bl knowledge retrieve`          | Retrieve from a Bailian knowledge base (deprecated, use `search` instead)                        |
-| `bl knowledge search`            | Search a Bailian knowledge base (RAG semantic retrieval)                                         |
-| `bl knowledge service copy`      | Copy a service into a new draft (name gets a copy\_ prefix)                                      |
-| `bl knowledge service create`    | Create a retrieval / Q&A service (initial status: draft, version: beta)                          |
-| `bl knowledge service delete`    | Delete a retrieval / Q&A service (soft delete, idempotent)                                       |
-| `bl knowledge service deploy`    | Publish the beta draft of a service as a new version                                             |
-| `bl knowledge service get`       | Show service (agent) details including per-version configuration                                 |
-| `bl knowledge service list`      | List retrieval / Q&A services (agents) in the workspace                                          |
-| `bl knowledge service update`    | Update service name, description or draft configuration                                          |
-| `bl knowledge stats`             | Show knowledge base storage and QPS monitoring data                                              |
-| `bl knowledge update`            | Update knowledge base name, description or rerank threshold                                      |
+| Command                          | Authentication | Description                                                                                      |
+| -------------------------------- | -------------- | ------------------------------------------------------------------------------------------------ |
+| `bl knowledge category add`      | API Key        | Create a data-center category                                                                    |
+| `bl knowledge category delete`   | API Key        | Delete a data-center category                                                                    |
+| `bl knowledge category list`     | API Key        | List data-center categories                                                                      |
+| `bl knowledge chat`              | API Key        | Chat with a Bailian knowledge base (RAG Q&A with streaming)                                      |
+| `bl knowledge chunk add`         | API Key        | Add a chunk directly to a knowledge base                                                         |
+| `bl knowledge chunk delete`      | API Key        | Delete chunks from a knowledge base (irreversible)                                               |
+| `bl knowledge chunk list`        | API Key        | List chunks in a knowledge base with content and status                                          |
+| `bl knowledge chunk update`      | API Key        | Update chunk content or toggle its retrieval visibility                                          |
+| `bl knowledge collection create` | API Key        | Create a FILE data collection                                                                    |
+| `bl knowledge collection get`    | API Key        | Show data collection details                                                                     |
+| `bl knowledge create`            | API Key        | Create a knowledge base and import data-center files or categories                               |
+| `bl knowledge delete`            | API Key        | Delete a knowledge base with all its documents and chunks                                        |
+| `bl knowledge doc delete`        | API Key        | Delete documents and their chunks from a knowledge base                                          |
+| `bl knowledge doc import-oss`    | API Key        | Batch import files from an authorized OSS bucket into the data center                            |
+| `bl knowledge doc list`          | API Key        | List documents in a knowledge base with parse/index status                                       |
+| `bl knowledge doc status`        | API Key        | Check knowledge base import job status                                                           |
+| `bl knowledge doc tag`           | API Key        | Batch update tags on data-center files                                                           |
+| `bl knowledge doc upload`        | API Key        | Upload local files or directories to the data center and optionally import into a knowledge base |
+| `bl knowledge file delete`       | API Key        | Permanently delete a file from the data center                                                   |
+| `bl knowledge file get`          | API Key        | Show data-center file details (size, MD5, tags, timestamps)                                      |
+| `bl knowledge file list`         | API Key        | List files in a data-center category                                                             |
+| `bl knowledge info`              | API Key        | Show knowledge base configuration details                                                        |
+| `bl knowledge list`              | API Key        | List knowledge bases in the workspace                                                            |
+| `bl knowledge retrieve`          | API Key        | Retrieve from a Bailian knowledge base (deprecated, use `search` instead)                        |
+| `bl knowledge search`            | API Key        | Search a Bailian knowledge base (RAG semantic retrieval)                                         |
+| `bl knowledge service copy`      | API Key        | Copy a service into a new draft (name gets a copy\_ prefix)                                      |
+| `bl knowledge service create`    | API Key        | Create a retrieval / Q&A service (initial status: draft, version: beta)                          |
+| `bl knowledge service delete`    | API Key        | Delete a retrieval / Q&A service (soft delete, idempotent)                                       |
+| `bl knowledge service deploy`    | API Key        | Publish the beta draft of a service as a new version                                             |
+| `bl knowledge service get`       | API Key        | Show service (agent) details including per-version configuration                                 |
+| `bl knowledge service list`      | API Key        | List retrieval / Q&A services (agents) in the workspace                                          |
+| `bl knowledge service update`    | API Key        | Update service name, description or draft configuration                                          |
+| `bl knowledge stats`             | API Key        | Show knowledge base storage and QPS monitoring data                                              |
+| `bl knowledge update`            | API Key        | Update knowledge base name, description or rerank threshold                                      |
 
 ## Command details
 
 ### `bl knowledge category add`
 
-| Field           | Value                                             |
-| --------------- | ------------------------------------------------- |
-| **Name**        | `knowledge category add`                          |
-| **Description** | Create a data-center category                     |
-| **Usage**       | `bl knowledge category add --name <text> [flags]` |
+| Field              | Value                                             |
+| ------------------ | ------------------------------------------------- |
+| **Name**           | `knowledge category add`                          |
+| **Description**    | Create a data-center category                     |
+| **Authentication** | API Key                                           |
+| **Usage**          | `bl knowledge category add --name <text> [flags]` |
 
 #### Flags
 
@@ -81,11 +82,12 @@ bl knowledge category add --name sub --parent-id cate-xxx
 
 ### `bl knowledge category delete`
 
-| Field           | Value                                                     |
-| --------------- | --------------------------------------------------------- |
-| **Name**        | `knowledge category delete`                               |
-| **Description** | Delete a data-center category                             |
-| **Usage**       | `bl knowledge category delete --category-id <id> [flags]` |
+| Field              | Value                                                     |
+| ------------------ | --------------------------------------------------------- |
+| **Name**           | `knowledge category delete`                               |
+| **Description**    | Delete a data-center category                             |
+| **Authentication** | API Key                                                   |
+| **Usage**          | `bl knowledge category delete --category-id <id> [flags]` |
 
 #### Flags
 
@@ -113,11 +115,12 @@ bl knowledge category delete --category-id cate-xxx --yes
 
 ### `bl knowledge category list`
 
-| Field           | Value                                |
-| --------------- | ------------------------------------ |
-| **Name**        | `knowledge category list`            |
-| **Description** | List data-center categories          |
-| **Usage**       | `bl knowledge category list [flags]` |
+| Field              | Value                                |
+| ------------------ | ------------------------------------ |
+| **Name**           | `knowledge category list`            |
+| **Description**    | List data-center categories          |
+| **Authentication** | API Key                              |
+| **Usage**          | `bl knowledge category list [flags]` |
 
 #### Flags
 
@@ -153,11 +156,12 @@ bl knowledge category list --next-token <token>
 
 ### `bl knowledge chat`
 
-| Field           | Value                                                        |
-| --------------- | ------------------------------------------------------------ |
-| **Name**        | `knowledge chat`                                             |
-| **Description** | Chat with a Bailian knowledge base (RAG Q&A with streaming)  |
-| **Usage**       | `bl knowledge chat --message <text> --agent-id <id> [flags]` |
+| Field              | Value                                                        |
+| ------------------ | ------------------------------------------------------------ |
+| **Name**           | `knowledge chat`                                             |
+| **Description**    | Chat with a Bailian knowledge base (RAG Q&A with streaming)  |
+| **Authentication** | API Key                                                      |
+| **Usage**          | `bl knowledge chat --message <text> --agent-id <id> [flags]` |
 
 #### Flags
 
@@ -195,11 +199,12 @@ bl knowledge chat --message "Describe these images" --image https://example.com/
 
 ### `bl knowledge chunk add`
 
-| Field           | Value                                                                                |
-| --------------- | ------------------------------------------------------------------------------------ |
-| **Name**        | `knowledge chunk add`                                                                |
-| **Description** | Add a chunk directly to a knowledge base                                             |
-| **Usage**       | `bl knowledge chunk add --index-id <id> (--content <text> \| --field <k=v>) [flags]` |
+| Field              | Value                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------ |
+| **Name**           | `knowledge chunk add`                                                                |
+| **Description**    | Add a chunk directly to a knowledge base                                             |
+| **Authentication** | API Key                                                                              |
+| **Usage**          | `bl knowledge chunk add --index-id <id> (--content <text> \| --field <k=v>) [flags]` |
 
 #### Flags
 
@@ -237,11 +242,12 @@ bl knowledge chunk add --index-id idx-xxx --field 列A=v1 --field 列B=v2
 
 ### `bl knowledge chunk delete`
 
-| Field           | Value                                                               |
-| --------------- | ------------------------------------------------------------------- |
-| **Name**        | `knowledge chunk delete`                                            |
-| **Description** | Delete chunks from a knowledge base (irreversible)                  |
-| **Usage**       | `bl knowledge chunk delete --index-id <id> --chunk-id <id> [flags]` |
+| Field              | Value                                                               |
+| ------------------ | ------------------------------------------------------------------- |
+| **Name**           | `knowledge chunk delete`                                            |
+| **Description**    | Delete chunks from a knowledge base (irreversible)                  |
+| **Authentication** | API Key                                                             |
+| **Usage**          | `bl knowledge chunk delete --index-id <id> --chunk-id <id> [flags]` |
 
 #### Flags
 
@@ -271,11 +277,12 @@ bl knowledge chunk delete --index-id idx-xxx --chunk-id chunk-a --yes
 
 ### `bl knowledge chunk list`
 
-| Field           | Value                                                   |
-| --------------- | ------------------------------------------------------- |
-| **Name**        | `knowledge chunk list`                                  |
-| **Description** | List chunks in a knowledge base with content and status |
-| **Usage**       | `bl knowledge chunk list --index-id <id> [flags]`       |
+| Field              | Value                                                   |
+| ------------------ | ------------------------------------------------------- |
+| **Name**           | `knowledge chunk list`                                  |
+| **Description**    | List chunks in a knowledge base with content and status |
+| **Authentication** | API Key                                                 |
+| **Usage**          | `bl knowledge chunk list --index-id <id> [flags]`       |
 
 #### Flags
 
@@ -306,11 +313,12 @@ bl knowledge chunk list --index-id idx-xxx --doc-id file-xxx --page-size 50
 
 ### `bl knowledge chunk update`
 
-| Field           | Value                                                                             |
-| --------------- | --------------------------------------------------------------------------------- |
-| **Name**        | `knowledge chunk update`                                                          |
-| **Description** | Update chunk content or toggle its retrieval visibility                           |
-| **Usage**       | `bl knowledge chunk update --index-id <id> --chunk-id <id> --doc-id <id> [flags]` |
+| Field              | Value                                                                             |
+| ------------------ | --------------------------------------------------------------------------------- |
+| **Name**           | `knowledge chunk update`                                                          |
+| **Description**    | Update chunk content or toggle its retrieval visibility                           |
+| **Authentication** | API Key                                                                           |
+| **Usage**          | `bl knowledge chunk update --index-id <id> --chunk-id <id> --doc-id <id> [flags]` |
 
 #### Flags
 
@@ -346,11 +354,12 @@ bl knowledge chunk update --index-id idx-xxx --chunk-id chunk-xxx --doc-id file-
 
 ### `bl knowledge collection create`
 
-| Field           | Value                                                                       |
-| --------------- | --------------------------------------------------------------------------- |
-| **Name**        | `knowledge collection create`                                               |
-| **Description** | Create a FILE data collection                                               |
-| **Usage**       | `bl knowledge collection create --name <text> --description <text> [flags]` |
+| Field              | Value                                                                       |
+| ------------------ | --------------------------------------------------------------------------- |
+| **Name**           | `knowledge collection create`                                               |
+| **Description**    | Create a FILE data collection                                               |
+| **Authentication** | API Key                                                                     |
+| **Usage**          | `bl knowledge collection create --name <text> --description <text> [flags]` |
 
 #### Flags
 
@@ -383,11 +392,12 @@ bl knowledge collection create --name oss-coll --description 'own bucket' --stor
 
 ### `bl knowledge collection get`
 
-| Field           | Value                                                                         |
-| --------------- | ----------------------------------------------------------------------------- |
-| **Name**        | `knowledge collection get`                                                    |
-| **Description** | Show data collection details                                                  |
-| **Usage**       | `bl knowledge collection get (--collection-id <id> \| --name <text>) [flags]` |
+| Field              | Value                                                                         |
+| ------------------ | ----------------------------------------------------------------------------- |
+| **Name**           | `knowledge collection get`                                                    |
+| **Description**    | Show data collection details                                                  |
+| **Authentication** | API Key                                                                       |
+| **Usage**          | `bl knowledge collection get (--collection-id <id> \| --name <text>) [flags]` |
 
 #### Flags
 
@@ -411,11 +421,12 @@ bl knowledge collection get --name my-collection
 
 ### `bl knowledge create`
 
-| Field           | Value                                                                             |
-| --------------- | --------------------------------------------------------------------------------- |
-| **Name**        | `knowledge create`                                                                |
-| **Description** | Create a knowledge base and import data-center files or categories                |
-| **Usage**       | `bl knowledge create --name <text> (--doc-id <id> \| --category-id <id>) [flags]` |
+| Field              | Value                                                                             |
+| ------------------ | --------------------------------------------------------------------------------- |
+| **Name**           | `knowledge create`                                                                |
+| **Description**    | Create a knowledge base and import data-center files or categories                |
+| **Authentication** | API Key                                                                           |
+| **Usage**          | `bl knowledge create --name <text> (--doc-id <id> \| --category-id <id>) [flags]` |
 
 #### Flags
 
@@ -450,11 +461,12 @@ bl knowledge create --name demo --category-id cate-xxx --wait
 
 ### `bl knowledge delete`
 
-| Field           | Value                                                     |
-| --------------- | --------------------------------------------------------- |
-| **Name**        | `knowledge delete`                                        |
-| **Description** | Delete a knowledge base with all its documents and chunks |
-| **Usage**       | `bl knowledge delete --index-id <id> [flags]`             |
+| Field              | Value                                                     |
+| ------------------ | --------------------------------------------------------- |
+| **Name**           | `knowledge delete`                                        |
+| **Description**    | Delete a knowledge base with all its documents and chunks |
+| **Authentication** | API Key                                                   |
+| **Usage**          | `bl knowledge delete --index-id <id> [flags]`             |
 
 #### Flags
 
@@ -483,11 +495,12 @@ bl knowledge delete --index-id idx-xxx --yes
 
 ### `bl knowledge doc delete`
 
-| Field           | Value                                                           |
-| --------------- | --------------------------------------------------------------- |
-| **Name**        | `knowledge doc delete`                                          |
-| **Description** | Delete documents and their chunks from a knowledge base         |
-| **Usage**       | `bl knowledge doc delete --index-id <id> --doc-id <id> [flags]` |
+| Field              | Value                                                           |
+| ------------------ | --------------------------------------------------------------- |
+| **Name**           | `knowledge doc delete`                                          |
+| **Description**    | Delete documents and their chunks from a knowledge base         |
+| **Authentication** | API Key                                                         |
+| **Usage**          | `bl knowledge doc delete --index-id <id> --doc-id <id> [flags]` |
 
 #### Flags
 
@@ -519,11 +532,12 @@ bl knowledge doc delete --index-id idx-xxx --doc-id file-a --doc-id file-b --yes
 
 ### `bl knowledge doc import-oss`
 
-| Field           | Value                                                                               |
-| --------------- | ----------------------------------------------------------------------------------- |
-| **Name**        | `knowledge doc import-oss`                                                          |
-| **Description** | Batch import files from an authorized OSS bucket into the data center               |
-| **Usage**       | `bl knowledge doc import-oss --bucket <name> --region <id> --oss-key <key> [flags]` |
+| Field              | Value                                                                               |
+| ------------------ | ----------------------------------------------------------------------------------- |
+| **Name**           | `knowledge doc import-oss`                                                          |
+| **Description**    | Batch import files from an authorized OSS bucket into the data center               |
+| **Authentication** | API Key                                                                             |
+| **Usage**          | `bl knowledge doc import-oss --bucket <name> --region <id> --oss-key <key> [flags]` |
 
 #### Flags
 
@@ -557,11 +571,12 @@ bl knowledge doc import-oss --bucket my-bucket --region cn-beijing --oss-key doc
 
 ### `bl knowledge doc list`
 
-| Field           | Value                                                      |
-| --------------- | ---------------------------------------------------------- |
-| **Name**        | `knowledge doc list`                                       |
-| **Description** | List documents in a knowledge base with parse/index status |
-| **Usage**       | `bl knowledge doc list --index-id <id> [flags]`            |
+| Field              | Value                                                      |
+| ------------------ | ---------------------------------------------------------- |
+| **Name**           | `knowledge doc list`                                       |
+| **Description**    | List documents in a knowledge base with parse/index status |
+| **Authentication** | API Key                                                    |
+| **Usage**          | `bl knowledge doc list --index-id <id> [flags]`            |
 
 #### Flags
 
@@ -591,11 +606,12 @@ bl knowledge doc list --index-id idx-xxx --page-size 100
 
 ### `bl knowledge doc status`
 
-| Field           | Value                                                           |
-| --------------- | --------------------------------------------------------------- |
-| **Name**        | `knowledge doc status`                                          |
-| **Description** | Check knowledge base import job status                          |
-| **Usage**       | `bl knowledge doc status --index-id <id> --job-id <id> [flags]` |
+| Field              | Value                                                           |
+| ------------------ | --------------------------------------------------------------- |
+| **Name**           | `knowledge doc status`                                          |
+| **Description**    | Check knowledge base import job status                          |
+| **Authentication** | API Key                                                         |
+| **Usage**          | `bl knowledge doc status --index-id <id> --job-id <id> [flags]` |
 
 #### Flags
 
@@ -629,11 +645,12 @@ bl knowledge doc status --index-id idx-xxx --job-id job-xxx --wait --poll-interv
 
 ### `bl knowledge doc tag`
 
-| Field           | Value                                                     |
-| --------------- | --------------------------------------------------------- |
-| **Name**        | `knowledge doc tag`                                       |
-| **Description** | Batch update tags on data-center files                    |
-| **Usage**       | `bl knowledge doc tag --doc-id <id> --tag <text> [flags]` |
+| Field              | Value                                                     |
+| ------------------ | --------------------------------------------------------- |
+| **Name**           | `knowledge doc tag`                                       |
+| **Description**    | Batch update tags on data-center files                    |
+| **Authentication** | API Key                                                   |
+| **Usage**          | `bl knowledge doc tag --doc-id <id> --tag <text> [flags]` |
 
 #### Flags
 
@@ -663,11 +680,12 @@ bl knowledge doc tag --doc-id file-a --doc-id file-b --tag final --mode overwrit
 
 ### `bl knowledge doc upload`
 
-| Field           | Value                                                                                            |
-| --------------- | ------------------------------------------------------------------------------------------------ |
-| **Name**        | `knowledge doc upload`                                                                           |
-| **Description** | Upload local files or directories to the data center and optionally import into a knowledge base |
-| **Usage**       | `bl knowledge doc upload --file <path> [flags]`                                                  |
+| Field              | Value                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| **Name**           | `knowledge doc upload`                                                                           |
+| **Description**    | Upload local files or directories to the data center and optionally import into a knowledge base |
+| **Authentication** | API Key                                                                                          |
+| **Usage**          | `bl knowledge doc upload --file <path> [flags]`                                                  |
 
 #### Flags
 
@@ -710,11 +728,12 @@ bl knowledge doc upload --file ./docs/ --dry-run --verbose
 
 ### `bl knowledge file delete`
 
-| Field           | Value                                             |
-| --------------- | ------------------------------------------------- |
-| **Name**        | `knowledge file delete`                           |
-| **Description** | Permanently delete a file from the data center    |
-| **Usage**       | `bl knowledge file delete --file-id <id> [flags]` |
+| Field              | Value                                             |
+| ------------------ | ------------------------------------------------- |
+| **Name**           | `knowledge file delete`                           |
+| **Description**    | Permanently delete a file from the data center    |
+| **Authentication** | API Key                                           |
+| **Usage**          | `bl knowledge file delete --file-id <id> [flags]` |
 
 #### Flags
 
@@ -743,11 +762,12 @@ bl knowledge file delete --file-id file-xxx --yes
 
 ### `bl knowledge file get`
 
-| Field           | Value                                                       |
-| --------------- | ----------------------------------------------------------- |
-| **Name**        | `knowledge file get`                                        |
-| **Description** | Show data-center file details (size, MD5, tags, timestamps) |
-| **Usage**       | `bl knowledge file get --file-id <id> [flags]`              |
+| Field              | Value                                                       |
+| ------------------ | ----------------------------------------------------------- |
+| **Name**           | `knowledge file get`                                        |
+| **Description**    | Show data-center file details (size, MD5, tags, timestamps) |
+| **Authentication** | API Key                                                     |
+| **Usage**          | `bl knowledge file get --file-id <id> [flags]`              |
 
 #### Flags
 
@@ -766,11 +786,12 @@ bl knowledge file get --file-id file-xxx --workspace-id ws-xxx
 
 ### `bl knowledge file list`
 
-| Field           | Value                                               |
-| --------------- | --------------------------------------------------- |
-| **Name**        | `knowledge file list`                               |
-| **Description** | List files in a data-center category                |
-| **Usage**       | `bl knowledge file list --category-id <id> [flags]` |
+| Field              | Value                                               |
+| ------------------ | --------------------------------------------------- |
+| **Name**           | `knowledge file list`                               |
+| **Description**    | List files in a data-center category                |
+| **Authentication** | API Key                                             |
+| **Usage**          | `bl knowledge file list --category-id <id> [flags]` |
 
 #### Flags
 
@@ -802,11 +823,12 @@ bl knowledge file list --category-id cate-xxx --name report
 
 ### `bl knowledge info`
 
-| Field           | Value                                       |
-| --------------- | ------------------------------------------- |
-| **Name**        | `knowledge info`                            |
-| **Description** | Show knowledge base configuration details   |
-| **Usage**       | `bl knowledge info --index-id <id> [flags]` |
+| Field              | Value                                       |
+| ------------------ | ------------------------------------------- |
+| **Name**           | `knowledge info`                            |
+| **Description**    | Show knowledge base configuration details   |
+| **Authentication** | API Key                                     |
+| **Usage**          | `bl knowledge info --index-id <id> [flags]` |
 
 #### Flags
 
@@ -819,7 +841,7 @@ bl knowledge file list --category-id cate-xxx --name report
 
 #### Notes
 
-- No dedicated detail API on the server yet — falls back to paginating the index list (up to 10 pages of 100).
+- Uses the index/list API with pipeline_id filtering to fetch a single knowledge base.
 - Indexing settings are immutable; changing them requires recreating the knowledge base.
 
 #### Examples
@@ -830,11 +852,12 @@ bl knowledge info --index-id idx-xxx --workspace-id ws-xxx
 
 ### `bl knowledge list`
 
-| Field           | Value                                 |
-| --------------- | ------------------------------------- |
-| **Name**        | `knowledge list`                      |
-| **Description** | List knowledge bases in the workspace |
-| **Usage**       | `bl knowledge list [flags]`           |
+| Field              | Value                                 |
+| ------------------ | ------------------------------------- |
+| **Name**           | `knowledge list`                      |
+| **Description**    | List knowledge bases in the workspace |
+| **Authentication** | API Key                               |
+| **Usage**          | `bl knowledge list [flags]`           |
 
 #### Flags
 
@@ -865,11 +888,12 @@ bl knowledge list --name demo --page-number 2 --page-size 50
 
 ### `bl knowledge retrieve`
 
-| Field           | Value                                                                     |
-| --------------- | ------------------------------------------------------------------------- |
-| **Name**        | `knowledge retrieve`                                                      |
-| **Description** | Retrieve from a Bailian knowledge base (deprecated, use `search` instead) |
-| **Usage**       | `bl knowledge retrieve --index-id <id> --query <text> [flags]`            |
+| Field              | Value                                                                     |
+| ------------------ | ------------------------------------------------------------------------- |
+| **Name**           | `knowledge retrieve`                                                      |
+| **Description**    | Retrieve from a Bailian knowledge base (deprecated, use `search` instead) |
+| **Authentication** | API Key                                                                   |
+| **Usage**          | `bl knowledge retrieve --index-id <id> --query <text> [flags]`            |
 
 #### Flags
 
@@ -900,11 +924,12 @@ bl knowledge retrieve --index-id idx_xxx --query "RAG retrieval" --rerank --rera
 
 ### `bl knowledge search`
 
-| Field           | Value                                                        |
-| --------------- | ------------------------------------------------------------ |
-| **Name**        | `knowledge search`                                           |
-| **Description** | Search a Bailian knowledge base (RAG semantic retrieval)     |
-| **Usage**       | `bl knowledge search --query <text> --agent-id <id> [flags]` |
+| Field              | Value                                                        |
+| ------------------ | ------------------------------------------------------------ |
+| **Name**           | `knowledge search`                                           |
+| **Description**    | Search a Bailian knowledge base (RAG semantic retrieval)     |
+| **Authentication** | API Key                                                      |
+| **Usage**          | `bl knowledge search --query <text> --agent-id <id> [flags]` |
 
 #### Flags
 
@@ -937,11 +962,12 @@ bl knowledge search --api-key $DASHSCOPE_API_KEY --query "test search" --agent-i
 
 ### `bl knowledge service copy`
 
-| Field           | Value                                                       |
-| --------------- | ----------------------------------------------------------- |
-| **Name**        | `knowledge service copy`                                    |
-| **Description** | Copy a service into a new draft (name gets a copy\_ prefix) |
-| **Usage**       | `bl knowledge service copy --agent-id <id> [flags]`         |
+| Field              | Value                                                       |
+| ------------------ | ----------------------------------------------------------- |
+| **Name**           | `knowledge service copy`                                    |
+| **Description**    | Copy a service into a new draft (name gets a copy\_ prefix) |
+| **Authentication** | API Key                                                     |
+| **Usage**          | `bl knowledge service copy --agent-id <id> [flags]`         |
 
 #### Flags
 
@@ -965,11 +991,12 @@ bl knowledge service copy --agent-id aid-xxx --workspace-id ws-xxx
 
 ### `bl knowledge service create`
 
-| Field           | Value                                                                      |
-| --------------- | -------------------------------------------------------------------------- |
-| **Name**        | `knowledge service create`                                                 |
-| **Description** | Create a retrieval / Q&A service (initial status: draft, version: beta)    |
-| **Usage**       | `bl knowledge service create --name <text> --scene <chat\|search> [flags]` |
+| Field              | Value                                                                      |
+| ------------------ | -------------------------------------------------------------------------- |
+| **Name**           | `knowledge service create`                                                 |
+| **Description**    | Create a retrieval / Q&A service (initial status: draft, version: beta)    |
+| **Authentication** | API Key                                                                    |
+| **Usage**          | `bl knowledge service create --name <text> --scene <chat\|search> [flags]` |
 
 #### Flags
 
@@ -1001,11 +1028,12 @@ bl knowledge service create --name my-search --scene search --index-id idx-xxx
 
 ### `bl knowledge service delete`
 
-| Field           | Value                                                      |
-| --------------- | ---------------------------------------------------------- |
-| **Name**        | `knowledge service delete`                                 |
-| **Description** | Delete a retrieval / Q&A service (soft delete, idempotent) |
-| **Usage**       | `bl knowledge service delete --agent-id <id> [flags]`      |
+| Field              | Value                                                      |
+| ------------------ | ---------------------------------------------------------- |
+| **Name**           | `knowledge service delete`                                 |
+| **Description**    | Delete a retrieval / Q&A service (soft delete, idempotent) |
+| **Authentication** | API Key                                                    |
+| **Usage**          | `bl knowledge service delete --agent-id <id> [flags]`      |
 
 #### Flags
 
@@ -1035,11 +1063,12 @@ bl knowledge service delete --agent-id aid-xxx --yes
 
 ### `bl knowledge service deploy`
 
-| Field           | Value                                                 |
-| --------------- | ----------------------------------------------------- |
-| **Name**        | `knowledge service deploy`                            |
-| **Description** | Publish the beta draft of a service as a new version  |
-| **Usage**       | `bl knowledge service deploy --agent-id <id> [flags]` |
+| Field              | Value                                                 |
+| ------------------ | ----------------------------------------------------- |
+| **Name**           | `knowledge service deploy`                            |
+| **Description**    | Publish the beta draft of a service as a new version  |
+| **Authentication** | API Key                                               |
+| **Usage**          | `bl knowledge service deploy --agent-id <id> [flags]` |
 
 #### Flags
 
@@ -1070,11 +1099,12 @@ bl knowledge service deploy --agent-id aid-xxx --version-desc 'tuned rerank para
 
 ### `bl knowledge service get`
 
-| Field           | Value                                                            |
-| --------------- | ---------------------------------------------------------------- |
-| **Name**        | `knowledge service get`                                          |
-| **Description** | Show service (agent) details including per-version configuration |
-| **Usage**       | `bl knowledge service get --agent-id <id> [flags]`               |
+| Field              | Value                                                            |
+| ------------------ | ---------------------------------------------------------------- |
+| **Name**           | `knowledge service get`                                          |
+| **Description**    | Show service (agent) details including per-version configuration |
+| **Authentication** | API Key                                                          |
+| **Usage**          | `bl knowledge service get --agent-id <id> [flags]`               |
 
 #### Flags
 
@@ -1103,11 +1133,12 @@ bl knowledge service get --agent-id aid-xxx --agent-version beta
 
 ### `bl knowledge service list`
 
-| Field           | Value                                                      |
-| --------------- | ---------------------------------------------------------- |
-| **Name**        | `knowledge service list`                                   |
-| **Description** | List retrieval / Q&A services (agents) in the workspace    |
-| **Usage**       | `bl knowledge service list --scene <chat\|search> [flags]` |
+| Field              | Value                                                      |
+| ------------------ | ---------------------------------------------------------- |
+| **Name**           | `knowledge service list`                                   |
+| **Description**    | List retrieval / Q&A services (agents) in the workspace    |
+| **Authentication** | API Key                                                    |
+| **Usage**          | `bl knowledge service list --scene <chat\|search> [flags]` |
 
 #### Flags
 
@@ -1141,11 +1172,12 @@ bl knowledge service list --scene search --status deployed
 
 ### `bl knowledge service update`
 
-| Field           | Value                                                   |
-| --------------- | ------------------------------------------------------- |
-| **Name**        | `knowledge service update`                              |
-| **Description** | Update service name, description or draft configuration |
-| **Usage**       | `bl knowledge service update --agent-id <id> [flags]`   |
+| Field              | Value                                                   |
+| ------------------ | ------------------------------------------------------- |
+| **Name**           | `knowledge service update`                              |
+| **Description**    | Update service name, description or draft configuration |
+| **Authentication** | API Key                                                 |
+| **Usage**          | `bl knowledge service update --agent-id <id> [flags]`   |
 
 #### Flags
 
@@ -1194,11 +1226,12 @@ bl knowledge service update --agent-id aid-xxx --agent-version 1 --version-desc 
 
 ### `bl knowledge stats`
 
-| Field           | Value                                               |
-| --------------- | --------------------------------------------------- |
-| **Name**        | `knowledge stats`                                   |
-| **Description** | Show knowledge base storage and QPS monitoring data |
-| **Usage**       | `bl knowledge stats --index-id <id> [flags]`        |
+| Field              | Value                                               |
+| ------------------ | --------------------------------------------------- |
+| **Name**           | `knowledge stats`                                   |
+| **Description**    | Show knowledge base storage and QPS monitoring data |
+| **Authentication** | API Key                                             |
+| **Usage**          | `bl knowledge stats --index-id <id> [flags]`        |
 
 #### Flags
 
@@ -1229,11 +1262,12 @@ bl knowledge stats --index-id idx-xxx --start 2026-07-30 --end 2026-07-31
 
 ### `bl knowledge update`
 
-| Field           | Value                                                       |
-| --------------- | ----------------------------------------------------------- |
-| **Name**        | `knowledge update`                                          |
-| **Description** | Update knowledge base name, description or rerank threshold |
-| **Usage**       | `bl knowledge update --index-id <id> [flags]`               |
+| Field              | Value                                                       |
+| ------------------ | ----------------------------------------------------------- |
+| **Name**           | `knowledge update`                                          |
+| **Description**    | Update knowledge base name, description or rerank threshold |
+| **Authentication** | API Key                                                     |
+| **Usage**          | `bl knowledge update --index-id <id> [flags]`               |
 
 #### Flags
 

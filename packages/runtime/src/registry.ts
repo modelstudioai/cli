@@ -25,6 +25,13 @@ interface CommandNode {
   children: Map<string, CommandNode>;
 }
 
+const AUTH_LABELS = {
+  apiKey: "API Key",
+  console: "Console",
+  openapi: "AK/SK",
+  none: "No Auth",
+} satisfies Record<AuthRequirement, string>;
+
 /**
  * What a command path resolves to in the registry. The single judgement that
  * feeds `resolve()` — no scattered `isGroupPath` + throwing `resolve`.
@@ -157,14 +164,37 @@ export class CommandRegistry {
     };
   }
 
-  private buildResourceLines(a: (s: string) => string, d: (s: string) => string): string {
-    const entries: Array<{ path: string; desc: string }> = [];
+  private buildCommandLines(
+    entries: Array<{ path: string; auth: AuthRequirement; desc: string }>,
+    accent: (text: string) => string,
+    dim: (text: string) => string,
+  ): string {
+    const maxPathLength = Math.max(...entries.map((entry) => entry.path.length));
+    const maxAuthLength = Math.max(
+      ...entries.map((entry) => `[${AUTH_LABELS[entry.auth]}]`.length),
+    );
+    const rows = entries.map((entry) => {
+      const authLabel = `[${AUTH_LABELS[entry.auth]}]`;
+      return `  ${accent(entry.path.padEnd(maxPathLength + 2))} ${accent(authLabel.padEnd(maxAuthLength + 2))} ${dim(entry.desc)}`;
+    });
+    return rows.join("\n");
+  }
+
+  private buildResourceLines(
+    accent: (text: string) => string,
+    dim: (text: string) => string,
+  ): string {
+    const entries: Array<{ path: string; auth: AuthRequirement; desc: string }> = [];
 
     const collect = (node: CommandNode, prefix: string) => {
       for (const [name, child] of node.children) {
         const fullPath = prefix ? `${prefix} ${name}` : name;
         if (child.command) {
-          entries.push({ path: fullPath, desc: child.command.description });
+          entries.push({
+            path: fullPath,
+            auth: child.command.auth,
+            desc: child.command.description,
+          });
         }
         if (child.children.size > 0) {
           collect(child, fullPath);
@@ -173,8 +203,7 @@ export class CommandRegistry {
     };
     collect(this.root, "");
 
-    const maxLen = Math.max(...entries.map((e) => e.path.length));
-    return entries.map((e) => `  ${a(e.path.padEnd(maxLen + 2))} ${d(e.desc)}`).join("\n");
+    return this.buildCommandLines(entries, accent, dim);
   }
 
   private buildFlagLines(
@@ -341,6 +370,7 @@ ${authFlagSections ? `${authFlagSections}\n\n` : ""}${b("Getting Help:")}
 
     out.write(`\n${cmd.description}\n`);
     out.write(`${b("Usage:")} ${prefix}${cmd.usageArgs ? ` ${cmd.usageArgs}` : ""}\n`);
+    out.write(`${b("Authentication:")} ${a(AUTH_LABELS[cmd.auth])}\n`);
     const flagEntries = [
       ...Object.entries(cmd.flags ?? {}),
       ...Object.entries(credentialFlagDefs(cmd)),
@@ -373,18 +403,25 @@ ${authFlagSections ? `${authFlagSections}\n\n` : ""}${b("Getting Help:")}
   }
 
   private printChildren(node: CommandNode, prefix: string, out: NodeJS.WriteStream): void {
-    const entries: Array<{ fullName: string; description: string }> = [];
-    const collect = (n: CommandNode, p: string) => {
-      for (const [name, child] of n.children) {
+    const entries: Array<{ path: string; auth: AuthRequirement; desc: string }> = [];
+    const collect = (currentNode: CommandNode, currentPath: string) => {
+      for (const [name, child] of currentNode.children) {
         if (child.command)
-          entries.push({ fullName: `${p} ${name}`, description: child.command.description });
-        if (child.children.size > 0) collect(child, `${p} ${name}`);
+          entries.push({
+            path: `${currentPath} ${name}`,
+            auth: child.command.auth,
+            desc: child.command.description,
+          });
+        if (child.children.size > 0) collect(child, `${currentPath} ${name}`);
       }
     };
     collect(node, prefix);
-    const maxLen = Math.max(...entries.map((e) => e.fullName.length));
-    for (const { fullName, description } of entries) {
-      out.write(`  ${this.accent(fullName.padEnd(maxLen), out)}  ${this.dim(description, out)}\n`);
-    }
+    out.write(
+      this.buildCommandLines(
+        entries,
+        (text) => this.accent(text, out),
+        (text) => this.dim(text, out),
+      ) + "\n",
+    );
   }
 }

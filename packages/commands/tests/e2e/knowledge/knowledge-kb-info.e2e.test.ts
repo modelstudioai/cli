@@ -25,7 +25,7 @@ describe("e2e: knowledge kb info", () => {
     expect(stderr).toMatch(/--index-id|Usage:/i);
   });
 
-  test("--dry-run 输出 list endpoint 与兜底策略说明", async () => {
+  test("--dry-run 输出 list endpoint (含 pipeline_id 过滤)", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_KB_INFO_ROUTES, [
       "knowledge",
       "info",
@@ -38,10 +38,9 @@ describe("e2e: knowledge kb info", () => {
       "json",
     ]);
     expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{ endpoint?: string; strategy?: string }>(stdout);
+    const data = parseStdoutJson<{ endpoint?: string }>(stdout);
     expect(data.endpoint).toMatch(/api\/v1\/indices\/rag\/index\/list/);
-    expect(data.endpoint).toMatch(/page_size=100/);
-    expect(data.strategy).toMatch(/paginate/i);
+    expect(data.endpoint).toMatch(/pipeline_id=idx_test/);
   });
 });
 

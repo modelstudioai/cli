@@ -23,39 +23,37 @@ const KB_INFO_FLAGS = {
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
-function indexListUrl(workspaceId: string, pageNumber: number): string {
+function indexDetailUrl(workspaceId: string, indexId: string): string {
   const url = new URL(ragEndpoint(workspaceId, RAG_PATHS.indexList));
-  url.searchParams.set("page_number", String(pageNumber));
-  url.searchParams.set("page_size", "100");
+  url.searchParams.set("pipeline_id", indexId);
+  url.searchParams.set("page_number", "1");
+  url.searchParams.set("page_size", "1");
   return url.toString();
 }
 
 /**
- * There is no dedicated detail API on the server, so fall back to paging
- * through index/list. If a detail API ships, only this function changes.
- * Also reused by kb delete for its confirmation summary.
+ * The index/list API now supports pipeline_id filtering, so a single
+ * request suffices instead of paginating. Reused by kb delete for its
+ * confirmation summary.
  */
 export async function fetchIndexDetail(
   client: Client,
   workspaceId: string,
   indexId: string,
 ): Promise<RagIndexRow> {
-  const maxPages = 10;
-  for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
-    const response = await client.requestJson<RagIndexListResponse>({
-      path: indexListUrl(workspaceId, pageNumber),
-      method: "GET",
-    });
-    const rows = response.data?.rows ?? [];
-    const match = rows.find((row) => row.id === indexId);
-    if (match) return match;
-    if (rows.length < 100) break; // reached the last page
+  const response = await client.requestJson<RagIndexListResponse>({
+    path: indexDetailUrl(workspaceId, indexId),
+    method: "GET",
+  });
+  const row = response.data?.rows?.[0];
+  if (!row) {
+    throw new BailianError(
+      `Knowledge base not found: ${indexId}`,
+      ExitCode.GENERAL,
+      "Check the id — list knowledge bases in this workspace to verify it.",
+    );
   }
-  throw new BailianError(
-    `Knowledge base not found: ${indexId}`,
-    ExitCode.GENERAL,
-    "Check the id — list knowledge bases in this workspace to verify it.",
-  );
+  return row;
 }
 
 function formatField(label: string, value: string | number | boolean | null | undefined): string {
@@ -68,7 +66,7 @@ export default defineCommand({
   usageArgs: "--index-id <id> [flags]",
   flags: KB_INFO_FLAGS,
   notes: [
-    "No dedicated detail API on the server yet — falls back to paginating the index list (up to 10 pages of 100).",
+    "Uses the index/list API with pipeline_id filtering to fetch a single knowledge base.",
     "Indexing settings are immutable; changing them requires recreating the knowledge base.",
   ],
   exampleArgs: ["--index-id idx-xxx --workspace-id ws-xxx"],
@@ -80,10 +78,8 @@ export default defineCommand({
     if (settings.dryRun) {
       emitResult(
         {
-          endpoint: indexListUrl(workspaceId, 1),
+          endpoint: indexDetailUrl(workspaceId, flags.indexId),
           request: null,
-          strategy:
-            "paginate index/list (page_size=100, up to 10 pages) to find --index-id; no dedicated detail API",
         },
         format,
       );

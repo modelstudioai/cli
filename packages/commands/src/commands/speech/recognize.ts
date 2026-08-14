@@ -12,6 +12,13 @@ import {
   stripUndefined,
   taskPath,
   speechRecognizePath,
+  resolveAsrApi,
+  buildAsrFlashRequest,
+  buildAsyncAsrLanguageFields,
+  collectAsrTranscriptionItems,
+  extractAsrFlashText,
+  type AsrApiRoute,
+  type AsrFlashFamily,
   type OutputFormat,
   type FlagsDef,
   type ParsedFlags,
@@ -27,8 +34,18 @@ const RECOGNIZE_FLAGS = {
     description: "Audio file URL or local file path (repeatable, max 100)",
     required: true,
   },
-  model: { type: "string", valueHint: "<model>", description: "Model ID (default: fun-asr)" },
-  language: { type: "string", valueHint: "<lang>", description: "Language hint (e.g. zh, en, ja)" },
+  model: {
+    type: "string",
+    valueHint: "<model>",
+    description:
+      "Model ID (default: fun-asr). Async: fun-asr / *-filetrans / paraformer-*; sync: qwen3-asr-flash* / fun-asr-flash* / qwen-audio-*-asr-flash",
+  },
+  language: {
+    type: "string",
+    valueHint: "<lang>",
+    description:
+      "Language hint (e.g. zh, en, ja). Classic async/input-audio: language_hints; qwen3-filetrans: language; qwen3 sync: asr_options.language",
+  },
   diarization: { type: "switch", description: "Enable automatic speaker diarization" },
   speakerCount: {
     type: "number",
@@ -55,8 +72,33 @@ const RECOGNIZE_FLAGS = {
 } satisfies FlagsDef;
 type RecognizeFlags = ParsedFlags<typeof RECOGNIZE_FLAGS>;
 
+function assertSyncFlashFlagsAllowed(
+  flags: RecognizeFlags,
+  model: string,
+  flashFamily: AsrFlashFamily,
+): void {
+  const unsupported: string[] = [];
+  if (flags.diarization === true) unsupported.push("--diarization");
+  if (flags.speakerCount !== undefined) unsupported.push("--speaker-count");
+  // qwen3 sync Flash does not use vocabulary_id; input-audio Flash (fun-asr-flash* / qwen-audio-*-asr-flash) does
+  if (flashFamily === "qwen3" && flags.vocabularyId !== undefined) {
+    unsupported.push("--vocabulary-id");
+  }
+  if (flags.channelId !== undefined) unsupported.push("--channel-id");
+  if (flags.async === true) unsupported.push("--async");
+  if (flags.pollInterval !== undefined) unsupported.push("--poll-interval");
+
+  if (unsupported.length > 0) {
+    throw new BailianError(
+      `Model "${model}" uses sync Flash ASR and does not support: ${unsupported.join(", ")}.\n` +
+        `Hint: Use an async filetrans model (e.g. fun-asr, qwen3-asr-flash-filetrans) for those flags.`,
+      ExitCode.USAGE,
+    );
+  }
+}
+
 export default defineCommand({
-  description: "Recognize speech from audio files (FunAudio-ASR)",
+  description: "Recognize speech from audio files (FunAudio-ASR / Qwen-ASR Flash)",
   auth: "apiKey",
   usageArgs: "--url <audio-url> [flags]",
   flags: RECOGNIZE_FLAGS,
@@ -68,6 +110,7 @@ export default defineCommand({
     "--url https://example.com/audio.mp3 --vocabulary-id vocab-abc123",
     "--url https://example.com/audio.mp3 --out result.json",
     "--url https://example.com/audio.mp3 --async --quiet",
+    "--url https://example.com/audio.mp3 --model qwen-audio-3.0-asr-flash --language en",
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
@@ -90,22 +133,70 @@ export default defineCommand({
     }
 
     const model = flags.model || "fun-asr";
+    const route = resolveAsrApi(model);
+    if (route.kind === "unsupported") {
+      throw new BailianError(
+        route.unsupportedReason ?? `Unsupported ASR model: ${model}`,
+        ExitCode.USAGE,
+      );
+    }
+
+    if (route.kind === "sync-flash") {
+      assertSyncFlashFlagsAllowed(flags, model, route.flashFamily!);
+      if (rawUrls.length !== 1) {
+        throw new BailianError(
+          `Model "${model}" is a sync Flash ASR model and accepts exactly one --url (got ${rawUrls.length}).\n` +
+            `Hint: Pass a single audio URL, or use an async filetrans model for batch files.`,
+          ExitCode.USAGE,
+        );
+      }
+    }
+    if (
+      route.kind === "async-filetrans" &&
+      route.asyncInputStyle === "file_url" &&
+      rawUrls.length !== 1
+    ) {
+      throw new BailianError(
+        `Model "${model}" accepts exactly one --url (got ${rawUrls.length}).\n` +
+          "Hint: qwen3-asr-flash-filetrans* requires a single file_url.",
+        ExitCode.USAGE,
+      );
+    }
+
     const format = detectOutputFormat(settings.output);
 
     // Auto-upload local files in parallel
-    const resolvedUrls = await Promise.all(rawUrls.map((u) => ctx.client.uploadFile(u, model)));
+    const resolvedUrls = await Promise.all(rawUrls.map((url) => ctx.client.uploadFile(url, model)));
+
+    if (route.kind === "sync-flash") {
+      await handleSyncFlashMode(
+        ctx.client,
+        settings,
+        flags,
+        format,
+        model,
+        route,
+        resolvedUrls[0]!,
+      );
+      return;
+    }
+
     const channelId = flags.channelId;
-    const language = flags.language;
     const vocabularyId = flags.vocabularyId;
+    const languageFields = buildAsyncAsrLanguageFields(
+      route.asyncLanguageStyle ?? "language_hints",
+      flags.language,
+    );
 
     const body: DashScopeASRRequest = {
       model,
-      input: {
-        file_urls: resolvedUrls,
-      },
+      input:
+        route.asyncInputStyle === "file_url"
+          ? { file_url: resolvedUrls[0]! }
+          : { file_urls: resolvedUrls },
       parameters: {
         channel_id: channelId !== undefined ? [channelId] : [0],
-        language_hints: language ? [language] : undefined,
+        ...languageFields,
         diarization_enabled: diarization ? true : undefined,
         speaker_count: speakerCount,
         vocabulary_id: vocabularyId,
@@ -116,7 +207,7 @@ export default defineCommand({
     stripUndefined(body.parameters as Record<string, unknown>);
 
     if (settings.dryRun) {
-      emitResult({ request: body, mode: "async" }, format);
+      emitResult({ request: body, mode: "async", path: speechRecognizePath() }, format);
       return;
     }
 
@@ -127,6 +218,55 @@ export default defineCommand({
     await handleAsyncMode(ctx.client, settings, body, flags, format, resolvedUrls.length);
   },
 });
+
+async function handleSyncFlashMode(
+  client: Client,
+  settings: Settings,
+  flags: RecognizeFlags,
+  format: OutputFormat,
+  model: string,
+  route: AsrApiRoute,
+  audioUrl: string,
+): Promise<void> {
+  const flashFamily = route.flashFamily as AsrFlashFamily;
+  const body = buildAsrFlashRequest({
+    model,
+    audioUrl,
+    language: flags.language,
+    vocabularyId: flags.vocabularyId,
+    flashFamily,
+  });
+
+  if (settings.dryRun) {
+    emitResult({ request: body, mode: "sync", path: route.path }, format);
+    return;
+  }
+
+  if (!settings.quiet) {
+    process.stderr.write(`[Model: ${model}] [Mode: sync] [Files: 1]\n`);
+  }
+
+  const response = await client.requestJson<Record<string, unknown>>({
+    path: route.path,
+    method: "POST",
+    headers: { "X-DashScope-SSE": "disable" },
+    body,
+  });
+
+  const text = extractAsrFlashText(response, flashFamily);
+  if (text) {
+    process.stdout.write(text.endsWith("\n") ? text : `${text}\n`);
+  } else {
+    emitBare(JSON.stringify(response));
+  }
+
+  if (flags.out) {
+    writeFileSync(flags.out, JSON.stringify(response, null, 2) + "\n");
+    if (!settings.quiet) {
+      process.stderr.write(`Full result saved to: ${flags.out}\n`);
+    }
+  }
+}
 
 async function handleAsyncMode(
   client: Client,
@@ -160,16 +300,16 @@ async function handleAsyncMode(
     url: pollUrl,
     intervalSec: pollInterval,
     timeoutSec: settings.timeout,
-    isComplete: (d) => (d as DashScopeASRTaskResult).output.task_status === "SUCCEEDED",
-    isFailed: (d) => (d as DashScopeASRTaskResult).output.task_status === "FAILED",
-    getStatus: (d) => (d as DashScopeASRTaskResult).output.task_status,
-    getErrorMessage: (d) => {
-      const o = (d as DashScopeASRTaskResult).output;
-      return (o as unknown as Record<string, unknown>).message as string | undefined;
+    isComplete: (data) => (data as DashScopeASRTaskResult).output.task_status === "SUCCEEDED",
+    isFailed: (data) => (data as DashScopeASRTaskResult).output.task_status === "FAILED",
+    getStatus: (data) => (data as DashScopeASRTaskResult).output.task_status,
+    getErrorMessage: (data) => {
+      const output = (data as DashScopeASRTaskResult).output;
+      return (output as unknown as Record<string, unknown>).message as string | undefined;
     },
   });
 
-  const results = result.output.results ?? [];
+  const results = collectAsrTranscriptionItems(result.output);
 
   if (results.length === 0) {
     emitResult({ task_id: taskId, status: result.output.task_status }, format);
@@ -179,12 +319,14 @@ async function handleAsyncMode(
   // Collect all transcription data for --out
   const allTransData: Record<string, unknown>[] = [];
 
-  for (let i = 0; i < results.length; i++) {
-    const subResult = results[i]!;
+  for (let index = 0; index < results.length; index++) {
+    const subResult = results[index]!;
     const isMulti = fileCount > 1;
 
     if (isMulti) {
-      process.stdout.write(`=== [${i + 1}/${results.length}] ${subResult.file_url ?? ""} ===\n`);
+      process.stdout.write(
+        `=== [${index + 1}/${results.length}] ${subResult.file_url ?? ""} ===\n`,
+      );
     }
 
     if (subResult.subtask_status === "FAILED") {

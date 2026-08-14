@@ -7,30 +7,31 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                    | Description                                                                                                                     |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `bl finetune audio create` | Create an audio TTS model fine-tune job (sft-lora)                                                                              |
-| `bl finetune cancel`       | Cancel a running fine-tune job                                                                                                  |
-| `bl finetune capability`   | Query fine-tune training capability — by model (which training types it supports) or by training type (which models support it) |
-| `bl finetune checkpoints`  | List checkpoints produced by a fine-tune job                                                                                    |
-| `bl finetune delete`       | Delete a fine-tune job record                                                                                                   |
-| `bl finetune export`       | Publish a checkpoint as a deployable model                                                                                      |
-| `bl finetune get`          | Get details of a single fine-tune job                                                                                           |
-| `bl finetune image create` | Create an image generation model fine-tune job (sft-lora)                                                                       |
-| `bl finetune list`         | List fine-tune jobs                                                                                                             |
-| `bl finetune logs`         | Fetch training logs for a fine-tune job                                                                                         |
-| `bl finetune text create`  | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                   |
-| `bl finetune watch`        | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                      |
+| Command                    | Authentication | Description                                                                                                                     |
+| -------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `bl finetune audio create` | API Key        | Create an audio TTS model fine-tune job (sft-lora)                                                                              |
+| `bl finetune cancel`       | API Key        | Cancel a running fine-tune job                                                                                                  |
+| `bl finetune capability`   | No Auth        | Query fine-tune training capability — by model (which training types it supports) or by training type (which models support it) |
+| `bl finetune checkpoints`  | API Key        | List checkpoints produced by a fine-tune job                                                                                    |
+| `bl finetune delete`       | API Key        | Delete a fine-tune job record                                                                                                   |
+| `bl finetune export`       | API Key        | Publish a checkpoint as a deployable model                                                                                      |
+| `bl finetune get`          | API Key        | Get details of a single fine-tune job                                                                                           |
+| `bl finetune image create` | API Key        | Create an image generation model fine-tune job (sft-lora)                                                                       |
+| `bl finetune list`         | API Key        | List fine-tune jobs                                                                                                             |
+| `bl finetune logs`         | API Key        | Fetch training logs for a fine-tune job                                                                                         |
+| `bl finetune text create`  | API Key        | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                   |
+| `bl finetune watch`        | API Key        | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                      |
 
 ## Command details
 
 ### `bl finetune audio create`
 
-| Field           | Value                                                                                                                               |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `finetune audio create`                                                                                                             |
-| **Description** | Create an audio TTS model fine-tune job (sft-lora)                                                                                  |
-| **Usage**       | `bl finetune audio create --model <model> --datasets <id\|path> [--validations <id\|path>] [--model-name <name>] [--suffix <text>]` |
+| Field              | Value                                                                                                                               |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `finetune audio create`                                                                                                             |
+| **Description**    | Create an audio TTS model fine-tune job (sft-lora)                                                                                  |
+| **Authentication** | API Key                                                                                                                             |
+| **Usage**          | `bl finetune audio create --model <model> --datasets <id\|path> [--validations <id\|path>] [--model-name <name>] [--suffix <text>]` |
 
 #### Flags
 
@@ -79,11 +80,12 @@ bl finetune audio create --model cosyvoice-v3-flash --datasets ./audio.zip --dry
 
 ### `bl finetune cancel`
 
-| Field           | Value                              |
-| --------------- | ---------------------------------- |
-| **Name**        | `finetune cancel`                  |
-| **Description** | Cancel a running fine-tune job     |
-| **Usage**       | `bl finetune cancel --job-id <id>` |
+| Field              | Value                              |
+| ------------------ | ---------------------------------- |
+| **Name**           | `finetune cancel`                  |
+| **Description**    | Cancel a running fine-tune job     |
+| **Authentication** | API Key                            |
+| **Usage**          | `bl finetune cancel --job-id <id>` |
 
 #### Flags
 
@@ -110,11 +112,12 @@ bl finetune cancel --job-id ft-xxx --dry-run
 
 ### `bl finetune capability`
 
-| Field           | Value                                                                                                                           |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `finetune capability`                                                                                                           |
-| **Description** | Query fine-tune training capability — by model (which training types it supports) or by training type (which models support it) |
-| **Usage**       | `bl finetune capability --model <m> \| --training-type <t>`                                                                     |
+| Field              | Value                                                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `finetune capability`                                                                                                           |
+| **Description**    | Query fine-tune training capability — by model (which training types it supports) or by training type (which models support it) |
+| **Authentication** | No Auth                                                                                                                         |
+| **Usage**          | `bl finetune capability --model <m> \| --training-type <t>`                                                                     |
 
 #### Flags
 
@@ -150,11 +153,12 @@ bl finetune capability --training-type sft --quiet
 
 ### `bl finetune checkpoints`
 
-| Field           | Value                                        |
-| --------------- | -------------------------------------------- |
-| **Name**        | `finetune checkpoints`                       |
-| **Description** | List checkpoints produced by a fine-tune job |
-| **Usage**       | `bl finetune checkpoints --job-id <id>`      |
+| Field              | Value                                        |
+| ------------------ | -------------------------------------------- |
+| **Name**           | `finetune checkpoints`                       |
+| **Description**    | List checkpoints produced by a fine-tune job |
+| **Authentication** | API Key                                      |
+| **Usage**          | `bl finetune checkpoints --job-id <id>`      |
 
 #### Flags
 
@@ -181,11 +185,12 @@ bl finetune checkpoints --job-id ft-xxx --output json
 
 ### `bl finetune delete`
 
-| Field           | Value                              |
-| --------------- | ---------------------------------- |
-| **Name**        | `finetune delete`                  |
-| **Description** | Delete a fine-tune job record      |
-| **Usage**       | `bl finetune delete --job-id <id>` |
+| Field              | Value                              |
+| ------------------ | ---------------------------------- |
+| **Name**           | `finetune delete`                  |
+| **Description**    | Delete a fine-tune job record      |
+| **Authentication** | API Key                            |
+| **Usage**          | `bl finetune delete --job-id <id>` |
 
 #### Flags
 
@@ -212,11 +217,12 @@ bl finetune delete --job-id ft-xxx --dry-run
 
 ### `bl finetune export`
 
-| Field           | Value                                                                      |
-| --------------- | -------------------------------------------------------------------------- |
-| **Name**        | `finetune export`                                                          |
-| **Description** | Publish a checkpoint as a deployable model                                 |
-| **Usage**       | `bl finetune export --job-id <id> --checkpoint <name> --model-name <name>` |
+| Field              | Value                                                                      |
+| ------------------ | -------------------------------------------------------------------------- |
+| **Name**           | `finetune export`                                                          |
+| **Description**    | Publish a checkpoint as a deployable model                                 |
+| **Authentication** | API Key                                                                    |
+| **Usage**          | `bl finetune export --job-id <id> --checkpoint <name> --model-name <name>` |
 
 #### Flags
 
@@ -242,11 +248,12 @@ bl finetune export --job-id ft-xxx --checkpoint ckpt-3 --model-name my-qwen-sft
 
 ### `bl finetune get`
 
-| Field           | Value                                 |
-| --------------- | ------------------------------------- |
-| **Name**        | `finetune get`                        |
-| **Description** | Get details of a single fine-tune job |
-| **Usage**       | `bl finetune get --job-id <id>`       |
+| Field              | Value                                 |
+| ------------------ | ------------------------------------- |
+| **Name**           | `finetune get`                        |
+| **Description**    | Get details of a single fine-tune job |
+| **Authentication** | API Key                               |
+| **Usage**          | `bl finetune get --job-id <id>`       |
 
 #### Flags
 
@@ -268,11 +275,12 @@ bl finetune get --job-id ft-xxx --output json
 
 ### `bl finetune image create`
 
-| Field           | Value                                                                                                                                                                                      |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Name**        | `finetune image create`                                                                                                                                                                    |
-| **Description** | Create an image generation model fine-tune job (sft-lora)                                                                                                                                  |
-| **Usage**       | `bl finetune image create --model <model> --datasets <id\|path> [--validations <id\|path>] [--model-name <name>] [--suffix <text>] [--generation-type <t2i\|i2i>] [--learning-rate <str>]` |
+| Field              | Value                                                                                                                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Name**           | `finetune image create`                                                                                                                                                                    |
+| **Description**    | Create an image generation model fine-tune job (sft-lora)                                                                                                                                  |
+| **Authentication** | API Key                                                                                                                                                                                    |
+| **Usage**          | `bl finetune image create --model <model> --datasets <id\|path> [--validations <id\|path>] [--model-name <name>] [--suffix <text>] [--generation-type <t2i\|i2i>] [--learning-rate <str>]` |
 
 #### Flags
 
@@ -329,11 +337,12 @@ bl finetune image create --model wan2.7-image-pro --datasets ./images.zip --dry-
 
 ### `bl finetune list`
 
-| Field           | Value                                                            |
-| --------------- | ---------------------------------------------------------------- |
-| **Name**        | `finetune list`                                                  |
-| **Description** | List fine-tune jobs                                              |
-| **Usage**       | `bl finetune list [--page <n>] [--page-size <n>] [--status <s>]` |
+| Field              | Value                                                            |
+| ------------------ | ---------------------------------------------------------------- |
+| **Name**           | `finetune list`                                                  |
+| **Description**    | List fine-tune jobs                                              |
+| **Authentication** | API Key                                                          |
+| **Usage**          | `bl finetune list [--page <n>] [--page-size <n>] [--status <s>]` |
 
 #### Flags
 
@@ -361,11 +370,12 @@ bl finetune list --page-size 20 --output json
 
 ### `bl finetune logs`
 
-| Field           | Value                                                                                             |
-| --------------- | ------------------------------------------------------------------------------------------------- |
-| **Name**        | `finetune logs`                                                                                   |
-| **Description** | Fetch training logs for a fine-tune job                                                           |
-| **Usage**       | `bl finetune logs --job-id <id> [--page <n>] [--page-size <n>] [--search <keyword>] [--tail <n>]` |
+| Field              | Value                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------- |
+| **Name**           | `finetune logs`                                                                                   |
+| **Description**    | Fetch training logs for a fine-tune job                                                           |
+| **Authentication** | API Key                                                                                           |
+| **Usage**          | `bl finetune logs --job-id <id> [--page <n>] [--page-size <n>] [--search <keyword>] [--tail <n>]` |
 
 #### Flags
 
@@ -407,11 +417,12 @@ bl finetune logs --job-id ft-xxx --search checkpoint --tail 5
 
 ### `bl finetune text create`
 
-| Field           | Value                                                                                                                                                                                                                                                                           |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `finetune text create`                                                                                                                                                                                                                                                          |
-| **Description** | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                                                                                                                                                                   |
-| **Usage**       | `bl finetune text create --model <model> --datasets <id\|path,...> [--validations <id\|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft\|sft-lora\|dpo\|dpo-lora\|cpt>]` |
+| Field              | Value                                                                                                                                                                                                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `finetune text create`                                                                                                                                                                                                                                                          |
+| **Description**    | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                                                                                                                                                                   |
+| **Authentication** | API Key                                                                                                                                                                                                                                                                         |
+| **Usage**          | `bl finetune text create --model <model> --datasets <id\|path,...> [--validations <id\|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft\|sft-lora\|dpo\|dpo-lora\|cpt>]` |
 
 #### Flags
 
@@ -486,11 +497,12 @@ bl finetune text create --model qwen3-8b --datasets file-xxx --dry-run
 
 ### `bl finetune watch`
 
-| Field           | Value                                                                                                      |
-| --------------- | ---------------------------------------------------------------------------------------------------------- |
-| **Name**        | `finetune watch`                                                                                           |
-| **Description** | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal. |
-| **Usage**       | `bl finetune watch --job-id <id> [--follow] [--interval <sec>] [--poll-timeout <sec>]`                     |
+| Field              | Value                                                                                                      |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| **Name**           | `finetune watch`                                                                                           |
+| **Description**    | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal. |
+| **Authentication** | API Key                                                                                                    |
+| **Usage**          | `bl finetune watch --job-id <id> [--follow] [--interval <sec>] [--poll-timeout <sec>]`                     |
 
 #### Flags
 
