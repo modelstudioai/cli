@@ -26,7 +26,7 @@
 5. If the installed `bl` is **older** than the latest npm version, **STOP** the current task and **ask the user** (report skill version, installed CLI version, and npm latest):
    > A newer version of bl is available (current: X.Y.Z, latest: A.B.C). Upgrade before continuing?
    - **Do NOT auto-upgrade silently** — the user decides.
-   - If the user agrees: run `bl update`, then continue. (`bl update` upgrades `bailian-cli` via npm and, on success, also runs `bl skill init` to keep skills in lockstep across all agent apps.)
+   - If the user agrees: run `bl update`, then continue. (`bl update` uses the detected install channel and, on success, also runs `bl skill init` to keep skills in lockstep across all agent apps.)
    - If the user declines: continue with the current version and note it in the summary.
    - If `npm view` / `bl update` fails (offline, registry blocked, permission): continue with the current `bl` and tell the user it could not be updated.
 6. Only proceed with the user's actual task after the above is resolved.
