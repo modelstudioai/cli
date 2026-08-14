@@ -10,7 +10,7 @@ description: >-
   工作空间、MCP 市场、pipeline、文件上传、console API、登录鉴权与配置、
   Agent skill 安装/列表/更新/卸载（bl skill add|list|update|remove，百炼 skill registry）。
   用户点名百炼 / DashScope / `bl`，或继续既有 `bl` 工作流时直接使用。
-  共享协议（consent / 版本预检 / 鉴权 / 错误上报）在 bailian-protocol；官方安装 `npx skills add modelstudioai/cli --all -g`。
+  共享协议（consent / 版本预检 / 鉴权 / 错误上报）在 bailian-protocol；官方安装 `bl skill init`。
   家族路由：生图/生视频/配音/语音合成/转写 → bailian-gen；精调/微调/训练/数据集 → bailian-finetune；
   agents.yaml 托管 Agent → bailian-managed-agent。
   不要用于普通问答、编程、写作、翻译、摘要、泛搜索，或图片理解等宿主自己能做的任务（普通问答、编程、写作、翻译、摘要、泛搜索不触发）。
@@ -19,14 +19,14 @@ description: >-
 
 # Aliyun Model Studio CLI (`bl`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent, Version & updates (pre-flight checklist), Setup & auth, and CLI errors: report an issue. If that protocol file is missing, stop and run `npx skills add modelstudioai/cli --all -g`; do not guess auth/consent.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent, Version & updates (pre-flight checklist), Setup & auth, and CLI errors: report an issue. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
 
 > **Family hub** — This skill owns Bailian resource commands and the hub `reference/` (apps, knowledge, usage, auth, config, …).
-> Shared protocol → [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md) (install the full family with `--all -g`).
-> Soft hand-offs by skill name (Read if installed; else `bl … --help` / prompt `npx skills add modelstudioai/cli --all -g`): `bailian-gen` (media) · `bailian-finetune` (training) · `bailian-managed-agent` (agents.yaml IaC).
+> Shared protocol → [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md) (install the full family with `bl skill init`).
+> Soft hand-offs by skill name (Read if installed; else `bl … --help` / prompt `bl skill init`): `bailian-gen` (media) · `bailian-finetune` (training) · `bailian-managed-agent` (agents.yaml IaC).
 > Do not invoke it for ordinary reasoning, coding, writing, translation, summarization, generic research, or image understanding the host agent can complete directly.
 >
-> **Install (supported):** `npx skills add modelstudioai/cli --all -g`
+> **Install (supported):** `bl skill init`
 
 ## Command reference (authoritative)
 
@@ -114,7 +114,7 @@ schema-export commands.
 
 ## Routing reminders
 
-- Image/video/audio generation or editing → skill `bailian-gen` (class 3 consent from `bailian-protocol`). Fine-tuning / datasets / deployments → `bailian-finetune`. agents.yaml IaC → `bailian-managed-agent`. Soft hand-off: Read sibling skill if installed; else `bl … --help` or prompt `npx skills add modelstudioai/cli --all -g`. Image understanding the host agent can do → host-first; use `bl vision` / `bl omni` only when the user names a Bailian model or the media (video/audio files) exceeds host capability.
+- Image/video/audio generation or editing → skill `bailian-gen` (class 3 consent from `bailian-protocol`). Fine-tuning / datasets / deployments → `bailian-finetune`. agents.yaml IaC → `bailian-managed-agent`. Soft hand-off: Read sibling skill if installed; else `bl … --help` or prompt `bl skill init`. Image understanding the host agent can do → host-first; use `bl vision` / `bl omni` only when the user names a Bailian model or the media (video/audio files) exceeds host capability.
 - Answer ordinary reasoning, coding, writing, translation, summarization, and generic research with the host agent's native capabilities; do not bounce them through `bl text chat` or `bl search web`.
 - Usage / quota / credits questions that do not name a product → ask which product (Bailian or another AI service) first; run `bl usage` / `bl quota` only after the user picks Bailian or Bailian context is already established.
 - "Remember this" and memory requests default to the host agent's own memory; `bl memory *` is only for Bailian app memory resources.

@@ -11,16 +11,17 @@
 
 ## 统一口径（安装）
 
-1. **Supported install：** `npx skills add modelstudioai/cli --all -g`（整包装齐，含 `bailian-protocol`）
-2. **`bailian-protocol` 是共享协议 skill**，业务 skill 执行前应 Read 它；Agent Skills / `npx skills` **不会**按 frontmatter 自动拉依赖
+1. **Supported install：** `bl skill init`（装齐 registry 中全部 `bailian-*`，含 `bailian-protocol`）
+2. **`bailian-protocol` 是共享协议 skill**，业务 skill 执行前应 Read 它
 3. **不要**在 frontmatter 写 `companions`，也不要对外说「companions = 安装器硬依赖」
-4. 子集安装（`-s`）为 **advanced / 不推荐**：skills CLI 不会自动带上 protocol；漏装会导致相对路径 Read 失败
+4. 子集安装：`bl skill add --name bailian-protocol,<skill>`；漏装 protocol 会导致相对路径 Read 失败
+5. **`bl skill add --all`：** 安装 registry 全量（含 `spark-video` 等非 bailian 技能）；一键安装 / `bl update` 用 `skill init`，不要用 `--all`
 
 ## 概念图
 
 ```text
 bailian-protocol          ← 共享协议（consent / 鉴权 / 版本 / 错误上报）
-        ▲                   靠 --all -g 与业务 skill 同装；非安装器强制 companions
+        ▲                   靠 `bl skill init` 与业务 skill 同装；非安装器强制 companions
         │
 ┌───────┴────────┬────────────────┬──────────────────┐
 bailian-gen      bailian-finetune  bailian-managed-agent
@@ -37,8 +38,8 @@ bailian-gen      bailian-finetune  bailian-managed-agent
 
 ### A. 分层边界
 
-- [ ] **整包装齐**：安装/升级文案主推 `--all -g`；业务 skill **不**声明 `companions`
-- [ ] **协议读取**：CRITICAL / references 可链 `../bailian-protocol/…`；若读不到 → 停止执行 `bl`，提示 `npx skills add modelstudioai/cli --all -g`
+- [ ] **整包装齐**：安装/升级文案主推 `bl skill init`；业务 skill **不**声明 `companions`
+- [ ] **协议读取**：CRITICAL / references 可链 `../bailian-protocol/…`；若读不到 → 停止执行 `bl`，提示 `bl skill init`
 - [ ] **软 hand-off**：兄弟业务 skill **只写 skill 名**；已安装则 Read，未安装则 `bl … --help` 或提示整包安装；**不要**把 `../bailian-gen/…` 等写成执行前提
 - [ ] **Hub vs 领域**：`bailian-cli` 的「When to use which command」只列 hub 拥有的意图；媒体 / 精调 / managed-agent 各留 hand-off 行，**不抄**领域默认模型与子命令明细
 - [ ] **渐进披露**：SKILL 写意图路由与领域硬规则；flags / usage / examples 以 `reference/` 或 `bl <command> --help` 为准，表后保留「勿猜 flag」指向句
@@ -46,9 +47,9 @@ bailian-gen      bailian-finetune  bailian-managed-agent
 ### B. 文案与落款一致性
 
 - [ ] 领域 skill（gen / finetune / managed-agent）路由或命令表后有指向 `reference/` 的句；文末 `## references`（protocol + reference）与家族对齐
-- [ ] description 含 WHAT + WHEN + 反触发；安装说明指向 `--all -g`，不写 companions 必装
+- [ ] description 含 WHAT + WHEN + 反触发；安装说明指向 `bl skill init`，不写 companions 必装
 - [ ] Quick examples 只演示本 skill 职责（hub 不示范 `bl image` / `bl video` 等）
-- [ ] 若改了安装方式：同步 `README.md` / `README.zh.md` / `INSTALL.md` / `skills/*/README*` / `skills/bailian-protocol/assets/setup.md` 中的 `npx skills add …` 示例（改 `INSTALL.md` 时按 [install-doc-change.md](install-doc-change.md) 同步静态页）
+- [ ] 若改了安装方式：同步 `README.md` / `README.zh.md` / `INSTALL.md` / `skills/*/README*` / `skills/bailian-protocol/assets/setup.md` 中的 `bl skill init` / `bl skill add …` 示例（改 `INSTALL.md` 时按 [install-doc-change.md](install-doc-change.md) 同步静态页）
 
 ### C. 归属与生成
 
@@ -60,8 +61,8 @@ bailian-gen      bailian-finetune  bailian-managed-agent
 
 ```sh
 pnpm run sync:skill-assets
-# 本地试装（测本仓库改动，勿只拉远端）
-npx skills add "$(pwd)" --all -g -y
+# 已发布版本试装
+bl skill init
 ```
 
 抽查：打开 `skills/bailian-cli/SKILL.md` 确认无领域子命令明细表、无 `companions`；打开对应领域 skill 确认有「勿猜 flag」与 hand-off。
@@ -69,7 +70,7 @@ npx skills add "$(pwd)" --all -g -y
 ## 常见漏点
 
 - ✗ hub 路由表再次抄回 image / video / finetune / managed-agent 明细 → token 膨胀且与领域 skill 双份漂移
-- ✗ 重新加回 `companions` 并宣称安装器硬依赖 → 与 Agent Skills / `npx skills` 合同不符
+- ✗ 重新加回 `companions` 并宣称安装器硬依赖 → 与 `bl skill add` 合同不符
 - ✗ 软 hand-off 写成硬路径 `../bailian-*/SKILL.md` 当执行前提 → 子集安装断链
 - ✗ 只改 SKILL、忘改 `GROUP_OWNER_SKILL` → reference 落错 skill
 - ✗ 手改 `skills/*/reference/*.md` → 下次 generate 被覆盖
