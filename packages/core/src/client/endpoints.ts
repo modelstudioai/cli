@@ -6,6 +6,11 @@ export function chatPath(): string {
   return "/compatible-mode/v1/chat/completions";
 }
 
+// ---- Responses (OpenAI Compatible) ----
+export function responsesPath(): string {
+  return "/compatible-mode/v1/responses";
+}
+
 // ---- Image Generation (DashScope) ----
 /** Async image API used by wan2.6-t2i / wan2.6-image (T2I) and similar message-format models. */
 export function imagePath(): string {
