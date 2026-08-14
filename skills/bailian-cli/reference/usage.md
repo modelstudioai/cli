@@ -7,13 +7,13 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command               | Description                                                                                |
-| --------------------- | ------------------------------------------------------------------------------------------ |
-| `bl usage free`       | Query free-tier quota for models (all models if --model is omitted)                        |
-| `bl usage freetier`   | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable |
-| `bl usage stats`      | Query model usage statistics                                                               |
-| `bl usage summary`    | Show a unified usage summary: free-tier quota and recent usage overview                    |
-| `bl usage token-plan` | Show Token Plan quota usage                                                                |
+| Command               | Authentication | Description                                                                                |
+| --------------------- | -------------- | ------------------------------------------------------------------------------------------ |
+| `bl usage free`       | Console        | Query free-tier quota for models (all models if --model is omitted)                        |
+| `bl usage freetier`   | Console        | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable |
+| `bl usage stats`      | Console        | Query model usage statistics                                                               |
+| `bl usage summary`    | Console        | Show a unified usage summary: free-tier quota and recent usage overview                    |
+| `bl usage token-plan` | Console        | Show Token Plan quota usage                                                                |
 
 ## Command details
 
@@ -207,11 +207,12 @@ bl usage summary --output json
 
 ### `bl usage token-plan`
 
-| Field           | Value                         |
-| --------------- | ----------------------------- |
-| **Name**        | `usage token-plan`            |
-| **Description** | Show Token Plan quota usage   |
-| **Usage**       | `bl usage token-plan [flags]` |
+| Field              | Value                         |
+| ------------------ | ----------------------------- |
+| **Name**           | `usage token-plan`            |
+| **Description**    | Show Token Plan quota usage   |
+| **Authentication** | Console                       |
+| **Usage**          | `bl usage token-plan [flags]` |
 
 #### Flags
 

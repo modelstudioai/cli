@@ -15,6 +15,8 @@ import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import type { HttpDeps } from "./http.ts";
 import { trackingHeaders } from "./headers.ts";
+import { McpSseClient } from "./mcp-sse.ts";
+import { parseSSE } from "./stream.ts";
 
 // ---- JSON-RPC 2.0 Types ----
 
@@ -27,7 +29,7 @@ interface JsonRpcRequest {
 
 interface JsonRpcResponse {
   jsonrpc: "2.0";
-  id: number;
+  id?: number | string | null;
   result?: unknown;
   error?: { code: number; message: string; data?: unknown };
 }
@@ -59,6 +61,101 @@ export interface McpToolResult {
  */
 export function bailianMcpPath(serverCode: string): string {
   return `/api/v1/mcps/${serverCode}/mcp`;
+}
+
+/** Classic SSE path: `/api/v1/mcps/<serverCode>/sse`. */
+export function bailianMcpSsePath(serverCode: string): string {
+  return `/api/v1/mcps/${serverCode}/sse`;
+}
+
+/**
+ * True when Streamable HTTP is unsupported and classic SSE fallback should be tried.
+ * Anchored to HTTP wrapper text only (not JSON-RPC / nested copies). Bailian 404 excluded.
+ */
+export function isStreamableHttpUnsupported(error: unknown): boolean {
+  if (!(error instanceof BailianError)) return false;
+  return /^MCP request failed:\s*405\b/i.test(error.message);
+}
+
+/**
+ * SSE fallback for `--url` (official backwards-compat: same URL, HTTP 405/404 then GET SSE).
+ */
+export function isUrlOverrideSseFallbackCandidate(error: unknown): boolean {
+  if (!(error instanceof BailianError)) return false;
+  return /^MCP request failed:\s*(405|404)\b/i.test(error.message);
+}
+
+export type McpConnectedClient = {
+  initialize(): Promise<void>;
+  listTools(): Promise<McpTool[]>;
+  callTool(name: string, args: Record<string, unknown>): Promise<McpToolResult>;
+  close?(): void;
+};
+
+export type ConnectBailianMcpOptions = {
+  deps: HttpDeps;
+  authToken: string | undefined;
+  /** Full Streamable HTTP URL (/mcp). */
+  httpUrl: string;
+  /** Full classic SSE URL (/sse). */
+  sseUrl: string;
+  serverCode: string;
+  /**
+   * Explicit `--url` override: try Streamable on that URL first;
+   * on 405/404 fall back to classic SSE on the same URL.
+   */
+  urlOverride?: string;
+};
+
+/**
+ * Connect via Streamable HTTP first; on 405 (except WebSearch), fall back to SSE.
+ * `--url` uses the same URL for Streamable then classic SSE (official backwards-compat).
+ * For WebSearch, rethrow the original error so commands can attach a re-activate hint.
+ */
+export async function connectBailianMcpWithFallback(
+  options: ConnectBailianMcpOptions,
+): Promise<{ client: McpConnectedClient; url: string }> {
+  const { deps, authToken, httpUrl, sseUrl, serverCode, urlOverride } = options;
+
+  if (urlOverride) {
+    const httpClient = new McpClient(deps, urlOverride, authToken);
+    try {
+      await httpClient.initialize();
+      return { client: httpClient, url: urlOverride };
+    } catch (error) {
+      if (!isUrlOverrideSseFallbackCandidate(error)) {
+        throw error;
+      }
+    }
+
+    const sseClient = new McpSseClient(deps, urlOverride, authToken);
+    try {
+      await sseClient.initialize();
+      return { client: sseClient, url: urlOverride };
+    } catch (error) {
+      sseClient.close();
+      throw error;
+    }
+  }
+
+  const httpClient = new McpClient(deps, httpUrl, authToken);
+  try {
+    await httpClient.initialize();
+    return { client: httpClient, url: httpUrl };
+  } catch (error) {
+    if (!isStreamableHttpUnsupported(error) || serverCode === "WebSearch") {
+      throw error;
+    }
+  }
+
+  const sseClient = new McpSseClient(deps, sseUrl, authToken);
+  try {
+    await sseClient.initialize();
+    return { client: sseClient, url: sseUrl };
+  } catch (error) {
+    sseClient.close();
+    throw error;
+  }
 }
 
 // ---- MCP Client ----
@@ -121,7 +218,7 @@ export class McpClient {
     };
 
     const response = await this.send(body);
-    const data = (await response.json()) as JsonRpcResponse;
+    const data = await this.readJsonRpcResponse(response, id);
 
     if (data.error) {
       throw new BailianError(
@@ -141,6 +238,44 @@ export class McpClient {
     };
 
     await this.send(body);
+  }
+
+  /**
+   * Read a JSON-RPC response by Content-Type: application/json or text/event-stream.
+   */
+  private async readJsonRpcResponse(
+    response: Response,
+    expectedId: number,
+  ): Promise<JsonRpcResponse> {
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("text/event-stream")) {
+      return await this.readJsonRpcFromSse(response, expectedId);
+    }
+
+    return (await response.json()) as JsonRpcResponse;
+  }
+
+  private async readJsonRpcFromSse(
+    response: Response,
+    expectedId: number,
+  ): Promise<JsonRpcResponse> {
+    const expectedKey = String(expectedId);
+    for await (const event of parseSSE(response)) {
+      if (event.event && event.event !== "message") continue;
+      let payload: JsonRpcResponse;
+      try {
+        payload = JSON.parse(event.data) as JsonRpcResponse;
+      } catch {
+        continue;
+      }
+      if (payload.id == null) continue;
+      if (String(payload.id) !== expectedKey) continue;
+      return payload;
+    }
+    throw new BailianError(
+      "MCP SSE response stream ended without a matching JSON-RPC response.",
+      ExitCode.GENERAL,
+    );
   }
 
   private async send(body: unknown): Promise<Response> {

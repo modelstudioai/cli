@@ -69,7 +69,19 @@ export {
   type AcsQueryParams,
   type AcsSignConfig,
 } from "./acs.ts";
-export type { McpTool, McpToolResult } from "./mcp.ts";
-export { McpClient, bailianMcpPath } from "./mcp.ts";
+export type {
+  McpTool,
+  McpToolResult,
+  McpConnectedClient,
+  ConnectBailianMcpOptions,
+} from "./mcp.ts";
+export {
+  McpClient,
+  bailianMcpPath,
+  bailianMcpSsePath,
+  isStreamableHttpUnsupported,
+  isUrlOverrideSseFallbackCandidate,
+  connectBailianMcpWithFallback,
+} from "./mcp.ts";
 export type { ServerSentEvent } from "./stream.ts";
 export { parseSSE } from "./stream.ts";

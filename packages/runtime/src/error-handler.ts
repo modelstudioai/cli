@@ -78,11 +78,12 @@ function fromFetchFailed(err: TypeError): BailianError {
   if (causeMsg && causeMsg !== code) detailParts.push(causeMsg);
   const detail = detailParts.length > 0 ? detailParts.join(": ") : "unknown cause";
 
+  // Prefer the errno (ENOTFOUND, …) so JSON toJSON() exposes cause.code for agents.
   return new BailianError(
     `Network request failed: ${detail}`,
     ExitCode.NETWORK,
     pickNetworkHint(code),
-    { cause: err },
+    { cause: cause ?? err },
   );
 }
 
