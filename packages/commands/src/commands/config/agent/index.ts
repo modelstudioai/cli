@@ -9,54 +9,73 @@ const FLAGS = {
   agent: {
     type: "string",
     valueHint: "<name>",
-    description: `Target agent: ${VALID_AGENT_NAMES.join(", ")}`,
+    description: {
+      "en-US": `Target agent: ${VALID_AGENT_NAMES.join(", ")}`,
+      "zh-CN": `目标 Agent：${VALID_AGENT_NAMES.join(", ")}`,
+    },
     required: true,
     choices: VALID_AGENT_NAMES,
   },
   baseUrl: {
     type: "string",
     valueHint: "<url>",
-    description: "API base URL",
+    description: { "en-US": "API base URL", "zh-CN": "API Base URL" },
   },
   region: {
     type: "string",
     valueHint: "<region>",
-    description:
-      "Model Studio region (e.g. cn-beijing, ap-southeast-1); converted into --base-url. Token Plan only",
+    description: {
+      "en-US":
+        "Model Studio region (e.g. cn-beijing, ap-southeast-1); converted into --base-url. Token Plan only",
+      "zh-CN":
+        "模型服务地域（例如 cn-beijing、ap-southeast-1）；将转换为 --base-url。仅用于 Token Plan",
+    },
   },
   apiKey: {
     type: "string",
     valueHint: "<key>",
-    description: "API key",
+    description: { "en-US": "API key", "zh-CN": "API Key" },
   },
   key: {
     type: "string",
     valueHint: "<encoded>",
-    description:
-      'Obfuscated API key from the web console (starts with "o1_"); decoded into --api-key',
+    description: {
+      "en-US":
+        'Obfuscated API key from the web console (starts with "o1_"); decoded into --api-key',
+      "zh-CN": '来自 Web 控制台的混淆 API Key（以 "o1_" 开头）；将解码为 --api-key',
+    },
   },
   model: {
     type: "string",
     valueHint: "<model>",
-    description: "Default model name",
+    description: { "en-US": "Default model name", "zh-CN": "默认模型名称" },
     required: true,
   },
   contextWindow: {
     type: "number",
     valueHint: "<tokens>",
-    description: "OpenClaw only: model context window in tokens (default: 256000)",
+    description: {
+      "en-US": "OpenClaw only: model context window in tokens (default: 256000)",
+      "zh-CN": "仅 OpenClaw：模型上下文窗口 Token 数（默认：256000）",
+    },
   },
   wireApi: {
     type: "string",
     valueHint: "<api>",
-    description:
-      'Codex only: wire protocol (default: responses). "chat" only works with legacy Codex <= 0.80.0',
+    description: {
+      "en-US":
+        'Codex only: wire protocol (default: responses). "chat" only works with legacy Codex <= 0.80.0',
+      "zh-CN": '仅 Codex：通信协议（默认：responses）。"chat" 仅适用于旧版 Codex <= 0.80.0',
+    },
     choices: ["chat", "responses"],
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Configure a coding agent to use DashScope API",
+  description: {
+    "en-US": "Configure a coding agent to use DashScope API",
+    "zh-CN": "配置编程 Agent 使用 DashScope API",
+  },
   auth: "none",
   usageArgs:
     "--agent <name> (--base-url <url> | --region <region>) (--api-key <key> | --key <encoded>) --model <model>",

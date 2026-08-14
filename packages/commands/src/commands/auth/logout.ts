@@ -2,17 +2,26 @@ import { defineCommand } from "bailian-cli-core";
 import { emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description: "Clear stored credentials; full logout also clears the model Base URL",
+  description: {
+    "en-US": "Clear stored credentials; full logout also clears the model Base URL",
+    "zh-CN": "清除已保存的凭证；完整退出还会清除模型 Base URL",
+  },
   auth: "none",
   usageArgs: "[--console | --open-api] [--dry-run]",
   flags: {
     console: {
       type: "switch",
-      description: "Only clear the console access_token, keep api_key intact",
+      description: {
+        "en-US": "Only clear the console access_token, keep api_key intact",
+        "zh-CN": "仅清除控制台 access_token，保留 api_key",
+      },
     },
     openApi: {
       type: "switch",
-      description: "Only clear OpenAPI AK/SK/STS credentials, keep other credentials intact",
+      description: {
+        "en-US": "Only clear OpenAPI AK/SK/STS credentials, keep other credentials intact",
+        "zh-CN": "仅清除 OpenAPI AK/SK/STS 凭证，保留其他凭证",
+      },
     },
   },
   exampleArgs: ["", "--console", "--open-api", "--dry-run"],

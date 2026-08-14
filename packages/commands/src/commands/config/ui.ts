@@ -49,9 +49,18 @@ const FLAGS = {
   port: {
     type: "number",
     valueHint: "<port>",
-    description: "Port to listen on (default: random free port)",
+    description: {
+      "en-US": "Port to listen on (default: random free port)",
+      "zh-CN": "监听端口（默认：随机可用端口）",
+    },
   },
-  noOpen: { type: "switch", description: "Do not open the browser automatically" },
+  noOpen: {
+    type: "switch",
+    description: {
+      "en-US": "Do not open the browser automatically",
+      "zh-CN": "不自动打开浏览器",
+    },
+  },
 } satisfies FlagsDef;
 
 const MAX_BODY = 1 << 20; // 1 MiB
@@ -642,7 +651,10 @@ export function createConfigUiServer(
 }
 
 export default defineCommand({
-  description: "Open a local web UI to manage config profiles",
+  description: {
+    "en-US": "Open a local web UI to manage config profiles",
+    "zh-CN": "打开用于管理配置 Profile 的本地 Web UI",
+  },
   auth: "none",
   usageArgs: "[--port <port>] [--no-open]",
   flags: FLAGS,

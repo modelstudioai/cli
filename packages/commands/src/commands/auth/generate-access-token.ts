@@ -10,24 +10,33 @@ const FLAGS = {
   accessKeyId: {
     type: "string",
     valueHint: "<id>",
-    description: "Alibaba Cloud Access Key ID",
+    description: { "en-US": "Alibaba Cloud Access Key ID", "zh-CN": "阿里云 Access Key ID" },
     required: true,
   },
   accessKeySecret: {
     type: "string",
     valueHint: "<secret>",
-    description: "Alibaba Cloud Access Key Secret",
+    description: {
+      "en-US": "Alibaba Cloud Access Key Secret",
+      "zh-CN": "阿里云 Access Key Secret",
+    },
     required: true,
   },
   securityToken: {
     type: "string",
     valueHint: "<token>",
-    description: "Alibaba Cloud STS Security Token to store (optional)",
+    description: {
+      "en-US": "Alibaba Cloud STS Security Token to store (optional)",
+      "zh-CN": "要保存的阿里云 STS Security Token（可选）",
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Generate a CLI access token using OpenAPI AK/SK",
+  description: {
+    "en-US": "Generate a CLI access token using OpenAPI AK/SK",
+    "zh-CN": "使用 OpenAPI AK/SK 生成 CLI Access Token",
+  },
   auth: "none",
   usageArgs: "--access-key-id <id> --access-key-secret <secret> --security-token <token>",
   flags: FLAGS,

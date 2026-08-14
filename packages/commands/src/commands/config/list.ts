@@ -2,7 +2,10 @@ import { defineCommand, detectOutputFormat } from "bailian-cli-core";
 import { emitBare, emitResult } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description: "List config profiles and show the active profile",
+  description: {
+    "en-US": "List config profiles and show the active profile",
+    "zh-CN": "列出配置 Profile 并显示当前激活项",
+  },
   auth: "none",
   exampleArgs: ["", "--output json"],
   async run(ctx) {

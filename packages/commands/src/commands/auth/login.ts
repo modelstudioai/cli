@@ -15,8 +15,11 @@ function hasValue(value: unknown): value is string {
 }
 
 export default defineCommand({
-  description:
-    "Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist)",
+  description: {
+    "en-US":
+      "Authenticate with API key, console browser login, or OpenAPI AK/SK (credentials can coexist)",
+    "zh-CN": "使用 API Key、控制台浏览器登录或 OpenAPI AK/SK 进行认证（多种凭证可共存）",
+  },
   auth: "none",
   usageArgs:
     "--api-key <key> | --console | --open-api --access-key-id <id> --access-key-secret <secret>",
@@ -24,36 +27,54 @@ export default defineCommand({
     apiKey: {
       type: "string",
       valueHint: "<key>",
-      description: "Model API key to store",
+      description: { "en-US": "Model API key to store", "zh-CN": "要保存的模型 API Key" },
     },
     baseUrl: {
       type: "string",
       valueHint: "<url>",
-      description: "Model API base URL (used with --api-key for validation)",
+      description: {
+        "en-US": "Model API base URL (used with --api-key for validation)",
+        "zh-CN": "模型 API Base URL（用于配合 --api-key 进行验证）",
+      },
     },
     console: {
       type: "switch",
-      description:
-        "Sign in via browser; use --console-site to choose domestic (default) or international",
+      description: {
+        "en-US":
+          "Sign in via browser; use --console-site to choose domestic (default) or international",
+        "zh-CN": "通过浏览器登录；使用 --console-site 选择国内站（默认）或国际站",
+      },
     },
     consoleSite: {
       type: "string",
       valueHint: "<site>",
-      description: "Console site: domestic, international",
+      description: {
+        "en-US": "Console site: domestic, international",
+        "zh-CN": "控制台站点：domestic、international",
+      },
     },
     openApi: {
       type: "switch",
-      description: "Store Alibaba Cloud OpenAPI AK/SK credentials",
+      description: {
+        "en-US": "Store Alibaba Cloud OpenAPI AK/SK credentials",
+        "zh-CN": "保存阿里云 OpenAPI AK/SK 凭证",
+      },
     },
     accessKeyId: {
       type: "string",
       valueHint: "<id>",
-      description: "Alibaba Cloud Access Key ID to store",
+      description: {
+        "en-US": "Alibaba Cloud Access Key ID to store",
+        "zh-CN": "要保存的阿里云 Access Key ID",
+      },
     },
     accessKeySecret: {
       type: "string",
       valueHint: "<secret>",
-      description: "Alibaba Cloud Access Key Secret to store",
+      description: {
+        "en-US": "Alibaba Cloud Access Key Secret to store",
+        "zh-CN": "要保存的阿里云 Access Key Secret",
+      },
     },
   },
   exampleArgs: [

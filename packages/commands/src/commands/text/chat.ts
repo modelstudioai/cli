@@ -15,43 +15,85 @@ import { ansi, emitResult, emitBare } from "bailian-cli-runtime";
 import { readFileSync } from "fs";
 
 const CHAT_FLAGS = {
-  model: { type: "string", valueHint: "<model>", description: "Model ID (default: qwen3.8-max)" },
+  model: {
+    type: "string",
+    valueHint: "<model>",
+    description: {
+      "en-US": "Model ID (default: qwen3.8-max)",
+      "zh-CN": "模型 ID（默认：qwen3.8-max）",
+    },
+  },
   message: {
     type: "array",
     valueHint: "<text>",
-    description: "Message text (repeatable, prefix role: to set role); or use --messages-file",
+    description: {
+      "en-US": "Message text (repeatable, prefix role: to set role); or use --messages-file",
+      "zh-CN": "消息文本（可重复；可使用 role: 前缀指定角色），也可使用 --messages-file",
+    },
   },
   messagesFile: {
     type: "string",
     valueHint: "<path>",
-    description: "JSON file with messages array (use - for stdin)",
+    description: {
+      "en-US": "JSON file with messages array (use - for stdin)",
+      "zh-CN": "包含 messages 数组的 JSON 文件（使用 - 从 stdin 读取）",
+    },
   },
-  system: { type: "string", valueHint: "<text>", description: "System prompt" },
+  system: {
+    type: "string",
+    valueHint: "<text>",
+    description: { "en-US": "System prompt", "zh-CN": "系统提示词" },
+  },
   maxTokens: {
     type: "number",
     valueHint: "<n>",
-    description: "Maximum tokens to generate (default: 4096)",
+    description: {
+      "en-US": "Maximum tokens to generate (default: 4096)",
+      "zh-CN": "最大生成 Token 数（默认：4096）",
+    },
   },
   temperature: {
     type: "number",
     valueHint: "<n>",
-    description: "Sampling temperature (0.0, 2.0]",
+    description: {
+      "en-US": "Sampling temperature (0.0, 2.0]",
+      "zh-CN": "采样温度 (0.0, 2.0]",
+    },
   },
-  topP: { type: "number", valueHint: "<n>", description: "Nucleus sampling threshold" },
-  stream: { type: "switch", description: "Stream response tokens (default: on in TTY)" },
+  topP: {
+    type: "number",
+    valueHint: "<n>",
+    description: { "en-US": "Nucleus sampling threshold", "zh-CN": "核采样阈值" },
+  },
+  stream: {
+    type: "switch",
+    description: {
+      "en-US": "Stream response tokens (default: on in TTY)",
+      "zh-CN": "流式输出响应 Token（TTY 中默认开启）",
+    },
+  },
   tool: {
     type: "array",
     valueHint: "<json-or-path>",
-    description: "Tool definition as JSON or file path (repeatable)",
+    description: {
+      "en-US": "Tool definition as JSON or file path (repeatable)",
+      "zh-CN": "JSON 格式的工具定义或文件路径（可重复）",
+    },
   },
   enableThinking: {
     type: "switch",
-    description: "Enable thinking/reasoning mode (for qwen3/qwq models)",
+    description: {
+      "en-US": "Enable thinking/reasoning mode (for qwen3/qwq models)",
+      "zh-CN": "启用思考/推理模式（适用于 qwen3/qwq 模型）",
+    },
   },
   thinkingBudget: {
     type: "number",
     valueHint: "<n>",
-    description: "Max tokens for thinking (default: 4096)",
+    description: {
+      "en-US": "Max tokens for thinking (default: 4096)",
+      "zh-CN": "思考过程最大 Token 数（默认：4096）",
+    },
   },
 } satisfies FlagsDef;
 type ChatFlags = ParsedFlags<typeof CHAT_FLAGS>;
@@ -105,7 +147,10 @@ function parseMessages(flags: ChatFlags): ParsedMessages {
 }
 
 export default defineCommand({
-  description: "Send a chat completion (OpenAI compatible, DashScope)",
+  description: {
+    "en-US": "Send a chat completion (OpenAI compatible, DashScope)",
+    "zh-CN": "发送聊天补全请求（兼容 OpenAI，基于 DashScope）",
+  },
   auth: "apiKey",
   usageArgs: "--message <text> [flags]",
   flags: CHAT_FLAGS,

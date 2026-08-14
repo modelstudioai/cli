@@ -3,7 +3,7 @@ import { emitResult } from "bailian-cli-runtime";
 import { SECRET_KEYS } from "./shared.ts";
 
 export default defineCommand({
-  description: "Display current configuration",
+  description: { "en-US": "Display current configuration", "zh-CN": "显示当前配置" },
   auth: "none",
   exampleArgs: ["", "--output json"],
   async run(ctx) {

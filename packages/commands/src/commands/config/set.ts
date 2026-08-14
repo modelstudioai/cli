@@ -3,21 +3,25 @@ import { emitResult } from "bailian-cli-runtime";
 import { SECRET_KEYS, resolveKey, validateAndCoerce } from "./shared.ts";
 
 export default defineCommand({
-  description: "Set a config value",
+  description: { "en-US": "Set a config value", "zh-CN": "设置配置项" },
   auth: "none",
   usageArgs: "--key <key> --value <value>",
   flags: {
     key: {
       type: "string",
       valueHint: "<key>",
-      description:
-        "Config key (language, base_url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, security_token, default_*_model, workspace_id)",
+      description: {
+        "en-US":
+          "Config key (language, base_url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, security_token, default_*_model, workspace_id)",
+        "zh-CN":
+          "配置项名称（language、base_url、output、output_dir、timeout、api_key、access_token、access_key_id、access_key_secret、security_token、default_*_model、workspace_id）",
+      },
       required: true,
     },
     value: {
       type: "string",
       valueHint: "<value>",
-      description: "Value to set",
+      description: { "en-US": "Value to set", "zh-CN": "要设置的值" },
       required: true,
     },
   },
