@@ -81,7 +81,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 请阅读：https://bailian.aliyun.com/cli/install.md 并按照说明为我安装阿里云百炼 CLI
 ```
 
-**手动安装（npm）**
+**NPM 安装**
 
 ```bash
 npm install -g bailian-cli
@@ -89,6 +89,22 @@ bl skill init
 ```
 
 > 需要预先安装 Node.js >= 18.17。
+
+**macOS/Linux 安装**
+
+```bash
+curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
+```
+
+> 无需预先安装 Node.js，安装脚本会自动安装 Bailian Skills。
+
+**Windows 安装**
+
+```powershell
+irm https://bailian.aliyun.com/cli/install.ps1 | iex
+```
+
+> 无需预先安装 Node.js，安装脚本会自动安装 Bailian Skills。
 
 ## 快速开始
 

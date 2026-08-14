@@ -82,7 +82,7 @@ Send the following to your Agent — it will detect your environment, then insta
 Please read https://bailian.aliyun.com/cli/install.md and install the Aliyun Model Studio CLI for me
 ```
 
-**Manual install (npm)**
+**Install with NPM**
 
 ```bash
 npm install -g bailian-cli
@@ -90,6 +90,22 @@ bl skill init
 ```
 
 > Requires Node.js >= 18.17.
+
+**Install on macOS/Linux**
+
+```bash
+curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
+```
+
+> No Node.js required. The installer automatically installs Bailian Skills.
+
+**Install on Windows**
+
+```powershell
+irm https://bailian.aliyun.com/cli/install.ps1 | iex
+```
+
+> No Node.js required. The installer automatically installs Bailian Skills.
 
 ## Quick Start
 
