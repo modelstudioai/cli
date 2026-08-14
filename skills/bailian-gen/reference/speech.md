@@ -128,7 +128,7 @@ bl speech synthesize --text "Hello" --voice <voice_id> --format wav --sample-rat
 ```
 
 ```bash
-bl speech synthesize # Stream to audio player (macOS)
+# Stream to audio player (macOS)
 ```
 
 ```bash
@@ -136,7 +136,7 @@ bl speech synthesize --text "Hello" --voice <voice_id> --stream | afplay -
 ```
 
 ```bash
-bl speech synthesize # Pipe to ffplay
+# Pipe to ffplay
 ```
 
 ```bash

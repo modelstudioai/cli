@@ -40,9 +40,18 @@ export default defineCommand({
   usageArgs: "--query <text> [flags]",
   flags: WEB_SEARCH_FLAGS,
   exampleArgs: [
-    '--query "Alibaba Cloud Bailian latest features"',
-    '--query "TypeScript 5.9 new features" --count 5',
-    '--query "Today\'s news"',
+    {
+      "en-US": '--query "Alibaba Cloud Bailian latest features"',
+      "zh-CN": '--query "阿里云百炼最新功能"',
+    },
+    {
+      "en-US": '--query "TypeScript 5.9 new features" --count 5',
+      "zh-CN": '--query "TypeScript 5.9 新功能" --count 5',
+    },
+    {
+      "en-US": '--query "Today\'s news"',
+      "zh-CN": '--query "今日新闻"',
+    },
     "--list-tools",
   ],
   validate: (f) => (!f.listTools && !f.query ? "Missing required flag: --query" : undefined),

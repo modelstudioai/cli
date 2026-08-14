@@ -141,10 +141,29 @@ export default defineCommand({
     },
   },
   exampleArgs: [
-    '--video https://example.com/input.mp4 --prompt "Convert the entire scene to claymation style"',
-    '--video https://example.com/input.mp4 --prompt "Replace the outfit with the style shown in the image" --ref-image https://example.com/clothes.png',
-    '--video https://example.com/input.mp4 --prompt "Convert to anime style" --resolution 720P --download output.mp4',
-    '--video https://example.com/input.mp4 --prompt "Put clothes on the kitten in the video" --watermark false',
+    {
+      "en-US":
+        '--video https://example.com/input.mp4 --prompt "Convert the entire scene to claymation style"',
+      "zh-CN": '--video https://example.com/input.mp4 --prompt "将整个场景转换为黏土动画风格"',
+    },
+    {
+      "en-US":
+        '--video https://example.com/input.mp4 --prompt "Replace the outfit with the style shown in the image" --ref-image https://example.com/clothes.png',
+      "zh-CN":
+        '--video https://example.com/input.mp4 --prompt "将服装替换为参考图片中的款式" --ref-image https://example.com/clothes.png',
+    },
+    {
+      "en-US":
+        '--video https://example.com/input.mp4 --prompt "Convert to anime style" --resolution 720P --download output.mp4',
+      "zh-CN":
+        '--video https://example.com/input.mp4 --prompt "转换为动漫风格" --resolution 720P --download output.mp4',
+    },
+    {
+      "en-US":
+        '--video https://example.com/input.mp4 --prompt "Put clothes on the kitten in the video" --watermark false',
+      "zh-CN":
+        '--video https://example.com/input.mp4 --prompt "给视频中的小猫穿上衣服" --watermark false',
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

@@ -91,12 +91,31 @@ export default defineCommand({
     },
   },
   exampleArgs: [
-    '--app-id abc123 --prompt "Hello"',
-    '--app-id abc123 --prompt "Describe this image" --image https://example.com/photo.jpg',
-    '--app-id abc123 --prompt "Analyze the image" --image img1.jpg --image img2.jpg',
-    '--app-id abc123 --prompt "Continue" --session-id sess_xxx --stream',
-    '--app-id abc123 --prompt "Search for materials" --pipeline-ids pipe1,pipe2',
-    '--app-id abc123 --prompt "Start" --biz-params \'{"key":"value"}\'',
+    {
+      "en-US": '--app-id abc123 --prompt "Hello"',
+      "zh-CN": '--app-id abc123 --prompt "你好"',
+    },
+    {
+      "en-US":
+        '--app-id abc123 --prompt "Describe this image" --image https://example.com/photo.jpg',
+      "zh-CN": '--app-id abc123 --prompt "描述这张图片" --image https://example.com/photo.jpg',
+    },
+    {
+      "en-US": '--app-id abc123 --prompt "Analyze the image" --image img1.jpg --image img2.jpg',
+      "zh-CN": '--app-id abc123 --prompt "分析这些图片" --image img1.jpg --image img2.jpg',
+    },
+    {
+      "en-US": '--app-id abc123 --prompt "Continue" --session-id sess_xxx --stream',
+      "zh-CN": '--app-id abc123 --prompt "继续" --session-id sess_xxx --stream',
+    },
+    {
+      "en-US": '--app-id abc123 --prompt "Search for materials" --pipeline-ids pipe1,pipe2',
+      "zh-CN": '--app-id abc123 --prompt "搜索资料" --pipeline-ids pipe1,pipe2',
+    },
+    {
+      "en-US": '--app-id abc123 --prompt "Start" --biz-params \'{"key":"value"}\'',
+      "zh-CN": '--app-id abc123 --prompt "开始" --biz-params \'{"key":"value"}\'',
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

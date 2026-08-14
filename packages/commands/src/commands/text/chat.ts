@@ -155,12 +155,28 @@ export default defineCommand({
   usageArgs: "--message <text> [flags]",
   flags: CHAT_FLAGS,
   exampleArgs: [
-    '--message "What is Qwen?"',
-    '--model qwen-max --system "You are a coding assistant." --message "Write fizzbuzz in Python"',
-    '--message "Hello" --message "assistant:Hi!" --message "How are you?"',
+    {
+      "en-US": '--message "What is Qwen?"',
+      "zh-CN": '--message "通义千问是什么？"',
+    },
+    {
+      "en-US":
+        '--model qwen-max --system "You are a coding assistant." --message "Write fizzbuzz in Python"',
+      "zh-CN": '--model qwen-max --system "你是一名编程助手。" --message "用 Python 编写 FizzBuzz"',
+    },
+    {
+      "en-US": '--message "Hello" --message "assistant:Hi!" --message "How are you?"',
+      "zh-CN": '--message "你好" --message "assistant:你好！" --message "你好吗？"',
+    },
     "--messages-file - --stream",
-    '--message "Hello" --output json',
-    '--model qwq-plus --message "Solve 1+1" --enable-thinking',
+    {
+      "en-US": '--message "Hello" --output json',
+      "zh-CN": '--message "你好" --output json',
+    },
+    {
+      "en-US": '--model qwq-plus --message "Solve 1+1" --enable-thinking',
+      "zh-CN": '--model qwq-plus --message "计算 1+1" --enable-thinking',
+    },
   ],
   validate: (f) =>
     !f.message && !f.messagesFile ? "Provide --message or --messages-file." : undefined,

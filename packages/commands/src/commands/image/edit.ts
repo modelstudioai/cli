@@ -142,14 +142,44 @@ export default defineCommand({
   usageArgs: "--image <url> --prompt <text> [flags]",
   flags: EDIT_FLAGS,
   exampleArgs: [
-    '--image ./photo.png --prompt "Replace the background with a beach"',
-    '--image https://example.com/logo.png --prompt "Change color to blue" --n 3',
-    '--image ./a.png --image ./b.png --prompt "Merge two images into one collage"',
-    '--image https://example.com/photo.png --prompt "Remove the person" --model qwen-image-2.0-pro',
-    '--image ./photo.png --prompt "Change the style" --model wan2.7-image',
-    '--image ./photo.png --prompt "Place the subject on a table" --model wan2.5-i2i-preview',
-    '--image ./photo.png --prompt "转换成绘本风格" --model wanx2.1-imageedit --function stylization_all',
-    '--image ./photo.png --prompt "Replace the background with a beach" --watermark false',
+    {
+      "en-US": '--image ./photo.png --prompt "Replace the background with a beach"',
+      "zh-CN": '--image ./photo.png --prompt "将背景替换为海滩"',
+    },
+    {
+      "en-US": '--image https://example.com/logo.png --prompt "Change color to blue" --n 3',
+      "zh-CN": '--image https://example.com/logo.png --prompt "将颜色改为蓝色" --n 3',
+    },
+    {
+      "en-US": '--image ./a.png --image ./b.png --prompt "Merge two images into one collage"',
+      "zh-CN": '--image ./a.png --image ./b.png --prompt "将两张图片合并成一张拼贴图"',
+    },
+    {
+      "en-US":
+        '--image https://example.com/photo.png --prompt "Remove the person" --model qwen-image-2.0-pro',
+      "zh-CN":
+        '--image https://example.com/photo.png --prompt "移除人物" --model qwen-image-2.0-pro',
+    },
+    {
+      "en-US": '--image ./photo.png --prompt "Change the style" --model wan2.7-image',
+      "zh-CN": '--image ./photo.png --prompt "更改图片风格" --model wan2.7-image',
+    },
+    {
+      "en-US":
+        '--image ./photo.png --prompt "Place the subject on a table" --model wan2.5-i2i-preview',
+      "zh-CN": '--image ./photo.png --prompt "将主体放在桌面上" --model wan2.5-i2i-preview',
+    },
+    {
+      "en-US":
+        '--image ./photo.png --prompt "Convert to a picture-book style" --model wanx2.1-imageedit --function stylization_all',
+      "zh-CN":
+        '--image ./photo.png --prompt "转换成绘本风格" --model wanx2.1-imageedit --function stylization_all',
+    },
+    {
+      "en-US":
+        '--image ./photo.png --prompt "Replace the background with a beach" --watermark false',
+      "zh-CN": '--image ./photo.png --prompt "将背景替换为海滩" --watermark false',
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

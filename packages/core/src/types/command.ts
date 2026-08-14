@@ -264,8 +264,8 @@ export interface Command<F extends FlagsDef = FlagsDef> {
   auth: AuthRequirement;
   /** Usage line arg portion, e.g. "--prompt <text> [flags]". Manually written. */
   usageArgs?: string;
-  /** Example arg strings (without the `<bin> <path>` prefix). */
-  exampleArgs?: string[];
+  /** Example args (without the `<bin> <path>` prefix). */
+  exampleArgs?: LocalizedText[];
   /** Additional help paragraphs rendered below flags. */
   notes?: LocalizedText[];
   flags?: F;

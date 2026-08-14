@@ -220,14 +220,38 @@ export default defineCommand({
   },
   exampleArgs: [
     "--list-voices",
-    '--message "Hello, who are you?"',
-    '--message "Describe this image" --image ./photo.jpg',
-    '--message "What is this audio saying?" --audio https://example.com/audio.wav',
-    '--message "Summarize this video" --video https://example.com/video.mp4',
-    '--message "What is this video about?" --video ./local-video.mp4 --text-only',
-    '--message "Answer in Sichuan dialect: How\'s the weather today?" --voice Sunny',
-    '--message "Hello" --text-only --output json',
-    '--message "Read this passage aloud" --audio-out greeting.wav',
+    {
+      "en-US": '--message "Hello, who are you?"',
+      "zh-CN": '--message "你好，你是谁？"',
+    },
+    {
+      "en-US": '--message "Describe this image" --image ./photo.jpg',
+      "zh-CN": '--message "描述这张图片" --image ./photo.jpg',
+    },
+    {
+      "en-US": '--message "What is this audio saying?" --audio https://example.com/audio.wav',
+      "zh-CN": '--message "这段音频说了什么？" --audio https://example.com/audio.wav',
+    },
+    {
+      "en-US": '--message "Summarize this video" --video https://example.com/video.mp4',
+      "zh-CN": '--message "总结这段视频" --video https://example.com/video.mp4',
+    },
+    {
+      "en-US": '--message "What is this video about?" --video ./local-video.mp4 --text-only',
+      "zh-CN": '--message "这段视频讲了什么？" --video ./local-video.mp4 --text-only',
+    },
+    {
+      "en-US": '--message "Answer in Sichuan dialect: How\'s the weather today?" --voice Sunny',
+      "zh-CN": '--message "请用四川话回答：今天天气怎么样？" --voice Sunny',
+    },
+    {
+      "en-US": '--message "Hello" --text-only --output json',
+      "zh-CN": '--message "你好" --text-only --output json',
+    },
+    {
+      "en-US": '--message "Read this passage aloud" --audio-out greeting.wav',
+      "zh-CN": '--message "朗读这段文字" --audio-out greeting.wav',
+    },
   ],
   validate: (f) => (f.listVoices || f.message ? undefined : "Missing required flag: --message"),
   async run(ctx) {

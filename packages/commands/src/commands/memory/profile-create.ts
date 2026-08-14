@@ -38,7 +38,12 @@ export default defineCommand({
     },
   },
   exampleArgs: [
-    '--name "user_basic" --attributes \'[{"name":"age","description":"age"},{"name":"hobby","description":"hobby"}]\'',
+    {
+      "en-US":
+        '--name "user_basic" --attributes \'[{"name":"age","description":"age"},{"name":"hobby","description":"hobby"}]\'',
+      "zh-CN":
+        '--name "user_basic" --attributes \'[{"name":"age","description":"年龄"},{"name":"hobby","description":"爱好"}]\'',
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

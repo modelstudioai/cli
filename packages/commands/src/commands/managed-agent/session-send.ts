@@ -49,7 +49,12 @@ export default defineCommand({
   auth: "apiKey",
   usageArgs: "--session-id <id> --message <text> [--no-stream] [--file <path>]",
   flags: SESSION_SEND_FLAGS,
-  exampleArgs: ['--session-id sess_abc123 --message "continue"'],
+  exampleArgs: [
+    {
+      "en-US": '--session-id sess_abc123 --message "continue"',
+      "zh-CN": '--session-id sess_abc123 --message "继续"',
+    },
+  ],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;

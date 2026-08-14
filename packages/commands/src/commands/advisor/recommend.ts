@@ -242,11 +242,26 @@ export default defineCommand({
     },
   },
   exampleArgs: [
-    '--message "I need a visual-understanding chatbot"',
-    '--message "Build an Agent that auto-generates animations"',
-    '--message "Legal contract review, high precision required"',
-    '--message "Low-cost high-concurrency online customer service" --output text',
-    '--message "Long document summarization" --dry-run',
+    {
+      "en-US": '--message "I need a visual-understanding chatbot"',
+      "zh-CN": '--message "我需要一个能够理解图片的聊天机器人"',
+    },
+    {
+      "en-US": '--message "Build an Agent that auto-generates animations"',
+      "zh-CN": '--message "构建一个可以自动生成动画的智能体"',
+    },
+    {
+      "en-US": '--message "Legal contract review, high precision required"',
+      "zh-CN": '--message "审查法律合同，要求高准确率"',
+    },
+    {
+      "en-US": '--message "Low-cost high-concurrency online customer service" --output text',
+      "zh-CN": '--message "低成本、高并发的在线客服" --output text',
+    },
+    {
+      "en-US": '--message "Long document summarization" --dry-run',
+      "zh-CN": '--message "长文档摘要" --dry-run',
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

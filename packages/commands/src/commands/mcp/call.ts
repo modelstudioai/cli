@@ -122,8 +122,16 @@ export default defineCommand({
   usageArgs: "--target <server.tool> [--arg k=v ...] [--json '{...}'] [--url <url>]",
   flags: CALL_FLAGS,
   exampleArgs: [
-    '--target market-cmapi00073529.SmartStockSelection --query "Screen consumer stocks with ROE > 15%"',
-    '--target market-cmapi00073529.FinQuery --json \'{"q":"Guizhou Maotai","limit":5}\'',
+    {
+      "en-US":
+        '--target market-cmapi00073529.SmartStockSelection --query "Screen consumer stocks with ROE > 15%"',
+      "zh-CN":
+        '--target market-cmapi00073529.SmartStockSelection --query "筛选 ROE 大于 15% 的消费股"',
+    },
+    {
+      "en-US": '--target market-cmapi00073529.FinQuery --json \'{"q":"Guizhou Maotai","limit":5}\'',
+      "zh-CN": '--target market-cmapi00073529.FinQuery --json \'{"q":"贵州茅台","limit":5}\'',
+    },
     "--target market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 --arg minScale=10",
   ],
   validate: validateCallFlags,

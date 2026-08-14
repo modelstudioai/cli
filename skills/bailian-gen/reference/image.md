@@ -71,7 +71,7 @@ bl image edit --image ./photo.png --prompt "Place the subject on a table" --mode
 ```
 
 ```bash
-bl image edit --image ./photo.png --prompt "转换成绘本风格" --model wanx2.1-imageedit --function stylization_all
+bl image edit --image ./photo.png --prompt "Convert to a picture-book style" --model wanx2.1-imageedit --function stylization_all
 ```
 
 ```bash

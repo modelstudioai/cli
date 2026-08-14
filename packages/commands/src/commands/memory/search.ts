@@ -55,8 +55,15 @@ export default defineCommand({
   usageArgs: "--user-id <id> [--query <text>] [flags]",
   flags: SEARCH_FLAGS,
   exampleArgs: [
-    '--user-id user1 --query "programming preferences"',
-    '--user-id user1 --messages \'[{"role":"user","content":"recommend a book"}]\' --top-k 5',
+    {
+      "en-US": '--user-id user1 --query "programming preferences"',
+      "zh-CN": '--user-id user1 --query "编程偏好"',
+    },
+    {
+      "en-US":
+        '--user-id user1 --messages \'[{"role":"user","content":"recommend a book"}]\' --top-k 5',
+      "zh-CN": '--user-id user1 --messages \'[{"role":"user","content":"推荐一本书"}]\' --top-k 5',
+    },
   ],
   validate: (f: SearchFlags) =>
     !f.query && !f.messages ? "Provide --query or --messages." : undefined,

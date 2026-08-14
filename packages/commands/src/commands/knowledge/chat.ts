@@ -182,9 +182,22 @@ export default defineCommand({
     },
   ],
   exampleArgs: [
-    '--message "What is RAG?" --agent-id aid-xxx --workspace-id ws-xxx',
-    '--message "user:What is RAG?" --message "assistant:RAG is..." --message "How does it work?" --agent-id aid-xxx --workspace-id ws-xxx',
-    '--message "Describe these images" --image https://example.com/a.png --image https://example.com/b.png --agent-id aid-xxx --workspace-id ws-xxx',
+    {
+      "en-US": '--message "What is RAG?" --agent-id aid-xxx --workspace-id ws-xxx',
+      "zh-CN": '--message "什么是 RAG？" --agent-id aid-xxx --workspace-id ws-xxx',
+    },
+    {
+      "en-US":
+        '--message "user:What is RAG?" --message "assistant:RAG is..." --message "How does it work?" --agent-id aid-xxx --workspace-id ws-xxx',
+      "zh-CN":
+        '--message "user:什么是 RAG？" --message "assistant:RAG 是……" --message "它是如何工作的？" --agent-id aid-xxx --workspace-id ws-xxx',
+    },
+    {
+      "en-US":
+        '--message "Describe these images" --image https://example.com/a.png --image https://example.com/b.png --agent-id aid-xxx --workspace-id ws-xxx',
+      "zh-CN":
+        '--message "描述这些图片" --image https://example.com/a.png --image https://example.com/b.png --agent-id aid-xxx --workspace-id ws-xxx',
+    },
   ],
   validate: (f) =>
     (f.message && f.message.length > 0) || (f.image && f.image.length > 0)

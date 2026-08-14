@@ -91,9 +91,22 @@ export default defineCommand({
     },
   ],
   exampleArgs: [
-    '--query "What is RAG?" --agent-id aid-xxx --workspace-id ws-xxx',
-    '--api-key $DASHSCOPE_API_KEY --query "test search" --agent-id aid-xxx --workspace-id ws-xxx --image https://example.com/img.jpg',
-    '--query "How does it work" --agent-id aid-xxx --workspace-id ws-xxx --query-history \'[{"role":"user","content":"What is RAG"},{"role":"assistant","content":"RAG is retrieval-augmented generation"}]\'',
+    {
+      "en-US": '--query "What is RAG?" --agent-id aid-xxx --workspace-id ws-xxx',
+      "zh-CN": '--query "什么是 RAG？" --agent-id aid-xxx --workspace-id ws-xxx',
+    },
+    {
+      "en-US":
+        '--api-key $DASHSCOPE_API_KEY --query "test search" --agent-id aid-xxx --workspace-id ws-xxx --image https://example.com/img.jpg',
+      "zh-CN":
+        '--api-key $DASHSCOPE_API_KEY --query "测试搜索" --agent-id aid-xxx --workspace-id ws-xxx --image https://example.com/img.jpg',
+    },
+    {
+      "en-US":
+        '--query "How does it work" --agent-id aid-xxx --workspace-id ws-xxx --query-history \'[{"role":"user","content":"What is RAG"},{"role":"assistant","content":"RAG is retrieval-augmented generation"}]\'',
+      "zh-CN":
+        '--query "它是如何工作的" --agent-id aid-xxx --workspace-id ws-xxx --query-history \'[{"role":"user","content":"什么是 RAG"},{"role":"assistant","content":"RAG 是检索增强生成"}]\'',
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

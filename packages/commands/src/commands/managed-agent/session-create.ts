@@ -64,7 +64,14 @@ export default defineCommand({
   auth: "apiKey",
   usageArgs: "[--agent <name>] [--environment <name>] [--title <title>] [--file <path>]",
   flags: SESSION_CREATE_FLAGS,
-  exampleArgs: ["", "--agent assistant", "--agent assistant --title 'debug run'"],
+  exampleArgs: [
+    "",
+    "--agent assistant",
+    {
+      "en-US": "--agent assistant --title 'debug run'",
+      "zh-CN": "--agent assistant --title '调试运行'",
+    },
+  ],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;

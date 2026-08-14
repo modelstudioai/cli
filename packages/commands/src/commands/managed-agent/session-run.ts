@@ -81,7 +81,16 @@ export default defineCommand({
   auth: "apiKey",
   usageArgs: "--prompt <text> [--agent <name>] [--no-stream] [--file <path>]",
   flags: SESSION_RUN_FLAGS,
-  exampleArgs: ['--prompt "hello"', '--agent assistant --prompt "summarize this repo"'],
+  exampleArgs: [
+    {
+      "en-US": '--prompt "hello"',
+      "zh-CN": '--prompt "你好"',
+    },
+    {
+      "en-US": '--agent assistant --prompt "summarize this repo"',
+      "zh-CN": '--agent assistant --prompt "总结这个代码仓库"',
+    },
+  ],
   notes: [
     ...CREDENTIALS_NOTE,
     {

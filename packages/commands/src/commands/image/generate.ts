@@ -122,17 +122,50 @@ export default defineCommand({
   usageArgs: "--prompt <text> [flags]",
   flags: GENERATE_FLAGS,
   exampleArgs: [
-    '--prompt "A cat in a spacesuit on Mars"',
-    '--prompt "Logo design" --n 3 --out-dir ./generated/',
-    '--prompt "Mountain landscape" --size 2688*1536',
-    '--prompt "A castle" --seed 42 --prompt-extend false',
-    '--prompt "Logo" --watermark false',
-    '--prompt "An alien in the space" --watermark false',
-    '--prompt "sunset" --model wan2.6-t2i --async --quiet',
-    '--prompt "plush doll" --model z-image-turbo --size 1024*1024',
-    '--prompt "sunset" --model wanx2.0-t2i-turbo --size 1024*1024',
-    '--prompt "Pro quality" --model qwen-image-2.0-pro',
-    '--prompt "Product shots" --n 2 --concurrent 3  # 6 images in parallel',
+    {
+      "en-US": '--prompt "A cat in a spacesuit on Mars"',
+      "zh-CN": '--prompt "一只穿着宇航服的猫站在火星上"',
+    },
+    {
+      "en-US": '--prompt "Logo design" --n 3 --out-dir ./generated/',
+      "zh-CN": '--prompt "Logo 设计" --n 3 --out-dir ./generated/',
+    },
+    {
+      "en-US": '--prompt "Mountain landscape" --size 2688*1536',
+      "zh-CN": '--prompt "山地景观" --size 2688*1536',
+    },
+    {
+      "en-US": '--prompt "A castle" --seed 42 --prompt-extend false',
+      "zh-CN": '--prompt "一座城堡" --seed 42 --prompt-extend false',
+    },
+    {
+      "en-US": '--prompt "Logo" --watermark false',
+      "zh-CN": '--prompt "Logo" --watermark false',
+    },
+    {
+      "en-US": '--prompt "An alien in the space" --watermark false',
+      "zh-CN": '--prompt "太空中的外星人" --watermark false',
+    },
+    {
+      "en-US": '--prompt "sunset" --model wan2.6-t2i --async --quiet',
+      "zh-CN": '--prompt "日落" --model wan2.6-t2i --async --quiet',
+    },
+    {
+      "en-US": '--prompt "plush doll" --model z-image-turbo --size 1024*1024',
+      "zh-CN": '--prompt "毛绒玩偶" --model z-image-turbo --size 1024*1024',
+    },
+    {
+      "en-US": '--prompt "sunset" --model wanx2.0-t2i-turbo --size 1024*1024',
+      "zh-CN": '--prompt "日落" --model wanx2.0-t2i-turbo --size 1024*1024',
+    },
+    {
+      "en-US": '--prompt "Pro quality" --model qwen-image-2.0-pro',
+      "zh-CN": '--prompt "专业品质" --model qwen-image-2.0-pro',
+    },
+    {
+      "en-US": '--prompt "Product shots" --n 2 --concurrent 3  # 6 images in parallel',
+      "zh-CN": '--prompt "产品摄影" --n 2 --concurrent 3  # 并行生成 6 张图片',
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

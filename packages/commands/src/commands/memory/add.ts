@@ -58,9 +58,18 @@ export default defineCommand({
   usageArgs: "--user-id <id> [--messages <json>] [--content <text>] [flags]",
   flags: ADD_FLAGS,
   exampleArgs: [
-    '--user-id user1 --content "The user likes Python programming"',
-    '--user-id user1 --messages \'[{"role":"user","content":"I like traveling"}]\'',
-    '--user-id user1 --content "Lives in Beijing" --profile-schema schema_xxx',
+    {
+      "en-US": '--user-id user1 --content "The user likes Python programming"',
+      "zh-CN": '--user-id user1 --content "用户喜欢使用 Python 编程"',
+    },
+    {
+      "en-US": '--user-id user1 --messages \'[{"role":"user","content":"I like traveling"}]\'',
+      "zh-CN": '--user-id user1 --messages \'[{"role":"user","content":"我喜欢旅行"}]\'',
+    },
+    {
+      "en-US": '--user-id user1 --content "Lives in Beijing" --profile-schema schema_xxx',
+      "zh-CN": '--user-id user1 --content "居住在北京" --profile-schema schema_xxx',
+    },
   ],
   validate: (f: AddFlags) =>
     !f.messages && !f.content ? "Provide --messages or --content." : undefined,

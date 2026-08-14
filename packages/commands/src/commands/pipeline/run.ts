@@ -64,7 +64,10 @@ export default defineCommand({
   usageArgs: "--file <path> [flags]",
   flags: RUN_FLAGS,
   exampleArgs: [
-    '--file workflow.yaml --input \'{"brief":"hello"}\'',
+    {
+      "en-US": '--file workflow.yaml --input \'{"brief":"hello"}\'',
+      "zh-CN": '--file workflow.yaml --input \'{"brief":"你好"}\'',
+    },
     "--file workflow.json --input-file inputs.json --concurrency 3",
     "--file workflow.yaml --dry-run",
     "--file workflow.json --events jsonl",

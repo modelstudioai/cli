@@ -36,6 +36,16 @@ test("registry renders runtime help copy with the selected language", async () =
         "zh-CN": "测试说明",
       },
     ],
+    exampleArgs: [
+      {
+        "en-US": '--message "Hello"',
+        "zh-CN": '--message "你好"',
+      },
+      {
+        "en-US": "# Stream the response",
+        "zh-CN": "# 流式输出响应",
+      },
+    ],
     auth: "none",
     run: async () => {},
   });
@@ -60,4 +70,7 @@ test("registry renders runtime help copy with the selected language", async () =
   output = "";
   registry.printHelp(["test"], stream);
   expect(output).toContain("测试说明");
+  expect(output).toContain('bl test --message "你好"');
+  expect(output).toContain("  # 流式输出响应");
+  expect(output).not.toContain("bl test # 流式输出响应");
 });

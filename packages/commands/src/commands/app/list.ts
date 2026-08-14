@@ -27,7 +27,15 @@ export default defineCommand({
       description: { "en-US": "Results per page (default: 30)", "zh-CN": "每页结果数（默认：30）" },
     },
   },
-  exampleArgs: ["", "--name customer service", "--page 2 --page-size 10", "--output json"],
+  exampleArgs: [
+    "",
+    {
+      "en-US": "--name customer service",
+      "zh-CN": "--name 客户服务",
+    },
+    "--page 2 --page-size 10",
+    "--output json",
+  ],
   async run(ctx) {
     const { settings, flags } = ctx;
     const name = flags.name || "";

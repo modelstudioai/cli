@@ -41,7 +41,12 @@ export default defineCommand({
       },
     },
   },
-  exampleArgs: ['--node-id node_xxx --user-id user1 --content "updated memory content"'],
+  exampleArgs: [
+    {
+      "en-US": '--node-id node_xxx --user-id user1 --content "updated memory content"',
+      "zh-CN": '--node-id node_xxx --user-id user1 --content "更新后的记忆内容"',
+    },
+  ],
   async run(ctx) {
     const { settings, flags } = ctx;
     const nodeId = flags.nodeId;

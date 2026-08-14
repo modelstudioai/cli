@@ -418,8 +418,14 @@ ${authFlagSections ? `${authFlagSections}\n\n` : ""}${b(this.localize(HELP_TEXT.
     }
     if (cmd.exampleArgs && cmd.exampleArgs.length > 0) {
       out.write(`\n${b(this.localize(HELP_TEXT.examples))}\n`);
-      for (const ex of cmd.exampleArgs) {
-        out.write(`  ${d(ex ? `${prefix} ${ex}` : prefix)}\n`);
+      for (const example of cmd.exampleArgs) {
+        const localizedExample = this.localize(example);
+        const line = localizedExample.startsWith("#")
+          ? localizedExample
+          : localizedExample
+            ? `${prefix} ${localizedExample}`
+            : prefix;
+        out.write(`  ${d(line)}\n`);
       }
     }
   }

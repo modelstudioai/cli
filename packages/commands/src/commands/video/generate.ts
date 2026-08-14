@@ -122,11 +122,26 @@ export default defineCommand({
     },
   },
   exampleArgs: [
-    '--prompt "A person reading a book, static shot"',
-    '--prompt "Ocean waves at sunset." --download sunset.mp4',
-    '--image https://example.com/cat.png --prompt "Make the cat in the scene move"',
-    '--prompt "Mountain landscape" --resolution 720P --duration 5',
-    '--prompt "A cat playing with a ball" --watermark false',
+    {
+      "en-US": '--prompt "A person reading a book, static shot"',
+      "zh-CN": '--prompt "一个人正在读书，固定镜头"',
+    },
+    {
+      "en-US": '--prompt "Ocean waves at sunset." --download sunset.mp4',
+      "zh-CN": '--prompt "日落时的海浪。" --download sunset.mp4',
+    },
+    {
+      "en-US": '--image https://example.com/cat.png --prompt "Make the cat in the scene move"',
+      "zh-CN": '--image https://example.com/cat.png --prompt "让画面中的猫动起来"',
+    },
+    {
+      "en-US": '--prompt "Mountain landscape" --resolution 720P --duration 5',
+      "zh-CN": '--prompt "山地景观" --resolution 720P --duration 5',
+    },
+    {
+      "en-US": '--prompt "A cat playing with a ball" --watermark false',
+      "zh-CN": '--prompt "一只正在玩球的猫" --watermark false',
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

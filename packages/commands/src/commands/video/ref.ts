@@ -141,11 +141,32 @@ export default defineCommand({
     },
   },
   exampleArgs: [
-    '--prompt "Image1 running on the grass" --image person.jpg',
-    '--prompt "Video 1 plays guitar, Image 1 walks over" --ref-video scene.mp4 --image person.jpg',
-    '--prompt "Image 1 speaks" --image person.jpg --image-voice voice.mp3 --resolution 1080P',
-    '--prompt "Image 1 and Image 2 have a conversation" --image a.jpg --image b.jpg --image-voice va.mp3 --image-voice vb.mp3',
-    '--prompt "Image 1 drinks water" --image person.jpg --watermark false',
+    {
+      "en-US": '--prompt "Image1 running on the grass" --image person.jpg',
+      "zh-CN": '--prompt "图片 1 中的人物在草地上奔跑" --image person.jpg',
+    },
+    {
+      "en-US":
+        '--prompt "Video 1 plays guitar, Image 1 walks over" --ref-video scene.mp4 --image person.jpg',
+      "zh-CN":
+        '--prompt "视频 1 中的人物弹吉他，图片 1 中的人物走过来" --ref-video scene.mp4 --image person.jpg',
+    },
+    {
+      "en-US":
+        '--prompt "Image 1 speaks" --image person.jpg --image-voice voice.mp3 --resolution 1080P',
+      "zh-CN":
+        '--prompt "图片 1 中的人物说话" --image person.jpg --image-voice voice.mp3 --resolution 1080P',
+    },
+    {
+      "en-US":
+        '--prompt "Image 1 and Image 2 have a conversation" --image a.jpg --image b.jpg --image-voice va.mp3 --image-voice vb.mp3',
+      "zh-CN":
+        '--prompt "图片 1 和图片 2 中的人物进行对话" --image a.jpg --image b.jpg --image-voice va.mp3 --image-voice vb.mp3',
+    },
+    {
+      "en-US": '--prompt "Image 1 drinks water" --image person.jpg --watermark false',
+      "zh-CN": '--prompt "图片 1 中的人物喝水" --image person.jpg --watermark false',
+    },
   ],
   validate: (f) =>
     !(f.image as string[] | undefined)?.length && !(f.refVideo as string[] | undefined)?.length

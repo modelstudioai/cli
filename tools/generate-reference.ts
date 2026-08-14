@@ -104,12 +104,16 @@ function formatFlagsTable(flags: FlagsDef | undefined): string {
   ].join("\n");
 }
 
-function formatExamples(path: string, exampleArgs: string[] | undefined): string {
+function formatExamples(path: string, exampleArgs: LocalizedText[] | undefined): string {
   if (!exampleArgs?.length) return "_No examples._\n";
   // Commands store argument-only examples; prepend `bl <path>` for the reference.
   return (
     exampleArgs
-      .map((ex) => ["```bash", `bl ${path}${ex ? ` ${ex}` : ""}`, "```"].join("\n"))
+      .map((example) => {
+        const text = referenceText(example);
+        const line = text.startsWith("#") ? text : `bl ${path}${text ? ` ${text}` : ""}`;
+        return ["```bash", line, "```"].join("\n");
+      })
       .join("\n\n") + "\n"
   );
 }

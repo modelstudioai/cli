@@ -46,7 +46,10 @@ export default defineCommand({
   flags: CREATE_KEY_FLAGS,
   exampleArgs: [
     "--account-id acc_123 --workspace-id ws_456",
-    "--account-id acc_123 --workspace-id ws_456 --description 'Dev key'",
+    {
+      "en-US": "--account-id acc_123 --workspace-id ws_456 --description 'Dev key'",
+      "zh-CN": "--account-id acc_123 --workspace-id ws_456 --description '开发密钥'",
+    },
   ],
   async run(ctx) {
     const { identity, settings, flags } = ctx;

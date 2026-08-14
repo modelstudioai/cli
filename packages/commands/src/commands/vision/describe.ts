@@ -73,10 +73,19 @@ export default defineCommand({
   },
   exampleArgs: [
     "--image photo.jpg",
-    '--image https://example.com/photo.jpg --prompt "What breed is this dog?"',
-    '--video https://example.com/video.mp4 --prompt "Summarize the video content"',
+    {
+      "en-US": '--image https://example.com/photo.jpg --prompt "What breed is this dog?"',
+      "zh-CN": '--image https://example.com/photo.jpg --prompt "这只狗是什么品种？"',
+    },
+    {
+      "en-US": '--video https://example.com/video.mp4 --prompt "Summarize the video content"',
+      "zh-CN": '--video https://example.com/video.mp4 --prompt "总结视频内容"',
+    },
     "--video ./local-video.mp4",
-    '--image photo.png --prompt "Extract the text" --model qwen3-vl-plus',
+    {
+      "en-US": '--image photo.png --prompt "Extract the text" --model qwen3-vl-plus',
+      "zh-CN": '--image photo.png --prompt "提取文字" --model qwen3-vl-plus',
+    },
   ],
   validate: (f) =>
     !f.image && !(f.video as string[] | undefined)?.length

@@ -83,8 +83,15 @@ export default defineCommand({
   usageArgs: "--index-id <id> --query <text> [flags]",
   flags: RETRIEVE_FLAGS,
   exampleArgs: [
-    '--index-id idx_xxx --query "How to use Alibaba Cloud Bailian"',
-    '--index-id idx_xxx --query "RAG retrieval" --rerank --rerank-model qwen3-rerank-hybrid',
+    {
+      "en-US": '--index-id idx_xxx --query "How to use Alibaba Cloud Bailian"',
+      "zh-CN": '--index-id idx_xxx --query "如何使用阿里云百炼"',
+    },
+    {
+      "en-US":
+        '--index-id idx_xxx --query "RAG retrieval" --rerank --rerank-model qwen3-rerank-hybrid',
+      "zh-CN": '--index-id idx_xxx --query "RAG 检索" --rerank --rerank-model qwen3-rerank-hybrid',
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

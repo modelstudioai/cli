@@ -290,15 +290,41 @@ export default defineCommand({
   flags: SYNTHESIZE_FLAGS,
   exampleArgs: [
     "--list-voices --model cosyvoice-v3-flash",
-    '--text "Hello, I am Qwen" --voice <voice_id>',
-    '--text "Hello world" --voice <voice_id> --language en',
+    {
+      "en-US": '--text "Hello, I am Qwen" --voice <voice_id>',
+      "zh-CN": '--text "你好，我是通义千问" --voice <voice_id>',
+    },
+    {
+      "en-US": '--text "Hello world" --voice <voice_id> --language en',
+      "zh-CN": '--text "你好，世界" --voice <voice_id> --language zh',
+    },
     "--text-file script.txt --out speech.wav --voice <voice_id>",
-    '--text "Today is a good day" --voice <voice_id> --instruction "Use a gentle tone"',
-    '--text "Hello" --voice <voice_id> --format wav --sample-rate 24000',
-    "# Stream to audio player (macOS)",
-    '--text "Hello" --voice <voice_id> --stream | afplay -',
-    "# Pipe to ffplay",
-    '--text "Hello" --voice <voice_id> --stream | ffplay -nodisp -autoexit -f s16le -ar 24000 -ac 1 -',
+    {
+      "en-US": '--text "Today is a good day" --voice <voice_id> --instruction "Use a gentle tone"',
+      "zh-CN": '--text "今天天气很好" --voice <voice_id> --instruction "使用温柔的语气"',
+    },
+    {
+      "en-US": '--text "Hello" --voice <voice_id> --format wav --sample-rate 24000',
+      "zh-CN": '--text "你好" --voice <voice_id> --format wav --sample-rate 24000',
+    },
+    {
+      "en-US": "# Stream to audio player (macOS)",
+      "zh-CN": "# 流式传输到音频播放器（macOS）",
+    },
+    {
+      "en-US": '--text "Hello" --voice <voice_id> --stream | afplay -',
+      "zh-CN": '--text "你好" --voice <voice_id> --stream | afplay -',
+    },
+    {
+      "en-US": "# Pipe to ffplay",
+      "zh-CN": "# 通过管道传输到 ffplay",
+    },
+    {
+      "en-US":
+        '--text "Hello" --voice <voice_id> --stream | ffplay -nodisp -autoexit -f s16le -ar 24000 -ac 1 -',
+      "zh-CN":
+        '--text "你好" --voice <voice_id> --stream | ffplay -nodisp -autoexit -f s16le -ar 24000 -ac 1 -',
+    },
   ],
   validate: (f) => {
     if (f.listVoices) return undefined;

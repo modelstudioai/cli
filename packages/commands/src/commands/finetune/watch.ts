@@ -92,9 +92,18 @@ export default defineCommand({
   usageArgs: "--job-id <id> [--follow] [--interval <sec>] [--poll-timeout <sec>]",
   flags: WATCH_FLAGS,
   exampleArgs: [
-    "--job-id ft-xxx                       # single probe, returns immediately",
-    "--job-id ft-xxx --output json        # status probe for agents",
-    "--job-id ft-xxx --follow              # block until terminal",
+    {
+      "en-US": "--job-id ft-xxx                       # single probe, returns immediately",
+      "zh-CN": "--job-id ft-xxx                       # 单次查询，立即返回",
+    },
+    {
+      "en-US": "--job-id ft-xxx --output json        # status probe for agents",
+      "zh-CN": "--job-id ft-xxx --output json        # 供智能体查询状态",
+    },
+    {
+      "en-US": "--job-id ft-xxx --follow              # block until terminal",
+      "zh-CN": "--job-id ft-xxx --follow              # 阻塞等待至终态",
+    },
     "--job-id ft-xxx --follow --interval 5",
     "--job-id ft-xxx --follow --poll-timeout 3600",
   ],
