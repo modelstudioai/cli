@@ -153,12 +153,8 @@ export class McpSseClient {
       if (headerTimedOut) {
         throw new BailianError("MCP SSE timed out waiting for response headers.", ExitCode.TIMEOUT);
       }
-      throw new BailianError(
-        `MCP SSE request failed: ${error instanceof Error ? error.message : String(error)}`,
-        ExitCode.NETWORK,
-        undefined,
-        { cause: error },
-      );
+      // Rethrow fetch failures so runtime can surface errno (e.g. ENOTFOUND) in JSON/text.
+      throw error;
     }
 
     if (this.deps.settings.verbose) {
@@ -352,34 +348,46 @@ export class McpSseClient {
     const requestSignal = createLinkedAbortSignal(timeoutMs, this.abortController?.signal);
     let res: Response;
     try {
-      res = await fetch(this.messageUrl, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-        signal: requestSignal.signal,
-      });
-    } catch (error) {
-      if (this.closed) {
-        throw new BailianError("MCP SSE session closed.", ExitCode.GENERAL);
+      try {
+        res = await fetch(this.messageUrl, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(body),
+          signal: requestSignal.signal,
+        });
+      } catch (error) {
+        if (this.closed) {
+          throw new BailianError("MCP SSE session closed.", ExitCode.GENERAL);
+        }
+        throw error;
       }
-      throw error;
+
+      if (this.deps.settings.verbose) {
+        console.error(`< ${res.status} ${res.statusText}`);
+      }
+
+      if (!res.ok) {
+        // Keep signal until error body is read (same class of bug as GET openSse).
+        let errMsg = `MCP request failed: ${res.status} ${res.statusText}`;
+        try {
+          const errBody = await res.text();
+          if (errBody) errMsg += ` - ${errBody.slice(0, 500)}`;
+        } catch (error) {
+          if (this.closed) {
+            throw new BailianError("MCP SSE session closed.", ExitCode.GENERAL);
+          }
+          if (requestSignal.timedOut) {
+            throw new BailianError(
+              "MCP SSE timed out reading error response body.",
+              ExitCode.TIMEOUT,
+            );
+          }
+          throw new BailianError(errMsg, ExitCode.GENERAL, undefined, { cause: error });
+        }
+        throw new BailianError(errMsg, ExitCode.GENERAL);
+      }
     } finally {
       requestSignal.cleanup();
-    }
-
-    if (this.deps.settings.verbose) {
-      console.error(`< ${res.status} ${res.statusText}`);
-    }
-
-    if (!res.ok) {
-      let errMsg = `MCP request failed: ${res.status} ${res.statusText}`;
-      try {
-        const errBody = await res.text();
-        if (errBody) errMsg += ` - ${errBody.slice(0, 500)}`;
-      } catch {
-        /* ignore */
-      }
-      throw new BailianError(errMsg, ExitCode.GENERAL);
     }
   }
 }
@@ -439,9 +447,13 @@ function cancellableTimeoutReject(
 function createLinkedAbortSignal(
   timeoutMs: number,
   parentSignal?: AbortSignal,
-): { signal: AbortSignal; cleanup: () => void } {
+): { signal: AbortSignal; cleanup: () => void; timedOut: boolean } {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const state = { timedOut: false };
+  const timeout = setTimeout(() => {
+    state.timedOut = true;
+    controller.abort();
+  }, timeoutMs);
   const abortFromParent = () => controller.abort(parentSignal?.reason);
   const cleanup = () => {
     clearTimeout(timeout);
@@ -452,5 +464,11 @@ function createLinkedAbortSignal(
   else parentSignal?.addEventListener("abort", abortFromParent, { once: true });
   controller.signal.addEventListener("abort", cleanup, { once: true });
 
-  return { signal: controller.signal, cleanup };
+  return {
+    signal: controller.signal,
+    cleanup,
+    get timedOut() {
+      return state.timedOut;
+    },
+  };
 }

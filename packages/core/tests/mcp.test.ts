@@ -563,7 +563,7 @@ test("McpSseClient：非 2xx 读 body 仍受 --timeout 约束", async () => {
   }
 });
 
-test("McpSseClient：fetch 失败保留 cause", async () => {
+test("McpSseClient：fetch 失败抛出原始 TypeError（保留 ENOTFOUND）", async () => {
   const originalFetch = globalThis.fetch;
   const root = Object.assign(new Error("getaddrinfo ENOTFOUND example.test"), {
     code: "ENOTFOUND",
@@ -576,11 +576,9 @@ test("McpSseClient：fetch 失败保留 cause", async () => {
 
   try {
     const client = new McpSseClient(testDeps(), "https://example.test/sse", "sk-test");
-    await expect(client.initialize()).rejects.toMatchObject({
-      message: expect.stringMatching(/MCP SSE request failed:\s*fetch failed/i),
-      exitCode: 6,
-      cause: fetchFailed,
-    });
+    const error = await client.initialize().catch((reason: unknown) => reason);
+    expect(error).toBe(fetchFailed);
+    expect((error as TypeError & { cause?: NodeJS.ErrnoException }).cause?.code).toBe("ENOTFOUND");
     client.close();
   } finally {
     globalThis.fetch = originalFetch;
@@ -680,6 +678,58 @@ test("McpSseClient：close 可中止进行中的 POST", async () => {
     client.close();
     await expect(initPromise).rejects.toThrow(/session closed|aborted/i);
     expect(postAborted).toBe(true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("McpSseClient：POST 非 2xx 读 body 仍受 --timeout 约束", async () => {
+  const originalFetch = globalThis.fetch;
+  const encoder = new TextEncoder();
+
+  globalThis.fetch = async (input, init) => {
+    const url = requestUrl(input);
+    const method = init?.method ?? "GET";
+    if (method === "GET" || url.endsWith("/sse")) {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode("event: endpoint\ndata: /message\n\n"));
+        },
+      });
+      return new Response(stream, {
+        status: 200,
+        headers: { "Content-Type": "text/event-stream" },
+      });
+    }
+
+    const signal = init?.signal;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        if (!signal) return;
+        const onAbort = () => {
+          try {
+            controller.error(new DOMException("This operation was aborted.", "AbortError"));
+          } catch {
+            /* ignore */
+          }
+        };
+        if (signal.aborted) onAbort();
+        else signal.addEventListener("abort", onAbort, { once: true });
+      },
+    });
+    return new Response(body, { status: 500, statusText: "Internal Server Error" });
+  };
+
+  try {
+    const client = new McpSseClient(
+      testDeps({ timeout: 1 }),
+      "https://example.test/sse",
+      "sk-test",
+    );
+    const started = Date.now();
+    await expect(client.initialize()).rejects.toThrow(/timed out reading error response body/i);
+    expect(Date.now() - started).toBeLessThan(2500);
+    client.close();
   } finally {
     globalThis.fetch = originalFetch;
   }
