@@ -315,6 +315,7 @@ export const JOURNEY_J3_ROUTES: E2eRouteExports = {
   ...JOURNEY_KB_BASE_ROUTES,
   "knowledge chunk list": "knowledgeChunkList",
   "knowledge chunk update": "knowledgeChunkUpdate",
+  "knowledge chunk delete": "knowledgeChunkDelete", // negative branch: delete an unknown chunk id
 };
 
 export const JOURNEY_J4_ROUTES: E2eRouteExports = {

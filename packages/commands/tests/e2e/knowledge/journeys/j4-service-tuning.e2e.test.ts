@@ -280,6 +280,30 @@ describe.skipIf(!isKbAdminE2EReady())("journey J4: 问答服务调优 (live, 自
       );
       reporter.recordNote(`正式版 search 轮询 ${releasedPoll.attempts} 次`);
       expect(releasedPoll.satisfied, `发布后正式版 search 未召回 ${marker}`).toBe(true);
+
+      // 6) Negative branch: calling a version number that was never published —
+      // the server rejects (RagAgentNotExist, verified live) and the CLI exits
+      // non-zero with the error passed through (the version set is server-side state)
+      const badVersionSearchRun = await reporter.runStep(
+        "search unpublished version (expect reject)",
+        JOURNEY_J4_ROUTES,
+        [
+          "knowledge",
+          "search",
+          "--query",
+          marker,
+          "--agent-id",
+          agentId,
+          "--agent-version",
+          "999",
+          "--workspace-id",
+          workspaceId,
+          "--output",
+          "json",
+        ],
+      );
+      expect(badVersionSearchRun.exitCode, "未发布版本号应被服务端拒绝").not.toBe(0);
+      expect(badVersionSearchRun.stderr).toMatch(/Agent application not found|RagAgentNotExist/i);
     } finally {
       if (agentId) {
         const deleteRun = await reporter.runStep("cleanup: service delete", JOURNEY_J4_ROUTES, [

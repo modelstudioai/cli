@@ -67,6 +67,27 @@ describe.skipIf(!isKbAdminE2EReady())("journey J2: 内容运维 (live, 自清理
       expect(docStatusRun.exitCode, docStatusRun.stderr).toBe(0);
       expect(docStatusRun.stdout.trim()).toBe("COMPLETED");
 
+      // 2.1) Negative branch: querying a job id that does not exist on this base —
+      // the server error (Index.IndexJobNotExist, verified live) passes through
+      // verbatim with a non-zero exit
+      const badJobStatusRun = await reporter.runStep(
+        "doc status unknown job (expect reject)",
+        JOURNEY_J2_ROUTES,
+        [
+          "knowledge",
+          "doc",
+          "status",
+          "--index-id",
+          kb.indexId,
+          "--job-id",
+          "job_nonexistent_e2e",
+          "--workspace-id",
+          workspaceId,
+        ],
+      );
+      expect(badJobStatusRun.exitCode, "不存在的 job id 应被服务端拒绝").not.toBe(0);
+      expect(badJobStatusRun.stderr).toMatch(/not exist/i);
+
       // 2.5) knowledge stats — monitor endpoint returns valid structure (hard)
       const statsRun = await reporter.runStep("kb stats", JOURNEY_J2_ROUTES, [
         "knowledge",

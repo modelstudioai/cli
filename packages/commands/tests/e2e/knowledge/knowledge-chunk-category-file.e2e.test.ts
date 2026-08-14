@@ -17,7 +17,7 @@ import {
   KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES,
   KNOWLEDGE_KB_DELETE_ROUTES,
 } from "../topic-routes.ts";
-import { deleteKbWithRetry } from "./journeys/journey-helpers.ts";
+import { deleteKbWithRetry, pollUntil } from "./journeys/journey-helpers.ts";
 
 interface DryRunBody {
   endpoint?: string;
@@ -854,6 +854,21 @@ describe.skipIf(!isKbAdminE2EReady())(
   () => {
     const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
 
+    test("file get 不存在的 file-id: 服务端错误原样透传 (非零退出)", async () => {
+      const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+        "knowledge",
+        "file",
+        "get",
+        "--file-id",
+        "file_nonexistent_e2e_0000",
+        "--workspace-id",
+        workspaceId,
+      ]);
+      expect(exitCode).not.toBe(0);
+      // Verified live: HTTP 200 + InvalidParameter with a "cant find" message
+      expect(stderr).toMatch(/cant find|InvalidParameter/i);
+    }, 60_000);
+
     test("collection get/create live: 幂等复用固定名测试集合", async () => {
       // collection has no delete API — reuse a fixed name idempotently instead of creating
       // new ones (the legacy name e2e-test-connector is kept: that idempotent resource
@@ -1521,8 +1536,25 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
     const categoryId = categoryAddRun.stdout.trim();
     expect(categoryId).toMatch(/^cate_/);
 
+    // ── empty-result contract: a freshly created category has no files —
+    // text mode prints the friendly empty line and exits 0 (empty ≠ error) ──
+    const emptyCategoryListRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      "knowledge",
+      "file",
+      "list",
+      "--category-id",
+      categoryId,
+      "--workspace-id",
+      workspaceId,
+    ]);
+    expect(emptyCategoryListRun.exitCode, emptyCategoryListRun.stderr).toBe(0);
+    expect(emptyCategoryListRun.stdout).toMatch(/No files found\./);
+
     const fixtureDir = mkdtempSync(join(tmpdir(), "param-e2e-"));
-    const filePath = join(fixtureDir, `param-${Date.now()}.md`);
+    // Server contract (verified live): listFile fileName filters by the exact
+    // file name WITHOUT extension — keep the stem for the --name assertion below
+    const fileStem = `param-${Date.now()}`;
+    const filePath = join(fixtureDir, `${fileStem}.md`);
     writeFileSync(filePath, "# e2e param file\n");
     const uploadRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
@@ -1541,21 +1573,30 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
     let indexId: string | undefined;
 
     try {
-      // ── P2: file list --name (模糊匹配) ──
-      const fileListByNameRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-        "knowledge",
-        "file",
-        "list",
-        "--category-id",
-        categoryId,
-        "--name",
-        "param-",
-        "--workspace-id",
-        workspaceId,
-        "--quiet",
-      ]);
-      expect(fileListByNameRun.exitCode, fileListByNameRun.stderr).toBe(0);
-      expect(fileListByNameRun.stdout.trim().split("\n")).toContain(fileId);
+      // ── P2: file list --name —— exact match on the extension-less file name
+      // (e.g. a.md → pass a); fuzzy/partial keywords return an empty set.
+      // Poll to absorb list-visibility lag right after upload ──
+      const fileListByNamePoll = await pollUntil(
+        () =>
+          runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+            "knowledge",
+            "file",
+            "list",
+            "--category-id",
+            categoryId,
+            "--name",
+            fileStem,
+            "--workspace-id",
+            workspaceId,
+            "--quiet",
+          ]),
+        (run) => run.exitCode === 0 && run.stdout.trim().split("\n").includes(fileId),
+        { timeoutMs: 60_000, intervalMs: 5_000 },
+      );
+      expect(
+        fileListByNamePoll.satisfied,
+        `file list --name 未包含 ${fileId} (attempts=${fileListByNamePoll.attempts})`,
+      ).toBe(true);
 
       // ── P2: file list --file-id ──
       const fileListByFileIdRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
@@ -1638,7 +1679,9 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
       ]);
       expect(listByParentRun.exitCode, listByParentRun.stderr).toBe(0);
 
-      // ── P3: category list --collection-id (no-error verification) ──
+      // ── P3: category list --collection-id — an unknown collection id is rejected
+      // by the server (Invalid connectorId, verified live) and the error passes
+      // through verbatim with a non-zero exit ──
       const listByCollectionRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
         "knowledge",
         "category",
@@ -1649,7 +1692,8 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
         workspaceId,
         "--quiet",
       ]);
-      expect(listByCollectionRun.exitCode, listByCollectionRun.stderr).toBe(0);
+      expect(listByCollectionRun.exitCode, "不存在的 collection id 应被服务端拒绝").not.toBe(0);
+      expect(listByCollectionRun.stderr).toMatch(/Invalid connectorId|InvalidParameter/i);
 
       // ── create kb for chunk tests ──
       const kbCreateRun = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
@@ -1743,6 +1787,45 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
         for (const node of chunkListByDocData.data?.nodes ?? []) {
           expect(node.metadata?.doc_id).toContain(fileId);
         }
+
+        // ── empty-result contract: a page far past the end returns no chunks —
+        // text mode prints the friendly empty line and exits 0 (empty ≠ error) ──
+        const chunkListEmptyPageRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+          "knowledge",
+          "chunk",
+          "list",
+          "--index-id",
+          indexId,
+          "--page-number",
+          "99",
+          "--workspace-id",
+          workspaceId,
+        ]);
+        expect(chunkListEmptyPageRun.exitCode, chunkListEmptyPageRun.stderr).toBe(0);
+        expect(chunkListEmptyPageRun.stdout).toMatch(/No chunks found\./);
+
+        // ── contract: updating a nonexistent chunk id — the server currently
+        // reports success (silent upsert-like semantics, verified live). The CLI
+        // passes the server result through without an existence pre-check; this
+        // assertion pins the known server behavior so a future server-side change
+        // (rejecting unknown ids) surfaces here immediately ──
+        const chunkUpdateMissingRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+          "knowledge",
+          "chunk",
+          "update",
+          "--index-id",
+          indexId,
+          "--chunk-id",
+          "chunk_nonexistent_e2e_0000",
+          "--doc-id",
+          fileId,
+          "--content",
+          "content for a chunk id that should not exist",
+          "--workspace-id",
+          workspaceId,
+        ]);
+        expect(chunkUpdateMissingRun.exitCode, chunkUpdateMissingRun.stderr).toBe(0);
+        expect(chunkUpdateMissingRun.stdout).toMatch(/updated: chunk_nonexistent_e2e_0000/);
 
         // ── P4: chunk update --content-file ──
         if (addedChunkId) {

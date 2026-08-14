@@ -13,12 +13,12 @@ const CATEGORY_LIST_FLAGS = {
   collectionId: {
     type: "string",
     valueHint: "<id>",
-    description: "Filter by collection ID",
+    description: "Filter by exact collection ID",
   },
   parentId: {
     type: "string",
     valueHint: "<id>",
-    description: "List sub-categories of this category",
+    description: "List sub-categories of this exact parent category",
   },
   name: {
     type: "string",

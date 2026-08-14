@@ -158,6 +158,39 @@ describe.skipIf(!isKbAdminE2EReady())("journey J3: 检索精修 (live, 自清理
         restored.satisfied,
         `attempts=${restored.attempts} exit=${restored.value.exitCode}`,
       );
+
+      // 5) Negative branch: deleting a chunk id that does not exist on this base —
+      // the server rejects (Index.InvalidParameter, verified live) and the error
+      // passes through verbatim; the marker chunk must remain recallable afterwards
+      const badDeleteRun = await reporter.runStep(
+        "chunk delete unknown id (expect reject)",
+        JOURNEY_J3_ROUTES,
+        [
+          "knowledge",
+          "chunk",
+          "delete",
+          "--index-id",
+          kb.indexId,
+          "--chunk-id",
+          "chunk_nonexistent_e2e_0000",
+          "--yes",
+          "--workspace-id",
+          workspaceId,
+        ],
+      );
+      expect(badDeleteRun.exitCode, "不存在的 chunk id 应被服务端拒绝").not.toBe(0);
+      expect(badDeleteRun.stderr).toMatch(/invalid|not exist/i);
+
+      const afterBadDelete = await reporter.runStep(
+        "retrieve after failed delete",
+        JOURNEY_J3_ROUTES,
+        retrieveArgs,
+      );
+      expect(afterBadDelete.exitCode, afterBadDelete.stderr).toBe(0);
+      expect(
+        nodesRecallMarker(afterBadDelete.stdout, marker),
+        `失败的删除误伤: ${marker} 不再召回`,
+      ).toBe(true);
     } finally {
       await cleanupKbFixture(reporter, JOURNEY_J3_ROUTES, fixture, workspaceId);
       reporter.finalize();

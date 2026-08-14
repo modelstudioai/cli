@@ -92,4 +92,63 @@ describe("e2e: knowledge stats dry-run", () => {
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/future/i);
   });
+
+  test("--start 非法时间格式报用法错误 (exit 2) 且 hint 给出合法格式", async () => {
+    const { stderr, exitCode } = await runCommandE2e(
+      KNOWLEDGE_KB_STATS_ROUTES,
+      [
+        "knowledge",
+        "stats",
+        "--dry-run",
+        "--index-id",
+        "idx_test",
+        "--start",
+        "2026-",
+        "--workspace-id",
+        "ws_test",
+        "--output",
+        "json",
+      ],
+      { DASHSCOPE_API_KEY: "sk-fake-for-dryrun" },
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/Invalid time value/i);
+    // The hint should teach the accepted formats (Unix seconds / ISO date)
+    expect(stderr).toMatch(/Unix seconds|ISO date/i);
+  });
+
+  test("13 位毫秒时间戳归一化为秒级字符串", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      KNOWLEDGE_KB_STATS_ROUTES,
+      [
+        "knowledge",
+        "stats",
+        "--dry-run",
+        "--index-id",
+        "idx_test",
+        "--start",
+        "1785369600000", // 2026-07-30 00:00:00 UTC in milliseconds
+        "--end",
+        "1786320000000", // 2026-08-10 00:00:00 UTC in milliseconds
+        "--workspace-id",
+        "ws_test",
+        "--output",
+        "json",
+      ],
+      { DASHSCOPE_API_KEY: "sk-fake-for-dryrun" },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<DryRunBody>(stdout);
+    expect(data.request?.startTimestamp).toBe("1785369600");
+    expect(data.request?.endTimestamp).toBe("1786320000");
+  });
+
+  test("缺 --index-id 报用法错误 (exit 2)", async () => {
+    const { exitCode } = await runCommandE2e(
+      KNOWLEDGE_KB_STATS_ROUTES,
+      ["knowledge", "stats", "--dry-run", "--workspace-id", "ws_test"],
+      { DASHSCOPE_API_KEY: "sk-fake-for-dryrun" },
+    );
+    expect(exitCode).toBe(2);
+  });
 });

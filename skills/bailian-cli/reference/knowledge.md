@@ -126,8 +126,8 @@ bl knowledge category delete --category-id cate-xxx --yes
 
 | Flag                   | Type   | Required | Description                                                           |
 | ---------------------- | ------ | -------- | --------------------------------------------------------------------- |
-| `--collection-id <id>` | string | no       | Filter by collection ID                                               |
-| `--parent-id <id>`     | string | no       | List sub-categories of this category                                  |
+| `--collection-id <id>` | string | no       | Filter by exact collection ID                                         |
+| `--parent-id <id>`     | string | no       | List sub-categories of this exact parent category                     |
 | `--name <text>`        | string | no       | Filter by category name (exact match, unlike the knowledge base list) |
 | `--next-token <token>` | string | no       | Cursor for the next page (from previous output)                       |
 | `--max-result <n>`     | number | no       | Items per page (default: 20)                                          |
@@ -794,20 +794,21 @@ bl knowledge file get --file-id file-xxx --workspace-id ws-xxx
 
 #### Flags
 
-| Flag                   | Type   | Required | Description                                                     |
-| ---------------------- | ------ | -------- | --------------------------------------------------------------- |
-| `--category-id <id>`   | string | yes      | Category to list (find ids via the category list command)       |
-| `--name <text>`        | string | no       | Filter by file name                                             |
-| `--file-id <id>`       | array  | no       | Filter by file ID (repeatable)                                  |
-| `--next-token <token>` | string | no       | Cursor for the next page (from previous output)                 |
-| `--max-result <n>`     | number | no       | Items per page                                                  |
-| `--workspace-id <id>`  | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
-| `--api-key <key>`      | string | no       | API key                                                         |
-| `--base-url <url>`     | string | no       | API base URL                                                    |
+| Flag                   | Type   | Required | Description                                                            |
+| ---------------------- | ------ | -------- | ---------------------------------------------------------------------- |
+| `--category-id <id>`   | string | yes      | Category to list (find ids via the category list command); exact match |
+| `--name <text>`        | string | no       | Filter by exact file name without its extension (a.md → pass a)        |
+| `--file-id <id>`       | array  | no       | Filter by exact file ID (repeatable)                                   |
+| `--next-token <token>` | string | no       | Cursor for the next page (from previous output)                        |
+| `--max-result <n>`     | number | no       | Items per page                                                         |
+| `--workspace-id <id>`  | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)        |
+| `--api-key <key>`      | string | no       | API key                                                                |
+| `--base-url <url>`     | string | no       | API base URL                                                           |
 
 #### Notes
 
 - A real category id is required — the default value is not resolved here. Find the id via the category list command.
+- --name matches the exact file name without its extension (for a.md pass a); partial keywords return no results.
 - Pagination is cursor-based: reuse the printed next token to continue.
 
 #### Examples
@@ -1146,7 +1147,7 @@ bl knowledge service get --agent-id aid-xxx --agent-version beta
 | `--status <status>`   | string | no       | Filter by status: draft, deployed (includes edited) or deleted          |
 | `--name <text>`       | string | no       | Filter by service name (fuzzy match)                                    |
 | `--agent-id <id>`     | string | no       | Filter by exact agent ID                                                |
-| `--index-id <id>`     | string | no       | Filter by linked knowledge base (pipeline) ID                           |
+| `--index-id <id>`     | string | no       | Filter by exact linked knowledge base (pipeline) ID                     |
 | `--page-number <n>`   | number | no       | Page number (default: 1)                                                |
 | `--page-size <n>`     | number | no       | Page size per request                                                   |
 | `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)         |

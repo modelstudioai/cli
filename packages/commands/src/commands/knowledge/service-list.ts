@@ -34,7 +34,7 @@ const SERVICE_LIST_FLAGS = {
   indexId: {
     type: "string",
     valueHint: "<id>",
-    description: "Filter by linked knowledge base (pipeline) ID",
+    description: "Filter by exact linked knowledge base (pipeline) ID",
   },
   ...PAGE_FLAGS,
   ...WORKSPACE_FLAG,

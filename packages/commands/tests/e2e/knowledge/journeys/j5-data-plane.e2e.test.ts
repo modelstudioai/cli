@@ -141,6 +141,26 @@ describe.skipIf(!isConnectorE2EReady())("journey J5: 数据面治理 (live, 自�
       ]);
       expect(fileDeleteRun.exitCode, fileDeleteRun.stderr).toBe(0);
       reporter.markCleaned(fileId);
+
+      // 3.1) Negative branch: deleting the same file again — it no longer exists,
+      // so the server rejects ("Cant find out file", verified live) and the error
+      // passes through verbatim with a non-zero exit
+      const repeatDeleteRun = await reporter.runStep(
+        "file delete again (expect reject)",
+        JOURNEY_J5_ROUTES,
+        [
+          "knowledge",
+          "file",
+          "delete",
+          "--file-id",
+          fileId,
+          "--yes",
+          "--workspace-id",
+          workspaceId,
+        ],
+      );
+      expect(repeatDeleteRun.exitCode, "重复删除已不存在的文件应被服务端拒绝").not.toBe(0);
+      expect(repeatDeleteRun.stderr).toMatch(/cant find|InvalidParameter/i);
     } finally {
       if (categoryId) {
         // 4) Clean up the self-created category + list verifies removal

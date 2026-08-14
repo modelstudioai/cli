@@ -195,11 +195,98 @@ describe("e2e: knowledge doc upload", () => {
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/No supported files found/i);
   });
+
+  test("--file <dir> 自动跳过 node_modules/.git，其中文件不进 steps 也不进 skipped", async () => {
+    const toolingDir = mkdtempSync(join(tmpdir(), "doc-upload-tooling-"));
+    writeFileSync(join(toolingDir, "guide.md"), "# business doc\n");
+    const nodeModulesDir = join(toolingDir, "node_modules");
+    mkdirSync(nodeModulesDir);
+    writeFileSync(join(nodeModulesDir, "vendored.md"), "# should never upload\n");
+    const gitDir = join(toolingDir, ".git");
+    mkdirSync(gitDir);
+    writeFileSync(join(gitDir, "COMMIT_EDITMSG.txt"), "message");
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_DOC_UPLOAD_ROUTES, [
+      "knowledge",
+      "doc",
+      "upload",
+      "--file",
+      toolingDir,
+      "--category-id",
+      "cate_test",
+      "--workspace-id",
+      "ws_test",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ steps: DryRunStep[]; skipped: string[] }>(stdout);
+    // Only guide.md is planned: 1 file × 3 steps
+    expect(data.steps).toHaveLength(3);
+    // Tooling directories are skipped silently — not even listed as skipped
+    expect(data.skipped).toEqual([]);
+    expect(JSON.stringify(data.steps)).not.toMatch(/vendored\.md|COMMIT_EDITMSG/);
+  });
 });
 
 // Live write artifacts (data-center files) are cleaned up in place via the file delete command.
 describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc upload (live)", () => {
   const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
+
+  test("0KB 空文件被服务端拒绝：非零退出且透传服务端原因", async () => {
+    const emptyPath = join(fixtureDir, `empty-${Date.now()}.md`);
+    writeFileSync(emptyPath, "");
+    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_DOC_UPLOAD_ROUTES, [
+      "knowledge",
+      "doc",
+      "upload",
+      "--file",
+      emptyPath,
+      "--workspace-id",
+      workspaceId,
+    ]);
+    expect(exitCode).not.toBe(0);
+    // Server message passed through verbatim (lease rejects an empty SizeInBytes)
+    expect(stderr).toMatch(/empty|SizeInBytes|InvalidParameter/i);
+  }, 60_000);
+
+  test("目录上传 --verbose 列出跳过文件明细与汇总计数", async () => {
+    const verboseDir = mkdtempSync(join(tmpdir(), "doc-upload-verbose-"));
+    writeFileSync(join(verboseDir, `verbose-${Date.now()}.md`), "# e2e verbose fixture\n");
+    writeFileSync(join(verboseDir, "unsupported.xyz"), "skip me");
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_DOC_UPLOAD_ROUTES, [
+      "knowledge",
+      "doc",
+      "upload",
+      "--file",
+      verboseDir,
+      "--workspace-id",
+      workspaceId,
+      "--verbose",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    // Summary line always shows both counts; --verbose adds the skipped detail list
+    expect(stdout).toMatch(/Uploaded 1 file, skipped 1 unsupported\./);
+    expect(stdout).toMatch(/Skipped files:/);
+    expect(stdout).toMatch(/unsupported\.xyz/);
+
+    // Extract the fileId from the text output (`<name>  <fileId>  registered`) and clean up
+    const fileId = stdout.match(/\s(file_\S+)\s+registered/)?.[1];
+    expect(fileId, `无法从输出提取 fileId: ${stdout}`).toBeTruthy();
+    const fileDeleteRun = await runCommandE2e(KNOWLEDGE_DOC_UPLOAD_ROUTES, [
+      "knowledge",
+      "file",
+      "delete",
+      "--file-id",
+      fileId!,
+      "--yes",
+      "--workspace-id",
+      workspaceId,
+    ]);
+    expect(fileDeleteRun.exitCode, fileDeleteRun.stderr).toBe(0);
+  }, 120_000);
 
   test("上传 2 个 md 返回各自 file_ 前缀 fileId (多文件 happy path)", async () => {
     const livePathA = join(fixtureDir, `live-a-${Date.now()}.md`);

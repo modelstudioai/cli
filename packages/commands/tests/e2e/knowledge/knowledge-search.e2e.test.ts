@@ -291,5 +291,26 @@ describe.skipIf(!isTableSearchE2EReady())(
       expect(data.data.nodes.length).toBeGreaterThan(0);
       expect(data.data.nodes.map((node) => node.text).join("\n")).toContain("颜色填充");
     }, 60_000);
+
+    test("--agent-version 非法版本值: 服务端拒绝并原样透传 (非零退出)", async () => {
+      // The version set is server-side state — the CLI sends the value as-is and
+      // passes the server rejection through (verified live: RagAgentNotExist)
+      const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
+        "knowledge",
+        "search",
+        "--query",
+        "颜色填充",
+        "--agent-id",
+        tableSearchAgentId,
+        "--agent-version",
+        "not-a-version",
+        "--workspace-id",
+        workspaceId,
+        "--output",
+        "json",
+      ]);
+      expect(exitCode).not.toBe(0);
+      expect(stderr).toMatch(/Agent application not found|RagAgentNotExist/i);
+    }, 60_000);
   },
 );

@@ -38,7 +38,10 @@ export function toEpochSecondsString(input: string): string {
     // Digits-only input is treated as Unix seconds; 13-digit millisecond timestamps are reduced to seconds
     return input.length >= 13 ? String(Math.floor(Number(input) / 1000)) : input;
   }
-  const parsedMs = Date.parse(input);
+  // Non-numeric input must be a full ISO date (YYYY-MM-DD, optionally with a time
+  // part). Date.parse alone is too lenient — V8 silently reads truncated input
+  // like "2026-" as Jan 1st, which would query a misleading range.
+  const parsedMs = /^\d{4}-\d{2}-\d{2}([T ].*)?$/.test(input) ? Date.parse(input) : Number.NaN;
   if (Number.isNaN(parsedMs)) {
     throw new BailianError(
       `Invalid time value: ${input}`,

@@ -101,6 +101,24 @@ describe("e2e: knowledge doc status", () => {
 describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc status (live, 自清理)", () => {
   const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
 
+  test("不存在的 index/job: 服务端错误原样透传 (非零退出)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_DOC_STATUS_ROUTES, [
+      "knowledge",
+      "doc",
+      "status",
+      "--index-id",
+      "idx_nonexistent_e2e",
+      "--job-id",
+      "job_nonexistent_e2e",
+      "--workspace-id",
+      workspaceId,
+    ]);
+    expect(exitCode).not.toBe(0);
+    // Verified live: Index.IndexNotExist for an unknown index; a real index with
+    // an unknown job id reports Index.IndexJobNotExist — both pass through verbatim
+    expect(stderr).toMatch(/not exist/i);
+  }, 60_000);
+
   test("status --wait --poll-interval → 返回 COMPLETED", async () => {
     const fixtureDir = mkdtempSync(join(tmpdir(), "doc-status-e2e-"));
     const filePathA = join(fixtureDir, `status-a-${Date.now()}.md`);
@@ -189,10 +207,12 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc status (live, 自清�
         "json",
       ]);
       expect(statusRun.exitCode, statusRun.stderr).toBe(0);
+      // JSON mode passes the server response through — the job state field is
+      // ingestion_status (final_status only exists in doc upload's own output)
       const statusData = parseStdoutJson<{
-        data?: { final_status?: string };
+        data?: { ingestion_status?: string };
       }>(statusRun.stdout);
-      expect(statusData.data?.final_status).toBe("COMPLETED");
+      expect(statusData.data?.ingestion_status).toBe("COMPLETED");
     } finally {
       // Cleanup base + data-center files
       if (fileIdB) {

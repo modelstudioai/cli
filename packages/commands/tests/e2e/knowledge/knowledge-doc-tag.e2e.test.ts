@@ -184,6 +184,26 @@ describe("e2e: knowledge doc tag", () => {
 describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc tag (live)", () => {
   const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
 
+  test("不存在的 doc-id: 服务端静默成功契约 (已知行为锁定)", async () => {
+    // The tag API currently reports success for an unknown doc id (verified
+    // live) — the CLI passes the server result through without an existence
+    // pre-check. This pins the known server behavior so a future server-side
+    // change (rejecting unknown ids) surfaces here immediately
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_DOC_TAG_ROUTES, [
+      "knowledge",
+      "doc",
+      "tag",
+      "--doc-id",
+      "file_nonexistent_e2e_0000",
+      "--tag",
+      "e2e-nonexistent-doc",
+      "--workspace-id",
+      workspaceId,
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stdout).toMatch(/tagged: 1 file\(s\)/);
+  }, 60_000);
+
   test("对新上传文件打标断言 Success", async () => {
     const fixtureDir = mkdtempSync(join(tmpdir(), "doc-tag-e2e-"));
     const filePath = join(fixtureDir, `tag-${Date.now()}.md`);

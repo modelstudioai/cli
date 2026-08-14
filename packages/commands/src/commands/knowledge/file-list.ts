@@ -13,18 +13,18 @@ const FILE_LIST_FLAGS = {
   categoryId: {
     type: "string",
     valueHint: "<id>",
-    description: "Category to list (find ids via the category list command)",
+    description: "Category to list (find ids via the category list command); exact match",
     required: true,
   },
   name: {
     type: "string",
     valueHint: "<text>",
-    description: "Filter by file name",
+    description: "Filter by exact file name without its extension (a.md → pass a)",
   },
   fileId: {
     type: "array",
     valueHint: "<id>",
-    description: "Filter by file ID (repeatable)",
+    description: "Filter by exact file ID (repeatable)",
   },
   nextToken: {
     type: "string",
@@ -46,6 +46,7 @@ export default defineCommand({
   flags: FILE_LIST_FLAGS,
   notes: [
     "A real category id is required — the default value is not resolved here. Find the id via the category list command.",
+    "--name matches the exact file name without its extension (for a.md pass a); partial keywords return no results.",
     "Pagination is cursor-based: reuse the printed next token to continue.",
   ],
   exampleArgs: [

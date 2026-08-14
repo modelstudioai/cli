@@ -152,6 +152,30 @@ describe.skipIf(!isKbAdminE2EReady())("journey J1: 冷启动首答 (live, 自清
         answerText.includes(marker),
         answerText || "(empty)",
       );
+
+      // 5) Negative branch: calling a version number that was never published —
+      // the server rejects (HTTP 400, verified live) and the CLI exits non-zero
+      // with the error passed through (the version set is server-side state)
+      const chatBadVersionRun = await reporter.runStep(
+        "chat unpublished version (expect reject)",
+        JOURNEY_J1_ROUTES,
+        [
+          "knowledge",
+          "chat",
+          "--message",
+          `What is ${marker}?`,
+          "--agent-id",
+          chatAgentId,
+          "--agent-version",
+          "999",
+          "--workspace-id",
+          workspaceId,
+          "--output",
+          "json",
+        ],
+      );
+      expect(chatBadVersionRun.exitCode, "未发布版本号应被服务端拒绝").not.toBe(0);
+      expect(chatBadVersionRun.stderr).toMatch(/HTTP 400/);
     } finally {
       for (const agentId of serviceAgentIds) {
         const deleteRun = await reporter.runStep(
