@@ -324,19 +324,12 @@ export interface RagListFileData {
 export type RagListFileResponse = RagConnectorResponse<RagListFileData>;
 export type RagDescribeFileResponse = RagConnectorResponse<RagDataCenterFile>;
 
-/** POST addConnector / getConnector */
+/** POST addConnector response / getConnector response — server does NOT echo fileConnectorConfig (live-verified) */
 export interface RagConnectorInfo {
   connectorId?: string;
   connectorName?: string;
   description?: string;
   connectorType?: string;
-  fileConnectorConfig?: {
-    storeType?: string;
-    /** CUSTOM request fields: regionId/bucketName (per add-connector.md, live-verified) */
-    regionId?: string;
-    bucketName?: string;
-    [key: string]: unknown;
-  };
   [key: string]: unknown;
 }
 export type RagAddConnectorResponse = RagConnectorResponse<RagConnectorInfo>;

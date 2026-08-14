@@ -93,10 +93,7 @@ text 模式：
 id: conn-xxx
 name: my-collection
 description: team docs
-storeType: PLATFORM
 ```
-
-> 如果是 `CUSTOM` 存储，额外显示 `ossRegion` 和 `ossBucket`（注意：实测 getConnector 响应可能不返回 fileConnectorConfig，storeType 显示为 `-`）。
 
 quiet 模式：输出集合 ID。
 
@@ -104,7 +101,7 @@ json 模式：返回 API 原始响应。
 
 **注意事项**
 
-- 无特殊注意事项。
+- getConnector 不返回 `fileConnectorConfig`（`storeType`/`regionId`/`bucketName`），这些字段仅在创建时通过请求体传入，查询时不可读回。
 
 **示例**
 

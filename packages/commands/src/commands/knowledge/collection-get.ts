@@ -66,15 +66,8 @@ export default defineCommand({
       emitBare(`id: ${collection?.connectorId ?? "-"}`);
       emitBare(`name: ${collection?.connectorName ?? "-"}`);
       emitBare(`description: ${collection?.description ?? "-"}`);
-      const storeType = collection?.fileConnectorConfig?.storeType;
-      emitBare(`storeType: ${storeType ?? "-"}`);
-      if (storeType === "CUSTOM") {
-        // Defensive branch: live-verified getConnector responses do NOT echo
-        // fileConnectorConfig at all (storeType prints "-"); kept in case the
-        // server starts returning it. Field names follow the create contract.
-        emitBare(`  ossRegion: ${collection?.fileConnectorConfig?.regionId ?? "-"}`);
-        emitBare(`  ossBucket: ${collection?.fileConnectorConfig?.bucketName ?? "-"}`);
-      }
+      // getConnector does not return fileConnectorConfig (storeType/regionId/bucketName);
+      // these fields are only available on the create request body.
       return;
     }
     emitResult(response, format);
