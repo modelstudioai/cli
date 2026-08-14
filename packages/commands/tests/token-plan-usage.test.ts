@@ -2,11 +2,14 @@ import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import tokenPlanUsage from "../src/commands/usage/token-plan.ts";
 
 const originalNoColor = process.env.NO_COLOR;
+const originalForceColor = process.env.FORCE_COLOR;
 const originalIsTty = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");
 
 afterEach(() => {
   if (originalNoColor === undefined) delete process.env.NO_COLOR;
   else process.env.NO_COLOR = originalNoColor;
+  if (originalForceColor === undefined) delete process.env.FORCE_COLOR;
+  else process.env.FORCE_COLOR = originalForceColor;
   if (originalIsTty) Object.defineProperty(process.stdout, "isTTY", originalIsTty);
   else delete (process.stdout as { isTTY?: boolean }).isTTY;
   vi.restoreAllMocks();
@@ -59,18 +62,28 @@ function wrapResponse(usage: Record<string, unknown>): Record<string, unknown> {
 }
 
 describe("usage token-plan view", () => {
-  test.each([
-    [0.7499, "32"],
-    [0.75, "33"],
-    [0.9, "31"],
-  ])("uses ANSI color %s for %s", async (percentage, colorCode) => {
+  test("renders the gauge with the usage-free brand fill color", async () => {
     delete process.env.NO_COLOR;
+    process.env.FORCE_COLOR = "3";
     Object.defineProperty(process.stdout, "isTTY", { configurable: true, value: true });
     const output = captureStdout();
 
-    await runTokenPlan(makeUsageResponse(percentage));
+    await runTokenPlan(makeUsageResponse(0.5));
 
-    expect(output.join("")).toContain(`\u001B[${colorCode}m`);
+    // Brand-cyan fill cell, same as the `usage free` gauge column
+    expect(output.join("")).toContain("\u001B[38;2;0;150;160m\u2588");
+  });
+
+  test("renders proportional gauge cells with a transparent track", async () => {
+    process.env.NO_COLOR = "1";
+    const output = captureStdout();
+
+    await runTokenPlan(makeUsageResponse(0.5));
+
+    const renderedOutput = output.join("");
+    // 50% of the default 20-cell gauge → 10 filled cells + 10 track spaces
+    expect(renderedOutput).toContain(`${"\u2588".repeat(10)}${" ".repeat(10)}`);
+    expect(renderedOutput).not.toContain("\u2588".repeat(11));
   });
 
   test("accepts missing reset times when the quota usage is zero", async () => {
