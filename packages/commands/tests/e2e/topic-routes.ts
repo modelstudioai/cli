@@ -109,6 +109,8 @@ export const USAGE_ROUTES: E2eRouteExports = {
   "usage free": "usageFree",
   "usage freetier": "usageFreetier",
   "usage stats": "usageStats",
+  "usage token-plan": "usageTokenPlan",
+  "usage coding-plan": "usageCodingPlan",
 };
 
 export const DEPLOY_ROUTES: E2eRouteExports = {
@@ -165,6 +167,7 @@ export const SKILL_ROUTES: E2eRouteExports = {
   "skill update": "skillUpdate",
   "skill remove": "skillRemove",
   "skill list": "skillList",
+  "skill init": "skillInit",
 };
 
 export const MANAGED_AGENT_ROUTES: E2eRouteExports = {

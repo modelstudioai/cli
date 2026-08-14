@@ -7,20 +7,21 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command             | Description                                                          |
-| ------------------- | -------------------------------------------------------------------- |
-| `bl image edit`     | Edit an existing image with text instructions (Qwen-Image / Wan 2.7) |
-| `bl image generate` | Generate images (Qwen-Image / wan2.x)                                |
+| Command             | Authentication | Description                                                          |
+| ------------------- | -------------- | -------------------------------------------------------------------- |
+| `bl image edit`     | API Key        | Edit an existing image with text instructions (Qwen-Image / Wan 2.7) |
+| `bl image generate` | API Key        | Generate images (Qwen-Image / wan2.x)                                |
 
 ## Command details
 
 ### `bl image edit`
 
-| Field           | Value                                                                |
-| --------------- | -------------------------------------------------------------------- |
-| **Name**        | `image edit`                                                         |
-| **Description** | Edit an existing image with text instructions (Qwen-Image / Wan 2.7) |
-| **Usage**       | `bl image edit --image <url> --prompt <text> [flags]`                |
+| Field              | Value                                                                |
+| ------------------ | -------------------------------------------------------------------- |
+| **Name**           | `image edit`                                                         |
+| **Description**    | Edit an existing image with text instructions (Qwen-Image / Wan 2.7) |
+| **Authentication** | API Key                                                              |
+| **Usage**          | `bl image edit --image <url> --prompt <text> [flags]`                |
 
 #### Flags
 
@@ -28,7 +29,7 @@ Index: [index.md](index.md)
 | --------------------------- | ------- | -------- | -------------------------------------------------------------------------------------------------- |
 | `--image <url>`             | array   | yes      | Source image URL or local file path (repeatable for multi-image merge)                             |
 | `--prompt <text>`           | string  | yes      | Edit instruction text                                                                              |
-| `--model <model>`           | string  | no       | Model ID (default: qwen-image-2.0)                                                                 |
+| `--model <model>`           | string  | no       | Model ID (default: qwen-image-3.0)                                                                 |
 | `--size <W*H>`              | string  | no       | Output image size: ratio (3:4, 16:9) or pixels (2048\*2048)                                        |
 | `--n <count>`               | number  | no       | Number of images (default: 1, max: 6)                                                              |
 | `--seed <n>`                | number  | no       | Random seed for reproducible results                                                               |
@@ -80,18 +81,19 @@ bl image edit --image ./photo.png --prompt "Replace the background with a beach"
 
 ### `bl image generate`
 
-| Field           | Value                                       |
-| --------------- | ------------------------------------------- |
-| **Name**        | `image generate`                            |
-| **Description** | Generate images (Qwen-Image / wan2.x)       |
-| **Usage**       | `bl image generate --prompt <text> [flags]` |
+| Field              | Value                                       |
+| ------------------ | ------------------------------------------- |
+| **Name**           | `image generate`                            |
+| **Description**    | Generate images (Qwen-Image / wan2.x)       |
+| **Authentication** | API Key                                     |
+| **Usage**          | `bl image generate --prompt <text> [flags]` |
 
 #### Flags
 
 | Flag                        | Type    | Required | Description                                                                                                              |
 | --------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `--prompt <text>`           | string  | yes      | Image description                                                                                                        |
-| `--model <model>`           | string  | no       | Model ID (default: qwen-image-2.0)                                                                                       |
+| `--model <model>`           | string  | no       | Model ID (default: qwen-image-3.0)                                                                                       |
 | `--size <W*H>`              | string  | no       | Image size: ratio (3:4, 16:9, 1:1) or pixels (2048\*2048)                                                                |
 | `--n <count>`               | number  | no       | Number of images per request (default: 1, max: 6)                                                                        |
 | `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                                                  |

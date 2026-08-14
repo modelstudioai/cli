@@ -1,5 +1,5 @@
 // Read-only discovery of locally installed AI tooling, surfaced by `config ui`:
-// - Agent skills installed under ~/.agents/skills (via `npx skills add`).
+// - Agent skills installed under ~/.agents/skills (via `bl skill add`).
 // - MCP servers declared in each coding agent's local config file.
 // - Coding agent frameworks and whether the bailian-cli provider is wired in.
 //
@@ -128,8 +128,8 @@ function countFiles(dir: string, budget = 500): number {
 }
 
 /**
- * Skill directories to scan, keyed by the module that owns them. `npx skills
- * add --all` fans skills out into each installed agent, so the same skill can
+ * Skill directories to scan, keyed by the module that owns them. `bl skill init` /
+ * `bl skill add` fans skills out into each installed agent, so the same skill can
  * live in several of these roots at once.
  */
 function skillRoots(home: string): Array<{ source: string; dir: string }> {

@@ -7,19 +7,20 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                | Description                                                                                    |
-| ---------------------- | ---------------------------------------------------------------------------------------------- |
-| `bl advisor recommend` | Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking) |
+| Command                | Authentication | Description                                                                                    |
+| ---------------------- | -------------- | ---------------------------------------------------------------------------------------------- |
+| `bl advisor recommend` | API Key        | Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking) |
 
 ## Command details
 
 ### `bl advisor recommend`
 
-| Field           | Value                                                                                          |
-| --------------- | ---------------------------------------------------------------------------------------------- |
-| **Name**        | `advisor recommend`                                                                            |
-| **Description** | Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking) |
-| **Usage**       | `bl advisor recommend --message <text> [flags]`                                                |
+| Field              | Value                                                                                          |
+| ------------------ | ---------------------------------------------------------------------------------------------- |
+| **Name**           | `advisor recommend`                                                                            |
+| **Description**    | Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking) |
+| **Authentication** | API Key                                                                                        |
+| **Usage**          | `bl advisor recommend --message <text> [flags]`                                                |
 
 #### Flags
 

@@ -7,19 +7,20 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command         | Description                                          |
-| --------------- | ---------------------------------------------------- |
-| `bl search web` | Search the web using DashScope MCP WebSearch service |
+| Command         | Authentication | Description                                          |
+| --------------- | -------------- | ---------------------------------------------------- |
+| `bl search web` | API Key        | Search the web using DashScope MCP WebSearch service |
 
 ## Command details
 
 ### `bl search web`
 
-| Field           | Value                                                |
-| --------------- | ---------------------------------------------------- |
-| **Name**        | `search web`                                         |
-| **Description** | Search the web using DashScope MCP WebSearch service |
-| **Usage**       | `bl search web --query <text> [flags]`               |
+| Field              | Value                                                |
+| ------------------ | ---------------------------------------------------- |
+| **Name**           | `search web`                                         |
+| **Description**    | Search the web using DashScope MCP WebSearch service |
+| **Authentication** | API Key                                              |
+| **Usage**          | `bl search web --query <text> [flags]`               |
 
 #### Flags
 

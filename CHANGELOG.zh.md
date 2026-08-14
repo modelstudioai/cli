@@ -11,17 +11,49 @@
 ### 新增
 
 - **百炼原生 Managed Agent Deployment** —— `agents.yaml` 中声明的 `deployments` 现在会创建原生 AgentStudio 资源，支持服务端 Cron 调度、本地文件资源上传、通过 `destroy` 归档，以及在下次 `apply` 时迁移旧版模拟 Deployment state。
-- **Skill Registry 管理** —— 新增 `bl skill add`、`bl skill list`、`bl skill update` 和 `bl skill remove`，支持向检测到的编码 Agent 安装 Skill、核对状态、原子更新及卸载 Registry Skill。
+- **`bl text chat` 支持 Responses API** —— 可通过 `--api responses` 调用 DashScope Responses API，支持流式输出、工具定义和结构化 JSON 输出；默认仍使用 Chat Completions。
+- **订阅套餐用量视图** —— `bl usage token-plan` 支持查看 5 小时和每周额度，`bl usage coding-plan` 支持查看 5 小时、每周和每月额度；两者均提供文本与 JSON 输出。
+- **命令帮助展示鉴权要求** —— Help 输出现在会明确标注命令需要 API Key、控制台登录还是阿里云 OpenAPI 凭证。
 
 ### 变更
 
-- **命令输出 Request ID** —— 数据集、模型部署和模型精调命令现在会在文本及 JSON 输出中展示服务端 Request ID，便于故障排查。
-- **Skill 分包与路由** —— 百炼 Skill 拆分为共享协议、生成、精调、Managed Agent 和 CLI Hub 等领域；支持的安装方式统一为 `npx skills add modelstudioai/cli --all -g`，一次安装完整 Skill 家族。
-- **Advisor 知识更新** —— npm 安装时会预下载模型推荐知识包，并在需要时自动刷新；下载失败不会阻断 CLI 安装。
+- **扩展语音识别模型支持** —— `bl speech recognize` 现在会将异步文件转写和同步 Flash ASR 模型路由至对应的 DashScope API，并为暂不支持的实时模型提供明确提示。
+- **增强 MCP 传输兼容性** —— MCP 命令现在可为兼容的百炼及自定义端点从 Streamable HTTP 自动回退至经典 SSE。
 
-### 内部
+### 修复
 
-- 百炼和 DashScope API 请求现在会携带 CLI 二进制名称及版本来源标签。
+- 二进制方式升级 CLI 成功后，现在会同步刷新已安装的 Agent Skills。
+- 修复 Token Plan 额度不可用或缺少重置时间时的展示问题。
+- 修复 Qwen3 文件转写结果处理，使等待模式和 `--out` 能够正常工作。
+- 修复 MCP SSE 分块解析、响应头超时、中止清理和回退状态匹配问题。
+- JSON 输出中的网络错误现在会在 `cause.code` 中保留 errno。
+
+## [1.14.3] - 2026-08-12
+
+### 修复
+
+- **免费额度兼容性** —— `bl usage free` 和 `bl usage freetier` 现在使用最新的 Bailian Commerce 控制台 API 查询、开通和关闭免费额度，并统一处理异步任务轮询。
+
+## [1.14.2] - 2026-08-07
+
+### 新增
+
+- **`bl skill init`** —— 一次性将全部官方 `bailian-*` Skill 安装到本机检测到的 AI Agent。
+
+### 变更
+
+- **Skill 命令接口** —— Skill 管理命令现在默认输出适合 Agent 工作流的 JSON；`bl skill add` 和 `bl skill update` 使用明确的 `--all` 与 `--name` 选择参数。
+
+## [1.14.1] - 2026-08-05
+
+### 新增
+
+- **百炼 Skill 按领域拆分** —— 通过 `npx skills add modelstudioai/cli --all -g` 可统一安装图片与视频生成、模型微调、Managed Agent 和共享执行协议等专用 Skill，提升任务路由准确性并减少无关上下文。
+
+### 变更
+
+- **默认图片模型升级至 Qwen-Image 3.0** —— 普通 API Key 用户的图片生成、图片编辑、Pipeline、配置 UI 和相关文档现在默认使用 `qwen-image-3.0`。
+- **扩展 Coding Agent 兼容范围** —— Skill 安装与更新现在能够识别更多 Coding Agent，保留已有安装链接，并自动将 Skill 补充到新识别的 Agent。
 
 ## [1.14.0] - 2026-08-04
 

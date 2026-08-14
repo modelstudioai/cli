@@ -136,6 +136,26 @@ interface RenderedCell {
   colored: string;
 }
 
+/** A standalone gauge cell (bar + label) for non-table layouts, e.g. the usage quota box. */
+export interface GaugeCell {
+  plain: string;
+  colored: string;
+}
+
+/**
+ * Render a single gauge cell in the `usage free` table style: brand-cyan fill,
+ * transparent track, and a light-blue label after the bar. `percent` is 0-100;
+ * null renders an empty gauge with a neutral label.
+ */
+export function renderGauge(
+  percent: number | null,
+  label: string,
+  width: number = DEFAULT_BAR_WIDTH,
+  out: NodeJS.WriteStream = process.stdout,
+): GaugeCell {
+  return buildBarCell(percent, label, width, colorLevel(out));
+}
+
 function buildBarCell(
   percent: number | null,
   label: string,

@@ -11,17 +11,49 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - **Native Bailian Managed Agent Deployments** — `deployments` declared in `agents.yaml` now materialize as native AgentStudio resources, with server-side cron schedules, local file resource uploads, archival through `destroy`, and migration of legacy emulated state on the next `apply`.
-- **Skill registry management** — added `bl skill add`, `bl skill list`, `bl skill update`, and `bl skill remove` for installing, reconciling, atomically updating, and removing registry skills across detected coding agents.
+- **Responses API for `bl text chat`** — Use `--api responses` to call the DashScope Responses API with streaming, tool definitions, and structured JSON output; Chat Completions remains the default.
+- **Subscription plan usage views** — `bl usage token-plan` displays 5-hour and weekly quota usage, while `bl usage coding-plan` displays 5-hour, weekly, and monthly usage; both support text and JSON output.
+- **Authentication requirements in command help** — Help output now states whether a command requires an API Key, Console login, or Alibaba Cloud OpenAPI credentials.
 
 ### Changed
 
-- **Request IDs in command output** — dataset, model deployment, and fine-tuning commands now expose server request IDs in text and JSON output for troubleshooting.
-- **Skill packaging and routing** — Bailian skills are split into the shared protocol, generation, fine-tuning, Managed Agent, and CLI hub domains. The supported installation flow now installs the complete family with `npx skills add modelstudioai/cli --all -g`.
-- **Advisor knowledge refresh** — the model advisor knowledge package is pre-fetched during npm installation and automatically refreshed when needed; download failures do not block CLI installation.
+- **Broader speech-recognition model support** — `bl speech recognize` now routes asynchronous file-transcription and synchronous Flash ASR models to the appropriate DashScope APIs, with clear guidance for unsupported realtime models.
+- **MCP transport compatibility** — MCP commands now fall back from Streamable HTTP to classic SSE for compatible Bailian and custom endpoints.
 
-### Internal
+### Fixed
 
-- Bailian and DashScope API requests now include CLI binary and version source-attribution tags.
+- Binary updates now refresh installed Agent Skills after a successful CLI upgrade.
+- Fixed unavailable Token Plan quota values and missing reset times.
+- Fixed Qwen3 file-transcription result handling so waiting mode and `--out` work correctly.
+- Fixed MCP SSE chunk parsing, header timeouts, abort cleanup, and fallback status matching.
+- Network failures in JSON output now preserve the errno value in `cause.code`.
+
+## [1.14.3] - 2026-08-12
+
+### Fixed
+
+- **Free-tier quota compatibility** — `bl usage free` and `bl usage freetier` now use the current Bailian Commerce console APIs for quota queries, activation, and deactivation, with consistent asynchronous-task polling.
+
+## [1.14.2] - 2026-08-07
+
+### Added
+
+- **`bl skill init`** — Install all first-party `bailian-*` skills into detected local AI Agents in one step.
+
+### Changed
+
+- **Skill command interface** — Skill management commands now default to JSON output for Agent workflows; `bl skill add` and `bl skill update` use explicit `--all` and `--name` selectors.
+
+## [1.14.1] - 2026-08-05
+
+### Added
+
+- **Focused Bailian Skills** — `npx skills add modelstudioai/cli --all -g` now installs dedicated skills for media generation, fine-tuning, Managed Agent, and shared execution rules, improving task routing while reducing irrelevant context.
+
+### Changed
+
+- **Default image model upgraded to Qwen-Image 3.0** — image generation, image editing, pipelines, the config UI, and related documentation now default to `qwen-image-3.0` for API Key users.
+- **Broader coding-agent compatibility** — Skill installation and updates now detect more coding agents, preserve existing installation links, and automatically backfill skills into newly detected agents.
 
 ## [1.14.0] - 2026-08-04
 

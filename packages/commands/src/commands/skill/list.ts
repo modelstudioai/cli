@@ -1,6 +1,5 @@
 import {
   defineCommand,
-  detectOutputFormat,
   computeSkillStatuses,
   fetchSkillsIndex,
   getSkillRegistryBaseUrl,
@@ -24,7 +23,7 @@ export default defineCommand({
     "STATUS: installed | outdated | not-installed | missing (lock has it, dir deleted) | untracked (dir exists, not managed)",
   ],
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
+    const format = ctx.settings.outputExplicit ? ctx.settings.output : "json";
     // Three-way reconciliation: live remote index × skill-lock.json (installation facts) × disk
     const index = await fetchSkillsIndex();
     const lock = readSkillLock();

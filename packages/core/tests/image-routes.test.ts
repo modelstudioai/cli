@@ -11,6 +11,7 @@ import {
 } from "../src/client/image-routes.ts";
 
 test("sync multimodal family covers qwen-image, wan2.6/2.7 image, and z-image", () => {
+  expect(isSyncMultimodalImageModel("qwen-image-3.0")).toBe(true);
   expect(isSyncMultimodalImageModel("qwen-image-2.0")).toBe(true);
   expect(isSyncMultimodalImageModel("qwen-image-2.0-pro")).toBe(true);
   expect(isSyncMultimodalImageModel("qwen-image-plus")).toBe(true);
@@ -41,6 +42,7 @@ test("legacy image2image is wan2.5-i2i only; wanx imageedit uses function protoc
 });
 
 test("size profiles are model-specific, not sync/async", () => {
+  expect(resolveImageSizeProfile("qwen-image-3.0")).toBe("qwen-image-2.0");
   expect(resolveImageSizeProfile("qwen-image-2.0")).toBe("qwen-image-2.0");
   expect(resolveImageSizeProfile("qwen-image")).toBe("qwen-image-fixed");
   expect(resolveImageSizeProfile("qwen-image-plus")).toBe("qwen-image-fixed");
@@ -55,6 +57,7 @@ test("size profiles are model-specific, not sync/async", () => {
 });
 
 test("prompt_extend defaults follow model docs", () => {
+  expect(resolvePromptExtendDefault("qwen-image-3.0")).toBe(true);
   expect(resolvePromptExtendDefault("qwen-image-2.0")).toBe(true);
   expect(resolvePromptExtendDefault("qwen-image-max")).toBe(true);
   expect(resolvePromptExtendDefault("z-image-turbo")).toBe(false);
@@ -85,6 +88,11 @@ test("resolveImageGenerateApi picks path, input style, and size profile", () => 
     kind: "async-image-generation",
     sizeProfile: "wan26",
   });
+  expect(resolveImageGenerateApi("qwen-image-3.0")).toMatchObject({
+    kind: "sync-multimodal",
+    sizeProfile: "qwen-image-2.0",
+    promptExtendDefault: true,
+  });
   expect(resolveImageGenerateApi("qwen-image-2.0")).toMatchObject({
     kind: "sync-multimodal",
     sizeProfile: "qwen-image-2.0",
@@ -112,6 +120,10 @@ test("resolveImageEditApi excludes pure T2I models from sync edit", () => {
     useSync: true,
   });
   expect(resolveImageEditApi("wan2.6-image")).toMatchObject({
+    kind: "sync-multimodal",
+    useSync: true,
+  });
+  expect(resolveImageEditApi("qwen-image-3.0")).toMatchObject({
     kind: "sync-multimodal",
     useSync: true,
   });

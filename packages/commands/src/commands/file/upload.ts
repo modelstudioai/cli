@@ -23,7 +23,7 @@ export default defineCommand({
     "--file photo.jpg --model qwen3-vl-plus",
     "--file video.mp4 --model wan2.1-t2v-plus",
     "--file audio.wav --model qwen3-asr-flash",
-    "--file cat.png --model qwen-image-2.0",
+    "--file cat.png --model qwen-image-3.0",
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

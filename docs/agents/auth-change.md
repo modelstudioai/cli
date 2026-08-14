@@ -25,7 +25,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 当前 command 鉴权域(`AuthRequirement`):
 
 - `apiKey` — DashScope / OpenAI-compatible 模型域,用 API key 与 model base URL
-- `console` — Bailian Console Gateway,用 console access token + region/site/switchAgent/workspace
+- `console` — Bailian Console Gateway,用 console access token + region/site/switchAgent;`workspace_id` 是独立的 Settings 作用域,不属于 credential
 - `openapi` — 阿里云 OpenAPI 签名域,用 AccessKey ID/Secret 调用 Token Plan 等 OpenAPI
 - `none` — 本地命令、登录/配置类命令、无需 credential 的命令
 
@@ -35,7 +35,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 
 - `bl auth login --api-key ...` 只更新 `api_key` / `base_url`
 - `bl auth login --console` 只更新 `access_token` 以及回调携带的 console 作用域字段
-- `bl auth login --open-api ...` 只更新 `access_key_id` / `access_key_secret`
+- `bl auth login --open-api ...` 更新 `access_key_id` / `access_key_secret`,同时会调用 OpenAPI 生成 CLI `access_token` 并一并写入;即一次 `--open-api` 登录同时产生 `openapi` 与 `console` 域凭证
 - `bl auth logout --console` 只清 `access_token`
 - `bl auth logout --open-api` 只清 `access_key_id` / `access_key_secret` / `security_token`
 - `bl auth logout` 清 `api_key` + `base_url` + `access_token` + `access_key_*`
@@ -78,6 +78,9 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
   - 如新增鉴权域,扩展 `AuthRequirement`
   - 更新 `credentialFlagDefs()` 暴露该域可见的 flag
   - 必要时新增 `*_AUTH_FLAGS`
+  - `workspace_id` 是作用域字段而非 credential,不要把它放进 `ConsoleCredential`;读取方式按命令 `auth` 域区分:
+    - `auth: "console"` 命令通过 `CONSOLE_AUTH_FLAGS` 自动获得 `--workspace-id`,由 `buildSettings()` 解析到 `settings.workspaceId`,命令统一从 `settings.workspaceId` 读取
+    - `auth: "apiKey"`/`"openapi"`/`"none"` 命令如需 `--workspace-id`,必须自声明 flag;因它不会进入 credential/global flags,命令从 `ctx.flags.workspaceId` 读取(可回退到 `settings.workspaceId`)
 - [ ] `packages/core/src/auth/types.ts`:
   - 新增 credential 类型 / source / scope 字段
 - [ ] `packages/core/src/auth/resolver.ts`:
@@ -131,6 +134,8 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 
 ## 完成后自查
 
+本仓库同时存在 `bl`(packages/cli) 与 `kscli`(packages/kscli) 两个入口,二者共享 core/runtime 鉴权链路,但暴露的命令不同。如果改动会影响两个入口共用的命令或错误提示,再分别验证它们各自实际暴露的路径;不要假设 `kscli` 也有 `bl auth *` 命令。
+
 ```sh
 # 各种凭证组合
 unset DASHSCOPE_API_KEY ALIBABA_CLOUD_ACCESS_KEY_ID ALIBABA_CLOUD_ACCESS_KEY_SECRET
@@ -150,8 +155,10 @@ Console 登录/网关相关改动:
 
 ```sh
 pnpm -F bailian-cli exec tsx src/main.ts auth login --console
-pnpm -F bailian-cli exec tsx src/main.ts usage stats --dry-run --output json
+pnpm -F bailian-cli exec tsx src/main.ts usage stats --dry-run --output json --workspace-id ws-xxx
 ```
+
+注意:`usage stats --dry-run` 仍会先校验 workspace,必须传入 `--workspace-id`(或 `BAILIAN_WORKSPACE_ID` / config `workspace_id`)。
 
 ## 常见漏点
 

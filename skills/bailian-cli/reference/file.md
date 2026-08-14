@@ -7,19 +7,20 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command          | Description                                              |
-| ---------------- | -------------------------------------------------------- |
-| `bl file upload` | Upload a local file to DashScope temporary storage (48h) |
+| Command          | Authentication | Description                                              |
+| ---------------- | -------------- | -------------------------------------------------------- |
+| `bl file upload` | API Key        | Upload a local file to DashScope temporary storage (48h) |
 
 ## Command details
 
 ### `bl file upload`
 
-| Field           | Value                                                    |
-| --------------- | -------------------------------------------------------- |
-| **Name**        | `file upload`                                            |
-| **Description** | Upload a local file to DashScope temporary storage (48h) |
-| **Usage**       | `bl file upload --file <path> --model <model>`           |
+| Field              | Value                                                    |
+| ------------------ | -------------------------------------------------------- |
+| **Name**           | `file upload`                                            |
+| **Description**    | Upload a local file to DashScope temporary storage (48h) |
+| **Authentication** | API Key                                                  |
+| **Usage**          | `bl file upload --file <path> --model <model>`           |
 
 #### Flags
 
@@ -45,5 +46,5 @@ bl file upload --file audio.wav --model qwen3-asr-flash
 ```
 
 ```bash
-bl file upload --file cat.png --model qwen-image-2.0
+bl file upload --file cat.png --model qwen-image-3.0
 ```

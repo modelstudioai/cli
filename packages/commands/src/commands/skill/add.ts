@@ -2,7 +2,6 @@ import {
   BailianError,
   ExitCode,
   defineCommand,
-  detectOutputFormat,
   detectInstalledAgents,
   fetchSkillsIndex,
   getSkillRegistryBaseUrl,
@@ -28,22 +27,31 @@ const INSTALL_CONCURRENCY = 3;
 export default defineCommand({
   description: "Install skills from the Bailian skill registry into local agents",
   auth: "none",
-  usageArgs: "--name <all|name,...>",
+  usageArgs: "--all | --name <name,...>",
   flags: {
+    all: {
+      type: "switch",
+      description: "Install all skills from the registry",
+    },
     name: {
       type: "string",
-      valueHint: "<all|name,...>",
-      description: "Skills to install: all or comma-separated skill names",
-      required: true,
+      valueHint: "<name,...>",
+      description: "Comma-separated skill names to install",
     },
   },
-  exampleArgs: ["--name all", "--name spark-video,bailian-model-recommend"],
+  validate(flags) {
+    if (flags.all && flags.name) return "Use either --all or --name, not both";
+    if (!flags.all && !flags.name)
+      return "Specify --all to install everything or --name <name,...> for specific skills";
+    return undefined;
+  },
+  exampleArgs: ["--all", "--name spark-video,bailian-model-recommend"],
   async run(ctx) {
-    const format = detectOutputFormat(ctx.settings.output);
-    const requested = parseSkillNames(ctx.flags.name, false);
+    const format = ctx.settings.outputExplicit ? ctx.settings.output : "json";
     const index = await fetchSkillsIndex();
     const remoteNames = Object.keys(index.skills);
-    const names = requested === "all" ? remoteNames : requested;
+    const parsed = ctx.flags.all ? "all" : parseSkillNames(ctx.flags.name, false);
+    const names = parsed === "all" ? remoteNames : parsed;
 
     const lock = readSkillLock();
     const agents = detectInstalledAgents();

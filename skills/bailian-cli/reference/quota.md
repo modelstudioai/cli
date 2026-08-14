@@ -7,22 +7,23 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command            | Description                             |
-| ------------------ | --------------------------------------- |
-| `bl quota check`   | Check current usage against rate limits |
-| `bl quota history` | View quota change history               |
-| `bl quota list`    | View model RPM/TPM rate limits          |
-| `bl quota request` | Request a temporary quota increase      |
+| Command            | Authentication | Description                             |
+| ------------------ | -------------- | --------------------------------------- |
+| `bl quota check`   | Console        | Check current usage against rate limits |
+| `bl quota history` | Console        | View quota change history               |
+| `bl quota list`    | Console        | View model RPM/TPM rate limits          |
+| `bl quota request` | Console        | Request a temporary quota increase      |
 
 ## Command details
 
 ### `bl quota check`
 
-| Field           | Value                                      |
-| --------------- | ------------------------------------------ |
-| **Name**        | `quota check`                              |
-| **Description** | Check current usage against rate limits    |
-| **Usage**       | `bl quota check [--model <model>] [flags]` |
+| Field              | Value                                      |
+| ------------------ | ------------------------------------------ |
+| **Name**           | `quota check`                              |
+| **Description**    | Check current usage against rate limits    |
+| **Authentication** | Console                                    |
+| **Usage**          | `bl quota check [--model <model>] [flags]` |
 
 #### Flags
 
@@ -59,11 +60,12 @@ bl quota check --output json
 
 ### `bl quota history`
 
-| Field           | Value                      |
-| --------------- | -------------------------- |
-| **Name**        | `quota history`            |
-| **Description** | View quota change history  |
-| **Usage**       | `bl quota history [flags]` |
+| Field              | Value                      |
+| ------------------ | -------------------------- |
+| **Name**           | `quota history`            |
+| **Description**    | View quota change history  |
+| **Authentication** | Console                    |
+| **Usage**          | `bl quota history [flags]` |
 
 #### Flags
 
@@ -101,11 +103,12 @@ bl quota history --output json
 
 ### `bl quota list`
 
-| Field           | Value                                     |
-| --------------- | ----------------------------------------- |
-| **Name**        | `quota list`                              |
-| **Description** | View model RPM/TPM rate limits            |
-| **Usage**       | `bl quota list [--model <model>] [flags]` |
+| Field              | Value                                     |
+| ------------------ | ----------------------------------------- |
+| **Name**           | `quota list`                              |
+| **Description**    | View model RPM/TPM rate limits            |
+| **Authentication** | Console                                   |
+| **Usage**          | `bl quota list [--model <model>] [flags]` |
 
 #### Flags
 
@@ -137,11 +140,12 @@ bl quota list --output json
 
 ### `bl quota request`
 
-| Field           | Value                                                    |
-| --------------- | -------------------------------------------------------- |
-| **Name**        | `quota request`                                          |
-| **Description** | Request a temporary quota increase                       |
-| **Usage**       | `bl quota request --model <model> --tpm <value> [flags]` |
+| Field              | Value                                                    |
+| ------------------ | -------------------------------------------------------- |
+| **Name**           | `quota request`                                          |
+| **Description**    | Request a temporary quota increase                       |
+| **Authentication** | Console                                                  |
+| **Usage**          | `bl quota request --model <model> --tpm <value> [flags]` |
 
 #### Flags
 

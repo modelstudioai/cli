@@ -13,12 +13,12 @@ description: >-
   图片和语音同步返回并落地本地文件，视频是异步任务、用 `--download` 或轮询取回；本地文件直接传路径，CLI 自动上传。
   反触发：宿主自己能做的图片理解、普通问答、编程、写作、翻译不走本技能；百炼应用/知识库/用量/额度走 bailian-cli；
   精调训练走 bailian-finetune。
-  官方安装：`npx skills add modelstudioai/cli --all -g`（与共享协议 bailian-protocol 同装）。
+  官方安装：`bl skill init`（与共享协议 bailian-protocol 同装）。
 ---
 
 # Bailian media generation (`bl image` / `bl video` / `bl speech` / `bl omni`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent (one-time ask templates), Version & updates (pre-flight checklist), and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) and `bl <command> --help` — do not guess flags. If that protocol file is missing, stop and run `npx skills add modelstudioai/cli --all -g`; do not guess auth/consent.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Provider selection and consent (one-time ask templates), Version & updates (pre-flight checklist), and CLI errors: report an issue. Command details are authoritative in [`reference/`](reference/index.md) and `bl <command> --help` — do not guess flags. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
 
 ## Consent (short version; full rules in bailian-protocol)
 
@@ -29,8 +29,8 @@ description: >-
 
 | User intent                                   | Command                            | Default model                                  |
 | --------------------------------------------- | ---------------------------------- | ---------------------------------------------- |
-| Text-to-image                                 | `bl image generate`                | `qwen-image-2.0`                               |
-| Image edit / multi-image merge                | `bl image edit` (repeat `--image`) | `qwen-image-2.0`                               |
+| Text-to-image                                 | `bl image generate`                | `qwen-image-3.0`                               |
+| Image edit / multi-image merge                | `bl image edit` (repeat `--image`) | `qwen-image-3.0`                               |
 | Text-to-video / image-to-video                | `bl video generate`                | `happyhorse-1.1-t2v` / `-i2v` (with `--image`) |
 | Video edit / style transfer                   | `bl video edit`                    | `happyhorse-1.0-video-edit`                    |
 | Reference-to-video + voice                    | `bl video ref`                     | `happyhorse-1.1-r2v`                           |
@@ -38,6 +38,8 @@ description: >-
 | Speech recognition (ASR / transcription)      | `bl speech recognize`              | `fun-asr`                                      |
 | A/V understanding (files the host can't play) | `bl omni --video` / `--audio`      | `qwen3.5-omni-plus`                            |
 | Image/video describe (user names Bailian)     | `bl vision describe`               | `qwen-vl-max`; host-first for plain image Q&A  |
+
+For ASR model selection, keep `fun-asr` (or other `*-filetrans`) for long recordings, repeated files, speaker diarization, or asynchronous task IDs. For one local or remote audio file up to about five minutes when the user asks for low-latency Flash models, use `--model fun-asr-flash-2026-06-15`, `--model qwen-audio-3.0-asr-flash`, or `--model qwen3-asr-flash`. Flash recognition is synchronous and accepts exactly one file per call.
 
 Flags, usage, and examples: see [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags.
 
@@ -76,7 +78,7 @@ If one or more `bl` commands actually ran, proactively add a one-line summary in
 
 ## Common hand-offs
 
-软 hand-off（按 skill **名**；已安装则 Read，否则 `--help` / 提示 `npx skills add modelstudioai/cli --all -g`）：
+软 hand-off（按 skill **名**；已安装则 Read，否则 `--help` / 提示 `bl skill init`）：
 
 - Generation failed and it is not a usage/auth/content-filter issue → follow the issue-reporting flow in `bailian-protocol` ([`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md#cli-errors-report-an-issue)) and ask once whether to report.
 - Managing Bailian apps / knowledge bases / usage → skill `bailian-cli` (fallback: `bl app\|knowledge\|usage --help`).
@@ -84,5 +86,5 @@ If one or more `bl` commands actually ran, proactively add a one-line summary in
 
 ## references
 
-- [bailian-protocol](../bailian-protocol/SKILL.md) — shared protocol (install via `--all -g`)
+- [bailian-protocol](../bailian-protocol/SKILL.md) — shared protocol (install via `bl skill init`)
 - [reference/](reference/index.md) — command details
