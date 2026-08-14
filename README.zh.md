@@ -81,7 +81,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 请阅读：https://bailian.aliyun.com/cli/install.md 并按照说明为我安装阿里云百炼 CLI
 ```
 
-**npm 安装**
+**NPM 安装**
 
 ```bash
 npm install -g bailian-cli

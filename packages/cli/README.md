@@ -82,7 +82,7 @@ Send the following to your Agent — it will detect your environment, then insta
 Please read https://bailian.aliyun.com/cli/install.md and install the Aliyun Model Studio CLI for me
 ```
 
-**Install with npm**
+**Install with NPM**
 
 ```bash
 npm install -g bailian-cli
