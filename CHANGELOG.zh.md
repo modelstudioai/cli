@@ -6,6 +6,43 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.15.0] - 2026-08-14
+
+### 新增
+
+- **`bl text chat` 支持 Responses API** —— 可通过 `--api responses` 调用 DashScope Responses API，支持流式输出、工具定义和结构化 JSON 输出；默认仍使用 Chat Completions。
+- **订阅套餐用量视图** —— `bl usage token-plan` 支持查看 5 小时和每周额度，`bl usage coding-plan` 支持查看 5 小时、每周和每月额度；两者均提供文本与 JSON 输出。
+- **命令帮助展示鉴权要求** —— Help 输出现在会明确标注命令需要 API Key、控制台登录还是阿里云 OpenAPI 凭证。
+
+### 变更
+
+- **扩展语音识别模型支持** —— `bl speech recognize` 现在会将异步文件转写和同步 Flash ASR 模型路由至对应的 DashScope API，并为暂不支持的实时模型提供明确提示。
+- **增强 MCP 传输兼容性** —— MCP 命令现在可为兼容的百炼及自定义端点从 Streamable HTTP 自动回退至经典 SSE。
+
+### 修复
+
+- 二进制方式升级 CLI 成功后，现在会同步刷新已安装的 Agent Skills。
+- 修复 Token Plan 额度不可用或缺少重置时间时的展示问题。
+- 修复 Qwen3 文件转写结果处理，使等待模式和 `--out` 能够正常工作。
+- 修复 MCP SSE 分块解析、响应头超时、中止清理和回退状态匹配问题。
+- JSON 输出中的网络错误现在会在 `cause.code` 中保留 errno。
+
+## [1.14.3] - 2026-08-12
+
+### 修复
+
+- **免费额度兼容性** —— `bl usage free` 和 `bl usage freetier` 现在使用最新的 Bailian Commerce 控制台 API 查询、开通和关闭免费额度，并统一处理异步任务轮询。
+
+## [1.14.2] - 2026-08-07
+
+### 新增
+
+- **`bl skill init`** —— 一次性将全部官方 `bailian-*` Skill 安装到本机检测到的 AI Agent。
+
+### 变更
+
+- **Skill 命令接口** —— Skill 管理命令现在默认输出适合 Agent 工作流的 JSON；`bl skill add` 和 `bl skill update` 使用明确的 `--all` 与 `--name` 选择参数。
+
 ## [1.14.1] - 2026-08-05
 
 ### 新增
