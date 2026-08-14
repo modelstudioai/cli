@@ -124,10 +124,8 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
 
   async function getRegistry(argv: string[]): Promise<CommandRegistry> {
     const localeSources = buildSources(pickConfigFlag(argv));
-    const [translator, loaded] = await Promise.all([
-      createTranslator(localeSources.file.language ?? DEFAULT_LANGUAGE),
-      getLoadedCommandPacks(),
-    ]);
+    const translator = createTranslator(localeSources.file.language ?? DEFAULT_LANGUAGE);
+    const loaded = await getLoadedCommandPacks();
     return new CommandRegistry(loaded.commands, binName, translator);
   }
 

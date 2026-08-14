@@ -43,7 +43,6 @@
     "bailian-cli-core": "workspace:*",
     "boxen": "catalog:",
     "chalk": "catalog:",
-    "i18next": "catalog:",
     "undici": "catalog:"
   },
   "devDependencies": {

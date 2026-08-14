@@ -1,27 +1,12 @@
 import { expect, test } from "vite-plus/test";
 import { defineCommand } from "bailian-cli-core";
-import { createTranslator, type CliMessageBundle } from "../src/i18n.ts";
+import { createTranslator } from "../src/i18n.ts";
 import { CommandRegistry } from "../src/registry.ts";
 
-const messages = {
-  namespace: "test",
-  resources: {
-    "en-US": { greeting: "Hello, {{name}}!", englishOnly: "English fallback" },
-    "zh-CN": { greeting: "你好，{{name}}！" },
-  },
-} satisfies CliMessageBundle;
-
-test("translator uses the selected language, interpolation and English fallback", async () => {
-  const translator = await createTranslator("zh-CN", [messages]);
+test("translator resolves colocated text while preserving plain strings", () => {
+  const translator = createTranslator("zh-CN");
 
   expect(translator.language).toBe("zh-CN");
-  expect(translator.translate("test:greeting", { name: "百炼" })).toBe("你好，百炼！");
-  expect(translator.translate("test:englishOnly")).toBe("English fallback");
-});
-
-test("translator resolves colocated text while preserving plain strings", async () => {
-  const translator = await createTranslator("zh-CN");
-
   expect(translator.localize("Already localized")).toBe("Already localized");
   expect(
     translator.localize({
@@ -29,10 +14,17 @@ test("translator resolves colocated text while preserving plain strings", async 
       "zh-CN": "显示帮助信息",
     }),
   ).toBe("显示帮助信息");
+
+  expect(
+    createTranslator("en-US").localize({
+      "en-US": "Show help",
+      "zh-CN": "显示帮助信息",
+    }),
+  ).toBe("Show help");
 });
 
 test("registry renders runtime help copy with the selected language", async () => {
-  const translator = await createTranslator("zh-CN");
+  const translator = createTranslator("zh-CN");
   const command = defineCommand({
     description: {
       "en-US": "Test command",

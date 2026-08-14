@@ -9,7 +9,6 @@ catalog:
   ajv: ^8.20.0
   boxen: ^8.0.1
   chalk: ^5.6.2
-  i18next: ^26.3.6
   tar-stream: ^3.2.0
   smol-toml: ^1.4.2
   tsx: ^4.23.0

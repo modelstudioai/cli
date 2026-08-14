@@ -24,9 +24,6 @@ catalogs:
     chalk:
       specifier: ^5.6.2
       version: 5.6.2
-    i18next:
-      specifier: ^26.3.6
-      version: 26.3.6
     smol-toml:
       specifier: ^1.4.2
       version: 1.7.0
@@ -257,9 +254,6 @@ importers:
       chalk:
         specifier: 'catalog:'
         version: 5.6.2
-      i18next:
-        specifier: 'catalog:'
-        version: 26.3.6(typescript@6.0.3)
       undici:
         specifier: 'catalog:'
         version: 6.27.0
@@ -1205,14 +1199,6 @@ packages:
   get-east-asian-width@1.6.0:
     resolution: {integrity: sha512-QRbvDIbx6YklUe6RxeTeleMR0yv3cYH6PsPZHcnVn7xv7zO1BHN8r0XETu8n6Ye3Q+ahtSarc3WgtNWmehIBfA==}
     engines: {node: '>=18'}
-
-  i18next@26.3.6:
-    resolution: {integrity: sha512-Bu5Z2nAXgfVyM8xvW3jk9EKRIuX37PudsrBViThNFx7CR7aaYTpP01cxNB/E4c4UUzTDiAZRstEhsRfPOL/8xA==}
-    peerDependencies:
-      typescript: ^5 || ^6 || ^7
-    peerDependenciesMeta:
-      typescript:
-        optional: true
 
   immediate@3.0.6:
     resolution: {integrity: sha512-XXOFtyqDjNDAQxVfYxuF7g9Il/IbWmmlQg2MYKOH8ExIT1qg6xc4zyS3HaEEATgs1btfzxq15ciUiY7gjSXRGQ==}
@@ -2263,10 +2249,6 @@ snapshots:
     optional: true
 
   get-east-asian-width@1.6.0: {}
-
-  i18next@26.3.6(typescript@6.0.3):
-    optionalDependencies:
-      typescript: 6.0.3
 
   immediate@3.0.6: {}
 
