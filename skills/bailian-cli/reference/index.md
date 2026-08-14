@@ -56,7 +56,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl skill list`                 | No Auth        | List registry skills and diff against local installs                                           | [skill.md](skill.md)           |
 | `bl skill remove`               | No Auth        | Remove locally installed skills (registry is untouched)                                        | [skill.md](skill.md)           |
 | `bl skill update`               | No Auth        | Update installed skills to the latest registry versions                                        | [skill.md](skill.md)           |
-| `bl text chat`                  | API Key        | Send a chat completion (OpenAI compatible, DashScope)                                          | [text.md](text.md)             |
+| `bl text chat`                  | API Key        | Send a text model request (OpenAI compatible, DashScope)                                       | [text.md](text.md)             |
 | `bl token-plan add-member`      | AK/SK          | Add a member to a Token Plan organization                                                      | [token-plan.md](token-plan.md) |
 | `bl token-plan assign-seats`    | AK/SK          | Batch assign Token Plan seats to members                                                       | [token-plan.md](token-plan.md) |
 | `bl token-plan create-key`      | AK/SK          | Create a Token Plan API key for a seat                                                         | [token-plan.md](token-plan.md) |

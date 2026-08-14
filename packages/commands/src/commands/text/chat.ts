@@ -1,20 +1,35 @@
 import {
   defineCommand,
   chatPath,
+  responsesPath,
   parseSSE,
   detectOutputFormat,
   readTextFromPathOrStdin,
   type ChatMessage,
   type ChatRequest,
   type ChatResponse,
+  type ResponsesRequest,
+  type ResponsesResponse,
+  type ResponsesStreamEvent,
   type StreamChunk,
   type FlagsDef,
   type ParsedFlags,
 } from "bailian-cli-core";
 import { ansi, emitResult, emitBare } from "bailian-cli-runtime";
 import { readFileSync } from "fs";
+import {
+  assertResponsesStreamCompleted,
+  inspectResponsesStreamEvent,
+  extractResponsesText,
+} from "./responses.ts";
 
 const CHAT_FLAGS = {
+  api: {
+    type: "string",
+    valueHint: "<chat|responses>",
+    choices: ["chat", "responses"] as const,
+    description: "API to call (default: chat)",
+  },
   model: { type: "string", valueHint: "<model>", description: "Model ID (default: qwen3.8-max)" },
   message: {
     type: "array",
@@ -72,31 +87,31 @@ function parseMessages(flags: ChatFlags): ParsedMessages {
   if (flags.messagesFile) {
     const raw = readTextFromPathOrStdin(flags.messagesFile);
     const parsed = JSON.parse(raw) as Array<{ role: string; content: string }>;
-    for (const m of parsed) {
-      if (m.role === "system") {
-        system = typeof m.content === "string" ? m.content : "";
+    for (const parsedMessage of parsed) {
+      if (parsedMessage.role === "system") {
+        system = typeof parsedMessage.content === "string" ? parsedMessage.content : "";
       } else {
-        messages.push(m as ChatMessage);
+        messages.push(parsedMessage as ChatMessage);
       }
     }
   }
 
   if (flags.message) {
     const validRoles = new Set(["system", "user", "assistant"]);
-    const msgs = flags.message;
-    for (const m of msgs) {
-      const colonIdx = m.indexOf(":");
-      const maybeRole = colonIdx !== -1 ? m.slice(0, colonIdx) : "";
+    const messageValues = flags.message;
+    for (const messageValue of messageValues) {
+      const colonIndex = messageValue.indexOf(":");
+      const maybeRole = colonIndex !== -1 ? messageValue.slice(0, colonIndex) : "";
 
       if (validRoles.has(maybeRole)) {
-        const content = m.slice(colonIdx + 1);
+        const content = messageValue.slice(colonIndex + 1);
         if (maybeRole === "system") {
           system = content;
         } else {
           messages.push({ role: maybeRole as "user" | "assistant", content });
         }
       } else {
-        messages.push({ role: "user", content: m });
+        messages.push({ role: "user", content: messageValue });
       }
     }
   }
@@ -105,24 +120,33 @@ function parseMessages(flags: ChatFlags): ParsedMessages {
 }
 
 export default defineCommand({
-  description: "Send a chat completion (OpenAI compatible, DashScope)",
+  description: "Send a text model request (OpenAI compatible, DashScope)",
   auth: "apiKey",
   usageArgs: "--message <text> [flags]",
   flags: CHAT_FLAGS,
   exampleArgs: [
     '--message "What is Qwen?"',
+    `--api responses --model qwen3.8-max --tool '{"type":"web_search"}' --message "Search for recent Alibaba Cloud news"`,
     '--model qwen-max --system "You are a coding assistant." --message "Write fizzbuzz in Python"',
     '--message "Hello" --message "assistant:Hi!" --message "How are you?"',
     "--messages-file - --stream",
     '--message "Hello" --output json',
     '--model qwq-plus --message "Solve 1+1" --enable-thinking',
   ],
-  validate: (f) =>
-    !f.message && !f.messagesFile ? "Provide --message or --messages-file." : undefined,
+  validate: (flags) => {
+    if (!flags.message && !flags.messagesFile) {
+      return "Provide --message or --messages-file.";
+    }
+    if (flags.api === "responses" && flags.thinkingBudget !== undefined) {
+      return "--thinking-budget is not supported by the Responses API.";
+    }
+    return undefined;
+  },
   async run(ctx) {
     const { settings, flags } = ctx;
     const { system, messages } = parseMessages(flags);
 
+    const api = flags.api ?? "chat";
     const model = flags.model || settings.defaultTextModel || "qwen3.8-max";
     const shouldStream = flags.stream || process.stdout.isTTY;
     const format = detectOutputFormat(settings.output);
@@ -134,29 +158,39 @@ export default defineCommand({
     }
     allMessages.push(...messages);
 
-    const body: ChatRequest = {
-      model,
-      messages: allMessages,
-      max_tokens: flags.maxTokens ?? 4096,
-      stream: shouldStream,
-    };
+    let body: ChatRequest | ResponsesRequest;
+    if (api === "responses") {
+      body = {
+        model,
+        input: allMessages,
+        max_output_tokens: flags.maxTokens ?? 4096,
+        stream: shouldStream,
+      };
+    } else {
+      body = {
+        model,
+        messages: allMessages,
+        max_tokens: flags.maxTokens ?? 4096,
+        stream: shouldStream,
+      };
+    }
 
     if (flags.temperature !== undefined) body.temperature = flags.temperature;
     if (flags.topP !== undefined) body.top_p = flags.topP;
 
     if (flags.enableThinking) {
       body.enable_thinking = true;
-      if (flags.thinkingBudget !== undefined) {
+      if (api === "chat" && "messages" in body && flags.thinkingBudget !== undefined) {
         body.thinking_budget = flags.thinkingBudget;
       }
     }
 
     if (flags.tool) {
-      const tools = flags.tool.map((t) => {
+      const tools = flags.tool.map((toolValue) => {
         try {
-          return JSON.parse(t);
+          return JSON.parse(toolValue);
         } catch {
-          const raw = readFileSync(t, "utf-8");
+          const raw = readFileSync(toolValue, "utf-8");
           return JSON.parse(raw);
         }
       });
@@ -169,8 +203,8 @@ export default defineCommand({
     }
 
     if (shouldStream) {
-      const res = await ctx.client.request({
-        path: chatPath(),
+      const responseStream = await ctx.client.request({
+        path: api === "responses" ? responsesPath() : chatPath(),
         method: "POST",
         body,
         stream: true,
@@ -178,6 +212,7 @@ export default defineCommand({
 
       let textContent = "";
       let inThinking = false;
+      let responsesCompleted = false;
       const writesStreamingStdout = format === "text";
       const isTTY = process.stdout.isTTY;
       const statusOut =
@@ -185,8 +220,28 @@ export default defineCommand({
       const resultOut = process.stdout;
       const statusColor = ansi(statusOut);
 
-      for await (const event of parseSSE(res)) {
+      for await (const event of parseSSE(responseStream)) {
         if (event.data === "[DONE]") break;
+        if (api === "responses") {
+          let parsedEvent: ResponsesStreamEvent;
+          try {
+            parsedEvent = JSON.parse(event.data) as ResponsesStreamEvent;
+          } catch {
+            continue;
+          }
+
+          const update = inspectResponsesStreamEvent(parsedEvent);
+          if (update.delta) {
+            textContent += update.delta;
+            if (writesStreamingStdout) resultOut.write(update.delta);
+          }
+          if (update.completed) {
+            responsesCompleted = true;
+            break;
+          }
+          continue;
+        }
+
         try {
           const parsed = JSON.parse(event.data) as StreamChunk;
 
@@ -216,12 +271,27 @@ export default defineCommand({
           // Skip unparseable chunks
         }
       }
+      if (api === "responses") assertResponsesStreamCompleted(responsesCompleted);
       if (inThinking) statusOut.write(statusColor.reset);
 
       if (format === "json") {
         emitResult({ content: textContent }, format);
       } else {
         resultOut.write("\n");
+      }
+    } else if (api === "responses") {
+      const response = await ctx.client.requestJson<ResponsesResponse>({
+        path: responsesPath(),
+        method: "POST",
+        body,
+      });
+
+      const text = extractResponsesText(response);
+
+      if (settings.quiet || format === "text") {
+        emitBare(text);
+      } else {
+        emitResult(response, format);
       }
     } else {
       const response = await ctx.client.requestJson<ChatResponse>({
