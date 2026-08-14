@@ -12,13 +12,15 @@ import {
   readConfigFile,
   writeConfigFile,
   deleteConfigProfile,
+  DEFAULT_LANGUAGE,
   REGIONS,
   type ConfigStore,
   type FlagsDef,
+  type Language,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { listenLocalServer, openInBrowser, openPath } from "../shared/local-server.ts";
-import { PAGE_HTML } from "./ui-html.ts";
+import { renderConfigUiHtml } from "./ui-html.ts";
 import {
   UI_VALID_KEYS,
   UI_ENUM_KEYS,
@@ -40,7 +42,12 @@ import {
   installSkillZip,
 } from "./inventory.ts";
 import { launchAgent, agentLaunchable, agentSupportsPrompt } from "./agent-launch.ts";
-import { SCENARIOS, getScenario, renderScenarioPrompt, type Scenario } from "./scenarios.ts";
+import {
+  getScenario,
+  localizeScenarios,
+  renderScenarioPrompt,
+  type Scenario,
+} from "./scenarios.ts";
 import { qrSvg } from "./qr.ts";
 import { makeAuthUiBridge, type AuthUiBridge } from "../auth/console-ui.ts";
 import { listAssets, resolveAssetPath, defaultOutputBase, contentType } from "./assets.ts";
@@ -76,6 +83,10 @@ function errMessage(err: unknown): string {
 function sendJson(res: http.ServerResponse, status: number, obj: unknown): void {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(obj));
+}
+
+function configUiLanguage(configStore: ConfigStore): Language {
+  return configStore.read().language ?? DEFAULT_LANGUAGE;
 }
 
 function readBody(req: http.IncomingMessage): Promise<string> {
@@ -165,6 +176,13 @@ export function createConfigUiServer(
   outputBase: string = defaultOutputBase(),
   authBridge?: AuthUiBridge,
 ): http.Server {
+  let activatedUiProfile: string | null = null;
+  const uiLanguage = (): Language => {
+    if (activatedUiProfile === null) return configUiLanguage(configStore);
+    const configName = activatedUiProfile === "default" ? undefined : activatedUiProfile;
+    return readConfigFile(configName).language ?? DEFAULT_LANGUAGE;
+  };
+
   return http.createServer(async (req, res) => {
     try {
       const host = (req.headers.host || "").split(":")[0];
@@ -195,7 +213,7 @@ export function createConfigUiServer(
             "img-src 'self' data: https://img.alicdn.com https://oss.aliyuncs.com; " +
             "media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
         });
-        res.end(PAGE_HTML);
+        res.end(renderConfigUiHtml(uiLanguage()));
         return;
       }
 
@@ -380,7 +398,10 @@ export function createConfigUiServer(
             dispatchable: launchable[i] && agentSupportsPrompt(a.id),
           }))
           .filter((a) => a.dispatchable);
-        sendJson(res, 200, { scenarios: SCENARIOS, agents: targets });
+        sendJson(res, 200, {
+          scenarios: localizeScenarios(uiLanguage()),
+          agents: targets,
+        });
         return;
       }
 
@@ -543,7 +564,10 @@ export function createConfigUiServer(
             inputs,
           };
         } else {
-          scenario = typeof body.scenario === "string" ? getScenario(body.scenario) : undefined;
+          scenario =
+            typeof body.scenario === "string"
+              ? getScenario(body.scenario, uiLanguage())
+              : undefined;
         }
         if (!scenario) {
           sendJson(res, 400, { error: "unknown scenario" });
@@ -588,7 +612,8 @@ export function createConfigUiServer(
         const body = parsed as { name?: unknown };
         try {
           const activeProfile = await configStore.activate(body.name);
-          sendJson(res, 200, { activeProfile });
+          activatedUiProfile = activeProfile;
+          sendJson(res, 200, { activeProfile, uiLanguage: uiLanguage() });
         } catch (err) {
           sendJson(res, 400, { error: errMessage(err) });
         }
@@ -621,7 +646,7 @@ export function createConfigUiServer(
         const existing = readConfigFile(normalized) as Record<string, unknown>;
         const saved = mergeUnmanagedProfileFields(existing, cleaned);
         await writeConfigFile(saved, normalized);
-        sendJson(res, 200, { saved });
+        sendJson(res, 200, { saved, uiLanguage: uiLanguage() });
         return;
       }
 

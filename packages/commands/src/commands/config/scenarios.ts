@@ -1,3 +1,5 @@
+import type { Language } from "bailian-cli-core";
+
 /**
  * Curated "Playground" scenarios surfaced in the config UI.
  *
@@ -23,7 +25,7 @@ export interface Scenario {
   inputs?: ScenarioInput[];
 }
 
-export const SCENARIOS: Scenario[] = [
+export const SCENARIOS = [
   // ---- 图像 ----
   {
     id: "image-generate",
@@ -150,17 +152,138 @@ export const SCENARIOS: Scenario[] = [
     prompt:
       "为当前工作目录的项目生成一个结构清晰的 README.md，包含：项目简介、安装步骤、使用示例、目录结构说明。请先阅读现有代码与配置再撰写，内容必须与实际实现一致。",
   },
-];
+] as const satisfies readonly Scenario[];
+
+type ScenarioTranslation = Pick<Scenario, "title" | "description" | "category" | "prompt">;
+type ScenarioId = (typeof SCENARIOS)[number]["id"];
+
+const EN_US_SCENARIOS = {
+  "image-generate": {
+    title: "Text to image",
+    description: "Generate a sample image and save it to the output directory.",
+    category: "Image",
+    prompt:
+      "Use bl's image generation capability (such as `bl image generate`) to create a sample image: a corgi holding an umbrella in the rain, watercolor style, with soft lighting. Save it to the output directory and tell me the file path.",
+  },
+  "image-describe": {
+    title: "Image understanding",
+    description: "Pick an image from the output directory and describe its content and style.",
+    category: "Image",
+    prompt:
+      "Pick an image from the output directory (output/images by default). Describe its subject, composition, colors, and style in detail, then suggest suitable use cases. If the directory is empty, say so.",
+  },
+  "image-alt-batch": {
+    title: "Batch alt text",
+    description: "Generate accessible alt text for images in the output directory.",
+    category: "Image",
+    prompt:
+      "Scan all images in the output directory (output/images by default) and write concise, accurate accessibility alt text for each one. Summarize the results in a File name -> Alt text table. If the directory is empty, say so.",
+  },
+  "image-to-code": {
+    title: "Screenshot to code",
+    description: "Recreate a UI screenshot from the output directory with HTML and CSS.",
+    category: "Image",
+    prompt:
+      "Find a UI screenshot in the output directory (output/images by default) and recreate its layout, spacing, and colors as closely as possible with HTML and CSS. Save it as a single file that opens directly in a browser and briefly explain your approach. If no screenshot is available, say so.",
+  },
+  "speech-generate": {
+    title: "Text to speech",
+    description: "Turn a sample sentence into natural speech.",
+    category: "Audio",
+    prompt:
+      "Use bl's speech synthesis capability (such as a `bl speech` command) to turn this sentence into natural speech: Welcome to Alibaba Cloud Model Studio CLI, making multimodal creation easier. Save the audio to the output directory and tell me the file path.",
+  },
+  "audio-summarize": {
+    title: "Transcribe and summarize audio",
+    description: "Transcribe an audio file from the output directory and summarize its key points.",
+    category: "Audio",
+    prompt:
+      "Find an audio file in the output directory (output/speech by default), transcribe it, provide the full transcript, and then summarize the key points as a list. If the directory is empty or transcription is unavailable, explain that and try to complete the task with the capabilities available.",
+  },
+  "video-generate": {
+    title: "Text to video",
+    description: "Generate a sample short video.",
+    category: "Video",
+    prompt:
+      "Use bl's video generation capability (such as `bl video generate`) to create a sample short video: a teenager running along the beach at sunset, cinematic, in slow motion. Save it to the output directory and tell me the file path.",
+  },
+  "video-storyboard": {
+    title: "Video storyboard",
+    description: "Create a storyboard suitable for text-to-video generation.",
+    category: "Video",
+    prompt:
+      "Create a storyboard for a 15-30 second short video themed The first cup of coffee in the city at dawn. For each shot, provide the visual description, duration, subtitles or narration, and an English prompt ready for text-to-video generation.",
+  },
+  "media-prompt-craft": {
+    title: "Multimodal prompts",
+    description: "Expand a sample idea into image, video, and speech prompts.",
+    category: "Multimodal",
+    prompt:
+      "Expand the idea A night market in a futuristic cyber city into three high-quality generation prompts: 1) text to image, 2) text to video, and 3) speech style. Provide each prompt in both Chinese and English, with brief parameter recommendations.",
+  },
+  "image-story-narration": {
+    title: "Image narration",
+    description: "Write narration for an image in the output directory.",
+    category: "Multimodal",
+    prompt:
+      "Pick an image from the output directory (output/images by default) and write an engaging English narration of about 60 seconds. Then provide a plain-text version ready for speech synthesis. If the directory is empty, say so.",
+  },
+  "summarize-project": {
+    title: "Summarize this project",
+    description:
+      "Read the current directory and summarize its architecture, stack, and main modules.",
+    category: "Code",
+    prompt:
+      "Inspect the project structure and key source files in the current working directory, then concisely summarize: 1) what it does, 2) its technology stack, 3) its main modules and their responsibilities, and 4) notable design choices. Inspect the code before drawing conclusions; do not guess.",
+  },
+  "write-tests": {
+    title: "Add tests for a core module",
+    description: "Choose an under-tested core module and add unit tests.",
+    category: "Code",
+    prompt:
+      "Choose a core module in the current project that has no tests or weak coverage. Add comprehensive unit tests for its main branches and edge cases, following the project's existing test framework and style. Read the relevant files and dependencies before writing tests.",
+  },
+  "code-review": {
+    title: "Code review",
+    description: "Review core project code and identify concrete improvements.",
+    category: "Code",
+    prompt:
+      "Review the current project's core source code for potential bugs, security risks, performance issues, and maintainability problems. Give specific, actionable recommendations ordered by severity. Inspect the project structure and select the key files before reviewing them.",
+  },
+  "explain-code": {
+    title: "Explain core code",
+    description: "Choose an entry point or core module and explain how it works.",
+    category: "Code",
+    prompt:
+      "Choose the current project's entry point or a core module and explain its responsibilities, key execution flow, and dependencies. Use clear English and include the call relationships when useful.",
+  },
+  "generate-readme": {
+    title: "Generate README",
+    description: "Generate a clear README.md that matches the implementation.",
+    category: "Documentation",
+    prompt:
+      "Generate a clear README.md for the project in the current working directory. Include an overview, installation steps, usage examples, and a directory structure guide. Read the existing source code and configuration first; the content must match the actual implementation.",
+  },
+} satisfies Record<ScenarioId, ScenarioTranslation>;
+
+export function localizeScenarios(language: Language): Scenario[] {
+  if (language === "zh-CN") return SCENARIOS.map((scenario) => ({ ...scenario }));
+
+  return SCENARIOS.map((scenario) => ({
+    ...scenario,
+    ...EN_US_SCENARIOS[scenario.id],
+  }));
+}
 
 /** Look up a scenario by id, or undefined when unknown. */
-export function getScenario(id: string): Scenario | undefined {
-  return SCENARIOS.find((s) => s.id === id);
+export function getScenario(id: string, language: Language): Scenario | undefined {
+  return localizeScenarios(language).find((scenario) => scenario.id === id);
 }
 
 /** Fill a scenario's `{{placeholder}}` tokens from user-provided values. */
 export function renderScenarioPrompt(scenario: Scenario, values: Record<string, string>): string {
   return scenario.prompt.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => {
-    const v = values[key];
-    return typeof v === "string" ? v.trim() : "";
+    const value = values[key];
+    return typeof value === "string" ? value.trim() : "";
   });
 }

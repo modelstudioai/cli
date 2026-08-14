@@ -2,6 +2,7 @@ import http from "node:http";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Script } from "node:vm";
 import { expect, test } from "vite-plus/test";
 import {
   activateConfigProfile,
@@ -51,11 +52,11 @@ function httpJson(
 }
 
 /** 隔离临时配置目录 + 启动 UI server，跑完清理。 */
-async function withServer(fn: (port: number) => Promise<void>): Promise<void> {
+async function withServer(fn: (port: number) => Promise<void>, configName?: string): Promise<void> {
   const saved = process.env.BAILIAN_CONFIG_DIR;
   const dir = mkdtempSync(join(tmpdir(), "bl-ui-"));
   process.env.BAILIAN_CONFIG_DIR = dir;
-  const server = createConfigUiServer(TOKEN, makeConfigStore());
+  const server = createConfigUiServer(TOKEN, makeConfigStore(configName));
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
   const addr = server.address();
   const port = addr && typeof addr === "object" ? addr.port : 0;
@@ -68,6 +69,118 @@ async function withServer(fn: (port: number) => Promise<void>): Promise<void> {
     rmSync(dir, { recursive: true, force: true });
   }
 }
+
+test("GET / follows the launch Profile language", async () => {
+  await withServer(async (port) => {
+    await writeConfigFile({ language: "zh-CN" });
+
+    const chinese = await httpJson(port, "GET", `/?token=${TOKEN}`);
+    expect(chinese.status).toBe(200);
+    expect(chinese.text).toContain('<html lang="zh-CN">');
+    expect(chinese.text).toContain("快速开始");
+    const inlineScript = chinese.text.match(/<script>([\s\S]*)<\/script>/)?.[1];
+    expect(inlineScript).toBeDefined();
+    expect(() => new Script(inlineScript ?? "")).not.toThrow();
+    expect(chinese.text).toContain("'Content-Type': 'application/json'");
+    expect(chinese.text).not.toContain("Content-类型");
+
+    await writeConfigFile({ language: "en-US" });
+    const english = await httpJson(port, "GET", `/?token=${TOKEN}`);
+    expect(english.status).toBe(200);
+    expect(english.text).toContain('<html lang="en-US">');
+    expect(english.text).toContain("Quick Start");
+  });
+});
+
+test("GET / embeds both locales so the browser can switch language in place", async () => {
+  await withServer(async (port) => {
+    await writeConfigFile({ language: "zh-CN" });
+
+    const response = await httpJson(port, "GET", `/?token=${TOKEN}`);
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("Quick Start");
+    expect(response.text).toContain("快速开始");
+    expect(response.text).toContain("'Content-Type': 'application/json'");
+  });
+});
+
+test("POST /api/profile returns the launch Profile language for an in-place update", async () => {
+  await withServer(async (port) => {
+    await writeConfigFile({ language: "en-US" });
+
+    const otherProfile = await httpJson(port, "POST", `/api/profile?token=${TOKEN}`, {
+      body: { name: "work", data: { language: "zh-CN" } },
+    });
+    expect(otherProfile.status).toBe(200);
+    expect(otherProfile.json.uiLanguage).toBe("en-US");
+
+    const response = await httpJson(port, "POST", `/api/profile?token=${TOKEN}`, {
+      body: { name: "", data: { language: "zh-CN" } },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.json.uiLanguage).toBe("zh-CN");
+  });
+});
+
+test("activating another Profile switches the Config UI language source", async () => {
+  await withServer(async (port) => {
+    await writeConfigFile({ language: "en-US" });
+    await writeConfigFile({ language: "zh-CN" }, "token-plan");
+    await activateConfigProfile("token-plan");
+
+    const saveDefault = await httpJson(port, "POST", `/api/profile?token=${TOKEN}`, {
+      body: { name: "default", data: { language: "en-US" } },
+    });
+    expect(saveDefault.status).toBe(200);
+    expect(saveDefault.json.uiLanguage).toBe("zh-CN");
+
+    const activateDefault = await httpJson(port, "POST", `/api/active?token=${TOKEN}`, {
+      body: { name: "default" },
+    });
+    expect(activateDefault.status).toBe(200);
+    expect(activateDefault.json.uiLanguage).toBe("en-US");
+
+    const scenarios = await httpJson(port, "GET", `/api/scenarios?token=${TOKEN}`);
+    expect(scenarios.json.scenarios[0].title).toBe("Text to image");
+  }, "token-plan");
+});
+
+test("GET / uses an explicitly selected named Profile language", async () => {
+  await withServer(async (port) => {
+    await writeConfigFile({ language: "en-US" });
+    await writeConfigFile({ language: "zh-CN" }, "work");
+
+    const response = await httpJson(port, "GET", `/?token=${TOKEN}`);
+    expect(response.status).toBe(200);
+    expect(response.text).toContain('<html lang="zh-CN">');
+    expect(response.text).toContain("快速开始");
+  }, "work");
+});
+
+test("GET /api/scenarios localizes built-in scenarios with the launch Profile", async () => {
+  await withServer(async (port) => {
+    await writeConfigFile({ language: "en-US" });
+    const english = await httpJson(port, "GET", `/api/scenarios?token=${TOKEN}`);
+    expect(english.status).toBe(200);
+    expect(english.json.scenarios[0]).toMatchObject({
+      id: "image-generate",
+      title: "Text to image",
+      category: "Image",
+      prompt: expect.stringContaining("Use bl's image generation capability"),
+    });
+
+    await writeConfigFile({ language: "zh-CN" });
+    const chinese = await httpJson(port, "GET", `/api/scenarios?token=${TOKEN}`);
+    expect(chinese.status).toBe(200);
+    expect(chinese.json.scenarios[0]).toMatchObject({
+      id: "image-generate",
+      title: "文生图",
+      category: "图像",
+    });
+  });
+});
 
 test("GET /api/config 返回全部 profile、明文密钥与持久化激活项", async () => {
   await withServer(async (port) => {
