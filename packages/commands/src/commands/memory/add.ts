@@ -28,6 +28,16 @@ const ADD_FLAGS = {
     valueHint: "<id>",
     description: "Memory library ID (isolate memory space)",
   },
+  projectId: {
+    type: "string",
+    valueHint: "<id>",
+    description: "Memory extraction rule ID (defaults to the library's default rule)",
+  },
+  metaData: {
+    type: "string",
+    valueHint: "<json>",
+    description: 'Custom metadata JSON object: {"location":"Beijing"}',
+  },
 } satisfies FlagsDef;
 type AddFlags = ParsedFlags<typeof ADD_FLAGS>;
 
@@ -40,6 +50,7 @@ export default defineCommand({
     '--user-id user1 --content "The user likes Python programming"',
     '--user-id user1 --messages \'[{"role":"user","content":"I like traveling"}]\'',
     '--user-id user1 --content "Lives in Beijing" --profile-schema schema_xxx',
+    '--user-id user1 --content "Lives in Beijing" --meta-data \'{"source":"onboarding"}\'',
   ],
   validate: (f: AddFlags) =>
     !f.messages && !f.content ? "Provide --messages or --content." : undefined,
@@ -63,6 +74,15 @@ export default defineCommand({
 
     if (flags.profileSchema) body.profile_schema = flags.profileSchema;
     if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId;
+    if (flags.projectId) body.project_id = flags.projectId;
+
+    if (flags.metaData) {
+      try {
+        body.meta_data = JSON.parse(flags.metaData);
+      } catch {
+        throw new UsageError("--meta-data must be valid JSON object");
+      }
+    }
 
     const format = detectOutputFormat(settings.output);
 
@@ -78,8 +98,14 @@ export default defineCommand({
     });
 
     if (settings.quiet || format === "text") {
-      const ids = response.memory_ids?.join(", ") || "none";
-      emitBare(`Memory added. IDs: ${ids}`);
+      const nodes = response.memory_nodes ?? [];
+      if (nodes.length === 0) {
+        emitBare("No memory fragments were extracted.");
+      } else {
+        for (const node of nodes) {
+          emitBare(`[${node.event ?? "ADD"}] ${node.memory_node_id} ${node.content}`);
+        }
+      }
     } else {
       emitResult(response, format);
     }

@@ -305,11 +305,22 @@ export interface MemoryAddRequest {
   custom_content?: string;
   profile_schema?: string;
   memory_library_id?: string;
+  project_id?: string;
+  meta_data?: Record<string, unknown>;
+}
+
+/** 变更的记忆片段;`event` 为 ADD / UPDATE / DELETE。 */
+export interface MemoryAddNode {
+  memory_node_id: string;
+  content: string;
+  event?: string;
+  /** 仅 `event` 为 UPDATE 时有效。 */
+  old_content?: string;
 }
 
 export interface MemoryAddResponse {
   request_id: string;
-  memory_ids?: string[];
+  memory_nodes?: MemoryAddNode[];
 }
 
 export interface MemorySearchRequest {
@@ -318,6 +329,17 @@ export interface MemorySearchRequest {
   query?: string;
   top_k?: number;
   memory_library_id?: string;
+  project_ids?: string[];
+  min_score?: number;
+  /**
+   * 计费档位的**有效**开关。服务端当前忽略单独传入的 `plan_version`,
+   * 只有 `enable_rerank: false` 才会按 lite 计费(pro 约为 lite 的 50 倍)。
+   */
+  enable_rerank?: boolean;
+  /** 文档所述的档位字段;当前服务端未按文档生效,与 `enable_rerank` 一起传。 */
+  plan_version?: "lite" | "pro";
+  enable_judge?: boolean;
+  enable_rewrite?: boolean;
 }
 
 export interface MemoryNode {
@@ -325,13 +347,19 @@ export interface MemoryNode {
   content: string;
   user_id?: string;
   meta_data?: Record<string, unknown>;
-  created_at?: string;
-  updated_at?: string;
+  project_id?: string;
+  /** 秒级 Unix 时间戳。 */
+  created_at?: number;
+  /** 秒级 Unix 时间戳。 */
+  updated_at?: number;
+  timestamp?: number;
 }
 
 export interface MemorySearchResponse {
   request_id: string;
   memory_nodes: MemoryNode[];
+  /** 本次检索实际计费的档位。 */
+  billing_plan?: string;
 }
 
 export interface MemoryNodeListResponse {
@@ -347,13 +375,18 @@ export interface MemoryNodeUpdateRequest {
   custom_content: string;
   /** 非默认记忆库时必填（与控制台记忆库 ID 一致） */
   memory_library_id?: string;
+  /** 记忆片段对应事件发生时的秒级 Unix 时间戳。 */
+  timestamp?: number;
+  /** 增量更新。 */
+  meta_data?: Record<string, unknown>;
 }
 
 // ---- Memory Profile (DashScope v2) ----
 
 export interface ProfileAttribute {
   name: string;
-  description: string;
+  description?: string;
+  default_value?: string;
   value?: string;
 }
 
@@ -361,6 +394,8 @@ export interface ProfileSchemaCreateRequest {
   name: string;
   description?: string;
   attributes: ProfileAttribute[];
+  memory_library_id?: string;
+  plan_version?: "lite" | "pro";
 }
 
 export interface ProfileSchemaCreateResponse {
@@ -368,12 +403,52 @@ export interface ProfileSchemaCreateResponse {
   profile_schema_id: string;
 }
 
+export interface ProfileSchemaSummary {
+  profile_schema_id: string;
+  name: string;
+  description?: string;
+}
+
+export interface ProfileSchemaListResponse {
+  request_id: string;
+  profile_schemas: ProfileSchemaSummary[];
+  total?: number;
+}
+
+/** 画像模板详情;`attributes[].attribute_id` 是更新/删除属性时的定位键。 */
+export interface ProfileSchemaGetResponse {
+  request_id: string;
+  name: string;
+  description?: string;
+  attributes: Array<ProfileAttribute & { attribute_id: string }>;
+}
+
+export interface ProfileSchemaAttributeOperation {
+  op: "add" | "update" | "delete";
+  /** `update` / `delete` 必填。 */
+  attribute_id?: string;
+  /** `add` 必填。 */
+  name?: string;
+  description?: string;
+  default_value?: string | null;
+}
+
+export interface ProfileSchemaUpdateRequest {
+  name?: string;
+  description?: string;
+  memory_library_id?: string;
+  attributes_operations?: ProfileSchemaAttributeOperation[];
+}
+
+/**
+ * 用户画像。服务端返回的是模板名称/描述与属性值,不回传 schema_id / user_id。
+ */
 export interface UserProfileResponse {
   request_id: string;
   profile: {
-    schema_id: string;
-    user_id: string;
-    attributes: ProfileAttribute[];
+    schema_name?: string;
+    schema_description?: string;
+    attributes: Array<{ id: string; name: string; value?: string }>;
   };
 }
 

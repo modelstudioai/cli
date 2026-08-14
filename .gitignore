@@ -52,3 +52,6 @@ packages/cli/scene/**/outputs/
 
 # Local scratch / plan drafts (never commit)
 .scratch/
+
+# pnpm pack output
+*.tgz

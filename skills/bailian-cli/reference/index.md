@@ -36,7 +36,11 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl memory delete`              | Delete a memory node                                                                           | [memory.md](memory.md)         |
 | `bl memory list`                | List memory nodes for a user                                                                   | [memory.md](memory.md)         |
 | `bl memory profile create`      | Create a user profile schema for memory profiling                                              | [memory.md](memory.md)         |
+| `bl memory profile delete`      | Delete a profile schema                                                                        | [memory.md](memory.md)         |
+| `bl memory profile detail`      | Show a profile schema and its attribute IDs                                                    | [memory.md](memory.md)         |
 | `bl memory profile get`         | Get user profile by schema ID and user ID                                                      | [memory.md](memory.md)         |
+| `bl memory profile list`        | List profile schemas                                                                           | [memory.md](memory.md)         |
+| `bl memory profile update`      | Update a profile schema's name, description, or attributes                                     | [memory.md](memory.md)         |
 | `bl memory search`              | Search memory nodes by query or messages                                                       | [memory.md](memory.md)         |
 | `bl memory update`              | Update a memory node content                                                                   | [memory.md](memory.md)         |
 | `bl model list`                 | Browse model families or show detailed model info in the Bailian model marketplace             | [model.md](model.md)           |
@@ -71,28 +75,28 @@ Use this index for the skill-scoped quick index and global flags.
 
 ## By group
 
-| Group        | Commands                                                                     | Reference                      |
-| ------------ | ---------------------------------------------------------------------------- | ------------------------------ |
-| `advisor`    | `recommend`                                                                  | [advisor.md](advisor.md)       |
-| `app`        | `call`, `list`                                                               | [app.md](app.md)               |
-| `auth`       | `generate-access-token`, `login`, `logout`, `status`                         | [auth.md](auth.md)             |
-| `config`     | `agent`, `list`, `set`, `show`, `ui`, `use`                                  | [config.md](config.md)         |
-| `console`    | `call`                                                                       | [console.md](console.md)       |
-| `file`       | `upload`                                                                     | [file.md](file.md)             |
-| `knowledge`  | `chat`, `retrieve`, `search`                                                 | [knowledge.md](knowledge.md)   |
-| `mcp`        | `call`, `list`, `tools`                                                      | [mcp.md](mcp.md)               |
-| `memory`     | `add`, `delete`, `list`, `profile create`, `profile get`, `search`, `update` | [memory.md](memory.md)         |
-| `model`      | `list`                                                                       | [model.md](model.md)           |
-| `pipeline`   | `run`, `validate`                                                            | [pipeline.md](pipeline.md)     |
-| `plugin`     | `install`, `link`, `list`, `remove`                                          | [plugin.md](plugin.md)         |
-| `quota`      | `check`, `history`, `list`, `request`                                        | [quota.md](quota.md)           |
-| `search`     | `web`                                                                        | [search.md](search.md)         |
-| `skill`      | `add`, `init`, `list`, `remove`, `update`                                    | [skill.md](skill.md)           |
-| `text`       | `chat`                                                                       | [text.md](text.md)             |
-| `token-plan` | `add-member`, `assign-seats`, `create-key`, `list-seats`                     | [token-plan.md](token-plan.md) |
-| `update`     | `(root)`                                                                     | [update.md](update.md)         |
-| `usage`      | `free`, `freetier`, `stats`, `summary`                                       | [usage.md](usage.md)           |
-| `workspace`  | `init`, `list`                                                               | [workspace.md](workspace.md)   |
+| Group        | Commands                                                                                                                                           | Reference                      |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| `advisor`    | `recommend`                                                                                                                                        | [advisor.md](advisor.md)       |
+| `app`        | `call`, `list`                                                                                                                                     | [app.md](app.md)               |
+| `auth`       | `generate-access-token`, `login`, `logout`, `status`                                                                                               | [auth.md](auth.md)             |
+| `config`     | `agent`, `list`, `set`, `show`, `ui`, `use`                                                                                                        | [config.md](config.md)         |
+| `console`    | `call`                                                                                                                                             | [console.md](console.md)       |
+| `file`       | `upload`                                                                                                                                           | [file.md](file.md)             |
+| `knowledge`  | `chat`, `retrieve`, `search`                                                                                                                       | [knowledge.md](knowledge.md)   |
+| `mcp`        | `call`, `list`, `tools`                                                                                                                            | [mcp.md](mcp.md)               |
+| `memory`     | `add`, `delete`, `list`, `profile create`, `profile delete`, `profile detail`, `profile get`, `profile list`, `profile update`, `search`, `update` | [memory.md](memory.md)         |
+| `model`      | `list`                                                                                                                                             | [model.md](model.md)           |
+| `pipeline`   | `run`, `validate`                                                                                                                                  | [pipeline.md](pipeline.md)     |
+| `plugin`     | `install`, `link`, `list`, `remove`                                                                                                                | [plugin.md](plugin.md)         |
+| `quota`      | `check`, `history`, `list`, `request`                                                                                                              | [quota.md](quota.md)           |
+| `search`     | `web`                                                                                                                                              | [search.md](search.md)         |
+| `skill`      | `add`, `init`, `list`, `remove`, `update`                                                                                                          | [skill.md](skill.md)           |
+| `text`       | `chat`                                                                                                                                             | [text.md](text.md)             |
+| `token-plan` | `add-member`, `assign-seats`, `create-key`, `list-seats`                                                                                           | [token-plan.md](token-plan.md) |
+| `update`     | `(root)`                                                                                                                                           | [update.md](update.md)         |
+| `usage`      | `free`, `freetier`, `stats`, `summary`                                                                                                             | [usage.md](usage.md)           |
+| `workspace`  | `init`, `list`                                                                                                                                     | [workspace.md](workspace.md)   |
 
 ## Global flags
 

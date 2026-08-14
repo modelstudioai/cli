@@ -24,6 +24,11 @@ export default defineCommand({
     },
     page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
     memoryLibraryId: { type: "string", valueHint: "<id>", description: "Memory library ID" },
+    projectId: {
+      type: "string",
+      valueHint: "<id>",
+      description: "Memory extraction rule ID (defaults to the library's default rule)",
+    },
   },
   exampleArgs: ["--user-id user1", "--user-id user1 --page-size 20 --page 2"],
   async run(ctx) {
@@ -36,6 +41,7 @@ export default defineCommand({
     if (flags.pageSize !== undefined) params.set("page_size", String(flags.pageSize));
     if (flags.page !== undefined) params.set("page_num", String(flags.page));
     if (flags.memoryLibraryId) params.set("memory_library_id", flags.memoryLibraryId);
+    if (flags.projectId) params.set("project_id", flags.projectId);
 
     const path = `${memoryListPath()}?${params.toString()}`;
 

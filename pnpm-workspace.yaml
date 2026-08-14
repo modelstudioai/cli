@@ -24,6 +24,10 @@ catalogMode: prefer
 overrides:
   vite: "catalog:"
   vitest: "catalog:"
+# The @deepseek-ai/dsh-* rc line (used only by bailian-cli-dsh) peers on
+# packages that were never published: dsh-type-meta, dsh-environment,
+# dsh-tasks. Auto-installing peers therefore 404s the whole workspace.
+autoInstallPeers: false
 peerDependencyRules:
   allowAny:
     - vite

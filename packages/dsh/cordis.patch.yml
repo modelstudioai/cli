@@ -1,0 +1,97 @@
+# bailian-cli-dsh — Aliyun Model Studio (Bailian) as a dsh profile bundle.
+#
+# Applied over whatever the earlier layers composed: one config override of the
+# base bundle's dormant pi-ai adapter, then one insert of the Bailian tool rows.
+# Every inserted id is `bailian-`-prefixed so a user profile can address,
+# reconfigure, or disable any single capability without touching the others.
+# Remember that a later patch REPLACES a row's whole `config` rather than
+# merging into it, so restate the complete config when overriding.
+
+# TokenPlan configures the base bundle's existing `llm-pi-ai` row instead of
+# inserting a second @deepseek-ai/dsh-llm-pi-ai instance. That plugin declares
+# pi-ai's entire built-in provider catalog to
+# `ctx.llm.registerConfigurableProviders` on every apply, and that registry
+# refuses an already-declared provider, so a second instance always fails the
+# whole tree with DUPLICATE_DIRECTORY on `amazon-bedrock`. Only adapter routes
+# are per-instance; the configurable-provider directory is global.
+#
+# Replacing this row's whole `config` costs nothing: the base mounts it dormant
+# with no config of its own. A profile that needs to drop or re-aim TokenPlan
+# restates this row's config rather than disabling an id.
+- id: llm-pi-ai
+  config:
+    providers:
+      bailian-tokenplan:
+        displayName: Aliyun Bailian TokenPlan
+        api: openai-completions
+        baseURL: https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
+        # A dedicated name, not DASHSCOPE_API_KEY. TokenPlan keys (sk-sp-)
+        # and pay-as-you-go keys (sk-ws-) are not interchangeable: this
+        # gateway 401s a pay-as-you-go key, and the memory / knowledge-base
+        # endpoints 401 a TokenPlan key. Sharing one variable would make
+        # whichever plugin loses silently fail to authenticate.
+        apiKeyEnv: BAILIAN_TOKENPLAN_API_KEY
+        compat:
+          thinkingFormat: qwen
+          supportsReasoningEffort: true
+        # Verified against GET /compatible-mode/v1/models plus a per-model
+        # image probe on 2026-08-14. Only `id` is required; context window
+        # and max tokens fall back to this provider's defaults.
+        #
+        # `input: [text, image]` is a claim about the endpoint, not a
+        # checked fact, and it is what opens the Web UI paste path and
+        # `read_image`. Every entry carrying it answered a colour question
+        # about a test PNG correctly. The DeepSeek routes deliberately do
+        # NOT carry it: they accept image content without erroring and then
+        # answer "None", so declaring vision would turn a clean refusal
+        # into a silently blind reply. Use `bailian_vision_describe` there.
+        #
+        # Omitted on purpose: wan2.7-image / wan2.7-image-pro are
+        # generation-only (reach them through `bailian_image_generate`) and
+        # qwen-audio-3.0-* are audio endpoints, not chat completions.
+        models:
+          - id: qwen3.8-max
+            input: [text, image]
+          - id: qwen3.7-plus
+            input: [text, image]
+          - id: qwen3.6-flash
+            input: [text, image]
+          # Rejects image content outright with HTTP 400.
+          - id: qwen3.7-max
+          - id: glm-5.2
+            input: [text, image]
+            compat:
+              thinkingFormat: deepseek
+          - id: deepseek-v4-pro
+            compat:
+              thinkingFormat: deepseek
+          - id: deepseek-v4-flash-0731
+            compat:
+              thinkingFormat: deepseek
+
+- insert:
+    - id: bailian-tool-vision
+      name: bailian-cli-dsh/tool-vision
+
+    - id: bailian-tool-image
+      name: bailian-cli-dsh/tool-image
+
+    # Disabled by default: the knowledge base to query is deployment-specific,
+    # and an enabled provider with no agentId would make `web_search` ambiguous
+    # for everyone. Set workspaceId + agentId and flip `disabled` to use it.
+    - id: bailian-web-search-rag
+      name: bailian-cli-dsh/web-search-rag
+      disabled: true
+      config: {}
+
+    # Disabled by default: memory add/search are billed per call.
+    - id: bailian-memory
+      name: bailian-cli-dsh/memory
+      disabled: true
+      config: {}
+
+    # Disabled by default: requires an applied `agents.yaml` in the workspace.
+    - id: bailian-subagent-managed-agent
+      name: bailian-cli-dsh/subagent-managed-agent
+      disabled: true
+      config: {}

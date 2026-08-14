@@ -13,6 +13,7 @@ export {
   memoryNodePath,
   memorySearchPath,
   mcpWebSearchPath,
+  profileSchemaItemPath,
   profileSchemaPath,
   speechRecognizePath,
   speechSynthesizePath,

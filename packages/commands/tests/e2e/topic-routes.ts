@@ -33,6 +33,10 @@ export const MEMORY_ROUTES: E2eRouteExports = {
   "memory delete": "memoryDelete",
   "memory profile create": "memoryProfileCreate",
   "memory profile get": "memoryProfileGet",
+  "memory profile list": "memoryProfileList",
+  "memory profile detail": "memoryProfileDetail",
+  "memory profile update": "memoryProfileUpdate",
+  "memory profile delete": "memoryProfileDelete",
 };
 
 export const KNOWLEDGE_ROUTES: E2eRouteExports = {

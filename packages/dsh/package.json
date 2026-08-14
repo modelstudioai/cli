@@ -1,0 +1,111 @@
+{
+  "name": "bailian-cli-dsh",
+  "version": "1.14.2",
+  "description": "Aliyun Model Studio (Bailian) plugin bundle for DeepSeek Harness (dsh): TokenPlan LLM provider, knowledge-base RAG search, vision, image generation, long-term memory, and managed-agent subagents.",
+  "homepage": "https://bailian.console.aliyun.com/cli",
+  "bugs": {
+    "url": "https://github.com/modelstudioai/cli/issues"
+  },
+  "license": "Apache-2.0",
+  "author": "Aliyun Model Studio",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/modelstudioai/cli.git",
+    "directory": "packages/dsh"
+  },
+  "files": [
+    "README.md",
+    "dist",
+    "cordis.patch.yml"
+  ],
+  "type": "module",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./tool-vision": {
+      "types": "./src/tool-vision/index.ts",
+      "default": "./src/tool-vision/index.ts"
+    },
+    "./tool-image": {
+      "types": "./src/tool-image/index.ts",
+      "default": "./src/tool-image/index.ts"
+    },
+    "./web-search-rag": {
+      "types": "./src/web-search-rag/index.ts",
+      "default": "./src/web-search-rag/index.ts"
+    },
+    "./memory": {
+      "types": "./src/memory/index.ts",
+      "default": "./src/memory/index.ts"
+    },
+    "./subagent-managed-agent": {
+      "types": "./src/subagent-managed-agent/index.ts",
+      "default": "./src/subagent-managed-agent/index.ts"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": "./dist/index.mjs",
+      "./tool-vision": "./dist/tool-vision/index.mjs",
+      "./tool-image": "./dist/tool-image/index.mjs",
+      "./web-search-rag": "./dist/web-search-rag/index.mjs",
+      "./memory": "./dist/memory/index.mjs",
+      "./subagent-managed-agent": "./dist/subagent-managed-agent/index.mjs",
+      "./cordis.patch.yml": "./cordis.patch.yml",
+      "./package.json": "./package.json"
+    },
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-agent": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-attachment": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-fs": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-launch-environment": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-llm": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-session": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-subagent": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-subprocess": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-web": "^0.1.0-rc.6",
+    "@types/node": "catalog:",
+    "typescript": "^6.0.2",
+    "vite-plus": "catalog:"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-agent": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-attachment": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-fs": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-launch-environment": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-llm": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-session": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-subagent": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-subprocess": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-web": "^0.1.0-rc.6"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

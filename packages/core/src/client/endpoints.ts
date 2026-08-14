@@ -75,7 +75,11 @@ export function profileSchemaPath(): string {
 }
 
 export function userProfilePath(schemaId: string): string {
-  return `/api/v2/apps/memory/profile_schemas/${encodeURIComponent(schemaId)}/profiles`;
+  return `/api/v2/apps/memory/profile_schemas/${encodeURIComponent(schemaId)}/user_profile`;
+}
+
+export function profileSchemaItemPath(schemaId: string): string {
+  return `/api/v2/apps/memory/profile_schemas/${encodeURIComponent(schemaId)}`;
 }
 
 // ---- Knowledge Base Retrieve (DashScope) ----

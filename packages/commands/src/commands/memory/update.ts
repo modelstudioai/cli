@@ -1,5 +1,6 @@
 import {
   defineCommand,
+  UsageError,
   memoryNodePath,
   detectOutputFormat,
   type MemoryNodeUpdateRequest,
@@ -34,6 +35,16 @@ export default defineCommand({
       valueHint: "<id>",
       description: "Memory library ID (non-default library)",
     },
+    timestamp: {
+      type: "number",
+      valueHint: "<unix-seconds>",
+      description: "When the remembered event happened (default: now)",
+    },
+    metaData: {
+      type: "string",
+      valueHint: "<json>",
+      description: 'Custom metadata JSON object, merged incrementally: {"source":"manual"}',
+    },
   },
   exampleArgs: ['--node-id node_xxx --user-id user1 --content "updated memory content"'],
   async run(ctx) {
@@ -47,6 +58,15 @@ export default defineCommand({
       custom_content: content,
     };
     if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId;
+    if (flags.timestamp !== undefined) body.timestamp = flags.timestamp;
+
+    if (flags.metaData) {
+      try {
+        body.meta_data = JSON.parse(flags.metaData);
+      } catch {
+        throw new UsageError("--meta-data must be valid JSON object");
+      }
+    }
 
     const format = detectOutputFormat(settings.output);
 

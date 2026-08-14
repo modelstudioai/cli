@@ -24,6 +24,38 @@ const SEARCH_FLAGS = {
     description: "Number of results to return (default: 10)",
   },
   memoryLibraryId: { type: "string", valueHint: "<id>", description: "Memory library ID" },
+  projectIds: {
+    type: "array",
+    valueHint: "<id>",
+    description: "Memory extraction rule ID for hybrid retrieval (repeatable)",
+  },
+  minScore: {
+    type: "number",
+    valueHint: "<n>",
+    description: "Minimum similarity score, 0-1 (default: 0.3)",
+  },
+  enableRerank: {
+    type: "boolean",
+    valueHint: "<bool>",
+    description:
+      "Rerank results. Also selects the billing tier: false bills lite, true bills pro (~50x). (default: true)",
+  },
+  planVersion: {
+    type: "string",
+    valueHint: "<lite|pro>",
+    description:
+      "Documented billing tier. The service currently honors --enable-rerank instead, so prefer that flag",
+  },
+  enableJudge: {
+    type: "boolean",
+    valueHint: "<bool>",
+    description: "Enable the intent-discrimination callback (default: false)",
+  },
+  enableRewrite: {
+    type: "boolean",
+    valueHint: "<bool>",
+    description: "Enable query rewriting (default: false)",
+  },
 } satisfies FlagsDef;
 type SearchFlags = ParsedFlags<typeof SEARCH_FLAGS>;
 
@@ -35,6 +67,7 @@ export default defineCommand({
   exampleArgs: [
     '--user-id user1 --query "programming preferences"',
     '--user-id user1 --messages \'[{"role":"user","content":"recommend a book"}]\' --top-k 5',
+    '--user-id user1 --query "preferences" --enable-rerank false --min-score 0.5',
   ],
   validate: (f: SearchFlags) =>
     !f.query && !f.messages ? "Provide --query or --messages." : undefined,
@@ -61,6 +94,21 @@ export default defineCommand({
 
     if (flags.topK !== undefined) body.top_k = flags.topK;
     if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId;
+    if (flags.projectIds && flags.projectIds.length > 0) body.project_ids = flags.projectIds;
+    if (flags.minScore !== undefined) body.min_score = flags.minScore;
+    if (flags.enableRerank !== undefined) body.enable_rerank = flags.enableRerank;
+    if (flags.enableJudge !== undefined) body.enable_judge = flags.enableJudge;
+    if (flags.enableRewrite !== undefined) body.enable_rewrite = flags.enableRewrite;
+
+    if (flags.planVersion) {
+      if (flags.planVersion !== "lite" && flags.planVersion !== "pro") {
+        throw new UsageError("--plan-version must be lite or pro");
+      }
+      body.plan_version = flags.planVersion;
+      // The service ignores plan_version on its own, so mirror the intent onto
+      // the flag it does honor unless the caller set that one explicitly.
+      if (flags.enableRerank === undefined) body.enable_rerank = flags.planVersion === "pro";
+    }
 
     const format = detectOutputFormat(settings.output);
 
