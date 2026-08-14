@@ -7,12 +7,13 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command             | Authentication | Description                                                                                |
-| ------------------- | -------------- | ------------------------------------------------------------------------------------------ |
-| `bl usage free`     | Console        | Query free-tier quota for models (all models if --model is omitted)                        |
-| `bl usage freetier` | Console        | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable |
-| `bl usage stats`    | Console        | Query model usage statistics                                                               |
-| `bl usage summary`  | Console        | Show a unified usage summary: free-tier quota and recent usage overview                    |
+| Command               | Description                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------ |
+| `bl usage free`       | Query free-tier quota for models (all models if --model is omitted)                        |
+| `bl usage freetier`   | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable |
+| `bl usage stats`      | Query model usage statistics                                                               |
+| `bl usage summary`    | Show a unified usage summary: free-tier quota and recent usage overview                    |
+| `bl usage token-plan` | Show Token Plan quota usage                                                                |
 
 ## Command details
 
@@ -202,4 +203,31 @@ bl usage summary --days 30
 
 ```bash
 bl usage summary --output json
+```
+
+### `bl usage token-plan`
+
+| Field           | Value                         |
+| --------------- | ----------------------------- |
+| **Name**        | `usage token-plan`            |
+| **Description** | Show Token Plan quota usage   |
+| **Usage**       | `bl usage token-plan [flags]` |
+
+#### Flags
+
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
+
+#### Examples
+
+```bash
+bl usage token-plan
+```
+
+```bash
+bl usage token-plan --output json
 ```

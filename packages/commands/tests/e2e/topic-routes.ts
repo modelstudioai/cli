@@ -109,6 +109,7 @@ export const USAGE_ROUTES: E2eRouteExports = {
   "usage free": "usageFree",
   "usage freetier": "usageFreetier",
   "usage stats": "usageStats",
+  "usage token-plan": "usageTokenPlan",
 };
 
 export const DEPLOY_ROUTES: E2eRouteExports = {

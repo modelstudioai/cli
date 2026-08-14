@@ -71,6 +71,7 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | Bailian pipeline workflow (a step in a bl flow)  | `bl pipeline run` / `validate`                | JSON/YAML workflow definitions                                                   |
 | Bailian rate limits / quota                      | `bl quota list` / `check` / `request`         | Console auth; class 2 — ask which product first if unnamed                       |
 | Bailian free tier / usage stats                  | `bl usage free` / `stats` / `freetier`        | Console auth; class 2 — ask which product first if unnamed                       |
+| Bailian Token Plan quota usage                   | `bl usage token-plan`                         | Console auth; class 2 — ask which product first if unnamed                       |
 | Console API (advanced)                           | `bl console call`                             | Console auth                                                                     |
 | Bailian workspace listing                        | `bl workspace list`                           | Console auth                                                                     |
 | Image / video / speech / omni / vision           | → skill `bailian-gen`                         | Fallback: `bl image\|video\|speech\|omni\|vision --help`                         |

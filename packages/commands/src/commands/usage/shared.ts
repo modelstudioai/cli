@@ -24,6 +24,14 @@ export function formatDate(ts: number): string {
   return `${year}-${month}-${day}`;
 }
 
+export function formatDateTime(ts: number): string {
+  const date = new Date(ts);
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  const second = String(date.getSeconds()).padStart(2, "0");
+  return `${formatDate(ts)} ${hour}:${minute}:${second}`;
+}
+
 export function requireWorkspaceId(settings: Settings, binName: string): string {
   if (settings.workspaceId) return settings.workspaceId;
 
