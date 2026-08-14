@@ -776,7 +776,7 @@ bl config set workspace_id ws-xxx
 
 **问题**：没有 `collection delete` 命令。
 
-**原因**：服务端无集合删除 API。
+**原因**：暂不支持通过 CLI 删除。
 
 **解决**：创建集合需谨慎。如需隔离，创建新集合并迁移文件。
 

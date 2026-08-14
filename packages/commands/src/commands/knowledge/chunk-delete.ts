@@ -41,10 +41,7 @@ export default defineCommand({
   auth: "apiKey",
   usageArgs: "--index-id <id> --chunk-id <id> [flags]",
   flags: CHUNK_DELETE_FLAGS,
-  notes: [
-    "The server accepts at most 10 ids per call; larger sets are split into sequential batches automatically.",
-    "If a batch fails, the operation stops and already-deleted batches are listed in the error.",
-  ],
+  notes: ["Accepts at most 10 chunk ids per call; larger sets are batched automatically."],
   exampleArgs: [
     "--index-id idx-xxx --chunk-id chunk-a --chunk-id chunk-b --workspace-id ws-xxx",
     "--index-id idx-xxx --chunk-id chunk-a --yes",

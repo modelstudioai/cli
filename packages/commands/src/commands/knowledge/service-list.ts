@@ -49,7 +49,7 @@ export default defineCommand({
   usageArgs: "--scene <chat|search> [flags]",
   flags: SERVICE_LIST_FLAGS,
   notes: [
-    "The server requires a scene — run once per scene to see both chat and search services.",
+    "A scene (chat or search) is required — run once per scene to see both.",
     "Use the returned agent_id with the search or chat commands, or with service management commands.",
   ],
   exampleArgs: ["--scene chat --workspace-id ws-xxx", "--scene search --status deployed"],

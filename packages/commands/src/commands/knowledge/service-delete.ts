@@ -58,7 +58,7 @@ export default defineCommand({
   flags: SERVICE_DELETE_FLAGS,
   notes: [
     "Deletion cannot be undone; the agent_id becomes unusable for search and chat calls.",
-    "The API is idempotent — deleting an already-deleted service does not fail.",
+    "Idempotent — deleting an already-deleted service does not fail.",
     "Requires the knowledge-base delete permission in the workspace.",
   ],
   exampleArgs: ["--agent-id aid-xxx --workspace-id ws-xxx", "--agent-id aid-xxx --yes"],

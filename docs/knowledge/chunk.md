@@ -29,7 +29,7 @@ bl knowledge chunk add --index-id <id> (--content <text> | --field <k=v>) [flags
 | `--field <key=value>`   | array  | 否¹  | 任意字段键值对（可重复），用于表格/图片知识库，键为 Excel 列名；与 content/title/image 互斥 |
 
 > ¹ `--content`/`--content-file`/`--title`/`--image-url` 与 `--field` 互斥，必须提供其一。
-> ² 表格/图片知识库必须提供 `--doc-id`，服务端无此字段会返回 HTTP 500（`dataId不能为空`）。文档型知识库可选。
+> ² 表格/图片知识库必须提供 `--doc-id`。文档型知识库可选。
 
 **参数约束**
 

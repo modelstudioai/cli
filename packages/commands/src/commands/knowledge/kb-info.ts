@@ -65,10 +65,7 @@ export default defineCommand({
   auth: "apiKey",
   usageArgs: "--index-id <id> [flags]",
   flags: KB_INFO_FLAGS,
-  notes: [
-    "Uses the index/list API with pipeline_id filtering to fetch a single knowledge base.",
-    "Indexing settings are immutable; changing them requires recreating the knowledge base.",
-  ],
+  notes: ["Indexing settings are immutable; changing them requires recreating the knowledge base."],
   exampleArgs: ["--index-id idx-xxx --workspace-id ws-xxx"],
   async run(ctx) {
     const { settings, flags } = ctx;

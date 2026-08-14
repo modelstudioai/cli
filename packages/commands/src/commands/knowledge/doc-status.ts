@@ -57,9 +57,9 @@ export default defineCommand({
   usageArgs: "--index-id <id> --job-id <id> [flags]",
   flags: DOC_STATUS_FLAGS,
   notes: [
-    "Both --index-id and --job-id are required by the server (passing only one returns SystemError).",
-    "If the server returns SystemError for an idle knowledge base, the job may not exist — check the ingestion id in the document list output.",
-    "Overall job states are PENDING / RUNNING / COMPLETED; per-document failures (for example PARSE_FAILED) exit non-zero with the server message passed through.",
+    "Both --index-id and --job-id are required (passing only one returns SystemError).",
+    "If you see a SystemError, the job may not exist — check the ingestion id in the document list output.",
+    "Overall job states are PENDING / RUNNING / COMPLETED; per-document failures (for example PARSE_FAILED) exit non-zero with the error message passed through.",
   ],
   exampleArgs: [
     "--index-id idx-xxx --job-id job-xxx --workspace-id ws-xxx",

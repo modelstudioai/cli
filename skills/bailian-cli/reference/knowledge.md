@@ -211,7 +211,7 @@ bl knowledge chat --message "Describe these images" --image https://example.com/
 | Flag                    | Type   | Required | Description                                                                                                                                               |
 | ----------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--index-id <id>`       | string | yes      | Knowledge base ID                                                                                                                                         |
-| `--doc-id <id>`         | string | no       | Owning document ID from the doc list command; required in practice — the server returns HTTP 500 (dataId不能为空) without it even for unstructured KBs    |
+| `--doc-id <id>`         | string | no       | Owning document ID from the doc list command; required in practice for all knowledge base types                                                           |
 | `--content <text>`      | string | no       | Chunk body text, up to 6000 chars (document-type); alternative to --content-file                                                                          |
 | `--content-file <path>` | string | no       | Read chunk body from a UTF-8 plain text file (.md/.txt etc.)                                                                                              |
 | `--title <text>`        | string | no       | Chunk title, up to 50 chars (document-type)                                                                                                               |
@@ -224,8 +224,8 @@ bl knowledge chat --message "Describe these images" --image https://example.com/
 #### Notes
 
 - Document / table / image knowledge bases are supported; audio-video ones are not.
-- --doc-id is required in practice — verified live: even unstructured (document-type) KBs return HTTP 500 (dataId不能为空) without it. Use the document-level id from the doc list command; the per-row doc_id in chunk list metadata is rejected (Index.InvalidParameter).
-- Adding a text content chunk to an image-type document (jpg) triggers HTTP 500 (Index.SystemError) — the server does not support text chunks on image documents. Target a text-type document (docx/pdf/txt) instead.
+- --doc-id is required in practice for all knowledge base types. Use the document-level id from the doc list command; the per-row doc_id in chunk list output is not accepted.
+- Image-type documents do not support text chunks. Target a text-type document (docx/pdf/txt) instead.
 - The API is idempotent but rate-limited to 10 calls per second — throttle batch scripts.
 - The response carries no chunk id; list chunks afterwards to find the new one.
 - For table/image knowledge bases use --field with Excel column headers as keys; values are passed through as strings.
@@ -262,8 +262,7 @@ bl knowledge chunk add --index-id idx-xxx --field 列A=v1 --field 列B=v2
 
 #### Notes
 
-- The server accepts at most 10 ids per call; larger sets are split into sequential batches automatically.
-- If a batch fails, the operation stops and already-deleted batches are listed in the error.
+- Accepts at most 10 chunk ids per call; larger sets are batched automatically.
 
 #### Examples
 
@@ -517,8 +516,8 @@ bl knowledge delete --index-id idx-xxx --yes
 
 - Removes documents from the knowledge base index only; the source files remain in the data center.
 - Use the doc_id from `knowledge doc list --quiet`, not the fileId from `knowledge doc upload`. For documents created via `knowledge create --doc-id`, the doc_id equals the fileId; for documents imported via `knowledge doc upload --index-id`, the doc_id may include a workspace suffix.
-- Deletion is asynchronous: the server returns Success immediately, but the document may still appear in `knowledge doc list` for up to ~30s until the change propagates.
-- The output lists the ids actually deleted as reported by the server.
+- Deletion may take up to ~30s to propagate — the document may still appear in the doc list briefly.
+- The output lists the ids actually deleted.
 
 #### Examples
 
@@ -629,9 +628,9 @@ bl knowledge doc list --index-id idx-xxx --page-size 100
 
 #### Notes
 
-- Both --index-id and --job-id are required by the server (passing only one returns SystemError).
-- If the server returns SystemError for an idle knowledge base, the job may not exist — check the ingestion id in the document list output.
-- Overall job states are PENDING / RUNNING / COMPLETED; per-document failures (for example PARSE_FAILED) exit non-zero with the server message passed through.
+- Both --index-id and --job-id are required (passing only one returns SystemError).
+- If you see a SystemError, the job may not exist — check the ingestion id in the document list output.
+- Overall job states are PENDING / RUNNING / COMPLETED; per-document failures (for example PARSE_FAILED) exit non-zero with the error message passed through.
 
 #### Examples
 
@@ -808,7 +807,7 @@ bl knowledge file get --file-id file-xxx --workspace-id ws-xxx
 
 #### Notes
 
-- The server requires a real category id here — unlike upload APIs, the literal default is NOT resolved (returns an empty list). Find the id via file details of any uploaded file, or the category list command.
+- A real category id is required — the default value is not resolved here. Find the id via the category list command.
 - Pagination is cursor-based: reuse the printed next token to continue.
 
 #### Examples
@@ -841,7 +840,6 @@ bl knowledge file list --category-id cate-xxx --name report
 
 #### Notes
 
-- Uses the index/list API with pipeline_id filtering to fetch a single knowledge base.
 - Indexing settings are immutable; changing them requires recreating the knowledge base.
 
 #### Examples
@@ -1048,7 +1046,7 @@ bl knowledge service create --name my-search --scene search --index-id idx-xxx
 #### Notes
 
 - Deletion cannot be undone; the agent_id becomes unusable for search and chat calls.
-- The API is idempotent — deleting an already-deleted service does not fail.
+- Idempotent — deleting an already-deleted service does not fail.
 - Requires the knowledge-base delete permission in the workspace.
 
 #### Examples
@@ -1157,7 +1155,7 @@ bl knowledge service get --agent-id aid-xxx --agent-version beta
 
 #### Notes
 
-- The server requires a scene — run once per scene to see both chat and search services.
+- A scene (chat or search) is required — run once per scene to see both.
 - Use the returned agent_id with the search or chat commands, or with service management commands.
 
 #### Examples

@@ -45,7 +45,7 @@ export default defineCommand({
   usageArgs: "--category-id <id> [flags]",
   flags: FILE_LIST_FLAGS,
   notes: [
-    "The server requires a real category id here — unlike upload APIs, the literal default is NOT resolved (returns an empty list). Find the id via file details of any uploaded file, or the category list command.",
+    "A real category id is required — the default value is not resolved here. Find the id via the category list command.",
     "Pagination is cursor-based: reuse the printed next token to continue.",
   ],
   exampleArgs: [
