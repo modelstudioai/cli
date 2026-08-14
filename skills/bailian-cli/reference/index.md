@@ -62,6 +62,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl token-plan create-key`      | AK/SK          | Create a Token Plan API key for a seat                                                         | [token-plan.md](token-plan.md) |
 | `bl token-plan list-seats`      | AK/SK          | List Token Plan subscription seat details                                                      | [token-plan.md](token-plan.md) |
 | `bl update`                     | No Auth        | Update the CLI to the latest or a specified version                                            | [update.md](update.md)         |
+| `bl usage coding-plan`          | Console        | Show Coding Plan quota usage                                                                   | [usage.md](usage.md)           |
 | `bl usage free`                 | Console        | Query free-tier quota for models (all models if --model is omitted)                            | [usage.md](usage.md)           |
 | `bl usage freetier`             | Console        | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable     | [usage.md](usage.md)           |
 | `bl usage stats`                | Console        | Query model usage statistics                                                                   | [usage.md](usage.md)           |
@@ -92,7 +93,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `text`       | `chat`                                                                       | [text.md](text.md)             |
 | `token-plan` | `add-member`, `assign-seats`, `create-key`, `list-seats`                     | [token-plan.md](token-plan.md) |
 | `update`     | `(root)`                                                                     | [update.md](update.md)         |
-| `usage`      | `free`, `freetier`, `stats`, `summary`, `token-plan`                         | [usage.md](usage.md)           |
+| `usage`      | `coding-plan`, `free`, `freetier`, `stats`, `summary`, `token-plan`          | [usage.md](usage.md)           |
 | `workspace`  | `init`, `list`                                                               | [workspace.md](workspace.md)   |
 
 ## Global flags

@@ -42,7 +42,13 @@ export {
 // Output facilities consumed by commands
 export { emitResult, emitBare, emitRequestId } from "./output/output.ts";
 export { formatTable } from "./output/table.ts";
-export { renderBoxTable, type BoxTableOptions, type BarColumn } from "./output/box-table.ts";
+export {
+  renderBoxTable,
+  renderGauge,
+  type BoxTableOptions,
+  type BarColumn,
+  type GaugeCell,
+} from "./output/box-table.ts";
 export { createSpinner, createProgressBar } from "./output/progress.ts";
 export { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
 export { maybeShowStatusBar } from "./output/status-bar.ts";
