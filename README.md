@@ -41,7 +41,14 @@ pnpm run typecheck
 pnpm run build       # tsc 产出 lib/
 ```
 
-本地联调：`dsh plugin --profile dev add <本仓库>/packages/bundle`，patch 文件受 HMR 监听。
+本地联调：`link:` 安装不会把被链接包的依赖装进 profile，需要把 bundle 和插件包**都** add 进去（插件包会报 "declares no dsh.bundle — installed as a plain dependency" 警告，符合预期）；npm 正式安装无此问题：
+
+```sh
+dsh plugin --profile dev add <本仓库>/packages/bundle
+dsh plugin --profile dev add <本仓库>/packages/tool-bailian-kb   # 仅 link 联调需要
+```
+
+patch 文件受 HMR 监听。
 
 ## Known Limitations
 
