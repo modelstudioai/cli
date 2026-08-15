@@ -7,22 +7,23 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command             | Description                                            |
-| ------------------- | ------------------------------------------------------ |
-| `bl plugin install` | Install or upgrade an allowlisted Command Pack         |
-| `bl plugin link`    | Link an allowlisted local Command Pack for development |
-| `bl plugin list`    | List installed Command Packs and their load status     |
-| `bl plugin remove`  | Remove an installed Command Pack                       |
+| Command             | Authentication | Description                                            |
+| ------------------- | -------------- | ------------------------------------------------------ |
+| `bl plugin install` | No Auth        | Install or upgrade an allowlisted Command Pack         |
+| `bl plugin link`    | No Auth        | Link an allowlisted local Command Pack for development |
+| `bl plugin list`    | No Auth        | List installed Command Packs and their load status     |
+| `bl plugin remove`  | No Auth        | Remove an installed Command Pack                       |
 
 ## Command details
 
 ### `bl plugin install`
 
-| Field           | Value                                          |
-| --------------- | ---------------------------------------------- |
-| **Name**        | `plugin install`                               |
-| **Description** | Install or upgrade an allowlisted Command Pack |
-| **Usage**       | `bl plugin install --package <name[@version]>` |
+| Field              | Value                                          |
+| ------------------ | ---------------------------------------------- |
+| **Name**           | `plugin install`                               |
+| **Description**    | Install or upgrade an allowlisted Command Pack |
+| **Authentication** | No Auth                                        |
+| **Usage**          | `bl plugin install --package <name[@version]>` |
 
 #### Flags
 
@@ -42,11 +43,12 @@ bl plugin install --package @ali/bailian-plugin-agent@beta
 
 ### `bl plugin link`
 
-| Field           | Value                                                  |
-| --------------- | ------------------------------------------------------ |
-| **Name**        | `plugin link`                                          |
-| **Description** | Link an allowlisted local Command Pack for development |
-| **Usage**       | `bl plugin link --path <directory>`                    |
+| Field              | Value                                                  |
+| ------------------ | ------------------------------------------------------ |
+| **Name**           | `plugin link`                                          |
+| **Description**    | Link an allowlisted local Command Pack for development |
+| **Authentication** | No Auth                                                |
+| **Usage**          | `bl plugin link --path <directory>`                    |
 
 #### Flags
 
@@ -62,11 +64,12 @@ bl plugin link --path ../bailian-plugin-agent
 
 ### `bl plugin list`
 
-| Field           | Value                                              |
-| --------------- | -------------------------------------------------- |
-| **Name**        | `plugin list`                                      |
-| **Description** | List installed Command Packs and their load status |
-| **Usage**       | `bl plugin list`                                   |
+| Field              | Value                                              |
+| ------------------ | -------------------------------------------------- |
+| **Name**           | `plugin list`                                      |
+| **Description**    | List installed Command Packs and their load status |
+| **Authentication** | No Auth                                            |
+| **Usage**          | `bl plugin list`                                   |
 
 #### Flags
 
@@ -84,11 +87,12 @@ bl plugin list --output json
 
 ### `bl plugin remove`
 
-| Field           | Value                               |
-| --------------- | ----------------------------------- |
-| **Name**        | `plugin remove`                     |
-| **Description** | Remove an installed Command Pack    |
-| **Usage**       | `bl plugin remove --name <package>` |
+| Field              | Value                               |
+| ------------------ | ----------------------------------- |
+| **Name**           | `plugin remove`                     |
+| **Description**    | Remove an installed Command Pack    |
+| **Authentication** | No Auth                             |
+| **Usage**          | `bl plugin remove --name <package>` |
 
 #### Flags
 

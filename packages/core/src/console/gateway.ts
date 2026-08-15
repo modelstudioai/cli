@@ -58,7 +58,7 @@ export function effectiveConsoleGatewayConfig(
 }
 
 export interface ConsoleGatewayRequest {
-  /** Console API name, e.g. zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota */
+  /** Console API name, e.g. zeldaEasy.bailian-commerce.freeTrial.queryFreeTierQuota */
   api: string;
   data: Record<string, unknown>;
 }

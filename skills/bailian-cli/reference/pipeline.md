@@ -7,20 +7,21 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                | Description                                      |
-| ---------------------- | ------------------------------------------------ |
-| `bl pipeline run`      | Run a pipeline workflow definition               |
-| `bl pipeline validate` | Validate a pipeline definition without executing |
+| Command                | Authentication | Description                                      |
+| ---------------------- | -------------- | ------------------------------------------------ |
+| `bl pipeline run`      | No Auth        | Run a pipeline workflow definition               |
+| `bl pipeline validate` | No Auth        | Validate a pipeline definition without executing |
 
 ## Command details
 
 ### `bl pipeline run`
 
-| Field           | Value                                   |
-| --------------- | --------------------------------------- |
-| **Name**        | `pipeline run`                          |
-| **Description** | Run a pipeline workflow definition      |
-| **Usage**       | `bl pipeline run --file <path> [flags]` |
+| Field              | Value                                   |
+| ------------------ | --------------------------------------- |
+| **Name**           | `pipeline run`                          |
+| **Description**    | Run a pipeline workflow definition      |
+| **Authentication** | No Auth                                 |
+| **Usage**          | `bl pipeline run --file <path> [flags]` |
 
 #### Flags
 
@@ -57,11 +58,12 @@ bl pipeline run --file workflow.yaml --output json
 
 ### `bl pipeline validate`
 
-| Field           | Value                                            |
-| --------------- | ------------------------------------------------ |
-| **Name**        | `pipeline validate`                              |
-| **Description** | Validate a pipeline definition without executing |
-| **Usage**       | `bl pipeline validate --file <path>`             |
+| Field              | Value                                            |
+| ------------------ | ------------------------------------------------ |
+| **Name**           | `pipeline validate`                              |
+| **Description**    | Validate a pipeline definition without executing |
+| **Authentication** | No Auth                                          |
+| **Usage**          | `bl pipeline validate --file <path>`             |
 
 #### Flags
 

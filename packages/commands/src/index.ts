@@ -48,6 +48,8 @@ export { default as usageFree } from "./commands/usage/free.ts";
 export { default as usageFreetier } from "./commands/usage/freetier.ts";
 export { default as usageStats } from "./commands/usage/stats.ts";
 export { default as usageSummary } from "./commands/usage/summary.ts";
+export { default as usageTokenPlan } from "./commands/usage/token-plan.ts";
+export { default as usageCodingPlan } from "./commands/usage/coding-plan.ts";
 export { default as pipelineRun } from "./commands/pipeline/run.ts";
 export { default as pipelineValidate } from "./commands/pipeline/validate.ts";
 export { default as advisorRecommend } from "./commands/advisor/recommend.ts";

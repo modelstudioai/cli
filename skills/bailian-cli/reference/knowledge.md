@@ -7,21 +7,22 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                 | Description                                                               |
-| ----------------------- | ------------------------------------------------------------------------- |
-| `bl knowledge chat`     | Chat with a Bailian knowledge base (RAG Q&A with streaming)               |
-| `bl knowledge retrieve` | Retrieve from a Bailian knowledge base (deprecated, use `search` instead) |
-| `bl knowledge search`   | Search a Bailian knowledge base (RAG semantic retrieval)                  |
+| Command                 | Authentication | Description                                                               |
+| ----------------------- | -------------- | ------------------------------------------------------------------------- |
+| `bl knowledge chat`     | API Key        | Chat with a Bailian knowledge base (RAG Q&A with streaming)               |
+| `bl knowledge retrieve` | API Key        | Retrieve from a Bailian knowledge base (deprecated, use `search` instead) |
+| `bl knowledge search`   | API Key        | Search a Bailian knowledge base (RAG semantic retrieval)                  |
 
 ## Command details
 
 ### `bl knowledge chat`
 
-| Field           | Value                                                        |
-| --------------- | ------------------------------------------------------------ |
-| **Name**        | `knowledge chat`                                             |
-| **Description** | Chat with a Bailian knowledge base (RAG Q&A with streaming)  |
-| **Usage**       | `bl knowledge chat --message <text> --agent-id <id> [flags]` |
+| Field              | Value                                                        |
+| ------------------ | ------------------------------------------------------------ |
+| **Name**           | `knowledge chat`                                             |
+| **Description**    | Chat with a Bailian knowledge base (RAG Q&A with streaming)  |
+| **Authentication** | API Key                                                      |
+| **Usage**          | `bl knowledge chat --message <text> --agent-id <id> [flags]` |
 
 #### Flags
 
@@ -57,11 +58,12 @@ bl knowledge chat --message "Describe these images" --image https://example.com/
 
 ### `bl knowledge retrieve`
 
-| Field           | Value                                                                     |
-| --------------- | ------------------------------------------------------------------------- |
-| **Name**        | `knowledge retrieve`                                                      |
-| **Description** | Retrieve from a Bailian knowledge base (deprecated, use `search` instead) |
-| **Usage**       | `bl knowledge retrieve --index-id <id> --query <text> [flags]`            |
+| Field              | Value                                                                     |
+| ------------------ | ------------------------------------------------------------------------- |
+| **Name**           | `knowledge retrieve`                                                      |
+| **Description**    | Retrieve from a Bailian knowledge base (deprecated, use `search` instead) |
+| **Authentication** | API Key                                                                   |
+| **Usage**          | `bl knowledge retrieve --index-id <id> --query <text> [flags]`            |
 
 #### Flags
 
@@ -92,11 +94,12 @@ bl knowledge retrieve --index-id idx_xxx --query "RAG retrieval" --rerank --rera
 
 ### `bl knowledge search`
 
-| Field           | Value                                                        |
-| --------------- | ------------------------------------------------------------ |
-| **Name**        | `knowledge search`                                           |
-| **Description** | Search a Bailian knowledge base (RAG semantic retrieval)     |
-| **Usage**       | `bl knowledge search --query <text> --agent-id <id> [flags]` |
+| Field              | Value                                                        |
+| ------------------ | ------------------------------------------------------------ |
+| **Name**           | `knowledge search`                                           |
+| **Description**    | Search a Bailian knowledge base (RAG semantic retrieval)     |
+| **Authentication** | API Key                                                      |
+| **Usage**          | `bl knowledge search --query <text> --agent-id <id> [flags]` |
 
 #### Flags
 

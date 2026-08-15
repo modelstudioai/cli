@@ -7,19 +7,20 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command   | Description                                          |
-| --------- | ---------------------------------------------------- |
-| `bl omni` | Multimodal chat with text + audio output (Qwen-Omni) |
+| Command   | Authentication | Description                                          |
+| --------- | -------------- | ---------------------------------------------------- |
+| `bl omni` | API Key        | Multimodal chat with text + audio output (Qwen-Omni) |
 
 ## Command details
 
 ### `bl omni`
 
-| Field           | Value                                                |
-| --------------- | ---------------------------------------------------- |
-| **Name**        | `omni`                                               |
-| **Description** | Multimodal chat with text + audio output (Qwen-Omni) |
-| **Usage**       | `bl omni --message <text> [flags]`                   |
+| Field              | Value                                                |
+| ------------------ | ---------------------------------------------------- |
+| **Name**           | `omni`                                               |
+| **Description**    | Multimodal chat with text + audio output (Qwen-Omni) |
+| **Authentication** | API Key                                              |
+| **Usage**          | `bl omni --message <text> [flags]`                   |
 
 #### Flags
 
