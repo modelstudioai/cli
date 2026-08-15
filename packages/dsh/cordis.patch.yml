@@ -76,6 +76,12 @@
     - id: bailian-tool-image
       name: bailian-cli-dsh/tool-image
 
+    # Enabled by default: the tool creates no resources at load time. It only
+    # provisions a cloud agent when the model actually calls it, and reuses it
+    # after — no deployment-specific ID to configure up front.
+    - id: bailian-tool-managed-agent
+      name: bailian-cli-dsh/tool-managed-agent
+
     # Disabled by default: the knowledge base to query is deployment-specific,
     # and an enabled provider with no agentId would make `web_search` ambiguous
     # for everyone. Set workspaceId + agentId and flip `disabled` to use it.
@@ -87,11 +93,5 @@
     # Disabled by default: memory add/search are billed per call.
     - id: bailian-memory
       name: bailian-cli-dsh/memory
-      disabled: true
-      config: {}
-
-    # Disabled by default: requires an applied `agents.yaml` in the workspace.
-    - id: bailian-subagent-managed-agent
-      name: bailian-cli-dsh/subagent-managed-agent
       disabled: true
       config: {}

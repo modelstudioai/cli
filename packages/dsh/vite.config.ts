@@ -8,9 +8,9 @@ export default defineConfig({
       "src/index.ts",
       "src/tool-vision/index.ts",
       "src/tool-image/index.ts",
+      "src/tool-managed-agent/index.ts",
       "src/web-search-rag/index.ts",
       "src/memory/index.ts",
-      "src/subagent-managed-agent/index.ts",
     ],
     minify: true,
     dts: {

@@ -7,25 +7,26 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                           | Description                                                   |
-| --------------------------------- | ------------------------------------------------------------- |
-| `bl managed-agent apply`          | Apply planned changes to create/update/delete agent resources |
-| `bl managed-agent destroy`        | Destroy all managed agent resources tracked in state          |
-| `bl managed-agent init`           | Create a new agents.yaml template                             |
-| `bl managed-agent plan`           | Show what changes would be applied to agent infrastructure    |
-| `bl managed-agent session create` | Create a new session for an agent                             |
-| `bl managed-agent session delete` | Delete a session                                              |
-| `bl managed-agent session events` | List event history for a session                              |
-| `bl managed-agent session get`    | Get details of a session                                      |
-| `bl managed-agent session list`   | List sessions from the provider                               |
-| `bl managed-agent session run`    | Create a session, send a message, and stream the response     |
-| `bl managed-agent session send`   | Send a message to an existing session and stream the response |
-| `bl managed-agent skill-list`     | List skills from the provider's skill catalog                 |
-| `bl managed-agent state import`   | Import an existing remote resource into agents state          |
-| `bl managed-agent state list`     | List resources tracked in agents state                        |
-| `bl managed-agent state rm`       | Remove a resource from state without destroying it remotely   |
-| `bl managed-agent state show`     | Show details of a resource in agents state                    |
-| `bl managed-agent validate`       | Validate an agents.yaml configuration (offline)               |
+| Command                           | Description                                                    |
+| --------------------------------- | -------------------------------------------------------------- |
+| `bl managed-agent apply`          | Apply planned changes to create/update/delete agent resources  |
+| `bl managed-agent destroy`        | Destroy all managed agent resources tracked in state           |
+| `bl managed-agent init`           | Create a new agents.yaml template                              |
+| `bl managed-agent plan`           | Show what changes would be applied to agent infrastructure     |
+| `bl managed-agent run`            | Provision (if needed) a cloud agent and run a task in one step |
+| `bl managed-agent session create` | Create a new session for an agent                              |
+| `bl managed-agent session delete` | Delete a session                                               |
+| `bl managed-agent session events` | List event history for a session                               |
+| `bl managed-agent session get`    | Get details of a session                                       |
+| `bl managed-agent session list`   | List sessions from the provider                                |
+| `bl managed-agent session run`    | Create a session, send a message, and stream the response      |
+| `bl managed-agent session send`   | Send a message to an existing session and stream the response  |
+| `bl managed-agent skill-list`     | List skills from the provider's skill catalog                  |
+| `bl managed-agent state import`   | Import an existing remote resource into agents state           |
+| `bl managed-agent state list`     | List resources tracked in agents state                         |
+| `bl managed-agent state rm`       | Remove a resource from state without destroying it remotely    |
+| `bl managed-agent state show`     | Show details of a resource in agents state                     |
+| `bl managed-agent validate`       | Validate an agents.yaml configuration (offline)                |
 
 ## Command details
 
@@ -168,6 +169,43 @@ bl managed-agent plan --provider bailian
 
 ```bash
 bl managed-agent plan --no-refresh
+```
+
+### `bl managed-agent run`
+
+| Field           | Value                                                                                          |
+| --------------- | ---------------------------------------------------------------------------------------------- |
+| **Name**        | `managed-agent run`                                                                            |
+| **Description** | Provision (if needed) a cloud agent and run a task in one step                                 |
+| **Usage**       | `bl managed-agent run --prompt <text> [--instructions <text>] [--model <id>] [--agent <name>]` |
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                                                |
+| ----------------------- | ------ | -------- | -------------------------------------------------------------------------- |
+| `--prompt <text>`       | string | yes      | Task to run (required)                                                     |
+| `--instructions <text>` | string | no       | Role/system instructions for the remote agent (default: generic assistant) |
+| `--model <id>`          | string | no       | Model for the remote agent (default: qwen3.8-max)                          |
+| `--agent <name>`        | string | no       | Agent identity to create/reuse (default: dsh-remote-runner)                |
+| `--no-stream`           | switch | no       | Use polling instead of SSE streaming                                       |
+| `--api-key <key>`       | string | no       | API key                                                                    |
+| `--base-url <url>`      | string | no       | API base URL                                                               |
+
+#### Notes
+
+- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+- Unlike `apply`, this creates/updates the cloud agent + environment on demand without --yes. The first run provisions cloud resources (may incur cost and take longer to start); later runs with the same --agent reuse them.
+
+#### Examples
+
+```bash
+bl managed-agent run --prompt "Summarize the latest AI news"
+```
+
+```bash
+bl managed-agent run --prompt "Audit this dependency tree" --instructions "You are a security expert" --model qwen3.8-max
 ```
 
 ### `bl managed-agent session create`

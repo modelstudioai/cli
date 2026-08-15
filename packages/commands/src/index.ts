@@ -99,6 +99,7 @@ export { default as managedAgentInit } from "./commands/managed-agent/init.ts";
 export { default as managedAgentValidate } from "./commands/managed-agent/validate.ts";
 export { default as managedAgentPlan } from "./commands/managed-agent/plan.ts";
 export { default as managedAgentApply } from "./commands/managed-agent/apply.ts";
+export { default as managedAgentRun } from "./commands/managed-agent/run.ts";
 export { default as managedAgentDestroy } from "./commands/managed-agent/destroy.ts";
 export { default as managedAgentStateList } from "./commands/managed-agent/state-list.ts";
 export { default as managedAgentStateShow } from "./commands/managed-agent/state-show.ts";

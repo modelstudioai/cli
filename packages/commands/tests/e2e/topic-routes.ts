@@ -177,6 +177,7 @@ export const MANAGED_AGENT_ROUTES: E2eRouteExports = {
   "managed-agent validate": "managedAgentValidate",
   "managed-agent plan": "managedAgentPlan",
   "managed-agent apply": "managedAgentApply",
+  "managed-agent run": "managedAgentRun",
   "managed-agent destroy": "managedAgentDestroy",
   "managed-agent state list": "managedAgentStateList",
   "managed-agent state rm": "managedAgentStateRm",

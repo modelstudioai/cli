@@ -33,6 +33,10 @@
       "types": "./src/tool-image/index.ts",
       "default": "./src/tool-image/index.ts"
     },
+    "./tool-managed-agent": {
+      "types": "./src/tool-managed-agent/index.ts",
+      "default": "./src/tool-managed-agent/index.ts"
+    },
     "./web-search-rag": {
       "types": "./src/web-search-rag/index.ts",
       "default": "./src/web-search-rag/index.ts"
@@ -40,10 +44,6 @@
     "./memory": {
       "types": "./src/memory/index.ts",
       "default": "./src/memory/index.ts"
-    },
-    "./subagent-managed-agent": {
-      "types": "./src/subagent-managed-agent/index.ts",
-      "default": "./src/subagent-managed-agent/index.ts"
     },
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./package.json": "./package.json"
@@ -54,9 +54,9 @@
       ".": "./dist/index.mjs",
       "./tool-vision": "./dist/tool-vision/index.mjs",
       "./tool-image": "./dist/tool-image/index.mjs",
+      "./tool-managed-agent": "./dist/tool-managed-agent/index.mjs",
       "./web-search-rag": "./dist/web-search-rag/index.mjs",
       "./memory": "./dist/memory/index.mjs",
-      "./subagent-managed-agent": "./dist/subagent-managed-agent/index.mjs",
       "./cordis.patch.yml": "./cordis.patch.yml",
       "./package.json": "./package.json"
     },

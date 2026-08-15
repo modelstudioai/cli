@@ -4,23 +4,23 @@
 
 一个包提供 5 个插件行，外加对 base bundle 的 `llm-pi-ai` 行做一次配置覆盖：
 
-| row id                           | 能力                                                            | 默认 | 依赖                  |
-| -------------------------------- | --------------------------------------------------------------- | ---- | --------------------- |
-| `llm-pi-ai`（覆盖 base 行）      | 把百炼 TokenPlan 网关注册成 LLM provider（`bailian-tokenplan`） | 启用 | TokenPlan Key         |
-| `bailian-tool-vision`            | `bailian_vision_describe`：图片/视频理解                        | 启用 | `bl`                  |
-| `bailian-tool-image`             | `bailian_image_generate`：文生图                                | 启用 | `bl`                  |
-| `bailian-web-search-rag`         | 百炼知识库检索，注册为 `web_search` 的后端                      | 停用 | 按量付费 Key + 知识库 |
-| `bailian-memory`                 | 跨会话长期记忆（tools + 自动检索/落库）                         | 停用 | 按量付费 Key          |
-| `bailian-subagent-managed-agent` | 子 agent 跑在百炼托管运行时                                     | 停用 | `bl` + `agents.yaml`  |
+| row id                       | 能力                                                            | 默认 | 依赖                  |
+| ---------------------------- | --------------------------------------------------------------- | ---- | --------------------- |
+| `llm-pi-ai`（覆盖 base 行）  | 把百炼 TokenPlan 网关注册成 LLM provider（`bailian-tokenplan`） | 启用 | TokenPlan Key         |
+| `bailian-tool-vision`        | `bailian_vision_describe`：图片/视频理解                        | 启用 | `bl`                  |
+| `bailian-tool-image`         | `bailian_image_generate`：文生图                                | 启用 | `bl`                  |
+| `bailian-tool-managed-agent` | `bailian_run_remote_task`：按需在云端创建 agent 并跑任务        | 启用 | `bl` + 按量付费 Key   |
+| `bailian-web-search-rag`     | 百炼知识库检索，注册为 `web_search` 的后端                      | 停用 | 按量付费 Key + 知识库 |
+| `bailian-memory`             | 跨会话长期记忆（tools + 自动检索/落库）                         | 停用 | 按量付费 Key          |
 
-后三个默认停用是有意的：它们要么需要部署方特有的资源 ID，要么按次计费，不该在用户没配置时就生效。
+`web-search-rag` 与 `memory` 默认停用是有意的：它们要么需要部署方特有的资源 ID，要么按次计费，不该在用户没配置时就生效。`tool-managed-agent` 默认启用——它加载时不建任何资源，只有模型真正调用时才在云端创建 agent。
 
 ---
 
 ## 1. 前置条件
 
 - Node ≥ 22.19（`dsh` 的要求）
-- `bl`（vision / image / subagent 三个插件通过子进程调它）
+- `bl`（vision / image / 远程任务 三个工具通过子进程调它）
 
   ```sh
   npm install -g bailian-cli
@@ -105,7 +105,9 @@ Web UI 在 http://127.0.0.1:3080。
 | `deepseek-v4-pro`        | 否                 |
 | `deepseek-v4-flash-0731` | 否                 |
 
-**两个工具** — `bailian_vision_describe`、`bailian_image_generate`。
+**三个工具** — `bailian_vision_describe`、`bailian_image_generate`、`bailian_run_remote_task`。
+
+前两个走 TokenPlan（vision/image）。`bailian_run_remote_task` 见 [§3.1](#31-远程任务-bailian_run_remote_task)——它默认启用但用的是**按量付费 Key + dashscope 端点**，与 TokenPlan 那两个不同。
 
 ### 关于看图，有个坑值得知道
 
@@ -117,6 +119,24 @@ dsh 会在两处**提前**拦截图片：Web UI 粘图前会查当前模型的�
 DeepSeek 那两个模型在 TokenPlan 网关上传图**不报错但也看不见**（实测会回答 "None"），所以本包坚决没给它们声明 `input: [image]`——否则会从"明确拒绝"退化成"静默失明"，更难排查。
 
 `bailian_image_generate` 同理：模型能看图时返回内联图片，不能看图时降级为返回落盘路径，你可以接着用 vision 工具读它。文件不会被删除，正是为了这个衔接。
+
+### 3.1 远程任务（`bailian_run_remote_task`）
+
+把一个任务甩到百炼云端的托管 agent 上跑，不占本地会话。**无需预先写 `agents.yaml` 或 `apply`**：工具首次被调用时，`bl managed-agent run` 会在你的账号里幂等创建一个 agent + cloud environment，之后复用。
+
+- 模型自己按用户意图填 `instructions`（远程 agent 的角色），`task` 是要它做的事。例如你说「在云端帮我审计这个依赖树，它该懂安全」→ 模型调 `bailian_run_remote_task(task="审计依赖树", instructions="你是安全专家")`。
+- **前提**：这条路走的是 managed-agent（agentstudio）服务，需要**按量付费 Key**（`sk-ws-`）+ dashscope 端点，且账号已开通 managed-agent。TokenPlan Key 不适用。若 `DASHSCOPE_API_KEY`/端点没配好，首次调用会返回 `Bailian API 404`。
+- 首次会创建云资源（可能计费、启动有延迟）；同名 agent 后续复用。默认 agent 名 `dsh-remote-runner`，可在配置里改。
+
+需要非默认的 agent 名 / 模型时：
+
+```yaml
+- id: bailian-tool-managed-agent
+  config:
+    agent: my-runner
+    model: qwen3.8-max
+    timeoutMs: 600000
+```
 
 ---
 
@@ -181,30 +201,7 @@ dsh 自身没有跨会话记忆（`ctx.compaction` 只在单会话内压缩上�
     autoPersist: false
 ```
 
-### 托管子 agent
-
-把 dsh 的子 agent 派发到百炼云端运行，不占本地资源。
-
-先在工作目录准备好清单并应用：
-
-```sh
-bl managed-agent init
-bl managed-agent apply --yes
-```
-
-再开启：
-
-```yaml
-- id: bailian-subagent-managed-agent
-  disabled: false
-  config:
-    file: agents.yaml
-    agent: assistant
-    provider: bailian
-    timeoutMs: 600000
-```
-
-两个已知限制：CLI 在会话结束时才一次性输出 JSON，所以**中途没有增量进度**，被取消时也拿不到部分输出；`prepareContinuable` 未实现，即只支持一次性委派，不支持多轮续聊。
+> 远程任务（`bailian_run_remote_task`）默认启用，配置见 [§3.1](#31-远程任务-bailian_run_remote_task)。
 
 ---
 
@@ -226,7 +223,7 @@ bl auth status
 - **文生图**：让模型生成一张图
 - **RAG**：问一个只有知识库里才有答案的问题
 - **记忆**：会话 A 告诉它一个事实 → 关掉 → 新开会话 B 提问，看是否命中
-- **子 agent**：派发一个子任务
+- **远程任务**：说「在云端帮我跑一个任务：<something>，它该擅长 <role>」→ 确认模型调用 `bailian_run_remote_task`（`instructions` 由模型按 role 填）→ 首次触发云端创建 → 返回远程会话结果（需按量付费 Key + 已开通 agentstudio）
 
 ---
 
