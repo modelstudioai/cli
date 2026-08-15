@@ -1,0 +1,13 @@
+{
+  "name": "bailian-kb-bundle",
+  "version": "0.1.0",
+  "description": "Installable dsh bundle for Bailian knowledge-base tools: kb_service_list, kb_search, kb_chat plus the kscli management skill.",
+  "type": "module",
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } },
+  "exports": {
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": ["cordis.patch.yml"],
+  "dependencies": { "dsh-tool-bailian-kb": "workspace:^" }
+}

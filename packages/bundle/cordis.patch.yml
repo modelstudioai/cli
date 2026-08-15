@@ -1,0 +1,10 @@
+# bailian-kb-bundle: inserts the Bailian knowledge-base consumer over dsh-base.
+# workspaceId reads BAILIAN_WORKSPACE_ID from the environment (~/.dsh/.env) so a
+# user patch is only needed to pin defaultAgentId or override the host/timeout.
+# An id-targeted user patch replaces this whole config: restate workspaceId too.
+
+- insert:
+    - id: tool-bailian-kb
+      name: dsh-tool-bailian-kb
+      config:
+        workspaceId: !!js process.env.BAILIAN_WORKSPACE_ID
