@@ -14,7 +14,8 @@ export class KbApiError extends Error {
 }
 
 export interface KbClientOptions {
-  workspaceId: string
+  /** Resolves the current workspace id per call (patch config or credential); throws with guidance when unconfigured. */
+  resolveWorkspaceId: () => Promise<string>
   endpointHost: string
   /** Service version forwarded on search/chat when set (deployment debug choice). */
   agentVersion?: string
@@ -33,9 +34,9 @@ export class KbClient {
   }
 
   private async post(path: string, body: unknown, accept: string, signal?: AbortSignal): Promise<Response> {
-    const apiKey = await this.opts.resolveApiKey()
+    const [apiKey, workspaceId] = await Promise.all([this.opts.resolveApiKey(), this.opts.resolveWorkspaceId()])
     const fetchImpl = this.opts.fetchImpl ?? fetch
-    const url = kbEndpoint(this.opts.endpointHost, this.opts.workspaceId, path)
+    const url = kbEndpoint(this.opts.endpointHost, workspaceId, path)
     const res = await fetchImpl(url, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'Accept': accept },

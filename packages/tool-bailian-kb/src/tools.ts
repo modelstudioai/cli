@@ -1,6 +1,9 @@
 /**
- * The three model-facing knowledge tools. Schemas are static per deployment: a configured
- * defaultAgentId downgrades agent_id to optional at build time (never a runtime fallback chain).
+ * The three model-facing knowledge tools. agent_id stays optional in the schema
+ * regardless of deployment: the default service (patch config or credential)
+ * can change at runtime through the credentials domain, so the fallback runs
+ * per call and a missing default surfaces as an executable error instead of a
+ * load-time schema difference.
  */
 
 import { defineTool } from '@deepseek-ai/dsh-tools'
@@ -15,7 +18,8 @@ const DEFAULT_TOP_K = 5
 
 export interface KbToolDeps {
   client: KbClient
-  defaultAgentId?: string
+  /** Resolves the default agent id per call (patch config or credential); omitted means no default. */
+  resolveDefaultAgentId?: () => Promise<string | undefined>
   chatTimeoutMs: number
 }
 
@@ -49,18 +53,18 @@ async function withServiceHint(client: KbClient, err: unknown): Promise<never> {
  * @returns definitions ready for `ctx.tools.register()`.
  */
 export function createKbTools(deps: KbToolDeps) {
-  const { client, defaultAgentId, chatTimeoutMs } = deps
+  const { client, resolveDefaultAgentId, chatTimeoutMs } = deps
   const agentIdParam = {
     type: 'string' as const,
-    ...(defaultAgentId === undefined ? { required: true as const } : {}),
-    description: defaultAgentId === undefined
-      ? 'Retrieval/Q&A service id (find one via kb_service_list).'
-      : 'Retrieval/Q&A service id; omit to use this deployment\'s default service.',
+    description: 'Retrieval/Q&A service id; omit to use the default service when this deployment configures one (find ids via kb_service_list).',
   }
-  const resolveAgentId = (supplied: string | undefined): string => {
-    const agentId = supplied ?? defaultAgentId
-    if (agentId === undefined) throw new Error('agent_id is required: discover services with kb_service_list')
-    return agentId
+  const resolveAgentId = async (supplied: string | undefined): Promise<string> => {
+    if (supplied !== undefined) return supplied
+    const defaultId = resolveDefaultAgentId === undefined ? undefined : await resolveDefaultAgentId()
+    if (defaultId === undefined) {
+      throw new Error('agent_id is required: no default service is configured; discover services with kb_service_list')
+    }
+    return defaultId
   }
 
   const serviceList = defineTool({
@@ -163,7 +167,7 @@ export function createKbTools(deps: KbToolDeps) {
       const topK = args.top_k ?? DEFAULT_TOP_K
       const body: SearchRequest = {
         query: args.query,
-        agent_id: resolveAgentId(args.agent_id),
+        agent_id: await resolveAgentId(args.agent_id),
         ...(client.agentVersion ? { agent_version: client.agentVersion } : {}),
         ...(args.images && args.images.length > 0 ? { images: args.images } : {}),
       }
@@ -210,7 +214,7 @@ export function createKbTools(deps: KbToolDeps) {
       const body = {
         input: { messages: [{ role: 'user' as const, content: args.message }] },
         parameters: { agent_options: {
-          agent_id: resolveAgentId(args.agent_id),
+          agent_id: await resolveAgentId(args.agent_id),
           ...(client.agentVersion ? { agent_version: client.agentVersion } : {}),
         } },
         stream: true as const,

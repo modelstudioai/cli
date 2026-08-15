@@ -3,7 +3,7 @@ import { KbApiError, KbClient } from '../src/client.js'
 
 function makeClient(fetchImpl: typeof fetch) {
   return new KbClient({
-    workspaceId: 'ws-1',
+    resolveWorkspaceId: async () => 'ws-1',
     endpointHost: 'cn-beijing.maas.aliyuncs.com',
     resolveApiKey: async () => 'sk-test',
     fetchImpl,
@@ -36,7 +36,7 @@ describe('KbClient.postJson', () => {
     const resolveApiKey = vi.fn(async () => 'sk-test')
     const fetchImpl = vi.fn(async () => new Response('{}', { status: 200 }))
     const client = new KbClient({
-      workspaceId: 'ws-1',
+      resolveWorkspaceId: async () => 'ws-1',
       endpointHost: 'h',
       resolveApiKey,
       fetchImpl: fetchImpl as unknown as typeof fetch,
@@ -44,5 +44,21 @@ describe('KbClient.postJson', () => {
     await client.postJson('/p', {})
     await client.postJson('/p', {})
     expect(resolveApiKey).toHaveBeenCalledTimes(2)
+  })
+
+  it('re-resolves the workspace id per call (credential hot-swap contract)', async () => {
+    let workspaceId = 'ws-1'
+    const fetchImpl = vi.fn(async () => new Response('{}', { status: 200 }))
+    const client = new KbClient({
+      resolveWorkspaceId: async () => workspaceId,
+      endpointHost: 'h',
+      resolveApiKey: async () => 'sk-test',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    })
+    await client.postJson('/p', {})
+    workspaceId = 'ws-2'
+    await client.postJson('/p', {})
+    const urls = fetchImpl.mock.calls.map(call => (call as unknown as [string])[0])
+    expect(urls).toEqual(['https://ws-1.h/p', 'https://ws-2.h/p'])
   })
 })

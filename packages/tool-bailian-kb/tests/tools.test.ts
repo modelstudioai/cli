@@ -4,9 +4,9 @@ import { createKbTools } from '../src/tools.js'
 
 const EXEC = {} as never
 
-function toolsWith(postJson: unknown, postSse?: unknown, defaultAgentId?: string) {
+function toolsWith(postJson: unknown, postSse?: unknown, resolveDefaultAgentId?: () => Promise<string | undefined>) {
   const client = { postJson, postSse, agentVersion: undefined } as unknown as KbClient
-  const list = createKbTools({ client, ...(defaultAgentId ? { defaultAgentId } : {}), chatTimeoutMs: 1000 })
+  const list = createKbTools({ client, ...(resolveDefaultAgentId ? { resolveDefaultAgentId } : {}), chatTimeoutMs: 1000 })
   const byName = Object.fromEntries(list.map(t => [t.name, t]))
   return { byName, list }
 }
@@ -36,21 +36,44 @@ describe('createKbTools', () => {
     expect(body.agent_id).toBe('aid-1')
   })
 
-  it('agent_id is required without defaultAgentId and optional with one', () => {
+  it('agent_id stays optional in the schema regardless of a configured default', () => {
     const withoutDefault = toolsWith(vi.fn()).byName.kb_search!
-    const withDefault = toolsWith(vi.fn(), undefined, 'aid-fixed').byName.kb_search!
+    const withDefault = toolsWith(vi.fn(), undefined, async () => 'aid-fixed').byName.kb_search!
     // defineTool compiles the spec into JSON Schema: requiredness lives in the top-level `required` array.
     const requiredList = (tool: { parameters: Record<string, unknown> }) =>
       (tool.parameters.required ?? []) as string[]
-    expect(requiredList(withoutDefault)).toContain('agent_id')
+    // The default can arrive or leave at runtime via the credentials domain, so
+    // the schema cannot promise requiredness either way.
+    expect(requiredList(withoutDefault)).not.toContain('agent_id')
     expect(requiredList(withDefault)).not.toContain('agent_id')
   })
 
-  it('kb_search falls back to defaultAgentId as an explicit resolve step', async () => {
+  it('kb_search falls back to the per-call default resolver as an explicit resolve step', async () => {
     const postJson = vi.fn(async (_path: string, _body: unknown) => searchResponse)
-    const { byName } = toolsWith(postJson, undefined, 'aid-fixed')
+    const { byName } = toolsWith(postJson, undefined, async () => 'aid-fixed')
     await byName.kb_search!.execute({ query: 'q' }, EXEC)
     expect((postJson.mock.calls[0]![1] as Record<string, unknown>).agent_id).toBe('aid-fixed')
+  })
+
+  it('a missing agent_id without any default resolves to executable discovery guidance', async () => {
+    const postJson = vi.fn(async (_path: string, _body: unknown) => searchResponse)
+    const { byName } = toolsWith(postJson)
+    const err = await byName.kb_search!.execute({ query: 'q' }, EXEC).catch((e: unknown) => e)
+    expect((err as Error).message).toContain('kb_service_list')
+  })
+
+  it('kb_search re-resolves the default per call (credential hot-swap contract)', async () => {
+    const postJson = vi.fn(async (_path: string, _body: unknown) => searchResponse)
+    let current: string | undefined
+    const resolveDefaultAgentId = vi.fn(async () => current)
+    const { byName } = toolsWith(postJson, undefined, resolveDefaultAgentId)
+    current = 'aid-one'
+    await byName.kb_search!.execute({ query: 'q' }, EXEC)
+    current = undefined
+    await byName.kb_search!.execute({ query: 'q' }, EXEC).catch(() => {})
+    expect(resolveDefaultAgentId).toHaveBeenCalledTimes(2)
+    expect((postJson.mock.calls[0]![1] as Record<string, unknown>).agent_id).toBe('aid-one')
+    expect(postJson).toHaveBeenCalledTimes(1)
   })
 
   it('a 4xx failure appends the current service list to the error', async () => {

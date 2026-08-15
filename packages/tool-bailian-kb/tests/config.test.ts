@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { Config } from '../src/index.js'
 
 describe('Config', () => {
-  it('applies defaults and keeps required workspaceId', () => {
+  it('applies defaults and accepts a pinned workspaceId', () => {
     const resolved = new Config({ workspaceId: 'ws-1' })
     expect(resolved.workspaceId).toBe('ws-1')
     expect(resolved.endpointHost).toBe('cn-beijing.maas.aliyuncs.com')
@@ -10,7 +10,9 @@ describe('Config', () => {
     expect(resolved.defaultAgentId).toBeUndefined()
   })
 
-  it('rejects a missing workspaceId (fail loud at load)', () => {
-    expect(() => new Config({} as never)).toThrow()
+  it('accepts a missing workspaceId (per-call credentials fallback)', () => {
+    const resolved = new Config({} as never)
+    expect(resolved.workspaceId).toBeUndefined()
+    expect(resolved.endpointHost).toBe('cn-beijing.maas.aliyuncs.com')
   })
 })
