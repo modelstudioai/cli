@@ -28,16 +28,16 @@
 
 - 百炼 API Key。**注意有两类且不可混用**：
 
-  | 类型      | 前缀     | 能访问                                  | 不能访问       |
-  | --------- | -------- | --------------------------------------- | -------------- |
-  | TokenPlan | `sk-sp-` | TokenPlan 网关（LLM / vision / 文生图） | 记忆库、知识库 |
-  | 按量付费  | `sk-ws-` | 记忆库、知识库、DashScope 全量接口      | TokenPlan 网关 |
+  | 类型      | 前缀     | 能访问                                                      | 不能访问                 |
+  | --------- | -------- | ----------------------------------------------------------- | ------------------------ |
+  | TokenPlan | `sk-sp-` | TokenPlan 网关（LLM / vision / 文生图）                     | 记忆库、知识库、远程任务 |
+  | 按量付费  | `sk-ws-` | 记忆库、知识库、远程任务（agentstudio）、DashScope 全量接口 | TokenPlan 网关           |
 
   两者互相返回 `401 InvalidApiKey`，所以本包用**两个不同的环境变量**，不会互相踩：
 
   ```sh
   export BAILIAN_TOKENPLAN_API_KEY=sk-sp-xxx   # 只给 bailian-tokenplan provider
-  export DASHSCOPE_API_KEY=sk-ws-xxx           # 给 bl、memory、RAG
+  export DASHSCOPE_API_KEY=sk-ws-xxx           # 给 bl、memory、RAG、远程任务
   ```
 
   只有一类 Key 也能用，只是能力范围相应缩小。若只有 TokenPlan Key：
@@ -48,7 +48,13 @@
   export DASHSCOPE_BASE_URL=https://token-plan.cn-beijing.maas.aliyuncs.com
   ```
 
-  这样 LLM / vision / 文生图可用，memory 与 RAG 不可用（保持停用即可）。
+  这样 LLM / vision / 文生图可用（后两者经 `bl` 走 TokenPlan 网关）；memory 与 RAG 保持停用即可。**远程任务仍可注册**，但它的凭证解析会看出这是 TokenPlan Key / 网关，调用 `bailian_run_remote_task` 时直接给出带修复指引的报错，而不是以前的 `Bailian API 404`。
+
+  **按量付费 Key 的解析顺序**（memory / RAG / 远程任务三处一致）：行内 `config.apiKey` → `$DASHSCOPE_API_KEY`。
+
+  **远程任务的端点**另有讲究：managed-agent（agentstudio）API **只**在工作空间前缀主机上提供——`https://{workspaceId}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio`（普通 dashscope 主机与 TokenPlan 网关都 404），且 Key 只能访问**自己归属的工作空间**（不匹配时 403 `Endpoint.AccessDenied`）。端点解析顺序：行内 `baseUrl` → `$DASHSCOPE_BASE_URL` → 行内 `workspaceId` → `$BAILIAN_WORKSPACE_ID`（后两者自动拼成工作空间主机）。workspace ID 在百炼控制台右上角的工作空间下拉里看。
+
+  memory / RAG 是显式开启的插件，Key 缺失或误填 `sk-sp-` 会在启动期报错；远程任务默认启用，为避免拖垮 TokenPlan-only 环境，改为调用时报错。
 
 ---
 
@@ -125,10 +131,12 @@ DeepSeek 那两个模型在 TokenPlan 网关上传图**不报错但也看不见*
 把一个任务甩到百炼云端的托管 agent 上跑，不占本地会话。**无需预先写 `agents.yaml` 或 `apply`**：工具首次被调用时，`bl managed-agent run` 会在你的账号里幂等创建一个 agent + cloud environment，之后复用。
 
 - 模型自己按用户意图填 `instructions`（远程 agent 的角色），`task` 是要它做的事。例如你说「在云端帮我审计这个依赖树，它该懂安全」→ 模型调 `bailian_run_remote_task(task="审计依赖树", instructions="你是安全专家")`。
-- **前提**：这条路走的是 managed-agent（agentstudio）服务，需要**按量付费 Key**（`sk-ws-`）+ dashscope 端点，且账号已开通 managed-agent。TokenPlan Key 不适用。若 `DASHSCOPE_API_KEY`/端点没配好，首次调用会返回 `Bailian API 404`。
+- **前提**：这条路走的是 managed-agent（agentstudio）服务，需要**按量付费 Key**（`sk-ws-`）+ **工作空间端点**，且账号已开通 managed-agent。TokenPlan Key 不适用。
+- **凭证解析**：Key 为 `config.apiKey` → `$DASHSCOPE_API_KEY`；端点为 `config.baseUrl` → `$DASHSCOPE_BASE_URL` → `config.workspaceId` → `$BAILIAN_WORKSPACE_ID`（后两者自动拼成 `https://{workspaceId}.cn-beijing.maas.aliyuncs.com`）。凡是解析出来的，都会显式下发给 `bl`，不会落到 `bl` 活动 config profile 的端点上——这正是旧版 `Bailian API 404` 的根因：agentstudio **只**在工作空间前缀主机上提供，TokenPlan 网关与普通 dashscope 主机都 404。
+- **两个高频报错**：`404`＝端点不是工作空间主机；`403 Endpoint.AccessDenied`＝主机对了但这个 Key 不属于该工作空间。二者都会附带具体修复指引。Key 归属的工作空间在百炼控制台右上角下拉里看。
 - 首次会创建云资源（可能计费、启动有延迟）；同名 agent 后续复用。默认 agent 名 `dsh-remote-runner`，可在配置里改。
 
-需要非默认的 agent 名 / 模型时：
+需要非默认的 agent 名 / 模型 / 凭证时：
 
 ```yaml
 - id: bailian-tool-managed-agent
@@ -136,6 +144,10 @@ DeepSeek 那两个模型在 TokenPlan 网关上传图**不报错但也看不见*
     agent: my-runner
     model: qwen3.8-max
     timeoutMs: 600000
+    # 可选凭证（省略则按上面的解析顺序找）：
+    # apiKey: sk-ws-xxxxxxxx
+    # workspaceId: llm-xxxxxxxx        # 推荐：自动拼成工作空间端点
+    # baseUrl: https://llm-xxxxxxxx.cn-beijing.maas.aliyuncs.com   # 或用完整端点
 ```
 
 ---
@@ -157,7 +169,7 @@ DeepSeek 那两个模型在 TokenPlan 网关上传图**不报错但也看不见*
     workspaceId: llm-xxxxxxxx # 百炼控制台工作空间 ID
     agentId: aid-xxxxxxxx # 知识库"检索服务"ID
     maxResults: 10
-    # apiKey 省略则读 $DASHSCOPE_API_KEY
+    # apiKey 省略则读 $DASHSCOPE_API_KEY（须为按量付费 sk-ws-；误填 sk-sp- 会在启动期报错）
 ```
 
 一个实例对一个知识库（`WebSearchRequest` 只带 `query` / `maxResults`，agentId 只能来自配置）。要多个知识库就插多行不同 `id`。
@@ -229,15 +241,18 @@ bl auth status
 
 ## 6. 常见问题
 
-| 现象                                   | 原因                                                                   |
-| -------------------------------------- | ---------------------------------------------------------------------- |
-| LLM 路由 `401 InvalidApiKey`           | `BAILIAN_TOKENPLAN_API_KEY` 没设，或误填了 `sk-ws-` 的按量付费 Key     |
-| memory / RAG `401 InvalidApiKey`       | `DASHSCOPE_API_KEY` 误填了 `sk-sp-` 的 TokenPlan Key                   |
-| `WEB_PROVIDER_AMBIGUOUS`               | 有多个搜索 provider，需在 `web` 行 pin `searchProvider`                |
-| 粘图报 `MODEL_DOES_NOT_SUPPORT_IMAGES` | 当前模型不支持图片输入，换成上表标"是"的，或改用 vision 工具           |
-| 工具报找不到 `bl`                      | `bl` 不在 PATH：`npm install -g bailian-cli`                           |
-| 改了 patch 但没生效                    | `config` 是整体替换，检查是否漏写了原有字段；再用 `--dump-config` 确认 |
-| `memoryLibraryId does not exist`       | 记忆库 ID 属于另一个账号，与当前 Key 不匹配                            |
+| 现象                                   | 原因                                                                                                                                                                               |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LLM 路由 `401 InvalidApiKey`           | `BAILIAN_TOKENPLAN_API_KEY` 没设，或误填了 `sk-ws-` 的按量付费 Key                                                                                                                 |
+| memory / RAG 启动期报 TokenPlan Key    | `DASHSCOPE_API_KEY` / `apiKey` 误填了 `sk-sp-` 的 TokenPlan Key                                                                                                                    |
+| 远程任务 `Bailian API 404`             | 端点不是工作空间前缀主机（TokenPlan 网关 / 普通 dashscope 主机都不提供 agentstudio）；给该行配 `workspaceId`（或 `baseUrl`），或导出 `BAILIAN_WORKSPACE_ID` / `DASHSCOPE_BASE_URL` |
+| 远程任务 `403 Endpoint.AccessDenied`   | 主机是工作空间主机，但这个 Key 不属于该工作空间；换成 Key 归属工作空间的 ID（控制台右上角下拉），或用属于该工作空间的 Key                                                          |
+| 远程任务调用即报 TokenPlan 提示        | `$DASHSCOPE_API_KEY` 是 `sk-sp-`；换按量付费 Key 或在行内配 `apiKey`                                                                                                               |
+| `WEB_PROVIDER_AMBIGUOUS`               | 有多个搜索 provider，需在 `web` 行 pin `searchProvider`                                                                                                                            |
+| 粘图报 `MODEL_DOES_NOT_SUPPORT_IMAGES` | 当前模型不支持图片输入，换成上表标"是"的，或改用 vision 工具                                                                                                                       |
+| 工具报找不到 `bl`                      | `bl` 不在 PATH：`npm install -g bailian-cli`                                                                                                                                       |
+| 改了 patch 但没生效                    | `config` 是整体替换，检查是否漏写了原有字段；再用 `--dump-config` 确认                                                                                                             |
+| `memoryLibraryId does not exist`       | 记忆库 ID 属于另一个账号，与当前 Key 不匹配                                                                                                                                        |
 
 ---
 

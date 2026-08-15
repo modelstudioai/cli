@@ -53,6 +53,7 @@ Index: [index.md](index.md)
 #### Notes
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- The agentstudio endpoint is workspace-scoped: the base URL is composed from the workspace id (agents.yaml workspace_id > $BAILIAN_WORKSPACE_ID > bl's configured workspace_id) as https://{workspace}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio, and the key must belong to that workspace.
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
@@ -87,6 +88,7 @@ bl managed-agent apply --provider bailian --yes
 #### Notes
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- The agentstudio endpoint is workspace-scoped: the base URL is composed from the workspace id (agents.yaml workspace_id > $BAILIAN_WORKSPACE_ID > bl's configured workspace_id) as https://{workspace}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio, and the key must belong to that workspace.
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
@@ -153,6 +155,7 @@ bl managed-agent init --provider all
 #### Notes
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- The agentstudio endpoint is workspace-scoped: the base URL is composed from the workspace id (agents.yaml workspace_id > $BAILIAN_WORKSPACE_ID > bl's configured workspace_id) as https://{workspace}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio, and the key must belong to that workspace.
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - --no-refresh and --dry-run plan offline from local config and state: no remote requests, no state writes, provider keys are not checked.
@@ -194,6 +197,7 @@ bl managed-agent plan --no-refresh
 #### Notes
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- The agentstudio endpoint is workspace-scoped: the base URL is composed from the workspace id (agents.yaml workspace_id > $BAILIAN_WORKSPACE_ID > bl's configured workspace_id) as https://{workspace}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio, and the key must belong to that workspace.
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Unlike `apply`, this creates/updates the cloud agent + environment on demand without --yes. The first run provisions cloud resources (may incur cost and take longer to start); later runs with the same --agent reuse them.
@@ -233,6 +237,7 @@ bl managed-agent run --prompt "Audit this dependency tree" --instructions "You a
 #### Notes
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- The agentstudio endpoint is workspace-scoped: the base URL is composed from the workspace id (agents.yaml workspace_id > $BAILIAN_WORKSPACE_ID > bl's configured workspace_id) as https://{workspace}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio, and the key must belong to that workspace.
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
@@ -271,6 +276,7 @@ bl managed-agent session create --agent assistant --title 'debug run'
 #### Notes
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- The agentstudio endpoint is workspace-scoped: the base URL is composed from the workspace id (agents.yaml workspace_id > $BAILIAN_WORKSPACE_ID > bl's configured workspace_id) as https://{workspace}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio, and the key must belong to that workspace.
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
@@ -303,6 +309,7 @@ bl managed-agent session delete --session-id sess_abc123
 #### Notes
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- The agentstudio endpoint is workspace-scoped: the base URL is composed from the workspace id (agents.yaml workspace_id > $BAILIAN_WORKSPACE_ID > bl's configured workspace_id) as https://{workspace}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio, and the key must belong to that workspace.
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
@@ -337,6 +344,7 @@ bl managed-agent session events --session-id sess_abc123 --all
 #### Notes
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- The agentstudio endpoint is workspace-scoped: the base URL is composed from the workspace id (agents.yaml workspace_id > $BAILIAN_WORKSPACE_ID > bl's configured workspace_id) as https://{workspace}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio, and the key must belong to that workspace.
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
@@ -368,6 +376,7 @@ bl managed-agent session get --session-id sess_abc123
 #### Notes
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- The agentstudio endpoint is workspace-scoped: the base URL is composed from the workspace id (agents.yaml workspace_id > $BAILIAN_WORKSPACE_ID > bl's configured workspace_id) as https://{workspace}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio, and the key must belong to that workspace.
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
@@ -412,6 +421,7 @@ bl managed-agent session list --all
 #### Notes
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- The agentstudio endpoint is workspace-scoped: the base URL is composed from the workspace id (agents.yaml workspace_id > $BAILIAN_WORKSPACE_ID > bl's configured workspace_id) as https://{workspace}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio, and the key must belong to that workspace.
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - --output json emits one envelope: { session_id, provider, agent, events } — read session_id to chain `session send/get/events/delete`.
@@ -449,6 +459,7 @@ bl managed-agent session run --agent assistant --prompt "summarize this repo"
 #### Notes
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- The agentstudio endpoint is workspace-scoped: the base URL is composed from the workspace id (agents.yaml workspace_id > $BAILIAN_WORKSPACE_ID > bl's configured workspace_id) as https://{workspace}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio, and the key must belong to that workspace.
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
@@ -479,6 +490,7 @@ bl managed-agent session send --session-id sess_abc123 --message "continue"
 #### Notes
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- The agentstudio endpoint is workspace-scoped: the base URL is composed from the workspace id (agents.yaml workspace_id > $BAILIAN_WORKSPACE_ID > bl's configured workspace_id) as https://{workspace}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio, and the key must belong to that workspace.
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Providers without a skill listing API (e.g. ark) return an empty list.
@@ -525,6 +537,7 @@ bl managed-agent skill-list --source custom --provider bailian
 #### Notes
 
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- The agentstudio endpoint is workspace-scoped: the base URL is composed from the workspace id (agents.yaml workspace_id > $BAILIAN_WORKSPACE_ID > bl's configured workspace_id) as https://{workspace}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio, and the key must belong to that workspace.
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 

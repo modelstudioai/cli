@@ -6,8 +6,9 @@
  */
 import type { Context } from "@deepseek-ai/cordis";
 import { launchEnvironmentOf } from "@deepseek-ai/dsh-launch-environment";
+import { DASHSCOPE_DEFAULT_BASE_URL } from "./credentials.ts";
 
-export const DASHSCOPE_DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com";
+export { DASHSCOPE_DEFAULT_BASE_URL } from "./credentials.ts";
 
 /** A non-2xx DashScope response, carrying the server's own wording. */
 export class DashScopeError extends Error {
@@ -22,8 +23,10 @@ export class DashScopeError extends Error {
 }
 
 /**
- * Resolve the DashScope key from explicit config, then the launch environment
- * (process env, project `.env`, harness-home `.env`).
+ * Resolve the DashScope key: explicit row config first, then the launch
+ * environment (process env, project `.env`, harness-home `.env`). Callers
+ * that get `undefined` decide their own failure mode — opt-in plugins reject
+ * at boot, the managed-agent tool falls through to bl's own auth chain.
  */
 export function resolveApiKey(ctx: Context, explicit?: string): string | undefined {
   if (explicit !== undefined && explicit.length > 0) return explicit;

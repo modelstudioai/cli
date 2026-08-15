@@ -79,18 +79,33 @@
     # Enabled by default: the tool creates no resources at load time. It only
     # provisions a cloud agent when the model actually calls it, and reuses it
     # after — no deployment-specific ID to configure up front.
+    #
+    # Credentials: needs a pay-as-you-go key (sk-ws-), resolved from row config
+    # `apiKey`, then $DASHSCOPE_API_KEY. The agentstudio API is served only on
+    # the workspace-scoped host, so the endpoint resolves from row `baseUrl`,
+    # then $DASHSCOPE_BASE_URL, then row `workspaceId` / $BAILIAN_WORKSPACE_ID
+    # composed into https://{workspace}.cn-beijing.maas.aliyuncs.com — whatever
+    # resolves ships to bl explicitly, never leaving the endpoint to bl's
+    # active-profile base_url (a TokenPlan or bare model-domain origin 404s
+    # agentstudio). The key must belong to that workspace. A resolved TokenPlan
+    # key or TokenPlan endpoint rejects at call time with guidance (this row is
+    # enabled by default and must not break boot for TokenPlan-only setups).
     - id: bailian-tool-managed-agent
       name: bailian-cli-dsh/tool-managed-agent
 
     # Disabled by default: the knowledge base to query is deployment-specific,
     # and an enabled provider with no agentId would make `web_search` ambiguous
     # for everyone. Set workspaceId + agentId and flip `disabled` to use it.
+    # Key: row config `apiKey`, then $DASHSCOPE_API_KEY (pay-as-you-go sk-ws-;
+    # a TokenPlan key is rejected at boot).
     - id: bailian-web-search-rag
       name: bailian-cli-dsh/web-search-rag
       disabled: true
       config: {}
 
     # Disabled by default: memory add/search are billed per call.
+    # Key: row config `apiKey`, then $DASHSCOPE_API_KEY (pay-as-you-go sk-ws-;
+    # a missing key or a TokenPlan key fails the boot with an actionable message).
     - id: bailian-memory
       name: bailian-cli-dsh/memory
       disabled: true

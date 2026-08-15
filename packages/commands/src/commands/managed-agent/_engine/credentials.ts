@@ -50,6 +50,7 @@ export interface CredentialHost {
  */
 export const CREDENTIALS_NOTE = [
   "Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).",
+  "The agentstudio endpoint is workspace-scoped: the base URL is composed from the workspace id (agents.yaml workspace_id > $BAILIAN_WORKSPACE_ID > bl's configured workspace_id) as https://{workspace}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio, and the key must belong to that workspace.",
   "Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.",
   "Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.",
 ];
@@ -85,13 +86,19 @@ export function prepareProviderEnv(): void {
  * the block references them and the interpolated value is empty (a literal in
  * agents.yaml is respected).
  *
- * `base_url` carries {@link AGENTSTUDIO_API_PATH} because the SDK appends resource
- * paths onto it verbatim; a value already ending in the suffix is left as-is.
- * It is filled even without a credential — `client.baseUrl` is readable
- * credential-less (defaults to the CLI's model-domain base URL) — so offline
- * commands (which skip the credential assert) still satisfy the SDK's
- * "workspace_id or base_url" schema. With no credential the `api_key` is left
- * untouched: online commands reject it via {@link assertProviderCredentials}.
+ * `base_url` is composed from the workspace when one is known — block
+ * `workspace_id` (agents.yaml literal or interpolated `${BAILIAN_WORKSPACE_ID}`)
+ * first, then bl's configured `workspace_id` — because agentstudio is served
+ * only on the workspace-scoped host; the bare model-domain origin 404s it
+ * (managed-agents API overview: `https://{workspace_id}.cn-beijing.maas.
+ * aliyuncs.com/api/v1/agentstudio`, region cn-beijing only). Only with no
+ * workspace at all does the model-domain origin get {@link AGENTSTUDIO_API_PATH}
+ * suffixed. A value already ending in the suffix is left as-is. base_url is
+ * filled even without a credential — `client.baseUrl` is readable
+ * credential-less — so offline commands (which skip the credential assert)
+ * still satisfy the SDK's "workspace_id or base_url" schema. With no
+ * credential the `api_key` is left untouched: online commands reject it via
+ * {@link assertProviderCredentials}.
  */
 export function injectProviderCredentials(
   providers: Record<string, unknown>,
@@ -103,16 +110,27 @@ export function injectProviderCredentials(
 
   const cred = host.client.exportApiCredential();
   if (cred) block.api_key = cred.token;
-  if ("base_url" in block && !block.base_url) {
-    // Defensive normalization: the auth chain already normalizes base_url to
-    // an origin, but never let a trailing slash produce "//api/v1/agentstudio".
-    const origin = host.client.baseUrl.replace(/\/+$/, "");
-    block.base_url = origin.endsWith(AGENTSTUDIO_API_PATH)
-      ? origin
-      : `${origin}${AGENTSTUDIO_API_PATH}`;
+  if ("workspace_id" in block && !block.workspace_id) {
+    // agents.yaml interpolation already replaced `${BAILIAN_WORKSPACE_ID}` in
+    // file-based flows; the inline runtime passes an object config that never
+    // interpolates, so read the env var here too (prepareProviderEnv
+    // placeholders it to "" when unset). bl's configured workspace_id is the
+    // last resort.
+    block.workspace_id =
+      process.env.BAILIAN_WORKSPACE_ID?.trim() || host.settings.workspaceId || "";
   }
-  if ("workspace_id" in block && !block.workspace_id && host.settings.workspaceId) {
-    block.workspace_id = host.settings.workspaceId;
+  if ("base_url" in block && !block.base_url) {
+    const workspaceId = typeof block.workspace_id === "string" ? block.workspace_id.trim() : "";
+    if (workspaceId) {
+      block.base_url = `https://${workspaceId}.cn-beijing.maas.aliyuncs.com${AGENTSTUDIO_API_PATH}`;
+    } else {
+      // Defensive normalization: the auth chain already normalizes base_url to
+      // an origin, but never let a trailing slash produce "//api/v1/agentstudio".
+      const origin = host.client.baseUrl.replace(/\/+$/, "");
+      block.base_url = origin.endsWith(AGENTSTUDIO_API_PATH)
+        ? origin
+        : `${origin}${AGENTSTUDIO_API_PATH}`;
+    }
   }
 }
 

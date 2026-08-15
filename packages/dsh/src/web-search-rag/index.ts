@@ -23,6 +23,7 @@ import type {
 import { WebError } from "@deepseek-ai/dsh-web";
 import { launchEnvironmentOf } from "@deepseek-ai/dsh-launch-environment";
 import z from "@deepseek-ai/schemastery";
+import { isTokenPlanKey, tokenPlanKeyRejection } from "../shared/credentials.ts";
 import { dashScopeFetch, resolveApiKey } from "../shared/http.ts";
 
 /** Cordis plugin name used by loader diagnostics. */
@@ -49,7 +50,9 @@ export const Config: z<Config> = z.object({
   apiKey: z
     .string()
     .role("secret")
-    .description("DashScope API key; defaults to $DASHSCOPE_API_KEY."),
+    .description(
+      "Pay-as-you-go DashScope key (sk-ws-); defaults to $DASHSCOPE_API_KEY. TokenPlan keys are rejected.",
+    ),
   workspaceId: z.string().description("Bailian workspace id; defaults to $BAILIAN_WORKSPACE_ID."),
   agentId: z.string().description("Retrieval service (agent) id identifying the knowledge base."),
   maxResults: z.natural().description("Default source cap when the caller sets none."),
@@ -147,12 +150,19 @@ export class BailianKbSearchProvider implements WebSearchProvider {
 }
 
 export function apply(ctx: Context, config: Config): void {
+  const apiKey = resolveApiKey(ctx, config.apiKey);
+  // A TokenPlan key would register a provider that looks available and then 401s
+  // on every search; reject it at boot instead. An absent key stays soft:
+  // `available()` returns false and dsh falls back to another provider.
+  if (apiKey !== undefined && isTokenPlanKey(apiKey)) {
+    throw new Error(tokenPlanKeyRejection(name, "the knowledge-base API"));
+  }
   const workspaceId =
     config.workspaceId ?? launchEnvironmentOf(ctx).get("BAILIAN_WORKSPACE_ID")?.value ?? "";
 
   ctx.web.registerSearchProvider(
     new BailianKbSearchProvider({
-      apiKey: resolveApiKey(ctx, config.apiKey) ?? "",
+      apiKey: apiKey ?? "",
       workspaceId,
       agentId: config.agentId ?? "",
       maxResults: config.maxResults ?? DEFAULT_MAX_RESULTS,

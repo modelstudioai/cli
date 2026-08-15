@@ -124,7 +124,8 @@ test("inject:已带后缀且尾斜杠的 base_url 去斜杠后原样保留", () 
   expect(providers.bailian.base_url).toBe("https://x.maas.aliyuncs.com/api/v1/agentstudio");
 });
 
-test("inject:workspace_id 引用且为空时用 settings 填充;有字面量则保留", () => {
+test("inject:workspace_id 引用且为空时按 env > settings 填充;有字面量则保留", () => {
+  delete process.env.BAILIAN_WORKSPACE_ID;
   const empty = { bailian: { api_key: "", workspace_id: "" } };
   injectProviderCredentials(
     empty,
@@ -132,12 +133,53 @@ test("inject:workspace_id 引用且为空时用 settings 填充;有字面量则�
   );
   expect(empty.bailian.workspace_id).toBe("ws-settings");
 
+  // 内联运行时(对象配置)不做 ${} 插值,env 变量在此补读。
+  process.env.BAILIAN_WORKSPACE_ID = "ws-env";
+  const fromEnv = { bailian: { api_key: "", workspace_id: "" } };
+  injectProviderCredentials(
+    fromEnv,
+    makeHost({ apiCred: bailianCred(), workspaceId: "ws-settings" }),
+  );
+  expect(fromEnv.bailian.workspace_id).toBe("ws-env");
+  delete process.env.BAILIAN_WORKSPACE_ID;
+
   const literal = { bailian: { api_key: "", workspace_id: "ws-yaml" } };
   injectProviderCredentials(
     literal,
     makeHost({ apiCred: bailianCred(), workspaceId: "ws-settings" }),
   );
   expect(literal.bailian.workspace_id).toBe("ws-yaml");
+});
+
+test("inject:workspace 已知时 base_url 拼工作空间主机,而非模型域 origin", () => {
+  // agents.yaml 字面量 workspace_id + 空 base_url。
+  const literal = { bailian: { api_key: "", base_url: "", workspace_id: "ws-yaml" } };
+  injectProviderCredentials(literal, makeHost({ apiCred: bailianCred() }));
+  expect(literal.bailian.base_url).toBe(
+    "https://ws-yaml.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio",
+  );
+
+  // 内联块:workspace_id 由 settings 填充后同样走工作空间主机。
+  const inline = { bailian: { api_key: "", base_url: "", workspace_id: "" } };
+  injectProviderCredentials(
+    inline,
+    makeHost({ apiCred: bailianCred(), workspaceId: "ws-settings" }),
+  );
+  expect(inline.bailian.workspace_id).toBe("ws-settings");
+  expect(inline.bailian.base_url).toBe(
+    "https://ws-settings.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio",
+  );
+
+  // 显式 base_url 字面量永远优先于拼装。
+  const explicit = {
+    bailian: {
+      api_key: "",
+      base_url: "https://custom.example.com/api/v1/agentstudio",
+      workspace_id: "ws-yaml",
+    },
+  };
+  injectProviderCredentials(explicit, makeHost({ apiCred: bailianCred() }));
+  expect(explicit.bailian.base_url).toBe("https://custom.example.com/api/v1/agentstudio");
 });
 
 test("inject:无凭证时 api_key 保持不变,base_url 仍用 client 默认域名补齐(离线/范围外 schema 可用)", () => {

@@ -26,6 +26,7 @@ import type { ContentBlock, Message } from "@deepseek-ai/dsh-llm";
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
 import { defineTool } from "@deepseek-ai/dsh-tools";
 import z from "@deepseek-ai/schemastery";
+import { isTokenPlanKey, tokenPlanKeyRejection } from "../shared/credentials.ts";
 import { dashScopeFetch, resolveApiKey, resolveBaseUrl } from "../shared/http.ts";
 
 /** Cordis plugin name used by loader diagnostics. */
@@ -56,7 +57,12 @@ export interface Config {
 }
 
 export const Config: z<Config> = z.object({
-  apiKey: z.string().role("secret").description("DashScope key; defaults to $DASHSCOPE_API_KEY."),
+  apiKey: z
+    .string()
+    .role("secret")
+    .description(
+      "Pay-as-you-go DashScope key (sk-ws-); defaults to $DASHSCOPE_API_KEY. TokenPlan keys are rejected.",
+    ),
   baseUrl: z.string().description("DashScope base URL override."),
   userId: z.string().description("Memory entity id owning these memories."),
   memoryLibraryId: z.string().description("Memory library id; defaults to the account default."),
@@ -355,8 +361,12 @@ export function apply(ctx: Context, config: Config): void {
   const apiKey = resolveApiKey(ctx, config.apiKey);
   if (apiKey === undefined) {
     throw new Error(
-      "bailian-memory: no DashScope API key. Set $DASHSCOPE_API_KEY or configure `apiKey`.",
+      "bailian-memory: no DashScope API key. Set `apiKey` in this row's config or export " +
+        "$DASHSCOPE_API_KEY (a pay-as-you-go sk-ws- key; the memory API 401s TokenPlan keys).",
     );
+  }
+  if (isTokenPlanKey(apiKey)) {
+    throw new Error(tokenPlanKeyRejection(name, "the memory API"));
   }
   const client = new MemoryClient(
     apiKey,

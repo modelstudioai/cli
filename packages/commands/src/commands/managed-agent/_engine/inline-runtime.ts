@@ -56,15 +56,17 @@ export function inlineStatePath(agentName: string): string {
 
 /**
  * The minimal in-memory project config that materializes into one cloud agent.
- * `providers.bailian` carries empty `api_key`/`base_url` placeholders so
- * {@link injectProviderCredentials} fills them from bl's auth chain (it only
- * writes fields the block already declares).
+ * `providers.bailian` carries empty `api_key`/`base_url`/`workspace_id`
+ * placeholders so {@link injectProviderCredentials} fills them from bl's auth
+ * chain and workspace sources (it only writes fields the block already
+ * declares). `workspace_id` lets injection compose the workspace-scoped
+ * agentstudio host instead of the model-domain origin.
  */
 export function buildInlineConfig(opts: InlineAgentOptions): Record<string, unknown> {
   return {
     version: "1",
     providers: {
-      bailian: { api_key: "", base_url: "" },
+      bailian: { api_key: "", base_url: "", workspace_id: "" },
     },
     defaults: { provider: "bailian" },
     environments: {
