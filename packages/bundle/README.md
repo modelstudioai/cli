@@ -1,4 +1,4 @@
-# bailian-kb-bundle（分发包）
+# bailian-kb-dsh（分发包）
 
 dsh bundle 分发面：`package.json` 的 `dsh.bundle.patch` 声明 + [`cordis.patch.yml`](cordis.patch.yml)，向 profile 插入 `tool-bailian-kb` row。
 
@@ -32,5 +32,5 @@ dsh bundle 分发面：`package.json` 的 `dsh.bundle.patch` 声明 + [`cordis.p
 ## 卸载
 
 ```sh
-dsh plugin --profile <name> remove bailian-kb-bundle
+dsh plugin --profile <name> remove bailian-kb-dsh
 ```

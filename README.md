@@ -1,4 +1,4 @@
-# bailian-kb-bundle
+# bailian-kb-dsh
 
 阿里云百炼知识库能力的 [DeepSeek Harness (dsh)](https://github.com/deepseek-ai/deepseek-harness) 插件 bundle：三个 API 直连模型工具（`kb_service_list` / `kb_search` / `kb_chat`）+ kscli 管理面 skill。
 
@@ -14,7 +14,7 @@
 ## 安装（dsh 用户）
 
 ```sh
-dsh plugin --profile web add bailian-kb-bundle   # npm 发布后；本地开发用绝对/相对路径
+dsh plugin --profile web add bailian-kb-dsh   # npm 发布后；本地开发用绝对/相对路径
 ```
 
 安装后 CLI 自动把 bundle 加入 profile 的层栈，无需手改 YAML。
@@ -28,7 +28,7 @@ DASHSCOPE_API_KEY=sk-xxx           # 必填：也可放 ~/.dsh/.credentials.yaml
 
 验证：`dsh --profile web --dump-config` 应能看到 `tool-bailian-kb` row。缺 `BAILIAN_WORKSPACE_ID` 时加载期直接报错（fail loud），不会静默跳过。
 
-卸载：`dsh plugin --profile web remove bailian-kb-bundle`。
+卸载：`dsh plugin --profile web remove bailian-kb-dsh`。
 
 ## 开发
 
