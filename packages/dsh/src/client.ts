@@ -28,8 +28,8 @@ function insertStyles(css: string): () => void {
   };
 }
 
-/** Services required by the client plugin. */
-export const inject = ["slots"];
+/** Services required by the client plugin (conversation for the input hub to send queries). */
+export const inject = ["slots", "sessions", "conversation"];
 
 /** Browser Cordis plugin: registers the "Bailian" settings.section page. */
 export function apply(ctx: any): void {
@@ -912,6 +912,26 @@ export function apply(ctx: any): void {
     .bw-card-desc{font-size:13px;color:var(--dsw-text-secondary,#71717a);line-height:1.6}
   `);
 
+  // Help the user send a natural-language query into the conversation (the
+  // agent then routes it to the right tool / may AskUserQuestion for params).
+  const sessionsSvc = ctx.get("sessions");
+  const inputHub = ctx.conversation && ctx.conversation.input ? ctx.conversation.input : undefined;
+  function sendQuery(sessionId: string, text: string): boolean {
+    try {
+      if (!inputHub) return false;
+      let shell: any;
+      const actx = sessionsSvc && sessionsSvc.scope ? sessionsSvc.scope(sessionId) : undefined;
+      if (actx && inputHub.for) shell = inputHub.for(actx);
+      else if (inputHub.shell) shell = inputHub.shell(sessionId);
+      if (!shell) return false;
+      shell.setDraft(text);
+      if (shell.submit) shell.submit();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   slots.inject("conversation.input.dock", () =>
     slots.register(
       { name: "conversation.input.dock", id: "bailian-welcome", order: -100 },
@@ -919,24 +939,9 @@ export function apply(ctx: any): void {
         const session = props && props.session;
         if (!session || session.blank !== true) return null;
         const [tab, setTab] = React.useState("rec");
-        const [feat, setFeat] = React.useState<any>(null);
-        const [featLoading, setFeatLoading] = React.useState("");
         let active = WELCOME_TABS.find((t) => t.id === tab);
         if (!active) active = WELCOME_TABS[0];
-
-        function runFeature(id: string) {
-          setFeatLoading(id);
-          setFeat(null);
-          fetch("/bailian/console", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ featureId: id }),
-          })
-            .then((r) => r.json())
-            .then((d) => setFeat(d))
-            .catch((e) => setFeat({ error: e && e.message ? e.message : String(e) }))
-            .then(() => setFeatLoading(""));
-        }
+        const sessionId = session.sessionId;
         return React.createElement(
           "div",
           { className: "bw-wrap" },
@@ -980,7 +985,7 @@ export function apply(ctx: any): void {
                 {
                   key: c.title,
                   className: "bw-card",
-                  onClick: feature ? () => runFeature(feature.id) : undefined,
+                  onClick: feature ? () => sendQuery(sessionId, feature.query) : undefined,
                   style: feature ? undefined : { cursor: "default", opacity: 0.75 },
                 },
                 React.createElement("div", { className: "bw-card-title" }, c.title),
@@ -989,36 +994,12 @@ export function apply(ctx: any): void {
                   ? React.createElement(
                       "div",
                       { style: { marginTop: "8px", fontSize: "12px", color: "#6366f1" } },
-                      featLoading === feature.id ? "查询中..." : "点击查询 →",
+                      "点击提问 →",
                     )
                   : null,
               );
             }),
           ),
-          feat
-            ? React.createElement(
-                "div",
-                { className: "bw-card", style: { marginTop: "14px" } },
-                feat.error
-                  ? React.createElement(
-                      "div",
-                      { className: "bw-card-desc", style: { color: "#e5484d" } },
-                      feat.error,
-                    )
-                  : React.createElement(
-                      "pre",
-                      {
-                        style: {
-                          whiteSpace: "pre-wrap",
-                          fontSize: "13px",
-                          margin: 0,
-                          color: "var(--dsw-text,#18181b)",
-                        },
-                      },
-                      feat.summary || JSON.stringify(feat.data, null, 2),
-                    ),
-              )
-            : null,
         );
       },
     ),

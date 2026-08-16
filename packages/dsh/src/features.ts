@@ -28,6 +28,8 @@ export interface BailianFeature {
   desc: string;
   /** Tool description: tells the LLM which user utterances should use it. */
   intent: string;
+  /** Natural-language query sent into the conversation when the card is clicked. */
+  query: string;
   /** `bl` command args (without `--output`); the Host appends `--output json`. */
   argv: string[];
   /** Args appended when the user supplies no params (e.g. ["--all"]). */
@@ -64,6 +66,7 @@ export const FEATURES: BailianFeature[] = [
     desc: "查询免费额度用量，一键开启「用完即停」，额度耗尽自动停止调用，不再产生意外扣费",
     intent:
       "查询百炼免费额度用量与『用完即停』防护状态。当用户提到免费额度、额度耗尽、意外扣费、用完即停、额度防护时使用。",
+    query: "帮我查看百炼免费额度用量，并告诉我怎么开启「用完即停」防护",
     argv: ["usage", "freetier"],
     defaultArgs: ["--all"],
     paramFlags: [
@@ -99,6 +102,7 @@ export const FEATURES: BailianFeature[] = [
     desc: "各模型/TokenPlan 的用量与百分比一次查清，自动生成用量分析",
     intent:
       "查询百炼 TokenPlan 个人版用量（5 小时/1 周窗口百分比、重置时间、套餐、用量包）。当用户问用量、用了多少、额度百分比、TokenPlan 使用情况时使用。",
+    query: "帮我查询百炼 TokenPlan 个人版用量（5 小时/1 周窗口、套餐与用量包）",
     argv: ["token-plan", "personal-usage"],
     summarize: (d) => {
       if (!d || typeof d !== "object") return "未获取到用量数据。";
@@ -116,21 +120,6 @@ export const FEATURES: BailianFeature[] = [
       return parts.length
         ? `TokenPlan 用量: ${parts.join("；")}`
         : "用量: " + JSON.stringify(d).slice(0, 300);
-    },
-  },
-  {
-    id: "apikey",
-    title: "API Key 管理",
-    desc: "查看 TokenPlan API Key（脱敏），创建/重置可在控制台或 bl 完成",
-    intent:
-      "查询当前百炼 TokenPlan API Key（脱敏）。当用户问 API Key、密钥、我的 key、查看 key 时使用。",
-    argv: ["token-plan", "personal-key"],
-    summarize: (d) => {
-      if (!d || typeof d !== "object") return "未获取到 API Key。";
-      const mask = pick(d, "mask_apikey", "maskApikey", "apiKey");
-      const id = pick(d, "key_id", "keyId");
-      if (mask) return `API Key: ${mask}${id !== undefined ? `（id: ${id}）` : ""}`;
-      return "API Key: " + JSON.stringify(d).slice(0, 300);
     },
   },
 ];
