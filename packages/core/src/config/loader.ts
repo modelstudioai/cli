@@ -199,7 +199,15 @@ export function buildSources(flags: Partial<SourceFlags>): ResolutionSources {
   const raw = readRawConfigObject();
   const configExplicit = flags.config !== undefined;
   const activeConfigName = readStoredActiveConfigName(raw, !configExplicit);
-  const configName = configExplicit ? normalizeConfigName(flags.config) : activeConfigName;
+  // Config selection: --config flag > BAILIAN_CONFIG env > persisted active_config.
+  // The env lets a host (e.g. dsh) pin a named profile for all child `bl`
+  // calls without rewriting --config or the user's active_config.
+  const envConfig = process.env.BAILIAN_CONFIG;
+  const configName = configExplicit
+    ? normalizeConfigName(flags.config)
+    : envConfig
+      ? normalizeConfigName(envConfig)
+      : activeConfigName;
   return {
     flags,
     file: parseConfigFile(readRawConfigBlock(raw, configName)),

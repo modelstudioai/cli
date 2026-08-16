@@ -65,6 +65,8 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl token-plan assign-seats`    | Batch assign Token Plan seats to members                                                       | [token-plan.md](token-plan.md) |
 | `bl token-plan create-key`      | Create a Token Plan API key for a seat                                                         | [token-plan.md](token-plan.md) |
 | `bl token-plan list-seats`      | List Token Plan subscription seat details                                                      | [token-plan.md](token-plan.md) |
+| `bl token-plan personal-key`    | Get the personal-edition TokenPlan API key (masked) for the current account                    | [token-plan.md](token-plan.md) |
+| `bl token-plan personal-usage`  | Query personal-edition TokenPlan usage (5h/1w percentage, subscription, addon credits)         | [token-plan.md](token-plan.md) |
 | `bl update`                     | Update the CLI to the latest or a specified version                                            | [update.md](update.md)         |
 | `bl usage free`                 | Query free-tier quota for models (all models if --model is omitted)                            | [usage.md](usage.md)           |
 | `bl usage freetier`             | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable     | [usage.md](usage.md)           |
@@ -93,7 +95,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `search`     | `web`                                                                                                                                              | [search.md](search.md)         |
 | `skill`      | `add`, `init`, `list`, `remove`, `update`                                                                                                          | [skill.md](skill.md)           |
 | `text`       | `chat`                                                                                                                                             | [text.md](text.md)             |
-| `token-plan` | `add-member`, `assign-seats`, `create-key`, `list-seats`                                                                                           | [token-plan.md](token-plan.md) |
+| `token-plan` | `add-member`, `assign-seats`, `create-key`, `list-seats`, `personal-key`, `personal-usage`                                                         | [token-plan.md](token-plan.md) |
 | `update`     | `(root)`                                                                                                                                           | [update.md](update.md)         |
 | `usage`      | `free`, `freetier`, `stats`, `summary`                                                                                                             | [usage.md](usage.md)           |
 | `workspace`  | `init`, `list`                                                                                                                                     | [workspace.md](workspace.md)   |

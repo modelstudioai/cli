@@ -19,13 +19,16 @@
 import type { Context } from "@deepseek-ai/cordis";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { runBl } from "../shared/bl.ts";
+import { defineTool } from "@deepseek-ai/dsh-tools";
+import type { JsonValue } from "@deepseek-ai/dsh-session";
+import { FEATURES, featureById, type FeatureParam } from "../features.ts";
 import z from "@deepseek-ai/schemastery";
 
 /** Cordis plugin name used by loader diagnostics. */
 export const name = "bailian-tokenplan-usage";
 
-/** Hard dependency: bl runs through the subprocess service. */
-export const inject = ["subprocess"];
+/** Hard deps: bl via subprocess; routes need webServer; feature tools need tools. */
+export const inject = ["subprocess", "webServer", "tools"];
 
 export interface Config {
   /** Alibaba Cloud Access Key ID. Fallback when not provided via UI. */
@@ -60,6 +63,7 @@ const PERSONAL_ADDON_COMMODITY_INTL = "sfm_tokenplansoloaddon_public_intl";
 
 const CREDENTIALS_ROUTE = "/bailian/credentials";
 const USAGE_ROUTE = "/bailian/tokenplan/usage";
+const CONSOLE_ROUTE = "/bailian/console";
 const BL_LOGIN_TIMEOUT_MS = 30_000;
 const BL_CALL_TIMEOUT_MS = 90_000;
 const BL_LOGIN_GRACE_MS = 20_000;
@@ -313,6 +317,103 @@ export function apply(ctx: Context, config: Config): void {
         try {
           const result = await fetchUsage(region, site);
           sendJson(res, 200, result);
+        } catch (error) {
+          sendJson(res, 500, { error: error instanceof Error ? error.message : "internal error" });
+        }
+      },
+    }),
+  );
+
+  // ── Feature layer: reuse bailian-cli commands as model tools + a generic route ──
+
+  /** Run a feature's `bl` command with the dsh profile; returns parsed JSON. */
+  async function invokeFeature(
+    feature: (typeof FEATURES)[number],
+    params?: Record<string, unknown>,
+  ): Promise<JsonValue> {
+    const extra: string[] = [];
+    for (const pf of feature.paramFlags ?? []) {
+      const val = params?.[pf.name];
+      if (val !== undefined && val !== null && val !== "") extra.push(pf.flag, String(val));
+    }
+    if (extra.length === 0 && feature.defaultArgs) extra.push(...feature.defaultArgs);
+    const args = [...feature.argv, ...extra, "--config", profile, "--output", "json"];
+    const outcome = await runBl(ctx, args, {
+      cwd: process.cwd(),
+      signal: AbortSignal.timeout(BL_CALL_TIMEOUT_MS),
+      graceMs: BL_CALL_GRACE_MS,
+    });
+    if (outcome.exitCode !== 0) {
+      const reason = outcome.stderr.trim() || outcome.stdout.trim() || `exit ${outcome.exitCode}`;
+      throw new Error(`bl ${feature.argv.join(" ")} failed: ${reason}`);
+    }
+    try {
+      return JSON.parse(outcome.stdout);
+    } catch {
+      return { raw: outcome.stdout };
+    }
+  }
+
+  // Natural-language entry: one model tool per feature.
+  const tools = ctx.get("tools");
+  if (tools !== undefined) {
+    for (const feature of FEATURES) {
+      // Keep FeatureParam's literal `type` union: widening it to `string`
+      // makes the map unassignable to ParameterSchemaSpec.
+      const parameters: Record<string, { type: FeatureParam["type"]; description: string }> = {};
+      for (const pf of feature.paramFlags ?? []) {
+        parameters[pf.name] = { type: pf.type, description: pf.description };
+      }
+      ctx.effect(() =>
+        tools.register(
+          defineTool({
+            name: `bailian_${feature.id}`,
+            description: `${feature.title}。${feature.intent}`,
+            parameters,
+            output: {
+              schema: { type: "object", additionalProperties: true },
+              render: (_a, value) => [
+                { type: "text", text: String((value as any).summary ?? JSON.stringify(value)) },
+              ],
+            },
+            async execute(args) {
+              const data = await invokeFeature(feature, args as Record<string, unknown>);
+              return { summary: feature.summarize(data), data };
+            },
+          }),
+        ),
+      );
+    }
+  }
+
+  // Card-click entry: generic route dispatching to a feature by id.
+  ctx.effect(() =>
+    webServer.register({
+      kind: "exact",
+      path: CONSOLE_ROUTE,
+      handler: async (req: IncomingMessage, res: ServerResponse) => {
+        if (req.method !== "POST") {
+          sendJson(res, 405, { error: "method not allowed, use POST" });
+          return;
+        }
+        let body: Record<string, unknown>;
+        try {
+          body = (await readJsonBody(req)) as Record<string, unknown>;
+        } catch (error) {
+          sendJson(res, 400, { error: error instanceof Error ? error.message : "bad request" });
+          return;
+        }
+        const feature = featureById(String(body.featureId ?? ""));
+        if (feature === undefined) {
+          sendJson(res, 400, { error: `unknown featureId: ${String(body.featureId)}` });
+          return;
+        }
+        try {
+          const data = await invokeFeature(
+            feature,
+            body.params as Record<string, unknown> | undefined,
+          );
+          sendJson(res, 200, { summary: feature.summarize(data), data });
         } catch (error) {
           sendJson(res, 500, { error: error instanceof Error ? error.message : "internal error" });
         }

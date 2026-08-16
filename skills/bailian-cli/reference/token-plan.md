@@ -7,12 +7,14 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                      | Description                               |
-| ---------------------------- | ----------------------------------------- |
-| `bl token-plan add-member`   | Add a member to a Token Plan organization |
-| `bl token-plan assign-seats` | Batch assign Token Plan seats to members  |
-| `bl token-plan create-key`   | Create a Token Plan API key for a seat    |
-| `bl token-plan list-seats`   | List Token Plan subscription seat details |
+| Command                        | Description                                                                            |
+| ------------------------------ | -------------------------------------------------------------------------------------- |
+| `bl token-plan add-member`     | Add a member to a Token Plan organization                                              |
+| `bl token-plan assign-seats`   | Batch assign Token Plan seats to members                                               |
+| `bl token-plan create-key`     | Create a Token Plan API key for a seat                                                 |
+| `bl token-plan list-seats`     | List Token Plan subscription seat details                                              |
+| `bl token-plan personal-key`   | Get the personal-edition TokenPlan API key (masked) for the current account            |
+| `bl token-plan personal-usage` | Query personal-edition TokenPlan usage (5h/1w percentage, subscription, addon credits) |
 
 ## Command details
 
@@ -152,4 +154,50 @@ bl token-plan list-seats --page-size 20 --status NORMAL
 
 ```bash
 bl token-plan list-seats --query-assigned true --seat-type standard
+```
+
+### `bl token-plan personal-key`
+
+| Field           | Value                                                                       |
+| --------------- | --------------------------------------------------------------------------- |
+| **Name**        | `token-plan personal-key`                                                   |
+| **Description** | Get the personal-edition TokenPlan API key (masked) for the current account |
+| **Usage**       | `bl token-plan personal-key [flags]`                                        |
+
+#### Flags
+
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
+
+#### Examples
+
+```bash
+bl token-plan personal-key
+```
+
+### `bl token-plan personal-usage`
+
+| Field           | Value                                                                                  |
+| --------------- | -------------------------------------------------------------------------------------- |
+| **Name**        | `token-plan personal-usage`                                                            |
+| **Description** | Query personal-edition TokenPlan usage (5h/1w percentage, subscription, addon credits) |
+| **Usage**       | `bl token-plan personal-usage [flags]`                                                 |
+
+#### Flags
+
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
+
+#### Examples
+
+```bash
+bl token-plan personal-usage
 ```

@@ -14,6 +14,7 @@
 // @ts-nocheck — built by esbuild into the ModuleLoader client bundle; React is
 // external (resolved by the browser ModuleLoader), styles injected via DOM.
 import React from "react";
+import { featureByTitle } from "./features.ts";
 
 /** Inject a <style> tag into the document head (browser). Returns a remover. */
 function insertStyles(css: string): () => void {
@@ -150,7 +151,7 @@ export function apply(ctx: any): void {
           setCLoading(true);
           setCredMsg({ type: "", text: "" });
           try {
-            const resp = await fetch("/api/bailian/credentials", {
+            const resp = await fetch("/bailian/credentials", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ accessKeyId: cred.id, accessKeySecret: cred.secret }),
@@ -160,7 +161,7 @@ export function apply(ctx: any): void {
             // Also save API Key to memory config if provided
             if (cred.apiKey) {
               try {
-                await fetch("/api/bailian/memory/config", {
+                await fetch("/bailian/memory/config", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ apiKey: cred.apiKey }),
@@ -187,7 +188,7 @@ export function apply(ctx: any): void {
           setUErr("");
           setResult(null);
           try {
-            const resp = await fetch("/api/bailian/tokenplan/usage", {
+            const resp = await fetch("/bailian/tokenplan/usage", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ region: uForm.region, site: uForm.site }),
@@ -598,7 +599,7 @@ export function apply(ctx: any): void {
           setMLoading(true);
           setMemMsg({ type: "", text: "" });
           try {
-            const resp = await fetch("/api/bailian/memory/config", {
+            const resp = await fetch("/bailian/memory/config", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(memCfg),
@@ -617,7 +618,7 @@ export function apply(ctx: any): void {
         }
         async function fetchMemStatus(): Promise<void> {
           try {
-            const resp = await fetch("/api/bailian/memory/status");
+            const resp = await fetch("/bailian/memory/status");
             const data = (await resp.json()) as MemoryStatusPayload;
             setMemStatus(data);
             if (data.userId) updateMemCfg("userId", data.userId);
@@ -918,8 +919,24 @@ export function apply(ctx: any): void {
         const session = props && props.session;
         if (!session || session.blank !== true) return null;
         const [tab, setTab] = React.useState("rec");
+        const [feat, setFeat] = React.useState<any>(null);
+        const [featLoading, setFeatLoading] = React.useState("");
         let active = WELCOME_TABS.find((t) => t.id === tab);
         if (!active) active = WELCOME_TABS[0];
+
+        function runFeature(id: string) {
+          setFeatLoading(id);
+          setFeat(null);
+          fetch("/bailian/console", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ featureId: id }),
+          })
+            .then((r) => r.json())
+            .then((d) => setFeat(d))
+            .catch((e) => setFeat({ error: e && e.message ? e.message : String(e) }))
+            .then(() => setFeatLoading(""));
+        }
         return React.createElement(
           "div",
           { className: "bw-wrap" },
@@ -956,15 +973,52 @@ export function apply(ctx: any): void {
           React.createElement(
             "div",
             { className: "bw-cards" },
-            active.cards.map((c) =>
-              React.createElement(
+            active.cards.map((c) => {
+              const feature = featureByTitle(c.title);
+              return React.createElement(
                 "div",
-                { key: c.title, className: "bw-card" },
+                {
+                  key: c.title,
+                  className: "bw-card",
+                  onClick: feature ? () => runFeature(feature.id) : undefined,
+                  style: feature ? undefined : { cursor: "default", opacity: 0.75 },
+                },
                 React.createElement("div", { className: "bw-card-title" }, c.title),
                 React.createElement("div", { className: "bw-card-desc" }, c.desc),
-              ),
-            ),
+                feature
+                  ? React.createElement(
+                      "div",
+                      { style: { marginTop: "8px", fontSize: "12px", color: "#6366f1" } },
+                      featLoading === feature.id ? "查询中..." : "点击查询 →",
+                    )
+                  : null,
+              );
+            }),
           ),
+          feat
+            ? React.createElement(
+                "div",
+                { className: "bw-card", style: { marginTop: "14px" } },
+                feat.error
+                  ? React.createElement(
+                      "div",
+                      { className: "bw-card-desc", style: { color: "#e5484d" } },
+                      feat.error,
+                    )
+                  : React.createElement(
+                      "pre",
+                      {
+                        style: {
+                          whiteSpace: "pre-wrap",
+                          fontSize: "13px",
+                          margin: 0,
+                          color: "var(--dsw-text,#18181b)",
+                        },
+                      },
+                      feat.summary || JSON.stringify(feat.data, null, 2),
+                    ),
+              )
+            : null,
         );
       },
     ),

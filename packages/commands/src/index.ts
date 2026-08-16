@@ -95,6 +95,8 @@ export { default as tokenPlanListSeats } from "./commands/token-plan/list-seats.
 export { default as tokenPlanCreateKey } from "./commands/token-plan/create-key.ts";
 export { default as tokenPlanAssignSeats } from "./commands/token-plan/assign-seats.ts";
 export { default as tokenPlanAddMember } from "./commands/token-plan/add-member.ts";
+export { default as tokenPlanPersonalUsage } from "./commands/token-plan/personal-usage.ts";
+export { default as tokenPlanPersonalKey } from "./commands/token-plan/personal-key.ts";
 export { default as managedAgentInit } from "./commands/managed-agent/init.ts";
 export { default as managedAgentValidate } from "./commands/managed-agent/validate.ts";
 export { default as managedAgentPlan } from "./commands/managed-agent/plan.ts";
