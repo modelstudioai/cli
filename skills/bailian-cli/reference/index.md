@@ -39,7 +39,10 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl memory profile get`         | API Key        | Get user profile by schema ID and user ID                                                      | [memory.md](memory.md)         |
 | `bl memory search`              | API Key        | Search memory nodes by query or messages                                                       | [memory.md](memory.md)         |
 | `bl memory update`              | API Key        | Update a memory node content                                                                   | [memory.md](memory.md)         |
-| `bl model list`                 | Console        | Browse model families or show detailed model info in the Bailian model marketplace             | [model.md](model.md)           |
+| `bl model list`                 | No Auth        | Browse model families or show detailed model info in the Bailian model marketplace             | [model.md](model.md)           |
+| `bl permission grant`           | API Key        | Grant model permissions (inference / finetune / deploy)                                        | [permission.md](permission.md) |
+| `bl permission list`            | API Key        | List model permissions (inference / fine-tune / deploy) in the workspace                       | [permission.md](permission.md) |
+| `bl permission revoke`          | API Key        | Revoke model permissions (inference / finetune / deploy)                                       | [permission.md](permission.md) |
 | `bl pipeline run`               | No Auth        | Run a pipeline workflow definition                                                             | [pipeline.md](pipeline.md)     |
 | `bl pipeline validate`          | No Auth        | Validate a pipeline definition without executing                                               | [pipeline.md](pipeline.md)     |
 | `bl plugin install`             | No Auth        | Install or upgrade an allowlisted Command Pack                                                 | [plugin.md](plugin.md)         |
@@ -48,8 +51,8 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl plugin remove`              | No Auth        | Remove an installed Command Pack                                                               | [plugin.md](plugin.md)         |
 | `bl quota check`                | Console        | Check current usage against rate limits                                                        | [quota.md](quota.md)           |
 | `bl quota history`              | Console        | View quota change history                                                                      | [quota.md](quota.md)           |
-| `bl quota list`                 | Console        | View model RPM/TPM rate limits                                                                 | [quota.md](quota.md)           |
-| `bl quota request`              | Console        | Request a temporary quota increase                                                             | [quota.md](quota.md)           |
+| `bl quota list`                 | API Key        | View model rate limits (QPM/TPM, account and workspace level)                                  | [quota.md](quota.md)           |
+| `bl quota update`               | API Key        | Update model rate limits (QPM/TPM), or clear them with --delete                                | [quota.md](quota.md)           |
 | `bl search web`                 | API Key        | Search the web using DashScope MCP WebSearch service                                           | [search.md](search.md)         |
 | `bl skill add`                  | No Auth        | Install skills from the Bailian skill registry into local agents                               | [skill.md](skill.md)           |
 | `bl skill init`                 | No Auth        | Install all bailian-\* skills (one-shot bootstrap for new environments)                        | [skill.md](skill.md)           |
@@ -85,9 +88,10 @@ Use this index for the skill-scoped quick index and global flags.
 | `mcp`        | `call`, `list`, `tools`                                                      | [mcp.md](mcp.md)               |
 | `memory`     | `add`, `delete`, `list`, `profile create`, `profile get`, `search`, `update` | [memory.md](memory.md)         |
 | `model`      | `list`                                                                       | [model.md](model.md)           |
+| `permission` | `grant`, `list`, `revoke`                                                    | [permission.md](permission.md) |
 | `pipeline`   | `run`, `validate`                                                            | [pipeline.md](pipeline.md)     |
 | `plugin`     | `install`, `link`, `list`, `remove`                                          | [plugin.md](plugin.md)         |
-| `quota`      | `check`, `history`, `list`, `request`                                        | [quota.md](quota.md)           |
+| `quota`      | `check`, `history`, `list`, `update`                                         | [quota.md](quota.md)           |
 | `search`     | `web`                                                                        | [search.md](search.md)         |
 | `skill`      | `add`, `init`, `list`, `remove`, `update`                                    | [skill.md](skill.md)           |
 | `text`       | `chat`                                                                       | [text.md](text.md)             |
