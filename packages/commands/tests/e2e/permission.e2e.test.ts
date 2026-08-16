@@ -99,10 +99,13 @@ describe("e2e: permission", () => {
   });
 
   test("permission revoke --all 缺 --yes 拒绝执行", async () => {
+    // --yes 护栏在 run() 开头、任何网络调用之前抛出；带 dummy key 让用例不依赖环境凭证（否则 auth stage 先报 AUTH(3)）。
     const { stderr, exitCode } = await runCommandE2e(PERMISSION_ROUTES, [
       "permission",
       "revoke",
       "--all",
+      "--api-key",
+      "e2e-dummy-key",
     ]);
     expect(exitCode).toBe(2);
     expect(stderr).toContain("Refusing");

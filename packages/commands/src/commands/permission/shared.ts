@@ -48,7 +48,6 @@ export function validatePermissionChange(flags: {
     if (models.length > MAX_MODELS_PER_REQUEST)
       return `--model accepts at most ${MAX_MODELS_PER_REQUEST} models per call.`;
   }
-  return undefined;
 }
 
 /**
