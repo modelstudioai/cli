@@ -1,7 +1,7 @@
 {
   "name": "bailian-cli-dsh",
   "version": "1.14.2",
-  "description": "Aliyun Model Studio (Bailian) plugin bundle for DeepSeek Harness (dsh): TokenPlan LLM provider, knowledge-base RAG search, vision, image generation, long-term memory, and managed-agent subagents.",
+  "description": "Aliyun Model Studio (Bailian) plugin bundle for DeepSeek Harness (dsh): TokenPlan LLM provider and personal-edition TokenPlan usage display in the webui.",
   "homepage": "https://bailian.console.aliyun.com/cli",
   "bugs": {
     "url": "https://github.com/modelstudioai/cli/issues"
@@ -16,6 +16,7 @@
   "files": [
     "README.md",
     "dist",
+    "client.bundle.js",
     "cordis.patch.yml"
   ],
   "type": "module",
@@ -23,28 +24,17 @@
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "default": "./src/index.ts"
+      "default": "./dist/index.mjs"
     },
-    "./tool-vision": {
-      "types": "./src/tool-vision/index.ts",
-      "default": "./src/tool-vision/index.ts"
-    },
-    "./tool-image": {
-      "types": "./src/tool-image/index.ts",
-      "default": "./src/tool-image/index.ts"
-    },
-    "./tool-managed-agent": {
-      "types": "./src/tool-managed-agent/index.ts",
-      "default": "./src/tool-managed-agent/index.ts"
-    },
-    "./web-search-rag": {
-      "types": "./src/web-search-rag/index.ts",
-      "default": "./src/web-search-rag/index.ts"
+    "./tokenplan-usage": {
+      "types": "./src/tokenplan-usage/index.ts",
+      "default": "./dist/tokenplan-usage/index.mjs"
     },
     "./memory": {
       "types": "./src/memory/index.ts",
-      "default": "./src/memory/index.ts"
+      "default": "./dist/memory/index.mjs"
     },
+    "./client": "./client.bundle.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./package.json": "./package.json"
   },
@@ -52,11 +42,9 @@
     "access": "public",
     "exports": {
       ".": "./dist/index.mjs",
-      "./tool-vision": "./dist/tool-vision/index.mjs",
-      "./tool-image": "./dist/tool-image/index.mjs",
-      "./tool-managed-agent": "./dist/tool-managed-agent/index.mjs",
-      "./web-search-rag": "./dist/web-search-rag/index.mjs",
+      "./tokenplan-usage": "./dist/tokenplan-usage/index.mjs",
       "./memory": "./dist/memory/index.mjs",
+      "./client": "./client.bundle.js",
       "./cordis.patch.yml": "./cordis.patch.yml",
       "./package.json": "./package.json"
     },
@@ -106,6 +94,9 @@
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
     }
   }
 }

@@ -7,12 +7,14 @@ import {
   workspaceEndpoint,
 } from "../src/shared/credentials.ts";
 
-// 行为锁定:两类 Key(sk-sp- TokenPlan / sk-ws- 按量付费)不可混用,三个直连服务
-// 模块(memory / RAG / managed-agent)都会拦下 TokenPlan Key,而不是等请求时
-// 拿到难懂的 401/404。managed-agent 的凭证两半独立下发:解析出 key 就显式
+// 行为锁定:两类 Key(sk-sp- TokenPlan / sk-ws- 按量付费)不可混用。
+// TokenPlan 网关 401 按量付费 Key,TokenPlan 网关只提供模型推理,不提供
+// 服务 API。managed-agent 的凭证两半独立下发:解析出 key 就显式
 // --api-key(不让 bl 用活动 profile 的 key),解析出端点就显式 --base-url
 // (不让 bl 用活动 profile 的端点)。agentstudio 只在工作空间前缀主机上提供,
 // 因此绝不存在"默认端点"——工作空间未知就是配置缺口,该报错而不是猜。
+// 这些共享函数来自早期版本(vision / image / managed-agent 等工具),
+// 工具已移除但凭证分类逻辑保留作为参考。
 
 test("isTokenPlanKey classifies by prefix", () => {
   expect(isTokenPlanKey("sk-sp-abc123")).toBe(true);

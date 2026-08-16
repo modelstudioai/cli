@@ -2,82 +2,43 @@
 
 把阿里云百炼（Model Studio）的能力接入 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（`dsh`）的 profile bundle。
 
-一个包提供 5 个插件行，外加对 base bundle 的 `llm-pi-ai` 行做一次配置覆盖：
+本包提供两项能力：
 
-| row id                       | 能力                                                            | 默认 | 依赖                  |
-| ---------------------------- | --------------------------------------------------------------- | ---- | --------------------- |
-| `llm-pi-ai`（覆盖 base 行）  | 把百炼 TokenPlan 网关注册成 LLM provider（`bailian-tokenplan`） | 启用 | TokenPlan Key         |
-| `bailian-tool-vision`        | `bailian_vision_describe`：图片/视频理解                        | 启用 | `bl`                  |
-| `bailian-tool-image`         | `bailian_image_generate`：文生图                                | 启用 | `bl`                  |
-| `bailian-tool-managed-agent` | `bailian_run_remote_task`：按需在云端创建 agent 并跑任务        | 启用 | `bl` + 按量付费 Key   |
-| `bailian-web-search-rag`     | 百炼知识库检索，注册为 `web_search` 的后端                      | 停用 | 按量付费 Key + 知识库 |
-| `bailian-memory`             | 跨会话长期记忆（tools + 自动检索/落库）                         | 停用 | 按量付费 Key          |
-
-`web-search-rag` 与 `memory` 默认停用是有意的：它们要么需要部署方特有的资源 ID，要么按次计费，不该在用户没配置时就生效。`tool-managed-agent` 默认启用——它加载时不建任何资源，只有模型真正调用时才在云端创建 agent。
+| 能力               | 说明                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------ |
+| **Bailian 设置页** | 通用的百炼凭证配置（AK/SK 存入 `dsh` bl profile + DashScope API Key）+ TokenPlan 用量展示 + 记忆库配置 |
+| **跨会话长期记忆** | 自动检索注入 + 自动落库，模型可主动 search/add/list。按量计费，默认停用                                |
 
 ---
 
 ## 1. 前置条件
 
 - Node ≥ 22.19（`dsh` 的要求）
-- `bl`（vision / image / 远程任务 三个工具通过子进程调它）
+- `bl`（用量展示通过子进程调用 `bl console call`）
 
   ```sh
   npm install -g bailian-cli
   ```
 
-- 百炼 API Key。**注意有两类且不可混用**：
+- **阿里云 AK/SK**（AccessKey ID + AccessKey Secret）—— 用于控制台鉴权，查询用量信息。在 webui 设置页填入即可，无需环境变量。
+- **DashScope API Key**（`sk-` 前缀，按量付费）—— 用于记忆库等 DashScope API 调用。在设置页「凭证配置」填入，与 AK/SK 并列为通用凭证。
 
-  | 类型      | 前缀     | 能访问                                                      | 不能访问                 |
-  | --------- | -------- | ----------------------------------------------------------- | ------------------------ |
-  | TokenPlan | `sk-sp-` | TokenPlan 网关（LLM / vision / 文生图）                     | 记忆库、知识库、远程任务 |
-  | 按量付费  | `sk-ws-` | 记忆库、知识库、远程任务（agentstudio）、DashScope 全量接口 | TokenPlan 网关           |
-
-  两者互相返回 `401 InvalidApiKey`，所以本包用**两个不同的环境变量**，不会互相踩：
-
-  ```sh
-  export BAILIAN_TOKENPLAN_API_KEY=sk-sp-xxx   # 只给 bailian-tokenplan provider
-  export DASHSCOPE_API_KEY=sk-ws-xxx           # 给 bl、memory、RAG、远程任务
-  ```
-
-  只有一类 Key 也能用，只是能力范围相应缩小。若只有 TokenPlan Key：
-
-  ```sh
-  export BAILIAN_TOKENPLAN_API_KEY=sk-sp-xxx
-  export DASHSCOPE_API_KEY=sk-sp-xxx
-  export DASHSCOPE_BASE_URL=https://token-plan.cn-beijing.maas.aliyuncs.com
-  ```
-
-  这样 LLM / vision / 文生图可用（后两者经 `bl` 走 TokenPlan 网关）；memory 与 RAG 保持停用即可。**远程任务仍可注册**，但它的凭证解析会看出这是 TokenPlan Key / 网关，调用 `bailian_run_remote_task` 时直接给出带修复指引的报错，而不是以前的 `Bailian API 404`。
-
-  **按量付费 Key 的解析顺序**（memory / RAG / 远程任务三处一致）：行内 `config.apiKey` → `$DASHSCOPE_API_KEY`。
-
-  **远程任务的端点**另有讲究：managed-agent（agentstudio）API **只**在工作空间前缀主机上提供——`https://{workspaceId}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio`（普通 dashscope 主机与 TokenPlan 网关都 404），且 Key 只能访问**自己归属的工作空间**（不匹配时 403 `Endpoint.AccessDenied`）。端点解析顺序：行内 `baseUrl` → `$DASHSCOPE_BASE_URL` → 行内 `workspaceId` → `$BAILIAN_WORKSPACE_ID`（后两者自动拼成工作空间主机）。workspace ID 在百炼控制台右上角的工作空间下拉里看。
-
-  memory / RAG 是显式开启的插件，Key 缺失或误填 `sk-sp-` 会在启动期报错；远程任务默认启用，为避免拖垮 TokenPlan-only 环境，改为调用时报错。
+  获取方式：[阿里云控制台 → AccessKey 管理](https://ram.console.aliyun.com/manage/ak)
 
 ---
 
 ## 2. 安装到 `web` profile
 
-`npx @deepseek-ai/dsh web` 是 `dsh --profile web` 的别名，所以要装进**名为 `web` 的 profile**，配置目录是 `~/.dsh/profiles/web/`（`$DSH_HOME` 可覆盖）。
-
-本包尚未发布到 npm，先在本仓库打包：
+`npx @deepseek-ai/dsh web` 是 `dsh --profile web` 的别名，配置目录是 `~/.dsh/profiles/web/`。
 
 ```sh
 pnpm -F bailian-cli-dsh build
-cd packages/dsh && pnpm pack          # 产出 bailian-cli-dsh-<version>.tgz
+cd packages/dsh && pnpm pack
+
+npx @deepseek-ai/dsh plugin --profile web add /absolute/path/to/bailian-cli-dsh-<version>.tgz
 ```
 
-装入 profile（`dsh plugin` 是 pnpm 的转发器，接受本地路径 / tarball / npm 包名 / git）：
-
-```sh
-npx @deepseek-ai/dsh plugin --profile web add /absolute/path/to/bailian-cli-dsh-1.14.2.tgz
-```
-
-因为 `package.json` 声明了 `dsh.bundle`，安装后会自动加入该 profile 的 bundle 层，无需手动改 `cordis.patch.yml`。
-
-确认 5 个插入行都在，且 TokenPlan provider 已配到 `llm-pi-ai` 上：
+确认 TokenPlan provider 和用量展示行都在：
 
 ```sh
 npx @deepseek-ai/dsh --profile web --dump-config | grep -E 'bailian|tokenplan'
@@ -91,168 +52,130 @@ npx @deepseek-ai/dsh web
 
 Web UI 在 http://127.0.0.1:3080。
 
-> 发布到 npm 后直接 `npx @deepseek-ai/dsh plugin --profile web add bailian-cli-dsh`，跳过打包步骤。
+---
+
+## 3. Bailian 设置页
+
+安装后，在 Web UI 左下角 **Settings** 面板会出现 **"Bailian"** 页面。
+
+### 凭证配置（通用）
+
+1. 在「凭证配置」区填入 **AccessKey ID** 和 **AccessKey Secret**
+2. 点击 **「保存凭证」**
+
+Host 会执行 `bl auth login --open-api --config dsh`，将 AK/SK 和新生成的 access_token 存入 bl 的 `dsh` 专属 profile。**所有后续百炼插件共用此凭证**，无需重复配置。
+
+### TokenPlan 用量
+
+1. 选择区域和站点
+2. 点击 **「查询用量」**
+
+Host 执行 `bl console call --config dsh` 调用 3 个个人版控制台接口，返回：
+
+- **用量百分比** —— 5 小时窗口 / 1 周窗口的用量百分比和重置时间
+- **套餐信息** —— 套餐类型（基础版/标准版/高级版）、状态、剩余天数、到期时间、自动续费
+- **额外用量包** —— Credits 总量、剩余量、生效中数量
+
+### 凭证解析优先级
+
+凭证保存到 bl 的 `dsh` profile 后，所有百炼插件通过 `--config dsh` 读取。行内 config 的 `accessKeyId`/`accessKeySecret` 作为兜底（未通过 UI 保存时自动使用）。
+
+### 行内配置（可选）
+
+如果不想在 UI 里每次输入，可以在 profile 的 `cordis.patch.yml` 里固化凭证：
+
+```yaml
+- id: bailian-tokenplan-usage
+  config:
+    # accessKeyId / accessKeySecret: 兜底凭证（未通过 UI 保存时使用）
+    # consoleRegion: cn-beijing
+    # consoleSite: domestic
+    # profile: dsh  # 默认用 dsh 专属 profile
+```
+
+配置后 UI 表单会留空，但点击「查询用量」会使用行内凭证。
 
 ---
 
-## 3. 开箱能用的部分
+## 4. 跨会话长期记忆
 
-装完不做任何配置就生效：
+默认停用（按量计费）。在 `cordis.patch.yml` 中设 `disabled: false` 启用，然后在设置页配置 API Key 和参数。
 
-**LLM provider** — 模型选择器里出现 `bailian-tokenplan`，可选模型（已逐个实测）：
+### 功能
 
-| 模型                     | 读图               |
-| ------------------------ | ------------------ |
-| `qwen3.8-max`            | 是                 |
-| `qwen3.7-plus`           | 是                 |
-| `qwen3.6-flash`          | 是                 |
-| `glm-5.2`                | 是                 |
-| `qwen3.7-max`            | 否（传图直接 400） |
-| `deepseek-v4-pro`        | 否                 |
-| `deepseek-v4-flash-0731` | 否                 |
+- **自动检索注入**：新会话首轮，用用户消息搜索记忆，将结果注入上下文（`autoInject`，默认开启）
+- **自动落库**：每轮结束，将该轮新消息发送到记忆库 add API（`autoPersist`，默认开启）
+- **模型工具**：`bailian_memory_search`（检索）、`bailian_memory_add`（存储）、`bailian_memory_list`（浏览）
 
-**三个工具** — `bailian_vision_describe`、`bailian_image_generate`、`bailian_run_remote_task`。
+### 触发机制
 
-前两个走 TokenPlan（vision/image）。`bailian_run_remote_task` 见 [§3.1](#31-远程任务-bailian_run_remote_task)——它默认启用但用的是**按量付费 Key + dashscope 端点**，与 TokenPlan 那两个不同。
+| 时机       | 触发方式                                                  |
+| ---------- | --------------------------------------------------------- |
+| 新会话首轮 | 自动检索记忆注入上下文（`agent/pre-step` 事件）           |
+| 对话中     | 模型主动调用 `bailian_memory_search`/`bailian_memory_add` |
+| 轮次结束   | 自动落库新消息（`agent/turn-stopping` 事件）              |
 
-### 关于看图，有个坑值得知道
+### 凭证与配置
 
-dsh 会在两处**提前**拦截图片：Web UI 粘图前会查当前模型的输入模态，`read_image` 也有同样的门禁。所以主模型选 DeepSeek 时，图片根本进不到对话里。
+- **API Key**：DashScope 按量付费 Key（`sk-`），在设置页「凭证配置」填入
+- **Base URL**：默认 `https://dashscope.aliyuncs.com/api/v2/apps/memory/`
+- **User ID**：记忆归属 ID，默认读系统用户名
+- **Plan Version**：`lite`（便宜，关闭 rerank）或 `pro`（开启 rerank，约 50 倍成本）。注意：实际计费由 `enable_rerank` 控制
+- **Top K**：检索返回数量（1-100，默认 10）
+- **Memory Library ID**：记忆库 ID，留空用默认
 
-- 主模型选 `qwen3.8-max` 等标着"是"的 → 直接粘图，原生看图，不需要任何工具
-- 主模型选 DeepSeek → 让它调 `bailian_vision_describe`，工具返回**文字描述**，绕过模态门禁
+### 计费
 
-DeepSeek 那两个模型在 TokenPlan 网关上传图**不报错但也看不见**（实测会回答 "None"），所以本包坚决没给它们声明 `input: [image]`——否则会从"明确拒绝"退化成"静默失明"，更难排查。
+- Add：120 QPM
+- Search：300 QPM（Lite ¥0.00002/次，Pro ¥0.001/次）
+- 总计不超过 3000 QPM
 
-`bailian_image_generate` 同理：模型能看图时返回内联图片，不能看图时降级为返回落盘路径，你可以接着用 vision 工具读它。文件不会被删除，正是为了这个衔接。
-
-### 3.1 远程任务（`bailian_run_remote_task`）
-
-把一个任务甩到百炼云端的托管 agent 上跑，不占本地会话。**无需预先写 `agents.yaml` 或 `apply`**：工具首次被调用时，`bl managed-agent run` 会在你的账号里幂等创建一个 agent + cloud environment，之后复用。
-
-- 模型自己按用户意图填 `instructions`（远程 agent 的角色），`task` 是要它做的事。例如你说「在云端帮我审计这个依赖树，它该懂安全」→ 模型调 `bailian_run_remote_task(task="审计依赖树", instructions="你是安全专家")`。
-- **前提**：这条路走的是 managed-agent（agentstudio）服务，需要**按量付费 Key**（`sk-ws-`）+ **工作空间端点**，且账号已开通 managed-agent。TokenPlan Key 不适用。
-- **凭证解析**：Key 为 `config.apiKey` → `$DASHSCOPE_API_KEY`；端点为 `config.baseUrl` → `$DASHSCOPE_BASE_URL` → `config.workspaceId` → `$BAILIAN_WORKSPACE_ID`（后两者自动拼成 `https://{workspaceId}.cn-beijing.maas.aliyuncs.com`）。凡是解析出来的，都会显式下发给 `bl`，不会落到 `bl` 活动 config profile 的端点上——这正是旧版 `Bailian API 404` 的根因：agentstudio **只**在工作空间前缀主机上提供，TokenPlan 网关与普通 dashscope 主机都 404。
-- **两个高频报错**：`404`＝端点不是工作空间主机；`403 Endpoint.AccessDenied`＝主机对了但这个 Key 不属于该工作空间。二者都会附带具体修复指引。Key 归属的工作空间在百炼控制台右上角下拉里看。
-- 首次会创建云资源（可能计费、启动有延迟）；同名 agent 后续复用。默认 agent 名 `dsh-remote-runner`，可在配置里改。
-
-需要非默认的 agent 名 / 模型 / 凭证时：
-
-```yaml
-- id: bailian-tool-managed-agent
-  config:
-    agent: my-runner
-    model: qwen3.8-max
-    timeoutMs: 600000
-    # 可选凭证（省略则按上面的解析顺序找）：
-    # apiKey: sk-ws-xxxxxxxx
-    # workspaceId: llm-xxxxxxxx        # 推荐：自动拼成工作空间端点
-    # baseUrl: https://llm-xxxxxxxx.cn-beijing.maas.aliyuncs.com   # 或用完整端点
-```
-
----
-
-## 4. 开启可选插件
-
-用户层配置写在 `~/.dsh/profiles/web/cordis.patch.yml`，按 row `id` 覆盖 bundle 的默认值。
-
-> **一个必须记住的语义**：patch 是按 row **整体替换 `config`**，不是深合并。所以覆盖一行时要把该行完整的 config 重写一遍。
-
-### 知识库检索（RAG）
-
-注册 id 为 `bailian-kb` 的搜索后端，模型用它熟悉的 `web_search` 就能检索私域文档。
-
-```yaml
-- id: bailian-web-search-rag
-  disabled: false
-  config:
-    workspaceId: llm-xxxxxxxx # 百炼控制台工作空间 ID
-    agentId: aid-xxxxxxxx # 知识库"检索服务"ID
-    maxResults: 10
-    # apiKey 省略则读 $DASHSCOPE_API_KEY（须为按量付费 sk-ws-；误填 sk-sp- 会在启动期报错）
-```
-
-一个实例对一个知识库（`WebSearchRequest` 只带 `query` / `maxResults`，agentId 只能来自配置）。要多个知识库就插多行不同 `id`。
-
-**如果 profile 里还有别的搜索 provider**（base bundle 默认带 `web-search-deepseek`），必须显式指定用哪个，否则 dsh 报 `WEB_PROVIDER_AMBIGUOUS`：
-
-```yaml
-- id: web
-  config:
-    searchProvider: bailian-kb
-```
-
-### 长期记忆
-
-dsh 自身没有跨会话记忆（`ctx.compaction` 只在单会话内压缩上下文）。开启后：两个工具 `bailian_memory_search` / `bailian_memory_add`，加上每个会话首轮自动检索注入、每轮结束自动落库。
+### 启用
 
 ```yaml
 - id: bailian-memory
   disabled: false
   config:
-    userId: your-name # 省略则读 $BAILIAN_MEMORY_USER_ID，再退到系统用户名
-    planVersion: lite
+    baseUrl: "https://dashscope.aliyuncs.com/api/v2/apps/memory/"
+    planVersion: "lite"
     topK: 10
     autoInject: true
-    injectEveryTurn: false # 开启会变成每轮一次检索，成本相应上升
     autoPersist: true
 ```
 
-**费用**：记忆库自 2026-08-20 起商业化，add 与 search 按次计费，pro 档约为 lite 档的 50 倍。
+启用后在设置页「记忆库」section 配置 API Key 和参数。
 
-实测发现一个与文档不符的地方：单独传 `plan_version: lite` 会被服务端忽略、仍按 pro 计费，真正生效的开关是 `enable_rerank: false`。本插件已按此处理——`planVersion: lite`（默认）会同时下发 `enable_rerank: false`，所以默认就是便宜的那档。
-
-不想要自动行为、只保留手动工具：
-
-```yaml
-- id: bailian-memory
-  disabled: false
-  config:
-    userId: your-name
-    autoInject: false
-    autoPersist: false
-```
-
-> 远程任务（`bailian_run_remote_task`）默认启用，配置见 [§3.1](#31-远程任务-bailian_run_remote_task)。
-
----
+> 记忆库调用 DashScope memory v2 API（非 `bl memory`），因为 v2 API 暴露了 `min_score`、`enable_rerank`、`plan_version`、`memory_library_id` 等参数 `bl memory` 不支持。
 
 ## 5. 验证
 
 ```sh
-# 配置是否被正确合成（改完 patch 后先看这个）
-npx @deepseek-ai/dsh --profile web --dump-config | grep -A5 bailian-memory
+# 配置合成
+npx @deepseek-ai/dsh --profile web --dump-config | grep bailian
 
-# bl 是否就绪
+# bl 就绪
 bl auth status
 ```
 
-启动后逐项试：
+启动后验证：
 
-- **LLM**：切到 `bailian-tokenplan / qwen3.8-max`，随便发一句
-- **原生看图**：同上模型，直接粘一张图提问
-- **间接看图**：切到 `deepseek-v4-pro`，让它用 `bailian_vision_describe` 读同一张图
-- **文生图**：让模型生成一张图
-- **RAG**：问一个只有知识库里才有答案的问题
-- **记忆**：会话 A 告诉它一个事实 → 关掉 → 新开会话 B 提问，看是否命中
-- **远程任务**：说「在云端帮我跑一个任务：<something>，它该擅长 <role>」→ 确认模型调用 `bailian_run_remote_task`（`instructions` 由模型按 role 填）→ 首次触发云端创建 → 返回远程会话结果（需按量付费 Key + 已开通 agentstudio）
+- **LLM**：切到 `bailian-tokenplan / qwen3.8-max`，发一句消息
+- **凭证配置**：打开 Settings → Bailian → 填入 AK/SK → 保存凭证
+- **用量展示**：同页面选择区域 → 查询用量
 
 ---
 
 ## 6. 常见问题
 
-| 现象                                   | 原因                                                                                                                                                                               |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| LLM 路由 `401 InvalidApiKey`           | `BAILIAN_TOKENPLAN_API_KEY` 没设，或误填了 `sk-ws-` 的按量付费 Key                                                                                                                 |
-| memory / RAG 启动期报 TokenPlan Key    | `DASHSCOPE_API_KEY` / `apiKey` 误填了 `sk-sp-` 的 TokenPlan Key                                                                                                                    |
-| 远程任务 `Bailian API 404`             | 端点不是工作空间前缀主机（TokenPlan 网关 / 普通 dashscope 主机都不提供 agentstudio）；给该行配 `workspaceId`（或 `baseUrl`），或导出 `BAILIAN_WORKSPACE_ID` / `DASHSCOPE_BASE_URL` |
-| 远程任务 `403 Endpoint.AccessDenied`   | 主机是工作空间主机，但这个 Key 不属于该工作空间；换成 Key 归属工作空间的 ID（控制台右上角下拉），或用属于该工作空间的 Key                                                          |
-| 远程任务调用即报 TokenPlan 提示        | `$DASHSCOPE_API_KEY` 是 `sk-sp-`；换按量付费 Key 或在行内配 `apiKey`                                                                                                               |
-| `WEB_PROVIDER_AMBIGUOUS`               | 有多个搜索 provider，需在 `web` 行 pin `searchProvider`                                                                                                                            |
-| 粘图报 `MODEL_DOES_NOT_SUPPORT_IMAGES` | 当前模型不支持图片输入，换成上表标"是"的，或改用 vision 工具                                                                                                                       |
-| 工具报找不到 `bl`                      | `bl` 不在 PATH：`npm install -g bailian-cli`                                                                                                                                       |
-| 改了 patch 但没生效                    | `config` 是整体替换，检查是否漏写了原有字段；再用 `--dump-config` 确认                                                                                                             |
-| `memoryLibraryId does not exist`       | 记忆库 ID 属于另一个账号，与当前 Key 不匹配                                                                                                                                        |
+| 现象                                  | 原因                                                                                                           |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| LLM 路由 `401 InvalidApiKey`          | `BAILIAN_TOKENPLAN_API_KEY` 没设，或误填了 `sk-ws-` 的按量付费 Key                                             |
+| 用量查询报 `bl auth login failed`     | AK/SK 无效或无权限；确认 AK 有百炼控制台访问权限                                                               |
+| 用量查询报 `NotLogined` 或 token 过期 | bl 的 access token 已过期；Host 会自动通过 AK/SK 刷新，确认 AK/SK 正确                                         |
+| 用量查询报 `bl console call failed`   | 控制台接口调用失败；检查 region/site 是否匹配你的账号                                                          |
+| 用量查询报 `Workspace.NotAuthorised`  | bl 用了其他 profile 的旧 access_token；Host 默认用 `--config dsh` 专属 profile 隔离，首次 login 会生成新 token |
+| 工具报找不到 `bl`                     | `bl` 不在 PATH：`npm install -g bailian-cli`                                                                   |
+| 设置页看不到 Bailian                  | 确认 bundle 已装入 web profile，且 `dsh.client` 声明在 package.json 中                                         |
 
 ---
 
@@ -262,4 +185,31 @@ bl auth status
 npx @deepseek-ai/dsh plugin --profile web remove bailian-cli-dsh
 ```
 
-移除后 bundle 层会自动从 `dsh.profile.bundles` 摘掉；`~/.dsh/profiles/web/cordis.patch.yml` 里你手写的覆盖行需要自己清理。
+---
+
+## 架构说明
+
+### Host 半（`src/tokenplan-usage/index.ts`）
+
+- `inject: ['subprocess']` —— 通过 subprocess 服务调用 `bl`
+- 所有 bl 命令都带 `--config dsh`，使用专属 profile 隔离凭证
+- 两个 webServer 路由：
+  - `POST /api/bailian/credentials` — 保存 AK/SK（`bl auth login --open-api --config dsh`，生成新 token）
+  - `POST /api/bailian/tokenplan/usage` — 查询用量（`bl console call --config dsh`，3 个个人版接口）
+
+调用链路：**AK/SK → `bl auth login --open-api --config dsh`（存入 dsh profile）→ `bl console call --config dsh`（读 dsh profile token → 控制台网关）→ 个人版 TokenPlan 接口**
+
+### Client 半（`src/tokenplan-usage/client.ts`）
+
+- 声明 `dsh.client: { platform: "web" }`，被 `client-modules` 扫描并加载
+- 注册 `settings.section`（id: `bailian`，label: `Bailian`），渲染通用百炼设置页
+- 两个区块：凭证配置（POST /api/bailian/credentials）+ TokenPlan 用量（POST /api/bailian/tokenplan/usage）
+- 后续百炼插件可在同一设置页新增区块，共用已保存的凭证
+
+### 共享模块（`src/shared/`）
+
+- `bl.ts` —— `bl` 子进程调用封装（env 转发、stdout/stderr 收集、JSON 解析）
+- `credentials.ts` —— TokenPlan / 按量付费 Key 分类工具
+- `http.ts` —— DashScope HTTP 客户端
+
+这些模块来自早期版本（vision / image / managed-agent / RAG / memory 工具），已移除工具实现但保留共享逻辑作为参考。
