@@ -1,6 +1,6 @@
 import type { Settings } from "../config/schema.ts";
-import { callConsoleGateway, effectiveConsoleGatewayConfig } from "../console/gateway.ts";
-import { fetchModelList } from "../console/models.ts";
+import { anonymousConsoleCall } from "../console/gateway.ts";
+import { findModelByName } from "../console/models.ts";
 
 /**
  * Training-type vocabulary exposed to users.
@@ -111,14 +111,6 @@ export async function fetchModelCapability(
   modelName: string,
 ): Promise<ModelCapability | null> {
   // Public model catalog — anonymous gateway call, no console token needed.
-  const eff = effectiveConsoleGatewayConfig(settings);
-  const call = (api: string, data: Record<string, unknown>) =>
-    callConsoleGateway(
-      { region: eff.consoleRegion, site: eff.consoleSite, switchAgent: eff.consoleSwitchAgent },
-      settings.timeout,
-      { api, data },
-    );
-  const result = await fetchModelList(call, { name: modelName, pageSize: 20 });
-  const match = result.models.find((item) => (item.model as string | undefined) === modelName);
-  return (match as ModelCapability | undefined) ?? null;
+  const match = await findModelByName(anonymousConsoleCall(settings), modelName);
+  return match as ModelCapability | null;
 }
