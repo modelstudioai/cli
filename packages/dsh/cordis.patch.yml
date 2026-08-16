@@ -69,6 +69,54 @@
             compat:
               thinkingFormat: deepseek
 
+      # Responses-API route for the TokenPlan Qwen thinking models: same
+      # gateway and key as bailian-tokenplan, but OpenAI Responses protocol
+      # (`/responses`) instead of chat/completions. Reasoning arrives as
+      # native `reasoning` output items; the gateway's
+      # `response.reasoning_text.delta` SSE event is one pi-ai's
+      # openai-responses adapter explicitly consumes. The three models stay
+      # listed on the completions provider above, so both routes remain
+      # selectable; delete them there to make Responses the only route.
+      #
+      # No `thinkingFormat: qwen` here — that compat maps the completions
+      # `reasoning_content` field, pi-ai types it only for
+      # openai-completions, and resolution rejects such switches on this
+      # protocol. Reasoning effort instead goes through each model's
+      # `reasoningEfforts`, whose wire spellings land in the gateway's
+      # `reasoning.effort` request parameter. The four levels below were the
+      # only ones probed; xhigh/max were not offered to the gateway.
+      #
+      # Verified on 2026-08-15 per model against /responses: non-stream and
+      # stream bodies, one function call, and a colour question about a test
+      # PNG. qwen3.7-max rejects image content with HTTP 400, so it carries
+      # no `input: [text, image]`.
+      bailian-tokenplan-responses:
+        displayName: Aliyun Bailian TokenPlan (Responses)
+        api: openai-responses
+        baseURL: https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
+        apiKeyEnv: BAILIAN_TOKENPLAN_API_KEY
+        models:
+          - id: qwen3.8-max
+            input: [text, image]
+            reasoningEfforts:
+              minimal: minimal
+              low: low
+              medium: medium
+              high: high
+          - id: qwen3.7-plus
+            input: [text, image]
+            reasoningEfforts:
+              minimal: minimal
+              low: low
+              medium: medium
+              high: high
+          - id: qwen3.7-max
+            reasoningEfforts:
+              minimal: minimal
+              low: low
+              medium: medium
+              high: high
+
 - insert:
     - id: bailian-tool-vision
       name: bailian-cli-dsh/tool-vision

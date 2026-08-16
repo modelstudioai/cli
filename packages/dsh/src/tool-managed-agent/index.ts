@@ -128,11 +128,36 @@ interface SessionRunResponse {
   events?: readonly { type?: string; content?: unknown; role?: string }[];
 }
 
-/** Assistant-visible text of a finished remote session. */
+/**
+ * Text of one sanitized envelope event. `bl --output json` emits the SDK's
+ * sanitized `SessionEvent` shape, where `content` is an ARRAY of content
+ * blocks (`[{ type: "text", text }]`) — never a plain string — and `type` is
+ * the provider's raw event type. Tolerate a legacy string `content` too.
+ */
+function eventText(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content
+    .map((block) =>
+      block !== null &&
+      typeof block === "object" &&
+      typeof (block as { text?: unknown }).text === "string"
+        ? (block as { text: string }).text
+        : "",
+    )
+    .join("");
+}
+
+/**
+ * Assistant-visible text of a finished remote session. The envelope echoes
+ * the user prompt as `type: "message", role: "user"`, so keep only non-user
+ * message events and join their text blocks.
+ */
 function assistantText(response: SessionRunResponse): string {
   return (response.events ?? [])
-    .filter((event) => event.type === "message" && typeof event.content === "string")
-    .map((event) => event.content as string)
+    .filter((event) => event.type === "message" && event.role !== "user")
+    .map((event) => eventText(event.content))
+    .filter((text) => text.length > 0)
     .join("\n")
     .trim();
 }
