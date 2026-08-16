@@ -85,8 +85,8 @@ const DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/api/v2/apps/memory/";
 const DEFAULT_TOP_K = 10;
 const DEFAULT_PLAN_VERSION = "lite";
 
-const CONFIG_ROUTE = "/api/bailian/memory/config";
-const STATUS_ROUTE = "/api/bailian/memory/status";
+const CONFIG_ROUTE = "/bailian/memory/config";
+const STATUS_ROUTE = "/bailian/memory/status";
 
 interface MemoryNode {
   memory_node_id?: string;

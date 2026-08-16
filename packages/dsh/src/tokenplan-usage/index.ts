@@ -58,8 +58,8 @@ const PERSONAL_SUB_COMMODITY_INTL = "sfm_tokenplansolo_public_intl";
 const PERSONAL_ADDON_COMMODITY_CN = "sfm_tokenplansoloaddon_public_cn";
 const PERSONAL_ADDON_COMMODITY_INTL = "sfm_tokenplansoloaddon_public_intl";
 
-const CREDENTIALS_ROUTE = "/api/bailian/credentials";
-const USAGE_ROUTE = "/api/bailian/tokenplan/usage";
+const CREDENTIALS_ROUTE = "/bailian/credentials";
+const USAGE_ROUTE = "/bailian/tokenplan/usage";
 const BL_LOGIN_TIMEOUT_MS = 30_000;
 const BL_CALL_TIMEOUT_MS = 90_000;
 const BL_LOGIN_GRACE_MS = 20_000;

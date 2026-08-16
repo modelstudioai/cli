@@ -7,6 +7,14 @@
 # merging into it, so restate the complete config when overriding.
 
 - insert:
+    # Client-only row: name is the package ROOT (no subpath) so client-modules
+    # can resolve "<name>/package.json" and detect the dsh.client declaration.
+    # Its node half (dist/index.mjs) is a no-op; the row exists to serve the
+    # browser bundle (client.bundle.js) that renders the Bailian settings page
+    # and the new-session welcome page.
+    - id: bailian-client
+      name: bailian-cli-dsh
+
     # TokenPlan usage display (dual-face: Host provides two webServer routes,
     # Client renders a general "Bailian" settings.section page). All bl commands
     # use `--config dsh` to isolate credentials in a dedicated bl profile.

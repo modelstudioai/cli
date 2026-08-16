@@ -4,10 +4,10 @@
 
 本包提供两项能力：
 
-| 能力               | 说明                                                                                                   |
-| ------------------ | ------------------------------------------------------------------------------------------------------ |
-| **Bailian 设置页** | 通用的百炼凭证配置（AK/SK 存入 `dsh` bl profile + DashScope API Key）+ TokenPlan 用量展示 + 记忆库配置 |
-| **跨会话长期记忆** | 自动检索注入 + 自动落库，模型可主动 search/add/list。按量计费，默认停用                                |
+| 能力               | 说明                                                                                                                  |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| **Bailian 设置页** | 通用的百炼凭证配置（AK/SK 存入 `dsh` bl profile + DashScope API Key）+ TokenPlan 用量展示 + 记忆库配置 + 新会话欢迎页 |
+| **跨会话长期记忆** | 自动检索注入 + 自动落库，模型可主动 search/add/list。按量计费，默认停用                                               |
 
 ---
 
@@ -32,16 +32,16 @@
 `npx @deepseek-ai/dsh web` 是 `dsh --profile web` 的别名，配置目录是 `~/.dsh/profiles/web/`。
 
 ```sh
-pnpm -F bailian-cli-dsh build
+pnpm -F bailian-cli-dsh build   # vp pack（host）+ esbuild（client.bundle.js）
 cd packages/dsh && pnpm pack
 
 npx @deepseek-ai/dsh plugin --profile web add /absolute/path/to/bailian-cli-dsh-<version>.tgz
 ```
 
-确认 TokenPlan provider 和用量展示行都在：
+确认 bailian 行都在：
 
 ```sh
-npx @deepseek-ai/dsh --profile web --dump-config | grep -E 'bailian|tokenplan'
+npx @deepseek-ai/dsh --profile web --dump-config | grep -E 'bailian'
 ```
 
 启动：
@@ -54,9 +54,12 @@ Web UI 在 http://127.0.0.1:3080。
 
 ---
 
-## 3. Bailian 设置页
+## 3. Bailian 设置页 + 欢迎页
 
-安装后，在 Web UI 左下角 **Settings** 面板会出现 **"Bailian"** 页面。
+安装并重启后：
+
+- **Settings → Bailian**：通用设置页（凭证配置 / TokenPlan 用量 / 记忆库）。
+- **新会话欢迎页**：每个新会话（blank）在输入框上方显示「百炼 Agent」欢迎页（Tab + 功能卡片），发出第一条消息后自动隐藏。
 
 ### 凭证配置（通用）
 
@@ -159,23 +162,24 @@ bl auth status
 
 启动后验证：
 
-- **LLM**：切到 `bailian-tokenplan / qwen3.8-max`，发一句消息
+- **欢迎页**：新开一个会话，输入框上方出现「百炼 Agent」欢迎页
 - **凭证配置**：打开 Settings → Bailian → 填入 AK/SK → 保存凭证
 - **用量展示**：同页面选择区域 → 查询用量
+- **记忆库**：启用 `bailian-memory` 后，同页面配置 API Key
 
 ---
 
 ## 6. 常见问题
 
-| 现象                                  | 原因                                                                                                           |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| LLM 路由 `401 InvalidApiKey`          | `BAILIAN_TOKENPLAN_API_KEY` 没设，或误填了 `sk-ws-` 的按量付费 Key                                             |
-| 用量查询报 `bl auth login failed`     | AK/SK 无效或无权限；确认 AK 有百炼控制台访问权限                                                               |
-| 用量查询报 `NotLogined` 或 token 过期 | bl 的 access token 已过期；Host 会自动通过 AK/SK 刷新，确认 AK/SK 正确                                         |
-| 用量查询报 `bl console call failed`   | 控制台接口调用失败；检查 region/site 是否匹配你的账号                                                          |
-| 用量查询报 `Workspace.NotAuthorised`  | bl 用了其他 profile 的旧 access_token；Host 默认用 `--config dsh` 专属 profile 隔离，首次 login 会生成新 token |
-| 工具报找不到 `bl`                     | `bl` 不在 PATH：`npm install -g bailian-cli`                                                                   |
-| 设置页看不到 Bailian                  | 确认 bundle 已装入 web profile，且 `dsh.client` 声明在 package.json 中                                         |
+| 现象                                  | 原因                                                                                                                               |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 用量查询报 `bl auth login failed`     | AK/SK 无效或无权限；确认 AK 有百炼控制台访问权限                                                                                   |
+| 用量查询报 `NotLogined` 或 token 过期 | bl 的 access token 已过期；Host 会自动通过 AK/SK 刷新，确认 AK/SK 正确                                                             |
+| 用量查询报 `bl console call failed`   | 控制台接口调用失败；检查 region/site 是否匹配你的账号                                                                              |
+| 用量查询报 `Workspace.NotAuthorised`  | bl 用了其他 profile 的旧 access_token；Host 默认用 `--config dsh` 专属 profile 隔离，首次 login 会生成新 token                     |
+| 工具报找不到 `bl`                     | `bl` 不在 PATH：`npm install -g bailian-cli`                                                                                       |
+| 设置页/欢迎页看不到 Bailian           | 需**重启 `dsh web`**（bundle 在启动时加载）；确认 `dump-config` 有 `bailian-client` 行，且 `client.bundle.js` 为 ModuleLoader 格式 |
+| 启动报 `invalid plugin ... apply`     | 包根 `dist/index.mjs` 必须导出 `apply`（no-op 插件）；重新 `pnpm build` 再装                                                       |
 
 ---
 
@@ -189,22 +193,35 @@ npx @deepseek-ai/dsh plugin --profile web remove bailian-cli-dsh
 
 ## 架构说明
 
-### Host 半（`src/tokenplan-usage/index.ts`）
+### Host 半
 
-- `inject: ['subprocess']` —— 通过 subprocess 服务调用 `bl`
-- 所有 bl 命令都带 `--config dsh`，使用专属 profile 隔离凭证
-- 两个 webServer 路由：
-  - `POST /api/bailian/credentials` — 保存 AK/SK（`bl auth login --open-api --config dsh`，生成新 token）
-  - `POST /api/bailian/tokenplan/usage` — 查询用量（`bl console call --config dsh`，3 个个人版接口）
+- `src/tokenplan-usage/index.ts` —— 凭证 + TokenPlan 用量。`inject: ['subprocess']`，所有 bl 命令带 `--config dsh` 隔离凭证。两个 webServer 路由：
+  - `POST /bailian/credentials` — 保存 AK/SK（`bl auth login --open-api --config dsh`，生成新 token）
+  - `POST /bailian/tokenplan/usage` — 查询用量（`bl console call --config dsh`，3 个个人版接口）
+- `src/memory/index.ts` —— 记忆库（默认停用）。直接调 DashScope memory v2 API，注册 tools + auto-inject/persist。路由 `/bailian/memory/config`、`/bailian/memory/status`。
+- `src/index.ts` —— 包根 no-op 插件，供 `bailian-client` 行加载（该行只为了让 client-modules 服务浏览器 bundle）。
+
+> 路由用 `/bailian/*` 而非 `/api/*`：`/api` 前缀被 dsh 的 RPC 网关（apiProxy）占用，自定义路由会被遮蔽。
 
 调用链路：**AK/SK → `bl auth login --open-api --config dsh`（存入 dsh profile）→ `bl console call --config dsh`（读 dsh profile token → 控制台网关）→ 个人版 TokenPlan 接口**
 
-### Client 半（`src/tokenplan-usage/client.ts`）
+### Client 半（`src/client.ts`）
 
-- 声明 `dsh.client: { platform: "web" }`，被 `client-modules` 扫描并加载
-- 注册 `settings.section`（id: `bailian`，label: `Bailian`），渲染通用百炼设置页
-- 两个区块：凭证配置（POST /api/bailian/credentials）+ TokenPlan 用量（POST /api/bailian/tokenplan/usage）
-- 后续百炼插件可在同一设置页新增区块，共用已保存的凭证
+- 唯一的浏览器源码，构建为 DSH ModuleLoader 格式（见下）。
+- 注册 `settings.section`（id: `bailian`，label: `Bailian`），渲染通用百炼设置页（凭证配置 / TokenPlan 用量 / 记忆库）。
+- 注册 `conversation.input.dock`（id: `bailian-welcome`）：当 `session.blank === true`（新会话）渲染「百炼 Agent」欢迎页（Tab + 功能卡片），开始对话后自动隐藏。
+- 通过 `fetch('/bailian/*')` 调 Host 路由。
+
+### Client 构建（ModuleLoader 格式）
+
+DSH 浏览器只加载 `window.__ModuleLoader__.load({ id, factory })` 格式的 bundle（`require('react')` 由浏览器 ModuleLoader 提供）。vite-plus 产出裸 ES module，格式不对，所以 client 单独用 esbuild 构建：
+
+- `scripts/build-client.mjs` —— 把 `src/client.ts` 构建为 CJS + browser + `react` external，包上 ModuleLoader banner/footer，输出 `client.bundle.js`。
+- `package.json` 的 `build` = `vp pack && node scripts/build-client.mjs`。
+- `package.json` 的 `exports["./client"]` 与 `dsh.client: { platform: "web" }` 指向 `client.bundle.js`，被 client-modules 扫描并服务。
+- `cordis.patch.yml` 的 `bailian-client` 行 `name` 必须是**包根**（`bailian-cli-dsh`，无子路径），client-modules 才能 `require.resolve("<name>/package.json")` 识别 `dsh.client`。
+
+改 client UI 只需编辑 `src/client.ts`，`pnpm build` 自动重新生成 `client.bundle.js`。
 
 ### 共享模块（`src/shared/`）
 

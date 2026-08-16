@@ -1,26 +1,31 @@
 /**
- * `bailian-cli-dsh/tokenplan-usage` (Client half): renders a general
- * "Bailian" settings.section page with:
+ * `bailian-cli-dsh` (Client half): renders the general "Bailian" webui —
+ * a settings.section page (凭证配置 / TokenPlan 用量 / 记忆库) plus a
+ * new-session welcome page. Built by `scripts/build-client.mjs` (esbuild)
+ * into the DSH ModuleLoader format (`client.bundle.js`).
  *
- * 1. **凭证配置** — AK/SK input + "保存凭证" button. Saves to the `dsh`
- *    bl profile via `POST /api/bailian/credentials`. All future Bailian
- *    plugins reuse these credentials.
- * 2. **TokenPlan 用量** — region/site selectors + "查询用量" button.
- *    Fetches via `POST /api/bailian/tokenplan/usage` using the dsh profile.
+ * Runs in the browser; `React` is external (resolved by the ModuleLoader),
+ * styles are injected via the DOM, and data comes from the Host's
+ * `/bailian/*` webServer routes via `fetch`.
  *
- * This module runs in the browser. `React` and `styles` are provided by
- * the DSH client runtime evaluator; `fetch` is the standard browser API.
- *
- * @module bailian-cli-dsh/tokenplan-usage/client
+ * @module bailian-cli-dsh/client
  */
 
-// Globals provided by the DSH client runtime evaluator (not imported).
-declare const React: {
-  createElement: (type: any, props?: any, ...children: any[]) => any;
-  useState: <T>(initial: T) => [T, (value: T | ((prev: T) => T)) => void];
-  useEffect: (effect: () => void | (() => void), deps?: any[]) => void;
-};
-declare const styles: { insert: (css: string) => () => void };
+// @ts-nocheck — built by esbuild into the ModuleLoader client bundle; React is
+// external (resolved by the browser ModuleLoader), styles injected via DOM.
+import React from "react";
+
+/** Inject a <style> tag into the document head (browser). Returns a remover. */
+function insertStyles(css: string): () => void {
+  if (typeof document === "undefined") return () => {};
+  const tag = document.createElement("style");
+  tag.dataset.plugin = "bailian-cli-dsh";
+  tag.textContent = css;
+  document.head.appendChild(tag);
+  return () => {
+    if (tag.parentNode) tag.parentNode.removeChild(tag);
+  };
+}
 
 /** Services required by the client plugin. */
 export const inject = ["slots"];
@@ -30,7 +35,7 @@ export function apply(ctx: any): void {
   const slots = ctx.get("slots");
   if (slots === undefined) return;
 
-  styles.insert(`
+  insertStyles(`
     .bl-wrap { padding: 20px; max-width: 640px; }
     .bl-title { font-size: 16px; font-weight: 600; margin: 0 0 4px; color: var(--dsw-text, #18181b); }
     .bl-sub { font-size: 12px; color: var(--dsw-text-secondary, #71717a); margin: 0 0 20px; }
@@ -890,7 +895,7 @@ export function apply(ctx: any): void {
     },
   ];
 
-  styles.insert(`
+  insertStyles(`
     .bw-wrap{padding:8px 4px 20px;max-width:1100px;margin:0 auto;width:100%}
     .bw-head{display:flex;gap:14px;align-items:flex-start;margin-bottom:18px}
     .bw-logo{width:44px;height:44px;border-radius:12px;background:#6366f1;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex:none}

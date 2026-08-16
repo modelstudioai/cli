@@ -51,7 +51,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "vp pack",
+    "build": "vp pack && node scripts/build-client.mjs",
     "dev": "vp pack --watch",
     "test": "vp test",
     "check": "vp check"
