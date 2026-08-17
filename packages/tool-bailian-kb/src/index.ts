@@ -19,10 +19,19 @@ interface WebRoute {
   path: string
   handler: (req: IncomingMessage, res: ServerResponse) => void | Promise<void>
 }
+/** Shell-environment registration shape (declared inline to avoid a host-package dependency). */
+interface ShellEnvRegistration {
+  name: string
+  variables: Record<string, { description: string }>
+  resolve: () => Record<string, string | undefined>
+}
 declare module '@deepseek-ai/cordis' {
   interface Context {
     webServer: {
       register(route: WebRoute): () => void
+    }
+    shellEnv: {
+      register(registration: ShellEnvRegistration): void
     }
   }
 }
@@ -183,6 +192,25 @@ export function apply(ctx: Context, config: Config): void {
     ctx.tools.register(tool)
   }
   registerSkill(ctx)
+
+  // Export the resolved workspace id as a shell environment variable so
+  // management CLI commands (`bl knowledge list`, `kscli kb list`, etc.)
+  // running in bash can see the value the settings service resolved.
+  // Without this, the settings.yaml value is invisible to child processes.
+  ctx.inject(['shellEnv'], (envCtx) => {
+    envCtx.shellEnv.register({
+      name: 'bailian-kb',
+      variables: {
+        BAILIAN_WORKSPACE_ID: {
+          description: 'Bailian workspace id resolved from settings (Settings → 百炼知识库) or credentials.',
+        },
+      },
+      resolve: () => {
+        const wsId = current().workspaceId
+        return wsId ? { BAILIAN_WORKSPACE_ID: wsId } : {}
+      },
+    })
+  })
 
   // Bridge routes let the browser settings page read and write the resolved
   // section without riding the settings wire (which requires an apiproxy
