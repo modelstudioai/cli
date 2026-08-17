@@ -1,10 +1,8 @@
 import type { Settings } from "../../config/schema.ts";
-import { callConsoleGateway, effectiveConsoleGatewayConfig } from "../../console/gateway.ts";
-import { fetchModelList } from "../../console/models.ts";
+import { anonymousConsoleCall } from "../../console/gateway.ts";
+import { fetchModelListAll } from "../../console/models.ts";
 import type { ModelProfile } from "../types.ts";
 import type { ModelSource } from "./types.ts";
-
-const PAGE_SIZE = 50;
 
 function toModelProfile(item: Record<string, unknown>): ModelProfile | null {
   if (!item.model) return null;
@@ -41,22 +39,7 @@ export class ApiSource implements ModelSource {
 
   async load(): Promise<ModelProfile[]> {
     // Public model catalog — no console token (advisor runs unauthenticated).
-    const eff = effectiveConsoleGatewayConfig(this.settings);
-    const call = (api: string, data: Record<string, unknown>) =>
-      callConsoleGateway(
-        { region: eff.consoleRegion, site: eff.consoleSite, switchAgent: eff.consoleSwitchAgent },
-        this.settings.timeout,
-        { api, data },
-      );
-
-    const first = await fetchModelList(call, { pageNo: 1, pageSize: PAGE_SIZE });
-    const allRaw = [...first.models];
-
-    const totalPages = Math.ceil(first.total / PAGE_SIZE);
-    for (let page = 2; page <= totalPages; page++) {
-      const result = await fetchModelList(call, { pageNo: page, pageSize: PAGE_SIZE });
-      allRaw.push(...result.models);
-    }
+    const allRaw = await fetchModelListAll(anonymousConsoleCall(this.settings));
 
     return allRaw
       .map(toModelProfile)

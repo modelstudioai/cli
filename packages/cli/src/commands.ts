@@ -76,15 +76,20 @@ import {
   usageFreetier,
   usageStats,
   usageSummary,
+  usageTokenPlan,
+  usageCodingPlan,
   pipelineRun,
   pipelineValidate,
   advisorRecommend,
   modelList,
   workspaceList,
   quotaList,
-  quotaRequest,
+  quotaUpdate,
   quotaHistory,
   quotaCheck,
+  permissionList,
+  permissionGrant,
+  permissionRevoke,
   datasetUpload,
   datasetList,
   datasetGet,
@@ -228,15 +233,20 @@ export const commands: Record<string, AnyCommand> = {
   "usage freetier": usageFreetier,
   "usage stats": usageStats,
   "usage summary": usageSummary,
+  "usage token-plan": usageTokenPlan,
+  "usage coding-plan": usageCodingPlan,
   "pipeline run": pipelineRun,
   "pipeline validate": pipelineValidate,
   "advisor recommend": advisorRecommend,
   "model list": modelList,
   "workspace list": workspaceList,
   "quota list": quotaList,
-  "quota request": quotaRequest,
+  "quota update": quotaUpdate,
   "quota history": quotaHistory,
   "quota check": quotaCheck,
+  "permission list": permissionList,
+  "permission grant": permissionGrant,
+  "permission revoke": permissionRevoke,
   "dataset upload": datasetUpload,
   "dataset list": datasetList,
   "dataset get": datasetGet,
@@ -294,4 +304,14 @@ export const commands: Record<string, AnyCommand> = {
   "managed-agent session send": managedAgentSessionSend,
   "managed-agent session events": managedAgentSessionEvents,
   "managed-agent skill-list": managedAgentSkillList,
+};
+
+/**
+ * Runtime-only aliases for renamed commands: dispatched by the CLI (merged in
+ * main.ts) but kept out of the canonical map so generate-reference.ts only
+ * documents the canonical path.
+ */
+export const commandAliases: Record<string, AnyCommand> = {
+  // Pre-migration name of "quota update".
+  "quota request": quotaUpdate,
 };

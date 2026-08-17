@@ -1,3 +1,5 @@
+import type { ConsoleCall } from "./gateway.ts";
+
 export const MODEL_LIST_API =
   "zeldaHttp.dashscopeModel./zelda/api/v1/modelCenter/listFoundationModels";
 export const PREDICT_CONFIG_API = "zeldaEasy.bmp.modelPredictRpcService.getPredictParamConfig";
@@ -5,8 +7,6 @@ export const PREDICT_CONFIG_API = "zeldaEasy.bmp.modelPredictRpcService.getPredi
 // ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
-
-type ConsoleCall = (api: string, data: Record<string, unknown>) => Promise<unknown>;
 
 /** Unwrap the DataV2 double-envelope that console gateway returns. */
 export function unwrapResponse(result: Record<string, unknown>): Record<string, unknown> {
@@ -75,6 +75,36 @@ export async function fetchModelList(
   }
 
   return { total, models };
+}
+
+/** Page through every model-list page and return all raw model items. */
+export async function fetchModelListAll(
+  call: ConsoleCall,
+  params: Omit<ModelListParams, "pageNo"> = {},
+): Promise<Record<string, unknown>[]> {
+  const pageSize = params.pageSize ?? 50;
+  const first = await fetchModelList(call, { ...params, pageNo: 1, pageSize });
+  const allModels = [...first.models];
+  const totalPages = Math.ceil(first.total / pageSize);
+  for (let pageNo = 2; pageNo <= totalPages; pageNo++) {
+    const result = await fetchModelList(call, { ...params, pageNo, pageSize });
+    if (result.models.length === 0) break;
+    allModels.push(...result.models);
+  }
+  return allModels;
+}
+
+/**
+ * Look up a single model by exact id. The server's `name` filter is a
+ * substring match, so an exact `model` equality check narrows the result
+ * (e.g. avoids `qwen3-8b` matching `qwen3-8b-v2`).
+ */
+export async function findModelByName(
+  call: ConsoleCall,
+  modelName: string,
+): Promise<Record<string, unknown> | null> {
+  const result = await fetchModelList(call, { name: modelName, pageSize: 50 });
+  return result.models.find((item) => item.model === modelName) ?? null;
 }
 
 // ---------------------------------------------------------------------------

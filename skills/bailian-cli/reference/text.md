@@ -7,43 +7,48 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command        | Authentication | Description                                           |
-| -------------- | -------------- | ----------------------------------------------------- |
-| `bl text chat` | API Key        | Send a chat completion (OpenAI compatible, DashScope) |
+| Command        | Authentication | Description                                              |
+| -------------- | -------------- | -------------------------------------------------------- |
+| `bl text chat` | API Key        | Send a text model request (OpenAI compatible, DashScope) |
 
 ## Command details
 
 ### `bl text chat`
 
-| Field              | Value                                                 |
-| ------------------ | ----------------------------------------------------- |
-| **Name**           | `text chat`                                           |
-| **Description**    | Send a chat completion (OpenAI compatible, DashScope) |
-| **Authentication** | API Key                                               |
-| **Usage**          | `bl text chat --message <text> [flags]`               |
+| Field              | Value                                                    |
+| ------------------ | -------------------------------------------------------- |
+| **Name**           | `text chat`                                              |
+| **Description**    | Send a text model request (OpenAI compatible, DashScope) |
+| **Authentication** | API Key                                                  |
+| **Usage**          | `bl text chat --message <text> [flags]`                  |
 
 #### Flags
 
-| Flag                     | Type   | Required | Description                                                                 |
-| ------------------------ | ------ | -------- | --------------------------------------------------------------------------- |
-| `--model <model>`        | string | no       | Model ID (default: qwen3.8-max)                                             |
-| `--message <text>`       | array  | no       | Message text (repeatable, prefix role: to set role); or use --messages-file |
-| `--messages-file <path>` | string | no       | JSON file with messages array (use - for stdin)                             |
-| `--system <text>`        | string | no       | System prompt                                                               |
-| `--max-tokens <n>`       | number | no       | Maximum tokens to generate (default: 4096)                                  |
-| `--temperature <n>`      | number | no       | Sampling temperature (0.0, 2.0]                                             |
-| `--top-p <n>`            | number | no       | Nucleus sampling threshold                                                  |
-| `--stream`               | switch | no       | Stream response tokens (default: on in TTY)                                 |
-| `--tool <json-or-path>`  | array  | no       | Tool definition as JSON or file path (repeatable)                           |
-| `--enable-thinking`      | switch | no       | Enable thinking/reasoning mode (for qwen3/qwq models)                       |
-| `--thinking-budget <n>`  | number | no       | Max tokens for thinking (default: 4096)                                     |
-| `--api-key <key>`        | string | no       | API key                                                                     |
-| `--base-url <url>`       | string | no       | API base URL                                                                |
+| Flag                      | Type   | Required | Description                                                                 |
+| ------------------------- | ------ | -------- | --------------------------------------------------------------------------- |
+| `--api <chat\|responses>` | string | no       | API to call (default: chat)                                                 |
+| `--model <model>`         | string | no       | Model ID (default: qwen3.8-max)                                             |
+| `--message <text>`        | array  | no       | Message text (repeatable, prefix role: to set role); or use --messages-file |
+| `--messages-file <path>`  | string | no       | JSON file with messages array (use - for stdin)                             |
+| `--system <text>`         | string | no       | System prompt                                                               |
+| `--max-tokens <n>`        | number | no       | Maximum tokens to generate (default: 4096)                                  |
+| `--temperature <n>`       | number | no       | Sampling temperature (0.0, 2.0]                                             |
+| `--top-p <n>`             | number | no       | Nucleus sampling threshold                                                  |
+| `--stream`                | switch | no       | Stream response tokens (default: on in TTY)                                 |
+| `--tool <json-or-path>`   | array  | no       | Tool definition as JSON or file path (repeatable)                           |
+| `--enable-thinking`       | switch | no       | Enable thinking/reasoning mode (for qwen3/qwq models)                       |
+| `--thinking-budget <n>`   | number | no       | Max tokens for thinking (default: 4096)                                     |
+| `--api-key <key>`         | string | no       | API key                                                                     |
+| `--base-url <url>`        | string | no       | API base URL                                                                |
 
 #### Examples
 
 ```bash
 bl text chat --message "What is Qwen?"
+```
+
+```bash
+bl text chat --api responses --model qwen3.8-max --tool '{"type":"web_search"}' --message "Search for recent Alibaba Cloud news"
 ```
 
 ```bash

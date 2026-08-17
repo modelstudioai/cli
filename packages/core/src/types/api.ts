@@ -108,6 +108,44 @@ export interface StreamChunk {
   };
 }
 
+// ---- Responses (OpenAI Compatible) ----
+
+export interface ResponsesRequest {
+  model: string;
+  input: ChatMessage[];
+  max_output_tokens?: number;
+  temperature?: number;
+  top_p?: number;
+  stream?: boolean;
+  tools?: Array<Record<string, unknown>>;
+  enable_thinking?: boolean;
+}
+
+export interface ResponsesOutputContent {
+  type: string;
+  text?: string;
+}
+
+export interface ResponsesOutputItem {
+  type: string;
+  content?: ResponsesOutputContent[];
+  [key: string]: unknown;
+}
+
+export interface ResponsesResponse {
+  id: string;
+  object: "response";
+  status: string;
+  output: ResponsesOutputItem[];
+  [key: string]: unknown;
+}
+
+export interface ResponsesStreamEvent {
+  type: string;
+  delta?: string;
+  [key: string]: unknown;
+}
+
 // ---- Image (DashScope) ----
 
 export interface DashScopeImageRequest {

@@ -26,6 +26,12 @@ describe("mcp-activate-hint", () => {
       false,
     );
     expect(isMcpNotActivated(new Error("MCP不存在或未开通"))).toBe(false);
+    // Nested wrapper phrase must not match (anchored at start).
+    expect(
+      isMcpNotActivated(
+        new BailianError("MCP error (-32000): MCP request failed: 404 Not Found - 未开通"),
+      ),
+    ).toBe(false);
   });
 
   test("hint 含对应 server 的 MCP 广场深链", () => {
@@ -36,6 +42,36 @@ describe("mcp-activate-hint", () => {
 
   test("WebSearch hint 含 SSE 升级说明", () => {
     expect(mcpActivateHint("WebSearch")).toMatch(/SSE|Streamable HTTP/i);
+  });
+
+  test("WebSearch + 405 streamableHttp 补重开通 hint", () => {
+    const original = new BailianError(
+      "MCP request failed: 405 Method Not Allowed - current mcp not support streamableHttp",
+      ExitCode.GENERAL,
+    );
+    try {
+      rethrowWithMcpActivateHint(original, "WebSearch");
+      expect.unreachable("should throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(BailianError);
+      const wrapped = error as BailianError;
+      expect(wrapped.message).toBe(original.message);
+      expect(wrapped.hint).toMatch(/SSE|Streamable HTTP|Activate|re-activate/i);
+      expect(wrapped.hint).toContain(mcpMarketplaceDetailPage("WebSearch"));
+    }
+  });
+
+  test("非 WebSearch 的 405 streamableHttp 不补 hint（由 fallback 处理）", () => {
+    const original = new BailianError(
+      "MCP request failed: 405 Method Not Allowed - current mcp not support streamableHttp",
+      ExitCode.GENERAL,
+    );
+    try {
+      rethrowWithMcpActivateHint(original, "WebParser");
+      expect.unreachable("should throw");
+    } catch (error) {
+      expect(error).toBe(original);
+    }
   });
 
   test("rethrow 保留原 message，补 hint", () => {

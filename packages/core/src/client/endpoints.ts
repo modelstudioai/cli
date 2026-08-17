@@ -6,6 +6,11 @@ export function chatPath(): string {
   return "/compatible-mode/v1/chat/completions";
 }
 
+// ---- Responses (OpenAI Compatible) ----
+export function responsesPath(): string {
+  return "/compatible-mode/v1/responses";
+}
+
 // ---- Image Generation (DashScope) ----
 /** Async image API used by wan2.6-t2i / wan2.6-image (T2I) and similar message-format models. */
 export function imagePath(): string {
@@ -35,6 +40,16 @@ export function videoGeneratePath(): string {
 // ---- Async Task Query ----
 export function taskPath(taskId: string): string {
   return `/api/v1/tasks/${encodeURIComponent(taskId)}`;
+}
+
+// ---- Model Rate Limits (DashScope) ----
+export function modelsLimitsPath(): string {
+  return "/api/v1/models/limits";
+}
+
+// ---- Model Permissions (DashScope) ----
+export function modelsPermissionsPath(): string {
+  return "/api/v1/models/permissions";
 }
 
 // ---- Application (Agent / Workflow) ----

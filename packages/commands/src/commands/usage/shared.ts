@@ -1,5 +1,5 @@
 import {
-  fetchModelList,
+  fetchModelListAll,
   BailianError,
   ExitCode,
   unwrapResponse,
@@ -7,14 +7,11 @@ import {
   type Settings,
 } from "bailian-cli-core";
 import { ansi, renderBoxTable, displayWidth, padEnd } from "bailian-cli-runtime";
+import { formatNumber } from "../shared/format.ts";
 
 // ---------------------------------------------------------------------------
 // Common formatters
 // ---------------------------------------------------------------------------
-
-export function formatNumber(num: number): string {
-  return num.toLocaleString("en-US");
-}
 
 export function formatDate(ts: number): string {
   const date = new Date(ts);
@@ -22,6 +19,14 @@ export function formatDate(ts: number): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+export function formatDateTime(ts: number): string {
+  const date = new Date(ts);
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  const second = String(date.getSeconds()).padStart(2, "0");
+  return `${formatDate(ts)} ${hour}:${minute}:${second}`;
 }
 
 export function requireWorkspaceId(settings: Settings, binName: string): string {
@@ -79,17 +84,7 @@ export interface ModelInfo {
 }
 
 export async function fetchAllModels(client: Client): Promise<ModelInfo[]> {
-  const allModels: Record<string, unknown>[] = [];
-  let page = 1;
-  while (true) {
-    const result = await fetchModelList((api, data) => client.console(api, data), {
-      pageNo: page,
-      pageSize: 50,
-    });
-    allModels.push(...result.models);
-    if (allModels.length >= result.total) break;
-    page++;
-  }
+  const allModels = await fetchModelListAll((api, data) => client.console(api, data));
   return allModels
     .filter((item) => typeof item.model === "string" && item.model)
     .map((item) => ({

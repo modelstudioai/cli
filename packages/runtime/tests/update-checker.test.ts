@@ -1,12 +1,57 @@
-import { expect, test } from "vite-plus/test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
+
+const binaryUpdateMocks = vi.hoisted(() => ({
+  performBinaryUpdate: vi.fn(),
+}));
+
+const childProcessMocks = vi.hoisted(() => ({
+  execSync: vi.fn(),
+}));
+
+vi.mock("../src/utils/binary-update.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/utils/binary-update.ts")>();
+  return { ...actual, performBinaryUpdate: binaryUpdateMocks.performBinaryUpdate };
+});
+
+vi.mock("child_process", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("child_process")>();
+  return { ...actual, execSync: childProcessMocks.execSync };
+});
+
 import {
   compareVersion,
   isMajorUpgrade,
   isNewerVersion,
   isPrerelease,
   parseVersion,
+  performAutoUpdate,
   shouldAutoUpdate,
 } from "../src/utils/update-checker.ts";
+
+let configDir: string;
+let previousConfigDir: string | undefined;
+let previousInstallMethod: string | undefined;
+
+beforeEach(() => {
+  configDir = mkdtempSync(join(tmpdir(), "bl-auto-update-binary-"));
+  previousConfigDir = process.env.BAILIAN_CONFIG_DIR;
+  previousInstallMethod = process.env.BAILIAN_INSTALL_METHOD;
+  process.env.BAILIAN_CONFIG_DIR = configDir;
+  process.env.BAILIAN_INSTALL_METHOD = "binary";
+  binaryUpdateMocks.performBinaryUpdate.mockResolvedValue("2.0.0");
+});
+
+afterEach(() => {
+  if (previousConfigDir === undefined) delete process.env.BAILIAN_CONFIG_DIR;
+  else process.env.BAILIAN_CONFIG_DIR = previousConfigDir;
+  if (previousInstallMethod === undefined) delete process.env.BAILIAN_INSTALL_METHOD;
+  else process.env.BAILIAN_INSTALL_METHOD = previousInstallMethod;
+  rmSync(configDir, { recursive: true, force: true });
+  vi.clearAllMocks();
+});
 
 test("parseVersion strips pre-release and build metadata", () => {
   expect(parseVersion("1.4.2")).toEqual([1, 4, 2]);
@@ -123,4 +168,12 @@ test("shouldAutoUpdate only targets stable releases with a significant gap", () 
   expect(shouldAutoUpdate("2.0.0-rc.1", "1.4.2")).toBe(false);
   // Same core, release over its pre-release: notify only (no major gap).
   expect(shouldAutoUpdate("1.4.2", "1.4.2-beta.1")).toBe(false);
+});
+
+test("binary auto-update syncs bailian skills after the CLI update succeeds", async () => {
+  const updated = await performAutoUpdate("1.14.3", "2.0.0");
+
+  expect(updated).toBe(true);
+  expect(binaryUpdateMocks.performBinaryUpdate).toHaveBeenCalledWith("2.0.0");
+  expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill init", { stdio: "inherit" });
 });

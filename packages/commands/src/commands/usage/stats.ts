@@ -8,13 +8,13 @@ import {
   extractListData,
   extractOverviewData,
   formatDate,
-  formatNumber,
   pollTelemetryApi,
   requireWorkspaceId,
   resolveUsageMap,
   type ModelStatisticItem,
   type OverviewStatistic,
 } from "./shared.ts";
+import { formatNumber } from "../shared/format.ts";
 
 interface UsageLabel {
   en: string;

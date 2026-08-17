@@ -26,15 +26,15 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag                     | Type   | Required | Description                                                                              |
-| ------------------------ | ------ | -------- | ---------------------------------------------------------------------------------------- |
-| `--target <server.tool>` | string | yes      | Server code and tool name joined by a dot, e.g. market-cmapi00073529.SmartStockSelection |
-| `--arg <kv>`             | array  | no       | Tool argument (repeatable). Values parsed as JSON if possible, else string.              |
-| `--json <obj>`           | string | no       | Full arguments object as JSON; merged with --arg (arg wins).                             |
-| `--query <text>`         | string | no       | Shortcut for --arg query=<text> (mirrors many DashScope MCP tools).                      |
-| `--url <url>`            | string | no       | Override the MCP endpoint URL (for non-Bailian servers)                                  |
-| `--api-key <key>`        | string | no       | API key                                                                                  |
-| `--base-url <url>`       | string | no       | API base URL                                                                             |
+| Flag                     | Type   | Required | Description                                                                                                 |
+| ------------------------ | ------ | -------- | ----------------------------------------------------------------------------------------------------------- |
+| `--target <server.tool>` | string | yes      | Server code and tool name joined by a dot, e.g. market-cmapi00073529.SmartStockSelection                    |
+| `--arg <kv>`             | array  | no       | Tool argument (repeatable). Values parsed as JSON if possible, else string.                                 |
+| `--json <obj>`           | string | no       | Full arguments object as JSON; merged with --arg (arg wins).                                                |
+| `--query <text>`         | string | no       | Shortcut for --arg query=<text> (mirrors many DashScope MCP tools).                                         |
+| `--url <url>`            | string | no       | Override the MCP endpoint URL (non-Bailian). Tries Streamable HTTP first, then classic SSE on the same URL. |
+| `--api-key <key>`        | string | no       | API key                                                                                                     |
+| `--base-url <url>`       | string | no       | API base URL                                                                                                |
 
 #### Examples
 
@@ -97,12 +97,12 @@ bl mcp list --output json
 
 #### Flags
 
-| Flag               | Type   | Required | Description                                             |
-| ------------------ | ------ | -------- | ------------------------------------------------------- |
-| `--server <code>`  | string | yes      | Server code from `mcp list` (e.g. market-cmapi00073529) |
-| `--url <url>`      | string | no       | Override the MCP endpoint URL (for non-Bailian servers) |
-| `--api-key <key>`  | string | no       | API key                                                 |
-| `--base-url <url>` | string | no       | API base URL                                            |
+| Flag               | Type   | Required | Description                                                                                                 |
+| ------------------ | ------ | -------- | ----------------------------------------------------------------------------------------------------------- |
+| `--server <code>`  | string | yes      | Server code from `mcp list` (e.g. market-cmapi00073529)                                                     |
+| `--url <url>`      | string | no       | Override the MCP endpoint URL (non-Bailian). Tries Streamable HTTP first, then classic SSE on the same URL. |
+| `--api-key <key>`  | string | no       | API key                                                                                                     |
+| `--base-url <url>` | string | no       | API base URL                                                                                                |
 
 #### Examples
 

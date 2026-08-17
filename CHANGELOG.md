@@ -6,6 +6,56 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.15.1] - 2026-08-17
+
+### Added
+
+- **Model permission management** — `bl permission list` shows per-model inference / fine-tune / deploy grants; `bl permission grant` and `bl permission revoke` manage them, with `--all` to one-key grant inference for every model in the workspace (including future ones).
+
+### Changed
+
+- **`bl quota request` renamed to `bl quota update`** — set per-model QPM/TPM via `--rpm`/`--tpm` and clear custom limits with the new `--delete`; omitted fields keep their current values, and the old `quota request` path keeps working as an alias.
+- **`bl quota list` reworked** — now reads the model-limits API and shows per-model and workspace-level request/usage limits plus async queue/concurrency limits in a single table.
+- **`bl model list` no longer requires Console login** — the model catalog and `--enrich` parameter-schema endpoints are public.
+- **`bl skill init` output simplified** — per-skill status is now `success`/`failed` (previously `installed`) with an aggregate `success`/`partial`/`failed` result; the `publishedAt` and `agents` fields were removed.
+
+## [1.15.0] - 2026-08-14
+
+### Added
+
+- **Responses API for `bl text chat`** — Use `--api responses` to call the DashScope Responses API with streaming, tool definitions, and structured JSON output; Chat Completions remains the default.
+- **Subscription plan usage views** — `bl usage token-plan` displays 5-hour and weekly quota usage, while `bl usage coding-plan` displays 5-hour, weekly, and monthly usage; both support text and JSON output.
+- **Authentication requirements in command help** — Help output now states whether a command requires an API Key, Console login, or Alibaba Cloud OpenAPI credentials.
+
+### Changed
+
+- **Broader speech-recognition model support** — `bl speech recognize` now routes asynchronous file-transcription and synchronous Flash ASR models to the appropriate DashScope APIs, with clear guidance for unsupported realtime models.
+- **MCP transport compatibility** — MCP commands now fall back from Streamable HTTP to classic SSE for compatible Bailian and custom endpoints.
+
+### Fixed
+
+- Binary updates now refresh installed Agent Skills after a successful CLI upgrade.
+- Fixed unavailable Token Plan quota values and missing reset times.
+- Fixed Qwen3 file-transcription result handling so waiting mode and `--out` work correctly.
+- Fixed MCP SSE chunk parsing, header timeouts, abort cleanup, and fallback status matching.
+- Network failures in JSON output now preserve the errno value in `cause.code`.
+
+## [1.14.3] - 2026-08-12
+
+### Fixed
+
+- **Free-tier quota compatibility** — `bl usage free` and `bl usage freetier` now use the current Bailian Commerce console APIs for quota queries, activation, and deactivation, with consistent asynchronous-task polling.
+
+## [1.14.2] - 2026-08-07
+
+### Added
+
+- **`bl skill init`** — Install all first-party `bailian-*` skills into detected local AI Agents in one step.
+
+### Changed
+
+- **Skill command interface** — Skill management commands now default to JSON output for Agent workflows; `bl skill add` and `bl skill update` use explicit `--all` and `--name` selectors.
+
 ## [1.14.1] - 2026-08-05
 
 ### Added

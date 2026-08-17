@@ -58,9 +58,28 @@ export function effectiveConsoleGatewayConfig(
 }
 
 export interface ConsoleGatewayRequest {
-  /** Console API name, e.g. zeldaEasy.bailian-commerce.freeTrial.queryFreeTierQuota */
+  /** Console API name, e.g. zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota */
   api: string;
   data: Record<string, unknown>;
+}
+
+/** Console-call signature shared by catalog helpers (`client.console` or an anonymous call). */
+export type ConsoleCall = (api: string, data: Record<string, unknown>) => Promise<unknown>;
+
+/**
+ * Build an anonymous (token-less) gateway caller for public catalog APIs such
+ * as `listFoundationModels` — no console login required.
+ */
+export function anonymousConsoleCall(
+  config: Pick<Settings, "consoleRegion" | "consoleSite" | "consoleSwitchAgent" | "timeout">,
+): ConsoleCall {
+  const eff = effectiveConsoleGatewayConfig(config);
+  return (api, data) =>
+    callConsoleGateway(
+      { region: eff.consoleRegion, site: eff.consoleSite, switchAgent: eff.consoleSwitchAgent },
+      config.timeout,
+      { api, data },
+    );
 }
 
 function buildGatewayParams(

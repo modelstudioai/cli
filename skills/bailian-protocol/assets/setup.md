@@ -11,16 +11,37 @@ inspect config keys. Day-to-day command routing lives in the business skills
 
 ## Install
 
-```bash
-npm install -g bailian-cli
-# Recommended: install the full bailian-* skill family (includes bailian-protocol)
-npx skills add modelstudioai/cli --all -g
+**prefer npm** (Node.js **≥ 18.17.0**); use the binary installer only when Node/npm is unavailable.
 
-# Advanced / not recommended: skills CLI does not auto-pull bailian-protocol
-# npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-gen
-# npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-finetune
-# npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-managed-agent
-# npx skills add modelstudioai/cli -g -s bailian-protocol -s bailian-cli
+### 1. Recommended: npm
+
+```bash
+# node -v ≥ 18.17.0; global install via npm only (do not use pnpm/yarn)
+npm install -g bailian-cli
+bl skill init
+```
+
+### 2. Fallback: binary (no Node)
+
+When there is no usable Node/npm, or Node is too old for the npm path:
+
+```bash
+curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
+# The script runs bl skill init after installing the CLI; if that fails, run it manually
+```
+
+Windows PowerShell: `irm https://bailian.aliyun.com/cli/install.ps1 | iex`
+
+### Skills
+
+- **Supported:** `bl skill init` (installs every `bailian-*`, including `bailian-protocol`)
+- **Advanced / subset** (include protocol when needed):
+
+```bash
+# bl skill add --name bailian-protocol,bailian-gen
+# bl skill add --name bailian-protocol,bailian-finetune
+# bl skill add --name bailian-protocol,bailian-managed-agent
+# bl skill add --name bailian-protocol,bailian-cli
 ```
 
 Verify: `bl --version` (prints `bl X.Y.Z`).
