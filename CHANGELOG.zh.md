@@ -6,6 +6,19 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.15.1] - 2026-08-17
+
+### 新增
+
+- **模型权限管理** —— `bl permission list` 查看各模型的推理 / 微调 / 部署授权；`bl permission grant` 与 `bl permission revoke` 负责授予和回收，支持 `--all` 一键为工作区全部模型（含后续新增模型）开启推理授权。
+
+### 变更
+
+- **`bl quota request` 更名为 `bl quota update`** —— 通过 `--rpm`/`--tpm` 设置单模型 QPM/TPM，新增 `--delete` 一键清除自定义限制；未指定的字段保持当前值，旧命令 `quota request` 仍作为别名可用。
+- **`bl quota list` 重构** —— 改从模型限制接口读取数据，单表展示模型级与工作区级的请求/用量限制及异步队列/并发限制。
+- **`bl model list` 不再需要控制台登录** —— 模型目录与 `--enrich` 参数结构端点均为公开接口。
+- **`bl skill init` 输出精简** —— 单技能状态改为 `success`/`failed`（原为 `installed`），新增 `success`/`partial`/`failed` 汇总结果；移除 `publishedAt` 与 `agents` 字段。
+
 ## [1.15.0] - 2026-08-14
 
 ### 新增
