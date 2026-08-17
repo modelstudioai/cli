@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat, getDeployment, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { defineCommand, getDeployment, type FlagsDef } from "bailian-cli-core";
+import { emitResult } from "bailian-cli-runtime";
 
 const GET_FLAGS = {
   deployedModel: {
@@ -22,10 +22,9 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const deployedModel = flags.deployedModel;
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult({ action: "deploy.get", deployed_model: deployedModel }, format);
+      emitResult({ action: "deploy.get", deployed_model: deployedModel }, "json");
       return;
     }
 
@@ -33,7 +32,7 @@ export default defineCommand({
     const deployment = response.output ?? response.data;
 
     if (!deployment) {
-      emitBare(`No data returned for ${deployedModel}`);
+      emitResult({ deployed_model: deployedModel, request_id: response.request_id }, "json");
       return;
     }
 
@@ -57,18 +56,6 @@ export default defineCommand({
     if (deployment.gmt_create) item.created_at = deployment.gmt_create;
     if (deployment.gmt_modified) item.updated_at = deployment.gmt_modified;
 
-    if (format === "json") {
-      emitResult({ ...item, request_id: response.request_id }, format);
-      return;
-    }
-
-    // text / quiet — fixed-width label column for alignment
-    const label = (key: string) => `${key}:`.padEnd(18);
-    for (const [key, value] of Object.entries(item)) {
-      if (value === "" || value === undefined) continue;
-      const display = typeof value === "string" ? value : JSON.stringify(value);
-      emitBare(`${label(key)}${display}`);
-    }
-    emitRequestId(response.request_id, settings.quiet);
+    emitResult({ ...item, request_id: response.request_id }, "json");
   },
 });

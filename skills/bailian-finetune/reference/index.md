@@ -22,6 +22,8 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl deploy image create`   | API Key        | Create an image generation model deployment                                                                                     | [deploy.md](deploy.md)     |
 | `bl deploy list`           | API Key        | List model deployments                                                                                                          | [deploy.md](deploy.md)     |
 | `bl deploy models`         | API Key        | List models available for deployment                                                                                            | [deploy.md](deploy.md)     |
+| `bl deploy pause`          | Console        | Pause a running model deployment (stops billing for mu/ptu)                                                                     | [deploy.md](deploy.md)     |
+| `bl deploy resume`         | Console        | Resume a paused model deployment (brings service back online)                                                                   | [deploy.md](deploy.md)     |
 | `bl deploy scale`          | API Key        | Scale a deployment's capacity                                                                                                   | [deploy.md](deploy.md)     |
 | `bl deploy text create`    | API Key        | Create a text model deployment                                                                                                  | [deploy.md](deploy.md)     |
 | `bl deploy update`         | API Key        | Update a deployment's rate limits (rpm_limit / tpm_limit)                                                                       | [deploy.md](deploy.md)     |
@@ -35,16 +37,18 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl finetune image create` | API Key        | Create an image generation model fine-tune job (sft-lora)                                                                       | [finetune.md](finetune.md) |
 | `bl finetune list`         | API Key        | List fine-tune jobs                                                                                                             | [finetune.md](finetune.md) |
 | `bl finetune logs`         | API Key        | Fetch training logs for a fine-tune job                                                                                         | [finetune.md](finetune.md) |
+| `bl finetune price`        | Console        | Estimate the training cost for a fine-tune job (token billing)                                                                  | [finetune.md](finetune.md) |
 | `bl finetune text create`  | API Key        | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                   | [finetune.md](finetune.md) |
+| `bl finetune video create` | API Key        | Create a video generation model fine-tune job (Wan i2v/kf2v, efficient_sft)                                                     | [finetune.md](finetune.md) |
 | `bl finetune watch`        | API Key        | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                      | [finetune.md](finetune.md) |
 
 ## By group
 
-| Group      | Commands                                                                                                                                 | Reference                  |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `dataset`  | `delete`, `get`, `list`, `upload`, `validate`                                                                                            | [dataset.md](dataset.md)   |
-| `deploy`   | `audio create`, `delete`, `get`, `image create`, `list`, `models`, `scale`, `text create`, `update`                                      | [deploy.md](deploy.md)     |
-| `finetune` | `audio create`, `cancel`, `capability`, `checkpoints`, `delete`, `export`, `get`, `image create`, `list`, `logs`, `text create`, `watch` | [finetune.md](finetune.md) |
+| Group      | Commands                                                                                                                                                          | Reference                  |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `dataset`  | `delete`, `get`, `list`, `upload`, `validate`                                                                                                                     | [dataset.md](dataset.md)   |
+| `deploy`   | `audio create`, `delete`, `get`, `image create`, `list`, `models`, `pause`, `resume`, `scale`, `text create`, `update`                                            | [deploy.md](deploy.md)     |
+| `finetune` | `audio create`, `cancel`, `capability`, `checkpoints`, `delete`, `export`, `get`, `image create`, `list`, `logs`, `price`, `text create`, `video create`, `watch` | [finetune.md](finetune.md) |
 
 ## Global flags
 

@@ -206,6 +206,8 @@ export interface DashScopeVideoRequest {
     prompt: string;
     negative_prompt?: string;
     img_url?: string;
+    first_frame_url?: string;
+    last_frame_url?: string;
     media?: Array<{
       type: "image" | "video" | "first_frame" | "last_frame" | "driving_audio" | "first_clip";
       url: string;

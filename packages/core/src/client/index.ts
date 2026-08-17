@@ -22,6 +22,7 @@ export {
   taskPath,
   userProfilePath,
   videoGeneratePath,
+  image2videoPath,
 } from "./endpoints.ts";
 export {
   isLegacyImage2ImageModel,

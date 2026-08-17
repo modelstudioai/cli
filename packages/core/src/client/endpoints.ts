@@ -37,6 +37,11 @@ export function videoGeneratePath(): string {
   return "/api/v1/services/aigc/video-generation/video-synthesis";
 }
 
+/** POST /api/v1/services/aigc/image2video/video-synthesis — kf2v (first+last frame). */
+export function image2videoPath(): string {
+  return "/api/v1/services/aigc/image2video/video-synthesis";
+}
+
 // ---- Async Task Query ----
 export function taskPath(taskId: string): string {
   return `/api/v1/tasks/${encodeURIComponent(taskId)}`;

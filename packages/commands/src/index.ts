@@ -71,6 +71,7 @@ export {
   finetuneTextCreate,
   finetuneAudioCreate,
   finetuneImageCreate,
+  finetuneVideoCreate,
 } from "./commands/finetune/create.ts";
 export { default as finetuneList } from "./commands/finetune/list.ts";
 export { default as finetuneGet } from "./commands/finetune/get.ts";
@@ -81,6 +82,7 @@ export { default as finetuneCheckpoints } from "./commands/finetune/checkpoints.
 export { default as finetuneExport } from "./commands/finetune/export.ts";
 export { default as finetuneWatch } from "./commands/finetune/watch.ts";
 export { default as finetuneCapability } from "./commands/finetune/capability.ts";
+export { default as finetunePrice } from "./commands/finetune/price.ts";
 export {
   deployTextCreate,
   deployAudioCreate,
@@ -92,6 +94,8 @@ export { default as deployModels } from "./commands/deploy/models.ts";
 export { default as deployScale } from "./commands/deploy/scale.ts";
 export { default as deployUpdate } from "./commands/deploy/update.ts";
 export { default as deployDelete } from "./commands/deploy/delete.ts";
+export { default as deployPause } from "./commands/deploy/pause.ts";
+export { default as deployResume } from "./commands/deploy/resume.ts";
 export { default as tokenPlanListSeats } from "./commands/token-plan/list-seats.ts";
 export { default as tokenPlanCreateKey } from "./commands/token-plan/create-key.ts";
 export { default as tokenPlanAssignSeats } from "./commands/token-plan/assign-seats.ts";

@@ -145,6 +145,7 @@ export const FINETUNE_ROUTES: E2eRouteExports = {
   "finetune text create": "finetuneTextCreate",
   "finetune audio create": "finetuneAudioCreate",
   "finetune image create": "finetuneImageCreate",
+  "finetune video create": "finetuneVideoCreate",
   "finetune list": "finetuneList",
   "finetune get": "finetuneGet",
   "finetune cancel": "finetuneCancel",

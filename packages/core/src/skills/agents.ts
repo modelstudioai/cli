@@ -285,6 +285,21 @@ function isRecordedCopy(linkPath: string, recordedLinks: string[]): boolean {
   }
 }
 
+/**
+ * Whether linkPath is a real directory containing a SKILL.md — indicating it is a
+ * skill artifact installed by another tool (e.g. `npx skills add`) or an older
+ * version predating bl's symlink management. These are safe to replace: they are
+ * not arbitrary user content but the same kind of artifact we manage.
+ */
+function isForeignSkillDir(linkPath: string): boolean {
+  try {
+    if (!lstatSync(linkPath).isDirectory()) return false;
+    return existsSync(join(linkPath, "SKILL.md"));
+  } catch {
+    return false;
+  }
+}
+
 export interface LinkResult {
   agent: string;
   path: string;
@@ -325,6 +340,11 @@ export function linkSkillToAgents(
         } else if (isRecordedCopy(linkPath, recordedLinks)) {
           // Copy-fallback artifact from a previous install → replace so updates
           // reach agents that have no symlink permission
+          rmSync(linkPath, { recursive: true, force: true });
+        } else if (isForeignSkillDir(linkPath)) {
+          // A real directory containing SKILL.md — a skill installed by another
+          // tool (e.g. `npx skills add`) or predating bl's symlink management.
+          // Replace with our symlink so future updates propagate automatically.
           rmSync(linkPath, { recursive: true, force: true });
         } else {
           results.push({

@@ -12,18 +12,24 @@ import { ExitCode } from "../../errors/codes.ts";
 import type { DatasetSchema, ValidationIssue, ValidationStats } from "./types.ts";
 
 /**
- * The platform caps dataset uploads at 300MB per file. `bl dataset upload`
- * enforces this client-side so users learn early. Update if the platform
- * raises the cap or differentiates per-purpose limits.
+ * The platform caps SFT/DPO text dataset uploads at 200MB per file.
+ * `bl dataset upload` enforces this client-side so users learn early.
+ * CPT uses 300MB (see MAX_CPT_BYTES); API general upload is also 300MB.
  */
-export const MAX_DATASET_BYTES = 300 * 1024 * 1024;
+export const MAX_DATASET_BYTES = 200 * 1024 * 1024;
 
 /**
- * Image / video ZIP size cap — 1 GB per the platform docs (vs 300 MB for
- * text / audio). Used by `bl dataset upload` for media schemas and by the
- * `sft-lora` training profile for image / video validation.
+ * CPT text dataset size cap — 300 MB per the platform docs.
+ * CPT requires at least 50M tokens; larger files are expected.
  */
-export const MAX_MEDIA_ZIP_BYTES = 1024 * 1024 * 1024;
+export const MAX_CPT_BYTES = 300 * 1024 * 1024;
+
+/**
+ * Image / video ZIP size cap — 2 GB per the platform docs. Used by
+ * `bl dataset upload` for media schemas and by the `sft-lora` training
+ * profile for image / video validation.
+ */
+export const MAX_MEDIA_ZIP_BYTES = 2 * 1024 * 1024 * 1024;
 
 export interface PreflightResult {
   bytes: number;
