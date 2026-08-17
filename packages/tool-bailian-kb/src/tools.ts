@@ -1,9 +1,10 @@
 /**
- * The two model-facing knowledge tools (kb_search, kb_chat). agent_id stays optional in the schema
- * regardless of deployment: the default services (patch config or credential)
- * can change at runtime through the credentials domain, so the fallback runs
- * per call and a missing default surfaces as an executable error instead of a
- * load-time schema difference.
+ * The two model-facing knowledge tools (kb_search, kb_chat). agent_id is REQUIRED in the schema:
+ * a model cannot know from the tool spec whether this deployment configures a default service, and a
+ * missing default previously only surfaced at call time, forcing a wasted round-trip. The per-call
+ * fallback to a configured default (settings/config or credential) is retained as defense-in-depth,
+ * but note defineTool validates args against the schema before execute, so through that entry point
+ * the fallback is inert; the model-facing contract is explicit.
  */
 
 import { defineTool } from '@deepseek-ai/dsh-tools'
@@ -45,13 +46,22 @@ export function createKbTools(deps: KbToolDeps) {
   const { client, resolveDefaultRetrieveAgentId, resolveDefaultChatAgentId } = deps
   const agentIdParam = {
     type: 'string' as const,
-    description: 'Retrieval/Q&A service id; omit to use the default service when this deployment configures one (find ids via `kscli service list`).',
+    required: true as const,
+    description: 'Retrieval/Q&A service id. REQUIRED: the schema cannot know whether this deployment '
+      + 'configures a default service, so always pass one. Find ids via '
+      + '`kscli service list --scene search --workspace-id <workspaceId>` (workspaceId resolves '
+      + 'automatically from DSH settings: bailian-kb.workspaceId in ~/.dsh/settings.yaml).',
   }
   const resolveRetrieveAgentId = async (supplied: string | undefined): Promise<string> => {
     if (supplied !== undefined) return supplied
     const defaultId = resolveDefaultRetrieveAgentId === undefined ? undefined : await resolveDefaultRetrieveAgentId()
     if (defaultId === undefined) {
-      throw new Error('agent_id is required: no default retrieval service is configured; discover services with `kscli service list`')
+      throw new Error(
+        'agent_id is required: no default retrieval service is configured. Pass agent_id explicitly '
+        + '(find ids: `kscli service list --scene search --workspace-id <workspaceId>`), or configure a '
+        + 'default: bailian-kb.defaultRetrieveAgentId in ~/.dsh/settings.yaml or '
+        + 'BAILIAN_DEFAULT_RETRIEVE_AGENT_ID in ~/.dsh/.credentials.yaml.',
+      )
     }
     return defaultId
   }
@@ -59,7 +69,12 @@ export function createKbTools(deps: KbToolDeps) {
     if (supplied !== undefined) return supplied
     const defaultId = resolveDefaultChatAgentId === undefined ? undefined : await resolveDefaultChatAgentId()
     if (defaultId === undefined) {
-      throw new Error('agent_id is required: no default chat service is configured; discover services with `kscli service list`')
+      throw new Error(
+        'agent_id is required: no default chat service is configured. Pass agent_id explicitly '
+        + '(find ids: `kscli service list --scene chat --workspace-id <workspaceId>`), or configure a '
+        + 'default: bailian-kb.defaultChatAgentId in ~/.dsh/settings.yaml or '
+        + 'BAILIAN_DEFAULT_CHAT_AGENT_ID in ~/.dsh/.credentials.yaml.',
+      )
     }
     return defaultId
   }
@@ -71,7 +86,10 @@ export function createKbTools(deps: KbToolDeps) {
       + 'references for you to verify, cite, or combine with other context. Retrieval scope and strategy '
       + '(multi-KB weighting, routing, reranking) come from the service configuration. '
       + 'top_k caps how many chunks return (client-side cut of the score-ranked results). '
-      + 'Use kb_chat instead when the user question can be answered by the knowledge base alone.',
+      + 'Use kb_chat instead when the user question can be answered by the knowledge base alone. '
+      + 'Credentials and workspace resolve automatically from DSH config '
+      + '(bailian-kb in ~/.dsh/settings.yaml, DASHSCOPE_API_KEY in ~/.dsh/.credentials.yaml) — '
+      + 'never read or pass them yourself. agent_id is REQUIRED (see its parameter description).',
     parameters: {
       query: { type: 'string', required: true, description: 'Search query text.' },
       agent_id: agentIdParam,
@@ -139,7 +157,10 @@ export function createKbTools(deps: KbToolDeps) {
       + '(multi-round retrieval + reranking + grounded generation). For knowledge Q&A this typically outperforms '
       + 'searching and synthesizing yourself when the question can be answered by the knowledge base alone; '
       + 'use kb_search instead when you need raw chunks to verify, cite, or combine with other work. '
-      + 'The pipeline runs an internal analysis/retrieval loop and may take a few minutes.',
+      + 'The pipeline runs an internal analysis/retrieval loop and may take a few minutes. '
+      + 'Credentials and workspace resolve automatically from DSH config '
+      + '(bailian-kb in ~/.dsh/settings.yaml, DASHSCOPE_API_KEY in ~/.dsh/.credentials.yaml) — '
+      + 'never read or pass them yourself. agent_id is REQUIRED (see its parameter description).',
     parameters: {
       message: { type: 'string', required: true, description: 'The question to ask.' },
       agent_id: agentIdParam,

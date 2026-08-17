@@ -21,7 +21,9 @@ export function registerSkill(ctx: Context): void {
       name: 'bailian-kb-management',
       description:
         'Manage Bailian knowledge bases with the kscli CLI: create/update KBs, upload documents, deploy '
-        + 'retrieval services, and maintain chunks. Retrieval itself uses the native kb_search/kb_chat tools.',
+        + 'retrieval services, and maintain chunks. Retrieval itself uses the native kb_search/kb_chat tools. '
+        + 'Credentials and workspace for kb_search/kb_chat resolve automatically from DSH config '
+        + '(bailian-kb in ~/.dsh/settings.yaml, DASHSCOPE_API_KEY in ~/.dsh/.credentials.yaml).',
       content,
       source: 'bundled',
       resourceBase: { kind: 'directory', path: SKILL_DIR },

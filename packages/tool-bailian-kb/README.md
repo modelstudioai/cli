@@ -22,8 +22,8 @@
 |---|---|---|---|---|
 | `DASHSCOPE_API_KEY` | —（无 settings 面） | —（无 config 面） | ✅ | 工具调用报错并引导配置 |
 | `BAILIAN_WORKSPACE_ID` | ✅ `workspaceId` | ✅ `workspaceId` | ✅ | 工具调用报错并引导配置 |
-| `BAILIAN_DEFAULT_RETRIEVE_AGENT_ID` | ✅ `defaultRetrieveAgentId` | ✅ `defaultRetrieveAgentId` | ✅ | `kb_search` 的 `agent_id` 参数变必填 |
-| `BAILIAN_DEFAULT_CHAT_AGENT_ID` | ✅ `defaultChatAgentId` | ✅ `defaultChatAgentId` | ✅ | `kb_chat` 的 `agent_id` 参数变必填 |
+| `BAILIAN_DEFAULT_RETRIEVE_AGENT_ID` | ✅ `defaultRetrieveAgentId` | ✅ `defaultRetrieveAgentId` | ✅ | `kb_search` 无 `agent_id` 的**程序化**调用报错并附配置指引（模型侧 schema 恒必填） |
+| `BAILIAN_DEFAULT_CHAT_AGENT_ID` | ✅ `defaultChatAgentId` | ✅ `defaultChatAgentId` | ✅ | `kb_chat` 无 `agent_id` 的**程序化**调用报错并附配置指引（模型侧 schema 恒必填） |
 
 行为参数（`endpointHost`/`agentVersion`/`chatTimeoutMs`）在 config/settings 层（设置文档可改，实时生效）。
 
@@ -59,19 +59,19 @@ Config 同时注册为 `bailian-kb` settings namespace（`installSettingsSection
 |---|---|---|---|
 | `workspaceId` | string? | — | 百炼工作空间 id；API host 为 workspace 子域名 `https://<workspaceId>.<endpointHost>`。未设置时每次调用回退 `BAILIAN_WORKSPACE_ID` credential |
 | `endpointHost` | string | `cn-beijing.maas.aliyuncs.com` | host 后缀，其他 region/私有化时替换 |
-| `defaultRetrieveAgentId` | string? | — | 默认检索服务；`kb_search` 的 `agent_id` 参数 schema 恒可选，默认值每次调用运行时解析（settings/config → credential） |
-| `defaultChatAgentId` | string? | — | 默认对话服务；`kb_chat` 的 `agent_id` 参数 schema 恒可选，默认值每次调用运行时解析（settings/config → credential） |
+| `defaultRetrieveAgentId` | string? | — | 默认检索服务；`kb_search` 的 `agent_id` 参数 schema **恒必填**（模型永远显式传），此默认仅作用于省略 `agent_id` 的程序化调用，每次调用运行时解析（settings/config → credential） |
+| `defaultChatAgentId` | string? | — | 默认对话服务；`kb_chat` 的 `agent_id` 参数 schema **恒必填**（模型永远显式传），此默认仅作用于省略 `agent_id` 的程序化调用，每次调用运行时解析（settings/config → credential） |
 | `agentVersion` | string? | — | `beta`（草稿调试）或已发布版本号；不暴露给模型 |
 | `chatTimeoutMs` | number | 300000 | kb_chat 超时；服务端是分钟级 agentic loop |
 
-凭证与回退链：`DASHSCOPE_API_KEY` 只走 `ctx.credentials` 引用（write-only，每次调用重新解析，热更换生效）；`workspaceId`/`defaultRetrieveAgentId`/`defaultChatAgentId` 先取 settings 解析值（用户层 > entry config），缺失时回退同名 credential（`BAILIAN_WORKSPACE_ID`/`BAILIAN_DEFAULT_RETRIEVE_AGENT_ID`/`BAILIAN_DEFAULT_CHAT_AGENT_ID`），都没有时报错并附配置指引。
+凭证与回退链：`DASHSCOPE_API_KEY` 只走 `ctx.credentials` 引用（write-only，每次调用重新解析，热更换生效）；`workspaceId`/`defaultRetrieveAgentId`/`defaultChatAgentId` 先取 settings 解析值（用户层 > entry config），缺失时回退同名 credential（`BAILIAN_WORKSPACE_ID`/`BAILIAN_DEFAULT_RETRIEVE_AGENT_ID`/`BAILIAN_DEFAULT_CHAT_AGENT_ID`），都没有时报错并附配置指引。注意：`agent_id` 在两个工具的 schema 中恒必填，模型路径不会触发默认服务回退；回退保留是为程序化调用与 credential 热切换。
 
 ## 工具
 
 | 工具 | 参数 | 返回 |
 |---|---|---|
-| `kb_search` | `query`、`agent_id`（见 defaultRetrieveAgentId）、`top_k?`（默认 5，**客户端截断**——服务端无此参数）、`images?` | chunks（text/score/来源）+ total |
-| `kb_chat` | `message`、`agent_id`（见 defaultChatAgentId） | 完整答案（内部消费 SSE 流缓冲返回）+ request_id |
+| `kb_search` | `query`、`agent_id`（**必填**；程序化省略时回退 defaultRetrieveAgentId）、`top_k?`（默认 5，**客户端截断**——服务端无此参数）、`images?` | chunks（text/score/来源）+ total |
+| `kb_chat` | `message`、`agent_id`（**必填**；程序化省略时回退 defaultChatAgentId） | 完整答案（内部消费 SSE 流缓冲返回）+ request_id |
 
 服务发现（`kb_service_list` 已移除）：通过 `kscli service list` CLI 命令查询可用检索/对话服务及其 agent_id。
 

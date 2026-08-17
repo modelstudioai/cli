@@ -36,44 +36,41 @@ describe('createKbTools', () => {
     expect(body.agent_id).toBe('aid-1')
   })
 
-  it('agent_id stays optional in the schema regardless of a configured default', () => {
-    const withoutDefault = toolsWith(vi.fn()).byName.kb_search!
-    const withDefault = toolsWith(vi.fn(), undefined, async () => 'aid-fixed').byName.kb_search!
+  it('agent_id is required in the schema for both tools', () => {
+    const { byName } = toolsWith(vi.fn())
     // defineTool compiles the spec into JSON Schema: requiredness lives in the top-level `required` array.
     const requiredList = (tool: { parameters: Record<string, unknown> }) =>
       (tool.parameters.required ?? []) as string[]
-    // The default can arrive or leave at runtime via the credentials domain, so
-    // the schema cannot promise requiredness either way.
-    expect(requiredList(withoutDefault)).not.toContain('agent_id')
-    expect(requiredList(withDefault)).not.toContain('agent_id')
+    expect(requiredList(byName.kb_search!)).toContain('agent_id')
+    expect(requiredList(byName.kb_chat!)).toContain('agent_id')
   })
 
-  it('kb_search falls back to the per-call default retrieve resolver as an explicit resolve step', async () => {
+  it('a missing agent_id is rejected by schema validation before execute (even with a default resolver)', async () => {
     const postJson = vi.fn(async (_path: string, _body: unknown) => searchResponse)
-    const { byName } = toolsWith(postJson, undefined, async () => 'aid-fixed')
-    await byName.kb_search!.execute({ query: 'q' }, EXEC)
-    expect((postJson.mock.calls[0]![1] as Record<string, unknown>).agent_id).toBe('aid-fixed')
-  })
-
-  it('a missing agent_id without any default resolves to executable discovery guidance', async () => {
-    const postJson = vi.fn(async (_path: string, _body: unknown) => searchResponse)
-    const { byName } = toolsWith(postJson)
-    const err = await byName.kb_search!.execute({ query: 'q' }, EXEC).catch((e: unknown) => e)
-    expect((err as Error).message).toContain('kscli service list')
-  })
-
-  it('kb_search re-resolves the default per call (credential hot-swap contract)', async () => {
-    const postJson = vi.fn(async (_path: string, _body: unknown) => searchResponse)
-    let current: string | undefined
-    const resolveDefaultRetrieveAgentId = vi.fn(async () => current)
+    const resolveDefaultRetrieveAgentId = vi.fn(async () => 'aid-fixed')
     const { byName } = toolsWith(postJson, undefined, resolveDefaultRetrieveAgentId)
-    current = 'aid-one'
-    await byName.kb_search!.execute({ query: 'q' }, EXEC)
-    current = undefined
-    await byName.kb_search!.execute({ query: 'q' }, EXEC).catch(() => {})
-    expect(resolveDefaultRetrieveAgentId).toHaveBeenCalledTimes(2)
-    expect((postJson.mock.calls[0]![1] as Record<string, unknown>).agent_id).toBe('aid-one')
-    expect(postJson).toHaveBeenCalledTimes(1)
+    // defineTool validates args against the compiled schema before execute runs,
+    // so with agent_id required the per-call default fallback is never consulted
+    // through this entry point; it stays as defense-in-depth only.
+    const err = await byName.kb_search!.execute({ query: 'q' }, EXEC).catch((e: unknown) => e)
+    expect((err as Error).message).toContain('agent_id')
+    expect(resolveDefaultRetrieveAgentId).not.toHaveBeenCalled()
+    expect(postJson).not.toHaveBeenCalled()
+  })
+
+  it('a missing agent_id without any default is also a schema rejection, not the runtime guidance error', async () => {
+    const { byName } = toolsWith(vi.fn())
+    const err = await byName.kb_search!.execute({ query: 'q' }, EXEC).catch((e: unknown) => e)
+    expect((err as Error).message).toContain('missing required property')
+  })
+
+  it('a supplied agent_id bypasses the default resolver entirely', async () => {
+    const postJson = vi.fn(async (_path: string, _body: unknown) => searchResponse)
+    const resolveDefaultRetrieveAgentId = vi.fn(async () => 'aid-default')
+    const { byName } = toolsWith(postJson, undefined, resolveDefaultRetrieveAgentId)
+    await byName.kb_search!.execute({ query: 'q', agent_id: 'aid-explicit' }, EXEC)
+    expect(resolveDefaultRetrieveAgentId).not.toHaveBeenCalled()
+    expect((postJson.mock.calls[0]![1] as Record<string, unknown>).agent_id).toBe('aid-explicit')
   })
 
   it('a 4xx failure passes the original error through unchanged', async () => {
