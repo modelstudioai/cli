@@ -1,11 +1,11 @@
 /**
  * Bailian knowledge-base plugin, browser half: one section page in the
  * Settings left nav. The workspace, default-retrieval-service and
- * default-chat-service ids ride the `bailian-kb` settings namespace the
- * Host half registers (echoing values through `ctx.settingsScope`,
- * degrading to write-only credential controls when the scope is
- * unavailable); the API key stays pure credentials-domain and never
- * echoes.
+ * default-chat-service ids ride the Host bridge route
+ * (`/bailian-kb/settings`) the Host half registers, bypassing the settings
+ * wire (which requires an apiproxy allowlist entry the composition does not
+ * grant out-of-tree namespaces); the API key stays pure credentials-domain
+ * and never echoes.
  */
 
 import type { ConnectionHandle } from '@deepseek-ai/dsh-client-connection/client'
@@ -21,9 +21,8 @@ import type {} from '@deepseek-ai/dsh-client-ui-slots'
 // through cordis, never a value import).
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import { BailianCard } from './BailianCard.tsx'
-import { BailianCardController, type BailianKbSection } from './bailian-card-controller.ts'
+import { BailianCardController } from './bailian-card-controller.ts'
 import { en, zh, type BailianKbLocaleKey } from './locales.ts'
-
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     /** The Bailian section page's copy. */
@@ -35,7 +34,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 const NS = 'tool-bailian-kb'
 
 /** Required services (cordis fiber inject). */
-export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope']
+export const inject = ['slots', 'locale', 'connection', 'remote']
 
 /**
  * Mount the Bailian section page into the Settings left nav.
@@ -49,15 +48,10 @@ export function apply(ctx: ClientContext): void {
   // render, so copy freshness rides the locale revision without re-registering.
   const t = ctx.locale.bind(NS)
 
-  // The echo transport: bound on this fiber, self-refreshing on pushed
-  // settings-document invalidations and connection resets. A remote browser
-  // binds in memory mode and the page degrades to write-only controls.
-  const scope = ctx.settingsScope.bind<BailianKbSection>({ namespace: 'bailian-kb' })
-  const card = new BailianCardController(api, scope)
-  ctx.effect(
-    () => scope.subscribe(() => { card.syncSettings() }),
-    'tool-bailian-kb: settings echo',
-  )
+  // The echo transport: the Host bridge route (`/bailian-kb/settings`) lets
+  // the page read and write the resolved section without riding the settings
+  // wire (which requires an apiproxy allowlist entry).
+  const card = new BailianCardController(api)
   // Values can change elsewhere (Models page, external file edits); the badges
   // must follow the Host, not the card's last write.
   ctx.effect(

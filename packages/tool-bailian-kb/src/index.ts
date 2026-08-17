@@ -5,12 +5,27 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import z from '@deepseek-ai/schemastery'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import { settingsNamespace, type SettingsRegisterOptions, type SettingsScope } from '@deepseek-ai/dsh-settings'
 import { KbClient } from './client.js'
 import { registerSkill } from './skill.js'
 import { createKbTools } from './tools.js'
+
+/** Minimal webServer route shape (declared inline to avoid a host-package dependency). */
+interface WebRoute {
+  kind: 'exact' | 'prefix'
+  path: string
+  handler: (req: IncomingMessage, res: ServerResponse) => void | Promise<void>
+}
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    webServer: {
+      register(route: WebRoute): () => void
+    }
+  }
+}
 
 export const name = 'tool-bailian-kb'
 export const inject = ['tools', 'credentials']
@@ -95,14 +110,15 @@ export function apply(ctx: Context, config: Config): void {
   // not carry: the `expose` opt-in (this page edits the section from the
   // browser) and the scope handle the credential migration writes through.
   let current: () => Config = () => config
+  let scope: SettingsScope<Config> | undefined
   ctx.inject(['settings'], (sctx) => {
     // `expose` is the wire opt-in the harness documents as deferred work; the
     // assertion keeps this compiling against pristine upstream types, which do
     // not declare it yet. Until upstream lands it the option is ignored and
     // the browser page degrades to its credentials-only fallback.
     const options = { base: config, expose: true } as SettingsRegisterOptions<Config>
-    const scope = sctx.settings.register(SETTINGS_NS, Config, options)
-    current = () => scope.get()
+    scope = sctx.settings.register(SETTINGS_NS, Config, options)
+    current = () => scope!.get()
     sctx.effect(() => () => { current = () => config }, 'tool-bailian-kb: settings source fallback')
     void seedFromCredentials(ctx, scope)
   })
@@ -154,4 +170,90 @@ export function apply(ctx: Context, config: Config): void {
     ctx.tools.register(tool)
   }
   registerSkill(ctx)
+
+  // Bridge routes let the browser settings page read and write the resolved
+  // section without riding the settings wire (which requires an apiproxy
+  // allowlist entry the composition does not grant out-of-tree namespaces).
+  ctx.inject(['webServer'], (wctx) => {
+    wctx.effect(() => wctx.webServer.register({
+      kind: 'exact',
+      path: '/bailian-kb/settings',
+      handler: (_req: IncomingMessage, res: ServerResponse) => {
+        sendJson(res, 200, current())
+      },
+    }), 'tool-bailian-kb: settings GET route')
+
+    wctx.effect(() => wctx.webServer.register({
+      kind: 'exact',
+      path: '/bailian-kb/settings',
+      handler: async (req: IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') {
+          sendJson(res, 405, { error: 'use POST' })
+          return
+        }
+        if (!scope) {
+          sendJson(res, 503, { error: 'settings service unavailable' })
+          return
+        }
+        let body: unknown
+        try { body = await readJsonBody(req) } catch (err) {
+          sendJson(res, 400, { error: err instanceof Error ? err.message : 'bad request' })
+          return
+        }
+        if (typeof body !== 'object' || body === null) {
+          sendJson(res, 400, { error: 'expected JSON object' })
+          return
+        }
+        // Build a settings update patch. null-valued keys are removals (the
+        // field falls back to the entry config and then the credential store).
+        const patch: Record<string, unknown> = {}
+        const removals = new Set<string>()
+        for (const [key, value] of Object.entries(body as Record<string, unknown>)) {
+          if (!(key in current())) continue
+          if (value === null) { removals.add(key); continue }
+          patch[key] = value
+        }
+        try {
+          if (removals.size > 0) {
+            // Remove fields from the user section by replacing it wholesale
+            // with the current resolved config minus the removed keys.
+            // Absent keys re-inherit the entry base and schema defaults.
+            const next = { ...current(), ...patch }
+            for (const key of removals) delete (next as Record<string, unknown>)[key]
+            await scope.replace(next)
+          } else if (Object.keys(patch).length > 0) {
+            await scope.update(patch)
+          }
+          sendJson(res, 200, scope.get())
+        } catch (err) {
+          sendJson(res, 500, { error: err instanceof Error ? err.message : 'settings write failed' })
+        }
+      },
+    }), 'tool-bailian-kb: settings POST route')
+  })
+}
+
+/** Write a JSON response. */
+function sendJson(res: ServerResponse, status: number, data: unknown): void {
+  res.statusCode = status
+  res.setHeader('Content-Type', 'application/json; charset=utf-8')
+  res.end(JSON.stringify(data))
+}
+
+/** Read a UTF-8 JSON body up to a size limit. */
+function readJsonBody(req: IncomingMessage, maxBytes = 16384): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = []
+    let total = 0
+    req.on('data', (chunk: Buffer) => {
+      total += chunk.length
+      if (total > maxBytes) { req.destroy(); reject(new Error('body too large')); return }
+      chunks.push(chunk)
+    })
+    req.on('end', () => {
+      try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))) }
+      catch (err) { reject(err) }
+    })
+    req.on('error', reject)
+  })
 }

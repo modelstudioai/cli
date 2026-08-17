@@ -2,13 +2,10 @@
  * The Bailian page's controller: a hybrid form over two domains.
  *
  * The workspace, default-retrieval-service and default-chat-service ids live
- * in the `bailian-kb` settings section the Host half registers, so while the
- * settings scope is `ready` they ECHO: the page shows the resolved value and
- * stages edits over it (clearing a field unsets the user layer, falling back
- * to the entry config and then the credential store). When the scope is
- * unavailable — a remote browser (memory mode) or a composition without a
- * settings service — both fields degrade to the original write-only credential
- * controls.
+ * in the `bailian-kb` settings section the Host half registers. The Host
+ * exposes them over a bridge route (`/bailian-kb/settings`) so the page can
+ * read and write without riding the settings wire (which requires an apiproxy
+ * allowlist entry the composition does not grant out-of-tree namespaces).
  *
  * The API key always rides its credential reference (write-only by design:
  * the wire is structurally value-free), so that control starts blank and
@@ -16,7 +13,7 @@
  */
 
 import type { IApiClient } from '@deepseek-ai/dsh-client-connection/client'
-import { createSnapshotStore, type SettingsScope, type SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
+import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 
 /** The credential references this page addresses, keyed by their ref names. */
 export const BAILIAN_CARD_REFS = [
@@ -120,17 +117,15 @@ export function dirtyOf(state: BailianCardState): boolean {
   return BAILIAN_CARD_REFS.some(key => staged(state, key))
 }
 
-/** Bridge the settings scope and the credentials domain onto the page. */
+/** Bridge the settings bridge route and the credentials domain onto the page. */
 export class BailianCardController {
   private readonly store: SnapshotStore<BailianCardState>
 
   /**
    * @param api - wire face used for the three credential references.
-   * @param scope - the bound `bailian-kb` settings scope (echo transport).
    */
   constructor(
     private readonly api: Pick<IApiClient, 'credentials'>,
-    private readonly scope: SettingsScope<BailianKbSection>,
   ) {
     this.store = createSnapshotStore<BailianCardState>({
       drafts: {
@@ -150,29 +145,35 @@ export class BailianCardController {
       clearing: false,
       failed: false,
     })
-    this.syncSettings()
+    void this.fetchSettings()
     void this.read()
   }
 
   /**
-   * Mirror the scope snapshot into the page state. Called at construction and
-   * from the registration-side subscription (the scope self-refreshes on
-   * pushed document invalidations and connection resets).
+   * Fetch the current settings from the Host bridge route. Called at
+   * construction and after every mutation (save, clear).
    */
-  syncSettings(): void {
-    const snapshot = this.scope.getSnapshot()
-    const value = snapshot.value
-    this.store.update(draft => {
-      draft.settings = {
-        status: snapshot.status,
-        writable: snapshot.writable,
-        values: {
-          ...(value?.workspaceId !== undefined ? { workspaceId: value.workspaceId } : {}),
-          ...(value?.defaultRetrieveAgentId !== undefined ? { defaultRetrieveAgentId: value.defaultRetrieveAgentId } : {}),
-          ...(value?.defaultChatAgentId !== undefined ? { defaultChatAgentId: value.defaultChatAgentId } : {}),
-        },
-      }
-    })
+  async fetchSettings(): Promise<void> {
+    try {
+      const resp = await fetch('/bailian-kb/settings')
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const value = await resp.json() as Record<string, unknown>
+      this.store.update(draft => {
+        draft.settings = {
+          status: 'ready',
+          writable: true,
+          values: {
+            ...(typeof value.workspaceId === 'string' ? { workspaceId: value.workspaceId } : {}),
+            ...(typeof value.defaultRetrieveAgentId === 'string' ? { defaultRetrieveAgentId: value.defaultRetrieveAgentId } : {}),
+            ...(typeof value.defaultChatAgentId === 'string' ? { defaultChatAgentId: value.defaultChatAgentId } : {}),
+          },
+        }
+      })
+    } catch (_fetchFailure) {
+      this.store.update(draft => {
+        draft.settings = { status: 'unavailable', writable: false, values: {} }
+      })
+    }
   }
 
   /**
@@ -190,28 +191,31 @@ export class BailianCardController {
 
   /**
    * Write every staged draft through its domain: echoing fields go to the
-   * settings user layer (blank = unset, falling back to entry config and the
-   * credential store), write-only fields go to `credentials.set`. A refused
-   * credential write keeps its draft; a refused settings write self-heals by
-   * the scope's own recovery read (the control snaps back to the Host value).
+   * settings user layer via the bridge route (blank = removal, falling back
+   * to entry config and the credential store), write-only fields go to
+   * `credentials.set`. A refused credential write keeps its draft; a refused
+   * settings write self-heals by re-fetching the Host value.
    */
   async save(): Promise<void> {
     const state = this.store.getSnapshot()
     if (state.saving || !dirtyOf(state)) return
     this.store.update(draft => { draft.saving = true })
     let failed = false
-    const writes: Promise<void>[] = []
+    const settingsPatch: Record<string, unknown> = {}
+    let hasSettingsWrite = false
+    const credentialWrites: Promise<void>[] = []
     const settled: BailianFieldKey[] = []
     for (const key of BAILIAN_CARD_REFS) {
       if (!staged(state, key)) continue
       const text = state.drafts[key] as string
       const field = SETTINGS_FIELDS[key]
       if (field !== undefined && state.settings.status === 'ready') {
-        writes.push(text === '' ? this.scope.unset(field) : this.scope.set(field, text))
+        settingsPatch[field] = text === '' ? null : text
+        hasSettingsWrite = true
         settled.push(key)
         continue
       }
-      writes.push((async () => {
+      credentialWrites.push((async () => {
         try {
           const response = await this.api.credentials.set({ ref: key, value: text })
           if (response.result.ok) settled.push(key)
@@ -221,13 +225,20 @@ export class BailianCardController {
         }
       })())
     }
-    await Promise.all(writes)
+    if (hasSettingsWrite) {
+      try {
+        await this.saveSettings(settingsPatch)
+      } catch (_settingsWriteFailure) {
+        failed = true
+      }
+    }
+    await Promise.all(credentialWrites)
     this.store.update(draft => {
       draft.saving = false
       draft.failed = failed
       for (const key of settled) draft.drafts[key] = undefined
     })
-    this.syncSettings()
+    await this.fetchSettings()
     await this.read()
   }
 
@@ -252,7 +263,13 @@ export class BailianCardController {
     if (state.clearing) return
     this.store.update(draft => { draft.clearing = true })
     let failed = false
-    if (state.settings.status === 'ready') await this.scope.unset(settingsField)
+    if (state.settings.status === 'ready') {
+      try {
+        await this.saveSettings({ [settingsField]: null })
+      } catch (_settingsWriteFailure) {
+        failed = true
+      }
+    }
     if (state.credentials[key].configured) {
       try {
         const response = await this.api.credentials.unset({ ref: key })
@@ -266,7 +283,7 @@ export class BailianCardController {
       draft.failed = failed
       draft.drafts[key] = undefined
     })
-    this.syncSettings()
+    await this.fetchSettings()
     await this.read()
   }
 
@@ -295,6 +312,24 @@ export class BailianCardController {
       save: () => this.save(),
       discard: () => { this.discard() },
       clearDefaultAgent: (key) => this.clearDefaultAgent(key),
+    }
+  }
+
+  /**
+   * Send a settings patch to the Host bridge route. `null`-valued keys are
+   * removals (the field falls back to the entry config and then the
+   * credential store); other values are merged into the user layer.
+   * @param patch - the partial settings update.
+   */
+  private async saveSettings(patch: Record<string, unknown>): Promise<void> {
+    const resp = await fetch('/bailian-kb/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    })
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${resp.status}`)
     }
   }
 
