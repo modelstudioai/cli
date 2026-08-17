@@ -104,12 +104,7 @@ export default defineCommand({
       }
     }
 
-    const [quotaResult, stopResult] = await Promise.all([
-      ctx.client.console(FREE_TIER_API, requestData),
-      ctx.client.console(FREE_TIER_ONLY_STATUS_API, {
-        queryFreeTierOnlyStatusRequest: { models },
-      }),
-    ]);
+    const quotaResult = await ctx.client.console(FREE_TIER_API, requestData);
 
     const allQuotas = extractQuotas(quotaResult);
     let quotas = modelFlag
@@ -137,7 +132,16 @@ export default defineCommand({
       );
     }
 
-    const stopStatuses = extractFreeTierOnlyStatuses(stopResult);
+    // Query auto-stop status only for the filtered models (the full catalog can
+    // exceed the status API's batch limit and trigger a server-side error).
+    const filteredModels = quotas.map((quota) => quota.model);
+    const stopResult = filteredModels.length
+      ? await ctx.client.console(FREE_TIER_ONLY_STATUS_API, {
+          queryFreeTierOnlyStatusRequest: { models: filteredModels },
+        })
+      : null;
+
+    const stopStatuses = stopResult ? extractFreeTierOnlyStatuses(stopResult) : [];
     const stopMap = new Map(stopStatuses.map((status) => [status.model, status.freeTierOnly]));
 
     if (format === "json") {
@@ -146,12 +150,12 @@ export default defineCommand({
         const used = hasQuota ? quota.quotaInitTotal - quota.quotaTotal : 0;
         const stopStatus = stopMap.get(quota.model);
         const autoStop =
-          quota.quotaStatus === "UNKNOWN"
-            ? "unsupported"
-            : stopStatus === true
-              ? true
-              : stopStatus === false
-                ? false
+          stopStatus === true
+            ? true
+            : stopStatus === false
+              ? false
+              : quota.quotaStatus === "UNKNOWN"
+                ? "unsupported"
                 : null;
         return {
           model: quota.model,

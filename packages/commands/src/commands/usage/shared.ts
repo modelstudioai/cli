@@ -187,12 +187,12 @@ export function printFreeTierTable(options: FreeTierTableOptions): void {
 
     const stopStatus = stopMap.get(quota.model);
     const autoStop =
-      quota.quotaStatus === "UNKNOWN"
-        ? "Unsupported"
-        : stopStatus === true
-          ? "ON"
-          : stopStatus === false
-            ? "OFF"
+      stopStatus === true
+        ? "ON"
+        : stopStatus === false
+          ? "OFF"
+          : quota.quotaStatus === "UNKNOWN"
+            ? "Unsupported"
             : "-";
 
     return [quota.model, typeMap.get(quota.model) || "-", remaining, total, "", autoStop];
