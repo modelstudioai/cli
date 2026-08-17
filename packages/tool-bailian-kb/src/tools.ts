@@ -1,6 +1,6 @@
 /**
  * The three model-facing knowledge tools. agent_id stays optional in the schema
- * regardless of deployment: the default service (patch config or credential)
+ * regardless of deployment: the default services (patch config or credential)
  * can change at runtime through the credentials domain, so the fallback runs
  * per call and a missing default surfaces as an executable error instead of a
  * load-time schema difference.
@@ -18,8 +18,11 @@ const DEFAULT_TOP_K = 5
 
 export interface KbToolDeps {
   client: KbClient
-  /** Resolves the default agent id per call (patch config or credential); omitted means no default. */
-  resolveDefaultAgentId?: () => Promise<string | undefined>
+  /** Resolves the default retrieval agent id per call (settings/patch config or credential); omitted means no default for kb_search. */
+  resolveDefaultRetrieveAgentId?: () => Promise<string | undefined>
+  /** Resolves the default chat agent id per call (settings/patch config or credential); omitted means no default for kb_chat. */
+  resolveDefaultChatAgentId?: () => Promise<string | undefined>
+  /** Read per call (a live-settings deployment supplies a getter). */
   chatTimeoutMs: number
 }
 
@@ -53,16 +56,26 @@ async function withServiceHint(client: KbClient, err: unknown): Promise<never> {
  * @returns definitions ready for `ctx.tools.register()`.
  */
 export function createKbTools(deps: KbToolDeps) {
-  const { client, resolveDefaultAgentId, chatTimeoutMs } = deps
+  // chatTimeoutMs is deliberately NOT destructured: reading it off deps at
+  // execute time keeps a live-settings getter live.
+  const { client, resolveDefaultRetrieveAgentId, resolveDefaultChatAgentId } = deps
   const agentIdParam = {
     type: 'string' as const,
     description: 'Retrieval/Q&A service id; omit to use the default service when this deployment configures one (find ids via kb_service_list).',
   }
-  const resolveAgentId = async (supplied: string | undefined): Promise<string> => {
+  const resolveRetrieveAgentId = async (supplied: string | undefined): Promise<string> => {
     if (supplied !== undefined) return supplied
-    const defaultId = resolveDefaultAgentId === undefined ? undefined : await resolveDefaultAgentId()
+    const defaultId = resolveDefaultRetrieveAgentId === undefined ? undefined : await resolveDefaultRetrieveAgentId()
     if (defaultId === undefined) {
-      throw new Error('agent_id is required: no default service is configured; discover services with kb_service_list')
+      throw new Error('agent_id is required: no default retrieval service is configured; discover services with kb_service_list')
+    }
+    return defaultId
+  }
+  const resolveChatAgentId = async (supplied: string | undefined): Promise<string> => {
+    if (supplied !== undefined) return supplied
+    const defaultId = resolveDefaultChatAgentId === undefined ? undefined : await resolveDefaultChatAgentId()
+    if (defaultId === undefined) {
+      throw new Error('agent_id is required: no default chat service is configured; discover services with kb_service_list')
     }
     return defaultId
   }
@@ -167,7 +180,7 @@ export function createKbTools(deps: KbToolDeps) {
       const topK = args.top_k ?? DEFAULT_TOP_K
       const body: SearchRequest = {
         query: args.query,
-        agent_id: await resolveAgentId(args.agent_id),
+        agent_id: await resolveRetrieveAgentId(args.agent_id),
         ...(client.agentVersion ? { agent_version: client.agentVersion } : {}),
         ...(args.images && args.images.length > 0 ? { images: args.images } : {}),
       }
@@ -211,10 +224,11 @@ export function createKbTools(deps: KbToolDeps) {
       render: (_args, value) => [{ type: 'text', text: value.answer.length === 0 ? '(empty answer)' : value.answer }],
     },
     async execute(args) {
+      const chatTimeoutMs = deps.chatTimeoutMs
       const body = {
         input: { messages: [{ role: 'user' as const, content: args.message }] },
         parameters: { agent_options: {
-          agent_id: await resolveAgentId(args.agent_id),
+          agent_id: await resolveChatAgentId(args.agent_id),
           ...(client.agentVersion ? { agent_version: client.agentVersion } : {}),
         } },
         stream: true as const,

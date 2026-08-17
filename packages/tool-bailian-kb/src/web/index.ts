@@ -1,9 +1,11 @@
 /**
- * Bailian knowledge-base plugin, browser half: one card in the plugin
- * configuration section staging the three credential references the Host half
- * resolves per call. The card is pure credentials-domain — this package
- * exposes no settings namespace (an out-of-tree package cannot get one onto
- * the browser settings surface), so nothing here touches a settings scope.
+ * Bailian knowledge-base plugin, browser half: one section page in the
+ * Settings left nav. The workspace, default-retrieval-service and
+ * default-chat-service ids ride the `bailian-kb` settings namespace the
+ * Host half registers (echoing values through `ctx.settingsScope`,
+ * degrading to write-only credential controls when the scope is
+ * unavailable); the API key stays pure credentials-domain and never
+ * echoes.
  */
 
 import type { ConnectionHandle } from '@deepseek-ai/dsh-client-connection/client'
@@ -14,16 +16,17 @@ import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 // credential-update events.
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
-// Type-only: the 'settings.plugin.item' SlotMap merge, declared by the plugins
-// settings section this card registers into.
-import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
+// The 'settings.section' SlotMap merge AND the ctx.settingsScope service,
+// both declared by the settings domain base (type-only: the service arrives
+// through cordis, never a value import).
+import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import { BailianCard } from './BailianCard.tsx'
-import { BailianCardController } from './bailian-card-controller.ts'
+import { BailianCardController, type BailianKbSection } from './bailian-card-controller.ts'
 import { en, zh, type BailianKbLocaleKey } from './locales.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
-    /** The Bailian card's copy. */
+    /** The Bailian section page's copy. */
     'tool-bailian-kb': BailianKbLocaleKey
   }
 }
@@ -32,17 +35,29 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 const NS = 'tool-bailian-kb'
 
 /** Required services (cordis fiber inject). */
-export const inject = ['slots', 'locale', 'connection', 'remote']
+export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope']
 
 /**
- * Mount the Bailian card into the plugin configuration section.
+ * Mount the Bailian section page into the Settings left nav.
  * @param ctx - the browser plugin context.
  */
 export function apply(ctx: ClientContext): void {
   const { api } = ctx.get('connection') as ConnectionHandle
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'tool-bailian-kb: dictionaries')
 
-  const card = new BailianCardController(api)
+  // Registration-time text: the nav label is a thunk the shell resolves per
+  // render, so copy freshness rides the locale revision without re-registering.
+  const t = ctx.locale.bind(NS)
+
+  // The echo transport: bound on this fiber, self-refreshing on pushed
+  // settings-document invalidations and connection resets. A remote browser
+  // binds in memory mode and the page degrades to write-only controls.
+  const scope = ctx.settingsScope.bind<BailianKbSection>({ namespace: 'bailian-kb' })
+  const card = new BailianCardController(api, scope)
+  ctx.effect(
+    () => scope.subscribe(() => { card.syncSettings() }),
+    'tool-bailian-kb: settings echo',
+  )
   // Values can change elsewhere (Models page, external file edits); the badges
   // must follow the Host, not the card's last write.
   ctx.effect(
@@ -50,10 +65,11 @@ export function apply(ctx: ClientContext): void {
     'tool-bailian-kb: credential invalidations',
   )
 
-  ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
-    name: 'settings.plugin.item',
+  ctx.slots.inject('settings.section', () => ctx.slots.register({
+    name: 'settings.section',
     id: 'bailian-kb',
-    order: 30,
+    order: 20,
+    label: () => t('nav'),
     locale: NS,
     inject: () => card.inject(),
   }, BailianCard))

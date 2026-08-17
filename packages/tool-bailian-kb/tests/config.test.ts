@@ -7,7 +7,8 @@ describe('Config', () => {
     expect(resolved.workspaceId).toBe('ws-1')
     expect(resolved.endpointHost).toBe('cn-beijing.maas.aliyuncs.com')
     expect(resolved.chatTimeoutMs).toBe(300_000)
-    expect(resolved.defaultAgentId).toBeUndefined()
+    expect(resolved.defaultRetrieveAgentId).toBeUndefined()
+    expect(resolved.defaultChatAgentId).toBeUndefined()
   })
 
   it('accepts a missing workspaceId (per-call credentials fallback)', () => {

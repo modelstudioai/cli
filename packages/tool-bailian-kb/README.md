@@ -4,23 +4,26 @@
 
 ## Config
 
+Config 同时注册为 `bailian-kb` settings namespace（`installSettingsSection`）：profile patch 的 entry config 作为 base 层，用户在设置页/设置文档的修改叠在其上且实时生效（所有值每次调用经 source thunk 读取，无需重启或重注册工具）。
+
 | 字段 | 类型 | 默认 | 语义 |
 |---|---|---|---|
-| `workspaceId` | string | **必填** | 百炼工作空间 id；API host 为 workspace 子域名 `https://<workspaceId>.<endpointHost>` |
+| `workspaceId` | string? | — | 百炼工作空间 id；API host 为 workspace 子域名 `https://<workspaceId>.<endpointHost>`。未设置时每次调用回退 `BAILIAN_WORKSPACE_ID` credential |
 | `endpointHost` | string | `cn-beijing.maas.aliyuncs.com` | host 后缀，其他 region/私有化时替换 |
-| `defaultAgentId` | string? | — | 场景固定式部署绑定的检索服务；**配置后 `agent_id` 参数在注册期变为可选**（加载期静态决定 schema，非运行时 fallback） |
+| `defaultRetrieveAgentId` | string? | — | 默认检索服务；`kb_search` 的 `agent_id` 参数 schema 恒可选，默认值每次调用运行时解析（settings/config → credential） |
+| `defaultChatAgentId` | string? | — | 默认对话服务；`kb_chat` 的 `agent_id` 参数 schema 恒可选，默认值每次调用运行时解析（settings/config → credential） |
 | `agentVersion` | string? | — | `beta`（草稿调试）或已发布版本号；不暴露给模型 |
 | `chatTimeoutMs` | number | 300000 | kb_chat 超时；服务端是分钟级 agentic loop |
 
-凭证：`DASHSCOPE_API_KEY` 走 `ctx.credentials` 引用，每次调用重新解析（热更换生效），未配置时报错并附获取指引。
+凭证与回退链：`DASHSCOPE_API_KEY` 只走 `ctx.credentials` 引用（write-only，每次调用重新解析，热更换生效）；`workspaceId`/`defaultRetrieveAgentId`/`defaultChatAgentId` 先取 settings 解析值（用户层 > entry config），缺失时回退同名 credential（`BAILIAN_WORKSPACE_ID`/`BAILIAN_DEFAULT_RETRIEVE_AGENT_ID`/`BAILIAN_DEFAULT_CHAT_AGENT_ID`），都没有时报错并附配置指引。
 
 ## 工具
 
 | 工具 | 参数 | 返回 |
 |---|---|---|
 | `kb_service_list` | `scene?`（chat\|search，省略查双场景合并）、`name_filter?` | 服务清单（agent_id、名称、scene、status、绑定知识库）+ total + truncated；分页内部消化（单 scene 100 条上限） |
-| `kb_search` | `query`、`agent_id`（见 defaultAgentId）、`top_k?`（默认 5，**客户端截断**——服务端无此参数）、`images?` | chunks（text/score/来源）+ total |
-| `kb_chat` | `message`、`agent_id` | 完整答案（内部消费 SSE 流缓冲返回）+ request_id |
+| `kb_search` | `query`、`agent_id`（见 defaultRetrieveAgentId）、`top_k?`（默认 5，**客户端截断**——服务端无此参数）、`images?` | chunks（text/score/来源）+ total |
+| `kb_chat` | `message`、`agent_id`（见 defaultChatAgentId） | 完整答案（内部消费 SSE 流缓冲返回）+ request_id |
 
 ## 错误语义
 

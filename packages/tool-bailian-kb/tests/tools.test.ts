@@ -4,9 +4,9 @@ import { createKbTools } from '../src/tools.js'
 
 const EXEC = {} as never
 
-function toolsWith(postJson: unknown, postSse?: unknown, resolveDefaultAgentId?: () => Promise<string | undefined>) {
+function toolsWith(postJson: unknown, postSse?: unknown, resolveDefaultRetrieveAgentId?: () => Promise<string | undefined>, resolveDefaultChatAgentId?: () => Promise<string | undefined>) {
   const client = { postJson, postSse, agentVersion: undefined } as unknown as KbClient
-  const list = createKbTools({ client, ...(resolveDefaultAgentId ? { resolveDefaultAgentId } : {}), chatTimeoutMs: 1000 })
+  const list = createKbTools({ client, ...(resolveDefaultRetrieveAgentId ? { resolveDefaultRetrieveAgentId } : {}), ...(resolveDefaultChatAgentId ? { resolveDefaultChatAgentId } : {}), chatTimeoutMs: 1000 })
   const byName = Object.fromEntries(list.map(t => [t.name, t]))
   return { byName, list }
 }
@@ -48,7 +48,7 @@ describe('createKbTools', () => {
     expect(requiredList(withDefault)).not.toContain('agent_id')
   })
 
-  it('kb_search falls back to the per-call default resolver as an explicit resolve step', async () => {
+  it('kb_search falls back to the per-call default retrieve resolver as an explicit resolve step', async () => {
     const postJson = vi.fn(async (_path: string, _body: unknown) => searchResponse)
     const { byName } = toolsWith(postJson, undefined, async () => 'aid-fixed')
     await byName.kb_search!.execute({ query: 'q' }, EXEC)
@@ -65,13 +65,13 @@ describe('createKbTools', () => {
   it('kb_search re-resolves the default per call (credential hot-swap contract)', async () => {
     const postJson = vi.fn(async (_path: string, _body: unknown) => searchResponse)
     let current: string | undefined
-    const resolveDefaultAgentId = vi.fn(async () => current)
-    const { byName } = toolsWith(postJson, undefined, resolveDefaultAgentId)
+    const resolveDefaultRetrieveAgentId = vi.fn(async () => current)
+    const { byName } = toolsWith(postJson, undefined, resolveDefaultRetrieveAgentId)
     current = 'aid-one'
     await byName.kb_search!.execute({ query: 'q' }, EXEC)
     current = undefined
     await byName.kb_search!.execute({ query: 'q' }, EXEC).catch(() => {})
-    expect(resolveDefaultAgentId).toHaveBeenCalledTimes(2)
+    expect(resolveDefaultRetrieveAgentId).toHaveBeenCalledTimes(2)
     expect((postJson.mock.calls[0]![1] as Record<string, unknown>).agent_id).toBe('aid-one')
     expect(postJson).toHaveBeenCalledTimes(1)
   })
@@ -100,5 +100,18 @@ describe('createKbTools', () => {
     const { byName } = toolsWith(vi.fn(), postSse)
     const err = await byName.kb_chat!.execute({ message: 'q', agent_id: 'aid-1' }, EXEC).catch((e: unknown) => e)
     expect((err as Error).message).toMatch(/timed out.*kb_search/s)
+  })
+
+  it('kb_chat reads chatTimeoutMs off deps per call (live-settings getter stays live)', async () => {
+    const timeout = Object.assign(new Error('operation timed out'), { name: 'TimeoutError' })
+    const postSse = vi.fn(async () => { throw timeout })
+    const client = { postJson: vi.fn(), postSse, agentVersion: undefined } as unknown as KbClient
+    // Mirrors the host apply: a getter over the mutable settings source.
+    let timeoutMs = 1000
+    const list = createKbTools({ client, get chatTimeoutMs() { return timeoutMs } })
+    const chat = list.find(t => t.name === 'kb_chat')!
+    timeoutMs = 2222
+    const err = await chat.execute({ message: 'q', agent_id: 'aid-1' }, EXEC).catch((e: unknown) => e)
+    expect((err as Error).message).toContain('2222ms')
   })
 })

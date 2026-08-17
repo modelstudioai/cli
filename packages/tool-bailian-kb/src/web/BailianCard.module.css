@@ -1,85 +1,47 @@
-/* Bailian card: header, credential fields, clear control, and save footer.
-   Mirrors the host plugin-card chrome (an out-of-tree bundle cannot value-
-   import the host card components, only their platform primitives). */
+/* Bailian settings page: title row, credential fields, clear control, and
+   save footer, in the settings-panel design language (16/24 title, 14/22
+   intro, `--dsw-alias-*` tokens — an out-of-tree bundle cannot value-import
+   the host section components, only their platform primitives). */
 
-.card {
-  list-style: none;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 12px;
-  background: var(--dsw-alias-bg-layer-3);
-  transition: border-color .16s, background .16s;
-}
-
-.card:hover {
-  border-color: var(--dsw-alias-label-dimmed);
-}
-
-/* An open card reads as the one being worked on, not merely taller. */
-.cardOpen {
-  background: var(--dsw-alias-bg-layer-2);
-  border-color: var(--dsw-alias-label-dimmed);
-}
-
-.header {
-  width: 100%;
-  appearance: none;
-  border: 0;
-  background: none;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 12px;
-}
-
-.header:focus-visible {
-  outline: 2px solid var(--dsw-alias-brand-primary);
-  outline-offset: -2px;
-}
-
-/* Name over description: the description is what tells two plugins apart. */
-.headText {
-  flex: 1;
-  min-width: 0;
+.section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-}
-
-.name {
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.4;
+  gap: 12px;
+  max-width: 720px;
   color: var(--dsw-alias-label-primary);
 }
 
-.description {
-  font-size: 13px;
-  line-height: 1.5;
+.headRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+}
+
+.intro {
+  margin: 0;
+  font-size: 14px;
+  line-height: 22px;
   color: var(--dsw-alias-label-tertiary);
 }
 
-.chevron {
-  flex: none;
-  color: var(--dsw-alias-label-tertiary);
-  transition: transform .16s;
+/* The three controls grouped as one outlined object on the panel fill. */
+.form {
+  margin-top: 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  padding: 4px 16px 12px;
+  background: var(--dsw-alias-bg-layer-3);
 }
 
-.chevronOpen {
-  transform: rotate(180deg);
-}
-
-.body {
-  border-top: 1px solid var(--dsw-alias-border-l2);
-  margin: 0 16px;
-  padding-bottom: 8px;
-}
-
-/* Carried on the header so a collapsed card still says it holds edits. */
+/* Carried beside the title so a scrolled page still says it holds edits. */
 .pending {
   flex: none;
   border-radius: 999px;
@@ -90,6 +52,14 @@
   white-space: nowrap;
   background: var(--dsw-alias-bg-module-platform);
   color: var(--dsw-alias-label-secondary);
+}
+
+/* Degraded-transport notice: the write-only fallback explains itself once. */
+.notice {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-state-warn-label);
 }
 
 .field {
@@ -197,7 +167,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  padding: 12px 0 4px;
+  padding: 12px 0 0;
   border-top: 1px solid var(--dsw-alias-border-l2);
 }
 

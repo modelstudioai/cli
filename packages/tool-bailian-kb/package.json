@@ -17,7 +17,7 @@
         "@deepseek-ai/dsh-client-locale",
         "@deepseek-ai/dsh-client-runtime",
         "@deepseek-ai/dsh-api-remotes",
-        "@deepseek-ai/dsh-client-ui-settings-plugins"
+        "@deepseek-ai/dsh-client-ui-settings"
       ],
       "platform": "web"
     }
@@ -28,14 +28,14 @@
     "@deepseek-ai/cordis": "^4.0.1",
     "@deepseek-ai/dsh-tools": "*",
     "@deepseek-ai/dsh-credentials": "*",
+    "@deepseek-ai/dsh-settings": "*",
     "@deepseek-ai/dsh-skill": "*",
     "@deepseek-ai/schemastery": "^3.18.1",
     "@deepseek-ai/dsh-api-remotes": "*",
     "@deepseek-ai/dsh-client-connection": "*",
     "@deepseek-ai/dsh-client-locale": "*",
     "@deepseek-ai/dsh-client-runtime": "*",
-    "@deepseek-ai/dsh-client-ui-settings-plugins": "*",
-    "@deepseek-ai/dsh-client-ui-primitives": "*",
+    "@deepseek-ai/dsh-client-ui-settings": "*",
     "@deepseek-ai/dsh-client-ui-slots": "*",
     "react": "^18.2.0"
   },
@@ -43,14 +43,14 @@
     "@deepseek-ai/cordis": "link:../../../deepseek-harness/vendor/cordis",
     "@deepseek-ai/dsh-tools": "link:../../../deepseek-harness/packages/core/tools",
     "@deepseek-ai/dsh-credentials": "link:../../../deepseek-harness/packages/credentials/credentials",
+    "@deepseek-ai/dsh-settings": "link:../../../deepseek-harness/packages/settings/settings",
     "@deepseek-ai/dsh-skill": "link:../../../deepseek-harness/packages/skill/skill",
     "@deepseek-ai/schemastery": "link:../../../deepseek-harness/vendor/schemastery",
     "@deepseek-ai/dsh-api-remotes": "link:../../../deepseek-harness/packages/api/remotes",
     "@deepseek-ai/dsh-client-connection": "link:../../../deepseek-harness/packages/client/connection",
     "@deepseek-ai/dsh-client-locale": "link:../../../deepseek-harness/packages/client/locale",
     "@deepseek-ai/dsh-client-runtime": "link:../../../deepseek-harness/packages/client/runtime",
-    "@deepseek-ai/dsh-client-ui-settings-plugins": "link:../../../deepseek-harness/packages/client/ui-settings-plugins",
-    "@deepseek-ai/dsh-client-ui-primitives": "link:../../../deepseek-harness/packages/client/ui-primitives",
+    "@deepseek-ai/dsh-client-ui-settings": "link:../../../deepseek-harness/packages/client/ui-settings",
     "@deepseek-ai/dsh-client-ui-slots": "link:../../../deepseek-harness/packages/client/ui-slots",
     "@types/node": "^22.0.0",
     "@types/react": "~18.3.1",

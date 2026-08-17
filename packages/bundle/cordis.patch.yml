@@ -2,8 +2,9 @@
 # workspaceId here is one resolution layer, not the only one: a config value
 # (this env read included) wins per call; when it is unset the plugin resolves
 # the BAILIAN_WORKSPACE_ID credential instead (web UI card or
-# ~/.dsh/.credentials.yaml). The same fallback covers defaultAgentId via
-# BAILIAN_DEFAULT_AGENT_ID, and the API key via DASHSCOPE_API_KEY.
+# ~/.dsh/.credentials.yaml). The same fallback covers defaultRetrieveAgentId
+# via BAILIAN_DEFAULT_RETRIEVE_AGENT_ID, defaultChatAgentId via
+# BAILIAN_DEFAULT_CHAT_AGENT_ID, and the API key via DASHSCOPE_API_KEY.
 
 - insert:
     - id: tool-bailian-kb
