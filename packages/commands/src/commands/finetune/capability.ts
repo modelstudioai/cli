@@ -1,22 +1,19 @@
 import {
   defineCommand,
-  fetchModelList,
+  fetchModelListAll,
   fetchModelCapability,
   listSupportedTrainingTypes,
   modelSupportsTrainingType,
   isTrainingTypeCli,
   trainingTypeMethodVariant,
   TRAINING_TYPES_CLI,
-  callConsoleGateway,
-  effectiveConsoleGatewayConfig,
+  anonymousConsoleCall,
   UsageError,
   type Settings,
   type ModelCapability,
   type FlagsDef,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
-
-const PAGE_SIZE = 50;
 
 /**
  * Page through every foundation-model page (listFoundationModels, public — no
@@ -25,20 +22,7 @@ const PAGE_SIZE = 50;
  * for filtering.
  */
 async function fetchAllFoundationModels(settings: Settings): Promise<ModelCapability[]> {
-  const eff = effectiveConsoleGatewayConfig(settings);
-  const call = (api: string, data: Record<string, unknown>) =>
-    callConsoleGateway(
-      { region: eff.consoleRegion, site: eff.consoleSite, switchAgent: eff.consoleSwitchAgent },
-      settings.timeout,
-      { api, data },
-    );
-  const first = await fetchModelList(call, { pageNo: 1, pageSize: PAGE_SIZE });
-  const all = [...first.models];
-  const totalPages = Math.ceil(first.total / PAGE_SIZE);
-  for (let pageNo = 2; pageNo <= totalPages; pageNo++) {
-    const result = await fetchModelList(call, { pageNo, pageSize: PAGE_SIZE });
-    all.push(...result.models);
-  }
+  const all = await fetchModelListAll(anonymousConsoleCall(settings));
   return all as ModelCapability[];
 }
 

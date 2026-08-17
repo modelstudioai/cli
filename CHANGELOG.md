@@ -6,6 +6,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.15.1] - 2026-08-17
+
+### Added
+
+- **Model permission management** — `bl permission list` shows per-model inference / fine-tune / deploy grants; `bl permission grant` and `bl permission revoke` manage them, with `--all` to one-key grant inference for every model in the workspace (including future ones).
+
+### Changed
+
+- **`bl quota request` renamed to `bl quota update`** — set per-model QPM/TPM via `--rpm`/`--tpm` and clear custom limits with the new `--delete`; omitted fields keep their current values, and the old `quota request` path keeps working as an alias.
+- **`bl quota list` reworked** — now reads the model-limits API and shows per-model and workspace-level request/usage limits plus async queue/concurrency limits in a single table.
+- **`bl model list` no longer requires Console login** — the model catalog and `--enrich` parameter-schema endpoints are public.
+- **`bl skill init` output simplified** — per-skill status is now `success`/`failed` (previously `installed`) with an aggregate `success`/`partial`/`failed` result; the `publishedAt` and `agents` fields were removed.
+
 ## [1.15.0] - 2026-08-14
 
 ### Added

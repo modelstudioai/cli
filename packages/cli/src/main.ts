@@ -1,5 +1,5 @@
 import { createCli } from "bailian-cli-runtime";
-import { commands } from "./commands.ts";
+import { commandAliases, commands } from "./commands.ts";
 import { commandPackPolicy } from "./command-pack-policy.ts";
 import pkg from "../package.json" with { type: "json" };
 
@@ -10,11 +10,14 @@ const quickStartTasks = [
   "Help me analyze this video and write a Xiaohongshu-style post",
 ] as const;
 
-void createCli(commands, {
-  binName: "bl",
-  version: pkg.version,
-  clientName: "bailian-cli",
-  npmPackage: "bailian-cli",
-  quickStartTasks,
-  commandPacks: commandPackPolicy,
-}).run();
+void createCli(
+  { ...commands, ...commandAliases },
+  {
+    binName: "bl",
+    version: pkg.version,
+    clientName: "bailian-cli",
+    npmPackage: "bailian-cli",
+    quickStartTasks,
+    commandPacks: commandPackPolicy,
+  },
+).run();

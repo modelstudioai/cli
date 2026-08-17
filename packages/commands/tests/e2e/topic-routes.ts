@@ -100,9 +100,17 @@ export const ADVISOR_ROUTES: E2eRouteExports = {
 
 export const QUOTA_ROUTES: E2eRouteExports = {
   "quota list": "quotaList",
-  "quota request": "quotaRequest",
+  "quota update": "quotaUpdate",
+  // Backward-compatible alias of "quota update".
+  "quota request": "quotaUpdate",
   "quota history": "quotaHistory",
   "quota check": "quotaCheck",
+};
+
+export const PERMISSION_ROUTES: E2eRouteExports = {
+  "permission list": "permissionList",
+  "permission grant": "permissionGrant",
+  "permission revoke": "permissionRevoke",
 };
 
 export const USAGE_ROUTES: E2eRouteExports = {

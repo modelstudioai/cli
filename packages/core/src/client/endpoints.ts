@@ -47,6 +47,16 @@ export function taskPath(taskId: string): string {
   return `/api/v1/tasks/${encodeURIComponent(taskId)}`;
 }
 
+// ---- Model Rate Limits (DashScope) ----
+export function modelsLimitsPath(): string {
+  return "/api/v1/models/limits";
+}
+
+// ---- Model Permissions (DashScope) ----
+export function modelsPermissionsPath(): string {
+  return "/api/v1/models/permissions";
+}
+
 // ---- Application (Agent / Workflow) ----
 export function appCompletionPath(appId: string): string {
   return `/api/v1/apps/${encodeURIComponent(appId)}/completion`;
