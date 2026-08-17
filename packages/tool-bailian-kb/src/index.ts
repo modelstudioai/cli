@@ -8,7 +8,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import z from '@deepseek-ai/schemastery'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
-import { settingsNamespace, type SettingsRegisterOptions, type SettingsScope } from '@deepseek-ai/dsh-settings'
+import { settingsNamespace, SettingsProvider, type SettingsRegisterOptions, type SettingsScope } from '@deepseek-ai/dsh-settings'
 import { KbClient } from './client.js'
 import { registerSkill } from './skill.js'
 import { createKbTools } from './tools.js'
@@ -39,6 +39,16 @@ const CREDENTIAL_SEEDS = [
   ['defaultRetrieveAgentId', 'BAILIAN_DEFAULT_RETRIEVE_AGENT_ID'],
   ['defaultChatAgentId', 'BAILIAN_DEFAULT_CHAT_AGENT_ID'],
 ] as const
+
+/**
+ * Every {@link Config} field the bridge route accepts. A static allowlist,
+ * NOT `key in current()`: optional fields with no default and no base
+ * (the default service ids) vanish from the resolved config once cleared,
+ * and a membership test against it would silently drop their next write.
+ */
+const CONFIG_FIELDS = new Set<string>([
+  'workspaceId', 'endpointHost', 'defaultRetrieveAgentId', 'defaultChatAgentId', 'agentVersion', 'chatTimeoutMs',
+])
 
 /**
  * One-time migration: before this section existed, the workspace and
@@ -111,7 +121,10 @@ export function apply(ctx: Context, config: Config): void {
   // browser) and the scope handle the credential migration writes through.
   let current: () => Config = () => config
   let scope: SettingsScope<Config> | undefined
+  /** The settings provider, captured for `mutate` (path-level unset) access. */
+  let settings: SettingsProvider | undefined
   ctx.inject(['settings'], (sctx) => {
+    settings = sctx.settings
     // `expose` is the wire opt-in the harness documents as deferred work; the
     // assertion keeps this compiling against pristine upstream types, which do
     // not declare it yet. Until upstream lands it the option is ignored and
@@ -174,21 +187,20 @@ export function apply(ctx: Context, config: Config): void {
   // Bridge routes let the browser settings page read and write the resolved
   // section without riding the settings wire (which requires an apiproxy
   // allowlist entry the composition does not grant out-of-tree namespaces).
+  // GET and POST share one exact-route registration: the webServer map keys
+  // on (kind, path), so two registrations for the same path throw
+  // "duplicate route" and the second handler silently replaces the first.
   ctx.inject(['webServer'], (wctx) => {
     wctx.effect(() => wctx.webServer.register({
       kind: 'exact',
       path: '/bailian-kb/settings',
-      handler: (_req: IncomingMessage, res: ServerResponse) => {
-        sendJson(res, 200, current())
-      },
-    }), 'tool-bailian-kb: settings GET route')
-
-    wctx.effect(() => wctx.webServer.register({
-      kind: 'exact',
-      path: '/bailian-kb/settings',
       handler: async (req: IncomingMessage, res: ServerResponse) => {
+        if (req.method === 'GET' || req.method === 'HEAD') {
+          sendJson(res, 200, current())
+          return
+        }
         if (req.method !== 'POST') {
-          sendJson(res, 405, { error: 'use POST' })
+          sendJson(res, 405, { error: 'use GET or POST' })
           return
         }
         if (!scope) {
@@ -209,27 +221,30 @@ export function apply(ctx: Context, config: Config): void {
         const patch: Record<string, unknown> = {}
         const removals = new Set<string>()
         for (const [key, value] of Object.entries(body as Record<string, unknown>)) {
-          if (!(key in current())) continue
+          if (!CONFIG_FIELDS.has(key)) continue
           if (value === null) { removals.add(key); continue }
           patch[key] = value
         }
         try {
-          if (removals.size > 0) {
-            // Remove fields from the user section by replacing it wholesale
-            // with the current resolved config minus the removed keys.
-            // Absent keys re-inherit the entry base and schema defaults.
-            const next = { ...current(), ...patch }
-            for (const key of removals) delete (next as Record<string, unknown>)[key]
-            await scope.replace(next)
-          } else if (Object.keys(patch).length > 0) {
-            await scope.update(patch)
+          // Apply non-removal patches first (scope.update merges into the user
+          // layer without disturbing other fields).
+          if (Object.keys(patch).length > 0) await scope.update(patch)
+          // Remove fields via path-level unset ops: this deletes the key from
+          // the user layer so it re-inherits the entry base and schema defaults.
+          // Using scope.replace() with the resolved config would bake defaults
+          // (endpointHost, chatTimeoutMs) and entry values into the user layer,
+          // shadowing future entry changes and polluting the stored document.
+          if (removals.size > 0 && settings) {
+            for (const key of removals) {
+              await settings.mutate(SETTINGS_NS, [{ op: 'unset', path: [key] }])
+            }
           }
           sendJson(res, 200, scope.get())
         } catch (err) {
           sendJson(res, 500, { error: err instanceof Error ? err.message : 'settings write failed' })
         }
       },
-    }), 'tool-bailian-kb: settings POST route')
+    }), 'tool-bailian-kb: settings bridge route')
   })
 }
 
