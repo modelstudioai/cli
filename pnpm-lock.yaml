@@ -15,12 +15,6 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(lightningcss@1.33.0)
 
-  packages/bundle:
-    dependencies:
-      dsh-tool-bailian-kb:
-        specifier: workspace:^
-        version: link:../tool-bailian-kb
-
   packages/tool-bailian-kb:
     devDependencies:
       '@deepseek-ai/cordis':

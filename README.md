@@ -6,15 +6,14 @@
 
 ## 仓库结构
 
-| 包 | 职责 |
+| 目录 | 职责 |
 |---|---|
-| [`packages/tool-bailian-kb`](packages/tool-bailian-kb/README.md) | 插件本体：Config、KbClient、三个工具、随包打包的管理 skill |
-| [`packages/bundle`](packages/bundle/README.md) | 分发面：`dsh.bundle` 声明 + `cordis.patch.yml` |
+| [`packages/tool-bailian-kb`](packages/tool-bailian-kb/README.md) | 插件包（同时是 dsh bundle）：Config、KbClient、工具、skill、cordis.patch.yml、浏览器端配置页 |
 
 ## 安装（dsh 用户）
 
 ```sh
-dsh plugin --profile web add bailian-kb-dsh   # npm 发布后；本地开发用绝对/相对路径
+dsh plugin --profile web add dsh-tool-bailian-kb   # npm 发布后；本地开发用绝对/相对路径
 ```
 
 安装后 CLI 自动把 bundle 加入 profile 的层栈，无需手改 YAML。
@@ -28,7 +27,7 @@ DASHSCOPE_API_KEY=sk-xxx           # 必填：也可放 ~/.dsh/.credentials.yaml
 
 验证：`dsh --profile web --dump-config` 应能看到 `tool-bailian-kb` row。缺 `BAILIAN_WORKSPACE_ID` 时加载期直接报错（fail loud），不会静默跳过。
 
-卸载：`dsh plugin --profile web remove bailian-kb-dsh`。
+卸载：`dsh plugin --profile web remove dsh-tool-bailian-kb`。
 
 ## 开发
 
@@ -41,11 +40,10 @@ pnpm run typecheck
 pnpm run build       # tsc 产出 lib/
 ```
 
-本地联调：`link:` 安装不会把被链接包的依赖装进 profile，需要把 bundle 和插件包**都** add 进去（插件包会报 "declares no dsh.bundle — installed as a plain dependency" 警告，符合预期）；npm 正式安装无此问题：
+本地联调：只需 add 一次（包同时声明 `dsh.bundle` 和插件代码）：
 
 ```sh
-dsh plugin --profile dev add <本仓库>/packages/bundle
-dsh plugin --profile dev add <本仓库>/packages/tool-bailian-kb   # 仅 link 联调需要
+dsh plugin --profile dev add <本仓库>/packages/tool-bailian-kb
 ```
 
 patch 文件受 HMR 监听。

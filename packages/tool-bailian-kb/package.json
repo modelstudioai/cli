@@ -11,6 +11,7 @@
     "./package.json": "./package.json"
   },
   "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
     "client": {
       "inject": [
         "@deepseek-ai/dsh-client-connection",
@@ -22,7 +23,7 @@
       "platform": "web"
     }
   },
-  "files": ["lib", "skills"],
+  "files": ["lib", "skills", "cordis.patch.yml"],
   "scripts": { "build": "tsc -b && tsdown" },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
