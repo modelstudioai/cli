@@ -1,6 +1,11 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isChatE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
-import { KNOWLEDGE_CHAT_ROUTES } from "./topic-routes.ts";
+import {
+  isChatE2EReady,
+  isMultimodalChatE2EReady,
+  parseStdoutJson,
+  runCommandE2e,
+} from "../helpers.ts";
+import { KNOWLEDGE_CHAT_ROUTES } from "../topic-routes.ts";
 
 interface ContentPart {
   type: string;
@@ -17,6 +22,7 @@ interface DryRunBody {
     parameters?: {
       agent_options?: {
         agent_id?: string;
+        agent_version?: string;
       };
     };
     stream?: boolean;
@@ -61,7 +67,7 @@ describe("e2e: knowledge chat", () => {
   test("缺少 --workspace-id 时非零退出并提示", async () => {
     const { stderr, exitCode } = await runCommandE2e(
       KNOWLEDGE_CHAT_ROUTES,
-      // 假 key + 隔离配置目录:避免本机 config 的 workspace_id/api_key 漏入
+      // Fake key + isolated config dir: keep the local config's workspace_id/api_key from leaking in
       [
         "knowledge",
         "chat",
@@ -101,6 +107,29 @@ describe("e2e: knowledge chat", () => {
     expect(data.request?.input?.messages?.[0]?.role).toBe("user");
     expect(data.request?.input?.messages?.[0]?.content).toBe("什么是RAG");
     expect(data.request?.parameters?.agent_options?.agent_id).toBe("aid_test");
+    // Without --agent-version the field is not sent (default behavior unchanged)
+    expect(data.request?.parameters?.agent_options).not.toHaveProperty("agent_version");
+  });
+
+  test("--dry-run + --agent-version 落在 agent_options 内", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
+      "knowledge",
+      "chat",
+      "--dry-run",
+      "--message",
+      "什么是RAG",
+      "--agent-id",
+      "aid_test",
+      "--agent-version",
+      "2",
+      "--workspace-id",
+      "ws_test",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<DryRunBody>(stdout);
+    expect(data.request?.parameters?.agent_options?.agent_version).toBe("2");
   });
 
   test("--dry-run 多轮消息解析 role:content 前缀", async () => {
@@ -192,6 +221,47 @@ describe("e2e: knowledge chat", () => {
       type: "image_url",
       image_url: { url: "https://example.com/b.png" },
     });
+  });
+
+  test("--dry-run JSON 对象消息通道解析结构化 content", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
+      "knowledge",
+      "chat",
+      "--dry-run",
+      "--message",
+      '{"role":"user","content":[{"type":"text","text":"结构化消息"}]}',
+      "--agent-id",
+      "aid_test",
+      "--workspace-id",
+      "ws_test",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<DryRunBody>(stdout);
+    const firstMsg = data.request?.input?.messages?.[0];
+    expect(firstMsg?.role).toBe("user");
+    expect(Array.isArray(firstMsg?.content)).toBe(true);
+    const parts = firstMsg?.content as ContentPart[];
+    expect(parts[0]).toEqual({ type: "text", text: "结构化消息" });
+  });
+
+  test("--image 与消息内嵌 image_url 冲突报 USAGE (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
+      "knowledge",
+      "chat",
+      "--dry-run",
+      "--message",
+      '{"role":"user","content":[{"type":"image_url","image_url":{"url":"https://example.com/e.png"}}]}',
+      "--image",
+      "https://example.com/x.png",
+      "--agent-id",
+      "aid_test",
+      "--workspace-id",
+      "ws_test",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/embedded/i);
   });
 });
 
@@ -324,3 +394,34 @@ describe.skipIf(!isChatE2EReady())("e2e: knowledge chat (live)", () => {
     expect(stderr).toBeTruthy();
   });
 });
+
+// Long-lived console-created fixture (multimodal Q&A services cannot be created
+// via the CLI — see .env BAILIAN_E2E_IMAGE_CHAT_AGENT_ID)
+describe.skipIf(!isMultimodalChatE2EReady())(
+  "e2e: knowledge chat --image live (常驻 fixture)",
+  () => {
+    const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
+    const imageChatAgentId = process.env.BAILIAN_E2E_IMAGE_CHAT_AGENT_ID!;
+
+    test("多模态问答接受 --image 并返回非空回答", async () => {
+      const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
+        "knowledge",
+        "chat",
+        "--message",
+        "图里有什么",
+        "--image",
+        "https://dashscope.oss-cn-beijing.aliyuncs.com/images/dog_and_girl.jpeg",
+        "--agent-id",
+        imageChatAgentId,
+        "--workspace-id",
+        workspaceId,
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<ChatJsonResult>(stdout);
+      expect(data.answer).toBeTruthy();
+      expect(data.answer.length).toBeGreaterThan(0);
+    }, 120_000);
+  },
+);

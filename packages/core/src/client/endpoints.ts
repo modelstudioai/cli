@@ -37,9 +37,24 @@ export function videoGeneratePath(): string {
   return "/api/v1/services/aigc/video-generation/video-synthesis";
 }
 
+/** POST /api/v1/services/aigc/image2video/video-synthesis — kf2v (first+last frame). */
+export function image2videoPath(): string {
+  return "/api/v1/services/aigc/image2video/video-synthesis";
+}
+
 // ---- Async Task Query ----
 export function taskPath(taskId: string): string {
   return `/api/v1/tasks/${encodeURIComponent(taskId)}`;
+}
+
+// ---- Model Rate Limits (DashScope) ----
+export function modelsLimitsPath(): string {
+  return "/api/v1/models/limits";
+}
+
+// ---- Model Permissions (DashScope) ----
+export function modelsPermissionsPath(): string {
+  return "/api/v1/models/permissions";
 }
 
 // ---- Application (Agent / Workflow) ----
@@ -202,3 +217,52 @@ export function deploymentUpdatePath(deployedModel: string): string {
 export function deploymentsModelsPath(): string {
   return "/api/v1/deployments/models";
 }
+
+// ---- RAG admin plane (knowledge base / data center / service management, workspace-based host) ----
+// All admin endpoints go through this factory; path constants are centralized in
+// RAG_PATHS to avoid per-endpoint boilerplate.
+
+export function ragEndpoint(workspaceId: string, path: string): string {
+  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com${path}`;
+}
+
+export const RAG_PATHS = {
+  // indices domain — knowledge bases / documents / chunks / import jobs.
+  // Note: parameter naming is inconsistent across endpoints; see per-path comments.
+  indexList: "/api/v1/indices/rag/index/list", // GET, pagination/filters go in the query string
+  indexCreateV2: "/api/v1/indices/rag/index/create_v2", // POST
+  indexUpdate: "/api/v1/indices/rag/index/update", // POST, index id parameter is named `id`
+  indexDelete: "/api/v1/indices/rag/index/delete", // POST, body { index_id }
+  indexMonitor: "/api/v1/indices/rag/index/monitor", // POST, second-precision string timestamps
+  indexFiles: "/api/v1/indices/rag/index/files", // GET, page parameter is page_num
+  indexDeleteFile: "/api/v1/indices/rag/index/delete_file", // POST, body { index_id, doc_ids }
+  indexJobCreate: "/api/v1/indices/rag/index/job/create", // POST, body requires nested dataSource { sourceType, fileIds } (flat documentIds from the docs is rejected)
+  indexJobStatus: "/api/v1/indices/rag/index_job/status", // GET, both index_id and job_id required
+  chunkList: "/api/v1/indices/rag/index/chunklist", // POST, body pageNum/pageSize
+  chunkCreate: "/api/v1/indices/rag/index/chunk/create", // POST, parameter is pipelineId; rate limit 10 req/s, no chunk_id in response
+  chunkUpdate: "/api/v1/indices/rag/index/chunk/update", // POST, parameter is pipelineId
+  chunkDelete: "/api/v1/indices/rag/index/chunk/delete", // POST, at most 10 per request
+  // agent domain — retrieval / chat services. The actual gateway prefix is rag/app/,
+  // not rag/agent/ as the public API docs state — the wrong path returns console HTML
+  // instead of an API response.
+  agentList: "/api/v1/indices/rag/app/list", // POST, agent_scene required
+  agentGet: "/api/v1/indices/rag/app/get", // POST
+  agentCreate: "/api/v1/indices/rag/app/create", // POST
+  agentUpdate: "/api/v1/indices/rag/app/update", // POST, config is only mutable on the beta draft
+  agentDeploy: "/api/v1/indices/rag/app/deploy", // POST
+  agentDelete: "/api/v1/indices/rag/app/delete", // POST, idempotent soft delete
+  agentCopy: "/api/v1/indices/rag/app/copy", // POST
+  // connector domain — data center (responses use requestId; cursor pagination via nextToken/maxResult)
+  applyFileUploadLease: "/api/v1/connector/dash/applyFileUploadLease", // sizeBytes must be a string
+  addFile: "/api/v1/connector/dash/addFile",
+  addFilesFromAuthorizedOss: "/api/v1/connector/dash/addFilesFromAuthorizedOss",
+  batchUpdateFileTag: "/api/v1/connector/dash/batchUpdateFileTag",
+  listFile: "/api/v1/connector/dash/listFile", // categoryId required
+  describeFile: "/api/v1/connector/dash/describeFile",
+  deleteFile: "/api/v1/connector/dash/deleteFile",
+  addConnector: "/api/v1/connector/dash/addConnector",
+  getConnector: "/api/v1/connector/dash/getConnector",
+  listCategory: "/api/v1/connector/dash/listCategory", // note: maxResult is singular
+  addCategory: "/api/v1/connector/dash/addCategory",
+  deleteCategory: "/api/v1/connector/dash/deleteCategory",
+} as const;

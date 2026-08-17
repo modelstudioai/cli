@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat, getDataset, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { defineCommand, getDataset, type FlagsDef } from "bailian-cli-core";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const GET_FLAGS = {
   fileId: {
@@ -19,10 +19,9 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const fileId = flags.fileId;
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult({ action: "dataset.get", file_id: fileId }, format);
+      emitResult({ action: "dataset.get", file_id: fileId }, "json");
       return;
     }
 
@@ -45,19 +44,10 @@ export default defineCommand({
       description: file.description ?? "",
     };
 
-    if (format === "json") {
-      emitResult({ ...item, request_id: response.request_id }, format);
-      return;
+    if (settings.quiet) {
+      emitBare(item.file_id);
+    } else {
+      emitResult({ ...item, request_id: response.request_id }, "json");
     }
-
-    // text / quiet
-    emitBare(`file_id:      ${item.file_id}`);
-    emitBare(`name:         ${item.name}`);
-    emitBare(`size:         ${item.size}`);
-    if (item.md5) emitBare(`md5:          ${item.md5}`);
-    if (item.purpose) emitBare(`purpose:      ${item.purpose}`);
-    if (item.created_at) emitBare(`created_at:   ${item.created_at}`);
-    if (item.description) emitBare(`description:  ${item.description}`);
-    emitRequestId(response.request_id, settings.quiet);
   },
 });

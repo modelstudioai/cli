@@ -36,6 +36,37 @@ export { default as memoryProfileGet } from "./commands/memory/profile-get.ts";
 export { default as knowledgeRetrieve } from "./commands/knowledge/retrieve.ts";
 export { default as knowledgeSearch } from "./commands/knowledge/search.ts";
 export { default as knowledgeChat } from "./commands/knowledge/chat.ts";
+export { default as knowledgeKbList } from "./commands/knowledge/kb-list.ts";
+export { default as knowledgeKbInfo } from "./commands/knowledge/kb-info.ts";
+export { default as knowledgeDocList } from "./commands/knowledge/doc-list.ts";
+export { default as knowledgeDocStatus } from "./commands/knowledge/doc-status.ts";
+export { default as knowledgeDocUpload } from "./commands/knowledge/doc-upload.ts";
+export { default as knowledgeKbCreate } from "./commands/knowledge/kb-create.ts";
+export { default as knowledgeKbUpdate } from "./commands/knowledge/kb-update.ts";
+export { default as knowledgeKbDelete } from "./commands/knowledge/kb-delete.ts";
+export { default as knowledgeDocDelete } from "./commands/knowledge/doc-delete.ts";
+export { default as knowledgeDocTag } from "./commands/knowledge/doc-tag.ts";
+export { default as knowledgeServiceList } from "./commands/knowledge/service-list.ts";
+export { default as knowledgeServiceGet } from "./commands/knowledge/service-get.ts";
+export { default as knowledgeServiceCreate } from "./commands/knowledge/service-create.ts";
+export { default as knowledgeServiceUpdate } from "./commands/knowledge/service-update.ts";
+export { default as knowledgeServiceDeploy } from "./commands/knowledge/service-deploy.ts";
+export { default as knowledgeServiceDelete } from "./commands/knowledge/service-delete.ts";
+export { default as knowledgeServiceCopy } from "./commands/knowledge/service-copy.ts";
+export { default as knowledgeChunkAdd } from "./commands/knowledge/chunk-add.ts";
+export { default as knowledgeChunkList } from "./commands/knowledge/chunk-list.ts";
+export { default as knowledgeChunkUpdate } from "./commands/knowledge/chunk-update.ts";
+export { default as knowledgeChunkDelete } from "./commands/knowledge/chunk-delete.ts";
+export { default as knowledgeKbStats } from "./commands/knowledge/kb-stats.ts";
+export { default as knowledgeCategoryList } from "./commands/knowledge/category-list.ts";
+export { default as knowledgeCategoryAdd } from "./commands/knowledge/category-add.ts";
+export { default as knowledgeCategoryDelete } from "./commands/knowledge/category-delete.ts";
+export { default as knowledgeFileList } from "./commands/knowledge/file-list.ts";
+export { default as knowledgeFileGet } from "./commands/knowledge/file-get.ts";
+export { default as knowledgeFileDelete } from "./commands/knowledge/file-delete.ts";
+export { default as knowledgeCollectionCreate } from "./commands/knowledge/collection-create.ts";
+export { default as knowledgeCollectionGet } from "./commands/knowledge/collection-get.ts";
+export { default as knowledgeDocImportOss } from "./commands/knowledge/doc-import-oss.ts";
 export { default as mcpCall } from "./commands/mcp/call.ts";
 export { default as mcpList } from "./commands/mcp/list.ts";
 export { default as mcpTools } from "./commands/mcp/tools.ts";
@@ -56,9 +87,12 @@ export { default as advisorRecommend } from "./commands/advisor/recommend.ts";
 export { default as modelList } from "./commands/model/list.ts";
 export { default as workspaceList } from "./commands/workspace/list.ts";
 export { default as quotaList } from "./commands/quota/list.ts";
-export { default as quotaRequest } from "./commands/quota/request.ts";
+export { default as quotaUpdate } from "./commands/quota/update.ts";
 export { default as quotaHistory } from "./commands/quota/history.ts";
 export { default as quotaCheck } from "./commands/quota/check.ts";
+export { default as permissionList } from "./commands/permission/list.ts";
+export { default as permissionGrant } from "./commands/permission/grant.ts";
+export { default as permissionRevoke } from "./commands/permission/revoke.ts";
 export { default as datasetUpload } from "./commands/dataset/upload.ts";
 export { default as datasetList } from "./commands/dataset/list.ts";
 export { default as datasetGet } from "./commands/dataset/get.ts";
@@ -68,6 +102,7 @@ export {
   finetuneTextCreate,
   finetuneAudioCreate,
   finetuneImageCreate,
+  finetuneVideoCreate,
 } from "./commands/finetune/create.ts";
 export { default as finetuneList } from "./commands/finetune/list.ts";
 export { default as finetuneGet } from "./commands/finetune/get.ts";
@@ -78,6 +113,7 @@ export { default as finetuneCheckpoints } from "./commands/finetune/checkpoints.
 export { default as finetuneExport } from "./commands/finetune/export.ts";
 export { default as finetuneWatch } from "./commands/finetune/watch.ts";
 export { default as finetuneCapability } from "./commands/finetune/capability.ts";
+export { default as finetunePrice } from "./commands/finetune/price.ts";
 export {
   deployTextCreate,
   deployAudioCreate,
@@ -89,6 +125,8 @@ export { default as deployModels } from "./commands/deploy/models.ts";
 export { default as deployScale } from "./commands/deploy/scale.ts";
 export { default as deployUpdate } from "./commands/deploy/update.ts";
 export { default as deployDelete } from "./commands/deploy/delete.ts";
+export { default as deployPause } from "./commands/deploy/pause.ts";
+export { default as deployResume } from "./commands/deploy/resume.ts";
 export { default as tokenPlanListSeats } from "./commands/token-plan/list-seats.ts";
 export { default as tokenPlanCreateKey } from "./commands/token-plan/create-key.ts";
 export { default as tokenPlanAssignSeats } from "./commands/token-plan/assign-seats.ts";

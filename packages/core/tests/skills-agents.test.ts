@@ -293,20 +293,51 @@ test("agents: Amp-style XDG config dir lights up the universal-xdg shared target
   });
 });
 
-test("agents: recorded copy-fallback artifact is replaced; unrecorded dir stays skipped", async () => {
+test("agents: foreign skill dir (contains SKILL.md) is replaced even without lock record", async () => {
   await inFakeHome(async (home) => {
     mkdirSync(join(home, ".claude"), { recursive: true });
     const canonical = seedCanonicalSkill("demo");
     const copyPath = join(home, ".claude", "skills", "demo");
 
-    // Simulate a previous install that fell back to copy (no symlink permission, e.g. Windows)
+    // Simulate a skill installed by another tool (e.g. `npx skills add`) — a real
+    // directory containing SKILL.md, not recorded in our lock.
+    mkdirSync(copyPath, { recursive: true });
+    writeFileSync(join(copyPath, "SKILL.md"), "stale copy from another tool");
+
+    // New behavior: contains SKILL.md → recognized as a skill artifact → replaced
+    const result = linkSkillToAgents("demo");
+    expect(result[0]).toMatchObject({ agent: "claude-code", mode: "symlink" });
+    expect(lstatSync(copyPath).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(copyPath)).toBe(canonical);
+  });
+});
+
+test("agents: foreign non-skill dir (no SKILL.md) stays skipped", async () => {
+  await inFakeHome(async (home) => {
+    mkdirSync(join(home, ".claude"), { recursive: true });
+    seedCanonicalSkill("demo");
+    const foreignPath = join(home, ".claude", "skills", "demo");
+
+    // A user's own directory that happens to share the skill name but has no SKILL.md
+    mkdirSync(foreignPath, { recursive: true });
+    writeFileSync(join(foreignPath, "my-notes.txt"), "user content");
+
+    const result = linkSkillToAgents("demo");
+    expect(result[0].mode).toBe("skipped");
+    // User content untouched
+    expect(readFileSync(join(foreignPath, "my-notes.txt"), "utf-8")).toBe("user content");
+  });
+});
+
+test("agents: recorded copy-fallback artifact is replaced with symlink", async () => {
+  await inFakeHome(async (home) => {
+    mkdirSync(join(home, ".claude"), { recursive: true });
+    const canonical = seedCanonicalSkill("demo");
+    const copyPath = join(home, ".claude", "skills", "demo");
+
+    // Simulate a previous install that fell back to copy (no symlink permission)
     mkdirSync(copyPath, { recursive: true });
     writeFileSync(join(copyPath, "SKILL.md"), "stale copy");
-
-    // Without a lock record the dir is foreign → skipped, content untouched
-    const unrecorded = linkSkillToAgents("demo");
-    expect(unrecorded[0].mode).toBe("skipped");
-    expect(readFileSync(join(copyPath, "SKILL.md"), "utf-8")).toBe("stale copy");
 
     // With the recorded link the artifact is rebuilt and points at canonical again
     const recorded = linkSkillToAgents("demo", detectInstalledAgents(), [copyPath]);

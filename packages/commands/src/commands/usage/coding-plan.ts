@@ -1,7 +1,7 @@
 import { defineCommand, detectOutputFormat, unwrapResponse } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { printQuotaBox, readNumber, type QuotaSection } from "./quota-box.ts";
-import { formatNumber } from "./shared.ts";
+import { formatNumber } from "../shared/format.ts";
 
 const CODING_PLAN_USAGE_API =
   "zeldaEasy.broadscope-bailian.codingPlan.queryCodingPlanInstanceInfoV2";

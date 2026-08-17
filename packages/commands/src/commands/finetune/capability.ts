@@ -1,23 +1,19 @@
 import {
   defineCommand,
-  detectOutputFormat,
-  fetchModelList,
+  fetchModelListAll,
   fetchModelCapability,
   listSupportedTrainingTypes,
   modelSupportsTrainingType,
   isTrainingTypeCli,
   trainingTypeMethodVariant,
   TRAINING_TYPES_CLI,
-  callConsoleGateway,
-  effectiveConsoleGatewayConfig,
+  anonymousConsoleCall,
   UsageError,
   type Settings,
   type ModelCapability,
   type FlagsDef,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
-
-const PAGE_SIZE = 50;
 
 /**
  * Page through every foundation-model page (listFoundationModels, public — no
@@ -26,36 +22,12 @@ const PAGE_SIZE = 50;
  * for filtering.
  */
 async function fetchAllFoundationModels(settings: Settings): Promise<ModelCapability[]> {
-  const eff = effectiveConsoleGatewayConfig(settings);
-  const call = (api: string, data: Record<string, unknown>) =>
-    callConsoleGateway(
-      { region: eff.consoleRegion, site: eff.consoleSite, switchAgent: eff.consoleSwitchAgent },
-      settings.timeout,
-      { api, data },
-    );
-  const first = await fetchModelList(call, { pageNo: 1, pageSize: PAGE_SIZE });
-  const all = [...first.models];
-  const totalPages = Math.ceil(first.total / PAGE_SIZE);
-  for (let pageNo = 2; pageNo <= totalPages; pageNo++) {
-    const result = await fetchModelList(call, { pageNo, pageSize: PAGE_SIZE });
-    all.push(...result.models);
-  }
+  const all = await fetchModelListAll(anonymousConsoleCall(settings));
   return all as ModelCapability[];
 }
 
-const VARIANT_LABEL: Record<string, string> = {
-  full: "full-parameter",
-  lora: "LoRA",
-};
-
-function describeTrainingType(value: string): string {
-  if (!isTrainingTypeCli(value)) return value;
-  const { method, variant } = trainingTypeMethodVariant(value);
-  return `${VARIANT_LABEL[variant] ?? variant} ${method.toUpperCase()}`;
-}
-
 const CAPABILITY_FLAGS = {
-  model: {
+  baseModel: {
     type: "string",
     valueHint: "<m>",
     description: "List training types supported by this base model.",
@@ -71,31 +43,31 @@ export default defineCommand({
   description:
     "Query fine-tune training capability — by model (which training types it supports) or by training type (which models support it)",
   auth: "none",
-  usageArgs: "--model <m> | --training-type <t>",
+  usageArgs: "--base-model <m> | --training-type <t>",
   flags: CAPABILITY_FLAGS,
   exampleArgs: [
-    "--model qwen3-8b",
+    "--base-model qwen3-8b",
     "--training-type sft-lora",
     "--training-type cpt --output json",
     "--training-type sft --quiet",
   ],
   notes: [
-    "Exactly one of --model / --training-type is required.",
+    "Exactly one of --base-model / --training-type is required.",
     "Training-type values use the `<method>` / `<method>-lora` convention:",
     "sft | sft-lora | dpo | dpo-lora | cpt. (cpt has no -lora variant server-side.)",
     "Queries listFoundationModels, a public API — no console login needed.",
   ],
   validate: (f) => {
-    if (f.model && f.trainingType)
-      return "--model and --training-type are mutually exclusive; pass one.";
-    if (!f.model && !f.trainingType) return "one of --model / --training-type is required.";
+    if (f.baseModel && f.trainingType)
+      return "--base-model and --training-type are mutually exclusive; pass one.";
+    if (!f.baseModel && !f.trainingType)
+      return "one of --base-model / --training-type is required.";
     return undefined;
   },
   async run(ctx) {
     const { settings, flags } = ctx;
-    const model = flags.model || undefined;
+    const model = flags.baseModel || undefined;
     const trainingType = flags.trainingType || undefined;
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
       emitResult(
@@ -104,7 +76,7 @@ export default defineCommand({
           model,
           training_type: trainingType,
         },
-        format,
+        "json",
       );
       return;
     }
@@ -113,7 +85,7 @@ export default defineCommand({
     if (model) {
       const capability = await fetchModelCapability(settings, model);
       if (!capability) {
-        emitBare(`No foundation model found matching "${model}".`);
+        emitResult({ model, error: `No foundation model found matching "${model}".` }, "json");
         return;
       }
       const supported = listSupportedTrainingTypes(capability);
@@ -121,23 +93,15 @@ export default defineCommand({
         for (const value of supported) emitBare(value);
         return;
       }
-      if (format !== "text") {
-        emitResult(
-          {
-            model: capability.model ?? model,
-            supported,
-            supports: capability.supports,
-            trainingTypes: capability.trainingTypes,
-          },
-          format,
-        );
-        return;
-      }
-      emitBare(`${capability.model ?? model}`);
-      emitBare(supported.length ? "Supported training types:" : "No supported training types.");
-      for (const value of supported) {
-        emitBare(`  ${value.padEnd(10)} ${describeTrainingType(value)}`);
-      }
+      emitResult(
+        {
+          model: capability.model ?? model,
+          supported,
+          supports: capability.supports,
+          trainingTypes: capability.trainingTypes,
+        },
+        "json",
+      );
       return;
     }
 
@@ -162,20 +126,15 @@ export default defineCommand({
       for (const entry of matched) emitBare(entry.model);
       return;
     }
-    if (format !== "text") {
-      emitResult(
-        {
-          training_type: trainingType,
-          method,
-          variant,
-          count: matched.length,
-          models: matched,
-        },
-        format,
-      );
-      return;
-    }
-    emitBare(`Models supporting ${trainingType} (${method} / ${variant}): ${matched.length}`);
-    for (const entry of matched) emitBare(`  ${entry.model}`);
+    emitResult(
+      {
+        training_type: trainingType,
+        method,
+        variant,
+        count: matched.length,
+        models: matched,
+      },
+      "json",
+    );
   },
 });

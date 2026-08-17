@@ -1,6 +1,5 @@
 import {
   defineCommand,
-  detectOutputFormat,
   createDeployment,
   pickPlanStrategy,
   STRATEGIES,
@@ -11,16 +10,16 @@ import {
   type CommandContext,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const CREATE_FLAGS = {
-  model: {
+  modelName: {
     type: "string",
-    valueHint: "<name>",
-    description: "Model name (catalog model or fine-tuned output) (required)",
+    valueHint: "<model_name>",
+    description: "Model to deploy — fine-tuned output name or catalog model (required)",
     required: true,
   },
-  name: {
+  displayName: {
     type: "string",
     valueHint: "<display_name>",
     description: "Console display name for the deployment (required)",
@@ -64,7 +63,7 @@ const CREATE_FLAGS = {
 } satisfies FlagsDef;
 
 const CREATE_USAGE =
-  "--model <model_name> --name <display_name> [--plan <plan>] [--deploy-spec <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]";
+  "--model-name <model_name> --display-name <display_name> [--plan <plan>] [--deploy-spec <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]";
 
 const CREATE_NOTES = [
   "Plan defaults to `lora` (Token-billed) for text/image and `mu` (model-unit-",
@@ -78,14 +77,11 @@ const CREATE_NOTES = [
   "Use `bl deploy models --source base` to inspect available templates.",
   "After creation, status starts at PENDING and transitions to RUNNING.",
   "Invoke the deployed model with: bl text chat --model <deployed_model>",
-  "WARNING: --model is overloaded across commands and refers to DIFFERENT",
-  "values. `bl deploy <modality> create --model` takes the exported model_name",
-  "(e.g. `qwen3-8b-ft-...`), but the create response also returns a",
-  "`deployed_model` field (the deployment instance id, e.g.",
-  "`qwen3-8b-5ecb5f068d79`). The inference call `bl text chat --model` must use",
-  "the `deployed_model` from the create response — NOT the `model_name` you",
-  "passed to `deploy <modality> create`. Do not reuse the value across the two",
-  "commands.",
+  "NOTE: --model-name is the model being deployed (e.g. `qwen3-8b-ft-...`).",
+  "The create response also returns a `deployed_model` field — the deployment",
+  "instance id (e.g. `qwen3-8b-5ecb5f068d79`). Use that id for inference",
+  "(`bl text chat --model <deployed_model>`) and lifecycle commands",
+  "(`deploy get/scale/pause/resume/delete --deployed-model <id>`).",
 ];
 
 /**
@@ -119,10 +115,9 @@ async function runCreate(
   ctx: CommandContext<typeof CREATE_FLAGS>,
 ): Promise<void> {
   const { identity, settings, flags } = ctx;
-  const model = flags.model as string;
-  const name = flags.name as string;
+  const model = flags.modelName as string;
+  const name = flags.displayName as string;
   const plan = (flags.plan as string | undefined) || defaultDeployPlan(modality);
-  const format = detectOutputFormat(settings.output);
 
   // Plan-specific behaviour is owned by core `plans.ts`. The strategy resolves
   // the plan-specific body fragment (mu may auto-pick a template from the
@@ -146,7 +141,7 @@ async function runCreate(
   };
 
   if (settings.dryRun) {
-    emitResult({ action: "deploy.create", body }, format);
+    emitResult({ action: "deploy.create", body }, "json");
     return;
   }
 
@@ -155,17 +150,8 @@ async function runCreate(
 
   if (settings.quiet) {
     emitBare(deployment?.deployed_model ?? "");
-  } else if (format === "text") {
-    emitBare(`Created deployment.`);
-    if (deployment?.deployed_model) emitBare(`  deployed_model:  ${deployment.deployed_model}`);
-    if (deployment?.status) emitBare(`  status:          ${deployment.status}`);
-    if (deployment?.plan) emitBare(`  plan:            ${deployment.plan}`);
-    emitBare(
-      `\nNext: track readiness with: ${identity.binName} deploy get --deployed-model ${deployment?.deployed_model ?? "<id>"}`,
-    );
-    emitRequestId(response.request_id, settings.quiet);
   } else {
-    emitResult(response, format);
+    emitResult(response, "json");
   }
 }
 
@@ -176,10 +162,10 @@ export const deployTextCreate = defineCommand({
   usageArgs: CREATE_USAGE,
   flags: CREATE_FLAGS,
   exampleArgs: [
-    "--model my-qwen-sft --name my-sft-test",
-    "--model qwen3.6-flash-2026-04-16 --name my-flash --plan ptu --input-tpm 10000 --output-tpm 1000",
-    "--model qwen3-8b --name my-qwen3-mu --plan mu",
-    "--model qwen3-8b --name my-qwen3 --plan mu --deploy-spec MU1 --capacity 2",
+    "--model-name my-qwen-sft --display-name my-sft-test",
+    "--model-name qwen3.6-flash-2026-04-16 --display-name my-flash --plan ptu --input-tpm 10000 --output-tpm 1000",
+    "--model-name qwen3-8b --display-name my-qwen3-mu --plan mu",
+    "--model-name qwen3-8b --display-name my-qwen3 --plan mu --deploy-spec MU1 --capacity 2",
   ],
   notes: CREATE_NOTES,
   validate: (flags) => validateCreate("text", flags),
@@ -193,9 +179,9 @@ export const deployAudioCreate = defineCommand({
   usageArgs: CREATE_USAGE,
   flags: CREATE_FLAGS,
   exampleArgs: [
-    "--model my-cosyvoice-ft --name my-tts",
-    "--model my-cosyvoice-ft --name my-tts --deploy-spec dps-xxxx --capacity 1",
-    "--model my-cosyvoice-ft --name my-tts --dry-run",
+    "--model-name my-cosyvoice-ft --display-name my-tts",
+    "--model-name my-cosyvoice-ft --display-name my-tts --deploy-spec dps-xxxx --capacity 1",
+    "--model-name my-cosyvoice-ft --display-name my-tts --dry-run",
   ],
   notes: CREATE_NOTES,
   validate: (flags) => validateCreate("audio", flags),
@@ -209,9 +195,9 @@ export const deployImageCreate = defineCommand({
   usageArgs: CREATE_USAGE,
   flags: CREATE_FLAGS,
   exampleArgs: [
-    "--model my-wan-ft --name my-wan",
-    "--model my-wan-ft --name my-wan-mu --plan mu",
-    "--model my-wan-ft --name my-wan --dry-run",
+    "--model-name my-wan-ft --display-name my-wan",
+    "--model-name my-wan-ft --display-name my-wan-mu --plan mu",
+    "--model-name my-wan-ft --display-name my-wan --dry-run",
   ],
   notes: CREATE_NOTES,
   validate: (flags) => validateCreate("image", flags),

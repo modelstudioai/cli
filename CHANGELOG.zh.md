@@ -6,6 +6,42 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.16.0] - 2026-08-17
+
+> CLI 迎来知识库全生命周期管理：从创建配置知识库、上传文档、调优切片，到部署检索/问答服务，均可通过 `bl knowledge` 与 `kscli` 完成。
+
+### 新增
+
+- **知识库管理** —— `bl knowledge create` / `list` / `info` / `update` / `delete` 覆盖知识库的完整生命周期；`bl knowledge stats` 查询指定过去时间段内的文档数量与用量统计。
+- **文档管理** —— `bl knowledge doc upload` 支持上传本地文件或整个目录（递归扫描，自动跳过不支持的格式及 `node_modules` 等工具目录）；`doc list` / `status` / `tag` / `delete` 覆盖文档生命周期其余环节，`doc import-oss` 支持从 OSS 导入文档。
+- **检索 / 问答服务管理** —— `bl knowledge service list` / `get` / `create` / `update` / `deploy` / `delete` / `copy` 管理检索与问答服务配置，支持将草稿部署为正式版本。
+- **切片管理** —— `bl knowledge chunk add` / `list` / `update` / `delete` 查看并精调文档切片。
+- **数据中心管理** —— `bl knowledge category list` / `add` / `delete`、`bl knowledge file list` / `get` / `delete`、`bl knowledge collection create` / `get` 管理类目、原始文件与数据集。
+- **检索与问答支持指定服务版本** —— `bl knowledge search` 和 `bl knowledge chat` 新增 `--agent-version`，可调用 beta（草稿）配置进行调试，或指定已发布的版本号。
+- **`kscli` 同步支持** —— 全部新知识库命令在 Knowledge Studio CLI 中以更短路径提供，如 `kscli kb list`、`kscli doc upload`、`kscli service deploy`。
+
+### 移除
+
+- **移除 `bl knowledge search --query-history`** —— 该参数此前并未实际生效；多轮场景请改用 `bl knowledge chat` 并通过 `--message` 传入对话历史。
+
+### 内部
+
+- 请求现在携带静态的 OpenAPI 来源标识请求头，用于后端渠道归因。
+- 新增知识库 E2E 测试套件，含冷启动、内容运营、切片调优、服务调优、数据面五条用户旅程场景。
+
+## [1.15.1] - 2026-08-17
+
+### 新增
+
+- **模型权限管理** —— `bl permission list` 查看各模型的推理 / 微调 / 部署授权；`bl permission grant` 与 `bl permission revoke` 负责授予和回收，支持 `--all` 一键为工作区全部模型（含后续新增模型）开启推理授权。
+
+### 变更
+
+- **`bl quota request` 更名为 `bl quota update`** —— 通过 `--rpm`/`--tpm` 设置单模型 QPM/TPM，新增 `--delete` 一键清除自定义限制；未指定的字段保持当前值，旧命令 `quota request` 仍作为别名可用。
+- **`bl quota list` 重构** —— 改从模型限制接口读取数据，单表展示模型级与工作区级的请求/用量限制及异步队列/并发限制。
+- **`bl model list` 不再需要控制台登录** —— 模型目录与 `--enrich` 参数结构端点均为公开接口。
+- **`bl skill init` 输出精简** —— 单技能状态改为 `success`/`failed`（原为 `installed`），新增 `success`/`partial`/`failed` 汇总结果；移除 `publishedAt` 与 `agents` 字段。
+
 ## [1.15.0] - 2026-08-14
 
 ### 新增
