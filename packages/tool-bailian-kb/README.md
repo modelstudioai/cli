@@ -1,6 +1,6 @@
 # dsh-tool-bailian-kb
 
-百炼知识库的 dsh 插件本体：在 `ctx.tools` 注册三个模型工具，并在 skills 服务可用时注册管理面 skill。
+百炼知识库的 dsh 插件本体：在 `ctx.tools` 注册两个检索模型工具（kb_search、kb_chat），并在 skills 服务可用时注册管理面 skill。服务发现通过 kscli CLI 完成。
 
 ## Config
 
@@ -21,13 +21,14 @@ Config 同时注册为 `bailian-kb` settings namespace（`installSettingsSection
 
 | 工具 | 参数 | 返回 |
 |---|---|---|
-| `kb_service_list` | `scene?`（chat\|search，省略查双场景合并）、`name_filter?` | 服务清单（agent_id、名称、scene、status、绑定知识库）+ total + truncated；分页内部消化（单 scene 100 条上限） |
 | `kb_search` | `query`、`agent_id`（见 defaultRetrieveAgentId）、`top_k?`（默认 5，**客户端截断**——服务端无此参数）、`images?` | chunks（text/score/来源）+ total |
 | `kb_chat` | `message`、`agent_id`（见 defaultChatAgentId） | 完整答案（内部消费 SSE 流缓冲返回）+ request_id |
 
+服务发现（`kb_service_list` 已移除）：通过 `kscli service list` CLI 命令查询可用检索/对话服务及其 agent_id。
+
 ## 错误语义
 
-- HTTP 错误（除 401/403 鉴权类）：错误信息**附当前服务清单**，模型可一步纠正无效 `agent_id`（5xx 也附，但通常代表服务端异常）；
+- HTTP 错误：原始错误透传，模型可通过 `kscli service list` 发现可用服务以纠正无效 `agent_id`；
 - 凭证缺失：指向 `~/.dsh/.env` / `.credentials.yaml` 配置方式与控制台取 key 页面；
 - chat 超时：说明服务端多轮检索特性，建议重试或改用 `kb_search`；
 - 服务端错误体截断至 500 字符进入错误信息（优先 `code: message`）。

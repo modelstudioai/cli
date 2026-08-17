@@ -1,6 +1,6 @@
 /**
- * Bailian knowledge-base consumer plugin: registers kb_service_list, kb_search,
- * and kb_chat over the DashScope RAG API, plus the kscli management skill.
+ * Bailian knowledge-base consumer plugin: registers kb_search and kb_chat over the DashScope RAG API,
+ * plus the kscli management skill.
  * @module dsh-tool-bailian-kb
  */
 

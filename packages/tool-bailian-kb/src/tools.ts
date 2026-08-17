@@ -1,5 +1,5 @@
 /**
- * The three model-facing knowledge tools. agent_id stays optional in the schema
+ * The two model-facing knowledge tools (kb_search, kb_chat). agent_id stays optional in the schema
  * regardless of deployment: the default services (patch config or credential)
  * can change at runtime through the credentials domain, so the fallback runs
  * per call and a missing default surfaces as an executable error instead of a
@@ -11,7 +11,6 @@ import type { SearchRequest, SearchResponse } from './api-types.js'
 import { KbApiError, type KbClient } from './client.js'
 import { consumeChatStream } from './chat.js'
 import { KB_PATHS } from './endpoints.js'
-import { listServices } from './services.js'
 
 /** Client-side chunk cap applied when the model omits top_k. */
 const DEFAULT_TOP_K = 5
@@ -26,32 +25,17 @@ export interface KbToolDeps {
   chatTimeoutMs: number
 }
 
-/** Format one service list into the error-hint / result text form. */
-function formatServices(services: { agent_id: string; name: string; scene: string; status: string }[]): string {
-  return services.map(s => `${s.agent_id} (${s.name}, scene=${s.scene}, ${s.status})`).join('; ')
-}
-
 /**
- * Append the current service list to a client error so the model can correct
- * an invalid agent_id in one step. Auth failures (401/403) keep their own message.
- * @param client - the shared knowledge API client used for best-effort discovery.
- * @param err - the failure being enriched; always rethrown.
- * @returns never; the original or enriched error is thrown.
+ * Forward the original tool error unchanged; service discovery now lives
+ * in the kscli management skill (`kscli service list`), so the tool no
+ * longer makes a best-effort API round-trip to enrich the message.
  */
-async function withServiceHint(client: KbClient, err: unknown): Promise<never> {
-  if (err instanceof KbApiError && err.status !== undefined && err.status >= 400 && err.status !== 401 && err.status !== 403) {
-    let hint: string | undefined
-    try {
-      const { services } = await listServices(client, {})
-      if (services.length > 0) hint = formatServices(services)
-    } catch { /* discovery is best-effort; the original error already carries the failure */ }
-    if (hint !== undefined) throw new KbApiError(`${err.message}. Available services: ${hint}`, err.status)
-  }
+async function withServiceHint(_client: KbClient, err: unknown): Promise<never> {
   throw err
 }
 
 /**
- * Build the three tool definitions over one shared client.
+ * Build the two tool definitions over one shared client.
  * @param deps - client plus the deployment's explicit pinning and timeout choices.
  * @returns definitions ready for `ctx.tools.register()`.
  */
@@ -61,13 +45,13 @@ export function createKbTools(deps: KbToolDeps) {
   const { client, resolveDefaultRetrieveAgentId, resolveDefaultChatAgentId } = deps
   const agentIdParam = {
     type: 'string' as const,
-    description: 'Retrieval/Q&A service id; omit to use the default service when this deployment configures one (find ids via kb_service_list).',
+    description: 'Retrieval/Q&A service id; omit to use the default service when this deployment configures one (find ids via `kscli service list`).',
   }
   const resolveRetrieveAgentId = async (supplied: string | undefined): Promise<string> => {
     if (supplied !== undefined) return supplied
     const defaultId = resolveDefaultRetrieveAgentId === undefined ? undefined : await resolveDefaultRetrieveAgentId()
     if (defaultId === undefined) {
-      throw new Error('agent_id is required: no default retrieval service is configured; discover services with kb_service_list')
+      throw new Error('agent_id is required: no default retrieval service is configured; discover services with `kscli service list`')
     }
     return defaultId
   }
@@ -75,62 +59,10 @@ export function createKbTools(deps: KbToolDeps) {
     if (supplied !== undefined) return supplied
     const defaultId = resolveDefaultChatAgentId === undefined ? undefined : await resolveDefaultChatAgentId()
     if (defaultId === undefined) {
-      throw new Error('agent_id is required: no default chat service is configured; discover services with kb_service_list')
+      throw new Error('agent_id is required: no default chat service is configured; discover services with `kscli service list`')
     }
     return defaultId
   }
-
-  const serviceList = defineTool({
-    name: 'kb_service_list',
-    description:
-      'List the Bailian knowledge retrieval/Q&A services available in this workspace. '
-      + 'Each entry names the service id (agent_id) to pass to kb_search (scene=search) or kb_chat (scene=chat), '
-      + 'its bound knowledge bases, and its status (prefer deployed). '
-      + 'Omit scene to see both kinds; narrow large workspaces with name_filter.',
-    parameters: {
-      scene: { type: 'string', enum: ['chat', 'search'], description: 'Only list services for this scene; omitted lists both.' },
-      name_filter: { type: 'string', description: 'Fuzzy match on the service name.' },
-    },
-    output: {
-      schema: {
-        type: 'object',
-        additionalProperties: false,
-        properties: {
-          services: {
-            type: 'array',
-            required: true,
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              properties: {
-                agent_id: { type: 'string', required: true },
-                name: { type: 'string', required: true },
-                scene: { type: 'string', required: true },
-                status: { type: 'string', required: true },
-                knowledge_bases: { type: 'array', required: true, items: { type: 'string' } },
-              },
-            },
-          },
-          total: { type: 'integer', required: true },
-          truncated: { type: 'boolean', required: true },
-        },
-      },
-      render: (_args, value) => [{
-        type: 'text',
-        text: value.services.length === 0
-          ? 'No knowledge services found.'
-          : `${value.services.length} service(s): ${formatServices(value.services)}`
-          + (value.truncated ? ` — listed first ${value.services.length} of ${value.total}; narrow with name_filter.` : ''),
-      }],
-    },
-    async execute(args) {
-      return await listServices(client, {
-        ...(args.scene === 'chat' || args.scene === 'search' ? { scene: args.scene } : {}),
-        ...(args.name_filter ? { nameFilter: args.name_filter } : {}),
-      })
-    },
-    presentCall: args => ({ card: 'generic', title: 'List knowledge services', kind: 'other', rawInput: args }),
-  })
 
   const search = defineTool({
     name: 'kb_search',
@@ -251,5 +183,5 @@ export function createKbTools(deps: KbToolDeps) {
     presentCall: args => ({ card: 'generic', title: 'Ask knowledge base (may take a few minutes)', kind: 'fetch', rawInput: args }),
   })
 
-  return [serviceList, search, chat]
+  return [search, chat]
 }

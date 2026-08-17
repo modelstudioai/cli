@@ -9,6 +9,6 @@ describe('kbEndpoint', () => {
 
   it('keeps protocol paths as constants', () => {
     expect(KB_PATHS.chat).toBe('/api/v2/apps/knowledge/chat')
-    expect(KB_PATHS.serviceList).toBe('/api/v1/indices/rag/app/list')
+    expect(KB_PATHS.search).toBe('/api/v1/indices/knowledge/search')
   })
 })

@@ -22,7 +22,7 @@ kscli doc status --kb-id <kb-id> --doc-id <doc-id>                    # 3. 轮�
 kscli service create ... && kscli service deploy ...                  # 4. 建/部署检索服务 → 得到 agent_id
 ```
 
-部署完成后用 `kb_service_list` 确认服务可见，再用 `kb_search` 带该 `agent_id` 验证检索。
+部署完成后用 `kscli service list` 确认服务可见，再用 `kb_search` 带该 `agent_id` 验证检索。
 
 ## 命令组速查
 

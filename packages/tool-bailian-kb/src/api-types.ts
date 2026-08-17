@@ -1,25 +1,4 @@
-/** Request/response fields of the three DashScope knowledge endpoints, mirrored from the verified kscli types. */
-
-export interface ServiceListRequest {
-  agent_scene: 'chat' | 'search'
-  agent_name?: string
-  page_number: number
-  page_size: number
-}
-
-export interface ServiceListRow {
-  agent_id?: string
-  agent_name?: string
-  agent_scene?: string
-  agent_status?: string
-  pipeline_list?: { pipeline_id?: string; pipeline_name?: string }[]
-}
-
-export interface ServiceListResponse {
-  code?: string
-  message?: string
-  data?: { total_count?: number; rows?: ServiceListRow[] }
-}
+/** Request/response fields of the DashScope search and chat endpoints, mirrored from the verified kscli types. */
 
 export interface SearchRequest {
   query: string

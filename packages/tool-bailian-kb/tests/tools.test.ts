@@ -21,9 +21,9 @@ const searchResponse = {
 }
 
 describe('createKbTools', () => {
-  it('registers exactly kb_service_list, kb_search, kb_chat', () => {
+  it('registers kb_search and kb_chat', () => {
     const { list } = toolsWith(vi.fn())
-    expect(list.map(t => t.name).sort()).toEqual(['kb_chat', 'kb_search', 'kb_service_list'])
+    expect(list.map(t => t.name).sort()).toEqual(['kb_chat', 'kb_search'])
   })
 
   it('kb_search truncates nodes client-side to top_k and never sends top_k to the server', async () => {
@@ -59,7 +59,7 @@ describe('createKbTools', () => {
     const postJson = vi.fn(async (_path: string, _body: unknown) => searchResponse)
     const { byName } = toolsWith(postJson)
     const err = await byName.kb_search!.execute({ query: 'q' }, EXEC).catch((e: unknown) => e)
-    expect((err as Error).message).toContain('kb_service_list')
+    expect((err as Error).message).toContain('kscli service list')
   })
 
   it('kb_search re-resolves the default per call (credential hot-swap contract)', async () => {
@@ -76,14 +76,13 @@ describe('createKbTools', () => {
     expect(postJson).toHaveBeenCalledTimes(1)
   })
 
-  it('a 4xx failure appends the current service list to the error', async () => {
-    const postJson = vi.fn(async (path: string) => {
-      if (path === '/api/v1/indices/knowledge/search') throw new KbApiError('agent not found', 400)
-      return { data: { total_count: 1, rows: [{ agent_id: 'aid-9', agent_name: 'faq', agent_scene: 'search', agent_status: 'deployed' }] } }
+  it('a 4xx failure passes the original error through unchanged', async () => {
+    const postJson = vi.fn(async (_path: string) => {
+      throw new KbApiError('agent not found', 400)
     })
     const { byName } = toolsWith(postJson)
     const err = await byName.kb_search!.execute({ query: 'q', agent_id: 'bad' }, EXEC).catch((e: unknown) => e)
-    expect((err as Error).message).toContain('aid-9')
+    expect((err as Error).message).toBe('agent not found')
   })
 
   it('kb_chat buffers the SSE stream into one answer', async () => {
