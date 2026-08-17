@@ -1,5 +1,5 @@
 {
-  "name": "dsh-tool-bailian-kb",
+  "name": "@ali/bailian-kb-dsh",
   "version": "0.1.0",
   "description": "Bailian knowledge-base tools for DeepSeek Harness: kb_search and kb_chat over the DashScope RAG API, plus the kscli management skill.",
   "type": "module",

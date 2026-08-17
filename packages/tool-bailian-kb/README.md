@@ -9,7 +9,7 @@
 ```yaml
 - insert:
     - id: tool-bailian-kb
-      name: dsh-tool-bailian-kb
+      name: '@ali/bailian-kb-dsh'
       config:
         workspaceId: !!js process.env.BAILIAN_WORKSPACE_ID
 ```
