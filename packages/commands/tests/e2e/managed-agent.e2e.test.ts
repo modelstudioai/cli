@@ -1,6 +1,20 @@
+import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { e2eFixturesDir, parseStdoutJson, runCommandE2e } from "./helpers.ts";
 import { MANAGED_AGENT_ROUTES } from "./topic-routes.ts";
+
+const AGENTS_DEPLOYMENT_YAML = join(e2eFixturesDir, "managed-agent", "agents-deployment.yaml");
+const AGENTS_DEPLOYMENT_INVALID_YAML = join(
+  e2eFixturesDir,
+  "managed-agent",
+  "agents-deployment-invalid.yaml",
+);
+
+const DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES = [
+  "bailian.deployment.initial_events.message_required",
+  "bailian.deployment.file.mount_path.required",
+  "bailian.deployment.file.mount_path.duplicate",
+];
 
 /**
  * managed-agent：help / 缺参不依赖密钥；所有 mutation 命令的 --dry-run
@@ -12,6 +26,102 @@ import { MANAGED_AGENT_ROUTES } from "./topic-routes.ts";
  */
 
 describe("e2e: managed-agent", () => {
+  test("validate 接受原生 Bailian Deployment 配置", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "validate",
+      "--file",
+      AGENTS_DEPLOYMENT_YAML,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      valid?: boolean;
+      diagnostics?: Array<{ code?: string; severity?: string }>;
+    }>(stdout);
+    expect(data.valid).toBe(true);
+    expect(data.diagnostics).not.toContainEqual(
+      expect.objectContaining({ code: "bailian.deployment.schedule_unsupported" }),
+    );
+  });
+
+  test("plan --dry-run 通过 SDK planner 规划原生 Bailian Deployment", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "plan",
+      "--dry-run",
+      "--file",
+      AGENTS_DEPLOYMENT_YAML,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      actions?: Array<{
+        action?: string;
+        address?: { provider?: string; type?: string; name?: string };
+      }>;
+      diagnostics?: Array<{ code?: string; severity?: string }>;
+    }>(stdout);
+    expect(data.actions).toContainEqual(
+      expect.objectContaining({
+        action: "create",
+        address: {
+          provider: "bailian",
+          type: "deployment",
+          name: "daily-report",
+        },
+      }),
+    );
+    expect(data.diagnostics).not.toContainEqual(
+      expect.objectContaining({ code: "bailian.deployment.schedule_unsupported" }),
+    );
+  });
+
+  test("validate 拒绝会产生空消息或无效挂载路径的 Bailian Deployment", async () => {
+    const { stdout, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "validate",
+      "--file",
+      AGENTS_DEPLOYMENT_INVALID_YAML,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(1);
+    const data = parseStdoutJson<{
+      valid?: boolean;
+      diagnostics?: Array<{ code?: string; severity?: string }>;
+    }>(stdout);
+    expect(data.valid).toBe(false);
+    for (const diagnosticCode of DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES) {
+      expect(data.diagnostics).toContainEqual(
+        expect.objectContaining({ code: diagnosticCode, severity: "error" }),
+      );
+    }
+  });
+
+  test("plan --dry-run 在 Deployment 安全诊断失败时阻断计划", async () => {
+    const { stdout, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "plan",
+      "--dry-run",
+      "--file",
+      AGENTS_DEPLOYMENT_INVALID_YAML,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(1);
+    const data = parseStdoutJson<{
+      diagnostics?: Array<{ code?: string; severity?: string }>;
+    }>(stdout);
+    for (const diagnosticCode of DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES) {
+      expect(data.diagnostics).toContainEqual(
+        expect.objectContaining({ code: diagnosticCode, severity: "error" }),
+      );
+    }
+  });
+
   test("managed-agent apply --help 正常退出", async () => {
     const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",

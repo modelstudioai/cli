@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.17.0] - 2026-08-17
+
+### Added
+
+- **Native Bailian Managed Agent Deployments** — `deployments` declared in `agents.yaml` now materialize as native AgentStudio resources, with server-side cron schedules, local file resource uploads, archival through `destroy`, and migration of legacy emulated state on the next `apply`.
+
 ## [1.16.0] - 2026-08-17
 
 > Full knowledge-base lifecycle management arrives in the CLI: create and configure knowledge bases, upload documents, tune chunks, and deploy retrieval/Q&A services — all from `bl knowledge` and `kscli`.
