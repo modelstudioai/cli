@@ -191,6 +191,7 @@ describe("e2e: knowledge doc upload", () => {
       unsupportedDir,
       "--workspace-id",
       "ws_test",
+      "--dry-run",
     ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/No supported files found/i);
