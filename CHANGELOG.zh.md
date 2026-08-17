@@ -6,6 +6,12 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.17.0] - 2026-08-17
+
+### 新增
+
+- **百炼原生 Managed Agent Deployment** —— `agents.yaml` 中声明的 `deployments` 现在会创建原生 AgentStudio 资源，支持服务端 Cron 调度、本地文件资源上传、通过 `destroy` 归档，以及在下次 `apply` 时迁移旧版模拟 Deployment state。
+
 ## [1.16.0] - 2026-08-17
 
 > CLI 迎来知识库全生命周期管理：从创建配置知识库、上传文档、调优切片，到部署检索/问答服务，均可通过 `bl knowledge` 与 `kscli` 完成。
@@ -46,7 +52,6 @@
 
 ### 新增
 
-- **百炼原生 Managed Agent Deployment** —— `agents.yaml` 中声明的 `deployments` 现在会创建原生 AgentStudio 资源，支持服务端 Cron 调度、本地文件资源上传、通过 `destroy` 归档，以及在下次 `apply` 时迁移旧版模拟 Deployment state。
 - **`bl text chat` 支持 Responses API** —— 可通过 `--api responses` 调用 DashScope Responses API，支持流式输出、工具定义和结构化 JSON 输出；默认仍使用 Chat Completions。
 - **订阅套餐用量视图** —— `bl usage token-plan` 支持查看 5 小时和每周额度，`bl usage coding-plan` 支持查看 5 小时、每周和每月额度；两者均提供文本与 JSON 输出。
 - **命令帮助展示鉴权要求** —— Help 输出现在会明确标注命令需要 API Key、控制台登录还是阿里云 OpenAPI 凭证。

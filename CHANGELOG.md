@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.17.0] - 2026-08-17
+
+### Added
+
+- **Native Bailian Managed Agent Deployments** — `deployments` declared in `agents.yaml` now materialize as native AgentStudio resources, with server-side cron schedules, local file resource uploads, archival through `destroy`, and migration of legacy emulated state on the next `apply`.
+
 ## [1.16.0] - 2026-08-17
 
 > Full knowledge-base lifecycle management arrives in the CLI: create and configure knowledge bases, upload documents, tune chunks, and deploy retrieval/Q&A services — all from `bl knowledge` and `kscli`.
@@ -46,7 +52,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
-- **Native Bailian Managed Agent Deployments** — `deployments` declared in `agents.yaml` now materialize as native AgentStudio resources, with server-side cron schedules, local file resource uploads, archival through `destroy`, and migration of legacy emulated state on the next `apply`.
 - **Responses API for `bl text chat`** — Use `--api responses` to call the DashScope Responses API with streaming, tool definitions, and structured JSON output; Chat Completions remains the default.
 - **Subscription plan usage views** — `bl usage token-plan` displays 5-hour and weekly quota usage, while `bl usage coding-plan` displays 5-hour, weekly, and monthly usage; both support text and JSON output.
 - **Authentication requirements in command help** — Help output now states whether a command requires an API Key, Console login, or Alibaba Cloud OpenAPI credentials.
