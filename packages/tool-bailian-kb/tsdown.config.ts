@@ -13,7 +13,7 @@ import { defineConfig } from 'tsdown'
 import { transform } from 'lightningcss'
 
 /** Plugin id stamped into the __ModuleLoader__.load handoff and style tags. */
-const PLUGIN_ID = 'dsh-tool-bailian-kb'
+const PLUGIN_ID = '@ali/bailian-kb-dsh'
 
 /** The module specifiers the shell shares into the frozen module table. */
 const PLATFORM_MODULES = [
