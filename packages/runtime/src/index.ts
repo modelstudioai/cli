@@ -63,6 +63,7 @@ export {
 
 // Utility facilities consumed by commands
 export { poll } from "./utils/polling.ts";
+export { confirmDangerousAction } from "./confirm.ts";
 export { downloadFile, formatBytes } from "./utils/download.ts";
 export { runConcurrent, getConcurrency, downloadParallel } from "./utils/concurrent.ts";
 export { resolveImageSize } from "./utils/image-size.ts";

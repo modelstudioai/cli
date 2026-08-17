@@ -16,6 +16,8 @@ export {
   modelsLimitsPath,
   modelsPermissionsPath,
   profileSchemaPath,
+  ragEndpoint,
+  RAG_PATHS,
   responsesPath,
   speechRecognizePath,
   speechSynthesizePath,
@@ -50,7 +52,13 @@ export {
   type AsrFlashFamily,
   type BuildAsrFlashRequestOpts,
 } from "./asr-routes.ts";
-export { CHANNEL, sourceConfig, trackingHeaders, type TrackingIdentity } from "./headers.ts";
+export {
+  CHANNEL,
+  OPEN_API_SOURCE,
+  sourceConfig,
+  trackingHeaders,
+  type TrackingIdentity,
+} from "./headers.ts";
 export type { HttpDeps, RequestOpts } from "./http.ts";
 export { request, requestJson } from "./http.ts";
 export { createInstrumentedFetch, type FetchImplementation } from "./instrumented-fetch.ts";

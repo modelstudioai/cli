@@ -3,6 +3,7 @@ export { mapApiError, type ApiErrorBody } from "./errors/api.ts";
 export { ExitCode } from "./errors/codes.ts";
 
 export type * from "./types/api.ts";
+export type * from "./types/knowledge-admin.ts";
 export * from "./auth/index.ts";
 export * from "./client/index.ts";
 export * from "./console/index.ts";

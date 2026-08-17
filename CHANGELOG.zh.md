@@ -6,6 +6,29 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.16.0] - 2026-08-17
+
+> CLI 迎来知识库全生命周期管理：从创建配置知识库、上传文档、调优切片，到部署检索/问答服务，均可通过 `bl knowledge` 与 `kscli` 完成。
+
+### 新增
+
+- **知识库管理** —— `bl knowledge create` / `list` / `info` / `update` / `delete` 覆盖知识库的完整生命周期；`bl knowledge stats` 查询指定过去时间段内的文档数量与用量统计。
+- **文档管理** —— `bl knowledge doc upload` 支持上传本地文件或整个目录（递归扫描，自动跳过不支持的格式及 `node_modules` 等工具目录）；`doc list` / `status` / `tag` / `delete` 覆盖文档生命周期其余环节，`doc import-oss` 支持从 OSS 导入文档。
+- **检索 / 问答服务管理** —— `bl knowledge service list` / `get` / `create` / `update` / `deploy` / `delete` / `copy` 管理检索与问答服务配置，支持将草稿部署为正式版本。
+- **切片管理** —— `bl knowledge chunk add` / `list` / `update` / `delete` 查看并精调文档切片。
+- **数据中心管理** —— `bl knowledge category list` / `add` / `delete`、`bl knowledge file list` / `get` / `delete`、`bl knowledge collection create` / `get` 管理类目、原始文件与数据集。
+- **检索与问答支持指定服务版本** —— `bl knowledge search` 和 `bl knowledge chat` 新增 `--agent-version`，可调用 beta（草稿）配置进行调试，或指定已发布的版本号。
+- **`kscli` 同步支持** —— 全部新知识库命令在 Knowledge Studio CLI 中以更短路径提供，如 `kscli kb list`、`kscli doc upload`、`kscli service deploy`。
+
+### 移除
+
+- **移除 `bl knowledge search --query-history`** —— 该参数此前并未实际生效；多轮场景请改用 `bl knowledge chat` 并通过 `--message` 传入对话历史。
+
+### 内部
+
+- 请求现在携带静态的 OpenAPI 来源标识请求头，用于后端渠道归因。
+- 新增知识库 E2E 测试套件，含冷启动、内容运营、切片调优、服务调优、数据面五条用户旅程场景。
+
 ## [1.15.1] - 2026-08-17
 
 ### 新增

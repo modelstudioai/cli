@@ -21,6 +21,7 @@
     "bl": "pnpm -F bailian-cli dev",
     "kscli": "pnpm -F knowledge-studio-cli dev",
     "test": "vp test",
+    "test:journey": "vp test packages/commands/tests/e2e/knowledge/journeys",
     "release:check": "node tools/release/check.mjs",
     "wiki:crawl": "node tools/wiki-crawler/index.mjs",
     "test:stress": "node packages/cli/tests/stress/run.mjs"

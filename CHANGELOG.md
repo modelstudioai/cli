@@ -6,6 +6,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.16.0] - 2026-08-17
+
+> Full knowledge-base lifecycle management arrives in the CLI: create and configure knowledge bases, upload documents, tune chunks, and deploy retrieval/Q&A services — all from `bl knowledge` and `kscli`.
+
+### Added
+
+- **Knowledge base management** — `bl knowledge create` / `list` / `info` / `update` / `delete` manage knowledge bases end to end; `bl knowledge stats` reports document counts and usage over a past time range.
+- **Document management** — `bl knowledge doc upload` uploads local files or whole directories (recursive scan, skips unsupported formats and tool directories like `node_modules`); `doc list` / `status` / `tag` / `delete` cover the rest of the document lifecycle, and `doc import-oss` imports documents from OSS.
+- **Retrieval / Q&A service management** — `bl knowledge service list` / `get` / `create` / `update` / `deploy` / `delete` / `copy` manage retrieval and Q&A service configurations, including deploying a draft to a published version.
+- **Chunk management** — `bl knowledge chunk add` / `list` / `update` / `delete` inspect and fine-tune document chunks.
+- **Data-center management** — `bl knowledge category list` / `add` / `delete`, `bl knowledge file list` / `get` / `delete`, and `bl knowledge collection create` / `get` manage categories, raw files, and data collections.
+- **Service version selection for retrieval and chat** — `bl knowledge search` and `bl knowledge chat` accept `--agent-version` to call the beta (draft) config for debugging or a specific published version.
+- **`kscli` parity** — all new knowledge commands are also available in Knowledge Studio CLI under shorter paths, e.g. `kscli kb list`, `kscli doc upload`, `kscli service deploy`.
+
+### Removed
+
+- **`bl knowledge search --query-history` removed** — the parameter never took effect; use `bl knowledge chat` with `--message` history for multi-turn scenarios.
+
+### Internal
+
+- Requests now carry a static OpenAPI source identification header for backend channel attribution.
+- Added knowledge-base E2E suites, including five user-journey scenarios covering cold start, content ops, chunk tuning, service tuning, and the data plane.
+
 ## [1.15.1] - 2026-08-17
 
 ### Added

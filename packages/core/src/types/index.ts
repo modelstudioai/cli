@@ -80,3 +80,4 @@ export type {
   StreamChunk,
   UserProfileResponse,
 } from "./api.ts";
+export type * from "./knowledge-admin.ts";
