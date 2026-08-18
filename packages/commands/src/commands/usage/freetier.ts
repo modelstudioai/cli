@@ -1,10 +1,8 @@
 import { defineCommand, detectOutputFormat, unwrapResponse } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import {
-  FREE_TIER_API,
   FREE_TIER_ONLY_STATUS_API,
   extractFreeTierOnlyStatuses,
-  extractQuotas,
   fetchAllModels,
   pollFreeTierBatch,
 } from "./shared.ts";
@@ -101,15 +99,9 @@ export default defineCommand({
     }
 
     if (off) {
-      const [quotaResult, stopResult] = await Promise.all([
-        ctx.client.console(FREE_TIER_API, { queryFreeTierQuotaRequest: { models } }),
-        ctx.client.console(FREE_TIER_ONLY_STATUS_API, {
-          queryFreeTierOnlyStatusRequest: { models },
-        }),
-      ]);
-
-      const quotas = extractQuotas(quotaResult);
-      const quotaMap = new Map(quotas.map((quota) => [quota.model, quota]));
+      const stopResult = await ctx.client.console(FREE_TIER_ONLY_STATUS_API, {
+        queryFreeTierOnlyStatusRequest: { models },
+      });
 
       const stopStatuses = extractFreeTierOnlyStatuses(stopResult);
       const stopMap = new Map(stopStatuses.map((status) => [status.model, status.freeTierOnly]));
@@ -117,13 +109,6 @@ export default defineCommand({
       for (const name of models) {
         if (stopMap.get(name) === false) {
           process.stderr.write(`Auto-stop is already disabled for "${name}".\n`);
-          continue;
-        }
-        const quota = quotaMap.get(name);
-        if (quota && quota.quotaTotal > 0 && stopMap.get(name) === true) {
-          process.stderr.write(
-            `Cannot disable auto-stop for "${name}": free-tier quota has not been fully consumed. Please disable auto-stop after the quota is exhausted.\n`,
-          );
           continue;
         }
         await pollFreeTierBatch(ctx.client, api, requestKey, [name]);
