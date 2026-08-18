@@ -166,6 +166,9 @@ bl config list
 
 # Switch config profile
 bl config use --name token-plan
+
+# Switch the CLI interface to Chinese
+bl config set --key language --value zh-CN
 ```
 
 Config file location: `~/.bailian/config.json`

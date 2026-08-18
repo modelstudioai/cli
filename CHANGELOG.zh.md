@@ -6,11 +6,16 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
-## [1.17.0] - 2026-08-17
+## [1.17.0] - 2026-08-18
 
 ### 新增
 
 - **百炼原生 Managed Agent Deployment** —— `agents.yaml` 中声明的 `deployments` 现在会创建原生 AgentStudio 资源，支持服务端 Cron 调度、本地文件资源上传、通过 `destroy` 归档，以及在下次 `apply` 时迁移旧版模拟 Deployment state。
+- **CLI 中英文体验** —— 可通过 `bl config set` 或 Config UI 将 `language` 设置为 `en-US` 或 `zh-CN`，在英文和中文的 CLI Help、Quick Start、命令示例及 Config UI 之间切换；所选语言跟随当前激活的配置。
+
+### 修复
+
+- **Free Tier Auto-Stop 控制** —— `bl usage freetier --off` 现在可在免费额度尚有剩余时关闭 Auto-Stop；状态展示会反映实际开关状态，并仅查询筛选后的模型，避免触发服务端批量查询上限。
 
 ## [1.16.0] - 2026-08-17
 
