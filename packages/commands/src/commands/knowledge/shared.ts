@@ -18,7 +18,10 @@ export const WORKSPACE_FLAG = {
   workspaceId: {
     type: "string",
     valueHint: "<id>",
-    description: "Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)",
+    description: {
+      "en-US": "Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)",
+      "zh-CN": "API Endpoint URL 使用的 Workspace ID（也可设置 BAILIAN_WORKSPACE_ID）",
+    },
   },
 } satisfies FlagsDef;
 
@@ -28,8 +31,16 @@ export const WORKSPACE_FLAG = {
 // flags to its own API contract. Never pass the flag names through verbatim;
 // the CLI-facing flag vocabulary is stable even when the backend is not.
 export const PAGE_FLAGS = {
-  pageNumber: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
-  pageSize: { type: "number", valueHint: "<n>", description: "Page size per request" },
+  pageNumber: {
+    type: "number",
+    valueHint: "<n>",
+    description: { "en-US": "Page number (default: 1)", "zh-CN": "页码（默认：1）" },
+  },
+  pageSize: {
+    type: "number",
+    valueHint: "<n>",
+    description: { "en-US": "Page size per request", "zh-CN": "每次请求的分页大小" },
+  },
 } satisfies FlagsDef;
 
 /** Three-level fallback: flag > BAILIAN_WORKSPACE_ID env > config (env/config are merged into settings); missing → USAGE. */

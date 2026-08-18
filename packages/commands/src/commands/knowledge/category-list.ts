@@ -13,39 +13,54 @@ const CATEGORY_LIST_FLAGS = {
   collectionId: {
     type: "string",
     valueHint: "<id>",
-    description: "Filter by exact collection ID",
+    description: { "en-US": "Filter by exact collection ID", "zh-CN": "按数据集合 ID 精确筛选" },
   },
   parentId: {
     type: "string",
     valueHint: "<id>",
-    description: "List sub-categories of this exact parent category",
+    description: {
+      "en-US": "List sub-categories of this exact parent category",
+      "zh-CN": "列出该父类目下的子类目",
+    },
   },
   name: {
     type: "string",
     valueHint: "<text>",
-    description: "Filter by category name (exact match, unlike the knowledge base list)",
+    description: {
+      "en-US": "Filter by category name (exact match, unlike the knowledge base list)",
+      "zh-CN": "按类目名称筛选（精确匹配，与知识库列表不同）",
+    },
   },
   nextToken: {
     type: "string",
     valueHint: "<token>",
-    description: "Cursor for the next page (from previous output)",
+    description: {
+      "en-US": "Cursor for the next page (from previous output)",
+      "zh-CN": "下一页游标（来自上一次输出）",
+    },
   },
   maxResult: {
     type: "number",
     valueHint: "<n>",
-    description: "Items per page (default: 20)",
+    description: { "en-US": "Items per page (default: 20)", "zh-CN": "每页条目数（默认：20）" },
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "List data-center categories",
+  description: { "en-US": "List data-center categories", "zh-CN": "列出数据中心类目" },
   auth: "apiKey",
   usageArgs: "[flags]",
   flags: CATEGORY_LIST_FLAGS,
   notes: [
-    "Categories marked [default] are where files land when no category is specified.",
-    "Pagination is cursor-based: reuse the printed next token to continue.",
+    {
+      "en-US": "Categories marked [default] are where files land when no category is specified.",
+      "zh-CN": "未指定类目时，文件会进入标记为 [default] 的类目。",
+    },
+    {
+      "en-US": "Pagination is cursor-based: reuse the printed next token to continue.",
+      "zh-CN": "分页使用游标：复用输出中的 next token 继续查询。",
+    },
   ],
   exampleArgs: ["--workspace-id ws-xxx", "--name my-category", "--next-token <token>"],
   async run(ctx) {

@@ -13,16 +13,22 @@ const DOC_DELETE_FLAGS = {
   indexId: {
     type: "string",
     valueHint: "<id>",
-    description: "Knowledge base ID",
+    description: { "en-US": "Knowledge base ID", "zh-CN": "知识库 ID" },
     required: true,
   },
   docId: {
     type: "array",
     valueHint: "<id>",
-    description: "Document ID to delete (repeatable)",
+    description: {
+      "en-US": "Document ID to delete (repeatable)",
+      "zh-CN": "要删除的文档 ID（可重复）",
+    },
     required: true,
   },
-  yes: { type: "switch", description: "Skip the confirmation prompt" },
+  yes: {
+    type: "switch",
+    description: { "en-US": "Skip the confirmation prompt", "zh-CN": "跳过确认提示" },
+  },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
@@ -36,15 +42,34 @@ function buildDeleteSummary(indexId: string, docIds: string[]): string {
 }
 
 export default defineCommand({
-  description: "Delete documents and their chunks from a knowledge base",
+  description: {
+    "en-US": "Delete documents and their chunks from a knowledge base",
+    "zh-CN": "从知识库中删除文档及其 Chunk",
+  },
   auth: "apiKey",
   usageArgs: "--index-id <id> --doc-id <id> [flags]",
   flags: DOC_DELETE_FLAGS,
   notes: [
-    "Removes documents from the knowledge base index only; the source files remain in the data center.",
-    "Use the doc_id from `knowledge doc list --quiet`, not the fileId from `knowledge doc upload`. For documents created via `knowledge create --doc-id`, the doc_id equals the fileId; for documents imported via `knowledge doc upload --index-id`, the doc_id may include a workspace suffix.",
-    "Deletion may take up to ~30s to propagate — the document may still appear in the doc list briefly.",
-    "The output lists the ids actually deleted.",
+    {
+      "en-US":
+        "Removes documents from the knowledge base index only; the source files remain in the data center.",
+      "zh-CN": "仅从知识库索引中移除文档；源文件仍保留在数据中心。",
+    },
+    {
+      "en-US":
+        "Use the doc_id from `knowledge doc list --quiet`, not the fileId from `knowledge doc upload`. For documents created via `knowledge create --doc-id`, the doc_id equals the fileId; for documents imported via `knowledge doc upload --index-id`, the doc_id may include a workspace suffix.",
+      "zh-CN":
+        "请使用 `knowledge doc list --quiet` 返回的 doc_id，而不是 `knowledge doc upload` 返回的 fileId。通过 `knowledge create --doc-id` 创建的文档，其 doc_id 等于 fileId；通过 `knowledge doc upload --index-id` 导入的文档，其 doc_id 可能带有 Workspace 后缀。",
+    },
+    {
+      "en-US":
+        "Deletion may take up to ~30s to propagate — the document may still appear in the doc list briefly.",
+      "zh-CN": "删除结果最多可能需要约 30 秒才会生效——文档可能会短暂地继续出现在列表中。",
+    },
+    {
+      "en-US": "The output lists the ids actually deleted.",
+      "zh-CN": "输出会列出实际删除的 ID。",
+    },
   ],
   exampleArgs: [
     "--index-id idx-xxx --doc-id file-xxx --workspace-id ws-xxx",

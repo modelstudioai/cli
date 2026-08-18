@@ -13,7 +13,7 @@ const DOC_LIST_FLAGS = {
   indexId: {
     type: "string",
     valueHint: "<id>",
-    description: "Knowledge base ID",
+    description: { "en-US": "Knowledge base ID", "zh-CN": "知识库 ID" },
     required: true,
   },
   ...PAGE_FLAGS,
@@ -21,13 +21,23 @@ const DOC_LIST_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "List documents in a knowledge base with parse/index status",
+  description: {
+    "en-US": "List documents in a knowledge base with parse/index status",
+    "zh-CN": "列出知识库文档及其解析/索引状态",
+  },
   auth: "apiKey",
   usageArgs: "--index-id <id> [flags]",
   flags: DOC_LIST_FLAGS,
   notes: [
-    "Documents with status FAILED are highlighted in text mode — use the import job status command to inspect failures.",
-    "Page size defaults to 10 (server default), max 100.",
+    {
+      "en-US":
+        "Documents with status FAILED are highlighted in text mode — use the import job status command to inspect failures.",
+      "zh-CN": "文本模式会突出显示状态为 FAILED 的文档——请使用导入任务状态命令检查失败详情。",
+    },
+    {
+      "en-US": "Page size defaults to 10 (server default), max 100.",
+      "zh-CN": "分页大小默认为 10（服务端默认值），最大为 100。",
+    },
   ],
   exampleArgs: ["--index-id idx-xxx --workspace-id ws-xxx", "--index-id idx-xxx --page-size 100"],
   validate(flags) {

@@ -13,14 +13,17 @@ const FILE_GET_FLAGS = {
   fileId: {
     type: "string",
     valueHint: "<id>",
-    description: "Data-center file ID",
+    description: { "en-US": "Data-center file ID", "zh-CN": "数据中心文件 ID" },
     required: true,
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Show data-center file details (size, MD5, tags, timestamps)",
+  description: {
+    "en-US": "Show data-center file details (size, MD5, tags, timestamps)",
+    "zh-CN": "查看数据中心文件详情（大小、MD5、标签、时间戳）",
+  },
   auth: "apiKey",
   usageArgs: "--file-id <id> [flags]",
   flags: FILE_GET_FLAGS,

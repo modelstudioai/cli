@@ -26,7 +26,10 @@ const LIST_FLAGS = {
   baseModel: {
     type: "string",
     valueHint: "<model>",
-    description: "Filter by base model ID (server-side)",
+    description: {
+      "en-US": "Filter by base model ID (server-side)",
+      "zh-CN": "按基础模型 ID 筛选（服务端筛选）",
+    },
   },
 } satisfies FlagsDef;
 

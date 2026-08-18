@@ -65,7 +65,10 @@ function printTable(permissions: ModelPermission[], total: number, emptyHint: st
 // ---------------------------------------------------------------------------
 
 export default defineCommand({
-  description: "List model permissions (inference / fine-tune / deploy) in the workspace",
+  description: {
+    "en-US": "List model permissions (inference / fine-tune / deploy) in the workspace",
+    "zh-CN": "列出 Workspace 中的模型权限（推理 / 微调 / 部署）",
+  },
   auth: "apiKey",
   usageArgs: "[--scope <scope>] [--model <model>] [--name <name>] [--page <n>] [--page-size <n>]",
   flags: {
@@ -73,20 +76,37 @@ export default defineCommand({
       type: "string",
       valueHint: "<scope>",
       choices: ["authorized", "authorizable"] as const,
-      description: "Authorization scope: authorizable (default, full catalog), authorized",
+      description: {
+        "en-US": "Authorization scope: authorizable (default, full catalog), authorized",
+        "zh-CN": "授权范围：authorizable（默认，完整目录）、authorized（已授权）",
+      },
     },
     model: {
       type: "string",
       valueHint: "<model>",
-      description: "Model ID (exact match)",
+      description: { "en-US": "Model ID (exact match)", "zh-CN": "模型 ID（精确匹配）" },
     },
     name: {
       type: "string",
       valueHint: "<name>",
-      description: "Fuzzy search by model name or ID",
+      description: {
+        "en-US": "Fuzzy search by model name or ID",
+        "zh-CN": "按模型名称或 ID 模糊搜索",
+      },
     },
-    page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
-    pageSize: { type: "number", valueHint: "<n>", description: "Results per page (default: 20)" },
+    page: {
+      type: "number",
+      valueHint: "<n>",
+      description: { "en-US": "Page number (default: 1)", "zh-CN": "页码（默认：1）" },
+    },
+    pageSize: {
+      type: "number",
+      valueHint: "<n>",
+      description: {
+        "en-US": "Results per page (default: 20)",
+        "zh-CN": "每页结果数（默认：20）",
+      },
+    },
   },
   exampleArgs: [
     "",
@@ -96,9 +116,24 @@ export default defineCommand({
     "--output text",
   ],
   notes: [
-    "Default scope is `authorizable` (the full grantable catalog); use `--scope authorized` to see only models already granted.",
-    "Output defaults to JSON; pass `--output text` for a table. Permission values are tri-state: true / false / null (never set).",
-    "Values mirror the server's grant records as-is for the workspace bound to your API key. A model reporting false/null can still be callable (access may come from other channels); see the Model Studio authorization docs for the exact semantics.",
+    {
+      "en-US":
+        "Default scope is `authorizable` (the full grantable catalog); use `--scope authorized` to see only models already granted.",
+      "zh-CN":
+        "默认范围为 `authorizable`（完整可授权目录）；使用 `--scope authorized` 仅查看已授权模型。",
+    },
+    {
+      "en-US":
+        "Output defaults to JSON; pass `--output text` for a table. Permission values are tri-state: true / false / null (never set).",
+      "zh-CN":
+        "默认输出 JSON；传入 `--output text` 可查看表格。权限值为三态：true / false / null（从未设置）。",
+    },
+    {
+      "en-US":
+        "Values mirror the server's grant records as-is for the workspace bound to your API key. A model reporting false/null can still be callable (access may come from other channels); see the Model Studio authorization docs for the exact semantics.",
+      "zh-CN":
+        "这些值原样反映 API Key 所绑定 Workspace 的服务端授权记录。显示 false/null 的模型仍可能可以调用（访问权限可能来自其他渠道）；准确语义请参阅百炼模型授权文档。",
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

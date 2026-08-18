@@ -95,7 +95,10 @@ function printView(usage: CodingPlanUsage, generatedAt: number): void {
 }
 
 export default defineCommand({
-  description: "Show Coding Plan quota usage",
+  description: {
+    "en-US": "Show Coding Plan quota usage",
+    "zh-CN": "查看 Coding Plan 配额使用情况",
+  },
   auth: "console",
   usageArgs: "[flags]",
   exampleArgs: ["", "--output json"],

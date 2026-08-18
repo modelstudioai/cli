@@ -51,7 +51,10 @@ function printView(usage: TokenPlanUsage, generatedAt: number): void {
 }
 
 export default defineCommand({
-  description: "Show Token Plan quota usage",
+  description: {
+    "en-US": "Show Token Plan quota usage",
+    "zh-CN": "查看 Token Plan 配额使用情况",
+  },
   auth: "console",
   usageArgs: "[flags]",
   exampleArgs: ["", "--output json"],

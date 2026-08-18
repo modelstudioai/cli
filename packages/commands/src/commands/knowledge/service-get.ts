@@ -14,13 +14,16 @@ const SERVICE_GET_FLAGS = {
   agentId: {
     type: "string",
     valueHint: "<id>",
-    description: "Service (agent) ID",
+    description: { "en-US": "Service (agent) ID", "zh-CN": "服务（Agent）ID" },
     required: true,
   },
   agentVersion: {
     type: "string",
     valueHint: "<version>",
-    description: "Specific version to inspect (beta or a published number); omit for all versions",
+    description: {
+      "en-US": "Specific version to inspect (beta or a published number); omit for all versions",
+      "zh-CN": "要查看的指定版本（beta 或已发布版本号）；省略则返回全部版本",
+    },
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
@@ -42,13 +45,23 @@ function printDetail(detail: RagAgentDetail): void {
 }
 
 export default defineCommand({
-  description: "Show service (agent) details including per-version configuration",
+  description: {
+    "en-US": "Show service (agent) details including per-version configuration",
+    "zh-CN": "查看服务（Agent）详情及各版本配置",
+  },
   auth: "apiKey",
   usageArgs: "--agent-id <id> [flags]",
   flags: SERVICE_GET_FLAGS,
   notes: [
-    "Without --agent-version all versions are returned (beta draft plus published numbers).",
-    "The version value is passed through as-is; the valid set is server-side state.",
+    {
+      "en-US":
+        "Without --agent-version all versions are returned (beta draft plus published numbers).",
+      "zh-CN": "未传入 --agent-version 时，会返回所有版本（beta 草稿和已发布版本号）。",
+    },
+    {
+      "en-US": "The version value is passed through as-is; the valid set is server-side state.",
+      "zh-CN": "版本值将原样传递；有效版本集合由服务端状态决定。",
+    },
   ],
   exampleArgs: [
     "--agent-id aid-xxx --workspace-id ws-xxx",

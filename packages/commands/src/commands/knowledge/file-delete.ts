@@ -15,10 +15,16 @@ const FILE_DELETE_FLAGS = {
   fileId: {
     type: "string",
     valueHint: "<id>",
-    description: "Data-center file ID to delete",
+    description: {
+      "en-US": "Data-center file ID to delete",
+      "zh-CN": "要删除的数据中心文件 ID",
+    },
     required: true,
   },
-  yes: { type: "switch", description: "Skip the confirmation prompt" },
+  yes: {
+    type: "switch",
+    description: { "en-US": "Skip the confirmation prompt", "zh-CN": "跳过确认提示" },
+  },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
@@ -43,13 +49,24 @@ async function buildDeleteSummary(
 }
 
 export default defineCommand({
-  description: "Permanently delete a file from the data center",
+  description: {
+    "en-US": "Permanently delete a file from the data center",
+    "zh-CN": "从数据中心永久删除文件",
+  },
   auth: "apiKey",
   usageArgs: "--file-id <id> [flags]",
   flags: FILE_DELETE_FLAGS,
   notes: [
-    "Irreversible. If knowledge bases reference this file, their related document indexes become invalid.",
-    "To remove a document from a single knowledge base only, use the document delete command instead.",
+    {
+      "en-US":
+        "Irreversible. If knowledge bases reference this file, their related document indexes become invalid.",
+      "zh-CN": "该操作不可撤销。如果知识库引用了此文件，其相关文档索引将失效。",
+    },
+    {
+      "en-US":
+        "To remove a document from a single knowledge base only, use the document delete command instead.",
+      "zh-CN": "如果只需从单个知识库中移除文档，请改用文档删除命令。",
+    },
   ],
   exampleArgs: ["--file-id file-xxx --workspace-id ws-xxx", "--file-id file-xxx --yes"],
   async run(ctx) {

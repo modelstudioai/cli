@@ -13,28 +13,37 @@ const SERVICE_LIST_FLAGS = {
   scene: {
     type: "string",
     valueHint: "<scene>",
-    description: "Service scene: chat (Q&A) or search (retrieval). Required by the server",
+    description: {
+      "en-US": "Service scene: chat (Q&A) or search (retrieval). Required by the server",
+      "zh-CN": "服务场景：chat（问答）或 search（检索），服务端必填",
+    },
     required: true,
   },
   status: {
     type: "string",
     valueHint: "<status>",
-    description: "Filter by status: draft, deployed (includes edited) or deleted",
+    description: {
+      "en-US": "Filter by status: draft, deployed (includes edited) or deleted",
+      "zh-CN": "按状态筛选：draft、deployed（包含 edited）或 deleted",
+    },
   },
   name: {
     type: "string",
     valueHint: "<text>",
-    description: "Filter by service name (fuzzy match)",
+    description: { "en-US": "Filter by service name (fuzzy match)", "zh-CN": "按服务名称模糊筛选" },
   },
   agentId: {
     type: "string",
     valueHint: "<id>",
-    description: "Filter by exact agent ID",
+    description: { "en-US": "Filter by exact agent ID", "zh-CN": "按 Agent ID 精确筛选" },
   },
   indexId: {
     type: "string",
     valueHint: "<id>",
-    description: "Filter by exact linked knowledge base (pipeline) ID",
+    description: {
+      "en-US": "Filter by exact linked knowledge base (pipeline) ID",
+      "zh-CN": "按关联的知识库（Pipeline）ID 精确筛选",
+    },
   },
   ...PAGE_FLAGS,
   ...WORKSPACE_FLAG,
@@ -44,13 +53,23 @@ const SCENES = ["chat", "search"];
 const STATUSES = ["draft", "deployed", "deleted"];
 
 export default defineCommand({
-  description: "List retrieval / Q&A services (agents) in the workspace",
+  description: {
+    "en-US": "List retrieval / Q&A services (agents) in the workspace",
+    "zh-CN": "列出 Workspace 中的检索/问答服务（Agent）",
+  },
   auth: "apiKey",
   usageArgs: "--scene <chat|search> [flags]",
   flags: SERVICE_LIST_FLAGS,
   notes: [
-    "A scene (chat or search) is required — run once per scene to see both.",
-    "Use the returned agent_id with the search or chat commands, or with service management commands.",
+    {
+      "en-US": "A scene (chat or search) is required — run once per scene to see both.",
+      "zh-CN": "必须指定场景（chat 或 search）——要查看两类服务，请分别运行一次。",
+    },
+    {
+      "en-US":
+        "Use the returned agent_id with the search or chat commands, or with service management commands.",
+      "zh-CN": "将返回的 agent_id 用于 search/chat 命令或服务管理命令。",
+    },
   ],
   exampleArgs: ["--scene chat --workspace-id ws-xxx", "--scene search --status deployed"],
   validate(flags) {

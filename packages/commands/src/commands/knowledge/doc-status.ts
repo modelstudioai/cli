@@ -22,21 +22,33 @@ const DOC_STATUS_FLAGS = {
   indexId: {
     type: "string",
     valueHint: "<id>",
-    description: "Knowledge base ID",
+    description: { "en-US": "Knowledge base ID", "zh-CN": "知识库 ID" },
     required: true,
   },
   jobId: {
     type: "string",
     valueHint: "<id>",
-    description: "Import job ID (ingestionId returned by import commands)",
+    description: {
+      "en-US": "Import job ID (ingestionId returned by import commands)",
+      "zh-CN": "导入任务 ID（导入命令返回的 ingestionId）",
+    },
     required: true,
   },
   ...PAGE_FLAGS,
-  wait: { type: "switch", description: "Poll until the job reaches a terminal state" },
+  wait: {
+    type: "switch",
+    description: {
+      "en-US": "Poll until the job reaches a terminal state",
+      "zh-CN": "轮询直到任务进入终态",
+    },
+  },
   pollInterval: {
     type: "number",
     valueHint: "<seconds>",
-    description: "Polling interval when waiting (default: 5)",
+    description: {
+      "en-US": "Polling interval when waiting (default: 5)",
+      "zh-CN": "等待时的轮询间隔（默认：5）",
+    },
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
@@ -52,14 +64,29 @@ function printStatus(response: RagIndexJobStatusResponse): void {
 }
 
 export default defineCommand({
-  description: "Check knowledge base import job status",
+  description: {
+    "en-US": "Check knowledge base import job status",
+    "zh-CN": "检查知识库导入任务状态",
+  },
   auth: "apiKey",
   usageArgs: "--index-id <id> --job-id <id> [flags]",
   flags: DOC_STATUS_FLAGS,
   notes: [
-    "Both --index-id and --job-id are required (passing only one returns SystemError).",
-    "If you see a SystemError, the job may not exist — check the ingestion id in the document list output.",
-    "Overall job states are PENDING / RUNNING / COMPLETED; per-document failures (for example PARSE_FAILED) exit non-zero with the error message passed through.",
+    {
+      "en-US": "Both --index-id and --job-id are required (passing only one returns SystemError).",
+      "zh-CN": "--index-id 和 --job-id 均为必填（只传其中一个会返回 SystemError）。",
+    },
+    {
+      "en-US":
+        "If you see a SystemError, the job may not exist — check the ingestion id in the document list output.",
+      "zh-CN": "如果出现 SystemError，任务可能不存在——请检查文档列表输出中的 ingestion ID。",
+    },
+    {
+      "en-US":
+        "Overall job states are PENDING / RUNNING / COMPLETED; per-document failures (for example PARSE_FAILED) exit non-zero with the error message passed through.",
+      "zh-CN":
+        "任务整体状态为 PENDING / RUNNING / COMPLETED；单个文档失败（例如 PARSE_FAILED）时会以非零状态退出，并原样透传错误信息。",
+    },
   ],
   exampleArgs: [
     "--index-id idx-xxx --job-id job-xxx --workspace-id ws-xxx",

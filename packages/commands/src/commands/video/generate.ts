@@ -56,7 +56,10 @@ export default defineCommand({
     lastFrame: {
       type: "string",
       valueHint: "<url>",
-      description: "Last frame image URL (with --image, enables kf2v first+last frame mode)",
+      description: {
+        "en-US": "Last frame image URL (with --image, enables kf2v first+last frame mode)",
+        "zh-CN": "尾帧图片 URL（与 --image 配合，启用 kf2v 首尾帧模式）",
+      },
     },
     negativePrompt: {
       type: "string",

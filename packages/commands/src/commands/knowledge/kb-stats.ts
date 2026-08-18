@@ -15,19 +15,24 @@ const KB_STATS_FLAGS = {
   indexId: {
     type: "string",
     valueHint: "<id>",
-    description: "Knowledge base ID",
+    description: { "en-US": "Knowledge base ID", "zh-CN": "知识库 ID" },
     required: true,
   },
   start: {
     type: "string",
     valueHint: "<time>",
-    description:
-      "Range start: Unix seconds or ISO date, must be in the past (default: 24 hours ago)",
+    description: {
+      "en-US": "Range start: Unix seconds or ISO date, must be in the past (default: 24 hours ago)",
+      "zh-CN": "范围开始时间：Unix 秒或 ISO 日期，必须是过去时间（默认：24 小时前）",
+    },
   },
   end: {
     type: "string",
     valueHint: "<time>",
-    description: "Range end: Unix seconds or ISO date, must be in the past (default: now)",
+    description: {
+      "en-US": "Range end: Unix seconds or ISO date, must be in the past (default: now)",
+      "zh-CN": "范围结束时间：Unix 秒或 ISO 日期，必须是过去时间（默认：当前时间）",
+    },
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
@@ -53,14 +58,28 @@ export function toEpochSecondsString(input: string): string {
 }
 
 export default defineCommand({
-  description: "Show knowledge base storage and QPS monitoring data",
+  description: {
+    "en-US": "Show knowledge base storage and QPS monitoring data",
+    "zh-CN": "查看知识库存储和 QPS 监控数据",
+  },
   auth: "apiKey",
   usageArgs: "--index-id <id> [flags]",
   flags: KB_STATS_FLAGS,
   notes: [
-    "Defaults to the last 24 hours when --start/--end are omitted.",
-    "Timestamps are normalized to epoch seconds as required by the server.",
-    "Future timestamps are rejected for --start and clamped to now for --end, since the monitor API only returns past data.",
+    {
+      "en-US": "Defaults to the last 24 hours when --start/--end are omitted.",
+      "zh-CN": "省略 --start/--end 时，默认查询最近 24 小时。",
+    },
+    {
+      "en-US": "Timestamps are normalized to epoch seconds as required by the server.",
+      "zh-CN": "时间戳会按服务端要求归一化为 Epoch 秒。",
+    },
+    {
+      "en-US":
+        "Future timestamps are rejected for --start and clamped to now for --end, since the monitor API only returns past data.",
+      "zh-CN":
+        "监控 API 只返回历史数据，因此未来的 --start 会被拒绝，未来的 --end 会被截断为当前时间。",
+    },
   ],
   exampleArgs: [
     "--index-id idx-xxx --workspace-id ws-xxx",

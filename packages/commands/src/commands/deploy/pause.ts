@@ -13,12 +13,18 @@ const PAUSE_FLAGS = {
   deployedModel: {
     type: "string",
     valueHint: "<id>",
-    description: "Deployed model identifier (required)",
+    description: {
+      "en-US": "Deployed model identifier (required)",
+      "zh-CN": "已部署模型标识（必填）",
+    },
     required: true,
   },
   skipPrecheck: {
     type: "switch",
-    description: "Skip the local RUNNING/PENDING status precheck",
+    description: {
+      "en-US": "Skip the local RUNNING/PENDING status precheck",
+      "zh-CN": "跳过本地 RUNNING/PENDING 状态预检查",
+    },
   },
 } satisfies FlagsDef;
 
@@ -30,7 +36,10 @@ const PAUSE_FLAGS = {
  * Precheck: status must be RUNNING or PENDING.
  */
 export default defineCommand({
-  description: "Pause a running model deployment (stops billing for mu/ptu)",
+  description: {
+    "en-US": "Pause a running model deployment (stops billing for mu/ptu)",
+    "zh-CN": "暂停运行中的模型部署（mu/ptu 方案将停止计费）",
+  },
   auth: "console",
   usageArgs: "--deployed-model <id> [--skip-precheck]",
   flags: PAUSE_FLAGS,
@@ -40,8 +49,18 @@ export default defineCommand({
     "--deployed-model dep-... --dry-run",
   ],
   notes: [
-    "While paused, billing ceases for mu/ptu plans. Use `deploy resume` to bring it back online or `deploy delete` to remove.",
-    "Precheck verifies status is RUNNING/PENDING before issuing the pause; pass --skip-precheck to bypass.",
+    {
+      "en-US":
+        "While paused, billing ceases for mu/ptu plans. Use `deploy resume` to bring it back online or `deploy delete` to remove.",
+      "zh-CN":
+        "暂停期间，mu/ptu 方案将停止计费。使用 `deploy resume` 恢复服务，或使用 `deploy delete` 删除部署。",
+    },
+    {
+      "en-US":
+        "Precheck verifies status is RUNNING/PENDING before issuing the pause; pass --skip-precheck to bypass.",
+      "zh-CN":
+        "发起暂停前会预检查部署状态是否为 RUNNING/PENDING；可传入 --skip-precheck 跳过检查。",
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

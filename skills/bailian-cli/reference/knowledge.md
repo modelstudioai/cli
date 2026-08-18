@@ -237,7 +237,7 @@ bl knowledge chunk add --index-id idx-xxx --content "chunk text" --title intro -
 ```
 
 ```bash
-bl knowledge chunk add --index-id idx-xxx --field 列A=v1 --field 列B=v2
+bl knowledge chunk add --index-id idx-xxx --field columnA=v1 --field columnB=v2
 ```
 
 ### `bl knowledge chunk delete`
