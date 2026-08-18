@@ -13,26 +13,40 @@ const CHUNK_LIST_FLAGS = {
   indexId: {
     type: "string",
     valueHint: "<id>",
-    description: "Knowledge base ID",
+    description: { "en-US": "Knowledge base ID", "zh-CN": "知识库 ID" },
     required: true,
   },
   docId: {
     type: "string",
     valueHint: "<id>",
-    description: "Only show chunks belonging to this document",
+    description: {
+      "en-US": "Only show chunks belonging to this document",
+      "zh-CN": "仅显示属于该文档的 Chunk",
+    },
   },
   ...PAGE_FLAGS,
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "List chunks in a knowledge base with content and status",
+  description: {
+    "en-US": "List chunks in a knowledge base with content and status",
+    "zh-CN": "列出知识库中的 Chunk 及其内容和状态",
+  },
   auth: "apiKey",
   usageArgs: "--index-id <id> [flags]",
   flags: CHUNK_LIST_FLAGS,
   notes: [
-    "Use metadata._id as the chunk id and metadata.doc_id as the document id in chunk update/delete commands.",
-    "Page size defaults to 20 (server default), max 100.",
+    {
+      "en-US":
+        "Use metadata._id as the chunk id and metadata.doc_id as the document id in chunk update/delete commands.",
+      "zh-CN":
+        "在 Chunk 更新/删除命令中，使用 metadata._id 作为 Chunk ID，使用 metadata.doc_id 作为文档 ID。",
+    },
+    {
+      "en-US": "Page size defaults to 20 (server default), max 100.",
+      "zh-CN": "分页大小默认为 20（服务端默认值），最大为 100。",
+    },
   ],
   exampleArgs: [
     "--index-id idx-xxx --workspace-id ws-xxx",

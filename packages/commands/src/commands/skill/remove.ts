@@ -19,14 +19,20 @@ interface RemoveOutcome {
 }
 
 export default defineCommand({
-  description: "Remove locally installed skills (registry is untouched)",
+  description: {
+    "en-US": "Remove locally installed skills (registry is untouched)",
+    "zh-CN": "移除本地已安装的 Skill（不修改 Registry）",
+  },
   auth: "none",
   usageArgs: "--name <all|name,...>",
   flags: {
     name: {
       type: "string",
       valueHint: "<all|name,...>",
-      description: "Skills to remove: all or comma-separated skill names",
+      description: {
+        "en-US": "Skills to remove: all or comma-separated skill names",
+        "zh-CN": "要移除的 Skill：all 或以逗号分隔的 Skill 名称",
+      },
       required: true,
     },
   },

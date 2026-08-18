@@ -99,22 +99,39 @@ function printTable(quotas: ModelQuota[], total: number): void {
 // ---------------------------------------------------------------------------
 
 export default defineCommand({
-  description: "View model rate limits (QPM/TPM, account and workspace level)",
+  description: {
+    "en-US": "View model rate limits (QPM/TPM, account and workspace level)",
+    "zh-CN": "查看模型限流配置（QPM/TPM，账号级和 Workspace 级）",
+  },
   auth: "apiKey",
   usageArgs: "[--model <model>] [--name <name>] [--page <n>] [--page-size <n>]",
   flags: {
     model: {
       type: "string",
       valueHint: "<model>",
-      description: "Model name(s), comma-separated (exact match)",
+      description: {
+        "en-US": "Model name(s), comma-separated (exact match)",
+        "zh-CN": "模型名称，多个以逗号分隔（精确匹配）",
+      },
     },
     name: {
       type: "string",
       valueHint: "<name>",
-      description: "Fuzzy search by model name",
+      description: { "en-US": "Fuzzy search by model name", "zh-CN": "按模型名称模糊搜索" },
     },
-    page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
-    pageSize: { type: "number", valueHint: "<n>", description: "Results per page (default: 20)" },
+    page: {
+      type: "number",
+      valueHint: "<n>",
+      description: { "en-US": "Page number (default: 1)", "zh-CN": "页码（默认：1）" },
+    },
+    pageSize: {
+      type: "number",
+      valueHint: "<n>",
+      description: {
+        "en-US": "Results per page (default: 20)",
+        "zh-CN": "每页结果数（默认：20）",
+      },
+    },
   },
   exampleArgs: [
     "",
@@ -123,7 +140,12 @@ export default defineCommand({
     "--name qwen --page-size 50",
     "--output json",
   ],
-  notes: ["Usage-vs-limit pressure checks live in `quota check` (console auth)."],
+  notes: [
+    {
+      "en-US": "Usage-vs-limit pressure checks live in `quota check` (console auth).",
+      "zh-CN": "用量与限流压力检查位于 `quota check`（Console 鉴权）。",
+    },
+  ],
   async run(ctx) {
     const { settings, flags } = ctx;
     const modelFlag = flags.model || undefined;

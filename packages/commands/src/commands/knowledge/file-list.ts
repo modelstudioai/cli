@@ -13,45 +13,74 @@ const FILE_LIST_FLAGS = {
   categoryId: {
     type: "string",
     valueHint: "<id>",
-    description: "Category to list (find ids via the category list command); exact match",
+    description: {
+      "en-US": "Category to list (find ids via the category list command); exact match",
+      "zh-CN": "要列出文件的类目（通过类目列表命令查找 ID）；精确匹配",
+    },
     required: true,
   },
   name: {
     type: "string",
     valueHint: "<text>",
-    description: "Filter by exact file name without its extension (a.md → pass a)",
+    description: {
+      "en-US": "Filter by exact file name without its extension (a.md → pass a)",
+      "zh-CN": "按不含扩展名的文件名精确筛选（a.md 应传入 a）",
+    },
   },
   fileId: {
     type: "array",
     valueHint: "<id>",
-    description: "Filter by exact file ID (repeatable)",
+    description: {
+      "en-US": "Filter by exact file ID (repeatable)",
+      "zh-CN": "按文件 ID 精确筛选（可重复）",
+    },
   },
   nextToken: {
     type: "string",
     valueHint: "<token>",
-    description: "Cursor for the next page (from previous output)",
+    description: {
+      "en-US": "Cursor for the next page (from previous output)",
+      "zh-CN": "下一页游标（来自上一次输出）",
+    },
   },
   maxResult: {
     type: "number",
     valueHint: "<n>",
-    description: "Items per page",
+    description: { "en-US": "Items per page", "zh-CN": "每页条目数" },
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "List files in a data-center category",
+  description: {
+    "en-US": "List files in a data-center category",
+    "zh-CN": "列出数据中心类目中的文件",
+  },
   auth: "apiKey",
   usageArgs: "--category-id <id> [flags]",
   flags: FILE_LIST_FLAGS,
   notes: [
-    "A real category id is required — the default value is not resolved here. Find the id via the category list command.",
-    "--name matches the exact file name without its extension (for a.md pass a); partial keywords return no results.",
-    "Pagination is cursor-based: reuse the printed next token to continue.",
+    {
+      "en-US":
+        "A real category id is required — the default value is not resolved here. Find the id via the category list command.",
+      "zh-CN": "必须提供真实的类目 ID——此处不会解析 default 值。请通过类目列表命令查找 ID。",
+    },
+    {
+      "en-US":
+        "--name matches the exact file name without its extension (for a.md pass a); partial keywords return no results.",
+      "zh-CN": "--name 精确匹配不含扩展名的文件名（a.md 应传入 a）；部分关键字不会返回结果。",
+    },
+    {
+      "en-US": "Pagination is cursor-based: reuse the printed next token to continue.",
+      "zh-CN": "分页使用游标：复用输出中的 next token 继续查询。",
+    },
   ],
   exampleArgs: [
     "--category-id cate-xxx --workspace-id ws-xxx",
-    "--category-id cate-xxx --name report",
+    {
+      "en-US": "--category-id cate-xxx --name report",
+      "zh-CN": "--category-id cate-xxx --name 报告",
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

@@ -311,6 +311,11 @@ test("parseConfigFile ignores obsolete region field", () => {
   expect("region" in f).toBe(false);
 });
 
+test("parseConfigFile accepts only supported languages", () => {
+  expect(parseConfigFile({ language: "zh-CN" }).language).toBe("zh-CN");
+  expect(parseConfigFile({ language: "fr-FR" }).language).toBeUndefined();
+});
+
 test("parseConfigFile accepts only well-formed http(s) base_url", () => {
   expect(parseConfigFile({ base_url: "https://dashscope.aliyuncs.com" }).base_url).toBe(
     "https://dashscope.aliyuncs.com",

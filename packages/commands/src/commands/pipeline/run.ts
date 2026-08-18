@@ -11,41 +11,63 @@ const RUN_FLAGS = {
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Pipeline definition file (YAML/JSON)",
+    description: {
+      "en-US": "Pipeline definition file (YAML/JSON)",
+      "zh-CN": "Pipeline 定义文件（YAML/JSON）",
+    },
     required: true,
   },
-  input: { type: "string", valueHint: "<json>", description: "Runtime input as inline JSON" },
+  input: {
+    type: "string",
+    valueHint: "<json>",
+    description: { "en-US": "Runtime input as inline JSON", "zh-CN": "内联 JSON 格式的运行时输入" },
+  },
   inputFile: {
     type: "string",
     valueHint: "<path>",
-    description: "Runtime input from a JSON file",
+    description: {
+      "en-US": "Runtime input from a JSON file",
+      "zh-CN": "来自 JSON 文件的运行时输入",
+    },
   },
   concurrency: {
     type: "number",
     valueHint: "<n>",
-    description: "Max parallel steps (default: 1)",
+    description: {
+      "en-US": "Max parallel steps (default: 1)",
+      "zh-CN": "最大并行步骤数（默认：1）",
+    },
   },
   events: {
     type: "string",
     valueHint: "<format>",
-    description: "Emit lifecycle events: jsonl",
+    description: { "en-US": "Emit lifecycle events: jsonl", "zh-CN": "输出生命周期事件：jsonl" },
     choices: ["jsonl"] as const,
   },
   stepTimeout: {
     type: "number",
     valueHint: "<seconds>",
-    description: "Default step timeout in seconds",
+    description: {
+      "en-US": "Default step timeout in seconds",
+      "zh-CN": "默认步骤超时时间，单位为秒",
+    },
   },
 } satisfies FlagsDef;
 type RunFlags = ParsedFlags<typeof RUN_FLAGS>;
 
 export default defineCommand({
-  description: "Run a pipeline workflow definition",
+  description: {
+    "en-US": "Run a pipeline workflow definition",
+    "zh-CN": "运行 Pipeline 工作流定义",
+  },
   auth: "none",
   usageArgs: "--file <path> [flags]",
   flags: RUN_FLAGS,
   exampleArgs: [
-    '--file workflow.yaml --input \'{"brief":"hello"}\'',
+    {
+      "en-US": '--file workflow.yaml --input \'{"brief":"hello"}\'',
+      "zh-CN": '--file workflow.yaml --input \'{"brief":"你好"}\'',
+    },
     "--file workflow.json --input-file inputs.json --concurrency 3",
     "--file workflow.yaml --dry-run",
     "--file workflow.json --events jsonl",

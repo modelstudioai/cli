@@ -5,7 +5,7 @@ const CHECKPOINTS_FLAGS = {
   jobId: {
     type: "string",
     valueHint: "<id>",
-    description: "Fine-tune job ID (required)",
+    description: { "en-US": "Fine-tune job ID (required)", "zh-CN": "微调任务 ID（必填）" },
     required: true,
   },
 } satisfies FlagsDef;
@@ -13,14 +13,26 @@ const CHECKPOINTS_FLAGS = {
 const EXPIRY_WARN_THRESHOLD_MS = 72 * 60 * 60 * 1000; // 72 hours
 
 export default defineCommand({
-  description: "List checkpoints produced by a fine-tune job",
+  description: {
+    "en-US": "List checkpoints produced by a fine-tune job",
+    "zh-CN": "列出微调任务生成的 Checkpoint",
+  },
   auth: "apiKey",
   usageArgs: "--job-id <id>",
   flags: CHECKPOINTS_FLAGS,
   exampleArgs: ["--job-id ft-xxx", "--job-id ft-xxx --output json"],
   notes: [
-    "`model_name` (shown for SUCCEEDED checkpoints) is the direct input for `deploy create --model-name`.",
-    "Checkpoints expire ~15 days after creation; `expire_time` shows the deadline. Export or deploy before expiry.",
+    {
+      "en-US":
+        "`model_name` (shown for SUCCEEDED checkpoints) is the direct input for `deploy create --model-name`.",
+      "zh-CN":
+        "SUCCEEDED Checkpoint 中显示的 `model_name` 可直接作为 `deploy create --model-name` 的输入。",
+    },
+    {
+      "en-US":
+        "Checkpoints expire ~15 days after creation; `expire_time` shows the deadline. Export or deploy before expiry.",
+      "zh-CN": "Checkpoint 创建后约 15 天过期，`expire_time` 显示截止时间。请在过期前导出或部署。",
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

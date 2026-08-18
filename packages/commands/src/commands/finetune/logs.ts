@@ -66,31 +66,47 @@ const LOGS_FLAGS = {
   jobId: {
     type: "string",
     valueHint: "<id>",
-    description: "Fine-tune job ID (required)",
+    description: { "en-US": "Fine-tune job ID (required)", "zh-CN": "微调任务 ID（必填）" },
     required: true,
   },
-  page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
+  page: {
+    type: "number",
+    valueHint: "<n>",
+    description: { "en-US": "Page number (default: 1)", "zh-CN": "页码（默认：1）" },
+  },
   pageSize: {
     type: "number",
     valueHint: "<n>",
-    description: "Lines per page (default: server-defined)",
+    description: {
+      "en-US": "Lines per page (default: server-defined)",
+      "zh-CN": "每页行数（默认：由服务端决定）",
+    },
   },
   search: {
     type: "string",
     valueHint: "<keyword>",
-    description:
-      "Case-insensitive substring filter. When set, all log pages are fetched and filtered client-side (--page is ignored).",
+    description: {
+      "en-US":
+        "Case-insensitive substring filter. When set, all log pages are fetched and filtered client-side (--page is ignored).",
+      "zh-CN": "不区分大小写的子字符串筛选。设置后会获取全部日志页并在客户端筛选（忽略 --page）。",
+    },
   },
   tail: {
     type: "number",
     valueHint: "<n>",
-    description:
-      "Keep only the last N entries. When set, all log pages are fetched and the trailing N are kept (--page is ignored).",
+    description: {
+      "en-US":
+        "Keep only the last N entries. When set, all log pages are fetched and the trailing N are kept (--page is ignored).",
+      "zh-CN": "仅保留最后 N 条记录。设置后会获取全部日志页并保留末尾 N 条（忽略 --page）。",
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Fetch training logs for a fine-tune job",
+  description: {
+    "en-US": "Fetch training logs for a fine-tune job",
+    "zh-CN": "获取微调任务的训练日志",
+  },
   auth: "apiKey",
   usageArgs: "--job-id <id> [--page <n>] [--page-size <n>] [--search <keyword>] [--tail <n>]",
   flags: LOGS_FLAGS,

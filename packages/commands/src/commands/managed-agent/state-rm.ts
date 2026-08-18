@@ -15,18 +15,27 @@ const STATE_RM_FLAGS = {
   address: {
     type: "string",
     valueHint: "<provider.type.name>",
-    description: "Resource state address (required)",
+    description: {
+      "en-US": "Resource state address (required)",
+      "zh-CN": "资源 State 地址（必填）",
+    },
     required: true,
   },
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Config file path (default: agents.yaml)",
+    description: {
+      "en-US": "Config file path (default: agents.yaml)",
+      "zh-CN": "配置文件路径（默认：agents.yaml）",
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Remove a resource from state without destroying it remotely",
+  description: {
+    "en-US": "Remove a resource from state without destroying it remotely",
+    "zh-CN": "从 State 中移除资源，但不销毁远端资源",
+  },
   auth: "none",
   usageArgs: "--address <provider.type.name> [--file <path>]",
   flags: STATE_RM_FLAGS,

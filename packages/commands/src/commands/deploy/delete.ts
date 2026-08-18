@@ -12,12 +12,18 @@ const DELETE_FLAGS = {
   deployedModel: {
     type: "string",
     valueHint: "<id>",
-    description: "Deployed model identifier (required)",
+    description: {
+      "en-US": "Deployed model identifier (required)",
+      "zh-CN": "已部署模型标识（必填）",
+    },
     required: true,
   },
   skipPrecheck: {
     type: "switch",
-    description: "Skip the local STOPPED/FAILED status precheck",
+    description: {
+      "en-US": "Skip the local STOPPED/FAILED status precheck",
+      "zh-CN": "跳过本地 STOPPED/FAILED 状态预检查",
+    },
   },
 } satisfies FlagsDef;
 
@@ -29,7 +35,10 @@ const DELETE_FLAGS = {
  * DELETE call.
  */
 export default defineCommand({
-  description: "Delete a model deployment (must be STOPPED or FAILED)",
+  description: {
+    "en-US": "Delete a model deployment (must be STOPPED or FAILED)",
+    "zh-CN": "删除模型部署（状态必须为 STOPPED 或 FAILED）",
+  },
   auth: "apiKey",
   usageArgs: "--deployed-model <id> [--skip-precheck]",
   flags: DELETE_FLAGS,

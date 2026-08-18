@@ -10,42 +10,68 @@ const SESSION_CREATE_FLAGS = {
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Config file path (default: agents.yaml)",
+    description: {
+      "en-US": "Config file path (default: agents.yaml)",
+      "zh-CN": "配置文件路径（默认：agents.yaml）",
+    },
   },
   agent: {
     type: "string",
     valueHint: "<name>",
-    description: "Agent name (auto-detected when only one agent is configured)",
+    description: {
+      "en-US": "Agent name (auto-detected when only one agent is configured)",
+      "zh-CN": "Agent 名称（仅配置一个 Agent 时自动识别）",
+    },
   },
   environment: {
     type: "string",
     valueHint: "<name>",
-    description: "Override agent's declared environment",
+    description: {
+      "en-US": "Override agent's declared environment",
+      "zh-CN": "覆盖 Agent 声明的环境",
+    },
   },
   vault: {
     type: "string",
     valueHint: "<name>",
-    description: "Override agent's declared vault",
+    description: { "en-US": "Override agent's declared vault", "zh-CN": "覆盖 Agent 声明的 Vault" },
   },
   memoryStores: {
     type: "string",
     valueHint: "<names>",
-    description: "Override agent's memory stores (comma-separated)",
+    description: {
+      "en-US": "Override agent's memory stores (comma-separated)",
+      "zh-CN": "覆盖 Agent 的 Memory Store（以逗号分隔）",
+    },
   },
-  title: { type: "string", valueHint: "<title>", description: "Session title" },
+  title: {
+    type: "string",
+    valueHint: "<title>",
+    description: { "en-US": "Session title", "zh-CN": "Session 标题" },
+  },
   provider: {
     type: "string",
     valueHint: "<name>",
-    description: "Target provider (multi-provider agents)",
+    description: {
+      "en-US": "Target provider (multi-provider agents)",
+      "zh-CN": "目标 Provider（多 Provider Agent）",
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Create a new session for an agent",
+  description: { "en-US": "Create a new session for an agent", "zh-CN": "为 Agent 创建新 Session" },
   auth: "apiKey",
   usageArgs: "[--agent <name>] [--environment <name>] [--title <title>] [--file <path>]",
   flags: SESSION_CREATE_FLAGS,
-  exampleArgs: ["", "--agent assistant", "--agent assistant --title 'debug run'"],
+  exampleArgs: [
+    "",
+    "--agent assistant",
+    {
+      "en-US": "--agent assistant --title 'debug run'",
+      "zh-CN": "--agent assistant --title '调试运行'",
+    },
+  ],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;

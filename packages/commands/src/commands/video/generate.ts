@@ -23,51 +23,75 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description:
-    "Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)",
+  description: {
+    "en-US":
+      "Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)",
+    "zh-CN": "根据文本或图片生成视频（happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v）",
+  },
   auth: "apiKey",
   usageArgs: "--prompt <text> [--image <url>] [flags]",
   flags: {
     model: {
       type: "string",
       valueHint: "<model>",
-      description: "Model ID (default: happyhorse-1.1-t2v, or happyhorse-1.1-i2v with --image)",
+      description: {
+        "en-US": "Model ID (default: happyhorse-1.1-t2v, or happyhorse-1.1-i2v with --image)",
+        "zh-CN": "模型 ID（默认：happyhorse-1.1-t2v；使用 --image 时为 happyhorse-1.1-i2v）",
+      },
     },
     prompt: {
       type: "string",
       valueHint: "<text>",
-      description: "Video description",
+      description: { "en-US": "Video description", "zh-CN": "视频描述" },
       required: true,
     },
     image: {
       type: "string",
       valueHint: "<url>",
-      description: "Input image URL for image-to-video generation",
+      description: {
+        "en-US": "Input image URL for image-to-video generation",
+        "zh-CN": "图生视频使用的输入图片 URL",
+      },
     },
     lastFrame: {
       type: "string",
       valueHint: "<url>",
-      description: "Last frame image URL (with --image, enables kf2v first+last frame mode)",
+      description: {
+        "en-US": "Last frame image URL (with --image, enables kf2v first+last frame mode)",
+        "zh-CN": "尾帧图片 URL（与 --image 配合，启用 kf2v 首尾帧模式）",
+      },
     },
     negativePrompt: {
       type: "string",
       valueHint: "<text>",
-      description: "Negative prompt to exclude unwanted content",
+      description: {
+        "en-US": "Negative prompt to exclude unwanted content",
+        "zh-CN": "负向提示词，用于排除不需要的内容",
+      },
     },
     resolution: {
       type: "string",
       valueHint: "<res>",
-      description: "Resolution: 720P or 1080P (default: 1080P)",
+      description: {
+        "en-US": "Resolution: 720P or 1080P (default: 1080P)",
+        "zh-CN": "分辨率：720P 或 1080P（默认：1080P）",
+      },
     },
     ratio: {
       type: "string",
       valueHint: "<ratio>",
-      description: "Aspect ratio (e.g. 16:9, 9:16, 1:1)",
+      description: {
+        "en-US": "Aspect ratio (e.g. 16:9, 9:16, 1:1)",
+        "zh-CN": "宽高比（例如 16:9、9:16、1:1）",
+      },
     },
     duration: {
       type: "number",
       valueHint: "<seconds>",
-      description: "Video duration in seconds (default: 5)",
+      description: {
+        "en-US": "Video duration in seconds (default: 5)",
+        "zh-CN": "视频时长，单位为秒（默认：5）",
+      },
     },
     promptExtend: {
       type: "boolean",
@@ -82,27 +106,51 @@ export default defineCommand({
     seed: {
       type: "number",
       valueHint: "<n>",
-      description: "Random seed for reproducible generation",
+      description: {
+        "en-US": "Random seed for reproducible generation",
+        "zh-CN": "用于复现生成结果的随机种子",
+      },
     },
     download: {
       type: "string",
       valueHint: "<path>",
-      description: "Save video to file on completion",
+      description: {
+        "en-US": "Save video to file on completion",
+        "zh-CN": "完成后将视频保存到文件",
+      },
     },
     ...ASYNC_FLAG,
     ...CONCURRENT_FLAG,
     pollInterval: {
       type: "number",
       valueHint: "<seconds>",
-      description: "Polling interval when waiting (default: 5)",
+      description: {
+        "en-US": "Polling interval when waiting (default: 5)",
+        "zh-CN": "等待任务时的轮询间隔（默认：5 秒）",
+      },
     },
   },
   exampleArgs: [
-    '--prompt "A person reading a book, static shot"',
-    '--prompt "Ocean waves at sunset." --download sunset.mp4',
-    '--image https://example.com/cat.png --prompt "Make the cat in the scene move"',
-    '--prompt "Mountain landscape" --resolution 720P --duration 5',
-    '--prompt "A cat playing with a ball" --watermark false',
+    {
+      "en-US": '--prompt "A person reading a book, static shot"',
+      "zh-CN": '--prompt "一个人正在读书，固定镜头"',
+    },
+    {
+      "en-US": '--prompt "Ocean waves at sunset." --download sunset.mp4',
+      "zh-CN": '--prompt "日落时的海浪。" --download sunset.mp4',
+    },
+    {
+      "en-US": '--image https://example.com/cat.png --prompt "Make the cat in the scene move"',
+      "zh-CN": '--image https://example.com/cat.png --prompt "让画面中的猫动起来"',
+    },
+    {
+      "en-US": '--prompt "Mountain landscape" --resolution 720P --duration 5',
+      "zh-CN": '--prompt "山地景观" --resolution 720P --duration 5',
+    },
+    {
+      "en-US": '--prompt "A cat playing with a ball" --watermark false',
+      "zh-CN": '--prompt "一只正在玩球的猫" --watermark false',
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

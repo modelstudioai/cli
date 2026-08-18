@@ -16,7 +16,12 @@ export const BAILIAN_HOST = "https://bailian.cn-beijing.aliyuncs.com";
 
 export type Region = keyof typeof REGIONS;
 
+export const SUPPORTED_LANGUAGES = ["en-US", "zh-CN"] as const;
+export type Language = (typeof SUPPORTED_LANGUAGES)[number];
+export const DEFAULT_LANGUAGE: Language = "en-US";
+
 export interface ConfigFile {
+  language?: Language;
   api_key?: string;
   /** OAuth-style token from `bl auth login --console` callback; sent as `Authorization: Bearer …` */
   access_token?: string;
@@ -45,6 +50,7 @@ export interface ConfigFile {
 }
 
 export const CONFIG_FILE_KEYS = [
+  "language",
   "api_key",
   "access_token",
   "access_key_id",
@@ -90,6 +96,11 @@ export function parseConfigFile(raw: unknown): ConfigFile {
   const obj = raw as Record<string, unknown>;
   const out: ConfigFile = {};
 
+  if (
+    typeof obj.language === "string" &&
+    (SUPPORTED_LANGUAGES as readonly string[]).includes(obj.language)
+  )
+    out.language = obj.language as Language;
   if (typeof obj.api_key === "string") out.api_key = obj.api_key;
   if (typeof obj.access_token === "string" && obj.access_token.length > 0)
     out.access_token = obj.access_token;

@@ -6,13 +6,16 @@ const GET_FLAGS = {
   jobId: {
     type: "string",
     valueHint: "<id>",
-    description: "Fine-tune job ID (required)",
+    description: { "en-US": "Fine-tune job ID (required)", "zh-CN": "微调任务 ID（必填）" },
     required: true,
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Get details of a single fine-tune job",
+  description: {
+    "en-US": "Get details of a single fine-tune job",
+    "zh-CN": "获取单个微调任务的详情",
+  },
   auth: "apiKey",
   usageArgs: "--job-id <id>",
   flags: GET_FLAGS,

@@ -7,20 +7,26 @@ import {
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description: "Get user profile by schema ID and user ID",
+  description: {
+    "en-US": "Get user profile by schema ID and user ID",
+    "zh-CN": "通过 Schema ID 和用户 ID 获取用户画像",
+  },
   auth: "apiKey",
   usageArgs: "--schema-id <id> --user-id <id>",
   flags: {
     schemaId: {
       type: "string",
       valueHint: "<id>",
-      description: "Profile schema ID (required)",
+      description: {
+        "en-US": "Profile schema ID (required)",
+        "zh-CN": "Profile Schema ID（必填）",
+      },
       required: true,
     },
     userId: {
       type: "string",
       valueHint: "<id>",
-      description: "User ID (required)",
+      description: { "en-US": "User ID (required)", "zh-CN": "用户 ID（必填）" },
       required: true,
     },
   },

@@ -13,31 +13,52 @@ const DOC_TAG_FLAGS = {
   docId: {
     type: "array",
     valueHint: "<id>",
-    description: "Data-center file ID to tag (repeatable, 1-20 per call)",
+    description: {
+      "en-US": "Data-center file ID to tag (repeatable, 1-20 per call)",
+      "zh-CN": "要添加标签的数据中心文件 ID（可重复，每次调用 1–20 个）",
+    },
     required: true,
   },
   tag: {
     type: "array",
     valueHint: "<text>",
-    description: "Tag applied to every --doc-id (repeatable, each up to 32 chars)",
+    description: {
+      "en-US": "Tag applied to every --doc-id (repeatable, each up to 32 chars)",
+      "zh-CN": "应用于每个 --doc-id 的标签（可重复，每个最多 32 个字符）",
+    },
     required: true,
   },
   mode: {
     type: "string",
     valueHint: "<mode>",
-    description: "Update mode: append (default) or overwrite",
+    description: {
+      "en-US": "Update mode: append (default) or overwrite",
+      "zh-CN": "更新模式：append（默认）或 overwrite",
+    },
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Batch update tags on data-center files",
+  description: {
+    "en-US": "Batch update tags on data-center files",
+    "zh-CN": "批量更新数据中心文件标签",
+  },
   auth: "apiKey",
   usageArgs: "--doc-id <id> --tag <text> [flags]",
   flags: DOC_TAG_FLAGS,
   notes: [
-    "The same tag set is applied to every --doc-id; run the command multiple times for different tag sets.",
-    "Server limits: up to 100 tags per file, total tag length up to 700 chars, tag up to 32 chars.",
+    {
+      "en-US":
+        "The same tag set is applied to every --doc-id; run the command multiple times for different tag sets.",
+      "zh-CN": "同一组标签会应用于每个 --doc-id；若需应用不同标签组，请多次运行该命令。",
+    },
+    {
+      "en-US":
+        "Server limits: up to 100 tags per file, total tag length up to 700 chars, tag up to 32 chars.",
+      "zh-CN":
+        "服务端限制：每个文件最多 100 个标签，标签总长度最多 700 个字符，单个标签最多 32 个字符。",
+    },
   ],
   exampleArgs: [
     "--doc-id file-xxx --tag project-a --tag draft --workspace-id ws-xxx",

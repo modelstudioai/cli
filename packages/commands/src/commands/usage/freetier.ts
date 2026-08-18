@@ -16,27 +16,36 @@ interface BatchResultFailure {
 }
 
 export default defineCommand({
-  description:
-    "Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable",
+  description: {
+    "en-US":
+      "Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable",
+    "zh-CN": "启用或停用免费额度模型自动停止。默认启用，使用 --off 停用",
+  },
   auth: "console",
   usageArgs: "<--model <model>[,model2,...] | --all> [--off] [flags]",
   flags: {
     model: {
       type: "string",
       valueHint: "<model>",
-      description: "Model name(s), comma-separated for multiple",
+      description: {
+        "en-US": "Model name(s), comma-separated for multiple",
+        "zh-CN": "模型名称，多个名称以逗号分隔",
+      },
     },
     all: {
       type: "switch",
-      description: "Apply to all free-tier models",
+      description: { "en-US": "Apply to all free-tier models", "zh-CN": "应用于全部免费额度模型" },
     },
     on: {
       type: "switch",
-      description: "Enable auto-stop (default behavior)",
+      description: {
+        "en-US": "Enable auto-stop (default behavior)",
+        "zh-CN": "启用自动停止（默认行为）",
+      },
     },
     off: {
       type: "switch",
-      description: "Disable auto-stop",
+      description: { "en-US": "Disable auto-stop", "zh-CN": "停用自动停止" },
     },
   },
   exampleArgs: [

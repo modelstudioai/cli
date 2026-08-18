@@ -15,18 +15,27 @@ const STATE_SHOW_FLAGS = {
   address: {
     type: "string",
     valueHint: "<provider.type.name>",
-    description: "Resource state address (required)",
+    description: {
+      "en-US": "Resource state address (required)",
+      "zh-CN": "资源 State 地址（必填）",
+    },
     required: true,
   },
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Config file path (default: agents.yaml)",
+    description: {
+      "en-US": "Config file path (default: agents.yaml)",
+      "zh-CN": "配置文件路径（默认：agents.yaml）",
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Show details of a resource in agents state",
+  description: {
+    "en-US": "Show details of a resource in agents state",
+    "zh-CN": "显示 Agent State 中资源的详情",
+  },
   auth: "none",
   usageArgs: "--address <provider.type.name> [--file <path>]",
   flags: STATE_SHOW_FLAGS,

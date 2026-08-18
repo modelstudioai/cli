@@ -1,5 +1,13 @@
-export type { ConfigFile, Region, Identity, Settings } from "./schema.ts";
-export { BAILIAN_HOST, CONFIG_FILE_KEYS, DOCS_HOSTS, REGIONS, parseConfigFile } from "./schema.ts";
+export type { ConfigFile, Language, Region, Identity, Settings } from "./schema.ts";
+export {
+  BAILIAN_HOST,
+  CONFIG_FILE_KEYS,
+  DEFAULT_LANGUAGE,
+  DOCS_HOSTS,
+  REGIONS,
+  SUPPORTED_LANGUAGES,
+  parseConfigFile,
+} from "./schema.ts";
 export { normalizeConfigName, readConfigFile, writeConfigFile } from "./loader.ts";
 export {
   activateConfigProfile,

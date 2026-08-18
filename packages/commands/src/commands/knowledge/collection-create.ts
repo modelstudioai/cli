@@ -13,46 +13,78 @@ const COLLECTION_CREATE_FLAGS = {
   name: {
     type: "string",
     valueHint: "<text>",
-    description: "Collection name",
+    description: { "en-US": "Collection name", "zh-CN": "数据集合名称" },
     required: true,
   },
   description: {
     type: "string",
     valueHint: "<text>",
-    description: "Collection description (required by the server)",
+    description: {
+      "en-US": "Collection description (required by the server)",
+      "zh-CN": "数据集合描述（服务端必填）",
+    },
     required: true,
   },
   storeType: {
     type: "string",
     valueHint: "<type>",
-    description: "Storage: platform (managed) or custom (your own OSS bucket)",
+    description: {
+      "en-US": "Storage: platform (managed) or custom (your own OSS bucket)",
+      "zh-CN": "存储类型：platform（托管）或 custom（自有 OSS Bucket）",
+    },
   },
   ossRegion: {
     type: "string",
     valueHint: "<id>",
-    description: "OSS region id (required with --store-type custom)",
+    description: {
+      "en-US": "OSS region id (required with --store-type custom)",
+      "zh-CN": "OSS Region ID（使用 --store-type custom 时必填）",
+    },
   },
   ossBucket: {
     type: "string",
     valueHint: "<name>",
-    description: "OSS bucket name (required with --store-type custom)",
+    description: {
+      "en-US": "OSS bucket name (required with --store-type custom)",
+      "zh-CN": "OSS Bucket 名称（使用 --store-type custom 时必填）",
+    },
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Create a FILE data collection",
+  description: { "en-US": "Create a FILE data collection", "zh-CN": "创建 FILE 数据集合" },
   auth: "apiKey",
   usageArgs: "--name <text> --description <text> [flags]",
   flags: COLLECTION_CREATE_FLAGS,
   notes: [
-    "Store type defaults to platform (managed storage); custom uses your authorized OSS bucket.",
-    "Custom buckets must carry the bucket tag bailian-connector-access=ReadAndWrite (Bailian's tag-based access control); without it the server rejects creation with a misleading 'setBucketCORS failed' error.",
-    "There is no collection delete API — create collections deliberately.",
+    {
+      "en-US":
+        "Store type defaults to platform (managed storage); custom uses your authorized OSS bucket.",
+      "zh-CN": "存储类型默认为 platform（托管存储）；custom 使用已授权的自有 OSS Bucket。",
+    },
+    {
+      "en-US":
+        "Custom buckets must carry the bucket tag bailian-connector-access=ReadAndWrite (Bailian's tag-based access control); without it the server rejects creation with a misleading 'setBucketCORS failed' error.",
+      "zh-CN":
+        "自定义 Bucket 必须带有 bailian-connector-access=ReadAndWrite 标签（百炼基于标签的访问控制）；缺少该标签时，服务端会以容易误解的 'setBucketCORS failed' 错误拒绝创建。",
+    },
+    {
+      "en-US": "There is no collection delete API — create collections deliberately.",
+      "zh-CN": "目前没有删除数据集合的 API——请谨慎创建。",
+    },
   ],
   exampleArgs: [
-    "--name my-collection --description 'team docs' --workspace-id ws-xxx",
-    "--name oss-coll --description 'own bucket' --store-type custom --oss-region cn-beijing --oss-bucket my-bucket",
+    {
+      "en-US": "--name my-collection --description 'team docs' --workspace-id ws-xxx",
+      "zh-CN": "--name my-collection --description '团队文档' --workspace-id ws-xxx",
+    },
+    {
+      "en-US":
+        "--name oss-coll --description 'own bucket' --store-type custom --oss-region cn-beijing --oss-bucket my-bucket",
+      "zh-CN":
+        "--name oss-coll --description '自有 Bucket' --store-type custom --oss-region cn-beijing --oss-bucket my-bucket",
+    },
   ],
   validate(flags) {
     // Server rejects names longer than 20 characters ("Connector name is longer than 20")

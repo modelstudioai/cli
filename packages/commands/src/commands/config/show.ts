@@ -1,9 +1,9 @@
-import { defineCommand, detectOutputFormat, maskToken } from "bailian-cli-core";
+import { DEFAULT_LANGUAGE, defineCommand, detectOutputFormat, maskToken } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import { SECRET_KEYS } from "./shared.ts";
 
 export default defineCommand({
-  description: "Display current configuration",
+  description: { "en-US": "Display current configuration", "zh-CN": "显示当前配置" },
   auth: "none",
   exampleArgs: ["", "--output json"],
   async run(ctx) {
@@ -14,6 +14,7 @@ export default defineCommand({
 
     const result: Record<string, unknown> = {
       ...file,
+      language: file.language ?? DEFAULT_LANGUAGE,
       base_url: client.baseUrl,
       output: settings.output,
       timeout: settings.timeout,

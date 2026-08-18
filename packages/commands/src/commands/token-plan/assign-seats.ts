@@ -24,21 +24,34 @@ const ASSIGN_SEATS_FLAGS = {
   seatType: {
     type: "string",
     valueHint: "<type>",
-    description: "Seat tier: standard, pro, or max",
+    description: {
+      "en-US": "Seat tier: standard, pro, or max",
+      "zh-CN": "席位档位：standard、pro 或 max",
+    },
     required: true,
   },
   accountId: {
     type: "array",
     valueHint: "<id>",
-    description: "Target member account ID (repeatable)",
+    description: {
+      "en-US": "Target member account ID (repeatable)",
+      "zh-CN": "目标成员账号 ID（可重复）",
+    },
   },
   ...TOKEN_PLAN_COMMON_QUERY_FLAGS,
-  locale: { type: "string", valueHint: "<locale>", description: "Language: zh-CN or en-US" },
+  locale: {
+    type: "string",
+    valueHint: "<locale>",
+    description: { "en-US": "Language: zh-CN or en-US", "zh-CN": "语言：zh-CN 或 en-US" },
+  },
 } satisfies FlagsDef;
 type AssignSeatsFlags = ParsedFlags<typeof ASSIGN_SEATS_FLAGS>;
 
 export default defineCommand({
-  description: "Batch assign Token Plan seats to members",
+  description: {
+    "en-US": "Batch assign Token Plan seats to members",
+    "zh-CN": "批量向成员分配 Token Plan 席位",
+  },
   auth: "openapi",
   usageArgs: "--workspace-id <id> --seat-type <type> --account-id <id> [flags]",
   flags: ASSIGN_SEATS_FLAGS,

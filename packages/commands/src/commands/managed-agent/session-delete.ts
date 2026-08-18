@@ -9,23 +9,26 @@ const SESSION_DELETE_FLAGS = {
   sessionId: {
     type: "string",
     valueHint: "<id>",
-    description: "Session ID (required)",
+    description: { "en-US": "Session ID (required)", "zh-CN": "Session ID（必填）" },
     required: true,
   },
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Config file path (default: agents.yaml)",
+    description: {
+      "en-US": "Config file path (default: agents.yaml)",
+      "zh-CN": "配置文件路径（默认：agents.yaml）",
+    },
   },
   provider: {
     type: "string",
     valueHint: "<name>",
-    description: "Target provider",
+    description: { "en-US": "Target provider", "zh-CN": "目标 Provider" },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Delete a session",
+  description: { "en-US": "Delete a session", "zh-CN": "删除 Session" },
   auth: "apiKey",
   usageArgs: "--session-id <id> [--provider <name>] [--file <path>]",
   flags: SESSION_DELETE_FLAGS,

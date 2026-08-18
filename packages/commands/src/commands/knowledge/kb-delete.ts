@@ -15,10 +15,13 @@ const KB_DELETE_FLAGS = {
   indexId: {
     type: "string",
     valueHint: "<id>",
-    description: "Knowledge base ID",
+    description: { "en-US": "Knowledge base ID", "zh-CN": "知识库 ID" },
     required: true,
   },
-  yes: { type: "switch", description: "Skip the confirmation prompt" },
+  yes: {
+    type: "switch",
+    description: { "en-US": "Skip the confirmation prompt", "zh-CN": "跳过确认提示" },
+  },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
@@ -54,13 +57,23 @@ async function buildDeleteSummary(
 }
 
 export default defineCommand({
-  description: "Delete a knowledge base with all its documents and chunks",
+  description: {
+    "en-US": "Delete a knowledge base with all its documents and chunks",
+    "zh-CN": "删除知识库及其所有文档和 Chunk",
+  },
   auth: "apiKey",
   usageArgs: "--index-id <id> [flags]",
   flags: KB_DELETE_FLAGS,
   notes: [
-    "Irreversible — the knowledge base and all indexed content are permanently removed.",
-    "Files in the data center are not affected; only the knowledge base index is deleted.",
+    {
+      "en-US": "Irreversible — the knowledge base and all indexed content are permanently removed.",
+      "zh-CN": "该操作不可撤销——知识库及所有已索引内容将被永久删除。",
+    },
+    {
+      "en-US":
+        "Files in the data center are not affected; only the knowledge base index is deleted.",
+      "zh-CN": "数据中心中的文件不受影响；仅删除知识库索引。",
+    },
   ],
   exampleArgs: ["--index-id idx-xxx --workspace-id ws-xxx", "--index-id idx-xxx --yes"],
   async run(ctx) {

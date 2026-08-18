@@ -3,7 +3,10 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 import { API_KEY_PAGE } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description: "Show current authentication state",
+  description: {
+    "en-US": "Show current authentication state",
+    "zh-CN": "显示当前认证状态",
+  },
   auth: "none",
   exampleArgs: ["", "--output json"],
   async run(ctx) {

@@ -23,26 +23,40 @@ const ADD_MEMBER_FLAGS = {
   accountName: {
     type: "string",
     valueHint: "<name>",
-    description: "Member display name",
+    description: { "en-US": "Member display name", "zh-CN": "成员显示名称" },
     required: true,
   },
-  orgId: { type: "string", valueHint: "<id>", description: "Organization ID", required: true },
+  orgId: {
+    type: "string",
+    valueHint: "<id>",
+    description: { "en-US": "Organization ID", "zh-CN": "组织 ID" },
+    required: true,
+  },
   orgRoleCode: {
     type: "string",
     valueHint: "<code>",
-    description: "Organization role: ORG_ADMIN or ORG_MEMBER (default: ORG_MEMBER)",
+    description: {
+      "en-US": "Organization role: ORG_ADMIN or ORG_MEMBER (default: ORG_MEMBER)",
+      "zh-CN": "组织角色：ORG_ADMIN 或 ORG_MEMBER（默认：ORG_MEMBER）",
+    },
   },
   specType: {
     type: "string",
     valueHint: "<type>",
-    description: "Seat tier to assign on creation: standard, pro, or max",
+    description: {
+      "en-US": "Seat tier to assign on creation: standard, pro, or max",
+      "zh-CN": "创建时分配的席位档位：standard、pro 或 max",
+    },
   },
   ...TOKEN_PLAN_COMMON_QUERY_FLAGS,
 } satisfies FlagsDef;
 type AddMemberFlags = ParsedFlags<typeof ADD_MEMBER_FLAGS>;
 
 export default defineCommand({
-  description: "Add a member to a Token Plan organization",
+  description: {
+    "en-US": "Add a member to a Token Plan organization",
+    "zh-CN": "向 Token Plan 组织添加成员",
+  },
   auth: "openapi",
   usageArgs: "--account-name <name> --org-id <id> [flags]",
   flags: ADD_MEMBER_FLAGS,

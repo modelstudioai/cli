@@ -122,6 +122,10 @@ CLI 只为「自己能权威解释的错误」发出语义化信号,服务端的
 
 例外: 仅当作用域极小(≤3 行)且语义从上下文完全明确时,可使用 `k`/`v`(Object.entries 的 key/value)。
 
+### 6. 用户可见 CLI 文案必须支持中英文
+
+新增或修改用户可见的 CLI 文案时必须同时提供 `en-US` / `zh-CN`;runtime 公共文案遵循同一规则,服务端错误仍按第 3 节原样透传。命令文案的具体检查项见 [command-add-remove.md](docs/agents/command-add-remove.md)。
+
 ## 完成改动后的快速验证
 
 ```sh

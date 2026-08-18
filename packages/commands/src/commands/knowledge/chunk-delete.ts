@@ -14,16 +14,22 @@ const CHUNK_DELETE_FLAGS = {
   indexId: {
     type: "string",
     valueHint: "<id>",
-    description: "Knowledge base ID",
+    description: { "en-US": "Knowledge base ID", "zh-CN": "知识库 ID" },
     required: true,
   },
   chunkId: {
     type: "array",
     valueHint: "<id>",
-    description: "Chunk ID to delete (repeatable; batches of 10 are sent automatically)",
+    description: {
+      "en-US": "Chunk ID to delete (repeatable; batches of 10 are sent automatically)",
+      "zh-CN": "要删除的 Chunk ID（可重复；每 10 个自动分批发送）",
+    },
     required: true,
   },
-  yes: { type: "switch", description: "Skip the confirmation prompt" },
+  yes: {
+    type: "switch",
+    description: { "en-US": "Skip the confirmation prompt", "zh-CN": "跳过确认提示" },
+  },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
@@ -37,11 +43,19 @@ export function splitIntoBatches(chunkIds: string[], batchSize = 10): string[][]
 }
 
 export default defineCommand({
-  description: "Delete chunks from a knowledge base (irreversible)",
+  description: {
+    "en-US": "Delete chunks from a knowledge base (irreversible)",
+    "zh-CN": "从知识库中删除 Chunk（不可撤销）",
+  },
   auth: "apiKey",
   usageArgs: "--index-id <id> --chunk-id <id> [flags]",
   flags: CHUNK_DELETE_FLAGS,
-  notes: ["Accepts at most 10 chunk ids per call; larger sets are batched automatically."],
+  notes: [
+    {
+      "en-US": "Accepts at most 10 chunk ids per call; larger sets are batched automatically.",
+      "zh-CN": "每次调用最多接受 10 个 Chunk ID；更多 ID 会自动分批处理。",
+    },
+  ],
   exampleArgs: [
     "--index-id idx-xxx --chunk-id chunk-a --chunk-id chunk-b --workspace-id ws-xxx",
     "--index-id idx-xxx --chunk-id chunk-a --yes",

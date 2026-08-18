@@ -4,27 +4,38 @@ import { emitResult } from "bailian-cli-runtime";
 const APP_LIST_API = "zeldaEasy.broadscope-bailian.app-control.list";
 
 export default defineCommand({
-  description: "List Bailian applications",
+  description: { "en-US": "List Bailian applications", "zh-CN": "列出百炼应用" },
   auth: "console",
   usageArgs: "[flags]",
   flags: {
     name: {
       type: "string",
       valueHint: "<name>",
-      description: "Filter by app name (keyword search)",
+      description: {
+        "en-US": "Filter by app name (keyword search)",
+        "zh-CN": "按应用名称筛选（关键词搜索）",
+      },
     },
     page: {
       type: "number",
       valueHint: "<n>",
-      description: "Page number (default: 1)",
+      description: { "en-US": "Page number (default: 1)", "zh-CN": "页码（默认：1）" },
     },
     pageSize: {
       type: "number",
       valueHint: "<n>",
-      description: "Results per page (default: 30)",
+      description: { "en-US": "Results per page (default: 30)", "zh-CN": "每页结果数（默认：30）" },
     },
   },
-  exampleArgs: ["", "--name customer service", "--page 2 --page-size 10", "--output json"],
+  exampleArgs: [
+    "",
+    {
+      "en-US": "--name customer service",
+      "zh-CN": "--name 客户服务",
+    },
+    "--page 2 --page-size 10",
+    "--output json",
+  ],
   async run(ctx) {
     const { settings, flags } = ctx;
     const name = flags.name || "";

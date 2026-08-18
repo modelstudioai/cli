@@ -149,90 +149,182 @@ const SYNTHESIZE_FLAGS = {
   text: {
     type: "string",
     valueHint: "<text>",
-    description: "Text to synthesize into speech (or use --text-file)",
+    description: {
+      "en-US": "Text to synthesize into speech (or use --text-file)",
+      "zh-CN": "要合成为语音的文本（也可使用 --text-file）",
+    },
   },
   textFile: {
     type: "string",
     valueHint: "<path>",
-    description: "Read text from a file instead of --text",
+    description: {
+      "en-US": "Read text from a file instead of --text",
+      "zh-CN": "从文件读取文本，而非使用 --text",
+    },
   },
   model: {
     type: "string",
     valueHint: "<model>",
-    description:
-      "Model ID (default: cosyvoice-v3-flash). System voices available for cosyvoice-v3-flash",
+    description: {
+      "en-US":
+        "Model ID (default: cosyvoice-v3-flash). System voices available for cosyvoice-v3-flash",
+      "zh-CN": "模型 ID（默认：cosyvoice-v3-flash）。cosyvoice-v3-flash 支持系统音色",
+    },
   },
   voice: {
     type: "string",
     valueHint: "<voice>",
-    description:
-      "Voice ID. Use --list-voices to see built-in voices for cosyvoice-v3-flash; for v3.5-flash provide a clone/design voice ID",
+    description: {
+      "en-US":
+        "Voice ID. Use --list-voices to see built-in voices for cosyvoice-v3-flash; for v3.5-flash provide a clone/design voice ID",
+      "zh-CN":
+        "音色 ID。使用 --list-voices 查看 cosyvoice-v3-flash 的内置音色；使用 v3.5-flash 时需提供复刻/设计音色 ID",
+    },
   },
   listVoices: {
     type: "switch",
-    description:
-      "List built-in system voices for the selected model and exit (console link shown in output)",
+    description: {
+      "en-US":
+        "List built-in system voices for the selected model and exit (console link shown in output)",
+      "zh-CN": "列出所选模型的内置系统音色并退出（输出中会显示控制台链接）",
+    },
   },
   format: {
     type: "string",
     valueHint: "<format>",
-    description: "Audio format: mp3, pcm, wav, opus (default: mp3)",
+    description: {
+      "en-US": "Audio format: mp3, pcm, wav, opus (default: mp3)",
+      "zh-CN": "音频格式：mp3、pcm、wav、opus（默认：mp3）",
+    },
     choices: ["mp3", "pcm", "wav", "opus"] as const,
   },
   sampleRate: {
     type: "string",
     valueHint: "<rate>",
-    description: "Audio sample rate in Hz (e.g. 24000)",
+    description: {
+      "en-US": "Audio sample rate in Hz (e.g. 24000)",
+      "zh-CN": "音频采样率，单位为 Hz（例如 24000）",
+    },
   },
-  volume: { type: "string", valueHint: "<volume>", description: "Volume 0-100 (default: 50)" },
-  rate: { type: "string", valueHint: "<rate>", description: "Speech rate 0.5-2.0 (default: 1.0)" },
+  volume: {
+    type: "string",
+    valueHint: "<volume>",
+    description: {
+      "en-US": "Volume 0-100 (default: 50)",
+      "zh-CN": "音量 0–100（默认：50）",
+    },
+  },
+  rate: {
+    type: "string",
+    valueHint: "<rate>",
+    description: {
+      "en-US": "Speech rate 0.5-2.0 (default: 1.0)",
+      "zh-CN": "语速 0.5–2.0（默认：1.0）",
+    },
+  },
   pitch: {
     type: "string",
     valueHint: "<pitch>",
-    description: "Pitch multiplier 0.5-2.0 (default: 1.0)",
+    description: {
+      "en-US": "Pitch multiplier 0.5-2.0 (default: 1.0)",
+      "zh-CN": "音高倍数 0.5–2.0（默认：1.0）",
+    },
   },
   seed: {
     type: "string",
     valueHint: "<seed>",
-    description: "Random seed 0-65535 for reproducible synthesis",
+    description: {
+      "en-US": "Random seed 0-65535 for reproducible synthesis",
+      "zh-CN": "用于复现合成结果的随机种子 0–65535",
+    },
   },
   language: {
     type: "string",
     valueHint: "<lang>",
-    description: "Language hint (e.g. zh, en, ja, ko, fr, de)",
+    description: {
+      "en-US": "Language hint (e.g. zh, en, ja, ko, fr, de)",
+      "zh-CN": "语言提示（例如 zh、en、ja、ko、fr、de）",
+    },
   },
   instruction: {
     type: "string",
     valueHint: "<text>",
-    description: 'Natural language instruction to control speech style (e.g. "Use a gentle tone"）',
+    description: {
+      "en-US": 'Natural language instruction to control speech style (e.g. "Use a gentle tone"）',
+      "zh-CN": "用于控制语音风格的自然语言指令（例如“使用温柔的语气”）",
+    },
   },
-  enableSsml: { type: "switch", description: "Enable SSML markup parsing in input text" },
+  enableSsml: {
+    type: "switch",
+    description: {
+      "en-US": "Enable SSML markup parsing in input text",
+      "zh-CN": "解析输入文本中的 SSML 标记",
+    },
+  },
   out: {
     type: "string",
     valueHint: "<path>",
-    description: "Save audio to file (default: auto-generate in temp dir)",
+    description: {
+      "en-US": "Save audio to file (default: auto-generate in temp dir)",
+      "zh-CN": "将音频保存到文件（默认：在临时目录中自动生成路径）",
+    },
   },
-  stream: { type: "switch", description: "Stream raw PCM audio to stdout (pipe to player)" },
+  stream: {
+    type: "switch",
+    description: {
+      "en-US": "Stream raw PCM audio to stdout (pipe to player)",
+      "zh-CN": "将原始 PCM 音频流式输出到 stdout（可通过管道传给播放器）",
+    },
+  },
   ...CONCURRENT_FLAG,
 } satisfies FlagsDef;
 type SynthesizeFlags = ParsedFlags<typeof SYNTHESIZE_FLAGS>;
 
 export default defineCommand({
-  description: "Synthesize speech from text (CosyVoice TTS)",
+  description: {
+    "en-US": "Synthesize speech from text (CosyVoice TTS)",
+    "zh-CN": "将文本合成为语音（CosyVoice TTS）",
+  },
   auth: "apiKey",
   usageArgs: "--text <text> [flags]",
   flags: SYNTHESIZE_FLAGS,
   exampleArgs: [
     "--list-voices --model cosyvoice-v3-flash",
-    '--text "Hello, I am Qwen" --voice <voice_id>',
-    '--text "Hello world" --voice <voice_id> --language en',
+    {
+      "en-US": '--text "Hello, I am Qwen" --voice <voice_id>',
+      "zh-CN": '--text "你好，我是通义千问" --voice <voice_id>',
+    },
+    {
+      "en-US": '--text "Hello world" --voice <voice_id> --language en',
+      "zh-CN": '--text "你好，世界" --voice <voice_id> --language zh',
+    },
     "--text-file script.txt --out speech.wav --voice <voice_id>",
-    '--text "Today is a good day" --voice <voice_id> --instruction "Use a gentle tone"',
-    '--text "Hello" --voice <voice_id> --format wav --sample-rate 24000',
-    "# Stream to audio player (macOS)",
-    '--text "Hello" --voice <voice_id> --stream | afplay -',
-    "# Pipe to ffplay",
-    '--text "Hello" --voice <voice_id> --stream | ffplay -nodisp -autoexit -f s16le -ar 24000 -ac 1 -',
+    {
+      "en-US": '--text "Today is a good day" --voice <voice_id> --instruction "Use a gentle tone"',
+      "zh-CN": '--text "今天天气很好" --voice <voice_id> --instruction "使用温柔的语气"',
+    },
+    {
+      "en-US": '--text "Hello" --voice <voice_id> --format wav --sample-rate 24000',
+      "zh-CN": '--text "你好" --voice <voice_id> --format wav --sample-rate 24000',
+    },
+    {
+      "en-US": "# Stream to audio player (macOS)",
+      "zh-CN": "# 流式传输到音频播放器（macOS）",
+    },
+    {
+      "en-US": '--text "Hello" --voice <voice_id> --stream | afplay -',
+      "zh-CN": '--text "你好" --voice <voice_id> --stream | afplay -',
+    },
+    {
+      "en-US": "# Pipe to ffplay",
+      "zh-CN": "# 通过管道传输到 ffplay",
+    },
+    {
+      "en-US":
+        '--text "Hello" --voice <voice_id> --stream | ffplay -nodisp -autoexit -f s16le -ar 24000 -ac 1 -',
+      "zh-CN":
+        '--text "你好" --voice <voice_id> --stream | ffplay -nodisp -autoexit -f s16le -ar 24000 -ac 1 -',
+    },
   ],
   validate: (f) => {
     if (f.listVoices) return undefined;

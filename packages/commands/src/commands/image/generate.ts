@@ -31,31 +31,51 @@ import { BOOL_FLAG_PROMPT_EXTEND_IMAGE_GENERATE, BOOL_FLAG_WATERMARK } from "bai
 import { join } from "path";
 
 const GENERATE_FLAGS = {
-  prompt: { type: "string", valueHint: "<text>", description: "Image description", required: true },
+  prompt: {
+    type: "string",
+    valueHint: "<text>",
+    description: { "en-US": "Image description", "zh-CN": "图片描述" },
+    required: true,
+  },
   model: {
     type: "string",
     valueHint: "<model>",
-    description: "Model ID (default: qwen-image-3.0)",
+    description: {
+      "en-US": "Model ID (default: qwen-image-3.0)",
+      "zh-CN": "模型 ID（默认：qwen-image-3.0）",
+    },
   },
   size: {
     type: "string",
     valueHint: "<W*H>",
-    description: "Image size: ratio (3:4, 16:9, 1:1) or pixels (2048*2048)",
+    description: {
+      "en-US": "Image size: ratio (3:4, 16:9, 1:1) or pixels (2048*2048)",
+      "zh-CN": "图片尺寸：比例（3:4、16:9、1:1）或像素（2048*2048）",
+    },
   },
   n: {
     type: "number",
     valueHint: "<count>",
-    description: "Number of images per request (default: 1, max: 6)",
+    description: {
+      "en-US": "Number of images per request (default: 1, max: 6)",
+      "zh-CN": "每次请求生成的图片数量（默认：1，最多：6）",
+    },
   },
   seed: {
     type: "number",
     valueHint: "<n>",
-    description: "Random seed for reproducible generation",
+    description: {
+      "en-US": "Random seed for reproducible generation",
+      "zh-CN": "用于复现生成结果的随机种子",
+    },
   },
   negativePrompt: {
     type: "string",
     valueHint: "<text>",
-    description: "Negative prompt to exclude unwanted content",
+    description: {
+      "en-US": "Negative prompt to exclude unwanted content",
+      "zh-CN": "负向提示词，用于排除不需要的内容",
+    },
   },
   promptExtend: {
     type: "boolean",
@@ -69,37 +89,83 @@ const GENERATE_FLAGS = {
   },
   ...ASYNC_FLAG,
   ...CONCURRENT_FLAG,
-  outDir: { type: "string", valueHint: "<dir>", description: "Download images to directory" },
+  outDir: {
+    type: "string",
+    valueHint: "<dir>",
+    description: { "en-US": "Download images to directory", "zh-CN": "将图片下载到指定目录" },
+  },
   outPrefix: {
     type: "string",
     valueHint: "<prefix>",
-    description: "Filename prefix (default: image)",
+    description: {
+      "en-US": "Filename prefix (default: image)",
+      "zh-CN": "文件名前缀（默认：image）",
+    },
   },
   pollInterval: {
     type: "number",
     valueHint: "<seconds>",
-    description: "Polling interval when waiting (default: 3)",
+    description: {
+      "en-US": "Polling interval when waiting (default: 3)",
+      "zh-CN": "等待任务时的轮询间隔（默认：3 秒）",
+    },
   },
 } satisfies FlagsDef;
 type GenerateFlags = ParsedFlags<typeof GENERATE_FLAGS>;
 
 export default defineCommand({
-  description: "Generate images (Qwen-Image / wan2.x)",
+  description: {
+    "en-US": "Generate images (Qwen-Image / wan2.x)",
+    "zh-CN": "生成图片（Qwen-Image / wan2.x）",
+  },
   auth: "apiKey",
   usageArgs: "--prompt <text> [flags]",
   flags: GENERATE_FLAGS,
   exampleArgs: [
-    '--prompt "A cat in a spacesuit on Mars"',
-    '--prompt "Logo design" --n 3 --out-dir ./generated/',
-    '--prompt "Mountain landscape" --size 2688*1536',
-    '--prompt "A castle" --seed 42 --prompt-extend false',
-    '--prompt "Logo" --watermark false',
-    '--prompt "An alien in the space" --watermark false',
-    '--prompt "sunset" --model wan2.6-t2i --async --quiet',
-    '--prompt "plush doll" --model z-image-turbo --size 1024*1024',
-    '--prompt "sunset" --model wanx2.0-t2i-turbo --size 1024*1024',
-    '--prompt "Pro quality" --model qwen-image-2.0-pro',
-    '--prompt "Product shots" --n 2 --concurrent 3  # 6 images in parallel',
+    {
+      "en-US": '--prompt "A cat in a spacesuit on Mars"',
+      "zh-CN": '--prompt "一只穿着宇航服的猫站在火星上"',
+    },
+    {
+      "en-US": '--prompt "Logo design" --n 3 --out-dir ./generated/',
+      "zh-CN": '--prompt "Logo 设计" --n 3 --out-dir ./generated/',
+    },
+    {
+      "en-US": '--prompt "Mountain landscape" --size 2688*1536',
+      "zh-CN": '--prompt "山地景观" --size 2688*1536',
+    },
+    {
+      "en-US": '--prompt "A castle" --seed 42 --prompt-extend false',
+      "zh-CN": '--prompt "一座城堡" --seed 42 --prompt-extend false',
+    },
+    {
+      "en-US": '--prompt "Logo" --watermark false',
+      "zh-CN": '--prompt "Logo" --watermark false',
+    },
+    {
+      "en-US": '--prompt "An alien in the space" --watermark false',
+      "zh-CN": '--prompt "太空中的外星人" --watermark false',
+    },
+    {
+      "en-US": '--prompt "sunset" --model wan2.6-t2i --async --quiet',
+      "zh-CN": '--prompt "日落" --model wan2.6-t2i --async --quiet',
+    },
+    {
+      "en-US": '--prompt "plush doll" --model z-image-turbo --size 1024*1024',
+      "zh-CN": '--prompt "毛绒玩偶" --model z-image-turbo --size 1024*1024',
+    },
+    {
+      "en-US": '--prompt "sunset" --model wanx2.0-t2i-turbo --size 1024*1024',
+      "zh-CN": '--prompt "日落" --model wanx2.0-t2i-turbo --size 1024*1024',
+    },
+    {
+      "en-US": '--prompt "Pro quality" --model qwen-image-2.0-pro',
+      "zh-CN": '--prompt "专业品质" --model qwen-image-2.0-pro',
+    },
+    {
+      "en-US": '--prompt "Product shots" --n 2 --concurrent 3  # 6 images in parallel',
+      "zh-CN": '--prompt "产品摄影" --n 2 --concurrent 3  # 并行生成 6 张图片',
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

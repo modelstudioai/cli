@@ -13,24 +13,36 @@ const PRICE_FLAGS = {
   baseModel: {
     type: "string",
     valueHint: "<model>",
-    description: "Base model to fine-tune (e.g. qwen3-8b; not the output model name)",
+    description: {
+      "en-US": "Base model to fine-tune (e.g. qwen3-8b; not the output model name)",
+      "zh-CN": "待微调的基座模型（例如 qwen3-8b；不是输出模型名称）",
+    },
     required: true,
   },
   datasets: {
     type: "string",
     valueHint: "<ids>",
-    description: "Training dataset file IDs, comma-separated (required)",
+    description: {
+      "en-US": "Training dataset file IDs, comma-separated (required)",
+      "zh-CN": "训练数据集文件 ID，多个以逗号分隔（必填）",
+    },
     required: true,
   },
   trainingType: {
     type: "string",
     valueHint: "<type>",
-    description: "Training type: sft | dpo | cpt (default: sft)",
+    description: {
+      "en-US": "Training type: sft | dpo | cpt (default: sft)",
+      "zh-CN": "训练类型：sft | dpo | cpt（默认：sft）",
+    },
   },
   nEpochs: {
     type: "number",
     valueHint: "<n>",
-    description: "Number of training epochs (default: 3)",
+    description: {
+      "en-US": "Number of training epochs (default: 3)",
+      "zh-CN": "训练轮数（默认：3）",
+    },
   },
 } satisfies FlagsDef;
 
@@ -44,7 +56,10 @@ const ESTIMATE_MAX_LENGTH = 8192;
 const DEFAULT_N_EPOCHS = 3;
 
 export default defineCommand({
-  description: "Estimate the training cost for a fine-tune job (token billing)",
+  description: {
+    "en-US": "Estimate the training cost for a fine-tune job (token billing)",
+    "zh-CN": "估算微调任务的训练费用（按 Token 计费）",
+  },
   auth: "console",
   usageArgs: "--base-model <model> --datasets <ids> [--training-type <type>] [--n-epochs <n>]",
   flags: PRICE_FLAGS,
@@ -54,9 +69,21 @@ export default defineCommand({
     "--base-model qwen3-8b --datasets file-ft-xxx --training-type cpt",
   ],
   notes: [
-    "Estimate only — the server computes token usage from the datasets; final cost is subject to the bill.",
-    "Covers token billing for sft / dpo / cpt. Training-unit (MTU) billing is not supported by this command.",
-    "Hyper-parameters other than --n-epochs are fixed at representative defaults for estimation.",
+    {
+      "en-US":
+        "Estimate only — the server computes token usage from the datasets; final cost is subject to the bill.",
+      "zh-CN": "该结果仅为估算值——服务端根据数据集计算 Token 用量，最终费用以账单为准。",
+    },
+    {
+      "en-US":
+        "Covers token billing for sft / dpo / cpt. Training-unit (MTU) billing is not supported by this command.",
+      "zh-CN": "支持估算 sft / dpo / cpt 的 Token 计费；此命令不支持训练单元（MTU）计费估算。",
+    },
+    {
+      "en-US":
+        "Hyper-parameters other than --n-epochs are fixed at representative defaults for estimation.",
+      "zh-CN": "除 --n-epochs 外，其他超参数会使用具有代表性的固定默认值进行估算。",
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

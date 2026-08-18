@@ -13,20 +13,27 @@ const CATEGORY_DELETE_FLAGS = {
   categoryId: {
     type: "string",
     valueHint: "<id>",
-    description: "Category ID to delete",
+    description: { "en-US": "Category ID to delete", "zh-CN": "要删除的类目 ID" },
     required: true,
   },
-  yes: { type: "switch", description: "Skip the confirmation prompt" },
+  yes: {
+    type: "switch",
+    description: { "en-US": "Skip the confirmation prompt", "zh-CN": "跳过确认提示" },
+  },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Delete a data-center category",
+  description: { "en-US": "Delete a data-center category", "zh-CN": "删除数据中心类目" },
   auth: "apiKey",
   usageArgs: "--category-id <id> [flags]",
   flags: CATEGORY_DELETE_FLAGS,
   notes: [
-    "Behavior for categories containing files or sub-categories is server-defined — the server error is passed through as-is.",
+    {
+      "en-US":
+        "Behavior for categories containing files or sub-categories is server-defined — the server error is passed through as-is.",
+      "zh-CN": "包含文件或子类目时的处理行为由服务端定义——服务端返回的错误将原样透传。",
+    },
   ],
   exampleArgs: ["--category-id cate-xxx --workspace-id ws-xxx", "--category-id cate-xxx --yes"],
   async run(ctx) {

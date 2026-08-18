@@ -17,7 +17,7 @@ const KB_INFO_FLAGS = {
   indexId: {
     type: "string",
     valueHint: "<id>",
-    description: "Knowledge base ID",
+    description: { "en-US": "Knowledge base ID", "zh-CN": "知识库 ID" },
     required: true,
   },
   ...WORKSPACE_FLAG,
@@ -61,11 +61,20 @@ function formatField(label: string, value: string | number | boolean | null | un
 }
 
 export default defineCommand({
-  description: "Show knowledge base configuration details",
+  description: {
+    "en-US": "Show knowledge base configuration details",
+    "zh-CN": "查看知识库配置详情",
+  },
   auth: "apiKey",
   usageArgs: "--index-id <id> [flags]",
   flags: KB_INFO_FLAGS,
-  notes: ["Indexing settings are immutable; changing them requires recreating the knowledge base."],
+  notes: [
+    {
+      "en-US":
+        "Indexing settings are immutable; changing them requires recreating the knowledge base.",
+      "zh-CN": "索引设置不可修改；如需更改，必须重新创建知识库。",
+    },
+  ],
   exampleArgs: ["--index-id idx-xxx --workspace-id ws-xxx"],
   async run(ctx) {
     const { settings, flags } = ctx;

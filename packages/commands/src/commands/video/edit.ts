@@ -21,56 +21,86 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description:
-    "Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)",
+  description: {
+    "en-US":
+      "Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)",
+    "zh-CN": "使用 happyhorse-1.0-video-edit 编辑视频（风格转换、对象替换等）",
+  },
   auth: "apiKey",
   usageArgs: "--video <url> --prompt <text> [flags]",
   flags: {
     model: {
       type: "string",
       valueHint: "<model>",
-      description: "Model ID (default: happyhorse-1.0-video-edit)",
+      description: {
+        "en-US": "Model ID (default: happyhorse-1.0-video-edit)",
+        "zh-CN": "模型 ID（默认：happyhorse-1.0-video-edit）",
+      },
     },
     video: {
       type: "string",
       valueHint: "<url>",
-      description: "Input video URL or local file (mp4/mov, 2-10s)",
+      description: {
+        "en-US": "Input video URL or local file (mp4/mov, 2-10s)",
+        "zh-CN": "输入视频 URL 或本地文件（mp4/mov，2–10 秒）",
+      },
       required: true,
     },
     prompt: {
       type: "string",
       valueHint: "<text>",
-      description: 'Edit instruction (e.g. "Convert the scene to a claymation style")',
+      description: {
+        "en-US": 'Edit instruction (e.g. "Convert the scene to a claymation style")',
+        "zh-CN": "编辑指令（例如“将场景转换为黏土动画风格”）",
+      },
     },
     refImage: {
       type: "string",
       valueHint: "<url>",
-      description: "Reference image URL (up to 4, comma-separated)",
+      description: {
+        "en-US": "Reference image URL (up to 4, comma-separated)",
+        "zh-CN": "参考图片 URL（最多 4 个，以逗号分隔）",
+      },
     },
     negativePrompt: {
       type: "string",
       valueHint: "<text>",
-      description: "Negative prompt to exclude unwanted content",
+      description: {
+        "en-US": "Negative prompt to exclude unwanted content",
+        "zh-CN": "负向提示词，用于排除不需要的内容",
+      },
     },
     resolution: {
       type: "string",
       valueHint: "<res>",
-      description: "Resolution: 720P or 1080P (default: 1080P)",
+      description: {
+        "en-US": "Resolution: 720P or 1080P (default: 1080P)",
+        "zh-CN": "分辨率：720P 或 1080P（默认：1080P）",
+      },
     },
     ratio: {
       type: "string",
       valueHint: "<ratio>",
-      description: "Aspect ratio (16:9, 9:16, 1:1, 4:3, 3:4)",
+      description: {
+        "en-US": "Aspect ratio (16:9, 9:16, 1:1, 4:3, 3:4)",
+        "zh-CN": "宽高比（16:9、9:16、1:1、4:3、3:4）",
+      },
     },
     duration: {
       type: "number",
       valueHint: "<seconds>",
-      description: "Output video duration in seconds (2-10)",
+      description: {
+        "en-US": "Output video duration in seconds (2-10)",
+        "zh-CN": "输出视频时长，单位为秒（2–10）",
+      },
     },
     audioSetting: {
       type: "string",
       valueHint: "<mode>",
-      description: "Audio: auto (default) or origin (keep original)",
+      description: {
+        "en-US": "Audio: auto (default) or origin (keep original)",
+        "zh-CN": "音频：auto（默认）或 origin（保留原音频）",
+      },
       choices: ["auto", "origin"] as const,
     },
     promptExtend: {
@@ -86,26 +116,54 @@ export default defineCommand({
     seed: {
       type: "number",
       valueHint: "<n>",
-      description: "Random seed for reproducible generation",
+      description: {
+        "en-US": "Random seed for reproducible generation",
+        "zh-CN": "用于复现生成结果的随机种子",
+      },
     },
     download: {
       type: "string",
       valueHint: "<path>",
-      description: "Save video to file on completion",
+      description: {
+        "en-US": "Save video to file on completion",
+        "zh-CN": "完成后将视频保存到文件",
+      },
     },
     ...ASYNC_FLAG,
     ...CONCURRENT_FLAG,
     pollInterval: {
       type: "number",
       valueHint: "<seconds>",
-      description: "Polling interval when waiting (default: 15)",
+      description: {
+        "en-US": "Polling interval when waiting (default: 15)",
+        "zh-CN": "等待任务时的轮询间隔（默认：15 秒）",
+      },
     },
   },
   exampleArgs: [
-    '--video https://example.com/input.mp4 --prompt "Convert the entire scene to claymation style"',
-    '--video https://example.com/input.mp4 --prompt "Replace the outfit with the style shown in the image" --ref-image https://example.com/clothes.png',
-    '--video https://example.com/input.mp4 --prompt "Convert to anime style" --resolution 720P --download output.mp4',
-    '--video https://example.com/input.mp4 --prompt "Put clothes on the kitten in the video" --watermark false',
+    {
+      "en-US":
+        '--video https://example.com/input.mp4 --prompt "Convert the entire scene to claymation style"',
+      "zh-CN": '--video https://example.com/input.mp4 --prompt "将整个场景转换为黏土动画风格"',
+    },
+    {
+      "en-US":
+        '--video https://example.com/input.mp4 --prompt "Replace the outfit with the style shown in the image" --ref-image https://example.com/clothes.png',
+      "zh-CN":
+        '--video https://example.com/input.mp4 --prompt "将服装替换为参考图片中的款式" --ref-image https://example.com/clothes.png',
+    },
+    {
+      "en-US":
+        '--video https://example.com/input.mp4 --prompt "Convert to anime style" --resolution 720P --download output.mp4',
+      "zh-CN":
+        '--video https://example.com/input.mp4 --prompt "转换为动漫风格" --resolution 720P --download output.mp4',
+    },
+    {
+      "en-US":
+        '--video https://example.com/input.mp4 --prompt "Put clothes on the kitten in the video" --watermark false',
+      "zh-CN":
+        '--video https://example.com/input.mp4 --prompt "给视频中的小猫穿上衣服" --watermark false',
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

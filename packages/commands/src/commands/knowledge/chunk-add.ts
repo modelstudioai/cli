@@ -16,40 +16,59 @@ const CHUNK_ADD_FLAGS = {
   indexId: {
     type: "string",
     valueHint: "<id>",
-    description: "Knowledge base ID",
+    description: { "en-US": "Knowledge base ID", "zh-CN": "知识库 ID" },
     required: true,
   },
   docId: {
     type: "string",
     valueHint: "<id>",
-    description:
-      "Owning document ID from the doc list command; required in practice for all knowledge base types",
+    description: {
+      "en-US":
+        "Owning document ID from the doc list command; required in practice for all knowledge base types",
+      "zh-CN": "来自文档列表命令的所属文档 ID；实际使用时所有知识库类型都需要提供",
+    },
   },
   content: {
     type: "string",
     valueHint: "<text>",
-    description: "Chunk body text, up to 6000 chars (document-type); alternative to --content-file",
+    description: {
+      "en-US": "Chunk body text, up to 6000 chars (document-type); alternative to --content-file",
+      "zh-CN": "Chunk 正文，最多 6000 个字符（文档型）；与 --content-file 二选一",
+    },
   },
   contentFile: {
     type: "string",
     valueHint: "<path>",
-    description: "Read chunk body from a UTF-8 plain text file (.md/.txt etc.)",
+    description: {
+      "en-US": "Read chunk body from a UTF-8 plain text file (.md/.txt etc.)",
+      "zh-CN": "从 UTF-8 纯文本文件（.md/.txt 等）读取 Chunk 正文",
+    },
   },
   title: {
     type: "string",
     valueHint: "<text>",
-    description: "Chunk title, up to 50 chars (document-type)",
+    description: {
+      "en-US": "Chunk title, up to 50 chars (document-type)",
+      "zh-CN": "Chunk 标题，最多 50 个字符（文档型）",
+    },
   },
   imageUrl: {
     type: "array",
     valueHint: "<url>",
-    description: "Chunk image URL (repeatable, up to 10; document-type)",
+    description: {
+      "en-US": "Chunk image URL (repeatable, up to 10; document-type)",
+      "zh-CN": "Chunk 图片 URL（可重复，最多 10 个；文档型）",
+    },
   },
   field: {
     type: "array",
     valueHint: "<key=value>",
-    description:
-      "Arbitrary field entry (repeatable) for table/image knowledge bases where keys are Excel column headers; mutually exclusive with content/title/image flags",
+    description: {
+      "en-US":
+        "Arbitrary field entry (repeatable) for table/image knowledge bases where keys are Excel column headers; mutually exclusive with content/title/image flags",
+      "zh-CN":
+        "表格/图片知识库的自定义字段（可重复），键为 Excel 列标题；不能与 content/title/image 相关选项同时使用",
+    },
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
@@ -68,21 +87,53 @@ export function parseFieldEntries(entries: string[]): Record<string, string> {
 }
 
 export default defineCommand({
-  description: "Add a chunk directly to a knowledge base",
+  description: {
+    "en-US": "Add a chunk directly to a knowledge base",
+    "zh-CN": "直接向知识库添加 Chunk",
+  },
   auth: "apiKey",
   usageArgs: "--index-id <id> (--content <text> | --field <k=v>) [flags]",
   flags: CHUNK_ADD_FLAGS,
   notes: [
-    "Document / table / image knowledge bases are supported; audio-video ones are not.",
-    "--doc-id is required in practice for all knowledge base types. Use the document-level id from the doc list command; the per-row doc_id in chunk list output is not accepted.",
-    "Image-type documents do not support text chunks. Target a text-type document (docx/pdf/txt) instead.",
-    "The API is idempotent but rate-limited to 10 calls per second — throttle batch scripts.",
-    "The response carries no chunk id; list chunks afterwards to find the new one.",
-    "For table/image knowledge bases use --field with Excel column headers as keys; values are passed through as strings.",
+    {
+      "en-US": "Document / table / image knowledge bases are supported; audio-video ones are not.",
+      "zh-CN": "支持文档、表格和图片知识库；不支持音视频知识库。",
+    },
+    {
+      "en-US":
+        "--doc-id is required in practice for all knowledge base types. Use the document-level id from the doc list command; the per-row doc_id in chunk list output is not accepted.",
+      "zh-CN":
+        "实际使用时，所有知识库类型都需要 --doc-id。请使用文档列表命令返回的文档级 ID；Chunk 列表每行返回的 doc_id 不被接受。",
+    },
+    {
+      "en-US":
+        "Image-type documents do not support text chunks. Target a text-type document (docx/pdf/txt) instead.",
+      "zh-CN": "图片型文档不支持文本 Chunk；请改为操作文本型文档（docx/pdf/txt）。",
+    },
+    {
+      "en-US":
+        "The API is idempotent but rate-limited to 10 calls per second — throttle batch scripts.",
+      "zh-CN": "该 API 具有幂等性，但限流为每秒 10 次调用——批处理脚本需要控制速率。",
+    },
+    {
+      "en-US": "The response carries no chunk id; list chunks afterwards to find the new one.",
+      "zh-CN": "响应不包含 Chunk ID；添加后请列出 Chunk 以查找新条目。",
+    },
+    {
+      "en-US":
+        "For table/image knowledge bases use --field with Excel column headers as keys; values are passed through as strings.",
+      "zh-CN": "表格/图片知识库请使用 --field，并以 Excel 列标题作为键；值将按字符串原样传递。",
+    },
   ],
   exampleArgs: [
-    '--index-id idx-xxx --content "chunk text" --title intro --workspace-id ws-xxx',
-    "--index-id idx-xxx --field 列A=v1 --field 列B=v2",
+    {
+      "en-US": '--index-id idx-xxx --content "chunk text" --title intro --workspace-id ws-xxx',
+      "zh-CN": '--index-id idx-xxx --content "Chunk 文本" --title 简介 --workspace-id ws-xxx',
+    },
+    {
+      "en-US": "--index-id idx-xxx --field columnA=v1 --field columnB=v2",
+      "zh-CN": "--index-id idx-xxx --field 列A=v1 --field 列B=v2",
+    },
   ],
   validate(flags) {
     const hasConvenience =

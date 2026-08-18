@@ -189,6 +189,19 @@ describe("e2e: config", () => {
     }
   });
 
+  test("config set language 拒绝不支持的值", async () => {
+    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
+      "config",
+      "set",
+      "--key",
+      "language",
+      "--value",
+      "fr-FR",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/Invalid language|en-US, zh-CN/i);
+  });
+
   test("config set 非法 key 时退出为用法错误", async () => {
     const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
       "config",

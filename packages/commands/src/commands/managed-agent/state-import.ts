@@ -9,29 +9,44 @@ const STATE_IMPORT_FLAGS = {
   address: {
     type: "string",
     valueHint: "<provider.type.name>",
-    description: "Resource state address (required)",
+    description: {
+      "en-US": "Resource state address (required)",
+      "zh-CN": "资源 State 地址（必填）",
+    },
     required: true,
   },
   remoteId: {
     type: "string",
     valueHint: "<id>",
-    description: "Existing remote resource ID to import (required)",
+    description: {
+      "en-US": "Existing remote resource ID to import (required)",
+      "zh-CN": "要导入的已有远端资源 ID（必填）",
+    },
     required: true,
   },
   resourceVersion: {
     type: "number",
     valueHint: "<n>",
-    description: "Resource version (for versioned resources like agents)",
+    description: {
+      "en-US": "Resource version (for versioned resources like agents)",
+      "zh-CN": "资源版本（用于 Agent 等带版本的资源）",
+    },
   },
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Config file path (default: agents.yaml)",
+    description: {
+      "en-US": "Config file path (default: agents.yaml)",
+      "zh-CN": "配置文件路径（默认：agents.yaml）",
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Import an existing remote resource into agents state",
+  description: {
+    "en-US": "Import an existing remote resource into agents state",
+    "zh-CN": "将已有远端资源导入 Agent State",
+  },
   auth: "apiKey",
   usageArgs:
     "--address <provider.type.name> --remote-id <id> [--resource-version <n>] [--file <path>]",

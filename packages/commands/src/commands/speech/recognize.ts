@@ -31,43 +31,73 @@ const RECOGNIZE_FLAGS = {
   url: {
     type: "array",
     valueHint: "<url>",
-    description: "Audio file URL or local file path (repeatable, max 100)",
+    description: {
+      "en-US": "Audio file URL or local file path (repeatable, max 100)",
+      "zh-CN": "音频文件 URL 或本地文件路径（可重复，最多 100 个）",
+    },
     required: true,
   },
   model: {
     type: "string",
     valueHint: "<model>",
-    description:
-      "Model ID (default: fun-asr). Async: fun-asr / *-filetrans / paraformer-*; sync: qwen3-asr-flash* / fun-asr-flash* / qwen-audio-*-asr-flash",
+    description: {
+      "en-US":
+        "Model ID (default: fun-asr). Async: fun-asr / *-filetrans / paraformer-*; sync: qwen3-asr-flash* / fun-asr-flash* / qwen-audio-*-asr-flash",
+      "zh-CN":
+        "模型 ID（默认：fun-asr）。异步：fun-asr / *-filetrans / paraformer-*；同步：qwen3-asr-flash* / fun-asr-flash* / qwen-audio-*-asr-flash",
+    },
   },
   language: {
     type: "string",
     valueHint: "<lang>",
-    description:
-      "Language hint (e.g. zh, en, ja). Classic async/input-audio: language_hints; qwen3-filetrans: language; qwen3 sync: asr_options.language",
+    description: {
+      "en-US":
+        "Language hint (e.g. zh, en, ja). Classic async/input-audio: language_hints; qwen3-filetrans: language; qwen3 sync: asr_options.language",
+      "zh-CN":
+        "语言提示（例如 zh、en、ja）。传统异步/input-audio：language_hints；qwen3-filetrans：language；qwen3 同步：asr_options.language",
+    },
   },
-  diarization: { type: "switch", description: "Enable automatic speaker diarization" },
+  diarization: {
+    type: "switch",
+    description: { "en-US": "Enable automatic speaker diarization", "zh-CN": "启用自动说话人分离" },
+  },
   speakerCount: {
     type: "number",
     valueHint: "<n>",
-    description: "Expected number of speakers (requires --diarization)",
+    description: {
+      "en-US": "Expected number of speakers (requires --diarization)",
+      "zh-CN": "预期的说话人数量（需启用 --diarization）",
+    },
   },
   vocabularyId: {
     type: "string",
     valueHint: "<id>",
-    description: "Hot-word vocabulary ID for improved accuracy",
+    description: {
+      "en-US": "Hot-word vocabulary ID for improved accuracy",
+      "zh-CN": "用于提升识别准确率的热词表 ID",
+    },
   },
-  channelId: { type: "number", valueHint: "<n>", description: "Audio channel ID (default: 0)" },
+  channelId: {
+    type: "number",
+    valueHint: "<n>",
+    description: { "en-US": "Audio channel ID (default: 0)", "zh-CN": "音频声道 ID（默认：0）" },
+  },
   out: {
     type: "string",
     valueHint: "<path>",
-    description: "Save full transcription result to JSON file",
+    description: {
+      "en-US": "Save full transcription result to JSON file",
+      "zh-CN": "将完整转写结果保存到 JSON 文件",
+    },
   },
   ...ASYNC_FLAG,
   pollInterval: {
     type: "number",
     valueHint: "<seconds>",
-    description: "Polling interval in seconds (default: 2)",
+    description: {
+      "en-US": "Polling interval in seconds (default: 2)",
+      "zh-CN": "轮询间隔，单位为秒（默认：2）",
+    },
   },
 } satisfies FlagsDef;
 type RecognizeFlags = ParsedFlags<typeof RECOGNIZE_FLAGS>;
@@ -98,7 +128,10 @@ function assertSyncFlashFlagsAllowed(
 }
 
 export default defineCommand({
-  description: "Recognize speech from audio files (FunAudio-ASR / Qwen-ASR Flash)",
+  description: {
+    "en-US": "Recognize speech from audio files (FunAudio-ASR / Qwen-ASR Flash)",
+    "zh-CN": "识别音频文件中的语音（FunAudio-ASR / Qwen-ASR Flash）",
+  },
   auth: "apiKey",
   usageArgs: "--url <audio-url> [flags]",
   flags: RECOGNIZE_FLAGS,

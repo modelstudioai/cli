@@ -13,28 +13,39 @@ const CATEGORY_ADD_FLAGS = {
   name: {
     type: "string",
     valueHint: "<text>",
-    description: "Category name (1-20 chars)",
+    description: { "en-US": "Category name (1-20 chars)", "zh-CN": "类目名称（1–20 个字符）" },
     required: true,
   },
   parentId: {
     type: "string",
     valueHint: "<id>",
-    description: "Create as a sub-category of this category",
+    description: {
+      "en-US": "Create as a sub-category of this category",
+      "zh-CN": "创建为该类目的子类目",
+    },
   },
   collectionId: {
     type: "string",
     valueHint: "<id>",
-    description: "Create under this collection (defaults to the platform collection)",
+    description: {
+      "en-US": "Create under this collection (defaults to the platform collection)",
+      "zh-CN": "在该数据集合下创建（默认为平台数据集合）",
+    },
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Create a data-center category",
+  description: { "en-US": "Create a data-center category", "zh-CN": "创建数据中心类目" },
   auth: "apiKey",
   usageArgs: "--name <text> [flags]",
   flags: CATEGORY_ADD_FLAGS,
-  notes: ["Use categories to organize data-center files by business domain."],
+  notes: [
+    {
+      "en-US": "Use categories to organize data-center files by business domain.",
+      "zh-CN": "使用类目按业务领域组织数据中心文件。",
+    },
+  ],
   exampleArgs: ["--name product-docs --workspace-id ws-xxx", "--name sub --parent-id cate-xxx"],
   validate(flags) {
     if (flags.name.length < 1 || flags.name.length > 20) return "--name must be 1-20 characters";

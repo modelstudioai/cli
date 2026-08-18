@@ -37,26 +37,22 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag                         | Type   | Required | Description                                                                                                                                                        |
-| ---------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--base-model <model>`       | string | yes      | Base model to fine-tune (e.g. qwen3-8b; not the output model name)                                                                                                 |
-| `--datasets <ids\|paths>`    | string | yes      | Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image). Local paths are uploaded (validated) first, then their file-ids are used. |
-| `--validations <ids\|paths>` | string | no       | Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).                                                                        |
-| `--model-name <name>`        | string | no       | Output model name (after training)                                                                                                                                 |
-| `--suffix <text>`            | string | no       | Output suffix appended by the platform (finetuned_output_suffix)                                                                                                   |
-| `--api-key <key>`            | string | no       | API key                                                                                                                                                            |
-| `--base-url <url>`           | string | no       | API base URL                                                                                                                                                       |
+| Flag                         | Type   | Required | Description                                                                                                                                                              |
+| ---------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--base-model <model>`       | string | yes      | Base model to fine-tune (e.g. qwen3-8b; not the output model name)                                                                                                       |
+| `--datasets <ids\|paths>`    | string | yes      | Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image/video). Local paths are uploaded (validated) first, then their file-ids are used. |
+| `--validations <ids\|paths>` | string | no       | Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).                                                                              |
+| `--model-name <name>`        | string | no       | Output model name (after training)                                                                                                                                       |
+| `--suffix <text>`            | string | no       | Output suffix appended by the platform (finetuned_output_suffix)                                                                                                         |
+| `--api-key <key>`            | string | no       | API key                                                                                                                                                                  |
+| `--base-url <url>`           | string | no       | API base URL                                                                                                                                                             |
 
 #### Notes
 
 - Creating a job uploads any local datasets and consumes training quota.
 - Use --dry-run to preview the request body without submitting.
-- --datasets / --validations accept either file-ids (from `dataset upload`)
-- or local paths. Local paths are validated and uploaded first, then their
-- file-ids are submitted — a one-step upload-and-train.
-- Audio TTS training runs sft-lora (efficient_sft) with fixed CosyVoice
-- hyper-parameter defaults; there are no training-type or hyper-parameter
-- knobs to set.
+- --datasets / --validations accept either file-ids (from `dataset upload`) or local paths. Local paths are validated and uploaded first, then their file-ids are submitted — a one-step upload-and-train.
+- Audio TTS training runs sft-lora (efficient_sft) with fixed CosyVoice hyper-parameter defaults; there are no training-type or hyper-parameter knobs to set.
 
 #### Examples
 
@@ -99,8 +95,7 @@ bl finetune audio create --base-model cosyvoice-v3-flash --datasets ./audio.zip 
 
 #### Notes
 
-- Only PENDING / RUNNING jobs can be cancelled. Completed / failed / already-
-- cancelled jobs return a server-side error (passed through verbatim).
+- Only PENDING / RUNNING jobs can be cancelled. Completed / failed / already-cancelled jobs return a server-side error (passed through verbatim).
 
 #### Examples
 
@@ -131,8 +126,7 @@ bl finetune cancel --job-id ft-xxx --dry-run
 #### Notes
 
 - Exactly one of --base-model / --training-type is required.
-- Training-type values use the `<method>` / `<method>-lora` convention:
-- sft | sft-lora | dpo | dpo-lora | cpt. (cpt has no -lora variant server-side.)
+- Training-type values use the `<method>` / `<method>-lora` convention: sft | sft-lora | dpo | dpo-lora | cpt. (cpt has no -lora variant server-side.)
 - Queries listFoundationModels, a public API — no console login needed.
 
 #### Examples
@@ -204,8 +198,7 @@ bl finetune checkpoints --job-id ft-xxx --output json
 
 #### Notes
 
-- Cancel a RUNNING job first via `finetune cancel` — the platform refuses
-- to delete jobs that are still in flight.
+- Cancel a RUNNING job first via `finetune cancel` — the platform refuses to delete jobs that are still in flight.
 
 #### Examples
 
@@ -238,9 +231,7 @@ bl finetune delete --job-id ft-xxx --dry-run
 
 #### Notes
 
-- Required before `deploy <modality> create` can target a checkpoint. The
-- platform may auto-export the best checkpoint when a job reaches SUCCEEDED —
-- explicit export is the canonical path for non-best checkpoints.
+- Required before `deploy <modality> create` can target a checkpoint. The platform may auto-export the best checkpoint when a job reaches SUCCEEDED — explicit export is the canonical path for non-best checkpoints.
 
 #### Examples
 
@@ -286,30 +277,24 @@ bl finetune get --job-id ft-xxx --output json
 
 #### Flags
 
-| Flag                           | Type   | Required | Description                                                                                                                                                         |
-| ------------------------------ | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--base-model <model>`         | string | yes      | Base model to fine-tune (e.g. qwen3-8b; not the output model name)                                                                                                  |
-| `--datasets <ids\|paths>`      | string | yes      | Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image). Local paths are uploaded (validated) first, then their file-ids are used.  |
-| `--validations <ids\|paths>`   | string | no       | Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).                                                                         |
-| `--model-name <name>`          | string | no       | Output model name (after training)                                                                                                                                  |
-| `--suffix <text>`              | string | no       | Output suffix appended by the platform (finetuned_output_suffix)                                                                                                    |
-| `--generation-type <t2i\|i2i>` | string | no       | Generation type: t2i (default) \| i2i. Sets generation_type/max_pixels. Required to train I2I from a file-id or with --dry-run (local data auto-detects input_img). |
-| `--learning-rate <str>`        | string | no       | Learning rate as a string to preserve precision (e.g. "3e-5")                                                                                                       |
-| `--api-key <key>`              | string | no       | API key                                                                                                                                                             |
-| `--base-url <url>`             | string | no       | API base URL                                                                                                                                                        |
+| Flag                           | Type   | Required | Description                                                                                                                                                              |
+| ------------------------------ | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--base-model <model>`         | string | yes      | Base model to fine-tune (e.g. qwen3-8b; not the output model name)                                                                                                       |
+| `--datasets <ids\|paths>`      | string | yes      | Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image/video). Local paths are uploaded (validated) first, then their file-ids are used. |
+| `--validations <ids\|paths>`   | string | no       | Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).                                                                              |
+| `--model-name <name>`          | string | no       | Output model name (after training)                                                                                                                                       |
+| `--suffix <text>`              | string | no       | Output suffix appended by the platform (finetuned_output_suffix)                                                                                                         |
+| `--generation-type <t2i\|i2i>` | string | no       | Generation type: t2i (default) \| i2i. Sets generation_type/max_pixels. Required to train I2I from a file-id or with --dry-run (local data auto-detects input_img).      |
+| `--learning-rate <str>`        | string | no       | Learning rate as a string to preserve precision (e.g. "3e-5")                                                                                                            |
+| `--api-key <key>`              | string | no       | API key                                                                                                                                                                  |
+| `--base-url <url>`             | string | no       | API base URL                                                                                                                                                             |
 
 #### Notes
 
 - Creating a job uploads any local datasets and consumes training quota.
 - Use --dry-run to preview the request body without submitting.
-- --datasets / --validations accept either file-ids (from `dataset upload`)
-- or local paths. Local paths are validated and uploaded first, then their
-- file-ids are submitted — a one-step upload-and-train.
-- Image generation training runs sft-lora (efficient_sft) with fixed defaults;
-- only --learning-rate is overridable. T2I vs I2I is declared with
-- --generation-type (default t2i), which sets generation_type/max_pixels. For
-- local data the type is auto-detected (records with input_img train I2I);
-- pass --generation-type explicitly to train I2I from a file-id or in --dry-run.
+- --datasets / --validations accept either file-ids (from `dataset upload`) or local paths. Local paths are validated and uploaded first, then their file-ids are submitted — a one-step upload-and-train.
+- Image generation training runs sft-lora (efficient_sft) with fixed defaults; only --learning-rate is overridable. T2I vs I2I is declared with --generation-type (default t2i), which sets generation_type/max_pixels. For local data the type is auto-detected (records with input_img train I2I); pass --generation-type explicitly to train I2I from a file-id or in --dry-run.
 
 #### Examples
 
@@ -478,7 +463,7 @@ bl finetune price --base-model qwen3-8b --datasets file-ft-xxx --training-type c
 | Flag                         | Type   | Required | Description                                                                                                                                                                              |
 | ---------------------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--base-model <model>`       | string | yes      | Base model to fine-tune (e.g. qwen3-8b; not the output model name)                                                                                                                       |
-| `--datasets <ids\|paths>`    | string | yes      | Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image). Local paths are uploaded (validated) first, then their file-ids are used.                       |
+| `--datasets <ids\|paths>`    | string | yes      | Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image/video). Local paths are uploaded (validated) first, then their file-ids are used.                 |
 | `--validations <ids\|paths>` | string | no       | Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).                                                                                              |
 | `--model-name <name>`        | string | no       | Output model name (after training)                                                                                                                                                       |
 | `--suffix <text>`            | string | no       | Output suffix appended by the platform (finetuned_output_suffix)                                                                                                                         |
@@ -494,21 +479,12 @@ bl finetune price --base-model qwen3-8b --datasets file-ft-xxx --training-type c
 
 - Creating a job uploads any local datasets and consumes training quota.
 - Use --dry-run to preview the request body without submitting.
-- --datasets / --validations accept either file-ids (from `dataset upload`)
-- or local paths. Local paths are validated and uploaded first, then their
-- file-ids are submitted — a one-step upload-and-train.
-- Training-type values use the `<method>` / `<method>-lora` convention:
-- sft (full) | sft-lora (LoRA) | dpo (full) | dpo-lora (LoRA) | cpt. These map
-- to the server's training_type at the interface boundary, so the rest of the
-- CLI never sees the raw server strings.
-- Before submitting (non dry-run) the job, the model's training capability is
-- checked via listFoundationModels (no console login required); an unsupported
-- training type fails fast with the list the model actually supports.
+- --datasets / --validations accept either file-ids (from `dataset upload`) or local paths. Local paths are validated and uploaded first, then their file-ids are submitted — a one-step upload-and-train.
+- Training-type values use the `<method>` / `<method>-lora` convention: sft (full) | sft-lora (LoRA) | dpo (full) | dpo-lora (LoRA) | cpt. These map to the server's training_type at the interface boundary, so the rest of the CLI never sees the raw server strings.
+- Before submitting (non dry-run) the job, the model's training capability is checked via listFoundationModels (no console login required); an unsupported training type fails fast with the list the model actually supports.
 - n_epochs defaults to 3. Other hyper-parameters are platform defaults unless set.
 - Learning rate is forwarded as a string to avoid JSON-number precision loss.
-- Pre-submit gate: if the training dataset's sample count is not greater
-- than batch_size, the job is rejected before upload or quota consumption
-- (the platform would otherwise fail ~10 min in, after data processing).
+- Pre-submit gate: if the training dataset's sample count is not greater than batch_size, the job is rejected before upload or quota consumption (the platform would otherwise fail ~10 min in, after data processing).
 
 #### Examples
 
@@ -555,29 +531,25 @@ bl finetune text create --base-model qwen3-8b --datasets file-xxx --dry-run
 
 #### Flags
 
-| Flag                         | Type   | Required | Description                                                                                                                                                        |
-| ---------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--base-model <model>`       | string | yes      | Base model to fine-tune (e.g. qwen3-8b; not the output model name)                                                                                                 |
-| `--datasets <ids\|paths>`    | string | yes      | Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image). Local paths are uploaded (validated) first, then their file-ids are used. |
-| `--validations <ids\|paths>` | string | no       | Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).                                                                        |
-| `--model-name <name>`        | string | no       | Output model name (after training)                                                                                                                                 |
-| `--suffix <text>`            | string | no       | Output suffix appended by the platform (finetuned_output_suffix)                                                                                                   |
-| `--n-epochs <n>`             | number | no       | Training epochs (default: 50)                                                                                                                                      |
-| `--batch-size <n>`           | number | no       | Batch size (default: model-specific, 1 for wan2.7, 4 for wan2.5/2.2)                                                                                               |
-| `--learning-rate <str>`      | string | no       | Learning rate as a string to preserve precision (default: "2e-5")                                                                                                  |
-| `--api-key <key>`            | string | no       | API key                                                                                                                                                            |
-| `--base-url <url>`           | string | no       | API base URL                                                                                                                                                       |
+| Flag                         | Type   | Required | Description                                                                                                                                                              |
+| ---------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--base-model <model>`       | string | yes      | Base model to fine-tune (e.g. qwen3-8b; not the output model name)                                                                                                       |
+| `--datasets <ids\|paths>`    | string | yes      | Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image/video). Local paths are uploaded (validated) first, then their file-ids are used. |
+| `--validations <ids\|paths>` | string | no       | Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).                                                                              |
+| `--model-name <name>`        | string | no       | Output model name (after training)                                                                                                                                       |
+| `--suffix <text>`            | string | no       | Output suffix appended by the platform (finetuned_output_suffix)                                                                                                         |
+| `--n-epochs <n>`             | number | no       | Training epochs (default: 50)                                                                                                                                            |
+| `--batch-size <n>`           | number | no       | Batch size (default: model-specific, 1 for wan2.7, 4 for wan2.5/2.2)                                                                                                     |
+| `--learning-rate <str>`      | string | no       | Learning rate as a string to preserve precision (default: "2e-5")                                                                                                        |
+| `--api-key <key>`            | string | no       | API key                                                                                                                                                                  |
+| `--base-url <url>`           | string | no       | API base URL                                                                                                                                                             |
 
 #### Notes
 
 - Creating a job uploads any local datasets and consumes training quota.
 - Use --dry-run to preview the request body without submitting.
-- --datasets / --validations accept either file-ids (from `dataset upload`)
-- or local paths. Local paths are validated and uploaded first, then their
-- file-ids are submitted — a one-step upload-and-train.
-- Video generation training (Wan i2v/kf2v) runs efficient_sft with model-
-- specific defaults: wan2.7 (batch_size=1, max_pixels=102400), wan2.5/2.2
-- (batch_size=4, max_pixels per model). Override with --batch-size/--n-epochs.
+- --datasets / --validations accept either file-ids (from `dataset upload`) or local paths. Local paths are validated and uploaded first, then their file-ids are submitted — a one-step upload-and-train.
+- Video generation training (Wan i2v/kf2v) runs efficient_sft with model-specific defaults: wan2.7 (batch_size=1, max_pixels=102400), wan2.5/2.2 (batch_size=4, max_pixels per model). Override with --batch-size/--n-epochs.
 - Datasets are .zip archives with data.jsonl + frame images + videos.
 - Recommended: ≥10 training samples, 20-100 for stable results.
 
@@ -621,14 +593,9 @@ bl finetune video create --base-model wan2.7-i2v --datasets file-xxx --dry-run
 
 #### Notes
 
-- Default (no --follow) is a NON-BLOCKING single status probe: one fetch, then
-- return immediately. This is the mode meant for agents / scripts — the caller
-- owns the polling cadence, so the CLI never holds the terminal.
-- A terminal FAILED/CANCELED status raises a normal CLI error (non-zero exit);
-- a SUCCEEDED or still-running status returns 0. With --follow, exceeding
-- --poll-timeout raises a timeout error.
-- Use --follow for the blocking, human-terminal-follow experience; use the
-- default mode when driving the loop yourself (e.g. from an agent).
+- Default (no --follow) is a NON-BLOCKING single status probe: one fetch, then return immediately. This is the mode meant for agents / scripts — the caller owns the polling cadence, so the CLI never holds the terminal.
+- A terminal FAILED/CANCELED status raises a normal CLI error (non-zero exit); a SUCCEEDED or still-running status returns 0. With --follow, exceeding --poll-timeout raises a timeout error.
+- Use --follow for the blocking, human-terminal-follow experience; use the default mode when driving the loop yourself (e.g. from an agent).
 - For per-step training output (not status), use `finetune logs`.
 
 #### Examples

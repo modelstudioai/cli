@@ -226,24 +226,42 @@ function isEmptyResult(result: RecommendResult): boolean {
 }
 
 export default defineCommand({
-  description:
-    "Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking)",
+  description: {
+    "en-US":
+      "Recommend the best models for your use case (intent analysis → candidate recall → LLM ranking)",
+    "zh-CN": "为你的使用场景推荐最佳模型（意图分析 → 候选召回 → LLM 排序）",
+  },
   auth: "apiKey",
   usageArgs: "--message <text> [flags]",
   flags: {
     message: {
       type: "string",
       valueHint: "<text>",
-      description: "Describe your requirements",
+      description: { "en-US": "Describe your requirements", "zh-CN": "描述你的需求" },
       required: true,
     },
   },
   exampleArgs: [
-    '--message "I need a visual-understanding chatbot"',
-    '--message "Build an Agent that auto-generates animations"',
-    '--message "Legal contract review, high precision required"',
-    '--message "Low-cost high-concurrency online customer service" --output text',
-    '--message "Long document summarization" --dry-run',
+    {
+      "en-US": '--message "I need a visual-understanding chatbot"',
+      "zh-CN": '--message "我需要一个能够理解图片的聊天机器人"',
+    },
+    {
+      "en-US": '--message "Build an Agent that auto-generates animations"',
+      "zh-CN": '--message "构建一个可以自动生成动画的智能体"',
+    },
+    {
+      "en-US": '--message "Legal contract review, high precision required"',
+      "zh-CN": '--message "审查法律合同，要求高准确率"',
+    },
+    {
+      "en-US": '--message "Low-cost high-concurrency online customer service" --output text',
+      "zh-CN": '--message "低成本、高并发的在线客服" --output text',
+    },
+    {
+      "en-US": '--message "Long document summarization" --dry-run',
+      "zh-CN": '--message "长文档摘要" --dry-run',
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

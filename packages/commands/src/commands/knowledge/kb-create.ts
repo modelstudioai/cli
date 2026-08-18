@@ -23,36 +23,59 @@ const KB_CREATE_FLAGS = {
   name: {
     type: "string",
     valueHint: "<text>",
-    description: "Knowledge base name (1-20 chars, unique in workspace)",
+    description: {
+      "en-US": "Knowledge base name (1-20 chars, unique in workspace)",
+      "zh-CN": "知识库名称（1–20 个字符，在 Workspace 中唯一）",
+    },
     required: true,
   },
   docId: {
     type: "array",
     valueHint: "<id>",
-    description:
-      "Data-center file id to import (repeatable); mutually exclusive with --category-id",
+    description: {
+      "en-US": "Data-center file id to import (repeatable); mutually exclusive with --category-id",
+      "zh-CN": "要导入的数据中心文件 ID（可重复）；不能与 --category-id 同时使用",
+    },
   },
   categoryId: {
     type: "array",
     valueHint: "<id>",
-    description:
-      "Import every file under this category (repeatable); mutually exclusive with --doc-id",
+    description: {
+      "en-US":
+        "Import every file under this category (repeatable); mutually exclusive with --doc-id",
+      "zh-CN": "导入该类目下的所有文件（可重复）；不能与 --doc-id 同时使用",
+    },
   },
   embeddingModel: {
     type: "string",
     valueHint: "<name>",
-    description: "Embedding model name (default: text-embedding-v4)",
+    description: {
+      "en-US": "Embedding model name (default: text-embedding-v4)",
+      "zh-CN": "Embedding 模型名称（默认：text-embedding-v4）",
+    },
   },
   chunkSize: {
     type: "number",
     valueHint: "<n>",
-    description: "Chunk size in characters (default: 600, recommended 300-800)",
+    description: {
+      "en-US": "Chunk size in characters (default: 600, recommended 300-800)",
+      "zh-CN": "Chunk 字符数（默认：600，建议：300–800）",
+    },
   },
-  wait: { type: "switch", description: "Poll the initial import job to a terminal state" },
+  wait: {
+    type: "switch",
+    description: {
+      "en-US": "Poll the initial import job to a terminal state",
+      "zh-CN": "轮询初始导入任务直到进入终态",
+    },
+  },
   pollInterval: {
     type: "number",
     valueHint: "<seconds>",
-    description: "Polling interval when waiting (default: 5)",
+    description: {
+      "en-US": "Polling interval when waiting (default: 5)",
+      "zh-CN": "等待时的轮询间隔（默认：5）",
+    },
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
@@ -79,14 +102,28 @@ export function buildDataSourceFields(flags: { docId?: string[]; categoryId?: st
 }
 
 export default defineCommand({
-  description: "Create a knowledge base and import data-center files or categories",
+  description: {
+    "en-US": "Create a knowledge base and import data-center files or categories",
+    "zh-CN": "创建知识库并导入数据中心文件或类目",
+  },
   auth: "apiKey",
   usageArgs: "--name <text> (--doc-id <id> | --category-id <id>) [flags]",
   flags: KB_CREATE_FLAGS,
   notes: [
-    "Structure/sink types are fixed to the default document knowledge base (unstructured, BUILT_IN storage).",
-    "Returns the knowledge base id (pipelineId) and the initial import job id (ingestionId).",
-    "Use the import job status command (or --wait) to track the initial import.",
+    {
+      "en-US":
+        "Structure/sink types are fixed to the default document knowledge base (unstructured, BUILT_IN storage).",
+      "zh-CN": "结构和存储类型固定为默认文档知识库（unstructured、BUILT_IN 存储）。",
+    },
+    {
+      "en-US":
+        "Returns the knowledge base id (pipelineId) and the initial import job id (ingestionId).",
+      "zh-CN": "返回知识库 ID（pipelineId）和初始导入任务 ID（ingestionId）。",
+    },
+    {
+      "en-US": "Use the import job status command (or --wait) to track the initial import.",
+      "zh-CN": "使用导入任务状态命令（或 --wait）跟踪初始导入。",
+    },
   ],
   exampleArgs: [
     "--name demo --doc-id file-xxx --workspace-id ws-xxx",

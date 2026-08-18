@@ -25,18 +25,27 @@ interface AddOutcome {
 const INSTALL_CONCURRENCY = 3;
 
 export default defineCommand({
-  description: "Install skills from the Bailian skill registry into local agents",
+  description: {
+    "en-US": "Install skills from the Bailian skill registry into local agents",
+    "zh-CN": "将百炼 Skill Registry 中的 Skill 安装到本地 Agent",
+  },
   auth: "none",
   usageArgs: "--all | --name <name,...>",
   flags: {
     all: {
       type: "switch",
-      description: "Install all skills from the registry",
+      description: {
+        "en-US": "Install all skills from the registry",
+        "zh-CN": "安装 Registry 中的全部 Skill",
+      },
     },
     name: {
       type: "string",
       valueHint: "<name,...>",
-      description: "Comma-separated skill names to install",
+      description: {
+        "en-US": "Comma-separated skill names to install",
+        "zh-CN": "要安装的 Skill 名称，以逗号分隔",
+      },
     },
   },
   validate(flags) {

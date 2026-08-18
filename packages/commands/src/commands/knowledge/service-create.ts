@@ -13,37 +13,62 @@ const SERVICE_CREATE_FLAGS = {
   name: {
     type: "string",
     valueHint: "<text>",
-    description: "Service name (up to 200 chars, unique per scene in the workspace)",
+    description: {
+      "en-US": "Service name (up to 200 chars, unique per scene in the workspace)",
+      "zh-CN": "服务名称（最多 200 个字符，在 Workspace 的同一场景中唯一）",
+    },
     required: true,
   },
   scene: {
     type: "string",
     valueHint: "<scene>",
-    description: "Service scene: chat (Q&A) or search (retrieval)",
+    description: {
+      "en-US": "Service scene: chat (Q&A) or search (retrieval)",
+      "zh-CN": "服务场景：chat（问答）或 search（检索）",
+    },
     required: true,
   },
   description: {
     type: "string",
     valueHint: "<text>",
-    description: "Service description (up to 1000 chars)",
+    description: {
+      "en-US": "Service description (up to 1000 chars)",
+      "zh-CN": "服务描述（最多 1000 个字符）",
+    },
   },
   indexId: {
     type: "string",
     valueHint: "<id>",
-    description: "Bind this knowledge base; other settings use server defaults",
+    description: {
+      "en-US": "Bind this knowledge base; other settings use server defaults",
+      "zh-CN": "绑定该知识库；其他设置使用服务端默认值",
+    },
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Create a retrieval / Q&A service (initial status: draft, version: beta)",
+  description: {
+    "en-US": "Create a retrieval / Q&A service (initial status: draft, version: beta)",
+    "zh-CN": "创建检索/问答服务（初始状态：draft，版本：beta）",
+  },
   auth: "apiKey",
   usageArgs: "--name <text> --scene <chat|search> [flags]",
   flags: SERVICE_CREATE_FLAGS,
   notes: [
-    "Without an explicit configuration the server applies its default agent settings.",
-    "The draft (beta) version can be tested via --agent-version beta on search/chat before deploying.",
-    "Requires the knowledge-base create permission in the workspace.",
+    {
+      "en-US": "Without an explicit configuration the server applies its default agent settings.",
+      "zh-CN": "未显式提供配置时，服务端会应用默认 Agent 设置。",
+    },
+    {
+      "en-US":
+        "The draft (beta) version can be tested via --agent-version beta on search/chat before deploying.",
+      "zh-CN": "部署前，可在 search/chat 命令中使用 --agent-version beta 测试草稿（beta）版本。",
+    },
+    {
+      "en-US": "Requires the knowledge-base create permission in the workspace.",
+      "zh-CN": "需要 Workspace 中的知识库创建权限。",
+    },
   ],
   exampleArgs: [
     "--name my-qa --scene chat --workspace-id ws-xxx",

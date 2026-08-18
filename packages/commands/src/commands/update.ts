@@ -61,14 +61,20 @@ function binaryReinstallHint(): string {
 }
 
 export default defineCommand({
-  description: "Update the CLI to the latest or a specified version",
+  description: {
+    "en-US": "Update the CLI to the latest or a specified version",
+    "zh-CN": "将 CLI 更新到最新版本或指定版本",
+  },
   auth: "none",
   usageArgs: "[--to <version>]",
   flags: {
     to: {
       type: "string",
       valueHint: "<version>",
-      description: "Install this exact version instead of the latest",
+      description: {
+        "en-US": "Install this exact version instead of the latest",
+        "zh-CN": "安装指定版本，而不是最新版本",
+      },
     },
   },
   exampleArgs: ["", "--to 0.1.14"],

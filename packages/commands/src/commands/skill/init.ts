@@ -34,13 +34,23 @@ interface InitOutcome {
 }
 
 export default defineCommand({
-  description: "Install all bailian-* skills (one-shot bootstrap for new environments)",
+  description: {
+    "en-US": "Install all bailian-* skills (one-shot bootstrap for new environments)",
+    "zh-CN": "安装全部 bailian-* Skill（用于新环境的一次性初始化）",
+  },
   auth: "none",
   usageArgs: "",
   exampleArgs: [""],
   notes: [
-    "Fetches the registry index and installs every skill whose name starts with bailian-",
-    "Equivalent to: bl skill add --all (filtered to bailian-* skills)",
+    {
+      "en-US":
+        "Fetches the registry index and installs every skill whose name starts with `bailian-`.",
+      "zh-CN": "获取 Registry 索引并安装名称以 `bailian-` 开头的所有 Skill。",
+    },
+    {
+      "en-US": "Equivalent to: `bl skill add --all` (filtered to `bailian-*` skills).",
+      "zh-CN": "等价于：`bl skill add --all`（筛选为 `bailian-*` Skill）。",
+    },
   ],
   async run(ctx) {
     const format = ctx.settings.outputExplicit ? ctx.settings.output : DEFAULT_FORMAT;

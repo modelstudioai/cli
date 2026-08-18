@@ -21,22 +21,42 @@ interface ServerSummary {
 }
 
 export default defineCommand({
-  description: "List MCP servers activated under your Bailian account",
+  description: {
+    "en-US": "List MCP servers activated under your Bailian account",
+    "zh-CN": "列出百炼账号下已激活的 MCP 服务器",
+  },
   auth: "console",
   usageArgs: "[flags]",
   flags: {
     name: {
       type: "string",
       valueHint: "<text>",
-      description: "Filter by server name (substring match)",
+      description: {
+        "en-US": "Filter by server name (substring match)",
+        "zh-CN": "按服务器名称筛选（子字符串匹配）",
+      },
     },
     type: {
       type: "string",
       valueHint: "<type>",
-      description: "Server type: OFFICIAL | PRIVATE (default: OFFICIAL)",
+      description: {
+        "en-US": "Server type: OFFICIAL | PRIVATE (default: OFFICIAL)",
+        "zh-CN": "服务器类型：OFFICIAL | PRIVATE（默认：OFFICIAL）",
+      },
     },
-    page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
-    pageSize: { type: "number", valueHint: "<n>", description: "Results per page (default: 30)" },
+    page: {
+      type: "number",
+      valueHint: "<n>",
+      description: { "en-US": "Page number (default: 1)", "zh-CN": "页码（默认：1）" },
+    },
+    pageSize: {
+      type: "number",
+      valueHint: "<n>",
+      description: {
+        "en-US": "Results per page (default: 30)",
+        "zh-CN": "每页结果数（默认：30）",
+      },
+    },
   },
   exampleArgs: ["", "--name finance", "--output json"],
   async run(ctx) {

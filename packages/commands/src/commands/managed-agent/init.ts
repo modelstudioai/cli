@@ -78,27 +78,39 @@ const INIT_FLAGS = {
   provider: {
     type: "string",
     valueHint: "<name>",
-    description: "Provider: bailian, claude, qoder, ark, all (default: bailian)",
+    description: {
+      "en-US": "Provider: bailian, claude, qoder, ark, all (default: bailian)",
+      "zh-CN": "Provider：bailian、claude、qoder、ark、all（默认：bailian）",
+    },
     choices: PROVIDERS,
   },
   agentName: {
     type: "string",
     valueHint: "<name>",
-    description: "Name of the first agent (default: assistant)",
+    description: {
+      "en-US": "Name of the first agent (default: assistant)",
+      "zh-CN": "第一个 Agent 的名称（默认：assistant）",
+    },
   },
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Output config path (default: agents.yaml)",
+    description: {
+      "en-US": "Output config path (default: agents.yaml)",
+      "zh-CN": "输出配置路径（默认：agents.yaml）",
+    },
   },
   force: {
     type: "switch",
-    description: "Overwrite an existing config file",
+    description: { "en-US": "Overwrite an existing config file", "zh-CN": "覆盖已有配置文件" },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Create a new agents.yaml template",
+  description: {
+    "en-US": "Create a new agents.yaml template",
+    "zh-CN": "创建新的 agents.yaml 模板",
+  },
   auth: "none",
   usageArgs: "[--provider <name>] [--agent-name <name>] [--file <path>] [--force]",
   flags: INIT_FLAGS,

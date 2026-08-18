@@ -74,6 +74,7 @@ packages/commands/src/index.ts
   - 普通业务命令的 `run(ctx)` 只读 `ctx.flags` / `ctx.settings` / `ctx.client`
   - `commands/auth/**` 可用 `ctx.authStore`,`commands/config/**` 可用 `ctx.configStore`;不要把这些持久化能力扩散到普通业务命令
   - `commands/plugin/**` 可用 `ctx.commandPacks`;产品 policy 由 runtime 绑定,命令不要自行 import 产品入口
+- [ ] 用户可见 Help 文案在命令文件中就近提供 `en-US` / `zh-CN`:命令 `description`、flag `description`、`notes` 和包含自然语言的 `exampleArgs`;纯命令语法示例可保留为字符串,服务端错误不翻译
 - [ ] `packages/commands/src/index.ts`:新增或移除对应 export
 - [ ] 如果命令调用 Console Gateway,设置 `auth: "console"`;不要重复声明 console 凭证域 flags
 - [ ] 如果命令不需要网络或自己管理配置/登录,设置 `auth: "none"`;不要绕过 runtime auth stage

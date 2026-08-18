@@ -7,23 +7,31 @@ import {
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description: "List memory nodes for a user",
+  description: { "en-US": "List memory nodes for a user", "zh-CN": "列出用户的记忆节点" },
   auth: "apiKey",
   usageArgs: "--user-id <id> [flags]",
   flags: {
     userId: {
       type: "string",
       valueHint: "<id>",
-      description: "User ID (required)",
+      description: { "en-US": "User ID (required)", "zh-CN": "用户 ID（必填）" },
       required: true,
     },
     pageSize: {
       type: "number",
       valueHint: "<n>",
-      description: "Results per page (default: 10)",
+      description: { "en-US": "Results per page (default: 10)", "zh-CN": "每页结果数（默认：10）" },
     },
-    page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
-    memoryLibraryId: { type: "string", valueHint: "<id>", description: "Memory library ID" },
+    page: {
+      type: "number",
+      valueHint: "<n>",
+      description: { "en-US": "Page number (default: 1)", "zh-CN": "页码（默认：1）" },
+    },
+    memoryLibraryId: {
+      type: "string",
+      valueHint: "<id>",
+      description: { "en-US": "Memory library ID", "zh-CN": "记忆库 ID" },
+    },
   },
   exampleArgs: ["--user-id user1", "--user-id user1 --page-size 20 --page 2"],
   async run(ctx) {

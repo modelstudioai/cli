@@ -2,26 +2,39 @@ import { defineCommand, listFineTunes, type FlagsDef } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
 const LIST_FLAGS = {
-  page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
+  page: {
+    type: "number",
+    valueHint: "<n>",
+    description: { "en-US": "Page number (default: 1)", "zh-CN": "页码（默认：1）" },
+  },
   pageSize: {
     type: "number",
     valueHint: "<n>",
-    description: "Results per page (default: 10, max 100)",
+    description: {
+      "en-US": "Results per page (default: 10, max 100)",
+      "zh-CN": "每页结果数（默认：10，最多：100）",
+    },
   },
   status: {
     type: "string",
     valueHint: "<s>",
-    description: "Filter by status (PENDING / RUNNING / SUCCEEDED / FAILED / CANCELED)",
+    description: {
+      "en-US": "Filter by status (PENDING / RUNNING / SUCCEEDED / FAILED / CANCELED)",
+      "zh-CN": "按状态筛选（PENDING / RUNNING / SUCCEEDED / FAILED / CANCELED）",
+    },
   },
   baseModel: {
     type: "string",
     valueHint: "<model>",
-    description: "Filter by base model ID (server-side)",
+    description: {
+      "en-US": "Filter by base model ID (server-side)",
+      "zh-CN": "按基础模型 ID 筛选（服务端筛选）",
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "List fine-tune jobs",
+  description: { "en-US": "List fine-tune jobs", "zh-CN": "列出微调任务" },
   auth: "apiKey",
   usageArgs: "[--page <n>] [--page-size <n>] [--status <s>] [--base-model <model>]",
   flags: LIST_FLAGS,

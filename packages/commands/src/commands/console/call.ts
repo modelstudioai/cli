@@ -7,20 +7,26 @@ import {
 import { emitResult } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description: "Call a Bailian console API via the CLI gateway",
+  description: {
+    "en-US": "Call a Bailian console API via the CLI gateway",
+    "zh-CN": "通过 CLI Gateway 调用百炼控制台 API",
+  },
   auth: "console",
   usageArgs: "--api <api> --data <json> [flags]",
   flags: {
     api: {
       type: "string",
       valueHint: "<api>",
-      description: "API name (e.g. zeldaEasy.broadscope-bailian.memory-library.getLibraries)",
+      description: {
+        "en-US": "API name (e.g. zeldaEasy.broadscope-bailian.memory-library.getLibraries)",
+        "zh-CN": "API 名称（例如 zeldaEasy.broadscope-bailian.memory-library.getLibraries）",
+      },
       required: true,
     },
     data: {
       type: "string",
       valueHint: "<json>",
-      description: "Request data as JSON string",
+      description: { "en-US": "Request data as JSON string", "zh-CN": "JSON 字符串格式的请求数据" },
       required: true,
     },
   },

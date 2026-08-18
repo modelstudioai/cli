@@ -13,20 +13,33 @@ const SERVICE_COPY_FLAGS = {
   agentId: {
     type: "string",
     valueHint: "<id>",
-    description: "Source service (agent) ID to copy",
+    description: {
+      "en-US": "Source service (agent) ID to copy",
+      "zh-CN": "要复制的源服务（Agent）ID",
+    },
     required: true,
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Copy a service into a new draft (name gets a copy_ prefix)",
+  description: {
+    "en-US": "Copy a service into a new draft (name gets a copy_ prefix)",
+    "zh-CN": "将服务复制为新草稿（名称会添加 copy_ 前缀）",
+  },
   auth: "apiKey",
   usageArgs: "--agent-id <id> [flags]",
   flags: SERVICE_COPY_FLAGS,
   notes: [
-    "The copy starts as a beta draft; test it with --agent-version beta, then deploy to publish.",
-    "Requires the knowledge-base create permission in the workspace.",
+    {
+      "en-US":
+        "The copy starts as a beta draft; test it with --agent-version beta, then deploy to publish.",
+      "zh-CN": "副本初始为 beta 草稿；请使用 --agent-version beta 测试，然后部署发布。",
+    },
+    {
+      "en-US": "Requires the knowledge-base create permission in the workspace.",
+      "zh-CN": "需要 Workspace 中的知识库创建权限。",
+    },
   ],
   exampleArgs: ["--agent-id aid-xxx --workspace-id ws-xxx"],
   async run(ctx) {

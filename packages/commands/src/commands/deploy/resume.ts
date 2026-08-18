@@ -13,12 +13,18 @@ const RESUME_FLAGS = {
   deployedModel: {
     type: "string",
     valueHint: "<id>",
-    description: "Deployed model identifier (required)",
+    description: {
+      "en-US": "Deployed model identifier (required)",
+      "zh-CN": "已部署模型标识（必填）",
+    },
     required: true,
   },
   skipPrecheck: {
     type: "switch",
-    description: "Skip the local STOPPED status precheck",
+    description: {
+      "en-US": "Skip the local STOPPED status precheck",
+      "zh-CN": "跳过本地 STOPPED 状态预检查",
+    },
   },
 } satisfies FlagsDef;
 
@@ -29,7 +35,10 @@ const RESUME_FLAGS = {
  * Precheck: status must be STOPPED.
  */
 export default defineCommand({
-  description: "Resume a paused model deployment (brings service back online)",
+  description: {
+    "en-US": "Resume a paused model deployment (brings service back online)",
+    "zh-CN": "恢复已暂停的模型部署（使服务重新上线）",
+  },
   auth: "console",
   usageArgs: "--deployed-model <id> [--skip-precheck]",
   flags: RESUME_FLAGS,
@@ -39,8 +48,15 @@ export default defineCommand({
     "--deployed-model dep-... --dry-run",
   ],
   notes: [
-    "Precheck verifies status is STOPPED before issuing the resume; pass --skip-precheck to bypass.",
-    "For mu/ptu plans, billing resumes once the service is back online.",
+    {
+      "en-US":
+        "Precheck verifies status is STOPPED before issuing the resume; pass --skip-precheck to bypass.",
+      "zh-CN": "发起恢复前会预检查部署状态是否为 STOPPED；可传入 --skip-precheck 跳过检查。",
+    },
+    {
+      "en-US": "For mu/ptu plans, billing resumes once the service is back online.",
+      "zh-CN": "对于 mu/ptu 方案，服务重新上线后将恢复计费。",
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

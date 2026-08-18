@@ -23,23 +23,33 @@ const CREATE_KEY_FLAGS = {
   accountId: {
     type: "string",
     valueHint: "<id>",
-    description: "Target member account ID",
+    description: { "en-US": "Target member account ID", "zh-CN": "目标成员账号 ID" },
     required: true,
   },
   ...TOKEN_PLAN_WORKSPACE_FLAG,
-  description: { type: "string", valueHint: "<text>", description: "API key description" },
+  description: {
+    type: "string",
+    valueHint: "<text>",
+    description: { "en-US": "API key description", "zh-CN": "API Key 描述" },
+  },
   ...TOKEN_PLAN_COMMON_QUERY_FLAGS,
 } satisfies FlagsDef;
 type CreateKeyFlags = ParsedFlags<typeof CREATE_KEY_FLAGS>;
 
 export default defineCommand({
-  description: "Create a Token Plan API key for a seat",
+  description: {
+    "en-US": "Create a Token Plan API key for a seat",
+    "zh-CN": "为席位创建 Token Plan API Key",
+  },
   auth: "openapi",
   usageArgs: "--account-id <id> --workspace-id <id> [flags]",
   flags: CREATE_KEY_FLAGS,
   exampleArgs: [
     "--account-id acc_123 --workspace-id ws_456",
-    "--account-id acc_123 --workspace-id ws_456 --description 'Dev key'",
+    {
+      "en-US": "--account-id acc_123 --workspace-id ws_456 --description 'Dev key'",
+      "zh-CN": "--account-id acc_123 --workspace-id ws_456 --description '开发密钥'",
+    },
   ],
   async run(ctx) {
     const { identity, settings, flags } = ctx;

@@ -13,37 +13,53 @@ const KB_UPDATE_FLAGS = {
   indexId: {
     type: "string",
     valueHint: "<id>",
-    description: "Knowledge base ID",
+    description: { "en-US": "Knowledge base ID", "zh-CN": "知识库 ID" },
     required: true,
   },
   name: {
     type: "string",
     valueHint: "<text>",
-    description: "New knowledge base name (1-20 chars)",
+    description: {
+      "en-US": "New knowledge base name (1-20 chars)",
+      "zh-CN": "新的知识库名称（1–20 个字符）",
+    },
   },
   description: {
     type: "string",
     valueHint: "<text>",
-    description: "New knowledge base description",
+    description: { "en-US": "New knowledge base description", "zh-CN": "新的知识库描述" },
   },
   rerankMinScore: {
     type: "number",
     valueHint: "<score>",
-    description: "Rerank minimum score threshold, range 0-1 (chunks below are filtered)",
+    description: {
+      "en-US": "Rerank minimum score threshold, range 0-1 (chunks below are filtered)",
+      "zh-CN": "Rerank 最低分数阈值，范围 0–1（低于阈值的 Chunk 会被过滤）",
+    },
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Update knowledge base name, description or rerank threshold",
+  description: {
+    "en-US": "Update knowledge base name, description or rerank threshold",
+    "zh-CN": "更新知识库名称、描述或 Rerank 阈值",
+  },
   auth: "apiKey",
   usageArgs: "--index-id <id> [flags]",
   flags: KB_UPDATE_FLAGS,
   notes: [
-    "Indexing settings (embedding model, chunk size, etc.) are immutable — recreate the knowledge base to change them.",
+    {
+      "en-US":
+        "Indexing settings (embedding model, chunk size, etc.) are immutable — recreate the knowledge base to change them.",
+      "zh-CN": "索引设置（Embedding 模型、Chunk 大小等）不可修改——如需更改，请重新创建知识库。",
+    },
   ],
   exampleArgs: [
-    "--index-id idx-xxx --description 'product docs v2' --workspace-id ws-xxx",
+    {
+      "en-US": "--index-id idx-xxx --description 'product docs v2' --workspace-id ws-xxx",
+      "zh-CN": "--index-id idx-xxx --description '产品文档 v2' --workspace-id ws-xxx",
+    },
     "--index-id idx-xxx --rerank-min-score 0.3",
   ],
   validate(flags) {

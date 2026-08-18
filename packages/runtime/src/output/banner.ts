@@ -1,24 +1,61 @@
 import { API_KEY_PAGE, TOKEN_PLAN_PAGE } from "../urls.ts";
+import { DEFAULT_LANGUAGE, type Language, type LocalizedText } from "bailian-cli-core";
+import type { Translator } from "../i18n.ts";
 import { ansi } from "./color.ts";
 
-export function printWelcomeBanner(cliName: string): void {
+const WELCOME_TEXT = {
+  title: { "en-US": "Welcome to Bailian CLI!", "zh-CN": "欢迎使用 Bailian CLI！" },
+  getStarted: { "en-US": "Get started in 2 steps:", "zh-CN": "只需两步即可开始使用：" },
+  getApiKey: { "en-US": "Get your API Key:", "zh-CN": "获取 API Key：" },
+  login: { "en-US": "Login:", "zh-CN": "登录：" },
+  tokenPlan: { "en-US": "Token Plan:", "zh-CN": "Token Plan：" },
+} satisfies Record<string, LocalizedText>;
+
+function localize(translator: Translator | undefined, text: LocalizedText): string {
+  return translator?.localize(text) ?? (typeof text === "string" ? text : text["en-US"]);
+}
+
+export function printWelcomeBanner(cliName: string, translator?: Translator): void {
   const color = ansi(process.stderr);
-  process.stderr.write(`\n  Welcome to ${color.purple("Bailian")} CLI!\n\n`);
-  process.stderr.write("  Get started in 2 steps:\n");
-  process.stderr.write(`  1. Get your API Key:  ${API_KEY_PAGE}\n`);
-  process.stderr.write(`  2. Login:             ${cliName} auth login --api-key <your-key>\n\n`);
-  process.stderr.write("  Token Plan:\n");
-  process.stderr.write(`  1. Get your API Key:  ${TOKEN_PLAN_PAGE}\n`);
+  const title = localize(translator, WELCOME_TEXT.title).replace(
+    "Bailian",
+    color.purple("Bailian"),
+  );
+  process.stderr.write(`\n  ${title}\n\n`);
+  process.stderr.write(`  ${localize(translator, WELCOME_TEXT.getStarted)}\n`);
+  process.stderr.write(`  1. ${localize(translator, WELCOME_TEXT.getApiKey)}  ${API_KEY_PAGE}\n`);
   process.stderr.write(
-    `  2. Login:             ${cliName} auth login --config token-plan --api-key <your-key>\n\n`,
+    `  2. ${localize(translator, WELCOME_TEXT.login)}             ${cliName} auth login --api-key <your-key>\n\n`,
+  );
+  process.stderr.write(`  ${localize(translator, WELCOME_TEXT.tokenPlan)}\n`);
+  process.stderr.write(
+    `  1. ${localize(translator, WELCOME_TEXT.getApiKey)}  ${TOKEN_PLAN_PAGE}\n`,
+  );
+  process.stderr.write(
+    `  2. ${localize(translator, WELCOME_TEXT.login)}             ${cliName} auth login --config token-plan --api-key <your-key>\n\n`,
   );
 }
 
-export function printQuickStart(tasks: readonly string[]): void {
+export function printQuickStart(
+  tasks: readonly string[],
+  language: Language = DEFAULT_LANGUAGE,
+): void {
   const color = ansi(process.stderr);
-  process.stderr.write("\n🎯 Try these with your AI coding assistant:\n\n");
-  tasks.forEach((task, i) => {
-    process.stderr.write(`${color.dim(String(i + 1))}  ${task}\n`);
+  const chineseHeading = "试试让你的 AI 编程助手完成这些任务：";
+  const englishHeading = "Try these with your AI coding assistant:";
+  const englishFirst = language === "en-US";
+  const primaryHeading = englishFirst ? englishHeading : chineseHeading;
+  const secondaryHeading = englishFirst ? chineseHeading : englishHeading;
+
+  process.stderr.write(`\n🎯 ${color.white(primaryHeading)}\n`);
+  process.stderr.write(`   ${color.dim(secondaryHeading)}\n\n`);
+  tasks.forEach((task, index) => {
+    const [chinese, ...englishLines] = task.split("\n");
+    const english = englishLines.join("\n").trimStart();
+    const primary = englishFirst ? english : chinese;
+    const secondary = englishFirst ? chinese : english;
+    process.stderr.write(`${color.dim(String(index + 1))}  ${color.white(primary)}\n`);
+    process.stderr.write(`   ${color.dim(secondary)}\n`);
   });
   process.stderr.write("\n");
 }

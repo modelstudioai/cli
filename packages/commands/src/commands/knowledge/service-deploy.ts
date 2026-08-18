@@ -15,15 +15,21 @@ const SERVICE_DEPLOY_FLAGS = {
   agentId: {
     type: "string",
     valueHint: "<id>",
-    description: "Service (agent) ID",
+    description: { "en-US": "Service (agent) ID", "zh-CN": "服务（Agent）ID" },
     required: true,
   },
   versionDesc: {
     type: "string",
     valueHint: "<text>",
-    description: "Description for the newly published version",
+    description: {
+      "en-US": "Description for the newly published version",
+      "zh-CN": "新发布版本的描述",
+    },
   },
-  yes: { type: "switch", description: "Skip the confirmation prompt" },
+  yes: {
+    type: "switch",
+    description: { "en-US": "Skip the confirmation prompt", "zh-CN": "跳过确认提示" },
+  },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
@@ -58,18 +64,34 @@ async function buildDeploySummary(
 }
 
 export default defineCommand({
-  description: "Publish the beta draft of a service as a new version",
+  description: {
+    "en-US": "Publish the beta draft of a service as a new version",
+    "zh-CN": "将服务的 beta 草稿发布为新版本",
+  },
   auth: "apiKey",
   usageArgs: "--agent-id <id> [flags]",
   flags: SERVICE_DEPLOY_FLAGS,
   notes: [
-    "The version number auto-increments; status becomes deployed.",
-    "Publishing affects live callers — the confirmation prompt guards against accidents.",
-    "Requires the knowledge-base modify permission in the workspace.",
+    {
+      "en-US": "The version number auto-increments; status becomes deployed.",
+      "zh-CN": "版本号会自动递增；状态将变为 deployed。",
+    },
+    {
+      "en-US":
+        "Publishing affects live callers — the confirmation prompt guards against accidents.",
+      "zh-CN": "发布会影响线上调用方——确认提示用于避免误操作。",
+    },
+    {
+      "en-US": "Requires the knowledge-base modify permission in the workspace.",
+      "zh-CN": "需要 Workspace 中的知识库修改权限。",
+    },
   ],
   exampleArgs: [
     "--agent-id aid-xxx --workspace-id ws-xxx",
-    "--agent-id aid-xxx --version-desc 'tuned rerank params' --yes",
+    {
+      "en-US": "--agent-id aid-xxx --version-desc 'tuned rerank params' --yes",
+      "zh-CN": "--agent-id aid-xxx --version-desc '已调优 Rerank 参数' --yes",
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

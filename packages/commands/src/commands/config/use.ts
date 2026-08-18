@@ -2,14 +2,17 @@ import { defineCommand, detectOutputFormat } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description: "Set the active config profile",
+  description: { "en-US": "Set the active config profile", "zh-CN": "设置当前激活的配置 Profile" },
   auth: "none",
   usageArgs: "--name <name>",
   flags: {
     name: {
       type: "string",
       valueHint: "<name>",
-      description: "Existing profile name, or default",
+      description: {
+        "en-US": "Existing profile name, or default",
+        "zh-CN": "已有 Profile 名称，或 default",
+      },
       required: true,
     },
   },

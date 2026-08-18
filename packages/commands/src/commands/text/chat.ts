@@ -28,45 +28,84 @@ const CHAT_FLAGS = {
     type: "string",
     valueHint: "<chat|responses>",
     choices: ["chat", "responses"] as const,
-    description: "API to call (default: chat)",
+    description: { "en-US": "API to call (default: chat)", "zh-CN": "调用的 API（默认：chat）" },
   },
-  model: { type: "string", valueHint: "<model>", description: "Model ID (default: qwen3.8-max)" },
+  model: {
+    type: "string",
+    valueHint: "<model>",
+    description: {
+      "en-US": "Model ID (default: qwen3.8-max)",
+      "zh-CN": "模型 ID（默认：qwen3.8-max）",
+    },
+  },
   message: {
     type: "array",
     valueHint: "<text>",
-    description: "Message text (repeatable, prefix role: to set role); or use --messages-file",
+    description: {
+      "en-US": "Message text (repeatable, prefix role: to set role); or use --messages-file",
+      "zh-CN": "消息文本（可重复；可使用 role: 前缀指定角色），也可使用 --messages-file",
+    },
   },
   messagesFile: {
     type: "string",
     valueHint: "<path>",
-    description: "JSON file with messages array (use - for stdin)",
+    description: {
+      "en-US": "JSON file with messages array (use - for stdin)",
+      "zh-CN": "包含 messages 数组的 JSON 文件（使用 - 从 stdin 读取）",
+    },
   },
-  system: { type: "string", valueHint: "<text>", description: "System prompt" },
+  system: {
+    type: "string",
+    valueHint: "<text>",
+    description: { "en-US": "System prompt", "zh-CN": "系统提示词" },
+  },
   maxTokens: {
     type: "number",
     valueHint: "<n>",
-    description: "Maximum tokens to generate (default: 4096)",
+    description: {
+      "en-US": "Maximum tokens to generate (default: 4096)",
+      "zh-CN": "最大生成 Token 数（默认：4096）",
+    },
   },
   temperature: {
     type: "number",
     valueHint: "<n>",
-    description: "Sampling temperature (0.0, 2.0]",
+    description: { "en-US": "Sampling temperature (0.0, 2.0]", "zh-CN": "采样温度 (0.0, 2.0]" },
   },
-  topP: { type: "number", valueHint: "<n>", description: "Nucleus sampling threshold" },
-  stream: { type: "switch", description: "Stream response tokens (default: on in TTY)" },
+  topP: {
+    type: "number",
+    valueHint: "<n>",
+    description: { "en-US": "Nucleus sampling threshold", "zh-CN": "核采样阈值" },
+  },
+  stream: {
+    type: "switch",
+    description: {
+      "en-US": "Stream response tokens (default: on in TTY)",
+      "zh-CN": "流式输出响应 Token（TTY 中默认开启）",
+    },
+  },
   tool: {
     type: "array",
     valueHint: "<json-or-path>",
-    description: "Tool definition as JSON or file path (repeatable)",
+    description: {
+      "en-US": "Tool definition as JSON or file path (repeatable)",
+      "zh-CN": "JSON 格式的工具定义或文件路径（可重复）",
+    },
   },
   enableThinking: {
     type: "switch",
-    description: "Enable thinking/reasoning mode (for qwen3/qwq models)",
+    description: {
+      "en-US": "Enable thinking/reasoning mode (for qwen3/qwq models)",
+      "zh-CN": "启用思考/推理模式（适用于 qwen3/qwq 模型）",
+    },
   },
   thinkingBudget: {
     type: "number",
     valueHint: "<n>",
-    description: "Max tokens for thinking (default: 4096)",
+    description: {
+      "en-US": "Max tokens for thinking (default: 4096)",
+      "zh-CN": "思考过程最大 Token 数（默认：4096）",
+    },
   },
 } satisfies FlagsDef;
 type ChatFlags = ParsedFlags<typeof CHAT_FLAGS>;
@@ -120,18 +159,34 @@ function parseMessages(flags: ChatFlags): ParsedMessages {
 }
 
 export default defineCommand({
-  description: "Send a text model request (OpenAI compatible, DashScope)",
+  description: {
+    "en-US": "Send a text model request (OpenAI compatible, DashScope)",
+    "zh-CN": "发送文本模型请求（OpenAI 兼容，DashScope）",
+  },
   auth: "apiKey",
   usageArgs: "--message <text> [flags]",
   flags: CHAT_FLAGS,
   exampleArgs: [
-    '--message "What is Qwen?"',
-    `--api responses --model qwen3.8-max --tool '{"type":"web_search"}' --message "Search for recent Alibaba Cloud news"`,
-    '--model qwen-max --system "You are a coding assistant." --message "Write fizzbuzz in Python"',
-    '--message "Hello" --message "assistant:Hi!" --message "How are you?"',
+    { "en-US": '--message "What is Qwen?"', "zh-CN": '--message "通义千问是什么？"' },
+    {
+      "en-US": `--api responses --model qwen3.8-max --tool '{"type":"web_search"}' --message "Search for recent Alibaba Cloud news"`,
+      "zh-CN": `--api responses --model qwen3.8-max --tool '{"type":"web_search"}' --message "搜索近期的阿里云新闻"`,
+    },
+    {
+      "en-US":
+        '--model qwen-max --system "You are a coding assistant." --message "Write fizzbuzz in Python"',
+      "zh-CN": '--model qwen-max --system "你是一名编程助手。" --message "用 Python 编写 FizzBuzz"',
+    },
+    {
+      "en-US": '--message "Hello" --message "assistant:Hi!" --message "How are you?"',
+      "zh-CN": '--message "你好" --message "assistant:你好！" --message "你好吗？"',
+    },
     "--messages-file - --stream",
-    '--message "Hello" --output json',
-    '--model qwq-plus --message "Solve 1+1" --enable-thinking',
+    { "en-US": '--message "Hello" --output json', "zh-CN": '--message "你好" --output json' },
+    {
+      "en-US": '--model qwq-plus --message "Solve 1+1" --enable-thinking',
+      "zh-CN": '--model qwq-plus --message "计算 1+1" --enable-thinking',
+    },
   ],
   validate: (flags) => {
     if (!flags.message && !flags.messagesFile) {

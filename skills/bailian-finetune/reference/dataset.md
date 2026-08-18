@@ -131,17 +131,9 @@ bl dataset list --output json
 
 #### Notes
 
-- Supports .jsonl (text) and .zip (audio/image archives with a data.jsonl
-- manifest). Six record schemas are recognized: chatml = {messages:[...]}
-- (SFT); dpo = {messages:[...], chosen, rejected}; cpt = {text:"..."}
-- (continual pre-training, raw text); tts = {wav_fn:"train/xxx.wav",
-- text:"..."} (audio fine-tuning); image = {img_path:"..."} (image
-- generation); video = {first_frame_path:...} (video generation). With no
-- --schema, a record carrying wav_fn is validated as TTS, img_path as image,
-- chosen/rejected as DPO, text (no messages) as CPT, otherwise ChatML.
-- Upload cap: 200MB SFT/DPO text, 300MB CPT, 2GB media zip. Upload uses the
-- OpenAI-compatible /compatible-mode/v1/files endpoint so the purpose tag is
-- persisted (the DashScope-native /api/v1/files drops it).
+- Supports .jsonl (text) and .zip (audio/image/video archives with a data.jsonl manifest). Six record schemas are recognized: chatml = {messages:[...]} (SFT); dpo = {messages:[...], chosen, rejected}; cpt = {text:"..."} (continual pre-training, raw text); tts = {wav_fn:"train/xxx.wav", text:"..."} (audio fine-tuning); image = {img_path:"..."} (image generation); video = {first_frame_path:...} (video generation).
+- With no --schema, a record carrying wav_fn is validated as TTS, img_path as image, chosen/rejected as DPO, text (no messages) as CPT, otherwise ChatML.
+- Upload cap: 200MB SFT/DPO text, 300MB CPT, 2GB media zip. Upload uses the OpenAI-compatible /compatible-mode/v1/files endpoint so the purpose tag is persisted (the DashScope-native /api/v1/files drops it).
 
 #### Examples
 
@@ -192,20 +184,10 @@ bl dataset upload --file train.jsonl --no-validate
 
 #### Notes
 
-- Default scan: every line gets a structural check, then ~160 lines (front 50,
-- evenly spaced 100, last 10) are JSON.parsed against the active schema.
-- Schemas: chatml = {messages:[...]} (SFT); dpo = {messages:[...], chosen,
-- rejected}; cpt = {text:"..."} (continual pre-training, raw text);
-- tts = {wav_fn:"train/xxx.wav", text:"..."} (audio fine-tuning);
-- image = {img_path:"..."} (image generation);
-- video = {first_frame_path:"...", video_path:"..."} (video generation,
-- i2v first-frame or kf2v first+last-frame with last_frame_path). With no
-- --schema, a record carrying wav_fn is validated as TTS, img_path as image,
-- first_frame_path/video_path as video, chosen/rejected as DPO, text (no
-- messages) as CPT, otherwise ChatML. Pass --schema to require a specific
-- shape on every record. ZIP archives (.zip) are validated structurally
-- (data.jsonl present, media references resolve) in addition to per-record
-- content checks. Use --full-validate to JSON.parse every line.
+- Default scan: every line gets a structural check, then ~160 lines (front 50, evenly spaced 100, last 10) are JSON.parsed against the active schema.
+- Schemas: chatml = {messages:[...]} (SFT); dpo = {messages:[...], chosen, rejected}; cpt = {text:"..."} (continual pre-training, raw text); tts = {wav_fn:"train/xxx.wav", text:"..."} (audio fine-tuning); image = {img_path:"..."} (image generation); video = {first_frame_path:"...", video_path:"..."} (video generation, i2v first-frame or kf2v first+last-frame with last_frame_path).
+- With no --schema, a record carrying wav_fn is validated as TTS, img_path as image, first_frame_path/video_path as video, chosen/rejected as DPO, text (no messages) as CPT, otherwise ChatML. Pass --schema to require a specific shape on every record.
+- ZIP archives (.zip) are validated structurally (data.jsonl present, media references resolve) in addition to per-record content checks. Use --full-validate to JSON.parse every line.
 
 #### Examples
 

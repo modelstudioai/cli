@@ -11,32 +11,38 @@ const SESSION_EVENTS_FLAGS = {
   sessionId: {
     type: "string",
     valueHint: "<id>",
-    description: "Session ID (required)",
+    description: { "en-US": "Session ID (required)", "zh-CN": "Session ID（必填）" },
     required: true,
   },
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Config file path (default: agents.yaml)",
+    description: {
+      "en-US": "Config file path (default: agents.yaml)",
+      "zh-CN": "配置文件路径（默认：agents.yaml）",
+    },
   },
   provider: {
     type: "string",
     valueHint: "<name>",
-    description: "Target provider",
+    description: { "en-US": "Target provider", "zh-CN": "目标 Provider" },
   },
   limit: {
     type: "number",
     valueHint: "<n>",
-    description: "Maximum number of events to fetch",
+    description: { "en-US": "Maximum number of events to fetch", "zh-CN": "要获取的最大事件数" },
   },
   all: {
     type: "switch",
-    description: "Fetch all pages by following the cursor",
+    description: {
+      "en-US": "Fetch all pages by following the cursor",
+      "zh-CN": "跟随 Cursor 获取全部分页",
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "List event history for a session",
+  description: { "en-US": "List event history for a session", "zh-CN": "列出 Session 的事件历史" },
   auth: "apiKey",
   usageArgs: "--session-id <id> [--limit <n>] [--all] [--file <path>]",
   flags: SESSION_EVENTS_FLAGS,

@@ -31,33 +31,51 @@ const DOC_UPLOAD_FLAGS = {
   file: {
     type: "array",
     valueHint: "<path>",
-    description:
-      "Local file or directory path (repeatable). Directories are scanned recursively; unsupported formats are skipped",
+    description: {
+      "en-US":
+        "Local file or directory path (repeatable). Directories are scanned recursively; unsupported formats are skipped",
+      "zh-CN": "本地文件或目录路径（可重复）。目录会递归扫描，不支持的格式将被跳过",
+    },
     required: true,
   },
   indexId: {
     type: "string",
     valueHint: "<id>",
-    description: "Import into this knowledge base after registration (one job for all files)",
+    description: {
+      "en-US": "Import into this knowledge base after registration (one job for all files)",
+      "zh-CN": "文件注册后导入该知识库（所有文件共用一个任务）",
+    },
   },
   categoryId: {
     type: "string",
     valueHint: "<id>",
-    description: "Target data-center category; defaults to the workspace default category",
+    description: {
+      "en-US": "Target data-center category; defaults to the workspace default category",
+      "zh-CN": "目标数据中心类目；默认为 Workspace 的默认类目",
+    },
   },
   tag: {
     type: "array",
     valueHint: "<text>",
-    description: "File tag (repeatable), applied to every uploaded file",
+    description: {
+      "en-US": "File tag (repeatable), applied to every uploaded file",
+      "zh-CN": "文件标签（可重复），应用于每个上传文件",
+    },
   },
   wait: {
     type: "switch",
-    description: "Poll the import job to a terminal state (needs --index-id)",
+    description: {
+      "en-US": "Poll the import job to a terminal state (needs --index-id)",
+      "zh-CN": "轮询导入任务直到进入终态（需要 --index-id）",
+    },
   },
   pollInterval: {
     type: "number",
     valueHint: "<seconds>",
-    description: "Polling interval when waiting (default: 5)",
+    description: {
+      "en-US": "Polling interval when waiting (default: 5)",
+      "zh-CN": "等待时的轮询间隔（默认：5）",
+    },
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
@@ -68,16 +86,35 @@ interface UploadedFile {
 }
 
 export default defineCommand({
-  description:
-    "Upload local files or directories to the data center and optionally import into a knowledge base",
+  description: {
+    "en-US":
+      "Upload local files or directories to the data center and optionally import into a knowledge base",
+    "zh-CN": "上传本地文件或目录到数据中心，并可选择导入知识库",
+  },
   auth: "apiKey",
   usageArgs: "--file <path> [flags]",
   flags: DOC_UPLOAD_FLAGS,
   notes: [
-    "Pipeline: apply upload lease → PUT to OSS → register file → (with --index-id) create import job.",
-    "Without --category-id the workspace default category is resolved automatically.",
-    "Directories are scanned recursively; node_modules, .git, and similar are skipped automatically.",
-    "Multiple files are processed sequentially; on failure, already-registered file ids are listed in the error hint.",
+    {
+      "en-US":
+        "Pipeline: apply upload lease → PUT to OSS → register file → (with --index-id) create import job.",
+      "zh-CN":
+        "处理流程：申请上传凭证 → PUT 到 OSS → 注册文件 →（传入 --index-id 时）创建导入任务。",
+    },
+    {
+      "en-US": "Without --category-id the workspace default category is resolved automatically.",
+      "zh-CN": "未传入 --category-id 时，会自动解析 Workspace 的默认类目。",
+    },
+    {
+      "en-US":
+        "Directories are scanned recursively; node_modules, .git, and similar are skipped automatically.",
+      "zh-CN": "目录会递归扫描；node_modules、.git 等目录会被自动跳过。",
+    },
+    {
+      "en-US":
+        "Multiple files are processed sequentially; on failure, already-registered file ids are listed in the error hint.",
+      "zh-CN": "多个文件会依次处理；失败时，错误提示会列出已经注册成功的文件 ID。",
+    },
   ],
   exampleArgs: [
     "--file ./a.md --workspace-id ws-xxx",

@@ -26,6 +26,7 @@ import {
   type AuthRequirement,
   type FlagDef,
   type FlagsDef,
+  type LocalizedText,
 } from "../packages/core/src/index.ts";
 import { commands } from "../packages/cli/src/commands.ts";
 
@@ -70,6 +71,11 @@ function escCell(s: string): string {
   return s.replace(/\|/g, "\\|").replace(/\n/g, " ").trim();
 }
 
+/** Skill references are English artifacts; localized CLI text keeps English here. */
+function referenceText(text: LocalizedText): string {
+  return typeof text === "string" ? text : text["en-US"];
+}
+
 function topLevel(path: string): string {
   return path.split(" ")[0]!;
 }
@@ -96,7 +102,7 @@ function formatFlagsTable(flags: FlagsDef | undefined): string {
   if (!entries.length) return "_No command-specific flags._\n";
   const rows = entries.map(([key, def]) => {
     const req = def.type !== "switch" && def.required ? "yes" : "no";
-    return `| \`${escCell(flagDisplay(key, def))}\` | ${escCell(flagType(def))} | ${req} | ${escCell(def.description)} |`;
+    return `| \`${escCell(flagDisplay(key, def))}\` | ${escCell(flagType(def))} | ${req} | ${escCell(referenceText(def.description))} |`;
   });
   return [
     "| Flag | Type | Required | Description |",
@@ -106,19 +112,23 @@ function formatFlagsTable(flags: FlagsDef | undefined): string {
   ].join("\n");
 }
 
-function formatExamples(path: string, exampleArgs: string[] | undefined): string {
+function formatExamples(path: string, exampleArgs: LocalizedText[] | undefined): string {
   if (!exampleArgs?.length) return "_No examples._\n";
   // Commands store argument-only examples; prepend `bl <path>` for the reference.
   return (
     exampleArgs
-      .map((ex) => ["```bash", `bl ${path}${ex ? ` ${ex}` : ""}`, "```"].join("\n"))
+      .map((example) => {
+        const text = referenceText(example);
+        const line = text.startsWith("#") ? text : `bl ${path}${text ? ` ${text}` : ""}`;
+        return ["```bash", line, "```"].join("\n");
+      })
       .join("\n\n") + "\n"
   );
 }
 
-function formatNotes(notes: string[] | undefined): string {
+function formatNotes(notes: LocalizedText[] | undefined): string {
   if (!notes?.length) return "";
-  return notes.map((n) => `- ${n}`).join("\n") + "\n";
+  return notes.map((note) => `- ${referenceText(note)}`).join("\n") + "\n";
 }
 
 function commandSection(path: string, cmd: AnyCommand): string {
@@ -126,7 +136,7 @@ function commandSection(path: string, cmd: AnyCommand): string {
   lines.push(`### \`bl ${path}\``, "");
   lines.push(`| Field | Value |`, `| --- | --- |`);
   lines.push(`| **Name** | \`${escCell(path)}\` |`);
-  lines.push(`| **Description** | ${escCell(cmd.description)} |`);
+  lines.push(`| **Description** | ${escCell(referenceText(cmd.description))} |`);
   lines.push(`| **Authentication** | ${AUTH_LABELS[cmd.auth]} |`);
   // Commands store argument-only usage; the `bl <path>` prefix is added here.
   const usage = `bl ${path}${cmd.usageArgs ? ` ${cmd.usageArgs}` : ""}`;
@@ -181,7 +191,9 @@ function buildGroupFile(group: string, groupEntries: [string, AnyCommand][]): st
   ];
 
   for (const [path, cmd] of groupEntries) {
-    lines.push(`| \`bl ${path}\` | ${AUTH_LABELS[cmd.auth]} | ${escCell(cmd.description)} |`);
+    lines.push(
+      `| \`bl ${path}\` | ${AUTH_LABELS[cmd.auth]} | ${escCell(referenceText(cmd.description))} |`,
+    );
   }
 
   lines.push("", "## Command details", "");
@@ -215,7 +227,7 @@ function buildIndex(
   for (const [path, cmd] of entries) {
     const group = topLevel(path);
     lines.push(
-      `| \`bl ${path}\` | ${AUTH_LABELS[cmd.auth]} | ${escCell(cmd.description)} | [${group}.md](${group}.md) |`,
+      `| \`bl ${path}\` | ${AUTH_LABELS[cmd.auth]} | ${escCell(referenceText(cmd.description))} | [${group}.md](${group}.md) |`,
     );
   }
 
@@ -231,6 +243,7 @@ function buildIndex(
   }
 
   lines.push(
+    "",
     "## Global flags",
     "",
     "Available on every command (in addition to command-specific flags):",

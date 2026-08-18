@@ -2,27 +2,37 @@ import { defineCommand, listDeployableModels, type FlagsDef } from "bailian-cli-
 import { emitResult } from "bailian-cli-runtime";
 
 const MODELS_FLAGS = {
-  page: { type: "number", valueHint: "<n>", description: "Page number (default: 1)" },
+  page: {
+    type: "number",
+    valueHint: "<n>",
+    description: { "en-US": "Page number (default: 1)", "zh-CN": "页码（默认：1）" },
+  },
   pageSize: {
     type: "number",
     valueHint: "<n>",
-    description: "Results per page (default: 100)",
+    description: { "en-US": "Results per page (default: 100)", "zh-CN": "每页结果数（默认：100）" },
   },
   // 全局 --version 是保留 flag,目录版本过滤改名 --catalog-version。
   catalogVersion: {
     type: "string",
     valueHint: "<v>",
-    description: "Catalog version filter (default: v1.0; required for new catalog models)",
+    description: {
+      "en-US": "Catalog version filter (default: v1.0; required for new catalog models)",
+      "zh-CN": "模型目录版本筛选（默认：v1.0；新目录模型必填）",
+    },
   },
   source: {
     type: "string",
     valueHint: "<s>",
-    description: "Model source filter: custom (fine-tuned) | base (catalog) | public",
+    description: {
+      "en-US": "Model source filter: custom (fine-tuned) | base (catalog) | public",
+      "zh-CN": "模型来源筛选：custom（微调模型）| base（模型目录）| public",
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "List models available for deployment",
+  description: { "en-US": "List models available for deployment", "zh-CN": "列出可部署的模型" },
   auth: "apiKey",
   usageArgs: "[--page <n>] [--page-size <n>] [--catalog-version <v>] [--source <custom|public>]",
   flags: MODELS_FLAGS,

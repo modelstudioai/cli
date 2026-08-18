@@ -8,12 +8,18 @@ const STATE_LIST_FLAGS = {
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Config file path (default: agents.yaml)",
+    description: {
+      "en-US": "Config file path (default: agents.yaml)",
+      "zh-CN": "配置文件路径（默认：agents.yaml）",
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "List resources tracked in agents state",
+  description: {
+    "en-US": "List resources tracked in agents state",
+    "zh-CN": "列出 Agent State 中跟踪的资源",
+  },
   auth: "none",
   usageArgs: "[--file <path>]",
   flags: STATE_LIST_FLAGS,

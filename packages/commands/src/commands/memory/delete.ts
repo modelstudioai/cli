@@ -2,26 +2,29 @@ import { defineCommand, memoryNodePath, detectOutputFormat } from "bailian-cli-c
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description: "Delete a memory node",
+  description: { "en-US": "Delete a memory node", "zh-CN": "删除记忆节点" },
   auth: "apiKey",
   usageArgs: "--node-id <id> --user-id <id>",
   flags: {
     nodeId: {
       type: "string",
       valueHint: "<id>",
-      description: "Memory node ID (required)",
+      description: { "en-US": "Memory node ID (required)", "zh-CN": "记忆节点 ID（必填）" },
       required: true,
     },
     userId: {
       type: "string",
       valueHint: "<id>",
-      description: "User ID (required)",
+      description: { "en-US": "User ID (required)", "zh-CN": "用户 ID（必填）" },
       required: true,
     },
     memoryLibraryId: {
       type: "string",
       valueHint: "<id>",
-      description: "Memory library ID (non-default library)",
+      description: {
+        "en-US": "Memory library ID (non-default library)",
+        "zh-CN": "记忆库 ID（非默认记忆库）",
+      },
     },
   },
   exampleArgs: ["--node-id node_xxx --user-id user1"],

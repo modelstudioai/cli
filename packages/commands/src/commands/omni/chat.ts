@@ -114,73 +114,144 @@ function buildWavHeader(dataLength: number): Buffer {
 }
 
 export default defineCommand({
-  description: "Multimodal chat with text + audio output (Qwen-Omni)",
+  description: {
+    "en-US": "Multimodal chat with text + audio output (Qwen-Omni)",
+    "zh-CN": "支持文本输入与音频输出的多模态对话（Qwen-Omni）",
+  },
   auth: "apiKey",
   usageArgs: "--message <text> [flags]",
   flags: {
     message: {
       type: "array",
       valueHint: "<text>",
-      description: "Message text (repeatable, prefix role: to set role)",
+      description: {
+        "en-US": "Message text (repeatable, prefix role: to set role)",
+        "zh-CN": "消息文本（可重复；可使用 role: 前缀指定角色）",
+      },
     },
     model: {
       type: "string",
       valueHint: "<model>",
-      description: "Model ID (default: qwen3.5-omni-plus)",
+      description: {
+        "en-US": "Model ID (default: qwen3.5-omni-plus)",
+        "zh-CN": "模型 ID（默认：qwen3.5-omni-plus）",
+      },
     },
-    system: { type: "string", valueHint: "<text>", description: "System prompt" },
+    system: {
+      type: "string",
+      valueHint: "<text>",
+      description: { "en-US": "System prompt", "zh-CN": "系统提示词" },
+    },
     image: {
       type: "array",
       valueHint: "<url>",
-      description: "Image URL or local file (repeatable)",
+      description: {
+        "en-US": "Image URL or local file (repeatable)",
+        "zh-CN": "图片 URL 或本地文件（可重复）",
+      },
     },
     audio: {
       type: "array",
       valueHint: "<url>",
-      description: "Audio URL or local file (.wav/.mp3/.amr/.aac/.m4a/.ogg/.3gp/.3gpp)",
+      description: {
+        "en-US": "Audio URL or local file (.wav/.mp3/.amr/.aac/.m4a/.ogg/.3gp/.3gpp)",
+        "zh-CN": "音频 URL 或本地文件（.wav/.mp3/.amr/.aac/.m4a/.ogg/.3gp/.3gpp）",
+      },
     },
     video: {
       type: "array",
       valueHint: "<url>",
-      description: "Video file URL / local path, or comma-separated frame URLs",
+      description: {
+        "en-US": "Video file URL / local path, or comma-separated frame URLs",
+        "zh-CN": "视频文件 URL / 本地路径，或以逗号分隔的帧 URL",
+      },
     },
     voice: {
       type: "string",
       valueHint: "<voice>",
-      description: "Output voice ID (default: Tina). Use --list-voices to see all options",
+      description: {
+        "en-US": "Output voice ID (default: Tina). Use --list-voices to see all options",
+        "zh-CN": "输出音色 ID（默认：Tina）。使用 --list-voices 查看所有选项",
+      },
     },
     listVoices: {
       type: "switch",
-      description: "List available output voices and exit",
+      description: {
+        "en-US": "List available output voices and exit",
+        "zh-CN": "列出可用的输出音色并退出",
+      },
     },
     audioFormat: {
       type: "string",
       valueHint: "<fmt>",
-      description: "Audio output format (default: wav)",
+      description: {
+        "en-US": "Audio output format (default: wav)",
+        "zh-CN": "音频输出格式（默认：wav）",
+      },
     },
     audioOut: {
       type: "string",
       valueHint: "<path>",
-      description: "Save audio to file (default: auto-generate)",
+      description: {
+        "en-US": "Save audio to file (default: auto-generate)",
+        "zh-CN": "将音频保存到文件（默认：自动生成路径）",
+      },
     },
-    textOnly: { type: "switch", description: "Output text only, no audio generation" },
-    maxTokens: { type: "number", valueHint: "<n>", description: "Maximum tokens to generate" },
+    textOnly: {
+      type: "switch",
+      description: {
+        "en-US": "Output text only, no audio generation",
+        "zh-CN": "仅输出文本，不生成音频",
+      },
+    },
+    maxTokens: {
+      type: "number",
+      valueHint: "<n>",
+      description: { "en-US": "Maximum tokens to generate", "zh-CN": "最大生成 Token 数" },
+    },
     temperature: {
       type: "number",
       valueHint: "<n>",
-      description: "Sampling temperature (0.0, 2.0]",
+      description: {
+        "en-US": "Sampling temperature (0.0, 2.0]",
+        "zh-CN": "采样温度 (0.0, 2.0]",
+      },
     },
   },
   exampleArgs: [
     "--list-voices",
-    '--message "Hello, who are you?"',
-    '--message "Describe this image" --image ./photo.jpg',
-    '--message "What is this audio saying?" --audio https://example.com/audio.wav',
-    '--message "Summarize this video" --video https://example.com/video.mp4',
-    '--message "What is this video about?" --video ./local-video.mp4 --text-only',
-    '--message "Answer in Sichuan dialect: How\'s the weather today?" --voice Sunny',
-    '--message "Hello" --text-only --output json',
-    '--message "Read this passage aloud" --audio-out greeting.wav',
+    {
+      "en-US": '--message "Hello, who are you?"',
+      "zh-CN": '--message "你好，你是谁？"',
+    },
+    {
+      "en-US": '--message "Describe this image" --image ./photo.jpg',
+      "zh-CN": '--message "描述这张图片" --image ./photo.jpg',
+    },
+    {
+      "en-US": '--message "What is this audio saying?" --audio https://example.com/audio.wav',
+      "zh-CN": '--message "这段音频说了什么？" --audio https://example.com/audio.wav',
+    },
+    {
+      "en-US": '--message "Summarize this video" --video https://example.com/video.mp4',
+      "zh-CN": '--message "总结这段视频" --video https://example.com/video.mp4',
+    },
+    {
+      "en-US": '--message "What is this video about?" --video ./local-video.mp4 --text-only',
+      "zh-CN": '--message "这段视频讲了什么？" --video ./local-video.mp4 --text-only',
+    },
+    {
+      "en-US": '--message "Answer in Sichuan dialect: How\'s the weather today?" --voice Sunny',
+      "zh-CN": '--message "请用四川话回答：今天天气怎么样？" --voice Sunny',
+    },
+    {
+      "en-US": '--message "Hello" --text-only --output json',
+      "zh-CN": '--message "你好" --text-only --output json',
+    },
+    {
+      "en-US": '--message "Read this passage aloud" --audio-out greeting.wav',
+      "zh-CN": '--message "朗读这段文字" --audio-out greeting.wav',
+    },
   ],
   validate: (f) => (f.listVoices || f.message ? undefined : "Missing required flag: --message"),
   async run(ctx) {

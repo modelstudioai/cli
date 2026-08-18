@@ -10,17 +10,25 @@ import { downloadFile, formatBytes } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description: "Download a completed video by task ID",
+  description: {
+    "en-US": "Download a completed video by task ID",
+    "zh-CN": "通过任务 ID 下载已完成的视频",
+  },
   auth: "apiKey",
   usageArgs: "--task-id <id> --out <path>",
   flags: {
     taskId: {
       type: "string",
       valueHint: "<id>",
-      description: "Task ID to download from",
+      description: { "en-US": "Task ID to download from", "zh-CN": "要下载的任务 ID" },
       required: true,
     },
-    out: { type: "string", valueHint: "<path>", description: "Output file path", required: true },
+    out: {
+      type: "string",
+      valueHint: "<path>",
+      description: { "en-US": "Output file path", "zh-CN": "输出文件路径" },
+      required: true,
+    },
   },
   exampleArgs: [
     "--task-id 3b256896-xxxx --out video.mp4",

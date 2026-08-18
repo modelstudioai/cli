@@ -19,13 +19,20 @@ const CHAT_FLAGS = {
   message: {
     type: "array",
     valueHint: "<text>",
-    description:
-      "Message text (repeatable). Supports role:content prefix to set role (e.g. user:hello), defaults to user. Follows OpenAI message format",
+    description: {
+      "en-US":
+        "Message text (repeatable). Supports role:content prefix to set role (e.g. user:hello), defaults to user. Follows OpenAI message format",
+      "zh-CN":
+        "消息文本（可重复）。支持使用 role:content 前缀指定角色（例如 user:hello），默认为 user。遵循 OpenAI 消息格式",
+    },
   },
   agentId: {
     type: "string",
     valueHint: "<id>",
-    description: "Q&A service ID (find in console knowledge Q&A page)",
+    description: {
+      "en-US": "Q&A service ID (find in console knowledge Q&A page)",
+      "zh-CN": "问答服务 ID（可在控制台知识库问答页面查看）",
+    },
     required: true,
   },
   // Knowledge APIs use a workspace-specific host, so --workspace-id is a per-command
@@ -35,13 +42,19 @@ const CHAT_FLAGS = {
   agentVersion: {
     type: "string",
     valueHint: "<version>",
-    description:
-      "Service version to call: beta (draft for debugging) or a published number; default is the latest published version",
+    description: {
+      "en-US":
+        "Service version to call: beta (draft for debugging) or a published number; default is the latest published version",
+      "zh-CN": "要调用的服务版本：beta（用于调试的草稿）或已发布版本号；默认使用最新发布版本",
+    },
   },
   image: {
     type: "array",
     valueHint: "<url>",
-    description: "Image URL (repeatable). Attached to the last user message as multimodal content",
+    description: {
+      "en-US": "Image URL (repeatable). Attached to the last user message as multimodal content",
+      "zh-CN": "图片 URL（可重复）。将作为多模态内容附加到最后一条用户消息",
+    },
   },
 } satisfies FlagsDef;
 type ChatFlags = ParsedFlags<typeof CHAT_FLAGS>;
@@ -142,21 +155,58 @@ const STEP_LABELS: Record<string, string> = {
 };
 
 export default defineCommand({
-  description: "Chat with a Bailian knowledge base (RAG Q&A with streaming)",
+  description: {
+    "en-US": "Chat with a Bailian knowledge base (RAG Q&A with streaming)",
+    "zh-CN": "与百炼知识库对话（支持流式输出的 RAG 问答）",
+  },
   auth: "apiKey",
   usageArgs: "--message <text> --agent-id <id> [flags]",
   flags: CHAT_FLAGS,
   notes: [
-    "Response is returned as SSE stream events. Event lifecycle: tool_calling → tool_return → plan_start → planning → plan_end → generation_start → generating → generation_end. tool_calling → tool_return may loop multiple times.",
-    "Auth: uses DashScope API Key (Bearer token). Get yours from the console API Key page.",
-    "`--workspace-id` can be set via BAILIAN_WORKSPACE_ID env or `kscli config set workspace_id <id>`.",
-    'Multi-turn: use --message "user:..." and --message "assistant:..." to pass conversation history.',
-    "`--agent-version beta` calls the draft config for debugging before it is deployed.",
+    {
+      "en-US":
+        "Response is returned as SSE stream events. Event lifecycle: tool_calling → tool_return → plan_start → planning → plan_end → generation_start → generating → generation_end. tool_calling → tool_return may loop multiple times.",
+      "zh-CN":
+        "响应以 SSE 流事件返回。事件生命周期：tool_calling → tool_return → plan_start → planning → plan_end → generation_start → generating → generation_end。tool_calling → tool_return 可能循环多次。",
+    },
+    {
+      "en-US":
+        "Auth: uses DashScope API Key (Bearer token). Get yours from the console API Key page.",
+      "zh-CN": "鉴权：使用 DashScope API Key（Bearer Token）。可在控制台 API Key 页面获取。",
+    },
+    {
+      "en-US":
+        "`--workspace-id` can be set via BAILIAN_WORKSPACE_ID env or `kscli config set workspace_id <id>`.",
+      "zh-CN":
+        "`--workspace-id` 可通过 BAILIAN_WORKSPACE_ID 环境变量或 `kscli config set workspace_id <id>` 设置。",
+    },
+    {
+      "en-US":
+        'Multi-turn: use --message "user:..." and --message "assistant:..." to pass conversation history.',
+      "zh-CN": '多轮对话：使用 --message "user:..." 和 --message "assistant:..." 传入对话历史。',
+    },
+    {
+      "en-US": "`--agent-version beta` calls the draft config for debugging before it is deployed.",
+      "zh-CN": "`--agent-version beta` 会调用尚未部署的草稿配置，便于发布前调试。",
+    },
   ],
   exampleArgs: [
-    '--message "What is RAG?" --agent-id aid-xxx --workspace-id ws-xxx',
-    '--message "user:What is RAG?" --message "assistant:RAG is..." --message "How does it work?" --agent-id aid-xxx --workspace-id ws-xxx',
-    '--message "Describe these images" --image https://example.com/a.png --image https://example.com/b.png --agent-id aid-xxx --workspace-id ws-xxx',
+    {
+      "en-US": '--message "What is RAG?" --agent-id aid-xxx --workspace-id ws-xxx',
+      "zh-CN": '--message "什么是 RAG？" --agent-id aid-xxx --workspace-id ws-xxx',
+    },
+    {
+      "en-US":
+        '--message "user:What is RAG?" --message "assistant:RAG is..." --message "How does it work?" --agent-id aid-xxx --workspace-id ws-xxx',
+      "zh-CN":
+        '--message "user:什么是 RAG？" --message "assistant:RAG 是……" --message "它是如何工作的？" --agent-id aid-xxx --workspace-id ws-xxx',
+    },
+    {
+      "en-US":
+        '--message "Describe these images" --image https://example.com/a.png --image https://example.com/b.png --agent-id aid-xxx --workspace-id ws-xxx',
+      "zh-CN":
+        '--message "描述这些图片" --image https://example.com/a.png --image https://example.com/b.png --agent-id aid-xxx --workspace-id ws-xxx',
+    },
   ],
   validate: (f) =>
     (f.message && f.message.length > 0) || (f.image && f.image.length > 0)

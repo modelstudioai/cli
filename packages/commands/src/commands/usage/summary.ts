@@ -22,14 +22,20 @@ import {
 const TOP_N = 10;
 
 export default defineCommand({
-  description: "Show a unified usage summary: free-tier quota and recent usage overview",
+  description: {
+    "en-US": "Show a unified usage summary: free-tier quota and recent usage overview",
+    "zh-CN": "显示统一用量摘要：免费额度和近期用量概览",
+  },
   auth: "console",
   usageArgs: "[--days <days>] [flags]",
   flags: {
     days: {
       type: "string",
       valueHint: "<days>",
-      description: "Number of days for the usage overview (default: 7)",
+      description: {
+        "en-US": "Number of days for the usage overview (default: 7)",
+        "zh-CN": "用量概览的天数（默认：7）",
+      },
     },
   },
   exampleArgs: ["", "--days 30", "--output json"],

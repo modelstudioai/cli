@@ -13,21 +13,37 @@ const KB_LIST_FLAGS = {
   name: {
     type: "string",
     valueHint: "<text>",
-    description: "Filter by knowledge base name (fuzzy match, 1-20 chars)",
+    description: {
+      "en-US": "Filter by knowledge base name (fuzzy match, 1-20 chars)",
+      "zh-CN": "按知识库名称筛选（模糊匹配，1–20 个字符）",
+    },
   },
   ...PAGE_FLAGS,
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "List knowledge bases in the workspace",
+  description: {
+    "en-US": "List knowledge bases in the workspace",
+    "zh-CN": "列出 Workspace 中的知识库",
+  },
   auth: "apiKey",
   usageArgs: "[flags]",
   flags: KB_LIST_FLAGS,
   notes: [
-    "Auth: uses DashScope API Key (Bearer token).",
-    "`--workspace-id` can be set via BAILIAN_WORKSPACE_ID env or config workspace_id.",
-    "Use the returned id as --index-id in knowledge base / document management commands.",
+    {
+      "en-US": "Auth: uses DashScope API Key (Bearer token).",
+      "zh-CN": "鉴权：使用 DashScope API Key（Bearer Token）。",
+    },
+    {
+      "en-US": "`--workspace-id` can be set via BAILIAN_WORKSPACE_ID env or config workspace_id.",
+      "zh-CN": "`--workspace-id` 可通过 BAILIAN_WORKSPACE_ID 环境变量或配置项 workspace_id 设置。",
+    },
+    {
+      "en-US":
+        "Use the returned id as --index-id in knowledge base / document management commands.",
+      "zh-CN": "在知识库/文档管理命令中，将返回的 ID 作为 --index-id 使用。",
+    },
   ],
   exampleArgs: ["--workspace-id ws-xxx", "--name demo --page-number 2 --page-size 50"],
   validate(flags) {

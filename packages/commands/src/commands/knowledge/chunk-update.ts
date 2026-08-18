@@ -18,38 +18,65 @@ const CHUNK_UPDATE_FLAGS = {
   indexId: {
     type: "string",
     valueHint: "<id>",
-    description: "Knowledge base ID",
+    description: { "en-US": "Knowledge base ID", "zh-CN": "知识库 ID" },
     required: true,
   },
   chunkId: {
     type: "string",
     valueHint: "<id>",
-    description: "Chunk ID (metadata._id from the chunk list output)",
+    description: {
+      "en-US": "Chunk ID (metadata._id from the chunk list output)",
+      "zh-CN": "Chunk ID（来自 Chunk 列表输出的 metadata._id）",
+    },
     required: true,
   },
   docId: {
     type: "string",
     valueHint: "<id>",
-    description: "Document ID owning the chunk (metadata.doc_id from the chunk list output)",
+    description: {
+      "en-US": "Document ID owning the chunk (metadata.doc_id from the chunk list output)",
+      "zh-CN": "Chunk 所属文档 ID（来自 Chunk 列表输出的 metadata.doc_id）",
+    },
     required: true,
   },
   content: {
     type: "string",
     valueHint: "<text>",
-    description: "New chunk content, 10-6000 chars; alternative to --content-file",
+    description: {
+      "en-US": "New chunk content, 10-6000 chars; alternative to --content-file",
+      "zh-CN": "新的 Chunk 内容，10–6000 个字符；与 --content-file 二选一",
+    },
   },
   contentFile: {
     type: "string",
     valueHint: "<path>",
-    description: "Read new content from a UTF-8 plain text file (.md/.txt etc.)",
+    description: {
+      "en-US": "Read new content from a UTF-8 plain text file (.md/.txt etc.)",
+      "zh-CN": "从 UTF-8 纯文本文件（.md/.txt 等）读取新内容",
+    },
   },
   title: {
     type: "string",
     valueHint: "<text>",
-    description: "Chunk title, 0-50 chars (empty string clears it; omit to keep unchanged)",
+    description: {
+      "en-US": "Chunk title, 0-50 chars (empty string clears it; omit to keep unchanged)",
+      "zh-CN": "Chunk 标题，0–50 个字符（空字符串表示清除；省略则保持不变）",
+    },
   },
-  exclude: { type: "switch", description: "Exclude this chunk from retrieval" },
-  include: { type: "switch", description: "Include this chunk in retrieval (default)" },
+  exclude: {
+    type: "switch",
+    description: {
+      "en-US": "Exclude this chunk from retrieval",
+      "zh-CN": "在检索中排除该 Chunk",
+    },
+  },
+  include: {
+    type: "switch",
+    description: {
+      "en-US": "Include this chunk in retrieval (default)",
+      "zh-CN": "在检索中包含该 Chunk（默认）",
+    },
+  },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
@@ -82,17 +109,35 @@ async function fetchChunkContent(
 }
 
 export default defineCommand({
-  description: "Update chunk content or toggle its retrieval visibility",
+  description: {
+    "en-US": "Update chunk content or toggle its retrieval visibility",
+    "zh-CN": "更新 Chunk 内容或切换其检索可见性",
+  },
   auth: "apiKey",
   usageArgs: "--index-id <id> --chunk-id <id> --doc-id <id> [flags]",
   flags: CHUNK_UPDATE_FLAGS,
   notes: [
-    "Content must be 10-6000 characters and within the knowledge base's max chunk size.",
-    "--content-file expects a UTF-8 plain text file; document formats (.docx/.pdf) are not parsed here.",
-    "Toggling --exclude/--include without new content re-submits the existing content automatically.",
+    {
+      "en-US": "Content must be 10-6000 characters and within the knowledge base's max chunk size.",
+      "zh-CN": "内容必须为 10–6000 个字符，且不能超过知识库的最大 Chunk 大小。",
+    },
+    {
+      "en-US":
+        "--content-file expects a UTF-8 plain text file; document formats (.docx/.pdf) are not parsed here.",
+      "zh-CN": "--content-file 需要 UTF-8 纯文本文件；此处不会解析 .docx/.pdf 等文档格式。",
+    },
+    {
+      "en-US":
+        "Toggling --exclude/--include without new content re-submits the existing content automatically.",
+      "zh-CN": "仅切换 --exclude/--include 而不提供新内容时，会自动重新提交现有内容。",
+    },
   ],
   exampleArgs: [
-    '--index-id idx-xxx --chunk-id chunk-xxx --doc-id file-xxx --content "corrected text"',
+    {
+      "en-US":
+        '--index-id idx-xxx --chunk-id chunk-xxx --doc-id file-xxx --content "corrected text"',
+      "zh-CN": '--index-id idx-xxx --chunk-id chunk-xxx --doc-id file-xxx --content "修正后的文本"',
+    },
     "--index-id idx-xxx --chunk-id chunk-xxx --doc-id file-xxx --exclude",
   ],
   validate(flags) {

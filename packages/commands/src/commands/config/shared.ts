@@ -1,7 +1,13 @@
-import { BailianError, ExitCode, normalizeModelBaseUrl } from "bailian-cli-core";
+import {
+  BailianError,
+  ExitCode,
+  normalizeModelBaseUrl,
+  SUPPORTED_LANGUAGES,
+} from "bailian-cli-core";
 
 /** Config keys that `config set` / `config ui` accept for read/write. */
 export const VALID_KEYS = [
+  "language",
   "base_url",
   "output",
   "output_dir",
@@ -47,6 +53,7 @@ export const UI_VALID_KEYS = [...VALID_KEYS, ...UI_EXTRA_KEYS] as const;
 
 // Keys the UI renders as a fixed-choice dropdown instead of a free-text input.
 export const UI_ENUM_KEYS: Record<string, string[]> = {
+  language: [...SUPPORTED_LANGUAGES],
   output: ["text", "json"],
   console_site: ["domestic", "international"],
 };
@@ -140,6 +147,13 @@ export function validateAndCoerce(key: string, value: string): string | number {
   if (!(VALID_KEYS as readonly string[]).includes(resolvedKey)) {
     throw new BailianError(
       `Invalid config key "${key}". Valid keys: ${VALID_KEYS.join(", ")}`,
+      ExitCode.USAGE,
+    );
+  }
+
+  if (resolvedKey === "language" && !(SUPPORTED_LANGUAGES as readonly string[]).includes(value)) {
+    throw new BailianError(
+      `Invalid language "${value}". Valid values: ${SUPPORTED_LANGUAGES.join(", ")}`,
       ExitCode.USAGE,
     );
   }

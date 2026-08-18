@@ -5,6 +5,7 @@ import {
   BailianError,
   COMMAND_PACK_API_VERSION,
   ExitCode,
+  SUPPORTED_LANGUAGES,
   UsageError,
   formatOutput,
   type AnyCommand,
@@ -12,6 +13,7 @@ import {
   type CommandPackCommand,
   type CommandPackMeta,
   type Identity,
+  type LocalizedText,
 } from "bailian-cli-core";
 import { CommandRegistry } from "../registry.ts";
 import { compareVersion } from "../utils/update-checker.ts";
@@ -67,12 +69,22 @@ function assertCommandPath(path: string, definition: CommandPackDefinition): voi
   }
 }
 
+function isLocalizedText(value: unknown): value is LocalizedText {
+  if (typeof value === "string") return value.length > 0;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+
+  const localizedText = value as Record<string, unknown>;
+  return SUPPORTED_LANGUAGES.every(
+    (language) => typeof localizedText[language] === "string" && localizedText[language].length > 0,
+  );
+}
+
 function assertCommand(path: string, value: unknown): asserts value is CommandPackCommand<any> {
   if (!value || typeof value !== "object") {
     throw new Error(`Command "${path}" must export an object.`);
   }
   const command = value as Partial<CommandPackCommand<any>>;
-  if (!command.description || typeof command.description !== "string") {
+  if (!isLocalizedText(command.description)) {
     throw new Error(`Command "${path}" is missing a description.`);
   }
   if (!command.auth || !AUTH_REQUIREMENTS.has(command.auth)) {

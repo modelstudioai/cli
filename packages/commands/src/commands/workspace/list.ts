@@ -67,14 +67,14 @@ function printTable(workspaces: WorkspaceInfo[]): void {
 }
 
 export default defineCommand({
-  description: "List all workspaces",
+  description: { "en-US": "List all workspaces", "zh-CN": "列出全部 Workspace" },
   auth: "console",
   usageArgs: "[flags]",
   flags: {
     list: {
       type: "string",
       valueHint: "<n>",
-      description: "Limit number of results",
+      description: { "en-US": "Limit number of results", "zh-CN": "限制结果数量" },
     },
   },
   exampleArgs: ["", "--list 5", "--output json"],

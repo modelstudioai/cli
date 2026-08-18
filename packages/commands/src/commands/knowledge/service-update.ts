@@ -21,80 +21,114 @@ const SERVICE_UPDATE_FLAGS = {
   agentId: {
     type: "string",
     valueHint: "<id>",
-    description: "Service (agent) ID",
+    description: { "en-US": "Service (agent) ID", "zh-CN": "服务（Agent）ID" },
     required: true,
   },
   name: {
     type: "string",
     valueHint: "<text>",
-    description: "New service name (up to 200 chars)",
+    description: {
+      "en-US": "New service name (up to 200 chars)",
+      "zh-CN": "新服务名称（最多 200 个字符）",
+    },
   },
   description: {
     type: "string",
     valueHint: "<text>",
-    description: "New service description (up to 1000 chars)",
+    description: {
+      "en-US": "New service description (up to 1000 chars)",
+      "zh-CN": "新服务描述（最多 1000 个字符）",
+    },
   },
   agentVersion: {
     type: "string",
     valueHint: "<version>",
-    description:
-      "Target version (default: beta draft). Published versions only accept --version-desc",
+    description: {
+      "en-US":
+        "Target version (default: beta draft). Published versions only accept --version-desc",
+      "zh-CN": "目标版本（默认：beta 草稿）。已发布版本只接受 --version-desc",
+    },
   },
   versionDesc: {
     type: "string",
     valueHint: "<text>",
-    description: "Version description",
+    description: { "en-US": "Version description", "zh-CN": "版本描述" },
   },
   policy: {
     type: "string",
     valueHint: "<policy>",
-    description: "Agent policy: turbo (fast) or agentic (multi-turn)",
+    description: {
+      "en-US": "Agent policy: turbo (fast) or agentic (multi-turn)",
+      "zh-CN": "Agent 策略：turbo（快速）或 agentic（多轮）",
+    },
   },
   model: {
     type: "string",
     valueHint: "<name>",
-    description: "Generation model code (must be in the platform allowlist)",
+    description: {
+      "en-US": "Generation model code (must be in the platform allowlist)",
+      "zh-CN": "生成模型代码（必须在平台白名单中）",
+    },
   },
   temperature: {
     type: "number",
     valueHint: "<n>",
-    description: "Sampling temperature, range 0-2",
+    description: { "en-US": "Sampling temperature, range 0-2", "zh-CN": "采样温度，范围 0–2" },
   },
   maxLlmCalls: {
     type: "number",
     valueHint: "<n>",
-    description: "Max LLM calls per request, range 1-30",
+    description: {
+      "en-US": "Max LLM calls per request, range 1-30",
+      "zh-CN": "每次请求最大 LLM 调用次数，范围 1–30",
+    },
   },
   enableSessionFile: {
     type: "string",
     valueHint: "<bool>",
-    description: "Enable session files: true or false",
+    description: {
+      "en-US": "Enable session files: true or false",
+      "zh-CN": "启用会话文件：true 或 false",
+    },
   },
   enableRefusal: {
     type: "string",
     valueHint: "<bool>",
-    description: "Enable refusal answers: true or false",
+    description: {
+      "en-US": "Enable refusal answers: true or false",
+      "zh-CN": "启用拒答：true 或 false",
+    },
   },
   enableAntiLeak: {
     type: "string",
     valueHint: "<bool>",
-    description: "Enable anti prompt-leak: true or false",
+    description: {
+      "en-US": "Enable anti prompt-leak: true or false",
+      "zh-CN": "启用防提示词泄露：true 或 false",
+    },
   },
   enableRichText: {
     type: "string",
     valueHint: "<bool>",
-    description: "Enable rich text output: true or false",
+    description: {
+      "en-US": "Enable rich text output: true or false",
+      "zh-CN": "启用富文本输出：true 或 false",
+    },
   },
   enableCitation: {
     type: "string",
     valueHint: "<bool>",
-    description: "Enable citations: true or false",
+    description: { "en-US": "Enable citations: true or false", "zh-CN": "启用引用：true 或 false" },
   },
   configFile: {
     type: "string",
     valueHint: "<path>",
-    description:
-      "JSON file replacing the whole agent_config (for nested settings like kb_search_configs); mutually exclusive with scalar config flags",
+    description: {
+      "en-US":
+        "JSON file replacing the whole agent_config (for nested settings like kb_search_configs); mutually exclusive with scalar config flags",
+      "zh-CN":
+        "替换整个 agent_config 的 JSON 文件（用于 kb_search_configs 等嵌套设置）；不能与标量配置选项同时使用",
+    },
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
@@ -226,16 +260,40 @@ async function fetchBetaConfig(
 }
 
 export default defineCommand({
-  description: "Update service name, description or draft configuration",
+  description: {
+    "en-US": "Update service name, description or draft configuration",
+    "zh-CN": "更新服务名称、描述或草稿配置",
+  },
   auth: "apiKey",
   usageArgs: "--agent-id <id> [flags]",
   flags: SERVICE_UPDATE_FLAGS,
   notes: [
-    "Configuration changes only apply to the beta draft; published versions accept --version-desc only.",
-    "To change the configuration of a published version, first update the beta draft (this command without --agent-version or with --agent-version beta), then run service deploy to publish a new version.",
-    "Scalar config flags merge into the current draft config (read-merge-write); --config-file replaces the whole config and is mutually exclusive with them.",
-    "After updating the draft, verify with --agent-version beta on search/chat, then deploy.",
-    "Requires the knowledge-base modify permission in the workspace.",
+    {
+      "en-US":
+        "Configuration changes only apply to the beta draft; published versions accept --version-desc only.",
+      "zh-CN": "配置修改只应用于 beta 草稿；已发布版本只接受 --version-desc。",
+    },
+    {
+      "en-US":
+        "To change the configuration of a published version, first update the beta draft (this command without --agent-version or with --agent-version beta), then run service deploy to publish a new version.",
+      "zh-CN":
+        "要修改已发布版本的配置，请先更新 beta 草稿（不传 --agent-version，或传 --agent-version beta），然后运行 service deploy 发布新版本。",
+    },
+    {
+      "en-US":
+        "Scalar config flags merge into the current draft config (read-merge-write); --config-file replaces the whole config and is mutually exclusive with them.",
+      "zh-CN":
+        "标量配置选项会合并到当前草稿配置（读取-合并-写入）；--config-file 会替换整个配置，且不能与标量配置选项同时使用。",
+    },
+    {
+      "en-US":
+        "After updating the draft, verify with --agent-version beta on search/chat, then deploy.",
+      "zh-CN": "更新草稿后，先在 search/chat 命令中使用 --agent-version beta 验证，再部署。",
+    },
+    {
+      "en-US": "Requires the knowledge-base modify permission in the workspace.",
+      "zh-CN": "需要 Workspace 中的知识库修改权限。",
+    },
   ],
   // Note on `agent_version` in the request body: this is the agent-management
   // domain's "target version" parameter (beta draft or a published version
@@ -245,7 +303,10 @@ export default defineCommand({
   exampleArgs: [
     "--agent-id aid-xxx --temperature 0.7 --workspace-id ws-xxx",
     "--agent-id aid-xxx --config-file ./agent-config.json",
-    "--agent-id aid-xxx --agent-version 1 --version-desc 'first stable release'",
+    {
+      "en-US": "--agent-id aid-xxx --agent-version 1 --version-desc 'first stable release'",
+      "zh-CN": "--agent-id aid-xxx --agent-version 1 --version-desc '首个稳定版本'",
+    },
   ],
   validate(flags) {
     const scalarTouched = Object.keys(collectScalarConfig(flags)).length > 0;

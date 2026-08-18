@@ -35,41 +35,67 @@ const EDIT_FLAGS = {
   image: {
     type: "array",
     valueHint: "<url>",
-    description: "Source image URL or local file path (repeatable for multi-image merge)",
+    description: {
+      "en-US": "Source image URL or local file path (repeatable for multi-image merge)",
+      "zh-CN": "源图片 URL 或本地文件路径（多图融合时可重复）",
+    },
     required: true,
   },
   prompt: {
     type: "string",
     valueHint: "<text>",
-    description: "Edit instruction text",
+    description: { "en-US": "Edit instruction text", "zh-CN": "编辑指令文本" },
     required: true,
   },
   model: {
     type: "string",
     valueHint: "<model>",
-    description: "Model ID (default: qwen-image-3.0)",
+    description: {
+      "en-US": "Model ID (default: qwen-image-3.0)",
+      "zh-CN": "模型 ID（默认：qwen-image-3.0）",
+    },
   },
   size: {
     type: "string",
     valueHint: "<W*H>",
-    description: "Output image size: ratio (3:4, 16:9) or pixels (2048*2048)",
+    description: {
+      "en-US": "Output image size: ratio (3:4, 16:9) or pixels (2048*2048)",
+      "zh-CN": "输出图片尺寸：比例（3:4、16:9）或像素（2048*2048）",
+    },
   },
   n: {
     type: "number",
     valueHint: "<count>",
-    description: "Number of images (default: 1, max: 6)",
+    description: {
+      "en-US": "Number of images (default: 1, max: 6)",
+      "zh-CN": "图片数量（默认：1，最多：6）",
+    },
   },
-  seed: { type: "number", valueHint: "<n>", description: "Random seed for reproducible results" },
+  seed: {
+    type: "number",
+    valueHint: "<n>",
+    description: {
+      "en-US": "Random seed for reproducible results",
+      "zh-CN": "用于复现结果的随机种子",
+    },
+  },
   negativePrompt: {
     type: "string",
     valueHint: "<text>",
-    description: "Negative prompt to exclude unwanted content",
+    description: {
+      "en-US": "Negative prompt to exclude unwanted content",
+      "zh-CN": "负向提示词，用于排除不需要的内容",
+    },
   },
   function: {
     type: "string",
     valueHint: "<name>",
-    description:
-      "wanx*-imageedit function (default: description_edit). Examples: stylization_all, description_edit",
+    description: {
+      "en-US":
+        "wanx*-imageedit function (default: description_edit). Examples: stylization_all, description_edit",
+      "zh-CN":
+        "wanx*-imageedit 功能（默认：description_edit）。例如：stylization_all、description_edit",
+    },
   },
   promptExtend: {
     type: "boolean",
@@ -81,36 +107,79 @@ const EDIT_FLAGS = {
     valueHint: "<bool>",
     description: BOOL_FLAG_WATERMARK,
   },
-  outDir: { type: "string", valueHint: "<dir>", description: "Download images to directory" },
+  outDir: {
+    type: "string",
+    valueHint: "<dir>",
+    description: { "en-US": "Download images to directory", "zh-CN": "将图片下载到指定目录" },
+  },
   outPrefix: {
     type: "string",
     valueHint: "<prefix>",
-    description: "Filename prefix (default: edited)",
+    description: {
+      "en-US": "Filename prefix (default: edited)",
+      "zh-CN": "文件名前缀（默认：edited）",
+    },
   },
   ...ASYNC_FLAG,
   ...CONCURRENT_FLAG,
   pollInterval: {
     type: "number",
     valueHint: "<seconds>",
-    description: "Polling interval when waiting (default: 3)",
+    description: {
+      "en-US": "Polling interval when waiting (default: 3)",
+      "zh-CN": "等待任务时的轮询间隔（默认：3 秒）",
+    },
   },
 } satisfies FlagsDef;
 type EditFlags = ParsedFlags<typeof EDIT_FLAGS>;
 
 export default defineCommand({
-  description: "Edit an existing image with text instructions (Qwen-Image / Wan 2.7)",
+  description: {
+    "en-US": "Edit an existing image with text instructions (Qwen-Image / Wan 2.7)",
+    "zh-CN": "使用文本指令编辑现有图片（Qwen-Image / Wan 2.7）",
+  },
   auth: "apiKey",
   usageArgs: "--image <url> --prompt <text> [flags]",
   flags: EDIT_FLAGS,
   exampleArgs: [
-    '--image ./photo.png --prompt "Replace the background with a beach"',
-    '--image https://example.com/logo.png --prompt "Change color to blue" --n 3',
-    '--image ./a.png --image ./b.png --prompt "Merge two images into one collage"',
-    '--image https://example.com/photo.png --prompt "Remove the person" --model qwen-image-2.0-pro',
-    '--image ./photo.png --prompt "Change the style" --model wan2.7-image',
-    '--image ./photo.png --prompt "Place the subject on a table" --model wan2.5-i2i-preview',
-    '--image ./photo.png --prompt "转换成绘本风格" --model wanx2.1-imageedit --function stylization_all',
-    '--image ./photo.png --prompt "Replace the background with a beach" --watermark false',
+    {
+      "en-US": '--image ./photo.png --prompt "Replace the background with a beach"',
+      "zh-CN": '--image ./photo.png --prompt "将背景替换为海滩"',
+    },
+    {
+      "en-US": '--image https://example.com/logo.png --prompt "Change color to blue" --n 3',
+      "zh-CN": '--image https://example.com/logo.png --prompt "将颜色改为蓝色" --n 3',
+    },
+    {
+      "en-US": '--image ./a.png --image ./b.png --prompt "Merge two images into one collage"',
+      "zh-CN": '--image ./a.png --image ./b.png --prompt "将两张图片合并成一张拼贴图"',
+    },
+    {
+      "en-US":
+        '--image https://example.com/photo.png --prompt "Remove the person" --model qwen-image-2.0-pro',
+      "zh-CN":
+        '--image https://example.com/photo.png --prompt "移除人物" --model qwen-image-2.0-pro',
+    },
+    {
+      "en-US": '--image ./photo.png --prompt "Change the style" --model wan2.7-image',
+      "zh-CN": '--image ./photo.png --prompt "更改图片风格" --model wan2.7-image',
+    },
+    {
+      "en-US":
+        '--image ./photo.png --prompt "Place the subject on a table" --model wan2.5-i2i-preview',
+      "zh-CN": '--image ./photo.png --prompt "将主体放在桌面上" --model wan2.5-i2i-preview',
+    },
+    {
+      "en-US":
+        '--image ./photo.png --prompt "Convert to a picture-book style" --model wanx2.1-imageedit --function stylization_all',
+      "zh-CN":
+        '--image ./photo.png --prompt "转换成绘本风格" --model wanx2.1-imageedit --function stylization_all',
+    },
+    {
+      "en-US":
+        '--image ./photo.png --prompt "Replace the background with a beach" --watermark false',
+      "zh-CN": '--image ./photo.png --prompt "将背景替换为海滩" --watermark false',
+    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

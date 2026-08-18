@@ -14,12 +14,18 @@ const VALIDATE_FLAGS = {
   file: {
     type: "string",
     valueHint: "<path>",
-    description: "Config file path (default: agents.yaml)",
+    description: {
+      "en-US": "Config file path (default: agents.yaml)",
+      "zh-CN": "配置文件路径（默认：agents.yaml）",
+    },
   },
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: "Validate an agents.yaml configuration (offline)",
+  description: {
+    "en-US": "Validate an agents.yaml configuration (offline)",
+    "zh-CN": "离线验证 agents.yaml 配置",
+  },
   auth: "none",
   usageArgs: "[--file <path>]",
   flags: VALIDATE_FLAGS,

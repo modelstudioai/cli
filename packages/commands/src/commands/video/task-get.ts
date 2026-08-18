@@ -7,11 +7,16 @@ import {
 import { emitResult, emitBare } from "bailian-cli-runtime";
 
 export default defineCommand({
-  description: "Query async task status",
+  description: { "en-US": "Query async task status", "zh-CN": "查询异步任务状态" },
   auth: "apiKey",
   usageArgs: "--task-id <id>",
   flags: {
-    taskId: { type: "string", valueHint: "<id>", description: "Async task ID", required: true },
+    taskId: {
+      type: "string",
+      valueHint: "<id>",
+      description: { "en-US": "Async task ID", "zh-CN": "异步任务 ID" },
+      required: true,
+    },
   },
   exampleArgs: [
     "--task-id 3b256896-3e70-xxxx-xxxx-xxxxxxxxxxxx",
