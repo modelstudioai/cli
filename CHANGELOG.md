@@ -6,11 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
-## [1.17.0] - 2026-08-17
+## [1.17.0] - 2026-08-18
 
 ### Added
 
 - **Native Bailian Managed Agent Deployments** — `deployments` declared in `agents.yaml` now materialize as native AgentStudio resources, with server-side cron schedules, local file resource uploads, archival through `destroy`, and migration of legacy emulated state on the next `apply`.
+- **Bilingual CLI experience** — Set `language` to `en-US` or `zh-CN` through `bl config set` or Config UI to switch CLI Help, Quick Start, command examples, and Config UI between English and Chinese. The selected language follows the active config.
+
+### Fixed
+
+- **Free Tier Auto-Stop controls** — `bl usage freetier --off` can now disable Auto-Stop even when free quota remains; status rendering reflects the actual switch state, and filtered model queries avoid server-side batch-limit failures.
 
 ## [1.16.0] - 2026-08-17
 

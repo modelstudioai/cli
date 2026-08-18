@@ -75,6 +75,7 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | Bailian Coding Plan quota usage                  | `bl usage coding-plan`                        | Console auth; class 2 — ask which product first if unnamed                       |
 | Console API (advanced)                           | `bl console call`                             | Console auth                                                                     |
 | Bailian workspace listing                        | `bl workspace list`                           | Console auth                                                                     |
+| Switch CLI Help / Quick Start language           | `bl config set --key language --value zh-CN`  | Use `en-US` to switch back; follows the active config profile                    |
 | Image / video / speech / omni / vision           | → skill `bailian-gen`                         | Fallback: `bl image\|video\|speech\|omni\|vision --help`                         |
 | Dataset / fine-tune / deploy                     | → skill `bailian-finetune`                    | Fallback: `bl dataset\|finetune\|deploy --help`                                  |
 | agents.yaml IaC / managed-agent sessions         | → skill `bailian-managed-agent`               | Fallback: `bl managed-agent --help`; `apply`/`destroy` need `--yes` after `plan` |
