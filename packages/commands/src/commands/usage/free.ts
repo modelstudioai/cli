@@ -1,4 +1,4 @@
-import { defineCommand, detectOutputFormat, fetchModelList } from "bailian-cli-core";
+import { defineCommand, detectOutputFormat, findModelByName } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
 import {
   FREE_TIER_API,
@@ -108,13 +108,11 @@ export default defineCommand({
       }
       requestData.queryFreeTierQuotaRequest.models = models;
     } else {
-      const searchResults = await Promise.all(
-        models.map((name) =>
-          fetchModelList((api, data) => ctx.client.console(api, data), { name, pageSize: 50 }),
-        ),
+      const matches = await Promise.all(
+        models.map((name) => findModelByName((api, data) => ctx.client.console(api, data), name)),
       );
       for (let idx = 0; idx < models.length; idx++) {
-        const matched = searchResults[idx].models.find((item) => item.model === models[idx]);
+        const matched = matches[idx];
         if (matched) {
           typeMap.set(models[idx], resolveModelType((matched.capabilities as string[]) || []));
         }

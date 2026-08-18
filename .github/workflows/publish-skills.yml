@@ -1,0 +1,27 @@
+# Poke the FC publish-skills flow after skills/ changes land.
+# The FC side reconciles this repo's skills/ directory against OSS
+# (bailian-wiki/skills/) using the repo HEAD snapshot as the only
+# source of truth — the request itself carries no content. Both the
+# repo and branch params are validated against FC-side whitelists
+# (PUBLISH_REPOS / PUBLISH_BRANCHES).
+#
+# feat/cli-skill-sync is temporary for end-to-end testing; remove it
+# (here and from the FC PUBLISH_BRANCHES whitelist) once the sync
+# link is verified on main.
+name: Publish skills to OSS
+
+on:
+  push:
+    branches:
+      - main
+      - feat/cli-skill-sync
+    paths:
+      - "skills/**"
+
+jobs:
+  poke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger FC publish-skills
+        run: |
+          curl -sf -X POST "${{ vars.FC_TRIGGER_URL }}/publish-skills?repo=modelstudioai/cli&branch=${{ github.ref_name }}"

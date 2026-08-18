@@ -33,9 +33,17 @@ interface CommandNode {
   children: Map<string, CommandNode>;
 }
 
+const AUTH_LABELS = {
+  apiKey: { "en-US": "API Key", "zh-CN": "API Key" },
+  console: { "en-US": "Console", "zh-CN": "Console" },
+  openapi: { "en-US": "AK/SK", "zh-CN": "AK/SK" },
+  none: { "en-US": "No Auth", "zh-CN": "无需鉴权" },
+} satisfies Record<AuthRequirement, LocalizedText>;
+
 const HELP_TEXT = {
   usage: { "en-US": "Usage:", "zh-CN": "用法：" },
   commands: { "en-US": "Commands:", "zh-CN": "命令：" },
+  authentication: { "en-US": "Authentication:", "zh-CN": "鉴权方式：" },
   flags: { "en-US": "Flags:", "zh-CN": "选项：" },
   globalFlags: { "en-US": "Global Flags:", "zh-CN": "全局选项：" },
   modelAuthFlags: { "en-US": "Model Auth Flags:", "zh-CN": "模型鉴权选项：" },
@@ -198,14 +206,37 @@ export class CommandRegistry {
     };
   }
 
-  private buildResourceLines(a: (s: string) => string, d: (s: string) => string): string {
-    const entries: Array<{ path: string; desc: string }> = [];
+  private buildCommandLines(
+    entries: Array<{ path: string; auth: AuthRequirement; desc: string }>,
+    accent: (text: string) => string,
+    dim: (text: string) => string,
+  ): string {
+    const maxPathLength = Math.max(...entries.map((entry) => entry.path.length));
+    const maxAuthLength = Math.max(
+      ...entries.map((entry) => `[${this.localize(AUTH_LABELS[entry.auth])}]`.length),
+    );
+    const rows = entries.map((entry) => {
+      const authLabel = `[${this.localize(AUTH_LABELS[entry.auth])}]`;
+      return `  ${accent(entry.path.padEnd(maxPathLength + 2))} ${accent(authLabel.padEnd(maxAuthLength + 2))} ${dim(entry.desc)}`;
+    });
+    return rows.join("\n");
+  }
+
+  private buildResourceLines(
+    accent: (text: string) => string,
+    dim: (text: string) => string,
+  ): string {
+    const entries: Array<{ path: string; auth: AuthRequirement; desc: string }> = [];
 
     const collect = (node: CommandNode, prefix: string) => {
       for (const [name, child] of node.children) {
         const fullPath = prefix ? `${prefix} ${name}` : name;
         if (child.command) {
-          entries.push({ path: fullPath, desc: this.localize(child.command.description) });
+          entries.push({
+            path: fullPath,
+            auth: child.command.auth,
+            desc: this.localize(child.command.description),
+          });
         }
         if (child.children.size > 0) {
           collect(child, fullPath);
@@ -214,8 +245,7 @@ export class CommandRegistry {
     };
     collect(this.root, "");
 
-    const maxLen = Math.max(...entries.map((e) => e.path.length));
-    return entries.map((e) => `  ${a(e.path.padEnd(maxLen + 2))} ${d(e.desc)}`).join("\n");
+    return this.buildCommandLines(entries, accent, dim);
   }
 
   private buildFlagLines(
@@ -394,9 +424,13 @@ ${authFlagSections ? `${authFlagSections}\n\n` : ""}${b(this.localize(HELP_TEXT.
     out.write(
       `${b(this.localize(HELP_TEXT.usage))} ${prefix}${cmd.usageArgs ? ` ${cmd.usageArgs}` : ""}\n`,
     );
-    const ownFlagEntries = Object.entries(cmd.flags ?? {}) as [string, FlagDef][];
-    const credentialFlagEntries = Object.entries(credentialFlagDefs(cmd)) as [string, FlagDef][];
-    const flagEntries = [...ownFlagEntries, ...credentialFlagEntries];
+    out.write(
+      `${b(this.localize(HELP_TEXT.authentication))} ${a(this.localize(AUTH_LABELS[cmd.auth]))}\n`,
+    );
+    const flagEntries = [
+      ...Object.entries(cmd.flags ?? {}),
+      ...Object.entries(credentialFlagDefs(cmd)),
+    ] as [string, FlagDef][];
     if (flagEntries.length > 0) {
       const lines = flagEntries.map(([key, def]) => ({
         flag: flagDisplay(key, def),
@@ -431,21 +465,25 @@ ${authFlagSections ? `${authFlagSections}\n\n` : ""}${b(this.localize(HELP_TEXT.
   }
 
   private printChildren(node: CommandNode, prefix: string, out: NodeJS.WriteStream): void {
-    const entries: Array<{ fullName: string; description: string }> = [];
-    const collect = (n: CommandNode, p: string) => {
-      for (const [name, child] of n.children) {
+    const entries: Array<{ path: string; auth: AuthRequirement; desc: string }> = [];
+    const collect = (currentNode: CommandNode, currentPath: string) => {
+      for (const [name, child] of currentNode.children) {
         if (child.command)
           entries.push({
-            fullName: `${p} ${name}`,
-            description: this.localize(child.command.description),
+            path: `${currentPath} ${name}`,
+            auth: child.command.auth,
+            desc: this.localize(child.command.description),
           });
-        if (child.children.size > 0) collect(child, `${p} ${name}`);
+        if (child.children.size > 0) collect(child, `${currentPath} ${name}`);
       }
     };
     collect(node, prefix);
-    const maxLen = Math.max(...entries.map((e) => e.fullName.length));
-    for (const { fullName, description } of entries) {
-      out.write(`  ${this.accent(fullName.padEnd(maxLen), out)}  ${this.dim(description, out)}\n`);
-    }
+    out.write(
+      this.buildCommandLines(
+        entries,
+        (text) => this.accent(text, out),
+        (text) => this.dim(text, out),
+      ) + "\n",
+    );
   }
 }

@@ -7,23 +7,24 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command             | Description                                                                                           |
-| ------------------- | ----------------------------------------------------------------------------------------------------- |
-| `bl video download` | Download a completed video by task ID                                                                 |
-| `bl video edit`     | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                |
-| `bl video generate` | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)            |
-| `bl video ref`      | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
-| `bl video task get` | Query async task status                                                                               |
+| Command             | Authentication | Description                                                                                           |
+| ------------------- | -------------- | ----------------------------------------------------------------------------------------------------- |
+| `bl video download` | API Key        | Download a completed video by task ID                                                                 |
+| `bl video edit`     | API Key        | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                |
+| `bl video generate` | API Key        | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)            |
+| `bl video ref`      | API Key        | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
+| `bl video task get` | API Key        | Query async task status                                                                               |
 
 ## Command details
 
 ### `bl video download`
 
-| Field           | Value                                           |
-| --------------- | ----------------------------------------------- |
-| **Name**        | `video download`                                |
-| **Description** | Download a completed video by task ID           |
-| **Usage**       | `bl video download --task-id <id> --out <path>` |
+| Field              | Value                                           |
+| ------------------ | ----------------------------------------------- |
+| **Name**           | `video download`                                |
+| **Description**    | Download a completed video by task ID           |
+| **Authentication** | API Key                                         |
+| **Usage**          | `bl video download --task-id <id> --out <path>` |
 
 #### Flags
 
@@ -46,11 +47,12 @@ bl video download --task-id 3b256896-xxxx --out video.mp4 --quiet
 
 ### `bl video edit`
 
-| Field           | Value                                                                                  |
-| --------------- | -------------------------------------------------------------------------------------- |
-| **Name**        | `video edit`                                                                           |
-| **Description** | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.) |
-| **Usage**       | `bl video edit --video <url> --prompt <text> [flags]`                                  |
+| Field              | Value                                                                                  |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| **Name**           | `video edit`                                                                           |
+| **Description**    | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.) |
+| **Authentication** | API Key                                                                                |
+| **Usage**          | `bl video edit --video <url> --prompt <text> [flags]`                                  |
 
 #### Flags
 
@@ -95,11 +97,12 @@ bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the
 
 ### `bl video generate`
 
-| Field           | Value                                                                                      |
-| --------------- | ------------------------------------------------------------------------------------------ |
-| **Name**        | `video generate`                                                                           |
-| **Description** | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v) |
-| **Usage**       | `bl video generate --prompt <text> [--image <url>] [flags]`                                |
+| Field              | Value                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| **Name**           | `video generate`                                                                           |
+| **Description**    | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v) |
+| **Authentication** | API Key                                                                                    |
+| **Usage**          | `bl video generate --prompt <text> [--image <url>] [flags]`                                |
 
 #### Flags
 
@@ -108,6 +111,7 @@ bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the
 | `--model <model>`           | string  | no       | Model ID (default: happyhorse-1.1-t2v, or happyhorse-1.1-i2v with --image)              |
 | `--prompt <text>`           | string  | yes      | Video description                                                                       |
 | `--image <url>`             | string  | no       | Input image URL for image-to-video generation                                           |
+| `--last-frame <url>`        | string  | no       | Last frame image URL (with --image, enables kf2v first+last frame mode)                 |
 | `--negative-prompt <text>`  | string  | no       | Negative prompt to exclude unwanted content                                             |
 | `--resolution <res>`        | string  | no       | Resolution: 720P or 1080P (default: 1080P)                                              |
 | `--ratio <ratio>`           | string  | no       | Aspect ratio (e.g. 16:9, 9:16, 1:1)                                                     |
@@ -146,11 +150,12 @@ bl video generate --prompt "A cat playing with a ball" --watermark false
 
 ### `bl video ref`
 
-| Field           | Value                                                                                                 |
-| --------------- | ----------------------------------------------------------------------------------------------------- |
-| **Name**        | `video ref`                                                                                           |
-| **Description** | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
-| **Usage**       | `bl video ref --prompt <text> --image <url>... [--ref-video <url>...] [flags]`                        |
+| Field              | Value                                                                                                 |
+| ------------------ | ----------------------------------------------------------------------------------------------------- |
+| **Name**           | `video ref`                                                                                           |
+| **Description**    | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
+| **Authentication** | API Key                                                                                               |
+| **Usage**          | `bl video ref --prompt <text> --image <url>... [--ref-video <url>...] [flags]`                        |
 
 #### Flags
 
@@ -199,11 +204,12 @@ bl video ref --prompt "Image 1 drinks water" --image person.jpg --watermark fals
 
 ### `bl video task get`
 
-| Field           | Value                              |
-| --------------- | ---------------------------------- |
-| **Name**        | `video task get`                   |
-| **Description** | Query async task status            |
-| **Usage**       | `bl video task get --task-id <id>` |
+| Field              | Value                              |
+| ------------------ | ---------------------------------- |
+| **Name**           | `video task get`                   |
+| **Description**    | Query async task status            |
+| **Authentication** | API Key                            |
+| **Usage**          | `bl video task get --task-id <id>` |
 
 #### Flags
 

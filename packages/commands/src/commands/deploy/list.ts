@@ -1,10 +1,5 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  listDeployments,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId, formatTable } from "bailian-cli-runtime";
+import { defineCommand, listDeployments, type FlagsDef } from "bailian-cli-core";
+import { emitResult } from "bailian-cli-runtime";
 
 const LIST_FLAGS = {
   page: {
@@ -38,13 +33,12 @@ export default defineCommand({
   exampleArgs: ["", "--status RUNNING", "--page-size 20 --output json"],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
     const status = flags.status || undefined;
 
     if (settings.dryRun) {
       emitResult(
         { action: "deploy.list", page: flags.page, page_size: flags.pageSize, status },
-        format,
+        "json",
       );
       return;
     }
@@ -67,27 +61,6 @@ export default defineCommand({
       created_at: item.gmt_create ?? "",
     }));
 
-    if (format === "json") {
-      emitResult({ items, total, request_id: response.request_id }, format);
-      return;
-    }
-
-    // text / quiet
-    if (items.length === 0) {
-      emitBare("No deployments found.");
-      return;
-    }
-    const headers = ["DEPLOYED_MODEL", "MODEL_NAME", "STATUS", "PLAN", "CAPACITY", "CREATED_AT"];
-    const rows = items.map((item) => [
-      item.deployed_model,
-      item.model_name,
-      item.status,
-      item.plan,
-      item.capacity,
-      item.created_at,
-    ]);
-    for (const line of formatTable(headers, rows)) emitBare(line);
-    if (total !== undefined) emitBare(`\nTotal: ${total}`);
-    emitRequestId(response.request_id, settings.quiet);
+    emitResult({ items, total, request_id: response.request_id }, "json");
   },
 });

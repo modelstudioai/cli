@@ -20,8 +20,7 @@ import {
   type AnsiStyles,
 } from "bailian-cli-runtime";
 
-const SKILL_SOURCE = "modelstudioai/cli";
-const SKILL_INSTALL_CMD = `npx skills add ${SKILL_SOURCE} --all -g -y`;
+const SKILL_INSTALL_CMD = "bl skill init";
 
 function updateAgentSkill(color: AnsiStyles): void {
   process.stderr.write("\nUpdating agent skill...\n");
@@ -149,6 +148,7 @@ export default defineCommand({
           `\n${color.green(`\u2713 Update complete: ${currentVersion} \u2192 ${newVer}`)}\n`,
         );
         writeUpdateState(newVer);
+        updateAgentSkill(color);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         const reinstall =

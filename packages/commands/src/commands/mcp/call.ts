@@ -49,8 +49,10 @@ const CALL_FLAGS = {
     type: "string",
     valueHint: "<url>",
     description: {
-      "en-US": "Override the MCP endpoint URL (for non-Bailian servers)",
-      "zh-CN": "覆盖 MCP Endpoint URL（用于非百炼服务器）",
+      "en-US":
+        "Override the MCP endpoint URL (non-Bailian). Tries Streamable HTTP first, then classic SSE on the same URL.",
+      "zh-CN":
+        "覆盖 MCP Endpoint URL（非百炼）。先尝试 Streamable HTTP，再在同一 URL 上回退到传统 SSE。",
     },
   },
 } satisfies FlagsDef;
@@ -140,14 +142,14 @@ export default defineCommand({
     const { serverCode, toolName } = parseTarget(flags.target);
     const toolArgs = buildToolArgs(flags);
 
-    const url = flags.url || ctx.client.url(bailianMcpPath(serverCode));
+    const previewUrl = flags.url || ctx.client.url(bailianMcpPath(serverCode));
     const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
       emitResult(
         {
           server: serverCode,
-          url,
+          url: previewUrl,
           tool: toolName,
           arguments: toolArgs,
         },
@@ -156,13 +158,14 @@ export default defineCommand({
       return;
     }
 
-    const client = ctx.client.mcp(url);
+    let client: { close?(): void } | undefined;
     try {
-      await client.initialize();
-      const result = await client.callTool(toolName, toolArgs);
+      const connected = await ctx.client.connectBailianMcp(serverCode, flags.url);
+      client = connected.client;
+      const result = await connected.client.callTool(toolName, toolArgs);
 
       if (result.isError) {
-        const errText = result.content.map((c) => c.text || "").join("\n");
+        const errText = result.content.map((contentItem) => contentItem.text || "").join("\n");
         throw new BailianError(`Tool error: ${errText}`);
       }
 
@@ -172,6 +175,8 @@ export default defineCommand({
         rethrowWithMcpActivateHint(error, serverCode);
       }
       throw error;
+    } finally {
+      client?.close?.();
     }
   },
 });

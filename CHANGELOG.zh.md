@@ -6,6 +6,85 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.17.0] - 2026-08-17
+
+### 新增
+
+- **百炼原生 Managed Agent Deployment** —— `agents.yaml` 中声明的 `deployments` 现在会创建原生 AgentStudio 资源，支持服务端 Cron 调度、本地文件资源上传、通过 `destroy` 归档，以及在下次 `apply` 时迁移旧版模拟 Deployment state。
+
+## [1.16.0] - 2026-08-17
+
+> CLI 迎来知识库全生命周期管理：从创建配置知识库、上传文档、调优切片，到部署检索/问答服务，均可通过 `bl knowledge` 与 `kscli` 完成。
+
+### 新增
+
+- **知识库管理** —— `bl knowledge create` / `list` / `info` / `update` / `delete` 覆盖知识库的完整生命周期；`bl knowledge stats` 查询指定过去时间段内的文档数量与用量统计。
+- **文档管理** —— `bl knowledge doc upload` 支持上传本地文件或整个目录（递归扫描，自动跳过不支持的格式及 `node_modules` 等工具目录）；`doc list` / `status` / `tag` / `delete` 覆盖文档生命周期其余环节，`doc import-oss` 支持从 OSS 导入文档。
+- **检索 / 问答服务管理** —— `bl knowledge service list` / `get` / `create` / `update` / `deploy` / `delete` / `copy` 管理检索与问答服务配置，支持将草稿部署为正式版本。
+- **切片管理** —— `bl knowledge chunk add` / `list` / `update` / `delete` 查看并精调文档切片。
+- **数据中心管理** —— `bl knowledge category list` / `add` / `delete`、`bl knowledge file list` / `get` / `delete`、`bl knowledge collection create` / `get` 管理类目、原始文件与数据集。
+- **检索与问答支持指定服务版本** —— `bl knowledge search` 和 `bl knowledge chat` 新增 `--agent-version`，可调用 beta（草稿）配置进行调试，或指定已发布的版本号。
+- **`kscli` 同步支持** —— 全部新知识库命令在 Knowledge Studio CLI 中以更短路径提供，如 `kscli kb list`、`kscli doc upload`、`kscli service deploy`。
+
+### 移除
+
+- **移除 `bl knowledge search --query-history`** —— 该参数此前并未实际生效；多轮场景请改用 `bl knowledge chat` 并通过 `--message` 传入对话历史。
+
+### 内部
+
+- 请求现在携带静态的 OpenAPI 来源标识请求头，用于后端渠道归因。
+- 新增知识库 E2E 测试套件，含冷启动、内容运营、切片调优、服务调优、数据面五条用户旅程场景。
+
+## [1.15.1] - 2026-08-17
+
+### 新增
+
+- **模型权限管理** —— `bl permission list` 查看各模型的推理 / 微调 / 部署授权；`bl permission grant` 与 `bl permission revoke` 负责授予和回收，支持 `--all` 一键为工作区全部模型（含后续新增模型）开启推理授权。
+
+### 变更
+
+- **`bl quota request` 更名为 `bl quota update`** —— 通过 `--rpm`/`--tpm` 设置单模型 QPM/TPM，新增 `--delete` 一键清除自定义限制；未指定的字段保持当前值，旧命令 `quota request` 仍作为别名可用。
+- **`bl quota list` 重构** —— 改从模型限制接口读取数据，单表展示模型级与工作区级的请求/用量限制及异步队列/并发限制。
+- **`bl model list` 不再需要控制台登录** —— 模型目录与 `--enrich` 参数结构端点均为公开接口。
+- **`bl skill init` 输出精简** —— 单技能状态改为 `success`/`failed`（原为 `installed`），新增 `success`/`partial`/`failed` 汇总结果；移除 `publishedAt` 与 `agents` 字段。
+
+## [1.15.0] - 2026-08-14
+
+### 新增
+
+- **`bl text chat` 支持 Responses API** —— 可通过 `--api responses` 调用 DashScope Responses API，支持流式输出、工具定义和结构化 JSON 输出；默认仍使用 Chat Completions。
+- **订阅套餐用量视图** —— `bl usage token-plan` 支持查看 5 小时和每周额度，`bl usage coding-plan` 支持查看 5 小时、每周和每月额度；两者均提供文本与 JSON 输出。
+- **命令帮助展示鉴权要求** —— Help 输出现在会明确标注命令需要 API Key、控制台登录还是阿里云 OpenAPI 凭证。
+
+### 变更
+
+- **扩展语音识别模型支持** —— `bl speech recognize` 现在会将异步文件转写和同步 Flash ASR 模型路由至对应的 DashScope API，并为暂不支持的实时模型提供明确提示。
+- **增强 MCP 传输兼容性** —— MCP 命令现在可为兼容的百炼及自定义端点从 Streamable HTTP 自动回退至经典 SSE。
+
+### 修复
+
+- 二进制方式升级 CLI 成功后，现在会同步刷新已安装的 Agent Skills。
+- 修复 Token Plan 额度不可用或缺少重置时间时的展示问题。
+- 修复 Qwen3 文件转写结果处理，使等待模式和 `--out` 能够正常工作。
+- 修复 MCP SSE 分块解析、响应头超时、中止清理和回退状态匹配问题。
+- JSON 输出中的网络错误现在会在 `cause.code` 中保留 errno。
+
+## [1.14.3] - 2026-08-12
+
+### 修复
+
+- **免费额度兼容性** —— `bl usage free` 和 `bl usage freetier` 现在使用最新的 Bailian Commerce 控制台 API 查询、开通和关闭免费额度，并统一处理异步任务轮询。
+
+## [1.14.2] - 2026-08-07
+
+### 新增
+
+- **`bl skill init`** —— 一次性将全部官方 `bailian-*` Skill 安装到本机检测到的 AI Agent。
+
+### 变更
+
+- **Skill 命令接口** —— Skill 管理命令现在默认输出适合 Agent 工作流的 JSON；`bl skill add` 和 `bl skill update` 使用明确的 `--all` 与 `--name` 选择参数。
+
 ## [1.14.1] - 2026-08-05
 
 ### 新增

@@ -1,10 +1,5 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  listDeployableModels,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId, formatTable } from "bailian-cli-runtime";
+import { defineCommand, listDeployableModels, type FlagsDef } from "bailian-cli-core";
+import { emitResult } from "bailian-cli-runtime";
 
 const MODELS_FLAGS = {
   page: {
@@ -49,7 +44,6 @@ export default defineCommand({
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
     // Default version to v1.0 — without it, the API returns the legacy catalog
     // (only old fine-tune outputs). Pass --catalog-version "" to opt out.
     const version = flags.catalogVersion === "" ? undefined : (flags.catalogVersion ?? "v1.0");
@@ -64,7 +58,7 @@ export default defineCommand({
           version,
           model_source: modelSource,
         },
-        format,
+        "json",
       );
       return;
     }
@@ -82,102 +76,55 @@ export default defineCommand({
     // Two response shapes:
     //   - custom (fine-tuned): top-level supported_plans: string[]
     //   - base (catalog):      plans: [{plan, templates?, cu_specs?}]
-    // For json: surface the deployment-relevant fields preserved as a tree, so
+    // Surface the deployment-relevant fields preserved as a tree, so
     // downstream tooling can drive `bl deploy <modality> create --deploy-spec <…>`
-    // without a second round-trip. For text: keep the compact one-line summary.
-    if (format === "json") {
-      const items = models.map((model) => {
-        const out: Record<string, unknown> = {
-          model_name: model.model_name ?? "",
-        };
-        if (model.base_model) out.base_model = model.base_model;
-        if (model.model_source) out.model_source = model.model_source;
-        if (model.supported_plans && model.supported_plans.length > 0) {
-          out.supported_plans = model.supported_plans;
-        }
-        if (model.plans && model.plans.length > 0) {
-          out.plans = model.plans.map((plan) => {
-            const planEntry: Record<string, unknown> = { plan: plan.plan ?? "" };
-            if (plan.cu_specs && plan.cu_specs.length > 0) {
-              planEntry.cu_specs = plan.cu_specs;
-            }
-            if (plan.templates && plan.templates.length > 0) {
-              // Pull the top 6 fields most useful for `bl deploy <modality> create`.
-              // Drop noisy/redundant: template_source, template_type,
-              // template_version, deploy_spec (typically == template_id).
-              planEntry.templates = plan.templates.map((template) => {
-                const tpl: Record<string, unknown> = {};
-                if (template.template_id) tpl.template_id = template.template_id;
-                if (template.template_name) tpl.template_name = template.template_name;
-                if (template.charge_type) tpl.charge_type = template.charge_type;
-                // Flatten roles.unified for the common COUPLED case.
-                const unified = template.roles?.unified;
-                if (unified?.model_unit_spec) tpl.model_unit_spec = unified.model_unit_spec;
-                if (unified?.capacity_unit_per_instance !== undefined)
-                  tpl.capacity_unit_per_instance = unified.capacity_unit_per_instance;
-                // Preserve split-role configs (SEPERATED) as-is so callers
-                // can still drive prefill/decode sizing.
-                if (template.roles?.prefill || template.roles?.decode) {
-                  tpl.roles = {
-                    prefill: template.roles?.prefill,
-                    decode: template.roles?.decode,
-                  };
-                }
-                if (template.template_desc) tpl.template_desc = template.template_desc;
-                return tpl;
-              });
-            }
-            return planEntry;
-          });
-        }
-        return out;
-      });
-      emitResult({ items, total, request_id: response.request_id }, format);
-      return;
-    }
-
-    // text / quiet — keep the compact single-line summary table.
-    const textItems = models.map((model) => {
-      let plansSummary = "";
-      if (model.supported_plans && model.supported_plans.length > 0) {
-        plansSummary = model.supported_plans.join(",");
-      } else if (model.plans && model.plans.length > 0) {
-        plansSummary = model.plans
-          .map((plan) => {
-            const planName = plan.plan ?? "?";
-            if (plan.templates && plan.templates.length > 0) {
-              return `${planName}(${plan.templates.length}t)`;
-            }
-            if (plan.cu_specs && plan.cu_specs.length > 0) {
-              return `${planName}(${plan.cu_specs.join("/")})`;
-            }
-            return planName;
-          })
-          .join(",");
-      } else {
-        plansSummary = "-";
-      }
-      return {
+    // without a second round-trip.
+    const items = models.map((model) => {
+      const out: Record<string, unknown> = {
         model_name: model.model_name ?? "",
-        base_model: model.base_model ?? "",
-        source: model.model_source ?? "",
-        plans: plansSummary,
       };
+      if (model.base_model) out.base_model = model.base_model;
+      if (model.model_source) out.model_source = model.model_source;
+      if (model.supported_plans && model.supported_plans.length > 0) {
+        out.supported_plans = model.supported_plans;
+      }
+      if (model.plans && model.plans.length > 0) {
+        out.plans = model.plans.map((plan) => {
+          const planEntry: Record<string, unknown> = { plan: plan.plan ?? "" };
+          if (plan.cu_specs && plan.cu_specs.length > 0) {
+            planEntry.cu_specs = plan.cu_specs;
+          }
+          if (plan.templates && plan.templates.length > 0) {
+            // Pull the top 6 fields most useful for `bl deploy <modality> create`.
+            // Drop noisy/redundant: template_source, template_type,
+            // template_version, deploy_spec (typically == template_id).
+            planEntry.templates = plan.templates.map((template) => {
+              const tpl: Record<string, unknown> = {};
+              if (template.template_id) tpl.template_id = template.template_id;
+              if (template.template_name) tpl.template_name = template.template_name;
+              if (template.charge_type) tpl.charge_type = template.charge_type;
+              // Flatten roles.unified for the common COUPLED case.
+              const unified = template.roles?.unified;
+              if (unified?.model_unit_spec) tpl.model_unit_spec = unified.model_unit_spec;
+              if (unified?.capacity_unit_per_instance !== undefined)
+                tpl.capacity_unit_per_instance = unified.capacity_unit_per_instance;
+              // Preserve split-role configs (SEPERATED) as-is so callers
+              // can still drive prefill/decode sizing.
+              if (template.roles?.prefill || template.roles?.decode) {
+                tpl.roles = {
+                  prefill: template.roles?.prefill,
+                  decode: template.roles?.decode,
+                };
+              }
+              if (template.template_desc) tpl.template_desc = template.template_desc;
+              return tpl;
+            });
+          }
+          return planEntry;
+        });
+      }
+      return out;
     });
-
-    if (textItems.length === 0) {
-      emitBare("No deployable models found.");
-      return;
-    }
-    const headers = ["MODEL_NAME", "BASE_MODEL", "SOURCE", "PLANS"];
-    const rows = textItems.map((item) => [
-      item.model_name,
-      item.base_model,
-      item.source,
-      item.plans,
-    ]);
-    for (const line of formatTable(headers, rows)) emitBare(line);
-    if (total !== undefined) emitBare(`\nTotal: ${total}`);
-    emitRequestId(response.request_id, settings.quiet);
+    emitResult({ items, total, request_id: response.request_id }, "json");
   },
 });

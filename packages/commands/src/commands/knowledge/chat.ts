@@ -13,6 +13,7 @@ import {
   type KnowledgeChatStreamChunk,
 } from "bailian-cli-core";
 import { ansi, emitResult, emitBare } from "bailian-cli-runtime";
+import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const CHAT_FLAGS = {
   message: {
@@ -34,13 +35,17 @@ const CHAT_FLAGS = {
     },
     required: true,
   },
-  // 知识库走 workspace 专属域名,--workspace-id 属命令自有 flag(console 凭证域不适用)。
-  workspaceId: {
+  // Knowledge APIs use a workspace-specific host, so --workspace-id is a per-command
+  // flag here (the console credential scope does not apply).
+  ...WORKSPACE_FLAG,
+  // Named to avoid the runtime-reserved global --version flag
+  agentVersion: {
     type: "string",
-    valueHint: "<id>",
+    valueHint: "<version>",
     description: {
-      "en-US": "Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)",
-      "zh-CN": "API Endpoint URL 使用的 Workspace ID（也可设置 BAILIAN_WORKSPACE_ID）",
+      "en-US":
+        "Service version to call: beta (draft for debugging) or a published number; default is the latest published version",
+      "zh-CN": "要调用的服务版本：beta（用于调试的草稿）或已发布版本号；默认使用最新发布版本",
     },
   },
   image: {
@@ -180,6 +185,10 @@ export default defineCommand({
         'Multi-turn: use --message "user:..." and --message "assistant:..." to pass conversation history.',
       "zh-CN": '多轮对话：使用 --message "user:..." 和 --message "assistant:..." 传入对话历史。',
     },
+    {
+      "en-US": "`--agent-version beta` calls the draft config for debugging before it is deployed.",
+      "zh-CN": "`--agent-version beta` 会调用尚未部署的草稿配置，便于发布前调试。",
+    },
   ],
   exampleArgs: [
     {
@@ -215,14 +224,7 @@ export default defineCommand({
       messages = [{ role: "user", content: "" }];
     }
 
-    const workspaceId = flags.workspaceId || settings.workspaceId;
-    if (!workspaceId) {
-      throw new BailianError(
-        "Workspace ID is required.",
-        ExitCode.USAGE,
-        `Pass --workspace-id, set BAILIAN_WORKSPACE_ID env, or configure: ${ctx.identity.binName} config set workspace_id <id>`,
-      );
-    }
+    const workspaceId = resolveWorkspaceId(ctx);
 
     const format = detectOutputFormat(settings.output);
     // API only supports SSE; streamOutput controls whether to print tokens in real-time
@@ -246,6 +248,9 @@ export default defineCommand({
       parameters: {
         agent_options: {
           agent_id: flags.agentId,
+          // Omitted flag → field not sent (default behavior unchanged); the value is
+          // not validated — the set of versions is server-side state
+          ...(flags.agentVersion ? { agent_version: flags.agentVersion } : {}),
         },
       },
       stream: true,

@@ -1,93 +1,20 @@
-import { defineCommand, detectOutputFormat, fetchModelList, type Client } from "bailian-cli-core";
+import { defineCommand, detectOutputFormat, unwrapResponse } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
+import {
+  FREE_TIER_API,
+  FREE_TIER_ONLY_STATUS_API,
+  extractFreeTierOnlyStatuses,
+  extractQuotas,
+  fetchAllModels,
+  pollFreeTierBatch,
+} from "./shared.ts";
 
-const ACTIVATE_API = "zeldaEasy.broadscope-bailian.freeTrial.batchActivateFreeTierOnly";
-const DEACTIVATE_API = "zeldaEasy.broadscope-bailian.freeTrial.batchDeactivateFreeTierOnly";
-const FREE_TIER_API = "zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota";
-const FREE_TIER_ONLY_STATUS_API = "zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierOnlyStatus";
-
-interface FreeTierQuota {
-  model: string;
-  quotaTotal: number;
-  quotaInitTotal: number;
-}
-
-interface FreeTierOnlyStatus {
-  model: string;
-  freeTierOnly: boolean;
-}
+const ACTIVATE_API = "zeldaEasy.bailian-commerce.freeTrial.batchActivateFreeTierOnly";
+const DEACTIVATE_API = "zeldaEasy.bailian-commerce.freeTrial.batchDeactivateFreeTierOnly";
 
 interface BatchResultFailure {
   failureModelId: string;
   errorCode: string;
-}
-
-function getNestedRecord(
-  obj: Record<string, unknown>,
-  key: string,
-): Record<string, unknown> | undefined {
-  const val = obj[key];
-  if (val && typeof val === "object" && !Array.isArray(val)) return val as Record<string, unknown>;
-  return undefined;
-}
-
-function extractResponseData(result: Record<string, unknown>): Record<string, unknown> {
-  const data = getNestedRecord(result, "data");
-  if (!data) return result;
-
-  const dataV2 = getNestedRecord(data, "DataV2");
-  if (dataV2) {
-    const inner = getNestedRecord(dataV2, "data");
-    const innerData = inner ? getNestedRecord(inner, "data") : undefined;
-    return innerData ?? inner ?? dataV2;
-  }
-
-  const direct = getNestedRecord(data, "data");
-  return direct ?? data;
-}
-
-const POLL_INTERVAL_MS = 500;
-const MAX_POLLS = 20;
-
-async function pollUntilDone(
-  client: Client,
-  api: string,
-  requestKey: string,
-  models: string[],
-): Promise<unknown> {
-  let nextTaskId: string | undefined;
-
-  for (let attempt = 0; attempt < MAX_POLLS; attempt++) {
-    const requestData = {
-      [requestKey]: nextTaskId ? { taskId: nextTaskId } : { models },
-    };
-
-    const raw = await client.console(api, requestData);
-
-    const resp = extractResponseData(raw as Record<string, unknown>);
-    if (resp.taskId && Object.keys(resp).length === 1) {
-      nextTaskId = resp.taskId as string;
-      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-      continue;
-    }
-    return raw;
-  }
-  return null;
-}
-
-async function fetchAllModelNames(client: Client): Promise<string[]> {
-  const allModels: Record<string, unknown>[] = [];
-  let page = 1;
-  while (true) {
-    const result = await fetchModelList((api, data) => client.console(api, data), {
-      pageNo: page,
-      pageSize: 50,
-    });
-    allModels.push(...result.models);
-    if (allModels.length >= result.total) break;
-    page++;
-  }
-  return allModels.map((item) => item.model as string).filter(Boolean);
 }
 
 export default defineCommand({
@@ -170,7 +97,7 @@ export default defineCommand({
     }
 
     if (!modelFlag) {
-      models = await fetchAllModelNames(ctx.client);
+      models = (await fetchAllModels(ctx.client)).map((model) => model.name);
     }
 
     if (off) {
@@ -181,12 +108,10 @@ export default defineCommand({
         }),
       ]);
 
-      const quotaData = extractResponseData(quotaResult as Record<string, unknown>);
-      const quotas = (quotaData.freeTierQuotas ?? []) as FreeTierQuota[];
+      const quotas = extractQuotas(quotaResult);
       const quotaMap = new Map(quotas.map((quota) => [quota.model, quota]));
 
-      const stopData = extractResponseData(stopResult as Record<string, unknown>);
-      const stopStatuses = (stopData.freeTierOnlyStatuses ?? []) as FreeTierOnlyStatus[];
+      const stopStatuses = extractFreeTierOnlyStatuses(stopResult);
       const stopMap = new Map(stopStatuses.map((status) => [status.model, status.freeTierOnly]));
 
       for (const name of models) {
@@ -201,7 +126,7 @@ export default defineCommand({
           );
           continue;
         }
-        await pollUntilDone(ctx.client, api, requestKey, [name]);
+        await pollFreeTierBatch(ctx.client, api, requestKey, [name]);
         process.stdout.write(`Disabled auto-stop for "${name}".\n`);
       }
       return;
@@ -209,13 +134,13 @@ export default defineCommand({
 
     const jsonResults: unknown[] = [];
     for (const name of models) {
-      const result = await pollUntilDone(ctx.client, api, requestKey, [name]);
+      const result = await pollFreeTierBatch(ctx.client, api, requestKey, [name]);
       if (format === "json") {
         jsonResults.push(result);
         continue;
       }
       if (result) {
-        const resultData = extractResponseData(result as Record<string, unknown>);
+        const resultData = unwrapResponse(result as Record<string, unknown>);
         const failureModels = (resultData.failureModels as BatchResultFailure[]) ?? [];
         if (failureModels.length > 0) {
           process.stderr.write(

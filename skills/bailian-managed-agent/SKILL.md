@@ -1,22 +1,22 @@
 ---
 name: bailian-managed-agent
 metadata:
-  version: "1.14.2"
+  version: "1.17.0"
   requires:
     bins: ["bl"]
 description: >-
   阿里云百炼托管 Agent 声明式基础设施入口：用户要创建agent、初始化 agents.yaml、校验或预览 agent 配置变更、
-  创建/更新/销毁百炼托管 Agent、和托管 agent 对话、查会话事件历史、导入或取消跟踪远端资源时使用
+  创建/更新/销毁百炼托管 Agent 或 Deployment、和托管 agent 对话、查会话事件历史、导入或取消跟踪远端资源时使用
   `bl managed-agent`。以 agents.yaml 为唯一事实源做 IaC：init 建脚手架、validate 离线校验、plan 预览 diff、
   apply / destroy 变更远端资源且必须带 `--yes`，务必先 plan 给用户看 diff 再让其确认。
   反触发：调用已上线的百炼应用/智能体走 bailian-app-call 或 `bl app`；宿主 agent 自身的记忆、技能、
   子代理不走本 skill；生图生视频走 bailian-gen。
-  官方安装：`npx skills add modelstudioai/cli --all -g`（与共享协议 bailian-protocol 同装）。
+  官方安装：`bl skill init`（与共享协议 bailian-protocol 同装）。
 ---
 
 # Bailian managed agent IaC (`bl managed-agent`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Version & updates (pre-flight checklist) and CLI errors: report an issue. Command details are authoritative in [`reference/managed-agent.md`](reference/managed-agent.md) and `bl managed-agent --help` — do not guess flags. If that protocol file is missing, stop and run `npx skills add modelstudioai/cli --all -g`; do not guess auth/consent.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Version & updates (pre-flight checklist) and CLI errors: report an issue. Command details are authoritative in [`reference/managed-agent.md`](reference/managed-agent.md) and `bl managed-agent --help` — do not guess flags. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
 
 ## Safety guardrail (the most important rule)
 
@@ -35,6 +35,26 @@ description: >-
 4. Apply     bl managed-agent apply --yes   # only after user confirmation
 5. Destroy   bl managed-agent destroy --yes # only after user confirmation
 ```
+
+## Deployment as IaC
+
+Deployment 与 Agent 一样声明在 `agents.yaml` 中，并复用同一条 `validate → plan → apply → destroy` IaC 链路；
+CLI 不提供绕过 state 的命令式 Deployment CRUD。最小配置：
+
+```yaml
+deployments:
+  daily-report:
+    agent: assistant
+    initial_events:
+      - type: user.message
+        content: "Generate today's report."
+```
+
+- `apply` 会在百炼创建原生 Deployment；`destroy` 会归档已跟踪的远端 Deployment。
+- `schedule` 会在 `apply` 后由百炼服务端执行。若旧流程已有外部 cron / CI，先检查 `plan`，避免重复触发。
+- `initial_events` 至少包含一个 `user.message` 或 `system.message`；`user.define_outcome` 在百炼会被丢弃并产生诊断。
+- 本地文件资源在 `apply` 时上传，`mount_path` 必须位于 `/mnt`，且归一化后不能重复。
+- 旧版模拟 Deployment 的 state 可能记录空 `remote_id`；升级后 `plan` 会显示 materialize 更新，确认后再 `apply`。
 
 ## Session interaction (chat with a deployed managed agent)
 
@@ -60,7 +80,7 @@ Flags, usage, and examples: see [`reference/`](reference/index.md) or `bl <comma
 
 ## Common hand-offs
 
-软 hand-off（按 skill **名**；已安装则 Read，否则 `--help` / 提示 `npx skills add modelstudioai/cli --all -g`）：
+软 hand-off（按 skill **名**；已安装则 Read，否则 `--help` / 提示 `bl skill init`）：
 
 - Call an already published Bailian app/assistant → `bailian-app-call`, or skill `bailian-cli` (`bl app list` / `call`; fallback: `bl app --help`).
 - Choosing the model referenced in agents.yaml → `bailian-model-recommend`.
@@ -68,5 +88,5 @@ Flags, usage, and examples: see [`reference/`](reference/index.md) or `bl <comma
 
 ## references
 
-- [bailian-protocol](../bailian-protocol/SKILL.md) — shared protocol (install via `--all -g`)
+- [bailian-protocol](../bailian-protocol/SKILL.md) — shared protocol (install via `bl skill init`)
 - [reference/](reference/index.md) — command details

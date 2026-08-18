@@ -1,10 +1,5 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  updateDeployment,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { defineCommand, updateDeployment, type FlagsDef } from "bailian-cli-core";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const UPDATE_FLAGS = {
   deployedModel: {
@@ -59,31 +54,22 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const deployedModel = flags.deployedModel;
-    const format = detectOutputFormat(settings.output);
 
     const body: Record<string, unknown> = {};
     if (flags.rpmLimit !== undefined) body.rpm_limit = flags.rpmLimit;
     if (flags.tpmLimit !== undefined) body.tpm_limit = flags.tpmLimit;
 
     if (settings.dryRun) {
-      emitResult({ action: "deploy.update", deployed_model: deployedModel, body }, format);
+      emitResult({ action: "deploy.update", deployed_model: deployedModel, body }, "json");
       return;
     }
 
     const response = await updateDeployment(ctx.client, deployedModel, body);
-    const deployment = response.output ?? response.data;
 
     if (settings.quiet) {
       emitBare(deployedModel);
-    } else if (format === "text") {
-      const parts: string[] = [];
-      if (deployment?.rpm_limit !== undefined) parts.push(`rpm_limit=${deployment.rpm_limit}`);
-      if (deployment?.tpm_limit !== undefined) parts.push(`tpm_limit=${deployment.tpm_limit}`);
-      const summary = parts.length ? ` (${parts.join(", ")})` : "";
-      emitBare(`Updated ${deployedModel}${summary}.`);
-      emitRequestId(response.request_id, settings.quiet);
     } else {
-      emitResult(response, format);
+      emitResult(response, "json");
     }
   },
 });

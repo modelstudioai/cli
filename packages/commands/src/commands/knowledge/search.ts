@@ -2,13 +2,12 @@ import {
   defineCommand,
   knowledgeSearchEndpoint,
   detectOutputFormat,
-  BailianError,
-  ExitCode,
   type FlagsDef,
   type KnowledgeSearchRequest,
   type KnowledgeSearchResponse,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
+import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const SEARCH_FLAGS = {
   query: {
@@ -29,13 +28,17 @@ const SEARCH_FLAGS = {
     },
     required: true,
   },
-  // 知识库走 workspace 专属域名,--workspace-id 属命令自有 flag(console 凭证域不适用)。
-  workspaceId: {
+  // Knowledge APIs use a workspace-specific host, so --workspace-id is a per-command
+  // flag here (the console credential scope does not apply).
+  ...WORKSPACE_FLAG,
+  // Named to avoid the runtime-reserved global --version flag
+  agentVersion: {
     type: "string",
-    valueHint: "<id>",
+    valueHint: "<version>",
     description: {
-      "en-US": "Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)",
-      "zh-CN": "API Endpoint URL 使用的 Workspace ID（也可设置 BAILIAN_WORKSPACE_ID）",
+      "en-US":
+        "Service version to call: beta (draft for debugging) or a published number; default is the latest published version",
+      "zh-CN": "要调用的服务版本：beta（用于调试的草稿）或已发布版本号；默认使用最新发布版本",
     },
   },
   image: {
@@ -44,16 +47,6 @@ const SEARCH_FLAGS = {
     description: {
       "en-US": "Image URL for multimodal retrieval (repeatable)",
       "zh-CN": "多模态检索使用的图片 URL（可重复）",
-    },
-  },
-  queryHistory: {
-    type: "string",
-    valueHint: "<json>",
-    description: {
-      "en-US":
-        'User conversation history JSON for context understanding and query rewriting. Format: \'[{"role":"user","content":"What is RAG"},{"role":"assistant","content":"RAG is..."}]\'',
-      "zh-CN":
-        '用于上下文理解和查询改写的用户对话历史 JSON。格式：\'[{"role":"user","content":"What is RAG"},{"role":"assistant","content":"RAG is..."}]\'',
     },
   },
 } satisfies FlagsDef;
@@ -85,9 +78,8 @@ export default defineCommand({
         "`--workspace-id` 可通过 BAILIAN_WORKSPACE_ID 环境变量或 `kscli config set workspace_id <id>` 设置。",
     },
     {
-      "en-US":
-        "`--query-history` passes prior conversation turns; the server rewrites the query based on context to improve retrieval relevance.",
-      "zh-CN": "`--query-history` 用于传入历史对话；服务端会根据上下文改写查询，以提高检索相关性。",
+      "en-US": "`--agent-version beta` calls the draft config for debugging before it is deployed.",
+      "zh-CN": "`--agent-version beta` 会调用尚未部署的草稿配置，便于发布前调试。",
     },
   ],
   exampleArgs: [
@@ -101,24 +93,11 @@ export default defineCommand({
       "zh-CN":
         '--api-key $DASHSCOPE_API_KEY --query "测试搜索" --agent-id aid-xxx --workspace-id ws-xxx --image https://example.com/img.jpg',
     },
-    {
-      "en-US":
-        '--query "How does it work" --agent-id aid-xxx --workspace-id ws-xxx --query-history \'[{"role":"user","content":"What is RAG"},{"role":"assistant","content":"RAG is retrieval-augmented generation"}]\'',
-      "zh-CN":
-        '--query "它是如何工作的" --agent-id aid-xxx --workspace-id ws-xxx --query-history \'[{"role":"user","content":"什么是 RAG"},{"role":"assistant","content":"RAG 是检索增强生成"}]\'',
-    },
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
 
-    const workspaceId = flags.workspaceId || settings.workspaceId;
-    if (!workspaceId) {
-      throw new BailianError(
-        "Workspace ID is required.",
-        ExitCode.USAGE,
-        `Pass --workspace-id, set BAILIAN_WORKSPACE_ID env, or configure: ${ctx.identity.binName} config set workspace_id <id>`,
-      );
-    }
+    const workspaceId = resolveWorkspaceId(ctx);
 
     const format = detectOutputFormat(settings.output);
 
@@ -127,23 +106,14 @@ export default defineCommand({
       agent_id: flags.agentId,
     };
 
-    if (flags.image && flags.image.length > 0) {
-      body.images = flags.image;
+    // Omitted flag → field not sent (default behavior unchanged: latest published
+    // version); the value is not validated — the set of versions is server-side state
+    if (flags.agentVersion) {
+      body.agent_version = flags.agentVersion;
     }
 
-    // Parse query_history JSON for multi-turn context
-    if (flags.queryHistory) {
-      try {
-        body.query_history = JSON.parse(flags.queryHistory) as Array<{
-          role: "user" | "assistant";
-          content: string;
-        }>;
-      } catch {
-        throw new BailianError(
-          '--query-history must be valid JSON. Example: --query-history \'[{"role":"user","content":"What is RAG"}]\'',
-          ExitCode.USAGE,
-        );
-      }
+    if (flags.image && flags.image.length > 0) {
+      body.images = flags.image;
     }
 
     const url = knowledgeSearchEndpoint(workspaceId);

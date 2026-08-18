@@ -1,25 +1,24 @@
 import {
   defineCommand,
-  detectOutputFormat,
   getFineTuneLogs,
   type Client,
   type FineTuneLogEntry,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { emitResult } from "bailian-cli-runtime";
 
 /**
- * Render a single log entry as a single line (mirrors the flatten logic used
- * for non-search text output: prefer common fields, fall back to JSON).
+ * Render a single log entry as a single line (used for search matching:
+ * prefer common fields, fall back to JSON).
  */
 function renderEntry(entry: FineTuneLogEntry | string): string {
   if (typeof entry === "string") return entry;
   const record = entry as Record<string, unknown>;
-  const ts = (record.timestamp ?? record.time ?? record.create_time ?? "") as string;
+  const timestamp = (record.timestamp ?? record.time ?? record.create_time ?? "") as string;
   const level = (record.level ?? "") as string;
-  const msg = (record.message ?? record.msg ?? record.log ?? "") as string;
-  if (msg || ts || level) {
-    return [ts, level, msg].filter(Boolean).join("\t");
+  const message = (record.message ?? record.msg ?? record.log ?? "") as string;
+  if (message || timestamp || level) {
+    return [timestamp, level, message].filter(Boolean).join("\t");
   }
   return JSON.stringify(entry);
 }
@@ -48,16 +47,16 @@ async function fetchAllLogs(
   let total = 0;
   // Hard cap to avoid an unbounded loop if the server misreports `total`.
   const maxPages = 200;
-  for (let i = 0; i < maxPages; i++) {
+  for (let page = 0; page < maxPages; page++) {
     const response = await getFineTuneLogs(client, jobId, { pageNo, pageSize });
     const payload = response.output ?? response.data;
-    const page = payload?.logs ?? [];
+    const logs = payload?.logs ?? [];
     total = payload?.total ?? total;
-    if (page.length === 0) break;
-    entries.push(...page);
+    if (logs.length === 0) break;
+    entries.push(...logs);
     // Stop once we've collected everything the server claims exists.
     if (total && entries.length >= total) break;
-    if (page.length < pageSize) break;
+    if (logs.length < pageSize) break;
     pageNo++;
   }
   return { entries, total };
@@ -126,7 +125,6 @@ export default defineCommand({
     const pageSize = flags.pageSize;
     const search = flags.search || undefined;
     const tail = flags.tail;
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
       emitResult(
@@ -138,7 +136,7 @@ export default defineCommand({
           search,
           tail,
         },
-        format,
+        "json",
       );
       return;
     }
@@ -163,18 +161,6 @@ export default defineCommand({
       const result =
         tailApplied !== undefined ? scanned.slice(scanned.length - tailApplied) : scanned;
 
-      if (settings.quiet || format === "text") {
-        if (result.length === 0) {
-          emitBare(search ? `No logs matched "${search}".` : "No logs returned.");
-          return;
-        }
-        for (const entry of result) emitBare(renderEntry(entry));
-        const parts: string[] = [`${result.length} shown`];
-        if (matched !== undefined) parts.push(`matched ${matched}`);
-        parts.push(`of ${entries.length}` + (total ? ` (total ${total})` : ""));
-        emitBare(`\n${parts.join(", ")}`);
-        return;
-      }
       emitResult(
         {
           ...(matched !== undefined ? { matched } : {}),
@@ -184,28 +170,13 @@ export default defineCommand({
           ...(tailApplied !== undefined ? { tail: tailApplied } : {}),
           logs: result,
         },
-        format,
+        "json",
       );
       return;
     }
 
     // Default: single page, verbatim response.
     const response = await getFineTuneLogs(ctx.client, jobId, { pageNo, pageSize });
-    const payload = response.output ?? response.data;
-    const logs = payload?.logs ?? [];
-
-    if (settings.quiet || format === "text") {
-      if (logs.length === 0) {
-        emitBare("No logs returned.");
-        return;
-      }
-      for (const entry of logs) {
-        emitBare(renderEntry(entry));
-      }
-      if (payload?.total !== undefined) emitBare(`\nTotal: ${payload.total}`);
-      emitRequestId(response.request_id, settings.quiet);
-    } else {
-      emitResult(response, format);
-    }
+    emitResult(response, "json");
   },
 });

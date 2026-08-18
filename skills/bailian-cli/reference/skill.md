@@ -7,23 +7,24 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command           | Description                                                             |
-| ----------------- | ----------------------------------------------------------------------- |
-| `bl skill add`    | Install skills from the Bailian skill registry into local agents        |
-| `bl skill init`   | Install all bailian-\* skills (one-shot bootstrap for new environments) |
-| `bl skill list`   | List registry skills and diff against local installs                    |
-| `bl skill remove` | Remove locally installed skills (registry is untouched)                 |
-| `bl skill update` | Update installed skills to the latest registry versions                 |
+| Command           | Authentication | Description                                                             |
+| ----------------- | -------------- | ----------------------------------------------------------------------- |
+| `bl skill add`    | No Auth        | Install skills from the Bailian skill registry into local agents        |
+| `bl skill init`   | No Auth        | Install all bailian-\* skills (one-shot bootstrap for new environments) |
+| `bl skill list`   | No Auth        | List registry skills and diff against local installs                    |
+| `bl skill remove` | No Auth        | Remove locally installed skills (registry is untouched)                 |
+| `bl skill update` | No Auth        | Update installed skills to the latest registry versions                 |
 
 ## Command details
 
 ### `bl skill add`
 
-| Field           | Value                                                            |
-| --------------- | ---------------------------------------------------------------- |
-| **Name**        | `skill add`                                                      |
-| **Description** | Install skills from the Bailian skill registry into local agents |
-| **Usage**       | `bl skill add --all \| --name <name,...>`                        |
+| Field              | Value                                                            |
+| ------------------ | ---------------------------------------------------------------- |
+| **Name**           | `skill add`                                                      |
+| **Description**    | Install skills from the Bailian skill registry into local agents |
+| **Authentication** | No Auth                                                          |
+| **Usage**          | `bl skill add --all \| --name <name,...>`                        |
 
 #### Flags
 
@@ -44,11 +45,12 @@ bl skill add --name spark-video,bailian-model-recommend
 
 ### `bl skill init`
 
-| Field           | Value                                                                   |
-| --------------- | ----------------------------------------------------------------------- |
-| **Name**        | `skill init`                                                            |
-| **Description** | Install all bailian-\* skills (one-shot bootstrap for new environments) |
-| **Usage**       | `bl skill init`                                                         |
+| Field              | Value                                                                   |
+| ------------------ | ----------------------------------------------------------------------- |
+| **Name**           | `skill init`                                                            |
+| **Description**    | Install all bailian-\* skills (one-shot bootstrap for new environments) |
+| **Authentication** | No Auth                                                                 |
+| **Usage**          | `bl skill init`                                                         |
 
 #### Flags
 
@@ -67,11 +69,12 @@ bl skill init
 
 ### `bl skill list`
 
-| Field           | Value                                                |
-| --------------- | ---------------------------------------------------- |
-| **Name**        | `skill list`                                         |
-| **Description** | List registry skills and diff against local installs |
-| **Usage**       | `bl skill list`                                      |
+| Field              | Value                                                |
+| ------------------ | ---------------------------------------------------- |
+| **Name**           | `skill list`                                         |
+| **Description**    | List registry skills and diff against local installs |
+| **Authentication** | No Auth                                              |
+| **Usage**          | `bl skill list`                                      |
 
 #### Flags
 
@@ -93,11 +96,12 @@ bl skill list --output json
 
 ### `bl skill remove`
 
-| Field           | Value                                                   |
-| --------------- | ------------------------------------------------------- |
-| **Name**        | `skill remove`                                          |
-| **Description** | Remove locally installed skills (registry is untouched) |
-| **Usage**       | `bl skill remove --name <all\|name,...>`                |
+| Field              | Value                                                   |
+| ------------------ | ------------------------------------------------------- |
+| **Name**           | `skill remove`                                          |
+| **Description**    | Remove locally installed skills (registry is untouched) |
+| **Authentication** | No Auth                                                 |
+| **Usage**          | `bl skill remove --name <all\|name,...>`                |
 
 #### Flags
 
@@ -117,11 +121,12 @@ bl skill remove --name all
 
 ### `bl skill update`
 
-| Field           | Value                                                   |
-| --------------- | ------------------------------------------------------- |
-| **Name**        | `skill update`                                          |
-| **Description** | Update installed skills to the latest registry versions |
-| **Usage**       | `bl skill update [--all] [--name <name,...>]`           |
+| Field              | Value                                                   |
+| ------------------ | ------------------------------------------------------- |
+| **Name**           | `skill update`                                          |
+| **Description**    | Update installed skills to the latest registry versions |
+| **Authentication** | No Auth                                                 |
+| **Usage**          | `bl skill update [--all] [--name <name,...>]`           |
 
 #### Flags
 

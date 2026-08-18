@@ -4,27 +4,34 @@ import {
   defineCommand,
   detectInstalledAgents,
   fetchSkillsIndex,
-  getSkillRegistryBaseUrl,
   installSkillWithFanout,
   readSkillLock,
   runWithConcurrency,
   writeSkillLock,
 } from "bailian-cli-core";
-import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
-
-interface InitOutcome {
-  name: string;
-  status: "installed" | "failed";
-  publishedAt?: string;
-  agents?: string[];
-  reason?: string;
-}
+import { emitBare, emitResult } from "bailian-cli-runtime";
 
 /** Prefix used to identify first-party Bailian skills in the registry. */
 const BAILIAN_PREFIX = "bailian-";
 
 /** Max number of skills downloading/installing at the same time. */
 const INIT_CONCURRENCY = 3;
+
+/** Default output format when user does not pass --output explicitly. */
+const DEFAULT_FORMAT = "json";
+
+/** All status values used by skill init (per-skill outcome + aggregate result). */
+const STATUS = {
+  success: "success",
+  partial: "partial",
+  failed: "failed",
+} as const;
+
+interface InitOutcome {
+  name: string;
+  status: typeof STATUS.success | typeof STATUS.failed;
+  reason?: string;
+}
 
 export default defineCommand({
   description: {
@@ -46,7 +53,7 @@ export default defineCommand({
     },
   ],
   async run(ctx) {
-    const format = ctx.settings.outputExplicit ? ctx.settings.output : "json";
+    const format = ctx.settings.outputExplicit ? ctx.settings.output : DEFAULT_FORMAT;
     const index = await fetchSkillsIndex();
 
     // Discover all bailian-* skills from the live registry index
@@ -65,16 +72,11 @@ export default defineCommand({
           lock.skills[name]?.links ?? [],
         );
         lock.skills[name] = record.lockEntry;
-        return {
-          name,
-          status: "installed",
-          publishedAt: entry.publishedAt,
-          agents: record.linkedAgents,
-        };
+        return { name, status: STATUS.success };
       } catch (err) {
         return {
           name,
-          status: "failed",
+          status: STATUS.failed,
           reason: err instanceof Error ? err.message : String(err),
         };
       }
@@ -82,30 +84,46 @@ export default defineCommand({
     const results = await runWithConcurrency(tasks, INIT_CONCURRENCY);
     writeSkillLock(lock);
 
-    if (format === "json") {
-      emitResult(
-        {
-          registry: getSkillRegistryBaseUrl(),
-          agents: agents.map((agent) => agent.id),
-          skills: results,
-        },
-        format,
-      );
+    const installed = results.filter((result) => result.status === STATUS.success);
+    const failed = results.filter((result) => result.status === STATUS.failed);
+
+    const status =
+      failed.length === 0
+        ? STATUS.success
+        : installed.length === 0
+          ? STATUS.failed
+          : STATUS.partial;
+
+    if (format === DEFAULT_FORMAT) {
+      const agentIds = agents.map((agent) => agent.id);
+      const payload: Record<string, unknown> = {
+        status,
+        skills: installed.map((result) => result.name),
+      };
+      if (failed.length > 0) {
+        payload.failed = failed.map((result) => ({
+          name: result.name,
+          reason: result.reason,
+          agents: agentIds,
+        }));
+      }
+      emitResult(payload, format);
     } else if (results.length === 0) {
       emitBare("No bailian-* skills found in the registry.");
     } else {
-      const rows = results.map((result) => [
-        result.name,
-        result.status,
-        result.publishedAt ? result.publishedAt.slice(0, 10) : "-",
-        result.status === "installed" ? result.agents?.join(", ") || "-" : (result.reason ?? "-"),
-      ]);
-      for (const line of formatTable(["NAME", "STATUS", "PUBLISHED", "AGENTS / REASON"], rows)) {
-        emitBare(line);
+      emitBare(
+        status === STATUS.success
+          ? `Installed ${installed.length} bailian-* skills.`
+          : `Installed ${installed.length}/${results.length} bailian-* skills.`,
+      );
+      if (failed.length > 0) {
+        emitBare("Failed:");
+        for (const item of failed) {
+          emitBare(`  ${item.name}: ${item.reason}`);
+        }
       }
     }
 
-    const failed = results.filter((result) => result.status === "failed");
     if (failed.length > 0) {
       throw new BailianError(
         `${failed.length}/${results.length} skill(s) failed to install`,

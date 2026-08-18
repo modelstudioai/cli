@@ -1,4 +1,5 @@
 import {
+  anonymousConsoleCall,
   defineCommand,
   detectOutputFormat,
   fetchModelDetail,
@@ -319,7 +320,7 @@ export default defineCommand({
     "en-US": "Browse model families or show detailed model info in the Bailian model marketplace",
     "zh-CN": "浏览百炼模型市场中的模型系列，或查看模型详细信息",
   },
-  auth: "console",
+  auth: "none",
   usageArgs:
     "[--model <model>] [--page <n>] [--page-size <n>] [--provider <p>] [--capability <c>] [--feature <f>] [--enrich]",
   flags: LIST_FLAGS,
@@ -331,10 +332,18 @@ export default defineCommand({
     "--model qwen-max --enrich --output json",
     "--feature function-calling --output json",
   ],
+  notes: [
+    {
+      "en-US":
+        "Both the catalog and --enrich parameter-schema endpoints are public — no console login needed.",
+      "zh-CN": "模型目录和 --enrich 使用的参数 Schema Endpoint 均为公开接口，无需登录控制台。",
+    },
+  ],
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = settings.outputExplicit ? detectOutputFormat(settings.output) : "json";
     const modelKey = flags.model;
+    const call = anonymousConsoleCall(settings);
 
     // ── Detail mode ──
     if (modelKey) {
@@ -345,7 +354,7 @@ export default defineCommand({
         return;
       }
 
-      const detail = await fetchModelDetail(ctx.client.console.bind(ctx.client), modelKey);
+      const detail = await fetchModelDetail(call, modelKey);
 
       if (!detail) {
         emitBare(`Model "${modelKey}" not found.`);
@@ -357,10 +366,7 @@ export default defineCommand({
         await Promise.all(
           trunkItems.map(async (item) => {
             if (!item.model) return;
-            const config = await fetchPredictConfig(
-              ctx.client.console.bind(ctx.client),
-              item.model,
-            );
+            const config = await fetchPredictConfig(call, item.model);
             if (config) item.predictConfig = config;
           }),
         );
@@ -390,7 +396,7 @@ export default defineCommand({
       return;
     }
 
-    const { total, groups } = await fetchModelGroups(ctx.client.console.bind(ctx.client), params);
+    const { total, groups } = await fetchModelGroups(call, params);
 
     if (format === "json") {
       emitResult(formatBrowseJson(groups, total), format);

@@ -20,6 +20,7 @@ interface ValidationServer {
     body: Record<string, unknown>;
     authorization?: string;
     sourceConfig?: string;
+    openApiSource?: string;
   }>;
   close(): Promise<void>;
 }
@@ -36,6 +37,7 @@ async function startValidationServer(statusCode = 200): Promise<ValidationServer
         body: rawBody ? (JSON.parse(rawBody) as Record<string, unknown>) : {},
         authorization: request.headers.authorization,
         sourceConfig: request.headers["x-dashscope-source-config"] as string | undefined,
+        openApiSource: request.headers["x-dashscope-openapisource"] as string | undefined,
       });
       response.writeHead(statusCode, { "Content-Type": "application/json" });
       if (statusCode >= 400) {
@@ -216,6 +218,7 @@ describe("e2e: auth", () => {
         path: "/compatible-mode/v1/chat/completions",
         authorization: "Bearer sk-e2e-placeholder",
         sourceConfig: expect.any(String),
+        openApiSource: "BailianCLI",
         body: {
           model: "qwen3.8-max",
           stream: false,
@@ -313,6 +316,7 @@ describe("e2e: auth", () => {
         path: "/compatible-mode/v1/chat/completions",
         authorization: "Bearer sk-sp-e2e-placeholder",
         sourceConfig: expect.any(String),
+        openApiSource: "BailianCLI",
         body: {
           model: "qwen3.8-max",
           stream: false,

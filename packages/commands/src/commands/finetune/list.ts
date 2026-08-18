@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat, listFineTunes, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId, formatTable } from "bailian-cli-runtime";
+import { defineCommand, listFineTunes, type FlagsDef } from "bailian-cli-core";
+import { emitResult } from "bailian-cli-runtime";
 
 const LIST_FLAGS = {
   page: {
@@ -23,71 +23,48 @@ const LIST_FLAGS = {
       "zh-CN": "按状态筛选（PENDING / RUNNING / SUCCEEDED / FAILED / CANCELED）",
     },
   },
+  baseModel: {
+    type: "string",
+    valueHint: "<model>",
+    description: "Filter by base model ID (server-side)",
+  },
 } satisfies FlagsDef;
 
 export default defineCommand({
   description: { "en-US": "List fine-tune jobs", "zh-CN": "列出微调任务" },
   auth: "apiKey",
-  usageArgs: "[--page <n>] [--page-size <n>] [--status <s>]",
+  usageArgs: "[--page <n>] [--page-size <n>] [--status <s>] [--base-model <model>]",
   flags: LIST_FLAGS,
-  exampleArgs: ["", "--status RUNNING", "--page-size 20 --output json"],
+  exampleArgs: ["", "--status RUNNING", "--base-model qwen3-8b", "--page-size 20"],
   async run(ctx) {
-    const { identity, settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
+    const { settings, flags } = ctx;
     const pageNo = flags.page;
     const pageSize = flags.pageSize;
     const status = flags.status || undefined;
+    const model = flags.baseModel || undefined;
 
     if (settings.dryRun) {
-      emitResult({ action: "finetune.list", page: pageNo, page_size: pageSize, status }, format);
+      emitResult(
+        { action: "finetune.list", page: pageNo, page_size: pageSize, status, model },
+        "json",
+      );
       return;
     }
 
-    const response = await listFineTunes(ctx.client, { pageNo, pageSize, status });
+    const response = await listFineTunes(ctx.client, { pageNo, pageSize, status, model });
     const payload = response.output ?? response.data;
     const jobs = payload?.jobs ?? [];
     const total = payload?.total;
 
-    const items = jobs.map((item) => ({
-      job_id: item.job_id ?? "",
-      base_model: item.model ?? "",
-      status: item.status ?? "",
-      training_type: item.training_type ?? "",
-      output_model: item.finetuned_output ?? "",
-      created_at: item.create_time ?? item.gmt_create ?? "",
+    const items = jobs.map((job) => ({
+      job_id: job.job_id ?? "",
+      base_model: job.model ?? "",
+      status: job.status ?? "",
+      training_type: job.training_type ?? "",
+      output_model: job.finetuned_output ?? "",
+      created_at: job.create_time ?? job.gmt_create ?? "",
     }));
 
-    if (format === "json") {
-      emitResult({ items, total, request_id: response.request_id }, format);
-      return;
-    }
-
-    // text / quiet
-    if (items.length === 0) {
-      emitBare("No fine-tune jobs found.");
-      return;
-    }
-    const headers = [
-      "JOB_ID",
-      "BASE_MODEL",
-      "STATUS",
-      "TRAINING_TYPE",
-      "OUTPUT_MODEL",
-      "CREATED_AT",
-    ];
-    const rows = items.map((i) => [
-      i.job_id,
-      i.base_model,
-      i.status,
-      i.training_type,
-      i.output_model,
-      i.created_at,
-    ]);
-    for (const line of formatTable(headers, rows)) emitBare(line);
-    if (total !== undefined) emitBare(`\nTotal: ${total}`);
-    emitBare(
-      `Tip: OUTPUT_MODEL is the input for \`${identity.binName} deploy text create --model\``,
-    );
-    emitRequestId(response.request_id, settings.quiet);
+    emitResult({ items, total, request_id: response.request_id }, "json");
   },
 });

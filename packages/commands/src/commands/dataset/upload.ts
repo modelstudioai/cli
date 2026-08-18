@@ -1,25 +1,26 @@
 import {
   defineCommand,
-  detectOutputFormat,
   uploadDataset,
   validateDataset,
   parseDatasetSchemaFlag,
   formatIssue,
   MAX_DATASET_BYTES,
+  MAX_CPT_BYTES,
   MAX_MEDIA_ZIP_BYTES,
   BailianError,
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const UPLOAD_FLAGS = {
   file: {
     type: "string",
     valueHint: "<path>",
     description: {
-      "en-US": "Local dataset file (.jsonl or .zip; ≤300MB text, ≤1GB image)",
-      "zh-CN": "本地数据集文件（.jsonl 或 .zip；文本不超过 300MB，图片不超过 1GB）",
+      "en-US": "Local dataset file (.jsonl or .zip; ≤200MB SFT/DPO, ≤300MB CPT, ≤2GB media zip)",
+      "zh-CN":
+        "本地数据集文件（.jsonl 或 .zip；SFT/DPO 不超过 200MB，CPT 不超过 300MB，媒体 ZIP 不超过 2GB）",
     },
     required: true,
   },
@@ -36,9 +37,9 @@ const UPLOAD_FLAGS = {
     valueHint: "<s>",
     description: {
       "en-US":
-        'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), "cpt" (raw text), "tts" (audio), or "image" (image generation). Default auto-detects per record.',
+        'Record schema: "chatml" (SFT), "dpo" (chosen/rejected), "cpt" (raw text), "tts" (audio), "image" (image generation), or "video" (video generation). Default auto-detects per record.',
       "zh-CN":
-        '记录 Schema："chatml"（SFT）、"dpo"（chosen/rejected）、"cpt"（原始文本）、"tts"（音频）或 "image"（图片生成）。默认逐条自动识别。',
+        '记录 Schema："chatml"（SFT）、"dpo"（chosen/rejected）、"cpt"（原始文本）、"tts"（音频）、"image"（图片生成）或 "video"（视频生成）。默认逐条自动识别。',
     },
   },
   noValidate: {
@@ -64,7 +65,7 @@ export default defineCommand({
   },
   auth: "apiKey",
   usageArgs:
-    "--file <path> [--purpose <name>] [--schema <chatml|dpo|cpt|tts|image>] [--no-validate] [--full-validate]",
+    "--file <path> [--purpose <name>] [--schema <chatml|dpo|cpt|tts|image|video>] [--no-validate] [--full-validate]",
   flags: UPLOAD_FLAGS,
   exampleArgs: [
     "--file train.jsonl",
@@ -78,9 +79,9 @@ export default defineCommand({
   notes: [
     {
       "en-US":
-        'Supports .jsonl (text) and .zip (audio/image archives with a data.jsonl manifest). Five record schemas are recognized: chatml = {messages:[...]} (SFT); dpo = {messages:[...], chosen, rejected}; cpt = {text:"..."} (continual pre-training, raw text); tts = {wav_fn:"train/xxx.wav", text:"..."} (audio fine-tuning); image = {img_path:"..."} (image generation).',
+        'Supports .jsonl (text) and .zip (audio/image/video archives with a data.jsonl manifest). Six record schemas are recognized: chatml = {messages:[...]} (SFT); dpo = {messages:[...], chosen, rejected}; cpt = {text:"..."} (continual pre-training, raw text); tts = {wav_fn:"train/xxx.wav", text:"..."} (audio fine-tuning); image = {img_path:"..."} (image generation); video = {first_frame_path:...} (video generation).',
       "zh-CN":
-        '支持 .jsonl（文本）和 .zip（包含 data.jsonl 清单的音频/图片归档）。可识别五种记录 Schema：chatml = {messages:[...]}（SFT）；dpo = {messages:[...], chosen, rejected}；cpt = {text:"..."}（持续预训练，原始文本）；tts = {wav_fn:"train/xxx.wav", text:"..."}（音频微调）；image = {img_path:"..."}（图片生成）。',
+        '支持 .jsonl（文本）和 .zip（包含 data.jsonl 清单的音频、图片或视频归档）。可识别六种记录 Schema：chatml = {messages:[...]}（SFT）；dpo = {messages:[...], chosen, rejected}；cpt = {text:"..."}（持续预训练，原始文本）；tts = {wav_fn:"train/xxx.wav", text:"..."}（音频微调）；image = {img_path:"..."}（图片生成）；video = {first_frame_path:...}（视频生成）。',
     },
     {
       "en-US":
@@ -90,9 +91,9 @@ export default defineCommand({
     },
     {
       "en-US":
-        "Upload cap: 300MB text, 1GB image. Upload uses the OpenAI-compatible /compatible-mode/v1/files endpoint so the purpose tag is persisted (the DashScope-native /api/v1/files drops it).",
+        "Upload cap: 200MB SFT/DPO text, 300MB CPT, 2GB media zip. Upload uses the OpenAI-compatible /compatible-mode/v1/files endpoint so the purpose tag is persisted (the DashScope-native /api/v1/files drops it).",
       "zh-CN":
-        "上传上限：文本 300MB，图片 1GB。上传使用 OpenAI 兼容的 /compatible-mode/v1/files Endpoint，以便保留 purpose 标签；DashScope 原生 /api/v1/files 会丢弃该标签。",
+        "上传上限：SFT/DPO 文本 200MB、CPT 300MB、媒体 ZIP 2GB。上传使用 OpenAI 兼容的 /compatible-mode/v1/files Endpoint，以便保留 purpose 标签；DashScope 原生 /api/v1/files 会丢弃该标签。",
     },
   ],
   async run(ctx) {
@@ -100,19 +101,15 @@ export default defineCommand({
     const filePath = flags.file;
     const purpose = flags.purpose || "fine-tune";
     const schema = parseDatasetSchemaFlag(flags.schema);
-    if (schema === "video") {
-      throw new BailianError(
-        `--schema video is not supported.`,
-        ExitCode.USAGE,
-        `Supported schemas: chatml, dpo, cpt, tts, image.`,
-      );
-    }
-    const format = detectOutputFormat(settings.output);
-    // Image schema allows larger ZIPs (1 GB vs 300 MB for text).
-    const isMediaSchema = schema === "image";
+    // Size caps differ per training type: SFT/DPO 200MB, CPT 300MB, media ZIP 2GB.
+    const isMediaSchema = schema === "image" || schema === "video";
+    const maxBytes = isMediaSchema
+      ? MAX_MEDIA_ZIP_BYTES
+      : schema === "cpt"
+        ? MAX_CPT_BYTES
+        : MAX_DATASET_BYTES;
 
     if (!flags.noValidate) {
-      const maxBytes = isMediaSchema ? MAX_MEDIA_ZIP_BYTES : MAX_DATASET_BYTES;
       const result = await validateDataset(filePath, {
         fullValidate: flags.fullValidate,
         schema,
@@ -152,11 +149,11 @@ export default defineCommand({
           action: "dataset.upload",
           file: filePath,
           purpose,
-          max_bytes: isMediaSchema ? MAX_MEDIA_ZIP_BYTES : MAX_DATASET_BYTES,
+          max_bytes: maxBytes,
           validate: !flags.noValidate,
           schema: schema ?? "auto",
         },
-        format,
+        "json",
       );
       return;
     }
@@ -169,11 +166,8 @@ export default defineCommand({
 
     if (settings.quiet) {
       emitBare(file.file_id);
-    } else if (format === "text") {
-      emitBare(`Uploaded ${file.name} → file_id=${file.file_id}`);
-      emitRequestId(request_id, settings.quiet);
     } else {
-      emitResult({ ...file, request_id }, format);
+      emitResult({ ...file, request_id }, "json");
     }
   },
 });

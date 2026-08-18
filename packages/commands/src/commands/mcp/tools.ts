@@ -23,8 +23,10 @@ export default defineCommand({
       type: "string",
       valueHint: "<url>",
       description: {
-        "en-US": "Override the MCP endpoint URL (for non-Bailian servers)",
-        "zh-CN": "覆盖 MCP Endpoint URL（用于非百炼服务器）",
+        "en-US":
+          "Override the MCP endpoint URL (non-Bailian). Tries Streamable HTTP first, then classic SSE on the same URL.",
+        "zh-CN":
+          "覆盖 MCP Endpoint URL（非百炼）。先尝试 Streamable HTTP，再在同一 URL 上回退到传统 SSE。",
       },
     },
   },
@@ -37,24 +39,27 @@ export default defineCommand({
     const { settings, flags } = ctx;
     const code = flags.server;
 
-    const url = flags.url || ctx.client.url(bailianMcpPath(code));
+    const previewUrl = flags.url || ctx.client.url(bailianMcpPath(code));
     const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult({ server: code, url, action: "tools/list" }, format);
+      emitResult({ server: code, url: previewUrl, action: "tools/list" }, format);
       return;
     }
 
-    const client = ctx.client.mcp(url);
+    let client: { close?(): void } | undefined;
     try {
-      await client.initialize();
-      const tools = await client.listTools();
-      emitResult({ server: code, url, tools }, format);
+      const connected = await ctx.client.connectBailianMcp(code, flags.url);
+      client = connected.client;
+      const tools = await connected.client.listTools();
+      emitResult({ server: code, url: connected.url, tools }, format);
     } catch (error) {
       if (!flags.url) {
         rethrowWithMcpActivateHint(error, code);
       }
       throw error;
+    } finally {
+      client?.close?.();
     }
   },
 });

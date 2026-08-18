@@ -1,6 +1,11 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
-import { KNOWLEDGE_ROUTES } from "./topic-routes.ts";
+import {
+  isDashScopeE2EReady,
+  isKbAdminE2EReady,
+  parseStdoutJson,
+  runCommandE2e,
+} from "../helpers.ts";
+import { KNOWLEDGE_ROUTES } from "../topic-routes.ts";
 
 // ---- Types ----
 
@@ -186,4 +191,58 @@ describe("e2e: knowledge retrieve dry-run", () => {
     expect(data.request?.rerank?.[0]?.rerank_mode).toBe("custom");
     expect(data.request?.rerank?.[0]?.rerank_instruct).toBe("按相关性排序");
   });
+});
+
+// Live: --rerank-instruct and --top-k (deprecated) on a real index
+describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge retrieve 参数补全 (live)", () => {
+  const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
+
+  test("retrieve --rerank-instruct + --top-k (不报错验证)", async () => {
+    // Grab a real index id from the workspace
+    const listRun = await runCommandE2e(KNOWLEDGE_ROUTES, [
+      "knowledge",
+      "list",
+      "--workspace-id",
+      workspaceId,
+      "--quiet",
+    ]);
+    expect(listRun.exitCode, listRun.stderr).toBe(0);
+    const indexId = listRun.stdout.trim().split("\n")[0];
+    if (!indexId) return;
+
+    // P6: --rerank-instruct (live)
+    const rerankInstructRun = await runCommandE2e(KNOWLEDGE_ROUTES, [
+      "knowledge",
+      "retrieve",
+      "--index-id",
+      indexId,
+      "--query",
+      "e2e test",
+      "--rerank",
+      "--rerank-model",
+      "qwen3-rerank-hybrid",
+      "--rerank-mode",
+      "custom",
+      "--rerank-instruct",
+      "按相关性排序",
+      "--output",
+      "json",
+    ]);
+    expect(rerankInstructRun.exitCode, rerankInstructRun.stderr).toBe(0);
+
+    // P6: --top-k (deprecated, verify still accepted)
+    const topKRun = await runCommandE2e(KNOWLEDGE_ROUTES, [
+      "knowledge",
+      "retrieve",
+      "--index-id",
+      indexId,
+      "--query",
+      "e2e test",
+      "--top-k",
+      "10",
+      "--output",
+      "json",
+    ]);
+    expect(topKRun.exitCode, topKRun.stderr).toBe(0);
+  }, 60_000);
 });

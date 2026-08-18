@@ -7,7 +7,7 @@
  * Ownership of each top-level command group is declared in `GROUP_OWNER_SKILL` below.
  * Unmapped groups fall back to `bailian-cli` (hub) so new commands never block generation.
  *
- * Committed to git; consumed by bailian-* Agent Skills (`npx skills add modelstudioai/cli`).
+ * Committed to git; consumed by bailian-* Agent Skills (`bl skill init`).
  *
  * Run: pnpm --filter bailian-cli run generate:reference
  * Also run via `pnpm run sync:skill-assets` or the repo pre-commit hook.
@@ -23,6 +23,7 @@ import {
   OPENAPI_AUTH_FLAGS,
   credentialFlagDefs,
   type AnyCommand,
+  type AuthRequirement,
   type FlagDef,
   type FlagsDef,
   type LocalizedText,
@@ -58,6 +59,13 @@ const GROUP_OWNER_SKILL: Readonly<Record<string, string>> = {
 const GENERATED_BANNER =
   "> Auto-generated from `packages/cli/src/commands.ts`. Do not edit by hand.\n" +
   "> Regenerate: `pnpm --filter bailian-cli run generate:reference`.";
+
+const AUTH_LABELS = {
+  apiKey: "API Key",
+  console: "Console",
+  openapi: "AK/SK",
+  none: "No Auth",
+} satisfies Record<AuthRequirement, string>;
 
 function escCell(s: string): string {
   return s.replace(/\|/g, "\\|").replace(/\n/g, " ").trim();
@@ -129,6 +137,7 @@ function commandSection(path: string, cmd: AnyCommand): string {
   lines.push(`| Field | Value |`, `| --- | --- |`);
   lines.push(`| **Name** | \`${escCell(path)}\` |`);
   lines.push(`| **Description** | ${escCell(referenceText(cmd.description))} |`);
+  lines.push(`| **Authentication** | ${AUTH_LABELS[cmd.auth]} |`);
   // Commands store argument-only usage; the `bl <path>` prefix is added here.
   const usage = `bl ${path}${cmd.usageArgs ? ` ${cmd.usageArgs}` : ""}`;
   lines.push(`| **Usage** | \`${escCell(usage)}\` |`);
@@ -177,12 +186,14 @@ function buildGroupFile(group: string, groupEntries: [string, AnyCommand][]): st
     "",
     "## Commands in this group",
     "",
-    "| Command | Description |",
-    "| --- | --- |",
+    "| Command | Authentication | Description |",
+    "| --- | --- | --- |",
   ];
 
   for (const [path, cmd] of groupEntries) {
-    lines.push(`| \`bl ${path}\` | ${escCell(referenceText(cmd.description))} |`);
+    lines.push(
+      `| \`bl ${path}\` | ${AUTH_LABELS[cmd.auth]} | ${escCell(referenceText(cmd.description))} |`,
+    );
   }
 
   lines.push("", "## Command details", "");
@@ -209,14 +220,14 @@ function buildIndex(
     "",
     "## Quick index",
     "",
-    "| Command | Description | Detail |",
-    "| --- | --- | --- |",
+    "| Command | Authentication | Description | Detail |",
+    "| --- | --- | --- | --- |",
   ];
 
   for (const [path, cmd] of entries) {
     const group = topLevel(path);
     lines.push(
-      `| \`bl ${path}\` | ${escCell(referenceText(cmd.description))} | [${group}.md](${group}.md) |`,
+      `| \`bl ${path}\` | ${AUTH_LABELS[cmd.auth]} | ${escCell(referenceText(cmd.description))} | [${group}.md](${group}.md) |`,
     );
   }
 

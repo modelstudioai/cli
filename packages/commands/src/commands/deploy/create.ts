@@ -1,6 +1,5 @@
 import {
   defineCommand,
-  detectOutputFormat,
   createDeployment,
   pickPlanStrategy,
   STRATEGIES,
@@ -11,19 +10,19 @@ import {
   type CommandContext,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const CREATE_FLAGS = {
-  model: {
+  modelName: {
     type: "string",
-    valueHint: "<name>",
+    valueHint: "<model_name>",
     description: {
-      "en-US": "Model name (catalog model or fine-tuned output) (required)",
-      "zh-CN": "模型名称（模型目录中的模型或微调输出模型，必填）",
+      "en-US": "Model to deploy — fine-tuned output name or catalog model (required)",
+      "zh-CN": "要部署的模型：微调输出模型名称或模型目录中的模型（必填）",
     },
     required: true,
   },
-  name: {
+  displayName: {
     type: "string",
     valueHint: "<display_name>",
     description: {
@@ -91,48 +90,42 @@ const CREATE_FLAGS = {
 } satisfies FlagsDef;
 
 const CREATE_USAGE =
-  "--model <model_name> --name <display_name> [--plan <plan>] [--deploy-spec <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]";
+  "--model-name <model_name> --display-name <display_name> [--plan <plan>] [--deploy-spec <id>] [--capacity <n>] [--billing-method <m>] [--input-tpm <n>] [--output-tpm <n>] [--thinking-output-tpm <n>]";
 
 const CREATE_NOTES = [
   {
     "en-US":
       "Plan defaults to `lora` (Token-billed) for text/image and `mu` (model-unit-billed) for audio (CosyVoice TTS). Pass --plan to override.",
     "zh-CN":
-      "文本/图片的 Plan 默认为 `lora`（按 Token 计费），音频（CosyVoice TTS）默认为 `mu`（按模型单元计费）。使用 --plan 覆盖默认值。",
+      "文本和图片部署默认使用 `lora`（按 Token 计费），音频（CosyVoice TTS）默认使用 `mu`（按模型单元计费）。可通过 --plan 覆盖。",
   },
   {
     "en-US":
       "For plan=ptu (Token-billed, provisioned throughput), --input-tpm and --output-tpm are required (the platform rejects creation without an explicit ptu_capacity despite the doc listing defaults).",
     "zh-CN":
-      "plan=ptu（按 Token 计费的预置吞吐）时，--input-tpm 和 --output-tpm 必填（如果没有显式 ptu_capacity，即使文档列出了默认值，平台也会拒绝创建）。",
-  },
-  {
-    "en-US": "For plan=mu, `capacity`, `billing_method` and `deploy_spec` are required.",
-    "zh-CN": "plan=mu 时，`capacity`、`billing_method` 和 `deploy_spec` 必填。",
+      "plan=ptu（按 Token 计费的预置吞吐）时，--input-tpm 和 --output-tpm 必填；即使文档列出了默认值，未显式传入 ptu_capacity 时平台也会拒绝创建。",
   },
   {
     "en-US":
-      "billing_method defaults to POST_PAY (only supported value); deploy_spec and capacity are auto-picked from GET /deployments/models when omitted.",
+      "For plan=mu, `capacity`, `billing_method` and `deploy_spec` are required. billing_method defaults to POST_PAY (only supported value); deploy_spec and capacity are auto-picked from GET /deployments/models when omitted.",
     "zh-CN":
-      "billing_method 默认为 POST_PAY（唯一支持值）；省略 deploy_spec 和 capacity 时，会从 GET /deployments/models 自动选择。",
+      "plan=mu 时，`capacity`、`billing_method` 和 `deploy_spec` 必填。billing_method 默认且仅支持 POST_PAY；省略 deploy_spec 和 capacity 时，会从 GET /deployments/models 自动选择。",
   },
   {
     "en-US": "Use `bl deploy models --source base` to inspect available templates.",
     "zh-CN": "使用 `bl deploy models --source base` 查看可用模板。",
   },
   {
-    "en-US": "After creation, status starts at PENDING and transitions to RUNNING.",
-    "zh-CN": "创建后状态从 PENDING 开始，并转换为 RUNNING。",
-  },
-  {
-    "en-US": "Invoke the deployed model with: `bl text chat --model <deployed_model>`.",
-    "zh-CN": "调用已部署模型：`bl text chat --model <deployed_model>`。",
+    "en-US":
+      "After creation, status starts at PENDING and transitions to RUNNING. Invoke the deployed model with: bl text chat --model <deployed_model>",
+    "zh-CN":
+      "创建后状态从 PENDING 开始，随后转为 RUNNING。调用已部署模型：bl text chat --model <deployed_model>",
   },
   {
     "en-US":
-      "WARNING: --model is overloaded across commands and refers to DIFFERENT values. `bl deploy <modality> create --model` takes the exported model_name (e.g. `qwen3-8b-ft-...`), but the create response also returns a `deployed_model` field (the deployment instance id, e.g. `qwen3-8b-5ecb5f068d79`). The inference call `bl text chat --model` must use the `deployed_model` from the create response — NOT the `model_name` you passed to `deploy <modality> create`. Do not reuse the value across the two commands.",
+      "NOTE: --model-name is the model being deployed (e.g. `qwen3-8b-ft-...`). The create response also returns a `deployed_model` field — the deployment instance id (e.g. `qwen3-8b-5ecb5f068d79`). Use that id for inference (`bl text chat --model <deployed_model>`) and lifecycle commands (`deploy get/scale/pause/resume/delete --deployed-model <id>`).",
     "zh-CN":
-      "警告：--model 在不同命令中含义不同，指向不同的值。`bl deploy <modality> create --model` 接收导出的 model_name（例如 `qwen3-8b-ft-...`），但创建响应还会返回 `deployed_model` 字段（部署实例 ID，例如 `qwen3-8b-5ecb5f068d79`）。推理调用 `bl text chat --model` 必须使用创建响应中的 `deployed_model`，而不是传给 `deploy <modality> create` 的 `model_name`。不要在这两个命令之间复用该值。",
+      "注意：--model-name 是要部署的模型（例如 `qwen3-8b-ft-...`）。创建响应中的 `deployed_model` 是部署实例 ID（例如 `qwen3-8b-5ecb5f068d79`），用于推理（`bl text chat --model <deployed_model>`）及生命周期命令（`deploy get/scale/pause/resume/delete --deployed-model <id>`）。",
   },
 ];
 
@@ -167,10 +160,9 @@ async function runCreate(
   ctx: CommandContext<typeof CREATE_FLAGS>,
 ): Promise<void> {
   const { identity, settings, flags } = ctx;
-  const model = flags.model as string;
-  const name = flags.name as string;
+  const model = flags.modelName as string;
+  const name = flags.displayName as string;
   const plan = (flags.plan as string | undefined) || defaultDeployPlan(modality);
-  const format = detectOutputFormat(settings.output);
 
   // Plan-specific behaviour is owned by core `plans.ts`. The strategy resolves
   // the plan-specific body fragment (mu may auto-pick a template from the
@@ -194,7 +186,7 @@ async function runCreate(
   };
 
   if (settings.dryRun) {
-    emitResult({ action: "deploy.create", body }, format);
+    emitResult({ action: "deploy.create", body }, "json");
     return;
   }
 
@@ -203,17 +195,8 @@ async function runCreate(
 
   if (settings.quiet) {
     emitBare(deployment?.deployed_model ?? "");
-  } else if (format === "text") {
-    emitBare(`Created deployment.`);
-    if (deployment?.deployed_model) emitBare(`  deployed_model:  ${deployment.deployed_model}`);
-    if (deployment?.status) emitBare(`  status:          ${deployment.status}`);
-    if (deployment?.plan) emitBare(`  plan:            ${deployment.plan}`);
-    emitBare(
-      `\nNext: track readiness with: ${identity.binName} deploy get --deployed-model ${deployment?.deployed_model ?? "<id>"}`,
-    );
-    emitRequestId(response.request_id, settings.quiet);
   } else {
-    emitResult(response, format);
+    emitResult(response, "json");
   }
 }
 
@@ -224,10 +207,10 @@ export const deployTextCreate = defineCommand({
   usageArgs: CREATE_USAGE,
   flags: CREATE_FLAGS,
   exampleArgs: [
-    "--model my-qwen-sft --name my-sft-test",
-    "--model qwen3.6-flash-2026-04-16 --name my-flash --plan ptu --input-tpm 10000 --output-tpm 1000",
-    "--model qwen3-8b --name my-qwen3-mu --plan mu",
-    "--model qwen3-8b --name my-qwen3 --plan mu --deploy-spec MU1 --capacity 2",
+    "--model-name my-qwen-sft --display-name my-sft-test",
+    "--model-name qwen3.6-flash-2026-04-16 --display-name my-flash --plan ptu --input-tpm 10000 --output-tpm 1000",
+    "--model-name qwen3-8b --display-name my-qwen3-mu --plan mu",
+    "--model-name qwen3-8b --display-name my-qwen3 --plan mu --deploy-spec MU1 --capacity 2",
   ],
   notes: CREATE_NOTES,
   validate: (flags) => validateCreate("text", flags),
@@ -244,9 +227,9 @@ export const deployAudioCreate = defineCommand({
   usageArgs: CREATE_USAGE,
   flags: CREATE_FLAGS,
   exampleArgs: [
-    "--model my-cosyvoice-ft --name my-tts",
-    "--model my-cosyvoice-ft --name my-tts --deploy-spec dps-xxxx --capacity 1",
-    "--model my-cosyvoice-ft --name my-tts --dry-run",
+    "--model-name my-cosyvoice-ft --display-name my-tts",
+    "--model-name my-cosyvoice-ft --display-name my-tts --deploy-spec dps-xxxx --capacity 1",
+    "--model-name my-cosyvoice-ft --display-name my-tts --dry-run",
   ],
   notes: CREATE_NOTES,
   validate: (flags) => validateCreate("audio", flags),
@@ -263,9 +246,9 @@ export const deployImageCreate = defineCommand({
   usageArgs: CREATE_USAGE,
   flags: CREATE_FLAGS,
   exampleArgs: [
-    "--model my-wan-ft --name my-wan",
-    "--model my-wan-ft --name my-wan-mu --plan mu",
-    "--model my-wan-ft --name my-wan --dry-run",
+    "--model-name my-wan-ft --display-name my-wan",
+    "--model-name my-wan-ft --display-name my-wan-mu --plan mu",
+    "--model-name my-wan-ft --display-name my-wan --dry-run",
   ],
   notes: CREATE_NOTES,
   validate: (flags) => validateCreate("image", flags),

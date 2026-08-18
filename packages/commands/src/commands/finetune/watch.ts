@@ -1,12 +1,12 @@
 import {
   defineCommand,
-  detectOutputFormat,
   getFineTune,
   BailianError,
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { emitResult, emitBare } from "bailian-cli-runtime";
+import { computeActualFee } from "./fee.ts";
 
 const DEFAULT_INTERVAL_SEC = 10;
 const MIN_INTERVAL_SEC = 1;
@@ -137,7 +137,6 @@ export default defineCommand({
     const follow = flags.follow;
     const intervalSec = Math.max(MIN_INTERVAL_SEC, flags.interval ?? DEFAULT_INTERVAL_SEC);
     const pollTimeoutSec = flags.pollTimeout;
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
       emitResult(
@@ -148,7 +147,7 @@ export default defineCommand({
           interval: intervalSec,
           timeout: pollTimeoutSec,
         },
-        format,
+        "json",
       );
       return;
     }
@@ -166,16 +165,24 @@ export default defineCommand({
       if (settings.quiet) {
         // Just the status word — ideal for `status=$(... finetune watch ... --quiet)`.
         emitBare(status || "UNKNOWN");
-      } else if (format === "text") {
-        emitBare(`${nowStamp()}  ${jobId}  ${status || "UNKNOWN"}`);
-        if (status === "SUCCEEDED") emitBare(`✓ ${jobId}  ${status}`);
-        emitRequestId(response.request_id, settings.quiet);
       } else {
-        // json: a compact, purpose-built status probe.
-        emitResult(
-          { job_id: jobId, status: status || "UNKNOWN", terminal, request_id: response.request_id },
-          format,
-        );
+        const output: Record<string, unknown> = {
+          job_id: jobId,
+          status: status || "UNKNOWN",
+          terminal,
+          request_id: response.request_id,
+        };
+        // Enrich terminal output with actual fee when usage is reported.
+        const usageTokens = typeof job?.usage === "number" ? job.usage : undefined;
+        if (terminal && usageTokens && usageTokens > 0 && job?.model) {
+          output.usage_tokens = usageTokens;
+          const fee = await computeActualFee(settings, job.model as string, usageTokens);
+          if (fee) {
+            output.training_cost = fee.cost;
+            output.cost_basis = `${fee.unitPrice} 元/${fee.priceUnit}`;
+          }
+        }
+        emitResult(output, "json");
       }
 
       if (terminal && status !== "SUCCEEDED") {
@@ -202,18 +209,28 @@ export default defineCommand({
         const job = response.output ?? response.data;
         const status = String(job?.status ?? "").toUpperCase();
 
-        if (format === "text" && !settings.quiet && status !== lastStatus) {
-          emitBare(`${nowStamp()}  ${jobId}  ${status || "UNKNOWN"}`);
+        if (!settings.quiet && status !== lastStatus) {
+          process.stderr.write(`${nowStamp()}  ${jobId}  ${status || "UNKNOWN"}\n`);
           lastStatus = status;
         }
 
         if (TERMINAL_STATUSES.has(status)) {
           const elapsed = Date.now() - startedAt;
-          if (format !== "text" || settings.quiet) {
-            emitResult(response, format);
-          } else if (status === "SUCCEEDED") {
-            emitBare(`\n✓ ${jobId}  ${status}  (elapsed ${formatElapsed(elapsed)})`);
-            emitRequestId(response.request_id, settings.quiet);
+          if (settings.quiet) {
+            emitBare(status || "UNKNOWN");
+          } else {
+            // Enrich the raw response with actual fee when usage is available.
+            const usageTokens = typeof job?.usage === "number" ? job.usage : undefined;
+            const enriched: Record<string, unknown> = { ...response };
+            if (usageTokens && usageTokens > 0 && job?.model) {
+              const fee = await computeActualFee(settings, job.model as string, usageTokens);
+              if (fee) {
+                enriched.training_cost = fee.cost;
+                enriched.usage_tokens = usageTokens;
+                enriched.cost_basis = `${fee.unitPrice} 元/${fee.priceUnit}`;
+              }
+            }
+            emitResult(enriched, "json");
           }
           if (status !== "SUCCEEDED") {
             throw new BailianError(
@@ -239,7 +256,7 @@ export default defineCommand({
       // Any other error (including the BailianError thrown above) propagates to
       // the central handler.
       if (controller.signal.aborted) {
-        emitBare("\nInterrupted.");
+        process.stderr.write("\nInterrupted.\n");
         return;
       }
       throw error;

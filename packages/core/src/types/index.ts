@@ -49,6 +49,7 @@ export type {
   ChatTool,
   DashScopeASRRequest,
   DashScopeASRTaskResult,
+  DashScopeASRTranscriptionItem,
   DashScopeAsyncResponse,
   DashScopeImageRequest,
   DashScopeImageSyncResponse,
@@ -80,3 +81,4 @@ export type {
   StreamChunk,
   UserProfileResponse,
 } from "./api.ts";
+export type * from "./knowledge-admin.ts";

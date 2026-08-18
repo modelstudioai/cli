@@ -7,22 +7,53 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command             | Description                                                                                |
-| ------------------- | ------------------------------------------------------------------------------------------ |
-| `bl usage free`     | Query free-tier quota for models (all models if --model is omitted)                        |
-| `bl usage freetier` | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable |
-| `bl usage stats`    | Query model usage statistics                                                               |
-| `bl usage summary`  | Show a unified usage summary: free-tier quota and recent usage overview                    |
+| Command                | Authentication | Description                                                                                |
+| ---------------------- | -------------- | ------------------------------------------------------------------------------------------ |
+| `bl usage coding-plan` | Console        | Show Coding Plan quota usage                                                               |
+| `bl usage free`        | Console        | Query free-tier quota for models (all models if --model is omitted)                        |
+| `bl usage freetier`    | Console        | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable |
+| `bl usage stats`       | Console        | Query model usage statistics                                                               |
+| `bl usage summary`     | Console        | Show a unified usage summary: free-tier quota and recent usage overview                    |
+| `bl usage token-plan`  | Console        | Show Token Plan quota usage                                                                |
 
 ## Command details
 
+### `bl usage coding-plan`
+
+| Field              | Value                          |
+| ------------------ | ------------------------------ |
+| **Name**           | `usage coding-plan`            |
+| **Description**    | Show Coding Plan quota usage   |
+| **Authentication** | Console                        |
+| **Usage**          | `bl usage coding-plan [flags]` |
+
+#### Flags
+
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
+
+#### Examples
+
+```bash
+bl usage coding-plan
+```
+
+```bash
+bl usage coding-plan --output json
+```
+
 ### `bl usage free`
 
-| Field           | Value                                                               |
-| --------------- | ------------------------------------------------------------------- |
-| **Name**        | `usage free`                                                        |
-| **Description** | Query free-tier quota for models (all models if --model is omitted) |
-| **Usage**       | `bl usage free [--model <model>[,model2,...]] [flags]`              |
+| Field              | Value                                                               |
+| ------------------ | ------------------------------------------------------------------- |
+| **Name**           | `usage free`                                                        |
+| **Description**    | Query free-tier quota for models (all models if --model is omitted) |
+| **Authentication** | Console                                                             |
+| **Usage**          | `bl usage free [--model <model>[,model2,...]] [flags]`              |
 
 #### Flags
 
@@ -73,11 +104,12 @@ bl usage free --model qwen3-max --console-region cn-beijing
 
 ### `bl usage freetier`
 
-| Field           | Value                                                                                      |
-| --------------- | ------------------------------------------------------------------------------------------ |
-| **Name**        | `usage freetier`                                                                           |
-| **Description** | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable |
-| **Usage**       | `bl usage freetier <--model <model>[,model2,...] \| --all> [--off] [flags]`                |
+| Field              | Value                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| **Name**           | `usage freetier`                                                                           |
+| **Description**    | Enable or disable auto-stop for free-tier models. Enables by default; use --off to disable |
+| **Authentication** | Console                                                                                    |
+| **Usage**          | `bl usage freetier <--model <model>[,model2,...] \| --all> [--off] [flags]`                |
 
 #### Flags
 
@@ -120,11 +152,12 @@ bl usage freetier --off --all
 
 ### `bl usage stats`
 
-| Field           | Value                                                      |
-| --------------- | ---------------------------------------------------------- |
-| **Name**        | `usage stats`                                              |
-| **Description** | Query model usage statistics                               |
-| **Usage**       | `bl usage stats [--model <model>] [--days <days>] [flags]` |
+| Field              | Value                                                      |
+| ------------------ | ---------------------------------------------------------- |
+| **Name**           | `usage stats`                                              |
+| **Description**    | Query model usage statistics                               |
+| **Authentication** | Console                                                    |
+| **Usage**          | `bl usage stats [--model <model>] [--days <days>] [flags]` |
 
 #### Flags
 
@@ -170,11 +203,12 @@ bl usage stats --output json
 
 ### `bl usage summary`
 
-| Field           | Value                                                                   |
-| --------------- | ----------------------------------------------------------------------- |
-| **Name**        | `usage summary`                                                         |
-| **Description** | Show a unified usage summary: free-tier quota and recent usage overview |
-| **Usage**       | `bl usage summary [--days <days>] [flags]`                              |
+| Field              | Value                                                                   |
+| ------------------ | ----------------------------------------------------------------------- |
+| **Name**           | `usage summary`                                                         |
+| **Description**    | Show a unified usage summary: free-tier quota and recent usage overview |
+| **Authentication** | Console                                                                 |
+| **Usage**          | `bl usage summary [--days <days>] [flags]`                              |
 
 #### Flags
 
@@ -198,4 +232,32 @@ bl usage summary --days 30
 
 ```bash
 bl usage summary --output json
+```
+
+### `bl usage token-plan`
+
+| Field              | Value                         |
+| ------------------ | ----------------------------- |
+| **Name**           | `usage token-plan`            |
+| **Description**    | Show Token Plan quota usage   |
+| **Authentication** | Console                       |
+| **Usage**          | `bl usage token-plan [flags]` |
+
+#### Flags
+
+| Flag                           | Type   | Required | Description                                              |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--console-region <region>`    | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1) |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                    |
+| `--console-switch-agent <uid>` | number | no       | Switch agent UID for delegated access                    |
+| `--workspace-id <id>`          | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                 |
+
+#### Examples
+
+```bash
+bl usage token-plan
+```
+
+```bash
+bl usage token-plan --output json
 ```

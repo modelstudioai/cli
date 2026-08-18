@@ -1,10 +1,5 @@
-import {
-  defineCommand,
-  detectOutputFormat,
-  exportCheckpoint,
-  type FlagsDef,
-} from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { defineCommand, exportCheckpoint, type FlagsDef } from "bailian-cli-core";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const EXPORT_FLAGS = {
   jobId: {
@@ -48,11 +43,10 @@ export default defineCommand({
     },
   ],
   async run(ctx) {
-    const { identity, settings, flags } = ctx;
+    const { settings, flags } = ctx;
     const jobId = flags.jobId;
     const checkpoint = flags.checkpoint;
     const modelName = flags.modelName;
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
       emitResult(
@@ -62,7 +56,7 @@ export default defineCommand({
           checkpoint,
           model_name: modelName,
         },
-        format,
+        "json",
       );
       return;
     }
@@ -73,14 +67,8 @@ export default defineCommand({
 
     if (settings.quiet) {
       emitBare(exported);
-    } else if (format === "text") {
-      emitBare(`Exported ${jobId} / ${checkpoint} → model_name=${exported}`);
-      emitBare(
-        `Next: ${identity.binName} deploy text create --model ${exported} --name <display-name>`,
-      );
-      emitRequestId(response.request_id, settings.quiet);
     } else {
-      emitResult(response, format);
+      emitResult(response, "json");
     }
   },
 });

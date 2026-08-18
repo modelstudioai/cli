@@ -16,7 +16,15 @@ import type { ValidationIssue } from "../types.ts";
 import type { RecordSchemaSpec } from "./types.ts";
 
 /** Accepted image file extensions (lower-case, with dot). */
-export const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".bmp", ".webp", ".tiff"]);
+export const IMAGE_EXTENSIONS = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".bmp",
+  ".tif",
+  ".tiff",
+  ".webp",
+]);
 
 /**
  * Check that a path string ends with an accepted image extension.

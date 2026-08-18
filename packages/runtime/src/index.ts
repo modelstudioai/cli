@@ -42,7 +42,13 @@ export {
 // Output facilities consumed by commands
 export { emitResult, emitBare, emitRequestId } from "./output/output.ts";
 export { formatTable } from "./output/table.ts";
-export { renderBoxTable, type BoxTableOptions, type BarColumn } from "./output/box-table.ts";
+export {
+  renderBoxTable,
+  renderGauge,
+  type BoxTableOptions,
+  type BarColumn,
+  type GaugeCell,
+} from "./output/box-table.ts";
 export { createSpinner, createProgressBar } from "./output/progress.ts";
 export { printWelcomeBanner, printQuickStart } from "./output/banner.ts";
 export { maybeShowStatusBar } from "./output/status-bar.ts";
@@ -57,6 +63,7 @@ export {
 
 // Utility facilities consumed by commands
 export { poll } from "./utils/polling.ts";
+export { confirmDangerousAction } from "./confirm.ts";
 export { downloadFile, formatBytes } from "./utils/download.ts";
 export { runConcurrent, getConcurrency, downloadParallel } from "./utils/concurrent.ts";
 export { resolveImageSize } from "./utils/image-size.ts";

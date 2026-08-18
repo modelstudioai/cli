@@ -1,175 +1,25 @@
-import {
-  defineCommand,
-  BailianError,
-  ExitCode,
-  detectOutputFormat,
-  type Settings,
-  type Client,
-} from "bailian-cli-core";
+import { defineCommand, BailianError, ExitCode, detectOutputFormat } from "bailian-cli-core";
 import { ansi, emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
-
-const OVERVIEW_API = "zeldaEasy.bailian-telemetry.model.getModelUsageStatistic";
-const LIST_API = "zeldaEasy.bailian-telemetry.model.listModelUsageStatisticData";
-
-interface UsageItem {
-  key: string;
-  value: number;
-  unit: string;
-}
-
-interface OverviewStatistic {
-  callCount: number;
-  modelCount: number;
-  callSuccessCount: number;
-  usages: UsageItem[];
-}
-
-interface ModelStatisticItem {
-  model: string;
-  callSuccessCount: number;
-  usages?: UsageItem[];
-  usage?: Record<string, number | undefined>;
-}
-
-interface ListStatisticResponse {
-  list: ModelStatisticItem[];
-  totalCount: number;
-  maxResults: number;
-}
-
-function getNestedRecord(
-  obj: Record<string, unknown>,
-  key: string,
-): Record<string, unknown> | undefined {
-  const val = obj[key];
-  if (val && typeof val === "object" && !Array.isArray(val)) return val as Record<string, unknown>;
-  return undefined;
-}
-
-function extractResponseData(result: Record<string, unknown>): Record<string, unknown> {
-  const data = getNestedRecord(result, "data");
-  if (!data) return result;
-
-  const dataV2 = getNestedRecord(data, "DataV2");
-  if (dataV2) {
-    const inner = getNestedRecord(dataV2, "data");
-    const innerData = inner ? getNestedRecord(inner, "data") : undefined;
-    return innerData ?? inner ?? dataV2;
-  }
-
-  const direct = getNestedRecord(data, "data");
-  return direct ?? data;
-}
-
-const POLL_INTERVAL_MS = 500;
-const MAX_POLLS = 30;
-
-async function pollTelemetryApi(
-  client: Client,
-  api: string,
-  reqDTO: Record<string, unknown>,
-): Promise<unknown> {
-  let nextTaskId: string | undefined;
-
-  for (let attempt = 0; attempt < MAX_POLLS; attempt++) {
-    const requestData = nextTaskId
-      ? { reqDTO: { ...reqDTO, asyncTaskId: nextTaskId } }
-      : { reqDTO };
-
-    const raw = await client.console(api, requestData);
-
-    const resp = extractResponseData(raw as Record<string, unknown>);
-
-    if (resp.taskId && Object.keys(resp).length === 1) {
-      nextTaskId = resp.taskId as string;
-      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-      continue;
-    }
-
-    return raw;
-  }
-  return null;
-}
-
-function requireWorkspaceId(settings: Settings, binName: string): string {
-  if (settings.workspaceId) return settings.workspaceId;
-
-  throw new BailianError(
-    `workspace-id is required. Set via --workspace-id, BAILIAN_WORKSPACE_ID, or \`${binName} config set workspace_id <id>\`.`,
-    ExitCode.GENERAL,
-    `Run \`${binName} workspace list\` to view available workspaces.`,
-  );
-}
-
-function formatNumber(num: number): string {
-  return num.toLocaleString("en-US");
-}
-
-function formatDate(ts: number): string {
-  const date = new Date(ts);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function extractOverviewData(result: unknown): OverviewStatistic | undefined {
-  const resp = extractResponseData(result as Record<string, unknown>);
-  if (resp.callSuccessCount !== undefined || resp.usages !== undefined) {
-    return resp as unknown as OverviewStatistic;
-  }
-  return undefined;
-}
-
-function extractListData(result: unknown): ListStatisticResponse {
-  const resp = extractResponseData(result as Record<string, unknown>);
-  const list = (resp.list as ModelStatisticItem[]) ?? [];
-  const totalCount = (resp.totalCount as number) ?? 0;
-  const maxResults = (resp.maxResults as number) ?? 0;
-  return { list, totalCount, maxResults };
-}
-
-function resolveUsageMap(item: ModelStatisticItem): Record<string, number> {
-  const out: Record<string, number> = {};
-  if (item.usages && Array.isArray(item.usages)) {
-    for (const entry of item.usages) {
-      if (entry.key && entry.value != null) {
-        out[entry.key] = entry.value;
-      }
-    }
-  }
-  if (item.usage && typeof item.usage === "object") {
-    for (const [key, val] of Object.entries(item.usage)) {
-      if (val != null) out[key] = val;
-    }
-  }
-  return out;
-}
+import {
+  LIST_API,
+  OVERVIEW_API,
+  USAGE_KEY_LABELS,
+  extractListData,
+  extractOverviewData,
+  formatDate,
+  pollTelemetryApi,
+  requireWorkspaceId,
+  resolveUsageMap,
+  type ModelStatisticItem,
+  type OverviewStatistic,
+} from "./shared.ts";
+import { formatNumber } from "../shared/format.ts";
 
 interface UsageLabel {
   en: string;
   unit?: string;
 }
-
-const USAGE_KEY_LABELS: Record<string, UsageLabel> = {
-  total_token: { en: "Total Tokens", unit: "tokens" },
-  input_token: { en: "Input Tokens", unit: "tokens" },
-  output_token: { en: "Output Tokens", unit: "tokens" },
-  input_token_cache: { en: "Cached Tokens", unit: "tokens" },
-  input_token_cache_read: { en: "Cache Read", unit: "tokens" },
-  input_token_cache_creation: { en: "Cache Creation", unit: "tokens" },
-  thinking_input_token: { en: "Thinking Input", unit: "tokens" },
-  thinking_output_token: { en: "Thinking Output", unit: "tokens" },
-  text_input_token: { en: "Text Input", unit: "tokens" },
-  purein_text_output_token: { en: "Text Output", unit: "tokens" },
-  embedding_token: { en: "Embedding", unit: "tokens" },
-  image_number: { en: "Images", unit: "images" },
-  video_duration: { en: "Video Duration", unit: "sec" },
-  content_duration: { en: "Audio Duration", unit: "sec" },
-  tts_text_number: { en: "TTS Chars", unit: "chars" },
-  total_token_avg: { en: "Avg Tokens/Req" },
-};
 
 function formatLabel(label: UsageLabel): string {
   const unitSuffix = label.unit ? ` [${label.unit}]` : "";

@@ -1,6 +1,7 @@
 import { defineCommand, detectOutputFormat, BailianError, ExitCode } from "bailian-cli-core";
 import { ansi, emitResult } from "bailian-cli-runtime";
 import { displayWidth, padEnd } from "bailian-cli-runtime";
+import { formatNumber } from "../shared/format.ts";
 
 const HISTORY_API = "zeldaEasy.broadscope-platform.modelInstance.listModelLimitApplications";
 
@@ -47,10 +48,6 @@ function formatDateTime(ts: string | undefined): string {
   } catch {
     return ts;
   }
-}
-
-function formatNumber(num: number): string {
-  return num.toLocaleString("en-US");
 }
 
 function printTable(records: LimitApplicationItem[], total: number): void {

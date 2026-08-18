@@ -1,5 +1,5 @@
 import {
-  fetchModelList,
+  fetchModelListAll,
   BailianError,
   ExitCode,
   unwrapResponse,
@@ -7,14 +7,11 @@ import {
   type Settings,
 } from "bailian-cli-core";
 import { ansi, renderBoxTable, displayWidth, padEnd } from "bailian-cli-runtime";
+import { formatNumber } from "../shared/format.ts";
 
 // ---------------------------------------------------------------------------
 // Common formatters
 // ---------------------------------------------------------------------------
-
-export function formatNumber(num: number): string {
-  return num.toLocaleString("en-US");
-}
 
 export function formatDate(ts: number): string {
   const date = new Date(ts);
@@ -22,6 +19,14 @@ export function formatDate(ts: number): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+export function formatDateTime(ts: number): string {
+  const date = new Date(ts);
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  const second = String(date.getSeconds()).padStart(2, "0");
+  return `${formatDate(ts)} ${hour}:${minute}:${second}`;
 }
 
 export function requireWorkspaceId(settings: Settings, binName: string): string {
@@ -79,17 +84,7 @@ export interface ModelInfo {
 }
 
 export async function fetchAllModels(client: Client): Promise<ModelInfo[]> {
-  const allModels: Record<string, unknown>[] = [];
-  let page = 1;
-  while (true) {
-    const result = await fetchModelList((api, data) => client.console(api, data), {
-      pageNo: page,
-      pageSize: 50,
-    });
-    allModels.push(...result.models);
-    if (allModels.length >= result.total) break;
-    page++;
-  }
+  const allModels = await fetchModelListAll((api, data) => client.console(api, data));
   return allModels
     .filter((item) => typeof item.model === "string" && item.model)
     .map((item) => ({
@@ -102,9 +97,9 @@ export async function fetchAllModels(client: Client): Promise<ModelInfo[]> {
 // Free-tier quota
 // ---------------------------------------------------------------------------
 
-export const FREE_TIER_API = "zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota";
+export const FREE_TIER_API = "zeldaEasy.bailian-commerce.freeTrial.queryFreeTierQuota";
 export const FREE_TIER_ONLY_STATUS_API =
-  "zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierOnlyStatus";
+  "zeldaEasy.bailian-commerce.freeTrial.queryFreeTierOnlyStatus";
 
 export interface FreeTierQuota {
   model: string;
@@ -257,22 +252,27 @@ export interface ListStatisticResponse {
 }
 
 const POLL_INTERVAL_MS = 500;
-const MAX_POLLS = 30;
+const DEFAULT_MAX_POLLS = 30;
 
-export async function pollTelemetryApi(
+/**
+ * Poll a console API until it returns a terminal (non task-id) response.
+ * The gateway answers an async request with a bare `{taskId}` envelope; the
+ * caller re-issues with that id until real data arrives or the budget runs out.
+ * `buildRequest` shapes each attempt (initial call vs. taskId follow-up) so the
+ * same loop serves every request-wrapper convention (telemetry `reqDTO`,
+ * free-tier batch `…Request`).
+ */
+export async function pollConsoleUntilDone(
   client: Client,
   api: string,
-  reqDTO: Record<string, unknown>,
+  buildRequest: (taskId: string | undefined) => Record<string, unknown>,
+  maxPolls = DEFAULT_MAX_POLLS,
 ): Promise<unknown> {
   let nextTaskId: string | undefined;
 
-  for (let attempt = 0; attempt < MAX_POLLS; attempt++) {
-    const requestData = nextTaskId
-      ? { reqDTO: { ...reqDTO, asyncTaskId: nextTaskId } }
-      : { reqDTO };
-
-    const raw = await client.console(api, requestData);
-    const resp = extractResponseData(raw as Record<string, unknown>);
+  for (let attempt = 0; attempt < maxPolls; attempt++) {
+    const raw = await client.console(api, buildRequest(nextTaskId));
+    const resp = unwrapResponse(raw as Record<string, unknown>);
 
     if (resp.taskId && Object.keys(resp).length === 1) {
       nextTaskId = resp.taskId as string;
@@ -282,6 +282,32 @@ export async function pollTelemetryApi(
     return raw;
   }
   return null;
+}
+
+/** Telemetry APIs wrap the payload in `reqDTO` and echo the task id as `asyncTaskId`. */
+export async function pollTelemetryApi(
+  client: Client,
+  api: string,
+  reqDTO: Record<string, unknown>,
+): Promise<unknown> {
+  return pollConsoleUntilDone(client, api, (taskId) =>
+    taskId ? { reqDTO: { ...reqDTO, asyncTaskId: taskId } } : { reqDTO },
+  );
+}
+
+/** Free-tier batch activate/deactivate wrap the payload in `requestKey` and echo `taskId`. */
+export async function pollFreeTierBatch(
+  client: Client,
+  api: string,
+  requestKey: string,
+  models: string[],
+): Promise<unknown> {
+  return pollConsoleUntilDone(
+    client,
+    api,
+    (taskId) => ({ [requestKey]: taskId ? { taskId } : { models } }),
+    20,
+  );
 }
 
 export function extractOverviewData(result: unknown): OverviewStatistic | undefined {

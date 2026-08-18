@@ -39,6 +39,7 @@ export const KNOWLEDGE_ROUTES: E2eRouteExports = {
   "knowledge retrieve": "knowledgeRetrieve",
   "knowledge search": "knowledgeSearch",
   "knowledge chat": "knowledgeChat",
+  "knowledge list": "knowledgeKbList", // live: grab a real index id for retrieve
 };
 
 export const KNOWLEDGE_SEARCH_ROUTES: E2eRouteExports = {
@@ -100,15 +101,25 @@ export const ADVISOR_ROUTES: E2eRouteExports = {
 
 export const QUOTA_ROUTES: E2eRouteExports = {
   "quota list": "quotaList",
-  "quota request": "quotaRequest",
+  "quota update": "quotaUpdate",
+  // Backward-compatible alias of "quota update".
+  "quota request": "quotaUpdate",
   "quota history": "quotaHistory",
   "quota check": "quotaCheck",
+};
+
+export const PERMISSION_ROUTES: E2eRouteExports = {
+  "permission list": "permissionList",
+  "permission grant": "permissionGrant",
+  "permission revoke": "permissionRevoke",
 };
 
 export const USAGE_ROUTES: E2eRouteExports = {
   "usage free": "usageFree",
   "usage freetier": "usageFreetier",
   "usage stats": "usageStats",
+  "usage token-plan": "usageTokenPlan",
+  "usage coding-plan": "usageCodingPlan",
 };
 
 export const DEPLOY_ROUTES: E2eRouteExports = {
@@ -135,6 +146,7 @@ export const FINETUNE_ROUTES: E2eRouteExports = {
   "finetune text create": "finetuneTextCreate",
   "finetune audio create": "finetuneAudioCreate",
   "finetune image create": "finetuneImageCreate",
+  "finetune video create": "finetuneVideoCreate",
   "finetune list": "finetuneList",
   "finetune get": "finetuneGet",
   "finetune cancel": "finetuneCancel",
@@ -183,4 +195,158 @@ export const MANAGED_AGENT_ROUTES: E2eRouteExports = {
   "managed-agent session run": "managedAgentSessionRun",
   "managed-agent session send": "managedAgentSessionSend",
   "managed-agent skill-list": "managedAgentSkillList",
+};
+
+export const KNOWLEDGE_KB_LIST_ROUTES: E2eRouteExports = {
+  "knowledge list": "knowledgeKbList",
+};
+
+export const KNOWLEDGE_KB_INFO_ROUTES: E2eRouteExports = {
+  "knowledge info": "knowledgeKbInfo",
+  "knowledge list": "knowledgeKbList", // live cases list first to grab a real id
+};
+
+export const KNOWLEDGE_DOC_LIST_ROUTES: E2eRouteExports = {
+  "knowledge doc list": "knowledgeDocList",
+  "knowledge list": "knowledgeKbList", // live cases grab a real index id first
+};
+
+export const KNOWLEDGE_DOC_STATUS_ROUTES: E2eRouteExports = {
+  "knowledge doc status": "knowledgeDocStatus",
+  "knowledge doc upload": "knowledgeDocUpload", // live: produce a real job_id
+  "knowledge create": "knowledgeKbCreate", // live: create a throwaway base
+  "knowledge delete": "knowledgeKbDelete", // live: cleanup the throwaway base
+  "knowledge file delete": "knowledgeFileDelete", // live: cleanup data-center files
+};
+
+export const KNOWLEDGE_DOC_UPLOAD_ROUTES: E2eRouteExports = {
+  "knowledge doc upload": "knowledgeDocUpload",
+  "knowledge file delete": "knowledgeFileDelete", // live cleanup of data-center files
+  "knowledge list": "knowledgeKbList", // live: grab a real index id for --index-id --wait
+};
+
+export const KNOWLEDGE_KB_CREATE_ROUTES: E2eRouteExports = {
+  "knowledge create": "knowledgeKbCreate",
+};
+
+export const KNOWLEDGE_KB_UPDATE_ROUTES: E2eRouteExports = {
+  "knowledge update": "knowledgeKbUpdate",
+};
+
+export const KNOWLEDGE_KB_DELETE_ROUTES: E2eRouteExports = {
+  "knowledge delete": "knowledgeKbDelete",
+  "knowledge create": "knowledgeKbCreate", // live self-cleaning chain
+  "knowledge update": "knowledgeKbUpdate", // live update step in the chain
+  "knowledge info": "knowledgeKbInfo", // live: verify update landed on the server
+  "knowledge list": "knowledgeKbList",
+  "knowledge doc upload": "knowledgeDocUpload",
+  "knowledge doc list": "knowledgeDocList", // live: verify imported file is visible in the KB
+  "knowledge file delete": "knowledgeFileDelete", // live cleanup of data-center files
+};
+
+export const KNOWLEDGE_DOC_DELETE_ROUTES: E2eRouteExports = {
+  "knowledge doc delete": "knowledgeDocDelete",
+};
+
+export const KNOWLEDGE_DOC_TAG_ROUTES: E2eRouteExports = {
+  "knowledge doc tag": "knowledgeDocTag",
+  "knowledge doc upload": "knowledgeDocUpload", // live uploads first to grab a real fileId
+  "knowledge file get": "knowledgeFileGet", // live: verify tags landed on the server
+  "knowledge file delete": "knowledgeFileDelete", // live cleanup of data-center files
+};
+
+export const KNOWLEDGE_KB_STATS_ROUTES: E2eRouteExports = {
+  "knowledge stats": "knowledgeKbStats",
+};
+
+export const KNOWLEDGE_SERVICE_ROUTES: E2eRouteExports = {
+  "knowledge service list": "knowledgeServiceList",
+  "knowledge service get": "knowledgeServiceGet",
+  "knowledge service create": "knowledgeServiceCreate",
+  "knowledge service update": "knowledgeServiceUpdate",
+  "knowledge service deploy": "knowledgeServiceDeploy",
+  "knowledge service delete": "knowledgeServiceDelete",
+  "knowledge service copy": "knowledgeServiceCopy",
+  "knowledge search": "knowledgeSearch", // beta verification chain smoke
+};
+
+export const KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES: E2eRouteExports = {
+  "knowledge chunk add": "knowledgeChunkAdd",
+  "knowledge chunk list": "knowledgeChunkList",
+  "knowledge chunk update": "knowledgeChunkUpdate",
+  "knowledge chunk delete": "knowledgeChunkDelete",
+  "knowledge stats": "knowledgeKbStats",
+  "knowledge retrieve": "knowledgeRetrieve", // live rerank retrieval on the throwaway base
+  "knowledge category list": "knowledgeCategoryList",
+  "knowledge category add": "knowledgeCategoryAdd",
+  "knowledge category delete": "knowledgeCategoryDelete",
+  "knowledge file list": "knowledgeFileList",
+  "knowledge file get": "knowledgeFileGet",
+  "knowledge file delete": "knowledgeFileDelete",
+  "knowledge collection create": "knowledgeCollectionCreate",
+  "knowledge collection get": "knowledgeCollectionGet",
+  "knowledge doc import-oss": "knowledgeDocImportOss",
+  "knowledge list": "knowledgeKbList", // live grabs a real index id
+  "knowledge doc list": "knowledgeDocList", // table fixture: resolve the document-level dataId
+  "knowledge doc upload": "knowledgeDocUpload", // live produces a fileId
+  "knowledge doc delete": "knowledgeDocDelete", // live verifies document-level delete semantics
+};
+
+// ---- Journey-level routes (full user-journey chains, see journeys/README.md) ----
+
+/** Minimal create/cleanup routes shared by J1–J4 */
+const JOURNEY_KB_BASE_ROUTES: E2eRouteExports = {
+  "knowledge doc upload": "knowledgeDocUpload",
+  "knowledge create": "knowledgeKbCreate",
+  "knowledge retrieve": "knowledgeRetrieve",
+  "knowledge delete": "knowledgeKbDelete",
+  "knowledge file delete": "knowledgeFileDelete", // clean up data-center files
+};
+
+export const JOURNEY_J1_ROUTES: E2eRouteExports = {
+  ...JOURNEY_KB_BASE_ROUTES,
+  "knowledge service create": "knowledgeServiceCreate",
+  "knowledge service get": "knowledgeServiceGet", // search-service retrieval-parameter backfill chain
+  "knowledge service update": "knowledgeServiceUpdate",
+  "knowledge service delete": "knowledgeServiceDelete",
+  "knowledge search": "knowledgeSearch",
+  "knowledge chat": "knowledgeChat",
+};
+
+export const JOURNEY_J2_ROUTES: E2eRouteExports = {
+  ...JOURNEY_KB_BASE_ROUTES,
+  "knowledge doc list": "knowledgeDocList",
+  "knowledge doc status": "knowledgeDocStatus",
+  "knowledge doc tag": "knowledgeDocTag",
+  "knowledge doc delete": "knowledgeDocDelete",
+  "knowledge stats": "knowledgeKbStats",
+};
+
+export const JOURNEY_J3_ROUTES: E2eRouteExports = {
+  ...JOURNEY_KB_BASE_ROUTES,
+  "knowledge chunk list": "knowledgeChunkList",
+  "knowledge chunk update": "knowledgeChunkUpdate",
+  "knowledge chunk delete": "knowledgeChunkDelete", // negative branch: delete an unknown chunk id
+};
+
+export const JOURNEY_J4_ROUTES: E2eRouteExports = {
+  ...JOURNEY_KB_BASE_ROUTES,
+  "knowledge service create": "knowledgeServiceCreate",
+  "knowledge service update": "knowledgeServiceUpdate",
+  "knowledge service get": "knowledgeServiceGet",
+  "knowledge service deploy": "knowledgeServiceDeploy",
+  "knowledge service delete": "knowledgeServiceDelete",
+  "knowledge search": "knowledgeSearch",
+};
+
+export const JOURNEY_J5_ROUTES: E2eRouteExports = {
+  "knowledge collection create": "knowledgeCollectionCreate",
+  "knowledge collection get": "knowledgeCollectionGet",
+  "knowledge category add": "knowledgeCategoryAdd",
+  "knowledge category list": "knowledgeCategoryList",
+  "knowledge category delete": "knowledgeCategoryDelete",
+  "knowledge file list": "knowledgeFileList",
+  "knowledge file get": "knowledgeFileGet",
+  "knowledge file delete": "knowledgeFileDelete",
+  "knowledge doc upload": "knowledgeDocUpload",
 };

@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat, deleteDataset, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId } from "bailian-cli-runtime";
+import { defineCommand, deleteDataset, type FlagsDef } from "bailian-cli-core";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const DELETE_FLAGS = {
   fileId: {
@@ -19,20 +19,18 @@ export default defineCommand({
   async run(ctx) {
     const { settings, flags } = ctx;
     const fileId = flags.fileId;
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
-      emitResult({ action: "dataset.delete", file_id: fileId }, format);
+      emitResult({ action: "dataset.delete", file_id: fileId }, "json");
       return;
     }
 
     const response = await deleteDataset(ctx.client, fileId);
 
-    if (settings.quiet || format === "text") {
-      emitBare(`Deleted ${fileId}.`);
-      emitRequestId(response.request_id, settings.quiet);
+    if (settings.quiet) {
+      emitBare(fileId);
     } else {
-      emitResult(response, format);
+      emitResult(response, "json");
     }
   },
 });

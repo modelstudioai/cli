@@ -31,7 +31,7 @@ export default defineCommand({
     },
   },
   exampleArgs: [
-    `--api zeldaEasy.broadscope-bailian.freeTrial.queryFreeTierQuota --data '{"queryFreeTierQuotaRequest":{"models":["qwen3-max"]}}'`,
+    `--api zeldaEasy.bailian-commerce.freeTrial.queryFreeTierQuota --data '{"queryFreeTierQuotaRequest":{"models":["qwen3-max"]}}'`,
     `--api some.api.name --data '{"key":"value"}' --console-region cn-beijing`,
   ],
   async run(ctx) {

@@ -6,6 +6,85 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.17.0] - 2026-08-17
+
+### Added
+
+- **Native Bailian Managed Agent Deployments** — `deployments` declared in `agents.yaml` now materialize as native AgentStudio resources, with server-side cron schedules, local file resource uploads, archival through `destroy`, and migration of legacy emulated state on the next `apply`.
+
+## [1.16.0] - 2026-08-17
+
+> Full knowledge-base lifecycle management arrives in the CLI: create and configure knowledge bases, upload documents, tune chunks, and deploy retrieval/Q&A services — all from `bl knowledge` and `kscli`.
+
+### Added
+
+- **Knowledge base management** — `bl knowledge create` / `list` / `info` / `update` / `delete` manage knowledge bases end to end; `bl knowledge stats` reports document counts and usage over a past time range.
+- **Document management** — `bl knowledge doc upload` uploads local files or whole directories (recursive scan, skips unsupported formats and tool directories like `node_modules`); `doc list` / `status` / `tag` / `delete` cover the rest of the document lifecycle, and `doc import-oss` imports documents from OSS.
+- **Retrieval / Q&A service management** — `bl knowledge service list` / `get` / `create` / `update` / `deploy` / `delete` / `copy` manage retrieval and Q&A service configurations, including deploying a draft to a published version.
+- **Chunk management** — `bl knowledge chunk add` / `list` / `update` / `delete` inspect and fine-tune document chunks.
+- **Data-center management** — `bl knowledge category list` / `add` / `delete`, `bl knowledge file list` / `get` / `delete`, and `bl knowledge collection create` / `get` manage categories, raw files, and data collections.
+- **Service version selection for retrieval and chat** — `bl knowledge search` and `bl knowledge chat` accept `--agent-version` to call the beta (draft) config for debugging or a specific published version.
+- **`kscli` parity** — all new knowledge commands are also available in Knowledge Studio CLI under shorter paths, e.g. `kscli kb list`, `kscli doc upload`, `kscli service deploy`.
+
+### Removed
+
+- **`bl knowledge search --query-history` removed** — the parameter never took effect; use `bl knowledge chat` with `--message` history for multi-turn scenarios.
+
+### Internal
+
+- Requests now carry a static OpenAPI source identification header for backend channel attribution.
+- Added knowledge-base E2E suites, including five user-journey scenarios covering cold start, content ops, chunk tuning, service tuning, and the data plane.
+
+## [1.15.1] - 2026-08-17
+
+### Added
+
+- **Model permission management** — `bl permission list` shows per-model inference / fine-tune / deploy grants; `bl permission grant` and `bl permission revoke` manage them, with `--all` to one-key grant inference for every model in the workspace (including future ones).
+
+### Changed
+
+- **`bl quota request` renamed to `bl quota update`** — set per-model QPM/TPM via `--rpm`/`--tpm` and clear custom limits with the new `--delete`; omitted fields keep their current values, and the old `quota request` path keeps working as an alias.
+- **`bl quota list` reworked** — now reads the model-limits API and shows per-model and workspace-level request/usage limits plus async queue/concurrency limits in a single table.
+- **`bl model list` no longer requires Console login** — the model catalog and `--enrich` parameter-schema endpoints are public.
+- **`bl skill init` output simplified** — per-skill status is now `success`/`failed` (previously `installed`) with an aggregate `success`/`partial`/`failed` result; the `publishedAt` and `agents` fields were removed.
+
+## [1.15.0] - 2026-08-14
+
+### Added
+
+- **Responses API for `bl text chat`** — Use `--api responses` to call the DashScope Responses API with streaming, tool definitions, and structured JSON output; Chat Completions remains the default.
+- **Subscription plan usage views** — `bl usage token-plan` displays 5-hour and weekly quota usage, while `bl usage coding-plan` displays 5-hour, weekly, and monthly usage; both support text and JSON output.
+- **Authentication requirements in command help** — Help output now states whether a command requires an API Key, Console login, or Alibaba Cloud OpenAPI credentials.
+
+### Changed
+
+- **Broader speech-recognition model support** — `bl speech recognize` now routes asynchronous file-transcription and synchronous Flash ASR models to the appropriate DashScope APIs, with clear guidance for unsupported realtime models.
+- **MCP transport compatibility** — MCP commands now fall back from Streamable HTTP to classic SSE for compatible Bailian and custom endpoints.
+
+### Fixed
+
+- Binary updates now refresh installed Agent Skills after a successful CLI upgrade.
+- Fixed unavailable Token Plan quota values and missing reset times.
+- Fixed Qwen3 file-transcription result handling so waiting mode and `--out` work correctly.
+- Fixed MCP SSE chunk parsing, header timeouts, abort cleanup, and fallback status matching.
+- Network failures in JSON output now preserve the errno value in `cause.code`.
+
+## [1.14.3] - 2026-08-12
+
+### Fixed
+
+- **Free-tier quota compatibility** — `bl usage free` and `bl usage freetier` now use the current Bailian Commerce console APIs for quota queries, activation, and deactivation, with consistent asynchronous-task polling.
+
+## [1.14.2] - 2026-08-07
+
+### Added
+
+- **`bl skill init`** — Install all first-party `bailian-*` skills into detected local AI Agents in one step.
+
+### Changed
+
+- **Skill command interface** — Skill management commands now default to JSON output for Agent workflows; `bl skill add` and `bl skill update` use explicit `--all` and `--name` selectors.
+
 ## [1.14.1] - 2026-08-05
 
 ### Added

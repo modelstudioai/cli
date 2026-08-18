@@ -1,6 +1,7 @@
 import {
   defineCommand,
   videoGeneratePath,
+  image2videoPath,
   taskPath,
   detectOutputFormat,
   type DashScopeVideoRequest,
@@ -51,6 +52,11 @@ export default defineCommand({
         "en-US": "Input image URL for image-to-video generation",
         "zh-CN": "图生视频使用的输入图片 URL",
       },
+    },
+    lastFrame: {
+      type: "string",
+      valueHint: "<url>",
+      description: "Last frame image URL (with --image, enables kf2v first+last frame mode)",
     },
     negativePrompt: {
       type: "string",
@@ -155,12 +161,20 @@ export default defineCommand({
     const format = detectOutputFormat(settings.output);
 
     const imageUrl = flags.image;
+    const lastFrameUrl = flags.lastFrame as string | undefined;
 
     // Auto-upload local image file for i2v
     let resolvedImageUrl: string | undefined;
     if (imageUrl) {
       resolvedImageUrl = await ctx.client.resolveImageInput(imageUrl, model);
     }
+    let resolvedLastFrameUrl: string | undefined;
+    if (lastFrameUrl) {
+      resolvedLastFrameUrl = await ctx.client.resolveImageInput(lastFrameUrl, model);
+    }
+
+    // kf2v mode: both --image and --last-frame provided.
+    const isKf2v = Boolean(resolvedImageUrl && resolvedLastFrameUrl);
 
     const watermark = resolveWatermark(flags.watermark);
     const promptExtend = resolveBooleanFlag(flags.promptExtend, undefined, "prompt-extend");
@@ -170,10 +184,16 @@ export default defineCommand({
       input: {
         prompt: prompt,
         negative_prompt: flags.negativePrompt || undefined,
-        // i2v models (happyhorse-1.1-i2v) require input.media with type 'first_frame'
-        ...(resolvedImageUrl
-          ? { media: [{ type: "first_frame" as const, url: resolvedImageUrl }] }
-          : {}),
+        // kf2v: first+last frame flat fields via image2video endpoint.
+        // wan2.1~2.6 i2v: flat img_url via video-generation endpoint.
+        // wan2.7+ / happyhorse i2v: media[] via video-generation endpoint.
+        ...(isKf2v
+          ? { first_frame_url: resolvedImageUrl, last_frame_url: resolvedLastFrameUrl }
+          : resolvedImageUrl
+            ? /wan[x]?2\.[1-6]/i.test(model)
+              ? { img_url: resolvedImageUrl }
+              : { media: [{ type: "first_frame" as const, url: resolvedImageUrl }] }
+            : {}),
       },
       parameters: {
         resolution: flags.resolution || undefined,
@@ -186,15 +206,28 @@ export default defineCommand({
     };
 
     if (settings.dryRun) {
-      const previewBody = resolvedImageUrl
-        ? {
-            ...body,
-            input: {
-              ...body.input,
-              media: [{ type: "first_frame" as const, url: redactDataUri(resolvedImageUrl) }],
-            },
-          }
-        : body;
+      let previewBody = body;
+      if (isKf2v) {
+        previewBody = {
+          ...body,
+          input: {
+            ...body.input,
+            first_frame_url: redactDataUri(resolvedImageUrl ?? ""),
+            last_frame_url: redactDataUri(resolvedLastFrameUrl ?? ""),
+          },
+        };
+      } else if (resolvedImageUrl) {
+        const redactedUrl = redactDataUri(resolvedImageUrl);
+        previewBody = {
+          ...body,
+          input: {
+            ...body.input,
+            ...(/wan[x]?2\.[1-6]/i.test(model)
+              ? { img_url: redactedUrl }
+              : { media: [{ type: "first_frame" as const, url: redactedUrl }] }),
+          },
+        };
+      }
       emitResult({ request: previewBody }, format);
       return;
     }
@@ -207,7 +240,7 @@ export default defineCommand({
       settings,
       () =>
         ctx.client.requestJson<DashScopeAsyncResponse>({
-          path: videoGeneratePath(),
+          path: isKf2v ? image2videoPath() : videoGeneratePath(),
           method: "POST",
           body,
           async: true,

@@ -1,20 +1,35 @@
 import {
   defineCommand,
   chatPath,
+  responsesPath,
   parseSSE,
   detectOutputFormat,
   readTextFromPathOrStdin,
   type ChatMessage,
   type ChatRequest,
   type ChatResponse,
+  type ResponsesRequest,
+  type ResponsesResponse,
+  type ResponsesStreamEvent,
   type StreamChunk,
   type FlagsDef,
   type ParsedFlags,
 } from "bailian-cli-core";
 import { ansi, emitResult, emitBare } from "bailian-cli-runtime";
 import { readFileSync } from "fs";
+import {
+  assertResponsesStreamCompleted,
+  inspectResponsesStreamEvent,
+  extractResponsesText,
+} from "./responses.ts";
 
 const CHAT_FLAGS = {
+  api: {
+    type: "string",
+    valueHint: "<chat|responses>",
+    choices: ["chat", "responses"] as const,
+    description: { "en-US": "API to call (default: chat)", "zh-CN": "调用的 API（默认：chat）" },
+  },
   model: {
     type: "string",
     valueHint: "<model>",
@@ -55,10 +70,7 @@ const CHAT_FLAGS = {
   temperature: {
     type: "number",
     valueHint: "<n>",
-    description: {
-      "en-US": "Sampling temperature (0.0, 2.0]",
-      "zh-CN": "采样温度 (0.0, 2.0]",
-    },
+    description: { "en-US": "Sampling temperature (0.0, 2.0]", "zh-CN": "采样温度 (0.0, 2.0]" },
   },
   topP: {
     type: "number",
@@ -114,31 +126,31 @@ function parseMessages(flags: ChatFlags): ParsedMessages {
   if (flags.messagesFile) {
     const raw = readTextFromPathOrStdin(flags.messagesFile);
     const parsed = JSON.parse(raw) as Array<{ role: string; content: string }>;
-    for (const m of parsed) {
-      if (m.role === "system") {
-        system = typeof m.content === "string" ? m.content : "";
+    for (const parsedMessage of parsed) {
+      if (parsedMessage.role === "system") {
+        system = typeof parsedMessage.content === "string" ? parsedMessage.content : "";
       } else {
-        messages.push(m as ChatMessage);
+        messages.push(parsedMessage as ChatMessage);
       }
     }
   }
 
   if (flags.message) {
     const validRoles = new Set(["system", "user", "assistant"]);
-    const msgs = flags.message;
-    for (const m of msgs) {
-      const colonIdx = m.indexOf(":");
-      const maybeRole = colonIdx !== -1 ? m.slice(0, colonIdx) : "";
+    const messageValues = flags.message;
+    for (const messageValue of messageValues) {
+      const colonIndex = messageValue.indexOf(":");
+      const maybeRole = colonIndex !== -1 ? messageValue.slice(0, colonIndex) : "";
 
       if (validRoles.has(maybeRole)) {
-        const content = m.slice(colonIdx + 1);
+        const content = messageValue.slice(colonIndex + 1);
         if (maybeRole === "system") {
           system = content;
         } else {
           messages.push({ role: maybeRole as "user" | "assistant", content });
         }
       } else {
-        messages.push({ role: "user", content: m });
+        messages.push({ role: "user", content: messageValue });
       }
     }
   }
@@ -148,16 +160,17 @@ function parseMessages(flags: ChatFlags): ParsedMessages {
 
 export default defineCommand({
   description: {
-    "en-US": "Send a chat completion (OpenAI compatible, DashScope)",
-    "zh-CN": "发送聊天补全请求（兼容 OpenAI，基于 DashScope）",
+    "en-US": "Send a text model request (OpenAI compatible, DashScope)",
+    "zh-CN": "发送文本模型请求（OpenAI 兼容，DashScope）",
   },
   auth: "apiKey",
   usageArgs: "--message <text> [flags]",
   flags: CHAT_FLAGS,
   exampleArgs: [
+    { "en-US": '--message "What is Qwen?"', "zh-CN": '--message "通义千问是什么？"' },
     {
-      "en-US": '--message "What is Qwen?"',
-      "zh-CN": '--message "通义千问是什么？"',
+      "en-US": `--api responses --model qwen3.8-max --tool '{"type":"web_search"}' --message "Search for recent Alibaba Cloud news"`,
+      "zh-CN": `--api responses --model qwen3.8-max --tool '{"type":"web_search"}' --message "搜索近期的阿里云新闻"`,
     },
     {
       "en-US":
@@ -169,21 +182,26 @@ export default defineCommand({
       "zh-CN": '--message "你好" --message "assistant:你好！" --message "你好吗？"',
     },
     "--messages-file - --stream",
-    {
-      "en-US": '--message "Hello" --output json',
-      "zh-CN": '--message "你好" --output json',
-    },
+    { "en-US": '--message "Hello" --output json', "zh-CN": '--message "你好" --output json' },
     {
       "en-US": '--model qwq-plus --message "Solve 1+1" --enable-thinking',
       "zh-CN": '--model qwq-plus --message "计算 1+1" --enable-thinking',
     },
   ],
-  validate: (f) =>
-    !f.message && !f.messagesFile ? "Provide --message or --messages-file." : undefined,
+  validate: (flags) => {
+    if (!flags.message && !flags.messagesFile) {
+      return "Provide --message or --messages-file.";
+    }
+    if (flags.api === "responses" && flags.thinkingBudget !== undefined) {
+      return "--thinking-budget is not supported by the Responses API.";
+    }
+    return undefined;
+  },
   async run(ctx) {
     const { settings, flags } = ctx;
     const { system, messages } = parseMessages(flags);
 
+    const api = flags.api ?? "chat";
     const model = flags.model || settings.defaultTextModel || "qwen3.8-max";
     const shouldStream = flags.stream || process.stdout.isTTY;
     const format = detectOutputFormat(settings.output);
@@ -195,29 +213,39 @@ export default defineCommand({
     }
     allMessages.push(...messages);
 
-    const body: ChatRequest = {
-      model,
-      messages: allMessages,
-      max_tokens: flags.maxTokens ?? 4096,
-      stream: shouldStream,
-    };
+    let body: ChatRequest | ResponsesRequest;
+    if (api === "responses") {
+      body = {
+        model,
+        input: allMessages,
+        max_output_tokens: flags.maxTokens ?? 4096,
+        stream: shouldStream,
+      };
+    } else {
+      body = {
+        model,
+        messages: allMessages,
+        max_tokens: flags.maxTokens ?? 4096,
+        stream: shouldStream,
+      };
+    }
 
     if (flags.temperature !== undefined) body.temperature = flags.temperature;
     if (flags.topP !== undefined) body.top_p = flags.topP;
 
     if (flags.enableThinking) {
       body.enable_thinking = true;
-      if (flags.thinkingBudget !== undefined) {
+      if (api === "chat" && "messages" in body && flags.thinkingBudget !== undefined) {
         body.thinking_budget = flags.thinkingBudget;
       }
     }
 
     if (flags.tool) {
-      const tools = flags.tool.map((t) => {
+      const tools = flags.tool.map((toolValue) => {
         try {
-          return JSON.parse(t);
+          return JSON.parse(toolValue);
         } catch {
-          const raw = readFileSync(t, "utf-8");
+          const raw = readFileSync(toolValue, "utf-8");
           return JSON.parse(raw);
         }
       });
@@ -230,8 +258,8 @@ export default defineCommand({
     }
 
     if (shouldStream) {
-      const res = await ctx.client.request({
-        path: chatPath(),
+      const responseStream = await ctx.client.request({
+        path: api === "responses" ? responsesPath() : chatPath(),
         method: "POST",
         body,
         stream: true,
@@ -239,6 +267,7 @@ export default defineCommand({
 
       let textContent = "";
       let inThinking = false;
+      let responsesCompleted = false;
       const writesStreamingStdout = format === "text";
       const isTTY = process.stdout.isTTY;
       const statusOut =
@@ -246,8 +275,28 @@ export default defineCommand({
       const resultOut = process.stdout;
       const statusColor = ansi(statusOut);
 
-      for await (const event of parseSSE(res)) {
+      for await (const event of parseSSE(responseStream)) {
         if (event.data === "[DONE]") break;
+        if (api === "responses") {
+          let parsedEvent: ResponsesStreamEvent;
+          try {
+            parsedEvent = JSON.parse(event.data) as ResponsesStreamEvent;
+          } catch {
+            continue;
+          }
+
+          const update = inspectResponsesStreamEvent(parsedEvent);
+          if (update.delta) {
+            textContent += update.delta;
+            if (writesStreamingStdout) resultOut.write(update.delta);
+          }
+          if (update.completed) {
+            responsesCompleted = true;
+            break;
+          }
+          continue;
+        }
+
         try {
           const parsed = JSON.parse(event.data) as StreamChunk;
 
@@ -277,12 +326,27 @@ export default defineCommand({
           // Skip unparseable chunks
         }
       }
+      if (api === "responses") assertResponsesStreamCompleted(responsesCompleted);
       if (inThinking) statusOut.write(statusColor.reset);
 
       if (format === "json") {
         emitResult({ content: textContent }, format);
       } else {
         resultOut.write("\n");
+      }
+    } else if (api === "responses") {
+      const response = await ctx.client.requestJson<ResponsesResponse>({
+        path: responsesPath(),
+        method: "POST",
+        body,
+      });
+
+      const text = extractResponsesText(response);
+
+      if (settings.quiet || format === "text") {
+        emitBare(text);
+      } else {
+        emitResult(response, format);
       }
     } else {
       const response = await ctx.client.requestJson<ChatResponse>({

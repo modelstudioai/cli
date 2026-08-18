@@ -1,5 +1,14 @@
-export type { ConsoleGatewayRequest, ConsoleGatewayTarget, ConsoleSite } from "./gateway.ts";
-export { callConsoleGateway, effectiveConsoleGatewayConfig } from "./gateway.ts";
+export type {
+  ConsoleCall,
+  ConsoleGatewayRequest,
+  ConsoleGatewayTarget,
+  ConsoleSite,
+} from "./gateway.ts";
+export {
+  anonymousConsoleCall,
+  callConsoleGateway,
+  effectiveConsoleGatewayConfig,
+} from "./gateway.ts";
 export type {
   ModelListParams,
   ModelListResult,
@@ -12,6 +21,8 @@ export type {
 } from "./models.ts";
 export {
   fetchModelList,
+  fetchModelListAll,
+  findModelByName,
   fetchModelGroups,
   fetchModelDetail,
   fetchPredictConfig,

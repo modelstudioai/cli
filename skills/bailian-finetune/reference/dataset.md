@@ -7,23 +7,24 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command               | Description                                                        |
-| --------------------- | ------------------------------------------------------------------ |
-| `bl dataset delete`   | Delete a dataset file by ID                                        |
-| `bl dataset get`      | Get details of a single dataset file                               |
-| `bl dataset list`     | List uploaded dataset files                                        |
-| `bl dataset upload`   | Upload a dataset file (.jsonl or .zip) to Bailian                  |
-| `bl dataset validate` | Locally validate a dataset file (.jsonl or .zip) without uploading |
+| Command               | Authentication | Description                                                        |
+| --------------------- | -------------- | ------------------------------------------------------------------ |
+| `bl dataset delete`   | API Key        | Delete a dataset file by ID                                        |
+| `bl dataset get`      | API Key        | Get details of a single dataset file                               |
+| `bl dataset list`     | API Key        | List uploaded dataset files                                        |
+| `bl dataset upload`   | API Key        | Upload a dataset file (.jsonl or .zip) to Bailian                  |
+| `bl dataset validate` | No Auth        | Locally validate a dataset file (.jsonl or .zip) without uploading |
 
 ## Command details
 
 ### `bl dataset delete`
 
-| Field           | Value                              |
-| --------------- | ---------------------------------- |
-| **Name**        | `dataset delete`                   |
-| **Description** | Delete a dataset file by ID        |
-| **Usage**       | `bl dataset delete --file-id <id>` |
+| Field              | Value                              |
+| ------------------ | ---------------------------------- |
+| **Name**           | `dataset delete`                   |
+| **Description**    | Delete a dataset file by ID        |
+| **Authentication** | API Key                            |
+| **Usage**          | `bl dataset delete --file-id <id>` |
 
 #### Flags
 
@@ -45,11 +46,12 @@ bl dataset delete --file-id file-id-xxx --dry-run
 
 ### `bl dataset get`
 
-| Field           | Value                                |
-| --------------- | ------------------------------------ |
-| **Name**        | `dataset get`                        |
-| **Description** | Get details of a single dataset file |
-| **Usage**       | `bl dataset get --file-id <id>`      |
+| Field              | Value                                |
+| ------------------ | ------------------------------------ |
+| **Name**           | `dataset get`                        |
+| **Description**    | Get details of a single dataset file |
+| **Authentication** | API Key                              |
+| **Usage**          | `bl dataset get --file-id <id>`      |
 
 #### Flags
 
@@ -71,11 +73,12 @@ bl dataset get --file-id file-xxx --output json
 
 ### `bl dataset list`
 
-| Field           | Value                                                               |
-| --------------- | ------------------------------------------------------------------- |
-| **Name**        | `dataset list`                                                      |
-| **Description** | List uploaded dataset files                                         |
-| **Usage**       | `bl dataset list [--page <n>] [--page-size <n>] [--purpose <name>]` |
+| Field              | Value                                                               |
+| ------------------ | ------------------------------------------------------------------- |
+| **Name**           | `dataset list`                                                      |
+| **Description**    | List uploaded dataset files                                         |
+| **Authentication** | API Key                                                             |
+| **Usage**          | `bl dataset list [--page <n>] [--page-size <n>] [--purpose <name>]` |
 
 #### Flags
 
@@ -107,29 +110,30 @@ bl dataset list --output json
 
 ### `bl dataset upload`
 
-| Field           | Value                                                                                                                            |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**        | `dataset upload`                                                                                                                 |
-| **Description** | Upload a dataset file (.jsonl or .zip) to Bailian                                                                                |
-| **Usage**       | `bl dataset upload --file <path> [--purpose <name>] [--schema <chatml\|dpo\|cpt\|tts\|image>] [--no-validate] [--full-validate]` |
+| Field              | Value                                                                                                                                   |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `dataset upload`                                                                                                                        |
+| **Description**    | Upload a dataset file (.jsonl or .zip) to Bailian                                                                                       |
+| **Authentication** | API Key                                                                                                                                 |
+| **Usage**          | `bl dataset upload --file <path> [--purpose <name>] [--schema <chatml\|dpo\|cpt\|tts\|image\|video>] [--no-validate] [--full-validate]` |
 
 #### Flags
 
-| Flag               | Type   | Required | Description                                                                                                                                              |
-| ------------------ | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--file <path>`    | string | yes      | Local dataset file (.jsonl or .zip; ≤300MB text, ≤1GB image)                                                                                             |
-| `--purpose <name>` | string | no       | Dataset purpose tag (default: "fine-tune"; e.g. "evaluation")                                                                                            |
-| `--schema <s>`     | string | no       | Record schema: "chatml" (SFT), "dpo" (chosen/rejected), "cpt" (raw text), "tts" (audio), or "image" (image generation). Default auto-detects per record. |
-| `--no-validate`    | switch | no       | Skip the local JSONL pre-flight check (not recommended)                                                                                                  |
-| `--full-validate`  | switch | no       | JSON.parse every line instead of sampling (slower)                                                                                                       |
-| `--api-key <key>`  | string | no       | API key                                                                                                                                                  |
-| `--base-url <url>` | string | no       | API base URL                                                                                                                                             |
+| Flag               | Type   | Required | Description                                                                                                                                                                          |
+| ------------------ | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--file <path>`    | string | yes      | Local dataset file (.jsonl or .zip; ≤200MB SFT/DPO, ≤300MB CPT, ≤2GB media zip)                                                                                                      |
+| `--purpose <name>` | string | no       | Dataset purpose tag (default: "fine-tune"; e.g. "evaluation")                                                                                                                        |
+| `--schema <s>`     | string | no       | Record schema: "chatml" (SFT), "dpo" (chosen/rejected), "cpt" (raw text), "tts" (audio), "image" (image generation), or "video" (video generation). Default auto-detects per record. |
+| `--no-validate`    | switch | no       | Skip the local JSONL pre-flight check (not recommended)                                                                                                                              |
+| `--full-validate`  | switch | no       | JSON.parse every line instead of sampling (slower)                                                                                                                                   |
+| `--api-key <key>`  | string | no       | API key                                                                                                                                                                              |
+| `--base-url <url>` | string | no       | API base URL                                                                                                                                                                         |
 
 #### Notes
 
-- Supports .jsonl (text) and .zip (audio/image archives with a data.jsonl manifest). Five record schemas are recognized: chatml = {messages:[...]} (SFT); dpo = {messages:[...], chosen, rejected}; cpt = {text:"..."} (continual pre-training, raw text); tts = {wav_fn:"train/xxx.wav", text:"..."} (audio fine-tuning); image = {img_path:"..."} (image generation).
+- Supports .jsonl (text) and .zip (audio/image/video archives with a data.jsonl manifest). Six record schemas are recognized: chatml = {messages:[...]} (SFT); dpo = {messages:[...], chosen, rejected}; cpt = {text:"..."} (continual pre-training, raw text); tts = {wav_fn:"train/xxx.wav", text:"..."} (audio fine-tuning); image = {img_path:"..."} (image generation); video = {first_frame_path:...} (video generation).
 - With no --schema, a record carrying wav_fn is validated as TTS, img_path as image, chosen/rejected as DPO, text (no messages) as CPT, otherwise ChatML.
-- Upload cap: 300MB text, 1GB image. Upload uses the OpenAI-compatible /compatible-mode/v1/files endpoint so the purpose tag is persisted (the DashScope-native /api/v1/files drops it).
+- Upload cap: 200MB SFT/DPO text, 300MB CPT, 2GB media zip. Upload uses the OpenAI-compatible /compatible-mode/v1/files endpoint so the purpose tag is persisted (the DashScope-native /api/v1/files drops it).
 
 #### Examples
 
@@ -163,25 +167,26 @@ bl dataset upload --file train.jsonl --no-validate
 
 ### `bl dataset validate`
 
-| Field           | Value                                                                                           |
-| --------------- | ----------------------------------------------------------------------------------------------- |
-| **Name**        | `dataset validate`                                                                              |
-| **Description** | Locally validate a dataset file (.jsonl or .zip) without uploading                              |
-| **Usage**       | `bl dataset validate --file <path> [--full-validate] [--schema <chatml\|dpo\|cpt\|tts\|image>]` |
+| Field              | Value                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------ |
+| **Name**           | `dataset validate`                                                                                     |
+| **Description**    | Locally validate a dataset file (.jsonl or .zip) without uploading                                     |
+| **Authentication** | No Auth                                                                                                |
+| **Usage**          | `bl dataset validate --file <path> [--full-validate] [--schema <chatml\|dpo\|cpt\|tts\|image\|video>]` |
 
 #### Flags
 
-| Flag              | Type   | Required | Description                                                                                                                                              |
-| ----------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--file <path>`   | string | yes      | Local dataset file (.jsonl or .zip)                                                                                                                      |
-| `--full-validate` | switch | no       | JSON.parse every line instead of sampling (slower)                                                                                                       |
-| `--schema <s>`    | string | no       | Record schema: "chatml" (SFT), "dpo" (chosen/rejected), "cpt" (raw text), "tts" (audio), or "image" (image generation). Default auto-detects per record. |
+| Flag              | Type   | Required | Description                                                                                                                                                                          |
+| ----------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--file <path>`   | string | yes      | Local dataset file (.jsonl or .zip)                                                                                                                                                  |
+| `--full-validate` | switch | no       | JSON.parse every line instead of sampling (slower)                                                                                                                                   |
+| `--schema <s>`    | string | no       | Record schema: "chatml" (SFT), "dpo" (chosen/rejected), "cpt" (raw text), "tts" (audio), "image" (image generation), or "video" (video generation). Default auto-detects per record. |
 
 #### Notes
 
 - Default scan: every line gets a structural check, then ~160 lines (front 50, evenly spaced 100, last 10) are JSON.parsed against the active schema.
-- Schemas: chatml = {messages:[...]} (SFT); dpo = {messages:[...], chosen, rejected}; cpt = {text:"..."} (continual pre-training, raw text); tts = {wav_fn:"train/xxx.wav", text:"..."} (audio fine-tuning); image = {img_path:"..."} (image generation).
-- With no --schema, a record carrying wav_fn is validated as TTS, img_path as image, chosen/rejected as DPO, text (no messages) as CPT, otherwise ChatML. Pass --schema to require a specific shape on every record.
+- Schemas: chatml = {messages:[...]} (SFT); dpo = {messages:[...], chosen, rejected}; cpt = {text:"..."} (continual pre-training, raw text); tts = {wav_fn:"train/xxx.wav", text:"..."} (audio fine-tuning); image = {img_path:"..."} (image generation); video = {first_frame_path:"...", video_path:"..."} (video generation, i2v first-frame or kf2v first+last-frame with last_frame_path).
+- With no --schema, a record carrying wav_fn is validated as TTS, img_path as image, first_frame_path/video_path as video, chosen/rejected as DPO, text (no messages) as CPT, otherwise ChatML. Pass --schema to require a specific shape on every record.
 - ZIP archives (.zip) are validated structurally (data.jsonl present, media references resolve) in addition to per-record content checks. Use --full-validate to JSON.parse every line.
 
 #### Examples
@@ -200,6 +205,10 @@ bl dataset validate --file cpt.jsonl --schema cpt
 
 ```bash
 bl dataset validate --file audio.zip --schema tts
+```
+
+```bash
+bl dataset validate --file wan-i2v-training-dataset.zip --schema video
 ```
 
 ```bash

@@ -9,19 +9,19 @@ Use this index for the skill-scoped quick index and global flags.
 
 ## Quick index
 
-| Command                | Description                                                                                           | Detail                 |
-| ---------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------- |
-| `bl image edit`        | Edit an existing image with text instructions (Qwen-Image / Wan 2.7)                                  | [image.md](image.md)   |
-| `bl image generate`    | Generate images (Qwen-Image / wan2.x)                                                                 | [image.md](image.md)   |
-| `bl omni`              | Multimodal chat with text + audio output (Qwen-Omni)                                                  | [omni.md](omni.md)     |
-| `bl speech recognize`  | Recognize speech from audio files (FunAudio-ASR)                                                      | [speech.md](speech.md) |
-| `bl speech synthesize` | Synthesize speech from text (CosyVoice TTS)                                                           | [speech.md](speech.md) |
-| `bl video download`    | Download a completed video by task ID                                                                 | [video.md](video.md)   |
-| `bl video edit`        | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                | [video.md](video.md)   |
-| `bl video generate`    | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)            | [video.md](video.md)   |
-| `bl video ref`         | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice | [video.md](video.md)   |
-| `bl video task get`    | Query async task status                                                                               | [video.md](video.md)   |
-| `bl vision describe`   | Describe an image or video using Qwen-VL                                                              | [vision.md](vision.md) |
+| Command                | Authentication | Description                                                                                           | Detail                 |
+| ---------------------- | -------------- | ----------------------------------------------------------------------------------------------------- | ---------------------- |
+| `bl image edit`        | API Key        | Edit an existing image with text instructions (Qwen-Image / Wan 2.7)                                  | [image.md](image.md)   |
+| `bl image generate`    | API Key        | Generate images (Qwen-Image / wan2.x)                                                                 | [image.md](image.md)   |
+| `bl omni`              | API Key        | Multimodal chat with text + audio output (Qwen-Omni)                                                  | [omni.md](omni.md)     |
+| `bl speech recognize`  | API Key        | Recognize speech from audio files (FunAudio-ASR / Qwen-ASR Flash)                                     | [speech.md](speech.md) |
+| `bl speech synthesize` | API Key        | Synthesize speech from text (CosyVoice TTS)                                                           | [speech.md](speech.md) |
+| `bl video download`    | API Key        | Download a completed video by task ID                                                                 | [video.md](video.md)   |
+| `bl video edit`        | API Key        | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                | [video.md](video.md)   |
+| `bl video generate`    | API Key        | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)            | [video.md](video.md)   |
+| `bl video ref`         | API Key        | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice | [video.md](video.md)   |
+| `bl video task get`    | API Key        | Query async task status                                                                               | [video.md](video.md)   |
+| `bl vision describe`   | API Key        | Describe an image or video using Qwen-VL                                                              | [vision.md](vision.md) |
 
 ## By group
 

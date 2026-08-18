@@ -7,20 +7,21 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command             | Description                                                          |
-| ------------------- | -------------------------------------------------------------------- |
-| `bl image edit`     | Edit an existing image with text instructions (Qwen-Image / Wan 2.7) |
-| `bl image generate` | Generate images (Qwen-Image / wan2.x)                                |
+| Command             | Authentication | Description                                                          |
+| ------------------- | -------------- | -------------------------------------------------------------------- |
+| `bl image edit`     | API Key        | Edit an existing image with text instructions (Qwen-Image / Wan 2.7) |
+| `bl image generate` | API Key        | Generate images (Qwen-Image / wan2.x)                                |
 
 ## Command details
 
 ### `bl image edit`
 
-| Field           | Value                                                                |
-| --------------- | -------------------------------------------------------------------- |
-| **Name**        | `image edit`                                                         |
-| **Description** | Edit an existing image with text instructions (Qwen-Image / Wan 2.7) |
-| **Usage**       | `bl image edit --image <url> --prompt <text> [flags]`                |
+| Field              | Value                                                                |
+| ------------------ | -------------------------------------------------------------------- |
+| **Name**           | `image edit`                                                         |
+| **Description**    | Edit an existing image with text instructions (Qwen-Image / Wan 2.7) |
+| **Authentication** | API Key                                                              |
+| **Usage**          | `bl image edit --image <url> --prompt <text> [flags]`                |
 
 #### Flags
 
@@ -80,11 +81,12 @@ bl image edit --image ./photo.png --prompt "Replace the background with a beach"
 
 ### `bl image generate`
 
-| Field           | Value                                       |
-| --------------- | ------------------------------------------- |
-| **Name**        | `image generate`                            |
-| **Description** | Generate images (Qwen-Image / wan2.x)       |
-| **Usage**       | `bl image generate --prompt <text> [flags]` |
+| Field              | Value                                       |
+| ------------------ | ------------------------------------------- |
+| **Name**           | `image generate`                            |
+| **Description**    | Generate images (Qwen-Image / wan2.x)       |
+| **Authentication** | API Key                                     |
+| **Usage**          | `bl image generate --prompt <text> [flags]` |
 
 #### Flags
 

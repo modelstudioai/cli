@@ -1,5 +1,5 @@
-import { defineCommand, detectOutputFormat, listDatasets, type FlagsDef } from "bailian-cli-core";
-import { emitResult, emitBare, emitRequestId, formatTable } from "bailian-cli-runtime";
+import { defineCommand, listDatasets, type FlagsDef } from "bailian-cli-core";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 
 const LIST_FLAGS = {
   page: {
@@ -33,7 +33,6 @@ export default defineCommand({
   exampleArgs: ["", "--purpose fine-tune", "--purpose evaluation --page-size 20", "--output json"],
   async run(ctx) {
     const { settings, flags } = ctx;
-    const format = detectOutputFormat(settings.output);
 
     if (settings.dryRun) {
       emitResult(
@@ -43,7 +42,7 @@ export default defineCommand({
           page_size: flags.pageSize,
           purpose: flags.purpose,
         },
-        format,
+        "json",
       );
       return;
     }
@@ -56,7 +55,6 @@ export default defineCommand({
     const files = response.data?.files ?? [];
     const total = response.data?.total;
 
-    // Normalize to consistent structure for both text/json output.
     const items = files.map((item) => ({
       file_id: item.file_id ?? "",
       name: item.name ?? "",
@@ -64,20 +62,10 @@ export default defineCommand({
       purpose: item.purpose ?? "",
     }));
 
-    if (format === "json") {
-      emitResult({ items, total, request_id: response.request_id }, format);
-      return;
+    if (settings.quiet) {
+      for (const item of items) emitBare(item.file_id);
+    } else {
+      emitResult({ items, total, request_id: response.request_id }, "json");
     }
-
-    // text / quiet
-    if (items.length === 0) {
-      emitBare("No dataset files found.");
-      return;
-    }
-    const headers = ["FILE_ID", "NAME", "SIZE", "PURPOSE"];
-    const rows = items.map((i) => [i.file_id, i.name, i.size, i.purpose]);
-    for (const line of formatTable(headers, rows)) emitBare(line);
-    if (total !== undefined) emitBare(`\nTotal: ${total}`);
-    emitRequestId(response.request_id, settings.quiet);
   },
 });

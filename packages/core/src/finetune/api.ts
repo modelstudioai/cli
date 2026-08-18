@@ -43,6 +43,8 @@ export interface ListFineTunesParams {
   pageNo?: number;
   pageSize?: number;
   status?: string;
+  /** Filter by base model ID (server-side). */
+  model?: string;
   signal?: AbortSignal;
 }
 
@@ -55,6 +57,7 @@ export async function listFineTunes(
   if (params.pageNo !== undefined) qs.set("page_no", String(params.pageNo));
   if (params.pageSize !== undefined) qs.set("page_size", String(params.pageSize));
   if (params.status) qs.set("status", params.status);
+  if (params.model) qs.set("model", params.model);
   const base = finetuneJobsPath();
   const path = qs.toString() ? `${base}?${qs.toString()}` : base;
   return client.requestJson<ListFineTunesResponse>({

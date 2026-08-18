@@ -13,12 +13,18 @@ export {
   memoryNodePath,
   memorySearchPath,
   mcpWebSearchPath,
+  modelsLimitsPath,
+  modelsPermissionsPath,
   profileSchemaPath,
+  ragEndpoint,
+  RAG_PATHS,
+  responsesPath,
   speechRecognizePath,
   speechSynthesizePath,
   taskPath,
   userProfilePath,
   videoGeneratePath,
+  image2videoPath,
 } from "./endpoints.ts";
 export {
   isLegacyImage2ImageModel,
@@ -34,7 +40,25 @@ export {
   type ImageInputStyle,
   type ImageSizeProfile,
 } from "./image-routes.ts";
-export { CHANNEL, sourceConfig, trackingHeaders, type TrackingIdentity } from "./headers.ts";
+export {
+  buildAsrFlashRequest,
+  buildAsyncAsrLanguageFields,
+  collectAsrTranscriptionItems,
+  extractAsrFlashText,
+  inferAudioFormatHint,
+  resolveAsrApi,
+  type AsrApiKind,
+  type AsrApiRoute,
+  type AsrFlashFamily,
+  type BuildAsrFlashRequestOpts,
+} from "./asr-routes.ts";
+export {
+  CHANNEL,
+  OPEN_API_SOURCE,
+  sourceConfig,
+  trackingHeaders,
+  type TrackingIdentity,
+} from "./headers.ts";
 export type { HttpDeps, RequestOpts } from "./http.ts";
 export { request, requestJson } from "./http.ts";
 export { createInstrumentedFetch, type FetchImplementation } from "./instrumented-fetch.ts";
@@ -57,7 +81,19 @@ export {
   type AcsQueryParams,
   type AcsSignConfig,
 } from "./acs.ts";
-export type { McpTool, McpToolResult } from "./mcp.ts";
-export { McpClient, bailianMcpPath } from "./mcp.ts";
+export type {
+  McpTool,
+  McpToolResult,
+  McpConnectedClient,
+  ConnectBailianMcpOptions,
+} from "./mcp.ts";
+export {
+  McpClient,
+  bailianMcpPath,
+  bailianMcpSsePath,
+  isStreamableHttpUnsupported,
+  isUrlOverrideSseFallbackCandidate,
+  connectBailianMcpWithFallback,
+} from "./mcp.ts";
 export type { ServerSentEvent } from "./stream.ts";
 export { parseSSE } from "./stream.ts";
