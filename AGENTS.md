@@ -35,7 +35,7 @@ packages/core/src/auth/            # apiKey / console credential 解析与落盘
 packages/core/src/client/          # HTTP client / endpoints / console gateway
 ```
 
-Skill / 命令手册随 `skills/bailian-*/` 经 `bl skill init` 安装（装齐 registry 中全部 `bailian-*`，含共享协议 `bailian-protocol`）。业务 skill（`bailian-cli` / `bailian-gen` / `bailian-finetune` / `bailian-managed-agent`）执行前读 `skills/bailian-protocol/`；不要依赖 frontmatter `companions`（安装器不强制）。`tools/generate-reference.ts` 从 **`packages/cli/src/commands.ts`** 按一级命令归属表分流写入各 `skills/<skill>/reference/`(纳入 git);`tools/sync-skill-metadata.ts` 从 `packages/cli/package.json` 同步各 `skills/*/SKILL.md` 的 `metadata.version`。两者由根脚本 `pnpm run sync:skill-assets` 和 `.vite-hooks/pre-commit` 执行。hub `bailian-cli` 的路由表不复述领域命令明细；SKILL 文案 / 安装约定 / hand-off 见 [docs/agents/skill-change.md](docs/agents/skill-change.md)。
+Skill / 命令手册随 `skills/bailian-*/` 经 `bl skill init` 安装（装齐 registry 中全部 `bailian-*`，含共享协议 `bailian-protocol`）。业务 skill（`bailian-cli` / `bailian-gen` / `bailian-finetune` / `bailian-managed-agent` / `bailian-web-search`）执行前读 `skills/bailian-protocol/`；不要依赖 frontmatter `companions`（安装器不强制）。`tools/generate-reference.ts` 从 **`packages/cli/src/commands.ts`** 按一级命令归属表分流写入各 `skills/<skill>/reference/`(纳入 git);`tools/sync-skill-metadata.ts` 从 `packages/cli/package.json` 同步各 `skills/*/SKILL.md` 的 `metadata.version`。两者由根脚本 `pnpm run sync:skill-assets` 和 `.vite-hooks/pre-commit` 执行。hub `bailian-cli` 的路由表不复述领域命令明细；SKILL 文案 / 安装约定 / hand-off 见 [docs/agents/skill-change.md](docs/agents/skill-change.md)。
 
 约定:
 

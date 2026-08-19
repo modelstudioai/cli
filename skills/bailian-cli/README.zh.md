@@ -5,7 +5,7 @@
 **阿里云百炼 CLI**（`bl`）的资源管理 Agent 技能 — 应用、记忆、RAG、用量/额度、MCP，以及 hub `reference/`。
 
 - 共享协议：`bailian-protocol`（通过 `bl skill init` 与整家族同装）
-- 软 hand-off（可选）：`bailian-gen` · `bailian-finetune` · `bailian-managed-agent`
+- 软 hand-off（可选）：`bailian-gen` · `bailian-finetune` · `bailian-managed-agent` · `bailian-web-search`
 
 ```bash
 bl skill init

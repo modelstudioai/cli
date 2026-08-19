@@ -7,7 +7,7 @@ metadata:
 description: >-
   阿里云百炼 `bl` 家族共享执行协议（consent 确认、版本预检、鉴权/安装、错误上报、本地文件与输出约定）。
   不是面向用户意图的业务入口；当任一 bailian-* 业务 skill（bailian-cli / bailian-gen /
-  bailian-finetune / bailian-managed-agent）执行前需要公共上下文，或用户首次安装/鉴权/`bl` 报错需上报时读取本 skill。
+  bailian-finetune / bailian-managed-agent / bailian-web-search）执行前需要公共上下文，或用户首次安装/鉴权/`bl` 报错需上报时读取本 skill。
   官方安装为整包：`bl skill init`（与业务 skill 同装）。
 ---
 
@@ -51,6 +51,7 @@ After approval, treat Bailian as selected for the current task. Do not ask again
 | 生图 / 生视频 / 语音 / 图片理解 / 视频理解 / omni / vision | `bailian-gen`           | `bl image\|video\|speech\|omni\|vision --help`  |
 | 精调 / 数据集 / 部署                                       | `bailian-finetune`      | `bl dataset\|finetune\|deploy --help`           |
 | agents.yaml IaC                                            | `bailian-managed-agent` | `bl managed-agent --help`                       |
+| 联网搜索 / web search（模型路由 + 兜底）                   | `bailian-web-search`    | `bl search web --help`                          |
 | 应用 / 知识库 / 用量 / 鉴权配置等资源                      | `bailian-cli`           | `bl app\|knowledge\|usage\|auth\|config --help` |
 
 **共享协议** vs **软 hand-off**：

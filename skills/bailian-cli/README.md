@@ -5,7 +5,7 @@
 Agent skill for **Alibaba Cloud Model Studio CLI** (`bl`) resource hub — apps, memory, RAG, usage/quota, MCP, and hub `reference/`.
 
 - Shared protocol: `bailian-protocol` (install via `bl skill init`)
-- Soft hand-offs (optional skills): `bailian-gen` · `bailian-finetune` · `bailian-managed-agent`
+- Soft hand-offs (optional skills): `bailian-gen` · `bailian-finetune` · `bailian-managed-agent` · `bailian-web-search`
 
 ```bash
 bl skill init

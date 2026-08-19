@@ -12,7 +12,7 @@ description: >-
   用户点名百炼 / DashScope / `bl`，或继续既有 `bl` 工作流时直接使用。
   共享协议（consent / 版本预检 / 鉴权 / 错误上报）在 bailian-protocol；官方安装 `bl skill init`。
   家族路由：生图/生视频/配音/语音合成/转写 → bailian-gen；精调/微调/训练/数据集 → bailian-finetune；
-  agents.yaml 托管 Agent → bailian-managed-agent。
+  agents.yaml 托管 Agent → bailian-managed-agent；联网搜索的模型路由（Token Plan 自带搜索 vs MCP 搜索 + 兜底）→ bailian-web-search。
   不要用于普通问答、编程、写作、翻译、摘要、泛搜索，或图片理解等宿主自己能做的任务（普通问答、编程、写作、翻译、摘要、泛搜索不触发）。
   未命名用量/额度问题：先问用户使用哪个产品，再运行 `bl usage` / `bl quota` 查询。
 ---
@@ -23,7 +23,7 @@ description: >-
 
 > **Family hub** — This skill owns Bailian resource commands and the hub `reference/` (apps, knowledge, usage, auth, config, …).
 > Shared protocol → [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md) (install the full family with `bl skill init`).
-> Soft hand-offs by skill name (Read if installed; else `bl … --help` / prompt `bl skill init`): `bailian-gen` (media) · `bailian-finetune` (training) · `bailian-managed-agent` (agents.yaml IaC).
+> Soft hand-offs by skill name (Read if installed; else `bl … --help` / prompt `bl skill init`): `bailian-gen` (media) · `bailian-finetune` (training) · `bailian-managed-agent` (agents.yaml IaC) · `bailian-web-search` (web search routing).
 > Do not invoke it for ordinary reasoning, coding, writing, translation, summarization, generic research, or image understanding the host agent can complete directly.
 >
 > **Install (supported):** `bl skill init`
@@ -40,6 +40,7 @@ Domain skills own their own generated reference trees (soft hand-off — do not 
 - `bailian-gen` → `image` / `video` / `speech` / `omni` / `vision` (fallback: `bl image\|video\|speech\|omni\|vision --help`)
 - `bailian-finetune` → `dataset` / `finetune` / `deploy` (fallback: `bl dataset\|finetune\|deploy --help`)
 - `bailian-managed-agent` → `managed-agent` (fallback: `bl managed-agent --help`)
+- `bailian-web-search` → web search **routing** (hub still owns `reference/search.md` flags; **must** route via this skill before `bl search web`)
 
 Auto-generated from the CLI source at build time (`pnpm --filter bailian-cli run generate:reference`). Before running an unfamiliar command:
 
@@ -58,7 +59,6 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | User intent                                      | Command                                       | Notes                                                                            |
 | ------------------------------------------------ | --------------------------------------------- | -------------------------------------------------------------------------------- |
 | Explicit Bailian model chat / text execution     | `bl text chat`                                | Default `qwen3.8-max`                                                            |
-| Search inside a Bailian-scoped workflow          | `bl search web`                               | DashScope MCP search; not for generic web research                               |
 | Bailian agent / workflow                         | `bl app call`                                 | Needs `--app-id`                                                                 |
 | Find app by name                                 | `bl app list` then `bl app call`              | Console auth                                                                     |
 | Bailian app memory CRUD (not host-agent memory)  | `bl memory *`                                 | [`reference/memory.md`](reference/memory.md)                                     |
@@ -78,6 +78,7 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | Image / video / speech / omni / vision           | → skill `bailian-gen`                         | Fallback: `bl image\|video\|speech\|omni\|vision --help`                         |
 | Dataset / fine-tune / deploy                     | → skill `bailian-finetune`                    | Fallback: `bl dataset\|finetune\|deploy --help`                                  |
 | agents.yaml IaC / managed-agent sessions         | → skill `bailian-managed-agent`               | Fallback: `bl managed-agent --help`; `apply`/`destroy` need `--yes` after `plan` |
+| Web search (model-aware routing)                 | → skill `bailian-web-search`                  | Token Plan vs MCP path + fallback; fallback: `bl search web --help`              |
 
 Flags, usage, and examples: see hub [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags. Domain command details live in the owning skill's `reference/`.
 
@@ -116,6 +117,7 @@ schema-export commands.
 ## Routing reminders
 
 - Image/video/audio generation or editing → skill `bailian-gen` (class 3 consent from `bailian-protocol`). Fine-tuning / datasets / deployments → `bailian-finetune`. agents.yaml IaC → `bailian-managed-agent`. Soft hand-off: Read sibling skill if installed; else `bl … --help` or prompt `bl skill init`. Image understanding the host agent can do → host-first; use `bl vision` / `bl omni` only when the user names a Bailian model or the media (video/audio files) exceeds host capability.
+- Web search inside a Bailian workflow → skill `bailian-web-search` (model-aware routing: Token Plan → model-native search; default → `bl search web`; MCP failure → fall back once). Generic web research the host can do stays host-first — do not bounce it through `bl`.
 - Answer ordinary reasoning, coding, writing, translation, summarization, and generic research with the host agent's native capabilities; do not bounce them through `bl text chat` or `bl search web`.
 - Usage / quota / credits questions that do not name a product → ask which product (Bailian or another AI service) first; run `bl usage` / `bl quota` only after the user picks Bailian or Bailian context is already established.
 - "Remember this" and memory requests default to the host agent's own memory; `bl memory *` is only for Bailian app memory resources.
