@@ -9,7 +9,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import z from '@deepseek-ai/schemastery'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import { settingsNamespace, SettingsProvider, type SettingsRegisterOptions, type SettingsScope } from '@deepseek-ai/dsh-settings'
-import { readBlCliConfig, startConsoleLogin } from './bl-cli.js'
+import { readBlCliConfig } from './bl-cli.js'
+import { consoleLoginState, startConsoleLogin } from './console-login.js'
 import { KbClient } from './client.js'
 import { registerSkill } from './skill.js'
 import { createKbTools } from './tools.js'
@@ -353,11 +354,10 @@ export function apply(ctx: Context, config: Config): void {
       },
     }), 'tool-bailian-kb: settings bridge route')
 
-    // Autofill bridge: adopt the bl CLI's stored login on demand (panel
-    // button). `fill` reads `~/.bailian/config.json` on the host and writes
-    // through the same layers the panel edits — the plain key never rides
-    // the wire to the browser; `login` starts the console browser flow that
-    // provisions the file for the next fill.
+    // Autofill bridge: fetch credentials by signing in to the Bailian console
+    // (panel button). `login` drives the console's callback protocol on the
+    // host and persists what comes back — the plain key never rides the wire
+    // to the browser; `loginStatus` lets the panel poll for the outcome.
     wctx.effect(() => wctx.webServer.register({
       kind: 'exact',
       path: '/bailian-kb/autofill',
@@ -366,43 +366,37 @@ export function apply(ctx: Context, config: Config): void {
           sendJson(res, 405, { error: 'use POST' })
           return
         }
-        let action = 'fill'
+        let action = 'login'
         try {
           const body = await readJsonBody(req)
-          if (typeof body === 'object' && body !== null && (body as { action?: unknown }).action === 'login') action = 'login'
-        } catch (_emptyOrMalformedBody) { /* default to fill */ }
-        if (action === 'login') {
-          sendJson(res, 200, { status: await startConsoleLogin() })
+          if (
+            typeof body === 'object' && body !== null
+            && (body as { action?: unknown }).action === 'loginStatus'
+          ) action = 'loginStatus'
+        } catch (_emptyOrMalformedBody) { /* default to login */ }
+        if (action === 'loginStatus') {
+          sendJson(res, 200, consoleLoginState())
           return
         }
-        const bl = readBlCliConfig()
-        const filled: string[] = []
-        let apiKey: 'filled' | 'missing' | 'failed' = 'missing'
-        if (bl.apiKey !== undefined) {
-          try {
-            await ctx.credentials.set(credentialRef('DASHSCOPE_API_KEY'), bl.apiKey)
-            apiKey = 'filled'
-            filled.push('apiKey')
-          } catch (_readOnlyShadow) {
-            apiKey = 'failed'
-          }
-        }
-        let workspaceId: 'filled' | 'missing' | 'failed' = 'missing'
-        if (bl.workspaceId !== undefined) {
-          if (scope) {
-            try {
-              await scope.update({ workspaceId: bl.workspaceId })
-              workspaceId = 'filled'
-              filled.push('workspaceId')
-            } catch (_settingsWriteFailure) {
-              workspaceId = 'failed'
+        // Drive the console flow ourselves with `needapikey=true`, so the key
+        // and the workspace id both belong to the account signing in now.
+        // Persisting here keeps the plain key on the host.
+        const started = await startConsoleLogin({
+          onComplete: async (credentials) => {
+            const written: string[] = []
+            if (credentials.apiKey !== undefined) {
+              await ctx.credentials.set(credentialRef('DASHSCOPE_API_KEY'), credentials.apiKey)
+              written.push('apiKey')
             }
-          } else {
-            workspaceId = 'failed'
-          }
-        }
-        if (filled.length > 0) await markSeeded(filled)
-        sendJson(res, 200, { apiKey, workspaceId })
+            if (credentials.workspaceId !== undefined && scope) {
+              await scope.update({ workspaceId: credentials.workspaceId })
+              written.push('workspaceId')
+            }
+            if (written.length > 0) await markSeeded(written)
+            return written
+          },
+        })
+        sendJson(res, 200, started)
       },
     }), 'tool-bailian-kb: autofill bridge route')
   })

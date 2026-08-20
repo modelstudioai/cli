@@ -47,8 +47,7 @@ const FIELDS: readonly FieldView[] = [
 /** Result-notice locale key per settled autofill outcome. */
 const AUTOFILL_NOTICES: Partial<Record<string, BailianKbLocaleKey>> = {
   done: 'autofillDone',
-  loginStarted: 'autofillLoginStarted',
-  blMissing: 'autofillBlMissing',
+  awaitingLogin: 'autofillAwaitingLogin',
   failed: 'autofillFailed',
 }
 
@@ -63,6 +62,8 @@ export function BailianCard(props: BailianCardProps) {
   const dirty = dirtyOf(state)
   const busy = state.saving || state.clearing
   const autofillNotice = AUTOFILL_NOTICES[state.autofill]
+  // The flow spans a browser login, so the button stays disabled until it settles.
+  const autofillBusy = state.autofill === 'running' || state.autofill === 'awaitingLogin'
   return (
     <section className={css.section}>
       <div className={css.headRow}>
@@ -74,13 +75,20 @@ export function BailianCard(props: BailianCardProps) {
         <button
           type="button"
           className={css.discard}
-          disabled={busy || state.autofill === 'running'}
+          disabled={busy || autofillBusy}
           onClick={() => { void props.autofill() }}
         >
           {t(state.autofill === 'running' ? 'autofilling' : 'autofill')}
         </button>
         <span className={css.hint}>
           {autofillNotice !== undefined ? t(autofillNotice) : t('autofillHint')}
+          {/* The host opens the page itself; this link is the fallback when it cannot. */}
+          {state.autofillLoginUrl !== undefined && state.autofillLoginUrl !== ''
+            ? <>
+                {' '}
+                <a href={state.autofillLoginUrl} target="_blank" rel="noreferrer">{t('autofillOpenUrl')}</a>
+              </>
+            : null}
         </span>
       </div>
       <div className={css.form}>

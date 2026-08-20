@@ -33,7 +33,7 @@
 
 - **DashScope API Key** — write-only，`type=password` 遮罩输入草稿，仅显示 configured/来自环境变量 徽标；写 `~/.dsh/.credentials.yaml`
 - **Bailian Workspace ID / 默认检索服务 ID / 默认对话服务 ID** — 回显：读写 `bailian-kb` settings 用户层，预填当前解析值；清空保存 = 移除用户层，回退 entry config → credential
-- **自动获取（bl CLI）** — 按钮调 Host 桥接路由 `/bailian-kb/autofill`：宿主机读 `~/.bailian/config.json`（`bl auth login` 的落盘），把 `api_key` 写入凭据存储、`workspace_id` 写入 settings，明文 key 不过浏览器；文件里没有 key 时在宿主机拉起 `bl auth login --console` 浏览器登录，完成后再次点击即可回填
+- **自动获取** — 按钮调 Host 桥接路由 `/bailian-kb/autofill`：Host **自己走百炼控制台登录回调协议**（不经 `bl` 命令，也不读 `~/.bailian/config.json`）在宿主机拉起浏览器登录，回调落到本机 loopback 端口后直接把 API 密钥写入凭据存储、工作空间 ID 写入 settings，明文 key 不过浏览器；面板轮询到完成后自动刷新（无需再次点击）。登录 URL 始终带 `needapikey=true`，因此**每次都由本次登录的账号签发新 key**，key 与 workspaceId 必然同账号，切换账号直接点一次即可；`bl auth login --console` 自身做不到这点（它硬编码 `needApiKey: !hasApiKey`，已存 key 时不再签发，会把旧账号的 key 和新账号的 workspaceId 配在一起且无任何提示）
 
 首次接入 seed：启动时若 API key / workspaceId 从未被设置过（settings、credential、env 均无值），自动从 `~/.bailian/config.json` 采纳一次；`seededFields` 字段（settings 文档内，面板不可编辑）记账已消费/已由用户管理的字段，用户主动清空的值永不会被重新填回。
 

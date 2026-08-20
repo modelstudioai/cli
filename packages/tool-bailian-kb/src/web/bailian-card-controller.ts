@@ -61,8 +61,8 @@ export interface BailianSettingsView {
   values: BailianKbSection
 }
 
-/** Where the autofill flow (adopt the bl CLI's stored login) currently stands. */
-export type BailianAutofillStatus = 'idle' | 'running' | 'done' | 'loginStarted' | 'blMissing' | 'failed'
+/** Where the autofill flow (adopt a Bailian console login) currently stands. */
+export type BailianAutofillStatus = 'idle' | 'running' | 'awaitingLogin' | 'done' | 'failed'
 
 /** What the Bailian page renders. */
 export interface BailianCardState {
@@ -80,6 +80,8 @@ export interface BailianCardState {
   failed: boolean
   /** The autofill flow's state; feeds the button label and its result notice. */
   autofill: BailianAutofillStatus
+  /** Console login URL while `awaitingLogin`, shown in case the host could not open a browser. */
+  autofillLoginUrl?: string
 }
 
 /** The registration-side face the page's slot entry injects. */
@@ -96,7 +98,7 @@ export interface BailianCardFace {
   discard: () => void
   /** Remove the stored default service from every writable layer, then re-read. */
   clearDefaultAgent: (key: 'BAILIAN_DEFAULT_RETRIEVE_AGENT_ID' | 'BAILIAN_DEFAULT_CHAT_AGENT_ID') => Promise<void>
-  /** Adopt the bl CLI's stored login (api key + workspace id) via the Host. */
+  /** Adopt a Bailian console login (api key + workspace id) via the Host. */
   autofill: () => Promise<void>
 }
 
@@ -152,6 +154,7 @@ export class BailianCardController {
       clearing: false,
       failed: false,
       autofill: 'idle',
+      autofillLoginUrl: undefined,
     })
     void this.fetchSettings()
     void this.read()
@@ -259,37 +262,88 @@ export class BailianCardController {
   }
 
   /**
-   * Adopt the bl CLI's stored login through the Host autofill route. The
-   * Host reads `~/.bailian/config.json` itself and writes the api key into
-   * the credential store and the workspace id into the settings section —
-   * the plain key never rides the wire to this page. When the file has no
-   * key yet, ask the Host to start `bl auth login --console` (a browser
-   * flow on the host machine); the user finishes it and clicks again.
+   * Fetch credentials by signing in to the Bailian console. The Host drives
+   * the console's callback protocol itself, always asking for a freshly issued
+   * api key, then persists the key into the credential store and the workspace
+   * id into the settings section — so both values belong to the account that
+   * just signed in, and the plain key never rides the wire to this page.
+   *
+   * Deliberately does NOT adopt the bl CLI's stored login: reusing a key from
+   * `~/.bailian/config.json` can pair one account's key with another account's
+   * workspace id (the CLI refuses to re-issue once any key is stored), and
+   * nothing would flag the mismatch until a knowledge-base call fails.
    */
   async autofill(): Promise<void> {
-    if (this.store.getSnapshot().autofill === 'running') return
-    this.store.update(draft => { draft.autofill = 'running' })
-    let outcome: BailianAutofillStatus = 'failed'
-    try {
-      const fill = await this.postAutofill('fill') as { apiKey?: string, workspaceId?: string }
-      if (fill.apiKey === 'filled') {
-        outcome = 'done'
-      } else if (fill.apiKey === 'missing') {
-        // Nothing to adopt yet: start the console login that provisions the
-        // CLI's credential file, then have the user retry the button.
-        const login = await this.postAutofill('login') as { status?: string }
-        outcome = login.status === 'started' || login.status === 'already-running'
-          ? 'loginStarted'
-          : login.status === 'not-found' ? 'blMissing' : 'failed'
-      }
-      // apiKey === 'failed' (a read-only source shadows the credential):
-      // fall through as 'failed' even when the workspace id was adopted.
-    } catch (_autofillFailure) {
-      outcome = 'failed'
-    }
-    this.store.update(draft => { draft.autofill = outcome })
+    const phase = this.store.getSnapshot().autofill
+    if (phase === 'running' || phase === 'awaitingLogin') return
+    this.store.update(draft => {
+      draft.autofill = 'running'
+      draft.autofillLoginUrl = undefined
+    })
+    await this.runConsoleLogin()
     await this.fetchSettings()
     await this.read()
+  }
+
+  /**
+   * Ask the Host to open the console login page, then poll for the outcome.
+   * The Host persists the credentials itself when the callback lands, always
+   * asking the console to issue a fresh key — so the key and the workspace id
+   * both come from the account signing in. (The bl CLI's own login refuses to
+   * re-issue once any key is stored, which would otherwise pair an old
+   * account's key with a new account's workspace.)
+   */
+  private async runConsoleLogin(): Promise<void> {
+    let started: { status?: string, loginUrl?: string }
+    try {
+      started = await this.postAutofill('login') as { status?: string, loginUrl?: string }
+    } catch (_routeFailure) {
+      this.store.update(draft => { draft.autofill = 'failed' })
+      return
+    }
+    if (started.status !== 'started' && started.status !== 'already-running') {
+      this.store.update(draft => { draft.autofill = 'failed' })
+      return
+    }
+    this.store.update(draft => {
+      draft.autofill = 'awaitingLogin'
+      draft.autofillLoginUrl = started.loginUrl
+    })
+    await this.pollConsoleLogin()
+  }
+
+  /**
+   * Poll the Host until the console login resolves. Bounded so a login the
+   * user abandons does not leave the button spinning forever; the Host keeps
+   * its own (longer) timeout, so a late callback still persists and shows up
+   * on the next page read.
+   */
+  private async pollConsoleLogin(): Promise<void> {
+    const deadline = Date.now() + 5 * 60 * 1000
+    while (Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      let phase: string | undefined
+      try {
+        phase = (await this.postAutofill('loginStatus') as { phase?: string }).phase
+      } catch (_pollFailure) {
+        continue
+      }
+      if (phase === 'done') {
+        this.store.update(draft => {
+          draft.autofill = 'done'
+          draft.autofillLoginUrl = undefined
+        })
+        return
+      }
+      if (phase === 'failed') {
+        this.store.update(draft => {
+          draft.autofill = 'failed'
+          draft.autofillLoginUrl = undefined
+        })
+        return
+      }
+    }
+    this.store.update(draft => { draft.autofill = 'failed' })
   }
 
   /**
@@ -360,10 +414,11 @@ export class BailianCardController {
 
   /**
    * Post one autofill action to the Host bridge route.
-   * @param action - `fill` adopts the CLI file; `login` starts the browser flow.
+   * @param action - `login` starts the console browser flow; `loginStatus`
+   * reads that flow's progress.
    * @returns the route's JSON answer.
    */
-  private async postAutofill(action: 'fill' | 'login'): Promise<unknown> {
+  private async postAutofill(action: 'login' | 'loginStatus'): Promise<unknown> {
     const resp = await fetch('/bailian-kb/autofill', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -5,9 +5,13 @@
  * console issues and persists it there in plain JSON — no CLI command ever
  * echoes the value back (auth status / config show both mask), so reading the
  * file is the only way to obtain it programmatically.
+ *
+ * Starting a login is NOT done through the CLI: it hard-codes
+ * `needApiKey: !hasApiKey` and so refuses to have a fresh key issued once any
+ * key is stored. See `console-login.ts`, which speaks the callback protocol
+ * directly and always asks for one.
  */
 
-import { spawn } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -46,33 +50,4 @@ export function readBlCliConfig(configPath = blCliConfigPath()): BlCliConfig {
   } catch (_unreadable) {
     return {}
   }
-}
-
-/** Outcome of asking the host to start a console browser login. */
-export type ConsoleLoginStart = 'started' | 'already-running' | 'not-found' | 'failed'
-
-/** The in-flight login child, if any: one browser flow at a time. */
-let loginChild: ReturnType<typeof spawn> | undefined
-
-/**
- * Start `bl auth login --console` on the host: opens the Bailian console
- * login page in the host's default browser; on completion the CLI persists
- * the issued api key and workspace id to `~/.bailian/config.json` (the flow
- * requests a key only when none is stored yet). Fire-and-forget: the child
- * keeps running after this resolves — callers re-read the credential file
- * on their next fill attempt.
- * @returns whether the flow started, was already running, or the CLI is absent.
- */
-export function startConsoleLogin(): Promise<ConsoleLoginStart> {
-  if (loginChild !== undefined) return Promise.resolve('already-running')
-  return new Promise((resolve) => {
-    const child = spawn('bl', ['auth', 'login', '--console'], { stdio: 'ignore' })
-    loginChild = child
-    child.once('spawn', () => { resolve('started') })
-    child.once('error', (err: NodeJS.ErrnoException) => {
-      loginChild = undefined
-      resolve(err.code === 'ENOENT' ? 'not-found' : 'failed')
-    })
-    child.once('exit', () => { loginChild = undefined })
-  })
 }

@@ -17,7 +17,7 @@ export type BailianKbLocaleKey =
   | 'fromEnv' | 'clear' | 'clearing'
   | 'save' | 'saving' | 'discard' | 'unsaved' | 'saveFailed'
   | 'autofill' | 'autofilling' | 'autofillHint'
-  | 'autofillDone' | 'autofillLoginStarted' | 'autofillBlMissing' | 'autofillFailed'
+  | 'autofillDone' | 'autofillAwaitingLogin' | 'autofillOpenUrl' | 'autofillFailed'
 
 /** English copy. */
 export const en: Record<BailianKbLocaleKey, string> = {
@@ -53,13 +53,13 @@ export const en: Record<BailianKbLocaleKey, string> = {
   discard: 'Discard',
   unsaved: 'Unsaved',
   saveFailed: 'The Host did not accept these values; they were left for you to correct.',
-  autofill: 'Auto-fill from bl CLI',
-  autofilling: 'Fetching…',
-  autofillHint: 'Adopt the API key and workspace id stored by the bl CLI (~/.bailian/config.json on the host); starts a console browser login on the host when the CLI has none yet.',
-  autofillDone: 'Adopted the bl CLI login; the fields below reflect the new values.',
-  autofillLoginStarted: 'A Bailian console login was opened in a browser on the host machine — finish signing in there, then click again.',
-  autofillBlMissing: 'The bl CLI was not found on the host; install it with `npm install -g bailian-cli` and retry.',
-  autofillFailed: 'Auto-fill failed — the credential may be locked by an environment variable, or the Host refused the write.',
+  autofill: 'Fetch from console login',
+  autofilling: 'Starting…',
+  autofillHint: 'Sign in to the Bailian console to fill in that account’s API key and workspace id.',
+  autofillDone: 'Credentials adopted; the fields below reflect the new values.',
+  autofillAwaitingLogin: 'Waiting for the Bailian console login to finish in a browser on the host machine…',
+  autofillOpenUrl: 'Open the login page manually',
+  autofillFailed: 'Auto-fill failed — the credential may be locked by an environment variable, the Host refused the write, or the login was abandoned.',
 }
 
 /** Simplified Chinese copy. */
@@ -96,11 +96,11 @@ export const zh: Record<BailianKbLocaleKey, string> = {
   discard: '放弃',
   unsaved: '未保存',
   saveFailed: '宿主未接受这些值，已保留供你修改。',
-  autofill: '自动获取（bl CLI）',
-  autofilling: '获取中…',
-  autofillHint: '从宿主机 bl CLI 的登录态（~/.bailian/config.json）回填 API 密钥与工作空间 ID；CLI 尚未登录时会在宿主机拉起百炼控制台浏览器登录。',
-  autofillDone: '已回填 bl CLI 的登录信息，下方字段已更新。',
-  autofillLoginStarted: '已在宿主机浏览器打开百炼控制台登录页，完成登录后请再次点击。',
-  autofillBlMissing: '宿主机未安装 bl CLI；请先 `npm install -g bailian-cli` 再重试。',
-  autofillFailed: '自动获取失败——凭据可能被环境变量锁定，或宿主拒绝了写入。',
+  autofill: '自动获取',
+  autofilling: '启动中…',
+  autofillHint: '登录百炼控制台，自动填入该账号的 API 密钥与工作空间 ID。',
+  autofillDone: '已回填凭据，下方字段已更新。',
+  autofillAwaitingLogin: '等待在宿主机浏览器中完成百炼控制台登录…',
+  autofillOpenUrl: '手动打开登录页',
+  autofillFailed: '自动获取失败——凭据可能被环境变量锁定、宿主拒绝了写入，或登录未完成。',
 }
