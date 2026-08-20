@@ -1,13 +1,13 @@
-# `kscli kb` — 知识库生命周期
+# `bl knowledge` — 知识库生命周期
 
 > 通用鉴权/全局 flag 见 [index.md](index.md)。以下 Flags 只列命令专属项。
 
-## `kscli kb list`
+## `bl knowledge list`
 
 列出 workspace 内知识库。
 
 ```
-Usage: kscli kb list [flags]
+Usage: bl knowledge list [flags]
 ```
 
 | Flag | 说明 |
@@ -21,16 +21,16 @@ Notes：
 - 返回的 id 即后续 kb/doc/chunk 管理命令的 `--index-id`。
 
 ```bash
-kscli kb list --workspace-id ws-xxx
-kscli kb list --name demo --page-number 2 --page-size 50
+bl knowledge list --workspace-id ws-xxx
+bl knowledge list --name demo --page-number 2 --page-size 50
 ```
 
-## `kscli kb info`
+## `bl knowledge info`
 
 查看知识库配置详情。
 
 ```
-Usage: kscli kb info --index-id <id> [flags]
+Usage: bl knowledge info --index-id <id> [flags]
 ```
 
 Notes：
@@ -38,15 +38,15 @@ Notes：
 - 索引配置不可变，改配置需重建知识库。
 
 ```bash
-kscli kb info --index-id idx-xxx --workspace-id ws-xxx
+bl knowledge info --index-id idx-xxx --workspace-id ws-xxx
 ```
 
-## `kscli kb create`
+## `bl knowledge create`
 
 建库并导入数据中心文件或类目。
 
 ```
-Usage: kscli kb create --name <text> (--doc-id <id> | --category-id <id>) [flags]
+Usage: bl knowledge create --name <text> (--doc-id <id> | --category-id <id>) [flags]
 ```
 
 | Flag | 说明 |
@@ -65,16 +65,16 @@ Notes：
 - 返回知识库 id（pipelineId）与首次导入任务 id（ingestionId）；用 `doc status`（或 `--wait`）跟踪导入。
 
 ```bash
-kscli kb create --name demo --doc-id file-xxx --workspace-id ws-xxx
-kscli kb create --name demo --category-id cate-xxx --wait
+bl knowledge create --name demo --doc-id file-xxx --workspace-id ws-xxx
+bl knowledge create --name demo --category-id cate-xxx --wait
 ```
 
-## `kscli kb update`
+## `bl knowledge update`
 
 改名、描述或 rerank 阈值。
 
 ```
-Usage: kscli kb update --index-id <id> [flags]
+Usage: bl knowledge update --index-id <id> [flags]
 ```
 
 | Flag | 说明 |
@@ -88,16 +88,16 @@ Notes：
 - 索引配置（embedding 模型、chunk size 等）不可变——要改只能重建。
 
 ```bash
-kscli kb update --index-id idx-xxx --description 'product docs v2' --workspace-id ws-xxx
-kscli kb update --index-id idx-xxx --rerank-min-score 0.3
+bl knowledge update --index-id idx-xxx --description 'product docs v2' --workspace-id ws-xxx
+bl knowledge update --index-id idx-xxx --rerank-min-score 0.3
 ```
 
-## `kscli kb delete`
+## `bl knowledge delete`
 
 删库（含全部文档与 chunk）。**不可逆，执行前须向用户确认。**
 
 ```
-Usage: kscli kb delete --index-id <id> [flags]
+Usage: bl knowledge delete --index-id <id> [flags]
 ```
 
 | Flag | 说明 |
@@ -110,16 +110,16 @@ Notes：
 - 数据中心内的源文件不受影响，只删索引。
 
 ```bash
-kscli kb delete --index-id idx-xxx --workspace-id ws-xxx
-kscli kb delete --index-id idx-xxx --yes
+bl knowledge delete --index-id idx-xxx --workspace-id ws-xxx
+bl knowledge delete --index-id idx-xxx --yes
 ```
 
-## `kscli kb stats`
+## `bl knowledge stats`
 
 存储量与 QPS 监控数据。
 
 ```
-Usage: kscli kb stats --index-id <id> [flags]
+Usage: bl knowledge stats --index-id <id> [flags]
 ```
 
 | Flag | 说明 |
@@ -132,6 +132,6 @@ Notes：
 - 监控 API 只返回历史数据：`--start` 拒绝未来时间，`--end` 的未来值被截断到当前。
 
 ```bash
-kscli kb stats --index-id idx-xxx --workspace-id ws-xxx
-kscli kb stats --index-id idx-xxx --start 2026-07-30 --end 2026-07-31
+bl knowledge stats --index-id idx-xxx --workspace-id ws-xxx
+bl knowledge stats --index-id idx-xxx --start 2026-07-30 --end 2026-07-31
 ```

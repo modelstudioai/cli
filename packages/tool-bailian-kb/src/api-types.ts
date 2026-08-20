@@ -1,4 +1,4 @@
-/** Request/response fields of the DashScope search and chat endpoints, mirrored from the verified kscli types. */
+/** Request/response fields of the DashScope search and chat endpoints, mirrored from the verified bl CLI types. */
 
 export interface SearchRequest {
   query: string

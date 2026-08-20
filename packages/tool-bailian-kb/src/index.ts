@@ -1,6 +1,6 @@
 /**
  * Bailian knowledge-base consumer plugin: registers kb_search and kb_chat over the DashScope RAG API,
- * plus the kscli management skill.
+ * plus the bl management skill.
  * @module dsh-tool-bailian-kb
  */
 
@@ -9,6 +9,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import z from '@deepseek-ai/schemastery'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import { settingsNamespace, SettingsProvider, type SettingsRegisterOptions, type SettingsScope } from '@deepseek-ai/dsh-settings'
+import { readBlCliConfig, startConsoleLogin } from './bl-cli.js'
 import { KbClient } from './client.js'
 import { registerSkill } from './skill.js'
 import { createKbTools } from './tools.js'
@@ -85,6 +86,58 @@ async function seedFromCredentials(ctx: Context, scope: SettingsScope<Config>): 
   }
 }
 
+/**
+ * One-time adoption of the bl CLI's stored login (`~/.bailian/config.json`):
+ * fields never set anywhere are filled from the CLI's credential file, so a
+ * `bl auth login --console` done before installing the plugin "just works".
+ * `seededFields` is the consumed-once ledger — a field is marked when it was
+ * seeded here, or when it already had a value (user-managed elsewhere) — so
+ * a value the user later clears deliberately is never resurrected.
+ * @param ctx - registrant context carrying credentials.
+ * @param scope - the registered `bailian-kb` scope the seed writes through.
+ */
+async function seedFromBlCli(ctx: Context, scope: SettingsScope<Config>): Promise<void> {
+  try {
+    const done = new Set(scope.get().seededFields ?? [])
+    if (done.has('apiKey') && done.has('workspaceId')) return
+    const bl = readBlCliConfig()
+    const marks: string[] = []
+    if (!done.has('apiKey')) {
+      const existing = await ctx.credentials.resolve(credentialRef('DASHSCOPE_API_KEY'))
+      if (existing) {
+        // Already configured (env or file): user-managed, never seed later.
+        marks.push('apiKey')
+      } else if (bl.apiKey !== undefined) {
+        try {
+          await ctx.credentials.set(credentialRef('DASHSCOPE_API_KEY'), bl.apiKey)
+          marks.push('apiKey')
+        } catch (_readOnlyShadow) {
+          // A read-only source refuses the write; leave unmarked so a later
+          // startup (once the shadow is gone) can still seed.
+        }
+      }
+      // Neither configured nor available from the CLI: leave unmarked so a
+      // later startup (after `bl auth login --console`) can seed.
+    }
+    if (!done.has('workspaceId')) {
+      const configured = scope.get().workspaceId
+        || (await ctx.credentials.resolve(credentialRef('BAILIAN_WORKSPACE_ID'))) !== undefined
+      if (configured) {
+        marks.push('workspaceId')
+      } else if (bl.workspaceId !== undefined) {
+        await scope.update({ workspaceId: bl.workspaceId })
+        marks.push('workspaceId')
+      }
+    }
+    if (marks.length > 0) {
+      await scope.update({ seededFields: [...new Set([...(scope.get().seededFields ?? []), ...marks])] })
+    }
+  } catch (_seedFailure) {
+    // Best-effort: an unseeded field still resolves through the normal
+    // credential fallback chain, and the panel's autofill button remains.
+  }
+}
+
 /** Bailian knowledge-base plugin configuration. */
 export interface Config {
   /** Bailian workspace id; the API host is the workspace subdomain `https://<workspaceId>.<endpointHost>`. Optional here: an unset value falls back per call to the BAILIAN_WORKSPACE_ID credential (env/.env or ~/.dsh/.credentials.yaml). Editable with echo on the Settings → 百炼知识库 page (settings layer). */
@@ -99,6 +152,8 @@ export interface Config {
   agentVersion?: string
   /** kb_chat timeout in milliseconds; the server side is a minutes-scale agentic loop. */
   chatTimeoutMs: number
+  /** Consumed-once ledger of {@link seedFromBlCli}: fields listed here are never auto-seeded again, so a deliberately cleared value stays cleared. Maintained by the host; not editable from the panel. */
+  seededFields?: string[]
 }
 
 /** Schemastery validation for {@link Config}; workspaceId and default agent ids are optional — both resolve per call with a credentials fallback. */
@@ -109,6 +164,7 @@ export const Config: z<Config> = z.object({
   defaultChatAgentId: z.string(),
   agentVersion: z.string(),
   chatTimeoutMs: z.number().default(300_000),
+  seededFields: z.array(z.string()),
 })
 
 /**
@@ -132,6 +188,20 @@ export function apply(ctx: Context, config: Config): void {
   let scope: SettingsScope<Config> | undefined
   /** The settings provider, captured for `mutate` (path-level unset) access. */
   let settings: SettingsProvider | undefined
+  /**
+   * Mark fields as consumed in the {@link seedFromBlCli} ledger — called on
+   * every user-driven write or clear, so a managed field is never re-seeded.
+   * Best-effort: a failed mark only risks one extra seed attempt.
+   */
+  const markSeeded = async (fields: readonly string[]): Promise<void> => {
+    if (!scope) return
+    try {
+      const done = new Set(scope.get().seededFields ?? [])
+      const added = fields.filter(field => !done.has(field))
+      if (added.length === 0) return
+      await scope.update({ seededFields: [...done, ...added] })
+    } catch (_markFailure) { /* best-effort */ }
+  }
   ctx.inject(['settings'], (sctx) => {
     settings = sctx.settings
     // `expose` is the wire opt-in the harness documents as deferred work; the
@@ -142,7 +212,13 @@ export function apply(ctx: Context, config: Config): void {
     scope = sctx.settings.register(SETTINGS_NS, Config, options)
     current = () => scope!.get()
     sctx.effect(() => () => { current = () => config }, 'tool-bailian-kb: settings source fallback')
-    void seedFromCredentials(ctx, scope)
+    void seedFromCredentials(ctx, scope).then(() => seedFromBlCli(ctx, scope!))
+    // Any api-key write or clear — this panel, the Models page, an external
+    // file edit — means the user manages the credential: consume the seed so
+    // a deliberately cleared key is never resurrected at the next startup.
+    sctx.on('credentials/updated', (ref) => {
+      if (ref === 'DASHSCOPE_API_KEY') void markSeeded(['apiKey'])
+    })
   })
 
   const client = new KbClient({
@@ -194,7 +270,7 @@ export function apply(ctx: Context, config: Config): void {
   registerSkill(ctx)
 
   // Export the resolved workspace id as a shell environment variable so
-  // management CLI commands (`bl knowledge list`, `kscli kb list`, etc.)
+  // management CLI commands (`bl knowledge list`, `bl knowledge service list`, etc.)
   // running in bash can see the value the settings service resolved.
   // Without this, the settings.yaml value is invisible to child processes.
   ctx.inject(['shellEnv'], (envCtx) => {
@@ -267,12 +343,68 @@ export function apply(ctx: Context, config: Config): void {
               await settings.mutate(SETTINGS_NS, [{ op: 'unset', path: [key] }])
             }
           }
+          // A user-driven workspace write or clear consumes its bl-CLI seed:
+          // a deliberately cleared value must never be resurrected at startup.
+          if ('workspaceId' in patch || removals.has('workspaceId')) await markSeeded(['workspaceId'])
           sendJson(res, 200, scope.get())
         } catch (err) {
           sendJson(res, 500, { error: err instanceof Error ? err.message : 'settings write failed' })
         }
       },
     }), 'tool-bailian-kb: settings bridge route')
+
+    // Autofill bridge: adopt the bl CLI's stored login on demand (panel
+    // button). `fill` reads `~/.bailian/config.json` on the host and writes
+    // through the same layers the panel edits — the plain key never rides
+    // the wire to the browser; `login` starts the console browser flow that
+    // provisions the file for the next fill.
+    wctx.effect(() => wctx.webServer.register({
+      kind: 'exact',
+      path: '/bailian-kb/autofill',
+      handler: async (req: IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') {
+          sendJson(res, 405, { error: 'use POST' })
+          return
+        }
+        let action = 'fill'
+        try {
+          const body = await readJsonBody(req)
+          if (typeof body === 'object' && body !== null && (body as { action?: unknown }).action === 'login') action = 'login'
+        } catch (_emptyOrMalformedBody) { /* default to fill */ }
+        if (action === 'login') {
+          sendJson(res, 200, { status: await startConsoleLogin() })
+          return
+        }
+        const bl = readBlCliConfig()
+        const filled: string[] = []
+        let apiKey: 'filled' | 'missing' | 'failed' = 'missing'
+        if (bl.apiKey !== undefined) {
+          try {
+            await ctx.credentials.set(credentialRef('DASHSCOPE_API_KEY'), bl.apiKey)
+            apiKey = 'filled'
+            filled.push('apiKey')
+          } catch (_readOnlyShadow) {
+            apiKey = 'failed'
+          }
+        }
+        let workspaceId: 'filled' | 'missing' | 'failed' = 'missing'
+        if (bl.workspaceId !== undefined) {
+          if (scope) {
+            try {
+              await scope.update({ workspaceId: bl.workspaceId })
+              workspaceId = 'filled'
+              filled.push('workspaceId')
+            } catch (_settingsWriteFailure) {
+              workspaceId = 'failed'
+            }
+          } else {
+            workspaceId = 'failed'
+          }
+        }
+        if (filled.length > 0) await markSeeded(filled)
+        sendJson(res, 200, { apiKey, workspaceId })
+      },
+    }), 'tool-bailian-kb: autofill bridge route')
   })
 }
 

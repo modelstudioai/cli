@@ -1,6 +1,6 @@
 /** Protocol path constants and the workspace-subdomain URL builder (external API spec; not configurable). */
 
-/** DashScope knowledge API paths for the two native tools (search, chat); service listing is handled by kscli. */
+/** DashScope knowledge API paths for the two native tools (search, chat); service listing is handled by the bl CLI. */
 export const KB_PATHS = {
   search: '/api/v1/indices/knowledge/search',
   chat: '/api/v2/apps/knowledge/chat',

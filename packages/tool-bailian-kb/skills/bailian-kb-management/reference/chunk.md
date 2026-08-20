@@ -1,14 +1,14 @@
-# `kscli chunk` — Chunk 运维
+# `bl knowledge chunk` — Chunk 运维
 
 > 通用鉴权/全局 flag 见 [index.md](index.md)。以下 Flags 只列命令专属项。
 > chunk id = `chunk list` 输出的 `metadata._id`；文档 id = `metadata.doc_id`。
 
-## `kscli chunk add`
+## `bl knowledge chunk add`
 
 直接向库内添加 chunk。
 
 ```
-Usage: kscli chunk add --index-id <id> (--content <text> | --field <k=v>) [flags]
+Usage: bl knowledge chunk add --index-id <id> (--content <text> | --field <k=v>) [flags]
 ```
 
 | Flag | 说明 |
@@ -29,16 +29,16 @@ Notes：
 - 响应不带 chunk id；添加后用 `chunk list` 反查。
 
 ```bash
-kscli chunk add --index-id idx-xxx --content "chunk text" --title intro --doc-id file-xxx
-kscli chunk add --index-id idx-xxx --field 列A=v1 --field 列B=v2
+bl knowledge chunk add --index-id idx-xxx --content "chunk text" --title intro --doc-id file-xxx
+bl knowledge chunk add --index-id idx-xxx --field 列A=v1 --field 列B=v2
 ```
 
-## `kscli chunk list`
+## `bl knowledge chunk list`
 
 列出 chunk 内容与状态。
 
 ```
-Usage: kscli chunk list --index-id <id> [flags]
+Usage: bl knowledge chunk list --index-id <id> [flags]
 ```
 
 | Flag | 说明 |
@@ -51,15 +51,15 @@ Notes：
 - 后续 update/delete 用输出中的 `metadata._id`（chunk id）与 `metadata.doc_id`（文档 id）。
 
 ```bash
-kscli chunk list --index-id idx-xxx --doc-id file-xxx --page-size 50
+bl knowledge chunk list --index-id idx-xxx --doc-id file-xxx --page-size 50
 ```
 
-## `kscli chunk update`
+## `bl knowledge chunk update`
 
 改 chunk 内容或切换检索可见性。
 
 ```
-Usage: kscli chunk update --index-id <id> --chunk-id <id> --doc-id <id> [flags]
+Usage: bl knowledge chunk update --index-id <id> --chunk-id <id> --doc-id <id> [flags]
 ```
 
 | Flag | 说明 |
@@ -78,16 +78,16 @@ Notes：
 - 只切 `--exclude/--include` 不给新内容时，自动重提交现有内容。
 
 ```bash
-kscli chunk update --index-id idx-xxx --chunk-id chunk-xxx --doc-id file-xxx --content "corrected text"
-kscli chunk update --index-id idx-xxx --chunk-id chunk-xxx --doc-id file-xxx --exclude
+bl knowledge chunk update --index-id idx-xxx --chunk-id chunk-xxx --doc-id file-xxx --content "corrected text"
+bl knowledge chunk update --index-id idx-xxx --chunk-id chunk-xxx --doc-id file-xxx --exclude
 ```
 
-## `kscli chunk delete`
+## `bl knowledge chunk delete`
 
 删除 chunk。**不可逆，执行前须向用户确认。**
 
 ```
-Usage: kscli chunk delete --index-id <id> --chunk-id <id> [flags]
+Usage: bl knowledge chunk delete --index-id <id> --chunk-id <id> [flags]
 ```
 
 | Flag | 说明 |
@@ -96,5 +96,5 @@ Usage: kscli chunk delete --index-id <id> --chunk-id <id> [flags]
 | `--yes` | 跳过交互确认 |
 
 ```bash
-kscli chunk delete --index-id idx-xxx --chunk-id chunk-a --chunk-id chunk-b --yes
+bl knowledge chunk delete --index-id idx-xxx --chunk-id chunk-a --chunk-id chunk-b --yes
 ```

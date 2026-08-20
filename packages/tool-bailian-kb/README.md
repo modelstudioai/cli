@@ -1,6 +1,6 @@
 # dsh-tool-bailian-kb
 
-百炼知识库的 dsh 插件包（同时是 dsh bundle）：在 `ctx.tools` 注册两个检索模型工具（kb_search、kb_chat），并在 skills 服务可用时注册管理面 skill。服务发现通过 kscli CLI 完成。
+百炼知识库的 dsh 插件包（同时是 dsh bundle）：在 `ctx.tools` 注册两个检索模型工具（kb_search、kb_chat），并在 skills 服务可用时注册管理面 skill。服务发现通过 bl CLI（bailian-cli）完成。
 
 ## Bundle 声明
 
@@ -33,6 +33,9 @@
 
 - **DashScope API Key** — write-only，`type=password` 遮罩输入草稿，仅显示 configured/来自环境变量 徽标；写 `~/.dsh/.credentials.yaml`
 - **Bailian Workspace ID / 默认检索服务 ID / 默认对话服务 ID** — 回显：读写 `bailian-kb` settings 用户层，预填当前解析值；清空保存 = 移除用户层，回退 entry config → credential
+- **自动获取（bl CLI）** — 按钮调 Host 桥接路由 `/bailian-kb/autofill`：宿主机读 `~/.bailian/config.json`（`bl auth login` 的落盘），把 `api_key` 写入凭据存储、`workspace_id` 写入 settings，明文 key 不过浏览器；文件里没有 key 时在宿主机拉起 `bl auth login --console` 浏览器登录，完成后再次点击即可回填
+
+首次接入 seed：启动时若 API key / workspaceId 从未被设置过（settings、credential、env 均无值），自动从 `~/.bailian/config.json` 采纳一次；`seededFields` 字段（settings 文档内，面板不可编辑）记账已消费/已由用户管理的字段，用户主动清空的值永不会被重新填回。
 
 降级：远程浏览器（非 loopback，settings RPC 不可达）或未组合 settings 服务时，ID 字段退回旧的 write-only credential 控件，页面顶部显示提示。
 
@@ -73,18 +76,18 @@ Config 同时注册为 `bailian-kb` settings namespace（`installSettingsSection
 | `kb_search` | `query`、`agent_id`（**必填**；程序化省略时回退 defaultRetrieveAgentId）、`top_k?`（默认 5，**客户端截断**——服务端无此参数）、`images?` | chunks（text/score/来源）+ total |
 | `kb_chat` | `message`、`agent_id`（**必填**；程序化省略时回退 defaultChatAgentId） | 完整答案（内部消费 SSE 流缓冲返回）+ request_id |
 
-服务发现（`kb_service_list` 已移除）：通过 `kscli service list` CLI 命令查询可用检索/对话服务及其 agent_id。
+服务发现（`kb_service_list` 已移除）：通过 `bl knowledge service list` CLI 命令查询可用检索/对话服务及其 agent_id。
 
 ## 错误语义
 
-- HTTP 错误：原始错误透传，模型可通过 `kscli service list` 发现可用服务以纠正无效 `agent_id`；
+- HTTP 错误：原始错误透传，模型可通过 `bl knowledge service list` 发现可用服务以纠正无效 `agent_id`；
 - 凭证缺失：指向 `~/.dsh/.env` / `.credentials.yaml` 配置方式与控制台取 key 页面；
 - chat 超时：说明服务端多轮检索特性，建议重试或改用 `kb_search`；
 - 服务端错误体截断至 500 字符进入错误信息（优先 `code: message`）。
 
 ## 管理面 skill
 
-`skills/bailian-kb-management/SKILL.md` 随包分发，插件通过 `ctx.inject(['skills'])` 在 skills 服务可用时以 `source: 'bundled'` 运行时注册；无 skills 服务的组合（headless 最小装配）不受影响。内容：kscli 安装/鉴权/workspace 解析、建库→上传→部署工作流、agent_id 固定最佳实践。
+`skills/bailian-kb-management/SKILL.md` 随包分发，插件通过 `ctx.inject(['skills'])` 在 skills 服务可用时以 `source: 'bundled'` 运行时注册；无 skills 服务的组合（headless 最小装配）不受影响。内容：bl CLI 安装/鉴权/workspace 解析、建库→上传→部署工作流、agent_id 固定最佳实践。
 
 ## Known Limitations
 

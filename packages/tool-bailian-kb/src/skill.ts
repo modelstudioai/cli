@@ -1,4 +1,4 @@
-/** Runtime skill registration: the packaged kscli-management SKILL.md joins the catalog when a skills registry is composed. */
+/** Runtime skill registration: the packaged bl-management SKILL.md joins the catalog when a skills registry is composed. */
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -20,7 +20,7 @@ export function registerSkill(ctx: Context): void {
     skillCtx.skills.register({
       name: 'bailian-kb-management',
       description:
-        'Manage Bailian knowledge bases with the kscli CLI: create/update KBs, upload documents, deploy '
+        'Manage Bailian knowledge bases with the bl CLI: create/update KBs, upload documents, deploy '
         + 'retrieval services, and maintain chunks. Retrieval itself uses the native kb_search/kb_chat tools. '
         + 'Credentials and workspace for kb_search/kb_chat resolve automatically from DSH config '
         + '(bailian-kb in ~/.dsh/settings.yaml, DASHSCOPE_API_KEY in ~/.dsh/.credentials.yaml).',

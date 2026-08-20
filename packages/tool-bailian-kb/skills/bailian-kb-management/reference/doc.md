@@ -1,13 +1,13 @@
-# `kscli doc` — 文档上传与导入
+# `bl knowledge doc` — 文档上传与导入
 
 > 通用鉴权/全局 flag 见 [index.md](index.md)。以下 Flags 只列命令专属项。
 
-## `kscli doc upload`
+## `bl knowledge doc upload`
 
 上传本地文件/目录到数据中心，可选同时导入知识库。
 
 ```
-Usage: kscli doc upload --file <path> [flags]
+Usage: bl knowledge doc upload --file <path> [flags]
 ```
 
 | Flag | 说明 |
@@ -26,17 +26,17 @@ Notes：
 - 多文件顺序处理；中途失败时，已注册的 fileId 会列在错误提示里。
 
 ```bash
-kscli doc upload --file ./a.md --workspace-id ws-xxx
-kscli doc upload --file ./a.md --file ./b.pdf --index-id idx-xxx --wait
-kscli doc upload --file ./docs/ --dry-run --verbose
+bl knowledge doc upload --file ./a.md --workspace-id ws-xxx
+bl knowledge doc upload --file ./a.md --file ./b.pdf --index-id idx-xxx --wait
+bl knowledge doc upload --file ./docs/ --dry-run --verbose
 ```
 
-## `kscli doc list`
+## `bl knowledge doc list`
 
 列出库内文档及解析/索引状态。
 
 ```
-Usage: kscli doc list --index-id <id> [flags]
+Usage: bl knowledge doc list --index-id <id> [flags]
 ```
 
 | Flag | 说明 |
@@ -50,16 +50,16 @@ Notes：
 - 输出的 doc_id 才是 `doc delete` / `chunk add` 应使用的文档 ID。
 
 ```bash
-kscli doc list --index-id idx-xxx --workspace-id ws-xxx
-kscli doc list --index-id idx-xxx --page-size 100
+bl knowledge doc list --index-id idx-xxx --workspace-id ws-xxx
+bl knowledge doc list --index-id idx-xxx --page-size 100
 ```
 
-## `kscli doc status`
+## `bl knowledge doc status`
 
 查看导入任务状态。
 
 ```
-Usage: kscli doc status --index-id <id> --job-id <id> [flags]
+Usage: bl knowledge doc status --index-id <id> --job-id <id> [flags]
 ```
 
 | Flag | 说明 |
@@ -74,15 +74,15 @@ Notes：
 - 任务整体状态：PENDING / RUNNING / COMPLETED；单文档失败（如 PARSE_FAILED）以非零退出码透传错误。
 
 ```bash
-kscli doc status --index-id idx-xxx --job-id job-xxx --wait --poll-interval 10
+bl knowledge doc status --index-id idx-xxx --job-id job-xxx --wait --poll-interval 10
 ```
 
-## `kscli doc delete`
+## `bl knowledge doc delete`
 
 从库中删除文档及其 chunk。**执行前须向用户确认。**
 
 ```
-Usage: kscli doc delete --index-id <id> --doc-id <id> [flags]
+Usage: bl knowledge doc delete --index-id <id> --doc-id <id> [flags]
 ```
 
 | Flag | 说明 |
@@ -93,19 +93,19 @@ Usage: kscli doc delete --index-id <id> --doc-id <id> [flags]
 Notes：
 
 - 只从知识库索引移除，数据中心源文件保留。
-- **用 `doc list` 输出的 doc_id，不是 `doc upload` 返回的 fileId**：经 `kb create --doc-id` 入库的文档二者相等；经 `doc upload --index-id` 入库的 doc_id 可能带 workspace 后缀。
+- **用 `doc list` 输出的 doc_id，不是 `doc upload` 返回的 fileId**：经 `knowledge create --doc-id` 入库的文档二者相等；经 `doc upload --index-id` 入库的 doc_id 可能带 workspace 后缀。
 - 删除传播最多 ~30s，期间文档可能仍出现在 doc list 里。
 
 ```bash
-kscli doc delete --index-id idx-xxx --doc-id file-a --doc-id file-b --yes
+bl knowledge doc delete --index-id idx-xxx --doc-id file-a --doc-id file-b --yes
 ```
 
-## `kscli doc tag`
+## `bl knowledge doc tag`
 
 批量更新数据中心文件标签。
 
 ```
-Usage: kscli doc tag --doc-id <id> --tag <text> [flags]
+Usage: bl knowledge doc tag --doc-id <id> --tag <text> [flags]
 ```
 
 | Flag | 说明 |
@@ -120,16 +120,16 @@ Notes：
 - 服务端限制：每文件 ≤100 个标签，标签总长 ≤700 字符。
 
 ```bash
-kscli doc tag --doc-id file-xxx --tag project-a --tag draft --workspace-id ws-xxx
-kscli doc tag --doc-id file-a --doc-id file-b --tag final --mode overwrite
+bl knowledge doc tag --doc-id file-xxx --tag project-a --tag draft --workspace-id ws-xxx
+bl knowledge doc tag --doc-id file-a --doc-id file-b --tag final --mode overwrite
 ```
 
-## `kscli doc import-oss`
+## `bl knowledge doc import-oss`
 
 从已授权 OSS bucket 批量导入到数据中心。
 
 ```
-Usage: kscli doc import-oss --bucket <name> --region <id> --oss-key <key> [flags]
+Usage: bl knowledge doc import-oss --bucket <name> --region <id> --oss-key <key> [flags]
 ```
 
 | Flag | 说明 |
@@ -146,6 +146,6 @@ Notes：
 - `--overwrite` 会替换旧文件并签发**新的 fileId**（旧 fileId 失效）。
 
 ```bash
-kscli doc import-oss --bucket my-bucket --region cn-beijing --oss-key docs/a.pdf --workspace-id ws-xxx
-kscli doc import-oss --bucket my-bucket --region cn-beijing --oss-key docs/a.pdf --oss-key docs/b.docx --overwrite
+bl knowledge doc import-oss --bucket my-bucket --region cn-beijing --oss-key docs/a.pdf --workspace-id ws-xxx
+bl knowledge doc import-oss --bucket my-bucket --region cn-beijing --oss-key docs/a.pdf --oss-key docs/b.docx --overwrite
 ```

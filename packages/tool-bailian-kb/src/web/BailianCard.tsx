@@ -44,6 +44,14 @@ const FIELDS: readonly FieldView[] = [
   { key: 'BAILIAN_DEFAULT_CHAT_AGENT_ID', labelKey: 'chatAgentId', hintKey: 'chatAgentIdHint', fallbackHintKey: 'chatAgentIdHintFallback', setKey: 'chatAgentIdSet', unsetKey: 'chatAgentIdUnset', secret: false },
 ]
 
+/** Result-notice locale key per settled autofill outcome. */
+const AUTOFILL_NOTICES: Partial<Record<string, BailianKbLocaleKey>> = {
+  done: 'autofillDone',
+  loginStarted: 'autofillLoginStarted',
+  blMissing: 'autofillBlMissing',
+  failed: 'autofillFailed',
+}
+
 /**
  * Render the Bailian section page.
  * @param props - locale copy, the page snapshot, and its actions.
@@ -54,6 +62,7 @@ export function BailianCard(props: BailianCardProps) {
   const state = props.useBailianCard(snapshot => snapshot)
   const dirty = dirtyOf(state)
   const busy = state.saving || state.clearing
+  const autofillNotice = AUTOFILL_NOTICES[state.autofill]
   return (
     <section className={css.section}>
       <div className={css.headRow}>
@@ -61,6 +70,19 @@ export function BailianCard(props: BailianCardProps) {
         {dirty ? <span className={css.pending}>{t('unsaved')}</span> : null}
       </div>
       <p className={css.intro}>{t('description')}</p>
+      <div className={css.autofillRow}>
+        <button
+          type="button"
+          className={css.discard}
+          disabled={busy || state.autofill === 'running'}
+          onClick={() => { void props.autofill() }}
+        >
+          {t(state.autofill === 'running' ? 'autofilling' : 'autofill')}
+        </button>
+        <span className={css.hint}>
+          {autofillNotice !== undefined ? t(autofillNotice) : t('autofillHint')}
+        </span>
+      </div>
       <div className={css.form}>
         {state.settings.status === 'unavailable'
           ? <p className={css.notice}>{t('settingsUnavailable')}</p>

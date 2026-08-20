@@ -16,4 +16,9 @@ describe('Config', () => {
     expect(resolved.workspaceId).toBeUndefined()
     expect(resolved.endpointHost).toBe('cn-beijing.maas.aliyuncs.com')
   })
+
+  it('carries the bl-CLI seed ledger through validation', () => {
+    const resolved = new Config({ seededFields: ['apiKey'] } as never)
+    expect(resolved.seededFields).toEqual(['apiKey'])
+  })
 })

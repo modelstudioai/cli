@@ -41,6 +41,13 @@
   background: var(--dsw-alias-bg-layer-3);
 }
 
+/* Autofill control between the intro and the form: button + one-line status. */
+.autofillRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 /* Carried beside the title so a scrolled page still says it holds edits. */
 .pending {
   flex: none;

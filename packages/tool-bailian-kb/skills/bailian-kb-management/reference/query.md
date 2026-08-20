@@ -1,15 +1,15 @@
-# `kscli search` / `chat` — 检索与问答（仅部署验证用）
+# `bl knowledge search` / `chat` — 检索与问答（仅部署验证用）
 
-> **日常检索/问答走原生工具 `kb_search` / `kb_chat`，不走 kscli。**
+> **日常检索/问答走原生工具 `kb_search` / `kb_chat`，不走 bl。**
 > 这两条命令只在两种场景下使用：(1) 部署前用 `--agent-version beta` 调试草稿配置；(2) 排查原生工具与 CLI 行为差异。
 > 通用鉴权/全局 flag 见 [index.md](index.md)。
 
-## `kscli search`
+## `bl knowledge search`
 
 RAG 语义检索。
 
 ```
-Usage: kscli search --query <text> --agent-id <id> [flags]
+Usage: bl knowledge search --query <text> --agent-id <id> [flags]
 ```
 
 | Flag | 说明 |
@@ -24,16 +24,16 @@ Notes：
 - 检索范围与策略（多库加权、路由、rerank 等）由 agent_id 的服务配置决定，只有 query 和 agent_id 必填。
 
 ```bash
-kscli search --query "What is RAG?" --agent-id aid-xxx --workspace-id ws-xxx
-kscli search --query "test" --agent-id aid-xxx --agent-version beta
+bl knowledge search --query "What is RAG?" --agent-id aid-xxx --workspace-id ws-xxx
+bl knowledge search --query "test" --agent-id aid-xxx --agent-version beta
 ```
 
-## `kscli chat`
+## `bl knowledge chat`
 
 RAG 问答（SSE 流式）。
 
 ```
-Usage: kscli chat --message <text> --agent-id <id> [flags]
+Usage: bl knowledge chat --message <text> --agent-id <id> [flags]
 ```
 
 | Flag | 说明 |
@@ -49,10 +49,10 @@ Notes：
 - 多轮对话：用 `--message "user:..."` 和 `--message "assistant:..."` 传历史。
 
 ```bash
-kscli chat --message "What is RAG?" --agent-id aid-xxx --workspace-id ws-xxx
-kscli chat --message "user:What is RAG?" --message "assistant:RAG is..." --message "How does it work?" --agent-id aid-xxx
+bl knowledge chat --message "What is RAG?" --agent-id aid-xxx --workspace-id ws-xxx
+bl knowledge chat --message "user:What is RAG?" --message "assistant:RAG is..." --message "How does it work?" --agent-id aid-xxx
 ```
 
-## `kscli retrieve`（已废弃）
+## `bl knowledge retrieve`（已废弃）
 
-改用 `kscli search`。
+改用 `bl knowledge search`。

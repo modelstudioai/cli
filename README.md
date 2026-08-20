@@ -1,6 +1,6 @@
 # bailian-kb-dsh
 
-阿里云百炼知识库能力的 [DeepSeek Harness (dsh)](https://github.com/deepseek-ai/deepseek-harness) 插件 bundle：三个 API 直连模型工具（`kb_service_list` / `kb_search` / `kb_chat`）+ kscli 管理面 skill。
+阿里云百炼知识库能力的 [DeepSeek Harness (dsh)](https://github.com/deepseek-ai/deepseek-harness) 插件 bundle：三个 API 直连模型工具（`kb_service_list` / `kb_search` / `kb_chat`）+ bl CLI 管理面 skill。
 
 设计文档：[docs/specs/2026-08-15-bailian-kb-bundle-design.md](docs/specs/2026-08-15-bailian-kb-bundle-design.md) · 实现计划：[docs/plans/2026-08-15-bailian-kb-bundle.md](docs/plans/2026-08-15-bailian-kb-bundle.md)
 

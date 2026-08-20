@@ -28,7 +28,7 @@ export interface KbToolDeps {
 
 /**
  * Forward the original tool error unchanged; service discovery now lives
- * in the kscli management skill (`kscli service list`), so the tool no
+ * in the bl management skill (`bl knowledge service list`), so the tool no
  * longer makes a best-effort API round-trip to enrich the message.
  */
 async function withServiceHint(_client: KbClient, err: unknown): Promise<never> {
@@ -49,7 +49,7 @@ export function createKbTools(deps: KbToolDeps) {
     required: true as const,
     description: 'Retrieval/Q&A service id. REQUIRED: the schema cannot know whether this deployment '
       + 'configures a default service, so always pass one. Find ids via '
-      + '`kscli service list --scene search --workspace-id <workspaceId>` (workspaceId resolves '
+      + '`bl knowledge service list --scene search --workspace-id <workspaceId>` (workspaceId resolves '
       + 'automatically from DSH settings: bailian-kb.workspaceId in ~/.dsh/settings.yaml).',
   }
   const resolveRetrieveAgentId = async (supplied: string | undefined): Promise<string> => {
@@ -58,7 +58,7 @@ export function createKbTools(deps: KbToolDeps) {
     if (defaultId === undefined) {
       throw new Error(
         'agent_id is required: no default retrieval service is configured. Pass agent_id explicitly '
-        + '(find ids: `kscli service list --scene search --workspace-id <workspaceId>`), or configure a '
+        + '(find ids: `bl knowledge service list --scene search --workspace-id <workspaceId>`), or configure a '
         + 'default: bailian-kb.defaultRetrieveAgentId in ~/.dsh/settings.yaml or '
         + 'BAILIAN_DEFAULT_RETRIEVE_AGENT_ID in ~/.dsh/.credentials.yaml.',
       )
@@ -71,7 +71,7 @@ export function createKbTools(deps: KbToolDeps) {
     if (defaultId === undefined) {
       throw new Error(
         'agent_id is required: no default chat service is configured. Pass agent_id explicitly '
-        + '(find ids: `kscli service list --scene chat --workspace-id <workspaceId>`), or configure a '
+        + '(find ids: `bl knowledge service list --scene chat --workspace-id <workspaceId>`), or configure a '
         + 'default: bailian-kb.defaultChatAgentId in ~/.dsh/settings.yaml or '
         + 'BAILIAN_DEFAULT_CHAT_AGENT_ID in ~/.dsh/.credentials.yaml.',
       )
