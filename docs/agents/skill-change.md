@@ -23,11 +23,11 @@
 bailian-protocol          ← 共享协议（consent / 鉴权 / 版本 / 错误上报）
         ▲                   靠 `bl skill init` 与业务 skill 同装；非安装器强制 companions
         │
-┌───────┴────────┬────────────────┬──────────────────┐
-bailian-gen      bailian-finetune  bailian-managed-agent
-（领域路由表）    （领域工作流）     （IaC 安全闸）
-        │                │                  │
-        └────────────────┼──────────────────┘
+┌───────┴────────┬────────────────┬──────────────────┬───────────────────┐
+bailian-gen      bailian-finetune  bailian-managed-agent   bailian-web-search
+（领域路由表）    （领域工作流）     （IaC 安全闸）          （搜索路由+兜底）
+        │                │                  │                     │
+        └────────────────┼──────────────────┴─────────────────────┘
                          ▼ 软 hand-off（按 skill 名）
                    bailian-cli（hub）
                    hub 路由表：本职命令 + 领域 hand-off 行

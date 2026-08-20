@@ -60,6 +60,21 @@ const GENERATED_BANNER =
   "> Auto-generated from `packages/cli/src/commands.ts`. Do not edit by hand.\n" +
   "> Regenerate: `pnpm --filter bailian-cli run generate:reference`.";
 
+/**
+ * Optional agent-facing notice injected at the top of a group's reference file.
+ * Used when the hub owns the command docs but a domain skill owns the routing
+ * decision (e.g. web search must go through bailian-web-search first).
+ */
+const GROUP_AGENT_NOTICE: Readonly<Record<string, string>> = {
+  search:
+    "> **Agent routing (mandatory):** Before running any `bl search *` command, " +
+    "Read skill `bailian-web-search` if installed and follow its identity-based routing " +
+    "(Token Plan → model-native web search; default → MCP; eligible MCP failures → fall back once). " +
+    "Do **not** call `bl search web` directly from this reference alone — Token Plan keys cannot " +
+    "authorize Bailian MCP search. If that skill is missing, run `bl skill init` or fall back to " +
+    "`bl search web --help` / `bl text chat --help` after checking `bl config show --output json`.",
+};
+
 const AUTH_LABELS = {
   apiKey: "API Key",
   console: "Console",
@@ -177,11 +192,13 @@ function ownerSkillForGroup(group: string): string {
 }
 
 function buildGroupFile(group: string, groupEntries: [string, AnyCommand][]): string {
+  const agentNotice = GROUP_AGENT_NOTICE[group];
   const lines: string[] = [
     `# \`bl ${group}\` commands`,
     "",
     GENERATED_BANNER,
     "",
+    ...(agentNotice ? [agentNotice, ""] : []),
     `Index: [index.md](index.md)`,
     "",
     "## Commands in this group",
