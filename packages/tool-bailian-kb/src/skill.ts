@@ -7,7 +7,7 @@ import type { Context } from '@deepseek-ai/cordis'
 // Type-only: resolves ctx.skills for the optional inject below.
 import type {} from '@deepseek-ai/dsh-skill'
 
-const SKILL_DIR = fileURLToPath(new URL('../skills/bailian-kb-management/', import.meta.url))
+const SKILL_DIR = fileURLToPath(new URL('../skills/bailian-kb/', import.meta.url))
 
 /**
  * Register the management skill when the skills registry is composed; headless
@@ -18,7 +18,7 @@ export function registerSkill(ctx: Context): void {
   ctx.inject(['skills'], (skillCtx) => {
     const content = readFileSync(join(SKILL_DIR, 'SKILL.md'), 'utf8')
     skillCtx.skills.register({
-      name: 'bailian-kb-management',
+      name: 'bailian-kb',
       description:
         'Manage Bailian knowledge bases with the bl CLI: create/update KBs, upload documents, deploy '
         + 'retrieval services, and maintain chunks. Retrieval itself uses the native kb_search/kb_chat tools. '

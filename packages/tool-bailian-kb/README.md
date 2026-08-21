@@ -87,7 +87,7 @@ Config 同时注册为 `bailian-kb` settings namespace（`installSettingsSection
 
 ## 管理面 skill
 
-`skills/bailian-kb-management/SKILL.md` 随包分发，插件通过 `ctx.inject(['skills'])` 在 skills 服务可用时以 `source: 'bundled'` 运行时注册；无 skills 服务的组合（headless 最小装配）不受影响。内容：bl CLI 安装/鉴权/workspace 解析、建库→上传→部署工作流、agent_id 固定最佳实践。
+`skills/bailian-kb/SKILL.md` 随包分发，插件通过 `ctx.inject(['skills'])` 在 skills 服务可用时以 `source: 'bundled'` 运行时注册；无 skills 服务的组合（headless 最小装配）不受影响。内容：bl CLI 安装/鉴权/workspace 解析、建库→上传→部署工作流、agent_id 固定最佳实践。
 
 ## Known Limitations
 

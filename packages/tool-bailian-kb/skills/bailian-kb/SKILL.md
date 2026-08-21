@@ -1,5 +1,5 @@
 ---
-name: bailian-kb-management
+name: bailian-kb
 description: >-
   管理阿里云百炼知识库（建库、上传文档、部署检索服务、Chunk 运维、数据中心文件管理），命令行工具为 bl（bailian-cli）。
   当用户要创建/更新/删除知识库、上传或导入文档（本地/OSS）、创建/部署/调参检索或问答服务、
