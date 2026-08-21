@@ -10,14 +10,15 @@
 /** Locale keys this page renders. */
 export type BailianKbLocaleKey =
   | 'nav' | 'title' | 'description' | 'settingsUnavailable' | 'fallbackConfigured'
-  | 'apiKey' | 'apiKeyHint' | 'apiKeySet' | 'apiKeyUnset'
-  | 'workspaceId' | 'workspaceIdHint' | 'workspaceIdHintFallback' | 'workspaceIdSet' | 'workspaceIdUnset'
+  | 'apiKey' | 'apiKeyHint' | 'apiKeySet' | 'apiKeyUnset' | 'apiKeyGet'
+  | 'workspaceId' | 'workspaceIdHint' | 'workspaceIdHintFallback' | 'workspaceIdSet' | 'workspaceIdUnset' | 'workspaceIdGet'
   | 'retrieveAgentId' | 'retrieveAgentIdHint' | 'retrieveAgentIdHintFallback' | 'retrieveAgentIdSet' | 'retrieveAgentIdUnset'
   | 'chatAgentId' | 'chatAgentIdHint' | 'chatAgentIdHintFallback' | 'chatAgentIdSet' | 'chatAgentIdUnset'
   | 'fromEnv' | 'clear' | 'clearing'
   | 'save' | 'saving' | 'discard' | 'unsaved' | 'saveFailed'
+  | 'advancedConfig'
   | 'autofill' | 'autofilling' | 'autofillHint'
-  | 'autofillDone' | 'autofillAwaitingLogin' | 'autofillOpenUrl' | 'autofillFailed'
+  | 'autofillDone' | 'autofillAwaitingLogin' | 'autofillOpenUrl' | 'autofillFailed' | 'autofillConfigured'
 
 /** English copy. */
 export const en: Record<BailianKbLocaleKey, string> = {
@@ -30,11 +31,13 @@ export const en: Record<BailianKbLocaleKey, string> = {
   apiKeyHint: 'DashScope API key. Stored in the credentials store and never shown again; leave blank to keep the current one.',
   apiKeySet: 'A key is configured.',
   apiKeyUnset: 'No key is configured; knowledge tools fail until one is.',
+  apiKeyGet: 'Get',
   workspaceId: 'Workspace id',
   workspaceIdHint: 'Bailian workspace id — the subdomain of your endpoints. Stored in the settings document; clear and save to fall back to the credential store.',
   workspaceIdHintFallback: 'Bailian workspace id — the subdomain of your endpoints. Leave blank to keep the current one.',
   workspaceIdSet: 'A workspace is configured.',
   workspaceIdUnset: 'No workspace is configured; knowledge tools fail until one is.',
+  workspaceIdGet: 'Get',
   retrieveAgentId: 'Default retrieval service id',
   retrieveAgentIdHint: 'agent_id of the default retrieval service (kb_search); when unset, every call must name one (`bl knowledge service list` discovers ids). Stored in the settings document.',
   retrieveAgentIdHintFallback: 'agent_id of the default retrieval service (kb_search); when unset, every call must name one (`bl knowledge service list` discovers ids). Leave blank to keep the current one.',
@@ -53,6 +56,7 @@ export const en: Record<BailianKbLocaleKey, string> = {
   discard: 'Discard',
   unsaved: 'Unsaved',
   saveFailed: 'The Host did not accept these values; they were left for you to correct.',
+  advancedConfig: 'Advanced configuration',
   autofill: 'Fetch from console login',
   autofilling: 'Starting…',
   autofillHint: 'Sign in to the Bailian console to fill in that account’s API key and workspace id.',
@@ -60,6 +64,7 @@ export const en: Record<BailianKbLocaleKey, string> = {
   autofillAwaitingLogin: 'Waiting for the Bailian console login to finish in a browser on the host machine…',
   autofillOpenUrl: 'Open the login page manually',
   autofillFailed: 'Auto-fill failed — the credential may be locked by an environment variable, the Host refused the write, or the login was abandoned.',
+  autofillConfigured: 'Configured. Click button to fetch this account’s API key and workspace id again.',
 }
 
 /** Simplified Chinese copy. */
@@ -73,11 +78,13 @@ export const zh: Record<BailianKbLocaleKey, string> = {
   apiKeyHint: 'DashScope API key。保存在凭据存储中且不会再次显示；留空表示保持当前值。',
   apiKeySet: '已配置密钥。',
   apiKeyUnset: '未配置密钥；配置前知识库工具不可用。',
+  apiKeyGet: '去获取',
   workspaceId: '工作空间 ID',
   workspaceIdHint: '百炼工作空间 ID，即终端节点地址的子域名。存入设置文档；清空并保存则回退到凭据存储。',
   workspaceIdHintFallback: '百炼工作空间 ID，即终端节点地址的子域名。留空表示保持当前值。',
   workspaceIdSet: '已配置工作空间。',
   workspaceIdUnset: '未配置工作空间；配置前知识库工具不可用。',
+  workspaceIdGet: '去获取',
   retrieveAgentId: '默认检索服务 ID',
   retrieveAgentIdHint: '默认检索服务（kb_search）的 agent_id；未设置时每次调用都需显式指定（可用 `bl knowledge service list` 发现 id）。存入设置文档。',
   retrieveAgentIdHintFallback: '默认检索服务（kb_search）的 agent_id；未设置时每次调用都需显式指定（可用 `bl knowledge service list` 发现 id）。留空表示保持当前值。',
@@ -96,6 +103,7 @@ export const zh: Record<BailianKbLocaleKey, string> = {
   discard: '放弃',
   unsaved: '未保存',
   saveFailed: '宿主未接受这些值，已保留供你修改。',
+  advancedConfig: '高级配置',
   autofill: '自动获取',
   autofilling: '启动中…',
   autofillHint: '登录百炼控制台，自动填入该账号的 API 密钥与工作空间 ID。',
@@ -103,4 +111,5 @@ export const zh: Record<BailianKbLocaleKey, string> = {
   autofillAwaitingLogin: '等待在宿主机浏览器中完成百炼控制台登录…',
   autofillOpenUrl: '手动打开登录页',
   autofillFailed: '自动获取失败——凭据可能被环境变量锁定、宿主拒绝了写入，或登录未完成。',
+  autofillConfigured: '已配置完成，点击按钮重新获取该账号的 API 密钥与工作空间 ID。',
 }
