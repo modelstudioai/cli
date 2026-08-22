@@ -32,8 +32,10 @@ const SERVICE_CREATE_FLAGS = {
     type: "string",
     valueHint: "<text>",
     description: {
-      "en-US": "Service description (up to 1000 chars)",
-      "zh-CN": "服务描述（最多 1000 个字符）",
+      "en-US":
+        "What this service answers and who it serves — recommended: agents read it to pick the right service (up to 1000 chars)",
+      "zh-CN":
+        "这个服务能回答什么、给谁用 —— 建议填写：agent 靠它判断该调用哪个服务（最多 1000 个字符）",
     },
   },
   indexId: {
@@ -71,7 +73,11 @@ export default defineCommand({
     },
   ],
   exampleArgs: [
-    "--name my-qa --scene chat --workspace-id ws-xxx",
+    {
+      "en-US":
+        "--name my-qa --scene chat --description 'answers product FAQs' --workspace-id ws-xxx",
+      "zh-CN": "--name my-qa --scene chat --description '回答产品常见问题' --workspace-id ws-xxx",
+    },
     "--name my-search --scene search --index-id idx-xxx",
   ],
   validate(flags) {

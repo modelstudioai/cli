@@ -128,7 +128,7 @@ bl knowledge info --index-id idx-xxx --workspace-id ws-xxx
 **用法**
 
 ```bash
-bl knowledge create --name <text> (--doc-id <id> | --category-id <id>) [flags]
+bl knowledge create --name <text> --description <text> (--doc-id <id> | --category-id <id>) [flags]
 ```
 
 **参数**
@@ -136,6 +136,7 @@ bl knowledge create --name <text> (--doc-id <id> | --category-id <id>) [flags]
 | 参数                        | 类型   | 必填 | 说明                                                     |
 | --------------------------- | ------ | ---- | -------------------------------------------------------- |
 | `--name <text>`             | string | 是   | 知识库名称（1-20 字符，工作区内唯一）                    |
+| `--description <text>`      | string | 是   | 知识库装了什么内容、给谁用（1-200 字符）                 |
 | `--doc-id <id>`             | array  | 否¹  | 数据中心文件 ID（可重复）；与 `--category-id` 互斥       |
 | `--category-id <id>`        | array  | 否¹  | 按分类导入该分类下所有文件（可重复）；与 `--doc-id` 互斥 |
 | `--embedding-model <name>`  | string | 否   | 向量模型名称（默认：`text-embedding-v4`）                |
@@ -148,6 +149,7 @@ bl knowledge create --name <text> (--doc-id <id> | --category-id <id>) [flags]
 **参数约束**
 
 - `--name` 长度 1-20 字符
+- `--description` 长度 1-200 字符，缺失或超长会在本地被拦截
 - `--doc-id` 和 `--category-id` 互斥，必须提供其一
 
 **输出**
@@ -176,13 +178,13 @@ json 模式：返回 API 原始响应，包含 `pipelineId`（知识库 ID）和
 
 ```bash
 # 从指定文件创建知识库
-bl knowledge create --name demo --doc-id file-xxx --workspace-id ws-xxx
+bl knowledge create --name demo --description '产品文档' --doc-id file-xxx --workspace-id ws-xxx
 
 # 从分类导入并等待导入完成
-bl knowledge create --name demo --category-id cate-xxx --wait
+bl knowledge create --name demo --description '产品文档' --category-id cate-xxx --wait
 
 # 指定向量模型和切片大小
-bl knowledge create --name my-kb --doc-id file-a --doc-id file-b --embedding-model text-embedding-v4 --chunk-size 400 --workspace-id ws-xxx
+bl knowledge create --name my-kb --description '产品文档 v2' --doc-id file-a --doc-id file-b --embedding-model text-embedding-v4 --chunk-size 400 --workspace-id ws-xxx
 ```
 
 ---

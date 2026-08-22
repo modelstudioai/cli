@@ -142,14 +142,14 @@ bl knowledge service create --name <text> --scene <chat|search> [flags]
 | ------------------------ | ------ | ---- | ------------------------------------------------- |
 | `--name <text>`          | string | 是   | 服务名称（最多 200 字符，同一场景下工作区内唯一） |
 | `--scene <chat\|search>` | string | 是   | 服务场景：`chat`（Q&A）或 `search`（检索）        |
-| `--description <text>`   | string | 否   | 服务描述（最多 1000 字符）                        |
+| `--description <text>`   | string | 建议 | 这个服务能回答什么、给谁用（最多 1000 字符）      |
 | `--index-id <id>`        | string | 否   | 绑定此知识库；其他配置使用服务端默认值            |
 
 **参数约束**
 
 - `--name` 最多 200 字符
 - `--scene` 只能是 `chat` 或 `search`
-- `--description` 最多 1000 字符
+- `--description` 最多 1000 字符；建议填写 —— agent 靠它判断该调用哪个服务
 
 **输出**
 

@@ -148,6 +148,8 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc status (live, 自清�
         "create",
         "--name",
         `e2e-st-${Date.now() % 100000000}`,
+        "--description",
+        "e2e fixture knowledge base (safe to delete)",
         "--doc-id",
         fileIdA,
         "--workspace-id",

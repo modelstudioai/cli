@@ -6,6 +6,7 @@ import {
   runCommandE2e,
 } from "../helpers.ts";
 import { KNOWLEDGE_ROUTES } from "../topic-routes.ts";
+import { VERIFIED_RERANK_MODEL } from "./verified-models.ts";
 
 // ---- Types ----
 
@@ -168,7 +169,7 @@ describe("e2e: knowledge retrieve dry-run", () => {
         "hello",
         "--rerank",
         "--rerank-model",
-        "qwen3-rerank-hybrid",
+        VERIFIED_RERANK_MODEL,
         "--rerank-mode",
         "custom",
         "--rerank-instruct",
@@ -187,7 +188,7 @@ describe("e2e: knowledge retrieve dry-run", () => {
     expect(data.request?.enable_reranking).toBe(true);
     expect(data.request?.dense_similarity_top_k).toBe(100);
     expect(data.request?.sparse_similarity_top_k).toBe(50);
-    expect(data.request?.rerank?.[0]?.model_name).toBe("qwen3-rerank-hybrid");
+    expect(data.request?.rerank?.[0]?.model_name).toBe(VERIFIED_RERANK_MODEL);
     expect(data.request?.rerank?.[0]?.rerank_mode).toBe("custom");
     expect(data.request?.rerank?.[0]?.rerank_instruct).toBe("按相关性排序");
   });
@@ -220,7 +221,7 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge retrieve 参数补全 (liv
       "e2e test",
       "--rerank",
       "--rerank-model",
-      "qwen3-rerank-hybrid",
+      VERIFIED_RERANK_MODEL,
       "--rerank-mode",
       "custom",
       "--rerank-instruct",

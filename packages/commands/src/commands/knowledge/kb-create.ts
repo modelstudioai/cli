@@ -29,6 +29,16 @@ const KB_CREATE_FLAGS = {
     },
     required: true,
   },
+  description: {
+    type: "string",
+    valueHint: "<text>",
+    description: {
+      "en-US":
+        "What this knowledge base holds and what it is for — tells bases apart in the workspace list (1-200 chars)",
+      "zh-CN": "知识库装了什么内容、给谁用，用于在 Workspace 列表中区分同类知识库（1–200 个字符）",
+    },
+    required: true,
+  },
   docId: {
     type: "array",
     valueHint: "<id>",
@@ -107,7 +117,7 @@ export default defineCommand({
     "zh-CN": "创建知识库并导入数据中心文件或类目",
   },
   auth: "apiKey",
-  usageArgs: "--name <text> (--doc-id <id> | --category-id <id>) [flags]",
+  usageArgs: "--name <text> --description <text> (--doc-id <id> | --category-id <id>) [flags]",
   flags: KB_CREATE_FLAGS,
   notes: [
     {
@@ -126,11 +136,20 @@ export default defineCommand({
     },
   ],
   exampleArgs: [
-    "--name demo --doc-id file-xxx --workspace-id ws-xxx",
-    "--name demo --category-id cate-xxx --wait",
+    {
+      "en-US": "--name demo --description 'product docs' --doc-id file-xxx --workspace-id ws-xxx",
+      "zh-CN": "--name demo --description '产品文档' --doc-id file-xxx --workspace-id ws-xxx",
+    },
+    {
+      "en-US": "--name demo --description 'product docs' --category-id cate-xxx --wait",
+      "zh-CN": "--name demo --description '产品文档' --category-id cate-xxx --wait",
+    },
   ],
   validate(flags) {
     if (flags.name.length < 1 || flags.name.length > 20) return "--name must be 1-20 characters";
+    if (flags.description.length < 1 || flags.description.length > 200) {
+      return "--description must be 1-200 characters";
+    }
     const hasDocIds = !!flags.docId?.length;
     const hasCategoryIds = !!flags.categoryId?.length;
     if (hasDocIds && hasCategoryIds) return "Use either --doc-id or --category-id, not both";
@@ -147,6 +166,9 @@ export default defineCommand({
     // Note: the public docs' example uses sinkType DEFAULT, but BUILT_IN is what works against the live API.
     const body = {
       name: flags.name,
+      // The server enforces description as a required 1-200 char field (the public
+      // API docs still list it as absent from CreateIndexV2Request.required).
+      description: flags.description,
       structureType: "unstructured",
       sinkType: "BUILT_IN",
       embeddingModelName: flags.embeddingModel ?? "text-embedding-v4",

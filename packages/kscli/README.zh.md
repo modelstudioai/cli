@@ -42,6 +42,7 @@ npm install -g knowledge-studio-cli
 # 1. 创建知识库
 kscli kb create \
   --name "my-kb" \
+  --description "我的产品文档知识库" \
   --embedding-model text-embedding-v3 \
   --workspace-id <your-workspace-id>
 

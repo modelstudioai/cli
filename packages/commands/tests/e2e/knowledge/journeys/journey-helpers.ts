@@ -323,6 +323,8 @@ export async function createKbWithDocs(
     "create",
     "--name",
     kbName,
+    "--description",
+    `journey ${journeyId} fixture knowledge base (safe to delete)`,
     ...fileIds.flatMap((fileId) => ["--doc-id", fileId]),
     "--workspace-id",
     workspaceId,

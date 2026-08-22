@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
 import { isKbAdminE2EReady, parseStdoutJson, runCommandE2e } from "../helpers.ts";
 import { KNOWLEDGE_SERVICE_ROUTES } from "../topic-routes.ts";
+import { pickDifferentAgentModel } from "./verified-models.ts";
 
 interface DryRunBody {
   endpoint?: string;
@@ -780,6 +781,33 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 参数全覆盖 (l
       expect(listIndexIdRun.exitCode, listIndexIdRun.stderr).toBe(0);
 
       // ── P0 组1: update --name --version-desc --model → get 读回 3 个 scalar ──
+      // --model 取值自适应：先读回草稿当前模型，再挑一个不同的已验证模型写入,
+      // 断言才能证明「值真的变了」而不是把默认值原样写回
+      const baselineGetRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+        "knowledge",
+        "service",
+        "get",
+        "--agent-id",
+        agentId,
+        "--agent-version",
+        "beta",
+        "--workspace-id",
+        workspaceId,
+        "--output",
+        "json",
+      ]);
+      expect(baselineGetRun.exitCode, baselineGetRun.stderr).toBe(0);
+      const baselineModel = parseStdoutJson<{
+        data?: { agent_details?: Array<{ agent_config?: { agent_model?: string } }> };
+      }>(baselineGetRun.stdout).data?.agent_details?.[0]?.agent_config?.agent_model;
+      const targetModel = pickDifferentAgentModel(baselineModel);
+      if (targetModel === undefined) {
+        // 白名单缩到只剩当前模型 —— 跳过模型断言而不是断言一个空操作
+        process.stderr.write(
+          `skip --model assertion: no verified model differs from ${baselineModel}\n`,
+        );
+      }
+
       const newName = `${serviceName}-renamed`;
       const updateScalarRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
         "knowledge",
@@ -791,8 +819,7 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 参数全覆盖 (l
         newName,
         "--version-desc",
         "beta-v1",
-        "--model",
-        "qwen-plus",
+        ...(targetModel === undefined ? [] : ["--model", targetModel]),
         "--workspace-id",
         workspaceId,
       ]);
@@ -816,14 +843,18 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 参数全覆盖 (l
         data?: {
           agent_name?: string;
           agent_details?: Array<{
-            agent_version_desc?: string;
+            agent_version_desc?: string | null;
             agent_config?: { agent_model?: string };
           }>;
         };
       }>(scalarGetRun.stdout);
       expect(scalarGetData.data?.agent_name).toBe(newName);
-      expect(scalarGetData.data?.agent_details?.[0]?.agent_config?.agent_model).toBe("qwen-plus");
-      expect(scalarGetData.data?.agent_details?.[0]?.agent_version_desc).toBe("beta-v1");
+      if (targetModel !== undefined) {
+        expect(scalarGetData.data?.agent_details?.[0]?.agent_config?.agent_model).toBe(targetModel);
+      }
+      // --version-desc 在 beta 草稿上是服务端空操作：update 返回 200 但存为 null。
+      // 版本说明只在 deploy 时传入、或对已发布版本 update 才能落库（下方 P0 组4 覆盖）。
+      expect(scalarGetData.data?.agent_details?.[0]?.agent_version_desc).toBeNull();
 
       // ── P0 组2: update --policy turbo → get 读回 ──
       const updateTurboRun = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
