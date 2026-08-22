@@ -1,6 +1,6 @@
 {
   "name": "bailian-cli-core",
-  "version": "1.17.0",
+  "version": "1.17.1",
   "description": "Core SDK for bailian-cli. See https://www.npmjs.com/package/bailian-cli for usage.",
   "homepage": "https://bailian.console.aliyun.com/cli",
   "bugs": {
