@@ -2,18 +2,18 @@
 
 知识库（Knowledge Base / pipeline / index）是 RAG 的核心载体，存储文档解析后的向量索引。本组命令覆盖知识库的创建、查看、更新、删除和监控。
 
-> **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](../knowledge-cli-guide.md#通用约定)。
+> **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](./kscli-cli-guide.md#通用约定)。
 
 ---
 
-#### `bl knowledge list`
+#### `kscli kb list`
 
 列出工作区中的知识库。
 
 **用法**
 
 ```bash
-bl knowledge list [flags]
+kscli kb list [flags]
 ```
 
 **参数**
@@ -50,22 +50,22 @@ json 模式：返回 API 原始响应，`data.rows[]` 包含完整知识库信�
 
 ```bash
 # 列出所有知识库
-bl knowledge list --workspace-id ws-xxx
+kscli kb list --workspace-id ws-xxx
 
 # 按名称过滤，第二页
-bl knowledge list --name demo --page-number 2 --page-size 50
+kscli kb list --name demo --page-number 2 --page-size 50
 ```
 
 ---
 
-#### `bl knowledge info`
+#### `kscli kb info`
 
 查看知识库配置详情。
 
 **用法**
 
 ```bash
-bl knowledge info --index-id <id> [flags]
+kscli kb info --index-id <id> [flags]
 ```
 
 **参数**
@@ -116,19 +116,19 @@ json 模式：返回知识库完整配置 JSON。
 
 ```bash
 # 查看知识库详情
-bl knowledge info --index-id idx-xxx --workspace-id ws-xxx
+kscli kb info --index-id idx-xxx --workspace-id ws-xxx
 ```
 
 ---
 
-#### `bl knowledge create`
+#### `kscli kb create`
 
 创建知识库并导入数据中心文件或分类。
 
 **用法**
 
 ```bash
-bl knowledge create --name <text> --description <text> (--doc-id <id> | --category-id <id>) [flags]
+kscli kb create --name <text> --description <text> (--doc-id <id> | --category-id <id>) [flags]
 ```
 
 **参数**
@@ -178,25 +178,25 @@ json 模式：返回 API 原始响应，包含 `pipelineId`（知识库 ID）和
 
 ```bash
 # 从指定文件创建知识库
-bl knowledge create --name demo --description '产品文档' --doc-id file-xxx --workspace-id ws-xxx
+kscli kb create --name demo --description '产品文档' --doc-id file-xxx --workspace-id ws-xxx
 
 # 从分类导入并等待导入完成
-bl knowledge create --name demo --description '产品文档' --category-id cate-xxx --wait
+kscli kb create --name demo --description '产品文档' --category-id cate-xxx --wait
 
 # 指定向量模型和切片大小
-bl knowledge create --name my-kb --description '产品文档 v2' --doc-id file-a --doc-id file-b --embedding-model text-embedding-v4 --chunk-size 400 --workspace-id ws-xxx
+kscli kb create --name my-kb --description '产品文档 v2' --doc-id file-a --doc-id file-b --embedding-model text-embedding-v4 --chunk-size 400 --workspace-id ws-xxx
 ```
 
 ---
 
-#### `bl knowledge update`
+#### `kscli kb update`
 
 更新知识库名称、描述或 rerank 阈值。
 
 **用法**
 
 ```bash
-bl knowledge update --index-id <id> [flags]
+kscli kb update --index-id <id> [flags]
 ```
 
 **参数**
@@ -234,22 +234,22 @@ json 模式：返回 API 原始响应。
 
 ```bash
 # 更新描述
-bl knowledge update --index-id idx-xxx --description "product docs v2" --workspace-id ws-xxx
+kscli kb update --index-id idx-xxx --description "product docs v2" --workspace-id ws-xxx
 
 # 调整 rerank 阈值
-bl knowledge update --index-id idx-xxx --rerank-min-score 0.3
+kscli kb update --index-id idx-xxx --rerank-min-score 0.3
 ```
 
 ---
 
-#### `bl knowledge delete`
+#### `kscli kb delete`
 
 删除知识库及其所有文档和 chunk。
 
 **用法**
 
 ```bash
-bl knowledge delete --index-id <id> [flags]
+kscli kb delete --index-id <id> [flags]
 ```
 
 **参数**
@@ -281,22 +281,22 @@ json 模式：返回 API 原始响应。
 
 ```bash
 # 删除（交互确认）
-bl knowledge delete --index-id idx-xxx --workspace-id ws-xxx
+kscli kb delete --index-id idx-xxx --workspace-id ws-xxx
 
 # 跳过确认
-bl knowledge delete --index-id idx-xxx --yes
+kscli kb delete --index-id idx-xxx --yes
 ```
 
 ---
 
-#### `bl knowledge stats`
+#### `kscli kb stats`
 
 查看知识库存储和 QPS 监控数据。
 
 **用法**
 
 ```bash
-bl knowledge stats --index-id <id> [flags]
+kscli kb stats --index-id <id> [flags]
 ```
 
 **参数**
@@ -331,12 +331,12 @@ json 模式：返回 API 原始响应，包含 `storageMonitorData` 和 `qpsMoni
 
 ```bash
 # 查看最近 24 小时监控
-bl knowledge stats --index-id idx-xxx --workspace-id ws-xxx
+kscli kb stats --index-id idx-xxx --workspace-id ws-xxx
 
 # 指定日期范围
-bl knowledge stats --index-id idx-xxx --start 2026-07-30 --end 2026-07-31
+kscli kb stats --index-id idx-xxx --start 2026-07-30 --end 2026-07-31
 ```
 
 ---
 
-← [返回总览](../knowledge-cli-guide.md)
+← [返回总览](./kscli-cli-guide.md)

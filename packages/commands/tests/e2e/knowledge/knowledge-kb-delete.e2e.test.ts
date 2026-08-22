@@ -101,6 +101,8 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge kb 写链路 (live, 自清
         "create",
         "--name",
         kbName,
+        "--description",
+        "e2e fixture knowledge base (safe to delete)",
         "--doc-id",
         fileId,
         "--workspace-id",

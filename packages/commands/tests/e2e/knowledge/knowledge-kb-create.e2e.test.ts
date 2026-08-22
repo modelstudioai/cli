@@ -5,6 +5,7 @@ import { KNOWLEDGE_KB_CREATE_ROUTES } from "../topic-routes.ts";
 interface DryRunBody {
   endpoint?: string;
   request?: {
+    description?: string;
     sourceType?: string;
     sinkType?: string;
     docIds?: string[];
@@ -23,6 +24,7 @@ describe("e2e: knowledge kb create", () => {
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--name/i);
+    expect(stderr).toMatch(/--description/i);
     expect(stderr).toMatch(/--doc-id/i);
     expect(stderr).toMatch(/--category-id/i);
     expect(stderr).toMatch(/--embedding-model/i);
@@ -33,6 +35,40 @@ describe("e2e: knowledge kb create", () => {
     const { exitCode } = await runCommandE2e(KNOWLEDGE_KB_CREATE_ROUTES, [
       "knowledge",
       "create",
+      "--description",
+      "demo base",
+      "--doc-id",
+      "file_test",
+      "--workspace-id",
+      "ws_test",
+    ]);
+    expect(exitCode).toBe(2);
+  });
+
+  // The server rejects a missing description with HTTP 400 (Index.InvalidParameter);
+  // the CLI must stop it locally instead.
+  test("缺 --description 报 USAGE (2)", async () => {
+    const { exitCode } = await runCommandE2e(KNOWLEDGE_KB_CREATE_ROUTES, [
+      "knowledge",
+      "create",
+      "--name",
+      "demo",
+      "--doc-id",
+      "file_test",
+      "--workspace-id",
+      "ws_test",
+    ]);
+    expect(exitCode).toBe(2);
+  });
+
+  test("--description 501 字符报 USAGE (2)", async () => {
+    const { exitCode } = await runCommandE2e(KNOWLEDGE_KB_CREATE_ROUTES, [
+      "knowledge",
+      "create",
+      "--name",
+      "demo",
+      "--description",
+      "x".repeat(501),
       "--doc-id",
       "file_test",
       "--workspace-id",
@@ -47,6 +83,8 @@ describe("e2e: knowledge kb create", () => {
       "create",
       "--name",
       "demo",
+      "--description",
+      "demo base",
       "--workspace-id",
       "ws_test",
     ]);
@@ -59,6 +97,8 @@ describe("e2e: knowledge kb create", () => {
       "create",
       "--name",
       "demo",
+      "--description",
+      "demo base",
       "--doc-id",
       "file_test",
       "--category-id",
@@ -75,6 +115,8 @@ describe("e2e: knowledge kb create", () => {
       "create",
       "--name",
       "x".repeat(21),
+      "--description",
+      "demo base",
       "--doc-id",
       "file_test",
       "--workspace-id",
@@ -89,6 +131,8 @@ describe("e2e: knowledge kb create", () => {
       "create",
       "--name",
       "demo",
+      "--description",
+      "demo base",
       "--doc-id",
       "file_test",
       "--workspace-id",
@@ -103,6 +147,8 @@ describe("e2e: knowledge kb create", () => {
     expect(data.request?.sourceType).toBe("DATA_CENTER_FILE");
     expect(data.request?.docIds).toEqual(["file_test"]);
     expect(data.request?.sinkType).toBe("BUILT_IN");
+    // description is a server-required field — it must reach the request body verbatim
+    expect(data.request?.description).toBe("demo base");
     // Defaults are part of the contract — the server applies no fallback of its own
     expect(data.request?.embeddingModelName).toBe("text-embedding-v4");
     expect(data.request?.chunkSize).toBe(600);
@@ -114,6 +160,8 @@ describe("e2e: knowledge kb create", () => {
       "create",
       "--name",
       "demo",
+      "--description",
+      "demo base",
       "--doc-id",
       "file_test",
       "--embedding-model",
@@ -138,6 +186,8 @@ describe("e2e: knowledge kb create", () => {
       "create",
       "--name",
       "demo",
+      "--description",
+      "demo base",
       "--category-id",
       "cate_test",
       "--workspace-id",

@@ -20,8 +20,9 @@ const COLLECTION_CREATE_FLAGS = {
     type: "string",
     valueHint: "<text>",
     description: {
-      "en-US": "Collection description (required by the server)",
-      "zh-CN": "数据集合描述（服务端必填）",
+      "en-US":
+        "What this collection holds and what it is for — tells collections apart in the list",
+      "zh-CN": "数据集合装了什么内容、给谁用，用于在列表中区分同类集合",
     },
     required: true,
   },

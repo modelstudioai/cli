@@ -18,6 +18,7 @@ import {
   KNOWLEDGE_KB_DELETE_ROUTES,
 } from "../topic-routes.ts";
 import { deleteKbWithRetry, pollUntil } from "./journeys/journey-helpers.ts";
+import { VERIFIED_RERANK_MODEL } from "./verified-models.ts";
 
 interface DryRunBody {
   endpoint?: string;
@@ -1058,6 +1059,8 @@ describe.skipIf(!isKbAdminE2EReady())(
           "create",
           "--name",
           `e2e-cate-kb-${Date.now() % 100000000}`.slice(0, 20),
+          "--description",
+          "e2e fixture knowledge base (safe to delete)",
           "--category-id",
           categoryId,
           "--workspace-id",
@@ -1158,6 +1161,8 @@ describe.skipIf(!isKbAdminE2EReady())(
         "create",
         "--name",
         `e2e-ck-${Date.now() % 100000000}`,
+        "--description",
+        "e2e fixture knowledge base (safe to delete)",
         "--doc-id",
         fileId,
         "--workspace-id",
@@ -1319,7 +1324,7 @@ describe.skipIf(!isKbAdminE2EReady())(
           "chunk chain fixture",
           "--rerank",
           "--rerank-model",
-          "qwen3-rerank-hybrid",
+          VERIFIED_RERANK_MODEL,
           "--rerank-mode",
           "similar",
           "--rerank-top-n",
@@ -1701,6 +1706,8 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: chunk/category/file 参数补全 (li
         "create",
         "--name",
         `e2e-pk-${Date.now() % 100000000}`.slice(0, 20),
+        "--description",
+        "e2e fixture knowledge base (safe to delete)",
         "--doc-id",
         fileId,
         "--workspace-id",

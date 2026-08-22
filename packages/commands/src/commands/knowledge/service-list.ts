@@ -14,8 +14,8 @@ const SERVICE_LIST_FLAGS = {
     type: "string",
     valueHint: "<scene>",
     description: {
-      "en-US": "Service scene: chat (Q&A) or search (retrieval). Required by the server",
-      "zh-CN": "服务场景：chat（问答）或 search（检索），服务端必填",
+      "en-US": "Service scene: chat (Q&A) or search (retrieval)",
+      "zh-CN": "服务场景：chat（问答）或 search（检索）",
     },
     required: true,
   },

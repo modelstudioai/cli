@@ -2,18 +2,18 @@
 
 检索服务（也称 agent）是知识库的检索入口。通过 `--agent-id` 在 search/chat 命令中使用。服务有 `chat`（问答）和 `search`（检索）两种场景。
 
-> **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](../knowledge-cli-guide.md#通用约定)。
+> **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](./kscli-cli-guide.md#通用约定)。
 
 ---
 
-#### `bl knowledge service list`
+#### `kscli service list`
 
 列出工作区中的检索/Q&A 服务。
 
 **用法**
 
 ```bash
-bl knowledge service list --scene <chat|search> [flags]
+kscli service list --scene <chat|search> [flags]
 ```
 
 **参数**
@@ -41,7 +41,7 @@ text 模式：
 ```
 aid-xxx  deployed  2  my-qa  (kb: my-kb)
 total: 1
-Use an agent_id above with the knowledge chat command.
+Use an agent_id above with the chat command.
 ```
 
 > 最后一行根据 scene 自动提示用 `search` 还是 `chat` 命令消费。
@@ -58,22 +58,22 @@ json 模式：返回 API 原始响应。
 
 ```bash
 # 列出 chat 服务
-bl knowledge service list --scene chat --workspace-id ws-xxx
+kscli service list --scene chat --workspace-id ws-xxx
 
 # 只看已部署的检索服务
-bl knowledge service list --scene search --status deployed
+kscli service list --scene search --status deployed
 ```
 
 ---
 
-#### `bl knowledge service get`
+#### `kscli service get`
 
 查看服务详情，含各版本配置。
 
 **用法**
 
 ```bash
-bl knowledge service get --agent-id <id> [flags]
+kscli service get --agent-id <id> [flags]
 ```
 
 **参数**
@@ -118,22 +118,22 @@ json 模式：返回 API 原始响应。
 
 ```bash
 # 查看服务完整详情
-bl knowledge service get --agent-id aid-xxx --workspace-id ws-xxx
+kscli service get --agent-id aid-xxx --workspace-id ws-xxx
 
 # 只看 beta 草稿配置
-bl knowledge service get --agent-id aid-xxx --agent-version beta
+kscli service get --agent-id aid-xxx --agent-version beta
 ```
 
 ---
 
-#### `bl knowledge service create`
+#### `kscli service create`
 
 创建检索/Q&A 服务，初始状态为 draft，版本为 beta。
 
 **用法**
 
 ```bash
-bl knowledge service create --name <text> --scene <chat|search> [flags]
+kscli service create --name <text> --scene <chat|search> [flags]
 ```
 
 **参数**
@@ -174,22 +174,22 @@ json 模式：返回 API 原始响应。
 
 ```bash
 # 创建 Q&A 服务
-bl knowledge service create --name my-qa --scene chat --workspace-id ws-xxx
+kscli service create --name my-qa --scene chat --workspace-id ws-xxx
 
 # 创建检索服务并绑定知识库
-bl knowledge service create --name my-search --scene search --index-id idx-xxx
+kscli service create --name my-search --scene search --index-id idx-xxx
 ```
 
 ---
 
-#### `bl knowledge service update`
+#### `kscli service update`
 
 更新服务名称、描述或草稿配置。
 
 **用法**
 
 ```bash
-bl knowledge service update --agent-id <id> [flags]
+kscli service update --agent-id <id> [flags]
 ```
 
 **参数**
@@ -247,25 +247,25 @@ json 模式：返回 API 原始响应。
 
 ```bash
 # 调整温度
-bl knowledge service update --agent-id aid-xxx --temperature 0.7 --workspace-id ws-xxx
+kscli service update --agent-id aid-xxx --temperature 0.7 --workspace-id ws-xxx
 
 # 用 JSON 文件替换整个配置
-bl knowledge service update --agent-id aid-xxx --config-file ./agent-config.json
+kscli service update --agent-id aid-xxx --config-file ./agent-config.json
 
 # 给已发布版本 1 加描述
-bl knowledge service update --agent-id aid-xxx --agent-version 1 --version-desc "first stable release"
+kscli service update --agent-id aid-xxx --agent-version 1 --version-desc "first stable release"
 ```
 
 ---
 
-#### `bl knowledge service deploy`
+#### `kscli service deploy`
 
 发布 beta 草稿为新版本。
 
 **用法**
 
 ```bash
-bl knowledge service deploy --agent-id <id> [flags]
+kscli service deploy --agent-id <id> [flags]
 ```
 
 **参数**
@@ -299,22 +299,22 @@ json 模式：返回 API 原始响应。
 
 ```bash
 # 发布（交互确认）
-bl knowledge service deploy --agent-id aid-xxx --workspace-id ws-xxx
+kscli service deploy --agent-id aid-xxx --workspace-id ws-xxx
 
 # 带描述并跳过确认
-bl knowledge service deploy --agent-id aid-xxx --version-desc "tuned rerank params" --yes
+kscli service deploy --agent-id aid-xxx --version-desc "tuned rerank params" --yes
 ```
 
 ---
 
-#### `bl knowledge service delete`
+#### `kscli service delete`
 
 删除检索/Q&A 服务（软删除，幂等）。
 
 **用法**
 
 ```bash
-bl knowledge service delete --agent-id <id> [flags]
+kscli service delete --agent-id <id> [flags]
 ```
 
 **参数**
@@ -347,22 +347,22 @@ json 模式：返回 API 原始响应。
 
 ```bash
 # 删除（交互确认）
-bl knowledge service delete --agent-id aid-xxx --workspace-id ws-xxx
+kscli service delete --agent-id aid-xxx --workspace-id ws-xxx
 
 # 跳过确认
-bl knowledge service delete --agent-id aid-xxx --yes
+kscli service delete --agent-id aid-xxx --yes
 ```
 
 ---
 
-#### `bl knowledge service copy`
+#### `kscli service copy`
 
 复制服务为新草稿（名称自动加 `copy_` 前缀）。
 
 **用法**
 
 ```bash
-bl knowledge service copy --agent-id <id> [flags]
+kscli service copy --agent-id <id> [flags]
 ```
 
 **参数**
@@ -393,9 +393,9 @@ json 模式：返回 API 原始响应。
 
 ```bash
 # 复制服务
-bl knowledge service copy --agent-id aid-source --workspace-id ws-xxx
+kscli service copy --agent-id aid-source --workspace-id ws-xxx
 ```
 
 ---
 
-← [返回总览](../knowledge-cli-guide.md)
+← [返回总览](./kscli-cli-guide.md)
