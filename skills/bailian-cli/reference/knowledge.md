@@ -432,7 +432,7 @@ bl knowledge collection get --name my-collection
 | Flag                        | Type   | Required | Description                                                                                               |
 | --------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------- |
 | `--name <text>`             | string | yes      | Knowledge base name (1-20 chars, unique in workspace)                                                     |
-| `--description <text>`      | string | yes      | What this knowledge base holds and what it is for — tells bases apart in the workspace list (1-200 chars) |
+| `--description <text>`      | string | yes      | What this knowledge base holds and what it is for — tells bases apart in the workspace list (1-500 chars) |
 | `--doc-id <id>`             | array  | no       | Data-center file id to import (repeatable); mutually exclusive with --category-id                         |
 | `--category-id <id>`        | array  | no       | Import every file under this category (repeatable); mutually exclusive with --doc-id                      |
 | `--embedding-model <name>`  | string | no       | Embedding model name (default: text-embedding-v4)                                                         |

@@ -136,7 +136,7 @@ bl knowledge create --name <text> --description <text> (--doc-id <id> | --catego
 | 参数                        | 类型   | 必填 | 说明                                                     |
 | --------------------------- | ------ | ---- | -------------------------------------------------------- |
 | `--name <text>`             | string | 是   | 知识库名称（1-20 字符，工作区内唯一）                    |
-| `--description <text>`      | string | 是   | 知识库装了什么内容、给谁用（1-200 字符）                 |
+| `--description <text>`      | string | 是   | 知识库装了什么内容、给谁用（1-500 字符）                 |
 | `--doc-id <id>`             | array  | 否¹  | 数据中心文件 ID（可重复）；与 `--category-id` 互斥       |
 | `--category-id <id>`        | array  | 否¹  | 按分类导入该分类下所有文件（可重复）；与 `--doc-id` 互斥 |
 | `--embedding-model <name>`  | string | 否   | 向量模型名称（默认：`text-embedding-v4`）                |
@@ -149,7 +149,7 @@ bl knowledge create --name <text> --description <text> (--doc-id <id> | --catego
 **参数约束**
 
 - `--name` 长度 1-20 字符
-- `--description` 长度 1-200 字符，缺失或超长会在本地被拦截
+- `--description` 长度 1-500 字符，缺失或超长会在本地被拦截
 - `--doc-id` 和 `--category-id` 互斥，必须提供其一
 
 **输出**

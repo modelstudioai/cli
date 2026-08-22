@@ -61,14 +61,14 @@ describe("e2e: knowledge kb create", () => {
     expect(exitCode).toBe(2);
   });
 
-  test("--description 201 字符报 USAGE (2)", async () => {
+  test("--description 501 字符报 USAGE (2)", async () => {
     const { exitCode } = await runCommandE2e(KNOWLEDGE_KB_CREATE_ROUTES, [
       "knowledge",
       "create",
       "--name",
       "demo",
       "--description",
-      "x".repeat(201),
+      "x".repeat(501),
       "--doc-id",
       "file_test",
       "--workspace-id",

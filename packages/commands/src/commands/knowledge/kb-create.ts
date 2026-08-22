@@ -34,8 +34,8 @@ const KB_CREATE_FLAGS = {
     valueHint: "<text>",
     description: {
       "en-US":
-        "What this knowledge base holds and what it is for — tells bases apart in the workspace list (1-200 chars)",
-      "zh-CN": "知识库装了什么内容、给谁用，用于在 Workspace 列表中区分同类知识库（1–200 个字符）",
+        "What this knowledge base holds and what it is for — tells bases apart in the workspace list (1-500 chars)",
+      "zh-CN": "知识库装了什么内容、给谁用，用于在 Workspace 列表中区分同类知识库（1–500 个字符）",
     },
     required: true,
   },
@@ -147,8 +147,8 @@ export default defineCommand({
   ],
   validate(flags) {
     if (flags.name.length < 1 || flags.name.length > 20) return "--name must be 1-20 characters";
-    if (flags.description.length < 1 || flags.description.length > 200) {
-      return "--description must be 1-200 characters";
+    if (flags.description.length < 1 || flags.description.length > 500) {
+      return "--description must be 1-500 characters";
     }
     const hasDocIds = !!flags.docId?.length;
     const hasCategoryIds = !!flags.categoryId?.length;
@@ -166,8 +166,8 @@ export default defineCommand({
     // Note: the public docs' example uses sinkType DEFAULT, but BUILT_IN is what works against the live API.
     const body = {
       name: flags.name,
-      // The server enforces description as a required 1-200 char field (the public
-      // API docs still list it as absent from CreateIndexV2Request.required).
+      // description is a required field; length limit is 1-500 (the public API docs
+      // still list it as absent from CreateIndexV2Request.required).
       description: flags.description,
       structureType: "unstructured",
       sinkType: "BUILT_IN",
