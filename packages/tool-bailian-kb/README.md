@@ -76,20 +76,63 @@ Config 同时注册为 `bailian-kb` settings namespace（`installSettingsSection
 | `kb_search` | `query`、`agent_id`（**必填**；程序化省略时回退 defaultRetrieveAgentId）、`top_k?`（默认 5，**客户端截断**——服务端无此参数）、`images?` | chunks（text/score/来源）+ total |
 | `kb_chat` | `message`、`agent_id`（**必填**；程序化省略时回退 defaultChatAgentId） | 完整答案（内部消费 SSE 流缓冲返回）+ request_id |
 
-服务发现（`kb_service_list` 已移除）：通过 `bl knowledge service list` CLI 命令查询可用检索/对话服务及其 agent_id。
+两个工具的 **description 保持静态**（不含任何服务 id）；可用服务清单由下述服务缓存经 `agent/pre-step` 注入为上下文消息。
+
+## 检索服务缓存与上下文注入
+
+模型要判断"该不该检索"，靠的是看到本 workspace 部署了哪些检索服务。插件内部经 `/api/v1/indices/rag/app/list` 拉取该清单并缓存，**不对模型暴露服务发现工具**（`kb_service_list` 不会回归：它会把"先 list 再 search"的额外一轮重新引入）；管理面仍用 bl。
+
+### 载体：上下文消息，不是工具描述
+
+清单经 `agent/pre-step` 注入为一条带 source 的 `UserMessage`（`{ kind: 'plugin', plugin: 'tool-bailian-kb/services', form: 'catalog' }`），而不是烘进 tool description。两个原因：
+
+1. **插件加载是每进程一次，不是每会话一次。** 描述在 `apply()` 时定型，长驻宿主里 TTL 只会被评估一次，用户在控制台新建的服务要等重启才能被感知；
+2. **重注册工具会废掉 prompt 前缀缓存**（从第一个变化的 schema token 起）。走上下文消息则让 schema 永久稳定。
+
+**变化抑制是正确性要求，不是优化**：`pre-step` 每个“步”（= 一次模型请求）触发一次，一轮里调 5 次工具就触发 6 次。只有清单内容变化时才重发，且判定叠加**可见性**（`session.surface.nodes`）——压缩把清单消息裁掉后会自动重新注入，否则模型会静默失去清单。
+
+### 清单内容策略
+
+| 情形 | 注入内容 |
+|---|---|
+| 配了默认服务 | 只列该服务 + "另有 N 个" 提示 |
+| 未配默认，deployed ≤ 10 | 全量 `agent_id` + 名称 |
+| 未配默认，deployed > 10 | 按 `modify_time` 倒序取 10 条，**显式标明截断**与总数 |
+| 0 个 / 拉取失败 / 无缓存 | 不注入（工具仍可用） |
+
+英文框架 + 服务名原样保留；空 scene 整节省略；截断必须告知（静默截断会让模型把清单当全集，进而断言"没有对应知识库"）。
+
+### 缓存与刷新
+
+落点：`${DSH_HOME:-~/.dsh}/cache/bailian-kb/services-<workspaceId>.json`（临时文件 + `rename()` 原子发布，目录 `0o700`）。按 workspace 分文件是必需的：api key 只能访问自己的 workspace（交叉组合返回 `Endpoint.AccessDenied`），而"自动获取"按钮就是为了切账号。
+
+存：`agent_id` / `agent_name` / `scene` / `status` / `modify_time`，预留 `description`（待后端补齐）。**不存 `pipeline_list`**——实测它常缺 `pipeline_name`、有时整个为空，做不了知识库标签。
+
+| 刷新触发点 | 模型何时看见 |
+|---|---|
+| pre-step 间隔调度（超 TTL 30 分钟，后台异步，**不阻塞**） | 下一步 |
+| 控制台登录成功（`/bailian-kb/autofill` 回调） | 下一步 |
+| 调用撞 4xx（agent_id 已失效） | **本步**，刷新后的列表追加进错误消息 |
+| workspaceId / apiKey 变更 | 下一步 |
+
+刷新失败只 warn，保留旧文档；并发刷新共享一个请求（pre-step 每步都会检查）。pre-step 监听器**永不抛异常**——抛出会使用户当前这一步失败。未组合 `agents` 的 headless 装配只是没有清单，工具照常可用。
 
 ## 错误语义
 
-- HTTP 错误：原始错误透传，模型可通过 `bl knowledge service list` 发现可用服务以纠正无效 `agent_id`；
+- HTTP 错误：4xx 时刷新服务缓存并把当前可用服务追加进错误消息（这两个接口上 `agent_id` 是唯一的调用方标识符，所以 4xx 大多是 id 已失效）；5xx 与刷新本身失败则原错误透传；
 - 凭证缺失：指向 `~/.dsh/.env` / `.credentials.yaml` 配置方式与控制台取 key 页面；
 - chat 超时：说明服务端多轮检索特性，建议重试或改用 `kb_search`；
 - 服务端错误体截断至 500 字符进入错误信息（优先 `code: message`）。
 
 ## 管理面 skill
 
-`skills/bailian-kb/SKILL.md` 随包分发，插件通过 `ctx.inject(['skills'])` 在 skills 服务可用时以 `source: 'bundled'` 运行时注册；无 skills 服务的组合（headless 最小装配）不受影响。内容：bl CLI 安装/鉴权/workspace 解析、建库→上传→部署工作流、agent_id 固定最佳实践。
+`skills/bailian-kb/SKILL.md` 随包分发，插件通过 `ctx.inject(['skills'])` 在 skills 服务可用时以 `source: 'bundled'` 运行时注册；无 skills 服务的组合（headless 最小装配）不受影响。文件的 YAML frontmatter 是 name / description 的**单一事实源**，注册时会被剥离（`SkillDefinition.content` 契约上是已去元数据的正文，而 runtime 注册路径不做任何解析）。
+
+内容：bl CLI 安装/鉴权/workspace 解析、建库→上传→部署工作流、服务清单的行为语义。**skill 不承担"该不该检索"的引导**（那是工具描述与上下文清单的事：skill 正文要模型先决定加载才能读到，是二阶决策）；它反过来承担一件工具做不到的事：**引导 agent 在 `service create` 时把服务名写清楚**。无 desc 时服务名是唯一语义来源，管理面的动作直接决定检索面的效果。
 
 ## Known Limitations
 
 - kb_chat 执行期无进展显示（缓冲式；进展会话事件设计见仓库根 README 与 spec 附录 A）。
 - `top_k` 是客户端截断：请求体不含该参数，服务端返回条数由检索服务配置决定，截断只影响进入模型上下文的量。
+- **服务画像的质量上限取决于服务名**：`service list` 接口当前不返回描述（已对两个 workspace 实测确认），所以模型只能靠 `agent_name` 判断一个服务能查什么。名字形如 `test-0819` 的部署，引导能力接近于零。后端补齐描述字段后只需改三处（`api-types` 补字段名 → `services.ts` 解析 → `buildServiceCatalog` 追加并截断到 200 字符），缓存已预留 `description` 键，无需迁移。
+- 拉取每个 scene 最多 2 页 / 200 条（`page_size` 服务端硬顶 100），超出时标 `truncated` 并在清单里告知。

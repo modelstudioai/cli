@@ -6,12 +6,23 @@ description: >-
   增删改查 Chunk、管理数据中心类目/文件/集合时使用本 skill。
   检索与问答不走本 skill——用原生工具 kb_search（取证据）/ kb_chat（成品问答）；
   bl knowledge search / chat 仅用于部署后的验证调试（如 --agent-version beta 调试草稿版）。
+  kb_search / kb_chat 的凭据与工作空间由插件自动解析（~/.dsh/settings.yaml 的 bailian-kb 段、
+  ~/.dsh/.credentials.yaml 的 DASHSCOPE_API_KEY），不要自己去读或传。
   普通问答、编程、写作、翻译、泛搜索不触发本 skill。
 ---
 
 # 百炼知识库管理（bl）
 
 检索面与管理面的分工：**查知识用 `kb_search`（取证据）/ `kb_chat`（成品问答）原生工具；本 skill 只覆盖管理长尾**——知识库全生命周期、文档、检索服务、Chunk、数据中心。
+
+本 skill **不负责**判断何时该检索。可用检索服务的清单（含 agent_id）由插件自动注入到会话上下文里，`kb_search` / `kb_chat` 直接取用；不需要为了检索先加载本 skill。
+
+## 检索服务清单的行为语义
+
+- 清单由插件从百炼 API 拉取后缓存，按会话周期性刷新（约 30 分钟），只含 **deployed** 状态的服务；
+- **刚用 `bl` 新建或部署的服务不会立刻出现在清单里**。不用等刷新——命令输出里刚拿到的 `agent_id` 直接可用；
+- 服务很多时清单只列最近修改的若干条并标明总数。要找特定服务用 `bl knowledge service list --scene search --name <关键词>`；
+- 清单里确实没有能回答用户问题的服务时，如实告知用户，**不要挑一个最像的 agent_id 去试**。
 
 ## 前置检查
 
@@ -83,8 +94,8 @@ bl knowledge service list --scene search --status deployed                  # 5.
 
 ## 最佳实践
 
-- 用户反复使用同一检索服务时，建议其把 agent_id 写入项目指令（如 AGENTS.md）或让 agent 记住，后续 kb_search / kb_chat 直接携带。
-- 服务有 draft/deployed 两种状态：只有 deployed 可被默认版本调用；draft 调试用 `--agent-version beta`。改已发布版本的配置：先改 beta 草稿（`service update`），验证后 `service deploy` 发新版本。
+- **建服务时必须把名字写清楚**：`service create --name` 的名称是模型判断"这个服务能查什么"的主要依据（服务描述暂未随列表接口返回）。`检索服务1`、`test-0819` 这类名字会让后续检索无法路由；写成 `产品文档检索`、`HR制度问答` 这种能看出覆盖内容的名字。同时填 `--description`（≤1000 字符），后端补齐列表字段后即可自动生效。
+- 服务有 draft/deployed 两种状态：只有 deployed 可被默认版本调用，也只有 deployed 会进入模型看到的服务清单；draft 调试用 `--agent-version beta`。改已发布版本的配置：先改 beta 草稿（`service update`），验证后 `service deploy` 发新版本。
 - 导入类命令（`knowledge create`、`doc upload --index-id`、`doc status`）优先带 `--wait` 轮询到终态，避免手工轮询；文档解析失败（如 PARSE_FAILED）会以非零退出码透传错误。
 - `chunk add` 有 10 QPS 限流，批量脚本注意节流；响应不带 chunk id，需要 `chunk list` 反查。
 - `service list` 必须带 `--scene chat|search`，两个场景要分别查询。

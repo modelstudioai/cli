@@ -13,6 +13,10 @@ import { readBlCliConfig } from './bl-cli.js'
 import { consoleLoginState, startConsoleLogin } from './console-login.js'
 import { KbClient } from './client.js'
 import { registerSkill } from './skill.js'
+import { ServiceCache } from './service-cache.js'
+import { CATALOG_ENTRY_LIMIT } from './service-catalog.js'
+import { installServiceContext } from './service-context.js'
+import type { ServiceScene } from './api-types.js'
 import { createKbTools } from './tools.js'
 
 /** Minimal webServer route shape (declared inline to avoid a host-package dependency). */
@@ -250,25 +254,90 @@ export function apply(ctx: Context, config: Config): void {
       return resolved.value
     },
   })
+
+  /** The workspace id if configured, without the client's guidance throw. */
+  const resolveWorkspaceIdOrUndefined = async (): Promise<string | undefined> => {
+    const pinned = current().workspaceId
+    if (pinned) return pinned
+    const resolved = await ctx.credentials.resolve(credentialRef('BAILIAN_WORKSPACE_ID'))
+    return resolved?.value
+  }
+
+  const serviceCache = new ServiceCache({
+    client,
+    resolveWorkspaceId: async () => {
+      const workspaceId = await resolveWorkspaceIdOrUndefined()
+      if (workspaceId === undefined) throw new Error('workspace id is not configured')
+      return workspaceId
+    },
+    get endpointHost() { return current().endpointHost },
+    warn: message => { ctx.logger.warn(message) },
+  })
+
+  /** The user's explicitly configured default for one scene: settings layer, then credential. */
+  const configuredDefaultAgentId = async (scene: ServiceScene): Promise<string | undefined> => {
+    const pinned = scene === 'search' ? current().defaultRetrieveAgentId : current().defaultChatAgentId
+    if (pinned) return pinned
+    const ref = scene === 'search' ? 'BAILIAN_DEFAULT_RETRIEVE_AGENT_ID' : 'BAILIAN_DEFAULT_CHAT_AGENT_ID'
+    const resolved = await ctx.credentials.resolve(credentialRef(ref))
+    return resolved?.value
+  }
+
+  /**
+   * The default service for one scene, falling back to the sole deployed service
+   * when the workspace has exactly one. That last layer is the zero-configuration
+   * path for the common 2C deployment: with one service there is nothing to
+   * choose, so making the user name it in settings buys nothing.
+   */
+  const resolveDefaultAgentId = async (scene: ServiceScene): Promise<string | undefined> => {
+    const configured = await configuredDefaultAgentId(scene)
+    if (configured !== undefined) return configured
+    const workspaceId = await resolveWorkspaceIdOrUndefined()
+    if (workspaceId === undefined) return undefined
+    const forScene = serviceCache.peek(workspaceId)?.entries.filter(entry => entry.scene === scene) ?? []
+    return forScene.length === 1 ? forScene[0]?.agent_id : undefined
+  }
   for (const tool of createKbTools({
     client,
-    resolveDefaultRetrieveAgentId: async () => {
-      const pinned = current().defaultRetrieveAgentId
-      if (pinned) return pinned
-      const resolved = await ctx.credentials.resolve(credentialRef('BAILIAN_DEFAULT_RETRIEVE_AGENT_ID'))
-      return resolved?.value
-    },
-    resolveDefaultChatAgentId: async () => {
-      const pinned = current().defaultChatAgentId
-      if (pinned) return pinned
-      const resolved = await ctx.credentials.resolve(credentialRef('BAILIAN_DEFAULT_CHAT_AGENT_ID'))
-      return resolved?.value
+    resolveDefaultRetrieveAgentId: async () => await resolveDefaultAgentId('search'),
+    resolveDefaultChatAgentId: async () => await resolveDefaultAgentId('chat'),
+    // Self-heal for a cached id the server has since rejected: refresh once and
+    // put the current list in the error, which reaches the model this step.
+    describeServicesAfterRefresh: async (scene) => {
+      await serviceCache.refresh()
+      const workspaceId = await resolveWorkspaceIdOrUndefined()
+      if (workspaceId === undefined) return undefined
+      const forScene = serviceCache.peek(workspaceId)?.entries.filter(entry => entry.scene === scene) ?? []
+      if (forScene.length === 0) return undefined
+      const lines = forScene.slice(0, CATALOG_ENTRY_LIMIT)
+        .map(entry => `- ${entry.agent_id} — ${entry.agent_name === '' ? '(unnamed)' : entry.agent_name}`)
+      const more = forScene.length - lines.length
+      return [
+        `Deployed ${scene} services in this workspace, re-read just now:`,
+        ...lines,
+        ...(more > 0 ? [`(and ${more} more — \`bl knowledge service list --scene ${scene}\`)`] : []),
+      ].join('\n')
     },
     get chatTimeoutMs() { return current().chatTimeoutMs },
   })) {
     ctx.tools.register(tool)
   }
   registerSkill(ctx)
+
+  // The service catalog rides an `agent/pre-step` context message rather than the
+  // tool descriptions: descriptions freeze at plugin load, and a plugin loads
+  // once per process, so in a long-running host a service created elsewhere
+  // would never be seen. Optional inject — a headless assembly without `agents`
+  // simply gets no catalog, and both tools keep working.
+  ctx.inject(['agents'], (actx) => {
+    installServiceContext(actx, {
+      cache: serviceCache,
+      resolveWorkspaceId: resolveWorkspaceIdOrUndefined,
+      resolveDefaultRetrieveAgentId: async () => await configuredDefaultAgentId('search'),
+      resolveDefaultChatAgentId: async () => await configuredDefaultAgentId('chat'),
+      warn: message => { actx.logger.warn(message) },
+    })
+  })
 
   // Export the resolved workspace id as a shell environment variable so
   // management CLI commands (`bl knowledge list`, `bl knowledge service list`, etc.)
@@ -393,6 +462,14 @@ export function apply(ctx: Context, config: Config): void {
               written.push('workspaceId')
             }
             if (written.length > 0) await markSeeded(written)
+            // A completed console login is the one unambiguous signal that the
+            // account may have changed. Without this the next session would
+            // build its catalog from the previous account's services, which is
+            // worse than having no cache at all.
+            if (written.length > 0) {
+              serviceCache.invalidate()
+              void serviceCache.refresh()
+            }
             return written
           },
         })

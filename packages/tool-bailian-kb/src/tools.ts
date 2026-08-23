@@ -5,6 +5,13 @@
  * fallback to a configured default (settings/config or credential) is retained as defense-in-depth,
  * but note defineTool validates args against the schema before execute, so through that entry point
  * the fallback is inert; the model-facing contract is explicit.
+ *
+ * These descriptions are deliberately STATIC. The available service ids are
+ * deployment state that changes while the process runs, and re-registering a tool
+ * to refresh its description invalidates the prompt prefix cache from the first
+ * changed schema token. The live catalog therefore rides an `agent/pre-step`
+ * context message instead (see `service-context.ts`), leaving these schemas
+ * byte-stable for the life of the process.
  */
 
 import { defineTool } from '@deepseek-ai/dsh-tools'
@@ -22,17 +29,41 @@ export interface KbToolDeps {
   resolveDefaultRetrieveAgentId?: () => Promise<string | undefined>
   /** Resolves the default chat agent id per call (settings/patch config or credential); omitted means no default for kb_chat. */
   resolveDefaultChatAgentId?: () => Promise<string | undefined>
+  /**
+   * Refreshes the service cache and summarizes what the workspace currently
+   * deploys for one scene. Called only after a client-side API failure, so a
+   * stale cached id self-corrects within the same step instead of waiting for the
+   * next scheduled refresh.
+   */
+  describeServicesAfterRefresh?: (scene: 'search' | 'chat') => Promise<string | undefined>
   /** Read per call (a live-settings deployment supplies a getter). */
   chatTimeoutMs: number
 }
 
 /**
- * Forward the original tool error unchanged; service discovery now lives
- * in the bl management skill (`bl knowledge service list`), so the tool no
- * longer makes a best-effort API round-trip to enrich the message.
+ * Rethrow an API failure, appending a freshly refreshed service list when the
+ * server rejected the request.
+ *
+ * On these two endpoints `agent_id` is the only caller-supplied identifier, so a
+ * 4xx is most often a service id that no longer exists — the recovery the model
+ * needs is the current list, delivered in the error message. The message is
+ * ordinary conversation text appended at the tail, so unlike a re-registered
+ * description it does not disturb the request prefix.
  */
-async function withServiceHint(_client: KbClient, err: unknown): Promise<never> {
-  throw err
+async function withServiceHint(
+  err: unknown,
+  scene: 'search' | 'chat',
+  describe: KbToolDeps['describeServicesAfterRefresh'],
+): Promise<never> {
+  if (describe === undefined || !(err instanceof KbApiError)) throw err
+  const status = err.status
+  if (status === undefined || status < 400 || status >= 500) throw err
+  // Best-effort enrichment: a failing refresh must not replace the real error.
+  const summary = await describe(scene).catch(() => undefined)
+  if (summary === undefined) throw err
+  throw new KbApiError(`${err.message}
+
+${summary}`, status)
 }
 
 /**
@@ -48,9 +79,12 @@ export function createKbTools(deps: KbToolDeps) {
     type: 'string' as const,
     required: true as const,
     description: 'Retrieval/Q&A service id. REQUIRED: the schema cannot know whether this deployment '
-      + 'configures a default service, so always pass one. Find ids via '
-      + '`bl knowledge service list --scene search --workspace-id <workspaceId>` (workspaceId resolves '
-      + 'automatically from DSH settings: bailian-kb.workspaceId in ~/.dsh/settings.yaml).',
+      + 'configures a default service, so always pass one. The deployed services of this workspace, '
+      + 'with their ids, are listed in a context message in this conversation; take the id from the '
+      + 'section matching the tool you are calling. If that list is absent or none of its services '
+      + 'covers the question, run `bl knowledge service list --scene search --name <keyword>` to look '
+      + '(workspaceId resolves automatically from DSH settings: bailian-kb.workspaceId in '
+      + '~/.dsh/settings.yaml).',
   }
   const resolveRetrieveAgentId = async (supplied: string | undefined): Promise<string> => {
     if (supplied !== undefined) return supplied
@@ -89,7 +123,9 @@ export function createKbTools(deps: KbToolDeps) {
       + 'Use kb_chat instead when the user question can be answered by the knowledge base alone. '
       + 'Credentials and workspace resolve automatically from DSH config '
       + '(bailian-kb in ~/.dsh/settings.yaml, DASHSCOPE_API_KEY in ~/.dsh/.credentials.yaml) — '
-      + 'never read or pass them yourself. agent_id is REQUIRED (see its parameter description).',
+      + 'never read or pass them yourself. agent_id is REQUIRED (see its parameter description). '
+      + 'If no listed service covers what the user is asking about, say so plainly rather than trying '
+      + 'the closest-looking id: unrelated evidence is worse for the user than none.',
     parameters: {
       query: { type: 'string', required: true, description: 'Search query text.' },
       agent_id: agentIdParam,
@@ -134,7 +170,8 @@ export function createKbTools(deps: KbToolDeps) {
         ...(client.agentVersion ? { agent_version: client.agentVersion } : {}),
         ...(args.images && args.images.length > 0 ? { images: args.images } : {}),
       }
-      const res = await client.postJson<SearchResponse>(KB_PATHS.search, body).catch(err => withServiceHint(client, err))
+      const res = await client.postJson<SearchResponse>(KB_PATHS.search, body)
+        .catch(async err => await withServiceHint(err, 'search', deps.describeServicesAfterRefresh))
       const nodes = (res.data?.nodes ?? []).slice(0, topK)
       return {
         chunks: nodes.map(n => ({
@@ -160,7 +197,9 @@ export function createKbTools(deps: KbToolDeps) {
       + 'The pipeline runs an internal analysis/retrieval loop and may take a few minutes. '
       + 'Credentials and workspace resolve automatically from DSH config '
       + '(bailian-kb in ~/.dsh/settings.yaml, DASHSCOPE_API_KEY in ~/.dsh/.credentials.yaml) — '
-      + 'never read or pass them yourself. agent_id is REQUIRED (see its parameter description).',
+      + 'never read or pass them yourself. agent_id is REQUIRED (see its parameter description). '
+      + 'If no listed service covers what the user is asking about, say so plainly rather than trying '
+      + 'the closest-looking id.',
     parameters: {
       message: { type: 'string', required: true, description: 'The question to ask.' },
       agent_id: agentIdParam,
@@ -196,7 +235,7 @@ export function createKbTools(deps: KbToolDeps) {
             + 'and long questions can exceed the deployment timeout. Retry, or use kb_search for raw chunks instead.',
           )
         }
-        return await withServiceHint(client, err)
+        return await withServiceHint(err, 'chat', deps.describeServicesAfterRefresh)
       }
       const { answer, requestId } = await consumeChatStream(res)
       return { answer, ...(requestId ? { request_id: requestId } : {}) }

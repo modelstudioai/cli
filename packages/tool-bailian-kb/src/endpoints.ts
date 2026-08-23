@@ -1,7 +1,13 @@
 /** Protocol path constants and the workspace-subdomain URL builder (external API spec; not configurable). */
 
-/** DashScope knowledge API paths for the two native tools (search, chat); service listing is handled by the bl CLI. */
+/**
+ * DashScope knowledge API paths. `serviceList` backs the plugin's internal
+ * service cache only — it is deliberately NOT exposed as a model tool (a
+ * discovery tool reintroduces the "list before you search" round trip this
+ * design exists to remove); the management surface uses the bl CLI instead.
+ */
 export const KB_PATHS = {
+  serviceList: '/api/v1/indices/rag/app/list',
   search: '/api/v1/indices/knowledge/search',
   chat: '/api/v2/apps/knowledge/chat',
 } as const

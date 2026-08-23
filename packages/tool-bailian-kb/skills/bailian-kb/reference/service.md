@@ -57,9 +57,9 @@ Usage: bl knowledge service create --name <text> --scene <chat|search> [flags]
 
 | Flag | 说明 |
 | --- | --- |
-| `--name <text>` | 服务名（≤200 字符，同场景内唯一） |
+| `--name <text>` | 服务名（≤200 字符，同场景内唯一）。**名称是模型判断该服务能查什么的主要依据**（描述暂未随 `service list` 返回），写清楚覆盖内容，避开 `检索服务1` / `test-xxx` |
 | `--scene <scene>` | chat（问答）或 search（检索） |
-| `--description <text>` | 描述（≤1000 字符） |
+| `--description <text>` | 描述（≤1000 字符）。建议始终填写：说明覆盖什么内容、适合回答什么问题 |
 | `--index-id <id>` | 绑定知识库；其余配置用服务端默认值 |
 
 Notes：
