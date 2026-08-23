@@ -46,12 +46,17 @@ interface FieldView {
   getUrl?: string
 }
 
-/** The controls, in page order. */
+/**
+ * The controls, in page order.
+ *
+ * The two default-service ids are NOT here: they render as pickers inside the
+ * advanced section instead, driven by the cached service list. A free-text id
+ * field beside a picker for the same setting is the same value twice, and the
+ * pair drifts the moment one of them writes.
+ */
 const FIELDS: readonly FieldView[] = [
   { key: 'DASHSCOPE_API_KEY', labelKey: 'apiKey', getKey: 'apiKeyGet', hintKey: 'apiKeyHint', fallbackHintKey: 'apiKeyHint', setKey: 'apiKeySet', unsetKey: 'apiKeyUnset', secret: true, advanced: true, getUrl: BAILIAN_CONSOLE_API_KEY_URL },
   { key: 'BAILIAN_WORKSPACE_ID', labelKey: 'workspaceId', getKey: 'workspaceIdGet', hintKey: 'workspaceIdHint', fallbackHintKey: 'workspaceIdHintFallback', setKey: 'workspaceIdSet', unsetKey: 'workspaceIdUnset', secret: false, advanced: true, getUrl: BAILIAN_CONSOLE_API_KEY_URL },
-  { key: 'BAILIAN_DEFAULT_RETRIEVE_AGENT_ID', labelKey: 'retrieveAgentId', hintKey: 'retrieveAgentIdHint', fallbackHintKey: 'retrieveAgentIdHintFallback', setKey: 'retrieveAgentIdSet', unsetKey: 'retrieveAgentIdUnset', secret: false, advanced: true },
-  { key: 'BAILIAN_DEFAULT_CHAT_AGENT_ID', labelKey: 'chatAgentId', hintKey: 'chatAgentIdHint', fallbackHintKey: 'chatAgentIdHintFallback', setKey: 'chatAgentIdSet', unsetKey: 'chatAgentIdUnset', secret: false, advanced: true },
 ]
 
 const ADVANCED_FIELDS = FIELDS.filter(field => field.advanced)
@@ -167,6 +172,114 @@ export function BailianCard(props: BailianCardProps) {
     )
   }
 
+  /**
+   * One scene's default-service picker — the sole control for that setting.
+   *
+   * The cached list is the menu, but a value already pinned outside this list
+   * (the fetch is capped, so an older service can be absent) is prepended as its
+   * own option: dropping it would make the panel silently forget a live setting.
+   */
+  function renderPicker(scene: 'search' | 'chat') {
+    const cache = state.cache
+    const entries = scene === 'search' ? cache.search : cache.chat
+    const pinned = scene === 'search'
+      ? state.settings.values.defaultRetrieveAgentId
+      : state.settings.values.defaultChatAgentId
+    const isPinned = pinned !== undefined && pinned !== ''
+    const pinnedIsListed = isPinned && entries.some(entry => entry.agent_id === pinned)
+    return (
+      <div className={css.field}>
+        <div className={css.head}>
+          <span className={css.label}>{t(scene === 'search' ? 'retrieveAgentId' : 'chatAgentId')}</span>
+          {isPinned
+            ? (
+              <button
+                type="button"
+                className={css.clear}
+                disabled={busy}
+                onClick={() => { void props.selectDefaultAgent(scene, undefined) }}
+              >
+                {t(state.clearing ? 'clearing' : 'pickerClear')}
+              </button>
+            )
+            : null}
+        </div>
+        <select
+          className={css.input}
+          value={pinned ?? ''}
+          disabled={busy || cache.status !== 'ready'}
+          onChange={(event) => {
+            const next = event.target.value
+            // The empty option is the clear path, which must remove the value
+            // from both the settings layer and the credential store.
+            void props.selectDefaultAgent(scene, next === '' ? undefined : next)
+          }}
+        >
+          <option value="">{t('pickerNone')}</option>
+          {isPinned && !pinnedIsListed
+            ? <option value={pinned}>{pinned}</option>
+            : null}
+          {entries.map(entry => (
+            <option key={entry.agent_id} value={entry.agent_id}>
+              {entry.agent_name === '' ? entry.agent_id : entry.agent_name}
+            </option>
+          ))}
+        </select>
+        <p className={css.hint}>
+          {entries.length === 0 ? t('cacheEmpty') : t(scene === 'search' ? 'retrieveAgentIdHint' : 'chatAgentIdHint')}
+        </p>
+      </div>
+    )
+  }
+
+  /**
+   * The service-cache diagnostics: last fetch, per-scene counts, refresh.
+   *
+   * This stays OUTSIDE the advanced fold on purpose. It is the answer to "why did
+   * the agent stop retrieving" — an empty workspace and a stale list look
+   * identical from the outside, and before this the only way to tell them apart
+   * was reading the cache JSON off disk.
+   */
+  function renderCacheStatus() {
+    const cache = state.cache
+    if (cache.status === 'loading') return <p className={css.hint}>{t('cacheLoading')}</p>
+    if (cache.status === 'unconfigured') return <p className={css.notice}>{t('cacheUnconfigured')}</p>
+    if (cache.status === 'unavailable') return <p className={css.notice}>{t('cacheUnavailable')}</p>
+
+    const fetched = cache.fetchedAt === undefined
+      ? t('cacheNever')
+      : new Date(cache.fetchedAt).toLocaleString()
+
+    return (
+      <div className={css.field}>
+        <div className={css.head}>
+          <span className={css.label}>{t('cacheTitle')}</span>
+          <button
+            type="button"
+            className={css.clear}
+            disabled={cache.refreshing}
+            onClick={() => { void props.refreshServices() }}
+          >
+            {t(cache.refreshing ? 'cacheRefreshing' : 'cacheRefresh')}
+          </button>
+        </div>
+        <p className={css.hint}>
+          {t('cacheFetchedAt')}: {fetched}
+          {cache.stale ? ` (${t('cacheStale')})` : ''}
+          {' · '}
+          {t('cacheSearchCount')}: {cache.searchCount}
+          {' · '}
+          {t('cacheChatCount')}: {cache.chatCount}
+        </p>
+        {cache.truncated ? <p className={css.notice}>{t('cacheTruncated')}</p> : null}
+        {cache.searchCount === 0 && cache.chatCount === 0
+          ? <p className={css.notice}>{t('cacheEmpty')}</p>
+          : null}
+        <p className={css.hint}>{t('cacheHint')}</p>
+      </div>
+    )
+  }
+
   return (
     <section className={css.section}>
       <div className={css.headRow}>
@@ -198,6 +311,7 @@ export function BailianCard(props: BailianCardProps) {
         {state.settings.status === 'unavailable'
           ? <p className={css.notice}>{t('settingsUnavailable')}</p>
           : null}
+        {renderCacheStatus()}
         <div className={css.advancedSection}>
           <button
             type="button"
@@ -211,6 +325,8 @@ export function BailianCard(props: BailianCardProps) {
             ? (
               <div className={css.advancedFields}>
                 {ADVANCED_FIELDS.map(renderField)}
+                {renderPicker('search')}
+                {renderPicker('chat')}
                 <div className={css.footer}>
                   {state.failed ? <p className={css.failed} role="status">{t('saveFailed')}</p> : null}
                   <button

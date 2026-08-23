@@ -32,6 +32,18 @@ const CACHE_VERSION = 1
 /** Refresh interval. Evaluated per `agent/pre-step`, so a short window genuinely takes effect. */
 export const CACHE_TTL_MS = 30 * 60 * 1000
 
+/**
+ * Refresh interval applied when the cached list is EMPTY.
+ *
+ * An empty list is almost never a settled fact — it is the intermediate state of
+ * a workspace being set up. Caching that negative result for the full TTL breaks
+ * the standard first-run path: configure the plugin against a fresh workspace (0
+ * services) → create a knowledge base and a service → and then wait up to half an
+ * hour before the catalog appears. Re-asking every minute while the answer is
+ * "nothing yet" has a bounded cost and removes that trap.
+ */
+export const EMPTY_CACHE_TTL_MS = 60 * 1000
+
 /** The stored document. */
 export interface ServiceCacheDocument {
   version: number
@@ -109,6 +121,19 @@ export function writeServiceCache(path: string, doc: ServiceCacheDocument): void
   renameSync(temp, path)
 }
 
+/** What the settings panel shows about the cache; see {@link ServiceCache.status}. */
+export interface ServiceCacheStatus {
+  workspaceId: string
+  /** Epoch millis of the last successful fetch; absent when nothing is cached. */
+  fetchedAt?: number
+  searchCount: number
+  chatCount: number
+  /** Server-reported total, which exceeds the counts above when the fetch was capped. */
+  total: number
+  truncated: boolean
+  stale: boolean
+}
+
 export interface ServiceCacheOptions {
   client: KbClient
   /** Resolves the current workspace id; a failure means "not configured yet". */
@@ -158,19 +183,64 @@ export class ServiceCache {
   }
 
   /**
-   * Whether the cached document is missing or older than the TTL.
+   * Whether the cached document is missing or older than its TTL.
+   * An empty list expires on the much shorter {@link EMPTY_CACHE_TTL_MS}.
    * @param workspaceId - the workspace being served.
    * @returns true when a refresh is due.
    */
   isStale(workspaceId: string): boolean {
     const doc = this.peek(workspaceId)
-    return doc === undefined || this.now - doc.fetchedAt >= CACHE_TTL_MS
+    if (doc === undefined) return true
+    const ttl = doc.entries.length === 0 ? EMPTY_CACHE_TTL_MS : CACHE_TTL_MS
+    return this.now - doc.fetchedAt >= ttl
   }
 
   /** Drop the in-memory view and force the next `peek` to re-read from disk. */
   invalidate(): void {
     this.document = undefined
     this.loadedFor = undefined
+  }
+
+  /**
+   * A diagnostic snapshot for the settings panel.
+   *
+   * The panel exists because this cache's staleness is otherwise invisible: a
+   * developer whose agent silently stops retrieving cannot tell an empty
+   * workspace from a stale list without reading the JSON file. `fetchedAt` plus
+   * the per-scene counts answer that in one glance.
+   * @param workspaceId - the workspace being served.
+   * @returns the snapshot; `fetchedAt` is undefined when nothing is cached.
+   */
+  status(workspaceId: string): ServiceCacheStatus {
+    const doc = this.peek(workspaceId)
+    if (doc === undefined) {
+      return { workspaceId, searchCount: 0, chatCount: 0, total: 0, truncated: false, stale: true }
+    }
+    return {
+      workspaceId,
+      fetchedAt: doc.fetchedAt,
+      searchCount: doc.entries.filter(entry => entry.scene === 'search').length,
+      chatCount: doc.entries.filter(entry => entry.scene === 'chat').length,
+      total: doc.total,
+      truncated: doc.truncated,
+      stale: this.isStale(workspaceId),
+    }
+  }
+
+  /**
+   * The cached entries of one scene, most recently modified first.
+   * Backs the panel's service picker, which exists so a default service can be
+   * chosen by name instead of by pasting a 36-character hex id.
+   * @param workspaceId - the workspace being served.
+   * @param scene - `search` or `chat`.
+   * @returns the entries, newest first.
+   */
+  entriesFor(workspaceId: string, scene: ServiceEntry['scene']): ServiceEntry[] {
+    const doc = this.peek(workspaceId)
+    if (doc === undefined) return []
+    return doc.entries
+      .filter(entry => entry.scene === scene)
+      .sort((left, right) => (right.modify_time ?? '').localeCompare(left.modify_time ?? ''))
   }
 
   /**

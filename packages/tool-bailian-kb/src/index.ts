@@ -324,6 +324,23 @@ export function apply(ctx: Context, config: Config): void {
   }
   registerSkill(ctx)
 
+  // A management command that changes the service inventory invalidates the
+  // cache immediately, so the next session sees the new service instead of
+  // waiting out the TTL. `tools/result` is observe-only (it returns undefined and
+  // sits after the pipeline), so listening here cannot affect tool execution.
+  //
+  // The command string is matched inside the serialized arguments rather than
+  // against a specific tool name: the agent may run `bl` through bash, a
+  // terminal tool, or a run_code program. A loose match is deliberate — a false
+  // positive costs one list request, while a miss falls back to the TTL.
+  ctx.on('tools/result', (_exec, result) => {
+    if (result.isError) return
+    const args = JSON.stringify((_exec as { arguments?: unknown }).arguments ?? '')
+    if (!/bl\s+knowledge\s+service\s+(create|deploy|delete|copy)/.test(args)) return
+    serviceCache.invalidate()
+    void serviceCache.refresh()
+  })
+
   // The service catalog rides an `agent/pre-step` context message rather than the
   // tool descriptions: descriptions freeze at plugin load, and a plugin loads
   // once per process, so in a long-running host a service created elsewhere
@@ -422,6 +439,38 @@ export function apply(ctx: Context, config: Config): void {
         }
       },
     }), 'tool-bailian-kb: settings bridge route')
+
+    // Service cache bridge: the panel's only window into cache freshness.
+    // GET returns the diagnostic snapshot plus the pickable services; POST
+    // forces a refresh and returns the same shape, so the numbers the developer
+    // sees update in place.
+    wctx.effect(() => wctx.webServer.register({
+      kind: 'exact',
+      path: '/bailian-kb/services',
+      handler: async (req: IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'POST') {
+          sendJson(res, 405, { error: 'use GET or POST' })
+          return
+        }
+        const workspaceId = await resolveWorkspaceIdOrUndefined()
+        if (workspaceId === undefined) {
+          sendJson(res, 200, { configured: false })
+          return
+        }
+        if (req.method === 'POST') {
+          // Force a fetch regardless of TTL: the button exists precisely for the
+          // case where the developer believes the cache is wrong.
+          serviceCache.invalidate()
+          await serviceCache.refresh()
+        }
+        sendJson(res, 200, {
+          configured: true,
+          status: serviceCache.status(workspaceId),
+          search: serviceCache.entriesFor(workspaceId, 'search'),
+          chat: serviceCache.entriesFor(workspaceId, 'chat'),
+        })
+      },
+    }), 'tool-bailian-kb: service cache bridge route')
 
     // Autofill bridge: fetch credentials by signing in to the Bailian console
     // (panel button). `login` drives the console's callback protocol on the

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { KbClient } from '../src/client.js'
 import {
   CACHE_TTL_MS,
+  EMPTY_CACHE_TTL_MS,
   ServiceCache,
   readServiceCache,
   serviceCachePath,
@@ -130,6 +131,56 @@ describe('ServiceCache', () => {
     writeServiceCache(serviceCachePath('llm-a', home), doc({ fetchedAt: 0 }))
     const { cache } = cacheWith(home, async () => emptyPage, () => CACHE_TTL_MS)
     expect(cache.isStale('llm-a')).toBe(true)
+  })
+
+  it('expires an EMPTY list on the much shorter negative TTL', () => {
+    // The trap this closes: configure the plugin against a fresh workspace (0
+    // services) → create a service → and then wait out the full TTL before the
+    // catalog appears. An empty list is a setup-in-progress state, not a fact.
+    const home = tempHome()
+    writeServiceCache(serviceCachePath('llm-a', home), doc({ fetchedAt: 0, entries: [], total: 0 }))
+    const justAfterEmptyTtl = cacheWith(home, async () => emptyPage, () => EMPTY_CACHE_TTL_MS)
+    expect(justAfterEmptyTtl.cache.isStale('llm-a')).toBe(true)
+
+    // A non-empty list of the same age is still fresh, so the short window costs
+    // nothing once services exist.
+    writeServiceCache(serviceCachePath('llm-b', home), doc({ workspaceId: 'llm-b', fetchedAt: 0 }))
+    const nonEmpty = cacheWith(home, async () => emptyPage, () => EMPTY_CACHE_TTL_MS)
+    expect(nonEmpty.cache.isStale('llm-b')).toBe(false)
+    expect(EMPTY_CACHE_TTL_MS).toBeLessThan(CACHE_TTL_MS)
+  })
+
+  it('reports a panel snapshot that separates "empty workspace" from "stale list"', () => {
+    const home = tempHome()
+    const { cache } = cacheWith(home, async () => emptyPage, () => 5_000)
+    // Nothing cached at all: the panel must be able to say "never fetched"
+    // rather than showing a zero that reads as "the workspace is empty".
+    const empty = cache.status('llm-a')
+    expect(empty).not.toHaveProperty('fetchedAt')
+    expect(empty).toMatchObject({ searchCount: 0, chatCount: 0, stale: true })
+
+    writeServiceCache(serviceCachePath('llm-a', home), doc({
+      fetchedAt: 5_000,
+      entries: [
+        { agent_id: 'aid-1', agent_name: 'a', scene: 'search', status: 'deployed', modify_time: '2026-08-01' },
+        { agent_id: 'aid-2', agent_name: 'b', scene: 'search', status: 'deployed', modify_time: '2026-08-09' },
+        { agent_id: 'aid-3', agent_name: 'c', scene: 'chat', status: 'deployed' },
+      ],
+      total: 900,
+      truncated: true,
+    }))
+    cache.invalidate()
+    expect(cache.status('llm-a')).toMatchObject({
+      fetchedAt: 5_000,
+      searchCount: 2,
+      chatCount: 1,
+      total: 900,
+      truncated: true,
+      stale: false,
+    })
+    // The picker lists newest first so the likely-in-use service is on top.
+    expect(cache.entriesFor('llm-a', 'search').map(e => e.agent_id)).toEqual(['aid-2', 'aid-1'])
+    expect(cache.entriesFor('llm-a', 'chat').map(e => e.agent_id)).toEqual(['aid-3'])
   })
 
   it('re-reads from disk when the workspace changes', () => {

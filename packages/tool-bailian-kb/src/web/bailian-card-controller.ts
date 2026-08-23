@@ -64,6 +64,40 @@ export interface BailianSettingsView {
 /** Where the autofill flow (adopt a Bailian console login) currently stands. */
 export type BailianAutofillStatus = 'idle' | 'running' | 'awaitingLogin' | 'done' | 'failed'
 
+/** One cached retrieval or Q&A service, as the picker lists it. */
+export interface BailianServiceEntry {
+  agent_id: string
+  agent_name: string
+  scene: 'search' | 'chat'
+  status: string
+  modify_time?: string
+}
+
+/**
+ * The service cache as the panel shows it.
+ *
+ * This exists because cache staleness is otherwise invisible: an agent that
+ * silently stops retrieving looks identical whether the workspace is empty or the
+ * list is merely out of date. `fetchedAt` with the per-scene counts distinguishes
+ * those two in one glance, which is the whole reason the panel earns its space.
+ */
+export interface BailianCacheView {
+  /** `unconfigured` = no workspace id yet; `unavailable` = the bridge route failed. */
+  status: 'loading' | 'ready' | 'unconfigured' | 'unavailable'
+  /** Epoch millis of the last successful fetch; absent when nothing is cached. */
+  fetchedAt?: number
+  searchCount: number
+  chatCount: number
+  /** Server-reported total, which exceeds the counts when the fetch was capped. */
+  total: number
+  truncated: boolean
+  stale: boolean
+  search: BailianServiceEntry[]
+  chat: BailianServiceEntry[]
+  /** Whether a forced refresh is in flight. */
+  refreshing: boolean
+}
+
 /** What the Bailian page renders. */
 export interface BailianCardState {
   /** Staged drafts; undefined = untouched (the control shows the echoed value). */
@@ -82,6 +116,8 @@ export interface BailianCardState {
   autofill: BailianAutofillStatus
   /** Console login URL while `awaitingLogin`, shown in case the host could not open a browser. */
   autofillLoginUrl?: string
+  /** Service cache diagnostics and the pickable services. */
+  cache: BailianCacheView
 }
 
 /** The registration-side face the page's slot entry injects. */
@@ -100,6 +136,14 @@ export interface BailianCardFace {
   clearDefaultAgent: (key: 'BAILIAN_DEFAULT_RETRIEVE_AGENT_ID' | 'BAILIAN_DEFAULT_CHAT_AGENT_ID') => Promise<void>
   /** Adopt a Bailian console login (api key + workspace id) via the Host. */
   autofill: () => Promise<void>
+  /** Force a service-cache refresh, bypassing the TTL. */
+  refreshServices: () => Promise<void>
+  /**
+   * Pin one scene's default service, or clear it when `agentId` is undefined.
+   * Clearing removes the value from the settings user layer AND the credential
+   * store, so the fallback chain cannot resurrect what the user just cleared.
+   */
+  selectDefaultAgent: (scene: 'search' | 'chat', agentId: string | undefined) => Promise<void>
 }
 
 /** The text a field's control shows when its draft is untouched. */
@@ -155,8 +199,20 @@ export class BailianCardController {
       failed: false,
       autofill: 'idle',
       autofillLoginUrl: undefined,
+      cache: {
+        status: 'loading',
+        searchCount: 0,
+        chatCount: 0,
+        total: 0,
+        truncated: false,
+        stale: true,
+        search: [],
+        chat: [],
+        refreshing: false,
+      },
     })
     void this.fetchSettings()
+    void this.fetchServices()
     void this.read()
   }
 
@@ -184,6 +240,93 @@ export class BailianCardController {
       this.store.update(draft => {
         draft.settings = { status: 'unavailable', writable: false, values: {} }
       })
+    }
+  }
+
+  /**
+   * Read the service cache snapshot from the Host bridge route.
+   * @param force - POST instead of GET, making the Host refetch regardless of TTL.
+   */
+  async fetchServices(force = false): Promise<void> {
+    if (force) this.store.update(draft => { draft.cache.refreshing = true })
+    try {
+      const resp = await fetch('/bailian-kb/services', { method: force ? 'POST' : 'GET' })
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const value = await resp.json() as {
+        configured?: boolean
+        status?: {
+          fetchedAt?: number
+          searchCount?: number
+          chatCount?: number
+          total?: number
+          truncated?: boolean
+          stale?: boolean
+        }
+        search?: BailianServiceEntry[]
+        chat?: BailianServiceEntry[]
+      }
+      this.store.update(draft => {
+        draft.cache.refreshing = false
+        if (value.configured !== true) {
+          // No workspace id yet: the panel says so rather than showing zeros,
+          // which would read as "the workspace has no services".
+          draft.cache.status = 'unconfigured'
+          return
+        }
+        draft.cache.status = 'ready'
+        draft.cache.fetchedAt = value.status?.fetchedAt
+        draft.cache.searchCount = value.status?.searchCount ?? 0
+        draft.cache.chatCount = value.status?.chatCount ?? 0
+        draft.cache.total = value.status?.total ?? 0
+        draft.cache.truncated = value.status?.truncated === true
+        draft.cache.stale = value.status?.stale === true
+        draft.cache.search = value.search ?? []
+        draft.cache.chat = value.chat ?? []
+      })
+    } catch (_routeFailure) {
+      this.store.update(draft => {
+        draft.cache.refreshing = false
+        draft.cache.status = 'unavailable'
+      })
+    }
+  }
+
+  /** Force a refresh, bypassing the TTL, and show the updated numbers. */
+  async refreshServices(): Promise<void> {
+    if (this.store.getSnapshot().cache.refreshing) return
+    await this.fetchServices(true)
+  }
+
+  /**
+   * Pin or clear one scene's default service.
+   *
+   * Clearing delegates to {@link clearDefaultAgent}, which removes the value from
+   * the settings user layer AND the credential store — without the second
+   * removal the fallback chain would resurrect what the user just cleared.
+   * @param scene - which tool's default to set.
+   * @param agentId - the service id to pin, or undefined to clear.
+   */
+  async selectDefaultAgent(scene: 'search' | 'chat', agentId: string | undefined): Promise<void> {
+    const key = scene === 'search' ? 'BAILIAN_DEFAULT_RETRIEVE_AGENT_ID' : 'BAILIAN_DEFAULT_CHAT_AGENT_ID'
+    if (agentId === undefined) {
+      await this.clearDefaultAgent(key)
+      return
+    }
+    const field: BailianSettingsField = scene === 'search' ? 'defaultRetrieveAgentId' : 'defaultChatAgentId'
+    this.store.update(draft => { draft.saving = true })
+    try {
+      const resp = await fetch('/bailian-kb/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: agentId }),
+      })
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      this.store.update(draft => { draft.failed = false })
+    } catch (_writeFailure) {
+      this.store.update(draft => { draft.failed = true })
+    } finally {
+      this.store.update(draft => { draft.saving = false })
+      await this.fetchSettings()
     }
   }
 
@@ -409,6 +552,8 @@ export class BailianCardController {
       discard: () => { this.discard() },
       clearDefaultAgent: (key) => this.clearDefaultAgent(key),
       autofill: () => this.autofill(),
+      refreshServices: () => this.refreshServices(),
+      selectDefaultAgent: (scene, agentId) => this.selectDefaultAgent(scene, agentId),
     }
   }
 

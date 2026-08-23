@@ -12,13 +12,17 @@ export type BailianKbLocaleKey =
   | 'nav' | 'title' | 'description' | 'settingsUnavailable' | 'fallbackConfigured'
   | 'apiKey' | 'apiKeyHint' | 'apiKeySet' | 'apiKeyUnset' | 'apiKeyGet'
   | 'workspaceId' | 'workspaceIdHint' | 'workspaceIdHintFallback' | 'workspaceIdSet' | 'workspaceIdUnset' | 'workspaceIdGet'
-  | 'retrieveAgentId' | 'retrieveAgentIdHint' | 'retrieveAgentIdHintFallback' | 'retrieveAgentIdSet' | 'retrieveAgentIdUnset'
-  | 'chatAgentId' | 'chatAgentIdHint' | 'chatAgentIdHintFallback' | 'chatAgentIdSet' | 'chatAgentIdUnset'
+  | 'retrieveAgentId' | 'retrieveAgentIdHint'
+  | 'chatAgentId' | 'chatAgentIdHint'
   | 'fromEnv' | 'clear' | 'clearing'
   | 'save' | 'saving' | 'discard' | 'unsaved' | 'saveFailed'
   | 'advancedConfig'
   | 'autofill' | 'autofilling' | 'autofillHint'
   | 'autofillDone' | 'autofillAwaitingLogin' | 'autofillOpenUrl' | 'autofillFailed' | 'autofillConfigured'
+  | 'cacheTitle' | 'cacheHint' | 'cacheLoading' | 'cacheUnconfigured' | 'cacheUnavailable'
+  | 'cacheFetchedAt' | 'cacheNever' | 'cacheStale' | 'cacheSearchCount' | 'cacheChatCount'
+  | 'cacheTruncated' | 'cacheEmpty' | 'cacheRefresh' | 'cacheRefreshing'
+  | 'pickerNone' | 'pickerClear'
 
 /** English copy. */
 export const en: Record<BailianKbLocaleKey, string> = {
@@ -38,16 +42,10 @@ export const en: Record<BailianKbLocaleKey, string> = {
   workspaceIdSet: 'A workspace is configured.',
   workspaceIdUnset: 'No workspace is configured; knowledge tools fail until one is.',
   workspaceIdGet: 'Get',
-  retrieveAgentId: 'Default retrieval service id',
-  retrieveAgentIdHint: 'agent_id of the default retrieval service (kb_search); when unset, every call must name one (`bl knowledge service list` discovers ids). Stored in the settings document.',
-  retrieveAgentIdHintFallback: 'agent_id of the default retrieval service (kb_search); when unset, every call must name one (`bl knowledge service list` discovers ids). Leave blank to keep the current one.',
-  retrieveAgentIdSet: 'A default retrieval service is configured.',
-  retrieveAgentIdUnset: 'No default retrieval service; every kb_search call must name one.',
-  chatAgentId: 'Default chat service id',
-  chatAgentIdHint: 'agent_id of the default Q&A service (kb_chat); when unset, every call must name one (`bl knowledge service list` discovers ids). Stored in the settings document.',
-  chatAgentIdHintFallback: 'agent_id of the default Q&A service (kb_chat); when unset, every call must name one (`bl knowledge service list` discovers ids). Leave blank to keep the current one.',
-  chatAgentIdSet: 'A default chat service is configured.',
-  chatAgentIdUnset: 'No default chat service; every kb_chat call must name one.',
+  retrieveAgentId: 'Default retrieval service',
+  retrieveAgentIdHint: 'The agent_id kb_search falls back to. Left unset, the injected catalog lists every deployed service instead.',
+  chatAgentId: 'Default Q&A service',
+  chatAgentIdHint: 'The agent_id kb_chat falls back to. Left unset, the injected catalog lists every deployed service instead.',
   fromEnv: 'Set by the environment (read-only here)',
   clear: 'Clear default',
   clearing: 'Clearing…',
@@ -65,6 +63,22 @@ export const en: Record<BailianKbLocaleKey, string> = {
   autofillOpenUrl: 'Open the login page manually',
   autofillFailed: 'Auto-fill failed — the credential may be locked by an environment variable, the Host refused the write, or the login was abandoned.',
   autofillConfigured: 'Configured. Click button to fetch this account’s API key and workspace id again.',
+  cacheTitle: 'Retrieval service cache',
+  cacheHint: 'The service list injected into each conversation. Refreshes on its own; refresh here when you have just created a service and want it picked up now.',
+  cacheLoading: 'Reading…',
+  cacheUnconfigured: 'Set a workspace id first.',
+  cacheUnavailable: 'Not reachable from this browser.',
+  cacheFetchedAt: 'Last fetched',
+  cacheNever: 'never',
+  cacheStale: 'refresh due',
+  cacheSearchCount: 'Retrieval services',
+  cacheChatCount: 'Q&A services',
+  cacheTruncated: 'List truncated — the workspace holds more than were fetched.',
+  cacheEmpty: 'No deployed services cached. If you just created one, refresh.',
+  cacheRefresh: 'Refresh',
+  cacheRefreshing: 'Refreshing…',
+  pickerNone: 'Not set — the full list is injected instead',
+  pickerClear: 'Clear',
 }
 
 /** Simplified Chinese copy. */
@@ -85,16 +99,10 @@ export const zh: Record<BailianKbLocaleKey, string> = {
   workspaceIdSet: '已配置工作空间。',
   workspaceIdUnset: '未配置工作空间；配置前知识库工具不可用。',
   workspaceIdGet: '去获取',
-  retrieveAgentId: '默认检索服务 ID',
-  retrieveAgentIdHint: '默认检索服务（kb_search）的 agent_id；未设置时每次调用都需显式指定（可用 `bl knowledge service list` 发现 id）。存入设置文档。',
-  retrieveAgentIdHintFallback: '默认检索服务（kb_search）的 agent_id；未设置时每次调用都需显式指定（可用 `bl knowledge service list` 发现 id）。留空表示保持当前值。',
-  retrieveAgentIdSet: '已配置默认检索服务。',
-  retrieveAgentIdUnset: '未配置默认检索服务；每次 kb_search 调用需显式指定。',
-  chatAgentId: '默认对话服务 ID',
-  chatAgentIdHint: '默认对话服务（kb_chat）的 agent_id；未设置时每次调用都需显式指定（可用 `bl knowledge service list` 发现 id）。存入设置文档。',
-  chatAgentIdHintFallback: '默认对话服务（kb_chat）的 agent_id；未设置时每次调用都需显式指定（可用 `bl knowledge service list` 发现 id）。留空表示保持当前值。',
-  chatAgentIdSet: '已配置默认对话服务。',
-  chatAgentIdUnset: '未配置默认对话服务；每次 kb_chat 调用需显式指定。',
+  retrieveAgentId: '默认检索服务',
+  retrieveAgentIdHint: 'kb_search 缺省使用的 agent_id。不设置时，注入的清单会列出全部已部署服务。',
+  chatAgentId: '默认对话服务',
+  chatAgentIdHint: 'kb_chat 缺省使用的 agent_id。不设置时，注入的清单会列出全部已部署服务。',
   fromEnv: '来自环境变量（此处只读）',
   clear: '清除默认',
   clearing: '清除中…',
@@ -112,4 +120,20 @@ export const zh: Record<BailianKbLocaleKey, string> = {
   autofillOpenUrl: '手动打开登录页',
   autofillFailed: '自动获取失败——凭据可能被环境变量锁定、宿主拒绝了写入，或登录未完成。',
   autofillConfigured: '已配置完成，点击按钮重新获取该账号的 API 密钥与工作空间 ID。',
+  cacheTitle: '检索服务缓存',
+  cacheHint: '注入到每次对话的服务清单。会自动刷新；刚建完服务想立即生效时在这里刷一下。',
+  cacheLoading: '读取中…',
+  cacheUnconfigured: '请先设置工作空间 ID。',
+  cacheUnavailable: '当前浏览器无法访问。',
+  cacheFetchedAt: '上次拉取',
+  cacheNever: '尚未拉取',
+  cacheStale: '待刷新',
+  cacheSearchCount: '检索服务',
+  cacheChatCount: '问答服务',
+  cacheTruncated: '清单已截断 —— 工作空间里的服务多于已拉取的数量。',
+  cacheEmpty: '缓存里没有已部署的服务。如果刚创建过，请刷新。',
+  cacheRefresh: '刷新',
+  cacheRefreshing: '刷新中…',
+  pickerNone: '未设置 —— 会注入完整清单',
+  pickerClear: '清空',
 }
