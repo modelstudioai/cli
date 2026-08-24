@@ -561,9 +561,9 @@ export function apply(ctx: Context, config: Config): void {
               sendJson(res, 200, consoleLoginState());
               return;
             }
-            // Drive the console flow ourselves with `needapikey=true`, so the key
-            // and the workspace id both belong to the account signing in now.
-            // Persisting here keeps the plain key on the host.
+            // Drive the console flow ourselves, requesting a freshly issued key,
+            // so the key and the workspace id both belong to the account signing
+            // in now. Persisting here keeps the plain key on the host.
             const started = await startConsoleLogin({
               onComplete: async (credentials) => {
                 const written: string[] = [];

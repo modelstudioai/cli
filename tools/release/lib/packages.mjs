@@ -19,7 +19,8 @@ export const ALL_PACKAGES = [...PACKAGES, KSCLI_PACKAGE];
 // Deliberately absent from every list above: packages/bailian-kb-dsh (bailian-kb-dsh).
 // It is a dsh plugin — a downstream host adapter, not part of the bl release closure:
 // its version tracks the dsh rc cadence instead of the locked core/runtime/commands/cli/kscli
-// version, and it ships through .github/workflows/publish-kb-dsh.yml. So it is exempt from
+// version, and it ships through publish.yml's separate `package=bailian-kb-dsh`
+// job (tools/release/publish-kb-dsh.mjs). So it is exempt from
 // loadAndValidatePackages' version-consistency check and from packAndScan. Not an oversight;
 // see docs/agents/dsh-plugin.md before adding it here.
 

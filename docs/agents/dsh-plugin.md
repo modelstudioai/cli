@@ -12,12 +12,12 @@
 
 它是**下游宿主适配层**：依赖方向朝外（消费 `bl` CLI 与百炼 API，装进 DeepSeek Harness 运行），不是 `core → runtime → commands → 产品入口` 这条链上的一环。由此带来四条与 `packages/*` 通行约定的**故意偏离**：
 
-| 项       | 本包                                   | 其他包                               | 原因                                                                                             |
-| -------- | -------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| 版本     | 独立 `0.1.x`                           | core/runtime/commands/cli/kscli 锁步 | 跟随 dsh 的 rc 节奏，与 `bl` 发版无关；不在 `tools/release/lib/packages.mjs` 白名单里            |
-| 构建     | `tsc` + `tsdown`                       | `vp pack`                            | 浏览器半需要 `__ModuleLoader__` banner/footer 与 lightningcss CSS Modules 内联，`vp pack` 产不出 |
-| 发布     | `.github/workflows/publish-kb-dsh.yml` | `publish.yml`                        | 不在 `bailian-cli` 依赖闭包内，走独立通道                                                        |
-| tsconfig | 三个                                   | 一个                                 | 见下                                                                                             |
+| 项       | 本包                                                                   | 其他包                                        | 原因                                                                                             |
+| -------- | ---------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| 版本     | 独立 `0.1.x`                                                           | core/runtime/commands/cli/kscli 锁步          | 跟随 dsh 的 rc 节奏，与 `bl` 发版无关；不在 `tools/release/lib/packages.mjs` 白名单里            |
+| 构建     | `tsc` + `tsdown`                                                       | `vp pack`                                     | 浏览器半需要 `__ModuleLoader__` banner/footer 与 lightningcss CSS Modules 内联，`vp pack` 产不出 |
+| 发布     | `publish.yml` 里 `package=bailian-kb-dsh` job，走 `publish-kb-dsh.mjs` | `publish.yml` 里 `publish-stable/channel.mjs` | 不在 `bailian-cli` 依赖闭包内，版本与构建都不同，不能与 `bl` 共用同一条 script                   |
+| tsconfig | 三个                                                                   | 一个                                          | 见下                                                                                             |
 
 ## tsconfig 三件套（改动前先读）
 
@@ -77,6 +77,39 @@ npx vp test packages/bailian-kb-dsh
 dsh plugin --profile dev add <本仓库>/packages/bailian-kb-dsh
 dsh --profile dev --dump-config          # 应能看到 tool-bailian-kb row
 ```
+
+## 发布
+
+入口与 `bl` 共用：Actions → **Publish** → `package=bailian-kb-dsh` + `mode=stable|channel`。共享的只有 workflow 入口与 checkout/pnpm/node/gitleaks/install 几步 setup；它走自己的 `tools/release/publish-kb-dsh.mjs`，**不**复用 `publish-stable.mjs` / `publish-channel.mjs`。
+
+|           | stable                                                              | channel                                                 |
+| --------- | ------------------------------------------------------------------- | ------------------------------------------------------- |
+| 版本      | `package.json` 当前值（先手动 bump 并提交）                         | 临时 `0.0.0-beta-<sha>-<stamp>`，`finally` 还原，不提交 |
+| npm tag   | `latest`                                                            | 你传的 `channel`（dist-tag）                            |
+| preflight | 工作区干净 + 必须在 `main`                                          | 无                                                      |
+| git tag   | `bailian-kb-dsh-v<version>`（与 `bl` 的 `v<version>` 错开命名空间） | 不打 tag                                                |
+| 审批      | `environment: production`（Required Reviewers）                     | 无                                                      |
+| 产物      | npm only                                                            | npm only                                                |
+
+两种模式都跑：`build`（tsc + web 隔离检查 + tsdown）→ 幂等性查重 → `pnpm pack` → `publint` + `gitleaks` → `pnpm publish --provenance`。
+
+本地验证（不真发，需本地装 gitleaks）：
+
+```sh
+node tools/release/publish-kb-dsh.mjs --dry-run
+node tools/release/publish-kb-dsh.mjs --dry-run --channel dsh-beta
+```
+
+### 首发前的 npm 侧前置（仓外操作，一次性）
+
+1. 占住包名 `bailian-kb-dsh`（OIDC Trusted Publishing 无法给不存在的包首发）
+2. 在 npm 包设置里绑 Trusted Publisher：仓库 `modelstudioai/cli`、workflow `publish.yml`；stable 走 environment `production`，channel 无 environment
+
+未完成这两步前触发 workflow 会在 `pnpm publish --provenance` 这一步失败（前面的 build / scan 仍会正常跑完）。
+
+### 已知待办
+
+- `publint` 会报一条 warning：`exports["./client"]` 是 CJS 但包为 `type: module`，建议改 `.cjs` 扩展名。这是迁移前就存在的状态，warning 不阻断发布；真要改得同时动宿主按 `exports["./client"]` 解析 `/plugins/<id>/client.js` 的 URL 契约，需 dsh 侧一起验证，不要单方面改
 
 ## 相关文档
 

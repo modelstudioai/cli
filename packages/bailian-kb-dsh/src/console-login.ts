@@ -1,20 +1,15 @@
 /**
- * Self-contained Bailian console login: the plugin speaks the console's
- * callback protocol itself instead of shelling out to `bl auth login --console`.
+ * Self-contained Bailian console login: the plugin drives the console's browser
+ * login itself and persists what comes back, rather than shelling out to the
+ * `bl` CLI.
  *
- * Why not the CLI: it hard-codes `needApiKey: !hasApiKey`, so once any api key
- * is stored it never asks the console to issue a fresh one — you end up pairing
- * an old account's key with a new account's workspace id, and nothing warns
- * you. Driving the flow here lets us always pass `needapikey=true`, so the key
- * and the workspace id both come from the account that just signed in, and the
- * values land straight in the dsh stores without transiting the CLI's
- * `~/.bailian/config.json`.
+ * Driving the flow here lets it always request a freshly issued api key, so the
+ * key and the workspace id both come from the account that just signed in, and
+ * the values land straight in the dsh stores.
  *
- * Protocol (mirrors the CLI's implementation): bind a loopback-only port, open
- * `<console>/console-login?notice=127.0.0.1:<port>?state=<state>&needapikey=true`,
- * then accept one callback carrying the credentials as query parameters or a
- * JSON / form-encoded body. Note the URL shape: `state` is part of the `notice`
- * value (separated by `?`), not a sibling query parameter.
+ * Shape of the flow: bind a loopback-only port, open the console login page
+ * pointed at that port, then accept one callback carrying the credentials as
+ * query parameters or a JSON / form-encoded body.
  */
 
 import { execFile } from "node:child_process";
@@ -30,12 +25,12 @@ const CONSOLE_ORIGINS: Record<string, string> = {
 /** How long the loopback listener waits for the browser callback. */
 const LOGIN_TIMEOUT_MS = 15 * 60 * 1000;
 
-/** Upper bound on a callback body, matching the CLI's limit. */
+/** Upper bound on a callback body. */
 const MAX_CALLBACK_BODY = 65536;
 
 /** Credentials the console callback can carry. */
 export interface ConsoleLoginCredentials {
-  /** Freshly issued DashScope api key (`needapikey=true` asks for one). */
+  /** Freshly issued DashScope api key. */
   apiKey?: string;
   /** Workspace id of the account that signed in. */
   workspaceId?: string;
@@ -95,8 +90,8 @@ function readBody(req: http.IncomingMessage): Promise<string> {
 
 /**
  * Parse a callback body as JSON (optionally wrapped in `data`) or as form
- * encoding. Content-type is a hint only — the CLI falls back to trying both,
- * and so do we, because the console has shipped both shapes.
+ * encoding. Content-type is a hint only: both shapes occur in practice, so both
+ * are attempted.
  * @param raw - the raw request body.
  * @returns the flattened fields; an unparseable body yields no fields.
  */
@@ -278,8 +273,8 @@ export async function startConsoleLogin(opts: {
     return { status: "failed", reason };
   }
 
-  // `state` rides inside the `notice` value, and `needapikey=true` is the whole
-  // point: it makes the console issue a key for the account signing in.
+  // Ask for a freshly issued key, so the key and the workspace id cannot end up
+  // belonging to two different accounts.
   const origin =
     (opts.site !== undefined ? CONSOLE_ORIGINS[opts.site] : undefined) ?? CONSOLE_ORIGINS.domestic!;
   const loginUrl =

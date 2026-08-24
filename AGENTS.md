@@ -86,7 +86,7 @@ Skill / 命令手册随 `skills/bailian-*/` 经 `bl skill init` 安装（装齐 
 
 源码包的 `version` 当前保持一致: `packages/core`、`packages/runtime`、`packages/commands`、`packages/cli`、`packages/kscli`。做版本 bump 时一动多动。release 工具当前强校验 / 发布范围以 `tools/release/lib/packages.mjs` 为准;把新包纳入发布前必须同步该清单和 [publish.md](docs/agents/publish.md)。
 
-**例外**: `packages/bailian-kb-dsh` 不参与这个锁步(独立 `0.1.x`,跟随 dsh rc 节奏),也不在 release 白名单里,由独立 workflow 发布。
+**例外**: `packages/bailian-kb-dsh` 不参与这个锁步(独立 `0.1.x`,跟随 dsh rc 节奏),也不在 release 白名单里;它走 `publish.yml` 里 `package=bailian-kb-dsh` 的独立 job(`tools/release/publish-kb-dsh.mjs`)。
 
 ### 2. 分层边界
 

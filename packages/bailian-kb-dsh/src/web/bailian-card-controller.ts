@@ -427,15 +427,14 @@ export class BailianCardController {
 
   /**
    * Fetch credentials by signing in to the Bailian console. The Host drives
-   * the console's callback protocol itself, always asking for a freshly issued
-   * api key, then persists the key into the credential store and the workspace
-   * id into the settings section — so both values belong to the account that
-   * just signed in, and the plain key never rides the wire to this page.
+   * the console browser login itself, always requesting a freshly issued api
+   * key, then persists the key into the credential store and the workspace id
+   * into the settings section — so both values belong to the account that just
+   * signed in, and the plain key never rides the wire to this page.
    *
-   * Deliberately does NOT adopt the bl CLI's stored login: reusing a key from
-   * `~/.bailian/config.json` can pair one account's key with another account's
-   * workspace id (the CLI refuses to re-issue once any key is stored), and
-   * nothing would flag the mismatch until a knowledge-base call fails.
+   * Deliberately does NOT adopt the bl CLI's stored login: that path can pair
+   * one account's key with another account's workspace id, and nothing would
+   * flag the mismatch until a knowledge-base call fails.
    */
   async autofill(): Promise<void> {
     const phase = this.store.getSnapshot().autofill;
@@ -452,10 +451,8 @@ export class BailianCardController {
   /**
    * Ask the Host to open the console login page, then poll for the outcome.
    * The Host persists the credentials itself when the callback lands, always
-   * asking the console to issue a fresh key — so the key and the workspace id
-   * both come from the account signing in. (The bl CLI's own login refuses to
-   * re-issue once any key is stored, which would otherwise pair an old
-   * account's key with a new account's workspace.)
+   * requesting a freshly issued key — so the key and the workspace id both come
+   * from the account signing in.
    */
   private async runConsoleLogin(): Promise<void> {
     let started: { status?: string; loginUrl?: string };

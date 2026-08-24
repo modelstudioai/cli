@@ -2,25 +2,21 @@
  * Retrieval-service discovery for the plugin's internal cache. Not a model tool:
  * see `KB_PATHS.serviceList`.
  *
- * Two verified server facts shape this module:
- * - `page_size` is capped at 100 regardless of what is requested, so a workspace
- *   with hundreds of services needs many round trips. Test/CI workspaces reach
- *   the high hundreds (913 observed), which is pure noise for routing, so this
- *   module stops after {@link MAX_PAGES} and reports the shortfall instead of
- *   faithfully paging through it.
- * - `agent_status: 'deployed'` is honored and means "deployed or edited". Only
- *   those are callable by the default agent version, so drafts never reach the
- *   model.
+ * Listing is paged, and a workspace can hold far more services than are useful
+ * for routing, so this module stops after {@link MAX_PAGES} and reports the
+ * shortfall rather than paging through everything. Only deployed services are
+ * requested: anything else is not callable by the default service version, so it
+ * would be noise in the catalog the model reads.
  */
 
 import type { ServiceListResponse, ServiceScene } from "./api-types.js";
 import type { KbClient } from "./client.js";
 import { KB_PATHS } from "./endpoints.js";
 
-/** Server page-size maximum; larger requests are silently clamped to this. */
+/** Page size requested per listing call. */
 const PAGE_SIZE = 100;
 
-/** Pages fetched per scene before reporting truncation (200 rows is far past the useful range). */
+/** Pages fetched per scene before reporting truncation; well past the useful routing range. */
 const MAX_PAGES = 2;
 
 /** One deployed retrieval or Q&A service, reduced to the fields that inform routing. */
@@ -28,11 +24,11 @@ export interface ServiceEntry {
   agent_id: string;
   agent_name: string;
   scene: ServiceScene;
-  /** `deployed` or `edited` — both are callable by the default version. */
+  /** Deployment status as reported for the service; only callable states are listed. */
   status: string;
   /** Last modification timestamp; the only signal for "which of these is in use". */
   modify_time?: string;
-  /** Absent until the backend adds a description to the list response. */
+  /** Service description, when the listing provides one. */
   description?: string;
 }
 

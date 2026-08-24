@@ -1,15 +1,13 @@
 /**
- * Host-side bridge to the locally installed `bl` CLI (bailian-cli). The CLI's
- * credential file (`~/.bailian/config.json`) is its documented "output": the
- * console browser login (`bl auth login --console`) validates the api key the
- * console issues and persists it there in plain JSON — no CLI command ever
- * echoes the value back (auth status / config show both mask), so reading the
- * file is the only way to obtain it programmatically.
+ * Host-side bridge to the locally installed `bl` CLI (bailian-cli): reads the
+ * credentials an earlier `bl auth login` already stored, so a user who has
+ * already set the CLI up does not have to configure this plugin a second time.
  *
- * Starting a login is NOT done through the CLI: it hard-codes
- * `needApiKey: !hasApiKey` and so refuses to have a fresh key issued once any
- * key is stored. See `console-login.ts`, which speaks the callback protocol
- * directly and always asks for one.
+ * Reading the CLI's credential file (`~/.bailian/config.json`) is the only way
+ * to obtain the value programmatically — CLI commands mask stored keys on
+ * output, so there is nothing to parse from stdout.
+ *
+ * Starting a login is NOT done through the CLI; see `console-login.ts`.
  */
 
 import { readFileSync } from "node:fs";
