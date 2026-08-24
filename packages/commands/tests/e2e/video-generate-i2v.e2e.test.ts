@@ -114,10 +114,11 @@ describe("e2e: video generate (i2v)", () => {
   });
 
   test.each([
-    // wan2.1~2.6 (legacy) use flat img_url; wan2.7+ and happyhorse use media[].
+    // wan2.1~2.6 (legacy) use flat img_url; wan2.7+ / wan3.0 / happyhorse use media[].
     ["wan2.5-i2v-preview", "img_url"],
     ["wan2.6-i2v", "img_url"],
     ["wan2.7-i2v", "media"],
+    ["wan3.0-video", "media"],
     ["happyhorse-1.1-i2v", "media"],
   ])("video generate --dry-run %s 首帧走 %s 字段", async (model, field) => {
     const configDir = makeE2eOutputDir(`video-i2v-input-shape-${model}`);
@@ -179,7 +180,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "generate",
         ...cliTimeoutPrefix(),
         "--model",
-        "happyhorse-1.1-i2v",
+        "wan3.0-video",
         "--image",
         "https://example.com/placeholder.png",
       ]);
@@ -194,7 +195,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         ...cliTimeoutPrefix(),
         "--dry-run",
         "--model",
-        "happyhorse-1.1-t2v",
+        "wan3.0-video",
         "--prompt",
         "干跑无图",
         "--output",
@@ -208,7 +209,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       expect(data.request?.input?.media).toBeUndefined();
     });
 
-    test("【happyhorse-1.1-i2v】图片生成视频", async () => {
+    test("【wan3.0-video】图片生成视频", async () => {
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
       const png = join(outDir, "e2e-gen.png");
       const gen = await runCommandE2e(VIDEO_ROUTES, [
@@ -234,7 +235,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "generate",
         ...cliTimeoutPrefix(),
         "--model",
-        "happyhorse-1.1-i2v",
+        "wan3.0-video",
         "--image",
         imagePath,
         "--prompt",

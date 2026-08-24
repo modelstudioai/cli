@@ -433,7 +433,7 @@ export async function videoGenerate(
     });
   }
 
-  const model = input.model || (input.image ? "happyhorse-1.1-i2v" : "happyhorse-1.1-t2v");
+  const model = input.model || "wan3.0-video";
 
   let resolvedImageUrl: string | undefined;
   if (input.image) {

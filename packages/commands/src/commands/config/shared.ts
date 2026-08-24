@@ -69,7 +69,9 @@ export const UI_BOOLEAN_KEYS = new Set<string>(["telemetry"]);
 export const UI_MODEL_DEFAULTS: Record<string, string> = {
   default_text_model: "qwen3.8-max",
   default_image_model: "qwen-image-3.0",
-  default_video_model: "happyhorse-1.1-t2v",
+  default_video_model: "wan3.0-video",
+  default_image_to_video_model: "wan3.0-video",
+  default_reference_to_video_model: "wan3.0-video",
   default_speech_model: "cosyvoice-v3-flash",
   default_omni_model: "qwen3.5-omni-plus",
 };
@@ -100,8 +102,18 @@ export const UI_MODEL_CATALOG: Record<string, ModelOption[]> = {
     { id: "wanx2.x", role: "image/generate · async series" },
   ],
   default_video_model: [
-    { id: "happyhorse-1.1-t2v", role: "video/generate default · text-to-video" },
+    { id: "wan3.0-video", role: "video/generate · t2v / i2v / r2v default" },
+    { id: "happyhorse-1.1-t2v", role: "video/generate · text-to-video" },
     { id: "happyhorse-1.1-i2v", role: "video/generate · image-to-video" },
+    { id: "happyhorse-1.1-r2v", role: "video/ref · reference-to-video" },
+  ],
+  default_image_to_video_model: [
+    { id: "wan3.0-video", role: "video/generate default · image-to-video" },
+    { id: "happyhorse-1.1-i2v", role: "video/generate · image-to-video" },
+  ],
+  default_reference_to_video_model: [
+    { id: "wan3.0-video", role: "video/ref default · reference-to-video" },
+    { id: "happyhorse-1.1-r2v", role: "video/ref · reference-to-video" },
   ],
   default_speech_model: [
     { id: "cosyvoice-v3-flash", role: "speech/synthesize (TTS) default" },
