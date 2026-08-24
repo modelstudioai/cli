@@ -1,15 +1,11 @@
-/** Request/response fields of the DashScope search and chat endpoints, mirrored from the verified bl CLI types. */
+/** Request/response fields of the DashScope search and chat endpoints. */
 
 /** Retrieval-service scenes; the server requires one per list query. */
 export type ServiceScene = "chat" | "search";
 
 export interface ServiceListRequest {
   agent_scene: ServiceScene;
-  /**
-   * Verified to be honored by the server, and to mean "deployed or edited"
-   * (matching the CLI's documented `--status deployed（含 edited）`). The
-   * spellings `status` and `agent_status_list` are silently ignored.
-   */
+  /** Filter to deployed services (spelling required by the server). */
   agent_status?: "deployed";
   agent_name?: string;
   page_number: number;
@@ -17,16 +13,15 @@ export interface ServiceListRequest {
 }
 
 /**
- * One row of the service list, mirrored from a verified live response
- * (2026-08-23). The response carries NO description field — confirmed against
- * two workspaces, including a name-filtered single-row query — even though
- * `service create --description` accepts one. `description` is therefore absent
- * here until the backend adds it; when it does, **name the field from the real
- * response** rather than guessing.
+ * One row of the service list.
  *
- * `pipeline_list` is typed but deliberately never consumed: it frequently omits
- * `pipeline_name` (leaving an opaque id) and is sometimes empty outright, so it
- * cannot serve as a knowledge-base label.
+ * `description` is not included: the listing endpoint does not currently return
+ * it, even for services created with a description. Add it here once it starts
+ * appearing on the wire.
+ *
+ * `pipeline_list` is typed but deliberately never consumed: it can omit
+ * `pipeline_name` or come back empty, so it cannot serve as a knowledge-base
+ * label.
  */
 export interface ServiceListRow {
   agent_id?: string;

@@ -2,8 +2,6 @@
 
 百炼知识库的 dsh 插件包（同时是 dsh bundle）：在 `ctx.tools` 注册两个检索模型工具（kb_search、kb_chat），并在 skills 服务可用时注册管理面 skill。服务发现通过 bl CLI（bailian-cli）完成。
 
-设计文档与实现计划归档在仓库 [`docs/kb-dsh/`](../../docs/kb-dsh/)；维护约定见 [`docs/agents/dsh-plugin.md`](../../docs/agents/dsh-plugin.md)。
-
 ## 安装（dsh 用户）
 
 ```sh
@@ -66,7 +64,7 @@ dsh plugin --profile dev add <本仓库>/packages/bailian-kb-dsh
 
 - **DashScope API Key** — write-only，`type=password` 遮罩输入草稿，仅显示 configured/来自环境变量 徽标；写 `~/.dsh/.credentials.yaml`
 - **Bailian Workspace ID / 默认检索服务 ID / 默认对话服务 ID** — 回显：读写 `bailian-kb` settings 用户层，预填当前解析值；清空保存 = 移除用户层，回退 entry config → credential
-- **自动获取** — 按钮调 Host 桥接路由 `/bailian-kb/autofill`：Host **自己走百炼控制台登录回调协议**（不经 `bl` 命令，也不读 `~/.bailian/config.json`）在宿主机拉起浏览器登录，回调落到本机 loopback 端口后直接把 API 密钥写入凭据存储、工作空间 ID 写入 settings，明文 key 不过浏览器；面板轮询到完成后自动刷新（无需再次点击）。登录 URL 始终带 `needapikey=true`，因此**每次都由本次登录的账号签发新 key**，key 与 workspaceId 必然同账号，切换账号直接点一次即可；`bl auth login --console` 自身做不到这点（它硬编码 `needApiKey: !hasApiKey`，已存 key 时不再签发，会把旧账号的 key 和新账号的 workspaceId 配在一起且无任何提示）
+- **自动获取** — 按钮调 Host 桥接路由 `/bailian-kb/autofill`：Host 在宿主机拉起浏览器登录百炼控制台（不经 `bl` 命令），回调落到本机 loopback 端口后直接把 API 密钥写入凭据存储、工作空间 ID 写入 settings，明文 key 不过浏览器；面板轮询到完成后自动刷新（无需再次点击）。登录 URL 始终请求签发新 key，因此每次都与当前账号配对，切换账号直接点一次即可。
 
 首次接入 seed：启动时若 API key / workspaceId 从未被设置过（settings、credential、env 均无值），自动从 `~/.bailian/config.json` 采纳一次；`seededFields` 字段（settings 文档内，面板不可编辑）记账已消费/已由用户管理的字段，用户主动清空的值永不会被重新填回。
 
@@ -167,5 +165,5 @@ Config 同时注册为 `bailian-kb` settings namespace（`installSettingsSection
 
 - kb_chat 执行期无进展显示（缓冲式；进展会话事件设计见仓库根 README 与 spec 附录 A）。
 - `top_k` 是客户端截断：请求体不含该参数，服务端返回条数由检索服务配置决定，截断只影响进入模型上下文的量。
-- **服务画像的质量上限取决于服务名**：`service list` 接口当前不返回描述（已对两个 workspace 实测确认），所以模型只能靠 `agent_name` 判断一个服务能查什么。名字形如 `test-0819` 的部署，引导能力接近于零。后端补齐描述字段后只需改三处（`api-types` 补字段名 → `services.ts` 解析 → `buildServiceCatalog` 追加并截断到 200 字符），缓存已预留 `description` 键，无需迁移。
-- 拉取每个 scene 最多 2 页 / 200 条（`page_size` 服务端硬顶 100），超出时标 `truncated` 并在清单里告知。
+- **服务画像的质量上限取决于服务名**：`service list` 接口当前不返回描述字段，所以模型只能靠 `agent_name` 判断一个服务能查什么。名字模糊的部署引导能力接近于零。后端补齐描述字段后只需改三处（`api-types` 补字段名 → `services.ts` 解析 → `buildServiceCatalog` 追加并截断到 200 字符），缓存已预留 `description` 键，无需迁移。
+- 拉取每个 scene 最多 2 页，超出时标 `truncated` 并在清单里告知。

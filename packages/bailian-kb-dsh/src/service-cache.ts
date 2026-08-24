@@ -2,10 +2,9 @@
  * On-disk cache of the workspace's deployed retrieval services.
  *
  * Landing spot: `${DSH_HOME:-~/.dsh}/cache/bailian-kb/services-<workspaceId>.json`.
- * Per-workspace files are required, not cosmetic: an api key only reaches its own
- * workspace (cross-pairs return `Endpoint.AccessDenied`), and the panel's
- * "autofill" button exists to switch accounts, so one shared file would blend
- * services from different accounts.
+ * Per-workspace files are required: an api key is scoped to one workspace, and
+ * the panel's "autofill" button exists to switch accounts, so one shared file
+ * would blend services from different accounts.
  *
  * Why not `ctx.storage`: the storage hub is absent from every shipped agent
  * preset, so `inject(['storage'])` may never fire for a third-party plugin, and
