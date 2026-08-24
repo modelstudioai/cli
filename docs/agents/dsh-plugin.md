@@ -57,13 +57,19 @@
 - [ ] `skills/bailian-kb/` 留在**包内**，不要挪到仓库顶层 `skills/`：`.github/workflows/publish-skills.yml` 把 `skills/**` 全量对账到 OSS registry，`bl skill init` 会装给所有 `bl` 用户，而这个 skill 讲的 `kb_search` / `kb_chat` 原生工具只在 dsh 里存在
 - [ ] skill 只有一个手写 `SKILL.md`，**不带 `reference/`**：它不是 CLI，没有义务维护一份 `bl` 参数手册。`bl` 命令的 flag 详情交给 `bl <命令> --help`（权威的 `bl` reference 由 `tools/generate-reference.ts` 写到 `skills/bailian-cli/reference/`，与本包无关）。SKILL.md 里写到的 `bl` 命令/flag 修改时手动核对 `packages/commands/src/commands/`，不要锚版本号
 
-### E. 依赖与测试约定
+### E. 文档（README 是 npm 主页，双语）
+
+- [ ] 用户可见行为变了（工具参数、配置字段、环境变量、设置页、安装/卸载命令）→ `README.md` 与 `README.zh.md` **一起改**；两份互为镜像，头部互链
+- [ ] README 只写用户要知道的事；"为什么这么设计"（上下文注入载体、缓存布局、刷新触发点、桥接路由）写进 [../kb-dsh/runtime-behavior.md](../kb-dsh/runtime-behavior.md)，不要回流 README
+- [ ] 包根保留 `LICENSE`（npm 无条件打包），与 `package.json` 的 `license` 一致
+
+### F. 依赖与测试约定
 
 - [ ] `@deepseek-ai/dsh-*` 同时列在 `peerDependencies`（运行时由 dsh 安装闭包提供）和 `devDependencies`（本地类型检查）——升级时两处同步
 - [ ] 测试从 `vite-plus/test` 导入（仓库统一约定），不要用 `vitest`
 - [ ] 忽略的 catch 绑定与 mock 签名参数用 `_` 前缀（根 `vite.config.ts` 已为本包放开 `no-unused-vars` 的对应 pattern）
 
-### F. 改完跑
+### G. 改完跑
 
 ```sh
 pnpm --filter bailian-kb-dsh run build   # tsc 出 dist/ + web 半隔离检查 + tsdown 出 client.js
@@ -114,5 +120,6 @@ node tools/release/publish-kb-dsh.mjs --dry-run --channel dsh-beta
 ## 相关文档
 
 - 设计与实现计划归档：[docs/kb-dsh/](../kb-dsh/)
-- 包内实现说明：[packages/bailian-kb-dsh/README.md](../../packages/bailian-kb-dsh/README.md)
+- 运行时行为与设计取舍（内部）：[docs/kb-dsh/runtime-behavior.md](../kb-dsh/runtime-behavior.md)
+- 用户面说明：[packages/bailian-kb-dsh/README.md](../../packages/bailian-kb-dsh/README.md) / [README.zh.md](../../packages/bailian-kb-dsh/README.zh.md)
 - skill 文案与路由约定：[skill-change.md](skill-change.md)
