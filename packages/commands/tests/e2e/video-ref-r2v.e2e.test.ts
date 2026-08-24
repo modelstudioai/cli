@@ -400,9 +400,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "json",
       ]);
       expect(exitCode, stderr).toBe(0);
-      const data = parseStdoutJson<{ status?: string; video_url?: string; saved?: string }>(
-        stdout,
-      );
+      const data = parseStdoutJson<{ status?: string; video_url?: string; saved?: string }>(stdout);
       expect(data.status).toBe("SUCCEEDED");
       expect(data.video_url?.startsWith("https://")).toBe(true);
       expect(data.saved).toBeTruthy();
