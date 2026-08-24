@@ -1,0 +1,14 @@
+{
+  "name": "bailian-kb-workspace",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "test": "vitest run",
+    "typecheck": "tsc -b packages/tool-bailian-kb && tsc -p packages/tool-bailian-kb/tsconfig.web.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.0"
+  }
+}
