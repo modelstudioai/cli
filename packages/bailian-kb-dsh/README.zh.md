@@ -32,6 +32,7 @@
 - DeepSeek Harness 及其插件运行时（`@deepseek-ai/dsh-*`），Node.js >= 22.12
 - 阿里云百炼账号：一个**工作空间 ID** 和一个 **DashScope API 密钥**（[去获取](https://bailian.console.aliyun.com/?tab=app#/api-key)）
 - 该工作空间下至少有一个**已部署**的检索或问答服务 —— 可在[控制台](https://bailian.console.aliyun.com/)创建，或用 `bl knowledge service create` / `bl knowledge service deploy`
+- 管理面的事（建库、导入文档、部署服务）需要 [`bl` CLI](https://www.npmjs.com/package/bailian-cli)（`npm install -g bailian-cli`）。检索本身直连 API、从不起子进程，所以 `kb_search` / `kb_chat` 不装也能用
 
 ## 安装
 

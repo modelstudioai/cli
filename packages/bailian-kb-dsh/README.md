@@ -32,6 +32,7 @@ Retrieval happens through **retrieval services** you deploy on Bailian: a servic
 - DeepSeek Harness with its plugin runtime (`@deepseek-ai/dsh-*`), Node.js >= 22.12
 - An Aliyun Model Studio account: a **workspace id** and a **DashScope API key** ([get one](https://bailian.console.aliyun.com/?tab=app#/api-key))
 - At least one **deployed** retrieval or Q&A service in that workspace — create one in the [console](https://bailian.console.aliyun.com/) or with `bl knowledge service create` / `bl knowledge service deploy`
+- The [`bl` CLI](https://www.npmjs.com/package/bailian-cli) (`npm install -g bailian-cli`) for anything on the management side — creating knowledge bases, ingesting documents, deploying services. Retrieval itself calls the API directly and never shells out, so `kb_search` / `kb_chat` work without it
 
 ## Installation
 

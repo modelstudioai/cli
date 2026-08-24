@@ -19,7 +19,7 @@ import { consoleLoginState, startConsoleLogin } from "./console-login.js";
 import { KbClient } from "./client.js";
 import { registerSkill } from "./skill.js";
 import { ServiceCache } from "./service-cache.js";
-import { CATALOG_ENTRY_LIMIT } from "./service-catalog.js";
+import { buildRefreshedSceneList } from "./service-catalog.js";
 import { installServiceContext } from "./service-context.js";
 import type { ServiceScene } from "./api-types.js";
 import { createKbTools } from "./tools.js";
@@ -333,28 +333,15 @@ export function apply(ctx: Context, config: Config): void {
     resolveDefaultRetrieveAgentId: async () => await resolveDefaultAgentId("search"),
     resolveDefaultChatAgentId: async () => await resolveDefaultAgentId("chat"),
     // Self-heal for a cached id the server has since rejected: refresh once and
-    // put the current list in the error, which reaches the model this step.
+    // put the current list in the error, which reaches the model this step. An
+    // empty result is reported too rather than dropped — a bare "invalid
+    // agent_id" reads as "try another one", and when nothing is deployed no id
+    // can work.
     describeServicesAfterRefresh: async (scene) => {
       await serviceCache.refresh();
       const workspaceId = await resolveWorkspaceIdOrUndefined();
       if (workspaceId === undefined) return undefined;
-      const forScene =
-        serviceCache.peek(workspaceId)?.entries.filter((entry) => entry.scene === scene) ?? [];
-      if (forScene.length === 0) return undefined;
-      const lines = forScene
-        .slice(0, CATALOG_ENTRY_LIMIT)
-        .map(
-          (entry) =>
-            `- ${entry.agent_id} — ${entry.agent_name === "" ? "(unnamed)" : entry.agent_name}`,
-        );
-      const more = forScene.length - lines.length;
-      return [
-        `Deployed ${scene} services in this workspace, re-read just now:`,
-        ...lines,
-        ...(more > 0
-          ? [`(and ${more} more — \`bl knowledge service list --scene ${scene}\`)`]
-          : []),
-      ].join("\n");
+      return buildRefreshedSceneList(scene, serviceCache.entriesFor(workspaceId, scene));
     },
     get chatTimeoutMs() {
       return current().chatTimeoutMs;

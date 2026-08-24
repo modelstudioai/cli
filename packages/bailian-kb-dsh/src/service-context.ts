@@ -25,7 +25,7 @@ import type { Context } from "@deepseek-ai/cordis";
 import type { Agent, PreStepDecision } from "@deepseek-ai/dsh-agent";
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
 import type { UserMessage } from "@deepseek-ai/dsh-session";
-import { buildServiceCatalog } from "./service-catalog.js";
+import { buildNoServiceNotice, buildServiceCatalog } from "./service-catalog.js";
 import type { ServiceCache } from "./service-cache.js";
 
 /** Marks this plugin's own injections in the durable log. */
@@ -102,20 +102,26 @@ export function installServiceContext(ctx: Context, opts: ServiceContextOptions)
         if (opts.cache.isStale(workspaceId)) void opts.cache.refresh();
 
         const document = opts.cache.peek(workspaceId);
+        // No document at all means the first fetch has not landed (or is
+        // failing): we know nothing, so claiming anything would be a guess. The
+        // refresh above self-corrects this on a later step.
         if (document === undefined) return decision;
         const [defaultRetrieveAgentId, defaultChatAgentId] = await Promise.all([
           opts.resolveDefaultRetrieveAgentId(),
           opts.resolveDefaultChatAgentId(),
         ]);
         if (signal.aborted) return decision;
-        const text = buildServiceCatalog({
-          entries: document.entries,
-          total: document.total,
-          truncated: document.truncated,
-          ...(defaultRetrieveAgentId !== undefined ? { defaultRetrieveAgentId } : {}),
-          ...(defaultChatAgentId !== undefined ? { defaultChatAgentId } : {}),
-        });
-        if (text === undefined) return decision;
+        // A document with zero entries is the opposite: an authoritative "this
+        // workspace deploys nothing callable". Saying so beats silence, which
+        // leaves the model to invent a required agent_id.
+        const text =
+          buildServiceCatalog({
+            entries: document.entries,
+            total: document.total,
+            truncated: document.truncated,
+            ...(defaultRetrieveAgentId !== undefined ? { defaultRetrieveAgentId } : {}),
+            ...(defaultChatAgentId !== undefined ? { defaultChatAgentId } : {}),
+          }) ?? buildNoServiceNotice();
 
         // Identical to what the model already sees: stay out of the way. This is
         // the branch that runs on nearly every step.

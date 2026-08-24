@@ -17,6 +17,8 @@ interface HarnessOptions {
   entries?: { agent_id: string; agent_name: string; scene: "search" | "chat"; status: string }[];
   cacheOverride?: ServiceCache;
   postJson?: () => Promise<unknown>;
+  /** Skip seeding the cache file, i.e. the very first step of a fresh install. */
+  withoutCacheFile?: boolean;
 }
 
 /** Drives the installed `agent/pre-step` listener against a fake session. */
@@ -25,15 +27,17 @@ function harness(options: HarnessOptions = {}) {
   const entries = options.entries ?? [
     { agent_id: "aid-1", agent_name: "svc-one", scene: "search" as const, status: "deployed" },
   ];
-  writeServiceCache(serviceCachePath(WS, home), {
-    version: 1,
-    fetchedAt: Date.now(),
-    workspaceId: WS,
-    endpointHost: HOST,
-    entries,
-    total: entries.length,
-    truncated: false,
-  });
+  if (options.withoutCacheFile !== true) {
+    writeServiceCache(serviceCachePath(WS, home), {
+      version: 1,
+      fetchedAt: Date.now(),
+      workspaceId: WS,
+      endpointHost: HOST,
+      entries,
+      total: entries.length,
+      truncated: false,
+    });
+  }
   const postJson = vi.fn(
     options.postJson ?? (async () => ({ code: "Success", data: { total_count: 0, rows: [] } })),
   );
@@ -145,8 +149,19 @@ describe("installServiceContext", () => {
     expect(h.injected(second)).toHaveLength(1);
   });
 
-  it("injects nothing when the cache holds no services", async () => {
+  it("injects the no-service notice when the cache holds no services", async () => {
+    // A cached empty list is authoritative, not a missing fetch: staying silent
+    // would leave the model to invent the required agent_id.
     const h = harness({ entries: [] });
+    const own = h.injected(await h.step());
+    expect(own).toHaveLength(1);
+    expect(own[0]?.content[0]?.text).toMatch(/no\s+deployed knowledge service/i);
+  });
+
+  it("injects nothing while no cache document exists yet", async () => {
+    // Nothing has been fetched, so any claim about the workspace would be a
+    // guess; the background refresh corrects this on a later step.
+    const h = harness({ withoutCacheFile: true });
     expect(h.injected(await h.step())).toHaveLength(0);
   });
 

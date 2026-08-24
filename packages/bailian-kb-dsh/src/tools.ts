@@ -12,6 +12,12 @@
  * changed schema token. The live catalog therefore rides an `agent/pre-step`
  * context message instead (see `service-context.ts`), leaving these schemas
  * byte-stable for the life of the process.
+ *
+ * Being static is also why recovery instructions do NOT live here: how to look
+ * further depends on what is actually deployed, and a token spent in a
+ * description is spent on every request. The dynamic carriers own that — the
+ * catalog message states a shortfall where one exists, and a rejected call comes
+ * back with the services that do exist (`service-catalog.ts`).
  */
 
 import { defineTool } from "@deepseek-ai/dsh-tools";
@@ -83,12 +89,11 @@ export function createKbTools(deps: KbToolDeps) {
     required: true as const,
     description:
       "Retrieval/Q&A service id. REQUIRED: the schema cannot know whether this deployment " +
-      "configures a default service, so always pass one. The deployed services of this workspace, " +
-      "with their ids, are listed in a context message in this conversation; take the id from the " +
-      "section matching the tool you are calling. If that list is absent or none of its services " +
-      "covers the question, run `bl knowledge service list --scene search --name <keyword>` to look " +
-      "(workspaceId resolves automatically from DSH settings: bailian-kb.workspaceId in " +
-      "~/.dsh/settings.yaml).",
+      "configures a default service, so always pass one. This conversation carries a context message " +
+      "listing the services deployed in the workspace — take the id from the section matching the tool " +
+      "you are calling. When that list is absent, or none of its services covers the question, say so " +
+      "rather than guessing: a rejected id is answered with the services that do exist, so a guess buys " +
+      "nothing.",
   };
   const resolveRetrieveAgentId = async (supplied: string | undefined): Promise<string> => {
     if (supplied !== undefined) return supplied;

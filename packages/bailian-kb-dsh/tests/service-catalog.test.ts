@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
-import { CATALOG_ENTRY_LIMIT, buildServiceCatalog } from "../src/service-catalog.js";
+import {
+  CATALOG_ENTRY_LIMIT,
+  buildNoServiceNotice,
+  buildRefreshedSceneList,
+  buildServiceCatalog,
+} from "../src/service-catalog.js";
 import type { ServiceEntry } from "../src/services.js";
 
 function entry(overrides: Partial<ServiceEntry> & { agent_id: string }): ServiceEntry {
@@ -19,8 +24,9 @@ function catalog(
 }
 
 describe("buildServiceCatalog", () => {
-  it("returns undefined when there is nothing worth injecting", () => {
-    // No services at all: the tool descriptions alone keep the tools usable.
+  it("returns undefined when there is no service to render", () => {
+    // Nothing to route to; the caller substitutes buildNoServiceNotice(), which
+    // is the branch that tells the model what to do about it.
     expect(catalog([])).toBeUndefined();
   });
 
@@ -118,5 +124,70 @@ describe("buildServiceCatalog", () => {
     expect(text).toContain("x".repeat(199));
     expect(text).not.toContain("x".repeat(201));
     expect(text).toContain("…");
+  });
+
+  it("explains how to get bl only where it recommends running it", () => {
+    // The plugin never shells out, so a fully configured deployment can have no
+    // bl on PATH. Naming the command without the install line is a dead end.
+    const complete = catalog([entry({ agent_id: "aid-1" })]) ?? "";
+    expect(complete).not.toContain("bl knowledge service list");
+    expect(complete).not.toContain("npm install -g bailian-cli");
+
+    const capped =
+      catalog(Array.from({ length: 12 }, (_x, index) => entry({ agent_id: `aid-${index}` }))) ?? "";
+    expect(capped).toContain("bl knowledge service list");
+    expect(capped).toContain("npm install -g bailian-cli");
+
+    // Same rule on the collapsed-to-default branch, which also names the command.
+    const collapsed =
+      catalog([entry({ agent_id: "aid-1" }), entry({ agent_id: "aid-2" })], {
+        defaultRetrieveAgentId: "aid-1",
+      }) ?? "";
+    expect(collapsed).toContain("bl knowledge service list");
+    expect(collapsed).toContain("npm install -g bailian-cli");
+  });
+});
+
+describe("buildNoServiceNotice", () => {
+  it("names the way out instead of leaving the model to invent an agent_id", () => {
+    const text = buildNoServiceNotice();
+    // agent_id is required, so silence here means a guessed id or a silently
+    // dropped retrieval — both look like a broken plugin to the user.
+    expect(text).toMatch(/do not invent an id/i);
+    expect(text).toContain("bl knowledge service create");
+    expect(text).toContain("bl knowledge service deploy");
+    // The management skill is a second-order path: a model that never loads it
+    // must still learn how to get bl.
+    expect(text).toContain("npm install -g bailian-cli");
+    expect(text).toContain("https://bailian.console.aliyun.com/");
+  });
+});
+
+describe("buildRefreshedSceneList", () => {
+  it("lists the scene's services for a rejected call", () => {
+    const text = buildRefreshedSceneList("search", [
+      entry({ agent_id: "aid-1", agent_name: "产品文档" }),
+    ]);
+    expect(text).toContain("aid-1 — 产品文档");
+    expect(text).toMatch(/re-read just now/i);
+    expect(text).not.toContain("npm install -g bailian-cli");
+  });
+
+  it("states the shortfall and how to get bl when the list is capped", () => {
+    const entries = Array.from({ length: CATALOG_ENTRY_LIMIT + 3 }, (_x, index) =>
+      entry({ agent_id: `aid-${index}` }),
+    );
+    const text = buildRefreshedSceneList("search", entries);
+    expect(text).toContain("and 3 more");
+    expect(text).toContain("npm install -g bailian-cli");
+  });
+
+  it("tells a rejected call to stop retrying when the scene has no services", () => {
+    // Returning nothing here used to let the bare "invalid agent_id" through,
+    // which reads as an invitation to try a different id.
+    const text = buildRefreshedSceneList("chat", []);
+    expect(text).toMatch(/no deployed chat services/i);
+    expect(text).toMatch(/do not retry with a different id/i);
+    expect(text).toContain("bl knowledge service deploy");
   });
 });
