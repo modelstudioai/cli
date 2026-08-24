@@ -186,11 +186,11 @@ export const Config: z<Config> = z.object({
 });
 
 /**
- * Register the three knowledge tools over one shared client, plus the
+ * Register the two knowledge tools over one shared client, plus the
  * management skill when a skills registry is composed. The Config doubles as
  * the `bailian-kb` settings section (entry config as the base layer), so
  * every value is read through the live source thunk per call — tool schemas
- * are static (agent_id stays optional regardless), so a settings edit needs
+ * are static (agent_id stays required regardless), so a settings edit needs
  * no re-registration.
  * @param ctx - registrant context carrying tools and credentials.
  * @param config - deployment's workspace, host, pinning, and timeout choices.

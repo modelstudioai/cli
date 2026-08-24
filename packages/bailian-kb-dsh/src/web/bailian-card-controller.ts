@@ -177,7 +177,7 @@ export class BailianCardController {
   private readonly store: SnapshotStore<BailianCardState>;
 
   /**
-   * @param api - wire face used for the three credential references.
+   * @param api - wire face used for the four credential references.
    */
   constructor(private readonly api: Pick<IApiClient, "credentials">) {
     this.store = createSnapshotStore<BailianCardState>({
@@ -625,7 +625,7 @@ export class BailianCardController {
   }
 
   /**
-   * Ask the credentials domain about all three references and publish the
+   * Ask the credentials domain about all four references and publish the
    * answer. A failed read keeps the last known state: the page stays usable
    * and a write still reaches the Host.
    */
