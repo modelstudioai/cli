@@ -34,23 +34,23 @@ description: >-
 
 ## 何时用哪个命令
 
-| 用户意图                                 | 命令                                                | 备注                                               |
-| ---------------------------------------- | --------------------------------------------------- | -------------------------------------------------- |
-| 查知识 / 问答（日常检索）                | 原生工具 `kb_search` / `kb_chat`                    | 不走 bl                                            |
-| 建库 / 查看 / 改名 / 删库 / 监控         | `bl knowledge create/list/info/update/delete/stats` | [reference/kb.md](reference/kb.md)                 |
-| 上传本地文档、看解析状态、删文档、打标签 | `bl knowledge doc upload/list/status/delete/tag`    | [reference/doc.md](reference/doc.md)               |
-| 从 OSS 批量导入                          | `bl knowledge doc import-oss`                       | Bucket 需预先授权服务角色                          |
-| 创建 / 部署 / 调参检索（问答）服务       | `bl knowledge service create/update/deploy/…`       | [reference/service.md](reference/service.md)       |
-| 修正错误切片、屏蔽某段内容               | `bl knowledge chunk add/list/update/delete`         | [reference/chunk.md](reference/chunk.md)           |
-| 数据中心类目 / 文件 / 集合管理           | `bl knowledge category/file/collection …`           | [reference/datacenter.md](reference/datacenter.md) |
-| CLI 配置、升级                           | `bl config show/set`、`bl update`                   | [reference/config.md](reference/config.md)         |
-| 部署后验证、调试草稿版服务               | `bl knowledge search/chat --agent-version beta`     | [reference/query.md](reference/query.md)           |
+| 用户意图                                 | 命令                                                | 备注                             |
+| ---------------------------------------- | --------------------------------------------------- | -------------------------------- |
+| 查知识 / 问答（日常检索）                | 原生工具 `kb_search` / `kb_chat`                    | 不走 bl                          |
+| 建库 / 查看 / 改名 / 删库 / 监控         | `bl knowledge create/list/info/update/delete/stats` | `bl knowledge create --help`     |
+| 上传本地文档、看解析状态、删文档、打标签 | `bl knowledge doc upload/list/status/delete/tag`    | `bl knowledge doc upload --help` |
+| 从 OSS 批量导入                          | `bl knowledge doc import-oss`                       | Bucket 需预先授权服务角色        |
+| 创建 / 部署 / 调参检索（问答）服务       | `bl knowledge service create/update/deploy/…`       | `bl knowledge service --help`    |
+| 修正错误切片、屏蔽某段内容               | `bl knowledge chunk add/list/update/delete`         | `bl knowledge chunk --help`      |
+| 数据中心类目 / 文件 / 集合管理           | `bl knowledge category/file/collection …`           | `bl knowledge category --help`   |
+| CLI 配置、升级                           | `bl config show/set`、`bl update`                   | `bl config --help`               |
+| 部署后验证、调试草稿版服务               | `bl knowledge search/chat --agent-version beta`     | `bl knowledge search --help`     |
 
 ## 核心工作流：建库到可检索
 
 ```bash
 bl knowledge doc upload --file ./docs/ --workspace-id ws-xxx                # 1. 上传本地文件/目录 → 得 fileId
-bl knowledge create --name my-kb --doc-id <fileId> --wait                # 2. 建库并导入 → 得 index-id (pipelineId)
+bl knowledge create --name my-kb --description '产品文档' --doc-id <fileId> --wait                # 2. 建库并导入 → 得 index-id (pipelineId)
 bl knowledge service create --name my-search --scene search --index-id <index-id>   # 3. 建检索服务 → 得 agent-id（draft）
 bl knowledge service deploy --agent-id <agent-id> --yes                     # 4. 发布服务（此后可被默认版本调用）
 bl knowledge service list --scene search --status deployed                  # 5. 确认服务可见
@@ -71,14 +71,9 @@ bl knowledge service list --scene search --status deployed                  # 5.
 | chunk id                | `chunk list` 输出的 `metadata._id`                      | `chunk update/delete` 的 `--chunk-id`                                               |
 | `agent-id`              | `service create/list`                                   | `service *`、`kb_search`/`kb_chat`、`bl knowledge search/chat`                      |
 
-## 命令参考（权威）
+## 命令参考
 
-命令的完整 Usage / Flags / Notes / Examples 在 [`reference/`](reference/index.md)：
-
-- [reference/index.md](reference/index.md) — 全命令速查表、全局 flag、鉴权说明
-- reference/&lt;group&gt;.md — 按命令组分文件（kb / doc / service / chunk / datacenter / config / query）
-
-执行不熟悉的命令前，先读对应 reference 或跑 `bl <命令> --help`。**不要猜 flag。**
+执行不熟悉的命令前，跑 `bl <命令> --help` 查看完整 Usage / Flags / Notes / Examples。**不要猜 flag。**
 全部命令支持 `--output json`（结构化输出）、`--dry-run`（预览请求）、`--quiet`、`--verbose`。
 
 ## 危险与不可逆操作

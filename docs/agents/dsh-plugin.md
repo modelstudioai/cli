@@ -55,7 +55,7 @@
 ### D. skill 资产
 
 - [ ] `skills/bailian-kb/` 留在**包内**，不要挪到仓库顶层 `skills/`：`.github/workflows/publish-skills.yml` 把 `skills/**` 全量对账到 OSS registry，`bl skill init` 会装给所有 `bl` 用户，而这个 skill 讲的 `kb_search` / `kb_chat` 原生工具只在 dsh 里存在
-- [ ] `SKILL.md` 手写（承载"检索走原生工具、管理走 `bl`"的路由决策）；`reference/` 由 `tools/generate-reference.ts` 生成，不要手改
+- [ ] skill 只有一个手写 `SKILL.md`，**不带 `reference/`**：它不是 CLI，没有义务维护一份 `bl` 参数手册。`bl` 命令的 flag 详情交给 `bl <命令> --help`（权威的 `bl` reference 由 `tools/generate-reference.ts` 写到 `skills/bailian-cli/reference/`，与本包无关）。SKILL.md 里写到的 `bl` 命令/flag 修改时手动核对 `packages/commands/src/commands/`，不要锚版本号
 
 ### E. 依赖与测试约定
 
