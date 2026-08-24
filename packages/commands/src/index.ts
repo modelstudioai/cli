@@ -148,6 +148,61 @@ export { default as managedAgentSessionRun } from "./commands/managed-agent/sess
 export { default as managedAgentSessionSend } from "./commands/managed-agent/session-send.ts";
 export { default as managedAgentSessionEvents } from "./commands/managed-agent/session-events.ts";
 export { default as managedAgentSkillList } from "./commands/managed-agent/skill-list.ts";
+export { default as managedAgentCapabilities } from "./commands/managed-agent/capabilities.ts";
+export {
+  managedAgentAgentGet,
+  managedAgentAgentList,
+  managedAgentAgentSearch,
+  managedAgentAgentVersions,
+} from "./commands/managed-agent/agent.ts";
+export {
+  managedAgentEnvironmentGet,
+  managedAgentEnvironmentList,
+  managedAgentEnvironmentSearch,
+} from "./commands/managed-agent/environment.ts";
+export {
+  managedAgentSkillDownload,
+  managedAgentSkillGet,
+  managedAgentSkillSearch,
+  managedAgentSkillVersions,
+} from "./commands/managed-agent/skill.ts";
+export {
+  managedAgentVaultGet,
+  managedAgentVaultList,
+  managedAgentVaultSearch,
+} from "./commands/managed-agent/vault.ts";
+export {
+  managedAgentDeploymentGet,
+  managedAgentDeploymentList,
+  managedAgentDeploymentPause,
+  managedAgentDeploymentRun,
+  managedAgentDeploymentRunsGet,
+  managedAgentDeploymentRunsList,
+  managedAgentDeploymentSearch,
+  managedAgentDeploymentUnpause,
+} from "./commands/managed-agent/deployment.ts";
+export {
+  managedAgentSessionArchive,
+  managedAgentSessionSearch,
+  managedAgentSessionUpdate,
+} from "./commands/managed-agent/session-management.ts";
+export {
+  managedAgentSessionEventList,
+  managedAgentSessionEventSend,
+  managedAgentSessionEventStream,
+} from "./commands/managed-agent/session-event.ts";
+export {
+  managedAgentSessionDebug,
+  managedAgentSessionExport,
+} from "./commands/managed-agent/session-debug.ts";
+export {
+  managedAgentFileDelete,
+  managedAgentFileDownload,
+  managedAgentFileGet,
+  managedAgentFileList,
+  managedAgentFileSearch,
+  managedAgentFileUpload,
+} from "./commands/managed-agent/file.ts";
 export { default as workspaceInit } from "./commands/workspace/init.ts";
 export { default as pluginInstall } from "./commands/plugin/install.ts";
 export { default as pluginLink } from "./commands/plugin/link.ts";

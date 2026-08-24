@@ -199,9 +199,88 @@ describe("e2e: managed-agent", () => {
     expect(stderr).not.toMatch(/--source must be one of/i);
     expect(stderr).toMatch(/File not found.*agents\.e2e-missing\.yaml/i);
   });
+
+  test("managed-agent skill versions --help 展示 cursor 分页选项", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "skill",
+      "versions",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--skill-id|--limit|--page|--all/i);
+  });
 });
 
 describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => {
+  test("capabilities 明确区分 Session Event 与独立 Thread API", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "capabilities",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      operations?: Record<string, { supported?: boolean; reason?: string }>;
+    }>(stdout);
+    expect(data.operations?.["session.event.list"]?.supported).toBe(true);
+    expect(data.operations?.["session_thread.list"]?.supported).toBe(false);
+    expect(data.operations?.["session_thread.list"]?.reason).toMatch(/no independent Thread/i);
+  });
+
+  test.each([
+    ["session archive", ["session", "archive", "--session-id", "sess_e2e"]],
+    ["session update", ["session", "update", "--session-id", "sess_e2e", "--title", "new"]],
+    [
+      "session event send",
+      [
+        "session",
+        "event",
+        "send",
+        "--session-id",
+        "sess_e2e",
+        "--event",
+        '{"type":"message","content":"hello"}',
+      ],
+    ],
+    [
+      "session export",
+      ["session", "export", "--session-id", "sess_e2e", "--output-file", "debug.zip"],
+    ],
+    ["file upload", ["file", "upload", "--path", "missing.txt"]],
+    [
+      "file download",
+      ["file", "download", "--file-id", "file_e2e", "--output-file", "artifact.bin"],
+    ],
+    ["file delete", ["file", "delete", "--file-id", "file_e2e"]],
+    [
+      "skill download",
+      [
+        "skill",
+        "download",
+        "--skill-id",
+        "skill_e2e",
+        "--skill-version",
+        "1",
+        "--output-file",
+        "skill.zip",
+      ],
+    ],
+    ["deployment run", ["deployment", "run", "--deployment-id", "dep_e2e"]],
+    ["deployment pause", ["deployment", "pause", "--deployment-id", "dep_e2e"]],
+    ["deployment unpause", ["deployment", "unpause", "--deployment-id", "dep_e2e"]],
+  ])("%s --dry-run 在构建 SDK runtime 前短路", async (_label, commandArgs) => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      ...commandArgs,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+  });
+
   test("init --dry-run 仅输出计划，不创建文件", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
