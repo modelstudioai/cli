@@ -11,6 +11,7 @@ monorepo 现在按"纯逻辑 → 运行时框架 → 命令库 → 产品入口"
 - `packages/commands` — `bailian-cli-commands`,可复用命令实现库,只导出 command,不决定产品路径
 - `packages/cli` — `bailian-cli`,完整 `bl` 产品入口;`src/commands.ts` 组装 `bl` 暴露的命令路径
 - `packages/kscli` — `knowledge-studio-cli`,Knowledge Studio 专用入口;`src/main.ts` 复用 commands 并重映射为 `kscli` 路径
+- `packages/bailian-kb-dsh` — `bailian-kb-dsh`,**下游宿主适配层**(依赖方向朝外):百炼知识库的 DeepSeek Harness (dsh) 插件,消费 `bl` CLI 与知识库 API,不在上面这条分层链上;版本、构建、发布都独立,见 [docs/agents/dsh-plugin.md](docs/agents/dsh-plugin.md)
 
 ### 关键文件
 
@@ -56,25 +57,26 @@ Skill / 命令手册随 `skills/bailian-*/` 经 `bl skill init` 安装（装齐 
 
 按当前任务从下表挑一条进入对应文档:
 
-| 场景              | 何时进入                                        | 详见                                                                         |
-| ----------------- | ----------------------------------------------- | ---------------------------------------------------------------------------- |
-| 命令增删改        | 增加 / 删除 / 重命名 `bl xxx` 或入口命令路径    | [docs/agents/command-add-remove.md](docs/agents/command-add-remove.md)       |
-| E2E 测试维护      | 新增/改命令或 e2e 用例、补 help/缺参/dry-run    | [docs/agents/cli-e2e-tests.md](docs/agents/cli-e2e-tests.md)                 |
-| 批量压测          | 改/跑多能力并发压测、`test:stress`、fixtures    | [docs/agents/stress-batch-tests.md](docs/agents/stress-batch-tests.md)       |
-| 选项变更          | 给已有命令加 `--flag` 或改默认值                | [docs/agents/command-flag-change.md](docs/agents/command-flag-change.md)     |
-| 模型上下架        | 增加新模型 / 改默认模型 / 废弃旧模型            | [docs/agents/model-add-remove.md](docs/agents/model-add-remove.md)           |
-| Skill 文案 / 路由 | 改 SKILL 路由、安装约定、hand-off、hub/领域边界 | [docs/agents/skill-change.md](docs/agents/skill-change.md)                   |
-| 错误文案变更      | 改 `BailianError` 的 message 或 hint            | [docs/agents/error-hint-change.md](docs/agents/error-hint-change.md)         |
-| URL / 渠道变更    | 控制台域名 / 文档站 / 追踪参数                  | [docs/agents/url-change.md](docs/agents/url-change.md)                       |
-| 埋点变更          | 改 AEM 命令事件、后端渠道 header、User-Agent    | [docs/agents/telemetry-change.md](docs/agents/telemetry-change.md)           |
-| 鉴权扩展          | 加 OAuth / SSO / 换 token 来源                  | [docs/agents/auth-change.md](docs/agents/auth-change.md)                     |
-| 配置项扩展        | 新 env var 或 `~/.bailian/config.json` 字段     | [docs/agents/config-add.md](docs/agents/config-add.md)                       |
-| Profile / 激活    | 改命名 Profile、预设或 `active_config`          | [docs/agents/config-profile-change.md](docs/agents/config-profile-change.md) |
-| 安装文档          | 改安装、鉴权、验证流程或线上 install 页面       | [docs/agents/install-doc-change.md](docs/agents/install-doc-change.md)       |
-| 发布              | channel / stable 发布到 npm（CI 驱动）          | [docs/agents/publish.md](docs/agents/publish.md)                             |
-| Change Log        | 发版说明 / 历史版本说明                         | [docs/agents/changelog-write.md](docs/agents/changelog-write.md)             |
-| 工具链调整        | lint 规则 / 构建配置 / 依赖升级                 | [docs/agents/lint-toolchain.md](docs/agents/lint-toolchain.md)               |
-| Command Pack      | 扩展包 / 白名单 / plugin 管理命令               | [docs/agents/command-pack.md](docs/agents/command-pack.md)                   |
+| 场景              | 何时进入                                         | 详见                                                                         |
+| ----------------- | ------------------------------------------------ | ---------------------------------------------------------------------------- |
+| 命令增删改        | 增加 / 删除 / 重命名 `bl xxx` 或入口命令路径     | [docs/agents/command-add-remove.md](docs/agents/command-add-remove.md)       |
+| E2E 测试维护      | 新增/改命令或 e2e 用例、补 help/缺参/dry-run     | [docs/agents/cli-e2e-tests.md](docs/agents/cli-e2e-tests.md)                 |
+| 批量压测          | 改/跑多能力并发压测、`test:stress`、fixtures     | [docs/agents/stress-batch-tests.md](docs/agents/stress-batch-tests.md)       |
+| 选项变更          | 给已有命令加 `--flag` 或改默认值                 | [docs/agents/command-flag-change.md](docs/agents/command-flag-change.md)     |
+| 模型上下架        | 增加新模型 / 改默认模型 / 废弃旧模型             | [docs/agents/model-add-remove.md](docs/agents/model-add-remove.md)           |
+| Skill 文案 / 路由 | 改 SKILL 路由、安装约定、hand-off、hub/领域边界  | [docs/agents/skill-change.md](docs/agents/skill-change.md)                   |
+| 错误文案变更      | 改 `BailianError` 的 message 或 hint             | [docs/agents/error-hint-change.md](docs/agents/error-hint-change.md)         |
+| URL / 渠道变更    | 控制台域名 / 文档站 / 追踪参数                   | [docs/agents/url-change.md](docs/agents/url-change.md)                       |
+| 埋点变更          | 改 AEM 命令事件、后端渠道 header、User-Agent     | [docs/agents/telemetry-change.md](docs/agents/telemetry-change.md)           |
+| 鉴权扩展          | 加 OAuth / SSO / 换 token 来源                   | [docs/agents/auth-change.md](docs/agents/auth-change.md)                     |
+| 配置项扩展        | 新 env var 或 `~/.bailian/config.json` 字段      | [docs/agents/config-add.md](docs/agents/config-add.md)                       |
+| Profile / 激活    | 改命名 Profile、预设或 `active_config`           | [docs/agents/config-profile-change.md](docs/agents/config-profile-change.md) |
+| 安装文档          | 改安装、鉴权、验证流程或线上 install 页面        | [docs/agents/install-doc-change.md](docs/agents/install-doc-change.md)       |
+| 发布              | channel / stable 发布到 npm（CI 驱动）           | [docs/agents/publish.md](docs/agents/publish.md)                             |
+| Change Log        | 发版说明 / 历史版本说明                          | [docs/agents/changelog-write.md](docs/agents/changelog-write.md)             |
+| 工具链调整        | lint 规则 / 构建配置 / 依赖升级                  | [docs/agents/lint-toolchain.md](docs/agents/lint-toolchain.md)               |
+| Command Pack      | 扩展包 / 白名单 / plugin 管理命令                | [docs/agents/command-pack.md](docs/agents/command-pack.md)                   |
+| dsh 插件          | 改 `packages/bailian-kb-dsh`、dsh 依赖、插件发布 | [docs/agents/dsh-plugin.md](docs/agents/dsh-plugin.md)                       |
 
 如果当前任务无法对应任何场景,先按经验完成,然后**回来评估这是不是一类新场景** —— 是就新增 `docs/agents/<scenario>.md`,把清单沉淀下来。
 
@@ -84,12 +86,15 @@ Skill / 命令手册随 `skills/bailian-*/` 经 `bl skill init` 安装（装齐 
 
 源码包的 `version` 当前保持一致: `packages/core`、`packages/runtime`、`packages/commands`、`packages/cli`、`packages/kscli`。做版本 bump 时一动多动。release 工具当前强校验 / 发布范围以 `tools/release/lib/packages.mjs` 为准;把新包纳入发布前必须同步该清单和 [publish.md](docs/agents/publish.md)。
 
+**例外**: `packages/bailian-kb-dsh` 不参与这个锁步(独立 `0.1.x`,跟随 dsh rc 节奏),也不在 release 白名单里,由独立 workflow 发布。
+
 ### 2. 分层边界
 
 - `core` 是纯库:不依赖 `runtime` / `commands` / 产品入口;不调 `process.exit`;新增/改动时不硬编码 `bl` / `kscli` 命令名、控制台 URL 或渠道追踪参数。当前遗留项见 [error-hint-change.md](docs/agents/error-hint-change.md) 与 [url-change.md](docs/agents/url-change.md),触碰相关代码时顺手收敛
 - `runtime` 是通用 CLI 框架:可以处理 TTY、help、错误输出、middleware,但不写具体业务命令逻辑
 - `commands` 是命令实现库:不决定产品路径;不在 `usageArgs` / `exampleArgs` / hint 里硬编码产品 bin 前缀
 - `cli` / `kscli` 是产品层:负责命令路径 map、产品 identity、README、技能 reference、发版入口
+- `bailian-kb-dsh` 在这条链之外:它是别的宿主(dsh)里的插件,只允许依赖 `core`(且当前刻意零依赖),反过来 `core` / `runtime` / `commands` / 产品层**永远不许**依赖它
 - URL 集中在 `packages/runtime/src/urls.ts`(用户面控制台)和 `packages/core/src/config/schema.ts` / client 层(API)
 
 ### 3. 错误处理边界:CLI 不翻译服务端错误
