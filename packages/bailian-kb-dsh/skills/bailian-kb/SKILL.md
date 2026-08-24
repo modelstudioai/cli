@@ -89,7 +89,7 @@ bl knowledge service list --scene search --status deployed                  # 5.
 
 ## 最佳实践
 
-- **建服务时必须把名字写清楚**：`service create --name` 的名称是模型判断"这个服务能查什么"的主要依据（服务描述暂未随列表接口返回）。`检索服务1`、`test-0819` 这类名字会让后续检索无法路由；写成 `产品文档检索`、`HR制度问答` 这种能看出覆盖内容的名字。同时填 `--description`（≤1000 字符），后端补齐列表字段后即可自动生效。
+- **建服务时必须把名字写清楚**：`service create --name` 的名称是模型判断"这个服务能查什么"的主要依据（服务描述暂未随列表接口返回）。`检索服务1` 这类无语义的名字会让后续检索无法路由；写成 `产品文档检索`、`HR制度问答` 这种能看出覆盖内容的名字。同时填 `--description`（≤1000 字符），列表接口返回该字段后即可自动生效。
 - 服务有 draft/deployed 两种状态：只有 deployed 可被默认版本调用，也只有 deployed 会进入模型看到的服务清单；draft 调试用 `--agent-version beta`。改已发布版本的配置：先改 beta 草稿（`service update`），验证后 `service deploy` 发新版本。
 - 导入类命令（`knowledge create`、`doc upload --index-id`、`doc status`）优先带 `--wait` 轮询到终态，避免手工轮询；文档解析失败（如 PARSE_FAILED）会以非零退出码透传错误。
 - `chunk add` 有 10 QPS 限流，批量脚本注意节流；响应不带 chunk id，需要 `chunk list` 反查。

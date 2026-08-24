@@ -135,9 +135,9 @@ Config 同时注册为 `bailian-kb` settings namespace（`installSettingsSection
 
 ### 缓存与刷新
 
-落点：`${DSH_HOME:-~/.dsh}/cache/bailian-kb/services-<workspaceId>.json`（临时文件 + `rename()` 原子发布，目录 `0o700`）。按 workspace 分文件是必需的：api key 只能访问自己的 workspace（交叉组合返回 `Endpoint.AccessDenied`），而"自动获取"按钮就是为了切账号。
+落点：`${DSH_HOME:-~/.dsh}/cache/bailian-kb/services-<workspaceId>.json`（临时文件 + `rename()` 原子发布，目录 `0o700`）。按 workspace 分文件是必需的：api key 只能访问自己的 workspace，而"自动获取"按钮就是为了切账号。
 
-存：`agent_id` / `agent_name` / `scene` / `status` / `modify_time`，预留 `description`（待后端补齐）。**不存 `pipeline_list`**——实测它常缺 `pipeline_name`、有时整个为空，做不了知识库标签。
+存：`agent_id` / `agent_name` / `scene` / `status` / `modify_time`，预留 `description`（待列表接口返回）。**不存 `pipeline_list`**——它不稳定携带 `pipeline_name`，做不了知识库标签。
 
 | 刷新触发点                                                | 模型何时看见                         |
 | --------------------------------------------------------- | ------------------------------------ |
@@ -163,7 +163,7 @@ Config 同时注册为 `bailian-kb` settings namespace（`installSettingsSection
 
 ## Known Limitations
 
-- kb_chat 执行期无进展显示（缓冲式；进展会话事件设计见仓库根 README 与 spec 附录 A）。
+- kb_chat 执行期无进展显示（缓冲式）。
 - `top_k` 是客户端截断：请求体不含该参数，服务端返回条数由检索服务配置决定，截断只影响进入模型上下文的量。
-- **服务画像的质量上限取决于服务名**：`service list` 接口当前不返回描述字段，所以模型只能靠 `agent_name` 判断一个服务能查什么。名字模糊的部署引导能力接近于零。后端补齐描述字段后只需改三处（`api-types` 补字段名 → `services.ts` 解析 → `buildServiceCatalog` 追加并截断到 200 字符），缓存已预留 `description` 键，无需迁移。
+- **服务画像的质量上限取决于服务名**：`service list` 接口当前不返回描述字段，所以模型只能靠 `agent_name` 判断一个服务能查什么。名字模糊的部署引导能力接近于零。列表接口补齐描述字段后只需改三处（`api-types` 补字段名 → `services.ts` 解析 → `buildServiceCatalog` 追加并截断到 200 字符），缓存已预留 `description` 键，无需迁移。
 - 拉取每个 scene 最多 2 页，超出时标 `truncated` 并在清单里告知。
