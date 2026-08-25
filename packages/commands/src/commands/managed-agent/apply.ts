@@ -6,7 +6,12 @@ import {
   type FlagsDef,
 } from "bailian-cli-core";
 import { emitBare, emitResult } from "bailian-cli-runtime";
-import { executePlannedProject, planProjectContext } from "@openagentpack/sdk";
+import {
+  executePlannedProject,
+  planProjectContext,
+  type PlannedAction,
+  UserError,
+} from "@openagentpack/sdk";
 import { formatResourceLabel } from "./_engine/address-utils.ts";
 import {
   assertProviderConfigured,
@@ -16,6 +21,12 @@ import {
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 import { renderAgentFeedback } from "./_engine/feedback.ts";
+import {
+  commitAutomaticVersion,
+  type PreparedAutomaticVersion,
+  prepareAutomaticVersion,
+  readVersionSource,
+} from "@openagentpack/local-git";
 
 const APPLY_FLAGS = {
   file: {
@@ -41,11 +52,25 @@ const APPLY_FLAGS = {
       "zh-CN": "无需交互提示直接确认并应用（执行变更时必填）",
     },
   },
+  ci: {
+    type: "switch",
+    description: {
+      "en-US": "Run non-interactively while blocking deletes and remote drift",
+      "zh-CN": "以非交互模式运行，并阻止删除和远端漂移覆盖",
+    },
+  },
   noRefresh: {
     type: "switch",
     description: {
       "en-US": "Skip refreshing state from remote before planning",
       "zh-CN": "规划前跳过从远端刷新状态",
+    },
+  },
+  refreshOnly: {
+    type: "switch",
+    description: {
+      "en-US": "Refresh state without mutating remote resources",
+      "zh-CN": "仅刷新 State，不修改远端资源",
     },
   },
   concurrency: {
@@ -64,10 +89,18 @@ export default defineCommand({
     "zh-CN": "应用规划的变更，创建、更新或删除 Agent 资源",
   },
   auth: "apiKey",
-  usageArgs: "[--file <path>] [--provider <name>] [--yes] [--concurrency <n>]",
+  usageArgs:
+    "[--file <path>] [--provider <name>] [--yes | --ci] [--no-refresh] [--refresh-only] [--concurrency <n>]",
   flags: APPLY_FLAGS,
-  exampleArgs: ["--yes", "--provider bailian --yes"],
+  exampleArgs: ["--yes", "--provider bailian --yes", "--ci"],
   notes: CREDENTIALS_NOTE,
+  validate(flags) {
+    if (flags.ci && flags.yes) return "--ci cannot be combined with --yes.";
+    if (flags.ci && flags.noRefresh) {
+      return "--ci requires remote state refresh and cannot be combined with --no-refresh.";
+    }
+    return undefined;
+  },
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
@@ -80,6 +113,8 @@ export default defineCommand({
             provider: flags.provider ?? "all",
             refresh: !flags.noRefresh,
             concurrency: flags.concurrency,
+            ci: flags.ci,
+            refresh_only: flags.refreshOnly,
           },
           config_file: file,
           hint: "Run `managed-agent plan` to preview the exact resource changes.",
@@ -89,16 +124,19 @@ export default defineCommand({
       return;
     }
 
-    const planned = await withAgentErrors(() =>
+    const versionSource = await readVersionSource(file);
+
+    const { planned, runtime } = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, file);
         assertProviderConfigured(runtime, flags.provider);
-        return planProjectContext(runtime, {
+        const planned = await planProjectContext(runtime, {
           provider: flags.provider,
           refresh: !flags.noRefresh,
           quiet: true,
           onFeedback: renderAgentFeedback,
         });
+        return { planned, runtime };
       }),
     );
 
@@ -118,6 +156,13 @@ export default defineCommand({
 
     const actionable = plan.actions.filter((action) => action.action !== "no-op");
     if (actionable.length === 0) {
+      if (!flags.refreshOnly) {
+        const preparedVersion = await prepareAutomaticVersion(
+          runtime.configPath,
+          versionSource.source,
+        );
+        await commitSuccessfulApplyVersion(preparedVersion, format);
+      }
       if (format === "json")
         emitResult({ succeeded: 0, failed: 0, skipped: 0, results: [] }, format);
       else emitBare("No changes. Infrastructure is up-to-date.");
@@ -127,19 +172,40 @@ export default defineCommand({
     const creates = actionable.filter((action) => action.action === "create").length;
     const updates = actionable.filter((action) => action.action === "update").length;
     const deletes = planned.destructiveActions;
+    if (flags.ci) assertCiApplyPolicy(actionable);
 
     for (const action of actionable) {
       const icon = action.action === "create" ? "+" : action.action === "update" ? "~" : "-";
       emitProgress(`  ${icon} ${formatResourceLabel(action.address)}`);
     }
 
-    if (!flags.yes) {
+    if (flags.refreshOnly) {
+      if (format === "json") {
+        emitResult(
+          {
+            refresh_only: true,
+            actions: actionable,
+            succeeded: 0,
+            failed: 0,
+            skipped: actionable.length,
+          },
+          format,
+        );
+      } else {
+        emitBare("Refresh-only mode: no remote mutations were performed.");
+      }
+      return;
+    }
+
+    if (!flags.yes && !flags.ci) {
       throw new BailianError(
         `Refusing to apply ${actionable.length} change(s) (${creates} create, ${updates} update, ${deletes.length} destroy) without confirmation.`,
         ExitCode.USAGE,
         "Review with `bl managed-agent plan`, then re-run with --yes to apply.",
       );
     }
+
+    const preparedVersion = await prepareAutomaticVersion(runtime.configPath, versionSource.source);
 
     const result = await withAgentErrors(() =>
       withStdoutProtected(() =>
@@ -161,6 +227,40 @@ export default defineCommand({
       emitBare(`\nApply finished: ${succeeded} succeeded, ${failed} failed, ${skipped} skipped.`);
     }
 
-    if (failed > 0) throw new BailianError("Apply failed.", ExitCode.GENERAL);
+    if (failed > 0 || skipped > 0) {
+      throw new BailianError(
+        failed > 0 ? "Apply failed." : "Apply incomplete: one or more actions were skipped.",
+        ExitCode.GENERAL,
+      );
+    }
+    await commitSuccessfulApplyVersion(preparedVersion, format);
   },
 });
+
+export function assertCiApplyPolicy(actions: PlannedAction[]): void {
+  const deletes = actions.filter((action) => action.action === "delete");
+  if (deletes.length > 0) {
+    throw new UserError(
+      `CI policy blocked ${deletes.length} delete action(s). Review the plan and apply this destructive change through an explicitly approved workflow.`,
+    );
+  }
+  const drifted = actions.filter(
+    (action) => action.driftKind === "remote" || action.driftKind === "both",
+  );
+  if (drifted.length > 0) {
+    throw new UserError(
+      `CI policy blocked ${drifted.length} action(s) with remote drift. Review the remote changes before deciding whether YAML should overwrite them.`,
+    );
+  }
+}
+
+async function commitSuccessfulApplyVersion(
+  prepared: PreparedAutomaticVersion | null,
+  format: "text" | "json",
+): Promise<void> {
+  if (!prepared) return;
+  const version = await commitAutomaticVersion(prepared);
+  if (version && format !== "json") {
+    emitBare(`Created local version ${version.short_commit} (${version.message}).`);
+  }
+}

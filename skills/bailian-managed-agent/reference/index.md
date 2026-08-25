@@ -9,31 +9,39 @@ Use this index for the skill-scoped quick index and global flags.
 
 ## Quick index
 
-| Command                           | Authentication | Description                                                   | Detail                               |
-| --------------------------------- | -------------- | ------------------------------------------------------------- | ------------------------------------ |
-| `bl managed-agent apply`          | API Key        | Apply planned changes to create/update/delete agent resources | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent destroy`        | API Key        | Destroy all managed agent resources tracked in state          | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent init`           | No Auth        | Create a new agents.yaml template                             | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent plan`           | API Key        | Show what changes would be applied to agent infrastructure    | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent session create` | API Key        | Create a new session for an agent                             | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent session delete` | API Key        | Delete a session                                              | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent session events` | API Key        | List event history for a session                              | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent session get`    | API Key        | Get details of a session                                      | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent session list`   | API Key        | List sessions from the provider                               | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent session run`    | API Key        | Create a session, send a message, and stream the response     | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent session send`   | API Key        | Send a message to an existing session and stream the response | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent skill-list`     | API Key        | List skills from the provider's skill catalog                 | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent state import`   | API Key        | Import an existing remote resource into agents state          | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent state list`     | No Auth        | List resources tracked in agents state                        | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent state rm`       | No Auth        | Remove a resource from state without destroying it remotely   | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent state show`     | No Auth        | Show details of a resource in agents state                    | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent validate`       | No Auth        | Validate an agents.yaml configuration (offline)               | [managed-agent.md](managed-agent.md) |
+| Command                            | Authentication | Description                                                   | Detail                               |
+| ---------------------------------- | -------------- | ------------------------------------------------------------- | ------------------------------------ |
+| `bl managed-agent apply`           | API Key        | Apply planned changes to create/update/delete agent resources | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent destroy`         | API Key        | Destroy all managed agent resources tracked in state          | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent init`            | No Auth        | Create an agents.yaml template or a local CI/Git project      | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent plan`            | API Key        | Show what changes would be applied to agent infrastructure    | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent playground`      | API Key        | Launch a Session Preview for an agents.yaml Agent             | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent session create`  | API Key        | Create a new session for an agent                             | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent session delete`  | API Key        | Delete a session                                              | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent session events`  | API Key        | List event history for a session                              | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent session get`     | API Key        | Get details of a session                                      | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent session list`    | API Key        | List sessions from the provider                               | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent session run`     | API Key        | Create a session, send a message, and stream the response     | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent session send`    | API Key        | Send a message to an existing session and stream the response | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent skill-list`      | API Key        | List skills from the provider's skill catalog                 | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent state import`    | API Key        | Import an existing remote resource into agents state          | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent state list`      | No Auth        | List resources tracked in agents state                        | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent state rm`        | No Auth        | Remove a resource from state without destroying it remotely   | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent state show`      | No Auth        | Show details of a resource in agents state                    | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent validate`        | No Auth        | Validate an agents.yaml configuration (offline)               | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent version disable` | No Auth        | Disable Apply-time Git versioning without removing history    | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent version enable`  | No Auth        | Enable Apply-time Git versioning for agents.yaml              | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent version list`    | No Auth        | List current-branch commits that changed agents.yaml          | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent version preview` | No Auth        | Preview a historical agents.yaml version                      | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent version restore` | No Auth        | Restore a historical agents.yaml version to the working tree  | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent version status`  | No Auth        | Show local Git versioning status for agents.yaml              | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent workbench`       | API Key        | Launch the agents.yaml project Workbench                      | [managed-agent.md](managed-agent.md) |
 
 ## By group
 
-| Group           | Commands                                                                                                                                                                                                                                 | Reference                            |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| `managed-agent` | `apply`, `destroy`, `init`, `plan`, `session create`, `session delete`, `session events`, `session get`, `session list`, `session run`, `session send`, `skill-list`, `state import`, `state list`, `state rm`, `state show`, `validate` | [managed-agent.md](managed-agent.md) |
+| Group           | Commands                                                                                                                                                                                                                                                                                                                                                                         | Reference                            |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `managed-agent` | `apply`, `destroy`, `init`, `plan`, `playground`, `session create`, `session delete`, `session events`, `session get`, `session list`, `session run`, `session send`, `skill-list`, `state import`, `state list`, `state rm`, `state show`, `validate`, `version disable`, `version enable`, `version list`, `version preview`, `version restore`, `version status`, `workbench` | [managed-agent.md](managed-agent.md) |
 
 ## Global flags
 

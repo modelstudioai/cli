@@ -6,7 +6,8 @@ metadata:
     bins: ["bl"]
 description: >-
   阿里云百炼托管 Agent 声明式基础设施入口：用户要创建agent、初始化 agents.yaml、校验或预览 agent 配置变更、
-  创建/更新/销毁百炼托管 Agent 或 Deployment、和托管 agent 对话、查会话事件历史、导入或取消跟踪远端资源时使用
+  创建/更新/销毁百炼托管 Agent 或 Deployment、在 Workbench 编辑和调试已有声明、管理 agents.yaml 本地 Git 版本、
+  生成 CI 仓库、和托管 agent 对话、查会话事件历史、导入或取消跟踪远端资源时使用
   `bl managed-agent`。以 agents.yaml 为唯一事实源做 IaC：init 建脚手架、validate 离线校验、plan 预览 diff、
   apply / destroy 变更远端资源且必须带 `--yes`，务必先 plan 给用户看 diff 再让其确认。
   反触发：调用已上线的百炼应用/智能体走 bailian-app-call 或 `bl app`；宿主 agent 自身的记忆、技能、
@@ -20,11 +21,12 @@ description: >-
 
 ## Safety guardrail (the most important rule)
 
-`apply` / `destroy` **mutate remote resources** and only execute when `--yes` is passed:
+`apply` / `destroy` **mutate remote resources**. Interactive execution requires `--yes`; `apply --ci` is only for an already approved CI workflow:
 
 1. Always run `bl managed-agent plan` first and show the diff to the user.
 2. Only after explicit user confirmation, retry `apply` / `destroy` with `--yes`.
 3. Never add `--yes` on your own initiative before the user has confirmed.
+4. Never use `--ci` to bypass user confirmation in an interactive task. CI mode blocks deletes and remote drift, but still mutates remote resources.
 
 ## IaC lifecycle
 
@@ -35,6 +37,23 @@ description: >-
 4. Apply     bl managed-agent apply --yes   # only after user confirmation
 5. Destroy   bl managed-agent destroy --yes # only after user confirmation
 ```
+
+## Workbench, local versions, and CI
+
+| Intent                                      | Command                                        |
+| ------------------------------------------- | ---------------------------------------------- |
+| Launch project resource editing             | `bl managed-agent workbench`                   |
+| Launch one Agent Session Preview            | `bl managed-agent playground --agent <id>`     |
+| Create or upgrade a local Git/CI repository | `bl managed-agent init --git <directory>`      |
+| Enable/disable shared automatic versions    | `bl managed-agent version enable` / `disable`  |
+| Inspect local version state and history     | `bl managed-agent version status` / `list`     |
+| Preview or restore a historical YAML        | `bl managed-agent version preview` / `restore` |
+
+- Bailian CLI and Workbench use the same repository-local switch for the same Git worktree and `agents.yaml` path. The switch lives in private Git metadata and is not cloned or pushed.
+- When enabled, a fully successful Apply creates a local commit containing only `agents.yaml`. Failed, partial, cancelled, and `--refresh-only` Apply runs do not commit.
+- `version restore` writes the historical YAML to the working tree. It does not move `HEAD`, restore `agents.state.json`, create a commit, or Apply remote changes.
+- Workbench can edit local drafts while Apply is running, but saving/version mutations are blocked until Apply completes. External file edits are detected through revision checks.
+- `init --git` never creates a remote repository or pushes. The generated Aone CI uses `apply --ci`, which blocks deletes and remote drift; review destructive changes in a separately approved workflow.
 
 ## Deployment as IaC
 

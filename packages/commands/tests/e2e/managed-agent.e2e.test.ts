@@ -132,6 +132,27 @@ describe("e2e: managed-agent", () => {
     expect(stderr).toMatch(/--file|--provider|--yes/i);
   });
 
+  test("managed-agent version 暴露共享版本管理子命令", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "version",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/enable|disable|status|list|preview|restore/i);
+  });
+
+  test("managed-agent version preview 缺少 --commit 时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "version",
+      "preview",
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--commit|Missing required/i);
+  });
+
   test("managed-agent session delete 缺少 --session-id 时退出为用法错误 (2)", async () => {
     const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
@@ -216,6 +237,47 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
     const data = parseStdoutJson<{ would_create?: string; provider?: string }>(stdout);
     expect(data.would_create).toBe("agents.e2e-dry-run.yaml");
     expect(data.provider).toBe("bailian");
+  });
+
+  test("init --git --dry-run 仅输出仓库脚手架计划", async () => {
+    const targetDirectory = join(
+      process.cwd(),
+      `.managed-agent-git-dry-run-${process.pid}-${Date.now()}`,
+    );
+    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "init",
+      "--git",
+      targetDirectory,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      would_initialize_git_project?: string;
+      mode?: string;
+    }>(stdout);
+    expect(data.would_initialize_git_project).toBe(targetDirectory);
+    expect(data.mode).toBe("create");
+  });
+
+  test("workbench --dry-run 仅输出启动计划", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "workbench",
+      "--dry-run",
+      "--no-open",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      would_launch?: string;
+      open_browser?: boolean;
+    }>(stdout);
+    expect(data.would_launch).toBe("workbench");
+    expect(data.open_browser).toBe(false);
   });
 
   test("apply --dry-run 仅输出计划", async () => {

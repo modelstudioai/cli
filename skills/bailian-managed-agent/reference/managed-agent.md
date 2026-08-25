@@ -7,36 +7,44 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                           | Authentication | Description                                                   |
-| --------------------------------- | -------------- | ------------------------------------------------------------- |
-| `bl managed-agent apply`          | API Key        | Apply planned changes to create/update/delete agent resources |
-| `bl managed-agent destroy`        | API Key        | Destroy all managed agent resources tracked in state          |
-| `bl managed-agent init`           | No Auth        | Create a new agents.yaml template                             |
-| `bl managed-agent plan`           | API Key        | Show what changes would be applied to agent infrastructure    |
-| `bl managed-agent session create` | API Key        | Create a new session for an agent                             |
-| `bl managed-agent session delete` | API Key        | Delete a session                                              |
-| `bl managed-agent session events` | API Key        | List event history for a session                              |
-| `bl managed-agent session get`    | API Key        | Get details of a session                                      |
-| `bl managed-agent session list`   | API Key        | List sessions from the provider                               |
-| `bl managed-agent session run`    | API Key        | Create a session, send a message, and stream the response     |
-| `bl managed-agent session send`   | API Key        | Send a message to an existing session and stream the response |
-| `bl managed-agent skill-list`     | API Key        | List skills from the provider's skill catalog                 |
-| `bl managed-agent state import`   | API Key        | Import an existing remote resource into agents state          |
-| `bl managed-agent state list`     | No Auth        | List resources tracked in agents state                        |
-| `bl managed-agent state rm`       | No Auth        | Remove a resource from state without destroying it remotely   |
-| `bl managed-agent state show`     | No Auth        | Show details of a resource in agents state                    |
-| `bl managed-agent validate`       | No Auth        | Validate an agents.yaml configuration (offline)               |
+| Command                            | Authentication | Description                                                   |
+| ---------------------------------- | -------------- | ------------------------------------------------------------- |
+| `bl managed-agent apply`           | API Key        | Apply planned changes to create/update/delete agent resources |
+| `bl managed-agent destroy`         | API Key        | Destroy all managed agent resources tracked in state          |
+| `bl managed-agent init`            | No Auth        | Create an agents.yaml template or a local CI/Git project      |
+| `bl managed-agent plan`            | API Key        | Show what changes would be applied to agent infrastructure    |
+| `bl managed-agent playground`      | API Key        | Launch a Session Preview for an agents.yaml Agent             |
+| `bl managed-agent session create`  | API Key        | Create a new session for an agent                             |
+| `bl managed-agent session delete`  | API Key        | Delete a session                                              |
+| `bl managed-agent session events`  | API Key        | List event history for a session                              |
+| `bl managed-agent session get`     | API Key        | Get details of a session                                      |
+| `bl managed-agent session list`    | API Key        | List sessions from the provider                               |
+| `bl managed-agent session run`     | API Key        | Create a session, send a message, and stream the response     |
+| `bl managed-agent session send`    | API Key        | Send a message to an existing session and stream the response |
+| `bl managed-agent skill-list`      | API Key        | List skills from the provider's skill catalog                 |
+| `bl managed-agent state import`    | API Key        | Import an existing remote resource into agents state          |
+| `bl managed-agent state list`      | No Auth        | List resources tracked in agents state                        |
+| `bl managed-agent state rm`        | No Auth        | Remove a resource from state without destroying it remotely   |
+| `bl managed-agent state show`      | No Auth        | Show details of a resource in agents state                    |
+| `bl managed-agent validate`        | No Auth        | Validate an agents.yaml configuration (offline)               |
+| `bl managed-agent version disable` | No Auth        | Disable Apply-time Git versioning without removing history    |
+| `bl managed-agent version enable`  | No Auth        | Enable Apply-time Git versioning for agents.yaml              |
+| `bl managed-agent version list`    | No Auth        | List current-branch commits that changed agents.yaml          |
+| `bl managed-agent version preview` | No Auth        | Preview a historical agents.yaml version                      |
+| `bl managed-agent version restore` | No Auth        | Restore a historical agents.yaml version to the working tree  |
+| `bl managed-agent version status`  | No Auth        | Show local Git versioning status for agents.yaml              |
+| `bl managed-agent workbench`       | API Key        | Launch the agents.yaml project Workbench                      |
 
 ## Command details
 
 ### `bl managed-agent apply`
 
-| Field              | Value                                                                                    |
-| ------------------ | ---------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent apply`                                                                    |
-| **Description**    | Apply planned changes to create/update/delete agent resources                            |
-| **Authentication** | API Key                                                                                  |
-| **Usage**          | `bl managed-agent apply [--file <path>] [--provider <name>] [--yes] [--concurrency <n>]` |
+| Field              | Value                                                                                                                            |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent apply`                                                                                                            |
+| **Description**    | Apply planned changes to create/update/delete agent resources                                                                    |
+| **Authentication** | API Key                                                                                                                          |
+| **Usage**          | `bl managed-agent apply [--file <path>] [--provider <name>] [--yes \| --ci] [--no-refresh] [--refresh-only] [--concurrency <n>]` |
 
 #### Flags
 
@@ -45,7 +53,9 @@ Index: [index.md](index.md)
 | `--file <path>`     | string | no       | Config file path (default: agents.yaml)                              |
 | `--provider <name>` | string | no       | Target provider (default: all configured)                            |
 | `--yes`             | switch | no       | Confirm and apply without an interactive prompt (required to mutate) |
+| `--ci`              | switch | no       | Run non-interactively while blocking deletes and remote drift        |
 | `--no-refresh`      | switch | no       | Skip refreshing state from remote before planning                    |
+| `--refresh-only`    | switch | no       | Refresh state without mutating remote resources                      |
 | `--concurrency <n>` | number | no       | Max independent resources to apply in parallel (default 6, max 10)   |
 | `--api-key <key>`   | string | no       | API key                                                              |
 | `--base-url <url>`  | string | no       | API base URL                                                         |
@@ -64,6 +74,10 @@ bl managed-agent apply --yes
 
 ```bash
 bl managed-agent apply --provider bailian --yes
+```
+
+```bash
+bl managed-agent apply --ci
 ```
 
 ### `bl managed-agent destroy`
@@ -103,12 +117,12 @@ bl managed-agent destroy --yes --cascade
 
 ### `bl managed-agent init`
 
-| Field              | Value                                                                                       |
-| ------------------ | ------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent init`                                                                        |
-| **Description**    | Create a new agents.yaml template                                                           |
-| **Authentication** | No Auth                                                                                     |
-| **Usage**          | `bl managed-agent init [--provider <name>] [--agent-name <name>] [--file <path>] [--force]` |
+| Field              | Value                                                                                                           |
+| ------------------ | --------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent init`                                                                                            |
+| **Description**    | Create an agents.yaml template or a local CI/Git project                                                        |
+| **Authentication** | No Auth                                                                                                         |
+| **Usage**          | `bl managed-agent init [--provider <name>] [--agent-name <name>] [--file <path>] [--git <directory>] [--force]` |
 
 #### Flags
 
@@ -117,6 +131,7 @@ bl managed-agent destroy --yes --cascade
 | `--provider <bailian\|claude\|qoder\|ark\|all>` | string | no       | Provider: bailian, claude, qoder, ark, all (default: bailian) |
 | `--agent-name <name>`                           | string | no       | Name of the first agent (default: assistant)                  |
 | `--file <path>`                                 | string | no       | Output config path (default: agents.yaml)                     |
+| `--git <directory>`                             | string | no       | Create or add CI/Git scaffolding in this project directory    |
 | `--force`                                       | switch | no       | Overwrite an existing config file                             |
 
 #### Examples
@@ -130,7 +145,11 @@ bl managed-agent init --provider bailian --agent-name assistant
 ```
 
 ```bash
-bl managed-agent init --provider all
+bl managed-agent init --git ./my-agents
+```
+
+```bash
+bl managed-agent init --git .
 ```
 
 ### `bl managed-agent plan`
@@ -172,6 +191,47 @@ bl managed-agent plan --provider bailian
 
 ```bash
 bl managed-agent plan --no-refresh
+```
+
+### `bl managed-agent playground`
+
+| Field              | Value                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent playground`                                                            |
+| **Description**    | Launch a Session Preview for an agents.yaml Agent                                     |
+| **Authentication** | API Key                                                                               |
+| **Usage**          | `bl managed-agent playground [--file <path>] [--agent <id>] [--port <n>] [--no-open]` |
+
+#### Flags
+
+| Flag               | Type   | Required | Description                                                           |
+| ------------------ | ------ | -------- | --------------------------------------------------------------------- |
+| `--file <path>`    | string | no       | Config file path (default: agents.yaml)                               |
+| `--port <n>`       | number | no       | Local port (default: 4848)                                            |
+| `--no-open`        | switch | no       | Do not open a browser automatically                                   |
+| `--agent <id>`     | string | no       | Agent to preview (required when the project declares multiple Agents) |
+| `--api-key <key>`  | string | no       | API key                                                               |
+| `--base-url <url>` | string | no       | API base URL                                                          |
+
+#### Notes
+
+- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+- Workbench requires Node.js 22+ and starts the shared @openagentpack/playground package locally. It does not push Git commits or switch branches.
+
+#### Examples
+
+```bash
+bl managed-agent playground
+```
+
+```bash
+bl managed-agent playground --agent assistant
+```
+
+```bash
+bl managed-agent playground --file agents.yaml --no-open
 ```
 
 ### `bl managed-agent session create`
@@ -617,4 +677,199 @@ bl managed-agent validate
 
 ```bash
 bl managed-agent validate --file agents.yaml
+```
+
+### `bl managed-agent version disable`
+
+| Field              | Value                                                      |
+| ------------------ | ---------------------------------------------------------- |
+| **Name**           | `managed-agent version disable`                            |
+| **Description**    | Disable Apply-time Git versioning without removing history |
+| **Authentication** | No Auth                                                    |
+| **Usage**          | `bl managed-agent version disable [--file <path>]`         |
+
+#### Flags
+
+| Flag            | Type   | Required | Description                             |
+| --------------- | ------ | -------- | --------------------------------------- |
+| `--file <path>` | string | no       | Config file path (default: agents.yaml) |
+
+#### Examples
+
+```bash
+bl managed-agent version disable
+```
+
+```bash
+bl managed-agent version disable --file agents.yaml
+```
+
+### `bl managed-agent version enable`
+
+| Field              | Value                                             |
+| ------------------ | ------------------------------------------------- |
+| **Name**           | `managed-agent version enable`                    |
+| **Description**    | Enable Apply-time Git versioning for agents.yaml  |
+| **Authentication** | No Auth                                           |
+| **Usage**          | `bl managed-agent version enable [--file <path>]` |
+
+#### Flags
+
+| Flag            | Type   | Required | Description                             |
+| --------------- | ------ | -------- | --------------------------------------- |
+| `--file <path>` | string | no       | Config file path (default: agents.yaml) |
+
+#### Examples
+
+```bash
+bl managed-agent version enable
+```
+
+```bash
+bl managed-agent version enable --file agents.yaml
+```
+
+### `bl managed-agent version list`
+
+| Field              | Value                                                                             |
+| ------------------ | --------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent version list`                                                      |
+| **Description**    | List current-branch commits that changed agents.yaml                              |
+| **Authentication** | No Auth                                                                           |
+| **Usage**          | `bl managed-agent version list [--file <path>] [--limit <n>] [--cursor <cursor>]` |
+
+#### Flags
+
+| Flag                | Type   | Required | Description                                        |
+| ------------------- | ------ | -------- | -------------------------------------------------- |
+| `--file <path>`     | string | no       | Config file path (default: agents.yaml)            |
+| `--limit <n>`       | number | no       | Maximum versions to return (default: 50, max: 100) |
+| `--cursor <cursor>` | string | no       | Pagination cursor returned by the previous page    |
+
+#### Examples
+
+```bash
+bl managed-agent version list
+```
+
+```bash
+bl managed-agent version list --limit 20 --output json
+```
+
+### `bl managed-agent version preview`
+
+| Field              | Value                                                                  |
+| ------------------ | ---------------------------------------------------------------------- |
+| **Name**           | `managed-agent version preview`                                        |
+| **Description**    | Preview a historical agents.yaml version                               |
+| **Authentication** | No Auth                                                                |
+| **Usage**          | `bl managed-agent version preview --commit <full-sha> [--file <path>]` |
+
+#### Flags
+
+| Flag                  | Type   | Required | Description                             |
+| --------------------- | ------ | -------- | --------------------------------------- |
+| `--file <path>`       | string | no       | Config file path (default: agents.yaml) |
+| `--commit <full-sha>` | string | yes      | Full commit SHA from the current branch |
+
+#### Examples
+
+```bash
+bl managed-agent version preview --commit <full-sha>
+```
+
+```bash
+bl managed-agent version preview --commit <full-sha> --output json
+```
+
+### `bl managed-agent version restore`
+
+| Field              | Value                                                                          |
+| ------------------ | ------------------------------------------------------------------------------ |
+| **Name**           | `managed-agent version restore`                                                |
+| **Description**    | Restore a historical agents.yaml version to the working tree                   |
+| **Authentication** | No Auth                                                                        |
+| **Usage**          | `bl managed-agent version restore --commit <full-sha> [--file <path>] [--yes]` |
+
+#### Flags
+
+| Flag                  | Type   | Required | Description                                 |
+| --------------------- | ------ | -------- | ------------------------------------------- |
+| `--file <path>`       | string | no       | Config file path (default: agents.yaml)     |
+| `--commit <full-sha>` | string | yes      | Full commit SHA from the current branch     |
+| `--yes`               | switch | no       | Restore without an interactive confirmation |
+
+#### Examples
+
+```bash
+bl managed-agent version restore --commit <full-sha>
+```
+
+```bash
+bl managed-agent version restore --commit <full-sha> --yes --output json
+```
+
+### `bl managed-agent version status`
+
+| Field              | Value                                             |
+| ------------------ | ------------------------------------------------- |
+| **Name**           | `managed-agent version status`                    |
+| **Description**    | Show local Git versioning status for agents.yaml  |
+| **Authentication** | No Auth                                           |
+| **Usage**          | `bl managed-agent version status [--file <path>]` |
+
+#### Flags
+
+| Flag            | Type   | Required | Description                             |
+| --------------- | ------ | -------- | --------------------------------------- |
+| `--file <path>` | string | no       | Config file path (default: agents.yaml) |
+
+#### Examples
+
+```bash
+bl managed-agent version status
+```
+
+```bash
+bl managed-agent version status --file agents.yaml --output json
+```
+
+### `bl managed-agent workbench`
+
+| Field              | Value                                                                 |
+| ------------------ | --------------------------------------------------------------------- |
+| **Name**           | `managed-agent workbench`                                             |
+| **Description**    | Launch the agents.yaml project Workbench                              |
+| **Authentication** | API Key                                                               |
+| **Usage**          | `bl managed-agent workbench [--file <path>] [--port <n>] [--no-open]` |
+
+#### Flags
+
+| Flag               | Type   | Required | Description                             |
+| ------------------ | ------ | -------- | --------------------------------------- |
+| `--file <path>`    | string | no       | Config file path (default: agents.yaml) |
+| `--port <n>`       | number | no       | Local port (default: 4848)              |
+| `--no-open`        | switch | no       | Do not open a browser automatically     |
+| `--api-key <key>`  | string | no       | API key                                 |
+| `--base-url <url>` | string | no       | API base URL                            |
+
+#### Notes
+
+- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+- Workbench requires Node.js 22+ and starts the shared @openagentpack/playground package locally. It does not push Git commits or switch branches.
+
+#### Examples
+
+```bash
+bl managed-agent workbench
+```
+
+```bash
+bl managed-agent workbench --file agents.yaml --no-open
+```
+
+```bash
+bl managed-agent workbench --port 4949
 ```

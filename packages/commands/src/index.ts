@@ -136,6 +136,18 @@ export { default as managedAgentValidate } from "./commands/managed-agent/valida
 export { default as managedAgentPlan } from "./commands/managed-agent/plan.ts";
 export { default as managedAgentApply } from "./commands/managed-agent/apply.ts";
 export { default as managedAgentDestroy } from "./commands/managed-agent/destroy.ts";
+export {
+  managedAgentPlayground,
+  managedAgentWorkbench,
+} from "./commands/managed-agent/workbench.ts";
+export {
+  managedAgentVersionDisable,
+  managedAgentVersionEnable,
+  managedAgentVersionList,
+  managedAgentVersionPreview,
+  managedAgentVersionRestore,
+  managedAgentVersionStatus,
+} from "./commands/managed-agent/version.ts";
 export { default as managedAgentStateList } from "./commands/managed-agent/state-list.ts";
 export { default as managedAgentStateShow } from "./commands/managed-agent/state-show.ts";
 export { default as managedAgentStateRm } from "./commands/managed-agent/state-rm.ts";
