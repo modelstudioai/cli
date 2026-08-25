@@ -10,6 +10,7 @@ on:
         options:
           - bailian-cli
           - knowledge-studio-cli
+          - bailian-kb-dsh
       mode:
         description: "Publish mode"
         required: true
@@ -18,7 +19,7 @@ on:
           - channel
           - stable
       channel:
-        description: "Required when mode=channel. npm dist-tag only (lowercase, digits, dashes), e.g. mcp / plugin / sync-release. bailian-cli binary CDN always overwrites sync-release.json; knowledge-studio-cli is npm-only."
+        description: "Required when mode=channel. npm dist-tag only (lowercase, digits, dashes), e.g. mcp / plugin / sync-release. bailian-cli binary CDN always overwrites sync-release.json; knowledge-studio-cli and bailian-kb-dsh are npm-only."
         required: false
         type: string
 
@@ -28,7 +29,7 @@ concurrency:
 
 jobs:
   publish-stable:
-    if: inputs.mode == 'stable'
+    if: inputs.mode == 'stable' && inputs.package != 'bailian-kb-dsh'
     name: publish stable (${{ inputs.package }}) to npm + binary + tag
     runs-on: ubuntu-latest
     environment: production # Required Reviewers gate
@@ -83,7 +84,7 @@ jobs:
         run: node tools/release/publish-stable.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }}
 
   publish-channel:
-    if: inputs.mode == 'channel'
+    if: inputs.mode == 'channel' && inputs.package != 'bailian-kb-dsh'
     name: publish channel (${{ inputs.package }}) to npm + binary
     runs-on: ubuntu-latest
     permissions:
@@ -138,3 +139,49 @@ jobs:
           BAILIAN_RELEASE_PREFIX: ${{ secrets.BAILIAN_RELEASE_PREFIX }}
           BAILIAN_STATIC_PREFIX: ${{ secrets.BAILIAN_STATIC_PREFIX }}
         run: node tools/release/publish-channel.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }} --channel "${{ inputs.channel }}"
+
+  # bailian-kb-dsh is the dsh plugin (downstream host adapter): independent version,
+  # tsc + tsdown build, npm-only. It shares this workflow's entry UI and setup steps
+  # but NOT publish-stable.mjs / publish-channel.mjs — those broadcast one version
+  # across the locked bl package set and produce binary artifacts, neither of which
+  # applies here. See docs/agents/dsh-plugin.md.
+  publish-kb-dsh:
+    if: inputs.package == 'bailian-kb-dsh'
+    name: publish ${{ inputs.mode }} (bailian-kb-dsh) to npm
+    runs-on: ubuntu-latest
+    # stable goes through the Required Reviewers gate, same as the bl stable job;
+    # channel stays ungated so dist-tag drops need no approval.
+    environment: ${{ inputs.mode == 'stable' && 'production' || '' }}
+    permissions:
+      contents: write # push the bailian-kb-dsh-v<version> tag (stable only)
+      id-token: write # OIDC for npm Trusted Publishing + provenance
+    steps:
+      - name: Require channel input
+        if: ${{ inputs.mode == 'channel' && inputs.channel == '' }}
+        run: |
+          echo "::error::mode=channel requires the workflow input \"channel\" (npm dist-tag, e.g. mcp / plugin). Leave mode=stable if you do not need a dist-tag."
+          exit 1
+
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org/"
+
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          GITLEAKS_VERSION=8.21.2
+          curl -sSfL \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: publish-kb-dsh
+        run: node tools/release/publish-kb-dsh.mjs ${{ inputs.mode == 'channel' && format('--channel "{0}"', inputs.channel) || '' }}

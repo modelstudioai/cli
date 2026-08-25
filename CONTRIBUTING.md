@@ -16,11 +16,17 @@ Developer guide for `bailian-cli` — the official CLI for Aliyun Model Studio (
 ```
 bailian-cli/
 ├── packages/
-│   ├── cli/              # `bailian-cli` — CLI entry, commands, UI
-│   └── core/             # `bailian-cli-core` — auth, HTTP, types
-├── docs/agents/          # Scenario-based maintenance guides
-├── tools/                # Release automation & reference generation
-├── AGENTS.md             # Contract for AI agents
+│   ├── core/           # `bailian-cli-core` — auth, config, HTTP client, errors, types
+│   ├── runtime/        # `bailian-cli-runtime` — CLI framework: parsing, help, middleware, output
+│   ├── commands/       # `bailian-cli-commands` — reusable command implementations
+│   ├── cli/            # `bailian-cli` — the full `bl` product entry
+│   ├── kscli/          # `knowledge-studio-cli` — `kscli` entry, reuses commands/
+│   ├── e2e/            # Shared e2e harness utilities (private)
+│   └── bailian-kb-dsh/ # `bailian-kb-dsh` — DeepSeek Harness plugin (independent version & release)
+├── skills/             # Agent skills installed by `bl skill init`
+├── docs/agents/        # Scenario-based maintenance guides
+├── tools/              # Release automation & reference generation
+├── AGENTS.md           # Contract for AI agents
 └── README.md
 ```
 
