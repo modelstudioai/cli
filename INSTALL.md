@@ -132,11 +132,11 @@ bl config set --key language --value en-US
 
 ## 6. 常见问题
 
-| 现象                     | 可能原因                     | 建议动作                                                                             |
-| ------------------------ | ---------------------------- | ------------------------------------------------------------------------------------ |
-| `bl: command not found`  | bin 不在 PATH                | 检查 `~/.local/bin` 或 `npm prefix -g`                                               |
-| curl 安装 404            | GitHub Release 资产未上传    | 改用 `npm install -g bailian-cli`                                                    |
-| Windows `bl update` 失败 | 旧布局 / 文件锁 / 网络       | 重跑 `irm .../install.ps1 \| iex` 迁移布局后重试                                     |
-| `plugin` 需要 npm        | 二进制安装无本机 npm         | 安装 Node，或改用 npm 版 CLI                                                         |
-| 安装报错 engines         | Node 版本过低（仅 npm 路径） | 升级到 ≥ 18.17.0                                                                     |
+| 现象                     | 可能原因                     | 建议动作                                                                                       |
+| ------------------------ | ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| `bl: command not found`  | bin 不在 PATH                | 检查 `~/.local/bin` 或 `npm prefix -g`                                                         |
+| curl 安装 404            | GitHub Release 资产未上传    | 改用 `npm install -g bailian-cli`                                                              |
+| Windows `bl update` 失败 | 旧布局 / 文件锁 / 网络       | 重跑 `irm .../install.ps1 \| iex` 迁移布局后重试                                               |
+| `plugin` 需要 npm        | 二进制安装无本机 npm         | 安装 Node，或改用 npm 版 CLI                                                                   |
+| 安装报错 engines         | Node 版本过低（仅 npm 路径） | 升级到 ≥ 18.17.0                                                                               |
 | `bl skill init` 失败     | 网络 / registry 不可达等     | 有 Node 且有 Git 时降级 `npx skills@1.5.18 add modelstudioai/cli --all -g`；否则重试或告知用户 |
