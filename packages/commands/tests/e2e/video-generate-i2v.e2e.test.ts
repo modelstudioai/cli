@@ -115,46 +115,26 @@ describe("e2e: video generate (i2v)", () => {
 
   test.each([
     // wan2.1~2.6 (legacy) use flat img_url; wan2.7+ / wan3.0 / happyhorse use media[].
+    // 用普通 dry-run（不绑 token-plan）：TP 不支持 wan3.0，绑 TP 会形成错误测试契约。
     ["wan2.5-i2v-preview", "img_url"],
     ["wan2.6-i2v", "img_url"],
     ["wan2.7-i2v", "media"],
     ["wan3.0-video", "media"],
     ["happyhorse-1.1-i2v", "media"],
   ])("video generate --dry-run %s 首帧走 %s 字段", async (model, field) => {
-    const configDir = makeE2eOutputDir(`video-i2v-input-shape-${model}`);
-    writeFileSync(
-      join(configDir, "config.json"),
-      JSON.stringify({
-        "token-plan": {
-          api_key: "sk-sp-e2e-placeholder",
-          base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
-        },
-      }),
-    );
-
-    const { stdout, stderr, exitCode } = await runCommandE2e(
-      VIDEO_ROUTES,
-      [
-        "video",
-        "generate",
-        "--config",
-        "token-plan",
-        "--dry-run",
-        "--model",
-        model,
-        "--image",
-        "https://example.com/placeholder.png",
-        "--prompt",
-        "干跑校验",
-        "--output",
-        "json",
-      ],
-      {
-        BAILIAN_CONFIG_DIR: configDir,
-        DASHSCOPE_API_KEY: "",
-        DASHSCOPE_BASE_URL: "",
-      },
-    );
+    const { stdout, stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
+      "video",
+      "generate",
+      "--dry-run",
+      "--model",
+      model,
+      "--image",
+      "https://example.com/placeholder.png",
+      "--prompt",
+      "干跑校验",
+      "--output",
+      "json",
+    ]);
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
       request?: {
@@ -171,40 +151,19 @@ describe("e2e: video generate (i2v)", () => {
   });
 
   test("video generate --dry-run --file 走 media file 字段", async () => {
-    const configDir = makeE2eOutputDir("video-generate-file-url");
-    writeFileSync(
-      join(configDir, "config.json"),
-      JSON.stringify({
-        "token-plan": {
-          api_key: "sk-sp-e2e-placeholder",
-          base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
-        },
-      }),
-    );
-
-    const { stdout, stderr, exitCode } = await runCommandE2e(
-      VIDEO_ROUTES,
-      [
-        "video",
-        "generate",
-        "--config",
-        "token-plan",
-        "--dry-run",
-        "--model",
-        "wan3.0-video",
-        "--file",
-        "https://example.com/reference.pdf",
-        "--prompt",
-        "文件生视频干跑",
-        "--output",
-        "json",
-      ],
-      {
-        BAILIAN_CONFIG_DIR: configDir,
-        DASHSCOPE_API_KEY: "",
-        DASHSCOPE_BASE_URL: "",
-      },
-    );
+    const { stdout, stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
+      "video",
+      "generate",
+      "--dry-run",
+      "--model",
+      "wan3.0-video",
+      "--file",
+      "https://example.com/reference.pdf",
+      "--prompt",
+      "文件生视频干跑",
+      "--output",
+      "json",
+    ]);
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
       request?: {
@@ -224,122 +183,59 @@ describe("e2e: video generate (i2v)", () => {
   });
 
   test("--file 与 --image 互斥时报用法错误并退出 (2)", async () => {
-    const configDir = makeE2eOutputDir("video-generate-file-mutex-image");
-    writeFileSync(
-      join(configDir, "config.json"),
-      JSON.stringify({
-        "token-plan": {
-          api_key: "sk-sp-e2e-placeholder",
-          base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
-        },
-      }),
-    );
-
-    const { stderr, exitCode } = await runCommandE2e(
-      VIDEO_ROUTES,
-      [
-        "video",
-        "generate",
-        "--config",
-        "token-plan",
-        "--dry-run",
-        "--model",
-        "wan3.0-video",
-        "--file",
-        "https://example.com/reference.pdf",
-        "--image",
-        "https://example.com/placeholder.png",
-        "--prompt",
-        "互斥校验",
-        "--output",
-        "json",
-      ],
-      {
-        BAILIAN_CONFIG_DIR: configDir,
-        DASHSCOPE_API_KEY: "",
-        DASHSCOPE_BASE_URL: "",
-      },
-    );
+    const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
+      "video",
+      "generate",
+      "--dry-run",
+      "--model",
+      "wan3.0-video",
+      "--file",
+      "https://example.com/reference.pdf",
+      "--image",
+      "https://example.com/placeholder.png",
+      "--prompt",
+      "互斥校验",
+      "--output",
+      "json",
+    ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--file.*mutually exclusive|--file.*互斥|mutually exclusive/i);
   });
 
   test("--file 与 --last-frame 互斥时报用法错误并退出 (2)", async () => {
-    const configDir = makeE2eOutputDir("video-generate-file-mutex-lastframe");
-    writeFileSync(
-      join(configDir, "config.json"),
-      JSON.stringify({
-        "token-plan": {
-          api_key: "sk-sp-e2e-placeholder",
-          base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
-        },
-      }),
-    );
-
-    const { stderr, exitCode } = await runCommandE2e(
-      VIDEO_ROUTES,
-      [
-        "video",
-        "generate",
-        "--config",
-        "token-plan",
-        "--dry-run",
-        "--model",
-        "wan3.0-video",
-        "--file",
-        "https://example.com/reference.pdf",
-        "--last-frame",
-        "https://example.com/last-frame.png",
-        "--prompt",
-        "互斥校验",
-        "--output",
-        "json",
-      ],
-      {
-        BAILIAN_CONFIG_DIR: configDir,
-        DASHSCOPE_API_KEY: "",
-        DASHSCOPE_BASE_URL: "",
-      },
-    );
+    const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
+      "video",
+      "generate",
+      "--dry-run",
+      "--model",
+      "wan3.0-video",
+      "--file",
+      "https://example.com/reference.pdf",
+      "--last-frame",
+      "https://example.com/last-frame.png",
+      "--prompt",
+      "互斥校验",
+      "--output",
+      "json",
+    ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--file.*mutually exclusive|--file.*互斥|mutually exclusive/i);
   });
 
   test("非 wan3.0 模型使用 --file 时报用法错误并退出 (2)", async () => {
-    const configDir = makeE2eOutputDir("video-generate-file-model-restricted");
-    writeFileSync(
-      join(configDir, "config.json"),
-      JSON.stringify({
-        "token-plan": {
-          api_key: "sk-sp-e2e-placeholder",
-          base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
-        },
-      }),
-    );
-
-    const { stderr, exitCode } = await runCommandE2e(
-      VIDEO_ROUTES,
-      [
-        "video",
-        "generate",
-        "--config",
-        "token-plan",
-        "--dry-run",
-        "--model",
-        "wan2.6-i2v",
-        "--file",
-        "https://example.com/reference.pdf",
-        "--prompt",
-        "模型限制校验",
-        "--output",
-        "json",
-      ],
-      {
-        BAILIAN_CONFIG_DIR: configDir,
-        DASHSCOPE_API_KEY: "",
-        DASHSCOPE_BASE_URL: "",
-      },
-    );
+    const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
+      "video",
+      "generate",
+      "--dry-run",
+      "--model",
+      "wan2.6-i2v",
+      "--file",
+      "https://example.com/reference.pdf",
+      "--prompt",
+      "模型限制校验",
+      "--output",
+      "json",
+    ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(
       /--file.*only supported by wan3\.0-video|--file.*仅.*wan3\.0-video|only supported by wan3\.0-video/i,
