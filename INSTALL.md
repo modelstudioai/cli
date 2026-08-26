@@ -23,13 +23,13 @@ npm install -g bailian-cli
 bl skill init
 ```
 
-**降级：** 若 `bl skill init` 失败，且本机有可用 Node / npm（`node -v` / `npm -v` 成功），再回退到：
+**降级：** 若 `bl skill init` 失败，先确认本机同时满足两个条件：`node -v` / `npm -v` 成功，**且** `git --version` 成功。两个条件都成立时，再回退到：
 
 ```bash
-npx skills add modelstudioai/cli --all -g
+npx skills@1.5.18 add modelstudioai/cli --all -g
 ```
 
-无 Node 时不要走 `npx` 降级；向用户说明 skill 安装失败，并保留 `bl skill init` 的错误信息。
+> 必须使用 `skills@1.5.18`：这是最后兼容 Node ≥18 的版本（与 Bailian CLI 的 Node ≥18.17.0 一致）；
 
 安装成功后，按第 5 节向用户说明语言切换与能力 tip（若也装了 skills，一并简要说明）。
 
@@ -139,4 +139,4 @@ bl config set --key language --value en-US
 | Windows `bl update` 失败 | 旧布局 / 文件锁 / 网络       | 重跑 `irm .../install.ps1 \| iex` 迁移布局后重试                                     |
 | `plugin` 需要 npm        | 二进制安装无本机 npm         | 安装 Node，或改用 npm 版 CLI                                                         |
 | 安装报错 engines         | Node 版本过低（仅 npm 路径） | 升级到 ≥ 18.17.0                                                                     |
-| `bl skill init` 失败     | 网络 / registry 不可达等     | 有 Node 时降级 `npx skills add modelstudioai/cli --all -g`；无 Node 则重试或告知用户 |
+| `bl skill init` 失败     | 网络 / registry 不可达等     | 有 Node 且有 Git 时降级 `npx skills@1.5.18 add modelstudioai/cli --all -g`；否则重试或告知用户 |
