@@ -15,7 +15,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl image generate`    | API Key        | Generate images (Qwen-Image / wan2.x)                                                                 | [image.md](image.md)   |
 | `bl omni`              | API Key        | Multimodal chat with text + audio output (Qwen-Omni)                                                  | [omni.md](omni.md)     |
 | `bl speech recognize`  | API Key        | Recognize speech from audio files (FunAudio-ASR / Qwen-ASR Flash)                                     | [speech.md](speech.md) |
-| `bl speech synthesize` | API Key        | Synthesize speech from text (CosyVoice TTS)                                                           | [speech.md](speech.md) |
+| `bl speech synthesize` | API Key        | Synthesize speech from text                                                                           | [speech.md](speech.md) |
 | `bl video download`    | API Key        | Download a completed video by task ID                                                                 | [video.md](video.md)   |
 | `bl video edit`        | API Key        | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                | [video.md](video.md)   |
 | `bl video generate`    | API Key        | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)            | [video.md](video.md)   |

@@ -24,6 +24,9 @@ interface ApiKeyLoginProfile {
   defaultImageToVideoModel?: string;
   defaultReferenceToVideoModel?: string;
   defaultImageModel?: string;
+  defaultSpeechModel?: string;
+  defaultSpeechRecognitionModel?: string;
+  apiKeyCapabilities?: readonly string[];
   persistPatch?: AuthPersistPatch;
 }
 
@@ -95,5 +98,8 @@ export async function validateAndPersistApiKey(
     default_image_to_video_model: profile.defaultImageToVideoModel,
     default_reference_to_video_model: profile.defaultReferenceToVideoModel,
     default_image_model: profile.defaultImageModel,
+    default_speech_model: profile.defaultSpeechModel,
+    default_speech_recognition_model: profile.defaultSpeechRecognitionModel,
+    api_key_capabilities: profile.apiKeyCapabilities ? [...profile.apiKeyCapabilities] : undefined,
   });
 }

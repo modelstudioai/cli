@@ -24,7 +24,9 @@ const credential = {
   auth: "apiKey",
   async run(ctx) {
     const apiKey = ctx.credentials.apiKey();
-    process.stdout.write(`credential-source:${apiKey.source}\n`);
+    process.stdout.write(
+      `credential-source:${apiKey.source} credential-base-url:${apiKey.baseUrl}\n`,
+    );
   },
 };
 

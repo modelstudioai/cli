@@ -41,7 +41,10 @@ export interface ConfigFile {
   default_reference_to_video_model?: string;
   default_image_model?: string;
   default_speech_model?: string;
+  default_speech_recognition_model?: string;
   default_omni_model?: string;
+  /** Leaf API-key capabilities this named Profile endpoint can serve. */
+  api_key_capabilities?: string[];
   workspace_id?: string;
   console_site?: "domestic" | "international";
   console_region?: string;
@@ -66,7 +69,9 @@ export const CONFIG_FILE_KEYS = [
   "default_reference_to_video_model",
   "default_image_model",
   "default_speech_model",
+  "default_speech_recognition_model",
   "default_omni_model",
+  "api_key_capabilities",
   "workspace_id",
   "console_site",
   "console_region",
@@ -76,6 +81,29 @@ export const CONFIG_FILE_KEYS = [
 
 const VALID_OUTPUTS = new Set<string>(["text", "json"]);
 const VALID_CONSOLE_SITES = new Set<string>(["domestic", "international"]);
+export const API_KEY_CAPABILITY_PATTERN = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
+
+export function isApiKeyCapability(value: string): boolean {
+  return API_KEY_CAPABILITY_PATTERN.test(value);
+}
+
+/**
+ * Normalize a persisted capability allowlist. Absence keeps the policy disabled;
+ * a present malformed value fails closed to an empty allowlist.
+ */
+export function normalizeApiKeyCapabilities(value: unknown): string[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) return [];
+
+  const normalized: string[] = [];
+  for (const item of value) {
+    if (typeof item !== "string") return [];
+    const capability = item.trim();
+    if (!isApiKeyCapability(capability)) return [];
+    if (!normalized.includes(capability)) normalized.push(capability);
+  }
+  return normalized;
+}
 
 /**
  * A syntactically valid absolute http(s) URL. Used to validate `base_url`
@@ -146,8 +174,15 @@ export function parseConfigFile(raw: unknown): ConfigFile {
     out.default_image_model = obj.default_image_model;
   if (typeof obj.default_speech_model === "string" && obj.default_speech_model.length > 0)
     out.default_speech_model = obj.default_speech_model;
+  if (
+    typeof obj.default_speech_recognition_model === "string" &&
+    obj.default_speech_recognition_model.length > 0
+  )
+    out.default_speech_recognition_model = obj.default_speech_recognition_model;
   if (typeof obj.default_omni_model === "string" && obj.default_omni_model.length > 0)
     out.default_omni_model = obj.default_omni_model;
+  const apiKeyCapabilities = normalizeApiKeyCapabilities(obj.api_key_capabilities);
+  if (apiKeyCapabilities !== undefined) out.api_key_capabilities = apiKeyCapabilities;
   if (typeof obj.workspace_id === "string" && obj.workspace_id.length > 0)
     out.workspace_id = obj.workspace_id;
   if (typeof obj.console_site === "string" && VALID_CONSOLE_SITES.has(obj.console_site))
@@ -195,6 +230,7 @@ export interface Settings {
   defaultReferenceToVideoModel?: string;
   defaultImageModel?: string;
   defaultSpeechModel?: string;
+  defaultSpeechRecognitionModel?: string;
   defaultOmniModel?: string;
   workspaceId?: string;
   consoleRegion?: string;

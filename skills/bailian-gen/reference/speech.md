@@ -10,7 +10,7 @@ Index: [index.md](index.md)
 | Command                | Authentication | Description                                                       |
 | ---------------------- | -------------- | ----------------------------------------------------------------- |
 | `bl speech recognize`  | API Key        | Recognize speech from audio files (FunAudio-ASR / Qwen-ASR Flash) |
-| `bl speech synthesize` | API Key        | Synthesize speech from text (CosyVoice TTS)                       |
+| `bl speech synthesize` | API Key        | Synthesize speech from text                                       |
 
 ## Command details
 
@@ -25,20 +25,20 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag                        | Type   | Required | Description                                                                                                                                 |
-| --------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--url <url>`               | array  | yes      | Audio file URL or local file path (repeatable, max 100)                                                                                     |
-| `--model <model>`           | string | no       | Model ID (default: fun-asr). Async: fun-asr / _-filetrans / paraformer-_; sync: qwen3-asr-flash* / fun-asr-flash* / qwen-audio-\*-asr-flash |
-| `--language <lang>`         | string | no       | Language hint (e.g. zh, en, ja). Classic async/input-audio: language_hints; qwen3-filetrans: language; qwen3 sync: asr_options.language     |
-| `--diarization`             | switch | no       | Enable automatic speaker diarization                                                                                                        |
-| `--speaker-count <n>`       | number | no       | Expected number of speakers (requires --diarization)                                                                                        |
-| `--vocabulary-id <id>`      | string | no       | Hot-word vocabulary ID for improved accuracy                                                                                                |
-| `--channel-id <n>`          | number | no       | Audio channel ID (default: 0)                                                                                                               |
-| `--out <path>`              | string | no       | Save full transcription result to JSON file                                                                                                 |
-| `--async`                   | switch | no       | Return async task id without waiting                                                                                                        |
-| `--poll-interval <seconds>` | number | no       | Polling interval in seconds (default: 2)                                                                                                    |
-| `--api-key <key>`           | string | no       | API key                                                                                                                                     |
-| `--base-url <url>`          | string | no       | API base URL                                                                                                                                |
+| Flag                        | Type   | Required | Description                                                                                                                                                                         |
+| --------------------------- | ------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--url <url>`               | array  | yes      | Audio file URL or local file path (repeatable, max 100)                                                                                                                             |
+| `--model <model>`           | string | no       | Model ID (default: configured Profile ASR model, otherwise fun-asr). Async: fun-asr / _-filetrans / paraformer-_; sync: qwen3-asr-flash* / fun-asr-flash* / qwen-audio-\*-asr-flash |
+| `--language <lang>`         | string | no       | Language hint (e.g. zh, en, ja). Classic async/input-audio: language_hints; qwen3-filetrans: language; qwen3 sync: asr_options.language                                             |
+| `--diarization`             | switch | no       | Enable automatic speaker diarization                                                                                                                                                |
+| `--speaker-count <n>`       | number | no       | Expected number of speakers (requires --diarization)                                                                                                                                |
+| `--vocabulary-id <id>`      | string | no       | Hot-word vocabulary ID for improved accuracy                                                                                                                                        |
+| `--channel-id <n>`          | number | no       | Audio channel ID (default: 0)                                                                                                                                                       |
+| `--out <path>`              | string | no       | Save full transcription result to JSON file                                                                                                                                         |
+| `--async`                   | switch | no       | Return async task id without waiting                                                                                                                                                |
+| `--poll-interval <seconds>` | number | no       | Polling interval in seconds (default: 2)                                                                                                                                            |
+| `--api-key <key>`           | string | no       | API key                                                                                                                                                                             |
+| `--base-url <url>`          | string | no       | API base URL                                                                                                                                                                        |
 
 #### Examples
 
@@ -79,7 +79,7 @@ bl speech recognize --url https://example.com/audio.mp3 --model qwen-audio-3.0-a
 | Field              | Value                                        |
 | ------------------ | -------------------------------------------- |
 | **Name**           | `speech synthesize`                          |
-| **Description**    | Synthesize speech from text (CosyVoice TTS)  |
+| **Description**    | Synthesize speech from text                  |
 | **Authentication** | API Key                                      |
 | **Usage**          | `bl speech synthesize --text <text> [flags]` |
 
@@ -89,10 +89,10 @@ bl speech recognize --url https://example.com/audio.mp3 --model qwen-audio-3.0-a
 | -------------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `--text <text>`                  | string | no       | Text to synthesize into speech (or use --text-file)                                                                       |
 | `--text-file <path>`             | string | no       | Read text from a file instead of --text                                                                                   |
-| `--model <model>`                | string | no       | Model ID (default: cosyvoice-v3-flash). System voices available for cosyvoice-v3-flash                                    |
+| `--model <model>`                | string | no       | Model ID (default: configured Profile TTS model, otherwise cosyvoice-v3-flash). System voices vary by model               |
 | `--voice <voice>`                | string | no       | Voice ID. Use --list-voices to see built-in voices for cosyvoice-v3-flash; for v3.5-flash provide a clone/design voice ID |
 | `--list-voices`                  | switch | no       | List built-in system voices for the selected model and exit (console link shown in output)                                |
-| `--format <mp3\|pcm\|wav\|opus>` | string | no       | Audio format: mp3, pcm, wav, opus (default: mp3)                                                                          |
+| `--format <mp3\|pcm\|wav\|opus>` | string | no       | Audio format: mp3, pcm, wav, opus (default: mp3; streaming default: pcm)                                                  |
 | `--sample-rate <rate>`           | string | no       | Audio sample rate in Hz (e.g. 24000)                                                                                      |
 | `--volume <volume>`              | string | no       | Volume 0-100 (default: 50)                                                                                                |
 | `--rate <rate>`                  | string | no       | Speech rate 0.5-2.0 (default: 1.0)                                                                                        |

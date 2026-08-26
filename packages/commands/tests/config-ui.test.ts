@@ -199,6 +199,7 @@ test("GET /api/config 返回全部 profile、明文密钥与持久化激活项",
     // Console/telemetry fields are editable via the UI (full ConfigFile surface).
     expect(res.json.keys).toContain("console_site");
     expect(res.json.keys).toContain("telemetry");
+    expect(res.json.keys).toContain("default_speech_recognition_model");
     expect(res.json.enums.console_site).toEqual(["domestic", "international"]);
     expect(res.json.booleanKeys).toContain("telemetry");
     // Default field hints are surfaced as prefilled values in the UI.
@@ -212,9 +213,11 @@ test("GET /api/config 返回全部 profile、明文密钥与持久化激活项",
     expect(res.json.modelCatalog.default_video_model.map((m: { id: string }) => m.id)).toContain(
       "happyhorse-1.1-i2v",
     );
-    expect(res.json.modelCatalog.default_speech_model.map((m: { id: string }) => m.id)).toContain(
-      "fun-asr",
-    );
+    expect(
+      res.json.modelCatalog.default_speech_recognition_model.map(
+        (model: { id: string }) => model.id,
+      ),
+    ).toEqual(["fun-asr", "qwen-audio-3.0-asr-flash"]);
   });
 });
 
@@ -316,6 +319,33 @@ test("POST /api/profile 可编辑 console/telemetry 字段并按类型持久化"
     });
     expect(bad.status).toBe(400);
     expect(String(bad.json.error)).toMatch(/console_site/);
+  });
+});
+
+test("POST /api/profile 按浏览器字符串形态往返持久化 capability 白名单", async () => {
+  await withServer(async (port) => {
+    const save = await httpJson(port, "POST", `/api/profile?token=${TOKEN}`, {
+      body: {
+        name: "company-plan",
+        data: {
+          api_key_capabilities: "text.chat, image.generate, text.chat",
+        },
+      },
+    });
+    expect(save.status).toBe(200);
+    expect(readConfigFile("company-plan").api_key_capabilities).toEqual([
+      "text.chat",
+      "image.generate",
+    ]);
+
+    const closeAll = await httpJson(port, "POST", `/api/profile?token=${TOKEN}`, {
+      body: {
+        name: "company-plan",
+        data: { api_key_capabilities: "[]" },
+      },
+    });
+    expect(closeAll.status).toBe(200);
+    expect(readConfigFile("company-plan").api_key_capabilities).toEqual([]);
   });
 });
 

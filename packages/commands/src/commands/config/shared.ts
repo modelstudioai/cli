@@ -1,6 +1,7 @@
 import {
   BailianError,
   ExitCode,
+  isApiKeyCapability,
   normalizeModelBaseUrl,
   SUPPORTED_LANGUAGES,
 } from "bailian-cli-core";
@@ -23,7 +24,9 @@ export const VALID_KEYS = [
   "default_reference_to_video_model",
   "default_image_model",
   "default_speech_model",
+  "default_speech_recognition_model",
   "default_omni_model",
+  "api_key_capabilities",
   "workspace_id",
 ] as const;
 
@@ -63,7 +66,8 @@ export const UI_BOOLEAN_KEYS = new Set<string>(["telemetry"]);
 
 // Default model each `default_*_model` key falls back to when left unset. These
 // mirror the inline `|| "<model>"` fallbacks in the generation commands
-// (text/chat, image/generate, video/generate, speech/synthesize, omni/chat) and
+// (text/chat, image/generate, video/generate, speech/synthesize,
+// speech/recognize, omni/chat) and
 // are surfaced as input placeholders so users can see the effective default
 // without persisting a value that would pin the model.
 export const UI_MODEL_DEFAULTS: Record<string, string> = {
@@ -71,6 +75,7 @@ export const UI_MODEL_DEFAULTS: Record<string, string> = {
   default_image_model: "qwen-image-3.0",
   default_video_model: "happyhorse-1.1-t2v",
   default_speech_model: "cosyvoice-v3-flash",
+  default_speech_recognition_model: "fun-asr",
   default_omni_model: "qwen3.5-omni-plus",
 };
 
@@ -105,7 +110,11 @@ export const UI_MODEL_CATALOG: Record<string, ModelOption[]> = {
   ],
   default_speech_model: [
     { id: "cosyvoice-v3-flash", role: "speech/synthesize (TTS) default" },
-    { id: "fun-asr", role: "speech/recognize (ASR)" },
+    { id: "qwen-audio-3.0-tts-plus", role: "Token Plan speech/synthesize (TTS)" },
+  ],
+  default_speech_recognition_model: [
+    { id: "fun-asr", role: "speech/recognize (ASR) default" },
+    { id: "qwen-audio-3.0-asr-flash", role: "Token Plan speech/recognize (ASR)" },
   ],
   default_omni_model: [
     { id: "qwen3.5-omni-plus", role: "omni/chat default" },
@@ -128,7 +137,9 @@ export const KEY_ALIASES: Record<string, string> = {
   "default-reference-to-video-model": "default_reference_to_video_model",
   "default-image-model": "default_image_model",
   "default-speech-model": "default_speech_model",
+  "default-speech-recognition-model": "default_speech_recognition_model",
   "default-omni-model": "default_omni_model",
+  "api-key-capabilities": "api_key_capabilities",
   "workspace-id": "workspace_id",
 };
 
@@ -141,7 +152,7 @@ export function resolveKey(key: string): string {
  * Validate a single config entry and coerce its value to the stored type.
  * Throws BailianError(USAGE) for unknown keys or invalid values.
  */
-export function validateAndCoerce(key: string, value: string): string | number {
+export function validateAndCoerce(key: string, value: string): string | number | string[] {
   const resolvedKey = resolveKey(key);
 
   if (!(VALID_KEYS as readonly string[]).includes(resolvedKey)) {
@@ -178,6 +189,39 @@ export function validateAndCoerce(key: string, value: string): string | number {
 
   if (resolvedKey === "base_url") return normalizeModelBaseUrl(value);
 
+  if (resolvedKey === "api_key_capabilities") {
+    let rawCapabilities: unknown;
+    if (value.trim().startsWith("[")) {
+      try {
+        rawCapabilities = JSON.parse(value) as unknown;
+      } catch {
+        throw new BailianError(
+          `Invalid API Key capability list "${value}". Use comma-separated values or a JSON array.`,
+          ExitCode.USAGE,
+        );
+      }
+    } else {
+      rawCapabilities = value.split(",").map((capability) => capability.trim());
+    }
+
+    if (!Array.isArray(rawCapabilities)) {
+      throw new BailianError("Invalid API Key capability list. Expected an array.", ExitCode.USAGE);
+    }
+    const capabilities: string[] = [];
+    for (const rawCapability of rawCapabilities) {
+      if (typeof rawCapability !== "string" || !isApiKeyCapability(rawCapability.trim())) {
+        throw new BailianError(
+          `Invalid API Key capability "${String(rawCapability)}".`,
+          ExitCode.USAGE,
+          "Use lowercase alphanumeric segments separated by '.' or '-'.",
+        );
+      }
+      const capability = rawCapability.trim();
+      if (!capabilities.includes(capability)) capabilities.push(capability);
+    }
+    return capabilities;
+  }
+
   return value;
 }
 
@@ -187,7 +231,10 @@ export function validateAndCoerce(key: string, value: string): string | number {
  * extras (console_*, telemetry) are validated here. Booleans are returned as
  * real booleans so they persist correctly in config.json.
  */
-export function validateAndCoerceUi(key: string, value: string): string | number | boolean {
+export function validateAndCoerceUi(
+  key: string,
+  value: string,
+): string | number | boolean | string[] {
   const resolvedKey = resolveKey(key);
 
   if ((VALID_KEYS as readonly string[]).includes(resolvedKey)) {

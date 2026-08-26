@@ -195,6 +195,46 @@ export interface ResolutionSources {
   configPath?: string;
 }
 
+export interface ApiKeyResolutionSourceSelection {
+  sources: ResolutionSources;
+  /** Named Profile whose file-backed API credential was replaced by default. */
+  fallbackFrom?: string;
+}
+
+/**
+ * Select the file-backed API-key source for a command capability. An explicit
+ * flag or environment API connection override bypasses Profile capability
+ * fallback entirely.
+ */
+export function selectApiKeyResolutionSources(
+  sources: ResolutionSources,
+  capability: string,
+  presetCapabilities?: readonly string[],
+): ApiKeyResolutionSourceSelection {
+  if (
+    sources.flags.apiKey ||
+    sources.flags.baseUrl ||
+    sources.env.DASHSCOPE_API_KEY?.trim() ||
+    sources.env.DASHSCOPE_BASE_URL
+  ) {
+    return { sources };
+  }
+  if (!sources.configName) return { sources };
+
+  const allowedCapabilities = sources.file.api_key_capabilities ?? presetCapabilities;
+  if (allowedCapabilities === undefined) return { sources };
+  if (allowedCapabilities.includes(capability)) return { sources };
+
+  return {
+    sources: {
+      ...sources,
+      file: readConfigFile(),
+      configName: undefined,
+    },
+    fallbackFrom: sources.configName,
+  };
+}
+
 export function buildSources(flags: Partial<SourceFlags>): ResolutionSources {
   const raw = readRawConfigObject();
   const configExplicit = flags.config !== undefined;
@@ -239,6 +279,7 @@ export function buildSettings(s: ResolutionSources): Settings {
     defaultReferenceToVideoModel: file.default_reference_to_video_model,
     defaultImageModel: file.default_image_model,
     defaultSpeechModel: file.default_speech_model,
+    defaultSpeechRecognitionModel: file.default_speech_recognition_model,
     defaultOmniModel: file.default_omni_model,
     workspaceId: flags.workspaceId || env.BAILIAN_WORKSPACE_ID || file.workspace_id || undefined,
     consoleRegion: flags.consoleRegion || file.console_region || undefined,
