@@ -209,7 +209,14 @@ export interface DashScopeVideoRequest {
     first_frame_url?: string;
     last_frame_url?: string;
     media?: Array<{
-      type: "image" | "video" | "first_frame" | "last_frame" | "driving_audio" | "first_clip";
+      type:
+        | "image"
+        | "video"
+        | "first_frame"
+        | "last_frame"
+        | "driving_audio"
+        | "first_clip"
+        | "file";
       url: string;
     }>;
   };
@@ -228,7 +235,7 @@ export interface DashScopeVideoRefRequest {
   input: {
     prompt: string;
     media: Array<{
-      type: "reference_image" | "reference_video";
+      type: "reference_image" | "reference_video" | "reference_audio";
       url: string;
       reference_voice?: string;
     }>;

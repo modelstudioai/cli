@@ -24,8 +24,9 @@ import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailia
 export default defineCommand({
   description: {
     "en-US":
-      "Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice",
-    "zh-CN": "参考生视频（happyhorse-1.1-r2v / wan2.6-r2v）：支持多主体、多镜头和语音",
+      "Reference-to-video generation (wan3.0-video / happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice",
+    "zh-CN":
+      "参考生视频（wan3.0-video / happyhorse-1.1-r2v / wan2.6-r2v）：支持多主体、多镜头和语音",
   },
   auth: "apiKey",
   usageArgs: "--prompt <text> --image <url>... [--ref-video <url>...] [flags]",
@@ -34,8 +35,8 @@ export default defineCommand({
       type: "string",
       valueHint: "<model>",
       description: {
-        "en-US": "Model ID (default: happyhorse-1.1-r2v)",
-        "zh-CN": "模型 ID（默认：happyhorse-1.1-r2v）",
+        "en-US": "Model ID (default: wan3.0-video)",
+        "zh-CN": "模型 ID（默认：wan3.0-video）",
       },
     },
     prompt: {
@@ -67,16 +68,20 @@ export default defineCommand({
       type: "array",
       valueHint: "<url>",
       description: {
-        "en-US": "Voice URL for corresponding image (pairs by position)",
-        "zh-CN": "对应图片的语音 URL（按位置配对）",
+        "en-US":
+          "Voice URL for corresponding image (pairs by position). On wan3.0-video emitted as reference_audio (refer to Audio 1, Audio 2 in prompt)",
+        "zh-CN":
+          "对应图片的语音 URL（按位置配对）。在 wan3.0-video 上作为 reference_audio 条目发送（prompt 中用「音频1」「音频2」引用）",
       },
     },
     videoVoice: {
       type: "array",
       valueHint: "<url>",
       description: {
-        "en-US": "Voice URL for corresponding ref-video (pairs by position)",
-        "zh-CN": "对应参考视频的语音 URL（按位置配对）",
+        "en-US":
+          "Voice URL for corresponding ref-video (pairs by position). On wan3.0-video emitted as reference_audio (refer to Audio 1, Audio 2 in prompt)",
+        "zh-CN":
+          "对应参考视频的语音 URL（按位置配对）。在 wan3.0-video 上作为 reference_audio 条目发送（prompt 中用「音频1」「音频2」引用）",
       },
     },
     resolution: {
@@ -182,11 +187,16 @@ export default defineCommand({
     const imageVoices = flags.imageVoice || [];
     const videoVoices = flags.videoVoice || [];
 
-    const model = flags.model || settings.defaultReferenceToVideoModel || "happyhorse-1.1-r2v";
+    const model = flags.model || settings.defaultReferenceToVideoModel || "wan3.0-video";
     const format = detectOutputFormat(settings.output);
+
+    // wan3.0-video emits voice as standalone reference_audio entries (referenced as Audio 1, Audio 2 in prompt);
+    // other models (wan2.7-r2v / happyhorse-1.1-r2v, etc.) keep the legacy reference_voice field attached to each asset.
+    const useReferenceAudio = /^wan3\./i.test(model);
 
     // --- Resolve file URLs (auto-upload local files) ---
     const media: DashScopeVideoRefRequest["input"]["media"] = [];
+    const audioEntries: Array<{ type: "reference_audio"; url: string }> = [];
 
     // Add reference images
     for (let imageIndex = 0; imageIndex < images.length; imageIndex++) {
@@ -199,7 +209,11 @@ export default defineCommand({
       // Pair voice by position
       if (imageVoices[imageIndex]) {
         const resolvedVoice = await ctx.client.uploadFile(imageVoices[imageIndex]!, model);
-        entry.reference_voice = resolvedVoice;
+        if (useReferenceAudio) {
+          audioEntries.push({ type: "reference_audio", url: resolvedVoice });
+        } else {
+          entry.reference_voice = resolvedVoice;
+        }
       }
 
       media.push(entry);
@@ -216,10 +230,21 @@ export default defineCommand({
       // Pair voice by position
       if (videoVoices[videoIndex]) {
         const resolvedVoice = await ctx.client.uploadFile(videoVoices[videoIndex]!, model);
-        entry.reference_voice = resolvedVoice;
+        if (useReferenceAudio) {
+          audioEntries.push({ type: "reference_audio", url: resolvedVoice });
+        } else {
+          entry.reference_voice = resolvedVoice;
+        }
       }
 
       media.push(entry);
+    }
+
+    // wan3.0: append reference voices as standalone media entries, ordered image-voice then video-voice (Audio 1, Audio 2, ...)
+    if (useReferenceAudio) {
+      for (const audioEntry of audioEntries) {
+        media.push(audioEntry);
+      }
     }
 
     // --- Build request body ---
