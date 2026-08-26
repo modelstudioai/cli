@@ -45,9 +45,9 @@ const WORKBENCH_NOTES = [
   ...CREDENTIALS_NOTE,
   {
     "en-US":
-      "Workbench requires Node.js 22+ and starts the shared @openagentpack/playground package locally. It does not push Git commits or switch branches.",
+      "Workbench requires Node.js 22+ and starts the shared @openagentpack/playground package locally. Local versions use the shared .openagentpack/versions project store and do not require Git.",
     "zh-CN":
-      "Workbench 需要 Node.js 22+，并在本地启动共享的 @openagentpack/playground 包；不会推送 Git Commit 或切换分支。",
+      "Workbench 需要 Node.js 22+，并在本地启动共享的 @openagentpack/playground 包；本地版本使用共享的 .openagentpack/versions 项目版本存储，不依赖 Git。",
   },
 ];
 

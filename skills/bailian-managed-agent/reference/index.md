@@ -13,7 +13,7 @@ Use this index for the skill-scoped quick index and global flags.
 | ---------------------------------- | -------------- | ------------------------------------------------------------- | ------------------------------------ |
 | `bl managed-agent apply`           | API Key        | Apply planned changes to create/update/delete agent resources | [managed-agent.md](managed-agent.md) |
 | `bl managed-agent destroy`         | API Key        | Destroy all managed agent resources tracked in state          | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent init`            | No Auth        | Create an agents.yaml template or a local CI/Git project      | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent init`            | No Auth        | Create an agents.yaml template                                | [managed-agent.md](managed-agent.md) |
 | `bl managed-agent plan`            | API Key        | Show what changes would be applied to agent infrastructure    | [managed-agent.md](managed-agent.md) |
 | `bl managed-agent playground`      | API Key        | Launch a Session Preview for an agents.yaml Agent             | [managed-agent.md](managed-agent.md) |
 | `bl managed-agent session create`  | API Key        | Create a new session for an agent                             | [managed-agent.md](managed-agent.md) |
@@ -29,12 +29,12 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl managed-agent state rm`        | No Auth        | Remove a resource from state without destroying it remotely   | [managed-agent.md](managed-agent.md) |
 | `bl managed-agent state show`      | No Auth        | Show details of a resource in agents state                    | [managed-agent.md](managed-agent.md) |
 | `bl managed-agent validate`        | No Auth        | Validate an agents.yaml configuration (offline)               | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent version disable` | No Auth        | Disable Apply-time Git versioning without removing history    | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent version enable`  | No Auth        | Enable Apply-time Git versioning for agents.yaml              | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent version list`    | No Auth        | List current-branch commits that changed agents.yaml          | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent version disable` | No Auth        | Disable Apply-time local snapshots without removing history   | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent version enable`  | No Auth        | Enable Apply-time local snapshots for agents.yaml             | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent version list`    | No Auth        | List local snapshots of agents.yaml                           | [managed-agent.md](managed-agent.md) |
 | `bl managed-agent version preview` | No Auth        | Preview a historical agents.yaml version                      | [managed-agent.md](managed-agent.md) |
 | `bl managed-agent version restore` | No Auth        | Restore a historical agents.yaml version to the working tree  | [managed-agent.md](managed-agent.md) |
-| `bl managed-agent version status`  | No Auth        | Show local Git versioning status for agents.yaml              | [managed-agent.md](managed-agent.md) |
+| `bl managed-agent version status`  | No Auth        | Show local snapshot versioning status for agents.yaml         | [managed-agent.md](managed-agent.md) |
 | `bl managed-agent workbench`       | API Key        | Launch the agents.yaml project Workbench                      | [managed-agent.md](managed-agent.md) |
 
 ## By group

@@ -6,12 +6,7 @@ import {
   type FlagsDef,
 } from "bailian-cli-core";
 import { emitBare, emitResult } from "bailian-cli-runtime";
-import {
-  executePlannedProject,
-  planProjectContext,
-  type PlannedAction,
-  UserError,
-} from "@openagentpack/sdk";
+import { executePlannedProject, planProjectContext } from "@openagentpack/sdk";
 import { formatResourceLabel } from "./_engine/address-utils.ts";
 import {
   assertProviderConfigured,
@@ -22,11 +17,12 @@ import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 import { renderAgentFeedback } from "./_engine/feedback.ts";
 import {
-  commitAutomaticVersion,
-  type PreparedAutomaticVersion,
-  prepareAutomaticVersion,
-  readVersionSource,
-} from "@openagentpack/local-git";
+  commitPreparedProjectVersion,
+  type PreparedProjectVersion,
+  prepareProjectVersion,
+  readProjectVersionSource,
+  releasePreparedProjectVersion,
+} from "@openagentpack/project-versions";
 
 const APPLY_FLAGS = {
   file: {
@@ -50,13 +46,6 @@ const APPLY_FLAGS = {
     description: {
       "en-US": "Confirm and apply without an interactive prompt (required to mutate)",
       "zh-CN": "无需交互提示直接确认并应用（执行变更时必填）",
-    },
-  },
-  ci: {
-    type: "switch",
-    description: {
-      "en-US": "Run non-interactively while blocking deletes and remote drift",
-      "zh-CN": "以非交互模式运行，并阻止删除和远端漂移覆盖",
     },
   },
   noRefresh: {
@@ -90,17 +79,10 @@ export default defineCommand({
   },
   auth: "apiKey",
   usageArgs:
-    "[--file <path>] [--provider <name>] [--yes | --ci] [--no-refresh] [--refresh-only] [--concurrency <n>]",
+    "[--file <path>] [--provider <name>] [--yes] [--no-refresh] [--refresh-only] [--concurrency <n>]",
   flags: APPLY_FLAGS,
-  exampleArgs: ["--yes", "--provider bailian --yes", "--ci"],
+  exampleArgs: ["--yes", "--provider bailian --yes"],
   notes: CREDENTIALS_NOTE,
-  validate(flags) {
-    if (flags.ci && flags.yes) return "--ci cannot be combined with --yes.";
-    if (flags.ci && flags.noRefresh) {
-      return "--ci requires remote state refresh and cannot be combined with --no-refresh.";
-    }
-    return undefined;
-  },
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
@@ -113,7 +95,6 @@ export default defineCommand({
             provider: flags.provider ?? "all",
             refresh: !flags.noRefresh,
             concurrency: flags.concurrency,
-            ci: flags.ci,
             refresh_only: flags.refreshOnly,
           },
           config_file: file,
@@ -124,7 +105,7 @@ export default defineCommand({
       return;
     }
 
-    const versionSource = await readVersionSource(file);
+    const versionSource = await readProjectVersionSource(file);
 
     const { planned, runtime } = await withAgentErrors(() =>
       withStdoutProtected(async () => {
@@ -157,7 +138,7 @@ export default defineCommand({
     const actionable = plan.actions.filter((action) => action.action !== "no-op");
     if (actionable.length === 0) {
       if (!flags.refreshOnly) {
-        const preparedVersion = await prepareAutomaticVersion(
+        const preparedVersion = await prepareProjectVersion(
           runtime.configPath,
           versionSource.source,
         );
@@ -172,8 +153,6 @@ export default defineCommand({
     const creates = actionable.filter((action) => action.action === "create").length;
     const updates = actionable.filter((action) => action.action === "update").length;
     const deletes = planned.destructiveActions;
-    if (flags.ci) assertCiApplyPolicy(actionable);
-
     for (const action of actionable) {
       const icon = action.action === "create" ? "+" : action.action === "update" ? "~" : "-";
       emitProgress(`  ${icon} ${formatResourceLabel(action.address)}`);
@@ -197,7 +176,7 @@ export default defineCommand({
       return;
     }
 
-    if (!flags.yes && !flags.ci) {
+    if (!flags.yes) {
       throw new BailianError(
         `Refusing to apply ${actionable.length} change(s) (${creates} create, ${updates} update, ${deletes.length} destroy) without confirmation.`,
         ExitCode.USAGE,
@@ -205,62 +184,50 @@ export default defineCommand({
       );
     }
 
-    const preparedVersion = await prepareAutomaticVersion(runtime.configPath, versionSource.source);
-
-    const result = await withAgentErrors(() =>
-      withStdoutProtected(() =>
-        executePlannedProject(planned, {
-          onFeedback: renderAgentFeedback,
-          policy: "force",
-          concurrency: flags.concurrency,
-        }),
-      ),
-    );
-
-    const succeeded = result.results.filter((entry) => entry.status === "success").length;
-    const failed = result.results.filter((entry) => entry.status === "failed").length;
-    const skipped = result.results.filter((entry) => entry.status === "skipped").length;
-
-    if (format === "json") {
-      emitResult({ succeeded, failed, skipped, results: result.results }, format);
-    } else {
-      emitBare(`\nApply finished: ${succeeded} succeeded, ${failed} failed, ${skipped} skipped.`);
-    }
-
-    if (failed > 0 || skipped > 0) {
-      throw new BailianError(
-        failed > 0 ? "Apply failed." : "Apply incomplete: one or more actions were skipped.",
-        ExitCode.GENERAL,
+    const preparedVersion = await prepareProjectVersion(runtime.configPath, versionSource.source);
+    let versionCommitted = false;
+    try {
+      const result = await withAgentErrors(() =>
+        withStdoutProtected(() =>
+          executePlannedProject(planned, {
+            onFeedback: renderAgentFeedback,
+            policy: "force",
+            concurrency: flags.concurrency,
+          }),
+        ),
       );
+
+      const succeeded = result.results.filter((entry) => entry.status === "success").length;
+      const failed = result.results.filter((entry) => entry.status === "failed").length;
+      const skipped = result.results.filter((entry) => entry.status === "skipped").length;
+
+      if (format === "json") {
+        emitResult({ succeeded, failed, skipped, results: result.results }, format);
+      } else {
+        emitBare(`\nApply finished: ${succeeded} succeeded, ${failed} failed, ${skipped} skipped.`);
+      }
+
+      if (failed > 0 || skipped > 0) {
+        throw new BailianError(
+          failed > 0 ? "Apply failed." : "Apply incomplete: one or more actions were skipped.",
+          ExitCode.GENERAL,
+        );
+      }
+      await commitSuccessfulApplyVersion(preparedVersion, format);
+      versionCommitted = true;
+    } finally {
+      if (!versionCommitted) await releasePreparedProjectVersion(preparedVersion);
     }
-    await commitSuccessfulApplyVersion(preparedVersion, format);
   },
 });
 
-export function assertCiApplyPolicy(actions: PlannedAction[]): void {
-  const deletes = actions.filter((action) => action.action === "delete");
-  if (deletes.length > 0) {
-    throw new UserError(
-      `CI policy blocked ${deletes.length} delete action(s). Review the plan and apply this destructive change through an explicitly approved workflow.`,
-    );
-  }
-  const drifted = actions.filter(
-    (action) => action.driftKind === "remote" || action.driftKind === "both",
-  );
-  if (drifted.length > 0) {
-    throw new UserError(
-      `CI policy blocked ${drifted.length} action(s) with remote drift. Review the remote changes before deciding whether YAML should overwrite them.`,
-    );
-  }
-}
-
 async function commitSuccessfulApplyVersion(
-  prepared: PreparedAutomaticVersion | null,
+  prepared: PreparedProjectVersion | null,
   format: "text" | "json",
 ): Promise<void> {
   if (!prepared) return;
-  const version = await commitAutomaticVersion(prepared);
+  const version = await commitPreparedProjectVersion(prepared);
   if (version && format !== "json") {
-    emitBare(`Created local version ${version.short_commit} (${version.message}).`);
+    emitBare(`Created local version ${version.short_version} (${version.message}).`);
   }
 }

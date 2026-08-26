@@ -8,16 +8,16 @@ import {
 import { confirmDangerousAction, emitBare, emitResult } from "bailian-cli-runtime";
 import chalk from "chalk";
 import {
-  disableLocalVersioning,
-  enableLocalVersioning,
-  getLocalVersionStatus,
-  type LocalProjectVersion,
-  type LocalVersionPreview,
-  type LocalVersionStatus,
-  listLocalVersions,
-  previewLocalVersion,
-  restoreLocalVersion,
-} from "@openagentpack/local-git";
+  disableProjectVersioning,
+  enableProjectVersioning,
+  getProjectVersionStatus,
+  type ProjectVersion,
+  type ProjectVersionPreview,
+  type ProjectVersionStatus,
+  listProjectVersions,
+  previewProjectVersion,
+  restoreProjectVersion,
+} from "@openagentpack/project-versions";
 
 const FILE_FLAG = {
   file: {
@@ -30,22 +30,22 @@ const FILE_FLAG = {
   },
 } satisfies FlagsDef;
 
-const COMMIT_FLAG = {
-  commit: {
+const VERSION_FLAG = {
+  versionId: {
     type: "string",
-    valueHint: "<full-sha>",
+    valueHint: "<full-version>",
     required: true,
     description: {
-      "en-US": "Full commit SHA from the current branch",
-      "zh-CN": "当前分支中的完整 Commit SHA",
+      "en-US": "Full local version ID",
+      "zh-CN": "完整的本地版本 ID",
     },
   },
 } satisfies FlagsDef;
 
 export const managedAgentVersionEnable = defineCommand({
   description: {
-    "en-US": "Enable Apply-time Git versioning for agents.yaml",
-    "zh-CN": "为 agents.yaml 启用 Apply 后自动 Git 版本管理",
+    "en-US": "Enable Apply-time local snapshots for agents.yaml",
+    "zh-CN": "为 agents.yaml 启用 Apply 后自动本地快照",
   },
   auth: "none",
   usageArgs: "[--file <path>]",
@@ -55,28 +55,30 @@ export const managedAgentVersionEnable = defineCommand({
     const file = ctx.flags.file ?? "agents.yaml";
     const format = detectOutputFormat(ctx.settings.output);
     if (ctx.settings.dryRun) {
-      emitResult({ would_enable: file, git: await getLocalVersionStatus(file) }, format);
+      emitResult({ would_enable: file, versioning: await getProjectVersionStatus(file) }, format);
       return;
     }
-    const result = await enableLocalVersioning(file, "Enable Bailian CLI versioning");
+    const result = await enableProjectVersioning(file, "Enable Bailian CLI versioning");
     if (format === "json") {
       emitResult(result, format);
       return;
     }
     if (result.version) {
-      emitBare(`Created baseline version ${result.version.short_commit} ${result.version.message}`);
+      emitBare(
+        `Created baseline version ${result.version.short_version} ${result.version.message}`,
+      );
     } else {
-      emitBare("Current agents.yaml is already versioned; no commit was created.");
+      emitBare("Current agents.yaml is already versioned; no snapshot was created.");
     }
     emitBare("Automatic versioning is enabled for this agents.yaml.");
-    renderStatus(result.git);
+    renderStatus(result.versioning);
   },
 });
 
 export const managedAgentVersionDisable = defineCommand({
   description: {
-    "en-US": "Disable Apply-time Git versioning without removing history",
-    "zh-CN": "关闭 Apply 后自动 Git 版本管理，但保留历史",
+    "en-US": "Disable Apply-time local snapshots without removing history",
+    "zh-CN": "关闭 Apply 后自动本地快照，但保留历史",
   },
   auth: "none",
   usageArgs: "[--file <path>]",
@@ -86,10 +88,10 @@ export const managedAgentVersionDisable = defineCommand({
     const file = ctx.flags.file ?? "agents.yaml";
     const format = detectOutputFormat(ctx.settings.output);
     if (ctx.settings.dryRun) {
-      emitResult({ would_disable: file, git: await getLocalVersionStatus(file) }, format);
+      emitResult({ would_disable: file, versioning: await getProjectVersionStatus(file) }, format);
       return;
     }
-    const status = await disableLocalVersioning(file);
+    const status = await disableProjectVersioning(file);
     if (format === "json") {
       emitResult(status, format);
       return;
@@ -101,15 +103,15 @@ export const managedAgentVersionDisable = defineCommand({
 
 export const managedAgentVersionStatus = defineCommand({
   description: {
-    "en-US": "Show local Git versioning status for agents.yaml",
-    "zh-CN": "显示 agents.yaml 的本地 Git 版本管理状态",
+    "en-US": "Show local snapshot versioning status for agents.yaml",
+    "zh-CN": "显示 agents.yaml 的本地快照版本管理状态",
   },
   auth: "none",
   usageArgs: "[--file <path>]",
   flags: FILE_FLAG,
   exampleArgs: ["", "--file agents.yaml --output json"],
   async run(ctx) {
-    const status = await getLocalVersionStatus(ctx.flags.file ?? "agents.yaml");
+    const status = await getProjectVersionStatus(ctx.flags.file ?? "agents.yaml");
     const format = detectOutputFormat(ctx.settings.output);
     if (format === "json") emitResult(status, format);
     else renderStatus(status);
@@ -138,15 +140,15 @@ const LIST_FLAGS = {
 
 export const managedAgentVersionList = defineCommand({
   description: {
-    "en-US": "List current-branch commits that changed agents.yaml",
-    "zh-CN": "列出当前分支中修改过 agents.yaml 的 Commit",
+    "en-US": "List local snapshots of agents.yaml",
+    "zh-CN": "列出 agents.yaml 的本地快照",
   },
   auth: "none",
   usageArgs: "[--file <path>] [--limit <n>] [--cursor <cursor>]",
   flags: LIST_FLAGS,
   exampleArgs: ["", "--limit 20 --output json"],
   async run(ctx) {
-    const page = await listLocalVersions(ctx.flags.file ?? "agents.yaml", {
+    const page = await listProjectVersions(ctx.flags.file ?? "agents.yaml", {
       limit: ctx.flags.limit,
       cursor: ctx.flags.cursor,
     });
@@ -156,7 +158,7 @@ export const managedAgentVersionList = defineCommand({
       return;
     }
     if (page.versions.length === 0) {
-      emitBare("No versions of agents.yaml exist on the current branch.");
+      emitBare("No local versions of agents.yaml exist.");
       return;
     }
     for (const version of page.versions) emitBare(formatVersion(version));
@@ -166,7 +168,7 @@ export const managedAgentVersionList = defineCommand({
 
 const PREVIEW_FLAGS = {
   ...FILE_FLAG,
-  ...COMMIT_FLAG,
+  ...VERSION_FLAG,
 } satisfies FlagsDef;
 
 export const managedAgentVersionPreview = defineCommand({
@@ -175,11 +177,14 @@ export const managedAgentVersionPreview = defineCommand({
     "zh-CN": "预览 agents.yaml 的历史版本",
   },
   auth: "none",
-  usageArgs: "--commit <full-sha> [--file <path>]",
+  usageArgs: "--version-id <full-version> [--file <path>]",
   flags: PREVIEW_FLAGS,
-  exampleArgs: ["--commit <full-sha>", "--commit <full-sha> --output json"],
+  exampleArgs: ["--version-id <full-version>", "--version-id <full-version> --output json"],
   async run(ctx) {
-    const preview = await previewLocalVersion(ctx.flags.file ?? "agents.yaml", ctx.flags.commit);
+    const preview = await previewProjectVersion(
+      ctx.flags.file ?? "agents.yaml",
+      ctx.flags.versionId,
+    );
     const format = detectOutputFormat(ctx.settings.output);
     if (format === "json") emitResult(preview, format);
     else renderPreview(preview);
@@ -203,12 +208,12 @@ export const managedAgentVersionRestore = defineCommand({
     "zh-CN": "将 agents.yaml 历史版本恢复到工作区",
   },
   auth: "none",
-  usageArgs: "--commit <full-sha> [--file <path>] [--yes]",
+  usageArgs: "--version-id <full-version> [--file <path>] [--yes]",
   flags: RESTORE_FLAGS,
-  exampleArgs: ["--commit <full-sha>", "--commit <full-sha> --yes --output json"],
+  exampleArgs: ["--version-id <full-version>", "--version-id <full-version> --yes --output json"],
   async run(ctx) {
     const file = ctx.flags.file ?? "agents.yaml";
-    const preview = await previewLocalVersion(file, ctx.flags.commit);
+    const preview = await previewProjectVersion(file, ctx.flags.versionId);
     const format = detectOutputFormat(ctx.settings.output);
     if (format !== "json") renderPreview(preview);
     if (!preview.can_restore) {
@@ -220,49 +225,47 @@ export const managedAgentVersionRestore = defineCommand({
       );
     }
     if (ctx.settings.dryRun) {
-      emitResult({ would_restore: ctx.flags.commit, preview }, format);
+      emitResult({ would_restore: ctx.flags.versionId, preview }, format);
       return;
     }
     await confirmDangerousAction(
-      "Restore this version to the agents.yaml working tree? HEAD and agents.state.json will not change.",
+      "Restore this version to the agents.yaml working tree? Version history and agents.state.json will not change.",
       ctx.flags.yes,
     );
-    const restored = await restoreLocalVersion(file, ctx.flags.commit, {
-      head: preview.base_head,
+    const restored = await restoreProjectVersion(file, ctx.flags.versionId, {
+      headVersion: preview.base_head_version,
       sourceRevision: preview.base_source_revision,
     });
     if (format === "json") {
-      emitResult({ restored: ctx.flags.commit, preview: restored }, format);
+      emitResult({ restored: ctx.flags.versionId, preview: restored }, format);
     } else {
       emitBare(
-        `Restored ${ctx.flags.commit.slice(0, 12)} to the working tree. HEAD was not changed.`,
+        `Restored ${ctx.flags.versionId.slice(0, 12)} to the working tree. Version history was not changed.`,
       );
     }
   },
 });
 
-function renderStatus(status: LocalVersionStatus): void {
-  emitBare(`Git available: ${status.git_available ? "yes" : "no"}`);
+function renderStatus(status: ProjectVersionStatus): void {
   emitBare(`Automatic versioning: ${status.enabled ? "enabled" : "disabled"}`);
-  emitBare(`Repository: ${status.repository_root ?? "none"}`);
-  emitBare(`Config path: ${status.config_path ?? "none"}`);
-  emitBare(`Branch: ${status.branch ?? "none"}`);
-  emitBare(`HEAD: ${status.head ?? "none"}`);
+  emitBare(`Version store: ${status.initialized ? status.store_root : "not initialized"}`);
+  emitBare(`Config path: ${status.config_path}`);
+  emitBare(`Current version: ${status.head_version ?? "none"}`);
   emitBare(
-    `agents.yaml: ${status.config_status}${status.config_versioned ? ", versioned" : ", unversioned"}`,
+    `agents.yaml: ${status.source_status}${status.source_versioned ? ", versioned" : ", unversioned"}`,
   );
-  const blockers = [...new Set([...status.commit_blockers, ...status.restore_blockers])];
+  const blockers = [...new Set([...status.write_blockers, ...status.restore_blockers])];
   for (const blocker of blockers) emitBare(chalk.yellow(`Blocker: ${blocker}`));
 }
 
-function formatVersion(version: LocalProjectVersion): string {
-  return `${chalk.yellow(version.short_commit)} ${version.authored_at} ${version.message} ${chalk.dim(`(${version.author_name})`)}`;
+function formatVersion(version: ProjectVersion): string {
+  return `${chalk.yellow(version.short_version)} ${version.created_at} ${version.message} ${chalk.dim(`(${version.created_by})`)}`;
 }
 
-function renderPreview(preview: LocalVersionPreview): void {
-  emitBare(chalk.bold(`Version ${preview.commit}`));
+function renderPreview(preview: ProjectVersionPreview): void {
+  emitBare(chalk.bold(`Version ${preview.version_id}`));
   emitBare(chalk.red("--- working tree"));
-  emitBare(chalk.green(`+++ ${preview.commit}`));
+  emitBare(chalk.green(`+++ ${preview.version_id}`));
   for (const line of buildLineDiff(preview.before_yaml, preview.after_yaml)) {
     if (line.kind === "deletion") emitBare(chalk.red(`-${line.text}`));
     else if (line.kind === "addition") emitBare(chalk.green(`+${line.text}`));

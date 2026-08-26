@@ -8,11 +8,11 @@ import {
   type FlagsDef,
 } from "bailian-cli-core";
 import { emitBare, emitResult } from "bailian-cli-runtime";
-import { createGitProject, inspectGitProjectTarget } from "./_engine/git-project.ts";
 
 const GITIGNORE_ADDITIONS = `
 # agents
 agents.state.json
+.openagentpack/versions/
 .env
 `;
 
@@ -101,14 +101,6 @@ const INIT_FLAGS = {
       "zh-CN": "输出配置路径（默认：agents.yaml）",
     },
   },
-  git: {
-    type: "string",
-    valueHint: "<directory>",
-    description: {
-      "en-US": "Create or add CI/Git scaffolding in this project directory",
-      "zh-CN": "在此项目目录中创建或补充 CI/Git 脚手架",
-    },
-  },
   force: {
     type: "switch",
     description: { "en-US": "Overwrite an existing config file", "zh-CN": "覆盖已有配置文件" },
@@ -117,64 +109,19 @@ const INIT_FLAGS = {
 
 export default defineCommand({
   description: {
-    "en-US": "Create an agents.yaml template or a local CI/Git project",
-    "zh-CN": "创建 agents.yaml 模板或本地 CI/Git 项目",
+    "en-US": "Create an agents.yaml template",
+    "zh-CN": "创建 agents.yaml 模板",
   },
   auth: "none",
-  usageArgs:
-    "[--provider <name>] [--agent-name <name>] [--file <path>] [--git <directory>] [--force]",
+  usageArgs: "[--provider <name>] [--agent-name <name>] [--file <path>] [--force]",
   flags: INIT_FLAGS,
-  exampleArgs: ["", "--provider bailian --agent-name assistant", "--git ./my-agents", "--git ."],
-  validate(flags) {
-    if (flags.git && flags.file) return "--git cannot be combined with --file.";
-    if (flags.git && flags.force) return "--git cannot be combined with --force.";
-    return undefined;
-  },
+  exampleArgs: ["", "--provider bailian --agent-name assistant"],
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
     const provider = flags.provider ?? "bailian";
     const agentName = flags.agentName ?? "assistant";
     const file = flags.file ?? "agents.yaml";
-
-    if (flags.git) {
-      const targetMode = await inspectGitProjectTarget(flags.git);
-      if (settings.dryRun) {
-        emitResult(
-          {
-            would_initialize_git_project: flags.git,
-            mode: targetMode === "new" ? "create" : "upgrade",
-            provider,
-            agent: agentName,
-          },
-          format,
-        );
-        return;
-      }
-      const template = buildTemplate({ provider, agentName });
-      const result = await createGitProject(flags.git, {
-        config: template,
-        cliVersion: ctx.identity.version,
-      });
-      if (format === "json") {
-        emitResult(result, format);
-      } else {
-        const action =
-          result.mode === "created" ? "Created CI/Git project" : "Added CI/Git scaffolding";
-        emitBare(`${action} at ${result.targetDirectory}`);
-        if (result.createdFiles.length > 0) {
-          emitBare(`Created: ${result.createdFiles.join(", ")}`);
-        }
-        if (result.updatedFiles.length > 0) {
-          emitBare(`Updated: ${result.updatedFiles.join(", ")}`);
-        }
-        if (result.preservedFiles.length > 0) {
-          emitBare(`Preserved: ${result.preservedFiles.join(", ")}`);
-        }
-        emitBare("Next: add credentials to .env, install dependencies, and open the Workbench.");
-      }
-      return;
-    }
 
     if (existsSync(file) && !flags.force) {
       throw new BailianError(

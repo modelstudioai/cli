@@ -40,7 +40,7 @@
     "check": "vp check"
   },
   "dependencies": {
-    "@openagentpack/local-git": "0.4.0",
+    "@openagentpack/project-versions": "0.4.0",
     "@openagentpack/sdk": "0.4.0",
     "bailian-cli-core": "workspace:*",
     "bailian-cli-runtime": "workspace:*",
