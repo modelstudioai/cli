@@ -16,11 +16,17 @@
 ```
 bailian-cli/
 ├── packages/
-│   ├── cli/              # `bailian-cli` —— CLI 入口、命令、UI
-│   └── core/             # `bailian-cli-core` —— 鉴权、HTTP、类型
-├── docs/agents/          # 场景化维护文档
-├── tools/                # 发版自动化与命令手册生成
-├── AGENTS.md             # AI agent 维护契约
+│   ├── core/           # `bailian-cli-core` —— 鉴权、配置、HTTP client、错误、类型
+│   ├── runtime/        # `bailian-cli-runtime` —— CLI 运行时:参数解析、help、middleware、输出
+│   ├── commands/       # `bailian-cli-commands` —— 可复用命令实现库
+│   ├── cli/            # `bailian-cli` —— 完整 `bl` 产品入口
+│   ├── kscli/          # `knowledge-studio-cli` —— `kscli` 入口,复用 commands/
+│   ├── e2e/            # e2e 共享工具(不发布)
+│   └── bailian-kb-dsh/ # `bailian-kb-dsh` —— DeepSeek Harness 插件(版本与发布独立)
+├── skills/             # `bl skill init` 安装的 Agent skill
+├── docs/agents/        # 场景化维护文档
+├── tools/              # 发版自动化与命令手册生成
+├── AGENTS.md           # AI agent 维护契约
 └── README.md
 ```
 

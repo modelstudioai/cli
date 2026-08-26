@@ -6,11 +6,33 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
-## [1.17.0] - 2026-08-17
+## [1.17.1] - 2026-08-22
+
+### 修复
+
+- **`knowledge create` 的 `--description` 更新为必填** —— 对齐服务端对知识库描述的必填校验：新增 `--description` 参数并设为必填，在发出请求前于本地校验 1–500 个字符的长度限制。`bl knowledge create` / `kscli kb create` 调用需带上该参数。
+- **`knowledge service update` 对服务端自己返回的配置字段误报警告** —— 通过 `--policy` 等标量参数更新草稿配置时，CLI 会先读取完整草稿再合并回写；草稿中的 `user_system_prompt`、`anti_leak_prompt`、`refusal_prompt`、`credibility_prompt`、`session_file_parse_mode` 以及 `enable_thinking` / `enable_temperature` / `enable_credibility` / `enable_max_completion_tokens` 此前不被 CLI 识别，导致每次更新都刷出一串 `unknown agent_config field passed through` 警告。配置本身始终被正确写入，现在不再误报。
+
+### 新增
+
+- **`bailian-web-search` 路由技能** —— `bl skill init` 现在会一并安装专门的联网搜索路由技能，让 agent 直接选中正确的搜索入口，不再靠猜。
+- **Knowledge Studio CLI 命令手册** —— 完整的 `kscli` 参考文档，覆盖知识库、文档、切片、集合/类目、文件、检索/问答服务以及 search/chat，每条命令均附可运行示例。
+
+### 变更
+
+- **描述类参数说明写清该填什么** —— 数据集合与服务的 `--description` 帮助文案现在会说明该字段的用途（在列表中区分同类项；服务描述供 agent 判断该调用哪个服务），不再只是重复「必填」。
+- **`knowledge retrieve --rerank-model` 补充前置条件说明** —— 帮助文案现在会说明目标知识库必须已配置重排序模型，否则任何取值都会被拒绝。
+
+## [1.17.0] - 2026-08-18
 
 ### 新增
 
 - **百炼原生 Managed Agent Deployment** —— `agents.yaml` 中声明的 `deployments` 现在会创建原生 AgentStudio 资源，支持服务端 Cron 调度、本地文件资源上传、通过 `destroy` 归档，以及在下次 `apply` 时迁移旧版模拟 Deployment state。
+- **CLI 中英文体验** —— 可通过 `bl config set` 或 Config UI 将 `language` 设置为 `en-US` 或 `zh-CN`，在英文和中文的 CLI Help、Quick Start、命令示例及 Config UI 之间切换；所选语言跟随当前激活的配置。
+
+### 修复
+
+- **Free Tier Auto-Stop 控制** —— `bl usage freetier --off` 现在可在免费额度尚有剩余时关闭 Auto-Stop；状态展示会反映实际开关状态，并仅查询筛选后的模型，避免触发服务端批量查询上限。
 
 ## [1.16.0] - 2026-08-17
 

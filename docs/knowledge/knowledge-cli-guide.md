@@ -153,7 +153,7 @@ bl knowledge doc upload --file ./docs/intro.md --workspace-id ws-xxx
 # → 返回 file-id
 
 # 2. 用文件创建知识库
-bl knowledge create --name my-kb --doc-id file-xxx --workspace-id ws-xxx --wait
+bl knowledge create --name my-kb --description '产品文档' --doc-id file-xxx --workspace-id ws-xxx --wait
 # → 返回 index-id (pipelineId) 和导入任务状态
 
 # 3. 创建检索服务（search 场景）
@@ -245,7 +245,7 @@ bl knowledge doc import-oss \
 # → 返回各文件的 fileId
 
 # 2. 创建知识库并导入这些文件
-bl knowledge create --name oss-kb --doc-id file-a --doc-id file-b --workspace-id ws-xxx --wait
+bl knowledge create --name oss-kb --description 'OSS 导入文档' --doc-id file-a --doc-id file-b --workspace-id ws-xxx --wait
 
 # 3. 检索
 bl knowledge search --query "相关内容" --agent-id aid-xxx --workspace-id ws-xxx

@@ -362,16 +362,16 @@ bl knowledge chunk update --index-id idx-xxx --chunk-id chunk-xxx --doc-id file-
 
 #### Flags
 
-| Flag                   | Type   | Required | Description                                                     |
-| ---------------------- | ------ | -------- | --------------------------------------------------------------- |
-| `--name <text>`        | string | yes      | Collection name                                                 |
-| `--description <text>` | string | yes      | Collection description (required by the server)                 |
-| `--store-type <type>`  | string | no       | Storage: platform (managed) or custom (your own OSS bucket)     |
-| `--oss-region <id>`    | string | no       | OSS region id (required with --store-type custom)               |
-| `--oss-bucket <name>`  | string | no       | OSS bucket name (required with --store-type custom)             |
-| `--workspace-id <id>`  | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
-| `--api-key <key>`      | string | no       | API key                                                         |
-| `--base-url <url>`     | string | no       | API base URL                                                    |
+| Flag                   | Type   | Required | Description                                                                         |
+| ---------------------- | ------ | -------- | ----------------------------------------------------------------------------------- |
+| `--name <text>`        | string | yes      | Collection name                                                                     |
+| `--description <text>` | string | yes      | What this collection holds and what it is for — tells collections apart in the list |
+| `--store-type <type>`  | string | no       | Storage: platform (managed) or custom (your own OSS bucket)                         |
+| `--oss-region <id>`    | string | no       | OSS region id (required with --store-type custom)                                   |
+| `--oss-bucket <name>`  | string | no       | OSS bucket name (required with --store-type custom)                                 |
+| `--workspace-id <id>`  | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                     |
+| `--api-key <key>`      | string | no       | API key                                                                             |
+| `--base-url <url>`     | string | no       | API base URL                                                                        |
 
 #### Notes
 
@@ -420,27 +420,28 @@ bl knowledge collection get --name my-collection
 
 ### `bl knowledge create`
 
-| Field              | Value                                                                             |
-| ------------------ | --------------------------------------------------------------------------------- |
-| **Name**           | `knowledge create`                                                                |
-| **Description**    | Create a knowledge base and import data-center files or categories                |
-| **Authentication** | API Key                                                                           |
-| **Usage**          | `bl knowledge create --name <text> (--doc-id <id> \| --category-id <id>) [flags]` |
+| Field              | Value                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------ |
+| **Name**           | `knowledge create`                                                                                     |
+| **Description**    | Create a knowledge base and import data-center files or categories                                     |
+| **Authentication** | API Key                                                                                                |
+| **Usage**          | `bl knowledge create --name <text> --description <text> (--doc-id <id> \| --category-id <id>) [flags]` |
 
 #### Flags
 
-| Flag                        | Type   | Required | Description                                                                          |
-| --------------------------- | ------ | -------- | ------------------------------------------------------------------------------------ |
-| `--name <text>`             | string | yes      | Knowledge base name (1-20 chars, unique in workspace)                                |
-| `--doc-id <id>`             | array  | no       | Data-center file id to import (repeatable); mutually exclusive with --category-id    |
-| `--category-id <id>`        | array  | no       | Import every file under this category (repeatable); mutually exclusive with --doc-id |
-| `--embedding-model <name>`  | string | no       | Embedding model name (default: text-embedding-v4)                                    |
-| `--chunk-size <n>`          | number | no       | Chunk size in characters (default: 600, recommended 300-800)                         |
-| `--wait`                    | switch | no       | Poll the initial import job to a terminal state                                      |
-| `--poll-interval <seconds>` | number | no       | Polling interval when waiting (default: 5)                                           |
-| `--workspace-id <id>`       | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                      |
-| `--api-key <key>`           | string | no       | API key                                                                              |
-| `--base-url <url>`          | string | no       | API base URL                                                                         |
+| Flag                        | Type   | Required | Description                                                                                               |
+| --------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------- |
+| `--name <text>`             | string | yes      | Knowledge base name (1-20 chars, unique in workspace)                                                     |
+| `--description <text>`      | string | yes      | What this knowledge base holds and what it is for — tells bases apart in the workspace list (1-500 chars) |
+| `--doc-id <id>`             | array  | no       | Data-center file id to import (repeatable); mutually exclusive with --category-id                         |
+| `--category-id <id>`        | array  | no       | Import every file under this category (repeatable); mutually exclusive with --doc-id                      |
+| `--embedding-model <name>`  | string | no       | Embedding model name (default: text-embedding-v4)                                                         |
+| `--chunk-size <n>`          | number | no       | Chunk size in characters (default: 600, recommended 300-800)                                              |
+| `--wait`                    | switch | no       | Poll the initial import job to a terminal state                                                           |
+| `--poll-interval <seconds>` | number | no       | Polling interval when waiting (default: 5)                                                                |
+| `--workspace-id <id>`       | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                           |
+| `--api-key <key>`           | string | no       | API key                                                                                                   |
+| `--base-url <url>`          | string | no       | API base URL                                                                                              |
 
 #### Notes
 
@@ -451,11 +452,11 @@ bl knowledge collection get --name my-collection
 #### Examples
 
 ```bash
-bl knowledge create --name demo --doc-id file-xxx --workspace-id ws-xxx
+bl knowledge create --name demo --description 'product docs' --doc-id file-xxx --workspace-id ws-xxx
 ```
 
 ```bash
-bl knowledge create --name demo --category-id cate-xxx --wait
+bl knowledge create --name demo --description 'product docs' --category-id cate-xxx --wait
 ```
 
 ### `bl knowledge delete`
@@ -911,6 +912,10 @@ bl knowledge list --name demo --page-number 2 --page-size 50
 | `--api-key <key>`               | string | no       | API key                                            |
 | `--base-url <url>`              | string | no       | API base URL                                       |
 
+#### Notes
+
+- --rerank-model requires the target knowledge base to already have a rerank model configured; otherwise every value is rejected.
+
 #### Examples
 
 ```bash
@@ -999,15 +1004,15 @@ bl knowledge service copy --agent-id aid-xxx --workspace-id ws-xxx
 
 #### Flags
 
-| Flag                   | Type   | Required | Description                                                       |
-| ---------------------- | ------ | -------- | ----------------------------------------------------------------- |
-| `--name <text>`        | string | yes      | Service name (up to 200 chars, unique per scene in the workspace) |
-| `--scene <scene>`      | string | yes      | Service scene: chat (Q&A) or search (retrieval)                   |
-| `--description <text>` | string | no       | Service description (up to 1000 chars)                            |
-| `--index-id <id>`      | string | no       | Bind this knowledge base; other settings use server defaults      |
-| `--workspace-id <id>`  | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)   |
-| `--api-key <key>`      | string | no       | API key                                                           |
-| `--base-url <url>`     | string | no       | API base URL                                                      |
+| Flag                   | Type   | Required | Description                                                                                                            |
+| ---------------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `--name <text>`        | string | yes      | Service name (up to 200 chars, unique per scene in the workspace)                                                      |
+| `--scene <scene>`      | string | yes      | Service scene: chat (Q&A) or search (retrieval)                                                                        |
+| `--description <text>` | string | no       | What this service answers and who it serves — recommended: agents read it to pick the right service (up to 1000 chars) |
+| `--index-id <id>`      | string | no       | Bind this knowledge base; other settings use server defaults                                                           |
+| `--workspace-id <id>`  | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                                        |
+| `--api-key <key>`      | string | no       | API key                                                                                                                |
+| `--base-url <url>`     | string | no       | API base URL                                                                                                           |
 
 #### Notes
 
@@ -1018,7 +1023,7 @@ bl knowledge service copy --agent-id aid-xxx --workspace-id ws-xxx
 #### Examples
 
 ```bash
-bl knowledge service create --name my-qa --scene chat --workspace-id ws-xxx
+bl knowledge service create --name my-qa --scene chat --description 'answers product FAQs' --workspace-id ws-xxx
 ```
 
 ```bash
@@ -1141,18 +1146,18 @@ bl knowledge service get --agent-id aid-xxx --agent-version beta
 
 #### Flags
 
-| Flag                  | Type   | Required | Description                                                             |
-| --------------------- | ------ | -------- | ----------------------------------------------------------------------- |
-| `--scene <scene>`     | string | yes      | Service scene: chat (Q&A) or search (retrieval). Required by the server |
-| `--status <status>`   | string | no       | Filter by status: draft, deployed (includes edited) or deleted          |
-| `--name <text>`       | string | no       | Filter by service name (fuzzy match)                                    |
-| `--agent-id <id>`     | string | no       | Filter by exact agent ID                                                |
-| `--index-id <id>`     | string | no       | Filter by exact linked knowledge base (pipeline) ID                     |
-| `--page-number <n>`   | number | no       | Page number (default: 1)                                                |
-| `--page-size <n>`     | number | no       | Page size per request                                                   |
-| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)         |
-| `--api-key <key>`     | string | no       | API key                                                                 |
-| `--base-url <url>`    | string | no       | API base URL                                                            |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--scene <scene>`     | string | yes      | Service scene: chat (Q&A) or search (retrieval)                 |
+| `--status <status>`   | string | no       | Filter by status: draft, deployed (includes edited) or deleted  |
+| `--name <text>`       | string | no       | Filter by service name (fuzzy match)                            |
+| `--agent-id <id>`     | string | no       | Filter by exact agent ID                                        |
+| `--index-id <id>`     | string | no       | Filter by exact linked knowledge base (pipeline) ID             |
+| `--page-number <n>`   | number | no       | Page number (default: 1)                                        |
+| `--page-size <n>`     | number | no       | Page size per request                                           |
+| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--api-key <key>`     | string | no       | API key                                                         |
+| `--base-url <url>`    | string | no       | API base URL                                                    |
 
 #### Notes
 

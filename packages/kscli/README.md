@@ -42,6 +42,7 @@ npm install -g knowledge-studio-cli
 # 1. Create a knowledge base
 kscli kb create \
   --name "my-kb" \
+  --description "my product docs knowledge base" \
   --embedding-model text-embedding-v3 \
   --workspace-id <your-workspace-id>
 

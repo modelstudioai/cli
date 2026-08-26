@@ -186,6 +186,17 @@ export interface RagAgentConfig {
   session_file_max_parse_length?: number;
   enable_kb_router?: string;
   kb_router_model?: string;
+  // Fields the server returns in the beta draft config; typed so read-merge-write
+  // round-trips them without a passthrough warning. Observed value kinds, not docs.
+  user_system_prompt?: string;
+  anti_leak_prompt?: string;
+  refusal_prompt?: string;
+  credibility_prompt?: string;
+  enable_thinking?: boolean;
+  enable_temperature?: boolean;
+  enable_credibility?: boolean;
+  enable_max_completion_tokens?: boolean;
+  session_file_parse_mode?: string;
   rerank_top_n?: number;
   hybrid_rerank?: Record<string, unknown>;
   kb_search_configs?: Array<Record<string, unknown>>;

@@ -82,6 +82,13 @@ export default defineCommand({
   auth: "apiKey",
   usageArgs: "--index-id <id> --query <text> [flags]",
   flags: RETRIEVE_FLAGS,
+  notes: [
+    {
+      "en-US":
+        "--rerank-model requires the target knowledge base to already have a rerank model configured; otherwise every value is rejected.",
+      "zh-CN": "--rerank-model 要求目标知识库已配置重排序模型，否则任何取值都会被拒绝。",
+    },
+  ],
   exampleArgs: [
     {
       "en-US": '--index-id idx_xxx --query "How to use Alibaba Cloud Bailian"',

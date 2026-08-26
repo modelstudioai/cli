@@ -6,11 +6,33 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
-## [1.17.0] - 2026-08-17
+## [1.17.1] - 2026-08-22
+
+### Fixed
+
+- **`knowledge create` now requires `--description`** — aligns with the server's required-description validation: the new `--description` flag is mandatory and its 1-500 character limit is checked locally before the request goes out. `bl knowledge create` / `kscli kb create` calls need to pass it.
+- **`knowledge service update` warned about config fields the server itself returned** — updating the draft config through scalar flags such as `--policy` reads the full draft and merges before writing back; the draft's `user_system_prompt`, `anti_leak_prompt`, `refusal_prompt`, `credibility_prompt`, `session_file_parse_mode`, and `enable_thinking` / `enable_temperature` / `enable_credibility` / `enable_max_completion_tokens` were not recognized by the CLI, so every update printed a run of `unknown agent_config field passed through` warnings. The config itself was always written correctly; the spurious warnings are gone.
+
+### Added
+
+- **`bailian-web-search` routing skill** — `bl skill init` now also installs a dedicated web-search routing skill, so agents pick the right search entry point instead of guessing.
+- **Knowledge Studio CLI command manual** — full `kscli` reference docs covering knowledge bases, documents, chunks, collections/categories, files, retrieval/Q&A services, and search/chat, with runnable examples for every command.
+
+### Changed
+
+- **Description flags explain what to write** — help text for the collection and service `--description` flags now states what the field is for (telling similar items apart in lists; for services, agents read it to pick the right one) rather than just repeating "required".
+- **`knowledge retrieve --rerank-model` documents its precondition** — help now states that the target knowledge base must already have a rerank model configured, otherwise every value is rejected.
+
+## [1.17.0] - 2026-08-18
 
 ### Added
 
 - **Native Bailian Managed Agent Deployments** — `deployments` declared in `agents.yaml` now materialize as native AgentStudio resources, with server-side cron schedules, local file resource uploads, archival through `destroy`, and migration of legacy emulated state on the next `apply`.
+- **Bilingual CLI experience** — Set `language` to `en-US` or `zh-CN` through `bl config set` or Config UI to switch CLI Help, Quick Start, command examples, and Config UI between English and Chinese. The selected language follows the active config.
+
+### Fixed
+
+- **Free Tier Auto-Stop controls** — `bl usage freetier --off` can now disable Auto-Stop even when free quota remains; status rendering reflects the actual switch state, and filtered model queries avoid server-side batch-limit failures.
 
 ## [1.16.0] - 2026-08-17
 

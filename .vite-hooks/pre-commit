@@ -14,6 +14,7 @@ git add \
   skills/bailian-finetune/SKILL.md \
   skills/bailian-finetune/reference \
   skills/bailian-managed-agent/SKILL.md \
-  skills/bailian-managed-agent/reference
+  skills/bailian-managed-agent/reference \
+  skills/bailian-web-search/SKILL.md
 
 vp staged
