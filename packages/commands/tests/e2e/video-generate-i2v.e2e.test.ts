@@ -114,46 +114,27 @@ describe("e2e: video generate (i2v)", () => {
   });
 
   test.each([
-    // wan2.1~2.6 (legacy) use flat img_url; wan2.7+ and happyhorse use media[].
+    // wan2.1~2.6 (legacy) use flat img_url; wan2.7+ / wan3.0 / happyhorse use media[].
+    // 用普通 dry-run（不绑 token-plan）：TP 不支持 wan3.0，绑 TP 会形成错误测试契约。
     ["wan2.5-i2v-preview", "img_url"],
     ["wan2.6-i2v", "img_url"],
     ["wan2.7-i2v", "media"],
+    ["wan3.0-video", "media"],
     ["happyhorse-1.1-i2v", "media"],
   ])("video generate --dry-run %s 首帧走 %s 字段", async (model, field) => {
-    const configDir = makeE2eOutputDir(`video-i2v-input-shape-${model}`);
-    writeFileSync(
-      join(configDir, "config.json"),
-      JSON.stringify({
-        "token-plan": {
-          api_key: "sk-sp-e2e-placeholder",
-          base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
-        },
-      }),
-    );
-
-    const { stdout, stderr, exitCode } = await runCommandE2e(
-      VIDEO_ROUTES,
-      [
-        "video",
-        "generate",
-        "--config",
-        "token-plan",
-        "--dry-run",
-        "--model",
-        model,
-        "--image",
-        "https://example.com/placeholder.png",
-        "--prompt",
-        "干跑校验",
-        "--output",
-        "json",
-      ],
-      {
-        BAILIAN_CONFIG_DIR: configDir,
-        DASHSCOPE_API_KEY: "",
-        DASHSCOPE_BASE_URL: "",
-      },
-    );
+    const { stdout, stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
+      "video",
+      "generate",
+      "--dry-run",
+      "--model",
+      model,
+      "--image",
+      "https://example.com/placeholder.png",
+      "--prompt",
+      "干跑校验",
+      "--output",
+      "json",
+    ]);
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
       request?: {
@@ -168,6 +149,98 @@ describe("e2e: video generate (i2v)", () => {
       expect(data.request?.input?.img_url).toBeUndefined();
     }
   });
+
+  test("video generate --dry-run --file 走 media file 字段", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
+      "video",
+      "generate",
+      "--dry-run",
+      "--model",
+      "wan3.0-video",
+      "--file",
+      "https://example.com/reference.pdf",
+      "--prompt",
+      "文件生视频干跑",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      request?: {
+        model?: string;
+        input?: {
+          media?: Array<{ type?: string; url?: string }>;
+          img_url?: string;
+          first_frame_url?: string;
+        };
+      };
+    }>(stdout);
+    expect(data.request?.model).toBe("wan3.0-video");
+    expect(data.request?.input?.media?.[0]?.type).toBe("file");
+    expect(data.request?.input?.media?.[0]?.url).toBe("https://example.com/reference.pdf");
+    expect(data.request?.input?.img_url).toBeUndefined();
+    expect(data.request?.input?.first_frame_url).toBeUndefined();
+  });
+
+  test("--file 与 --image 互斥时报用法错误并退出 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
+      "video",
+      "generate",
+      "--dry-run",
+      "--model",
+      "wan3.0-video",
+      "--file",
+      "https://example.com/reference.pdf",
+      "--image",
+      "https://example.com/placeholder.png",
+      "--prompt",
+      "互斥校验",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--file.*mutually exclusive|--file.*互斥|mutually exclusive/i);
+  });
+
+  test("--file 与 --last-frame 互斥时报用法错误并退出 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
+      "video",
+      "generate",
+      "--dry-run",
+      "--model",
+      "wan3.0-video",
+      "--file",
+      "https://example.com/reference.pdf",
+      "--last-frame",
+      "https://example.com/last-frame.png",
+      "--prompt",
+      "互斥校验",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--file.*mutually exclusive|--file.*互斥|mutually exclusive/i);
+  });
+
+  test("非 wan3.0 模型使用 --file 时报用法错误并退出 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
+      "video",
+      "generate",
+      "--dry-run",
+      "--model",
+      "wan2.6-i2v",
+      "--file",
+      "https://example.com/reference.pdf",
+      "--prompt",
+      "模型限制校验",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(
+      /--file.*only supported by wan3\.0-video|--file.*仅.*wan3\.0-video|only supported by wan3\.0-video/i,
+    );
+  });
 });
 
 describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
@@ -179,7 +252,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "generate",
         ...cliTimeoutPrefix(),
         "--model",
-        "happyhorse-1.1-i2v",
+        "wan3.0-video",
         "--image",
         "https://example.com/placeholder.png",
       ]);
@@ -194,7 +267,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         ...cliTimeoutPrefix(),
         "--dry-run",
         "--model",
-        "happyhorse-1.1-t2v",
+        "wan3.0-video",
         "--prompt",
         "干跑无图",
         "--output",
@@ -208,7 +281,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       expect(data.request?.input?.media).toBeUndefined();
     });
 
-    test("【happyhorse-1.1-i2v】图片生成视频", async () => {
+    test("【wan3.0-video】图片生成视频", async () => {
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
       const png = join(outDir, "e2e-gen.png");
       const gen = await runCommandE2e(VIDEO_ROUTES, [
@@ -234,7 +307,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "generate",
         ...cliTimeoutPrefix(),
         "--model",
-        "happyhorse-1.1-i2v",
+        "wan3.0-video",
         "--image",
         imagePath,
         "--prompt",
