@@ -98,12 +98,11 @@ A named Profile can limit the API Key commands it supports through `api_key_capa
 - Unless `--quiet` is used, the CLI reports fallback on stderr. With `--output json`, it emits a
   structured warning.
 
-Custom Profiles opt in only by defining `api_key_capabilities`. A missing field disables fallback,
-while `[]` makes every API Key command fall back to `default`.
-
-The built-in `token-plan` Profile is the compatibility exception: older configs without the field
-use the current built-in preset. A successful API Key login appends missing preset capabilities
-without removing existing entries.
+Profiles opt in only by defining `api_key_capabilities`. A missing field disables fallback, while
+`[]` makes every API Key command fall back to `default`. This applies to the built-in `token-plan`
+Profile too: the CLI never injects a newer preset at runtime. A successful Token Plan API Key login
+appends missing preset capabilities without removing existing entries, so log in again to upgrade
+the persisted preset.
 
 ```bash
 bl config set --config company-plan --key api-key-capabilities \
@@ -128,7 +127,9 @@ still follow flag > environment > config.
 
 Activation selects the entire Config for every credential domain, not only model consumption. The only exception is the API Key capability fallback described above. After activating `token-plan`, Token Plan management and Console commands still read their OpenAPI or Console credentials from that Profile. If those credentials remain in `default`, invoke the command with `--config default` or log the corresponding credential domain into `token-plan`.
 
-The built-in `token-plan` profile defaults to:
+The built-in `token-plan` preset contains the following values. The CLI materializes them only after
+a successful `auth login --config token-plan`. It does not replace them at runtime; run the login
+command again to persist a newer preset:
 
 - Base URL: `https://token-plan.cn-beijing.maas.aliyuncs.com`
 - Text model: `qwen3.8-max`

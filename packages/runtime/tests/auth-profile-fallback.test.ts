@@ -139,7 +139,7 @@ test("authStage 为支持的 capability 保留所选 Profile API Key", async () 
   expect(context.client.exportApiCredential()?.token).toBe("sk-plan");
 });
 
-test("authStage 为缺少 capability 字段的旧 token-plan 应用内置 preset", async () => {
+test("authStage 不为缺少 capability 字段的旧 token-plan 注入内置 preset", async () => {
   useTempConfigDir();
   await writeConfigFile({ api_key: "sk-default", base_url: "https://default.example.com" });
   await writeConfigFile(
@@ -147,18 +147,11 @@ test("authStage 为缺少 capability 字段的旧 token-plan 应用内置 preset
     "token-plan",
   );
 
-  const supportedContext = makeContext(["image", "generate"], { config: "token-plan" });
-  await runAuth(supportedContext);
-  expect(supportedContext.client.exportApiCredential()).toMatchObject({
+  const context = makeContext(["search", "web"], { config: "token-plan" });
+  await runAuth(context);
+  expect(context.client.exportApiCredential()).toMatchObject({
     token: "sk-token-plan",
     baseUrl: "https://token-plan.example.com",
-  });
-
-  const unsupportedContext = makeContext(["search", "web"], { config: "token-plan" });
-  await runAuth(unsupportedContext);
-  expect(unsupportedContext.client.exportApiCredential()).toMatchObject({
-    token: "sk-default",
-    baseUrl: "https://default.example.com",
   });
 });
 

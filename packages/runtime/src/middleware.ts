@@ -15,7 +15,6 @@ import type {
 import {
   Client,
   DEFAULT_LANGUAGE,
-  getModelProfilePreset,
   resolveApiKey,
   resolveConsole,
   resolveOpenApi,
@@ -127,8 +126,7 @@ export const authStage: Middleware = async (ctx, next) => {
   };
   if (command.auth === "apiKey") {
     const capability = ctx.path.join(".");
-    const presetCapabilities = getModelProfilePreset(sources.configName)?.apiKeyCapabilities;
-    const selection = selectApiKeyResolutionSources(sources, capability, presetCapabilities);
+    const selection = selectApiKeyResolutionSources(sources, capability);
     const apiSources = selection.sources;
     if (selection.fallbackFrom && !settings.quiet) {
       writeApiKeyFallbackNotice(ctx, selection.fallbackFrom);

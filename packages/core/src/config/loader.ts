@@ -202,14 +202,13 @@ export interface ApiKeyResolutionSourceSelection {
 }
 
 /**
- * Select the file-backed API-key source for a command capability. An explicit
- * flag or environment API connection override bypasses Profile capability
- * fallback entirely.
+ * Select the file-backed API-key source for a command capability. Only a
+ * persisted Profile capability list enables fallback. An explicit flag or
+ * environment API connection override bypasses it entirely.
  */
 export function selectApiKeyResolutionSources(
   sources: ResolutionSources,
   capability: string,
-  presetCapabilities?: readonly string[],
 ): ApiKeyResolutionSourceSelection {
   if (
     sources.flags.apiKey ||
@@ -221,7 +220,7 @@ export function selectApiKeyResolutionSources(
   }
   if (!sources.configName) return { sources };
 
-  const allowedCapabilities = sources.file.api_key_capabilities ?? presetCapabilities;
+  const allowedCapabilities = sources.file.api_key_capabilities;
   if (allowedCapabilities === undefined) return { sources };
   if (allowedCapabilities.includes(capability)) return { sources };
 

@@ -18,7 +18,6 @@ import {
   selectApiKeyResolutionSources,
 } from "../src/config/loader.ts";
 import { getConfigPath } from "../src/config/paths.ts";
-import { getModelProfilePreset } from "../src/config/profile-presets.ts";
 
 /** 在隔离的临时配置目录里执行,结束后恢复环境。 */
 async function inTempConfigDir(fn: () => Promise<void>): Promise<void> {
@@ -446,42 +445,25 @@ test("显式 API Key 跳过 capability fallback，其他字段仍按既有优先
   });
 });
 
-test("旧 token-plan Profile 缺少持久化字段时使用内置 capability 预设", async () => {
+test("旧 token-plan Profile 缺少 capability 字段时不启用 fallback", async () => {
   await inTempConfigDir(async () => {
     await writeConfigFile({ api_key: "sk-default" });
     await writeConfigFile({ api_key: "sk-token-plan" }, "token-plan");
     const selectedSources = { ...buildSources({ config: "token-plan" }), env: {} };
-    const presetCapabilities = getModelProfilePreset("token-plan")?.apiKeyCapabilities;
 
-    const supported = selectApiKeyResolutionSources(
-      selectedSources,
-      "video.generate",
-      presetCapabilities,
-    );
-    expect(supported.sources.file.api_key).toBe("sk-token-plan");
-
-    const fallback = selectApiKeyResolutionSources(
-      selectedSources,
-      "search.web",
-      presetCapabilities,
-    );
-    expect(fallback.fallbackFrom).toBe("token-plan");
-    expect(fallback.sources.file.api_key).toBe("sk-default");
+    const selected = selectApiKeyResolutionSources(selectedSources, "search.web");
+    expect(selected.fallbackFrom).toBeUndefined();
+    expect(selected.sources.file.api_key).toBe("sk-token-plan");
   });
 });
 
-test("token-plan 显式空 capability 白名单覆盖内置预设", async () => {
+test("token-plan 显式空 capability 白名单启用全量 fallback", async () => {
   await inTempConfigDir(async () => {
     await writeConfigFile({ api_key: "sk-default" });
     await writeConfigFile({ api_key: "sk-token-plan", api_key_capabilities: [] }, "token-plan");
     const selectedSources = { ...buildSources({ config: "token-plan" }), env: {} };
-    const presetCapabilities = getModelProfilePreset("token-plan")?.apiKeyCapabilities;
 
-    const fallback = selectApiKeyResolutionSources(
-      selectedSources,
-      "video.generate",
-      presetCapabilities,
-    );
+    const fallback = selectApiKeyResolutionSources(selectedSources, "video.generate");
     expect(fallback.fallbackFrom).toBe("token-plan");
     expect(fallback.sources.file.api_key).toBe("sk-default");
   });
