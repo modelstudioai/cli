@@ -42,9 +42,9 @@ const RECOGNIZE_FLAGS = {
     valueHint: "<model>",
     description: {
       "en-US":
-        "Model ID (default: fun-asr). Async: fun-asr / *-filetrans / paraformer-*; sync: qwen3-asr-flash* / fun-asr-flash* / qwen-audio-*-asr-flash",
+        "Model ID (default: configured Profile ASR model, otherwise fun-asr). Async: fun-asr / *-filetrans / paraformer-*; sync: qwen3-asr-flash* / fun-asr-flash* / qwen-audio-*-asr-flash",
       "zh-CN":
-        "模型 ID（默认：fun-asr）。异步：fun-asr / *-filetrans / paraformer-*；同步：qwen3-asr-flash* / fun-asr-flash* / qwen-audio-*-asr-flash",
+        "模型 ID（默认：Profile 配置的 ASR 模型，否则为 fun-asr）。异步：fun-asr / *-filetrans / paraformer-*；同步：qwen3-asr-flash* / fun-asr-flash* / qwen-audio-*-asr-flash",
     },
   },
   language: {
@@ -165,7 +165,7 @@ export default defineCommand({
       );
     }
 
-    const model = flags.model || "fun-asr";
+    const model = flags.model || settings.defaultSpeechRecognitionModel || "fun-asr";
     const route = resolveAsrApi(model);
     if (route.kind === "unsupported") {
       throw new BailianError(

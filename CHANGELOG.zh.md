@@ -6,6 +6,20 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.18.0] - 2026-08-27
+
+### 新增
+
+- **Profile API Key 自动回退** —— 当前 Profile 不支持某条命令时，自动使用 `default` 中的 API Key 和接入地址，无需手动切换 Profile；显式凭证仍然优先。
+- **语音合成与识别支持独立默认模型** —— Profile 支持分别配置 TTS 和 ASR 默认模型。
+- **Wan3.0 文件生视频** —— `bl video generate --file` 支持本地文件或 URL，并校验互斥输入。
+
+### 变更
+
+- **视频默认模型升级至 Wan3.0** —— 普通 API Key 的文生、图生和参考生视频默认使用 `wan3.0-video`，并支持首尾帧与参考音频；Token Plan 默认模型保持不变。
+- **扩展 Token Plan 预设** —— 登录后自动补充语音默认模型和缺失能力，同时保留用户已有配置。
+- **优化语音与 Skill 安装体验** —— 流式语音合成默认输出 PCM；Skill 安装文档补充兼容 Node 18 的降级方式及 Node.js、Git 前置条件。
+
 ## [1.17.1] - 2026-08-22
 
 ### 修复

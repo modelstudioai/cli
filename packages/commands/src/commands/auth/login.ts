@@ -168,9 +168,13 @@ export default defineCommand({
       return;
     }
     const profilePreset = getModelProfilePreset(settings.configName);
-    const storedBaseUrl = store.stored().baseUrl;
+    const stored = store.stored();
+    const storedBaseUrl = stored.baseUrl;
     const resolvedBaseUrl = baseUrl || store.resolveBaseUrl(profilePreset?.baseUrl);
     const persistBaseUrl = baseUrl || (!storedBaseUrl ? profilePreset?.baseUrl : undefined);
+    const apiKeyCapabilities = profilePreset
+      ? [...new Set([...(stored.apiKeyCapabilities ?? []), ...profilePreset.apiKeyCapabilities])]
+      : stored.apiKeyCapabilities;
     await validateAndPersistApiKey(deps, key, {
       baseUrl: resolvedBaseUrl,
       persistBaseUrl,
@@ -179,6 +183,9 @@ export default defineCommand({
       defaultImageToVideoModel: profilePreset?.defaultImageToVideoModel,
       defaultReferenceToVideoModel: profilePreset?.defaultReferenceToVideoModel,
       defaultImageModel: profilePreset?.defaultImageModel,
+      defaultSpeechModel: profilePreset?.defaultSpeechModel,
+      defaultSpeechRecognitionModel: profilePreset?.defaultSpeechRecognitionModel,
+      apiKeyCapabilities,
     });
   },
 });

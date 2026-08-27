@@ -12,9 +12,9 @@ export default defineCommand({
       valueHint: "<key>",
       description: {
         "en-US":
-          "Config key (language, base_url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, security_token, default_*_model, workspace_id)",
+          "Config key (language, base_url, output, output_dir, timeout, api_key, api_key_capabilities, access_token, access_key_id, access_key_secret, security_token, default_*_model, workspace_id)",
         "zh-CN":
-          "配置项名称（language、base_url、output、output_dir、timeout、api_key、access_token、access_key_id、access_key_secret、security_token、default_*_model、workspace_id）",
+          "配置项名称（language、base_url、output、output_dir、timeout、api_key、api_key_capabilities、access_token、access_key_id、access_key_secret、security_token、default_*_model、workspace_id）",
       },
       required: true,
     },
@@ -30,6 +30,7 @@ export default defineCommand({
     "--key output --value json",
     "--key timeout --value 600",
     "--key base_url --value https://dashscope.aliyuncs.com",
+    "--config company-plan --key api-key-capabilities --value text.chat,image.generate",
   ],
   async run(ctx) {
     const { settings, flags } = ctx;

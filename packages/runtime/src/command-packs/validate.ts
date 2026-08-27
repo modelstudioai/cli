@@ -164,7 +164,7 @@ function adaptCommandPack(
                     ExitCode.GENERAL,
                   );
                 }
-                const credential = ctx.authStore.describe().apiKey;
+                const credential = ctx.client.exportApiCredential();
                 if (!credential) {
                   throw new BailianError(
                     "No API key available to the Command Pack.",

@@ -62,12 +62,12 @@ describe("Token Plan image input compatibility", () => {
     expect(() => imageFileToDataUri(imagePath)).toThrow(/Unsupported image format/);
   });
 
-  test("uses Data URI for the token-plan profile even through a custom proxy", async () => {
+  test("uses ordinary upload behavior for a non-Token-Plan endpoint regardless of Profile name", () => {
     const imagePath = makeImage(".webp");
     const client = makeClient("https://proxy.example.com/bailian", "token-plan");
 
-    await expect(client.resolveImageInput(imagePath, "happyhorse-1.1-i2v")).resolves.toMatch(
-      /^data:image\/webp;base64,/,
+    expect(() => client.resolveImageInput(imagePath, "happyhorse-1.1-i2v")).toThrow(
+      /model-domain API key/,
     );
   });
 

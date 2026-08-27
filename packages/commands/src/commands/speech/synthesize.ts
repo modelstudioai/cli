@@ -167,8 +167,9 @@ const SYNTHESIZE_FLAGS = {
     valueHint: "<model>",
     description: {
       "en-US":
-        "Model ID (default: cosyvoice-v3-flash). System voices available for cosyvoice-v3-flash",
-      "zh-CN": "模型 ID（默认：cosyvoice-v3-flash）。cosyvoice-v3-flash 支持系统音色",
+        "Model ID (default: configured Profile TTS model, otherwise cosyvoice-v3-flash). System voices vary by model",
+      "zh-CN":
+        "模型 ID（默认：Profile 配置的 TTS 模型，否则为 cosyvoice-v3-flash）。系统音色因模型而异",
     },
   },
   voice: {
@@ -193,8 +194,8 @@ const SYNTHESIZE_FLAGS = {
     type: "string",
     valueHint: "<format>",
     description: {
-      "en-US": "Audio format: mp3, pcm, wav, opus (default: mp3)",
-      "zh-CN": "音频格式：mp3、pcm、wav、opus（默认：mp3）",
+      "en-US": "Audio format: mp3, pcm, wav, opus (default: mp3; streaming default: pcm)",
+      "zh-CN": "音频格式：mp3、pcm、wav、opus（默认：mp3；流式模式默认：pcm）",
     },
     choices: ["mp3", "pcm", "wav", "opus"] as const,
   },
@@ -282,8 +283,8 @@ type SynthesizeFlags = ParsedFlags<typeof SYNTHESIZE_FLAGS>;
 
 export default defineCommand({
   description: {
-    "en-US": "Synthesize speech from text (CosyVoice TTS)",
-    "zh-CN": "将文本合成为语音（CosyVoice TTS）",
+    "en-US": "Synthesize speech from text",
+    "zh-CN": "将文本合成为语音",
   },
   auth: "apiKey",
   usageArgs: "--text <text> [flags]",
@@ -357,14 +358,14 @@ export default defineCommand({
 
     const language = flags.language || undefined;
     const instruction = flags.instruction || undefined;
-    const audioFormat = flags.format || undefined;
+    const useStream = flags.stream === true;
+    const audioFormat = flags.format || (useStream ? "pcm" : "mp3");
     const sampleRate = flags.sampleRate !== undefined ? Number(flags.sampleRate) : undefined;
     const volume = flags.volume !== undefined ? Number(flags.volume) : undefined;
     const rate = flags.rate !== undefined ? Number(flags.rate) : undefined;
     const pitch = flags.pitch !== undefined ? Number(flags.pitch) : undefined;
     const seed = flags.seed !== undefined ? Number(flags.seed) : undefined;
     const enableSsml = flags.enableSsml === true ? true : undefined;
-    const useStream = flags.stream === true;
 
     const format = detectOutputFormat(settings.output);
 

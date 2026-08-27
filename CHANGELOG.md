@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.18.0] - 2026-08-27
+
+### Added
+
+- **Automatic Profile API Key fallback** — unsupported commands use the API Key and endpoint from `default` without requiring a Profile switch; explicit credentials still take priority.
+- **Independent speech defaults** — Profiles support separate default models for TTS and ASR.
+- **Wan3.0 file-to-video** — `bl video generate --file` accepts local files or URLs and validates incompatible inputs.
+
+### Changed
+
+- **Wan3.0 is now the default video model** — regular API Key text, image, and reference video tasks default to `wan3.0-video`, with first/last-frame and reference-audio support. Token Plan defaults remain unchanged.
+- **Expanded Token Plan preset** — login adds speech defaults and missing capabilities while preserving existing user configuration.
+- **Improved speech and Skill installation experience** — streaming synthesis defaults to PCM; installation docs add a Node 18-compatible fallback and clarify the Node.js and Git prerequisites.
+
 ## [1.17.1] - 2026-08-22
 
 ### Fixed

@@ -32,6 +32,8 @@
 - [ ] Command Pack 不能覆盖内置命令、其他 pack 命令或重声明保留 flag。
 - [ ] 普通网络请求走 `ctx.client`；基础 Context 提供 `identity/settings/flags/client/output/errors`，不提供原始凭据。
 - [ ] `ctx.credentials.apiKey()` 仅限 policy 显式声明 `credentialAccess: ["apiKey"]`，且命令自身为 `auth: "apiKey"`。
+- [ ] API Key capability ID 由 host 按实际叶子命令路径生成（例如 `agent credential` → `agent.credential`）；Command Pack 不声明额外元数据，Profile allowlist 对 pack 命令同样 fail closed。
+- [ ] `ctx.credentials.apiKey()` 必须返回 `authStage` 已注入 `ctx.client` 的实际凭证，不能重新读取原 Profile 绕过 capability fallback。
 - [ ] 不向 Command Pack 暴露原始 Console Token、OpenAPI AK/SK、`authStore` 或 `configStore`。
 - [ ] 不向 Command Pack 暴露宿主的 `commandPacks` manager，避免 pack 安装或删除其他 pack。
 - [ ] 单包失败必须 fail-open：保留内置命令和其他合法 pack。
@@ -40,6 +42,7 @@
 ## 测试与文档
 
 - [ ] `packages/runtime/tests/command-packs.test.ts` 覆盖产品 policy、安装目录隔离、协议版本、前缀和导出契约。
+- [ ] Command Pack 测试覆盖 capability 格式/鉴权域、adapter 保留字段，以及 raw API Key 委托使用 fallback 后的实际 Base URL。
 - [ ] `packages/cli/tests/e2e/command-packs.e2e.test.ts` 覆盖 help、link、执行、output/errors、凭据授权、list、remove。
 - [ ] `packages/kscli/tests/e2e/command-packs.e2e.test.ts` 覆盖统一 host 和 runtime 默认空 policy 下不暴露管理命令。
 - [ ] fixture 的包名必须在测试白名单内，且构建入口不依赖工作区运行时解析。
