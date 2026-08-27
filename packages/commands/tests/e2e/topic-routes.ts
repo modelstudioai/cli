@@ -62,6 +62,7 @@ export const VIDEO_ROUTES: E2eRouteExports = {
   "video ref": "videoRef",
   "video task get": "videoTaskGet",
   "video download": "videoDownload",
+  "speech synthesize": "speechSynthesize",
 };
 
 export const VISION_ROUTES: E2eRouteExports = {

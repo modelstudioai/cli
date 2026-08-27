@@ -1215,7 +1215,9 @@ const PAGE_HTML = `<!doctype html>
       var row = el('div', 'row');
       var label = el('label', '', key); label.htmlFor = 'f_' + key;
       var val = data[key];
-      var strVal = (val === undefined || val === null) ? '' : String(val);
+      var strVal = Array.isArray(val)
+        ? (val.length ? val.join(', ') : '[]')
+        : ((val === undefined || val === null) ? '' : String(val));
       if (SECRETS.indexOf(key) >= 0) {
         var input = el('input'); input.id = 'f_' + key; input.name = key; input.value = strVal;
         input.type = 'password';

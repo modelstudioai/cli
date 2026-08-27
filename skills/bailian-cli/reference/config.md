@@ -88,10 +88,10 @@ bl config list --output json
 
 #### Flags
 
-| Flag              | Type   | Required | Description                                                                                                                                                            |
-| ----------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--key <key>`     | string | yes      | Config key (language, base*url, output, output_dir, timeout, api_key, access_token, access_key_id, access_key_secret, security_token, default*\*\_model, workspace_id) |
-| `--value <value>` | string | yes      | Value to set                                                                                                                                                           |
+| Flag              | Type   | Required | Description                                                                                                                                                                                  |
+| ----------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--key <key>`     | string | yes      | Config key (language, base*url, output, output_dir, timeout, api_key, api_key_capabilities, access_token, access_key_id, access_key_secret, security_token, default*\*\_model, workspace_id) |
+| `--value <value>` | string | yes      | Value to set                                                                                                                                                                                 |
 
 #### Examples
 
@@ -109,6 +109,10 @@ bl config set --key timeout --value 600
 
 ```bash
 bl config set --key base_url --value https://dashscope.aliyuncs.com
+```
+
+```bash
+bl config set --config company-plan --key api-key-capabilities --value text.chat,image.generate
 ```
 
 ### `bl config show`

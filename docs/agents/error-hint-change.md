@@ -46,6 +46,7 @@ runtime/error-handler.ts:
   - 内部 AUTH/USAGE/NETWORK/TIMEOUT → 走 enhanceHint(只 AUTH 还有增强)
   - TypeError("fetch failed") → 读 err.cause.code 翻成 NETWORK
   - Node fs errno → 翻成 GENERAL + errno hint
+  - `--output json` → stderr 输出两空格缩进的多行 error JSON；前面已有结构化 warning 时，两个 diagnostics 以空行分隔
   - 其它 Error → 默认走 cause 链
   ↓
 process.exit(err.exitCode)

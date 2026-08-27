@@ -24,9 +24,8 @@ import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailia
 
 export default defineCommand({
   description: {
-    "en-US":
-      "Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)",
-    "zh-CN": "根据文本或图片生成视频（happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v）",
+    "en-US": "Generate a video from text or image (wan3.0-video / wan2.6-t2v / happyhorse-1.1-i2v)",
+    "zh-CN": "根据文本或图片生成视频（wan3.0-video / wan2.6-t2v / happyhorse-1.1-i2v）",
   },
   auth: "apiKey",
   usageArgs: "--prompt <text> [--image <url>] [flags]",
@@ -35,8 +34,8 @@ export default defineCommand({
       type: "string",
       valueHint: "<model>",
       description: {
-        "en-US": "Model ID (default: happyhorse-1.1-t2v, or happyhorse-1.1-i2v with --image)",
-        "zh-CN": "模型 ID（默认：happyhorse-1.1-t2v；使用 --image 时为 happyhorse-1.1-i2v）",
+        "en-US": "Model ID (default: wan3.0-video)",
+        "zh-CN": "模型 ID（默认：wan3.0-video）",
       },
     },
     prompt: {
@@ -119,6 +118,16 @@ export default defineCommand({
         "zh-CN": "完成后将视频保存到文件",
       },
     },
+    file: {
+      type: "string",
+      valueHint: "<url-or-path>",
+      description: {
+        "en-US":
+          "Reference file URL or local path for file-to-video (wan3.0-video only; mutually exclusive with --image/--last-frame)",
+        "zh-CN":
+          "参考文件 URL 或本地路径，用于文件生视频（仅 wan3.0-video；与 --image/--last-frame 互斥）",
+      },
+    },
     ...ASYNC_FLAG,
     ...CONCURRENT_FLAG,
     pollInterval: {
@@ -159,12 +168,20 @@ export default defineCommand({
     const model =
       flags.model ||
       (flags.image
-        ? settings.defaultImageToVideoModel || "happyhorse-1.1-i2v"
-        : settings.defaultVideoModel || "happyhorse-1.1-t2v");
+        ? settings.defaultImageToVideoModel || "wan3.0-video"
+        : settings.defaultVideoModel || "wan3.0-video");
     const format = detectOutputFormat(settings.output);
 
     const imageUrl = flags.image;
     const lastFrameUrl = flags.lastFrame as string | undefined;
+    const fileUrl = flags.file as string | undefined;
+
+    if (fileUrl && (imageUrl || lastFrameUrl)) {
+      throw new BailianError(
+        "--file is mutually exclusive with --image/--last-frame.",
+        ExitCode.USAGE,
+      );
+    }
 
     // Auto-upload local image file for i2v
     let resolvedImageUrl: string | undefined;
@@ -178,6 +195,18 @@ export default defineCommand({
 
     // kf2v mode: both --image and --last-frame provided.
     const isKf2v = Boolean(resolvedImageUrl && resolvedLastFrameUrl);
+    // 万相 3.x（All-in-One）首尾帧走 media[]；旧 kf2v 仍走 image2video 平铺字段。
+    // 与 video/ref.ts 的 useReferenceAudio 保持同一判定：忽略大小写、覆盖 wan3.x 系列。
+    const isWan30 = /^wan3\./i.test(model);
+
+    if (fileUrl && !isWan30) {
+      throw new BailianError("--file is only supported by wan3.0-video.", ExitCode.USAGE);
+    }
+
+    let resolvedFileUrl: string | undefined;
+    if (fileUrl) {
+      resolvedFileUrl = await ctx.client.uploadFile(fileUrl, model);
+    }
 
     const watermark = resolveWatermark(flags.watermark);
     const promptExtend = resolveBooleanFlag(flags.promptExtend, undefined, "prompt-extend");
@@ -187,16 +216,26 @@ export default defineCommand({
       input: {
         prompt: prompt,
         negative_prompt: flags.negativePrompt || undefined,
-        // kf2v: first+last frame flat fields via image2video endpoint.
+        // wan3.0 kf2v: media[first_frame, last_frame] via video-generation endpoint.
+        // legacy kf2v: first_frame_url/last_frame_url via image2video endpoint.
         // wan2.1~2.6 i2v: flat img_url via video-generation endpoint.
         // wan2.7+ / happyhorse i2v: media[] via video-generation endpoint.
-        ...(isKf2v
-          ? { first_frame_url: resolvedImageUrl, last_frame_url: resolvedLastFrameUrl }
-          : resolvedImageUrl
-            ? /wan[x]?2\.[1-6]/i.test(model)
-              ? { img_url: resolvedImageUrl }
-              : { media: [{ type: "first_frame" as const, url: resolvedImageUrl }] }
-            : {}),
+        ...(resolvedFileUrl
+          ? { media: [{ type: "file" as const, url: resolvedFileUrl }] }
+          : isKf2v
+            ? isWan30
+              ? {
+                  media: [
+                    { type: "first_frame" as const, url: resolvedImageUrl! },
+                    { type: "last_frame" as const, url: resolvedLastFrameUrl! },
+                  ],
+                }
+              : { first_frame_url: resolvedImageUrl, last_frame_url: resolvedLastFrameUrl }
+            : resolvedImageUrl
+              ? /wan[x]?2\.[1-6]/i.test(model)
+                ? { img_url: resolvedImageUrl }
+                : { media: [{ type: "first_frame" as const, url: resolvedImageUrl }] }
+              : {}),
       },
       parameters: {
         resolution: flags.resolution || undefined,
@@ -210,13 +249,29 @@ export default defineCommand({
 
     if (settings.dryRun) {
       let previewBody = body;
-      if (isKf2v) {
+      if (resolvedFileUrl) {
         previewBody = {
           ...body,
           input: {
             ...body.input,
-            first_frame_url: redactDataUri(resolvedImageUrl ?? ""),
-            last_frame_url: redactDataUri(resolvedLastFrameUrl ?? ""),
+            media: [{ type: "file" as const, url: redactDataUri(resolvedFileUrl) }],
+          },
+        };
+      } else if (isKf2v) {
+        const redactedFirst = redactDataUri(resolvedImageUrl ?? "");
+        const redactedLast = redactDataUri(resolvedLastFrameUrl ?? "");
+        previewBody = {
+          ...body,
+          input: {
+            ...body.input,
+            ...(isWan30
+              ? {
+                  media: [
+                    { type: "first_frame" as const, url: redactedFirst },
+                    { type: "last_frame" as const, url: redactedLast },
+                  ],
+                }
+              : { first_frame_url: redactedFirst, last_frame_url: redactedLast }),
           },
         };
       } else if (resolvedImageUrl) {
@@ -243,7 +298,7 @@ export default defineCommand({
       settings,
       () =>
         ctx.client.requestJson<DashScopeAsyncResponse>({
-          path: isKf2v ? image2videoPath() : videoGeneratePath(),
+          path: isKf2v && !isWan30 ? image2videoPath() : videoGeneratePath(),
           method: "POST",
           body,
           async: true,

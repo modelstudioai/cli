@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
@@ -57,6 +57,46 @@ describe("e2e: speech recognize", () => {
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/recognize|--url|model|audio/i);
+  });
+
+  test("Token Plan 未显式传 model 时默认使用 qwen-audio ASR", async () => {
+    const configDir = makeE2eOutputDir("speech-recognize-token-plan-default");
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify({
+        "token-plan": {
+          api_key: "sk-sp-e2e-placeholder",
+          base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
+          default_speech_recognition_model: "qwen-audio-3.0-asr-flash",
+        },
+      }),
+    );
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      SPEECH_ROUTES,
+      [
+        "speech",
+        "recognize",
+        "--config",
+        "token-plan",
+        "--url",
+        "https://example.com/audio.wav",
+        "--dry-run",
+        "--output",
+        "json",
+        "--quiet",
+      ],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ request?: { model?: string }; mode?: string }>(stdout);
+    expect(data.request?.model).toBe("qwen-audio-3.0-asr-flash");
+    expect(data.mode).toBe("sync");
   });
 
   test("speech recognize sync-flash dry-run 走 multimodal-generation", async () => {

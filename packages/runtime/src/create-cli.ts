@@ -206,7 +206,11 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             configStore: makeConfigStore(sources.configName),
             authStore: makeAuthStore(sources),
             commandPacks: commandPackManager,
-            client: new Client({ identity, settings, baseUrl: resolveModelBaseUrl(sources) }),
+            client: new Client({
+              identity,
+              settings,
+              baseUrl: resolveModelBaseUrl(sources),
+            }),
           };
           await runMiddleware(ctx);
           await flushTelemetry(1000);

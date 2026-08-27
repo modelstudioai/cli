@@ -5,6 +5,9 @@ interface ModelProfilePreset {
   defaultImageToVideoModel: string;
   defaultReferenceToVideoModel: string;
   defaultImageModel: string;
+  defaultSpeechModel: string;
+  defaultSpeechRecognitionModel: string;
+  apiKeyCapabilities: readonly string[];
 }
 
 const MODEL_PROFILE_PRESETS: Readonly<Record<string, ModelProfilePreset>> = {
@@ -15,6 +18,20 @@ const MODEL_PROFILE_PRESETS: Readonly<Record<string, ModelProfilePreset>> = {
     defaultImageToVideoModel: "happyhorse-1.1-i2v",
     defaultReferenceToVideoModel: "happyhorse-1.1-r2v",
     defaultImageModel: "wan2.7-image",
+    defaultSpeechModel: "qwen-audio-3.0-tts-plus",
+    defaultSpeechRecognitionModel: "qwen-audio-3.0-asr-flash",
+    apiKeyCapabilities: [
+      "text.chat",
+      "vision.describe",
+      "image.generate",
+      "image.edit",
+      "speech.recognize",
+      "speech.synthesize",
+      "video.generate",
+      "video.ref",
+      "video.task.get",
+      "video.download",
+    ],
   },
 };
 

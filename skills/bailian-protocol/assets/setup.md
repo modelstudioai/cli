@@ -86,6 +86,31 @@ The built-in Profile supplies the Token Plan Base URL. `auth login` tests the ke
 and activates the Profile only when validation succeeds; do not ask the user to configure the Base
 URL or run a duplicate smoke test.
 
+### API Key capability fallback
+
+A named Profile can limit the API Key commands it supports through `api_key_capabilities`.
+
+- Supported commands use the selected Profile's API Key configuration.
+- Unsupported commands read `api_key` and `base_url` from `default`; other settings remain on the
+  selected Profile.
+- An explicit API Key or Base URL from flags or environment variables disables fallback for that
+  command.
+- Unless `--quiet` is used, the CLI reports fallback on stderr. With `--output json`, it emits a
+  structured warning.
+
+Profiles opt in only by defining `api_key_capabilities`. A missing field disables fallback, while
+`[]` makes every API Key command fall back to `default`. This applies to the built-in `token-plan`
+Profile too: the CLI never injects a newer preset at runtime. A successful Token Plan API Key login
+appends missing preset capabilities without removing existing entries, so log in again to upgrade
+the persisted preset.
+
+```bash
+bl config set --config company-plan --key api-key-capabilities \
+  --value text.chat,image.generate,video.generate
+```
+
+Capability IDs are leaf command paths joined with dots, such as `video.task.get`.
+
 Successful login automatically activates the explicitly selected Profile. Use `bl config list` to
 inspect it, and switch back when needed:
 
@@ -100,9 +125,11 @@ credential is validated and saved. Failed login and `--dry-run` do not switch Pr
 persisted `active_config` > `default`; credential and endpoint fields inside the selected Profile
 still follow flag > environment > config.
 
-Activation selects the entire Config for every credential domain, not only model consumption. After activating `token-plan`, Token Plan management and Console commands also read their OpenAPI or Console credentials from that Profile. If those credentials remain in `default`, invoke the command with `--config default` or log the corresponding credential domain into `token-plan`.
+Activation selects the entire Config for every credential domain, not only model consumption. The only exception is the API Key capability fallback described above. After activating `token-plan`, Token Plan management and Console commands still read their OpenAPI or Console credentials from that Profile. If those credentials remain in `default`, invoke the command with `--config default` or log the corresponding credential domain into `token-plan`.
 
-The built-in `token-plan` profile defaults to:
+The built-in `token-plan` preset contains the following values. The CLI materializes them only after
+a successful `auth login --config token-plan`. It does not replace them at runtime; run the login
+command again to persist a newer preset:
 
 - Base URL: `https://token-plan.cn-beijing.maas.aliyuncs.com`
 - Text model: `qwen3.8-max`
@@ -110,6 +137,9 @@ The built-in `token-plan` profile defaults to:
 - Text-to-video model (`default_video_model`): `happyhorse-1.1-t2v`
 - Image-to-video model (`default_image_to_video_model`): `happyhorse-1.1-i2v`
 - Reference-to-video model (`default_reference_to_video_model`): `happyhorse-1.1-r2v`
+- Speech synthesis model (`default_speech_model`): `qwen-audio-3.0-tts-plus`
+- Speech recognition model (`default_speech_recognition_model`): `qwen-audio-3.0-asr-flash`
+- API Key capabilities: `text.chat`, `vision.describe`, `image.generate`, `image.edit`, `speech.recognize`, `speech.synthesize`, `video.generate`, `video.ref`, `video.task.get`, `video.download`
 
 The usual priority applies to this profile too: per-command `--api-key` / `--base-url`, then `DASHSCOPE_API_KEY` / `DASHSCOPE_BASE_URL`, then the selected profile. Unset environment overrides when you want to use the credentials saved in `token-plan`.
 

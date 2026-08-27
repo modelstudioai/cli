@@ -100,8 +100,9 @@ export class Client {
    * Export the model-domain credential for delegation to an embedded SDK that
    * owns its own transport (e.g. @openagentpack/sdk). Deliberate escape hatch:
    * regular commands keep calling {@link request}/{@link requestJson} and never
-   * handle tokens — lint restricts callers to managed-agent/_engine. Undefined
-   * when no credential resolved (authStage tolerates that only under dry-run).
+   * handle tokens; only trusted internal adapters such as managed-agent/_engine
+   * and the Command Pack host use this export. Undefined when no credential
+   * resolved (authStage tolerates that only under dry-run).
    */
   exportApiCredential(): ApiKeyCredential | undefined {
     return this.deps.apiCred;
@@ -156,7 +157,6 @@ export class Client {
   }
 
   usesTokenPlanEndpoint(): boolean {
-    if (this.deps.settings.configName === "token-plan") return true;
     try {
       return /^token-plan\.[a-z0-9-]+\.maas\.aliyuncs\.com$/i.test(new URL(this.baseUrl).hostname);
     } catch {

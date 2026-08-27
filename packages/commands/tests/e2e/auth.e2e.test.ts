@@ -274,13 +274,27 @@ describe("e2e: auth", () => {
         default_image_to_video_model: "happyhorse-1.1-i2v",
         default_reference_to_video_model: "happyhorse-1.1-r2v",
         default_image_model: "wan2.7-image",
+        default_speech_model: "qwen-audio-3.0-tts-plus",
+        default_speech_recognition_model: "qwen-audio-3.0-asr-flash",
+        api_key_capabilities: [
+          "text.chat",
+          "vision.describe",
+          "image.generate",
+          "image.edit",
+          "speech.recognize",
+          "speech.synthesize",
+          "video.generate",
+          "video.ref",
+          "video.task.get",
+          "video.download",
+        ],
       });
     } finally {
       await validationServer.close();
     }
   });
 
-  test("auth login --config token-plan 物化并重置内置预设", async () => {
+  test("auth login --config token-plan 追加新版 capability preset 且不删除已有能力", async () => {
     const validationServer = await startValidationServer();
     const configDir = makeE2eOutputDir("auth-token-plan-preset-login");
     writeFileSync(
@@ -293,6 +307,7 @@ describe("e2e: auth", () => {
             default_image_to_video_model: "custom-image-to-video-model",
             default_reference_to_video_model: "custom-reference-to-video-model",
             default_image_model: "custom-image-model",
+            api_key_capabilities: ["text.chat", "custom.command"],
           },
         },
         null,
@@ -337,6 +352,21 @@ describe("e2e: auth", () => {
         default_image_to_video_model: "happyhorse-1.1-i2v",
         default_reference_to_video_model: "happyhorse-1.1-r2v",
         default_image_model: "wan2.7-image",
+        default_speech_model: "qwen-audio-3.0-tts-plus",
+        default_speech_recognition_model: "qwen-audio-3.0-asr-flash",
+        api_key_capabilities: [
+          "text.chat",
+          "custom.command",
+          "vision.describe",
+          "image.generate",
+          "image.edit",
+          "speech.recognize",
+          "speech.synthesize",
+          "video.generate",
+          "video.ref",
+          "video.task.get",
+          "video.download",
+        ],
       });
       expect((config["token-plan"] as Record<string, unknown>).base_url).not.toBe(
         validationServer.baseUrl,
@@ -344,6 +374,58 @@ describe("e2e: auth", () => {
       expect((config["token-plan"] as Record<string, unknown>).api_key).not.toBe(
         "sk-env-must-not-be-persisted",
       );
+    } finally {
+      await validationServer.close();
+    }
+  });
+
+  test("auth login --config token-plan 为显式空白名单追加 capability preset", async () => {
+    const validationServer = await startValidationServer();
+    const configDir = makeE2eOutputDir("auth-token-plan-empty-capabilities-login");
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify(
+        {
+          "token-plan": {
+            api_key_capabilities: [],
+          },
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+
+    try {
+      const login = await runCommandE2e(
+        AUTH_ROUTES,
+        ["auth", "login", "--config", "token-plan", "--api-key", "sk-sp-e2e-placeholder"],
+        {
+          BAILIAN_CONFIG_DIR: configDir,
+          DASHSCOPE_API_KEY: "",
+          DASHSCOPE_BASE_URL: validationServer.baseUrl,
+        },
+      );
+      expect(login.exitCode, login.stderr).toBe(0);
+      expect(validationServer.requests).toHaveLength(1);
+
+      const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
+        string,
+        unknown
+      >;
+      expect(config["token-plan"]).toMatchObject({
+        api_key_capabilities: [
+          "text.chat",
+          "vision.describe",
+          "image.generate",
+          "image.edit",
+          "speech.recognize",
+          "speech.synthesize",
+          "video.generate",
+          "video.ref",
+          "video.task.get",
+          "video.download",
+        ],
+      });
     } finally {
       await validationServer.close();
     }

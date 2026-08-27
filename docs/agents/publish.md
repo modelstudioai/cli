@@ -24,6 +24,10 @@ publish-stable.mjs / publish-channel.mjs   ← 唯一发版入口
 
 `tools/release/lib/binary-release.mjs` 等是实现，一般不要单独当发版入口（调试可用）。
 
+### bailian-kb-dsh（独立版本、npm-only）
+
+同一个 Publish 入口，`package=bailian-kb-dsh`。它走单独的 `tools/release/publish-kb-dsh.mjs`，不复用 `publish-stable.mjs` / `publish-channel.mjs`（版本独立、无 binary、无 OSS CDN）。详见 [dsh-plugin.md](dsh-plugin.md#发布)。
+
 两种模式：
 
 | 模式    | 用途                                                                                    | 触发方式                                     |

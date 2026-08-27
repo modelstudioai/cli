@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   e2eLabelFromMetaUrl,
@@ -23,6 +24,72 @@ describe("e2e: speech synthesize", () => {
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/synthesize|--text|--voice|model/i);
+  });
+
+  test("Token Plan 未显式传 model/format 时使用 qwen-audio TTS 和 MP3", async () => {
+    const configDir = makeE2eOutputDir("speech-synthesize-token-plan-default");
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify({
+        "token-plan": {
+          api_key: "sk-sp-e2e-placeholder",
+          base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
+          default_speech_model: "qwen-audio-3.0-tts-plus",
+        },
+      }),
+    );
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      SPEECH_ROUTES,
+      [
+        "speech",
+        "synthesize",
+        "--config",
+        "token-plan",
+        "--voice",
+        "longanlingxin",
+        "--text",
+        "Token Plan 默认语音模型测试",
+        "--dry-run",
+        "--output",
+        "json",
+        "--quiet",
+      ],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      request?: { model?: string; input?: { format?: string } };
+    }>(stdout);
+    expect(data.request?.model).toBe("qwen-audio-3.0-tts-plus");
+    expect(data.request?.input?.format).toBe("mp3");
+  });
+
+  test("speech synthesize 流式模式未显式传 format 时保持 PCM", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+      "speech",
+      "synthesize",
+      "--model",
+      "qwen-audio-3.0-tts-plus",
+      "--voice",
+      "longanlingxin",
+      "--text",
+      "流式格式测试",
+      "--stream",
+      "--dry-run",
+      "--output",
+      "json",
+      "--quiet",
+    ]);
+
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ request?: { input?: { format?: string } } }>(stdout);
+    expect(data.request?.input?.format).toBe("pcm");
   });
 });
 

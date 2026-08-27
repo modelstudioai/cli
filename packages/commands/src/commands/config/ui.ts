@@ -139,15 +139,17 @@ function tokenMatches(provided: string | null, expected: string): boolean {
 /** Build the request cleaned/validated config block from a posted `data` map. */
 function buildProfilePatch(
   data: Record<string, unknown>,
-): Record<string, string | number | boolean> {
-  const cleaned: Record<string, string | number | boolean> = {};
-  for (const [k, v] of Object.entries(data)) {
+): Record<string, string | number | boolean | string[]> {
+  const cleaned: Record<string, string | number | boolean | string[]> = {};
+  for (const [key, rawValue] of Object.entries(data)) {
     let value = "";
-    if (typeof v === "string") value = v;
-    else if (typeof v === "number" || typeof v === "boolean") value = String(v);
-    // null/undefined/objects fall through as "" and clear the key
+    if (typeof rawValue === "string") value = rawValue;
+    else if (typeof rawValue === "number" || typeof rawValue === "boolean") {
+      value = String(rawValue);
+    } else if (Array.isArray(rawValue)) value = JSON.stringify(rawValue);
+    // null/undefined/non-array objects fall through as "" and clear the key
     if (value === "") continue;
-    cleaned[resolveKey(k)] = validateAndCoerceUi(k, value);
+    cleaned[resolveKey(key)] = validateAndCoerceUi(key, value);
   }
   return cleaned;
 }
@@ -155,7 +157,7 @@ function buildProfilePatch(
 /** Preserve valid Config fields that the UI does not expose or manage. */
 function mergeUnmanagedProfileFields(
   existing: Record<string, unknown>,
-  managedPatch: Record<string, string | number | boolean>,
+  managedPatch: Record<string, string | number | boolean | string[]>,
 ): Record<string, unknown> {
   const managedKeys = new Set<string>(UI_VALID_KEYS);
   const merged: Record<string, unknown> = {};
@@ -635,7 +637,7 @@ export function createConfigUiServer(
           return;
         }
         let normalized: string | undefined;
-        let cleaned: Record<string, string | number | boolean>;
+        let cleaned: Record<string, string | number | boolean | string[]>;
         try {
           normalized = normalizeConfigName(body.name);
           cleaned = buildProfilePatch(body.data as Record<string, unknown>);
