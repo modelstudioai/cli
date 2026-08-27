@@ -79,6 +79,13 @@ function isLocalizedText(value: unknown): value is LocalizedText {
   );
 }
 
+function isCommandRisk(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+
+  const risk = value as Record<string, unknown>;
+  return risk.level === "high" && isLocalizedText(risk.message);
+}
+
 function assertCommand(path: string, value: unknown): asserts value is CommandPackCommand<any> {
   if (!value || typeof value !== "object") {
     throw new Error(`Command "${path}" must export an object.`);
@@ -90,8 +97,8 @@ function assertCommand(path: string, value: unknown): asserts value is CommandPa
   if (!command.auth || !AUTH_REQUIREMENTS.has(command.auth)) {
     throw new Error(`Command "${path}" has an invalid auth requirement.`);
   }
-  if (command.risk !== undefined && !isLocalizedText(command.risk.message)) {
-    throw new Error(`Command "${path}" has an invalid risk message.`);
+  if (command.risk !== undefined && !isCommandRisk(command.risk)) {
+    throw new Error(`Command "${path}" has invalid risk metadata.`);
   }
   if (typeof command.run !== "function") {
     throw new Error(`Command "${path}" is missing run(ctx).`);

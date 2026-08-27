@@ -6,7 +6,7 @@ import {
   type FlagsDef,
   type RagConnectorResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare, confirmDangerousAction } from "bailian-cli-runtime";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const CATEGORY_DELETE_FLAGS = {
@@ -16,16 +16,19 @@ const CATEGORY_DELETE_FLAGS = {
     description: { "en-US": "Category ID to delete", "zh-CN": "要删除的类目 ID" },
     required: true,
   },
-  yes: {
-    type: "switch",
-    description: { "en-US": "Skip the confirmation prompt", "zh-CN": "跳过确认提示" },
-  },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
 export default defineCommand({
   description: { "en-US": "Delete a data-center category", "zh-CN": "删除数据中心类目" },
   auth: "apiKey",
+  risk: {
+    level: "high",
+    message: {
+      "en-US": "This deletes the selected data-center category and cannot be undone.",
+      "zh-CN": "该操作会删除所选数据中心类目，且无法撤销。",
+    },
+  },
   usageArgs: "--category-id <id> [flags]",
   flags: CATEGORY_DELETE_FLAGS,
   notes: [
@@ -48,11 +51,6 @@ export default defineCommand({
       emitResult({ endpoint, request: body }, format);
       return;
     }
-
-    await confirmDangerousAction(
-      `Delete category ${flags.categoryId}\nThis cannot be undone.`,
-      flags.yes ?? false,
-    );
 
     const response = await ctx.client.requestJson<
       RagConnectorResponse<Record<string, unknown> | undefined>

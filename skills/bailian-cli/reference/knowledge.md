@@ -94,8 +94,8 @@ bl knowledge category add --name sub --parent-id cate-xxx
 | Flag                  | Type   | Required | Description                                                     |
 | --------------------- | ------ | -------- | --------------------------------------------------------------- |
 | `--category-id <id>`  | string | yes      | Category ID to delete                                           |
-| `--yes`               | switch | no       | Skip the confirmation prompt                                    |
 | `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--yes`               | switch | no       | Confirm this high-risk operation                                |
 | `--api-key <key>`     | string | no       | API key                                                         |
 | `--base-url <url>`    | string | no       | API base URL                                                    |
 
@@ -255,8 +255,8 @@ bl knowledge chunk add --index-id idx-xxx --field columnA=v1 --field columnB=v2
 | --------------------- | ------ | -------- | --------------------------------------------------------------------- |
 | `--index-id <id>`     | string | yes      | Knowledge base ID                                                     |
 | `--chunk-id <id>`     | array  | yes      | Chunk ID to delete (repeatable; batches of 10 are sent automatically) |
-| `--yes`               | switch | no       | Skip the confirmation prompt                                          |
 | `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)       |
+| `--yes`               | switch | no       | Confirm this high-risk operation                                      |
 | `--api-key <key>`     | string | no       | API key                                                               |
 | `--base-url <url>`    | string | no       | API base URL                                                          |
 
@@ -473,8 +473,8 @@ bl knowledge create --name demo --description 'product docs' --category-id cate-
 | Flag                  | Type   | Required | Description                                                     |
 | --------------------- | ------ | -------- | --------------------------------------------------------------- |
 | `--index-id <id>`     | string | yes      | Knowledge base ID                                               |
-| `--yes`               | switch | no       | Skip the confirmation prompt                                    |
 | `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--yes`               | switch | no       | Confirm this high-risk operation                                |
 | `--api-key <key>`     | string | no       | API key                                                         |
 | `--base-url <url>`    | string | no       | API base URL                                                    |
 
@@ -740,8 +740,8 @@ bl knowledge doc upload --file ./docs/ --dry-run --verbose
 | Flag                  | Type   | Required | Description                                                     |
 | --------------------- | ------ | -------- | --------------------------------------------------------------- |
 | `--file-id <id>`      | string | yes      | Data-center file ID to delete                                   |
-| `--yes`               | switch | no       | Skip the confirmation prompt                                    |
 | `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--yes`               | switch | no       | Confirm this high-risk operation                                |
 | `--api-key <key>`     | string | no       | API key                                                         |
 | `--base-url <url>`    | string | no       | API base URL                                                    |
 
@@ -1044,8 +1044,8 @@ bl knowledge service create --name my-search --scene search --index-id idx-xxx
 | Flag                  | Type   | Required | Description                                                     |
 | --------------------- | ------ | -------- | --------------------------------------------------------------- |
 | `--agent-id <id>`     | string | yes      | Service (agent) ID                                              |
-| `--yes`               | switch | no       | Skip the confirmation prompt                                    |
 | `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--yes`               | switch | no       | Confirm this high-risk operation                                |
 | `--api-key <key>`     | string | no       | API key                                                         |
 | `--base-url <url>`    | string | no       | API base URL                                                    |
 
@@ -1080,8 +1080,8 @@ bl knowledge service delete --agent-id aid-xxx --yes
 | ----------------------- | ------ | -------- | --------------------------------------------------------------- |
 | `--agent-id <id>`       | string | yes      | Service (agent) ID                                              |
 | `--version-desc <text>` | string | no       | Description for the newly published version                     |
-| `--yes`                 | switch | no       | Skip the confirmation prompt                                    |
 | `--workspace-id <id>`   | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--yes`                 | switch | no       | Confirm this high-risk operation                                |
 | `--api-key <key>`       | string | no       | API key                                                         |
 | `--base-url <url>`      | string | no       | API base URL                                                    |
 

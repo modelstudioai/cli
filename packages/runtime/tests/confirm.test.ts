@@ -1,31 +1,7 @@
-import { afterEach, describe, expect, test, vi } from "vite-plus/test";
+import { describe, expect, test, vi } from "vite-plus/test";
 import { defineCommand, ExitCode, type CommandRisk, type LocalizedText } from "bailian-cli-core";
-import {
-  ConfirmationRequiredError,
-  confirmDangerousAction,
-  confirmationFlagDefs,
-} from "../src/confirm.ts";
+import { ConfirmationRequiredError, confirmationFlagDefs } from "../src/confirm.ts";
 import { confirmationStage, type RunContext } from "../src/middleware.ts";
-
-const readlineMocks = vi.hoisted(() => {
-  const question = vi.fn(async () => "y");
-  const close = vi.fn();
-  return {
-    question,
-    close,
-    createInterface: vi.fn(() => ({ question, close })),
-  };
-});
-
-vi.mock("node:readline/promises", () => ({ createInterface: readlineMocks.createInterface }));
-
-const originalIsTTY = process.stdin.isTTY;
-
-afterEach(() => {
-  process.stdin.isTTY = originalIsTTY;
-  vi.restoreAllMocks();
-  vi.clearAllMocks();
-});
 
 const HIGH_RISK_MESSAGE = {
   "en-US": "This permanently deletes the document and its chunks.",
@@ -82,26 +58,6 @@ describe("confirmation metadata", () => {
         hint: "此命令将执行高风险操作。如确认继续，请在原命令中添加 --yes 后重新执行。",
       },
     });
-  });
-
-  test("legacy commands fail closed without opening a TTY prompt", async () => {
-    process.stdin.isTTY = false;
-    await expect(confirmDangerousAction("legacy summary", false)).rejects.toMatchObject({
-      exitCode: ExitCode.USAGE,
-    });
-    await expect(confirmDangerousAction("legacy summary", true)).resolves.toBeUndefined();
-  });
-
-  test("legacy commands retain their existing TTY confirmation during migration", async () => {
-    process.stdin.isTTY = true;
-    const stderrWrite = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-
-    await expect(confirmDangerousAction("legacy summary", false)).resolves.toBeUndefined();
-
-    expect(stderrWrite).toHaveBeenCalledWith("legacy summary\n");
-    expect(readlineMocks.createInterface).toHaveBeenCalledOnce();
-    expect(readlineMocks.question).toHaveBeenCalledWith("Proceed? [y/N] ");
-    expect(readlineMocks.close).toHaveBeenCalledOnce();
   });
 });
 

@@ -163,6 +163,42 @@ test("loads an API 1 Command Pack and preserves its command contract", async () 
   expect(commands["agent ping"]?.flags?.message).toMatchObject({ required: true, type: "string" });
 });
 
+test.each([
+  ["null", null],
+  ["a non-object value", "high"],
+  ["a missing level", { message: "Dangerous operation." }],
+  ["an unsupported level", { level: "low", message: "Dangerous operation." }],
+  ["an invalid message", { level: "high", message: "" }],
+])("rejects Command Pack risk metadata with %s", async (_caseName, risk) => {
+  const root = await mkdtemp(join(tmpdir(), "command-pack-risk-test-"));
+
+  try {
+    await writeFile(
+      join(root, "commands.mjs"),
+      `export default {
+        "agent dangerous": {
+          description: "Dangerous command",
+          auth: "none",
+          risk: ${JSON.stringify(risk)},
+          async run() {},
+        },
+      };\n`,
+    );
+
+    await expect(
+      loadAndValidateCommandPack(
+        "@ali/bailian-plugin-agent",
+        packageJson,
+        policy.supported["@ali/bailian-plugin-agent"]!,
+        identity,
+        root,
+      ),
+    ).rejects.toThrow(/invalid risk/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("rejects incompatible protocol versions and invalid command prefixes", async () => {
   await expect(
     loadAndValidateCommandPack(

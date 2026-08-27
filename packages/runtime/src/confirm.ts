@@ -1,4 +1,3 @@
-import { createInterface } from "node:readline/promises";
 import {
   BailianError,
   ExitCode,
@@ -20,39 +19,6 @@ export const CONFIRMATION_FLAGS = {
 
 export function confirmationFlagDefs(command: { risk?: CommandRisk }): FlagsDef {
   return command.risk === undefined ? {} : CONFIRMATION_FLAGS;
-}
-
-/**
- * Transitional compatibility for commands that have not moved to command-level
- * risk metadata yet.
- * TODO(next commit): migrate every remaining caller to command-level risk metadata, then
- * remove this helper and update their confirmation wording/examples together.
- *
- * @deprecated Declare command-level risk metadata and let runtime gate confirmation.
- */
-export async function confirmDangerousAction(summary: string, yes: boolean): Promise<void> {
-  if (yes) return;
-  if (!process.stdin.isTTY) {
-    throw new BailianError(
-      "Confirmation required for this destructive action.",
-      ExitCode.USAGE,
-      "Re-run with --yes to confirm in non-interactive mode",
-    );
-  }
-  process.stderr.write(`${summary}\n`);
-  const readline = createInterface({ input: process.stdin, output: process.stderr });
-  try {
-    const answer = (await readline.question("Proceed? [y/N] ")).trim().toLowerCase();
-    if (answer !== "y" && answer !== "yes") {
-      process.stderr.write("Cancelled.\n");
-      // Intentional: a user-initiated cancellation is not an error, and we want
-      // to exit here rather than unwind through the middleware stack (which
-      // would still print a success report for an action that did not happen).
-      process.exit(ExitCode.SUCCESS);
-    }
-  } finally {
-    readline.close();
-  }
 }
 
 export function confirmationHint(): LocalizedText {
