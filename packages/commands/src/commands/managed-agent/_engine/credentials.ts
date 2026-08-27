@@ -170,11 +170,16 @@ export function normalizeInterpolatedProviderBlocks(providers: Record<string, un
  * provider's `api_key` resolved empty (missing env var, or no bl login for
  * bailian). Replaces the SDK's raw `Environment variable '...' is not set` /
  * zod config error with a clean message plus a provider-specific hint. Validates
- * every declared provider, so a project is only runnable once all its providers'
- * keys are available; offline commands skip the check entirely.
+ * every declared provider by default. A scoped operation may pass its exact
+ * provider list so unrelated credentials cannot block it; offline commands skip
+ * the check entirely.
  */
-export function assertProviderCredentials(providers: Record<string, unknown>): void {
+export function assertProviderCredentials(
+  providers: Record<string, unknown>,
+  targetProviders?: readonly string[],
+): void {
   for (const [name, raw] of Object.entries(providers)) {
+    if (targetProviders && !targetProviders.includes(name)) continue;
     if (!raw || typeof raw !== "object") continue;
     const block = raw as Record<string, unknown>;
     if (!("api_key" in block)) continue;

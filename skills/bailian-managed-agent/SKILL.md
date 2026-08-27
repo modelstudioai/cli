@@ -40,6 +40,19 @@ API-oriented commands do not replace IaC. Agent / Environment / Skill / Vault �
 5. Destroy   bl managed-agent destroy --yes # only after user confirmation
 ```
 
+## Scoped single-Agent create
+
+`bl managed-agent agent create`仍然先把声明写入 `agents.yaml`，再通过 SDK 的定向 Plan/Apply 创建远端资源，
+不是绕过 State 的命令式 API 调用：
+
+- 用户只提供 Agent `name`；CLI 自动生成稳定的 YAML 逻辑 key，同名 Agent 用递增后缀并存。
+- 默认只预览自动 key 和定向计划；`--dry-run` 完全离线，只有显式 `--yes` 才写 YAML 并创建远端 Agent。
+- 定向流程只刷新目标 Agent 及其传递依赖；无关资源不检测 Drift、不产生 action，也不阻塞。
+- 目标 Agent 必须是 `create`，相关依赖必须已经处于 `no-op`；项目级 Drift 和删除仍由全量 `plan/apply` 处理。
+- 远端创建失败时保留 YAML 声明；修复相关依赖或 Provider 错误后，重复相同命令会复用待创建 key。
+
+具体 flags、usage 和 examples 以 `reference/` 或 `bl managed-agent agent create --help` 为准。
+
 ## Deployment as IaC
 
 Deployment 与 Agent 一样声明在 `agents.yaml` 中，并复用同一条 `validate → plan → apply → destroy` IaC 链路；

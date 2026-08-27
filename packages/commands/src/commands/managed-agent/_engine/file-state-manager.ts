@@ -6,7 +6,7 @@ import {
   type StateScope,
 } from "@openagentpack/sdk";
 
-function createStateScope(configPath: string, projectName?: string): StateScope {
+export function createFileStateScope(configPath: string, projectName?: string): StateScope {
   const resolved = resolve(configPath);
   return { projectId: projectName ?? basename(dirname(resolved)) };
 }
@@ -19,6 +19,6 @@ export async function loadFileState(
 ): Promise<IStateManager> {
   const resolved = resolve(configPath);
   const backend = new LocalFileStateBackend({ configPath: resolved, statePath });
-  const path = backend.getStatePath(createStateScope(resolved, projectName));
+  const path = backend.getStatePath(createFileStateScope(resolved, projectName));
   return StateManager.load(path);
 }

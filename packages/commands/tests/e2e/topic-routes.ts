@@ -198,6 +198,7 @@ export const MANAGED_AGENT_ROUTES: E2eRouteExports = {
   "managed-agent session events": "managedAgentSessionEvents",
   "managed-agent skill-list": "managedAgentSkillList",
   "managed-agent capabilities": "managedAgentCapabilities",
+  "managed-agent agent create": "managedAgentAgentCreate",
   "managed-agent agent list": "managedAgentAgentList",
   "managed-agent agent get": "managedAgentAgentGet",
   "managed-agent agent search": "managedAgentAgentSearch",

@@ -1,5 +1,10 @@
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
+import { parse } from "yaml";
 import { e2eFixturesDir, parseStdoutJson, runCommandE2e } from "./helpers.ts";
 import { MANAGED_AGENT_ROUTES } from "./topic-routes.ts";
 
@@ -9,6 +14,7 @@ const AGENTS_DEPLOYMENT_INVALID_YAML = join(
   "managed-agent",
   "agents-deployment-invalid.yaml",
 );
+const AGENTS_YAML = join(e2eFixturesDir, "managed-agent", "agents.yaml");
 
 const DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES = [
   "bailian.deployment.initial_events.message_required",
@@ -130,6 +136,125 @@ describe("e2e: managed-agent", () => {
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--file|--provider|--yes/i);
+  });
+
+  test("managed-agent agent create --help 展示声明和确认参数", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "agent",
+      "create",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--name|--model|--instructions|--skill|--yes/i);
+    expect(stderr).not.toMatch(/--key/i);
+  });
+
+  test("managed-agent agent create 缺少 --name 时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "agent",
+      "create",
+      "--model",
+      "qwen3.8-max",
+      "--instructions",
+      "help",
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--name|Missing required/i);
+  });
+
+  test("managed-agent agent create 默认只预览，不写 YAML", async () => {
+    const sourceBefore = await readFile(AGENTS_YAML, "utf8");
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      MANAGED_AGENT_ROUTES,
+      [
+        "managed-agent",
+        "agent",
+        "create",
+        "--name",
+        "Create Confirm",
+        "--model",
+        "qwen3.8-max",
+        "--instructions",
+        "Preview before create",
+        "--file",
+        AGENTS_YAML,
+        "--output",
+        "json",
+      ],
+      { DASHSCOPE_API_KEY: "sk-e2e-agent-create" },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      agent?: { key?: string; name?: string };
+      yaml_written?: boolean;
+      requires_confirmation?: boolean;
+      ready_to_create?: boolean;
+    }>(stdout);
+    expect(data.agent).toEqual(
+      expect.objectContaining({ key: "create-confirm", name: "Create Confirm" }),
+    );
+    expect(data.yaml_written).toBe(false);
+    expect(data.requires_confirmation).toBe(true);
+    expect(data.ready_to_create).toBe(true);
+    expect(await readFile(AGENTS_YAML, "utf8")).toBe(sourceBefore);
+  });
+
+  test("managed-agent agent create 远端失败后保留 YAML，重试复用 key", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "bl-agent-create-e2e-"));
+    const configPath = join(directory, "agents.yaml");
+    await writeFile(configPath, await readFile(AGENTS_YAML, "utf8"), "utf8");
+    const requestBodies: Array<Record<string, unknown>> = [];
+    const server = http.createServer((request, response) => {
+      const chunks: Buffer[] = [];
+      request.on("data", (chunk: Buffer) => chunks.push(chunk));
+      request.on("end", () => {
+        const body = Buffer.concat(chunks).toString("utf8");
+        if (body) requestBodies.push(JSON.parse(body) as Record<string, unknown>);
+        response.writeHead(500, { "Content-Type": "application/json" });
+        response.end(JSON.stringify({ message: "intentional create failure" }));
+      });
+    });
+    await new Promise<void>((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
+    const address = server.address() as AddressInfo;
+    const args = [
+      "managed-agent",
+      "agent",
+      "create",
+      "--name",
+      "Retry Agent",
+      "--model",
+      "qwen3.8-max",
+      "--instructions",
+      "Retry safely",
+      "--file",
+      configPath,
+      "--yes",
+      "--output",
+      "json",
+    ];
+    const env = {
+      DASHSCOPE_API_KEY: "sk-e2e-agent-create",
+      BAILIAN_BASE_URL: `http://127.0.0.1:${address.port}/api/v1/agentstudio`,
+    };
+    try {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const result = await runCommandE2e(MANAGED_AGENT_ROUTES, args, env);
+        expect(result.exitCode, result.stderr).toBe(1);
+      }
+      const config = parse(await readFile(configPath, "utf8")) as {
+        agents: Record<string, { name?: string }>;
+      };
+      expect(config.agents["retry-agent"]?.name).toBe("Retry Agent");
+      expect(config.agents["retry-agent-2"]).toBeUndefined();
+      expect(requestBodies).toHaveLength(2);
+      expect(requestBodies.every((body) => body.name === "Retry Agent")).toBe(true);
+    } finally {
+      await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   test("managed-agent session delete 缺少 --session-id 时退出为用法错误 (2)", async () => {
@@ -309,6 +434,44 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{ would_apply?: { provider?: string } }>(stdout);
     expect(data.would_apply?.provider).toBe("all");
+  });
+
+  test("agent create --dry-run 自动生成 key 且不改 YAML", async () => {
+    const sourceBefore = await readFile(AGENTS_YAML, "utf8");
+    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "agent",
+      "create",
+      "--dry-run",
+      "--name",
+      "Create Preview",
+      "--model",
+      "qwen3.8-max",
+      "--instructions",
+      "Preview only",
+      "--file",
+      AGENTS_YAML,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      agent?: { key?: string; name?: string };
+      yaml_written?: boolean;
+      actions?: Array<{ action?: string; address?: { name?: string } }>;
+    }>(stdout);
+    expect(data.agent).toEqual(
+      expect.objectContaining({ key: "create-preview", name: "Create Preview" }),
+    );
+    expect(data.yaml_written).toBe(false);
+    expect(data.actions).toContainEqual(
+      expect.objectContaining({
+        action: "create",
+        address: expect.objectContaining({ name: "create-preview" }),
+      }),
+    );
+    expect(data.actions?.every((action) => action.address?.name === "create-preview")).toBe(true);
+    expect(await readFile(AGENTS_YAML, "utf8")).toBe(sourceBefore);
   });
 
   test("destroy --dry-run 仅输出计划", async () => {
