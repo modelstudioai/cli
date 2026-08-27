@@ -7,7 +7,11 @@ import {
   normalizeAgentKey,
   replaceConfigAtomically,
   selectAgentKey,
-} from "../src/commands/managed-agent/agent-create.ts";
+} from "../src/commands/managed-agent/agent/create.ts";
+import {
+  normalizeResourceKey,
+  parseMetadata,
+} from "../src/commands/managed-agent/_engine/scoped-create.ts";
 
 function candidate(instructions = "help") {
   return buildAgentDecl(undefined, {
@@ -22,6 +26,17 @@ test("Agent key 从显示名生成并保留 Unicode", () => {
   expect(normalizeAgentKey("  Data Assistant  ")).toBe("data-assistant");
   expect(normalizeAgentKey("数据分析 助手")).toBe("数据分析-助手");
   expect(normalizeAgentKey("***")).toBe("agent");
+});
+
+test("通用资源 key 与 metadata 输入保持稳定", () => {
+  expect(normalizeResourceKey("  Production Vault  ", "vault")).toBe("production-vault");
+  expect(normalizeResourceKey("生产 环境", "environment")).toBe("生产-环境");
+  expect(normalizeResourceKey("***", "vault")).toBe("vault");
+  expect(parseMetadata(["owner=platform", "empty="])).toEqual({
+    owner: "platform",
+    empty: "",
+  });
+  expect(() => parseMetadata(["missing-separator"])).toThrow(/Invalid metadata/);
 });
 
 test("同名已跟踪 Agent 分配递增 key", () => {
@@ -86,7 +101,7 @@ test("YAML 替换校验原内容并保留文件权限", async () => {
 
     await expect(
       replaceConfigAtomically(configPath, "version: stale\n", "version: overwritten\n"),
-    ).rejects.toThrow(/changed while Agent create was being prepared/);
+    ).rejects.toThrow(/changed while resource create was being prepared/);
     expect(await readFile(configPath, "utf8")).toBe("version: new\n");
   } finally {
     await rm(directory, { recursive: true, force: true });

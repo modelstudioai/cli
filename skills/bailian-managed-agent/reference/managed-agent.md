@@ -7,64 +7,69 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                                 | Authentication | Description                                                         |
-| --------------------------------------- | -------------- | ------------------------------------------------------------------- |
-| `bl managed-agent agent create`         | API Key        | Declare and create one Managed Agent through an isolated YAML apply |
-| `bl managed-agent agent get`            | API Key        | Get a Managed Agent                                                 |
-| `bl managed-agent agent list`           | API Key        | List Managed Agents                                                 |
-| `bl managed-agent agent search`         | API Key        | Search Managed Agents                                               |
-| `bl managed-agent agent versions`       | API Key        | List Managed Agent versions                                         |
-| `bl managed-agent apply`                | API Key        | Apply planned changes to create/update/delete agent resources       |
-| `bl managed-agent capabilities`         | No Auth        | Show operation-level Managed Agents API capabilities                |
-| `bl managed-agent deployment get`       | API Key        | Get a Managed Agent deployment                                      |
-| `bl managed-agent deployment list`      | API Key        | List Managed Agent deployments                                      |
-| `bl managed-agent deployment pause`     | API Key        | Pause a Managed Agent deployment                                    |
-| `bl managed-agent deployment run`       | API Key        | Run a Managed Agent deployment now                                  |
-| `bl managed-agent deployment runs get`  | API Key        | Get a Managed Agent deployment run                                  |
-| `bl managed-agent deployment runs list` | API Key        | List runs for a Managed Agent deployment                            |
-| `bl managed-agent deployment search`    | API Key        | Search Managed Agent deployments                                    |
-| `bl managed-agent deployment unpause`   | API Key        | Unpause a Managed Agent deployment                                  |
-| `bl managed-agent destroy`              | API Key        | Destroy all managed agent resources tracked in state                |
-| `bl managed-agent environment get`      | API Key        | Get a Managed Agent environment                                     |
-| `bl managed-agent environment list`     | API Key        | List Managed Agent environments                                     |
-| `bl managed-agent environment search`   | API Key        | Search Managed Agent environments                                   |
-| `bl managed-agent file delete`          | API Key        | Delete a Managed Agent file                                         |
-| `bl managed-agent file download`        | API Key        | Download Managed Agent file content                                 |
-| `bl managed-agent file get`             | API Key        | Get Managed Agent file metadata                                     |
-| `bl managed-agent file list`            | API Key        | List Managed Agent files                                            |
-| `bl managed-agent file search`          | API Key        | Search Managed Agent files                                          |
-| `bl managed-agent file upload`          | API Key        | Upload a Managed Agent file                                         |
-| `bl managed-agent init`                 | No Auth        | Create a new agents.yaml template                                   |
-| `bl managed-agent plan`                 | API Key        | Show what changes would be applied to agent infrastructure          |
-| `bl managed-agent session archive`      | API Key        | Archive a Managed Agent session                                     |
-| `bl managed-agent session create`       | API Key        | Create a new session for an agent                                   |
-| `bl managed-agent session debug`        | API Key        | Aggregate session diagnostics                                       |
-| `bl managed-agent session delete`       | API Key        | Delete a session                                                    |
-| `bl managed-agent session event list`   | API Key        | List events for a Managed Agent session                             |
-| `bl managed-agent session event send`   | API Key        | Send raw events to a Managed Agent session                          |
-| `bl managed-agent session event stream` | API Key        | Stream events from a Managed Agent session                          |
-| `bl managed-agent session events`       | API Key        | List events for a Managed Agent session                             |
-| `bl managed-agent session export`       | API Key        | Export session diagnostics as a ZIP                                 |
-| `bl managed-agent session get`          | API Key        | Get details of a session                                            |
-| `bl managed-agent session list`         | API Key        | List sessions from the provider                                     |
-| `bl managed-agent session run`          | API Key        | Create a session, send a message, and stream the response           |
-| `bl managed-agent session search`       | API Key        | Search Managed Agent sessions                                       |
-| `bl managed-agent session send`         | API Key        | Send a message to an existing session and stream the response       |
-| `bl managed-agent session update`       | API Key        | Update a Managed Agent session                                      |
-| `bl managed-agent skill download`       | API Key        | Download a Managed Agent skill version                              |
-| `bl managed-agent skill get`            | API Key        | Get a Managed Agent skill                                           |
-| `bl managed-agent skill list`           | API Key        | List Managed Agent skills                                           |
-| `bl managed-agent skill search`         | API Key        | Search Managed Agent skills                                         |
-| `bl managed-agent skill versions`       | API Key        | List Managed Agent skill versions                                   |
-| `bl managed-agent skill-list`           | API Key        | List Managed Agent skills                                           |
-| `bl managed-agent state import`         | API Key        | Import an existing remote resource into agents state                |
-| `bl managed-agent state list`           | No Auth        | List resources tracked in agents state                              |
-| `bl managed-agent state rm`             | No Auth        | Remove a resource from state without destroying it remotely         |
-| `bl managed-agent state show`           | No Auth        | Show details of a resource in agents state                          |
-| `bl managed-agent validate`             | No Auth        | Validate an agents.yaml configuration (offline)                     |
-| `bl managed-agent vault get`            | API Key        | Get a Managed Agent vault                                           |
-| `bl managed-agent vault list`           | API Key        | List Managed Agent vaults                                           |
-| `bl managed-agent vault search`         | API Key        | Search Managed Agent vaults                                         |
+| Command                                    | Authentication | Description                                                                  |
+| ------------------------------------------ | -------------- | ---------------------------------------------------------------------------- |
+| `bl managed-agent agent create`            | API Key        | Declare and create one Managed Agent through an isolated YAML apply          |
+| `bl managed-agent agent get`               | API Key        | Get a Managed Agent                                                          |
+| `bl managed-agent agent list`              | API Key        | List Managed Agents                                                          |
+| `bl managed-agent agent search`            | API Key        | Search Managed Agents                                                        |
+| `bl managed-agent agent versions`          | API Key        | List Managed Agent versions                                                  |
+| `bl managed-agent apply`                   | API Key        | Apply planned changes to create/update/delete agent resources                |
+| `bl managed-agent capabilities`            | No Auth        | Show operation-level Managed Agents API capabilities                         |
+| `bl managed-agent deployment create`       | API Key        | Declare and create one Managed Agent Deployment through a scoped YAML apply  |
+| `bl managed-agent deployment get`          | API Key        | Get a Managed Agent deployment                                               |
+| `bl managed-agent deployment list`         | API Key        | List Managed Agent deployments                                               |
+| `bl managed-agent deployment pause`        | API Key        | Pause a Managed Agent deployment                                             |
+| `bl managed-agent deployment run`          | API Key        | Run a Managed Agent deployment now                                           |
+| `bl managed-agent deployment runs get`     | API Key        | Get a Managed Agent deployment run                                           |
+| `bl managed-agent deployment runs list`    | API Key        | List runs for a Managed Agent deployment                                     |
+| `bl managed-agent deployment search`       | API Key        | Search Managed Agent deployments                                             |
+| `bl managed-agent deployment unpause`      | API Key        | Unpause a Managed Agent deployment                                           |
+| `bl managed-agent destroy`                 | API Key        | Destroy all managed agent resources tracked in state                         |
+| `bl managed-agent environment create`      | API Key        | Declare and create one Managed Agent Environment through a scoped YAML apply |
+| `bl managed-agent environment get`         | API Key        | Get a Managed Agent environment                                              |
+| `bl managed-agent environment list`        | API Key        | List Managed Agent environments                                              |
+| `bl managed-agent environment search`      | API Key        | Search Managed Agent environments                                            |
+| `bl managed-agent file delete`             | API Key        | Delete a Managed Agent file                                                  |
+| `bl managed-agent file download`           | API Key        | Download Managed Agent file content                                          |
+| `bl managed-agent file get`                | API Key        | Get Managed Agent file metadata                                              |
+| `bl managed-agent file list`               | API Key        | List Managed Agent files                                                     |
+| `bl managed-agent file search`             | API Key        | Search Managed Agent files                                                   |
+| `bl managed-agent file upload`             | API Key        | Upload a Managed Agent file                                                  |
+| `bl managed-agent init`                    | No Auth        | Create a new agents.yaml template                                            |
+| `bl managed-agent plan`                    | API Key        | Show what changes would be applied to agent infrastructure                   |
+| `bl managed-agent session archive`         | API Key        | Archive a Managed Agent session                                              |
+| `bl managed-agent session create`          | API Key        | Create a new session for an agent                                            |
+| `bl managed-agent session debug`           | API Key        | Aggregate session diagnostics                                                |
+| `bl managed-agent session delete`          | API Key        | Delete a session                                                             |
+| `bl managed-agent session event list`      | API Key        | List events for a Managed Agent session                                      |
+| `bl managed-agent session event send`      | API Key        | Send raw events to a Managed Agent session                                   |
+| `bl managed-agent session event stream`    | API Key        | Stream events from a Managed Agent session                                   |
+| `bl managed-agent session events`          | API Key        | List events for a Managed Agent session                                      |
+| `bl managed-agent session export`          | API Key        | Export session diagnostics as a ZIP                                          |
+| `bl managed-agent session get`             | API Key        | Get details of a session                                                     |
+| `bl managed-agent session list`            | API Key        | List sessions from the provider                                              |
+| `bl managed-agent session run`             | API Key        | Create a session, send a message, and stream the response                    |
+| `bl managed-agent session search`          | API Key        | Search Managed Agent sessions                                                |
+| `bl managed-agent session send`            | API Key        | Send a message to an existing session and stream the response                |
+| `bl managed-agent session update`          | API Key        | Update a Managed Agent session                                               |
+| `bl managed-agent skill create`            | API Key        | Declare and create one custom Managed Agent Skill from a local source        |
+| `bl managed-agent skill download`          | API Key        | Download a Managed Agent skill version                                       |
+| `bl managed-agent skill get`               | API Key        | Get a Managed Agent skill                                                    |
+| `bl managed-agent skill list`              | API Key        | List Managed Agent skills                                                    |
+| `bl managed-agent skill search`            | API Key        | Search Managed Agent skills                                                  |
+| `bl managed-agent skill versions`          | API Key        | List Managed Agent skill versions                                            |
+| `bl managed-agent skill-list`              | API Key        | List Managed Agent skills                                                    |
+| `bl managed-agent state import`            | API Key        | Import an existing remote resource into agents state                         |
+| `bl managed-agent state list`              | No Auth        | List resources tracked in agents state                                       |
+| `bl managed-agent state rm`                | No Auth        | Remove a resource from state without destroying it remotely                  |
+| `bl managed-agent state show`              | No Auth        | Show details of a resource in agents state                                   |
+| `bl managed-agent validate`                | No Auth        | Validate an agents.yaml configuration (offline)                              |
+| `bl managed-agent vault create`            | API Key        | Declare and create one empty Managed Agent Vault through a scoped YAML apply |
+| `bl managed-agent vault credential create` | API Key        | Append and create one environment-variable Credential in a tracked Vault     |
+| `bl managed-agent vault get`               | API Key        | Get a Managed Agent vault                                                    |
+| `bl managed-agent vault list`              | API Key        | List Managed Agent vaults                                                    |
+| `bl managed-agent vault search`            | API Key        | Search Managed Agent vaults                                                  |
 
 ## Command details
 
@@ -330,6 +335,55 @@ bl managed-agent capabilities
 
 ```bash
 bl managed-agent capabilities --provider bailian --output json
+```
+
+### `bl managed-agent deployment create`
+
+| Field              | Value                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent deployment create`                                                                                                                                                                                                                                                                                                                                            |
+| **Description**    | Declare and create one Managed Agent Deployment through a scoped YAML apply                                                                                                                                                                                                                                                                                                  |
+| **Authentication** | API Key                                                                                                                                                                                                                                                                                                                                                                      |
+| **Usage**          | `bl managed-agent deployment create --name <name> --agent <yaml-key> (--message <text>... \| --event <json\|@path>...) [--agent-version <number>] [--environment <yaml-key>] [--vault <yaml-key>...] [--resource <json\|@path>...] [--schedule <cron> --timezone <timezone>] [--description <text>] [--metadata <key=value>...] [--provider <name>] [--file <path>] [--yes]` |
+
+#### Flags
+
+| Flag                       | Type   | Required | Description                                                             |
+| -------------------------- | ------ | -------- | ----------------------------------------------------------------------- |
+| `--name <name>`            | string | yes      | Remote Deployment display name; the YAML key is generated automatically |
+| `--agent <yaml-key>`       | string | yes      | Existing Agent key from agents.yaml                                     |
+| `--agent-version <number>` | number | no       | Agent version                                                           |
+| `--environment <yaml-key>` | string | no       | Existing Environment key from agents.yaml                               |
+| `--vault <yaml-key>`       | array  | no       | Existing Vault key from agents.yaml (repeatable)                        |
+| `--message <text>`         | array  | no       | Initial user message (repeatable)                                       |
+| `--event <json\|@path>`    | array  | no       | Initial user.message or system.message JSON (repeatable)                |
+| `--resource <json\|@path>` | array  | no       | File Resource JSON with source or file_id (repeatable)                  |
+| `--schedule <cron>`        | string | no       | Five-field cron expression                                              |
+| `--timezone <timezone>`    | string | no       | IANA schedule timezone                                                  |
+| `--description <text>`     | string | no       | Deployment description                                                  |
+| `--metadata <key=value>`   | array  | no       | Metadata entry (repeatable)                                             |
+| `--provider <name>`        | string | no       | Target provider; inferred when unambiguous                              |
+| `--file <path>`            | string | no       | Config file path (default: agents.yaml)                                 |
+| `--yes`                    | switch | no       | Write YAML and run the scoped remote create                             |
+| `--api-key <key>`          | string | no       | API key                                                                 |
+| `--base-url <url>`         | string | no       | API base URL                                                            |
+
+#### Notes
+
+- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+- Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
+- Initial Events must contain 1-50 user.message/system.message entries. --resource accepts only File Resources in this release.
+
+#### Examples
+
+```bash
+bl managed-agent deployment create --name Daily --agent assistant --message "Generate the report"
+```
+
+```bash
+bl managed-agent deployment create --name Daily --agent assistant --event '{"type":"system.message","content":"Be concise"}' --message "Run" --yes
 ```
 
 ### `bl managed-agent deployment get`
@@ -660,6 +714,52 @@ bl managed-agent destroy --yes
 
 ```bash
 bl managed-agent destroy --yes --cascade
+```
+
+### `bl managed-agent environment create`
+
+| Field              | Value                                                                                                                                                                                                                                                                             |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent environment create`                                                                                                                                                                                                                                                |
+| **Description**    | Declare and create one Managed Agent Environment through a scoped YAML apply                                                                                                                                                                                                      |
+| **Authentication** | API Key                                                                                                                                                                                                                                                                           |
+| **Usage**          | `bl managed-agent environment create --name <name> [--description <text>] [--metadata <key=value>...] [--apt <package>...] [--pip <package>...] [--npm <package>...] [--cargo <package>...] [--gem <package>...] [--go <package>...] [--provider <name>] [--file <path>] [--yes]` |
+
+#### Flags
+
+| Flag                     | Type   | Required | Description                                                              |
+| ------------------------ | ------ | -------- | ------------------------------------------------------------------------ |
+| `--name <name>`          | string | yes      | Remote Environment display name; the YAML key is generated automatically |
+| `--description <text>`   | string | no       | Environment description                                                  |
+| `--metadata <key=value>` | array  | no       | Metadata entry (repeatable)                                              |
+| `--apt <package>`        | array  | no       | APT package (repeatable)                                                 |
+| `--pip <package>`        | array  | no       | pip package (repeatable)                                                 |
+| `--npm <package>`        | array  | no       | npm package (repeatable)                                                 |
+| `--cargo <package>`      | array  | no       | Cargo package (repeatable)                                               |
+| `--gem <package>`        | array  | no       | Ruby gem package (repeatable)                                            |
+| `--go <package>`         | array  | no       | Go package (repeatable)                                                  |
+| `--provider <name>`      | string | no       | Target provider; inferred when unambiguous                               |
+| `--file <path>`          | string | no       | Config file path (default: agents.yaml)                                  |
+| `--yes`                  | switch | no       | Write YAML and run the scoped remote create                              |
+| `--api-key <key>`        | string | no       | API key                                                                  |
+| `--base-url <url>`       | string | no       | API base URL                                                             |
+
+#### Notes
+
+- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+- Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
+- Creates a cloud Environment with unrestricted networking. Without --yes, only previews the generated YAML key and scoped plan.
+
+#### Examples
+
+```bash
+bl managed-agent environment create --name Development
+```
+
+```bash
+bl managed-agent environment create --name Development --pip pandas --npm typescript --metadata owner=platform --yes
 ```
 
 ### `bl managed-agent environment get`
@@ -1624,6 +1724,44 @@ bl managed-agent session update --session-id sess_abc --title 'investigation'
 bl managed-agent session update --session-id sess_abc --metadata @metadata.json
 ```
 
+### `bl managed-agent skill create`
+
+| Field              | Value                                                                                                           |
+| ------------------ | --------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent skill create`                                                                                    |
+| **Description**    | Declare and create one custom Managed Agent Skill from a local source                                           |
+| **Authentication** | API Key                                                                                                         |
+| **Usage**          | `bl managed-agent skill create --source <directory\|zip\|SKILL.md> [--provider <name>] [--file <path>] [--yes]` |
+
+#### Flags
+
+| Flag                                  | Type   | Required | Description                                               |
+| ------------------------------------- | ------ | -------- | --------------------------------------------------------- |
+| `--source <directory\|zip\|SKILL.md>` | string | yes      | Local Skill directory, ZIP archive, or single SKILL.md    |
+| `--provider <name>`                   | string | no       | Target provider; inferred when unambiguous                |
+| `--file <path>`                       | string | no       | Config file path (default: agents.yaml)                   |
+| `--yes`                               | switch | no       | Write YAML and upload the Skill through the scoped create |
+| `--api-key <key>`                     | string | no       | API key                                                   |
+| `--base-url <url>`                    | string | no       | API base URL                                              |
+
+#### Notes
+
+- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+- Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
+- The YAML key is derived from SKILL.md frontmatter name. Remote URLs remain available through handwritten YAML plus full apply.
+
+#### Examples
+
+```bash
+bl managed-agent skill create --source ./skills/code-review
+```
+
+```bash
+bl managed-agent skill create --source ./skill.zip --yes
+```
+
 ### `bl managed-agent skill download`
 
 | Field              | Value                                                                                                      |
@@ -1991,6 +2129,88 @@ bl managed-agent validate
 
 ```bash
 bl managed-agent validate --file agents.yaml
+```
+
+### `bl managed-agent vault create`
+
+| Field              | Value                                                                                                                 |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent vault create`                                                                                          |
+| **Description**    | Declare and create one empty Managed Agent Vault through a scoped YAML apply                                          |
+| **Authentication** | API Key                                                                                                               |
+| **Usage**          | `bl managed-agent vault create --name <name> [--metadata <key=value>...] [--provider <name>] [--file <path>] [--yes]` |
+
+#### Flags
+
+| Flag                     | Type   | Required | Description                                                        |
+| ------------------------ | ------ | -------- | ------------------------------------------------------------------ |
+| `--name <name>`          | string | yes      | Remote Vault display name; the YAML key is generated automatically |
+| `--metadata <key=value>` | array  | no       | Metadata entry (repeatable)                                        |
+| `--provider <name>`      | string | no       | Target provider; inferred when unambiguous                         |
+| `--file <path>`          | string | no       | Config file path (default: agents.yaml)                            |
+| `--yes`                  | switch | no       | Write YAML and run the scoped remote create                        |
+| `--api-key <key>`        | string | no       | API key                                                            |
+| `--base-url <url>`       | string | no       | API base URL                                                       |
+
+#### Notes
+
+- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+- Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
+- Creates an empty Vault. Add secrets later with `vault credential create`.
+
+#### Examples
+
+```bash
+bl managed-agent vault create --name Production
+```
+
+```bash
+bl managed-agent vault create --name Production --metadata owner=platform --yes
+```
+
+### `bl managed-agent vault credential create`
+
+| Field              | Value                                                                                                                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Name**           | `managed-agent vault credential create`                                                                                                                                                          |
+| **Description**    | Append and create one environment-variable Credential in a tracked Vault                                                                                                                         |
+| **Authentication** | API Key                                                                                                                                                                                          |
+| **Usage**          | `bl managed-agent vault credential create --vault <yaml-key> --name <name> --secret-name <name> --secret-env <env-name> [--metadata <key=value>...] [--provider <name>] [--file <path>] [--yes]` |
+
+#### Flags
+
+| Flag                      | Type   | Required | Description                                            |
+| ------------------------- | ------ | -------- | ------------------------------------------------------ |
+| `--vault <yaml-key>`      | string | yes      | Existing tracked Vault key from agents.yaml            |
+| `--name <name>`           | string | yes      | Credential display name                                |
+| `--secret-name <name>`    | string | yes      | Environment variable name exposed to the Agent         |
+| `--secret-env <env-name>` | string | yes      | Local environment variable containing the secret value |
+| `--metadata <key=value>`  | array  | no       | Metadata entry (repeatable)                            |
+| `--provider <name>`       | string | no       | Target provider; inferred when unambiguous             |
+| `--file <path>`           | string | no       | Config file path (default: agents.yaml)                |
+| `--yes`                   | switch | no       | Write YAML and create the remote Credential            |
+| `--api-key <key>`         | string | no       | API key                                                |
+| `--base-url <url>`        | string | no       | API base URL                                           |
+
+#### Notes
+
+- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+- Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
+- --secret-env is an environment variable name, not the secret itself. The CLI auto-loads the nearest .env from the current directory upward; shell exports and CI secret injection also work.
+- YAML stores only ${ENV_NAME}. Never commit .env; subsequent full apply runs must provide the same environment variable.
+
+#### Examples
+
+```bash
+bl managed-agent vault credential create --vault production --name api-token --secret-name API_TOKEN --secret-env PROD_API_TOKEN
+```
+
+```bash
+bl managed-agent vault credential create --vault production --name api-token --secret-name API_TOKEN --secret-env PROD_API_TOKEN --yes
 ```
 
 ### `bl managed-agent vault get`

@@ -20,14 +20,15 @@ description: >-
 
 ## Safety guardrail (the most important rule)
 
-`apply` / `destroy` **mutate persistent remote resources** and only execute when `--yes` is passed:
+`apply` / `destroy` and single-resource `create --yes` **mutate persistent remote resources**:
 
 1. For `agents.yaml` resource changes, always run `bl managed-agent plan` first and show the diff to the user.
-2. Only after explicit user confirmation, retry `apply` / `destroy` with `--yes`.
-3. Never add `--yes` on your own initiative before the user has confirmed.
+2. A single-resource create command previews its scoped plan when `--yes` is absent; show that preview before retrying it with `--yes`.
+3. Only after explicit user confirmation, retry `apply` / `destroy` / single-resource create with `--yes`.
+4. Never add `--yes` on your own initiative before the user has confirmed.
 
-API-oriented commands do not replace IaC. Agent / Environment / Skill / Vault 的持久配置仍通过
-`agents.yaml → plan → apply` 管理；命令式写操作只覆盖 Session、Event、File 和 Deployment 运行时动作。
+API-oriented commands do not replace IaC. Agent / Environment / Skill / Vault / Deployment 的 create 命令仍通过
+`agents.yaml → scoped plan → scoped apply` 管理；查询命令和 Session、Event、File、Deployment 运行时动作直接调用 API。
 `session archive|delete`、`file delete`、`deployment run` 也需要先 `--dry-run`，确认后才传 `--yes`。
 
 ## IaC lifecycle
@@ -40,23 +41,49 @@ API-oriented commands do not replace IaC. Agent / Environment / Skill / Vault �
 5. Destroy   bl managed-agent destroy --yes # only after user confirmation
 ```
 
-## Scoped single-Agent create
+## Scoped single-resource create
 
-`bl managed-agent agent create`仍然先把声明写入 `agents.yaml`，再通过 SDK 的定向 Plan/Apply 创建远端资源，
-不是绕过 State 的命令式 API 调用：
+以下命令都先构造 `agents.yaml` 声明，再通过 SDK 的定向 Plan/Apply 创建远端资源，不绕过 State：
 
-- 用户只提供 Agent `name`；CLI 自动生成稳定的 YAML 逻辑 key，同名 Agent 用递增后缀并存。
-- 默认只预览自动 key 和定向计划；`--dry-run` 完全离线，只有显式 `--yes` 才写 YAML 并创建远端 Agent。
-- 定向流程只刷新目标 Agent 及其传递依赖；无关资源不检测 Drift、不产生 action，也不阻塞。
-- 目标 Agent 必须是 `create`，相关依赖必须已经处于 `no-op`；项目级 Drift 和删除仍由全量 `plan/apply` 处理。
+| Resource              | Command                                    |
+| --------------------- | ------------------------------------------ |
+| Agent                 | `bl managed-agent agent create`            |
+| Environment           | `bl managed-agent environment create`      |
+| Custom Skill          | `bl managed-agent skill create`            |
+| Empty Vault           | `bl managed-agent vault create`            |
+| Credential in a Vault | `bl managed-agent vault credential create` |
+| Deployment            | `bl managed-agent deployment create`       |
+
+- 用户只提供资源 `name`；CLI 自动生成稳定的 YAML 逻辑 key，同名资源用递增后缀并存。Credential 追加到指定 Vault，不单独生成 key。
+- 默认只预览自动 key 和定向计划；`--dry-run` 完全离线，只有显式 `--yes` 才写 YAML 并创建远端资源。
+- 定向流程只刷新目标资源及其传递依赖；无关资源不检测 Drift、不产生 action，也不阻塞。
+- 目标资源必须是 `create`，相关依赖必须已经处于 `no-op`；项目级 Drift 和删除仍由全量 `plan/apply` 处理。
 - 远端创建失败时保留 YAML 声明；修复相关依赖或 Provider 错误后，重复相同命令会复用待创建 key。
+- `skill create` 接受本地目录、ZIP 或单个 `SKILL.md`；远程 URL 仍需手工声明到 YAML，再执行全量 Apply。
 
-具体 flags、usage 和 examples 以 `reference/` 或 `bl managed-agent agent create --help` 为准。
+### Credential secret input
+
+`vault credential create --secret-env <ENV_NAME>` 中的参数是变量名，不是 Secret 明文。Secret 可来自 Shell export、CI Secret 注入或可选的 `.env`；CLI 会从当前目录向上自动加载最近的 `.env`，用户不必创建该文件。
+
+```bash
+export PROD_API_TOKEN="..."
+bl managed-agent vault credential create \
+  --vault production \
+  --name api-token \
+  --secret-name API_TOKEN \
+  --secret-env PROD_API_TOKEN
+```
+
+- YAML 只保存 `secret_value: ${PROD_API_TOKEN}`，输出、诊断和 State 都不保存明文。
+- 不要提交 `.env`；若使用 `.env`，先确认项目 `.gitignore` 已忽略它。
+- 预览后再带 `--yes` 重试。后续执行全量 Apply 时也必须提供同名环境变量。
+
+具体 flags、usage 和 examples 以 `reference/` 或对应命令的 `--help` 为准。
 
 ## Deployment as IaC
 
 Deployment 与 Agent 一样声明在 `agents.yaml` 中，并复用同一条 `validate → plan → apply → destroy` IaC 链路；
-CLI 不提供绕过 state 的命令式 Deployment CRUD。最小配置：
+`deployment create` 可追加一条声明并走定向 Apply；CLI 不提供绕过 state 的 Deployment create/update/delete。最小配置：
 
 ```yaml
 deployments:
@@ -89,19 +116,19 @@ Managed Agents 的子线程通过 Event 中的 `session_thread_id` 暴露；公�
 
 ## API-oriented resource commands
 
-| Intent                                 | Command family                  |
-| -------------------------------------- | ------------------------------- | ------- | ------------------------------ | --------- | --------- | ------- |
-| Check exact API support/auth/reason    | `bl managed-agent capabilities` |
-| Discover agents and versions           | `agent list                     | get     | search                         | versions` |
-| Discover environments                  | `environment list               | get     | search`                        |
-| Discover skills and download a version | `skill list                     | get     | search                         | versions  | download` |
-| Inspect vault envelopes                | `vault list                     | get     | search`                        |
-| Inspect deployments and run history    | `deployment list                | get     | search`, `deployment runs list | get`      |
-| Run or pause deployments               | `deployment run                 | pause   | unpause`                       |
-| Manage session metadata/lifecycle      | `session list                   | get     | search                         | update    | archive   | delete` |
-| Work with raw events                   | `session event send             | list    | stream`                        |
-| Diagnose/export a session              | `session debug                  | export` |
-| Work with files                        | `file upload                    | list    | get                            | search    | download  | delete` |
+| Intent                                 | Command family                                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Check exact API support/auth/reason    | `bl managed-agent capabilities`                                                                         |
+| Discover agents and versions           | `agent list`, `agent get`, `agent search`, `agent versions`                                             |
+| Discover environments                  | `environment list`, `environment get`, `environment search`                                             |
+| Discover skills and download a version | `skill list`, `skill get`, `skill search`, `skill versions`, `skill download`                           |
+| Inspect vault envelopes                | `vault list`, `vault get`, `vault search`                                                               |
+| Inspect deployments and run history    | `deployment list`, `deployment get`, `deployment search`, `deployment runs list`, `deployment runs get` |
+| Run or pause deployments               | `deployment run`, `deployment pause`, `deployment unpause`                                              |
+| Manage session metadata/lifecycle      | `session list`, `session get`, `session search`, `session update`, `session archive`, `session delete`  |
+| Work with raw events                   | `session event send`, `session event list`, `session event stream`                                      |
+| Diagnose/export a session              | `session debug`, `session export`                                                                       |
+| Work with files                        | `file upload`, `file list`, `file get`, `file search`, `file download`, `file delete`                   |
 
 - 所有 Cursor 都是不透明字符串：只回传 `next_page`，不得转换为数字页码。
 - 客户端搜索默认最多扫描 10 页；需要扩大范围时显式传 `--page-limit`。Deployment 搜索直接映射服务端 `keyword`。

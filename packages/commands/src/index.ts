@@ -149,39 +149,34 @@ export { default as managedAgentSessionSend } from "./commands/managed-agent/ses
 export { default as managedAgentSessionEvents } from "./commands/managed-agent/session-events.ts";
 export { default as managedAgentSkillList } from "./commands/managed-agent/skill-list.ts";
 export { default as managedAgentCapabilities } from "./commands/managed-agent/capabilities.ts";
-export { default as managedAgentAgentCreate } from "./commands/managed-agent/agent-create.ts";
-export {
-  managedAgentAgentGet,
-  managedAgentAgentList,
-  managedAgentAgentSearch,
-  managedAgentAgentVersions,
-} from "./commands/managed-agent/agent.ts";
-export {
-  managedAgentEnvironmentGet,
-  managedAgentEnvironmentList,
-  managedAgentEnvironmentSearch,
-} from "./commands/managed-agent/environment.ts";
-export {
-  managedAgentSkillDownload,
-  managedAgentSkillGet,
-  managedAgentSkillSearch,
-  managedAgentSkillVersions,
-} from "./commands/managed-agent/skill.ts";
-export {
-  managedAgentVaultGet,
-  managedAgentVaultList,
-  managedAgentVaultSearch,
-} from "./commands/managed-agent/vault.ts";
-export {
-  managedAgentDeploymentGet,
-  managedAgentDeploymentList,
-  managedAgentDeploymentPause,
-  managedAgentDeploymentRun,
-  managedAgentDeploymentRunsGet,
-  managedAgentDeploymentRunsList,
-  managedAgentDeploymentSearch,
-  managedAgentDeploymentUnpause,
-} from "./commands/managed-agent/deployment.ts";
+export { default as managedAgentAgentCreate } from "./commands/managed-agent/agent/create.ts";
+export { default as managedAgentEnvironmentCreate } from "./commands/managed-agent/environment/create.ts";
+export { default as managedAgentSkillCreate } from "./commands/managed-agent/skill/create.ts";
+export { default as managedAgentVaultCreate } from "./commands/managed-agent/vault/create.ts";
+export { default as managedAgentVaultCredentialCreate } from "./commands/managed-agent/vault/credential/create.ts";
+export { default as managedAgentDeploymentCreate } from "./commands/managed-agent/deployment/create.ts";
+export { default as managedAgentAgentGet } from "./commands/managed-agent/agent/get.ts";
+export { default as managedAgentAgentList } from "./commands/managed-agent/agent/list.ts";
+export { default as managedAgentAgentSearch } from "./commands/managed-agent/agent/search.ts";
+export { default as managedAgentAgentVersions } from "./commands/managed-agent/agent/versions.ts";
+export { default as managedAgentEnvironmentGet } from "./commands/managed-agent/environment/get.ts";
+export { default as managedAgentEnvironmentList } from "./commands/managed-agent/environment/list.ts";
+export { default as managedAgentEnvironmentSearch } from "./commands/managed-agent/environment/search.ts";
+export { default as managedAgentSkillDownload } from "./commands/managed-agent/skill/download.ts";
+export { default as managedAgentSkillGet } from "./commands/managed-agent/skill/get.ts";
+export { default as managedAgentSkillSearch } from "./commands/managed-agent/skill/search.ts";
+export { default as managedAgentSkillVersions } from "./commands/managed-agent/skill/versions.ts";
+export { default as managedAgentVaultGet } from "./commands/managed-agent/vault/get.ts";
+export { default as managedAgentVaultList } from "./commands/managed-agent/vault/list.ts";
+export { default as managedAgentVaultSearch } from "./commands/managed-agent/vault/search.ts";
+export { default as managedAgentDeploymentGet } from "./commands/managed-agent/deployment/get.ts";
+export { default as managedAgentDeploymentList } from "./commands/managed-agent/deployment/list.ts";
+export { default as managedAgentDeploymentPause } from "./commands/managed-agent/deployment/pause.ts";
+export { default as managedAgentDeploymentRun } from "./commands/managed-agent/deployment/run.ts";
+export { default as managedAgentDeploymentRunsGet } from "./commands/managed-agent/deployment/runs/get.ts";
+export { default as managedAgentDeploymentRunsList } from "./commands/managed-agent/deployment/runs/list.ts";
+export { default as managedAgentDeploymentSearch } from "./commands/managed-agent/deployment/search.ts";
+export { default as managedAgentDeploymentUnpause } from "./commands/managed-agent/deployment/unpause.ts";
 export {
   managedAgentSessionArchive,
   managedAgentSessionSearch,

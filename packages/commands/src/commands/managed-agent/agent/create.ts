@@ -1,14 +1,8 @@
-import { randomUUID } from "node:crypto";
-import { readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
-import { basename, dirname, resolve } from "node:path";
 import {
   buildAgentDecl,
   type IStateManager,
-  LocalFileStateBackend,
   planAgentResourcesWithStateBackend,
-  type ResolvedProjectConfig,
   type ResourceAddress,
-  resolveProjectConfigFromObject,
   syncAgentResourcesWithStateBackend,
 } from "@openagentpack/sdk";
 import {
@@ -20,13 +14,19 @@ import {
 } from "bailian-cli-core";
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { parseDocument } from "yaml";
-import { formatResourceLabel } from "./_engine/address-utils.ts";
-import { CREDENTIALS_NOTE, resolveAgentProjectConfig } from "./_engine/config-loader.ts";
-import { assertProviderCredentials } from "./_engine/credentials.ts";
-import { withStdoutProtected } from "./_engine/console-capture.ts";
-import { withAgentErrors } from "./_engine/errors.ts";
-import { createFileStateScope } from "./_engine/file-state-manager.ts";
-import { installSdkTransport } from "./_engine/transport.ts";
+import { formatResourceLabel } from "../_engine/address-utils.ts";
+import { CREDENTIALS_NOTE } from "../_engine/config-loader.ts";
+import { withStdoutProtected } from "../_engine/console-capture.ts";
+import { withAgentErrors } from "../_engine/errors.ts";
+import {
+  loadScopedCreateProject,
+  normalizeResourceKey,
+  replaceConfigAtomically,
+  resolveCandidateDeclaration,
+  selectResourceKey,
+} from "../_engine/scoped-create.ts";
+
+export { replaceConfigAtomically } from "../_engine/scoped-create.ts";
 
 const CREATE_FLAGS = {
   name: {
@@ -122,28 +122,8 @@ interface AgentKeySelection {
   reusedPending: boolean;
 }
 
-function canonicalJson(value: unknown): string {
-  const normalize = (candidate: unknown): unknown => {
-    if (Array.isArray(candidate)) return candidate.map(normalize);
-    if (!candidate || typeof candidate !== "object") return candidate;
-    return Object.fromEntries(
-      Object.entries(candidate as Record<string, unknown>)
-        .filter(([, entry]) => entry !== undefined)
-        .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
-        .map(([key, entry]) => [key, normalize(entry)]),
-    );
-  };
-  return JSON.stringify(normalize(value));
-}
-
 export function normalizeAgentKey(displayName: string): string {
-  const normalized = displayName
-    .normalize("NFKC")
-    .trim()
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, "-")
-    .replace(/^-+|-+$/g, "");
-  return normalized || "agent";
+  return normalizeResourceKey(displayName, "agent");
 }
 
 export function selectAgentKey(options: {
@@ -153,80 +133,17 @@ export function selectAgentKey(options: {
   candidate: BuiltAgentDecl;
   state: IStateManager;
 }): AgentKeySelection {
-  const tracked = new Set(
-    options.state
-      .listResources()
-      .filter(
-        (resource) =>
-          resource.address.provider === options.provider &&
-          (resource.address.type === "agent" || resource.address.type === "template"),
-      )
-      .map((resource) => resource.address.name),
-  );
-  const candidateJson = canonicalJson(options.candidate);
-  for (const [key, declaration] of Object.entries(options.agents)) {
-    const effectiveName = declaration.name ?? key;
-    if (effectiveName !== options.displayName || tracked.has(key)) continue;
-    if (canonicalJson({ ...declaration, name: effectiveName }) === candidateJson) {
-      return { key, reusedPending: true };
-    }
-  }
-
-  const baseKey = normalizeAgentKey(options.displayName);
-  if (!(baseKey in options.agents)) return { key: baseKey, reusedPending: false };
-  let suffix = 2;
-  while (`${baseKey}-${suffix}` in options.agents) suffix += 1;
-  return { key: `${baseKey}-${suffix}`, reusedPending: false };
-}
-
-export async function replaceConfigAtomically(
-  configPath: string,
-  expectedSource: string,
-  nextSource: string,
-): Promise<void> {
-  const destination = resolve(configPath);
-  const currentSource = await readFile(destination, "utf8");
-  if (currentSource !== expectedSource) {
-    throw new BailianError(
-      `${configPath} changed while Agent create was being prepared.`,
-      ExitCode.GENERAL,
-      "Review the latest YAML and re-run the command; no file was overwritten.",
-    );
-  }
-  const currentStat = await stat(destination);
-  const temporary = resolve(dirname(destination), `.${basename(destination)}.${randomUUID()}.tmp`);
-  await writeFile(temporary, nextSource, { flag: "wx", mode: currentStat.mode });
-  try {
-    await rename(temporary, destination);
-  } catch (error) {
-    await unlink(temporary).catch(() => undefined);
-    throw error;
-  }
-}
-
-function resolveTargetProvider(
-  config: ResolvedProjectConfig,
-  requested: string | undefined,
-): string {
-  if (requested === "all") {
-    throw new BailianError("--provider all is not valid for Agent create.", ExitCode.USAGE);
-  }
-  if (requested) {
-    if (requested in config.providers) return requested;
-    throw new BailianError(
-      `Provider '${requested}' is not configured in agents.yaml.`,
-      ExitCode.USAGE,
-    );
-  }
-  const defaultProvider = config.defaults?.provider;
-  if (defaultProvider && defaultProvider !== "all") return defaultProvider;
-  const configuredProviders = Object.keys(config.providers);
-  if (configuredProviders.length === 1) return configuredProviders[0]!;
-  throw new BailianError(
-    "Agent create cannot infer one target provider.",
-    ExitCode.USAGE,
-    "Pass --provider <name> when defaults.provider is 'all' or multiple providers are configured.",
-  );
+  return selectResourceKey({
+    displayName: options.displayName,
+    provider: options.provider,
+    resourceTypes: ["agent", "template"],
+    declarations: options.agents as unknown as Record<string, Record<string, unknown>>,
+    candidate: options.candidate as unknown as Record<string, unknown>,
+    effectiveName: (key, declaration) =>
+      typeof declaration.name === "string" ? declaration.name : key,
+    fallbackKey: "agent",
+    state: options.state,
+  });
 }
 
 function rootAddress(
@@ -271,32 +188,8 @@ export default defineCommand({
     const { flags, settings } = ctx;
     const format = detectOutputFormat(settings.output);
     const file = flags.file ?? "agents.yaml";
-    const sourceBeforeLoad = await readFile(resolve(file), "utf8").catch((error) => {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code === "ENOENT") {
-        throw new BailianError(
-          `Config file not found: ${file}`,
-          ExitCode.USAGE,
-          "Run `bl managed-agent init` first.",
-        );
-      }
-      throw error;
-    });
-    const loaded = await withAgentErrors(() =>
-      resolveAgentProjectConfig(ctx, file, { credentials: "none" }),
-    );
-    const source = await readFile(loaded.configPath, "utf8");
-    if (source !== sourceBeforeLoad) {
-      throw new BailianError(
-        `${file} changed while it was being loaded.`,
-        ExitCode.GENERAL,
-        "Re-run the command against the latest file.",
-      );
-    }
-
-    const provider = resolveTargetProvider(loaded.config, flags.provider);
-    if (!settings.dryRun) assertProviderCredentials(loaded.config.providers, [provider]);
-    installSdkTransport(ctx);
+    const project = await loadScopedCreateProject(ctx, file, flags.provider);
+    const provider = project.provider;
 
     const rawAgent = buildAgentDecl(undefined, {
       name: flags.name.trim(),
@@ -309,34 +202,26 @@ export default defineCommand({
       builtinTools: flags.tool,
       skills: flags.skill?.map((skillName) => ({ kind: "custom", name: skillName })),
     }).agent;
-    const temporaryKey = "__bailian_cli_agent_create_candidate__";
-    const resolvedCandidate = await withAgentErrors(() =>
-      resolveProjectConfigFromObject(
-        {
-          ...loaded.config,
-          agents: { ...loaded.config.agents, [temporaryKey]: rawAgent },
-        },
-        { projectName: loaded.projectName, basePath: dirname(loaded.configPath) },
-      ),
-    );
-    const candidateAgent = resolvedCandidate.config.agents![temporaryKey]! as BuiltAgentDecl;
-    const stateBackend = new LocalFileStateBackend({ configPath: loaded.configPath });
-    const stateScope = createFileStateScope(loaded.configPath, loaded.projectName);
-    const keySelection = await stateBackend.read(stateScope, (state) =>
+    const candidateAgent = (await resolveCandidateDeclaration({
+      project,
+      group: "agents",
+      rawDeclaration: rawAgent as unknown as Record<string, unknown>,
+    })) as unknown as BuiltAgentDecl;
+    const keySelection = await project.stateBackend.read(project.stateScope, (state) =>
       selectAgentKey({
         displayName: flags.name.trim(),
         provider,
-        agents: (loaded.config.agents ?? {}) as Record<string, BuiltAgentDecl>,
+        agents: (project.config.agents ?? {}) as Record<string, BuiltAgentDecl>,
         candidate: candidateAgent,
         state,
       }),
     );
     const agentKey = keySelection.key;
-    const candidateConfig = structuredClone(loaded.config);
+    const candidateConfig = structuredClone(project.config);
     candidateConfig.agents = { ...candidateConfig.agents, [agentKey]: candidateAgent };
     candidateConfig._resolved = true;
 
-    const document = parseDocument(source);
+    const document = parseDocument(project.source);
     if (document.errors.length > 0) {
       throw new BailianError(
         `YAML parse error: ${document.errors.map((error) => error.message).join("; ")}`,
@@ -346,12 +231,12 @@ export default defineCommand({
     document.setIn(["agents", agentKey], rawAgent);
     const nextSource = document.toString();
     const backendInput = {
-      projectName: loaded.projectName,
+      projectName: project.projectName,
       config: candidateConfig,
-      configPath: loaded.configPath,
+      configPath: project.configPath,
       providers: { [provider]: candidateConfig.providers[provider] },
-      stateBackend,
-      stateScope,
+      stateBackend: project.stateBackend,
+      stateScope: project.stateScope,
     };
 
     if (settings.dryRun || !flags.yes) {
@@ -369,7 +254,7 @@ export default defineCommand({
       );
       const result = {
         agent: { key: agentKey, name: flags.name.trim(), provider },
-        config_file: loaded.configPath,
+        config_file: project.configPath,
         yaml_written: false,
         reused_pending: keySelection.reusedPending,
         requires_confirmation: !settings.dryRun,
@@ -397,7 +282,7 @@ export default defineCommand({
       return;
     }
 
-    await replaceConfigAtomically(loaded.configPath, source, nextSource);
+    await replaceConfigAtomically(project.configPath, project.source, nextSource);
     const run = await withAgentErrors(() =>
       withStdoutProtected(() =>
         syncAgentResourcesWithStateBackend(backendInput, agentKey, {
@@ -408,7 +293,7 @@ export default defineCommand({
         }),
       ),
     );
-    const remoteId = await stateBackend.read(stateScope, (state) => {
+    const remoteId = await project.stateBackend.read(project.stateScope, (state) => {
       const selectedRoot = rootAddress(
         run.actions.map((action) => action.address),
         agentKey,
@@ -417,7 +302,7 @@ export default defineCommand({
     });
     const result = {
       agent: { key: agentKey, name: flags.name.trim(), provider, remote_id: remoteId },
-      config_file: loaded.configPath,
+      config_file: project.configPath,
       yaml_written: true,
       reused_pending: keySelection.reusedPending,
       status: run.status,
@@ -428,7 +313,7 @@ export default defineCommand({
     };
     if (format === "json") emitResult(result, format);
     else {
-      emitBare(`Wrote ${loaded.configPath} with Agent key '${agentKey}'.`);
+      emitBare(`Wrote ${project.configPath} with Agent key '${agentKey}'.`);
       if (run.status === "completed") emitBare(`Created Agent '${flags.name.trim()}'.`);
       else emitBare(`Scoped create ${run.status}: ${run.error ?? "unknown error"}`);
     }
