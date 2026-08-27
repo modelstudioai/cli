@@ -90,6 +90,9 @@ function assertCommand(path: string, value: unknown): asserts value is CommandPa
   if (!command.auth || !AUTH_REQUIREMENTS.has(command.auth)) {
     throw new Error(`Command "${path}" has an invalid auth requirement.`);
   }
+  if (command.risk !== undefined && !isLocalizedText(command.risk.message)) {
+    throw new Error(`Command "${path}" has an invalid risk message.`);
+  }
   if (typeof command.run !== "function") {
     throw new Error(`Command "${path}" is missing run(ctx).`);
   }
@@ -106,6 +109,7 @@ function adaptCommandPack(
       {
         description: command.description,
         auth: command.auth,
+        risk: command.risk,
         usageArgs: command.usageArgs,
         exampleArgs: command.exampleArgs,
         notes: command.notes,

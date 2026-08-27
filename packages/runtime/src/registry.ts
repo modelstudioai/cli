@@ -17,6 +17,7 @@ import { camelToKebab } from "./args.ts";
 import type { Translator } from "./i18n.ts";
 import { printQuickStart, printWelcomeBanner } from "./output/banner.ts";
 import { ansi } from "./output/color.ts";
+import { confirmationFlagDefs } from "./confirm.ts";
 
 export type { Command, AnyCommand, FlagDef, FlagsDef } from "bailian-cli-core";
 
@@ -101,7 +102,11 @@ export class CommandRegistry {
 
   private register(path: string, command: AnyCommand): void {
     // 同名守卫:命令自有 flag 不得与全局或其可见凭证域 flag 同名。
-    const reserved = { ...GLOBAL_FLAGS, ...credentialFlagDefs(command) };
+    const reserved = {
+      ...GLOBAL_FLAGS,
+      ...confirmationFlagDefs(command),
+      ...credentialFlagDefs(command),
+    };
     for (const key of Object.keys(command.flags ?? {})) {
       if (key in reserved) {
         throw new Error(`Command "${path}" redeclares reserved flag "${key}".`);
@@ -429,6 +434,7 @@ ${authFlagSections ? `${authFlagSections}\n\n` : ""}${b(this.localize(HELP_TEXT.
     );
     const flagEntries = [
       ...Object.entries(cmd.flags ?? {}),
+      ...Object.entries(confirmationFlagDefs(cmd)),
       ...Object.entries(credentialFlagDefs(cmd)),
     ] as [string, FlagDef][];
     if (flagEntries.length > 0) {

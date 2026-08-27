@@ -103,6 +103,7 @@ export async function trackCommandExecution(
   const start = performance.now();
   let success = true;
   let errorMessage: string | undefined;
+  let exitCode: number | undefined;
   let httpStatus: number | undefined;
   let requestId: string | undefined;
 
@@ -112,6 +113,7 @@ export async function trackCommandExecution(
     success = false;
     if (err instanceof BailianError) {
       errorMessage = err.message;
+      exitCode = err.exitCode;
       httpStatus = err.api?.httpStatus;
       requestId = err.api?.requestId;
     } else if (err instanceof Error) {
@@ -125,7 +127,7 @@ export async function trackCommandExecution(
       command: commandPath.join(" "),
       durationMs,
       success,
-      error: success ? undefined : { message: errorMessage, httpStatus, requestId },
+      error: success ? undefined : { message: errorMessage, exitCode, httpStatus, requestId },
       cliVersion: deps.identity.version,
       authMethod: deps.authMethod,
       params: extractParams(flags),

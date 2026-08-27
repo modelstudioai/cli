@@ -508,8 +508,8 @@ bl knowledge delete --index-id idx-xxx --yes
 | --------------------- | ------ | -------- | --------------------------------------------------------------- |
 | `--index-id <id>`     | string | yes      | Knowledge base ID                                               |
 | `--doc-id <id>`       | array  | yes      | Document ID to delete (repeatable)                              |
-| `--yes`               | switch | no       | Skip the confirmation prompt                                    |
 | `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--yes`               | switch | no       | Confirm this high-risk operation                                |
 | `--api-key <key>`     | string | no       | API key                                                         |
 | `--base-url <url>`    | string | no       | API base URL                                                    |
 
@@ -523,7 +523,7 @@ bl knowledge delete --index-id idx-xxx --yes
 #### Examples
 
 ```bash
-bl knowledge doc delete --index-id idx-xxx --doc-id file-xxx --workspace-id ws-xxx
+bl knowledge doc delete --index-id idx-xxx --doc-id file-xxx --workspace-id ws-xxx --dry-run
 ```
 
 ```bash

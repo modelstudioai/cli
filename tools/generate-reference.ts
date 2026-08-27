@@ -29,6 +29,7 @@ import {
   type LocalizedText,
 } from "../packages/core/src/index.ts";
 import { commands } from "../packages/cli/src/commands.ts";
+import { confirmationFlagDefs } from "../packages/runtime/src/confirm.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SKILLS_DIR = join(__dirname, "../skills");
@@ -160,7 +161,13 @@ function commandSection(path: string, cmd: AnyCommand): string {
 
   // 与命令 help 的 Flags 区一致:自有 + 该命令可见的凭证域 flag。
   lines.push("#### Flags", "");
-  lines.push(formatFlagsTable({ ...cmd.flags, ...credentialFlagDefs(cmd) }));
+  lines.push(
+    formatFlagsTable({
+      ...cmd.flags,
+      ...confirmationFlagDefs(cmd),
+      ...credentialFlagDefs(cmd),
+    }),
+  );
 
   if (cmd.notes?.length) {
     lines.push("#### Notes", "");

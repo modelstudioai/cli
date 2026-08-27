@@ -141,6 +141,7 @@ test("loads an API 1 Command Pack and preserves its command contract", async () 
   expect(Object.keys(commands)).toEqual([
     "agent credential",
     "agent credential-denied",
+    "agent dangerous",
     "agent fail",
     "agent output",
     "agent ping",
@@ -150,6 +151,14 @@ test("loads an API 1 Command Pack and preserves its command contract", async () 
   expect(commands["agent ping"]?.description).toEqual({
     "en-US": "Ping the Command Pack fixture",
     "zh-CN": "调用 Command Pack 测试命令",
+  });
+  expect(commands["agent ping"]?.risk).toBeUndefined();
+  expect(commands["agent dangerous"]?.risk).toEqual({
+    level: "high",
+    message: {
+      "en-US": "This fixture represents a high-risk operation.",
+      "zh-CN": "该测试命令代表高风险操作。",
+    },
   });
   expect(commands["agent ping"]?.flags?.message).toMatchObject({ required: true, type: "string" });
 });
