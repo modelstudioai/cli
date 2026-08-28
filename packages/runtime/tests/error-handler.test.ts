@@ -27,6 +27,7 @@ test("handleError: fetch failed JSON includes cause.code from errno", () => {
     expect(() => handleError(fetchFailed, "bl")).toThrow(
       new RegExp(`process\\.exit:${ExitCode.NETWORK}`),
     );
+    expect(stderr).toMatch(/^\{\n {2}"error": \{\n/);
     const payload = JSON.parse(stderr.trim()) as {
       error: { code: number; message: string; cause?: { message: string; code?: string } };
     };

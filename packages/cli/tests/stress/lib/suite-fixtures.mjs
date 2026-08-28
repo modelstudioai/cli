@@ -130,7 +130,7 @@ export async function generateCombinedFixtures({ suiteRoot, cliPackage }) {
       "video",
       "generate",
       "--model",
-      "happyhorse-1.1-t2v",
+      "wan3.0-video",
       "--prompt",
       "压测前置短视频：海浪与静态远景，无明显人物。",
       "--duration",

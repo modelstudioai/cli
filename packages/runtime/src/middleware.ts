@@ -15,14 +15,17 @@ import type {
 } from "bailian-cli-core";
 import {
   Client,
+  DEFAULT_LANGUAGE,
   resolveApiKey,
   resolveConsole,
   resolveOpenApi,
   resolveModelBaseUrl,
+  selectApiKeyResolutionSources,
   trackCommandExecution,
 } from "bailian-cli-core";
 import { maybeShowStatusBar } from "./output/status-bar.ts";
 import { ansi } from "./output/color.ts";
+import { createTranslator } from "./i18n.ts";
 import {
   checkForUpdate,
   getPendingUpdateNotification,
@@ -65,6 +68,43 @@ export interface RunContext {
 /** Koa-style onion middleware: do work, call `next()`, do work after it returns. */
 export type Middleware = (ctx: RunContext, next: () => Promise<void>) => Promise<void>;
 
+function formatApiKeyFallbackNotice(
+  ctx: RunContext,
+  fallbackFrom: string,
+  commandPath: string,
+): string {
+  const translator = createTranslator(ctx.sources.file.language ?? DEFAULT_LANGUAGE);
+  return translator.localize({
+    "en-US": `Profile "${fallbackFrom}" does not support command "${commandPath}"; API Key settings will be read from Profile "default" for this run.`,
+    "zh-CN": `Profile "${fallbackFrom}" 不支持命令 "${commandPath}"，本次将从 Profile "default" 读取 API Key 配置。`,
+  });
+}
+
+function writeApiKeyFallbackNotice(ctx: RunContext, fallbackFrom: string): void {
+  const commandPath = ctx.path.join(" ");
+  const message = formatApiKeyFallbackNotice(ctx, fallbackFrom, commandPath);
+  if (ctx.settings.output === "json") {
+    process.stderr.write(
+      JSON.stringify(
+        {
+          warning: {
+            code: "PROFILE_API_KEY_FALLBACK",
+            message,
+            profile: fallbackFrom,
+            command_path: ctx.path,
+            fallback_profile: "default",
+            credential_fields: ["api_key", "base_url"],
+          },
+        },
+        null,
+        2,
+      ) + "\n\n",
+    );
+    return;
+  }
+  process.stderr.write(`${message}\n`);
+}
+
 /** Fold a middleware list into a single runnable function. */
 export function compose(stack: Middleware[]): (ctx: RunContext) => Promise<void> {
   return (ctx) => {
@@ -91,13 +131,23 @@ export const authStage: Middleware = async (ctx, next) => {
     baseUrl: resolveModelBaseUrl(sources),
   };
   if (command.auth === "apiKey") {
+    const capability = ctx.path.join(".");
+    const selection = selectApiKeyResolutionSources(sources, capability);
+    const apiSources = selection.sources;
+    if (selection.fallbackFrom && !settings.quiet) {
+      writeApiKeyFallbackNotice(ctx, selection.fallbackFrom);
+    }
     let cred: ApiKeyCredential | undefined;
     try {
-      cred = resolveApiKey(sources);
+      cred = resolveApiKey(apiSources);
     } catch (err) {
       if (!settings.dryRun) throw err;
     }
-    ctx.client = new Client({ ...base, apiCred: cred });
+    ctx.client = new Client({
+      ...base,
+      baseUrl: resolveModelBaseUrl(apiSources),
+      apiCred: cred,
+    });
     if (cred) maybeShowStatusBar(settings, cred.token, cred);
   } else if (command.auth === "console") {
     let cred: ConsoleCredential | undefined;

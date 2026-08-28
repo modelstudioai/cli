@@ -37,6 +37,9 @@ export type AuthPersistPatch = Pick<
   | "default_image_to_video_model"
   | "default_reference_to_video_model"
   | "default_image_model"
+  | "default_speech_model"
+  | "default_speech_recognition_model"
+  | "api_key_capabilities"
 >;
 
 /**
@@ -46,8 +49,14 @@ export type AuthPersistPatch = Pick<
 export interface AuthStore {
   /** 各域"将会解析出"的凭证快照(auth status 用)。 */
   describe(): AuthState;
-  /** 磁盘上当前是否存有各域凭证及 model baseUrl(区别于 describe:只看 file,不含 flag/env 源)。 */
-  stored(): { apiKey: boolean; console: boolean; openapi: boolean; baseUrl?: string };
+  /** 磁盘上当前是否存有各域凭证，以及 model baseUrl/capability 配置（只看 file，不含 flag/env 源）。 */
+  stored(): {
+    apiKey: boolean;
+    console: boolean;
+    openapi: boolean;
+    baseUrl?: string;
+    apiKeyCapabilities?: string[];
+  };
   /** model 域 baseUrl 链(flag > env > config file > fallback)。 */
   resolveBaseUrl(fallback?: string): string;
   /** 登录落盘:合并写入,undefined 键忽略；显式 --config 成功后同时激活目标 Profile。 */
@@ -74,6 +83,7 @@ export function makeAuthStore(sources: ResolutionSources): AuthStore {
         console: !!file.access_token,
         openapi: !!(file.access_key_id || file.access_key_secret || file.security_token),
         baseUrl: file.base_url,
+        apiKeyCapabilities: file.api_key_capabilities,
       };
     },
     resolveBaseUrl: (fallback) => resolveModelBaseUrl(sources, fallback),

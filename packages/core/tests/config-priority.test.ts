@@ -37,7 +37,46 @@ test("token-plan Profile 预设保持固定", () => {
     defaultImageToVideoModel: "happyhorse-1.1-i2v",
     defaultReferenceToVideoModel: "happyhorse-1.1-r2v",
     defaultImageModel: "wan2.7-image",
+    defaultSpeechModel: "qwen-audio-3.0-tts-plus",
+    defaultSpeechRecognitionModel: "qwen-audio-3.0-asr-flash",
+    apiKeyCapabilities: [
+      "text.chat",
+      "vision.describe",
+      "image.generate",
+      "image.edit",
+      "speech.recognize",
+      "speech.synthesize",
+      "video.generate",
+      "video.ref",
+      "video.task.get",
+      "video.download",
+    ],
   });
+});
+
+test("api_key_capabilities 解析并去重叶子能力，保留显式空白名单", () => {
+  expect(
+    parseConfigFile({
+      api_key_capabilities: [" text.chat ", "image.generate", "text.chat", "video.task.get"],
+    }).api_key_capabilities,
+  ).toEqual(["text.chat", "image.generate", "video.task.get"]);
+  expect(parseConfigFile({ api_key_capabilities: [] }).api_key_capabilities).toEqual([]);
+  expect(parseConfigFile({}).api_key_capabilities).toBeUndefined();
+});
+
+test("api_key_capabilities 手工配置格式错误时 fail closed", () => {
+  expect(parseConfigFile({ api_key_capabilities: "text.chat" }).api_key_capabilities).toEqual([]);
+  expect(
+    parseConfigFile({ api_key_capabilities: ["text.chat", "Video Generate"] }).api_key_capabilities,
+  ).toEqual([]);
+});
+
+test("default_speech_recognition_model 从配置文件进入运行时 Settings", () => {
+  const file = parseConfigFile({
+    default_speech_recognition_model: "qwen-audio-3.0-asr-flash",
+  });
+  expect(file.default_speech_recognition_model).toBe("qwen-audio-3.0-asr-flash");
+  expect(resolve({ file }).defaultSpeechRecognitionModel).toBe("qwen-audio-3.0-asr-flash");
 });
 
 test("baseUrl:flag > env > file > 默认，所有来源统一归一化", () => {

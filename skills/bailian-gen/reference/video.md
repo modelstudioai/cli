@@ -7,13 +7,13 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command             | Authentication | Description                                                                                           |
-| ------------------- | -------------- | ----------------------------------------------------------------------------------------------------- |
-| `bl video download` | API Key        | Download a completed video by task ID                                                                 |
-| `bl video edit`     | API Key        | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                |
-| `bl video generate` | API Key        | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v)            |
-| `bl video ref`      | API Key        | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
-| `bl video task get` | API Key        | Query async task status                                                                               |
+| Command             | Authentication | Description                                                                                                          |
+| ------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `bl video download` | API Key        | Download a completed video by task ID                                                                                |
+| `bl video edit`     | API Key        | Edit a video with happyhorse-1.0-video-edit (style transfer, object replacement, etc.)                               |
+| `bl video generate` | API Key        | Generate a video from text or image (wan3.0-video / wan2.6-t2v / happyhorse-1.1-i2v)                                 |
+| `bl video ref`      | API Key        | Reference-to-video generation (wan3.0-video / happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
+| `bl video task get` | API Key        | Query async task status                                                                                              |
 
 ## Command details
 
@@ -97,34 +97,35 @@ bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the
 
 ### `bl video generate`
 
-| Field              | Value                                                                                      |
-| ------------------ | ------------------------------------------------------------------------------------------ |
-| **Name**           | `video generate`                                                                           |
-| **Description**    | Generate a video from text or image (happyhorse-1.1-t2v / happyhorse-1.1-i2v / wan2.6-t2v) |
-| **Authentication** | API Key                                                                                    |
-| **Usage**          | `bl video generate --prompt <text> [--image <url>] [flags]`                                |
+| Field              | Value                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------ |
+| **Name**           | `video generate`                                                                     |
+| **Description**    | Generate a video from text or image (wan3.0-video / wan2.6-t2v / happyhorse-1.1-i2v) |
+| **Authentication** | API Key                                                                              |
+| **Usage**          | `bl video generate --prompt <text> [--image <url>] [flags]`                          |
 
 #### Flags
 
-| Flag                        | Type    | Required | Description                                                                             |
-| --------------------------- | ------- | -------- | --------------------------------------------------------------------------------------- |
-| `--model <model>`           | string  | no       | Model ID (default: happyhorse-1.1-t2v, or happyhorse-1.1-i2v with --image)              |
-| `--prompt <text>`           | string  | yes      | Video description                                                                       |
-| `--image <url>`             | string  | no       | Input image URL for image-to-video generation                                           |
-| `--last-frame <url>`        | string  | no       | Last frame image URL (with --image, enables kf2v first+last frame mode)                 |
-| `--negative-prompt <text>`  | string  | no       | Negative prompt to exclude unwanted content                                             |
-| `--resolution <res>`        | string  | no       | Resolution: 720P or 1080P (default: 1080P)                                              |
-| `--ratio <ratio>`           | string  | no       | Aspect ratio (e.g. 16:9, 9:16, 1:1)                                                     |
-| `--duration <seconds>`      | number  | no       | Video duration in seconds (default: 5)                                                  |
-| `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default). |
-| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
-| `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                 |
-| `--download <path>`         | string  | no       | Save video to file on completion                                                        |
-| `--async`                   | switch  | no       | Return async task id without waiting                                                    |
-| `--concurrent <n>`          | number  | no       | Run N parallel requests (default: 1)                                                    |
-| `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 5)                                              |
-| `--api-key <key>`           | string  | no       | API key                                                                                 |
-| `--base-url <url>`          | string  | no       | API base URL                                                                            |
+| Flag                        | Type    | Required | Description                                                                                                          |
+| --------------------------- | ------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
+| `--model <model>`           | string  | no       | Model ID (default: wan3.0-video)                                                                                     |
+| `--prompt <text>`           | string  | yes      | Video description                                                                                                    |
+| `--image <url>`             | string  | no       | Input image URL for image-to-video generation                                                                        |
+| `--last-frame <url>`        | string  | no       | Last frame image URL (with --image, enables kf2v first+last frame mode)                                              |
+| `--negative-prompt <text>`  | string  | no       | Negative prompt to exclude unwanted content                                                                          |
+| `--resolution <res>`        | string  | no       | Resolution: 720P or 1080P (default: 1080P)                                                                           |
+| `--ratio <ratio>`           | string  | no       | Aspect ratio (e.g. 16:9, 9:16, 1:1)                                                                                  |
+| `--duration <seconds>`      | number  | no       | Video duration in seconds (default: 5)                                                                               |
+| `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default).                              |
+| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                                                  |
+| `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                                              |
+| `--download <path>`         | string  | no       | Save video to file on completion                                                                                     |
+| `--file <url-or-path>`      | string  | no       | Reference file URL or local path for file-to-video (wan3.0-video only; mutually exclusive with --image/--last-frame) |
+| `--async`                   | switch  | no       | Return async task id without waiting                                                                                 |
+| `--concurrent <n>`          | number  | no       | Run N parallel requests (default: 1)                                                                                 |
+| `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 5)                                                                           |
+| `--api-key <key>`           | string  | no       | API key                                                                                                              |
+| `--base-url <url>`          | string  | no       | API base URL                                                                                                         |
 
 #### Examples
 
@@ -150,35 +151,35 @@ bl video generate --prompt "A cat playing with a ball" --watermark false
 
 ### `bl video ref`
 
-| Field              | Value                                                                                                 |
-| ------------------ | ----------------------------------------------------------------------------------------------------- |
-| **Name**           | `video ref`                                                                                           |
-| **Description**    | Reference-to-video generation (happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
-| **Authentication** | API Key                                                                                               |
-| **Usage**          | `bl video ref --prompt <text> --image <url>... [--ref-video <url>...] [flags]`                        |
+| Field              | Value                                                                                                                |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `video ref`                                                                                                          |
+| **Description**    | Reference-to-video generation (wan3.0-video / happyhorse-1.1-r2v / wan2.6-r2v): multi-subject, multi-shot with voice |
+| **Authentication** | API Key                                                                                                              |
+| **Usage**          | `bl video ref --prompt <text> --image <url>... [--ref-video <url>...] [flags]`                                       |
 
 #### Flags
 
-| Flag                        | Type    | Required | Description                                                                             |
-| --------------------------- | ------- | -------- | --------------------------------------------------------------------------------------- |
-| `--model <model>`           | string  | no       | Model ID (default: happyhorse-1.1-r2v)                                                  |
-| `--prompt <text>`           | string  | yes      | Video description with reference markers (image1, video1, etc.)                         |
-| `--image <url>`             | array   | no       | Reference image URL or local file (repeatable for multiple subjects)                    |
-| `--ref-video <url>`         | array   | no       | Reference video URL or local file (repeatable)                                          |
-| `--image-voice <url>`       | array   | no       | Voice URL for corresponding image (pairs by position)                                   |
-| `--video-voice <url>`       | array   | no       | Voice URL for corresponding ref-video (pairs by position)                               |
-| `--resolution <res>`        | string  | no       | Resolution: 720P or 1080P (default: 1080P)                                              |
-| `--ratio <ratio>`           | string  | no       | Aspect ratio (16:9, 9:16, 1:1)                                                          |
-| `--duration <seconds>`      | number  | no       | Video duration in seconds (default: 5)                                                  |
-| `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default). |
-| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
-| `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                 |
-| `--download <path>`         | string  | no       | Save video to file on completion                                                        |
-| `--async`                   | switch  | no       | Return async task id without waiting                                                    |
-| `--concurrent <n>`          | number  | no       | Run N parallel requests (default: 1)                                                    |
-| `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 15)                                             |
-| `--api-key <key>`           | string  | no       | API key                                                                                 |
-| `--base-url <url>`          | string  | no       | API base URL                                                                            |
+| Flag                        | Type    | Required | Description                                                                                                                                 |
+| --------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--model <model>`           | string  | no       | Model ID (default: wan3.0-video)                                                                                                            |
+| `--prompt <text>`           | string  | yes      | Video description with reference markers (image1, video1, etc.)                                                                             |
+| `--image <url>`             | array   | no       | Reference image URL or local file (repeatable for multiple subjects)                                                                        |
+| `--ref-video <url>`         | array   | no       | Reference video URL or local file (repeatable)                                                                                              |
+| `--image-voice <url>`       | array   | no       | Voice URL for corresponding image (pairs by position). On wan3.0-video emitted as reference_audio (refer to Audio 1, Audio 2 in prompt)     |
+| `--video-voice <url>`       | array   | no       | Voice URL for corresponding ref-video (pairs by position). On wan3.0-video emitted as reference_audio (refer to Audio 1, Audio 2 in prompt) |
+| `--resolution <res>`        | string  | no       | Resolution: 720P or 1080P (default: 1080P)                                                                                                  |
+| `--ratio <ratio>`           | string  | no       | Aspect ratio (16:9, 9:16, 1:1)                                                                                                              |
+| `--duration <seconds>`      | number  | no       | Video duration in seconds (default: 5)                                                                                                      |
+| `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default).                                                     |
+| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                                                                         |
+| `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                                                                     |
+| `--download <path>`         | string  | no       | Save video to file on completion                                                                                                            |
+| `--async`                   | switch  | no       | Return async task id without waiting                                                                                                        |
+| `--concurrent <n>`          | number  | no       | Run N parallel requests (default: 1)                                                                                                        |
+| `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 15)                                                                                                 |
+| `--api-key <key>`           | string  | no       | API key                                                                                                                                     |
+| `--base-url <url>`          | string  | no       | API base URL                                                                                                                                |
 
 #### Examples
 

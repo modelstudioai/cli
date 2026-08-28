@@ -278,6 +278,70 @@ describe("e2e: config", () => {
     }
   });
 
+  test("config set 将 API Key 能力列表写入命名 Profile 并保留显式空列表", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "bl-config-api-key-capabilities-"));
+    try {
+      const configPath = join(configDir, "config.json");
+      const env = { BAILIAN_CONFIG_DIR: configDir };
+      const setResult = await runCommandE2e(
+        CONFIG_ROUTES,
+        [
+          "config",
+          "set",
+          "--config",
+          "company-plan",
+          "--key",
+          "api-key-capabilities",
+          "--value",
+          "text.chat,image.generate,text.chat",
+          "--output",
+          "json",
+        ],
+        env,
+      );
+      expect(setResult.exitCode, setResult.stderr).toBe(0);
+      const setData = parseStdoutJson<{
+        api_key_capabilities?: string[];
+        config?: string;
+      }>(setResult.stdout);
+      expect(setData.api_key_capabilities).toEqual(["text.chat", "image.generate"]);
+      expect(setData.config).toBe("company-plan");
+
+      const persisted = JSON.parse(readFileSync(configPath, "utf8")) as Record<string, unknown>;
+      expect((persisted["company-plan"] as Record<string, unknown>).api_key_capabilities).toEqual([
+        "text.chat",
+        "image.generate",
+      ]);
+
+      const clearResult = await runCommandE2e(
+        CONFIG_ROUTES,
+        [
+          "config",
+          "set",
+          "--config",
+          "company-plan",
+          "--key",
+          "api-key-capabilities",
+          "--value",
+          "[]",
+          "--output",
+          "json",
+        ],
+        env,
+      );
+      expect(clearResult.exitCode, clearResult.stderr).toBe(0);
+      expect(
+        parseStdoutJson<{ api_key_capabilities?: string[] }>(clearResult.stdout)
+          .api_key_capabilities,
+      ).toEqual([]);
+
+      const cleared = JSON.parse(readFileSync(configPath, "utf8")) as Record<string, unknown>;
+      expect((cleared["company-plan"] as Record<string, unknown>).api_key_capabilities).toEqual([]);
+    } finally {
+      rmSync(configDir, { recursive: true, force: true });
+    }
+  });
+
   test("config set --dry-run 不落盘（仅输出 would_set）", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, [
       "config",

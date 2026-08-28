@@ -18,15 +18,19 @@
 - 解析阶段用局部变量保留“是否显式传入 `--config`”的信息；完成 Config 选择后不进入 `Settings`。
 - `--config default` 必须显式选择顶层配置并绕过命名激活项。
 - 普通命令的显式 `--config` 只覆盖本次选择，不修改持久化激活状态；例外是
-  `auth login --config ...`，凭证验证并落盘成功后自动激活该 Profile。
+  `auth login --config ...`，凭证落盘成功后自动激活该 Profile。
 - 激活状态只选择配置 block，不改变字段优先级；字段仍为 flag > env > selected config > 默认值。
+- API Key capability fallback 是窄例外：命名 Profile 显式配置 `api_key_capabilities` 后，不在白名单中的 `auth: "apiKey"` 叶子命令只把 file 层 `api_key` / `base_url` 切到顶层 `default`；所选 Profile 的其他 settings 和 `active_config` 均不变。如果 `--api-key` / `--base-url` 或 `DASHSCOPE_API_KEY` / `DASHSCOPE_BASE_URL` 任一提供了更高优先级的模型连接参数，则整个 capability fallback 跳过，file 层也不切换；未显式提供的另一部分继续按 flag > env > 所选 Profile 解析。
+- Profile 是否启用 capability fallback 只看持久化的 `api_key_capabilities`，与名称无关：字段缺失表示关闭策略，`[]` 表示全部 API Key 命令 fallback。runtime 不注入内置 preset；升级内置 Plan Profile 的 preset 需要重新登录。
+- 对命中内置 preset 的 Profile，API Key 登录落盘成功后会把当前 preset 中缺少的 capability 追加落盘，同时保留已有项且不做删除；Console/OpenAPI 登录、自定义 Profile、dry-run 和失败登录均不修改该白名单。
+- Capability ID 直接使用产品实际叶子命令路径并以 `.` 连接（例如 `video task get` → `video.task.get`）；不新增命令元数据。新增或改名后的 API Key 路由未进入白名单时自然 fail closed。
 - Pipeline 等进程内调用链也要复用统一的 `buildSources()`，避免绕过激活状态。
 - Console access token 自动刷新等后台读写必须携带 `settings.configName`，不得直接读写顶层 default。
 
 ## 3. 保持读写命令交互一致
 
 - `auth login`、`config set` 等写命令未传 `--config` 时修改当前激活项。
-- `auth login --config <name>` 显式指定不存在的 Profile 时，仅在凭证验证成功并实际落盘时
+- `auth login --config <name>` 显式指定不存在的 Profile 时，仅在凭证实际落盘时
   创建和激活；`config set --config <name>` 可创建但不自动激活。
 - `config show`、`auth status` 和业务消费等读命令不得因为显式指定不存在的名称而创建 Profile。
 - `auth logout` 默认只清理当前激活项；显式 `--config` 只清理指定项。
@@ -55,6 +59,8 @@
 
 - 旧配置无 `active_config` -> `default`。
 - 激活命名 Profile 后，无 `--config` 的命令选择该 Profile。
+- 任意名称 Profile 的叶子路由 capability 命中时使用自身 API Key；未命中或空白名单时使用 `default` API Key；`--api-key` / `--base-url` 和 `DASHSCOPE_API_KEY` / `DASHSCOPE_BASE_URL` 任一覆盖时跳过 fallback。
+- 旧内置 Plan Profile 缺 capability 字段时不启用 fallback；重新登录后使用并持久化当前 preset，显式配置（含 `[]`）按文件值生效。
 - 显式命名 `--config` 和 `--config default` 均覆盖激活项且不修改磁盘状态。
 - 激活不存在的 Profile 失败且不写盘。
 - 悬空 `active_config` 明确失败。
@@ -63,6 +69,9 @@
 - 显式 `auth login --config <name>` 成功后激活该 Profile，失败或 dry-run 不创建、不切换；
   `--config default` 成功后切回 `default`。
 - Console token 自动刷新不从其他 Profile 借用 AK/SK，也不把新 token 写入其他 Profile。
+- Console/OpenAPI/none 命令不参与 API Key capability fallback；fallback 后的 Client 特殊端点行为必须跟随最终解析的 `base_url`，不能根据原 `settings.configName` 推断端点类型。
+- Fallback 反馈只描述 CLI 能权威确认的本地行为：当前 Profile 不支持空格分隔的用户可见叶子命令，本次将从 `default` 读取 API Key 配置；不得声称整个 Profile 已切换，也不得展示 capability ID 或 `<undeclared>` 等内部值。存在 `--api-key` / `--base-url` 或 `DASHSCOPE_API_KEY` / `DASHSCOPE_BASE_URL` 任一显式覆盖时必须跳过 fallback 且不输出反馈。
+- Fallback 反馈写 stderr，`--quiet` 抑制；text 模式输出本地化句子，`--output json` 输出两空格缩进的多行 `warning` 对象。dry-run 和后续鉴权失败仍保留反馈；JSON 模式下多个 diagnostics 以空行分隔，任何模式都不得输出凭证值。
 - `config list/show/use/ui`、`auth status` 和依赖默认模型的消费命令覆盖对应 E2E。
 - `config ui` 覆盖保存时保留顶层元数据（如 `active_config`），继续允许空值清除字段，并覆盖 `console_*`/`telemetry` 的类型归一化与枚举校验。
 - Assets:`listAssets` 覆盖分类归类、时间倒序、目录缺失返回空；`resolveAssetPath` 覆盖目录穿越拦截;`contentType` 覆盖常见扩展名映射。
