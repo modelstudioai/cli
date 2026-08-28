@@ -33,7 +33,7 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 
 `~/.bailian/config.json` 可同时保存 `api_key`、`access_token` 与 `access_key_*`。登录任一种方式不得删除另一种:
 
-- `bl auth login --api-key ...` 更新 `api_key`;显式 `base_url` 会一并写入，所选命名 Profile 若命中内置套餐预设（当前为 `token-plan`），则在尚未保存 `base_url` 时补写预设地址，并把该预设的默认模型物化写入。API Key 落盘成功后，`api_key_capabilities` 保留已有项并追加当前 preset 中缺少的项，不自动删除任何已有能力；无 preset 的自定义 Profile 不做合并。登录仍不得删除其他鉴权域的凭证
+- `bl auth login --api-key ...` 更新 `api_key`;显式 `base_url` 会一并写入，所选命名 Profile 若命中内置套餐预设（当前为 `token-plan`），则在尚未保存 `base_url` 时补写预设地址，并把该预设的默认模型物化写入。API Key 验证成功后，`api_key_capabilities` 保留已有项并追加当前 preset 中缺少的项，不自动删除任何已有能力；无 preset 的自定义 Profile 不做合并。登录仍不得删除其他鉴权域的凭证
 - `bl auth login --console` 只更新 `access_token` 以及回调携带的 console 作用域字段
 - `bl auth login --open-api ...` 更新 `access_key_id` / `access_key_secret`,同时会调用 OpenAPI 生成 CLI `access_token` 并一并写入;即一次 `--open-api` 登录同时产生 `openapi` 与 `console` 域凭证
 - `bl auth logout --console` 只清 `access_token`
@@ -47,9 +47,9 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 - `--config` 只选择 config 文件 block，不提升该 block 的字段优先级。对 `auth: "apiKey"` 命令，runtime 会先按叶子命令路径检查所选 Profile 的 `api_key_capabilities`:
   - `--api-key` / `--base-url` 或 `DASHSCOPE_API_KEY` / `DASHSCOPE_BASE_URL` 任一显式连接覆盖存在时，完全跳过自动降级，继续走统一的 flag > env > selected config file > 默认值
   - 配置文件显式声明 `api_key_capabilities` 后，命中能力时保留所选 Profile，未命中时仅把 file-backed `api_key` / `base_url` 来源切到顶层 `default`，其他 Settings 仍来自所选 Profile
-  - 字段缺失时不启用降级，包括命中内置套餐预设的 Profile；preset 只在 API Key 登录落盘成功后物化写入，升级 preset 需要重新登录
+  - 字段缺失时不启用降级，包括命中内置套餐预设的 Profile；preset 只在 API Key 登录验证成功后物化写入，升级 preset 需要重新登录
   - fallback 反馈写 stderr:text 模式输出本地化句子，`--output json` 输出两空格缩进的多行 `warning` 对象;若后续鉴权失败，warning 与多行 `error` 对象以空行分隔，stdout 仍只保留命令结果
-- 显式 `auth login --config <name>` 在凭证落盘成功后自动激活目标 Profile；未传
+- 显式 `auth login --config <name>` 在凭证验证并落盘成功后自动激活目标 Profile；未传
   `--config` 时继续写当前激活项，失败和 dry-run 不切换
 - `resolveConsole()` — `auth: "console"` 命令;当前 token 来自 config `access_token`,region/site/switchAgent 来自 flag > config > 默认
 - `resolveOpenApi()` — `auth: "openapi"` 命令;优先级 `--access-key-id/--access-key-secret` > `ALIBABA_CLOUD_ACCESS_KEY_ID/ALIBABA_CLOUD_ACCESS_KEY_SECRET` > config `access_key_*`。兼容读取旧字段 `openapi_access_key_*`,新写入只写短字段

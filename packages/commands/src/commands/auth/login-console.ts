@@ -11,7 +11,7 @@ import {
   type Settings,
 } from "bailian-cli-core";
 import { listenLocalServer, openInBrowser } from "../shared/local-server.ts";
-import { persistApiKey } from "./login-api-key.ts";
+import { validateAndPersistApiKey } from "./login-api-key.ts";
 
 /** 登录流程的能力面:身份(UA)、有效配置(timeout 等)、auth 域落盘。 */
 export interface LoginDeps {
@@ -413,7 +413,9 @@ export async function runConsoleLogin(
             workspace_id: workspaceId || undefined,
           };
           if (apiKey) {
-            await persistApiKey(deps, apiKey, {
+            const testBaseUrl = baseUrl || deps.authStore.resolveBaseUrl();
+            await validateAndPersistApiKey(deps, apiKey, {
+              baseUrl: testBaseUrl,
               persistBaseUrl: baseUrl || undefined,
               persistPatch: callbackPatch,
             });
