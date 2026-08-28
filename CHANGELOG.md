@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.18.1] - 2026-08-28
+
+### Removed
+
+- Removed API Key validation from `bl auth login`.
+
 ## [1.18.0] - 2026-08-27
 
 ### Added

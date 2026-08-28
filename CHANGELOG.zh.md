@@ -6,6 +6,12 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.18.1] - 2026-08-28
+
+### 已移除
+
+- 移除 `bl auth login` 的 API Key 校验。
+
 ## [1.18.0] - 2026-08-27
 
 ### 新增
