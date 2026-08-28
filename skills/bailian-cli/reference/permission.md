@@ -109,12 +109,16 @@ bl permission list --output text
 
 ### `bl permission revoke`
 
-| Field              | Value                                                                         |
-| ------------------ | ----------------------------------------------------------------------------- |
-| **Name**           | `permission revoke`                                                           |
-| **Description**    | Revoke model permissions (inference / finetune / deploy)                      |
-| **Authentication** | API Key                                                                       |
-| **Usage**          | `bl permission revoke --model <models> [--action <actions>] \| --all [flags]` |
+| Field              | Value                                                                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `permission revoke`                                                                                                                                           |
+| **Description**    | Revoke model permissions (inference / finetune / deploy)                                                                                                      |
+| **Authentication** | API Key                                                                                                                                                       |
+| **Usage**          | `bl permission revoke --model <models> [--action <actions>] \| --all [flags]`                                                                                 |
+| **Risk**           | `high`                                                                                                                                                        |
+| **Risk message**   | This revokes model permissions and may interrupt inference, fine-tuning, or deployment workloads. With --all, it also clears all historical inference grants. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -137,14 +141,17 @@ bl permission list --output text
 #### Examples
 
 ```bash
+# Only after explicit user confirmation:
 bl permission revoke --model qwen-plus --yes
 ```
 
 ```bash
+# Only after explicit user confirmation:
 bl permission revoke --model qwen-plus,qwen3-max --action inference,finetune --yes
 ```
 
 ```bash
+# Only after explicit user confirmation:
 bl permission revoke --all --yes
 ```
 

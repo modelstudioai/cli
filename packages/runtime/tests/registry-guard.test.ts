@@ -53,11 +53,12 @@ test("high risk 命令不能自行声明 runtime 保留的 yes", () => {
   expect(() => new CommandRegistry({ "x normal": normal }, "bl")).not.toThrow();
 });
 
-test("命令 help 只为 high risk 展示 runtime 注入的 --yes", () => {
+test("命令 help 只为 high risk 展示风险信息和 runtime 注入的 --yes", () => {
   const high = defineCommand({
     description: "danger",
     auth: "none",
     risk: { level: "high", message: "dangerous operation" },
+    exampleArgs: ["--dry-run", "--yes"],
     run: noopRun,
   });
   const normal = defineCommand({
@@ -77,5 +78,10 @@ test("命令 help 只为 high risk 展示 runtime 注入的 --yes", () => {
   } as unknown as NodeJS.WriteStream);
 
   expect(highHelp).toContain("--yes");
+  expect(highHelp).toContain("Risk: high");
+  expect(highHelp).toContain("Risk message: dangerous operation");
+  expect(highHelp).toMatch(/# Only after explicit confirmation:\n\s+bl asset delete --yes/);
   expect(normalHelp).not.toContain("--yes");
+  expect(normalHelp).not.toContain("Risk:");
+  expect(normalHelp).not.toContain("Risk message:");
 });

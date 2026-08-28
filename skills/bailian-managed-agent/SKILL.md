@@ -8,7 +8,7 @@ description: >-
   阿里云百炼托管 Agent 声明式基础设施入口：用户要创建agent、初始化 agents.yaml、校验或预览 agent 配置变更、
   创建/更新/销毁百炼托管 Agent 或 Deployment、和托管 agent 对话、查会话事件历史、导入或取消跟踪远端资源时使用
   `bl managed-agent`。以 agents.yaml 为唯一事实源做 IaC：init 建脚手架、validate 离线校验、plan 预览 diff、
-  apply / destroy 变更远端资源且必须带 `--yes`，务必先 plan 给用户看 diff 再让其确认。
+  apply / destroy 变更远端资源且受统一高风险确认闸门保护，务必先 plan 给用户看 diff 再让其确认，禁止自动添加 `--yes`。
   反触发：调用已上线的百炼应用/智能体走 bailian-app-call 或 `bl app`；宿主 agent 自身的记忆、技能、
   子代理不走本 skill；生图生视频走 bailian-gen。
   官方安装：`bl skill init`（与共享协议 bailian-protocol 同装）。
@@ -16,15 +16,17 @@ description: >-
 
 # Bailian managed agent IaC (`bl managed-agent`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Version & updates (pre-flight checklist) and CLI errors: report an issue. Command details are authoritative in [`reference/managed-agent.md`](reference/managed-agent.md) and `bl managed-agent --help` — do not guess flags. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): High-risk operation confirmation, Version & updates (pre-flight checklist), and CLI errors: report an issue. Command details are authoritative in [`reference/managed-agent.md`](reference/managed-agent.md) and `bl managed-agent --help` — do not guess flags. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
 
 ## Safety guardrail (the most important rule)
 
-`apply` / `destroy` **mutate remote resources** and only execute when `--yes` is passed:
+`apply` / `destroy` **mutate remote resources** and add a domain-specific preview requirement on top of the shared high-risk confirmation protocol:
 
 1. Always run `bl managed-agent plan` first and show the diff to the user.
-2. Only after explicit user confirmation, retry `apply` / `destroy` with `--yes`.
-3. Never add `--yes` on your own initiative before the user has confirmed.
+2. Ask the user to confirm the exact action and scope shown in the plan.
+3. Only then run `apply` / `destroy` with `--yes`; a changed plan requires confirmation again.
+
+`session delete` and future `risk: high` commands follow the shared protocol.
 
 ## IaC lifecycle
 
@@ -32,8 +34,9 @@ description: >-
 1. Init      bl managed-agent init          # scaffold agents.yaml
 2. Validate  bl managed-agent validate      # offline, no network calls
 3. Preview   bl managed-agent plan          # show the pending change diff
-4. Apply     bl managed-agent apply --yes   # only after user confirmation
-5. Destroy   bl managed-agent destroy --yes # only after user confirmation
+4. Confirm   show the plan and ask the user # no automatic --yes
+5. Apply     bl managed-agent apply --yes   # only after explicit confirmation
+6. Destroy   bl managed-agent destroy --yes # separate explicit confirmation
 ```
 
 ## Deployment as IaC

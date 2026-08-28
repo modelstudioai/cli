@@ -31,12 +31,16 @@ Index: [index.md](index.md)
 
 ### `bl managed-agent apply`
 
-| Field              | Value                                                                            |
-| ------------------ | -------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent apply`                                                            |
-| **Description**    | Apply planned changes to create/update/delete agent resources                    |
-| **Authentication** | API Key                                                                          |
-| **Usage**          | `bl managed-agent apply [--file <path>] [--provider <name>] [--concurrency <n>]` |
+| Field              | Value                                                                                           |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent apply`                                                                           |
+| **Description**    | Apply planned changes to create/update/delete agent resources                                   |
+| **Authentication** | API Key                                                                                         |
+| **Usage**          | `bl managed-agent apply [--file <path>] [--provider <name>] [--concurrency <n>]`                |
+| **Risk**           | `high`                                                                                          |
+| **Risk message**   | This applies the current plan and may create, update, or delete remote managed Agent resources. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -59,21 +63,27 @@ Index: [index.md](index.md)
 #### Examples
 
 ```bash
+# Only after explicit user confirmation:
 bl managed-agent apply --yes
 ```
 
 ```bash
+# Only after explicit user confirmation:
 bl managed-agent apply --provider bailian --yes
 ```
 
 ### `bl managed-agent destroy`
 
-| Field              | Value                                                  |
-| ------------------ | ------------------------------------------------------ |
-| **Name**           | `managed-agent destroy`                                |
-| **Description**    | Destroy all managed agent resources tracked in state   |
-| **Authentication** | API Key                                                |
-| **Usage**          | `bl managed-agent destroy [--file <path>] [--cascade]` |
+| Field              | Value                                                                                                      |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent destroy`                                                                                    |
+| **Description**    | Destroy all managed agent resources tracked in state                                                       |
+| **Authentication** | API Key                                                                                                    |
+| **Usage**          | `bl managed-agent destroy [--file <path>] [--cascade]`                                                     |
+| **Risk**           | `high`                                                                                                     |
+| **Risk message**   | This deletes every managed Agent resource tracked in state; --cascade may also delete dependent resources. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -94,10 +104,12 @@ bl managed-agent apply --provider bailian --yes
 #### Examples
 
 ```bash
+# Only after explicit user confirmation:
 bl managed-agent destroy --yes
 ```
 
 ```bash
+# Only after explicit user confirmation:
 bl managed-agent destroy --yes --cascade
 ```
 

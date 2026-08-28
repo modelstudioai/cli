@@ -82,12 +82,16 @@ bl knowledge category add --name sub --parent-id cate-xxx
 
 ### `bl knowledge category delete`
 
-| Field              | Value                                                     |
-| ------------------ | --------------------------------------------------------- |
-| **Name**           | `knowledge category delete`                               |
-| **Description**    | Delete a data-center category                             |
-| **Authentication** | API Key                                                   |
-| **Usage**          | `bl knowledge category delete --category-id <id> [flags]` |
+| Field              | Value                                                                |
+| ------------------ | -------------------------------------------------------------------- |
+| **Name**           | `knowledge category delete`                                          |
+| **Description**    | Delete a data-center category                                        |
+| **Authentication** | API Key                                                              |
+| **Usage**          | `bl knowledge category delete --category-id <id> [flags]`            |
+| **Risk**           | `high`                                                               |
+| **Risk message**   | This deletes the selected data-center category and cannot be undone. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -110,6 +114,7 @@ bl knowledge category delete --category-id cate-xxx --workspace-id ws-xxx
 ```
 
 ```bash
+# Only after explicit user confirmation:
 bl knowledge category delete --category-id cate-xxx --yes
 ```
 
@@ -248,6 +253,10 @@ bl knowledge chunk add --index-id idx-xxx --field columnA=v1 --field columnB=v2
 | **Description**    | Delete chunks from a knowledge base (irreversible)                  |
 | **Authentication** | API Key                                                             |
 | **Usage**          | `bl knowledge chunk delete --index-id <id> --chunk-id <id> [flags]` |
+| **Risk**           | `high`                                                              |
+| **Risk message**   | This permanently deletes the selected chunks and cannot be undone.  |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -271,6 +280,7 @@ bl knowledge chunk delete --index-id idx-xxx --chunk-id chunk-a --chunk-id chunk
 ```
 
 ```bash
+# Only after explicit user confirmation:
 bl knowledge chunk delete --index-id idx-xxx --chunk-id chunk-a --yes
 ```
 
@@ -461,12 +471,16 @@ bl knowledge create --name demo --description 'product docs' --category-id cate-
 
 ### `bl knowledge delete`
 
-| Field              | Value                                                     |
-| ------------------ | --------------------------------------------------------- |
-| **Name**           | `knowledge delete`                                        |
-| **Description**    | Delete a knowledge base with all its documents and chunks |
-| **Authentication** | API Key                                                   |
-| **Usage**          | `bl knowledge delete --index-id <id> [flags]`             |
+| Field              | Value                                                                                                               |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `knowledge delete`                                                                                                  |
+| **Description**    | Delete a knowledge base with all its documents and chunks                                                           |
+| **Authentication** | API Key                                                                                                             |
+| **Usage**          | `bl knowledge delete --index-id <id> [flags]`                                                                       |
+| **Risk**           | `high`                                                                                                              |
+| **Risk message**   | This permanently deletes the knowledge base and all of its documents and chunks. Data-center files are not deleted. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -490,17 +504,22 @@ bl knowledge delete --index-id idx-xxx --workspace-id ws-xxx
 ```
 
 ```bash
+# Only after explicit user confirmation:
 bl knowledge delete --index-id idx-xxx --yes
 ```
 
 ### `bl knowledge doc delete`
 
-| Field              | Value                                                           |
-| ------------------ | --------------------------------------------------------------- |
-| **Name**           | `knowledge doc delete`                                          |
-| **Description**    | Delete documents and their chunks from a knowledge base         |
-| **Authentication** | API Key                                                         |
-| **Usage**          | `bl knowledge doc delete --index-id <id> --doc-id <id> [flags]` |
+| Field              | Value                                                                    |
+| ------------------ | ------------------------------------------------------------------------ |
+| **Name**           | `knowledge doc delete`                                                   |
+| **Description**    | Delete documents and their chunks from a knowledge base                  |
+| **Authentication** | API Key                                                                  |
+| **Usage**          | `bl knowledge doc delete --index-id <id> --doc-id <id> [flags]`          |
+| **Risk**           | `high`                                                                   |
+| **Risk message**   | This permanently deletes the selected documents and all of their chunks. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -527,6 +546,7 @@ bl knowledge doc delete --index-id idx-xxx --doc-id file-xxx --workspace-id ws-x
 ```
 
 ```bash
+# Only after explicit user confirmation:
 bl knowledge doc delete --index-id idx-xxx --doc-id file-a --doc-id file-b --yes
 ```
 
@@ -728,12 +748,16 @@ bl knowledge doc upload --file ./docs/ --dry-run --verbose
 
 ### `bl knowledge file delete`
 
-| Field              | Value                                             |
-| ------------------ | ------------------------------------------------- |
-| **Name**           | `knowledge file delete`                           |
-| **Description**    | Permanently delete a file from the data center    |
-| **Authentication** | API Key                                           |
-| **Usage**          | `bl knowledge file delete --file-id <id> [flags]` |
+| Field              | Value                                                                                                                |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `knowledge file delete`                                                                                              |
+| **Description**    | Permanently delete a file from the data center                                                                       |
+| **Authentication** | API Key                                                                                                              |
+| **Usage**          | `bl knowledge file delete --file-id <id> [flags]`                                                                    |
+| **Risk**           | `high`                                                                                                               |
+| **Risk message**   | This permanently deletes the data-center file. Knowledge-base document indexes that reference it may become invalid. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -757,6 +781,7 @@ bl knowledge file delete --file-id file-xxx --workspace-id ws-xxx
 ```
 
 ```bash
+# Only after explicit user confirmation:
 bl knowledge file delete --file-id file-xxx --yes
 ```
 
@@ -1032,12 +1057,16 @@ bl knowledge service create --name my-search --scene search --index-id idx-xxx
 
 ### `bl knowledge service delete`
 
-| Field              | Value                                                      |
-| ------------------ | ---------------------------------------------------------- |
-| **Name**           | `knowledge service delete`                                 |
-| **Description**    | Delete a retrieval / Q&A service (soft delete, idempotent) |
-| **Authentication** | API Key                                                    |
-| **Usage**          | `bl knowledge service delete --agent-id <id> [flags]`      |
+| Field              | Value                                                                                                                  |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `knowledge service delete`                                                                                             |
+| **Description**    | Delete a retrieval / Q&A service (soft delete, idempotent)                                                             |
+| **Authentication** | API Key                                                                                                                |
+| **Usage**          | `bl knowledge service delete --agent-id <id> [flags]`                                                                  |
+| **Risk**           | `high`                                                                                                                 |
+| **Risk message**   | This deletes the service and makes its agent ID unavailable for search and chat calls. The operation cannot be undone. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -1062,17 +1091,22 @@ bl knowledge service delete --agent-id aid-xxx --workspace-id ws-xxx
 ```
 
 ```bash
+# Only after explicit user confirmation:
 bl knowledge service delete --agent-id aid-xxx --yes
 ```
 
 ### `bl knowledge service deploy`
 
-| Field              | Value                                                 |
-| ------------------ | ----------------------------------------------------- |
-| **Name**           | `knowledge service deploy`                            |
-| **Description**    | Publish the beta draft of a service as a new version  |
-| **Authentication** | API Key                                               |
-| **Usage**          | `bl knowledge service deploy --agent-id <id> [flags]` |
+| Field              | Value                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| **Name**           | `knowledge service deploy`                                                                       |
+| **Description**    | Publish the beta draft of a service as a new version                                             |
+| **Authentication** | API Key                                                                                          |
+| **Usage**          | `bl knowledge service deploy --agent-id <id> [flags]`                                            |
+| **Risk**           | `high`                                                                                           |
+| **Risk message**   | This publishes the current draft as a new version and changes the behavior seen by live callers. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -1098,6 +1132,7 @@ bl knowledge service deploy --agent-id aid-xxx --workspace-id ws-xxx
 ```
 
 ```bash
+# Only after explicit user confirmation:
 bl knowledge service deploy --agent-id aid-xxx --version-desc 'tuned rerank params' --yes
 ```
 
