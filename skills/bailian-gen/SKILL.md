@@ -1,7 +1,7 @@
 ---
 name: bailian-gen
 metadata:
-  version: "1.18.0"
+  version: "1.18.1"
   requires:
     bins: ["bl"]
 description: >-
