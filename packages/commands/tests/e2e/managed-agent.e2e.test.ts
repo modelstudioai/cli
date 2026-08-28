@@ -132,6 +132,23 @@ describe("e2e: managed-agent", () => {
     expect(stderr).toMatch(/--file|--provider|--yes/i);
   });
 
+  test.each(["apply", "destroy"])("managed-agent %s 无 --yes 返回确认请求 (7)", async (command) => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      command,
+      "--file",
+      "agents.e2e-missing.yaml",
+      "--api-key",
+      "e2e-dummy-key",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
+  });
+
   test("managed-agent session delete 缺少 --session-id 时退出为用法错误 (2)", async () => {
     const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
@@ -223,7 +240,6 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
       "managed-agent",
       "apply",
       "--dry-run",
-      "--yes",
       "--output",
       "json",
     ]);

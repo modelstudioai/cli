@@ -31,24 +31,24 @@ Index: [index.md](index.md)
 
 ### `bl managed-agent apply`
 
-| Field              | Value                                                                                    |
-| ------------------ | ---------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent apply`                                                                    |
-| **Description**    | Apply planned changes to create/update/delete agent resources                            |
-| **Authentication** | API Key                                                                                  |
-| **Usage**          | `bl managed-agent apply [--file <path>] [--provider <name>] [--yes] [--concurrency <n>]` |
+| Field              | Value                                                                            |
+| ------------------ | -------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent apply`                                                            |
+| **Description**    | Apply planned changes to create/update/delete agent resources                    |
+| **Authentication** | API Key                                                                          |
+| **Usage**          | `bl managed-agent apply [--file <path>] [--provider <name>] [--concurrency <n>]` |
 
 #### Flags
 
-| Flag                | Type   | Required | Description                                                          |
-| ------------------- | ------ | -------- | -------------------------------------------------------------------- |
-| `--file <path>`     | string | no       | Config file path (default: agents.yaml)                              |
-| `--provider <name>` | string | no       | Target provider (default: all configured)                            |
-| `--yes`             | switch | no       | Confirm and apply without an interactive prompt (required to mutate) |
-| `--no-refresh`      | switch | no       | Skip refreshing state from remote before planning                    |
-| `--concurrency <n>` | number | no       | Max independent resources to apply in parallel (default 6, max 10)   |
-| `--api-key <key>`   | string | no       | API key                                                              |
-| `--base-url <url>`  | string | no       | API base URL                                                         |
+| Flag                | Type   | Required | Description                                                        |
+| ------------------- | ------ | -------- | ------------------------------------------------------------------ |
+| `--file <path>`     | string | no       | Config file path (default: agents.yaml)                            |
+| `--provider <name>` | string | no       | Target provider (default: all configured)                          |
+| `--no-refresh`      | switch | no       | Skip refreshing state from remote before planning                  |
+| `--concurrency <n>` | number | no       | Max independent resources to apply in parallel (default 6, max 10) |
+| `--yes`             | switch | no       | Confirm this high-risk operation                                   |
+| `--api-key <key>`   | string | no       | API key                                                            |
+| `--base-url <url>`  | string | no       | API base URL                                                       |
 
 #### Notes
 
@@ -68,20 +68,20 @@ bl managed-agent apply --provider bailian --yes
 
 ### `bl managed-agent destroy`
 
-| Field              | Value                                                          |
-| ------------------ | -------------------------------------------------------------- |
-| **Name**           | `managed-agent destroy`                                        |
-| **Description**    | Destroy all managed agent resources tracked in state           |
-| **Authentication** | API Key                                                        |
-| **Usage**          | `bl managed-agent destroy [--file <path>] [--yes] [--cascade]` |
+| Field              | Value                                                  |
+| ------------------ | ------------------------------------------------------ |
+| **Name**           | `managed-agent destroy`                                |
+| **Description**    | Destroy all managed agent resources tracked in state   |
+| **Authentication** | API Key                                                |
+| **Usage**          | `bl managed-agent destroy [--file <path>] [--cascade]` |
 
 #### Flags
 
 | Flag               | Type   | Required | Description                                                                |
 | ------------------ | ------ | -------- | -------------------------------------------------------------------------- |
 | `--file <path>`    | string | no       | Config file path (default: agents.yaml)                                    |
-| `--yes`            | switch | no       | Confirm and destroy without an interactive prompt (required)               |
 | `--cascade`        | switch | no       | Auto-delete dependent resources (e.g. sessions referencing an environment) |
+| `--yes`            | switch | no       | Confirm this high-risk operation                                           |
 | `--api-key <key>`  | string | no       | API key                                                                    |
 | `--base-url <url>` | string | no       | API base URL                                                               |
 
