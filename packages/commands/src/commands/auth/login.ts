@@ -5,7 +5,7 @@ import {
   normalizeModelBaseUrl,
 } from "bailian-cli-core";
 import { emitBare } from "bailian-cli-runtime";
-import { validateAndPersistApiKey } from "./login-api-key.ts";
+import { persistApiKey } from "./login-api-key.ts";
 import { resolveConsoleOrigin, runConsoleLogin } from "./login-console.ts";
 
 const LOGIN_MODE_HINT = "Choose exactly one login mode: --api-key, --console, or --open-api";
@@ -33,8 +33,8 @@ export default defineCommand({
       type: "string",
       valueHint: "<url>",
       description: {
-        "en-US": "Model API base URL (used with --api-key for validation)",
-        "zh-CN": "模型 API Base URL（用于配合 --api-key 进行验证）",
+        "en-US": "Model API base URL to store with --api-key",
+        "zh-CN": "与 --api-key 一并保存的模型 API Base URL",
       },
     },
     console: {
@@ -164,19 +164,17 @@ export default defineCommand({
     if (!key) return;
 
     if (settings.dryRun) {
-      emitBare("Would validate and save API key.");
+      emitBare("Would save API key.");
       return;
     }
     const profilePreset = getModelProfilePreset(settings.configName);
     const stored = store.stored();
     const storedBaseUrl = stored.baseUrl;
-    const resolvedBaseUrl = baseUrl || store.resolveBaseUrl(profilePreset?.baseUrl);
     const persistBaseUrl = baseUrl || (!storedBaseUrl ? profilePreset?.baseUrl : undefined);
     const apiKeyCapabilities = profilePreset
       ? [...new Set([...(stored.apiKeyCapabilities ?? []), ...profilePreset.apiKeyCapabilities])]
       : stored.apiKeyCapabilities;
-    await validateAndPersistApiKey(deps, key, {
-      baseUrl: resolvedBaseUrl,
+    await persistApiKey(deps, key, {
       persistBaseUrl,
       defaultTextModel: profilePreset?.defaultTextModel,
       defaultVideoModel: profilePreset?.defaultVideoModel,
@@ -187,5 +185,6 @@ export default defineCommand({
       defaultSpeechRecognitionModel: profilePreset?.defaultSpeechRecognitionModel,
       apiKeyCapabilities,
     });
+    process.stderr.write(`API key saved to ${store.path}\n`);
   },
 });

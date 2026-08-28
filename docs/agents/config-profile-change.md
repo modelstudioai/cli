@@ -18,11 +18,11 @@
 - 解析阶段用局部变量保留“是否显式传入 `--config`”的信息；完成 Config 选择后不进入 `Settings`。
 - `--config default` 必须显式选择顶层配置并绕过命名激活项。
 - 普通命令的显式 `--config` 只覆盖本次选择，不修改持久化激活状态；例外是
-  `auth login --config ...`，凭证验证并落盘成功后自动激活该 Profile。
+  `auth login --config ...`，凭证落盘成功后自动激活该 Profile。
 - 激活状态只选择配置 block，不改变字段优先级；字段仍为 flag > env > selected config > 默认值。
 - API Key capability fallback 是窄例外：命名 Profile 显式配置 `api_key_capabilities` 后，不在白名单中的 `auth: "apiKey"` 叶子命令只把 file 层 `api_key` / `base_url` 切到顶层 `default`；所选 Profile 的其他 settings 和 `active_config` 均不变。如果 `--api-key` / `--base-url` 或 `DASHSCOPE_API_KEY` / `DASHSCOPE_BASE_URL` 任一提供了更高优先级的模型连接参数，则整个 capability fallback 跳过，file 层也不切换；未显式提供的另一部分继续按 flag > env > 所选 Profile 解析。
 - Profile 是否启用 capability fallback 只看持久化的 `api_key_capabilities`，与名称无关：字段缺失表示关闭策略，`[]` 表示全部 API Key 命令 fallback。runtime 不注入内置 preset；升级内置 Plan Profile 的 preset 需要重新登录。
-- 对命中内置 preset 的 Profile，API Key 登录验证成功后会把当前 preset 中缺少的 capability 追加落盘，同时保留已有项且不做删除；Console/OpenAPI 登录、自定义 Profile、dry-run 和失败登录均不修改该白名单。
+- 对命中内置 preset 的 Profile，API Key 登录落盘成功后会把当前 preset 中缺少的 capability 追加落盘，同时保留已有项且不做删除；Console/OpenAPI 登录、自定义 Profile、dry-run 和失败登录均不修改该白名单。
 - Capability ID 直接使用产品实际叶子命令路径并以 `.` 连接（例如 `video task get` → `video.task.get`）；不新增命令元数据。新增或改名后的 API Key 路由未进入白名单时自然 fail closed。
 - Pipeline 等进程内调用链也要复用统一的 `buildSources()`，避免绕过激活状态。
 - Console access token 自动刷新等后台读写必须携带 `settings.configName`，不得直接读写顶层 default。
@@ -30,7 +30,7 @@
 ## 3. 保持读写命令交互一致
 
 - `auth login`、`config set` 等写命令未传 `--config` 时修改当前激活项。
-- `auth login --config <name>` 显式指定不存在的 Profile 时，仅在凭证验证成功并实际落盘时
+- `auth login --config <name>` 显式指定不存在的 Profile 时，仅在凭证实际落盘时
   创建和激活；`config set --config <name>` 可创建但不自动激活。
 - `config show`、`auth status` 和业务消费等读命令不得因为显式指定不存在的名称而创建 Profile。
 - `auth logout` 默认只清理当前激活项；显式 `--config` 只清理指定项。

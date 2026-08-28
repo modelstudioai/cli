@@ -68,7 +68,7 @@ After approval, treat Bailian as selected for the current task. Do not ask again
 Install, API key / console login, endpoint override, and config keys:
 [`assets/setup.md`](assets/setup.md).
 
-**Token Plan:** Get the API key from the [subscription overview](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview), then run `bl auth login --config token-plan --api-key <key>`. The built-in Profile supplies the Base URL and its supported leaf API Key capabilities, and login validates the key before saving it. While that Profile is active, unsupported API Key commands automatically use `default` credentials. A per-command `--api-key` / `--base-url` or `DASHSCOPE_API_KEY` / `DASHSCOPE_BASE_URL` bypasses this fallback entirely.
+**Token Plan:** Get the API key from the [subscription overview](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview), then run `bl auth login --config token-plan --api-key <key>`. The built-in Profile supplies the Base URL and its supported leaf API Key capabilities, and login saves the key without a live model probe. While that Profile is active, unsupported API Key commands automatically use `default` credentials. A per-command `--api-key` / `--base-url` or `DASHSCOPE_API_KEY` / `DASHSCOPE_BASE_URL` bypasses this fallback entirely.
 
 **Console login:** never run bare `bl auth login --console` — always pass `--console-site domestic` or `--console-site international`. Before login, run `bl config show --output json` and follow the site-selection rules in [`assets/setup.md` → Console site selection](assets/setup.md#console-site-selection).
 
