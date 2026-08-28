@@ -82,9 +82,9 @@ bl image generate --prompt "A cat"
 bl video generate --prompt "A horse running through a field"
 ```
 
-The built-in Profile supplies the Token Plan Base URL. `auth login` tests the key first, then saves
-and activates the Profile only when validation succeeds; do not ask the user to configure the Base
-URL or run a duplicate smoke test.
+The built-in Profile supplies the Token Plan Base URL. `auth login` saves the key and activates
+the Profile without a live model probe; do not ask the user to configure the Base URL or run a
+duplicate smoke test.
 
 ### API Key capability fallback
 
@@ -120,7 +120,7 @@ bl config use --name default
 ```
 
 `auth login --config token-plan` creates or updates that Profile and activates it only after the
-credential is validated and saved. Failed login and `--dry-run` do not switch Profiles. Use
+credential is saved. Failed login and `--dry-run` do not switch Profiles. Use
 `--config default` for a one-command override. Config selection follows explicit `--config` >
 persisted `active_config` > `default`; credential and endpoint fields inside the selected Profile
 still follow flag > environment > config.
