@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { isDashScopeE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { PERMISSION_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: permission", () => {
   test("permission list --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(PERMISSION_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(PERMISSION_ROUTES, [
       "permission",
       "list",
       "--help",
@@ -17,7 +17,7 @@ describe("e2e: permission", () => {
   });
 
   test("permission grant --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(PERMISSION_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(PERMISSION_ROUTES, [
       "permission",
       "grant",
       "--help",
@@ -29,7 +29,7 @@ describe("e2e: permission", () => {
   });
 
   test("permission revoke --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(PERMISSION_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(PERMISSION_ROUTES, [
       "permission",
       "revoke",
       "--help",

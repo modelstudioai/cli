@@ -7,6 +7,7 @@ import {
   isDashScopeE2EReady,
   makeE2eOutputDir,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "./helpers.ts";
 import { VIDEO_ROUTES } from "./topic-routes.ts";
@@ -17,7 +18,7 @@ import { VIDEO_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: video edit", () => {
   test("video edit --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, ["video", "edit", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(VIDEO_ROUTES, ["video", "edit", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/edit|--video|--prompt|model|--async|--concurrent/i);
   });

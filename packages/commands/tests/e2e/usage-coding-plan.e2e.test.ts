@@ -3,13 +3,14 @@ import {
   isConsoleAuthFailure,
   isConsoleE2EReady,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "./helpers.ts";
 import { USAGE_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: usage coding-plan", () => {
   test("usage coding-plan --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(USAGE_ROUTES, [
       "usage",
       "coding-plan",
       "--help",
@@ -19,7 +20,7 @@ describe("e2e: usage coding-plan", () => {
   });
 
   test("usage coding-plan --help 包含 --output json 示例", async () => {
-    const { stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(USAGE_ROUTES, [
       "usage",
       "coding-plan",
       "--help",

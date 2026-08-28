@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vite-plus/test";
 import { join } from "path";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e, e2eFixturesDir } from "./helpers.ts";
+import {
+  isDashScopeE2EReady,
+  parseStdoutJson,
+  runCommandHelp,
+  runCommandE2e,
+  e2eFixturesDir,
+} from "./helpers.ts";
 import { DATASET_ROUTES } from "./topic-routes.ts";
 
 /**
@@ -18,7 +24,7 @@ import { DATASET_ROUTES } from "./topic-routes.ts";
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
   test("dataset upload --help 正常退出并展示 --file", async () => {
-    const { stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(DATASET_ROUTES, [
       "dataset",
       "upload",
       "--help",

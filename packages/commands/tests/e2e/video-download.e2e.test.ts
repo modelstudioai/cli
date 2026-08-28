@@ -8,6 +8,7 @@ import {
   isDashScopeE2EReady,
   makeE2eOutputDir,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "./helpers.ts";
 import { VIDEO_ROUTES } from "./topic-routes.ts";
@@ -22,7 +23,11 @@ const PLACEHOLDER_TASK_ID = "00000000-0000-4000-8000-000000000001";
 
 describe("e2e: video download", () => {
   test("video download --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, ["video", "download", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(VIDEO_ROUTES, [
+      "video",
+      "download",
+      "--help",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/download|--task-id|--out/i);
   });

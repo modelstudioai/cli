@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { PIPELINE_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: pipeline", () => {
@@ -65,7 +65,7 @@ describe("e2e: pipeline", () => {
   });
 
   test("pipeline run --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(PIPELINE_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(PIPELINE_ROUTES, [
       "pipeline",
       "run",
       "--help",
@@ -76,7 +76,7 @@ describe("e2e: pipeline", () => {
   });
 
   test("pipeline validate --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(PIPELINE_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(PIPELINE_ROUTES, [
       "pipeline",
       "validate",
       "--help",

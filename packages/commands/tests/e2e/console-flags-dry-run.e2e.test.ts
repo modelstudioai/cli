@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { CONSOLE_FLAGS_DRY_RUN_ROUTES } from "./topic-routes.ts";
 
 type ConsoleDryRunMeta = {
@@ -10,7 +10,7 @@ type ConsoleDryRunMeta = {
 
 describe("e2e: console global flags (dry-run)", () => {
   test("console call --help 不暴露命令级 region/site，示例使用 --console-region", async () => {
-    const { stderr, exitCode } = await runCommandE2e(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
       "console",
       "call",
       "--help",
@@ -24,7 +24,7 @@ describe("e2e: console global flags (dry-run)", () => {
   });
 
   test("auth login --help:自有 flag 含 --console-site,不含其余 console 域 flag", async () => {
-    const { stderr, exitCode } = await runCommandE2e(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
       "auth",
       "login",
       "--help",
