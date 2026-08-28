@@ -2,16 +2,16 @@
 
 ## 架构分层
 
-| 层级            | 路径                                                  | 测什么                                                                                   |
-| --------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| **共享基建**    | `packages/e2e`                                        | gating、子进程 runner、output、globalSetup（`private`，不发布）                          |
-| **命令 E2E**    | `packages/commands/tests/e2e`                         | help、缺参、dry-run、live（gated）；每用例最小路由                                       |
-| **Journey E2E** | `packages/commands/tests/e2e/knowledge/journeys`      | 用户旅程全链路（跨命令回路 + 标记词召回闭环），全部 live gated；见 `journeys/README.md`  |
-| **bl smoke**    | `packages/cli/tests/e2e/registry.smoke.e2e.test.ts`   | 产品 map 全部 path `--help`、分组 help、根 help                                          |
-| **kscli smoke** | `packages/kscli/tests/e2e/registry.smoke.e2e.test.ts` | 从 `kscli/src/commands.ts` 推导 path/分组；identity（`--version`、`search --help` path） |
-| **runtime**     | `packages/runtime/tests`                              | `proxy.e2e`、console 跨域 flag 拒绝                                                      |
+| 层级            | 路径                                                  | 测什么                                                                                  |
+| --------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **共享基建**    | `packages/e2e`                                        | gating、子进程 runner、registry help 捕获、output、globalSetup（`private`，不发布）     |
+| **命令 E2E**    | `packages/commands/tests/e2e`                         | help、缺参、dry-run、live（gated）；每用例最小路由                                      |
+| **Journey E2E** | `packages/commands/tests/e2e/knowledge/journeys`      | 用户旅程全链路（跨命令回路 + 标记词召回闭环），全部 live gated；见 `journeys/README.md` |
+| **bl smoke**    | `packages/cli/tests/e2e/registry.smoke.e2e.test.ts`   | 产品 map 全部 path/分组的进程内 help；根 help、鉴权域等代表性子进程冒烟                 |
+| **kscli smoke** | `packages/kscli/tests/e2e/registry.smoke.e2e.test.ts` | map 全部 path/分组的进程内 help；`--version`、`search --help` 等代表性子进程冒烟        |
+| **runtime**     | `packages/runtime/tests`                              | `proxy.e2e`、console 跨域 flag 拒绝                                                     |
 
-**依赖边界**：`e2e` → `core`；`commands/tests` → `e2e` + `commands/src`；产品 tests → `e2e` + 各自 `src`。**禁止**产品 import `commands/tests/**`（子进程 spawn harness 路径除外）。
+**依赖边界**：`e2e` → `core`；`commands/tests` → `e2e` + `commands/src`；产品 tests → `e2e` + 各自 `src` + `runtime` 公共 API。**禁止**产品 import `commands/tests/**`（子进程 spawn harness 路径除外）。
 
 ## 触发条件
 
@@ -37,6 +37,8 @@
 
 - bl：`runCli` from `packages/cli/tests/e2e/helpers.ts`
 - kscli：`runKscli` from `packages/kscli/tests/e2e/helpers.ts`
+- 全量 leaf/group help 使用产品 `commands` 创建 `CommandRegistry`，先通过 `resolve([...path, "--help"])` 检查 help 路由，再用 `captureRegistryHelp` 检查完整 Usage；禁止在 `test.each(commandPaths/groupPaths)` 中逐条启动 `tsx` 子进程
+- 真实子进程只保留根 help/version、产品身份、代表性叶子 help/鉴权域和缺参退出码等 shell/stdio/env 契约
 
 ### 共享
 
