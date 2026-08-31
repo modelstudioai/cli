@@ -7,33 +7,37 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                            | Authentication | Description                                                   |
-| ---------------------------------- | -------------- | ------------------------------------------------------------- |
-| `bl managed-agent apply`           | API Key        | Apply planned changes to create/update/delete agent resources |
-| `bl managed-agent destroy`         | API Key        | Destroy all managed agent resources tracked in state          |
-| `bl managed-agent init`            | No Auth        | Create an agents.yaml template                                |
-| `bl managed-agent plan`            | API Key        | Show what changes would be applied to agent infrastructure    |
-| `bl managed-agent playground`      | API Key        | Launch a Session Preview for an agents.yaml Agent             |
-| `bl managed-agent session create`  | API Key        | Create a new session for an agent                             |
-| `bl managed-agent session delete`  | API Key        | Delete a session                                              |
-| `bl managed-agent session events`  | API Key        | List event history for a session                              |
-| `bl managed-agent session get`     | API Key        | Get details of a session                                      |
-| `bl managed-agent session list`    | API Key        | List sessions from the provider                               |
-| `bl managed-agent session run`     | API Key        | Create a session, send a message, and stream the response     |
-| `bl managed-agent session send`    | API Key        | Send a message to an existing session and stream the response |
-| `bl managed-agent skill-list`      | API Key        | List skills from the provider's skill catalog                 |
-| `bl managed-agent state import`    | API Key        | Import an existing remote resource into agents state          |
-| `bl managed-agent state list`      | No Auth        | List resources tracked in agents state                        |
-| `bl managed-agent state rm`        | No Auth        | Remove a resource from state without destroying it remotely   |
-| `bl managed-agent state show`      | No Auth        | Show details of a resource in agents state                    |
-| `bl managed-agent validate`        | No Auth        | Validate an agents.yaml configuration (offline)               |
-| `bl managed-agent version disable` | No Auth        | Disable Apply-time local snapshots without removing history   |
-| `bl managed-agent version enable`  | No Auth        | Enable Apply-time local snapshots for agents.yaml             |
-| `bl managed-agent version list`    | No Auth        | List local snapshots of agents.yaml                           |
-| `bl managed-agent version preview` | No Auth        | Preview a historical agents.yaml version                      |
-| `bl managed-agent version restore` | No Auth        | Restore a historical agents.yaml version to the working tree  |
-| `bl managed-agent version status`  | No Auth        | Show local snapshot versioning status for agents.yaml         |
-| `bl managed-agent workbench`       | API Key        | Launch the agents.yaml project Workbench                      |
+| Command                                    | Authentication | Description                                                        |
+| ------------------------------------------ | -------------- | ------------------------------------------------------------------ |
+| `bl managed-agent apply`                   | API Key        | Apply planned changes to create/update/delete agent resources      |
+| `bl managed-agent destroy`                 | API Key        | Destroy all managed agent resources tracked in state               |
+| `bl managed-agent init`                    | No Auth        | Create an agents.yaml template                                     |
+| `bl managed-agent plan`                    | API Key        | Show what changes would be applied to agent infrastructure         |
+| `bl managed-agent playground`              | API Key        | Launch a Session Preview for an agents.yaml Agent                  |
+| `bl managed-agent project build`           | No Auth        | Organize directory source and generate the immutable Publish Build |
+| `bl managed-agent project init`            | No Auth        | Create a directory project or convert the local agents.yaml        |
+| `bl managed-agent project publish`         | API Key        | Publish the current directory-project Build and record a version   |
+| `bl managed-agent project validate`        | No Auth        | Validate a directory Agent project                                 |
+| `bl managed-agent project version disable` | No Auth        | Disable directory project versions                                 |
+| `bl managed-agent project version enable`  | No Auth        | Enable directory project versions                                  |
+| `bl managed-agent project version list`    | No Auth        | List directory project versions                                    |
+| `bl managed-agent project version preview` | No Auth        | Preview a directory project version                                |
+| `bl managed-agent project version restore` | No Auth        | Restore a version to the project working directory                 |
+| `bl managed-agent project version status`  | No Auth        | Show directory project version status                              |
+| `bl managed-agent project workbench`       | API Key        | Launch the directory project Workbench                             |
+| `bl managed-agent session create`          | API Key        | Create a new session for an agent                                  |
+| `bl managed-agent session delete`          | API Key        | Delete a session                                                   |
+| `bl managed-agent session events`          | API Key        | List event history for a session                                   |
+| `bl managed-agent session get`             | API Key        | Get details of a session                                           |
+| `bl managed-agent session list`            | API Key        | List sessions from the provider                                    |
+| `bl managed-agent session run`             | API Key        | Create a session, send a message, and stream the response          |
+| `bl managed-agent session send`            | API Key        | Send a message to an existing session and stream the response      |
+| `bl managed-agent skill-list`              | API Key        | List skills from the provider's skill catalog                      |
+| `bl managed-agent state import`            | API Key        | Import an existing remote resource into agents state               |
+| `bl managed-agent state list`              | No Auth        | List resources tracked in agents state                             |
+| `bl managed-agent state rm`                | No Auth        | Remove a resource from state without destroying it remotely        |
+| `bl managed-agent state show`              | No Auth        | Show details of a resource in agents state                         |
+| `bl managed-agent validate`                | No Auth        | Validate an agents.yaml configuration (offline)                    |
 
 ## Command details
 
@@ -204,7 +208,7 @@ bl managed-agent plan --no-refresh
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
-- Workbench requires Node.js 22+ and starts the shared @openagentpack/playground package locally. Local versions use the shared .openagentpack/versions project store and do not require Git.
+- Session Preview requires Node.js 22+ and keeps using an agents.yaml source. Directory Workbench is available under managed-agent project workbench.
 
 #### Examples
 
@@ -218,6 +222,318 @@ bl managed-agent playground --agent assistant
 
 ```bash
 bl managed-agent playground --file agents.yaml --no-open
+```
+
+### `bl managed-agent project build`
+
+| Field              | Value                                                              |
+| ------------------ | ------------------------------------------------------------------ |
+| **Name**           | `managed-agent project build`                                      |
+| **Description**    | Organize directory source and generate the immutable Publish Build |
+| **Authentication** | No Auth                                                            |
+| **Usage**          | `bl managed-agent project build [--project <directory>] [--yes]`   |
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                         |
+| ----------------------- | ------ | -------- | --------------------------------------------------- |
+| `--project <directory>` | string | no       | Directory project root (default: current directory) |
+| `--yes`                 | switch | no       | Write the previewed Build                           |
+
+#### Examples
+
+```bash
+bl managed-agent project build --dry-run
+```
+
+```bash
+bl managed-agent project build --yes
+```
+
+```bash
+bl managed-agent project build --project ./my-agent --yes
+```
+
+### `bl managed-agent project init`
+
+| Field              | Value                                                                        |
+| ------------------ | ---------------------------------------------------------------------------- |
+| **Name**           | `managed-agent project init`                                                 |
+| **Description**    | Create a directory project or convert the local agents.yaml                  |
+| **Authentication** | No Auth                                                                      |
+| **Usage**          | `bl managed-agent project init [--project <directory>] [--provider bailian]` |
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                         |
+| ----------------------- | ------ | -------- | --------------------------------------------------- |
+| `--project <directory>` | string | no       | Directory project root (default: current directory) |
+| `--provider <name>`     | string | no       | Provider for a new project                          |
+
+#### Examples
+
+```bash
+bl managed-agent project init
+```
+
+```bash
+bl managed-agent project init --project ./my-agent
+```
+
+```bash
+bl managed-agent project init --provider bailian
+```
+
+### `bl managed-agent project publish`
+
+| Field              | Value                                                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent project publish`                                                                                           |
+| **Description**    | Publish the current directory-project Build and record a version                                                          |
+| **Authentication** | API Key                                                                                                                   |
+| **Usage**          | `bl managed-agent project publish [--project <directory>] [--provider <name>] [--yes] [--no-refresh] [--concurrency <n>]` |
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                         |
+| ----------------------- | ------ | -------- | --------------------------------------------------- |
+| `--project <directory>` | string | no       | Directory project root (default: current directory) |
+| `--provider <name>`     | string | no       | Target provider                                     |
+| `--yes`                 | switch | no       | Confirm remote Publish                              |
+| `--no-refresh`          | switch | no       | Skip remote refresh before planning                 |
+| `--concurrency <n>`     | number | no       | Maximum parallel resource operations                |
+| `--api-key <key>`       | string | no       | API key                                             |
+| `--base-url <url>`      | string | no       | API base URL                                        |
+
+#### Notes
+
+- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+
+#### Examples
+
+```bash
+bl managed-agent project publish --yes
+```
+
+```bash
+bl managed-agent project publish --project ./my-agent --yes
+```
+
+```bash
+bl managed-agent project publish --provider bailian --yes
+```
+
+### `bl managed-agent project validate`
+
+| Field              | Value                                                       |
+| ------------------ | ----------------------------------------------------------- |
+| **Name**           | `managed-agent project validate`                            |
+| **Description**    | Validate a directory Agent project                          |
+| **Authentication** | No Auth                                                     |
+| **Usage**          | `bl managed-agent project validate [--project <directory>]` |
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                         |
+| ----------------------- | ------ | -------- | --------------------------------------------------- |
+| `--project <directory>` | string | no       | Directory project root (default: current directory) |
+
+#### Examples
+
+```bash
+bl managed-agent project validate
+```
+
+```bash
+bl managed-agent project validate --project ./my-agent
+```
+
+### `bl managed-agent project version disable`
+
+| Field              | Value                                                              |
+| ------------------ | ------------------------------------------------------------------ |
+| **Name**           | `managed-agent project version disable`                            |
+| **Description**    | Disable directory project versions                                 |
+| **Authentication** | No Auth                                                            |
+| **Usage**          | `bl managed-agent project version disable [--project <directory>]` |
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                         |
+| ----------------------- | ------ | -------- | --------------------------------------------------- |
+| `--project <directory>` | string | no       | Directory project root (default: current directory) |
+
+#### Examples
+
+```bash
+bl managed-agent project version disable
+```
+
+```bash
+bl managed-agent project version disable --project ./my-agent
+```
+
+### `bl managed-agent project version enable`
+
+| Field              | Value                                                             |
+| ------------------ | ----------------------------------------------------------------- |
+| **Name**           | `managed-agent project version enable`                            |
+| **Description**    | Enable directory project versions                                 |
+| **Authentication** | No Auth                                                           |
+| **Usage**          | `bl managed-agent project version enable [--project <directory>]` |
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                         |
+| ----------------------- | ------ | -------- | --------------------------------------------------- |
+| `--project <directory>` | string | no       | Directory project root (default: current directory) |
+
+#### Examples
+
+```bash
+bl managed-agent project version enable
+```
+
+```bash
+bl managed-agent project version enable --project ./my-agent
+```
+
+### `bl managed-agent project version list`
+
+| Field              | Value                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent project version list`                                                              |
+| **Description**    | List directory project versions                                                                   |
+| **Authentication** | No Auth                                                                                           |
+| **Usage**          | `bl managed-agent project version list [--project <directory>] [--limit <n>] [--cursor <cursor>]` |
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                         |
+| ----------------------- | ------ | -------- | --------------------------------------------------- |
+| `--project <directory>` | string | no       | Directory project root (default: current directory) |
+| `--limit <n>`           | number | no       | Maximum versions to return                          |
+| `--cursor <cursor>`     | string | no       | Pagination cursor                                   |
+
+#### Examples
+
+```bash
+bl managed-agent project version list
+```
+
+```bash
+bl managed-agent project version list --limit 20 --output json
+```
+
+### `bl managed-agent project version preview`
+
+| Field              | Value                                                                                          |
+| ------------------ | ---------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent project version preview`                                                        |
+| **Description**    | Preview a directory project version                                                            |
+| **Authentication** | No Auth                                                                                        |
+| **Usage**          | `bl managed-agent project version preview --version-id <full-version> [--project <directory>]` |
+
+#### Flags
+
+| Flag                          | Type   | Required | Description                                         |
+| ----------------------------- | ------ | -------- | --------------------------------------------------- |
+| `--project <directory>`       | string | no       | Directory project root (default: current directory) |
+| `--version-id <full-version>` | string | yes      | Full project version ID                             |
+
+#### Examples
+
+```bash
+bl managed-agent project version preview --version-id <full-version>
+```
+
+### `bl managed-agent project version restore`
+
+| Field              | Value                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------ |
+| **Name**           | `managed-agent project version restore`                                                                |
+| **Description**    | Restore a version to the project working directory                                                     |
+| **Authentication** | No Auth                                                                                                |
+| **Usage**          | `bl managed-agent project version restore --version-id <full-version> [--project <directory>] [--yes]` |
+
+#### Flags
+
+| Flag                          | Type   | Required | Description                                         |
+| ----------------------------- | ------ | -------- | --------------------------------------------------- |
+| `--project <directory>`       | string | no       | Directory project root (default: current directory) |
+| `--version-id <full-version>` | string | yes      | Full project version ID                             |
+| `--yes`                       | switch | no       | Restore without interactive confirmation            |
+
+#### Examples
+
+```bash
+bl managed-agent project version restore --version-id <full-version>
+```
+
+```bash
+bl managed-agent project version restore --version-id <full-version> --yes
+```
+
+### `bl managed-agent project version status`
+
+| Field              | Value                                                             |
+| ------------------ | ----------------------------------------------------------------- |
+| **Name**           | `managed-agent project version status`                            |
+| **Description**    | Show directory project version status                             |
+| **Authentication** | No Auth                                                           |
+| **Usage**          | `bl managed-agent project version status [--project <directory>]` |
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                         |
+| ----------------------- | ------ | -------- | --------------------------------------------------- |
+| `--project <directory>` | string | no       | Directory project root (default: current directory) |
+
+#### Examples
+
+```bash
+bl managed-agent project version status
+```
+
+```bash
+bl managed-agent project version status --project ./my-agent --output json
+```
+
+### `bl managed-agent project workbench`
+
+| Field              | Value                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent project workbench`                                                     |
+| **Description**    | Launch the directory project Workbench                                                |
+| **Authentication** | API Key                                                                               |
+| **Usage**          | `bl managed-agent project workbench [--project <directory>] [--port <n>] [--no-open]` |
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                         |
+| ----------------------- | ------ | -------- | --------------------------------------------------- |
+| `--project <directory>` | string | no       | Directory project root (default: current directory) |
+| `--port <n>`            | number | no       | Local port (default: 4848)                          |
+| `--no-open`             | switch | no       | Do not open a browser                               |
+| `--api-key <key>`       | string | no       | API key                                             |
+| `--base-url <url>`      | string | no       | API base URL                                        |
+
+#### Notes
+
+- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
+- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
+- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
+
+#### Examples
+
+```bash
+bl managed-agent project workbench
+```
+
+```bash
+bl managed-agent project workbench --project ./my-agent --no-open
 ```
 
 ### `bl managed-agent session create`
@@ -663,199 +979,4 @@ bl managed-agent validate
 
 ```bash
 bl managed-agent validate --file agents.yaml
-```
-
-### `bl managed-agent version disable`
-
-| Field              | Value                                                       |
-| ------------------ | ----------------------------------------------------------- |
-| **Name**           | `managed-agent version disable`                             |
-| **Description**    | Disable Apply-time local snapshots without removing history |
-| **Authentication** | No Auth                                                     |
-| **Usage**          | `bl managed-agent version disable [--file <path>]`          |
-
-#### Flags
-
-| Flag            | Type   | Required | Description                             |
-| --------------- | ------ | -------- | --------------------------------------- |
-| `--file <path>` | string | no       | Config file path (default: agents.yaml) |
-
-#### Examples
-
-```bash
-bl managed-agent version disable
-```
-
-```bash
-bl managed-agent version disable --file agents.yaml
-```
-
-### `bl managed-agent version enable`
-
-| Field              | Value                                             |
-| ------------------ | ------------------------------------------------- |
-| **Name**           | `managed-agent version enable`                    |
-| **Description**    | Enable Apply-time local snapshots for agents.yaml |
-| **Authentication** | No Auth                                           |
-| **Usage**          | `bl managed-agent version enable [--file <path>]` |
-
-#### Flags
-
-| Flag            | Type   | Required | Description                             |
-| --------------- | ------ | -------- | --------------------------------------- |
-| `--file <path>` | string | no       | Config file path (default: agents.yaml) |
-
-#### Examples
-
-```bash
-bl managed-agent version enable
-```
-
-```bash
-bl managed-agent version enable --file agents.yaml
-```
-
-### `bl managed-agent version list`
-
-| Field              | Value                                                                             |
-| ------------------ | --------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent version list`                                                      |
-| **Description**    | List local snapshots of agents.yaml                                               |
-| **Authentication** | No Auth                                                                           |
-| **Usage**          | `bl managed-agent version list [--file <path>] [--limit <n>] [--cursor <cursor>]` |
-
-#### Flags
-
-| Flag                | Type   | Required | Description                                        |
-| ------------------- | ------ | -------- | -------------------------------------------------- |
-| `--file <path>`     | string | no       | Config file path (default: agents.yaml)            |
-| `--limit <n>`       | number | no       | Maximum versions to return (default: 50, max: 100) |
-| `--cursor <cursor>` | string | no       | Pagination cursor returned by the previous page    |
-
-#### Examples
-
-```bash
-bl managed-agent version list
-```
-
-```bash
-bl managed-agent version list --limit 20 --output json
-```
-
-### `bl managed-agent version preview`
-
-| Field              | Value                                                                          |
-| ------------------ | ------------------------------------------------------------------------------ |
-| **Name**           | `managed-agent version preview`                                                |
-| **Description**    | Preview a historical agents.yaml version                                       |
-| **Authentication** | No Auth                                                                        |
-| **Usage**          | `bl managed-agent version preview --version-id <full-version> [--file <path>]` |
-
-#### Flags
-
-| Flag                          | Type   | Required | Description                             |
-| ----------------------------- | ------ | -------- | --------------------------------------- |
-| `--file <path>`               | string | no       | Config file path (default: agents.yaml) |
-| `--version-id <full-version>` | string | yes      | Full local version ID                   |
-
-#### Examples
-
-```bash
-bl managed-agent version preview --version-id <full-version>
-```
-
-```bash
-bl managed-agent version preview --version-id <full-version> --output json
-```
-
-### `bl managed-agent version restore`
-
-| Field              | Value                                                                                  |
-| ------------------ | -------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent version restore`                                                        |
-| **Description**    | Restore a historical agents.yaml version to the working tree                           |
-| **Authentication** | No Auth                                                                                |
-| **Usage**          | `bl managed-agent version restore --version-id <full-version> [--file <path>] [--yes]` |
-
-#### Flags
-
-| Flag                          | Type   | Required | Description                                 |
-| ----------------------------- | ------ | -------- | ------------------------------------------- |
-| `--file <path>`               | string | no       | Config file path (default: agents.yaml)     |
-| `--version-id <full-version>` | string | yes      | Full local version ID                       |
-| `--yes`                       | switch | no       | Restore without an interactive confirmation |
-
-#### Examples
-
-```bash
-bl managed-agent version restore --version-id <full-version>
-```
-
-```bash
-bl managed-agent version restore --version-id <full-version> --yes --output json
-```
-
-### `bl managed-agent version status`
-
-| Field              | Value                                                 |
-| ------------------ | ----------------------------------------------------- |
-| **Name**           | `managed-agent version status`                        |
-| **Description**    | Show local snapshot versioning status for agents.yaml |
-| **Authentication** | No Auth                                               |
-| **Usage**          | `bl managed-agent version status [--file <path>]`     |
-
-#### Flags
-
-| Flag            | Type   | Required | Description                             |
-| --------------- | ------ | -------- | --------------------------------------- |
-| `--file <path>` | string | no       | Config file path (default: agents.yaml) |
-
-#### Examples
-
-```bash
-bl managed-agent version status
-```
-
-```bash
-bl managed-agent version status --file agents.yaml --output json
-```
-
-### `bl managed-agent workbench`
-
-| Field              | Value                                                                 |
-| ------------------ | --------------------------------------------------------------------- |
-| **Name**           | `managed-agent workbench`                                             |
-| **Description**    | Launch the agents.yaml project Workbench                              |
-| **Authentication** | API Key                                                               |
-| **Usage**          | `bl managed-agent workbench [--file <path>] [--port <n>] [--no-open]` |
-
-#### Flags
-
-| Flag               | Type   | Required | Description                             |
-| ------------------ | ------ | -------- | --------------------------------------- |
-| `--file <path>`    | string | no       | Config file path (default: agents.yaml) |
-| `--port <n>`       | number | no       | Local port (default: 4848)              |
-| `--no-open`        | switch | no       | Do not open a browser automatically     |
-| `--api-key <key>`  | string | no       | API key                                 |
-| `--base-url <url>` | string | no       | API base URL                            |
-
-#### Notes
-
-- Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
-- Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
-- Workbench requires Node.js 22+ and starts the shared @openagentpack/playground package locally. Local versions use the shared .openagentpack/versions project store and do not require Git.
-
-#### Examples
-
-```bash
-bl managed-agent workbench
-```
-
-```bash
-bl managed-agent workbench --file agents.yaml --no-open
-```
-
-```bash
-bl managed-agent workbench --port 4949
 ```

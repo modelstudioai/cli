@@ -3,7 +3,7 @@ import { emitResult } from "bailian-cli-runtime";
 import { CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { launchManagedAgentPlayground } from "./_engine/playground-launcher.ts";
 
-const WORKBENCH_FLAGS = {
+const PLAYGROUND_BASE_FLAGS = {
   file: {
     type: "string",
     valueHint: "<path>",
@@ -30,7 +30,7 @@ const WORKBENCH_FLAGS = {
 } satisfies FlagsDef;
 
 const PLAYGROUND_FLAGS = {
-  ...WORKBENCH_FLAGS,
+  ...PLAYGROUND_BASE_FLAGS,
   agent: {
     type: "string",
     valueHint: "<id>",
@@ -41,51 +41,15 @@ const PLAYGROUND_FLAGS = {
   },
 } satisfies FlagsDef;
 
-const WORKBENCH_NOTES = [
+const PLAYGROUND_NOTES = [
   ...CREDENTIALS_NOTE,
   {
     "en-US":
-      "Workbench requires Node.js 22+ and starts the shared @openagentpack/playground package locally. Local versions use the shared .openagentpack/versions project store and do not require Git.",
+      "Session Preview requires Node.js 22+ and keeps using an agents.yaml source. Directory Workbench is available under managed-agent project workbench.",
     "zh-CN":
-      "Workbench 需要 Node.js 22+，并在本地启动共享的 @openagentpack/playground 包；本地版本使用共享的 .openagentpack/versions 项目版本存储，不依赖 Git。",
+      "会话预览需要 Node.js 22+，并继续使用 agents.yaml；目录 Workbench 位于 managed-agent project workbench。",
   },
 ];
-
-export const managedAgentWorkbench = defineCommand({
-  description: {
-    "en-US": "Launch the agents.yaml project Workbench",
-    "zh-CN": "启动 agents.yaml 项目 Workbench",
-  },
-  auth: "apiKey",
-  usageArgs: "[--file <path>] [--port <n>] [--no-open]",
-  flags: WORKBENCH_FLAGS,
-  exampleArgs: ["", "--file agents.yaml --no-open", "--port 4949"],
-  notes: WORKBENCH_NOTES,
-  async run(ctx) {
-    const file = ctx.flags.file ?? "agents.yaml";
-    const port = ctx.flags.port ?? 4848;
-    if (ctx.settings.dryRun) {
-      emitResult(
-        {
-          would_launch: "workbench",
-          config_file: file,
-          port,
-          open_browser: !ctx.flags.noOpen,
-        },
-        detectOutputFormat(ctx.settings.output),
-      );
-      return;
-    }
-    await launchManagedAgentPlayground({
-      file,
-      port,
-      open: !ctx.flags.noOpen,
-      surface: "workbench",
-      client: ctx.client,
-      settings: ctx.settings,
-    });
-  },
-});
 
 export const managedAgentPlayground = defineCommand({
   description: {
@@ -96,7 +60,7 @@ export const managedAgentPlayground = defineCommand({
   usageArgs: "[--file <path>] [--agent <id>] [--port <n>] [--no-open]",
   flags: PLAYGROUND_FLAGS,
   exampleArgs: ["", "--agent assistant", "--file agents.yaml --no-open"],
-  notes: WORKBENCH_NOTES,
+  notes: PLAYGROUND_NOTES,
   async run(ctx) {
     const file = ctx.flags.file ?? "agents.yaml";
     const port = ctx.flags.port ?? 4848;

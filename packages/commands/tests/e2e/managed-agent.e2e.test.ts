@@ -1,5 +1,7 @@
+import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, test } from "vite-plus/test";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 import { e2eFixturesDir, parseStdoutJson, runCommandE2e } from "./helpers.ts";
 import { MANAGED_AGENT_ROUTES } from "./topic-routes.ts";
 
@@ -15,6 +17,13 @@ const DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES = [
   "bailian.deployment.file.mount_path.required",
   "bailian.deployment.file.mount_path.duplicate",
 ];
+const projectDirectories: string[] = [];
+
+afterEach(async () => {
+  for (const directory of projectDirectories.splice(0)) {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 /**
  * managed-agent：help / 缺参不依赖密钥；所有 mutation 命令的 --dry-run
@@ -143,19 +152,83 @@ describe("e2e: managed-agent", () => {
     expect(stderr).not.toContain("--git");
   });
 
-  test("managed-agent version 暴露共享版本管理子命令", async () => {
+  test("managed-agent project 暴露目录项目与共享版本管理子命令", async () => {
     const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
-      "version",
+      "project",
       "--help",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/enable|disable|status|list|preview|restore/i);
+    expect(stderr).toMatch(/init|validate|build|publish|workbench|version/i);
   });
 
-  test("managed-agent version preview 缺少 --version-id 时退出为用法错误 (2)", async () => {
+  test("managed-agent project 完成 init、validate、build 与 version status 本地闭环", async () => {
+    const projectRoot = await mkdtemp(join(tmpdir(), "bailian-managed-agent-project-"));
+    projectDirectories.push(projectRoot);
+    const initialized = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "project",
+      "init",
+      "--project",
+      projectRoot,
+      "--provider",
+      "bailian",
+      "--output",
+      "json",
+    ]);
+    expect(initialized.exitCode, initialized.stderr).toBe(0);
+    expect(
+      parseStdoutJson<{ baseline_version?: string }>(initialized.stdout).baseline_version,
+    ).toMatch(/^[a-f0-9]{64}$/);
+
+    const validated = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "project",
+      "validate",
+      "--project",
+      projectRoot,
+      "--output",
+      "json",
+    ]);
+    expect(validated.exitCode, validated.stderr).toBe(0);
+    expect(
+      parseStdoutJson<{ diagnostics?: Array<{ severity?: string }> }>(validated.stdout).diagnostics,
+    ).not.toContainEqual(expect.objectContaining({ severity: "error" }));
+
+    const built = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "project",
+      "build",
+      "--project",
+      projectRoot,
+      "--yes",
+      "--output",
+      "json",
+    ]);
+    expect(built.exitCode, built.stderr).toBe(0);
+    expect(await readFile(join(projectRoot, ".openagentpack/build/agents.yaml"), "utf8")).toContain(
+      "assistant",
+    );
+
+    const status = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "project",
+      "version",
+      "status",
+      "--project",
+      projectRoot,
+      "--output",
+      "json",
+    ]);
+    expect(status.exitCode, status.stderr).toBe(0);
+    expect(parseStdoutJson<{ enabled?: boolean }>(status.stdout).enabled).toBe(true);
+    expect(await stat(join(projectRoot, ".openagentpack/state.json")).catch(() => null)).toBeNull();
+  });
+
+  test("managed-agent project version preview 缺少 --version-id 时退出为用法错误 (2)", async () => {
     const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
+      "project",
       "version",
       "preview",
       "--quiet",
@@ -250,11 +323,14 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
     expect(data.provider).toBe("bailian");
   });
 
-  test("workbench --dry-run 仅输出启动计划", async () => {
+  test("project workbench --dry-run 仅输出目录项目启动计划", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
+      "project",
       "workbench",
       "--dry-run",
+      "--project",
+      "./agent-project",
       "--no-open",
       "--output",
       "json",
@@ -262,10 +338,12 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
       would_launch?: string;
-      open_browser?: boolean;
+      project_root?: string;
+      port?: number;
     }>(stdout);
     expect(data.would_launch).toBe("workbench");
-    expect(data.open_browser).toBe(false);
+    expect(data.project_root).toBe("./agent-project");
+    expect(data.port).toBe(4848);
   });
 
   test("apply --dry-run 仅输出计划", async () => {

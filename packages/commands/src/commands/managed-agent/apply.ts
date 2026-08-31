@@ -16,13 +16,6 @@ import {
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 import { renderAgentFeedback } from "./_engine/feedback.ts";
-import {
-  commitPreparedProjectVersion,
-  type PreparedProjectVersion,
-  prepareProjectVersion,
-  readProjectVersionSource,
-  releasePreparedProjectVersion,
-} from "@openagentpack/project-versions";
 
 const APPLY_FLAGS = {
   file: {
@@ -105,9 +98,7 @@ export default defineCommand({
       return;
     }
 
-    const versionSource = await readProjectVersionSource(file);
-
-    const { planned, runtime } = await withAgentErrors(() =>
+    const planned = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, file);
         assertProviderConfigured(runtime, flags.provider);
@@ -117,7 +108,7 @@ export default defineCommand({
           quiet: true,
           onFeedback: renderAgentFeedback,
         });
-        return { planned, runtime };
+        return planned;
       }),
     );
 
@@ -137,13 +128,6 @@ export default defineCommand({
 
     const actionable = plan.actions.filter((action) => action.action !== "no-op");
     if (actionable.length === 0) {
-      if (!flags.refreshOnly) {
-        const preparedVersion = await prepareProjectVersion(
-          runtime.configPath,
-          versionSource.source,
-        );
-        await commitSuccessfulApplyVersion(preparedVersion, format);
-      }
       if (format === "json")
         emitResult({ succeeded: 0, failed: 0, skipped: 0, results: [] }, format);
       else emitBare("No changes. Infrastructure is up-to-date.");
@@ -184,50 +168,31 @@ export default defineCommand({
       );
     }
 
-    const preparedVersion = await prepareProjectVersion(runtime.configPath, versionSource.source);
-    let versionCommitted = false;
-    try {
-      const result = await withAgentErrors(() =>
-        withStdoutProtected(() =>
-          executePlannedProject(planned, {
-            onFeedback: renderAgentFeedback,
-            policy: "force",
-            concurrency: flags.concurrency,
-          }),
-        ),
+    const result = await withAgentErrors(() =>
+      withStdoutProtected(() =>
+        executePlannedProject(planned, {
+          onFeedback: renderAgentFeedback,
+          policy: "force",
+          concurrency: flags.concurrency,
+        }),
+      ),
+    );
+
+    const succeeded = result.results.filter((entry) => entry.status === "success").length;
+    const failed = result.results.filter((entry) => entry.status === "failed").length;
+    const skipped = result.results.filter((entry) => entry.status === "skipped").length;
+
+    if (format === "json") {
+      emitResult({ succeeded, failed, skipped, results: result.results }, format);
+    } else {
+      emitBare(`\nApply finished: ${succeeded} succeeded, ${failed} failed, ${skipped} skipped.`);
+    }
+
+    if (failed > 0 || skipped > 0) {
+      throw new BailianError(
+        failed > 0 ? "Apply failed." : "Apply incomplete: one or more actions were skipped.",
+        ExitCode.GENERAL,
       );
-
-      const succeeded = result.results.filter((entry) => entry.status === "success").length;
-      const failed = result.results.filter((entry) => entry.status === "failed").length;
-      const skipped = result.results.filter((entry) => entry.status === "skipped").length;
-
-      if (format === "json") {
-        emitResult({ succeeded, failed, skipped, results: result.results }, format);
-      } else {
-        emitBare(`\nApply finished: ${succeeded} succeeded, ${failed} failed, ${skipped} skipped.`);
-      }
-
-      if (failed > 0 || skipped > 0) {
-        throw new BailianError(
-          failed > 0 ? "Apply failed." : "Apply incomplete: one or more actions were skipped.",
-          ExitCode.GENERAL,
-        );
-      }
-      await commitSuccessfulApplyVersion(preparedVersion, format);
-      versionCommitted = true;
-    } finally {
-      if (!versionCommitted) await releasePreparedProjectVersion(preparedVersion);
     }
   },
 });
-
-async function commitSuccessfulApplyVersion(
-  prepared: PreparedProjectVersion | null,
-  format: "text" | "json",
-): Promise<void> {
-  if (!prepared) return;
-  const version = await commitPreparedProjectVersion(prepared);
-  if (version && format !== "json") {
-    emitBare(`Created local version ${version.short_version} (${version.message}).`);
-  }
-}

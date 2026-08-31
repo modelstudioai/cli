@@ -37,21 +37,24 @@ description: >-
 5. Destroy   bl managed-agent destroy --yes # only after user confirmation
 ```
 
-## Workbench and local versions
+## Directory projects, Workbench, and local versions
 
-| Intent                                   | Command                                        |
-| ---------------------------------------- | ---------------------------------------------- |
-| Launch project resource editing          | `bl managed-agent workbench`                   |
-| Launch one Agent Session Preview         | `bl managed-agent playground --agent <id>`     |
-| Enable/disable shared automatic versions | `bl managed-agent version enable` / `disable`  |
-| Inspect local version state and history  | `bl managed-agent version status` / `list`     |
-| Preview or restore a historical YAML     | `bl managed-agent version preview` / `restore` |
+| Intent                                  | Command                                                |
+| --------------------------------------- | ------------------------------------------------------ |
+| Create or convert a directory project   | `bl managed-agent project init`                        |
+| Validate and Build directory source     | `bl managed-agent project validate` / `build`          |
+| Publish the current immutable Build     | `bl managed-agent project publish --yes`               |
+| Launch project resource editing         | `bl managed-agent project workbench`                   |
+| Launch one Agent Session Preview        | `bl managed-agent playground --agent <id>`             |
+| Enable/disable project versions         | `bl managed-agent project version enable` / `disable`  |
+| Inspect local version state and history | `bl managed-agent project version status` / `list`     |
+| Preview or restore project source       | `bl managed-agent project version preview` / `restore` |
 
-- Bailian CLI and Workbench use the same `.openagentpack/versions` store and enable switch for the same `agents.yaml`. Git is not required.
-- `store.json` contains only the switch and head metadata. Immutable linked entries live under `entries/`, while complete YAML is stored as content-addressed blobs under `blobs/`. Neither `agents.state.json` nor referenced files are versioned.
-- When enabled, a fully successful Apply creates a local snapshot only when `agents.yaml` changed. Failed, partial, cancelled, and `--refresh-only` Apply runs do not create one.
-- `version restore` writes the historical YAML to the working tree. It does not move version history, restore `agents.state.json`, create a new snapshot, or Apply remote changes.
-- Workbench can edit local drafts while Apply is running, but saving/version mutations are blocked until Apply completes. External file edits are detected through revision checks.
+- Bailian CLI and Workbench use the same `.openagentpack/versions/project` store and enable switch. Git is not required.
+- Build is local-only. Publish never runs Build implicitly and consumes only a current `.openagentpack/build/agents.yaml` plus manifest.
+- A successful Publish versions the canonical YAML and the complete project source tree, including Skill scripts/assets and binary files. Remote State is never versioned or restored.
+- `project version restore` restores source files to the working directory, invalidates Build, and does not move version history or remote State.
+- `managed-agent playground` remains the standalone `agents.yaml` Session Preview path; directory Workbench is only under `managed-agent project workbench`.
 
 ## Deployment as IaC
 

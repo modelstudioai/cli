@@ -13,7 +13,8 @@ const PLAYGROUND_URL_PATTERN = /running at http:\/\/localhost:(\d+)/i;
 export interface PlaygroundLaunchOptions {
   port?: number;
   open: boolean;
-  file: string;
+  file?: string;
+  project?: string;
   agent?: string;
   surface: "preview" | "workbench";
   client: Client;
@@ -51,8 +52,10 @@ export async function launchManagedAgentPlayground(
   if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
     throw new BailianError(`Invalid --port '${port}'.`, ExitCode.USAGE);
   }
-  const configPath = resolve(options.file);
-  const projectId = createHash("sha256").update(configPath).digest("hex").slice(0, 16);
+  const sourcePath = resolve(
+    options.surface === "workbench" ? (options.project ?? ".") : (options.file ?? "agents.yaml"),
+  );
+  const projectId = createHash("sha256").update(sourcePath).digest("hex").slice(0, 16);
   const launcher = resolveLauncher();
   const existing = await probeExistingPlayground(port);
   if (existing) {
@@ -74,7 +77,7 @@ export async function launchManagedAgentPlayground(
     }
   }
 
-  const environment = buildPlaygroundEnvironment(options, port, configPath);
+  const environment = buildPlaygroundEnvironment(options, port, sourcePath);
   if (launcher.fetched) {
     emitBare(`Fetching ${PLAYGROUND_PACKAGE} (first run may take a moment)...`);
   }
@@ -214,15 +217,21 @@ function findLocalPlaygroundBin(startDirectory: string): string | undefined {
 function buildPlaygroundEnvironment(
   options: PlaygroundLaunchOptions,
   port: number,
-  configPath: string,
+  sourcePath: string,
 ): NodeJS.ProcessEnv {
   const credential = options.client.exportApiCredential();
   const environment: NodeJS.ProcessEnv = {
     ...process.env,
     PORT: String(port),
-    AGENTS_CONFIG_PATH: configPath,
     AGENTS_PLAYGROUND_TOKEN: randomBytes(32).toString("hex"),
   };
+  if (options.surface === "workbench") {
+    delete environment.AGENTS_CONFIG_PATH;
+    environment.AGENTS_PROJECT_ROOT = sourcePath;
+  } else {
+    delete environment.AGENTS_PROJECT_ROOT;
+    environment.AGENTS_CONFIG_PATH = sourcePath;
+  }
   if (credential) environment.DASHSCOPE_API_KEY = credential.token;
   const baseUrl = options.client.baseUrl.replace(/\/+$/, "");
   environment.BAILIAN_BASE_URL = baseUrl.endsWith("/api/v1/agentstudio")
