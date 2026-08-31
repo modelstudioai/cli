@@ -26,7 +26,7 @@ description: >-
 2. Ask the user to confirm the exact action and scope shown in the plan.
 3. Only then run `apply` / `destroy` with `--yes`; a changed plan requires confirmation again.
 
-`session delete` and future `risk: high` commands follow the shared protocol.
+`state rm`, `session delete`, and future `risk: high` commands follow the shared protocol.
 
 ## IaC lifecycle
 

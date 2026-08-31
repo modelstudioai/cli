@@ -237,6 +237,10 @@ bl managed-agent session create --agent assistant --title 'debug run'
 | **Description**    | Delete a session                                                                        |
 | **Authentication** | API Key                                                                                 |
 | **Usage**          | `bl managed-agent session delete --session-id <id> [--provider <name>] [--file <path>]` |
+| **Risk**           | `high`                                                                                  |
+| **Risk message**   | This deletes the specified remote managed Agent Session.                                |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -245,6 +249,7 @@ bl managed-agent session create --agent assistant --title 'debug run'
 | `--session-id <id>` | string | yes      | Session ID (required)                   |
 | `--file <path>`     | string | no       | Config file path (default: agents.yaml) |
 | `--provider <name>` | string | no       | Target provider                         |
+| `--yes`             | switch | no       | Confirm this high-risk operation        |
 | `--api-key <key>`   | string | no       | API key                                 |
 | `--base-url <url>`  | string | no       | API base URL                            |
 
@@ -257,7 +262,8 @@ bl managed-agent session create --agent assistant --title 'debug run'
 #### Examples
 
 ```bash
-bl managed-agent session delete --session-id sess_abc123
+# Only after explicit user confirmation:
+bl managed-agent session delete --session-id sess_abc123 --yes
 ```
 
 ### `bl managed-agent session events`
@@ -552,12 +558,16 @@ bl managed-agent state list --file agents.yaml
 
 ### `bl managed-agent state rm`
 
-| Field              | Value                                                                      |
-| ------------------ | -------------------------------------------------------------------------- |
-| **Name**           | `managed-agent state rm`                                                   |
-| **Description**    | Remove a resource from state without destroying it remotely                |
-| **Authentication** | No Auth                                                                    |
-| **Usage**          | `bl managed-agent state rm --address <provider.type.name> [--file <path>]` |
+| Field              | Value                                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent state rm`                                                                                          |
+| **Description**    | Remove a resource from state without destroying it remotely                                                       |
+| **Authentication** | No Auth                                                                                                           |
+| **Usage**          | `bl managed-agent state rm --address <provider.type.name> [--file <path>]`                                        |
+| **Risk**           | `high`                                                                                                            |
+| **Risk message**   | This removes the resource from local state without deleting it remotely, so this project will no longer track it. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -565,6 +575,7 @@ bl managed-agent state list --file agents.yaml
 | -------------------------------- | ------ | -------- | --------------------------------------- |
 | `--address <provider.type.name>` | string | yes      | Resource state address (required)       |
 | `--file <path>`                  | string | no       | Config file path (default: agents.yaml) |
+| `--yes`                          | switch | no       | Confirm this high-risk operation        |
 
 #### Notes
 
@@ -573,7 +584,8 @@ bl managed-agent state list --file agents.yaml
 #### Examples
 
 ```bash
-bl managed-agent state rm --address bailian.agent.assistant
+# Only after explicit user confirmation:
+bl managed-agent state rm --address bailian.agent.assistant --yes
 ```
 
 ### `bl managed-agent state show`

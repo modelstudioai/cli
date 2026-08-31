@@ -149,6 +149,38 @@ describe("e2e: managed-agent", () => {
     });
   });
 
+  test.each([
+    ["state rm", ["state", "rm"]],
+    ["session delete", ["session", "delete"]],
+  ])("managed-agent %s --help 展示 runtime 注入的 --yes", async (_commandName, commandPath) => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      ...commandPath,
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--yes/i);
+  });
+
+  test.each([
+    ["state rm", ["state", "rm", "--address", "bailian.agent.assistant"]],
+    [
+      "session delete",
+      ["session", "delete", "--session-id", "sess_e2e", "--api-key", "e2e-dummy-key"],
+    ],
+  ])("managed-agent %s 无 --yes 返回确认请求 (7)", async (_commandName, commandArgs) => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      ...commandArgs,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
+  });
+
   test("managed-agent session delete 缺少 --session-id 时退出为用法错误 (2)", async () => {
     const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",

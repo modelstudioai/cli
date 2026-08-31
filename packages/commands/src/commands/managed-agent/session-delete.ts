@@ -30,9 +30,16 @@ const SESSION_DELETE_FLAGS = {
 export default defineCommand({
   description: { "en-US": "Delete a session", "zh-CN": "删除 Session" },
   auth: "apiKey",
+  risk: {
+    level: "high",
+    message: {
+      "en-US": "This deletes the specified remote managed Agent Session.",
+      "zh-CN": "该操作会删除指定的远端托管 Agent Session。",
+    },
+  },
   usageArgs: "--session-id <id> [--provider <name>] [--file <path>]",
   flags: SESSION_DELETE_FLAGS,
-  exampleArgs: ["--session-id sess_abc123"],
+  exampleArgs: ["--session-id sess_abc123 --yes"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
