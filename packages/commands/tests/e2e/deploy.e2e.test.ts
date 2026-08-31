@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { isDashScopeE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { DEPLOY_ROUTES } from "./topic-routes.ts";
 
 /**
@@ -16,14 +16,13 @@ import { DEPLOY_ROUTES } from "./topic-routes.ts";
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
   test("deploy 列出子命令", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(DEPLOY_ROUTES, ["deploy"]);
+    const { stderr, exitCode } = await runCommandHelp(DEPLOY_ROUTES, ["deploy", "--help"]);
     expect(exitCode, stderr).toBe(0);
-    const out = `${stdout}\n${stderr}`;
-    expect(out).toMatch(/create|list|get|delete|update|scale|models/);
+    expect(stderr).toMatch(/create|list|get|delete|update|scale|models/);
   });
 
   test("deploy create --help 正常退出并展示必填项", async () => {
-    const { stderr, exitCode } = await runCommandE2e(DEPLOY_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(DEPLOY_ROUTES, [
       "deploy",
       "text",
       "create",

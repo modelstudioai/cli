@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { isDashScopeE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { SEARCH_WEB_ROUTES } from "./topic-routes.ts";
 
 function pagesFromSearchWebStdout(stdout: string): Array<{ title?: string; url?: string }> {
@@ -17,7 +17,7 @@ function pagesFromSearchWebStdout(stdout: string): Array<{ title?: string; url?:
 
 describe("e2e: search web", () => {
   test("search web --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(SEARCH_WEB_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(SEARCH_WEB_ROUTES, [
       "search",
       "web",
       "--help",

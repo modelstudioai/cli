@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { isDashScopeE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { TEXT_CHAT_ROUTES } from "./topic-routes.ts";
 
 /**
@@ -8,7 +8,7 @@ import { TEXT_CHAT_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: text chat", () => {
   test("text chat --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(TEXT_CHAT_ROUTES, ["text", "chat", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(TEXT_CHAT_ROUTES, ["text", "chat", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--api\s+<chat\|responses>/i);
     expect(stderr).toMatch(/chat|--message|model|stream/i);

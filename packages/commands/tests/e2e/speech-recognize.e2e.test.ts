@@ -9,6 +9,7 @@ import {
   isDashScopeE2EReady,
   makeE2eOutputDir,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "./helpers.ts";
 import { SPEECH_ROUTES } from "./topic-routes.ts";
@@ -50,7 +51,7 @@ describe("e2e: speech recognize", () => {
   }
 
   test("speech recognize --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(SPEECH_ROUTES, [
       "speech",
       "recognize",
       "--help",

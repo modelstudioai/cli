@@ -6,8 +6,8 @@ export function deriveGroupPaths(commandPaths: string[]): string[] {
   const groups = new Set<string>();
   for (const path of commandPaths) {
     const parts = path.split(" ");
-    for (let i = 1; i < parts.length; i++) {
-      const prefix = parts.slice(0, i).join(" ");
+    for (let partIndex = 1; partIndex < parts.length; partIndex++) {
+      const prefix = parts.slice(0, partIndex).join(" ");
       const hasChildren = commandPaths.some(
         (candidate) => candidate.startsWith(`${prefix} `) && candidate !== prefix,
       );
@@ -15,4 +15,22 @@ export function deriveGroupPaths(commandPaths: string[]): string[] {
     }
   }
   return [...groups].sort();
+}
+
+interface RegistryHelpPrinter {
+  printHelp(commandPath: string[], output: NodeJS.WriteStream): void;
+}
+
+export function captureRegistryHelp(printer: RegistryHelpPrinter, commandPath: string[]): string {
+  let helpOutput = "";
+  const output = {
+    isTTY: false,
+    write(chunk: string): boolean {
+      helpOutput += chunk;
+      return true;
+    },
+  } as NodeJS.WriteStream;
+
+  printer.printHelp(commandPath, output);
+  return helpOutput;
 }

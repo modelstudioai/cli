@@ -3,6 +3,7 @@ import {
   isBailianE2EEnabled,
   isDashScopeE2EReady,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "./helpers.ts";
 import { VIDEO_ROUTES } from "./topic-routes.ts";
@@ -15,7 +16,7 @@ const taskId = process.env.BAILIAN_E2E_VIDEO_TASK_ID?.trim();
 
 describe("e2e: video task get", () => {
   test("video task get --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(VIDEO_ROUTES, [
       "video",
       "task",
       "get",

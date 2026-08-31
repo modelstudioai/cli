@@ -5,7 +5,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
-import { isKbAdminE2EReady, parseStdoutJson, runCommandE2e } from "../helpers.ts";
+import { isKbAdminE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "../helpers.ts";
 import { KNOWLEDGE_SERVICE_ROUTES } from "../topic-routes.ts";
 import { pickDifferentAgentModel } from "./verified-models.ts";
 
@@ -16,7 +16,7 @@ interface DryRunBody {
 
 describe("e2e: knowledge service list", () => {
   test("--help 展示 flags", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(KNOWLEDGE_SERVICE_ROUTES, [
       "knowledge",
       "service",
       "list",

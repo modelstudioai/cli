@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
-import { isKbAdminE2EReady, parseStdoutJson, runCommandE2e } from "../helpers.ts";
+import { isKbAdminE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "../helpers.ts";
 import { KNOWLEDGE_DOC_UPLOAD_ROUTES } from "../topic-routes.ts";
 
 const fixtureDir = mkdtempSync(join(tmpdir(), "doc-upload-e2e-"));
@@ -17,7 +17,7 @@ interface DryRunStep {
 
 describe("e2e: knowledge doc upload", () => {
   test("--help 展示 flags", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_DOC_UPLOAD_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(KNOWLEDGE_DOC_UPLOAD_ROUTES, [
       "knowledge",
       "doc",
       "upload",

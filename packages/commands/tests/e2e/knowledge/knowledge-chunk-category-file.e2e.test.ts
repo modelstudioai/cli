@@ -11,6 +11,7 @@ import {
   isOssImportE2EReady,
   isTableKbE2EReady,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "../helpers.ts";
 import {
@@ -47,7 +48,7 @@ const HELP_SMOKE_CASES: Array<[string[], RegExp]> = [
 describe("e2e: chunk/category/file 全命令 --help 冒烟", () => {
   test("12 条命令 help 退出 0 且展示代表性 flag（chunk add 单独测）", async () => {
     for (const [commandPath, flagPattern] of HELP_SMOKE_CASES) {
-      const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      const { stderr, exitCode } = await runCommandHelp(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
         ...commandPath,
         "--help",
       ]);
@@ -59,7 +60,7 @@ describe("e2e: chunk/category/file 全命令 --help 冒烟", () => {
 
 describe("e2e: knowledge chunk 组 (静态)", () => {
   test("chunk add: --help 展示双通道 flags", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "chunk",
       "add",

@@ -4,6 +4,7 @@ import { promisify } from "util";
 import { monorepoRoot } from "./monorepo-root.ts";
 
 const execFileAsync = promisify(execFile);
+const tsxLoader = import.meta.resolve("tsx");
 
 export interface RunCliResult {
   stdout: string;
@@ -18,24 +19,28 @@ export function resolveTsxBin(): string {
   return join(root, "node_modules", ".bin", name);
 }
 
-/** 子进程通过 tsx 执行指定 main.ts 入口 */
+/** 子进程通过 Node 的 tsx loader 执行指定 main.ts 入口，不启动 tsx CLI 的 IPC server。 */
 export async function runNodeMain(
   mainTs: string,
   args: string[],
   options: { cwd: string; env?: NodeJS.ProcessEnv } = { cwd: process.cwd() },
 ): Promise<RunCliResult> {
   try {
-    const { stdout, stderr } = await execFileAsync(resolveTsxBin(), [mainTs, ...args], {
-      cwd: options.cwd,
-      encoding: "utf8",
-      maxBuffer: 32 * 1024 * 1024,
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: "1",
-        DO_NOT_TRACK: "1",
-        ...options.env,
+    const { stdout, stderr } = await execFileAsync(
+      process.execPath,
+      ["--import", tsxLoader, mainTs, ...args],
+      {
+        cwd: options.cwd,
+        encoding: "utf8",
+        maxBuffer: 32 * 1024 * 1024,
+        env: {
+          ...process.env,
+          NODE_NO_WARNINGS: "1",
+          DO_NOT_TRACK: "1",
+          ...options.env,
+        },
       },
-    });
+    );
     return { stdout: stdout ?? "", stderr: stderr ?? "", exitCode: 0 };
   } catch (err: unknown) {
     const e = err as {
