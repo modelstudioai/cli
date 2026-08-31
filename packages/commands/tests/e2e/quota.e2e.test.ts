@@ -32,6 +32,7 @@ describe("e2e: quota", () => {
     expect(stderr).toContain("--rpm");
     expect(stderr).toContain("--tpm");
     expect(stderr).toContain("--delete");
+    expect(stderr).toContain("--yes");
   });
 
   test("quota request 作为 quota update 的兼容别名可用", async () => {
@@ -90,6 +91,17 @@ describe("e2e: quota", () => {
     ]);
     expect(exitCode).toBe(2);
     expect(stderr).toContain("cannot be combined");
+  });
+
+  test("quota update --delete 非 TTY 无 --yes 报 USAGE (2)", async () => {
+    // 注入假 key 让 apiKey 鉴权通过；确认门在发任何网络请求前触发
+    const { stderr, exitCode } = await runCommandE2e(
+      QUOTA_ROUTES,
+      ["quota", "update", "--model", "qwen-plus", "--delete"],
+      { DASHSCOPE_API_KEY: "sk-e2e-quota-delete" },
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--yes/);
   });
 
   test("quota update --rpm 负数报错", async () => {

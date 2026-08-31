@@ -149,12 +149,12 @@ bl quota list --output json
 
 ### `bl quota update`
 
-| Field              | Value                                                                |
-| ------------------ | -------------------------------------------------------------------- |
-| **Name**           | `quota update`                                                       |
-| **Description**    | Update model rate limits (QPM/TPM), or clear them with --delete      |
-| **Authentication** | API Key                                                              |
-| **Usage**          | `bl quota update --model <model> [--rpm <n>] [--tpm <n>] [--delete]` |
+| Field              | Value                                                                        |
+| ------------------ | ---------------------------------------------------------------------------- |
+| **Name**           | `quota update`                                                               |
+| **Description**    | Update model rate limits (QPM/TPM), or clear them with --delete              |
+| **Authentication** | API Key                                                                      |
+| **Usage**          | `bl quota update --model <model> [--rpm <n>] [--tpm <n>] [--delete] [--yes]` |
 
 #### Flags
 
@@ -164,12 +164,14 @@ bl quota list --output json
 | `--rpm <n>`        | number | no       | Max requests per minute (QPM)              |
 | `--tpm <n>`        | number | no       | Max tokens per minute (TPM)                |
 | `--delete`         | switch | no       | Clear all custom rate limits for the model |
+| `--yes`            | switch | no       | Skip the confirmation prompt for --delete  |
 | `--api-key <key>`  | string | no       | API key                                    |
 | `--base-url <url>` | string | no       | API base URL                               |
 
 #### Notes
 
 - Fields you omit keep their current values (server-side OVERLAY merge); --delete clears all custom limits.
+- --delete requires confirmation; pass --yes to skip the prompt in scripts.
 - Setting TPM without an existing QPM limit is rejected server-side — pass --rpm first or together.
 
 #### Examples
@@ -184,6 +186,10 @@ bl quota update --model qwen3-max --tpm 500000
 
 ```bash
 bl quota update --model qwen-plus --delete
+```
+
+```bash
+bl quota update --model qwen-plus --delete --yes
 ```
 
 ```bash
