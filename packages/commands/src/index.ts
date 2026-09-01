@@ -88,6 +88,7 @@ export { default as modelList } from "./commands/model/list.ts";
 export { default as workspaceList } from "./commands/workspace/list.ts";
 export { default as quotaList } from "./commands/quota/list.ts";
 export { default as quotaUpdate } from "./commands/quota/update.ts";
+export { default as quotaDelete } from "./commands/quota/delete.ts";
 export { default as quotaHistory } from "./commands/quota/history.ts";
 export { default as quotaCheck } from "./commands/quota/check.ts";
 export { default as permissionList } from "./commands/permission/list.ts";

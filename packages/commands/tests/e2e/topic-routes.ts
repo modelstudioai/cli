@@ -103,6 +103,7 @@ export const ADVISOR_ROUTES: E2eRouteExports = {
 export const QUOTA_ROUTES: E2eRouteExports = {
   "quota list": "quotaList",
   "quota update": "quotaUpdate",
+  "quota delete": "quotaDelete",
   // Backward-compatible alias of "quota update".
   "quota request": "quotaUpdate",
   "quota history": "quotaHistory",
