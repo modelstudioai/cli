@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "fs
 import { tmpdir } from "os";
 import { join } from "path";
 import { describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { CONFIG_ROUTES } from "./topic-routes.ts";
 
 /**
@@ -11,29 +11,29 @@ import { CONFIG_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: config", () => {
   test("config show --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "show", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(CONFIG_ROUTES, ["config", "show", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/show|config/i);
   });
 
   test("config set --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "set", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(CONFIG_ROUTES, ["config", "set", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/set|--key|--value/i);
   });
 
   test("config list/use --help 正常退出", async () => {
-    const listResult = await runCommandE2e(CONFIG_ROUTES, ["config", "list", "--help"]);
+    const listResult = await runCommandHelp(CONFIG_ROUTES, ["config", "list", "--help"]);
     expect(listResult.exitCode, listResult.stderr).toBe(0);
     expect(listResult.stderr).toMatch(/list|active|profile/i);
 
-    const useResult = await runCommandE2e(CONFIG_ROUTES, ["config", "use", "--help"]);
+    const useResult = await runCommandHelp(CONFIG_ROUTES, ["config", "use", "--help"]);
     expect(useResult.exitCode, useResult.stderr).toBe(0);
     expect(useResult.stderr).toMatch(/use|--name|active/i);
   });
 
   test("config ui --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "ui", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(CONFIG_ROUTES, ["config", "ui", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/ui|--port|--no-open|web/i);
   });
@@ -464,7 +464,7 @@ describe("e2e: config", () => {
   });
 
   test("config agent --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(CONFIG_ROUTES, ["config", "agent", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(CONFIG_ROUTES, ["config", "agent", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/agent|--base-url|--model/i);
   });

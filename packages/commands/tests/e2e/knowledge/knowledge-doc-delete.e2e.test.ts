@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCommandE2e } from "../helpers.ts";
+import { parseStdoutJson, runCommandHelp, runCommandE2e } from "../helpers.ts";
 import { KNOWLEDGE_DOC_DELETE_ROUTES } from "../topic-routes.ts";
 
 describe("e2e: knowledge doc delete", () => {
   test("--help 展示 flags", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_DOC_DELETE_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(KNOWLEDGE_DOC_DELETE_ROUTES, [
       "knowledge",
       "doc",
       "delete",

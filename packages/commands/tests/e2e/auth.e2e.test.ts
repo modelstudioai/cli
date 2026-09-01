@@ -7,6 +7,7 @@ import {
   isOpenApiE2EReady,
   makeE2eOutputDir,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "./helpers.ts";
 import { AUTH_ROUTES } from "./topic-routes.ts";
@@ -15,7 +16,7 @@ import { AUTH_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: auth", () => {
   test("auth login --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, ["auth", "login", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(AUTH_ROUTES, ["auth", "login", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/login|api-key/i);
     expect(stderr).toMatch(/--console-site/);
@@ -108,13 +109,13 @@ describe("e2e: auth", () => {
   });
 
   test("auth logout --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, ["auth", "logout", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(AUTH_ROUTES, ["auth", "logout", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/logout|dry-run|yes/i);
   });
 
   test("auth status --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, ["auth", "status", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(AUTH_ROUTES, ["auth", "status", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/status|output/i);
   });

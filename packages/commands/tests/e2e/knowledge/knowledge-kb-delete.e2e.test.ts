@@ -4,13 +4,13 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
-import { isKbAdminE2EReady, parseStdoutJson, runCommandE2e } from "../helpers.ts";
+import { isKbAdminE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "../helpers.ts";
 import { deleteKbWithRetry } from "./journeys/journey-helpers.ts";
 import { KNOWLEDGE_KB_DELETE_ROUTES } from "../topic-routes.ts";
 
 describe("e2e: knowledge kb delete", () => {
   test("--help 展示 flags", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(KNOWLEDGE_KB_DELETE_ROUTES, [
       "knowledge",
       "delete",
       "--help",

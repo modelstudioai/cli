@@ -19,20 +19,25 @@ Index: [index.md](index.md)
 
 ### `bl dataset delete`
 
-| Field              | Value                              |
-| ------------------ | ---------------------------------- |
-| **Name**           | `dataset delete`                   |
-| **Description**    | Delete a dataset file by ID        |
-| **Authentication** | API Key                            |
-| **Usage**          | `bl dataset delete --file-id <id>` |
+| Field              | Value                                      |
+| ------------------ | ------------------------------------------ |
+| **Name**           | `dataset delete`                           |
+| **Description**    | Delete a dataset file by ID                |
+| **Authentication** | API Key                                    |
+| **Usage**          | `bl dataset delete --file-id <id> [--yes]` |
 
 #### Flags
 
-| Flag               | Type   | Required | Description                |
-| ------------------ | ------ | -------- | -------------------------- |
-| `--file-id <id>`   | string | yes      | Dataset file ID (required) |
-| `--api-key <key>`  | string | no       | API key                    |
-| `--base-url <url>` | string | no       | API base URL               |
+| Flag               | Type   | Required | Description                  |
+| ------------------ | ------ | -------- | ---------------------------- |
+| `--file-id <id>`   | string | yes      | Dataset file ID (required)   |
+| `--yes`            | switch | no       | Skip the confirmation prompt |
+| `--api-key <key>`  | string | no       | API key                      |
+| `--base-url <url>` | string | no       | API base URL                 |
+
+#### Notes
+
+- Irreversible — the dataset file is permanently removed.
 
 #### Examples
 
@@ -42,6 +47,10 @@ bl dataset delete --file-id file-id-xxx
 
 ```bash
 bl dataset delete --file-id file-id-xxx --dry-run
+```
+
+```bash
+bl dataset delete --file-id file-id-xxx --yes
 ```
 
 ### `bl dataset get`

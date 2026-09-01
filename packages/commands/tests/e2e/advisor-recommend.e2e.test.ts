@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { isDashScopeE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { ADVISOR_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: advisor recommend", () => {
   test("advisor recommend --help exits successfully", async () => {
-    const { stderr, exitCode } = await runCommandE2e(ADVISOR_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(ADVISOR_ROUTES, [
       "advisor",
       "recommend",
       "--help",

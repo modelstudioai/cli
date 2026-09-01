@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
-import { isBailianE2EEnabled, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { isBailianE2EEnabled, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { SKILL_ROUTES } from "./topic-routes.ts";
 
 /** Canonical always-published skill; also the backbone of advisor wiki sync */
@@ -15,33 +15,33 @@ function makeTempConfigDir(): string {
 
 describe("e2e: skill", () => {
   test("skill add --help exits successfully", async () => {
-    const { stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, ["skill", "add", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(SKILL_ROUTES, ["skill", "add", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--all/);
     expect(stderr).toMatch(/--name/);
   });
 
   test("skill update --help exits successfully", async () => {
-    const { stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, ["skill", "update", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(SKILL_ROUTES, ["skill", "update", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--all/);
     expect(stderr).toMatch(/--name/);
   });
 
   test("skill remove --help exits successfully", async () => {
-    const { stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, ["skill", "remove", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(SKILL_ROUTES, ["skill", "remove", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--name/);
   });
 
   test("skill list --help exits successfully", async () => {
-    const { stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, ["skill", "list", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(SKILL_ROUTES, ["skill", "list", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/list|registry/i);
   });
 
   test("skill init --help exits successfully", async () => {
-    const { stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, ["skill", "init", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(SKILL_ROUTES, ["skill", "init", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/bailian/i);
   });

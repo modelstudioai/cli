@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
-import { e2eFixturesDir, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { e2eFixturesDir, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { MANAGED_AGENT_ROUTES } from "./topic-routes.ts";
 
 const AGENTS_DEPLOYMENT_YAML = join(e2eFixturesDir, "managed-agent", "agents-deployment.yaml");
@@ -123,7 +123,7 @@ describe("e2e: managed-agent", () => {
   });
 
   test("managed-agent apply --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "apply",
       "--help",
@@ -206,7 +206,7 @@ describe("e2e: managed-agent", () => {
   });
 
   test("managed-agent skill-list --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "skill-list",
       "--help",

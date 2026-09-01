@@ -8,6 +8,7 @@ import {
   isDashScopeE2EReady,
   makeE2eOutputDir,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "./helpers.ts";
 import { VIDEO_ROUTES } from "./topic-routes.ts";
@@ -18,7 +19,11 @@ import { VIDEO_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: video generate (i2v)", () => {
   test("video generate --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, ["video", "generate", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(VIDEO_ROUTES, [
+      "video",
+      "generate",
+      "--help",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/generate|--prompt|--image|model/i);
   });

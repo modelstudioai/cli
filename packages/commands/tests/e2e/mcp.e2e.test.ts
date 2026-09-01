@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { isDashScopeE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { MCP_ROUTES } from "./topic-routes.ts";
 
 /**
@@ -18,25 +18,25 @@ import { MCP_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: mcp", () => {
   test("mcp list --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MCP_ROUTES, ["mcp", "list", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(MCP_ROUTES, ["mcp", "list", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/list|--name|--type|--page/i);
   });
 
   test("mcp tools --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MCP_ROUTES, ["mcp", "tools", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(MCP_ROUTES, ["mcp", "tools", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/tools|--server|--url/i);
   });
 
   test("mcp call --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MCP_ROUTES, ["mcp", "call", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(MCP_ROUTES, ["mcp", "call", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/call|--target|--arg|--json/i);
   });
 
   test("mcp list --help 不暴露 --all 入口（市场全量已下线）", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MCP_ROUTES, ["mcp", "list", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(MCP_ROUTES, ["mcp", "list", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).not.toMatch(/--all/);
   });

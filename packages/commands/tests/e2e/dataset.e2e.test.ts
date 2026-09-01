@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vite-plus/test";
 import { join } from "path";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e, e2eFixturesDir } from "./helpers.ts";
+import {
+  isDashScopeE2EReady,
+  parseStdoutJson,
+  runCommandHelp,
+  runCommandE2e,
+  e2eFixturesDir,
+} from "./helpers.ts";
 import { DATASET_ROUTES } from "./topic-routes.ts";
 
 /**
@@ -18,7 +24,7 @@ import { DATASET_ROUTES } from "./topic-routes.ts";
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
   test("dataset upload --help 正常退出并展示 --file", async () => {
-    const { stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(DATASET_ROUTES, [
       "dataset",
       "upload",
       "--help",
@@ -285,6 +291,42 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
     ]);
     expect(exitCode, stdout + stderr).not.toBe(0);
     expect(`${stdout}\n${stderr}`).toMatch(/--schema video is not supported/);
+  });
+
+  test("dataset delete --help 展示 --yes", async () => {
+    const { stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
+      "dataset",
+      "delete",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--yes/i);
+  });
+
+  test("dataset delete --dry-run 发出结构化动作", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
+      "dataset",
+      "delete",
+      "--file-id",
+      "file-id-xxx",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ action: string }>(stdout);
+    expect(data.action).toBe("dataset.delete");
+  });
+
+  test("dataset delete 非 TTY 无 --yes 报 USAGE (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
+      "dataset",
+      "delete",
+      "--file-id",
+      "file-id-xxx",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--yes/);
   });
 });
 

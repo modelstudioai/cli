@@ -181,23 +181,25 @@ bl finetune checkpoints --job-id ft-xxx --output json
 
 ### `bl finetune delete`
 
-| Field              | Value                              |
-| ------------------ | ---------------------------------- |
-| **Name**           | `finetune delete`                  |
-| **Description**    | Delete a fine-tune job record      |
-| **Authentication** | API Key                            |
-| **Usage**          | `bl finetune delete --job-id <id>` |
+| Field              | Value                                      |
+| ------------------ | ------------------------------------------ |
+| **Name**           | `finetune delete`                          |
+| **Description**    | Delete a fine-tune job record              |
+| **Authentication** | API Key                                    |
+| **Usage**          | `bl finetune delete --job-id <id> [--yes]` |
 
 #### Flags
 
-| Flag               | Type   | Required | Description                 |
-| ------------------ | ------ | -------- | --------------------------- |
-| `--job-id <id>`    | string | yes      | Fine-tune job ID (required) |
-| `--api-key <key>`  | string | no       | API key                     |
-| `--base-url <url>` | string | no       | API base URL                |
+| Flag               | Type   | Required | Description                  |
+| ------------------ | ------ | -------- | ---------------------------- |
+| `--job-id <id>`    | string | yes      | Fine-tune job ID (required)  |
+| `--yes`            | switch | no       | Skip the confirmation prompt |
+| `--api-key <key>`  | string | no       | API key                      |
+| `--base-url <url>` | string | no       | API base URL                 |
 
 #### Notes
 
+- Irreversible — the job record is permanently removed.
 - Cancel a RUNNING job first via `finetune cancel` — the platform refuses to delete jobs that are still in flight.
 
 #### Examples
@@ -208,6 +210,10 @@ bl finetune delete --job-id ft-xxx
 
 ```bash
 bl finetune delete --job-id ft-xxx --dry-run
+```
+
+```bash
+bl finetune delete --job-id ft-xxx --yes
 ```
 
 ### `bl finetune export`

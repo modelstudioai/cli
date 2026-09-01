@@ -1,5 +1,5 @@
 import { defineCommand, detectOutputFormat, modelsLimitsPath } from "bailian-cli-core";
-import { emitResult } from "bailian-cli-runtime";
+import { emitResult, confirmDangerousAction } from "bailian-cli-runtime";
 import { formatNumber } from "../shared/format.ts";
 
 const MINUTE_SECONDS = 60;
@@ -10,7 +10,7 @@ export default defineCommand({
     "zh-CN": "更新模型限流配置（QPM/TPM），或使用 --delete 清除配置",
   },
   auth: "apiKey",
-  usageArgs: "--model <model> [--rpm <n>] [--tpm <n>] [--delete]",
+  usageArgs: "--model <model> [--rpm <n>] [--tpm <n>] [--delete] [--yes]",
   flags: {
     model: {
       type: "string",
@@ -41,11 +41,19 @@ export default defineCommand({
         "zh-CN": "清除该模型的所有自定义限流配置",
       },
     },
+    yes: {
+      type: "switch",
+      description: {
+        "en-US": "Skip the confirmation prompt for --delete",
+        "zh-CN": "使用 --delete 时跳过确认提示",
+      },
+    },
   },
   exampleArgs: [
     "--model qwen-plus --rpm 60 --tpm 100000",
     "--model qwen3-max --tpm 500000",
     "--model qwen-plus --delete",
+    "--model qwen-plus --delete --yes",
     "--model qwen-plus --rpm 60 --output json",
   ],
   notes: [
@@ -54,6 +62,10 @@ export default defineCommand({
         "Fields you omit keep their current values (server-side OVERLAY merge); --delete clears all custom limits.",
       "zh-CN":
         "未指定的字段将保留当前值（服务端 OVERLAY 合并）；--delete 会清除所有自定义限流配置。",
+    },
+    {
+      "en-US": "--delete requires confirmation; pass --yes to skip the prompt in scripts.",
+      "zh-CN": "--delete 需要确认；脚本中可加 --yes 跳过交互提示。",
     },
     {
       "en-US":
@@ -96,6 +108,13 @@ export default defineCommand({
         format,
       );
       return;
+    }
+
+    if (flags.delete) {
+      await confirmDangerousAction(
+        `Clear all custom rate limits for model ${modelName}.\nYour custom QPM/TPM configuration will be removed.`,
+        flags.yes ?? false,
+      );
     }
 
     const result = await ctx.client.requestJson<{ request_id?: string }>({
