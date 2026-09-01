@@ -100,5 +100,12 @@ export function atomicSwap(tmpDir: string, destDir: string): void {
     if (existsSync(backup) && !existsSync(destDir)) renameSync(backup, destDir);
     throw err;
   }
-  if (existsSync(backup)) rmSync(backup, { recursive: true, force: true });
+  // Best-effort cleanup: the swap already succeeded, so a backup deletion failure
+  // (permissions, host safe-delete guards on large dirs) must not fail the install;
+  // leftover .old-* dirs are inert (skill status scans ignore them)
+  try {
+    if (existsSync(backup)) rmSync(backup, { recursive: true, force: true });
+  } catch {
+    /* keep the backup on disk rather than report a completed install as failed */
+  }
 }

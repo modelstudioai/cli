@@ -37,6 +37,8 @@ const MODELS_FILE = "models.jsonl";
 const THROTTLE_MS = 12 * 60 * 60 * 1000; // 12h
 /** Tighter than the interactive default: the silent channel must not stall `bl advisor recommend` */
 const INDEX_TIMEOUT_MS = 3000;
+/** No retries on the silent channel: a failed sync simply tries again on the next recommend */
+const FETCH_ATTEMPTS = 1;
 
 interface SyncState {
   lastChecked: number;
@@ -108,7 +110,7 @@ function wikiLockNeedsBackfill(contentHash: string): boolean {
 /** Fetch skills/index.json via the shared registry client and extract the wiki skill entry; returns null on any failure */
 async function fetchIndexEntry(): Promise<SkillIndexEntry | null> {
   try {
-    const index = await fetchSkillsIndex(INDEX_TIMEOUT_MS);
+    const index = await fetchSkillsIndex(INDEX_TIMEOUT_MS, FETCH_ATTEMPTS);
     return index.skills[WIKI_SKILL_NAME] ?? null;
   } catch {
     return null;
@@ -160,6 +162,7 @@ export async function maybeSyncWikiData(): Promise<boolean> {
       entry,
       detectInstalledAgents(),
       previousLinks,
+      FETCH_ATTEMPTS,
     );
     recordWikiInLock(record.lockEntry);
   } catch {
