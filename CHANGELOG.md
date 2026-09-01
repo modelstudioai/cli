@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.19.0] - 2026-09-01
+
+### Added
+
+- **`bl quota delete`** — clears all custom QPM/TPM rate limits for a model.
+
+### Changed
+
+- **High-risk operation confirmation** — high-risk commands show risk details in `--help` and Skill command references. Without `--yes`, the high-risk operation is not executed; JSON output returns exit code `7` with `error.type: "requires_confirmation"`. After confirmation, re-run with `--yes`; `--dry-run` does not require confirmation.
+
 ## [1.18.2] - 2026-09-01
 
 ### Changed
