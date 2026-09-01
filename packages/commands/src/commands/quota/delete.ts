@@ -1,5 +1,5 @@
 import { defineCommand, detectOutputFormat, modelsLimitsPath } from "bailian-cli-core";
-import { emitResult, confirmDangerousAction } from "bailian-cli-runtime";
+import { emitResult } from "bailian-cli-runtime";
 
 export default defineCommand({
   description: {
@@ -7,7 +7,15 @@ export default defineCommand({
     "zh-CN": "清除模型的所有自定义限流配置（QPM/TPM）",
   },
   auth: "apiKey",
-  usageArgs: "--model <model> [--yes]",
+  risk: {
+    level: "high",
+    message: {
+      "en-US":
+        "This permanently clears all custom QPM/TPM rate limits for the specified model and cannot be undone.",
+      "zh-CN": "该操作会永久清除指定模型的所有自定义 QPM/TPM 限流配置，且无法撤销。",
+    },
+  },
+  usageArgs: "--model <model>",
   flags: {
     model: {
       type: "string",
@@ -15,26 +23,11 @@ export default defineCommand({
       description: { "en-US": "Model name (required)", "zh-CN": "模型名称（必填）" },
       required: true,
     },
-    yes: {
-      type: "switch",
-      description: {
-        "en-US": "Skip the confirmation prompt",
-        "zh-CN": "跳过确认提示",
-      },
-    },
   },
-  exampleArgs: ["--model qwen-plus", "--model qwen-plus --yes", "--model qwen-plus --output json"],
-  notes: [
-    {
-      "en-US":
-        "Irreversible — the server-side OVERLAY is reset to defaults, so your custom QPM/TPM configuration is permanently removed.",
-      "zh-CN":
-        "该操作不可撤销——服务端 OVERLAY 会重置为默认值，你的自定义 QPM/TPM 配置将被永久删除。",
-    },
-    {
-      "en-US": "Requires confirmation; pass --yes to skip the prompt in scripts.",
-      "zh-CN": "需要确认；脚本中可加 --yes 跳过交互提示。",
-    },
+  exampleArgs: [
+    "--model qwen-plus",
+    "--model qwen-plus --dry-run --output json",
+    "--model qwen-plus --yes",
   ],
   async run(ctx) {
     const { settings, flags } = ctx;
@@ -50,11 +43,6 @@ export default defineCommand({
       );
       return;
     }
-
-    await confirmDangerousAction(
-      `Clear all custom rate limits for model ${modelName}.\nYour custom QPM/TPM configuration will be removed.`,
-      flags.yes ?? false,
-    );
 
     const result = await ctx.client.requestJson<{ request_id?: string }>({
       path: modelsLimitsPath(),

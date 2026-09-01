@@ -61,26 +61,25 @@ bl quota check --output json
 
 ### `bl quota delete`
 
-| Field              | Value                                              |
-| ------------------ | -------------------------------------------------- |
-| **Name**           | `quota delete`                                     |
-| **Description**    | Clear all custom rate limits (QPM/TPM) for a model |
-| **Authentication** | API Key                                            |
-| **Usage**          | `bl quota delete --model <model> [--yes]`          |
+| Field              | Value                                                                                                |
+| ------------------ | ---------------------------------------------------------------------------------------------------- |
+| **Name**           | `quota delete`                                                                                       |
+| **Description**    | Clear all custom rate limits (QPM/TPM) for a model                                                   |
+| **Authentication** | API Key                                                                                              |
+| **Usage**          | `bl quota delete --model <model>`                                                                    |
+| **Risk**           | `high`                                                                                               |
+| **Risk message**   | This permanently clears all custom QPM/TPM rate limits for the specified model and cannot be undone. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
-| Flag               | Type   | Required | Description                  |
-| ------------------ | ------ | -------- | ---------------------------- |
-| `--model <model>`  | string | yes      | Model name (required)        |
-| `--yes`            | switch | no       | Skip the confirmation prompt |
-| `--api-key <key>`  | string | no       | API key                      |
-| `--base-url <url>` | string | no       | API base URL                 |
-
-#### Notes
-
-- Irreversible — the server-side OVERLAY is reset to defaults, so your custom QPM/TPM configuration is permanently removed.
-- Requires confirmation; pass --yes to skip the prompt in scripts.
+| Flag               | Type   | Required | Description                      |
+| ------------------ | ------ | -------- | -------------------------------- |
+| `--model <model>`  | string | yes      | Model name (required)            |
+| `--yes`            | switch | no       | Confirm this high-risk operation |
+| `--api-key <key>`  | string | no       | API key                          |
+| `--base-url <url>` | string | no       | API base URL                     |
 
 #### Examples
 
@@ -89,11 +88,12 @@ bl quota delete --model qwen-plus
 ```
 
 ```bash
-bl quota delete --model qwen-plus --yes
+bl quota delete --model qwen-plus --dry-run --output json
 ```
 
 ```bash
-bl quota delete --model qwen-plus --output json
+# Only after explicit user confirmation:
+bl quota delete --model qwen-plus --yes
 ```
 
 ### `bl quota history`

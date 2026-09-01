@@ -294,27 +294,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     expect(data.action).toBe(`finetune.${sub}`);
   });
 
-  test("finetune delete --help 展示 --yes", async () => {
-    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
-      "finetune",
-      "delete",
-      "--help",
-    ]);
-    expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/--yes/i);
-  });
-
-  test("finetune delete 非 TTY 无 --yes 报 USAGE (2)", async () => {
-    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
-      "finetune",
-      "delete",
-      "--job-id",
-      "ft-xxx",
-    ]);
-    expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/--yes/);
-  });
-
   test("finetune create --dry-run 解析多 datasets 中的空白", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
       "finetune",
@@ -490,6 +469,35 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     expect(data.body.hyper_parameters.n_epochs).toBe(100);
     expect(data.body.hyper_parameters.batch_size).toBe(2);
     expect(data.body.hyper_parameters.learning_rate).toBe("1e-5");
+  });
+});
+
+describe("e2e: finetune high-risk confirmation", () => {
+  test("finetune delete --help 展示 runtime 注入的 --yes", async () => {
+    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      "finetune",
+      "delete",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--yes/i);
+  });
+
+  test("finetune delete 无 --yes 返回确认请求 (7)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      "finetune",
+      "delete",
+      "--job-id",
+      "ft-xxx",
+      "--api-key",
+      "e2e-dummy-key",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
   });
 });
 

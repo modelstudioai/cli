@@ -201,24 +201,30 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
     const data = parseStdoutJson<{ action: string }>(stdout);
     expect(data.action).toBe(`deploy.${sub}`);
   });
+});
 
-  test("deploy delete --help 展示 --yes", async () => {
+describe("e2e: deploy high-risk confirmation", () => {
+  test("deploy delete --help 展示 runtime 注入的 --yes", async () => {
     const { stderr, exitCode } = await runCommandE2e(DEPLOY_ROUTES, ["deploy", "delete", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--yes/i);
   });
 
-  test("deploy delete 非 TTY 无 --yes 报 USAGE (2)", async () => {
-    // --skip-precheck 保证确认门在发任何网络请求前触发
+  test("deploy delete 无 --yes 返回确认请求 (7)", async () => {
     const { stderr, exitCode } = await runCommandE2e(DEPLOY_ROUTES, [
       "deploy",
       "delete",
       "--deployed-model",
       "dep-xxx",
-      "--skip-precheck",
+      "--api-key",
+      "e2e-dummy-key",
+      "--output",
+      "json",
     ]);
-    expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/--yes/);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
   });
 });
 

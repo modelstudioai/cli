@@ -103,15 +103,16 @@ describe("e2e: quota", () => {
     expect(stderr).toContain("Missing required flag: --model");
   });
 
-  test("quota delete 非 TTY 无 --yes 报 USAGE (2)", async () => {
-    // 注入假 key 让 apiKey 鉴权通过；确认门在发任何网络请求前触发
+  test("quota delete 无 --yes 返回确认请求 (7)", async () => {
     const { stderr, exitCode } = await runCommandE2e(
       QUOTA_ROUTES,
-      ["quota", "delete", "--model", "qwen-plus"],
+      ["quota", "delete", "--model", "qwen-plus", "--output", "json"],
       { DASHSCOPE_API_KEY: "sk-e2e-quota-delete" },
     );
-    expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/--yes/);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
   });
 
   test("quota update --rpm 负数报错", async () => {
