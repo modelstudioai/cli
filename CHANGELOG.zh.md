@@ -6,6 +6,16 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.18.2] - 2026-09-01
+
+### 变更
+
+- **删除与清除操作增加确认** —— `bl finetune delete`、`bl deploy delete`、`bl dataset delete` 和 `bl quota update --delete` 现在会在执行前要求确认；非交互场景请传入 `--yes`。
+
+### 修复
+
+- **Skill 安装可靠性** —— `bl skill init` 现在会重试临时性网络故障；备份清理受阻时，已完成的 Skill 更新不再被误报为失败。
+
 ## [1.18.1] - 2026-08-28
 
 ### 已移除
