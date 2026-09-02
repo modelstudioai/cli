@@ -15,7 +15,6 @@ Index: [index.md](index.md)
 | `bl managed-agent agent search`            | API Key        | Search Managed Agents                                                        |
 | `bl managed-agent agent versions`          | API Key        | List Managed Agent versions                                                  |
 | `bl managed-agent apply`                   | API Key        | Apply planned changes to create/update/delete agent resources                |
-| `bl managed-agent capabilities`            | No Auth        | Show operation-level Managed Agents API capabilities                         |
 | `bl managed-agent deployment create`       | API Key        | Declare and create one Managed Agent Deployment through a scoped YAML apply  |
 | `bl managed-agent deployment get`          | API Key        | Get a Managed Agent deployment                                               |
 | `bl managed-agent deployment list`         | API Key        | List Managed Agent deployments                                               |
@@ -322,35 +321,6 @@ bl managed-agent apply --yes
 ```bash
 # Only after explicit user confirmation:
 bl managed-agent apply --provider bailian --yes
-```
-
-### `bl managed-agent capabilities`
-
-| Field              | Value                                                |
-| ------------------ | ---------------------------------------------------- |
-| **Name**           | `managed-agent capabilities`                         |
-| **Description**    | Show operation-level Managed Agents API capabilities |
-| **Authentication** | No Auth                                              |
-| **Usage**          | `bl managed-agent capabilities [--provider <name>]`  |
-
-#### Flags
-
-| Flag                | Type   | Required | Description                            |
-| ------------------- | ------ | -------- | -------------------------------------- |
-| `--provider <name>` | string | no       | Provider to inspect (default: bailian) |
-
-#### Notes
-
-- Capabilities distinguish public Managed Agents APIs from client-side compositions and unsupported resources.
-
-#### Examples
-
-```bash
-bl managed-agent capabilities
-```
-
-```bash
-bl managed-agent capabilities --provider bailian --output json
 ```
 
 ### `bl managed-agent deployment create`

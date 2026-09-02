@@ -149,7 +149,6 @@ export { default as managedAgentSessionRun } from "./commands/managed-agent/sess
 export { default as managedAgentSessionSend } from "./commands/managed-agent/session-send.ts";
 export { default as managedAgentSessionEvents } from "./commands/managed-agent/session-events.ts";
 export { default as managedAgentSkillList } from "./commands/managed-agent/skill-list.ts";
-export { default as managedAgentCapabilities } from "./commands/managed-agent/capabilities.ts";
 export { default as managedAgentAgentCreate } from "./commands/managed-agent/agent/create.ts";
 export { default as managedAgentEnvironmentCreate } from "./commands/managed-agent/environment/create.ts";
 export { default as managedAgentSkillCreate } from "./commands/managed-agent/skill/create.ts";

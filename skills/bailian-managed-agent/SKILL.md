@@ -127,7 +127,6 @@ Managed Agents 的子线程通过 Event 中的 `session_thread_id` 暴露；公�
 
 | Intent                                 | Command family                                                                                          |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Check exact API support/auth/reason    | `bl managed-agent capabilities`                                                                         |
 | Discover agents and versions           | `agent list`, `agent get`, `agent search`, `agent versions`                                             |
 | Discover environments                  | `environment list`, `environment get`, `environment search`                                             |
 | Discover skills and download a version | `skill list`, `skill get`, `skill search`, `skill versions`, `skill download`                           |
@@ -143,7 +142,7 @@ Managed Agents 的子线程通过 Event 中的 `session_thread_id` 暴露；公�
 - 客户端搜索默认最多扫描 10 页；需要扩大范围时显式传 `--page-limit`。Deployment 搜索直接映射服务端 `keyword`。
 - 下载必须给出 `--output-file`；默认不覆盖已有文件，只有用户确认后才可加 `--force`。
 - `session export` 只导出诊断元数据，不含 File 正文，并会脱敏凭证类字段。
-- 公开 Managed Agents API 没有模型 Catalog，也没有 MCP OAuth Login；以 `capabilities` 返回的 unsupported 原因为准。
+- 公开 Managed Agents API 没有模型 Catalog，也没有 MCP OAuth Login；CLI 不注册对应命令。
 
 ## Local state management
 

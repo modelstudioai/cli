@@ -1166,34 +1166,6 @@ vaults:
 });
 
 describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => {
-  test("capabilities 明确区分 Session Event 与独立 Thread API", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
-      "managed-agent",
-      "capabilities",
-      "--output",
-      "json",
-    ]);
-    expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{
-      operations?: Record<string, { supported?: boolean; auth?: string; reason?: string }>;
-    }>(stdout);
-    for (const operation of [
-      "agent.create",
-      "environment.create",
-      "skill.create",
-      "vault.create",
-      "vault.credential.create",
-      "deployment.create",
-    ]) {
-      expect(data.operations?.[operation]).toEqual(
-        expect.objectContaining({ supported: true, auth: "api_key" }),
-      );
-    }
-    expect(data.operations?.["session.event.list"]?.supported).toBe(true);
-    expect(data.operations?.["session_thread.list"]?.supported).toBe(false);
-    expect(data.operations?.["session_thread.list"]?.reason).toMatch(/no independent Thread/i);
-  });
-
   test.each([
     ["session archive", ["session", "archive", "--session-id", "sess_e2e"]],
     ["session update", ["session", "update", "--session-id", "sess_e2e", "--title", "new"]],
