@@ -1,0 +1,83 @@
+{
+  "resources": [
+    {
+      "address": {
+        "type": "environment",
+        "name": "dev",
+        "provider": "bailian"
+      },
+      "remote_id": "env_ZjQxMzg5NDkwYjcxNGJmMj",
+      "content_hash": "d7744af584d39dad40371b0abeefd15f595f9b252401d56b1695eff11c34745a",
+      "desired_hash": "d7744af584d39dad40371b0abeefd15f595f9b252401d56b1695eff11c34745a",
+      "desired_comparable_hash": "df4636ee00f9b91880ffb65051bd58bc840be71f9bb13d4e64129b5e46dcddfc",
+      "desired_readiness_baseline": {
+        "operational_hash": "d7744af584d39dad40371b0abeefd15f595f9b252401d56b1695eff11c34745a",
+        "description_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+        "metadata_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+      },
+      "remote_hash": "df4636ee00f9b91880ffb65051bd58bc840be71f9bb13d4e64129b5e46dcddfc",
+      "remote_snapshot": {
+        "description": null,
+        "config": {
+          "type": "cloud",
+          "networking": {
+            "type": "unrestricted"
+          }
+        }
+      },
+      "drift_paths": [],
+      "drift_status": "in_sync"
+    },
+    {
+      "address": {
+        "type": "agent",
+        "name": "assistant",
+        "provider": "bailian"
+      },
+      "remote_id": "agent_01M1E06GQ4KR9QJFX9MQJMBA4H",
+      "version": 1,
+      "content_hash": "c173a2dafaf0039b9ddfb8b342f58876b1c9510d12debe765e82b586dcd30168",
+      "desired_hash": "c173a2dafaf0039b9ddfb8b342f58876b1c9510d12debe765e82b586dcd30168",
+      "desired_comparable_hash": "429c090d7f12c014aa2a15ac0ec4a8f89555694b4acc36049b66bb2c1d7d5d54",
+      "desired_readiness_baseline": {
+        "operational_hash": "3f3cfd0953464b338b23b1e753c6698ef2567133ee6eded15b500d8df717f9ec",
+        "description_hash": "d97348b869d0aef8d26e4f06bba719d6f57864d7c1eef68c433a11aaa6e2b244",
+        "metadata_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+      },
+      "remote_hash": "429c090d7f12c014aa2a15ac0ec4a8f89555694b4acc36049b66bb2c1d7d5d54",
+      "remote_snapshot": {
+        "description": "E2E auth-chain fixture",
+        "model": "qwen3.7-max",
+        "instructions": "You are a helpful assistant.\n"
+      },
+      "drift_paths": [],
+      "drift_status": "in_sync"
+    },
+    {
+      "address": {
+        "type": "agent",
+        "name": "test-create",
+        "provider": "bailian"
+      },
+      "remote_id": "agent_01M1EXETGHNV6QBGQZ4PZRAEQ5",
+      "version": 1,
+      "content_hash": "5084a95feef59412ac07d99a500bbfca801c0a86143706d14bb209c4ccfda073",
+      "desired_hash": "5084a95feef59412ac07d99a500bbfca801c0a86143706d14bb209c4ccfda073",
+      "desired_comparable_hash": "5f381045d839d5ef97751407123a3ad27e15a00976d198cfe2359ce14ac127a0",
+      "desired_readiness_baseline": {
+        "operational_hash": "5a16d288fb20b4ebc5d9f5c1b3d6d6eae6d072bcdcf3d069161946c709d09a69",
+        "description_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+        "metadata_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      "remote_hash": "5f381045d839d5ef97751407123a3ad27e15a00976d198cfe2359ce14ac127a0",
+      "remote_snapshot": {
+        "name": "test-create",
+        "description": null,
+        "model": "qwen3.8-max",
+        "instructions": "111"
+      },
+      "drift_paths": [],
+      "drift_status": "in_sync"
+    }
+  ]
+}

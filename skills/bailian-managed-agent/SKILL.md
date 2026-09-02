@@ -55,6 +55,9 @@ API-oriented commands do not replace IaC. Agent / Environment / Skill / Vault / 
 | Deployment            | `bl managed-agent deployment create`       |
 
 - 用户只提供资源 `name`；CLI 自动生成稳定的 YAML 逻辑 key，同名资源用递增后缀并存。Credential 追加到指定 Vault，不单独生成 key。
+- `agent create --skill <id>` 直接绑定已存在的远端 Skill，不要求顶层 `skills` 声明；默认写为 `type: custom`，平台 Skill 显式增加 `--type official`。同一次命令中的全部 `--skill` 共用该类型。
+- `agent create --skill-dir <path>` 接收可重复的本地 Skill 目录或 ZIP：CLI 从其中的 `SKILL.md` 读取 name，自动生成顶层 `skills.<key>` 声明，并把该 key 写入 Agent 的 `skills` 列表；定向 Apply 会先上传 custom Skill，再创建 Agent。`--type` 只作用于 `--skill <id>`，不改变本地 Skill 的 custom 类型。
+- Environment 和 Vault 属于 Session/Deployment 运行时绑定，不是 Agent 创建参数；在 `session create|run` 或 `deployment create` 中传入。
 - 默认只预览自动 key 和定向计划；`--dry-run` 完全离线，只有显式 `--yes` 才写 YAML 并创建远端资源。
 - 定向流程只刷新目标资源及其传递依赖；无关资源不检测 Drift、不产生 action，也不阻塞。
 - 目标资源必须是 `create`，相关依赖必须已经处于 `no-op`；项目级 Drift 和删除仍由全量 `plan/apply` 处理。

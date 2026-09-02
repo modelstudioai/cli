@@ -14,7 +14,7 @@ import {
   CREDENTIALS_NOTE,
 } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
-import { withAgentErrors } from "./_engine/errors.ts";
+import { formatAgentDiagnosticFailure, withAgentErrors } from "./_engine/errors.ts";
 import { renderAgentFeedback } from "./_engine/feedback.ts";
 
 const PLAN_FLAGS = {
@@ -95,17 +95,18 @@ export default defineCommand({
 
     const plan = planned.plan;
     const hasErrors = plan.diagnostics.some((diag) => diag.severity === "error");
+    const failureMessage = formatAgentDiagnosticFailure(plan.diagnostics, "Plan contains errors.");
 
     if (format === "json") {
       emitResult(plan, format);
-      if (hasErrors) throw new BailianError("Plan contains errors.", ExitCode.GENERAL);
+      if (hasErrors) throw new BailianError(failureMessage, ExitCode.GENERAL);
       return;
     }
 
     for (const diag of plan.diagnostics) {
       emitBare(`[${diag.severity}] ${diag.code}: ${diag.message}`);
     }
-    if (hasErrors) throw new BailianError("Plan contains errors.", ExitCode.GENERAL);
+    if (hasErrors) throw new BailianError(failureMessage, ExitCode.GENERAL);
 
     const creates = plan.actions.filter((action) => action.action === "create");
     const updates = plan.actions.filter((action) => action.action === "update");

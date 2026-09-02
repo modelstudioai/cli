@@ -75,30 +75,30 @@ Index: [index.md](index.md)
 
 ### `bl managed-agent agent create`
 
-| Field              | Value                                                                                                                                                                                                                                       |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent agent create`                                                                                                                                                                                                                |
-| **Description**    | Declare and create one Managed Agent through an isolated YAML apply                                                                                                                                                                         |
-| **Authentication** | API Key                                                                                                                                                                                                                                     |
-| **Usage**          | `bl managed-agent agent create --name <name> --model <model> --instructions <text\|path> [--description <text>] [--provider <name>] [--environment <name>] [--vault <name>] [--skill <name>...] [--tool <name>...] [--file <path>] [--yes]` |
+| Field              | Value                                                                                                                                                                                                                                               |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent agent create`                                                                                                                                                                                                                        |
+| **Description**    | Declare and create one Managed Agent through an isolated YAML apply                                                                                                                                                                                 |
+| **Authentication** | API Key                                                                                                                                                                                                                                             |
+| **Usage**          | `bl managed-agent agent create --name <name> --model <model> --instructions <text\|path> [--description <text>] [--provider <name>] [--skill <id>...] [--type custom\|official] [--skill-dir <path>...] [--tool <name>...] [--file <path>] [--yes]` |
 
 #### Flags
 
-| Flag                          | Type   | Required | Description                                                          |
-| ----------------------------- | ------ | -------- | -------------------------------------------------------------------- |
-| `--name <name>`               | string | yes      | Remote Agent display name; the YAML key is generated automatically   |
-| `--model <model>`             | string | yes      | Model ID                                                             |
-| `--instructions <text\|path>` | string | yes      | Inline instructions or a ./, ../, or absolute file path              |
-| `--description <text>`        | string | no       | Agent description                                                    |
-| `--provider <name>`           | string | no       | Target provider; inferred when the config has one effective provider |
-| `--environment <name>`        | string | no       | Existing environment key from agents.yaml                            |
-| `--vault <name>`              | string | no       | Existing vault key from agents.yaml                                  |
-| `--skill <name>`              | array  | no       | Existing custom Skill key from agents.yaml (repeatable)              |
-| `--tool <name>`               | array  | no       | Builtin tool name (repeatable)                                       |
-| `--file <path>`               | string | no       | Config file path (default: agents.yaml)                              |
-| `--yes`                       | switch | no       | Write YAML and run the scoped remote create                          |
-| `--api-key <key>`             | string | no       | API key                                                              |
-| `--base-url <url>`            | string | no       | API base URL                                                         |
+| Flag                          | Type   | Required | Description                                                                                             |
+| ----------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------- |
+| `--name <name>`               | string | yes      | Remote Agent display name; the YAML key is generated automatically                                      |
+| `--model <model>`             | string | yes      | Model ID                                                                                                |
+| `--instructions <text\|path>` | string | yes      | Inline instructions or a ./, ../, or absolute file path                                                 |
+| `--description <text>`        | string | no       | Agent description                                                                                       |
+| `--provider <name>`           | string | no       | Target provider; inferred when the config has one effective provider                                    |
+| `--skill <id>`                | array  | no       | Existing remote Skill ID (repeatable)                                                                   |
+| `--skill-dir <path>`          | array  | no       | Local Skill directory or ZIP to declare, upload, and attach through the same scoped create (repeatable) |
+| `--type <custom\|official>`   | string | no       | Type applied to every --skill value (default: custom)                                                   |
+| `--tool <name>`               | array  | no       | Builtin tool name (repeatable)                                                                          |
+| `--file <path>`               | string | no       | Config file path (default: agents.yaml)                                                                 |
+| `--yes`                       | switch | no       | Write YAML and run the scoped remote create                                                             |
+| `--api-key <key>`             | string | no       | API key                                                                                                 |
+| `--base-url <url>`            | string | no       | API base URL                                                                                            |
 
 #### Notes
 
@@ -106,6 +106,8 @@ Index: [index.md](index.md)
 - Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Without --yes, previews the generated YAML key and scoped plan. --dry-run stays offline. Unrelated resources are not refreshed or drift-checked.
+- --skill writes an external Skill reference directly into the Agent declaration. --type defaults to custom; use --type official for platform Skills. These Skills are not managed through the top-level skills map.
+- --skill-dir accepts a local Skill directory or ZIP, writes it as a top-level custom Skill declaration, and writes its generated YAML key into the Agent skills list. Skill and Agent are created together in dependency order. --type applies only to --skill IDs.
 
 #### Examples
 
@@ -114,7 +116,15 @@ bl managed-agent agent create --name assistant --model qwen3.8-max --instruction
 ```
 
 ```bash
-bl managed-agent agent create --name assistant --model qwen3.8-max --instructions ./prompts/assistant.md --environment dev --skill search --yes
+bl managed-agent agent create --name assistant --model qwen3.8-max --instructions ./prompts/assistant.md --skill skill_abc --yes
+```
+
+```bash
+bl managed-agent agent create --name slides --model qwen3.8-max --instructions ./prompts/slides.md --skill skill_pptx --type official --yes
+```
+
+```bash
+bl managed-agent agent create --name reviewer --model qwen3.8-max --instructions ./prompts/reviewer.md --skill-dir ./skills/code-review --yes
 ```
 
 ### `bl managed-agent agent get`

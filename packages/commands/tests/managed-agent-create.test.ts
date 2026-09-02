@@ -4,9 +4,11 @@ import { join } from "node:path";
 import { buildAgentDecl, StateManager } from "@openagentpack/sdk";
 import { expect, test } from "vite-plus/test";
 import {
+  buildAgentSkillRefs,
   normalizeAgentKey,
   replaceConfigAtomically,
   selectAgentKey,
+  selectLocalSkillKey,
 } from "../src/commands/managed-agent/agent/create.ts";
 import {
   normalizeResourceKey,
@@ -87,6 +89,74 @@ test("同名待创建声明配置不同则创建新的逻辑 key", () => {
       state,
     }),
   ).toEqual({ key: "assistant-2", reusedPending: false });
+});
+
+test("Agent Skill ID 默认生成 custom 外部引用并去重", () => {
+  expect(buildAgentSkillRefs(["skill_report", "skill_report", "skill_chart"])).toEqual([
+    { type: "custom", skill_id: "skill_report" },
+    { type: "custom", skill_id: "skill_chart" },
+  ]);
+});
+
+test("Agent Skill ID 可生成 official 外部引用", () => {
+  expect(buildAgentSkillRefs(["skill_pptx"], "official")).toEqual([
+    { type: "official", skill_id: "skill_pptx" },
+  ]);
+  expect(() => buildAgentSkillRefs([" "])).toThrow(/must not be empty/);
+});
+
+test("本地 Skill 来源复用同声明的待创建或已跟踪 key", () => {
+  const declaration = {
+    name: "local-report",
+    source: "skills/local-report.zip",
+    origin: "custom",
+    provider: "bailian",
+  };
+  const pendingState = StateManager.initialize("/tmp/bailian-cli-local-skill-pending.json");
+  expect(
+    selectLocalSkillKey({
+      displayName: "local-report",
+      provider: "bailian",
+      declarations: { "local-report": declaration },
+      candidate: declaration,
+      state: pendingState,
+    }),
+  ).toEqual({
+    key: "local-report",
+    needsCreate: true,
+    reusedPending: true,
+    reusedTracked: false,
+  });
+
+  const trackedState = StateManager.initialize("/tmp/bailian-cli-local-skill-tracked.json");
+  trackedState.setResource({
+    address: { type: "skill", name: "local-report", provider: "bailian" },
+    remote_id: "skill_local_report",
+    content_hash: "hash",
+  });
+  expect(
+    selectLocalSkillKey({
+      displayName: "local-report",
+      provider: "bailian",
+      declarations: { "local-report": declaration },
+      candidate: declaration,
+      state: trackedState,
+    }),
+  ).toEqual({
+    key: "local-report",
+    needsCreate: false,
+    reusedPending: false,
+    reusedTracked: true,
+  });
+  expect(() =>
+    selectLocalSkillKey({
+      displayName: "local-report",
+      provider: "bailian",
+      declarations: { "local-report": declaration },
+      candidate: { ...declaration, source: "skills/new-local-report.zip" },
+      state: trackedState,
+    }),
+  ).toThrow(/already tracked with a different declaration/);
 });
 
 test("YAML 替换校验原内容并保留文件权限", async () => {

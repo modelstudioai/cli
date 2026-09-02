@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -21,12 +21,37 @@ const AGENTS_DEPLOYMENT_INVALID_YAML = join(
   "agents-deployment-invalid.yaml",
 );
 const AGENTS_YAML = join(e2eFixturesDir, "managed-agent", "agents.yaml");
+const LOCAL_SKILL_ZIP_BASE64 =
+  "UEsDBAoAAAAIAGBoIV3X45MGOwAAAEoAAAAIAAAAU0tJTEwubWTT1dXlykvMTbVSyMlPTszRLUotyC8q4UpJLU4uyiwoyczPs1LwAckoQGQUirMzc3K4dIHalKESQRAtAFBLAwQKAAAAAABgaCFdAAAAAAAAAAAAAAAACAAAAHNjcmlwdHMvUEsDBAoAAAAIAGBoIV3vn4RoIQAAAB8AAAAOAAAAc2NyaXB0cy9ydW4uanNLrSjILypRSM7PKy5RKCrNU7BV0NBUsLVTKCkqTbXmAgBQSwECFAAKAAAACABgaCFd1+OTBjsAAABKAAAACAAAAAAAAAAAAAAAAAAAAAAAU0tJTEwubWRQSwECFAAKAAAAAABgaCFdAAAAAAAAAAAAAAAACAAAAAAAAAAAABAAAABhAAAAc2NyaXB0cy9QSwECFAAKAAAACABgaCFd75+EaCEAAAAfAAAADgAAAAAAAAAAAAAAAACHAAAAc2NyaXB0cy9ydW4uanNQSwUGAAAAAAMAAwCoAAAA1AAAAAAA";
 
 const DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES = [
   "bailian.deployment.initial_events.message_required",
   "bailian.deployment.file.mount_path.required",
   "bailian.deployment.file.mount_path.duplicate",
 ];
+
+async function writeLocalSkillDirectory(parentDirectory: string): Promise<string> {
+  const skillDirectory = join(parentDirectory, "local-report");
+  await mkdir(join(skillDirectory, "scripts"), { recursive: true });
+  await writeFile(
+    join(skillDirectory, "SKILL.md"),
+    `---
+name: local-report
+description: Local report skill
+---
+# Local Report
+`,
+    "utf8",
+  );
+  await writeFile(join(skillDirectory, "scripts", "run.js"), "export const run = true;\n", "utf8");
+  return skillDirectory;
+}
+
+async function writeLocalSkillZip(parentDirectory: string): Promise<string> {
+  const skillZipPath = join(parentDirectory, "local-report.zip");
+  await writeFile(skillZipPath, Buffer.from(LOCAL_SKILL_ZIP_BASE64, "base64"));
+  return skillZipPath;
+}
 
 async function seedTrackedResources(
   configPath: string,
@@ -92,7 +117,7 @@ describe("e2e: managed-agent", () => {
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
       valid?: boolean;
-      diagnostics?: Array<{ code?: string; severity?: string }>;
+      diagnostics?: Array<{ code?: string; message?: string; severity?: string }>;
     }>(stdout);
     expect(data.valid).toBe(true);
     expect(data.diagnostics).not.toContainEqual(
@@ -134,7 +159,7 @@ describe("e2e: managed-agent", () => {
   });
 
   test("validate 拒绝会产生空消息或无效挂载路径的 Bailian Deployment", async () => {
-    const { stdout, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "validate",
       "--file",
@@ -145,9 +170,17 @@ describe("e2e: managed-agent", () => {
     expect(exitCode).toBe(1);
     const data = parseStdoutJson<{
       valid?: boolean;
-      diagnostics?: Array<{ code?: string; severity?: string }>;
+      diagnostics?: Array<{ code?: string; message?: string; severity?: string }>;
     }>(stdout);
     expect(data.valid).toBe(false);
+    const errorDiagnostics =
+      data.diagnostics?.filter((diagnostic) => diagnostic.severity === "error") ?? [];
+    const firstError = errorDiagnostics[0];
+    expect(firstError?.code).toBeTruthy();
+    expect(firstError?.message).toBeTruthy();
+    expect(stderr).toContain(`[${firstError?.code}] ${firstError?.message}`);
+    expect(stderr).toContain(`(+${errorDiagnostics.length - 1} more errors)`);
+    expect(stderr).not.toMatch(/Validation failed with \d+ error/);
     for (const diagnosticCode of DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES) {
       expect(data.diagnostics).toContainEqual(
         expect.objectContaining({ code: diagnosticCode, severity: "error" }),
@@ -156,7 +189,7 @@ describe("e2e: managed-agent", () => {
   });
 
   test("plan --dry-run 在 Deployment 安全诊断失败时阻断计划", async () => {
-    const { stdout, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "plan",
       "--dry-run",
@@ -167,8 +200,16 @@ describe("e2e: managed-agent", () => {
     ]);
     expect(exitCode).toBe(1);
     const data = parseStdoutJson<{
-      diagnostics?: Array<{ code?: string; severity?: string }>;
+      diagnostics?: Array<{ code?: string; message?: string; severity?: string }>;
     }>(stdout);
+    const errorDiagnostics =
+      data.diagnostics?.filter((diagnostic) => diagnostic.severity === "error") ?? [];
+    const firstError = errorDiagnostics[0];
+    expect(firstError?.code).toBeTruthy();
+    expect(firstError?.message).toBeTruthy();
+    expect(stderr).toContain(`[${firstError?.code}] ${firstError?.message}`);
+    expect(stderr).toContain(`(+${errorDiagnostics.length - 1} more errors)`);
+    expect(stderr).not.toContain("Plan contains errors.");
     for (const diagnosticCode of DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES) {
       expect(data.diagnostics).toContainEqual(
         expect.objectContaining({ code: diagnosticCode, severity: "error" }),
@@ -186,6 +227,99 @@ describe("e2e: managed-agent", () => {
     expect(stderr).toMatch(/--file|--provider|--yes/i);
   });
 
+  test("managed-agent apply 计划失败时在最终错误中保留首条诊断和剩余数量", async () => {
+    const { stderr, exitCode } = await runCommandE2e(
+      MANAGED_AGENT_ROUTES,
+      [
+        "managed-agent",
+        "apply",
+        "--file",
+        AGENTS_DEPLOYMENT_INVALID_YAML,
+        "--no-refresh",
+        "--yes",
+        "--output",
+        "json",
+      ],
+      {
+        DASHSCOPE_API_KEY: "sk-e2e-apply-diagnostics",
+        BAILIAN_BASE_URL: "http://127.0.0.1:1",
+      },
+    );
+
+    expect(exitCode).toBe(1);
+    for (const diagnosticCode of DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES) {
+      expect(stderr).toContain(`[error] ${diagnosticCode}:`);
+    }
+    expect(stderr).toContain(`[${DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES[0]}]`);
+    expect(stderr).toContain(`(+${DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES.length - 1} more errors)`);
+    expect(stderr).not.toContain("Cannot apply: resolve the errors above first.");
+  });
+
+  test("managed-agent apply 失败时在 text 和 JSON 最终错误中保留服务端原因", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "bl-apply-error-e2e-"));
+    const configPath = join(directory, "agents.yaml");
+    const server = http.createServer((_request, response) => {
+      response.writeHead(500, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          code: "AGENT_E2E_FAILURE",
+          message: "intentional apply failure",
+          request_id: "req_apply_error_e2e",
+        }),
+      );
+    });
+    await new Promise<void>((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
+    const address = server.address() as AddressInfo;
+    const configSource = `version: "1"
+providers:
+  bailian:
+    api_key: \${DASHSCOPE_API_KEY}
+    base_url: \${BAILIAN_BASE_URL}
+defaults:
+  provider: bailian
+agents:
+  apply-error:
+    name: Apply Error
+    model: qwen3.8-max
+    instructions: Exercise the apply error path.
+`;
+    await writeFile(configPath, configSource, "utf8");
+    const baseArgs = [
+      "managed-agent",
+      "apply",
+      "--file",
+      configPath,
+      "--provider",
+      "bailian",
+      "--yes",
+    ];
+    const env = {
+      DASHSCOPE_API_KEY: "sk-e2e-apply-error",
+      BAILIAN_BASE_URL: `http://127.0.0.1:${address.port}`,
+    };
+
+    try {
+      const textResult = await runCommandE2e(MANAGED_AGENT_ROUTES, baseArgs, env);
+      expect(textResult.exitCode).toBe(1);
+      expect(textResult.stderr).toMatch(/Error:\s+Bailian API 500:.*intentional apply failure/);
+      expect(textResult.stderr).not.toMatch(/Error:\s+Apply failed\./);
+
+      const jsonResult = await runCommandE2e(
+        MANAGED_AGENT_ROUTES,
+        [...baseArgs, "--output", "json"],
+        env,
+      );
+      expect(jsonResult.exitCode).toBe(1);
+      expect(jsonResult.stderr).toMatch(
+        /"message":\s*"Bailian API 500:.*intentional apply failure/,
+      );
+      expect(jsonResult.stderr).not.toMatch(/"message":\s*"Apply failed\."/);
+    } finally {
+      await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   test("managed-agent agent create --help 展示声明和确认参数", async () => {
     const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
@@ -194,8 +328,10 @@ describe("e2e: managed-agent", () => {
       "--help",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/--name|--model|--instructions|--skill|--yes/i);
-    expect(stderr).not.toMatch(/--key/i);
+    expect(stderr).toMatch(/--name|--model|--instructions|--skill|--skill-dir|--type|--yes/i);
+    expect(stderr).toMatch(/remote Skill ID/i);
+    expect(stderr).toMatch(/local Skill directory/i);
+    expect(stderr).not.toMatch(/--key|--environment|--vault/i);
   });
 
   test("managed-agent agent create 缺少 --name 时退出为用法错误 (2)", async () => {
@@ -211,6 +347,305 @@ describe("e2e: managed-agent", () => {
     ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--name|Missing required/i);
+  });
+
+  test.each([
+    ["--environment", "dev"],
+    ["--vault", "secrets"],
+  ])("managed-agent agent create 不接受运行时参数 %s", async (flag, value) => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "agent",
+      "create",
+      "--name",
+      "Runtime Binding Agent",
+      "--model",
+      "qwen3.8-max",
+      "--instructions",
+      "help",
+      flag,
+      value,
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/Unknown option|unknown flag|unexpected/i);
+  });
+
+  test("managed-agent agent create 将 official Skill ID 写为外部引用", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "bl-agent-official-skill-e2e-"));
+    const configPath = join(directory, "agents.yaml");
+    await writeFile(
+      configPath,
+      `version: "1"
+providers:
+  bailian:
+    api_key: \${DASHSCOPE_API_KEY}
+    base_url: \${BAILIAN_BASE_URL}
+defaults:
+  provider: bailian
+`,
+      "utf8",
+    );
+
+    try {
+      const { exitCode } = await runCommandE2e(
+        MANAGED_AGENT_ROUTES,
+        [
+          "managed-agent",
+          "agent",
+          "create",
+          "--name",
+          "Report Agent",
+          "--model",
+          "qwen3.8-max",
+          "--instructions",
+          "Create a report.",
+          "--skill",
+          "skill_pptx",
+          "--type",
+          "official",
+          "--file",
+          configPath,
+          "--yes",
+        ],
+        {
+          DASHSCOPE_API_KEY: "sk-e2e-agent-official-skill",
+          BAILIAN_BASE_URL: "http://127.0.0.1:1/api/v1/agentstudio",
+        },
+      );
+      expect(exitCode).toBe(1);
+      const config = parse(await readFile(configPath, "utf8")) as {
+        agents?: Record<string, { skills?: Array<{ type?: string; skill_id?: string }> }>;
+      };
+      expect(config.agents?.["report-agent"]?.skills).toEqual([
+        { type: "official", skill_id: "skill_pptx" },
+      ]);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("managed-agent agent create 的 Skill type 默认是 custom", async () => {
+    const sourceBefore = await readFile(AGENTS_YAML, "utf8");
+    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "agent",
+      "create",
+      "--dry-run",
+      "--name",
+      "Custom Skill Agent",
+      "--model",
+      "qwen3.8-max",
+      "--instructions",
+      "Use the custom Skill.",
+      "--skill",
+      "skill_custom_abc",
+      "--file",
+      AGENTS_YAML,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      agent?: { skills?: Array<{ type?: string; skill_id?: string }> };
+      yaml_written?: boolean;
+    }>(stdout);
+    expect(data.agent?.skills).toEqual([{ type: "custom", skill_id: "skill_custom_abc" }]);
+    expect(data.yaml_written).toBe(false);
+    expect(await readFile(AGENTS_YAML, "utf8")).toBe(sourceBefore);
+  });
+
+  test("managed-agent agent create --skill-dir 离线规划 Skill 与 Agent 且不写 YAML", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "bl-agent-skill-dir-preview-e2e-"));
+    const configPath = join(directory, "agents.yaml");
+    const skillDirectory = await writeLocalSkillDirectory(directory);
+    const configSource = `version: "1"
+providers:
+  bailian:
+    api_key: \${DASHSCOPE_API_KEY}
+    base_url: \${BAILIAN_BASE_URL}
+defaults:
+  provider: bailian
+    `;
+    await writeFile(configPath, configSource, "utf8");
+
+    try {
+      const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+        "managed-agent",
+        "agent",
+        "create",
+        "--dry-run",
+        "--name",
+        "ZIP Agent",
+        "--model",
+        "qwen3.8-max",
+        "--instructions",
+        "Use the local Skill.",
+        "--skill-dir",
+        skillDirectory,
+        "--file",
+        configPath,
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{
+        agent?: { key?: string; skills?: Array<string | Record<string, unknown>> };
+        local_skills?: Array<{ key?: string; name?: string; source?: string }>;
+        yaml_written?: boolean;
+        actions?: Array<{
+          action?: string;
+          address?: { type?: string; name?: string; provider?: string };
+        }>;
+      }>(stdout);
+      expect(data.agent).toEqual(
+        expect.objectContaining({ key: "zip-agent", skills: ["local-report"] }),
+      );
+      expect(data.local_skills).toEqual([
+        expect.objectContaining({
+          key: "local-report",
+          name: "local-report",
+          source: "local-report",
+        }),
+      ]);
+      expect(data.yaml_written).toBe(false);
+      expect(data.actions).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            action: "create",
+            address: expect.objectContaining({ type: "skill", name: "local-report" }),
+          }),
+          expect.objectContaining({
+            action: "create",
+            address: expect.objectContaining({ type: "agent", name: "zip-agent" }),
+          }),
+        ]),
+      );
+      expect(data.actions).toHaveLength(2);
+      expect(await readFile(configPath, "utf8")).toBe(configSource);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("managed-agent agent create --skill-dir 兼容本地 ZIP", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "bl-agent-skill-dir-zip-e2e-"));
+    const configPath = join(directory, "agents.yaml");
+    const skillZipPath = await writeLocalSkillZip(directory);
+    const configSource = `version: "1"
+providers:
+  bailian:
+    api_key: \${DASHSCOPE_API_KEY}
+    base_url: \${BAILIAN_BASE_URL}
+defaults:
+  provider: bailian
+`;
+    await writeFile(configPath, configSource, "utf8");
+
+    try {
+      const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+        "managed-agent",
+        "agent",
+        "create",
+        "--dry-run",
+        "--name",
+        "ZIP Agent",
+        "--model",
+        "qwen3.8-max",
+        "--instructions",
+        "Use the ZIP Skill.",
+        "--skill-dir",
+        skillZipPath,
+        "--file",
+        configPath,
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{
+        agent?: { skills?: Array<string | Record<string, unknown>> };
+        local_skills?: Array<{ key?: string; source?: string }>;
+        yaml_written?: boolean;
+      }>(stdout);
+      expect(data.agent?.skills).toEqual(["local-report"]);
+      expect(data.local_skills).toEqual([
+        expect.objectContaining({ key: "local-report", source: "local-report.zip" }),
+      ]);
+      expect(data.yaml_written).toBe(false);
+      expect(await readFile(configPath, "utf8")).toBe(configSource);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("managed-agent agent create --skill-dir 写入顶层 Skill 并在 Agent 中引用 key", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "bl-agent-skill-dir-write-e2e-"));
+    const configPath = join(directory, "agents.yaml");
+    const skillDirectory = await writeLocalSkillDirectory(directory);
+    await writeFile(
+      configPath,
+      `version: "1"
+providers:
+  bailian:
+    api_key: \${DASHSCOPE_API_KEY}
+    base_url: \${BAILIAN_BASE_URL}
+defaults:
+  provider: bailian
+`,
+      "utf8",
+    );
+    const server = http.createServer((_request, response) => {
+      response.writeHead(500, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ message: "intentional Skill directory upload failure" }));
+    });
+    await new Promise<void>((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
+    const address = server.address() as AddressInfo;
+    const args = [
+      "managed-agent",
+      "agent",
+      "create",
+      "--name",
+      "ZIP Agent",
+      "--model",
+      "qwen3.8-max",
+      "--instructions",
+      "Use the local Skill.",
+      "--skill-dir",
+      skillDirectory,
+      "--file",
+      configPath,
+      "--yes",
+      "--output",
+      "json",
+    ];
+    const env = {
+      DASHSCOPE_API_KEY: "sk-e2e-agent-skill-zip",
+      BAILIAN_BASE_URL: `http://127.0.0.1:${address.port}/api/v1/agentstudio`,
+    };
+
+    try {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const result = await runCommandE2e(MANAGED_AGENT_ROUTES, args, env);
+        expect(result.exitCode, result.stderr).toBe(1);
+        expect(result.stderr).toContain("intentional Skill directory upload failure");
+      }
+      const config = parse(await readFile(configPath, "utf8")) as {
+        skills?: Record<string, Record<string, unknown>>;
+        agents?: Record<string, { skills?: Array<string | Record<string, unknown>> }>;
+      };
+      expect(config.skills?.["local-report"]).toEqual({
+        name: "local-report",
+        source: "local-report",
+        origin: "custom",
+        provider: "bailian",
+      });
+      expect(config.agents?.["zip-agent"]?.skills).toEqual(["local-report"]);
+      expect(config.skills?.["local-report-2"]).toBeUndefined();
+      expect(config.agents?.["zip-agent-2"]).toBeUndefined();
+    } finally {
+      await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   test.each([
@@ -328,6 +763,7 @@ describe("e2e: managed-agent", () => {
       for (let attempt = 0; attempt < 2; attempt += 1) {
         const result = await runCommandE2e(MANAGED_AGENT_ROUTES, args, env);
         expect(result.exitCode, result.stderr).toBe(1);
+        expect(result.stderr).toContain("intentional create failure");
       }
       const config = parse(await readFile(configPath, "utf8")) as {
         agents: Record<string, { name?: string }>;
@@ -381,6 +817,7 @@ describe("e2e: managed-agent", () => {
       for (let attempt = 0; attempt < 2; attempt += 1) {
         const result = await runCommandE2e(MANAGED_AGENT_ROUTES, args, env);
         expect(result.exitCode, result.stderr).toBe(1);
+        expect(result.stderr).toContain("intentional environment create failure");
       }
       const config = parse(await readFile(configPath, "utf8")) as {
         environments: Record<string, { name?: string }>;
@@ -471,7 +908,13 @@ vaults:
         request.on("end", () => {
           requestBodies.push(JSON.parse(Buffer.concat(chunks).toString("utf8")));
           response.writeHead(500, { "Content-Type": "application/json" });
-          response.end(JSON.stringify({ message: "intentional credential create failure" }));
+          response.end(
+            JSON.stringify({
+              code: "CREDENTIAL_CREATE_FAILURE",
+              message: "intentional credential create failure",
+              request_id: "req_credential_create_e2e",
+            }),
+          );
         });
         return;
       }
@@ -523,6 +966,10 @@ vaults:
       for (let attempt = 0; attempt < 2; attempt += 1) {
         const result = await runCommandE2e(MANAGED_AGENT_ROUTES, args, env);
         expect(result.exitCode).toBe(1);
+        expect(result.stderr).toMatch(/"message":\s*"intentional credential create failure"/);
+        expect(result.stderr).toMatch(/"http_status":\s*500/);
+        expect(result.stderr).toMatch(/"api_code":\s*"CREDENTIAL_CREATE_FAILURE"/);
+        expect(result.stderr).toMatch(/"request_id":\s*"req_credential_create_e2e"/);
         expect(`${result.stdout}\n${result.stderr}`).not.toContain(
           "credential-secret-must-not-leak",
         );

@@ -19,7 +19,7 @@ import { formatResourceLabel } from "./address-utils.ts";
 import { resolveAgentProjectConfig } from "./config-loader.ts";
 import { assertProviderCredentials } from "./credentials.ts";
 import { withStdoutProtected } from "./console-capture.ts";
-import { withAgentErrors } from "./errors.ts";
+import { retainAgentError, withAgentErrors } from "./errors.ts";
 import { createFileStateScope } from "./file-state-manager.ts";
 import { installSdkTransport } from "./transport.ts";
 
@@ -313,7 +313,11 @@ export async function runScopedTopLevelCreate(input: ScopedTopLevelCreateInput):
       ),
     );
   } catch (error) {
-    throw retainedDeclarationError(error, input.resourceType);
+    throw retainAgentError(
+      error,
+      "The YAML declaration was kept. Fix the related dependency or provider error, then re-run the same create command.",
+      `Scoped ${input.resourceType} create failed.`,
+    );
   }
   const remoteId = await project.stateBackend.read(
     project.stateScope,
@@ -428,20 +432,4 @@ function renderPlan(
     const icon = action.action === "create" ? "+" : action.action === "update" ? "~" : "-";
     emitBare(`  ${icon} ${formatResourceLabel(action.address)}`);
   }
-}
-
-function retainedDeclarationError(error: unknown, resourceType: string): BailianError {
-  if (error instanceof BailianError) {
-    return new BailianError(
-      error.message,
-      error.exitCode,
-      "The YAML declaration was kept. Fix the related dependency or provider error, then re-run the same create command.",
-      { api: error.api, rawResponse: error.rawResponse, cause: error.cause },
-    );
-  }
-  return new BailianError(
-    error instanceof Error ? error.message : String(error),
-    ExitCode.GENERAL,
-    `The ${resourceType} YAML declaration was kept; re-run the same create command after fixing the error.`,
-  );
 }

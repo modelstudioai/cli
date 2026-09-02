@@ -16,7 +16,7 @@ import { emitBare, emitResult } from "bailian-cli-runtime";
 import { parseDocument } from "yaml";
 import { CREDENTIALS_NOTE } from "../../_engine/config-loader.ts";
 import { withStdoutProtected } from "../../_engine/console-capture.ts";
-import { withAgentErrors } from "../../_engine/errors.ts";
+import { retainAgentError, withAgentErrors } from "../../_engine/errors.ts";
 import {
   loadScopedCreateProject,
   parseMetadata,
@@ -294,11 +294,10 @@ export default defineCommand({
         ),
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new BailianError(
-        message,
-        error instanceof BailianError ? error.exitCode : ExitCode.GENERAL,
+      throw retainAgentError(
+        error,
         "The YAML declaration was kept. Restore the same secret environment variable and re-run this command; an already-created matching Credential will be adopted.",
+        "Vault Credential create failed.",
       );
     }
     const result = {

@@ -22,3 +22,16 @@ agents:
     instructions: |
       You are a helpful assistant.
     environment: dev
+  test-create:
+    name: test-create
+    model: qwen3.8-max
+    instructions: "111"
+    provider: bailian
+    tools:
+      builtin: []
+      mcp: []
+    mcp_servers: []
+    skills:
+      - type: custom
+        skill_id: skill_M2I0ZTZhOWJiOWY5NDFkMzk2YT
+    metadata: {}

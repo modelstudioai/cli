@@ -14,7 +14,7 @@ import {
   CREDENTIALS_NOTE,
 } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
-import { withAgentErrors } from "./_engine/errors.ts";
+import { formatAgentDiagnosticFailure, withAgentErrors } from "./_engine/errors.ts";
 import { renderAgentFeedback } from "./_engine/feedback.ts";
 
 const APPLY_FLAGS = {
@@ -109,11 +109,20 @@ export default defineCommand({
       if (format === "json") process.stderr.write(`${line}\n`);
       else emitBare(line);
     };
-    if (plan.diagnostics.some((diag) => diag.severity === "error")) {
-      for (const diag of plan.diagnostics) {
-        if (diag.severity === "error") emitProgress(`[error] ${diag.code}: ${diag.message}`);
+    const errorDiagnostics = plan.diagnostics.filter(
+      (diagnostic) => diagnostic.severity === "error",
+    );
+    if (errorDiagnostics.length > 0) {
+      for (const diagnostic of errorDiagnostics) {
+        emitProgress(`[error] ${diagnostic.code}: ${diagnostic.message}`);
       }
-      throw new BailianError("Cannot apply: resolve the errors above first.", ExitCode.GENERAL);
+      throw new BailianError(
+        formatAgentDiagnosticFailure(
+          errorDiagnostics,
+          "Cannot apply: resolve the errors above first.",
+        ),
+        ExitCode.GENERAL,
+      );
     }
 
     const actionable = plan.actions.filter((action) => action.action !== "no-op");
@@ -152,7 +161,8 @@ export default defineCommand({
     );
 
     const succeeded = result.results.filter((entry) => entry.status === "success").length;
-    const failed = result.results.filter((entry) => entry.status === "failed").length;
+    const failedResults = result.results.filter((entry) => entry.status === "failed");
+    const failed = failedResults.length;
     const skipped = result.results.filter((entry) => entry.status === "skipped").length;
 
     if (format === "json") {
@@ -161,6 +171,9 @@ export default defineCommand({
       emitBare(`\nApply finished: ${succeeded} succeeded, ${failed} failed, ${skipped} skipped.`);
     }
 
-    if (failed > 0) throw new BailianError("Apply failed.", ExitCode.GENERAL);
+    if (failed > 0) {
+      const firstFailure = failedResults.find((entry) => entry.error);
+      throw new BailianError(firstFailure?.error ?? "Apply failed.", ExitCode.GENERAL);
+    }
   },
 });
