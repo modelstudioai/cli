@@ -283,24 +283,28 @@ bl managed-agent agent versions --agent-id agent_abc --all --output json
 
 ### `bl managed-agent apply`
 
-| Field              | Value                                                                                    |
-| ------------------ | ---------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent apply`                                                                    |
-| **Description**    | Apply planned changes to create/update/delete agent resources                            |
-| **Authentication** | API Key                                                                                  |
-| **Usage**          | `bl managed-agent apply [--file <path>] [--provider <name>] [--yes] [--concurrency <n>]` |
+| Field              | Value                                                                                           |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent apply`                                                                           |
+| **Description**    | Apply planned changes to create/update/delete agent resources                                   |
+| **Authentication** | API Key                                                                                         |
+| **Usage**          | `bl managed-agent apply [--file <path>] [--provider <name>] [--concurrency <n>]`                |
+| **Risk**           | `high`                                                                                          |
+| **Risk message**   | This applies the current plan and may create, update, or delete remote managed Agent resources. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
-| Flag                | Type   | Required | Description                                                          |
-| ------------------- | ------ | -------- | -------------------------------------------------------------------- |
-| `--file <path>`     | string | no       | Config file path (default: agents.yaml)                              |
-| `--provider <name>` | string | no       | Target provider (default: all configured)                            |
-| `--yes`             | switch | no       | Confirm and apply without an interactive prompt (required to mutate) |
-| `--no-refresh`      | switch | no       | Skip refreshing state from remote before planning                    |
-| `--concurrency <n>` | number | no       | Max independent resources to apply in parallel (default 6, max 10)   |
-| `--api-key <key>`   | string | no       | API key                                                              |
-| `--base-url <url>`  | string | no       | API base URL                                                         |
+| Flag                | Type   | Required | Description                                                        |
+| ------------------- | ------ | -------- | ------------------------------------------------------------------ |
+| `--file <path>`     | string | no       | Config file path (default: agents.yaml)                            |
+| `--provider <name>` | string | no       | Target provider (default: all configured)                          |
+| `--no-refresh`      | switch | no       | Skip refreshing state from remote before planning                  |
+| `--concurrency <n>` | number | no       | Max independent resources to apply in parallel (default 6, max 10) |
+| `--yes`             | switch | no       | Confirm this high-risk operation                                   |
+| `--api-key <key>`   | string | no       | API key                                                            |
+| `--base-url <url>`  | string | no       | API base URL                                                       |
 
 #### Notes
 
@@ -311,10 +315,12 @@ bl managed-agent agent versions --agent-id agent_abc --all --output json
 #### Examples
 
 ```bash
+# Only after explicit user confirmation:
 bl managed-agent apply --yes
 ```
 
 ```bash
+# Only after explicit user confirmation:
 bl managed-agent apply --provider bailian --yes
 ```
 
@@ -693,20 +699,24 @@ bl managed-agent deployment unpause --deployment-id dep_abc
 
 ### `bl managed-agent destroy`
 
-| Field              | Value                                                          |
-| ------------------ | -------------------------------------------------------------- |
-| **Name**           | `managed-agent destroy`                                        |
-| **Description**    | Destroy all managed agent resources tracked in state           |
-| **Authentication** | API Key                                                        |
-| **Usage**          | `bl managed-agent destroy [--file <path>] [--yes] [--cascade]` |
+| Field              | Value                                                                                                      |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent destroy`                                                                                    |
+| **Description**    | Destroy all managed agent resources tracked in state                                                       |
+| **Authentication** | API Key                                                                                                    |
+| **Usage**          | `bl managed-agent destroy [--file <path>] [--cascade]`                                                     |
+| **Risk**           | `high`                                                                                                     |
+| **Risk message**   | This deletes every managed Agent resource tracked in state; --cascade may also delete dependent resources. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
 | Flag               | Type   | Required | Description                                                                |
 | ------------------ | ------ | -------- | -------------------------------------------------------------------------- |
 | `--file <path>`    | string | no       | Config file path (default: agents.yaml)                                    |
-| `--yes`            | switch | no       | Confirm and destroy without an interactive prompt (required)               |
 | `--cascade`        | switch | no       | Auto-delete dependent resources (e.g. sessions referencing an environment) |
+| `--yes`            | switch | no       | Confirm this high-risk operation                                           |
 | `--api-key <key>`  | string | no       | API key                                                                    |
 | `--base-url <url>` | string | no       | API base URL                                                               |
 
@@ -719,10 +729,12 @@ bl managed-agent deployment unpause --deployment-id dep_abc
 #### Examples
 
 ```bash
+# Only after explicit user confirmation:
 bl managed-agent destroy --yes
 ```
 
 ```bash
+# Only after explicit user confirmation:
 bl managed-agent destroy --yes --cascade
 ```
 
@@ -1282,12 +1294,16 @@ bl managed-agent session debug --session-id sess_abc --output json
 
 ### `bl managed-agent session delete`
 
-| Field              | Value                                                                                         |
-| ------------------ | --------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent session delete`                                                                |
-| **Description**    | Delete a session                                                                              |
-| **Authentication** | API Key                                                                                       |
-| **Usage**          | `bl managed-agent session delete --session-id <id> --yes [--provider <name>] [--file <path>]` |
+| Field              | Value                                                                                   |
+| ------------------ | --------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent session delete`                                                          |
+| **Description**    | Delete a session                                                                        |
+| **Authentication** | API Key                                                                                 |
+| **Usage**          | `bl managed-agent session delete --session-id <id> [--provider <name>] [--file <path>]` |
+| **Risk**           | `high`                                                                                  |
+| **Risk message**   | This deletes the specified remote managed Agent Session.                                |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -1296,7 +1312,7 @@ bl managed-agent session debug --session-id sess_abc --output json
 | `--session-id <id>` | string | yes      | Session ID (required)                   |
 | `--file <path>`     | string | no       | Config file path (default: agents.yaml) |
 | `--provider <name>` | string | no       | Target provider                         |
-| `--yes`             | switch | no       | Confirm permanent session deletion      |
+| `--yes`             | switch | no       | Confirm this high-risk operation        |
 | `--api-key <key>`   | string | no       | API key                                 |
 | `--base-url <url>`  | string | no       | API base URL                            |
 
@@ -1309,7 +1325,8 @@ bl managed-agent session debug --session-id sess_abc --output json
 #### Examples
 
 ```bash
-bl managed-agent session delete --session-id sess_abc123
+# Only after explicit user confirmation:
+bl managed-agent session delete --session-id sess_abc123 --yes
 ```
 
 ### `bl managed-agent session event list`
@@ -2062,12 +2079,16 @@ bl managed-agent state list --file agents.yaml
 
 ### `bl managed-agent state rm`
 
-| Field              | Value                                                                      |
-| ------------------ | -------------------------------------------------------------------------- |
-| **Name**           | `managed-agent state rm`                                                   |
-| **Description**    | Remove a resource from state without destroying it remotely                |
-| **Authentication** | No Auth                                                                    |
-| **Usage**          | `bl managed-agent state rm --address <provider.type.name> [--file <path>]` |
+| Field              | Value                                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent state rm`                                                                                          |
+| **Description**    | Remove a resource from state without destroying it remotely                                                       |
+| **Authentication** | No Auth                                                                                                           |
+| **Usage**          | `bl managed-agent state rm --address <provider.type.name> [--file <path>]`                                        |
+| **Risk**           | `high`                                                                                                            |
+| **Risk message**   | This removes the resource from local state without deleting it remotely, so this project will no longer track it. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -2075,6 +2096,7 @@ bl managed-agent state list --file agents.yaml
 | -------------------------------- | ------ | -------- | --------------------------------------- |
 | `--address <provider.type.name>` | string | yes      | Resource state address (required)       |
 | `--file <path>`                  | string | no       | Config file path (default: agents.yaml) |
+| `--yes`                          | switch | no       | Confirm this high-risk operation        |
 
 #### Notes
 
@@ -2083,7 +2105,8 @@ bl managed-agent state list --file agents.yaml
 #### Examples
 
 ```bash
-bl managed-agent state rm --address bailian.agent.assistant
+# Only after explicit user confirmation:
+bl managed-agent state rm --address bailian.agent.assistant --yes
 ```
 
 ### `bl managed-agent state show`

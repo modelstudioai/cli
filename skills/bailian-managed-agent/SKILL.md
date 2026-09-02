@@ -1,14 +1,15 @@
 ---
 name: bailian-managed-agent
 metadata:
-  version: "1.18.0"
+  version: "1.19.0"
   requires:
     bins: ["bl"]
 description: >-
   阿里云百炼托管 Agent 声明式基础设施与 API 命令入口：用户要创建agent、初始化 agents.yaml、校验或预览配置变更、
   创建/更新/销毁托管 Agent 或 Deployment，或查询 Agent/Environment/Skill/Vault/Deployment、管理 Session/Event/File、
   运行/暂停 Deployment 时使用 `bl managed-agent`。持久资源仍以 agents.yaml 为唯一事实源做 IaC；公开 API 能力按资源透出
-  list/get/search/versions/download、数据面和运行时动作命令。apply / destroy 与破坏性 API 命令必须遵守 `--yes` 门禁。
+  list/get/search/versions/download、数据面和运行时动作命令。apply / destroy 与破坏性 API 命令受统一高风险确认闸门保护；
+  务必先展示预览再让用户确认，禁止自动添加 `--yes`。
   反触发：调用已上线的百炼应用/智能体走 bailian-app-call 或 `bl app`；宿主 agent 自身的记忆、技能、
   子代理不走本 skill；生图生视频走 bailian-gen。
   官方安装：`bl skill init`（与共享协议 bailian-protocol 同装）。
@@ -16,7 +17,7 @@ description: >-
 
 # Bailian managed agent IaC (`bl managed-agent`)
 
-**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): Version & updates (pre-flight checklist) and CLI errors: report an issue. Command details are authoritative in [`reference/managed-agent.md`](reference/managed-agent.md) and `bl managed-agent --help` — do not guess flags. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
+**CRITICAL — Before executing, MUST read the shared protocol in [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md): High-risk operation confirmation, Version & updates (pre-flight checklist), and CLI errors: report an issue. Command details are authoritative in [`reference/managed-agent.md`](reference/managed-agent.md) and `bl managed-agent --help` — do not guess flags. If that protocol file is missing, stop and run `bl skill init`; do not guess auth/consent.**
 
 ## Safety guardrail (the most important rule)
 
@@ -31,14 +32,18 @@ API-oriented commands do not replace IaC. Agent / Environment / Skill / Vault / 
 `agents.yaml → scoped plan → scoped apply` 管理；查询命令和 Session、Event、File、Deployment 运行时动作直接调用 API。
 `session archive|delete`、`file delete`、`deployment run` 也需要先 `--dry-run`，确认后才传 `--yes`。
 
+`state rm`, `session delete`, and future `risk: high` commands follow the shared protocol: show the
+risk message and exact scope, then wait for explicit confirmation before re-running with `--yes`.
+
 ## IaC lifecycle
 
 ```
 1. Init      bl managed-agent init          # scaffold agents.yaml
 2. Validate  bl managed-agent validate      # offline, no network calls
 3. Preview   bl managed-agent plan          # show the pending change diff
-4. Apply     bl managed-agent apply --yes   # only after user confirmation
-5. Destroy   bl managed-agent destroy --yes # only after user confirmation
+4. Confirm   show the plan and ask the user # no automatic --yes
+5. Apply     bl managed-agent apply --yes   # only after explicit confirmation
+6. Destroy   bl managed-agent destroy --yes # separate explicit confirmation
 ```
 
 ## Scoped single-resource create

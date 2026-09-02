@@ -6,6 +6,32 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.19.0] - 2026-09-01
+
+### 新增
+
+- **`bl quota delete`** — 清除指定模型的全部自定义 QPM/TPM 限流配置。
+
+### 变更
+
+- **高风险操作确认** — 高风险命令会在 `--help` 和 Skill 命令参考中展示风险说明。未传入 `--yes` 时，高风险操作不会执行；JSON 输出会返回退出码 `7` 和 `error.type: "requires_confirmation"`。确认后可添加 `--yes` 重新执行；`--dry-run` 无需确认。
+
+## [1.18.2] - 2026-09-01
+
+### 变更
+
+- **删除与清除操作增加确认** —— `bl finetune delete`、`bl deploy delete`、`bl dataset delete` 和 `bl quota update --delete` 现在会在执行前要求确认；非交互场景请传入 `--yes`。
+
+### 修复
+
+- **Skill 安装可靠性** —— `bl skill init` 现在会重试临时性网络故障；备份清理受阻时，已完成的 Skill 更新不再被误报为失败。
+
+## [1.18.1] - 2026-08-28
+
+### 已移除
+
+- 移除 `bl auth login` 的 API Key 校验。
+
 ## [1.18.0] - 2026-08-27
 
 ### 新增

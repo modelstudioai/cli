@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isKbAdminE2EReady, parseStdoutJson, runCommandE2e } from "../helpers.ts";
+import { isKbAdminE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "../helpers.ts";
 import { KNOWLEDGE_DOC_LIST_ROUTES } from "../topic-routes.ts";
 
 describe("e2e: knowledge doc list", () => {
   test("--help 展示 flags", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_DOC_LIST_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(KNOWLEDGE_DOC_LIST_ROUTES, [
       "knowledge",
       "doc",
       "list",

@@ -13,9 +13,20 @@ const DELETE_FLAGS = {
 export default defineCommand({
   description: { "en-US": "Delete a dataset file by ID", "zh-CN": "通过 ID 删除数据集文件" },
   auth: "apiKey",
+  risk: {
+    level: "high",
+    message: {
+      "en-US": "This permanently deletes the specified dataset file and cannot be undone.",
+      "zh-CN": "该操作会永久删除指定的数据集文件，且无法撤销。",
+    },
+  },
   usageArgs: "--file-id <id>",
   flags: DELETE_FLAGS,
-  exampleArgs: ["--file-id file-id-xxx", "--file-id file-id-xxx --dry-run"],
+  exampleArgs: [
+    "--file-id file-id-xxx",
+    "--file-id file-id-xxx --dry-run",
+    "--file-id file-id-xxx --yes",
+  ],
   async run(ctx) {
     const { settings, flags } = ctx;
     const fileId = flags.fileId;

@@ -1,8 +1,8 @@
-import { existsSync, lstatSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "fs";
-import { createHash } from "crypto";
-import { tmpdir } from "os";
-import { join } from "path";
-import { brotliCompressSync } from "zlib";
+import { existsSync, lstatSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { brotliCompressSync } from "node:zlib";
 import tar from "tar-stream";
 import { afterEach, expect, test, vi } from "vite-plus/test";
 import { BailianError } from "../src/errors/base.ts";
@@ -10,6 +10,18 @@ import type { AgentTarget } from "../src/skills/agents.ts";
 import { isSafeEntryName } from "../src/skills/extract.ts";
 import { installSkillFromBuffer, installSkillWithFanout } from "../src/skills/installer.ts";
 import { getSkillsDir } from "../src/skills/lock.ts";
+import { downloadSkillAsset, fetchSkillsIndex } from "../src/skills/registry.ts";
+
+/** rmSync wrapped in a spy so tests can simulate host deletion guards (e.g. safe-delete) */
+const fsMocks = vi.hoisted(() => ({
+  rmSync: vi.fn(),
+}));
+
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  fsMocks.rmSync.mockImplementation(actual.rmSync);
+  return { ...actual, rmSync: fsMocks.rmSync };
+});
 
 /** Run in an isolated temp config dir, restore env afterwards. */
 async function inTempConfigDir(fn: () => Promise<void>): Promise<void> {
@@ -225,15 +237,83 @@ test("fanout install: downloads, links agents, and builds lock entry with merged
   });
 });
 
-test("fanout install: download failure surfaces as BailianError and leaves no canonical dir", async () => {
+test("fanout install: download failure exhausts retries and leaves no canonical dir", async () => {
   await inTempConfigDir(async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({ ok: false, status: 404 })),
-    );
+    const fetchMock = vi.fn(async () => ({ ok: false, status: 404 }));
+    vi.stubGlobal("fetch", fetchMock);
     await expect(
       installSkillWithFanout("demo", { contentHash: "sha256:whatever" }, []),
     ).rejects.toThrow(BailianError);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(existsSync(join(getSkillsDir(), "demo"))).toBe(false);
   });
+});
+
+// ---- host deletion guards (safe-delete): backup cleanup must not fail a completed install ----
+
+const GUARD_ERROR =
+  '[safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":1583,"threshold":500}';
+
+test("installer: guard blocking backup deletion does not fail the install", async () => {
+  await inTempConfigDir(async () => {
+    await installSkillFromBuffer("demo", await buildTarBr({ "SKILL.md": VALID_SKILL_MD }));
+    fsMocks.rmSync.mockImplementationOnce(() => {
+      throw new Error(GUARD_ERROR);
+    });
+    const v2 = "---\nname: demo\ndescription: demo skill v2\n---\n";
+    const installed = await installSkillFromBuffer("demo", await buildTarBr({ "SKILL.md": v2 }));
+    expect(installed.name).toBe("demo");
+    expect(readFileSync(join(getSkillsDir(), "demo", "SKILL.md"), "utf-8")).toBe(v2);
+    // The blocked backup stays on disk but is inert (status scans ignore .old-*)
+    const leftovers = readdirSync(getSkillsDir()).filter((entry) => entry.startsWith("demo.old-"));
+    expect(leftovers).toHaveLength(1);
+  });
+});
+
+test("installer: temp cleanup failure does not mask the original error", async () => {
+  await inTempConfigDir(async () => {
+    fsMocks.rmSync.mockImplementationOnce(() => {
+      throw new Error(GUARD_ERROR);
+    });
+    const buf = await buildTarBr({ "SKILL.md": VALID_SKILL_MD, "../evil.txt": "pwned\n" });
+    await expect(installSkillFromBuffer("demo", buf)).rejects.toThrow(/unsafe tar entry/);
+  });
+});
+
+// ---- registry retry policy ----
+
+test("registry: index fetch retries transient failures and succeeds", async () => {
+  const indexPayload = { skills: { demo: { contentHash: "sha256:abc" } } };
+  const fetchMock = vi.fn(async () => {
+    if (fetchMock.mock.calls.length < 3) throw new Error("network down");
+    return { ok: true, status: 200, json: async () => indexPayload };
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  const index = await fetchSkillsIndex(1000);
+  expect(index.skills.demo.contentHash).toBe("sha256:abc");
+  expect(fetchMock).toHaveBeenCalledTimes(3);
+});
+
+test("registry: attempts=1 keeps the silent channel fail-fast", async () => {
+  const fetchMock = vi.fn(async () => {
+    throw new Error("network down");
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  await expect(fetchSkillsIndex(1000, 1)).rejects.toThrow(BailianError);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+test("registry: asset download retries transient HTTP errors", async () => {
+  const fetchMock = vi.fn(async () => {
+    if (fetchMock.mock.calls.length === 1) return { ok: false, status: 503 };
+    return {
+      ok: true,
+      status: 200,
+      arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
+    };
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  const buffer = await downloadSkillAsset("demo");
+  expect([...buffer]).toEqual([1, 2, 3]);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
 });

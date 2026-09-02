@@ -40,9 +40,20 @@ export default defineCommand({
     "zh-CN": "删除模型部署（状态必须为 STOPPED 或 FAILED）",
   },
   auth: "apiKey",
+  risk: {
+    level: "high",
+    message: {
+      "en-US": "This permanently deletes the specified model deployment and cannot be undone.",
+      "zh-CN": "该操作会永久删除指定的模型部署，且无法撤销。",
+    },
+  },
   usageArgs: "--deployed-model <id> [--skip-precheck]",
   flags: DELETE_FLAGS,
-  exampleArgs: ["--deployed-model dep-...", "--deployed-model dep-... --dry-run"],
+  exampleArgs: [
+    "--deployed-model dep-...",
+    "--deployed-model dep-... --dry-run",
+    "--deployed-model dep-... --yes",
+  ],
   async run(ctx) {
     const { settings, flags } = ctx;
     const deployedModel = flags.deployedModel;

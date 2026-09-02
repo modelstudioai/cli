@@ -6,6 +6,32 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.19.0] - 2026-09-01
+
+### Added
+
+- **`bl quota delete`** — clears all custom QPM/TPM rate limits for a model.
+
+### Changed
+
+- **High-risk operation confirmation** — high-risk commands show risk details in `--help` and Skill command references. Without `--yes`, the high-risk operation is not executed; JSON output returns exit code `7` with `error.type: "requires_confirmation"`. After confirmation, re-run with `--yes`; `--dry-run` does not require confirmation.
+
+## [1.18.2] - 2026-09-01
+
+### Changed
+
+- **Confirmation before deleting or clearing resources** — `bl finetune delete`, `bl deploy delete`, `bl dataset delete`, and `bl quota update --delete` now ask for confirmation; pass `--yes` for non-interactive use.
+
+### Fixed
+
+- **Skill installation reliability** — `bl skill init` now retries transient network failures, and completed Skill updates are no longer reported as failed when backup cleanup is blocked.
+
+## [1.18.1] - 2026-08-28
+
+### Removed
+
+- Removed API Key validation from `bl auth login`.
+
 ## [1.18.0] - 2026-08-27
 
 ### Added

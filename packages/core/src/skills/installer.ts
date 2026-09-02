@@ -61,12 +61,22 @@ export async function installSkillFromBuffer(
     atomicSwap(tmpDir, dest);
     return { name, path: dest, meta };
   } finally {
-    if (existsSync(tmpDir)) rmSync(tmpDir, { recursive: true, force: true });
+    // Best-effort cleanup: on failure paths this must not mask the original error,
+    // and on success the dir is already renamed away (existsSync → false)
+    try {
+      if (existsSync(tmpDir)) rmSync(tmpDir, { recursive: true, force: true });
+    } catch {
+      /* leave the temp dir rather than hide the real error */
+    }
   }
 }
 
 /** Install a single skill by index entry (download + validate + write to disk) */
-export async function installSkill(name: string, entry: SkillIndexEntry): Promise<InstalledSkill> {
+export async function installSkill(
+  name: string,
+  entry: SkillIndexEntry,
+  downloadAttempts?: number,
+): Promise<InstalledSkill> {
   if (entry.compression && entry.compression !== "tar.br") {
     throw new BailianError(
       `Skill ${name} uses unsupported compression format: ${entry.compression}`,
@@ -74,7 +84,7 @@ export async function installSkill(name: string, entry: SkillIndexEntry): Promis
       "Upgrade bailian-cli to the latest version and retry",
     );
   }
-  const buffer = await downloadSkillAsset(name, entry);
+  const buffer = await downloadSkillAsset(name, entry, downloadAttempts);
   return installSkillFromBuffer(name, buffer, entry.contentHash);
 }
 
@@ -116,14 +126,17 @@ export interface SkillInstallRecord {
  * entry (batch writeSkillLock for commands, best-effort upsertSkillLockEntry for silent channels).
  * recordedLinks = the skill's previously recorded fan-out paths from the lock; lets the
  * fan-out replace copy-fallback artifacts and keeps unvisited paths reclaimable.
+ * downloadAttempts = registry fetch attempts (undefined → interactive default; silent
+ * background channels pass 1 to fail fast instead of stalling the host command).
  */
 export async function installSkillWithFanout(
   name: string,
   entry: SkillIndexEntry,
   agents: AgentTarget[] = detectInstalledAgents(),
   recordedLinks: string[] = [],
+  downloadAttempts?: number,
 ): Promise<SkillInstallRecord> {
-  await installSkill(name, entry);
+  await installSkill(name, entry, downloadAttempts);
   const fanout = fanOutSkillToAgents(name, agents, recordedLinks);
   return {
     lockEntry: buildSkillLockEntry(entry, fanout.links),

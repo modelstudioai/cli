@@ -17,11 +17,12 @@
   │    ├─ ~/.bailian/telemetry.jsonl
   │    └─ AEM(pid=bailian-cli-node, event name=命令路径)
   │
-  └─ authStage
-       ├─ apiKey  → DashScope / 模型域
-       ├─ console → Bailian Console Gateway
-       ├─ openapi → 阿里云 OpenAPI
-       └─ none    → 无凭证域；本地命令也仍有 AEM 命令事件
+  └─ confirmationStage
+       └─ versionCheckStage → authStage
+            ├─ apiKey  → DashScope / 模型域
+            ├─ console → Bailian Console Gateway
+            ├─ openapi → 阿里云 OpenAPI
+            └─ none    → 无凭证域；本地命令也仍有 AEM 命令事件
 ```
 
 ### 1. 三套鉴权与埋点标识
@@ -77,7 +78,7 @@ source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网�
 
 ### 3. 全命令 AEM 客户端埋点
 
-`packages/runtime/src/middleware.ts` 的 `telemetryStage` 包裹 `authStage` 与命令执行，因此成功、业务失败、网络失败和鉴权失败都会形成一次命令事件。事件名是空格连接的命令路径，例如 `text chat`。
+`packages/runtime/src/middleware.ts` 的 `telemetryStage` 包裹确认闸门、`authStage` 与命令执行，因此成功、确认未通过、业务失败、网络失败和鉴权失败都会形成一次命令事件。事件名是空格连接的命令路径，例如 `text chat`。确认闸门仍位于版本检查、鉴权和业务执行之前，不会因为埋点而放行高风险操作。
 
 以下情况不会形成命令事件，因为没有进入 middleware 的 `run`：
 
@@ -92,7 +93,7 @@ source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网�
 - `command`、`timestamp`、`durationMs`、`success`
 - `cliVersion`、`nodeVersion`、`os`
 - `authMethod`
-- 失败时的 `errorMessage`、`httpStatus`、`requestId`
+- 失败时的 `errorMessage`、`exitCode`、`httpStatus`、`requestId`
 - 安全 allowlist 过滤后的 `params`
 
 参数默认不上传，只有 `packages/core/src/telemetry/tracker.ts` 的 `PARAM_ALLOWLIST` 中字段会进入事件。不得加入 prompt、凭证、文件路径、URL、账号/租户/工作空间 ID 或其他用户内容。
@@ -108,16 +109,16 @@ source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网�
 
 AEM 映射：
 
-| AEM 字段   | 内容                                      |
-| ---------- | ----------------------------------------- |
-| event name | 命令路径                                  |
-| `et`       | `EXP`                                     |
-| `ext`      | 除 `command`、`params` 外的结构化事件字段 |
-| `c1`       | allowlist 参数                            |
-| `c2`       | `success` / `failure`                     |
-| `c3`       | HTTP status                               |
-| `c4`       | 错误文案，最多 500 字符                   |
-| `c5`       | request ID                                |
+| AEM 字段   | 内容                                                               |
+| ---------- | ------------------------------------------------------------------ |
+| event name | 命令路径                                                           |
+| `et`       | `EXP`                                                              |
+| `ext`      | 除 `command`、`params` 外的结构化事件字段，包含失败时的 `exitCode` |
+| `c1`       | allowlist 参数                                                     |
+| `c2`       | `success` / `failure`                                              |
+| `c3`       | HTTP status                                                        |
+| `c4`       | 错误文案，最多 500 字符                                            |
+| `c5`       | request ID                                                         |
 
 远端发送是 best-effort，不得阻塞命令或改变退出码。正常退出最多等待 1 秒，SIGINT 最多等待 500 ms。
 
@@ -144,6 +145,7 @@ AEM 映射：
 - [ ] 更新 `TrackingEvent`、`createTrackingEvent()` 与 `buildRemoteAemOptions()` 的字段映射
 - [ ] 本地 JSONL 与远端 AEM 必须基于同一结构化事件，不能维护两套字段口径
 - [ ] 成功与失败均覆盖；遥测异常必须静默且不改变业务退出码
+- [ ] runtime 本地语义错误应记录 `exitCode`；新增字段默认随 AEM `ext` 上报，无需占用新的 `c1`—`c5`
 - [ ] 检查 `DO_NOT_TRACK=1` 与 `telemetry: false` 两个关闭入口
 - [ ] 错误字段不得额外拼接 token、请求体、prompt 或本地路径
 

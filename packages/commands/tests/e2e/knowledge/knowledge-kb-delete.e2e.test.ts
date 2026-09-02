@@ -4,13 +4,13 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
-import { isKbAdminE2EReady, parseStdoutJson, runCommandE2e } from "../helpers.ts";
+import { isKbAdminE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "../helpers.ts";
 import { deleteKbWithRetry } from "./journeys/journey-helpers.ts";
 import { KNOWLEDGE_KB_DELETE_ROUTES } from "../topic-routes.ts";
 
 describe("e2e: knowledge kb delete", () => {
   test("--help 展示 flags", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(KNOWLEDGE_KB_DELETE_ROUTES, [
       "knowledge",
       "delete",
       "--help",
@@ -48,7 +48,7 @@ describe("e2e: knowledge kb delete", () => {
     expect(data.request?.index_id).toBe("idx_test");
   });
 
-  test("非 TTY 无 --yes 报 USAGE (2)", async () => {
+  test("无 --yes 返回确认请求 (7)", async () => {
     const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
       "knowledge",
       "delete",
@@ -58,9 +58,17 @@ describe("e2e: knowledge kb delete", () => {
       "sk-fake",
       "--workspace-id",
       "ws_test",
+      "--output",
+      "json",
     ]);
-    expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/--yes/);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: {
+        code: 7,
+        type: "requires_confirmation",
+        hint: expect.stringContaining("--yes"),
+      },
+    });
   });
 });
 

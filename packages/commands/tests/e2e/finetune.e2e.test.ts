@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vite-plus/test";
 import { join } from "path";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e, e2eFixturesDir } from "./helpers.ts";
+import {
+  isDashScopeE2EReady,
+  parseStdoutJson,
+  runCommandHelp,
+  runCommandE2e,
+  e2eFixturesDir,
+} from "./helpers.ts";
 import { FINETUNE_ROUTES } from "./topic-routes.ts";
 
 /**
@@ -17,14 +23,15 @@ import { FINETUNE_ROUTES } from "./topic-routes.ts";
 
 describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   test("finetune 列出子命令", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, ["finetune"]);
+    const { stderr, exitCode } = await runCommandHelp(FINETUNE_ROUTES, ["finetune", "--help"]);
     expect(exitCode, stderr).toBe(0);
-    const out = `${stdout}\n${stderr}`;
-    expect(out).toMatch(/create|list|get|cancel|delete|logs|checkpoints|export|watch|capability/);
+    expect(stderr).toMatch(
+      /create|list|get|cancel|delete|logs|checkpoints|export|watch|capability/,
+    );
   });
 
   test("finetune create --help 正常退出并展示必填项", async () => {
-    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(FINETUNE_ROUTES, [
       "finetune",
       "text",
       "create",
@@ -336,7 +343,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   test("finetune audio create --help 不暴露文本超参 flag", async () => {
     // Audio models don't consume --training-type / --n-epochs / --batch-size /
     // --learning-rate / --max-length, so those flags are not offered.
-    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(FINETUNE_ROUTES, [
       "finetune",
       "audio",
       "create",
@@ -369,7 +376,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
   test("finetune video create --help 暴露视频超参且不含文本超参", async () => {
     // Video exposes --n-epochs / --batch-size / --learning-rate; the text-only
     // --training-type / --max-length surface is not offered.
-    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(FINETUNE_ROUTES, [
       "finetune",
       "video",
       "create",
@@ -462,6 +469,35 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (offline)", () => {
     expect(data.body.hyper_parameters.n_epochs).toBe(100);
     expect(data.body.hyper_parameters.batch_size).toBe(2);
     expect(data.body.hyper_parameters.learning_rate).toBe("1e-5");
+  });
+});
+
+describe("e2e: finetune high-risk confirmation", () => {
+  test("finetune delete --help 展示 runtime 注入的 --yes", async () => {
+    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      "finetune",
+      "delete",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--yes/i);
+  });
+
+  test("finetune delete 无 --yes 返回确认请求 (7)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(FINETUNE_ROUTES, [
+      "finetune",
+      "delete",
+      "--job-id",
+      "ft-xxx",
+      "--api-key",
+      "e2e-dummy-key",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
   });
 });
 

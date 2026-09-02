@@ -3,6 +3,7 @@ import {
   isBailianE2EEnabled,
   isDashScopeE2EReady,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "./helpers.ts";
 import { MEMORY_ROUTES } from "./topic-routes.ts";
@@ -38,25 +39,29 @@ function memoryLibraryCliArgs(): string[] {
 
 describe("e2e: memory", () => {
   test("memory add --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MEMORY_ROUTES, ["memory", "add", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(MEMORY_ROUTES, ["memory", "add", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/add|--user-id|--content|messages/i);
   });
 
   test("memory list --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MEMORY_ROUTES, ["memory", "list", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(MEMORY_ROUTES, ["memory", "list", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/list|--user-id|memory-library/i);
   });
 
   test("memory search --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MEMORY_ROUTES, ["memory", "search", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(MEMORY_ROUTES, [
+      "memory",
+      "search",
+      "--help",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/search|--query|user-id/i);
   });
 
   test("memory profile create --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MEMORY_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(MEMORY_ROUTES, [
       "memory",
       "profile",
       "create",

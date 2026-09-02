@@ -213,7 +213,7 @@ bl knowledge chunk delete --index-id <id> --chunk-id <id> [flags]
 | ----------------- | ------ | ---- | ------------------------------------------------ |
 | `--index-id <id>` | string | 是   | 知识库 ID                                        |
 | `--chunk-id <id>` | array  | 是   | Chunk ID（可重复，每批最多 10 个，超出自动分批） |
-| `--yes`           | switch | 否   | 跳过确认提示                                     |
+| `--yes`           | switch | 否   | 显式确认执行高风险操作                           |
 
 **输出**
 

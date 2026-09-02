@@ -1,10 +1,4 @@
-import {
-  BailianError,
-  defineCommand,
-  detectOutputFormat,
-  ExitCode,
-  type FlagsDef,
-} from "bailian-cli-core";
+import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-core";
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { deleteSession } from "@openagentpack/sdk";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
@@ -31,18 +25,21 @@ const SESSION_DELETE_FLAGS = {
     valueHint: "<name>",
     description: { "en-US": "Target provider", "zh-CN": "目标 Provider" },
   },
-  yes: {
-    type: "switch",
-    description: { "en-US": "Confirm permanent session deletion", "zh-CN": "确认永久删除 Session" },
-  },
 } satisfies FlagsDef;
 
 export default defineCommand({
   description: { "en-US": "Delete a session", "zh-CN": "删除 Session" },
   auth: "apiKey",
-  usageArgs: "--session-id <id> --yes [--provider <name>] [--file <path>]",
+  risk: {
+    level: "high",
+    message: {
+      "en-US": "This deletes the specified remote managed Agent Session.",
+      "zh-CN": "该操作会删除指定的远端托管 Agent Session。",
+    },
+  },
+  usageArgs: "--session-id <id> [--provider <name>] [--file <path>]",
   flags: SESSION_DELETE_FLAGS,
-  exampleArgs: ["--session-id sess_abc123"],
+  exampleArgs: ["--session-id sess_abc123 --yes"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
@@ -59,14 +56,6 @@ export default defineCommand({
         format,
       );
       return;
-    }
-
-    if (!flags.yes) {
-      throw new BailianError(
-        `Refusing to delete session ${flags.sessionId} without confirmation.`,
-        ExitCode.USAGE,
-        "Re-run with --yes or preview with --dry-run.",
-      );
     }
 
     await withAgentErrors(() =>

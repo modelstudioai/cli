@@ -6,10 +6,18 @@ import {
   authStage,
   telemetryStage,
   versionCheckStage,
+  confirmationStage,
   runCommandStage,
   type RunContext,
 } from "./middleware.ts";
-import type { AnyCommand, FlagsDef, Identity, ParsedFlags, SourceFlags } from "bailian-cli-core";
+import type {
+  AnyCommand,
+  FlagsDef,
+  Identity,
+  LocalizedText,
+  ParsedFlags,
+  SourceFlags,
+} from "bailian-cli-core";
 import {
   CONSOLE_AUTH_FLAGS,
   DEFAULT_LANGUAGE,
@@ -33,6 +41,7 @@ import { loadCommandPacks } from "./command-packs/load.ts";
 import { createCommandPackManager } from "./command-packs/manager.ts";
 import type { CommandPackPolicy } from "./command-packs/types.ts";
 import { createTranslator } from "./i18n.ts";
+import { confirmationFlagDefs } from "./confirm.ts";
 
 /** Per-product identity injected by each CLI entrypoint (bl / rag / …). */
 export interface CliOptions {
@@ -113,7 +122,13 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
 
   installProcessHandlers(binName);
 
-  const runMiddleware = compose([versionCheckStage, telemetryStage, authStage, runCommandStage]);
+  const runMiddleware = compose([
+    telemetryStage,
+    confirmationStage,
+    versionCheckStage,
+    authStage,
+    runCommandStage,
+  ]);
 
   function getLoadedCommandPacks(): ReturnType<typeof loadCommandPacks> {
     if (!loadedCommandPacksPromise) {
@@ -122,11 +137,17 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     return loadedCommandPacksPromise;
   }
 
-  async function getRegistry(argv: string[]): Promise<CommandRegistry> {
+  async function getRegistry(argv: string[]): Promise<{
+    registry: CommandRegistry;
+    localize: (text: LocalizedText) => string;
+  }> {
     const localeSources = buildSources(pickConfigFlag(argv));
     const translator = createTranslator(localeSources.file.language ?? DEFAULT_LANGUAGE);
     const loaded = await getLoadedCommandPacks();
-    return new CommandRegistry(loaded.commands, binName, translator);
+    return {
+      registry: new CommandRegistry(loaded.commands, binName, translator),
+      localize: (text) => translator.localize(text),
+    };
   }
 
   /** Render help for `path`; root ([]) doubles as the onboarding / login guide. */
@@ -157,7 +178,11 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     }
   }
 
-  async function dispatch(registry: CommandRegistry, argv: string[]): Promise<void> {
+  async function dispatch(
+    registry: CommandRegistry,
+    argv: string[],
+    localize: (text: LocalizedText) => string,
+  ): Promise<void> {
     const res = resolve(argv, registry);
 
     switch (res.kind) {
@@ -177,9 +202,11 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         try {
           // 全局与凭证域 flag 进 sources,命令自有 flag 进 ctx.flags。
           const credDefs = credentialFlagDefs(res.command);
+          const confirmationDefs = confirmationFlagDefs(res.command);
           const parsedFlags = parseFlags(res.rest, {
             ...GLOBAL_FLAGS,
             ...credDefs,
+            ...confirmationDefs,
             ...res.command.flags,
           }) as Record<string, unknown>;
           const globalFlags = pick(parsedFlags, [
@@ -201,6 +228,8 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             path: res.path,
             command: res.command,
             flags: ownFlags,
+            confirmed: parsedFlags.yes === true,
+            localize,
             settings,
             sources,
             configStore: makeConfigStore(sources.configName),
@@ -233,7 +262,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     run(argv: string[] = process.argv.slice(2)) {
       return Promise.resolve()
         .then(() => getRegistry(argv))
-        .then((registry) => dispatch(registry, argv))
+        .then(({ registry, localize }) => dispatch(registry, argv, localize))
         .catch(
           (err) => flushTelemetry(1000).finally(() => handleError(err, binName)) as unknown as void,
         );

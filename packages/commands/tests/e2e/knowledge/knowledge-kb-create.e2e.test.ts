@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCommandE2e } from "../helpers.ts";
+import { parseStdoutJson, runCommandHelp, runCommandE2e } from "../helpers.ts";
 import { KNOWLEDGE_KB_CREATE_ROUTES } from "../topic-routes.ts";
 
 interface DryRunBody {
@@ -17,7 +17,7 @@ interface DryRunBody {
 
 describe("e2e: knowledge kb create", () => {
   test("--help 展示 flags", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_KB_CREATE_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(KNOWLEDGE_KB_CREATE_ROUTES, [
       "knowledge",
       "create",
       "--help",

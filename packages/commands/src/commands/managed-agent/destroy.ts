@@ -21,13 +21,6 @@ const DESTROY_FLAGS = {
       "zh-CN": "配置文件路径（默认：agents.yaml）",
     },
   },
-  yes: {
-    type: "switch",
-    description: {
-      "en-US": "Confirm and destroy without an interactive prompt (required)",
-      "zh-CN": "无需交互提示直接确认并销毁（必填）",
-    },
-  },
   cascade: {
     type: "switch",
     description: {
@@ -43,7 +36,15 @@ export default defineCommand({
     "zh-CN": "销毁 State 中跟踪的全部托管 Agent 资源",
   },
   auth: "apiKey",
-  usageArgs: "[--file <path>] [--yes] [--cascade]",
+  risk: {
+    level: "high",
+    message: {
+      "en-US":
+        "This deletes every managed Agent resource tracked in state; --cascade may also delete dependent resources.",
+      "zh-CN": "该操作会删除 State 中跟踪的全部托管 Agent 资源；--cascade 还可能删除依赖资源。",
+    },
+  },
+  usageArgs: "[--file <path>] [--cascade]",
   flags: DESTROY_FLAGS,
   exampleArgs: ["--yes", "--yes --cascade"],
   notes: CREDENTIALS_NOTE,
@@ -84,14 +85,6 @@ export default defineCommand({
       const line = `  - ${formatResourceLabel(resource.address)} [${resource.remote_id}]`;
       if (format === "json") process.stderr.write(`${line}\n`);
       else emitBare(line);
-    }
-
-    if (!flags.yes) {
-      throw new BailianError(
-        `Refusing to destroy ${resources.length} resource(s) without confirmation.`,
-        ExitCode.USAGE,
-        "Re-run with --yes to destroy (add --cascade to remove dependents).",
-      );
     }
 
     const result = await withAgentErrors(() =>

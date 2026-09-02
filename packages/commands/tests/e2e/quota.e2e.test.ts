@@ -4,20 +4,21 @@ import {
   isConsoleAuthFailure,
   isDashScopeE2EReady,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "./helpers.ts";
 import { QUOTA_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: quota", () => {
   test("quota list --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, ["quota", "list", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(QUOTA_ROUTES, ["quota", "list", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("--model");
     expect(stderr).toContain("--name");
   });
 
   test("quota list --help 包含所有示例", async () => {
-    const { stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, ["quota", "list", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(QUOTA_ROUTES, ["quota", "list", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("bl quota list");
     expect(stderr).toContain("bl quota list --model qwen3-max");
@@ -25,30 +26,36 @@ describe("e2e: quota", () => {
   });
 
   test("quota update --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, ["quota", "update", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(QUOTA_ROUTES, ["quota", "update", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("--model");
     expect(stderr).toContain("--rpm");
     expect(stderr).toContain("--tpm");
-    expect(stderr).toContain("--delete");
+  });
+
+  test("quota delete --help 正常退出", async () => {
+    const { stderr, exitCode } = await runCommandHelp(QUOTA_ROUTES, ["quota", "delete", "--help"]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toContain("--model");
+    expect(stderr).toContain("--yes");
+    expect(stderr).toContain("bl quota delete --model qwen-plus");
   });
 
   test("quota request 作为 quota update 的兼容别名可用", async () => {
-    const { stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, ["quota", "request", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(QUOTA_ROUTES, ["quota", "request", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("--rpm");
-    expect(stderr).toContain("--delete");
   });
 
   test("quota history --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, ["quota", "history", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(QUOTA_ROUTES, ["quota", "history", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("--page");
     expect(stderr).toContain("--model");
   });
 
   test("quota check --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, ["quota", "check", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(QUOTA_ROUTES, ["quota", "check", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("--model");
     expect(stderr).toContain("--period");
@@ -66,7 +73,7 @@ describe("e2e: quota", () => {
     expect(stderr).toContain("at least 1 minute");
   });
 
-  test("quota update 缺少 --rpm/--tpm/--delete 报用法错误", async () => {
+  test("quota update 缺少 --rpm/--tpm 报用法错误", async () => {
     const { stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
       "update",
@@ -74,21 +81,38 @@ describe("e2e: quota", () => {
       "qwen-plus",
     ]);
     expect(exitCode).toBe(2);
-    expect(stderr).toContain("one of --rpm / --tpm / --delete");
+    expect(stderr).toContain("one of --rpm / --tpm");
   });
 
-  test("quota update --delete 与 --rpm 互斥", async () => {
+  test("quota update 不再接受 --delete", async () => {
     const { stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
       "update",
       "--model",
       "qwen-plus",
       "--delete",
-      "--rpm",
-      "60",
     ]);
     expect(exitCode).toBe(2);
-    expect(stderr).toContain("cannot be combined");
+    expect(stderr).toContain("Unknown flag");
+  });
+
+  test("quota delete 缺少 --model 报用法错误", async () => {
+    // 裸 `quota delete`（无任何 flag）会渲染 help 并正常退出，需带 flag 触发必填校验
+    const { stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, ["quota", "delete", "--yes"]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toContain("Missing required flag: --model");
+  });
+
+  test("quota delete 无 --yes 返回确认请求 (7)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(
+      QUOTA_ROUTES,
+      ["quota", "delete", "--model", "qwen-plus", "--output", "json"],
+      { DASHSCOPE_API_KEY: "sk-e2e-quota-delete" },
+    );
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
   });
 
   test("quota update --rpm 负数报错", async () => {
@@ -183,13 +207,12 @@ describe("e2e: quota", () => {
     expect(entry?.usage_limit_period).toBe(60);
   });
 
-  test("quota update --delete --dry-run 输出 DELETE 操作", async () => {
+  test("quota delete --dry-run 输出 DELETE 操作", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, [
       "quota",
-      "update",
+      "delete",
       "--model",
       "qwen-plus",
-      "--delete",
       "--dry-run",
       "--output",
       "json",
@@ -198,6 +221,7 @@ describe("e2e: quota", () => {
     const data = parseStdoutJson<{
       request?: { models?: { model?: string; operation_type?: string }[] };
     }>(stdout);
+    expect(data.request?.models?.[0]?.model).toBe("qwen-plus");
     expect(data.request?.models?.[0]?.operation_type).toBe("DELETE");
   });
 
@@ -272,8 +296,8 @@ describe("e2e: quota", () => {
   });
 });
 
-// 真实调用 GET /api/v1/models/limits。quota update 只测 --dry-run——live POST
-// 会真实改写账号限流，不做 e2e。
+// 真实调用 GET /api/v1/models/limits。quota update / quota delete 只测
+// --dry-run——live POST 会真实改写账号限流，不做 e2e。
 describe.skipIf(!isDashScopeE2EReady())("e2e: quota（DashScope）", () => {
   test("quota list 文本输出正常退出", async () => {
     const { stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, [

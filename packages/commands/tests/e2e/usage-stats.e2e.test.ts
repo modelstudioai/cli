@@ -3,6 +3,7 @@ import {
   isConsoleE2EReady,
   isConsoleAuthFailure,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "./helpers.ts";
 import { USAGE_ROUTES } from "./topic-routes.ts";
@@ -42,13 +43,13 @@ async function fetchDefaultWorkspaceId(): Promise<string> {
 
 describe("e2e: usage stats", () => {
   test("usage stats --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, ["usage", "stats", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(USAGE_ROUTES, ["usage", "stats", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--model|--days|stats/i);
   });
 
   test("usage stats --help 包含所有示例", async () => {
-    const { stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, ["usage", "stats", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(USAGE_ROUTES, ["usage", "stats", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("bl usage stats");
     expect(stderr).toContain("bl usage stats --model qwen-turbo");
@@ -56,7 +57,7 @@ describe("e2e: usage stats", () => {
   });
 
   test("usage stats --help 包含 --workspace-id 选项", async () => {
-    const { stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, ["usage", "stats", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(USAGE_ROUTES, ["usage", "stats", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("--workspace-id");
   });

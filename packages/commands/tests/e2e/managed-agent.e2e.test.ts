@@ -11,7 +11,7 @@ import {
 } from "@openagentpack/sdk";
 import { describe, expect, test } from "vite-plus/test";
 import { parse } from "yaml";
-import { e2eFixturesDir, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { e2eFixturesDir, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { MANAGED_AGENT_ROUTES } from "./topic-routes.ts";
 
 const AGENTS_DEPLOYMENT_YAML = join(e2eFixturesDir, "managed-agent", "agents-deployment.yaml");
@@ -218,7 +218,7 @@ describe("e2e: managed-agent", () => {
   });
 
   test("managed-agent apply --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "apply",
       "--help",
@@ -1026,6 +1026,55 @@ vaults:
     expect(incompleteSchedule.stderr).toMatch(/--schedule and --timezone/i);
   });
 
+  test.each(["apply", "destroy"])("managed-agent %s 无 --yes 返回确认请求 (7)", async (command) => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      command,
+      "--file",
+      "agents.e2e-missing.yaml",
+      "--api-key",
+      "e2e-dummy-key",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
+  });
+
+  test.each([
+    ["state rm", ["state", "rm"]],
+    ["session delete", ["session", "delete"]],
+  ])("managed-agent %s --help 展示 runtime 注入的 --yes", async (_commandName, commandPath) => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      ...commandPath,
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--yes/i);
+  });
+
+  test.each([
+    ["state rm", ["state", "rm", "--address", "bailian.agent.assistant"]],
+    [
+      "session delete",
+      ["session", "delete", "--session-id", "sess_e2e", "--api-key", "e2e-dummy-key"],
+    ],
+  ])("managed-agent %s 无 --yes 返回确认请求 (7)", async (_commandName, commandArgs) => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      ...commandArgs,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
+  });
+
   test("managed-agent session delete 缺少 --session-id 时退出为用法错误 (2)", async () => {
     const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
@@ -1051,7 +1100,7 @@ vaults:
   });
 
   test("managed-agent skill-list --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "skill-list",
       "--help",
@@ -1208,7 +1257,6 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
       "managed-agent",
       "apply",
       "--dry-run",
-      "--yes",
       "--output",
       "json",
     ]);

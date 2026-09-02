@@ -8,6 +8,7 @@ import {
   isDashScopeE2EReady,
   makeE2eOutputDir,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "./helpers.ts";
 import { IMAGE_ROUTES } from "./topic-routes.ts";
@@ -18,7 +19,7 @@ import { IMAGE_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: image edit", () => {
   test("image edit --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, ["image", "edit", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(IMAGE_ROUTES, ["image", "edit", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/edit|--image|--prompt|--async|--concurrent/i);
   });

@@ -6,11 +6,11 @@ const MINUTE_SECONDS = 60;
 
 export default defineCommand({
   description: {
-    "en-US": "Update model rate limits (QPM/TPM), or clear them with --delete",
-    "zh-CN": "更新模型限流配置（QPM/TPM），或使用 --delete 清除配置",
+    "en-US": "Update model rate limits (QPM/TPM)",
+    "zh-CN": "更新模型限流配置（QPM/TPM）",
   },
   auth: "apiKey",
-  usageArgs: "--model <model> [--rpm <n>] [--tpm <n>] [--delete]",
+  usageArgs: "--model <model> [--rpm <n>] [--tpm <n>]",
   flags: {
     model: {
       type: "string",
@@ -34,26 +34,18 @@ export default defineCommand({
         "zh-CN": "每分钟最大 Token 数（TPM）",
       },
     },
-    delete: {
-      type: "switch",
-      description: {
-        "en-US": "Clear all custom rate limits for the model",
-        "zh-CN": "清除该模型的所有自定义限流配置",
-      },
-    },
   },
   exampleArgs: [
     "--model qwen-plus --rpm 60 --tpm 100000",
     "--model qwen3-max --tpm 500000",
-    "--model qwen-plus --delete",
     "--model qwen-plus --rpm 60 --output json",
   ],
   notes: [
     {
       "en-US":
-        "Fields you omit keep their current values (server-side OVERLAY merge); --delete clears all custom limits.",
+        'Fields you omit keep their current values (server-side OVERLAY merge). Clear all custom limits with the "quota delete" command instead.',
       "zh-CN":
-        "未指定的字段将保留当前值（服务端 OVERLAY 合并）；--delete 会清除所有自定义限流配置。",
+        "未指定的字段将保留当前值（服务端 OVERLAY 合并）。清除全部自定义限流配置请改用 “quota delete” 命令。",
     },
     {
       "en-US":
@@ -62,10 +54,8 @@ export default defineCommand({
     },
   ],
   validate: (flags) => {
-    if (flags.delete && (flags.rpm !== undefined || flags.tpm !== undefined))
-      return "--delete cannot be combined with --rpm/--tpm.";
-    if (!flags.delete && flags.rpm === undefined && flags.tpm === undefined)
-      return "one of --rpm / --tpm / --delete is required.";
+    if (flags.rpm === undefined && flags.tpm === undefined)
+      return "one of --rpm / --tpm is required.";
     if (flags.rpm !== undefined && flags.rpm < 0) return "--rpm must be a non-negative number.";
     if (flags.tpm !== undefined && flags.tpm < 0) return "--tpm must be a non-negative number.";
     return undefined;
@@ -76,17 +66,13 @@ export default defineCommand({
     const format = detectOutputFormat(settings.output);
 
     const entry: Record<string, unknown> = { model: modelName };
-    if (flags.delete) {
-      entry.operation_type = "DELETE";
-    } else {
-      if (flags.rpm !== undefined) {
-        entry.request_limit = flags.rpm;
-        entry.request_limit_period = MINUTE_SECONDS;
-      }
-      if (flags.tpm !== undefined) {
-        entry.usage_limit = flags.tpm;
-        entry.usage_limit_period = MINUTE_SECONDS;
-      }
+    if (flags.rpm !== undefined) {
+      entry.request_limit = flags.rpm;
+      entry.request_limit_period = MINUTE_SECONDS;
+    }
+    if (flags.tpm !== undefined) {
+      entry.usage_limit = flags.tpm;
+      entry.usage_limit_period = MINUTE_SECONDS;
     }
     const body = { models: [entry] };
 
@@ -106,11 +92,6 @@ export default defineCommand({
 
     if (format === "json") {
       emitResult({ model: modelName, ...result }, format);
-      return;
-    }
-
-    if (flags.delete) {
-      process.stdout.write(`Rate limits cleared for "${modelName}".\n`);
       return;
     }
     const parts: string[] = [];

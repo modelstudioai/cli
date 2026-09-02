@@ -6,13 +6,14 @@ import {
   isDashScopeE2EReady,
   makeE2eOutputDir,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "./helpers.ts";
 import { OMNI_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: omni", () => {
   test("omni --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(OMNI_ROUTES, ["omni", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(OMNI_ROUTES, ["omni", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/omni|--message|--audio|text-only/i);
   });

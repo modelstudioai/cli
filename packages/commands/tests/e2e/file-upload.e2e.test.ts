@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vite-plus/test";
 import { join } from "path";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e, e2eFixturesDir } from "./helpers.ts";
+import {
+  isDashScopeE2EReady,
+  parseStdoutJson,
+  runCommandHelp,
+  runCommandE2e,
+  e2eFixturesDir,
+} from "./helpers.ts";
 import { FILE_UPLOAD_ROUTES } from "./topic-routes.ts";
 
 /**
@@ -9,7 +15,7 @@ import { FILE_UPLOAD_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: file upload", () => {
   test("file upload --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(FILE_UPLOAD_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(FILE_UPLOAD_ROUTES, [
       "file",
       "upload",
       "--help",

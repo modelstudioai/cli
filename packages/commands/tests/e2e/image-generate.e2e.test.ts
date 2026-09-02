@@ -7,6 +7,7 @@ import {
   isDashScopeE2EReady,
   makeE2eOutputDir,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "./helpers.ts";
 import { IMAGE_ROUTES } from "./topic-routes.ts";
@@ -19,7 +20,11 @@ import { IMAGE_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: image generate", () => {
   test("image generate --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(IMAGE_ROUTES, ["image", "generate", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(IMAGE_ROUTES, [
+      "image",
+      "generate",
+      "--help",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/generate|--prompt|--model/i);
   });

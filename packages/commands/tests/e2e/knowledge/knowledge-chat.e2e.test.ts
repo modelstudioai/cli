@@ -3,6 +3,7 @@ import {
   isChatE2EReady,
   isMultimodalChatE2EReady,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "../helpers.ts";
 import { KNOWLEDGE_CHAT_ROUTES } from "../topic-routes.ts";
@@ -31,7 +32,7 @@ interface DryRunBody {
 
 describe("e2e: knowledge chat", () => {
   test("knowledge chat --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHAT_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(KNOWLEDGE_CHAT_ROUTES, [
       "knowledge",
       "chat",
       "--help",

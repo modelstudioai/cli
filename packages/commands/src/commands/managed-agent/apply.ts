@@ -34,13 +34,6 @@ const APPLY_FLAGS = {
       "zh-CN": "目标 Provider（默认：全部已配置项）",
     },
   },
-  yes: {
-    type: "switch",
-    description: {
-      "en-US": "Confirm and apply without an interactive prompt (required to mutate)",
-      "zh-CN": "无需交互提示直接确认并应用（执行变更时必填）",
-    },
-  },
   noRefresh: {
     type: "switch",
     description: {
@@ -64,7 +57,15 @@ export default defineCommand({
     "zh-CN": "应用规划的变更，创建、更新或删除 Agent 资源",
   },
   auth: "apiKey",
-  usageArgs: "[--file <path>] [--provider <name>] [--yes] [--concurrency <n>]",
+  risk: {
+    level: "high",
+    message: {
+      "en-US":
+        "This applies the current plan and may create, update, or delete remote managed Agent resources.",
+      "zh-CN": "该操作会应用当前计划，可能创建、更新或删除远端托管 Agent 资源。",
+    },
+  },
+  usageArgs: "[--file <path>] [--provider <name>] [--concurrency <n>]",
   flags: APPLY_FLAGS,
   exampleArgs: ["--yes", "--provider bailian --yes"],
   notes: CREDENTIALS_NOTE,
@@ -133,21 +134,9 @@ export default defineCommand({
       return;
     }
 
-    const creates = actionable.filter((action) => action.action === "create").length;
-    const updates = actionable.filter((action) => action.action === "update").length;
-    const deletes = planned.destructiveActions;
-
     for (const action of actionable) {
       const icon = action.action === "create" ? "+" : action.action === "update" ? "~" : "-";
       emitProgress(`  ${icon} ${formatResourceLabel(action.address)}`);
-    }
-
-    if (!flags.yes) {
-      throw new BailianError(
-        `Refusing to apply ${actionable.length} change(s) (${creates} create, ${updates} update, ${deletes.length} destroy) without confirmation.`,
-        ExitCode.USAGE,
-        "Review with `bl managed-agent plan`, then re-run with --yes to apply.",
-      );
     }
 
     const result = await withAgentErrors(() =>

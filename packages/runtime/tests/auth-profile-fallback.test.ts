@@ -12,6 +12,7 @@ import {
   resolveModelBaseUrl,
   writeConfigFile,
   type CommandPackManager,
+  type LocalizedText,
   type SourceFlags,
 } from "bailian-cli-core";
 import { authStage, type RunContext } from "../src/middleware.ts";
@@ -56,6 +57,8 @@ function makeContext(
     path,
     command,
     flags: {},
+    confirmed: false,
+    localize: (text: LocalizedText) => (typeof text === "string" ? text : text["en-US"]),
     settings,
     sources,
     configStore: makeConfigStore(sources.configName),

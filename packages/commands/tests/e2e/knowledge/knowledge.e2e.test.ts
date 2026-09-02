@@ -3,6 +3,7 @@ import {
   isDashScopeE2EReady,
   isKbAdminE2EReady,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "../helpers.ts";
 import { KNOWLEDGE_ROUTES } from "../topic-routes.ts";
@@ -28,7 +29,7 @@ interface DryRunBody {
 
 describe("e2e: knowledge retrieve", () => {
   test("knowledge retrieve --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(KNOWLEDGE_ROUTES, [
       "knowledge",
       "retrieve",
       "--help",

@@ -19,20 +19,25 @@ Index: [index.md](index.md)
 
 ### `bl dataset delete`
 
-| Field              | Value                              |
-| ------------------ | ---------------------------------- |
-| **Name**           | `dataset delete`                   |
-| **Description**    | Delete a dataset file by ID        |
-| **Authentication** | API Key                            |
-| **Usage**          | `bl dataset delete --file-id <id>` |
+| Field              | Value                                                                     |
+| ------------------ | ------------------------------------------------------------------------- |
+| **Name**           | `dataset delete`                                                          |
+| **Description**    | Delete a dataset file by ID                                               |
+| **Authentication** | API Key                                                                   |
+| **Usage**          | `bl dataset delete --file-id <id>`                                        |
+| **Risk**           | `high`                                                                    |
+| **Risk message**   | This permanently deletes the specified dataset file and cannot be undone. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
-| Flag               | Type   | Required | Description                |
-| ------------------ | ------ | -------- | -------------------------- |
-| `--file-id <id>`   | string | yes      | Dataset file ID (required) |
-| `--api-key <key>`  | string | no       | API key                    |
-| `--base-url <url>` | string | no       | API base URL               |
+| Flag               | Type   | Required | Description                      |
+| ------------------ | ------ | -------- | -------------------------------- |
+| `--file-id <id>`   | string | yes      | Dataset file ID (required)       |
+| `--yes`            | switch | no       | Confirm this high-risk operation |
+| `--api-key <key>`  | string | no       | API key                          |
+| `--base-url <url>` | string | no       | API base URL                     |
 
 #### Examples
 
@@ -42,6 +47,11 @@ bl dataset delete --file-id file-id-xxx
 
 ```bash
 bl dataset delete --file-id file-id-xxx --dry-run
+```
+
+```bash
+# Only after explicit user confirmation:
+bl dataset delete --file-id file-id-xxx --yes
 ```
 
 ### `bl dataset get`

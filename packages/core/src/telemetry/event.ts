@@ -6,6 +6,7 @@ export interface TrackingEvent {
   durationMs: number;
   success: boolean;
   errorMessage?: string;
+  exitCode?: number;
   httpStatus?: number;
   requestId?: string;
   cliVersion: string;
@@ -19,7 +20,7 @@ export function createTrackingEvent(opts: {
   command: string;
   durationMs: number;
   success: boolean;
-  error?: { message?: string; httpStatus?: number; requestId?: string };
+  error?: { message?: string; exitCode?: number; httpStatus?: number; requestId?: string };
   cliVersion: string;
   authMethod?: AuthRequirement;
   params?: Record<string, unknown>;
@@ -40,6 +41,7 @@ export function createTrackingEvent(opts: {
 
   if (!opts.success && opts.error) {
     if (opts.error.message) event.errorMessage = opts.error.message;
+    if (opts.error.exitCode !== undefined) event.exitCode = opts.error.exitCode;
     if (opts.error.httpStatus !== undefined) event.httpStatus = opts.error.httpStatus;
     if (opts.error.requestId) event.requestId = opts.error.requestId;
   }
