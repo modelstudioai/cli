@@ -30,10 +30,11 @@ description: >-
 
 API-oriented commands do not replace IaC. Agent / Environment / Skill / Vault / Deployment 的 create 命令仍通过
 `agents.yaml → scoped plan → scoped apply` 管理；查询命令和 Session、Event、File、Deployment 运行时动作直接调用 API。
-`session archive|delete`、`file delete`、`deployment run` 也需要先 `--dry-run`，确认后才传 `--yes`。
+`session archive|delete`、`file delete`、`deployment run|pause|unpause` 也需要先 `--dry-run`，确认后才传 `--yes`。
 
-`state rm`, `session delete`, and future `risk: high` commands follow the shared protocol: show the
-risk message and exact scope, then wait for explicit confirmation before re-running with `--yes`.
+`state rm`, `session archive|delete`, `file delete`, `deployment run|pause|unpause`, and future
+`risk: high` commands follow the shared protocol: show the risk message and exact scope, then wait
+for explicit confirmation before re-running with `--yes`.
 
 ## IaC lifecycle
 

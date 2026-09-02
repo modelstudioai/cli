@@ -477,12 +477,16 @@ bl managed-agent deployment list --status active --all --output json
 
 ### `bl managed-agent deployment pause`
 
-| Field              | Value                                                                             |
-| ------------------ | --------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent deployment pause`                                                  |
-| **Description**    | Pause a Managed Agent deployment                                                  |
-| **Authentication** | API Key                                                                           |
-| **Usage**          | `bl managed-agent deployment pause (--deployment <name> \| --deployment-id <id>)` |
+| Field              | Value                                                                                                |
+| ------------------ | ---------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent deployment pause`                                                                     |
+| **Description**    | Pause a Managed Agent deployment                                                                     |
+| **Authentication** | API Key                                                                                              |
+| **Usage**          | `bl managed-agent deployment pause (--deployment <name> \| --deployment-id <id>)`                    |
+| **Risk**           | `high`                                                                                               |
+| **Risk message**   | This pauses the specified Managed Agent deployment and stops its scheduled executions until resumed. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -492,6 +496,7 @@ bl managed-agent deployment list --status active --all --output json
 | `--provider <name>`    | string | no       | Target provider                              |
 | `--deployment <name>`  | string | no       | Logical deployment name in agents.yaml/state |
 | `--deployment-id <id>` | string | no       | Direct deployment ID                         |
+| `--yes`                | switch | no       | Confirm this high-risk operation             |
 | `--api-key <key>`      | string | no       | API key                                      |
 | `--base-url <url>`     | string | no       | API base URL                                 |
 
@@ -508,17 +513,22 @@ bl managed-agent deployment pause --deployment daily-report --dry-run
 ```
 
 ```bash
-bl managed-agent deployment pause --deployment-id dep_abc
+# Only after explicit user confirmation:
+bl managed-agent deployment pause --deployment-id dep_abc --yes
 ```
 
 ### `bl managed-agent deployment run`
 
-| Field              | Value                                                                                 |
-| ------------------ | ------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent deployment run`                                                        |
-| **Description**    | Run a Managed Agent deployment now                                                    |
-| **Authentication** | API Key                                                                               |
-| **Usage**          | `bl managed-agent deployment run (--deployment <name> \| --deployment-id <id>) --yes` |
+| Field              | Value                                                                                                                       |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent deployment run`                                                                                              |
+| **Description**    | Run a Managed Agent deployment now                                                                                          |
+| **Authentication** | API Key                                                                                                                     |
+| **Usage**          | `bl managed-agent deployment run (--deployment <name> \| --deployment-id <id>)`                                             |
+| **Risk**           | `high`                                                                                                                      |
+| **Risk message**   | This immediately starts a run for the specified Managed Agent deployment and may incur usage or trigger configured actions. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -528,7 +538,7 @@ bl managed-agent deployment pause --deployment-id dep_abc
 | `--provider <name>`    | string | no       | Target provider                              |
 | `--deployment <name>`  | string | no       | Logical deployment name in agents.yaml/state |
 | `--deployment-id <id>` | string | no       | Direct deployment ID                         |
-| `--yes`                | switch | no       | Confirm deployment run                       |
+| `--yes`                | switch | no       | Confirm this high-risk operation             |
 | `--api-key <key>`      | string | no       | API key                                      |
 | `--base-url <url>`     | string | no       | API base URL                                 |
 
@@ -545,6 +555,7 @@ bl managed-agent deployment run --deployment daily-report --dry-run
 ```
 
 ```bash
+# Only after explicit user confirmation:
 bl managed-agent deployment run --deployment-id dep_abc --yes
 ```
 
@@ -663,12 +674,16 @@ bl managed-agent deployment search --query nightly --all --output json
 
 ### `bl managed-agent deployment unpause`
 
-| Field              | Value                                                                               |
-| ------------------ | ----------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent deployment unpause`                                                  |
-| **Description**    | Unpause a Managed Agent deployment                                                  |
-| **Authentication** | API Key                                                                             |
-| **Usage**          | `bl managed-agent deployment unpause (--deployment <name> \| --deployment-id <id>)` |
+| Field              | Value                                                                                                       |
+| ------------------ | ----------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent deployment unpause`                                                                          |
+| **Description**    | Unpause a Managed Agent deployment                                                                          |
+| **Authentication** | API Key                                                                                                     |
+| **Usage**          | `bl managed-agent deployment unpause (--deployment <name> \| --deployment-id <id>)`                         |
+| **Risk**           | `high`                                                                                                      |
+| **Risk message**   | This resumes the specified Managed Agent deployment and may restart scheduled executions and related usage. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -678,6 +693,7 @@ bl managed-agent deployment search --query nightly --all --output json
 | `--provider <name>`    | string | no       | Target provider                              |
 | `--deployment <name>`  | string | no       | Logical deployment name in agents.yaml/state |
 | `--deployment-id <id>` | string | no       | Direct deployment ID                         |
+| `--yes`                | switch | no       | Confirm this high-risk operation             |
 | `--api-key <key>`      | string | no       | API key                                      |
 | `--base-url <url>`     | string | no       | API base URL                                 |
 
@@ -694,7 +710,8 @@ bl managed-agent deployment unpause --deployment daily-report --dry-run
 ```
 
 ```bash
-bl managed-agent deployment unpause --deployment-id dep_abc
+# Only after explicit user confirmation:
+bl managed-agent deployment unpause --deployment-id dep_abc --yes
 ```
 
 ### `bl managed-agent destroy`
@@ -893,12 +910,16 @@ bl managed-agent environment search --query production --page-limit 20 --output 
 
 ### `bl managed-agent file delete`
 
-| Field              | Value                                               |
-| ------------------ | --------------------------------------------------- |
-| **Name**           | `managed-agent file delete`                         |
-| **Description**    | Delete a Managed Agent file                         |
-| **Authentication** | API Key                                             |
-| **Usage**          | `bl managed-agent file delete --file-id <id> --yes` |
+| Field              | Value                                                             |
+| ------------------ | ----------------------------------------------------------------- |
+| **Name**           | `managed-agent file delete`                                       |
+| **Description**    | Delete a Managed Agent file                                       |
+| **Authentication** | API Key                                                           |
+| **Usage**          | `bl managed-agent file delete --file-id <id>`                     |
+| **Risk**           | `high`                                                            |
+| **Risk message**   | This permanently deletes the specified remote Managed Agent file. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -907,7 +928,7 @@ bl managed-agent environment search --query production --page-limit 20 --output 
 | `--file <path>`     | string | no       | Config file path (default: agents.yaml) |
 | `--provider <name>` | string | no       | Target provider                         |
 | `--file-id <id>`    | string | yes      | Remote file ID                          |
-| `--yes`             | switch | no       | Confirm permanent file deletion         |
+| `--yes`             | switch | no       | Confirm this high-risk operation        |
 | `--api-key <key>`   | string | no       | API key                                 |
 | `--base-url <url>`  | string | no       | API base URL                            |
 
@@ -924,6 +945,7 @@ bl managed-agent file delete --file-id file_abc --dry-run
 ```
 
 ```bash
+# Only after explicit user confirmation:
 bl managed-agent file delete --file-id file_abc --yes
 ```
 
@@ -1180,12 +1202,16 @@ bl managed-agent plan --no-refresh
 
 ### `bl managed-agent session archive`
 
-| Field              | Value                                                      |
-| ------------------ | ---------------------------------------------------------- |
-| **Name**           | `managed-agent session archive`                            |
-| **Description**    | Archive a Managed Agent session                            |
-| **Authentication** | API Key                                                    |
-| **Usage**          | `bl managed-agent session archive --session-id <id> --yes` |
+| Field              | Value                                                     |
+| ------------------ | --------------------------------------------------------- |
+| **Name**           | `managed-agent session archive`                           |
+| **Description**    | Archive a Managed Agent session                           |
+| **Authentication** | API Key                                                   |
+| **Usage**          | `bl managed-agent session archive --session-id <id>`      |
+| **Risk**           | `high`                                                    |
+| **Risk message**   | This archives the specified remote Managed Agent Session. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -1194,7 +1220,7 @@ bl managed-agent plan --no-refresh
 | `--file <path>`     | string | no       | Config file path (default: agents.yaml) |
 | `--provider <name>` | string | no       | Target provider                         |
 | `--session-id <id>` | string | yes      | Session ID                              |
-| `--yes`             | switch | no       | Confirm session archive                 |
+| `--yes`             | switch | no       | Confirm this high-risk operation        |
 | `--api-key <key>`   | string | no       | API key                                 |
 | `--base-url <url>`  | string | no       | API base URL                            |
 
@@ -1211,6 +1237,7 @@ bl managed-agent session archive --session-id sess_abc --dry-run
 ```
 
 ```bash
+# Only after explicit user confirmation:
 bl managed-agent session archive --session-id sess_abc --yes
 ```
 

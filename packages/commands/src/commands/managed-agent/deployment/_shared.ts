@@ -96,14 +96,6 @@ export const DEPLOYMENT_ACTION_TARGET_FLAGS = {
   },
 } as const;
 
-export const DEPLOYMENT_RUN_ACTION_FLAGS = {
-  ...DEPLOYMENT_ACTION_TARGET_FLAGS,
-  yes: {
-    type: "switch",
-    description: { "en-US": "Confirm deployment run", "zh-CN": "确认运行 Deployment" },
-  },
-} as const;
-
 export function validateDeploymentActionTarget(flags: {
   deployment?: string;
   deploymentId?: string;

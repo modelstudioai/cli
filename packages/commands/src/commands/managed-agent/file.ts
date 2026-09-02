@@ -7,7 +7,7 @@ import {
   listRemoteFiles,
   uploadFile,
 } from "@openagentpack/sdk";
-import { BailianError, defineCommand, detectOutputFormat, ExitCode } from "bailian-cli-core";
+import { defineCommand, detectOutputFormat } from "bailian-cli-core";
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import {
   API_TARGET_FLAGS,
@@ -90,10 +90,6 @@ const DOWNLOAD_FLAGS = {
 } as const;
 const DELETE_FLAGS = {
   ...GET_FLAGS,
-  yes: {
-    type: "switch",
-    description: { "en-US": "Confirm permanent file deletion", "zh-CN": "确认永久删除文件" },
-  },
 } as const;
 
 function fileRows(files: ProviderFileInfo[]): string[][] {
@@ -298,7 +294,14 @@ export const managedAgentFileDownload = defineCommand({
 export const managedAgentFileDelete = defineCommand({
   description: { "en-US": "Delete a Managed Agent file", "zh-CN": "删除托管 Agent 文件" },
   auth: "apiKey",
-  usageArgs: "--file-id <id> --yes",
+  risk: {
+    level: "high",
+    message: {
+      "en-US": "This permanently deletes the specified remote Managed Agent file.",
+      "zh-CN": "该操作会永久删除指定的远端托管 Agent 文件。",
+    },
+  },
+  usageArgs: "--file-id <id>",
   flags: DELETE_FLAGS,
   exampleArgs: ["--file-id file_abc --dry-run", "--file-id file_abc --yes"],
   notes: CREDENTIALS_NOTE,
@@ -307,13 +310,6 @@ export const managedAgentFileDelete = defineCommand({
     if (ctx.settings.dryRun) {
       emitResult({ would_delete_file: ctx.flags.fileId }, format);
       return;
-    }
-    if (!ctx.flags.yes) {
-      throw new BailianError(
-        `Refusing to delete file ${ctx.flags.fileId} without confirmation.`,
-        ExitCode.USAGE,
-        "Re-run with --yes or preview with --dry-run.",
-      );
     }
     await withAgentErrors(() =>
       withStdoutProtected(async () => {

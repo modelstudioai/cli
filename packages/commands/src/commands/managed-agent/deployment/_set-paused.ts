@@ -16,9 +16,24 @@ export function createSetDeploymentPausedCommand(paused: boolean) {
       ? { "en-US": "Pause a Managed Agent deployment", "zh-CN": "暂停托管 Agent Deployment" }
       : { "en-US": "Unpause a Managed Agent deployment", "zh-CN": "恢复托管 Agent Deployment" },
     auth: "apiKey",
+    risk: {
+      level: "high",
+      message: paused
+        ? {
+            "en-US":
+              "This pauses the specified Managed Agent deployment and stops its scheduled executions until resumed.",
+            "zh-CN": "该操作会暂停指定的托管 Agent Deployment，并停止其定时执行直至恢复。",
+          }
+        : {
+            "en-US":
+              "This resumes the specified Managed Agent deployment and may restart scheduled executions and related usage.",
+            "zh-CN":
+              "该操作会恢复指定的托管 Agent Deployment，可能重新开始定时执行并产生相关用量。",
+          },
+    },
     usageArgs: "(--deployment <name> | --deployment-id <id>)",
     flags: DEPLOYMENT_ACTION_TARGET_FLAGS,
-    exampleArgs: [`--deployment daily-report --dry-run`, `--deployment-id dep_abc`],
+    exampleArgs: [`--deployment daily-report --dry-run`, `--deployment-id dep_abc --yes`],
     notes: CREDENTIALS_NOTE,
     validate: validateDeploymentActionTarget,
     async run(ctx) {

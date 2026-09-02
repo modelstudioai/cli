@@ -1046,6 +1046,11 @@ vaults:
   test.each([
     ["state rm", ["state", "rm"]],
     ["session delete", ["session", "delete"]],
+    ["session archive", ["session", "archive"]],
+    ["file delete", ["file", "delete"]],
+    ["deployment run", ["deployment", "run"]],
+    ["deployment pause", ["deployment", "pause"]],
+    ["deployment unpause", ["deployment", "unpause"]],
   ])("managed-agent %s --help 展示 runtime 注入的 --yes", async (_commandName, commandPath) => {
     const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
@@ -1062,6 +1067,11 @@ vaults:
       "session delete",
       ["session", "delete", "--session-id", "sess_e2e", "--api-key", "e2e-dummy-key"],
     ],
+    ["session archive", ["session", "archive", "--session-id", "sess_e2e"]],
+    ["file delete", ["file", "delete", "--file-id", "file_e2e"]],
+    ["deployment run", ["deployment", "run", "--deployment-id", "dep_e2e"]],
+    ["deployment pause", ["deployment", "pause", "--deployment-id", "dep_e2e"]],
+    ["deployment unpause", ["deployment", "unpause", "--deployment-id", "dep_e2e"]],
   ])("managed-agent %s 无 --yes 返回确认请求 (7)", async (_commandName, commandArgs) => {
     const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",

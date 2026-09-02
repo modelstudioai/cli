@@ -90,10 +90,6 @@ const UPDATE_FLAGS = {
 const ARCHIVE_FLAGS = {
   ...API_TARGET_FLAGS,
   ...SESSION_ID_FLAG,
-  yes: {
-    type: "switch",
-    description: { "en-US": "Confirm session archive", "zh-CN": "确认归档 Session" },
-  },
 } as const;
 
 function sessionRows(sessions: ProviderSessionInfo[]): string[][] {
@@ -217,7 +213,14 @@ export const managedAgentSessionUpdate = defineCommand({
 export const managedAgentSessionArchive = defineCommand({
   description: { "en-US": "Archive a Managed Agent session", "zh-CN": "归档托管 Agent Session" },
   auth: "apiKey",
-  usageArgs: "--session-id <id> --yes",
+  risk: {
+    level: "high",
+    message: {
+      "en-US": "This archives the specified remote Managed Agent Session.",
+      "zh-CN": "该操作会归档指定的远端托管 Agent Session。",
+    },
+  },
+  usageArgs: "--session-id <id>",
   flags: ARCHIVE_FLAGS,
   exampleArgs: ["--session-id sess_abc --dry-run", "--session-id sess_abc --yes"],
   notes: CREDENTIALS_NOTE,
@@ -226,13 +229,6 @@ export const managedAgentSessionArchive = defineCommand({
     if (ctx.settings.dryRun) {
       emitResult({ would_archive_session: ctx.flags.sessionId }, format);
       return;
-    }
-    if (!ctx.flags.yes) {
-      throw new BailianError(
-        `Refusing to archive session ${ctx.flags.sessionId} without confirmation.`,
-        ExitCode.USAGE,
-        "Re-run with --yes or preview with --dry-run.",
-      );
     }
     const session = await withAgentErrors(() =>
       withStdoutProtected(async () => {
