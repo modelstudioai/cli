@@ -30,7 +30,7 @@
 | 命令声明          | 凭证 / 请求域                                       | 主要请求出口                                                                          | 后端埋点标识                                  | 前端埋点标识（AEM）                              |
 | ----------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------ |
 | `auth: "apiKey"`  | API Key；DashScope / OpenAI-compatible 模型域       | `Client.request/requestJson`、`McpClient`、Managed Agent instrumented fetch、上传策略 | 有：`User-Agent`、`x-dashscope-source-config` | 有：`pid=bailian-cli-node`、`authMethod=apiKey`  |
-| `auth: "console"` | Console access token；Bailian Console Gateway       | `callConsoleGateway()` → `/cli/api.json`                                              | 无                                            | 有：`pid=bailian-cli-node`、`authMethod=console` |
+| `auth: "console"` | Console access token；Bailian Console Gateway       | `callConsoleGateway()` → `/cli/api.json`                                              | 有：Console Gateway 后端直接标识              | 有：`pid=bailian-cli-node`、`authMethod=console` |
 | `auth: "openapi"` | AccessKey ID/Secret，可选 STS token；阿里云 OpenAPI | `Client.openApiJson()`                                                                | 有：`x-dashscope-source-config`               | 有：`pid=bailian-cli-node`、`authMethod=openapi` |
 | `auth: "none"`    | 无凭证域                                            | 本地逻辑或命令自行管理的登录/配置流程                                                 | 无                                            | 有：`pid=bailian-cli-node`、`authMethod=none`    |
 
@@ -41,6 +41,7 @@
 
 - Managed Agent 的 `User-Agent` 对所有 SDK 请求注入；`x-dashscope-source-config` 仅对阿里云 host 注入
 - DashScope 上传策略 `getPolicy` 只有 `x-dashscope-source-config`，没有显式 CLI `User-Agent`
+- Console Gateway 用户数据由后端直接区分，不依赖 `x-dashscope-source-config`；AEM 的 `authMethod=console` 是独立的命令侧统计
 - OpenAPI 的 ACS 签名头，以及 Console Gateway 的 `product`、`action`、`api` 是鉴权或路由字段，不计为埋点标识
 
 ### 2. 后端渠道参数
