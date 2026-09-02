@@ -1,5 +1,6 @@
 import { dirname } from "node:path";
 import {
+  bootstrapRuntimeCredentialsSync,
   createVaultCredentialWithStateBackend,
   planVaultCredentialCreateWithStateBackend,
   type ResolvedProjectConfig,
@@ -69,14 +70,6 @@ const FLAGS = {
       "zh-CN": "Metadata 条目（可重复）",
     },
   },
-  provider: {
-    type: "string",
-    valueHint: "<name>",
-    description: {
-      "en-US": "Target provider; inferred when unambiguous",
-      "zh-CN": "目标 Provider；可唯一确定时自动推断",
-    },
-  },
   file: {
     type: "string",
     valueHint: "<path>",
@@ -101,7 +94,7 @@ export default defineCommand({
   },
   auth: "apiKey",
   usageArgs:
-    "--vault <yaml-key> --name <name> --secret-name <name> --secret-env <env-name> [--metadata <key=value>...] [--provider <name>] [--file <path>] [--yes]",
+    "--vault <yaml-key> --name <name> --secret-name <name> --secret-env <env-name> [--metadata <key=value>...] [--file <path>] [--yes]",
   flags: FLAGS,
   exampleArgs: [
     "--vault production --name api-token --secret-name API_TOKEN --secret-env PROD_API_TOKEN",
@@ -134,10 +127,12 @@ export default defineCommand({
   },
   async run(ctx) {
     const format = detectOutputFormat(ctx.settings.output);
-    const project = await loadScopedCreateProject(
-      ctx,
-      ctx.flags.file ?? "agents.yaml",
-      ctx.flags.provider,
+    bootstrapRuntimeCredentialsSync();
+    const secretValue = process.env[ctx.flags.secretEnv];
+    const project = await loadScopedCreateProject(ctx, ctx.flags.file ?? "agents.yaml").finally(
+      () => {
+        delete process.env[ctx.flags.secretEnv];
+      },
     );
     const vault = project.config.vaults?.[ctx.flags.vault];
     if (!vault) {
@@ -146,7 +141,6 @@ export default defineCommand({
         ExitCode.USAGE,
       );
     }
-    const secretValue = process.env[ctx.flags.secretEnv];
     if (ctx.flags.yes && !ctx.settings.dryRun && !secretValue) {
       throw new BailianError(
         `Environment variable '${ctx.flags.secretEnv}' is not set or is empty.`,

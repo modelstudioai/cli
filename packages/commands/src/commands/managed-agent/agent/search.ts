@@ -27,7 +27,7 @@ export default defineCommand({
         return searchCursorPages(
           async (page) => {
             const response = await listRemoteAgents(runtime, {
-              provider: ctx.flags.provider,
+              provider: "bailian",
               limit: ctx.flags.limit ?? 100,
               page,
               include_archived: ctx.flags.includeArchived,

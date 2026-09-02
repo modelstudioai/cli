@@ -97,14 +97,6 @@ const FLAGS = {
       "zh-CN": "Metadata 条目（可重复）",
     },
   },
-  provider: {
-    type: "string",
-    valueHint: "<name>",
-    description: {
-      "en-US": "Target provider; inferred when unambiguous",
-      "zh-CN": "目标 Provider；可唯一确定时自动推断",
-    },
-  },
   file: {
     type: "string",
     valueHint: "<path>",
@@ -129,7 +121,7 @@ export default defineCommand({
   },
   auth: "apiKey",
   usageArgs:
-    "--name <name> --agent <yaml-key> (--message <text>... | --event <json|@path>...) [--agent-version <number>] [--environment <yaml-key>] [--vault <yaml-key>...] [--resource <json|@path>...] [--schedule <cron> --timezone <timezone>] [--description <text>] [--metadata <key=value>...] [--provider <name>] [--file <path>] [--yes]",
+    "--name <name> --agent <yaml-key> (--message <text>... | --event <json|@path>...) [--agent-version <number>] [--environment <yaml-key>] [--vault <yaml-key>...] [--resource <json|@path>...] [--schedule <cron> --timezone <timezone>] [--description <text>] [--metadata <key=value>...] [--file <path>] [--yes]",
   flags: FLAGS,
   exampleArgs: [
     {
@@ -138,9 +130,9 @@ export default defineCommand({
     },
     {
       "en-US":
-        '--name Daily --agent assistant --event \'{"type":"system.message","content":"Be concise"}\' --message "Run" --yes',
+        '--name Daily --agent assistant --event \'{"type":"system.message","content":"Be concise"}\' --yes',
       "zh-CN":
-        '--name Daily --agent assistant --event \'{"type":"system.message","content":"保持简洁"}\' --message "执行" --yes',
+        '--name Daily --agent assistant --event \'{"type":"system.message","content":"保持简洁"}\' --yes',
     },
   ],
   notes: [
@@ -152,10 +144,18 @@ export default defineCommand({
       "zh-CN":
         "Initial Events 必须包含 1–50 条 user.message/system.message；本期 --resource 仅接受 File Resource。",
     },
+    {
+      "en-US":
+        "Use either repeatable --message values or repeatable --event values; the two input forms cannot be mixed.",
+      "zh-CN": "重复使用 --message 或重复使用 --event；两种输入形式不能混用。",
+    },
   ],
   validate: (flags) => {
     if (!flags.name.trim()) return "--name must not be empty.";
     if (!flags.agent.trim()) return "--agent must not be empty.";
+    if (flags.message?.length && flags.event?.length) {
+      return "--message and --event cannot be used together.";
+    }
     if (!flags.message?.length && !flags.event?.length)
       return "Pass at least one --message or --event.";
     if (Boolean(flags.schedule) !== Boolean(flags.timezone)) {
@@ -170,11 +170,7 @@ export default defineCommand({
     return undefined;
   },
   async run(ctx) {
-    const project = await loadScopedCreateProject(
-      ctx,
-      ctx.flags.file ?? "agents.yaml",
-      ctx.flags.provider,
-    );
+    const project = await loadScopedCreateProject(ctx, ctx.flags.file ?? "agents.yaml");
     const initialEvents = [
       ...(ctx.flags.message ?? []).map((content) => ({ type: "user.message" as const, content })),
       ...validateEvents(await parseJsonInputs(ctx.flags.event, "event")),

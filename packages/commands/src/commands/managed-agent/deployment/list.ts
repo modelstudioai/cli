@@ -23,7 +23,7 @@ export default defineCommand({
         return fetchAllPages(
           async (page) => {
             const response = await listRemoteDeployments(runtime, {
-              provider: ctx.flags.provider,
+              provider: "bailian",
               agent_id: ctx.flags.agentId,
               status: ctx.flags.status,
               include_archived: ctx.flags.includeArchived,

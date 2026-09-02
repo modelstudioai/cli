@@ -127,19 +127,11 @@ export function deploymentRunRows(runs: DeploymentRunInfo[]): string[][] {
 
 export async function resolveDeploymentTarget(
   runtime: ProjectRuntimeContext,
-  options: { provider?: string; deployment?: string; deploymentId?: string },
+  options: { deployment?: string; deploymentId?: string },
 ): Promise<string> {
   if (options.deploymentId) return options.deploymentId;
-  const configuredProviders = Array.from(runtime.providers.keys());
-  const provider =
-    options.provider ??
-    (configuredProviders.length === 1
-      ? configuredProviders[0]
-      : (() => {
-          throw new UserError("Multiple providers configured. Use --provider to specify one.");
-        })());
   const state = runtime.state.getResource({
-    provider,
+    provider: "bailian",
     type: "deployment",
     name: options.deployment!,
   });

@@ -26,7 +26,7 @@ export default defineCommand({
         return fetchAllPages(
           async (page) => {
             const response = await listRemoteDeploymentRuns(runtime, ctx.flags.deploymentId, {
-              provider: ctx.flags.provider,
+              provider: "bailian",
               limit: ctx.flags.limit,
               page,
             });

@@ -8,11 +8,7 @@ import {
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { executePlannedProject, planProjectContext } from "@openagentpack/sdk";
 import { formatResourceLabel } from "./_engine/address-utils.ts";
-import {
-  assertProviderConfigured,
-  buildAgentRuntime,
-  CREDENTIALS_NOTE,
-} from "./_engine/config-loader.ts";
+import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { formatAgentDiagnosticFailure, withAgentErrors } from "./_engine/errors.ts";
 import { renderAgentFeedback } from "./_engine/feedback.ts";
@@ -24,14 +20,6 @@ const APPLY_FLAGS = {
     description: {
       "en-US": "Config file path (default: agents.yaml)",
       "zh-CN": "配置文件路径（默认：agents.yaml）",
-    },
-  },
-  provider: {
-    type: "string",
-    valueHint: "<name>",
-    description: {
-      "en-US": "Target provider (default: all configured)",
-      "zh-CN": "目标 Provider（默认：全部已配置项）",
     },
   },
   noRefresh: {
@@ -65,9 +53,9 @@ export default defineCommand({
       "zh-CN": "该操作会应用当前计划，可能创建、更新或删除远端托管 Agent 资源。",
     },
   },
-  usageArgs: "[--file <path>] [--provider <name>] [--concurrency <n>]",
+  usageArgs: "[--file <path>] [--concurrency <n>]",
   flags: APPLY_FLAGS,
-  exampleArgs: ["--yes", "--provider bailian --yes"],
+  exampleArgs: ["--yes"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
@@ -78,7 +66,7 @@ export default defineCommand({
       emitResult(
         {
           would_apply: {
-            provider: flags.provider ?? "all",
+            provider: "bailian",
             refresh: !flags.noRefresh,
             concurrency: flags.concurrency,
           },
@@ -93,9 +81,8 @@ export default defineCommand({
     const planned = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, file);
-        assertProviderConfigured(runtime, flags.provider);
         return planProjectContext(runtime, {
-          provider: flags.provider,
+          provider: "bailian",
           refresh: !flags.noRefresh,
           quiet: true,
           onFeedback: renderAgentFeedback,

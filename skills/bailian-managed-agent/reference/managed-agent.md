@@ -74,12 +74,12 @@ Index: [index.md](index.md)
 
 ### `bl managed-agent agent create`
 
-| Field              | Value                                                                                                                                                                                                                                               |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent agent create`                                                                                                                                                                                                                        |
-| **Description**    | Declare and create one Managed Agent through an isolated YAML apply                                                                                                                                                                                 |
-| **Authentication** | API Key                                                                                                                                                                                                                                             |
-| **Usage**          | `bl managed-agent agent create --name <name> --model <model> --instructions <text\|path> [--description <text>] [--provider <name>] [--skill <id>...] [--type custom\|official] [--skill-dir <path>...] [--tool <name>...] [--file <path>] [--yes]` |
+| Field              | Value                                                                                                                                                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent agent create`                                                                                                                                                                                                    |
+| **Description**    | Declare and create one Managed Agent through an isolated YAML apply                                                                                                                                                             |
+| **Authentication** | API Key                                                                                                                                                                                                                         |
+| **Usage**          | `bl managed-agent agent create --name <name> --model <model> --instructions <text\|path> [--description <text>] [--skill <id>...] [--type custom\|official] [--skill-dir <path>...] [--tool <name>...] [--file <path>] [--yes]` |
 
 #### Flags
 
@@ -89,7 +89,6 @@ Index: [index.md](index.md)
 | `--model <model>`             | string | yes      | Model ID                                                                                                |
 | `--instructions <text\|path>` | string | yes      | Inline instructions or a ./, ../, or absolute file path                                                 |
 | `--description <text>`        | string | no       | Agent description                                                                                       |
-| `--provider <name>`           | string | no       | Target provider; inferred when the config has one effective provider                                    |
 | `--skill <id>`                | array  | no       | Existing remote Skill ID (repeatable)                                                                   |
 | `--skill-dir <path>`          | array  | no       | Local Skill directory or ZIP to declare, upload, and attach through the same scoped create (repeatable) |
 | `--type <custom\|official>`   | string | no       | Type applied to every --skill value (default: custom)                                                   |
@@ -101,8 +100,8 @@ Index: [index.md](index.md)
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Without --yes, previews the generated YAML key and scoped plan. --dry-run stays offline. Unrelated resources are not refreshed or drift-checked.
 - --skill writes an external Skill reference directly into the Agent declaration. --type defaults to custom; use --type official for platform Skills. These Skills are not managed through the top-level skills map.
@@ -140,7 +139,6 @@ bl managed-agent agent create --name reviewer --model qwen3.8-max --instructions
 | Flag                  | Type   | Required | Description                             |
 | --------------------- | ------ | -------- | --------------------------------------- |
 | `--file <path>`       | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>`   | string | no       | Target provider                         |
 | `--agent-id <id>`     | string | yes      | Agent ID                                |
 | `--agent-version <n>` | number | no       | Specific agent version                  |
 | `--api-key <key>`     | string | no       | API key                                 |
@@ -148,8 +146,8 @@ bl managed-agent agent create --name reviewer --model qwen3.8-max --instructions
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -176,7 +174,6 @@ bl managed-agent agent get --agent-id agent_abc --agent-version 3 --output json
 | Flag                 | Type   | Required | Description                                       |
 | -------------------- | ------ | -------- | ------------------------------------------------- |
 | `--file <path>`      | string | no       | Config file path (default: agents.yaml)           |
-| `--provider <name>`  | string | no       | Target provider                                   |
 | `--limit <n>`        | number | no       | Page size (1-100)                                 |
 | `--page <cursor>`    | string | no       | Opaque page cursor returned by a previous request |
 | `--all`              | switch | no       | Fetch all pages by following opaque cursors       |
@@ -186,8 +183,8 @@ bl managed-agent agent get --agent-id agent_abc --agent-version 3 --output json
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -218,7 +215,6 @@ bl managed-agent agent list --all --include-archived --output json
 | Flag                 | Type   | Required | Description                                                   |
 | -------------------- | ------ | -------- | ------------------------------------------------------------- |
 | `--file <path>`      | string | no       | Config file path (default: agents.yaml)                       |
-| `--provider <name>`  | string | no       | Target provider                                               |
 | `--limit <n>`        | number | no       | Page size (1-100)                                             |
 | `--query <text>`     | string | yes      | Case-insensitive text to find in IDs, names, and descriptions |
 | `--page-limit <n>`   | number | no       | Maximum pages to scan for client-side search (default: 10)    |
@@ -228,8 +224,8 @@ bl managed-agent agent list --all --include-archived --output json
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -253,21 +249,20 @@ bl managed-agent agent search --query code --page-limit 20 --output json
 
 #### Flags
 
-| Flag                | Type   | Required | Description                                       |
-| ------------------- | ------ | -------- | ------------------------------------------------- |
-| `--file <path>`     | string | no       | Config file path (default: agents.yaml)           |
-| `--provider <name>` | string | no       | Target provider                                   |
-| `--limit <n>`       | number | no       | Page size (1-100)                                 |
-| `--page <cursor>`   | string | no       | Opaque page cursor returned by a previous request |
-| `--all`             | switch | no       | Fetch all pages by following opaque cursors       |
-| `--agent-id <id>`   | string | yes      | Agent ID                                          |
-| `--api-key <key>`   | string | no       | API key                                           |
-| `--base-url <url>`  | string | no       | API base URL                                      |
+| Flag               | Type   | Required | Description                                       |
+| ------------------ | ------ | -------- | ------------------------------------------------- |
+| `--file <path>`    | string | no       | Config file path (default: agents.yaml)           |
+| `--limit <n>`      | number | no       | Page size (1-100)                                 |
+| `--page <cursor>`  | string | no       | Opaque page cursor returned by a previous request |
+| `--all`            | switch | no       | Fetch all pages by following opaque cursors       |
+| `--agent-id <id>`  | string | yes      | Agent ID                                          |
+| `--api-key <key>`  | string | no       | API key                                           |
+| `--base-url <url>` | string | no       | API base URL                                      |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -287,7 +282,7 @@ bl managed-agent agent versions --agent-id agent_abc --all --output json
 | **Name**           | `managed-agent apply`                                                                           |
 | **Description**    | Apply planned changes to create/update/delete agent resources                                   |
 | **Authentication** | API Key                                                                                         |
-| **Usage**          | `bl managed-agent apply [--file <path>] [--provider <name>] [--concurrency <n>]`                |
+| **Usage**          | `bl managed-agent apply [--file <path>] [--concurrency <n>]`                                    |
 | **Risk**           | `high`                                                                                          |
 | **Risk message**   | This applies the current plan and may create, update, or delete remote managed Agent resources. |
 
@@ -298,7 +293,6 @@ bl managed-agent agent versions --agent-id agent_abc --all --output json
 | Flag                | Type   | Required | Description                                                        |
 | ------------------- | ------ | -------- | ------------------------------------------------------------------ |
 | `--file <path>`     | string | no       | Config file path (default: agents.yaml)                            |
-| `--provider <name>` | string | no       | Target provider (default: all configured)                          |
 | `--no-refresh`      | switch | no       | Skip refreshing state from remote before planning                  |
 | `--concurrency <n>` | number | no       | Max independent resources to apply in parallel (default 6, max 10) |
 | `--yes`             | switch | no       | Confirm this high-risk operation                                   |
@@ -307,8 +301,8 @@ bl managed-agent agent versions --agent-id agent_abc --all --output json
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -318,19 +312,14 @@ bl managed-agent agent versions --agent-id agent_abc --all --output json
 bl managed-agent apply --yes
 ```
 
-```bash
-# Only after explicit user confirmation:
-bl managed-agent apply --provider bailian --yes
-```
-
 ### `bl managed-agent deployment create`
 
-| Field              | Value                                                                                                                                                                                                                                                                                                                                                                        |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent deployment create`                                                                                                                                                                                                                                                                                                                                            |
-| **Description**    | Declare and create one Managed Agent Deployment through a scoped YAML apply                                                                                                                                                                                                                                                                                                  |
-| **Authentication** | API Key                                                                                                                                                                                                                                                                                                                                                                      |
-| **Usage**          | `bl managed-agent deployment create --name <name> --agent <yaml-key> (--message <text>... \| --event <json\|@path>...) [--agent-version <number>] [--environment <yaml-key>] [--vault <yaml-key>...] [--resource <json\|@path>...] [--schedule <cron> --timezone <timezone>] [--description <text>] [--metadata <key=value>...] [--provider <name>] [--file <path>] [--yes]` |
+| Field              | Value                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent deployment create`                                                                                                                                                                                                                                                                                                                        |
+| **Description**    | Declare and create one Managed Agent Deployment through a scoped YAML apply                                                                                                                                                                                                                                                                              |
+| **Authentication** | API Key                                                                                                                                                                                                                                                                                                                                                  |
+| **Usage**          | `bl managed-agent deployment create --name <name> --agent <yaml-key> (--message <text>... \| --event <json\|@path>...) [--agent-version <number>] [--environment <yaml-key>] [--vault <yaml-key>...] [--resource <json\|@path>...] [--schedule <cron> --timezone <timezone>] [--description <text>] [--metadata <key=value>...] [--file <path>] [--yes]` |
 
 #### Flags
 
@@ -348,7 +337,6 @@ bl managed-agent apply --provider bailian --yes
 | `--timezone <timezone>`    | string | no       | IANA schedule timezone                                                  |
 | `--description <text>`     | string | no       | Deployment description                                                  |
 | `--metadata <key=value>`   | array  | no       | Metadata entry (repeatable)                                             |
-| `--provider <name>`        | string | no       | Target provider; inferred when unambiguous                              |
 | `--file <path>`            | string | no       | Config file path (default: agents.yaml)                                 |
 | `--yes`                    | switch | no       | Write YAML and run the scoped remote create                             |
 | `--api-key <key>`          | string | no       | API key                                                                 |
@@ -356,11 +344,12 @@ bl managed-agent apply --provider bailian --yes
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
 - Initial Events must contain 1-50 user.message/system.message entries. --resource accepts only File Resources in this release.
+- Use either repeatable --message values or repeatable --event values; the two input forms cannot be mixed.
 
 #### Examples
 
@@ -369,7 +358,7 @@ bl managed-agent deployment create --name Daily --agent assistant --message "Gen
 ```
 
 ```bash
-bl managed-agent deployment create --name Daily --agent assistant --event '{"type":"system.message","content":"Be concise"}' --message "Run" --yes
+bl managed-agent deployment create --name Daily --agent assistant --event '{"type":"system.message","content":"Be concise"}' --yes
 ```
 
 ### `bl managed-agent deployment get`
@@ -386,15 +375,14 @@ bl managed-agent deployment create --name Daily --agent assistant --event '{"typ
 | Flag                   | Type   | Required | Description                             |
 | ---------------------- | ------ | -------- | --------------------------------------- |
 | `--file <path>`        | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>`    | string | no       | Target provider                         |
 | `--deployment-id <id>` | string | yes      | Deployment ID                           |
 | `--api-key <key>`      | string | no       | API key                                 |
 | `--base-url <url>`     | string | no       | API base URL                            |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -417,7 +405,6 @@ bl managed-agent deployment get --deployment-id dep_abc
 | Flag                           | Type   | Required | Description                                       |
 | ------------------------------ | ------ | -------- | ------------------------------------------------- |
 | `--file <path>`                | string | no       | Config file path (default: agents.yaml)           |
-| `--provider <name>`            | string | no       | Target provider                                   |
 | `--limit <n>`                  | number | no       | Page size (1-100)                                 |
 | `--page <cursor>`              | string | no       | Opaque page cursor returned by a previous request |
 | `--all`                        | switch | no       | Fetch all pages by following opaque cursors       |
@@ -431,8 +418,8 @@ bl managed-agent deployment get --deployment-id dep_abc
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -463,7 +450,6 @@ bl managed-agent deployment list --status active --all --output json
 | Flag                   | Type   | Required | Description                                  |
 | ---------------------- | ------ | -------- | -------------------------------------------- |
 | `--file <path>`        | string | no       | Config file path (default: agents.yaml)      |
-| `--provider <name>`    | string | no       | Target provider                              |
 | `--deployment <name>`  | string | no       | Logical deployment name in agents.yaml/state |
 | `--deployment-id <id>` | string | no       | Direct deployment ID                         |
 | `--yes`                | switch | no       | Confirm this high-risk operation             |
@@ -472,8 +458,8 @@ bl managed-agent deployment list --status active --all --output json
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -505,7 +491,6 @@ bl managed-agent deployment pause --deployment-id dep_abc --yes
 | Flag                   | Type   | Required | Description                                  |
 | ---------------------- | ------ | -------- | -------------------------------------------- |
 | `--file <path>`        | string | no       | Config file path (default: agents.yaml)      |
-| `--provider <name>`    | string | no       | Target provider                              |
 | `--deployment <name>`  | string | no       | Logical deployment name in agents.yaml/state |
 | `--deployment-id <id>` | string | no       | Direct deployment ID                         |
 | `--yes`                | switch | no       | Confirm this high-risk operation             |
@@ -514,8 +499,8 @@ bl managed-agent deployment pause --deployment-id dep_abc --yes
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -540,18 +525,17 @@ bl managed-agent deployment run --deployment-id dep_abc --yes
 
 #### Flags
 
-| Flag                | Type   | Required | Description                             |
-| ------------------- | ------ | -------- | --------------------------------------- |
-| `--file <path>`     | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>` | string | no       | Target provider                         |
-| `--run-id <id>`     | string | yes      | Deployment run ID                       |
-| `--api-key <key>`   | string | no       | API key                                 |
-| `--base-url <url>`  | string | no       | API base URL                            |
+| Flag               | Type   | Required | Description                             |
+| ------------------ | ------ | -------- | --------------------------------------- |
+| `--file <path>`    | string | no       | Config file path (default: agents.yaml) |
+| `--run-id <id>`    | string | yes      | Deployment run ID                       |
+| `--api-key <key>`  | string | no       | API key                                 |
+| `--base-url <url>` | string | no       | API base URL                            |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -574,7 +558,6 @@ bl managed-agent deployment runs get --run-id run_abc
 | Flag                   | Type   | Required | Description                                       |
 | ---------------------- | ------ | -------- | ------------------------------------------------- |
 | `--file <path>`        | string | no       | Config file path (default: agents.yaml)           |
-| `--provider <name>`    | string | no       | Target provider                                   |
 | `--deployment-id <id>` | string | yes      | Deployment ID                                     |
 | `--limit <n>`          | number | no       | Page size (1-100)                                 |
 | `--page <cursor>`      | string | no       | Opaque page cursor returned by a previous request |
@@ -584,8 +567,8 @@ bl managed-agent deployment runs get --run-id run_abc
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -612,7 +595,6 @@ bl managed-agent deployment runs list --deployment-id dep_abc --all --output jso
 | Flag                           | Type   | Required | Description                                                   |
 | ------------------------------ | ------ | -------- | ------------------------------------------------------------- |
 | `--file <path>`                | string | no       | Config file path (default: agents.yaml)                       |
-| `--provider <name>`            | string | no       | Target provider                                               |
 | `--limit <n>`                  | number | no       | Page size (1-100)                                             |
 | `--page <cursor>`              | string | no       | Opaque page cursor returned by a previous request             |
 | `--all`                        | switch | no       | Fetch all pages by following opaque cursors                   |
@@ -627,8 +609,8 @@ bl managed-agent deployment runs list --deployment-id dep_abc --all --output jso
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Deployment search maps --query to the provider's server-side keyword parameter.
 
@@ -660,7 +642,6 @@ bl managed-agent deployment search --query nightly --all --output json
 | Flag                   | Type   | Required | Description                                  |
 | ---------------------- | ------ | -------- | -------------------------------------------- |
 | `--file <path>`        | string | no       | Config file path (default: agents.yaml)      |
-| `--provider <name>`    | string | no       | Target provider                              |
 | `--deployment <name>`  | string | no       | Logical deployment name in agents.yaml/state |
 | `--deployment-id <id>` | string | no       | Direct deployment ID                         |
 | `--yes`                | switch | no       | Confirm this high-risk operation             |
@@ -669,8 +650,8 @@ bl managed-agent deployment search --query nightly --all --output json
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -709,8 +690,8 @@ bl managed-agent deployment unpause --deployment-id dep_abc --yes
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -727,12 +708,12 @@ bl managed-agent destroy --yes --cascade
 
 ### `bl managed-agent environment create`
 
-| Field              | Value                                                                                                                                                                                                                                                                             |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent environment create`                                                                                                                                                                                                                                                |
-| **Description**    | Declare and create one Managed Agent Environment through a scoped YAML apply                                                                                                                                                                                                      |
-| **Authentication** | API Key                                                                                                                                                                                                                                                                           |
-| **Usage**          | `bl managed-agent environment create --name <name> [--description <text>] [--metadata <key=value>...] [--apt <package>...] [--pip <package>...] [--npm <package>...] [--cargo <package>...] [--gem <package>...] [--go <package>...] [--provider <name>] [--file <path>] [--yes]` |
+| Field              | Value                                                                                                                                                                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent environment create`                                                                                                                                                                                                                            |
+| **Description**    | Declare and create one Managed Agent Environment through a scoped YAML apply                                                                                                                                                                                  |
+| **Authentication** | API Key                                                                                                                                                                                                                                                       |
+| **Usage**          | `bl managed-agent environment create --name <name> [--description <text>] [--metadata <key=value>...] [--apt <package>...] [--pip <package>...] [--npm <package>...] [--cargo <package>...] [--gem <package>...] [--go <package>...] [--file <path>] [--yes]` |
 
 #### Flags
 
@@ -747,7 +728,6 @@ bl managed-agent destroy --yes --cascade
 | `--cargo <package>`      | array  | no       | Cargo package (repeatable)                                               |
 | `--gem <package>`        | array  | no       | Ruby gem package (repeatable)                                            |
 | `--go <package>`         | array  | no       | Go package (repeatable)                                                  |
-| `--provider <name>`      | string | no       | Target provider; inferred when unambiguous                               |
 | `--file <path>`          | string | no       | Config file path (default: agents.yaml)                                  |
 | `--yes`                  | switch | no       | Write YAML and run the scoped remote create                              |
 | `--api-key <key>`        | string | no       | API key                                                                  |
@@ -755,8 +735,8 @@ bl managed-agent destroy --yes --cascade
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
 - Creates a cloud Environment with unrestricted networking. Without --yes, only previews the generated YAML key and scoped plan.
@@ -785,15 +765,14 @@ bl managed-agent environment create --name Development --pip pandas --npm typesc
 | Flag                    | Type   | Required | Description                             |
 | ----------------------- | ------ | -------- | --------------------------------------- |
 | `--file <path>`         | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>`     | string | no       | Target provider                         |
 | `--environment-id <id>` | string | yes      | Environment ID                          |
 | `--api-key <key>`       | string | no       | API key                                 |
 | `--base-url <url>`      | string | no       | API base URL                            |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -816,7 +795,6 @@ bl managed-agent environment get --environment-id env_abc
 | Flag                 | Type   | Required | Description                                       |
 | -------------------- | ------ | -------- | ------------------------------------------------- |
 | `--file <path>`      | string | no       | Config file path (default: agents.yaml)           |
-| `--provider <name>`  | string | no       | Target provider                                   |
 | `--limit <n>`        | number | no       | Page size (1-100)                                 |
 | `--page <cursor>`    | string | no       | Opaque page cursor returned by a previous request |
 | `--all`              | switch | no       | Fetch all pages by following opaque cursors       |
@@ -826,8 +804,8 @@ bl managed-agent environment get --environment-id env_abc
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -854,7 +832,6 @@ bl managed-agent environment list --all --output json
 | Flag                 | Type   | Required | Description                                                   |
 | -------------------- | ------ | -------- | ------------------------------------------------------------- |
 | `--file <path>`      | string | no       | Config file path (default: agents.yaml)                       |
-| `--provider <name>`  | string | no       | Target provider                                               |
 | `--limit <n>`        | number | no       | Page size (1-100)                                             |
 | `--query <text>`     | string | yes      | Case-insensitive text to find in IDs, names, and descriptions |
 | `--page-limit <n>`   | number | no       | Maximum pages to scan for client-side search (default: 10)    |
@@ -864,8 +841,8 @@ bl managed-agent environment list --all --output json
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -893,19 +870,18 @@ bl managed-agent environment search --query production --page-limit 20 --output 
 
 #### Flags
 
-| Flag                | Type   | Required | Description                             |
-| ------------------- | ------ | -------- | --------------------------------------- |
-| `--file <path>`     | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>` | string | no       | Target provider                         |
-| `--file-id <id>`    | string | yes      | Remote file ID                          |
-| `--yes`             | switch | no       | Confirm this high-risk operation        |
-| `--api-key <key>`   | string | no       | API key                                 |
-| `--base-url <url>`  | string | no       | API base URL                            |
+| Flag               | Type   | Required | Description                             |
+| ------------------ | ------ | -------- | --------------------------------------- |
+| `--file <path>`    | string | no       | Config file path (default: agents.yaml) |
+| `--file-id <id>`   | string | yes      | Remote file ID                          |
+| `--yes`            | switch | no       | Confirm this high-risk operation        |
+| `--api-key <key>`  | string | no       | API key                                 |
+| `--base-url <url>` | string | no       | API base URL                            |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -933,7 +909,6 @@ bl managed-agent file delete --file-id file_abc --yes
 | Flag                   | Type   | Required | Description                             |
 | ---------------------- | ------ | -------- | --------------------------------------- |
 | `--file <path>`        | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>`    | string | no       | Target provider                         |
 | `--file-id <id>`       | string | yes      | Remote file ID                          |
 | `--output-file <path>` | string | yes      | Destination path                        |
 | `--force`              | switch | no       | Overwrite an existing output file       |
@@ -942,8 +917,8 @@ bl managed-agent file delete --file-id file_abc --yes
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -963,18 +938,17 @@ bl managed-agent file download --file-id file_abc --output-file ./artifact.pdf
 
 #### Flags
 
-| Flag                | Type   | Required | Description                             |
-| ------------------- | ------ | -------- | --------------------------------------- |
-| `--file <path>`     | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>` | string | no       | Target provider                         |
-| `--file-id <id>`    | string | yes      | Remote file ID                          |
-| `--api-key <key>`   | string | no       | API key                                 |
-| `--base-url <url>`  | string | no       | API base URL                            |
+| Flag               | Type   | Required | Description                             |
+| ------------------ | ------ | -------- | --------------------------------------- |
+| `--file <path>`    | string | no       | Config file path (default: agents.yaml) |
+| `--file-id <id>`   | string | yes      | Remote file ID                          |
+| `--api-key <key>`  | string | no       | API key                                 |
+| `--base-url <url>` | string | no       | API base URL                            |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -994,21 +968,20 @@ bl managed-agent file get --file-id file_abc
 
 #### Flags
 
-| Flag                | Type   | Required | Description                                       |
-| ------------------- | ------ | -------- | ------------------------------------------------- |
-| `--file <path>`     | string | no       | Config file path (default: agents.yaml)           |
-| `--provider <name>` | string | no       | Target provider                                   |
-| `--limit <n>`       | number | no       | Page size (1-100)                                 |
-| `--page <cursor>`   | string | no       | Opaque page cursor returned by a previous request |
-| `--all`             | switch | no       | Fetch all pages by following opaque cursors       |
-| `--scope-id <id>`   | string | no       | Filter by scope ID                                |
-| `--api-key <key>`   | string | no       | API key                                           |
-| `--base-url <url>`  | string | no       | API base URL                                      |
+| Flag               | Type   | Required | Description                                       |
+| ------------------ | ------ | -------- | ------------------------------------------------- |
+| `--file <path>`    | string | no       | Config file path (default: agents.yaml)           |
+| `--limit <n>`      | number | no       | Page size (1-100)                                 |
+| `--page <cursor>`  | string | no       | Opaque page cursor returned by a previous request |
+| `--all`            | switch | no       | Fetch all pages by following opaque cursors       |
+| `--scope-id <id>`  | string | no       | Filter by scope ID                                |
+| `--api-key <key>`  | string | no       | API key                                           |
+| `--base-url <url>` | string | no       | API base URL                                      |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1032,21 +1005,20 @@ bl managed-agent file list --scope-id sess_abc --all --output json
 
 #### Flags
 
-| Flag                | Type   | Required | Description                                                   |
-| ------------------- | ------ | -------- | ------------------------------------------------------------- |
-| `--file <path>`     | string | no       | Config file path (default: agents.yaml)                       |
-| `--provider <name>` | string | no       | Target provider                                               |
-| `--limit <n>`       | number | no       | Page size (1-100)                                             |
-| `--query <text>`    | string | yes      | Case-insensitive text to find in IDs, names, and descriptions |
-| `--page-limit <n>`  | number | no       | Maximum pages to scan for client-side search (default: 10)    |
-| `--scope-id <id>`   | string | no       | Filter by scope ID                                            |
-| `--api-key <key>`   | string | no       | API key                                                       |
-| `--base-url <url>`  | string | no       | API base URL                                                  |
+| Flag               | Type   | Required | Description                                                   |
+| ------------------ | ------ | -------- | ------------------------------------------------------------- |
+| `--file <path>`    | string | no       | Config file path (default: agents.yaml)                       |
+| `--limit <n>`      | number | no       | Page size (1-100)                                             |
+| `--query <text>`   | string | yes      | Case-insensitive text to find in IDs, names, and descriptions |
+| `--page-limit <n>` | number | no       | Maximum pages to scan for client-side search (default: 10)    |
+| `--scope-id <id>`  | string | no       | Filter by scope ID                                            |
+| `--api-key <key>`  | string | no       | API key                                                       |
+| `--base-url <url>` | string | no       | API base URL                                                  |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1061,30 +1033,28 @@ bl managed-agent file search --query pdf --scope-id sess_abc --output json
 
 ### `bl managed-agent file upload`
 
-| Field              | Value                                                                                                       |
-| ------------------ | ----------------------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent file upload`                                                                                 |
-| **Description**    | Upload a Managed Agent file                                                                                 |
-| **Authentication** | API Key                                                                                                     |
-| **Usage**          | `bl managed-agent file upload --path <path> [--filename <name>] [--mime-type <type>] [--purpose <purpose>]` |
+| Field              | Value                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent file upload`                                                           |
+| **Description**    | Upload a Managed Agent file                                                           |
+| **Authentication** | API Key                                                                               |
+| **Usage**          | `bl managed-agent file upload --path <path> [--filename <name>] [--mime-type <type>]` |
 
 #### Flags
 
-| Flag                  | Type   | Required | Description                             |
-| --------------------- | ------ | -------- | --------------------------------------- |
-| `--file <path>`       | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>`   | string | no       | Target provider                         |
-| `--path <path>`       | string | yes      | Local file path                         |
-| `--filename <name>`   | string | no       | Remote filename override                |
-| `--mime-type <type>`  | string | no       | MIME type override                      |
-| `--purpose <purpose>` | string | no       | Provider upload purpose                 |
-| `--api-key <key>`     | string | no       | API key                                 |
-| `--base-url <url>`    | string | no       | API base URL                            |
+| Flag                 | Type   | Required | Description                             |
+| -------------------- | ------ | -------- | --------------------------------------- |
+| `--file <path>`      | string | no       | Config file path (default: agents.yaml) |
+| `--path <path>`      | string | yes      | Local file path                         |
+| `--filename <name>`  | string | no       | Remote filename override                |
+| `--mime-type <type>` | string | no       | MIME type override                      |
+| `--api-key <key>`    | string | no       | API key                                 |
+| `--base-url <url>`   | string | no       | API base URL                            |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1093,27 +1063,22 @@ bl managed-agent file search --query pdf --scope-id sess_abc --output json
 bl managed-agent file upload --path ./report.pdf
 ```
 
-```bash
-bl managed-agent file upload --path ./data.json --purpose assistants
-```
-
 ### `bl managed-agent init`
 
-| Field              | Value                                                                                       |
-| ------------------ | ------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent init`                                                                        |
-| **Description**    | Create a new agents.yaml template                                                           |
-| **Authentication** | No Auth                                                                                     |
-| **Usage**          | `bl managed-agent init [--provider <name>] [--agent-name <name>] [--file <path>] [--force]` |
+| Field              | Value                                                                   |
+| ------------------ | ----------------------------------------------------------------------- |
+| **Name**           | `managed-agent init`                                                    |
+| **Description**    | Create a new agents.yaml template                                       |
+| **Authentication** | No Auth                                                                 |
+| **Usage**          | `bl managed-agent init [--agent-name <name>] [--file <path>] [--force]` |
 
 #### Flags
 
-| Flag                                            | Type   | Required | Description                                                   |
-| ----------------------------------------------- | ------ | -------- | ------------------------------------------------------------- |
-| `--provider <bailian\|claude\|qoder\|ark\|all>` | string | no       | Provider: bailian, claude, qoder, ark, all (default: bailian) |
-| `--agent-name <name>`                           | string | no       | Name of the first agent (default: assistant)                  |
-| `--file <path>`                                 | string | no       | Output config path (default: agents.yaml)                     |
-| `--force`                                       | switch | no       | Overwrite an existing config file                             |
+| Flag                  | Type   | Required | Description                                  |
+| --------------------- | ------ | -------- | -------------------------------------------- |
+| `--agent-name <name>` | string | no       | Name of the first agent (default: assistant) |
+| `--file <path>`       | string | no       | Output config path (default: agents.yaml)    |
+| `--force`             | switch | no       | Overwrite an existing config file            |
 
 #### Examples
 
@@ -1122,37 +1087,32 @@ bl managed-agent init
 ```
 
 ```bash
-bl managed-agent init --provider bailian --agent-name assistant
-```
-
-```bash
-bl managed-agent init --provider all
+bl managed-agent init --agent-name assistant
 ```
 
 ### `bl managed-agent plan`
 
-| Field              | Value                                                                                       |
-| ------------------ | ------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent plan`                                                                        |
-| **Description**    | Show what changes would be applied to agent infrastructure                                  |
-| **Authentication** | API Key                                                                                     |
-| **Usage**          | `bl managed-agent plan [--file <path>] [--provider <name>] [--no-refresh] [--refresh-only]` |
+| Field              | Value                                                                   |
+| ------------------ | ----------------------------------------------------------------------- |
+| **Name**           | `managed-agent plan`                                                    |
+| **Description**    | Show what changes would be applied to agent infrastructure              |
+| **Authentication** | API Key                                                                 |
+| **Usage**          | `bl managed-agent plan [--file <path>] [--no-refresh] [--refresh-only]` |
 
 #### Flags
 
-| Flag                | Type   | Required | Description                                                    |
-| ------------------- | ------ | -------- | -------------------------------------------------------------- |
-| `--file <path>`     | string | no       | Config file path (default: agents.yaml)                        |
-| `--provider <name>` | string | no       | Target provider (default: all configured)                      |
-| `--no-refresh`      | switch | no       | Skip refreshing state from remote before planning              |
-| `--refresh-only`    | switch | no       | Refresh state and show drift without planning remote mutations |
-| `--api-key <key>`   | string | no       | API key                                                        |
-| `--base-url <url>`  | string | no       | API base URL                                                   |
+| Flag               | Type   | Required | Description                                                    |
+| ------------------ | ------ | -------- | -------------------------------------------------------------- |
+| `--file <path>`    | string | no       | Config file path (default: agents.yaml)                        |
+| `--no-refresh`     | switch | no       | Skip refreshing state from remote before planning              |
+| `--refresh-only`   | switch | no       | Refresh state and show drift without planning remote mutations |
+| `--api-key <key>`  | string | no       | API key                                                        |
+| `--base-url <url>` | string | no       | API base URL                                                   |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - --no-refresh and --dry-run plan offline from local config and state: no remote requests, no state writes, provider keys are not checked.
 
@@ -1160,10 +1120,6 @@ bl managed-agent init --provider all
 
 ```bash
 bl managed-agent plan
-```
-
-```bash
-bl managed-agent plan --provider bailian
 ```
 
 ```bash
@@ -1188,7 +1144,6 @@ bl managed-agent plan --no-refresh
 | Flag                | Type   | Required | Description                             |
 | ------------------- | ------ | -------- | --------------------------------------- |
 | `--file <path>`     | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>` | string | no       | Target provider                         |
 | `--session-id <id>` | string | yes      | Session ID                              |
 | `--yes`             | switch | no       | Confirm this high-risk operation        |
 | `--api-key <key>`   | string | no       | API key                                 |
@@ -1196,8 +1151,8 @@ bl managed-agent plan --no-refresh
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1230,14 +1185,13 @@ bl managed-agent session archive --session-id sess_abc --yes
 | `--vault <name>`          | string | no       | Override agent's declared vault                              |
 | `--memory-stores <names>` | string | no       | Override agent's memory stores (comma-separated)             |
 | `--title <title>`         | string | no       | Session title                                                |
-| `--provider <name>`       | string | no       | Target provider (multi-provider agents)                      |
 | `--api-key <key>`         | string | no       | API key                                                      |
 | `--base-url <url>`        | string | no       | API base URL                                                 |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1268,15 +1222,14 @@ bl managed-agent session create --agent assistant --title 'debug run'
 | Flag                | Type   | Required | Description                             |
 | ------------------- | ------ | -------- | --------------------------------------- |
 | `--file <path>`     | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>` | string | no       | Target provider                         |
 | `--session-id <id>` | string | yes      | Session ID                              |
 | `--api-key <key>`   | string | no       | API key                                 |
 | `--base-url <url>`  | string | no       | API base URL                            |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1291,14 +1244,14 @@ bl managed-agent session debug --session-id sess_abc --output json
 
 ### `bl managed-agent session delete`
 
-| Field              | Value                                                                                   |
-| ------------------ | --------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent session delete`                                                          |
-| **Description**    | Delete a session                                                                        |
-| **Authentication** | API Key                                                                                 |
-| **Usage**          | `bl managed-agent session delete --session-id <id> [--provider <name>] [--file <path>]` |
-| **Risk**           | `high`                                                                                  |
-| **Risk message**   | This deletes the specified remote managed Agent Session.                                |
+| Field              | Value                                                               |
+| ------------------ | ------------------------------------------------------------------- |
+| **Name**           | `managed-agent session delete`                                      |
+| **Description**    | Delete a session                                                    |
+| **Authentication** | API Key                                                             |
+| **Usage**          | `bl managed-agent session delete --session-id <id> [--file <path>]` |
+| **Risk**           | `high`                                                              |
+| **Risk message**   | This deletes the specified remote managed Agent Session.            |
 
 > **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
@@ -1308,15 +1261,14 @@ bl managed-agent session debug --session-id sess_abc --output json
 | ------------------- | ------ | -------- | --------------------------------------- |
 | `--session-id <id>` | string | yes      | Session ID (required)                   |
 | `--file <path>`     | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>` | string | no       | Target provider                         |
 | `--yes`             | switch | no       | Confirm this high-risk operation        |
 | `--api-key <key>`   | string | no       | API key                                 |
 | `--base-url <url>`  | string | no       | API base URL                            |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1340,7 +1292,6 @@ bl managed-agent session delete --session-id sess_abc123 --yes
 | Flag                           | Type   | Required | Description                                       |
 | ------------------------------ | ------ | -------- | ------------------------------------------------- |
 | `--file <path>`                | string | no       | Config file path (default: agents.yaml)           |
-| `--provider <name>`            | string | no       | Target provider                                   |
 | `--session-id <id>`            | string | yes      | Session ID                                        |
 | `--limit <n>`                  | number | no       | Page size (1-100)                                 |
 | `--page <cursor>`              | string | no       | Opaque page cursor returned by a previous request |
@@ -1354,8 +1305,8 @@ bl managed-agent session delete --session-id sess_abc123 --yes
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - --types is applied client-side to each page returned by the provider.
 
@@ -1383,7 +1334,6 @@ bl managed-agent session event list --session-id sess_abc --all --output json
 | Flag                    | Type   | Required | Description                                   |
 | ----------------------- | ------ | -------- | --------------------------------------------- |
 | `--file <path>`         | string | no       | Config file path (default: agents.yaml)       |
-| `--provider <name>`     | string | no       | Target provider                               |
 | `--session-id <id>`     | string | yes      | Session ID                                    |
 | `--event <json\|@path>` | string | yes      | Raw event object/array as JSON or @event.json |
 | `--api-key <key>`       | string | no       | API key                                       |
@@ -1391,14 +1341,14 @@ bl managed-agent session event list --session-id sess_abc --all --output json
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
 
 ```bash
-bl managed-agent session event send --session-id sess_abc --event '{"type":"message","role":"user","content":"hello"}'
+bl managed-agent session event send --session-id sess_abc --event '{"type":"message","role":"user","content":[{"type":"text","text":"hello"}]}'
 ```
 
 ```bash
@@ -1419,7 +1369,6 @@ bl managed-agent session event send --session-id sess_abc --event @event.json
 | Flag                    | Type   | Required | Description                             |
 | ----------------------- | ------ | -------- | --------------------------------------- |
 | `--file <path>`         | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>`     | string | no       | Target provider                         |
 | `--session-id <id>`     | string | yes      | Session ID                              |
 | `--after-id <event-id>` | string | no       | Resume after this event ID              |
 | `--api-key <key>`       | string | no       | API key                                 |
@@ -1427,8 +1376,8 @@ bl managed-agent session event send --session-id sess_abc --event @event.json
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - When the provider has no native event cursor, --after-id resumes through paginated history polling and event ID de-duplication.
 
@@ -1456,7 +1405,6 @@ bl managed-agent session event stream --session-id sess_abc --after-id evt_123 -
 | Flag                           | Type   | Required | Description                                       |
 | ------------------------------ | ------ | -------- | ------------------------------------------------- |
 | `--file <path>`                | string | no       | Config file path (default: agents.yaml)           |
-| `--provider <name>`            | string | no       | Target provider                                   |
 | `--session-id <id>`            | string | yes      | Session ID                                        |
 | `--limit <n>`                  | number | no       | Page size (1-100)                                 |
 | `--page <cursor>`              | string | no       | Opaque page cursor returned by a previous request |
@@ -1470,8 +1418,8 @@ bl managed-agent session event stream --session-id sess_abc --after-id evt_123 -
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - --types is applied client-side to each page returned by the provider.
 
@@ -1499,7 +1447,6 @@ bl managed-agent session events --session-id sess_abc --all --output json
 | Flag                   | Type   | Required | Description                             |
 | ---------------------- | ------ | -------- | --------------------------------------- |
 | `--file <path>`        | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>`    | string | no       | Target provider                         |
 | `--session-id <id>`    | string | yes      | Session ID                              |
 | `--output-file <path>` | string | yes      | Destination ZIP path                    |
 | `--force`              | switch | no       | Overwrite an existing output file       |
@@ -1508,8 +1455,8 @@ bl managed-agent session events --session-id sess_abc --all --output json
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - The ZIP contains metadata only; file bodies and credential-like values are excluded/redacted.
 
@@ -1521,12 +1468,12 @@ bl managed-agent session export --session-id sess_abc --output-file ./session-de
 
 ### `bl managed-agent session get`
 
-| Field              | Value                                                                                |
-| ------------------ | ------------------------------------------------------------------------------------ |
-| **Name**           | `managed-agent session get`                                                          |
-| **Description**    | Get details of a session                                                             |
-| **Authentication** | API Key                                                                              |
-| **Usage**          | `bl managed-agent session get --session-id <id> [--provider <name>] [--file <path>]` |
+| Field              | Value                                                            |
+| ------------------ | ---------------------------------------------------------------- |
+| **Name**           | `managed-agent session get`                                      |
+| **Description**    | Get details of a session                                         |
+| **Authentication** | API Key                                                          |
+| **Usage**          | `bl managed-agent session get --session-id <id> [--file <path>]` |
 
 #### Flags
 
@@ -1534,14 +1481,13 @@ bl managed-agent session export --session-id sess_abc --output-file ./session-de
 | ------------------- | ------ | -------- | --------------------------------------- |
 | `--session-id <id>` | string | yes      | Session ID (required)                   |
 | `--file <path>`     | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>` | string | no       | Target provider                         |
 | `--api-key <key>`   | string | no       | API key                                 |
 | `--base-url <url>`  | string | no       | API base URL                            |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1571,14 +1517,13 @@ bl managed-agent session get --session-id sess_abc123
 | `--statuses <statuses>`        | string | no       | Comma-separated session statuses                  |
 | `--created-at-gte <timestamp>` | string | no       | Created at or after this RFC 3339 timestamp       |
 | `--created-at-lte <timestamp>` | string | no       | Created at or before this RFC 3339 timestamp      |
-| `--provider <name>`            | string | no       | Target provider                                   |
 | `--api-key <key>`              | string | no       | API key                                           |
 | `--base-url <url>`             | string | no       | API base URL                                      |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1615,15 +1560,14 @@ bl managed-agent session list --all
 | `--vault <name>`          | string | no       | Override agent's declared vault                              |
 | `--memory-stores <names>` | string | no       | Override agent's memory stores (comma-separated)             |
 | `--title <title>`         | string | no       | Session title                                                |
-| `--provider <name>`       | string | no       | Target provider                                              |
 | `--no-stream`             | switch | no       | Use polling instead of SSE streaming                         |
 | `--api-key <key>`         | string | no       | API key                                                      |
 | `--base-url <url>`        | string | no       | API base URL                                                 |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - --output json emits one envelope: { session_id, provider, agent, events } — read session_id to chain `session send/get/events/delete`.
 
@@ -1651,7 +1595,6 @@ bl managed-agent session run --agent assistant --prompt "summarize this repo"
 | Flag                           | Type   | Required | Description                                                   |
 | ------------------------------ | ------ | -------- | ------------------------------------------------------------- |
 | `--file <path>`                | string | no       | Config file path (default: agents.yaml)                       |
-| `--provider <name>`            | string | no       | Target provider                                               |
 | `--limit <n>`                  | number | no       | Page size (1-100)                                             |
 | `--query <text>`               | string | yes      | Case-insensitive text to find in IDs, names, and descriptions |
 | `--page-limit <n>`             | number | no       | Maximum pages to scan for client-side search (default: 10)    |
@@ -1664,8 +1607,8 @@ bl managed-agent session run --agent assistant --prompt "summarize this repo"
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1694,15 +1637,14 @@ bl managed-agent session search --query failed --statuses failed --output json
 | `--session-id <id>` | string | yes      | Session ID (required)                   |
 | `--message <text>`  | string | yes      | Message to send (required)              |
 | `--file <path>`     | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>` | string | no       | Target provider                         |
 | `--no-stream`       | switch | no       | Use polling instead of SSE streaming    |
 | `--api-key <key>`   | string | no       | API key                                 |
 | `--base-url <url>`  | string | no       | API base URL                            |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1725,7 +1667,6 @@ bl managed-agent session send --session-id sess_abc123 --message "continue"
 | Flag                       | Type   | Required | Description                             |
 | -------------------------- | ------ | -------- | --------------------------------------- |
 | `--file <path>`            | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>`        | string | no       | Target provider                         |
 | `--session-id <id>`        | string | yes      | Session ID                              |
 | `--title <title>`          | string | no       | New session title                       |
 | `--metadata <json\|@path>` | string | no       | String-valued metadata JSON or @file    |
@@ -1734,8 +1675,8 @@ bl managed-agent session send --session-id sess_abc123 --message "continue"
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1750,19 +1691,18 @@ bl managed-agent session update --session-id sess_abc --metadata @metadata.json
 
 ### `bl managed-agent skill create`
 
-| Field              | Value                                                                                                           |
-| ------------------ | --------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent skill create`                                                                                    |
-| **Description**    | Declare and create one custom Managed Agent Skill from a local source                                           |
-| **Authentication** | API Key                                                                                                         |
-| **Usage**          | `bl managed-agent skill create --source <directory\|zip\|SKILL.md> [--provider <name>] [--file <path>] [--yes]` |
+| Field              | Value                                                                                       |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent skill create`                                                                |
+| **Description**    | Declare and create one custom Managed Agent Skill from a local source                       |
+| **Authentication** | API Key                                                                                     |
+| **Usage**          | `bl managed-agent skill create --source <directory\|zip\|SKILL.md> [--file <path>] [--yes]` |
 
 #### Flags
 
 | Flag                                  | Type   | Required | Description                                               |
 | ------------------------------------- | ------ | -------- | --------------------------------------------------------- |
 | `--source <directory\|zip\|SKILL.md>` | string | yes      | Local Skill directory, ZIP archive, or single SKILL.md    |
-| `--provider <name>`                   | string | no       | Target provider; inferred when unambiguous                |
 | `--file <path>`                       | string | no       | Config file path (default: agents.yaml)                   |
 | `--yes`                               | switch | no       | Write YAML and upload the Skill through the scoped create |
 | `--api-key <key>`                     | string | no       | API key                                                   |
@@ -1770,8 +1710,8 @@ bl managed-agent session update --session-id sess_abc --metadata @metadata.json
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
 - The YAML key is derived from SKILL.md frontmatter name. Remote URLs remain available through handwritten YAML plus full apply.
@@ -1800,7 +1740,6 @@ bl managed-agent skill create --source ./skill.zip --yes
 | Flag                        | Type   | Required | Description                             |
 | --------------------------- | ------ | -------- | --------------------------------------- |
 | `--file <path>`             | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>`         | string | no       | Target provider                         |
 | `--skill-id <id>`           | string | yes      | Skill ID                                |
 | `--skill-version <version>` | string | yes      | Skill version                           |
 | `--output-file <path>`      | string | yes      | Destination ZIP path                    |
@@ -1810,8 +1749,8 @@ bl managed-agent skill create --source ./skill.zip --yes
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1831,18 +1770,17 @@ bl managed-agent skill download --skill-id skill_abc --skill-version 3 --output-
 
 #### Flags
 
-| Flag                | Type   | Required | Description                             |
-| ------------------- | ------ | -------- | --------------------------------------- |
-| `--file <path>`     | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>` | string | no       | Target provider                         |
-| `--skill-id <id>`   | string | yes      | Skill ID                                |
-| `--api-key <key>`   | string | no       | API key                                 |
-| `--base-url <url>`  | string | no       | API base URL                            |
+| Flag               | Type   | Required | Description                             |
+| ------------------ | ------ | -------- | --------------------------------------- |
+| `--file <path>`    | string | no       | Config file path (default: agents.yaml) |
+| `--skill-id <id>`  | string | yes      | Skill ID                                |
+| `--api-key <key>`  | string | no       | API key                                 |
+| `--base-url <url>` | string | no       | API base URL                            |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1865,7 +1803,6 @@ bl managed-agent skill get --skill-id skill_abc
 | Flag                               | Type   | Required | Description                                       |
 | ---------------------------------- | ------ | -------- | ------------------------------------------------- |
 | `--file <path>`                    | string | no       | Config file path (default: agents.yaml)           |
-| `--provider <name>`                | string | no       | Target provider                                   |
 | `--limit <n>`                      | number | no       | Page size (1-100)                                 |
 | `--page <cursor>`                  | string | no       | Opaque page cursor returned by a previous request |
 | `--all`                            | switch | no       | Fetch all pages by following opaque cursors       |
@@ -1875,8 +1812,8 @@ bl managed-agent skill get --skill-id skill_abc
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - --source all combines one page from each catalog, or every page with --all; it does not accept --page.
 
@@ -1908,7 +1845,6 @@ bl managed-agent skill list --source all --all --output json
 | Flag                               | Type   | Required | Description                                                   |
 | ---------------------------------- | ------ | -------- | ------------------------------------------------------------- |
 | `--file <path>`                    | string | no       | Config file path (default: agents.yaml)                       |
-| `--provider <name>`                | string | no       | Target provider                                               |
 | `--limit <n>`                      | number | no       | Page size (1-100)                                             |
 | `--query <text>`                   | string | yes      | Case-insensitive text to find in IDs, names, and descriptions |
 | `--page-limit <n>`                 | number | no       | Maximum pages to scan for client-side search (default: 10)    |
@@ -1918,8 +1854,8 @@ bl managed-agent skill list --source all --all --output json
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1943,21 +1879,20 @@ bl managed-agent skill search --query report --source all --output json
 
 #### Flags
 
-| Flag                | Type   | Required | Description                                       |
-| ------------------- | ------ | -------- | ------------------------------------------------- |
-| `--file <path>`     | string | no       | Config file path (default: agents.yaml)           |
-| `--provider <name>` | string | no       | Target provider                                   |
-| `--skill-id <id>`   | string | yes      | Skill ID                                          |
-| `--limit <n>`       | number | no       | Page size (1-100)                                 |
-| `--page <cursor>`   | string | no       | Opaque page cursor returned by a previous request |
-| `--all`             | switch | no       | Fetch all pages by following opaque cursors       |
-| `--api-key <key>`   | string | no       | API key                                           |
-| `--base-url <url>`  | string | no       | API base URL                                      |
+| Flag               | Type   | Required | Description                                       |
+| ------------------ | ------ | -------- | ------------------------------------------------- |
+| `--file <path>`    | string | no       | Config file path (default: agents.yaml)           |
+| `--skill-id <id>`  | string | yes      | Skill ID                                          |
+| `--limit <n>`      | number | no       | Page size (1-100)                                 |
+| `--page <cursor>`  | string | no       | Opaque page cursor returned by a previous request |
+| `--all`            | switch | no       | Fetch all pages by following opaque cursors       |
+| `--api-key <key>`  | string | no       | API key                                           |
+| `--base-url <url>` | string | no       | API base URL                                      |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -1984,7 +1919,6 @@ bl managed-agent skill versions --skill-id skill_abc --all --output json
 | Flag                               | Type   | Required | Description                                       |
 | ---------------------------------- | ------ | -------- | ------------------------------------------------- |
 | `--file <path>`                    | string | no       | Config file path (default: agents.yaml)           |
-| `--provider <name>`                | string | no       | Target provider                                   |
 | `--limit <n>`                      | number | no       | Page size (1-100)                                 |
 | `--page <cursor>`                  | string | no       | Opaque page cursor returned by a previous request |
 | `--all`                            | switch | no       | Fetch all pages by following opaque cursors       |
@@ -1994,8 +1928,8 @@ bl managed-agent skill versions --skill-id skill_abc --all --output json
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - --source all combines one page from each catalog, or every page with --all; it does not accept --page.
 
@@ -2015,28 +1949,28 @@ bl managed-agent skill-list --source all --all --output json
 
 ### `bl managed-agent state import`
 
-| Field              | Value                                                                                                                    |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| **Name**           | `managed-agent state import`                                                                                             |
-| **Description**    | Import an existing remote resource into agents state                                                                     |
-| **Authentication** | API Key                                                                                                                  |
-| **Usage**          | `bl managed-agent state import --address <provider.type.name> --remote-id <id> [--resource-version <n>] [--file <path>]` |
+| Field              | Value                                                                                                                   |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent state import`                                                                                            |
+| **Description**    | Import an existing remote resource into agents state                                                                    |
+| **Authentication** | API Key                                                                                                                 |
+| **Usage**          | `bl managed-agent state import --address <bailian.type.name> --remote-id <id> [--resource-version <n>] [--file <path>]` |
 
 #### Flags
 
-| Flag                             | Type   | Required | Description                                            |
-| -------------------------------- | ------ | -------- | ------------------------------------------------------ |
-| `--address <provider.type.name>` | string | yes      | Resource state address (required)                      |
-| `--remote-id <id>`               | string | yes      | Existing remote resource ID to import (required)       |
-| `--resource-version <n>`         | number | no       | Resource version (for versioned resources like agents) |
-| `--file <path>`                  | string | no       | Config file path (default: agents.yaml)                |
-| `--api-key <key>`                | string | no       | API key                                                |
-| `--base-url <url>`               | string | no       | API base URL                                           |
+| Flag                            | Type   | Required | Description                                            |
+| ------------------------------- | ------ | -------- | ------------------------------------------------------ |
+| `--address <bailian.type.name>` | string | yes      | Resource state address (required)                      |
+| `--remote-id <id>`              | string | yes      | Existing remote resource ID to import (required)       |
+| `--resource-version <n>`        | number | no       | Resource version (for versioned resources like agents) |
+| `--file <path>`                 | string | no       | Config file path (default: agents.yaml)                |
+| `--api-key <key>`               | string | no       | API key                                                |
+| `--base-url <url>`              | string | no       | API base URL                                           |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -2062,6 +1996,7 @@ bl managed-agent state import --address bailian.agent.assistant --remote-id agen
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Runs fully offline against local files: no login or provider credentials required.
 
 #### Examples
@@ -2097,6 +2032,7 @@ bl managed-agent state list --file agents.yaml
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Runs fully offline against local files: no login or provider credentials required.
 
 #### Examples
@@ -2124,6 +2060,7 @@ bl managed-agent state rm --address bailian.agent.assistant --yes
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Runs fully offline against local files: no login or provider credentials required.
 
 #### Examples
@@ -2149,6 +2086,7 @@ bl managed-agent state show --address bailian.agent.assistant
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Runs fully offline against local files: no login or provider credentials required.
 
 #### Examples
@@ -2163,12 +2101,12 @@ bl managed-agent validate --file agents.yaml
 
 ### `bl managed-agent vault create`
 
-| Field              | Value                                                                                                                 |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent vault create`                                                                                          |
-| **Description**    | Declare and create one empty Managed Agent Vault through a scoped YAML apply                                          |
-| **Authentication** | API Key                                                                                                               |
-| **Usage**          | `bl managed-agent vault create --name <name> [--metadata <key=value>...] [--provider <name>] [--file <path>] [--yes]` |
+| Field              | Value                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent vault create`                                                                      |
+| **Description**    | Declare and create one empty Managed Agent Vault through a scoped YAML apply                      |
+| **Authentication** | API Key                                                                                           |
+| **Usage**          | `bl managed-agent vault create --name <name> [--metadata <key=value>...] [--file <path>] [--yes]` |
 
 #### Flags
 
@@ -2176,7 +2114,6 @@ bl managed-agent validate --file agents.yaml
 | ------------------------ | ------ | -------- | ------------------------------------------------------------------ |
 | `--name <name>`          | string | yes      | Remote Vault display name; the YAML key is generated automatically |
 | `--metadata <key=value>` | array  | no       | Metadata entry (repeatable)                                        |
-| `--provider <name>`      | string | no       | Target provider; inferred when unambiguous                         |
 | `--file <path>`          | string | no       | Config file path (default: agents.yaml)                            |
 | `--yes`                  | switch | no       | Write YAML and run the scoped remote create                        |
 | `--api-key <key>`        | string | no       | API key                                                            |
@@ -2184,8 +2121,8 @@ bl managed-agent validate --file agents.yaml
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
 - Creates an empty Vault. Add secrets later with `vault credential create`.
@@ -2202,12 +2139,12 @@ bl managed-agent vault create --name Production --metadata owner=platform --yes
 
 ### `bl managed-agent vault credential create`
 
-| Field              | Value                                                                                                                                                                                            |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Name**           | `managed-agent vault credential create`                                                                                                                                                          |
-| **Description**    | Append and create one environment-variable Credential in a tracked Vault                                                                                                                         |
-| **Authentication** | API Key                                                                                                                                                                                          |
-| **Usage**          | `bl managed-agent vault credential create --vault <yaml-key> --name <name> --secret-name <name> --secret-env <env-name> [--metadata <key=value>...] [--provider <name>] [--file <path>] [--yes]` |
+| Field              | Value                                                                                                                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent vault credential create`                                                                                                                                      |
+| **Description**    | Append and create one environment-variable Credential in a tracked Vault                                                                                                     |
+| **Authentication** | API Key                                                                                                                                                                      |
+| **Usage**          | `bl managed-agent vault credential create --vault <yaml-key> --name <name> --secret-name <name> --secret-env <env-name> [--metadata <key=value>...] [--file <path>] [--yes]` |
 
 #### Flags
 
@@ -2218,7 +2155,6 @@ bl managed-agent vault create --name Production --metadata owner=platform --yes
 | `--secret-name <name>`    | string | yes      | Environment variable name exposed to the Agent         |
 | `--secret-env <env-name>` | string | yes      | Local environment variable containing the secret value |
 | `--metadata <key=value>`  | array  | no       | Metadata entry (repeatable)                            |
-| `--provider <name>`       | string | no       | Target provider; inferred when unambiguous             |
 | `--file <path>`           | string | no       | Config file path (default: agents.yaml)                |
 | `--yes`                   | switch | no       | Write YAML and create the remote Credential            |
 | `--api-key <key>`         | string | no       | API key                                                |
@@ -2226,8 +2162,8 @@ bl managed-agent vault create --name Production --metadata owner=platform --yes
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
 - --secret-env is an environment variable name, not the secret itself. The CLI auto-loads the nearest .env from the current directory upward; shell exports and CI secret injection also work.
@@ -2254,18 +2190,17 @@ bl managed-agent vault credential create --vault production --name api-token --s
 
 #### Flags
 
-| Flag                | Type   | Required | Description                             |
-| ------------------- | ------ | -------- | --------------------------------------- |
-| `--file <path>`     | string | no       | Config file path (default: agents.yaml) |
-| `--provider <name>` | string | no       | Target provider                         |
-| `--vault-id <id>`   | string | yes      | Vault ID                                |
-| `--api-key <key>`   | string | no       | API key                                 |
-| `--base-url <url>`  | string | no       | API base URL                            |
+| Flag               | Type   | Required | Description                             |
+| ------------------ | ------ | -------- | --------------------------------------- |
+| `--file <path>`    | string | no       | Config file path (default: agents.yaml) |
+| `--vault-id <id>`  | string | yes      | Vault ID                                |
+| `--api-key <key>`  | string | no       | API key                                 |
+| `--base-url <url>` | string | no       | API base URL                            |
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -2288,7 +2223,6 @@ bl managed-agent vault get --vault-id vault_abc
 | Flag                 | Type   | Required | Description                                       |
 | -------------------- | ------ | -------- | ------------------------------------------------- |
 | `--file <path>`      | string | no       | Config file path (default: agents.yaml)           |
-| `--provider <name>`  | string | no       | Target provider                                   |
 | `--limit <n>`        | number | no       | Page size (1-100)                                 |
 | `--page <cursor>`    | string | no       | Opaque page cursor returned by a previous request |
 | `--all`              | switch | no       | Fetch all pages by following opaque cursors       |
@@ -2298,8 +2232,8 @@ bl managed-agent vault get --vault-id vault_abc
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
@@ -2326,7 +2260,6 @@ bl managed-agent vault list --all --output json
 | Flag                 | Type   | Required | Description                                                   |
 | -------------------- | ------ | -------- | ------------------------------------------------------------- |
 | `--file <path>`      | string | no       | Config file path (default: agents.yaml)                       |
-| `--provider <name>`  | string | no       | Target provider                                               |
 | `--limit <n>`        | number | no       | Page size (1-100)                                             |
 | `--query <text>`     | string | yes      | Case-insensitive text to find in IDs, names, and descriptions |
 | `--page-limit <n>`   | number | no       | Maximum pages to scan for client-side search (default: 10)    |
@@ -2336,8 +2269,8 @@ bl managed-agent vault list --all --output json
 
 #### Notes
 
+- bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
-- Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples

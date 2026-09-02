@@ -125,7 +125,6 @@ export function selectResourceKey(options: {
 export async function loadScopedCreateProject(
   host: ScopedCreateHost,
   file: string,
-  requestedProvider: string | undefined,
 ): Promise<LoadedScopedCreateProject> {
   const sourceBeforeLoad = await readFile(resolve(file), "utf8").catch((error) => {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
@@ -148,7 +147,7 @@ export async function loadScopedCreateProject(
       "Re-run the command against the latest file.",
     );
   }
-  const provider = resolveTargetProvider(loaded.config, requestedProvider);
+  const provider = "bailian";
   if (!host.settings.dryRun) assertProviderCredentials(loaded.config.providers, [provider]);
   installSdkTransport(host);
   const stateBackend = new LocalFileStateBackend({ configPath: loaded.configPath });
@@ -159,34 +158,6 @@ export async function loadScopedCreateProject(
     stateBackend,
     stateScope: createFileStateScope(loaded.configPath, loaded.projectName),
   };
-}
-
-export function resolveTargetProvider(
-  config: ResolvedProjectConfig,
-  requested: string | undefined,
-): string {
-  if (requested === "all") {
-    throw new BailianError(
-      "--provider all is not valid for a single-resource create.",
-      ExitCode.USAGE,
-    );
-  }
-  if (requested) {
-    if (requested in config.providers) return requested;
-    throw new BailianError(
-      `Provider '${requested}' is not configured in agents.yaml.`,
-      ExitCode.USAGE,
-    );
-  }
-  const defaultProvider = config.defaults?.provider;
-  if (defaultProvider && defaultProvider !== "all") return defaultProvider;
-  const configuredProviders = Object.keys(config.providers);
-  if (configuredProviders.length === 1) return configuredProviders[0]!;
-  throw new BailianError(
-    "Cannot infer one target provider for this create command.",
-    ExitCode.USAGE,
-    "Pass --provider <name> when defaults.provider is 'all' or multiple providers are configured.",
-  );
 }
 
 export async function resolveCandidateDeclaration(options: {

@@ -3,6 +3,7 @@ import {
   isTerminalSessionStatus,
   listSessionEvents,
   sendRemoteSessionEvents,
+  SessionEventSchema,
   streamSessionEvents,
 } from "@openagentpack/sdk";
 import { sanitizeSessionEvents } from "@openagentpack/sdk/session-events";
@@ -111,6 +112,16 @@ function normalizeEventInput(value: unknown): SessionEventInput[] {
       ExitCode.USAGE,
     );
   }
+  for (const [index, entry] of values.entries()) {
+    const validation = SessionEventSchema.safeParse(entry);
+    if (validation.success) continue;
+    const issue = validation.error.issues[0];
+    const path = issue?.path.length ? ` at ${issue.path.join(".")}` : "";
+    throw new BailianError(
+      `Invalid event at index ${index}${path}: ${issue?.message ?? "does not match the Session event schema"}.`,
+      ExitCode.USAGE,
+    );
+  }
   return values as SessionEventInput[];
 }
 
@@ -140,7 +151,7 @@ export const managedAgentSessionEventList = defineCommand({
         return fetchAllPages(
           async (page) => {
             const response = await listSessionEvents(runtime, ctx.flags.sessionId, {
-              provider: ctx.flags.provider,
+              provider: "bailian",
               limit: ctx.flags.limit,
               page_token: page,
               order: ctx.flags.order,
@@ -181,7 +192,7 @@ export const managedAgentSessionEventSend = defineCommand({
   usageArgs: "--session-id <id> --event <json|@path>",
   flags: EVENT_SEND_FLAGS,
   exampleArgs: [
-    '--session-id sess_abc --event \'{"type":"message","role":"user","content":"hello"}\'',
+    '--session-id sess_abc --event \'{"type":"message","role":"user","content":[{"type":"text","text":"hello"}]}\'',
     "--session-id sess_abc --event @event.json",
   ],
   notes: CREDENTIALS_NOTE,
@@ -196,7 +207,7 @@ export const managedAgentSessionEventSend = defineCommand({
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return sendRemoteSessionEvents(runtime, ctx.flags.sessionId, events, {
-          provider: ctx.flags.provider,
+          provider: "bailian",
         });
       }),
     );
@@ -230,7 +241,7 @@ export const managedAgentSessionEventStream = defineCommand({
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         const events: ProviderSessionEvent[] = [];
         for await (const event of streamSessionEvents(runtime, ctx.flags.sessionId, {
-          provider: ctx.flags.provider,
+          provider: "bailian",
           after_id: ctx.flags.afterId,
         })) {
           events.push(event);

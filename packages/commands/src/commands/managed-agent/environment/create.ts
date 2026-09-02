@@ -37,7 +37,6 @@ const FLAGS = {
   cargo: packageFlag("Cargo"),
   gem: packageFlag("Ruby gem"),
   go: packageFlag("Go"),
-  provider: providerFlag(),
   file: fileFlag(),
   yes: yesFlag(),
 } satisfies FlagsDef;
@@ -49,7 +48,7 @@ export default defineCommand({
   },
   auth: "apiKey",
   usageArgs:
-    "--name <name> [--description <text>] [--metadata <key=value>...] [--apt <package>...] [--pip <package>...] [--npm <package>...] [--cargo <package>...] [--gem <package>...] [--go <package>...] [--provider <name>] [--file <path>] [--yes]",
+    "--name <name> [--description <text>] [--metadata <key=value>...] [--apt <package>...] [--pip <package>...] [--npm <package>...] [--cargo <package>...] [--gem <package>...] [--go <package>...] [--file <path>] [--yes]",
   flags: FLAGS,
   exampleArgs: [
     "--name Development",
@@ -67,11 +66,7 @@ export default defineCommand({
   ],
   validate: (flags) => (!flags.name.trim() ? "--name must not be empty." : undefined),
   async run(ctx) {
-    const project = await loadScopedCreateProject(
-      ctx,
-      ctx.flags.file ?? "agents.yaml",
-      ctx.flags.provider,
-    );
+    const project = await loadScopedCreateProject(ctx, ctx.flags.file ?? "agents.yaml");
     const packages = Object.fromEntries(
       ["apt", "pip", "npm", "cargo", "gem", "go"]
         .map((manager) => [manager, ctx.flags[manager as keyof typeof ctx.flags]])
@@ -120,17 +115,6 @@ function packageFlag(manager: string) {
     description: {
       "en-US": `${manager} package (repeatable)`,
       "zh-CN": `${manager} 软件包（可重复）`,
-    },
-  };
-}
-
-function providerFlag() {
-  return {
-    type: "string" as const,
-    valueHint: "<name>",
-    description: {
-      "en-US": "Target provider; inferred when unambiguous",
-      "zh-CN": "目标 Provider；可唯一确定时自动推断",
     },
   };
 }

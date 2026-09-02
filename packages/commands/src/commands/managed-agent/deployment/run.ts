@@ -47,7 +47,7 @@ export default defineCommand({
         const deploymentId = await resolveDeploymentTarget(runtime, ctx.flags);
         return {
           deploymentId,
-          run: await runRemoteDeployment(runtime, deploymentId, { provider: ctx.flags.provider }),
+          run: await runRemoteDeployment(runtime, deploymentId, { provider: "bailian" }),
         };
       }),
     );

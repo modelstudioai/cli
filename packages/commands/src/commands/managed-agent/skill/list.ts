@@ -1,5 +1,6 @@
 import { listRemoteSkills } from "@openagentpack/sdk";
 import { defineCommand, detectOutputFormat } from "bailian-cli-core";
+import { emitResult } from "bailian-cli-runtime";
 import { emitCollection, validateLimitAndPageLimit } from "../_engine/api-helpers.ts";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "../_engine/config-loader.ts";
 import { withStdoutProtected } from "../_engine/console-capture.ts";
@@ -7,15 +8,27 @@ import { withAgentErrors } from "../_engine/errors.ts";
 import { fetchAllPages } from "../_engine/pagination.ts";
 import { SKILL_LIST_FLAGS, skillRows, type SkillSource } from "./_shared.ts";
 
+export function buildSkillListJsonResult<T>(
+  source: SkillSource,
+  result: { items: T[]; hasMore: boolean; nextPage?: string },
+) {
+  return {
+    source,
+    skills: result.items,
+    has_more: result.hasMore,
+    next_page: result.nextPage,
+  };
+}
+
 async function listOneCatalog(
   runtime: Parameters<typeof listRemoteSkills>[0],
   source: Exclude<SkillSource, "all">,
-  options: { provider?: string; limit?: number; page?: string; all?: boolean },
+  options: { limit?: number; page?: string; all?: boolean },
 ) {
   return fetchAllPages(
     async (page) => {
       const response = await listRemoteSkills(runtime, {
-        provider: options.provider,
+        provider: "bailian",
         source,
         limit: options.limit,
         page,
@@ -55,7 +68,6 @@ export default defineCommand({
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         if (source !== "all") {
           return listOneCatalog(runtime, source, {
-            provider: ctx.flags.provider,
             limit: ctx.flags.limit,
             page: ctx.flags.page,
             all: ctx.flags.all,
@@ -63,12 +75,10 @@ export default defineCommand({
         }
         const [custom, official] = await Promise.all([
           listOneCatalog(runtime, "custom", {
-            provider: ctx.flags.provider,
             limit: ctx.flags.limit,
             all: ctx.flags.all,
           }),
           listOneCatalog(runtime, "official", {
-            provider: ctx.flags.provider,
             limit: ctx.flags.limit,
             all: ctx.flags.all,
           }),
@@ -80,6 +90,10 @@ export default defineCommand({
         };
       }),
     );
+    if (format === "json") {
+      emitResult(buildSkillListJsonResult(source, result), format);
+      return;
+    }
     emitCollection({
       format,
       key: "skills",

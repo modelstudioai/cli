@@ -34,7 +34,7 @@ export default defineCommand({
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return downloadRemoteSkill(runtime, ctx.flags.skillId, ctx.flags.skillVersion, {
-          provider: ctx.flags.provider,
+          provider: "bailian",
         });
       }),
     );

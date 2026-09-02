@@ -19,14 +19,6 @@ const FLAGS = {
       "zh-CN": "本地 Skill 目录、ZIP 压缩包或单个 SKILL.md",
     },
   },
-  provider: {
-    type: "string",
-    valueHint: "<name>",
-    description: {
-      "en-US": "Target provider; inferred when unambiguous",
-      "zh-CN": "目标 Provider；可唯一确定时自动推断",
-    },
-  },
   file: {
     type: "string",
     valueHint: "<path>",
@@ -50,7 +42,7 @@ export default defineCommand({
     "zh-CN": "从本地来源声明并创建一个自定义托管 Agent Skill",
   },
   auth: "apiKey",
-  usageArgs: "--source <directory|zip|SKILL.md> [--provider <name>] [--file <path>] [--yes]",
+  usageArgs: "--source <directory|zip|SKILL.md> [--file <path>] [--yes]",
   flags: FLAGS,
   exampleArgs: ["--source ./skills/code-review", "--source ./skill.zip --yes"],
   notes: [
@@ -65,11 +57,7 @@ export default defineCommand({
   ],
   validate: (flags) => (!flags.source.trim() ? "--source must not be empty." : undefined),
   async run(ctx) {
-    const project = await loadScopedCreateProject(
-      ctx,
-      ctx.flags.file ?? "agents.yaml",
-      ctx.flags.provider,
-    );
+    const project = await loadScopedCreateProject(ctx, ctx.flags.file ?? "agents.yaml");
     const inspected = await inspectSkillSource(ctx.flags.source, { basePath: process.cwd() });
     const source =
       relative(dirname(project.configPath), inspected.sourcePath).split(sep).join("/") || ".";

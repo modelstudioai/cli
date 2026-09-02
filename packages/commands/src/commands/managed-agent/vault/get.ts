@@ -19,7 +19,7 @@ export default defineCommand({
     const vault = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
-        return getRemoteVault(runtime, ctx.flags.vaultId, { provider: ctx.flags.provider });
+        return getRemoteVault(runtime, ctx.flags.vaultId, { provider: "bailian" });
       }),
     );
     if (format === "json") {

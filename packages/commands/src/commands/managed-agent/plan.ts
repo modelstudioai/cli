@@ -8,11 +8,7 @@ import {
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { planProjectContext } from "@openagentpack/sdk";
 import { formatResourceLabel } from "./_engine/address-utils.ts";
-import {
-  assertProviderConfigured,
-  buildAgentRuntime,
-  CREDENTIALS_NOTE,
-} from "./_engine/config-loader.ts";
+import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { formatAgentDiagnosticFailure, withAgentErrors } from "./_engine/errors.ts";
 import { renderAgentFeedback } from "./_engine/feedback.ts";
@@ -24,14 +20,6 @@ const PLAN_FLAGS = {
     description: {
       "en-US": "Config file path (default: agents.yaml)",
       "zh-CN": "配置文件路径（默认：agents.yaml）",
-    },
-  },
-  provider: {
-    type: "string",
-    valueHint: "<name>",
-    description: {
-      "en-US": "Target provider (default: all configured)",
-      "zh-CN": "目标 Provider（默认：全部已配置项）",
     },
   },
   noRefresh: {
@@ -56,9 +44,9 @@ export default defineCommand({
     "zh-CN": "显示将应用到 Agent 基础设施的变更",
   },
   auth: "apiKey",
-  usageArgs: "[--file <path>] [--provider <name>] [--no-refresh] [--refresh-only]",
+  usageArgs: "[--file <path>] [--no-refresh] [--refresh-only]",
   flags: PLAN_FLAGS,
-  exampleArgs: ["", "--provider bailian", "--no-refresh"],
+  exampleArgs: ["", "--no-refresh"],
   notes: [
     ...CREDENTIALS_NOTE,
     {
@@ -83,9 +71,8 @@ export default defineCommand({
         const runtime = await buildAgentRuntime(ctx, file, {
           credentials: offline ? "none" : "all",
         });
-        assertProviderConfigured(runtime, flags.provider);
         return planProjectContext(runtime, {
-          provider: flags.provider,
+          provider: "bailian",
           refresh: !offline,
           quiet: format === "json",
           onFeedback: format === "json" ? undefined : renderAgentFeedback,

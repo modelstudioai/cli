@@ -23,7 +23,7 @@ export default defineCommand({
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return getRemoteDeployment(runtime, ctx.flags.deploymentId, {
-          provider: ctx.flags.provider,
+          provider: "bailian",
         });
       }),
     );

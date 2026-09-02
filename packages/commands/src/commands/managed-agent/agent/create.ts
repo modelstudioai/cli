@@ -66,14 +66,6 @@ const CREATE_FLAGS = {
     valueHint: "<text>",
     description: { "en-US": "Agent description", "zh-CN": "Agent 描述" },
   },
-  provider: {
-    type: "string",
-    valueHint: "<name>",
-    description: {
-      "en-US": "Target provider; inferred when the config has one effective provider",
-      "zh-CN": "目标 Provider；配置只有一个有效 Provider 时自动推断",
-    },
-  },
   skill: {
     type: "array",
     valueHint: "<id>",
@@ -344,7 +336,7 @@ export default defineCommand({
   },
   auth: "apiKey",
   usageArgs:
-    "--name <name> --model <model> --instructions <text|path> [--description <text>] [--provider <name>] [--skill <id>...] [--type custom|official] [--skill-dir <path>...] [--tool <name>...] [--file <path>] [--yes]",
+    "--name <name> --model <model> --instructions <text|path> [--description <text>] [--skill <id>...] [--type custom|official] [--skill-dir <path>...] [--tool <name>...] [--file <path>] [--yes]",
   flags: CREATE_FLAGS,
   exampleArgs: [
     '--name assistant --model qwen3.8-max --instructions "You are helpful."',
@@ -390,7 +382,7 @@ export default defineCommand({
     const { flags, settings } = ctx;
     const format = detectOutputFormat(settings.output);
     const file = flags.file ?? "agents.yaml";
-    const project = await loadScopedCreateProject(ctx, file, flags.provider);
+    const project = await loadScopedCreateProject(ctx, file);
     const provider = project.provider;
     const externalSkillRefs = buildAgentSkillRefs(flags.skill, agentSkillType(flags.type));
     const localSkills = await prepareLocalSkillSources(project, flags.skillDir);

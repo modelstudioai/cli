@@ -23,7 +23,7 @@ export default defineCommand({
         return fetchAllPages(
           async (page) => {
             const response = await listRemoteVaults(runtime, {
-              provider: ctx.flags.provider,
+              provider: "bailian",
               limit: ctx.flags.limit,
               page,
               include_archived: ctx.flags.includeArchived,

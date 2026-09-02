@@ -107,11 +107,42 @@ async function collectSessionDiagnostics(
   };
 }
 
-const SENSITIVE_KEY =
-  /(api[_-]?key|access[_-]?key|secret|token|authorization|credential|password)/i;
+const SENSITIVE_MARKER = String.raw`(?:api[_-]?key|access[_-]?key|private[_-]?key|secret|token|authorization|credential|password|signature|signed[_-]?url)`;
+const SENSITIVE_KEY = new RegExp(`${SENSITIVE_MARKER}|tool[_-]?input`, "i");
+const SENSITIVE_URL_PARAMETER = new RegExp(
+  `([?&][^=&#\\s]*(?:${SENSITIVE_MARKER})[^=&#\\s]*=)[^&#\\s"'<>),}\\]]*`,
+  "gi",
+);
+const SENSITIVE_DOUBLE_QUOTED_VALUE = new RegExp(
+  `("[^"]*(?:${SENSITIVE_MARKER})[^"]*"\\s*:\\s*")[^"]*(")`,
+  "gi",
+);
+const SENSITIVE_SINGLE_QUOTED_VALUE = new RegExp(
+  `('[^']*(?:${SENSITIVE_MARKER})[^']*'\\s*:\\s*')[^']*(')`,
+  "gi",
+);
+const SENSITIVE_ASSIGNMENT = new RegExp(
+  `(\\b[^\\s=:,;]*(?:${SENSITIVE_MARKER})[^\\s=:,;]*\\s*=\\s*)(?!\\[REDACTED\\])(?:"[^"]*"|'[^']*'|[^\\s,;&]+)`,
+  "gi",
+);
+const AUTHORIZATION_VALUE = /\b(authorization\s*:\s*)(?:bearer\s+)?[^\s,;]+/gi;
+const BEARER_TOKEN = /\b(bearer\s+)[A-Za-z0-9._~+/=-]+/gi;
+const API_KEY_LITERAL = /\bsk-[A-Za-z0-9_-]{8,}\b/g;
+
+function redactSensitiveText(value: string): string {
+  return value
+    .replace(SENSITIVE_URL_PARAMETER, "$1[REDACTED]")
+    .replace(SENSITIVE_DOUBLE_QUOTED_VALUE, "$1[REDACTED]$2")
+    .replace(SENSITIVE_SINGLE_QUOTED_VALUE, "$1[REDACTED]$2")
+    .replace(SENSITIVE_ASSIGNMENT, "$1[REDACTED]")
+    .replace(AUTHORIZATION_VALUE, "$1[REDACTED]")
+    .replace(BEARER_TOKEN, "$1[REDACTED]")
+    .replace(API_KEY_LITERAL, "[REDACTED]");
+}
 
 export function redactSensitiveValues(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(redactSensitiveValues);
+  if (typeof value === "string") return redactSensitiveText(value);
   if (!value || typeof value !== "object") return value;
   return Object.fromEntries(
     Object.entries(value).map(([key, entry]) => [
@@ -233,7 +264,7 @@ export const managedAgentSessionDebug = defineCommand({
     const bundle = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
-        return collectSessionDiagnostics(runtime, ctx.flags.sessionId, ctx.flags.provider);
+        return collectSessionDiagnostics(runtime, ctx.flags.sessionId, "bailian");
       }),
     );
     const redacted = redactSensitiveValues(bundle);
@@ -278,7 +309,7 @@ export const managedAgentSessionExport = defineCommand({
     const bundle = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
-        return collectSessionDiagnostics(runtime, ctx.flags.sessionId, ctx.flags.provider);
+        return collectSessionDiagnostics(runtime, ctx.flags.sessionId, "bailian");
       }),
     );
     const manifest = {

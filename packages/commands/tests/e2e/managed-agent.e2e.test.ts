@@ -224,7 +224,8 @@ describe("e2e: managed-agent", () => {
       "--help",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/--file|--provider|--yes/i);
+    expect(stderr).toMatch(/--file|--yes/i);
+    expect(stderr).not.toContain("--provider");
   });
 
   test("managed-agent apply 计划失败时在最终错误中保留首条诊断和剩余数量", async () => {
@@ -284,15 +285,7 @@ agents:
     instructions: Exercise the apply error path.
 `;
     await writeFile(configPath, configSource, "utf8");
-    const baseArgs = [
-      "managed-agent",
-      "apply",
-      "--file",
-      configPath,
-      "--provider",
-      "bailian",
-      "--yes",
-    ];
+    const baseArgs = ["managed-agent", "apply", "--file", configPath, "--yes"];
     const env = {
       DASHSCOPE_API_KEY: "sk-e2e-apply-error",
       BAILIAN_BASE_URL: `http://127.0.0.1:${address.port}`,
@@ -948,7 +941,7 @@ vaults:
       "--secret-name",
       "API_TOKEN",
       "--secret-env",
-      "E2E_RETRY_SECRET",
+      "ANTHROPIC_API_KEY",
       "--file",
       configPath,
       "--yes",
@@ -957,7 +950,7 @@ vaults:
     ];
     const env = {
       DASHSCOPE_API_KEY: "sk-e2e-vault-credential",
-      E2E_RETRY_SECRET: "credential-secret-must-not-leak",
+      ANTHROPIC_API_KEY: "credential-secret-must-not-leak",
     };
     try {
       await seedTrackedResources(configPath, [
@@ -980,7 +973,7 @@ vaults:
       expect(config.vaults.production.credentials).toEqual([
         expect.objectContaining({
           name: "api-token",
-          secret_value: "${E2E_RETRY_SECRET}",
+          secret_value: "${ANTHROPIC_API_KEY}",
         }),
       ]);
       expect(requestBodies).toHaveLength(2);
@@ -991,6 +984,23 @@ vaults:
   });
 
   test("deployment create 拒绝非法 Event 与不完整 Schedule", async () => {
+    const mixedEventInputs = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "deployment",
+      "create",
+      "--dry-run",
+      "--name",
+      "Mixed Events",
+      "--agent",
+      "assistant",
+      "--message",
+      "Run",
+      "--event",
+      '{"type":"system.message","content":"Be concise"}',
+    ]);
+    expect(mixedEventInputs.exitCode).toBe(2);
+    expect(mixedEventInputs.stderr).toMatch(/--message and --event cannot be used together/i);
+
     const invalidEvent = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "deployment",
@@ -1116,7 +1126,8 @@ vaults:
       "--help",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/--source|--provider|--file/i);
+    expect(stderr).toMatch(/--source|--file/i);
+    expect(stderr).not.toContain("--provider");
   });
 
   test("managed-agent skill-list 非法 --source 时退出为用法错误 (2)", async () => {
@@ -1163,6 +1174,50 @@ vaults:
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--skill-id|--limit|--page|--all/i);
   });
+
+  test("session event send 拒绝字符串 content", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "session",
+      "event",
+      "send",
+      "--dry-run",
+      "--session-id",
+      "sess_e2e",
+      "--event",
+      '{"type":"message","role":"user","content":"hello"}',
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/invalid event.*content.*expected array/i);
+  });
+
+  test("file upload 不再暴露多 Provider 专属选项", async () => {
+    const providerResult = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "file",
+      "upload",
+      "--dry-run",
+      "--path",
+      "missing.txt",
+      "--provider",
+      "bailian",
+    ]);
+    expect(providerResult.exitCode).toBe(2);
+    expect(providerResult.stderr).toMatch(/Unknown flag.*--provider/i);
+
+    const purposeResult = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "file",
+      "upload",
+      "--dry-run",
+      "--path",
+      "missing.txt",
+      "--purpose",
+      "agent",
+    ]);
+    expect(purposeResult.exitCode).toBe(2);
+    expect(purposeResult.stderr).toMatch(/Unknown flag.*--purpose/i);
+  });
 });
 
 describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => {
@@ -1178,7 +1233,7 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
         "--session-id",
         "sess_e2e",
         "--event",
-        '{"type":"message","content":"hello"}',
+        '{"type":"message","role":"user","content":[{"type":"text","text":"hello"}]}',
       ],
     ],
     [
@@ -1234,6 +1289,18 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
     expect(data.provider).toBe("bailian");
   });
 
+  test("init 不再接受 --provider", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "init",
+      "--dry-run",
+      "--provider",
+      "claude",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/Unknown flag.*--provider/i);
+  });
+
   test("apply --dry-run 仅输出计划", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
@@ -1244,7 +1311,7 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
     ]);
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{ would_apply?: { provider?: string } }>(stdout);
-    expect(data.would_apply?.provider).toBe("all");
+    expect(data.would_apply?.provider).toBe("bailian");
   });
 
   test("agent create --dry-run 自动生成 key 且不改 YAML", async () => {

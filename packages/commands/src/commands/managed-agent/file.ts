@@ -60,11 +60,6 @@ const UPLOAD_FLAGS = {
     valueHint: "<type>",
     description: { "en-US": "MIME type override", "zh-CN": "覆盖 MIME 类型" },
   },
-  purpose: {
-    type: "string",
-    valueHint: "<purpose>",
-    description: { "en-US": "Provider upload purpose", "zh-CN": "Provider 上传用途" },
-  },
 } as const;
 
 const LIST_FLAGS = { ...API_TARGET_FLAGS, ...CURSOR_FLAGS, ...SCOPE_ID_FLAG };
@@ -106,9 +101,9 @@ function fileRows(files: ProviderFileInfo[]): string[][] {
 export const managedAgentFileUpload = defineCommand({
   description: { "en-US": "Upload a Managed Agent file", "zh-CN": "上传托管 Agent 文件" },
   auth: "apiKey",
-  usageArgs: "--path <path> [--filename <name>] [--mime-type <type>] [--purpose <purpose>]",
+  usageArgs: "--path <path> [--filename <name>] [--mime-type <type>]",
   flags: UPLOAD_FLAGS,
-  exampleArgs: ["--path ./report.pdf", "--path ./data.json --purpose assistants"],
+  exampleArgs: ["--path ./report.pdf"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const format = detectOutputFormat(ctx.settings.output);
@@ -118,7 +113,6 @@ export const managedAgentFileUpload = defineCommand({
           would_upload_file: ctx.flags.path,
           filename: ctx.flags.filename ?? basename(ctx.flags.path),
           mime_type: ctx.flags.mimeType ?? inferMimeType(ctx.flags.path),
-          purpose: ctx.flags.purpose,
         },
         format,
       );
@@ -129,9 +123,8 @@ export const managedAgentFileUpload = defineCommand({
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return uploadFile(runtime, content, ctx.flags.filename ?? basename(ctx.flags.path), {
-          provider: ctx.flags.provider,
+          provider: "bailian",
           mimeType: ctx.flags.mimeType ?? inferMimeType(ctx.flags.path),
-          purpose: ctx.flags.purpose,
         });
       }),
     );
@@ -156,7 +149,7 @@ export const managedAgentFileList = defineCommand({
         return fetchAllPages(
           async (page) => {
             const response = await listRemoteFiles(runtime, {
-              provider: ctx.flags.provider,
+              provider: "bailian",
               scope_id: ctx.flags.scopeId,
               limit: ctx.flags.limit,
               page,
@@ -197,7 +190,7 @@ export const managedAgentFileGet = defineCommand({
     const file = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
-        return getFileInfo(runtime, ctx.flags.fileId, { provider: ctx.flags.provider });
+        return getFileInfo(runtime, ctx.flags.fileId, { provider: "bailian" });
       }),
     );
     if (format === "json") emitResult(file, format);
@@ -228,7 +221,7 @@ export const managedAgentFileSearch = defineCommand({
         return searchCursorPages(
           async (page) => {
             const response = await listRemoteFiles(runtime, {
-              provider: ctx.flags.provider,
+              provider: "bailian",
               scope_id: ctx.flags.scopeId,
               limit: ctx.flags.limit ?? 100,
               page,
@@ -281,7 +274,7 @@ export const managedAgentFileDownload = defineCommand({
     const content = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
-        return downloadRemoteFile(runtime, ctx.flags.fileId, { provider: ctx.flags.provider });
+        return downloadRemoteFile(runtime, ctx.flags.fileId, { provider: "bailian" });
       }),
     );
     const outputFile = await writeOutputFile(ctx.flags.outputFile, content, ctx.flags.force);
@@ -314,7 +307,7 @@ export const managedAgentFileDelete = defineCommand({
     await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
-        await deleteFile(runtime, ctx.flags.fileId, { provider: ctx.flags.provider });
+        await deleteFile(runtime, ctx.flags.fileId, { provider: "bailian" });
       }),
     );
     if (format === "json") emitResult({ deleted: ctx.flags.fileId }, format);

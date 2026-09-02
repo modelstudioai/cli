@@ -26,7 +26,7 @@ export default defineCommand({
         return fetchAllPages(
           async (page) => {
             const response = await listRemoteSkillVersions(runtime, ctx.flags.skillId, {
-              provider: ctx.flags.provider,
+              provider: "bailian",
               limit: ctx.flags.limit,
               page,
             });

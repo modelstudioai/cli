@@ -19,7 +19,7 @@ export default defineCommand({
     const skill = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
-        return getRemoteSkill(runtime, ctx.flags.skillId, { provider: ctx.flags.provider });
+        return getRemoteSkill(runtime, ctx.flags.skillId, { provider: "bailian" });
       }),
     );
     if (format === "json") {

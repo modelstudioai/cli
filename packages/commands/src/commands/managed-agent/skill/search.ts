@@ -29,7 +29,7 @@ export default defineCommand({
           searchCursorPages(
             async (page) => {
               const response = await listRemoteSkills(runtime, {
-                provider: ctx.flags.provider,
+                provider: "bailian",
                 source: catalog,
                 limit: ctx.flags.limit ?? 100,
                 page,

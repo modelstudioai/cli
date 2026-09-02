@@ -25,7 +25,7 @@ export default defineCommand({
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return getRemoteAgent(runtime, ctx.flags.agentId, {
-          provider: ctx.flags.provider,
+          provider: "bailian",
           version: ctx.flags.agentVersion,
         });
       }),

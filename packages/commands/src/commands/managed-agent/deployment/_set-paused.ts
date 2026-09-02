@@ -56,7 +56,7 @@ export function createSetDeploymentPausedCommand(paused: boolean) {
           return {
             deploymentId,
             deployment: await setRemoteDeploymentPaused(runtime, deploymentId, paused, {
-              provider: ctx.flags.provider,
+              provider: "bailian",
             }),
           };
         }),

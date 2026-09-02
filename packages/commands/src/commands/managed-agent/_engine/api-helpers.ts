@@ -11,11 +11,6 @@ export const API_TARGET_FLAGS = {
       "zh-CN": "配置文件路径（默认：agents.yaml）",
     },
   },
-  provider: {
-    type: "string",
-    valueHint: "<name>",
-    description: { "en-US": "Target provider", "zh-CN": "目标 Provider" },
-  },
 } satisfies FlagsDef;
 
 export const CURSOR_FLAGS = {

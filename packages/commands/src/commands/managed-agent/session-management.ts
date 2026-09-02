@@ -134,7 +134,7 @@ export const managedAgentSessionSearch = defineCommand({
           async (page) => {
             const response = await listSessionSummaries(runtime, {
               agent: ctx.flags.agent,
-              provider: ctx.flags.provider,
+              provider: "bailian",
               filter: {
                 page,
                 limit: ctx.flags.limit ?? 100,
@@ -201,7 +201,7 @@ export const managedAgentSessionUpdate = defineCommand({
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
         return updateRemoteSession(runtime, ctx.flags.sessionId, input, {
-          provider: ctx.flags.provider,
+          provider: "bailian",
         });
       }),
     );
@@ -233,7 +233,7 @@ export const managedAgentSessionArchive = defineCommand({
     const session = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, ctx.flags.file ?? "agents.yaml");
-        return archiveRemoteSession(runtime, ctx.flags.sessionId, { provider: ctx.flags.provider });
+        return archiveRemoteSession(runtime, ctx.flags.sessionId, { provider: "bailian" });
       }),
     );
     if (format === "json") emitResult({ archived: ctx.flags.sessionId, session }, format);

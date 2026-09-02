@@ -26,14 +26,6 @@ const FLAGS = {
       "zh-CN": "Metadata 条目（可重复）",
     },
   },
-  provider: {
-    type: "string",
-    valueHint: "<name>",
-    description: {
-      "en-US": "Target provider; inferred when unambiguous",
-      "zh-CN": "目标 Provider；可唯一确定时自动推断",
-    },
-  },
   file: {
     type: "string",
     valueHint: "<path>",
@@ -57,8 +49,7 @@ export default defineCommand({
     "zh-CN": "通过定向 YAML Apply 声明并创建一个空的托管 Agent Vault",
   },
   auth: "apiKey",
-  usageArgs:
-    "--name <name> [--metadata <key=value>...] [--provider <name>] [--file <path>] [--yes]",
+  usageArgs: "--name <name> [--metadata <key=value>...] [--file <path>] [--yes]",
   flags: FLAGS,
   exampleArgs: ["--name Production", "--name Production --metadata owner=platform --yes"],
   notes: [
@@ -71,11 +62,7 @@ export default defineCommand({
   ],
   validate: (flags) => (!flags.name.trim() ? "--name must not be empty." : undefined),
   async run(ctx) {
-    const project = await loadScopedCreateProject(
-      ctx,
-      ctx.flags.file ?? "agents.yaml",
-      ctx.flags.provider,
-    );
+    const project = await loadScopedCreateProject(ctx, ctx.flags.file ?? "agents.yaml");
     const rawDeclaration: Record<string, unknown> = {
       display_name: ctx.flags.name.trim(),
       provider: project.provider,

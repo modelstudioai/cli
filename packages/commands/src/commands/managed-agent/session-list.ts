@@ -58,11 +58,6 @@ const SESSION_LIST_FLAGS = {
       "zh-CN": "创建时间不晚于该 RFC 3339 时间戳",
     },
   },
-  provider: {
-    type: "string",
-    valueHint: "<name>",
-    description: { "en-US": "Target provider", "zh-CN": "目标 Provider" },
-  },
 } satisfies FlagsDef;
 
 export default defineCommand({
@@ -92,7 +87,7 @@ export default defineCommand({
           async (page) => {
             const result = await listSessionSummaries(runtime, {
               agent: flags.agent,
-              provider: flags.provider,
+              provider: "bailian",
               filter: {
                 page,
                 limit: flags.limit,
