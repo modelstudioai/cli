@@ -189,8 +189,8 @@ importers:
   packages/commands:
     dependencies:
       '@openagentpack/sdk':
-        specifier: 0.4.0-beta-2472720-20260827
-        version: 0.4.0-beta-2472720-20260827
+        specifier: 0.5.0
+        version: 0.5.0
       bailian-cli-core:
         specifier: workspace:*
         version: link:../core
@@ -1124,8 +1124,8 @@ packages:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
 
-  '@openagentpack/sdk@0.4.0-beta-2472720-20260827':
-    resolution: {integrity: sha512-Ms9xeYKllgaeeBKvlb5O6rvSn3mHw2PWJ6SEY+08Vayti3Fi7yhRqb4vOGfC1L3+vQtl0qRf2Bqsr3b8dyx4zw==}
+  '@openagentpack/sdk@0.5.0':
+    resolution: {integrity: sha512-9mNMvPWuoiK5NQVFN5i2qAhUAFSmw9jO8xrMDXXfa6eSu0XlEAPZzR6DDg4HdhW+ex60KgA+fcNA0h0LRF552A==}
     engines: {node: '>=18.17.0'}
 
   '@oxc-project/runtime@0.129.0':
@@ -4287,7 +4287,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  '@openagentpack/sdk@0.4.0-beta-2472720-20260827':
+  '@openagentpack/sdk@0.5.0':
     dependencies:
       jszip: 3.10.1
       yaml: 2.9.0
