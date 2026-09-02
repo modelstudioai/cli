@@ -48,7 +48,7 @@ describe("e2e: knowledge kb delete", () => {
     expect(data.request?.index_id).toBe("idx_test");
   });
 
-  test("非 TTY 无 --yes 报 USAGE (2)", async () => {
+  test("无 --yes 返回确认请求 (7)", async () => {
     const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_KB_DELETE_ROUTES, [
       "knowledge",
       "delete",
@@ -58,9 +58,17 @@ describe("e2e: knowledge kb delete", () => {
       "sk-fake",
       "--workspace-id",
       "ws_test",
+      "--output",
+      "json",
     ]);
-    expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/--yes/);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: {
+        code: 7,
+        type: "requires_confirmation",
+        hint: expect.stringContaining("--yes"),
+      },
+    });
   });
 });
 

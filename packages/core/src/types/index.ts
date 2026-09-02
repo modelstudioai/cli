@@ -1,5 +1,7 @@
 export type {
   Command,
+  CommandRisk,
+  CommandRiskLevel,
   AnyCommand,
   CommandContext,
   LocalizedText,

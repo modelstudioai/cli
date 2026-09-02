@@ -11,6 +11,7 @@ import type {
   ParsedFlags,
   ResolutionSources,
   Settings,
+  LocalizedText,
 } from "bailian-cli-core";
 import {
   Client,
@@ -31,6 +32,7 @@ import {
   performAutoUpdate,
   shouldAutoUpdate,
 } from "./utils/update-checker.ts";
+import { ConfirmationRequiredError, confirmationHint } from "./confirm.ts";
 
 /**
  * What each middleware stage gets for the invocation in flight: the matched
@@ -45,6 +47,10 @@ export interface RunContext {
   readonly command: AnyCommand;
   /** 只含本命令声明的 flag(分流后);全局 flag 在 sources/settings。 */
   flags: ParsedFlags<FlagsDef>;
+  /** Whether the runtime-owned --yes flag was explicitly supplied. */
+  readonly confirmed: boolean;
+  /** Locale selector for runtime-owned command metadata and messages. */
+  readonly localize: (text: LocalizedText) => string;
   /** 解析后的有效配置面(命令的新读取面;双轨迁移期与 config 并存)。 */
   settings: Settings;
   /** 解析源:provider/访问器用;业务命令不可见(窄视图类型不含此字段)。 */
@@ -210,6 +216,22 @@ export const versionCheckStage: Middleware = async (ctx, next) => {
       process.stderr.write(`  Run ${color.cyan(`${ctx.identity.binName} update`)} to upgrade\n\n`);
     }
   }
+};
+
+/**
+ * Safety gate before update/auth/command stages. Telemetry may wrap this stage
+ * so confirmation-required failures remain observable.
+ */
+export const confirmationStage: Middleware = async (ctx, next) => {
+  if (ctx.command.risk === undefined || ctx.confirmed || ctx.settings.dryRun) {
+    await next();
+    return;
+  }
+
+  throw new ConfirmationRequiredError({
+    message: ctx.localize(ctx.command.risk.message),
+    hint: ctx.localize(confirmationHint()),
+  });
 };
 
 /** Innermost stage: hand control to the command with its full context. */

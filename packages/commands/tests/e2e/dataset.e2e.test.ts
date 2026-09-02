@@ -293,16 +293,6 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
     expect(`${stdout}\n${stderr}`).toMatch(/--schema video is not supported/);
   });
 
-  test("dataset delete --help 展示 --yes", async () => {
-    const { stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
-      "dataset",
-      "delete",
-      "--help",
-    ]);
-    expect(exitCode, stderr).toBe(0);
-    expect(stderr).toMatch(/--yes/i);
-  });
-
   test("dataset delete --dry-run 发出结构化动作", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
       "dataset",
@@ -317,16 +307,34 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
     const data = parseStdoutJson<{ action: string }>(stdout);
     expect(data.action).toBe("dataset.delete");
   });
+});
 
-  test("dataset delete 非 TTY 无 --yes 报 USAGE (2)", async () => {
+describe("e2e: dataset high-risk confirmation", () => {
+  test("dataset delete --help 展示 runtime 注入的 --yes", async () => {
+    const { stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
+      "dataset",
+      "delete",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--yes/i);
+  });
+
+  test("dataset delete 无 --yes 返回确认请求 (7)", async () => {
     const { stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
       "dataset",
       "delete",
       "--file-id",
       "file-id-xxx",
+      "--api-key",
+      "e2e-dummy-key",
+      "--output",
+      "json",
     ]);
-    expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/--yes/);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
   });
 });
 

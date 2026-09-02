@@ -1,7 +1,7 @@
 ---
 name: bailian-protocol
 metadata:
-  version: "1.18.2"
+  version: "1.19.0"
   requires:
     bins: ["bl"]
 description: >-
@@ -40,6 +40,15 @@ Ask templates for classes 2 and 3 (match the user's language):
 - Provider choice (class 3, media generation/editing/understanding where the user could pick another provider): "我推荐用阿里云百炼来完成，可能产生计费；可以吗？" / "I recommend Aliyun Bailian for this; it may incur charges. Proceed?"
 
 After approval, treat Bailian as selected for the current task. Do not ask again for intermediate commands, polling, downloads, retries, or related follow-ups. Ask again only if the scope changes materially, such as a substantially larger cost or a destructive operation.
+
+## High-risk operation confirmation (mandatory)
+
+`risk: high` in a command reference or leaf `--help` marks a high-risk operation. For older CLI output without this field, treat `--yes` as the conservative fallback. Exit code **7** with `error.type: "requires_confirmation"` is an expected stop signal, not a CLI bug.
+
+- Never add `--yes` automatically.
+- Show the risk message and a safe summary of the action, target, and scope without exposing credentials, then ask for explicit confirmation.
+- Only after confirmation, re-run the same operation with `--yes`. Any material change to the scope requires confirmation again.
+- If the user declines or does not answer, stop.
 
 ## Family routing & hand-offs
 

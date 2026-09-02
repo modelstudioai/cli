@@ -1,6 +1,7 @@
 import type {
   AnyCommand,
   AuthRequirement,
+  CommandRiskLevel,
   FlagDef,
   FlagsDef,
   LocalizedText,
@@ -17,6 +18,7 @@ import { camelToKebab } from "./args.ts";
 import type { Translator } from "./i18n.ts";
 import { printQuickStart, printWelcomeBanner } from "./output/banner.ts";
 import { ansi } from "./output/color.ts";
+import { confirmationFlagDefs } from "./confirm.ts";
 
 export type { Command, AnyCommand, FlagDef, FlagsDef } from "bailian-cli-core";
 
@@ -40,10 +42,16 @@ const AUTH_LABELS = {
   none: { "en-US": "No Auth", "zh-CN": "无需鉴权" },
 } satisfies Record<AuthRequirement, LocalizedText>;
 
+const RISK_LEVEL_LABELS = {
+  high: { "en-US": "high", "zh-CN": "高风险" },
+} satisfies Record<CommandRiskLevel, LocalizedText>;
+
 const HELP_TEXT = {
   usage: { "en-US": "Usage:", "zh-CN": "用法：" },
   commands: { "en-US": "Commands:", "zh-CN": "命令：" },
   authentication: { "en-US": "Authentication:", "zh-CN": "鉴权方式：" },
+  risk: { "en-US": "Risk:", "zh-CN": "风险等级：" },
+  riskMessage: { "en-US": "Risk message:", "zh-CN": "风险说明：" },
   flags: { "en-US": "Flags:", "zh-CN": "选项：" },
   globalFlags: { "en-US": "Global Flags:", "zh-CN": "全局选项：" },
   modelAuthFlags: { "en-US": "Model Auth Flags:", "zh-CN": "模型鉴权选项：" },
@@ -63,6 +71,10 @@ const HELP_TEXT = {
   },
   notes: { "en-US": "Notes:", "zh-CN": "说明：" },
   examples: { "en-US": "Examples:", "zh-CN": "示例：" },
+  confirmedExample: {
+    "en-US": "# Only after explicit confirmation:",
+    "zh-CN": "# 仅在明确确认后执行：",
+  },
   minimalWorkflow: { "en-US": "Minimal workflow.yaml:", "zh-CN": "最小 workflow.yaml：" },
   tryIt: { "en-US": "Try it:", "zh-CN": "试一试：" },
 } satisfies Record<string, LocalizedText>;
@@ -101,7 +113,11 @@ export class CommandRegistry {
 
   private register(path: string, command: AnyCommand): void {
     // 同名守卫:命令自有 flag 不得与全局或其可见凭证域 flag 同名。
-    const reserved = { ...GLOBAL_FLAGS, ...credentialFlagDefs(command) };
+    const reserved = {
+      ...GLOBAL_FLAGS,
+      ...confirmationFlagDefs(command),
+      ...credentialFlagDefs(command),
+    };
     for (const key of Object.keys(command.flags ?? {})) {
       if (key in reserved) {
         throw new Error(`Command "${path}" redeclares reserved flag "${key}".`);
@@ -427,8 +443,15 @@ ${authFlagSections ? `${authFlagSections}\n\n` : ""}${b(this.localize(HELP_TEXT.
     out.write(
       `${b(this.localize(HELP_TEXT.authentication))} ${a(this.localize(AUTH_LABELS[cmd.auth]))}\n`,
     );
+    if (cmd.risk !== undefined) {
+      out.write(
+        `${b(this.localize(HELP_TEXT.risk))} ${a(this.localize(RISK_LEVEL_LABELS[cmd.risk.level]))}\n`,
+      );
+      out.write(`${b(this.localize(HELP_TEXT.riskMessage))} ${this.localize(cmd.risk.message)}\n`);
+    }
     const flagEntries = [
       ...Object.entries(cmd.flags ?? {}),
+      ...Object.entries(confirmationFlagDefs(cmd)),
       ...Object.entries(credentialFlagDefs(cmd)),
     ] as [string, FlagDef][];
     if (flagEntries.length > 0) {
@@ -454,6 +477,9 @@ ${authFlagSections ? `${authFlagSections}\n\n` : ""}${b(this.localize(HELP_TEXT.
       out.write(`\n${b(this.localize(HELP_TEXT.examples))}\n`);
       for (const example of cmd.exampleArgs) {
         const localizedExample = this.localize(example);
+        if (cmd.risk !== undefined && /(?:^|\s)--yes(?:\s|$)/.test(localizedExample)) {
+          out.write(`  ${d(this.localize(HELP_TEXT.confirmedExample))}\n`);
+        }
         const line = localizedExample.startsWith("#")
           ? localizedExample
           : localizedExample

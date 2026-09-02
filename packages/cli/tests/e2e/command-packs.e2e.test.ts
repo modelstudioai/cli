@@ -65,6 +65,7 @@ describe("e2e: Command Pack", () => {
     expect(linkedJson.linked.commands).toEqual([
       "agent credential",
       "agent credential-denied",
+      "agent dangerous",
       "agent fail",
       "agent output",
       "agent ping",
@@ -170,6 +171,34 @@ describe("e2e: Command Pack", () => {
     expect(failed.stderr).toContain("Use agent fail only in tests.");
   });
 
+  test("high-risk 命令由 runtime 统一确认并支持安全 dry-run", async () => {
+    const dangerousHelp = await runCli(["agent", "dangerous", "--help"], env());
+    expect(dangerousHelp.exitCode, dangerousHelp.stderr).toBe(0);
+    expect(dangerousHelp.stderr).toContain("--yes");
+
+    const unconfirmed = await runCli(["agent", "dangerous", "--output", "json"], env());
+    expect(unconfirmed.exitCode).toBe(7);
+    expect(JSON.parse(unconfirmed.stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
+
+    const confirmed = await runCli(["agent", "dangerous", "--yes", "--output", "json"], env());
+    expect(confirmed.exitCode, confirmed.stderr).toBe(0);
+    expect(parseStdoutJson(confirmed.stdout)).toEqual({
+      executed: true,
+      dry_run: false,
+      command_flags: [],
+    });
+
+    const preview = await runCli(["agent", "dangerous", "--dry-run", "--output", "json"], env());
+    expect(preview.exitCode, preview.stderr).toBe(0);
+    expect(parseStdoutJson(preview.stdout)).toEqual({
+      executed: false,
+      dry_run: true,
+      command_flags: [],
+    });
+  });
+
   test("plugin list 输出加载状态", async () => {
     const result = await runCli(["plugin", "list", "--output", "json"], env());
     expect(result.exitCode, result.stderr).toBe(0);
@@ -183,6 +212,7 @@ describe("e2e: Command Pack", () => {
         commands: [
           "agent credential",
           "agent credential-denied",
+          "agent dangerous",
           "agent fail",
           "agent output",
           "agent ping",

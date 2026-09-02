@@ -1,7 +1,7 @@
 ---
 name: bailian-finetune
 metadata:
-  version: "1.18.2"
+  version: "1.19.0"
   requires:
     bins: ["bl"]
 description: >-
@@ -33,7 +33,7 @@ description: >-
 - Unsure which training methods a base model supports → `bl finetune capability --base-model <base>` or `--training-type sft|sft-lora|dpo|cpt`.
 - Text `--training-type` values: `sft` / `sft-lora` / `dpo` / `dpo-lora` / `cpt`. Audio bases include `cosyvoice-v3-flash`; image bases include `wan2.7-image-pro`.
 - Deployment plans: audio defaults to `--plan mu`; text/image default to `lora`.
-- Preview write operations (create / delete / cancel / scale) with `--dry-run` first, and confirm with the user before deleting a job or dataset.
+- For `risk: high` or `requires_confirmation`, follow `bailian-protocol`; never add `--yes` automatically.
 
 ## When to use which command
 

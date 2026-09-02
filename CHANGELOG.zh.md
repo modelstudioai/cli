@@ -6,6 +6,16 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.19.0] - 2026-09-01
+
+### 新增
+
+- **`bl quota delete`** — 清除指定模型的全部自定义 QPM/TPM 限流配置。
+
+### 变更
+
+- **高风险操作确认** — 高风险命令会在 `--help` 和 Skill 命令参考中展示风险说明。未传入 `--yes` 时，高风险操作不会执行；JSON 输出会返回退出码 `7` 和 `error.type: "requires_confirmation"`。确认后可添加 `--yes` 重新执行；`--dry-run` 无需确认。
+
 ## [1.18.2] - 2026-09-01
 
 ### 变更
