@@ -12,6 +12,12 @@ interface SdkApiErrorLike extends Error {
   responseBody: string;
 }
 
+interface AgentDiagnosticLike {
+  severity: string;
+  code?: string;
+  message: string;
+}
+
 function isSdkApiError(error: Error): error is SdkApiErrorLike {
   const candidate = error as Partial<SdkApiErrorLike>;
   return typeof candidate.statusCode === "number" && typeof candidate.responseBody === "string";
@@ -43,6 +49,42 @@ function parseSdkResponseBody(raw: string): ApiErrorBody {
  */
 function isSdkPollingTimeout(error: UserError): boolean {
   return /did not complete within the timeout/i.test(error.message);
+}
+
+/**
+ * Keep the final CLI error useful for hosts that retain stderr's terminal
+ * BailianError but discard the diagnostics emitted before it. The complete
+ * diagnostic collection remains on stdout/stderr; the terminal error carries
+ * the first actionable reason and signals when more errors are available.
+ */
+export function formatAgentDiagnosticFailure(
+  diagnostics: readonly AgentDiagnosticLike[],
+  fallback: string,
+): string {
+  const errors = diagnostics.filter((diagnostic) => diagnostic.severity === "error");
+  const firstError = errors[0];
+  if (!firstError) return fallback;
+
+  const codePrefix = firstError.code?.trim() ? `[${firstError.code}] ` : "";
+  const remaining = errors.length - 1;
+  const remainingSuffix = remaining > 0 ? ` (+${remaining} more errors)` : "";
+  return `${codePrefix}${firstError.message}${remainingSuffix}`;
+}
+
+/** Add a recovery hint without replacing the original error or its metadata. */
+export function retainAgentError(error: unknown, hint: string, fallback: string): BailianError {
+  if (error instanceof BailianError) {
+    return new BailianError(error.message, error.exitCode, hint, {
+      api: error.api,
+      rawResponse: error.rawResponse,
+      cause: error.cause,
+    });
+  }
+  if (error instanceof Error) {
+    return new BailianError(error.message, ExitCode.GENERAL, hint, { cause: error });
+  }
+  const message = typeof error === "string" && error.trim() ? error : fallback;
+  return new BailianError(message, ExitCode.GENERAL, hint);
 }
 
 /**

@@ -1,7 +1,11 @@
 import { UserError } from "@openagentpack/sdk";
 import { BailianError, ExitCode } from "bailian-cli-core";
 import { expect, test } from "vite-plus/test";
-import { withAgentErrors } from "../src/commands/managed-agent/_engine/errors.ts";
+import {
+  formatAgentDiagnosticFailure,
+  retainAgentError,
+  withAgentErrors,
+} from "../src/commands/managed-agent/_engine/errors.ts";
 
 /**
  * Structural stand-in for the SDK's internal `ApiError` (not exported by the
@@ -115,4 +119,46 @@ test("fetch transport TypeError is rethrown untouched for the runtime NETWORK ma
   } catch (error) {
     expect(error).toBe(transportError);
   }
+});
+
+test("diagnostic failure surfaces the first error and reports the remaining count", () => {
+  const message = formatAgentDiagnosticFailure(
+    [
+      { severity: "warning", code: "warning.code", message: "warning" },
+      { severity: "error", code: "first.code", message: "first failure" },
+      { severity: "error", code: "second.code", message: "second failure" },
+      { severity: "error", code: "third.code", message: "third failure" },
+    ],
+    "fallback",
+  );
+
+  expect(message).toBe("[first.code] first failure (+2 more errors)");
+});
+
+test("diagnostic failure uses its fallback only when no error detail exists", () => {
+  expect(
+    formatAgentDiagnosticFailure(
+      [{ severity: "warning", code: "warning.code", message: "warning" }],
+      "fallback",
+    ),
+  ).toBe("fallback");
+});
+
+test("retaining an Agent error adds a hint without losing structured context", () => {
+  const cause = new Error("provider cause");
+  const original = new BailianError("provider failure", ExitCode.GENERAL, undefined, {
+    api: { httpStatus: 500, apiCode: "PROVIDER_FAILURE", requestId: "req-retain" },
+    rawResponse: "raw provider response",
+    cause,
+  });
+
+  const retained = retainAgentError(original, "retry the create", "fallback");
+
+  expect(retained).not.toBe(original);
+  expect(retained.message).toBe("provider failure");
+  expect(retained.exitCode).toBe(ExitCode.GENERAL);
+  expect(retained.hint).toBe("retry the create");
+  expect(retained.api).toEqual(original.api);
+  expect(retained.rawResponse).toBe("raw provider response");
+  expect(retained.cause).toBe(cause);
 });

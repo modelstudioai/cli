@@ -166,6 +166,18 @@ test("assert:所有已声明 provider 的 key 非空时通过", () => {
   ).not.toThrow();
 });
 
+test("assert:定向检查不会被无关 provider 的空 key 阻塞", () => {
+  expect(() =>
+    assertProviderCredentials(
+      {
+        bailian: { api_key: "x" },
+        claude: { api_key: "" },
+      },
+      ["bailian"],
+    ),
+  ).not.toThrow();
+});
+
 test("assert:claude key 为空抛 AUTH 且 hint 指向 ANTHROPIC_API_KEY", () => {
   let thrown: unknown;
   try {

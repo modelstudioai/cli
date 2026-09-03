@@ -6,6 +6,29 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.20.0] - 2026-09-03
+
+> Managed Agent 现在同时提供 YAML-first 基础设施管理与百炼 AgentStudio 资源、运行时 API 操作。
+
+### 新增
+
+- **Managed Agent API 命令** —— 新增 Agent、Environment、Skill、Vault、Deployment、Session 和 File 的列表、详情、搜索、版本、上传、下载、运行、暂停、归档、事件及诊断等操作。
+- **基于 YAML 的单资源创建** —— `agent create`、`environment create`、`skill create`、`vault create`、`vault credential create` 和 `deployment create` 会更新 `agents.yaml`，并且只 Apply 目标资源，不受无关资源 Drift 阻塞。
+- **Agent Skill 挂载** —— 创建 Agent 时支持引用已有的自定义或官方 Skill ID，也支持本地 Skill 目录和 ZIP 文件。
+
+### 变更
+
+- **Managed Agent CLI 限定为百炼 Provider** —— `bl managed-agent` 现在只面向百炼，移除 Provider 选择参数，并拒绝包含其他 Provider 的配置。
+- **运行时变更增加确认** —— Deployment 运行/暂停/恢复、Session 归档/删除以及 File 删除操作需要显式进行高风险确认。
+
+### 修复
+
+- **Managed Agent 错误输出** —— Apply 和单资源创建失败时会保留底层 Provider 的具体诊断，不再只显示 `Apply failed.`。
+
+### 安全
+
+- 凭证仅在内存中解析并从进程环境清除；Vault Credential 声明通过环境变量引用 Secret，不会持久化明文。
+
 ## [1.19.0] - 2026-09-01
 
 ### 新增

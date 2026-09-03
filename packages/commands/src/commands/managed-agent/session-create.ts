@@ -49,14 +49,6 @@ const SESSION_CREATE_FLAGS = {
     valueHint: "<title>",
     description: { "en-US": "Session title", "zh-CN": "Session 标题" },
   },
-  provider: {
-    type: "string",
-    valueHint: "<name>",
-    description: {
-      "en-US": "Target provider (multi-provider agents)",
-      "zh-CN": "目标 Provider（多 Provider Agent）",
-    },
-  },
 } satisfies FlagsDef;
 
 export default defineCommand({
@@ -83,7 +75,7 @@ export default defineCommand({
         {
           would_create_session: {
             agent: flags.agent ?? "auto",
-            provider: flags.provider ?? "auto",
+            provider: "bailian",
             environment: flags.environment,
             vault: flags.vault,
             memory_stores: parseMemoryStores(flags.memoryStores),
@@ -101,7 +93,7 @@ export default defineCommand({
         const runtime = await buildAgentRuntime(ctx, file);
         return createSessionForAgent(runtime, {
           agent: flags.agent,
-          provider: flags.provider,
+          provider: "bailian",
           environment: flags.environment,
           vault: flags.vault,
           memoryStores: parseMemoryStores(flags.memoryStores),

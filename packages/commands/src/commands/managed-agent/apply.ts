@@ -8,13 +8,9 @@ import {
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { executePlannedProject, planProjectContext } from "@openagentpack/sdk";
 import { formatResourceLabel } from "./_engine/address-utils.ts";
-import {
-  assertProviderConfigured,
-  buildAgentRuntime,
-  CREDENTIALS_NOTE,
-} from "./_engine/config-loader.ts";
+import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
-import { withAgentErrors } from "./_engine/errors.ts";
+import { formatAgentDiagnosticFailure, withAgentErrors } from "./_engine/errors.ts";
 import { renderAgentFeedback } from "./_engine/feedback.ts";
 
 const APPLY_FLAGS = {
@@ -24,14 +20,6 @@ const APPLY_FLAGS = {
     description: {
       "en-US": "Config file path (default: agents.yaml)",
       "zh-CN": "配置文件路径（默认：agents.yaml）",
-    },
-  },
-  provider: {
-    type: "string",
-    valueHint: "<name>",
-    description: {
-      "en-US": "Target provider (default: all configured)",
-      "zh-CN": "目标 Provider（默认：全部已配置项）",
     },
   },
   noRefresh: {
@@ -65,9 +53,9 @@ export default defineCommand({
       "zh-CN": "该操作会应用当前计划，可能创建、更新或删除远端托管 Agent 资源。",
     },
   },
-  usageArgs: "[--file <path>] [--provider <name>] [--concurrency <n>]",
+  usageArgs: "[--file <path>] [--concurrency <n>]",
   flags: APPLY_FLAGS,
-  exampleArgs: ["--yes", "--provider bailian --yes"],
+  exampleArgs: ["--yes"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
@@ -78,7 +66,7 @@ export default defineCommand({
       emitResult(
         {
           would_apply: {
-            provider: flags.provider ?? "all",
+            provider: "bailian",
             refresh: !flags.noRefresh,
             concurrency: flags.concurrency,
           },
@@ -93,9 +81,8 @@ export default defineCommand({
     const planned = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, file);
-        assertProviderConfigured(runtime, flags.provider);
         return planProjectContext(runtime, {
-          provider: flags.provider,
+          provider: "bailian",
           refresh: !flags.noRefresh,
           quiet: true,
           onFeedback: renderAgentFeedback,
@@ -110,11 +97,20 @@ export default defineCommand({
       if (format === "json") process.stderr.write(`${line}\n`);
       else emitBare(line);
     };
-    if (plan.diagnostics.some((diag) => diag.severity === "error")) {
-      for (const diag of plan.diagnostics) {
-        if (diag.severity === "error") emitProgress(`[error] ${diag.code}: ${diag.message}`);
+    const errorDiagnostics = plan.diagnostics.filter(
+      (diagnostic) => diagnostic.severity === "error",
+    );
+    if (errorDiagnostics.length > 0) {
+      for (const diagnostic of errorDiagnostics) {
+        emitProgress(`[error] ${diagnostic.code}: ${diagnostic.message}`);
       }
-      throw new BailianError("Cannot apply: resolve the errors above first.", ExitCode.GENERAL);
+      throw new BailianError(
+        formatAgentDiagnosticFailure(
+          errorDiagnostics,
+          "Cannot apply: resolve the errors above first.",
+        ),
+        ExitCode.GENERAL,
+      );
     }
 
     const actionable = plan.actions.filter((action) => action.action !== "no-op");
@@ -141,7 +137,8 @@ export default defineCommand({
     );
 
     const succeeded = result.results.filter((entry) => entry.status === "success").length;
-    const failed = result.results.filter((entry) => entry.status === "failed").length;
+    const failedResults = result.results.filter((entry) => entry.status === "failed");
+    const failed = failedResults.length;
     const skipped = result.results.filter((entry) => entry.status === "skipped").length;
 
     if (format === "json") {
@@ -150,6 +147,9 @@ export default defineCommand({
       emitBare(`\nApply finished: ${succeeded} succeeded, ${failed} failed, ${skipped} skipped.`);
     }
 
-    if (failed > 0) throw new BailianError("Apply failed.", ExitCode.GENERAL);
+    if (failed > 0) {
+      const firstFailure = failedResults.find((entry) => entry.error);
+      throw new BailianError(firstFailure?.error ?? "Apply failed.", ExitCode.GENERAL);
+    }
   },
 });

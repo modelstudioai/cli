@@ -27,11 +27,6 @@ const SESSION_SEND_FLAGS = {
       "zh-CN": "配置文件路径（默认：agents.yaml）",
     },
   },
-  provider: {
-    type: "string",
-    valueHint: "<name>",
-    description: { "en-US": "Target provider", "zh-CN": "目标 Provider" },
-  },
   noStream: {
     type: "switch",
     description: {
@@ -68,7 +63,7 @@ export default defineCommand({
           would_send: {
             session_id: flags.sessionId,
             message: flags.message,
-            provider: flags.provider ?? "auto",
+            provider: "bailian",
             mode: flags.noStream ? "polling" : "streaming",
           },
           config_file: file,
@@ -83,7 +78,7 @@ export default defineCommand({
         const runtime = await buildAgentRuntime(ctx, file);
         if (flags.noStream) {
           const result = await sendSessionMessagePolling(runtime, flags.sessionId, flags.message, {
-            provider: flags.provider,
+            provider: "bailian",
           });
           renderCollectedEvents(result, asJson, {
             session_id: flags.sessionId,
@@ -94,7 +89,7 @@ export default defineCommand({
             flags.sessionId,
             flags.message,
             {
-              provider: flags.provider,
+              provider: "bailian",
             },
           );
           await streamAndRenderEvents(events, asJson, {

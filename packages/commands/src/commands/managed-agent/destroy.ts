@@ -68,7 +68,16 @@ export default defineCommand({
     const planned = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, file);
-        return planDestroyProjectContext(runtime);
+        const planned = planDestroyProjectContext(runtime);
+        return {
+          ...planned,
+          resources: planned.resources.filter(
+            (resource) => resource.address.provider === "bailian",
+          ),
+          defaultMemoryStores: (planned.defaultMemoryStores ?? []).filter(
+            (memoryStore) => memoryStore.provider === "bailian",
+          ),
+        };
       }),
     );
 

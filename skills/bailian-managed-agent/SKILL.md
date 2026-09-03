@@ -1,14 +1,15 @@
 ---
 name: bailian-managed-agent
 metadata:
-  version: "1.19.0"
+  version: "1.20.0"
   requires:
     bins: ["bl"]
 description: >-
-  阿里云百炼托管 Agent 声明式基础设施入口：用户要创建agent、初始化 agents.yaml、校验或预览 agent 配置变更、
-  创建/更新/销毁百炼托管 Agent 或 Deployment、和托管 agent 对话、查会话事件历史、导入或取消跟踪远端资源时使用
-  `bl managed-agent`。以 agents.yaml 为唯一事实源做 IaC：init 建脚手架、validate 离线校验、plan 预览 diff、
-  apply / destroy 变更远端资源且受统一高风险确认闸门保护，务必先 plan 给用户看 diff 再让其确认，禁止自动添加 `--yes`。
+  阿里云百炼托管 Agent 声明式基础设施与 API 命令入口：用户要创建agent、初始化 agents.yaml、校验或预览配置变更、
+  创建/更新/销毁托管 Agent 或 Deployment，或查询 Agent/Environment/Skill/Vault/Deployment、管理 Session/Event/File、
+  运行/暂停 Deployment 时使用 `bl managed-agent`。持久资源仍以 agents.yaml 为唯一事实源做 IaC；公开 API 能力按资源透出
+  list/get/search/versions/download、数据面和运行时动作命令。apply / destroy 与破坏性 API 命令受统一高风险确认闸门保护；
+  务必先展示预览再让用户确认，禁止自动添加 `--yes`。
   反触发：调用已上线的百炼应用/智能体走 bailian-app-call 或 `bl app`；宿主 agent 自身的记忆、技能、
   子代理不走本 skill；生图生视频走 bailian-gen。
   官方安装：`bl skill init`（与共享协议 bailian-protocol 同装）。
@@ -20,13 +21,20 @@ description: >-
 
 ## Safety guardrail (the most important rule)
 
-`apply` / `destroy` **mutate remote resources** and add a domain-specific preview requirement on top of the shared high-risk confirmation protocol:
+`apply` / `destroy` and single-resource `create --yes` **mutate persistent remote resources**:
 
-1. Always run `bl managed-agent plan` first and show the diff to the user.
-2. Ask the user to confirm the exact action and scope shown in the plan.
-3. Only then run `apply` / `destroy` with `--yes`; a changed plan requires confirmation again.
+1. For `agents.yaml` resource changes, always run `bl managed-agent plan` first and show the diff to the user.
+2. A single-resource create command previews its scoped plan when `--yes` is absent; show that preview before retrying it with `--yes`.
+3. Only after explicit user confirmation, retry `apply` / `destroy` / single-resource create with `--yes`.
+4. Never add `--yes` on your own initiative before the user has confirmed.
 
-`state rm`, `session delete`, and future `risk: high` commands follow the shared protocol.
+API-oriented commands do not replace IaC. Agent / Environment / Skill / Vault / Deployment 的 create 命令仍通过
+`agents.yaml → scoped plan → scoped apply` 管理；查询命令和 Session、Event、File、Deployment 运行时动作直接调用 API。
+`session archive|delete`、`file delete`、`deployment run|pause|unpause` 也需要先 `--dry-run`，确认后才传 `--yes`。
+
+`state rm`, `session archive|delete`, `file delete`, `deployment run|pause|unpause`, and future
+`risk: high` commands follow the shared protocol: show the risk message and exact scope, then wait
+for explicit confirmation before re-running with `--yes`.
 
 ## IaC lifecycle
 
@@ -39,10 +47,52 @@ description: >-
 6. Destroy   bl managed-agent destroy --yes # separate explicit confirmation
 ```
 
+## Scoped single-resource create
+
+以下命令都先构造 `agents.yaml` 声明，再通过 SDK 的定向 Plan/Apply 创建远端资源，不绕过 State：
+
+| Resource              | Command                                    |
+| --------------------- | ------------------------------------------ |
+| Agent                 | `bl managed-agent agent create`            |
+| Environment           | `bl managed-agent environment create`      |
+| Custom Skill          | `bl managed-agent skill create`            |
+| Empty Vault           | `bl managed-agent vault create`            |
+| Credential in a Vault | `bl managed-agent vault credential create` |
+| Deployment            | `bl managed-agent deployment create`       |
+
+- 用户只提供资源 `name`；CLI 自动生成稳定的 YAML 逻辑 key，同名资源用递增后缀并存。Credential 追加到指定 Vault，不单独生成 key。
+- `agent create --skill <id>` 直接绑定已存在的远端 Skill，不要求顶层 `skills` 声明；默认写为 `type: custom`，平台 Skill 显式增加 `--type official`。同一次命令中的全部 `--skill` 共用该类型。
+- `agent create --skill-dir <path>` 接收可重复的本地 Skill 目录或 ZIP：CLI 从其中的 `SKILL.md` 读取 name，自动生成顶层 `skills.<key>` 声明，并把该 key 写入 Agent 的 `skills` 列表；定向 Apply 会先上传 custom Skill，再创建 Agent。`--type` 只作用于 `--skill <id>`，不改变本地 Skill 的 custom 类型。
+- Environment 和 Vault 属于 Session/Deployment 运行时绑定，不是 Agent 创建参数；在 `session create|run` 或 `deployment create` 中传入。
+- 默认只预览自动 key 和定向计划；`--dry-run` 完全离线，只有显式 `--yes` 才写 YAML 并创建远端资源。
+- 定向流程只刷新目标资源及其传递依赖；无关资源不检测 Drift、不产生 action，也不阻塞。
+- 目标资源必须是 `create`，相关依赖必须已经处于 `no-op`；项目级 Drift 和删除仍由全量 `plan/apply` 处理。
+- 远端创建失败时保留 YAML 声明；修复相关依赖或 Provider 错误后，重复相同命令会复用待创建 key。
+- `skill create` 接受本地目录、ZIP 或单个 `SKILL.md`；远程 URL 仍需手工声明到 YAML，再执行全量 Apply。
+
+### Credential secret input
+
+`vault credential create --secret-env <ENV_NAME>` 中的参数是变量名，不是 Secret 明文。Secret 可来自 Shell export、CI Secret 注入或可选的 `.env`；CLI 会从当前目录向上自动加载最近的 `.env`，用户不必创建该文件。
+
+```bash
+export PROD_API_TOKEN="..."
+bl managed-agent vault credential create \
+  --vault production \
+  --name api-token \
+  --secret-name API_TOKEN \
+  --secret-env PROD_API_TOKEN
+```
+
+- YAML 只保存 `secret_value: ${PROD_API_TOKEN}`，输出、诊断和 State 都不保存明文。
+- 不要提交 `.env`；若使用 `.env`，先确认项目 `.gitignore` 已忽略它。
+- 预览后再带 `--yes` 重试。后续执行全量 Apply 时也必须提供同名环境变量。
+
+具体 flags、usage 和 examples 以 `reference/` 或对应命令的 `--help` 为准。
+
 ## Deployment as IaC
 
 Deployment 与 Agent 一样声明在 `agents.yaml` 中，并复用同一条 `validate → plan → apply → destroy` IaC 链路；
-CLI 不提供绕过 state 的命令式 Deployment CRUD。最小配置：
+`deployment create` 可追加一条声明并走定向 Apply；CLI 不提供绕过 state 的 Deployment create/update/delete。最小配置：
 
 ```yaml
 deployments:
@@ -68,6 +118,31 @@ deployments:
 | Create / inspect / list sessions      | `bl managed-agent session create` / `get` / `list` |
 | List session event history            | `bl managed-agent session events`                  |
 | Delete a session                      | `bl managed-agent session delete`                  |
+
+规范路径是 `session event list|send|stream`；`session events` 保留为 `session event list` 的兼容别名。
+Managed Agents 的子线程通过 Event 中的 `session_thread_id` 暴露；公开 API 当前没有独立 Thread 资源 CRUD，
+不要构造 `session thread list|get|archive|events` 命令。
+
+## API-oriented resource commands
+
+| Intent                                 | Command family                                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Discover agents and versions           | `agent list`, `agent get`, `agent search`, `agent versions`                                             |
+| Discover environments                  | `environment list`, `environment get`, `environment search`                                             |
+| Discover skills and download a version | `skill list`, `skill get`, `skill search`, `skill versions`, `skill download`                           |
+| Inspect vault envelopes                | `vault list`, `vault get`, `vault search`                                                               |
+| Inspect deployments and run history    | `deployment list`, `deployment get`, `deployment search`, `deployment runs list`, `deployment runs get` |
+| Run or pause deployments               | `deployment run`, `deployment pause`, `deployment unpause`                                              |
+| Manage session metadata/lifecycle      | `session list`, `session get`, `session search`, `session update`, `session archive`, `session delete`  |
+| Work with raw events                   | `session event send`, `session event list`, `session event stream`                                      |
+| Diagnose/export a session              | `session debug`, `session export`                                                                       |
+| Work with files                        | `file upload`, `file list`, `file get`, `file search`, `file download`, `file delete`                   |
+
+- 所有 Cursor 都是不透明字符串：只回传 `next_page`，不得转换为数字页码。
+- 客户端搜索默认最多扫描 10 页；需要扩大范围时显式传 `--page-limit`。Deployment 搜索直接映射服务端 `keyword`。
+- 下载必须给出 `--output-file`；默认不覆盖已有文件，只有用户确认后才可加 `--force`。
+- `session export` 只导出诊断元数据，不含 File 正文，并会脱敏凭证类字段。
+- 公开 Managed Agents API 没有模型 Catalog，也没有 MCP OAuth Login；CLI 不注册对应命令。
 
 ## Local state management
 
