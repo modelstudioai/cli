@@ -29,6 +29,7 @@ config 文件     ─┘
   - `ConfigFile`(disk 形状,snake_case)加新字段(如果允许写文件)
   - `parseConfigFile()` 解析新字段
   - 如果是 enum 字段,加校验
+  - 如果是数组字段,明确“缺失 / 空数组 / 非法值”的不同语义；安全策略字段的非法值必须 fail closed
 
 ### B. 加载逻辑
 
@@ -51,6 +52,7 @@ config 文件     ─┘
 - [ ] 配置展示 / 修改命令同步:
   - `packages/commands/src/commands/config/show.ts` 显示新字段
   - `packages/commands/src/commands/config/set.ts` 的 `VALID_KEYS` / `KEY_ALIASES` / description 允许 set
+  - `packages/commands/src/commands/config/ui.ts` / `ui-html.ts` 能按原类型往返数组字段,不能把 `[]` 保存成字段缺失
 
 ### E. 文档
 
@@ -61,6 +63,7 @@ config 文件     ─┘
 - [ ] 单测覆盖优先级:flag > env > file
 - [ ] 校验失败抛错(非法值)
 - [ ] 默认值正确
+- [ ] 数组配置覆盖 CLI 逗号/JSON 输入、Config UI 往返、去重和显式空数组
 
 ## 完成后自查
 
@@ -82,3 +85,4 @@ cat ~/.bailian/config.json
 - ✗ 全局 switch 没标 `type: "switch"`,被当成需要值的 `--xxx <value>`
 - ✗ 加了 env var 但 README 表格没更新,用户不知道有这条
 - ✗ `config show` 不显示新字段,用户改了无法回查
+- ✗ UI 用 `String([])` 把显式空数组渲染为空串,保存后意外关闭安全策略

@@ -73,12 +73,16 @@ bl deploy audio create --model-name my-cosyvoice-ft --display-name my-tts --dry-
 
 ### `bl deploy delete`
 
-| Field              | Value                                                      |
-| ------------------ | ---------------------------------------------------------- |
-| **Name**           | `deploy delete`                                            |
-| **Description**    | Delete a model deployment (must be STOPPED or FAILED)      |
-| **Authentication** | API Key                                                    |
-| **Usage**          | `bl deploy delete --deployed-model <id> [--skip-precheck]` |
+| Field              | Value                                                                         |
+| ------------------ | ----------------------------------------------------------------------------- |
+| **Name**           | `deploy delete`                                                               |
+| **Description**    | Delete a model deployment (must be STOPPED or FAILED)                         |
+| **Authentication** | API Key                                                                       |
+| **Usage**          | `bl deploy delete --deployed-model <id> [--skip-precheck]`                    |
+| **Risk**           | `high`                                                                        |
+| **Risk message**   | This permanently deletes the specified model deployment and cannot be undone. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -86,6 +90,7 @@ bl deploy audio create --model-name my-cosyvoice-ft --display-name my-tts --dry-
 | ----------------------- | ------ | -------- | --------------------------------------------- |
 | `--deployed-model <id>` | string | yes      | Deployed model identifier (required)          |
 | `--skip-precheck`       | switch | no       | Skip the local STOPPED/FAILED status precheck |
+| `--yes`                 | switch | no       | Confirm this high-risk operation              |
 | `--api-key <key>`       | string | no       | API key                                       |
 | `--base-url <url>`      | string | no       | API base URL                                  |
 
@@ -97,6 +102,11 @@ bl deploy delete --deployed-model dep-...
 
 ```bash
 bl deploy delete --deployed-model dep-... --dry-run
+```
+
+```bash
+# Only after explicit user confirmation:
+bl deploy delete --deployed-model dep-... --yes
 ```
 
 ### `bl deploy get`

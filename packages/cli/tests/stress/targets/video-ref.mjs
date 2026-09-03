@@ -16,7 +16,7 @@ const prompts = [
 
 export const runStress = defineStressTarget({
   canonical: "video-ref",
-  defaultModel: "happyhorse-1.1-r2v",
+  defaultModel: "wan3.0-video",
   batchDirPrefix: "video-ref-batch",
   helpText: "pnpm run test:stress -- video-ref [--reuse-fixtures] -- --count 5 -c 2",
 

@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { isDashScopeE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { PERMISSION_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: permission", () => {
   test("permission list --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(PERMISSION_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(PERMISSION_ROUTES, [
       "permission",
       "list",
       "--help",
@@ -17,7 +17,7 @@ describe("e2e: permission", () => {
   });
 
   test("permission grant --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(PERMISSION_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(PERMISSION_ROUTES, [
       "permission",
       "grant",
       "--help",
@@ -29,7 +29,7 @@ describe("e2e: permission", () => {
   });
 
   test("permission revoke --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(PERMISSION_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(PERMISSION_ROUTES, [
       "permission",
       "revoke",
       "--help",
@@ -98,18 +98,39 @@ describe("e2e: permission", () => {
     expect(stderr).toContain("at most 20");
   });
 
-  test("permission revoke --all 缺 --yes 拒绝执行", async () => {
-    // --yes 护栏在 run() 开头、任何网络调用之前抛出；带 dummy key 让用例不依赖环境凭证（否则 auth stage 先报 AUTH(3)）。
+  test("permission revoke --all 无 --yes 返回确认请求 (7)", async () => {
     const { stderr, exitCode } = await runCommandE2e(PERMISSION_ROUTES, [
       "permission",
       "revoke",
       "--all",
       "--api-key",
       "e2e-dummy-key",
+      "--output",
+      "json",
     ]);
-    expect(exitCode).toBe(2);
-    expect(stderr).toContain("Refusing");
-    expect(stderr).toContain("--yes");
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
+  });
+
+  test("permission revoke --model 无 --yes 返回确认请求 (7)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(PERMISSION_ROUTES, [
+      "permission",
+      "revoke",
+      "--model",
+      "qwen-plus",
+      "--api-key",
+      "e2e-dummy-key",
+      "--base-url",
+      "http://127.0.0.1:1",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
   });
 
   // --dry-run 跳过 auth stage（见 runtime middleware），无需凭证即可断言请求形状。

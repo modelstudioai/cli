@@ -20,17 +20,12 @@ const SESSION_GET_FLAGS = {
       "zh-CN": "配置文件路径（默认：agents.yaml）",
     },
   },
-  provider: {
-    type: "string",
-    valueHint: "<name>",
-    description: { "en-US": "Target provider", "zh-CN": "目标 Provider" },
-  },
 } satisfies FlagsDef;
 
 export default defineCommand({
   description: { "en-US": "Get details of a session", "zh-CN": "获取 Session 详情" },
   auth: "apiKey",
-  usageArgs: "--session-id <id> [--provider <name>] [--file <path>]",
+  usageArgs: "--session-id <id> [--file <path>]",
   flags: SESSION_GET_FLAGS,
   exampleArgs: ["--session-id sess_abc123"],
   notes: CREDENTIALS_NOTE,
@@ -42,7 +37,7 @@ export default defineCommand({
     const session = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, file);
-        return getSession(runtime, flags.sessionId, flags.provider);
+        return getSession(runtime, flags.sessionId, "bailian");
       }),
     );
 

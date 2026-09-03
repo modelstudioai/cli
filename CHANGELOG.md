@@ -6,6 +6,69 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.20.0] - 2026-09-03
+
+> Managed Agents now combines YAML-first infrastructure management with direct Bailian AgentStudio resource and runtime operations.
+
+### Added
+
+- **Managed Agent API commands** — added direct list, get, search, version, upload, download, run, pause, archive, event, and diagnostic operations for Agents, Environments, Skills, Vaults, Deployments, Sessions, and Files.
+- **Scoped YAML-backed resource creation** — `agent create`, `environment create`, `skill create`, `vault create`, `vault credential create`, and `deployment create` update `agents.yaml` and apply only the target resource without unrelated drift blocking the operation.
+- **Agent Skill attachment** — Agent creation supports existing custom or official Skill IDs as well as local Skill directories and ZIP archives.
+
+### Changed
+
+- **Bailian-only Managed Agent CLI** — `bl managed-agent` now targets the Bailian provider exclusively; provider-selection flags were removed and configurations containing other providers are rejected.
+- **Runtime mutation confirmation** — Deployment run/pause/unpause, Session archive/delete, and File delete operations require explicit high-risk confirmation.
+
+### Fixed
+
+- **Managed Agent error reporting** — Apply and scoped-create failures preserve the underlying provider diagnostic instead of ending with only `Apply failed.`.
+
+### Security
+
+- Credentials are resolved in memory and removed from the process environment; Vault credential declarations reference environment variables without persisting plaintext secrets.
+
+## [1.19.0] - 2026-09-01
+
+### Added
+
+- **`bl quota delete`** — clears all custom QPM/TPM rate limits for a model.
+
+### Changed
+
+- **High-risk operation confirmation** — high-risk commands show risk details in `--help` and Skill command references. Without `--yes`, the high-risk operation is not executed; JSON output returns exit code `7` with `error.type: "requires_confirmation"`. After confirmation, re-run with `--yes`; `--dry-run` does not require confirmation.
+
+## [1.18.2] - 2026-09-01
+
+### Changed
+
+- **Confirmation before deleting or clearing resources** — `bl finetune delete`, `bl deploy delete`, `bl dataset delete`, and `bl quota update --delete` now ask for confirmation; pass `--yes` for non-interactive use.
+
+### Fixed
+
+- **Skill installation reliability** — `bl skill init` now retries transient network failures, and completed Skill updates are no longer reported as failed when backup cleanup is blocked.
+
+## [1.18.1] - 2026-08-28
+
+### Removed
+
+- Removed API Key validation from `bl auth login`.
+
+## [1.18.0] - 2026-08-27
+
+### Added
+
+- **Automatic Profile API Key fallback** — unsupported commands use the API Key and endpoint from `default` without requiring a Profile switch; explicit credentials still take priority.
+- **Independent speech defaults** — Profiles support separate default models for TTS and ASR.
+- **Wan3.0 file-to-video** — `bl video generate --file` accepts local files or URLs and validates incompatible inputs.
+
+### Changed
+
+- **Wan3.0 is now the default video model** — regular API Key text, image, and reference video tasks default to `wan3.0-video`, with first/last-frame and reference-audio support. Token Plan defaults remain unchanged.
+- **Expanded Token Plan preset** — login adds speech defaults and missing capabilities while preserving existing user configuration.
+- **Improved speech and Skill installation experience** — streaming synthesis defaults to PCM; installation docs add a Node 18-compatible fallback and clarify the Node.js and Git prerequisites.
+
 ## [1.17.1] - 2026-08-22
 
 ### Fixed

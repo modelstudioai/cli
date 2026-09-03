@@ -116,9 +116,9 @@
 
 **Flags**：`--index-id` 必填；`--doc-id` array 必填（可重复）；`--yes`。
 
-**实现方案**：`doc-delete.ts`；确认摘要含 index_id + doc_id 列表（≤5 个全列，超出显示前 5 + 总数）；输出以 `data.deleted` 为准（与入参数量不一致时 text 模式警告差异）。
+**实现方案**：`doc-delete.ts`；命令在 `risk` 对象中同时声明 `level: "high"` 和双语 `message`，由 runtime 在 `run()` 前统一确认；输出以 `data.deleted` 为准（与入参数量不一致时 text 模式警告差异）。
 
-**测试方案**：help / 缺参×2 / dry-run 断言 `doc_ids` 数组 / 非 TTY 无 `--yes` exitCode 2 / live 配合 upload 清理链。
+**测试方案**：help / 缺参×2 / dry-run 断言 `doc_ids` 数组 / 无 `--yes` 返回 exitCode 7 + `requires_confirmation` / live 配合 upload 清理链。
 
 ## doc tag — 批量更新文档标签
 

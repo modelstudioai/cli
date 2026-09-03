@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,7 +9,19 @@ const fixtureRoot = join(fileURLToPath(import.meta.url), "..", "..", "fixtures",
 let configDir: string;
 
 function env(): NodeJS.ProcessEnv {
-  return { BAILIAN_CONFIG_DIR: configDir, DO_NOT_TRACK: "1" };
+  return {
+    BAILIAN_CONFIG_DIR: configDir,
+    DO_NOT_TRACK: "1",
+    DASHSCOPE_API_KEY: "",
+    DASHSCOPE_BASE_URL: "",
+  };
+}
+
+function parseStderrJsonDiagnostics(stderr: string): unknown[] {
+  return stderr
+    .trim()
+    .split(/\n\s*\n/)
+    .map((diagnostic) => JSON.parse(diagnostic) as unknown);
 }
 
 describe("e2e: Command Pack", () => {
@@ -53,6 +65,7 @@ describe("e2e: Command Pack", () => {
     expect(linkedJson.linked.commands).toEqual([
       "agent credential",
       "agent credential-denied",
+      "agent dangerous",
       "agent fail",
       "agent output",
       "agent ping",
@@ -70,6 +83,68 @@ describe("e2e: Command Pack", () => {
     const executed = await runCli(["agent", "ping", "--message", "hello"], env());
     expect(executed.exitCode, executed.stderr).toBe(0);
     expect(executed.stdout).toContain("command-pack:hello");
+
+    await writeFile(
+      join(configDir, "config.json"),
+      JSON.stringify(
+        {
+          base_url: "https://default.example.com",
+          active_config: "company-plan",
+          "company-plan": {
+            api_key: "sk-plan",
+            base_url: "https://plan.example.com",
+            api_key_capabilities: [],
+          },
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+    const fallbackFailure = await runCli(["agent", "credential", "--output", "json"], env());
+    expect(fallbackFailure.exitCode).toBe(3);
+    expect(fallbackFailure.stderr).toMatch(/^\{\n {2}"warning": \{/);
+    expect(fallbackFailure.stderr).toContain("\n\n{\n");
+    expect(parseStderrJsonDiagnostics(fallbackFailure.stderr)).toEqual([
+      {
+        warning: {
+          code: "PROFILE_API_KEY_FALLBACK",
+          message:
+            'Profile "company-plan" does not support command "agent credential"; API Key settings will be read from Profile "default" for this run.',
+          profile: "company-plan",
+          command_path: ["agent", "credential"],
+          fallback_profile: "default",
+          credential_fields: ["api_key", "base_url"],
+        },
+      },
+      {
+        error: expect.objectContaining({
+          code: 3,
+          message: "No API key found.",
+        }),
+      },
+    ]);
+
+    await writeFile(
+      join(configDir, "config.json"),
+      JSON.stringify(
+        {
+          api_key: "sk-default",
+          base_url: "https://default.example.com",
+          active_config: "company-plan",
+          "company-plan": {
+            api_key: "sk-plan",
+            base_url: "https://plan.example.com",
+            api_key_capabilities: [],
+          },
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+    const fallbackCredential = await runCli(["agent", "credential"], env());
+    expect(fallbackCredential.exitCode, fallbackCredential.stderr).toBe(0);
+    expect(fallbackCredential.stderr).toContain('command "agent credential"');
+    expect(fallbackCredential.stdout).toContain("credential-base-url:https://default.example.com");
 
     const credential = await runCli(["agent", "credential", "--api-key", "fixture-key"], env());
     expect(credential.exitCode, credential.stderr).toBe(0);
@@ -96,6 +171,34 @@ describe("e2e: Command Pack", () => {
     expect(failed.stderr).toContain("Use agent fail only in tests.");
   });
 
+  test("high-risk 命令由 runtime 统一确认并支持安全 dry-run", async () => {
+    const dangerousHelp = await runCli(["agent", "dangerous", "--help"], env());
+    expect(dangerousHelp.exitCode, dangerousHelp.stderr).toBe(0);
+    expect(dangerousHelp.stderr).toContain("--yes");
+
+    const unconfirmed = await runCli(["agent", "dangerous", "--output", "json"], env());
+    expect(unconfirmed.exitCode).toBe(7);
+    expect(JSON.parse(unconfirmed.stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
+
+    const confirmed = await runCli(["agent", "dangerous", "--yes", "--output", "json"], env());
+    expect(confirmed.exitCode, confirmed.stderr).toBe(0);
+    expect(parseStdoutJson(confirmed.stdout)).toEqual({
+      executed: true,
+      dry_run: false,
+      command_flags: [],
+    });
+
+    const preview = await runCli(["agent", "dangerous", "--dry-run", "--output", "json"], env());
+    expect(preview.exitCode, preview.stderr).toBe(0);
+    expect(parseStdoutJson(preview.stdout)).toEqual({
+      executed: false,
+      dry_run: true,
+      command_flags: [],
+    });
+  });
+
   test("plugin list 输出加载状态", async () => {
     const result = await runCli(["plugin", "list", "--output", "json"], env());
     expect(result.exitCode, result.stderr).toBe(0);
@@ -109,6 +212,7 @@ describe("e2e: Command Pack", () => {
         commands: [
           "agent credential",
           "agent credential-denied",
+          "agent dangerous",
           "agent fail",
           "agent output",
           "agent ping",

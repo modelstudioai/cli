@@ -5,7 +5,7 @@ import {
   ExitCode,
   type FlagsDef,
 } from "bailian-cli-core";
-import { confirmDangerousAction, emitBare, emitResult } from "bailian-cli-runtime";
+import { emitBare, emitResult } from "bailian-cli-runtime";
 import {
   commitProjectBuild,
   createDirectoryWorkspaceVersionService,
@@ -13,6 +13,7 @@ import {
   initializeDirectoryProject,
   planProjectPublish,
   previewProjectBuild,
+  type ProjectBuildResolver,
   validateDirectoryProject,
 } from "@openagentpack/project-workspace";
 import { CREDENTIALS_NOTE, resolveAgentProjectConfig } from "./_engine/config-loader.ts";
@@ -42,16 +43,9 @@ export const managedAgentProjectInit = defineCommand({
     "zh-CN": "创建目录项目，或转换当前 agents.yaml",
   },
   auth: "none",
-  usageArgs: "[--project <directory>] [--provider bailian]",
-  flags: {
-    ...PROJECT_FLAG,
-    provider: {
-      type: "string",
-      valueHint: "<name>",
-      description: { "en-US": "Provider for a new project", "zh-CN": "新项目使用的 Provider" },
-    },
-  },
-  exampleArgs: ["", "--project ./my-agent", "--provider bailian"],
+  usageArgs: "[--project <directory>]",
+  flags: PROJECT_FLAG,
+  exampleArgs: ["", "--project ./my-agent"],
   async run(ctx) {
     if (ctx.settings.dryRun) {
       emitResult(
@@ -62,7 +56,7 @@ export const managedAgentProjectInit = defineCommand({
     }
     const result = await initializeDirectoryProject({
       projectRoot: ctx.flags.project ?? ".",
-      provider: ctx.flags.provider ?? "bailian",
+      provider: "bailian",
     });
     emitResult(result, detectOutputFormat(ctx.settings.output));
   },
@@ -98,14 +92,16 @@ export const managedAgentProjectBuild = defineCommand({
     "zh-CN": "整理目录源文件并生成不可变的发布 Build",
   },
   auth: "none",
-  usageArgs: "[--project <directory>] [--yes]",
-  flags: {
-    ...PROJECT_FLAG,
-    yes: {
-      type: "switch",
-      description: { "en-US": "Write the previewed Build", "zh-CN": "写入已预览的 Build" },
+  risk: {
+    level: "high",
+    message: {
+      "en-US":
+        "This organizes the directory project source and writes the previewed immutable Build.",
+      "zh-CN": "该操作会整理目录项目源文件，并写入已预览的不可变 Build。",
     },
   },
+  usageArgs: "[--project <directory>]",
+  flags: PROJECT_FLAG,
   exampleArgs: ["--dry-run", "--yes", "--project ./my-agent --yes"],
   async run(ctx) {
     const root = ctx.flags.project ?? ".";
@@ -117,13 +113,6 @@ export const managedAgentProjectBuild = defineCommand({
     }
     if (!preview.can_build)
       throw new BailianError("Directory project is invalid and cannot be built.", ExitCode.GENERAL);
-    if (!ctx.flags.yes) {
-      throw new BailianError(
-        "Build requires confirmation before it organizes shared skills and writes generated YAML.",
-        ExitCode.USAGE,
-        "Preview with --dry-run, then rerun with --yes.",
-      );
-    }
     const built = await commitProjectBuild({
       projectRoot: root,
       baseRevision: preview.project_revision,
@@ -141,19 +130,17 @@ export const managedAgentProjectPublish = defineCommand({
     "zh-CN": "发布当前目录项目 Build 并记录版本",
   },
   auth: "apiKey",
-  usageArgs:
-    "[--project <directory>] [--provider <name>] [--yes] [--no-refresh] [--concurrency <n>]",
+  risk: {
+    level: "high",
+    message: {
+      "en-US":
+        "This publishes the current directory-project Build and may create, update, or delete remote managed Agent resources.",
+      "zh-CN": "该操作会发布当前目录项目 Build，可能创建、更新或删除远端托管 Agent 资源。",
+    },
+  },
+  usageArgs: "[--project <directory>] [--no-refresh] [--concurrency <n>]",
   flags: {
     ...PROJECT_FLAG,
-    provider: {
-      type: "string",
-      valueHint: "<name>",
-      description: { "en-US": "Target provider", "zh-CN": "目标 Provider" },
-    },
-    yes: {
-      type: "switch",
-      description: { "en-US": "Confirm remote Publish", "zh-CN": "确认执行远端发布" },
-    },
     noRefresh: {
       type: "switch",
       description: {
@@ -170,16 +157,19 @@ export const managedAgentProjectPublish = defineCommand({
       },
     },
   },
-  exampleArgs: ["--yes", "--project ./my-agent --yes", "--provider bailian --yes"],
+  exampleArgs: ["--yes", "--project ./my-agent --yes"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
     installSdkTransport(ctx);
     const root = ctx.flags.project ?? ".";
-    const resolveBuild = (buildPath: string) => resolveAgentProjectConfig(ctx, buildPath);
+    const resolveBuild: ProjectBuildResolver = async (buildPath) =>
+      (await resolveAgentProjectConfig(ctx, buildPath)) as unknown as Awaited<
+        ReturnType<ProjectBuildResolver>
+      >;
     const planned = await withAgentErrors(() =>
       withStdoutProtected(() =>
         planProjectPublish(root, {
-          provider: ctx.flags.provider,
+          provider: "bailian",
           refresh: !ctx.flags.noRefresh,
           quiet: true,
           onFeedback: renderAgentFeedback,
@@ -203,20 +193,13 @@ export const managedAgentProjectPublish = defineCommand({
       const marker = action.action === "create" ? "+" : action.action === "update" ? "~" : "-";
       emitBare(`${marker} ${formatResourceLabel(action.address)}`);
     }
-    if (!ctx.flags.yes) {
-      throw new BailianError(
-        `Refusing to Publish ${actions.length} remote change(s) without confirmation.`,
-        ExitCode.USAGE,
-        "Review with project publish --dry-run, then rerun with --yes.",
-      );
-    }
     const result = await withAgentErrors(() =>
       withStdoutProtected(() =>
         executeProjectPublish({
           projectRoot: planned.project_root,
           expectedProjectRevision: planned.project_revision,
           expectedYamlHash: planned.build_manifest.yaml_hash,
-          provider: ctx.flags.provider,
+          provider: "bailian",
           refresh: !ctx.flags.noRefresh,
           concurrency: ctx.flags.concurrency,
           policy: "force",
@@ -376,18 +359,16 @@ export const managedAgentProjectVersionRestore = defineCommand({
     "zh-CN": "将历史版本恢复到项目工作目录",
   },
   auth: "none",
-  usageArgs: "--version-id <full-version> [--project <directory>] [--yes]",
-  flags: {
-    ...PROJECT_FLAG,
-    ...VERSION_ID_FLAG,
-    yes: {
-      type: "switch",
-      description: {
-        "en-US": "Restore without interactive confirmation",
-        "zh-CN": "无需交互确认直接恢复",
-      },
+  risk: {
+    level: "high",
+    message: {
+      "en-US":
+        "This restores the full directory source to the working tree. Version history and remote State will not move.",
+      "zh-CN": "该操作会将完整目录源文件恢复到工作区；版本历史和远端 State 不会移动。",
     },
   },
+  usageArgs: "--version-id <full-version> [--project <directory>]",
+  flags: { ...PROJECT_FLAG, ...VERSION_ID_FLAG },
   exampleArgs: ["--version-id <full-version>", "--version-id <full-version> --yes"],
   async run(ctx) {
     const service = createDirectoryWorkspaceVersionService(ctx.flags.project ?? ".");
@@ -404,10 +385,6 @@ export const managedAgentProjectVersionRestore = defineCommand({
       );
       return;
     }
-    await confirmDangerousAction(
-      "Restore the full directory source? Version history and remote State will not move.",
-      ctx.flags.yes,
-    );
     const restored = await service.restoreVersion(ctx.flags.versionId, {
       headVersion: preview.base_head_version,
       projectRevision: preview.base_project_revision,

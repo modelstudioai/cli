@@ -6,6 +6,69 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [1.20.0] - 2026-09-03
+
+> Managed Agent 现在同时提供 YAML-first 基础设施管理与百炼 AgentStudio 资源、运行时 API 操作。
+
+### 新增
+
+- **Managed Agent API 命令** —— 新增 Agent、Environment、Skill、Vault、Deployment、Session 和 File 的列表、详情、搜索、版本、上传、下载、运行、暂停、归档、事件及诊断等操作。
+- **基于 YAML 的单资源创建** —— `agent create`、`environment create`、`skill create`、`vault create`、`vault credential create` 和 `deployment create` 会更新 `agents.yaml`，并且只 Apply 目标资源，不受无关资源 Drift 阻塞。
+- **Agent Skill 挂载** —— 创建 Agent 时支持引用已有的自定义或官方 Skill ID，也支持本地 Skill 目录和 ZIP 文件。
+
+### 变更
+
+- **Managed Agent CLI 限定为百炼 Provider** —— `bl managed-agent` 现在只面向百炼，移除 Provider 选择参数，并拒绝包含其他 Provider 的配置。
+- **运行时变更增加确认** —— Deployment 运行/暂停/恢复、Session 归档/删除以及 File 删除操作需要显式进行高风险确认。
+
+### 修复
+
+- **Managed Agent 错误输出** —— Apply 和单资源创建失败时会保留底层 Provider 的具体诊断，不再只显示 `Apply failed.`。
+
+### 安全
+
+- 凭证仅在内存中解析并从进程环境清除；Vault Credential 声明通过环境变量引用 Secret，不会持久化明文。
+
+## [1.19.0] - 2026-09-01
+
+### 新增
+
+- **`bl quota delete`** — 清除指定模型的全部自定义 QPM/TPM 限流配置。
+
+### 变更
+
+- **高风险操作确认** — 高风险命令会在 `--help` 和 Skill 命令参考中展示风险说明。未传入 `--yes` 时，高风险操作不会执行；JSON 输出会返回退出码 `7` 和 `error.type: "requires_confirmation"`。确认后可添加 `--yes` 重新执行；`--dry-run` 无需确认。
+
+## [1.18.2] - 2026-09-01
+
+### 变更
+
+- **删除与清除操作增加确认** —— `bl finetune delete`、`bl deploy delete`、`bl dataset delete` 和 `bl quota update --delete` 现在会在执行前要求确认；非交互场景请传入 `--yes`。
+
+### 修复
+
+- **Skill 安装可靠性** —— `bl skill init` 现在会重试临时性网络故障；备份清理受阻时，已完成的 Skill 更新不再被误报为失败。
+
+## [1.18.1] - 2026-08-28
+
+### 已移除
+
+- 移除 `bl auth login` 的 API Key 校验。
+
+## [1.18.0] - 2026-08-27
+
+### 新增
+
+- **Profile API Key 自动回退** —— 当前 Profile 不支持某条命令时，自动使用 `default` 中的 API Key 和接入地址，无需手动切换 Profile；显式凭证仍然优先。
+- **语音合成与识别支持独立默认模型** —— Profile 支持分别配置 TTS 和 ASR 默认模型。
+- **Wan3.0 文件生视频** —— `bl video generate --file` 支持本地文件或 URL，并校验互斥输入。
+
+### 变更
+
+- **视频默认模型升级至 Wan3.0** —— 普通 API Key 的文生、图生和参考生视频默认使用 `wan3.0-video`，并支持首尾帧与参考音频；Token Plan 默认模型保持不变。
+- **扩展 Token Plan 预设** —— 登录后自动补充语音默认模型和缺失能力，同时保留用户已有配置。
+- **优化语音与 Skill 安装体验** —— 流式语音合成默认输出 PCM；Skill 安装文档补充兼容 Node 18 的降级方式及 Node.js、Git 前置条件。
+
 ## [1.17.1] - 2026-08-22
 
 ### 修复

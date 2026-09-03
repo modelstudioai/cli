@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCommandE2e } from "../helpers.ts";
+import { parseStdoutJson, runCommandHelp, runCommandE2e } from "../helpers.ts";
 import { KNOWLEDGE_DOC_DELETE_ROUTES } from "../topic-routes.ts";
 
 describe("e2e: knowledge doc delete", () => {
   test("--help 展示 flags", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_DOC_DELETE_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(KNOWLEDGE_DOC_DELETE_ROUTES, [
       "knowledge",
       "doc",
       "delete",
@@ -66,7 +66,7 @@ describe("e2e: knowledge doc delete", () => {
     expect(data.request?.doc_ids).toEqual(["file_a", "file_b"]);
   });
 
-  test("非 TTY 无 --yes 报 USAGE (2)", async () => {
+  test("无 --yes 返回确认请求 (7)", async () => {
     const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_DOC_DELETE_ROUTES, [
       "knowledge",
       "doc",
@@ -79,9 +79,18 @@ describe("e2e: knowledge doc delete", () => {
       "sk-fake",
       "--workspace-id",
       "ws_test",
+      "--output",
+      "json",
     ]);
-    expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/--yes/);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: {
+        code: 7,
+        type: "requires_confirmation",
+        hint: expect.stringContaining("--yes"),
+      },
+    });
+    expect(stderr).not.toContain("sk-fake");
   });
 });
 

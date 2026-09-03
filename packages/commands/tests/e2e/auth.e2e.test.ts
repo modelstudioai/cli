@@ -1,6 +1,4 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
-import http from "node:http";
-import type { AddressInfo } from "node:net";
 import { tmpdir } from "os";
 import { join } from "path";
 import { describe, expect, test } from "vite-plus/test";
@@ -9,60 +7,16 @@ import {
   isOpenApiE2EReady,
   makeE2eOutputDir,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "./helpers.ts";
 import { AUTH_ROUTES } from "./topic-routes.ts";
-
-interface ValidationServer {
-  baseUrl: string;
-  requests: Array<{
-    path: string;
-    body: Record<string, unknown>;
-    authorization?: string;
-    sourceConfig?: string;
-    openApiSource?: string;
-  }>;
-  close(): Promise<void>;
-}
-
-async function startValidationServer(statusCode = 200): Promise<ValidationServer> {
-  const requests: ValidationServer["requests"] = [];
-  const server = http.createServer((request, response) => {
-    const chunks: Buffer[] = [];
-    request.on("data", (chunk: Buffer) => chunks.push(chunk));
-    request.on("end", () => {
-      const rawBody = Buffer.concat(chunks).toString("utf8");
-      requests.push({
-        path: request.url ?? "",
-        body: rawBody ? (JSON.parse(rawBody) as Record<string, unknown>) : {},
-        authorization: request.headers.authorization,
-        sourceConfig: request.headers["x-dashscope-source-config"] as string | undefined,
-        openApiSource: request.headers["x-dashscope-openapisource"] as string | undefined,
-      });
-      response.writeHead(statusCode, { "Content-Type": "application/json" });
-      if (statusCode >= 400) {
-        response.end(JSON.stringify({ code: "InvalidApiKey", message: "invalid key" }));
-        return;
-      }
-      response.end(
-        JSON.stringify({ choices: [{ message: { role: "assistant", content: "ok" } }] }),
-      );
-    });
-  });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const address = server.address() as AddressInfo;
-  return {
-    baseUrl: `http://127.0.0.1:${address.port}`,
-    requests,
-    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
-  };
-}
 
 /** Auth E2E：本地参数/持久化契约默认执行；真实鉴权请求按对应 readiness gate 执行。 */
 
 describe("e2e: auth", () => {
   test("auth login --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, ["auth", "login", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(AUTH_ROUTES, ["auth", "login", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/login|api-key/i);
     expect(stderr).toMatch(/--console-site/);
@@ -155,13 +109,13 @@ describe("e2e: auth", () => {
   });
 
   test("auth logout --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, ["auth", "logout", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(AUTH_ROUTES, ["auth", "logout", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/logout|dry-run|yes/i);
   });
 
   test("auth status --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, ["auth", "status", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(AUTH_ROUTES, ["auth", "status", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/status|output/i);
   });
@@ -172,7 +126,7 @@ describe("e2e: auth", () => {
     expect(stderr).toMatch(/Choose exactly one login mode/);
   });
 
-  test("auth login --dry-run --api-key 不发起校验与落盘", async () => {
+  test("auth login --dry-run --api-key 不发起落盘", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(AUTH_ROUTES, [
       "auth",
       "login",
@@ -181,7 +135,7 @@ describe("e2e: auth", () => {
       "sk-e2e-dry-run-placeholder",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stdout).toContain("Would validate and save API key.");
+    expect(stdout).toContain("Would save API key.");
   });
 
   test("auth login --dry-run 仍校验显式 Base URL", async () => {
@@ -198,90 +152,83 @@ describe("e2e: auth", () => {
     expect(stderr).toMatch(/Invalid model base URL/);
   });
 
-  test("auth login --api-key 验证后原子保存凭证和 Base URL", async () => {
-    const validationServer = await startValidationServer();
+  test("auth login --api-key 原子保存凭证和 Base URL（无联网探测）", async () => {
     const configDir = makeE2eOutputDir("auth-api-key-login");
-    const sdkBaseUrl = `${validationServer.baseUrl}/compatible-mode/v1/?source=login#fragment`;
-    try {
-      const login = await runCommandE2e(
-        AUTH_ROUTES,
-        ["auth", "login", "--api-key", "sk-e2e-placeholder", "--base-url", sdkBaseUrl],
-        {
-          BAILIAN_CONFIG_DIR: configDir,
-          DASHSCOPE_API_KEY: "",
-          DASHSCOPE_BASE_URL: "",
-        },
-      );
-      expect(login.exitCode, login.stderr).toBe(0);
-      expect(validationServer.requests).toHaveLength(1);
-      expect(validationServer.requests[0]).toMatchObject({
-        path: "/compatible-mode/v1/chat/completions",
-        authorization: "Bearer sk-e2e-placeholder",
-        sourceConfig: expect.any(String),
-        openApiSource: "BailianCLI",
-        body: {
-          model: "qwen3.8-max",
-          stream: false,
-        },
-      });
+    const origin = "https://dashscope.example.test";
+    const sdkBaseUrl = `${origin}/compatible-mode/v1/?source=login#fragment`;
+    const login = await runCommandE2e(
+      AUTH_ROUTES,
+      ["auth", "login", "--api-key", "sk-e2e-placeholder", "--base-url", sdkBaseUrl],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+    expect(login.exitCode, login.stderr).toBe(0);
+    expect(login.stderr).toMatch(/API key saved to/);
 
-      const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
-        string,
-        unknown
-      >;
-      expect(config.api_key).toBe("sk-e2e-placeholder");
-      expect(config.base_url).toBe(validationServer.baseUrl);
-    } finally {
-      await validationServer.close();
-    }
+    const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
+      string,
+      unknown
+    >;
+    expect(config.api_key).toBe("sk-e2e-placeholder");
+    expect(config.base_url).toBe(origin);
   });
 
   test("auth login --config token-plan 接受 Anthropic SDK Base URL", async () => {
-    const validationServer = await startValidationServer();
     const configDir = makeE2eOutputDir("auth-token-plan-anthropic-base-url");
-    try {
-      const login = await runCommandE2e(
-        AUTH_ROUTES,
-        [
-          "auth",
-          "login",
-          "--config",
-          "token-plan",
-          "--api-key",
-          "sk-sp-e2e-placeholder",
-          "--base-url",
-          `${validationServer.baseUrl}/apps/anthropic?source=sdk#fragment`,
-        ],
-        {
-          BAILIAN_CONFIG_DIR: configDir,
-          DASHSCOPE_API_KEY: "",
-          DASHSCOPE_BASE_URL: "",
-        },
-      );
-      expect(login.exitCode, login.stderr).toBe(0);
-      expect(validationServer.requests).toHaveLength(1);
-      expect(validationServer.requests[0].path).toBe("/compatible-mode/v1/chat/completions");
+    const origin = "https://token-plan.example.test";
+    const login = await runCommandE2e(
+      AUTH_ROUTES,
+      [
+        "auth",
+        "login",
+        "--config",
+        "token-plan",
+        "--api-key",
+        "sk-sp-e2e-placeholder",
+        "--base-url",
+        `${origin}/apps/anthropic?source=sdk#fragment`,
+      ],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+    expect(login.exitCode, login.stderr).toBe(0);
 
-      const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
-        string,
-        unknown
-      >;
-      expect(config["token-plan"]).toMatchObject({
-        api_key: "sk-sp-e2e-placeholder",
-        base_url: validationServer.baseUrl,
-        default_text_model: "qwen3.8-max",
-        default_video_model: "happyhorse-1.1-t2v",
-        default_image_to_video_model: "happyhorse-1.1-i2v",
-        default_reference_to_video_model: "happyhorse-1.1-r2v",
-        default_image_model: "wan2.7-image",
-      });
-    } finally {
-      await validationServer.close();
-    }
+    const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
+      string,
+      unknown
+    >;
+    expect(config["token-plan"]).toMatchObject({
+      api_key: "sk-sp-e2e-placeholder",
+      base_url: origin,
+      default_text_model: "qwen3.8-max",
+      default_video_model: "happyhorse-1.1-t2v",
+      default_image_to_video_model: "happyhorse-1.1-i2v",
+      default_reference_to_video_model: "happyhorse-1.1-r2v",
+      default_image_model: "wan2.7-image",
+      default_speech_model: "qwen-audio-3.0-tts-plus",
+      default_speech_recognition_model: "qwen-audio-3.0-asr-flash",
+      api_key_capabilities: [
+        "text.chat",
+        "vision.describe",
+        "image.generate",
+        "image.edit",
+        "speech.recognize",
+        "speech.synthesize",
+        "video.generate",
+        "video.ref",
+        "video.task.get",
+        "video.download",
+      ],
+    });
   });
 
-  test("auth login --config token-plan 物化并重置内置预设", async () => {
-    const validationServer = await startValidationServer();
+  test("auth login --config token-plan 追加新版 capability preset 且不删除已有能力", async () => {
     const configDir = makeE2eOutputDir("auth-token-plan-preset-login");
     writeFileSync(
       join(configDir, "config.json"),
@@ -293,6 +240,7 @@ describe("e2e: auth", () => {
             default_image_to_video_model: "custom-image-to-video-model",
             default_reference_to_video_model: "custom-reference-to-video-model",
             default_image_model: "custom-image-model",
+            api_key_capabilities: ["text.chat", "custom.command"],
           },
         },
         null,
@@ -300,64 +248,110 @@ describe("e2e: auth", () => {
       ) + "\n",
     );
 
-    try {
-      const login = await runCommandE2e(
-        AUTH_ROUTES,
-        ["auth", "login", "--config", "token-plan", "--api-key", "sk-sp-e2e-placeholder"],
-        {
-          BAILIAN_CONFIG_DIR: configDir,
-          DASHSCOPE_API_KEY: "sk-env-must-not-be-persisted",
-          DASHSCOPE_BASE_URL: validationServer.baseUrl,
-        },
-      );
-      expect(login.exitCode, login.stderr).toBe(0);
-      expect(validationServer.requests).toHaveLength(1);
-      expect(validationServer.requests[0]).toMatchObject({
-        path: "/compatible-mode/v1/chat/completions",
-        authorization: "Bearer sk-sp-e2e-placeholder",
-        sourceConfig: expect.any(String),
-        openApiSource: "BailianCLI",
-        body: {
-          model: "qwen3.8-max",
-          stream: false,
-        },
-      });
+    const login = await runCommandE2e(
+      AUTH_ROUTES,
+      ["auth", "login", "--config", "token-plan", "--api-key", "sk-sp-e2e-placeholder"],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "sk-env-must-not-be-persisted",
+        DASHSCOPE_BASE_URL: "https://env-must-not-override-preset.example.test",
+      },
+    );
+    expect(login.exitCode, login.stderr).toBe(0);
 
-      const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
-        string,
-        unknown
-      >;
-      expect(config.api_key).toBeUndefined();
-      expect(config.active_config).toBe("token-plan");
-      expect(config["token-plan"]).toMatchObject({
-        api_key: "sk-sp-e2e-placeholder",
-        base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
-        default_text_model: "qwen3.8-max",
-        default_video_model: "happyhorse-1.1-t2v",
-        default_image_to_video_model: "happyhorse-1.1-i2v",
-        default_reference_to_video_model: "happyhorse-1.1-r2v",
-        default_image_model: "wan2.7-image",
-      });
-      expect((config["token-plan"] as Record<string, unknown>).base_url).not.toBe(
-        validationServer.baseUrl,
-      );
-      expect((config["token-plan"] as Record<string, unknown>).api_key).not.toBe(
-        "sk-env-must-not-be-persisted",
-      );
-    } finally {
-      await validationServer.close();
-    }
+    const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
+      string,
+      unknown
+    >;
+    expect(config.api_key).toBeUndefined();
+    expect(config.active_config).toBe("token-plan");
+    expect(config["token-plan"]).toMatchObject({
+      api_key: "sk-sp-e2e-placeholder",
+      base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
+      default_text_model: "qwen3.8-max",
+      default_video_model: "happyhorse-1.1-t2v",
+      default_image_to_video_model: "happyhorse-1.1-i2v",
+      default_reference_to_video_model: "happyhorse-1.1-r2v",
+      default_image_model: "wan2.7-image",
+      default_speech_model: "qwen-audio-3.0-tts-plus",
+      default_speech_recognition_model: "qwen-audio-3.0-asr-flash",
+      api_key_capabilities: [
+        "text.chat",
+        "custom.command",
+        "vision.describe",
+        "image.generate",
+        "image.edit",
+        "speech.recognize",
+        "speech.synthesize",
+        "video.generate",
+        "video.ref",
+        "video.task.get",
+        "video.download",
+      ],
+    });
+    expect((config["token-plan"] as Record<string, unknown>).base_url).not.toBe(
+      "https://env-must-not-override-preset.example.test",
+    );
+    expect((config["token-plan"] as Record<string, unknown>).api_key).not.toBe(
+      "sk-env-must-not-be-persisted",
+    );
+  });
+
+  test("auth login --config token-plan 为显式空白名单追加 capability preset", async () => {
+    const configDir = makeE2eOutputDir("auth-token-plan-empty-capabilities-login");
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify(
+        {
+          "token-plan": {
+            api_key_capabilities: [],
+          },
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+
+    const login = await runCommandE2e(
+      AUTH_ROUTES,
+      ["auth", "login", "--config", "token-plan", "--api-key", "sk-sp-e2e-placeholder"],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "https://env-ignored-for-persist.example.test",
+      },
+    );
+    expect(login.exitCode, login.stderr).toBe(0);
+
+    const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
+      string,
+      unknown
+    >;
+    expect(config["token-plan"]).toMatchObject({
+      api_key_capabilities: [
+        "text.chat",
+        "vision.describe",
+        "image.generate",
+        "image.edit",
+        "speech.recognize",
+        "speech.synthesize",
+        "video.generate",
+        "video.ref",
+        "video.task.get",
+        "video.download",
+      ],
+    });
   });
 
   test("auth login 未传 --config 时写当前激活 Config", async () => {
-    const validationServer = await startValidationServer();
     const configDir = makeE2eOutputDir("auth-active-profile-login");
+    const storedBaseUrl = "https://dev-profile.example.test";
     writeFileSync(
       join(configDir, "config.json"),
       JSON.stringify(
         {
           active_config: "dev",
-          dev: { base_url: validationServer.baseUrl },
+          dev: { base_url: storedBaseUrl },
         },
         null,
         2,
@@ -369,60 +363,48 @@ describe("e2e: auth", () => {
       DASHSCOPE_API_KEY: "",
       DASHSCOPE_BASE_URL: "",
     };
-    try {
-      const activeLogin = await runCommandE2e(
-        AUTH_ROUTES,
-        ["auth", "login", "--api-key", "sk-active-placeholder"],
-        env,
-      );
-      expect(activeLogin.exitCode, activeLogin.stderr).toBe(0);
+    const activeLogin = await runCommandE2e(
+      AUTH_ROUTES,
+      ["auth", "login", "--api-key", "sk-active-placeholder"],
+      env,
+    );
+    expect(activeLogin.exitCode, activeLogin.stderr).toBe(0);
 
-      expect(validationServer.requests).toHaveLength(1);
-
-      const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
-        string,
-        unknown
-      >;
-      expect(config.api_key).toBeUndefined();
-      expect(config.active_config).toBe("dev");
-      expect(config.dev).toMatchObject({
-        api_key: "sk-active-placeholder",
-        base_url: validationServer.baseUrl,
-      });
-    } finally {
-      await validationServer.close();
-    }
+    const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
+      string,
+      unknown
+    >;
+    expect(config.api_key).toBeUndefined();
+    expect(config.active_config).toBe("dev");
+    expect(config.dev).toMatchObject({
+      api_key: "sk-active-placeholder",
+      base_url: storedBaseUrl,
+    });
   });
 
-  test("auth login --api-key 验证失败不留下半配置", async () => {
-    const validationServer = await startValidationServer(400);
+  test("auth login --api-key 非法 Base URL 失败时不留下半配置", async () => {
     const configDir = makeE2eOutputDir("auth-api-key-login-failure");
-    try {
-      const login = await runCommandE2e(
-        AUTH_ROUTES,
-        [
-          "auth",
-          "login",
-          "--config",
-          "failed-profile",
-          "--api-key",
-          "sk-invalid",
-          "--base-url",
-          validationServer.baseUrl,
-        ],
-        {
-          BAILIAN_CONFIG_DIR: configDir,
-          DASHSCOPE_API_KEY: "",
-          DASHSCOPE_BASE_URL: "",
-        },
-      );
-      expect(login.exitCode).not.toBe(0);
-      expect(login.stderr).toMatch(/invalid key/);
-      expect(login.stderr).not.toMatch(/API key validation failed|Invalid API key/);
-      expect(existsSync(join(configDir, "config.json"))).toBe(false);
-    } finally {
-      await validationServer.close();
-    }
+    const login = await runCommandE2e(
+      AUTH_ROUTES,
+      [
+        "auth",
+        "login",
+        "--config",
+        "failed-profile",
+        "--api-key",
+        "sk-invalid",
+        "--base-url",
+        "ftp://example.com/models",
+      ],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+    expect(login.exitCode).not.toBe(0);
+    expect(login.stderr).toMatch(/Invalid model base URL/);
+    expect(existsSync(join(configDir, "config.json"))).toBe(false);
   });
 
   test("auth login --dry-run 覆盖全局参数 --output json --timeout", async () => {
@@ -438,7 +420,7 @@ describe("e2e: auth", () => {
       "120",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stdout).toContain("Would validate and save API key.");
+    expect(stdout).toContain("Would save API key.");
   });
 
   test("auth login 缺少密钥且 --output json 时报用法错误并退出 (2)", async () => {

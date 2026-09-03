@@ -1,7 +1,7 @@
 ---
 name: bailian-gen
 metadata:
-  version: "1.17.1"
+  version: "1.20.0"
   requires:
     bins: ["bl"]
 description: >-
@@ -33,13 +33,15 @@ description: >-
 | ---------------------------------------- | ----------------------------------------- | --------------------------------------------------- |
 | Text-to-image                            | `bl image generate`                       | `qwen-image-3.0`                                    |
 | Image edit / multi-image merge           | `bl image edit` (repeat `--image`)        | `qwen-image-3.0`                                    |
-| Text-to-video / image-to-video           | `bl video generate`                       | `happyhorse-1.1-t2v` / `-i2v` (with `--image`)      |
+| Text-to-video / image-to-video           | `bl video generate`                       | `wan3.0-video`                                      |
 | Video edit / style transfer              | `bl video edit`                           | `happyhorse-1.0-video-edit`                         |
-| Reference-to-video + voice               | `bl video ref`                            | `happyhorse-1.1-r2v`                                |
+| Reference-to-video + voice               | `bl video ref`                            | `wan3.0-video`                                      |
 | Speech synthesis (TTS / voiceover)       | `bl speech synthesize`                    | `cosyvoice-v3-flash`                                |
 | Speech recognition (ASR / transcription) | `bl speech recognize`                     | `fun-asr`                                           |
 | Image describe                           | `bl vision describe`                      | `qwen3-vl-plus`；宿主能做且未点名 → host-first      |
 | Video / A-V understand                   | `bl vision describe --video` 或 `bl omni` | 视频理解默认走百炼；`omni` 默认 `qwen3.5-omni-plus` |
+
+Unless the user explicitly specifies a model, omit `--model` and let the CLI use the active Profile’s default.
 
 For ASR model selection, keep `fun-asr` (or other `*-filetrans`) for long recordings, repeated files, speaker diarization, or asynchronous task IDs. For one local or remote audio file up to about five minutes when the user asks for low-latency Flash models, use `--model fun-asr-flash-2026-06-15`, `--model qwen-audio-3.0-asr-flash`, or `--model qwen3-asr-flash`. Flash recognition is synchronous and accepts exactly one file per call.
 

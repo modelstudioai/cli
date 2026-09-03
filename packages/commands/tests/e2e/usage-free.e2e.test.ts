@@ -3,19 +3,20 @@ import {
   isConsoleE2EReady,
   isConsoleAuthFailure,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "./helpers.ts";
 import { USAGE_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: usage free", () => {
   test("usage free --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, ["usage", "free", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(USAGE_ROUTES, ["usage", "free", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--model|quota|free-tier/i);
   });
 
   test("usage free --help 包含所有示例", async () => {
-    const { stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, ["usage", "free", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(USAGE_ROUTES, ["usage", "free", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toContain("bl usage free");
     expect(stderr).toContain("bl usage free --model qwen3-max");

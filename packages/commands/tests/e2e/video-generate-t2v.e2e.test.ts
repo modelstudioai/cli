@@ -7,6 +7,7 @@ import {
   isDashScopeE2EReady,
   makeE2eOutputDir,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "./helpers.ts";
 import { VIDEO_ROUTES } from "./topic-routes.ts";
@@ -17,7 +18,11 @@ import { VIDEO_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: video generate (t2v)", () => {
   test("video generate --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, ["video", "generate", "--help"]);
+    const { stderr, exitCode } = await runCommandHelp(VIDEO_ROUTES, [
+      "video",
+      "generate",
+      "--help",
+    ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/generate|--prompt|--model|download|image/i);
   });
@@ -32,7 +37,7 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "generate",
         ...cliTimeoutPrefix(),
         "--model",
-        "happyhorse-1.1-t2v",
+        "wan3.0-video",
       ]);
       expect(exitCode).toBe(2);
       expect(stderr).toMatch(/--prompt|Usage:/i);
@@ -44,8 +49,6 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
         "generate",
         "--dry-run",
         ...cliTimeoutPrefix(),
-        "--model",
-        "happyhorse-1.1-t2v",
         "--prompt",
         "干跑校验",
         "--output",
@@ -55,18 +58,18 @@ describe.skipIf(!isBailianE2EVideoEnabled() || !isDashScopeE2EReady())(
       const data = parseStdoutJson<{ request?: { model?: string; input?: { prompt?: string } } }>(
         stdout,
       );
-      expect(data.request?.model).toBe("happyhorse-1.1-t2v");
+      expect(data.request?.model).toBe("wan3.0-video");
       expect(data.request?.input?.prompt).toBe("干跑校验");
     });
 
-    test("【happyhorse-1.1-t2v】文本生成视频", async () => {
+    test("【wan3.0-video】文本生成视频", async () => {
       const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
       const { stdout, stderr, exitCode } = await runCommandE2e(VIDEO_ROUTES, [
         "video",
         "generate",
         ...cliTimeoutPrefix(),
         "--model",
-        "happyhorse-1.1-t2v",
+        "wan3.0-video",
         "--prompt",
         "夕阳下海面波光，远景静态镜头",
         "--download",

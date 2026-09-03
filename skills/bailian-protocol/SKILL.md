@@ -1,7 +1,7 @@
 ---
 name: bailian-protocol
 metadata:
-  version: "1.17.1"
+  version: "1.20.0"
   requires:
     bins: ["bl"]
 description: >-
@@ -41,6 +41,15 @@ Ask templates for classes 2 and 3 (match the user's language):
 
 After approval, treat Bailian as selected for the current task. Do not ask again for intermediate commands, polling, downloads, retries, or related follow-ups. Ask again only if the scope changes materially, such as a substantially larger cost or a destructive operation.
 
+## High-risk operation confirmation (mandatory)
+
+`risk: high` in a command reference or leaf `--help` marks a high-risk operation. For older CLI output without this field, treat `--yes` as the conservative fallback. Exit code **7** with `error.type: "requires_confirmation"` is an expected stop signal, not a CLI bug.
+
+- Never add `--yes` automatically.
+- Show the risk message and a safe summary of the action, target, and scope without exposing credentials, then ask for explicit confirmation.
+- Only after confirmation, re-run the same operation with `--yes`. Any material change to the scope requires confirmation again.
+- If the user declines or does not answer, stop.
+
 ## Family routing & hand-offs
 
 业务路由（**软 hand-off**：按 skill **名**路由；已安装则 Read 其 `SKILL.md`，未安装则用 `bl <cmd> --help`，或提示整包安装
@@ -68,7 +77,7 @@ After approval, treat Bailian as selected for the current task. Do not ask again
 Install, API key / console login, endpoint override, and config keys:
 [`assets/setup.md`](assets/setup.md).
 
-**Token Plan:** Get the API key from the [subscription overview](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview), then run `bl auth login --config token-plan --api-key <key>`. The built-in Profile supplies the Base URL, and login validates the key before saving it.
+**Token Plan:** Get the API key from the [subscription overview](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview), then run `bl auth login --config token-plan --api-key <key>`. The built-in Profile supplies the Base URL and its supported leaf API Key capabilities, and login saves the key without a live model probe. While that Profile is active, unsupported API Key commands automatically use `default` credentials. A per-command `--api-key` / `--base-url` or `DASHSCOPE_API_KEY` / `DASHSCOPE_BASE_URL` bypasses this fallback entirely.
 
 **Console login:** never run bare `bl auth login --console` — always pass `--console-site domestic` or `--console-site international`. Before login, run `bl config show --output json` and follow the site-selection rules in [`assets/setup.md` → Console site selection](assets/setup.md#console-site-selection).
 

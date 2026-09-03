@@ -71,7 +71,9 @@ packages/commands/src/index.ts
   - `usageArgs`(不含 bin/path 前缀)
   - `exampleArgs`(不含 bin/path 前缀)
   - `validate`(跨 flag 校验)
+  - 高风险命令必须声明 `risk: { level: "high", message: <双语文案> }`;`--yes` 由 runtime 注入,命令不得自行声明
   - 普通业务命令的 `run(ctx)` 只读 `ctx.flags` / `ctx.settings` / `ctx.client`
+  - 声明 `risk` 的 `run(ctx)` 必须在任何远端请求或本地写入之前处理 `ctx.settings.dryRun` 并返回预览;runtime 只负责确认闸门,不替命令实现 dry-run
   - `commands/auth/**` 可用 `ctx.authStore`,`commands/config/**` 可用 `ctx.configStore`;不要把这些持久化能力扩散到普通业务命令
   - `commands/plugin/**` 可用 `ctx.commandPacks`;产品 policy 由 runtime 绑定,命令不要自行 import 产品入口
 - [ ] 用户可见 Help 文案在命令文件中就近提供 `en-US` / `zh-CN`:命令 `description`、flag `description`、`notes` 和包含自然语言的 `exampleArgs`;纯命令语法示例可保留为字符串,服务端错误不翻译

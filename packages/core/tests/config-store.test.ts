@@ -4,6 +4,7 @@ import { join } from "path";
 import { expect, test } from "vite-plus/test";
 import { makeConfigStore } from "../src/config/store.ts";
 import { makeAuthStore } from "../src/auth/store.ts";
+import { resolveApiKey } from "../src/auth/resolver.ts";
 import { refreshAccessToken } from "../src/auth/refresh-token.ts";
 import {
   buildSettings,
@@ -14,6 +15,7 @@ import {
   readConfigProfiles,
   activateConfigProfile,
   deleteConfigProfile,
+  selectApiKeyResolutionSources,
 } from "../src/config/loader.ts";
 import { getConfigPath } from "../src/config/paths.ts";
 
@@ -362,5 +364,118 @@ test("buildSources 暴露命名 config 且 default 等价顶层", async () => {
     expect(devSources.configPath).toBe(getConfigPath());
     expect(devSources.file.access_token).toBe("tok-dev");
     expect(devSources.file.api_key).toBeUndefined();
+  });
+});
+
+test("API Key capability 白名单支持任意命名 Profile，并只替换 fallback 的 file 层", async () => {
+  await inTempConfigDir(async () => {
+    await writeConfigFile({ api_key: "sk-default", base_url: "https://default.example.com" });
+    await writeConfigFile(
+      {
+        api_key: "sk-company-plan",
+        base_url: "https://plan.example.com",
+        api_key_capabilities: ["image.generate"],
+      },
+      "company-plan",
+    );
+
+    const selectedSources = { ...buildSources({ config: "company-plan" }), env: {} };
+    const supported = selectApiKeyResolutionSources(selectedSources, "image.generate");
+    expect(supported).toMatchObject({ sources: { configName: "company-plan" } });
+    expect(supported.sources.file.api_key).toBe("sk-company-plan");
+
+    const fallback = selectApiKeyResolutionSources(selectedSources, "text.chat");
+    expect(fallback.fallbackFrom).toBe("company-plan");
+    expect(fallback.sources.configName).toBeUndefined();
+    expect(fallback.sources.file).toMatchObject({
+      api_key: "sk-default",
+      base_url: "https://default.example.com",
+    });
+  });
+});
+
+test("API Key capability policy 缺失时保持原 Profile，空白名单对任意叶子路由 fail closed", async () => {
+  await inTempConfigDir(async () => {
+    await writeConfigFile({ api_key: "sk-default" });
+    await writeConfigFile({ api_key: "sk-ordinary" }, "ordinary");
+    await writeConfigFile({ api_key: "sk-closed", api_key_capabilities: [] }, "closed-plan");
+
+    const ordinary = selectApiKeyResolutionSources(
+      { ...buildSources({ config: "ordinary" }), env: {} },
+      "text.chat",
+    );
+    expect(ordinary.fallbackFrom).toBeUndefined();
+    expect(ordinary.sources.file.api_key).toBe("sk-ordinary");
+
+    const closed = selectApiKeyResolutionSources(
+      { ...buildSources({ config: "closed-plan" }), env: {} },
+      "speech.synthesize",
+    );
+    expect(closed.fallbackFrom).toBe("closed-plan");
+    expect(closed.sources.file.api_key).toBe("sk-default");
+  });
+});
+
+test("显式 API Key 跳过 capability fallback，其他字段仍按既有优先级解析", async () => {
+  await inTempConfigDir(async () => {
+    await writeConfigFile({ api_key: "sk-default", base_url: "https://default.example.com" });
+    await writeConfigFile(
+      {
+        api_key: "sk-plan",
+        base_url: "https://plan.example.com",
+        api_key_capabilities: ["image.generate"],
+      },
+      "company-plan",
+    );
+
+    const selectedSources = buildSources({
+      config: "company-plan",
+      apiKey: "sk-flag",
+    });
+    selectedSources.env = { DASHSCOPE_BASE_URL: "https://env.example.com" };
+    const selected = selectApiKeyResolutionSources(selectedSources, "text.chat");
+
+    expect(selected.fallbackFrom).toBeUndefined();
+    expect(selected.sources.file.api_key).toBe("sk-plan");
+    expect(resolveApiKey(selected.sources)).toMatchObject({
+      token: "sk-flag",
+      baseUrl: "https://env.example.com",
+      source: "flag",
+    });
+  });
+});
+
+test("旧 token-plan Profile 缺少 capability 字段时不启用 fallback", async () => {
+  await inTempConfigDir(async () => {
+    await writeConfigFile({ api_key: "sk-default" });
+    await writeConfigFile({ api_key: "sk-token-plan" }, "token-plan");
+    const selectedSources = { ...buildSources({ config: "token-plan" }), env: {} };
+
+    const selected = selectApiKeyResolutionSources(selectedSources, "search.web");
+    expect(selected.fallbackFrom).toBeUndefined();
+    expect(selected.sources.file.api_key).toBe("sk-token-plan");
+  });
+});
+
+test("token-plan 显式空 capability 白名单启用全量 fallback", async () => {
+  await inTempConfigDir(async () => {
+    await writeConfigFile({ api_key: "sk-default" });
+    await writeConfigFile({ api_key: "sk-token-plan", api_key_capabilities: [] }, "token-plan");
+    const selectedSources = { ...buildSources({ config: "token-plan" }), env: {} };
+
+    const fallback = selectApiKeyResolutionSources(selectedSources, "video.generate");
+    expect(fallback.fallbackFrom).toBe("token-plan");
+    expect(fallback.sources.file.api_key).toBe("sk-default");
+  });
+});
+
+test("default 配置不对自身应用 capability fallback", async () => {
+  await inTempConfigDir(async () => {
+    await writeConfigFile({ api_key: "sk-default", api_key_capabilities: [] });
+    const defaultSources = { ...buildSources({ config: "default" }), env: {} };
+
+    const selected = selectApiKeyResolutionSources(defaultSources, "text.chat");
+    expect(selected.fallbackFrom).toBeUndefined();
+    expect(selected.sources.file.api_key).toBe("sk-default");
   });
 });

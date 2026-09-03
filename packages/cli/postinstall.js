@@ -181,7 +181,13 @@ function atomicSwap(tmpDir, catalogDir) {
     if (existsSync(backup) && !existsSync(catalogDir)) renameSync(backup, catalogDir);
     throw err;
   }
-  if (existsSync(backup)) rmSync(backup, { recursive: true, force: true });
+  // Best-effort cleanup (symmetric with core skills/extract.ts): the swap already
+  // succeeded, so a backup deletion failure must not fail the pre-download
+  try {
+    if (existsSync(backup)) rmSync(backup, { recursive: true, force: true });
+  } catch {
+    /* keep the backup on disk rather than report a completed swap as failed */
+  }
 }
 
 async function main() {
@@ -214,7 +220,11 @@ async function main() {
     }
     atomicSwap(tmpDir, catalogDir);
   } catch (err) {
-    if (existsSync(tmpDir)) rmSync(tmpDir, { recursive: true, force: true });
+    try {
+      if (existsSync(tmpDir)) rmSync(tmpDir, { recursive: true, force: true });
+    } catch {
+      /* cleanup must not mask the original error */
+    }
     throw err;
   }
 

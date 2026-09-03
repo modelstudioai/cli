@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
-import { isKbAdminE2EReady, parseStdoutJson, runCommandE2e } from "../helpers.ts";
+import { isKbAdminE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "../helpers.ts";
 import { KNOWLEDGE_DOC_STATUS_ROUTES } from "../topic-routes.ts";
 
 // Live coverage depends on a real job_id produced by doc upload; it is exercised
@@ -10,7 +10,7 @@ import { KNOWLEDGE_DOC_STATUS_ROUTES } from "../topic-routes.ts";
 
 describe("e2e: knowledge doc status", () => {
   test("--help 展示 flags", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_DOC_STATUS_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(KNOWLEDGE_DOC_STATUS_ROUTES, [
       "knowledge",
       "doc",
       "status",

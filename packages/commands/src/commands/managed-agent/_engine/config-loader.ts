@@ -3,8 +3,8 @@ import {
   type LoadedProjectConfig,
   type ProjectRuntimeContext,
   resolveProjectConfig,
-  UserError,
 } from "@openagentpack/sdk";
+import { BailianError, ExitCode } from "bailian-cli-core";
 import {
   assertProviderCredentials,
   type CredentialHost,
@@ -20,11 +20,13 @@ export { CREDENTIALS_NOTE, OFFLINE_NOTE } from "./credentials.ts";
 
 /**
  * Whether this run requires provider keys:
- *   - "all" (default) — online command: every provider declared in agents.yaml
- *     must have a non-empty key after injection
+ *   - "all" (default) — online command: the Bailian provider must have a
+ *     non-empty key after injection
  *   - "none" — offline command (local config/state only), skip the check
  */
 export type CredentialScope = "all" | "none";
+
+export const BAILIAN_PROVIDER = "bailian";
 
 interface AgentConfigOptions {
   resolveEnv?: boolean;
@@ -42,7 +44,8 @@ interface AgentConfigOptions {
  *   3. override the bailian block with the CLI auth chain's credential (in-memory)
  *   4. scrub all credential vars from process.env (real values now live only in
  *      the config object → provider adapters, never the environment)
- *   5. fail with a CLI-authoritative AUTH error if any provider's key is empty
+ *   5. enforce Bailian-only config and fail with a CLI-authoritative AUTH error
+ *      if its key is empty
  *      (offline commands pass `credentials: "none"` to skip the check)
  */
 export async function resolveAgentProjectConfig(
@@ -55,6 +58,7 @@ export async function resolveAgentProjectConfig(
   normalizeInterpolatedProviderBlocks(resolved.config.providers);
   injectProviderCredentials(resolved.config.providers, host);
   scrubCredentialEnv();
+  assertBailianOnlyProviders(resolved.config.providers);
   if ((options.credentials ?? "all") !== "none") {
     assertProviderCredentials(resolved.config.providers);
   }
@@ -91,15 +95,23 @@ export async function buildAgentRuntime(
   return { ...ctx, configPath };
 }
 
-/** Ensure a user-supplied --provider value is actually configured in agents.yaml. */
-export function assertProviderConfigured(
-  ctx: ProjectRuntimeContext,
-  provider: string | undefined,
-): void {
-  if (!provider || provider === "all") return;
-  if (ctx.providers.has(provider)) return;
-  const available = Array.from(ctx.providers.keys()).join(", ") || "none";
-  throw new UserError(
-    `Provider '${provider}' is not configured. Available providers: ${available}.`,
+/** Enforce the bl product boundary while the shared SDK remains multi-provider capable. */
+export function assertBailianOnlyProviders(providers: Record<string, unknown>): void {
+  const configuredProviders = Object.keys(providers);
+  const unsupportedProviders = configuredProviders.filter(
+    (provider) => provider !== BAILIAN_PROVIDER,
   );
+  if (unsupportedProviders.length > 0) {
+    const names = unsupportedProviders.join(", ");
+    throw new BailianError(
+      `bl managed-agent only supports provider '${BAILIAN_PROVIDER}'; remove unsupported providers: ${names}. / bl managed-agent 仅支持 Provider '${BAILIAN_PROVIDER}'；请移除不支持的 Provider：${names}。`,
+      ExitCode.USAGE,
+    );
+  }
+  if (!(BAILIAN_PROVIDER in providers)) {
+    throw new BailianError(
+      `bl managed-agent requires a '${BAILIAN_PROVIDER}' provider configuration. / bl managed-agent 需要配置 Provider '${BAILIAN_PROVIDER}'。`,
+      ExitCode.USAGE,
+    );
+  }
 }

@@ -20,19 +20,21 @@ const SESSION_DELETE_FLAGS = {
       "zh-CN": "配置文件路径（默认：agents.yaml）",
     },
   },
-  provider: {
-    type: "string",
-    valueHint: "<name>",
-    description: { "en-US": "Target provider", "zh-CN": "目标 Provider" },
-  },
 } satisfies FlagsDef;
 
 export default defineCommand({
   description: { "en-US": "Delete a session", "zh-CN": "删除 Session" },
   auth: "apiKey",
-  usageArgs: "--session-id <id> [--provider <name>] [--file <path>]",
+  risk: {
+    level: "high",
+    message: {
+      "en-US": "This deletes the specified remote managed Agent Session.",
+      "zh-CN": "该操作会删除指定的远端托管 Agent Session。",
+    },
+  },
+  usageArgs: "--session-id <id> [--file <path>]",
   flags: SESSION_DELETE_FLAGS,
-  exampleArgs: ["--session-id sess_abc123"],
+  exampleArgs: ["--session-id sess_abc123 --yes"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
@@ -43,7 +45,7 @@ export default defineCommand({
       emitResult(
         {
           would_delete_session: flags.sessionId,
-          provider: flags.provider ?? "auto",
+          provider: "bailian",
           config_file: file,
         },
         format,
@@ -54,7 +56,7 @@ export default defineCommand({
     await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, file);
-        await deleteSession(runtime, flags.sessionId, flags.provider);
+        await deleteSession(runtime, flags.sessionId, "bailian");
       }),
     );
 

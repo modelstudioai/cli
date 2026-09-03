@@ -5,7 +5,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
-import { isKbAdminE2EReady, parseStdoutJson, runCommandE2e } from "../helpers.ts";
+import { isKbAdminE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "../helpers.ts";
 import { KNOWLEDGE_SERVICE_ROUTES } from "../topic-routes.ts";
 import { pickDifferentAgentModel } from "./verified-models.ts";
 
@@ -16,7 +16,7 @@ interface DryRunBody {
 
 describe("e2e: knowledge service list", () => {
   test("--help 展示 flags", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(KNOWLEDGE_SERVICE_ROUTES, [
       "knowledge",
       "service",
       "list",
@@ -454,7 +454,7 @@ describe("e2e: knowledge service update", () => {
 });
 
 describe("e2e: knowledge service deploy / delete (危险)", () => {
-  test("deploy: 非 TTY 无 --yes 报 USAGE (2)", async () => {
+  test("deploy: 无 --yes 返回确认请求 (7)", async () => {
     const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
       "knowledge",
       "service",
@@ -465,9 +465,13 @@ describe("e2e: knowledge service deploy / delete (危险)", () => {
       "sk-fake",
       "--workspace-id",
       "ws_test",
+      "--output",
+      "json",
     ]);
-    expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/--yes/);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
   });
 
   test("deploy: --dry-run 断言 body", async () => {
@@ -491,7 +495,7 @@ describe("e2e: knowledge service deploy / delete (危险)", () => {
     expect(data.request?.agent_version_desc).toBe("v1 desc");
   });
 
-  test("delete: 非 TTY 无 --yes 报 USAGE (2)", async () => {
+  test("delete: 无 --yes 返回确认请求 (7)", async () => {
     const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
       "knowledge",
       "service",
@@ -502,9 +506,32 @@ describe("e2e: knowledge service deploy / delete (危险)", () => {
       "sk-fake",
       "--workspace-id",
       "ws_test",
+      "--output",
+      "json",
     ]);
-    expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/--yes/);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
+  });
+
+  test("delete: --dry-run 断言 body", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+      "knowledge",
+      "service",
+      "delete",
+      "--agent-id",
+      "aid_test",
+      "--workspace-id",
+      "ws_test",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<DryRunBody>(stdout);
+    expect(data.endpoint).toMatch(/rag\/app\/delete/);
+    expect(data.request?.agent_id).toBe("aid_test");
   });
 });
 

@@ -4,6 +4,7 @@ import {
   isSearchE2EReady,
   isTableSearchE2EReady,
   parseStdoutJson,
+  runCommandHelp,
   runCommandE2e,
 } from "../helpers.ts";
 import { KNOWLEDGE_SEARCH_ROUTES } from "../topic-routes.ts";
@@ -20,7 +21,7 @@ interface DryRunBody {
 
 describe("e2e: knowledge search", () => {
   test("knowledge search --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(KNOWLEDGE_SEARCH_ROUTES, [
       "knowledge",
       "search",
       "--help",

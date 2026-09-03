@@ -2,16 +2,16 @@
 
 ## 架构分层
 
-| 层级            | 路径                                                  | 测什么                                                                                   |
-| --------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| **共享基建**    | `packages/e2e`                                        | gating、子进程 runner、output、globalSetup（`private`，不发布）                          |
-| **命令 E2E**    | `packages/commands/tests/e2e`                         | help、缺参、dry-run、live（gated）；每用例最小路由                                       |
-| **Journey E2E** | `packages/commands/tests/e2e/knowledge/journeys`      | 用户旅程全链路（跨命令回路 + 标记词召回闭环），全部 live gated；见 `journeys/README.md`  |
-| **bl smoke**    | `packages/cli/tests/e2e/registry.smoke.e2e.test.ts`   | 产品 map 全部 path `--help`、分组 help、根 help                                          |
-| **kscli smoke** | `packages/kscli/tests/e2e/registry.smoke.e2e.test.ts` | 从 `kscli/src/commands.ts` 推导 path/分组；identity（`--version`、`search --help` path） |
-| **runtime**     | `packages/runtime/tests`                              | `proxy.e2e`、console 跨域 flag 拒绝                                                      |
+| 层级            | 路径                                                  | 测什么                                                                                  |
+| --------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **共享基建**    | `packages/e2e`                                        | gating、子进程 runner、registry help 捕获、output、globalSetup（`private`，不发布）     |
+| **命令 E2E**    | `packages/commands/tests/e2e`                         | 进程内 help、子进程缺参/dry-run/live（gated）；每用例最小路由                           |
+| **Journey E2E** | `packages/commands/tests/e2e/knowledge/journeys`      | 用户旅程全链路（跨命令回路 + 标记词召回闭环），全部 live gated；见 `journeys/README.md` |
+| **bl smoke**    | `packages/cli/tests/e2e/registry.smoke.e2e.test.ts`   | 产品 map 全部 path/分组的进程内 help；根 help、鉴权域等代表性子进程冒烟                 |
+| **kscli smoke** | `packages/kscli/tests/e2e/registry.smoke.e2e.test.ts` | map 全部 path/分组的进程内 help；`--version`、`search --help` 等代表性子进程冒烟        |
+| **runtime**     | `packages/runtime/tests`                              | `proxy.e2e`、console 跨域 flag 拒绝                                                     |
 
-**依赖边界**：`e2e` → `core`；`commands/tests` → `e2e` + `commands/src`；产品 tests → `e2e` + 各自 `src`。**禁止**产品 import `commands/tests/**`（子进程 spawn harness 路径除外）。
+**依赖边界**：`e2e` → `core`；`commands/tests` → `e2e` + `commands/src`；产品 tests → `e2e` + 各自 `src` + `runtime` 公共 API。**禁止**产品 import `commands/tests/**`（子进程 spawn harness 路径除外）。
 
 ## 触发条件
 
@@ -29,7 +29,8 @@
 ### commands E2E
 
 - 路径：`packages/commands/tests/e2e/<kebab-topic>.e2e.test.ts`；knowledge 领域集中在 `packages/commands/tests/e2e/knowledge/` 子目录（新增 knowledge 命令测试放这里）
-- 子进程：`runCommandE2e(routes, args)` from `./helpers.ts`（spawn `harness/main.ts`，`routes` 为本 topic 最小 path → export 映射）
+- help：`runCommandHelp(routes, [...path, "--help"])` from `./helpers.ts`（当前 Vitest worker 内用真实 command + `CommandRegistry` 渲染，不启动子进程）
+- 子进程：缺参、dry-run、live 使用 `runCommandE2e(routes, args)`（spawn `harness/main.ts`，`routes` 为本 topic 最小 path → export 映射）
 - fixtures：`packages/commands/tests/e2e/fixtures/`
 - 路由常量：`topic-routes.ts`（按 topic 维护，**非**全量产品 map）
 
@@ -37,10 +38,12 @@
 
 - bl：`runCli` from `packages/cli/tests/e2e/helpers.ts`
 - kscli：`runKscli` from `packages/kscli/tests/e2e/helpers.ts`
+- 全量 leaf/group help 使用产品 `commands` 创建 `CommandRegistry`，先通过 `resolve([...path, "--help"])` 检查 help 路由，再用 `captureRegistryHelp` 检查完整 Usage；禁止在 `test.each(commandPaths/groupPaths)` 中逐条启动 `tsx` 子进程
+- 真实子进程只保留根 help/version、产品身份、代表性叶子 help/鉴权域和缺参退出码等 shell/stdio/env 契约
 
 ### 共享
 
-- gating / output / runner：`e2e/gating`、`e2e/output`、`e2e/runner`
+- gating / output / runner：`e2e/gating`、`e2e/output`、`e2e/runner`；runner 使用 `node --import tsx` 执行 TypeScript 入口，不启动 tsx CLI IPC server
 - globalSetup：根 `vite.config.ts` → `packages/e2e/src/global-setup.ts`
 - 解析 JSON stdout：`parseStdoutJson`；输出目录：`makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url))`
 - 长任务：`cliTimeoutPrefix()`；视频用例加 `test(..., 3_600_000)` 等显式超时
@@ -48,9 +51,12 @@
 ## 双层 describe（固定结构）
 
 ```ts
-// 1) 不 skip：--help，无密钥、无真实 API（分组 help 由 bl registry.smoke 覆盖）
+// 1) 不 skip：进程内 --help，无密钥、无真实 API（分组 help 由 bl registry.smoke 覆盖）
 describe("e2e: <topic>", () => {
-  test("<subcommand> --help 正常退出", ...);
+  test("<subcommand> --help 正常退出", async () => {
+    const result = await runCommandHelp(FOO_ROUTES, ["foo", "bar", "--help"]);
+    expect(result.exitCode, result.stderr).toBe(0);
+  });
 });
 
 // 2) skipIf：缺参 / dry-run / 真实集成
@@ -74,10 +80,17 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 ## 用例类型
 
-1. **--help**：`runCommandE2e(ROUTES, [..., "--help"])` → stderr 含主要 flags
+1. **--help**：`runCommandHelp(ROUTES, [..., "--help"])` → stderr 含主要 flags；产品层另保留少量真实子进程 help 验证 shell/stdio/env
 2. **缺参**：带无害全局 flag（如 `--quiet`）且不传 required flag → `exitCode === 2`
 3. **--dry-run**：实现在联网/上传/写盘**之前**返回；断言 stdout JSON/文本
 4. **真实集成**：放在 skip 块**末尾**
+
+高风险命令额外要求：
+
+- `--help` 展示 runtime 注入的 `--yes`
+- 无 `--yes` 返回 exit code 7 和 JSON `type: "requires_confirmation"`
+- `--dry-run` 无需 `--yes`，且必须证明在任何远端请求或本地写入之前返回
+- runtime 的离线 high-risk fixture 必须覆盖带 `--yes` 确实进入 `run()`，并断言 `yes` 不进入 command 自有 flags
 
 ## Journey 层（用户旅程全链路）
 
@@ -94,8 +107,8 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 ## 安全与例外
 
-- **禁止破坏真实用户配置**：`auth logout` 默认只用 `--dry-run`；需要验证实际落盘时，必须通过
-  `BAILIAN_CONFIG_DIR` 指向隔离 fixture；`config set` 只用 `--dry-run`
+- **禁止破坏真实用户配置**：`auth logout` 和 `config set` 默认只用 `--dry-run`；只有验证持久化契约时，才允许通过
+  `BAILIAN_CONFIG_DIR` 指向每个用例独占的临时目录实际落盘，并必须在 `finally` 中清理；禁止写入或复用真实 `~/.bailian`
 - **不加 dry-run**：`dryRun` 在 `resolveFileUrl` / `resolveCredential` / 上传**之后**的命令（如 `image edit`、`speech recognize` 带 `--url`）
 - **`--list-voices` 等旁路**：先于 `--text` 校验的 flag，缺参用例勿带该 flag
 - 新增 required option → 至少一条缺参用例；改 dry-run 输出 → 更新对应断言
@@ -105,7 +118,7 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 - [ ] `packages/commands/src/index.ts` 导出 + `packages/cli/src/commands.ts` 暴露路径 + `topic-routes.ts` 补最小路由
 - [ ] `packages/commands/tests/e2e/<topic>.e2e.test.ts`（新建或扩展）
 - [ ] 若改了 `usageArgs` / `flags` / `exampleArgs`,跑 `pnpm --filter bailian-cli run generate:reference` 更新各 `skills/<skill>/reference/` 并提交
-- [ ] 子命令 `--help`（分组 help 由 bl `registry.smoke` 覆盖）
+- [ ] 子命令 `--help` 使用 `runCommandHelp`（分组 help 由 bl `registry.smoke` 覆盖）
 - [ ] skip 块：每个 required flag 缺参；可 dry-run 则加一条
 - [ ] 至少一条真实集成（或说明为何仅 smoke）；不破坏已有集成用例顺序
 - [ ] `vp test packages/commands/tests/e2e/<file>` 通过

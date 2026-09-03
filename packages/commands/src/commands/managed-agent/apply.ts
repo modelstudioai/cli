@@ -8,13 +8,9 @@ import {
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { executePlannedProject, planProjectContext } from "@openagentpack/sdk";
 import { formatResourceLabel } from "./_engine/address-utils.ts";
-import {
-  assertProviderConfigured,
-  buildAgentRuntime,
-  CREDENTIALS_NOTE,
-} from "./_engine/config-loader.ts";
+import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
-import { withAgentErrors } from "./_engine/errors.ts";
+import { formatAgentDiagnosticFailure, withAgentErrors } from "./_engine/errors.ts";
 import { renderAgentFeedback } from "./_engine/feedback.ts";
 
 const APPLY_FLAGS = {
@@ -24,21 +20,6 @@ const APPLY_FLAGS = {
     description: {
       "en-US": "Config file path (default: agents.yaml)",
       "zh-CN": "配置文件路径（默认：agents.yaml）",
-    },
-  },
-  provider: {
-    type: "string",
-    valueHint: "<name>",
-    description: {
-      "en-US": "Target provider (default: all configured)",
-      "zh-CN": "目标 Provider（默认：全部已配置项）",
-    },
-  },
-  yes: {
-    type: "switch",
-    description: {
-      "en-US": "Confirm and apply without an interactive prompt (required to mutate)",
-      "zh-CN": "无需交互提示直接确认并应用（执行变更时必填）",
     },
   },
   noRefresh: {
@@ -71,10 +52,17 @@ export default defineCommand({
     "zh-CN": "应用规划的变更，创建、更新或删除 Agent 资源",
   },
   auth: "apiKey",
-  usageArgs:
-    "[--file <path>] [--provider <name>] [--yes] [--no-refresh] [--refresh-only] [--concurrency <n>]",
+  risk: {
+    level: "high",
+    message: {
+      "en-US":
+        "This applies the current plan and may create, update, or delete remote managed Agent resources.",
+      "zh-CN": "该操作会应用当前计划，可能创建、更新或删除远端托管 Agent 资源。",
+    },
+  },
+  usageArgs: "[--file <path>] [--concurrency <n>]",
   flags: APPLY_FLAGS,
-  exampleArgs: ["--yes", "--provider bailian --yes"],
+  exampleArgs: ["--yes"],
   notes: CREDENTIALS_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;
@@ -85,7 +73,7 @@ export default defineCommand({
       emitResult(
         {
           would_apply: {
-            provider: flags.provider ?? "all",
+            provider: "bailian",
             refresh: !flags.noRefresh,
             concurrency: flags.concurrency,
             refresh_only: flags.refreshOnly,
@@ -101,14 +89,12 @@ export default defineCommand({
     const planned = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, file);
-        assertProviderConfigured(runtime, flags.provider);
-        const planned = await planProjectContext(runtime, {
-          provider: flags.provider,
+        return planProjectContext(runtime, {
+          provider: "bailian",
           refresh: !flags.noRefresh,
           quiet: true,
           onFeedback: renderAgentFeedback,
         });
-        return planned;
       }),
     );
 
@@ -119,11 +105,20 @@ export default defineCommand({
       if (format === "json") process.stderr.write(`${line}\n`);
       else emitBare(line);
     };
-    if (plan.diagnostics.some((diag) => diag.severity === "error")) {
-      for (const diag of plan.diagnostics) {
-        if (diag.severity === "error") emitProgress(`[error] ${diag.code}: ${diag.message}`);
+    const errorDiagnostics = plan.diagnostics.filter(
+      (diagnostic) => diagnostic.severity === "error",
+    );
+    if (errorDiagnostics.length > 0) {
+      for (const diagnostic of errorDiagnostics) {
+        emitProgress(`[error] ${diagnostic.code}: ${diagnostic.message}`);
       }
-      throw new BailianError("Cannot apply: resolve the errors above first.", ExitCode.GENERAL);
+      throw new BailianError(
+        formatAgentDiagnosticFailure(
+          errorDiagnostics,
+          "Cannot apply: resolve the errors above first.",
+        ),
+        ExitCode.GENERAL,
+      );
     }
 
     const actionable = plan.actions.filter((action) => action.action !== "no-op");
@@ -134,38 +129,9 @@ export default defineCommand({
       return;
     }
 
-    const creates = actionable.filter((action) => action.action === "create").length;
-    const updates = actionable.filter((action) => action.action === "update").length;
-    const deletes = planned.destructiveActions;
     for (const action of actionable) {
       const icon = action.action === "create" ? "+" : action.action === "update" ? "~" : "-";
       emitProgress(`  ${icon} ${formatResourceLabel(action.address)}`);
-    }
-
-    if (flags.refreshOnly) {
-      if (format === "json") {
-        emitResult(
-          {
-            refresh_only: true,
-            actions: actionable,
-            succeeded: 0,
-            failed: 0,
-            skipped: actionable.length,
-          },
-          format,
-        );
-      } else {
-        emitBare("Refresh-only mode: no remote mutations were performed.");
-      }
-      return;
-    }
-
-    if (!flags.yes) {
-      throw new BailianError(
-        `Refusing to apply ${actionable.length} change(s) (${creates} create, ${updates} update, ${deletes.length} destroy) without confirmation.`,
-        ExitCode.USAGE,
-        "Review with `bl managed-agent plan`, then re-run with --yes to apply.",
-      );
     }
 
     const result = await withAgentErrors(() =>
@@ -179,7 +145,8 @@ export default defineCommand({
     );
 
     const succeeded = result.results.filter((entry) => entry.status === "success").length;
-    const failed = result.results.filter((entry) => entry.status === "failed").length;
+    const failedResults = result.results.filter((entry) => entry.status === "failed");
+    const failed = failedResults.length;
     const skipped = result.results.filter((entry) => entry.status === "skipped").length;
 
     if (format === "json") {
@@ -188,11 +155,9 @@ export default defineCommand({
       emitBare(`\nApply finished: ${succeeded} succeeded, ${failed} failed, ${skipped} skipped.`);
     }
 
-    if (failed > 0 || skipped > 0) {
-      throw new BailianError(
-        failed > 0 ? "Apply failed." : "Apply incomplete: one or more actions were skipped.",
-        ExitCode.GENERAL,
-      );
+    if (failed > 0) {
+      const firstFailure = failedResults.find((entry) => entry.error);
+      throw new BailianError(firstFailure?.error ?? "Apply failed.", ExitCode.GENERAL);
     }
   },
 });

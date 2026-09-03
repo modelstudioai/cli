@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isDashScopeE2EReady, runCommandE2e } from "./helpers.ts";
+import { isDashScopeE2EReady, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { SPEECH_ROUTES } from "./topic-routes.ts";
 
 /**
@@ -8,7 +8,7 @@ import { SPEECH_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: speech list-voices", () => {
   test("speech synthesize --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(SPEECH_ROUTES, [
       "speech",
       "synthesize",
       "--help",
@@ -18,7 +18,7 @@ describe("e2e: speech list-voices", () => {
   });
 
   test("speech recognize --help 正常退出", async () => {
-    const { stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(SPEECH_ROUTES, [
       "speech",
       "recognize",
       "--help",

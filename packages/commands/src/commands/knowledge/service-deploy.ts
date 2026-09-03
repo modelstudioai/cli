@@ -3,12 +3,10 @@ import {
   ragEndpoint,
   RAG_PATHS,
   detectOutputFormat,
-  type Client,
   type FlagsDef,
-  type RagAgentGetResponse,
   type RagAgentMutationResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare, confirmDangerousAction } from "bailian-cli-runtime";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 import { agentMutationField, resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const SERVICE_DEPLOY_FLAGS = {
@@ -26,42 +24,8 @@ const SERVICE_DEPLOY_FLAGS = {
       "zh-CN": "新发布版本的描述",
     },
   },
-  yes: {
-    type: "switch",
-    description: { "en-US": "Skip the confirmation prompt", "zh-CN": "跳过确认提示" },
-  },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
-
-/** Confirmation summary lookup (name/status); warns that deploying an edited draft overwrites live behavior; failure degrades to id-only */
-async function buildDeploySummary(
-  client: Client,
-  workspaceId: string,
-  agentId: string,
-): Promise<string> {
-  let infoPart = "";
-  let editedWarning = "";
-  try {
-    const detail = await client.requestJson<RagAgentGetResponse>({
-      path: ragEndpoint(workspaceId, RAG_PATHS.agentGet),
-      method: "POST",
-      body: { agent_id: agentId },
-    });
-    const name = detail.data?.agent_name;
-    const status = detail.data?.agent_status;
-    if (name) infoPart += `  name: ${name}`;
-    if (status) {
-      infoPart += `  status: ${status}`;
-      if (status === "edited") {
-        editedWarning =
-          "\nWARNING: a published version is live — deploying replaces its behavior with the current draft.";
-      }
-    }
-  } catch {
-    // Degrade gracefully: a failed lookup does not block confirmation
-  }
-  return `Deploy service ${agentId}${infoPart}${editedWarning}\nPublishing changes what live callers get from this service.`;
-}
 
 export default defineCommand({
   description: {
@@ -69,6 +33,14 @@ export default defineCommand({
     "zh-CN": "将服务的 beta 草稿发布为新版本",
   },
   auth: "apiKey",
+  risk: {
+    level: "high",
+    message: {
+      "en-US":
+        "This publishes the current draft as a new version and changes the behavior seen by live callers.",
+      "zh-CN": "该操作会将当前草稿发布为新版本，并改变线上调用方使用的服务行为。",
+    },
+  },
   usageArgs: "--agent-id <id> [flags]",
   flags: SERVICE_DEPLOY_FLAGS,
   notes: [
@@ -108,11 +80,6 @@ export default defineCommand({
       emitResult({ endpoint, request: body }, format);
       return;
     }
-
-    const summary = flags.yes
-      ? ""
-      : await buildDeploySummary(ctx.client, workspaceId, flags.agentId);
-    await confirmDangerousAction(summary, flags.yes ?? false);
 
     const response = await ctx.client.requestJson<RagAgentMutationResponse>({
       path: endpoint,

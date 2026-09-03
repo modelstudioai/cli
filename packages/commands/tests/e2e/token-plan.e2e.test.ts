@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vite-plus/test";
-import { makeE2eOutputDir, parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { makeE2eOutputDir, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { TOKEN_PLAN_ROUTES } from "./topic-routes.ts";
 
 describe("e2e: token-plan", () => {
   test("token-plan help shows centralized OpenAPI auth flags", async () => {
-    const { stderr, exitCode } = await runCommandE2e(TOKEN_PLAN_ROUTES, [
+    const { stderr, exitCode } = await runCommandHelp(TOKEN_PLAN_ROUTES, [
       "token-plan",
       "list-seats",
       "--help",

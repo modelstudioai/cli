@@ -3,12 +3,10 @@ import {
   ragEndpoint,
   RAG_PATHS,
   detectOutputFormat,
-  type Client,
   type FlagsDef,
   type RagConnectorResponse,
-  type RagDescribeFileResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare, confirmDangerousAction } from "bailian-cli-runtime";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const FILE_DELETE_FLAGS = {
@@ -21,32 +19,8 @@ const FILE_DELETE_FLAGS = {
     },
     required: true,
   },
-  yes: {
-    type: "switch",
-    description: { "en-US": "Skip the confirmation prompt", "zh-CN": "跳过确认提示" },
-  },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
-
-/** Confirmation summary lookup (file name/size); failure degrades to id-only */
-async function buildDeleteSummary(
-  client: Client,
-  workspaceId: string,
-  fileId: string,
-): Promise<string> {
-  let infoPart = "";
-  try {
-    const detail = await client.requestJson<RagDescribeFileResponse>({
-      path: ragEndpoint(workspaceId, RAG_PATHS.describeFile),
-      method: "POST",
-      body: { fileId },
-    });
-    if (detail.data?.fileName) infoPart = `  name: ${detail.data.fileName}`;
-  } catch {
-    // Degrade gracefully: a failed lookup does not block confirmation
-  }
-  return `Delete data-center file ${fileId}${infoPart}\nPERMANENT: if the file is referenced by knowledge bases, their document indexes break too. This differs from removing a document from one knowledge base.`;
-}
 
 export default defineCommand({
   description: {
@@ -54,6 +28,14 @@ export default defineCommand({
     "zh-CN": "从数据中心永久删除文件",
   },
   auth: "apiKey",
+  risk: {
+    level: "high",
+    message: {
+      "en-US":
+        "This permanently deletes the data-center file. Knowledge-base document indexes that reference it may become invalid.",
+      "zh-CN": "该操作会永久删除数据中心文件；引用该文件的知识库文档索引可能失效。",
+    },
+  },
   usageArgs: "--file-id <id> [flags]",
   flags: FILE_DELETE_FLAGS,
   notes: [
@@ -81,11 +63,6 @@ export default defineCommand({
       emitResult({ endpoint, request: body }, format);
       return;
     }
-
-    const summary = flags.yes
-      ? ""
-      : await buildDeleteSummary(ctx.client, workspaceId, flags.fileId);
-    await confirmDangerousAction(summary, flags.yes ?? false);
 
     const response = await ctx.client.requestJson<
       RagConnectorResponse<Record<string, unknown> | undefined>
