@@ -6,6 +6,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.20.0] - 2026-09-03
+
+> Managed Agents now combines YAML-first infrastructure management with direct Bailian AgentStudio resource and runtime operations.
+
+### Added
+
+- **Managed Agent API commands** — added direct list, get, search, version, upload, download, run, pause, archive, event, and diagnostic operations for Agents, Environments, Skills, Vaults, Deployments, Sessions, and Files.
+- **Scoped YAML-backed resource creation** — `agent create`, `environment create`, `skill create`, `vault create`, `vault credential create`, and `deployment create` update `agents.yaml` and apply only the target resource without unrelated drift blocking the operation.
+- **Agent Skill attachment** — Agent creation supports existing custom or official Skill IDs as well as local Skill directories and ZIP archives.
+
+### Changed
+
+- **Bailian-only Managed Agent CLI** — `bl managed-agent` now targets the Bailian provider exclusively; provider-selection flags were removed and configurations containing other providers are rejected.
+- **Runtime mutation confirmation** — Deployment run/pause/unpause, Session archive/delete, and File delete operations require explicit high-risk confirmation.
+
+### Fixed
+
+- **Managed Agent error reporting** — Apply and scoped-create failures preserve the underlying provider diagnostic instead of ending with only `Apply failed.`.
+
+### Security
+
+- Credentials are resolved in memory and removed from the process environment; Vault credential declarations reference environment variables without persisting plaintext secrets.
+
 ## [1.19.0] - 2026-09-01
 
 ### Added
