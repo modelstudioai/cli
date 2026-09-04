@@ -306,7 +306,6 @@ bl managed-agent agent versions --agent-id agent_abc --all --output json
 | ------------------- | ------ | -------- | ------------------------------------------------------------------ |
 | `--file <path>`     | string | no       | Config file path (default: agents.yaml)                            |
 | `--no-refresh`      | switch | no       | Skip refreshing state from remote before planning                  |
-| `--refresh-only`    | switch | no       | Refresh state without mutating remote resources                    |
 | `--concurrency <n>` | number | no       | Max independent resources to apply in parallel (default 6, max 10) |
 | `--yes`             | switch | no       | Confirm this high-risk operation                                   |
 | `--api-key <key>`   | string | no       | API key                                                            |

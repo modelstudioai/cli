@@ -29,13 +29,6 @@ const APPLY_FLAGS = {
       "zh-CN": "规划前跳过从远端刷新状态",
     },
   },
-  refreshOnly: {
-    type: "switch",
-    description: {
-      "en-US": "Refresh state without mutating remote resources",
-      "zh-CN": "仅刷新 State，不修改远端资源",
-    },
-  },
   concurrency: {
     type: "number",
     valueHint: "<n>",
@@ -76,7 +69,6 @@ export default defineCommand({
             provider: "bailian",
             refresh: !flags.noRefresh,
             concurrency: flags.concurrency,
-            refresh_only: flags.refreshOnly,
           },
           config_file: file,
           hint: "Run `managed-agent plan` to preview the exact resource changes.",

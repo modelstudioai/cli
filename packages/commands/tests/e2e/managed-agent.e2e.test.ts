@@ -105,8 +105,8 @@ async function seedTrackedResources(
 /**
  * managed-agent：help / 缺参不依赖密钥；所有 mutation 命令的 --dry-run
  * 必须在构建 SDK runtime（凭证注入 / 联网 / 写盘）之前短路，因此同样不需要密钥。
- * 鉴权分层：离线命令（init/validate/state list|show|rm）auth: "none"；联网命令
- * 统一 auth: "apiKey" 硬门禁（见 managed-agent-auth-chain e2e）。
+ * 鉴权分层：离线命令（init/project init/validate/state list|show|rm）auth: "none"；
+ * 联网命令统一 auth: "apiKey" 硬门禁（见 managed-agent-auth-chain e2e）。
  * 真实集成（apply/destroy/session 流程）依赖工作区内的 agents.yaml 与远端资源，
  * 属批量场景，暂仅覆盖 dry-run 契约。
  */
@@ -234,6 +234,18 @@ describe("e2e: managed-agent", () => {
     expect(stderr).toMatch(/--file|--yes/i);
     expect(stderr).not.toContain("--provider");
     expect(stderr).not.toContain("--ci");
+    expect(stderr).not.toContain("--refresh-only");
+  });
+
+  test("managed-agent apply 不再接受 --refresh-only", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "apply",
+      "--dry-run",
+      "--refresh-only",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/Unknown flag.*--refresh-only/i);
   });
 
   test("managed-agent init 不再暴露 Git 仓库脚手架", async () => {
@@ -272,6 +284,11 @@ describe("e2e: managed-agent", () => {
     expect(
       parseStdoutJson<{ baseline_version?: string }>(initialized.stdout).baseline_version,
     ).toMatch(/^[a-f0-9]{64}$/);
+    expect(JSON.parse(await readFile(join(projectRoot, "project.json"), "utf8"))).toEqual({
+      version: "1",
+    });
+    expect(await stat(join(projectRoot, ".env")).catch(() => null)).toBeNull();
+    expect(await stat(join(projectRoot, ".gitignore")).catch(() => null)).toBeNull();
 
     const validated = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
@@ -300,6 +317,9 @@ describe("e2e: managed-agent", () => {
     expect(built.exitCode, built.stderr).toBe(0);
     expect(await readFile(join(projectRoot, ".openagentpack/build/agents.yaml"), "utf8")).toContain(
       "assistant",
+    );
+    expect(await readFile(join(projectRoot, ".openagentpack/build/agents.yaml"), "utf8")).toContain(
+      "provider: bailian",
     );
 
     const status = await runCommandE2e(MANAGED_AGENT_ROUTES, [
@@ -1423,6 +1443,27 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
     ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/Unknown flag.*--provider/i);
+  });
+
+  test("project init --dry-run 不需要密钥且不创建目录", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "bailian-managed-agent-project-dry-run-"));
+    projectDirectories.push(parent);
+    const projectRoot = join(parent, "project");
+    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "project",
+      "init",
+      "--dry-run",
+      "--project",
+      projectRoot,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(
+      parseStdoutJson<{ would_initialize_project?: string }>(stdout).would_initialize_project,
+    ).toBe(projectRoot);
+    expect(await stat(projectRoot).catch(() => null)).toBeNull();
   });
 
   test("apply --dry-run 仅输出计划", async () => {

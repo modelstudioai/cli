@@ -33,6 +33,7 @@ interface AgentConfigOptions {
   projectName?: string;
   statePath?: string;
   credentials?: CredentialScope;
+  overrideBailianBaseUrl?: boolean;
 }
 
 /**
@@ -56,7 +57,9 @@ export async function resolveAgentProjectConfig(
   prepareProviderEnv();
   const resolved = await resolveProjectConfig(filePath, options);
   normalizeInterpolatedProviderBlocks(resolved.config.providers);
-  injectProviderCredentials(resolved.config.providers, host);
+  injectProviderCredentials(resolved.config.providers, host, {
+    overrideBaseUrl: options.overrideBailianBaseUrl,
+  });
   scrubCredentialEnv();
   assertBailianOnlyProviders(resolved.config.providers);
   if ((options.credentials ?? "all") !== "none") {

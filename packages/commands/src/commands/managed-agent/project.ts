@@ -49,15 +49,14 @@ export const managedAgentProjectInit = defineCommand({
   async run(ctx) {
     if (ctx.settings.dryRun) {
       emitResult(
-        { would_initialize_project: ctx.flags.project ?? "." },
+        {
+          would_initialize_project: ctx.flags.project ?? ".",
+        },
         detectOutputFormat(ctx.settings.output),
       );
       return;
     }
-    const result = await initializeDirectoryProject({
-      projectRoot: ctx.flags.project ?? ".",
-      provider: "bailian",
-    });
+    const result = await initializeDirectoryProject({ projectRoot: ctx.flags.project ?? "." });
     emitResult(result, detectOutputFormat(ctx.settings.output));
   },
 });
@@ -163,9 +162,9 @@ export const managedAgentProjectPublish = defineCommand({
     installSdkTransport(ctx);
     const root = ctx.flags.project ?? ".";
     const resolveBuild: ProjectBuildResolver = async (buildPath) =>
-      (await resolveAgentProjectConfig(ctx, buildPath)) as unknown as Awaited<
-        ReturnType<ProjectBuildResolver>
-      >;
+      (await resolveAgentProjectConfig(ctx, buildPath, {
+        overrideBailianBaseUrl: true,
+      })) as unknown as Awaited<ReturnType<ProjectBuildResolver>>;
     const planned = await withAgentErrors(() =>
       withStdoutProtected(() =>
         planProjectPublish(root, {
@@ -199,6 +198,7 @@ export const managedAgentProjectPublish = defineCommand({
           projectRoot: planned.project_root,
           expectedProjectRevision: planned.project_revision,
           expectedYamlHash: planned.build_manifest.yaml_hash,
+          expectedPlanFingerprint: planned.plan_fingerprint,
           provider: "bailian",
           refresh: !ctx.flags.noRefresh,
           concurrency: ctx.flags.concurrency,

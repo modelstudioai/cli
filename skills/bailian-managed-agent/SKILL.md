@@ -62,7 +62,10 @@ for explicit confirmation before re-running with `--yes`.
 | Preview or restore project source       | `bl managed-agent project version preview` / `restore` |
 
 - Bailian CLI and Workbench use the same `.openagentpack/versions/project` store and enable switch. Git is not required.
+- Directory projects always use Bailian. `project.json` does not declare a Provider; Build supplies the Bailian Provider configuration automatically.
+- `project init`, `validate`, `build`, and version commands are local-only. Publish and Workbench resolve credentials from Bailian CLI flags, shell environment, or the active Profile; project initialization does not write credentials into the project directory.
 - Build is local-only. Publish never runs Build implicitly and consumes only a current `.openagentpack/build/agents.yaml` plus manifest.
+- Agent-owned Files live under `agents/<agent>/files/<id>/`. Add `{ "file": "<id>", "mount_path": "/mnt/<name>" }` to `agent.json.files`; Publish uploads the File and every later Session mounts it automatically. A File referenced by multiple Agents is promoted to `resources/files/<id>/` during Build.
 - A successful Publish versions the canonical YAML and the complete project source tree, including Skill scripts/assets and binary files. Remote State is never versioned or restored.
 - `project version restore` restores source files to the working directory, invalidates Build, and does not move version history or remote State.
 - `managed-agent playground` remains the standalone `agents.yaml` Session Preview path; directory Workbench is only under `managed-agent project workbench`.
