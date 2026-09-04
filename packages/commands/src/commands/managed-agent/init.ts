@@ -12,6 +12,7 @@ import { emitBare, emitResult } from "bailian-cli-runtime";
 const GITIGNORE_ADDITIONS = `
 # agents
 agents.state.json
+.openagentpack/versions/
 .env
 `;
 
@@ -71,8 +72,8 @@ const INIT_FLAGS = {
 
 export default defineCommand({
   description: {
-    "en-US": "Create a new agents.yaml template",
-    "zh-CN": "创建新的 agents.yaml 模板",
+    "en-US": "Create an agents.yaml template",
+    "zh-CN": "创建 agents.yaml 模板",
   },
   auth: "none",
   usageArgs: "[--agent-name <name>] [--file <path>] [--force]",

@@ -6,8 +6,9 @@ metadata:
     bins: ["bl"]
 description: >-
   阿里云百炼托管 Agent 声明式基础设施与 API 命令入口：用户要创建agent、初始化 agents.yaml、校验或预览配置变更、
-  创建/更新/销毁托管 Agent 或 Deployment，或查询 Agent/Environment/Skill/Vault/Deployment、管理 Session/Event/File、
-  运行/暂停 Deployment 时使用 `bl managed-agent`。持久资源仍以 agents.yaml 为唯一事实源做 IaC；公开 API 能力按资源透出
+  创建/更新/销毁托管 Agent 或 Deployment、在 Workbench 编辑和调试目录项目、管理本地快照版本，或查询
+  Agent/Environment/Skill/Vault/Deployment、管理 Session/Event/File、运行/暂停 Deployment 时使用
+  `bl managed-agent`。持久资源仍以 agents.yaml 为唯一事实源做 IaC；公开 API 能力按资源透出
   list/get/search/versions/download、数据面和运行时动作命令。apply / destroy 与破坏性 API 命令受统一高风险确认闸门保护；
   务必先展示预览再让用户确认，禁止自动添加 `--yes`。
   反触发：调用已上线的百炼应用/智能体走 bailian-app-call 或 `bl app`；宿主 agent 自身的记忆、技能、
@@ -46,6 +47,31 @@ for explicit confirmation before re-running with `--yes`.
 5. Apply     bl managed-agent apply --yes   # only after explicit confirmation
 6. Destroy   bl managed-agent destroy --yes # separate explicit confirmation
 ```
+
+## Directory projects, Workbench, and local versions
+
+| Intent                                  | Command                                                |
+| --------------------------------------- | ------------------------------------------------------ |
+| Create or convert a directory project   | `bl managed-agent project init`                        |
+| Validate and Build directory source     | `bl managed-agent project validate` / `build`          |
+| Publish the current immutable Build     | `bl managed-agent project publish --yes`               |
+| Launch project resource editing         | `bl managed-agent project workbench`                   |
+| Launch one Agent Session Preview        | `bl managed-agent playground --agent <id>`             |
+| Enable/disable project versions         | `bl managed-agent project version enable` / `disable`  |
+| Inspect local version state and history | `bl managed-agent project version status` / `list`     |
+| Preview or restore project source       | `bl managed-agent project version preview` / `restore` |
+
+- Bailian CLI and Workbench use the same `.openagentpack/versions/project` store and enable switch. Git is not required.
+- Directory projects always use Bailian. `project.json` does not declare a Provider; Build supplies the Bailian Provider configuration automatically.
+- Fresh `project init` includes complete Skill/File/Vault/Environment examples with bilingual README files under `agents/assistant/<resource-type>/_examples/`. They are not linked in `agent.json` and are excluded from Build discovery, Workbench declarations, and remote Publish. Copy a resource outside `_examples/` and configure its Agent reference to use it. Examples remain local versioned source; never put real secrets into them. / 新项目的四类资源示例默认不启用、不发布；请按 README 复制到 `_examples/` 外再配置引用，不要向示例写入真实密钥。
+- `project init`, `validate`, `build`, and version commands are local-only. Publish and Workbench resolve credentials from Bailian CLI flags, shell environment, or the active Profile; project initialization does not write credentials into the project directory.
+- Build is local-only. Publish never runs Build implicitly and consumes only a current `.openagentpack/build/agents.yaml` plus manifest.
+- Build moves literal Vault `secret_value` / `access_token` values from Agent-local or shared `vault.json` into project-root `.env`, replacing them with generated environment references. Existing references and `.env` entries are preserved; conflicts receive suffixed variable names. Preview/dry-run never write or print secrets. Publish and Workbench read the selected project's root `.env` as a fallback to inherited environment variables, even when invoked elsewhere. `.env` is private plaintext storage, excluded from local versions but not automatically ignored by Git; keep it backed up securely.
+- Build 会将 Agent 本地或共享 `vault.json` 中的明文密钥移入项目根目录 `.env`，再写回环境变量引用；保留已有引用和变量，重名时生成后缀。预览不写文件或输出密钥。`.env` 不进入版本快照，也不加密；请自行备份并加入 Git 忽略规则。
+- Agent-local File and Skill content supports Build-time association. A File may be copied directly into `agents/<agent>/files/`, or placed in `agents/<agent>/files/<id>/` when that directory contains exactly one content file; Build generates `file.json` and a `/mnt/<filename>` entry in `agent.json.files`. A directory under `agents/<agent>/skills/<id>/` containing `SKILL.md` generates `skill.json` and its `agent.json.skills` entry. Explicit JSON always wins; shared root resources remain explicit. Resources referenced by multiple Agents are promoted to the corresponding root shared directory during Build.
+- A successful Publish versions the canonical YAML and the complete project source tree, including Skill scripts/assets and binary files. Remote State is never versioned or restored.
+- `project version restore` restores source files to the working directory, invalidates Build, and does not move version history or remote State.
+- `managed-agent playground` remains the standalone `agents.yaml` Session Preview path; directory Workbench is only under `managed-agent project workbench`.
 
 ## Scoped single-resource create
 
