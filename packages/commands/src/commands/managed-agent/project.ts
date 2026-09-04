@@ -46,6 +46,14 @@ export const managedAgentProjectInit = defineCommand({
   usageArgs: "[--project <directory>]",
   flags: PROJECT_FLAG,
   exampleArgs: ["", "--project ./my-agent"],
+  notes: [
+    {
+      "en-US":
+        "New projects include Skill, File, Vault, and Environment examples under each resource directory's _examples/. They are not referenced by agent.json and are excluded from Build/Publish. Copy an example outside _examples/ to enable it, then configure its Agent reference.",
+      "zh-CN":
+        "新项目在四类资源目录的 _examples/ 下生成配置示例，不写入 agent.json 引用，也不参与 Build/Publish。需要使用时，将示例复制到 _examples/ 外，再配置 Agent 引用。",
+    },
+  ],
   async run(ctx) {
     if (ctx.settings.dryRun) {
       emitResult(
@@ -95,8 +103,9 @@ export const managedAgentProjectBuild = defineCommand({
     level: "high",
     message: {
       "en-US":
-        "This organizes the directory project source and writes the previewed immutable Build.",
-      "zh-CN": "该操作会整理目录项目源文件，并写入已预览的不可变 Build。",
+        "This organizes project source, moves literal Vault secrets into the local .env, and writes the previewed immutable Build.",
+      "zh-CN":
+        "该操作会整理项目源文件，将 Vault 明文密钥移入本地 .env，并写入已预览的不可变 Build。",
     },
   },
   usageArgs: "[--project <directory>]",
@@ -161,8 +170,9 @@ export const managedAgentProjectPublish = defineCommand({
   async run(ctx) {
     installSdkTransport(ctx);
     const root = ctx.flags.project ?? ".";
-    const resolveBuild: ProjectBuildResolver = async (buildPath) =>
+    const resolveBuild: ProjectBuildResolver = async (buildPath, options) =>
       (await resolveAgentProjectConfig(ctx, buildPath, {
+        environment: options?.environment,
         overrideBailianBaseUrl: true,
       })) as unknown as Awaited<ReturnType<ProjectBuildResolver>>;
     const planned = await withAgentErrors(() =>

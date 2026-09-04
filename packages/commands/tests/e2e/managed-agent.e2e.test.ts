@@ -290,6 +290,32 @@ describe("e2e: managed-agent", () => {
     expect(await stat(join(projectRoot, ".env")).catch(() => null)).toBeNull();
     expect(await stat(join(projectRoot, ".gitignore")).catch(() => null)).toBeNull();
 
+    expect(
+      JSON.parse(await readFile(join(projectRoot, "agents/assistant/agent.json"), "utf8")),
+    ).toEqual({ name: "Assistant", model: "qwen3.7-max" });
+    for (const relativePath of [
+      "skills/_examples/example-skill/skill.json",
+      "skills/_examples/example-skill/SKILL.md",
+      "files/_examples/example-file/file.json",
+      "files/_examples/example-file/example.md",
+      "vaults/_examples/example-vault/vault.json",
+      "environments/_examples/example-env/environment.json",
+    ]) {
+      expect((await stat(join(projectRoot, "agents/assistant", relativePath))).isFile()).toBe(true);
+      expect(
+        await readFile(join(projectRoot, "agents/assistant", relativePath, "../README.md"), "utf8"),
+      ).toContain("_examples/");
+    }
+
+    const skillDirectory = join(projectRoot, "agents/assistant/skills/writer");
+    const filesDirectory = join(projectRoot, "agents/assistant/files");
+    const nestedFileDirectory = join(filesDirectory, "mount");
+    await mkdir(skillDirectory, { recursive: true });
+    await mkdir(nestedFileDirectory, { recursive: true });
+    await writeFile(join(skillDirectory, "SKILL.md"), "# Writer\n", "utf8");
+    await writeFile(join(filesDirectory, "brief.txt"), "Build this brief.\n", "utf8");
+    await writeFile(join(nestedFileDirectory, "mount.md"), "Mount this file.\n", "utf8");
+
     const validated = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "project",
@@ -304,6 +330,38 @@ describe("e2e: managed-agent", () => {
       parseStdoutJson<{ diagnostics?: Array<{ severity?: string }> }>(validated.stdout).diagnostics,
     ).not.toContainEqual(expect.objectContaining({ severity: "error" }));
 
+    const vaultDirectory = join(projectRoot, "agents/assistant/vaults/secrets");
+    await mkdir(vaultDirectory, { recursive: true });
+    await writeFile(
+      join(vaultDirectory, "vault.json"),
+      JSON.stringify({
+        id: "secrets",
+        display_name: "Secrets",
+        credentials: [
+          {
+            name: "service",
+            type: "environment_variable",
+            secret_name: "SERVICE_TOKEN",
+            secret_value: "e2e-vault-private-value",
+          },
+        ],
+      }),
+    );
+    const dryBuild = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "project",
+      "build",
+      "--project",
+      projectRoot,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(dryBuild.exitCode, dryBuild.stderr).toBe(0);
+    expect(dryBuild.stdout + dryBuild.stderr).not.toContain("e2e-vault-private-value");
+    expect(dryBuild.stdout).toContain("AGENTS_VAULT_");
+    expect(await stat(join(projectRoot, ".env")).catch(() => null)).toBeNull();
+
     const built = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
       "project",
@@ -315,11 +373,49 @@ describe("e2e: managed-agent", () => {
       "json",
     ]);
     expect(built.exitCode, built.stderr).toBe(0);
+    const generatedYaml = await readFile(
+      join(projectRoot, ".openagentpack/build/agents.yaml"),
+      "utf8",
+    );
+    expect(generatedYaml).not.toContain("example-");
+    expect(generatedYaml).not.toContain("_examples");
+    expect(generatedYaml).not.toContain("$" + "{SERVICE_TOKEN}");
+    expect(built.stdout + built.stderr).not.toContain("e2e-vault-private-value");
+    expect(await readFile(join(projectRoot, ".env"), "utf8")).toContain("e2e-vault-private-value");
+    expect(await readFile(join(vaultDirectory, "vault.json"), "utf8")).not.toContain(
+      "e2e-vault-private-value",
+    );
+    expect(
+      await readFile(join(projectRoot, ".openagentpack/build/agents.yaml"), "utf8"),
+    ).not.toContain("e2e-vault-private-value");
     expect(await readFile(join(projectRoot, ".openagentpack/build/agents.yaml"), "utf8")).toContain(
       "assistant",
     );
     expect(await readFile(join(projectRoot, ".openagentpack/build/agents.yaml"), "utf8")).toContain(
       "provider: bailian",
+    );
+    expect(JSON.parse(await readFile(join(skillDirectory, "skill.json"), "utf8"))).toEqual({
+      id: "writer",
+    });
+    expect(JSON.parse(await readFile(join(filesDirectory, "brief/file.json"), "utf8"))).toEqual({
+      id: "brief",
+      name: "brief.txt",
+      source: "./brief.txt",
+    });
+    expect(JSON.parse(await readFile(join(nestedFileDirectory, "file.json"), "utf8"))).toEqual({
+      id: "mount",
+      name: "mount.md",
+      source: "./mount.md",
+    });
+    const builtAgent = JSON.parse(
+      await readFile(join(projectRoot, "agents/assistant/agent.json"), "utf8"),
+    );
+    expect(builtAgent.skills).toEqual(["writer"]);
+    expect(builtAgent.files).toEqual(
+      expect.arrayContaining([
+        { file: "brief", mount_path: "/mnt/brief.txt" },
+        { file: "mount", mount_path: "/mnt/mount.md" },
+      ]),
     );
 
     const status = await runCommandE2e(MANAGED_AGENT_ROUTES, [

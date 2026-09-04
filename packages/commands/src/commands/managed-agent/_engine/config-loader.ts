@@ -30,6 +30,7 @@ export const BAILIAN_PROVIDER = "bailian";
 
 interface AgentConfigOptions {
   resolveEnv?: boolean;
+  environment?: Record<string, string>;
   projectName?: string;
   statePath?: string;
   credentials?: CredentialScope;

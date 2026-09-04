@@ -1181,14 +1181,14 @@ bl managed-agent playground --file agents.yaml --no-open
 
 ### `bl managed-agent project build`
 
-| Field              | Value                                                                                 |
-| ------------------ | ------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent project build`                                                         |
-| **Description**    | Organize directory source and generate the immutable Publish Build                    |
-| **Authentication** | No Auth                                                                               |
-| **Usage**          | `bl managed-agent project build [--project <directory>]`                              |
-| **Risk**           | `high`                                                                                |
-| **Risk message**   | This organizes the directory project source and writes the previewed immutable Build. |
+| Field              | Value                                                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent project build`                                                                                             |
+| **Description**    | Organize directory source and generate the immutable Publish Build                                                        |
+| **Authentication** | No Auth                                                                                                                   |
+| **Usage**          | `bl managed-agent project build [--project <directory>]`                                                                  |
+| **Risk**           | `high`                                                                                                                    |
+| **Risk message**   | This organizes project source, moves literal Vault secrets into the local .env, and writes the previewed immutable Build. |
 
 > **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
@@ -1229,6 +1229,10 @@ bl managed-agent project build --project ./my-agent --yes
 | Flag                    | Type   | Required | Description                                         |
 | ----------------------- | ------ | -------- | --------------------------------------------------- |
 | `--project <directory>` | string | no       | Directory project root (default: current directory) |
+
+#### Notes
+
+- New projects include Skill, File, Vault, and Environment examples under each resource directory's \_examples/. They are not referenced by agent.json and are excluded from Build/Publish. Copy an example outside \_examples/ to enable it, then configure its Agent reference.
 
 #### Examples
 
