@@ -15,7 +15,7 @@ import {
   previewProjectBuild,
   type ProjectBuildResolver,
   validateDirectoryProject,
-} from "@openagentpack/project-workspace";
+} from "@openagentpack/sdk/project-workspace";
 import { CREDENTIALS_NOTE, resolveAgentProjectConfig } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";

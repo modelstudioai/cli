@@ -10,7 +10,7 @@ import {
   prepareProjectVersion,
   previewProjectVersion,
   restoreProjectVersion,
-} from "@openagentpack/project-versions";
+} from "@openagentpack/sdk/project-versions";
 import { afterEach, describe, expect, test } from "vite-plus/test";
 import { playgroundBrowserTargetFromSummary } from "../src/commands/managed-agent/_engine/playground-launcher.ts";
 
