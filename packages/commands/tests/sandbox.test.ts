@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { BailianError, ExitCode, type AnyCommand, type Settings } from "bailian-cli-core";
+import { BailianError, Client, ExitCode, type AnyCommand, type Settings } from "bailian-cli-core";
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 import {
   buildSandboxCreateBody,
@@ -51,10 +51,26 @@ interface RecordedRequest {
   timeout?: number;
 }
 
+function createUrlResolver(baseUrl?: string): Client["url"] {
+  const client = new Client({
+    identity: {
+      binName: "bl",
+      version: "test",
+      npmPackage: "bailian-cli",
+      clientName: "bailian-cli",
+    },
+    settings: SETTINGS,
+    baseUrl: baseUrl ?? "https://dashscope.aliyuncs.com",
+    baseUrlIsDefault: baseUrl === undefined,
+  });
+  return client.url.bind(client);
+}
+
 async function runCommand(
   command: AnyCommand,
   flags: Record<string, unknown>,
   response: unknown,
+  baseUrl?: string,
 ): Promise<RecordedRequest> {
   vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   const requestJson = vi.fn(async (_request: RecordedRequest) => response);
@@ -71,7 +87,7 @@ async function runCommand(
     },
     settings: SETTINGS,
     flags,
-    client: { requestJson, request },
+    client: { requestJson, request, url: createUrlResolver(baseUrl) },
   } as never);
 
   const recorded = requestJson.mock.calls[0]?.[0] ?? request.mock.calls[0]?.[0];
@@ -336,6 +352,20 @@ describe("Sandbox command transport", () => {
     "maps $name to its documented method and path",
     async ({ command, flags, response, request }) => {
       expect(await runCommand(command, flags, response)).toEqual(request);
+      expect(
+        await runCommand(
+          command,
+          { ...flags, workspaceId: undefined },
+          response,
+          "https://gateway.example.test",
+        ),
+      ).toEqual({
+        ...request,
+        path: request.path.replace(
+          "https://ws-test.cn-beijing.maas.aliyuncs.com",
+          "https://gateway.example.test",
+        ),
+      });
     },
   );
 
@@ -357,6 +387,7 @@ describe("Sandbox command transport", () => {
         showCredentials: testCase.showCredentials,
       },
       client: {
+        url: createUrlResolver(),
         requestJson: async () => ({
           sandboxID: "sandbox-test",
           envdAccessToken: "envd-secret",
@@ -435,62 +466,65 @@ describe("Sandbox template build polling", () => {
         memoryMb: 2048,
         async: true,
       },
-      client: { requestJson },
+      client: { requestJson, url: createUrlResolver() },
     } as never);
     expect(requestJson).toHaveBeenCalledTimes(1);
     expect(stdout).toBe("template-test\tbuild-test\n");
   });
 
-  test("default template creation polls build-status and emits the final envelope", async () => {
-    let stdout = "";
-    vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
-      stdout += String(chunk);
-      return true;
-    });
-    const requestJson = vi
-      .fn()
-      .mockResolvedValueOnce({
-        templateID: "template-test",
-        buildID: "build-test",
-        buildStatus: "building",
-      })
-      .mockResolvedValueOnce({
-        templateID: "template-test",
-        buildID: "build-test",
-        status: "ready",
+  test.each([undefined, "https://gateway.example.test"])(
+    "template creation polls the selected origin %s and emits the final envelope",
+    async (baseUrl) => {
+      let stdout = "";
+      vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+        stdout += String(chunk);
+        return true;
       });
-    await sandboxTemplateCreate.run({
-      identity: { binName: "bl" },
-      settings: { ...SETTINGS, quiet: false },
-      flags: {
-        workspaceId: "ws-test",
-        name: "python",
-        cpuCount: 1,
-        memoryMb: 2048,
-        async: false,
-        pollInterval: 1,
-      },
-      client: { requestJson },
-    } as never);
+      const requestJson = vi
+        .fn()
+        .mockResolvedValueOnce({
+          templateID: "template-test",
+          buildID: "build-test",
+          buildStatus: "building",
+        })
+        .mockResolvedValueOnce({
+          templateID: "template-test",
+          buildID: "build-test",
+          status: "ready",
+        });
+      await sandboxTemplateCreate.run({
+        identity: { binName: "bl" },
+        settings: { ...SETTINGS, quiet: false },
+        flags: {
+          workspaceId: "ws-test",
+          name: "python",
+          cpuCount: 1,
+          memoryMb: 2048,
+          async: false,
+          pollInterval: 1,
+        },
+        client: { requestJson, url: createUrlResolver(baseUrl) },
+      } as never);
 
-    expect(requestJson).toHaveBeenCalledTimes(2);
-    expect(requestJson.mock.calls[1]?.[0]).toMatchObject({
-      method: "GET",
-      path: "https://ws-test.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio/sandbox/templates/template-test/builds/build-test/status",
-    });
-    expect(JSON.parse(stdout)).toEqual({
-      template: {
-        templateID: "template-test",
-        buildID: "build-test",
-        buildStatus: "building",
-      },
-      build: {
-        templateID: "template-test",
-        buildID: "build-test",
-        status: "ready",
-      },
-    });
-  });
+      expect(requestJson).toHaveBeenCalledTimes(2);
+      expect(requestJson.mock.calls[1]?.[0]).toMatchObject({
+        method: "GET",
+        path: `${baseUrl ?? "https://ws-test.cn-beijing.maas.aliyuncs.com"}/api/v1/agentstudio/sandbox/templates/template-test/builds/build-test/status`,
+      });
+      expect(JSON.parse(stdout)).toEqual({
+        template: {
+          templateID: "template-test",
+          buildID: "build-test",
+          buildStatus: "building",
+        },
+        build: {
+          templateID: "template-test",
+          buildID: "build-test",
+          status: "ready",
+        },
+      });
+    },
+  );
 });
 
 test("Sandbox validation errors use CLI usage exit codes", async () => {

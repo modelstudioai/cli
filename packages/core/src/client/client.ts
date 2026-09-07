@@ -23,6 +23,8 @@ export interface ClientDeps {
   settings: Settings;
   /** Model 域 base URL(凭证无关链解析,resolveModelBaseUrl;有 apiCred 时两者一致)。 */
   baseUrl: string;
+  /** True only when the shared URL chain used its default; explicit origins win over service defaults. */
+  baseUrlIsDefault?: boolean;
   apiCred?: ApiKeyCredential;
   consoleCred?: ConsoleCredential;
   openApiCred?: OpenApiCredential;
@@ -108,9 +110,13 @@ export class Client {
     return this.deps.apiCred;
   }
 
-  /** Full URL for a model-domain {@link path}; build request/display URLs only through this. */
-  url(path: string): string {
-    return this.baseUrl + path;
+  /**
+   * Full URL for a model-domain path. Services may supply a lazy default origin,
+   * evaluated only when no flag/env/profile base URL was configured.
+   */
+  url(path: string, defaultBaseUrl?: () => string): string {
+    const baseUrl = this.deps.baseUrlIsDefault && defaultBaseUrl ? defaultBaseUrl() : this.baseUrl;
+    return baseUrl + path;
   }
 
   private toOpts({ path, ...rest }: ClientRequestOpts): RequestOpts {

@@ -19,8 +19,8 @@ Before running `bl`, read the shared [bailian-protocol](../bailian-protocol/SKIL
 ## Scope and setup
 
 - Manage Sandbox instances and templates through Bailian's E2B-compatible REST control plane. No E2B SDK or E2B API key is required; authentication uses the Bailian API Key as an Authorization Bearer token.
-- Resolve the workspace from `--workspace-id`, then `BAILIAN_WORKSPACE_ID`, then configured `workspace_id`. The current CLI targets `cn-beijing` and requires prior Sandbox SLR authorization.
-- The current endpoint is `https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio/sandbox`. Login and command-level `--base-url` do not override the Sandbox endpoint; the saved API Key is reused.
+- Resolve Base URL through the same CLI chain as Managed Agent: `--base-url` > `DASHSCOPE_BASE_URL` > login/profile `base_url`. Use an origin such as `https://workspace.cn-beijing.maas.aliyuncs.com`; the CLI strips URL paths/query/fragment and appends `/api/v1/agentstudio/sandbox`. The saved API Key is reused. Profile capability fallback follows the shared protocol for both the key and Base URL.
+- If no Base URL is configured, resolve the workspace from `--workspace-id`, then `BAILIAN_WORKSPACE_ID`, then configured `workspace_id`, and use `https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio/sandbox`. With a configured Base URL, the workspace flag is optional. The service currently supports `cn-beijing` and requires prior Sandbox SLR authorization.
 - No `agents.yaml` or local IaC state is required. `connect` returns instance connection information; it does not open an interactive shell. Do not invent commands for executing code or transferring files inside the sandbox.
 
 ## Choose the operation
@@ -35,6 +35,8 @@ Before running `bl`, read the shared [bailian-protocol](../bailian-protocol/SKIL
 | Delete a template                     | `bl sandbox template delete`                             |
 
 Read [reference/index.md](reference/index.md) and the relevant section of [reference/sandbox.md](reference/sandbox.md) for exact flags, usage, and examples, or run the matching command with `--help`. Do not guess flags.
+
+To save the origin in an isolated Profile, use `bl auth login --config sandbox --api-key <key> --base-url <origin>`. For a one-command override, use `bl sandbox list --base-url <origin>`. Custom gateways also apply to template build-status polling.
 
 ## Operational boundaries
 

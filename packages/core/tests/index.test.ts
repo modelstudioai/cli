@@ -142,6 +142,29 @@ test("Client sends Sandbox REST requests with Bearer auth and no E2B API key", a
   }
 });
 
+test("Client.url evaluates a service default only when the shared origin was not configured", () => {
+  const deps = testDeps();
+  const defaultClient = new Client({
+    ...deps,
+    baseUrl: "https://dashscope.aliyuncs.com",
+    baseUrlIsDefault: true,
+  });
+  const configuredClient = new Client({
+    ...deps,
+    baseUrl: "https://dashscope.aliyuncs.com",
+    baseUrlIsDefault: false,
+  });
+  expect(defaultClient.url("/service")).toBe("https://dashscope.aliyuncs.com/service");
+  expect(defaultClient.url("/service", () => "https://workspace.example.test")).toBe(
+    "https://workspace.example.test/service",
+  );
+  expect(
+    configuredClient.url("/service", () => {
+      throw new Error("A configured origin must not require a workspace default.");
+    }),
+  ).toBe("https://dashscope.aliyuncs.com/service");
+});
+
 test("BailianError propagates cause via options-bag and exposes it in toJSON", () => {
   const root = Object.assign(new Error("getaddrinfo ENOTFOUND example.invalid"), {
     code: "ENOTFOUND",

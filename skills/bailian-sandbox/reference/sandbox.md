@@ -38,7 +38,7 @@ Index: [index.md](index.md)
 
 | Flag                           | Type   | Required | Description                                                                        |
 | ------------------------------ | ------ | -------- | ---------------------------------------------------------------------------------- |
-| `--workspace-id <id>`          | string | no       | Workspace ID for the Sandbox endpoint (or set BAILIAN_WORKSPACE_ID)                |
+| `--workspace-id <id>`          | string | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
 | `--sandbox-id <id>`            | string | yes      | Sandbox instance ID                                                                |
 | `--body <json\|@path>`         | string | no       | JSON request body, inline or loaded from an @file path; explicit flags override it |
 | `--instance-timeout <seconds>` | number | no       | Sandbox lifetime after this operation (300-604800 seconds)                         |
@@ -49,7 +49,8 @@ Index: [index.md](index.md)
 #### Notes
 
 - Auth: uses a Bailian API Key as an Authorization Bearer token; no E2B key is sent.
-- The workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > login/profile base_url. The CLI uses its origin and appends /api/v1/agentstudio/sandbox; otherwise it uses the workspace-scoped cn-beijing endpoint.
+- Without a configured base URL, workspace is required: --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id.
 - Sandbox is currently available in cn-beijing only and requires prior SLR authorization.
 - Global --timeout limits HTTP requests and total template-build polling; --instance-timeout maps to the Sandbox API lifetime field.
 
@@ -76,7 +77,7 @@ bl sandbox connect --sandbox-id sbx-xxx --show-credentials --output json
 
 | Flag                             | Type    | Required | Description                                                                        |
 | -------------------------------- | ------- | -------- | ---------------------------------------------------------------------------------- |
-| `--workspace-id <id>`            | string  | no       | Workspace ID for the Sandbox endpoint (or set BAILIAN_WORKSPACE_ID)                |
+| `--workspace-id <id>`            | string  | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
 | `--body <json\|@path>`           | string  | no       | JSON request body, inline or loaded from an @file path; explicit flags override it |
 | `--template-id <id>`             | string  | no       | Ready template ID; may alternatively be supplied as templateID in --body           |
 | `--instance-timeout <seconds>`   | number  | no       | Sandbox lifetime after this operation (300-604800 seconds)                         |
@@ -95,7 +96,8 @@ bl sandbox connect --sandbox-id sbx-xxx --show-credentials --output json
 #### Notes
 
 - Auth: uses a Bailian API Key as an Authorization Bearer token; no E2B key is sent.
-- The workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > login/profile base_url. The CLI uses its origin and appends /api/v1/agentstudio/sandbox; otherwise it uses the workspace-scoped cn-beijing endpoint.
+- Without a configured base URL, workspace is required: --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id.
 - Sandbox is currently available in cn-beijing only and requires prior SLR authorization.
 - Global --timeout limits HTTP requests and total template-build polling; --instance-timeout maps to the Sandbox API lifetime field.
 
@@ -103,6 +105,10 @@ bl sandbox connect --sandbox-id sbx-xxx --show-credentials --output json
 
 ```bash
 bl sandbox create --template-id tpl-xxx --instance-timeout 3600
+```
+
+```bash
+bl sandbox create --template-id tpl-xxx --base-url https://workspace.cn-beijing.maas.aliyuncs.com
 ```
 
 ```bash
@@ -128,18 +134,19 @@ bl sandbox create --template-id tpl-xxx --show-credentials --output json
 
 #### Flags
 
-| Flag                  | Type   | Required | Description                                                         |
-| --------------------- | ------ | -------- | ------------------------------------------------------------------- |
-| `--workspace-id <id>` | string | no       | Workspace ID for the Sandbox endpoint (or set BAILIAN_WORKSPACE_ID) |
-| `--sandbox-id <id>`   | string | yes      | Sandbox instance ID                                                 |
-| `--yes`               | switch | no       | Confirm this high-risk operation                                    |
-| `--api-key <key>`     | string | no       | API key                                                             |
-| `--base-url <url>`    | string | no       | API base URL                                                        |
+| Flag                  | Type   | Required | Description                                                                        |
+| --------------------- | ------ | -------- | ---------------------------------------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
+| `--sandbox-id <id>`   | string | yes      | Sandbox instance ID                                                                |
+| `--yes`               | switch | no       | Confirm this high-risk operation                                                   |
+| `--api-key <key>`     | string | no       | API key                                                                            |
+| `--base-url <url>`    | string | no       | API base URL                                                                       |
 
 #### Notes
 
 - Auth: uses a Bailian API Key as an Authorization Bearer token; no E2B key is sent.
-- The workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > login/profile base_url. The CLI uses its origin and appends /api/v1/agentstudio/sandbox; otherwise it uses the workspace-scoped cn-beijing endpoint.
+- Without a configured base URL, workspace is required: --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id.
 - Sandbox is currently available in cn-beijing only and requires prior SLR authorization.
 - Global --timeout limits HTTP requests and total template-build polling; --instance-timeout maps to the Sandbox API lifetime field.
 
@@ -165,18 +172,19 @@ bl sandbox delete --sandbox-id sbx-xxx --yes
 
 #### Flags
 
-| Flag                  | Type   | Required | Description                                                         |
-| --------------------- | ------ | -------- | ------------------------------------------------------------------- |
-| `--workspace-id <id>` | string | no       | Workspace ID for the Sandbox endpoint (or set BAILIAN_WORKSPACE_ID) |
-| `--sandbox-id <id>`   | string | yes      | Sandbox instance ID                                                 |
-| `--show-credentials`  | switch | no       | Print envd and traffic access tokens instead of redacting them      |
-| `--api-key <key>`     | string | no       | API key                                                             |
-| `--base-url <url>`    | string | no       | API base URL                                                        |
+| Flag                  | Type   | Required | Description                                                                        |
+| --------------------- | ------ | -------- | ---------------------------------------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
+| `--sandbox-id <id>`   | string | yes      | Sandbox instance ID                                                                |
+| `--show-credentials`  | switch | no       | Print envd and traffic access tokens instead of redacting them                     |
+| `--api-key <key>`     | string | no       | API key                                                                            |
+| `--base-url <url>`    | string | no       | API base URL                                                                       |
 
 #### Notes
 
 - Auth: uses a Bailian API Key as an Authorization Bearer token; no E2B key is sent.
-- The workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > login/profile base_url. The CLI uses its origin and appends /api/v1/agentstudio/sandbox; otherwise it uses the workspace-scoped cn-beijing endpoint.
+- Without a configured base URL, workspace is required: --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id.
 - Sandbox is currently available in cn-beijing only and requires prior SLR authorization.
 - Global --timeout limits HTTP requests and total template-build polling; --instance-timeout maps to the Sandbox API lifetime field.
 
@@ -201,20 +209,21 @@ bl sandbox get --sandbox-id sbx-xxx --show-credentials --output json
 
 #### Flags
 
-| Flag                  | Type   | Required | Description                                                         |
-| --------------------- | ------ | -------- | ------------------------------------------------------------------- |
-| `--workspace-id <id>` | string | no       | Workspace ID for the Sandbox endpoint (or set BAILIAN_WORKSPACE_ID) |
-| `--template-id <id>`  | string | no       | Filter by template ID                                               |
-| `--sandbox-id <id>`   | string | no       | Filter by sandbox ID                                                |
-| `--state <state>`     | string | no       | Filter by state, for example running or paused                      |
-| `--limit <n>`         | number | no       | Maximum results (1-50)                                              |
-| `--api-key <key>`     | string | no       | API key                                                             |
-| `--base-url <url>`    | string | no       | API base URL                                                        |
+| Flag                  | Type   | Required | Description                                                                        |
+| --------------------- | ------ | -------- | ---------------------------------------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
+| `--template-id <id>`  | string | no       | Filter by template ID                                                              |
+| `--sandbox-id <id>`   | string | no       | Filter by sandbox ID                                                               |
+| `--state <state>`     | string | no       | Filter by state, for example running or paused                                     |
+| `--limit <n>`         | number | no       | Maximum results (1-50)                                                             |
+| `--api-key <key>`     | string | no       | API key                                                                            |
+| `--base-url <url>`    | string | no       | API base URL                                                                       |
 
 #### Notes
 
 - Auth: uses a Bailian API Key as an Authorization Bearer token; no E2B key is sent.
-- The workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > login/profile base_url. The CLI uses its origin and appends /api/v1/agentstudio/sandbox; otherwise it uses the workspace-scoped cn-beijing endpoint.
+- Without a configured base URL, workspace is required: --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id.
 - Sandbox is currently available in cn-beijing only and requires prior SLR authorization.
 - Global --timeout limits HTTP requests and total template-build polling; --instance-timeout maps to the Sandbox API lifetime field.
 
@@ -243,17 +252,18 @@ bl sandbox list --template-id tpl-xxx --output json
 
 #### Flags
 
-| Flag                  | Type   | Required | Description                                                         |
-| --------------------- | ------ | -------- | ------------------------------------------------------------------- |
-| `--workspace-id <id>` | string | no       | Workspace ID for the Sandbox endpoint (or set BAILIAN_WORKSPACE_ID) |
-| `--sandbox-id <id>`   | string | yes      | Sandbox instance ID                                                 |
-| `--api-key <key>`     | string | no       | API key                                                             |
-| `--base-url <url>`    | string | no       | API base URL                                                        |
+| Flag                  | Type   | Required | Description                                                                        |
+| --------------------- | ------ | -------- | ---------------------------------------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
+| `--sandbox-id <id>`   | string | yes      | Sandbox instance ID                                                                |
+| `--api-key <key>`     | string | no       | API key                                                                            |
+| `--base-url <url>`    | string | no       | API base URL                                                                       |
 
 #### Notes
 
 - Auth: uses a Bailian API Key as an Authorization Bearer token; no E2B key is sent.
-- The workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > login/profile base_url. The CLI uses its origin and appends /api/v1/agentstudio/sandbox; otherwise it uses the workspace-scoped cn-beijing endpoint.
+- Without a configured base URL, workspace is required: --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id.
 - Sandbox is currently available in cn-beijing only and requires prior SLR authorization.
 - Global --timeout limits HTTP requests and total template-build polling; --instance-timeout maps to the Sandbox API lifetime field.
 
@@ -280,7 +290,7 @@ bl sandbox pause --sandbox-id sbx-xxx --dry-run --output json
 
 | Flag                           | Type   | Required | Description                                                                        |
 | ------------------------------ | ------ | -------- | ---------------------------------------------------------------------------------- |
-| `--workspace-id <id>`          | string | no       | Workspace ID for the Sandbox endpoint (or set BAILIAN_WORKSPACE_ID)                |
+| `--workspace-id <id>`          | string | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
 | `--sandbox-id <id>`            | string | yes      | Sandbox instance ID                                                                |
 | `--body <json\|@path>`         | string | no       | JSON request body, inline or loaded from an @file path; explicit flags override it |
 | `--instance-timeout <seconds>` | number | no       | Sandbox lifetime after this operation (300-604800 seconds)                         |
@@ -291,7 +301,8 @@ bl sandbox pause --sandbox-id sbx-xxx --dry-run --output json
 #### Notes
 
 - Auth: uses a Bailian API Key as an Authorization Bearer token; no E2B key is sent.
-- The workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > login/profile base_url. The CLI uses its origin and appends /api/v1/agentstudio/sandbox; otherwise it uses the workspace-scoped cn-beijing endpoint.
+- Without a configured base URL, workspace is required: --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id.
 - Sandbox is currently available in cn-beijing only and requires prior SLR authorization.
 - Global --timeout limits HTTP requests and total template-build polling; --instance-timeout maps to the Sandbox API lifetime field.
 
@@ -316,18 +327,19 @@ bl sandbox resume --sandbox-id sbx-xxx --show-credentials --output json
 
 #### Flags
 
-| Flag                  | Type   | Required | Description                                                         |
-| --------------------- | ------ | -------- | ------------------------------------------------------------------- |
-| `--workspace-id <id>` | string | no       | Workspace ID for the Sandbox endpoint (or set BAILIAN_WORKSPACE_ID) |
-| `--template-id <id>`  | string | yes      | Sandbox template ID                                                 |
-| `--build-id <id>`     | string | yes      | Template build ID                                                   |
-| `--api-key <key>`     | string | no       | API key                                                             |
-| `--base-url <url>`    | string | no       | API base URL                                                        |
+| Flag                  | Type   | Required | Description                                                                        |
+| --------------------- | ------ | -------- | ---------------------------------------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
+| `--template-id <id>`  | string | yes      | Sandbox template ID                                                                |
+| `--build-id <id>`     | string | yes      | Template build ID                                                                  |
+| `--api-key <key>`     | string | no       | API key                                                                            |
+| `--base-url <url>`    | string | no       | API base URL                                                                       |
 
 #### Notes
 
 - Auth: uses a Bailian API Key as an Authorization Bearer token; no E2B key is sent.
-- The workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > login/profile base_url. The CLI uses its origin and appends /api/v1/agentstudio/sandbox; otherwise it uses the workspace-scoped cn-beijing endpoint.
+- Without a configured base URL, workspace is required: --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id.
 - Sandbox is currently available in cn-beijing only and requires prior SLR authorization.
 - Global --timeout limits HTTP requests and total template-build polling; --instance-timeout maps to the Sandbox API lifetime field.
 
@@ -354,7 +366,7 @@ bl sandbox template build-status --template-id tpl-xxx --build-id build-xxx --ou
 
 | Flag                           | Type   | Required | Description                                                                        |
 | ------------------------------ | ------ | -------- | ---------------------------------------------------------------------------------- |
-| `--workspace-id <id>`          | string | no       | Workspace ID for the Sandbox endpoint (or set BAILIAN_WORKSPACE_ID)                |
+| `--workspace-id <id>`          | string | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
 | `--body <json\|@path>`         | string | no       | JSON request body, inline or loaded from an @file path; explicit flags override it |
 | `--name <name>`                | string | no       | Template name                                                                      |
 | `--cpu-count <cores>`          | number | no       | vCPU count                                                                         |
@@ -377,7 +389,8 @@ bl sandbox template build-status --template-id tpl-xxx --build-id build-xxx --ou
 #### Notes
 
 - Auth: uses a Bailian API Key as an Authorization Bearer token; no E2B key is sent.
-- The workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > login/profile base_url. The CLI uses its origin and appends /api/v1/agentstudio/sandbox; otherwise it uses the workspace-scoped cn-beijing endpoint.
+- Without a configured base URL, workspace is required: --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id.
 - Sandbox is currently available in cn-beijing only and requires prior SLR authorization.
 - Global --timeout limits HTTP requests and total template-build polling; --instance-timeout maps to the Sandbox API lifetime field.
 - File mounts and other complete nested structures can be supplied through --body.
@@ -412,18 +425,19 @@ bl sandbox template create --name browser --cpu-count 4 --memory-mb 8192 --dry-r
 
 #### Flags
 
-| Flag                  | Type   | Required | Description                                                         |
-| --------------------- | ------ | -------- | ------------------------------------------------------------------- |
-| `--workspace-id <id>` | string | no       | Workspace ID for the Sandbox endpoint (or set BAILIAN_WORKSPACE_ID) |
-| `--template-id <id>`  | string | yes      | Sandbox template ID                                                 |
-| `--yes`               | switch | no       | Confirm this high-risk operation                                    |
-| `--api-key <key>`     | string | no       | API key                                                             |
-| `--base-url <url>`    | string | no       | API base URL                                                        |
+| Flag                  | Type   | Required | Description                                                                        |
+| --------------------- | ------ | -------- | ---------------------------------------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
+| `--template-id <id>`  | string | yes      | Sandbox template ID                                                                |
+| `--yes`               | switch | no       | Confirm this high-risk operation                                                   |
+| `--api-key <key>`     | string | no       | API key                                                                            |
+| `--base-url <url>`    | string | no       | API base URL                                                                       |
 
 #### Notes
 
 - Auth: uses a Bailian API Key as an Authorization Bearer token; no E2B key is sent.
-- The workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > login/profile base_url. The CLI uses its origin and appends /api/v1/agentstudio/sandbox; otherwise it uses the workspace-scoped cn-beijing endpoint.
+- Without a configured base URL, workspace is required: --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id.
 - Sandbox is currently available in cn-beijing only and requires prior SLR authorization.
 - Global --timeout limits HTTP requests and total template-build polling; --instance-timeout maps to the Sandbox API lifetime field.
 - The server rejects deletion while running or paused instances still use the template.
@@ -450,17 +464,18 @@ bl sandbox template delete --template-id tpl-xxx --yes
 
 #### Flags
 
-| Flag                  | Type   | Required | Description                                                         |
-| --------------------- | ------ | -------- | ------------------------------------------------------------------- |
-| `--workspace-id <id>` | string | no       | Workspace ID for the Sandbox endpoint (or set BAILIAN_WORKSPACE_ID) |
-| `--template-id <id>`  | string | yes      | Sandbox template ID                                                 |
-| `--api-key <key>`     | string | no       | API key                                                             |
-| `--base-url <url>`    | string | no       | API base URL                                                        |
+| Flag                  | Type   | Required | Description                                                                        |
+| --------------------- | ------ | -------- | ---------------------------------------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
+| `--template-id <id>`  | string | yes      | Sandbox template ID                                                                |
+| `--api-key <key>`     | string | no       | API key                                                                            |
+| `--base-url <url>`    | string | no       | API base URL                                                                       |
 
 #### Notes
 
 - Auth: uses a Bailian API Key as an Authorization Bearer token; no E2B key is sent.
-- The workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > login/profile base_url. The CLI uses its origin and appends /api/v1/agentstudio/sandbox; otherwise it uses the workspace-scoped cn-beijing endpoint.
+- Without a configured base URL, workspace is required: --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id.
 - Sandbox is currently available in cn-beijing only and requires prior SLR authorization.
 - Global --timeout limits HTTP requests and total template-build polling; --instance-timeout maps to the Sandbox API lifetime field.
 
@@ -485,18 +500,19 @@ bl sandbox template get --template-id tpl-xxx --output json
 
 #### Flags
 
-| Flag                  | Type   | Required | Description                                                         |
-| --------------------- | ------ | -------- | ------------------------------------------------------------------- |
-| `--workspace-id <id>` | string | no       | Workspace ID for the Sandbox endpoint (or set BAILIAN_WORKSPACE_ID) |
-| `--limit <n>`         | number | no       | Maximum results (1-100)                                             |
-| `--cursor <cursor>`   | string | no       | Server-side pagination cursor                                       |
-| `--api-key <key>`     | string | no       | API key                                                             |
-| `--base-url <url>`    | string | no       | API base URL                                                        |
+| Flag                  | Type   | Required | Description                                                                        |
+| --------------------- | ------ | -------- | ---------------------------------------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
+| `--limit <n>`         | number | no       | Maximum results (1-100)                                                            |
+| `--cursor <cursor>`   | string | no       | Server-side pagination cursor                                                      |
+| `--api-key <key>`     | string | no       | API key                                                                            |
+| `--base-url <url>`    | string | no       | API base URL                                                                       |
 
 #### Notes
 
 - Auth: uses a Bailian API Key as an Authorization Bearer token; no E2B key is sent.
-- The workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > login/profile base_url. The CLI uses its origin and appends /api/v1/agentstudio/sandbox; otherwise it uses the workspace-scoped cn-beijing endpoint.
+- Without a configured base URL, workspace is required: --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id.
 - Sandbox is currently available in cn-beijing only and requires prior SLR authorization.
 - Global --timeout limits HTTP requests and total template-build polling; --instance-timeout maps to the Sandbox API lifetime field.
 - The API response does not expose a next cursor, so automatic --all pagination is unavailable.
@@ -524,7 +540,7 @@ bl sandbox template list --limit 100 --output json
 
 | Flag                           | Type   | Required | Description                                                                        |
 | ------------------------------ | ------ | -------- | ---------------------------------------------------------------------------------- |
-| `--workspace-id <id>`          | string | no       | Workspace ID for the Sandbox endpoint (or set BAILIAN_WORKSPACE_ID)                |
+| `--workspace-id <id>`          | string | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
 | `--template-id <id>`           | string | yes      | Sandbox template ID                                                                |
 | `--body <json\|@path>`         | string | no       | JSON request body, inline or loaded from an @file path; explicit flags override it |
 | `--name <name>`                | string | no       | Template name                                                                      |
@@ -546,7 +562,8 @@ bl sandbox template list --limit 100 --output json
 #### Notes
 
 - Auth: uses a Bailian API Key as an Authorization Bearer token; no E2B key is sent.
-- The workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > login/profile base_url. The CLI uses its origin and appends /api/v1/agentstudio/sandbox; otherwise it uses the workspace-scoped cn-beijing endpoint.
+- Without a configured base URL, workspace is required: --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id.
 - Sandbox is currently available in cn-beijing only and requires prior SLR authorization.
 - Global --timeout limits HTTP requests and total template-build polling; --instance-timeout maps to the Sandbox API lifetime field.
 - Supplying envConfig or --env replaces the template's complete environment map.

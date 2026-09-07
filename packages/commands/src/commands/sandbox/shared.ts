@@ -1,13 +1,21 @@
 import { readFile } from "node:fs/promises";
-import { BailianError, ExitCode, type FlagsDef, type LocalizedText } from "bailian-cli-core";
+import {
+  BailianError,
+  ExitCode,
+  sandboxApiPath,
+  sandboxBaseUrl,
+  type Client,
+  type FlagsDef,
+  type LocalizedText,
+} from "bailian-cli-core";
 
 export const WORKSPACE_FLAG = {
   workspaceId: {
     type: "string",
     valueHint: "<id>",
     description: {
-      "en-US": "Workspace ID for the Sandbox endpoint (or set BAILIAN_WORKSPACE_ID)",
-      "zh-CN": "Sandbox Endpoint 使用的 Workspace ID（也可设置 BAILIAN_WORKSPACE_ID）",
+      "en-US": "Workspace ID for the default Sandbox endpoint; optional with a configured base URL",
+      "zh-CN": "默认 Sandbox Endpoint 的 Workspace ID；已配置 Base URL 时可省略",
     },
   },
 } satisfies FlagsDef;
@@ -62,8 +70,15 @@ export const SANDBOX_NOTES: LocalizedText[] = [
   },
   {
     "en-US":
-      "The workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.",
-    "zh-CN": "Workspace 依次从 --workspace-id、BAILIAN_WORKSPACE_ID、配置项 workspace_id 解析。",
+      "Base URL: --base-url > DASHSCOPE_BASE_URL > login/profile base_url. The CLI uses its origin and appends /api/v1/agentstudio/sandbox; otherwise it uses the workspace-scoped cn-beijing endpoint.",
+    "zh-CN":
+      "Base URL 优先级：--base-url > DASHSCOPE_BASE_URL > 登录/Profile 的 base_url。CLI 取其 origin 并追加 /api/v1/agentstudio/sandbox；未配置时使用工作空间的 cn-beijing Endpoint。",
+  },
+  {
+    "en-US":
+      "Without a configured base URL, workspace is required: --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id.",
+    "zh-CN":
+      "未配置 Base URL 时必须提供 Workspace：--workspace-id > BAILIAN_WORKSPACE_ID > 配置项 workspace_id。",
   },
   {
     "en-US":
@@ -80,17 +95,23 @@ export const SANDBOX_NOTES: LocalizedText[] = [
 
 export type JsonObject = Record<string, unknown>;
 
-export function resolveWorkspaceId(ctx: {
+interface SandboxEndpointContext {
   flags: { workspaceId?: string };
   settings: { workspaceId?: string };
-  identity: { binName: string };
-}): string {
+  client: Pick<Client, "url">;
+}
+
+export function resolveSandboxEndpoint(ctx: SandboxEndpointContext, path: string): string {
+  return ctx.client.url(sandboxApiPath(path), () => sandboxBaseUrl(resolveWorkspaceId(ctx)));
+}
+
+export function resolveWorkspaceId(ctx: Omit<SandboxEndpointContext, "client">): string {
   const workspaceId = ctx.flags.workspaceId || ctx.settings.workspaceId;
   if (!workspaceId) {
     throw new BailianError(
-      "Workspace ID is required.",
+      "Workspace ID is required when no base URL is configured. / 未配置 Base URL 时必须提供 Workspace ID。",
       ExitCode.USAGE,
-      `Pass --workspace-id, set BAILIAN_WORKSPACE_ID, or configure: ${ctx.identity.binName} config set workspace_id <id>`,
+      "Pass --workspace-id, set BAILIAN_WORKSPACE_ID, configure workspace_id, or set --base-url. / 请传入 --workspace-id、设置 BAILIAN_WORKSPACE_ID 或 workspace_id 配置，或通过 --base-url 指定地址。",
     );
   }
   return workspaceId;

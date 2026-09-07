@@ -19,6 +19,8 @@ export {
   ragEndpoint,
   RAG_PATHS,
   sandboxEndpoint,
+  sandboxBaseUrl,
+  sandboxApiPath,
   SANDBOX_PATHS,
   sandboxInstancePath,
   sandboxInstanceActionPath,

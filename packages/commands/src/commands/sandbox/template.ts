@@ -3,7 +3,7 @@ import {
   detectOutputFormat,
   defineCommand,
   ExitCode,
-  sandboxEndpoint,
+  sandboxApiPath,
   SANDBOX_PATHS,
   sandboxTemplateBuildStatusPath,
   sandboxTemplatePath,
@@ -21,7 +21,7 @@ import {
   POLL_INTERVAL_FLAG,
   readRequestBody,
   redactRequestSecrets,
-  resolveWorkspaceId,
+  resolveSandboxEndpoint,
   SANDBOX_NOTES,
   setDefined,
   validateIntegerRange,
@@ -312,7 +312,7 @@ function validatePollInterval(flags: { pollInterval?: number }): string | undefi
 
 async function emitTemplateMutationResult(options: {
   response: TemplateInfo;
-  workspaceId: string;
+  endpoint: string;
   client: Client;
   settings: Settings;
   async: boolean;
@@ -333,10 +333,13 @@ async function emitTemplateMutationResult(options: {
     }
     return;
   }
-  const buildEndpoint = sandboxEndpoint(
-    options.workspaceId,
-    sandboxTemplateBuildStatusPath(options.response.templateID, options.response.buildID),
-  );
+  // Poll the same origin that accepted the build, including custom gateways.
+  const buildEndpoint = new URL(
+    sandboxApiPath(
+      sandboxTemplateBuildStatusPath(options.response.templateID, options.response.buildID),
+    ),
+    options.endpoint,
+  ).toString();
   const build = await waitForTemplateBuild(
     options.client,
     options.settings,
@@ -372,8 +375,7 @@ export const sandboxTemplateCreate = defineCommand({
   validate: validatePollInterval,
   async run(ctx) {
     const format = detectOutputFormat(ctx.settings.output);
-    const workspaceId = resolveWorkspaceId(ctx);
-    const endpoint = sandboxEndpoint(workspaceId, SANDBOX_PATHS.templateCreate);
+    const endpoint = resolveSandboxEndpoint(ctx, SANDBOX_PATHS.templateCreate);
     const body = await buildTemplateCreateBody(ctx.flags);
     if (ctx.settings.dryRun) {
       emitResult({ method: "POST", endpoint, request: redactRequestSecrets(body) }, format);
@@ -386,7 +388,7 @@ export const sandboxTemplateCreate = defineCommand({
     });
     await emitTemplateMutationResult({
       response,
-      workspaceId,
+      endpoint,
       client: ctx.client,
       settings: ctx.settings,
       async: ctx.flags.async,
@@ -419,8 +421,7 @@ export const sandboxTemplateList = defineCommand({
     return undefined;
   },
   async run(ctx) {
-    const workspaceId = resolveWorkspaceId(ctx);
-    const url = new URL(sandboxEndpoint(workspaceId, SANDBOX_PATHS.templateList));
+    const url = new URL(resolveSandboxEndpoint(ctx, SANDBOX_PATHS.templateList));
     if (ctx.flags.limit !== undefined) url.searchParams.set("limit", String(ctx.flags.limit));
     if (ctx.flags.cursor) url.searchParams.set("cursor", ctx.flags.cursor);
     const response = await ctx.client.requestJson<TemplateInfo[]>({
@@ -466,8 +467,7 @@ export const sandboxTemplateGet = defineCommand({
   exampleArgs: ["--template-id tpl-xxx", "--template-id tpl-xxx --output json"],
   notes: SANDBOX_NOTES,
   async run(ctx) {
-    const workspaceId = resolveWorkspaceId(ctx);
-    const endpoint = sandboxEndpoint(workspaceId, sandboxTemplatePath(ctx.flags.templateId));
+    const endpoint = resolveSandboxEndpoint(ctx, sandboxTemplatePath(ctx.flags.templateId));
     const response = await ctx.client.requestJson<TemplateInfo>({ path: endpoint, method: "GET" });
     if (ctx.settings.quiet) emitBare(displayValue(response.templateID));
     else emitResult(response, detectOutputFormat(ctx.settings.output));
@@ -499,8 +499,7 @@ export const sandboxTemplateUpdate = defineCommand({
   validate: validatePollInterval,
   async run(ctx) {
     const format = detectOutputFormat(ctx.settings.output);
-    const workspaceId = resolveWorkspaceId(ctx);
-    const endpoint = sandboxEndpoint(workspaceId, sandboxTemplatePath(ctx.flags.templateId));
+    const endpoint = resolveSandboxEndpoint(ctx, sandboxTemplatePath(ctx.flags.templateId));
     const body = await buildTemplateUpdateBody(ctx.flags);
     if (ctx.settings.dryRun) {
       emitResult({ method: "PUT", endpoint, request: redactRequestSecrets(body) }, format);
@@ -513,7 +512,7 @@ export const sandboxTemplateUpdate = defineCommand({
     });
     await emitTemplateMutationResult({
       response,
-      workspaceId,
+      endpoint,
       client: ctx.client,
       settings: ctx.settings,
       async: ctx.flags.async,
@@ -536,9 +535,8 @@ export const sandboxTemplateBuildStatus = defineCommand({
   ],
   notes: SANDBOX_NOTES,
   async run(ctx) {
-    const workspaceId = resolveWorkspaceId(ctx);
-    const endpoint = sandboxEndpoint(
-      workspaceId,
+    const endpoint = resolveSandboxEndpoint(
+      ctx,
       sandboxTemplateBuildStatusPath(ctx.flags.templateId, ctx.flags.buildId),
     );
     const response = await ctx.client.requestJson<TemplateBuildStatus>({
@@ -573,8 +571,7 @@ export const sandboxTemplateDelete = defineCommand({
   ],
   async run(ctx) {
     const format = detectOutputFormat(ctx.settings.output);
-    const workspaceId = resolveWorkspaceId(ctx);
-    const endpoint = sandboxEndpoint(workspaceId, sandboxTemplatePath(ctx.flags.templateId));
+    const endpoint = resolveSandboxEndpoint(ctx, sandboxTemplatePath(ctx.flags.templateId));
     if (ctx.settings.dryRun) {
       emitResult({ method: "DELETE", endpoint, request: null }, format);
       return;

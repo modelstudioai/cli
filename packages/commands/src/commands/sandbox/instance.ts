@@ -3,7 +3,6 @@ import {
   detectOutputFormat,
   defineCommand,
   ExitCode,
-  sandboxEndpoint,
   SANDBOX_PATHS,
   sandboxInstanceActionPath,
   sandboxInstancePath,
@@ -20,7 +19,7 @@ import {
   readRequestBody,
   redactConnectionCredentials,
   redactRequestSecrets,
-  resolveWorkspaceId,
+  resolveSandboxEndpoint,
   SANDBOX_NOTES,
   setDefined,
   SHOW_CREDENTIALS_FLAG,
@@ -222,14 +221,14 @@ export const sandboxCreate = defineCommand({
   flags: CREATE_FLAGS,
   exampleArgs: [
     "--template-id tpl-xxx --instance-timeout 3600",
+    "--template-id tpl-xxx --base-url https://workspace.cn-beijing.maas.aliyuncs.com",
     "--body @sandbox.json --dry-run --output json",
     "--template-id tpl-xxx --show-credentials --output json",
   ],
   notes: SANDBOX_NOTES,
   async run(ctx) {
     const format = detectOutputFormat(ctx.settings.output);
-    const workspaceId = resolveWorkspaceId(ctx);
-    const endpoint = sandboxEndpoint(workspaceId, SANDBOX_PATHS.sandboxes);
+    const endpoint = resolveSandboxEndpoint(ctx, SANDBOX_PATHS.sandboxes);
     const body = await buildSandboxCreateBody(ctx.flags);
     if (ctx.settings.dryRun) {
       emitResult({ method: "POST", endpoint, request: redactRequestSecrets(body) }, format);
@@ -265,8 +264,7 @@ export const sandboxList = defineCommand({
     return undefined;
   },
   async run(ctx) {
-    const workspaceId = resolveWorkspaceId(ctx);
-    const url = new URL(sandboxEndpoint(workspaceId, SANDBOX_PATHS.sandboxList));
+    const url = new URL(resolveSandboxEndpoint(ctx, SANDBOX_PATHS.sandboxList));
     if (ctx.flags.templateId) url.searchParams.set("templateID", ctx.flags.templateId);
     if (ctx.flags.sandboxId) url.searchParams.set("sandboxID", ctx.flags.sandboxId);
     if (ctx.flags.state) url.searchParams.set("state", ctx.flags.state);
@@ -314,8 +312,7 @@ export const sandboxGet = defineCommand({
   exampleArgs: ["--sandbox-id sbx-xxx", "--sandbox-id sbx-xxx --show-credentials --output json"],
   notes: SANDBOX_NOTES,
   async run(ctx) {
-    const workspaceId = resolveWorkspaceId(ctx);
-    const endpoint = sandboxEndpoint(workspaceId, sandboxInstancePath(ctx.flags.sandboxId));
+    const endpoint = resolveSandboxEndpoint(ctx, sandboxInstancePath(ctx.flags.sandboxId));
     const response = await ctx.client.requestJson<SandboxInfo>({ path: endpoint, method: "GET" });
     emitSandboxObject(response, {
       format: detectOutputFormat(ctx.settings.output),
@@ -343,9 +340,8 @@ function connectionCommand(action: "connect" | "resume") {
     notes: SANDBOX_NOTES,
     async run(ctx) {
       const format = detectOutputFormat(ctx.settings.output);
-      const workspaceId = resolveWorkspaceId(ctx);
-      const endpoint = sandboxEndpoint(
-        workspaceId,
+      const endpoint = resolveSandboxEndpoint(
+        ctx,
         sandboxInstanceActionPath(ctx.flags.sandboxId, action),
       );
       const body = await buildConnectionBody(ctx.flags);
@@ -379,9 +375,8 @@ export const sandboxPause = defineCommand({
   notes: SANDBOX_NOTES,
   async run(ctx) {
     const format = detectOutputFormat(ctx.settings.output);
-    const workspaceId = resolveWorkspaceId(ctx);
-    const endpoint = sandboxEndpoint(
-      workspaceId,
+    const endpoint = resolveSandboxEndpoint(
+      ctx,
       sandboxInstanceActionPath(ctx.flags.sandboxId, "pause"),
     );
     if (ctx.settings.dryRun) {
@@ -410,8 +405,7 @@ export const sandboxDelete = defineCommand({
   notes: SANDBOX_NOTES,
   async run(ctx) {
     const format = detectOutputFormat(ctx.settings.output);
-    const workspaceId = resolveWorkspaceId(ctx);
-    const endpoint = sandboxEndpoint(workspaceId, sandboxInstancePath(ctx.flags.sandboxId));
+    const endpoint = resolveSandboxEndpoint(ctx, sandboxInstancePath(ctx.flags.sandboxId));
     if (ctx.settings.dryRun) {
       emitResult({ method: "DELETE", endpoint, request: null }, format);
       return;

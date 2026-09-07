@@ -1,8 +1,30 @@
-import { describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCommandE2e, runCommandHelp } from "./helpers.ts";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
+import { parseStdoutJson, runCommandE2e as runBaseCommandE2e, runCommandHelp } from "./helpers.ts";
 import { SANDBOX_ROUTES } from "./topic-routes.ts";
 
 const AUTH_ARGS = ["--api-key", "sk-sandbox-e2e", "--workspace-id", "ws-e2e"];
+let configDirectory: string;
+
+beforeEach(() => {
+  configDirectory = mkdtempSync(join(tmpdir(), "bl-sandbox-e2e-"));
+  writeFileSync(join(configDirectory, "config.json"), "{}");
+});
+
+afterEach(() => {
+  rmSync(configDirectory, { recursive: true, force: true });
+});
+
+function runCommandE2e(routes: typeof SANDBOX_ROUTES, args: string[]) {
+  return runBaseCommandE2e(routes, args, {
+    BAILIAN_CONFIG_DIR: configDirectory,
+    DASHSCOPE_BASE_URL: "",
+    DASHSCOPE_API_KEY: "",
+    BAILIAN_WORKSPACE_ID: "",
+  });
+}
 
 describe("e2e: Sandbox command discovery", () => {
   test.each([

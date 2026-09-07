@@ -228,14 +228,19 @@ export function ragEndpoint(workspaceId: string, path: string): string {
 
 // ---- Sandbox control plane (workspace-based host, cn-beijing only) ----
 
-/**
- * Build an absolute Bailian Sandbox control-plane URL.
- *
- * Sandbox currently supports cn-beijing only. Keep the workspace-specific host
- * centralized here so commands never hard-code API endpoints.
- */
+/** Default Sandbox origin when no shared base URL was configured (cn-beijing only). */
+export function sandboxBaseUrl(workspaceId: string): string {
+  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com`;
+}
+
+/** Sandbox service prefix, appended to the selected origin just like AgentStudio SDK paths. */
+export function sandboxApiPath(path: string): string {
+  return `/api/v1/agentstudio/sandbox${path}`;
+}
+
+/** Build the default workspace-scoped absolute Sandbox control-plane URL. */
 export function sandboxEndpoint(workspaceId: string, path: string): string {
-  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio/sandbox${path}`;
+  return sandboxBaseUrl(workspaceId) + sandboxApiPath(path);
 }
 
 export const SANDBOX_PATHS = {
