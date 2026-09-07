@@ -99,9 +99,10 @@ export function prepareProviderEnv(): void {
  * Override the bailian provider block with bl's authStage-resolved credential, so
  * the bailian API key is authoritatively the CLI auth chain's — never a config
  * file bare-read or a stale env value. `api_key` is replaced unconditionally
- * when a credential resolved; `base_url` / `workspace_id` are filled only when
- * the block references them and the interpolated value is empty (a literal in
- * agents.yaml is respected).
+ * when a credential resolved. `base_url` is normally filled only when empty so
+ * a literal in agents.yaml remains supported; directory projects pass
+ * `overrideBaseUrl` so their connection always follows the Bailian CLI auth
+ * chain. `workspace_id` is filled only when empty.
  *
  * `base_url` carries {@link AGENTSTUDIO_API_PATH} because the SDK appends resource
  * paths onto it verbatim; a value already ending in the suffix is left as-is.
@@ -114,6 +115,7 @@ export function prepareProviderEnv(): void {
 export function injectProviderCredentials(
   providers: Record<string, unknown>,
   host: CredentialHost,
+  options: { overrideBaseUrl?: boolean } = {},
 ): void {
   const bailian = providers.bailian;
   if (!bailian || typeof bailian !== "object") return;
@@ -121,7 +123,7 @@ export function injectProviderCredentials(
 
   const cred = host.client.exportApiCredential();
   if (cred) block.api_key = cred.token;
-  if ("base_url" in block && !block.base_url) {
+  if ("base_url" in block && (options.overrideBaseUrl || !block.base_url)) {
     // Defensive normalization: the auth chain already normalizes base_url to
     // an origin, but never let a trailing slash produce "//api/v1/agentstudio".
     const origin = host.client.baseUrl.replace(/\/+$/, "");

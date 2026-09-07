@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -9,7 +9,7 @@ import {
   resolveProjectConfig,
   type ResourceAddress,
 } from "@openagentpack/sdk";
-import { describe, expect, test } from "vite-plus/test";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 import { parse } from "yaml";
 import { e2eFixturesDir, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { MANAGED_AGENT_ROUTES } from "./topic-routes.ts";
@@ -29,6 +29,13 @@ const DEPLOYMENT_SAFETY_DIAGNOSTIC_CODES = [
   "bailian.deployment.file.mount_path.required",
   "bailian.deployment.file.mount_path.duplicate",
 ];
+const projectDirectories: string[] = [];
+
+afterEach(async () => {
+  for (const directory of projectDirectories.splice(0)) {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 async function writeLocalSkillDirectory(parentDirectory: string): Promise<string> {
   const skillDirectory = join(parentDirectory, "local-report");
@@ -98,8 +105,8 @@ async function seedTrackedResources(
 /**
  * managed-agent：help / 缺参不依赖密钥；所有 mutation 命令的 --dry-run
  * 必须在构建 SDK runtime（凭证注入 / 联网 / 写盘）之前短路，因此同样不需要密钥。
- * 鉴权分层：离线命令（init/validate/state list|show|rm）auth: "none"；联网命令
- * 统一 auth: "apiKey" 硬门禁（见 managed-agent-auth-chain e2e）。
+ * 鉴权分层：离线命令（init/project init/validate/state list|show|rm）auth: "none"；
+ * 联网命令统一 auth: "apiKey" 硬门禁（见 managed-agent-auth-chain e2e）。
  * 真实集成（apply/destroy/session 流程）依赖工作区内的 agents.yaml 与远端资源，
  * 属批量场景，暂仅覆盖 dry-run 契约。
  */
@@ -226,6 +233,216 @@ describe("e2e: managed-agent", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--file|--yes/i);
     expect(stderr).not.toContain("--provider");
+    expect(stderr).not.toContain("--ci");
+    expect(stderr).not.toContain("--refresh-only");
+  });
+
+  test("managed-agent apply 不再接受 --refresh-only", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "apply",
+      "--dry-run",
+      "--refresh-only",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/Unknown flag.*--refresh-only/i);
+  });
+
+  test("managed-agent init 不再暴露 Git 仓库脚手架", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "init",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).not.toContain("--git");
+  });
+
+  test("managed-agent project 暴露目录项目与共享版本管理子命令", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "project",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/init|validate|build|publish|workbench|version/i);
+  });
+
+  test("managed-agent project 完成 init、validate、build 与 version status 本地闭环", async () => {
+    const projectRoot = await mkdtemp(join(tmpdir(), "bailian-managed-agent-project-"));
+    projectDirectories.push(projectRoot);
+    const initialized = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "project",
+      "init",
+      "--project",
+      projectRoot,
+      "--output",
+      "json",
+    ]);
+    expect(initialized.exitCode, initialized.stderr).toBe(0);
+    expect(
+      parseStdoutJson<{ baseline_version?: string }>(initialized.stdout).baseline_version,
+    ).toMatch(/^[a-f0-9]{64}$/);
+    expect(JSON.parse(await readFile(join(projectRoot, "project.json"), "utf8"))).toEqual({
+      version: "1",
+    });
+    expect(await stat(join(projectRoot, ".env")).catch(() => null)).toBeNull();
+    expect(await stat(join(projectRoot, ".gitignore")).catch(() => null)).toBeNull();
+
+    expect(
+      JSON.parse(await readFile(join(projectRoot, "agents/assistant/agent.json"), "utf8")),
+    ).toEqual({ name: "Assistant", model: "qwen3.7-max" });
+    for (const relativePath of [
+      "skills/_examples/example-skill/skill.json",
+      "skills/_examples/example-skill/SKILL.md",
+      "files/_examples/example-file/file.json",
+      "files/_examples/example-file/example.md",
+      "vaults/_examples/example-vault/vault.json",
+      "environments/_examples/example-env/environment.json",
+    ]) {
+      expect((await stat(join(projectRoot, "agents/assistant", relativePath))).isFile()).toBe(true);
+      expect(
+        await readFile(join(projectRoot, "agents/assistant", relativePath, "../README.md"), "utf8"),
+      ).toContain("_examples/");
+    }
+
+    const skillDirectory = join(projectRoot, "agents/assistant/skills/writer");
+    const filesDirectory = join(projectRoot, "agents/assistant/files");
+    const nestedFileDirectory = join(filesDirectory, "mount");
+    await mkdir(skillDirectory, { recursive: true });
+    await mkdir(nestedFileDirectory, { recursive: true });
+    await writeFile(join(skillDirectory, "SKILL.md"), "# Writer\n", "utf8");
+    await writeFile(join(filesDirectory, "brief.txt"), "Build this brief.\n", "utf8");
+    await writeFile(join(nestedFileDirectory, "mount.md"), "Mount this file.\n", "utf8");
+
+    const validated = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "project",
+      "validate",
+      "--project",
+      projectRoot,
+      "--output",
+      "json",
+    ]);
+    expect(validated.exitCode, validated.stderr).toBe(0);
+    expect(
+      parseStdoutJson<{ diagnostics?: Array<{ severity?: string }> }>(validated.stdout).diagnostics,
+    ).not.toContainEqual(expect.objectContaining({ severity: "error" }));
+
+    const vaultDirectory = join(projectRoot, "agents/assistant/vaults/secrets");
+    await mkdir(vaultDirectory, { recursive: true });
+    await writeFile(
+      join(vaultDirectory, "vault.json"),
+      JSON.stringify({
+        id: "secrets",
+        display_name: "Secrets",
+        credentials: [
+          {
+            name: "service",
+            type: "environment_variable",
+            secret_name: "SERVICE_TOKEN",
+            secret_value: "e2e-vault-private-value",
+          },
+        ],
+      }),
+    );
+    const dryBuild = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "project",
+      "build",
+      "--project",
+      projectRoot,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(dryBuild.exitCode, dryBuild.stderr).toBe(0);
+    expect(dryBuild.stdout + dryBuild.stderr).not.toContain("e2e-vault-private-value");
+    expect(dryBuild.stdout).toContain("AGENTS_VAULT_");
+    expect(await stat(join(projectRoot, ".env")).catch(() => null)).toBeNull();
+
+    const built = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "project",
+      "build",
+      "--project",
+      projectRoot,
+      "--yes",
+      "--output",
+      "json",
+    ]);
+    expect(built.exitCode, built.stderr).toBe(0);
+    const generatedYaml = await readFile(
+      join(projectRoot, ".openagentpack/build/agents.yaml"),
+      "utf8",
+    );
+    expect(generatedYaml).not.toContain("example-");
+    expect(generatedYaml).not.toContain("_examples");
+    expect(generatedYaml).not.toContain("$" + "{SERVICE_TOKEN}");
+    expect(built.stdout + built.stderr).not.toContain("e2e-vault-private-value");
+    expect(await readFile(join(projectRoot, ".env"), "utf8")).toContain("e2e-vault-private-value");
+    expect(await readFile(join(vaultDirectory, "vault.json"), "utf8")).not.toContain(
+      "e2e-vault-private-value",
+    );
+    expect(
+      await readFile(join(projectRoot, ".openagentpack/build/agents.yaml"), "utf8"),
+    ).not.toContain("e2e-vault-private-value");
+    expect(await readFile(join(projectRoot, ".openagentpack/build/agents.yaml"), "utf8")).toContain(
+      "assistant",
+    );
+    expect(await readFile(join(projectRoot, ".openagentpack/build/agents.yaml"), "utf8")).toContain(
+      "provider: bailian",
+    );
+    expect(JSON.parse(await readFile(join(skillDirectory, "skill.json"), "utf8"))).toEqual({
+      id: "writer",
+    });
+    expect(JSON.parse(await readFile(join(filesDirectory, "brief/file.json"), "utf8"))).toEqual({
+      id: "brief",
+      name: "brief.txt",
+      source: "./brief.txt",
+    });
+    expect(JSON.parse(await readFile(join(nestedFileDirectory, "file.json"), "utf8"))).toEqual({
+      id: "mount",
+      name: "mount.md",
+      source: "./mount.md",
+    });
+    const builtAgent = JSON.parse(
+      await readFile(join(projectRoot, "agents/assistant/agent.json"), "utf8"),
+    );
+    expect(builtAgent.skills).toEqual(["writer"]);
+    expect(builtAgent.files).toEqual(
+      expect.arrayContaining([
+        { file: "brief", mount_path: "/mnt/brief.txt" },
+        { file: "mount", mount_path: "/mnt/mount.md" },
+      ]),
+    );
+
+    const status = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "project",
+      "version",
+      "status",
+      "--project",
+      projectRoot,
+      "--output",
+      "json",
+    ]);
+    expect(status.exitCode, status.stderr).toBe(0);
+    expect(parseStdoutJson<{ enabled?: boolean }>(status.stdout).enabled).toBe(true);
+    expect(await stat(join(projectRoot, ".openagentpack/state.json")).catch(() => null)).toBeNull();
+  });
+
+  test("managed-agent project version preview 缺少 --version-id 时退出为用法错误 (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "project",
+      "version",
+      "preview",
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--version-id|Missing required/i);
   });
 
   test("managed-agent apply 计划失败时在最终错误中保留首条诊断和剩余数量", async () => {
@@ -1289,6 +1506,29 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
     expect(data.provider).toBe("bailian");
   });
 
+  test("project workbench --dry-run 仅输出目录项目启动计划", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "project",
+      "workbench",
+      "--dry-run",
+      "--project",
+      "./agent-project",
+      "--no-open",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      would_launch?: string;
+      project_root?: string;
+      port?: number;
+    }>(stdout);
+    expect(data.would_launch).toBe("workbench");
+    expect(data.project_root).toBe("./agent-project");
+    expect(data.port).toBe(4848);
+  });
+
   test("init 不再接受 --provider", async () => {
     const { stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
@@ -1299,6 +1539,27 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
     ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/Unknown flag.*--provider/i);
+  });
+
+  test("project init --dry-run 不需要密钥且不创建目录", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "bailian-managed-agent-project-dry-run-"));
+    projectDirectories.push(parent);
+    const projectRoot = join(parent, "project");
+    const { stdout, stderr, exitCode } = await runCommandE2e(MANAGED_AGENT_ROUTES, [
+      "managed-agent",
+      "project",
+      "init",
+      "--dry-run",
+      "--project",
+      projectRoot,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(
+      parseStdoutJson<{ would_initialize_project?: string }>(stdout).would_initialize_project,
+    ).toBe(projectRoot);
+    expect(await stat(projectRoot).catch(() => null)).toBeNull();
   });
 
   test("apply --dry-run 仅输出计划", async () => {
