@@ -1,12 +1,14 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
+import { promisify } from "node:util";
 import { BailianError, type Client, ExitCode, type Settings } from "bailian-cli-core";
 import { emitBare } from "bailian-cli-runtime";
 
 const PLAYGROUND_PACKAGE = "@openagentpack/playground";
+const execFileAsync = promisify(execFile);
 const DEFAULT_PORT = 4848;
 const PLAYGROUND_URL_PATTERN = /running at http:\/\/localhost:(\d+)/i;
 
@@ -56,7 +58,7 @@ export async function launchManagedAgentPlayground(
     options.surface === "workbench" ? (options.project ?? ".") : (options.file ?? "agents.yaml"),
   );
   const projectId = createHash("sha256").update(sourcePath).digest("hex").slice(0, 16);
-  const launcher = resolveLauncher();
+  const launcher = await resolveLauncher();
   const existing = await probeExistingPlayground(port);
   if (existing) {
     const reusable =
@@ -147,7 +149,7 @@ function assertSupportedNodeVersion(): void {
   );
 }
 
-function resolveLauncher(): Launcher {
+export async function resolveLauncher(): Promise<Launcher> {
   const explicit =
     process.env.BAILIAN_MANAGED_AGENT_PLAYGROUND_BIN?.trim() ||
     process.env.AGENTS_PLAYGROUND_BIN?.trim();
@@ -161,21 +163,67 @@ function resolveLauncher(): Launcher {
     return { command: process.execPath, args: [explicit], fetched: false };
   }
 
-  const installed = resolveInstalledPlayground();
-  if (installed) return installed;
-
-  const monorepoBinary = findLocalPlaygroundBin(process.cwd());
-  if (monorepoBinary) {
-    return { command: process.execPath, args: [monorepoBinary], fetched: false };
+  const requestedVersion = process.env.BAILIAN_MANAGED_AGENT_PLAYGROUND_VERSION?.trim() || "latest";
+  const { stdout } = await execFileAsync(
+    "npm",
+    [
+      "view",
+      `${PLAYGROUND_PACKAGE}@${requestedVersion}`,
+      "version",
+      "--json",
+      "--prefer-online",
+      "--fetch-retries=0",
+      "--fetch-timeout=10000",
+    ],
+    { timeout: 15_000, maxBuffer: 1024 * 1024 },
+  );
+  let resolvedVersion: unknown;
+  try {
+    resolvedVersion = JSON.parse(stdout);
+  } catch {
+    resolvedVersion = undefined;
+  }
+  if (
+    typeof resolvedVersion !== "string" ||
+    !/^\d+\.\d+\.\d+(?:-[\da-zA-Z.-]+)?(?:\+[\da-zA-Z.-]+)?$/.test(resolvedVersion)
+  ) {
+    throw new BailianError(
+      "npm did not return a single valid Playground version. Specify an exact version or dist-tag. / npm 未返回唯一有效的 Playground 版本号。请指定精确版本或 dist-tag。",
+      ExitCode.GENERAL,
+    );
   }
 
-  const requestedVersion = process.env.BAILIAN_MANAGED_AGENT_PLAYGROUND_VERSION?.trim() || "latest";
+  const installed = resolveInstalledPlayground();
+  if (installed?.version === resolvedVersion) return installed;
+
+  const monorepoBinary = findLocalPlaygroundBin(process.cwd());
+  if (
+    monorepoBinary &&
+    readPlaygroundVersion(resolve(dirname(monorepoBinary), "../../package.json")) ===
+      resolvedVersion
+  ) {
+    return {
+      command: process.execPath,
+      args: [monorepoBinary],
+      version: resolvedVersion,
+      fetched: false,
+    };
+  }
+
   return {
     command: "npx",
-    args: ["-y", `${PLAYGROUND_PACKAGE}@${requestedVersion}`],
-    version: requestedVersion === "latest" ? undefined : requestedVersion,
+    args: ["-y", `${PLAYGROUND_PACKAGE}@${resolvedVersion}`],
+    version: resolvedVersion,
     fetched: true,
   };
+}
+
+function readPlaygroundVersion(manifestPath: string): string | undefined {
+  try {
+    return (JSON.parse(readFileSync(manifestPath, "utf8")) as { version?: string }).version;
+  } catch {
+    return undefined;
+  }
 }
 
 function resolveInstalledPlayground(): Launcher | undefined {
