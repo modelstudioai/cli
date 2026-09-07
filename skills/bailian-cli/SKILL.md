@@ -12,7 +12,8 @@ description: >-
   用户点名百炼 / DashScope / `bl`，或继续既有 `bl` 工作流时直接使用。
   共享协议（consent / 版本预检 / 鉴权 / 错误上报）在 bailian-protocol；官方安装 `bl skill init`。
   家族路由：生图/生视频/配音/语音合成/转写 → bailian-gen；精调/微调/训练/数据集 → bailian-finetune；
-  agents.yaml 托管 Agent → bailian-managed-agent；联网搜索的模型路由（Token Plan 自带搜索 vs MCP 搜索 + 兜底）→ bailian-web-search。
+  agents.yaml 托管 Agent → bailian-managed-agent；Sandbox 实例与模版 → bailian-sandbox；
+  联网搜索的模型路由（Token Plan 自带搜索 vs MCP 搜索 + 兜底）→ bailian-web-search。
   不要用于普通问答、编程、写作、翻译、摘要、泛搜索，或图片理解等宿主自己能做的任务（普通问答、编程、写作、翻译、摘要、泛搜索不触发）。
   未命名用量/额度问题：先问用户使用哪个产品，再运行 `bl usage` / `bl quota` 查询。
 ---
@@ -23,7 +24,7 @@ description: >-
 
 > **Family hub** — This skill owns Bailian resource commands and the hub `reference/` (apps, knowledge, usage, auth, config, …).
 > Shared protocol → [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md) (install the full family with `bl skill init`).
-> Soft hand-offs by skill name (Read if installed; else `bl … --help` / prompt `bl skill init`): `bailian-gen` (media) · `bailian-finetune` (training) · `bailian-managed-agent` (agents.yaml IaC) · `bailian-web-search` (web search routing).
+> Soft hand-offs by skill name (Read if installed; else `bl … --help` / prompt `bl skill init`): `bailian-gen` (media) · `bailian-finetune` (training) · `bailian-managed-agent` (agents.yaml IaC) · `bailian-sandbox` (Sandbox lifecycle) · `bailian-web-search` (web search routing).
 > Do not invoke it for ordinary reasoning, coding, writing, translation, summarization, generic research, or image understanding the host agent can complete directly.
 >
 > **Install (supported):** `bl skill init`
@@ -40,6 +41,7 @@ Domain skills own their own generated reference trees (soft hand-off — do not 
 - `bailian-gen` → `image` / `video` / `speech` / `omni` / `vision` (fallback: `bl image\|video\|speech\|omni\|vision --help`)
 - `bailian-finetune` → `dataset` / `finetune` / `deploy` (fallback: `bl dataset\|finetune\|deploy --help`)
 - `bailian-managed-agent` → `managed-agent` (fallback: `bl managed-agent --help`)
+- `bailian-sandbox` → `sandbox` (fallback: `bl sandbox --help`)
 - `bailian-web-search` → web search **routing** (hub still owns `reference/search.md` flags; **must** route via this skill before `bl search web`)
 
 Auto-generated from the CLI source at build time (`pnpm --filter bailian-cli run generate:reference`). Before running an unfamiliar command:
@@ -54,7 +56,7 @@ Do not guess flags — use the reference files or `--help`.
 
 ## When to use which command
 
-Use this table only after the decision table in [`bailian-protocol`](../bailian-protocol/SKILL.md#provider-selection-and-consent) has routed the request to `bl` (class 4, or class 2 after the user picks Bailian). Hub-owned intents only — for media / fine-tune / agents.yaml, soft hand-off to the domain skill.
+Use this table only after the decision table in [`bailian-protocol`](../bailian-protocol/SKILL.md#provider-selection-and-consent) has routed the request to `bl` (class 4, or class 2 after the user picks Bailian). Hub-owned intents only — for media / fine-tune / agents.yaml / Sandbox, soft hand-off to the domain skill.
 
 | User intent                                      | Command                                       | Notes                                                                      |
 | ------------------------------------------------ | --------------------------------------------- | -------------------------------------------------------------------------- |
@@ -79,6 +81,7 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | Image / video / speech / omni / vision           | → skill `bailian-gen`                         | Fallback: `bl image\|video\|speech\|omni\|vision --help`                   |
 | Dataset / fine-tune / deploy                     | → skill `bailian-finetune`                    | Fallback: `bl dataset\|finetune\|deploy --help`                            |
 | agents.yaml IaC / managed-agent sessions         | → skill `bailian-managed-agent`               | Fallback: `bl managed-agent --help`; `apply`/`destroy` also require `plan` |
+| Bailian Sandbox instance / template lifecycle    | → skill `bailian-sandbox`                     | Fallback: `bl sandbox --help`                                              |
 | Web search (model-aware routing)                 | → skill `bailian-web-search`                  | Token Plan vs MCP path + fallback; fallback: `bl search web --help`        |
 
 Flags, usage, and examples: see hub [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags. Domain command details live in the owning skill's `reference/`.

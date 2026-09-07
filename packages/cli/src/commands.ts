@@ -194,6 +194,19 @@ import {
   managedAgentFileSearch,
   managedAgentFileDownload,
   managedAgentFileDelete,
+  sandboxCreate,
+  sandboxList,
+  sandboxGet,
+  sandboxConnect,
+  sandboxPause,
+  sandboxResume,
+  sandboxDelete,
+  sandboxTemplateCreate,
+  sandboxTemplateList,
+  sandboxTemplateGet,
+  sandboxTemplateUpdate,
+  sandboxTemplateBuildStatus,
+  sandboxTemplateDelete,
 } from "bailian-cli-commands";
 
 // Full bailian-cli product: every command, exposed under the `bl` binary.
@@ -399,6 +412,19 @@ export const commands: Record<string, AnyCommand> = {
   "managed-agent file search": managedAgentFileSearch,
   "managed-agent file download": managedAgentFileDownload,
   "managed-agent file delete": managedAgentFileDelete,
+  "sandbox create": sandboxCreate,
+  "sandbox list": sandboxList,
+  "sandbox get": sandboxGet,
+  "sandbox connect": sandboxConnect,
+  "sandbox pause": sandboxPause,
+  "sandbox resume": sandboxResume,
+  "sandbox delete": sandboxDelete,
+  "sandbox template create": sandboxTemplateCreate,
+  "sandbox template list": sandboxTemplateList,
+  "sandbox template get": sandboxTemplateGet,
+  "sandbox template update": sandboxTemplateUpdate,
+  "sandbox template build-status": sandboxTemplateBuildStatus,
+  "sandbox template delete": sandboxTemplateDelete,
 };
 
 /**

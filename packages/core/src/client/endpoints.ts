@@ -226,6 +226,45 @@ export function ragEndpoint(workspaceId: string, path: string): string {
   return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com${path}`;
 }
 
+// ---- Sandbox control plane (workspace-based host, cn-beijing only) ----
+
+/**
+ * Build an absolute Bailian Sandbox control-plane URL.
+ *
+ * Sandbox currently supports cn-beijing only. Keep the workspace-specific host
+ * centralized here so commands never hard-code API endpoints.
+ */
+export function sandboxEndpoint(workspaceId: string, path: string): string {
+  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio/sandbox${path}`;
+}
+
+export const SANDBOX_PATHS = {
+  sandboxes: "/sandboxes",
+  sandboxList: "/v2/sandboxes",
+  templates: "/templates",
+  templateCreate: "/v3/templates",
+  templateList: "/v2/templates",
+} as const;
+
+export function sandboxInstancePath(sandboxId: string): string {
+  return `${SANDBOX_PATHS.sandboxes}/${encodeURIComponent(sandboxId)}`;
+}
+
+export function sandboxInstanceActionPath(
+  sandboxId: string,
+  action: "connect" | "pause" | "resume",
+): string {
+  return `${sandboxInstancePath(sandboxId)}/${action}`;
+}
+
+export function sandboxTemplatePath(templateId: string): string {
+  return `${SANDBOX_PATHS.templates}/${encodeURIComponent(templateId)}`;
+}
+
+export function sandboxTemplateBuildStatusPath(templateId: string, buildId: string): string {
+  return `${sandboxTemplatePath(templateId)}/builds/${encodeURIComponent(buildId)}/status`;
+}
+
 export const RAG_PATHS = {
   // indices domain — knowledge bases / documents / chunks / import jobs.
   // Note: parameter naming is inconsistent across endpoints; see per-path comments.

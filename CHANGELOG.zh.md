@@ -6,6 +6,16 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [未发布]
+
+### 新增
+
+- **Sandbox 管控面命令** —— 新增 `bl sandbox` 实例与模版生命周期命令，覆盖百炼 Sandbox 的 13 个 REST API；模版构建默认等待完成，也可通过 `--async` 仅提交并立即返回。
+
+### 安全
+
+- Sandbox 调用使用百炼 API Key 作为 Bearer Token，不依赖 E2B SDK，也不发送 E2B API Key。连接凭据和 dry-run 中的环境变量默认脱敏；仅在确实需要原始连接 Token 时使用 `--show-credentials`。
+
 ## [1.20.0] - 2026-09-03
 
 > Managed Agent 现在同时提供 YAML-first 基础设施管理与百炼 AgentStudio 资源、运行时 API 操作。
