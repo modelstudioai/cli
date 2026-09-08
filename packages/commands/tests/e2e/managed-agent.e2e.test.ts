@@ -368,7 +368,6 @@ describe("e2e: managed-agent", () => {
       "build",
       "--project",
       projectRoot,
-      "--yes",
       "--output",
       "json",
     ]);
