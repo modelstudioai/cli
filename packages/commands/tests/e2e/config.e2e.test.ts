@@ -64,10 +64,53 @@ describe("e2e: config", () => {
       config_file?: string;
       base_url?: string;
       timeout?: number;
+      watermark?: boolean;
     }>(stdout);
     expect(data.config_file).toBeDefined();
     expect(data.base_url).toBeDefined();
     expect(data.timeout).toBeDefined();
+    expect(data.watermark).toBe(true);
+  });
+
+  test("config set 将 watermark 作为 boolean 写入并由 config show 读回", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "bl-config-watermark-"));
+    try {
+      const env = { BAILIAN_CONFIG_DIR: configDir };
+      const setResult = await runCommandE2e(
+        CONFIG_ROUTES,
+        [
+          "config",
+          "set",
+          "--config",
+          "media",
+          "--key",
+          "watermark",
+          "--value",
+          "false",
+          "--output",
+          "json",
+        ],
+        env,
+      );
+      expect(setResult.exitCode, setResult.stderr).toBe(0);
+      expect(parseStdoutJson<{ watermark?: boolean }>(setResult.stdout).watermark).toBe(false);
+
+      const persisted = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
+        string,
+        Record<string, unknown>
+      >;
+      expect(persisted.media?.watermark).toBe(false);
+
+      const showResult = await runCommandE2e(
+        CONFIG_ROUTES,
+        ["config", "show", "--config", "media", "--output", "json"],
+        env,
+      );
+      expect(showResult.exitCode, showResult.stderr).toBe(0);
+      expect(parseStdoutJson<{ watermark?: boolean }>(showResult.stdout).watermark).toBe(false);
+    } finally {
+      rmSync(configDir, { recursive: true, force: true });
+    }
   });
 
   test("config show --output text", async () => {

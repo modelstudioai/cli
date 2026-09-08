@@ -34,7 +34,7 @@ export function resolveBooleanFlag(
   return defaultWhenUnset;
 }
 
-/** Resolve `--watermark` flag; default true when unset. */
-export function resolveWatermark(flagValue: unknown): boolean {
-  return parseOptionalBooleanValue(flagValue, "watermark") ?? true;
+/** Resolve `--watermark`; command flag overrides config, then defaults to true. */
+export function resolveWatermark(flagValue: unknown, configuredValue?: boolean): boolean {
+  return parseOptionalBooleanValue(flagValue, "watermark") ?? configuredValue ?? true;
 }

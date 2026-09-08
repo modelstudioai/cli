@@ -1,8 +1,9 @@
 /** Shared --foo <bool> help text; keep wording consistent with actual CLI/request behavior. */
 
 export const BOOL_FLAG_WATERMARK = {
-  "en-US": "Enable watermark (true/false). Omit flag to use CLI default (true).",
-  "zh-CN": "是否启用水印（true/false）。不传时使用 CLI 默认值 true。",
+  "en-US":
+    "Enable watermark (true/false). Omit flag to use the Profile setting or CLI default (true).",
+  "zh-CN": "是否启用水印（true/false）。不传时使用 Profile 配置或 CLI 默认值 true。",
 };
 
 /** CLI sends prompt_extend=true when flag omitted (qwen-image edit, etc.). */
