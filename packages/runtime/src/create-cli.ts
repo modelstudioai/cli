@@ -217,7 +217,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             parsedFlags,
             Object.keys(res.command.flags ?? {}),
           ) as ParsedFlags<FlagsDef>;
-          const invalid = res.command.validate?.(ownFlags);
+          const invalid = await res.command.validate?.(ownFlags);
           if (invalid) throw new UsageError(invalid);
 
           // 校验通过 → 建源、解析 settings、组 ctx,进中间件执行命令。
