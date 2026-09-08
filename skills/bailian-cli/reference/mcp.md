@@ -7,11 +7,13 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command        | Authentication | Description                                           |
-| -------------- | -------------- | ----------------------------------------------------- |
-| `bl mcp call`  | API Key        | Call a tool on an MCP server (tools/call)             |
-| `bl mcp list`  | Console        | List MCP servers activated under your Bailian account |
-| `bl mcp tools` | API Key        | List tools exposed by an MCP server (tools/list)      |
+| Command             | Authentication | Description                                                            |
+| ------------------- | -------------- | ---------------------------------------------------------------------- |
+| `bl mcp call`       | API Key        | Call a tool on an MCP server (tools/call)                              |
+| `bl mcp connect`    | API Key        | Register a Bailian MCP server in an Agent's native configuration       |
+| `bl mcp disconnect` | No Auth        | Remove an unchanged MCP registration previously managed by bailian-cli |
+| `bl mcp list`       | Console        | List MCP servers activated under your Bailian account                  |
+| `bl mcp tools`      | API Key        | List tools exposed by an MCP server (tools/list)                       |
 
 ## Command details
 
@@ -48,6 +50,74 @@ bl mcp call --target market-cmapi00073529.FinQuery --json '{"q":"Guizhou Maotai"
 
 ```bash
 bl mcp call --target market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 --arg minScale=10
+```
+
+### `bl mcp connect`
+
+| Field              | Value                                                                                    |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| **Name**           | `mcp connect`                                                                            |
+| **Description**    | Register a Bailian MCP server in an Agent's native configuration                         |
+| **Authentication** | API Key                                                                                  |
+| **Usage**          | `bl mcp connect --server <code> --transport <streamable-http\|sse> --agent <agent\|all>` |
+
+#### Flags
+
+| Flag                                                   | Type   | Required | Description                                                 |
+| ------------------------------------------------------ | ------ | -------- | ----------------------------------------------------------- |
+| `--server <code>`                                      | string | yes      | Bailian MCP Server Code, such as TextGenerateImage          |
+| `--transport <streamable-http\|sse>`                   | string | yes      | MCP transport exposed by the server: streamable-http or sse |
+| `--agent <codex\|claude-code\|qwen-code\|gemini\|all>` | string | yes      | Target Agent: codex, claude-code, qwen-code, gemini, all    |
+| `--api-key <key>`                                      | string | no       | API key                                                     |
+| `--base-url <url>`                                     | string | no       | API base URL                                                |
+
+#### Notes
+
+- This release registers the official China-site MCP endpoint; the model API --base-url does not change the MCP endpoint.
+- The resolved API key is written to the selected Agent's private local configuration. Existing unmanaged entries are never overwritten.
+
+#### Examples
+
+```bash
+bl mcp connect --server TextGenerateImage --transport streamable-http --agent codex
+```
+
+```bash
+bl mcp connect --server VideoGenerate --transport sse --agent claude-code
+```
+
+```bash
+bl mcp connect --server TextGenerateImage --transport streamable-http --agent all
+```
+
+### `bl mcp disconnect`
+
+| Field              | Value                                                                  |
+| ------------------ | ---------------------------------------------------------------------- |
+| **Name**           | `mcp disconnect`                                                       |
+| **Description**    | Remove an unchanged MCP registration previously managed by bailian-cli |
+| **Authentication** | No Auth                                                                |
+| **Usage**          | `bl mcp disconnect --server <code> --agent <agent\|all>`               |
+
+#### Flags
+
+| Flag                                                   | Type   | Required | Description                                              |
+| ------------------------------------------------------ | ------ | -------- | -------------------------------------------------------- |
+| `--server <code>`                                      | string | yes      | Bailian MCP Server Code used during connect              |
+| `--agent <codex\|claude-code\|qwen-code\|gemini\|all>` | string | yes      | Target Agent: codex, claude-code, qwen-code, gemini, all |
+
+#### Notes
+
+- A registration changed after connect is left untouched and reported as a conflict.
+
+#### Examples
+
+```bash
+bl mcp disconnect --server TextGenerateImage --agent codex
+```
+
+```bash
+bl mcp disconnect --server TextGenerateImage --agent all
 ```
 
 ### `bl mcp list`

@@ -76,6 +76,8 @@ export const SPEECH_ROUTES: E2eRouteExports = {
 
 export const MCP_ROUTES: E2eRouteExports = {
   "mcp call": "mcpCall",
+  "mcp connect": "mcpConnect",
+  "mcp disconnect": "mcpDisconnect",
   "mcp list": "mcpList",
   "mcp tools": "mcpTools",
 };

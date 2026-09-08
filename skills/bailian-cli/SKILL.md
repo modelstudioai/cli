@@ -68,6 +68,7 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | Bailian model catalog / pricing / params         | `bl model list`                               | Console auth; `--model <family>` for detail, `--enrich` for input params         |
 | Install / list / update / remove registry skills | `bl skill add` / `list` / `update` / `remove` | Bailian skill registry; see [`reference/skill.md`](reference/skill.md)           |
 | Bailian MCP marketplace discovery / call         | `bl mcp list` / `tools` / `call`              | —                                                                                |
+| Register or remove a Bailian MCP in an Agent     | `bl mcp connect` / `disconnect`               | Codex, Claude Code, Qwen Code, and Gemini CLI                                    |
 | Bailian pipeline workflow (a step in a bl flow)  | `bl pipeline run` / `validate`                | JSON/YAML workflow definitions                                                   |
 | Bailian rate limits / quota                      | `bl quota list` / `check` / `request`         | Console auth; class 2 — ask which product first if unnamed                       |
 | Bailian free tier / usage stats                  | `bl usage free` / `stats` / `freetier`        | Console auth; class 2 — ask which product first if unnamed                       |

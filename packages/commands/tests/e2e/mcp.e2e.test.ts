@@ -1,3 +1,7 @@
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { parse as parseToml } from "smol-toml";
 import { describe, expect, test } from "vite-plus/test";
 import { isDashScopeE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { MCP_ROUTES } from "./topic-routes.ts";
@@ -33,6 +37,148 @@ describe("e2e: mcp", () => {
     const { stderr, exitCode } = await runCommandHelp(MCP_ROUTES, ["mcp", "call", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/call|--target|--arg|--json/i);
+  });
+
+  test("mcp connect/disconnect --help 展示原生 Agent 注册参数", async () => {
+    const connect = await runCommandHelp(MCP_ROUTES, ["mcp", "connect", "--help"]);
+    expect(connect.exitCode, connect.stderr).toBe(0);
+    expect(connect.stderr).toMatch(/--server|--transport|streamable-http|--agent/i);
+
+    const disconnect = await runCommandHelp(MCP_ROUTES, ["mcp", "disconnect", "--help"]);
+    expect(disconnect.exitCode, disconnect.stderr).toBe(0);
+    expect(disconnect.stderr).toMatch(/--server|--agent/i);
+  });
+
+  test("mcp connect 缺少必填参数时退出为用法错误 (2)", async () => {
+    for (const args of [
+      ["mcp", "connect", "--transport", "streamable-http", "--agent", "codex"],
+      ["mcp", "connect", "--server", "ImageGenerate", "--agent", "codex"],
+      ["mcp", "connect", "--server", "ImageGenerate", "--transport", "streamable-http"],
+    ]) {
+      const { exitCode } = await runCommandE2e(MCP_ROUTES, [...args, "--quiet"]);
+      expect(exitCode).toBe(2);
+    }
+  });
+
+  test("mcp connect --dry-run 输出端点和 Header 名但不写配置", async () => {
+    const tempHome = mkdtempSync(join(tmpdir(), "bl-mcp-connect-dry-"));
+    try {
+      const { stdout, stderr, exitCode } = await runCommandE2e(
+        MCP_ROUTES,
+        [
+          "mcp",
+          "connect",
+          "--server",
+          "ImageGenerate",
+          "--transport",
+          "streamable-http",
+          "--agent",
+          "codex",
+          "--base-url",
+          "https://custom-model-gateway.example.com",
+          "--dry-run",
+          "--output",
+          "json",
+        ],
+        {
+          HOME: tempHome,
+          CODEX_HOME: join(tempHome, ".codex"),
+          BAILIAN_CONFIG_DIR: join(tempHome, ".bailian"),
+        },
+      );
+      expect(exitCode, stderr).toBe(0);
+      const data = parseStdoutJson<{
+        server?: string;
+        transport?: string;
+        endpoint?: string;
+        header_names?: string[];
+      }>(stdout);
+      expect(data.server).toBe("ImageGenerate");
+      expect(data.transport).toBe("streamable-http");
+      expect(data.endpoint).toBe("https://dashscope.aliyuncs.com/api/v1/mcps/ImageGenerate/mcp");
+      expect(data.header_names).toEqual(
+        expect.arrayContaining([
+          "Authorization",
+          "x-dashscope-openapisource",
+          "x-dashscope-source-config",
+        ]),
+      );
+      expect(existsSync(join(tempHome, ".codex", "config.toml"))).toBe(false);
+    } finally {
+      rmSync(tempHome, { recursive: true, force: true });
+    }
+  });
+
+  test("mcp connect/disconnect 可在隔离 HOME 内完成 Codex 配置闭环", async () => {
+    const tempHome = mkdtempSync(join(tmpdir(), "bl-mcp-connect-write-"));
+    const codexDir = join(tempHome, ".codex");
+    const configDir = join(tempHome, ".bailian");
+    const configPath = join(codexDir, "config.toml");
+    mkdirSync(codexDir, { recursive: true });
+    writeFileSync(configPath, 'model = "gpt-5"\n');
+    const env = { HOME: tempHome, CODEX_HOME: codexDir, BAILIAN_CONFIG_DIR: configDir };
+
+    try {
+      const connected = await runCommandE2e(
+        MCP_ROUTES,
+        [
+          "mcp",
+          "connect",
+          "--server",
+          "ImageGenerate",
+          "--transport",
+          "streamable-http",
+          "--agent",
+          "codex",
+          "--api-key",
+          "sk-test-secret",
+          "--base-url",
+          "https://dashscope.aliyuncs.com",
+          "--output",
+          "json",
+        ],
+        env,
+      );
+      expect(connected.exitCode, connected.stderr).toBe(0);
+      const config = parseToml(readFileSync(configPath, "utf8")) as Record<string, unknown>;
+      expect(config.model).toBe("gpt-5");
+      expect((config.mcp_servers as Record<string, unknown>).ImageGenerate).toBeDefined();
+      expect(readFileSync(join(configDir, "mcp-registrations.json"), "utf8")).not.toContain(
+        "sk-test-secret",
+      );
+
+      const preview = await runCommandE2e(
+        MCP_ROUTES,
+        [
+          "mcp",
+          "disconnect",
+          "--server",
+          "ImageGenerate",
+          "--agent",
+          "codex",
+          "--dry-run",
+          "--output",
+          "json",
+        ],
+        env,
+      );
+      expect(preview.exitCode, preview.stderr).toBe(0);
+      expect(
+        (parseToml(readFileSync(configPath, "utf8")).mcp_servers as Record<string, unknown>)
+          .ImageGenerate,
+      ).toBeDefined();
+
+      const disconnected = await runCommandE2e(
+        MCP_ROUTES,
+        ["mcp", "disconnect", "--server", "ImageGenerate", "--agent", "codex", "--output", "json"],
+        env,
+      );
+      expect(disconnected.exitCode, disconnected.stderr).toBe(0);
+      const after = parseToml(readFileSync(configPath, "utf8")) as Record<string, unknown>;
+      expect((after.mcp_servers as Record<string, unknown>).ImageGenerate).toBeUndefined();
+    } finally {
+      rmSync(tempHome, { recursive: true, force: true });
+    }
   });
 
   test("mcp list --help 不暴露 --all 入口（市场全量已下线）", async () => {
