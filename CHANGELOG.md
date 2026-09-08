@@ -16,6 +16,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - Sandbox calls use the Bailian API Key as a Bearer token without an E2B SDK or E2B API key. Returned connection credentials and dry-run environment values are redacted by default; use `--show-credentials` only when the raw connection tokens are required.
 
+## [1.21.0] - 2026-09-07
+
+### Added
+
+- **Managed Agent directory projects** — initialize, validate, build, and publish local projects with Agent-scoped resource configuration and resource examples.
+- **Local project versions** — enable or disable snapshot versioning, list and preview history, and restore project files without Git.
+- **Project Workbench** — edit resources, review changes, publish updates, and manage local versions in a browser.
+
+### Changed
+
+- **Playground version resolution** — check npm before launch, reuse matching local versions, and fetch the latest version when needed; retain explicit version and binary overrides.
+- **Managed Agent SDK** — upgrade to `0.7.0` and consume project workspace and version services through SDK subpath exports.
+
 ## [1.20.0] - 2026-09-03
 
 > Managed Agents now combines YAML-first infrastructure management with direct Bailian AgentStudio resource and runtime operations.

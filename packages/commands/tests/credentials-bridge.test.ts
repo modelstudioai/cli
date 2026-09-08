@@ -104,6 +104,20 @@ test("inject:base_url 已带后缀不重复拼;非空字面量 base_url 保留",
   expect(literal.bailian.base_url).toBe("https://custom.example.com/api/v1/agentstudio");
 });
 
+test("inject:目录项目可强制使用 Bailian CLI 解析出的 base_url", () => {
+  const providers = {
+    bailian: {
+      api_key: "from-project-env",
+      base_url: "https://project-env.example.com/api/v1/agentstudio",
+    },
+  };
+  injectProviderCredentials(providers, makeHost({ apiCred: bailianCred() }), {
+    overrideBaseUrl: true,
+  });
+  expect(providers.bailian.api_key).toBe("sk-auth-chain");
+  expect(providers.bailian.base_url).toBe("https://dashscope.aliyuncs.com/api/v1/agentstudio");
+});
+
 test("inject:base_url 尾斜杠被规范化,不产生双斜杠", () => {
   const providers = { bailian: { api_key: "", base_url: "" } };
   injectProviderCredentials(
