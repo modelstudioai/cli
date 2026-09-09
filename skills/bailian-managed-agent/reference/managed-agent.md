@@ -1181,38 +1181,35 @@ bl managed-agent playground --file agents.yaml --no-open
 
 ### `bl managed-agent project build`
 
-| Field              | Value                                                                                                                     |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent project build`                                                                                             |
-| **Description**    | Organize directory source and generate the immutable Publish Build                                                        |
-| **Authentication** | No Auth                                                                                                                   |
-| **Usage**          | `bl managed-agent project build [--project <directory>]`                                                                  |
-| **Risk**           | `high`                                                                                                                    |
-| **Risk message**   | This organizes project source, moves literal Vault secrets into the local .env, and writes the previewed immutable Build. |
-
-> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+| Field              | Value                                                              |
+| ------------------ | ------------------------------------------------------------------ |
+| **Name**           | `managed-agent project build`                                      |
+| **Description**    | Organize directory source and generate the immutable Publish Build |
+| **Authentication** | No Auth                                                            |
+| **Usage**          | `bl managed-agent project build [--project <directory>]`           |
 
 #### Flags
 
 | Flag                    | Type   | Required | Description                                         |
 | ----------------------- | ------ | -------- | --------------------------------------------------- |
 | `--project <directory>` | string | no       | Directory project root (default: current directory) |
-| `--yes`                 | switch | no       | Confirm this high-risk operation                    |
+
+#### Notes
+
+- Build writes local project files without confirmation, including inferred resource associations and migration of plaintext Vault secrets into .env. Use --dry-run to preview without writing. Publish still requires explicit confirmation before remote changes.
 
 #### Examples
+
+```bash
+bl managed-agent project build
+```
 
 ```bash
 bl managed-agent project build --dry-run
 ```
 
 ```bash
-# Only after explicit user confirmation:
-bl managed-agent project build --yes
-```
-
-```bash
-# Only after explicit user confirmation:
-bl managed-agent project build --project ./my-agent --yes
+bl managed-agent project build --project ./my-agent
 ```
 
 ### `bl managed-agent project init`
@@ -1226,12 +1223,13 @@ bl managed-agent project build --project ./my-agent --yes
 
 #### Flags
 
-| Flag                    | Type   | Required | Description                                         |
-| ----------------------- | ------ | -------- | --------------------------------------------------- |
-| `--project <directory>` | string | no       | Directory project root (default: current directory) |
+| Flag                    | Type   | Required | Description                                                                   |
+| ----------------------- | ------ | -------- | ----------------------------------------------------------------------------- |
+| `--project <directory>` | string | no       | Directory project root (default: ./managed-agent under the current directory) |
 
 #### Notes
 
+- Without --project, creates a managed-agent/ subdirectory. Enter it before running other project commands. Use --project . to initialize in place or convert the current agents.yaml; existing project files are not overwritten.
 - New projects include Skill, File, Vault, and Environment examples under each resource directory's \_examples/. They are not referenced by agent.json and are excluded from Build/Publish. Copy an example outside \_examples/ to enable it, then configure its Agent reference.
 
 #### Examples
@@ -1242,6 +1240,10 @@ bl managed-agent project init
 
 ```bash
 bl managed-agent project init --project ./my-agent
+```
+
+```bash
+bl managed-agent project init --project .
 ```
 
 ### `bl managed-agent project publish`

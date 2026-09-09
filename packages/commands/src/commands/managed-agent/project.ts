@@ -1,3 +1,5 @@
+import { stat } from "node:fs/promises";
+import { join } from "node:path";
 import {
   BailianError,
   defineCommand,
@@ -14,6 +16,7 @@ import {
   planProjectPublish,
   previewProjectBuild,
   type ProjectBuildResolver,
+  resolveDirectoryProjectRoot,
   validateDirectoryProject,
 } from "@openagentpack/sdk/project-workspace";
 import { CREDENTIALS_NOTE, resolveAgentProjectConfig } from "./_engine/config-loader.ts";
@@ -44,9 +47,23 @@ export const managedAgentProjectInit = defineCommand({
   },
   auth: "none",
   usageArgs: "[--project <directory>]",
-  flags: PROJECT_FLAG,
-  exampleArgs: ["", "--project ./my-agent"],
+  flags: {
+    project: {
+      ...PROJECT_FLAG.project,
+      description: {
+        "en-US": "Directory project root (default: ./managed-agent under the current directory)",
+        "zh-CN": "目录项目根路径（默认：当前目录下的 ./managed-agent）",
+      },
+    },
+  },
+  exampleArgs: ["", "--project ./my-agent", "--project ."],
   notes: [
+    {
+      "en-US":
+        "Without --project, creates a managed-agent/ subdirectory. Enter it before running other project commands. Use --project . to initialize in place or convert the current agents.yaml; existing project files are not overwritten.",
+      "zh-CN":
+        "不传 --project 时创建 managed-agent/ 子目录；后续项目操作请先进入该目录。使用 --project . 可在当前目录初始化或转换 agents.yaml；不会覆盖已有项目文件。",
+    },
     {
       "en-US":
         "New projects include Skill, File, Vault, and Environment examples under each resource directory's _examples/. They are not referenced by agent.json and are excluded from Build/Publish. Copy an example outside _examples/ to enable it, then configure its Agent reference.",
@@ -55,16 +72,17 @@ export const managedAgentProjectInit = defineCommand({
     },
   ],
   async run(ctx) {
+    const projectRoot = ctx.flags.project ?? "./managed-agent";
     if (ctx.settings.dryRun) {
       emitResult(
         {
-          would_initialize_project: ctx.flags.project ?? ".",
+          would_initialize_project: projectRoot,
         },
         detectOutputFormat(ctx.settings.output),
       );
       return;
     }
-    const result = await initializeDirectoryProject({ projectRoot: ctx.flags.project ?? "." });
+    const result = await initializeDirectoryProject({ projectRoot });
     emitResult(result, detectOutputFormat(ctx.settings.output));
   },
 });
@@ -99,18 +117,34 @@ export const managedAgentProjectBuild = defineCommand({
     "zh-CN": "整理目录源文件并生成不可变的发布 Build",
   },
   auth: "none",
-  risk: {
-    level: "high",
-    message: {
+  notes: [
+    {
       "en-US":
-        "This organizes project source, moves literal Vault secrets into the local .env, and writes the previewed immutable Build.",
+        "Build writes local project files without confirmation, including inferred resource associations and migration of plaintext Vault secrets into .env. Use --dry-run to preview without writing. Publish still requires explicit confirmation before remote changes.",
       "zh-CN":
-        "该操作会整理项目源文件，将 Vault 明文密钥移入本地 .env，并写入已预览的不可变 Build。",
+        "Build 无需确认即可写入本地项目文件，包括推断的资源关联及将 Vault 明文密钥移入 .env。使用 --dry-run 可只预览不写入。Publish 变更远端资源前仍需显式确认。",
     },
-  },
+  ],
   usageArgs: "[--project <directory>]",
   flags: PROJECT_FLAG,
-  exampleArgs: ["--dry-run", "--yes", "--project ./my-agent --yes"],
+  exampleArgs: ["", "--dry-run", "--project ./my-agent"],
+  async validate(flags) {
+    await withAgentErrors(async () => {
+      const root = await resolveDirectoryProjectRoot(flags.project ?? ".");
+      const metadata = await stat(join(root, "project.json")).catch((error: unknown) => {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+        throw error;
+      });
+      if (!metadata?.isFile()) {
+        throw new BailianError(
+          `Not a project root: ${root} (project.json is missing).`,
+          ExitCode.USAGE,
+          "Run from the directory containing project.json, or pass --project <directory>.",
+        );
+      }
+    });
+    return undefined;
+  },
   async run(ctx) {
     const root = ctx.flags.project ?? ".";
     const preview = await previewProjectBuild(root);
@@ -120,7 +154,11 @@ export const managedAgentProjectBuild = defineCommand({
       return;
     }
     if (!preview.can_build)
-      throw new BailianError("Directory project is invalid and cannot be built.", ExitCode.GENERAL);
+      throw new BailianError(
+        preview.diagnostics.find((diagnostic) => diagnostic.severity === "error")?.message ??
+          "Directory project is invalid and cannot be built.",
+        ExitCode.GENERAL,
+      );
     const built = await commitProjectBuild({
       projectRoot: root,
       baseRevision: preview.project_revision,

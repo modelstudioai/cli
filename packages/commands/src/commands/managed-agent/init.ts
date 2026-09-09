@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import {
   BailianError,
   defineCommand,
@@ -87,7 +88,7 @@ export default defineCommand({
 
     if (existsSync(file) && !flags.force) {
       throw new BailianError(
-        `${file} already exists.`,
+        `${resolve(file)} already exists.`,
         ExitCode.USAGE,
         "Pass --force to overwrite.",
       );
@@ -128,7 +129,7 @@ export default defineCommand({
     if (format === "json") {
       emitResult({ created: file, provider: "bailian", agent: agentName }, format);
     } else {
-      emitBare(`Created ${file}`);
+      emitBare(`Created ${resolve(file)}`);
       emitBare(
         "Credentials: run `bl auth login --api-key <key> --base-url <url>`, or set DASHSCOPE_API_KEY / BAILIAN_BASE_URL.",
       );

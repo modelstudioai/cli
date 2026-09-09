@@ -287,8 +287,10 @@ export interface Command<F extends FlagsDef = FlagsDef> {
    * Cross-flag validation, after parsing and before run. Return an error message
    * → UsageError; undefined to pass. Single-flag `required` is enforced by the
    * parser — use this for rules spanning flags or depending on a flag's *value*.
+   * May be async for read-only local preflight. Runtime awaits it before auth
+   * and confirmation. Do not perform remote requests or local writes here.
    */
-  validate?: (flags: ParsedFlags<F>) => string | undefined;
+  validate?: (flags: ParsedFlags<F>) => string | undefined | Promise<string | undefined>;
   run: (ctx: CommandContext<F>) => Promise<void>;
 }
 

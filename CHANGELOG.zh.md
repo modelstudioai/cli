@@ -16,6 +16,23 @@
 
 - Sandbox 调用使用百炼 API Key 作为 Bearer Token，不依赖 E2B SDK，也不发送 E2B API Key。连接凭据和 dry-run 中的环境变量默认脱敏；仅在确实需要原始连接 Token 时使用 `--show-credentials`。
 
+## [1.22.0] - 2026-09-08
+
+### 变更
+
+- **项目初始化** —— `managed-agent project init` 默认创建 `./managed-agent` 子目录；如需原地初始化，请使用 `--project .`。**(BREAKING)**
+- **Build 确认机制** —— `managed-agent project build` 无需确认，并且不再接受 `--yes`。使用 `--dry-run` 可只读预览；Publish 仍需显式确认。**(BREAKING)**
+- **Managed Agent SDK** —— 升级至 `0.7.1`。Build 自动关联 Agent 目录下已启用的资源，保留显式引用、Skill 版本和 File 挂载路径；Environment 或 Vault 选择存在歧义时，在写入前报错。
+
+### 修复
+
+- **项目诊断** —— 提供可操作的项目根目录提示，并展示 Build 校验失败的具体原因。
+- **YAML 初始化路径** —— 创建成功及文件已存在的错误信息均展示 YAML 绝对路径。
+
+### 内部
+
+- 补充项目初始化和 Build 回归覆盖，移除本地闭环 E2E 测试中过时的 Build 确认参数。
+
 ## [1.21.0] - 2026-09-07
 
 ### 新增
