@@ -386,8 +386,10 @@ export const sandboxTemplateCreate = defineCommand({
         "--image 覆盖 body 中的 fromImage/imageName；显式 --from-image/--image-name 再覆盖对应预设字段。不传 --image 时保持原有镜像行为。",
     },
     {
-      "en-US": "File mounts and other complete nested structures can be supplied through --body.",
-      "zh-CN": "文件挂载等完整嵌套结构可通过 --body 提供。",
+      "en-US":
+        "For local file mounts, use sandbox file upload first; put the available file's id into --body mntConfig[].originFileId with mountPath and optional originFileName. Upload and template must use the same workspace. Other complete nested structures can also be supplied through --body.",
+      "zh-CN":
+        "挂载本地文件前先调用 sandbox file upload；将可用文件的 id 填入 --body 的 mntConfig[].originFileId，并传入 mountPath 和可选的 originFileName。上传和模版须位于同一工作空间。其他完整嵌套结构也可通过 --body 提供。",
     },
     {
       "en-US":
@@ -520,6 +522,12 @@ export const sandboxTemplateUpdate = defineCommand({
     {
       "en-US": "Supplying envConfig or --env replaces the template's complete environment map.",
       "zh-CN": "传入 envConfig 或 --env 会整体替换模版的环境变量 Map。",
+    },
+    {
+      "en-US":
+        "Use sandbox file upload for local mount files. In --body mntConfig[], set originFileId to the available file's id and supply mountPath; upload and template must use the same workspace.",
+      "zh-CN":
+        "本地挂载文件先通过 sandbox file upload 上传。在 --body 的 mntConfig[] 中，将 originFileId 设为可用文件的 id 并传入 mountPath；上传和模版须位于同一工作空间。",
     },
     {
       "en-US":

@@ -12,6 +12,7 @@ Index: [index.md](index.md)
 | `bl sandbox connect`               | API Key        | Connect to a Sandbox instance and return connection information |
 | `bl sandbox create`                | API Key        | Create a Sandbox instance                                       |
 | `bl sandbox delete`                | API Key        | Release a Sandbox instance                                      |
+| `bl sandbox file upload`           | API Key        | Upload a workspace file for Sandbox template mounts             |
 | `bl sandbox get`                   | API Key        | Get Sandbox instance details                                    |
 | `bl sandbox list`                  | API Key        | List Sandbox instances                                          |
 | `bl sandbox official-images`       | No Auth        | List the built-in Sandbox base images (offline)                 |
@@ -160,6 +161,47 @@ bl sandbox delete --sandbox-id sbx-xxx --dry-run
 ```bash
 # Only after explicit user confirmation:
 bl sandbox delete --sandbox-id sbx-xxx --yes
+```
+
+### `bl sandbox file upload`
+
+| Field              | Value                                                                           |
+| ------------------ | ------------------------------------------------------------------------------- |
+| **Name**           | `sandbox file upload`                                                           |
+| **Description**    | Upload a workspace file for Sandbox template mounts                             |
+| **Authentication** | API Key                                                                         |
+| **Usage**          | `bl sandbox file upload --path <path> [--filename <name>] [--mime-type <type>]` |
+
+#### Flags
+
+| Flag                  | Type   | Required | Description                                                                        |
+| --------------------- | ------ | -------- | ---------------------------------------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
+| `--path <path>`       | string | yes      | Local file path                                                                    |
+| `--filename <name>`   | string | no       | Remote filename override                                                           |
+| `--mime-type <type>`  | string | no       | Multipart file MIME type (default: application/octet-stream)                       |
+| `--api-key <key>`     | string | no       | API key                                                                            |
+| `--base-url <url>`    | string | no       | API base URL                                                                       |
+
+#### Notes
+
+- POST /api/v1/agentstudio/files with multipart fields file and source=sandbox_template. Uses a Bailian Bearer API Key, not Console authentication or an E2B key; no agents.yaml is needed.
+- Base URL follows Sandbox: --base-url > DASHSCOPE_BASE_URL > login/profile base_url. Without one, --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id selects the cn-beijing origin. The upload path has no /sandbox prefix.
+- Returns the upload response immediately; --quiet prints only its id. Upload does not wait for security review: status=checking is not ready to mount. Use an available file's id as mntConfig[].originFileId in template create/update --body, together with mountPath and optional originFileName, in the same workspace. This does not transfer files into a running instance.
+- --dry-run previews the endpoint, source, and local path without reading or uploading the file. The service detects the MIME type and enforces upload limits.
+
+#### Examples
+
+```bash
+bl sandbox file upload --path ./config.json --output json
+```
+
+```bash
+bl sandbox file upload --path ./config.json --quiet
+```
+
+```bash
+bl sandbox file upload --path ./notes.txt --filename notes.txt --mime-type text/plain --dry-run --output json
 ```
 
 ### `bl sandbox get`
@@ -433,7 +475,7 @@ bl sandbox template build-status --template-id tpl-xxx --build-id build-xxx --ou
 - browser (浏览器): Chromium and a visual desktop for clicking, filling forms, and screenshots. fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/browser:v0.0.44
 - all-in-one (全能型): Code execution and browser capabilities together. fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/all-in-one:v0.0.44
 - --image overrides body fromImage/imageName; explicit --from-image/--image-name override the corresponding preset fields. Without --image, image behavior is unchanged.
-- File mounts and other complete nested structures can be supplied through --body.
+- For local file mounts, use sandbox file upload first; put the available file's id into --body mntConfig[].originFileId with mountPath and optional originFileName. Upload and template must use the same workspace. Other complete nested structures can also be supplied through --body.
 - By default the command waits for build status ready; --async returns the submitted build immediately.
 
 #### Examples
@@ -616,6 +658,7 @@ bl sandbox template list --limit 100 --output json
 - all-in-one (全能型): Code execution and browser capabilities together. fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/all-in-one:v0.0.44
 - --image overrides body fromImage/imageName; explicit --from-image/--image-name override the corresponding preset fields. Without --image, image behavior is unchanged.
 - Supplying envConfig or --env replaces the template's complete environment map.
+- Use sandbox file upload for local mount files. In --body mntConfig[], set originFileId to the available file's id and supply mountPath; upload and template must use the same workspace.
 - By default the command waits for build status ready; --async returns the submitted build immediately.
 
 #### Examples

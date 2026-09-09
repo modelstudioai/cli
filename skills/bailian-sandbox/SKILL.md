@@ -6,7 +6,7 @@ metadata:
     bins: ["bl"]
 description: >-
   阿里云百炼 Sandbox 沙箱实例与模版生命周期管理入口：用户要创建、查询、连接、暂停、恢复或释放百炼沙箱，
-  或查看内置基础镜像、创建、更新、查询、删除沙箱模版、查看模版构建状态时，使用 `bl sandbox`。
+  或查看内置基础镜像、上传模版挂载文件、创建、更新、查询、删除沙箱模版、查看模版构建状态时，使用 `bl sandbox`。
   仅覆盖百炼 Sandbox 管控面；不用于宿主执行沙箱设置、E2B 官方云资源或沙箱内命令执行与文件传输。
   agents.yaml 托管 Agent / Session / Environment 管理交给 bailian-managed-agent。
   官方安装：`bl skill init`（与共享协议 bailian-protocol 同装）。
@@ -19,21 +19,22 @@ Before running `bl`, read the shared [bailian-protocol](../bailian-protocol/SKIL
 ## Scope and setup
 
 - Manage Sandbox instances and templates through Bailian's E2B-compatible REST control plane. No E2B SDK or E2B API key is required; authentication uses the Bailian API Key as an Authorization Bearer token.
-- Resolve Base URL through the same CLI chain as Managed Agent: `--base-url` > `DASHSCOPE_BASE_URL` > login/profile `base_url`. Use an origin such as `https://workspace.cn-beijing.maas.aliyuncs.com`; the CLI strips URL paths/query/fragment and appends `/api/v1/agentstudio/sandbox`. The saved API Key is reused. Profile capability fallback follows the shared protocol for both the key and Base URL.
+- Resolve Base URL through the same CLI chain as Managed Agent: `--base-url` > `DASHSCOPE_BASE_URL` > login/profile `base_url`. Use an origin such as `https://workspace.cn-beijing.maas.aliyuncs.com`; the CLI strips URL paths/query/fragment and appends `/api/v1/agentstudio/sandbox` for lifecycle operations, or `/api/v1/agentstudio/files` for template file uploads. The saved API Key is reused. Profile capability fallback follows the shared protocol for both the key and Base URL.
 - If no Base URL is configured, resolve the workspace from `--workspace-id`, then `BAILIAN_WORKSPACE_ID`, then configured `workspace_id`, and use `https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio/sandbox`. With a configured Base URL, the workspace flag is optional. The service currently supports `cn-beijing` and requires prior Sandbox SLR authorization.
 - No `agents.yaml` or local IaC state is required. `connect` returns instance connection information; it does not open an interactive shell. Do not invent commands for executing code or transferring files inside the sandbox.
 
 ## Choose the operation
 
-| User intent                           | Command family                                            |
-| ------------------------------------- | --------------------------------------------------------- |
-| Discover built-in base image presets  | `bl sandbox official-images` (offline, no authentication) |
-| Inspect or create instances           | `bl sandbox list` / `get` / `create`                      |
-| Connect, pause, or resume an instance | `bl sandbox connect` / `pause` / `resume`                 |
-| Release an instance                   | `bl sandbox delete`                                       |
-| Inspect or build templates            | `bl sandbox template list` / `get` / `create` / `update`  |
-| Check a submitted template build      | `bl sandbox template build-status`                        |
-| Delete a template                     | `bl sandbox template delete`                              |
+| User intent                             | Command family                                            |
+| --------------------------------------- | --------------------------------------------------------- |
+| Discover built-in base image presets    | `bl sandbox official-images` (offline, no authentication) |
+| Upload a local file for template mounts | `bl sandbox file upload`                                  |
+| Inspect or create instances             | `bl sandbox list` / `get` / `create`                      |
+| Connect, pause, or resume an instance   | `bl sandbox connect` / `pause` / `resume`                 |
+| Release an instance                     | `bl sandbox delete`                                       |
+| Inspect or build templates              | `bl sandbox template list` / `get` / `create` / `update`  |
+| Check a submitted template build        | `bl sandbox template build-status`                        |
+| Delete a template                       | `bl sandbox template delete`                              |
 
 Read [reference/index.md](reference/index.md) and the relevant section of [reference/sandbox.md](reference/sandbox.md) for exact flags, usage, and examples, or run the matching command with `--help`. Do not guess flags.
 
@@ -48,7 +49,8 @@ For built-in template images, discover the preset ID or Chinese name through `sa
 - Connection credentials are redacted by default. Use `--show-credentials` only when the user explicitly needs the connection tokens, and keep them out of chat summaries, logs, and committed files.
 - Template create/update wait by polling the build-status endpoint, not template details. `--async` returns after the submission response with `templateID` / `buildID`; it does not mean the build is ready. Use those IDs with `template build-status` to check completion.
 - Global `--timeout` limits HTTP requests and total template-build polling. `--instance-timeout` sets instance lifetime; these are different limits. A polling timeout does not prove the remote build failed or stopped; check its status before submitting another build.
-- `--body` accepts a JSON object inline or through `@path`; explicit flags override body fields. Template file mounts require workspace File IDs, not temporary `oss://` URLs from `bl file upload`.
+- `--body` accepts a JSON object inline or through `@path`; explicit flags override body fields. For local template mounts, first use `bl sandbox file upload`: it sends multipart `file` and fixed `source=sandbox_template` directly to `/api/v1/agentstudio/files` with the Bailian API Key. Use the returned `id` as `mntConfig[].originFileId`, with `mountPath` and optional `originFileName`, in template create/update `--body`. The upload and template must use the same workspace. This is not the temporary OSS upload from `bl file upload` or a transfer into a running instance.
+- File upload returns immediately after the upload response and does not poll security review. `status=checking` is not ready to mount; only use files whose status is `available`. `--quiet` returns the File ID only; inspect the normal/JSON response for status. Upload alone does not authorize creating a template or instance.
 
 ## Common hand-offs
 

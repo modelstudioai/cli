@@ -14,6 +14,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl sandbox connect`               | API Key        | Connect to a Sandbox instance and return connection information | [sandbox.md](sandbox.md) |
 | `bl sandbox create`                | API Key        | Create a Sandbox instance                                       | [sandbox.md](sandbox.md) |
 | `bl sandbox delete`                | API Key        | Release a Sandbox instance                                      | [sandbox.md](sandbox.md) |
+| `bl sandbox file upload`           | API Key        | Upload a workspace file for Sandbox template mounts             | [sandbox.md](sandbox.md) |
 | `bl sandbox get`                   | API Key        | Get Sandbox instance details                                    | [sandbox.md](sandbox.md) |
 | `bl sandbox list`                  | API Key        | List Sandbox instances                                          | [sandbox.md](sandbox.md) |
 | `bl sandbox official-images`       | No Auth        | List the built-in Sandbox base images (offline)                 | [sandbox.md](sandbox.md) |
@@ -28,9 +29,9 @@ Use this index for the skill-scoped quick index and global flags.
 
 ## By group
 
-| Group     | Commands                                                                                                                                                                                              | Reference                |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| `sandbox` | `connect`, `create`, `delete`, `get`, `list`, `official-images`, `pause`, `resume`, `template build-status`, `template create`, `template delete`, `template get`, `template list`, `template update` | [sandbox.md](sandbox.md) |
+| Group     | Commands                                                                                                                                                                                                             | Reference                |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `sandbox` | `connect`, `create`, `delete`, `file upload`, `get`, `list`, `official-images`, `pause`, `resume`, `template build-status`, `template create`, `template delete`, `template get`, `template list`, `template update` | [sandbox.md](sandbox.md) |
 
 ## Global flags
 

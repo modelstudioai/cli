@@ -18,6 +18,7 @@ export {
   profileSchemaPath,
   ragEndpoint,
   RAG_PATHS,
+  agentStudioFilesPath,
   sandboxEndpoint,
   sandboxBaseUrl,
   sandboxApiPath,

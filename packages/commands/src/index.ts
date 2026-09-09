@@ -224,6 +224,7 @@ export { default as skillRemove } from "./commands/skill/remove.ts";
 export { default as skillList } from "./commands/skill/list.ts";
 export { default as skillInit } from "./commands/skill/init.ts";
 export { sandboxOfficialImages } from "./commands/sandbox/images.ts";
+export { sandboxFileUpload } from "./commands/sandbox/file.ts";
 export {
   sandboxConnect,
   sandboxCreate,

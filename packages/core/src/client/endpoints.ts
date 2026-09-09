@@ -228,6 +228,11 @@ export function ragEndpoint(workspaceId: string, path: string): string {
 
 // ---- Sandbox control plane (workspace-based host, cn-beijing only) ----
 
+/** AgentStudio workspace files; template uploads send source=sandbox_template. */
+export function agentStudioFilesPath(): string {
+  return "/api/v1/agentstudio/files";
+}
+
 /** Default Sandbox origin when no shared base URL was configured (cn-beijing only). */
 export function sandboxBaseUrl(workspaceId: string): string {
   return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com`;

@@ -185,6 +185,7 @@ export const SKILL_ROUTES: E2eRouteExports = {
 export const SANDBOX_ROUTES: E2eRouteExports = {
   "sandbox create": "sandboxCreate",
   "sandbox official-images": "sandboxOfficialImages",
+  "sandbox file upload": "sandboxFileUpload",
   "sandbox list": "sandboxList",
   "sandbox get": "sandboxGet",
   "sandbox connect": "sandboxConnect",
