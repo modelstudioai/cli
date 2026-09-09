@@ -13,6 +13,7 @@ import {
   type Settings,
 } from "bailian-cli-core";
 import { createSpinner, emitBare, emitResult, formatTable } from "bailian-cli-runtime";
+import { resolveSandboxImage, SANDBOX_IMAGE_CHOICES, SANDBOX_IMAGE_NOTES } from "./images.ts";
 import {
   BODY_FLAG,
   displayValue,
@@ -69,6 +70,15 @@ const TEMPLATE_ID_FLAG = {
 } satisfies FlagsDef;
 
 const TEMPLATE_MUTATION_FIELDS = {
+  image: {
+    type: "string",
+    valueHint: "<preset>",
+    choices: SANDBOX_IMAGE_CHOICES,
+    description: {
+      "en-US": "Built-in image ID or Chinese name; fills fromImage and imageName",
+      "zh-CN": "内置镜像 ID 或中文名；自动填写 fromImage 和 imageName",
+    },
+  },
   name: {
     type: "string",
     valueHint: "<name>",
@@ -198,6 +208,11 @@ const BUILD_STATUS_FLAGS = {
 } satisfies FlagsDef;
 
 function applyTemplateMutationFlags(body: JsonObject, flags: CreateFlags | UpdateFlags): void {
+  if (flags.image !== undefined) {
+    const image = resolveSandboxImage(flags.image);
+    body.fromImage = image.imageUrl;
+    body.imageName = image.imageName;
+  }
   setDefined(body, "name", flags.name);
   setDefined(body, "cpuCount", flags.cpuCount);
   setDefined(body, "memoryMB", flags.memoryMb);
@@ -356,12 +371,20 @@ export const sandboxTemplateCreate = defineCommand({
   usageArgs: "(--name <name> --cpu-count <cores> --memory-mb <mb> | --body <json|@path>) [flags]",
   flags: CREATE_FLAGS,
   exampleArgs: [
+    "--name browser --image browser --cpu-count 1 --memory-mb 2048",
     "--name python --cpu-count 1 --memory-mb 2048",
     "--body @template.json --async --output json",
     "--name browser --cpu-count 4 --memory-mb 8192 --dry-run --output json",
   ],
   notes: [
     ...SANDBOX_NOTES,
+    ...SANDBOX_IMAGE_NOTES,
+    {
+      "en-US":
+        "--image overrides body fromImage/imageName; explicit --from-image/--image-name override the corresponding preset fields. Without --image, image behavior is unchanged.",
+      "zh-CN":
+        "--image 覆盖 body 中的 fromImage/imageName；显式 --from-image/--image-name 再覆盖对应预设字段。不传 --image 时保持原有镜像行为。",
+    },
     {
       "en-US": "File mounts and other complete nested structures can be supplied through --body.",
       "zh-CN": "文件挂载等完整嵌套结构可通过 --body 提供。",
@@ -480,12 +503,20 @@ export const sandboxTemplateUpdate = defineCommand({
   usageArgs: "--template-id <id> (--body <json|@path> | [fields])",
   flags: UPDATE_FLAGS,
   exampleArgs: [
+    "--template-id tpl-xxx --image all-in-one",
     "--template-id tpl-xxx --cpu-count 4 --memory-mb 8192",
     "--template-id tpl-xxx --body @template-update.json --async --output json",
     "--template-id tpl-xxx --description updated --dry-run --output json",
   ],
   notes: [
     ...SANDBOX_NOTES,
+    ...SANDBOX_IMAGE_NOTES,
+    {
+      "en-US":
+        "--image overrides body fromImage/imageName; explicit --from-image/--image-name override the corresponding preset fields. Without --image, image behavior is unchanged.",
+      "zh-CN":
+        "--image 覆盖 body 中的 fromImage/imageName；显式 --from-image/--image-name 再覆盖对应预设字段。不传 --image 时保持原有镜像行为。",
+    },
     {
       "en-US": "Supplying envConfig or --env replaces the template's complete environment map.",
       "zh-CN": "传入 envConfig 或 --env 会整体替换模版的环境变量 Map。",

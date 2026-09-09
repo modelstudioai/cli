@@ -14,6 +14,7 @@ Index: [index.md](index.md)
 | `bl sandbox delete`                | API Key        | Release a Sandbox instance                                      |
 | `bl sandbox get`                   | API Key        | Get Sandbox instance details                                    |
 | `bl sandbox list`                  | API Key        | List Sandbox instances                                          |
+| `bl sandbox official-images`       | No Auth        | List the built-in Sandbox base images (offline)                 |
 | `bl sandbox pause`                 | API Key        | Pause a Sandbox instance                                        |
 | `bl sandbox resume`                | API Key        | Resume a Sandbox instance and return connection information     |
 | `bl sandbox template build-status` | API Key        | Get Sandbox template build status                               |
@@ -241,6 +242,40 @@ bl sandbox list --state running --limit 20
 bl sandbox list --template-id tpl-xxx --output json
 ```
 
+### `bl sandbox official-images`
+
+| Field              | Value                                           |
+| ------------------ | ----------------------------------------------- |
+| **Name**           | `sandbox official-images`                       |
+| **Description**    | List the built-in Sandbox base images (offline) |
+| **Authentication** | No Auth                                         |
+| **Usage**          | `bl sandbox official-images`                    |
+
+#### Flags
+
+_No command-specific flags._
+
+#### Notes
+
+- Use a preset ID or Chinese name with template create/update --image. These are pinned cn-beijing images; other environments may differ. Use --from-image for a custom image.
+- code-interpreter (代码解释器): Python / Node.js runtimes with common data-processing libraries. fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/code-interpreter-v1:v0.0.44
+- browser (浏览器): Chromium and a visual desktop for clicking, filling forms, and screenshots. fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/browser:v0.0.44
+- all-in-one (全能型): Code execution and browser capabilities together. fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/all-in-one:v0.0.44
+
+#### Examples
+
+```bash
+bl sandbox official-images
+```
+
+```bash
+bl sandbox official-images --output json
+```
+
+```bash
+bl sandbox official-images --quiet
+```
+
 ### `bl sandbox pause`
 
 | Field              | Value                                |
@@ -364,27 +399,28 @@ bl sandbox template build-status --template-id tpl-xxx --build-id build-xxx --ou
 
 #### Flags
 
-| Flag                           | Type   | Required | Description                                                                        |
-| ------------------------------ | ------ | -------- | ---------------------------------------------------------------------------------- |
-| `--workspace-id <id>`          | string | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
-| `--body <json\|@path>`         | string | no       | JSON request body, inline or loaded from an @file path; explicit flags override it |
-| `--name <name>`                | string | no       | Template name                                                                      |
-| `--cpu-count <cores>`          | number | no       | vCPU count                                                                         |
-| `--memory-mb <mb>`             | number | no       | Memory in MB                                                                       |
-| `--from-image <image>`         | string | no       | Base image identifier                                                              |
-| `--image-name <name>`          | string | no       | Base image display name                                                            |
-| `--env <key=value>`            | array  | no       | Template environment variable; repeat for multiple values                          |
-| `--allow-out <address>`        | array  | no       | Outbound allow-list entry; repeat for multiple values                              |
-| `--deny-out <address>`         | array  | no       | Outbound deny-list entry; repeat for multiple values                               |
-| `--auto-pause-time <seconds>`  | number | no       | Automatically pause after 300-604800 seconds                                       |
-| `--max-running-time <seconds>` | number | no       | Maximum running lifetime in seconds (300-604800)                                   |
-| `--description <text>`         | string | no       | Template description                                                               |
-| `--tag <tag>`                  | array  | no       | E2B tag; repeat for multiple values                                                |
-| `--alias <alias>`              | string | no       | E2B template alias                                                                 |
-| `--async`                      | switch | no       | Return the submitted templateID/buildID immediately without polling                |
-| `--poll-interval <seconds>`    | number | no       | Template build polling interval (default: 5 seconds)                               |
-| `--api-key <key>`              | string | no       | API key                                                                            |
-| `--base-url <url>`             | string | no       | API base URL                                                                       |
+| Flag                                                                          | Type   | Required | Description                                                                        |
+| ----------------------------------------------------------------------------- | ------ | -------- | ---------------------------------------------------------------------------------- |
+| `--workspace-id <id>`                                                         | string | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
+| `--body <json\|@path>`                                                        | string | no       | JSON request body, inline or loaded from an @file path; explicit flags override it |
+| `--image <code-interpreter\|代码解释器\|browser\|浏览器\|all-in-one\|全能型>` | string | no       | Built-in image ID or Chinese name; fills fromImage and imageName                   |
+| `--name <name>`                                                               | string | no       | Template name                                                                      |
+| `--cpu-count <cores>`                                                         | number | no       | vCPU count                                                                         |
+| `--memory-mb <mb>`                                                            | number | no       | Memory in MB                                                                       |
+| `--from-image <image>`                                                        | string | no       | Base image identifier                                                              |
+| `--image-name <name>`                                                         | string | no       | Base image display name                                                            |
+| `--env <key=value>`                                                           | array  | no       | Template environment variable; repeat for multiple values                          |
+| `--allow-out <address>`                                                       | array  | no       | Outbound allow-list entry; repeat for multiple values                              |
+| `--deny-out <address>`                                                        | array  | no       | Outbound deny-list entry; repeat for multiple values                               |
+| `--auto-pause-time <seconds>`                                                 | number | no       | Automatically pause after 300-604800 seconds                                       |
+| `--max-running-time <seconds>`                                                | number | no       | Maximum running lifetime in seconds (300-604800)                                   |
+| `--description <text>`                                                        | string | no       | Template description                                                               |
+| `--tag <tag>`                                                                 | array  | no       | E2B tag; repeat for multiple values                                                |
+| `--alias <alias>`                                                             | string | no       | E2B template alias                                                                 |
+| `--async`                                                                     | switch | no       | Return the submitted templateID/buildID immediately without polling                |
+| `--poll-interval <seconds>`                                                   | number | no       | Template build polling interval (default: 5 seconds)                               |
+| `--api-key <key>`                                                             | string | no       | API key                                                                            |
+| `--base-url <url>`                                                            | string | no       | API base URL                                                                       |
 
 #### Notes
 
@@ -393,10 +429,18 @@ bl sandbox template build-status --template-id tpl-xxx --build-id build-xxx --ou
 - Without a configured base URL, workspace is required: --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id.
 - Sandbox is currently available in cn-beijing only and requires prior SLR authorization.
 - Global --timeout limits HTTP requests and total template-build polling; --instance-timeout maps to the Sandbox API lifetime field.
+- code-interpreter (代码解释器): Python / Node.js runtimes with common data-processing libraries. fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/code-interpreter-v1:v0.0.44
+- browser (浏览器): Chromium and a visual desktop for clicking, filling forms, and screenshots. fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/browser:v0.0.44
+- all-in-one (全能型): Code execution and browser capabilities together. fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/all-in-one:v0.0.44
+- --image overrides body fromImage/imageName; explicit --from-image/--image-name override the corresponding preset fields. Without --image, image behavior is unchanged.
 - File mounts and other complete nested structures can be supplied through --body.
 - By default the command waits for build status ready; --async returns the submitted build immediately.
 
 #### Examples
+
+```bash
+bl sandbox template create --name browser --image browser --cpu-count 1 --memory-mb 2048
+```
 
 ```bash
 bl sandbox template create --name python --cpu-count 1 --memory-mb 2048
@@ -538,26 +582,27 @@ bl sandbox template list --limit 100 --output json
 
 #### Flags
 
-| Flag                           | Type   | Required | Description                                                                        |
-| ------------------------------ | ------ | -------- | ---------------------------------------------------------------------------------- |
-| `--workspace-id <id>`          | string | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
-| `--template-id <id>`           | string | yes      | Sandbox template ID                                                                |
-| `--body <json\|@path>`         | string | no       | JSON request body, inline or loaded from an @file path; explicit flags override it |
-| `--name <name>`                | string | no       | Template name                                                                      |
-| `--cpu-count <cores>`          | number | no       | vCPU count                                                                         |
-| `--memory-mb <mb>`             | number | no       | Memory in MB                                                                       |
-| `--from-image <image>`         | string | no       | Base image identifier                                                              |
-| `--image-name <name>`          | string | no       | Base image display name                                                            |
-| `--env <key=value>`            | array  | no       | Template environment variable; repeat for multiple values                          |
-| `--allow-out <address>`        | array  | no       | Outbound allow-list entry; repeat for multiple values                              |
-| `--deny-out <address>`         | array  | no       | Outbound deny-list entry; repeat for multiple values                               |
-| `--auto-pause-time <seconds>`  | number | no       | Automatically pause after 300-604800 seconds                                       |
-| `--max-running-time <seconds>` | number | no       | Maximum running lifetime in seconds (300-604800)                                   |
-| `--description <text>`         | string | no       | Template description                                                               |
-| `--async`                      | switch | no       | Return the submitted templateID/buildID immediately without polling                |
-| `--poll-interval <seconds>`    | number | no       | Template build polling interval (default: 5 seconds)                               |
-| `--api-key <key>`              | string | no       | API key                                                                            |
-| `--base-url <url>`             | string | no       | API base URL                                                                       |
+| Flag                                                                          | Type   | Required | Description                                                                        |
+| ----------------------------------------------------------------------------- | ------ | -------- | ---------------------------------------------------------------------------------- |
+| `--workspace-id <id>`                                                         | string | no       | Workspace ID for the default Sandbox endpoint; optional with a configured base URL |
+| `--template-id <id>`                                                          | string | yes      | Sandbox template ID                                                                |
+| `--body <json\|@path>`                                                        | string | no       | JSON request body, inline or loaded from an @file path; explicit flags override it |
+| `--image <code-interpreter\|代码解释器\|browser\|浏览器\|all-in-one\|全能型>` | string | no       | Built-in image ID or Chinese name; fills fromImage and imageName                   |
+| `--name <name>`                                                               | string | no       | Template name                                                                      |
+| `--cpu-count <cores>`                                                         | number | no       | vCPU count                                                                         |
+| `--memory-mb <mb>`                                                            | number | no       | Memory in MB                                                                       |
+| `--from-image <image>`                                                        | string | no       | Base image identifier                                                              |
+| `--image-name <name>`                                                         | string | no       | Base image display name                                                            |
+| `--env <key=value>`                                                           | array  | no       | Template environment variable; repeat for multiple values                          |
+| `--allow-out <address>`                                                       | array  | no       | Outbound allow-list entry; repeat for multiple values                              |
+| `--deny-out <address>`                                                        | array  | no       | Outbound deny-list entry; repeat for multiple values                               |
+| `--auto-pause-time <seconds>`                                                 | number | no       | Automatically pause after 300-604800 seconds                                       |
+| `--max-running-time <seconds>`                                                | number | no       | Maximum running lifetime in seconds (300-604800)                                   |
+| `--description <text>`                                                        | string | no       | Template description                                                               |
+| `--async`                                                                     | switch | no       | Return the submitted templateID/buildID immediately without polling                |
+| `--poll-interval <seconds>`                                                   | number | no       | Template build polling interval (default: 5 seconds)                               |
+| `--api-key <key>`                                                             | string | no       | API key                                                                            |
+| `--base-url <url>`                                                            | string | no       | API base URL                                                                       |
 
 #### Notes
 
@@ -566,10 +611,18 @@ bl sandbox template list --limit 100 --output json
 - Without a configured base URL, workspace is required: --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id.
 - Sandbox is currently available in cn-beijing only and requires prior SLR authorization.
 - Global --timeout limits HTTP requests and total template-build polling; --instance-timeout maps to the Sandbox API lifetime field.
+- code-interpreter (代码解释器): Python / Node.js runtimes with common data-processing libraries. fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/code-interpreter-v1:v0.0.44
+- browser (浏览器): Chromium and a visual desktop for clicking, filling forms, and screenshots. fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/browser:v0.0.44
+- all-in-one (全能型): Code execution and browser capabilities together. fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/all-in-one:v0.0.44
+- --image overrides body fromImage/imageName; explicit --from-image/--image-name override the corresponding preset fields. Without --image, image behavior is unchanged.
 - Supplying envConfig or --env replaces the template's complete environment map.
 - By default the command waits for build status ready; --async returns the submitted build immediately.
 
 #### Examples
+
+```bash
+bl sandbox template update --template-id tpl-xxx --image all-in-one
+```
 
 ```bash
 bl sandbox template update --template-id tpl-xxx --cpu-count 4 --memory-mb 8192

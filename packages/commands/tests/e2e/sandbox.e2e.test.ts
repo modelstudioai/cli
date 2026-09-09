@@ -27,6 +27,18 @@ function runCommandE2e(routes: typeof SANDBOX_ROUTES, args: string[]) {
 }
 
 describe("e2e: Sandbox command discovery", () => {
+  test("built-in images are discoverable without API Key authentication", async () => {
+    const { stderr, exitCode } = await runCommandHelp(SANDBOX_ROUTES, [
+      "sandbox",
+      "official-images",
+      "--help",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toContain("Usage: bl sandbox official-images");
+    expect(stderr).not.toContain("Authentication: API Key");
+    expect(stderr).toContain("code-interpreter");
+    expect(stderr).toContain("all-in-one");
+  });
   test.each([
     ["sandbox", "create"],
     ["sandbox", "list"],
@@ -69,6 +81,8 @@ describe("e2e: Sandbox command discovery", () => {
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--max-running-time <seconds>/);
+    expect(stderr).toMatch(/--image <[^>]*code-interpreter[^>]*browser[^>]*all-in-one[^>]*>/);
+    expect(stderr).toContain("browser:v0.0.44");
     expect(stderr).toMatch(/--async/);
     expect(stderr).toMatch(/--poll-interval <seconds>/);
     expect(stderr).toMatch(/waits for build status ready/i);
@@ -76,6 +90,109 @@ describe("e2e: Sandbox command discovery", () => {
 });
 
 describe("e2e: Sandbox offline validation and dry-run", () => {
+  test("image catalog is available offline in JSON, text, and quiet output", async () => {
+    const jsonResult = await runCommandE2e(SANDBOX_ROUTES, [
+      "sandbox",
+      "official-images",
+      "--output",
+      "json",
+    ]);
+    expect(jsonResult.exitCode, jsonResult.stderr).toBe(0);
+    const images = JSON.parse(jsonResult.stdout) as {
+      id: string;
+      imageName: string;
+      imageUrl: string;
+    }[];
+    expect(images.map((image) => image.id)).toEqual(["code-interpreter", "browser", "all-in-one"]);
+    expect(images[1]).toMatchObject({
+      imageName: "浏览器",
+      imageUrl: "fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/browser:v0.0.44",
+    });
+    const textResult = await runCommandE2e(SANDBOX_ROUTES, [
+      "sandbox",
+      "official-images",
+      "--output",
+      "text",
+    ]);
+    expect(textResult.exitCode, textResult.stderr).toBe(0);
+    expect(textResult.stdout).toContain("代码解释器");
+    expect(textResult.stdout).toContain("browser:v0.0.44");
+    const quietResult = await runCommandE2e(SANDBOX_ROUTES, [
+      "sandbox",
+      "official-images",
+      "--quiet",
+    ]);
+    expect(quietResult.exitCode, quietResult.stderr).toBe(0);
+    expect(quietResult.stdout.trim().split("\n")).toEqual([
+      "code-interpreter",
+      "browser",
+      "all-in-one",
+    ]);
+  });
+
+  test.each([
+    {
+      operation: "create",
+      args: ["--name", "test", "--cpu-count", "1", "--memory-mb", "2048"],
+      selector: "browser",
+      method: "POST",
+    },
+    {
+      operation: "update",
+      args: ["--template-id", "template-test"],
+      selector: "浏览器",
+      method: "PUT",
+    },
+  ])(
+    "template $operation resolves --image before dry-run output",
+    async ({ operation, args, selector, method }) => {
+      const { stdout, stderr, exitCode } = await runCommandE2e(SANDBOX_ROUTES, [
+        "sandbox",
+        "template",
+        operation,
+        ...args,
+        "--image",
+        selector,
+        ...AUTH_ARGS,
+        "--dry-run",
+        "--output",
+        "json",
+      ]);
+      expect(exitCode, stderr).toBe(0);
+      expect(parseStdoutJson(stdout)).toMatchObject({
+        method,
+        request: {
+          fromImage: "fc-e2b-registry.cn-beijing.cr.aliyuncs.com/runtime/browser:v0.0.44",
+          imageName: "浏览器",
+        },
+      });
+    },
+  );
+
+  test("unknown image selector fails before a request", async () => {
+    const { stderr, exitCode } = await runCommandE2e(SANDBOX_ROUTES, [
+      "sandbox",
+      "template",
+      "create",
+      "--name",
+      "test",
+      "--cpu-count",
+      "1",
+      "--memory-mb",
+      "2048",
+      "--image",
+      "unknown",
+      ...AUTH_ARGS,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 2, message: expect.stringContaining("--image") },
+    });
+  });
+
   test("create requires a template in flags or body", async () => {
     const { stderr, exitCode } = await runCommandE2e(SANDBOX_ROUTES, [
       "sandbox",

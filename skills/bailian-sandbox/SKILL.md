@@ -6,7 +6,7 @@ metadata:
     bins: ["bl"]
 description: >-
   阿里云百炼 Sandbox 沙箱实例与模版生命周期管理入口：用户要创建、查询、连接、暂停、恢复或释放百炼沙箱，
-  或创建、更新、查询、删除沙箱模版、查看模版构建状态时，使用 `bl sandbox`。
+  或查看内置基础镜像、创建、更新、查询、删除沙箱模版、查看模版构建状态时，使用 `bl sandbox`。
   仅覆盖百炼 Sandbox 管控面；不用于宿主执行沙箱设置、E2B 官方云资源或沙箱内命令执行与文件传输。
   agents.yaml 托管 Agent / Session / Environment 管理交给 bailian-managed-agent。
   官方安装：`bl skill init`（与共享协议 bailian-protocol 同装）。
@@ -25,18 +25,21 @@ Before running `bl`, read the shared [bailian-protocol](../bailian-protocol/SKIL
 
 ## Choose the operation
 
-| User intent                           | Command family                                           |
-| ------------------------------------- | -------------------------------------------------------- |
-| Inspect or create instances           | `bl sandbox list` / `get` / `create`                     |
-| Connect, pause, or resume an instance | `bl sandbox connect` / `pause` / `resume`                |
-| Release an instance                   | `bl sandbox delete`                                      |
-| Inspect or build templates            | `bl sandbox template list` / `get` / `create` / `update` |
-| Check a submitted template build      | `bl sandbox template build-status`                       |
-| Delete a template                     | `bl sandbox template delete`                             |
+| User intent                           | Command family                                            |
+| ------------------------------------- | --------------------------------------------------------- |
+| Discover built-in base image presets  | `bl sandbox official-images` (offline, no authentication) |
+| Inspect or create instances           | `bl sandbox list` / `get` / `create`                      |
+| Connect, pause, or resume an instance | `bl sandbox connect` / `pause` / `resume`                 |
+| Release an instance                   | `bl sandbox delete`                                       |
+| Inspect or build templates            | `bl sandbox template list` / `get` / `create` / `update`  |
+| Check a submitted template build      | `bl sandbox template build-status`                        |
+| Delete a template                     | `bl sandbox template delete`                              |
 
 Read [reference/index.md](reference/index.md) and the relevant section of [reference/sandbox.md](reference/sandbox.md) for exact flags, usage, and examples, or run the matching command with `--help`. Do not guess flags.
 
 To save the origin in an isolated Profile, use `bl auth login --config sandbox --api-key <key> --base-url <origin>`. For a one-command override, use `bl sandbox list --base-url <origin>`. Custom gateways also apply to template build-status polling.
+
+For built-in template images, discover the preset ID or Chinese name through `sandbox official-images`, then pass it to template create/update with `--image`. This fills both `fromImage` and `imageName`; `--image-name` alone remains a display name, not an image selector. Presets override the body's image fields; explicit `--from-image` / `--image-name` override the corresponding preset fields. Presets are pinned cn-beijing image URLs, not a live catalog or an availability guarantee for other environments. Omitting `--image` does not change existing defaults or update a template's image implicitly. See the generated reference for the catalog and exact flags.
 
 ## Operational boundaries
 
