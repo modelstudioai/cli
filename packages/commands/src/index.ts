@@ -75,6 +75,8 @@ export { default as speechSynthesize } from "./commands/speech/synthesize.ts";
 export { default as speechRecognize } from "./commands/speech/recognize.ts";
 export { default as fileUpload } from "./commands/file/upload.ts";
 export { default as consoleCall } from "./commands/console/call.ts";
+export { default as securityOverview } from "./commands/security/overview.ts";
+export { default as securityAlerts } from "./commands/security/alerts.ts";
 export { default as usageFree } from "./commands/usage/free.ts";
 export { default as usageFreetier } from "./commands/usage/freetier.ts";
 export { default as usageStats } from "./commands/usage/stats.ts";

@@ -84,3 +84,4 @@ export type {
   UserProfileResponse,
 } from "./api.ts";
 export type * from "./knowledge-admin.ts";
+export type * from "./security.ts";

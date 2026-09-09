@@ -115,6 +115,33 @@ export function knowledgeChatEndpoint(workspaceId: string): string {
   return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com/api/v2/apps/knowledge/chat`;
 }
 
+// ---- Agent Security Center (AgentStudio, workspace-based host) ----
+// AgentStudio shares the per-workspace host scheme with the RAG admin plane
+// below, not the shared DashScope gateway. The region is fixed to cn-beijing
+// per the backend — a full cloud region, a different namespace from the CLI's
+// region (cn / us / intl), so it is never derived from it.
+
+/** Per-workspace AgentStudio host (same shape as {@link ragEndpoint}'s host). */
+export function agentStudioHost(workspaceId: string): string {
+  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com`;
+}
+
+const SECURITY_PREFIX = "/api/v1/agentstudio/security";
+
+// Security endpoints take an already-resolved AgentStudio host (origin) —
+// normally agentStudioHost(workspaceId), or a --base-url override for
+// pre-release / private / mock. See resolveSecurityHost in client/security.ts.
+
+/** GET protection overview — fixed to the last 24 hours, no request params. */
+export function securityOverviewEndpoint(host: string): string {
+  return `${host}${SECURITY_PREFIX}/overview`;
+}
+
+/** GET alert list (agent_logs); filters / pagination go in the query string. */
+export function securityAgentLogsEndpoint(host: string): string {
+  return `${host}${SECURITY_PREFIX}/agent_logs`;
+}
+
 // ---- MCP Services (Streamable HTTP) ----
 export function mcpWebSearchPath(): string {
   return "/api/v1/mcps/WebSearch/mcp";
