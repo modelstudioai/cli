@@ -16,6 +16,22 @@ export interface PipelineEnv {
   settings: Settings;
 }
 
+/** Media steps that inherit Profile `watermark` when the YAML omits the field. */
+export const PIPELINE_WATERMARK_STEPS = new Set(["image/generate", "image/edit", "video/generate"]);
+
+/**
+ * Fill Profile watermark into a planned/executed step input.
+ * Explicit step `watermark` wins; otherwise use Settings (file → default true).
+ */
+export function applyProfileWatermarkToStepInput(
+  stepType: string,
+  input: Record<string, unknown>,
+  settings: Settings,
+): Record<string, unknown> {
+  if (!PIPELINE_WATERMARK_STEPS.has(stepType) || input.watermark !== undefined) return input;
+  return { ...input, watermark: settings.watermark };
+}
+
 /**
  * Build the in-process env for pipeline steps. Uses the same source resolution
  * as the CLI itself (env vars, config file; no CLI flags), but forces JSON

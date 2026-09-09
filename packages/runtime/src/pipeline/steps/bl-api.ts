@@ -192,7 +192,8 @@ export async function imageGenerate(
     n,
     seed: input.seed,
     prompt_extend: promptExtend,
-    watermark: resolveWatermark(input.watermark),
+    // Step input overrides Profile; omit → use Profile / CLI default (true).
+    watermark: resolveWatermark(input.watermark, env.settings.watermark),
   };
 
   const body: DashScopeImageRequest =
@@ -299,7 +300,8 @@ export async function imageEdit(
     n,
     seed: input.seed,
     prompt_extend: promptExtend,
-    watermark: resolveWatermark(input.watermark),
+    // Step input overrides Profile; omit → use Profile / CLI default (true).
+    watermark: resolveWatermark(input.watermark, env.settings.watermark),
   };
 
   let body: DashScopeImageRequest;
@@ -460,7 +462,8 @@ export async function videoGenerate(
       ratio: input.ratio || undefined,
       duration: input.duration,
       prompt_extend: resolveBooleanFlag(input["prompt-extend"], undefined, "prompt-extend"),
-      watermark: resolveWatermark(input.watermark),
+      // Step input overrides Profile; omit → use Profile / CLI default (true).
+      watermark: resolveWatermark(input.watermark, env.settings.watermark),
       seed: input.seed,
     },
   };
