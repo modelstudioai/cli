@@ -272,6 +272,7 @@ export function buildSettings(s: ResolutionSources): Settings {
     outputExplicit: Boolean(flags.output || env.DASHSCOPE_OUTPUT || file.output),
     outputDir: file.output_dir || undefined,
     timeout,
+    watermark: file.watermark ?? true,
     defaultTextModel: file.default_text_model,
     defaultVideoModel: file.default_video_model,
     defaultImageToVideoModel: file.default_image_to_video_model,

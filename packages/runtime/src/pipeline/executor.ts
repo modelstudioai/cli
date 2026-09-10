@@ -1,5 +1,5 @@
 import { PipelineError, toPipelineError } from "./errors.ts";
-import { buildPipelineEnv } from "./bl-config.ts";
+import { applyProfileWatermarkToStepInput, buildPipelineEnv } from "./bl-config.ts";
 import { getDefaultStepDispatcher, type StepDispatcher } from "./dispatcher.ts";
 import {
   evaluateCondition,
@@ -156,12 +156,17 @@ async function executePipelineInternal(
   if (options.dryRun) {
     for (const planStep of topologicalOrder(plan)) {
       const resolved = resolvePlannedStepInput(planStep.step, pipeline, normalizedRuntimeInput);
+      const plannedInput = applyProfileWatermarkToStepInput(
+        planStep.step.type,
+        resolved.redacted,
+        blEnv.settings,
+      );
       const report: PipelineStepReport = {
         id: planStep.step.id,
         type: planStep.step.type,
         status: "planned",
         dependencies: planStep.dependencies,
-        input: resolved.redacted,
+        input: plannedInput,
         ...(planStep.step.when !== undefined ? { condition: "pending" } : {}),
       };
       reports.push(report);
@@ -170,14 +175,14 @@ async function executePipelineInternal(
         timestamp: now(),
         status: "planned",
         step: stepEvent(planStep),
-        input: inputSummary(resolved.redacted, resolved.sensitiveKeys),
+        input: inputSummary(plannedInput, resolved.sensitiveKeys),
       });
       await emit({
         type: "step.planned",
         timestamp: now(),
         status: "planned",
         step: stepEvent(planStep),
-        input: inputSummary(resolved.redacted, resolved.sensitiveKeys),
+        input: inputSummary(plannedInput, resolved.sensitiveKeys),
         ...(planStep.step.when !== undefined ? { condition: "pending" as const } : {}),
       });
     }
