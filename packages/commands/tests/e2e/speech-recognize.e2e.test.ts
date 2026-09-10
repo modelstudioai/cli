@@ -40,11 +40,18 @@ describe("e2e: speech recognize", () => {
           language_hints?: string[];
           language?: string;
           vocabulary_id?: string;
+          vocabulary?: Record<string, number>;
         };
         input?: {
           file_url?: string;
           file_urls?: string[];
-          messages?: Array<{ content?: Array<{ type?: string }> }>;
+          context?: Array<{
+            role?: string;
+            content?: Array<{ type?: string; text?: string }>;
+          }>;
+          messages?: Array<{
+            content?: Array<{ type?: string; text?: string; input_audio?: { data?: string } }>;
+          }>;
         };
       };
     }>(stdout);
@@ -118,6 +125,116 @@ describe("e2e: speech recognize", () => {
     expect(body.request?.parameters?.language_hints).toEqual(["en"]);
     expect(body.request?.parameters?.vocabulary_id).toBe("vocab-e2e");
     expect(body.request?.input?.messages?.[0]?.content?.[0]?.type).toBe("input_audio");
+  });
+
+  test("speech recognize async dry-run 注入 input.context 与 parameters.vocabulary", async () => {
+    const body = await runRecognizeDryRun([
+      "--model",
+      "qwen-audio-3.0-asr-flash-filetrans",
+      "--url",
+      "https://example.com/audio.mp3",
+      "--vocabulary",
+      '{"奋斗者":4,"鲸落":4}',
+      "--context",
+      "奋斗者号 鲸落 深海勇士",
+    ]);
+    expect(body.mode).toBe("async");
+    expect(body.request?.parameters?.vocabulary).toEqual({ 奋斗者: 4, 鲸落: 4 });
+    expect(body.request?.input?.context).toEqual([
+      {
+        role: "user",
+        content: [{ type: "input_text", text: "奋斗者号 鲸落 深海勇士" }],
+      },
+    ]);
+  });
+
+  test("speech recognize sync input-audio dry-run 将 context 前置且 input_audio 在最后", async () => {
+    const body = await runRecognizeDryRun([
+      "--model",
+      "qwen-audio-3.0-asr-flash",
+      "--url",
+      "https://example.com/audio.wav",
+      "--vocabulary",
+      '{"奋斗者":4}',
+      "--context",
+      "奋斗者号",
+    ]);
+    expect(body.mode).toBe("sync");
+    expect(body.request?.parameters?.vocabulary).toEqual({ 奋斗者: 4 });
+    const messages = body.request?.input?.messages ?? [];
+    expect(messages).toHaveLength(2);
+    expect(messages[0]?.content?.[0]).toMatchObject({ type: "input_text", text: "奋斗者号" });
+    expect(messages[1]?.content?.[0]?.type).toBe("input_audio");
+  });
+
+  test("speech recognize 非法 --vocabulary JSON 返回用法错误", async () => {
+    const { stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+      "speech",
+      "recognize",
+      "--model",
+      "qwen-audio-3.0-asr-flash-filetrans",
+      "--url",
+      "https://example.com/a.wav",
+      "--vocabulary",
+      "{bad json",
+      "--dry-run",
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/not valid JSON|--vocabulary/i);
+  });
+
+  test("speech recognize 空 --vocabulary 返回用法错误", async () => {
+    const { stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+      "speech",
+      "recognize",
+      "--model",
+      "qwen-audio-3.0-asr-flash-filetrans",
+      "--url",
+      "https://example.com/a.wav",
+      "--vocabulary",
+      "",
+      "--dry-run",
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/not valid JSON|--vocabulary/i);
+  });
+
+  test("speech recognize qwen3 sync 拒绝 --vocabulary", async () => {
+    const { stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+      "speech",
+      "recognize",
+      "--model",
+      "qwen3-asr-flash",
+      "--url",
+      "https://example.com/a.wav",
+      "--vocabulary",
+      '{"奋斗者":4}',
+      "--dry-run",
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--vocabulary|does not support/i);
+    expect(stderr).toMatch(/qwen-audio-3\.0-asr-flash|vocabulary\/context/i);
+  });
+
+  test("speech recognize sync Flash 拒绝 --diarization 时提示 async filetrans", async () => {
+    const { stderr, exitCode } = await runCommandE2e(SPEECH_ROUTES, [
+      "speech",
+      "recognize",
+      "--model",
+      "fun-asr-flash",
+      "--url",
+      "https://example.com/a.wav",
+      "--diarization",
+      "--dry-run",
+      "--quiet",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--diarization|does not support/i);
+    expect(stderr).toMatch(/async filetrans|fun-asr/i);
+    expect(stderr).not.toMatch(/vocabulary\/context/i);
   });
 
   test("speech recognize qwen3 filetrans dry-run 使用 file_url 与 language", async () => {
@@ -366,5 +483,88 @@ describe.skipIf(!isBailianE2EMediaEnabled() || !isDashScopeE2EReady())(
       const raw = readFileSync(asrJson, "utf8");
       expect(raw.length).toBeGreaterThan(2);
     }, 300_000);
+
+    test("【qwen-audio】synthesize → recognize 即时热词/上下文", async () => {
+      // 生造专名：无热词时常被听错；带 --vocabulary/--context 后应能正确召回。
+      const hotwordScript =
+        "请把录音同步到听悟匣，并启动澜舟芯做摘要。听悟匣负责转写，澜舟芯负责归档。最后确认玄甲协议是否已开启。";
+      const hotwords = ["听悟匣", "澜舟芯", "玄甲协议"] as const;
+      const vocabularyJson = '{"听悟匣":4,"澜舟芯":4,"玄甲协议":4}';
+      const contextText = "听悟匣 澜舟芯 玄甲协议";
+
+      const missingHotwords = (text: string): string[] => {
+        const normalized = text.replace(/\s+/g, "");
+        return hotwords.filter((word) => !normalized.includes(word));
+      };
+
+      const outDir = makeE2eOutputDir(e2eLabelFromMetaUrl(import.meta.url));
+      const outMp3 = join(outDir, "hotword-tts.mp3");
+      const syn = await runCommandE2e(SPEECH_ROUTES, [
+        "speech",
+        "synthesize",
+        "--model",
+        "cosyvoice-v3-flash",
+        "--voice",
+        "longxiaochun_v3",
+        "--text",
+        hotwordScript,
+        "--out",
+        outMp3,
+        "--output",
+        "json",
+      ]);
+      expect(syn.exitCode, syn.stderr).toBe(0);
+      const synBody = parseStdoutJson<{ audio_url?: string }>(syn.stdout);
+      const audioUrl = synBody.audio_url;
+      expect(audioUrl?.startsWith("http")).toBe(true);
+
+      const baselineOut = join(outDir, "asr-baseline.json");
+      const baseline = await runCommandE2e(SPEECH_ROUTES, [
+        "speech",
+        "recognize",
+        "--model",
+        "qwen-audio-3.0-asr-flash",
+        "--url",
+        audioUrl!,
+        "--language",
+        "zh",
+        "--out",
+        baselineOut,
+        "--quiet",
+      ]);
+      expect(baseline.exitCode, baseline.stderr).toBe(0);
+      writeFileSync(join(outDir, "asr-baseline.txt"), baseline.stdout);
+      const baselineMissing = missingHotwords(baseline.stdout);
+      // soft：仅落盘对照，不 fail（无热词偶发也能认出专名）
+      writeFileSync(
+        join(outDir, "asr-baseline-missing.txt"),
+        baselineMissing.length > 0 ? baselineMissing.join("\n") + "\n" : "(none)\n",
+      );
+
+      const hotOut = join(outDir, "asr-hot.json");
+      const hot = await runCommandE2e(SPEECH_ROUTES, [
+        "speech",
+        "recognize",
+        "--model",
+        "qwen-audio-3.0-asr-flash",
+        "--url",
+        audioUrl!,
+        "--language",
+        "zh",
+        "--vocabulary",
+        vocabularyJson,
+        "--context",
+        contextText,
+        "--out",
+        hotOut,
+        "--quiet",
+      ]);
+      expect(hot.exitCode, hot.stderr).toBe(0);
+      writeFileSync(join(outDir, "asr-hot.txt"), hot.stdout);
+      expect(
+        missingHotwords(hot.stdout),
+        `expected hotwords in ASR text, got: ${hot.stdout.trim()}`,
+      ).toEqual([]);
+    }, 420_000);
   },
 );

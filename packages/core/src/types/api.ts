@@ -580,11 +580,19 @@ export interface DashScopeTTSStreamChunk {
 
 // ---- Speech Recognition / ASR (DashScope) ----
 
+/** Context-enhancement message for async ASR `input.context` / sync Flash `input.messages`. */
+export interface AsrContextMessage {
+  role: "user" | "assistant";
+  content: Array<{ type: "input_text" | "text"; text: string }>;
+}
+
 export interface DashScopeASRRequest {
   model: string;
   input: {
     file_urls?: string[];
     file_url?: string;
+    /** Context enhancement for async filetrans (array of chat-style messages). */
+    context?: AsrContextMessage[];
   };
   parameters?: {
     channel_id?: number[];
@@ -595,6 +603,8 @@ export interface DashScopeASRRequest {
     diarization_enabled?: boolean;
     speaker_count?: number;
     vocabulary_id?: string;
+    /** Instant hot words (word → weight); takes effect on Qwen-Audio-3.0-ASR-Flash series. */
+    vocabulary?: Record<string, number>;
   };
 }
 
