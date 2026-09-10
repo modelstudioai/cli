@@ -1,16 +1,20 @@
 import { imageSyncPath, speechRecognizePath } from "./endpoints.ts";
 
+import type { AsrContextMessage } from "../types/api.ts";
+
 /**
  * DashScope ASR APIs differ by model family:
  *
  * - async file transcription (`.../audio/asr/transcription`):
  *   fun-asr*, paraformer* (non-realtime), *-filetrans, sensevoice*
- *   language via `parameters.language_hints`
+ *   language via `parameters.language_hints`; optional `input.context` /
+ *   `parameters.vocabulary` (model-dependent effective range)
  * - sync multimodal (`.../aigc/multimodal-generation/generation`):
  *   - qwen3: `{ content: [{ audio }] }` + optional `asr_options.language`
- *     (qwen3-asr-flash*)
+ *     (qwen3-asr-flash*) — no vocabulary / context fields in this body shape
  *   - input-audio: `{ type: input_audio, input_audio.data }` +
- *     `format`/`sample_rate` + optional `language_hints`
+ *     `format`/`sample_rate` + optional `language_hints` /
+ *     `vocabulary_id` / `vocabulary`; optional leading `input_text` for context
  *     (fun-asr-flash*, qwen-audio-*-asr-flash*)
  * - realtime / streaming: WebSocket — not supported by `speech recognize`
  */
@@ -158,7 +162,16 @@ export interface BuildAsrFlashRequestOpts {
   language?: string;
   /** Precompiled hotword vocabulary ID; supported for input-audio Flash (fun-asr-flash* / qwen-audio-*-asr-flash). */
   vocabularyId?: string;
+  /** Instant hot words (word → weight); input-audio Flash only (command layer rejects qwen3). */
+  vocabulary?: Record<string, number>;
+  /** Context enhancement text; prepended as input_text before input_audio. */
+  context?: string;
   flashFamily: AsrFlashFamily;
+}
+
+/** Wrap plain text as a single user context message for ASR. */
+export function buildAsrContextMessages(text: string): AsrContextMessage[] {
+  return [{ role: "user", content: [{ type: "input_text", text }] }];
 }
 
 /**
@@ -178,10 +191,10 @@ export function buildAsyncAsrLanguageFields(
 
 /** Build a sync multimodal ASR request body for Flash models. */
 export function buildAsrFlashRequest(opts: BuildAsrFlashRequestOpts): Record<string, unknown> {
-  const { model, audioUrl, language, vocabularyId, flashFamily } = opts;
+  const { model, audioUrl, language, vocabularyId, vocabulary, context, flashFamily } = opts;
 
   if (flashFamily === "input-audio") {
-    // Match official Qwen-Audio / Fun-ASR-Flash docs: language_hints + vocabulary_id
+    // Match official Qwen-Audio / Fun-ASR-Flash docs: language_hints + vocabulary(_id)
     const parameters: Record<string, unknown> = {
       format: inferAudioFormatHint(audioUrl),
       sample_rate: "16000",
@@ -192,21 +205,28 @@ export function buildAsrFlashRequest(opts: BuildAsrFlashRequestOpts): Record<str
     if (vocabularyId) {
       parameters.vocabulary_id = vocabularyId;
     }
+    if (vocabulary) {
+      parameters.vocabulary = vocabulary;
+    }
+    // input_audio must be the last message; prepend context as input_text when present
+    const messages: Array<Record<string, unknown>> = [];
+    if (context) {
+      for (const message of buildAsrContextMessages(context)) {
+        messages.push(message as unknown as Record<string, unknown>);
+      }
+    }
+    messages.push({
+      role: "user",
+      content: [
+        {
+          type: "input_audio",
+          input_audio: { data: audioUrl },
+        },
+      ],
+    });
     return {
       model,
-      input: {
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "input_audio",
-                input_audio: { data: audioUrl },
-              },
-            ],
-          },
-        ],
-      },
+      input: { messages },
       parameters,
     };
   }

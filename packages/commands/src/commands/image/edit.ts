@@ -207,7 +207,7 @@ export default defineCommand({
       "prompt-extend",
     );
 
-    const watermark = resolveWatermark(flags.watermark);
+    const watermark = resolveWatermark(flags.watermark, settings.watermark);
 
     const parameters: NonNullable<DashScopeImageRequest["parameters"]> = {
       size: resolveImageSize(flags.size, route.sizeProfile),

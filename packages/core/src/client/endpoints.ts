@@ -109,6 +109,11 @@ export function speechRecognizePath(): string {
   return "/api/v1/services/audio/asr/transcription";
 }
 
+// ---- Hot-word Vocabulary (ASR customization) ----
+export function speechVocabularyPath(): string {
+  return "/api/v1/services/audio/asr/customization";
+}
+
 // ---- Memory Profile (long-term memory v2, workspace-based host) ----
 export function profileSchemaPath(): string {
   return "/api/v2/apps/memory/profile_schemas";

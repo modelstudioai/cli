@@ -1,7 +1,7 @@
 ---
 name: bailian-gen
 metadata:
-  version: "1.22.0"
+  version: "1.23.0"
   requires:
     bins: ["bl"]
 description: >-
@@ -45,7 +45,26 @@ Unless the user explicitly specifies a model, omit `--model` and let the CLI use
 
 For ASR model selection, keep `fun-asr` (or other `*-filetrans`) for long recordings, repeated files, speaker diarization, or asynchronous task IDs. For one local or remote audio file up to about five minutes when the user asks for low-latency Flash models, use `--model fun-asr-flash-2026-06-15`, `--model qwen-audio-3.0-asr-flash`, or `--model qwen3-asr-flash`. Flash recognition is synchronous and accepts exactly one file per call.
 
+To improve ASR accuracy with domain terms:
+
+- Prefer instant `--vocabulary` / `--context` on `bl speech recognize` when the model is Qwen-Audio-3.0-ASR-Flash series (and Fun-ASR-Flash for `--context` only) — no pre-built vocabulary needed. Start weights at 4 (do not default everything to 5). `--context` must list the target words themselves; a topic description alone has little effect.
+- Use `bl speech vocabulary create` + `--vocabulary-id` for Fun-ASR / Paraformer, or whenever the same hot words must be reused across requests. The vocabulary `--model` must exactly match recognize `--model` (otherwise the vocabulary is silently ignored). Each account may have at most 10 vocabularies; delete unused ones.
+
 Flags, usage, and examples: see [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags.
+
+## Watermark configuration
+
+Image generation and editing, video generation and editing, and reference-to-video enable watermarks by default. Change the default for the active Profile with:
+
+```bash
+bl config set --key watermark --value false
+```
+
+Set it to `true` to enable watermarks again. To update a named Profile without switching Profiles, add `--config <name>`:
+
+```bash
+bl config set --config media --key watermark --value false
+```
 
 ## Local files (mandatory)
 
@@ -68,6 +87,11 @@ bl vision describe --image ./photo.jpg --prompt "图里有什么？"
 bl vision describe --video ./clip.mp4 --prompt "总结视频内容"
 bl omni --message "Describe the video content" --video ./demo.mp4 --text-only
 bl speech synthesize --text "Hello, welcome to Bailian" --out hello.mp3
+bl speech recognize --url ./meeting.wav --model qwen-audio-3.0-asr-flash-filetrans \
+  --vocabulary '{"奋斗者":4}' --context "奋斗者号"
+VOCAB=$(bl speech vocabulary create --model fun-asr --prefix demo --words '{"奋斗者":4}' --quiet)
+bl speech recognize --url ./meeting.wav --model fun-asr --vocabulary-id "$VOCAB"
+bl speech vocabulary delete --id "$VOCAB" --yes
 ```
 
 ## Output language

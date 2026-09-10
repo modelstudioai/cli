@@ -33,3 +33,9 @@ test("default-speech-recognition-model alias accepts an ASR model ID", () => {
     "qwen-audio-3.0-asr-flash",
   );
 });
+
+test("watermark config accepts only boolean text and stores a boolean", () => {
+  expect(validateAndCoerce("watermark", "false")).toBe(false);
+  expect(validateAndCoerce("watermark", "TRUE")).toBe(true);
+  expect(() => validateAndCoerce("watermark", "yes")).toThrow(/true or false/i);
+});

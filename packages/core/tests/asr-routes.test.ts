@@ -1,5 +1,6 @@
 import { expect, test } from "vite-plus/test";
 import {
+  buildAsrContextMessages,
   buildAsrFlashRequest,
   buildAsyncAsrLanguageFields,
   collectAsrTranscriptionItems,
@@ -139,6 +140,47 @@ test("buildAsrFlashRequest shapes qwen3 and input-audio bodies", () => {
       vocabulary_id: "vocab-abc",
     },
   });
+});
+
+test("buildAsrContextMessages wraps plain text as a single user input_text message", () => {
+  expect(buildAsrContextMessages("奋斗者号 鲸落")).toEqual([
+    { role: "user", content: [{ type: "input_text", text: "奋斗者号 鲸落" }] },
+  ]);
+});
+
+test("buildAsrFlashRequest injects instant vocabulary and prepends context before input_audio", () => {
+  const body = buildAsrFlashRequest({
+    model: "qwen-audio-3.0-asr-flash",
+    audioUrl: "https://example.com/a.wav",
+    vocabulary: { 奋斗者: 4, 鲸落: 4 },
+    context: "奋斗者号 鲸落",
+    flashFamily: "input-audio",
+  });
+
+  expect(body).toEqual({
+    model: "qwen-audio-3.0-asr-flash",
+    input: {
+      messages: [
+        {
+          role: "user",
+          content: [{ type: "input_text", text: "奋斗者号 鲸落" }],
+        },
+        {
+          role: "user",
+          content: [{ type: "input_audio", input_audio: { data: "https://example.com/a.wav" } }],
+        },
+      ],
+    },
+    parameters: {
+      format: "wav",
+      sample_rate: "16000",
+      vocabulary: { 奋斗者: 4, 鲸落: 4 },
+    },
+  });
+
+  const messages = (body.input as { messages: Array<{ content: Array<{ type?: string }> }> })
+    .messages;
+  expect(messages[messages.length - 1]?.content?.[0]?.type).toBe("input_audio");
 });
 
 test("buildAsyncAsrLanguageFields maps language by async style", () => {

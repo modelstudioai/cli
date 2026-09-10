@@ -200,8 +200,10 @@ test("GET /api/config 返回全部 profile、明文密钥与持久化激活项",
     expect(res.json.keys).toContain("console_site");
     expect(res.json.keys).toContain("telemetry");
     expect(res.json.keys).toContain("default_speech_recognition_model");
+    expect(res.json.keys).toContain("watermark");
     expect(res.json.enums.console_site).toEqual(["domestic", "international"]);
     expect(res.json.booleanKeys).toContain("telemetry");
+    expect(res.json.booleanKeys).toContain("watermark");
     // Default field hints are surfaced as prefilled values in the UI.
     expect(res.json.fieldDefaults.default_image_model).toBe("qwen-image-3.0");
     expect(res.json.fieldDefaults.default_text_model).toBe("qwen3.8-max");

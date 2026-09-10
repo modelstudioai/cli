@@ -115,6 +115,11 @@ export const VISION_ROUTES: E2eRouteExports = {
 export const SPEECH_ROUTES: E2eRouteExports = {
   "speech synthesize": "speechSynthesize",
   "speech recognize": "speechRecognize",
+  "speech vocabulary create": "speechVocabularyCreate",
+  "speech vocabulary list": "speechVocabularyList",
+  "speech vocabulary get": "speechVocabularyGet",
+  "speech vocabulary update": "speechVocabularyUpdate",
+  "speech vocabulary delete": "speechVocabularyDelete",
 };
 
 export const MCP_ROUTES: E2eRouteExports = {
