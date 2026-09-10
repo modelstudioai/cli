@@ -19,6 +19,7 @@
   - 类型由 `ParsedFlags<typeof FLAGS>` 推导;避免手写 `flags.x as number` 这类断言
   - 单 flag 必填用 `required: true`;跨 flag / 值相关校验放 `validate`
   - 默认值 fallback 写在命令实现或 `Settings` 解析层,不要重复解析 env/config
+  - 需要在高风险确认前检查本地路径时,可用异步 `validate`;runtime 会在鉴权和确认前等待它完成。这里只允许本地只读检查,不写文件、不请求远端。非缺参的环境错误应抛出 `BailianError`,避免裸命令调用被当成缺参而仅显示 help。
 
 ### B. 鉴权 / 全局选项
 

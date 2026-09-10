@@ -6,6 +6,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.22.0] - 2026-09-08
+
+### Changed
+
+- **Project initialization** — `managed-agent project init` now creates `./managed-agent` by default. Use `--project .` to initialize in place. **(BREAKING)**
+- **Build confirmation** — `managed-agent project build` no longer requires confirmation and rejects `--yes`. Use `--dry-run` for a read-only preview; Publish still requires confirmation. **(BREAKING)**
+- **Managed Agent SDK** — upgrade to `0.7.1`. Build automatically associates active Agent-local resources while preserving explicit bindings, Skill versions, and File mount paths. Ambiguous Environment or Vault selections are rejected before writing.
+
+### Fixed
+
+- **Project diagnostics** — provide actionable project-root guidance and surface the underlying Build validation error.
+- **YAML initialization paths** — show the absolute YAML path in creation messages and existing-file errors.
+
+### Internal
+
+- Expand project initialization and Build regression coverage, and remove the obsolete Build confirmation flag from the local lifecycle E2E test.
+
 ## [1.21.0] - 2026-09-07
 
 ### Added
