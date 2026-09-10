@@ -42,6 +42,69 @@ describe("e2e: memory profile create", () => {
     expect(exitCode).toBe(2);
   });
 
+  test("--attributes 空数组报 USAGE (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MEMORY_PROFILE_CREATE_ROUTES, [
+      "memory",
+      "profile",
+      "create",
+      "--name",
+      "user_basic",
+      "--attributes",
+      "[]",
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/attribute/i);
+  });
+
+  test("--name 33 字符报 USAGE (2)", async () => {
+    const { exitCode } = await runCommandE2e(MEMORY_PROFILE_CREATE_ROUTES, [
+      "memory",
+      "profile",
+      "create",
+      "--name",
+      "n".repeat(33),
+      "--attributes",
+      '[{"name":"age"}]',
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+  });
+
+  test("--description 129 字符报 USAGE (2)", async () => {
+    const { exitCode } = await runCommandE2e(MEMORY_PROFILE_CREATE_ROUTES, [
+      "memory",
+      "profile",
+      "create",
+      "--name",
+      "user_basic",
+      "--description",
+      "d".repeat(129),
+      "--attributes",
+      '[{"name":"age"}]',
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+  });
+
+  test("--attributes 内属性 name 超长报 USAGE (2)", async () => {
+    const { exitCode } = await runCommandE2e(MEMORY_PROFILE_CREATE_ROUTES, [
+      "memory",
+      "profile",
+      "create",
+      "--name",
+      "user_basic",
+      "--attributes",
+      `[{"name":"${"a".repeat(33)}"}]`,
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+  });
+
   test("--attributes 非法 JSON 报 USAGE (2)", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_PROFILE_CREATE_ROUTES, [
       "memory",

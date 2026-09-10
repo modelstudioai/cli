@@ -20,8 +20,25 @@ describe("e2e: memory delete", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--node-id/i);
     expect(stderr).toMatch(/--user-id/i);
+    expect(stderr).toMatch(/--yes/i);
     expect(stderr).toMatch(/--memory-library-id/i);
     expect(stderr).toMatch(/--workspace-id/i);
+  });
+
+  test("缺 --yes 报 CONFIRMATION_REQUIRED (7)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MEMORY_DELETE_ROUTES, [
+      "memory",
+      "delete",
+      "--node-id",
+      "node_test",
+      "--user-id",
+      "user1",
+      ...TEST_WORKSPACE_ARGS,
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(7);
+    expect(stderr).toMatch(/--yes/i);
   });
 
   test("缺 --node-id 报 USAGE (2)", async () => {
@@ -44,6 +61,22 @@ describe("e2e: memory delete", () => {
     expect(exitCode).toBe(2);
   });
 
+  test("--memory-library-id 33 字符报 USAGE (2)", async () => {
+    const { exitCode } = await runCommandE2e(MEMORY_DELETE_ROUTES, [
+      "memory",
+      "delete",
+      "--node-id",
+      "node_test",
+      "--user-id",
+      "user1",
+      "--memory-library-id",
+      "l".repeat(33),
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+  });
+
   test("--dry-run 断言 endpoint / DELETE / query 参数", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_DELETE_ROUTES, [
       "memory",
@@ -59,6 +92,8 @@ describe("e2e: memory delete", () => {
       "--output",
       "json",
     ]);
+    // dry-run must short-circuit before the runtime confirmation gate, otherwise
+    // this non-TTY run would fail asking for --yes
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<MemoryDryRunBody>(stdout);
     const endpoint = data.endpoint ?? "";
@@ -97,6 +132,7 @@ describe.skipIf(!isMemoryE2EReady())("e2e: memory delete (live)", () => {
       `no-such-node-${Date.now()}`,
       "--user-id",
       memoryUserId(),
+      "--yes",
       "--output",
       "json",
     ]);
@@ -208,6 +244,9 @@ describe.skipIf(!isMemoryE2EReady())("e2e: memory delete (live)", () => {
       (node) => node.memory_node_id === addedNodeId,
     );
     expect(updatedNode?.content, afterUpdateRes.stdout).toBe(contentAfter);
+    // update mutated both content and meta_data; verify the meta_data write
+    // landed too rather than only the content
+    expect(updatedNode?.meta_data?.updated, afterUpdateRes.stdout).toBe("true");
 
     const deleteRes = await runCommandE2e(MEMORY_DELETE_ROUTES, [
       "memory",
@@ -217,6 +256,7 @@ describe.skipIf(!isMemoryE2EReady())("e2e: memory delete (live)", () => {
       addedNodeId,
       "--user-id",
       userId,
+      "--yes",
       "--output",
       "json",
     ]);

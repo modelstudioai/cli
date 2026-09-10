@@ -54,6 +54,21 @@ describe("e2e: memory profile delete", () => {
     expect(stderr).toMatch(/--yes/i);
   });
 
+  test("--memory-library-id 33 字符报 USAGE (2)", async () => {
+    const { exitCode } = await runCommandE2e(MEMORY_PROFILE_DELETE_ROUTES, [
+      "memory",
+      "profile",
+      "delete",
+      "--schema-id",
+      "schema_test",
+      "--memory-library-id",
+      "l".repeat(33),
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+  });
+
   test("--dry-run 断言 endpoint / DELETE，且不触发确认", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_PROFILE_DELETE_ROUTES, [
       "memory",

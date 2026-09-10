@@ -13,6 +13,7 @@ import {
   MEMORY_WORKSPACE_NOTE,
   PROJECT_ID_FLAG,
   WORKSPACE_FLAG,
+  checkMemoryScopeLengths,
   resolveWorkspaceId,
 } from "./shared.ts";
 
@@ -53,6 +54,8 @@ export default defineCommand({
     "--user-id user1 --memory-library-id lib_xxx --output json",
   ],
   validate: (flags) => {
+    const scopeError = checkMemoryScopeLengths(flags);
+    if (scopeError) return scopeError;
     if (flags.page !== undefined && flags.page < 1) return "--page must be at least 1.";
     if (flags.pageSize !== undefined && flags.pageSize < 1)
       return "--page-size must be at least 1.";

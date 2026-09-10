@@ -34,6 +34,19 @@ describe("e2e: memory profile list", () => {
     expect(exitCode).toBe(2);
   });
 
+  test("--memory-library-id 33 字符报 USAGE (2)", async () => {
+    const { exitCode } = await runCommandE2e(MEMORY_PROFILE_LIST_ROUTES, [
+      "memory",
+      "profile",
+      "list",
+      "--memory-library-id",
+      "l".repeat(33),
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+  });
+
   test("--page-size 0 报 USAGE (2)", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_PROFILE_LIST_ROUTES, [
       "memory",

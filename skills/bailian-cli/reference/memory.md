@@ -52,6 +52,7 @@ Index: [index.md](index.md)
 - The memory API lives on a workspace-specific host, so --workspace-id is required; it can also come from BAILIAN_WORKSPACE_ID or the workspace_id config field.
 - --content and --messages are mutually exclusive: when --content is set, --messages is ignored by the server.
 - The response lists the changed memory nodes; one call can add, update or delete several at once.
+- Account-level rate limits: add 120 QPM, search 300 QPM, 3000 QPM across all memory APIs. On HTTP 429 back off and leave at least 1s between calls.
 
 #### Examples
 
@@ -73,12 +74,16 @@ bl memory add --user-id user1 --content "Attended WAIC" --meta-data '{"location"
 
 ### `bl memory delete`
 
-| Field              | Value                                                    |
-| ------------------ | -------------------------------------------------------- |
-| **Name**           | `memory delete`                                          |
-| **Description**    | Delete a memory node                                     |
-| **Authentication** | API Key                                                  |
-| **Usage**          | `bl memory delete --node-id <id> --user-id <id> [flags]` |
+| Field              | Value                                                                    |
+| ------------------ | ------------------------------------------------------------------------ |
+| **Name**           | `memory delete`                                                          |
+| **Description**    | Delete a memory node                                                     |
+| **Authentication** | API Key                                                                  |
+| **Usage**          | `bl memory delete --node-id <id> --user-id <id> [flags]`                 |
+| **Risk**           | `high`                                                                   |
+| **Risk message**   | This permanently deletes the specified memory node and cannot be undone. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
@@ -88,17 +93,24 @@ bl memory add --user-id user1 --content "Attended WAIC" --meta-data '{"location"
 | `--user-id <id>`           | string | yes      | Memory entity ID that owns the memory (required)                |
 | `--memory-library-id <id>` | string | no       | Memory library ID (default: the account's default library)      |
 | `--workspace-id <id>`      | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--yes`                    | switch | no       | Confirm this high-risk operation                                |
 | `--api-key <key>`          | string | no       | API key                                                         |
 | `--base-url <url>`         | string | no       | API base URL                                                    |
 
 #### Notes
 
 - The memory API lives on a workspace-specific host, so --workspace-id is required; it can also come from BAILIAN_WORKSPACE_ID or the workspace_id config field.
+- Irreversible — the memory node is permanently removed. Run `memory list` first to confirm the node ID.
 
 #### Examples
 
 ```bash
 bl memory delete --node-id node_xxx --user-id user1 --workspace-id ws_xxx
+```
+
+```bash
+# Only after explicit user confirmation:
+bl memory delete --node-id node_xxx --user-id user1 --yes
 ```
 
 ### `bl memory list`
@@ -390,6 +402,7 @@ bl memory profile update --schema-id schema_xxx --attributes-operations '[{"op":
 
 - The memory API lives on a workspace-specific host, so --workspace-id is required; it can also come from BAILIAN_WORKSPACE_ID or the workspace_id config field.
 - --plan-version overrides --enable-rerank and changes the price: pro reranks, lite does not.
+- Account-level rate limits: add 120 QPM, search 300 QPM, 3000 QPM across all memory APIs. On HTTP 429 back off and leave at least 1s between calls.
 
 #### Examples
 

@@ -63,6 +63,20 @@ describe("e2e: memory list", () => {
     expect(exitCode).toBe(2);
   });
 
+  test("--memory-library-id 33 字符报 USAGE (2)", async () => {
+    const { exitCode } = await runCommandE2e(MEMORY_LIST_ROUTES, [
+      "memory",
+      "list",
+      "--user-id",
+      memoryUserId(),
+      "--memory-library-id",
+      "l".repeat(33),
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+  });
+
   test("--page-size 0 报 USAGE (2)", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_LIST_ROUTES, [
       "memory",

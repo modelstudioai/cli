@@ -341,9 +341,18 @@ export interface AppStreamChunk {
 
 // ---- Memory (DashScope v2) ----
 
+/**
+ * Multimodal message part. The memory API reference only documents `content`
+ * as `string | array` without pinning the element shape, so this mirrors the
+ * sibling Knowledge Chat contract (`KnowledgeChatContentPart`).
+ */
+export type MemoryContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
 export interface MemoryMessage {
   role: "user" | "assistant";
-  content: string;
+  content: string | MemoryContentPart[];
 }
 
 /** 记忆抽取策略版本：pro 开启 Rerank，lite 关闭（单价不同）。 */

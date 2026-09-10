@@ -10,7 +10,9 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
   MEMORY_LIBRARY_FLAG,
   MEMORY_WORKSPACE_NOTE,
+  MAX_CUSTOM_CONTENT_LENGTH,
   WORKSPACE_FLAG,
+  checkMemoryScopeLengths,
   parseJsonObjectFlag,
   resolveWorkspaceId,
 } from "./shared.ts";
@@ -60,9 +62,6 @@ const UPDATE_FLAGS = {
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
-/** Max characters accepted for custom_content. */
-const MAX_CONTENT_LENGTH = 512;
-
 export default defineCommand({
   description: { "en-US": "Update a memory node content", "zh-CN": "更新记忆节点内容" },
   auth: "apiKey",
@@ -90,8 +89,10 @@ export default defineCommand({
     },
   ],
   validate: (flags) => {
-    if (flags.content.length > MAX_CONTENT_LENGTH)
-      return `--content must be at most ${MAX_CONTENT_LENGTH} characters.`;
+    const scopeError = checkMemoryScopeLengths(flags);
+    if (scopeError) return scopeError;
+    if (flags.content.length > MAX_CUSTOM_CONTENT_LENGTH)
+      return `--content must be at most ${MAX_CUSTOM_CONTENT_LENGTH} characters.`;
     if (flags.timestamp !== undefined && flags.timestamp < 0)
       return "--timestamp must be a non-negative Unix timestamp in seconds.";
     return undefined;

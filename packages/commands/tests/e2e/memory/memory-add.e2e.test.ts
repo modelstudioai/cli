@@ -66,6 +66,22 @@ describe("e2e: memory add", () => {
     expect(exitCode).toBe(2);
   });
 
+  test("--memory-library-id 33 字符报 USAGE (2)", async () => {
+    const { exitCode } = await runCommandE2e(MEMORY_ADD_ROUTES, [
+      "memory",
+      "add",
+      "--user-id",
+      memoryUserId(),
+      "--content",
+      "over-long library id",
+      "--memory-library-id",
+      "l".repeat(33),
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+  });
+
   test("--messages 非法 JSON 报 USAGE (2)", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_ADD_ROUTES, [
       "memory",

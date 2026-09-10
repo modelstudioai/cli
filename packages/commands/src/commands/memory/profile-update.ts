@@ -13,6 +13,9 @@ import {
   MEMORY_LIBRARY_FLAG,
   MEMORY_WORKSPACE_NOTE,
   WORKSPACE_FLAG,
+  assertAttributeFieldLengths,
+  checkMemoryScopeLengths,
+  checkProfileSchemaTextLengths,
   parseJsonArrayFlag,
   resolveWorkspaceId,
 } from "./shared.ts";
@@ -64,6 +67,7 @@ function validateOperations(operations: ProfileSchemaAttributeOperation[]): void
     if (operation.op !== "add" && !operation.attribute_id) {
       throw new UsageError(`${position}.attribute_id is required when op is "${operation.op}"`);
     }
+    assertAttributeFieldLengths(position, operation);
   });
 }
 
@@ -99,7 +103,7 @@ export default defineCommand({
   validate: (flags) => {
     if (!flags.name && !flags.description && !flags.attributesOperations)
       return "Provide --name, --description, or --attributes-operations.";
-    return undefined;
+    return checkMemoryScopeLengths(flags) ?? checkProfileSchemaTextLengths(flags) ?? undefined;
   },
   async run(ctx) {
     const { settings, flags } = ctx;

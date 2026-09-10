@@ -136,6 +136,36 @@ describe("e2e: memory profile update", () => {
     expect(exitCode).toBe(2);
   });
 
+  test("--name 33 字符报 USAGE (2)", async () => {
+    const { exitCode } = await runCommandE2e(MEMORY_PROFILE_UPDATE_ROUTES, [
+      "memory",
+      "profile",
+      "update",
+      "--schema-id",
+      "schema_test",
+      "--name",
+      "n".repeat(33),
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+  });
+
+  test("op=add 属性 name 超长报 USAGE (2)", async () => {
+    const { exitCode } = await runCommandE2e(MEMORY_PROFILE_UPDATE_ROUTES, [
+      "memory",
+      "profile",
+      "update",
+      "--schema-id",
+      "schema_test",
+      "--attributes-operations",
+      `[{"op":"add","name":"${"a".repeat(33)}"}]`,
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+  });
+
   test("--dry-run 断言 endpoint / PATCH / name 与 description", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_PROFILE_UPDATE_ROUTES, [
       "memory",

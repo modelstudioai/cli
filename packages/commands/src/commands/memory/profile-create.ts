@@ -1,5 +1,6 @@
 import {
   defineCommand,
+  UsageError,
   memoryEndpoint,
   profileSchemaPath,
   detectOutputFormat,
@@ -15,6 +16,9 @@ import {
   MEMORY_WORKSPACE_NOTE,
   PLAN_VERSION_FLAG,
   WORKSPACE_FLAG,
+  assertAttributeFieldLengths,
+  checkMemoryScopeLengths,
+  checkProfileSchemaTextLengths,
   parseJsonArrayFlag,
   resolveWorkspaceId,
 } from "./shared.ts";
@@ -76,10 +80,20 @@ export default defineCommand({
         '--name "user_basic" --attributes \'[{"name":"age"}]\' --plan-version lite --memory-library-id lib_xxx',
     },
   ],
+  validate: (flags) =>
+    checkMemoryScopeLengths(flags) ?? checkProfileSchemaTextLengths(flags) ?? undefined,
   async run(ctx) {
     const { settings, flags } = ctx;
 
     const attributes = parseJsonArrayFlag<ProfileAttribute>("--attributes", flags.attributes);
+    if (attributes.length === 0) {
+      throw new UsageError("--attributes must contain at least one attribute");
+    }
+    attributes.forEach((attribute, index) => {
+      const position = `--attributes[${index}]`;
+      if (!attribute.name) throw new UsageError(`${position}.name is required`);
+      assertAttributeFieldLengths(position, attribute);
+    });
 
     const body: ProfileSchemaCreateRequest = { name: flags.name, attributes };
     if (flags.description) body.description = flags.description;

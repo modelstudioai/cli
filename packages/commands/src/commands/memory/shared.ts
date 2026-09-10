@@ -52,6 +52,100 @@ export const PROJECT_ID_FLAG = {
   },
 } satisfies FlagsDef;
 
+// ---- Documented field limits (long-term memory API reference) ----
+
+/** Max characters accepted for user_id. */
+export const MAX_USER_ID_LENGTH = 64;
+/** Max characters accepted for memory_library_id. */
+export const MAX_MEMORY_LIBRARY_ID_LENGTH = 32;
+/** Max characters accepted for custom_content. */
+export const MAX_CUSTOM_CONTENT_LENGTH = 512;
+/** Max characters accepted for a profile schema name. */
+export const MAX_SCHEMA_NAME_LENGTH = 32;
+/** Max characters accepted for a profile schema description. */
+export const MAX_SCHEMA_DESCRIPTION_LENGTH = 128;
+/** Max characters accepted for a profile attribute name. */
+export const MAX_ATTRIBUTE_NAME_LENGTH = 32;
+/** Max characters accepted for a profile attribute description. */
+export const MAX_ATTRIBUTE_DESCRIPTION_LENGTH = 128;
+/** Max characters accepted for a profile attribute default value. */
+export const MAX_ATTRIBUTE_DEFAULT_VALUE_LENGTH = 128;
+
+/**
+ * Length guard for the scope flags every memory command carries, so `--dry-run`
+ * already rejects input the API would reject.
+ */
+export function checkMemoryScopeLengths(flags: {
+  userId?: string;
+  memoryLibraryId?: string;
+}): string | undefined {
+  if (flags.userId !== undefined && flags.userId.length > MAX_USER_ID_LENGTH) {
+    return `--user-id must be at most ${MAX_USER_ID_LENGTH} characters.`;
+  }
+  if (
+    flags.memoryLibraryId !== undefined &&
+    flags.memoryLibraryId.length > MAX_MEMORY_LIBRARY_ID_LENGTH
+  ) {
+    return `--memory-library-id must be at most ${MAX_MEMORY_LIBRARY_ID_LENGTH} characters.`;
+  }
+  return undefined;
+}
+
+/** Length guard for the profile schema name / description pair. */
+export function checkProfileSchemaTextLengths(flags: {
+  name?: string;
+  description?: string;
+}): string | undefined {
+  if (flags.name !== undefined && flags.name.length > MAX_SCHEMA_NAME_LENGTH) {
+    return `--name must be at most ${MAX_SCHEMA_NAME_LENGTH} characters.`;
+  }
+  if (flags.description !== undefined && flags.description.length > MAX_SCHEMA_DESCRIPTION_LENGTH) {
+    return `--description must be at most ${MAX_SCHEMA_DESCRIPTION_LENGTH} characters.`;
+  }
+  return undefined;
+}
+
+/**
+ * Length guard for one attribute payload, shared by `profile create` attributes
+ * and `profile update` attribute operations. Throws because it runs after the
+ * JSON flag is parsed.
+ */
+export function assertAttributeFieldLengths(
+  position: string,
+  attribute: { name?: string; description?: string; default_value?: string | null },
+): void {
+  if (attribute.name !== undefined && attribute.name.length > MAX_ATTRIBUTE_NAME_LENGTH) {
+    throw new UsageError(
+      `${position}.name must be at most ${MAX_ATTRIBUTE_NAME_LENGTH} characters`,
+    );
+  }
+  if (
+    attribute.description !== undefined &&
+    attribute.description.length > MAX_ATTRIBUTE_DESCRIPTION_LENGTH
+  ) {
+    throw new UsageError(
+      `${position}.description must be at most ${MAX_ATTRIBUTE_DESCRIPTION_LENGTH} characters`,
+    );
+  }
+  if (
+    attribute.default_value !== undefined &&
+    attribute.default_value !== null &&
+    attribute.default_value.length > MAX_ATTRIBUTE_DEFAULT_VALUE_LENGTH
+  ) {
+    throw new UsageError(
+      `${position}.default_value must be at most ${MAX_ATTRIBUTE_DEFAULT_VALUE_LENGTH} characters`,
+    );
+  }
+}
+
+/** Shared help note: the documented account-level QPM ceilings for the memory API. */
+export const MEMORY_RATE_LIMIT_NOTE = {
+  "en-US":
+    "Account-level rate limits: add 120 QPM, search 300 QPM, 3000 QPM across all memory APIs. On HTTP 429 back off and leave at least 1s between calls.",
+  "zh-CN":
+    "账号级限流：add 120 QPM、search 300 QPM，记忆库全部接口合计 3000 QPM。遇到 HTTP 429 请降速，两次请求间隔建议至少 1 秒。",
+};
+
 /** Parse a JSON object flag (`--meta-data`), rejecting arrays and primitives. */
 export function parseJsonObjectFlag(flagName: string, raw: string): Record<string, unknown> {
   let parsed: unknown;

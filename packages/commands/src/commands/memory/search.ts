@@ -13,9 +13,11 @@ import {
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
   MEMORY_LIBRARY_FLAG,
+  MEMORY_RATE_LIMIT_NOTE,
   MEMORY_WORKSPACE_NOTE,
   PLAN_VERSION_FLAG,
   WORKSPACE_FLAG,
+  checkMemoryScopeLengths,
   parseJsonArrayFlag,
   resolveWorkspaceId,
 } from "./shared.ts";
@@ -117,6 +119,7 @@ export default defineCommand({
         "--plan-version overrides --enable-rerank and changes the price: pro reranks, lite does not.",
       "zh-CN": "--plan-version 覆盖 --enable-rerank 且影响计费：pro 开启重排，lite 不开启。",
     },
+    MEMORY_RATE_LIMIT_NOTE,
   ],
   exampleArgs: [
     {
@@ -135,6 +138,8 @@ export default defineCommand({
   ],
   validate: (flags: SearchFlags) => {
     if (!flags.query && !flags.messages) return "Provide --query or --messages.";
+    const scopeError = checkMemoryScopeLengths(flags);
+    if (scopeError) return scopeError;
     if (flags.topK !== undefined && (flags.topK < 1 || flags.topK > MAX_TOP_K))
       return `--top-k must be between 1 and ${MAX_TOP_K}.`;
     if (flags.minScore !== undefined && (flags.minScore < 0 || flags.minScore > 1))

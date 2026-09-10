@@ -91,6 +91,24 @@ describe("e2e: memory update", () => {
     expect(exitCode).toBe(2);
   });
 
+  test("--memory-library-id 33 字符报 USAGE (2)", async () => {
+    const { exitCode } = await runCommandE2e(MEMORY_UPDATE_ROUTES, [
+      "memory",
+      "update",
+      "--node-id",
+      "node_test",
+      "--user-id",
+      memoryUserId(),
+      "--content",
+      "新内容",
+      "--memory-library-id",
+      "l".repeat(33),
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+  });
+
   test("--meta-data 非法 JSON 报 USAGE (2)", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_UPDATE_ROUTES, [
       "memory",

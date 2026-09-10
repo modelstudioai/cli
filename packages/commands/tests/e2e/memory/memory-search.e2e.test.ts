@@ -65,6 +65,22 @@ describe("e2e: memory search", () => {
     expect(exitCode).toBe(2);
   });
 
+  test("--memory-library-id 33 字符报 USAGE (2)", async () => {
+    const { exitCode } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
+      "memory",
+      "search",
+      "--user-id",
+      memoryUserId(),
+      "--query",
+      "x",
+      "--memory-library-id",
+      "l".repeat(33),
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+  });
+
   test("--top-k 101 报 USAGE (2)", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
       "memory",

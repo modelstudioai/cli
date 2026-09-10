@@ -13,9 +13,12 @@ import {
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
   MEMORY_LIBRARY_FLAG,
+  MEMORY_RATE_LIMIT_NOTE,
   MEMORY_WORKSPACE_NOTE,
+  MAX_CUSTOM_CONTENT_LENGTH,
   PROJECT_ID_FLAG,
   WORKSPACE_FLAG,
+  checkMemoryScopeLengths,
   parseJsonArrayFlag,
   parseJsonObjectFlag,
   resolveWorkspaceId,
@@ -71,10 +74,6 @@ type AddFlags = ParsedFlags<typeof ADD_FLAGS>;
 
 /** Max messages accepted per AddMemory call (a Q&A pair counts as 2). */
 const MAX_MESSAGES = 50;
-/** Max characters accepted for custom_content. */
-const MAX_CONTENT_LENGTH = 512;
-/** Max characters accepted for user_id. */
-const MAX_USER_ID_LENGTH = 64;
 
 export default defineCommand({
   description: {
@@ -96,6 +95,7 @@ export default defineCommand({
         "The response lists the changed memory nodes; one call can add, update or delete several at once.",
       "zh-CN": "返回结果是变更的记忆片段列表；一次调用可能同时新增、更新或删除多条。",
     },
+    MEMORY_RATE_LIMIT_NOTE,
   ],
   exampleArgs: [
     {
@@ -118,10 +118,10 @@ export default defineCommand({
   ],
   validate: (flags: AddFlags) => {
     if (!flags.messages && !flags.content) return "Provide --messages or --content.";
-    if (flags.userId.length > MAX_USER_ID_LENGTH)
-      return `--user-id must be at most ${MAX_USER_ID_LENGTH} characters.`;
-    if (flags.content && flags.content.length > MAX_CONTENT_LENGTH)
-      return `--content must be at most ${MAX_CONTENT_LENGTH} characters.`;
+    const scopeError = checkMemoryScopeLengths(flags);
+    if (scopeError) return scopeError;
+    if (flags.content && flags.content.length > MAX_CUSTOM_CONTENT_LENGTH)
+      return `--content must be at most ${MAX_CUSTOM_CONTENT_LENGTH} characters.`;
     return undefined;
   },
   async run(ctx) {

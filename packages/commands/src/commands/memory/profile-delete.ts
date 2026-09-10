@@ -11,6 +11,7 @@ import {
   MEMORY_LIBRARY_FLAG,
   MEMORY_WORKSPACE_NOTE,
   WORKSPACE_FLAG,
+  checkMemoryScopeLengths,
   resolveWorkspaceId,
 } from "./shared.ts";
 
@@ -54,6 +55,7 @@ export default defineCommand({
     },
   ],
   exampleArgs: ["--schema-id schema_xxx --workspace-id ws_xxx", "--schema-id schema_xxx --yes"],
+  validate: (flags) => checkMemoryScopeLengths(flags),
   async run(ctx) {
     const { settings, flags } = ctx;
 

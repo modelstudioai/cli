@@ -71,6 +71,7 @@ export type {
   MemoryAddRequest,
   MemoryAddResponse,
   MemoryChangedNode,
+  MemoryContentPart,
   MemoryMessage,
   MemoryNode,
   MemoryNodeListResponse,
