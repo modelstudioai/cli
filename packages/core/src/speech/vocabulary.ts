@@ -102,12 +102,7 @@ export function queryVocabulary(
     vocabulary?: VocabularyEntry[];
   }>
 > {
-  return callVocabularyApi(
-    client,
-    "query_vocabulary",
-    { vocabulary_id: vocabularyId },
-    signal,
-  );
+  return callVocabularyApi(client, "query_vocabulary", { vocabulary_id: vocabularyId }, signal);
 }
 
 export function updateVocabulary(
@@ -129,10 +124,5 @@ export function deleteVocabulary(
   vocabularyId: string,
   signal?: AbortSignal,
 ): Promise<VocabularyEnvelope<Record<string, never>>> {
-  return callVocabularyApi(
-    client,
-    "delete_vocabulary",
-    { vocabulary_id: vocabularyId },
-    signal,
-  );
+  return callVocabularyApi(client, "delete_vocabulary", { vocabulary_id: vocabularyId }, signal);
 }

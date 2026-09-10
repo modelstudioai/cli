@@ -60,18 +60,18 @@ describe("parseVocabularyEntries", () => {
   });
 
   test("数组形态透传 lang", () => {
-    expect(
-      parseVocabularyEntries('[{"text":"奋斗者","weight":4,"lang":"zh"}]'),
-    ).toEqual([{ text: "奋斗者", weight: 4, lang: "zh" }]);
+    expect(parseVocabularyEntries('[{"text":"奋斗者","weight":4,"lang":"zh"}]')).toEqual([
+      { text: "奋斗者", weight: 4, lang: "zh" },
+    ]);
   });
 
   test("数组形态忽略第二参 lang", () => {
-    expect(
-      parseVocabularyEntries('[{"text":"奋斗者","weight":4}]', "zh"),
-    ).toEqual([{ text: "奋斗者", weight: 4 }]);
-    expect(
-      parseVocabularyEntries('[{"text":"奋斗者","weight":4,"lang":"en"}]', "zh"),
-    ).toEqual([{ text: "奋斗者", weight: 4, lang: "en" }]);
+    expect(parseVocabularyEntries('[{"text":"奋斗者","weight":4}]', "zh")).toEqual([
+      { text: "奋斗者", weight: 4 },
+    ]);
+    expect(parseVocabularyEntries('[{"text":"奋斗者","weight":4,"lang":"en"}]', "zh")).toEqual([
+      { text: "奋斗者", weight: 4, lang: "en" },
+    ]);
   });
 
   test("数组缺 text 或 weight 拒绝", () => {

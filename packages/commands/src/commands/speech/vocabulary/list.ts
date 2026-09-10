@@ -22,8 +22,7 @@ const LIST_FLAGS = {
     type: "number",
     valueHint: "<n>",
     description: {
-      "en-US":
-        "Page number, 1-based (default: 1). Mapped to API page_index (0-based) as page - 1",
+      "en-US": "Page number, 1-based (default: 1). Mapped to API page_index (0-based) as page - 1",
       "zh-CN": "页码，从 1 开始（默认：1）。映射为 API 的 page_index（从 0 开始）：page - 1",
     },
   },
@@ -50,12 +49,10 @@ export default defineCommand({
     {
       "en-US":
         "List responses do not include target_model; use `speech vocabulary get` to inspect the model a vocabulary was built for.",
-      "zh-CN":
-        "list 响应不含 target_model；要对齐模型请使用 `speech vocabulary get`。",
+      "zh-CN": "list 响应不含 target_model；要对齐模型请使用 `speech vocabulary get`。",
     },
     {
-      "en-US":
-        "Vocabularies with status UNDEPLOYED are silently ignored by ASR.",
+      "en-US": "Vocabularies with status UNDEPLOYED are silently ignored by ASR.",
       "zh-CN": "status 为 UNDEPLOYED 的热词表会被 ASR 静默忽略。",
     },
   ],

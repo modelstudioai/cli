@@ -249,9 +249,7 @@ export default defineCommand({
     const format = detectOutputFormat(settings.output);
 
     const vocabulary =
-      flags.vocabulary !== undefined
-        ? parseInstantVocabulary(flags.vocabulary)
-        : undefined;
+      flags.vocabulary !== undefined ? parseInstantVocabulary(flags.vocabulary) : undefined;
 
     // Auto-upload local files in parallel
     const resolvedUrls = await Promise.all(rawUrls.map((url) => ctx.client.uploadFile(url, model)));
@@ -283,9 +281,7 @@ export default defineCommand({
         ...(route.asyncInputStyle === "file_url"
           ? { file_url: resolvedUrls[0]! }
           : { file_urls: resolvedUrls }),
-        ...(flags.context !== undefined
-          ? { context: buildAsrContextMessages(flags.context) }
-          : {}),
+        ...(flags.context !== undefined ? { context: buildAsrContextMessages(flags.context) } : {}),
       },
       parameters: {
         channel_id: channelId !== undefined ? [channelId] : [0],

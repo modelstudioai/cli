@@ -70,13 +70,13 @@ export default defineCommand({
         '--model paraformer-v2 --prefix demo --words \'[{"text":"奋斗者","weight":4,"lang":"zh"}]\'',
     },
     {
-      "en-US": '--model fun-asr --prefix demo --words \'{"Fendouzhe":4}\' --lang zh',
-      "zh-CN": '--model fun-asr --prefix demo --words \'{"奋斗者":4}\' --lang zh',
+      "en-US": "--model fun-asr --prefix demo --words '{\"Fendouzhe\":4}' --lang zh",
+      "zh-CN": "--model fun-asr --prefix demo --words '{\"奋斗者\":4}' --lang zh",
     },
     "--model fun-asr --prefix demo --words-file ./hotwords.json",
     {
-      "en-US": '--model fun-asr --prefix demo --words \'{"Fendouzhe":4}\' --quiet',
-      "zh-CN": '--model fun-asr --prefix demo --words \'{"奋斗者":4}\' --quiet',
+      "en-US": "--model fun-asr --prefix demo --words '{\"Fendouzhe\":4}' --quiet",
+      "zh-CN": "--model fun-asr --prefix demo --words '{\"奋斗者\":4}' --quiet",
     },
   ],
   validate: (flags: CreateFlags) => validateVocabularySource(flags),

@@ -26,9 +26,9 @@ export const VOCABULARY_BODY_FLAGS = {
     valueHint: "<json>",
     description: {
       "en-US":
-        'Hot words as JSON object of word→weight, e.g. \'{"Fendouzhe":4}\'; or the API entry array for per-entry lang. Weight 1-5 (4 recommended); when the vocabulary target_model is a Qwen-Audio-3.0-ASR-Flash series model, 50 is also allowed as super hot word. Or use --words-file',
+        "Hot words as JSON object of word→weight, e.g. '{\"Fendouzhe\":4}'; or the API entry array for per-entry lang. Weight 1-5 (4 recommended); when the vocabulary target_model is a Qwen-Audio-3.0-ASR-Flash series model, 50 is also allowed as super hot word. Or use --words-file",
       "zh-CN":
-        '热词，JSON 对象「热词→权重」，例如 \'{"奋斗者":4}\'；需要逐条指定语言时可传 API 的条目数组。权重 1-5（推荐 4）；当热词表的 target_model 为 Qwen-Audio-3.0-ASR-Flash 系列时还可使用 50（超级热词）。也可使用 --words-file',
+        "热词，JSON 对象「热词→权重」，例如 '{\"奋斗者\":4}'；需要逐条指定语言时可传 API 的条目数组。权重 1-5（推荐 4）；当热词表的 target_model 为 Qwen-Audio-3.0-ASR-Flash 系列时还可使用 50（超级热词）。也可使用 --words-file",
     },
   },
   wordsFile: {
@@ -66,9 +66,7 @@ export function validateVocabularySource(flags: VocabularySourceFlags): string |
 
 /** Read and parse vocabulary entries from flag or file. */
 export function readVocabularyEntries(flags: VocabularySourceFlags): VocabularyEntry[] {
-  const raw = flags.wordsFile
-    ? readTextFromPathOrStdin(flags.wordsFile)
-    : (flags.words as string);
+  const raw = flags.wordsFile ? readTextFromPathOrStdin(flags.wordsFile) : (flags.words as string);
   return parseVocabularyEntries(raw, flags.lang);
 }
 
@@ -77,8 +75,7 @@ export const VOCABULARY_LIMIT_NOTES = [
   {
     "en-US":
       "Each account may have at most 10 vocabularies; updates must be at least 5 minutes apart. See improve-asr-accuracy for full limits.",
-    "zh-CN":
-      "每个账号最多 10 个热词表；两次更新间隔至少 5 分钟。完整限制见 improve-asr-accuracy。",
+    "zh-CN": "每个账号最多 10 个热词表；两次更新间隔至少 5 分钟。完整限制见 improve-asr-accuracy。",
   },
   {
     "en-US":

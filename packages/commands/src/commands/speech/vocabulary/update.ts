@@ -33,8 +33,7 @@ export default defineCommand({
     message: {
       "en-US":
         "This fully replaces all hot words in the vocabulary. Entries not listed will be discarded and cannot be undone.",
-      "zh-CN":
-        "该操作会完全替换热词表中的全部词条。未列出的词将被丢弃，且无法撤销。",
+      "zh-CN": "该操作会完全替换热词表中的全部词条。未列出的词将被丢弃，且无法撤销。",
     },
   },
   usageArgs: "--id <id> (--words <json> | --words-file <path>) [flags]",
@@ -43,15 +42,14 @@ export default defineCommand({
     {
       "en-US":
         "update is a full replace, not an append. Prefer --dry-run first to preview the complete vocabulary that will be written.",
-      "zh-CN":
-        "update 是完全替换，不是增量追加。建议先用 --dry-run 预览将要写入的完整词表。",
+      "zh-CN": "update 是完全替换，不是增量追加。建议先用 --dry-run 预览将要写入的完整词表。",
     },
     ...VOCABULARY_LIMIT_NOTES,
   ],
   exampleArgs: [
     {
-      "en-US": '--id vocab-demo-xxx --words \'{"Fendouzhe":4}\' --dry-run',
-      "zh-CN": '--id vocab-demo-xxx --words \'{"奋斗者":4}\' --dry-run',
+      "en-US": "--id vocab-demo-xxx --words '{\"Fendouzhe\":4}' --dry-run",
+      "zh-CN": "--id vocab-demo-xxx --words '{\"奋斗者\":4}' --dry-run",
     },
     {
       "en-US": '--id vocab-demo-xxx --words \'{"Fendouzhe":4,"Jingluo":4}\' --yes',
