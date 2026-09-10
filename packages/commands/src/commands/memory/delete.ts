@@ -1,50 +1,62 @@
-import { defineCommand, memoryNodePath, detectOutputFormat } from "bailian-cli-core";
+import {
+  defineCommand,
+  memoryEndpoint,
+  memoryNodePath,
+  detectOutputFormat,
+  type FlagsDef,
+} from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
+import { buildQuery } from "../shared/params.ts";
+import {
+  MEMORY_LIBRARY_FLAG,
+  MEMORY_WORKSPACE_NOTE,
+  WORKSPACE_FLAG,
+  resolveWorkspaceId,
+} from "./shared.ts";
+
+const DELETE_FLAGS = {
+  nodeId: {
+    type: "string",
+    valueHint: "<id>",
+    description: { "en-US": "Memory node ID (required)", "zh-CN": "记忆节点 ID（必填）" },
+    required: true,
+  },
+  userId: {
+    type: "string",
+    valueHint: "<id>",
+    description: {
+      "en-US": "Memory entity ID that owns the memory (required)",
+      "zh-CN": "记忆实体 ID，标识记忆归属对象（必填）",
+    },
+    required: true,
+  },
+  ...MEMORY_LIBRARY_FLAG,
+  ...WORKSPACE_FLAG,
+} satisfies FlagsDef;
 
 export default defineCommand({
   description: { "en-US": "Delete a memory node", "zh-CN": "删除记忆节点" },
   auth: "apiKey",
-  usageArgs: "--node-id <id> --user-id <id>",
-  flags: {
-    nodeId: {
-      type: "string",
-      valueHint: "<id>",
-      description: { "en-US": "Memory node ID (required)", "zh-CN": "记忆节点 ID（必填）" },
-      required: true,
-    },
-    userId: {
-      type: "string",
-      valueHint: "<id>",
-      description: { "en-US": "User ID (required)", "zh-CN": "用户 ID（必填）" },
-      required: true,
-    },
-    memoryLibraryId: {
-      type: "string",
-      valueHint: "<id>",
-      description: {
-        "en-US": "Memory library ID (non-default library)",
-        "zh-CN": "记忆库 ID（非默认记忆库）",
-      },
-    },
-  },
-  exampleArgs: ["--node-id node_xxx --user-id user1"],
+  usageArgs: "--node-id <id> --user-id <id> [flags]",
+  flags: DELETE_FLAGS,
+  notes: [MEMORY_WORKSPACE_NOTE],
+  exampleArgs: ["--node-id node_xxx --user-id user1 --workspace-id ws_xxx"],
   async run(ctx) {
     const { settings, flags } = ctx;
     const nodeId = flags.nodeId;
-    const userId = flags.userId;
 
     const format = detectOutputFormat(settings.output);
-    const params = new URLSearchParams({ user_id: userId });
-    if (flags.memoryLibraryId) params.set("memory_library_id", flags.memoryLibraryId);
-    const path = `${memoryNodePath(nodeId)}?${params.toString()}`;
+    const url =
+      memoryEndpoint(resolveWorkspaceId(ctx), memoryNodePath(nodeId)) +
+      buildQuery({ user_id: flags.userId, memory_library_id: flags.memoryLibraryId });
 
     if (settings.dryRun) {
-      emitResult({ endpoint: ctx.client.url(path), method: "DELETE" }, format);
+      emitResult({ endpoint: url, method: "DELETE" }, format);
       return;
     }
 
     const response = await ctx.client.requestJson<{ request_id: string }>({
-      path,
+      path: url,
       method: "DELETE",
     });
 

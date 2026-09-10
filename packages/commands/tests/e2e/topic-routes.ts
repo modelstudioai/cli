@@ -25,14 +25,57 @@ export const CONFIG_ROUTES: E2eRouteExports = {
   "config agent": "configAgent",
 };
 
-export const MEMORY_ROUTES: E2eRouteExports = {
+export const MEMORY_ADD_ROUTES: E2eRouteExports = {
   "memory add": "memoryAdd",
+};
+
+export const MEMORY_SEARCH_ROUTES: E2eRouteExports = {
   "memory search": "memorySearch",
+};
+
+export const MEMORY_LIST_ROUTES: E2eRouteExports = {
   "memory list": "memoryList",
+};
+
+export const MEMORY_UPDATE_ROUTES: E2eRouteExports = {
   "memory update": "memoryUpdate",
+};
+
+export const MEMORY_DELETE_ROUTES: E2eRouteExports = {
   "memory delete": "memoryDelete",
+  "memory add": "memoryAdd", // live self-cleaning chain
+  "memory list": "memoryList", // live: resolve the node id add just produced
+  "memory search": "memorySearch", // live: verify the node is retrievable
+  "memory update": "memoryUpdate", // live update step in the chain
+};
+
+export const MEMORY_PROFILE_CREATE_ROUTES: E2eRouteExports = {
   "memory profile create": "memoryProfileCreate",
+};
+
+export const MEMORY_PROFILE_LIST_ROUTES: E2eRouteExports = {
+  "memory profile list": "memoryProfileList",
+};
+
+export const MEMORY_PROFILE_SHOW_ROUTES: E2eRouteExports = {
+  "memory profile show": "memoryProfileShow",
+};
+
+export const MEMORY_PROFILE_UPDATE_ROUTES: E2eRouteExports = {
+  "memory profile update": "memoryProfileUpdate",
+};
+
+export const MEMORY_PROFILE_GET_ROUTES: E2eRouteExports = {
   "memory profile get": "memoryProfileGet",
+};
+
+export const MEMORY_PROFILE_DELETE_ROUTES: E2eRouteExports = {
+  "memory profile delete": "memoryProfileDelete",
+  "memory profile create": "memoryProfileCreate", // live self-cleaning chain
+  "memory profile list": "memoryProfileList", // live: the new schema shows up in the list
+  "memory profile show": "memoryProfileShow", // live: attribute_id handles for update
+  "memory profile update": "memoryProfileUpdate", // live update step in the chain
+  "memory profile get": "memoryProfileGet", // live: user profile reachable through the schema
 };
 
 export const KNOWLEDGE_ROUTES: E2eRouteExports = {

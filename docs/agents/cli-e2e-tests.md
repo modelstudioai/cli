@@ -71,12 +71,13 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 | 场景                    | 条件                                                                                                       |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
-| 文本/搜索/记忆/配置     | `isDashScopeE2EReady()`                                                                                    |
+| 文本/搜索/配置          | `isDashScopeE2EReady()`                                                                                    |
 | 图像/语音               | `isBailianE2EMediaEnabled() && isDashScopeE2EReady()`                                                      |
 | 视频                    | `isBailianE2EVideoEnabled() && isDashScopeE2EReady()`                                                      |
 | OpenAPI AK/SK           | `isOpenApiE2EReady()`（`.env` 中必须同时提供完整 AK/SK）                                                   |
 | 视频 download/task      | 另需 `BAILIAN_E2E_VIDEO_TASK_ID`                                                                           |
 | 知识库 chat/search live | `isChatE2EReady()` / `isSearchE2EReady()`（`knowledge chat/search`，需 `BAILIAN_WORKSPACE_ID` + agent ID） |
+| 记忆 live               | `isMemoryE2EReady()`（另需 `BAILIAN_E2E_MEMORY_LIBRARY_ID`；记忆服务需账号单独开通）                       |
 
 ## 用例类型
 

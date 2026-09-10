@@ -346,25 +346,48 @@ export interface MemoryMessage {
   content: string;
 }
 
+/** 记忆抽取策略版本：pro 开启 Rerank，lite 关闭（单价不同）。 */
+export type MemoryPlanVersion = "pro" | "lite";
+
 export interface MemoryAddRequest {
   user_id: string;
   messages?: MemoryMessage[];
   custom_content?: string;
   profile_schema?: string;
   memory_library_id?: string;
+  /** 记忆片段规则 ID；不传则用记忆库的默认规则 */
+  project_id?: string;
+  meta_data?: Record<string, unknown>;
+}
+
+/** AddMemory 返回的变更记录：一次调用可能产生多条 ADD/UPDATE/DELETE。 */
+export interface MemoryChangedNode {
+  memory_node_id: string;
+  content: string;
+  event?: "ADD" | "UPDATE" | "DELETE";
+  /** 仅 event 为 UPDATE 时有效 */
+  old_content?: string;
 }
 
 export interface MemoryAddResponse {
   request_id: string;
-  memory_ids?: string[];
+  memory_nodes?: MemoryChangedNode[];
 }
 
 export interface MemorySearchRequest {
   user_id: string;
   messages?: MemoryMessage[];
-  query?: string;
   top_k?: number;
+  /** 最小相似度阈值，值域 [0,1] */
+  min_score?: number;
+  enable_rerank?: boolean;
+  /** 优先级高于 enable_rerank：传了本字段时 enable_rerank 被忽略 */
+  plan_version?: MemoryPlanVersion;
+  enable_judge?: boolean;
+  enable_rewrite?: boolean;
   memory_library_id?: string;
+  /** 记忆片段规则 ID 数组，可多规则混合检索 */
+  project_ids?: string[];
 }
 
 export interface MemoryNode {
@@ -372,8 +395,10 @@ export interface MemoryNode {
   content: string;
   user_id?: string;
   meta_data?: Record<string, unknown>;
-  created_at?: string;
-  updated_at?: string;
+  /** 秒级 Unix 时间戳 */
+  created_at?: number;
+  /** 秒级 Unix 时间戳 */
+  updated_at?: number;
 }
 
 export interface MemorySearchResponse {
@@ -394,20 +419,26 @@ export interface MemoryNodeUpdateRequest {
   custom_content: string;
   /** 非默认记忆库时必填（与控制台记忆库 ID 一致） */
   memory_library_id?: string;
+  /** 记忆片段对应事件发生时的秒级 Unix 时间戳（默认当前时间） */
+  timestamp?: number;
+  /** 用户自定义信息（增量更新） */
+  meta_data?: Record<string, unknown>;
 }
 
 // ---- Memory Profile (DashScope v2) ----
 
 export interface ProfileAttribute {
   name: string;
-  description: string;
-  value?: string;
+  description?: string;
+  default_value?: string;
 }
 
 export interface ProfileSchemaCreateRequest {
   name: string;
   description?: string;
   attributes: ProfileAttribute[];
+  memory_library_id?: string;
+  plan_version?: MemoryPlanVersion;
 }
 
 export interface ProfileSchemaCreateResponse {
@@ -415,12 +446,60 @@ export interface ProfileSchemaCreateResponse {
   profile_schema_id: string;
 }
 
+export interface ProfileSchemaSummary {
+  profile_schema_id: string;
+  name: string;
+  description?: string;
+}
+
+export interface ProfileSchemaListResponse {
+  request_id: string;
+  profile_schemas?: ProfileSchemaSummary[];
+  total?: number;
+}
+
+/** GetProfileSchema：属性带 attribute_id，是 UpdateProfileSchema 的操作句柄 */
+export interface ProfileSchemaAttribute extends ProfileAttribute {
+  attribute_id: string;
+}
+
+export interface ProfileSchemaDetailResponse {
+  request_id: string;
+  name?: string;
+  description?: string;
+  attributes?: ProfileSchemaAttribute[];
+}
+
+export interface ProfileSchemaAttributeOperation {
+  op: "add" | "update" | "delete";
+  /** op 为 update / delete 时必填 */
+  attribute_id?: string;
+  /** op 为 add 时必填 */
+  name?: string;
+  description?: string;
+  default_value?: string | null;
+}
+
+export interface ProfileSchemaUpdateRequest {
+  name?: string;
+  description?: string;
+  attributes_operations?: ProfileSchemaAttributeOperation[];
+  memory_library_id?: string;
+}
+
+/** GetUserProfile 的属性：value 未提取时字段缺失 */
+export interface UserProfileAttribute {
+  id: string;
+  name: string;
+  value?: string;
+}
+
 export interface UserProfileResponse {
   request_id: string;
-  profile: {
-    schema_id: string;
-    user_id: string;
-    attributes: ProfileAttribute[];
+  profile?: {
+    schema_name?: string;
+    schema_description?: string;
+    attributes?: UserProfileAttribute[];
   };
 }
 

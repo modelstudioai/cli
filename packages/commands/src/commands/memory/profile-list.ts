@@ -1,31 +1,21 @@
 import {
   defineCommand,
   memoryEndpoint,
-  memoryListPath,
+  profileSchemaPath,
   detectOutputFormat,
   type FlagsDef,
-  type MemoryNodeListResponse,
+  type ProfileSchemaListResponse,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { buildQuery } from "../shared/params.ts";
 import {
   MEMORY_LIBRARY_FLAG,
   MEMORY_WORKSPACE_NOTE,
-  PROJECT_ID_FLAG,
   WORKSPACE_FLAG,
   resolveWorkspaceId,
 } from "./shared.ts";
 
-const LIST_FLAGS = {
-  userId: {
-    type: "string",
-    valueHint: "<id>",
-    description: {
-      "en-US": "Memory entity ID that owns the memory (required)",
-      "zh-CN": "记忆实体 ID，标识记忆归属对象（必填）",
-    },
-    required: true,
-  },
+const PROFILE_LIST_FLAGS = {
   pageSize: {
     type: "number",
     valueHint: "<n>",
@@ -36,21 +26,20 @@ const LIST_FLAGS = {
     valueHint: "<n>",
     description: { "en-US": "Page number (default: 1)", "zh-CN": "页码（默认：1）" },
   },
-  ...PROJECT_ID_FLAG,
   ...MEMORY_LIBRARY_FLAG,
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: { "en-US": "List memory nodes for a user", "zh-CN": "列出用户的记忆节点" },
+  description: { "en-US": "List profile schemas", "zh-CN": "列出画像模板" },
   auth: "apiKey",
-  usageArgs: "--user-id <id> [flags]",
-  flags: LIST_FLAGS,
+  usageArgs: "[flags]",
+  flags: PROFILE_LIST_FLAGS,
   notes: [MEMORY_WORKSPACE_NOTE],
   exampleArgs: [
-    "--user-id user1 --workspace-id ws_xxx",
-    "--user-id user1 --page-size 20 --page 2",
-    "--user-id user1 --memory-library-id lib_xxx --output json",
+    "--workspace-id ws_xxx",
+    "--page-size 20 --page 2",
+    "--memory-library-id lib_xxx --output json",
   ],
   validate: (flags) => {
     if (flags.page !== undefined && flags.page < 1) return "--page must be at least 1.";
@@ -63,12 +52,10 @@ export default defineCommand({
 
     const format = detectOutputFormat(settings.output);
     const url =
-      memoryEndpoint(resolveWorkspaceId(ctx), memoryListPath()) +
+      memoryEndpoint(resolveWorkspaceId(ctx), profileSchemaPath()) +
       buildQuery({
-        user_id: flags.userId,
         page_size: flags.pageSize,
         page_num: flags.page,
-        project_id: flags.projectId,
         memory_library_id: flags.memoryLibraryId,
       });
 
@@ -77,20 +64,19 @@ export default defineCommand({
       return;
     }
 
-    const response = await ctx.client.requestJson<MemoryNodeListResponse>({
+    const response = await ctx.client.requestJson<ProfileSchemaListResponse>({
       path: url,
       method: "GET",
     });
 
     if (settings.quiet || format === "text") {
-      if (!response.memory_nodes || response.memory_nodes.length === 0) {
-        emitBare("No memory nodes found.");
+      const schemas = response.profile_schemas ?? [];
+      if (schemas.length === 0) {
+        emitBare("No profile schemas found.");
       } else {
-        for (const node of response.memory_nodes) {
-          emitBare(`[${node.memory_node_id}] ${node.content}`);
-          if (node.meta_data && Object.keys(node.meta_data).length > 0) {
-            emitBare(`  meta: ${JSON.stringify(node.meta_data)}`);
-          }
+        for (const schema of schemas) {
+          emitBare(`[${schema.profile_schema_id}] ${schema.name}`);
+          if (schema.description) emitBare(`  ${schema.description}`);
         }
         if (response.total !== undefined) {
           emitBare(`\nTotal: ${response.total}`);

@@ -75,6 +75,21 @@ export function isConnectorE2EReady(): boolean {
   return isKbAdminE2EReady() && process.env.BAILIAN_E2E_CONNECTOR === "1";
 }
 
+/**
+ * 记忆库 fixture（memory / memory profile live 闭环）
+ *
+ * 记忆 API 没有「列出记忆库」接口，ID 只能从控制台抄，因此必须显式配置；
+ * 另外记忆服务需要在账号上单独开通，未开通时服务端返回 ServiceNotOpened。
+ * 记忆 API 部署在 workspace 专属域名上，所以还需要 BAILIAN_WORKSPACE_ID。
+ */
+export function isMemoryE2EReady(): boolean {
+  return (
+    isDashScopeE2EReady() &&
+    !!process.env.BAILIAN_E2E_MEMORY_LIBRARY_ID?.trim() &&
+    !!process.env.BAILIAN_WORKSPACE_ID?.trim()
+  );
+}
+
 // ---- Long-lived knowledge fixtures (created manually in the console; the CLI
 // cannot create table/image-type bases or multimodal services itself) ----
 

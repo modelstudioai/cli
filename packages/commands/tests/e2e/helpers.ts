@@ -34,6 +34,7 @@ export {
   isDashScopeE2EReady,
   isImageKbE2EReady,
   isKbAdminE2EReady,
+  isMemoryE2EReady,
   isMultimodalChatE2EReady,
   isMultimodalSearchE2EReady,
   isOpenApiE2EReady,

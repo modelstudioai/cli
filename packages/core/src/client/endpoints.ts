@@ -1,5 +1,18 @@
 // API path builders — return the path only; the Client prepends the
 // credential's baseUrl. Commands never see baseUrl.
+//
+// Exception: workspace-scoped APIs (RAG admin plane, knowledge search/chat,
+// memory) live on a per-workspace host, so their builders return an absolute
+// URL — see `workspaceEndpoint`.
+
+/**
+ * Workspace-scoped API host. Everything reached through the workspace gateway
+ * (RAG admin plane, knowledge search/chat, memory) shares this host shape, so
+ * it is spelled out exactly once here.
+ */
+function workspaceEndpoint(workspaceId: string, path: string): string {
+  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com${path}`;
+}
 
 // ---- Chat (OpenAI Compatible) ----
 export function chatPath(): string {
@@ -62,7 +75,14 @@ export function appCompletionPath(appId: string): string {
   return `/api/v1/apps/${encodeURIComponent(appId)}/completion`;
 }
 
-// ---- Memory (DashScope v2) ----
+// ---- Memory (long-term memory v2, workspace-based host) ----
+// The path builders below return the path portion only; wrap them in
+// `memoryEndpoint` to get the URL the memory API is actually served on.
+
+export function memoryEndpoint(workspaceId: string, path: string): string {
+  return workspaceEndpoint(workspaceId, path);
+}
+
 export function memoryAddPath(): string {
   return "/api/v2/apps/memory/add";
 }
@@ -89,13 +109,17 @@ export function speechRecognizePath(): string {
   return "/api/v1/services/audio/asr/transcription";
 }
 
-// ---- Memory Profile (DashScope v2) ----
+// ---- Memory Profile (long-term memory v2, workspace-based host) ----
 export function profileSchemaPath(): string {
   return "/api/v2/apps/memory/profile_schemas";
 }
 
+export function profileSchemaItemPath(schemaId: string): string {
+  return `/api/v2/apps/memory/profile_schemas/${encodeURIComponent(schemaId)}`;
+}
+
 export function userProfilePath(schemaId: string): string {
-  return `/api/v2/apps/memory/profile_schemas/${encodeURIComponent(schemaId)}/profiles`;
+  return `${profileSchemaItemPath(schemaId)}/user_profile`;
 }
 
 // ---- Knowledge Base Retrieve (DashScope) ----
@@ -106,13 +130,13 @@ export function knowledgeRetrievePath(): string {
 // ---- Knowledge Search (新版 RAG 检索, workspace-based host) ----
 
 export function knowledgeSearchEndpoint(workspaceId: string): string {
-  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com/api/v1/indices/knowledge/search`;
+  return workspaceEndpoint(workspaceId, "/api/v1/indices/knowledge/search");
 }
 
 // ---- Knowledge Chat (新版 RAG 问答, workspace-based host) ----
 
 export function knowledgeChatEndpoint(workspaceId: string): string {
-  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com/api/v2/apps/knowledge/chat`;
+  return workspaceEndpoint(workspaceId, "/api/v2/apps/knowledge/chat");
 }
 
 // ---- MCP Services (Streamable HTTP) ----
@@ -223,7 +247,7 @@ export function deploymentsModelsPath(): string {
 // RAG_PATHS to avoid per-endpoint boilerplate.
 
 export function ragEndpoint(workspaceId: string, path: string): string {
-  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com${path}`;
+  return workspaceEndpoint(workspaceId, path);
 }
 
 export const RAG_PATHS = {
