@@ -1,7 +1,7 @@
 ---
 name: bailian-gen
 metadata:
-  version: "1.22.0"
+  version: "1.23.0"
   requires:
     bins: ["bl"]
 description: >-
@@ -51,6 +51,20 @@ To improve ASR accuracy with domain terms:
 - Use `bl speech vocabulary create` + `--vocabulary-id` for Fun-ASR / Paraformer, or whenever the same hot words must be reused across requests. The vocabulary `--model` must exactly match recognize `--model` (otherwise the vocabulary is silently ignored). Each account may have at most 10 vocabularies; delete unused ones.
 
 Flags, usage, and examples: see [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags.
+
+## Watermark configuration
+
+Image generation and editing, video generation and editing, and reference-to-video enable watermarks by default. Change the default for the active Profile with:
+
+```bash
+bl config set --key watermark --value false
+```
+
+Set it to `true` to enable watermarks again. To update a named Profile without switching Profiles, add `--config <name>`:
+
+```bash
+bl config set --config media --key watermark --value false
+```
 
 ## Local files (mandatory)
 
