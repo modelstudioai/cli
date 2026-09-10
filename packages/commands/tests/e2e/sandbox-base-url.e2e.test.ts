@@ -231,3 +231,88 @@ describe("e2e: Sandbox custom gateway transport", () => {
     },
   );
 });
+
+describe("e2e: Sandbox submitted build recovery", () => {
+  test.each([
+    { action: "create", output: "json", failure: "timeout", exitCode: 5 },
+    { action: "update", output: "text", failure: "service", exitCode: 1 },
+    { action: "create", output: "json", failure: "network", exitCode: 6 },
+  ])(
+    "$action retains IDs after a $failure in $output output",
+    async ({ action, output, failure, exitCode }) => {
+      let submissionCount = 0;
+      const server = createServer((request, response) => {
+        request.resume();
+        response.setHeader("content-type", "application/json");
+        if (request.method !== "GET") {
+          submissionCount += 1;
+          response.end(
+            JSON.stringify({
+              templateID: "template-recovery",
+              buildID: "build-recovery",
+              buildStatus: "building",
+            }),
+          );
+        } else if (failure === "network") {
+          request.socket.destroy();
+        } else if (failure === "service") {
+          response.writeHead(503);
+          response.end(
+            JSON.stringify({
+              code: 100005,
+              message: "original service failure",
+              requestID: "request-recovery",
+            }),
+          );
+        } else {
+          response.end(JSON.stringify({ status: "building" }));
+        }
+      });
+      await new Promise<void>((resolve, reject) => {
+        server.once("error", reject);
+        server.listen(0, "127.0.0.1", resolve);
+      });
+      servers.push(server);
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("Expected a local TCP server.");
+      const args =
+        action === "create"
+          ? ["--name", "recovery", "--cpu-count", "1", "--memory-mb", "2048"]
+          : ["--template-id", "template-recovery", "--description", "updated"];
+      const result = await runCommandE2e(
+        ROUTES,
+        ["sandbox", "template", action, ...args, "--timeout", "1", "--quiet", "--output", output],
+        makeConfigEnv({
+          api_key: "sk-recovery-test",
+          base_url: `http://127.0.0.1:${address.port}`,
+        }),
+      );
+      expect(result.exitCode, result.stderr).toBe(exitCode);
+      expect(result.stdout).toBe("");
+      expect(submissionCount).toBe(1);
+      expect(result.stderr).toContain("templateID=template-recovery, buildID=build-recovery");
+      expect(result.stderr).toContain("sandbox template build-status");
+      if (output === "json") {
+        const diagnostics = result.stderr
+          .trim()
+          .split(/\n\s*\n/)
+          .map((diagnostic) => JSON.parse(diagnostic));
+        expect(diagnostics.at(-1)).toMatchObject({ error: { code: exitCode } });
+        if (failure === "timeout") {
+          expect(diagnostics).toHaveLength(1);
+          expect(diagnostics[0].error.message).toBe("Template build polling timed out.");
+        } else {
+          expect(diagnostics[0]).toMatchObject({
+            templateID: "template-recovery",
+            buildID: "build-recovery",
+          });
+          expect(diagnostics.at(-1).error.message).toContain("Network request failed");
+        }
+      } else {
+        expect(result.stderr).toContain("original service failure");
+        expect(result.stderr).toContain("HTTP 503 (100005)");
+        expect(result.stderr).toContain("request-recovery");
+      }
+    },
+  );
+});

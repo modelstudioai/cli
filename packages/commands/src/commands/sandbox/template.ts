@@ -355,12 +355,41 @@ async function emitTemplateMutationResult(options: {
     ),
     options.endpoint,
   ).toString();
-  const build = await waitForTemplateBuild(
-    options.client,
-    options.settings,
-    buildEndpoint,
-    options.pollInterval ?? 5,
-  );
+  let build: TemplateBuildStatus;
+  try {
+    build = await waitForTemplateBuild(
+      options.client,
+      options.settings,
+      buildEndpoint,
+      options.pollInterval ?? 5,
+    );
+  } catch (error) {
+    const hint =
+      `Submitted build / 已提交的构建: templateID=${options.response.templateID}, buildID=${options.response.buildID}.\n` +
+      "Check this build with sandbox template build-status before submitting another build. / 请先通过 sandbox template build-status 查询本次构建，再决定是否重新提交。";
+    if (error instanceof BailianError) {
+      throw new BailianError(
+        error.message,
+        error.exitCode,
+        [error.hint, hint].filter(Boolean).join("\n"),
+        {
+          api: error.api,
+          rawResponse: error.rawResponse,
+          cause: error.cause,
+        },
+      );
+    }
+    // Leave transport errors intact so runtime retains timeout/network classification.
+    const recovery = {
+      templateID: options.response.templateID,
+      buildID: options.response.buildID,
+      hint,
+    };
+    process.stderr.write(
+      format === "json" ? `${JSON.stringify(recovery, null, 2)}\n\n` : `${hint}\n`,
+    );
+    throw error;
+  }
   if (options.settings.quiet) emitBare(displayValue(options.response.templateID));
   else emitResult({ template: options.response, build }, format);
 }

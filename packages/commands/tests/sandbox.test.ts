@@ -445,6 +445,113 @@ describe("Sandbox template build polling", () => {
     expect(requestJson).not.toHaveBeenCalled();
   });
 
+  test.each([
+    { name: "create", command: sandboxTemplateCreate },
+    { name: "update", command: sandboxTemplateUpdate },
+  ])("$name preserves submitted IDs and the original polling failure", async ({ command }) => {
+    const submission = { templateID: "template-test", buildID: "build-test" };
+    const serviceCause = new Error("original cause");
+    const serviceError = new BailianError("service message", ExitCode.GENERAL, "original hint", {
+      api: { httpStatus: 503, apiCode: "Unavailable", requestId: "request-test" },
+      rawResponse: "original response",
+      cause: serviceCause,
+    });
+    const scenarios = [
+      {
+        timeout: 0,
+        response: { status: "building" },
+        exitCode: ExitCode.TIMEOUT,
+        message: "Template build polling timed out.",
+      },
+      {
+        timeout: 30,
+        response: { status: "error", reason: { message: "image download failed" } },
+        exitCode: ExitCode.GENERAL,
+        message: "image download failed",
+      },
+      {
+        timeout: 30,
+        error: serviceError,
+        exitCode: ExitCode.GENERAL,
+        message: serviceError.message,
+      },
+    ];
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    for (const scenario of scenarios) {
+      const requestJson = vi.fn().mockResolvedValueOnce(submission);
+      if (scenario.error) requestJson.mockRejectedValue(scenario.error);
+      else requestJson.mockResolvedValue(scenario.response);
+      const operation = command.run({
+        identity: { binName: "bl" },
+        settings: { ...SETTINGS, timeout: scenario.timeout },
+        flags: {
+          workspaceId: "ws-test",
+          templateId: "template-test",
+          name: "python",
+          cpuCount: 1,
+          memoryMb: 2048,
+          async: false,
+        },
+        client: { requestJson, url: createUrlResolver() },
+      } as never);
+      await expect(operation).rejects.toMatchObject({
+        message: scenario.message,
+        exitCode: scenario.exitCode,
+        hint: expect.stringContaining("templateID=template-test, buildID=build-test"),
+      });
+      if (scenario.error) {
+        await expect(operation).rejects.toMatchObject({
+          api: serviceError.api,
+          rawResponse: serviceError.rawResponse,
+          cause: serviceCause,
+          hint: expect.stringContaining("original hint"),
+        });
+      }
+      expect(requestJson.mock.calls.filter(([request]) => request.method !== "GET")).toHaveLength(
+        1,
+      );
+    }
+    expect(stdout).not.toHaveBeenCalled();
+  });
+
+  test.each(["json", "text"] as const)(
+    "transport failures retain their identity and emit build recovery in %s diagnostics",
+    async (output) => {
+      const failure = new TypeError("fetch failed", { cause: { code: "ECONNRESET" } });
+      const requestJson = vi
+        .fn()
+        .mockResolvedValueOnce({ templateID: "template-test", buildID: "build-test" })
+        .mockRejectedValue(failure);
+      let stderr = "";
+      vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+        stderr += String(chunk);
+        return true;
+      });
+      await expect(
+        sandboxTemplateCreate.run({
+          identity: { binName: "bl" },
+          settings: { ...SETTINGS, output },
+          flags: {
+            workspaceId: "ws-test",
+            name: "python",
+            cpuCount: 1,
+            memoryMb: 2048,
+            async: false,
+          },
+          client: { requestJson, url: createUrlResolver() },
+        } as never),
+      ).rejects.toBe(failure);
+      if (output === "json") {
+        expect(JSON.parse(stderr)).toMatchObject({
+          templateID: "template-test",
+          buildID: "build-test",
+        });
+      } else {
+        expect(stderr).toContain("templateID=template-test, buildID=build-test");
+      }
+    },
+  );
+
   test("async template creation returns after the submit request", async () => {
     let stdout = "";
     vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
