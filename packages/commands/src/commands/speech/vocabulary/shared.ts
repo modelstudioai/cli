@@ -1,6 +1,7 @@
 import {
   readTextFromPathOrStdin,
   parseVocabularyEntries,
+  UsageError,
   type FlagsDef,
   type ParsedFlags,
   type VocabularyEntry,
@@ -60,6 +61,17 @@ export function validateVocabularySource(flags: VocabularySourceFlags): string |
   }
   if (flags.words && flags.wordsFile) {
     return "Use either --words or --words-file, not both.";
+  }
+  if (!flags.words) {
+    return undefined;
+  }
+  try {
+    parseVocabularyEntries(flags.words, flags.lang);
+  } catch (error) {
+    if (error instanceof UsageError) {
+      return error.message;
+    }
+    throw error;
   }
   return undefined;
 }
