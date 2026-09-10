@@ -3,22 +3,6 @@ import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import type { Client } from "./client.ts";
 
-/**
- * Agent Security Center (AgentStudio) response envelope.
- *
- * Unlike DashScope's `{ code, message }` shape — which `requestJson` already
- * understands — AgentStudio reports failures as `{ success: false, errorCode,
- * errorMsg }` over HTTP 200, so it needs its own unwrap layer. Missing data is
- * not an error by contract: `success: true` with a null `data` is valid and
- * surfaces as `null` here rather than throwing.
- */
-export interface SecurityEnvelope<T> {
-  success: boolean;
-  data: T | null;
-  errorCode?: string;
-  errorMsg?: string;
-}
-
 /** Documented AgentStudio error codes → actionable hint. */
 const SECURITY_ERROR_HINTS: Record<string, string> = {
   "12000090": "STS credentials unavailable — retry in a moment",
@@ -41,40 +25,126 @@ export function isDashScopeGateway(origin: string): boolean {
   return DASHSCOPE_GATEWAY_ORIGINS.has(origin.replace(/\/+$/, ""));
 }
 
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+/** First non-empty string among the candidates, else undefined (treats "" as absent). */
+function firstNonEmptyString(...candidates: unknown[]): string | undefined {
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.length > 0) return candidate;
+  }
+  return undefined;
+}
+
+function throwSecurityFailure(
+  errorCode: string | undefined,
+  errorMsg: string | undefined,
+  rawResponse: string,
+): never {
+  const code = errorCode ?? "unknown";
+  // When neither a code nor a message is present the envelope shape is
+  // unrecognised (e.g. a backend contract change) — surface a body snippet so
+  // the failure is diagnosable instead of an opaque "unknown - no message".
+  const bodySnippet =
+    errorCode === undefined && errorMsg === undefined
+      ? `\nUnexpected response body (truncated): ${rawResponse.slice(0, 800)}`
+      : "";
+  throw new BailianError(
+    `Security API failed: ${code} - ${errorMsg ?? "no message"}${bodySnippet}`,
+    // 12000092 (no permission to create the service-linked role) is an auth
+    // problem the caller can act on; everything else is a generic failure.
+    code === "12000092" ? ExitCode.AUTH : ExitCode.GENERAL,
+    SECURITY_ERROR_HINTS[code],
+    { rawResponse: rawResponse.slice(0, 500) },
+  );
+}
+
+/**
+ * Parse an Agent Security Center response body and return the business payload.
+ *
+ * The backend serves these through the Zelda "DataV2" double-envelope — the same
+ * shape the console gateway returns (see console/models.ts unwrapResponse):
+ *
+ *   { code, successResponse, requestId,
+ *     data: { success, errorCode, errorMsg,
+ *             DataV2: { ret: ["SUCCESS::…"],
+ *                       data: { success, failed, data: <payload> } } } }
+ *
+ * The payload lives at `data.DataV2.data.data`. The legacy flat envelope
+ * `{ success, data, errorCode, errorMsg }` is still accepted so any endpoint
+ * that has not migrated keeps working. A failed or unrecognized shape throws
+ * with the raw body attached (surfaced by --output json) for diagnosis.
+ */
+export function parseSecurityBody<T>(raw: string, contentType?: string | null): T | null {
+  let body: unknown;
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    throw new BailianError(
+      `Security API returned non-JSON response (${contentType ?? "unknown type"}).`,
+      ExitCode.GENERAL,
+      undefined,
+      { rawResponse: raw.slice(0, 500) },
+    );
+  }
+
+  const root = asRecord(body);
+  const data = root ? asRecord(root.data) : undefined;
+  const dataV2 = data ? asRecord(data.DataV2) : undefined;
+
+  // Zelda / DataV2 double-envelope (current backend contract).
+  if (dataV2) {
+    const inner = asRecord(dataV2.data);
+    const ret = Array.isArray(dataV2.ret) ? dataV2.ret.map((entry) => String(entry)) : [];
+    const retOk = ret.length === 0 || ret.some((line) => line.startsWith("SUCCESS"));
+    const errorCode = firstNonEmptyString(data?.errorCode, root?.errorCode);
+    const errorMsg =
+      firstNonEmptyString(data?.errorMsg, root?.errorMsg) ?? (retOk ? undefined : ret.join("; "));
+    const failed =
+      root?.successResponse === false ||
+      data?.success === false ||
+      inner?.success === false ||
+      inner?.failed === true ||
+      !retOk ||
+      errorCode !== undefined;
+    if (failed) throwSecurityFailure(errorCode, errorMsg, raw);
+    return ((inner ? inner.data : undefined) ?? null) as T | null;
+  }
+
+  // Legacy flat envelope: { success, data, errorCode, errorMsg }.
+  if (root && "success" in root) {
+    if (!root.success) {
+      throwSecurityFailure(
+        firstNonEmptyString(root.errorCode),
+        firstNonEmptyString(root.errorMsg),
+        raw,
+      );
+    }
+    return (root.data ?? null) as T | null;
+  }
+
+  // Bare payload: the REST endpoint currently returns the business object
+  // directly, with no envelope. Treat the root object as the payload.
+  if (root) return root as T;
+
+  // Not an object at all — surface the raw body so the contract change is visible.
+  throwSecurityFailure(undefined, undefined, raw);
+}
+
 /**
  * GET a Security Center endpoint and unwrap its envelope.
  *
- * `url` is an absolute per-workspace AgentStudio URL (see `securityOverviewEndpoint`
- * / `securityAgentLogsEndpoint`); the Client detects the absolute form, uses it
- * verbatim, and injects the Bearer token — so the model-domain `base_url` never
- * leaks into these calls. Genuine HTTP errors (non-2xx) surface through the
- * Client transport; only HTTP 200 envelopes reach the `success` check below.
- * Returns null when the server reports success with no data.
+ * `url` is an absolute AgentStudio URL (see securityOverviewEndpoint /
+ * securityAgentLogsEndpoint, or a --base-url override); the Client uses it
+ * verbatim and injects the Bearer token. Genuine HTTP errors (non-2xx) surface
+ * through the Client transport; only HTTP 200 bodies reach parseSecurityBody.
+ * Returns null when the server reports success with no payload.
  */
 export async function securityGet<T>(client: Client, url: string): Promise<T | null> {
   const response = await client.request({ path: url, method: "GET" });
-
-  let body: SecurityEnvelope<T>;
-  try {
-    body = (await response.json()) as SecurityEnvelope<T>;
-  } catch {
-    const contentType = response.headers.get("content-type") || "unknown type";
-    throw new BailianError(
-      `Security API returned non-JSON response (${contentType}).`,
-      ExitCode.GENERAL,
-    );
-  }
-
-  if (!body.success) {
-    const code = body.errorCode ?? "unknown";
-    throw new BailianError(
-      `Security API failed: ${code} - ${body.errorMsg ?? "no message"}`,
-      // 12000092 (no permission to create the service-linked role) is an auth
-      // problem the caller can act on; everything else is a generic failure.
-      code === "12000092" ? ExitCode.AUTH : ExitCode.GENERAL,
-      SECURITY_ERROR_HINTS[code],
-    );
-  }
-
-  return body.data ?? null;
+  const raw = await response.text();
+  return parseSecurityBody<T>(raw, response.headers.get("content-type"));
 }

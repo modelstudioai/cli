@@ -6,6 +6,8 @@
 export interface SecurityToggle {
   key: string;
   enabled: boolean;
+  /** Protection entries carry an asset count; absent for some (e.g. external_agent). */
+  count?: number | null;
 }
 
 /** Detection card: `hit` is the headline number, `scanned` the total. */
@@ -18,9 +20,15 @@ export interface SecurityScanStat {
 export interface SecurityOverview {
   capabilities?: SecurityToggle[] | null;
   protection?: SecurityToggle[] | null;
+  // Detection cards: the REST endpoint returns snake_case, the console-gateway
+  // (DataV2) shape returns camelCase. Accept both; the renderer picks whichever
+  // is present.
   content_safety?: SecurityScanStat | null;
   file_scan?: SecurityScanStat | null;
   skill_scan?: SecurityScanStat | null;
+  contentSafety?: SecurityScanStat | null;
+  fileScan?: SecurityScanStat | null;
+  skillScan?: SecurityScanStat | null;
 }
 
 export type SecurityRiskLevel = "high" | "medium" | "low";

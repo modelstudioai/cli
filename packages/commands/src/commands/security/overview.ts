@@ -68,7 +68,6 @@ export default defineCommand({
     }
 
     const data = await securityGet<SecurityOverview>(ctx.client, endpoint);
-
     if (!data) {
       if (format === "json") emitResult({}, format);
       else emitBare("Overview unavailable.");
@@ -80,11 +79,14 @@ export default defineCommand({
       return;
     }
 
-    // Banner totals are client-side sums across the detection cards.
-    const cards = SCAN_CARDS.map(([key, label]) => ({
-      label,
-      stat: data[key] as SecurityScanStat | null | undefined,
-    }));
+    // Banner totals are client-side sums across the detection cards. Each card
+    // accepts the snake_case (REST) or camelCase (console-gateway) field.
+    const cards = SCAN_CARDS.map(({ label, keys }) => {
+      const stat = keys
+        .map((key) => data[key] as SecurityScanStat | null | undefined)
+        .find((value) => value !== undefined);
+      return { label, stat: stat ?? null };
+    });
     const sum = (pick: (stat: SecurityScanStat) => number | null): number =>
       cards.reduce((total, card) => total + (card.stat ? (pick(card.stat) ?? 0) : 0), 0);
 

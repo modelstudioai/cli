@@ -56,11 +56,11 @@ export const PROTECTION_LABELS: Record<string, string> = {
   external_agent: "BYOA 托管",
 };
 
-/** Detection cards summed into the overview banner (headline + total). */
-export const SCAN_CARDS: Array<[keyof SecurityOverview, string]> = [
-  ["content_safety", "内容安全"],
-  ["file_scan", "文件扫描"],
-  ["skill_scan", "技能扫描"],
+/** Detection cards summed into the overview banner: label + snake_case (REST) / camelCase (gateway) keys. */
+export const SCAN_CARDS: Array<{ label: string; keys: Array<keyof SecurityOverview> }> = [
+  { label: "内容安全", keys: ["content_safety", "contentSafety"] },
+  { label: "文件扫描", keys: ["file_scan", "fileScan"] },
+  { label: "技能扫描", keys: ["skill_scan", "skillScan"] },
 ];
 
 /** Append a query param only when present; arrays append each item (repeatable). */
@@ -89,7 +89,8 @@ export function renderToggles(
     return;
   }
   for (const toggle of toggles) {
-    emitBare(`  ${toggle.enabled ? "on " : "off"}  ${labels[toggle.key] ?? toggle.key}`);
+    const count = typeof toggle.count === "number" ? `  (${toggle.count})` : "";
+    emitBare(`  ${toggle.enabled ? "on " : "off"}  ${labels[toggle.key] ?? toggle.key}${count}`);
   }
 }
 
