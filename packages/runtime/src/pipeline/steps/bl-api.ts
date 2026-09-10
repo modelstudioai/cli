@@ -12,6 +12,7 @@ import {
   speechRecognizePath,
   resolveAsrApi,
   buildAsrFlashRequest,
+  buildAsrContextMessages,
   buildAsyncAsrLanguageFields,
   collectAsrTranscriptionItems,
   extractAsrFlashText,
@@ -566,6 +567,10 @@ export interface SpeechRecognizeInput {
   diarization?: boolean;
   "speaker-count"?: number;
   "vocabulary-id"?: string;
+  /** Instant hot words (already structured; no JSON string parse needed). */
+  vocabulary?: Record<string, number>;
+  /** Context enhancement plain text. */
+  context?: string;
   "channel-id"?: number;
   "poll-interval"?: number;
 }
@@ -605,9 +610,11 @@ export async function speechRecognize(
     const unsupportedFlags: string[] = [];
     if (input.diarization) unsupportedFlags.push("diarization");
     if (input["speaker-count"] !== undefined) unsupportedFlags.push("speaker-count");
-    // input-audio Flash supports vocabulary_id; qwen3 sync Flash does not
-    if (route.flashFamily === "qwen3" && input["vocabulary-id"] !== undefined) {
-      unsupportedFlags.push("vocabulary-id");
+    // qwen3 sync Flash has no place for vocabulary_id / vocabulary / context in its body shape
+    if (route.flashFamily === "qwen3") {
+      if (input["vocabulary-id"] !== undefined) unsupportedFlags.push("vocabulary-id");
+      if (input.vocabulary !== undefined) unsupportedFlags.push("vocabulary");
+      if (input.context !== undefined) unsupportedFlags.push("context");
     }
     if (input["channel-id"] !== undefined) unsupportedFlags.push("channel-id");
     if (unsupportedFlags.length > 0) {
@@ -651,6 +658,8 @@ export async function speechRecognize(
       audioUrl: fileUrls[0]!,
       language: input.language,
       vocabularyId: input["vocabulary-id"],
+      vocabulary: input.vocabulary,
+      context: input.context,
       flashFamily,
     });
     const response = await env.client.requestJson<Record<string, unknown>>({
@@ -674,14 +683,19 @@ export async function speechRecognize(
   );
   const body: DashScopeASRRequest = {
     model,
-    input:
-      route.asyncInputStyle === "file_url" ? { file_url: fileUrls[0]! } : { file_urls: fileUrls },
+    input: {
+      ...(route.asyncInputStyle === "file_url"
+        ? { file_url: fileUrls[0]! }
+        : { file_urls: fileUrls }),
+      ...(input.context ? { context: buildAsrContextMessages(input.context) } : {}),
+    },
     parameters: {
       channel_id: input["channel-id"] !== undefined ? [input["channel-id"]] : undefined,
       ...languageFields,
       diarization_enabled: input.diarization,
       speaker_count: input["speaker-count"],
       vocabulary_id: input["vocabulary-id"],
+      vocabulary: input.vocabulary,
     },
   };
   stripUndefined(body.parameters as Record<string, unknown>);

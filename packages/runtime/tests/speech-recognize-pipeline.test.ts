@@ -68,6 +68,81 @@ test("pipeline speechRecognize routes input-audio flash to sync multimodal endpo
   });
 });
 
+test("pipeline speechRecognize injects vocabulary and context on sync input-audio", async () => {
+  const { env, captured } = makeEnv();
+  await speechRecognize(
+    env,
+    {
+      url: "https://example.com/a.wav",
+      model: "qwen-audio-3.0-asr-flash",
+      vocabulary: { 奋斗者: 4 },
+      context: "奋斗者号",
+    },
+    makeCtx(),
+  );
+
+  expect(captured[0]?.body).toMatchObject({
+    parameters: { vocabulary: { 奋斗者: 4 } },
+    input: {
+      messages: [
+        { role: "user", content: [{ type: "input_text", text: "奋斗者号" }] },
+        {
+          role: "user",
+          content: [{ type: "input_audio", input_audio: { data: "https://example.com/a.wav" } }],
+        },
+      ],
+    },
+  });
+});
+
+test("pipeline speechRecognize injects vocabulary and context on async filetrans", async () => {
+  const { env, captured } = makeEnv(async (opts) => {
+    if (opts.async || opts.method === "POST") {
+      return { output: { task_id: "task-1", task_status: "PENDING" } };
+    }
+    return {
+      output: { task_id: "task-1", task_status: "SUCCEEDED", results: [] },
+      request_id: "r1",
+    };
+  });
+
+  await speechRecognize(
+    env,
+    {
+      url: "https://example.com/a.wav",
+      model: "qwen-audio-3.0-asr-flash-filetrans",
+      vocabulary: { 鲸落: 4 },
+      context: "鲸落 深海勇士",
+      "poll-interval": 0,
+    },
+    makeCtx(),
+  );
+
+  expect(captured[0]?.body).toMatchObject({
+    input: {
+      file_urls: ["https://example.com/a.wav"],
+      context: [{ role: "user", content: [{ type: "input_text", text: "鲸落 深海勇士" }] }],
+    },
+    parameters: { vocabulary: { 鲸落: 4 } },
+  });
+});
+
+test("pipeline speechRecognize rejects vocabulary on qwen3 sync flash", async () => {
+  const { env, captured } = makeEnv();
+  await expect(
+    speechRecognize(
+      env,
+      {
+        url: "https://example.com/a.wav",
+        model: "qwen3-asr-flash",
+        vocabulary: { 奋斗者: 4 },
+      },
+      makeCtx(),
+    ),
+  ).rejects.toBeInstanceOf(PipelineError);
+  expect(captured).toHaveLength(0);
+});
+
 test("pipeline speechRecognize maps qwen3-filetrans language to parameters.language", async () => {
   const { env, captured } = makeEnv(async (opts) => {
     if (opts.async || opts.method === "POST") {
