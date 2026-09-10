@@ -14,9 +14,11 @@ import {
   speechRecognizePath,
   resolveAsrApi,
   buildAsrFlashRequest,
+  buildAsrContextMessages,
   buildAsyncAsrLanguageFields,
   collectAsrTranscriptionItems,
   extractAsrFlashText,
+  parseInstantVocabulary,
   type AsrApiRoute,
   type AsrFlashFamily,
   type OutputFormat,
@@ -73,8 +75,30 @@ const RECOGNIZE_FLAGS = {
     type: "string",
     valueHint: "<id>",
     description: {
-      "en-US": "Hot-word vocabulary ID for improved accuracy",
-      "zh-CN": "用于提升识别准确率的热词表 ID",
+      "en-US":
+        "Pre-built hot-word vocabulary ID (create it via `speech vocabulary create`). Its target_model must exactly match --model, otherwise it is silently ignored. Wider model support than --vocabulary, including Fun-ASR and Paraformer",
+      "zh-CN":
+        "预编译热词列表 ID（可用 `speech vocabulary create` 创建）。其 target_model 必须与 --model 完全一致，否则静默失效且无报错。支持模型比 --vocabulary 更广，含 Fun-ASR 与 Paraformer 系列",
+    },
+  },
+  vocabulary: {
+    type: "string",
+    valueHint: "<json>",
+    description: {
+      "en-US":
+        "Instant hot words as JSON object of word→weight, e.g. '{\"Fendouzhe\":4}'. Weight 1-5 (4 recommended; higher values can hurt other words), 50 for super hot word. No pre-built vocabulary needed. Takes effect only on Qwen-Audio-3.0-ASR-Flash models",
+      "zh-CN":
+        "即时热词，JSON 对象「热词→权重」，例如 '{\"奋斗者\":4}'。权重 1-5（推荐 4，过高会拖累其他词），50 表示超级热词。无需预先创建热词表。仅 Qwen-Audio-3.0-ASR-Flash 系列模型生效",
+    },
+  },
+  context: {
+    type: "string",
+    valueHint: "<text>",
+    description: {
+      "en-US":
+        "Context enhancement word list to improve accuracy on proper nouns; must contain the target words themselves (a topic description alone has little effect); max 400 chars. Takes effect only on Qwen-Audio-3.0-ASR-Flash and Fun-ASR-Flash models",
+      "zh-CN":
+        "上下文增强词表，提升专有名词准确率；须包含待识别的原词本身（只写主题描述效果有限），最长 400 字符。仅 Qwen-Audio-3.0-ASR-Flash 系列与 Fun-ASR-Flash 模型生效",
     },
   },
   channelId: {
@@ -110,9 +134,11 @@ function assertSyncFlashFlagsAllowed(
   const unsupported: string[] = [];
   if (flags.diarization === true) unsupported.push("--diarization");
   if (flags.speakerCount !== undefined) unsupported.push("--speaker-count");
-  // qwen3 sync Flash does not use vocabulary_id; input-audio Flash (fun-asr-flash* / qwen-audio-*-asr-flash) does
-  if (flashFamily === "qwen3" && flags.vocabularyId !== undefined) {
-    unsupported.push("--vocabulary-id");
+  // qwen3 sync Flash has no place for vocabulary_id / vocabulary / context in its body shape
+  if (flashFamily === "qwen3") {
+    if (flags.vocabularyId !== undefined) unsupported.push("--vocabulary-id");
+    if (flags.vocabulary !== undefined) unsupported.push("--vocabulary");
+    if (flags.context !== undefined) unsupported.push("--context");
   }
   if (flags.channelId !== undefined) unsupported.push("--channel-id");
   if (flags.async === true) unsupported.push("--async");
@@ -121,10 +147,32 @@ function assertSyncFlashFlagsAllowed(
   if (unsupported.length > 0) {
     throw new BailianError(
       `Model "${model}" uses sync Flash ASR and does not support: ${unsupported.join(", ")}.\n` +
-        `Hint: Use an async filetrans model (e.g. fun-asr, qwen3-asr-flash-filetrans) for those flags.`,
+        syncFlashUnsupportedHint(unsupported),
       ExitCode.USAGE,
     );
   }
+}
+
+/** Pick a hint that matches the rejected flags (vocab/context vs diarization/async/…). */
+function syncFlashUnsupportedHint(unsupported: string[]): string {
+  const vocabularyRelated = new Set(["--vocabulary", "--vocabulary-id", "--context"]);
+  const hasVocabularyRelated = unsupported.some((flag) => vocabularyRelated.has(flag));
+  const hasOtherFlags = unsupported.some((flag) => !vocabularyRelated.has(flag));
+
+  if (hasVocabularyRelated && !hasOtherFlags) {
+    return (
+      "Hint: Use qwen-audio-3.0-asr-flash (or an async filetrans model such as " +
+      "qwen-audio-3.0-asr-flash-filetrans) for vocabulary/context flags."
+    );
+  }
+  if (hasVocabularyRelated && hasOtherFlags) {
+    return (
+      "Hint: For vocabulary/context flags use qwen-audio-3.0-asr-flash or " +
+      "qwen-audio-3.0-asr-flash-filetrans; for the other flags use an async filetrans model " +
+      "(e.g. fun-asr)."
+    );
+  }
+  return "Hint: Use an async filetrans model (e.g. fun-asr, qwen3-asr-flash-filetrans) for those flags.";
 }
 
 export default defineCommand({
@@ -141,6 +189,8 @@ export default defineCommand({
     "--url https://example.com/meeting.wav --diarization --speaker-count 3",
     "--url https://example.com/audio.mp3 --language zh",
     "--url https://example.com/audio.mp3 --vocabulary-id vocab-abc123",
+    '--url https://example.com/audio.mp3 --model qwen-audio-3.0-asr-flash-filetrans --vocabulary \'{"奋斗者":4,"鲸落":4}\'',
+    '--url https://example.com/audio.mp3 --model qwen-audio-3.0-asr-flash-filetrans --context "奋斗者号 鲸落 深海勇士"',
     "--url https://example.com/audio.mp3 --out result.json",
     "--url https://example.com/audio.mp3 --async --quiet",
     "--url https://example.com/audio.mp3 --model qwen-audio-3.0-asr-flash --language en",
@@ -198,6 +248,11 @@ export default defineCommand({
 
     const format = detectOutputFormat(settings.output);
 
+    const vocabulary =
+      flags.vocabulary !== undefined
+        ? parseInstantVocabulary(flags.vocabulary)
+        : undefined;
+
     // Auto-upload local files in parallel
     const resolvedUrls = await Promise.all(rawUrls.map((url) => ctx.client.uploadFile(url, model)));
 
@@ -210,6 +265,7 @@ export default defineCommand({
         model,
         route,
         resolvedUrls[0]!,
+        vocabulary,
       );
       return;
     }
@@ -223,16 +279,21 @@ export default defineCommand({
 
     const body: DashScopeASRRequest = {
       model,
-      input:
-        route.asyncInputStyle === "file_url"
+      input: {
+        ...(route.asyncInputStyle === "file_url"
           ? { file_url: resolvedUrls[0]! }
-          : { file_urls: resolvedUrls },
+          : { file_urls: resolvedUrls }),
+        ...(flags.context !== undefined
+          ? { context: buildAsrContextMessages(flags.context) }
+          : {}),
+      },
       parameters: {
         channel_id: channelId !== undefined ? [channelId] : [0],
         ...languageFields,
         diarization_enabled: diarization ? true : undefined,
         speaker_count: speakerCount,
         vocabulary_id: vocabularyId,
+        vocabulary,
       },
     };
 
@@ -260,6 +321,7 @@ async function handleSyncFlashMode(
   model: string,
   route: AsrApiRoute,
   audioUrl: string,
+  vocabulary: Record<string, number> | undefined,
 ): Promise<void> {
   const flashFamily = route.flashFamily as AsrFlashFamily;
   const body = buildAsrFlashRequest({
@@ -267,6 +329,8 @@ async function handleSyncFlashMode(
     audioUrl,
     language: flags.language,
     vocabularyId: flags.vocabularyId,
+    vocabulary,
+    context: flags.context,
     flashFamily,
   });
 

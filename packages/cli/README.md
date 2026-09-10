@@ -111,13 +111,14 @@ irm https://bailian.aliyun.com/cli/install.ps1 | iex
 
 Once installed, just describe your task to your AI Agent — no need to assemble commands by hand.
 
-| Scenario                 | What to say to your Agent                                                         |
-| ------------------------ | --------------------------------------------------------------------------------- |
-| Managed Agent            | "Create a Managed Agent that can generate short-film storyboards and videos."     |
-| Image & video generation | "Generate an image of a cat in a spacesuit on Mars, then turn it into a video."   |
-| Usage & quota            | "Show my recent model usage, free-tier quota, and rate limits."                   |
-| Model selection          | "Recommend a model for image understanding and customer support."                 |
-| About Bailian CLI        | "Tell me what Bailian CLI can do for me, and suggest how to use it for my needs." |
+| Scenario                 | What to say to your Agent                                                                     |
+| ------------------------ | --------------------------------------------------------------------------------------------- |
+| Managed Agent            | "Create a Managed Agent that can generate short-film storyboards and videos."                 |
+| Image & video generation | "Generate an image of a cat in a spacesuit on Mars, then turn it into a video."               |
+| Speech recognition       | "Transcribe this audio; if proper nouns are wrong, add hot words and try again."              |
+| Usage & quota            | "Show my recent model usage, free-tier quota, and rate limits."                               |
+| Model selection          | "Recommend a model for image understanding and customer support."                             |
+| About Bailian CLI        | "Tell me what Bailian CLI can do for me, and suggest how to use it for my needs."             |
 
 > More examples and scenarios: [Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)
 
