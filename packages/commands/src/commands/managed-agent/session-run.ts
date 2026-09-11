@@ -59,11 +59,6 @@ const SESSION_RUN_FLAGS = {
     valueHint: "<title>",
     description: { "en-US": "Session title", "zh-CN": "Session 标题" },
   },
-  provider: {
-    type: "string",
-    valueHint: "<name>",
-    description: { "en-US": "Target provider", "zh-CN": "目标 Provider" },
-  },
   noStream: {
     type: "switch",
     description: {
@@ -108,7 +103,7 @@ export default defineCommand({
 
     const runOptions = {
       agent: flags.agent,
-      provider: flags.provider,
+      provider: "bailian",
       environment: flags.environment,
       vault: flags.vault,
       memoryStores: parseMemoryStores(flags.memoryStores),
@@ -121,7 +116,7 @@ export default defineCommand({
           would_run: {
             prompt: flags.prompt,
             agent: flags.agent ?? "auto",
-            provider: flags.provider ?? "auto",
+            provider: "bailian",
             environment: flags.environment,
             vault: flags.vault,
             memory_stores: runOptions.memoryStores,

@@ -1,4 +1,4 @@
-import { defineCommand, BailianError, ExitCode } from "bailian-cli-core";
+import { defineCommand } from "bailian-cli-core";
 import { runPermissionChange, validatePermissionChange } from "./shared.ts";
 
 export default defineCommand({
@@ -7,7 +7,16 @@ export default defineCommand({
     "zh-CN": "撤销模型权限（推理 / 微调 / 部署）",
   },
   auth: "apiKey",
-  usageArgs: "--model <models> [--action <actions>] | --all --yes",
+  risk: {
+    level: "high",
+    message: {
+      "en-US":
+        "This revokes model permissions and may interrupt inference, fine-tuning, or deployment workloads. With --all, it also clears all historical inference grants.",
+      "zh-CN":
+        "该操作会撤销模型权限，可能导致推理、精调或部署任务中断；使用 --all 时会清除全部历史推理授权。",
+    },
+  },
+  usageArgs: "--model <models> [--action <actions>] | --all [flags]",
   flags: {
     model: {
       type: "string",
@@ -33,17 +42,10 @@ export default defineCommand({
         "zh-CN": "关闭一键授权并清除所有历史推理授权",
       },
     },
-    yes: {
-      type: "switch",
-      description: {
-        "en-US": "Confirm --all without an interactive prompt (required)",
-        "zh-CN": "无需交互提示确认执行 --all（必填）",
-      },
-    },
   },
   exampleArgs: [
-    "--model qwen-plus",
-    "--model qwen-plus,qwen3-max --action inference,finetune",
+    "--model qwen-plus --yes",
+    "--model qwen-plus,qwen3-max --action inference,finetune --yes",
     "--all --yes",
     "--model qwen-plus --dry-run --output json",
   ],
@@ -51,6 +53,11 @@ export default defineCommand({
     {
       "en-US": "Grants apply to the business workspace your API key belongs to.",
       "zh-CN": "授权将应用于 API Key 所属的业务 Workspace。",
+    },
+    {
+      "en-US":
+        "All revoke operations require --yes; use --dry-run to preview the request without confirmation.",
+      "zh-CN": "所有撤权操作均需使用 --yes；可通过 --dry-run 免确认预览请求。",
     },
     {
       "en-US":
@@ -65,14 +72,6 @@ export default defineCommand({
   ],
   validate: (flags) => validatePermissionChange(flags),
   async run(ctx) {
-    const { flags, settings } = ctx;
-    if (flags.all && !flags.yes && !settings.dryRun) {
-      throw new BailianError(
-        "Refusing to clear all historical inference grants without confirmation.",
-        ExitCode.USAGE,
-        "Re-run with --yes to close one-key authorization (or preview with --dry-run).",
-      );
-    }
-    await runPermissionChange(ctx, flags, false);
+    await runPermissionChange(ctx, ctx.flags, false);
   },
 });

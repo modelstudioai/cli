@@ -258,10 +258,24 @@ export interface CommandContext<F extends FlagsDef = FlagsDef> {
  * typed flags (`ParsedFlags<F>` = 命令自有 flag). Stored heterogeneously as
  * {@link AnyCommand}; the precise typing lives at the `defineCommand` call site.
  */
+export type CommandRiskLevel = "high";
+
+export interface CommandRisk {
+  level: CommandRiskLevel;
+  message: LocalizedText;
+}
+
 export interface Command<F extends FlagsDef = FlagsDef> {
   description: LocalizedText;
   /** Credential this command requires. See {@link AuthRequirement}. */
   auth: AuthRequirement;
+  /**
+   * Runtime-classified operation risk and its user-facing consequence message.
+   * Omit for normal commands.
+   * High-risk commands must return from `run` on `settings.dryRun` before any
+   * remote request or local write; runtime only owns the confirmation gate.
+   */
+  risk?: CommandRisk;
   /** Usage line arg portion, e.g. "--prompt <text> [flags]". Manually written. */
   usageArgs?: string;
   /** Example args (without the `<bin> <path>` prefix). */
@@ -273,8 +287,10 @@ export interface Command<F extends FlagsDef = FlagsDef> {
    * Cross-flag validation, after parsing and before run. Return an error message
    * → UsageError; undefined to pass. Single-flag `required` is enforced by the
    * parser — use this for rules spanning flags or depending on a flag's *value*.
+   * May be async for read-only local preflight. Runtime awaits it before auth
+   * and confirmation. Do not perform remote requests or local writes here.
    */
-  validate?: (flags: ParsedFlags<F>) => string | undefined;
+  validate?: (flags: ParsedFlags<F>) => string | undefined | Promise<string | undefined>;
   run: (ctx: CommandContext<F>) => Promise<void>;
 }
 

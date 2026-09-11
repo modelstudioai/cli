@@ -181,25 +181,28 @@ bl finetune checkpoints --job-id ft-xxx --output json
 
 ### `bl finetune delete`
 
-| Field              | Value                                      |
-| ------------------ | ------------------------------------------ |
-| **Name**           | `finetune delete`                          |
-| **Description**    | Delete a fine-tune job record              |
-| **Authentication** | API Key                                    |
-| **Usage**          | `bl finetune delete --job-id <id> [--yes]` |
+| Field              | Value                                                                             |
+| ------------------ | --------------------------------------------------------------------------------- |
+| **Name**           | `finetune delete`                                                                 |
+| **Description**    | Delete a fine-tune job record                                                     |
+| **Authentication** | API Key                                                                           |
+| **Usage**          | `bl finetune delete --job-id <id>`                                                |
+| **Risk**           | `high`                                                                            |
+| **Risk message**   | This permanently deletes the specified fine-tune job record and cannot be undone. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
 
 #### Flags
 
-| Flag               | Type   | Required | Description                  |
-| ------------------ | ------ | -------- | ---------------------------- |
-| `--job-id <id>`    | string | yes      | Fine-tune job ID (required)  |
-| `--yes`            | switch | no       | Skip the confirmation prompt |
-| `--api-key <key>`  | string | no       | API key                      |
-| `--base-url <url>` | string | no       | API base URL                 |
+| Flag               | Type   | Required | Description                      |
+| ------------------ | ------ | -------- | -------------------------------- |
+| `--job-id <id>`    | string | yes      | Fine-tune job ID (required)      |
+| `--yes`            | switch | no       | Confirm this high-risk operation |
+| `--api-key <key>`  | string | no       | API key                          |
+| `--base-url <url>` | string | no       | API base URL                     |
 
 #### Notes
 
-- Irreversible — the job record is permanently removed.
 - Cancel a RUNNING job first via `finetune cancel` — the platform refuses to delete jobs that are still in flight.
 
 #### Examples
@@ -213,6 +216,7 @@ bl finetune delete --job-id ft-xxx --dry-run
 ```
 
 ```bash
+# Only after explicit user confirmation:
 bl finetune delete --job-id ft-xxx --yes
 ```
 

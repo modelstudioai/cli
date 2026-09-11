@@ -7,7 +7,7 @@ import {
   type FlagsDef,
   type RagMutationResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare, confirmDangerousAction } from "bailian-cli-runtime";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const CHUNK_DELETE_FLAGS = {
@@ -25,10 +25,6 @@ const CHUNK_DELETE_FLAGS = {
       "zh-CN": "要删除的 Chunk ID（可重复；每 10 个自动分批发送）",
     },
     required: true,
-  },
-  yes: {
-    type: "switch",
-    description: { "en-US": "Skip the confirmation prompt", "zh-CN": "跳过确认提示" },
   },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
@@ -48,6 +44,13 @@ export default defineCommand({
     "zh-CN": "从知识库中删除 Chunk（不可撤销）",
   },
   auth: "apiKey",
+  risk: {
+    level: "high",
+    message: {
+      "en-US": "This permanently deletes the selected chunks and cannot be undone.",
+      "zh-CN": "该操作会永久删除所选 Chunk，且无法撤销。",
+    },
+  },
   usageArgs: "--index-id <id> --chunk-id <id> [flags]",
   flags: CHUNK_DELETE_FLAGS,
   notes: [
@@ -80,11 +83,6 @@ export default defineCommand({
       );
       return;
     }
-
-    await confirmDangerousAction(
-      `Delete ${flags.chunkId.length} chunk(s) from knowledge base ${flags.indexId} in ${batches.length} batch(es).\nChunks are permanently removed. This cannot be undone.`,
-      flags.yes ?? false,
-    );
 
     // Sequential batches; any batch failure aborts, listing already-deleted batches in the error
     let deletedCount = 0;

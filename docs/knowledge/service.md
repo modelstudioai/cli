@@ -270,11 +270,11 @@ bl knowledge service deploy --agent-id <id> [flags]
 
 **参数**
 
-| 参数                    | 类型   | 必填 | 说明             |
-| ----------------------- | ------ | ---- | ---------------- |
-| `--agent-id <id>`       | string | 是   | 服务（agent）ID  |
-| `--version-desc <text>` | string | 否   | 新版本的描述说明 |
-| `--yes`                 | switch | 否   | 跳过确认提示     |
+| 参数                    | 类型   | 必填 | 说明                   |
+| ----------------------- | ------ | ---- | ---------------------- |
+| `--agent-id <id>`       | string | 是   | 服务（agent）ID        |
+| `--version-desc <text>` | string | 否   | 新版本的描述说明       |
+| `--yes`                 | switch | 否   | 显式确认执行高风险操作 |
 
 **输出**
 
@@ -319,10 +319,10 @@ bl knowledge service delete --agent-id <id> [flags]
 
 **参数**
 
-| 参数              | 类型   | 必填 | 说明            |
-| ----------------- | ------ | ---- | --------------- |
-| `--agent-id <id>` | string | 是   | 服务（agent）ID |
-| `--yes`           | switch | 否   | 跳过确认提示    |
+| 参数              | 类型   | 必填 | 说明                   |
+| ----------------- | ------ | ---- | ---------------------- |
+| `--agent-id <id>` | string | 是   | 服务（agent）ID        |
+| `--yes`           | switch | 否   | 显式确认执行高风险操作 |
 
 **输出**
 

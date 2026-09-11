@@ -1,5 +1,7 @@
 export type {
   Command,
+  CommandRisk,
+  CommandRiskLevel,
   AnyCommand,
   CommandContext,
   LocalizedText,
@@ -47,6 +49,7 @@ export type {
   ChatRequest,
   ChatResponse,
   ChatTool,
+  AsrContextMessage,
   DashScopeASRRequest,
   DashScopeASRTaskResult,
   DashScopeASRTranscriptionItem,

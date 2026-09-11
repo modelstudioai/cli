@@ -3,6 +3,7 @@ import {
   ExitCode,
   isApiKeyCapability,
   normalizeModelBaseUrl,
+  parseBooleanValue,
   SUPPORTED_LANGUAGES,
 } from "bailian-cli-core";
 
@@ -13,6 +14,7 @@ export const VALID_KEYS = [
   "output",
   "output_dir",
   "timeout",
+  "watermark",
   "api_key",
   "access_token",
   "access_key_id",
@@ -62,7 +64,7 @@ export const UI_ENUM_KEYS: Record<string, string[]> = {
 };
 
 // Keys the UI renders as a true/false dropdown and stores as a boolean.
-export const UI_BOOLEAN_KEYS = new Set<string>(["telemetry"]);
+export const UI_BOOLEAN_KEYS = new Set<string>(["telemetry", "watermark"]);
 
 // Default model each `default_*_model` key falls back to when left unset. These
 // mirror the inline `|| "<model>"` fallbacks in the generation commands
@@ -164,7 +166,10 @@ export function resolveKey(key: string): string {
  * Validate a single config entry and coerce its value to the stored type.
  * Throws BailianError(USAGE) for unknown keys or invalid values.
  */
-export function validateAndCoerce(key: string, value: string): string | number | string[] {
+export function validateAndCoerce(
+  key: string,
+  value: string,
+): string | number | boolean | string[] {
   const resolvedKey = resolveKey(key);
 
   if (!(VALID_KEYS as readonly string[]).includes(resolvedKey)) {
@@ -200,6 +205,8 @@ export function validateAndCoerce(key: string, value: string): string | number |
   }
 
   if (resolvedKey === "base_url") return normalizeModelBaseUrl(value);
+
+  if (resolvedKey === "watermark") return parseBooleanValue(value, "watermark");
 
   if (resolvedKey === "api_key_capabilities") {
     let rawCapabilities: unknown;

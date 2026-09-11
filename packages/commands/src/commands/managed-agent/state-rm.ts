@@ -37,9 +37,17 @@ export default defineCommand({
     "zh-CN": "从 State 中移除资源，但不销毁远端资源",
   },
   auth: "none",
+  risk: {
+    level: "high",
+    message: {
+      "en-US":
+        "This removes the resource from local state without deleting it remotely, so this project will no longer track it.",
+      "zh-CN": "该操作会从本地 State 中移除资源但不会删除远端资源，此项目将不再跟踪该资源。",
+    },
+  },
   usageArgs: "--address <provider.type.name> [--file <path>]",
   flags: STATE_RM_FLAGS,
-  exampleArgs: ["--address bailian.agent.assistant"],
+  exampleArgs: ["--address bailian.agent.assistant --yes"],
   notes: OFFLINE_NOTE,
   async run(ctx) {
     const { settings, flags } = ctx;

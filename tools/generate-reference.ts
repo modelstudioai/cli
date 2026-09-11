@@ -29,6 +29,7 @@ import {
   type LocalizedText,
 } from "../packages/core/src/index.ts";
 import { commands } from "../packages/cli/src/commands.ts";
+import { confirmationFlagDefs } from "../packages/runtime/src/confirm.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SKILLS_DIR = join(__dirname, "../skills");
@@ -127,7 +128,11 @@ function formatFlagsTable(flags: FlagsDef | undefined): string {
   ].join("\n");
 }
 
-function formatExamples(path: string, exampleArgs: LocalizedText[] | undefined): string {
+function formatExamples(
+  path: string,
+  exampleArgs: LocalizedText[] | undefined,
+  highRisk: boolean,
+): string {
   if (!exampleArgs?.length) return "_No examples._\n";
   // Commands store argument-only examples; prepend `bl <path>` for the reference.
   return (
@@ -135,7 +140,11 @@ function formatExamples(path: string, exampleArgs: LocalizedText[] | undefined):
       .map((example) => {
         const text = referenceText(example);
         const line = text.startsWith("#") ? text : `bl ${path}${text ? ` ${text}` : ""}`;
-        return ["```bash", line, "```"].join("\n");
+        const confirmationComment =
+          highRisk && /(?:^|\s)--yes(?:\s|$)/.test(text)
+            ? ["# Only after explicit user confirmation:"]
+            : [];
+        return ["```bash", ...confirmationComment, line, "```"].join("\n");
       })
       .join("\n\n") + "\n"
   );
@@ -156,11 +165,29 @@ function commandSection(path: string, cmd: AnyCommand): string {
   // Commands store argument-only usage; the `bl <path>` prefix is added here.
   const usage = `bl ${path}${cmd.usageArgs ? ` ${cmd.usageArgs}` : ""}`;
   lines.push(`| **Usage** | \`${escCell(usage)}\` |`);
+  if (cmd.risk !== undefined) {
+    lines.push(`| **Risk** | \`${cmd.risk.level}\` |`);
+    lines.push(`| **Risk message** | ${escCell(referenceText(cmd.risk.message))} |`);
+  }
   lines.push("");
+
+  if (cmd.risk !== undefined) {
+    lines.push(
+      '> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, ' +
+        "stop and ask for explicit user confirmation of the same action and scope.",
+      "",
+    );
+  }
 
   // 与命令 help 的 Flags 区一致:自有 + 该命令可见的凭证域 flag。
   lines.push("#### Flags", "");
-  lines.push(formatFlagsTable({ ...cmd.flags, ...credentialFlagDefs(cmd) }));
+  lines.push(
+    formatFlagsTable({
+      ...cmd.flags,
+      ...confirmationFlagDefs(cmd),
+      ...credentialFlagDefs(cmd),
+    }),
+  );
 
   if (cmd.notes?.length) {
     lines.push("#### Notes", "");
@@ -168,7 +195,7 @@ function commandSection(path: string, cmd: AnyCommand): string {
   }
 
   lines.push("#### Examples", "");
-  lines.push(formatExamples(path, cmd.exampleArgs));
+  lines.push(formatExamples(path, cmd.exampleArgs, cmd.risk !== undefined));
 
   return lines.join("\n");
 }

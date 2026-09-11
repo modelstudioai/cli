@@ -28,6 +28,7 @@ function makeSettings(configName?: string): Settings {
     output: "json",
     outputExplicit: false,
     timeout: 30,
+    watermark: true,
     verbose: false,
     quiet: true,
     dryRun: false,

@@ -8,7 +8,7 @@ import {
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { validateProjectConfig } from "@openagentpack/sdk";
 import { OFFLINE_NOTE, resolveAgentProjectConfig } from "./_engine/config-loader.ts";
-import { withAgentErrors } from "./_engine/errors.ts";
+import { formatAgentDiagnosticFailure, withAgentErrors } from "./_engine/errors.ts";
 
 const VALIDATE_FLAGS = {
   file: {
@@ -56,7 +56,10 @@ export default defineCommand({
     }
 
     if (errorCount > 0) {
-      throw new BailianError(`Validation failed with ${errorCount} error(s).`, ExitCode.GENERAL);
+      throw new BailianError(
+        formatAgentDiagnosticFailure(diagnostics, `Validation failed with ${errorCount} error(s).`),
+        ExitCode.GENERAL,
+      );
     }
   },
 });

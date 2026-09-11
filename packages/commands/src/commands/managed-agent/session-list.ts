@@ -5,6 +5,11 @@ import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts"
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
 import { fetchAllPages } from "./_engine/pagination.ts";
+import {
+  CURSOR_FLAGS,
+  splitCommaSeparated,
+  validateLimitAndPageLimit,
+} from "./_engine/api-helpers.ts";
 
 const SESSION_LIST_FLAGS = {
   file: {
@@ -27,10 +32,31 @@ const SESSION_LIST_FLAGS = {
       "zh-CN": "跟随 Cursor 获取全部分页",
     },
   },
-  provider: {
+  limit: CURSOR_FLAGS.limit,
+  page: CURSOR_FLAGS.page,
+  statuses: {
     type: "string",
-    valueHint: "<name>",
-    description: { "en-US": "Target provider", "zh-CN": "目标 Provider" },
+    valueHint: "<statuses>",
+    description: {
+      "en-US": "Comma-separated session statuses",
+      "zh-CN": "Session 状态，多个以逗号分隔",
+    },
+  },
+  createdAtGte: {
+    type: "string",
+    valueHint: "<timestamp>",
+    description: {
+      "en-US": "Created at or after this RFC 3339 timestamp",
+      "zh-CN": "创建时间不早于该 RFC 3339 时间戳",
+    },
+  },
+  createdAtLte: {
+    type: "string",
+    valueHint: "<timestamp>",
+    description: {
+      "en-US": "Created at or before this RFC 3339 timestamp",
+      "zh-CN": "创建时间不晚于该 RFC 3339 时间戳",
+    },
   },
 } satisfies FlagsDef;
 
@@ -40,36 +66,51 @@ export default defineCommand({
     "zh-CN": "列出 Provider 中的 Session",
   },
   auth: "apiKey",
-  usageArgs: "[--agent <name>] [--all] [--provider <name>] [--file <path>]",
+  usageArgs: "[--agent <name>] [--statuses <statuses>] [--limit <n>] [--page <cursor>] [--all]",
   flags: SESSION_LIST_FLAGS,
   exampleArgs: ["", "--agent assistant", "--all"],
   notes: CREDENTIALS_NOTE,
+  validate: validateLimitAndPageLimit,
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
     const file = flags.file ?? "agents.yaml";
 
-    const { items: summaries, hasMore } = await withAgentErrors(() =>
+    const {
+      items: summaries,
+      hasMore,
+      nextPage,
+    } = await withAgentErrors(() =>
       withStdoutProtected(async () => {
         const runtime = await buildAgentRuntime(ctx, file);
-        return fetchAllPages(async (page) => {
-          const result = await listSessionSummaries(runtime, {
-            agent: flags.agent,
-            provider: flags.provider,
-            filter: page ? { page } : undefined,
-          });
-          return {
-            items: result.summaries,
-            hasMore: result.hasMore,
-            nextPage: result.nextPage,
-          };
-        }, flags.all);
+        return fetchAllPages(
+          async (page) => {
+            const result = await listSessionSummaries(runtime, {
+              agent: flags.agent,
+              provider: "bailian",
+              filter: {
+                page,
+                limit: flags.limit,
+                statuses: splitCommaSeparated(flags.statuses),
+                created_at_gte: flags.createdAtGte,
+                created_at_lte: flags.createdAtLte,
+              },
+            });
+            return {
+              items: result.summaries,
+              hasMore: result.hasMore,
+              nextPage: result.nextPage,
+            };
+          },
+          flags.all,
+          flags.page,
+        );
       }),
     );
 
     const sessions = summaries.map((summary) => summary.session);
     if (format === "json") {
-      emitResult({ sessions, has_more: hasMore }, format);
+      emitResult({ sessions, has_more: hasMore, next_page: nextPage }, format);
       return;
     }
     if (sessions.length === 0) {

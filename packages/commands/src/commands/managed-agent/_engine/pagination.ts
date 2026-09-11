@@ -8,8 +8,9 @@ export interface PagedResult<T> {
 export async function fetchAllPages<T>(
   fetchPage: (page?: string) => Promise<PagedResult<T>>,
   all?: boolean,
+  initialPage?: string,
 ): Promise<PagedResult<T>> {
-  const first = await fetchPage();
+  const first = await fetchPage(initialPage);
   const items = [...first.items];
   let hasMore = first.hasMore;
   let nextPage = first.nextPage;

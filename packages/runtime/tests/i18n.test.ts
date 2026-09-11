@@ -47,6 +47,13 @@ test("registry renders runtime help copy with the selected language", async () =
       },
     ],
     auth: "none",
+    risk: {
+      level: "high",
+      message: {
+        "en-US": "This operation is permanent.",
+        "zh-CN": "该操作无法撤销。",
+      },
+    },
     run: async () => {},
   });
   const registry = new CommandRegistry({ test: command }, "bl", translator);
@@ -69,6 +76,8 @@ test("registry renders runtime help copy with the selected language", async () =
 
   output = "";
   registry.printHelp(["test"], stream);
+  expect(output).toContain("风险等级： 高风险");
+  expect(output).toContain("风险说明： 该操作无法撤销。");
   expect(output).toContain("测试说明");
   expect(output).toContain('bl test --message "你好"');
   expect(output).toContain("  # 流式输出响应");

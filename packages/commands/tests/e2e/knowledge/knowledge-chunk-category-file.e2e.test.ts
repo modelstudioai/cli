@@ -434,7 +434,7 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
     expect(data.batches[1]!.request.chunkIds).toHaveLength(2);
   });
 
-  test("chunk delete: 非 TTY 无 --yes 报 USAGE (2)", async () => {
+  test("chunk delete: 无 --yes 返回确认请求 (7)", async () => {
     const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "chunk",
@@ -447,9 +447,13 @@ describe("e2e: knowledge chunk 组 (静态)", () => {
       "sk-fake",
       "--workspace-id",
       "ws_test",
+      "--output",
+      "json",
     ]);
-    expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/--yes/);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
   });
 });
 
@@ -550,7 +554,22 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
     expect(data.request?.connectorId).toBe("conn_test");
   });
 
-  test("category delete: 非 TTY 无 --yes 报 USAGE (2)", async () => {
+  test("category delete: dry-run 断言 categoryId", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      "knowledge",
+      "category",
+      "delete",
+      "--category-id",
+      "cate_test",
+      ...COMMON,
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<DryRunBody>(stdout);
+    expect(data.endpoint).toMatch(/deleteCategory/);
+    expect(data.request?.categoryId).toBe("cate_test");
+  });
+
+  test("category delete: 无 --yes 返回确认请求 (7)", async () => {
     const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "category",
@@ -561,9 +580,13 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
       "sk-fake",
       "--workspace-id",
       "ws_test",
+      "--output",
+      "json",
     ]);
-    expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/--yes/);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
   });
 
   test("file list: 缺 --category-id 报 USAGE (2)", async () => {
@@ -619,7 +642,22 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
     expect(data.request?.fileId).toBe("file_test");
   });
 
-  test("file delete: 非 TTY 无 --yes 报 USAGE (2)", async () => {
+  test("file delete: dry-run 断言 fileId", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
+      "knowledge",
+      "file",
+      "delete",
+      "--file-id",
+      "file_test",
+      ...COMMON,
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<DryRunBody>(stdout);
+    expect(data.endpoint).toMatch(/deleteFile/);
+    expect(data.request?.fileId).toBe("file_test");
+  });
+
+  test("file delete: 无 --yes 返回确认请求 (7)", async () => {
     const { stderr, exitCode } = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
       "knowledge",
       "file",
@@ -630,9 +668,13 @@ describe("e2e: kb stats / category / file / connector / import-oss (静态)", ()
       "sk-fake",
       "--workspace-id",
       "ws_test",
+      "--output",
+      "json",
     ]);
-    expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/--yes/);
+    expect(exitCode).toBe(7);
+    expect(JSON.parse(stderr)).toMatchObject({
+      error: { code: 7, type: "requires_confirmation" },
+    });
   });
 
   test("collection create: --name 21 字符 USAGE (2)", async () => {

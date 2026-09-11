@@ -6,6 +6,7 @@ export const ExitCode = {
   QUOTA: 4,
   TIMEOUT: 5,
   NETWORK: 6,
+  CONFIRMATION_REQUIRED: 7,
   CONTENT_FILTER: 10,
 } as const;
 

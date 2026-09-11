@@ -6,7 +6,7 @@ import {
   type FlagsDef,
   type RagDeleteFileResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare, confirmDangerousAction } from "bailian-cli-runtime";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const DOC_DELETE_FLAGS = {
@@ -25,21 +25,8 @@ const DOC_DELETE_FLAGS = {
     },
     required: true,
   },
-  yes: {
-    type: "switch",
-    description: { "en-US": "Skip the confirmation prompt", "zh-CN": "跳过确认提示" },
-  },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
-
-/** Confirmation summary: list all doc_ids up to 5, otherwise show the first 5 + total count */
-function buildDeleteSummary(indexId: string, docIds: string[]): string {
-  const listed =
-    docIds.length <= 5
-      ? docIds.join("\n  ")
-      : `${docIds.slice(0, 5).join("\n  ")}\n  ... (${docIds.length} documents total)`;
-  return `Delete ${docIds.length} document(s) from knowledge base ${indexId}:\n  ${listed}\nDocuments and all their chunks are permanently removed from the index. This cannot be undone.`;
-}
 
 export default defineCommand({
   description: {
@@ -47,6 +34,13 @@ export default defineCommand({
     "zh-CN": "从知识库中删除文档及其 Chunk",
   },
   auth: "apiKey",
+  risk: {
+    level: "high",
+    message: {
+      "en-US": "This permanently deletes the selected documents and all of their chunks.",
+      "zh-CN": "该操作会永久删除所选文档及其全部 Chunk，且无法撤销。",
+    },
+  },
   usageArgs: "--index-id <id> --doc-id <id> [flags]",
   flags: DOC_DELETE_FLAGS,
   notes: [
@@ -72,7 +66,7 @@ export default defineCommand({
     },
   ],
   exampleArgs: [
-    "--index-id idx-xxx --doc-id file-xxx --workspace-id ws-xxx",
+    "--index-id idx-xxx --doc-id file-xxx --workspace-id ws-xxx --dry-run",
     "--index-id idx-xxx --doc-id file-a --doc-id file-b --yes",
   ],
   async run(ctx) {
@@ -88,11 +82,6 @@ export default defineCommand({
       emitResult({ endpoint, request: body }, format);
       return;
     }
-
-    await confirmDangerousAction(
-      buildDeleteSummary(flags.indexId, flags.docId),
-      flags.yes ?? false,
-    );
 
     const response = await ctx.client.requestJson<RagDeleteFileResponse>({
       path: endpoint,

@@ -3,12 +3,10 @@ import {
   ragEndpoint,
   RAG_PATHS,
   detectOutputFormat,
-  type Client,
   type FlagsDef,
-  type RagAgentGetResponse,
   type RagAgentMutationResponse,
 } from "bailian-cli-core";
-import { emitResult, emitBare, confirmDangerousAction } from "bailian-cli-runtime";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 import { agentMutationField, resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const SERVICE_DELETE_FLAGS = {
@@ -18,41 +16,8 @@ const SERVICE_DELETE_FLAGS = {
     description: { "en-US": "Service (agent) ID", "zh-CN": "服务（Agent）ID" },
     required: true,
   },
-  yes: {
-    type: "switch",
-    description: { "en-US": "Skip the confirmation prompt", "zh-CN": "跳过确认提示" },
-  },
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
-
-/** Confirmation summary lookup (name/status); failure degrades to id-only */
-async function buildDeleteSummary(
-  client: Client,
-  workspaceId: string,
-  agentId: string,
-): Promise<string> {
-  let infoPart = "";
-  let liveWarning = "";
-  try {
-    const detail = await client.requestJson<RagAgentGetResponse>({
-      path: ragEndpoint(workspaceId, RAG_PATHS.agentGet),
-      method: "POST",
-      body: { agent_id: agentId },
-    });
-    const name = detail.data?.agent_name;
-    const status = detail.data?.agent_status;
-    if (name) infoPart += `  name: ${name}`;
-    if (status) {
-      infoPart += `  status: ${status}`;
-      if (status === "deployed" || status === "edited") {
-        liveWarning = "\nWARNING: this service is LIVE — deleting it breaks existing callers.";
-      }
-    }
-  } catch {
-    // Degrade gracefully: a failed lookup does not block confirmation
-  }
-  return `Delete service ${agentId}${infoPart}${liveWarning}\nDeletion cannot be undone; the agent_id can no longer be used for search or chat calls.`;
-}
 
 export default defineCommand({
   description: {
@@ -60,6 +25,14 @@ export default defineCommand({
     "zh-CN": "删除检索/问答服务（软删除，幂等）",
   },
   auth: "apiKey",
+  risk: {
+    level: "high",
+    message: {
+      "en-US":
+        "This deletes the service and makes its agent ID unavailable for search and chat calls. The operation cannot be undone.",
+      "zh-CN": "该操作会删除服务，使其 Agent ID 无法再用于搜索和对话调用，且无法撤销。",
+    },
+  },
   usageArgs: "--agent-id <id> [flags]",
   flags: SERVICE_DELETE_FLAGS,
   notes: [
@@ -90,11 +63,6 @@ export default defineCommand({
       emitResult({ endpoint, request: body }, format);
       return;
     }
-
-    const summary = flags.yes
-      ? ""
-      : await buildDeleteSummary(ctx.client, workspaceId, flags.agentId);
-    await confirmDangerousAction(summary, flags.yes ?? false);
 
     const response = await ctx.client.requestJson<RagAgentMutationResponse>({
       path: endpoint,

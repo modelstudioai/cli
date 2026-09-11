@@ -6,6 +6,77 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.23.0] - 2026-09-10
+
+### Added
+
+- **Profile-level watermark control** — configure `watermark` with `bl config set --key watermark --value true|false` to control the default watermark behavior for image generation and editing, video generation and editing, and reference-to-video commands.
+- **ASR accuracy controls** — `bl speech recognize` now supports instant hot words with `--vocabulary`, contextual word enhancement with `--context`, and reusable pre-built vocabularies with `--vocabulary-id` for supported ASR models.
+- **Speech vocabulary management** — added `bl speech vocabulary create|list|get|update|delete` to manage reusable pre-built hot-word vocabularies.
+
+## [1.22.0] - 2026-09-08
+
+### Changed
+
+- **Project initialization** — `managed-agent project init` now creates `./managed-agent` by default. Use `--project .` to initialize in place. **(BREAKING)**
+- **Build confirmation** — `managed-agent project build` no longer requires confirmation and rejects `--yes`. Use `--dry-run` for a read-only preview; Publish still requires confirmation. **(BREAKING)**
+- **Managed Agent SDK** — upgrade to `0.7.1`. Build automatically associates active Agent-local resources while preserving explicit bindings, Skill versions, and File mount paths. Ambiguous Environment or Vault selections are rejected before writing.
+
+### Fixed
+
+- **Project diagnostics** — provide actionable project-root guidance and surface the underlying Build validation error.
+- **YAML initialization paths** — show the absolute YAML path in creation messages and existing-file errors.
+
+### Internal
+
+- Expand project initialization and Build regression coverage, and remove the obsolete Build confirmation flag from the local lifecycle E2E test.
+
+## [1.21.0] - 2026-09-07
+
+### Added
+
+- **Managed Agent directory projects** — initialize, validate, build, and publish local projects with Agent-scoped resource configuration and resource examples.
+- **Local project versions** — enable or disable snapshot versioning, list and preview history, and restore project files without Git.
+- **Project Workbench** — edit resources, review changes, publish updates, and manage local versions in a browser.
+
+### Changed
+
+- **Playground version resolution** — check npm before launch, reuse matching local versions, and fetch the latest version when needed; retain explicit version and binary overrides.
+- **Managed Agent SDK** — upgrade to `0.7.0` and consume project workspace and version services through SDK subpath exports.
+
+## [1.20.0] - 2026-09-03
+
+> Managed Agents now combines YAML-first infrastructure management with direct Bailian AgentStudio resource and runtime operations.
+
+### Added
+
+- **Managed Agent API commands** — added direct list, get, search, version, upload, download, run, pause, archive, event, and diagnostic operations for Agents, Environments, Skills, Vaults, Deployments, Sessions, and Files.
+- **Scoped YAML-backed resource creation** — `agent create`, `environment create`, `skill create`, `vault create`, `vault credential create`, and `deployment create` update `agents.yaml` and apply only the target resource without unrelated drift blocking the operation.
+- **Agent Skill attachment** — Agent creation supports existing custom or official Skill IDs as well as local Skill directories and ZIP archives.
+
+### Changed
+
+- **Bailian-only Managed Agent CLI** — `bl managed-agent` now targets the Bailian provider exclusively; provider-selection flags were removed and configurations containing other providers are rejected.
+- **Runtime mutation confirmation** — Deployment run/pause/unpause, Session archive/delete, and File delete operations require explicit high-risk confirmation.
+
+### Fixed
+
+- **Managed Agent error reporting** — Apply and scoped-create failures preserve the underlying provider diagnostic instead of ending with only `Apply failed.`.
+
+### Security
+
+- Credentials are resolved in memory and removed from the process environment; Vault credential declarations reference environment variables without persisting plaintext secrets.
+
+## [1.19.0] - 2026-09-01
+
+### Added
+
+- **`bl quota delete`** — clears all custom QPM/TPM rate limits for a model.
+
+### Changed
+
+- **High-risk operation confirmation** — high-risk commands show risk details in `--help` and Skill command references. Without `--yes`, the high-risk operation is not executed; JSON output returns exit code `7` with `error.type: "requires_confirmation"`. After confirmation, re-run with `--yes`; `--dry-run` does not require confirmation.
+
 ## [1.18.2] - 2026-09-01
 
 ### Changed

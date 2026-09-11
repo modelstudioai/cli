@@ -85,6 +85,13 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 3. **--dry-run**：实现在联网/上传/写盘**之前**返回；断言 stdout JSON/文本
 4. **真实集成**：放在 skip 块**末尾**
 
+高风险命令额外要求：
+
+- `--help` 展示 runtime 注入的 `--yes`
+- 无 `--yes` 返回 exit code 7 和 JSON `type: "requires_confirmation"`
+- `--dry-run` 无需 `--yes`，且必须证明在任何远端请求或本地写入之前返回
+- runtime 的离线 high-risk fixture 必须覆盖带 `--yes` 确实进入 `run()`，并断言 `yes` 不进入 command 自有 flags
+
 ## Journey 层（用户旅程全链路）
 
 - **定位**：命令 E2E 验单命令契约；journey 验“用户带着目标跨命令走通回路”，结构性断言不在 journey 重复

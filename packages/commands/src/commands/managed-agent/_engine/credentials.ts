@@ -34,6 +34,12 @@ const CREDENTIAL_HINTS: Record<string, string> = {
   qoder: "Set QODER_PAT (or QODER_API_KEY) in your shell or .env.",
 };
 
+const BAILIAN_ONLY_NOTE = {
+  "en-US":
+    "bl managed-agent supports the Bailian provider only; configurations containing other providers are rejected.",
+  "zh-CN": "bl managed-agent 仅支持百炼 Provider；包含其他 Provider 的配置会被拒绝。",
+} as const;
+
 /** The slice of CommandContext the credential pipeline needs: authStage-resolved client + settings. */
 export interface CredentialHost {
   client: Client;
@@ -43,23 +49,17 @@ export interface CredentialHost {
 /**
  * Shared `--help` note documenting where agent commands get provider
  * credentials. Bailian goes through bl's own auth chain (commands declare
- * `auth: "apiKey"`); other providers come from env. Either way the resolved
- * credential is injected into the SDK in-memory and scrubbed from the
- * environment. Attach to every command that loads agents.yaml. `bl` prefix is
- * safe: agent commands ship on `bl` only.
+ * `auth: "apiKey"`). The resolved credential is injected into the SDK in-memory
+ * and scrubbed from the environment. Attach to every command that loads
+ * agents.yaml. `bl` prefix is safe: agent commands ship on `bl` only.
  */
 export const CREDENTIALS_NOTE = [
+  BAILIAN_ONLY_NOTE,
   {
     "en-US":
       "Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).",
     "zh-CN":
       "百炼凭证来自 bl 鉴权链：--api-key > DASHSCOPE_API_KEY > `bl auth login`（当前激活的配置 Profile）。",
-  },
-  {
-    "en-US":
-      "Other providers read the env vars referenced in agents.yaml (e.g. ${ANTHROPIC_API_KEY}), including .env and ~/.agents/config.json.",
-    "zh-CN":
-      "其他 Provider 读取 agents.yaml 中引用的环境变量（例如 ${ANTHROPIC_API_KEY}），包括 .env 和 ~/.agents/config.json。",
   },
   {
     "en-US":
@@ -73,6 +73,7 @@ export const CREDENTIALS_NOTE = [
  * agents.yaml / local state only, so no login or provider key is required.
  */
 export const OFFLINE_NOTE = [
+  BAILIAN_ONLY_NOTE,
   {
     "en-US": "Runs fully offline against local files: no login or provider credentials required.",
     "zh-CN": "完全离线处理本地文件：无需登录或提供 Provider 凭证。",
@@ -98,9 +99,10 @@ export function prepareProviderEnv(): void {
  * Override the bailian provider block with bl's authStage-resolved credential, so
  * the bailian API key is authoritatively the CLI auth chain's — never a config
  * file bare-read or a stale env value. `api_key` is replaced unconditionally
- * when a credential resolved; `base_url` / `workspace_id` are filled only when
- * the block references them and the interpolated value is empty (a literal in
- * agents.yaml is respected).
+ * when a credential resolved. `base_url` is normally filled only when empty so
+ * a literal in agents.yaml remains supported; directory projects pass
+ * `overrideBaseUrl` so their connection always follows the Bailian CLI auth
+ * chain. `workspace_id` is filled only when empty.
  *
  * `base_url` carries {@link AGENTSTUDIO_API_PATH} because the SDK appends resource
  * paths onto it verbatim; a value already ending in the suffix is left as-is.
@@ -113,6 +115,7 @@ export function prepareProviderEnv(): void {
 export function injectProviderCredentials(
   providers: Record<string, unknown>,
   host: CredentialHost,
+  options: { overrideBaseUrl?: boolean } = {},
 ): void {
   const bailian = providers.bailian;
   if (!bailian || typeof bailian !== "object") return;
@@ -120,7 +123,7 @@ export function injectProviderCredentials(
 
   const cred = host.client.exportApiCredential();
   if (cred) block.api_key = cred.token;
-  if ("base_url" in block && !block.base_url) {
+  if ("base_url" in block && (options.overrideBaseUrl || !block.base_url)) {
     // Defensive normalization: the auth chain already normalizes base_url to
     // an origin, but never let a trailing slash produce "//api/v1/agentstudio".
     const origin = host.client.baseUrl.replace(/\/+$/, "");
@@ -166,15 +169,16 @@ export function normalizeInterpolatedProviderBlocks(providers: Record<string, un
 }
 
 /**
- * After injection, fail with a CLI-authoritative AUTH error if any configured
- * provider's `api_key` resolved empty (missing env var, or no bl login for
- * bailian). Replaces the SDK's raw `Environment variable '...' is not set` /
- * zod config error with a clean message plus a provider-specific hint. Validates
- * every declared provider, so a project is only runnable once all its providers'
- * keys are available; offline commands skip the check entirely.
+ * After injection, fail with a CLI-authoritative AUTH error if Bailian's
+ * `api_key` resolved empty. Replaces the SDK's raw config error with a clean
+ * message and hint. Offline commands skip the check entirely.
  */
-export function assertProviderCredentials(providers: Record<string, unknown>): void {
+export function assertProviderCredentials(
+  providers: Record<string, unknown>,
+  targetProviders?: readonly string[],
+): void {
   for (const [name, raw] of Object.entries(providers)) {
+    if (targetProviders && !targetProviders.includes(name)) continue;
     if (!raw || typeof raw !== "object") continue;
     const block = raw as Record<string, unknown>;
     if (!("api_key" in block)) continue;

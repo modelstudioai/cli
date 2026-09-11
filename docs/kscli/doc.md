@@ -190,11 +190,11 @@ kscli doc delete --index-id <id> --doc-id <id> [flags]
 
 **参数**
 
-| 参数              | 类型   | 必填 | 说明              |
-| ----------------- | ------ | ---- | ----------------- |
-| `--index-id <id>` | string | 是   | 知识库 ID         |
-| `--doc-id <id>`   | array  | 是   | 文档 ID（可重复） |
-| `--yes`           | switch | 否   | 跳过确认提示      |
+| 参数              | 类型   | 必填 | 说明               |
+| ----------------- | ------ | ---- | ------------------ |
+| `--index-id <id>` | string | 是   | 知识库 ID          |
+| `--doc-id <id>`   | array  | 是   | 文档 ID（可重复）  |
+| `--yes`           | switch | 否   | 显式确认高风险操作 |
 
 **输出**
 
@@ -223,7 +223,7 @@ json 模式：返回 API 原始响应，`data.deleted[]` 为实际删除的 ID �
 # 删除单个文档
 kscli doc delete --index-id idx-xxx --doc-id doc-xxx --workspace-id ws-xxx
 
-# 批量删除，跳过确认
+# 用户明确确认后批量删除
 kscli doc delete --index-id idx-xxx --doc-id doc-a --doc-id doc-b --yes
 ```
 

@@ -1,4 +1,10 @@
-import { defineCommand, detectOutputFormat, type FlagsDef } from "bailian-cli-core";
+import {
+  BailianError,
+  defineCommand,
+  detectOutputFormat,
+  ExitCode,
+  type FlagsDef,
+} from "bailian-cli-core";
 import { emitBare, emitResult } from "bailian-cli-runtime";
 import { importResource, parseStateAddress } from "@openagentpack/sdk";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
@@ -8,7 +14,7 @@ import { withAgentErrors } from "./_engine/errors.ts";
 const STATE_IMPORT_FLAGS = {
   address: {
     type: "string",
-    valueHint: "<provider.type.name>",
+    valueHint: "<bailian.type.name>",
     description: {
       "en-US": "Resource state address (required)",
       "zh-CN": "资源 State 地址（必填）",
@@ -42,6 +48,17 @@ const STATE_IMPORT_FLAGS = {
   },
 } satisfies FlagsDef;
 
+function parseBailianStateAddress(address: string) {
+  const parsed = parseStateAddress(address, { requireProvider: true });
+  if (parsed.provider !== "bailian") {
+    throw new BailianError(
+      `bl managed-agent can import only Bailian resources; address provider was '${parsed.provider}'. / bl managed-agent 只能导入百炼资源；地址中的 Provider 为 '${parsed.provider}'。`,
+      ExitCode.USAGE,
+    );
+  }
+  return parsed;
+}
+
 export default defineCommand({
   description: {
     "en-US": "Import an existing remote resource into agents state",
@@ -49,7 +66,7 @@ export default defineCommand({
   },
   auth: "apiKey",
   usageArgs:
-    "--address <provider.type.name> --remote-id <id> [--resource-version <n>] [--file <path>]",
+    "--address <bailian.type.name> --remote-id <id> [--resource-version <n>] [--file <path>]",
   flags: STATE_IMPORT_FLAGS,
   exampleArgs: ["--address bailian.agent.assistant --remote-id agent-abc123"],
   notes: CREDENTIALS_NOTE,
@@ -61,7 +78,7 @@ export default defineCommand({
     if (settings.dryRun) {
       // Validate the address shape locally so dry-run still catches usage errors.
       await withAgentErrors(async () => {
-        parseStateAddress(flags.address, { requireProvider: true });
+        parseBailianStateAddress(flags.address);
       });
       emitResult(
         {
@@ -78,9 +95,7 @@ export default defineCommand({
     await withAgentErrors(() =>
       withStdoutProtected(async () => {
         // Parse first so a malformed address fails fast, before any config I/O.
-        const parsed = parseStateAddress(flags.address, {
-          requireProvider: true,
-        });
+        const parsed = parseBailianStateAddress(flags.address);
         const runtime = await buildAgentRuntime(ctx, file);
         await importResource(runtime, parsed, flags.remoteId, {
           resourceVersion: flags.resourceVersion,

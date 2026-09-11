@@ -15,7 +15,7 @@ When `bl` fails, the agent first helps the user fix the problem. If the failure 
 function shouldOfferIssueReport(exitCode, apiCode, message, hint):
 
   # Step 1: Unambiguous EXCLUDE by exit code
-  if exitCode in [2 (USAGE), 3 (AUTH), 4 (QUOTA), 10 (CONTENT_FILTER)]:
+  if exitCode in [2 (USAGE), 3 (AUTH), 4 (QUOTA), 7 (CONFIRMATION_REQUIRED), 10 (CONTENT_FILTER)]:
     return EXCLUDE  # help user fix; never offer reporting
 
   # Step 2: NETWORK / TIMEOUT — exclude if hint is actionable
@@ -69,18 +69,19 @@ function matchesIncludeCriteria(exitCode, apiCode, message):
 
 These are **user**, **environment**, or **service business** errors. Give fix hints; do not ask to file an issue.
 
-| Category                   | Signal                                 | Examples                                                                        |
-| -------------------------- | -------------------------------------- | ------------------------------------------------------------------------------- |
-| **Usage / args**           | Exit code **2** (USAGE)                | Missing flag, invalid path, unknown subcommand, local file not found            |
-| **Auth**                   | Exit code **3** (AUTH)                 | No API key, invalid key, expired console token                                  |
-| **Quota**                  | Exit code **4** (QUOTA)                | Free tier exhausted, rate limit / quota messages                                |
-| **Content filter**         | Exit code **10** (CONTENT_FILTER)      | Content moderation blocked the request                                          |
-| **Model not found**        | Message or `api_code`                  | `ModelNotFound`, `invalid_request_error` naming a bad model, HTTP 404 for model |
-| **Invalid API params**     | USAGE or service validation            | `InvalidParameter`, `invalid_request_error` for bad `--size`, `--format`, etc.  |
-| **Free quota query**       | `bl usage free` business result        | Quota used up — not a CLI defect                                                |
-| **Obvious local env**      | Hint is sufficient                     | `ENOENT` / `EACCES`, wrong file path, disk full                                 |
-| **Network (self-service)** | Exit code **6** (NETWORK) + clear hint | DNS, proxy, TLS — user fixes `DASHSCOPE_BASE_URL`, proxy, or network            |
-| **Timeout (self-service)** | Exit code **5** (TIMEOUT) + hint works | Increase `--timeout`, check `base_url` with `bl auth status`                    |
+| Category                   | Signal                                    | Examples                                                                        |
+| -------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------- |
+| **Usage / args**           | Exit code **2** (USAGE)                   | Missing flag, invalid path, unknown subcommand, local file not found            |
+| **Auth**                   | Exit code **3** (AUTH)                    | No API key, invalid key, expired console token                                  |
+| **Quota**                  | Exit code **4** (QUOTA)                   | Free tier exhausted, rate limit / quota messages                                |
+| **Confirmation required**  | Exit code **7** + `requires_confirmation` | Expected high-risk control flow; ask the user, never auto-retry with `--yes`    |
+| **Content filter**         | Exit code **10** (CONTENT_FILTER)         | Content moderation blocked the request                                          |
+| **Model not found**        | Message or `api_code`                     | `ModelNotFound`, `invalid_request_error` naming a bad model, HTTP 404 for model |
+| **Invalid API params**     | USAGE or service validation               | `InvalidParameter`, `invalid_request_error` for bad `--size`, `--format`, etc.  |
+| **Free quota query**       | `bl usage free` business result           | Quota used up — not a CLI defect                                                |
+| **Obvious local env**      | Hint is sufficient                        | `ENOENT` / `EACCES`, wrong file path, disk full                                 |
+| **Network (self-service)** | Exit code **6** (NETWORK) + clear hint    | DNS, proxy, TLS — user fixes `DASHSCOPE_BASE_URL`, proxy, or network            |
+| **Timeout (self-service)** | Exit code **5** (TIMEOUT) + hint works    | Increase `--timeout`, check `base_url` with `bl auth status`                    |
 
 **Rule:** If the authoritative source of the error is the **service response** or **user input**, treat it as non-reportable (same boundary as the CLI repo’s error-handling docs).
 
@@ -337,15 +338,16 @@ Do **not** block on `gh` — always provide a manual path.
 
 ## Exit codes (reference)
 
-| Code | Name           | Usually reportable?                             |
-| ---- | -------------- | ----------------------------------------------- |
-| 0    | SUCCESS        | —                                               |
-| 1    | GENERAL        | Sometimes (if CLI bug, not service passthrough) |
-| 2    | USAGE          | No                                              |
-| 3    | AUTH           | No                                              |
-| 4    | QUOTA          | No                                              |
-| 5    | TIMEOUT        | Rarely (after user fixes env)                   |
-| 6    | NETWORK        | Rarely (after user fixes env)                   |
-| 10   | CONTENT_FILTER | No                                              |
+| Code | Name                  | Usually reportable?                             |
+| ---- | --------------------- | ----------------------------------------------- |
+| 0    | SUCCESS               | —                                               |
+| 1    | GENERAL               | Sometimes (if CLI bug, not service passthrough) |
+| 2    | USAGE                 | No                                              |
+| 3    | AUTH                  | No                                              |
+| 4    | QUOTA                 | No                                              |
+| 5    | TIMEOUT               | Rarely (after user fixes env)                   |
+| 6    | NETWORK               | Rarely (after user fixes env)                   |
+| 7    | CONFIRMATION_REQUIRED | No — expected high-risk control flow            |
+| 10   | CONTENT_FILTER        | No                                              |
 
 JSON errors use the same numeric `error.code` field when `--output json` is set.

@@ -40,6 +40,8 @@ bailian-gen      bailian-finetune  bailian-managed-agent   bailian-web-search
 
 - [ ] **整包装齐**：安装/升级文案主推 `bl skill init`；业务 skill **不**声明 `companions`
 - [ ] **协议读取**：CRITICAL / references 可链 `../bailian-protocol/…`；若读不到 → 停止执行 `bl`，提示 `bl skill init`
+- [ ] **高风险确认**：统一由 `bailian-protocol` 定义；reference / leaf help 以 `risk: high` 明示风险，业务 skill 不得引导 Agent 自动补 `--yes`。遇到 exit code 7 / `requires_confirmation` 时停止执行并请求确认；目标或范围变化后重新确认
+- [ ] **正常控制流**：`requires_confirmation` 不是 CLI bug，`assets/issue-reporting.md` 必须将 exit code 7 保持在 EXCLUDE 范围
 - [ ] **软 hand-off**：兄弟业务 skill **只写 skill 名**；已安装则 Read，未安装则 `bl … --help` 或提示整包安装；**不要**把 `../bailian-gen/…` 等写成执行前提
 - [ ] **Hub vs 领域**：`bailian-cli` 的「When to use which command」只列 hub 拥有的意图；媒体 / 精调 / managed-agent 各留 hand-off 行，**不抄**领域默认模型与子命令明细
 - [ ] **渐进披露**：SKILL 写意图路由与领域硬规则；flags / usage / examples 以 `reference/` 或 `bl <command> --help` 为准，表后保留「勿猜 flag」指向句
@@ -55,6 +57,7 @@ bailian-gen      bailian-finetune  bailian-managed-agent   bailian-web-search
 
 - [ ] 新一级命令组归属领域时：改 `tools/generate-reference.ts` 的 `GROUP_OWNER_SKILL`，并更新**拥有方** skill 的路由表；hub 最多加一行 hand-off
 - [ ] 跑 `pnpm run sync:skill-assets`（或 commit 走 pre-commit），提交生成的 `reference/` 与 version 同步结果
+- [ ] 高风险命令生成的 reference 必须包含 `Risk` / `Risk message` 和简短 Agent safety 提示；带 `--yes` 的示例必须标注只能在确认后执行，不要手改生成物
 - [ ] 默认模型若写在领域路由表（如 `bailian-gen`）：与命令 default / [model-add-remove.md](model-add-remove.md) 一并核对
 
 ## 完成后自查

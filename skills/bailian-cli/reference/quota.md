@@ -7,12 +7,13 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command            | Authentication | Description                                                     |
-| ------------------ | -------------- | --------------------------------------------------------------- |
-| `bl quota check`   | Console        | Check current usage against rate limits                         |
-| `bl quota history` | Console        | View quota change history                                       |
-| `bl quota list`    | API Key        | View model rate limits (QPM/TPM, account and workspace level)   |
-| `bl quota update`  | API Key        | Update model rate limits (QPM/TPM), or clear them with --delete |
+| Command            | Authentication | Description                                                   |
+| ------------------ | -------------- | ------------------------------------------------------------- |
+| `bl quota check`   | Console        | Check current usage against rate limits                       |
+| `bl quota delete`  | API Key        | Clear all custom rate limits (QPM/TPM) for a model            |
+| `bl quota history` | Console        | View quota change history                                     |
+| `bl quota list`    | API Key        | View model rate limits (QPM/TPM, account and workspace level) |
+| `bl quota update`  | API Key        | Update model rate limits (QPM/TPM)                            |
 
 ## Command details
 
@@ -56,6 +57,43 @@ bl quota check --model qwen3.6-plus,qwen-turbo
 
 ```bash
 bl quota check --output json
+```
+
+### `bl quota delete`
+
+| Field              | Value                                                                                                |
+| ------------------ | ---------------------------------------------------------------------------------------------------- |
+| **Name**           | `quota delete`                                                                                       |
+| **Description**    | Clear all custom rate limits (QPM/TPM) for a model                                                   |
+| **Authentication** | API Key                                                                                              |
+| **Usage**          | `bl quota delete --model <model>`                                                                    |
+| **Risk**           | `high`                                                                                               |
+| **Risk message**   | This permanently clears all custom QPM/TPM rate limits for the specified model and cannot be undone. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag               | Type   | Required | Description                      |
+| ------------------ | ------ | -------- | -------------------------------- |
+| `--model <model>`  | string | yes      | Model name (required)            |
+| `--yes`            | switch | no       | Confirm this high-risk operation |
+| `--api-key <key>`  | string | no       | API key                          |
+| `--base-url <url>` | string | no       | API base URL                     |
+
+#### Examples
+
+```bash
+bl quota delete --model qwen-plus
+```
+
+```bash
+bl quota delete --model qwen-plus --dry-run --output json
+```
+
+```bash
+# Only after explicit user confirmation:
+bl quota delete --model qwen-plus --yes
 ```
 
 ### `bl quota history`
@@ -149,29 +187,26 @@ bl quota list --output json
 
 ### `bl quota update`
 
-| Field              | Value                                                                        |
-| ------------------ | ---------------------------------------------------------------------------- |
-| **Name**           | `quota update`                                                               |
-| **Description**    | Update model rate limits (QPM/TPM), or clear them with --delete              |
-| **Authentication** | API Key                                                                      |
-| **Usage**          | `bl quota update --model <model> [--rpm <n>] [--tpm <n>] [--delete] [--yes]` |
+| Field              | Value                                                     |
+| ------------------ | --------------------------------------------------------- |
+| **Name**           | `quota update`                                            |
+| **Description**    | Update model rate limits (QPM/TPM)                        |
+| **Authentication** | API Key                                                   |
+| **Usage**          | `bl quota update --model <model> [--rpm <n>] [--tpm <n>]` |
 
 #### Flags
 
-| Flag               | Type   | Required | Description                                |
-| ------------------ | ------ | -------- | ------------------------------------------ |
-| `--model <model>`  | string | yes      | Model name (required)                      |
-| `--rpm <n>`        | number | no       | Max requests per minute (QPM)              |
-| `--tpm <n>`        | number | no       | Max tokens per minute (TPM)                |
-| `--delete`         | switch | no       | Clear all custom rate limits for the model |
-| `--yes`            | switch | no       | Skip the confirmation prompt for --delete  |
-| `--api-key <key>`  | string | no       | API key                                    |
-| `--base-url <url>` | string | no       | API base URL                               |
+| Flag               | Type   | Required | Description                   |
+| ------------------ | ------ | -------- | ----------------------------- |
+| `--model <model>`  | string | yes      | Model name (required)         |
+| `--rpm <n>`        | number | no       | Max requests per minute (QPM) |
+| `--tpm <n>`        | number | no       | Max tokens per minute (TPM)   |
+| `--api-key <key>`  | string | no       | API key                       |
+| `--base-url <url>` | string | no       | API base URL                  |
 
 #### Notes
 
-- Fields you omit keep their current values (server-side OVERLAY merge); --delete clears all custom limits.
-- --delete requires confirmation; pass --yes to skip the prompt in scripts.
+- Fields you omit keep their current values (server-side OVERLAY merge). Clear all custom limits with the "quota delete" command instead.
 - Setting TPM without an existing QPM limit is rejected server-side — pass --rpm first or together.
 
 #### Examples
@@ -182,14 +217,6 @@ bl quota update --model qwen-plus --rpm 60 --tpm 100000
 
 ```bash
 bl quota update --model qwen3-max --tpm 500000
-```
-
-```bash
-bl quota update --model qwen-plus --delete
-```
-
-```bash
-bl quota update --model qwen-plus --delete --yes
 ```
 
 ```bash

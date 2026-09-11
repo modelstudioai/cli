@@ -152,7 +152,7 @@ kscli --help
 
 ### 危险操作确认
 
-涉及删除的命令（`kb delete`、`doc delete`、`chunk delete`、`file delete`、`category delete`、`service delete`）以及 `service deploy` 在执行前会弹出二次确认提示。使用 `--yes` 可跳过确认，适用于自动化脚本。
+涉及删除的命令（`kb delete`、`doc delete`、`chunk delete`、`file delete`、`category delete`、`service delete`）以及 `service deploy` 属于高风险操作。未带 `--yes` 时 CLI 不会执行，也不会弹出交互式 Y/N，而是返回 exit code 7 和 `requires_confirmation`；确认后在原命令中添加 `--yes` 重新执行。
 
 ### Dry-run 模式
 
