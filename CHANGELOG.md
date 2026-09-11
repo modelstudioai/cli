@@ -16,6 +16,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - Sandbox calls use the Bailian API Key as a Bearer token without an E2B SDK or E2B API key. Returned connection credentials and dry-run environment values are redacted by default; use `--show-credentials` only when the raw connection tokens are required.
 
+## [1.23.0] - 2026-09-10
+
+### Added
+
+- **Profile-level watermark control** — configure `watermark` with `bl config set --key watermark --value true|false` to control the default watermark behavior for image generation and editing, video generation and editing, and reference-to-video commands.
+- **ASR accuracy controls** — `bl speech recognize` now supports instant hot words with `--vocabulary`, contextual word enhancement with `--context`, and reusable pre-built vocabularies with `--vocabulary-id` for supported ASR models.
+- **Speech vocabulary management** — added `bl speech vocabulary create|list|get|update|delete` to manage reusable pre-built hot-word vocabularies.
+
 ## [1.22.0] - 2026-09-08
 
 ### Changed

@@ -30,6 +30,7 @@ export {
   responsesPath,
   speechRecognizePath,
   speechSynthesizePath,
+  speechVocabularyPath,
   taskPath,
   userProfilePath,
   videoGeneratePath,
@@ -50,6 +51,7 @@ export {
   type ImageSizeProfile,
 } from "./image-routes.ts";
 export {
+  buildAsrContextMessages,
   buildAsrFlashRequest,
   buildAsyncAsrLanguageFields,
   collectAsrTranscriptionItems,

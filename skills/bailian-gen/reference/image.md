@@ -36,7 +36,7 @@ Index: [index.md](index.md)
 | `--negative-prompt <text>`  | string  | no       | Negative prompt to exclude unwanted content                                                        |
 | `--function <name>`         | string  | no       | wanx\*-imageedit function (default: description_edit). Examples: stylization_all, description_edit |
 | `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag to use CLI default (true).                            |
-| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                                |
+| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use the Profile setting or CLI default (true).         |
 | `--out-dir <dir>`           | string  | no       | Download images to directory                                                                       |
 | `--out-prefix <prefix>`     | string  | no       | Filename prefix (default: edited)                                                                  |
 | `--async`                   | switch  | no       | Return async task id without waiting                                                               |
@@ -99,7 +99,7 @@ bl image edit --image ./photo.png --prompt "Replace the background with a beach"
 | `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                                                  |
 | `--negative-prompt <text>`  | string  | no       | Negative prompt to exclude unwanted content                                                                              |
 | `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag: true for qwen-image sync; parameter omitted on async models (API default). |
-| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                                                      |
+| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use the Profile setting or CLI default (true).                               |
 | `--async`                   | switch  | no       | Return async task id without waiting                                                                                     |
 | `--concurrent <n>`          | number  | no       | Run N parallel requests (default: 1)                                                                                     |
 | `--out-dir <dir>`           | string  | no       | Download images to directory                                                                                             |

@@ -89,6 +89,11 @@ export function speechRecognizePath(): string {
   return "/api/v1/services/audio/asr/transcription";
 }
 
+// ---- Hot-word Vocabulary (ASR customization) ----
+export function speechVocabularyPath(): string {
+  return "/api/v1/services/audio/asr/customization";
+}
+
 // ---- Memory Profile (DashScope v2) ----
 export function profileSchemaPath(): string {
   return "/api/v2/apps/memory/profile_schemas";

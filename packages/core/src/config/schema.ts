@@ -35,6 +35,7 @@ export interface ConfigFile {
   output?: "text" | "json";
   output_dir?: string;
   timeout?: number;
+  watermark?: boolean;
   default_text_model?: string;
   default_video_model?: string;
   default_image_to_video_model?: string;
@@ -63,6 +64,7 @@ export const CONFIG_FILE_KEYS = [
   "output",
   "output_dir",
   "timeout",
+  "watermark",
   "default_text_model",
   "default_video_model",
   "default_image_to_video_model",
@@ -156,6 +158,7 @@ export function parseConfigFile(raw: unknown): ConfigFile {
   if (typeof obj.output_dir === "string" && obj.output_dir.length > 0)
     out.output_dir = obj.output_dir;
   if (typeof obj.timeout === "number" && obj.timeout > 0) out.timeout = obj.timeout;
+  if (typeof obj.watermark === "boolean") out.watermark = obj.watermark;
   if (typeof obj.default_text_model === "string" && obj.default_text_model.length > 0)
     out.default_text_model = obj.default_text_model;
   if (typeof obj.default_video_model === "string" && obj.default_video_model.length > 0)
@@ -224,6 +227,7 @@ export interface Settings {
   outputExplicit: boolean;
   outputDir?: string;
   timeout: number;
+  watermark: boolean;
   defaultTextModel?: string;
   defaultVideoModel?: string;
   defaultImageToVideoModel?: string;

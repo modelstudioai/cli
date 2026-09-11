@@ -56,26 +56,26 @@ bl video download --task-id 3b256896-xxxx --out video.mp4 --quiet
 
 #### Flags
 
-| Flag                             | Type    | Required | Description                                                                             |
-| -------------------------------- | ------- | -------- | --------------------------------------------------------------------------------------- |
-| `--model <model>`                | string  | no       | Model ID (default: happyhorse-1.0-video-edit)                                           |
-| `--video <url>`                  | string  | yes      | Input video URL or local file (mp4/mov, 2-10s)                                          |
-| `--prompt <text>`                | string  | no       | Edit instruction (e.g. "Convert the scene to a claymation style")                       |
-| `--ref-image <url>`              | string  | no       | Reference image URL (up to 4, comma-separated)                                          |
-| `--negative-prompt <text>`       | string  | no       | Negative prompt to exclude unwanted content                                             |
-| `--resolution <res>`             | string  | no       | Resolution: 720P or 1080P (default: 1080P)                                              |
-| `--ratio <ratio>`                | string  | no       | Aspect ratio (16:9, 9:16, 1:1, 4:3, 3:4)                                                |
-| `--duration <seconds>`           | number  | no       | Output video duration in seconds (2-10)                                                 |
-| `--audio-setting <auto\|origin>` | string  | no       | Audio: auto (default) or origin (keep original)                                         |
-| `--prompt-extend <bool>`         | boolean | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default). |
-| `--watermark <bool>`             | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                     |
-| `--seed <n>`                     | number  | no       | Random seed for reproducible generation                                                 |
-| `--download <path>`              | string  | no       | Save video to file on completion                                                        |
-| `--async`                        | switch  | no       | Return async task id without waiting                                                    |
-| `--concurrent <n>`               | number  | no       | Run N parallel requests (default: 1)                                                    |
-| `--poll-interval <seconds>`      | number  | no       | Polling interval when waiting (default: 15)                                             |
-| `--api-key <key>`                | string  | no       | API key                                                                                 |
-| `--base-url <url>`               | string  | no       | API base URL                                                                            |
+| Flag                             | Type    | Required | Description                                                                                |
+| -------------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------ |
+| `--model <model>`                | string  | no       | Model ID (default: happyhorse-1.0-video-edit)                                              |
+| `--video <url>`                  | string  | yes      | Input video URL or local file (mp4/mov, 2-10s)                                             |
+| `--prompt <text>`                | string  | no       | Edit instruction (e.g. "Convert the scene to a claymation style")                          |
+| `--ref-image <url>`              | string  | no       | Reference image URL (up to 4, comma-separated)                                             |
+| `--negative-prompt <text>`       | string  | no       | Negative prompt to exclude unwanted content                                                |
+| `--resolution <res>`             | string  | no       | Resolution: 720P or 1080P (default: 1080P)                                                 |
+| `--ratio <ratio>`                | string  | no       | Aspect ratio (16:9, 9:16, 1:1, 4:3, 3:4)                                                   |
+| `--duration <seconds>`           | number  | no       | Output video duration in seconds (2-10)                                                    |
+| `--audio-setting <auto\|origin>` | string  | no       | Audio: auto (default) or origin (keep original)                                            |
+| `--prompt-extend <bool>`         | boolean | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default).    |
+| `--watermark <bool>`             | boolean | no       | Enable watermark (true/false). Omit flag to use the Profile setting or CLI default (true). |
+| `--seed <n>`                     | number  | no       | Random seed for reproducible generation                                                    |
+| `--download <path>`              | string  | no       | Save video to file on completion                                                           |
+| `--async`                        | switch  | no       | Return async task id without waiting                                                       |
+| `--concurrent <n>`               | number  | no       | Run N parallel requests (default: 1)                                                       |
+| `--poll-interval <seconds>`      | number  | no       | Polling interval when waiting (default: 15)                                                |
+| `--api-key <key>`                | string  | no       | API key                                                                                    |
+| `--base-url <url>`               | string  | no       | API base URL                                                                               |
 
 #### Examples
 
@@ -117,7 +117,7 @@ bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the
 | `--ratio <ratio>`           | string  | no       | Aspect ratio (e.g. 16:9, 9:16, 1:1)                                                                                  |
 | `--duration <seconds>`      | number  | no       | Video duration in seconds (default: 5)                                                                               |
 | `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default).                              |
-| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                                                  |
+| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use the Profile setting or CLI default (true).                           |
 | `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                                              |
 | `--download <path>`         | string  | no       | Save video to file on completion                                                                                     |
 | `--file <url-or-path>`      | string  | no       | Reference file URL or local path for file-to-video (wan3.0-video only; mutually exclusive with --image/--last-frame) |
@@ -172,7 +172,7 @@ bl video generate --prompt "A cat playing with a ball" --watermark false
 | `--ratio <ratio>`           | string  | no       | Aspect ratio (16:9, 9:16, 1:1)                                                                                                              |
 | `--duration <seconds>`      | number  | no       | Video duration in seconds (default: 5)                                                                                                      |
 | `--prompt-extend <bool>`    | boolean | no       | Enable prompt extend (true/false). Omit flag to omit the parameter (DashScope default).                                                     |
-| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use CLI default (true).                                                                         |
+| `--watermark <bool>`        | boolean | no       | Enable watermark (true/false). Omit flag to use the Profile setting or CLI default (true).                                                  |
 | `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                                                                     |
 | `--download <path>`         | string  | no       | Save video to file on completion                                                                                                            |
 | `--async`                   | switch  | no       | Return async task id without waiting                                                                                                        |

@@ -37,6 +37,7 @@ function testDeps(identity: Partial<Identity> = {}): {
       output: "json",
       outputExplicit: true,
       timeout: 30,
+      watermark: true,
       verbose: false,
       quiet: true,
       dryRun: false,
@@ -382,6 +383,9 @@ test("resolveWatermark uses flag or defaults to true", () => {
   expect(resolveWatermark("false")).toBe(false);
   expect(resolveWatermark("true")).toBe(true);
   expect(resolveWatermark(undefined)).toBe(true);
+  expect(resolveWatermark(undefined, false)).toBe(false);
+  expect(resolveWatermark("true", false)).toBe(true);
+  expect(resolveWatermark("false", true)).toBe(false);
 });
 
 test("resolveBooleanFlag uses flag or defaultWhenUnset", () => {

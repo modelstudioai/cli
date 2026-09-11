@@ -249,7 +249,7 @@ export default defineCommand({
 
     // --- Build request body ---
     const promptExtend = resolveBooleanFlag(flags.promptExtend, undefined, "prompt-extend");
-    const watermark = resolveWatermark(flags.watermark);
+    const watermark = resolveWatermark(flags.watermark, settings.watermark);
 
     const body: DashScopeVideoRefRequest = {
       model,

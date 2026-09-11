@@ -38,6 +38,7 @@ const SETTINGS: Settings = {
   output: "json",
   outputExplicit: true,
   timeout: 30,
+  watermark: true,
   verbose: false,
   quiet: true,
   dryRun: false,

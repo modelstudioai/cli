@@ -80,6 +80,14 @@ test("default_speech_recognition_model 从配置文件进入运行时 Settings",
   expect(resolve({ file }).defaultSpeechRecognitionModel).toBe("qwen-audio-3.0-asr-flash");
 });
 
+test("watermark 从配置文件进入 Settings，缺省时保持合规默认值 true", () => {
+  expect(parseConfigFile({ watermark: false }).watermark).toBe(false);
+  expect(parseConfigFile({ watermark: true }).watermark).toBe(true);
+  expect(parseConfigFile({ watermark: "false" }).watermark).toBeUndefined();
+  expect(resolve({ file: { watermark: false } }).watermark).toBe(false);
+  expect(resolve({}).watermark).toBe(true);
+});
+
 test("baseUrl:flag > env > file > 默认，所有来源统一归一化", () => {
   const flags = { baseUrl: "https://flag.example.com/compatible-mode/v1?source=flag" };
   const env = { DASHSCOPE_BASE_URL: "https://env.example.com/apps/anthropic#env" };
