@@ -49,6 +49,7 @@ export type {
   ChatRequest,
   ChatResponse,
   ChatTool,
+  AsrContextMessage,
   DashScopeASRRequest,
   DashScopeASRTaskResult,
   DashScopeASRTranscriptionItem,

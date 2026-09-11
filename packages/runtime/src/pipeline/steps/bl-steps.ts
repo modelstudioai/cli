@@ -1,5 +1,9 @@
 import { registerStep } from "../dispatcher.ts";
-import { buildPipelineEnv, type PipelineEnv } from "../bl-config.ts";
+import {
+  applyProfileWatermarkToStepInput,
+  buildPipelineEnv,
+  type PipelineEnv,
+} from "../bl-config.ts";
 import { isRecord } from "../utils.ts";
 import {
   textChat,
@@ -153,9 +157,13 @@ async function executeDirectBlStep(
   input: Record<string, unknown>,
   ctx: StepContext,
 ): Promise<StepResult> {
+  const env = (ctx.blEnv as PipelineEnv | undefined) ?? buildPipelineEnv();
+
   if (ctx.dryRun) {
+    // Surface the Profile-effective watermark in dry-run so plans match runtime.
+    const plannedInput = applyProfileWatermarkToStepInput(id, input, env.settings);
     return {
-      metadata: { dryRun: true, step: id, plannedInput: input },
+      metadata: { dryRun: true, step: id, plannedInput },
       warnings: [
         { code: "dry_run_skipped", message: `Step ${id} was not executed in dry-run mode` },
       ],
@@ -167,7 +175,6 @@ async function executeDirectBlStep(
     throw new Error(`No direct API handler registered for step: ${id}`);
   }
 
-  const env = (ctx.blEnv as PipelineEnv | undefined) ?? buildPipelineEnv();
   const data = await handler(env, input, ctx);
   const builder = RESULT_BUILDERS[id];
   if (builder) {

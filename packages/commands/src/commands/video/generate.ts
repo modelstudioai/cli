@@ -208,7 +208,7 @@ export default defineCommand({
       resolvedFileUrl = await ctx.client.uploadFile(fileUrl, model);
     }
 
-    const watermark = resolveWatermark(flags.watermark);
+    const watermark = resolveWatermark(flags.watermark, settings.watermark);
     const promptExtend = resolveBooleanFlag(flags.promptExtend, undefined, "prompt-extend");
 
     const body: DashScopeVideoRequest = {

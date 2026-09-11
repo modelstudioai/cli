@@ -240,4 +240,75 @@ describe("e2e: pipeline", () => {
     expect(stdout).toBe("");
     expect(stderr).toMatch(/--events must be one of: jsonl/i);
   });
+
+  test("pipeline image/generate dry-run 继承 Profile watermark=false", async () => {
+    const configDir = await mkdtemp(join(tmpdir(), "bl-pipeline-wm-"));
+    const workflowPath = join(configDir, "image-generate.json");
+    try {
+      await writeFile(
+        join(configDir, "config.json"),
+        JSON.stringify({ api_key: "sk-test-placeholder", watermark: false }, null, 2) + "\n",
+      );
+      await writeFile(
+        workflowPath,
+        JSON.stringify({
+          version: "workflow/v1",
+          steps: [{ id: "gen", type: "image/generate", input: { prompt: "A cat" } }],
+        }),
+      );
+      const { stdout, stderr, exitCode } = await runCommandE2e(
+        PIPELINE_ROUTES,
+        ["pipeline", "run", "--file", workflowPath, "--dry-run", "--output", "json"],
+        { BAILIAN_CONFIG_DIR: configDir, DASHSCOPE_API_KEY: "", DASHSCOPE_BASE_URL: "" },
+      );
+      expect(exitCode, stderr).toBe(0);
+      const report = parseStdoutJson<{
+        status?: string;
+        steps?: Array<{ type?: string; input?: { watermark?: boolean; prompt?: string } }>;
+      }>(stdout);
+      expect(report.status).toBe("planned");
+      expect(report.steps?.[0]).toMatchObject({
+        type: "image/generate",
+        input: { prompt: "A cat", watermark: false },
+      });
+    } finally {
+      await rm(configDir, { recursive: true, force: true });
+    }
+  });
+
+  test("pipeline 步骤显式 watermark=true 覆盖 Profile false", async () => {
+    const configDir = await mkdtemp(join(tmpdir(), "bl-pipeline-wm-ov-"));
+    const workflowPath = join(configDir, "image-generate.json");
+    try {
+      await writeFile(
+        join(configDir, "config.json"),
+        JSON.stringify({ api_key: "sk-test-placeholder", watermark: false }, null, 2) + "\n",
+      );
+      await writeFile(
+        workflowPath,
+        JSON.stringify({
+          version: "workflow/v1",
+          steps: [
+            {
+              id: "gen",
+              type: "image/generate",
+              input: { prompt: "A cat", watermark: true },
+            },
+          ],
+        }),
+      );
+      const { stdout, stderr, exitCode } = await runCommandE2e(
+        PIPELINE_ROUTES,
+        ["pipeline", "run", "--file", workflowPath, "--dry-run", "--output", "json"],
+        { BAILIAN_CONFIG_DIR: configDir, DASHSCOPE_API_KEY: "", DASHSCOPE_BASE_URL: "" },
+      );
+      expect(exitCode, stderr).toBe(0);
+      const report = parseStdoutJson<{
+        steps?: Array<{ input?: { watermark?: boolean } }>;
+      }>(stdout);
+      expect(report.steps?.[0]?.input?.watermark).toBe(true);
+    } finally {
+      await rm(configDir, { recursive: true, force: true });
+    }
+  });
 });

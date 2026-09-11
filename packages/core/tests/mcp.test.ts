@@ -23,6 +23,7 @@ function testDeps(overrides?: Partial<Settings>): { identity: Identity; settings
       output: "json",
       outputExplicit: true,
       timeout: 5,
+      watermark: true,
       verbose: false,
       quiet: true,
       dryRun: false,

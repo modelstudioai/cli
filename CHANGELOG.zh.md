@@ -15,6 +15,13 @@
 ### 内部
 
 - 补充 Agent 安全 E2E 覆盖（help、缺 workspace 的 usage 错误、dry-run 域名推导与 `--base-url` 覆盖、query string 筛选、枚举快失败），并为新的 `security` 组生成 `bailian-cli` 技能 reference。
+## [1.23.0] - 2026-09-10
+
+### 新增
+
+- **Profile 级水印控制** —— 可通过 `bl config set --key watermark --value true|false` 设置图片生成与编辑、视频生成与编辑以及参考生视频命令的默认水印行为。
+- **ASR 准确率增强** —— `bl speech recognize` 现支持通过 `--vocabulary` 传入即时热词、通过 `--context` 增强上下文词表，以及通过 `--vocabulary-id` 使用适用于对应 ASR 模型的预编译热词表。
+- **语音热词表管理** —— 新增 `bl speech vocabulary create|list|get|update|delete`，用于管理可复用的预编译热词表。
 
 ## [1.22.0] - 2026-09-08
 
