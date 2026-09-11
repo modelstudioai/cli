@@ -5,6 +5,7 @@ import {
   resolveApiKey,
   resolveConsole,
   resolveModelBaseUrl,
+  resolveModelBaseUrlState,
   resolveOpenApi,
 } from "../src/auth/resolver.ts";
 import { getModelProfilePreset } from "../src/config/profile-presets.ts";
@@ -104,6 +105,24 @@ test("baseUrl:非法 flag/env 在 resolver 边界报 usage error", () => {
   expect(() =>
     resolveModelBaseUrl(src({ env: { DASHSCOPE_BASE_URL: "file:///tmp/model" } })),
   ).toThrow(/Invalid model base URL/);
+});
+
+test("baseUrl state distinguishes an implicit default from an explicitly configured default origin", () => {
+  const defaultOrigin = "https://dashscope.aliyuncs.com";
+  expect(resolveModelBaseUrlState(src({}))).toEqual({
+    baseUrl: defaultOrigin,
+    baseUrlIsDefault: true,
+  });
+  for (const sources of [
+    src({ flags: { baseUrl: defaultOrigin } }),
+    src({ env: { DASHSCOPE_BASE_URL: defaultOrigin } }),
+    src({ file: { base_url: defaultOrigin } }),
+  ]) {
+    expect(resolveModelBaseUrlState(sources)).toEqual({
+      baseUrl: defaultOrigin,
+      baseUrlIsDefault: false,
+    });
+  }
 });
 
 test("命名 config 仍保持 flag > env > selected file", () => {

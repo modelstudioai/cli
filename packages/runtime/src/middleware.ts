@@ -19,7 +19,7 @@ import {
   resolveApiKey,
   resolveConsole,
   resolveOpenApi,
-  resolveModelBaseUrl,
+  resolveModelBaseUrlState,
   selectApiKeyResolutionSources,
   trackCommandExecution,
 } from "bailian-cli-core";
@@ -128,7 +128,7 @@ export const authStage: Middleware = async (ctx, next) => {
   const base = {
     identity: ctx.identity,
     settings,
-    baseUrl: resolveModelBaseUrl(sources),
+    ...resolveModelBaseUrlState(sources),
   };
   if (command.auth === "apiKey") {
     const capability = ctx.path.join(".");
@@ -145,7 +145,7 @@ export const authStage: Middleware = async (ctx, next) => {
     }
     ctx.client = new Client({
       ...base,
-      baseUrl: resolveModelBaseUrl(apiSources),
+      ...resolveModelBaseUrlState(apiSources),
       apiCred: cred,
     });
     if (cred) maybeShowStatusBar(settings, cred.token, cred);
