@@ -6,15 +6,23 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
-## [未发布]
+## [1.24.0] - 2026-09-11
 
 ### 新增
 
-- **Sandbox 管控面命令** —— 新增 `bl sandbox` 实例与模版生命周期命令，覆盖百炼 Sandbox 的 13 个 REST API；模版构建默认等待完成，也可通过 `--async` 仅提交并立即返回。
+- Sandbox 实例与模版生命周期命令，支持自动轮询构建状态和 `--async` 异步提交。
+- `bl sandbox official-images` 与模版 `--image` 参数，内置代码解释器、浏览器和全能型镜像预设。
+- `bl sandbox file upload` 使用 `source=sandbox_template` 上传模版挂载文件，返回的 File ID 可用于 `mntConfig`。
+- Sandbox 复用 `--base-url`、环境变量和 Profile 配置，未配置时通过工作空间拼接接入地址。
+- 独立的 `bailian-sandbox` Skill，提供命令参考和实例连接指南。
+
+### 修复
+
+- 模版构建轮询失败时保留已提交的 `templateID` 和 `buildID`，便于先查询已有构建，避免重复提交。
 
 ### 安全
 
-- Sandbox 调用使用百炼 API Key 作为 Bearer Token，不依赖 E2B SDK，也不发送 E2B API Key。连接凭据和 dry-run 中的环境变量默认脱敏；仅在确实需要原始连接 Token 时使用 `--show-credentials`。
+- Sandbox REST 调用使用百炼 Bearer 鉴权，不依赖 E2B SDK 或 E2B API Key；连接凭据和 dry-run 环境变量默认脱敏。
 
 ## [1.23.0] - 2026-09-10
 
