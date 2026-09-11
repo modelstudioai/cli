@@ -15,6 +15,24 @@
 ### 内部
 
 - 补充 Agent 安全 E2E 覆盖（help、缺 workspace 的 usage 错误、dry-run 域名推导与 `--base-url` 覆盖、query string 筛选、枚举快失败），并为新的 `security` 组生成 `bailian-cli` 技能 reference。
+## [1.24.0] - 2026-09-11
+
+### 新增
+
+- Sandbox 实例与模版生命周期命令，支持自动轮询构建状态和 `--async` 异步提交。
+- `bl sandbox official-images` 与模版 `--image` 参数，内置代码解释器、浏览器和全能型镜像预设。
+- `bl sandbox file upload` 使用 `source=sandbox_template` 上传模版挂载文件，返回的 File ID 可用于 `mntConfig`。
+- Sandbox 复用 `--base-url`、环境变量和 Profile 配置，未配置时通过工作空间拼接接入地址。
+- 独立的 `bailian-sandbox` Skill，提供命令参考和实例连接指南。
+
+### 修复
+
+- 模版构建轮询失败时保留已提交的 `templateID` 和 `buildID`，便于先查询已有构建，避免重复提交。
+
+### 安全
+
+- Sandbox REST 调用使用百炼 Bearer 鉴权，不依赖 E2B SDK 或 E2B API Key；连接凭据和 dry-run 环境变量默认脱敏。
+
 ## [1.23.0] - 2026-09-10
 
 ### 新增

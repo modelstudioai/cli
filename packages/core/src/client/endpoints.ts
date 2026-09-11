@@ -258,6 +258,55 @@ export function ragEndpoint(workspaceId: string, path: string): string {
   return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com${path}`;
 }
 
+// ---- Sandbox control plane (workspace-based host, cn-beijing only) ----
+
+/** AgentStudio workspace files; template uploads send source=sandbox_template. */
+export function agentStudioFilesPath(): string {
+  return "/api/v1/agentstudio/files";
+}
+
+/** Default Sandbox origin when no shared base URL was configured (cn-beijing only). */
+export function sandboxBaseUrl(workspaceId: string): string {
+  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com`;
+}
+
+/** Sandbox service prefix, appended to the selected origin just like AgentStudio SDK paths. */
+export function sandboxApiPath(path: string): string {
+  return `/api/v1/agentstudio/sandbox${path}`;
+}
+
+/** Build the default workspace-scoped absolute Sandbox control-plane URL. */
+export function sandboxEndpoint(workspaceId: string, path: string): string {
+  return sandboxBaseUrl(workspaceId) + sandboxApiPath(path);
+}
+
+export const SANDBOX_PATHS = {
+  sandboxes: "/sandboxes",
+  sandboxList: "/v2/sandboxes",
+  templates: "/templates",
+  templateCreate: "/v3/templates",
+  templateList: "/v2/templates",
+} as const;
+
+export function sandboxInstancePath(sandboxId: string): string {
+  return `${SANDBOX_PATHS.sandboxes}/${encodeURIComponent(sandboxId)}`;
+}
+
+export function sandboxInstanceActionPath(
+  sandboxId: string,
+  action: "connect" | "pause" | "resume",
+): string {
+  return `${sandboxInstancePath(sandboxId)}/${action}`;
+}
+
+export function sandboxTemplatePath(templateId: string): string {
+  return `${SANDBOX_PATHS.templates}/${encodeURIComponent(templateId)}`;
+}
+
+export function sandboxTemplateBuildStatusPath(templateId: string, buildId: string): string {
+  return `${sandboxTemplatePath(templateId)}/builds/${encodeURIComponent(buildId)}/status`;
+}
+
 export const RAG_PATHS = {
   // indices domain — knowledge bases / documents / chunks / import jobs.
   // Note: parameter naming is inconsistent across endpoints; see per-path comments.

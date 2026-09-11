@@ -56,6 +56,7 @@ bailian-gen      bailian-finetune  bailian-managed-agent   bailian-web-search
 ### C. 归属与生成
 
 - [ ] 新一级命令组归属领域时：改 `tools/generate-reference.ts` 的 `GROUP_OWNER_SKILL`，并更新**拥有方** skill 的路由表；hub 最多加一行 hand-off
+- [ ] 新增领域目录时：补齐 `SKILL.md`（含 `metadata.version`），同步 `packages/cli/package.json` 的 reference 格式化路径、`.vite-hooks/pre-commit` 的生成物暂存清单、`tools/release/check.mjs` 的生成物校验清单；同步 hub 与共享协议的领域路由
 - [ ] 跑 `pnpm run sync:skill-assets`（或 commit 走 pre-commit），提交生成的 `reference/` 与 version 同步结果
 - [ ] 高风险命令生成的 reference 必须包含 `Risk` / `Risk message` 和简短 Agent safety 提示；带 `--yes` 的示例必须标注只能在确认后执行，不要手改生成物
 - [ ] 默认模型若写在领域路由表（如 `bailian-gen`）：与命令 default / [model-add-remove.md](model-add-remove.md) 一并核对
