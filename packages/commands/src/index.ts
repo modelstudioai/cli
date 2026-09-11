@@ -228,3 +228,22 @@ export { default as skillUpdate } from "./commands/skill/update.ts";
 export { default as skillRemove } from "./commands/skill/remove.ts";
 export { default as skillList } from "./commands/skill/list.ts";
 export { default as skillInit } from "./commands/skill/init.ts";
+export { sandboxOfficialImages } from "./commands/sandbox/images.ts";
+export { sandboxFileUpload } from "./commands/sandbox/file.ts";
+export {
+  sandboxConnect,
+  sandboxCreate,
+  sandboxDelete,
+  sandboxGet,
+  sandboxList,
+  sandboxPause,
+  sandboxResume,
+} from "./commands/sandbox/instance.ts";
+export {
+  sandboxTemplateBuildStatus,
+  sandboxTemplateCreate,
+  sandboxTemplateDelete,
+  sandboxTemplateGet,
+  sandboxTemplateList,
+  sandboxTemplateUpdate,
+} from "./commands/sandbox/template.ts";

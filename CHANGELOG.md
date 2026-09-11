@@ -6,6 +6,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.24.0] - 2026-09-11
+
+### Added
+
+- Sandbox instance and template lifecycle commands, with automatic build polling and `--async` submission.
+- `bl sandbox official-images` and template `--image` presets for Code Interpreter, Browser, and All-in-One.
+- `bl sandbox file upload` uploads template mount files with `source=sandbox_template`; use the returned File ID in `mntConfig`.
+- Sandbox supports shared `--base-url`, environment and Profile configuration, with workspace-based endpoint fallback.
+- Dedicated `bailian-sandbox` Skill with command references and instance connection guidance.
+
+### Fixed
+
+- Preserve submitted `templateID` and `buildID` when template-build polling fails, so users can check the existing build before resubmitting.
+
+### Security
+
+- Sandbox REST calls use Bailian Bearer authentication without an E2B SDK or E2B API key. Connection credentials and dry-run environment values are redacted by default.
+
 ## [1.23.0] - 2026-09-10
 
 ### Added

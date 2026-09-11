@@ -187,6 +187,24 @@ export const SKILL_ROUTES: E2eRouteExports = {
   "skill init": "skillInit",
 };
 
+export const SANDBOX_ROUTES: E2eRouteExports = {
+  "sandbox create": "sandboxCreate",
+  "sandbox official-images": "sandboxOfficialImages",
+  "sandbox file upload": "sandboxFileUpload",
+  "sandbox list": "sandboxList",
+  "sandbox get": "sandboxGet",
+  "sandbox connect": "sandboxConnect",
+  "sandbox pause": "sandboxPause",
+  "sandbox resume": "sandboxResume",
+  "sandbox delete": "sandboxDelete",
+  "sandbox template create": "sandboxTemplateCreate",
+  "sandbox template list": "sandboxTemplateList",
+  "sandbox template get": "sandboxTemplateGet",
+  "sandbox template update": "sandboxTemplateUpdate",
+  "sandbox template build-status": "sandboxTemplateBuildStatus",
+  "sandbox template delete": "sandboxTemplateDelete",
+};
+
 export const MANAGED_AGENT_ROUTES: E2eRouteExports = {
   "managed-agent init": "managedAgentInit",
   "managed-agent validate": "managedAgentValidate",

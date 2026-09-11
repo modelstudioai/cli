@@ -2,11 +2,17 @@ import { expect, test } from "vite-plus/test";
 import type { Identity, Settings } from "../src/index.ts";
 import {
   BailianError,
+  Client,
   ExitCode,
   McpClient,
   callConsoleGateway,
   mapApiError,
   request,
+  sandboxEndpoint,
+  sandboxInstanceActionPath,
+  sandboxInstancePath,
+  sandboxTemplateBuildStatusPath,
+  sandboxTemplatePath,
 } from "../src/index.ts";
 import { parseConfigFile } from "../src/config/schema.ts";
 import {
@@ -72,6 +78,92 @@ test("mapApiError captures apiCode and request_id when present", () => {
     apiCode: "Throttling",
     requestId: "req-abc-123",
   });
+});
+
+test("mapApiError captures Sandbox numeric code and requestID", () => {
+  const err = mapApiError(400, {
+    code: 100004,
+    message: "参数缺失",
+    requestID: "sandbox-request-id",
+  });
+  expect(err.message).toBe("参数缺失");
+  expect(err.api).toEqual({
+    httpStatus: 400,
+    apiCode: "100004",
+    requestId: "sandbox-request-id",
+  });
+});
+
+test("Sandbox endpoint builders fix cn-beijing and encode path identifiers", () => {
+  expect(sandboxEndpoint("ws-test", "/sandboxes")).toBe(
+    "https://ws-test.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio/sandbox/sandboxes",
+  );
+  expect(sandboxInstancePath("sandbox/a b")).toBe("/sandboxes/sandbox%2Fa%20b");
+  expect(sandboxInstanceActionPath("sandbox/a b", "connect")).toBe(
+    "/sandboxes/sandbox%2Fa%20b/connect",
+  );
+  expect(sandboxTemplatePath("template/a b")).toBe("/templates/template%2Fa%20b");
+  expect(sandboxTemplateBuildStatusPath("template/a", "build b")).toBe(
+    "/templates/template%2Fa/builds/build%20b/status",
+  );
+});
+
+test("Client sends Sandbox REST requests with Bearer auth and no E2B API key", async () => {
+  const originalFetch = globalThis.fetch;
+  let requestHeaders: RequestInit["headers"];
+  globalThis.fetch = async (_input, init) => {
+    requestHeaders = init?.headers;
+    return new Response(JSON.stringify({ sandboxID: "sandbox-test" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  try {
+    const deps = testDeps();
+    const client = new Client({
+      ...deps,
+      baseUrl: "https://dashscope.aliyuncs.com",
+      apiCred: {
+        token: "bailian-api-key",
+        baseUrl: "https://dashscope.aliyuncs.com",
+        source: "flag",
+      },
+    });
+    await client.requestJson({
+      path: sandboxEndpoint("ws-test", "/sandboxes/sandbox-test"),
+      method: "GET",
+    });
+
+    const headers = new Headers(requestHeaders);
+    expect(headers.get("Authorization")).toBe("Bearer bailian-api-key");
+    expect(headers.has("X-API-Key")).toBe(false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Client.url evaluates a service default only when the shared origin was not configured", () => {
+  const deps = testDeps();
+  const defaultClient = new Client({
+    ...deps,
+    baseUrl: "https://dashscope.aliyuncs.com",
+    baseUrlIsDefault: true,
+  });
+  const configuredClient = new Client({
+    ...deps,
+    baseUrl: "https://dashscope.aliyuncs.com",
+    baseUrlIsDefault: false,
+  });
+  expect(defaultClient.url("/service")).toBe("https://dashscope.aliyuncs.com/service");
+  expect(defaultClient.url("/service", () => "https://workspace.example.test")).toBe(
+    "https://workspace.example.test/service",
+  );
+  expect(
+    configuredClient.url("/service", () => {
+      throw new Error("A configured origin must not require a workspace default.");
+    }),
+  ).toBe("https://dashscope.aliyuncs.com/service");
 });
 
 test("BailianError propagates cause via options-bag and exposes it in toJSON", () => {
