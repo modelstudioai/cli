@@ -47,6 +47,11 @@ describe("e2e: mcp", () => {
     expect(connect.stderr).toMatch(/qoder/);
     expect(connect.stderr).toMatch(/qoderwork/);
     expect(connect.stderr).toMatch(/qwenwork/);
+    expect(connect.stderr).toMatch(/opencode/);
+    expect(connect.stderr).toMatch(/openclaw/);
+    expect(connect.stderr).toMatch(/deepseek-harness/);
+    expect(connect.stderr).toMatch(/zcode/);
+    expect(connect.stderr).toMatch(/workbuddy/);
 
     const disconnect = await runCommandHelp(MCP_ROUTES, ["mcp", "disconnect", "--help"]);
     expect(disconnect.exitCode, disconnect.stderr).toBe(0);

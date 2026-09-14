@@ -6,8 +6,13 @@ import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
 import {
   connectMcpAgents,
   disconnectMcpAgents,
+  dshMcpPath,
+  opencodeMcpPath,
+  openclawMcpPath,
   qwenworkMcpPath,
   resolveMcpAgentTargets,
+  workbuddyMcpPaths,
+  zcodeMcpPath,
   type McpConnectionSpec,
 } from "../src/commands/mcp/agent-config.ts";
 
@@ -333,5 +338,175 @@ describe("MCP Agent registration", () => {
 
     expect(result.status).toBe("absent");
     expect(existsSync(join(configDir, "mcp-registrations.json"))).toBe(false);
+  });
+
+  test("opencode writes remote MCP entries under mcp", () => {
+    mkdirSync(join(home, ".config", "opencode"), { recursive: true });
+    const [result] = connectMcpAgents({
+      agents: ["opencode"],
+      spec: spec(),
+      cliVersion: "1.18.2",
+      home,
+      configDir,
+    });
+    expect(result.status).toBe("added");
+    expect(result.path).toBe(opencodeMcpPath(home));
+    expect(readJson(result.path)).toMatchObject({
+      mcp: {
+        ImageGenerate: {
+          type: "remote",
+          url: spec().endpoint,
+          enabled: true,
+          oauth: false,
+          headers: spec().headers,
+        },
+      },
+    });
+  });
+
+  test("openclaw writes mcp.servers with native transport names", () => {
+    mkdirSync(join(home, ".openclaw"), { recursive: true });
+    connectMcpAgents({
+      agents: ["openclaw"],
+      spec: spec(),
+      cliVersion: "1.18.2",
+      home,
+      configDir,
+    });
+    expect(readJson(openclawMcpPath(home))).toMatchObject({
+      mcp: {
+        servers: {
+          ImageGenerate: {
+            url: spec().endpoint,
+            transport: "streamable-http",
+            headers: spec().headers,
+          },
+        },
+      },
+    });
+    connectMcpAgents({
+      agents: ["openclaw"],
+      spec: spec("sse"),
+      cliVersion: "1.18.2",
+      home,
+      configDir,
+    });
+    expect(readJson(openclawMcpPath(home))).toMatchObject({
+      mcp: {
+        servers: {
+          ImageGenerate: {
+            url: spec("sse").endpoint,
+            transport: "sse",
+            headers: spec("sse").headers,
+          },
+        },
+      },
+    });
+  });
+
+  test("zcode writes mcp.servers with http and sse types", () => {
+    mkdirSync(join(home, ".zcode", "cli"), { recursive: true });
+    const [result] = connectMcpAgents({
+      agents: ["zcode"],
+      spec: spec(),
+      cliVersion: "1.18.2",
+      home,
+      configDir,
+    });
+    expect(result.path).toBe(zcodeMcpPath(home));
+    expect(readJson(result.path)).toMatchObject({
+      mcp: {
+        servers: {
+          ImageGenerate: {
+            type: "http",
+            url: spec().endpoint,
+            enabled: true,
+            headers: spec().headers,
+          },
+        },
+      },
+    });
+  });
+
+  test("workbuddy writes mcp.json into each installed product directory", () => {
+    mkdirSync(join(home, ".workbuddy"), { recursive: true });
+    mkdirSync(join(home, ".codebuddy"), { recursive: true });
+    const [result] = connectMcpAgents({
+      agents: ["workbuddy"],
+      spec: spec(),
+      cliVersion: "1.18.2",
+      home,
+      configDir,
+    });
+    expect(result.status).toBe("added");
+    const paths = workbuddyMcpPaths(home);
+    expect(paths).toEqual([
+      join(home, ".workbuddy", "mcp.json"),
+      join(home, ".codebuddy", "mcp.json"),
+    ]);
+    for (const path of paths) {
+      expect(readJson(path)).toMatchObject({
+        mcpServers: {
+          ImageGenerate: { type: "http", url: spec().endpoint, headers: spec().headers },
+        },
+      });
+    }
+    expect(existsSync(join(home, ".workbuddy-ai"))).toBe(false);
+
+    const [removed] = disconnectMcpAgents({
+      agents: ["workbuddy"],
+      name: "ImageGenerate",
+      home,
+      configDir,
+    });
+    expect(removed.status).toBe("removed");
+    for (const path of paths) {
+      expect(readJson(path).mcpServers).toEqual({});
+    }
+  });
+
+  test("deepseek-harness injects a streamable-http MCP client patch and preserves other inserts", () => {
+    mkdirSync(join(home, ".dsh"), { recursive: true });
+    writeFileSync(
+      dshMcpPath(home),
+      ["- insert:", "    - id: tool-other", "      name: other-plugin", ""].join("\n"),
+    );
+    const [result] = connectMcpAgents({
+      agents: ["deepseek-harness"],
+      spec: spec(),
+      cliVersion: "1.18.2",
+      home,
+      configDir,
+    });
+    expect(result.status).toBe("added");
+    const content = readFileSync(dshMcpPath(home), "utf8");
+    expect(content).toContain("tool-other");
+    expect(content).toContain("@deepseek-ai/dsh-mcp-client");
+    expect(content).toContain("streamable-http");
+    expect(content).toContain(spec().endpoint);
+    expect(() =>
+      connectMcpAgents({
+        agents: ["deepseek-harness"],
+        spec: spec("sse"),
+        cliVersion: "1.18.2",
+        home,
+        configDir,
+      }),
+    ).toThrow(/DeepSeek Harness.*SSE|SSE.*DeepSeek Harness/);
+  });
+
+  test("all targets include newly supported agents when installed", () => {
+    mkdirSync(join(home, ".config", "opencode"), { recursive: true });
+    mkdirSync(join(home, ".openclaw"), { recursive: true });
+    mkdirSync(join(home, ".dsh"), { recursive: true });
+    mkdirSync(join(home, ".zcode"), { recursive: true });
+    mkdirSync(join(home, ".workbuddy-ai"), { recursive: true });
+    expect(resolveMcpAgentTargets("all", home)).toEqual([
+      "opencode",
+      "openclaw",
+      "deepseek-harness",
+      "zcode",
+      "workbuddy",
+    ]);
   });
 });

@@ -19,7 +19,7 @@ import {
 import { inflateRawSync } from "node:zlib";
 import yaml from "yaml";
 import { parse as parseToml } from "smol-toml";
-import { qwenworkMcpPath } from "../mcp/agent-config.ts";
+import { qwenworkMcpPath, workbuddyMcpPaths } from "../mcp/agent-config.ts";
 
 /**
  * Where an item comes from. Everything discovered on disk today is `local`;
@@ -398,7 +398,9 @@ function transportOf(entry: Record<string, unknown>): {
   const url = typeof entry.url === "string" ? entry.url : undefined;
   if (url) {
     const type = typeof entry.type === "string" ? entry.type.toLowerCase() : "";
-    return { transport: type === "sse" ? "sse" : "http", detail: url };
+    const transportField = typeof entry.transport === "string" ? entry.transport.toLowerCase() : "";
+    if (type === "sse" || transportField === "sse") return { transport: "sse", detail: url };
+    return { transport: "http", detail: url };
   }
   return { transport: "unknown", detail: "" };
 }
@@ -475,7 +477,44 @@ export function listMcpServers(home: string = homedir()): McpServerInfo[] {
   if (gemini) collectMcpMap(gemini.mcpServers, "gemini", "global", out, true);
 
   const openclaw = readJsonSafe(join(home, ".openclaw", "openclaw.json"));
-  if (openclaw) collectMcpMap(openclaw.mcpServers, "openclaw", "global", out, true);
+  if (openclaw) {
+    const mcp = asRecord(openclaw.mcp);
+    collectMcpMap(mcp?.servers ?? openclaw.mcpServers, "openclaw", "global", out, true);
+  }
+
+  const zcode = readJsonSafe(join(home, ".zcode", "cli", "config.json"));
+  if (zcode) collectMcpMap(asRecord(zcode.mcp)?.servers, "zcode", "global", out, true);
+
+  for (const file of workbuddyMcpPaths(home)) {
+    const workbuddy = readJsonSafe(file);
+    if (workbuddy) collectMcpMap(workbuddy.mcpServers, "workbuddy", file, out, true);
+  }
+
+  const dshPatch = readText(join(home, ".dsh", "cordis.patch.yml"));
+  if (dshPatch) {
+    try {
+      const parsed = yaml.parse(dshPatch) as unknown;
+      const items = Array.isArray(parsed) ? parsed : [];
+      const dshServers: Record<string, unknown> = {};
+      for (const item of items) {
+        const entries = asRecord(item)?.insert;
+        const list = Array.isArray(entries) ? entries : [item];
+        for (const entry of list) {
+          const record = asRecord(entry);
+          const config = record ? asRecord(record.config) : undefined;
+          if (
+            record?.name === "@deepseek-ai/dsh-mcp-client" &&
+            typeof config?.serverName === "string"
+          ) {
+            dshServers[config.serverName] = config;
+          }
+        }
+      }
+      collectMcpMap(dshServers, "deepseek-harness", "global", out, false);
+    } catch {
+      /* ignore malformed yaml */
+    }
+  }
 
   const claudeDesktop = readJsonSafe(claudeDesktopConfigPath(home));
   if (claudeDesktop) collectMcpMap(claudeDesktop.mcpServers, "claude-desktop", "global", out, true);
@@ -514,6 +553,8 @@ function claudeDesktopConfigPath(home: string): string {
 interface McpWriteTarget {
   file: string;
   mapKey: string;
+  /** When set, the server map lives at parentKey.mapKey (e.g. mcp.servers). */
+  parentKey?: string;
   /** Claude stores project-scoped servers under projects[scope][mapKey]. */
   projectScoped: boolean;
 }
@@ -581,6 +622,20 @@ function mcpWriteTarget(source: string, scope: string, home: string): McpWriteTa
   if (source === "openclaw")
     return {
       file: join(home, ".openclaw", "openclaw.json"),
+      mapKey: "servers",
+      parentKey: "mcp",
+      projectScoped: false,
+    };
+  if (source === "zcode")
+    return {
+      file: join(home, ".zcode", "cli", "config.json"),
+      mapKey: "servers",
+      parentKey: "mcp",
+      projectScoped: false,
+    };
+  if (source === "workbuddy")
+    return {
+      file: workbuddyMcpPaths(home)[0] ?? join(home, ".workbuddy-ai", "mcp.json"),
       mapKey: "mcpServers",
       projectScoped: false,
     };
@@ -623,6 +678,45 @@ function unmaskMcpConfig(submitted: unknown, stored: unknown): unknown {
   return submitted;
 }
 
+function mcpMapContainer(
+  root: Record<string, unknown>,
+  target: McpWriteTarget,
+  scope: string,
+): Record<string, unknown> | undefined {
+  let container: Record<string, unknown> | undefined = root;
+  if (target.projectScoped) {
+    const projects = asRecord(root.projects);
+    container = projects ? asRecord(projects[scope]) : undefined;
+  }
+  if (!container) return undefined;
+  if (target.parentKey) {
+    const parent = asRecord(container[target.parentKey]);
+    return parent;
+  }
+  return container;
+}
+
+function ensureMcpMapContainer(
+  root: Record<string, unknown>,
+  target: McpWriteTarget,
+  scope: string,
+): Record<string, unknown> {
+  let container: Record<string, unknown> = root;
+  if (target.projectScoped) {
+    const projects = asRecord(root.projects) ?? {};
+    root.projects = projects;
+    const proj = asRecord(projects[scope]) ?? {};
+    projects[scope] = proj;
+    container = proj;
+  }
+  if (target.parentKey) {
+    const parent = asRecord(container[target.parentKey]) ?? {};
+    container[target.parentKey] = parent;
+    return parent;
+  }
+  return container;
+}
+
 /** Create or update one MCP server entry, writing back to its source file. */
 export function writeMcpServer(
   source: string,
@@ -639,14 +733,7 @@ export function writeMcpServer(
   if (!cfg) throw new Error("Config must be a JSON object.");
 
   const root = readJsonSafe(target.file) ?? {};
-  let container: Record<string, unknown> = root;
-  if (target.projectScoped) {
-    const projects = asRecord(root.projects) ?? {};
-    root.projects = projects;
-    const proj = asRecord(projects[scope]) ?? {};
-    projects[scope] = proj;
-    container = proj;
-  }
+  const container = ensureMcpMapContainer(root, target, scope);
   const map = asRecord(container[target.mapKey]) ?? {};
   container[target.mapKey] = map;
 
@@ -667,11 +754,7 @@ export function deleteMcpServer(
   if (!target) throw new Error("This MCP source is read-only and cannot be edited here.");
   const root = readJsonSafe(target.file);
   if (!root) throw new Error("Config file not found.");
-  let container: Record<string, unknown> | undefined = root;
-  if (target.projectScoped) {
-    const projects = asRecord(root.projects);
-    container = projects ? asRecord(projects[scope]) : undefined;
-  }
+  const container = mcpMapContainer(root, target, scope);
   const map = container ? asRecord(container[target.mapKey]) : undefined;
   if (!map || !(name in map)) throw new Error("Server not found: " + name);
   delete map[name];

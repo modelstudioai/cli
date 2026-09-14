@@ -3,6 +3,7 @@ import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { BailianError, ExitCode } from "bailian-cli-core";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
+import yaml from "yaml";
 import {
   backup,
   stripJsonc,
@@ -19,7 +20,18 @@ export const MCP_AGENT_IDS = [
   "qwenwork",
   "qwen-code",
   "gemini",
+  "opencode",
+  "openclaw",
+  "deepseek-harness",
+  "zcode",
+  "workbuddy",
 ] as const;
+
+const DSH_MCP_PLUGIN = "@deepseek-ai/dsh-mcp-client";
+const DSH_OTHER_PATCHES = "__dshOtherPatches";
+const DSH_SERVERS = "mcpServers";
+const WORKBUDDY_DIRS = [".workbuddy-ai", ".workbuddy", ".codebuddy"] as const;
+const OPENCLAW_DIRS = [".openclaw", ".clawdbot", ".moltbot"] as const;
 
 export type NativeMcpAgent = (typeof MCP_AGENT_IDS)[number];
 export type McpTransport = "streamable-http" | "sse";
@@ -57,6 +69,7 @@ interface RegistrationManifest {
 
 interface AgentAdapter {
   path(home: string): string;
+  paths?(home: string): string[];
   installed(home: string): boolean;
   supports(transport: McpTransport): boolean;
   parse(path: string): Record<string, unknown>;
@@ -130,6 +143,43 @@ function serverMap(config: Record<string, unknown>, key: string): Record<string,
   return current;
 }
 
+function nestedServerMap(config: Record<string, unknown>, keys: string[]): Record<string, unknown> {
+  let current = config;
+  for (const key of keys) {
+    current = serverMap(current, key);
+  }
+  return current;
+}
+
+function adapterWritePaths(adapter: AgentAdapter, home: string): string[] {
+  const listed = adapter.paths?.(home);
+  if (listed && listed.length > 0) return listed;
+  return [adapter.path(home)];
+}
+
+function envOrHomePath(envValue: string | undefined, home: string, fallbackDir: string): string {
+  const trimmed = envValue?.trim();
+  return trimmed ? trimmed : join(home, fallbackDir);
+}
+
+function mergeConnectStatus(
+  current: McpAgentResult["status"] | undefined,
+  next: "added" | "updated" | "unchanged",
+): McpAgentResult["status"] {
+  if (current === undefined || current === "unchanged") return next;
+  if (next === "updated" || current === "updated") return "updated";
+  return current;
+}
+
+function unsupportedSseError(agent: NativeMcpAgent): BailianError {
+  const label =
+    agent === "codex" ? "Codex" : agent === "deepseek-harness" ? "DeepSeek Harness" : agent;
+  return new BailianError(
+    `${label} does not support SSE MCP servers; use --transport streamable-http.`,
+    ExitCode.USAGE,
+  );
+}
+
 function qwenworkUserDataDirs(home: string): string[] {
   if (process.platform === "darwin") {
     const support = join(home, "Library", "Application Support");
@@ -155,26 +205,148 @@ export function qwenworkMcpPath(home: string): string {
   return join(dirs[0], "mcp.json");
 }
 
+export function opencodeMcpPath(home: string): string {
+  return join(home, ".config", "opencode", "opencode.json");
+}
+
+export function openclawMcpPath(home: string): string {
+  const fromEnv = process.env.OPENCLAW_CONFIG_PATH?.trim();
+  if (fromEnv) return fromEnv;
+  const existing = OPENCLAW_DIRS.map((dir) => join(home, dir)).find((dir) => existsSync(dir));
+  return join(existing ?? join(home, OPENCLAW_DIRS[0]), "openclaw.json");
+}
+
+export function dshHomeDir(home: string): string {
+  return envOrHomePath(process.env.DSH_HOME, home, ".dsh");
+}
+
+export function dshMcpPath(home: string): string {
+  return join(dshHomeDir(home), "cordis.patch.yml");
+}
+
+export function zcodeMcpPath(home: string): string {
+  return join(envOrHomePath(process.env.ZCODE_HOME, home, ".zcode"), "cli", "config.json");
+}
+
+function workbuddyProductDirs(home: string): string[] {
+  return WORKBUDDY_DIRS.map((dir) => join(home, dir));
+}
+
+function workbuddyFileInDir(dir: string): string {
+  const recommended = join(dir, ".mcp.json");
+  if (existsSync(recommended)) return recommended;
+  return join(dir, "mcp.json");
+}
+
+export function workbuddyMcpPaths(home: string): string[] {
+  const existing = workbuddyProductDirs(home).filter((dir) => existsSync(dir));
+  const dirs = existing.length > 0 ? existing : [join(home, WORKBUDDY_DIRS[0])];
+  return dirs.map((dir) => workbuddyFileInDir(dir));
+}
+
+function isDshMcpEntry(value: unknown): value is Record<string, unknown> {
+  return isObject(value) && value.name === DSH_MCP_PLUGIN && isObject(value.config);
+}
+
+function dshServerName(entry: Record<string, unknown>): string | undefined {
+  const config = entry.config;
+  if (!isObject(config) || typeof config.serverName !== "string" || config.serverName === "") {
+    return undefined;
+  }
+  return config.serverName;
+}
+
+function parseDshPatch(path: string): Record<string, unknown> {
+  if (!existsSync(path)) return { [DSH_OTHER_PATCHES]: [], [DSH_SERVERS]: {} };
+  let parsed: unknown;
+  try {
+    parsed = yaml.parse(readFileSync(path, "utf8"));
+  } catch (error) {
+    throw new BailianError(
+      `Cannot update MCP configuration because ${path} is invalid.`,
+      ExitCode.GENERAL,
+      "Fix the existing configuration file and retry; it was not changed.",
+      { cause: error },
+    );
+  }
+  if (parsed === null || parsed === undefined) {
+    return { [DSH_OTHER_PATCHES]: [], [DSH_SERVERS]: {} };
+  }
+  if (!Array.isArray(parsed)) {
+    throw new BailianError(
+      `Cannot update MCP configuration because ${path} is invalid.`,
+      ExitCode.GENERAL,
+      "Fix the existing configuration file and retry; it was not changed.",
+    );
+  }
+
+  const otherPatches: unknown[] = [];
+  const servers: Record<string, unknown> = {};
+  for (const item of parsed) {
+    if (isObject(item) && Array.isArray(item.insert)) {
+      const otherEntries: unknown[] = [];
+      for (const entry of item.insert) {
+        if (isDshMcpEntry(entry)) {
+          const name = dshServerName(entry);
+          if (name) {
+            servers[name] = entry;
+            continue;
+          }
+        }
+        otherEntries.push(entry);
+      }
+      if (otherEntries.length > 0) otherPatches.push({ ...item, insert: otherEntries });
+      continue;
+    }
+    if (isDshMcpEntry(item)) {
+      const name = dshServerName(item);
+      if (name) {
+        servers[name] = item;
+        continue;
+      }
+    }
+    otherPatches.push(item);
+  }
+  return { [DSH_OTHER_PATCHES]: otherPatches, [DSH_SERVERS]: servers };
+}
+
+function serializeDshPatch(config: Record<string, unknown>): string {
+  const otherPatches = Array.isArray(config[DSH_OTHER_PATCHES]) ? config[DSH_OTHER_PATCHES] : [];
+  const servers = isObject(config[DSH_SERVERS]) ? config[DSH_SERVERS] : {};
+  const patches = [...otherPatches];
+  const mcpEntries = Object.values(servers);
+  if (mcpEntries.length > 0) patches.push({ insert: mcpEntries });
+  return yaml.stringify(patches);
+}
+
 function jsonMcpAdapter(options: {
   path: (home: string) => string;
+  paths?: (home: string) => string[];
   installed: (home: string) => boolean;
+  supports?: (transport: McpTransport) => boolean;
   typed?: boolean;
+  serverKeys?: string[];
+  buildEntry?: (spec: McpConnectionSpec) => Record<string, unknown>;
 }): AgentAdapter {
+  const serverKeys = options.serverKeys ?? ["mcpServers"];
   return {
     path: options.path,
+    paths: options.paths,
     installed: options.installed,
-    supports: () => true,
+    supports: options.supports ?? (() => true),
     parse: parseJson,
     serialize: (config) => `${JSON.stringify(config, null, 2)}\n`,
-    getServers: (config) => serverMap(config, "mcpServers"),
-    buildEntry: (spec) =>
-      options.typed
-        ? {
-            type: spec.transport === "sse" ? "sse" : "http",
-            url: spec.endpoint,
-            headers: spec.headers,
-          }
-        : { url: spec.endpoint, headers: spec.headers },
+    getServers: (config) => nestedServerMap(config, serverKeys),
+    buildEntry:
+      options.buildEntry ??
+      ((spec) =>
+        options.typed
+          ? {
+              type: spec.transport === "sse" ? "sse" : "http",
+              url: spec.endpoint,
+              headers: spec.headers,
+            }
+          : { url: spec.endpoint, headers: spec.headers }),
   };
 }
 
@@ -248,6 +420,67 @@ const adapters: Record<NativeMcpAgent, AgentAdapter> = {
         ? { url: spec.endpoint, headers: spec.headers }
         : { httpUrl: spec.endpoint, headers: spec.headers },
   },
+  opencode: jsonMcpAdapter({
+    path: opencodeMcpPath,
+    installed: (home) =>
+      existsSync(join(home, ".config", "opencode")) || existsSync(opencodeMcpPath(home)),
+    serverKeys: ["mcp"],
+    buildEntry: (spec) => ({
+      type: "remote",
+      url: spec.endpoint,
+      enabled: true,
+      oauth: false,
+      headers: spec.headers,
+    }),
+  }),
+  openclaw: jsonMcpAdapter({
+    path: openclawMcpPath,
+    installed: (home) =>
+      Boolean(process.env.OPENCLAW_CONFIG_PATH?.trim()) ||
+      OPENCLAW_DIRS.some((dir) => existsSync(join(home, dir))) ||
+      existsSync(openclawMcpPath(home)),
+    serverKeys: ["mcp", "servers"],
+    buildEntry: (spec) => ({
+      url: spec.endpoint,
+      transport: spec.transport === "sse" ? "sse" : "streamable-http",
+      headers: spec.headers,
+    }),
+  }),
+  "deepseek-harness": {
+    path: dshMcpPath,
+    installed: (home) => existsSync(dshHomeDir(home)),
+    supports: (transport) => transport === "streamable-http",
+    parse: parseDshPatch,
+    serialize: serializeDshPatch,
+    getServers: (config) => serverMap(config, DSH_SERVERS),
+    buildEntry: (spec) => ({
+      id: `mcp-bailian-${spec.name}`,
+      name: DSH_MCP_PLUGIN,
+      config: {
+        serverName: spec.name,
+        transport: "streamable-http",
+        url: spec.endpoint,
+        headers: spec.headers,
+      },
+    }),
+  },
+  zcode: jsonMcpAdapter({
+    path: zcodeMcpPath,
+    installed: (home) => existsSync(envOrHomePath(process.env.ZCODE_HOME, home, ".zcode")),
+    serverKeys: ["mcp", "servers"],
+    buildEntry: (spec) => ({
+      type: spec.transport === "sse" ? "sse" : "http",
+      url: spec.endpoint,
+      enabled: true,
+      headers: spec.headers,
+    }),
+  }),
+  workbuddy: jsonMcpAdapter({
+    path: (home) => workbuddyMcpPaths(home)[0] ?? join(home, WORKBUDDY_DIRS[0], "mcp.json"),
+    paths: workbuddyMcpPaths,
+    installed: (home) => workbuddyProductDirs(home).some((dir) => existsSync(dir)),
+    typed: true,
+  }),
 };
 
 function stableJson(value: unknown): string {
@@ -362,44 +595,49 @@ export function connectMcpAgents(options: ConnectOptions): McpAgentResult[] {
   for (const agent of options.agents) {
     const adapter = adapters[agent];
     if (!adapter.supports(options.spec.transport)) {
-      throw new BailianError(
-        `Codex does not support SSE MCP servers; use --transport streamable-http.`,
-        ExitCode.USAGE,
-      );
+      throw unsupportedSseError(agent);
     }
 
-    const path = adapter.path(options.home);
-    const config = adapter.parse(path);
-    const servers = adapter.getServers(config);
+    const paths = adapterWritePaths(adapter, options.home);
+    const primaryPath = adapter.path(options.home);
     const key = registrationKey(agent, options.spec.name);
     const managed = manifest.registrations[key];
-    const existing = servers[options.spec.name];
-    assertManagedEntry(existing, managed, agent, options.spec.name);
-
     const desired = adapter.buildEntry(options.spec);
     const desiredFingerprint = fingerprint(desired);
-    const status =
-      existing === undefined
-        ? "added"
-        : fingerprint(existing) === desiredFingerprint
-          ? "unchanged"
-          : "updated";
-    results.push({ agent, path, status });
+    let status: McpAgentResult["status"] | undefined;
 
-    if (status !== "unchanged") {
-      servers[options.spec.name] = desired;
-      writes.push({
-        path,
-        original: existsSync(path) ? readFileSync(path, "utf8") : undefined,
-        content: adapter.serialize(config),
-      });
+    for (const path of paths) {
+      const config = adapter.parse(path);
+      const servers = adapter.getServers(config);
+      const existing = servers[options.spec.name];
+      assertManagedEntry(existing, managed, agent, options.spec.name);
+      const pathStatus =
+        existing === undefined
+          ? "added"
+          : fingerprint(existing) === desiredFingerprint
+            ? "unchanged"
+            : "updated";
+      status = mergeConnectStatus(status, pathStatus);
+      if (pathStatus !== "unchanged") {
+        servers[options.spec.name] = desired;
+        writes.push({
+          path,
+          original: existsSync(path) ? readFileSync(path, "utf8") : undefined,
+          content: adapter.serialize(config),
+        });
+      }
+    }
+
+    const resolvedStatus = status ?? "unchanged";
+    results.push({ agent, path: primaryPath, status: resolvedStatus });
+    if (resolvedStatus !== "unchanged") {
       manifest.registrations[key] = {
         agent,
         name: options.spec.name,
         serverCode: options.spec.serverCode,
         transport: options.spec.transport,
         endpoint: options.spec.endpoint,
-        path,
+        path: primaryPath,
         fingerprint: desiredFingerprint,
         cliVersion: options.cliVersion,
         updatedAt: new Date().toISOString(),
@@ -419,34 +657,39 @@ export function disconnectMcpAgents(options: DisconnectOptions): McpAgentResult[
 
   for (const agent of options.agents) {
     const adapter = adapters[agent];
-    const path = adapter.path(options.home);
+    const primaryPath = adapter.path(options.home);
     const key = registrationKey(agent, options.name);
     const managed = manifest.registrations[key];
     if (!managed) {
-      results.push({ agent, path, status: "absent" });
+      results.push({ agent, path: primaryPath, status: "absent" });
       continue;
     }
 
-    const config = adapter.parse(path);
-    const servers = adapter.getServers(config);
-    const existing = servers[options.name];
-    if (existing === undefined) {
-      delete manifest.registrations[key];
-      manifestChanged = true;
-      results.push({ agent, path, status: "absent" });
-      continue;
+    let removed = false;
+    let sawExisting = false;
+    for (const path of adapterWritePaths(adapter, options.home)) {
+      const config = adapter.parse(path);
+      const servers = adapter.getServers(config);
+      const existing = servers[options.name];
+      if (existing === undefined) continue;
+      sawExisting = true;
+      assertManagedEntry(existing, managed, agent, options.name);
+      delete servers[options.name];
+      removed = true;
+      writes.push({
+        path,
+        original: readFileSync(path, "utf8"),
+        content: adapter.serialize(config),
+      });
     }
-    assertManagedEntry(existing, managed, agent, options.name);
-    delete servers[options.name];
-    const result: McpAgentResult = { agent, path, status: "removed" };
-    results.push(result);
-    writes.push({
-      path,
-      original: readFileSync(path, "utf8"),
-      content: adapter.serialize(config),
-    });
+
     delete manifest.registrations[key];
     manifestChanged = true;
+    results.push({
+      agent,
+      path: primaryPath,
+      status: sawExisting && removed ? "removed" : "absent",
+    });
   }
 
   if (writes.length > 0 || manifestChanged) {

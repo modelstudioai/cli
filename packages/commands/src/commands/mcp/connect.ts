@@ -80,6 +80,12 @@ export default defineCommand({
       "zh-CN":
         "qoder、qoderwork、qwenwork 是彼此独立的产品。qwenwork 是千问办公（QwenWork）；qoderwork 是 Qoder Work。",
     },
+    {
+      "en-US":
+        "workbuddy covers CodeBuddy / WorkBuddy. deepseek-harness is DeepSeek Harness and only accepts streamable-http.",
+      "zh-CN":
+        "workbuddy 覆盖 CodeBuddy / WorkBuddy。deepseek-harness 是 DeepSeek Harness，仅支持 streamable-http。",
+    },
   ],
   exampleArgs: [
     "--server TextGenerateImage --transport streamable-http --agent cursor",

@@ -63,19 +63,20 @@ bl mcp call --target market-cmapi00073529.SmartFundSelection --arg riskLevel=R3 
 
 #### Flags
 
-| Flag                                                                                       | Type   | Required | Description                                                                                  |
-| ------------------------------------------------------------------------------------------ | ------ | -------- | -------------------------------------------------------------------------------------------- |
-| `--server <code>`                                                                          | string | yes      | Bailian MCP Server Code, such as TextGenerateImage                                           |
-| `--transport <streamable-http\|sse>`                                                       | string | yes      | MCP transport exposed by the server: streamable-http or sse                                  |
-| `--agent <codex\|claude-code\|cursor\|qoder\|qoderwork\|qwenwork\|qwen-code\|gemini\|all>` | string | yes      | Target Agent: codex, claude-code, cursor, qoder, qoderwork, qwenwork, qwen-code, gemini, all |
-| `--api-key <key>`                                                                          | string | no       | API key                                                                                      |
-| `--base-url <url>`                                                                         | string | no       | API base URL                                                                                 |
+| Flag                                                                                                                                               | Type   | Required | Description                                                                                                                                          |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--server <code>`                                                                                                                                  | string | yes      | Bailian MCP Server Code, such as TextGenerateImage                                                                                                   |
+| `--transport <streamable-http\|sse>`                                                                                                               | string | yes      | MCP transport exposed by the server: streamable-http or sse                                                                                          |
+| `--agent <codex\|claude-code\|cursor\|qoder\|qoderwork\|qwenwork\|qwen-code\|gemini\|opencode\|openclaw\|deepseek-harness\|zcode\|workbuddy\|all>` | string | yes      | Target Agent: codex, claude-code, cursor, qoder, qoderwork, qwenwork, qwen-code, gemini, opencode, openclaw, deepseek-harness, zcode, workbuddy, all |
+| `--api-key <key>`                                                                                                                                  | string | no       | API key                                                                                                                                              |
+| `--base-url <url>`                                                                                                                                 | string | no       | API base URL                                                                                                                                         |
 
 #### Notes
 
 - This release registers the official China-site MCP endpoint; the model API --base-url does not change the MCP endpoint.
 - The resolved API key is written to the selected Agent's private local configuration. Existing unmanaged entries are never overwritten.
 - qoder, qoderwork, and qwenwork are independent products. qwenwork is QwenWork (千问办公); qoderwork is Qoder Work.
+- workbuddy covers CodeBuddy / WorkBuddy. deepseek-harness is DeepSeek Harness and only accepts streamable-http.
 
 #### Examples
 
@@ -102,10 +103,10 @@ bl mcp connect --server TextGenerateImage --transport streamable-http --agent al
 
 #### Flags
 
-| Flag                                                                                       | Type   | Required | Description                                                                                  |
-| ------------------------------------------------------------------------------------------ | ------ | -------- | -------------------------------------------------------------------------------------------- |
-| `--server <code>`                                                                          | string | yes      | Bailian MCP Server Code used during connect                                                  |
-| `--agent <codex\|claude-code\|cursor\|qoder\|qoderwork\|qwenwork\|qwen-code\|gemini\|all>` | string | yes      | Target Agent: codex, claude-code, cursor, qoder, qoderwork, qwenwork, qwen-code, gemini, all |
+| Flag                                                                                                                                               | Type   | Required | Description                                                                                                                                          |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--server <code>`                                                                                                                                  | string | yes      | Bailian MCP Server Code used during connect                                                                                                          |
+| `--agent <codex\|claude-code\|cursor\|qoder\|qoderwork\|qwenwork\|qwen-code\|gemini\|opencode\|openclaw\|deepseek-harness\|zcode\|workbuddy\|all>` | string | yes      | Target Agent: codex, claude-code, cursor, qoder, qoderwork, qwenwork, qwen-code, gemini, opencode, openclaw, deepseek-harness, zcode, workbuddy, all |
 
 #### Notes
 
