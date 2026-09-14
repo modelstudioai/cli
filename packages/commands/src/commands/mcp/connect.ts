@@ -74,9 +74,15 @@ export default defineCommand({
         "The resolved API key is written to the selected Agent's private local configuration. Existing unmanaged entries are never overwritten.",
       "zh-CN": "解析出的 API Key 会写入所选 Agent 的本地私有配置；CLI 不会覆盖非其管理的同名条目。",
     },
+    {
+      "en-US":
+        "qoder, qoderwork, and qwenwork are independent products. qwenwork is QwenWork (千问办公); qoderwork is Qoder Work.",
+      "zh-CN":
+        "qoder、qoderwork、qwenwork 是彼此独立的产品。qwenwork 是千问办公（QwenWork）；qoderwork 是 Qoder Work。",
+    },
   ],
   exampleArgs: [
-    "--server TextGenerateImage --transport streamable-http --agent codex",
+    "--server TextGenerateImage --transport streamable-http --agent cursor",
     "--server VideoGenerate --transport sse --agent claude-code",
     "--server TextGenerateImage --transport streamable-http --agent all",
   ],

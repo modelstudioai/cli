@@ -58,32 +58,32 @@ Do not guess flags — use the reference files or `--help`.
 
 Use this table only after the decision table in [`bailian-protocol`](../bailian-protocol/SKILL.md#provider-selection-and-consent) has routed the request to `bl` (class 4, or class 2 after the user picks Bailian). Hub-owned intents only — for media / fine-tune / agents.yaml / Sandbox, soft hand-off to the domain skill.
 
-| User intent                                      | Command                                       | Notes                                                                      |
-| ------------------------------------------------ | --------------------------------------------- | -------------------------------------------------------------------------- |
-| Explicit Bailian model chat / text execution     | `bl text chat`                                | Default `qwen3.8-max`                                                      |
-| Bailian agent / workflow                         | `bl app call`                                 | Needs `--app-id`                                                           |
-| Find app by name                                 | `bl app list` then `bl app call`              | Console auth                                                               |
-| Bailian app memory CRUD (not host-agent memory)  | `bl memory *`                                 | [`reference/memory.md`](reference/memory.md)                               |
-| Bailian knowledge base RAG                       | `bl knowledge search` / `chat`                | API key + agent/workspace IDs                                              |
-| Upload a file as a step of a Bailian workflow    | `bl file upload`                              | When you need `oss://` URL explicitly; not for generic hosting             |
-| Bailian model selection / recommendation         | `bl advisor recommend`                        | Intent → candidate recall → LLM ranking                                    |
-| Bailian model catalog / pricing / params         | `bl model list`                               | Console auth; `--model <family>` for detail, `--enrich` for input params   |
-| Install / list / update / remove registry skills | `bl skill add` / `list` / `update` / `remove` | Bailian skill registry; see [`reference/skill.md`](reference/skill.md)     |
-| Bailian MCP marketplace discovery / call         | `bl mcp list` / `tools` / `call`              | —                                                                          |
-| Register or remove a Bailian MCP in an Agent     | `bl mcp connect` / `disconnect`               | Codex, Claude Code, Qwen Code, and Gemini CLI                              |
-| Bailian pipeline workflow (a step in a bl flow)  | `bl pipeline run` / `validate`                | JSON/YAML workflow definitions                                             |
-| Bailian rate limits / quota                      | `bl quota list` / `check` / `request`         | Console auth; class 2 — ask which product first if unnamed                 |
-| Bailian free tier / usage stats                  | `bl usage free` / `stats` / `freetier`        | Console auth; class 2 — ask which product first if unnamed                 |
-| Bailian Token Plan quota usage                   | `bl usage token-plan`                         | Console auth; class 2 — ask which product first if unnamed                 |
-| Bailian Coding Plan quota usage                  | `bl usage coding-plan`                        | Console auth; class 2 — ask which product first if unnamed                 |
-| Console API (advanced)                           | `bl console call`                             | Console auth                                                               |
-| Bailian workspace listing                        | `bl workspace list`                           | Console auth                                                               |
-| Switch CLI Help / Quick Start language           | `bl config set --key language --value zh-CN`  | Use `en-US` to switch back; follows the active config profile              |
-| Image / video / speech / omni / vision           | → skill `bailian-gen`                         | Fallback: `bl image\|video\|speech\|omni\|vision --help`                   |
-| Dataset / fine-tune / deploy                     | → skill `bailian-finetune`                    | Fallback: `bl dataset\|finetune\|deploy --help`                            |
-| agents.yaml IaC / managed-agent sessions         | → skill `bailian-managed-agent`               | Fallback: `bl managed-agent --help`; `apply`/`destroy` also require `plan` |
-| Bailian Sandbox instance / template lifecycle    | → skill `bailian-sandbox`                     | Fallback: `bl sandbox --help`                                              |
-| Web search (model-aware routing)                 | → skill `bailian-web-search`                  | Token Plan vs MCP path + fallback; fallback: `bl search web --help`        |
+| User intent                                      | Command                                       | Notes                                                                                     |
+| ------------------------------------------------ | --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Explicit Bailian model chat / text execution     | `bl text chat`                                | Default `qwen3.8-max`                                                                     |
+| Bailian agent / workflow                         | `bl app call`                                 | Needs `--app-id`                                                                          |
+| Find app by name                                 | `bl app list` then `bl app call`              | Console auth                                                                              |
+| Bailian app memory CRUD (not host-agent memory)  | `bl memory *`                                 | [`reference/memory.md`](reference/memory.md)                                              |
+| Bailian knowledge base RAG                       | `bl knowledge search` / `chat`                | API key + agent/workspace IDs                                                             |
+| Upload a file as a step of a Bailian workflow    | `bl file upload`                              | When you need `oss://` URL explicitly; not for generic hosting                            |
+| Bailian model selection / recommendation         | `bl advisor recommend`                        | Intent → candidate recall → LLM ranking                                                   |
+| Bailian model catalog / pricing / params         | `bl model list`                               | Console auth; `--model <family>` for detail, `--enrich` for input params                  |
+| Install / list / update / remove registry skills | `bl skill add` / `list` / `update` / `remove` | Bailian skill registry; see [`reference/skill.md`](reference/skill.md)                    |
+| Bailian MCP marketplace discovery / call         | `bl mcp list` / `tools` / `call`              | —                                                                                         |
+| Register or remove a Bailian MCP in an Agent     | `bl mcp connect` / `disconnect`               | Codex, Claude Code, Cursor, Qoder, Qoder Work, QwenWork (千问办公), Qwen Code, Gemini CLI |
+| Bailian pipeline workflow (a step in a bl flow)  | `bl pipeline run` / `validate`                | JSON/YAML workflow definitions                                                            |
+| Bailian rate limits / quota                      | `bl quota list` / `check` / `request`         | Console auth; class 2 — ask which product first if unnamed                                |
+| Bailian free tier / usage stats                  | `bl usage free` / `stats` / `freetier`        | Console auth; class 2 — ask which product first if unnamed                                |
+| Bailian Token Plan quota usage                   | `bl usage token-plan`                         | Console auth; class 2 — ask which product first if unnamed                                |
+| Bailian Coding Plan quota usage                  | `bl usage coding-plan`                        | Console auth; class 2 — ask which product first if unnamed                                |
+| Console API (advanced)                           | `bl console call`                             | Console auth                                                                              |
+| Bailian workspace listing                        | `bl workspace list`                           | Console auth                                                                              |
+| Switch CLI Help / Quick Start language           | `bl config set --key language --value zh-CN`  | Use `en-US` to switch back; follows the active config profile                             |
+| Image / video / speech / omni / vision           | → skill `bailian-gen`                         | Fallback: `bl image\|video\|speech\|omni\|vision --help`                                  |
+| Dataset / fine-tune / deploy                     | → skill `bailian-finetune`                    | Fallback: `bl dataset\|finetune\|deploy --help`                                           |
+| agents.yaml IaC / managed-agent sessions         | → skill `bailian-managed-agent`               | Fallback: `bl managed-agent --help`; `apply`/`destroy` also require `plan`                |
+| Bailian Sandbox instance / template lifecycle    | → skill `bailian-sandbox`                     | Fallback: `bl sandbox --help`                                                             |
+| Web search (model-aware routing)                 | → skill `bailian-web-search`                  | Token Plan vs MCP path + fallback; fallback: `bl search web --help`                       |
 
 Flags, usage, and examples: see hub [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags. Domain command details live in the owning skill's `reference/`.
 

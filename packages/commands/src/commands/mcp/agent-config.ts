@@ -10,7 +10,16 @@ import {
   writeTextAtomic,
 } from "../config/agent/writers/utils.ts";
 
-export const MCP_AGENT_IDS = ["codex", "claude-code", "qwen-code", "gemini"] as const;
+export const MCP_AGENT_IDS = [
+  "codex",
+  "claude-code",
+  "cursor",
+  "qoder",
+  "qoderwork",
+  "qwenwork",
+  "qwen-code",
+  "gemini",
+] as const;
 
 export type NativeMcpAgent = (typeof MCP_AGENT_IDS)[number];
 export type McpTransport = "streamable-http" | "sse";
@@ -121,6 +130,54 @@ function serverMap(config: Record<string, unknown>, key: string): Record<string,
   return current;
 }
 
+function qwenworkUserDataDirs(home: string): string[] {
+  if (process.platform === "darwin") {
+    const support = join(home, "Library", "Application Support");
+    return [join(support, "QwenWorkCN"), join(support, "QwenWork"), join(support, "QwenWork CN")];
+  }
+  if (process.platform === "win32") {
+    const appData = join(home, "AppData", "Roaming");
+    return [join(appData, "QwenWorkCN"), join(appData, "QwenWork")];
+  }
+  return [join(home, ".config", "QwenWorkCN"), join(home, ".config", "QwenWork")];
+}
+
+/** QwenWork / 千问办公 stores MCP config in Electron userData (`mcp.json`). */
+export function qwenworkMcpPath(home: string): string {
+  const dirs = qwenworkUserDataDirs(home);
+  for (const dir of dirs) {
+    const file = join(dir, "mcp.json");
+    if (existsSync(file)) return file;
+  }
+  for (const dir of dirs) {
+    if (existsSync(dir)) return join(dir, "mcp.json");
+  }
+  return join(dirs[0], "mcp.json");
+}
+
+function jsonMcpAdapter(options: {
+  path: (home: string) => string;
+  installed: (home: string) => boolean;
+  typed?: boolean;
+}): AgentAdapter {
+  return {
+    path: options.path,
+    installed: options.installed,
+    supports: () => true,
+    parse: parseJson,
+    serialize: (config) => `${JSON.stringify(config, null, 2)}\n`,
+    getServers: (config) => serverMap(config, "mcpServers"),
+    buildEntry: (spec) =>
+      options.typed
+        ? {
+            type: spec.transport === "sse" ? "sse" : "http",
+            url: spec.endpoint,
+            headers: spec.headers,
+          }
+        : { url: spec.endpoint, headers: spec.headers },
+  };
+}
+
 const adapters: Record<NativeMcpAgent, AgentAdapter> = {
   codex: {
     path: (home) => join(process.env.CODEX_HOME || join(home, ".codex"), "config.toml"),
@@ -147,6 +204,26 @@ const adapters: Record<NativeMcpAgent, AgentAdapter> = {
       headers: spec.headers,
     }),
   },
+  cursor: jsonMcpAdapter({
+    path: (home) => join(home, ".cursor", "mcp.json"),
+    installed: (home) =>
+      existsSync(join(home, ".cursor")) || existsSync(join(home, ".cursor", "mcp.json")),
+  }),
+  qoder: jsonMcpAdapter({
+    path: (home) => join(home, ".qoder", "mcp.json"),
+    installed: (home) =>
+      existsSync(join(home, ".qoder")) || existsSync(join(home, ".qoder", "mcp.json")),
+  }),
+  qoderwork: jsonMcpAdapter({
+    path: (home) => join(home, ".qoderwork", "mcp.json"),
+    installed: (home) =>
+      existsSync(join(home, ".qoderwork")) || existsSync(join(home, ".qoderwork", "mcp.json")),
+  }),
+  qwenwork: jsonMcpAdapter({
+    path: qwenworkMcpPath,
+    installed: (home) => qwenworkUserDataDirs(home).some((dir) => existsSync(dir)),
+    typed: true,
+  }),
   "qwen-code": {
     path: (home) => join(home, ".qwen", "settings.json"),
     installed: (home) => existsSync(join(home, ".qwen")),

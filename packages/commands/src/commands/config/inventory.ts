@@ -19,6 +19,7 @@ import {
 import { inflateRawSync } from "node:zlib";
 import yaml from "yaml";
 import { parse as parseToml } from "smol-toml";
+import { qwenworkMcpPath } from "../mcp/agent-config.ts";
 
 /**
  * Where an item comes from. Everything discovered on disk today is `local`;
@@ -453,19 +454,25 @@ export function listMcpServers(home: string = homedir()): McpServerInfo[] {
   const opencode = readJsonSafe(join(home, ".config", "opencode", "opencode.json"));
   if (opencode) collectMcpMap(opencode.mcp, "opencode", "global", out, true);
 
-  // Cursor, Windsurf, Gemini, QoderWork, OpenClaw, Claude Desktop: all JSON with
-  // a top-level `mcpServers` map (Claude/Cursor convention).
+  // Cursor, Windsurf, Gemini, Qoder, Qoder Work, QwenWork (千问办公), OpenClaw,
+  // Claude Desktop: JSON with a top-level `mcpServers` map.
   const cursor = readJsonSafe(join(home, ".cursor", "mcp.json"));
   if (cursor) collectMcpMap(cursor.mcpServers, "cursor", "global", out, true);
+
+  const qoder = readJsonSafe(join(home, ".qoder", "mcp.json"));
+  if (qoder) collectMcpMap(qoder.mcpServers, "qoder", "global", out, true);
+
+  const qoderwork = readJsonSafe(join(home, ".qoderwork", "mcp.json"));
+  if (qoderwork) collectMcpMap(qoderwork.mcpServers, "qoderwork", "global", out, true);
+
+  const qwenwork = readJsonSafe(qwenworkMcpPath(home));
+  if (qwenwork) collectMcpMap(qwenwork.mcpServers, "qwenwork", "global", out, true);
 
   const windsurf = readJsonSafe(join(home, ".codeium", "windsurf", "mcp_config.json"));
   if (windsurf) collectMcpMap(windsurf.mcpServers, "windsurf", "global", out, true);
 
   const gemini = readJsonSafe(join(home, ".gemini", "settings.json"));
   if (gemini) collectMcpMap(gemini.mcpServers, "gemini", "global", out, true);
-
-  const qoder = readJsonSafe(join(home, ".qoderwork", "mcp.json"));
-  if (qoder) collectMcpMap(qoder.mcpServers, "qoderwork", "global", out, true);
 
   const openclaw = readJsonSafe(join(home, ".openclaw", "openclaw.json"));
   if (openclaw) collectMcpMap(openclaw.mcpServers, "openclaw", "global", out, true);
@@ -553,9 +560,21 @@ function mcpWriteTarget(source: string, scope: string, home: string): McpWriteTa
       mapKey: "mcpServers",
       projectScoped: false,
     };
+  if (source === "qoder")
+    return {
+      file: join(home, ".qoder", "mcp.json"),
+      mapKey: "mcpServers",
+      projectScoped: false,
+    };
   if (source === "qoderwork")
     return {
       file: join(home, ".qoderwork", "mcp.json"),
+      mapKey: "mcpServers",
+      projectScoped: false,
+    };
+  if (source === "qwenwork")
+    return {
+      file: qwenworkMcpPath(home),
       mapKey: "mcpServers",
       projectScoped: false,
     };

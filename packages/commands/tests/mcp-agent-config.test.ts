@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
 import {
   connectMcpAgents,
   disconnectMcpAgents,
+  qwenworkMcpPath,
   resolveMcpAgentTargets,
   type McpConnectionSpec,
 } from "../src/commands/mcp/agent-config.ts";
@@ -106,6 +107,35 @@ describe("MCP Agent registration", () => {
       path: [".gemini", "settings.json"],
       streamable: { httpUrl: spec().endpoint, headers: spec().headers },
       sse: { url: spec("sse").endpoint, headers: spec("sse").headers },
+    },
+    {
+      agent: "cursor" as const,
+      path: [".cursor", "mcp.json"],
+      streamable: { url: spec().endpoint, headers: spec().headers },
+      sse: { url: spec("sse").endpoint, headers: spec("sse").headers },
+    },
+    {
+      agent: "qoder" as const,
+      path: [".qoder", "mcp.json"],
+      streamable: { url: spec().endpoint, headers: spec().headers },
+      sse: { url: spec("sse").endpoint, headers: spec("sse").headers },
+    },
+    {
+      agent: "qoderwork" as const,
+      path: [".qoderwork", "mcp.json"],
+      streamable: { url: spec().endpoint, headers: spec().headers },
+      sse: { url: spec("sse").endpoint, headers: spec("sse").headers },
+    },
+    {
+      agent: "qwenwork" as const,
+      path:
+        process.platform === "darwin"
+          ? ["Library", "Application Support", "QwenWorkCN", "mcp.json"]
+          : process.platform === "win32"
+            ? ["AppData", "Roaming", "QwenWorkCN", "mcp.json"]
+            : [".config", "QwenWorkCN", "mcp.json"],
+      streamable: { type: "http", url: spec().endpoint, headers: spec().headers },
+      sse: { type: "sse", url: spec("sse").endpoint, headers: spec("sse").headers },
     },
   ])(
     "$agent maps both remote transports to its native JSON format",
@@ -214,10 +244,83 @@ describe("MCP Agent registration", () => {
   test("all targets only installed supported agents", () => {
     mkdirSync(join(home, ".codex"), { recursive: true });
     mkdirSync(join(home, ".gemini"), { recursive: true });
+    mkdirSync(join(home, ".cursor"), { recursive: true });
+    mkdirSync(join(home, ".qoderwork"), { recursive: true });
 
-    expect(resolveMcpAgentTargets("all", home)).toEqual(["codex", "gemini"]);
+    expect(resolveMcpAgentTargets("all", home)).toEqual(["codex", "cursor", "qoderwork", "gemini"]);
     expect(resolveMcpAgentTargets("qwen-code", home)).toEqual(["qwen-code"]);
     expect(existsSync(join(home, ".qwen"))).toBe(false);
+
+    mkdirSync(join(qwenworkMcpPath(home), ".."), { recursive: true });
+    expect(resolveMcpAgentTargets("all", home)).toEqual([
+      "codex",
+      "cursor",
+      "qoderwork",
+      "qwenwork",
+      "gemini",
+    ]);
+  });
+
+  test("qoderwork writes ~/.qoderwork/mcp.json", () => {
+    mkdirSync(join(home, ".qoderwork"), { recursive: true });
+    const [result] = connectMcpAgents({
+      agents: ["qoderwork"],
+      spec: spec(),
+      cliVersion: "1.18.2",
+      home,
+      configDir,
+    });
+    expect(result.status).toBe("added");
+    expect(result.path).toBe(join(home, ".qoderwork", "mcp.json"));
+    expect(readJson(result.path)).toMatchObject({
+      mcpServers: { ImageGenerate: { url: spec().endpoint, headers: spec().headers } },
+    });
+  });
+
+  test("qwenwork writes Electron userData mcp.json and never uses Qoder Work", () => {
+    mkdirSync(join(home, ".qoderwork"), { recursive: true });
+    const [result] = connectMcpAgents({
+      agents: ["qwenwork"],
+      spec: spec(),
+      cliVersion: "1.18.2",
+      home,
+      configDir,
+    });
+    expect(result.status).toBe("added");
+    expect(result.path).toBe(qwenworkMcpPath(home));
+    expect(result.path).not.toContain(".qoderwork");
+    expect(existsSync(join(home, ".qoderwork", "mcp.json"))).toBe(false);
+    expect(readJson(result.path)).toMatchObject({
+      mcpServers: {
+        ImageGenerate: { type: "http", url: spec().endpoint, headers: spec().headers },
+      },
+    });
+  });
+
+  test("qwenwork prefers an existing QwenWork mcp.json over creating QwenWorkCN", () => {
+    const intlPath =
+      process.platform === "darwin"
+        ? join(home, "Library", "Application Support", "QwenWork", "mcp.json")
+        : process.platform === "win32"
+          ? join(home, "AppData", "Roaming", "QwenWork", "mcp.json")
+          : join(home, ".config", "QwenWork", "mcp.json");
+    mkdirSync(join(intlPath, ".."), { recursive: true });
+    writeFileSync(intlPath, JSON.stringify({ keep: true }));
+
+    const [result] = connectMcpAgents({
+      agents: ["qwenwork"],
+      spec: spec(),
+      cliVersion: "1.18.2",
+      home,
+      configDir,
+    });
+    expect(result.path).toBe(intlPath);
+    expect(readJson(intlPath)).toMatchObject({
+      keep: true,
+      mcpServers: {
+        ImageGenerate: { type: "http", url: spec().endpoint, headers: spec().headers },
+      },
+    });
   });
 
   test("disconnecting an unmanaged absent server does not create a manifest", () => {

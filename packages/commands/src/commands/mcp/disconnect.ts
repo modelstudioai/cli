@@ -54,7 +54,7 @@ export default defineCommand({
     },
   ],
   exampleArgs: [
-    "--server TextGenerateImage --agent codex",
+    "--server TextGenerateImage --agent cursor",
     "--server TextGenerateImage --agent all",
   ],
   async run(ctx) {

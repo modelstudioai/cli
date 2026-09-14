@@ -43,6 +43,10 @@ describe("e2e: mcp", () => {
     const connect = await runCommandHelp(MCP_ROUTES, ["mcp", "connect", "--help"]);
     expect(connect.exitCode, connect.stderr).toBe(0);
     expect(connect.stderr).toMatch(/--server|--transport|streamable-http|--agent/i);
+    expect(connect.stderr).toMatch(/cursor/);
+    expect(connect.stderr).toMatch(/qoder/);
+    expect(connect.stderr).toMatch(/qoderwork/);
+    expect(connect.stderr).toMatch(/qwenwork/);
 
     const disconnect = await runCommandHelp(MCP_ROUTES, ["mcp", "disconnect", "--help"]);
     expect(disconnect.exitCode, disconnect.stderr).toBe(0);
