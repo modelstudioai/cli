@@ -13,8 +13,9 @@
  * `v<betaVersion>` Release (identical binaries).
  *
  * Re-runs are idempotent via `gh release upload --clobber` (see gh-release.mjs).
- * After the GitHub upload the same assets are pushed straight to OSS from the
- * runner and HEAD-reconciled — all in-process, no external FC (see oss-direct-upload.mjs).
+ * After the GitHub upload the same assets go to OSS through the FC release
+ * channel: FC-presigned PUT URLs + FC-side HEAD reconcile, so the runner holds
+ * no OSS credentials (see oss-direct-upload.mjs).
  *
  * Called by publish-stable.mjs / publish-channel.mjs.
  * Debug:
@@ -245,9 +246,9 @@ export async function releaseBinaryArtifacts(rawOptions = {}) {
     filePaths: [join(ROOT, "CHANGELOG.md"), join(ROOT, "CHANGELOG.zh.md")],
     dryRun,
   });
-  // Push the exact Release assets straight to OSS from the runner, then
-  // HEAD-reconcile. Stable releases additionally maintain release/manifest.json
-  // (newer-version guard). Throws on failure — CI is the only OSS writer.
+  // Mirror the exact Release assets to OSS through the FC channel (presigned
+  // upload + FC-side HEAD reconcile). Stable releases additionally maintain
+  // release/manifest.json (newer-version guard, FC-side). Throws on failure.
   const plans = ossMirrorPlans({ dir, version, mode, files });
   const mirror = await mirrorReleaseAssetsToOss({ plans, dryRun });
   if (mode === "stable" && !mirror.skipped) {
