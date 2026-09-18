@@ -8,14 +8,18 @@
 
 ## [1.26.0] - 2026-09-17
 
+### 新增
+
+- **Agent 安全命令** —— `bl agents security overview`（最近 24 小时的防护总览）与 `bl agents security alerts`（告警列表，支持风险等级、资产类型、状态、厂商、分页与排序等筛选）。两者均对接按 workspace 区分的 AgentStudio 域名，遵循统一的 `text` / `json` / `--quiet` / `--dry-run` 约定。域名默认由 `--workspace-id` 推导，也可通过 `--base-url` / `DASHSCOPE_BASE_URL` / `auth login --base-url` 指向某个 workspace 或预发源覆盖（例如 `https://<workspace-id>.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio`）。
+
+### 内部
+
+- 补充 Agent 安全 E2E 覆盖（help、缺 workspace 的 usage 错误、dry-run 域名推导与 `--base-url` 覆盖、query string 筛选、枚举快失败），并为新的 `agents` 组生成 `bailian-cli` 技能 reference。
+
 ### 变更
 
 - **简化认证方式** —— 默认推荐使用控制台登录，需要时可自动创建普通 API Key。已有普通 API Key 和 Token Plan 订阅 Key 统一使用 `bl auth login --api-key <API_KEY>` 登录。
 - **API Key 自动校验与地域识别** —— API Key 会在保存前进行校验，CLI 自动选择可用地域，并在适用时完成 Token Plan 配置。
-
-### 修复
-
-- **视频任务诊断** —— 视频任务失败时展示服务端错误码、错误信息、请求 ID 和调度时间；下载失败时展示实际失败原因，不再只提示任务未完成。
 
 ## [1.25.0] - 2026-09-14
 
