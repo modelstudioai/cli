@@ -203,6 +203,7 @@ bl finetune checkpoints --job-id ft-xxx --output json
 
 #### Notes
 
+- Irreversible — the job record is permanently removed.
 - Cancel a RUNNING job first via `finetune cancel` — the platform refuses to delete jobs that are still in flight.
 
 #### Examples

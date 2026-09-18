@@ -118,6 +118,28 @@ export interface ModelPriceInfo {
   [key: string]: unknown;
 }
 
+/** Retirement notice for one service of a model. */
+export interface ModelOfflineNotice {
+  /** Public announcement URL; empty when the platform published none. */
+  announceUrl?: string;
+  /** Local-time `YYYY-MM-DD HH:mm:ss`; absent once the model is already offline. */
+  offlineTime?: string;
+}
+
+/** Per-service retirement notices, keyed by service name (`inference`, …). */
+export interface ModelOfflineInfo {
+  inference?: ModelOfflineNotice;
+}
+
+/** A single snippet: `{ code, … }` under one language of one API style. */
+export interface ModelSampleSnippet {
+  code?: string;
+  [key: string]: unknown;
+}
+
+/** sdk → api style → language → snippet (e.g. `openai.completionsAPI.python`). */
+export type ModelSampleCodeV2 = Record<string, Record<string, Record<string, ModelSampleSnippet>>>;
+
 export interface ModelGroupItem {
   model: string;
   name: string;
@@ -137,6 +159,11 @@ export interface ModelGroupItem {
   openSource?: boolean;
   category?: string;
   predictConfig?: PredictConfigEntry[];
+  /** Present once the model has been retired; an ISO timestamp. */
+  offlineAt?: string;
+  /** Present once retirement has been announced, before or after it takes effect. */
+  offlineInfo?: ModelOfflineInfo;
+  sampleCodeV2?: ModelSampleCodeV2;
   [key: string]: unknown;
 }
 
@@ -210,6 +237,37 @@ export async function fetchModelGroups(
   const groups = (responseData.list as ModelGroup[]) ?? [];
 
   return { total, groups };
+}
+
+/** Flatten family groups into their individual model items. */
+export function flattenModelGroups(groups: ModelGroup[]): ModelGroupItem[] {
+  return groups.flatMap((group) => group.items ?? []);
+}
+
+/**
+ * Fetch every model item in the catalog. The first page yields `total`; the
+ * remaining pages are fetched concurrently because ranking needs the whole set.
+ */
+export async function fetchModelGroupsAll(
+  call: ConsoleCall,
+  params: Omit<ModelGroupParams, "pageNo"> = {},
+): Promise<ModelGroupItem[]> {
+  const pageSize = params.pageSize ?? 50;
+  const first = await fetchModelGroups(call, {
+    ...params,
+    pageNo: 1,
+    pageSize,
+  });
+  const totalPages = Math.max(1, Math.ceil(first.total / pageSize));
+
+  const remainingPages: number[] = [];
+  for (let pageNo = 2; pageNo <= totalPages; pageNo++) remainingPages.push(pageNo);
+
+  const remaining = await Promise.all(
+    remainingPages.map((pageNo) => fetchModelGroups(call, { ...params, pageNo, pageSize })),
+  );
+
+  return flattenModelGroups([first.groups, ...remaining.map((page) => page.groups)].flat());
 }
 
 // ---------------------------------------------------------------------------

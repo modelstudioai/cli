@@ -201,6 +201,12 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: deploy (offline)", () => {
     const data = parseStdoutJson<{ action: string }>(stdout);
     expect(data.action).toBe(`deploy.${sub}`);
   });
+
+  test("deploy delete --help 展示 --yes", async () => {
+    const { stderr, exitCode } = await runCommandE2e(DEPLOY_ROUTES, ["deploy", "delete", "--help"]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--yes/i);
+  });
 });
 
 describe("e2e: deploy high-risk confirmation", () => {
