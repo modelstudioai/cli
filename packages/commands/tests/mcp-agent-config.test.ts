@@ -133,13 +133,8 @@ describe("MCP Agent registration", () => {
     },
     {
       agent: "qwenwork" as const,
-      path:
-        process.platform === "darwin"
-          ? ["Library", "Application Support", "QwenWorkCN", "mcp.json"]
-          : process.platform === "win32"
-            ? ["AppData", "Roaming", "QwenWorkCN", "mcp.json"]
-            : [".config", "QwenWorkCN", "mcp.json"],
-      streamable: { type: "http", url: spec().endpoint, headers: spec().headers },
+      path: [".qwenworkcn", "mcp.json"],
+      streamable: { type: "streamable-http", url: spec().endpoint, headers: spec().headers },
       sse: { type: "sse", url: spec("sse").endpoint, headers: spec("sse").headers },
     },
   ])(
@@ -282,7 +277,7 @@ describe("MCP Agent registration", () => {
     });
   });
 
-  test("qwenwork writes Electron userData mcp.json and never uses Qoder Work", () => {
+  test("qwenwork writes ~/.qwenworkcn/mcp.json and never uses Qoder Work", () => {
     mkdirSync(join(home, ".qoderwork"), { recursive: true });
     const [result] = connectMcpAgents({
       agents: ["qwenwork"],
@@ -292,23 +287,18 @@ describe("MCP Agent registration", () => {
       configDir,
     });
     expect(result.status).toBe("added");
-    expect(result.path).toBe(qwenworkMcpPath(home));
+    expect(result.path).toBe(join(home, ".qwenworkcn", "mcp.json"));
     expect(result.path).not.toContain(".qoderwork");
     expect(existsSync(join(home, ".qoderwork", "mcp.json"))).toBe(false);
     expect(readJson(result.path)).toMatchObject({
       mcpServers: {
-        ImageGenerate: { type: "http", url: spec().endpoint, headers: spec().headers },
+        ImageGenerate: { type: "streamable-http", url: spec().endpoint, headers: spec().headers },
       },
     });
   });
 
-  test("qwenwork prefers an existing QwenWork mcp.json over creating QwenWorkCN", () => {
-    const intlPath =
-      process.platform === "darwin"
-        ? join(home, "Library", "Application Support", "QwenWork", "mcp.json")
-        : process.platform === "win32"
-          ? join(home, "AppData", "Roaming", "QwenWork", "mcp.json")
-          : join(home, ".config", "QwenWork", "mcp.json");
+  test("qwenwork prefers an existing ~/.qwenwork/mcp.json over creating .qwenworkcn", () => {
+    const intlPath = join(home, ".qwenwork", "mcp.json");
     mkdirSync(join(intlPath, ".."), { recursive: true });
     writeFileSync(intlPath, JSON.stringify({ keep: true }));
 
@@ -323,7 +313,7 @@ describe("MCP Agent registration", () => {
     expect(readJson(intlPath)).toMatchObject({
       keep: true,
       mcpServers: {
-        ImageGenerate: { type: "http", url: spec().endpoint, headers: spec().headers },
+        ImageGenerate: { type: "streamable-http", url: spec().endpoint, headers: spec().headers },
       },
     });
   });

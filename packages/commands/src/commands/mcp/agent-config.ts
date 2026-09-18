@@ -180,21 +180,15 @@ function unsupportedSseError(agent: NativeMcpAgent): BailianError {
   );
 }
 
-function qwenworkUserDataDirs(home: string): string[] {
-  if (process.platform === "darwin") {
-    const support = join(home, "Library", "Application Support");
-    return [join(support, "QwenWorkCN"), join(support, "QwenWork"), join(support, "QwenWork CN")];
-  }
-  if (process.platform === "win32") {
-    const appData = join(home, "AppData", "Roaming");
-    return [join(appData, "QwenWorkCN"), join(appData, "QwenWork")];
-  }
-  return [join(home, ".config", "QwenWorkCN"), join(home, ".config", "QwenWork")];
+const QWENWORK_DIRS = [".qwenworkcn", ".qwenwork"] as const;
+
+function qwenworkConfigDirs(home: string): string[] {
+  return QWENWORK_DIRS.map((dir) => join(home, dir));
 }
 
-/** QwenWork / 千问办公 stores MCP config in Electron userData (`mcp.json`). */
+/** QwenWork / 千问办公 stores MCP config in `~/.qwenworkcn/mcp.json` (or `~/.qwenwork/mcp.json`). */
 export function qwenworkMcpPath(home: string): string {
-  const dirs = qwenworkUserDataDirs(home);
+  const dirs = qwenworkConfigDirs(home);
   for (const dir of dirs) {
     const file = join(dir, "mcp.json");
     if (existsSync(file)) return file;
@@ -393,8 +387,13 @@ const adapters: Record<NativeMcpAgent, AgentAdapter> = {
   }),
   qwenwork: jsonMcpAdapter({
     path: qwenworkMcpPath,
-    installed: (home) => qwenworkUserDataDirs(home).some((dir) => existsSync(dir)),
-    typed: true,
+    installed: (home) =>
+      qwenworkConfigDirs(home).some((dir) => existsSync(dir) || existsSync(join(dir, "mcp.json"))),
+    buildEntry: (spec) => ({
+      type: spec.transport === "sse" ? "sse" : "streamable-http",
+      url: spec.endpoint,
+      headers: spec.headers,
+    }),
   }),
   "qwen-code": {
     path: (home) => join(home, ".qwen", "settings.json"),
