@@ -124,27 +124,25 @@ irm https://bailian.aliyun.com/cli/install.ps1 | iex
 
 ## 认证方式
 
-### API Key
+### 控制台登录（OAuth，推荐）
 
-大部分命令均需要 API Key。前往 [DashScope 控制台](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key) 获取。
-
-```bash
-bl auth login --api-key sk-xxxxx
-```
-
-Token Plan 的 API Key 前往 [Token Plan 订阅详情](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview) 获取或复制。
-
-```bash
-bl auth login --config token-plan --api-key sk-sp-xxxxx
-```
-
-### 控制台登录（OAuth）
-
-控制台能力命令（模型列表、应用列表、MCP 列表、工作空间、用量查询、限流提额、控制台直调）需要使用此登录方式。打开浏览器跳转百炼控制台完成登录。
+控制台能力命令（模型列表、应用列表、MCP 列表、工作空间、用量查询、限流提额、控制台直调）需要使用此登录方式，并可在需要时创建普通 API Key。Token Plan 等订阅计划不能使用 `--console`，请使用下面的 API Key 登录方式。
 
 ```bash
 bl auth login --console
 ```
+
+国际站请使用 `--console-site international`。
+
+### API Key
+
+使用已有的普通 API Key 或 Token Plan 订阅 Key，都执行同一条命令：
+
+```bash
+bl auth login --api-key <API_KEY>
+```
+
+普通 Key 前往 [DashScope 控制台](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key) 获取，Token Plan Key 前往 [订阅详情](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview) 获取。
 
 ### 阿里云 OpenAPI AK/SK
 

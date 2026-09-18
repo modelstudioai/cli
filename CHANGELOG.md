@@ -6,6 +6,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.26.0] - 2026-09-17
+
+### Changed
+
+- **Simplified authentication** — Console login is now the recommended default and can create an ordinary API key when needed. Existing ordinary API keys and Token Plan subscription keys use the same `bl auth login --api-key <API_KEY>` command.
+- **Automatic API key validation and endpoint selection** — API keys are validated before being saved. The CLI automatically selects an available regional endpoint and applies the appropriate Token Plan configuration when applicable.
+
+### Fixed
+
+- **Video task diagnostics** — Failed video tasks now expose the service error code, message, request ID, and scheduling time; downloads show the actual failure detail instead of only an incomplete status.
+
+## [1.25.0] - 2026-09-14
+
+### Added
+
+- **Token Plan harness quota** — `bl token-plan harness-quota` shows Token Plan harness entitlement quota usage (Console auth), joining the harness list with issued entitlements to display used/total quota, usage ratio, and reset time; harnesses with a pending entitlement are listed as issuing.
+- Filter the harness list with `--type official_tool|infrastructure`; render as a quota box or `--output json`.
+
 ## [1.24.0] - 2026-09-11
 
 ### Added

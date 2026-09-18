@@ -1,7 +1,7 @@
 ---
 name: bailian-cli
 metadata:
-  version: "1.24.0"
+  version: "1.26.0"
   requires:
     bins: ["bl"]
 description: >-
@@ -75,6 +75,7 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | Bailian rate limits / quota                      | `bl quota list` / `check` / `request`         | Console auth; class 2 — ask which product first if unnamed                                                                         |
 | Bailian free tier / usage stats                  | `bl usage free` / `stats` / `freetier`        | Console auth; class 2 — ask which product first if unnamed                                                                         |
 | Bailian Token Plan quota usage                   | `bl usage token-plan`                         | Console auth; class 2 — ask which product first if unnamed                                                                         |
+| Token Plan harness entitlement quota             | `bl token-plan harness-quota`                 | Console auth; issued quota usage + still-issuing harnesses                                                                         |
 | Bailian Coding Plan quota usage                  | `bl usage coding-plan`                        | Console auth; class 2 — ask which product first if unnamed                                                                         |
 | Console API (advanced)                           | `bl console call`                             | Console auth                                                                                                                       |
 | Bailian workspace listing                        | `bl workspace list`                           | Console auth                                                                                                                       |
@@ -130,4 +131,4 @@ schema-export commands.
 - For `risk: high` commands or `requires_confirmation`, follow the shared protocol; never add `--yes` automatically.
 - `bl managed-agent apply` / `destroy` have an additional domain rule: run `plan` first and show the diff before asking for confirmation.
 - When a matched `bl` command accepts a file URL, pass local paths directly; never require the user to host the file first.
-- Console login → always `--console-site domestic|international`; see [`../bailian-protocol/assets/setup.md`](../bailian-protocol/assets/setup.md#console-site-selection).
+- Console login → use `bl auth login --console` for China; add `--console-site international` for the international site. It may create an ordinary API Key. Token Plan and other subscription plans must use `bl auth login --api-key <key>`. See [`../bailian-protocol/assets/setup.md`](../bailian-protocol/assets/setup.md#authentication).

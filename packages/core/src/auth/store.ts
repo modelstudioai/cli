@@ -3,6 +3,7 @@ import type { ResolutionSources } from "../config/loader.ts";
 import { readConfigFile, writeConfigFile } from "../config/loader.ts";
 import { getConfigPath } from "../config/paths.ts";
 import { normalizeModelBaseUrl } from "../config/model-base-url.ts";
+import { resolveApiKeyLoginConfigName } from "../config/profile-presets.ts";
 import type { AuthState } from "./types.ts";
 import { describeAuthState, resolveModelBaseUrl } from "./resolver.ts";
 
@@ -88,13 +89,23 @@ export function makeAuthStore(sources: ResolutionSources): AuthStore {
     },
     resolveBaseUrl: (fallback) => resolveModelBaseUrl(sources, fallback),
     async login(patch) {
-      const existing = readConfigFile(configName) as Record<string, unknown>;
+      const targetConfigName = patch.api_key
+        ? resolveApiKeyLoginConfigName(patch.api_key, configName, activateAfterLogin)
+        : configName;
+      const shouldActivate = activateAfterLogin || targetConfigName !== configName;
+      const existing = readConfigFile(targetConfigName) as Record<string, unknown>;
+
       for (const [key, value] of Object.entries(patch)) {
         if (value !== undefined) {
-          existing[key] = key === "base_url" ? normalizeModelBaseUrl(String(value)) : value;
+          if (key === "api_key_capabilities" && Array.isArray(value)) {
+            const storedCapabilities = Array.isArray(existing[key]) ? existing[key] : [];
+            existing[key] = [...new Set([...storedCapabilities, ...value])];
+          } else {
+            existing[key] = key === "base_url" ? normalizeModelBaseUrl(String(value)) : value;
+          }
         }
       }
-      await writeConfigFile(existing, configName, { activate: activateAfterLogin });
+      await writeConfigFile(existing, targetConfigName, { activate: shouldActivate });
     },
     async logout(scope) {
       const existing = readConfigFile(configName) as Record<string, unknown>;

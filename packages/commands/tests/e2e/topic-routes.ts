@@ -179,6 +179,7 @@ export const TOKEN_PLAN_ROUTES: E2eRouteExports = {
   "token-plan create-key": "tokenPlanCreateKey",
   "token-plan assign-seats": "tokenPlanAssignSeats",
   "token-plan add-member": "tokenPlanAddMember",
+  "token-plan harness-quota": "tokenPlanHarnessQuota",
 };
 
 export const SKILL_ROUTES: E2eRouteExports = {

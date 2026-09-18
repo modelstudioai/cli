@@ -50,28 +50,24 @@ bl auth generate-access-token --access-key-id LTAIxxxxx --access-key-secret xxxx
 
 #### Flags
 
-| Flag                           | Type   | Required | Description                                                                           |
-| ------------------------------ | ------ | -------- | ------------------------------------------------------------------------------------- |
-| `--api-key <key>`              | string | no       | Model API key to store                                                                |
-| `--base-url <url>`             | string | no       | Model API base URL to store with --api-key                                            |
-| `--console`                    | switch | no       | Sign in via browser; use --console-site to choose domestic (default) or international |
-| `--console-site <site>`        | string | no       | Console site: domestic, international                                                 |
-| `--open-api`                   | switch | no       | Store Alibaba Cloud OpenAPI AK/SK credentials                                         |
-| `--access-key-id <id>`         | string | no       | Alibaba Cloud Access Key ID to store                                                  |
-| `--access-key-secret <secret>` | string | no       | Alibaba Cloud Access Key Secret to store                                              |
+| Flag                           | Type   | Required | Description                                                                                                                                                                      |
+| ------------------------------ | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--api-key <key>`              | string | no       | Model API key to validate and store                                                                                                                                              |
+| `--base-url <url>`             | string | no       | Model API base URL to validate and store with --api-key                                                                                                                          |
+| `--console`                    | switch | no       | Sign in via browser (China by default; use --console-site international for the international site). Creates an ordinary API key if needed; subscription plans require --api-key |
+| `--console-site <site>`        | string | no       | Console site: domestic, international                                                                                                                                            |
+| `--open-api`                   | switch | no       | Store Alibaba Cloud OpenAPI AK/SK credentials                                                                                                                                    |
+| `--access-key-id <id>`         | string | no       | Alibaba Cloud Access Key ID to store                                                                                                                                             |
+| `--access-key-secret <secret>` | string | no       | Alibaba Cloud Access Key Secret to store                                                                                                                                         |
 
 #### Examples
 
 ```bash
-bl auth login --api-key sk-xxxxx
-```
-
-```bash
-bl auth login --config token-plan --api-key sk-sp-xxxxx
-```
-
-```bash
 bl auth login --console
+```
+
+```bash
+bl auth login --api-key sk-xxxxx
 ```
 
 ```bash

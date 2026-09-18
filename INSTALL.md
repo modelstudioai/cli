@@ -79,13 +79,9 @@ which bl   # Windows: where.exe bl
 ### 推荐：浏览器登录（控制台会话）
 
 1. 执行 `bl auth status --output json`，判断是否已配置。
-2. 若未配置，在**用户本机终端**执行 `bl auth login --console`。
-3. 登录成功后执行 `bl auth status --output json` 确认；汇报时只使用 masked 字段，**禁止**回显完整凭据。
-
-### 备选：API Key / Token Plan
-
-- 普通 Key：`bl auth login --api-key <Key>`
-- Token Plan：`bl auth login --config token-plan --api-key <Key>`
+2. 若未配置，在**用户本机终端**执行 `bl auth login --console`（国际站执行 `bl auth login --console --console-site international`）；需要时会自动创建普通 API Key。
+3. 如果使用 Token Plan 等订阅计划，不能使用 `--console`，请执行 `bl auth login --api-key <API_KEY>`。
+4. 登录成功后执行 `bl auth status --output json` 确认；汇报时只使用 masked 字段，**禁止**回显完整凭据。
 
 ### Agent 安全约束
 

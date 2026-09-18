@@ -19,10 +19,32 @@ publish-stable.mjs / publish-channel.mjs   ← 唯一发版入口
         └─ binary（lib/binary-release
               → binary-build
               → gh-release
-              → oss-direct-upload）
+              → oss-direct-upload → FC release 通道）
 ```
 
 `tools/release/lib/binary-release.mjs` 等是实现，一般不要单独当发版入口（调试可用）。
+
+### OSS 通道：FC 预签名上传（仓库不持有任何 OSS 凭据）
+
+二进制与静态文件（changelog）上 OSS 不再由 CI 持 AK/SK 直传，而是经 FC 函数
+（bailian-docs-llm-wiki-crawl 的 `release-prepare` / `release-finalize` action）：
+
+1. CI 用本 job 的 GitHub OIDC token（`id-token: write`）调 `release-prepare`；FC 验签
+   （白名单仓库 + ref）后返回 OSS 预签名 PUT URL（30 分钟过期）
+2. runner 拿 URL 直传 OSS（文件体不经过 FC）
+3. CI 调 `release-finalize`：FC 用函数角色 STS 凭证做 HEAD 字节数对账；stable 额外
+   维护 `manifest.json` / `latest.json`（newer-version 守卫在 FC 侧）
+
+配置面：
+
+| 位置             | 变量                                                                                                                        | 说明                                                                                             |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| GitHub Variables | 触发 URL 复用共享的 `FC_TRIGGER_URL`（publish-skills 同源，同一 FC 函数按 URL 路径路由 action）；另需 `FC_RELEASE_AUDIENCE` | 未设 URL 则跳过 OSS 通道（不阻塞 npm 发布）；复用意味着 FC 部署完成前不要合入 release 工具链改动 |
+| FC 函数 env      | `RELEASE_OIDC_AUD` / `RELEASE_ALLOWED_REPOS` / `RELEASE_ALLOWED_REFS`                                                       | 鉴权策略；audience 需与 CI 侧一致                                                                |
+| FC 函数 env      | `OSS_BUCKET` / `OSS_REGION` / `OSS_RELEASE_PREFIX` / `OSS_STATIC_PREFIX`                                                    | bucket 与 key 前缀（原七组 OSS secrets 收敛至此）                                                |
+
+改动 FC 侧逻辑（验签策略 / 对账 / manifest 守卫）去 bailian-docs-llm-wiki-crawl 仓库；
+本仓库只维护 client（`tools/release/lib/oss-direct-upload.mjs`）。
 
 ### bailian-kb-dsh（独立版本、npm-only）
 
@@ -88,7 +110,7 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 
 ## CI 基础设施
 
-- **认证**：npm OIDC Trusted Publishing（无 token），需要 `id-token: write` 权限
+- **认证**：npm OIDC Trusted Publishing（无 token），需要 `id-token: write` 权限；OSS 通道复用同一 OIDC token 向 FC 证明身份（见上文「OSS 通道」）
 - **GitHub Release**：`contents: write` + `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`（stable / channel 均需）
 - **Node 版本**：24（npm 11.5+ 才支持 OIDC token 交换）
 - **Bun**：`oven-sh/setup-bun`，版本钉死在 workflow 中

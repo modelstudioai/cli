@@ -1,74 +1,55 @@
 /**
- * Publish binary release assets to OSS entirely from the CI runner:
- * upload → HEAD-reconcile byte sizes → maintain release/manifest.json.
- * No external FC is involved anymore; CI is the single writer.
+ * Publish binary release assets to OSS through the FC release channel:
+ * the runner no longer holds any OSS credentials. Flow:
  *
- * Flow:
- *   - Every mode uploads its assets to `<prefix>/<tag>/<basename>`; channel
- *     mode also uploads `sync-release.json` to the prefix root (empty tag).
- *   - After upload, every object is HEAD-verified against the local byte size
- *     (reconciliation — the runner has the ground-truth artifacts on disk).
- *   - Stable only: when the tag is a NEWER version than the current manifest
- *     (compareVersions), rewrite `<prefix>/manifest.json` and the rolling
- *     `<prefix>/latest.json` — both carry the SAME rolling-manifest body
- *     written by binary-build.mjs. Channel mode never touches those two files.
+ *   release-prepare  → FC verifies the GitHub OIDC token, whitelist-checks the
+ *                      keys and returns presigned OSS PUT URLs (30 min expiry)
+ *   direct PUT       → the runner uploads each artifact straight to OSS
+ *                      (the runner→OSS path proven stable by the old design)
+ *   release-finalize → FC HEAD-reconciles every object against the local byte
+ *                      size and, for stable releases, maintains
+ *                      `<prefix>/manifest.json` + `<prefix>/latest.json`
+ *                      behind the same newer-version guard as before
  *
- * Zero-dependency: OSS V1 header signature (HMAC-SHA1) over plain fetch.
+ * The FC side lives in the bailian-docs-llm-wiki-crawl function
+ * (release-prepare / release-finalize actions); OSS access there uses the
+ * function role's STS credentials, so no AK/SK exists in this repo or in
+ * GitHub Secrets anymore.
  *
  * Gating / failure model:
- *   - BAILIAN_OSS_AK / BAILIAN_OSS_SK unset → warn + no-op (npm/GitHub publish
- *     still succeed; set the secrets to enable the OSS channel).
- *   - Once enabled, any upload/reconcile/manifest failure THROWS and fails the
- *     release step — re-running the workflow is idempotent (uploads overwrite).
+ *   - FC_TRIGGER_URL unset → warn + no-op (npm/GitHub publish still succeed).
+ *     The URL is the shared repo variable also used by publish-skills (same
+ *     FC function; actions are routed by URL path), so the channel is ON
+ *     whenever the FC function is reachable — deploy the FC release flows
+ *     before merging release tooling changes.
+ *   - Enabled but no OIDC token available → THROW (misconfigured CI must fail
+ *     loudly instead of silently skipping the OSS mirror).
+ *   - Any prepare/upload/finalize failure THROWS and fails the release step —
+ *     re-running the workflow is idempotent (uploads overwrite).
  *
- * Environment variables (all injected from GitHub repo Settings → Secrets;
- * no OSS defaults are hardcoded in this repo):
- *   BAILIAN_OSS_AK / BAILIAN_OSS_SK —— RAM AccessKey; needs oss:PutObject and
- *                                      oss:GetObject on the release prefix
- *   BAILIAN_OSS_BUCKET / BAILIAN_OSS_REGION / BAILIAN_RELEASE_PREFIX
- *                                   —— required once the channel is enabled
- *   BAILIAN_STATIC_PREFIX           —— prefix for static files (changelogs, etc.);
- *                                      same bucket/creds, separate namespace
- *   BAILIAN_OSS_ENDPOINT            —— optional request endpoint override;
- *                                      public manifest URLs always use the
- *                                      region endpoint
+ * Environment variables:
+ *   FC_TRIGGER_URL       —— FC HTTP trigger base URL (repo Settings → Variables)
+ *   FC_RELEASE_AUDIENCE  —— OIDC audience requested from GitHub and verified
+ *                           by FC (must match FC-side RELEASE_OIDC_AUD)
+ *   ACTIONS_ID_TOKEN_REQUEST_TOKEN / ACTIONS_ID_TOKEN_REQUEST_URL
+ *                          —— injected by GitHub Actions when the job has
+ *                             `permissions: id-token: write`
  */
-import { createHash, createHmac } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
 import { basename } from "node:path";
 
 /**
- * Resolve the OSS context from the environment. Returns null when the channel
- * is disabled (no credentials). Throws when credentials are present but the
- * non-credential configuration is incomplete — a misconfigured release must
- * fail loudly instead of uploading to a guessed location.
+ * Resolve the FC release channel context; null when the channel is disabled.
+ * Reuses the shared FC_TRIGGER_URL (the same function already serves
+ * publish-skills; actions are routed by URL path).
  */
-function ossContext() {
-  const ak = process.env.BAILIAN_OSS_AK?.trim();
-  const sk = process.env.BAILIAN_OSS_SK?.trim();
-  if (!ak || !sk) return null;
-  const cfg = {
-    bucket: process.env.BAILIAN_OSS_BUCKET?.trim() || "",
-    region: process.env.BAILIAN_OSS_REGION?.trim() || "",
-    endpoint: process.env.BAILIAN_OSS_ENDPOINT?.trim() || "",
-    prefix: process.env.BAILIAN_RELEASE_PREFIX?.trim() || "",
+function fcContext() {
+  const triggerUrl = process.env.FC_TRIGGER_URL?.trim();
+  if (!triggerUrl) return null;
+  return {
+    triggerUrl: triggerUrl.replace(/\/+$/, ""),
+    audience: process.env.FC_RELEASE_AUDIENCE?.trim() || "",
   };
-  const missing = [
-    ["BAILIAN_OSS_BUCKET", cfg.bucket],
-    ["BAILIAN_OSS_REGION", cfg.region],
-    ["BAILIAN_RELEASE_PREFIX", cfg.prefix],
-  ]
-    .filter(([, value]) => !value)
-    .map(([name]) => name);
-  if (missing.length > 0) {
-    throw new Error(`OSS channel misconfigured; missing env: ${missing.join(", ")}`);
-  }
-  return { creds: { ak, sk }, cfg };
-}
-
-/** Virtual-hosted-style request host: <bucket>.<endpoint-or-region>. */
-function ossHost(cfg) {
-  return `${cfg.bucket}.${cfg.endpoint || `${cfg.region}.aliyuncs.com`}`;
 }
 
 function contentTypeFor(name) {
@@ -79,68 +60,68 @@ function contentTypeFor(name) {
 }
 
 /**
- * Compare two version strings (strip a leading v/V, split on `.`, numeric
- * per-segment; non-numeric / missing segments count as 0).
- * @returns {number} 1 if a>b, -1 if a<b, 0 if equal
+ * Fetch a GitHub Actions OIDC token for this job. Requires
+ * `permissions: id-token: write` on the calling job; throws when the channel
+ * is enabled but no token can be obtained (CI misconfiguration).
  */
-export function compareVersions(a, b) {
-  const norm = (v) =>
-    String(v ?? "")
-      .trim()
-      .replace(/^[vV]/, "")
-      .split(".")
-      .map((s) => parseInt(s, 10) || 0);
-  const pa = norm(a);
-  const pb = norm(b);
-  const len = Math.max(pa.length, pb.length);
-  for (let i = 0; i < len; i++) {
-    const x = pa[i] ?? 0;
-    const y = pb[i] ?? 0;
-    if (x > y) return 1;
-    if (x < y) return -1;
+async function fetchOidcToken(audience) {
+  const requestToken = process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
+  const requestUrl = process.env.ACTIONS_ID_TOKEN_REQUEST_URL;
+  if (!requestToken || !requestUrl) {
+    throw new Error(
+      "FC release channel enabled but no OIDC token available; " +
+        "ensure the workflow job declares `permissions: id-token: write`",
+    );
   }
-  return 0;
+  const separator = requestUrl.includes("?") ? "&" : "?";
+  const url = audience
+    ? `${requestUrl}${separator}audience=${encodeURIComponent(audience)}`
+    : requestUrl;
+  const res = await fetch(url, { headers: { Authorization: `bearer ${requestToken}` } });
+  if (!res.ok) {
+    throw new Error(`GitHub OIDC token request failed: HTTP ${res.status}`);
+  }
+  const body = await res.json();
+  if (typeof body?.value !== "string" || !body.value) {
+    throw new Error("GitHub OIDC token request returned no token value");
+  }
+  return body.value;
 }
 
 /**
- * Signed OSS request (V1 header signature). Keys here are [A-Za-z0-9._/-] only,
- * so no URL encoding is needed and the signed resource matches the request path.
+ * Call an FC release action with the OIDC token. Retries transient network
+ * failures; throws on HTTP errors and on `success: false` responses
+ * (FC returns structured errors, e.g. OIDC verification failures).
  */
-async function ossRequest(
-  method,
-  key,
-  { creds, cfg, body = null, contentType = "", extraHeaders = {} },
-) {
-  const date = new Date().toUTCString();
-  const contentMd5 = body ? createHash("md5").update(body).digest("base64") : "";
-  const canonical = `${method}\n${contentMd5}\n${contentType}\n${date}\n/${cfg.bucket}/${key}`;
-  const signature = createHmac("sha1", creds.sk).update(canonical).digest("base64");
-  const headers = { Date: date, Authorization: `OSS ${creds.ak}:${signature}`, ...extraHeaders };
-  if (contentType) headers["Content-Type"] = contentType;
-  if (contentMd5) headers["Content-MD5"] = contentMd5;
-  const options = { method, headers };
-  if (body) options.body = body;
-  return fetch(`https://${ossHost(cfg)}/${key}`, options);
-}
-
-async function putObject({ creds, cfg, key, body, contentType }) {
-  const res = await ossRequest("PUT", key, { creds, cfg, body, contentType });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`OSS PUT ${key} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
-  }
-}
-
-/** PUT with exponential-backoff retries (runner → OSS can flake too). */
-async function putWithRetry(params, attempts = 3) {
+async function fcCall(ctx, action, payload, token, attempts = 3) {
   for (let attempt = 1; ; attempt++) {
     try {
-      return await putObject(params);
-    } catch (err) {
-      if (attempt >= attempts) throw err;
+      const res = await fetch(`${ctx.triggerUrl}/${action}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(120_000),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok || !body?.success) {
+        const reason = body?.error || `HTTP ${res.status}`;
+        throw new Error(
+          `FC ${action} failed: ${reason}${body?.status ? ` (status ${body.status})` : ""}`,
+        );
+      }
+      return body;
+    } catch (error) {
+      // Structured FC errors (auth/whitelist/reconcile) are final; only retry
+      // raw network failures, which surface as TypeError "fetch failed".
+      const isNetworkError =
+        error instanceof TypeError || /fetch failed|timeout/i.test(error.message);
+      if (attempt >= attempts || !isNetworkError) throw error;
       const delay = 1000 * 2 ** (attempt - 1);
       process.stdout.write(
-        `  [oss] retry ${attempt}/${attempts - 1} for ${params.key} in ${delay}ms (${err.message})\n`,
+        `  [fc] retry ${attempt}/${attempts - 1} for ${action} in ${delay}ms (${error.message})\n`,
       );
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
@@ -148,40 +129,8 @@ async function putWithRetry(params, attempts = 3) {
 }
 
 /**
- * Remote object byte size; null when the object does not exist.
- * Forces the identity encoding: for compressible types (e.g. JSON) OSS gzips
- * the transfer and undici then strips the content-length header, which would
- * otherwise read as a bogus size 0 here.
- */
-async function headObjectSize(key, creds, cfg) {
-  const res = await ossRequest("HEAD", key, {
-    creds,
-    cfg,
-    extraHeaders: { "Accept-Encoding": "identity" },
-  });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`OSS HEAD ${key} failed: HTTP ${res.status}`);
-  const length = res.headers.get("content-length");
-  if (length == null) throw new Error(`OSS HEAD ${key} returned no content-length`);
-  return Number(length);
-}
-
-/** GET + parse a JSON object; null when missing or corrupt. */
-async function getObjectJson(key, creds, cfg) {
-  const res = await ossRequest("GET", key, { creds, cfg });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`OSS GET ${key} failed: HTTP ${res.status}`);
-  try {
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Run async task factories with a bounded concurrency pool.
  * Returns results in the same order as the input tasks array.
- * (Same contract as packages/commands/src/commands/skill/shared.ts)
  *
  * @template T
  * @param {Array<() => Promise<T>>} tasks
@@ -204,99 +153,84 @@ async function runWithConcurrency(tasks, limit) {
   return results;
 }
 
-/**
- * HEAD-reconcile: verify every uploaded object exists remotely with the same
- * byte size as the local file. Runs HEAD requests concurrently.
- *
- * @param {Array<{ path: string, key: string }>} jobs
- * @param {{ ak: string, sk: string }} creds
- * @param {object} cfg
- * @param {string} label  Context for error messages (e.g. "release", "static-files")
- */
-async function reconcileUploads(jobs, creds, cfg, label) {
-  const results = await runWithConcurrency(
-    jobs.map((job) => async () => {
-      const remote = await headObjectSize(job.key, creds, cfg);
-      const local = statSync(job.path).size;
-      if (remote !== local) {
-        return {
-          ok: false,
-          key: job.key,
-          error: `OSS ${label} reconcile mismatch for ${job.key}: local ${local}B vs remote ${remote ?? "missing"}`,
-        };
+/** PUT a local file to a presigned URL with exponential-backoff retries. */
+async function putWithRetry({ putUrl, contentType, body }, attempts = 3) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      // Only Content-Type was signed by FC; sending extra canonical headers
+      // (e.g. Content-MD5) would break the OSS signature.
+      const res = await fetch(putUrl, {
+        method: "PUT",
+        headers: { "Content-Type": contentType },
+        body,
+        signal: AbortSignal.timeout(600_000),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status} ${text.slice(0, 200)}`);
       }
-      return { ok: true, key: job.key };
-    }),
-    4,
-  );
-  const mismatches = results.filter((result) => !result.ok);
-  if (mismatches.length > 0) {
-    throw new Error(mismatches.map((item) => item.error).join("\n"));
+      return;
+    } catch (error) {
+      if (attempt >= attempts) throw error;
+      const delay = 1000 * 2 ** (attempt - 1);
+      process.stdout.write(
+        `  [oss] retry ${attempt}/${attempts - 1} in ${delay}ms (${error.message})\n`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
   }
-  process.stdout.write(`${label} reconcile ok: ${jobs.length}/${jobs.length} object(s) verified\n`);
 }
 
 /**
- * Upload release assets to OSS under `<prefix>/<tag>/<basename>`, then
- * HEAD-reconcile every object against the local byte size.
- * Throws on any upload or reconcile failure (CI is the only writer now).
+ * Shared upload pipeline for release assets and static files:
+ * prepare (presign) → direct PUT → finalize (FC-side HEAD reconcile).
  *
  * @param {{
- *   plans: Array<{ tag: string, paths: string[] }>,
- *   dryRun?: boolean,
- * }} options `paths` may be bare basenames in dry-run planning mode.
- * @returns {Promise<{ uploaded: number, skipped: boolean }>}
+ *   ctx: { triggerUrl: string, audience: string },
+ *   prefix: "release" | "static",
+ *   jobs: Array<{ path: string, tag: string, name: string }>,
+ *   label: string,
+ * }} params
  */
-export async function mirrorReleaseAssetsToOss({ plans, dryRun = false }) {
-  const ctx = ossContext();
-  if (!ctx) {
-    process.stdout.write(
-      "\n[warn] BAILIAN_OSS_AK/SK unset; skip the OSS release channel entirely\n",
+async function uploadViaFc({ ctx, prefix, jobs, label }) {
+  const token = await fetchOidcToken(ctx.audience);
+  const prepare = await fcCall(
+    ctx,
+    "release-prepare",
+    {
+      files: jobs.map((job) => ({
+        prefix,
+        tag: job.tag,
+        name: job.name,
+        contentType: contentTypeFor(job.name),
+      })),
+    },
+    token,
+  );
+  const uploads = prepare.uploads ?? [];
+  if (uploads.length !== jobs.length) {
+    throw new Error(
+      `FC release-prepare returned ${uploads.length} URL(s) for ${jobs.length} file(s)`,
     );
-    return { uploaded: 0, skipped: true };
-  }
-  const { creds, cfg } = ctx;
-
-  // An empty tag means the object lives at the prefix root (rolling manifests).
-  const jobs = plans.flatMap(({ tag, paths }) =>
-    paths.map((path) => ({
-      path,
-      key: [cfg.prefix, tag, basename(path)].filter(Boolean).join("/"),
-    })),
-  );
-  if (jobs.length === 0) return { uploaded: 0, skipped: true };
-
-  process.stdout.write(
-    `\n==> OSS upload: ${jobs.length} object(s) → ${cfg.bucket} (${cfg.endpoint || cfg.region})\n`,
-  );
-
-  if (dryRun) {
-    for (const job of jobs) {
-      process.stdout.write(`[dry-run] PUT oss://${cfg.bucket}/${job.key}\n`);
-    }
-    process.stdout.write(`[dry-run] reconcile (HEAD size check) ${jobs.length} object(s)\n`);
-    return { uploaded: 0, skipped: false };
   }
 
   const results = await runWithConcurrency(
-    jobs.map((job) => async () => {
+    jobs.map((job, index) => async () => {
       const startedAt = Date.now();
       try {
         const body = readFileSync(job.path);
         await putWithRetry({
-          creds,
-          cfg,
-          key: job.key,
+          putUrl: uploads[index].putUrl,
+          contentType: uploads[index].contentType,
           body,
-          contentType: contentTypeFor(job.key),
         });
         process.stdout.write(
-          `  [oss] ok ${job.key} (${(body.length / 1024 / 1024).toFixed(1)}MB, ${Date.now() - startedAt}ms)\n`,
+          `  [oss] ok ${uploads[index].key} (${(body.length / 1024 / 1024).toFixed(1)}MB, ${Date.now() - startedAt}ms)\n`,
         );
-        return { ok: true, key: job.key };
+        return { ok: true, key: uploads[index].key };
       } catch (error) {
-        process.stdout.write(`  [oss] FAIL ${job.key}: ${error.message}\n`);
-        return { ok: false, key: job.key, error: error.message };
+        process.stdout.write(`  [oss] FAIL ${uploads[index].key}: ${error.message}\n`);
+        return { ok: false, key: uploads[index].key, error: error.message };
       }
     }),
     4,
@@ -311,17 +245,64 @@ export async function mirrorReleaseAssetsToOss({ plans, dryRun = false }) {
     );
   }
 
-  await reconcileUploads(jobs, creds, cfg, "release");
+  // HEAD byte-size reconciliation now happens FC-side (it holds the only OSS
+  // credentials); the runner reports local sizes as ground truth.
+  await fcCall(
+    ctx,
+    "release-finalize",
+    {
+      files: jobs.map((job, index) => ({ key: uploads[index].key, size: statSync(job.path).size })),
+    },
+    token,
+  );
+  process.stdout.write(
+    `${label} reconcile ok: ${jobs.length}/${jobs.length} object(s) verified by FC\n`,
+  );
+}
+
+/**
+ * Upload release assets to OSS under `<release-prefix>/<tag>/<basename>` via
+ * the FC channel. Throws on any prepare/upload/finalize failure.
+ *
+ * @param {{
+ *   plans: Array<{ tag: string, paths: string[] }>,
+ *   dryRun?: boolean,
+ * }} options `paths` may be bare basenames in dry-run planning mode.
+ * @returns {Promise<{ uploaded: number, skipped: boolean }>}
+ */
+export async function mirrorReleaseAssetsToOss({ plans, dryRun = false }) {
+  const ctx = fcContext();
+  if (!ctx) {
+    process.stdout.write("\n[warn] FC_TRIGGER_URL unset; skip the OSS release channel entirely\n");
+    return { uploaded: 0, skipped: true };
+  }
+
+  // An empty tag means the object lives at the prefix root (rolling manifests).
+  const jobs = plans.flatMap(({ tag, paths }) =>
+    paths.map((path) => ({ path, tag, name: basename(path) })),
+  );
+  if (jobs.length === 0) return { uploaded: 0, skipped: true };
+
+  process.stdout.write(`\n==> OSS upload via FC: ${jobs.length} object(s) → ${ctx.triggerUrl}\n`);
+
+  if (dryRun) {
+    for (const job of jobs) {
+      process.stdout.write(
+        `[dry-run] presign+PUT <release>/${[job.tag, job.name].filter(Boolean).join("/")}\n`,
+      );
+    }
+    process.stdout.write(`[dry-run] finalize (FC HEAD size reconcile) ${jobs.length} object(s)\n`);
+    return { uploaded: 0, skipped: false };
+  }
+
+  await uploadViaFc({ ctx, prefix: "release", jobs, label: "release" });
   return { uploaded: jobs.length, skipped: false };
 }
 
 /**
- * Maintain the STABLE pointers at the prefix root: rewrite `manifest.json`
- * and the rolling `latest.json` when `tag` is a newer version than the
- * current manifest (first write included). Both objects carry the SAME
- * rolling-manifest body produced by binary-build.mjs (`channelJsonPath`):
- * `{ name, channel, version, releasedAt, assets: { "<os>-<arch>": { file, sha256, inner } } }`
- * — identical in shape to the channel `<channel>.json` manifests.
+ * Maintain the STABLE pointers at the prefix root: FC rewrites
+ * `manifest.json` and the rolling `latest.json` when `tag` is a newer version
+ * than the current manifest (newer-version guard lives FC-side now).
  *
  * @param {{
  *   tag: string,
@@ -331,17 +312,15 @@ export async function mirrorReleaseAssetsToOss({ plans, dryRun = false }) {
  * @returns {Promise<{ updated: boolean, latest: string | null }>}
  */
 export async function maintainReleaseManifest({ tag, channelJsonPath = null, dryRun = false }) {
-  const ctx = ossContext();
+  const ctx = fcContext();
   if (!ctx) {
-    process.stdout.write("[info] BAILIAN_OSS_AK/SK unset; skip manifest.json maintenance\n");
+    process.stdout.write("[info] FC_TRIGGER_URL unset; skip manifest.json maintenance\n");
     return { updated: false, latest: null };
   }
-  const { creds, cfg } = ctx;
-  const key = `${cfg.prefix}/manifest.json`;
 
   if (dryRun) {
     process.stdout.write(
-      `[dry-run] manifest: GET oss://${cfg.bucket}/${key} → rewrite manifest.json + latest.json from ${channelJsonPath ?? "<rolling manifest>"} when ${tag} > latest\n`,
+      `[dry-run] manifest: FC release-finalize rewrites manifest.json + latest.json from ${channelJsonPath ?? "<rolling manifest>"} when ${tag} > latest\n`,
     );
     return { updated: false, latest: null };
   }
@@ -349,71 +328,29 @@ export async function maintainReleaseManifest({ tag, channelJsonPath = null, dry
     throw new Error("maintainReleaseManifest requires channelJsonPath outside dry-run");
   }
 
-  const current = await getObjectJson(key, creds, cfg);
-  // Rolling-manifest shape carries `version`; fall back to the legacy
-  // `{ latest }` pointer shape so the first migrated write still compares.
-  const currentLatest =
-    typeof current?.version === "string"
-      ? current.version
-      : typeof current?.latest === "string"
-        ? current.latest
-        : null;
-  const newer = currentLatest == null || compareVersions(tag, currentLatest) > 0;
-  if (!newer) {
-    process.stdout.write(`manifest unchanged: latest=${currentLatest} is not older than ${tag}\n`);
-    return { updated: false, latest: currentLatest };
+  const body = JSON.parse(readFileSync(channelJsonPath, "utf-8"));
+  const token = await fetchOidcToken(ctx.audience);
+  const result = await fcCall(
+    ctx,
+    "release-finalize",
+    { files: [], manifest: { tag, body } },
+    token,
+  );
+  if (result.manifestUpdated) {
+    process.stdout.write(`manifest.json → latest=${result.latest ?? tag}\n`);
+    process.stdout.write(`latest.json → ${result.latest ?? tag}\n`);
+  } else {
+    process.stdout.write(`manifest unchanged: latest=${result.latest} is not older than ${tag}\n`);
   }
-
-  const body = readFileSync(channelJsonPath);
-  await putObject({ creds, cfg, key, body, contentType: "application/json" });
-  process.stdout.write(`manifest.json → latest=${tag} (was ${currentLatest ?? "none"})\n`);
-  await putObject({
-    creds,
-    cfg,
-    key: `${cfg.prefix}/latest.json`,
-    body,
-    contentType: "application/json",
-  });
-  process.stdout.write(`latest.json → ${tag}\n`);
-  return { updated: true, latest: tag };
+  return { updated: Boolean(result.manifestUpdated), latest: result.latest ?? null };
 }
 
 /**
- * Resolve the OSS context for the static-files channel. Same bucket/creds as
- * the release channel but uses BAILIAN_STATIC_PREFIX instead of
- * BAILIAN_RELEASE_PREFIX. Returns null when credentials are absent (channel
- * disabled); throws when creds exist but required config is incomplete.
- */
-function staticOssContext() {
-  const ak = process.env.BAILIAN_OSS_AK?.trim();
-  const sk = process.env.BAILIAN_OSS_SK?.trim();
-  if (!ak || !sk) return null;
-  const cfg = {
-    bucket: process.env.BAILIAN_OSS_BUCKET?.trim() || "",
-    region: process.env.BAILIAN_OSS_REGION?.trim() || "",
-    endpoint: process.env.BAILIAN_OSS_ENDPOINT?.trim() || "",
-    prefix: process.env.BAILIAN_STATIC_PREFIX?.trim() || "",
-  };
-  const missing = [
-    ["BAILIAN_OSS_BUCKET", cfg.bucket],
-    ["BAILIAN_OSS_REGION", cfg.region],
-    ["BAILIAN_STATIC_PREFIX", cfg.prefix],
-  ]
-    .filter(([, value]) => !value)
-    .map(([name]) => name);
-  if (missing.length > 0) {
-    throw new Error(`OSS static-files channel misconfigured; missing env: ${missing.join(", ")}`);
-  }
-  return { creds: { ak, sk }, cfg };
-}
-
-/**
- * Sync a list of local files to OSS under `<BAILIAN_STATIC_PREFIX>/<basename>`.
- * Generic utility for any repo files that need to be mirrored to the static
- * prefix (changelogs today; docs, banners, etc. in the future).
+ * Sync a list of local files to OSS under `<static-prefix>/<basename>` via
+ * the FC channel. Generic utility for any repo files that need to be mirrored
+ * to the static prefix (changelogs today; docs, banners, etc. in the future).
  *
- * Gating: BAILIAN_OSS_AK/SK unset → warn + no-op. BAILIAN_STATIC_PREFIX unset
- * (with creds present) → throw (misconfiguration).
+ * Gating: FC_TRIGGER_URL unset → warn + no-op.
  *
  * @param {{
  *   filePaths: string[],
@@ -422,63 +359,26 @@ function staticOssContext() {
  * @returns {Promise<{ uploaded: number, skipped: boolean }>}
  */
 export async function syncStaticFilesToOss({ filePaths, dryRun = false }) {
-  const ctx = staticOssContext();
+  const ctx = fcContext();
   if (!ctx) {
-    process.stdout.write("\n[warn] BAILIAN_OSS_AK/SK unset; skip static-files sync to OSS\n");
+    process.stdout.write("\n[warn] FC_TRIGGER_URL unset; skip static-files sync to OSS\n");
     return { uploaded: 0, skipped: true };
   }
-  const { creds, cfg } = ctx;
 
-  const jobs = filePaths.map((path) => ({
-    path,
-    key: `${cfg.prefix}/${basename(path)}`,
-  }));
+  const jobs = filePaths.map((path) => ({ path, tag: "", name: basename(path) }));
   if (jobs.length === 0) return { uploaded: 0, skipped: true };
 
   process.stdout.write(
-    `\n==> OSS static-files sync: ${jobs.length} file(s) → ${cfg.bucket}/${cfg.prefix}/\n`,
+    `\n==> OSS static-files sync via FC: ${jobs.length} file(s) → ${ctx.triggerUrl}\n`,
   );
 
   if (dryRun) {
     for (const job of jobs) {
-      process.stdout.write(`[dry-run] PUT oss://${cfg.bucket}/${job.key}\n`);
+      process.stdout.write(`[dry-run] presign+PUT <static>/${job.name}\n`);
     }
     return { uploaded: 0, skipped: false };
   }
 
-  const results = await runWithConcurrency(
-    jobs.map((job) => async () => {
-      const startedAt = Date.now();
-      try {
-        const body = readFileSync(job.path);
-        await putWithRetry({
-          creds,
-          cfg,
-          key: job.key,
-          body,
-          contentType: contentTypeFor(job.key),
-        });
-        process.stdout.write(
-          `  [oss] ok ${job.key} (${(body.length / 1024).toFixed(1)}KB, ${Date.now() - startedAt}ms)\n`,
-        );
-        return { ok: true, key: job.key };
-      } catch (error) {
-        process.stdout.write(`  [oss] FAIL ${job.key}: ${error.message}\n`);
-        return { ok: false, key: job.key, error: error.message };
-      }
-    }),
-    4,
-  );
-
-  const failed = results.filter((result) => !result.ok);
-  if (failed.length > 0) {
-    throw new Error(
-      `OSS static-files sync failed for ${failed.length}/${jobs.length} file(s): ${failed
-        .map((item) => item.key)
-        .join(", ")}`,
-    );
-  }
-
-  await reconcileUploads(jobs, creds, cfg, "static-files");
+  await uploadViaFc({ ctx, prefix: "static", jobs, label: "static-files" });
   return { uploaded: jobs.length, skipped: false };
 }

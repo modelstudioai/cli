@@ -125,27 +125,25 @@ Once installed, just describe your task to your AI Agent — no need to assemble
 
 ## Authentication
 
-### API Key
+### Console Login (OAuth, Recommended)
 
-Required for most commands. Get your key from the [DashScope Console](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key).
-
-```bash
-bl auth login --api-key sk-xxxxx
-```
-
-Get or copy your Token Plan API key from the [Token Plan subscription overview](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview).
-
-```bash
-bl auth login --config token-plan --api-key sk-sp-xxxxx
-```
-
-### Console Login (OAuth)
-
-Required for console capability commands (model list, app list, MCP list, workspace, usage queries, rate-limit increases, direct console calls). Opens the Bailian console in your browser to sign in.
+Required for console capability commands (model list, app list, MCP list, workspace, usage queries, rate-limit increases, direct console calls). It can create an ordinary API key when needed. Token Plan and other subscription plans cannot use `--console`; use the API Key login below.
 
 ```bash
 bl auth login --console
 ```
+
+Use `--console-site international` for the international console.
+
+### API Key
+
+To use an existing ordinary API key or a Token Plan subscription key, run the same command:
+
+```bash
+bl auth login --api-key <API_KEY>
+```
+
+Get an ordinary key from the [DashScope Console](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key), or a Token Plan key from the [subscription overview](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview).
 
 ### Alibaba Cloud OpenAPI AK/SK
 

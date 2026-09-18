@@ -65,3 +65,25 @@ export interface AddOrganizationMemberResponse {
     SeatAssigned?: boolean;
   };
 }
+
+// Console gateway payloads keep the server's camelCase keys, unlike the
+// PascalCase OpenAPI shapes above.
+
+export interface HarnessBenefitItem {
+  type?: string;
+  hasResourcePack?: boolean;
+  planCodes?: string[];
+  title?: string;
+  quotaUnit?: string;
+  priceInfo?: { unit?: string } | null;
+}
+
+export interface TokenPlanEquityInfo {
+  instanceId?: string;
+  templateCode?: string;
+  equityType?: string;
+  totalQuota?: number;
+  availableQuota?: number;
+  instanceStartTime?: number;
+  instanceEndTime?: number;
+}
