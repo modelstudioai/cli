@@ -68,6 +68,8 @@ export { default as knowledgeCollectionCreate } from "./commands/knowledge/colle
 export { default as knowledgeCollectionGet } from "./commands/knowledge/collection-get.ts";
 export { default as knowledgeDocImportOss } from "./commands/knowledge/doc-import-oss.ts";
 export { default as mcpCall } from "./commands/mcp/call.ts";
+export { default as mcpConnect } from "./commands/mcp/connect.ts";
+export { default as mcpDisconnect } from "./commands/mcp/disconnect.ts";
 export { default as mcpList } from "./commands/mcp/list.ts";
 export { default as mcpTools } from "./commands/mcp/tools.ts";
 export { default as searchWeb } from "./commands/search/web.ts";
