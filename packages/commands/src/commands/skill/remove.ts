@@ -50,6 +50,20 @@ export default defineCommand({
       return;
     }
 
+    if (ctx.settings.dryRun) {
+      emitResult(
+        {
+          action: "skill.remove",
+          skills: names.map((name) => ({
+            name,
+            removedLinks: (lock.skills[name]?.links ?? []).length,
+          })),
+        },
+        format,
+      );
+      return;
+    }
+
     const diskDirs = new Set(listSkillDirsOnDisk());
     const results: RemoveOutcome[] = [];
     for (const name of names) {
@@ -83,17 +97,19 @@ export default defineCommand({
     if (format === "json") {
       emitResult({ skills: results }, format);
     } else {
-      const rows = results.map((r) => [
-        r.name,
-        r.status,
-        r.status === "removed" ? `reclaimed ${r.removedLinks} agent link(s)` : (r.reason ?? "-"),
+      const rows = results.map((result) => [
+        result.name,
+        result.status,
+        result.status === "removed"
+          ? `reclaimed ${result.removedLinks} agent link(s)`
+          : (result.reason ?? "-"),
       ]);
       for (const line of formatTable(["NAME", "STATUS", "DETAIL"], rows)) {
         emitBare(line);
       }
     }
 
-    const failed = results.filter((r) => r.status === "failed");
+    const failed = results.filter((result) => result.status === "failed");
     if (failed.length > 0) {
       throw new BailianError(
         `${failed.length}/${results.length} skill(s) failed to remove`,

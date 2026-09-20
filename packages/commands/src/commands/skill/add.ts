@@ -57,13 +57,27 @@ export default defineCommand({
   exampleArgs: ["--all", "--name spark-video,bailian-model-recommend"],
   async run(ctx) {
     const format = ctx.settings.outputExplicit ? ctx.settings.output : "json";
+    const agents = detectInstalledAgents();
+    const parsed = ctx.flags.all ? "all" : parseSkillNames(ctx.flags.name, false);
+
+    if (ctx.settings.dryRun) {
+      emitResult(
+        {
+          action: "skill.add",
+          registry: getSkillRegistryBaseUrl(),
+          agents: agents.map((agent) => agent.id),
+          skills: parsed,
+        },
+        format,
+      );
+      return;
+    }
+
     const index = await fetchSkillsIndex();
     const remoteNames = Object.keys(index.skills);
-    const parsed = ctx.flags.all ? "all" : parseSkillNames(ctx.flags.name, false);
     const names = parsed === "all" ? remoteNames : parsed;
 
     const lock = readSkillLock();
-    const agents = detectInstalledAgents();
 
     // collect-then-throw: a single skill failure only affects itself; successful ones are written to disk and lock as usual.
     // Skills install concurrently (bounded by INSTALL_CONCURRENCY) — each writes to a disjoint canonical dir, unique tmpDir, and distinct lock key.

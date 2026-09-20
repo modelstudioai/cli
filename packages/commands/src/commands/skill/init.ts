@@ -4,6 +4,7 @@ import {
   defineCommand,
   detectInstalledAgents,
   fetchSkillsIndex,
+  getSkillRegistryBaseUrl,
   installSkillWithFanout,
   readSkillLock,
   runWithConcurrency,
@@ -54,13 +55,27 @@ export default defineCommand({
   ],
   async run(ctx) {
     const format = ctx.settings.outputExplicit ? ctx.settings.output : DEFAULT_FORMAT;
+    const agents = detectInstalledAgents();
+
+    if (ctx.settings.dryRun) {
+      emitResult(
+        {
+          action: "skill.init",
+          registry: getSkillRegistryBaseUrl(),
+          skills: `${BAILIAN_PREFIX}*`,
+          agents: agents.map((agent) => agent.id),
+        },
+        format,
+      );
+      return;
+    }
+
     const index = await fetchSkillsIndex();
 
     // Discover all bailian-* skills from the live registry index
     const names = Object.keys(index.skills).filter((name) => name.startsWith(BAILIAN_PREFIX));
 
     const lock = readSkillLock();
-    const agents = detectInstalledAgents();
 
     const tasks = names.map((name) => async (): Promise<InitOutcome> => {
       const entry = index.skills[name];

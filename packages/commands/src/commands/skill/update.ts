@@ -58,11 +58,43 @@ export default defineCommand({
     const format = ctx.settings.outputExplicit ? ctx.settings.output : "json";
     const updateAll = ctx.flags.all || !ctx.flags.name;
     const requested = updateAll ? "all" : parseSkillNames(ctx.flags.name, false);
-    const index = await fetchSkillsIndex();
     const lock = readSkillLock();
+    const agents = detectInstalledAgents();
+
+    if (ctx.settings.dryRun) {
+      const failed: UpdateOutcome[] = [];
+      let skills: string[];
+      if (requested === "all") {
+        skills = Object.keys(lock.skills);
+      } else {
+        skills = [];
+        for (const name of requested) {
+          if (!lock.skills[name]) {
+            failed.push({
+              name,
+              status: "failed",
+              reason: "not installed; run bl skill add --name " + name + " first",
+            });
+            continue;
+          }
+          skills.push(name);
+        }
+      }
+      emitResult(
+        {
+          action: "skill.update",
+          registry: getSkillRegistryBaseUrl(),
+          skills,
+          ...(failed.length > 0 ? { failed } : {}),
+        },
+        format,
+      );
+      return;
+    }
+
+    const index = await fetchSkillsIndex();
     const disk = new Set(listSkillDirsOnDisk());
 
-    const agents = detectInstalledAgents();
     const results: UpdateOutcome[] = [];
     const targets: string[] = [];
     if (requested === "all") {

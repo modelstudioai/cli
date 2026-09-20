@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
@@ -11,6 +11,31 @@ const WIKI_SKILL = "bailian-docs-llm-wiki";
 /** Redirect ~/.bailian into a throwaway dir so lock/skill writes never touch the real user config */
 function makeTempConfigDir(): string {
   return mkdtempSync(join(tmpdir(), "bl-skill-e2e-"));
+}
+
+/** 在隔离 configDir 里种一个假 skill + lock，供 remove/update --dry-run 本地断言 */
+function seedInstalledSkill(configDir: string, skillName: string, links: string[]): void {
+  const skillDir = join(configDir, "skills", skillName);
+  mkdirSync(skillDir, { recursive: true });
+  writeFileSync(join(skillDir, "SKILL.md"), "---\nname: seeded\n---\n");
+  writeFileSync(
+    join(configDir, "skills", "skill-lock.json"),
+    `${JSON.stringify(
+      {
+        version: 1,
+        skills: {
+          [skillName]: {
+            contentHash: "sha256:seeded-for-dry-run",
+            installedAt: new Date().toISOString(),
+            sourceType: "oss",
+            links,
+          },
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
 }
 
 describe("e2e: skill", () => {
@@ -47,7 +72,7 @@ describe("e2e: skill", () => {
   });
 });
 
-// Local-only cases: auth "none" + validation happens before any network access, no gating needed
+// Local-only cases: auth "none" + dry-run / validation happen before any network access
 describe("e2e: skill (local, no credentials)", () => {
   test("skill add without --all or --name errors as usage error (2)", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, [
@@ -95,6 +120,102 @@ describe("e2e: skill (local, no credentials)", () => {
     }>(stdout);
     expect(data.skills?.[0]?.status).toBe("failed");
     expect(data.skills?.[0]?.reason).toMatch(/not installed/i);
+  });
+
+  test("skill remove --dry-run 仅输出计划且不删盘", async () => {
+    const configDir = makeTempConfigDir();
+    const fakeHome = makeTempConfigDir();
+    const linkPath = join(fakeHome, ".claude", "skills", "seeded-skill");
+    seedInstalledSkill(configDir, "seeded-skill", [linkPath]);
+    mkdirSync(join(fakeHome, ".claude", "skills"), { recursive: true });
+    writeFileSync(linkPath, "link-placeholder");
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      SKILL_ROUTES,
+      ["skill", "remove", "--name", "seeded-skill", "--dry-run", "--output", "json"],
+      { BAILIAN_CONFIG_DIR: configDir, HOME: fakeHome, USERPROFILE: fakeHome },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      action?: string;
+      skills?: Array<{ name?: string; removedLinks?: number }>;
+    }>(stdout);
+    expect(data.action).toBe("skill.remove");
+    expect(data.skills?.[0]?.name).toBe("seeded-skill");
+    expect(data.skills?.[0]?.removedLinks).toBe(1);
+    expect(existsSync(join(configDir, "skills", "seeded-skill", "SKILL.md"))).toBe(true);
+    expect(existsSync(join(configDir, "skills", "skill-lock.json"))).toBe(true);
+    expect(existsSync(linkPath)).toBe(true);
+  });
+
+  test("skill add --dry-run 仅输出计划且不写盘、不联网", async () => {
+    const configDir = makeTempConfigDir();
+    const fakeHome = makeTempConfigDir();
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      SKILL_ROUTES,
+      ["skill", "add", "--name", WIKI_SKILL, "--dry-run", "--output", "json"],
+      { BAILIAN_CONFIG_DIR: configDir, HOME: fakeHome, USERPROFILE: fakeHome },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      action?: string;
+      skills?: string[] | string;
+      registry?: string;
+    }>(stdout);
+    expect(data.action).toBe("skill.add");
+    expect(data.registry).toMatch(/^https?:\/\//);
+    expect(data.skills).toEqual([WIKI_SKILL]);
+    expect(existsSync(join(configDir, "skills", WIKI_SKILL))).toBe(false);
+    expect(existsSync(join(configDir, "skills", "skill-lock.json"))).toBe(false);
+  });
+
+  test("skill init --dry-run 仅输出筛选意图且不写盘、不联网", async () => {
+    const configDir = makeTempConfigDir();
+    const fakeHome = makeTempConfigDir();
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      SKILL_ROUTES,
+      ["skill", "init", "--dry-run", "--output", "json"],
+      { BAILIAN_CONFIG_DIR: configDir, HOME: fakeHome, USERPROFILE: fakeHome },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      action?: string;
+      skills?: string;
+      registry?: string;
+    }>(stdout);
+    expect(data.action).toBe("skill.init");
+    expect(data.registry).toMatch(/^https?:\/\//);
+    expect(data.skills).toBe("bailian-*");
+    expect(existsSync(join(configDir, "skills"))).toBe(false);
+  });
+
+  test("skill update --dry-run 仅输出计划且不 fan-out、不写 lock", async () => {
+    const configDir = makeTempConfigDir();
+    const fakeHome = makeTempConfigDir();
+    const linkPath = join(fakeHome, ".claude", "skills", "seeded-skill");
+    seedInstalledSkill(configDir, "seeded-skill", [linkPath]);
+    mkdirSync(join(fakeHome, ".claude", "skills"), { recursive: true });
+    writeFileSync(linkPath, "link-placeholder");
+    const lockBefore = readFileSync(join(configDir, "skills", "skill-lock.json"), "utf-8");
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      SKILL_ROUTES,
+      ["skill", "update", "--name", "seeded-skill", "--dry-run", "--output", "json"],
+      { BAILIAN_CONFIG_DIR: configDir, HOME: fakeHome, USERPROFILE: fakeHome },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      action?: string;
+      skills?: string[];
+      registry?: string;
+    }>(stdout);
+    expect(data.action).toBe("skill.update");
+    expect(data.registry).toMatch(/^https?:\/\//);
+    expect(data.skills).toEqual(["seeded-skill"]);
+    expect(readFileSync(join(configDir, "skills", "skill-lock.json"), "utf-8")).toBe(lockBefore);
+    expect(existsSync(join(configDir, "skills", "seeded-skill", "SKILL.md"))).toBe(true);
+    expect(existsSync(linkPath)).toBe(true);
+    expect(readFileSync(linkPath, "utf-8")).toBe("link-placeholder");
   });
 });
 
