@@ -218,13 +218,13 @@ async function syncAgentSkillsAfterUpdate(
   try {
     process.stderr.write(`  ${dim}Syncing agent skill...${reset}\n`);
     const { execSync } = await import("child_process");
-    execSync("bl skill init", { stdio: "inherit" });
+    execSync("bl skill update", { stdio: "inherit" });
     process.stderr.write(`  ${green}\u2713 Agent skill updated.${reset}\n\n`);
   } catch (error) {
     process.stderr.write(
       `  ${yellow}\u26a0 Agent skill sync failed: ${errorMessage(error)}${reset}\n`,
     );
-    process.stderr.write(`  ${yellow}  Run manually: bl skill init${reset}\n\n`);
+    process.stderr.write(`  ${yellow}  Run manually: bl skill update${reset}\n\n`);
   }
 }
 

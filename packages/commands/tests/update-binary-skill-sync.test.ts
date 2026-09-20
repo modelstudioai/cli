@@ -45,18 +45,42 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-test("binary bl update syncs bailian skills after the CLI update succeeds", async () => {
+const identity = {
+  binName: "bl",
+  clientName: "bailian-cli",
+  npmPackage: "bailian-cli",
+  version: "1.14.3",
+};
+
+function expectSkillUpdateNotInit(): void {
+  expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill update", { stdio: "inherit" });
+  expect(
+    childProcessMocks.execSync.mock.calls.some((call) => String(call[0]).includes("skill init")),
+  ).toBe(false);
+}
+
+test("binary bl update refreshes installed skills and does not run skill init", async () => {
   await updateCommand.run({
-    identity: {
-      binName: "bl",
-      clientName: "bailian-cli",
-      npmPackage: "bailian-cli",
-      version: "1.14.3",
-    },
+    identity,
     flags: { to: "1.15.0" },
     settings: {},
   } as never);
 
   expect(runtimeMocks.performBinaryUpdate).toHaveBeenCalledWith("1.15.0");
-  expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill init", { stdio: "inherit" });
+  expectSkillUpdateNotInit();
+});
+
+test("npm bl update refreshes installed skills and does not run skill init", async () => {
+  process.env.BAILIAN_INSTALL_METHOD = "npm";
+
+  await updateCommand.run({
+    identity,
+    flags: { to: "1.15.0" },
+    settings: {},
+  } as never);
+
+  expect(childProcessMocks.execSync).toHaveBeenCalledWith("npm install -g bailian-cli@1.15.0", {
+    stdio: "inherit",
+  });
+  expectSkillUpdateNotInit();
 });
