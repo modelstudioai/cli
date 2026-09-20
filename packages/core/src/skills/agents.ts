@@ -152,6 +152,8 @@ export function getAgentTargets(): AgentTarget[] {
       detectDirs: [join(xdgConfig, "devin")],
     },
     simple("droid", "Droid", ".factory"),
+    // DeepSeek DSH reads global skills from <dshHome>/skills; DSH_HOME relocates the home
+    fromBase("dsh", "DeepSeek DSH", envBase(process.env.DSH_HOME, ".dsh")),
     simple("forgecode", "ForgeCode", ".forge"),
     simple("gemini-cli", "Gemini CLI", ".gemini"),
     simple("github-copilot", "GitHub Copilot", ".copilot"),
@@ -224,8 +226,12 @@ export function getAgentTargets(): AgentTarget[] {
     simple("terramind", "Terramind", ".terramind"),
     simple("tinycloud", "Tinycloud", ".tinycloud"),
     simple("trae", "Trae", ".trae"),
+    // Trae CLI reads global skills from ~/.traecli/skills (project-level .trae/skills stays project-only)
+    simple("trae-cli", "Trae CLI", ".traecli"),
     simple("trae-cn", "Trae CN", ".trae-cn"),
     simple("windsurf", "Windsurf", ".codeium/windsurf"),
+    // Tencent WorkBuddy reads global skills from ~/.workbuddy/skills
+    simple("workbuddy", "Tencent WorkBuddy", ".workbuddy"),
     {
       id: "zcode",
       displayName: "ZCode",
