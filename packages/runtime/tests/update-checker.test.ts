@@ -170,10 +170,30 @@ test("shouldAutoUpdate only targets stable releases with a significant gap", () 
   expect(shouldAutoUpdate("1.4.2", "1.4.2-beta.1")).toBe(false);
 });
 
-test("binary auto-update syncs bailian skills after the CLI update succeeds", async () => {
+function expectSkillUpdateNotInit(): void {
+  expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill update", { stdio: "inherit" });
+  expect(
+    childProcessMocks.execSync.mock.calls.some((call) => String(call[0]).includes("skill init")),
+  ).toBe(false);
+}
+
+test("binary auto-update refreshes installed skills and does not run skill init", async () => {
   const updated = await performAutoUpdate("1.14.3", "2.0.0");
 
   expect(updated).toBe(true);
   expect(binaryUpdateMocks.performBinaryUpdate).toHaveBeenCalledWith("2.0.0");
-  expect(childProcessMocks.execSync).toHaveBeenCalledWith("bl skill init", { stdio: "inherit" });
+  expectSkillUpdateNotInit();
+});
+
+test("npm auto-update refreshes installed skills and does not run skill init", async () => {
+  process.env.BAILIAN_INSTALL_METHOD = "npm";
+  childProcessMocks.execSync.mockReturnValue("");
+
+  const updated = await performAutoUpdate("1.14.3", "2.0.0");
+
+  expect(updated).toBe(true);
+  expect(childProcessMocks.execSync).toHaveBeenCalledWith("npm install -g bailian-cli@latest", {
+    stdio: "inherit",
+  });
+  expectSkillUpdateNotInit();
 });
