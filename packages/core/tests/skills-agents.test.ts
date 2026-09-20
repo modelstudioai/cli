@@ -35,6 +35,7 @@ async function inFakeHome(fn: (home: string) => Promise<void>): Promise<void> {
     HERMES_HOME: process.env.HERMES_HOME,
     AUTOHAND_HOME: process.env.AUTOHAND_HOME,
     GROK_HOME: process.env.GROK_HOME,
+    DSH_HOME: process.env.DSH_HOME,
     APPDATA: process.env.APPDATA,
     FLATPAK_XDG_CONFIG_HOME: process.env.FLATPAK_XDG_CONFIG_HOME,
   };
@@ -50,6 +51,7 @@ async function inFakeHome(fn: (home: string) => Promise<void>): Promise<void> {
     "HERMES_HOME",
     "AUTOHAND_HOME",
     "GROK_HOME",
+    "DSH_HOME",
     "APPDATA",
     "FLATPAK_XDG_CONFIG_HOME",
   ]) {
@@ -79,7 +81,7 @@ test("agents: registry mirrors upstream agent list minus non-symlinkable agents"
     const ids = getAgentTargets().map((agent) => agent.id);
     expect(ids).toContain("universal");
     expect(ids).toContain("universal-xdg");
-    expect(getAgentTargets()).toHaveLength(65);
+    expect(getAgentTargets()).toHaveLength(68);
     // eve (no global dir, upstream forces direct writes) and promptscript (project-only)
     // cannot participate in global symlink fan-out
     expect(ids).not.toContain("eve");
@@ -100,12 +102,13 @@ test("agents: expanded registry detects per-agent config dirs", async () => {
   await inFakeHome(async (home) => {
     mkdirSync(join(home, ".roo"), { recursive: true });
     mkdirSync(join(home, ".trae"), { recursive: true });
+    mkdirSync(join(home, ".traecli"), { recursive: true });
     mkdirSync(join(home, ".gemini"), { recursive: true });
     mkdirSync(join(home, ".codeium", "windsurf"), { recursive: true });
     mkdirSync(join(home, ".snowflake", "cortex"), { recursive: true });
 
     const detected = detectInstalledAgents().map((agent) => agent.id);
-    expect(detected).toEqual(["cortex", "gemini-cli", "roo", "trae", "windsurf"]);
+    expect(detected).toEqual(["cortex", "gemini-cli", "roo", "trae", "trae-cli", "windsurf"]);
 
     // skills dirs follow each agent's own convention
     const targets = getAgentTargets();
@@ -115,6 +118,33 @@ test("agents: expanded registry detects per-agent config dirs", async () => {
     expect(targets.find((agent) => agent.id === "cortex")?.skillsDir).toBe(
       join(home, ".snowflake", "cortex", "skills"),
     );
+  });
+});
+
+test("agents: WorkBuddy/Trae CLI/DSH use their official global skills dirs", async () => {
+  await inFakeHome(async (home) => {
+    mkdirSync(join(home, ".workbuddy"), { recursive: true });
+    mkdirSync(join(home, ".traecli"), { recursive: true });
+    mkdirSync(join(home, ".dsh"), { recursive: true });
+
+    const detected = detectInstalledAgents();
+    expect(detected.map((agent) => agent.id)).toEqual(["dsh", "trae-cli", "workbuddy"]);
+    expect(detected.find((agent) => agent.id === "workbuddy")?.skillsDir).toBe(
+      join(home, ".workbuddy", "skills"),
+    );
+    expect(detected.find((agent) => agent.id === "trae-cli")?.skillsDir).toBe(
+      join(home, ".traecli", "skills"),
+    );
+    expect(detected.find((agent) => agent.id === "dsh")?.skillsDir).toBe(
+      join(home, ".dsh", "skills"),
+    );
+
+    seedCanonicalSkill("demo");
+    const results = linkSkillToAgents("demo");
+    expect(results.map((result) => result.agent)).toEqual(["dsh", "trae-cli", "workbuddy"]);
+    expect(lstatSync(join(home, ".workbuddy", "skills", "demo")).isSymbolicLink()).toBe(true);
+    expect(lstatSync(join(home, ".traecli", "skills", "demo")).isSymbolicLink()).toBe(true);
+    expect(lstatSync(join(home, ".dsh", "skills", "demo")).isSymbolicLink()).toBe(true);
   });
 });
 
@@ -165,18 +195,20 @@ test("agents: OpenClaw historical alias dirs are detected and link into the exis
   });
 });
 
-test("agents: VIBE_HOME/HERMES_HOME/AUTOHAND_HOME/GROK_HOME relocate their agents", async () => {
+test("agents: VIBE_HOME/HERMES_HOME/AUTOHAND_HOME/GROK_HOME/DSH_HOME relocate their agents", async () => {
   await inFakeHome(async (home) => {
     const customDirs = {
       "mistral-vibe": join(home, "custom-vibe"),
       hermes: join(home, "custom-hermes"),
       "autohand-code": join(home, "custom-autohand"),
       grok: join(home, "custom-grok"),
+      dsh: join(home, "custom-dsh"),
     };
     process.env.VIBE_HOME = customDirs["mistral-vibe"];
     process.env.HERMES_HOME = customDirs.hermes;
     process.env.AUTOHAND_HOME = customDirs["autohand-code"];
     process.env.GROK_HOME = customDirs.grok;
+    process.env.DSH_HOME = customDirs.dsh;
     for (const dir of Object.values(customDirs)) {
       mkdirSync(dir, { recursive: true });
     }
