@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [1.28.0] - 2026-09-20
+
+### Added
+
+- **Agent security commands** — `bl agents security overview` (protection overview for the last 24 hours) and `bl agents security alerts` (alert list with risk-level, asset-type, status, vendor, pagination and sorting filters). Both call the per-workspace AgentStudio host and honor the shared `text` / `json` / `--quiet` / `--dry-run` contract. The host is derived from `--workspace-id`, or overridden by `--base-url` / `DASHSCOPE_BASE_URL` / `auth login --base-url` pointed at a workspace or pre-release origin (e.g. `https://<workspace-id>.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio`).
+
+### Internal
+
+- Add Agent security E2E coverage (help, missing-workspace usage error, dry-run host derivation and `--base-url` override, query-string filters, enum fast-fail) and generate the `bailian-cli` skill reference for the new `agents` group.
+
 ## [1.27.0] - 2026-09-18
 
 ### Added
@@ -28,10 +38,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - **Simplified authentication** — Console login is now the recommended default and can create an ordinary API key when needed. Existing ordinary API keys and Token Plan subscription keys use the same `bl auth login --api-key <API_KEY>` command.
 - **Automatic API key validation and endpoint selection** — API keys are validated before being saved. The CLI automatically selects an available regional endpoint and applies the appropriate Token Plan configuration when applicable.
-
-### Fixed
-
-- **Video task diagnostics** — Failed video tasks now expose the service error code, message, request ID, and scheduling time; downloads show the actual failure detail instead of only an incomplete status.
 
 ## [1.25.0] - 2026-09-14
 
