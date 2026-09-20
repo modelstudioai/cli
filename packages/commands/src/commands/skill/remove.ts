@@ -5,6 +5,7 @@ import {
   getSkillsDir,
   listSkillDirsOnDisk,
   parseSkillNames,
+  planUnlinkSkillFromAgents,
   readSkillLock,
   removeSkillDir,
   unlinkSkillFromAgents,
@@ -79,7 +80,8 @@ export default defineCommand({
           name,
           status: "remove",
           canonical: join(skillsDir, name),
-          links: locked.links ?? [],
+          // 与真实 unlink 同一候选集：含 lock 外的历史托管 symlink
+          links: planUnlinkSkillFromAgents(name, locked.links ?? []),
         };
       });
 

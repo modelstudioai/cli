@@ -423,13 +423,13 @@ export function fanOutSkillToAgents(
 }
 
 /**
- * Reclaim fan-out artifacts for a skill across all agent dirs.
- * Symlinks pointing to canonical are removed (including historical links not in lock,
- * via defensive scan of the full registry); real directories are only removed if recorded
- * in lock (copy-fallback artifacts). A single failure does not block the rest.
+ * Collect paths that unlinkSkillFromAgents would reclaim (read-only).
+ * Same candidate set and eligibility rules as the mutating unlink: managed
+ * symlinks anywhere under the agent registry (including historical links not
+ * in lock), plus recorded copy-fallback directories.
  */
-export function unlinkSkillFromAgents(name: string, recordedLinks: string[] = []): string[] {
-  const removed: string[] = [];
+export function planUnlinkSkillFromAgents(name: string, recordedLinks: string[] = []): string[] {
+  const planned: string[] = [];
   const candidates = new Set(recordedLinks);
   for (const agent of getAgentTargets()) candidates.add(join(agent.skillsDir, name));
   for (const linkPath of candidates) {
@@ -441,14 +441,34 @@ export function unlinkSkillFromAgents(name: string, recordedLinks: string[] = []
         continue;
       }
       if (stat.isSymbolicLink()) {
-        if (isManagedLink(linkPath)) {
-          rmSync(linkPath);
-          removed.push(linkPath);
-        }
+        if (isManagedLink(linkPath)) planned.push(linkPath);
       } else if (recordedLinks.some((recorded) => samePath(recorded, linkPath))) {
-        rmSync(linkPath, { recursive: true, force: true });
-        removed.push(linkPath);
+        planned.push(linkPath);
       }
+    } catch {
+      /* single failure does not block remaining scan */
+    }
+  }
+  return planned;
+}
+
+/**
+ * Reclaim fan-out artifacts for a skill across all agent dirs.
+ * Symlinks pointing to canonical are removed (including historical links not in lock,
+ * via defensive scan of the full registry); real directories are only removed if recorded
+ * in lock (copy-fallback artifacts). A single failure does not block the rest.
+ */
+export function unlinkSkillFromAgents(name: string, recordedLinks: string[] = []): string[] {
+  const removed: string[] = [];
+  for (const linkPath of planUnlinkSkillFromAgents(name, recordedLinks)) {
+    try {
+      const stat = lstatSync(linkPath);
+      if (stat.isSymbolicLink()) {
+        rmSync(linkPath);
+      } else {
+        rmSync(linkPath, { recursive: true, force: true });
+      }
+      removed.push(linkPath);
     } catch {
       /* single failure does not block remaining cleanup */
     }

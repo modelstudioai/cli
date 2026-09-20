@@ -16,6 +16,7 @@ import {
   fanOutSkillToAgents,
   getAgentTargets,
   linkSkillToAgents,
+  planUnlinkSkillFromAgents,
   unlinkSkillFromAgents,
 } from "../src/skills/agents.ts";
 import { getSkillsDir } from "../src/skills/lock.ts";
@@ -247,6 +248,31 @@ test("agents: unlink reclaims managed links, leaves foreign content untouched", 
     expect(removed.sort()).toEqual(links.map((l) => l.path).sort());
     expect(existsSync(join(home, ".claude", "skills", "demo"))).toBe(false);
     expect(existsSync(join(home, ".agents", "skills", "demo"))).toBe(false);
+  });
+});
+
+test("agents: planUnlink includes historical managed symlinks missing from lock", async () => {
+  await inFakeHome(async (home) => {
+    mkdirSync(join(home, ".claude"), { recursive: true });
+    mkdirSync(join(home, ".agents"), { recursive: true });
+    const canonical = seedCanonicalSkill("demo");
+    const allLinks = linkSkillToAgents("demo")
+      .filter((link) => link.mode === "symlink")
+      .map((link) => link.path);
+    expect(allLinks.length).toBeGreaterThanOrEqual(2);
+
+    // Lock only recorded one path; the rest are historical managed symlinks
+    const recordedOnly = [allLinks[0]!];
+    const planned = planUnlinkSkillFromAgents("demo", recordedOnly);
+    expect(planned.sort()).toEqual([...allLinks].sort());
+
+    // plan 与真实 unlink 范围一致
+    const removed = unlinkSkillFromAgents("demo", recordedOnly);
+    expect(removed.sort()).toEqual(planned.sort());
+    expect(existsSync(canonical)).toBe(true);
+    for (const linkPath of allLinks) {
+      expect(existsSync(linkPath)).toBe(false);
+    }
   });
 });
 

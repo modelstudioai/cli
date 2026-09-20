@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
@@ -142,10 +142,14 @@ describe("e2e: skill (local, no credentials)", () => {
   test("skill remove --dry-run 仅输出计划且不删盘", async () => {
     const configDir = makeTempConfigDir();
     const fakeHome = makeTempConfigDir();
-    const linkPath = join(fakeHome, ".claude", "skills", "seeded-skill");
-    seedInstalledSkill(configDir, "seeded-skill", [linkPath]);
+    const recordedLink = join(fakeHome, ".claude", "skills", "seeded-skill");
+    const historicalLink = join(fakeHome, ".agents", "skills", "seeded-skill");
+    seedInstalledSkill(configDir, "seeded-skill", [recordedLink]);
     mkdirSync(join(fakeHome, ".claude", "skills"), { recursive: true });
-    writeFileSync(linkPath, "link-placeholder");
+    mkdirSync(join(fakeHome, ".agents", "skills"), { recursive: true });
+    // recorded：普通占位文件；historical：指向 canonical 的托管 symlink（不在 lock 里）
+    writeFileSync(recordedLink, "link-placeholder");
+    symlinkSync(join(configDir, "skills", "seeded-skill"), historicalLink, "dir");
 
     const { stdout, stderr, exitCode } = await runCommandE2e(
       SKILL_ROUTES,
@@ -166,10 +170,11 @@ describe("e2e: skill (local, no credentials)", () => {
     expect(data.skills?.[0]?.status).toBe("remove");
     expect(data.skills?.[0]?.name).toBe("seeded-skill");
     expect(data.skills?.[0]?.canonical).toBe(join(configDir, "skills", "seeded-skill"));
-    expect(data.skills?.[0]?.links).toEqual([linkPath]);
+    expect(data.skills?.[0]?.links?.sort()).toEqual([recordedLink, historicalLink].sort());
     expect(existsSync(join(configDir, "skills", "seeded-skill", "SKILL.md"))).toBe(true);
     expect(existsSync(join(configDir, "skills", "skill-lock.json"))).toBe(true);
-    expect(existsSync(linkPath)).toBe(true);
+    expect(existsSync(recordedLink)).toBe(true);
+    expect(existsSync(historicalLink)).toBe(true);
   });
 
   test("skill update --dry-run 未安装时退出码与真实一致 (1)", async () => {
