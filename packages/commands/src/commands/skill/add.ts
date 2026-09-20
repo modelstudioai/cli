@@ -12,6 +12,7 @@ import {
   writeSkillLock,
 } from "bailian-cli-core";
 import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
+import { planFanoutLinks, summarizeAgents } from "./dry-run-plan.ts";
 
 interface AddOutcome {
   name: string;
@@ -57,25 +58,50 @@ export default defineCommand({
   exampleArgs: ["--all", "--name spark-video,bailian-model-recommend"],
   async run(ctx) {
     const format = ctx.settings.outputExplicit ? ctx.settings.output : "json";
-    const agents = detectInstalledAgents();
+    const index = await fetchSkillsIndex();
+    const remoteNames = Object.keys(index.skills);
     const parsed = ctx.flags.all ? "all" : parseSkillNames(ctx.flags.name, false);
+    const names = parsed === "all" ? remoteNames : parsed;
+    const agents = detectInstalledAgents();
 
     if (ctx.settings.dryRun) {
+      const skills = names.map((name) => {
+        const entry = index.skills[name];
+        if (!entry) {
+          return {
+            name,
+            status: "failed" as const,
+            reason: "skill not found in registry",
+          };
+        }
+        return {
+          name,
+          status: "install" as const,
+          publishedAt: entry.publishedAt,
+          links: planFanoutLinks(name, agents),
+        };
+      });
+
       emitResult(
         {
           action: "skill.add",
           registry: getSkillRegistryBaseUrl(),
-          agents: agents.map((agent) => agent.id),
-          skills: parsed,
+          agents: summarizeAgents(agents),
+          skills,
         },
         format,
       );
+
+      const failed = skills.filter((skill) => skill.status === "failed");
+      if (failed.length > 0) {
+        throw new BailianError(
+          `${failed.length}/${skills.length} skill(s) failed to install`,
+          ExitCode.GENERAL,
+          "Check the reason for failed skills in the output; network failures can be retried with bl skill add",
+        );
+      }
       return;
     }
-
-    const index = await fetchSkillsIndex();
-    const remoteNames = Object.keys(index.skills);
-    const names = parsed === "all" ? remoteNames : parsed;
 
     const lock = readSkillLock();
 

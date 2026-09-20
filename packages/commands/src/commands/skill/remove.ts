@@ -2,6 +2,7 @@ import {
   BailianError,
   ExitCode,
   defineCommand,
+  getSkillsDir,
   listSkillDirsOnDisk,
   parseSkillNames,
   readSkillLock,
@@ -10,11 +11,20 @@ import {
   writeSkillLock,
 } from "bailian-cli-core";
 import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
+import { join } from "node:path";
 
 interface RemoveOutcome {
   name: string;
   status: "removed" | "failed";
   removedLinks?: number;
+  reason?: string;
+}
+
+interface RemovePlanItem {
+  name: string;
+  status: "remove" | "failed";
+  canonical?: string;
+  links?: string[];
   reason?: string;
 }
 
@@ -50,21 +60,42 @@ export default defineCommand({
       return;
     }
 
+    const diskDirs = new Set(listSkillDirsOnDisk());
+    const skillsDir = getSkillsDir();
+
     if (ctx.settings.dryRun) {
-      emitResult(
-        {
-          action: "skill.remove",
-          skills: names.map((name) => ({
+      const results: RemovePlanItem[] = names.map((name) => {
+        const locked = lock.skills[name];
+        if (!locked) {
+          return {
             name,
-            removedLinks: (lock.skills[name]?.links ?? []).length,
-          })),
-        },
-        format,
-      );
+            status: "failed",
+            reason: diskDirs.has(name)
+              ? "directory not managed by bl skill (untracked); remove manually if needed"
+              : "not installed",
+          };
+        }
+        return {
+          name,
+          status: "remove",
+          canonical: join(skillsDir, name),
+          links: locked.links ?? [],
+        };
+      });
+
+      emitResult({ action: "skill.remove", skills: results }, format);
+
+      const failed = results.filter((result) => result.status === "failed");
+      if (failed.length > 0) {
+        throw new BailianError(
+          `${failed.length}/${results.length} skill(s) failed to remove`,
+          ExitCode.GENERAL,
+          "Check the reason for failed skills in the output; use bl skill list to verify local install status",
+        );
+      }
       return;
     }
 
-    const diskDirs = new Set(listSkillDirsOnDisk());
     const results: RemoveOutcome[] = [];
     for (const name of names) {
       const locked = lock.skills[name];

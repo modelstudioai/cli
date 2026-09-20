@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
@@ -13,7 +13,7 @@ function makeTempConfigDir(): string {
   return mkdtempSync(join(tmpdir(), "bl-skill-e2e-"));
 }
 
-/** 在隔离 configDir 里种一个假 skill + lock，供 remove/update --dry-run 本地断言 */
+/** 在隔离 configDir 里种一个假 skill + lock，供 remove --dry-run 本地断言 */
 function seedInstalledSkill(configDir: string, skillName: string, links: string[]): void {
   const skillDir = join(configDir, "skills", skillName);
   mkdirSync(skillDir, { recursive: true });
@@ -72,7 +72,7 @@ describe("e2e: skill", () => {
   });
 });
 
-// Local-only cases: auth "none" + dry-run / validation happen before any network access
+// Local-only cases: auth "none" + validation / remove dry-run need no registry
 describe("e2e: skill (local, no credentials)", () => {
   test("skill add without --all or --name errors as usage error (2)", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(SKILL_ROUTES, [
@@ -122,6 +122,23 @@ describe("e2e: skill (local, no credentials)", () => {
     expect(data.skills?.[0]?.reason).toMatch(/not installed/i);
   });
 
+  test("skill remove --dry-run 未安装时退出码与真实一致 (1)", async () => {
+    const configDir = makeTempConfigDir();
+    const { stdout, exitCode } = await runCommandE2e(
+      SKILL_ROUTES,
+      ["skill", "remove", "--name", "definitely-not-installed", "--dry-run", "--output", "json"],
+      { BAILIAN_CONFIG_DIR: configDir },
+    );
+    expect(exitCode).toBe(1);
+    const data = parseStdoutJson<{
+      action?: string;
+      skills?: Array<{ name?: string; status?: string; reason?: string }>;
+    }>(stdout);
+    expect(data.action).toBe("skill.remove");
+    expect(data.skills?.[0]?.status).toBe("failed");
+    expect(data.skills?.[0]?.reason).toMatch(/not installed/i);
+  });
+
   test("skill remove --dry-run 仅输出计划且不删盘", async () => {
     const configDir = makeTempConfigDir();
     const fakeHome = makeTempConfigDir();
@@ -138,85 +155,40 @@ describe("e2e: skill (local, no credentials)", () => {
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
       action?: string;
-      skills?: Array<{ name?: string; removedLinks?: number }>;
+      skills?: Array<{
+        name?: string;
+        status?: string;
+        canonical?: string;
+        links?: string[];
+      }>;
     }>(stdout);
     expect(data.action).toBe("skill.remove");
+    expect(data.skills?.[0]?.status).toBe("remove");
     expect(data.skills?.[0]?.name).toBe("seeded-skill");
-    expect(data.skills?.[0]?.removedLinks).toBe(1);
+    expect(data.skills?.[0]?.canonical).toBe(join(configDir, "skills", "seeded-skill"));
+    expect(data.skills?.[0]?.links).toEqual([linkPath]);
     expect(existsSync(join(configDir, "skills", "seeded-skill", "SKILL.md"))).toBe(true);
     expect(existsSync(join(configDir, "skills", "skill-lock.json"))).toBe(true);
     expect(existsSync(linkPath)).toBe(true);
   });
 
-  test("skill add --dry-run 仅输出计划且不写盘、不联网", async () => {
+  test("skill update --dry-run 未安装时退出码与真实一致 (1)", async () => {
     const configDir = makeTempConfigDir();
     const fakeHome = makeTempConfigDir();
-    const { stdout, stderr, exitCode } = await runCommandE2e(
+    const { stdout, exitCode } = await runCommandE2e(
       SKILL_ROUTES,
-      ["skill", "add", "--name", WIKI_SKILL, "--dry-run", "--output", "json"],
+      ["skill", "update", "--name", "definitely-not-installed", "--dry-run", "--output", "json"],
       { BAILIAN_CONFIG_DIR: configDir, HOME: fakeHome, USERPROFILE: fakeHome },
     );
-    expect(exitCode, stderr).toBe(0);
+    expect(exitCode).toBe(1);
     const data = parseStdoutJson<{
       action?: string;
-      skills?: string[] | string;
-      registry?: string;
-    }>(stdout);
-    expect(data.action).toBe("skill.add");
-    expect(data.registry).toMatch(/^https?:\/\//);
-    expect(data.skills).toEqual([WIKI_SKILL]);
-    expect(existsSync(join(configDir, "skills", WIKI_SKILL))).toBe(false);
-    expect(existsSync(join(configDir, "skills", "skill-lock.json"))).toBe(false);
-  });
-
-  test("skill init --dry-run 仅输出筛选意图且不写盘、不联网", async () => {
-    const configDir = makeTempConfigDir();
-    const fakeHome = makeTempConfigDir();
-    const { stdout, stderr, exitCode } = await runCommandE2e(
-      SKILL_ROUTES,
-      ["skill", "init", "--dry-run", "--output", "json"],
-      { BAILIAN_CONFIG_DIR: configDir, HOME: fakeHome, USERPROFILE: fakeHome },
-    );
-    expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{
-      action?: string;
-      skills?: string;
-      registry?: string;
-    }>(stdout);
-    expect(data.action).toBe("skill.init");
-    expect(data.registry).toMatch(/^https?:\/\//);
-    expect(data.skills).toBe("bailian-*");
-    expect(existsSync(join(configDir, "skills"))).toBe(false);
-  });
-
-  test("skill update --dry-run 仅输出计划且不 fan-out、不写 lock", async () => {
-    const configDir = makeTempConfigDir();
-    const fakeHome = makeTempConfigDir();
-    const linkPath = join(fakeHome, ".claude", "skills", "seeded-skill");
-    seedInstalledSkill(configDir, "seeded-skill", [linkPath]);
-    mkdirSync(join(fakeHome, ".claude", "skills"), { recursive: true });
-    writeFileSync(linkPath, "link-placeholder");
-    const lockBefore = readFileSync(join(configDir, "skills", "skill-lock.json"), "utf-8");
-
-    const { stdout, stderr, exitCode } = await runCommandE2e(
-      SKILL_ROUTES,
-      ["skill", "update", "--name", "seeded-skill", "--dry-run", "--output", "json"],
-      { BAILIAN_CONFIG_DIR: configDir, HOME: fakeHome, USERPROFILE: fakeHome },
-    );
-    expect(exitCode, stderr).toBe(0);
-    const data = parseStdoutJson<{
-      action?: string;
-      skills?: string[];
-      registry?: string;
+      skills?: Array<{ name?: string; status?: string; reason?: string }>;
     }>(stdout);
     expect(data.action).toBe("skill.update");
-    expect(data.registry).toMatch(/^https?:\/\//);
-    expect(data.skills).toEqual(["seeded-skill"]);
-    expect(readFileSync(join(configDir, "skills", "skill-lock.json"), "utf-8")).toBe(lockBefore);
-    expect(existsSync(join(configDir, "skills", "seeded-skill", "SKILL.md"))).toBe(true);
-    expect(existsSync(linkPath)).toBe(true);
-    expect(readFileSync(linkPath, "utf-8")).toBe("link-placeholder");
-  });
+    expect(data.skills?.[0]?.status).toBe("failed");
+    expect(data.skills?.[0]?.reason).toMatch(/not installed/i);
+  }, 60_000);
 });
 
 describe.skipIf(!isBailianE2EEnabled())("e2e: skill (real registry)", () => {
@@ -234,6 +206,89 @@ describe.skipIf(!isBailianE2EEnabled())("e2e: skill (real registry)", () => {
     }>(stdout);
     expect(data.registry).toMatch(/^https?:\/\//);
     expect(Array.isArray(data.skills)).toBe(true);
+  }, 60_000);
+
+  test("skill add --dry-run 输出路径计划且不写盘", async () => {
+    const configDir = makeTempConfigDir();
+    const fakeHome = makeTempConfigDir();
+    // 造一个可检测的 agent 目录，便于断言 skillsDir / link path
+    mkdirSync(join(fakeHome, ".claude"), { recursive: true });
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      SKILL_ROUTES,
+      ["skill", "add", "--name", WIKI_SKILL, "--dry-run", "--output", "json"],
+      { BAILIAN_CONFIG_DIR: configDir, HOME: fakeHome, USERPROFILE: fakeHome },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      action?: string;
+      agents?: Array<{ id?: string; skillsDir?: string }>;
+      skills?: Array<{
+        name?: string;
+        status?: string;
+        links?: Array<{
+          path?: string;
+          exists?: boolean;
+          kind?: string;
+          hasSkillMd?: boolean;
+        }>;
+      }>;
+    }>(stdout);
+    expect(data.action).toBe("skill.add");
+    expect(data.skills?.[0]?.name).toBe(WIKI_SKILL);
+    expect(data.skills?.[0]?.status).toBe("install");
+    expect(data.agents?.some((agent) => agent.id === "claude-code")).toBe(true);
+    const wikiLinks = data.skills?.[0]?.links ?? [];
+    expect(wikiLinks.length).toBeGreaterThan(0);
+    expect(wikiLinks.every((link) => typeof link.path === "string")).toBe(true);
+    expect(wikiLinks.every((link) => typeof link.exists === "boolean")).toBe(true);
+    expect(existsSync(join(configDir, "skills", WIKI_SKILL))).toBe(false);
+    expect(existsSync(join(configDir, "skills", "skill-lock.json"))).toBe(false);
+  }, 60_000);
+
+  test("skill add --dry-run 对不存在的 skill 退出码与真实一致 (1)", async () => {
+    const configDir = makeTempConfigDir();
+    const fakeHome = makeTempConfigDir();
+    const { stdout, exitCode } = await runCommandE2e(
+      SKILL_ROUTES,
+      ["skill", "add", "--name", "definitely-not-in-registry", "--dry-run", "--output", "json"],
+      { BAILIAN_CONFIG_DIR: configDir, HOME: fakeHome, USERPROFILE: fakeHome },
+    );
+    expect(exitCode).toBe(1);
+    const data = parseStdoutJson<{
+      action?: string;
+      skills?: Array<{ name?: string; status?: string; reason?: string }>;
+    }>(stdout);
+    expect(data.action).toBe("skill.add");
+    expect(data.skills?.[0]?.status).toBe("failed");
+    expect(data.skills?.[0]?.reason).toMatch(/not found/i);
+  }, 60_000);
+
+  test("skill init --dry-run 输出路径计划且不写盘", async () => {
+    const configDir = makeTempConfigDir();
+    const fakeHome = makeTempConfigDir();
+    mkdirSync(join(fakeHome, ".claude"), { recursive: true });
+
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      SKILL_ROUTES,
+      ["skill", "init", "--dry-run", "--output", "json"],
+      { BAILIAN_CONFIG_DIR: configDir, HOME: fakeHome, USERPROFILE: fakeHome },
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{
+      action?: string;
+      agents?: Array<{ id?: string; skillsDir?: string }>;
+      skills?: Array<{
+        name?: string;
+        links?: Array<{ path?: string; exists?: boolean }>;
+      }>;
+    }>(stdout);
+    expect(data.action).toBe("skill.init");
+    expect(data.skills?.some((skill) => skill.name?.startsWith("bailian-"))).toBe(true);
+    expect(data.agents?.some((agent) => typeof agent.skillsDir === "string")).toBe(true);
+    const firstLinks = data.skills?.[0]?.links ?? [];
+    expect(firstLinks.length).toBeGreaterThan(0);
+    expect(existsSync(join(configDir, "skills"))).toBe(false);
   }, 60_000);
 
   test("skill add + remove full lifecycle in isolated dirs", async () => {

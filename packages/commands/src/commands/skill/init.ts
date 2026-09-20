@@ -4,13 +4,13 @@ import {
   defineCommand,
   detectInstalledAgents,
   fetchSkillsIndex,
-  getSkillRegistryBaseUrl,
   installSkillWithFanout,
   readSkillLock,
   runWithConcurrency,
   writeSkillLock,
 } from "bailian-cli-core";
 import { emitBare, emitResult } from "bailian-cli-runtime";
+import { planFanoutLinks, summarizeAgents } from "./dry-run-plan.ts";
 
 /** Prefix used to identify first-party Bailian skills in the registry. */
 const BAILIAN_PREFIX = "bailian-";
@@ -55,25 +55,26 @@ export default defineCommand({
   ],
   async run(ctx) {
     const format = ctx.settings.outputExplicit ? ctx.settings.output : DEFAULT_FORMAT;
+    const index = await fetchSkillsIndex();
+
+    // Discover all bailian-* skills from the live registry index
+    const names = Object.keys(index.skills).filter((name) => name.startsWith(BAILIAN_PREFIX));
     const agents = detectInstalledAgents();
 
     if (ctx.settings.dryRun) {
       emitResult(
         {
           action: "skill.init",
-          registry: getSkillRegistryBaseUrl(),
-          skills: `${BAILIAN_PREFIX}*`,
-          agents: agents.map((agent) => agent.id),
+          skills: names.map((name) => ({
+            name,
+            links: planFanoutLinks(name, agents),
+          })),
+          agents: summarizeAgents(agents),
         },
         format,
       );
       return;
     }
-
-    const index = await fetchSkillsIndex();
-
-    // Discover all bailian-* skills from the live registry index
-    const names = Object.keys(index.skills).filter((name) => name.startsWith(BAILIAN_PREFIX));
 
     const lock = readSkillLock();
 
