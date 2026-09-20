@@ -18,7 +18,7 @@ export default defineConfig({
       codeSplitting: false,
     },
     dts: {
-      tsgo: true,
+      generator: "tsgo",
     },
     exports: true,
   },
