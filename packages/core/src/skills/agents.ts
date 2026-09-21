@@ -462,11 +462,15 @@ export function unlinkSkillFromAgents(name: string, recordedLinks: string[] = []
   const removed: string[] = [];
   for (const linkPath of planUnlinkSkillFromAgents(name, recordedLinks)) {
     try {
-      const stat = lstatSync(linkPath);
-      if (stat.isSymbolicLink()) {
+      if (isManagedLink(linkPath)) {
         rmSync(linkPath);
-      } else {
+      } else if (
+        !lstatSync(linkPath).isSymbolicLink() &&
+        recordedLinks.some((recorded) => samePath(recorded, linkPath))
+      ) {
         rmSync(linkPath, { recursive: true, force: true });
+      } else {
+        continue;
       }
       removed.push(linkPath);
     } catch {
