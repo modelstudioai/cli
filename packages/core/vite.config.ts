@@ -4,7 +4,7 @@ export default defineConfig({
   pack: {
     minify: true,
     dts: {
-      tsgo: true,
+      generator: "tsgo",
     },
   },
   lint: {
