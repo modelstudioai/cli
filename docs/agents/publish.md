@@ -71,7 +71,7 @@ workflow 的 `channel` 输入**只决定 npm dist-tag**（如 `mcp` / `plugin` /
 ### channel 发布
 
 1. 在 GitHub 触发 Publish workflow，mode 选 `channel`，channel 填 npm dist-tag 名：
-   - **`bailian-cli`**：npm 发到该 tag；二进制同时刷新 CDN `sync-release.json`（与 tag 名无关）。本机验证：`BAILIAN_CHANNEL=sync-release`
+   - **`bailian-cli`**：npm 发到该 tag；二进制同时刷新 CDN `sync-release.json`（与 tag 名无关）。本机验证：`BAILIAN_CHANNEL=sync-release`。**先发二进制（zip+tar.gz 上齐）再发静态仓 `install.sh`**，避免新脚本去拉还不存在的 `.tar.gz`。
    - **`knowledge-studio-cli`**：仅 npm（自动跳过 binary，不碰 `sync-release.json`）
 2. CI 自动：生成 `0.0.0-beta-<sha7>-<YYYYMMDDHHMM>`（UTC 到分钟；同 commit 同分钟重跑会覆盖同号）→ 临时 bump → 自检 → **npm 发到 dist-tag** →（bailian-cli）**Bun 编二进制 + GH prerelease + 覆盖 `sync-release.json`** → 还原 package.json
 3. 对应脚本：`tools/release/publish-channel.mjs`
@@ -81,7 +81,7 @@ workflow 的 `channel` 输入**只决定 npm dist-tag**（如 `mcp` / `plugin` /
 1. 确保当前 release tooling 覆盖的包(`tools/release/lib/packages.mjs`)已升到目标版本且一致;当前基础集合为 `packages/core` / `packages/runtime` / `packages/commands` / `packages/cli`，`knowledge-studio-cli` 发布会额外包含 `packages/kscli`
 2. 在 GitHub 触发 Publish workflow，package 选目标包集合，mode 选 `stable`
 3. 需要 production environment 审批人批准
-4. CI 自动：自检 → **npm 发到 latest** → **推送 git tag `v<ver>`** → **Bun 编二进制并创建/更新 GitHub Release** →（bailian-cli）维护 CDN **`manifest.json`** → 完成
+4. CI 自动：自检 → **npm 发到 latest** → **推送 git tag `v<ver>`** → **Bun 编二进制并创建/更新 GitHub Release**（每平台 `.zip`，darwin/linux 额外 `.tar.gz`）→（bailian-cli）维护 CDN **`manifest.json`**（unix 资产含 `tar` / `tarSha256`，`file` 仍为 zip）→ 完成
 5. 如果所选发布集合的当前版本已全部存在于 npm，stable 发布会失败并提示先升级版本号；如果只有部分包已发布，CI 会继续补发缺失包
 6. 对应脚本：`tools/release/publish-stable.mjs`
 

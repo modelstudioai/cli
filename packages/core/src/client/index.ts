@@ -28,6 +28,9 @@ export {
   sandboxTemplatePath,
   sandboxTemplateBuildStatusPath,
   responsesPath,
+  agentStudioHost,
+  securityOverviewEndpoint,
+  securityAgentLogsEndpoint,
   speechRecognizePath,
   speechSynthesizePath,
   speechVocabularyPath,
@@ -72,6 +75,7 @@ export {
 } from "./headers.ts";
 export type { HttpDeps, RequestOpts } from "./http.ts";
 export { request, requestJson } from "./http.ts";
+export { securityGet, parseSecurityBody, isDashScopeGateway } from "./security.ts";
 export { createInstrumentedFetch, type FetchImplementation } from "./instrumented-fetch.ts";
 export {
   Client,

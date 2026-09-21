@@ -2,9 +2,9 @@
  * Publish bailian-cli binary assets to GitHub Releases.
  *
  * stable:  release `v<version>` (tag must already be on origin; --verify-tag)
- *          assets: bl-*.zip, SHA256SUMS  (no latest.json on the GH release)
+ *          assets: bl-*.zip, unix bl-*.tar.gz, SHA256SUMS  (no latest.json on the GH release)
  *          OSS: rewrite release/manifest.json + latest.json from build latest.json
- * channel: versioned prerelease `v<betaVersion>` (assets: bl-*.zip, SHA256SUMS)
+ * channel: versioned prerelease `v<betaVersion>` (assets: bl-*.zip, unix bl-*.tar.gz, SHA256SUMS)
  *          + rolling prerelease `channel-sync-release` holding only sync-release.json
  *          OSS: always overwrite prefix-root sync-release.json
  *

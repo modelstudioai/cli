@@ -70,7 +70,7 @@ bl --version
 which bl   # Windows: where.exe bl
 ```
 
-> CDN / GitHub Release 未就绪或下载失败时，若本机已有合格 Node，回退到上方 npm 安装。
+> CDN / GitHub Release 未就绪或下载失败时，若本机已有合格 Node，回退到上方 npm 安装。Unix 二进制安装优先解 `.tar.gz`（不依赖 `unzip`）；Windows 仍使用 `.zip`。
 
 ---
 

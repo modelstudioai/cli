@@ -1,7 +1,7 @@
 ---
 name: bailian-sandbox
 metadata:
-  version: "1.26.0"
+  version: "1.28.0"
   requires:
     bins: ["bl"]
 description: >-

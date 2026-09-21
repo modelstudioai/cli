@@ -5,7 +5,9 @@
  * FC-presigned URLs and holds no OSS credentials itself.
  *
  * Layout under the base:
- *   v<version>/<asset>.zip —— immutable per-version binaries + SHA256SUMS
+ *   v<version>/<asset>.zip —— per-version zip (Windows installer, `bl update`, old Unix install.sh)
+ *   v<version>/<asset>.tar.gz —— unix install.sh default (darwin / linux); same inner binary
+ *   SHA256SUMS             —— checksums for zip and tar.gz
  *   manifest.json          —— stable install/update pointer (rolling-manifest shape)
  *   latest.json            —— stable alias; same body as manifest.json
  *   sync-release.json      —— official channel/verify rolling pointer (all bailian-cli
@@ -95,6 +97,15 @@ export function binaryAssetFileName(
   _exe = false,
 ): string {
   return `bl-${version}-${os}-${arch}.zip`;
+}
+
+/**
+ * Unix install.sh archive: `bl-<ver>-<os>-<arch>.tar.gz`.
+ * Windows has no tar.gz (PowerShell Expand-Archive uses zip).
+ */
+export function binaryTarFileName(version: string, os: string, arch: string): string | undefined {
+  if (os === "windows") return undefined;
+  return `bl-${version}-${os}-${arch}.tar.gz`;
 }
 
 /** Uncompressed binary name inside the zip. */

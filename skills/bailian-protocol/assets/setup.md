@@ -32,6 +32,8 @@ curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
 
 Windows PowerShell: `irm https://bailian.aliyun.com/cli/install.ps1 | iex`
 
+Unix `install.sh` prefers the `.tar.gz` asset and does not require `unzip`. Windows keeps `.zip`.
+
 ### Skills
 
 - **Supported:** `bl skill init` (installs every `bailian-*`, including `bailian-protocol`)

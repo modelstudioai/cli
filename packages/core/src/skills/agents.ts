@@ -152,6 +152,8 @@ export function getAgentTargets(): AgentTarget[] {
       detectDirs: [join(xdgConfig, "devin")],
     },
     simple("droid", "Droid", ".factory"),
+    // DeepSeek DSH reads global skills from <dshHome>/skills; DSH_HOME relocates the home
+    fromBase("dsh", "DeepSeek DSH", envBase(process.env.DSH_HOME, ".dsh")),
     simple("forgecode", "ForgeCode", ".forge"),
     simple("gemini-cli", "Gemini CLI", ".gemini"),
     simple("github-copilot", "GitHub Copilot", ".copilot"),
@@ -224,8 +226,12 @@ export function getAgentTargets(): AgentTarget[] {
     simple("terramind", "Terramind", ".terramind"),
     simple("tinycloud", "Tinycloud", ".tinycloud"),
     simple("trae", "Trae", ".trae"),
+    // Trae CLI reads global skills from ~/.traecli/skills (project-level .trae/skills stays project-only)
+    simple("trae-cli", "Trae CLI", ".traecli"),
     simple("trae-cn", "Trae CN", ".trae-cn"),
     simple("windsurf", "Windsurf", ".codeium/windsurf"),
+    // Tencent WorkBuddy reads global skills from ~/.workbuddy/skills
+    simple("workbuddy", "Tencent WorkBuddy", ".workbuddy"),
     {
       id: "zcode",
       displayName: "ZCode",
@@ -423,13 +429,13 @@ export function fanOutSkillToAgents(
 }
 
 /**
- * Reclaim fan-out artifacts for a skill across all agent dirs.
- * Symlinks pointing to canonical are removed (including historical links not in lock,
- * via defensive scan of the full registry); real directories are only removed if recorded
- * in lock (copy-fallback artifacts). A single failure does not block the rest.
+ * Collect paths that unlinkSkillFromAgents would reclaim (read-only).
+ * Same candidate set and eligibility rules as the mutating unlink: managed
+ * symlinks anywhere under the agent registry (including historical links not
+ * in lock), plus recorded copy-fallback directories.
  */
-export function unlinkSkillFromAgents(name: string, recordedLinks: string[] = []): string[] {
-  const removed: string[] = [];
+export function planUnlinkSkillFromAgents(name: string, recordedLinks: string[] = []): string[] {
+  const planned: string[] = [];
   const candidates = new Set(recordedLinks);
   for (const agent of getAgentTargets()) candidates.add(join(agent.skillsDir, name));
   for (const linkPath of candidates) {
@@ -441,14 +447,38 @@ export function unlinkSkillFromAgents(name: string, recordedLinks: string[] = []
         continue;
       }
       if (stat.isSymbolicLink()) {
-        if (isManagedLink(linkPath)) {
-          rmSync(linkPath);
-          removed.push(linkPath);
-        }
+        if (isManagedLink(linkPath)) planned.push(linkPath);
       } else if (recordedLinks.some((recorded) => samePath(recorded, linkPath))) {
-        rmSync(linkPath, { recursive: true, force: true });
-        removed.push(linkPath);
+        planned.push(linkPath);
       }
+    } catch {
+      /* single failure does not block remaining scan */
+    }
+  }
+  return planned;
+}
+
+/**
+ * Reclaim fan-out artifacts for a skill across all agent dirs.
+ * Symlinks pointing to canonical are removed (including historical links not in lock,
+ * via defensive scan of the full registry); real directories are only removed if recorded
+ * in lock (copy-fallback artifacts). A single failure does not block the rest.
+ */
+export function unlinkSkillFromAgents(name: string, recordedLinks: string[] = []): string[] {
+  const removed: string[] = [];
+  for (const linkPath of planUnlinkSkillFromAgents(name, recordedLinks)) {
+    try {
+      if (isManagedLink(linkPath)) {
+        rmSync(linkPath);
+      } else if (
+        !lstatSync(linkPath).isSymbolicLink() &&
+        recordedLinks.some((recorded) => samePath(recorded, linkPath))
+      ) {
+        rmSync(linkPath, { recursive: true, force: true });
+      } else {
+        continue;
+      }
+      removed.push(linkPath);
     } catch {
       /* single failure does not block remaining cleanup */
     }
