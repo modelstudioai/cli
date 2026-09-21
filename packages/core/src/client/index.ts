@@ -68,6 +68,7 @@ export {
 } from "./asr-routes.ts";
 export {
   CHANNEL,
+  DASHSCOPE_SERVICE_HEADER,
   OPEN_API_SOURCE,
   sourceConfig,
   trackingHeaders,
