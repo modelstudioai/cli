@@ -7,13 +7,13 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command           | Authentication | Description                                                            |
-| ----------------- | -------------- | ---------------------------------------------------------------------- |
-| `bl skill add`    | No Auth        | Install skills from the Bailian skill registry into local agents       |
-| `bl skill init`   | No Auth        | Install all bailian-* skills (one-shot bootstrap for new environments) |
-| `bl skill list`   | No Auth        | List registry skills and diff against local installs                   |
-| `bl skill remove` | No Auth        | Remove locally installed skills (registry is untouched)                |
-| `bl skill update` | No Auth        | Update installed skills to the latest registry versions                |
+| Command           | Authentication | Description                                                             |
+| ----------------- | -------------- | ----------------------------------------------------------------------- |
+| `bl skill add`    | No Auth        | Install skills from the Bailian skill registry into local agents        |
+| `bl skill init`   | No Auth        | Install all bailian-\* skills (one-shot bootstrap for new environments) |
+| `bl skill list`   | No Auth        | List registry skills and diff against local installs                    |
+| `bl skill remove` | No Auth        | Remove locally installed skills (registry is untouched)                 |
+| `bl skill update` | No Auth        | Update installed skills to the latest registry versions                 |
 
 ## Command details
 
@@ -45,12 +45,12 @@ bl skill add --name spark-video,bailian-model-recommend
 
 ### `bl skill init`
 
-| Field              | Value                                                                  |
-| ------------------ | ---------------------------------------------------------------------- |
-| **Name**           | `skill init`                                                           |
-| **Description**    | Install all bailian-* skills (one-shot bootstrap for new environments) |
-| **Authentication** | No Auth                                                                |
-| **Usage**          | `bl skill init`                                                        |
+| Field              | Value                                                                   |
+| ------------------ | ----------------------------------------------------------------------- |
+| **Name**           | `skill init`                                                            |
+| **Description**    | Install all bailian-\* skills (one-shot bootstrap for new environments) |
+| **Authentication** | No Auth                                                                 |
+| **Usage**          | `bl skill init`                                                         |
 
 #### Flags
 
