@@ -33,6 +33,7 @@ describe("Client.bailianMcpRegistrationHeaders", () => {
       "x-dashscope-openapisource": "BailianCLI",
       "x-dashscope-source-config":
         '{"channel":"bailian-cli","tags":{"t1":"public","t2":"bl","t3":"1.18.2"}}',
+      "X-Dashscope-Service": "bailian-cli",
     });
   });
 

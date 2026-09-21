@@ -8,9 +8,7 @@ export default defineConfig({
   },
   pack: {
     minify: true,
-    dts: {
-      generator: "tsgo",
-    },
+    dts: true,
   },
   lint: {
     options: {

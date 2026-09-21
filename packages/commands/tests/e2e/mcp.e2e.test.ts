@@ -110,6 +110,7 @@ describe("e2e: mcp", () => {
           "Authorization",
           "x-dashscope-openapisource",
           "x-dashscope-source-config",
+          "X-Dashscope-Service",
         ]),
       );
       expect(existsSync(join(tempHome, ".codex", "config.toml"))).toBe(false);
@@ -151,7 +152,12 @@ describe("e2e: mcp", () => {
       expect(connected.exitCode, connected.stderr).toBe(0);
       const config = parseToml(readFileSync(configPath, "utf8")) as Record<string, unknown>;
       expect(config.model).toBe("gpt-5");
-      expect((config.mcp_servers as Record<string, unknown>).ImageGenerate).toBeDefined();
+      const registered = (config.mcp_servers as Record<string, Record<string, unknown>>)
+        .ImageGenerate;
+      expect(registered).toBeDefined();
+      const httpHeaders = registered.http_headers as Record<string, string>;
+      expect(httpHeaders["X-Dashscope-Service"]).toBe("bailian-cli");
+      expect(httpHeaders["x-dashscope-openapisource"]).toBe("BailianCLI");
       expect(readFileSync(join(configDir, "mcp-registrations.json"), "utf8")).not.toContain(
         "sk-test-secret",
       );
