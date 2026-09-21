@@ -1,6 +1,6 @@
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { expect, test } from "vite-plus/test";
 import {
   listSkills,
@@ -8,6 +8,7 @@ import {
   listAgents,
   getSkillDetail,
 } from "../src/commands/config/inventory.ts";
+import { qwenworkMcpPath } from "../src/commands/mcp/agent-config.ts";
 
 /** Build an isolated fake $HOME and clean it up afterwards. */
 function withHome(fn: (home: string) => void): void {
@@ -142,6 +143,32 @@ test("listMcpServers 汇总 codex(toml) 与 claude(json) 的 MCP 定义", () => 
 test("listMcpServers 无配置时返回空数组", () => {
   withHome((home) => {
     expect(listMcpServers(home)).toEqual([]);
+  });
+});
+
+test("listMcpServers 区分 Qoder、Qoder Work 与千问办公 QwenWork", () => {
+  withHome((home) => {
+    write(
+      home,
+      ".qoder/mcp.json",
+      JSON.stringify({ mcpServers: { qoder: { url: "https://qoder" } } }),
+    );
+    write(
+      home,
+      ".qoderwork/mcp.json",
+      JSON.stringify({ mcpServers: { qoderwork: { url: "https://qoderwork" } } }),
+    );
+    write(
+      home,
+      relative(home, qwenworkMcpPath(home)),
+      JSON.stringify({ mcpServers: { qwenwork: { type: "http", url: "https://qwenwork" } } }),
+    );
+
+    const servers = listMcpServers(home);
+    const byName = Object.fromEntries(servers.map((s) => [s.name, s]));
+    expect(byName.qoder).toMatchObject({ source: "qoder" });
+    expect(byName.qoderwork).toMatchObject({ source: "qoderwork" });
+    expect(byName.qwenwork).toMatchObject({ source: "qwenwork" });
   });
 });
 
