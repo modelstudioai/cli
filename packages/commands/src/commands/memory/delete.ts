@@ -22,14 +22,7 @@ const DELETE_FLAGS = {
     description: { "en-US": "Memory node ID (required)", "zh-CN": "记忆节点 ID（必填）" },
     required: true,
   },
-  userId: {
-    type: "string",
-    valueHint: "<id>",
-    description: {
-      "en-US": "Deprecated compatibility option; ignored, the node ID selects the memory",
-      "zh-CN": "已弃用的兼容参数；不发送到接口，通过节点 ID 定位记忆",
-    },
-  },
+
   ...MEMORY_LIBRARY_FLAG,
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;

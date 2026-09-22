@@ -66,30 +66,6 @@ const SEARCH_FLAGS = {
       "zh-CN": "最小相似度分数阈值，0~1（默认：0.3）",
     },
   },
-  enableRerank: {
-    type: "boolean",
-    valueHint: "<bool>",
-    description: {
-      "en-US": "Rerank results (default: false); ignored when --plan-version is set",
-      "zh-CN": "是否重排序搜索结果（默认：false）；传了 --plan-version 时本参数被忽略",
-    },
-  },
-  enableJudge: {
-    type: "boolean",
-    valueHint: "<bool>",
-    description: {
-      "en-US": "Run the intent judge callback (default: false)",
-      "zh-CN": "是否开启意图判别回调（默认：false）",
-    },
-  },
-  enableRewrite: {
-    type: "boolean",
-    valueHint: "<bool>",
-    description: {
-      "en-US": "Rewrite the query before searching (default: false)",
-      "zh-CN": "是否开启 query 重写（默认：false）",
-    },
-  },
   memoryTypes: {
     type: "array",
     valueHint: "<type>",
@@ -99,16 +75,31 @@ const SEARCH_FLAGS = {
       "zh-CN": "搜索的记忆类型（可重复；服务端默认仅 observation）",
     },
   },
-  queryTimestamp: {
-    type: "number",
-    valueHint: "<seconds>",
+  memoryType: {
+    type: "string",
+    valueHint: "<type>",
+    choices: ["observation", "skill"] as const,
     description: {
-      "en-US":
-        "Query time as a Unix timestamp in seconds, used during query rewrite (default: now)",
-      "zh-CN": "问询时间的秒级 Unix 时间戳，rewrite 阶段使用（默认：当前时间）",
+      "en-US": "Deprecated alias for --memory-types; cannot be combined with --memory-types",
+      "zh-CN": "已弃用：--memory-types 的别名，不能与 --memory-types 同时传入",
     },
   },
-  ...PROJECT_IDS_FLAG,
+
+  projectIds: {
+    ...PROJECT_IDS_FLAG.projectId,
+    description: {
+      "en-US": "Memory fragment rule ID (repeatable)",
+      "zh-CN": "记忆片段规则 ID（可重复）",
+    },
+  },
+  projectId: {
+    ...PROJECT_IDS_FLAG.projectId,
+    description: {
+      "en-US":
+        "Deprecated alias for --project-ids (repeatable); cannot be combined with --project-ids",
+      "zh-CN": "已弃用：--project-ids 的别名（可重复），不能与 --project-ids 同时传入",
+    },
+  },
   ...PLAN_VERSION_FLAG,
   ...MEMORY_LIBRARY_FLAG,
   ...WORKSPACE_FLAG,
@@ -129,9 +120,9 @@ export default defineCommand({
     MEMORY_WORKSPACE_NOTE,
     {
       "en-US":
-        "--plan-version overrides --enable-rerank. With both omitted the plan is pro; --enable-rerank false alone selects lite. Plans are billed differently.",
+        "Use --plan-version pro or lite to select the search strategy. When omitted, the server defaults to pro. Plans are billed differently.",
       "zh-CN":
-        "--plan-version 优先于 --enable-rerank。两者均省略为 pro；仅传 --enable-rerank false 为 lite。不同计划计费不同。",
+        "通过 --plan-version pro 或 lite 选择检索策略；省略时服务端默认使用 pro。不同计划计费不同。",
     },
     {
       "en-US":
@@ -157,21 +148,23 @@ export default defineCommand({
     },
     {
       "en-US":
-        '--user-id user1 --query "meeting summary" --memory-types skill --project-id skill_project_xxx',
+        '--user-id user1 --query "meeting summary" --memory-types skill --project-ids skill_project_xxx',
       "zh-CN":
-        '--user-id user1 --query "会议纪要" --memory-types skill --project-id skill_project_xxx',
+        '--user-id user1 --query "会议纪要" --memory-types skill --project-ids skill_project_xxx',
     },
   ],
   validate: (flags: SearchFlags) => {
     if (!flags.query && !flags.messages) return "Provide --query or --messages.";
+    if (flags.projectId !== undefined && flags.projectIds !== undefined)
+      return "--project-id and --project-ids are mutually exclusive. / --project-id 与 --project-ids 不能同时传入。";
+    if (flags.memoryType !== undefined && flags.memoryTypes !== undefined)
+      return "--memory-type and --memory-types are mutually exclusive. / --memory-type 与 --memory-types 不能同时传入。";
     const scopeError = checkMemoryScopeLengths(flags);
     if (scopeError) return scopeError;
     if (flags.topK !== undefined && (flags.topK < 1 || flags.topK > MAX_TOP_K))
       return `--top-k must be between 1 and ${MAX_TOP_K}.`;
     if (flags.minScore !== undefined && (flags.minScore < 0 || flags.minScore > 1))
       return "--min-score must be between 0 and 1.";
-    if (flags.queryTimestamp !== undefined && flags.queryTimestamp < 0)
-      return "--query-timestamp must be a non-negative Unix timestamp in seconds.";
     return undefined;
   },
   async run(ctx) {
@@ -186,13 +179,11 @@ export default defineCommand({
 
     if (flags.topK !== undefined) body.top_k = flags.topK;
     if (flags.minScore !== undefined) body.min_score = flags.minScore;
-    if (flags.enableRerank !== undefined) body.enable_rerank = flags.enableRerank;
-    if (flags.enableJudge !== undefined) body.enable_judge = flags.enableJudge;
-    if (flags.enableRewrite !== undefined) body.enable_rewrite = flags.enableRewrite;
     if (flags.planVersion) body.plan_version = flags.planVersion as MemoryPlanVersion;
-    if (flags.projectId?.length) body.project_ids = flags.projectId;
-    if (flags.memoryTypes?.length) body.memory_types = flags.memoryTypes as MemoryType[];
-    if (flags.queryTimestamp !== undefined) body.query_timestamp = flags.queryTimestamp;
+    const projectIds = flags.projectIds ?? flags.projectId;
+    const memoryTypes = flags.memoryTypes ?? (flags.memoryType ? [flags.memoryType] : undefined);
+    if (projectIds?.length) body.project_ids = projectIds;
+    if (memoryTypes?.length) body.memory_types = memoryTypes as MemoryType[];
     if (flags.libraryId) body.memory_library_id = flags.libraryId;
 
     const format = detectOutputFormat(settings.output);

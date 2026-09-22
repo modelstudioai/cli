@@ -26,14 +26,7 @@ const UPDATE_FLAGS = {
     description: { "en-US": "Memory node ID (required)", "zh-CN": "记忆节点 ID（必填）" },
     required: true,
   },
-  userId: {
-    type: "string",
-    valueHint: "<id>",
-    description: {
-      "en-US": "Deprecated compatibility option; ignored, the node ID selects the memory",
-      "zh-CN": "已弃用的兼容参数；不发送到接口，通过节点 ID 定位记忆",
-    },
-  },
+
   content: {
     type: "string",
     valueHint: "<text>",
@@ -43,14 +36,7 @@ const UPDATE_FLAGS = {
     },
     required: true,
   },
-  timestamp: {
-    type: "number",
-    valueHint: "<seconds>",
-    description: {
-      "en-US": "Unix timestamp (seconds); omitted values preserve the existing timestamp",
-      "zh-CN": "秒级 Unix 时间戳；不传时保留原值",
-    },
-  },
+
   metaData: {
     type: "string",
     valueHint: "<json>",
@@ -88,10 +74,8 @@ export default defineCommand({
       "zh-CN": '--node-id node_xxx --content "更新后的记忆内容" --workspace-id ws_xxx',
     },
     {
-      "en-US":
-        '--node-id node_xxx --content "met at WAIC" --timestamp 1747278460 --meta-data \'{"city":"Shanghai"}\'',
-      "zh-CN":
-        '--node-id node_xxx --content "在 WAIC 见面" --timestamp 1747278460 --meta-data \'{"city":"上海"}\'',
+      "en-US": '--node-id node_xxx --content "met at WAIC" --meta-data \'{"city":"Shanghai"}\'',
+      "zh-CN": '--node-id node_xxx --content "在 WAIC 见面" --meta-data \'{"city":"上海"}\'',
     },
     {
       "en-US":
@@ -105,8 +89,6 @@ export default defineCommand({
     if (scopeError) return scopeError;
     if (flags.content.length > MAX_CUSTOM_CONTENT_LENGTH)
       return `--content must be at most ${MAX_CUSTOM_CONTENT_LENGTH} characters.`;
-    if (flags.timestamp !== undefined && flags.timestamp < 0)
-      return "--timestamp must be a non-negative Unix timestamp in seconds.";
     const skillError = checkSkillMetadataFlags(flags);
     if (skillError) return skillError;
     return undefined;
@@ -118,7 +100,6 @@ export default defineCommand({
     const body: MemoryNodeUpdateRequest = {
       custom_content: flags.content,
     };
-    if (flags.timestamp !== undefined) body.timestamp = flags.timestamp;
     if (flags.metaData) body.meta_data = parseJsonObjectFlag("--meta-data", flags.metaData);
     if (
       flags.skillName !== undefined &&

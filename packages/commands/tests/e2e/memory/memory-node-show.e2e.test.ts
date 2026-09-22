@@ -1,3 +1,4 @@
+import { assertMemoryServiceRejection } from "./live-helpers.ts";
 import { describe, expect, test } from "vite-plus/test";
 import { isMemoryE2EReady, parseStdoutJson, runCommandE2e, runCommandHelp } from "../helpers.ts";
 import { MEMORY_NODE_SHOW_ROUTES } from "../topic-routes.ts";
@@ -50,7 +51,7 @@ describe("e2e: memory node show", () => {
 describe.skipIf(!isMemoryE2EReady())("e2e: memory node show (live)", () => {
   test("不存在的节点被服务端拒绝（非 0 退出）", async () => {
     const workspaceId = process.env.BAILIAN_WORKSPACE_ID?.trim() ?? "";
-    const { exitCode } = await runCommandE2e(MEMORY_NODE_SHOW_ROUTES, [
+    const { exitCode, stderr } = await runCommandE2e(MEMORY_NODE_SHOW_ROUTES, [
       "memory",
       "node",
       "show",
@@ -61,7 +62,7 @@ describe.skipIf(!isMemoryE2EReady())("e2e: memory node show (live)", () => {
       "--output",
       "json",
     ]);
-    expect(exitCode).not.toBe(0);
+    assertMemoryServiceRejection({ exitCode, stderr });
   });
 });
 

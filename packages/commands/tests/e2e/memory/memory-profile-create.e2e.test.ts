@@ -4,6 +4,24 @@ import { MEMORY_PROFILE_CREATE_ROUTES } from "../topic-routes.ts";
 import { TEST_WORKSPACE_ARGS, type MemoryDryRunBody } from "./shared.ts";
 
 describe("e2e: memory profile create", () => {
+  test.each([true, false])("属性内部字段 immutable=%s 不允许传入", async (immutable) => {
+    const { exitCode, stderr } = await runCommandE2e(MEMORY_PROFILE_CREATE_ROUTES, [
+      "memory",
+      "profile",
+      "create",
+      "--name",
+      "test",
+      "--attributes",
+      JSON.stringify([{ name: "age", immutable }]),
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/immutable.*internal/i);
+  });
+
   test("--help 展示 flags", async () => {
     const { stderr, exitCode } = await runCommandHelp(MEMORY_PROFILE_CREATE_ROUTES, [
       "memory",

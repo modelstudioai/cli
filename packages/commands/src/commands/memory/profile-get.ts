@@ -35,15 +35,7 @@ const PROFILE_GET_FLAGS = {
     },
     required: true,
   },
-  needDetail: {
-    type: "boolean",
-    valueHint: "<bool>",
-    description: {
-      "en-US":
-        "Return per-item value lists (item_id / status / value) instead of the joined value string",
-      "zh-CN": "返回逐条画像值列表（item_id / status / value），而非拼接后的 value 字符串",
-    },
-  },
+
   ...MEMORY_LIBRARY_FLAG,
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
@@ -64,17 +56,8 @@ export default defineCommand({
       "zh-CN":
         "只有 `memory add --profile-schema` 传入同一个 Schema ID 时才会提取属性值，否则所有属性都为空。查看模板定义本身请用 `memory profile show`。",
     },
-    {
-      "en-US":
-        "--need-detail true expands each attribute into its value items with item_id and status, the handles for profile value management.",
-      "zh-CN":
-        "--need-detail true 将每个属性展开为带 item_id 与 status 的值项列表，便于画像值管理。",
-    },
   ],
-  exampleArgs: [
-    "--schema-id schema_xxx --user-id user1 --workspace-id ws_xxx",
-    "--schema-id schema_xxx --user-id user1 --need-detail true",
-  ],
+  exampleArgs: ["--schema-id schema_xxx --user-id user1 --workspace-id ws_xxx"],
   validate: (flags) => checkMemoryScopeLengths(flags),
   async run(ctx) {
     const { settings, flags } = ctx;
@@ -85,7 +68,6 @@ export default defineCommand({
       buildQuery({
         user_id: flags.userId,
         memory_library_id: flags.libraryId,
-        need_detail: flags.needDetail === undefined ? undefined : String(flags.needDetail),
       });
 
     if (settings.dryRun) {

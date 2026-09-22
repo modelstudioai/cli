@@ -64,17 +64,12 @@ export interface MemoryDryRunBody {
     project_ids?: string[];
     profile_schema?: string;
     memory_library_id?: string;
-    timestamp?: number;
     skill_name?: string;
     skill_description?: string;
     skill_tags?: string[];
     memory_types?: string[];
-    query_timestamp?: number;
     top_k?: number;
     min_score?: number;
-    enable_rerank?: boolean;
-    enable_judge?: boolean;
-    enable_rewrite?: boolean;
     plan_version?: string;
     query?: string;
     name?: string;
@@ -158,6 +153,8 @@ export interface ProfileSchemaListBody {
 }
 
 export interface ProfileSchemaDetailBody {
+  plan_version?: string;
+  extract_scene?: string;
   request_id?: string;
   name?: string;
   description?: string;
@@ -165,7 +162,7 @@ export interface ProfileSchemaDetailBody {
     attribute_id: string;
     name: string;
     description?: string;
-    default_value?: string;
+    default_value?: string | null;
   }>;
 }
 

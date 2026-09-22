@@ -22,7 +22,7 @@
 | 模板详情     | `bl memory profile show`   | `--schema-id`                            | GET `/profile_schemas/{schema_id}`              | 返回模板定义及属性 `attribute_id`                  |
 | 更新模板     | `bl memory profile update` | `--schema-id`，至少一个更新字段          | PATCH `/profile_schemas/{schema_id}`            | 修改模板字段、属性、策略档位或抽取场景             |
 | 删除模板     | `bl memory profile delete` | `--schema-id`                            | DELETE `/profile_schemas/{schema_id}`           | 高风险确认；影响依赖该模板的画像访问               |
-| 读取用户画像 | `bl memory profile get`    | `--schema-id`、`--user-id`               | GET `/profile_schemas/{schema_id}/user_profile` | 读取抽取值；`--need-detail true` 返回值项          |
+| 读取用户画像 | `bl memory profile get`    | `--schema-id`、`--user-id`               | GET `/profile_schemas/{schema_id}/user_profile` | 读取已抽取的用户画像属性值                         |
 
 `profile update` 的更新字段是 `--name`、`--description`、`--attributes-operations`、`--plan-version`、`--extract-scene`。
 
@@ -40,49 +40,38 @@
 
 ## 范围参数矩阵
 
-| 命令                                     | `--user-id`                    | `--library-id` | `--project-id`                              |
-| ---------------------------------------- | ------------------------------ | -------------- | ------------------------------------------- |
-| `add`                                    | 必填                           | 可选           | 内容直存最多 1 个；消息抽取最多 5 个        |
-| `search`                                 | 必填                           | 可选           | 可重复；CLI 未实现与 add 相同的数量上限校验 |
-| `list`                                   | 必填                           | 可选           | 单个；省略仅查询默认规则                    |
-| `update` / `delete`                      | 兼容参数，已弃用且不发给服务端 | 可选           | 不支持，按节点 ID 定位                      |
-| `node show` / `skill export`             | 不支持                         | 不支持         | 不支持，按节点 ID 定位                      |
-| `profile create/list/show/update/delete` | 不支持                         | 可选           | 不支持                                      |
-| `profile get`                            | 必填                           | 可选           | 不支持，按模板 ID 定位                      |
+| 命令                                     | `--user-id`            | `--library-id` | 规则参数                                      |
+| ---------------------------------------- | ---------------------- | -------------- | --------------------------------------------- |
+| `add`                                    | 必填                   | 可选           | 内容直存最多 1 个；消息抽取最多 5 个          |
+| `search`                                 | 必填                   | 可选           | --project-ids 可重复；--project-id 为弃用别名 |
+| `list`                                   | 必填                   | 可选           | 单个；省略仅查询默认规则                      |
+| `update` / `delete`                      | 不支持，按节点 ID 定位 | 可选           | 不支持，按节点 ID 定位                        |
+| `node show` / `skill export`             | 不支持                 | 不支持         | 不支持，按节点 ID 定位                        |
+| `profile create/list/show/update/delete` | 不支持                 | 可选           | 不支持                                        |
+| `profile get`                            | 必填                   | 可选           | 不支持，按模板 ID 定位                        |
 
 `--workspace-id` 对全部命令有效；也可从 `BAILIAN_WORKSPACE_ID` 或配置 `workspace_id` 获取。记忆库参数省略时使用账号默认记忆库。不要给未声明范围参数的命令追加这些参数。
 
+搜索的 `--memory-type` 是 `--memory-types` 的 deprecated 别名；`--project-id` 是 `--project-ids` 的 deprecated 别名。同组单复数参数互斥，CLI 统一发送复数字段。
+
 ## 关键行为矩阵
 
-| 场景                              | 当前行为                                                             |
-| --------------------------------- | -------------------------------------------------------------------- |
-| `add` 同时传 content/messages     | 服务端以 content 为准，但 CLI 仍解析、校验 messages；建议只传一种    |
-| `add --extract-mode profile_only` | 必须传 messages 和 profile-schema，不能传 content                    |
-| `add --wait 0`                    | 返回提交回执；不代表抽取完成                                         |
-| `add` 默认等待                    | 轮询预算 120 秒，轮询间隔 3 秒；超时后台仍可能运行                   |
-| `search` 同时传 query/messages    | messages 优先；query 会在单独使用时包装成一条 user 消息              |
-| `search` 未指定类型               | 服务端默认 observation；查询 skill 须显式指定                        |
-| `search` 策略选择                 | 显式 plan-version 优先；均省略为 pro；仅 enable-rerank=false 为 lite |
-| `update` 未传 timestamp           | 保留原时间戳；不会自动改成当前时间                                   |
-| 模板属性变更                      | op 用小写 add/update/delete；后两者用 attribute_id 定位              |
-| 删除确认                          | 节点、模板删除均由 runtime 提供 `--yes`；可先 `--dry-run`            |
+| 场景                              | 当前行为                                                          |
+| --------------------------------- | ----------------------------------------------------------------- |
+| `add` 同时传 content/messages     | 服务端以 content 为准，但 CLI 仍解析、校验 messages；建议只传一种 |
+| `add --extract-mode profile_only` | 必须传 messages 和 profile-schema，不能传 content                 |
+| `add --wait 0`                    | 返回提交回执；不代表抽取完成                                      |
+| `add` 默认等待                    | 轮询预算 120 秒，轮询间隔 3 秒；超时后台仍可能运行                |
+| `search` 同时传 query/messages    | messages 优先；query 会在单独使用时包装成一条 user 消息           |
+| `search` 未指定类型               | 服务端默认 observation；查询 skill 须显式指定                     |
+| `search` 策略选择                 | 通过 plan-version 选择 pro/lite；省略时服务端默认 pro             |
+| `update` 的时间戳处理             | 保留原时间戳；不会自动改成当前时间                                |
+| 模板属性变更                      | op 用小写 add/update/delete；后两者用 attribute_id 定位           |
+| 删除确认                          | 节点、模板删除均由 runtime 提供 `--yes`；可先 `--dry-run`         |
 
-## 后端与 CLI 的边界
+## 使用边界
 
-| 能力                               | CLI 状态                 | 用户可用路径 / 边界                                                      |
-| ---------------------------------- | ------------------------ | ------------------------------------------------------------------------ |
-| GetEvent                           | 内部使用，未注册查询命令 | 由 `add` 自动轮询；提交后通过 list/search/profile get 核对结果           |
-| 同步 AddMemory                     | 未开放                   | `add` 统一走异步接口，即便内容直存也是如此                               |
-| 画像值项直接增删改                 | 未开放                   | `profile get --need-detail true` 可读取值项；`profile update` 只更新模板 |
-| 项目 / 规则管理                    | 未开放                   | 后端对齐稿标记为非对客；CLI 仅消费已有规则 ID                            |
-| DeleteEntity / DeleteEntityProfile | 未开放                   | 后端对齐稿标记为暂不对客；不要把节点删除当作实体清空                     |
-| 记忆库管理                         | 未开放                   | CLI 仅接受已有记忆库 ID                                                  |
-
-## 核对依据
-
-- [产品命令注册](../../packages/cli/src/commands.ts)：公开路径与数量。
-- [命令实现](../../packages/commands/src/commands/memory/)：参数、验证、请求与输出。
-- [API 路径构造](../../packages/core/src/client/endpoints.ts)：HTTP 映射。
-- [历史后端实测](2026-09-21-memory-live-verify.md)：默认规则范围、时间戳保留、Skill 导出和删除状态等行为证据。
-
-已实现不等于每个服务端组合都已实测。跨库隔离、多模态抽取、限流效果及部分异步终态不在本次文档验证范围内。
+- `add` 自动轮询异步任务；当前没有独立的事件查询命令，可通过 `list` / `search` / `profile get` 核对结果。
+- `profile update` 修改画像模板；用户画像值通过消息抽取更新，没有直接编辑命令。
+- 记忆库与规则使用已有 ID，CLI 不提供其管理命令。
+- 节点删除仅作用于指定节点，不代表清空用户的全部记忆或画像。

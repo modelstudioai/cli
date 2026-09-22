@@ -388,8 +388,6 @@ export interface MemoryAddRequest {
   skill_name?: string;
   skill_description?: string;
   skill_tags?: string[];
-  /** 记忆片段对应事件发生时的秒级 Unix 时间戳（默认当前时间） */
-  timestamp?: number;
 }
 
 /**
@@ -461,20 +459,16 @@ export interface MemorySearchRequest {
   top_k?: number;
   /** 最小相似度阈值，值域 [0,1] */
   min_score?: number;
-  enable_rerank?: boolean;
-  /** 优先级高于 enable_rerank：传了本字段时 enable_rerank 被忽略 */
   plan_version?: MemoryPlanVersion;
-  enable_judge?: boolean;
-  enable_rewrite?: boolean;
   memory_library_id?: string;
   /** 记忆片段规则 ID 数组，可多规则混合检索 */
   project_ids?: string[];
+  /** @deprecated Use project_ids. */
   project_id?: string;
   /** 搜索筛选记忆类型；不传时服务端默认 ["observation"] */
   memory_types?: MemoryType[];
+  /** @deprecated Use memory_types. */
   memory_type?: MemoryType;
-  /** 问询时间（秒级 Unix 时间戳），rewrite 阶段使用；不填默认当前系统时间 */
-  query_timestamp?: number;
 }
 
 export interface MemoryNode {
@@ -538,8 +532,6 @@ export interface MemoryNodeUpdateRequest {
   custom_content: string;
   /** 非默认记忆库时必填（与控制台记忆库 ID 一致） */
   memory_library_id?: string;
-  /** 记忆片段对应事件发生时的秒级 Unix 时间戳（不传保留原值） */
-  timestamp?: number;
   /** 用户自定义信息（增量更新） */
   meta_data?: Record<string, unknown>;
   /** skill 三件套：节点为 skill 类型时服务端强制，all-or-nothing */

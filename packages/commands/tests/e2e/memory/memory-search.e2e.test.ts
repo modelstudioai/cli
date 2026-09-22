@@ -1,3 +1,4 @@
+import { assertMemoryServiceRejection } from "./live-helpers.ts";
 import { describe, expect, test } from "vite-plus/test";
 import { isMemoryE2EReady, parseStdoutJson, runCommandE2e, runCommandHelp } from "../helpers.ts";
 import { MEMORY_SEARCH_ROUTES } from "../topic-routes.ts";
@@ -22,14 +23,66 @@ describe("e2e: memory search", () => {
     expect(stderr).toMatch(/--messages/i);
     expect(stderr).toMatch(/--top-k/i);
     expect(stderr).toMatch(/--min-score/i);
-    expect(stderr).toMatch(/--enable-rerank/i);
-    expect(stderr).toMatch(/--enable-judge/i);
-    expect(stderr).toMatch(/--enable-rewrite/i);
+    expect(stderr).not.toMatch(/--enable-rerank/i);
+    expect(stderr).not.toMatch(/--enable-judge/i);
+    expect(stderr).not.toMatch(/--enable-rewrite/i);
     expect(stderr).toMatch(/--plan-version/i);
     expect(stderr).toMatch(/--workspace-id/i);
     expect(stderr).toMatch(/--project-id/i);
     expect(stderr).toMatch(/--memory-types/i);
-    expect(stderr).toMatch(/--query-timestamp/i);
+    expect(stderr).not.toMatch(/--query-timestamp/i);
+  });
+
+  test.each([
+    ["--project-ids", "--memory-types"],
+    ["--project-id", "--memory-type"],
+  ])("%s / %s 归一化为复数请求字段", async (projectFlag, typeFlag) => {
+    const { exitCode, stdout, stderr } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
+      "memory",
+      "search",
+      "--user-id",
+      "user1",
+      "--query",
+      "x",
+      projectFlag,
+      "project_a",
+      typeFlag,
+      "skill",
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<MemoryDryRunBody>(stdout);
+    expect(data.request?.project_ids).toEqual(["project_a"]);
+    expect(data.request?.memory_types).toEqual(["skill"]);
+    expect(data.request).not.toHaveProperty("project_id");
+    expect(data.request).not.toHaveProperty("memory_type");
+  });
+
+  test.each([
+    ["--project-id", "--project-ids", "project_a"],
+    ["--memory-type", "--memory-types", "skill"],
+  ])("%s 与 %s 互斥", async (singular, plural, value) => {
+    const { exitCode, stderr } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
+      "memory",
+      "search",
+      "--user-id",
+      "user1",
+      "--query",
+      "x",
+      singular,
+      value,
+      plural,
+      value,
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toContain("mutually exclusive");
   });
 
   test("缺 --user-id 报 USAGE (2)", async () => {
@@ -126,19 +179,28 @@ describe("e2e: memory search", () => {
     expect(stderr).toMatch(/pro|lite/i);
   });
 
-  test("--enable-rerank 非 true/false 报 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
-      "memory",
-      "search",
-      "--user-id",
-      memoryUserId(),
-      "--query",
-      "x",
-      "--enable-rerank",
-      "yes",
-    ]);
-    expect(exitCode).toBe(2);
-  });
+  test.each(["--enable-rerank", "--enable-judge", "--enable-rewrite"])(
+    "%s 已移除，拒绝旧开关",
+    async (flag) => {
+      const { exitCode, stderr } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
+        "memory",
+        "search",
+        "--user-id",
+        "user1",
+        "--query",
+        "x",
+        flag,
+        "false",
+        ...TEST_WORKSPACE_ARGS,
+        "--dry-run",
+        "--output",
+        "json",
+      ]);
+      expect(exitCode).toBe(2);
+      expect(stderr).toMatch(/Unknown flag/i);
+      expect(stderr).toContain(flag);
+    },
+  );
 
   test("--messages 非法 JSON 报 USAGE (2)", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
@@ -208,12 +270,6 @@ describe("e2e: memory search", () => {
       "5",
       "--min-score",
       "0",
-      "--enable-rerank",
-      "true",
-      "--enable-judge",
-      "true",
-      "--enable-rewrite",
-      "false",
       "--plan-version",
       "lite",
       "--library-id",
@@ -228,14 +284,14 @@ describe("e2e: memory search", () => {
     expect(data.request?.top_k).toBe(5);
     // 0 is a meaningful threshold — it must not be dropped as falsy
     expect(data.request?.min_score).toBe(0);
-    expect(data.request?.enable_rerank).toBe(true);
-    expect(data.request?.enable_judge).toBe(true);
-    expect(data.request?.enable_rewrite).toBe(false);
+    expect(data.request).not.toHaveProperty("enable_rerank");
+    expect(data.request).not.toHaveProperty("enable_judge");
+    expect(data.request).not.toHaveProperty("enable_rewrite");
     expect(data.request?.plan_version).toBe("lite");
     expect(data.request?.memory_library_id).toBe("lib_test");
   });
 
-  test("--dry-run 断言可重复 --project-id 汇成 project_ids", async () => {
+  test("--dry-run 断言可重复 --project-ids 汇成 project_ids", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
       "memory",
       "search",
@@ -243,9 +299,9 @@ describe("e2e: memory search", () => {
       "user1",
       "--query",
       "多规则混检",
-      "--project-id",
+      "--project-ids",
       "proj_a",
-      "--project-id",
+      "--project-ids",
       "proj_b",
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",
@@ -258,7 +314,7 @@ describe("e2e: memory search", () => {
     expect(data.request?.project_id).toBeUndefined();
   });
 
-  test("--dry-run 断言可重复 --memory-types 与 --query-timestamp 映射", async () => {
+  test("--dry-run 断言可重复 --memory-types 映射", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
       "memory",
       "search",
@@ -270,8 +326,6 @@ describe("e2e: memory search", () => {
       "observation",
       "--memory-types",
       "skill",
-      "--query-timestamp",
-      "1747278460",
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",
       "--output",
@@ -280,7 +334,7 @@ describe("e2e: memory search", () => {
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<MemoryDryRunBody>(stdout);
     expect(data.request?.memory_types).toEqual(["observation", "skill"]);
-    expect(data.request?.query_timestamp).toBe(1747278460);
+    expect(data.request).not.toHaveProperty("query_timestamp");
   });
 
   test("--dry-run 不传 --memory-types 时 body 里不出现该键（服务端默认 observation）", async () => {
@@ -299,7 +353,7 @@ describe("e2e: memory search", () => {
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<MemoryDryRunBody>(stdout);
     expect(data.request?.memory_types).toBeUndefined();
-    expect(data.request?.query_timestamp).toBeUndefined();
+    expect(data.request).not.toHaveProperty("query_timestamp");
   });
 
   test("--memory-types 非法取值报 USAGE (2)", async () => {
@@ -317,18 +371,23 @@ describe("e2e: memory search", () => {
     expect(stderr).toMatch(/observation|skill/i);
   });
 
-  test("--query-timestamp 负数报 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
+  test("内部参数 --query-timestamp 不对 CLI 开放", async () => {
+    const { exitCode, stderr } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
       "memory",
       "search",
       "--user-id",
-      memoryUserId(),
+      "user1",
       "--query",
       "x",
       "--query-timestamp",
-      "-1",
+      "1747278460",
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+      "--output",
+      "json",
     ]);
     expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/Unknown flag.*--query-timestamp/i);
   });
 });
 
@@ -356,11 +415,13 @@ describe.skipIf(!isMemoryE2EReady())("e2e: memory search (live)", () => {
   });
 
   test("--library-id 不存在时服务端拒绝（非 0 退出）", async () => {
-    const { exitCode } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
+    const { exitCode, stderr } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
       "memory",
       "search",
       "--library-id",
       "no-such-library-000000000000000",
+      "--workspace-id",
+      process.env.BAILIAN_WORKSPACE_ID!,
       "--user-id",
       memoryUserId(),
       "--query",
@@ -370,6 +431,6 @@ describe.skipIf(!isMemoryE2EReady())("e2e: memory search (live)", () => {
       "--output",
       "json",
     ]);
-    expect(exitCode).not.toBe(0);
+    assertMemoryServiceRejection({ exitCode, stderr });
   });
 });

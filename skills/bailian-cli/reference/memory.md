@@ -47,7 +47,6 @@ Index: [index.md](index.md)
 | `--skill-description <text>`    | string | no       | Skill description (skill memory; requires --skill-name and --skill-tags)                                                   |
 | `--skill-tags <tag>`            | array  | no       | Skill tag (repeatable; requires --skill-name and --skill-description)                                                      |
 | `--meta-data <json>`            | string | no       | Custom metadata JSON object: {"location_name":"Beijing"}                                                                   |
-| `--timestamp <seconds>`         | number | no       | Unix timestamp (seconds) of when the remembered event happened                                                             |
 | `--wait <seconds>`              | number | no       | Polling budget in seconds before giving up (default: 120); 0 prints the event ID and returns right after submission        |
 | `--project-id <id>`             | array  | no       | Memory fragment rule ID (repeatable for messages/search; custom content accepts one)                                       |
 | `--library-id <id>`             | string | no       | Memory library ID (default: the account's default library)                                                                 |
@@ -100,15 +99,14 @@ bl memory add --user-id user1 --content "Attended WAIC" --wait 0
 
 #### Flags
 
-| Flag                  | Type   | Required | Description                                                              |
-| --------------------- | ------ | -------- | ------------------------------------------------------------------------ |
-| `--node-id <id>`      | string | yes      | Memory node ID (required)                                                |
-| `--user-id <id>`      | string | no       | Deprecated compatibility option; ignored, the node ID selects the memory |
-| `--library-id <id>`   | string | no       | Memory library ID (default: the account's default library)               |
-| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)          |
-| `--yes`               | switch | no       | Confirm this high-risk operation                                         |
-| `--api-key <key>`     | string | no       | API key                                                                  |
-| `--base-url <url>`    | string | no       | API base URL                                                             |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--node-id <id>`      | string | yes      | Memory node ID (required)                                       |
+| `--library-id <id>`   | string | no       | Memory library ID (default: the account's default library)      |
+| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--yes`               | switch | no       | Confirm this high-risk operation                                |
+| `--api-key <key>`     | string | no       | API key                                                         |
+| `--base-url <url>`    | string | no       | API base URL                                                    |
 
 #### Notes
 
@@ -289,30 +287,24 @@ bl memory profile delete --schema-id schema_xxx --yes
 
 #### Flags
 
-| Flag                   | Type    | Required | Description                                                                               |
-| ---------------------- | ------- | -------- | ----------------------------------------------------------------------------------------- |
-| `--schema-id <id>`     | string  | yes      | Profile schema ID (required)                                                              |
-| `--user-id <id>`       | string  | yes      | Memory entity ID that owns the profile (required)                                         |
-| `--need-detail <bool>` | boolean | no       | Return per-item value lists (item_id / status / value) instead of the joined value string |
-| `--library-id <id>`    | string  | no       | Memory library ID (default: the account's default library)                                |
-| `--workspace-id <id>`  | string  | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                           |
-| `--api-key <key>`      | string  | no       | API key                                                                                   |
-| `--base-url <url>`     | string  | no       | API base URL                                                                              |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--schema-id <id>`    | string | yes      | Profile schema ID (required)                                    |
+| `--user-id <id>`      | string | yes      | Memory entity ID that owns the profile (required)               |
+| `--library-id <id>`   | string | no       | Memory library ID (default: the account's default library)      |
+| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--api-key <key>`     | string | no       | API key                                                         |
+| `--base-url <url>`    | string | no       | API base URL                                                    |
 
 #### Notes
 
 - The memory API lives on a workspace-specific host, so --workspace-id is required; it can also come from BAILIAN_WORKSPACE_ID or the workspace_id config field.
 - Values are extracted only when `memory add --profile-schema` used the same schema ID; otherwise every attribute comes back empty. Use `memory profile show` for the schema definition itself.
-- --need-detail true expands each attribute into its value items with item_id and status, the handles for profile value management.
 
 #### Examples
 
 ```bash
 bl memory profile get --schema-id schema_xxx --user-id user1 --workspace-id ws_xxx
-```
-
-```bash
-bl memory profile get --schema-id schema_xxx --user-id user1 --need-detail true
 ```
 
 ### `bl memory profile list`
@@ -437,29 +429,27 @@ bl memory profile update --schema-id schema_xxx --attributes-operations '[{"op":
 
 #### Flags
 
-| Flag                                  | Type    | Required | Description                                                                          |
-| ------------------------------------- | ------- | -------- | ------------------------------------------------------------------------------------ |
-| `--user-id <id>`                      | string  | yes      | Memory entity ID that owns the memory (required)                                     |
-| `--query <text>`                      | string  | no       | Search text; sent as a single user message                                           |
-| `--messages <json>`                   | string  | no       | Messages JSON array for context-based search; overrides --query                      |
-| `--top-k <n>`                         | number  | no       | Max results, 1-100 (default: 10)                                                     |
-| `--min-score <score>`                 | number  | no       | Minimum similarity score, 0-1 (default: 0.3)                                         |
-| `--enable-rerank <bool>`              | boolean | no       | Rerank results (default: false); ignored when --plan-version is set                  |
-| `--enable-judge <bool>`               | boolean | no       | Run the intent judge callback (default: false)                                       |
-| `--enable-rewrite <bool>`             | boolean | no       | Rewrite the query before searching (default: false)                                  |
-| `--memory-types <observation\|skill>` | array   | no       | Memory types to search (repeatable; server default: observation only)                |
-| `--query-timestamp <seconds>`         | number  | no       | Query time as a Unix timestamp in seconds, used during query rewrite (default: now)  |
-| `--project-id <id>`                   | array   | no       | Memory fragment rule ID (repeatable for messages/search; custom content accepts one) |
-| `--plan-version <pro\|lite>`          | string  | no       | Strategy version: pro (rerank on) or lite (rerank off); billed differently           |
-| `--library-id <id>`                   | string  | no       | Memory library ID (default: the account's default library)                           |
-| `--workspace-id <id>`                 | string  | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                      |
-| `--api-key <key>`                     | string  | no       | API key                                                                              |
-| `--base-url <url>`                    | string  | no       | API base URL                                                                         |
+| Flag                                  | Type   | Required | Description                                                                            |
+| ------------------------------------- | ------ | -------- | -------------------------------------------------------------------------------------- |
+| `--user-id <id>`                      | string | yes      | Memory entity ID that owns the memory (required)                                       |
+| `--query <text>`                      | string | no       | Search text; sent as a single user message                                             |
+| `--messages <json>`                   | string | no       | Messages JSON array for context-based search; overrides --query                        |
+| `--top-k <n>`                         | number | no       | Max results, 1-100 (default: 10)                                                       |
+| `--min-score <score>`                 | number | no       | Minimum similarity score, 0-1 (default: 0.3)                                           |
+| `--memory-types <observation\|skill>` | array  | no       | Memory types to search (repeatable; server default: observation only)                  |
+| `--memory-type <observation\|skill>`  | string | no       | Deprecated alias for --memory-types; cannot be combined with --memory-types            |
+| `--project-ids <id>`                  | array  | no       | Memory fragment rule ID (repeatable)                                                   |
+| `--project-id <id>`                   | array  | no       | Deprecated alias for --project-ids (repeatable); cannot be combined with --project-ids |
+| `--plan-version <pro\|lite>`          | string | no       | Strategy version: pro (rerank on) or lite (rerank off); billed differently             |
+| `--library-id <id>`                   | string | no       | Memory library ID (default: the account's default library)                             |
+| `--workspace-id <id>`                 | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                        |
+| `--api-key <key>`                     | string | no       | API key                                                                                |
+| `--base-url <url>`                    | string | no       | API base URL                                                                           |
 
 #### Notes
 
 - The memory API lives on a workspace-specific host, so --workspace-id is required; it can also come from BAILIAN_WORKSPACE_ID or the workspace_id config field.
-- --plan-version overrides --enable-rerank. With both omitted the plan is pro; --enable-rerank false alone selects lite. Plans are billed differently.
+- Use --plan-version pro or lite to select the search strategy. When omitted, the server defaults to pro. Plans are billed differently.
 - Without --memory-types the server searches observation memories only; pass --memory-types skill (or both types) to include skill memories.
 - Account-level rate limits: add 120 QPM, search 300 QPM, 3000 QPM across all memory APIs. On HTTP 429 back off and leave at least 1s between calls.
 
@@ -478,7 +468,7 @@ bl memory search --user-id user1 --query "reminders" --plan-version lite --min-s
 ```
 
 ```bash
-bl memory search --user-id user1 --query "meeting summary" --memory-types skill --project-id skill_project_xxx
+bl memory search --user-id user1 --query "meeting summary" --memory-types skill --project-ids skill_project_xxx
 ```
 
 ### `bl memory skill export`
@@ -528,9 +518,7 @@ bl memory skill export --node-id node_xxx --output json
 | Flag                         | Type   | Required | Description                                                              |
 | ---------------------------- | ------ | -------- | ------------------------------------------------------------------------ |
 | `--node-id <id>`             | string | yes      | Memory node ID (required)                                                |
-| `--user-id <id>`             | string | no       | Deprecated compatibility option; ignored, the node ID selects the memory |
 | `--content <text>`           | string | yes      | New content for the memory node, max 512 characters (required)           |
-| `--timestamp <seconds>`      | number | no       | Unix timestamp (seconds); omitted values preserve the existing timestamp |
 | `--meta-data <json>`         | string | no       | Custom metadata JSON object, merged incrementally: {"key":"value"}       |
 | `--skill-name <name>`        | string | no       | Skill name (skill memory; requires --skill-description and --skill-tags) |
 | `--skill-description <text>` | string | no       | Skill description (skill memory; requires --skill-name and --skill-tags) |
@@ -553,7 +541,7 @@ bl memory update --node-id node_xxx --content "updated memory content" --workspa
 ```
 
 ```bash
-bl memory update --node-id node_xxx --content "met at WAIC" --timestamp 1747278460 --meta-data '{"city":"Shanghai"}'
+bl memory update --node-id node_xxx --content "met at WAIC" --meta-data '{"city":"Shanghai"}'
 ```
 
 ```bash

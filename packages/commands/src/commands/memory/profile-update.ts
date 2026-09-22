@@ -72,6 +72,11 @@ function validateOperations(operations: ProfileSchemaAttributeOperation[]): void
     if (operation.op !== "add" && !operation.attribute_id) {
       throw new UsageError(`${position}.attribute_id is required when op is "${operation.op}"`);
     }
+    if ("immutable" in operation) {
+      throw new UsageError(
+        `${position}.immutable is internal and is not supported by the CLI. / immutable 为内部参数，CLI 不支持。`,
+      );
+    }
     assertAttributeFieldLengths(position, operation);
   });
 }

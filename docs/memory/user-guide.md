@@ -122,30 +122,30 @@ bl memory search --user-id demo_user --query '周末活动偏好' \
 bl memory search --user-id demo_user --query '如何整理会议记录' \
   --memory-types observation --memory-types skill --output json
 
-# 按既有规则检索；project-id 可重复
+# 按既有规则检索；project-ids 可重复
 bl memory search --user-id demo_user --query '周末活动' \
-  --project-id '<project-id>' --output json
+  --project-ids '<project-id>' --output json
 
 # 查看指定规则的第二页节点
 bl memory list --user-id demo_user --project-id '<project-id>' \
   --page 2 --page-size 20 --output json
 ```
 
+搜索推荐使用 `--project-ids`、`--memory-types`。保留 `--project-id`、`--memory-type` 作为 deprecated 别名；别名会归一化为请求中的 `project_ids`、`memory_types`。同组单复数参数不能同时传入。`add/list` 的 `--project-id` 仍是正常参数。
+
 `search --messages '<JSON数组>'` 支持结合对话上下文检索，并优先于 `--query`。不传 `--project-id` 的 `list` 只查默认规则，不会汇总其他 observation 或 skill 规则。
 
-检索的服务端默认值为 top_k=10、min_score=0.3；CLI 校验范围分别为 1–100 和 0–1。`--enable-judge true`、`--enable-rewrite true` 可请求意图判别和查询重写；`--query-timestamp` 是重写使用的秒级 Unix 时间戳。效果取决于服务端策略。
+检索的服务端默认值为 top_k=10、min_score=0.3；CLI 校验范围分别为 1–100 和 0–1。
 
-策略优先级如下，建议直接传 `--plan-version`，避免依赖兼容开关：
+通过 `--plan-version` 选择检索策略：
 
-| 参数组合                   | 策略                       |
-| -------------------------- | -------------------------- |
-| `--plan-version pro`       | pro，优先于 enable-rerank  |
-| `--plan-version lite`      | lite，优先于 enable-rerank |
-| 仅 `--enable-rerank true`  | pro                        |
-| 仅 `--enable-rerank false` | lite                       |
-| 两者都不传                 | pro                        |
+| 参数                  | 策略              |
+| --------------------- | ----------------- |
+| `--plan-version pro`  | pro，开启 rerank  |
+| `--plan-version lite` | lite，关闭 rerank |
+| 不传 `--plan-version` | 服务端默认 pro    |
 
-当前部分参数帮助仍将 enable-rerank 标为“默认 false”，不能据此推断省略参数会选择 lite；命令 notes 与历史服务端验证明确为 pro。不同策略计费不同，本文不提供价格承诺。
+不同策略计费不同，本文不提供价格承诺。
 
 ## 6. 更新和删除节点
 
@@ -155,7 +155,7 @@ bl memory update --node-id '<memory-node-id>' \
   --meta-data '{"source":"user_correction"}' --output json
 ```
 
-`--content` 全量替换节点内容；`--meta-data` 是 JSON 对象，按增量合并。`--timestamp` 使用秒级 Unix 时间戳，省略时保留原值。无需传 `--user-id`；更新和删除命令虽保留兼容参数，但不会将其发送给服务端。
+`--content` 全量替换节点内容；`--meta-data` 是 JSON 对象，按增量合并。CLI 不提供修改时间戳的参数，更新内容时保留原时间戳。更新和删除按节点 ID 定位，不接受 `--user-id`。
 
 先查看详情并预览删除请求，确认目标后执行：
 
@@ -180,6 +180,8 @@ bl memory profile create --name travel_profile \
 
 保存返回的 `profile_schema_id`。创建模板只定义属性，不会自动生成任何用户的画像。
 
+`efficient` 支持 lite / pro；`intelligent` 必须搭配 pro。传 `intelligent + lite` 会被服务端拒绝（2026-09-22 live 验证）。
+
 ### 根据模板抽取
 
 将下方占位符替换为刚创建的 Schema ID：
@@ -202,14 +204,10 @@ bl memory profile show --schema-id '<profile-schema-id>' --output json
 bl memory profile get --schema-id '<profile-schema-id>' \
   --user-id demo_user --output json
 
-# 值项详情：包含 item_id、status、value
-bl memory profile get --schema-id '<profile-schema-id>' \
-  --user-id demo_user --need-detail true --output json
-
 bl memory profile list --page 1 --page-size 20 --output json
 ```
 
-画像数据位于 `profile.attributes`。普通模式的多值可能合并为 value 字符串；详情模式使用 `value_items`。空属性可能省略 value 或返回空值项数组，不应假设所有字段必有值。`attribute_id` 定位模板属性，`item_id` 定位画像值项，二者不可互换。
+画像数据位于 `profile.attributes`，多值可能合并为 value 字符串。空属性可能省略 value，不应假设所有字段必有值。`attribute_id` 定位模板属性。CLI 当前不开放画像值项详情或单值项管理。
 
 ### 维护模板
 
@@ -250,7 +248,7 @@ bl memory add --user-id demo_user --project-id '<skill-project-id>' \
   --skill-tags office --skill-tags meeting --output json
 
 bl memory search --user-id demo_user --query '整理会议记录' \
-  --memory-types skill --project-id '<skill-project-id>' --output json
+  --memory-types skill --project-ids '<skill-project-id>' --output json
 ```
 
 用返回的节点 ID 导出：
@@ -271,17 +269,17 @@ bl memory skill export --node-id '<skill-node-id>' --output json > meeting-summa
 
 以下是当前 CLI 的本地校验，不应当作全部后端限制：
 
-| 参数                                | 约束                                        |
-| ----------------------------------- | ------------------------------------------- |
-| user-id / library-id                | 最长 64 / 32                                |
-| add/update 的 content               | 最长 512                                    |
-| add 的 messages                     | 最多 50 条                                  |
-| add 的 project-id                   | 内容直存最多 1 个，消息抽取最多 5 个        |
-| Schema name / 属性 name             | 最长 32                                     |
-| 属性 description / default_value    | 最长 128；default_value 可为 null           |
-| Schema description                  | 不固定为 128，服务端决定                    |
-| timestamp / query-timestamp / wait  | 非负数；时间戳单位为秒                      |
-| list/profile list 的 page/page-size | 至少 1；默认第 1 页、每页 10 条，不自动翻页 |
+| 参数                                | 约束                                                   |
+| ----------------------------------- | ------------------------------------------------------ |
+| user-id / library-id                | 最长 64 / 32                                           |
+| add/update 的 content               | 最长 512                                               |
+| add 的 messages                     | 最多 50 条                                             |
+| add 的 project-id                   | 内容直存最多 1 个，消息抽取最多 5 个                   |
+| Schema name / 属性 name             | 最长 32                                                |
+| 属性 description / default_value    | 最长 128；清空 default_value 传空字符串，不能仅传 null |
+| Schema description                  | 不固定为 128，服务端决定                               |
+| wait                                | 非负数，单位为秒                                       |
+| list/profile list 的 page/page-size | 至少 1；默认第 1 页、每页 10 条，不自动翻页            |
 
 长度校验按 JavaScript 字符串 length 计算，包含某些 emoji 时不等于视觉字符数。
 
@@ -296,6 +294,7 @@ bl memory add --user-id demo_user \
 ```
 
 `--messages`、`--attributes`、`--attributes-operations` 接收 JSON 数组；`--meta-data` 接收 JSON 对象。当前实现直接解析参数文本，不提供这些参数的 `@file` 读取语法。
+
 
 ## 10. 常见问题
 

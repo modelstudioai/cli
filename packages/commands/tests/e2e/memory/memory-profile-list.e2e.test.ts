@@ -1,3 +1,4 @@
+import { assertMemoryServiceRejection } from "./live-helpers.ts";
 import { describe, expect, test } from "vite-plus/test";
 import { isMemoryE2EReady, parseStdoutJson, runCommandE2e, runCommandHelp } from "../helpers.ts";
 import { MEMORY_PROFILE_LIST_ROUTES } from "../topic-routes.ts";
@@ -132,15 +133,17 @@ describe.skipIf(!isMemoryE2EReady())("e2e: memory profile list (live)", () => {
   });
 
   test("--library-id 不存在时服务端拒绝（非 0 退出）", async () => {
-    const { exitCode } = await runCommandE2e(MEMORY_PROFILE_LIST_ROUTES, [
+    const { exitCode, stderr } = await runCommandE2e(MEMORY_PROFILE_LIST_ROUTES, [
       "memory",
       "profile",
       "list",
       "--library-id",
       "no-such-library-000000000000000",
+      "--workspace-id",
+      process.env.BAILIAN_WORKSPACE_ID!,
       "--output",
       "json",
     ]);
-    expect(exitCode).not.toBe(0);
+    assertMemoryServiceRejection({ exitCode, stderr });
   });
 });

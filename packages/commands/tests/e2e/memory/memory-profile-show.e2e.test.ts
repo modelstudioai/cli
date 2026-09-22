@@ -1,3 +1,4 @@
+import { assertMemoryServiceRejection } from "./live-helpers.ts";
 import { describe, expect, test } from "vite-plus/test";
 import { isMemoryE2EReady, parseStdoutJson, runCommandE2e, runCommandHelp } from "../helpers.ts";
 import { MEMORY_PROFILE_SHOW_ROUTES } from "../topic-routes.ts";
@@ -100,7 +101,7 @@ describe("e2e: memory profile show", () => {
 
 describe.skipIf(!isMemoryE2EReady())("e2e: memory profile show (live)", () => {
   test("不存在的 schema 被服务端拒绝（非 0 退出）", async () => {
-    const { exitCode } = await runCommandE2e(MEMORY_PROFILE_SHOW_ROUTES, [
+    const { exitCode, stderr } = await runCommandE2e(MEMORY_PROFILE_SHOW_ROUTES, [
       "memory",
       "profile",
       "show",
@@ -110,6 +111,6 @@ describe.skipIf(!isMemoryE2EReady())("e2e: memory profile show (live)", () => {
       "--output",
       "json",
     ]);
-    expect(exitCode).not.toBe(0);
+    assertMemoryServiceRejection({ exitCode, stderr });
   });
 });

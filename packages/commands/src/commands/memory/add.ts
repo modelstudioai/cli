@@ -85,14 +85,7 @@ const ADD_FLAGS = {
       "zh-CN": '用户自定义信息 JSON 对象：{"location_name":"北京"}',
     },
   },
-  timestamp: {
-    type: "number",
-    valueHint: "<seconds>",
-    description: {
-      "en-US": "Unix timestamp (seconds) of when the remembered event happened",
-      "zh-CN": "记忆片段对应事件发生时的秒级 Unix 时间戳",
-    },
-  },
+
   wait: {
     type: "number",
     valueHint: "<seconds>",
@@ -255,8 +248,6 @@ export default defineCommand({
       return `--content must be at most ${MAX_CUSTOM_CONTENT_LENGTH} characters.`;
     const skillError = checkSkillMetadataFlags(flags);
     if (skillError) return skillError;
-    if (flags.timestamp !== undefined && flags.timestamp < 0)
-      return "--timestamp must be a non-negative Unix timestamp in seconds.";
     if (flags.wait !== undefined && flags.wait < 0)
       return "--wait must be a non-negative number of seconds.";
     return undefined;
@@ -292,7 +283,6 @@ export default defineCommand({
       body.skill_description = flags.skillDescription;
       body.skill_tags = flags.skillTags;
     }
-    if (flags.timestamp !== undefined) body.timestamp = flags.timestamp;
     if (flags.libraryId) body.memory_library_id = flags.libraryId;
 
     const format = detectOutputFormat(settings.output);

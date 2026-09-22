@@ -1,3 +1,4 @@
+import { assertMemoryServiceRejection } from "./live-helpers.ts";
 import { describe, expect, test } from "vite-plus/test";
 import { isMemoryE2EReady, parseStdoutJson, runCommandE2e, runCommandHelp } from "../helpers.ts";
 import { MEMORY_PROFILE_GET_ROUTES } from "../topic-routes.ts";
@@ -19,7 +20,7 @@ describe("e2e: memory profile get", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--schema-id/i);
     expect(stderr).toMatch(/--user-id/i);
-    expect(stderr).toMatch(/--need-detail/i);
+    expect(stderr).not.toMatch(/--need-detail/i);
     expect(stderr).toMatch(/--library-id/i);
     expect(stderr).toMatch(/--workspace-id/i);
   });
@@ -108,26 +109,7 @@ describe("e2e: memory profile get", () => {
     expect(endpoint).toMatch(/memory_library_id=lib_test/);
   });
 
-  test("--dry-run 断言 --need-detail 进 query string，不传时不出现", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_PROFILE_GET_ROUTES, [
-      "memory",
-      "profile",
-      "get",
-      "--schema-id",
-      "schema_test",
-      "--user-id",
-      "user1",
-      "--need-detail",
-      "true",
-      ...TEST_WORKSPACE_ARGS,
-      "--dry-run",
-      "--output",
-      "json",
-    ]);
-    expect(exitCode, stderr).toBe(0);
-    const endpoint = parseStdoutJson<MemoryDryRunBody>(stdout).endpoint ?? "";
-    expect(endpoint).toMatch(/need_detail=true/);
-
+  test("--dry-run 不发送 need_detail", async () => {
     const plainRes = await runCommandE2e(MEMORY_PROFILE_GET_ROUTES, [
       "memory",
       "profile",
@@ -146,8 +128,8 @@ describe("e2e: memory profile get", () => {
     expect(plainEndpoint).not.toMatch(/need_detail/);
   });
 
-  test("--need-detail 非 true/false 报 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(MEMORY_PROFILE_GET_ROUTES, [
+  test.each(["true", "false"])("拒绝暂未对客参数 --need-detail %s", async (value) => {
+    const { exitCode, stderr } = await runCommandE2e(MEMORY_PROFILE_GET_ROUTES, [
       "memory",
       "profile",
       "get",
@@ -156,17 +138,20 @@ describe("e2e: memory profile get", () => {
       "--user-id",
       "user1",
       "--need-detail",
-      "yes",
+      value,
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",
+      "--output",
+      "json",
     ]);
     expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/Unknown flag.*--need-detail/i);
   });
 });
 
 describe.skipIf(!isMemoryE2EReady())("e2e: memory profile get (live)", () => {
   test("不存在的 schema 被服务端拒绝（非 0 退出）", async () => {
-    const { exitCode } = await runCommandE2e(MEMORY_PROFILE_GET_ROUTES, [
+    const { exitCode, stderr } = await runCommandE2e(MEMORY_PROFILE_GET_ROUTES, [
       "memory",
       "profile",
       "get",
@@ -178,6 +163,6 @@ describe.skipIf(!isMemoryE2EReady())("e2e: memory profile get (live)", () => {
       "--output",
       "json",
     ]);
-    expect(exitCode).not.toBe(0);
+    assertMemoryServiceRejection({ exitCode, stderr });
   });
 });

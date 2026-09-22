@@ -33,7 +33,7 @@ describe("e2e: memory add", () => {
     expect(stderr).toMatch(/--skill-name/i);
     expect(stderr).toMatch(/--skill-description/i);
     expect(stderr).toMatch(/--skill-tags/i);
-    expect(stderr).toMatch(/--timestamp/i);
+    expect(stderr).not.toMatch(/--timestamp/i);
     expect(stderr).toMatch(/--wait/i);
     expect(stderr).toMatch(/--library-id/i);
     expect(stderr).toMatch(/--workspace-id/i);
@@ -202,7 +202,7 @@ describe("e2e: memory add", () => {
     expect(data.request?.messages).toBeUndefined();
     expect(data.request?.meta_data).toBeUndefined();
     expect(data.request?.skill_name).toBeUndefined();
-    expect(data.request?.timestamp).toBeUndefined();
+    expect(data.request).not.toHaveProperty("timestamp");
   });
 
   test("--dry-run + --messages 断言 messages 原样进 body", async () => {
@@ -279,7 +279,7 @@ describe("e2e: memory add", () => {
     expect(data.request?.project_ids).toEqual(["proj_a", "proj_b"]);
   });
 
-  test("--dry-run 断言 skill 三件套与 --timestamp 映射", async () => {
+  test("--dry-run 断言 skill 三件套映射", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_ADD_ROUTES, [
       "memory",
       "add",
@@ -295,8 +295,6 @@ describe("e2e: memory add", () => {
       "办公",
       "--skill-tags",
       "总结",
-      "--timestamp",
-      "1747278460",
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",
       "--output",
@@ -307,7 +305,7 @@ describe("e2e: memory add", () => {
     expect(data.request?.skill_name).toBe("会议纪要整理");
     expect(data.request?.skill_description).toBe("提取会议重点并生成摘要");
     expect(data.request?.skill_tags).toEqual(["办公", "总结"]);
-    expect(data.request?.timestamp).toBe(1747278460);
+    expect(data.request).not.toHaveProperty("timestamp");
   });
 
   test("skill 三件套只传部分报 USAGE (2)", async () => {
@@ -343,22 +341,24 @@ describe("e2e: memory add", () => {
     expect(exitCode).toBe(2);
   });
 
-  test("--timestamp 负数报 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(MEMORY_ADD_ROUTES, [
+  test("内部参数 --timestamp 不对 CLI 开放", async () => {
+    const { exitCode, stderr } = await runCommandE2e(MEMORY_ADD_ROUTES, [
       "memory",
       "add",
       "--user-id",
-      memoryUserId(),
+      "user1",
       "--content",
-      "timestamp 负数",
+      "memory",
       "--timestamp",
-      "-1",
+      "1747278460",
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",
+      "--output",
+      "json",
     ]);
     expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/Unknown flag.*--timestamp/i);
   });
-
   test("--messages role 非法报 USAGE (2)", async () => {
     const { stderr, exitCode } = await runCommandE2e(MEMORY_ADD_ROUTES, [
       "memory",
@@ -452,7 +452,7 @@ describe("e2e: memory add", () => {
 // memory-delete.e2e.test.ts.
 
 describe.skipIf(!isMemorySkillE2EReady())("e2e: memory add (live skill)", () => {
-  test("skill 抽取闭环：add(skill 三件套) → search --memory-types skill → delete", async () => {
+  test("skill 闭环：add → export → update → export → search → delete → list", async () => {
     const userId = `cli-skill-${Date.now()}`;
     const marker = `vp-skill-${Date.now()}`;
 
@@ -508,6 +508,46 @@ describe.skipIf(!isMemorySkillE2EReady())("e2e: memory add (live skill)", () => 
       expect(exported.memory_node.content).not.toMatch(/^---/);
       expect(exported.memory_node.skill_name).toBe(`测试技能 ${marker}`);
       expect(exported.memory_node.skill_tags).toEqual(["e2e-test"]);
+      const updateRes = await runCommandE2e(MEMORY_DELETE_ROUTES, [
+        "memory",
+        "update",
+        ...memoryScopeCliArgs(),
+        "--node-id",
+        skillNodeId,
+        "--content",
+        `${marker} 更新后的会议纪要流程`,
+        "--skill-name",
+        `更新技能 ${marker}`,
+        "--skill-description",
+        "更新后的摘要说明",
+        "--skill-tags",
+        "updated",
+        "--skill-tags",
+        "summary",
+        "--output",
+        "json",
+      ]);
+      expect(updateRes.exitCode, updateRes.stderr).toBe(0);
+      const updatedExport = await runCommandE2e(MEMORY_DELETE_ROUTES, [
+        "memory",
+        "skill",
+        "export",
+        "--workspace-id",
+        process.env.BAILIAN_WORKSPACE_ID!,
+        "--node-id",
+        skillNodeId,
+        "--output",
+        "json",
+      ]);
+      expect(updatedExport.exitCode, updatedExport.stderr).toBe(0);
+      expect(
+        parseStdoutJson<{ memory_node: unknown }>(updatedExport.stdout).memory_node,
+      ).toMatchObject({
+        content: `${marker} 更新后的会议纪要流程`,
+        skill_name: `更新技能 ${marker}`,
+        skill_description: "更新后的摘要说明",
+        skill_tags: ["updated", "summary"],
+      });
       const searchRes = await runCommandE2e(MEMORY_DELETE_ROUTES, [
         "memory",
         "search",
@@ -540,13 +580,26 @@ describe.skipIf(!isMemorySkillE2EReady())("e2e: memory add (live skill)", () => 
         ...memoryScopeCliArgs(),
         "--node-id",
         skillNodeId,
-        "--user-id",
-        userId,
         "--yes",
         "--output",
         "json",
       ]);
       expect(cleanup.exitCode, cleanup.stderr).toBe(0);
+      const afterDelete = await runCommandE2e(MEMORY_DELETE_ROUTES, [
+        "memory",
+        "list",
+        ...memoryScopeCliArgs(),
+        "--user-id",
+        userId,
+        "--project-id",
+        memorySkillProjectId(),
+        "--output",
+        "json",
+      ]);
+      expect(afterDelete.exitCode, afterDelete.stderr).toBe(0);
+      const remaining = parseStdoutJson<MemoryNodeListBody>(afterDelete.stdout);
+      expect(remaining.memory_nodes, afterDelete.stdout).toEqual([]);
+      expect(remaining.total, afterDelete.stdout).toBe(0);
     }
   }, 240_000);
 });

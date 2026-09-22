@@ -3,13 +3,12 @@ import { isMemoryE2EReady, parseStdoutJson, runCommandE2e } from "../helpers.ts"
 import {
   MEMORY_ADD_ROUTES,
   MEMORY_PROFILE_DELETE_ROUTES,
-  MEMORY_LIST_ROUTES,
   MEMORY_UPDATE_ROUTES,
   MEMORY_DELETE_ROUTES,
   MEMORY_PROFILE_CREATE_ROUTES,
   MEMORY_PROFILE_UPDATE_ROUTES,
 } from "../topic-routes.ts";
-import { memoryScopeCliArgs, TEST_WORKSPACE_ARGS } from "./shared.ts";
+import { memoryScopeCliArgs, TEST_WORKSPACE_ARGS, type UserProfileBody } from "./shared.ts";
 
 const DRY = [...TEST_WORKSPACE_ARGS, "--dry-run", "--output", "json"];
 
@@ -110,7 +109,7 @@ describe("memory 0921 verified contract", () => {
     expect(result.stderr).toMatch(/profile-schema|messages|content/);
   });
 
-  test("update omits user_id and timestamp unless a timestamp is supplied", async () => {
+  test("update omits user_id and internal timestamp", async () => {
     const result = await runCommandE2e(MEMORY_UPDATE_ROUTES, [
       "memory",
       "update",
@@ -187,117 +186,133 @@ describe("memory 0921 verified contract", () => {
   });
 });
 
-describe.skipIf(!isMemoryE2EReady())("memory 0921 profile_only (live)", () => {
-  test("schema scene and profile-only extraction form a self-cleaning CLI journey", async () => {
-    const routes = { ...MEMORY_PROFILE_DELETE_ROUTES, ...MEMORY_ADD_ROUTES, ...MEMORY_LIST_ROUTES };
-    const userId = `cli-profile-only-${Date.now()}`;
-    const scope = memoryScopeCliArgs();
-    const created = await runCommandE2e(routes, [
-      "memory",
-      "profile",
-      "create",
-      ...scope,
-      "--name",
-      userId.slice(-25),
-      "--attributes",
-      '[{"name":"爱好","description":"用户喜欢的运动"}]',
-      "--extract-scene",
-      "efficient",
-      "--plan-version",
-      "lite",
-      "--output",
-      "json",
-    ]);
-    expect(created.exitCode, created.stderr).toBe(0);
-    const schemaId = parseStdoutJson<{ profile_schema_id: string }>(
-      created.stdout,
-    ).profile_schema_id;
-    expect(schemaId).toBeTruthy();
-    try {
-      const updated = await runCommandE2e(routes, [
-        "memory",
+// Every supported extraction mode × scene × tier gets its own isolated readback journey.
+const extractionCases = ["profile_only", "combined"].flatMap((mode) =>
+  ["efficient", "intelligent"].flatMap((scene) =>
+    ["lite", "pro"].map((tier) => ({ mode, scene, tier })),
+  ),
+);
+
+describe.skipIf(!isMemoryE2EReady())("memory profile extraction matrix (live)", () => {
+  test.each(extractionCases)(
+    "$mode / $scene / $tier checks compatibility and profile readback",
+    async ({ mode, scene, tier }) => {
+      const routes = { ...MEMORY_PROFILE_DELETE_ROUTES, ...MEMORY_DELETE_ROUTES };
+      const userId = `profile-${mode}-${scene}-${tier}-${Date.now()}`;
+      const scope = memoryScopeCliArgs();
+      async function invoke<T>(args: string[]): Promise<T> {
+        const result = await runCommandE2e(routes, [
+          "memory",
+          ...args,
+          ...scope,
+          "--output",
+          "json",
+        ]);
+        expect(result.exitCode, result.stderr).toBe(0);
+        return parseStdoutJson<T>(result.stdout);
+      }
+      const createArgs = [
         "profile",
-        "update",
-        ...scope,
-        "--schema-id",
-        schemaId,
+        "create",
+        "--name",
+        userId.slice(-32),
+        "--attributes",
+        '[{"name":"爱好","description":"用户最喜欢的运动"}]',
         "--extract-scene",
-        "efficient",
-        "--output",
-        "json",
-      ]);
-      expect(updated.exitCode, updated.stderr).toBe(0);
-      const added = await runCommandE2e(routes, [
-        "memory",
-        "add",
-        ...scope,
-        "--user-id",
-        userId,
-        "--messages",
-        '[{"role":"user","content":"我最喜欢的运动是游泳。"}]',
-        "--profile-schema",
-        schemaId,
-        "--extract-mode",
-        "profile_only",
-        "--output",
-        "json",
-      ]);
-      expect(added.exitCode, added.stderr).toBe(0);
-      const result = parseStdoutJson<{
-        events: Array<{
-          resource_type: string;
-          status: string;
-          result: Array<{ memory_type: string; name: string }>;
-        }>;
-      }>(added.stdout);
-      expect(result.events).toHaveLength(1);
-      expect(result.events[0]).toMatchObject({
-        resource_type: "user_profile",
-        status: "SUCCEEDED",
-      });
-      expect(result.events[0].result).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ memory_type: "user_profile", name: "爱好" }),
-        ]),
-      );
-      const profile = await runCommandE2e(routes, [
-        "memory",
-        "profile",
-        "get",
-        ...scope,
-        "--schema-id",
-        schemaId,
-        "--user-id",
-        userId,
-        "--output",
-        "json",
-      ]);
-      expect(profile.exitCode, profile.stderr).toBe(0);
-      expect(profile.stdout).toContain("游泳");
-      const listed = await runCommandE2e(routes, [
-        "memory",
-        "list",
-        ...scope,
-        "--user-id",
-        userId,
-        "--output",
-        "json",
-      ]);
-      expect(listed.exitCode, listed.stderr).toBe(0);
-      expect(parseStdoutJson<{ total: number }>(listed.stdout).total).toBe(0);
-    } finally {
-      const deleted = await runCommandE2e(routes, [
-        "memory",
-        "profile",
-        "delete",
-        ...scope,
-        "--schema-id",
-        schemaId,
-        "--yes",
-        "--output",
-        "json",
-      ]);
-      expect(deleted.exitCode, deleted.stderr).toBe(0);
-    }
-  }, 240_000);
+        scene,
+        "--plan-version",
+        tier,
+      ];
+      if (scene === "intelligent" && tier === "lite") {
+        const rejected = await runCommandE2e(routes, [
+          "memory",
+          ...createArgs,
+          ...scope,
+          "--output",
+          "json",
+        ]);
+        if (rejected.exitCode === 0) {
+          const unexpected = parseStdoutJson<{ profile_schema_id: string }>(rejected.stdout);
+          await invoke(["profile", "delete", "--schema-id", unexpected.profile_schema_id, "--yes"]);
+        }
+        expect(rejected.exitCode, rejected.stderr).toBe(1);
+        const { error } = parseStdoutJson<{
+          error: { http_status: number; api_code: string; message: string; request_id: string };
+        }>(rejected.stderr);
+        expect(error.http_status).toBe(400);
+        expect(error.api_code).toBe("InvalidParameter");
+        expect(error.request_id).toBeTruthy();
+        expect(error.message).toContain("lite is not compatible with extract scene intelligent");
+        return;
+      }
+      const created = await invoke<{ profile_schema_id: string }>(createArgs);
+      const schemaId = created.profile_schema_id;
+      expect(schemaId).toBeTruthy();
+      try {
+        const schema = await invoke<{ extract_scene: string; plan_version: string }>([
+          "profile",
+          "show",
+          "--schema-id",
+          schemaId,
+        ]);
+        expect(schema).toMatchObject({ extract_scene: scene, plan_version: tier });
+        const added = await invoke<{ events: Array<{ resource_type: string; status: string }> }>([
+          "add",
+          "--user-id",
+          userId,
+          "--messages",
+          '[{"role":"user","content":"我最喜欢的运动是游泳。"}]',
+          "--profile-schema",
+          schemaId,
+          ...(mode === "profile_only" ? ["--extract-mode", "profile_only"] : []),
+        ]);
+        const profileEvent = added.events.find((event) => event.resource_type === "user_profile");
+        expect(profileEvent).toBeDefined();
+        expect(profileEvent?.status).toMatch(/^(SUCCEEDED|SUCCESS)$/);
+        if (mode === "profile_only") expect(added.events).toHaveLength(1);
+        const profile = await invoke<UserProfileBody>([
+          "profile",
+          "get",
+          "--schema-id",
+          schemaId,
+          "--user-id",
+          userId,
+        ]);
+        expect(
+          profile.profile?.attributes?.find((attribute) => attribute.name === "爱好")?.value,
+        ).toContain("游泳");
+        const listed = await invoke<{ total: number; memory_nodes: Array<{ content: string }> }>([
+          "list",
+          "--user-id",
+          userId,
+        ]);
+        if (mode === "profile_only") {
+          expect(listed.total).toBe(0);
+          expect(listed.memory_nodes).toEqual([]);
+        } else {
+          expect(listed.total).toBeGreaterThan(0);
+          expect(listed.memory_nodes.some((node) => node.content.includes("游泳"))).toBe(true);
+        }
+      } finally {
+        try {
+          // Read page 1 repeatedly while deleting, so pagination shifts cannot skip any fixture.
+          for (let round = 0; round < 100; round += 1) {
+            const listed = await invoke<{ memory_nodes: Array<{ memory_node_id: string }> }>([
+              "list",
+              "--user-id",
+              userId,
+            ]);
+            expect(Array.isArray(listed.memory_nodes)).toBe(true);
+            if (listed.memory_nodes.length === 0) break;
+            for (const node of listed.memory_nodes)
+              await invoke(["delete", "--node-id", node.memory_node_id, "--yes"]);
+            expect(round, "Memory fixture cleanup did not terminate.").toBeLessThan(99);
+          }
+        } finally {
+          await invoke(["profile", "delete", "--schema-id", schemaId, "--yes"]);
+        }
+      }
+    },
+    240_000,
+  );
 });

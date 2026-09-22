@@ -94,6 +94,11 @@ export default defineCommand({
     attributes.forEach((attribute, index) => {
       const position = `--attributes[${index}]`;
       if (!attribute.name) throw new UsageError(`${position}.name is required`);
+      if ("immutable" in attribute) {
+        throw new UsageError(
+          `${position}.immutable is internal and is not supported by the CLI. / immutable 为内部参数，CLI 不支持。`,
+        );
+      }
       assertAttributeFieldLengths(position, attribute);
     });
 
