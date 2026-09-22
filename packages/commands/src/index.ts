@@ -72,6 +72,8 @@ export { default as knowledgeCollectionCreate } from "./commands/knowledge/colle
 export { default as knowledgeCollectionGet } from "./commands/knowledge/collection-get.ts";
 export { default as knowledgeDocImportOss } from "./commands/knowledge/doc-import-oss.ts";
 export { default as mcpCall } from "./commands/mcp/call.ts";
+export { default as mcpConnect } from "./commands/mcp/connect.ts";
+export { default as mcpDisconnect } from "./commands/mcp/disconnect.ts";
 export { default as mcpList } from "./commands/mcp/list.ts";
 export { default as mcpTools } from "./commands/mcp/tools.ts";
 export { default as searchWeb } from "./commands/search/web.ts";
@@ -84,6 +86,8 @@ export { default as speechVocabularyUpdate } from "./commands/speech/vocabulary/
 export { default as speechVocabularyDelete } from "./commands/speech/vocabulary/delete.ts";
 export { default as fileUpload } from "./commands/file/upload.ts";
 export { default as consoleCall } from "./commands/console/call.ts";
+export { default as securityOverview } from "./commands/security/overview.ts";
+export { default as securityAlerts } from "./commands/security/alerts.ts";
 export { default as usageFree } from "./commands/usage/free.ts";
 export { default as usageFreetier } from "./commands/usage/freetier.ts";
 export { default as usageStats } from "./commands/usage/stats.ts";
@@ -94,12 +98,47 @@ export { default as pipelineRun } from "./commands/pipeline/run.ts";
 export { default as pipelineValidate } from "./commands/pipeline/validate.ts";
 export { default as advisorRecommend } from "./commands/advisor/recommend.ts";
 export { default as modelList } from "./commands/model/list.ts";
+export { default as modelSearch } from "./commands/model/search.ts";
+export { default as modelCode } from "./commands/model/code.ts";
 export { default as workspaceList } from "./commands/workspace/list.ts";
 export { default as quotaList } from "./commands/quota/list.ts";
 export { default as quotaUpdate } from "./commands/quota/update.ts";
 export { default as quotaDelete } from "./commands/quota/delete.ts";
 export { default as quotaHistory } from "./commands/quota/history.ts";
 export { default as quotaCheck } from "./commands/quota/check.ts";
+export { default as monitorOverview } from "./commands/monitor/overview.ts";
+export { default as monitorModels } from "./commands/monitor/models.ts";
+export { default as monitorMetrics } from "./commands/monitor/metrics.ts";
+export { default as monitorErrors } from "./commands/monitor/errors.ts";
+export { default as monitorDeliveryStatus } from "./commands/monitor/delivery-status.ts";
+export { default as monitorDeliveryEnable } from "./commands/monitor/delivery-enable.ts";
+export { default as monitorDeliveryDisable } from "./commands/monitor/delivery-disable.ts";
+export { default as logStatus } from "./commands/log/status.ts";
+export { default as logAuditList } from "./commands/log/audit-list.ts";
+export { default as logAuditGet } from "./commands/log/audit-get.ts";
+export { default as logAuditCount } from "./commands/log/audit-count.ts";
+export { default as logAuditEnable } from "./commands/log/audit-enable.ts";
+export { default as logAuditDisable } from "./commands/log/audit-disable.ts";
+export { default as logInferenceList } from "./commands/log/inference-list.ts";
+export { default as logInferenceGet } from "./commands/log/inference-get.ts";
+export { default as logInferenceCount } from "./commands/log/inference-count.ts";
+export { default as logInferenceEnable } from "./commands/log/inference-enable.ts";
+export { default as logInferenceDisable } from "./commands/log/inference-disable.ts";
+export { default as logTraceList } from "./commands/log/trace-list.ts";
+export { default as logTraceGet } from "./commands/log/trace-get.ts";
+export { default as logTraceStats } from "./commands/log/trace-stats.ts";
+export { default as alertMetrics } from "./commands/alert/metrics.ts";
+export { default as alertTemplateList } from "./commands/alert/template-list.ts";
+export { default as alertTemplateCreate } from "./commands/alert/template-create.ts";
+export { default as alertTemplateUpdate } from "./commands/alert/template-update.ts";
+export { default as alertTemplateDelete } from "./commands/alert/template-delete.ts";
+export { default as alertList } from "./commands/alert/list.ts";
+export { default as alertCreate } from "./commands/alert/create.ts";
+export { default as alertUpdate } from "./commands/alert/update.ts";
+export { default as alertDelete } from "./commands/alert/delete.ts";
+export { default as alertEnable } from "./commands/alert/enable.ts";
+export { default as alertDisable } from "./commands/alert/disable.ts";
+export { default as alertHistory } from "./commands/alert/history.ts";
 export { default as permissionList } from "./commands/permission/list.ts";
 export { default as permissionGrant } from "./commands/permission/grant.ts";
 export { default as permissionRevoke } from "./commands/permission/revoke.ts";
@@ -141,6 +180,7 @@ export { default as tokenPlanListSeats } from "./commands/token-plan/list-seats.
 export { default as tokenPlanCreateKey } from "./commands/token-plan/create-key.ts";
 export { default as tokenPlanAssignSeats } from "./commands/token-plan/assign-seats.ts";
 export { default as tokenPlanAddMember } from "./commands/token-plan/add-member.ts";
+export { default as tokenPlanHarnessQuota } from "./commands/token-plan/harness-quota.ts";
 export { default as managedAgentInit } from "./commands/managed-agent/init.ts";
 export { default as managedAgentValidate } from "./commands/managed-agent/validate.ts";
 export { default as managedAgentPlan } from "./commands/managed-agent/plan.ts";
@@ -232,3 +272,22 @@ export { default as skillUpdate } from "./commands/skill/update.ts";
 export { default as skillRemove } from "./commands/skill/remove.ts";
 export { default as skillList } from "./commands/skill/list.ts";
 export { default as skillInit } from "./commands/skill/init.ts";
+export { sandboxOfficialImages } from "./commands/sandbox/images.ts";
+export { sandboxFileUpload } from "./commands/sandbox/file.ts";
+export {
+  sandboxConnect,
+  sandboxCreate,
+  sandboxDelete,
+  sandboxGet,
+  sandboxList,
+  sandboxPause,
+  sandboxResume,
+} from "./commands/sandbox/instance.ts";
+export {
+  sandboxTemplateBuildStatus,
+  sandboxTemplateCreate,
+  sandboxTemplateDelete,
+  sandboxTemplateGet,
+  sandboxTemplateList,
+  sandboxTemplateUpdate,
+} from "./commands/sandbox/template.ts";

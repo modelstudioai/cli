@@ -9,6 +9,7 @@ import {
   getUpdateInstallMethod,
   isCompiledBinary,
   binaryAssetFileName,
+  binaryTarFileName,
   binaryInnerFileName,
   writeInstallMethodSync,
 } from "../src/install/index.ts";
@@ -101,6 +102,12 @@ test("getUpdateInstallMethod forces npm for non-bailian products even with binar
 test("binaryAssetFileName uses per-platform zip", () => {
   expect(binaryAssetFileName("1.2.3", "windows", "x64", true)).toBe("bl-1.2.3-windows-x64.zip");
   expect(binaryAssetFileName("1.2.3", "darwin", "arm64", false)).toBe("bl-1.2.3-darwin-arm64.zip");
+});
+
+test("binaryTarFileName is unix-only", () => {
+  expect(binaryTarFileName("1.2.3", "darwin", "arm64")).toBe("bl-1.2.3-darwin-arm64.tar.gz");
+  expect(binaryTarFileName("1.2.3", "linux", "x64")).toBe("bl-1.2.3-linux-x64.tar.gz");
+  expect(binaryTarFileName("1.2.3", "windows", "x64")).toBeUndefined();
 });
 
 test("binaryInnerFileName keeps exe suffix inside zip", () => {

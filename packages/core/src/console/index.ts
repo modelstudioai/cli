@@ -16,7 +16,11 @@ export type {
   ModelGroupItem,
   ModelGroupParams,
   ModelGroupResult,
+  ModelOfflineInfo,
+  ModelOfflineNotice,
   ModelPriceInfo,
+  ModelSampleCodeV2,
+  ModelSampleSnippet,
   PredictConfigEntry,
 } from "./models.ts";
 export {
@@ -24,6 +28,8 @@ export {
   fetchModelListAll,
   findModelByName,
   fetchModelGroups,
+  fetchModelGroupsAll,
+  flattenModelGroups,
   fetchModelDetail,
   fetchPredictConfig,
   unwrapResponse,

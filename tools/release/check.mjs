@@ -69,12 +69,14 @@ export async function runCheck(options = {}) {
           "skills/bailian-gen/SKILL.md",
           "skills/bailian-finetune/SKILL.md",
           "skills/bailian-managed-agent/SKILL.md",
+          "skills/bailian-sandbox/SKILL.md",
           "skills/bailian-web-search/SKILL.md",
         ]),
     "skills/bailian-cli/reference/",
     "skills/bailian-gen/reference/",
     "skills/bailian-finetune/reference/",
     "skills/bailian-managed-agent/reference/",
+    "skills/bailian-sandbox/reference/",
   ]);
 
   step("build bailian-cli");

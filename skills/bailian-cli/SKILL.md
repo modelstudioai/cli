@@ -1,7 +1,7 @@
 ---
 name: bailian-cli
 metadata:
-  version: "1.23.0"
+  version: "2.0.0"
   requires:
     bins: ["bl"]
 description: >-
@@ -12,7 +12,8 @@ description: >-
   用户点名百炼 / DashScope / `bl`，或继续既有 `bl` 工作流时直接使用。
   共享协议（consent / 版本预检 / 鉴权 / 错误上报）在 bailian-protocol；官方安装 `bl skill init`。
   家族路由：生图/生视频/配音/语音合成/转写 → bailian-gen；精调/微调/训练/数据集 → bailian-finetune；
-  agents.yaml 托管 Agent → bailian-managed-agent；联网搜索的模型路由（Token Plan 自带搜索 vs MCP 搜索 + 兜底）→ bailian-web-search。
+  agents.yaml 托管 Agent → bailian-managed-agent；Sandbox 实例与模版 → bailian-sandbox；
+  联网搜索的模型路由（Token Plan 自带搜索 vs MCP 搜索 + 兜底）→ bailian-web-search。
   不要用于普通问答、编程、写作、翻译、摘要、泛搜索，或图片理解等宿主自己能做的任务（普通问答、编程、写作、翻译、摘要、泛搜索不触发）。
   未命名用量/额度问题：先问用户使用哪个产品，再运行 `bl usage` / `bl quota` 查询。
 ---
@@ -23,7 +24,7 @@ description: >-
 
 > **Family hub** — This skill owns Bailian resource commands and the hub `reference/` (apps, knowledge, usage, auth, config, …).
 > Shared protocol → [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md) (install the full family with `bl skill init`).
-> Soft hand-offs by skill name (Read if installed; else `bl … --help` / prompt `bl skill init`): `bailian-gen` (media) · `bailian-finetune` (training) · `bailian-managed-agent` (agents.yaml IaC) · `bailian-web-search` (web search routing).
+> Soft hand-offs by skill name (Read if installed; else `bl … --help` / prompt `bl skill init`): `bailian-gen` (media) · `bailian-finetune` (training) · `bailian-managed-agent` (agents.yaml IaC) · `bailian-sandbox` (Sandbox lifecycle) · `bailian-web-search` (web search routing).
 > Do not invoke it for ordinary reasoning, coding, writing, translation, summarization, generic research, or image understanding the host agent can complete directly.
 >
 > **Install (supported):** `bl skill init`
@@ -40,6 +41,7 @@ Domain skills own their own generated reference trees (soft hand-off — do not 
 - `bailian-gen` → `image` / `video` / `speech` / `omni` / `vision` (fallback: `bl image\|video\|speech\|omni\|vision --help`)
 - `bailian-finetune` → `dataset` / `finetune` / `deploy` (fallback: `bl dataset\|finetune\|deploy --help`)
 - `bailian-managed-agent` → `managed-agent` (fallback: `bl managed-agent --help`)
+- `bailian-sandbox` → `sandbox` (fallback: `bl sandbox --help`)
 - `bailian-web-search` → web search **routing** (hub still owns `reference/search.md` flags; **must** route via this skill before `bl search web`)
 
 Auto-generated from the CLI source at build time (`pnpm --filter bailian-cli run generate:reference`). Before running an unfamiliar command:
@@ -54,32 +56,40 @@ Do not guess flags — use the reference files or `--help`.
 
 ## When to use which command
 
-Use this table only after the decision table in [`bailian-protocol`](../bailian-protocol/SKILL.md#provider-selection-and-consent) has routed the request to `bl` (class 4, or class 2 after the user picks Bailian). Hub-owned intents only — for media / fine-tune / agents.yaml, soft hand-off to the domain skill.
+Use this table only after the decision table in [`bailian-protocol`](../bailian-protocol/SKILL.md#provider-selection-and-consent) has routed the request to `bl` (class 4, or class 2 after the user picks Bailian). Hub-owned intents only — for media / fine-tune / agents.yaml / Sandbox, soft hand-off to the domain skill.
 
-| User intent                                      | Command                                       | Notes                                                                      |
-| ------------------------------------------------ | --------------------------------------------- | -------------------------------------------------------------------------- |
-| Explicit Bailian model chat / text execution     | `bl text chat`                                | Default `qwen3.8-max`                                                      |
-| Bailian agent / workflow                         | `bl app call`                                 | Needs `--app-id`                                                           |
-| Find app by name                                 | `bl app list` then `bl app call`              | Console auth                                                               |
-| Bailian app memory CRUD (not host-agent memory)  | `bl memory *`                                 | [`reference/memory.md`](reference/memory.md)                               |
-| Bailian knowledge base RAG                       | `bl knowledge search` / `chat`                | API key + agent/workspace IDs                                              |
-| Upload a file as a step of a Bailian workflow    | `bl file upload`                              | When you need `oss://` URL explicitly; not for generic hosting             |
-| Bailian model selection / recommendation         | `bl advisor recommend`                        | Intent → candidate recall → LLM ranking                                    |
-| Bailian model catalog / pricing / params         | `bl model list`                               | Console auth; `--model <family>` for detail, `--enrich` for input params   |
-| Install / list / update / remove registry skills | `bl skill add` / `list` / `update` / `remove` | Bailian skill registry; see [`reference/skill.md`](reference/skill.md)     |
-| Bailian MCP marketplace discovery / call         | `bl mcp list` / `tools` / `call`              | —                                                                          |
-| Bailian pipeline workflow (a step in a bl flow)  | `bl pipeline run` / `validate`                | JSON/YAML workflow definitions                                             |
-| Bailian rate limits / quota                      | `bl quota list` / `check` / `request`         | Console auth; class 2 — ask which product first if unnamed                 |
-| Bailian free tier / usage stats                  | `bl usage free` / `stats` / `freetier`        | Console auth; class 2 — ask which product first if unnamed                 |
-| Bailian Token Plan quota usage                   | `bl usage token-plan`                         | Console auth; class 2 — ask which product first if unnamed                 |
-| Bailian Coding Plan quota usage                  | `bl usage coding-plan`                        | Console auth; class 2 — ask which product first if unnamed                 |
-| Console API (advanced)                           | `bl console call`                             | Console auth                                                               |
-| Bailian workspace listing                        | `bl workspace list`                           | Console auth                                                               |
-| Switch CLI Help / Quick Start language           | `bl config set --key language --value zh-CN`  | Use `en-US` to switch back; follows the active config profile              |
-| Image / video / speech / omni / vision           | → skill `bailian-gen`                         | Fallback: `bl image\|video\|speech\|omni\|vision --help`                   |
-| Dataset / fine-tune / deploy                     | → skill `bailian-finetune`                    | Fallback: `bl dataset\|finetune\|deploy --help`                            |
-| agents.yaml IaC / managed-agent sessions         | → skill `bailian-managed-agent`               | Fallback: `bl managed-agent --help`; `apply`/`destroy` also require `plan` |
-| Web search (model-aware routing)                 | → skill `bailian-web-search`                  | Token Plan vs MCP path + fallback; fallback: `bl search web --help`        |
+| User intent                                         | Command                                                                                                        | Notes                                                                                                                              |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Explicit Bailian model chat / text execution        | `bl text chat`                                                                                                 | Default `qwen3.8-max`                                                                                                              |
+| Bailian agent / workflow                            | `bl app call`                                                                                                  | Needs `--app-id`                                                                                                                   |
+| Find app by name                                    | `bl app list` then `bl app call`                                                                               | Console auth                                                                                                                       |
+| Bailian app memory CRUD (not host-agent memory)     | `bl memory *`                                                                                                  | [`reference/memory.md`](reference/memory.md)                                                                                       |
+| Bailian knowledge base RAG                          | `bl knowledge search` / `chat`                                                                                 | API key + agent/workspace IDs                                                                                                      |
+| Upload a file as a step of a Bailian workflow       | `bl file upload`                                                                                               | When you need `oss://` URL explicitly; not for generic hosting                                                                     |
+| Bailian model selection / recommendation            | `bl advisor recommend`                                                                                         | Intent → candidate recall → LLM ranking                                                                                            |
+| Bailian model catalog / pricing / params            | `bl model list`                                                                                                | No auth (public catalog); `--model <family>` for detail, `--enrich` for input params                                               |
+| Find a model by keyword / modality                  | `bl model search`                                                                                              | Weighted ranking; `--input-modality` / `--output-modality`; offline models hidden by default                                       |
+| SDK sample code for calling a model                 | `bl model code`                                                                                                | `--sdk openai\|dashscope`, `--lang`; text output is the snippet alone, safe to redirect                                            |
+| Install / list / update / remove registry skills    | `bl skill add` / `list` / `update` / `remove`                                                                  | Bailian skill registry; see [`reference/skill.md`](reference/skill.md)                                                             |
+| Bailian MCP marketplace discovery / call            | `bl mcp list` / `tools` / `call`                                                                               | —                                                                                                                                  |
+| Register or remove a Bailian MCP in an Agent        | `bl mcp connect` / `disconnect`                                                                                | Codex, Claude Code, Cursor, Qoder, Qoder Work, QwenWork, Qwen Code, Gemini, OpenCode, OpenClaw, DeepSeek Harness, ZCode, WorkBuddy |
+| Bailian pipeline workflow (a step in a bl flow)     | `bl pipeline run` / `validate`                                                                                 | JSON/YAML workflow definitions                                                                                                     |
+| Bailian rate limits / quota                         | `bl quota list` / `check` / `request`                                                                          | Console auth; class 2 — ask which product first if unnamed                                                                         |
+| Bailian free tier / usage stats                     | `bl usage free` / `stats` / `freetier`                                                                         | Console auth; class 2 — ask which product first if unnamed                                                                         |
+| Bailian Token Plan quota usage                      | `bl usage token-plan`                                                                                          | Console auth; class 2 — ask which product first if unnamed                                                                         |
+| Token Plan harness entitlement quota                | `bl token-plan harness-quota`                                                                                  | Console auth; issued quota usage + still-issuing harnesses                                                                         |
+| Bailian Coding Plan quota usage                     | `bl usage coding-plan`                                                                                         | Console auth; class 2 — ask which product first if unnamed                                                                         |
+| Model monitoring (calls, latency, errors, delivery) | `bl monitor overview` / `models` / `metrics` / `errors` / `delivery *`                                         | Console auth; see [`reference/monitor.md`](reference/monitor.md)                                                                   |
+| Model call logs / traces                            | `bl log audit *` / `bl log inference *` / `bl log status` / `bl log trace *`                                   | Console auth; audit and inference logs have separate APIs and switches; see [`reference/log.md`](reference/log.md)                 |
+| Model alert rules / templates / history             | `bl alert list` / `create` / `update` / `delete` / `enable` / `disable` / `history` / `metrics` / `template *` | Console auth; contacts are managed in the CloudMonitor console; see [`reference/alert.md`](reference/alert.md)                     |
+| Console API (advanced)                              | `bl console call`                                                                                              | Console auth                                                                                                                       |
+| Bailian workspace listing                           | `bl workspace list`                                                                                            | Console auth                                                                                                                       |
+| Switch CLI Help / Quick Start language              | `bl config set --key language --value zh-CN`                                                                   | Use `en-US` to switch back; follows the active config profile                                                                      |
+| Image / video / speech / omni / vision              | → skill `bailian-gen`                                                                                          | Fallback: `bl image\|video\|speech\|omni\|vision --help`                                                                           |
+| Dataset / fine-tune / deploy                        | → skill `bailian-finetune`                                                                                     | Fallback: `bl dataset\|finetune\|deploy --help`                                                                                    |
+| agents.yaml IaC / managed-agent sessions            | → skill `bailian-managed-agent`                                                                                | Fallback: `bl managed-agent --help`; `apply`/`destroy` need `--yes` after `plan`                                                   |
+| Bailian Sandbox instance / template lifecycle       | → skill `bailian-sandbox`                                                                                      | Fallback: `bl sandbox --help`                                                                                                      |
+| Web search (model-aware routing)                    | → skill `bailian-web-search`                                                                                   | Token Plan vs MCP path + fallback; fallback: `bl search web --help`                                                                |
 
 Flags, usage, and examples: see hub [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags. Domain command details live in the owning skill's `reference/`.
 
@@ -126,4 +136,4 @@ schema-export commands.
 - For `risk: high` commands or `requires_confirmation`, follow the shared protocol; never add `--yes` automatically.
 - `bl managed-agent apply` / `destroy` have an additional domain rule: run `plan` first and show the diff before asking for confirmation.
 - When a matched `bl` command accepts a file URL, pass local paths directly; never require the user to host the file first.
-- Console login → always `--console-site domestic|international`; see [`../bailian-protocol/assets/setup.md`](../bailian-protocol/assets/setup.md#console-site-selection).
+- Console login → use `bl auth login --console` for China; add `--console-site international` for the international site. It may create an ordinary API Key. Token Plan and other subscription plans must use `bl auth login --api-key <key>`. See [`../bailian-protocol/assets/setup.md`](../bailian-protocol/assets/setup.md#authentication).

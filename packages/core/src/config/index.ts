@@ -28,5 +28,9 @@ export {
 } from "./loader.ts";
 export { makeConfigStore, type ConfigStore } from "./store.ts";
 export { ensureConfigDir, getConfigDir, getConfigPath, getCredentialsPath } from "./paths.ts";
-export { getModelProfilePreset } from "./profile-presets.ts";
+export {
+  getApiKeyLoginKind,
+  getModelProfilePreset,
+  type ApiKeyLoginKind,
+} from "./profile-presets.ts";
 export { normalizeModelBaseUrl } from "./model-base-url.ts";

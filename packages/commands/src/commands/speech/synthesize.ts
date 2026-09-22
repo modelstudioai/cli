@@ -26,6 +26,7 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 import { VOICE_TTS_PAGE } from "bailian-cli-runtime";
 
 const COSYVOICE_CLONE_DESIGN_DOC = `${DOCS_HOSTS.cn}/cosyvoice-clone-design-api`;
+const QWEN_AUDIO_TTS_VOICE_DOC = `${DOCS_HOSTS.cn}/qwen-audio-tts-voice-list`;
 
 interface VoiceEntry {
   voice: string;
@@ -33,6 +34,32 @@ interface VoiceEntry {
   desc: string;
   lang: string;
 }
+
+// qwen-audio-3.0-tts-plus system voices (official docs list only these two)
+const QWEN_AUDIO_30_TTS_PLUS_VOICES: VoiceEntry[] = [
+  { voice: "longanlingxin", name: "龙安灵心", desc: "知心温暖音", lang: "中文/英文" },
+  { voice: "longanlufeng", name: "龙安鲁风", desc: "明亮开朗音", lang: "中文/英文" },
+];
+
+// qwen-audio-3.0-tts-flash system voices
+const QWEN_AUDIO_30_TTS_FLASH_VOICES: VoiceEntry[] = [
+  // Social companion (premium Chinese)
+  { voice: "longanfengyue", name: "龙安风悦", desc: "自然亲切音", lang: "中文/英文" },
+  { voice: "longanyuanfei", name: "龙安元妃", desc: "高傲妃子音", lang: "中文/英文" },
+  { voice: "longanlingxi", name: "龙安灵希", desc: "可爱甜美音", lang: "中文/英文" },
+  { voice: "longanxiaoxin", name: "龙安小昕", desc: "亲切活泼音", lang: "中文/英文" },
+  { voice: "longanhuan_v3.6", name: "龙安欢", desc: "欢脱元气女", lang: "中文/英文" },
+  // Kids / toys (premium children)
+  { voice: "longjielidou_v3.6", name: "龙杰力豆", desc: "天真男童", lang: "中文/英文" },
+  { voice: "longpaopao_v3.6", name: "龙泡泡", desc: "软糯可爱音", lang: "中文/英文" },
+  // Character / game (premium Chinese)
+  { voice: "longhuohuo_v3.6", name: "龙火火", desc: "顽皮少年音", lang: "中文/英文" },
+  { voice: "longchuanshu_v3.6", name: "龙川叔", desc: "川普大叔音", lang: "中文/英文" },
+  // Social companion / assistant (premium English)
+  { voice: "loongmary", name: "loongmary", desc: "温暖英音", lang: "英文" },
+  { voice: "loongeva_v3.6", name: "loongeva", desc: "高智美音", lang: "英文" },
+  { voice: "loongjohn", name: "loongJohn", desc: "沉稳亲切美音", lang: "英文" },
+];
 
 // cosyvoice-v3-flash system voices
 const COSYVOICE_V3_FLASH_VOICES: VoiceEntry[] = [
@@ -111,6 +138,8 @@ const COSYVOICE_V3_FLASH_VOICES: VoiceEntry[] = [
 ];
 
 const MODEL_VOICES: Record<string, VoiceEntry[]> = {
+  "qwen-audio-3.0-tts-plus": QWEN_AUDIO_30_TTS_PLUS_VOICES,
+  "qwen-audio-3.0-tts-flash": QWEN_AUDIO_30_TTS_FLASH_VOICES,
   "cosyvoice-v3-flash": COSYVOICE_V3_FLASH_VOICES,
   "cosyvoice-v3-plus": COSYVOICE_V3_FLASH_VOICES,
   "cosyvoice-v3.5-flash": [],
@@ -118,11 +147,18 @@ const MODEL_VOICES: Record<string, VoiceEntry[]> = {
   "cosyvoice-v2": [],
 };
 
+/** Official voice-list docs URL for the model family. */
+function voiceDocsUrl(model: string): string {
+  if (model.startsWith("qwen-audio-")) return QWEN_AUDIO_TTS_VOICE_DOC;
+  return VOICE_TTS_PAGE;
+}
+
 function printVoiceList(model: string): void {
   const voices = MODEL_VOICES[model];
+  const docsUrl = voiceDocsUrl(model);
   if (!voices) {
     process.stdout.write(`No built-in voice list available for model: ${model}\n`);
-    process.stdout.write(`Browse voices in the console: ${VOICE_TTS_PAGE}\n`);
+    process.stdout.write(`See official voice list: ${docsUrl}\n`);
     return;
   }
   if (voices.length === 0) {
@@ -138,11 +174,13 @@ function printVoiceList(model: string): void {
     `${col("VOICE ID", 26)} ${col("NAME", 10)} ${col("DESCRIPTION", 16)} LANGUAGE\n`,
   );
   process.stdout.write(`${"-".repeat(26)} ${"-".repeat(10)} ${"-".repeat(16)} ${"-".repeat(12)}\n`);
-  for (const v of voices) {
-    process.stdout.write(`${col(v.voice, 26)} ${col(v.name, 10)} ${col(v.desc, 16)} ${v.lang}\n`);
+  for (const entry of voices) {
+    process.stdout.write(
+      `${col(entry.voice, 26)} ${col(entry.name, 10)} ${col(entry.desc, 16)} ${entry.lang}\n`,
+    );
   }
   process.stdout.write(`\nTotal: ${voices.length} voices\n`);
-  process.stdout.write(`Preview and browse more voices in the console: \n${VOICE_TTS_PAGE}\n`);
+  process.stdout.write(`Preview and browse more voices: \n${docsUrl}\n`);
 }
 
 const SYNTHESIZE_FLAGS = {
@@ -177,9 +215,9 @@ const SYNTHESIZE_FLAGS = {
     valueHint: "<voice>",
     description: {
       "en-US":
-        "Voice ID. Use --list-voices to see built-in voices for cosyvoice-v3-flash; for v3.5-flash provide a clone/design voice ID",
+        "Voice ID. Use --list-voices for the selected model (e.g. qwen-audio-3.0-tts-plus/flash, cosyvoice-v3-flash); for v3.5-flash provide a clone/design voice ID",
       "zh-CN":
-        "音色 ID。使用 --list-voices 查看 cosyvoice-v3-flash 的内置音色；使用 v3.5-flash 时需提供复刻/设计音色 ID",
+        "音色 ID。使用 --list-voices 查看所选模型的内置音色（如 qwen-audio-3.0-tts-plus/flash、cosyvoice-v3-flash）；使用 v3.5-flash 时需提供复刻/设计音色 ID",
     },
   },
   listVoices: {
@@ -290,10 +328,11 @@ export default defineCommand({
   usageArgs: "--text <text> [flags]",
   flags: SYNTHESIZE_FLAGS,
   exampleArgs: [
+    "--list-voices --model qwen-audio-3.0-tts-plus",
     "--list-voices --model cosyvoice-v3-flash",
     {
-      "en-US": '--text "Hello, I am Qwen" --voice <voice_id>',
-      "zh-CN": '--text "你好，我是通义千问" --voice <voice_id>',
+      "en-US": '--text "Hello, I am Qwen" --model qwen-audio-3.0-tts-plus --voice longanlingxin',
+      "zh-CN": '--text "你好，我是通义千问" --model qwen-audio-3.0-tts-plus --voice longanlingxin',
     },
     {
       "en-US": '--text "Hello world" --voice <voice_id> --language en',

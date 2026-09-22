@@ -1,7 +1,8 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { createServer, type Server } from "http";
 import { tmpdir } from "os";
 import { join } from "path";
-import { describe, expect, test } from "vite-plus/test";
+import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 import {
   isDashScopeE2EReady,
   isOpenApiE2EReady,
@@ -14,13 +15,44 @@ import { AUTH_ROUTES } from "./topic-routes.ts";
 
 /** Auth E2E：本地参数/持久化契约默认执行；真实鉴权请求按对应 readiness gate 执行。 */
 
+let modelsServer: Server;
+let modelsOrigin: string;
+
+beforeAll(async () => {
+  modelsServer = createServer((request, response) => {
+    if (request.method !== "GET" || !request.url?.includes("/models")) {
+      response.writeHead(404, { "content-type": "application/json" });
+      response.end(JSON.stringify({ code: "NotFound", message: "models route required" }));
+      return;
+    }
+    if (request.headers.authorization === "Bearer sk-rejected-placeholder") {
+      response.writeHead(401, { "content-type": "application/json" });
+      response.end(JSON.stringify({ code: "InvalidApiKey", message: "invalid key" }));
+      return;
+    }
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify({ data: [{ model: "qwen-plus" }] }));
+  });
+  await new Promise<void>((resolveListen) => modelsServer.listen(0, "127.0.0.1", resolveListen));
+  const address = modelsServer.address();
+  if (!address || typeof address === "string") throw new Error("models server did not start");
+  modelsOrigin = `http://127.0.0.1:${address.port}`;
+});
+
+afterAll(async () => {
+  await new Promise<void>((resolveClose) => modelsServer.close(() => resolveClose()));
+});
+
 describe("e2e: auth", () => {
   test("auth login --help 正常退出", async () => {
     const { stderr, exitCode } = await runCommandHelp(AUTH_ROUTES, ["auth", "login", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/login|api-key/i);
-    expect(stderr).toMatch(/--console-site/);
+    expect(stderr).toMatch(/--console-site.*ordinary API key/i);
+    expect(stderr).toMatch(/subscription plans.*--api-key/i);
     expect(stderr).toMatch(/--open-api/);
+    expect(stderr).toContain("bl auth login --console\n");
+    expect(stderr).not.toContain("bl auth login --console --console-site domestic");
   });
 
   test("auth login 一次只能选择一种登录模式", async () => {
@@ -135,7 +167,7 @@ describe("e2e: auth", () => {
       "sk-e2e-dry-run-placeholder",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stdout).toContain("Would save API key.");
+    expect(stdout).toContain("Would validate and save API key.");
   });
 
   test("auth login --dry-run 仍校验显式 Base URL", async () => {
@@ -152,13 +184,18 @@ describe("e2e: auth", () => {
     expect(stderr).toMatch(/Invalid model base URL/);
   });
 
-  test("auth login --api-key 原子保存凭证和 Base URL（无联网探测）", async () => {
+  test("auth login --api-key 通过 /models 校验后原子保存凭证和 Base URL", async () => {
     const configDir = makeE2eOutputDir("auth-api-key-login");
-    const origin = "https://dashscope.example.test";
-    const sdkBaseUrl = `${origin}/compatible-mode/v1/?source=login#fragment`;
     const login = await runCommandE2e(
       AUTH_ROUTES,
-      ["auth", "login", "--api-key", "sk-e2e-placeholder", "--base-url", sdkBaseUrl],
+      [
+        "auth",
+        "login",
+        "--api-key",
+        "sk-e2e-placeholder",
+        "--base-url",
+        `${modelsOrigin}/compatible-mode/v1/?source=login#fragment`,
+      ],
       {
         BAILIAN_CONFIG_DIR: configDir,
         DASHSCOPE_API_KEY: "",
@@ -166,19 +203,18 @@ describe("e2e: auth", () => {
       },
     );
     expect(login.exitCode, login.stderr).toBe(0);
-    expect(login.stderr).toMatch(/API key saved to/);
+    expect(login.stderr).toMatch(/API key validated and saved to/);
 
     const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
       string,
       unknown
     >;
     expect(config.api_key).toBe("sk-e2e-placeholder");
-    expect(config.base_url).toBe(origin);
+    expect(config.base_url).toBe(modelsOrigin);
   });
 
   test("auth login --config token-plan 接受 Anthropic SDK Base URL", async () => {
     const configDir = makeE2eOutputDir("auth-token-plan-anthropic-base-url");
-    const origin = "https://token-plan.example.test";
     const login = await runCommandE2e(
       AUTH_ROUTES,
       [
@@ -189,7 +225,7 @@ describe("e2e: auth", () => {
         "--api-key",
         "sk-sp-e2e-placeholder",
         "--base-url",
-        `${origin}/apps/anthropic?source=sdk#fragment`,
+        `${modelsOrigin}/apps/anthropic?source=sdk#fragment`,
       ],
       {
         BAILIAN_CONFIG_DIR: configDir,
@@ -205,7 +241,7 @@ describe("e2e: auth", () => {
     >;
     expect(config["token-plan"]).toMatchObject({
       api_key: "sk-sp-e2e-placeholder",
-      base_url: origin,
+      base_url: modelsOrigin,
       default_text_model: "qwen3.8-max",
       default_video_model: "happyhorse-1.1-t2v",
       default_image_to_video_model: "happyhorse-1.1-i2v",
@@ -250,7 +286,16 @@ describe("e2e: auth", () => {
 
     const login = await runCommandE2e(
       AUTH_ROUTES,
-      ["auth", "login", "--config", "token-plan", "--api-key", "sk-sp-e2e-placeholder"],
+      [
+        "auth",
+        "login",
+        "--config",
+        "token-plan",
+        "--api-key",
+        "sk-sp-e2e-placeholder",
+        "--base-url",
+        modelsOrigin,
+      ],
       {
         BAILIAN_CONFIG_DIR: configDir,
         DASHSCOPE_API_KEY: "sk-env-must-not-be-persisted",
@@ -267,7 +312,7 @@ describe("e2e: auth", () => {
     expect(config.active_config).toBe("token-plan");
     expect(config["token-plan"]).toMatchObject({
       api_key: "sk-sp-e2e-placeholder",
-      base_url: "https://token-plan.cn-beijing.maas.aliyuncs.com",
+      base_url: modelsOrigin,
       default_text_model: "qwen3.8-max",
       default_video_model: "happyhorse-1.1-t2v",
       default_image_to_video_model: "happyhorse-1.1-i2v",
@@ -297,6 +342,104 @@ describe("e2e: auth", () => {
     );
   });
 
+  test("auth login 根据 sk-sp 前缀自动写入并激活 Token Plan Profile", async () => {
+    const configDir = makeE2eOutputDir("auth-token-plan-key-inference");
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify(
+        {
+          active_config: "dev",
+          dev: { base_url: "https://dev-profile.example.test" },
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+
+    const login = await runCommandE2e(
+      AUTH_ROUTES,
+      ["auth", "login", "--api-key", "sk-sp-e2e-inferred", "--base-url", modelsOrigin],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+    expect(login.exitCode, login.stderr).toBe(0);
+
+    const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
+      string,
+      unknown
+    >;
+    expect(config.active_config).toBe("token-plan");
+    expect(config.api_key).toBeUndefined();
+    expect(config.dev).toEqual({ base_url: "https://dev-profile.example.test" });
+    expect(config["token-plan"]).toMatchObject({
+      api_key: "sk-sp-e2e-inferred",
+      base_url: modelsOrigin,
+      default_text_model: "qwen3.8-max",
+      api_key_capabilities: [
+        "text.chat",
+        "vision.describe",
+        "image.generate",
+        "image.edit",
+        "speech.recognize",
+        "speech.synthesize",
+        "video.generate",
+        "video.ref",
+        "video.task.get",
+        "video.download",
+      ],
+    });
+  });
+
+  test("auth login 显式 Profile 和 Base URL 优先且保留 sk-sp 的 Token Plan 预设", async () => {
+    const configDir = makeE2eOutputDir("auth-explicit-profile-precedence");
+    const login = await runCommandE2e(
+      AUTH_ROUTES,
+      [
+        "auth",
+        "login",
+        "--config",
+        "custom-plan",
+        "--api-key",
+        "sk-sp-e2e-explicit",
+        "--base-url",
+        `${modelsOrigin}/compatible-mode/v1`,
+      ],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+    expect(login.exitCode, login.stderr).toBe(0);
+
+    const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
+      string,
+      unknown
+    >;
+    expect(config.active_config).toBe("custom-plan");
+    expect(config["custom-plan"]).toMatchObject({
+      api_key: "sk-sp-e2e-explicit",
+      base_url: modelsOrigin,
+      default_text_model: "qwen3.8-max",
+      api_key_capabilities: [
+        "text.chat",
+        "vision.describe",
+        "image.generate",
+        "image.edit",
+        "speech.recognize",
+        "speech.synthesize",
+        "video.generate",
+        "video.ref",
+        "video.task.get",
+        "video.download",
+      ],
+    });
+    expect(config["token-plan"]).toBeUndefined();
+  });
+
   test("auth login --config token-plan 为显式空白名单追加 capability preset", async () => {
     const configDir = makeE2eOutputDir("auth-token-plan-empty-capabilities-login");
     writeFileSync(
@@ -314,7 +457,16 @@ describe("e2e: auth", () => {
 
     const login = await runCommandE2e(
       AUTH_ROUTES,
-      ["auth", "login", "--config", "token-plan", "--api-key", "sk-sp-e2e-placeholder"],
+      [
+        "auth",
+        "login",
+        "--config",
+        "token-plan",
+        "--api-key",
+        "sk-sp-e2e-placeholder",
+        "--base-url",
+        modelsOrigin,
+      ],
       {
         BAILIAN_CONFIG_DIR: configDir,
         DASHSCOPE_API_KEY: "",
@@ -343,9 +495,9 @@ describe("e2e: auth", () => {
     });
   });
 
-  test("auth login 未传 --config 时写当前激活 Config", async () => {
+  test("auth login 普通 Key 保留当前激活的非 Token Plan Profile", async () => {
     const configDir = makeE2eOutputDir("auth-active-profile-login");
-    const storedBaseUrl = "https://dev-profile.example.test";
+    const storedBaseUrl = modelsOrigin;
     writeFileSync(
       join(configDir, "config.json"),
       JSON.stringify(
@@ -376,10 +528,68 @@ describe("e2e: auth", () => {
     >;
     expect(config.api_key).toBeUndefined();
     expect(config.active_config).toBe("dev");
-    expect(config.dev).toMatchObject({
+    expect(config.dev).toEqual({
       api_key: "sk-active-placeholder",
       base_url: storedBaseUrl,
     });
+  });
+
+  test("auth login 普通 Key 校验成功后为新 Profile 保存匹配的 Base URL", async () => {
+    const configDir = makeE2eOutputDir("auth-standard-key-without-base-url");
+    const login = await runCommandE2e(
+      AUTH_ROUTES,
+      [
+        "auth",
+        "login",
+        "--config",
+        "standard",
+        "--api-key",
+        "sk-standard-placeholder",
+        "--base-url",
+        modelsOrigin,
+      ],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+    expect(login.exitCode, login.stderr).toBe(0);
+
+    const config = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as Record<
+      string,
+      unknown
+    >;
+    expect(config.active_config).toBe("standard");
+    expect(config["standard"]).toEqual({
+      api_key: "sk-standard-placeholder",
+      base_url: modelsOrigin,
+    });
+  });
+
+  test("auth login /models 拒绝 Key 时不写配置、不激活 Profile", async () => {
+    const configDir = makeE2eOutputDir("auth-api-key-validation-rejected");
+    const login = await runCommandE2e(
+      AUTH_ROUTES,
+      [
+        "auth",
+        "login",
+        "--config",
+        "rejected",
+        "--api-key",
+        "sk-rejected-placeholder",
+        "--base-url",
+        modelsOrigin,
+      ],
+      {
+        BAILIAN_CONFIG_DIR: configDir,
+        DASHSCOPE_API_KEY: "",
+        DASHSCOPE_BASE_URL: "",
+      },
+    );
+    expect(login.exitCode).toBe(3);
+    expect(login.stderr).toMatch(/API key validation failed/);
+    expect(existsSync(join(configDir, "config.json"))).toBe(false);
   });
 
   test("auth login --api-key 非法 Base URL 失败时不留下半配置", async () => {
@@ -420,7 +630,7 @@ describe("e2e: auth", () => {
       "120",
     ]);
     expect(exitCode, stderr).toBe(0);
-    expect(stdout).toContain("Would save API key.");
+    expect(stdout).toContain("Would validate and save API key.");
   });
 
   test("auth login 缺少密钥且 --output json 时报用法错误并退出 (2)", async () => {

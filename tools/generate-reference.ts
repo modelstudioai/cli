@@ -54,6 +54,8 @@ const GROUP_OWNER_SKILL: Readonly<Record<string, string>> = {
   deploy: "bailian-finetune",
   // bailian-managed-agent — agents.yaml IaC
   "managed-agent": "bailian-managed-agent",
+  // bailian-sandbox — Sandbox control-plane lifecycle
+  sandbox: "bailian-sandbox",
   // everything else → bailian-cli (hub)
 };
 

@@ -15,7 +15,7 @@
 2. **`bailian-protocol` 是共享协议 skill**，业务 skill 执行前应 Read 它
 3. **不要**在 frontmatter 写 `companions`，也不要对外说「companions = 安装器硬依赖」
 4. 子集安装：`bl skill add --name bailian-protocol,<skill>`；漏装 protocol 会导致相对路径 Read 失败
-5. **`bl skill add --all`：** 安装 registry 全量（含 `spark-video` 等非 bailian 技能）；一键安装 / `bl update` 用 `skill init`，不要用 `--all`
+5. **`bl skill add --all`：** 安装 registry 全量（含 `spark-video` 等非 bailian 技能）；不要用 `--all` 做升级同步。首次 / 整包用 `bl skill init`。升级后自动同步以及 `bl update` 成功后用 `bl skill update`（只更新已安装，不装新 skill）。
 
 ## 概念图
 
@@ -38,7 +38,7 @@ bailian-gen      bailian-finetune  bailian-managed-agent   bailian-web-search
 
 ### A. 分层边界
 
-- [ ] **整包装齐**：安装/升级文案主推 `bl skill init`；业务 skill **不**声明 `companions`
+- [ ] **整包装齐**：安装 / 缺 skill 文案主推 `bl skill init`；升级同步用 `bl skill update`（只更新已安装，不装新 skill）；业务 skill **不**声明 `companions`
 - [ ] **协议读取**：CRITICAL / references 可链 `../bailian-protocol/…`；若读不到 → 停止执行 `bl`，提示 `bl skill init`
 - [ ] **高风险确认**：统一由 `bailian-protocol` 定义；reference / leaf help 以 `risk: high` 明示风险，业务 skill 不得引导 Agent 自动补 `--yes`。遇到 exit code 7 / `requires_confirmation` 时停止执行并请求确认；目标或范围变化后重新确认
 - [ ] **正常控制流**：`requires_confirmation` 不是 CLI bug，`assets/issue-reporting.md` 必须将 exit code 7 保持在 EXCLUDE 范围
@@ -56,6 +56,7 @@ bailian-gen      bailian-finetune  bailian-managed-agent   bailian-web-search
 ### C. 归属与生成
 
 - [ ] 新一级命令组归属领域时：改 `tools/generate-reference.ts` 的 `GROUP_OWNER_SKILL`，并更新**拥有方** skill 的路由表；hub 最多加一行 hand-off
+- [ ] 新增领域目录时：补齐 `SKILL.md`（含 `metadata.version`），同步 `packages/cli/package.json` 的 reference 格式化路径、`.vite-hooks/pre-commit` 的生成物暂存清单、`tools/release/check.mjs` 的生成物校验清单；同步 hub 与共享协议的领域路由
 - [ ] 跑 `pnpm run sync:skill-assets`（或 commit 走 pre-commit），提交生成的 `reference/` 与 version 同步结果
 - [ ] 高风险命令生成的 reference 必须包含 `Risk` / `Risk message` 和简短 Agent safety 提示；带 `--yes` 的示例必须标注只能在确认后执行，不要手改生成物
 - [ ] 默认模型若写在领域路由表（如 `bailian-gen`）：与命令 default / [model-add-remove.md](model-add-remove.md) 一并核对

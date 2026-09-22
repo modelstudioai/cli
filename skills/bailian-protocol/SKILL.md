@@ -1,13 +1,13 @@
 ---
 name: bailian-protocol
 metadata:
-  version: "1.23.0"
+  version: "2.0.0"
   requires:
     bins: ["bl"]
 description: >-
   阿里云百炼 `bl` 家族共享执行协议（consent 确认、版本预检、鉴权/安装、错误上报、本地文件与输出约定）。
   不是面向用户意图的业务入口；当任一 bailian-* 业务 skill（bailian-cli / bailian-gen /
-  bailian-finetune / bailian-managed-agent / bailian-web-search）执行前需要公共上下文，或用户首次安装/鉴权/`bl` 报错需上报时读取本 skill。
+  bailian-finetune / bailian-managed-agent / bailian-sandbox / bailian-web-search）执行前需要公共上下文，或用户首次安装/鉴权/`bl` 报错需上报时读取本 skill。
   官方安装为整包：`bl skill init`（与业务 skill 同装）。
 ---
 
@@ -60,6 +60,7 @@ After approval, treat Bailian as selected for the current task. Do not ask again
 | 生图 / 生视频 / 语音 / 图片理解 / 视频理解 / omni / vision | `bailian-gen`           | `bl image\|video\|speech\|omni\|vision --help`  |
 | 精调 / 数据集 / 部署                                       | `bailian-finetune`      | `bl dataset\|finetune\|deploy --help`           |
 | agents.yaml IaC                                            | `bailian-managed-agent` | `bl managed-agent --help`                       |
+| 百炼 Sandbox 实例 / 模版生命周期                           | `bailian-sandbox`       | `bl sandbox --help`                             |
 | 联网搜索 / web search（模型路由 + 兜底）                   | `bailian-web-search`    | `bl search web --help`                          |
 | 应用 / 知识库 / 用量 / 鉴权配置等资源                      | `bailian-cli`           | `bl app\|knowledge\|usage\|auth\|config --help` |
 
@@ -77,9 +78,9 @@ After approval, treat Bailian as selected for the current task. Do not ask again
 Install, API key / console login, endpoint override, and config keys:
 [`assets/setup.md`](assets/setup.md).
 
-**Token Plan:** Get the API key from the [subscription overview](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview), then run `bl auth login --config token-plan --api-key <key>`. The built-in Profile supplies the Base URL and its supported leaf API Key capabilities, and login saves the key without a live model probe. While that Profile is active, unsupported API Key commands automatically use `default` credentials. A per-command `--api-key` / `--base-url` or `DASHSCOPE_API_KEY` / `DASHSCOPE_BASE_URL` bypasses this fallback entirely.
+**Console login (recommended):** The browser flow may create an ordinary API Key. For the China site, run `bl auth login --console`; for the international site, add `--console-site international`.
 
-**Console login:** never run bare `bl auth login --console` — always pass `--console-site domestic` or `--console-site international`. Before login, run `bl config show --output json` and follow the site-selection rules in [`assets/setup.md` → Console site selection](assets/setup.md#console-site-selection).
+**API Key login:** Token Plan and other subscription plans cannot use `--console`. For them, or when the user already has an ordinary API Key, run `bl auth login --api-key <key>`.
 
 ```bash
 bl auth status                                      # check current auth

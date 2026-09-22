@@ -30,6 +30,7 @@ export {
   detectInstalledAgents,
   linkSkillToAgents,
   fanOutSkillToAgents,
+  planUnlinkSkillFromAgents,
   unlinkSkillFromAgents,
   type AgentTarget,
   type LinkResult,

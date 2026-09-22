@@ -1,0 +1,320 @@
+--- a/docs/memory/2026-09-20-memory-backend-api.md
++++ b/docs/memory/2026-09-20-memory-backend-api.md
+@@ -1,11 +1,21 @@
+ # 长期记忆后端 API（对齐稿）
+ 
+-> 日期: 2026-09-20
+-> 来源: `.local/memory.md`（旧公开契约）+ `.local/memory-0918.md`（0918 新契约）+ CLI 代码对齐 + **生产环境 live 验证**
++> 日期: 2026-09-20；最后复核: 2026-09-21
++> 来源: `.local/memory.md`（旧公开契约）+ `.local/memory-0918.md`（0918 新契约）+ `.local/memory-0921.md`（后端修订）+ CLI 代码对齐 + **生产环境 live 验证**
+ > 生产 Host: `https://{workspace_id}.cn-beijing.maas.aliyuncs.com`
+ > 路径前缀: `/api/v2/apps/memory/`
+ >
+ > 本文档是给后端的对齐后接口契约。POC 环境文档里的 `poc-dashscope.aliyuncs.com/api/v2/apps/poc-memory/` 仅为测试前缀。标「live」的口径已在 `{workspace_id}.cn-beijing.maas.aliyuncs.com` 实测。
++
++## 0921 复核与证据边界
++
++本次复核覆盖新版契约和生产 HTTP wire。新增结论优先于旧稿中的历史说明。验证证据见同目录 `2026-09-21-memory-live-verify.md` 和 `2026-09-21-memory-live-verify.json`。
++
++- **已实测修正**：PATCH/DELETE 不要求 `user_id`；PATCH 省略 `timestamp` 保留旧值；错误体为 `{request_id, code, message}`；删除节点后 Get 可返回 `status="delete"`。
++- **已实测补充**：`extract_mode=profile_only`、`project_ids` 最多 5 项、Search 单数别名、实体/画像删除范围，以及旧 `enable_rerank` 对生效计划的影响。
++- **开放范围**：0921 将 `timestamp`、`query_timestamp`、`custom_instructions`、`expired_in_days`、`auto_refresh`（Add 入参）、`immutable` 标为内部；`need_detail`、画像值修改和项目/实体管理标为暂未对客。接口可调用不代表已公开，不自动据此扩展 CLI。
++- **历史字段**：旧稿中的长度上限、限流、`enable_judge`/`enable_rewrite` 行为未全部重测；0921 未提及不等于已废弃，也不应把旧说明写成新契约已确认。
++- **删除模板**：0921 遗漏 DeleteProfileSchema；本轮 DELETE 清理 4 个临时模板均为 200，继续保留为实测能力，公开状态待后端确认。
+ 
+ ## 公共请求信息
+ 
+@@ -16,7 +26,11 @@
+ | 认证 | Header `Authorization: Bearer $DASHSCOPE_API_KEY` |
+ | Content-Type | `application/json` |
+ 
+-账号级限流：全部记忆接口合计不超过 3000 QPM；Add 120 QPM；Search 300 QPM。
++0921 所列公共生产地址 `https://dashscope.aliyuncs.com/api/v2/apps/memory` 已通过列表及错误响应探针；上述 workspace 域名完成完整验证。未对公共地址重跑全部写接口。
++
++成功响应包含 `request_id`。本轮 400/404 返回 JSON：`{"request_id":"...","code":"InvalidParameter","message":"..."}`，响应头有 `x-request-id`。未见 0921 写的 `request_id` / `status_name` / `status_message` 三个响应头；客户端应读取 JSON 错误体，保留 HTTP 状态码。
++
++账号级限流（历史契约，本轮未压测）：全部记忆接口合计不超过 3000 QPM；Add 120 QPM；Search 300 QPM。
+ 
+ ## 对齐口径（相对 0918 / 旧公开文档的修正）
+ 
+@@ -28,7 +42,7 @@
+ | 4 | Add 项目隔离 | **`messages` 走 `project_ids` 数组**；**`custom_content` 只能走单数 `project_id`**。live 实测：`custom_content` + `project_ids` 返回 `InvalidParameter`（`custom_content can only be bound to one project`）。二者互斥 | **文档原口径错误，已按 live 改** |
+ | 5 | Search / List 项目隔离 | Search 用 **`project_ids` 数组**。List 查询参数仍为单数 `project_id`。不传 `project_id` 时 List 只返回默认 observation 规则下的节点，**不会列出 skill 节点** | 已通 |
+ | 6 | Add `timestamp` | 纳入入参（秒级 Unix 时间戳）。0918 参数表未列、示例请求体有 | 已通，节点 `timestamp` 回显该值 |
+-| 7 | Search 旧公开能力 | 保留 `enable_rerank` / `enable_judge` / `enable_rewrite` / `plan_version`。不传 `plan_version` 时响应仍回显，默认 `pro` | 已通 |
++| 7 | Search 旧公开能力 | 保留 `enable_rerank` / `enable_judge` / `enable_rewrite` / `plan_version`。`plan_version` 优先；未传时显式 `enable_rerank=false` 为 `lite`，`true` 为 `pro`，二者均省略为 `pro` | 已通 |
+ | 8 | Event 状态 | 提交时 `PENDING` → 轮询中 **`RUNNING`** → 终态 `SUCCEEDED` / `FAILED` / `UNRECORDED`。0918 参数表漏了 `RUNNING`；本环境未复现 `SUCCESS` 变体 | **已改** |
+ | 9 | Event result 字段 | **`memory_type`（snake_case）**，不是 0918 示例的 camelCase `memoryType` | **文档原口径错误，已按 live 改** |
+ | 10 | GetUserProfile 大小写 | 本环境默认模式与 `need_detail` 均为 snake_case（`request_id` / `schema_name`）。0918 默认模式 camelCase 未复现。`need_evidence` 本环境未返回 | **已改** |
+@@ -58,6 +72,8 @@
+ | ListMemoryProjects | GET | `/memory_projects` | 列出记忆项目（非对客） |
+ | GetMemoryProject | GET | `/memory_projects/{project_id}` | 记忆项目详情（非对客） |
+ | UpdateMemoryProject | PATCH | `/memory_projects/{project_id}` | 更新记忆项目（非对客） |
++| DeleteEntity | DELETE | `/entities/{entity_type}/{entity_id}` | 删除实体全部记忆（暂不对客） |
++| DeleteEntityProfile | DELETE | `/entities_profile/{entity_type}/{entity_id}` | 仅删除实体画像（暂不对客） |
+ 
+ 兼容接口（行为不变，新调用方不必使用）：
+ 
+@@ -100,9 +116,13 @@
+ | messages[].tool_call_id | Body | String | 条件 | `role=tool` 时必填，对应 `tool_calls[].id` |
+ | custom_content | Body | String | 与 messages 二选一 | 自定义内容，最大 512 字符；传入则不基于 messages 抽取 |
+ | memory_library_id | Body | String | 否 | 记忆库 ID，最大 32 字符；不传则用默认记忆库 |
+-| project_ids | Body | Array[String] | 否 | 记忆片段规则 ID 列表，**仅 `messages` 抽取时使用**。不传则用该记忆库默认规则。与 `project_id` 互斥 |
++| project_ids | Body | Array[String] | 否 | 记忆片段规则 ID 列表，**仅 `messages` 抽取时使用**。不传则用该记忆库默认规则。与 `project_id` 互斥；最多 5 项，6 项实测 400 |
+ | project_id | Body | String | 否 | 单数规则 ID。**`custom_content` 时必须用这个，不能用 `project_ids`** |
+ | profile_schema | Body | String | 否 | 画像模板 ID；需要同时抽取用户画像时必填 |
++| extract_mode | Body | String | 否 | `profile_only` 仅抽画像，必须传 `profile_schema` 与 `messages`；实测仅产生 user_profile 任务 |
++| custom_instructions | Body | String | 否 | 内部参数，0921 新增，自定义抽取指令；本轮未验证其效果 |
++| expired_in_days | Body | Integer | 否 | 内部参数，0921 新增，过期天数；本轮未验证其效果 |
++| auto_refresh | Body | Boolean | 否 | 内部参数，0921 新增，是否自动刷新；本轮未验证其效果 |
+ | meta_data | Body | Object | 否 | 用户自定义元信息 |
+ | skill_name | Body | String | 条件 | skill 三件套之一。skill 项目 + custom_content 时必传三件套 |
+ | skill_description | Body | String | 条件 | skill 三件套之一 |
+@@ -127,7 +147,7 @@
+ | events[].result | Array | 提交时即为空数组 `[]`，成功后填入变更记录 |
+ | events[].user_id | String | 子用户 ID |
+ 
+-`project_ids` / `project_id` / `profile_schema` 与返回的 `events[]` 应一一对应。live 实测 `resource_type`：
++普通模式下 `project_ids` / `project_id` / `profile_schema` 对应返回的任务；`extract_mode=profile_only` 只产生画像任务。live 实测 `resource_type`：
+ 
+ | 入参 | resource_type |
+ | --- | --- |
+@@ -343,14 +363,16 @@
+ | messages[].role | Body | String | 是 | 消息角色 |
+ | messages[].content | Body | String \| Array | 否 | 消息内容 |
+ | memory_library_id | Body | String | 否 | 记忆库 ID；不传则用默认记忆库 |
+-| project_ids | Body | Array[String] | 否 | 记忆片段规则 ID 数组，可多规则混合检索；不传则用默认规则 |
++| project_ids | Body | Array[String] | 否 | 记忆片段规则 ID 数组，可多规则混合检索；不传则用默认规则；与 project_id 互斥 |
++| project_id | Body | String | 否 | 单个项目 ID，0921 明确支持；实测可配 memory_type=skill 召回 skill |
+ | top_k | Body | Integer | 否 | 最大召回个数，1~100，默认 10 |
+ | min_score | Body | Double | 否 | 最小相似度阈值，值域 **`[0, 1]`**，默认 0.3。低于阈值的结果会被过滤 |
+ | memory_types | Body | Array[String] | 否 | 筛选记忆类型：`observation` / `skill`。不传默认 `["observation"]` |
++| memory_type | Body | String | 否 | 单类型别名。建议与 memory_types 二选一；并传冲突值实测不报错，优先级未形成完整契约 |
+ | plan_version | Body | String | 否 | `pro` / `lite`，大小写不敏感，传错报错。不传默认 `pro`。优先级高于 `enable_rerank` |
+-| enable_rerank | Body | Boolean | 否 | 是否重排序，默认 false。传了 `plan_version` 时被忽略。`pro` 开启 rerank，`lite` 关闭 |
+-| enable_judge | Body | Boolean | 否 | 是否开启意图判别回调，默认 false |
+-| enable_rewrite | Body | Boolean | 否 | 是否开启 query 重写，默认 false |
++| enable_rerank | Body | Boolean | 否 | 历史兼容字段；显式 false 且未传 plan_version 时响应为 lite，true 时为 pro；二者均省略为 pro。显式 plan_version 优先（0921 实测） |
++| enable_judge | Body | Boolean | 否 | 历史兼容字段；本轮 false 入参被接受，未验证判别效果或默认值 |
++| enable_rewrite | Body | Boolean | 否 | 历史兼容字段；本轮 false 入参被接受，未验证重写效果或默认值 |
+ | query_timestamp | Body | Long | 否 | 问询时间（秒级 Unix 时间戳），rewrite 阶段使用；不填默认当前系统时间 |
+ 
+ ### 出参
+@@ -433,7 +455,7 @@
+ | --- | --- | --- | --- | --- |
+ | user_id | Query | String | 是 | 记忆实体 ID，最大 64 字符 |
+ | memory_library_id | Query | String | 否 | 记忆库 ID；不传则用默认记忆库 |
+-| project_id | Query | String | 否 | 记忆片段规则 ID（单值过滤）。不传则用默认规则 |
++| project_id | Query | String | 否 | 记忆片段规则 ID（单值过滤）。不传只查默认规则，不会汇总其他 observation / skill 项目；本轮自定义 observation 有 3 条，默认查询仍为 0 |
+ | page_num | Query | Integer | 否 | 页号，从 1 开始，默认 1 |
+ | page_size | Query | Integer | 否 | 每页大小，默认 10 |
+ 
+@@ -561,10 +583,9 @@
+ | 参数 | 位置 | 类型 | 必填 | 说明 |
+ | --- | --- | --- | --- | --- |
+ | memory_node_id | Path | String | 是 | 记忆节点 ID |
+-| user_id | Body | String | 是 | 记忆实体 ID，最大 64 字符 |
+ | custom_content | Body | String | 是 | 更新后的内容，最大 512 字符 |
+ | memory_library_id | Body | String | 否 | 记忆库 ID；非默认记忆库时需要 |
+-| timestamp | Body | Long | 否 | 秒级 Unix 时间戳；不填默认当前系统时间 |
++| timestamp | Body | Long | 否 | 内部参数；秒级 Unix 时间戳。PATCH 不传保留旧值，显式传入会更新（0921 实测） |
+ | meta_data | Body | Object | 否 | 自定义元信息，增量更新 |
+ | skill_name | Body | String | 条件 | 节点为 skill 时必传三件套 |
+ | skill_description | Body | String | 条件 | 节点为 skill 时必传三件套 |
+@@ -583,7 +604,6 @@
+   --header "Authorization: Bearer $DASHSCOPE_API_KEY" \
+   --header "Content-Type: application/json" \
+   --data '{
+-    "user_id": "user_001",
+     "custom_content": "更新内容",
+     "timestamp": 1747278460,
+     "meta_data": {
+@@ -607,14 +627,13 @@
+ 
+ **接口路径：** `DELETE /api/v2/apps/memory/memory_nodes/{memory_node_id}`
+ 
+-**接口描述：** 永久删除指定记忆节点，不可恢复。
++**接口描述：** 删除指定记忆节点。0921 实测删除后 Get 仍 200 返回节点，`status="delete"`；不能据此声称立即物理删除或内容不可再读取。
+ 
+ ### 入参
+ 
+ | 参数 | 位置 | 类型 | 必填 | 说明 |
+ | --- | --- | --- | --- | --- |
+ | memory_node_id | Path | String | 是 | 记忆节点 ID |
+-| user_id | Query | String | 是 | 记忆实体 ID（调用方需携带，用于隔离校验） |
+ | memory_library_id | Query | String | 否 | 记忆库 ID；不传则用默认记忆库 |
+ 
+ ### 出参
+@@ -626,7 +645,7 @@
+ ### 请求示例
+ 
+ ```bash
+-curl -X DELETE "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/memory_nodes/{memory_node_id}?user_id=user_001" \
++curl -X DELETE "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/memory_nodes/{memory_node_id}" \
+   --header "Authorization: Bearer $DASHSCOPE_API_KEY"
+ ```
+ 
+@@ -721,7 +740,7 @@
+ `need_detail=false`（默认）：每个属性返回拼接后的 `value` 字符串。
+ `need_detail=true`：每个属性返回 `value_items` 列表（含 `item_id` / `status` / `value`），作为 UpdateUserProfileValues 的操作句柄。
+ 
+-live：两种模式均为 snake_case（`request_id` / `schema_name` / `schema_description`）。0918 默认模式 camelCase 未复现。`need_evidence` 本环境未返回。
++live：两种模式均为 snake_case（`request_id` / `schema_name` / `schema_description`）。0918 默认模式 camelCase 未复现。`need_evidence` 本环境未返回。无值时默认模式省略 `value`，详情模式为 `value_items: []`；两条独立值实测使用 `; ` 拼接。
+ 
+ ### 入参
+ 
+@@ -756,12 +775,10 @@
+ | profile.attributes | Array | 属性列表 |
+ | profile.attributes[].id | String | 属性 ID |
+ | profile.attributes[].name | String | 属性名称 |
+-| profile.attributes[].description | String | 属性描述 |
+ | profile.attributes[].value_items | Array | 值项列表 |
+ | profile.attributes[].value_items[].item_id | Integer | 值项 ID，供 UpdateUserProfileValues 使用 |
+ | profile.attributes[].value_items[].status | String | 值项状态，示例为 `valid` |
+ | profile.attributes[].value_items[].value | String | 值内容 |
+-| profile.attributes[].value_items[].need_evidence | Boolean | 0918 已划掉；本环境未返回 |
+ 
+ ### 请求示例
+ 
+@@ -784,7 +801,7 @@
+       {
+         "id": "00484806d4a343198d61abe8a0d8ae84",
+         "name": "爱好",
+-        "value": "打球;游泳"
++        "value": "打球; 游泳"
+       },
+       {
+         "id": "05fa398b8386454999a685d246bb2f91",
+@@ -814,17 +831,14 @@
+       {
+         "id": "d6d4f21aefa649f6ae036fa02bf5e1ea",
+         "name": "兴趣",
+-        "description": "兴趣爱好",
+         "value_items": [
+           {
+             "item_id": 5634,
+-            "need_evidence": false,
+             "status": "valid",
+             "value": "打球"
+           },
+           {
+             "item_id": 6496,
+-            "need_evidence": true,
+             "status": "valid",
+             "value": "游泳"
+           }
+@@ -934,15 +948,17 @@
+ 
+ | 参数 | 位置 | 类型 | 必填 | 说明 |
+ | --- | --- | --- | --- | --- |
++| extract_scene | Body | String | 否 | efficient / intelligent；Schema 默认 efficient；本轮 Schema 和项目单独传该字段的 PATCH 均为 200 |
+ | name | Body | String | 是 | 模板名称，最大 32 字符 |
+ | attributes | Body | Array | 是 | 属性定义列表，不能为空 |
+ | attributes[].name | Body | String | 是 | 属性名称，最大 32 字符。语义应尽量唯一，避免「姓名/名称/名字」同时出现 |
+ | attributes[].description | Body | String | 否 | 属性描述，最大 128 字符 |
+ | attributes[].default_value | Body | String | 条件 | 默认值，最大 128 字符；`immutable=true` 时必填 |
+ | attributes[].immutable | Body | Boolean | 否 | 是否不可变，默认 false |
+-| description | Body | String | 否 | 模板描述，最大 128 字符 |
++| description | Body | String | 否 | 模板描述；0921 明确长度上限由系统配置决定，旧 128 字符上限不作为当前保证 |
+ | plan_version | Body | String | 否 | `pro` / `lite`，大小写不敏感，传错报错。不传默认 `pro` |
+ | memory_library_id | Body | String | 否 | 记忆库 ID；不传则用默认记忆库 |
++
+ 
+ ### 出参
+ 
+@@ -1107,9 +1123,10 @@
+ 
+ | 参数 | 位置 | 类型 | 必填 | 说明 |
+ | --- | --- | --- | --- | --- |
++| extract_scene | Body | String | 否 | efficient / intelligent；Schema 默认 efficient；本轮 Schema 和项目单独传该字段的 PATCH 均为 200 |
+ | profile_schema_id | Path | String | 是 | 画像模板 ID |
+ | name | Body | String | 否 | 模板名称，最大 32 字符 |
+-| description | Body | String | 否 | 模板描述，最大 128 字符 |
++| description | Body | String | 否 | 模板描述；0921 明确长度上限由系统配置决定，旧 128 字符上限不作为当前保证 |
+ | plan_version | Body | String | 否 | `pro` / `lite`，大小写不敏感，传错报错 |
+ | attributes_operations | Body | Array | 否 | 属性变更操作列表 |
+ | attributes_operations[].op | Body | String | 是（有 operations 时） | `add` / `update` / `delete` |
+@@ -1125,6 +1142,7 @@
+ - `op=add`：可传 name / description / immutable / default_value；`immutable=true` 时应传 `default_value`
+ - `op=update`：必须传 `attribute_id`；可更新 name / description / default_value；不支持更新 `immutable`
+ - `op=delete`：必须传 `attribute_id`
++
+ 
+ ### 出参
+ 
+@@ -1230,6 +1248,8 @@
+ 
+ | 参数 | 位置 | 类型 | 必填 | 说明 |
+ | --- | --- | --- | --- | --- |
++| extract_scene | Body | String | 否 | efficient / intelligent；Schema 默认 efficient；本轮 Schema 和项目单独传该字段的 PATCH 均为 200 |
++| description | Body | String | 否 | 0921 明确：项目描述；本轮未验证修改 |
+ | name | Body | String | 是 | 项目名称 |
+ | memory_library_id | Body | String | 否 | 记忆库 ID；不传则用默认记忆库 |
+ | memory_type | Body | String | 否 | `observation` / `skill`，默认 `observation` |
+@@ -1239,6 +1259,7 @@
+ | custom_instruction | Body | String | 否 | 自定义指令内容 |
+ | expired_in_days | Body | Integer | 否 | 记忆过期天数 |
+ | auto_refresh | Body | Boolean | 否 | 是否自动刷新 |
++
+ 
+ ### 出参
+ 
+@@ -1424,6 +1445,8 @@
+ 
+ | 参数 | 位置 | 类型 | 必填 | 说明 |
+ | --- | --- | --- | --- | --- |
++| extract_scene | Body | String | 否 | efficient / intelligent；Schema 默认 efficient；本轮 Schema 和项目单独传该字段的 PATCH 均为 200 |
++| description | Body | String | 否 | 0921 明确：项目描述；本轮未验证修改 |
+ | project_id | Path | String | 是 | 项目 ID |
+ | memory_library_id | Body | String | 否 | 记忆库 ID |
+ | name | Body | String | 否 | 项目名称 |
+@@ -1433,6 +1456,7 @@
+ | auto_refresh | Body | Boolean | 否 | 是否自动刷新 |
+ | plan_version | Body | String | 否 | 收费计划 |
+ | support_multi_modal | Body | Boolean | 否 | 是否支持多模态 |
++
+ 
+ ### 出参
+ 
+@@ -1463,3 +1487,41 @@
+   "request_id": "bb499327-79c6-9a65-9f2d-c0c6abda6419"
+ }
+ ```
++
++
++---
++
++# 五、实体清理（0921 新增；暂不对客）
++
++## DeleteEntity
++
++**接口路径：** `DELETE /api/v2/apps/memory/entities/{entity_type}/{entity_id}`
++
++| 参数 | 位置 | 类型 | 必填 | 说明 |
++| --- | --- | --- | --- | --- |
++| entity_type | Path | String | 是 | 当前为 user |
++| entity_id | Path | String | 是 | 待清理的实体 ID，对应 user_id |
++| memory_library_id | Query | String | 否 | 不传按默认记忆库解析；本轮显式传入测试记忆库 |
++
++成功为 `{request_id}`。本轮删除后 observation 和 skill 列表均为空，补测非空画像也被清空。重复删除返回 HTTP 404、`code=EntityNotFound`，不是再次 200。这里只证明查询不可见，不保证底层立即物理清除。
++
++## DeleteEntityProfile
++
++**接口路径：** `DELETE /api/v2/apps/memory/entities_profile/{entity_type}/{entity_id}`
++
++| 参数 | 位置 | 类型 | 必填 | 说明 |
++| --- | --- | --- | --- | --- |
++| entity_type | Path | String | 是 | 当前为 user |
++| entity_id | Path | String | 是 | 对应 user_id |
++| memory_library_id | Query | String | 否 | 不传按默认记忆库解析 |
++| profile_schema_id | Query | String | 否 | 指定时仅清空该模板下画像；不传清空全部模板下画像 |
++
++成功为 `{request_id}`。本轮用两套模板验证：指定模板只清空目标画像，另一套仍保留「绘画」，observation 仍为 3 条；省略模板后另一套画像也清空，节点数仍为 3。空详情仍返回 Schema 和 attributes，仅 value_items 为空。
++
++## 同步 AddMemory 的兼容补充
++
++`POST /add` 的 `custom_content` 本轮成功，返回 `{request_id, memory_nodes:[{memory_node_id,content,event}]}`。0921 同步入参新增/明确 `extract_mode=profile_only`（需要 messages 和 profile_schema）及内部参数；本轮仅验证同步直存，不将异步 profile_only 的结论外推为同步抽取已验证。
++
++## 返回字段的可选性
++
++响应表列出字段不等于字段始终存在。纯文本节点可能省略 media_desc / multimodal_medias；未设置的项目 custom_instruction、description 可能省略；未设置的属性 default_value 可能省略。GetMemoryNode 的 media_urls 本轮为空数组。GetEvent 的 old_content 只适用于 UPDATE，本轮未触发该事件分支。应按分支建模，而非对所有字段做无条件 required 校验。

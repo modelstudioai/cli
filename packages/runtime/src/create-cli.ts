@@ -29,7 +29,7 @@ import {
   buildSources,
   buildSettings,
   describeAuthState,
-  resolveModelBaseUrl,
+  resolveModelBaseUrlState,
   makeConfigStore,
   makeAuthStore,
   flushTelemetry,
@@ -238,7 +238,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
             client: new Client({
               identity,
               settings,
-              baseUrl: resolveModelBaseUrl(sources),
+              ...resolveModelBaseUrlState(sources),
             }),
           };
           await runMiddleware(ctx);

@@ -19,10 +19,32 @@ publish-stable.mjs / publish-channel.mjs   ← 唯一发版入口
         └─ binary（lib/binary-release
               → binary-build
               → gh-release
-              → oss-direct-upload）
+              → oss-direct-upload → FC release 通道）
 ```
 
 `tools/release/lib/binary-release.mjs` 等是实现，一般不要单独当发版入口（调试可用）。
+
+### OSS 通道：FC 预签名上传（仓库不持有任何 OSS 凭据）
+
+二进制与静态文件（changelog）上 OSS 不再由 CI 持 AK/SK 直传，而是经 FC 函数
+（bailian-docs-llm-wiki-crawl 的 `release-prepare` / `release-finalize` action）：
+
+1. CI 用本 job 的 GitHub OIDC token（`id-token: write`）调 `release-prepare`；FC 验签
+   （白名单仓库 + ref）后返回 OSS 预签名 PUT URL（30 分钟过期）
+2. runner 拿 URL 直传 OSS（文件体不经过 FC）
+3. CI 调 `release-finalize`：FC 用函数角色 STS 凭证做 HEAD 字节数对账；stable 额外
+   维护 `manifest.json` / `latest.json`（newer-version 守卫在 FC 侧）
+
+配置面：
+
+| 位置             | 变量                                                                                                                        | 说明                                                                                             |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| GitHub Variables | 触发 URL 复用共享的 `FC_TRIGGER_URL`（publish-skills 同源，同一 FC 函数按 URL 路径路由 action）；另需 `FC_RELEASE_AUDIENCE` | 未设 URL 则跳过 OSS 通道（不阻塞 npm 发布）；复用意味着 FC 部署完成前不要合入 release 工具链改动 |
+| FC 函数 env      | `RELEASE_OIDC_AUD` / `RELEASE_ALLOWED_REPOS` / `RELEASE_ALLOWED_REFS`                                                       | 鉴权策略；audience 需与 CI 侧一致                                                                |
+| FC 函数 env      | `OSS_BUCKET` / `OSS_REGION` / `OSS_RELEASE_PREFIX` / `OSS_STATIC_PREFIX`                                                    | bucket 与 key 前缀（原七组 OSS secrets 收敛至此）                                                |
+
+改动 FC 侧逻辑（验签策略 / 对账 / manifest 守卫）去 bailian-docs-llm-wiki-crawl 仓库；
+本仓库只维护 client（`tools/release/lib/oss-direct-upload.mjs`）。
 
 ### bailian-kb-dsh（独立版本、npm-only）
 
@@ -49,7 +71,7 @@ workflow 的 `channel` 输入**只决定 npm dist-tag**（如 `mcp` / `plugin` /
 ### channel 发布
 
 1. 在 GitHub 触发 Publish workflow，mode 选 `channel`，channel 填 npm dist-tag 名：
-   - **`bailian-cli`**：npm 发到该 tag；二进制同时刷新 CDN `sync-release.json`（与 tag 名无关）。本机验证：`BAILIAN_CHANNEL=sync-release`
+   - **`bailian-cli`**：npm 发到该 tag；二进制同时刷新 CDN `sync-release.json`（与 tag 名无关）。本机验证：`BAILIAN_CHANNEL=sync-release`。**先发二进制（zip+tar.gz 上齐）再发静态仓 `install.sh`**，避免新脚本去拉还不存在的 `.tar.gz`。
    - **`knowledge-studio-cli`**：仅 npm（自动跳过 binary，不碰 `sync-release.json`）
 2. CI 自动：生成 `0.0.0-beta-<sha7>-<YYYYMMDDHHMM>`（UTC 到分钟；同 commit 同分钟重跑会覆盖同号）→ 临时 bump → 自检 → **npm 发到 dist-tag** →（bailian-cli）**Bun 编二进制 + GH prerelease + 覆盖 `sync-release.json`** → 还原 package.json
 3. 对应脚本：`tools/release/publish-channel.mjs`
@@ -59,7 +81,7 @@ workflow 的 `channel` 输入**只决定 npm dist-tag**（如 `mcp` / `plugin` /
 1. 确保当前 release tooling 覆盖的包(`tools/release/lib/packages.mjs`)已升到目标版本且一致;当前基础集合为 `packages/core` / `packages/runtime` / `packages/commands` / `packages/cli`，`knowledge-studio-cli` 发布会额外包含 `packages/kscli`
 2. 在 GitHub 触发 Publish workflow，package 选目标包集合，mode 选 `stable`
 3. 需要 production environment 审批人批准
-4. CI 自动：自检 → **npm 发到 latest** → **推送 git tag `v<ver>`** → **Bun 编二进制并创建/更新 GitHub Release** →（bailian-cli）维护 CDN **`manifest.json`** → 完成
+4. CI 自动：自检 → **npm 发到 latest** → **推送 git tag `v<ver>`** → **Bun 编二进制并创建/更新 GitHub Release**（每平台 `.zip`，darwin/linux 额外 `.tar.gz`）→（bailian-cli）维护 CDN **`manifest.json`**（unix 资产含 `tar` / `tarSha256`，`file` 仍为 zip）→ 完成
 5. 如果所选发布集合的当前版本已全部存在于 npm，stable 发布会失败并提示先升级版本号；如果只有部分包已发布，CI 会继续补发缺失包
 6. 对应脚本：`tools/release/publish-stable.mjs`
 
@@ -88,7 +110,7 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 
 ## CI 基础设施
 
-- **认证**：npm OIDC Trusted Publishing（无 token），需要 `id-token: write` 权限
+- **认证**：npm OIDC Trusted Publishing（无 token），需要 `id-token: write` 权限；OSS 通道复用同一 OIDC token 向 FC 证明身份（见上文「OSS 通道」）
 - **GitHub Release**：`contents: write` + `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`（stable / channel 均需）
 - **Node 版本**：24（npm 11.5+ 才支持 OIDC token 交换）
 - **Bun**：`oven-sh/setup-bun`，版本钉死在 workflow 中

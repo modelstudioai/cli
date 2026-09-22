@@ -8,11 +8,22 @@ import { ExitCode } from "../errors/codes.ts";
 // Resolve the credential for a command's declared domain (model = api-key,
 // console = access-token), by priority, or throw. Read only from sources.
 
+/** Preserve whether the shared base URL chain selected a configured origin or its default. */
+export function resolveModelBaseUrlState(
+  sources: ResolutionSources,
+  fallback: string = REGIONS.cn,
+): { baseUrl: string; baseUrlIsDefault: boolean } {
+  const configuredBaseUrl =
+    sources.flags.baseUrl || sources.env.DASHSCOPE_BASE_URL || sources.file.base_url;
+  return {
+    baseUrl: normalizeModelBaseUrl(configuredBaseUrl || fallback),
+    baseUrlIsDefault: !configuredBaseUrl,
+  };
+}
+
 /** Model-domain baseUrl(flag > env > config file > fallback);无需 key 也可解析。 */
 export function resolveModelBaseUrl(s: ResolutionSources, fallback: string = REGIONS.cn): string {
-  return normalizeModelBaseUrl(
-    s.flags.baseUrl || s.env.DASHSCOPE_BASE_URL || s.file.base_url || fallback,
-  );
+  return resolveModelBaseUrlState(s, fallback).baseUrl;
 }
 
 /**

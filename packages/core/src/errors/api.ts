@@ -7,9 +7,10 @@ export interface ApiErrorBody {
     type?: string;
     code?: number | string;
   };
-  code?: string;
+  code?: number | string;
   message?: string;
   request_id?: string;
+  requestID?: string;
 }
 
 export function mapApiError(status: number, body: ApiErrorBody, _url?: string): BailianError {
@@ -26,7 +27,7 @@ export function mapApiError(status: number, body: ApiErrorBody, _url?: string): 
     api: {
       httpStatus: status,
       apiCode,
-      requestId: body.request_id,
+      requestId: body.request_id ?? body.requestID,
     },
   });
 }

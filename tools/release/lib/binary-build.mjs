@@ -1,6 +1,6 @@
 /**
  * Build standalone `bl` binaries with Bun --compile, then pack each as a
- * per-platform `.zip` via binary-zip.mjs (Release / OSS download asset).
+ * per-platform `.zip` (all OS) plus `.tar.gz` on darwin/linux (Release / OSS).
  *
  * Used by lib/binary-release.mjs (and publish-stable / publish-channel orchestrators).
  * Debug:
@@ -21,6 +21,7 @@ import {
   rollingManifestChannelId,
   rollingManifestFileName,
 } from "./binary-options.mjs";
+import { ensureTar, tarOne } from "./binary-tar.mjs";
 import { ensureZip, zipOne } from "./binary-zip.mjs";
 
 const BINARY_COMPILE = fileURLToPath(new URL("./binary-compile.mjs", import.meta.url));
@@ -42,14 +43,27 @@ export function binaryInnerName(version, { os, arch, exe }) {
   return `bl-${version}-${os}-${arch}${exe ? ".exe" : ""}`;
 }
 
-/** Release asset basename: `bl-<ver>-<os>-<arch>.zip`. */
+/** Release zip basename: `bl-<ver>-<os>-<arch>.zip` (install.ps1 / bl update / old install.sh). */
 export function binaryAssetName(version, { os, arch }) {
   return `bl-${version}-${os}-${arch}.zip`;
 }
 
-/** Full matrix zip basenames for a version (order matches BINARY_TARGETS). */
+/** Unix install.sh default archive: `bl-<ver>-<os>-<arch>.tar.gz`. */
+export function binaryTarAssetName(version, { os, arch }) {
+  return `bl-${version}-${os}-${arch}.tar.gz`;
+}
+
+export function unixTarTarget(target) {
+  return target.os !== "windows";
+}
+
+/** Full matrix: zip for every target, plus tar.gz for darwin/linux. */
 export function matrixAssetNames(version) {
-  return BINARY_TARGETS.map((target) => binaryAssetName(version, target));
+  return BINARY_TARGETS.flatMap((target) => {
+    const zipName = binaryAssetName(version, target);
+    if (!unixTarTarget(target)) return [zipName];
+    return [zipName, binaryTarAssetName(version, target)];
+  });
 }
 
 function log(message = "") {
@@ -156,22 +170,32 @@ function compileOne({ bunTarget, os, arch, exe }, version, outdir, entry) {
 }
 
 function writeChecksums(outdir, artifacts) {
-  const lines = artifacts.map((item) => `${item.sha256}  ${item.fileName}`);
+  const lines = [];
+  for (const item of artifacts) {
+    lines.push(`${item.sha256}  ${item.fileName}`);
+    if (item.tarFileName && item.tarSha256) {
+      lines.push(`${item.tarSha256}  ${item.tarFileName}`);
+    }
+  }
   writeFileSync(join(outdir, "SHA256SUMS"), `${lines.join("\n")}\n`);
 }
 
-/** Write the rolling channel manifest (`latest.json` / `sync-release.json`) with per-platform zip + sha256. */
+/** Write the rolling channel manifest (`latest.json` / `sync-release.json`) with per-platform zip + optional tar.gz. */
 function writeChannelManifest(outdir, version, artifacts, mode) {
   const channel = rollingManifestChannelId(mode);
   const assets = Object.fromEntries(
-    artifacts.map((item) => [
-      `${item.os}-${item.arch}`,
-      {
+    artifacts.map((item) => {
+      const asset = {
         file: item.fileName,
         sha256: item.sha256,
         inner: item.innerName,
-      },
-    ]),
+      };
+      if (item.tarFileName && item.tarSha256) {
+        asset.tar = item.tarFileName;
+        asset.tarSha256 = item.tarSha256;
+      }
+      return [`${item.os}-${item.arch}`, asset];
+    }),
   );
   const manifest = {
     name: "bailian-cli",
@@ -203,7 +227,28 @@ function smokeTestHostBinary(compiled, outdir) {
   }
 }
 
-/** Compile binaries into `outdir`, zip per platform, write checksums (+ channel manifest). */
+function packOne(compiled, version, outdir) {
+  let tarMeta = null;
+  if (unixTarTarget(compiled)) {
+    tarMeta = tarOne(compiled, {
+      outdir,
+      tarFileName: binaryTarAssetName(version, compiled),
+      log,
+    });
+  }
+  const zipMeta = zipOne(compiled, {
+    outdir,
+    zipFileName: binaryAssetName(version, compiled),
+    log,
+  });
+  return {
+    ...zipMeta,
+    tarFileName: tarMeta?.fileName,
+    tarSha256: tarMeta?.sha256,
+  };
+}
+
+/** Compile binaries into `outdir`, zip (+ unix tar.gz) per platform, write checksums (+ channel manifest). */
 export function buildBinaryArtifacts(rawOptions = {}) {
   const options = normalizeBuildOptions(rawOptions);
   const { outdir, mode, channel } = options;
@@ -211,6 +256,7 @@ export function buildBinaryArtifacts(rawOptions = {}) {
   ensureZip();
   const version = cliVersion();
   const targets = resolveTargets(options);
+  if (targets.some((target) => unixTarTarget(target))) ensureTar();
 
   mkdirSync(outdir, { recursive: true });
   log(`bun ${bunVersion}`);
@@ -220,9 +266,7 @@ export function buildBinaryArtifacts(rawOptions = {}) {
 
   const compiled = targets.map((target) => compileOne(target, version, outdir, CLI_ENTRY));
   smokeTestHostBinary(compiled, outdir);
-  const artifacts = compiled.map((item) =>
-    zipOne(item, { outdir, zipFileName: binaryAssetName(version, item), log }),
-  );
+  const artifacts = compiled.map((item) => packOne(item, version, outdir));
   writeChecksums(outdir, artifacts);
 
   const extras = ["SHA256SUMS"];
@@ -231,6 +275,9 @@ export function buildBinaryArtifacts(rawOptions = {}) {
   log(`\nBuilt ${artifacts.length} zip(s):`);
   for (const item of artifacts) {
     log(`  ${item.fileName}  ${item.sha256.slice(0, 12)}… (inner ${item.innerName})`);
+    if (item.tarFileName) {
+      log(`  ${item.tarFileName}  ${item.tarSha256.slice(0, 12)}…`);
+    }
   }
   log(`Also wrote ${extras.join(", ")}`);
   return {

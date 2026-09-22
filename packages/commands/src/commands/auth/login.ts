@@ -5,7 +5,7 @@ import {
   normalizeModelBaseUrl,
 } from "bailian-cli-core";
 import { emitBare } from "bailian-cli-runtime";
-import { persistApiKey } from "./login-api-key.ts";
+import { persistApiKey, validateApiKey } from "./login-api-key.ts";
 import { resolveConsoleOrigin, runConsoleLogin } from "./login-console.ts";
 
 const LOGIN_MODE_HINT = "Choose exactly one login mode: --api-key, --console, or --open-api";
@@ -27,22 +27,26 @@ export default defineCommand({
     apiKey: {
       type: "string",
       valueHint: "<key>",
-      description: { "en-US": "Model API key to store", "zh-CN": "要保存的模型 API Key" },
+      description: {
+        "en-US": "Model API key to validate and store",
+        "zh-CN": "要校验并保存的模型 API Key",
+      },
     },
     baseUrl: {
       type: "string",
       valueHint: "<url>",
       description: {
-        "en-US": "Model API base URL to store with --api-key",
-        "zh-CN": "与 --api-key 一并保存的模型 API Base URL",
+        "en-US": "Model API base URL to validate and store with --api-key",
+        "zh-CN": "与 --api-key 一并校验并保存的模型 API Base URL",
       },
     },
     console: {
       type: "switch",
       description: {
         "en-US":
-          "Sign in via browser; use --console-site to choose domestic (default) or international",
-        "zh-CN": "通过浏览器登录；使用 --console-site 选择国内站（默认）或国际站",
+          "Sign in via browser (China by default; use --console-site international for the international site). Creates an ordinary API key if needed; subscription plans require --api-key",
+        "zh-CN":
+          "通过浏览器登录（默认中国站；国际站使用 --console-site international）。需要时会创建普通 API Key；订阅计划必须使用 --api-key 登录",
       },
     },
     consoleSite: {
@@ -78,9 +82,8 @@ export default defineCommand({
     },
   },
   exampleArgs: [
-    "--api-key sk-xxxxx",
-    "--config token-plan --api-key sk-sp-xxxxx",
     "--console",
+    "--api-key sk-xxxxx",
     "--open-api --access-key-id LTAIxxxxx --access-key-secret xxxxx",
   ],
   validate: (f) => {
@@ -164,18 +167,20 @@ export default defineCommand({
     if (!key) return;
 
     if (settings.dryRun) {
-      emitBare("Would save API key.");
+      emitBare("Would validate and save API key.");
       return;
     }
-    const profilePreset = getModelProfilePreset(settings.configName);
     const stored = store.stored();
-    const storedBaseUrl = stored.baseUrl;
-    const persistBaseUrl = baseUrl || (!storedBaseUrl ? profilePreset?.baseUrl : undefined);
-    const apiKeyCapabilities = profilePreset
-      ? [...new Set([...(stored.apiKeyCapabilities ?? []), ...profilePreset.apiKeyCapabilities])]
-      : stored.apiKeyCapabilities;
+    const validation = await validateApiKey(deps, key, {
+      explicitBaseUrl: baseUrl,
+      storedBaseUrl: stored.baseUrl,
+      workspaceId: settings.workspaceId,
+    });
+    const profilePreset = getModelProfilePreset(
+      validation.kind === "token-plan" ? "token-plan" : undefined,
+    );
     await persistApiKey(deps, key, {
-      persistBaseUrl,
+      persistBaseUrl: validation.baseUrl,
       defaultTextModel: profilePreset?.defaultTextModel,
       defaultVideoModel: profilePreset?.defaultVideoModel,
       defaultImageToVideoModel: profilePreset?.defaultImageToVideoModel,
@@ -183,8 +188,8 @@ export default defineCommand({
       defaultImageModel: profilePreset?.defaultImageModel,
       defaultSpeechModel: profilePreset?.defaultSpeechModel,
       defaultSpeechRecognitionModel: profilePreset?.defaultSpeechRecognitionModel,
-      apiKeyCapabilities,
+      apiKeyCapabilities: profilePreset?.apiKeyCapabilities,
     });
-    process.stderr.write(`API key saved to ${store.path}\n`);
+    process.stderr.write(`API key validated and saved to ${store.path}\n`);
   },
 });

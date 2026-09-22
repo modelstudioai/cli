@@ -14,10 +14,11 @@
    ```
    If this fails, see [Missing `bl`](#missing-bl) below.
 3. Compare the two versions (ignore the `bl` prefix; compare only `X.Y.Z`):
-   - If `metadata.version` ≠ `bl --version`, refresh skills before doing anything else:
+   - If `metadata.version` ≠ `bl --version`, refresh already-installed skills before doing anything else:
      ```bash
-     bl skill init
+     bl skill update
      ```
+   - If `bailian-protocol` or another needed skill is missing, stop and run `bl skill init`. Do not use `bl skill init` only to refresh versions — it installs every `bailian-*` skill.
    - Do not trust a stale `reference/` when versions mismatch — flags may be wrong.
 4. Check the latest published CLI version:
    ```bash
@@ -26,7 +27,7 @@
 5. If the installed `bl` is **older** than the latest npm version, **STOP** the current task and **ask the user** (report skill version, installed CLI version, and npm latest):
    > A newer version of bl is available (current: X.Y.Z, latest: A.B.C). Upgrade before continuing?
    - **Do NOT auto-upgrade silently** — the user decides.
-   - If the user agrees: run `bl update`, then continue. (`bl update` uses the detected install channel and, on success, also runs `bl skill init` to keep skills in lockstep across all agent apps.)
+   - If the user agrees: run `bl update`, then continue. (`bl update` uses the detected install channel and, on success, also runs `bl skill update` to refresh already-installed skills; it does not install new skills. First-time install still uses `bl skill init`.)
    - If the user declines: continue with the current version and note it in the summary.
    - If `npm view` / `bl update` fails (offline, registry blocked, permission): continue with the current `bl` and tell the user it could not be updated.
 6. Only proceed with the user's actual task after the above is resolved.

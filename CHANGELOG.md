@@ -6,6 +6,79 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.0.0] - 2026-09-22
+
+### Added
+
+- **Native MCP registration** — Added `bl mcp connect` and `bl mcp disconnect` to add or remove Bailian MCP servers in Agent-native configurations:
+  - Supports `streamable-http` and SSE, targeting an individual Agent or all installed Agents with `--agent all`.
+  - Supports Codex, Claude Code, Cursor, Qoder, Qoder Work, QwenWork, Qwen Code, Gemini, OpenCode, OpenClaw, DeepSeek Harness, ZCode, and WorkBuddy.
+  - Never overwrites unmanaged entries and preserves registrations modified by users during removal.
+- **Broader Skill delivery** — Skill installation and updates now support WorkBuddy, Trae CLI, and DeepSeek DSH through their global Skill directories.
+
+### Fixed
+
+- **Skill operation previews** — `bl skill init`, `add`, `update`, and `remove` now honor `--dry-run`, showing the planned Skills, Agents, and target paths without writing. Invalid requests retain the same failure status as real execution.
+- **Safer Skill cleanup** — `bl skill remove` previews and executions now use the same managed-link discovery scope, recognize historical managed links, and recheck targets immediately before deletion to avoid removing changed or unmanaged content.
+
+## [1.28.0] - 2026-09-20
+
+### Added
+
+- **Agent security commands** — `bl agents security overview` (protection overview for the last 24 hours) and `bl agents security alerts` (alert list with risk-level, asset-type, status, vendor, pagination and sorting filters). Both call the per-workspace AgentStudio host and honor the shared `text` / `json` / `--quiet` / `--dry-run` contract. The host is derived from `--workspace-id`, or overridden by `--base-url` / `DASHSCOPE_BASE_URL` / `auth login --base-url` pointed at a workspace or pre-release origin (e.g. `https://<workspace-id>.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio`).
+
+### Internal
+
+- Add Agent security E2E coverage (help, missing-workspace usage error, dry-run host derivation and `--base-url` override, query-string filters, enum fast-fail) and generate the `bailian-cli` skill reference for the new `agents` group.
+
+## [1.27.0] - 2026-09-18
+
+### Added
+
+- **Monitoring, logs, and alerts** — Added `bl monitor`, `bl log`, and `bl alert` command groups for model call statistics, failures, latency, token usage, audit and inference logs, traces, delivery configuration, and alert management.
+- **Model discovery and code samples** — Added `bl model search` for relevance-ranked catalog search and `bl model code` for ready-to-run SDK examples.
+
+### Changed
+
+- **Model catalog** — `bl model list` now supports input/output modality filters, hides offline models by default, and can include them with `--include-deprecated`.
+
+### Fixed
+
+- **Speech voices** — `bl speech synthesize --list-voices` now supports the built-in voices and documentation links for `qwen-audio-3.0-tts-plus` and `qwen-audio-3.0-tts-flash`.
+- **Unix binary distribution** — Added `.tar.gz` release assets and checksums for macOS and Linux, enabling installation without an `unzip` dependency while retaining `.zip` assets for compatibility.
+
+## [1.26.0] - 2026-09-17
+
+### Changed
+
+- **Simplified authentication** — Console login is now the recommended default and can create an ordinary API key when needed. Existing ordinary API keys and Token Plan subscription keys use the same `bl auth login --api-key <API_KEY>` command.
+- **Automatic API key validation and endpoint selection** — API keys are validated before being saved. The CLI automatically selects an available regional endpoint and applies the appropriate Token Plan configuration when applicable.
+
+## [1.25.0] - 2026-09-14
+
+### Added
+
+- **Token Plan harness quota** — `bl token-plan harness-quota` shows Token Plan harness entitlement quota usage (Console auth), joining the harness list with issued entitlements to display used/total quota, usage ratio, and reset time; harnesses with a pending entitlement are listed as issuing.
+- Filter the harness list with `--type official_tool|infrastructure`; render as a quota box or `--output json`.
+
+## [1.24.0] - 2026-09-11
+
+### Added
+
+- Sandbox instance and template lifecycle commands, with automatic build polling and `--async` submission.
+- `bl sandbox official-images` and template `--image` presets for Code Interpreter, Browser, and All-in-One.
+- `bl sandbox file upload` uploads template mount files with `source=sandbox_template`; use the returned File ID in `mntConfig`.
+- Sandbox supports shared `--base-url`, environment and Profile configuration, with workspace-based endpoint fallback.
+- Dedicated `bailian-sandbox` Skill with command references and instance connection guidance.
+
+### Fixed
+
+- Preserve submitted `templateID` and `buildID` when template-build polling fails, so users can check the existing build before resubmitting.
+
+### Security
+
+- Sandbox REST calls use Bailian Bearer authentication without an E2B SDK or E2B API key. Connection credentials and dry-run environment values are redacted by default.
+
 ## [1.23.0] - 2026-09-10
 
 ### Added

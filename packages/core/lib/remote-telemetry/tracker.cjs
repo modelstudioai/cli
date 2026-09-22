@@ -709,7 +709,7 @@ module.exports = (function (e) {
             e = this._processData(this._queue, n);
           } catch (e) {}
           if (e && e.length < t) return ((this._queue = []), void this.send(e));
-          for (var r, o = []; this._queue.length; ) {
+          for (var r, o = []; this._queue.length;) {
             o.push(this._queue.shift());
             try {
               r = this._processData(o, n);
@@ -1080,7 +1080,7 @@ module.exports = (function (e) {
           var u,
             p = D(a);
           try {
-            for (p.s(); !(u = p.n()).done; ) {
+            for (p.s(); !(u = p.n()).done;) {
               var l = u.value;
               if (!1 === e.test(l.mac)) return l.mac;
             }

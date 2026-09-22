@@ -28,9 +28,9 @@ export function ensureZip() {
  * Pack compiled binary into `zipFileName` under `outdir` and remove the raw file.
  *
  * @param {{ innerName: string, innerPath: string, os: string, arch: string }} compiled
- * @param {{ outdir: string, zipFileName: string, log?: (message?: string) => void }} options
+ * @param {{ outdir: string, zipFileName: string, log?: (message?: string) => void, removeInner?: boolean }} options
  */
-export function zipOne(compiled, { outdir, zipFileName, log = defaultLog }) {
+export function zipOne(compiled, { outdir, zipFileName, log = defaultLog, removeInner = true }) {
   const zipPath = join(outdir, zipFileName);
   log(`zip ${compiled.innerName} → ${zipFileName}`);
 
@@ -43,7 +43,7 @@ export function zipOne(compiled, { outdir, zipFileName, log = defaultLog }) {
     process.stderr.write(result.stderr || result.stdout || "");
     throw new Error(`zip failed for ${compiled.innerName}`);
   }
-  unlinkSync(compiled.innerPath);
+  if (removeInner) unlinkSync(compiled.innerPath);
   return {
     fileName: zipFileName,
     outfile: zipPath,

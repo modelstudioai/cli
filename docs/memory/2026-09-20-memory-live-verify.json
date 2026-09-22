@@ -1,0 +1,2441 @@
+{
+  "calls": [
+    {
+      "name": "ListMemory",
+      "method": "GET",
+      "path": "/memory_nodes",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/memory_nodes",
+      "query": {
+        "user_id": "doc-verify-20260920",
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "page_num": 1,
+        "page_size": 10
+      },
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 467,
+      "ok": true,
+      "error": null,
+      "response": {
+        "memory_nodes": [],
+        "page_num": 1,
+        "page_size": 10,
+        "request_id": "5cb00f90-80e1-9ebb-bc38-edf4aaddcc8d",
+        "total": 0
+      },
+      "actual_keys": ["memory_nodes", "page_num", "page_size", "request_id", "total"],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "ListProfileSchemas",
+      "method": "GET",
+      "path": "/profile_schemas",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/profile_schemas",
+      "query": {
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "page_num": 1,
+        "page_size": 10
+      },
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 269,
+      "ok": true,
+      "error": null,
+      "response": {
+        "profile_schemas": [
+          {
+            "description": "系统自动创建的默认画像模板",
+            "extract_scene": "efficient",
+            "name": "默认画像",
+            "plan_version": "pro",
+            "profile_schema_id": "6f641c01c02e4d13b440782d78908686"
+          }
+        ],
+        "request_id": "0decce3a-6d59-96de-97a6-8d8631e58ee5",
+        "total": 1
+      },
+      "actual_keys": [
+        "profile_schemas",
+        "profile_schemas[].description",
+        "profile_schemas[].extract_scene",
+        "profile_schemas[].name",
+        "profile_schemas[].plan_version",
+        "profile_schemas[].profile_schema_id",
+        "request_id",
+        "total"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "ListMemoryProjects",
+      "method": "GET",
+      "path": "/memory_projects",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/memory_projects",
+      "query": {
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "page_num": 1,
+        "page_size": 10
+      },
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 198,
+      "ok": true,
+      "error": null,
+      "response": {
+        "memory_projects": [
+          {
+            "auto_refresh": true,
+            "created_at": 1789876427,
+            "description": "Skill抽取策略",
+            "expired_in_days": -1,
+            "extract_scene": "intelligent",
+            "instruction_type": "default",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "memory_type": "skill",
+            "name": "Skill抽取",
+            "plan_version": "pro",
+            "project_id": "5914d8b460de451fb2fbd920279627e3",
+            "support_multi_modal": false,
+            "updated_at": 1789876427
+          },
+          {
+            "auto_refresh": true,
+            "created_at": 1788796766,
+            "expired_in_days": 180,
+            "extract_scene": "efficient",
+            "instruction_type": "default",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "memory_type": "observation",
+            "name": "默认记忆片段规则",
+            "plan_version": "pro",
+            "project_id": "996832425b134e91a4934d9f91a453ff",
+            "support_multi_modal": false,
+            "updated_at": 1788796766
+          }
+        ],
+        "page_num": 1,
+        "page_size": 10,
+        "request_id": "7a3e7a1d-8279-906c-9f15-3dbf6e339bd6",
+        "total": 2
+      },
+      "actual_keys": [
+        "memory_projects",
+        "memory_projects[].auto_refresh",
+        "memory_projects[].created_at",
+        "memory_projects[].description",
+        "memory_projects[].expired_in_days",
+        "memory_projects[].extract_scene",
+        "memory_projects[].instruction_type",
+        "memory_projects[].memory_library_id",
+        "memory_projects[].memory_type",
+        "memory_projects[].name",
+        "memory_projects[].plan_version",
+        "memory_projects[].project_id",
+        "memory_projects[].support_multi_modal",
+        "memory_projects[].updated_at",
+        "page_num",
+        "page_size",
+        "request_id",
+        "total"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "ListMemoryProjects skill",
+      "method": "GET",
+      "path": "/memory_projects",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/memory_projects",
+      "query": {
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "memory_type": "skill",
+        "page_num": 1,
+        "page_size": 10
+      },
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 214,
+      "ok": true,
+      "error": null,
+      "response": {
+        "memory_projects": [
+          {
+            "auto_refresh": true,
+            "created_at": 1789876427,
+            "description": "Skill抽取策略",
+            "expired_in_days": -1,
+            "extract_scene": "intelligent",
+            "instruction_type": "default",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "memory_type": "skill",
+            "name": "Skill抽取",
+            "plan_version": "pro",
+            "project_id": "5914d8b460de451fb2fbd920279627e3",
+            "support_multi_modal": false,
+            "updated_at": 1789876427
+          }
+        ],
+        "page_num": 1,
+        "page_size": 10,
+        "request_id": "df12cda9-b6d5-9daa-b92e-d08744e239e8",
+        "total": 1
+      },
+      "actual_keys": [
+        "memory_projects",
+        "memory_projects[].auto_refresh",
+        "memory_projects[].created_at",
+        "memory_projects[].description",
+        "memory_projects[].expired_in_days",
+        "memory_projects[].extract_scene",
+        "memory_projects[].instruction_type",
+        "memory_projects[].memory_library_id",
+        "memory_projects[].memory_type",
+        "memory_projects[].name",
+        "memory_projects[].plan_version",
+        "memory_projects[].project_id",
+        "memory_projects[].support_multi_modal",
+        "memory_projects[].updated_at",
+        "page_num",
+        "page_size",
+        "request_id",
+        "total"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetMemoryProject skill",
+      "method": "GET",
+      "path": "/memory_projects/5914d8b460de451fb2fbd920279627e3",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/memory_projects/5914d8b460de451fb2fbd920279627e3",
+      "query": {
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700"
+      },
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 232,
+      "ok": true,
+      "error": null,
+      "response": {
+        "auto_refresh": true,
+        "created_at": 1789876427,
+        "description": "Skill抽取策略",
+        "expired_in_days": -1,
+        "extract_scene": "intelligent",
+        "instruction_type": "default",
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "memory_type": "skill",
+        "name": "Skill抽取",
+        "plan_version": "pro",
+        "project_id": "5914d8b460de451fb2fbd920279627e3",
+        "request_id": "57b07d79-4521-9a6f-b5fd-aa029d088349",
+        "support_multi_modal": false,
+        "updated_at": 1789876427
+      },
+      "actual_keys": [
+        "auto_refresh",
+        "created_at",
+        "description",
+        "expired_in_days",
+        "extract_scene",
+        "instruction_type",
+        "memory_library_id",
+        "memory_type",
+        "name",
+        "plan_version",
+        "project_id",
+        "request_id",
+        "support_multi_modal",
+        "updated_at"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": ["auto_refresh", "description", "expired_in_days", "extract_scene"]
+    },
+    {
+      "name": "CreateProfileSchema",
+      "method": "POST",
+      "path": "/profile_schemas",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/profile_schemas",
+      "query": null,
+      "request_body": {
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "name": "doc-verify-schema",
+        "description": "live verify schema, safe to delete",
+        "plan_version": "lite",
+        "attributes": [
+          {
+            "name": "爱好",
+            "description": "兴趣爱好",
+            "immutable": false
+          },
+          {
+            "name": "城市",
+            "description": "常住城市",
+            "immutable": false
+          }
+        ]
+      },
+      "status": 200,
+      "elapsed_ms": 257,
+      "ok": true,
+      "error": null,
+      "response": {
+        "profile_schema_id": "9b5e49724ba141bab94933ce08e96f70",
+        "request_id": "584e8e3e-c17c-9cd5-9bfe-76bf1a4fda66"
+      },
+      "actual_keys": ["profile_schema_id", "request_id"],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetProfileSchema",
+      "method": "GET",
+      "path": "/profile_schemas/9b5e49724ba141bab94933ce08e96f70",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/profile_schemas/9b5e49724ba141bab94933ce08e96f70",
+      "query": {
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700"
+      },
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 260,
+      "ok": true,
+      "error": null,
+      "response": {
+        "attributes": [
+          {
+            "attribute_id": "4f804426246642df96433f0251a6ec43",
+            "description": "常住城市",
+            "immutable": false,
+            "name": "城市"
+          },
+          {
+            "attribute_id": "61f6ae954fdf43fbb0d09db80bc6a740",
+            "description": "兴趣爱好",
+            "immutable": false,
+            "name": "爱好"
+          }
+        ],
+        "description": "live verify schema, safe to delete",
+        "extract_scene": "efficient",
+        "name": "doc-verify-schema",
+        "plan_version": "lite",
+        "request_id": "a71f2a89-0d41-980a-a714-94aaaac00b75"
+      },
+      "actual_keys": [
+        "attributes",
+        "attributes[].attribute_id",
+        "attributes[].description",
+        "attributes[].immutable",
+        "attributes[].name",
+        "description",
+        "extract_scene",
+        "name",
+        "plan_version",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": ["extract_scene", "plan_version"]
+    },
+    {
+      "name": "UpdateProfileSchema",
+      "method": "PATCH",
+      "path": "/profile_schemas/9b5e49724ba141bab94933ce08e96f70",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/profile_schemas/9b5e49724ba141bab94933ce08e96f70",
+      "query": null,
+      "request_body": {
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "description": "live verify schema updated",
+        "plan_version": "lite"
+      },
+      "status": 200,
+      "elapsed_ms": 266,
+      "ok": true,
+      "error": null,
+      "response": {
+        "request_id": "f7fb7dec-4ca2-9372-bd92-8ae439504e47"
+      },
+      "actual_keys": ["request_id"],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "AddMemory observation",
+      "method": "POST",
+      "path": "/add-async",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/add-async",
+      "query": null,
+      "request_body": {
+        "user_id": "doc-verify-20260920",
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "timestamp": 1747278460,
+        "messages": [
+          {
+            "role": "user",
+            "content": "你好"
+          },
+          {
+            "role": "assistant",
+            "content": "你好，有什么可以帮您"
+          },
+          {
+            "role": "user",
+            "content": "我住在杭州，周末喜欢打篮球，明天下午三点提醒我开会。"
+          },
+          {
+            "role": "assistant",
+            "content": "好的，已记下。"
+          }
+        ],
+        "meta_data": {
+          "source": "doc-verify",
+          "city": "Hangzhou"
+        },
+        "profile_schema": "9b5e49724ba141bab94933ce08e96f70"
+      },
+      "status": 200,
+      "elapsed_ms": 244,
+      "ok": true,
+      "error": null,
+      "response": {
+        "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+        "events": [
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "observation",
+            "result": [],
+            "status": "PENDING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          },
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "9b5e49724ba141bab94933ce08e96f70",
+            "resource_type": "user_profile",
+            "result": [],
+            "status": "PENDING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "850d6163-19ae-9d78-a44e-a8126245e6c0"
+      },
+      "actual_keys": [
+        "event_id",
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#1",
+      "method": "GET",
+      "path": "/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 234,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          },
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "9b5e49724ba141bab94933ce08e96f70",
+            "resource_type": "user_profile",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "025876e7-22ba-9eef-8509-dfd6631dc088"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#2",
+      "method": "GET",
+      "path": "/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 481,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          },
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "9b5e49724ba141bab94933ce08e96f70",
+            "resource_type": "user_profile",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "756b508b-a8c7-9f1c-9126-6e781b1cebe6"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#3",
+      "method": "GET",
+      "path": "/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 249,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          },
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "9b5e49724ba141bab94933ce08e96f70",
+            "resource_type": "user_profile",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "a57c160e-b1b8-975c-bc4d-f6753ab83ad4"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#4",
+      "method": "GET",
+      "path": "/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 212,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          },
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "9b5e49724ba141bab94933ce08e96f70",
+            "resource_type": "user_profile",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "717535af-8d21-9ec6-abb1-8afa2be5a87e"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#5",
+      "method": "GET",
+      "path": "/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 475,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          },
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "9b5e49724ba141bab94933ce08e96f70",
+            "resource_type": "user_profile",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "6b07c933-a21a-9a94-a7be-110b559e7348"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#6",
+      "method": "GET",
+      "path": "/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 210,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          },
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "9b5e49724ba141bab94933ce08e96f70",
+            "resource_type": "user_profile",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "e0980627-2b32-94d0-862d-d5bbb10bcab6"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#7",
+      "method": "GET",
+      "path": "/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 298,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          },
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "9b5e49724ba141bab94933ce08e96f70",
+            "resource_type": "user_profile",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "1c3bc922-2680-9d48-9d46-a4031a2d76e0"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#8",
+      "method": "GET",
+      "path": "/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 272,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          },
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "9b5e49724ba141bab94933ce08e96f70",
+            "resource_type": "user_profile",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "239830b0-3cfd-9364-a216-892b707079a0"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#9",
+      "method": "GET",
+      "path": "/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 239,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          },
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "9b5e49724ba141bab94933ce08e96f70",
+            "resource_type": "user_profile",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "59979d30-b3de-9986-9dd6-a061e72800d3"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#10",
+      "method": "GET",
+      "path": "/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 268,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          },
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "9b5e49724ba141bab94933ce08e96f70",
+            "resource_type": "user_profile",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876508,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "1b5f2b2d-3670-926f-a8b6-c3455eb81563"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#11",
+      "method": "GET",
+      "path": "/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/0d1535547c2648ac983c73c11b757bb61789876508524",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 345,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "observation",
+            "result": [
+              {
+                "content": "用户住在杭州",
+                "event": "ADD",
+                "memory_node_id": "979c381f11e14ed693cfff0d0cd75bfa",
+                "memory_type": "observation"
+              },
+              {
+                "content": "用户周末喜欢打篮球",
+                "event": "ADD",
+                "memory_node_id": "cb8bc29cea49474ea65ede0321b1ba2f",
+                "memory_type": "observation"
+              },
+              {
+                "content": "用户明天下午三点需要提醒开会",
+                "event": "ADD",
+                "memory_node_id": "2b9d57a15bc443829fd1c8e5f2a9b2fd",
+                "memory_type": "observation"
+              }
+            ],
+            "status": "SUCCEEDED",
+            "updated_at": 1789876540,
+            "user_id": "doc-verify-20260920"
+          },
+          {
+            "created_at": 1789876508,
+            "event_id": "0d1535547c2648ac983c73c11b757bb61789876508524",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "9b5e49724ba141bab94933ce08e96f70",
+            "resource_type": "user_profile",
+            "result": [
+              {
+                "content": "杭州",
+                "event": "ADD",
+                "memory_type": "user_profile",
+                "name": "城市"
+              },
+              {
+                "content": "打篮球",
+                "event": "ADD",
+                "memory_type": "user_profile",
+                "name": "爱好"
+              }
+            ],
+            "status": "SUCCEEDED",
+            "updated_at": 1789876539,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "2ae26d74-fec6-99d5-88a6-5d672bbf91a6"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].result[].content",
+        "events[].result[].event",
+        "events[].result[].memory_node_id",
+        "events[].result[].memory_type",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "AddMemory custom_content",
+      "method": "POST",
+      "path": "/add-async",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/add-async",
+      "query": null,
+      "request_body": {
+        "user_id": "doc-verify-20260920",
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "custom_content": "用户下周要去上海参加 WAIC",
+        "meta_data": {
+          "source": "doc-verify-custom"
+        }
+      },
+      "status": 200,
+      "elapsed_ms": 286,
+      "ok": true,
+      "error": null,
+      "response": {
+        "event_id": "aeae804cffc94406936330a7355756ea1789876542140",
+        "events": [
+          {
+            "created_at": 1789876542,
+            "event_id": "aeae804cffc94406936330a7355756ea1789876542140",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "custom_observation",
+            "result": [],
+            "status": "PENDING",
+            "updated_at": 1789876542,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "fd810fda-0ff5-90aa-9fce-4b0fc5000b4b"
+      },
+      "actual_keys": [
+        "event_id",
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#1",
+      "method": "GET",
+      "path": "/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 257,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876542,
+            "event_id": "aeae804cffc94406936330a7355756ea1789876542140",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "custom_observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876542,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "c66d0747-6d67-9090-9af6-89b940f7576f"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#2",
+      "method": "GET",
+      "path": "/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 220,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876542,
+            "event_id": "aeae804cffc94406936330a7355756ea1789876542140",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "custom_observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876542,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "985c8410-62d7-9bf2-b8a9-de762e0420bc"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#3",
+      "method": "GET",
+      "path": "/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 196,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876542,
+            "event_id": "aeae804cffc94406936330a7355756ea1789876542140",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "custom_observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876542,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "d249f7d4-4e29-9d0a-b17b-961d2638eddd"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#4",
+      "method": "GET",
+      "path": "/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 236,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876542,
+            "event_id": "aeae804cffc94406936330a7355756ea1789876542140",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "custom_observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876542,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "d2258b5d-06af-93ac-8085-85a7977c35ea"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#5",
+      "method": "GET",
+      "path": "/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 230,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876542,
+            "event_id": "aeae804cffc94406936330a7355756ea1789876542140",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "custom_observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876542,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "27153b2e-4137-9c5e-8bce-b893e6f61f45"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#6",
+      "method": "GET",
+      "path": "/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 331,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876542,
+            "event_id": "aeae804cffc94406936330a7355756ea1789876542140",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "custom_observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876542,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "fa671451-710a-9818-ae45-07d03da3055f"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#7",
+      "method": "GET",
+      "path": "/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 253,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876542,
+            "event_id": "aeae804cffc94406936330a7355756ea1789876542140",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "custom_observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876542,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "9a99d716-e472-9f73-8728-270af453c4b4"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#8",
+      "method": "GET",
+      "path": "/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 203,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876542,
+            "event_id": "aeae804cffc94406936330a7355756ea1789876542140",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "custom_observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876542,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "9834d8ce-5bf6-9aa1-be2f-129013d19b61"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#9",
+      "method": "GET",
+      "path": "/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 242,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876542,
+            "event_id": "aeae804cffc94406936330a7355756ea1789876542140",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "custom_observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876542,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "95c5dc91-38af-9abb-a543-031f828fdd6f"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#10",
+      "method": "GET",
+      "path": "/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 221,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876542,
+            "event_id": "aeae804cffc94406936330a7355756ea1789876542140",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "custom_observation",
+            "result": [],
+            "status": "RUNNING",
+            "updated_at": 1789876542,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "a1fcae38-a388-9d4f-9dd2-38b966e4c2cd"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetEvent poll#11",
+      "method": "GET",
+      "path": "/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/events/aeae804cffc94406936330a7355756ea1789876542140",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 226,
+      "ok": true,
+      "error": null,
+      "response": {
+        "events": [
+          {
+            "created_at": 1789876542,
+            "event_id": "aeae804cffc94406936330a7355756ea1789876542140",
+            "event_type": "ADD_ASYNC",
+            "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+            "resource_id": "996832425b134e91a4934d9f91a453ff",
+            "resource_type": "custom_observation",
+            "result": [
+              {
+                "content": "用户下周要去上海参加 WAIC",
+                "event": "ADD",
+                "memory_node_id": "389beeb548994450bf432c1cd20b2815",
+                "memory_type": "observation"
+              }
+            ],
+            "status": "SUCCEEDED",
+            "updated_at": 1789876572,
+            "user_id": "doc-verify-20260920"
+          }
+        ],
+        "request_id": "2db3ed26-c6ac-9c1c-9317-212e1bf00113"
+      },
+      "actual_keys": [
+        "events",
+        "events[].created_at",
+        "events[].event_id",
+        "events[].event_type",
+        "events[].memory_library_id",
+        "events[].resource_id",
+        "events[].resource_type",
+        "events[].result",
+        "events[].result[].content",
+        "events[].result[].event",
+        "events[].result[].memory_node_id",
+        "events[].result[].memory_type",
+        "events[].status",
+        "events[].updated_at",
+        "events[].user_id",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "AddMemory skill",
+      "method": "POST",
+      "path": "/add-async",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/add-async",
+      "query": null,
+      "request_body": {
+        "user_id": "doc-verify-20260920",
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "project_ids": ["5914d8b460de451fb2fbd920279627e3"],
+        "custom_content": "整理会议纪要",
+        "skill_name": "会议纪要整理",
+        "skill_description": "自动提取会议重点并生成摘要",
+        "skill_tags": ["办公", "总结"]
+      },
+      "status": 400,
+      "elapsed_ms": 218,
+      "ok": false,
+      "error": "{\"request_id\":\"92fdf5ec-ef6c-98fe-8a7f-55486eff7474\",\"code\":\"InvalidParameter\",\"message\":\"custom_content can only be bound to one project, project_ids is not supported when custom_content is provided.\"}",
+      "response": {
+        "request_id": "92fdf5ec-ef6c-98fe-8a7f-55486eff7474",
+        "code": "InvalidParameter",
+        "message": "custom_content can only be bound to one project, project_ids is not supported when custom_content is provided."
+      },
+      "actual_keys": ["request_id", "code", "message"],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "ListMemory after add",
+      "method": "GET",
+      "path": "/memory_nodes",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/memory_nodes",
+      "query": {
+        "user_id": "doc-verify-20260920",
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "page_num": 1,
+        "page_size": 20
+      },
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 184,
+      "ok": true,
+      "error": null,
+      "response": {
+        "memory_nodes": [
+          {
+            "content": "用户下周要去上海参加 WAIC",
+            "created_at": 1789876572,
+            "memory_node_id": "389beeb548994450bf432c1cd20b2815",
+            "memory_type": "observation",
+            "meta_data": {
+              "source": "doc-verify-custom"
+            },
+            "project_id": "996832425b134e91a4934d9f91a453ff",
+            "status": "valid",
+            "timestamp": 1789876542,
+            "updated_at": 1789876572
+          },
+          {
+            "content": "用户住在杭州",
+            "created_at": 1789876541,
+            "media_desc": "",
+            "memory_node_id": "979c381f11e14ed693cfff0d0cd75bfa",
+            "memory_type": "observation",
+            "meta_data": {
+              "city": "Hangzhou",
+              "source": "doc-verify"
+            },
+            "project_id": "996832425b134e91a4934d9f91a453ff",
+            "status": "valid",
+            "timestamp": 1747278460,
+            "updated_at": 1789876541
+          },
+          {
+            "content": "用户周末喜欢打篮球",
+            "created_at": 1789876541,
+            "media_desc": "",
+            "memory_node_id": "cb8bc29cea49474ea65ede0321b1ba2f",
+            "memory_type": "observation",
+            "meta_data": {
+              "city": "Hangzhou",
+              "source": "doc-verify"
+            },
+            "project_id": "996832425b134e91a4934d9f91a453ff",
+            "status": "valid",
+            "timestamp": 1747278460,
+            "updated_at": 1789876541
+          },
+          {
+            "content": "用户明天下午三点需要提醒开会",
+            "created_at": 1789876541,
+            "media_desc": "",
+            "memory_node_id": "2b9d57a15bc443829fd1c8e5f2a9b2fd",
+            "memory_type": "observation",
+            "meta_data": {
+              "city": "Hangzhou",
+              "source": "doc-verify"
+            },
+            "project_id": "996832425b134e91a4934d9f91a453ff",
+            "status": "valid",
+            "timestamp": 1747378800,
+            "updated_at": 1789876541
+          }
+        ],
+        "page_num": 1,
+        "page_size": 20,
+        "request_id": "b94f81e9-86f1-9c1c-998f-6d7a5135c408",
+        "total": 4
+      },
+      "actual_keys": [
+        "memory_nodes",
+        "memory_nodes[].content",
+        "memory_nodes[].created_at",
+        "memory_nodes[].memory_node_id",
+        "memory_nodes[].memory_type",
+        "memory_nodes[].meta_data",
+        "memory_nodes[].meta_data.source",
+        "memory_nodes[].project_id",
+        "memory_nodes[].status",
+        "memory_nodes[].timestamp",
+        "memory_nodes[].updated_at",
+        "page_num",
+        "page_size",
+        "request_id",
+        "total"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "SearchMemory observation",
+      "method": "POST",
+      "path": "/memory_nodes/search",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/memory_nodes/search",
+      "query": null,
+      "request_body": {
+        "user_id": "doc-verify-20260920",
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "messages": [
+          {
+            "role": "user",
+            "content": "我下周有什么安排？"
+          }
+        ],
+        "top_k": 10,
+        "min_score": 0,
+        "memory_types": ["observation"],
+        "plan_version": "lite",
+        "query_timestamp": 1747278460
+      },
+      "status": 200,
+      "elapsed_ms": 325,
+      "ok": true,
+      "error": null,
+      "response": {
+        "memory_nodes": [
+          {
+            "content": "用户下周要去上海参加 WAIC",
+            "created_at": 1789876572,
+            "memory_node_id": "389beeb548994450bf432c1cd20b2815",
+            "memory_type": "observation",
+            "meta_data": {
+              "source": "doc-verify-custom"
+            },
+            "project_id": "996832425b134e91a4934d9f91a453ff",
+            "score": 0.658,
+            "status": "valid",
+            "timestamp": 1789876542,
+            "updated_at": 1789876572
+          },
+          {
+            "content": "用户明天下午三点需要提醒开会",
+            "created_at": 1789876541,
+            "memory_node_id": "2b9d57a15bc443829fd1c8e5f2a9b2fd",
+            "memory_type": "observation",
+            "meta_data": {
+              "city": "Hangzhou",
+              "source": "doc-verify"
+            },
+            "project_id": "996832425b134e91a4934d9f91a453ff",
+            "score": 0.0,
+            "status": "valid",
+            "timestamp": 1747378800,
+            "updated_at": 1789876541
+          },
+          {
+            "content": "用户周末喜欢打篮球",
+            "created_at": 1789876541,
+            "memory_node_id": "cb8bc29cea49474ea65ede0321b1ba2f",
+            "memory_type": "observation",
+            "meta_data": {
+              "city": "Hangzhou",
+              "source": "doc-verify"
+            },
+            "project_id": "996832425b134e91a4934d9f91a453ff",
+            "score": 0.0,
+            "status": "valid",
+            "timestamp": 1747278460,
+            "updated_at": 1789876541
+          },
+          {
+            "content": "用户住在杭州",
+            "created_at": 1789876541,
+            "memory_node_id": "979c381f11e14ed693cfff0d0cd75bfa",
+            "memory_type": "observation",
+            "meta_data": {
+              "city": "Hangzhou",
+              "source": "doc-verify"
+            },
+            "project_id": "996832425b134e91a4934d9f91a453ff",
+            "score": 0.0,
+            "status": "valid",
+            "timestamp": 1747278460,
+            "updated_at": 1789876541
+          }
+        ],
+        "plan_version": "lite",
+        "request_id": "ff21a5ef-eb1d-9c72-b7b7-df561df71f36"
+      },
+      "actual_keys": [
+        "memory_nodes",
+        "memory_nodes[].content",
+        "memory_nodes[].created_at",
+        "memory_nodes[].memory_node_id",
+        "memory_nodes[].memory_type",
+        "memory_nodes[].meta_data",
+        "memory_nodes[].meta_data.source",
+        "memory_nodes[].project_id",
+        "memory_nodes[].score",
+        "memory_nodes[].status",
+        "memory_nodes[].timestamp",
+        "memory_nodes[].updated_at",
+        "plan_version",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "SearchMemory skill",
+      "method": "POST",
+      "path": "/memory_nodes/search",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/memory_nodes/search",
+      "query": null,
+      "request_body": {
+        "user_id": "doc-verify-20260920",
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "messages": [
+          {
+            "role": "user",
+            "content": "会议纪要"
+          }
+        ],
+        "top_k": 10,
+        "min_score": 0,
+        "memory_types": ["skill"],
+        "plan_version": "lite",
+        "project_ids": ["5914d8b460de451fb2fbd920279627e3"]
+      },
+      "status": 200,
+      "elapsed_ms": 464,
+      "ok": true,
+      "error": null,
+      "response": {
+        "memory_nodes": [],
+        "plan_version": "lite",
+        "request_id": "9ad74f9c-ab44-924d-b3fa-5abc9a1889c4"
+      },
+      "actual_keys": ["memory_nodes", "plan_version", "request_id"],
+      "missing_vs_doc": [],
+      "extra_vs_doc": ["plan_version"]
+    },
+    {
+      "name": "SearchMemory mixed types",
+      "method": "POST",
+      "path": "/memory_nodes/search",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/memory_nodes/search",
+      "query": null,
+      "request_body": {
+        "user_id": "doc-verify-20260920",
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "messages": [
+          {
+            "role": "user",
+            "content": "提醒"
+          }
+        ],
+        "top_k": 10,
+        "min_score": 0,
+        "memory_types": ["observation", "skill"]
+      },
+      "status": 200,
+      "elapsed_ms": 770,
+      "ok": true,
+      "error": null,
+      "response": {
+        "memory_nodes": [
+          {
+            "content": "用户明天下午三点需要提醒开会",
+            "created_at": 1789876541,
+            "memory_node_id": "2b9d57a15bc443829fd1c8e5f2a9b2fd",
+            "memory_type": "observation",
+            "meta_data": {
+              "city": "Hangzhou",
+              "source": "doc-verify"
+            },
+            "project_id": "996832425b134e91a4934d9f91a453ff",
+            "score": 0.275,
+            "status": "valid",
+            "timestamp": 1747378800,
+            "updated_at": 1789876541
+          },
+          {
+            "content": "用户下周要去上海参加 WAIC",
+            "created_at": 1789876572,
+            "memory_node_id": "389beeb548994450bf432c1cd20b2815",
+            "memory_type": "observation",
+            "meta_data": {
+              "source": "doc-verify-custom"
+            },
+            "project_id": "996832425b134e91a4934d9f91a453ff",
+            "score": 0.167,
+            "status": "valid",
+            "timestamp": 1789876542,
+            "updated_at": 1789876572
+          },
+          {
+            "content": "用户住在杭州",
+            "created_at": 1789876541,
+            "memory_node_id": "979c381f11e14ed693cfff0d0cd75bfa",
+            "memory_type": "observation",
+            "meta_data": {
+              "city": "Hangzhou",
+              "source": "doc-verify"
+            },
+            "project_id": "996832425b134e91a4934d9f91a453ff",
+            "score": 0.155,
+            "status": "valid",
+            "timestamp": 1747278460,
+            "updated_at": 1789876541
+          },
+          {
+            "content": "用户周末喜欢打篮球",
+            "created_at": 1789876541,
+            "memory_node_id": "cb8bc29cea49474ea65ede0321b1ba2f",
+            "memory_type": "observation",
+            "meta_data": {
+              "city": "Hangzhou",
+              "source": "doc-verify"
+            },
+            "project_id": "996832425b134e91a4934d9f91a453ff",
+            "score": 0.029,
+            "status": "valid",
+            "timestamp": 1747278460,
+            "updated_at": 1789876541
+          }
+        ],
+        "plan_version": "pro",
+        "request_id": "d1aa2489-1872-9b4f-8a1e-3756b615ddf4"
+      },
+      "actual_keys": [
+        "memory_nodes",
+        "memory_nodes[].content",
+        "memory_nodes[].created_at",
+        "memory_nodes[].memory_node_id",
+        "memory_nodes[].memory_type",
+        "memory_nodes[].meta_data",
+        "memory_nodes[].meta_data.city",
+        "memory_nodes[].meta_data.source",
+        "memory_nodes[].project_id",
+        "memory_nodes[].score",
+        "memory_nodes[].status",
+        "memory_nodes[].timestamp",
+        "memory_nodes[].updated_at",
+        "plan_version",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetMemoryNode",
+      "method": "GET",
+      "path": "/memory_nodes/979c381f11e14ed693cfff0d0cd75bfa",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/memory_nodes/979c381f11e14ed693cfff0d0cd75bfa",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 260,
+      "ok": true,
+      "error": null,
+      "response": {
+        "memory_node": {
+          "content": "用户住在杭州",
+          "created_at": 1789876541,
+          "media_desc": "",
+          "media_urls": [],
+          "memory_node_id": "979c381f11e14ed693cfff0d0cd75bfa",
+          "memory_type": "observation",
+          "meta_data": {
+            "city": "Hangzhou",
+            "source": "doc-verify"
+          },
+          "project_id": "996832425b134e91a4934d9f91a453ff",
+          "status": "valid",
+          "timestamp": 1747278460,
+          "updated_at": 1789876541
+        },
+        "request_id": "0549a1c9-5db4-97ff-aba3-50f99e85fd48"
+      },
+      "actual_keys": [
+        "memory_node",
+        "memory_node.content",
+        "memory_node.created_at",
+        "memory_node.media_desc",
+        "memory_node.media_urls",
+        "memory_node.memory_node_id",
+        "memory_node.memory_type",
+        "memory_node.meta_data",
+        "memory_node.meta_data.city",
+        "memory_node.meta_data.source",
+        "memory_node.project_id",
+        "memory_node.status",
+        "memory_node.timestamp",
+        "memory_node.updated_at",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "UpdateMemory",
+      "method": "PATCH",
+      "path": "/memory_nodes/979c381f11e14ed693cfff0d0cd75bfa",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/memory_nodes/979c381f11e14ed693cfff0d0cd75bfa",
+      "query": null,
+      "request_body": {
+        "user_id": "doc-verify-20260920",
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "custom_content": "用户下周要去上海参加 WAIC，已更新",
+        "timestamp": 1747278460,
+        "meta_data": {
+          "source": "doc-verify-updated"
+        }
+      },
+      "status": 200,
+      "elapsed_ms": 373,
+      "ok": true,
+      "error": null,
+      "response": {
+        "request_id": "becd6582-1950-9061-afac-efe50c2988c0"
+      },
+      "actual_keys": ["request_id"],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetSkillExport",
+      "method": "GET",
+      "path": "/skill/export/979c381f11e14ed693cfff0d0cd75bfa",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/skill/export/979c381f11e14ed693cfff0d0cd75bfa",
+      "query": null,
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 273,
+      "ok": true,
+      "error": null,
+      "response": {
+        "memory_node": {
+          "content": "用户下周要去上海参加 WAIC，已更新",
+          "created_at": 1789876541,
+          "media_desc": "",
+          "media_urls": [],
+          "memory_node_id": "979c381f11e14ed693cfff0d0cd75bfa",
+          "memory_type": "observation",
+          "meta_data": {
+            "city": "Hangzhou",
+            "source": "doc-verify-updated"
+          },
+          "project_id": "996832425b134e91a4934d9f91a453ff",
+          "status": "valid",
+          "timestamp": 1747278460,
+          "updated_at": 1789876577
+        },
+        "request_id": "155c3b0a-7a81-913c-8925-c810d7be3198"
+      },
+      "actual_keys": [
+        "memory_node",
+        "memory_node.content",
+        "memory_node.created_at",
+        "memory_node.media_desc",
+        "memory_node.media_urls",
+        "memory_node.memory_node_id",
+        "memory_node.memory_type",
+        "memory_node.meta_data",
+        "memory_node.meta_data.city",
+        "memory_node.meta_data.source",
+        "memory_node.project_id",
+        "memory_node.status",
+        "memory_node.timestamp",
+        "memory_node.updated_at",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "GetUserProfile default",
+      "method": "GET",
+      "path": "/profile_schemas/9b5e49724ba141bab94933ce08e96f70/user_profile",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/profile_schemas/9b5e49724ba141bab94933ce08e96f70/user_profile",
+      "query": {
+        "user_id": "doc-verify-20260920",
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700"
+      },
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 201,
+      "ok": true,
+      "error": null,
+      "response": {
+        "profile": {
+          "attributes": [
+            {
+              "id": "61f6ae954fdf43fbb0d09db80bc6a740",
+              "name": "爱好",
+              "value": "打篮球"
+            },
+            {
+              "id": "4f804426246642df96433f0251a6ec43",
+              "name": "城市",
+              "value": "杭州"
+            }
+          ],
+          "schema_description": "live verify schema updated",
+          "schema_name": "doc-verify-schema"
+        },
+        "request_id": "1200538d-a2ca-9bb4-b983-f75077982a28"
+      },
+      "actual_keys": [
+        "profile",
+        "profile.attributes",
+        "profile.attributes[].id",
+        "profile.attributes[].name",
+        "profile.attributes[].value",
+        "profile.schema_description",
+        "profile.schema_name",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": ["request_id"]
+    },
+    {
+      "name": "GetUserProfile need_detail",
+      "method": "GET",
+      "path": "/profile_schemas/9b5e49724ba141bab94933ce08e96f70/user_profile",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/profile_schemas/9b5e49724ba141bab94933ce08e96f70/user_profile",
+      "query": {
+        "user_id": "doc-verify-20260920",
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "need_detail": "true"
+      },
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 392,
+      "ok": true,
+      "error": null,
+      "response": {
+        "profile": {
+          "attributes": [
+            {
+              "id": "61f6ae954fdf43fbb0d09db80bc6a740",
+              "name": "爱好",
+              "value_items": [
+                {
+                  "item_id": 12037082,
+                  "status": "valid",
+                  "value": "打篮球"
+                }
+              ]
+            },
+            {
+              "id": "4f804426246642df96433f0251a6ec43",
+              "name": "城市",
+              "value_items": [
+                {
+                  "item_id": 12037081,
+                  "status": "valid",
+                  "value": "杭州"
+                }
+              ]
+            }
+          ],
+          "schema_description": "live verify schema updated",
+          "schema_name": "doc-verify-schema"
+        },
+        "request_id": "8b115113-43af-9b9b-b234-2b2d8093d1e3"
+      },
+      "actual_keys": [
+        "profile",
+        "profile.attributes",
+        "profile.attributes[].id",
+        "profile.attributes[].name",
+        "profile.attributes[].value_items",
+        "profile.attributes[].value_items[].item_id",
+        "profile.attributes[].value_items[].status",
+        "profile.attributes[].value_items[].value",
+        "profile.schema_description",
+        "profile.schema_name",
+        "request_id"
+      ],
+      "missing_vs_doc": [],
+      "extra_vs_doc": ["request_id"]
+    },
+    {
+      "name": "UpdateUserProfileValues add",
+      "method": "PATCH",
+      "path": "/profile_schemas/9b5e49724ba141bab94933ce08e96f70/profile_values",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/profile_schemas/9b5e49724ba141bab94933ce08e96f70/profile_values",
+      "query": null,
+      "request_body": {
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "entity_id": "doc-verify-20260920",
+        "attribute_id": "61f6ae954fdf43fbb0d09db80bc6a740",
+        "op_type": "add",
+        "value": "游泳"
+      },
+      "status": 200,
+      "elapsed_ms": 303,
+      "ok": true,
+      "error": null,
+      "response": {
+        "request_id": "9763c790-9faf-9688-88b3-147ac2c27ed3"
+      },
+      "actual_keys": ["request_id"],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "UpdateUserProfileValues update",
+      "method": "PATCH",
+      "path": "/profile_schemas/9b5e49724ba141bab94933ce08e96f70/profile_values",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/profile_schemas/9b5e49724ba141bab94933ce08e96f70/profile_values",
+      "query": null,
+      "request_body": {
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700",
+        "entity_id": "doc-verify-20260920",
+        "attribute_id": "61f6ae954fdf43fbb0d09db80bc6a740",
+        "op_type": "update",
+        "item_id": 12037082,
+        "value": "打排球"
+      },
+      "status": 200,
+      "elapsed_ms": 256,
+      "ok": true,
+      "error": null,
+      "response": {
+        "request_id": "f032a08e-61ba-9376-85b7-3fcddb4ebd22"
+      },
+      "actual_keys": ["request_id"],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "DeleteMemory",
+      "method": "DELETE",
+      "path": "/memory_nodes/979c381f11e14ed693cfff0d0cd75bfa",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/memory_nodes/979c381f11e14ed693cfff0d0cd75bfa",
+      "query": {
+        "user_id": "doc-verify-20260920",
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700"
+      },
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 376,
+      "ok": true,
+      "error": null,
+      "response": {
+        "request_id": "ed5266e3-ec36-9dc8-8d93-9005e6272dbd"
+      },
+      "actual_keys": ["request_id"],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "DeleteMemory",
+      "method": "DELETE",
+      "path": "/memory_nodes/cb8bc29cea49474ea65ede0321b1ba2f",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/memory_nodes/cb8bc29cea49474ea65ede0321b1ba2f",
+      "query": {
+        "user_id": "doc-verify-20260920",
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700"
+      },
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 395,
+      "ok": true,
+      "error": null,
+      "response": {
+        "request_id": "a3c843c8-1701-956d-9461-ee53a8cbb67c"
+      },
+      "actual_keys": ["request_id"],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "DeleteMemory",
+      "method": "DELETE",
+      "path": "/memory_nodes/2b9d57a15bc443829fd1c8e5f2a9b2fd",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/memory_nodes/2b9d57a15bc443829fd1c8e5f2a9b2fd",
+      "query": {
+        "user_id": "doc-verify-20260920",
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700"
+      },
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 352,
+      "ok": true,
+      "error": null,
+      "response": {
+        "request_id": "a0f5d752-0295-99e7-af47-68ae9516a243"
+      },
+      "actual_keys": ["request_id"],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "DeleteMemory",
+      "method": "DELETE",
+      "path": "/memory_nodes/389beeb548994450bf432c1cd20b2815",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/memory_nodes/389beeb548994450bf432c1cd20b2815",
+      "query": {
+        "user_id": "doc-verify-20260920",
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700"
+      },
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 431,
+      "ok": true,
+      "error": null,
+      "response": {
+        "request_id": "44357de0-9bb2-98df-aa1d-34182e468d95"
+      },
+      "actual_keys": ["request_id"],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    },
+    {
+      "name": "DeleteProfileSchema",
+      "method": "DELETE",
+      "path": "/profile_schemas/9b5e49724ba141bab94933ce08e96f70",
+      "url": "https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v2/apps/memory/profile_schemas/9b5e49724ba141bab94933ce08e96f70",
+      "query": {
+        "memory_library_id": "09a5726943d84ffeb01e97c875379700"
+      },
+      "request_body": null,
+      "status": 200,
+      "elapsed_ms": 287,
+      "ok": true,
+      "error": null,
+      "response": {
+        "request_id": "26f5dc5f-6f6b-9475-be31-b89deb9f5ddd"
+      },
+      "actual_keys": ["request_id"],
+      "missing_vs_doc": [],
+      "extra_vs_doc": []
+    }
+  ]
+}

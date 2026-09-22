@@ -216,8 +216,8 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
     expect(data.schema).toBe("dpo");
   });
 
-  test("dataset upload --schema image --no-validate --dry-run 采用 1GB 媒体上限", async () => {
-    // image schema raises the upload cap to 1 GiB (vs 300 MB for text).
+  test("dataset upload --schema image --no-validate --dry-run 采用 2GB 媒体上限", async () => {
+    // image schema raises the upload cap to 2 GiB (vs 300 MB for text).
     // --no-validate keeps this offline (the jsonl fixture is not a real zip).
     const file = join(e2eFixturesDir, ".dataset-valid.jsonl");
     const { stdout, stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
@@ -236,7 +236,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
     const data = parseStdoutJson<{ action: string; schema: string; max_bytes: number }>(stdout);
     expect(data.action).toBe("dataset.upload");
     expect(data.schema).toBe("image");
-    expect(data.max_bytes).toBe(1024 * 1024 * 1024);
+    expect(data.max_bytes).toBe(2 * 1024 * 1024 * 1024);
   });
 
   test.each(["tts", "image"])("dataset upload --dry-run 接受媒体 schema %s", async (schema) => {
@@ -259,7 +259,9 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
     expect(data.schema).toBe(schema);
   });
 
-  test("dataset validate --schema video 拒绝（视频生成入口已隐藏）", async () => {
+  test("dataset validate --schema video 接受视频 schema（按记录结构校验）", async () => {
+    // video schema is supported; the chatml fixture fails on record shape
+    // (missing first_frame_path), not on schema acceptance.
     const file = join(e2eFixturesDir, ".dataset-valid.jsonl");
     const { stdout, stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
       "dataset",
@@ -272,10 +274,11 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
       "json",
     ]);
     expect(exitCode, stdout + stderr).not.toBe(0);
-    expect(`${stdout}\n${stderr}`).toMatch(/--schema video is not supported/);
+    expect(`${stdout}\n${stderr}`).not.toMatch(/is not supported/);
+    expect(`${stdout}\n${stderr}`).toMatch(/first_frame_path/);
   });
 
-  test("dataset upload --schema video 拒绝（视频生成入口已隐藏）", async () => {
+  test("dataset upload --schema video --no-validate --dry-run 采用 2GB 媒体上限", async () => {
     const file = join(e2eFixturesDir, ".dataset-valid.jsonl");
     const { stdout, stderr, exitCode } = await runCommandE2e(DATASET_ROUTES, [
       "dataset",
@@ -289,8 +292,11 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
       "--output",
       "json",
     ]);
-    expect(exitCode, stdout + stderr).not.toBe(0);
-    expect(`${stdout}\n${stderr}`).toMatch(/--schema video is not supported/);
+    expect(exitCode, stdout + stderr).toBe(0);
+    const data = parseStdoutJson<{ action: string; schema: string; max_bytes: number }>(stdout);
+    expect(data.action).toBe("dataset.upload");
+    expect(data.schema).toBe("video");
+    expect(data.max_bytes).toBe(2 * 1024 * 1024 * 1024);
   });
 
   test("dataset delete --dry-run 发出结构化动作", async () => {

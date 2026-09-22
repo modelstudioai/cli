@@ -144,6 +144,33 @@ export function knowledgeChatEndpoint(workspaceId: string): string {
   return workspaceEndpoint(workspaceId, "/api/v2/apps/knowledge/chat");
 }
 
+// ---- Agent Security Center (AgentStudio, workspace-based host) ----
+// AgentStudio shares the per-workspace host scheme with the RAG admin plane
+// below, not the shared DashScope gateway. The region is fixed to cn-beijing
+// per the backend — a full cloud region, a different namespace from the CLI's
+// region (cn / us / intl), so it is never derived from it.
+
+/** Per-workspace AgentStudio host (same shape as {@link ragEndpoint}'s host). */
+export function agentStudioHost(workspaceId: string): string {
+  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com`;
+}
+
+const SECURITY_PREFIX = "/api/v1/agentstudio/security";
+
+// Security endpoints take an already-resolved AgentStudio host (origin) —
+// normally agentStudioHost(workspaceId), or a --base-url override for
+// pre-release / private / mock. See resolveSecurityHost in client/security.ts.
+
+/** GET protection overview — fixed to the last 24 hours, no request params. */
+export function securityOverviewEndpoint(host: string): string {
+  return `${host}${SECURITY_PREFIX}/overview`;
+}
+
+/** GET alert list (agent_logs); filters / pagination go in the query string. */
+export function securityAgentLogsEndpoint(host: string): string {
+  return `${host}${SECURITY_PREFIX}/agent_logs`;
+}
+
 // ---- MCP Services (Streamable HTTP) ----
 export function mcpWebSearchPath(): string {
   return "/api/v1/mcps/WebSearch/mcp";
@@ -253,6 +280,55 @@ export function deploymentsModelsPath(): string {
 
 export function ragEndpoint(workspaceId: string, path: string): string {
   return workspaceEndpoint(workspaceId, path);
+}
+
+// ---- Sandbox control plane (workspace-based host, cn-beijing only) ----
+
+/** AgentStudio workspace files; template uploads send source=sandbox_template. */
+export function agentStudioFilesPath(): string {
+  return "/api/v1/agentstudio/files";
+}
+
+/** Default Sandbox origin when no shared base URL was configured (cn-beijing only). */
+export function sandboxBaseUrl(workspaceId: string): string {
+  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com`;
+}
+
+/** Sandbox service prefix, appended to the selected origin just like AgentStudio SDK paths. */
+export function sandboxApiPath(path: string): string {
+  return `/api/v1/agentstudio/sandbox${path}`;
+}
+
+/** Build the default workspace-scoped absolute Sandbox control-plane URL. */
+export function sandboxEndpoint(workspaceId: string, path: string): string {
+  return sandboxBaseUrl(workspaceId) + sandboxApiPath(path);
+}
+
+export const SANDBOX_PATHS = {
+  sandboxes: "/sandboxes",
+  sandboxList: "/v2/sandboxes",
+  templates: "/templates",
+  templateCreate: "/v3/templates",
+  templateList: "/v2/templates",
+} as const;
+
+export function sandboxInstancePath(sandboxId: string): string {
+  return `${SANDBOX_PATHS.sandboxes}/${encodeURIComponent(sandboxId)}`;
+}
+
+export function sandboxInstanceActionPath(
+  sandboxId: string,
+  action: "connect" | "pause" | "resume",
+): string {
+  return `${sandboxInstancePath(sandboxId)}/${action}`;
+}
+
+export function sandboxTemplatePath(templateId: string): string {
+  return `${SANDBOX_PATHS.templates}/${encodeURIComponent(templateId)}`;
+}
+
+export function sandboxTemplateBuildStatusPath(templateId: string, buildId: string): string {
+  return `${sandboxTemplatePath(templateId)}/builds/${encodeURIComponent(buildId)}/status`;
 }
 
 export const RAG_PATHS = {

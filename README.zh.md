@@ -25,11 +25,12 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 - **模型生成** — 文本、图像、视频、语音全模态生成，支持编辑与参考生成
 - **素材理解** — 图像、文档、音频、长视频的解析与问答
 - **应用编排** — 调用百炼已发布的 Managed Agent、智能体和工作流，接入知识库、记忆库、联网搜索与 MCP 工具
+- **原生 MCP 接入** — 将百炼 MCP 服务注册到 Codex、Claude Code、Cursor、Qoder、Qoder Work、千问办公（QwenWork）、Qwen Code 或 Gemini CLI，并保留渠道归因
 - **模型训推** — 数据集校验上传、模型精调、专属模型部署上线
 - **账号运维** — 授权登录、界面化配置、模型市场、用量与额度、限流提额、团队席位管理
 - **套餐接入** — 支持 Token Plan 等订阅计划一键接到 CLI 和常见 Coding Agent
 
-> **注意：** 应用编排、模型训推、账号运维和套餐接入目前仅支持中国站（aliyun.com）账号，暂不支持国际站 / 全球站账号。
+> **注意：** 应用编排、原生 MCP 接入、模型训推、账号运维和套餐接入目前仅支持中国站（aliyun.com）账号，暂不支持国际站 / 全球站账号。
 
 ## 示例 1：一句话生成一部电影短片
 
@@ -116,6 +117,7 @@ irm https://bailian.aliyun.com/cli/install.ps1 | iex
 | 图片和视频生成   | “生成一张穿着太空服的猫站在火星上的图片，再把它制作成一段视频。”        |
 | 语音识别         | “把这段音频转写成文字，专有名词识别不准的话帮我加上热词再试。”          |
 | 用量与额度       | “查看最近的模型用量、免费额度和限流情况。”                              |
+| 监控与告警       | “查看我的模型调用统计、失败明细和调用日志，并创建一条告警规则。”        |
 | 模型选型         | “推荐一个适合图片理解和智能客服的模型。”                                |
 | 了解 Bailian CLI | “介绍一下 Bailian CLI 能帮我完成哪些任务，并根据我的需求推荐使用方式。” |
 
@@ -123,27 +125,25 @@ irm https://bailian.aliyun.com/cli/install.ps1 | iex
 
 ## 认证方式
 
-### API Key
+### 控制台登录（OAuth，推荐）
 
-大部分命令均需要 API Key。前往 [DashScope 控制台](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key) 获取。
-
-```bash
-bl auth login --api-key sk-xxxxx
-```
-
-Token Plan 的 API Key 前往 [Token Plan 订阅详情](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview) 获取或复制。
-
-```bash
-bl auth login --config token-plan --api-key sk-sp-xxxxx
-```
-
-### 控制台登录（OAuth）
-
-控制台能力命令（模型列表、应用列表、MCP 列表、工作空间、用量查询、限流提额、控制台直调）需要使用此登录方式。打开浏览器跳转百炼控制台完成登录。
+控制台能力命令（模型列表、应用列表、MCP 列表、工作空间、用量查询、限流提额、控制台直调）需要使用此登录方式，并可在需要时创建普通 API Key。Token Plan 等订阅计划不能使用 `--console`，请使用下面的 API Key 登录方式。
 
 ```bash
 bl auth login --console
 ```
+
+国际站请使用 `--console-site international`。
+
+### API Key
+
+使用已有的普通 API Key 或 Token Plan 订阅 Key，都执行同一条命令：
+
+```bash
+bl auth login --api-key <API_KEY>
+```
+
+普通 Key 前往 [DashScope 控制台](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key) 获取，Token Plan Key 前往 [订阅详情](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview) 获取。
 
 ### 阿里云 OpenAPI AK/SK
 

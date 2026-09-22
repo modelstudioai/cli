@@ -81,6 +81,28 @@ async function runAuth(context: RunContext): Promise<void> {
   await authStage(context, async () => {});
 }
 
+test.each([undefined, "https://default.example.com", "https://dashscope.aliyuncs.com"])(
+  "service defaults follow the effective profile base URL after capability fallback: %s",
+  async (defaultBaseUrl) => {
+    useTempConfigDir();
+    await writeConfigFile({ api_key: "sk-default", base_url: defaultBaseUrl });
+    await writeConfigFile(
+      {
+        api_key: "sk-plan",
+        base_url: "https://plan.example.com",
+        api_key_capabilities: ["text.chat"],
+      },
+      "company-plan",
+    );
+    const context = makeContext(["sandbox", "list"]);
+    await runAuth(context);
+    expect(context.client.url("/service", () => "https://workspace.example.test")).toBe(
+      `${defaultBaseUrl ?? "https://workspace.example.test"}/service`,
+    );
+    expect(context.client.exportApiCredential()?.token).toBe("sk-default");
+  },
+);
+
 async function captureStderr(operation: () => Promise<void>): Promise<{
   output: string;
   error?: unknown;

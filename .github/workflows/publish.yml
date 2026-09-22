@@ -56,7 +56,7 @@ jobs:
             | sudo tar -xz -C /usr/local/bin gitleaks
           gitleaks version
 
-      - name: Ensure zip (per-platform binary archives)
+      - name: Ensure zip and tar (per-platform binary archives)
         run: sudo apt-get update && sudo apt-get install -y zip
 
       - run: pnpm install --frozen-lockfile
@@ -70,17 +70,15 @@ jobs:
       - name: publish-stable
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # OSS release channel runs fully in CI: upload + reconcile + manifest.json.
-          # All values come from repo Settings → Secrets — no OSS defaults live in
-          # code. Leave AK/SK unset to skip the OSS channel; once enabled,
-          # bucket/region/prefix are required.
-          BAILIAN_OSS_AK: ${{ secrets.BAILIAN_OSS_AK }}
-          BAILIAN_OSS_SK: ${{ secrets.BAILIAN_OSS_SK }}
-          BAILIAN_OSS_BUCKET: ${{ secrets.BAILIAN_OSS_BUCKET }}
-          BAILIAN_OSS_REGION: ${{ secrets.BAILIAN_OSS_REGION }}
-          BAILIAN_OSS_ENDPOINT: ${{ secrets.BAILIAN_OSS_ENDPOINT }}
-          BAILIAN_RELEASE_PREFIX: ${{ secrets.BAILIAN_RELEASE_PREFIX }}
-          BAILIAN_STATIC_PREFIX: ${{ secrets.BAILIAN_STATIC_PREFIX }}
+          # OSS release channel goes through the FC release function (presigned
+          # upload + reconcile + manifest.json): this repo holds no OSS
+          # credentials, the job only presents its GitHub OIDC token (requires
+          # id-token: write above). The trigger URL is the shared
+          # FC_TRIGGER_URL (same function serves publish-skills; actions are
+          # routed by URL path); leave it unset to skip the OSS channel.
+          # Bucket / prefix / allowlists live in the FC function.
+          FC_TRIGGER_URL: ${{ vars.FC_TRIGGER_URL }}
+          FC_RELEASE_AUDIENCE: ${{ vars.FC_RELEASE_AUDIENCE }}
         run: node tools/release/publish-stable.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }}
 
   publish-channel:
@@ -116,7 +114,7 @@ jobs:
             | sudo tar -xz -C /usr/local/bin gitleaks
           gitleaks version
 
-      - name: Ensure zip (per-platform binary archives)
+      - name: Ensure zip and tar (per-platform binary archives)
         run: sudo apt-get update && sudo apt-get install -y zip
 
       - run: pnpm install --frozen-lockfile
@@ -130,14 +128,10 @@ jobs:
       - name: publish-channel
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # OSS release channel — same Settings-injected values as stable.
-          BAILIAN_OSS_AK: ${{ secrets.BAILIAN_OSS_AK }}
-          BAILIAN_OSS_SK: ${{ secrets.BAILIAN_OSS_SK }}
-          BAILIAN_OSS_BUCKET: ${{ secrets.BAILIAN_OSS_BUCKET }}
-          BAILIAN_OSS_REGION: ${{ secrets.BAILIAN_OSS_REGION }}
-          BAILIAN_OSS_ENDPOINT: ${{ secrets.BAILIAN_OSS_ENDPOINT }}
-          BAILIAN_RELEASE_PREFIX: ${{ secrets.BAILIAN_RELEASE_PREFIX }}
-          BAILIAN_STATIC_PREFIX: ${{ secrets.BAILIAN_STATIC_PREFIX }}
+          # OSS release channel — same FC-backed flow as stable; no OSS
+          # credentials in this repo (see publish-stable env notes).
+          FC_TRIGGER_URL: ${{ vars.FC_TRIGGER_URL }}
+          FC_RELEASE_AUDIENCE: ${{ vars.FC_RELEASE_AUDIENCE }}
         run: node tools/release/publish-channel.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }} --channel "${{ inputs.channel }}"
 
   # bailian-kb-dsh is the dsh plugin (downstream host adapter): independent version,
