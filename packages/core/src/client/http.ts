@@ -35,6 +35,21 @@ function bodyReferencesOssUrl(body: unknown): boolean {
 }
 
 export async function request(deps: HttpDeps, opts: RequestOpts): Promise<Response> {
+  const timeoutMs = (opts.timeout ?? deps.settings.timeout) * 1000;
+  const requestSignal = createRequestSignal(timeoutMs, opts.signal);
+  try {
+    // Raw/streaming callers retain ownership of successful response bodies.
+    return await performRequest(deps, opts, requestSignal.signal);
+  } finally {
+    requestSignal.cleanup();
+  }
+}
+
+async function performRequest(
+  deps: HttpDeps,
+  opts: RequestOpts,
+  signal: AbortSignal,
+): Promise<Response> {
   const isFormData = typeof FormData !== "undefined" && opts.body instanceof FormData;
 
   const headers: Record<string, string> = {
@@ -62,9 +77,6 @@ export async function request(deps: HttpDeps, opts: RequestOpts): Promise<Respon
     console.error(`> x-dashscope-source-config: ${sourceConfig(deps.identity)}`);
   }
 
-  const timeoutMs = (opts.timeout ?? deps.settings.timeout) * 1000;
-
-  const requestSignal = createRequestSignal(timeoutMs, opts.signal);
   const res = await fetch(opts.url, {
     method: opts.method ?? "GET",
     headers,
@@ -73,8 +85,8 @@ export async function request(deps: HttpDeps, opts: RequestOpts): Promise<Respon
         ? (opts.body as FormData)
         : JSON.stringify(opts.body)
       : undefined,
-    signal: requestSignal.signal,
-  }).finally(requestSignal.cleanup);
+    signal,
+  });
 
   if (deps.settings.verbose) {
     console.error(`< ${res.status} ${res.statusText}`);
@@ -89,6 +101,7 @@ export async function request(deps: HttpDeps, opts: RequestOpts): Promise<Respon
     try {
       body = (await res.json()) as ApiErrorBody;
     } catch {
+      if (signal.aborted) throw signal.reason;
       /* non-JSON */
     }
     throw mapApiError(res.status, body, opts.url);
@@ -107,37 +120,48 @@ function createRequestSignal(
   const cleanup = () => {
     clearTimeout(timeout);
     parentSignal?.removeEventListener("abort", abortFromParent);
+    controller.signal.removeEventListener("abort", cleanup);
   };
 
+  controller.signal.addEventListener("abort", cleanup, { once: true });
   if (parentSignal?.aborted) abortFromParent();
   else parentSignal?.addEventListener("abort", abortFromParent, { once: true });
-  controller.signal.addEventListener("abort", cleanup, { once: true });
 
   return { signal: controller.signal, cleanup };
 }
 
 export async function requestJson<T>(deps: HttpDeps, opts: RequestOpts): Promise<T> {
-  const res = await request(deps, opts);
-  let data: T & { code?: string; message?: string; request_id?: string };
+  const timeoutMs = (opts.timeout ?? deps.settings.timeout) * 1000;
+  const requestSignal = createRequestSignal(timeoutMs, opts.signal);
   try {
-    data = (await res.json()) as T & { code?: string; message?: string; request_id?: string };
-  } catch {
-    const contentType = res.headers.get("content-type") || "";
-    throw new BailianError(
-      `API returned non-JSON response (${contentType || "unknown type"}). Server may be experiencing issues.`,
-      ExitCode.GENERAL,
-    );
-  }
+    const res = await performRequest(deps, opts, requestSignal.signal);
+    let data: T & { code?: string; message?: string; request_id?: string };
+    try {
+      data = (await res.json()) as T & { code?: string; message?: string; request_id?: string };
+    } catch {
+      if (requestSignal.signal.aborted) throw requestSignal.signal.reason;
+      const contentType = res.headers.get("content-type") || "";
+      throw new BailianError(
+        `API returned non-JSON response (${contentType || "unknown type"}). Server may be experiencing issues.\nAPI 返回了非 JSON 响应（${contentType || "未知类型"}），服务器可能出现问题。`,
+        ExitCode.GENERAL,
+      );
+    }
 
-  // DashScope error format: { code: "ErrorCode", message: "..." }
-  if (
-    data.code &&
-    typeof data.code === "string" &&
-    data.code !== "200" &&
-    data.code !== "Success"
-  ) {
-    throw mapApiError(200, { error: { message: data.message, type: data.code } }, opts.url);
-  }
+    // DashScope error format: { code: "ErrorCode", message: "..." }
+    if (
+      data.code &&
+      typeof data.code === "string" &&
+      data.code !== "200" &&
+      data.code !== "Success"
+    ) {
+      throw mapApiError(200, { error: { message: data.message, type: data.code } }, opts.url);
+    }
 
-  return data;
+    return data;
+  } catch (error) {
+    if (requestSignal.signal.aborted) throw requestSignal.signal.reason;
+    throw error;
+  } finally {
+    requestSignal.cleanup();
+  }
 }

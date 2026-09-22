@@ -37,16 +37,26 @@ description: >-
 
 ## When to use which command
 
-| Intent                          | Command                                                                                          |
-| ------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Validate / upload training data | `bl dataset validate` / `upload` (`.jsonl` or `.zip`)                                            |
-| Dataset list / detail / delete  | `bl dataset list` / `get` / `delete`                                                             |
-| Create a fine-tuning job        | `bl finetune text\|audio\|image create`                                                          |
-| Job list / detail / follow      | `bl finetune list` / `get` / `watch` / `logs`                                                    |
-| Artifacts and export            | `bl finetune checkpoints` / `export`                                                             |
-| Cancel / delete a job           | `bl finetune cancel` / `delete`                                                                  |
-| Trainable capability lookup     | `bl finetune capability`                                                                         |
-| Deploy / lifecycle              | `bl deploy text\|audio\|image create`, `list` / `get` / `update` / `scale` / `delete` / `models` |
+| Intent                                 | Command                                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Validate / upload training data        | `bl dataset validate` / `upload` (`.jsonl` or `.zip`)                                            |
+| Dataset list / detail / delete         | `bl dataset list` / `get` / `delete`                                                             |
+| Create a fine-tuning job               | `bl finetune text\|audio\|image create`                                                          |
+| Job list / detail / follow             | `bl finetune list` / `get` / `watch` / `logs`                                                    |
+| Artifacts and export                   | `bl finetune checkpoints` / `export`                                                             |
+| Cancel / delete a job                  | `bl finetune cancel` / `delete`                                                                  |
+| Trainable capability lookup            | `bl finetune capability`                                                                         |
+| Deploy / lifecycle                     | `bl deploy text\|audio\|image create`, `list` / `get` / `update` / `scale` / `delete` / `models` |
+| Query throughput reservations          | `bl deploy list --plan ptu` / `bl deploy get`                                                    |
+| Query capacity instances               | `bl deploy capacity list` / `get`                                                                |
+| Query / wait for a capacity operation  | `bl deploy operation get` / `wait`                                                               |
+| Buy / scale / renew / release capacity | `bl deploy capacity create` / `scale` / `renew` / `delete`                                       |
+| Unsubscribe a prepaid instance         | `bl deploy capacity unsubscribe` (builds the billing console refund link)                        |
+| Configure ModelCode overflow strategy  | `bl deploy overflow`                                                                             |
+
+The `capacity list` / `get`, `operation get` / `wait` and `deploy list` / `get` queries are read-only. Capacity values are kTPM; effective, configured and target capacities are distinct. `deploy list --status` filters only the fetched page locally, with the server total left unfiltered. `operation get` reports status as data; `operation wait` exits non-zero on failure or timeout and refreshes capacity after success. Use IDs returned by the API; waiting never retries a write.
+
+The `capacity create` / `scale` / `renew` / `delete` and `overflow` commands are high-risk writes: preview with `--dry-run`, then confirm with the runtime-injected `--yes`. Each write is submitted once and never auto-retried; HTTP 200 is not success, so pass `--wait` or check `operation_status`. Scale values are one instance's absolute kTPM, not deltas or ModelCode totals, and zero is not release. `capacity delete` releases an instance but keeps the ModelCode; active prepaid instances cannot be DELETEd — run `capacity unsubscribe --instance-id <id>` to get the billing console refund link and finish there (no API exists for refunds). Release is confirmed by `deleted=true`. `overflow` applies to the whole ModelCode, not one instance. There is no estimator or standalone auto-renewal endpoint — renewal settings ride along purchase/scale/renew.
 
 Flags, usage, and examples: see [`reference/`](reference/index.md) or `bl <command> --help` — do not guess flags.
 
