@@ -108,6 +108,12 @@ export function knowledgeRetrievePath(): string {
   return "/api/v1/indices/rag/index/retrieve";
 }
 
+// ---- Workspace-scoped MaaS endpoints (cn-beijing only) ----
+
+export function workspaceMaaSBaseUrl(workspaceId: string): string {
+  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com`;
+}
+
 // ---- Knowledge Search (新版 RAG 检索, workspace-based host) ----
 
 export function knowledgeSearchEndpoint(workspaceId: string): string {

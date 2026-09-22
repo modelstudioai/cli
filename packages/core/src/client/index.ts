@@ -38,6 +38,7 @@ export {
   userProfilePath,
   videoGeneratePath,
   image2videoPath,
+  workspaceMaaSBaseUrl,
 } from "./endpoints.ts";
 export {
   isLegacyImage2ImageModel,
