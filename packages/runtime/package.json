@@ -1,6 +1,6 @@
 {
   "name": "bailian-cli-runtime",
-  "version": "1.28.0",
+  "version": "2.0.0",
   "description": "Runtime framework for bailian-cli (createCli, registry, args, output, pipeline). See https://www.npmjs.com/package/bailian-cli for usage.",
   "homepage": "https://bailian.console.aliyun.com/cli",
   "bugs": {
@@ -26,11 +26,11 @@
     "./package.json": "./package.json"
   },
   "publishConfig": {
-    "access": "public",
     "exports": {
       ".": "./dist/index.mjs",
       "./package.json": "./package.json"
     },
+    "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
@@ -52,7 +52,7 @@
     "ajv": "catalog:",
     "e2e": "workspace:*",
     "typescript": "^6.0.2",
-    "vite-plus": "0.1.22",
+    "vite-plus": "catalog:",
     "yaml": "catalog:"
   },
   "engines": {

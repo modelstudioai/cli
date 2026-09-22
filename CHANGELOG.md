@@ -6,6 +6,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.0.0] - 2026-09-22
+
+### Added
+
+- **Native MCP registration** — Added `bl mcp connect` and `bl mcp disconnect` to add or remove Bailian MCP servers in Agent-native configurations:
+  - Supports `streamable-http` and SSE, targeting an individual Agent or all installed Agents with `--agent all`.
+  - Supports Codex, Claude Code, Cursor, Qoder, Qoder Work, QwenWork, Qwen Code, Gemini, OpenCode, OpenClaw, DeepSeek Harness, ZCode, and WorkBuddy.
+  - Never overwrites unmanaged entries and preserves registrations modified by users during removal.
+- **Broader Skill delivery** — Skill installation and updates now support WorkBuddy, Trae CLI, and DeepSeek DSH through their global Skill directories.
+
+### Fixed
+
+- **Skill operation previews** — `bl skill init`, `add`, `update`, and `remove` now honor `--dry-run`, showing the planned Skills, Agents, and target paths without writing. Invalid requests retain the same failure status as real execution.
+- **Safer Skill cleanup** — `bl skill remove` previews and executions now use the same managed-link discovery scope, recognize historical managed links, and recheck targets immediately before deletion to avoid removing changed or unmanaged content.
+
 ## [1.28.0] - 2026-09-20
 
 ### Added

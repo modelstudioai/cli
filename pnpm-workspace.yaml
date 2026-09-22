@@ -14,9 +14,9 @@ catalog:
   tsx: ^4.23.0
   typescript: ^5
   undici: ^6.27.0
-  vite: npm:@voidzero-dev/vite-plus-core@latest
-  vite-plus: latest
-  vitest: npm:@voidzero-dev/vite-plus-test@latest
+  vite: npm:@voidzero-dev/vite-plus-core@0.3.3
+  vite-plus: 0.3.3
+  vitest: 4.1.11
   yaml: ^2.8.3
   yauzl: ^3.4.0
 
@@ -24,6 +24,7 @@ catalogMode: prefer
 overrides:
   vite: "catalog:"
   vitest: "catalog:"
+  "ws@>=8.0.0 <8.21.0": 8.21.3
 peerDependencyRules:
   allowAny:
     - vite
