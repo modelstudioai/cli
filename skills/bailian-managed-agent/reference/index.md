@@ -4,7 +4,7 @@
 > Regenerate: `pnpm --filter bailian-cli run generate:reference`.
 
 Command **details** are in sibling `<group>.md` files in this directory.
-This index only covers groups owned by this skill. Other `bl` groups live in sibling bailian-\* skills.
+This index only covers groups owned by this skill. Other `bl` groups live in sibling bailian-* skills.
 Use this index for the skill-scoped quick index and global flags.
 
 ## Quick index

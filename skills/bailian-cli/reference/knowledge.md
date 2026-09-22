@@ -34,7 +34,7 @@ Index: [index.md](index.md)
 | `bl knowledge list`              | API Key        | List knowledge bases in the workspace                                                            |
 | `bl knowledge retrieve`          | API Key        | Retrieve from a Bailian knowledge base (deprecated, use `search` instead)                        |
 | `bl knowledge search`            | API Key        | Search a Bailian knowledge base (RAG semantic retrieval)                                         |
-| `bl knowledge service copy`      | API Key        | Copy a service into a new draft (name gets a copy\_ prefix)                                      |
+| `bl knowledge service copy`      | API Key        | Copy a service into a new draft (name gets a copy_ prefix)                                       |
 | `bl knowledge service create`    | API Key        | Create a retrieval / Q&A service (initial status: draft, version: beta)                          |
 | `bl knowledge service delete`    | API Key        | Delete a retrieval / Q&A service (soft delete, idempotent)                                       |
 | `bl knowledge service deploy`    | API Key        | Publish the beta draft of a service as a new version                                             |
@@ -307,7 +307,7 @@ bl knowledge chunk delete --index-id idx-xxx --chunk-id chunk-a --yes
 
 #### Notes
 
-- Use metadata.\_id as the chunk id and metadata.doc_id as the document id in chunk update/delete commands.
+- Use metadata._id as the chunk id and metadata.doc_id as the document id in chunk update/delete commands.
 - Page size defaults to 20 (server default), max 100.
 
 #### Examples
@@ -334,7 +334,7 @@ bl knowledge chunk list --index-id idx-xxx --doc-id file-xxx --page-size 50
 | Flag                    | Type   | Required | Description                                                               |
 | ----------------------- | ------ | -------- | ------------------------------------------------------------------------- |
 | `--index-id <id>`       | string | yes      | Knowledge base ID                                                         |
-| `--chunk-id <id>`       | string | yes      | Chunk ID (metadata.\_id from the chunk list output)                       |
+| `--chunk-id <id>`       | string | yes      | Chunk ID (metadata._id from the chunk list output)                        |
 | `--doc-id <id>`         | string | yes      | Document ID owning the chunk (metadata.doc_id from the chunk list output) |
 | `--content <text>`      | string | no       | New chunk content, 10-6000 chars; alternative to --content-file           |
 | `--content-file <path>` | string | no       | Read new content from a UTF-8 plain text file (.md/.txt etc.)             |
@@ -991,12 +991,12 @@ bl knowledge search --api-key $DASHSCOPE_API_KEY --query "test search" --agent-i
 
 ### `bl knowledge service copy`
 
-| Field              | Value                                                       |
-| ------------------ | ----------------------------------------------------------- |
-| **Name**           | `knowledge service copy`                                    |
-| **Description**    | Copy a service into a new draft (name gets a copy\_ prefix) |
-| **Authentication** | API Key                                                     |
-| **Usage**          | `bl knowledge service copy --agent-id <id> [flags]`         |
+| Field              | Value                                                      |
+| ------------------ | ---------------------------------------------------------- |
+| **Name**           | `knowledge service copy`                                   |
+| **Description**    | Copy a service into a new draft (name gets a copy_ prefix) |
+| **Authentication** | API Key                                                    |
+| **Usage**          | `bl knowledge service copy --agent-id <id> [flags]`        |
 
 #### Flags
 

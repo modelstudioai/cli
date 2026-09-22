@@ -35,7 +35,7 @@ Index: [index.md](index.md)
 | `--base-url <url>`                                                    | string | no       | API base URL                                                                                      |
 | `--region <region>`                                                   | string | no       | Model Studio region (e.g. cn-beijing, ap-southeast-1); converted into --base-url. Token Plan only |
 | `--api-key <key>`                                                     | string | no       | API key                                                                                           |
-| `--key <encoded>`                                                     | string | no       | Obfuscated API key from the web console (starts with "o1\_"); decoded into --api-key              |
+| `--key <encoded>`                                                     | string | no       | Obfuscated API key from the web console (starts with "o1_"); decoded into --api-key               |
 | `--model <model>`                                                     | string | yes      | Default model name                                                                                |
 | `--context-window <tokens>`                                           | number | no       | OpenClaw only: model context window in tokens (default: 256000)                                   |
 | `--wire-api <chat\|responses>`                                        | string | no       | Codex only: wire protocol (default: responses). "chat" only works with legacy Codex <= 0.80.0     |
@@ -88,10 +88,10 @@ bl config list --output json
 
 #### Flags
 
-| Flag              | Type   | Required | Description                                                                                                                                                                                             |
-| ----------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--key <key>`     | string | yes      | Config key (language, base*url, output, output_dir, timeout, watermark, api_key, api_key_capabilities, access_token, access_key_id, access_key_secret, security_token, default*\*\_model, workspace_id) |
-| `--value <value>` | string | yes      | Value to set                                                                                                                                                                                            |
+| Flag              | Type   | Required | Description                                                                                                                                                                                           |
+| ----------------- | ------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--key <key>`     | string | yes      | Config key (language, base_url, output, output_dir, timeout, watermark, api_key, api_key_capabilities, access_token, access_key_id, access_key_secret, security_token, default_*_model, workspace_id) |
+| `--value <value>` | string | yes      | Value to set                                                                                                                                                                                          |
 
 #### Examples
 
