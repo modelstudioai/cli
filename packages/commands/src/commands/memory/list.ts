@@ -51,7 +51,7 @@ export default defineCommand({
   exampleArgs: [
     "--user-id user1 --workspace-id ws_xxx",
     "--user-id user1 --page-size 20 --page 2",
-    "--user-id user1 --memory-library-id lib_xxx --output json",
+    "--user-id user1 --library-id lib_xxx --output json",
   ],
   validate: (flags) => {
     const scopeError = checkMemoryScopeLengths(flags);
@@ -72,7 +72,7 @@ export default defineCommand({
         page_size: flags.pageSize,
         page_num: flags.page,
         project_id: flags.projectId,
-        memory_library_id: flags.memoryLibraryId,
+        memory_library_id: flags.libraryId,
       });
 
     if (settings.dryRun) {

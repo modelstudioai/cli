@@ -34,18 +34,18 @@ Index: [index.md](index.md)
 
 #### Flags
 
-| Flag                       | Type   | Required | Description                                                           |
-| -------------------------- | ------ | -------- | --------------------------------------------------------------------- |
-| `--user-id <id>`           | string | yes      | Memory entity ID that owns the memory (required)                      |
-| `--messages <json>`        | string | no       | Messages JSON array: [{"role":"user","content":"..."},...] (max 50)   |
-| `--content <text>`         | string | no       | Custom content to memorize verbatim; takes precedence over --messages |
-| `--profile-schema <id>`    | string | no       | Profile schema ID; without it no user profile is extracted            |
-| `--meta-data <json>`       | string | no       | Custom metadata JSON object: {"location_name":"Beijing"}              |
-| `--project-id <id>`        | string | no       | Memory fragment rule ID (default: the library's default rule)         |
-| `--memory-library-id <id>` | string | no       | Memory library ID (default: the account's default library)            |
-| `--workspace-id <id>`      | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)       |
-| `--api-key <key>`          | string | no       | API key                                                               |
-| `--base-url <url>`         | string | no       | API base URL                                                          |
+| Flag                    | Type   | Required | Description                                                           |
+| ----------------------- | ------ | -------- | --------------------------------------------------------------------- |
+| `--user-id <id>`        | string | yes      | Memory entity ID that owns the memory (required)                      |
+| `--messages <json>`     | string | no       | Messages JSON array: [{"role":"user","content":"..."},...] (max 50)   |
+| `--content <text>`      | string | no       | Custom content to memorize verbatim; takes precedence over --messages |
+| `--profile-schema <id>` | string | no       | Profile schema ID; without it no user profile is extracted            |
+| `--meta-data <json>`    | string | no       | Custom metadata JSON object: {"location_name":"Beijing"}              |
+| `--project-id <id>`     | string | no       | Memory fragment rule ID (default: the library's default rule)         |
+| `--library-id <id>`     | string | no       | Memory library ID (default: the account's default library)            |
+| `--workspace-id <id>`   | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)       |
+| `--api-key <key>`       | string | no       | API key                                                               |
+| `--base-url <url>`      | string | no       | API base URL                                                          |
 
 #### Notes
 
@@ -87,15 +87,15 @@ bl memory add --user-id user1 --content "Attended WAIC" --meta-data '{"location"
 
 #### Flags
 
-| Flag                       | Type   | Required | Description                                                     |
-| -------------------------- | ------ | -------- | --------------------------------------------------------------- |
-| `--node-id <id>`           | string | yes      | Memory node ID (required)                                       |
-| `--user-id <id>`           | string | yes      | Memory entity ID that owns the memory (required)                |
-| `--memory-library-id <id>` | string | no       | Memory library ID (default: the account's default library)      |
-| `--workspace-id <id>`      | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
-| `--yes`                    | switch | no       | Confirm this high-risk operation                                |
-| `--api-key <key>`          | string | no       | API key                                                         |
-| `--base-url <url>`         | string | no       | API base URL                                                    |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--node-id <id>`      | string | yes      | Memory node ID (required)                                       |
+| `--user-id <id>`      | string | yes      | Memory entity ID that owns the memory (required)                |
+| `--library-id <id>`   | string | no       | Memory library ID (default: the account's default library)      |
+| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--yes`               | switch | no       | Confirm this high-risk operation                                |
+| `--api-key <key>`     | string | no       | API key                                                         |
+| `--base-url <url>`    | string | no       | API base URL                                                    |
 
 #### Notes
 
@@ -124,16 +124,16 @@ bl memory delete --node-id node_xxx --user-id user1 --yes
 
 #### Flags
 
-| Flag                       | Type   | Required | Description                                                     |
-| -------------------------- | ------ | -------- | --------------------------------------------------------------- |
-| `--user-id <id>`           | string | yes      | Memory entity ID that owns the memory (required)                |
-| `--page-size <n>`          | number | no       | Results per page (default: 10)                                  |
-| `--page <n>`               | number | no       | Page number (default: 1)                                        |
-| `--project-id <id>`        | string | no       | Memory fragment rule ID (default: the library's default rule)   |
-| `--memory-library-id <id>` | string | no       | Memory library ID (default: the account's default library)      |
-| `--workspace-id <id>`      | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
-| `--api-key <key>`          | string | no       | API key                                                         |
-| `--base-url <url>`         | string | no       | API base URL                                                    |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--user-id <id>`      | string | yes      | Memory entity ID that owns the memory (required)                |
+| `--page-size <n>`     | number | no       | Results per page (default: 10)                                  |
+| `--page <n>`          | number | no       | Page number (default: 1)                                        |
+| `--project-id <id>`   | string | no       | Memory fragment rule ID (default: the library's default rule)   |
+| `--library-id <id>`   | string | no       | Memory library ID (default: the account's default library)      |
+| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--api-key <key>`     | string | no       | API key                                                         |
+| `--base-url <url>`    | string | no       | API base URL                                                    |
 
 #### Notes
 
@@ -150,7 +150,7 @@ bl memory list --user-id user1 --page-size 20 --page 2
 ```
 
 ```bash
-bl memory list --user-id user1 --memory-library-id lib_xxx --output json
+bl memory list --user-id user1 --library-id lib_xxx --output json
 ```
 
 ### `bl memory profile create`
@@ -170,7 +170,7 @@ bl memory list --user-id user1 --memory-library-id lib_xxx --output json
 | `--description <text>`       | string | no       | Schema description                                                               |
 | `--attributes <json>`        | string | yes      | Attributes JSON array: [{"name":"age","description":"age","default_value":"18"}] |
 | `--plan-version <pro\|lite>` | string | no       | Strategy version: pro (rerank on) or lite (rerank off); billed differently       |
-| `--memory-library-id <id>`   | string | no       | Memory library ID (default: the account's default library)                       |
+| `--library-id <id>`          | string | no       | Memory library ID (default: the account's default library)                       |
 | `--workspace-id <id>`        | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                  |
 | `--api-key <key>`            | string | no       | API key                                                                          |
 | `--base-url <url>`           | string | no       | API base URL                                                                     |
@@ -187,7 +187,7 @@ bl memory profile create --name "user_basic" --attributes '[{"name":"age","descr
 ```
 
 ```bash
-bl memory profile create --name "user_basic" --attributes '[{"name":"age"}]' --plan-version lite --memory-library-id lib_xxx
+bl memory profile create --name "user_basic" --attributes '[{"name":"age"}]' --plan-version lite --library-id lib_xxx
 ```
 
 ### `bl memory profile delete`
@@ -205,14 +205,14 @@ bl memory profile create --name "user_basic" --attributes '[{"name":"age"}]' --p
 
 #### Flags
 
-| Flag                       | Type   | Required | Description                                                     |
-| -------------------------- | ------ | -------- | --------------------------------------------------------------- |
-| `--schema-id <id>`         | string | yes      | Profile schema ID (required)                                    |
-| `--memory-library-id <id>` | string | no       | Memory library ID (default: the account's default library)      |
-| `--workspace-id <id>`      | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
-| `--yes`                    | switch | no       | Confirm this high-risk operation                                |
-| `--api-key <key>`          | string | no       | API key                                                         |
-| `--base-url <url>`         | string | no       | API base URL                                                    |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--schema-id <id>`    | string | yes      | Profile schema ID (required)                                    |
+| `--library-id <id>`   | string | no       | Memory library ID (default: the account's default library)      |
+| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--yes`               | switch | no       | Confirm this high-risk operation                                |
+| `--api-key <key>`     | string | no       | API key                                                         |
+| `--base-url <url>`    | string | no       | API base URL                                                    |
 
 #### Notes
 
@@ -241,14 +241,14 @@ bl memory profile delete --schema-id schema_xxx --yes
 
 #### Flags
 
-| Flag                       | Type   | Required | Description                                                     |
-| -------------------------- | ------ | -------- | --------------------------------------------------------------- |
-| `--schema-id <id>`         | string | yes      | Profile schema ID (required)                                    |
-| `--user-id <id>`           | string | yes      | Memory entity ID that owns the profile (required)               |
-| `--memory-library-id <id>` | string | no       | Memory library ID (default: the account's default library)      |
-| `--workspace-id <id>`      | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
-| `--api-key <key>`          | string | no       | API key                                                         |
-| `--base-url <url>`         | string | no       | API base URL                                                    |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--schema-id <id>`    | string | yes      | Profile schema ID (required)                                    |
+| `--user-id <id>`      | string | yes      | Memory entity ID that owns the profile (required)               |
+| `--library-id <id>`   | string | no       | Memory library ID (default: the account's default library)      |
+| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--api-key <key>`     | string | no       | API key                                                         |
+| `--base-url <url>`    | string | no       | API base URL                                                    |
 
 #### Notes
 
@@ -272,14 +272,14 @@ bl memory profile get --schema-id schema_xxx --user-id user1 --workspace-id ws_x
 
 #### Flags
 
-| Flag                       | Type   | Required | Description                                                     |
-| -------------------------- | ------ | -------- | --------------------------------------------------------------- |
-| `--page-size <n>`          | number | no       | Results per page (default: 10)                                  |
-| `--page <n>`               | number | no       | Page number (default: 1)                                        |
-| `--memory-library-id <id>` | string | no       | Memory library ID (default: the account's default library)      |
-| `--workspace-id <id>`      | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
-| `--api-key <key>`          | string | no       | API key                                                         |
-| `--base-url <url>`         | string | no       | API base URL                                                    |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--page-size <n>`     | number | no       | Results per page (default: 10)                                  |
+| `--page <n>`          | number | no       | Page number (default: 1)                                        |
+| `--library-id <id>`   | string | no       | Memory library ID (default: the account's default library)      |
+| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--api-key <key>`     | string | no       | API key                                                         |
+| `--base-url <url>`    | string | no       | API base URL                                                    |
 
 #### Notes
 
@@ -296,7 +296,7 @@ bl memory profile list --page-size 20 --page 2
 ```
 
 ```bash
-bl memory profile list --memory-library-id lib_xxx --output json
+bl memory profile list --library-id lib_xxx --output json
 ```
 
 ### `bl memory profile show`
@@ -310,13 +310,13 @@ bl memory profile list --memory-library-id lib_xxx --output json
 
 #### Flags
 
-| Flag                       | Type   | Required | Description                                                     |
-| -------------------------- | ------ | -------- | --------------------------------------------------------------- |
-| `--schema-id <id>`         | string | yes      | Profile schema ID (required)                                    |
-| `--memory-library-id <id>` | string | no       | Memory library ID (default: the account's default library)      |
-| `--workspace-id <id>`      | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
-| `--api-key <key>`          | string | no       | API key                                                         |
-| `--base-url <url>`         | string | no       | API base URL                                                    |
+| Flag                  | Type   | Required | Description                                                     |
+| --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--schema-id <id>`    | string | yes      | Profile schema ID (required)                                    |
+| `--library-id <id>`   | string | no       | Memory library ID (default: the account's default library)      |
+| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--api-key <key>`     | string | no       | API key                                                         |
+| `--base-url <url>`    | string | no       | API base URL                                                    |
 
 #### Notes
 
@@ -350,7 +350,7 @@ bl memory profile show --schema-id schema_xxx --output json
 | `--name <name>`                  | string | no       | New schema name                                                 |
 | `--description <text>`           | string | no       | New schema description                                          |
 | `--attributes-operations <json>` | string | no       | Attribute operations JSON array: [{"op":"add","name":"plan"}]   |
-| `--memory-library-id <id>`       | string | no       | Memory library ID (default: the account's default library)      |
+| `--library-id <id>`              | string | no       | Memory library ID (default: the account's default library)      |
 | `--workspace-id <id>`            | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
 | `--api-key <key>`                | string | no       | API key                                                         |
 | `--base-url <url>`               | string | no       | API base URL                                                    |
@@ -393,7 +393,7 @@ bl memory profile update --schema-id schema_xxx --attributes-operations '[{"op":
 | `--enable-rewrite <bool>`    | boolean | no       | Rewrite the query before searching (default: false)                        |
 | `--project-id <id>`          | array   | no       | Memory fragment rule ID (repeatable for hybrid retrieval)                  |
 | `--plan-version <pro\|lite>` | string  | no       | Strategy version: pro (rerank on) or lite (rerank off); billed differently |
-| `--memory-library-id <id>`   | string  | no       | Memory library ID (default: the account's default library)                 |
+| `--library-id <id>`          | string  | no       | Memory library ID (default: the account's default library)                 |
 | `--workspace-id <id>`        | string  | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)            |
 | `--api-key <key>`            | string  | no       | API key                                                                    |
 | `--base-url <url>`           | string  | no       | API base URL                                                               |
@@ -429,17 +429,17 @@ bl memory search --user-id user1 --query "reminders" --plan-version lite --min-s
 
 #### Flags
 
-| Flag                       | Type   | Required | Description                                                        |
-| -------------------------- | ------ | -------- | ------------------------------------------------------------------ |
-| `--node-id <id>`           | string | yes      | Memory node ID (required)                                          |
-| `--user-id <id>`           | string | yes      | Memory entity ID that owns the memory (required)                   |
-| `--content <text>`         | string | yes      | New content for the memory node, max 512 characters (required)     |
-| `--timestamp <seconds>`    | number | no       | Unix timestamp (seconds) of when the remembered event happened     |
-| `--meta-data <json>`       | string | no       | Custom metadata JSON object, merged incrementally: {"key":"value"} |
-| `--memory-library-id <id>` | string | no       | Memory library ID (default: the account's default library)         |
-| `--workspace-id <id>`      | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)    |
-| `--api-key <key>`          | string | no       | API key                                                            |
-| `--base-url <url>`         | string | no       | API base URL                                                       |
+| Flag                    | Type   | Required | Description                                                        |
+| ----------------------- | ------ | -------- | ------------------------------------------------------------------ |
+| `--node-id <id>`        | string | yes      | Memory node ID (required)                                          |
+| `--user-id <id>`        | string | yes      | Memory entity ID that owns the memory (required)                   |
+| `--content <text>`      | string | yes      | New content for the memory node, max 512 characters (required)     |
+| `--timestamp <seconds>` | number | no       | Unix timestamp (seconds) of when the remembered event happened     |
+| `--meta-data <json>`    | string | no       | Custom metadata JSON object, merged incrementally: {"key":"value"} |
+| `--library-id <id>`     | string | no       | Memory library ID (default: the account's default library)         |
+| `--workspace-id <id>`   | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)    |
+| `--api-key <key>`       | string | no       | API key                                                            |
+| `--base-url <url>`      | string | no       | API base URL                                                       |
 
 #### Notes
 

@@ -16,7 +16,7 @@ describe("e2e: memory profile update", () => {
     expect(stderr).toMatch(/--name/i);
     expect(stderr).toMatch(/--description/i);
     expect(stderr).toMatch(/--attributes-operations/i);
-    expect(stderr).toMatch(/--memory-library-id/i);
+    expect(stderr).toMatch(/--library-id/i);
     expect(stderr).toMatch(/--workspace-id/i);
   });
 
@@ -225,7 +225,7 @@ describe("e2e: memory profile update", () => {
       "schema_test",
       "--name",
       "user_basic_v2",
-      "--memory-library-id",
+      "--library-id",
       "lib_test",
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",

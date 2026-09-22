@@ -64,7 +64,7 @@ export default defineCommand({
     const format = detectOutputFormat(settings.output);
     const url =
       memoryEndpoint(resolveWorkspaceId(ctx), userProfilePath(flags.schemaId)) +
-      buildQuery({ user_id: flags.userId, memory_library_id: flags.memoryLibraryId });
+      buildQuery({ user_id: flags.userId, memory_library_id: flags.libraryId });
 
     if (settings.dryRun) {
       emitResult({ endpoint: url, method: "GET" }, format);

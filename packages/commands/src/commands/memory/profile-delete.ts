@@ -62,7 +62,7 @@ export default defineCommand({
     const format = detectOutputFormat(settings.output);
     const url =
       memoryEndpoint(resolveWorkspaceId(ctx), profileSchemaItemPath(flags.schemaId)) +
-      buildQuery({ memory_library_id: flags.memoryLibraryId });
+      buildQuery({ memory_library_id: flags.libraryId });
 
     if (settings.dryRun) {
       emitResult({ endpoint: url, method: "DELETE" }, format);

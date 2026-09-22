@@ -163,7 +163,7 @@ export default defineCommand({
     if (flags.enableRewrite !== undefined) body.enable_rewrite = flags.enableRewrite;
     if (flags.planVersion) body.plan_version = flags.planVersion as MemoryPlanVersion;
     if (flags.projectId?.length) body.project_ids = flags.projectId;
-    if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId;
+    if (flags.libraryId) body.memory_library_id = flags.libraryId;
 
     const format = detectOutputFormat(settings.output);
     const url = memoryEndpoint(resolveWorkspaceId(ctx), memorySearchPath());

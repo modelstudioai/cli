@@ -21,8 +21,26 @@ describe("e2e: memory list", () => {
     expect(stderr).toMatch(/--page-size/i);
     expect(stderr).toMatch(/--page/i);
     expect(stderr).toMatch(/--project-id/i);
-    expect(stderr).toMatch(/--memory-library-id/i);
+    expect(stderr).toMatch(/--library-id/i);
+    expect(stderr).not.toMatch(/--memory-library-id/i);
     expect(stderr).toMatch(/--workspace-id/i);
+  });
+
+  test("旧 --memory-library-id 不再接受", async () => {
+    const { exitCode, stderr } = await runCommandE2e(MEMORY_LIST_ROUTES, [
+      "memory",
+      "list",
+      "--user-id",
+      "user1",
+      "--memory-library-id",
+      "lib_test",
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/unknown.*memory-library-id/i);
   });
 
   test("缺 workspace 时报 USAGE (2)", async () => {
@@ -63,13 +81,13 @@ describe("e2e: memory list", () => {
     expect(exitCode).toBe(2);
   });
 
-  test("--memory-library-id 33 字符报 USAGE (2)", async () => {
+  test("--library-id 33 字符报 USAGE (2)", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_LIST_ROUTES, [
       "memory",
       "list",
       "--user-id",
       memoryUserId(),
-      "--memory-library-id",
+      "--library-id",
       "l".repeat(33),
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",
@@ -120,7 +138,7 @@ describe("e2e: memory list", () => {
     expect(data.method).toBe("GET");
   });
 
-  test("--dry-run 断言分页 / project-id / memory-library-id 进 query string", async () => {
+  test("--dry-run 断言分页 / project-id / library-id 进 query string", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_LIST_ROUTES, [
       "memory",
       "list",
@@ -132,7 +150,7 @@ describe("e2e: memory list", () => {
       "2",
       "--project-id",
       "proj_test",
-      "--memory-library-id",
+      "--library-id",
       "lib_test",
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",

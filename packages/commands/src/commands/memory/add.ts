@@ -141,7 +141,7 @@ export default defineCommand({
     if (flags.metaData) body.meta_data = parseJsonObjectFlag("--meta-data", flags.metaData);
     if (flags.profileSchema) body.profile_schema = flags.profileSchema;
     if (flags.projectId) body.project_id = flags.projectId;
-    if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId;
+    if (flags.libraryId) body.memory_library_id = flags.libraryId;
 
     const format = detectOutputFormat(settings.output);
     const url = memoryEndpoint(resolveWorkspaceId(ctx), memoryAddPath());

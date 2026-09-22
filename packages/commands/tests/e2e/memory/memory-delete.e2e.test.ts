@@ -21,7 +21,7 @@ describe("e2e: memory delete", () => {
     expect(stderr).toMatch(/--node-id/i);
     expect(stderr).toMatch(/--user-id/i);
     expect(stderr).toMatch(/--yes/i);
-    expect(stderr).toMatch(/--memory-library-id/i);
+    expect(stderr).toMatch(/--library-id/i);
     expect(stderr).toMatch(/--workspace-id/i);
   });
 
@@ -61,7 +61,7 @@ describe("e2e: memory delete", () => {
     expect(exitCode).toBe(2);
   });
 
-  test("--memory-library-id 33 字符报 USAGE (2)", async () => {
+  test("--library-id 33 字符报 USAGE (2)", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_DELETE_ROUTES, [
       "memory",
       "delete",
@@ -69,7 +69,7 @@ describe("e2e: memory delete", () => {
       "node_test",
       "--user-id",
       "user1",
-      "--memory-library-id",
+      "--library-id",
       "l".repeat(33),
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",
@@ -85,7 +85,7 @@ describe("e2e: memory delete", () => {
       "node_test",
       "--user-id",
       "user1",
-      "--memory-library-id",
+      "--library-id",
       "lib_test",
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",
@@ -103,7 +103,7 @@ describe("e2e: memory delete", () => {
     expect(data.method).toBe("DELETE");
   });
 
-  test("--dry-run 不传 --memory-library-id 时 query 里不出现该键", async () => {
+  test("--dry-run 不传 --library-id 时 query 里不出现该键", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_DELETE_ROUTES, [
       "memory",
       "delete",

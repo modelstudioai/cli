@@ -32,7 +32,7 @@ export function memoryScopeCliArgs(): string[] {
   const libraryId = process.env.BAILIAN_E2E_MEMORY_LIBRARY_ID?.trim();
   const workspaceId = process.env.BAILIAN_WORKSPACE_ID?.trim();
   return [
-    ...(libraryId ? ["--memory-library-id", libraryId] : []),
+    ...(libraryId ? ["--library-id", libraryId] : []),
     ...(workspaceId ? ["--workspace-id", workspaceId] : []),
   ];
 }

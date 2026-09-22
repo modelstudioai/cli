@@ -9,7 +9,7 @@
 | 对象               | 用途                                      | 标识                                                                |
 | ------------------ | ----------------------------------------- | ------------------------------------------------------------------- |
 | Workspace          | 选择 Memory API 所在工作空间              | `--workspace-id`                                                    |
-| 记忆库             | 指定记忆数据所在库；省略用账号默认库      | `--memory-library-id`                                               |
+| 记忆库             | 指定记忆数据所在库；省略用账号默认库      | `--library-id`                                                      |
 | 记忆实体           | 业务中的用户或其他记忆归属对象            | `--user-id`                                                         |
 | 片段规则 / project | 决定抽取规则及 observation / skill 等类型 | `--project-id`                                                      |
 | 记忆节点           | 一条事实或技能记忆                        | 返回的 `memory_node_id`，用于 `--node-id`                           |
@@ -47,7 +47,7 @@ bl config set workspace_id '<your-workspace-id>'
 
 当前实现按 Workspace 构造北京区绝对地址 `https://<workspace-id>.cn-beijing.maas.aliyuncs.com`。通用 `--base-url` 不能用来切换这组命令的 Workspace 网关。
 
-以下示例使用默认记忆库；若使用指定库，在支持的命令中始终传同一个 `--memory-library-id`。`node show` 和 `skill export` 仅通过节点 ID 定位，不接受记忆库参数。
+以下示例使用默认记忆库；若使用指定库，在支持的命令中始终传同一个 `--library-id`。`node show` 和 `skill export` 仅通过节点 ID 定位，不接受记忆库参数。
 
 ## 3. 写入并读取第一条记忆
 
@@ -268,7 +268,7 @@ bl memory skill export --node-id '<skill-node-id>' --output json > meeting-summa
 
 | 参数                                | 约束                                        |
 | ----------------------------------- | ------------------------------------------- |
-| user-id / memory-library-id         | 最长 64 / 32                                |
+| user-id / library-id                | 最长 64 / 32                                |
 | add/update 的 content               | 最长 512                                    |
 | add 的 messages                     | 最多 50 条                                  |
 | add 的 project-id                   | 内容直存最多 1 个，消息抽取最多 5 个        |

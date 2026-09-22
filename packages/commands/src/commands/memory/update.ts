@@ -107,7 +107,7 @@ export default defineCommand({
     };
     if (flags.timestamp !== undefined) body.timestamp = flags.timestamp;
     if (flags.metaData) body.meta_data = parseJsonObjectFlag("--meta-data", flags.metaData);
-    if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId;
+    if (flags.libraryId) body.memory_library_id = flags.libraryId;
 
     const format = detectOutputFormat(settings.output);
     const url = memoryEndpoint(resolveWorkspaceId(ctx), memoryNodePath(nodeId));

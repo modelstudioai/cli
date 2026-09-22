@@ -17,7 +17,7 @@ describe("e2e: memory add", () => {
     expect(stderr).toMatch(/--profile-schema/i);
     expect(stderr).toMatch(/--meta-data/i);
     expect(stderr).toMatch(/--project-id/i);
-    expect(stderr).toMatch(/--memory-library-id/i);
+    expect(stderr).toMatch(/--library-id/i);
     expect(stderr).toMatch(/--workspace-id/i);
   });
 
@@ -66,7 +66,7 @@ describe("e2e: memory add", () => {
     expect(exitCode).toBe(2);
   });
 
-  test("--memory-library-id 33 字符报 USAGE (2)", async () => {
+  test("--library-id 33 字符报 USAGE (2)", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_ADD_ROUTES, [
       "memory",
       "add",
@@ -74,7 +74,7 @@ describe("e2e: memory add", () => {
       memoryUserId(),
       "--content",
       "over-long library id",
-      "--memory-library-id",
+      "--library-id",
       "l".repeat(33),
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",
@@ -207,7 +207,7 @@ describe("e2e: memory add", () => {
     expect(data.request?.custom_content).toBeUndefined();
   });
 
-  test("--dry-run 断言 --meta-data/--project-id/--profile-schema/--memory-library-id 映射", async () => {
+  test("--dry-run 断言 --meta-data/--project-id/--profile-schema/--library-id 映射", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_ADD_ROUTES, [
       "memory",
       "add",
@@ -221,7 +221,7 @@ describe("e2e: memory add", () => {
       "proj_test",
       "--profile-schema",
       "schema_test",
-      "--memory-library-id",
+      "--library-id",
       "lib_test",
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",

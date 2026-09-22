@@ -17,7 +17,7 @@ export const MEMORY_WORKSPACE_NOTE = {
  * account's default library, so it stays optional on every command.
  */
 export const MEMORY_LIBRARY_FLAG = {
-  memoryLibraryId: {
+  libraryId: {
     type: "string",
     valueHint: "<id>",
     description: {
@@ -77,16 +77,13 @@ export const MAX_ATTRIBUTE_DEFAULT_VALUE_LENGTH = 128;
  */
 export function checkMemoryScopeLengths(flags: {
   userId?: string;
-  memoryLibraryId?: string;
+  libraryId?: string;
 }): string | undefined {
   if (flags.userId !== undefined && flags.userId.length > MAX_USER_ID_LENGTH) {
     return `--user-id must be at most ${MAX_USER_ID_LENGTH} characters.`;
   }
-  if (
-    flags.memoryLibraryId !== undefined &&
-    flags.memoryLibraryId.length > MAX_MEMORY_LIBRARY_ID_LENGTH
-  ) {
-    return `--memory-library-id must be at most ${MAX_MEMORY_LIBRARY_ID_LENGTH} characters.`;
+  if (flags.libraryId !== undefined && flags.libraryId.length > MAX_MEMORY_LIBRARY_ID_LENGTH) {
+    return `--library-id must be at most ${MAX_MEMORY_LIBRARY_ID_LENGTH} characters. / --library-id 最多 ${MAX_MEMORY_LIBRARY_ID_LENGTH} 个字符。`;
   }
   return undefined;
 }

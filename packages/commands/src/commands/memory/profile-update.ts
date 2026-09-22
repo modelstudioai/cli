@@ -119,7 +119,7 @@ export default defineCommand({
       validateOperations(operations);
       body.attributes_operations = operations;
     }
-    if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId;
+    if (flags.libraryId) body.memory_library_id = flags.libraryId;
 
     const format = detectOutputFormat(settings.output);
     const url = memoryEndpoint(resolveWorkspaceId(ctx), profileSchemaItemPath(flags.schemaId));

@@ -65,7 +65,7 @@ describe("e2e: memory search", () => {
     expect(exitCode).toBe(2);
   });
 
-  test("--memory-library-id 33 字符报 USAGE (2)", async () => {
+  test("--library-id 33 字符报 USAGE (2)", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
       "memory",
       "search",
@@ -73,7 +73,7 @@ describe("e2e: memory search", () => {
       memoryUserId(),
       "--query",
       "x",
-      "--memory-library-id",
+      "--library-id",
       "l".repeat(33),
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",
@@ -214,7 +214,7 @@ describe("e2e: memory search", () => {
       "false",
       "--plan-version",
       "lite",
-      "--memory-library-id",
+      "--library-id",
       "lib_test",
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",
@@ -280,11 +280,11 @@ describe.skipIf(!isMemoryE2EReady())("e2e: memory search (live)", () => {
     expect(data.memory_nodes ?? []).toHaveLength(0);
   });
 
-  test("--memory-library-id 不存在时服务端拒绝（非 0 退出）", async () => {
+  test("--library-id 不存在时服务端拒绝（非 0 退出）", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
       "memory",
       "search",
-      "--memory-library-id",
+      "--library-id",
       "no-such-library-000000000000000",
       "--user-id",
       memoryUserId(),

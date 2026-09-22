@@ -132,7 +132,7 @@ describe("memory 0921 verified contract", () => {
       "delete",
       "--node-id",
       "node1",
-      "--memory-library-id",
+      "--library-id",
       "lib1",
       ...DRY,
     ]);

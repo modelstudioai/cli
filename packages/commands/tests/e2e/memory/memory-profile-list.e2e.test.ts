@@ -19,7 +19,7 @@ describe("e2e: memory profile list", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--page-size/i);
     expect(stderr).toMatch(/--page/i);
-    expect(stderr).toMatch(/--memory-library-id/i);
+    expect(stderr).toMatch(/--library-id/i);
     expect(stderr).toMatch(/--workspace-id/i);
   });
 
@@ -34,12 +34,12 @@ describe("e2e: memory profile list", () => {
     expect(exitCode).toBe(2);
   });
 
-  test("--memory-library-id 33 字符报 USAGE (2)", async () => {
+  test("--library-id 33 字符报 USAGE (2)", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_PROFILE_LIST_ROUTES, [
       "memory",
       "profile",
       "list",
-      "--memory-library-id",
+      "--library-id",
       "l".repeat(33),
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",
@@ -85,7 +85,7 @@ describe("e2e: memory profile list", () => {
     expect(data.method).toBe("GET");
   });
 
-  test("--dry-run 断言分页与 memory-library-id 进 query string", async () => {
+  test("--dry-run 断言分页与 library-id 进 query string", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_PROFILE_LIST_ROUTES, [
       "memory",
       "profile",
@@ -94,7 +94,7 @@ describe("e2e: memory profile list", () => {
       "20",
       "--page",
       "2",
-      "--memory-library-id",
+      "--library-id",
       "lib_test",
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",
@@ -131,12 +131,12 @@ describe.skipIf(!isMemoryE2EReady())("e2e: memory profile list (live)", () => {
     }
   });
 
-  test("--memory-library-id 不存在时服务端拒绝（非 0 退出）", async () => {
+  test("--library-id 不存在时服务端拒绝（非 0 退出）", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_PROFILE_LIST_ROUTES, [
       "memory",
       "profile",
       "list",
-      "--memory-library-id",
+      "--library-id",
       "no-such-library-000000000000000",
       "--output",
       "json",

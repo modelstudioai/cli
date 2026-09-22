@@ -75,9 +75,9 @@ export default defineCommand({
     },
     {
       "en-US":
-        '--name "user_basic" --attributes \'[{"name":"age"}]\' --plan-version lite --memory-library-id lib_xxx',
+        '--name "user_basic" --attributes \'[{"name":"age"}]\' --plan-version lite --library-id lib_xxx',
       "zh-CN":
-        '--name "user_basic" --attributes \'[{"name":"age"}]\' --plan-version lite --memory-library-id lib_xxx',
+        '--name "user_basic" --attributes \'[{"name":"age"}]\' --plan-version lite --library-id lib_xxx',
     },
   ],
   validate: (flags) =>
@@ -98,7 +98,7 @@ export default defineCommand({
     const body: ProfileSchemaCreateRequest = { name: flags.name, attributes };
     if (flags.description) body.description = flags.description;
     if (flags.planVersion) body.plan_version = flags.planVersion as MemoryPlanVersion;
-    if (flags.memoryLibraryId) body.memory_library_id = flags.memoryLibraryId;
+    if (flags.libraryId) body.memory_library_id = flags.libraryId;
 
     const format = detectOutputFormat(settings.output);
     const url = memoryEndpoint(resolveWorkspaceId(ctx), profileSchemaPath());

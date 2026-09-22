@@ -21,7 +21,7 @@ describe("e2e: memory update", () => {
     expect(stderr).toMatch(/--content/i);
     expect(stderr).toMatch(/--timestamp/i);
     expect(stderr).toMatch(/--meta-data/i);
-    expect(stderr).toMatch(/--memory-library-id/i);
+    expect(stderr).toMatch(/--library-id/i);
     expect(stderr).toMatch(/--workspace-id/i);
   });
 
@@ -91,7 +91,7 @@ describe("e2e: memory update", () => {
     expect(exitCode).toBe(2);
   });
 
-  test("--memory-library-id 33 字符报 USAGE (2)", async () => {
+  test("--library-id 33 字符报 USAGE (2)", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_UPDATE_ROUTES, [
       "memory",
       "update",
@@ -101,7 +101,7 @@ describe("e2e: memory update", () => {
       memoryUserId(),
       "--content",
       "新内容",
-      "--memory-library-id",
+      "--library-id",
       "l".repeat(33),
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",
@@ -152,7 +152,7 @@ describe("e2e: memory update", () => {
     expect(data.request?.meta_data).toBeUndefined();
   });
 
-  test("--dry-run 断言 --timestamp/--meta-data/--memory-library-id 映射", async () => {
+  test("--dry-run 断言 --timestamp/--meta-data/--library-id 映射", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_UPDATE_ROUTES, [
       "memory",
       "update",
@@ -166,7 +166,7 @@ describe("e2e: memory update", () => {
       "1747278460",
       "--meta-data",
       '{"city":"上海"}',
-      "--memory-library-id",
+      "--library-id",
       "lib_test",
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",

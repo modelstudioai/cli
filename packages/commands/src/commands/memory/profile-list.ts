@@ -40,7 +40,7 @@ export default defineCommand({
   exampleArgs: [
     "--workspace-id ws_xxx",
     "--page-size 20 --page 2",
-    "--memory-library-id lib_xxx --output json",
+    "--library-id lib_xxx --output json",
   ],
   validate: (flags) => {
     const scopeError = checkMemoryScopeLengths(flags);
@@ -59,7 +59,7 @@ export default defineCommand({
       buildQuery({
         page_size: flags.pageSize,
         page_num: flags.page,
-        memory_library_id: flags.memoryLibraryId,
+        memory_library_id: flags.libraryId,
       });
 
     if (settings.dryRun) {

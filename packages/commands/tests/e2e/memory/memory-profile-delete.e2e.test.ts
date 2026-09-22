@@ -23,7 +23,7 @@ describe("e2e: memory profile delete", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--schema-id/i);
     expect(stderr).toMatch(/--yes/i);
-    expect(stderr).toMatch(/--memory-library-id/i);
+    expect(stderr).toMatch(/--library-id/i);
     expect(stderr).toMatch(/--workspace-id/i);
   });
 
@@ -54,14 +54,14 @@ describe("e2e: memory profile delete", () => {
     expect(stderr).toMatch(/--yes/i);
   });
 
-  test("--memory-library-id 33 字符报 USAGE (2)", async () => {
+  test("--library-id 33 字符报 USAGE (2)", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_PROFILE_DELETE_ROUTES, [
       "memory",
       "profile",
       "delete",
       "--schema-id",
       "schema_test",
-      "--memory-library-id",
+      "--library-id",
       "l".repeat(33),
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",
@@ -89,14 +89,14 @@ describe("e2e: memory profile delete", () => {
     expect(data.method).toBe("DELETE");
   });
 
-  test("--dry-run 断言 --memory-library-id 进 query string", async () => {
+  test("--dry-run 断言 --library-id 进 query string", async () => {
     const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_PROFILE_DELETE_ROUTES, [
       "memory",
       "profile",
       "delete",
       "--schema-id",
       "schema_test",
-      "--memory-library-id",
+      "--library-id",
       "lib_test",
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",
