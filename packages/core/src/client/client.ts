@@ -111,6 +111,18 @@ export class Client {
   }
 
   /**
+   * Headers for registering a Bailian MCP endpoint in an external Agent.
+   * Credential resolution and channel attribution remain owned by the client.
+   */
+  bailianMcpRegistrationHeaders(): Record<string, string> {
+    const credential = this.requireApi();
+    return {
+      Authorization: `Bearer ${credential.token}`,
+      ...trackingHeaders(this.deps.identity),
+    };
+  }
+
+  /**
    * Full URL for a model-domain path. Services may supply a lazy default origin,
    * evaluated only when no flag/env/profile base URL was configured.
    */

@@ -393,8 +393,10 @@ test("McpSseClient：string JSON-RPC id 可匹配；仅认 event:endpoint", asyn
 
 test("McpClient：支持 text/event-stream 响应体", async () => {
   const originalFetch = globalThis.fetch;
+  const sentHeaders: Headers[] = [];
 
   globalThis.fetch = async (_input, init) => {
+    sentHeaders.push(new Headers(init?.headers));
     const body = typeof init?.body === "string" ? JSON.parse(init.body) : {};
     if (body.method === "notifications/initialized") {
       return new Response(null, { status: 202 });
@@ -417,6 +419,10 @@ test("McpClient：支持 text/event-stream 响应体", async () => {
   try {
     const client = new McpClient(testDeps(), "https://example.test/mcp", "sk-test");
     await client.initialize();
+    expect(sentHeaders.length).toBeGreaterThan(0);
+    for (const headers of sentHeaders) {
+      expect(headers.get("X-Dashscope-Service")).toBe("bailian-cli");
+    }
   } finally {
     globalThis.fetch = originalFetch;
   }

@@ -6,6 +6,21 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.0.0] - 2026-09-22
+
+### 新增
+
+- **原生 MCP 注册** —— 新增 `bl mcp connect` 和 `bl mcp disconnect`，支持在 Agent 原生配置中接入或移除百炼 MCP 服务：
+  - 支持 `streamable-http` 与 SSE，可指定单个 Agent 或使用 `--agent all`。
+  - 支持 Codex、Claude Code、Cursor、Qoder、Qoder Work、QwenWork、Qwen Code、Gemini、OpenCode、OpenClaw、DeepSeek Harness、ZCode 和 WorkBuddy。
+  - 不会覆盖非 CLI 管理的同名配置；移除时会保留已被用户修改的注册项。
+- **扩展 Skill 分发范围** —— Skill 安装和更新新增支持 WorkBuddy、Trae CLI 与 DeepSeek DSH，并使用各自的全局 Skill 目录。
+
+### 修复
+
+- **Skill 操作预览** —— `bl skill init`、`add`、`update` 和 `remove` 现在会正确响应 `--dry-run`，只读展示计划操作的 Skill、Agent 和目标路径；无效请求的失败状态与实际执行保持一致。
+- **Skill 清理安全性** —— `bl skill remove` 的预览与实际执行现在使用相同的托管链接发现范围，可识别历史托管链接，并在删除前重新校验目标，避免误删已变化或不再由 CLI 管理的内容。
+
 ## [1.28.0] - 2026-09-20
 
 ### 新增
