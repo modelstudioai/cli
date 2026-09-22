@@ -166,6 +166,18 @@ export {
 } from "./commands/deploy/create.ts";
 export { default as deployList } from "./commands/deploy/list.ts";
 export { default as deployGet } from "./commands/deploy/get.ts";
+export { default as deployCapacityList } from "./commands/deploy/capacity-list.ts";
+export { default as deployCapacityGet } from "./commands/deploy/capacity-get.ts";
+export {
+  deployCapacityCreate,
+  deployCapacityScale,
+  deployCapacityRenew,
+  deployCapacityDelete,
+} from "./commands/deploy/capacity-write.ts";
+export { default as deployCapacityUnsubscribe } from "./commands/deploy/capacity-unsubscribe.ts";
+export { default as deployOverflow } from "./commands/deploy/overflow.ts";
+export { default as deployOperationGet } from "./commands/deploy/operation-get.ts";
+export { default as deployOperationWait } from "./commands/deploy/operation-wait.ts";
 export { default as deployModels } from "./commands/deploy/models.ts";
 export { default as deployScale } from "./commands/deploy/scale.ts";
 export { default as deployUpdate } from "./commands/deploy/update.ts";
