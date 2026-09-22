@@ -191,7 +191,7 @@ bl update
 
 ## 相关链接
 
-Memory 用户文档：[能力矩阵](docs/memory/cli-matrix.md) · [技术指南](docs/memory/user-guide.md)。
+Memory 用户文档：[能力矩阵](https://github.com/modelstudioai/cli/blob/main/docs/memory/cli-matrix.md) · [技术指南](https://github.com/modelstudioai/cli/blob/main/docs/memory/user-guide.md)。
 
 | 资源                    | 地址                                                                                      |
 | :---------------------- | :---------------------------------------------------------------------------------------- |

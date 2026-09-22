@@ -191,6 +191,8 @@ bl update
 
 ## 相关链接
 
+Memory 用户文档：[能力矩阵](https://github.com/modelstudioai/cli/blob/main/docs/memory/cli-matrix.md) · [技术指南](https://github.com/modelstudioai/cli/blob/main/docs/memory/user-guide.md)。
+
 | 资源                    | 地址                                                                                      |
 | :---------------------- | :---------------------------------------------------------------------------------------- |
 | 阿里云百炼 CLI 官方主页 | https://bailian.console.aliyun.com/cli?source_channel=cli_github&                         |
