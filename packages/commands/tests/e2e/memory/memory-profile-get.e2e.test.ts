@@ -19,6 +19,7 @@ describe("e2e: memory profile get", () => {
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--schema-id/i);
     expect(stderr).toMatch(/--user-id/i);
+    expect(stderr).toMatch(/--need-detail/i);
     expect(stderr).toMatch(/--library-id/i);
     expect(stderr).toMatch(/--workspace-id/i);
   });
@@ -105,6 +106,61 @@ describe("e2e: memory profile get", () => {
     const endpoint = parseStdoutJson<MemoryDryRunBody>(stdout).endpoint ?? "";
     expect(endpoint).toMatch(/user_id=user1/);
     expect(endpoint).toMatch(/memory_library_id=lib_test/);
+  });
+
+  test("--dry-run 断言 --need-detail 进 query string，不传时不出现", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_PROFILE_GET_ROUTES, [
+      "memory",
+      "profile",
+      "get",
+      "--schema-id",
+      "schema_test",
+      "--user-id",
+      "user1",
+      "--need-detail",
+      "true",
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const endpoint = parseStdoutJson<MemoryDryRunBody>(stdout).endpoint ?? "";
+    expect(endpoint).toMatch(/need_detail=true/);
+
+    const plainRes = await runCommandE2e(MEMORY_PROFILE_GET_ROUTES, [
+      "memory",
+      "profile",
+      "get",
+      "--schema-id",
+      "schema_test",
+      "--user-id",
+      "user1",
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(plainRes.exitCode, plainRes.stderr).toBe(0);
+    const plainEndpoint = parseStdoutJson<MemoryDryRunBody>(plainRes.stdout).endpoint ?? "";
+    expect(plainEndpoint).not.toMatch(/need_detail/);
+  });
+
+  test("--need-detail 非 true/false 报 USAGE (2)", async () => {
+    const { exitCode } = await runCommandE2e(MEMORY_PROFILE_GET_ROUTES, [
+      "memory",
+      "profile",
+      "get",
+      "--schema-id",
+      "schema_test",
+      "--user-id",
+      "user1",
+      "--need-detail",
+      "yes",
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
   });
 });
 

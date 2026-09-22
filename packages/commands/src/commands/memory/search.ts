@@ -9,6 +9,7 @@ import {
   type MemoryPlanVersion,
   type MemorySearchRequest,
   type MemorySearchResponse,
+  type MemoryType,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
@@ -16,6 +17,7 @@ import {
   MEMORY_RATE_LIMIT_NOTE,
   MEMORY_WORKSPACE_NOTE,
   PLAN_VERSION_FLAG,
+  PROJECT_IDS_FLAG,
   WORKSPACE_FLAG,
   checkMemoryScopeLengths,
   parseJsonArrayFlag,
@@ -88,14 +90,25 @@ const SEARCH_FLAGS = {
       "zh-CN": "是否开启 query 重写（默认：false）",
     },
   },
-  projectId: {
+  memoryTypes: {
     type: "array",
-    valueHint: "<id>",
+    valueHint: "<type>",
+    choices: ["observation", "skill"] as const,
     description: {
-      "en-US": "Memory fragment rule ID (repeatable for hybrid retrieval)",
-      "zh-CN": "记忆片段规则 ID（可重复，用于多规则混合检索）",
+      "en-US": "Memory types to search (repeatable; server default: observation only)",
+      "zh-CN": "搜索的记忆类型（可重复；服务端默认仅 observation）",
     },
   },
+  queryTimestamp: {
+    type: "number",
+    valueHint: "<seconds>",
+    description: {
+      "en-US":
+        "Query time as a Unix timestamp in seconds, used during query rewrite (default: now)",
+      "zh-CN": "问询时间的秒级 Unix 时间戳，rewrite 阶段使用（默认：当前时间）",
+    },
+  },
+  ...PROJECT_IDS_FLAG,
   ...PLAN_VERSION_FLAG,
   ...MEMORY_LIBRARY_FLAG,
   ...WORKSPACE_FLAG,
@@ -116,8 +129,15 @@ export default defineCommand({
     MEMORY_WORKSPACE_NOTE,
     {
       "en-US":
-        "--plan-version overrides --enable-rerank and changes the price: pro reranks, lite does not.",
-      "zh-CN": "--plan-version 覆盖 --enable-rerank 且影响计费：pro 开启重排，lite 不开启。",
+        "--plan-version overrides --enable-rerank. With both omitted the plan is pro; --enable-rerank false alone selects lite. Plans are billed differently.",
+      "zh-CN":
+        "--plan-version 优先于 --enable-rerank。两者均省略为 pro；仅传 --enable-rerank false 为 lite。不同计划计费不同。",
+    },
+    {
+      "en-US":
+        "Without --memory-types the server searches observation memories only; pass --memory-types skill (or both types) to include skill memories.",
+      "zh-CN":
+        "不传 --memory-types 时服务端仅搜索事实记忆（observation）；传 --memory-types skill（或同时传两种）可搜索技能记忆。",
     },
     MEMORY_RATE_LIMIT_NOTE,
   ],
@@ -135,6 +155,12 @@ export default defineCommand({
       "en-US": '--user-id user1 --query "reminders" --plan-version lite --min-score 0',
       "zh-CN": '--user-id user1 --query "提醒事项" --plan-version lite --min-score 0',
     },
+    {
+      "en-US":
+        '--user-id user1 --query "meeting summary" --memory-types skill --project-id skill_project_xxx',
+      "zh-CN":
+        '--user-id user1 --query "会议纪要" --memory-types skill --project-id skill_project_xxx',
+    },
   ],
   validate: (flags: SearchFlags) => {
     if (!flags.query && !flags.messages) return "Provide --query or --messages.";
@@ -144,6 +170,8 @@ export default defineCommand({
       return `--top-k must be between 1 and ${MAX_TOP_K}.`;
     if (flags.minScore !== undefined && (flags.minScore < 0 || flags.minScore > 1))
       return "--min-score must be between 0 and 1.";
+    if (flags.queryTimestamp !== undefined && flags.queryTimestamp < 0)
+      return "--query-timestamp must be a non-negative Unix timestamp in seconds.";
     return undefined;
   },
   async run(ctx) {
@@ -163,6 +191,8 @@ export default defineCommand({
     if (flags.enableRewrite !== undefined) body.enable_rewrite = flags.enableRewrite;
     if (flags.planVersion) body.plan_version = flags.planVersion as MemoryPlanVersion;
     if (flags.projectId?.length) body.project_ids = flags.projectId;
+    if (flags.memoryTypes?.length) body.memory_types = flags.memoryTypes as MemoryType[];
+    if (flags.queryTimestamp !== undefined) body.query_timestamp = flags.queryTimestamp;
     if (flags.libraryId) body.memory_library_id = flags.libraryId;
 
     const format = detectOutputFormat(settings.output);
@@ -184,7 +214,9 @@ export default defineCommand({
         emitBare("No memory nodes found.");
       } else {
         for (const node of response.memory_nodes) {
-          emitBare(`[${node.memory_node_id}] ${node.content}`);
+          const typePrefix = node.memory_type ? `[${node.memory_type}] ` : "";
+          const scoreSuffix = node.score !== undefined ? ` (score ${node.score})` : "";
+          emitBare(`${typePrefix}[${node.memory_node_id}] ${node.content}${scoreSuffix}`);
         }
       }
     } else {

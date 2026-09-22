@@ -26,10 +26,9 @@ const DELETE_FLAGS = {
     type: "string",
     valueHint: "<id>",
     description: {
-      "en-US": "Memory entity ID that owns the memory (required)",
-      "zh-CN": "记忆实体 ID，标识记忆归属对象（必填）",
+      "en-US": "Deprecated compatibility option; ignored, the node ID selects the memory",
+      "zh-CN": "已弃用的兼容参数；不发送到接口，通过节点 ID 定位记忆",
     },
-    required: true,
   },
   ...MEMORY_LIBRARY_FLAG,
   ...WORKSPACE_FLAG,
@@ -41,24 +40,22 @@ export default defineCommand({
   risk: {
     level: "high",
     message: {
-      "en-US": "This permanently deletes the specified memory node and cannot be undone.",
-      "zh-CN": "该操作会永久删除指定的记忆片段，且无法恢复。",
+      "en-US": "This deletes the specified memory node. Confirm the node ID before proceeding.",
+      "zh-CN": "该操作会删除指定记忆节点，请确认节点 ID。",
     },
   },
-  usageArgs: "--node-id <id> --user-id <id> [flags]",
+  usageArgs: "--node-id <id> [flags]",
   flags: DELETE_FLAGS,
   notes: [
     MEMORY_WORKSPACE_NOTE,
     {
       "en-US":
-        "Irreversible — the memory node is permanently removed. Run `memory list` first to confirm the node ID.",
-      "zh-CN": "该操作不可撤销——记忆片段将被永久删除。建议先用 `memory list` 确认节点 ID。",
+        "Deleted nodes may remain readable with status=delete. Run `memory list` first to confirm the node ID.",
+      "zh-CN":
+        "删除后的节点仍可能通过详情接口读取，状态为 delete。建议先用 `memory list` 确认节点 ID。",
     },
   ],
-  exampleArgs: [
-    "--node-id node_xxx --user-id user1 --workspace-id ws_xxx",
-    "--node-id node_xxx --user-id user1 --yes",
-  ],
+  exampleArgs: ["--node-id node_xxx --workspace-id ws_xxx", "--node-id node_xxx --yes"],
   validate: (flags) => checkMemoryScopeLengths(flags),
   async run(ctx) {
     const { settings, flags } = ctx;
@@ -67,7 +64,7 @@ export default defineCommand({
     const format = detectOutputFormat(settings.output);
     const url =
       memoryEndpoint(resolveWorkspaceId(ctx), memoryNodePath(nodeId)) +
-      buildQuery({ user_id: flags.userId, memory_library_id: flags.libraryId });
+      buildQuery({ memory_library_id: flags.libraryId });
 
     if (settings.dryRun) {
       emitResult({ endpoint: url, method: "DELETE" }, format);

@@ -5,6 +5,7 @@ import {
   profileSchemaItemPath,
   detectOutputFormat,
   type FlagsDef,
+  type MemoryPlanVersion,
   type ProfileSchemaAttributeOperation,
   type ProfileSchemaUpdateRequest,
 } from "bailian-cli-core";
@@ -12,6 +13,8 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
   MEMORY_LIBRARY_FLAG,
   MEMORY_WORKSPACE_NOTE,
+  PLAN_VERSION_FLAG,
+  EXTRACT_SCENE_FLAG,
   WORKSPACE_FLAG,
   assertAttributeFieldLengths,
   checkMemoryScopeLengths,
@@ -48,6 +51,8 @@ const PROFILE_UPDATE_FLAGS = {
       "zh-CN": '属性操作 JSON 数组：[{"op":"add","name":"plan"}]',
     },
   },
+  ...PLAN_VERSION_FLAG,
+  ...EXTRACT_SCENE_FLAG,
   ...MEMORY_LIBRARY_FLAG,
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
@@ -73,8 +78,8 @@ function validateOperations(operations: ProfileSchemaAttributeOperation[]): void
 
 export default defineCommand({
   description: {
-    "en-US": "Update a profile schema name, description, or attributes",
-    "zh-CN": "更新画像模板的名称、描述或属性",
+    "en-US": "Update a profile schema, extraction scene, or billing tier",
+    "zh-CN": "更新画像模板、抽取场景或计费档位",
   },
   auth: "apiKey",
   usageArgs: "--schema-id <id> [flags]",
@@ -101,8 +106,14 @@ export default defineCommand({
     },
   ],
   validate: (flags) => {
-    if (!flags.name && !flags.description && !flags.attributesOperations)
-      return "Provide --name, --description, or --attributes-operations.";
+    if (
+      !flags.name &&
+      flags.description === undefined &&
+      !flags.attributesOperations &&
+      !flags.planVersion &&
+      !flags.extractScene
+    )
+      return "Provide --name, --description, --plan-version, --extract-scene, or --attributes-operations. / 请至少提供一个模板更新字段。";
     return checkMemoryScopeLengths(flags) ?? checkProfileSchemaTextLengths(flags) ?? undefined;
   },
   async run(ctx) {
@@ -110,7 +121,8 @@ export default defineCommand({
 
     const body: ProfileSchemaUpdateRequest = {};
     if (flags.name) body.name = flags.name;
-    if (flags.description) body.description = flags.description;
+    if (flags.description !== undefined) body.description = flags.description;
+    if (flags.planVersion) body.plan_version = flags.planVersion as MemoryPlanVersion;
     if (flags.attributesOperations) {
       const operations = parseJsonArrayFlag<ProfileSchemaAttributeOperation>(
         "--attributes-operations",
@@ -119,6 +131,7 @@ export default defineCommand({
       validateOperations(operations);
       body.attributes_operations = operations;
     }
+    if (flags.extractScene) body.extract_scene = flags.extractScene;
     if (flags.libraryId) body.memory_library_id = flags.libraryId;
 
     const format = detectOutputFormat(settings.output);

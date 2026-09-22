@@ -83,8 +83,13 @@ export function memoryEndpoint(workspaceId: string, path: string): string {
   return workspaceEndpoint(workspaceId, path);
 }
 
-export function memoryAddPath(): string {
-  return "/api/v2/apps/memory/add";
+export function memoryAddAsyncPath(): string {
+  return "/api/v2/apps/memory/add-async";
+}
+
+/** GET /api/v2/apps/memory/events/{event_id} — async add task status (internal polling). */
+export function memoryEventPath(eventId: string): string {
+  return `/api/v2/apps/memory/events/${encodeURIComponent(eventId)}`;
 }
 
 export function memorySearchPath(): string {
@@ -97,6 +102,11 @@ export function memoryListPath(): string {
 
 export function memoryNodePath(nodeId: string): string {
   return `/api/v2/apps/memory/memory_nodes/${encodeURIComponent(nodeId)}`;
+}
+
+/** GET /api/v2/apps/memory/skill/export/{memory_node_id} — skill memory export. */
+export function memorySkillExportPath(nodeId: string): string {
+  return `/api/v2/apps/memory/skill/export/${encodeURIComponent(nodeId)}`;
 }
 
 // ---- Speech Synthesis (TTS) ----
@@ -125,6 +135,11 @@ export function profileSchemaItemPath(schemaId: string): string {
 
 export function userProfilePath(schemaId: string): string {
   return `${profileSchemaItemPath(schemaId)}/user_profile`;
+}
+
+/** PATCH /api/v2/apps/memory/profile_schemas/{id}/profile_values — value item add/update/delete. */
+export function userProfileValuesPath(schemaId: string): string {
+  return `${profileSchemaItemPath(schemaId)}/profile_values`;
 }
 
 // ---- Knowledge Base Retrieve (DashScope) ----

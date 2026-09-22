@@ -35,6 +35,7 @@ export {
   isImageKbE2EReady,
   isKbAdminE2EReady,
   isMemoryE2EReady,
+  isMemorySkillE2EReady,
   isMultimodalChatE2EReady,
   isMultimodalSearchE2EReady,
   isOpenApiE2EReady,

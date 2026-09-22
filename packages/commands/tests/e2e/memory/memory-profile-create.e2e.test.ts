@@ -73,7 +73,7 @@ describe("e2e: memory profile create", () => {
     expect(exitCode).toBe(2);
   });
 
-  test("--description 129 字符报 USAGE (2)", async () => {
+  test("--description 长度限制由服务端决定", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_PROFILE_CREATE_ROUTES, [
       "memory",
       "profile",
@@ -87,7 +87,7 @@ describe("e2e: memory profile create", () => {
       ...TEST_WORKSPACE_ARGS,
       "--dry-run",
     ]);
-    expect(exitCode).toBe(2);
+    expect(exitCode).toBe(0);
   });
 
   test("--attributes 内属性 name 超长报 USAGE (2)", async () => {

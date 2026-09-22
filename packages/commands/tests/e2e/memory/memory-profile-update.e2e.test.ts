@@ -16,6 +16,7 @@ describe("e2e: memory profile update", () => {
     expect(stderr).toMatch(/--name/i);
     expect(stderr).toMatch(/--description/i);
     expect(stderr).toMatch(/--attributes-operations/i);
+    expect(stderr).toMatch(/--plan-version/i);
     expect(stderr).toMatch(/--library-id/i);
     expect(stderr).toMatch(/--workspace-id/i);
   });
@@ -31,7 +32,7 @@ describe("e2e: memory profile update", () => {
     expect(exitCode).toBe(2);
   });
 
-  test("三个可改字段全不传报 USAGE (2)", async () => {
+  test("四个可改字段全不传报 USAGE (2)", async () => {
     const { stderr, exitCode } = await runCommandE2e(MEMORY_PROFILE_UPDATE_ROUTES, [
       "memory",
       "profile",
@@ -41,6 +42,41 @@ describe("e2e: memory profile update", () => {
     ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/--attributes-operations/i);
+    expect(stderr).toMatch(/--plan-version/i);
+  });
+
+  test("--dry-run 断言 --plan-version 进 body", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_PROFILE_UPDATE_ROUTES, [
+      "memory",
+      "profile",
+      "update",
+      "--schema-id",
+      "schema_test",
+      "--plan-version",
+      "lite",
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<MemoryDryRunBody>(stdout);
+    expect(data.method).toBe("PATCH");
+    expect(data.request?.plan_version).toBe("lite");
+  });
+
+  test("--plan-version 非法取值报 USAGE (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MEMORY_PROFILE_UPDATE_ROUTES, [
+      "memory",
+      "profile",
+      "update",
+      "--schema-id",
+      "schema_test",
+      "--plan-version",
+      "ultra",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/pro|lite/i);
   });
 
   test("--attributes-operations 非法 JSON 报 USAGE (2)", async () => {

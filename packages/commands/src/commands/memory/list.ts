@@ -47,7 +47,15 @@ export default defineCommand({
   auth: "apiKey",
   usageArgs: "--user-id <id> [flags]",
   flags: LIST_FLAGS,
-  notes: [MEMORY_WORKSPACE_NOTE],
+  notes: [
+    MEMORY_WORKSPACE_NOTE,
+    {
+      "en-US":
+        "Without --project-id, only the default rule is listed; other observation and skill projects require their project ID.",
+      "zh-CN":
+        "不传 --project-id 只查询默认规则；其他 observation 和 skill 项目需指定对应项目 ID。",
+    },
+  ],
   exampleArgs: [
     "--user-id user1 --workspace-id ws_xxx",
     "--user-id user1 --page-size 20 --page 2",
@@ -90,7 +98,8 @@ export default defineCommand({
         emitBare("No memory nodes found.");
       } else {
         for (const node of response.memory_nodes) {
-          emitBare(`[${node.memory_node_id}] ${node.content}`);
+          const typePrefix = node.memory_type ? `[${node.memory_type}] ` : "";
+          emitBare(`${typePrefix}[${node.memory_node_id}] ${node.content}`);
           if (node.meta_data && Object.keys(node.meta_data).length > 0) {
             emitBare(`  meta: ${JSON.stringify(node.meta_data)}`);
           }

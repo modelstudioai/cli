@@ -7,6 +7,7 @@ import {
   memoryUserId,
   type MemoryAddBody,
   type MemoryDryRunBody,
+  type MemoryNodeDetailBody,
   type MemoryNodeListBody,
 } from "./shared.ts";
 
@@ -51,16 +52,6 @@ describe("e2e: memory delete", () => {
     expect(exitCode).toBe(2);
   });
 
-  test("缺 --user-id 报 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(MEMORY_DELETE_ROUTES, [
-      "memory",
-      "delete",
-      "--node-id",
-      "node_test",
-    ]);
-    expect(exitCode).toBe(2);
-  });
-
   test("--library-id 33 字符报 USAGE (2)", async () => {
     const { exitCode } = await runCommandE2e(MEMORY_DELETE_ROUTES, [
       "memory",
@@ -98,7 +89,7 @@ describe("e2e: memory delete", () => {
     const data = parseStdoutJson<MemoryDryRunBody>(stdout);
     const endpoint = data.endpoint ?? "";
     expect(endpoint).toMatch(/api\/v2\/apps\/memory\/memory_nodes\/node_test\?/);
-    expect(endpoint).toMatch(/user_id=user1/);
+    expect(endpoint).not.toMatch(/user_id=/);
     expect(endpoint).toMatch(/memory_library_id=lib_test/);
     expect(data.method).toBe("DELETE");
   });
@@ -139,8 +130,8 @@ describe.skipIf(!isMemoryE2EReady())("e2e: memory delete (live)", () => {
     expect(exitCode).not.toBe(0);
   });
 
-  test("记忆节点自清理闭环：add → list → search → update → delete → list", async () => {
-    const userId = memoryUserId();
+  test("记忆节点自清理闭环：add → list → node show → search → update → delete → list", async () => {
+    const userId = `cli-memory-${Date.now()}`;
     const marker = `vp-${Date.now()}`;
     const contentBefore = `CLI vp test ${marker}：记忆写入（可删）`;
     const contentAfter = `CLI vp test ${marker}：记忆已更新`;
@@ -161,11 +152,16 @@ describe.skipIf(!isMemoryE2EReady())("e2e: memory delete (live)", () => {
     expect(addRes.exitCode, addRes.stderr).toBe(0);
     const added = parseStdoutJson<MemoryAddBody>(addRes.stdout);
     expect(added.request_id?.length ?? 0, addRes.stdout).toBeGreaterThan(0);
-    // The contract says AddMemory reports the changed nodes; a bare request_id
-    // with no node means the write silently did nothing.
-    expect(added.memory_nodes?.length ?? 0, addRes.stdout).toBeGreaterThan(0);
-    const addedNodeId = added.memory_nodes![0]!.memory_node_id;
-    expect(addedNodeId.length).toBeGreaterThan(0);
+    // add 已改为 add-async：命令内部轮询到终态，节点 id 从 events[].result[] 提取；
+    // 只有 request_id/event_id 而无任何 result 节点意味着写入静默失败。
+    expect(added.event_id?.length ?? 0, addRes.stdout).toBeGreaterThan(0);
+    const addedNodeId = (added.events ?? [])
+      .flatMap((event) => event.result ?? [])
+      .map((item) => item.memory_node_id)
+      .find((nodeId): nodeId is string => !!nodeId && nodeId.length > 0);
+    if (!addedNodeId) {
+      throw new Error(`memory add 未产生任何记忆节点。stdout=${addRes.stdout}`);
+    }
 
     const listRes = await runCommandE2e(MEMORY_DELETE_ROUTES, [
       "memory",
@@ -187,6 +183,25 @@ describe.skipIf(!isMemoryE2EReady())("e2e: memory delete (live)", () => {
       );
     }
     expect(listedNode.meta_data?.marker).toBe(marker);
+
+    // node show 只有 workspace 作用域（无 --library-id flag）
+    const workspaceId = process.env.BAILIAN_WORKSPACE_ID?.trim() ?? "";
+    const showRes = await runCommandE2e(MEMORY_DELETE_ROUTES, [
+      "memory",
+      "node",
+      "show",
+      "--workspace-id",
+      workspaceId,
+      "--node-id",
+      addedNodeId,
+      "--output",
+      "json",
+    ]);
+    expect(showRes.exitCode, showRes.stderr).toBe(0);
+    const shown = parseStdoutJson<MemoryNodeDetailBody>(showRes.stdout);
+    expect(shown.memory_node?.memory_node_id, showRes.stdout).toBe(addedNodeId);
+    expect(shown.memory_node?.content, showRes.stdout).toBe(contentBefore);
+    expect(shown.memory_node?.meta_data?.marker, showRes.stdout).toBe(marker);
 
     const searchRes = await runCommandE2e(MEMORY_DELETE_ROUTES, [
       "memory",
@@ -215,8 +230,6 @@ describe.skipIf(!isMemoryE2EReady())("e2e: memory delete (live)", () => {
       ...memoryScopeCliArgs(),
       "--node-id",
       addedNodeId,
-      "--user-id",
-      userId,
       "--content",
       contentAfter,
       "--meta-data",
@@ -254,8 +267,6 @@ describe.skipIf(!isMemoryE2EReady())("e2e: memory delete (live)", () => {
       ...memoryScopeCliArgs(),
       "--node-id",
       addedNodeId,
-      "--user-id",
-      userId,
       "--yes",
       "--output",
       "json",

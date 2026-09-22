@@ -31,6 +31,8 @@ export { default as memorySearch } from "./commands/memory/search.ts";
 export { default as memoryList } from "./commands/memory/list.ts";
 export { default as memoryUpdate } from "./commands/memory/update.ts";
 export { default as memoryDelete } from "./commands/memory/delete.ts";
+export { default as memoryNodeShow } from "./commands/memory/node-show.ts";
+export { default as memorySkillExport } from "./commands/memory/skill-export.ts";
 export { default as memoryProfileCreate } from "./commands/memory/profile-create.ts";
 export { default as memoryProfileList } from "./commands/memory/profile-list.ts";
 export { default as memoryProfileShow } from "./commands/memory/profile-show.ts";

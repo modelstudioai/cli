@@ -40,6 +40,19 @@ export const PLAN_VERSION_FLAG = {
   },
 } satisfies FlagsDef;
 
+/** Extraction scene for profile schema creation and updates. */
+export const EXTRACT_SCENE_FLAG = {
+  extractScene: {
+    type: "string",
+    valueHint: "<scene>",
+    choices: ["efficient", "intelligent"] as const,
+    description: {
+      "en-US": "Extraction scene: efficient or intelligent (creation default: efficient)",
+      "zh-CN": "抽取场景：efficient 或 intelligent（创建时默认 efficient）",
+    },
+  },
+} satisfies FlagsDef;
+
 /** Memory fragment rule scope, repeatable for the search hybrid form. */
 export const PROJECT_ID_FLAG = {
   projectId: {
@@ -52,6 +65,68 @@ export const PROJECT_ID_FLAG = {
   },
 } satisfies FlagsDef;
 
+/**
+ * Repeatable rule scope. Search and message extraction use project_ids;
+ * custom content binds one project using singular project_id.
+ */
+export const PROJECT_IDS_FLAG = {
+  projectId: {
+    type: "array",
+    valueHint: "<id>",
+    description: {
+      "en-US":
+        "Memory fragment rule ID (repeatable for messages/search; custom content accepts one)",
+      "zh-CN": "记忆片段规则 ID（消息抽取/搜索可重复；自定义内容仅支持一个）",
+    },
+  },
+} satisfies FlagsDef;
+
+/**
+ * Skill metadata triple. The server requires all three on skill nodes; the CLI
+ * enforces all-or-nothing locally so `--dry-run` already rejects partial input.
+ */
+export const SKILL_METADATA_FLAGS = {
+  skillName: {
+    type: "string",
+    valueHint: "<name>",
+    description: {
+      "en-US": "Skill name (skill memory; requires --skill-description and --skill-tags)",
+      "zh-CN": "技能名称（skill 记忆；需与 --skill-description、--skill-tags 同时传）",
+    },
+  },
+  skillDescription: {
+    type: "string",
+    valueHint: "<text>",
+    description: {
+      "en-US": "Skill description (skill memory; requires --skill-name and --skill-tags)",
+      "zh-CN": "技能描述（skill 记忆；需与 --skill-name、--skill-tags 同时传）",
+    },
+  },
+  skillTags: {
+    type: "array",
+    valueHint: "<tag>",
+    description: {
+      "en-US": "Skill tag (repeatable; requires --skill-name and --skill-description)",
+      "zh-CN": "技能标签（可重复；需与 --skill-name、--skill-description 同时传）",
+    },
+  },
+} satisfies FlagsDef;
+
+/** All-or-nothing guard for the skill metadata triple. */
+export function checkSkillMetadataFlags(flags: {
+  skillName?: string;
+  skillDescription?: string;
+  skillTags?: string[];
+}): string | undefined {
+  const providedCount = [flags.skillName, flags.skillDescription, flags.skillTags].filter(
+    (value) => value !== undefined,
+  ).length;
+  if (providedCount > 0 && providedCount < 3) {
+    return "--skill-name, --skill-description and --skill-tags must be provided together.";
+  }
+  return undefined;
+}
+
 // ---- Documented field limits (long-term memory API reference) ----
 
 /** Max characters accepted for user_id. */
@@ -62,8 +137,6 @@ export const MAX_MEMORY_LIBRARY_ID_LENGTH = 32;
 export const MAX_CUSTOM_CONTENT_LENGTH = 512;
 /** Max characters accepted for a profile schema name. */
 export const MAX_SCHEMA_NAME_LENGTH = 32;
-/** Max characters accepted for a profile schema description. */
-export const MAX_SCHEMA_DESCRIPTION_LENGTH = 128;
 /** Max characters accepted for a profile attribute name. */
 export const MAX_ATTRIBUTE_NAME_LENGTH = 32;
 /** Max characters accepted for a profile attribute description. */
@@ -88,16 +161,13 @@ export function checkMemoryScopeLengths(flags: {
   return undefined;
 }
 
-/** Length guard for the profile schema name / description pair. */
+/** Schema names have a fixed limit; description limits are server-configured. */
 export function checkProfileSchemaTextLengths(flags: {
   name?: string;
   description?: string;
 }): string | undefined {
   if (flags.name !== undefined && flags.name.length > MAX_SCHEMA_NAME_LENGTH) {
     return `--name must be at most ${MAX_SCHEMA_NAME_LENGTH} characters.`;
-  }
-  if (flags.description !== undefined && flags.description.length > MAX_SCHEMA_DESCRIPTION_LENGTH) {
-    return `--description must be at most ${MAX_SCHEMA_DESCRIPTION_LENGTH} characters.`;
   }
   return undefined;
 }

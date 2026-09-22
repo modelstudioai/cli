@@ -78,7 +78,8 @@ export default defineCommand({
         emitBare("No profile schemas found.");
       } else {
         for (const schema of schemas) {
-          emitBare(`[${schema.profile_schema_id}] ${schema.name}`);
+          const planSuffix = schema.plan_version ? ` (${schema.plan_version})` : "";
+          emitBare(`[${schema.profile_schema_id}] ${schema.name}${planSuffix}`);
           if (schema.description) emitBare(`  ${schema.description}`);
         }
         if (response.total !== undefined) {

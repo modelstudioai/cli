@@ -15,6 +15,7 @@ import {
   MEMORY_LIBRARY_FLAG,
   MEMORY_WORKSPACE_NOTE,
   PLAN_VERSION_FLAG,
+  EXTRACT_SCENE_FLAG,
   WORKSPACE_FLAG,
   assertAttributeFieldLengths,
   checkMemoryScopeLengths,
@@ -45,6 +46,7 @@ const PROFILE_CREATE_FLAGS = {
     required: true,
   },
   ...PLAN_VERSION_FLAG,
+  ...EXTRACT_SCENE_FLAG,
   ...MEMORY_LIBRARY_FLAG,
   ...WORKSPACE_FLAG,
 } satisfies FlagsDef;
@@ -96,8 +98,9 @@ export default defineCommand({
     });
 
     const body: ProfileSchemaCreateRequest = { name: flags.name, attributes };
-    if (flags.description) body.description = flags.description;
+    if (flags.description !== undefined) body.description = flags.description;
     if (flags.planVersion) body.plan_version = flags.planVersion as MemoryPlanVersion;
+    if (flags.extractScene) body.extract_scene = flags.extractScene;
     if (flags.libraryId) body.memory_library_id = flags.libraryId;
 
     const format = detectOutputFormat(settings.output);

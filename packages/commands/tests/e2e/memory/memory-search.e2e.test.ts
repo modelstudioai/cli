@@ -28,6 +28,8 @@ describe("e2e: memory search", () => {
     expect(stderr).toMatch(/--plan-version/i);
     expect(stderr).toMatch(/--workspace-id/i);
     expect(stderr).toMatch(/--project-id/i);
+    expect(stderr).toMatch(/--memory-types/i);
+    expect(stderr).toMatch(/--query-timestamp/i);
   });
 
   test("缺 --user-id 报 USAGE (2)", async () => {
@@ -254,6 +256,79 @@ describe("e2e: memory search", () => {
     const data = parseStdoutJson<MemoryDryRunBody>(stdout);
     expect(data.request?.project_ids).toEqual(["proj_a", "proj_b"]);
     expect(data.request?.project_id).toBeUndefined();
+  });
+
+  test("--dry-run 断言可重复 --memory-types 与 --query-timestamp 映射", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
+      "memory",
+      "search",
+      "--user-id",
+      "user1",
+      "--query",
+      "技能搜索",
+      "--memory-types",
+      "observation",
+      "--memory-types",
+      "skill",
+      "--query-timestamp",
+      "1747278460",
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<MemoryDryRunBody>(stdout);
+    expect(data.request?.memory_types).toEqual(["observation", "skill"]);
+    expect(data.request?.query_timestamp).toBe(1747278460);
+  });
+
+  test("--dry-run 不传 --memory-types 时 body 里不出现该键（服务端默认 observation）", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
+      "memory",
+      "search",
+      "--user-id",
+      "user1",
+      "--query",
+      "默认类型",
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<MemoryDryRunBody>(stdout);
+    expect(data.request?.memory_types).toBeUndefined();
+    expect(data.request?.query_timestamp).toBeUndefined();
+  });
+
+  test("--memory-types 非法取值报 USAGE (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
+      "memory",
+      "search",
+      "--user-id",
+      memoryUserId(),
+      "--query",
+      "x",
+      "--memory-types",
+      "profile",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/observation|skill/i);
+  });
+
+  test("--query-timestamp 负数报 USAGE (2)", async () => {
+    const { exitCode } = await runCommandE2e(MEMORY_SEARCH_ROUTES, [
+      "memory",
+      "search",
+      "--user-id",
+      memoryUserId(),
+      "--query",
+      "x",
+      "--query-timestamp",
+      "-1",
+    ]);
+    expect(exitCode).toBe(2);
   });
 });
 

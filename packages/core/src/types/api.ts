@@ -350,13 +350,27 @@ export type MemoryContentPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string } };
 
+/** OpenAI-standard tool call item carried by an assistant message. */
+export interface MemoryToolCall {
+  id: string;
+  type?: "function";
+  function: { name: string; arguments?: string };
+}
+
 export interface MemoryMessage {
-  role: "user" | "assistant";
-  content: string | MemoryContentPart[];
+  role: "user" | "assistant" | "tool";
+  content?: string | MemoryContentPart[];
+  /** assistant 消息可携带的 OpenAI 标准 tool_calls */
+  tool_calls?: MemoryToolCall[];
+  /** role=tool 消息必带：对应 tool_calls 里的 id */
+  tool_call_id?: string;
 }
 
 /** 记忆抽取策略版本：pro 开启 Rerank，lite 关闭（单价不同）。 */
 export type MemoryPlanVersion = "pro" | "lite";
+
+/** 记忆节点类型：observation 事实记忆 / skill 技能记忆。 */
+export type MemoryType = "observation" | "skill";
 
 export interface MemoryAddRequest {
   user_id: string;
@@ -364,23 +378,81 @@ export interface MemoryAddRequest {
   custom_content?: string;
   profile_schema?: string;
   memory_library_id?: string;
-  /** 记忆片段规则 ID；不传则用记忆库的默认规则 */
+  /** 消息抽取项目 ID 数组，最多五项；与 project_id 互斥 */
+  project_ids?: string[];
+  /** 自定义内容仅允许单个项目 */
   project_id?: string;
+  extract_mode?: "profile_only";
   meta_data?: Record<string, unknown>;
+  /** skill 三件套：skill 项目 + custom_content 时服务端强制，all-or-nothing */
+  skill_name?: string;
+  skill_description?: string;
+  skill_tags?: string[];
+  /** 记忆片段对应事件发生时的秒级 Unix 时间戳（默认当前时间） */
+  timestamp?: number;
 }
 
-/** AddMemory 返回的变更记录：一次调用可能产生多条 ADD/UPDATE/DELETE。 */
-export interface MemoryChangedNode {
-  memory_node_id: string;
-  content: string;
+/**
+ * PENDING / RUNNING 是进行态；SUCCEEDED 是已验证的成功终态。
+ * SUCCESS 仅为旧契约兼容值，本轮线上未出现。
+ */
+export type MemoryEventStatus =
+  | "RUNNING"
+  | "PENDING"
+  | "SUCCEEDED"
+  | "SUCCESS"
+  | "FAILED"
+  | "UNRECORDED";
+
+/** 任务来源类型：一次 add-async 可能同时产生 observation/skill/user_profile/custom_observation/custom_skill event。 */
+export type MemoryEventResourceType =
+  | "observation"
+  | "skill"
+  | "user_profile"
+  | "custom_observation"
+  | "custom_skill";
+
+/** 事件结果使用 snake_case；画像变更含属性 name，无 memory_node_id。 */
+export interface MemoryEventResult {
+  memory_type?: MemoryType | "user_profile";
+  name?: string;
+  /** ADD 时为添加内容，UPDATE 时为新内容，DELETE 时为旧内容 */
+  content?: string;
   event?: "ADD" | "UPDATE" | "DELETE";
-  /** 仅 event 为 UPDATE 时有效 */
+  /** observation/skill 时为记忆节点 id；user_profile 时不存在 */
+  memory_node_id?: string;
+  /** 仅 UPDATE 时存在：旧节点内容 */
   old_content?: string;
 }
 
-export interface MemoryAddResponse {
+export interface MemoryEvent {
+  created_at?: number;
+  event_id?: string;
+  event_type?: string;
+  memory_library_id?: string;
+  /** 执行任务的来源 id（project/profile 相应 id） */
+  resource_id?: string;
+  /** 已知值见 MemoryEventResourceType；保留未知服务端值 */
+  resource_type?: string;
+  /** 已知值见 MemoryEventStatus；未知状态继续轮询至超时 */
+  status?: string;
+  updated_at?: number;
+  user_id?: string;
+  /** 提交/运行中为空数组，完成后包含变更结果 */
+  result?: MemoryEventResult[];
+}
+
+/** POST /add-async 响应：提交回执，events 初始均为 PENDING。 */
+export interface MemoryAddAsyncResponse {
   request_id: string;
-  memory_nodes?: MemoryChangedNode[];
+  event_id?: string;
+  events?: MemoryEvent[];
+}
+
+/** GET /events/{event_id} 响应（CLI 内部轮询消费，不对外透出命令）。 */
+export interface MemoryEventResponse {
+  request_id: string;
+  events?: MemoryEvent[];
 }
 
 export interface MemorySearchRequest {
@@ -397,6 +469,12 @@ export interface MemorySearchRequest {
   memory_library_id?: string;
   /** 记忆片段规则 ID 数组，可多规则混合检索 */
   project_ids?: string[];
+  project_id?: string;
+  /** 搜索筛选记忆类型；不传时服务端默认 ["observation"] */
+  memory_types?: MemoryType[];
+  memory_type?: MemoryType;
+  /** 问询时间（秒级 Unix 时间戳），rewrite 阶段使用；不填默认当前系统时间 */
+  query_timestamp?: number;
 }
 
 export interface MemoryNode {
@@ -408,11 +486,44 @@ export interface MemoryNode {
   created_at?: number;
   /** 秒级 Unix 时间戳 */
   updated_at?: number;
+  /** 记忆的相关时间（秒级）：如 5-01 记录“明天有会议”，这里是 5-02 */
+  timestamp?: number;
+  /** add/update 时指定的项目 ID，可能为空 */
+  project_id?: string;
+  memory_type?: string;
+  /** 记忆节点状态（契约未给全枚举，示例为 "valid"） */
+  status?: string;
+  /** 搜索分数（仅 search 响应） */
+  score?: number;
+  /** 多模态信息描述 */
+  media_desc?: string;
+  /** 多模态资源链接列表 */
+  media_urls?: string[];
+  /** 存在时返回；元素结构尚未通过多模态实测 */
+  multimodal_medias?: unknown[];
 }
 
 export interface MemorySearchResponse {
   request_id: string;
+  /** 本次搜索生效的收费计划（回显） */
+  plan_version?: MemoryPlanVersion;
   memory_nodes: MemoryNode[];
+}
+
+/** GET /memory_nodes/{id} 响应；skill content 保留 frontmatter。 */
+export interface MemoryNodeDetailResponse {
+  request_id: string;
+  memory_node?: MemoryNode;
+}
+
+/** Skill export strips frontmatter from content and exposes its metadata separately. */
+export interface MemorySkillExportResponse {
+  request_id: string;
+  memory_node?: MemoryNode & {
+    skill_name?: string;
+    skill_description?: string;
+    skill_tags?: string[];
+  };
 }
 
 export interface MemoryNodeListResponse {
@@ -424,25 +535,33 @@ export interface MemoryNodeListResponse {
 }
 
 export interface MemoryNodeUpdateRequest {
-  user_id: string;
   custom_content: string;
   /** 非默认记忆库时必填（与控制台记忆库 ID 一致） */
   memory_library_id?: string;
-  /** 记忆片段对应事件发生时的秒级 Unix 时间戳（默认当前时间） */
+  /** 记忆片段对应事件发生时的秒级 Unix 时间戳（不传保留原值） */
   timestamp?: number;
   /** 用户自定义信息（增量更新） */
   meta_data?: Record<string, unknown>;
+  /** skill 三件套：节点为 skill 类型时服务端强制，all-or-nothing */
+  skill_name?: string;
+  skill_description?: string;
+  skill_tags?: string[];
 }
 
 // ---- Memory Profile (DashScope v2) ----
 
+export type MemoryExtractScene = "efficient" | "intelligent";
+
 export interface ProfileAttribute {
   name: string;
+  /** 内部字段；true 时需要 default_value */
+  immutable?: boolean;
   description?: string;
   default_value?: string;
 }
 
 export interface ProfileSchemaCreateRequest {
+  extract_scene?: MemoryExtractScene;
   name: string;
   description?: string;
   attributes: ProfileAttribute[];
@@ -456,9 +575,11 @@ export interface ProfileSchemaCreateResponse {
 }
 
 export interface ProfileSchemaSummary {
+  extract_scene?: MemoryExtractScene;
   profile_schema_id: string;
   name: string;
   description?: string;
+  plan_version?: MemoryPlanVersion;
 }
 
 export interface ProfileSchemaListResponse {
@@ -473,6 +594,8 @@ export interface ProfileSchemaAttribute extends ProfileAttribute {
 }
 
 export interface ProfileSchemaDetailResponse {
+  extract_scene?: MemoryExtractScene;
+  plan_version?: MemoryPlanVersion;
   request_id: string;
   name?: string;
   description?: string;
@@ -480,6 +603,8 @@ export interface ProfileSchemaDetailResponse {
 }
 
 export interface ProfileSchemaAttributeOperation {
+  /** 内部字段，仅 op=add 支持 */
+  immutable?: boolean;
   op: "add" | "update" | "delete";
   /** op 为 update / delete 时必填 */
   attribute_id?: string;
@@ -490,19 +615,31 @@ export interface ProfileSchemaAttributeOperation {
 }
 
 export interface ProfileSchemaUpdateRequest {
+  extract_scene?: MemoryExtractScene;
   name?: string;
   description?: string;
   attributes_operations?: ProfileSchemaAttributeOperation[];
   memory_library_id?: string;
+  plan_version?: MemoryPlanVersion;
 }
 
-/** GetUserProfile 的属性：value 未提取时字段缺失 */
-export interface UserProfileAttribute {
-  id: string;
-  name: string;
+/** need_detail 模式下的单个画像值项。 */
+export interface UserProfileValueItem {
+  item_id?: number;
+  status?: string;
   value?: string;
 }
 
+/** GetUserProfile 的属性：value 未提取时字段缺失；need_detail 时返回 value_items 列表 */
+export interface UserProfileAttribute {
+  id: string;
+  name: string;
+  description?: string;
+  value?: string;
+  value_items?: UserProfileValueItem[];
+}
+
+/** GetUserProfile 两种模式均为 snake_case，JSON 输出原样透传。 */
 export interface UserProfileResponse {
   request_id: string;
   profile?: {
@@ -510,6 +647,19 @@ export interface UserProfileResponse {
     schema_description?: string;
     attributes?: UserProfileAttribute[];
   };
+}
+
+/** PATCH /profile_schemas/{id}/profile_values 请求体（画像值项增删改）。 */
+export interface UserProfileValueUpdateRequest {
+  /** 实体 ID，用户画像场景传 user_id */
+  entity_id: string;
+  attribute_id: string;
+  op_type: "add" | "update" | "delete";
+  /** op_type 为 update/delete 时必填 */
+  item_id?: number;
+  /** op_type 为 add/update 时使用 */
+  value?: string;
+  memory_library_id?: string;
 }
 
 // ---- Knowledge Retrieve (DashScope protocol — snake_case) ----

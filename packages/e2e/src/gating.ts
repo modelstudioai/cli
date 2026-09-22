@@ -90,6 +90,17 @@ export function isMemoryE2EReady(): boolean {
   );
 }
 
+/**
+ * skill 记忆 fixture（skill 抽取 live 闭环）
+ *
+ * skill 类型的 project 无法通过 CLI 创建（项目管理接口非对客），且 skill 抽取
+ * 仅对加白账号开放，因此需要在控制台预置 skill 项目后通过
+ * BAILIAN_E2E_MEMORY_SKILL_PROJECT_ID 注入；未配置时 skill live 用例整体跳过。
+ */
+export function isMemorySkillE2EReady(): boolean {
+  return isMemoryE2EReady() && !!process.env.BAILIAN_E2E_MEMORY_SKILL_PROJECT_ID?.trim();
+}
+
 // ---- Long-lived knowledge fixtures (created manually in the console; the CLI
 // cannot create table/image-type bases or multimodal services itself) ----
 

@@ -97,12 +97,15 @@ bl memory add --user-id demo_user \
 
 默认 `--wait 120`，轮询间隔为 3 秒；这是轮询预算，不是整个进程的严格时间上限。
 
-| 状态                | 含义与处理                                    |
-| ------------------- | --------------------------------------------- |
-| PENDING / RUNNING   | 尚未结束，继续轮询                            |
-| SUCCEEDED / SUCCESS | 成功终态，检查 result；空数组可能表示没有变化 |
-| UNRECORDED          | 终态，CLI 展示状态；不能当作已写入成功        |
-| FAILED              | 失败终态；CLI 输出结果并以非零状态退出        |
+| 状态       | 含义与处理                                            |
+| ---------- | ----------------------------------------------------- |
+| PENDING    | 等待处理，继续轮询                                    |
+| RUNNING    | 正在执行，继续轮询                                    |
+| SUCCEEDED  | 已实测的成功终态；检查 result，空数组可能表示没有变化 |
+| UNRECORDED | 终态，CLI 展示状态；不能当作已写入成功                |
+| FAILED     | 失败终态；CLI 输出结果并以非零状态退出                |
+
+通常的状态变化为 `PENDING → RUNNING → SUCCEEDED`，轮询时不一定能观察到每个阶段。CLI 还兼容 `SUCCESS` 作为成功状态的拼写；这不是另一个执行阶段，也不表示它是当前后端已验证的标准返回值。
 
 提交的 `event_id` 不是节点 ID。一个事件可以包含多项任务；轮询等待全部任务到达终态。存在部分失败时，成功部分可能已经落地，应逐项检查。
 
@@ -222,6 +225,8 @@ bl memory profile update --schema-id '<profile-schema-id>' \
 bl memory profile update --schema-id '<profile-schema-id>' \
   --plan-version pro --extract-scene intelligent --output json
 ```
+
+这里的 attribute 是模板字段（如“城市”），value 是用户的具体值（如“杭州”）。当前更新模板仍使用 `--attributes-operations`，创建模板使用 `--attributes`；两者分别接收操作数组和定义数组。
 
 属性 op 使用小写 `add` / `update` / `delete`。add 必须有 name；update/delete 必须有从 `profile show` 获取的 attribute_id。`profile update` 修改模板，不是直接编辑某个用户的画像值。模板更新也不应被当作历史数据自动重抽取的保证。
 

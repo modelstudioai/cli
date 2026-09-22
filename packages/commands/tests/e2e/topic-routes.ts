@@ -47,6 +47,16 @@ export const MEMORY_DELETE_ROUTES: E2eRouteExports = {
   "memory list": "memoryList", // live: resolve the node id add just produced
   "memory search": "memorySearch", // live: verify the node is retrievable
   "memory update": "memoryUpdate", // live update step in the chain
+  "memory node show": "memoryNodeShow", // live: verify node detail after update
+  "memory skill export": "memorySkillExport", // live: verify exported skill metadata
+};
+
+export const MEMORY_NODE_SHOW_ROUTES: E2eRouteExports = {
+  "memory node show": "memoryNodeShow",
+};
+
+export const MEMORY_SKILL_EXPORT_ROUTES: E2eRouteExports = {
+  "memory skill export": "memorySkillExport",
 };
 
 export const MEMORY_PROFILE_CREATE_ROUTES: E2eRouteExports = {

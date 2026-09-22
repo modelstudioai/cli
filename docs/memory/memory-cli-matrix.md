@@ -1,6 +1,6 @@
 # `bl memory` 能力矩阵
 
-本文以表格形式固化 `bl memory` 命令组的能力基线:命令 ↔ 功能域 ↔ 底层 API ↔ 参数 ↔ 约束 ↔ 输出 ↔ 风险。矩阵用于能力盘点、评审与测试用例设计;面向使用者的分步说明见 [memory-cli-guide.md](memory-cli-guide.md)。
+本文以表格形式固化 `bl memory` 命令组的能力基线:命令 ↔ 功能域 ↔ 底层 API ↔ 参数 ↔ 约束 ↔ 输出 ↔ 风险。矩阵用于能力盘点、评审与测试用例设计;面向使用者的分步说明见 [用户技术指南](user-guide.md)。
 
 - 核实基线:分支 `feat/memory`,13 条命令路径,核对源为 `packages/cli/src/commands.ts`、`packages/commands/src/commands/memory/*`、`packages/core/src/client/endpoints.ts`
 - 核实日期:2026-09-22
@@ -40,24 +40,24 @@
 | ----------------------- | ------ | --------------------------------------------------------------------------------------------- |
 | `--workspace-id <id>`   | string | 记忆 API 挂在 workspace 独占域上,**必需**;也可用 `BAILIAN_WORKSPACE_ID` 或配置 `workspace_id` |
 | `--api-key <key>`       | string | 凭证(来自 `auth: "apiKey"` 凭证域)                                                            |
-| `--base-url <url>`      | string | API 基址覆盖                                                                                  |
+| `--base-url <url>`      | string | 通用凭证参数；不能覆盖本组按 Workspace 构造的绝对网关地址                                     |
 | `--output <text\|json>` | string | 输出格式,缺省 `text`                                                                          |
 | `--quiet`               | switch | 仅打印精简结果                                                                                |
 | `--verbose`             | switch | 打印轮询等调试信息(stderr)                                                                    |
 | `--dry-run`             | switch | 只打印将要请求的 endpoint/method/body,不发请求                                                |
-| `--timeout <ms>`        | number | 单次 HTTP 超时                                                                                |
-| `--config <path>`       | string | 指定配置文件                                                                                  |
+| `--timeout <seconds>`   | number | HTTP 请求超时，单位为秒                                                                       |
+| `--config <name>`       | string | 选择命名配置 Profile                                                                          |
 | `--help` / `--version`  | switch | 运行时全局参数                                                                                |
 
 13 条命令全部为 `auth: "apiKey"`,无 console 凭证域命令。
 
 ### 2.2 作用域参数
 
-| 参数                | 类型   | 出现于                                    | 说明                                                                                       |
-| ------------------- | ------ | ----------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `--user-id <id>`    | string | `add` / `search` / `list` / `profile get` | 记忆归属实体 ID;**必填**。`update` / `delete` 上为已弃用兼容参数,不发送到接口              |
-| `--library-id <id>` | string | 除 `node show` / `skill export` 外的全部  | 记忆库 ID,缺省用账号默认库                                                                 |
-| `--project-id <id>` | array  | `add` / `search` / `list`                 | 记忆抽取规则 ID。`list` 为单值;`add`/`search` 可重复,上限 5 个;`add --content` 仅接受 1 个 |
+| 参数                | 类型   | 出现于                                    | 说明                                                                                                                           |
+| ------------------- | ------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `--user-id <id>`    | string | `add` / `search` / `list` / `profile get` | 记忆归属实体 ID;**必填**。`update` / `delete` 上为已弃用兼容参数,不发送到接口                                                  |
+| `--library-id <id>` | string | 除 `node show` / `skill export` 外的全部  | 记忆库 ID,缺省用账号默认库                                                                                                     |
+| `--project-id <id>` | array  | `add` / `search` / `list`                 | 记忆抽取规则 ID。`list` 为单值;`add`/`search` 可重复；add 最多 5 个，search 未做同样的本地数量校验;`add --content` 仅接受 1 个 |
 
 ### 2.3 按命令的特有参数
 
@@ -116,7 +116,7 @@
 | 画像值管理(改/删单条画像值) | `PATCH /api/v2/apps/memory/profile_schemas/{schema_id}/profile_values` | 端点已在 `endpoints.ts` 中定义(`userProfileValuesPath`),但无命令引用;`profile get --need-detail true` 返回的 `item_id` 暂无 CLI 出口 |
 | 事件查询                    | `GET /api/v2/apps/memory/events/{event_id}`                            | 仅作为 `memory add` 的内部轮询;`--wait 0` 拿到 `event_id` 后,用户侧无法再用 CLI 查该事件终态                                         |
 
-这两项属于**已知缺口**而非缺陷:前者等待画像值语义定稿,后者在 `--wait 0` 场景下由 `memory list` / `memory search` 兜底。
+这两项属于**已知缺口**而非缺陷:前者没有 CLI 入口，具体开放计划未确认；后者在 `--wait 0` 场景下由 `memory list` / `memory search` 兜底。
 
 ---
 
@@ -135,7 +135,7 @@
 | 属性 `name`              | 32 字符                   | `profile create` / `profile update`       |
 | 属性 `description`       | 128 字符                  | `profile create` / `profile update`       |
 | 属性 `default_value`     | 128 字符                  | `profile create` / `profile update`       |
-| `--timestamp`            | 非负整数(秒)              | `add` / `update`                          |
+| `--timestamp`            | 非负数(秒)                | `add` / `update`                          |
 | `--wait`                 | 非负数(秒)                | `add`                                     |
 | `--page` / `--page-size` | ≥ 1                       | `list` / `profile list`                   |
 | `--top-k`                | 1–100                     | `search`                                  |
@@ -166,9 +166,9 @@
 | `--plan-version`  | `pro`         | rerank 开启;`search` 在两者都不传时的默认档                      |
 |                   | `lite`        | rerank 关闭;`search --enable-rerank false` 单独使用也会落到 lite |
 | `--extract-scene` | `efficient`   | 创建模板时的默认场景                                             |
-|                   | `intelligent` | 更高成本的抽取场景                                               |
+|                   | `intelligent` | 另一种抽取场景；具体效果与计费由服务端定义                       |
 
-优先级:`--plan-version` 显式传入时覆盖 `--enable-rerank`;`search` 两者都不传 → pro。技能记忆 + `lite` 组合会被服务端拒绝(400)。
+优先级:`--plan-version` 显式传入时覆盖 `--enable-rerank`;`search` 两者都不传 → pro。历史实测中创建 skill 类型项目并选择 lite 被服务端拒绝(400)；不能将此结论扩大为所有 skill 检索参数组合。
 
 ### 4.4 记忆类型
 
@@ -178,7 +178,7 @@
 
 ## 五、输出格式矩阵
 
-`text`(缺省)/`--quiet` 分支逐命令实现;`json` 打印服务端原始响应。`--dry-run` 输出 `{endpoint, method, request?}`。
+`text`(缺省)/`--quiet` 分支逐命令实现;`json` 输出结构化响应；add 等待完成时组装 request_id、event_id 和最终 events。`--dry-run` 输出 `{endpoint, method, request?}`。
 
 | 命令             | text / quiet 输出                                                                                                                                                                   | 空结果文案                     |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
@@ -196,7 +196,7 @@
 | `profile delete` | `Profile schema <schema_id> deleted.`                                                                                                                                               | —                              |
 | `profile get`    | `<name>: <value>`;`--need-detail true` 时为 `<name>: <value> (item <item_id>, <status>)`                                                                                            | `No profile data found.`       |
 
-`--dry-run` 覆盖全部 13 条命令;`add` / `search` / `profile create` / `profile update` 的 dry-run 会带完整 `request` body,其余只带 `endpoint` + `method`。
+`--dry-run` 覆盖全部 13 条命令;`add` / `update` / `search` / `profile create` / `profile update` 的 dry-run 会带完整 `request` body,其余只带 `endpoint` + `method`。
 
 ---
 
@@ -210,7 +210,7 @@ runtime 统一为 `risk.level = "high"` 的命令注入 `--yes`(`packages/runtim
 | `memory profile delete` | high     | This permanently deletes the profile schema and its attribute definitions. Profiles already extracted for this schema become unreachable. | 同上                                                                                  |
 | 其余 11 条              | —        | —                                                                                                                                         | 直接执行                                                                              |
 
-Agent 侧硬约束:**不得自动补 `--yes`**。收到 `type: "requires_confirmation"` 时应停下,向用户复述同一动作与范围并取得显式确认后,才带 `--yes` 重跑原命令。
+自动化调用只有在目标和删除范围已获授权时才使用 `--yes`；未经确认时先预览或请求用户确认。
 
 退出码约定(`packages/core/src/errors/codes.ts`):
 
@@ -219,12 +219,12 @@ Agent 侧硬约束:**不得自动补 `--yes`**。收到 `type: "requires_confirm
 | 0      | `SUCCESS`               | 正常完成                                           |
 | 1      | `GENERAL`               | 服务端 4xx/5xx、业务错码、`add` 存在 FAILED 子任务 |
 | 2      | `USAGE`                 | 本地参数校验失败、JSON 参数形状不合法              |
-| 3      | `AUTH`                  | 凭证缺失或无效                                     |
-| 4      | `QUOTA`                 | 配额不足                                           |
+| 3      | `AUTH`                  | 本地凭证缺失；服务端鉴权错误按 GENERAL 处理        |
+| 4      | `QUOTA`                 | 通用保留码；本组不据服务端错误推断配额归类         |
 | 5      | `TIMEOUT`               | `add` 轮询超出 `--wait` 预算                       |
 | 6      | `NETWORK`               | DNS/TCP/TLS/代理层失败                             |
 | 7      | `CONFIRMATION_REQUIRED` | 高风险命令缺 `--yes`                               |
-| 10     | `CONTENT_FILTER`        | 内容安全拦截                                       |
+| 10     | `CONTENT_FILTER`        | 通用保留码；本组不据服务端错误推断内容安全归类     |
 
 **服务端错误不翻译**:CLI 只在超时、轮询失败聚合等自己能权威解释的场景构造语义化错误;HTTP 4xx/5xx 与业务错码的 message 原样透传。
 
@@ -237,13 +237,13 @@ Agent 侧硬约束:**不得自动补 `--yes`**。收到 `type: "requires_confirm
 | 触发命令    | 仅 `memory add`                                                                                                                           |
 | 轮询间隔    | 3s(`POLL_INTERVAL_MS = 3_000`)                                                                                                            |
 | 默认预算    | 120s(`DEFAULT_WAIT_SECONDS = 120`),`--wait <s>` 覆盖,`--wait 0` 立即返回                                                                  |
-| 终态        | `SUCCEEDED` / `SUCCESS` / `FAILED` / `UNRECORDED`                                                                                         |
+| 终态        | `SUCCEEDED` / `FAILED` / `UNRECORDED`；CLI 额外兼容成功拼写 `SUCCESS`，不是额外阶段                                                       |
 | 超时        | `BailianError(ExitCode.TIMEOUT)`,hint 指向 `memory list` / `memory search --memory-types skill` / `memory profile get`;后台任务可能仍在跑 |
 | 部分失败    | 先输出已完成事件,再以 `ExitCode.GENERAL` 抛出 FAILED 事件 JSON(原样)                                                                      |
 | `--verbose` | 每轮向 stderr 打印 `[poll N] <event_id> <type>=<status> ...`                                                                              |
 | `--wait 0`  | 只回执 `event_id` 与 pending 任务数;后续终态需靠 `list` / `search` 侧观察                                                                 |
 
-`memory add` 一次调用可能同时产生 ADD / UPDATE / DELETE 三类节点变更,也可能同时写出用户画像,因此 `--wait 0` + 侧查是批量导入场景的推荐组合。
+`memory add` 一次调用可能同时产生 ADD / UPDATE / DELETE 三类节点变更,也可能同时写出用户画像,使用 `--wait 0` 时需要调用方自行安排结果核对；提交回执不代表抽取完成。
 
 ---
 
@@ -273,10 +273,9 @@ Agent 侧硬约束:**不得自动补 `--yes`**。收到 `type: "requires_confirm
 
 ## 十、文档索引
 
-| 文档                                       | 内容                                                                           |
-| ------------------------------------------ | ------------------------------------------------------------------------------ |
-| [memory-cli-guide.md](memory-cli-guide.md) | 入口指南:核心概念、通用约定、典型工作流、错误排查、速查表                      |
-| [node.md](node.md)                         | 记忆节点命令手册:`add` / `search` / `list` / `node show` / `update` / `delete` |
-| [skill.md](skill.md)                       | 技能记忆命令手册:技能三元组 + `skill export`                                   |
-| [profile.md](profile.md)                   | 画像模板与用户画像命令手册:`profile create\|list\|show\|update\|delete\|get`   |
-| `skills/bailian-cli/reference/memory.md`   | 自动生成的参数参考(随代码更新,不要手改)                                        |
+| 文档                                                         | 内容                                            |
+| ------------------------------------------------------------ | ----------------------------------------------- |
+| [文档首页](README.md)                                        | 版本范围与阅读入口                              |
+| [用户技术指南](user-guide.md)                                | 核心概念、记忆节点、画像、Skill、异步流程和排查 |
+| [能力矩阵](cli-matrix.md)                                    | 精简能力总览及 CLI 边界                         |
+| [完整参数参考](../../skills/bailian-cli/reference/memory.md) | 自动生成的参数参考，不手工修改                  |

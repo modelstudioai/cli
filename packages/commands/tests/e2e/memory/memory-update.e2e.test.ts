@@ -21,6 +21,9 @@ describe("e2e: memory update", () => {
     expect(stderr).toMatch(/--content/i);
     expect(stderr).toMatch(/--timestamp/i);
     expect(stderr).toMatch(/--meta-data/i);
+    expect(stderr).toMatch(/--skill-name/i);
+    expect(stderr).toMatch(/--skill-description/i);
+    expect(stderr).toMatch(/--skill-tags/i);
     expect(stderr).toMatch(/--library-id/i);
     expect(stderr).toMatch(/--workspace-id/i);
   });
@@ -31,18 +34,6 @@ describe("e2e: memory update", () => {
       "update",
       "--user-id",
       memoryUserId(),
-      "--content",
-      "新内容",
-    ]);
-    expect(exitCode).toBe(2);
-  });
-
-  test("缺 --user-id 报 USAGE (2)", async () => {
-    const { exitCode } = await runCommandE2e(MEMORY_UPDATE_ROUTES, [
-      "memory",
-      "update",
-      "--node-id",
-      "node_test",
       "--content",
       "新内容",
     ]);
@@ -146,7 +137,7 @@ describe("e2e: memory update", () => {
     const data = parseStdoutJson<MemoryDryRunBody>(stdout);
     expect(data.endpoint).toMatch(/api\/v2\/apps\/memory\/memory_nodes\/node_test$/);
     expect(data.method).toBe("PATCH");
-    expect(data.request?.user_id).toBe("user1");
+    expect(data.request?.user_id).toBeUndefined();
     expect(data.request?.custom_content).toBe("更新后的记忆内容");
     expect(data.request?.timestamp).toBeUndefined();
     expect(data.request?.meta_data).toBeUndefined();
@@ -198,6 +189,79 @@ describe("e2e: memory update", () => {
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<MemoryDryRunBody>(stdout);
     expect(data.endpoint).toMatch(/memory_nodes\/node%2Fwith%20space$/);
+  });
+
+  test("--dry-run 断言 skill 三件套映射", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_UPDATE_ROUTES, [
+      "memory",
+      "update",
+      "--node-id",
+      "node_test",
+      "--user-id",
+      "user1",
+      "--content",
+      "整理会议纪要",
+      "--skill-name",
+      "会议纪要整理",
+      "--skill-description",
+      "提取会议重点",
+      "--skill-tags",
+      "办公",
+      "--skill-tags",
+      "总结",
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<MemoryDryRunBody>(stdout);
+    expect(data.request?.skill_name).toBe("会议纪要整理");
+    expect(data.request?.skill_description).toBe("提取会议重点");
+    expect(data.request?.skill_tags).toEqual(["办公", "总结"]);
+  });
+
+  test("--dry-run 不传 skill 三件套时 body 里不出现该组键", async () => {
+    const { stdout, stderr, exitCode } = await runCommandE2e(MEMORY_UPDATE_ROUTES, [
+      "memory",
+      "update",
+      "--node-id",
+      "node_test",
+      "--user-id",
+      "user1",
+      "--content",
+      "普通更新",
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<MemoryDryRunBody>(stdout);
+    expect(data.request?.skill_name).toBeUndefined();
+    expect(data.request?.skill_description).toBeUndefined();
+    expect(data.request?.skill_tags).toBeUndefined();
+  });
+
+  test("skill 三件套只传部分报 USAGE (2)", async () => {
+    const { stderr, exitCode } = await runCommandE2e(MEMORY_UPDATE_ROUTES, [
+      "memory",
+      "update",
+      "--node-id",
+      "node_test",
+      "--user-id",
+      memoryUserId(),
+      "--content",
+      "部分 skill 参数",
+      "--skill-name",
+      "只有名字",
+      "--skill-description",
+      "缺 tags",
+      ...TEST_WORKSPACE_ARGS,
+      "--dry-run",
+    ]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/skill-name|skill-description|skill-tags/i);
   });
 });
 

@@ -37,6 +37,15 @@ export function memoryScopeCliArgs(): string[] {
   ];
 }
 
+/**
+ * Skill-type project ID for live skill extraction cases. Skill projects can
+ * only be created in the console, so `isMemorySkillE2EReady()` gates on this
+ * env var and cases skip without it.
+ */
+export function memorySkillProjectId(): string {
+  return process.env.BAILIAN_E2E_MEMORY_SKILL_PROJECT_ID?.trim() ?? "";
+}
+
 /** `--dry-run --output json` payload shape shared by the memory commands. */
 export interface MemoryDryRunBody {
   endpoint?: string;
@@ -44,13 +53,23 @@ export interface MemoryDryRunBody {
   request?: {
     user_id?: string;
     custom_content?: string;
-    messages?: Array<{ role?: string; content?: string }>;
+    messages?: Array<{
+      role?: string;
+      content?: string;
+      tool_calls?: Array<{ id?: string; type?: string; function?: { name?: string } }>;
+      tool_call_id?: string;
+    }>;
     meta_data?: Record<string, unknown>;
     project_id?: string;
     project_ids?: string[];
     profile_schema?: string;
     memory_library_id?: string;
     timestamp?: number;
+    skill_name?: string;
+    skill_description?: string;
+    skill_tags?: string[];
+    memory_types?: string[];
+    query_timestamp?: number;
     top_k?: number;
     min_score?: number;
     enable_rerank?: boolean;
@@ -80,17 +99,51 @@ export interface MemoryNodeListBody {
     meta_data?: Record<string, unknown>;
     created_at?: number;
     updated_at?: number;
+    timestamp?: number;
+    project_id?: string;
+    memory_type?: string;
+    status?: string;
+    score?: number;
   }>;
 }
 
+/** POST /add-async 提交回执 + 轮询终态后的 json 输出形状。 */
 export interface MemoryAddBody {
   request_id?: string;
-  memory_nodes?: Array<{
+  event_id?: string;
+  events?: Array<{
+    event_id?: string;
+    event_type?: string;
+    resource_id?: string;
+    resource_type?: string;
+    status?: string;
+    result?: Array<{
+      memory_type?: string;
+      name?: string;
+      content?: string;
+      event?: string;
+      memory_node_id?: string;
+      old_content?: string;
+    }>;
+  }>;
+}
+
+/** GET /memory_nodes/{id} 与 GET /skill/export/{id} 共用的响应形状。 */
+export interface MemoryNodeDetailBody {
+  request_id?: string;
+  memory_node?: {
     memory_node_id: string;
     content: string;
-    event?: string;
-    old_content?: string;
-  }>;
+    timestamp?: number;
+    created_at?: number;
+    updated_at?: number;
+    media_desc?: string;
+    meta_data?: Record<string, unknown>;
+    memory_type?: string;
+    status?: string;
+    project_id?: string;
+    media_urls?: string[];
+  };
 }
 
 export interface ProfileSchemaCreateBody {
@@ -121,6 +174,15 @@ export interface UserProfileBody {
   profile?: {
     schema_name?: string;
     schema_description?: string;
-    attributes?: Array<{ id: string; name: string; value?: string }>;
+    attributes?: Array<{
+      id: string;
+      name: string;
+      value?: string;
+      value_items?: Array<{
+        item_id?: number;
+        status?: string;
+        value?: string;
+      }>;
+    }>;
   };
 }
