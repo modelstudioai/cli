@@ -38,8 +38,15 @@ Index: [index.md](index.md)
 | `--tool <json-or-path>`   | array  | no       | Tool definition as JSON or file path (repeatable)                           |
 | `--enable-thinking`       | switch | no       | Enable thinking/reasoning mode (for qwen3/qwq models)                       |
 | `--thinking-budget <n>`   | number | no       | Max tokens for thinking (default: 4096)                                     |
+| `--prime`                 | switch | no       | Use Prime mode with a workspace-scoped endpoint                             |
+| `--workspace-id <id>`     | string | no       | Workspace ID for the default Prime endpoint (or set BAILIAN_WORKSPACE_ID)   |
 | `--api-key <key>`         | string | no       | API key                                                                     |
 | `--base-url <url>`        | string | no       | API base URL                                                                |
+
+#### Notes
+
+- Prime mode requires an explicit model and currently supports only the Chat Completions API.
+- Prime endpoint: configured --base-url, DASHSCOPE_BASE_URL, or profile base_url takes precedence; otherwise workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.
 
 #### Examples
 
@@ -69,4 +76,8 @@ bl text chat --message "Hello" --output json
 
 ```bash
 bl text chat --model qwq-plus --message "Solve 1+1" --enable-thinking
+```
+
+```bash
+bl text chat --prime --workspace-id <id> --model glm-5.3-prime --message "Explain this code"
 ```

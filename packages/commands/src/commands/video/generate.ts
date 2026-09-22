@@ -21,6 +21,7 @@ import { downloadFile, formatBytes } from "bailian-cli-runtime";
 import { runConcurrent, getConcurrency } from "bailian-cli-runtime";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { BOOL_FLAG_PROMPT_EXTEND_API_DEFAULT, BOOL_FLAG_WATERMARK } from "bailian-cli-runtime";
+import { PRIME_FLAGS, resolvePrimeEndpoint, validatePrimeFlags } from "../shared/prime.ts";
 
 export default defineCommand({
   description: {
@@ -128,6 +129,7 @@ export default defineCommand({
           "参考文件 URL 或本地路径，用于文件生视频（仅 wan3.0-video；与 --image/--last-frame 互斥）",
       },
     },
+    ...PRIME_FLAGS,
     ...ASYNC_FLAG,
     ...CONCURRENT_FLAG,
     pollInterval: {
@@ -160,7 +162,25 @@ export default defineCommand({
       "en-US": '--prompt "A cat playing with a ball" --watermark false',
       "zh-CN": '--prompt "一只正在玩球的猫" --watermark false',
     },
+    {
+      "en-US":
+        '--prime --workspace-id <id> --model wan3.0-video-prime --prompt "Ocean waves at sunset"',
+      "zh-CN": '--prime --workspace-id <id> --model wan3.0-video-prime --prompt "日落时的海浪"',
+    },
   ],
+  notes: [
+    {
+      "en-US": "Prime mode requires an explicit model.",
+      "zh-CN": "Prime 模式必须显式指定模型。",
+    },
+    {
+      "en-US":
+        "Prime endpoint: configured --base-url, DASHSCOPE_BASE_URL, or profile base_url takes precedence; otherwise workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.",
+      "zh-CN":
+        "Prime Endpoint：已配置的 --base-url、DASHSCOPE_BASE_URL 或 Profile base_url 优先；否则按 --workspace-id、BAILIAN_WORKSPACE_ID、配置项 workspace_id 解析工作空间。",
+    },
+  ],
+  validate: validatePrimeFlags,
   async run(ctx) {
     const { settings, flags } = ctx;
     const prompt = flags.prompt;
@@ -210,6 +230,9 @@ export default defineCommand({
 
     const watermark = resolveWatermark(flags.watermark, settings.watermark);
     const promptExtend = resolveBooleanFlag(flags.promptExtend, undefined, "prompt-extend");
+
+    const requestPath = isKf2v && !isWan30 ? image2videoPath() : videoGeneratePath();
+    const submitPath = flags.prime ? resolvePrimeEndpoint(ctx, requestPath) : requestPath;
 
     const body: DashScopeVideoRequest = {
       model,
@@ -286,7 +309,10 @@ export default defineCommand({
           },
         };
       }
-      emitResult({ request: previewBody }, format);
+      emitResult(
+        flags.prime ? { endpoint: submitPath, request: previewBody } : { request: previewBody },
+        format,
+      );
       return;
     }
 
@@ -298,7 +324,7 @@ export default defineCommand({
       settings,
       () =>
         ctx.client.requestJson<DashScopeAsyncResponse>({
-          path: isKf2v && !isWan30 ? image2videoPath() : videoGeneratePath(),
+          path: submitPath,
           method: "POST",
           body,
           async: true,
@@ -306,7 +332,7 @@ export default defineCommand({
       "tasks",
     );
 
-    const taskIds = responses.map((r) => r.output.task_id);
+    const taskIds = responses.map((response) => response.output.task_id);
 
     if (!settings.quiet) {
       process.stderr.write(`[Model: ${model}]\n`);
@@ -322,17 +348,19 @@ export default defineCommand({
     const pollInterval = flags.pollInterval ?? 5;
 
     const pollPromises = taskIds.map((taskId) => {
-      const pollUrl = ctx.client.url(taskPath(taskId));
+      const pollUrl = flags.prime
+        ? resolvePrimeEndpoint(ctx, taskPath(taskId))
+        : ctx.client.url(taskPath(taskId));
       return poll<DashScopeTaskResponse>(ctx.client, settings, {
         url: pollUrl,
         intervalSec: pollInterval,
         timeoutSec: settings.timeout,
-        isComplete: (d) => (d as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
-        isFailed: (d) => (d as DashScopeTaskResponse).output.task_status === "FAILED",
-        getStatus: (d) => (d as DashScopeTaskResponse).output.task_status,
-        getErrorMessage: (d) => {
-          const o = (d as DashScopeTaskResponse).output;
-          return o.message || o.code || undefined;
+        isComplete: (data) => (data as DashScopeTaskResponse).output.task_status === "SUCCEEDED",
+        isFailed: (data) => (data as DashScopeTaskResponse).output.task_status === "FAILED",
+        getStatus: (data) => (data as DashScopeTaskResponse).output.task_status,
+        getErrorMessage: (data) => {
+          const output = (data as DashScopeTaskResponse).output;
+          return output.message || output.code || undefined;
         },
       });
     });
@@ -341,12 +369,11 @@ export default defineCommand({
 
     // Collect video URLs from all results
     const videos: Array<{ taskId: string; videoUrl: string }> = [];
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i]!;
+    for (const [resultIndex, result] of results.entries()) {
       const videoUrl =
         result.output.video_url || (result.output.results && result.output.results[0]?.url);
       if (videoUrl) {
-        videos.push({ taskId: taskIds[i]!, videoUrl });
+        videos.push({ taskId: taskIds[resultIndex]!, videoUrl });
       }
     }
 
