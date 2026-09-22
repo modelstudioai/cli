@@ -38,6 +38,14 @@
 import { readFileSync, statSync } from "node:fs";
 import { basename } from "node:path";
 
+const MAX_RETRIES = 20;
+const ATTEMPT_TIMEOUT_MS = 600_000;
+const RETRY_BACKOFF_CAP_MS = 10_000;
+
+function retryDelayMs(failedAttempt) {
+  return Math.min(1000 * 2 ** (failedAttempt - 1), RETRY_BACKOFF_CAP_MS);
+}
+
 /**
  * Resolve the FC release channel context; null when the channel is disabled.
  * Reuses the shared FC_TRIGGER_URL (the same function already serves
@@ -78,7 +86,10 @@ async function fetchOidcToken(audience) {
   const url = audience
     ? `${requestUrl}${separator}audience=${encodeURIComponent(audience)}`
     : requestUrl;
-  const res = await fetch(url, { headers: { Authorization: `bearer ${requestToken}` } });
+  const res = await fetch(url, {
+    headers: { Authorization: `bearer ${requestToken}` },
+    signal: AbortSignal.timeout(ATTEMPT_TIMEOUT_MS),
+  });
   if (!res.ok) {
     throw new Error(`GitHub OIDC token request failed: HTTP ${res.status}`);
   }
@@ -90,13 +101,14 @@ async function fetchOidcToken(audience) {
 }
 
 /**
- * Call an FC release action with the OIDC token. Retries transient network
- * failures; throws on HTTP errors and on `success: false` responses
- * (FC returns structured errors, e.g. OIDC verification failures).
+ * Call an FC release action with a fresh OIDC token for every attempt. Retries
+ * transient network failures; throws on HTTP errors and on `success: false`
+ * responses (FC returns structured errors, e.g. OIDC verification failures).
  */
-async function fcCall(ctx, action, payload, token, attempts = 3) {
+async function fcCall(ctx, action, payload, maxRetries = MAX_RETRIES) {
   for (let attempt = 1; ; attempt++) {
     try {
+      const token = await fetchOidcToken(ctx.audience);
       const res = await fetch(`${ctx.triggerUrl}/${action}`, {
         method: "POST",
         headers: {
@@ -104,7 +116,7 @@ async function fcCall(ctx, action, payload, token, attempts = 3) {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(120_000),
+        signal: AbortSignal.timeout(ATTEMPT_TIMEOUT_MS),
       });
       const body = await res.json().catch(() => null);
       if (!res.ok || !body?.success) {
@@ -119,10 +131,10 @@ async function fcCall(ctx, action, payload, token, attempts = 3) {
       // raw network failures, which surface as TypeError "fetch failed".
       const isNetworkError =
         error instanceof TypeError || /fetch failed|timeout/i.test(error.message);
-      if (attempt >= attempts || !isNetworkError) throw error;
-      const delay = 1000 * 2 ** (attempt - 1);
+      if (attempt > maxRetries || !isNetworkError) throw error;
+      const delay = retryDelayMs(attempt);
       process.stdout.write(
-        `  [fc] retry ${attempt}/${attempts - 1} for ${action} in ${delay}ms (${error.message})\n`,
+        `  [fc] retry ${attempt}/${maxRetries} for ${action} in ${delay}ms (${error.message})\n`,
       );
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
@@ -155,7 +167,7 @@ async function runWithConcurrency(tasks, limit) {
 }
 
 /** PUT a local file to a presigned URL with exponential-backoff retries. */
-async function putWithRetry({ putUrl, contentType, body }, attempts = 3) {
+async function putWithRetry({ putUrl, contentType, body }, maxRetries = MAX_RETRIES) {
   for (let attempt = 1; ; attempt++) {
     try {
       // Only Content-Type was signed by FC; sending extra canonical headers
@@ -164,7 +176,7 @@ async function putWithRetry({ putUrl, contentType, body }, attempts = 3) {
         method: "PUT",
         headers: { "Content-Type": contentType },
         body,
-        signal: AbortSignal.timeout(600_000),
+        signal: AbortSignal.timeout(ATTEMPT_TIMEOUT_MS),
       });
       if (!res.ok) {
         const text = await res.text().catch(() => "");
@@ -172,10 +184,10 @@ async function putWithRetry({ putUrl, contentType, body }, attempts = 3) {
       }
       return;
     } catch (error) {
-      if (attempt >= attempts) throw error;
-      const delay = 1000 * 2 ** (attempt - 1);
+      if (attempt > maxRetries) throw error;
+      const delay = retryDelayMs(attempt);
       process.stdout.write(
-        `  [oss] retry ${attempt}/${attempts - 1} in ${delay}ms (${error.message})\n`,
+        `  [oss] retry ${attempt}/${maxRetries} in ${delay}ms (${error.message})\n`,
       );
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
@@ -194,20 +206,14 @@ async function putWithRetry({ putUrl, contentType, body }, attempts = 3) {
  * }} params
  */
 async function uploadViaFc({ ctx, prefix, jobs, label }) {
-  const token = await fetchOidcToken(ctx.audience);
-  const prepare = await fcCall(
-    ctx,
-    "release-prepare",
-    {
-      files: jobs.map((job) => ({
-        prefix,
-        tag: job.tag,
-        name: job.name,
-        contentType: contentTypeFor(job.name),
-      })),
-    },
-    token,
-  );
+  const prepare = await fcCall(ctx, "release-prepare", {
+    files: jobs.map((job) => ({
+      prefix,
+      tag: job.tag,
+      name: job.name,
+      contentType: contentTypeFor(job.name),
+    })),
+  });
   const uploads = prepare.uploads ?? [];
   if (uploads.length !== jobs.length) {
     throw new Error(
@@ -248,14 +254,9 @@ async function uploadViaFc({ ctx, prefix, jobs, label }) {
 
   // HEAD byte-size reconciliation now happens FC-side (it holds the only OSS
   // credentials); the runner reports local sizes as ground truth.
-  await fcCall(
-    ctx,
-    "release-finalize",
-    {
-      files: jobs.map((job, index) => ({ key: uploads[index].key, size: statSync(job.path).size })),
-    },
-    token,
-  );
+  await fcCall(ctx, "release-finalize", {
+    files: jobs.map((job, index) => ({ key: uploads[index].key, size: statSync(job.path).size })),
+  });
   process.stdout.write(
     `${label} reconcile ok: ${jobs.length}/${jobs.length} object(s) verified by FC\n`,
   );
@@ -330,13 +331,10 @@ export async function maintainReleaseManifest({ tag, channelJsonPath = null, dry
   }
 
   const body = JSON.parse(readFileSync(channelJsonPath, "utf-8"));
-  const token = await fetchOidcToken(ctx.audience);
-  const result = await fcCall(
-    ctx,
-    "release-finalize",
-    { files: [], manifest: { tag, body } },
-    token,
-  );
+  const result = await fcCall(ctx, "release-finalize", {
+    files: [],
+    manifest: { tag, body },
+  });
   if (result.manifestUpdated) {
     process.stdout.write(`manifest.json → latest=${result.latest ?? tag}\n`);
     process.stdout.write(`latest.json → ${result.latest ?? tag}\n`);
