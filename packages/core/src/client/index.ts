@@ -6,7 +6,6 @@ export {
   imageText2ImagePath,
   image2ImagePath,
   knowledgeChatEndpoint,
-  knowledgeRetrievePath,
   knowledgeSearchEndpoint,
   memoryAddAsyncPath,
   memoryEndpoint,

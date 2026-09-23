@@ -15,17 +15,6 @@
 export const VERIFIED_AGENT_MODELS = ["qwen3.6-plus", "qwen3.7-plus"] as const;
 
 /**
- * Accepted value for `rerank[].model_name` on index/retrieve.
- * Gotcha: the server only branches on the `-hybrid` suffix — the model prefix is
- * ignored (`qwen3-rerank` and `gte-rerank` score identically to omitting the field,
- * `qwen3-rerank-hybrid` and `gte-rerank-hybrid` score identically to each other), so
- * the effective scoring model is the index's own `rerankModelName`. Unknown names and
- * indexes without `rerankModelName` both fail with
- * HTTP 500 Index.IndexRerankError "index rerank config(<name>) error.".
- */
-export const VERIFIED_RERANK_MODEL = "qwen3-rerank-hybrid";
-
-/**
  * Pick a verified model that differs from the current one, so a write → read-back
  * assertion proves the value actually changed instead of re-writing the default.
  * Returns undefined when the allowlist has shrunk to the model already in use — the

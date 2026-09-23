@@ -62,3 +62,8 @@ describe("e2e: kscli registry smoke", () => {
     );
   });
 });
+
+test("removed retrieve command is rejected", async () => {
+  const { exitCode } = await runKscli(["retrieve", "--help"]);
+  expect(exitCode).toBe(2);
+});

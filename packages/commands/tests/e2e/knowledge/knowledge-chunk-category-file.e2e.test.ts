@@ -19,7 +19,6 @@ import {
   KNOWLEDGE_KB_DELETE_ROUTES,
 } from "../topic-routes.ts";
 import { deleteKbWithRetry, pollUntil } from "./journeys/journey-helpers.ts";
-import { VERIFIED_RERANK_MODEL } from "./verified-models.ts";
 
 interface DryRunBody {
   endpoint?: string;
@@ -1178,7 +1177,7 @@ describe.skipIf(!isKbAdminE2EReady())(
       // kb create --wait adds a full import phase — generous timeout
     }, 600_000);
 
-    test("chunk 全链路: 建库 → add → list 回读 → update → rerank 检索 → 分批 delete", async () => {
+    test("chunk 全链路: 建库 → add → list 回读 → update → 分批 delete", async () => {
       // Create a throwaway knowledge base (upload + create --wait, reusing existing commands)
       const fixtureDir = mkdtempSync(join(tmpdir(), "chunk-chain-e2e-"));
       const filePath = join(fixtureDir, `chunk-${Date.now()}.md`);
@@ -1355,33 +1354,6 @@ describe.skipIf(!isKbAdminE2EReady())(
         // not arrays as the public docs' empty-array examples suggest
         expect(typeof statsData.data?.storageMonitorData?.indexStorageLimit).toBe("number");
         expect(Array.isArray(statsData.data?.qpsMonitorData?.monitorData)).toBe(true);
-
-        // retrieve with full rerank params — the only live call of the rerank billing
-        // path (recall is not asserted: indexing lag would make it flaky; shape only)
-        const rerankRun = await runCommandE2e(KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES, [
-          "knowledge",
-          "retrieve",
-          "--index-id",
-          indexId,
-          "--query",
-          "chunk chain fixture",
-          "--rerank",
-          "--rerank-model",
-          VERIFIED_RERANK_MODEL,
-          "--rerank-mode",
-          "similar",
-          "--rerank-top-n",
-          "5",
-          "--dense-similarity-top-k",
-          "20",
-          "--sparse-similarity-top-k",
-          "20",
-          "--output",
-          "json",
-        ]);
-        expect(rerankRun.exitCode, rerankRun.stderr).toBe(0);
-        const rerankData = parseStdoutJson<{ data?: { nodes?: unknown[] } }>(rerankRun.stdout);
-        expect(Array.isArray(rerankData.data?.nodes)).toBe(true);
 
         // 10 more chunks force the >10-id auto-batching path in the live delete
         // (sequential process spawns naturally respect the 10 req/s rate limit)

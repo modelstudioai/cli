@@ -1,10 +1,8 @@
-// J3 retrieval tuning: the real effect of chunk-level exclusion on recall.
-// create → chunk list locates the marker chunk → chunk update --exclude → retrieve
-// asserts the exclusion flag (hard) → chunk update --include restores → retrieve
+// J3 retrieval tuning: chunk-level exclusion and restoration read-back.
+// create → chunk list locates the marker chunk → chunk update --exclude → chunk list
+// asserts the exclusion flag (hard) → chunk update --include restores → chunk list
 // asserts restoration (soft, index-refresh lag is tolerable).
-// Semantic gotcha (verified live): the legacy retrieve endpoint does not filter
-// excluded chunks; it only sets metadata.is_displayed_chunk_content to false —
-// that flag is the closure signal.
+// Read exclusion metadata through chunk list.
 import { describe, expect, test } from "vite-plus/test";
 import { isKbAdminE2EReady, parseStdoutJson } from "../../helpers.ts";
 import { JOURNEY_J3_ROUTES } from "../../topic-routes.ts";
@@ -27,7 +25,7 @@ interface ChunkListResponse {
   };
 }
 
-interface RetrieveResponse {
+interface ChunkStateResponse {
   data?: {
     nodes?: Array<{
       text?: string;
@@ -38,9 +36,9 @@ interface RetrieveResponse {
 
 /** Exclusion flag of the node containing the marker; undefined when the marker is not found */
 function markerNodeDisplayFlag(stdout: string, marker: string): boolean | undefined {
-  let response: RetrieveResponse;
+  let response: ChunkStateResponse;
   try {
-    response = parseStdoutJson<RetrieveResponse>(stdout);
+    response = parseStdoutJson<ChunkStateResponse>(stdout);
   } catch {
     return undefined;
   }
@@ -59,27 +57,29 @@ describe.skipIf(!isKbAdminE2EReady())("journey J3: 检索精修 (live, 自清理
     const marker = uniqueMarker("j3");
     const fixture: Partial<KbFixture> = {};
     try {
-      // 1) Create the base and confirm the marker is recallable (baseline for judging exclude)
+      // 1) Create the base and confirm the marker is visible (baseline for judging exclude)
       const kb = await createKbWithDocs(reporter, JOURNEY_J3_ROUTES, "j3", [marker], workspaceId);
       Object.assign(fixture, kb);
 
-      // Gotcha: retrieve is a legacy DashScope-host command and does not accept --workspace-id
-      const retrieveArgs = [
+      const chunkListArgs = [
         "knowledge",
-        "retrieve",
+        "chunk",
+        "list",
         "--index-id",
         kb.indexId,
-        "--query",
-        marker,
+        "--workspace-id",
+        workspaceId,
+        "--page-size",
+        "100",
         "--output",
         "json",
       ];
       const baseline = await pollUntil(
-        () => reporter.runStep("retrieve baseline", JOURNEY_J3_ROUTES, retrieveArgs),
+        () => reporter.runStep("chunk list baseline", JOURNEY_J3_ROUTES, chunkListArgs),
         (run) => run.exitCode === 0 && nodesRecallMarker(run.stdout, marker),
         { timeoutMs: 180_000, intervalMs: 15_000 },
       );
-      expect(baseline.satisfied, `基线未召回标记词 ${marker}`).toBe(true);
+      expect(baseline.satisfied, `基线未找到标记词 ${marker}`).toBe(true);
 
       // 2) chunk list locates the chunk containing the marker (metadata._id / doc_id feed update)
       const chunkListRun = await reporter.runStep("chunk list", JOURNEY_J3_ROUTES, [
@@ -123,7 +123,7 @@ describe.skipIf(!isKbAdminE2EReady())("journey J3: 检索精修 (live, 自清理
       expect(excludeRun.exitCode, excludeRun.stderr).toBe(0);
 
       const excluded = await pollUntil(
-        () => reporter.runStep("retrieve after exclude", JOURNEY_J3_ROUTES, retrieveArgs),
+        () => reporter.runStep("chunk list after exclude", JOURNEY_J3_ROUTES, chunkListArgs),
         (run) => run.exitCode === 0 && markerNodeDisplayFlag(run.stdout, marker) === false,
         { timeoutMs: 180_000, intervalMs: 15_000 },
       );
@@ -149,7 +149,7 @@ describe.skipIf(!isKbAdminE2EReady())("journey J3: 检索精修 (live, 自清理
       expect(includeRun.exitCode, includeRun.stderr).toBe(0);
 
       const restored = await pollUntil(
-        () => reporter.runStep("retrieve after include", JOURNEY_J3_ROUTES, retrieveArgs),
+        () => reporter.runStep("chunk list after include", JOURNEY_J3_ROUTES, chunkListArgs),
         (run) => run.exitCode === 0 && markerNodeDisplayFlag(run.stdout, marker) === true,
         { timeoutMs: 120_000, intervalMs: 15_000 },
       );
@@ -161,7 +161,7 @@ describe.skipIf(!isKbAdminE2EReady())("journey J3: 检索精修 (live, 自清理
 
       // 5) Negative branch: deleting a chunk id that does not exist on this base —
       // the server rejects (Index.InvalidParameter, verified live) and the error
-      // passes through verbatim; the marker chunk must remain recallable afterwards
+      // passes through verbatim; the marker chunk must remain visible afterwards
       const badDeleteRun = await reporter.runStep(
         "chunk delete unknown id (expect reject)",
         JOURNEY_J3_ROUTES,
@@ -182,14 +182,14 @@ describe.skipIf(!isKbAdminE2EReady())("journey J3: 检索精修 (live, 自清理
       expect(badDeleteRun.stderr).toMatch(/invalid|not exist/i);
 
       const afterBadDelete = await reporter.runStep(
-        "retrieve after failed delete",
+        "chunk list after failed delete",
         JOURNEY_J3_ROUTES,
-        retrieveArgs,
+        chunkListArgs,
       );
       expect(afterBadDelete.exitCode, afterBadDelete.stderr).toBe(0);
       expect(
         nodesRecallMarker(afterBadDelete.stdout, marker),
-        `失败的删除误伤: ${marker} 不再召回`,
+        `失败的删除误伤: ${marker} 不再可见`,
       ).toBe(true);
     } finally {
       await cleanupKbFixture(reporter, JOURNEY_J3_ROUTES, fixture, workspaceId);

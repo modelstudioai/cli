@@ -13,11 +13,11 @@
 
 ```
 实现文件:
-  packages/commands/src/commands/knowledge/retrieve.ts
-    ↓ packages/commands/src/index.ts export { default as knowledgeRetrieve }
+  packages/commands/src/commands/knowledge/search.ts
+    ↓ packages/commands/src/index.ts export { default as knowledgeSearch }
 产品入口:
-  packages/cli/src/commands.ts  "knowledge retrieve": knowledgeRetrieve  ↔ bl knowledge retrieve
-  packages/kscli/src/main.ts    "retrieve": knowledgeRetrieve             ↔ kscli retrieve
+  packages/cli/src/commands.ts  "knowledge search": knowledgeSearch  ↔ bl knowledge search
+  packages/kscli/src/main.ts    "search": knowledgeSearch             ↔ kscli search
 ```
 
 常见路径形态:
@@ -43,7 +43,7 @@ packages/commands/src/index.ts
         ↓
 ┌──────────────────────────────┬──────────────────────────────┐
 │ packages/cli/src/commands.ts │ packages/kscli/src/main.ts   │
-│ { "text chat": textChat }    │ { "retrieve": knowledge... } │
+│ { "text chat": textChat }    │ { "search": knowledge... } │
 └──────────────┬───────────────┴──────────────┬───────────────┘
                ↓                              ↓
         createCli(commands, identity)  →  runtime registry/help/middleware

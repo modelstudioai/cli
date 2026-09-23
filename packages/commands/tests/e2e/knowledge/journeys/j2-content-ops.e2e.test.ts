@@ -1,6 +1,6 @@
 // J2 content operations: routine document add/remove and the visibility loop.
-// create (doc1+doc2) → doc list/status checks → doc tag → retrieve hits both markers
-// → doc delete doc2 → retrieve verifies markerB is gone and markerA remains.
+// create (doc1+doc2) → doc list/status checks → doc tag → search hits both markers
+// → doc delete doc2 → search verifies markerB is gone and markerA remains.
 // Note: there is no "append documents to an existing base" command (kb update takes
 // no doc-id), so incremental semantics are expressed as a two-document create + deleting one.
 import { describe, expect, test } from "vite-plus/test";
@@ -11,6 +11,7 @@ import {
   createJourneyReporter,
   createKbWithDocs,
   nodesRecallMarker,
+  patchSearchServiceRetrievalConfig,
   pollUntil,
   uniqueMarker,
   type KbFixture,
@@ -24,6 +25,7 @@ describe.skipIf(!isKbAdminE2EReady())("journey J2: 内容运维 (live, 自清理
     const markerA = uniqueMarker("j2a");
     const markerB = uniqueMarker("j2b");
     const fixture: Partial<KbFixture> = {};
+    let searchAgentId: string | undefined;
     try {
       // 1) Create the base with two documents
       const kb = await createKbWithDocs(
@@ -34,6 +36,27 @@ describe.skipIf(!isKbAdminE2EReady())("journey J2: 内容运维 (live, 自清理
         workspaceId,
       );
       Object.assign(fixture, kb);
+      const serviceRun = await reporter.runStep("service create (search)", JOURNEY_J2_ROUTES, [
+        "knowledge",
+        "service",
+        "create",
+        "--name",
+        `e2e-j2-s-${Date.now() % 100000000}`,
+        "--scene",
+        "search",
+        "--index-id",
+        kb.indexId,
+        "--workspace-id",
+        workspaceId,
+        "--quiet",
+      ]);
+      expect(serviceRun.exitCode, serviceRun.stderr).toBe(0);
+      const agentId = serviceRun.stdout.trim().split("\n").pop()!;
+      searchAgentId = agentId;
+      expect(agentId).toMatch(/^aid-/);
+      reporter.trackResource("service", agentId);
+      await patchSearchServiceRetrievalConfig(reporter, JOURNEY_J2_ROUTES, agentId, workspaceId);
+
       const [fileIdA, fileIdB] = kb.fileIds as [string, string];
 
       // 2) doc list contains both documents (hard); doc status terminal state COMPLETED (hard)
@@ -144,16 +167,19 @@ describe.skipIf(!isKbAdminE2EReady())("journey J2: 内容运维 (live, 自清理
         `tag=${tagValue} exit=${tagReadbackRun.exitCode}`,
       );
 
-      // 4) retrieve hits both markers (hard, polling to absorb indexing lag)
-      // Gotcha: retrieve is a legacy DashScope-host command and does not accept --workspace-id
-      const retrieveMarker = (marker: string, stepName: string) =>
+      // 4) search hits both markers (hard, polling to absorb indexing lag)
+      const searchMarker = (marker: string, stepName: string) =>
         pollUntil(
           () =>
             reporter.runStep(stepName, JOURNEY_J2_ROUTES, [
               "knowledge",
-              "retrieve",
-              "--index-id",
-              kb.indexId,
+              "search",
+              "--agent-id",
+              agentId,
+              "--agent-version",
+              "beta",
+              "--workspace-id",
+              workspaceId,
               "--query",
               marker,
               "--output",
@@ -162,10 +188,10 @@ describe.skipIf(!isKbAdminE2EReady())("journey J2: 内容运维 (live, 自清理
           (run) => run.exitCode === 0 && nodesRecallMarker(run.stdout, marker),
           { timeoutMs: 180_000, intervalMs: 15_000 },
         );
-      const pollA = await retrieveMarker(markerA, "retrieve markerA");
-      expect(pollA.satisfied, `retrieve 未召回 ${markerA}`).toBe(true);
-      const pollB = await retrieveMarker(markerB, "retrieve markerB");
-      expect(pollB.satisfied, `retrieve 未召回 ${markerB}`).toBe(true);
+      const pollA = await searchMarker(markerA, "search markerA");
+      expect(pollA.satisfied, `search 未召回 ${markerA}`).toBe(true);
+      const pollB = await searchMarker(markerB, "search markerB");
+      expect(pollB.satisfied, `search 未召回 ${markerB}`).toBe(true);
 
       // 5) Delete doc2 → markerB no longer recalled while markerA remains (hard)
       const docDeleteRun = await reporter.runStep("doc delete doc2", JOURNEY_J2_ROUTES, [
@@ -184,11 +210,15 @@ describe.skipIf(!isKbAdminE2EReady())("journey J2: 内容运维 (live, 自清理
 
       const goneB = await pollUntil(
         () =>
-          reporter.runStep("retrieve markerB (expect miss)", JOURNEY_J2_ROUTES, [
+          reporter.runStep("search markerB (expect miss)", JOURNEY_J2_ROUTES, [
             "knowledge",
-            "retrieve",
-            "--index-id",
-            kb.indexId,
+            "search",
+            "--agent-id",
+            agentId,
+            "--agent-version",
+            "beta",
+            "--workspace-id",
+            workspaceId,
             "--query",
             markerB,
             "--output",
@@ -200,11 +230,15 @@ describe.skipIf(!isKbAdminE2EReady())("journey J2: 内容运维 (live, 自清理
       reporter.recordNote(`doc delete 后 markerB 消失轮询 ${goneB.attempts} 次`);
       expect(goneB.satisfied, `doc delete 后 ${markerB} 仍可召回`).toBe(true);
 
-      const stillA = await reporter.runStep("retrieve markerA (still hit)", JOURNEY_J2_ROUTES, [
+      const stillA = await reporter.runStep("search markerA (still hit)", JOURNEY_J2_ROUTES, [
         "knowledge",
-        "retrieve",
-        "--index-id",
-        kb.indexId,
+        "search",
+        "--agent-id",
+        agentId,
+        "--agent-version",
+        "beta",
+        "--workspace-id",
+        workspaceId,
         "--query",
         markerA,
         "--output",
@@ -216,6 +250,19 @@ describe.skipIf(!isKbAdminE2EReady())("journey J2: 内容运维 (live, 自清理
         `doc delete 误伤: ${markerA} 不再召回`,
       ).toBe(true);
     } finally {
+      if (searchAgentId) {
+        const deleteRun = await reporter.runStep("cleanup: service delete", JOURNEY_J2_ROUTES, [
+          "knowledge",
+          "service",
+          "delete",
+          "--agent-id",
+          searchAgentId,
+          "--yes",
+          "--workspace-id",
+          workspaceId,
+        ]);
+        if (deleteRun.exitCode === 0) reporter.markCleaned(searchAgentId);
+      }
       await cleanupKbFixture(reporter, JOURNEY_J2_ROUTES, fixture, workspaceId);
       reporter.finalize();
     }

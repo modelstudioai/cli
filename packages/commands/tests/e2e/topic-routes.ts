@@ -88,13 +88,6 @@ export const MEMORY_PROFILE_DELETE_ROUTES: E2eRouteExports = {
   "memory profile get": "memoryProfileGet", // live: user profile reachable through the schema
 };
 
-export const KNOWLEDGE_ROUTES: E2eRouteExports = {
-  "knowledge retrieve": "knowledgeRetrieve",
-  "knowledge search": "knowledgeSearch",
-  "knowledge chat": "knowledgeChat",
-  "knowledge list": "knowledgeKbList", // live: grab a real index id for retrieve
-};
-
 export const KNOWLEDGE_SEARCH_ROUTES: E2eRouteExports = {
   "knowledge search": "knowledgeSearch",
 };
@@ -467,7 +460,6 @@ export const KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES: E2eRouteExports = {
   "knowledge chunk update": "knowledgeChunkUpdate",
   "knowledge chunk delete": "knowledgeChunkDelete",
   "knowledge stats": "knowledgeKbStats",
-  "knowledge retrieve": "knowledgeRetrieve", // live rerank retrieval on the throwaway base
   "knowledge category list": "knowledgeCategoryList",
   "knowledge category add": "knowledgeCategoryAdd",
   "knowledge category delete": "knowledgeCategoryDelete",
@@ -489,7 +481,6 @@ export const KNOWLEDGE_CHUNK_CATEGORY_FILE_ROUTES: E2eRouteExports = {
 const JOURNEY_KB_BASE_ROUTES: E2eRouteExports = {
   "knowledge doc upload": "knowledgeDocUpload",
   "knowledge create": "knowledgeKbCreate",
-  "knowledge retrieve": "knowledgeRetrieve",
   "knowledge delete": "knowledgeKbDelete",
   "knowledge file delete": "knowledgeFileDelete", // clean up data-center files
 };
@@ -505,6 +496,11 @@ export const JOURNEY_J1_ROUTES: E2eRouteExports = {
 };
 
 export const JOURNEY_J2_ROUTES: E2eRouteExports = {
+  "knowledge service create": "knowledgeServiceCreate",
+  "knowledge service get": "knowledgeServiceGet",
+  "knowledge service update": "knowledgeServiceUpdate",
+  "knowledge service delete": "knowledgeServiceDelete",
+  "knowledge search": "knowledgeSearch",
   ...JOURNEY_KB_BASE_ROUTES,
   "knowledge doc list": "knowledgeDocList",
   "knowledge doc status": "knowledgeDocStatus",

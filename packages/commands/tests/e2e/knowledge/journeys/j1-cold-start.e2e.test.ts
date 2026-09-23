@@ -1,7 +1,7 @@
 // J1 cold-start first answer: from zero to the first citable answer.
-// upload → kb create --wait → retrieve recalls the marker → service create (search/chat, draft)
+// upload → kb create --wait → service create (search/chat, draft)
 // → search --agent-version beta recalls → chat --agent-version beta first answer.
-// Closure assertions: the fixture marker is recalled by retrieve/search (hard);
+// Closure assertions: the fixture marker is recalled by search (hard);
 // the chat answer cites the marker (soft).
 import { describe, expect, test } from "vite-plus/test";
 import { isKbAdminE2EReady, parseStdoutJson } from "../../helpers.ts";
@@ -20,7 +20,7 @@ import {
 describe.skipIf(!isKbAdminE2EReady())("journey J1: 冷启动首答 (live, 自清理)", () => {
   const workspaceId = process.env.BAILIAN_WORKSPACE_ID!;
 
-  test("upload → create → retrieve → search(beta) → chat(beta) 回路闭合", async () => {
+  test("upload → create → search(beta) → chat(beta) 回路闭合", async () => {
     const reporter = createJourneyReporter(import.meta.url);
     const marker = uniqueMarker("j1");
     const fixture: Partial<KbFixture> = {};
@@ -29,27 +29,6 @@ describe.skipIf(!isKbAdminE2EReady())("journey J1: 冷启动首答 (live, 自清
       // 1) Upload + create the knowledge base (--wait for the initial import)
       const kb = await createKbWithDocs(reporter, JOURNEY_J1_ROUTES, "j1", [marker], workspaceId);
       Object.assign(fixture, kb);
-
-      // 2) retrieve directly against the base recalls the marker (hard assertion,
-      // polling to absorb index-visibility lag)
-      // Gotcha: retrieve is a legacy DashScope-host command and does not accept --workspace-id
-      const retrievePoll = await pollUntil(
-        () =>
-          reporter.runStep("retrieve marker", JOURNEY_J1_ROUTES, [
-            "knowledge",
-            "retrieve",
-            "--index-id",
-            kb.indexId,
-            "--query",
-            marker,
-            "--output",
-            "json",
-          ]),
-        (run) => run.exitCode === 0 && nodesRecallMarker(run.stdout, marker),
-        { timeoutMs: 180_000, intervalMs: 15_000 },
-      );
-      reporter.recordNote(`retrieve 轮询 ${retrievePoll.attempts} 次`);
-      expect(retrievePoll.satisfied, `retrieve 未召回标记词 ${marker}`).toBe(true);
 
       // 3) Create a retrieval service (initial draft/beta); search on the draft recalls (hard assertion)
       const searchServiceRun = await reporter.runStep(
@@ -197,6 +176,6 @@ describe.skipIf(!isKbAdminE2EReady())("journey J1: 冷启动首答 (live, 自清
       await cleanupKbFixture(reporter, JOURNEY_J1_ROUTES, fixture, workspaceId);
       reporter.finalize();
     }
-    // Observed create times vary widely plus three polling phases — timeout sized for the worst path
+    // Observed create times vary widely plus search polling — timeout sized for the worst path
   }, 900_000);
 });

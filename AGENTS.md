@@ -41,7 +41,7 @@ Skill / 命令手册随 `skills/bailian-*/` 经 `bl skill init` 安装（装齐 
 约定:
 
 - 命令实现文件路径仍按能力放置:`packages/commands/src/commands/text/chat.ts`
-- 产品命令路径由入口 map 决定:同一个实现可暴露为 `bl knowledge retrieve` 或 `kscli retrieve`
+- 产品命令路径由入口 map 决定:同一个实现可暴露为 `bl knowledge search` 或 `kscli search`
 - `defineCommand` 只写命令元数据与逻辑: `auth`、`flags`、`usageArgs`、`exampleArgs`、`validate`、`run`
 - `usageArgs` / `exampleArgs` 不写 `bl` 或 `kscli` 前缀;runtime / reference 生成器按产品路径补前缀
 - 不再使用 `catalog.ts` 作为登记处;新增/重命名命令必须同时看命令库导出和产品入口 map

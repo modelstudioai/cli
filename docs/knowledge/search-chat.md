@@ -1,67 +1,8 @@
 # 检索与对话命令手册
 
-以下命令通过检索服务（agent）消费知识库。`search` 用于语义检索，`chat` 用于多轮对话。`retrieve` 已废弃。
+以下命令通过检索服务（agent）消费知识库。`search` 用于语义检索，`chat` 用于多轮对话。
 
 > **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](../knowledge-cli-guide.md#通用约定)。
-
----
-
-#### `bl knowledge retrieve`
-
-从知识库检索（已废弃，请用 `search` 替代）。
-
-**用法**
-
-```bash
-bl knowledge retrieve --index-id <id> --query <text> [flags]
-```
-
-**参数**
-
-| 参数                            | 类型   | 必填 | 说明                                                |
-| ------------------------------- | ------ | ---- | --------------------------------------------------- |
-| `--index-id <id>`               | string | 是   | 知识库 ID                                           |
-| `--query <text>`                | string | 是   | 检索查询文本                                        |
-| `--dense-similarity-top-k <n>`  | number | 否   | 稠密检索 top K                                      |
-| `--sparse-similarity-top-k <n>` | number | 否   | 稀疏检索 top K                                      |
-| `--rerank`                      | switch | 否   | 启用 rerank                                         |
-| `--rerank-top-n <n>`            | number | 否   | rerank 返回 top N 结果                              |
-| `--rerank-model <name>`         | string | 否   | rerank 模型名，如 `qwen3-rerank-hybrid`             |
-| `--rerank-mode <mode>`          | string | 否   | rerank 模式：`qa`、`similar` 或 `custom`            |
-| `--rerank-instruct <text>`      | string | 否   | 自定义 rerank 指令（`--rerank-mode custom` 时使用） |
-| `--top-k <n>`                   | number | 否   | 返回结果数（已废弃，用 `--rerank-top-n` 替代）      |
-
-**输出**
-
-text/quiet 模式：
-
-```
-[1] (score: 0.9512)
-检索到的文本内容...
-
-[2] (score: 0.8734)
-另一段文本内容...
-```
-
-> 无结果时输出 `No results found.`
-
-json 模式：返回 API 原始响应。
-
-**注意事项**
-
-- **已废弃**，推荐使用 `search` 命令。`search` 通过 agent_id 驱动检索策略，支持更多高级特性。
-- `--top-k` 已废弃，使用 `--rerank-top-n` 替代，传入 `--top-k` 会输出 stderr 警告。
-- 此命令直接用 `--index-id` 检索，不需要创建检索服务。
-
-**示例**
-
-```bash
-# 基础检索
-bl knowledge retrieve --index-id idx-xxx --query "How to use Alibaba Cloud Bailian" --workspace-id ws-xxx
-
-# 启用 rerank
-bl knowledge retrieve --index-id idx-xxx --query "RAG retrieval" --rerank --rerank-model qwen3-rerank-hybrid
-```
 
 ---
 
@@ -108,7 +49,7 @@ json 模式：返回 API 原始响应，`data.nodes[]` 包含检索结果。
 
 - 检索范围和策略（多知识库加权、路由、rerank 等）由 `--agent-id` 对应的服务配置驱动。只需 `--query` 和 `--agent-id` 即可调用。
 - `--agent-version beta` 调试草稿配置进行调试，部署前验证效果。
-- 与 `retrieve` 的区别：`search` 通过 agent_id 间接驱动检索策略（支持多知识库、路由、rerank 等），`retrieve` 直接操作 index_id 且功能较少。
+- `search` 通过 agent_id 驱动检索策略，支持多知识库、路由、rerank 等。
 
 **示例**
 

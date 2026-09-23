@@ -32,7 +32,6 @@ Index: [index.md](index.md)
 | `bl knowledge file list`         | API Key        | List files in a data-center category                                                             |
 | `bl knowledge info`              | API Key        | Show knowledge base configuration details                                                        |
 | `bl knowledge list`              | API Key        | List knowledge bases in the workspace                                                            |
-| `bl knowledge retrieve`          | API Key        | Retrieve from a Bailian knowledge base (deprecated, use `search` instead)                        |
 | `bl knowledge search`            | API Key        | Search a Bailian knowledge base (RAG semantic retrieval)                                         |
 | `bl knowledge service copy`      | API Key        | Copy a service into a new draft (name gets a copy_ prefix)                                       |
 | `bl knowledge service create`    | API Key        | Create a retrieval / Q&A service (initial status: draft, version: beta)                          |
@@ -909,46 +908,6 @@ bl knowledge list --workspace-id ws-xxx
 
 ```bash
 bl knowledge list --name demo --page-number 2 --page-size 50
-```
-
-### `bl knowledge retrieve`
-
-| Field              | Value                                                                     |
-| ------------------ | ------------------------------------------------------------------------- |
-| **Name**           | `knowledge retrieve`                                                      |
-| **Description**    | Retrieve from a Bailian knowledge base (deprecated, use `search` instead) |
-| **Authentication** | API Key                                                                   |
-| **Usage**          | `bl knowledge retrieve --index-id <id> --query <text> [flags]`            |
-
-#### Flags
-
-| Flag                            | Type   | Required | Description                                        |
-| ------------------------------- | ------ | -------- | -------------------------------------------------- |
-| `--index-id <id>`               | string | yes      | Knowledge base index ID (required)                 |
-| `--query <text>`                | string | yes      | Search query (required)                            |
-| `--dense-similarity-top-k <n>`  | number | no       | Dense retrieval top K                              |
-| `--sparse-similarity-top-k <n>` | number | no       | Sparse retrieval top K                             |
-| `--rerank`                      | switch | no       | Enable reranking                                   |
-| `--rerank-top-n <n>`            | number | no       | Rerank top N results                               |
-| `--rerank-model <name>`         | string | no       | Rerank model, e.g. qwen3-rerank-hybrid             |
-| `--rerank-mode <mode>`          | string | no       | Rerank mode: qa, similar, or custom                |
-| `--rerank-instruct <text>`      | string | no       | Custom rerank instruction, when mode=custom        |
-| `--top-k <n>`                   | number | no       | Number of results (deprecated, use --rerank-top-n) |
-| `--api-key <key>`               | string | no       | API key                                            |
-| `--base-url <url>`              | string | no       | API base URL                                       |
-
-#### Notes
-
-- --rerank-model requires the target knowledge base to already have a rerank model configured; otherwise every value is rejected.
-
-#### Examples
-
-```bash
-bl knowledge retrieve --index-id idx_xxx --query "How to use Alibaba Cloud Bailian"
-```
-
-```bash
-bl knowledge retrieve --index-id idx_xxx --query "RAG retrieval" --rerank --rerank-model qwen3-rerank-hybrid
 ```
 
 ### `bl knowledge search`

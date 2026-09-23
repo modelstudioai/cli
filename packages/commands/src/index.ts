@@ -39,7 +39,6 @@ export { default as memoryProfileShow } from "./commands/memory/profile-show.ts"
 export { default as memoryProfileUpdate } from "./commands/memory/profile-update.ts";
 export { default as memoryProfileDelete } from "./commands/memory/profile-delete.ts";
 export { default as memoryProfileGet } from "./commands/memory/profile-get.ts";
-export { default as knowledgeRetrieve } from "./commands/knowledge/retrieve.ts";
 export { default as knowledgeSearch } from "./commands/knowledge/search.ts";
 export { default as knowledgeChat } from "./commands/knowledge/chat.ts";
 export { default as knowledgeKbList } from "./commands/knowledge/kb-list.ts";

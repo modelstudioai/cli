@@ -142,11 +142,6 @@ export function userProfileValuesPath(schemaId: string): string {
   return `${profileSchemaItemPath(schemaId)}/profile_values`;
 }
 
-// ---- Knowledge Base Retrieve (DashScope) ----
-export function knowledgeRetrievePath(): string {
-  return "/api/v1/indices/rag/index/retrieve";
-}
-
 // ---- Knowledge Search (新版 RAG 检索, workspace-based host) ----
 
 export function knowledgeSearchEndpoint(workspaceId: string): string {
