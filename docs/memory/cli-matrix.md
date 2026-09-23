@@ -1,6 +1,6 @@
 # Memory CLI 能力矩阵
 
-[文档首页](README.md) · [用户技术指南](user-guide.md) · [完整参数参考](../../skills/bailian-cli/reference/memory.md)
+[文档首页](README.md) · [用户技术指南](user-guide.md) · [完整参数参考](../../skills/bailian-memory/reference/memory.md)
 
 范围：2026-09-22 工作区源码，共 **13 个公开命令**。版本与发布状态见[文档首页](README.md)。所有命令使用 API Key，均需要解析出 Workspace ID。
 

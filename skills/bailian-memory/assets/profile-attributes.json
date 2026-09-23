@@ -1,0 +1,27 @@
+[
+  { "name": "preferred_name", "description": "用户明确希望使用的称呼；不从账号名推断真实姓名。" },
+  {
+    "name": "home_city",
+    "description": "用户明确的当前常住城市；不含精确地址，不把出差、旅游或假设地点当常住地。"
+  },
+  {
+    "name": "occupation",
+    "description": "用户明确的长期职业或角色；不从一次任务推断，可保留多个角色。"
+  },
+  {
+    "name": "response_language",
+    "description": "用户明确的长期回答语言偏好；不把一次翻译的目标语言当长期偏好。"
+  },
+  {
+    "name": "communication_preferences",
+    "description": "用户明确的表达和沟通偏好，必须保留适用场景；工作邮件简短不等于所有回答简短。"
+  },
+  {
+    "name": "interests",
+    "description": "用户明确的持续兴趣；不把一次提问、他人兴趣或助手建议当作用户兴趣。"
+  },
+  {
+    "name": "dietary_preferences",
+    "description": "用户明确的饮食偏好；不推断或记录疾病、宗教等敏感原因。"
+  }
+]

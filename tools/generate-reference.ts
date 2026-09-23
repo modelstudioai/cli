@@ -56,6 +56,8 @@ const GROUP_OWNER_SKILL: Readonly<Record<string, string>> = {
   "managed-agent": "bailian-managed-agent",
   // bailian-sandbox — Sandbox control-plane lifecycle
   sandbox: "bailian-sandbox",
+  // bailian-memory — personal memory and explicit Memory resource operations
+  memory: "bailian-memory",
   // everything else → bailian-cli (hub)
 };
 

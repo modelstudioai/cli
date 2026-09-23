@@ -1,6 +1,6 @@
 # Memory CLI 用户技术指南
 
-[文档首页](README.md) · [能力矩阵](cli-matrix.md) · [完整参数参考](../../skills/bailian-cli/reference/memory.md)
+[文档首页](README.md) · [能力矩阵](cli-matrix.md) · [完整参数参考](../../skills/bailian-memory/reference/memory.md)
 
 本指南帮助应用开发者用 `bl memory` 保存用户的长期记忆、召回相关信息、提取结构化画像，并管理可复用的 Skill 记忆。内容按 2026-09-22 工作区实现整理；发布范围见[文档首页](README.md)。
 
@@ -294,7 +294,6 @@ bl memory add --user-id demo_user \
 ```
 
 `--messages`、`--attributes`、`--attributes-operations` 接收 JSON 数组；`--meta-data` 接收 JSON 对象。当前实现直接解析参数文本，不提供这些参数的 `@file` 读取语法。
-
 
 ## 10. 常见问题
 

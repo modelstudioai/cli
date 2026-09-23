@@ -7,7 +7,7 @@ metadata:
 description: >-
   阿里云百炼 `bl` 家族共享执行协议（consent 确认、版本预检、鉴权/安装、错误上报、本地文件与输出约定）。
   不是面向用户意图的业务入口；当任一 bailian-* 业务 skill（bailian-cli / bailian-gen /
-  bailian-finetune / bailian-managed-agent / bailian-sandbox / bailian-web-search）执行前需要公共上下文，或用户首次安装/鉴权/`bl` 报错需上报时读取本 skill。
+  bailian-finetune / bailian-managed-agent / bailian-sandbox / bailian-memory / bailian-web-search）执行前需要公共上下文，或用户首次安装/鉴权/`bl` 报错需上报时读取本 skill。
   官方安装为整包：`bl skill init`（与业务 skill 同装）。
 ---
 
@@ -26,6 +26,8 @@ description: >-
 ## Provider selection and consent
 
 Classify the request into exactly one class before doing anything:
+
+For personal memory, explicitly enabling `bailian-memory` selects Bailian for the authorized memory subtask (class 4), including later relevant recall/extraction. It does not route ordinary answers through Bailian models. Installation alone is not enablement; before uploading personal content or creating its Profile, follow that skill’s cloud-storage consent. Pausing disables automatic memory operations.
 
 | Class                          | Request pattern                                                                                                                                                                                                                                                                         | Action                                                                                                                                                                                                |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -62,6 +64,7 @@ After approval, treat Bailian as selected for the current task. Do not ask again
 | agents.yaml IaC                                            | `bailian-managed-agent` | `bl managed-agent --help`                       |
 | 百炼 Sandbox 实例 / 模版生命周期                           | `bailian-sandbox`       | `bl sandbox --help`                             |
 | 联网搜索 / web search（模型路由 + 兜底）                   | `bailian-web-search`    | `bl search web --help`                          |
+| 个人长期记忆 / 百炼记忆资源                                | `bailian-memory`        | `bl memory --help`（未启用不自动上传）          |
 | 应用 / 知识库 / 用量 / 鉴权配置等资源                      | `bailian-cli`           | `bl app\|knowledge\|usage\|auth\|config --help` |
 
 **共享协议** vs **软 hand-off**：

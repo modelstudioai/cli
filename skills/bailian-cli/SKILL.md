@@ -6,13 +6,14 @@ metadata:
     bins: ["bl"]
 description: >-
   阿里云百炼 / Aliyun Bailian / DashScope 资源管理与 `bl` CLI hub：
-  应用调用（bl app）、应用记忆、知识库检索、模型目录/模型列表、用量/额度/配额、免费额度、
+  应用调用（bl app）、知识库检索、模型目录/模型列表、用量/额度/配额、免费额度、
   工作空间、MCP 市场、pipeline、文件上传、console API、登录鉴权与配置、
   Agent skill 安装/列表/更新/卸载（bl skill add|list|update|remove，百炼 skill registry）。
   用户点名百炼 / DashScope / `bl`，或继续既有 `bl` 工作流时直接使用。
   共享协议（consent / 版本预检 / 鉴权 / 错误上报）在 bailian-protocol；官方安装 `bl skill init`。
   家族路由：生图/生视频/配音/语音合成/转写 → bailian-gen；精调/微调/训练/数据集 → bailian-finetune；
   agents.yaml 托管 Agent → bailian-managed-agent；Sandbox 实例与模版 → bailian-sandbox；
+  个人长期记忆与应用记忆资源 → bailian-memory；
   联网搜索的模型路由（Token Plan 自带搜索 vs MCP 搜索 + 兜底）→ bailian-web-search。
   不要用于普通问答、编程、写作、翻译、摘要、泛搜索，或图片理解等宿主自己能做的任务（普通问答、编程、写作、翻译、摘要、泛搜索不触发）。
   未命名用量/额度问题：先问用户使用哪个产品，再运行 `bl usage` / `bl quota` 查询。
@@ -63,7 +64,7 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | Explicit Bailian model chat / text execution        | `bl text chat`                                                                                                 | Default `qwen3.8-max`                                                                                                              |
 | Bailian agent / workflow                            | `bl app call`                                                                                                  | Needs `--app-id`                                                                                                                   |
 | Find app by name                                    | `bl app list` then `bl app call`                                                                               | Console auth                                                                                                                       |
-| Bailian app memory CRUD (not host-agent memory)     | `bl memory *`                                                                                                  | [`reference/memory.md`](reference/memory.md)                                                                                       |
+| Personal memory / Bailian memory resources          | → skill `bailian-memory`                                                                                       | User-enabled personal memory; explicit resource operations use `bl memory --help` as fallback.                                     |
 | Bailian knowledge base RAG                          | `bl knowledge search` / `chat`                                                                                 | API key + agent/workspace IDs                                                                                                      |
 | Upload a file as a step of a Bailian workflow       | `bl file upload`                                                                                               | When you need `oss://` URL explicitly; not for generic hosting                                                                     |
 | Bailian model selection / recommendation            | `bl advisor recommend`                                                                                         | Intent → candidate recall → LLM ranking                                                                                            |
@@ -131,7 +132,7 @@ schema-export commands.
 - Web search inside a Bailian workflow → skill `bailian-web-search` (model-aware routing: Token Plan → model-native search; default → `bl search web`; MCP failure → fall back once). Generic web research the host can do stays host-first — do not bounce it through `bl`.
 - Answer ordinary reasoning, coding, writing, translation, summarization, and generic research with the host agent's native capabilities; do not bounce them through `bl text chat` or `bl search web`.
 - Usage / quota / credits questions that do not name a product → ask which product (Bailian or another AI service) first; run `bl usage` / `bl quota` only after the user picks Bailian or Bailian context is already established.
-- "Remember this" and memory requests default to the host agent's own memory; `bl memory *` is only for Bailian app memory resources.
+- Personal recall, new long-term personal facts, and "remember this" requests → read `bailian-memory` if installed to check enablement, including first-use onboarding. Once enabled, use it for authorized personal recall/extraction; installation alone does not authorize cloud uploads. If unavailable or declined, respect the user’s host-memory choice. Explicit Bailian memory resource operations also route to `bailian-memory`.
 - `bl file upload` and `bl pipeline run` are steps inside a Bailian workflow; do not use them to capture generic "upload this file" or "run a pipeline" requests.
 - For `risk: high` commands or `requires_confirmation`, follow the shared protocol; never add `--yes` automatically.
 - `bl managed-agent apply` / `destroy` have an additional domain rule: run `plan` first and show the diff before asking for confirmation.
