@@ -1,4 +1,13 @@
-import { existsSync, lstatSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,20 +16,22 @@ import tar from "tar-stream";
 import { afterEach, expect, test, vi } from "vite-plus/test";
 import { BailianError } from "../src/errors/base.ts";
 import type { AgentTarget } from "../src/skills/agents.ts";
-import { isSafeEntryName } from "../src/skills/extract.ts";
+import { atomicSwap, isSafeEntryName } from "../src/skills/extract.ts";
 import { installSkillFromBuffer, installSkillWithFanout } from "../src/skills/installer.ts";
 import { getSkillsDir } from "../src/skills/lock.ts";
 import { downloadSkillAsset, fetchSkillsIndex } from "../src/skills/registry.ts";
 
 /** rmSync wrapped in a spy so tests can simulate host deletion guards (e.g. safe-delete) */
 const fsMocks = vi.hoisted(() => ({
+  renameSync: vi.fn(),
   rmSync: vi.fn(),
 }));
 
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
+  fsMocks.renameSync.mockImplementation(actual.renameSync);
   fsMocks.rmSync.mockImplementation(actual.rmSync);
-  return { ...actual, rmSync: fsMocks.rmSync };
+  return { ...actual, renameSync: fsMocks.renameSync, rmSync: fsMocks.rmSync };
 });
 
 /** Run in an isolated temp config dir, restore env afterwards. */
@@ -87,6 +98,29 @@ test("installer: reinstall atomically swaps, no old files left behind", async ()
   });
 });
 
+test("installer: blocked Windows root rename falls back to in-place reconciliation", async () => {
+  const root = mkdtempSync(join(tmpdir(), "bl-skill-swap-"));
+  const destDir = join(root, "demo");
+  const tmpDir = join(root, ".tmp-demo");
+  mkdirSync(join(destDir, "stale"), { recursive: true });
+  mkdirSync(join(tmpDir, "references"), { recursive: true });
+  writeFileSync(join(destDir, "SKILL.md"), "old\n");
+  writeFileSync(join(destDir, "stale", "old.md"), "old\n");
+  writeFileSync(join(tmpDir, "SKILL.md"), "new\n");
+  writeFileSync(join(tmpDir, "references", "usage.md"), "new reference\n");
+
+  fsMocks.renameSync.mockImplementationOnce(() => {
+    throw Object.assign(new Error("directory is locked"), { code: "EPERM" });
+  });
+  atomicSwap(tmpDir, destDir, { allowInPlaceFallback: true });
+
+  expect(readFileSync(join(destDir, "SKILL.md"), "utf-8")).toBe("new\n");
+  expect(readFileSync(join(destDir, "references", "usage.md"), "utf-8")).toBe("new reference\n");
+  expect(existsSync(join(destDir, "stale"))).toBe(false);
+  expect(readdirSync(root).filter((entry) => entry.includes(".old-"))).toEqual([]);
+  rmSync(root, { recursive: true, force: true });
+});
+
 test("installer: tar-slip entry → rejected and canonical not written", async () => {
   await inTempConfigDir(async () => {
     const buf = await buildTarBr({ "SKILL.md": VALID_SKILL_MD, "../evil.txt": "pwned\n" });
@@ -104,6 +138,22 @@ test("installer: backslash entry names rejected (Windows tar-slip vector)", asyn
     });
     await expect(installSkillFromBuffer("demo", buf)).rejects.toThrow(/unsafe tar entry/);
     expect(existsSync(join(getSkillsDir(), "demo"))).toBe(false);
+  });
+});
+
+test("installer: rejects a skill that would exceed a Windows agent path before swapping", async () => {
+  await inTempConfigDir(async () => {
+    await installSkillFromBuffer("demo", await buildTarBr({ "SKILL.md": VALID_SKILL_MD }));
+    const longRoot = join("C:\\Users\\demo\\.agent\\skills", "x".repeat(230), "demo");
+    const updated = "---\nname: demo\ndescription: updated\n---\n";
+
+    await expect(
+      installSkillFromBuffer("demo", await buildTarBr({ "SKILL.md": updated }), undefined, [
+        longRoot,
+      ]),
+    ).rejects.toThrow(/Windows-incompatible path/);
+
+    expect(readFileSync(join(getSkillsDir(), "demo", "SKILL.md"), "utf-8")).toBe(VALID_SKILL_MD);
   });
 });
 
