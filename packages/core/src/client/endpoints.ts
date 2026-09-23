@@ -142,6 +142,12 @@ export function userProfileValuesPath(schemaId: string): string {
   return `${profileSchemaItemPath(schemaId)}/profile_values`;
 }
 
+// ---- Workspace-scoped MaaS endpoints (cn-beijing only) ----
+
+export function workspaceMaaSBaseUrl(workspaceId: string): string {
+  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com`;
+}
+
 // ---- Knowledge Search (新版 RAG 检索, workspace-based host) ----
 
 export function knowledgeSearchEndpoint(workspaceId: string): string {
@@ -266,9 +272,39 @@ export function deploymentPath(deployedModel: string): string {
   return `/api/v1/deployments/${encodeURIComponent(deployedModel)}`;
 }
 
+/** GET /api/v1/deployments/{deployed_model}/capacity-instances */
+export function deploymentCapacityInstancesPath(code: string): string {
+  return `${deploymentPath(code)}/capacity-instances`;
+}
+
+/** GET /api/v1/deployments/{deployed_model}/capacity-instances/{instance_id} */
+export function deploymentCapacityInstancePath(code: string, id: string): string {
+  return `${deploymentCapacityInstancesPath(code)}/${encodeURIComponent(id)}`;
+}
+
+/** PUT /api/v1/deployments/{deployed_model}/capacity-instances/{instance_id}/scale */
+export function deploymentCapacityInstanceScalePath(code: string, id: string): string {
+  return `${deploymentCapacityInstancePath(code, id)}/scale`;
+}
+
+/** PUT /api/v1/deployments/{deployed_model}/capacity-instances/{instance_id}/renew */
+export function deploymentCapacityInstanceRenewPath(code: string, id: string): string {
+  return `${deploymentCapacityInstancePath(code, id)}/renew`;
+}
+
+/** PUT /api/v1/deployments/{deployed_model}/update-overflowstrategy */
+export function deploymentOverflowPath(code: string): string {
+  return `${deploymentPath(code)}/update-overflowstrategy`;
+}
+
+/** GET /api/v1/deployments/{deployed_model}/capacity-operations/{operation_id} */
+export function deploymentCapacityOperationPath(code: string, id: string): string {
+  return `${deploymentPath(code)}/capacity-operations/${encodeURIComponent(id)}`;
+}
+
 /** PUT /api/v1/deployments/{deployed_model}/scale — capacity adjust. */
 export function deploymentScalePath(deployedModel: string): string {
-  return `/api/v1/deployments/${encodeURIComponent(deployedModel)}/scale`;
+  return `${deploymentPath(deployedModel)}/scale`;
 }
 
 /**
