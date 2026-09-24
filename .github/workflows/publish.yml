@@ -94,6 +94,8 @@ jobs:
           # Bucket / prefix / allowlists live in the FC function.
           FC_TRIGGER_URL: ${{ vars.FC_TRIGGER_URL }}
           FC_RELEASE_AUDIENCE: ${{ vars.FC_RELEASE_AUDIENCE }}
+        # Script order: git tag, then binary GitHub Release + OSS, then npm.
+        # OSS upload can fail on a network blip; npm must not succeed first.
         run: node tools/release/publish-stable.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }}
 
   publish-channel:
@@ -162,6 +164,8 @@ jobs:
           # credentials in this repo (see publish-stable env notes).
           FC_TRIGGER_URL: ${{ vars.FC_TRIGGER_URL }}
           FC_RELEASE_AUDIENCE: ${{ vars.FC_RELEASE_AUDIENCE }}
+        # Script order: binary GitHub Release + OSS, then npm.
+        # OSS upload can fail on a network blip; npm must not succeed first.
         run: node tools/release/publish-channel.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }} --channel "${{ inputs.channel }}"
 
   # bailian-kb-dsh is the dsh plugin (downstream host adapter): independent version,
