@@ -19,6 +19,11 @@ import {
   pollImportJob,
 } from "./shared.ts";
 
+// Console model selection and an existing multimedia index both use these defaults.
+// The server remains authoritative for the configured model allowlist.
+const MULTIMEDIA_EMBEDDING_MODEL = "qwen3-vl-embedding";
+const MULTIMEDIA_RERANK_MODEL = "qwen3-vl-rerank";
+
 const KB_CREATE_FLAGS = {
   knowledgeType: {
     type: "string",
@@ -40,7 +45,10 @@ const KB_CREATE_FLAGS = {
   multimodalEmbeddingModel: {
     type: "string",
     valueHint: "<name>",
-    description: { "en-US": "Multimodal embedding model name", "zh-CN": "多模态向量模型名称" },
+    description: {
+      "en-US": "Multimodal embedding model (multimedia/visual scene: alias of --embedding-model)",
+      "zh-CN": "多模态向量模型（音视频/视觉理解场景下为 --embedding-model 的别名）",
+    },
   },
   name: {
     type: "string",
@@ -83,8 +91,9 @@ const KB_CREATE_FLAGS = {
     valueHint: "<name>",
     description: {
       "en-US":
-        "Embedding model name (document default: text-embedding-v4; multimedia: server default)",
-      "zh-CN": "Embedding 模型名称（文档默认 text-embedding-v4；音视频采用服务端默认）",
+        "Embedding model name (document default: text-embedding-v4; multimedia/visual scene: qwen3-vl-embedding)",
+      "zh-CN":
+        "Embedding 模型名称（文档默认 text-embedding-v4；音视频/视觉理解默认 qwen3-vl-embedding）",
     },
   },
   chunkSize: {
@@ -145,9 +154,9 @@ export default defineCommand({
   notes: [
     {
       "en-US":
-        "Structure/sink types are unstructured and BUILT_IN. Multimedia defaults to basic_multimedia_qa; explicit model flags are passed through.",
+        "Structure/sink types are unstructured and BUILT_IN. Multimedia uses basic_multimedia_qa, qwen3-vl-embedding and qwen3-vl-rerank with similar reranking. Allowed explicit models are validated by the server.",
       "zh-CN":
-        "结构和存储类型为 unstructured、BUILT_IN。音视频场景默认 basic_multimedia_qa；显式模型参数原样传递。",
+        "结构和存储类型为 unstructured、BUILT_IN。音视频采用 basic_multimedia_qa、qwen3-vl-embedding 和 qwen3-vl-rerank（similar 模式）。显式模型是否在允许列表中由服务端校验。",
     },
     {
       "en-US":
@@ -160,6 +169,7 @@ export default defineCommand({
     },
   ],
   exampleArgs: [
+    "--name media-demo --description media --doc-id file-xxx --knowledge-type multimedia",
     {
       "en-US": "--name demo --description 'product docs' --doc-id file-xxx --workspace-id ws-xxx",
       "zh-CN": "--name demo --description '产品文档' --doc-id file-xxx --workspace-id ws-xxx",
@@ -170,6 +180,17 @@ export default defineCommand({
     },
   ],
   validate(flags) {
+    if (
+      (flags.knowledgeType === "multimedia" || flags.knowledgeScene === "visual_perception_qa") &&
+      flags.embeddingModel !== undefined &&
+      flags.multimodalEmbeddingModel !== undefined
+    )
+      return {
+        "en-US":
+          "For multimedia/visual scenes, choose only one of --embedding-model and --multimodal-embedding-model.",
+        "zh-CN":
+          "音视频/视觉理解场景只能选择 --embedding-model 或 --multimodal-embedding-model 中的一种。",
+      };
     if (flags.knowledgeScene && !flags.knowledgeType)
       return {
         "en-US": "--knowledge-scene requires --knowledge-type.",
@@ -228,14 +249,21 @@ export default defineCommand({
               (flags.knowledgeType === "multimedia" ? "basic_multimedia_qa" : "basic_document_qa"),
           }
         : {}),
-      ...(flags.embeddingModel !== undefined
-        ? { embeddingModelName: flags.embeddingModel }
-        : flags.knowledgeType === "multimedia"
-          ? {}
-          : { embeddingModelName: "text-embedding-v4" }),
-      ...(flags.multimodalEmbeddingModel !== undefined
-        ? { multimodalEmbeddingModelName: flags.multimodalEmbeddingModel }
-        : {}),
+      ...(flags.knowledgeType === "multimedia" || flags.knowledgeScene === "visual_perception_qa"
+        ? {
+            // The console's multimedia/visual branches use embeddingModelName, not the image-only field.
+            embeddingModelName:
+              flags.multimodalEmbeddingModel ?? flags.embeddingModel ?? MULTIMEDIA_EMBEDDING_MODEL,
+            ...(flags.knowledgeType === "multimedia"
+              ? { rerankModelName: MULTIMEDIA_RERANK_MODEL, rerankMode: "similar" }
+              : {}),
+          }
+        : {
+            embeddingModelName: flags.embeddingModel ?? "text-embedding-v4",
+            ...(flags.multimodalEmbeddingModel !== undefined
+              ? { multimodalEmbeddingModelName: flags.multimodalEmbeddingModel }
+              : {}),
+          }),
       chunkSize: flags.chunkSize ?? 600,
       ...buildDataSourceFields(flags),
     };

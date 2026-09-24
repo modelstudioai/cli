@@ -408,6 +408,6 @@ bl knowledge service copy --agent-id aid-source --workspace-id ws-xxx
 bl knowledge service create --name media-search --scene search --config-file ./agent-config.json
 ```
 
-配置文件可包含每库 kb_search_configs、混排 hybrid_rerank 及服务端支持的其他字段。模型配置按服务端合同填写，CLI 不猜测默认音视频模型。`service get` 文本显示每库及混排配置摘要，JSON 保留完整响应。
+配置文件可包含每库 kb_search_configs、混排 hybrid_rerank 及服务端支持的其他字段。图片/音视频库，以及 visual_perception_qa/basic_multimedia_qa 场景，单库使用 multimodalRankModel 候选（当前已核对 qwen3-vl-rerank）；普通文档库使用 rankModel 候选。混排只要包含任一前述多模态库，就使用多模态候选；同一服务内普通文档的单库 rerank 不跟随混排全部改成 VL。检索与问答服务规则相同。配置文件明确设置 kb_search_configs[].rerank.model_name 与 hybrid_rerank.model_name；CLI 保留配置，由服务端校验模型和库的兼容性，不根据未知库类型自动改写。`service get` 文本显示每库及混排配置摘要，JSON 保留完整响应。
 
 `service update --config-file` 替换完整配置；标量更新沿用读取后合并写入，保留既有检索配置及未知字段。修改 temperature 等参数不应丢掉媒体检索模型设置。

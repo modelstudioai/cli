@@ -68,6 +68,12 @@ export default defineCommand({
   flags: SERVICE_CREATE_FLAGS,
   notes: [
     {
+      "en-US":
+        "Rerank options depend on each knowledge base: image/multimedia or visual_perception_qa/basic_multimedia_qa use multimodal models (currently qwen3-vl-rerank). Hybrid rerank uses multimodal options if any bound base requires them. Explicit configs are preserved; the server validates model compatibility.",
+      "zh-CN":
+        "排序模型按库选择：图片/音视频类型或 visual_perception_qa/basic_multimedia_qa 场景使用多模态模型（当前 qwen3-vl-rerank）；混排只要包含这类库也使用多模态候选。显式配置原样保留，模型兼容性由服务端校验。",
+    },
+    {
       "en-US": "Without an explicit configuration the server applies its default agent settings.",
       "zh-CN": "未显式提供配置时，服务端会应用默认 Agent 设置。",
     },

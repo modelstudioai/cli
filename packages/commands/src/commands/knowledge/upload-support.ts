@@ -6,8 +6,8 @@ import { basename, extname, join } from "node:path";
 import { BailianError, ExitCode, type LocalizedText } from "bailian-cli-core";
 
 const MB = 1024 * 1024;
-/** Decimal GB. Kept explicit until the backend byte-unit contract is confirmed. */
-export const MEDIA_MAX_BYTES = 2_000_000_000;
+/** User-confirmed binary limit: 2 GiB. */
+export const MEDIA_MAX_BYTES = 2 * 1024 ** 3;
 export const MEDIA_EXTENSIONS = new Set([
   ".aac",
   ".amr",
@@ -197,8 +197,8 @@ export function checkUploadFile(
     if (rule.enforce === "block") {
       throw new BailianError(
         localize({
-          "en-US": `File exceeds the ${isMediaFile(filePath) ? "2 GB (2,000,000,000 bytes)" : `${limitMb} MB`} limit for ${extension}: ${basename(filePath)}`,
-          "zh-CN": `文件超过 ${extension} 的 ${isMediaFile(filePath) ? "2 GB（2,000,000,000 字节）" : `${limitMb} MB`} 上限：${basename(filePath)}`,
+          "en-US": `File exceeds the ${isMediaFile(filePath) ? "2 GiB (2,147,483,648 bytes)" : `${limitMb} MB`} limit for ${extension}: ${basename(filePath)}`,
+          "zh-CN": `文件超过 ${extension} 的 ${isMediaFile(filePath) ? "2 GiB（2,147,483,648 字节）" : `${limitMb} MB`} 上限：${basename(filePath)}`,
         }),
         ExitCode.USAGE,
       );

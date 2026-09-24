@@ -44,11 +44,11 @@
 
 ### 3.1 `knowledge create` / `kb create`
 
-拟新增 `--knowledge-type`、`--knowledge-scene`、`--multimodal-embedding-model`，分别映射 knowledgeType、knowledgeScene、multimodalEmbeddingModelName；现有 `--embedding-model` 继续映射 embeddingModelName。
+新增 `--knowledge-type`、`--knowledge-scene` 映射 knowledgeType、knowledgeScene。音视频/视觉理解场景的 `--multimodal-embedding-model` 与 `--embedding-model` 是互斥别名，均映射 embeddingModelName；其他场景的显式多模态字段沿用 multimodalEmbeddingModelName。
 
 为控制此次范围，首批明确支持原有 document 与新增 multimedia，不因增加类型 flag 就宣称 table/image 的完整创建流程已支持。音视频组合为 `unstructured + multimedia + basic_multimedia_qa`。建议指定 multimedia 且未指定场景时，由 CLI 补固定场景，并在 dry-run 显示实际请求；显式冲突的组合报参数错误。普通库未指定新参数时保持现有创建行为。
 
-**模型字段处理**：允许显式配置两个模型字段；音视频默认模型及两字段的组合应通过独立新库创建验证后确定。不能仅根据旧库查询结果就强制某个字段必填，也不能让普通文档的默认 text-embedding-v4 无条件套用到 multimedia。
+**模型字段处理（已按管控台及只读配置修正）**：音视频默认 embeddingModelName=qwen3-vl-embedding、rerankModelName=qwen3-vl-rerank、rerankMode=similar；不能误填图片分支的 multimodalEmbeddingModelName。普通文档默认 text-embedding-v4 保持不变，具体模型候选由后台配置及服务端校验负责。
 
 验收：旧文档创建请求不变；媒体创建请求含正确类型/场景；dry-run 可审阅；独立媒体库完成导入与查询。媒体文件/类目超过单次导入上限时应明确分批或报错，不把最多 50 个媒体解释成知识库总容量。
 
@@ -179,4 +179,4 @@ deploy/copy/list/delete 的协议不因媒体升级改变。通过 beta 查询�
 
 ## 实施口径补充（2026-09-24）
 
-开发分支当前按十进制 2,000,000,000 字节实现媒体大小边界；后端精确单位仍待确认，不把此假设当作后端验收结果。媒体建库不默认套用 text-embedding-v4；未显式配置的模型字段省略。已知本地媒体超过 50 个在上传前拒绝，不自动拆分任务；未知类型的历史来源交服务端校验。details 接口 pageSize 最大 10，默认列表最大 100。实施与验证状态以 [开发计划执行记录](../superpowers/plans/2026-09-24-rag-multimedia-cli.md#执行记录2026-09-24持续更新) 为准；本文前面的未实施说明是计划编写时状态。
+用户已确认上限为 2 GiB（2,147,483,648 字节），开发分支据此校准边界。音视频建库默认 embeddingModelName=qwen3-vl-embedding、rerankModelName=qwen3-vl-rerank，模型字段与管控台及现有库的只读配置一致。已知本地媒体超过 50 个在上传前拒绝，不自动拆分任务；未知类型的历史来源交服务端校验。details 接口 pageSize 最大 10，默认列表最大 100。实施与验证状态以 [开发计划执行记录](../superpowers/plans/2026-09-24-rag-multimedia-cli.md#执行记录2026-09-24持续更新) 为准；本文前面的未实施说明是计划编写时状态。

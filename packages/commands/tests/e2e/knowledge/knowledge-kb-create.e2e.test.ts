@@ -219,7 +219,7 @@ describe("multimedia creation contract", () => {
       "--knowledge-type",
       "multimedia",
       "--multimodal-embedding-model",
-      "fixture-vl",
+      "qwen3-vl-embedding",
       "--workspace-id",
       "ws_test",
       "--dry-run",
@@ -231,10 +231,11 @@ describe("multimedia creation contract", () => {
     expect(output.request).toMatchObject({
       knowledgeType: "multimedia",
       knowledgeScene: "basic_multimedia_qa",
-      multimodalEmbeddingModelName: "fixture-vl",
+      embeddingModelName: "qwen3-vl-embedding",
+      rerankModelName: "qwen3-vl-rerank",
       structureType: "unstructured",
     });
-    expect(output.request).not.toHaveProperty("embeddingModelName");
+    expect(output.request).not.toHaveProperty("multimodalEmbeddingModelName");
   });
   test("conflicting media scene fails before network", async () => {
     const result = await runCommandE2e(KNOWLEDGE_KB_CREATE_ROUTES, [

@@ -359,7 +359,7 @@ bl knowledge doc list --index-id idx-xxx --details --page-number 2 --page-size 1
 
 `doc list --details` 调用文件详情列表接口，文本显示 chunkSize、overlapSize、separator、chunkMode、enableHeaders；JSON 保留原始响应。详情接口每页最多 **10** 条，默认普通列表仍为最多 100 条。
 
-音视频格式：aac、amr、flac、flv、m4a、mp3、mpeg、ogg、opus、wav、webm、wma、mp4、mkv、avi、mov、wmv。后缀不区分大小写，目录扫描包含这些格式。单文件本地上限 **2 GB = 2,000,000,000 字节**；这是当前明确采用的十进制解释，后端若采用 2 GiB 则需相应调整。原有文档/图片的大小限制保持不变。
+音视频格式：aac、amr、flac、flv、m4a、mp3、mpeg、ogg、opus、wav、webm、wma、mp4、mkv、avi、mov、wmv。后缀不区分大小写，目录扫描包含这些格式。单文件本地上限 **2 GiB = 2,147,483,648 字节**，用户已确认采用二进制单位。原有文档/图片的大小限制保持不变。
 
 ```bash
 bl knowledge doc upload --file ./short.mp4 --parser DOCMIND_LLM_VERSION_MEDIA --index-id idx-xxx --wait

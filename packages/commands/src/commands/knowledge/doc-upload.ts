@@ -114,9 +114,9 @@ export default defineCommand({
   notes: [
     {
       "en-US":
-        "Audio/video files support up to 2 GB (2,000,000,000 bytes) each. With --index-id, at most 50 local media files per call; no automatic splitting.",
+        "Audio/video files support up to 2 GiB (2,147,483,648 bytes) each. With --index-id, at most 50 local media files per call; no automatic splitting.",
       "zh-CN":
-        "音视频单文件上限 2 GB（2,000,000,000 字节）。带 --index-id 时每次最多 50 个本地音视频文件，不自动拆批。",
+        "音视频单文件上限 2 GiB（2,147,483,648 字节）。带 --index-id 时每次最多 50 个本地音视频文件，不自动拆批。",
     },
     {
       "en-US":

@@ -448,12 +448,12 @@ bl knowledge collection get --name my-collection
 | ----------------------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------- |
 | `--knowledge-type <document\|multimedia>` | string | no       | Knowledge type: document or multimedia                                                                    |
 | `--knowledge-scene <scene>`               | string | no       | Knowledge scene (requires --knowledge-type)                                                               |
-| `--multimodal-embedding-model <name>`     | string | no       | Multimodal embedding model name                                                                           |
+| `--multimodal-embedding-model <name>`     | string | no       | Multimodal embedding model (multimedia/visual scene: alias of --embedding-model)                          |
 | `--name <text>`                           | string | yes      | Knowledge base name (1-20 chars, unique in workspace)                                                     |
 | `--description <text>`                    | string | yes      | What this knowledge base holds and what it is for — tells bases apart in the workspace list (1-500 chars) |
 | `--doc-id <id>`                           | array  | no       | Data-center file id to import (repeatable); mutually exclusive with --category-id                         |
 | `--category-id <id>`                      | array  | no       | Import every file under this category (repeatable); mutually exclusive with --doc-id                      |
-| `--embedding-model <name>`                | string | no       | Embedding model name (document default: text-embedding-v4; multimedia: server default)                    |
+| `--embedding-model <name>`                | string | no       | Embedding model name (document default: text-embedding-v4; multimedia/visual scene: qwen3-vl-embedding)   |
 | `--chunk-size <n>`                        | number | no       | Chunk size in characters (default: 600, recommended 300-800)                                              |
 | `--wait`                                  | switch | no       | Poll the initial import job to a terminal state                                                           |
 | `--poll-interval <seconds>`               | number | no       | Polling interval when waiting (default: 5)                                                                |
@@ -463,11 +463,15 @@ bl knowledge collection get --name my-collection
 
 #### Notes
 
-- Structure/sink types are unstructured and BUILT_IN. Multimedia defaults to basic_multimedia_qa; explicit model flags are passed through.
+- Structure/sink types are unstructured and BUILT_IN. Multimedia uses basic_multimedia_qa, qwen3-vl-embedding and qwen3-vl-rerank with similar reranking. Allowed explicit models are validated by the server.
 - Returns the knowledge base id (pipelineId) and the initial import job id (ingestionId).
 - Use the import job status command (or --wait) to track the initial import.
 
 #### Examples
+
+```bash
+bl knowledge create --name media-demo --description media --doc-id file-xxx --knowledge-type multimedia
+```
 
 ```bash
 bl knowledge create --name demo --description 'product docs' --doc-id file-xxx --workspace-id ws-xxx
@@ -778,7 +782,7 @@ bl knowledge doc tag --doc-id file-a --doc-id file-b --tag final --mode overwrit
 
 #### Notes
 
-- Audio/video files support up to 2 GB (2,000,000,000 bytes) each. With --index-id, at most 50 local media files per call; no automatic splitting.
+- Audio/video files support up to 2 GiB (2,147,483,648 bytes) each. With --index-id, at most 50 local media files per call; no automatic splitting.
 - Pipeline: apply upload lease → PUT to OSS → register file → (with --index-id) create import job.
 - Without --category-id the workspace default category is resolved automatically.
 - Directories are scanned recursively; node_modules, .git, and similar are skipped automatically.
@@ -1059,6 +1063,7 @@ bl knowledge service copy --agent-id aid-xxx --workspace-id ws-xxx
 
 #### Notes
 
+- Rerank options depend on each knowledge base: image/multimedia or visual_perception_qa/basic_multimedia_qa use multimodal models (currently qwen3-vl-rerank). Hybrid rerank uses multimodal options if any bound base requires them. Explicit configs are preserved; the server validates model compatibility.
 - Without an explicit configuration the server applies its default agent settings.
 - The draft (beta) version can be tested via --agent-version beta on search/chat before deploying.
 - Requires the knowledge-base create permission in the workspace.
@@ -1261,6 +1266,7 @@ bl knowledge service list --scene search --status deployed
 
 #### Notes
 
+- Rerank options depend on each knowledge base: image/multimedia or visual_perception_qa/basic_multimedia_qa use multimodal models (currently qwen3-vl-rerank). Hybrid rerank uses multimodal options if any bound base requires them. Explicit configs are preserved; the server validates model compatibility.
 - Configuration changes only apply to the beta draft; published versions accept --version-desc only.
 - To change the configuration of a published version, first update the beta draft (this command without --agent-version or with --agent-version beta), then run service deploy to publish a new version.
 - Scalar config flags merge into the current draft config (read-merge-write); --config-file replaces the whole config and is mutually exclusive with them.

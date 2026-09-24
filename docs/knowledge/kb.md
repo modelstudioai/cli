@@ -349,6 +349,8 @@ bl knowledge stats --index-id idx-xxx --start 2026-07-30 --end 2026-07-31
 bl knowledge create --name media-demo --description "音视频资料" --doc-id file-example --knowledge-type multimedia
 ```
 
-媒体请求不自动套用普通文档的 `text-embedding-v4`，未指定模型时由服务端决定。`--embedding-model` 与 `--multimodal-embedding-model` 显式指定时各自透传；具体组合需符合服务端合同，本轮未进行真实模型组合验收。普通文档未使用新参数时保持原行为。
+音视频请求默认发送 `embeddingModelName=qwen3-vl-embedding`、`rerankModelName=qwen3-vl-rerank`、`rerankMode=similar`，与管控台切换逻辑及现有音视频库的只读配置一致。音视频场景的 `--multimodal-embedding-model` 是 `--embedding-model` 的别名，两者互斥，均映射到 `embeddingModelName`，不能误用图片建库的 `multimodalEmbeddingModelName`。视觉理解文档场景 `visual_perception_qa` 同样使用 VL embedding，但不默认加入 rerank。
+
+普通文档未使用新参数时仍为 `text-embedding-v4`。显式模型仍由服务端校验其允许列表；CLI 不把当前观察到的模型名称硬编码成永久白名单。只读核对不代表已新建媒体库进行解析验收。
 
 `list` 文本增加类型，`info` 文本展示 knowledgeType、knowledgeScene、multimodalEmbeddingModelName。JSON 保留服务端对象及未知字段。列表接口缺少这三个字段按后端 bug 处理；null/缺失不代表普通文档库，CLI 不发额外探测请求、不推断或写回，也不提供 multimediaVersion 参数。

@@ -163,9 +163,9 @@ describe("multimedia file rules", () => {
     "mov",
     "wmv",
   ];
-  test.each(extensions)("supports .%s with a decimal 2 GB hard limit", (extension) => {
+  test.each(extensions)("supports .%s with a 2 GiB hard limit", (extension) => {
     expect(UPLOAD_FORMAT_RULES[`.${extension}`]).toEqual({
-      maxBytes: 2_000_000_000,
+      maxBytes: 2_147_483_648,
       enforce: "block",
     });
     expect(
@@ -175,7 +175,7 @@ describe("multimedia file rules", () => {
   test("uppercase media extension is accepted", () => {
     expect(checkUploadFile(writeFixture("clip.MP4", "sample")).sizeBytes).toBe(6);
   });
-  test.each([512 * 1024 * 1024 + 1, 1_999_999_999, 2_000_000_000, 2_000_000_001])(
+  test.each([512 * 1024 * 1024 + 1, 2_147_483_647, 2_147_483_648, 2_147_483_649])(
     "media boundary %s is checked without reading data",
     async (size) => {
       const { openSync, ftruncateSync, closeSync, unlinkSync } = await import("node:fs");
@@ -184,7 +184,7 @@ describe("multimedia file rules", () => {
       ftruncateSync(descriptor, size);
       closeSync(descriptor);
       try {
-        if (size <= 2_000_000_000) expect(checkUploadFile(path).sizeBytes).toBe(size);
+        if (size <= 2_147_483_648) expect(checkUploadFile(path).sizeBytes).toBe(size);
         else expect(() => checkUploadFile(path)).toThrow();
       } finally {
         unlinkSync(path);
