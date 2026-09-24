@@ -36,11 +36,23 @@ function printDetail(detail: RagAgentDetail): void {
   if (!config) return;
   if (config.agent_policy) emitBare(`  policy: ${config.agent_policy}`);
   if (config.agent_model) emitBare(`  model: ${config.agent_model}`);
+  if (config.hybrid_rerank !== undefined)
+    emitBare(`  hybrid_rerank: ${JSON.stringify(config.hybrid_rerank)}`);
   if (config.temperature !== undefined) emitBare(`  temperature: ${config.temperature}`);
   for (const kbConfig of config.kb_search_configs ?? []) {
     const kbId = typeof kbConfig.id === "string" ? kbConfig.id : "?";
     const kbName = typeof kbConfig.name === "string" ? `  (${kbConfig.name})` : "";
     emitBare(`  kb: ${kbId}${kbName}`);
+    for (const key of [
+      "rerank",
+      "rerank_model",
+      "rerank_top_n",
+      "rerank_min_score",
+      "dense_similarity_top_k",
+      "sparse_similarity_top_k",
+    ]) {
+      if (kbConfig[key] !== undefined) emitBare(`    ${key}: ${JSON.stringify(kbConfig[key])}`);
+    }
   }
 }
 

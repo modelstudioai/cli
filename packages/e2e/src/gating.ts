@@ -138,3 +138,14 @@ export function isOssImportE2EReady(): boolean {
     !!process.env.BAILIAN_E2E_OSS_KEY?.trim()
   );
 }
+
+/** RAG ingestion is expensive: ordinary live/media/video gates never enable this journey. */
+export function isRagMediaWriteE2EReady(): boolean {
+  return (
+    isKbAdminE2EReady() &&
+    process.env.BAILIAN_E2E_RAG_MEDIA_WRITE === "1" &&
+    !!process.env.BAILIAN_E2E_RAG_MEDIA_FILE?.trim() &&
+    !!process.env.BAILIAN_E2E_RAG_MEDIA_RUN_ID?.trim() &&
+    ["upload", "existing-file"].includes(process.env.BAILIAN_E2E_RAG_MEDIA_PATH ?? "")
+  );
+}

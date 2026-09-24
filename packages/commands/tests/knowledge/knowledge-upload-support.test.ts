@@ -142,3 +142,53 @@ describe("expandUploadPaths", () => {
     }
   });
 });
+
+describe("multimedia file rules", () => {
+  const extensions = [
+    "aac",
+    "amr",
+    "flac",
+    "flv",
+    "m4a",
+    "mp3",
+    "mpeg",
+    "ogg",
+    "opus",
+    "wav",
+    "webm",
+    "wma",
+    "mp4",
+    "mkv",
+    "avi",
+    "mov",
+    "wmv",
+  ];
+  test.each(extensions)("supports .%s with a decimal 2 GB hard limit", (extension) => {
+    expect(UPLOAD_FORMAT_RULES[`.${extension}`]).toEqual({
+      maxBytes: 2_000_000_000,
+      enforce: "block",
+    });
+    expect(
+      checkUploadFile(writeFixture(`clip.${extension}`, "small synthetic fixture")).sizeBytes,
+    ).toBeGreaterThan(0);
+  });
+  test("uppercase media extension is accepted", () => {
+    expect(checkUploadFile(writeFixture("clip.MP4", "sample")).sizeBytes).toBe(6);
+  });
+  test.each([512 * 1024 * 1024 + 1, 1_999_999_999, 2_000_000_000, 2_000_000_001])(
+    "media boundary %s is checked without reading data",
+    async (size) => {
+      const { openSync, ftruncateSync, closeSync, unlinkSync } = await import("node:fs");
+      const path = join(fixtureDir, `sparse-${size}.mp4`);
+      const descriptor = openSync(path, "w");
+      ftruncateSync(descriptor, size);
+      closeSync(descriptor);
+      try {
+        if (size <= 2_000_000_000) expect(checkUploadFile(path).sizeBytes).toBe(size);
+        else expect(() => checkUploadFile(path)).toThrow();
+      } finally {
+        unlinkSync(path);
+      }
+    },
+  );
+});

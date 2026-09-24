@@ -69,6 +69,7 @@ import {
   knowledgeCollectionCreate,
   knowledgeCollectionGet,
   knowledgeDocImportOss,
+  knowledgeDocImport,
   mcpCall,
   mcpConnect,
   mcpDisconnect,
@@ -350,6 +351,7 @@ export const commands: Record<string, AnyCommand> = {
   "knowledge chunk delete": knowledgeChunkDelete,
   "knowledge stats": knowledgeKbStats,
   "knowledge doc import-oss": knowledgeDocImportOss,
+  "knowledge doc import": knowledgeDocImport,
   // Data-center commands live under knowledge (no separate connector namespace);
   // the user-facing term for connector is "collection".
   "knowledge collection create": knowledgeCollectionCreate,

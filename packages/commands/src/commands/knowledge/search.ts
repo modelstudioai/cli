@@ -1,4 +1,8 @@
+import { readFileSync } from "node:fs";
+import { firstNonEmptyText, mediaSummary } from "./media-output.ts";
 import {
+  BailianError,
+  ExitCode,
   defineCommand,
   knowledgeSearchEndpoint,
   detectOutputFormat,
@@ -10,14 +14,21 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const SEARCH_FLAGS = {
+  kbSearchConfigsFile: {
+    type: "string",
+    valueHint: "<path>",
+    description: {
+      "en-US": "JSON array of knowledge IDs and online search_filters",
+      "zh-CN": "知识库 ID 与在线 search_filters 的 JSON 数组文件",
+    },
+  },
   query: {
     type: "string",
     valueHint: "<text>",
     description: {
-      "en-US": "Search query text (required, cannot be empty)",
-      "zh-CN": "搜索查询文本（必填且不能为空）",
+      "en-US": "Search text (or provide --image)",
+      "zh-CN": "搜索文本（或提供 --image）",
     },
-    required: true,
   },
   agentId: {
     type: "string",
@@ -57,14 +68,14 @@ export default defineCommand({
     "zh-CN": "搜索百炼知识库（RAG 语义检索）",
   },
   auth: "apiKey",
-  usageArgs: "--query <text> --agent-id <id> [flags]",
+  usageArgs: "--agent-id <id> (--query <text> | --image <url>) [flags]",
   flags: SEARCH_FLAGS,
   notes: [
     {
       "en-US":
-        "Retrieval scope and strategy (multi-index weighting, routing, reranking, etc.) are driven by the agent_id service config. Only query and agent_id are required.",
+        "Retrieval scope and strategy (multi-index weighting, routing, reranking, etc.) are driven by the agent_id service config. Provide agent_id and at least one query or image.",
       "zh-CN":
-        "检索范围与策略（多索引权重、路由、重排序等）由 agent_id 服务配置决定。仅 query 和 agent_id 必填。",
+        "检索范围与策略（多索引权重、路由、重排序等）由 agent_id 服务配置决定。必须提供 agent_id，以及 query 或 image。",
     },
     {
       "en-US":
@@ -94,6 +105,11 @@ export default defineCommand({
         '--api-key $DASHSCOPE_API_KEY --query "测试搜索" --agent-id aid-xxx --workspace-id ws-xxx --image https://example.com/img.jpg',
     },
   ],
+  validate(flags) {
+    if (!flags.query?.trim() && !flags.image?.some((url) => url.trim()))
+      return { "en-US": "Provide --query or --image.", "zh-CN": "请提供 --query 或 --image。" };
+    return undefined;
+  },
   async run(ctx) {
     const { settings, flags } = ctx;
 
@@ -102,7 +118,7 @@ export default defineCommand({
     const format = detectOutputFormat(settings.output);
 
     const body: KnowledgeSearchRequest = {
-      query: flags.query,
+      query: flags.query ?? "",
       agent_id: flags.agentId,
     };
 
@@ -114,6 +130,47 @@ export default defineCommand({
 
     if (flags.image && flags.image.length > 0) {
       body.images = flags.image;
+    }
+
+    if (flags.kbSearchConfigsFile !== undefined) {
+      const raw = readFileSync(flags.kbSearchConfigsFile, "utf8");
+      let configs: unknown;
+      try {
+        configs = JSON.parse(raw);
+      } catch {
+        throw new BailianError(
+          ctx.localize({
+            "en-US": "Search configuration must contain valid JSON.",
+            "zh-CN": "检索配置文件必须包含合法 JSON。",
+          }),
+          ExitCode.USAGE,
+        );
+      }
+      const ids = new Set<string>();
+      if (
+        !Array.isArray(configs) ||
+        configs.some((entry: unknown) => {
+          if (!entry || typeof entry !== "object" || Array.isArray(entry)) return true;
+          const record = entry as Record<string, unknown>;
+          if (typeof record.id !== "string" || !record.id.trim() || ids.has(record.id)) return true;
+          ids.add(record.id);
+          return (
+            Object.keys(record).some((key) => key !== "id" && key !== "search_filters") ||
+            (record.search_filters !== undefined && !Array.isArray(record.search_filters))
+          );
+        })
+      ) {
+        throw new BailianError(
+          ctx.localize({
+            "en-US":
+              "Online search configuration must be an array with unique nonempty id values and optional search_filters arrays; offline strategy fields are not accepted.",
+            "zh-CN":
+              "在线检索配置必须是数组，各项包含唯一且非空的 id，可选 search_filters 数组；不接受离线策略字段。",
+          }),
+          ExitCode.USAGE,
+        );
+      }
+      body.kb_search_configs = configs as NonNullable<KnowledgeSearchRequest["kb_search_configs"]>;
     }
 
     const url = knowledgeSearchEndpoint(workspaceId);
@@ -134,10 +191,12 @@ export default defineCommand({
       if (nodes.length === 0) {
         emitBare("No results found.");
       } else {
-        for (let i = 0; i < nodes.length; i++) {
-          const node = nodes[i]!;
-          emitBare(`[${i + 1}] (score: ${node.score.toFixed(4)})`);
-          emitBare(node.text);
+        for (const [nodeIndex, node] of nodes.entries()) {
+          emitBare(`[${nodeIndex + 1}] (score: ${node.score.toFixed(4)})`);
+          emitBare(
+            firstNonEmptyText(node.text, node.metadata?.content, node.metadata?.clip_description),
+          );
+          for (const line of mediaSummary(node.metadata ?? {})) emitBare(line);
           emitBare("");
         }
       }

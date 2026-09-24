@@ -204,3 +204,56 @@ describe("e2e: knowledge kb create", () => {
 });
 
 // The live self-cleaning chain lives in knowledge-kb-delete.e2e.test.ts (upload → create → delete).
+
+describe("multimedia creation contract", () => {
+  test("explicit media models and fixed scene map without document defaults", async () => {
+    const result = await runCommandE2e(KNOWLEDGE_KB_CREATE_ROUTES, [
+      "knowledge",
+      "create",
+      "--name",
+      "media",
+      "--description",
+      "sample",
+      "--doc-id",
+      "file_test",
+      "--knowledge-type",
+      "multimedia",
+      "--multimodal-embedding-model",
+      "fixture-vl",
+      "--workspace-id",
+      "ws_test",
+      "--dry-run",
+      "--output",
+      "json",
+    ]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    const output = parseStdoutJson<{ request: Record<string, unknown> }>(result.stdout);
+    expect(output.request).toMatchObject({
+      knowledgeType: "multimedia",
+      knowledgeScene: "basic_multimedia_qa",
+      multimodalEmbeddingModelName: "fixture-vl",
+      structureType: "unstructured",
+    });
+    expect(output.request).not.toHaveProperty("embeddingModelName");
+  });
+  test("conflicting media scene fails before network", async () => {
+    const result = await runCommandE2e(KNOWLEDGE_KB_CREATE_ROUTES, [
+      "knowledge",
+      "create",
+      "--name",
+      "media",
+      "--description",
+      "sample",
+      "--doc-id",
+      "file_test",
+      "--knowledge-type",
+      "multimedia",
+      "--knowledge-scene",
+      "basic_document_qa",
+      "--workspace-id",
+      "ws_test",
+      "--dry-run",
+    ]);
+    expect(result.exitCode).toBe(2);
+  });
+});

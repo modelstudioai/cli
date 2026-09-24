@@ -96,6 +96,10 @@ export default defineCommand({
   flags: CHUNK_ADD_FLAGS,
   notes: [
     {
+      "en-US": "Adding chunks to multimedia knowledge bases is not supported by the service.",
+      "zh-CN": "服务端不支持向音视频知识库新增切片。",
+    },
+    {
       "en-US": "Document / table / image knowledge bases are supported; audio-video ones are not.",
       "zh-CN": "支持文档、表格和图片知识库；不支持音视频知识库。",
     },

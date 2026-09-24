@@ -1079,3 +1079,22 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge service 参数全覆盖 (l
     }
   }, 300_000);
 });
+
+test("create rejects ambiguous configuration sources", async () => {
+  const result = await runCommandE2e(KNOWLEDGE_SERVICE_ROUTES, [
+    "knowledge",
+    "service",
+    "create",
+    "--name",
+    "test",
+    "--scene",
+    "search",
+    "--index-id",
+    "index_test",
+    "--config-file",
+    "not-read.json",
+    "--dry-run",
+  ]);
+  expect(result.exitCode).toBe(2);
+  expect(result.stderr).toContain("either --config-file or --index-id");
+});

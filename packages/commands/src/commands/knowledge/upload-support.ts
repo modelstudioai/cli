@@ -3,9 +3,33 @@
 // "default" (verified against the live API), so no listCategory resolution is needed.
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, extname, join } from "node:path";
-import { BailianError, ExitCode } from "bailian-cli-core";
+import { BailianError, ExitCode, type LocalizedText } from "bailian-cli-core";
 
 const MB = 1024 * 1024;
+/** Decimal GB. Kept explicit until the backend byte-unit contract is confirmed. */
+export const MEDIA_MAX_BYTES = 2_000_000_000;
+export const MEDIA_EXTENSIONS = new Set([
+  ".aac",
+  ".amr",
+  ".flac",
+  ".flv",
+  ".m4a",
+  ".mp3",
+  ".mpeg",
+  ".ogg",
+  ".opus",
+  ".wav",
+  ".webm",
+  ".wma",
+  ".mp4",
+  ".mkv",
+  ".avi",
+  ".mov",
+  ".wmv",
+]);
+export function isMediaFile(filePath: string): boolean {
+  return MEDIA_EXTENSIONS.has(extname(filePath).toLowerCase());
+}
 
 export interface UploadFormatRule {
   maxBytes: number;
@@ -19,6 +43,12 @@ export interface UploadFormatRule {
  * a server-side rejection would be passed through verbatim.
  */
 export const UPLOAD_FORMAT_RULES: Record<string, UploadFormatRule> = {
+  ...Object.fromEntries(
+    [...MEDIA_EXTENSIONS].map((extension) => [
+      extension,
+      { maxBytes: MEDIA_MAX_BYTES, enforce: "block" as const },
+    ]),
+  ),
   ".doc": { maxBytes: 150 * MB, enforce: "block" },
   ".docx": { maxBytes: 150 * MB, enforce: "block" },
   ".ppt": { maxBytes: 150 * MB, enforce: "block" },
@@ -137,7 +167,11 @@ export function expandUploadPaths(paths: string[]): ExpandResult {
 }
 
 /** Local pre-flight check before reading the file: extension allowlist + hard/soft size limits. File I/O failure → GENERAL + errno hint. */
-export function checkUploadFile(filePath: string): { sizeBytes: number; warning?: string } {
+export function checkUploadFile(
+  filePath: string,
+  localize: (text: LocalizedText) => string = (text) =>
+    typeof text === "string" ? text : text["en-US"],
+): { sizeBytes: number; warning?: string } {
   const extension = extname(filePath).toLowerCase();
   const rule = UPLOAD_FORMAT_RULES[extension];
   if (!rule) {
@@ -162,7 +196,10 @@ export function checkUploadFile(filePath: string): { sizeBytes: number; warning?
     const limitMb = rule.maxBytes / MB;
     if (rule.enforce === "block") {
       throw new BailianError(
-        `File exceeds the ${limitMb} MB limit for ${extension}: ${basename(filePath)}`,
+        localize({
+          "en-US": `File exceeds the ${isMediaFile(filePath) ? "2 GB (2,000,000,000 bytes)" : `${limitMb} MB`} limit for ${extension}: ${basename(filePath)}`,
+          "zh-CN": `文件超过 ${extension} 的 ${isMediaFile(filePath) ? "2 GB（2,000,000,000 字节）" : `${limitMb} MB`} 上限：${basename(filePath)}`,
+        }),
         ExitCode.USAGE,
       );
     }

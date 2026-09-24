@@ -20,6 +20,28 @@ import {
 } from "./shared.ts";
 
 const KB_CREATE_FLAGS = {
+  knowledgeType: {
+    type: "string",
+    valueHint: "<type>",
+    choices: ["document", "multimedia"] as const,
+    description: {
+      "en-US": "Knowledge type: document or multimedia",
+      "zh-CN": "知识类型：document 或 multimedia",
+    },
+  },
+  knowledgeScene: {
+    type: "string",
+    valueHint: "<scene>",
+    description: {
+      "en-US": "Knowledge scene (requires --knowledge-type)",
+      "zh-CN": "知识场景（需要 --knowledge-type）",
+    },
+  },
+  multimodalEmbeddingModel: {
+    type: "string",
+    valueHint: "<name>",
+    description: { "en-US": "Multimodal embedding model name", "zh-CN": "多模态向量模型名称" },
+  },
   name: {
     type: "string",
     valueHint: "<text>",
@@ -60,8 +82,9 @@ const KB_CREATE_FLAGS = {
     type: "string",
     valueHint: "<name>",
     description: {
-      "en-US": "Embedding model name (default: text-embedding-v4)",
-      "zh-CN": "Embedding 模型名称（默认：text-embedding-v4）",
+      "en-US":
+        "Embedding model name (document default: text-embedding-v4; multimedia: server default)",
+      "zh-CN": "Embedding 模型名称（文档默认 text-embedding-v4；音视频采用服务端默认）",
     },
   },
   chunkSize: {
@@ -122,8 +145,9 @@ export default defineCommand({
   notes: [
     {
       "en-US":
-        "Structure/sink types are fixed to the default document knowledge base (unstructured, BUILT_IN storage).",
-      "zh-CN": "结构和存储类型固定为默认文档知识库（unstructured、BUILT_IN 存储）。",
+        "Structure/sink types are unstructured and BUILT_IN. Multimedia defaults to basic_multimedia_qa; explicit model flags are passed through.",
+      "zh-CN":
+        "结构和存储类型为 unstructured、BUILT_IN。音视频场景默认 basic_multimedia_qa；显式模型参数原样传递。",
     },
     {
       "en-US":
@@ -146,6 +170,31 @@ export default defineCommand({
     },
   ],
   validate(flags) {
+    if (flags.knowledgeScene && !flags.knowledgeType)
+      return {
+        "en-US": "--knowledge-scene requires --knowledge-type.",
+        "zh-CN": "--knowledge-scene 需要 --knowledge-type。",
+      };
+    if (
+      flags.knowledgeType === "multimedia" &&
+      flags.knowledgeScene &&
+      flags.knowledgeScene !== "basic_multimedia_qa"
+    )
+      return {
+        "en-US": "Multimedia requires basic_multimedia_qa.",
+        "zh-CN": "音视频知识库场景必须为 basic_multimedia_qa。",
+      };
+    if (
+      flags.knowledgeType === "document" &&
+      flags.knowledgeScene &&
+      ![
+        "basic_document_qa",
+        "visual_perception_qa",
+        "lite_document_qa",
+        "visual_document_qa",
+      ].includes(flags.knowledgeScene)
+    )
+      return { "en-US": "Invalid document knowledge scene.", "zh-CN": "文档知识库场景无效。" };
     if (flags.name.length < 1 || flags.name.length > 20) return "--name must be 1-20 characters";
     if (flags.description.length < 1 || flags.description.length > 500) {
       return "--description must be 1-500 characters";
@@ -171,7 +220,22 @@ export default defineCommand({
       description: flags.description,
       structureType: "unstructured",
       sinkType: "BUILT_IN",
-      embeddingModelName: flags.embeddingModel ?? "text-embedding-v4",
+      ...(flags.knowledgeType
+        ? {
+            knowledgeType: flags.knowledgeType,
+            knowledgeScene:
+              flags.knowledgeScene ??
+              (flags.knowledgeType === "multimedia" ? "basic_multimedia_qa" : "basic_document_qa"),
+          }
+        : {}),
+      ...(flags.embeddingModel !== undefined
+        ? { embeddingModelName: flags.embeddingModel }
+        : flags.knowledgeType === "multimedia"
+          ? {}
+          : { embeddingModelName: "text-embedding-v4" }),
+      ...(flags.multimodalEmbeddingModel !== undefined
+        ? { multimodalEmbeddingModelName: flags.multimodalEmbeddingModel }
+        : {}),
       chunkSize: flags.chunkSize ?? 600,
       ...buildDataSourceFields(flags),
     };

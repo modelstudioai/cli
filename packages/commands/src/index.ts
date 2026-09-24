@@ -304,3 +304,5 @@ export {
   sandboxTemplateList,
   sandboxTemplateUpdate,
 } from "./commands/sandbox/template.ts";
+
+export { default as knowledgeDocImport } from "./commands/knowledge/doc-import.ts";

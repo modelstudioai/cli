@@ -1,3 +1,4 @@
+import { parseConfigFile } from "./service-update.ts";
 import {
   defineCommand,
   ragEndpoint,
@@ -10,6 +11,14 @@ import { emitResult, emitBare } from "bailian-cli-runtime";
 import { agentMutationField, resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const SERVICE_CREATE_FLAGS = {
+  configFile: {
+    type: "string",
+    valueHint: "<path>",
+    description: {
+      "en-US": "Complete agent_config JSON file (excludes --index-id)",
+      "zh-CN": "完整 agent_config JSON 文件（与 --index-id 互斥）",
+    },
+  },
   name: {
     type: "string",
     valueHint: "<text>",
@@ -81,6 +90,11 @@ export default defineCommand({
     "--name my-search --scene search --index-id idx-xxx",
   ],
   validate(flags) {
+    if (flags.configFile !== undefined && flags.indexId !== undefined)
+      return {
+        "en-US": "Use either --config-file or --index-id.",
+        "zh-CN": "--config-file 与 --index-id 不能同时使用。",
+      };
     if (flags.name.length > 200) return "--name must be at most 200 characters";
     if (flags.scene !== "chat" && flags.scene !== "search") {
       return "--scene must be chat or search";
@@ -102,7 +116,11 @@ export default defineCommand({
       agent_name: flags.name,
       agent_scene: flags.scene,
       ...(flags.description ? { agent_desc: flags.description } : {}),
-      ...(flags.indexId ? { agent_config: { kb_search_configs: [{ id: flags.indexId }] } } : {}),
+      ...(flags.configFile !== undefined
+        ? { agent_config: parseConfigFile(flags.configFile) }
+        : flags.indexId
+          ? { agent_config: { kb_search_configs: [{ id: flags.indexId }] } }
+          : {}),
     };
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.agentCreate);
 

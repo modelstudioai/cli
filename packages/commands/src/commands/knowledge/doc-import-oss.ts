@@ -10,7 +10,10 @@ import {
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
+import { PARSER_FLAGS, readParserOptions } from "./parser-config.ts";
+
 const DOC_IMPORT_OSS_FLAGS = {
+  ...PARSER_FLAGS,
   bucket: {
     type: "string",
     valueHint: "<name>",
@@ -103,13 +106,17 @@ export default defineCommand({
     const workspaceId = resolveWorkspaceId(ctx);
     const format = detectOutputFormat(settings.output);
 
-    // categoryType fixed to UNSTRUCTURED; parser not exposed as a flag (defaults to AUTO_SELECT)
+    const parserOptions = readParserOptions(flags, ctx.localize);
     const body = {
       categoryId: flags.categoryId ?? "default",
       categoryType: "UNSTRUCTURED",
       ossBucket: flags.bucket,
       ossRegionId: flags.region,
-      fileDetails: flags.ossKey.map((ossKey) => ({ fileName: basename(ossKey), ossKey })),
+      fileDetails: flags.ossKey.map((ossKey) => ({
+        fileName: basename(ossKey),
+        ossKey,
+        ...parserOptions,
+      })),
       ...(flags.tag?.length ? { tags: flags.tag } : {}),
       ...(flags.overwrite ? { overWriteFileByOssKey: true } : {}),
     };

@@ -1,6 +1,5 @@
 // Orchestration command: local file → data center → (optional) import into a knowledge base.
-import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { statSync } from "node:fs";
 import { basename } from "node:path";
 import {
   defineCommand,
@@ -25,9 +24,27 @@ import {
   pollImportJob,
   withPartialSuccessHint,
 } from "./shared.ts";
-import { checkUploadFile, expandUploadPaths } from "./upload-support.ts";
+import {
+  checkUploadFile,
+  expandUploadPaths,
+  isMediaFile,
+  UPLOAD_FORMAT_RULES,
+} from "./upload-support.ts";
+
+import { computeFileMd5, putFileStream } from "./upload-stream.ts";
+import { PARSER_FLAGS, readParserOptions } from "./parser-config.ts";
 
 const DOC_UPLOAD_FLAGS = {
+  categoryType: {
+    type: "string",
+    valueHint: "<type>",
+    choices: ["UNSTRUCTURED", "SESSION_FILE"] as const,
+    description: {
+      "en-US": "File category type (SESSION_FILE for temporary chat attachments)",
+      "zh-CN": "文件类目类型（SESSION_FILE 用于临时会话附件）",
+    },
+  },
+  ...PARSER_FLAGS,
   file: {
     type: "array",
     valueHint: "<path>",
@@ -97,6 +114,12 @@ export default defineCommand({
   notes: [
     {
       "en-US":
+        "Audio/video files support up to 2 GB (2,000,000,000 bytes) each. With --index-id, at most 50 local media files per call; no automatic splitting.",
+      "zh-CN":
+        "音视频单文件上限 2 GB（2,000,000,000 字节）。带 --index-id 时每次最多 50 个本地音视频文件，不自动拆批。",
+    },
+    {
+      "en-US":
         "Pipeline: apply upload lease → PUT to OSS → register file → (with --index-id) create import job.",
       "zh-CN":
         "处理流程：申请上传凭证 → PUT 到 OSS → 注册文件 →（传入 --index-id 时）创建导入任务。",
@@ -123,6 +146,15 @@ export default defineCommand({
     "--file ./docs/ --dry-run --verbose",
   ],
   validate(flags) {
+    if (
+      flags.categoryType === "SESSION_FILE" &&
+      (flags.indexId || flags.parser !== undefined || flags.parserConfigFile !== undefined)
+    )
+      return {
+        "en-US":
+          "SESSION_FILE uses the default parser and cannot be imported with --index-id; omit parser options.",
+        "zh-CN": "SESSION_FILE 使用默认解析器，不能通过 --index-id 入库；请省略 parser 选项。",
+      };
     if (flags.wait && !flags.indexId) return "--wait requires --index-id";
     return undefined;
   },
@@ -130,22 +162,33 @@ export default defineCommand({
     const { settings, flags } = ctx;
     const workspaceId = resolveWorkspaceId(ctx);
     const format = detectOutputFormat(settings.output);
+    const parserOptions = { parser: "AUTO_SELECT", ...readParserOptions(flags, ctx.localize) };
 
     // Expand directories into individual file paths; unsupported extensions are
     // collected into `skipped` rather than throwing (directory-scan semantics)
     const { files: expandedFiles, skipped } = expandUploadPaths(flags.file);
+    if (flags.indexId && expandedFiles.filter(isMediaFile).length > 50) {
+      throw new BailianError(
+        ctx.localize({
+          "en-US":
+            "At most 50 media files can be imported in one call. Split the input before uploading.",
+          "zh-CN": "每次最多导入 50 个音视频文件，请在上传前拆分输入。",
+        }),
+        ExitCode.USAGE,
+      );
+    }
     if (expandedFiles.length === 0) {
       throw new BailianError(
         "No supported files found",
         ExitCode.USAGE,
-        `Supported formats: .pdf .doc .docx .ppt .pptx .xls .xlsx .csv .md .txt .html .png .jpg .jpeg .bmp .gif`,
+        `Supported formats: ${Object.keys(UPLOAD_FORMAT_RULES).join(" ")}`,
       );
     }
 
     // Local pre-flight validation also runs in dry-run (rehearsal semantics: surface
     // file problems early); exceeding a soft limit only warns
     const checkedFiles = expandedFiles.map((filePath) => {
-      const checked = checkUploadFile(filePath);
+      const checked = checkUploadFile(filePath, ctx.localize);
       if (checked.warning) process.stderr.write(`Warning: ${checked.warning}\n`);
       return { filePath, sizeBytes: checked.sizeBytes };
     });
@@ -159,6 +202,7 @@ export default defineCommand({
           endpoint: ragEndpoint(workspaceId, RAG_PATHS.applyFileUploadLease),
           request: {
             category: categoryPlaceholder,
+            ...(flags.categoryType ? { categoryType: flags.categoryType } : {}),
             fileName: basename(checkedFile.filePath),
             sizeBytes: String(checkedFile.sizeBytes), // gotcha: must be a string
             contentMd5: "<md5-base64>",
@@ -175,7 +219,8 @@ export default defineCommand({
           request: {
             leaseId: "<leaseId>",
             category: categoryPlaceholder,
-            parser: "AUTO_SELECT",
+            ...(flags.categoryType ? { categoryType: flags.categoryType } : {}),
+            ...parserOptions,
             ...(flags.tag?.length ? { tags: flags.tag } : {}),
           } as unknown,
         },
@@ -206,8 +251,17 @@ export default defineCommand({
     const uploaded: UploadedFile[] = [];
     for (const checkedFile of checkedFiles) {
       try {
-        const fileBuffer = readFileSync(checkedFile.filePath);
-        const contentMd5 = createHash("md5").update(fileBuffer).digest("base64");
+        const originalStat = statSync(checkedFile.filePath);
+        if (originalStat.size !== checkedFile.sizeBytes) {
+          throw new BailianError(
+            ctx.localize({
+              "en-US": "The source file changed since validation; upload was stopped.",
+              "zh-CN": "源文件在校验后发生变化，已停止上传。",
+            }),
+            ExitCode.GENERAL,
+          );
+        }
+        const contentMd5 = await computeFileMd5(checkedFile.filePath);
 
         // 1) Apply for an upload lease (gotcha: the category parameter is named
         //    category, not categoryId; sizeBytes must be a string)
@@ -216,6 +270,7 @@ export default defineCommand({
           method: "POST",
           body: {
             category: categoryId,
+            ...(flags.categoryType ? { categoryType: flags.categoryType } : {}),
             fileName: basename(checkedFile.filePath),
             sizeBytes: String(checkedFile.sizeBytes),
             contentMd5,
@@ -233,17 +288,36 @@ export default defineCommand({
         // 2) OSS upload: goes to the OSS host, not the DashScope gateway — native fetch without a Bearer header
         let ossResponse: Response;
         try {
-          ossResponse = await fetch(leaseParam.url, {
-            method: leaseParam.method ?? "PUT",
-            headers: leaseParam.headers,
-            body: fileBuffer,
-          });
+          ossResponse = await putFileStream(
+            checkedFile.filePath,
+            { ...leaseParam, url: leaseParam.url },
+            AbortSignal.timeout(settings.timeout * 1000),
+          );
         } catch (error) {
-          const causeCode = (error as { cause?: { code?: string } }).cause?.code;
+          const fileError = error as { code?: string; cause?: { code?: string } };
+          const causeCode = fileError.code ?? fileError.cause?.code;
+          const localReadFailure = ["ENOENT", "EACCES", "EPERM", "EISDIR", "EIO"].includes(
+            causeCode ?? "",
+          );
           throw new BailianError(
-            `OSS upload failed for ${basename(checkedFile.filePath)}`,
-            ExitCode.NETWORK,
-            causeCode ? `Network error (${causeCode}).` : undefined,
+            ctx.localize({
+              "en-US": `OSS upload failed for ${basename(checkedFile.filePath)}`,
+              "zh-CN": `文件 ${basename(checkedFile.filePath)} 的 OSS 上传失败`,
+            }),
+            localReadFailure ? ExitCode.GENERAL : ExitCode.NETWORK,
+            causeCode
+              ? ctx.localize(
+                  localReadFailure
+                    ? {
+                        "en-US": `File read error (${causeCode}); check that the source exists and is readable.`,
+                        "zh-CN": `文件读取错误（${causeCode}）；请检查源文件是否存在且可读。`,
+                      }
+                    : {
+                        "en-US": `Network error (${causeCode}).`,
+                        "zh-CN": `网络错误（${causeCode}）。`,
+                      },
+                )
+              : undefined,
             { cause: error },
           );
         }
@@ -255,6 +329,21 @@ export default defineCommand({
           );
         }
 
+        const uploadedStat = statSync(checkedFile.filePath);
+        if (
+          originalStat.size !== uploadedStat.size ||
+          originalStat.mtimeMs !== uploadedStat.mtimeMs ||
+          originalStat.ino !== uploadedStat.ino
+        ) {
+          throw new BailianError(
+            ctx.localize({
+              "en-US": "The source file changed during upload; registration was stopped.",
+              "zh-CN": "源文件在上传过程中发生变化，已停止注册。",
+            }),
+            ExitCode.GENERAL,
+          );
+        }
+
         // 3) Register the file
         const added = await ctx.client.requestJson<RagAddFileResponse>({
           path: ragEndpoint(workspaceId, RAG_PATHS.addFile),
@@ -262,7 +351,8 @@ export default defineCommand({
           body: {
             leaseId,
             category: categoryId,
-            parser: "AUTO_SELECT",
+            ...(flags.categoryType ? { categoryType: flags.categoryType } : {}),
+            ...parserOptions,
             ...(flags.tag?.length ? { tags: flags.tag } : {}),
           },
         });
@@ -276,7 +366,7 @@ export default defineCommand({
         uploaded.push({ path: checkedFile.filePath, fileId });
       } catch (error) {
         // Partial-failure semantics: abort with an error, listing already-registered
-        // fileIds in the hint (re-uploading is cheap and idempotent)
+        // fileIds in the hint so users can resume without re-uploading
         if (uploaded.length > 0) {
           throw withPartialSuccessHint(
             error,
@@ -291,32 +381,39 @@ export default defineCommand({
     let ingestionId: string | undefined;
     let finalStatus: string | undefined;
     if (flags.indexId) {
-      const job = await ctx.client.requestJson<RagJobCreateResponse>({
-        path: ragEndpoint(workspaceId, RAG_PATHS.indexJobCreate),
-        method: "POST",
-        body: {
-          indexId: flags.indexId,
-          // Live-verified: the field name is docIds (not documentIds as in the
-          // public docs); omitting sourceType would import the entire data center.
-          sourceType: "DATA_CENTER_FILE",
-          docIds: uploaded.map((item) => item.fileId),
-        },
-      });
-      ingestionId = job.data?.ingestionId;
-      if (flags.wait && ingestionId) {
-        const statusResponse = await pollImportJob(ctx.client, settings, {
-          statusUrl: importJobStatusUrl(workspaceId, flags.indexId, ingestionId).toString(),
-          intervalSec: flags.pollInterval ?? 5,
+      try {
+        const job = await ctx.client.requestJson<RagJobCreateResponse>({
+          path: ragEndpoint(workspaceId, RAG_PATHS.indexJobCreate),
+          method: "POST",
+          body: {
+            indexId: flags.indexId,
+            // Live-verified: the field name is docIds (not documentIds as in the
+            // public docs); omitting sourceType would import the entire data center.
+            sourceType: "DATA_CENTER_FILE",
+            docIds: uploaded.map((item) => item.fileId),
+          },
         });
-        finalStatus = importJobStatus(statusResponse);
-        // Job finished but some documents failed to parse → non-zero exit, server message passed through verbatim
-        if (failedImportDocs(statusResponse).length > 0) {
-          throw new BailianError(
-            importJobFailureMessage(statusResponse, "Import job reported document failures."),
-            ExitCode.GENERAL,
-            `Registered file ids: ${uploaded.map((item) => item.fileId).join(", ")}`,
-          );
+        ingestionId = job.data?.ingestionId;
+        if (flags.wait && ingestionId) {
+          const statusResponse = await pollImportJob(ctx.client, settings, {
+            statusUrl: importJobStatusUrl(workspaceId, flags.indexId, ingestionId).toString(),
+            intervalSec: flags.pollInterval ?? 5,
+          });
+          finalStatus = importJobStatus(statusResponse);
+          // Job finished but some documents failed to parse → non-zero exit, server message passed through verbatim
+          if (failedImportDocs(statusResponse).length > 0) {
+            throw new BailianError(
+              importJobFailureMessage(statusResponse, "Import job reported document failures."),
+              ExitCode.GENERAL,
+              `Registered file ids: ${uploaded.map((item) => item.fileId).join(", ")}`,
+            );
+          }
         }
+      } catch (error) {
+        throw withPartialSuccessHint(
+          error,
+          `fileIds: ${uploaded.map((item) => item.fileId).join(", ")}; indexId: ${flags.indexId}${ingestionId ? `; ingestionId: ${ingestionId}` : ""}`,
+        );
       }
     }
 

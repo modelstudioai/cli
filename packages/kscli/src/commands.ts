@@ -36,6 +36,7 @@ import {
   knowledgeCollectionCreate,
   knowledgeCollectionGet,
   knowledgeDocImportOss,
+  knowledgeDocImport,
 } from "bailian-cli-commands";
 
 // kscli (Knowledge Studio CLI): lightweight RAG product. Ships config/update
@@ -80,4 +81,5 @@ export const commands: Record<string, AnyCommand> = {
   "collection create": knowledgeCollectionCreate,
   "collection get": knowledgeCollectionGet,
   "doc import-oss": knowledgeDocImportOss,
+  "doc import": knowledgeDocImport,
 };

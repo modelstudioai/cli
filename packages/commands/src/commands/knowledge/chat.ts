@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { createChatAccumulator } from "./chat-events.ts";
+import { mediaSummary } from "./media-output.ts";
 import {
   defineCommand,
   knowledgeChatEndpoint,
@@ -10,12 +13,37 @@ import {
   type KnowledgeChatContentPart,
   type KnowledgeChatMessage,
   type KnowledgeChatRequest,
-  type KnowledgeChatStreamChunk,
 } from "bailian-cli-core";
-import { ansi, emitResult, emitBare } from "bailian-cli-runtime";
+import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 
 const CHAT_FLAGS = {
+  messagesFile: {
+    type: "string",
+    valueHint: "<path>",
+    description: {
+      "en-US": "Complete messages JSON array, including tool history (excludes --message/--image)",
+      "zh-CN": "完整 messages JSON 数组，支持工具历史（与 --message/--image 互斥）",
+    },
+  },
+  sessionFileId: {
+    type: "array",
+    valueHint: "<fileId>",
+    description: {
+      "en-US": "Session file ID (repeatable, up to 10; requires service file preprocessing)",
+      "zh-CN": "会话文件 ID（可重复，最多 10 个；服务需开启文件预解析）",
+    },
+  },
+  enableCacheControl: {
+    type: "boolean",
+    valueHint: "<true|false>",
+    description: { "en-US": "Explicit context cache control", "zh-CN": "显式上下文缓存开关" },
+  },
+  requestId: {
+    type: "string",
+    valueHint: "<id>",
+    description: { "en-US": "Business request ID", "zh-CN": "业务请求 ID" },
+  },
   message: {
     type: "array",
     valueHint: "<text>",
@@ -69,12 +97,12 @@ type ChatFlags = ParsedFlags<typeof CHAT_FLAGS>;
 function parseMessages(flags: ChatFlags): KnowledgeChatMessage[] {
   const messages: KnowledgeChatMessage[] = [];
   if (flags.message) {
-    const validRoles = new Set(["user", "assistant"]);
-    for (const m of flags.message) {
+    const validRoles = new Set(["user", "assistant", "tool"]);
+    for (const message of flags.message) {
       // Try JSON object first (advanced usage)
-      if (m.startsWith("{")) {
+      if (message.startsWith("{")) {
         try {
-          const parsed = JSON.parse(m) as { role?: string; content?: unknown };
+          const parsed = JSON.parse(message) as { role?: string; content?: unknown };
           if (parsed.role && validRoles.has(parsed.role) && parsed.content !== undefined) {
             messages.push(parsed as KnowledgeChatMessage);
             continue;
@@ -85,13 +113,16 @@ function parseMessages(flags: ChatFlags): KnowledgeChatMessage[] {
       }
 
       // Simple role:content or plain text
-      const colonIdx = m.indexOf(":");
-      const maybeRole = colonIdx !== -1 ? m.slice(0, colonIdx) : "";
+      const colonIdx = message.indexOf(":");
+      const maybeRole = colonIdx !== -1 ? message.slice(0, colonIdx) : "";
 
       if (validRoles.has(maybeRole)) {
-        messages.push({ role: maybeRole as "user" | "assistant", content: m.slice(colonIdx + 1) });
+        messages.push({
+          role: maybeRole as KnowledgeChatMessage["role"],
+          content: message.slice(colonIdx + 1),
+        });
       } else {
-        messages.push({ role: "user", content: m });
+        messages.push({ role: "user", content: message });
       }
     }
   }
@@ -102,7 +133,7 @@ function parseMessages(flags: ChatFlags): KnowledgeChatMessage[] {
 function hasEmbeddedImages(messages: KnowledgeChatMessage[]): boolean {
   for (const msg of messages) {
     if (Array.isArray(msg.content)) {
-      if (msg.content.some((p) => p.type === "image_url")) return true;
+      if (msg.content.some((part) => part.type === "image_url")) return true;
     }
   }
   return false;
@@ -115,9 +146,9 @@ function attachImagesToLastUserMessage(
 ): void {
   // Find last user message index
   let lastUserIdx = -1;
-  for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i]!.role === "user") {
-      lastUserIdx = i;
+  for (let messageIndex = messages.length - 1; messageIndex >= 0; messageIndex--) {
+    if (messages[messageIndex]!.role === "user") {
+      lastUserIdx = messageIndex;
       break;
     }
   }
@@ -146,13 +177,6 @@ function attachImagesToLastUserMessage(
 
   target.content = contentParts;
 }
-
-/** SSE step_change → human-friendly progress label (TTY only) */
-const STEP_LABELS: Record<string, string> = {
-  tool_calling: "🔍 Retrieving...",
-  plan_start: "🤔 Planning...",
-  generation_start: "✍️ Generating...",
-};
 
 export default defineCommand({
   description: {
@@ -208,13 +232,71 @@ export default defineCommand({
         '--message "描述这些图片" --image https://example.com/a.png --image https://example.com/b.png --agent-id aid-xxx --workspace-id ws-xxx',
     },
   ],
-  validate: (f) =>
-    (f.message && f.message.length > 0) || (f.image && f.image.length > 0)
-      ? undefined
-      : "Provide --message (or --image for a pure image query).",
+  validate(flags) {
+    if (flags.messagesFile && (flags.message?.length || flags.image?.length))
+      return {
+        "en-US": "--messages-file cannot be combined with --message or --image.",
+        "zh-CN": "--messages-file 不能与 --message 或 --image 同时使用。",
+      };
+    if (!flags.messagesFile && !flags.message?.length && !flags.image?.length)
+      return {
+        "en-US": "Provide --message, --messages-file or --image.",
+        "zh-CN": "请提供 --message、--messages-file 或 --image。",
+      };
+    if (
+      flags.sessionFileId &&
+      (flags.sessionFileId.length > 10 || flags.sessionFileId.some((fileId) => !fileId.trim()))
+    )
+      return {
+        "en-US": "--session-file-id accepts up to 10 nonempty IDs.",
+        "zh-CN": "--session-file-id 最多接受 10 个非空 ID。",
+      };
+    return undefined;
+  },
   async run(ctx) {
     const { settings, flags } = ctx;
     let messages = parseMessages(flags);
+    if (flags.messagesFile !== undefined) {
+      const raw = readFileSync(flags.messagesFile, "utf8");
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        throw new BailianError(
+          ctx.localize({
+            "en-US": "--messages-file must contain valid JSON.",
+            "zh-CN": "--messages-file 必须包含合法 JSON。",
+          }),
+          ExitCode.USAGE,
+        );
+      }
+      if (
+        !Array.isArray(parsed) ||
+        parsed.length === 0 ||
+        parsed.some((entry: unknown) => {
+          if (!entry || typeof entry !== "object" || Array.isArray(entry)) return true;
+          const message = entry as Record<string, unknown>;
+          return (
+            !["user", "assistant", "tool"].includes(
+              typeof message.role === "string" ? message.role : "",
+            ) ||
+            !(typeof message.content === "string" || Array.isArray(message.content)) ||
+            (message.role === "tool" &&
+              (typeof message.tool_call_id !== "string" || !message.tool_call_id.trim()))
+          );
+        })
+      )
+        throw new BailianError(
+          ctx.localize({
+            "en-US":
+              "--messages-file must be a nonempty message array with user/assistant/tool roles and content; tool messages require tool_call_id.",
+            "zh-CN":
+              "--messages-file 必须为非空消息数组，包含 user/assistant/tool 角色和 content；工具消息必须包含 tool_call_id。",
+          }),
+          ExitCode.USAGE,
+        );
+      messages = parsed as KnowledgeChatMessage[];
+    }
 
     const imageUrls = flags.image;
     const hasImages = !!imageUrls && imageUrls.length > 0;
@@ -228,7 +310,7 @@ export default defineCommand({
 
     const format = detectOutputFormat(settings.output);
     // API only supports SSE; streamOutput controls whether to print tokens in real-time
-    const streamOutput = format === "text" && !!process.stdout.isTTY;
+    const streamOutput = !settings.quiet && format === "text" && !!process.stdout.isTTY;
 
     // Attach --image URLs to messages (multimodal content array)
     if (hasImages) {
@@ -244,10 +326,15 @@ export default defineCommand({
     const body: KnowledgeChatRequest = {
       input: {
         messages,
+        ...(flags.requestId !== undefined ? { request_id: flags.requestId } : {}),
       },
       parameters: {
         agent_options: {
           agent_id: flags.agentId,
+          ...(flags.sessionFileId ? { session_files: flags.sessionFileId } : {}),
+          ...(flags.enableCacheControl !== undefined
+            ? { enable_cache_control: flags.enableCacheControl }
+            : {}),
           // Omitted flag → field not sent (default behavior unchanged); the value is
           // not validated — the set of versions is server-side state
           ...(flags.agentVersion ? { agent_version: flags.agentVersion } : {}),
@@ -270,110 +357,51 @@ export default defineCommand({
       stream: true,
     });
 
-    if (streamOutput) {
-      const color = ansi(process.stdout);
-      const verbose = settings.verbose;
-
-      for await (const event of parseSSE(res)) {
-        if (event.data === "[DONE]") break;
-
-        if (event.event === "error") {
-          let errMsg = "Chat API error";
-          let errCode: string | undefined;
-          try {
-            const err = JSON.parse(event.data);
-            errMsg = err.message || errMsg;
-            errCode = err.code;
-          } catch {
-            /* use defaults */
+    const accumulator = createChatAccumulator(ctx.localize);
+    let displayedStage = "";
+    for await (const event of parseSSE(res)) {
+      if (settings.verbose) process.stderr.write(`[event] ${event.event ?? "message"}\n`);
+      const fragments = accumulator.accept(event);
+      if (streamOutput) {
+        for (const fragment of fragments) {
+          if (fragment.stage !== displayedStage) {
+            if (displayedStage) process.stdout.write("\n");
+            const labels: Record<string, { "en-US": string; "zh-CN": string }> = {
+              planning: { "en-US": "Planning", "zh-CN": "规划" },
+              tool_calling: { "en-US": "Tools", "zh-CN": "工具" },
+              generating: { "en-US": "Answer", "zh-CN": "回答" },
+              unknown: { "en-US": "Other events", "zh-CN": "其他事件" },
+            };
+            process.stdout.write(`[${ctx.localize(labels[fragment.stage] ?? labels.unknown!)}]\n`);
+            displayedStage = fragment.stage;
           }
-          throw new BailianError(
-            errMsg,
-            ExitCode.GENERAL,
-            errCode ? `API error: ${errCode}` : undefined,
-          );
-        }
-
-        try {
-          const chunk = JSON.parse(event.data) as KnowledgeChatStreamChunk;
-
-          for (const choice of chunk.output?.choices ?? []) {
-            const msg = choice.message;
-
-            // Progress indicator (TTY text mode)
-            if (msg.extra?.step_change) {
-              const label = STEP_LABELS[msg.extra.step_change];
-              if (label) {
-                process.stdout.write(`${color.dim(label)}\n`);
-              }
-            }
-
-            // Verbose: dump all events to stderr
-            if (verbose && msg.extra?.step_change) {
-              process.stderr.write(
-                ansi(process.stderr).dim(
-                  `[event] step_change=${msg.extra.step_change} step=${msg.extra?.step ?? ""} group=${msg.extra?.group ?? ""}`,
-                ) + "\n",
-              );
-            }
-
-            // Extract generated content
-            if (msg.content) {
-              process.stdout.write(msg.content);
-            }
-
-            if (choice.finish_reason === "stop") break;
-          }
-        } catch {
-          // Skip unparseable chunks
+          process.stdout.write(fragment.content);
         }
       }
-
+      if (event.data === "[DONE]") break;
+    }
+    const result = accumulator.finish();
+    if (settings.quiet) emitBare(result.answer);
+    else if (format !== "text") emitResult(result, format);
+    else if (!streamOutput) emitBare(result.answer);
+    else {
       process.stdout.write("\n");
-    } else {
-      // Buffered output: collect all chunks then emit
-      let textContent = "";
-      let requestId = "";
-
-      for await (const event of parseSSE(res)) {
-        if (event.data === "[DONE]") break;
-
-        if (event.event === "error") {
-          let errMsg = "Chat API error";
-          let errCode: string | undefined;
-          try {
-            const err = JSON.parse(event.data);
-            errMsg = err.message || errMsg;
-            errCode = err.code;
-          } catch {
-            /* use defaults */
-          }
-          throw new BailianError(
-            errMsg,
-            ExitCode.GENERAL,
-            errCode ? `API error: ${errCode}` : undefined,
-          );
-        }
-
-        try {
-          const chunk = JSON.parse(event.data) as KnowledgeChatStreamChunk;
-          if (chunk.request_id) requestId = chunk.request_id;
-
-          for (const choice of chunk.output?.choices ?? []) {
-            if (choice.message?.content) {
-              textContent += choice.message.content;
-            }
-            if (choice.finish_reason === "stop") break;
-          }
-        } catch {
-          // Skip unparseable chunks
-        }
-      }
-
-      if (settings.quiet || format === "text") {
-        emitBare(textContent);
-      } else {
-        emitResult({ answer: textContent, request_id: requestId }, format);
+      if (result.docs.length) emitBare(ctx.localize({ "en-US": "Sources:", "zh-CN": "来源：" }));
+      for (const doc of result.docs) {
+        if (doc === null || typeof doc !== "object" || Array.isArray(doc)) continue;
+        const record = doc as Record<string, unknown>;
+        const metadata =
+          record.metadata && typeof record.metadata === "object" && !Array.isArray(record.metadata)
+            ? (record.metadata as Record<string, unknown>)
+            : record;
+        emitBare(
+          JSON.stringify({
+            doc_id: metadata.doc_id,
+            title: metadata.title,
+            citation: metadata._citation_index,
+          }),
+        );
+        for (const line of mediaSummary(metadata)) emitBare(line);
       }
     }
   },

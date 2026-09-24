@@ -1,6 +1,7 @@
 // Shared building blocks for the knowledge admin commands.
 import {
   BailianError,
+  ExitCode,
   ragEndpoint,
   RAG_PATHS,
   type Client,
@@ -118,13 +119,18 @@ export async function pollImportJob(
   settings: Settings,
   options: { statusUrl: string; intervalSec: number },
 ): Promise<RagIndexJobStatusResponse> {
+  const deadline = Date.now() + settings.timeout * 1000;
   return poll<RagIndexJobStatusResponse>(client, settings, {
     url: options.statusUrl,
+    load: () => readImportJobPages(client, options.statusUrl, deadline),
     intervalSec: options.intervalSec,
     timeoutSec: settings.timeout,
     isComplete: (data) => {
       const response = data as RagIndexJobStatusResponse;
-      return importJobStatus(response) === "COMPLETED" || allDocsTerminal(response);
+      const total = response.data?.total_count;
+      const rows = response.data?.rows ?? [];
+      const covered = typeof total === "number" && total >= 0 && rows.length >= total;
+      return covered && (importJobStatus(response) === "COMPLETED" || allDocsTerminal(response));
     },
     isFailed: () => false,
     getStatus: (data) => {
@@ -140,10 +146,63 @@ export async function pollImportJob(
   });
 }
 
+/** One bounded polling snapshot: start at page one and retain all unique documents. */
+async function readImportJobPages(
+  client: Client,
+  statusUrl: string,
+  deadline: number,
+): Promise<RagIndexJobStatusResponse> {
+  const url = new URL(statusUrl);
+  const requestedSize = Number(url.searchParams.get("page_size") ?? 100);
+  const pageSize =
+    Number.isInteger(requestedSize) && requestedSize > 0 ? Math.min(requestedSize, 100) : 100;
+  url.searchParams.set("page_size", String(pageSize));
+  url.searchParams.set("page_number", "1");
+  const first = await client.requestJson<RagIndexJobStatusResponse>({
+    path: url.toString(),
+    method: "GET",
+  });
+  const documents = new Map<string, RagIndexJobDoc>();
+  function addRows(response: RagIndexJobStatusResponse): void {
+    for (const document of response.data?.rows ?? []) {
+      if (document.doc_id) documents.set(document.doc_id, document);
+    }
+  }
+  addRows(first);
+  const total = first.data?.total_count;
+  if (typeof total !== "number" || !Number.isSafeInteger(total) || total < 0) {
+    // No total means we cannot prove coverage; leave the snapshot non-terminal.
+    return {
+      ...first,
+      data: { ...first.data, total_count: undefined, rows: [...documents.values()] },
+    };
+  }
+  for (let pageNumber = 2; pageNumber <= Math.ceil(total / pageSize); pageNumber++) {
+    if (Date.now() >= deadline) throw new BailianError("Polling timed out.", ExitCode.TIMEOUT);
+    url.searchParams.set("page_number", String(pageNumber));
+    const page = await client.requestJson<RagIndexJobStatusResponse>({
+      path: url.toString(),
+      method: "GET",
+    });
+    const previousSize = documents.size;
+    addRows(page);
+    if (page.data?.total_count !== total) {
+      // A changing result set is not a complete snapshot. Retry from page one.
+      return {
+        ...first,
+        data: { ...first.data, total_count: undefined, rows: [...documents.values()] },
+      };
+    }
+    if (documents.size === previousSize) break;
+  }
+  return { ...first, data: { ...first.data, rows: [...documents.values()] } };
+}
+
 /** Attach a hint for partial-success cases while preserving server context (api/rawResponse kept) */
 export function withPartialSuccessHint(error: unknown, hint: string): unknown {
-  if (!(error instanceof BailianError) || error.hint) return error;
-  return new BailianError(error.message, error.exitCode, hint, {
+  if (!(error instanceof BailianError)) return error;
+  const combinedHint = error.hint ? `${error.hint}\n${hint}` : hint;
+  return new BailianError(error.message, error.exitCode, combinedHint, {
     cause: error,
     api: error.api,
     rawResponse: error.rawResponse,

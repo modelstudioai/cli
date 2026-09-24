@@ -315,3 +315,24 @@ describe.skipIf(!isTableSearchE2EReady())(
     }, 60_000);
   },
 );
+
+test("pure image input may omit --query", async () => {
+  const result = await runCommandE2e(KNOWLEDGE_SEARCH_ROUTES, [
+    "knowledge",
+    "search",
+    "--agent-id",
+    "aid_test",
+    "--image",
+    "https://example.com/frame.png",
+    "--workspace-id",
+    "ws_test",
+    "--dry-run",
+    "--output",
+    "json",
+  ]);
+  expect(result.exitCode, result.stderr).toBe(0);
+  expect(parseStdoutJson<DryRunBody>(result.stdout).request).toMatchObject({
+    query: "",
+    images: ["https://example.com/frame.png"],
+  });
+});

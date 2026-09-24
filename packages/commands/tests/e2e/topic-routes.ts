@@ -547,3 +547,7 @@ export const JOURNEY_J5_ROUTES: E2eRouteExports = {
   "knowledge file delete": "knowledgeFileDelete",
   "knowledge doc upload": "knowledgeDocUpload",
 };
+
+export const KNOWLEDGE_DOC_IMPORT_ROUTES: E2eRouteExports = {
+  "knowledge doc import": "knowledgeDocImport",
+};

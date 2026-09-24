@@ -1,3 +1,4 @@
+import { firstNonEmptyText, mediaSummary } from "./media-output.ts";
 import {
   defineCommand,
   ragEndpoint,
@@ -103,8 +104,13 @@ export default defineCommand({
           emitBare(
             `[chunk] ${metadata._id ?? "?"}  (doc: ${metadata.doc_name ?? "?"}, doc_id: ${metadata.doc_id ?? "?"})${statusPart}${excludedPart}`,
           );
-          const contentText = metadata.content ?? node.text ?? "";
+          const contentText = firstNonEmptyText(
+            metadata.content,
+            node.text,
+            metadata.clip_description,
+          );
           emitBare(`  ${contentText.length > 200 ? `${contentText.slice(0, 200)}…` : contentText}`);
+          for (const line of mediaSummary(metadata)) emitBare(`  ${line}`);
         }
       }
       emitBare(`total: ${response.data?.total ?? nodes.length}`);
