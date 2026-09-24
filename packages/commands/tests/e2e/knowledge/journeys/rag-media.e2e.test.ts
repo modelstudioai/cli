@@ -124,7 +124,7 @@ test.skipIf(!isRagMediaWriteE2EReady())(
       } else {
         const collectionId = process.env.BAILIAN_E2E_RAG_MEDIA_COLLECTION_ID;
         indexId = process.env.BAILIAN_E2E_RAG_MEDIA_INDEX_ID;
-        if (!collectionId || !indexId || ["1uz4om722t", "h4zeu45r6l"].includes(indexId))
+        if (!collectionId || !indexId)
           throw new Error("existing-file requires a dedicated test collection and test index.");
         const info = await query(["knowledge", "info", "--index-id", indexId]);
         if (typeof info.name !== "string" || !info.name.startsWith("e2e-media-"))
