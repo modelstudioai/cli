@@ -80,19 +80,8 @@ try {
     published.set(pkg.key, exists);
     log(`${pkg.name}@${betaVersion}: ${exists ? "already published" : "to publish"}`);
   }
-  if (packages.every((pkg) => published.get(pkg.key))) {
-    log("\nall packages already published; nothing to do for npm.");
-  } else {
-    // 1) npm (dependency order: core → runtime → commands → cli [→ kscli])
-    for (const pkg of packages) {
-      if (published.get(pkg.key)) continue;
-      step(`publish ${pkg.name}@${betaVersion} (tag=${channel}, provenance)`);
-      pnpmPublish(pkg, { tag: channel, provenance: true, dryRun });
-    }
-  }
-
-  // 2) binary GitHub Release — must run before finally restores package.json versions.
-  // Channel binary always refreshes OSS sync-release.json (npm tag is independent).
+  // 1) binary GitHub Release before npm, and before finally restores package.json.
+  // OSS sync-release.json can fail on a network blip; npm must not land first.
   if (skipBinary) {
     const reason = knowledge
       ? "[knowledge] skipping binary (npm-only; does not touch sync-release.json)"
@@ -103,6 +92,17 @@ try {
       `publish binary GitHub Release (mode=channel, npm-tag=${channel}, CDN=sync-release, version=${betaVersion})`,
     );
     await releaseBinaryArtifacts({ mode: "channel", channel, dryRun });
+  }
+
+  // 2) npm (dependency order: core → runtime → commands → cli [→ kscli])
+  if (packages.every((pkg) => published.get(pkg.key))) {
+    log("\nall packages already published; nothing to do for npm.");
+  } else {
+    for (const pkg of packages) {
+      if (published.get(pkg.key)) continue;
+      step(`publish ${pkg.name}@${betaVersion} (tag=${channel}, provenance)`);
+      pnpmPublish(pkg, { tag: channel, provenance: true, dryRun });
+    }
   }
 
   const parts = ["npm"];
