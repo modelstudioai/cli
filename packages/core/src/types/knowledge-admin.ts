@@ -19,6 +19,9 @@ export interface RagIndexRow {
   name: string;
   description?: string;
   dataType?: string;
+  knowledgeType?: string | null;
+  knowledgeScene?: string | null;
+  multimodalEmbeddingModelName?: string | null;
   embeddingModelName?: string;
   embeddingDimension?: number;
   chunkSize?: number;
@@ -60,6 +63,25 @@ export interface RagIndexFilesData {
   [key: string]: unknown;
 }
 export type RagIndexFilesResponse = RagResponse<RagIndexFilesData>;
+
+/** POST list/index/file/details, preserving the server's mixed field casing. */
+export interface RagIndexFileDetailRow extends RagIndexFileRow {
+  chunkSize?: number;
+  overlapSize?: number;
+  separator?: string;
+  chunkMode?: string;
+  enableHeaders?: boolean;
+  categoryId?: string;
+  categoryName?: string;
+  tags?: string[];
+}
+export type RagIndexFileDetailsResponse = RagResponse<{
+  rows?: RagIndexFileDetailRow[];
+  total_count?: number;
+  page_number?: number;
+  page_size?: number;
+  [key: string]: unknown;
+}>;
 
 /**
  * GET index_job/status (verified against the live API)

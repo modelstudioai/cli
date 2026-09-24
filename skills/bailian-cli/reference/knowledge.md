@@ -22,6 +22,7 @@ Index: [index.md](index.md)
 | `bl knowledge create`            | API Key        | Create a knowledge base and import data-center files or categories                               |
 | `bl knowledge delete`            | API Key        | Delete a knowledge base with all its documents and chunks                                        |
 | `bl knowledge doc delete`        | API Key        | Delete documents and their chunks from a knowledge base                                          |
+| `bl knowledge doc import`        | API Key        | Import existing data-center files into an existing knowledge base                                |
 | `bl knowledge doc import-oss`    | API Key        | Batch import files from an authorized OSS bucket into the data center                            |
 | `bl knowledge doc list`          | API Key        | List documents in a knowledge base with parse/index status                                       |
 | `bl knowledge doc status`        | API Key        | Check knowledge base import job status                                                           |
@@ -169,15 +170,19 @@ bl knowledge category list --next-token <token>
 
 #### Flags
 
-| Flag                        | Type   | Required | Description                                                                                                                            |
-| --------------------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `--message <text>`          | array  | no       | Message text (repeatable). Supports role:content prefix to set role (e.g. user:hello), defaults to user. Follows OpenAI message format |
-| `--agent-id <id>`           | string | yes      | Q&A service ID (find in console knowledge Q&A page)                                                                                    |
-| `--workspace-id <id>`       | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                                                        |
-| `--agent-version <version>` | string | no       | Service version to call: beta (draft for debugging) or a published number; default is the latest published version                     |
-| `--image <url>`             | array  | no       | Image URL (repeatable). Attached to the last user message as multimodal content                                                        |
-| `--api-key <key>`           | string | no       | API key                                                                                                                                |
-| `--base-url <url>`          | string | no       | API base URL                                                                                                                           |
+| Flag                                   | Type    | Required | Description                                                                                                                            |
+| -------------------------------------- | ------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `--messages-file <path>`               | string  | no       | Complete messages JSON array, including tool history (excludes --message/--image)                                                      |
+| `--session-file-id <fileId>`           | array   | no       | Session file ID (repeatable, up to 10; requires service file preprocessing)                                                            |
+| `--enable-cache-control <true\|false>` | boolean | no       | Explicit context cache control                                                                                                         |
+| `--request-id <id>`                    | string  | no       | Business request ID                                                                                                                    |
+| `--message <text>`                     | array   | no       | Message text (repeatable). Supports role:content prefix to set role (e.g. user:hello), defaults to user. Follows OpenAI message format |
+| `--agent-id <id>`                      | string  | yes      | Q&A service ID (find in console knowledge Q&A page)                                                                                    |
+| `--workspace-id <id>`                  | string  | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                                                        |
+| `--agent-version <version>`            | string  | no       | Service version to call: beta (draft for debugging) or a published number; default is the latest published version                     |
+| `--image <url>`                        | array   | no       | Image URL (repeatable). Attached to the last user message as multimodal content                                                        |
+| `--api-key <key>`                      | string  | no       | API key                                                                                                                                |
+| `--base-url <url>`                     | string  | no       | API base URL                                                                                                                           |
 
 #### Notes
 
@@ -227,6 +232,7 @@ bl knowledge chat --message "Describe these images" --image https://example.com/
 
 #### Notes
 
+- Adding chunks to multimedia knowledge bases is not supported by the service.
 - Document / table / image knowledge bases are supported; audio-video ones are not.
 - --doc-id is required in practice for all knowledge base types. Use the document-level id from the doc list command; the per-row doc_id in chunk list output is not accepted.
 - Image-type documents do not support text chunks. Target a text-type document (docx/pdf/txt) instead.
@@ -438,23 +444,26 @@ bl knowledge collection get --name my-collection
 
 #### Flags
 
-| Flag                        | Type   | Required | Description                                                                                               |
-| --------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------- |
-| `--name <text>`             | string | yes      | Knowledge base name (1-20 chars, unique in workspace)                                                     |
-| `--description <text>`      | string | yes      | What this knowledge base holds and what it is for — tells bases apart in the workspace list (1-500 chars) |
-| `--doc-id <id>`             | array  | no       | Data-center file id to import (repeatable); mutually exclusive with --category-id                         |
-| `--category-id <id>`        | array  | no       | Import every file under this category (repeatable); mutually exclusive with --doc-id                      |
-| `--embedding-model <name>`  | string | no       | Embedding model name (default: text-embedding-v4)                                                         |
-| `--chunk-size <n>`          | number | no       | Chunk size in characters (default: 600, recommended 300-800)                                              |
-| `--wait`                    | switch | no       | Poll the initial import job to a terminal state                                                           |
-| `--poll-interval <seconds>` | number | no       | Polling interval when waiting (default: 5)                                                                |
-| `--workspace-id <id>`       | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                           |
-| `--api-key <key>`           | string | no       | API key                                                                                                   |
-| `--base-url <url>`          | string | no       | API base URL                                                                                              |
+| Flag                                      | Type   | Required | Description                                                                                               |
+| ----------------------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------- |
+| `--knowledge-type <document\|multimedia>` | string | no       | Knowledge type: document or multimedia                                                                    |
+| `--knowledge-scene <scene>`               | string | no       | Knowledge scene (requires --knowledge-type)                                                               |
+| `--multimodal-embedding-model <name>`     | string | no       | Multimodal embedding model name                                                                           |
+| `--name <text>`                           | string | yes      | Knowledge base name (1-20 chars, unique in workspace)                                                     |
+| `--description <text>`                    | string | yes      | What this knowledge base holds and what it is for — tells bases apart in the workspace list (1-500 chars) |
+| `--doc-id <id>`                           | array  | no       | Data-center file id to import (repeatable); mutually exclusive with --category-id                         |
+| `--category-id <id>`                      | array  | no       | Import every file under this category (repeatable); mutually exclusive with --doc-id                      |
+| `--embedding-model <name>`                | string | no       | Embedding model name (document default: text-embedding-v4; multimedia: server default)                    |
+| `--chunk-size <n>`                        | number | no       | Chunk size in characters (default: 600, recommended 300-800)                                              |
+| `--wait`                                  | switch | no       | Poll the initial import job to a terminal state                                                           |
+| `--poll-interval <seconds>`               | number | no       | Polling interval when waiting (default: 5)                                                                |
+| `--workspace-id <id>`                     | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                           |
+| `--api-key <key>`                         | string | no       | API key                                                                                                   |
+| `--base-url <url>`                        | string | no       | API base URL                                                                                              |
 
 #### Notes
 
-- Structure/sink types are fixed to the default document knowledge base (unstructured, BUILT_IN storage).
+- Structure/sink types are unstructured and BUILT_IN. Multimedia defaults to basic_multimedia_qa; explicit model flags are passed through.
 - Returns the knowledge base id (pipelineId) and the initial import job id (ingestionId).
 - Use the import job status command (or --wait) to track the initial import.
 
@@ -549,6 +558,47 @@ bl knowledge doc delete --index-id idx-xxx --doc-id file-xxx --workspace-id ws-x
 bl knowledge doc delete --index-id idx-xxx --doc-id file-a --doc-id file-b --yes
 ```
 
+### `bl knowledge doc import`
+
+| Field              | Value                                                                                               |
+| ------------------ | --------------------------------------------------------------------------------------------------- |
+| **Name**           | `knowledge doc import`                                                                              |
+| **Description**    | Import existing data-center files into an existing knowledge base                                   |
+| **Authentication** | API Key                                                                                             |
+| **Usage**          | `bl knowledge doc import --index-id <id> (--doc-id <fileId> ... \| --category-id <id> ...) [flags]` |
+
+#### Flags
+
+| Flag                                                     | Type    | Required | Description                                                       |
+| -------------------------------------------------------- | ------- | -------- | ----------------------------------------------------------------- |
+| `--chunk-mode <h1\|h2\|h3\|h4\|h5\|length\|page\|regex>` | string  | no       | Document chunk mode (not video time slicing)                      |
+| `--chunk-size <characters>`                              | number  | no       | Document chunk size, 1-6000 characters                            |
+| `--overlap-size <characters>`                            | number  | no       | Document overlap size, 0-1024 characters                          |
+| `--separator <regex>`                                    | string  | no       | Separator for regex chunk mode                                    |
+| `--enable-headers <true\|false>`                         | boolean | no       | Enable document header extraction                                 |
+| `--index-id <id>`                                        | string  | yes      | Existing knowledge base ID                                        |
+| `--doc-id <fileId>`                                      | array   | no       | Existing data-center file ID (repeatable; excludes --category-id) |
+| `--category-id <id>`                                     | array   | no       | Data-center category ID (repeatable; excludes --doc-id)           |
+| `--wait`                                                 | switch  | no       | Wait for the import job to finish                                 |
+| `--poll-interval <seconds>`                              | number  | no       | Polling interval (default: 5 seconds)                             |
+| `--workspace-id <id>`                                    | string  | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)   |
+| `--api-key <key>`                                        | string  | no       | API key                                                           |
+| `--base-url <url>`                                       | string  | no       | API base URL                                                      |
+
+#### Notes
+
+- Reuses file IDs without uploading again. Importing may start parsing and indexing. --doc-id takes a data-center fileId.
+
+#### Examples
+
+```bash
+bl knowledge doc import --index-id idx-xxx --doc-id file-xxx --wait
+```
+
+```bash
+bl knowledge doc import --index-id idx-xxx --category-id category-xxx --dry-run
+```
+
 ### `bl knowledge doc import-oss`
 
 | Field              | Value                                                                               |
@@ -560,17 +610,19 @@ bl knowledge doc delete --index-id idx-xxx --doc-id file-a --doc-id file-b --yes
 
 #### Flags
 
-| Flag                  | Type   | Required | Description                                                     |
-| --------------------- | ------ | -------- | --------------------------------------------------------------- |
-| `--bucket <name>`     | string | yes      | Authorized OSS bucket name                                      |
-| `--region <id>`       | string | yes      | OSS region id (e.g. cn-beijing)                                 |
-| `--oss-key <key>`     | array  | yes      | OSS object key to import (repeatable, 1-10 per call)            |
-| `--category-id <id>`  | string | no       | Target data-center category (default: the default category)     |
-| `--tag <text>`        | array  | no       | File tag applied to every imported file (repeatable, up to 10)  |
-| `--overwrite`         | switch | no       | Overwrite files previously imported from the same OSS keys      |
-| `--workspace-id <id>` | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
-| `--api-key <key>`     | string | no       | API key                                                         |
-| `--base-url <url>`    | string | no       | API base URL                                                    |
+| Flag                          | Type   | Required | Description                                                     |
+| ----------------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--parser <name>`             | string | no       | File parser (e.g. AUTO_SELECT or DOCMIND_LLM_VERSION_MEDIA)     |
+| `--parser-config-file <path>` | string | no       | JSON object containing parser configuration                     |
+| `--bucket <name>`             | string | yes      | Authorized OSS bucket name                                      |
+| `--region <id>`               | string | yes      | OSS region id (e.g. cn-beijing)                                 |
+| `--oss-key <key>`             | array  | yes      | OSS object key to import (repeatable, 1-10 per call)            |
+| `--category-id <id>`          | string | no       | Target data-center category (default: the default category)     |
+| `--tag <text>`                | array  | no       | File tag applied to every imported file (repeatable, up to 10)  |
+| `--overwrite`                 | switch | no       | Overwrite files previously imported from the same OSS keys      |
+| `--workspace-id <id>`         | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
+| `--api-key <key>`             | string | no       | API key                                                         |
+| `--base-url <url>`            | string | no       | API base URL                                                    |
 
 #### Notes
 
@@ -601,6 +653,7 @@ bl knowledge doc import-oss --bucket my-bucket --region cn-beijing --oss-key doc
 
 | Flag                  | Type   | Required | Description                                                     |
 | --------------------- | ------ | -------- | --------------------------------------------------------------- |
+| `--details`           | switch | no       | Include file-level chunk configuration (page size up to 10)     |
 | `--index-id <id>`     | string | yes      | Knowledge base ID                                               |
 | `--page-number <n>`   | number | no       | Page number (default: 1)                                        |
 | `--page-size <n>`     | number | no       | Page size per request                                           |
@@ -611,7 +664,7 @@ bl knowledge doc import-oss --bucket my-bucket --region cn-beijing --oss-key doc
 #### Notes
 
 - Documents with status FAILED are highlighted in text mode — use the import job status command to inspect failures.
-- Page size defaults to 10 (server default), max 100.
+- Page size defaults to 10; max 100 normally, or 10 with --details.
 
 #### Examples
 
@@ -708,20 +761,24 @@ bl knowledge doc tag --doc-id file-a --doc-id file-b --tag final --mode overwrit
 
 #### Flags
 
-| Flag                        | Type   | Required | Description                                                                                                     |
-| --------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------- |
-| `--file <path>`             | array  | yes      | Local file or directory path (repeatable). Directories are scanned recursively; unsupported formats are skipped |
-| `--index-id <id>`           | string | no       | Import into this knowledge base after registration (one job for all files)                                      |
-| `--category-id <id>`        | string | no       | Target data-center category; defaults to the workspace default category                                         |
-| `--tag <text>`              | array  | no       | File tag (repeatable), applied to every uploaded file                                                           |
-| `--wait`                    | switch | no       | Poll the import job to a terminal state (needs --index-id)                                                      |
-| `--poll-interval <seconds>` | number | no       | Polling interval when waiting (default: 5)                                                                      |
-| `--workspace-id <id>`       | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                                 |
-| `--api-key <key>`           | string | no       | API key                                                                                                         |
-| `--base-url <url>`          | string | no       | API base URL                                                                                                    |
+| Flag                                           | Type   | Required | Description                                                                                                     |
+| ---------------------------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------- |
+| `--category-type <UNSTRUCTURED\|SESSION_FILE>` | string | no       | File category type (SESSION_FILE for temporary chat attachments)                                                |
+| `--parser <name>`                              | string | no       | File parser (e.g. AUTO_SELECT or DOCMIND_LLM_VERSION_MEDIA)                                                     |
+| `--parser-config-file <path>`                  | string | no       | JSON object containing parser configuration                                                                     |
+| `--file <path>`                                | array  | yes      | Local file or directory path (repeatable). Directories are scanned recursively; unsupported formats are skipped |
+| `--index-id <id>`                              | string | no       | Import into this knowledge base after registration (one job for all files)                                      |
+| `--category-id <id>`                           | string | no       | Target data-center category; defaults to the workspace default category                                         |
+| `--tag <text>`                                 | array  | no       | File tag (repeatable), applied to every uploaded file                                                           |
+| `--wait`                                       | switch | no       | Poll the import job to a terminal state (needs --index-id)                                                      |
+| `--poll-interval <seconds>`                    | number | no       | Polling interval when waiting (default: 5)                                                                      |
+| `--workspace-id <id>`                          | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                                 |
+| `--api-key <key>`                              | string | no       | API key                                                                                                         |
+| `--base-url <url>`                             | string | no       | API base URL                                                                                                    |
 
 #### Notes
 
+- Audio/video files support up to 2 GB (2,000,000,000 bytes) each. With --index-id, at most 50 local media files per call; no automatic splitting.
 - Pipeline: apply upload lease → PUT to OSS → register file → (with --index-id) create import job.
 - Without --category-id the workspace default category is resolved automatically.
 - Directories are scanned recursively; node_modules, .git, and similar are skipped automatically.
@@ -912,28 +969,29 @@ bl knowledge list --name demo --page-number 2 --page-size 50
 
 ### `bl knowledge search`
 
-| Field              | Value                                                        |
-| ------------------ | ------------------------------------------------------------ |
-| **Name**           | `knowledge search`                                           |
-| **Description**    | Search a Bailian knowledge base (RAG semantic retrieval)     |
-| **Authentication** | API Key                                                      |
-| **Usage**          | `bl knowledge search --query <text> --agent-id <id> [flags]` |
+| Field              | Value                                                                           |
+| ------------------ | ------------------------------------------------------------------------------- |
+| **Name**           | `knowledge search`                                                              |
+| **Description**    | Search a Bailian knowledge base (RAG semantic retrieval)                        |
+| **Authentication** | API Key                                                                         |
+| **Usage**          | `bl knowledge search --agent-id <id> (--query <text> \| --image <url>) [flags]` |
 
 #### Flags
 
-| Flag                        | Type   | Required | Description                                                                                                        |
-| --------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------ |
-| `--query <text>`            | string | yes      | Search query text (required, cannot be empty)                                                                      |
-| `--agent-id <id>`           | string | yes      | Retrieval service ID (find in console knowledge retrieval page)                                                    |
-| `--workspace-id <id>`       | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                                    |
-| `--agent-version <version>` | string | no       | Service version to call: beta (draft for debugging) or a published number; default is the latest published version |
-| `--image <url>`             | array  | no       | Image URL for multimodal retrieval (repeatable)                                                                    |
-| `--api-key <key>`           | string | no       | API key                                                                                                            |
-| `--base-url <url>`          | string | no       | API base URL                                                                                                       |
+| Flag                              | Type   | Required | Description                                                                                                        |
+| --------------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------ |
+| `--kb-search-configs-file <path>` | string | no       | JSON array of knowledge IDs and online search_filters                                                              |
+| `--query <text>`                  | string | no       | Search text (or provide --image)                                                                                   |
+| `--agent-id <id>`                 | string | yes      | Retrieval service ID (find in console knowledge retrieval page)                                                    |
+| `--workspace-id <id>`             | string | no       | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                                    |
+| `--agent-version <version>`       | string | no       | Service version to call: beta (draft for debugging) or a published number; default is the latest published version |
+| `--image <url>`                   | array  | no       | Image URL for multimodal retrieval (repeatable)                                                                    |
+| `--api-key <key>`                 | string | no       | API key                                                                                                            |
+| `--base-url <url>`                | string | no       | API base URL                                                                                                       |
 
 #### Notes
 
-- Retrieval scope and strategy (multi-index weighting, routing, reranking, etc.) are driven by the agent_id service config. Only query and agent_id are required.
+- Retrieval scope and strategy (multi-index weighting, routing, reranking, etc.) are driven by the agent_id service config. Provide agent_id and at least one query or image.
 - Auth: uses DashScope API Key (Bearer token). Get yours from the console API Key page.
 - `--workspace-id` can be set via BAILIAN_WORKSPACE_ID env or `kscli config set workspace_id <id>`.
 - `--agent-version beta` calls the draft config for debugging before it is deployed.
@@ -990,6 +1048,7 @@ bl knowledge service copy --agent-id aid-xxx --workspace-id ws-xxx
 
 | Flag                   | Type   | Required | Description                                                                                                            |
 | ---------------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `--config-file <path>` | string | no       | Complete agent_config JSON file (excludes --index-id)                                                                  |
 | `--name <text>`        | string | yes      | Service name (up to 200 chars, unique per scene in the workspace)                                                      |
 | `--scene <scene>`      | string | yes      | Service scene: chat (Q&A) or search (retrieval)                                                                        |
 | `--description <text>` | string | no       | What this service answers and who it serves — recommended: agents read it to pick the right service (up to 1000 chars) |

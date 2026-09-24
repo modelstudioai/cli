@@ -89,7 +89,11 @@ async function run(
   settings: Partial<Settings> = {},
 ) {
   const validation = await command.validate?.(flags);
-  if (validation) throw new BailianError(validation, ExitCode.USAGE);
+  if (validation)
+    throw new BailianError(
+      typeof validation === "string" ? validation : validation["en-US"],
+      ExitCode.USAGE,
+    );
   await command.run({
     identity: {
       binName: "test-cli",

@@ -298,7 +298,9 @@ export interface Command<F extends FlagsDef = FlagsDef> {
    * May be async for read-only local preflight. Runtime awaits it before auth
    * and confirmation. Do not perform remote requests or local writes here.
    */
-  validate?: (flags: ParsedFlags<F>) => string | undefined | Promise<string | undefined>;
+  validate?: (
+    flags: ParsedFlags<F>,
+  ) => LocalizedText | undefined | Promise<LocalizedText | undefined>;
   run: (ctx: CommandContext<F>) => Promise<void>;
 }
 

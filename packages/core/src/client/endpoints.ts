@@ -385,9 +385,10 @@ export const RAG_PATHS = {
   indexUpdate: "/api/v1/indices/rag/index/update", // POST, index id parameter is named `id`
   indexDelete: "/api/v1/indices/rag/index/delete", // POST, body { index_id }
   indexMonitor: "/api/v1/indices/rag/index/monitor", // POST, second-precision string timestamps
+  indexFileDetails: "/api/v1/indices/rag/list/index/file/details", // POST, camelCase pagination; max 10
   indexFiles: "/api/v1/indices/rag/index/files", // GET, page parameter is page_num
   indexDeleteFile: "/api/v1/indices/rag/index/delete_file", // POST, body { index_id, doc_ids }
-  indexJobCreate: "/api/v1/indices/rag/index/job/create", // POST, body requires nested dataSource { sourceType, fileIds } (flat documentIds from the docs is rejected)
+  indexJobCreate: "/api/v1/indices/rag/index/job/create", // POST, body uses explicit sourceType and flat docIds/categoryIds; omitting sourceType can import the entire data center
   indexJobStatus: "/api/v1/indices/rag/index_job/status", // GET, both index_id and job_id required
   chunkList: "/api/v1/indices/rag/index/chunklist", // POST, body pageNum/pageSize
   chunkCreate: "/api/v1/indices/rag/index/chunk/create", // POST, parameter is pipelineId; rate limit 10 req/s, no chunk_id in response

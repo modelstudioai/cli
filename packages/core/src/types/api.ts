@@ -657,6 +657,7 @@ export interface UserProfileValueUpdateRequest {
 // ---- Knowledge Search (新版 RAG 检索 API, agent_id-based) ----
 
 export interface KnowledgeSearchRequest {
+  kb_search_configs?: Array<{ id: string; search_filters?: unknown[] }>;
   query: string;
   agent_id: string;
   /** "beta" targets the debug draft; a numeric version targets that published version; defaults to the latest published version */
@@ -682,8 +683,15 @@ export interface KnowledgeSearchResponse {
         doc_url?: string;
         pipeline_id?: string;
         workspace_id?: string;
-        page_number?: number;
-        image_url?: string;
+        page_number?: number | number[];
+        image_url?: string | string[];
+        video_url?: string[];
+        audio_url?: string[];
+        clip_start_time?: number;
+        clip_end_time?: number;
+        clip_description?: string;
+        audio_segments?: Array<Record<string, unknown>>;
+        [key: string]: unknown;
         _knowledge_type?: string;
         _citation_index?: number;
         _score?: number;
@@ -699,17 +707,23 @@ export type KnowledgeChatContentPart =
   | { type: "image_url"; image_url: { url: string } };
 
 export interface KnowledgeChatMessage {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "tool";
+  tool_call_id?: string;
+  tool_calls?: unknown[];
+  [key: string]: unknown;
   content: string | KnowledgeChatContentPart[];
 }
 
 export interface KnowledgeChatRequest {
   input: {
     messages: KnowledgeChatMessage[];
+    request_id?: string;
   };
   parameters: {
     agent_options: {
       agent_id: string;
+      session_files?: string[];
+      enable_cache_control?: boolean;
       /** "beta" targets the debug draft; a numeric version targets that published version; defaults to the latest published version */
       agent_version?: string;
       user?: {
@@ -722,24 +736,30 @@ export interface KnowledgeChatRequest {
 }
 
 export interface KnowledgeChatStreamChunk {
-  output: {
-    choices: Array<{
-      message: {
-        role: string;
-        content: string;
+  output?: {
+    request_id?: string;
+    choices?: Array<{
+      message?: {
+        role?: string;
+        content?: string | KnowledgeChatContentPart[];
         tool_calls?: unknown[];
-        extra?: {
-          group?: string;
-          step_change?: string;
-          step?: string;
+        additional_kwargs?: {
+          extra_json?: Record<string, unknown> | string;
+          [key: string]: unknown;
         };
+        extra?: { group?: string; step_change?: string; step?: string; [key: string]: unknown };
+        [key: string]: unknown;
       };
-      finish_reason: string;
+      finish_reason?: string;
+      [key: string]: unknown;
     }>;
+    [key: string]: unknown;
   };
-  code: string;
-  message: string;
-  request_id: string;
+  usage?: Record<string, unknown>;
+  code?: string | number;
+  message?: string;
+  request_id?: string;
+  [key: string]: unknown;
 }
 
 // ---- Speech Synthesis / TTS (DashScope) ----
