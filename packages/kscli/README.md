@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[Knowledge Studio Console](https://rag.console.aliyun.com/) · [中文文档](README.zh.md) · [API Documentation](https://help.aliyun.com/zh/model-studio/) · [Full CLI Guide](https://github.com/modelstudioai/cli/blob/main/docs/knowledge-cli-guide.md)
+[Knowledge Studio Console](https://rag.console.aliyun.com/) · [中文文档](README.zh.md) · [API Documentation](https://help.aliyun.com/zh/model-studio/) · [Full CLI Guide](https://github.com/modelstudioai/cli/blob/main/docs/knowledge/knowledge-cli-guide.md)
 
 </div>
 
@@ -149,7 +149,7 @@ kscli chat \
 | `config set`  | Set a configuration value         |
 | `update`      | Self-update to the latest version |
 
-> For full parameter details, output formats, and usage examples, see the [CLI Guide](https://github.com/modelstudioai/cli/blob/main/docs/knowledge-cli-guide.md).
+> For full parameter details, output formats, and usage examples, see the [CLI Guide](https://github.com/modelstudioai/cli/blob/main/docs/knowledge/knowledge-cli-guide.md).
 
 ## Authentication
 
@@ -197,12 +197,12 @@ All commands support these common flags:
 
 ## Links
 
-| Resource                 | URL                                                                                                       |
-| :----------------------- | :-------------------------------------------------------------------------------------------------------- |
-| Knowledge Studio Console | https://rag.console.aliyun.com/                                                                           |
-| DashScope API Docs       | https://help.aliyun.com/zh/model-studio/                                                                  |
-| Get API Key              | https://bailian.console.aliyun.com/?tab=app#/api-key                                                      |
-| Full CLI Guide           | [docs/knowledge-cli-guide.md](https://github.com/modelstudioai/cli/blob/main/docs/knowledge-cli-guide.md) |
+| Resource                 | URL                                                                                                                 |
+| :----------------------- | :------------------------------------------------------------------------------------------------------------------ |
+| Knowledge Studio Console | https://rag.console.aliyun.com/                                                                                     |
+| DashScope API Docs       | https://help.aliyun.com/zh/model-studio/                                                                            |
+| Get API Key              | https://bailian.console.aliyun.com/?tab=app#/api-key                                                                |
+| Full CLI Guide           | [docs/knowledge-cli-guide.md](https://github.com/modelstudioai/cli/blob/main/docs/knowledge/knowledge-cli-guide.md) |
 
 ## Contributing
 
@@ -211,3 +211,7 @@ Bug reports, feature requests, and PRs are welcome. See [CONTRIBUTING.md](https:
 ## License
 
 [Apache 2.0](LICENSE)
+
+### RAG audio and video
+
+`kscli doc import --index-id <id> --doc-id <fileId>` imports an existing file into a knowledge base; `doc list --details` shows per-file processing settings. Media support includes parser options, streaming uploads, and media references in search/chunk output. Chat JSON separates the final answer from phases, tools, docs, usage, and raw events; quiet mode emits only the final answer. See the [command guide](../../docs/knowledge/knowledge-cli-guide.md).

@@ -2,7 +2,7 @@
 
 文档管理覆盖文件上传、OSS 导入、解析状态跟踪、文档删除和标签管理。文档导入知识库后自动解析为 chunk。
 
-> **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](../knowledge-cli-guide.md#通用约定)。
+> **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](knowledge-cli-guide.md#通用约定)。
 
 ---
 
@@ -341,4 +341,33 @@ bl knowledge doc import-oss --bucket my-bucket --region cn-beijing --oss-key doc
 
 ---
 
-← [返回总览](../knowledge-cli-guide.md)
+← [返回总览](knowledge-cli-guide.md)
+
+## 已有文件导入与音视频接入
+
+`doc upload` 从本地上传到数据中心，`doc import-oss` 从已授权 OSS 注册到数据中心；两者产生 fileId。新增 `doc import` 把这些已有文件加入已有知识库，不重复上传。kscli 使用相同参数，省略 `knowledge` 前缀。
+
+```bash
+bl knowledge doc import --index-id idx-xxx --doc-id file-xxx --wait
+bl knowledge doc import --index-id idx-xxx --category-id cate-xxx --dry-run
+bl knowledge doc list --index-id idx-xxx --details --page-number 2 --page-size 10
+```
+
+`--doc-id` 与 `--category-id` 可重复但互斥，必须选一种。`--wait` 与 `--poll-interval` 控制等待；返回 ingestionId。等待会汇总任务所有页的文件状态，失败文件不会因不在第一页而漏掉。超时后用原 ingestionId 继续查询，不必重新导入。
+
+普通文档可传 `--chunk-mode h1|h2|h3|h4|h5|length|page|regex`、`--chunk-size`、`--overlap-size`、`--separator`、`--enable-headers true|false`。length 需要 chunk-size，regex 需要 separator；这些不是音视频的按秒切片参数。
+
+`doc list --details` 调用文件详情列表接口，文本显示 chunkSize、overlapSize、separator、chunkMode、enableHeaders；JSON 保留原始响应。详情接口每页最多 **10** 条，默认普通列表仍为最多 100 条。
+
+音视频格式：aac、amr、flac、flv、m4a、mp3、mpeg、ogg、opus、wav、webm、wma、mp4、mkv、avi、mov、wmv。后缀不区分大小写，目录扫描包含这些格式。单文件本地上限 **2 GB = 2,000,000,000 字节**；这是当前明确采用的十进制解释，后端若采用 2 GiB 则需相应调整。原有文档/图片的大小限制保持不变。
+
+```bash
+bl knowledge doc upload --file ./short.mp4 --parser DOCMIND_LLM_VERSION_MEDIA --index-id idx-xxx --wait
+bl knowledge doc import-oss --bucket my-bucket --region cn-beijing --oss-key samples/short.mp4 --parser DOCMIND_LLM_VERSION_MEDIA
+```
+
+两个接入命令均支持 `--parser-config-file <JSON对象文件>`，保留未知配置键；OSS 参数应用到本批每个 fileDetails 元素。未指定 parser 时保持原有默认行为。上传使用流式 MD5 和流式 PUT，不把整个媒体加载进内存。
+
+带 `--index-id` 时，一次最多接入 50 个已知本地媒体文件，超限在上传前拒绝，不自动拆批。历史 fileId 和类目的类型/数量由服务端验证；类目个数不等于文件数。OSS 注册仍最多 10 个对象，与知识库导入上限不同。
+
+临时问答附件使用 `doc upload --category-type SESSION_FILE`，租约和注册都传同一类型；不能同时指定 index-id 或自定义 parser/config。会话附件不是长期知识库入库方式。

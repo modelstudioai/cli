@@ -2,7 +2,7 @@
 
 检索服务（也称 agent）是知识库的检索入口。通过 `--agent-id` 在 search/chat 命令中使用。服务有 `chat`（问答）和 `search`（检索）两种场景。
 
-> **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](../knowledge-cli-guide.md#通用约定)。
+> **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](knowledge-cli-guide.md#通用约定)。
 
 ---
 
@@ -398,4 +398,16 @@ bl knowledge service copy --agent-id aid-source --workspace-id ws-xxx
 
 ---
 
-← [返回总览](../knowledge-cli-guide.md)
+← [返回总览](knowledge-cli-guide.md)
+
+## 完整服务配置与媒体检索模型
+
+`service create --config-file` 接受完整 agent_config JSON 对象，与快捷 `--index-id` 互斥：
+
+```sh
+bl knowledge service create --name media-search --scene search --config-file ./agent-config.json
+```
+
+配置文件可包含每库 kb_search_configs、混排 hybrid_rerank 及服务端支持的其他字段。模型配置按服务端合同填写，CLI 不猜测默认音视频模型。`service get` 文本显示每库及混排配置摘要，JSON 保留完整响应。
+
+`service update --config-file` 替换完整配置；标量更新沿用读取后合并写入，保留既有检索配置及未知字段。修改 temperature 等参数不应丢掉媒体检索模型设置。

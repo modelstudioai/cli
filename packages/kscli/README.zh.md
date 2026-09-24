@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[Knowledge Studio 控制台](https://rag.console.aliyun.com/) · [English](README.md) · [API 文档](https://help.aliyun.com/zh/model-studio/) · [完整 CLI 指南](https://github.com/modelstudioai/cli/blob/main/docs/knowledge-cli-guide.md)
+[Knowledge Studio 控制台](https://rag.console.aliyun.com/) · [English](README.md) · [API 文档](https://help.aliyun.com/zh/model-studio/) · [完整 CLI 指南](https://github.com/modelstudioai/cli/blob/main/docs/knowledge/knowledge-cli-guide.md)
 
 </div>
 
@@ -149,7 +149,7 @@ kscli chat \
 | `config set`  | 设置配置项       |
 | `update`      | 自更新到最新版本 |
 
-> 完整参数说明、输出格式与使用示例请参阅 [CLI 指南](https://github.com/modelstudioai/cli/blob/main/docs/knowledge-cli-guide.md)。
+> 完整参数说明、输出格式与使用示例请参阅 [CLI 指南](https://github.com/modelstudioai/cli/blob/main/docs/knowledge/knowledge-cli-guide.md)。
 
 ## 认证方式
 
@@ -202,12 +202,12 @@ kscli update
 
 ## 相关链接
 
-| 资源                    | 地址                                                                                                      |
-| :---------------------- | :-------------------------------------------------------------------------------------------------------- |
-| Knowledge Studio 控制台 | https://rag.console.aliyun.com/                                                                           |
-| DashScope API 文档      | https://help.aliyun.com/zh/model-studio/                                                                  |
-| 获取 API Key            | https://bailian.console.aliyun.com/?tab=app#/api-key                                                      |
-| 完整 CLI 指南           | [docs/knowledge-cli-guide.md](https://github.com/modelstudioai/cli/blob/main/docs/knowledge-cli-guide.md) |
+| 资源                    | 地址                                                                                                                |
+| :---------------------- | :------------------------------------------------------------------------------------------------------------------ |
+| Knowledge Studio 控制台 | https://rag.console.aliyun.com/                                                                                     |
+| DashScope API 文档      | https://help.aliyun.com/zh/model-studio/                                                                            |
+| 获取 API Key            | https://bailian.console.aliyun.com/?tab=app#/api-key                                                                |
+| 完整 CLI 指南           | [docs/knowledge-cli-guide.md](https://github.com/modelstudioai/cli/blob/main/docs/knowledge/knowledge-cli-guide.md) |
 
 ## 参与贡献
 
@@ -216,3 +216,7 @@ kscli update
 ## 许可证
 
 [Apache 2.0](LICENSE)
+
+### RAG 音视频接入
+
+`kscli doc import --index-id <id> --doc-id <fileId>` 将历史文件导入已有库；`doc list --details` 查看文件级处理参数。支持音视频 parser、流式上传，以及检索/切片中的媒体来源展示。问答 JSON 将最终 answer 与 phases/tools/docs/usage/events 分开保存，quiet 仅输出最终回答。参阅 [命令指南](../../docs/knowledge/knowledge-cli-guide.md)。

@@ -2,7 +2,7 @@
 
 集合（collection）是数据中心的顶层容器，对应服务端的 connector。分类（category）用于组织集合内的文件，支持多级嵌套。
 
-> **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](../knowledge-cli-guide.md#通用约定)。
+> **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](knowledge-cli-guide.md#通用约定)。
 
 ---
 
@@ -265,4 +265,17 @@ bl knowledge category delete --category-id cate-xxx --yes
 
 ---
 
-← [返回总览](../knowledge-cli-guide.md)
+← [返回总览](knowledge-cli-guide.md)
+
+## 从 collection 查历史 fileId
+
+历史 fileId 不限于 `doc import-oss` 创建的文件。先列出 collection 的分类，再逐个列出文件：
+
+```sh
+bl knowledge category list --collection-id collection-example --output json
+bl knowledge category list --collection-id collection-example --parent-id category-example --output json
+bl knowledge file list --category-id category-example --output json
+bl knowledge doc import --index-id index-example --doc-id file-example --wait
+```
+
+分类与文件列表遇到 `data.nextToken` 时，保持原过滤条件并追加 `--next-token` 继续读取；对子分类重复遍历。文件 ID 取自 `data.fileList[].fileId`，不要把分类 ID 或知识库 doc ID 当作文件 ID。`doc import` 不重复上传文件，但重新入库仍可能触发解析，真实验收仍计入一次解析预算。
