@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.1.0] - 2026-09-28
+
+### Added
+
+- **Text fine-tuning parameters** — `bl finetune text create` now accepts job name, priority, LoRA, evaluation, checkpoint, dataset-split, and data-augmentation parameters. `bl finetune get` returns expanded job metadata and hyperparameters.
+
+### Fixed
+
+- **Windows Skill installation** — Handle legacy path limits and update installed Skills in place when running agents keep directories open.
+
+### Internal
+
+- Publish binaries before npm `latest` and ad-hoc sign macOS release binaries.
+
 ## [2.0.0] - 2026-09-22
 
 ### Added
