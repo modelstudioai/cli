@@ -77,8 +77,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # Binary compile uses `bun build --compile` CLI (not Bun.build API).
-      # Pin 1.3.14: 1.2.19 grows darwin-x64 LC_CODE_SIGNATURE.datasize past
-      # __LINKEDIT and rcodesign panics; 1.3.12 truncates arm64 signatures.
       # Keep this pin in sync with any local smoke tests of binary-compile.mjs.
       - uses: oven-sh/setup-bun@v2
         with:
@@ -154,8 +152,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # Binary compile uses `bun build --compile` CLI (not Bun.build API).
-      # Pin 1.3.14: 1.2.19 grows darwin-x64 LC_CODE_SIGNATURE.datasize past
-      # __LINKEDIT and rcodesign panics; 1.3.12 truncates arm64 signatures.
       # Keep this pin in sync with any local smoke tests of binary-compile.mjs.
       - uses: oven-sh/setup-bun@v2
         with:
