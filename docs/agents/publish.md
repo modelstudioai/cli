@@ -115,7 +115,7 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 - **GitHub Release**：`contents: write` + `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`（stable / channel 均需）
 - **Node 版本**：24（npm 11.5+ 才支持 OIDC token 交换）
 - **Bun**：`oven-sh/setup-bun`，版本钉死在 workflow 中
-- **darwin 签名**：编完后 `binary-codesign.mjs` 对 darwin Mach-O 做 ad-hoc 重签，并按 Apple 的方式重算每一页 SHA-256（末页不补零）。对不上就中止发布。macOS runner 额外跑 `codesign --verify --strict`。Linux runner 用 `rcodesign 0.29.0 sign`；不要用 `rcodesign verify`（会拒绝 Apple 已通过的 ad-hoc 签名）。漏签时 Apple Silicon 会在启动时 SIGKILL
+- **darwin 签名**：编完后 `binary-codesign.mjs` 对 darwin Mach-O 做 ad-hoc 重签，并按 Apple 的方式重算每一页 SHA-256（末页不补零）。对不上就中止发布。含二进制的 stable / channel job 使用 `macos-15-intel`，由 Apple `codesign --force --sign -` 签名并跑 `codesign --verify --strict`。不要在此流程改回 Linux `rcodesign 0.29.0`：它会因 Bun 交叉编译的 Intel Mach-O 签名范围越界而 panic（上游 issue #194）。漏签时 Apple Silicon 会在启动时 SIGKILL
 - **Actions 版本**：checkout/setup-node/pnpm-action 均为 v6（Node 24 兼容）
 - **npm 配置**：当前 release tooling 发布的包(`bailian-cli-core` / `bailian-cli-runtime` / `bailian-cli-commands` / `bailian-cli` / `knowledge-studio-cli`)的 Trusted Publisher 指向 `modelstudioai/cli` 的 `publish.yml`;新增发布包时同步 npm Trusted Publisher
 
@@ -162,6 +162,7 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 | CI 用 Node 22（npm 10）跑 publish                                   | npm 10 不支持 OIDC token 交换，publish 报 404                                      |
 | stable 发布前没有升级版本号                                         | 所选发布集合的版本已全部存在于 npm，CI 明确报错并要求先升级版本号                  |
 | channel job 缺少 `contents: write`                                  | `gh release create` 失败                                                           |
+| 在 Linux runner 上用 `rcodesign 0.29.0` 签 Bun 的 darwin-x64 二进制    | `rcodesign` 因签名范围越界 panic；二进制发布在生成 Release / npm 前中止       |
 | darwin 二进制编完后没有 ad-hoc 重签                                 | Apple Silicon / macOS 27 对失效的 linker 签名直接 SIGKILL（`Killed: 9`）           |
 | npm 先于二进制 / OSS 成功                                           | latest 已发出，CDN 上没有对应 zip/tar.gz；OSS 网络失败时无法回滚 npm               |
 | stable 未先推 tag 就建 Release                                      | `--verify-tag` 失败                                                                |

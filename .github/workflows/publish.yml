@@ -31,7 +31,9 @@ jobs:
   publish-stable:
     if: inputs.mode == 'stable' && inputs.package != 'bailian-kb-dsh'
     name: publish stable (${{ inputs.package }}) to npm + binary + tag
-    runs-on: ubuntu-latest
+    # Use Apple's codesign for both Darwin architectures. rcodesign 0.29.0
+    # panics while parsing Bun's cross-compiled bun-darwin-x64 signature.
+    runs-on: macos-15-intel
     environment: production # Required Reviewers gate
     permissions:
       contents: write # push tag + create GitHub Release with binary assets
@@ -52,27 +54,12 @@ jobs:
           set -euo pipefail
           GITLEAKS_VERSION=8.21.2
           curl -sSfL \
-            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_darwin_x64.tar.gz" \
             | sudo tar -xz -C /usr/local/bin gitleaks
           gitleaks version
 
-      - name: Ensure zip and tar (per-platform binary archives)
-        run: sudo apt-get update && sudo apt-get install -y zip
-
-      # bun build --compile leaves an invalid darwin linker signature. rcodesign
-      # re-signs those Mach-O files on the Linux runner (binary-codesign.mjs).
-      - name: Install rcodesign (ad-hoc sign darwin binaries)
-        run: |
-          set -euo pipefail
-          RCODESIGN_VERSION=0.29.0
-          asset="apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl.tar.gz"
-          curl -fsSL -o "/tmp/${asset}" \
-            "https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign/${RCODESIGN_VERSION}/${asset}"
-          tar -xzf "/tmp/${asset}" -C /tmp
-          sudo install -m 755 \
-            "/tmp/apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl/rcodesign" \
-            /usr/local/bin/rcodesign
-          rcodesign --version
+      # The macOS runner provides zip/tar and Apple's codesign. binary-build.mjs
+      # uses codesign natively here, avoiding rcodesign's Bun Intel Mach-O panic.
 
       - run: pnpm install --frozen-lockfile
 
@@ -101,7 +88,9 @@ jobs:
   publish-channel:
     if: inputs.mode == 'channel' && inputs.package != 'bailian-kb-dsh'
     name: publish channel (${{ inputs.package }}) to npm + binary
-    runs-on: ubuntu-latest
+    # Use Apple's codesign for both Darwin architectures. rcodesign 0.29.0
+    # panics while parsing Bun's cross-compiled bun-darwin-x64 signature.
+    runs-on: macos-15-intel
     permissions:
       contents: write # create prerelease GitHub Release with binary assets
       id-token: write # OIDC for npm Trusted Publishing + provenance
@@ -127,27 +116,12 @@ jobs:
           set -euo pipefail
           GITLEAKS_VERSION=8.21.2
           curl -sSfL \
-            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_darwin_x64.tar.gz" \
             | sudo tar -xz -C /usr/local/bin gitleaks
           gitleaks version
 
-      - name: Ensure zip and tar (per-platform binary archives)
-        run: sudo apt-get update && sudo apt-get install -y zip
-
-      # bun build --compile leaves an invalid darwin linker signature. rcodesign
-      # re-signs those Mach-O files on the Linux runner (binary-codesign.mjs).
-      - name: Install rcodesign (ad-hoc sign darwin binaries)
-        run: |
-          set -euo pipefail
-          RCODESIGN_VERSION=0.29.0
-          asset="apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl.tar.gz"
-          curl -fsSL -o "/tmp/${asset}" \
-            "https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign/${RCODESIGN_VERSION}/${asset}"
-          tar -xzf "/tmp/${asset}" -C /tmp
-          sudo install -m 755 \
-            "/tmp/apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl/rcodesign" \
-            /usr/local/bin/rcodesign
-          rcodesign --version
+      # The macOS runner provides zip/tar and Apple's codesign. binary-build.mjs
+      # uses codesign natively here, avoiding rcodesign's Bun Intel Mach-O panic.
 
       - run: pnpm install --frozen-lockfile
 
