@@ -6,6 +6,20 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.1.0] - 2026-09-28
+
+### 新增
+
+- **文本微调参数** —— `bl finetune text create` 现在支持任务名、优先级、LoRA、评估、Checkpoint、数据集切分和数据增强参数；`bl finetune get` 返回更完整的任务元数据与超参数。
+
+### 修复
+
+- **Windows Skill 安装** —— 处理传统路径长度限制，并可在运行中的 Agent 占用目录时原地更新已安装的 Skill。
+
+### 内部
+
+- 调整发布顺序，在 npm `latest` 前发布二进制，并对 macOS 发布二进制进行 ad-hoc 签名。
+
 ## [2.0.0] - 2026-09-22
 
 ### 新增
