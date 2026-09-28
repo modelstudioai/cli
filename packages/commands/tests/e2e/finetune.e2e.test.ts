@@ -588,9 +588,7 @@ describe("finetune complete recipe (offline)", () => {
     "json",
   ];
   test("preserves names, priority and every explicit hyperparameter", async () => {
-    const result = await runCommandE2e(FINETUNE_ROUTES, recipeArgs, {
-      DASHSCOPE_API_KEY: "offline-test-key",
-    });
+    const result = await runCommandE2e(FINETUNE_ROUTES, recipeArgs);
     expect(result.exitCode, result.stderr).toBe(0);
     const response = parseStdoutJson<{ body: Record<string, unknown> }>(result.stdout);
     expect(response.body).toMatchObject({
@@ -623,9 +621,7 @@ describe("finetune complete recipe (offline)", () => {
   ])("rejects invalid %s before submission", async (flagName, invalidValue) => {
     const invalidArgs = [...recipeArgs];
     invalidArgs[invalidArgs.indexOf(flagName) + 1] = invalidValue;
-    const result = await runCommandE2e(FINETUNE_ROUTES, invalidArgs, {
-      DASHSCOPE_API_KEY: "offline-test-key",
-    });
+    const result = await runCommandE2e(FINETUNE_ROUTES, invalidArgs);
     expect(result.exitCode).toBe(2);
   });
 });
