@@ -3,7 +3,9 @@
  *   bun tools/release/lib/binary-compile.mjs --entry <path> --outfile <path> --target <bun-target>
  *
  * Uses `bun build --compile` (CLI). The Bun.build({ compile }) API on ≤1.2.19
- * can exit 0 without writing outfile; CI pins 1.2.19 so we stay on the CLI.
+ * can exit 0 without writing outfile.
+ * CI pins Bun 1.3.14. 1.2.19 grows darwin-x64 LC_CODE_SIGNATURE.datasize past
+ * __LINKEDIT, and rcodesign panics. 1.3.12 truncates arm64 signatures.
  *
  * Called by binary-build.mjs (Node orchestration stays on Node).
  */

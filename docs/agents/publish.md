@@ -114,7 +114,7 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 - **认证**：npm OIDC Trusted Publishing（无 token），需要 `id-token: write` 权限；OSS 通道复用同一 OIDC token 向 FC 证明身份（见上文「OSS 通道」）
 - **GitHub Release**：`contents: write` + `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`（stable / channel 均需）
 - **Node 版本**：24（npm 11.5+ 才支持 OIDC token 交换）
-- **Bun**：`oven-sh/setup-bun`，版本钉死在 workflow 中
+- **Bun**：`oven-sh/setup-bun`，版本钉死在 workflow 中（当前 `1.3.14`）。不要退回 `1.2.19`：那个版本在 bundle 超过模板 `__BUN` 时会把 darwin-x64 的 `LC_CODE_SIGNATURE.datasize` 加到超出 `__LINKEDIT`，Linux 上的 `rcodesign sign` 解析 Mach-O 时 panic。也不要升到未验证的版本：`1.3.12` 会把 arm64 签名截断，`codesign` 直接拒绝
 - **darwin 签名**：编完后 `binary-codesign.mjs` 对 darwin Mach-O 做 ad-hoc 重签，并按 Apple 的方式重算每一页 SHA-256（末页不补零）。对不上就中止发布。macOS runner 额外跑 `codesign --verify --strict`。Linux runner 用 `rcodesign 0.29.0 sign`；不要用 `rcodesign verify`（会拒绝 Apple 已通过的 ad-hoc 签名）。漏签时 Apple Silicon 会在启动时 SIGKILL
 - **Actions 版本**：checkout/setup-node/pnpm-action 均为 v6（Node 24 兼容）
 - **npm 配置**：当前 release tooling 发布的包(`bailian-cli-core` / `bailian-cli-runtime` / `bailian-cli-commands` / `bailian-cli` / `knowledge-studio-cli`)的 Trusted Publisher 指向 `modelstudioai/cli` 的 `publish.yml`;新增发布包时同步 npm Trusted Publisher
@@ -149,19 +149,20 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 
 ## 常见漏点（基于历史踩坑）
 
-| 漏点                                                                | 后果                                                                               |
-| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| 只升部分包,漏升 runtime/commands/kscli                              | 当前 check.mjs 按所选发布集合校验,但未选择 `knowledge-studio-cli` 时不会覆盖 kscli |
-| 新增发布包但没加 `tools/release/lib/packages.mjs`                   | CI 不会 bump/publish/校验该包                                                      |
-| cli 升版号但 core 没升                                              | check.mjs 会拦下                                                                   |
-| 发版漏更 CHANGELOG，或分类写成规范外的 `优化`/`Improved`            | 用户看不到本次变更，分类与历史不一致                                               |
-| `1.0.0` 当 beta 直接发                                              | 占了 `latest` tag，所有用户被强升，撤回成本极高                                    |
-| README 写的 bin 名实际 `package.json.bin` 没注册                    | 用户复制命令报 `command not found`                                                 |
-| Node 徽章与 `cli/package.json.engines` 不一致（当前应为 `>=18.17`） | 用户在声明外的 Node 上 `npm i` 被 engine 警告或直接失败                            |
-| npm Trusted Publisher 的 workflow filename 改了没同步               | OIDC 匹配不上，publish 报 404                                                      |
-| CI 用 Node 22（npm 10）跑 publish                                   | npm 10 不支持 OIDC token 交换，publish 报 404                                      |
-| stable 发布前没有升级版本号                                         | 所选发布集合的版本已全部存在于 npm，CI 明确报错并要求先升级版本号                  |
-| channel job 缺少 `contents: write`                                  | `gh release create` 失败                                                           |
-| darwin 二进制编完后没有 ad-hoc 重签                                 | Apple Silicon / macOS 27 对失效的 linker 签名直接 SIGKILL（`Killed: 9`）           |
-| npm 先于二进制 / OSS 成功                                           | latest 已发出，CDN 上没有对应 zip/tar.gz；OSS 网络失败时无法回滚 npm               |
-| stable 未先推 tag 就建 Release                                      | `--verify-tag` 失败                                                                |
+| 漏点                                                                | 后果                                                                                         |
+| ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 只升部分包,漏升 runtime/commands/kscli                              | 当前 check.mjs 按所选发布集合校验,但未选择 `knowledge-studio-cli` 时不会覆盖 kscli           |
+| 新增发布包但没加 `tools/release/lib/packages.mjs`                   | CI 不会 bump/publish/校验该包                                                                |
+| cli 升版号但 core 没升                                              | check.mjs 会拦下                                                                             |
+| 发版漏更 CHANGELOG，或分类写成规范外的 `优化`/`Improved`            | 用户看不到本次变更，分类与历史不一致                                                         |
+| `1.0.0` 当 beta 直接发                                              | 占了 `latest` tag，所有用户被强升，撤回成本极高                                              |
+| README 写的 bin 名实际 `package.json.bin` 没注册                    | 用户复制命令报 `command not found`                                                           |
+| Node 徽章与 `cli/package.json.engines` 不一致（当前应为 `>=18.17`） | 用户在声明外的 Node 上 `npm i` 被 engine 警告或直接失败                                      |
+| npm Trusted Publisher 的 workflow filename 改了没同步               | OIDC 匹配不上，publish 报 404                                                                |
+| CI 用 Node 22（npm 10）跑 publish                                   | npm 10 不支持 OIDC token 交换，publish 报 404                                                |
+| stable 发布前没有升级版本号                                         | 所选发布集合的版本已全部存在于 npm，CI 明确报错并要求先升级版本号                            |
+| channel job 缺少 `contents: write`                                  | `gh release create` 失败                                                                     |
+| darwin 二进制编完后没有 ad-hoc 重签                                 | Apple Silicon / macOS 27 对失效的 linker 签名直接 SIGKILL（`Killed: 9`）                     |
+| 把编译用的 Bun 从 `1.3.14` 退回 `1.2.19`                            | darwin-x64 的 `datasize` 超出 `__LINKEDIT`，`rcodesign` panic，channel/stable 二进制步骤失败 |
+| npm 先于二进制 / OSS 成功                                           | latest 已发出，CDN 上没有对应 zip/tar.gz；OSS 网络失败时无法回滚 npm                         |
+| stable 未先推 tag 就建 Release                                      | `--verify-tag` 失败                                                                          |
