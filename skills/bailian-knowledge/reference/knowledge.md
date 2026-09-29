@@ -431,7 +431,7 @@ bl knowledge chunk update --index-id idx-xxx --chunk-id chunk-xxx --doc-id file-
 
 ## bl knowledge collection create
 
-Create a FILE data collection
+Create a FILE collection
 
 ```sh
 bl knowledge collection create --name <text> --description <text> [flags]
@@ -482,7 +482,7 @@ bl knowledge collection create --name oss-coll --description 'own bucket' --stor
 
 ## bl knowledge collection get
 
-Show data collection details
+Show collection details
 
 ```sh
 bl knowledge collection get (--collection-id <id> | --name <text>) [flags]

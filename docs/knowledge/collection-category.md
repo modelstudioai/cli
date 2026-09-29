@@ -1,6 +1,6 @@
-# 数据中心集合与分类命令手册
+# 数据中心数据集与分类命令手册
 
-集合（collection）是数据中心的顶层容器，对应服务端的 connector。分类（category）用于组织集合内的文件，支持多级嵌套。
+数据集（collection）是数据中心的顶层容器。分类（category）用于组织数据集内的文件，支持多级嵌套。
 
 > **通用约定**（鉴权、Workspace ID、全局参数、输出格式、危险操作确认、Dry-run 模式）请参阅 [总览文档](knowledge-cli-guide.md#通用约定)。
 
@@ -8,7 +8,7 @@
 
 #### `bl knowledge collection create`
 
-创建 FILE 数据集合。
+创建 FILE 数据集。
 
 **用法**
 
@@ -20,8 +20,8 @@ bl knowledge collection create --name <text> --description <text> [flags]
 
 | 参数                   | 类型   | 必填 | 说明                                                             |
 | ---------------------- | ------ | ---- | ---------------------------------------------------------------- |
-| `--name <text>`        | string | 是   | 集合名称（1-20 字符）                                            |
-| `--description <text>` | string | 是   | 集合描述                                                         |
+| `--name <text>`        | string | 是   | 数据集名称（1-20 字符）                                          |
+| `--description <text>` | string | 是   | 数据集描述                                                       |
 | `--store-type <type>`  | string | 否   | 存储类型：`platform`（托管，默认）或 `custom`（自有 OSS bucket） |
 | `--oss-region <id>`    | string | 否   | OSS region ID（`--store-type custom` 时必填）                    |
 | `--oss-bucket <name>`  | string | 否   | OSS bucket 名称（`--store-type custom` 时必填）                  |
@@ -40,7 +40,7 @@ text 模式：
 created: conn-xxx  (my-collection, PLATFORM)
 ```
 
-quiet 模式：输出集合 ID。
+quiet 模式：输出数据集 ID。
 
 json 模式：返回 API 原始响应。
 
@@ -48,15 +48,15 @@ json 模式：返回 API 原始响应。
 
 - `platform` 使用平台托管存储；`custom` 使用已授权的 OSS bucket。
 - 自定义 bucket 必须携带标签 `bailian-connector-access=ReadAndWrite`（百炼的标签访问控制），否则服务端报 `setBucketCORS failed` 误导性错误。
-- **无集合删除 API**，创建需谨慎。
+- **无数据集删除 API**，创建需谨慎。
 
 **示例**
 
 ```bash
-# 创建平台托管的集合
+# 创建平台托管的数据集
 bl knowledge collection create --name my-collection --description "team docs" --workspace-id ws-xxx
 
-# 创建使用自有 OSS bucket 的集合
+# 创建使用自有 OSS bucket 的数据集
 bl knowledge collection create --name oss-coll --description "own bucket" --store-type custom --oss-region cn-beijing --oss-bucket my-bucket
 ```
 
@@ -64,7 +64,7 @@ bl knowledge collection create --name oss-coll --description "own bucket" --stor
 
 #### `bl knowledge collection get`
 
-查看数据集合详情。
+查看数据集详情。
 
 **用法**
 
@@ -74,10 +74,10 @@ bl knowledge collection get (--collection-id <id> | --name <text>) [flags]
 
 **参数**
 
-| 参数                   | 类型   | 必填 | 说明     |
-| ---------------------- | ------ | ---- | -------- |
-| `--collection-id <id>` | string | 否¹  | 集合 ID  |
-| `--name <text>`        | string | 否¹  | 集合名称 |
+| 参数                   | 类型   | 必填 | 说明       |
+| ---------------------- | ------ | ---- | ---------- |
+| `--collection-id <id>` | string | 否¹  | 数据集 ID  |
+| `--name <text>`        | string | 否¹  | 数据集名称 |
 
 > ¹ `--collection-id` 和 `--name` 二选一，必须提供其一。
 
@@ -95,7 +95,7 @@ name: my-collection
 description: team docs
 ```
 
-quiet 模式：输出集合 ID。
+quiet 模式：输出数据集 ID。
 
 json 模式：返回 API 原始响应。
 
@@ -129,7 +129,7 @@ bl knowledge category list [flags]
 
 | 参数                   | 类型   | 必填 | 说明                                                   |
 | ---------------------- | ------ | ---- | ------------------------------------------------------ |
-| `--collection-id <id>` | string | 否   | 按集合 ID 过滤                                         |
+| `--collection-id <id>` | string | 否   | 按数据集 ID 过滤                                       |
 | `--parent-id <id>`     | string | 否   | 列出此分类的子分类                                     |
 | `--name <text>`        | string | 否   | 按分类名称过滤（精确匹配，与知识库列表的模糊匹配不同） |
 | `--next-token <token>` | string | 否   | 游标分页令牌                                           |
@@ -182,11 +182,11 @@ bl knowledge category add --name <text> [flags]
 
 **参数**
 
-| 参数                   | 类型   | 必填 | 说明                             |
-| ---------------------- | ------ | ---- | -------------------------------- |
-| `--name <text>`        | string | 是   | 分类名称（1-20 字符）            |
-| `--parent-id <id>`     | string | 否   | 创建为指定分类的子分类           |
-| `--collection-id <id>` | string | 否   | 创建在此集合下（默认：平台集合） |
+| 参数                   | 类型   | 必填 | 说明                                 |
+| ---------------------- | ------ | ---- | ------------------------------------ |
+| `--name <text>`        | string | 是   | 分类名称（1-20 字符）                |
+| `--parent-id <id>`     | string | 否   | 创建为指定分类的子分类               |
+| `--collection-id <id>` | string | 否   | 创建在此数据集下（默认：平台数据集） |
 
 **参数约束**
 

@@ -433,7 +433,7 @@ kscli chunk update --index-id idx-xxx --chunk-id chunk-xxx --doc-id file-xxx --e
 
 ## kscli collection create
 
-Create a FILE data collection
+Create a FILE collection
 
 ```sh
 kscli collection create --name <text> --description <text> [flags]
@@ -484,7 +484,7 @@ kscli collection create --name oss-coll --description 'own bucket' --store-type 
 
 ## kscli collection get
 
-Show data collection details
+Show collection details
 
 ```sh
 kscli collection get (--collection-id <id> | --name <text>) [flags]

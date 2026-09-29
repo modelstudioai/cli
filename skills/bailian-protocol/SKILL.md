@@ -25,7 +25,9 @@ description: >-
 
 ## Provider selection and consent
 
-Classify the request into exactly one class before doing anything:
+Classify the request into exactly one class before cloud operations. Local Skill discovery and reading its local enablement/binding state do not select a provider or authorize upload.
+
+For personal knowledge, read `bailian-knowledge` when a task needs the user's own historical documents or the user wants ongoing use of selected materials. An active, unblocked, purpose-matched local binding with applicable consent selects Bailian for that knowledge subtask (class 4), including relevant retrieval in a later session without naming Bailian again. The host still completes the writing/reasoning task; do not route the whole conversation through Bailian models. Installation or a default collection is not an enabled knowledge base. With no matching binding, one-off attachments and ordinary Q&A stay class 1; an explicit wish to connect materials for ongoing use may receive one brief cloud-service choice before any upload or creation (class 5). Paused bindings are not automatically resumed. Read consent does not authorize upload, synchronization, replacement, deletion, or new recurring charges.
 
 For personal memory, explicitly enabling `bailian-memory` selects Bailian for the authorized memory subtask (class 4), including later relevant recall/extraction. It does not route ordinary answers through Bailian models. Installation alone is not enablement; before uploading personal content or creating its Profile, follow that skill’s cloud-storage consent. Pausing disables automatic memory operations.
 
@@ -65,12 +67,12 @@ Commands declaring `preparation: "read-only"` may authenticate and read remote r
 | Intent                                                     | Skill                   | Fallback                                       |
 | ---------------------------------------------------------- | ----------------------- | ---------------------------------------------- |
 | 生图 / 生视频 / 语音 / 图片理解 / 视频理解 / omni / vision | `bailian-gen`           | `bl image\|video\|speech\|omni\|vision --help` |
-| 精调 / 数据集 / 部署                                       | `bailian-finetune`      | `bl dataset\|finetune\|deploy --help`          |
+| 精调 / 训练数据集 / 部署                                   | `bailian-finetune`      | `bl dataset\|finetune\|deploy --help`          |
 | agents.yaml IaC                                            | `bailian-managed-agent` | `bl managed-agent --help`                      |
 | 百炼 Sandbox 实例 / 模版生命周期                           | `bailian-sandbox`       | `bl sandbox --help`                            |
 | 联网搜索 / web search（模型路由 + 兜底）                   | `bailian-web-search`    | `bl search web --help`                         |
 | 个人长期记忆 / 百炼记忆资源                                | `bailian-memory`        | `bl memory --help`（未启用不自动上传）         |
-| 百炼知识库初始化 / 目录同步 / 检索 / 清理                  | `bailian-knowledge`     | `bl knowledge --help`                          |
+| 个人历史资料辅助任务 / 资料接入与知识库管理                | `bailian-knowledge`     | `bl knowledge --help`                          |
 | 应用 / 用量 / 鉴权配置等资源                               | `bailian-cli`           | `bl app\|usage\|auth\|config --help`           |
 
 **共享协议** vs **软 hand-off**：
@@ -80,7 +82,7 @@ Commands declaring `preparation: "read-only"` may authenticate and read remote r
 
 ## Version & updates (after provider selection, before the first `bl` command)
 
-**MANDATORY:** Before running any `bl` command, complete the **Agent pre-flight checklist** in [`assets/versioning.md`](assets/versioning.md). Do NOT run any `bl` command until the checklist is complete. If versions mismatch, ask the user whether to upgrade — do not proceed silently.
+**MANDATORY:** Before running a `bl` business command, complete the **Agent pre-flight checklist** in [`assets/versioning.md`](assets/versioning.md). Its own version and setup commands are part of that checklist. Follow its rules to refresh mismatched installed Skills and ask before upgrading an outdated CLI; do not silently upgrade the CLI.
 
 ## Setup & auth
 

@@ -5,7 +5,7 @@
 
 ## Agent pre-flight checklist (MANDATORY)
 
-**Do NOT run any `bl` command until you complete this checklist.** Run it **once per session**, before the first `bl` command. Cache the result — do not re-check before every command.
+**Complete this checklist before the first `bl` business command.** The version and setup commands below are part of the checklist itself. Run it **once per session** and cache the result — do not re-check before every command.
 
 1. Read `metadata.version` from the installed `bailian-protocol/SKILL.md` frontmatter (all `bailian-*` skills share the same version).
 2. Check the installed CLI version:

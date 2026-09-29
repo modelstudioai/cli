@@ -13,7 +13,7 @@ const COLLECTION_CREATE_FLAGS = {
   name: {
     type: "string",
     valueHint: "<text>",
-    description: { "en-US": "Collection name", "zh-CN": "数据集合名称" },
+    description: { "en-US": "Collection name", "zh-CN": "数据集名称" },
     required: true,
   },
   description: {
@@ -22,7 +22,7 @@ const COLLECTION_CREATE_FLAGS = {
     description: {
       "en-US":
         "What this collection holds and what it is for — tells collections apart in the list",
-      "zh-CN": "数据集合装了什么内容、给谁用，用于在列表中区分同类集合",
+      "zh-CN": "数据集装了什么内容、给谁用，用于在列表中区分同类数据集",
     },
     required: true,
   },
@@ -54,7 +54,7 @@ const COLLECTION_CREATE_FLAGS = {
 } satisfies FlagsDef;
 
 export default defineCommand({
-  description: { "en-US": "Create a FILE data collection", "zh-CN": "创建 FILE 数据集合" },
+  description: { "en-US": "Create a FILE collection", "zh-CN": "创建 FILE 数据集" },
   auth: "apiKey",
   usageArgs: "--name <text> --description <text> [flags]",
   flags: COLLECTION_CREATE_FLAGS,
@@ -72,7 +72,7 @@ export default defineCommand({
     },
     {
       "en-US": "There is no collection delete API — create collections deliberately.",
-      "zh-CN": "目前没有删除数据集合的 API——请谨慎创建。",
+      "zh-CN": "目前没有删除数据集的 API——请谨慎创建。",
     },
   ],
   exampleArgs: [

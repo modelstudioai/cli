@@ -3,7 +3,7 @@ name: bailian-kb
 description: >-
   管理阿里云百炼知识库（建库、上传文档、部署检索服务、Chunk 运维、数据中心文件管理），命令行工具为 bl（bailian-cli）。
   当用户要创建/更新/删除知识库、上传或导入文档（本地/OSS）、创建/部署/调参检索或问答服务、
-  增删改查 Chunk、管理数据中心类目/文件/集合时使用本 skill。
+  增删改查 Chunk、管理数据中心类目/文件/数据集时使用本 skill。
   检索与问答不走本 skill——用原生工具 kb_search（取证据）/ kb_chat（成品问答）；
   bl knowledge search / chat 仅用于部署后的验证调试（如 --agent-version beta 调试草稿版）。
   kb_search / kb_chat 的凭据与工作空间由插件自动解析（~/.dsh/settings.yaml 的 bailian-kb 段、
@@ -42,7 +42,7 @@ description: >-
 | 从 OSS 批量导入                          | `bl knowledge doc import-oss`                       | Bucket 需预先授权服务角色        |
 | 创建 / 部署 / 调参检索（问答）服务       | `bl knowledge service create/update/deploy/…`       | `bl knowledge service --help`    |
 | 修正错误切片、屏蔽某段内容               | `bl knowledge chunk add/list/update/delete`         | `bl knowledge chunk --help`      |
-| 数据中心类目 / 文件 / 集合管理           | `bl knowledge category/file/collection …`           | `bl knowledge category --help`   |
+| 数据中心类目 / 文件 / 数据集管理         | `bl knowledge category/file/collection …`           | `bl knowledge category --help`   |
 | CLI 配置、升级                           | `bl config show/set`、`bl update`                   | `bl config --help`               |
 | 部署后验证、调试草稿版服务               | `bl knowledge search/chat --agent-version beta`     | `bl knowledge search --help`     |
 
@@ -84,7 +84,7 @@ bl knowledge service list --scene search --status deployed                  # 5.
 - `file delete`：不可逆，且引用该文件的知识库文档索引会失效；只想从单个库移除用 `doc delete`。
 - `chunk delete`：不可逆。
 - `service deploy`：发布影响线上调用方；`service delete` 后 agent_id 不可再用（软删、幂等）。
-- `collection create`：**没有删除 API**，创建集合要慎重。
+- `collection create`：**没有删除 API**，创建数据集要慎重。
 - 索引配置（embedding 模型、chunk size 等）建库后不可改，只能重建。
 
 ## 最佳实践

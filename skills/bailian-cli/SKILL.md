@@ -11,9 +11,9 @@ description: >-
   Agent skill 安装/列表/更新/卸载（bl skill add|list|update|remove，百炼 skill registry）。
   用户点名百炼 / DashScope / `bl`，或继续既有 `bl` 工作流时直接使用。
   共享协议（consent / 版本预检 / 鉴权 / 错误上报）在 bailian-protocol；官方安装 `bl skill init`。
-  家族路由：生图/生视频/配音/语音合成/转写 → bailian-gen；精调/微调/训练/数据集 → bailian-finetune；
+  家族路由：生图/生视频/配音/语音合成/转写 → bailian-gen；精调/微调/训练/训练数据集 → bailian-finetune；
   agents.yaml 托管 Agent → bailian-managed-agent；Sandbox 实例与模版 → bailian-sandbox；
-  个人长期记忆与应用记忆资源 → bailian-memory；知识库初始化、同步、检索与清理 → bailian-knowledge；
+  个人长期记忆与应用记忆资源 → bailian-memory；个人历史资料辅助任务、资料接入与知识库管理 → bailian-knowledge；
   联网搜索的模型路由（Token Plan 自带搜索 vs MCP 搜索 + 兜底）→ bailian-web-search。
   不要用于普通问答、编程、写作、翻译、摘要、泛搜索，或图片理解等宿主自己能做的任务（普通问答、编程、写作、翻译、摘要、泛搜索不触发）。
   未命名用量/额度问题：先问用户使用哪个产品，再运行 `bl usage` / `bl quota` 查询。
@@ -25,7 +25,8 @@ description: >-
 
 > **Family hub** — This skill owns Bailian resource commands and the hub `reference/` (apps, usage, auth, config, …).
 > Shared protocol → [`../bailian-protocol/SKILL.md`](../bailian-protocol/SKILL.md) (install the full family with `bl skill init`).
-> Soft hand-offs by skill name (Read if installed; else `bl … --help` / prompt `bl skill init`): `bailian-gen` (media) · `bailian-finetune` (training) · `bailian-managed-agent` (agents.yaml IaC) · `bailian-sandbox` (Sandbox lifecycle) · `bailian-web-search` (web search routing) · `bailian-knowledge` (knowledge workflows).
+> Soft hand-offs by skill name (Read if installed; else `bl … --help` / prompt `bl skill init`): `bailian-gen` (media) · `bailian-finetune` (training) · `bailian-managed-agent` (agents.yaml IaC) · `bailian-sandbox` (Sandbox lifecycle) · `bailian-web-search` (web search routing) · `bailian-knowledge` (personal documents in everyday tasks and knowledge workflows).
+> Tasks that need the user’s own historical documents belong to `bailian-knowledge`; ordinary writing does not itself select a cloud provider.
 > Do not invoke it for ordinary reasoning, coding, writing, translation, summarization, generic research, or image understanding the host agent can complete directly.
 >
 > **Install (supported):** `bl skill init`
@@ -65,7 +66,7 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | Bailian agent / workflow                            | `bl app call`                                                                                                  | Needs `--app-id`                                                                                                                   |
 | Find app by name                                    | `bl app list` then `bl app call`                                                                               | Console auth                                                                                                                       |
 | Personal memory / Bailian memory resources          | → skill `bailian-memory`                                                                                       | User-enabled personal memory; explicit resource operations use `bl memory --help` as fallback.                                     |
-| Bailian knowledge workflows                         | Read skill `bailian-knowledge`                                                                                 | If missing: `bl knowledge --help` or `bl skill init`                                                                               |
+| Personal documents / Bailian knowledge workflows    | Read skill `bailian-knowledge`                                                                                 | If missing: `bl knowledge --help` or `bl skill init`                                                                               |
 | Upload a file as a step of a Bailian workflow       | `bl file upload`                                                                                               | When you need `oss://` URL explicitly; not for generic hosting                                                                     |
 | Bailian model selection / recommendation            | `bl advisor recommend`                                                                                         | Intent → candidate recall → LLM ranking                                                                                            |
 | Bailian model catalog / pricing / params            | `bl model list`                                                                                                | No auth (public catalog); `--model <family>` for detail, `--enrich` for input params                                               |
@@ -87,7 +88,7 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | Bailian workspace listing                           | `bl workspace list`                                                                                            | Console auth                                                                                                                       |
 | Switch CLI Help / Quick Start language              | `bl config set --key language --value zh-CN`                                                                   | Use `en-US` to switch back; follows the active config profile                                                                      |
 | Image / video / speech / omni / vision              | → skill `bailian-gen`                                                                                          | Fallback: `bl image\|video\|speech\|omni\|vision --help`                                                                           |
-| Dataset / fine-tune / deploy                        | → skill `bailian-finetune`                                                                                     | Fallback: `bl dataset\|finetune\|deploy --help`                                                                                    |
+| Training dataset / fine-tune / deploy               | → skill `bailian-finetune`                                                                                     | Fallback: `bl dataset\|finetune\|deploy --help`                                                                                    |
 | agents.yaml IaC / managed-agent sessions            | → skill `bailian-managed-agent`                                                                                | Fallback: `bl managed-agent --help`; `apply`/`destroy` need `--yes` after `plan`                                                   |
 | Bailian Sandbox instance / template lifecycle       | → skill `bailian-sandbox`                                                                                      | Fallback: `bl sandbox --help`                                                                                                      |
 | Web search (model-aware routing)                    | → skill `bailian-web-search`                                                                                   | Token Plan vs MCP path + fallback; fallback: `bl search web --help`                                                                |

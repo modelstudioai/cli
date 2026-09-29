@@ -16,7 +16,7 @@
    - [检索服务管理](#检索服务管理) → [完整手册](service.md)
    - [Chunk 管理](#chunk-管理) → [完整手册](chunk.md)
    - [数据中心文件管理](#数据中心文件管理) → [完整手册](file.md)
-   - [数据中心集合与分类](#数据中心集合与分类) → [完整手册](collection-category.md)
+   - [数据中心数据集与分类](#数据中心数据集与分类) → [完整手册](collection-category.md)
    - [检索与对话](#检索与对话) → [完整手册](search-chat.md)
    - [配置与维护](#配置与维护)
 6. [常见错误与排查](#常见错误与排查)
@@ -32,7 +32,7 @@
 - **文档管理**：上传本地文件或目录、从 OSS 批量导入、查看解析状态、删除、打标签
 - **Chunk 级运维**：直接增删改查知识库中的内容切片
 - **检索服务管理**：创建/部署/复制/删除 Q&A 和检索服务（agent），管理 draft 与发布版本
-- **数据中心管理**：文件、集合（connector）、分类的增删查
+- **数据中心管理**：文件、数据集（collection）、分类的增删查
 - **检索与对话**：语义检索（search）、多轮对话（chat）
 - **配置与维护**：查看/修改本地配置、自更新 CLI
 
@@ -61,8 +61,8 @@ kscli --help
 ┌─────────────────────────────────────────────────────────────┐
 │                     数据中心 (Data Center)                    │
 │                                                             │
-│  集合 (Collection) ──┬── 分类 (Category) ── 文件 (File)      │
-│                      │   "connector"        可多级嵌套       │
+│  数据集 (Collection) ──┬── 分类 (Category) ── 文件 (File)      │
+│                      │                      可多级嵌套       │
 │                      └── 默认分类                            │
 │                                                             │
 │  文件来源：doc upload(本地上传) / doc import-oss(OSS导入)     │
@@ -610,13 +610,13 @@ kscli file delete --file-id <id> [flags]
 
 ---
 
-### 数据中心集合与分类
+### 数据中心数据集与分类
 
 > 📖 [完整手册](collection-category.md) — 5 个命令
 
 #### `kscli collection create`
 
-创建 FILE 数据集合。
+创建 FILE 数据集。
 
 ```bash
 kscli collection create --name <text> --description <text> [flags]
@@ -628,7 +628,7 @@ kscli collection create --name <text> --description <text> [flags]
 
 #### `kscli collection get`
 
-查看数据集合详情。
+查看数据集详情。
 
 ```bash
 kscli collection get (--collection-id <id> | --name <text>) [flags]
@@ -858,13 +858,13 @@ kscli config set --key workspace_id --value ws-xxx
 
 **解决**：通过 `file get` 的 category 字段或 `category list` 获取真实分类 ID。
 
-### 集合无法删除
+### 数据集无法删除
 
 **问题**：没有 `collection delete` 命令。
 
 **原因**：暂不支持通过 CLI 删除。
 
-**解决**：创建集合需谨慎。如需隔离，创建新集合并迁移文件。
+**解决**：创建数据集需谨慎。如需隔离，创建新数据集并迁移文件。
 
 ---
 
@@ -898,8 +898,8 @@ kscli config set --key workspace_id --value ws-xxx
 | `kscli file list`         | 文件列表     | `--category-id`                                             |
 | `kscli file get`          | 文件详情     | `--file-id`                                                 |
 | `kscli file delete`       | 删除文件     | `--file-id`, `--yes`                                        |
-| `kscli collection create` | 创建集合     | `--name`, `--description`                                   |
-| `kscli collection get`    | 集合详情     | `--collection-id`/`--name`                                  |
+| `kscli collection create` | 创建数据集   | `--name`, `--description`                                   |
+| `kscli collection get`    | 数据集详情   | `--collection-id`/`--name`                                  |
 | `kscli category list`     | 分类列表     | `--collection-id`, `--parent-id`                            |
 | `kscli category add`      | 创建分类     | `--name`, `--parent-id`                                     |
 | `kscli category delete`   | 删除分类     | `--category-id`, `--yes`                                    |
