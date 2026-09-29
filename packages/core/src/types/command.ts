@@ -69,6 +69,13 @@ export type AuthRequirement = "apiKey" | "console" | "openapi" | "none";
 // ── Flag 分组:全局(所有命令) + 凭证域(按命令的 auth 可见) ────────────────────
 /** 所有命令都可用的全局 flag。 */
 export const GLOBAL_FLAGS = {
+  introspect: {
+    type: "switch",
+    description: {
+      "en-US": "Print the machine-readable command schema (JSON) and exit",
+      "zh-CN": "输出机器可读的命令说明（JSON）并退出",
+    },
+  },
   output: {
     type: "string",
     valueHint: "<format>",
@@ -235,7 +242,11 @@ export function credentialFlagDefs(cmd: { auth: AuthRequirement }): FlagsDef {
  * resolved configuration surface, `identity` for product identity, and `flags`
  * for parsed arguments. Never handle tokens or baseUrl.
  */
-export interface CommandContext<F extends FlagsDef = FlagsDef> {
+export interface CommandContext<F extends FlagsDef = FlagsDef, Prepared = undefined> {
+  /** Resolve a unique registered product path; older hosts may omit this capability. */
+  commandPath?: (command: AnyCommand) => string[] | undefined;
+  /** Read-only preparation result, supplied only after the runtime confirmation gate. */
+  prepared?: Prepared;
   /** 静态产品身份(binName/version/npmPackage/clientName)。 */
   identity: Identity;
   /**
@@ -271,9 +282,23 @@ export type CommandRiskLevel = "high";
 export interface CommandRisk {
   level: CommandRiskLevel;
   message: LocalizedText;
+  reason?: "destructive" | "billing";
 }
 
-export interface Command<F extends FlagsDef = FlagsDef> {
+export interface CommandNotice {
+  code: string;
+  message: LocalizedText;
+  url?: string;
+}
+
+export interface CommandPreparation<Prepared> {
+  data: Prepared;
+  preview: unknown;
+  risk: CommandRisk | null;
+  notices: readonly CommandNotice[];
+}
+
+export interface Command<F extends FlagsDef = FlagsDef, Prepared = undefined> {
   description: LocalizedText;
   /** Credential this command requires. See {@link AuthRequirement}. */
   auth: AuthRequirement;
@@ -284,6 +309,8 @@ export interface Command<F extends FlagsDef = FlagsDef> {
    * remote request or local write; runtime only owns the confirmation gate.
    */
   risk?: CommandRisk;
+  /** Authenticated, read-only planning. Never write files, request leases, or mutate resources. */
+  prepare?: (ctx: CommandContext<F>) => Promise<CommandPreparation<Prepared>>;
   /** Usage line arg portion, e.g. "--prompt <text> [flags]". Manually written. */
   usageArgs?: string;
   /** Example args (without the `<bin> <path>` prefix). */
@@ -301,13 +328,15 @@ export interface Command<F extends FlagsDef = FlagsDef> {
   validate?: (
     flags: ParsedFlags<F>,
   ) => LocalizedText | undefined | Promise<LocalizedText | undefined>;
-  run: (ctx: CommandContext<F>) => Promise<void>;
+  run: (ctx: CommandContext<F, Prepared>) => Promise<void>;
 }
 
 /** Type-erased command for heterogeneous storage (registry / context). */
-export type AnyCommand = Command<any>;
+export type AnyCommand = Command<any, any>;
 
 /** Identity wrapper whose only job is to infer `F` from `spec.flags`. */
-export function defineCommand<F extends FlagsDef>(spec: Command<F>): Command<F> {
+export function defineCommand<F extends FlagsDef, Prepared = undefined>(
+  spec: Command<F, Prepared>,
+): Command<F, Prepared> {
   return spec;
 }

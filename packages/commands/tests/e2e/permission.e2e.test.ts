@@ -1,6 +1,13 @@
-import { describe, expect, test } from "vite-plus/test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterAll, describe, expect, test } from "vite-plus/test";
 import { isDashScopeE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { PERMISSION_ROUTES } from "./topic-routes.ts";
+
+const configDirectory = mkdtempSync(join(tmpdir(), "permission-defaults-"));
+afterAll(() => rmSync(configDirectory, { recursive: true, force: true }));
+const defaultOutputEnvironment = { BAILIAN_CONFIG_DIR: configDirectory, DASHSCOPE_OUTPUT: "" };
 
 describe("e2e: permission", () => {
   test("permission list --help 正常退出", async () => {
@@ -136,11 +143,11 @@ describe("e2e: permission", () => {
   // --dry-run 跳过 auth stage（见 runtime middleware），无需凭证即可断言请求形状。
   // 不传 --output：permission 命令组默认 JSON 输出。
   test("permission list --dry-run 输出 GET 请求（默认 AUTHORIZABLE + JSON）", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(PERMISSION_ROUTES, [
-      "permission",
-      "list",
-      "--dry-run",
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      PERMISSION_ROUTES,
+      ["permission", "list", "--dry-run"],
+      defaultOutputEnvironment,
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
       endpoint?: string;
@@ -155,28 +162,30 @@ describe("e2e: permission", () => {
   });
 
   test("permission list --scope authorized --dry-run 透传 scope", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(PERMISSION_ROUTES, [
-      "permission",
-      "list",
-      "--scope",
-      "authorized",
-      "--dry-run",
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      PERMISSION_ROUTES,
+      ["permission", "list", "--scope", "authorized", "--dry-run"],
+      defaultOutputEnvironment,
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{ query?: { authorization_scope?: string } }>(stdout);
     expect(data.query?.authorization_scope).toBe("AUTHORIZED");
   });
 
   test("permission grant --dry-run 输出逐模型 POST 请求体（默认 JSON）", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(PERMISSION_ROUTES, [
-      "permission",
-      "grant",
-      "--model",
-      "qwen-plus,qwen3-max",
-      "--action",
-      "inference,finetune",
-      "--dry-run",
-    ]);
+    const { stdout, stderr, exitCode } = await runCommandE2e(
+      PERMISSION_ROUTES,
+      [
+        "permission",
+        "grant",
+        "--model",
+        "qwen-plus,qwen3-max",
+        "--action",
+        "inference,finetune",
+        "--dry-run",
+      ],
+      defaultOutputEnvironment,
+    );
     expect(exitCode, stderr).toBe(0);
     const data = parseStdoutJson<{
       endpoint?: string;

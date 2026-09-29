@@ -1,5 +1,6 @@
 import { BailianError, ExitCode, detectOutputFormat, type OutputFormat } from "bailian-cli-core";
 import { API_KEY_PAGE } from "./urls.ts";
+import { ConfirmationRequiredError } from "./confirm.ts";
 
 const LABEL_WIDTH = 13;
 
@@ -134,6 +135,14 @@ function writeCauseChain(err: Error): void {
 }
 
 function writeBailianErrorText(err: BailianError): void {
+  if (err instanceof ConfirmationRequiredError) {
+    const details = err.toJSON().error;
+    if (details.plan !== undefined) {
+      process.stderr.write(
+        JSON.stringify({ plan: details.plan, notices: details.notices ?? [] }, null, 2) + "\n",
+      );
+    }
+  }
   process.stderr.write(`\n${pad("Error:")}${err.message}\n`);
 
   const hint = enhanceHint(err);

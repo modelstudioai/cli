@@ -83,14 +83,16 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 1. **--help**：`runCommandHelp(ROUTES, [..., "--help"])` → stderr 含主要 flags；产品层另保留少量真实子进程 help 验证 shell/stdio/env
 2. **缺参**：带无害全局 flag（如 `--quiet`）且不传 required flag → `exitCode === 2`
-3. **--dry-run**：实现在联网/上传/写盘**之前**返回；断言 stdout JSON/文本
+3. **--dry-run**：静态命令在联网/上传/写盘之前返回；prepare 命令可先鉴权并读取完整远端计划，但不得产生远端或本地写入。断言 stdout JSON/文本及请求清单。
 4. **真实集成**：放在 skip 块**末尾**
 
 高风险命令额外要求：
 
 - `--help` 展示 runtime 注入的 `--yes`
 - 无 `--yes` 返回 exit code 7 和 JSON `type: "requires_confirmation"`
-- `--dry-run` 无需 `--yes`，且必须证明在任何远端请求或本地写入之前返回
+- `--dry-run` 无需 `--yes`；静态命令证明零网络/零写入，prepare 命令证明缺凭证返回 AUTH、只调用读接口且零写入
+- prepare 命令同时验证：实际无风险可执行，有风险时错误包含 plan/notices，预览/确认前不运行自动升级，服务端错误原样透传
+- `--introspect` 根/组/叶均跳过必填、validate、prepare、auth 和 run；输出实际产品路径及确定性 JSON
 - runtime 的离线 high-risk fixture 必须覆盖带 `--yes` 确实进入 `run()`，并断言 `yes` 不进入 command 自有 flags
 
 ## Journey 层（用户旅程全链路）

@@ -28,6 +28,8 @@
 - [ ] 如果新 flag 影响有效配置面,改 `packages/core/src/config/schema.ts` 的 `Settings` 接口
 - [ ] 如果对应 env var 或 config 文件字段,改 `packages/core/src/config/loader.ts` 的 `buildSettings`
 
+- [ ] 新全局 flag 在根/组/叶 `--introspect` 中可发现；命令自有 flag 不得占用 introspect；跨 flag validate 仍标注为未导出
+
 ### C. 文档层
 
 - [ ] `README.md` / `README.zh.md` 如果在示例里展示了相关命令,补充新 flag

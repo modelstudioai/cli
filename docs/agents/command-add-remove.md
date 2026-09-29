@@ -73,11 +73,13 @@ packages/commands/src/index.ts
   - `validate`(跨 flag 校验)
   - 高风险命令必须声明 `risk: { level: "high", message: <双语文案> }`;`--yes` 由 runtime 注入,命令不得自行声明
   - 普通业务命令的 `run(ctx)` 只读 `ctx.flags` / `ctx.settings` / `ctx.client`
-  - 声明 `risk` 的 `run(ctx)` 必须在任何远端请求或本地写入之前处理 `ctx.settings.dryRun` 并返回预览;runtime 只负责确认闸门,不替命令实现 dry-run
+  - 静态 `risk` 命令在 `run(ctx)` 的任何远端请求或本地写入前处理 `settings.dryRun`。声明 `prepare` 的命令由 runtime 先鉴权、只读规划、预览/确认，再调用 `run`；`run` 通过 `ctx.prepared` 读取同一份计划
+  - `prepare` 不得写文件/锁、申请租约、上传或调用模型；可读远端（包括只读 POST），因此 dry-run 仍需要凭证。计划声明实际 risk=null 或 high；静态 risk 保留最大风险用于 help/--yes
+  - 创建持续计费资源声明 `risk.reason: "billing"`，确认前说明费用，不把政策额度当成账户余额
   - `commands/auth/**` 可用 `ctx.authStore`,`commands/config/**` 可用 `ctx.configStore`;不要把这些持久化能力扩散到普通业务命令
   - `commands/plugin/**` 可用 `ctx.commandPacks`;产品 policy 由 runtime 绑定,命令不要自行 import 产品入口
 - [ ] 用户可见 Help 文案在命令文件中就近提供 `en-US` / `zh-CN`:命令 `description`、flag `description`、`notes` 和包含自然语言的 `exampleArgs`;纯命令语法示例可保留为字符串,服务端错误不翻译
-- [ ] 如果命令执行不可逆的删除/销毁(远端资源删除、永久移除),必须提供 `yes` switch flag,并在 `run` 中于 `dry-run` 分支之后、任何网络调用之前调用 runtime 的 `confirmDangerousAction(summary, flags.yes ?? false)`(参考 `knowledge/*-delete.ts`);`--yes` 的 flag description 用「Skip the confirmation prompt / 跳过确认提示」,`notes` 里声明不可撤销
+- [ ] 不可逆删除/销毁必须声明 `risk`，`--yes` 由 runtime 注入；命令不得自行声明 yes 或调用旧的 confirmDangerousAction。notes 说明不可撤销；计费确认和删除确认都使用 code 7 / requires_confirmation。
 - [ ] `packages/commands/src/index.ts`:新增或移除对应 export
 - [ ] 如果命令调用 Console Gateway,设置 `auth: "console"`;不要重复声明 console 凭证域 flags
 - [ ] 如果命令不需要网络或自己管理配置/登录,设置 `auth: "none"`;不要绕过 runtime auth stage

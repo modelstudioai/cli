@@ -38,38 +38,40 @@ npm install -g knowledge-studio-cli
 
 ## 快速开始
 
+先配置有效的 DashScope API Key（例如通过 `DASHSCOPE_API_KEY`），并准备有知识库权限的工作空间。下方占位 ID 请替换为实际值。
+
+知识库创建成功后，即使不检索也持续按时计费。**标准版一次性 720 小时额度由多个知识库共享，新用户开通服务后 30 天内有效**；模型调用另计，CLI 不假定当前账户还剩多少额度。详见[计费规则](https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base)。
+
 ```bash
-# 1. 创建知识库
-kscli kb create \
-  --name "my-kb" \
-  --description "我的产品文档知识库" \
-  --embedding-model text-embedding-v3 \
-  --workspace-id <your-workspace-id>
-
-# 2. 上传文档
-kscli doc upload \
-  --kb-id <kb-id> \
-  --file ./product-docs.pdf \
-  --workspace-id <your-workspace-id>
-
-# 3. 查看处理状态
-kscli doc status \
-  --kb-id <kb-id> \
-  --doc-id <doc-id> \
-  --workspace-id <your-workspace-id>
-
-# 4. 语义检索
-kscli search \
-  --query "什么是 Model Studio？" \
-  --agent-id <your-agent-id> \
-  --workspace-id <your-workspace-id>
-
-# 5. 知识库问答（流式输出）
-kscli chat \
-  --message "什么是RAG？" \
-  --agent-id <your-agent-id> \
-  --workspace-id <your-workspace-id>
+# 先预览：可能鉴权并读取已有资源，但不会写入。
+kscli init --workspace-id <workspace-id> --dry-run
 ```
+
+查看计划和计费说明，确认本次操作及范围后再执行：
+
+```bash
+kscli init --workspace-id <workspace-id> --yes
+```
+
+初始化会上传样例、创建或复用可确认归属的知识库与 beta 检索服务，并验证样例检索。不会自动创建问答服务或发布服务。保留返回的 ID 和 `.bailian/knowledge/init.json` 恢复记录。继续检索时使用返回的 **agent ID**，不要填知识库 index ID：
+
+```bash
+kscli search --agent-id <agent-id> --agent-version beta --query "RAG" --workspace-id <workspace-id>
+```
+
+关闭终端或后续步骤失败不会停止计费。请查看 init 输出的资源及清理动作，部分失败时也要核对已创建资源。仅清理不再需要的资源，复用资源不属于默认临时资源。查看具体知识库并确认删除后果后：
+
+```bash
+kscli kb delete --index-id <index-id> --workspace-id <workspace-id>
+```
+
+删除需要确认；只有确认范围后才添加 `--yes`。成功删除知识库才能停止其规格计费，仅删除文档或检索服务不行。源文件等其他资源可能需要另行清理。
+
+### 通过 AI 助手使用
+
+通过 `bl skill init` 安装知识库工作流，或用 `bl skill add --name bailian-protocol,bailian-knowledge` 选择安装。更新已安装 Skill 使用 `bl skill update`。安装渠道属于完整百炼 CLI，`kscli` 没有 `skill` 子命令。
+
+助手先读取 `kscli --introspect` 确认当前能力，创建资源前预览变更并解释计费。当前 schema 未列出的能力不能视为已安装版本支持。
 
 ## 命令列表
 

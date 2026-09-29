@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
+import type { LocalizedText } from "bailian-cli-core";
 import create, { buildDataSourceFields } from "../../src/commands/knowledge/kb-create.ts";
 
 describe("buildDataSourceFields", () => {
@@ -56,6 +57,7 @@ test.each([
         workspaceId: "ws_test",
       },
       settings: { dryRun: true, output: "json" },
+      localize: (text: LocalizedText) => (typeof text === "string" ? text : text["en-US"]),
       client: { requestJson },
     } as unknown as Parameters<typeof create.run>[0]);
     const body = JSON.parse(writes.join("")).request;

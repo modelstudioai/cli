@@ -15,6 +15,10 @@ export const BAILIAN_CONSOLE = `${BAILIAN_CONSOLE_ROOT}/cn-beijing`;
 /** Direct deep link to API key management page. */
 export const API_KEY_PAGE = `${BAILIAN_CONSOLE}/?tab=app#/api-key`;
 
+/** Running-time billing, shared trial allowance and model-call charges for RAG. */
+export const KNOWLEDGE_BILLING_PAGE =
+  "https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base";
+
 /** Direct deep link to the Token Plan subscription overview and API key entry. */
 export const TOKEN_PLAN_PAGE = `${BAILIAN_CONSOLE_ROOT}/cn-beijing?tab=plan#/efm/subscription/overview`;
 

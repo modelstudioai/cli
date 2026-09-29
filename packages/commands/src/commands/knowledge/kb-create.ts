@@ -1,3 +1,4 @@
+import { createKnowledgeIndex } from "./operations/index.ts";
 import {
   defineCommand,
   ragEndpoint,
@@ -6,9 +7,14 @@ import {
   BailianError,
   ExitCode,
   type FlagsDef,
-  type RagCreateIndexV2Response,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
+import {
+  knowledgeCreationRisk,
+  localizedKnowledgeBillingNotice,
+  writeKnowledgeBillingNotice,
+  reportCreatedKnowledgeBase,
+} from "./billing.ts";
 import {
   resolveWorkspaceId,
   WORKSPACE_FLAG,
@@ -149,6 +155,7 @@ export default defineCommand({
     "zh-CN": "创建知识库并导入数据中心文件或类目",
   },
   auth: "apiKey",
+  risk: knowledgeCreationRisk,
   usageArgs: "--name <text> --description <text> (--doc-id <id> | --category-id <id>) [flags]",
   flags: KB_CREATE_FLAGS,
   notes: [
@@ -270,17 +277,18 @@ export default defineCommand({
     const endpoint = ragEndpoint(workspaceId, RAG_PATHS.indexCreateV2);
 
     if (settings.dryRun) {
-      emitResult({ endpoint, request: body }, format);
+      emitResult(
+        { endpoint, request: body, notices: [localizedKnowledgeBillingNotice(ctx)] },
+        format,
+      );
       return;
     }
 
-    const response = await ctx.client.requestJson<RagCreateIndexV2Response>({
-      path: endpoint,
-      method: "POST",
-      body,
-    });
+    writeKnowledgeBillingNotice(ctx);
+    const response = await createKnowledgeIndex(ctx.client, workspaceId, body);
     const pipelineId = response.data?.pipelineId;
     const ingestionId = response.data?.ingestionId;
+    const resources = pipelineId ? [reportCreatedKnowledgeBase(ctx, workspaceId, pipelineId)] : [];
 
     let finalStatus: string | undefined;
     if (flags.wait && pipelineId && ingestionId) {
@@ -312,6 +320,14 @@ export default defineCommand({
       emitBare("Next: check the import job status, then search against this knowledge base.");
       return;
     }
-    emitResult(finalStatus ? { ...response, final_status: finalStatus } : response, format);
+    emitResult(
+      {
+        ...response,
+        ...(finalStatus ? { final_status: finalStatus } : {}),
+        resources,
+        notices: [localizedKnowledgeBillingNotice(ctx)],
+      },
+      format,
+    );
   },
 });

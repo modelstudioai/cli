@@ -101,7 +101,7 @@ export default defineCommand({
           );
         }
       }
-      emitBare(`total: ${response.data?.total ?? rows.length}`);
+      emitBare(`total: ${response.data?.total_count ?? rows.length}`);
     } else {
       emitResult(response, format);
     }

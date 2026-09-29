@@ -90,7 +90,7 @@
 
 ### 鉴权
 
-所有 `bl knowledge` 命令均使用 **DashScope API Key**（Bearer token）鉴权。获取方式：百炼控制台 API Key 页面。
+`bl knowledge` 业务命令使用 **DashScope API Key**（Bearer token）鉴权；`--help` 和 `--introspect` 无需凭证。获取方式：百炼控制台 API Key 页面。
 
 优先级（高 → 低）：
 
@@ -114,16 +114,17 @@
 
 以下参数在所有 `bl knowledge` 子命令中通用，后续命令手册中不再逐条列出：
 
-| 参数                  | 类型   | 说明                                                        |
-| --------------------- | ------ | ----------------------------------------------------------- |
-| `--output <format>`   | string | 输出格式：`text`（默认，人类友好）或 `json`（API 原始响应） |
-| `--api-key <key>`     | string | DashScope API Key                                           |
-| `--base-url <url>`    | string | API 基地址（一般不需要指定）                                |
-| `--timeout <seconds>` | number | 请求超时秒数                                                |
-| `--quiet`             | switch | 静默模式，只输出关键结果（如 ID 列表）                      |
-| `--verbose`           | switch | 详细模式，打印 HTTP 请求/响应详情到 stderr                  |
-| `--dry-run`           | switch | 干跑模式，预览将发送的请求结构，不实际调用 API              |
-| `--config <name>`     | string | 使用指定配置 profile 执行命令                               |
+| 参数                  | 类型   | 说明                                                         |
+| --------------------- | ------ | ------------------------------------------------------------ |
+| `--output <format>`   | string | 输出格式：`text`（默认，人类友好）或 `json`（API 原始响应）  |
+| `--api-key <key>`     | string | DashScope API Key                                            |
+| `--base-url <url>`    | string | API 基地址（一般不需要指定）                                 |
+| `--timeout <seconds>` | number | 请求超时秒数                                                 |
+| `--quiet`             | switch | 静默模式，只输出关键结果（如 ID 列表）                       |
+| `--verbose`           | switch | 详细模式，打印 HTTP 请求/响应详情到 stderr                   |
+| `--dry-run`           | switch | 预览请求或执行计划，不写入；带只读预检的命令可能读取远端资源 |
+| `--introspect`        | switch | 输出当前命令范围的结构化能力说明，无需凭证                   |
+| `--config <name>`     | string | 使用指定配置 profile 执行命令                                |
 
 > **注意**：命令手册中每个命令的参数表只列出该命令**特有**的参数。上述全局参数对所有命令有效。
 
@@ -137,9 +138,34 @@
 
 涉及删除的命令（`kb delete`、`doc delete`、`chunk delete`、`file delete`、`category delete`、`service delete`、`service deploy`）属于高风险操作。未带 `--yes` 时 CLI 不会执行，也不会弹出交互式 Y/N，而是返回 exit code 7 和 `requires_confirmation`；确认后在原命令中添加 `--yes` 重新执行。
 
+直接创建知识库同样需要计费确认；`init` 根据只读预检计划判断是否需要新建。已授权且范围未改变时无需重复征询，但不能因为存在免费额度就自动确认。费用提醒和已创建资源诊断可能输出到 stderr，quiet 不会抑制这些提醒。
+
 ### Dry-run 模式
 
-`--dry-run` 模式下，命令会输出将发送的 endpoint 和 request body，但**不实际发起网络请求**。部分命令在 dry-run 下仍会执行本地校验（如文件扩展名检查、参数约束检查）。
+普通静态命令的 `--dry-run` 输出请求预览，不发起网络请求，可能执行文件扩展名等本地校验。声明 `preparation: "read-only"` 的命令（如 `init`）会鉴权并读取已有资源以生成真实计划；不修改云端资源或本地恢复记录，也不运行样例检索。不要把所有 dry-run 都当成离线模式。
+
+### 命令能力发现
+
+```bash
+bl --introspect
+bl knowledge --introspect
+bl knowledge init --introspect
+kscli --introspect
+```
+
+分别获取根、分组或叶子范围的单份 JSON，包含真实产品命令路径、双语描述、参数、示例、鉴权域、风险和只读预检标识。它无需凭证，不执行业务请求，也不返回凭证值。当前 `schema_version` 为 1，同版本只做兼容性字段增加；消费者应忽略未知字段，遇到不支持的 schema 版本明确报错。跨参数校验不在 schema 中导出，不能从描述推断结构化默认值。Skill 参数参考与此 schema 使用同一数据源。
+
+### 初始化与持续计费
+
+```bash
+bl knowledge init --workspace-id <workspace-id> --dry-run
+```
+
+查看计划后确认创建及费用，再去掉 `--dry-run` 并添加 `--yes`。初始化会上传样例、创建或复用归属明确的知识库与 beta 检索服务，以检索到样例内容为成功标准；不会自动创建问答服务或发布服务。
+
+知识库从创建成功起持续按时计费。标准版一次性 720 小时额度由多个知识库共享，新用户开通后 30 天内有效，模型调用另计；CLI 不假定账户余额。见[计费规则](https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base)。
+
+保留返回的 index/agent ID、created/reused 信息和 `.bailian/knowledge/init.json`（可用 `--state-file` 指定）。重复执行先核对已有资源；同名但归属不明或请求结果不确定时不会擅自重建。创建后失败仍会输出已创建资源与计费提醒。按返回的清理动作处理本次新建资源，复用资源不属于默认清理范围；关闭终端不停止计费，成功删除知识库才能停止其规格计费。
 
 ---
 

@@ -32,13 +32,20 @@ export function confirmationHint(): LocalizedText {
 interface ConfirmationRequiredErrorOptions {
   message: string;
   hint: string;
+  plan?: unknown;
+  notices?: readonly unknown[];
 }
 
 /** Semantic runtime error consumed by both humans and Agent callers. */
 export class ConfirmationRequiredError extends BailianError {
+  private readonly confirmationDetails: Pick<ConfirmationRequiredErrorOptions, "plan" | "notices">;
   constructor(options: ConfirmationRequiredErrorOptions) {
     super(options.message, ExitCode.CONFIRMATION_REQUIRED, options.hint);
     this.name = "ConfirmationRequiredError";
+    this.confirmationDetails = {
+      ...(options.plan !== undefined ? { plan: options.plan } : {}),
+      ...(options.notices !== undefined ? { notices: options.notices } : {}),
+    };
   }
 
   override toJSON() {
@@ -48,6 +55,7 @@ export class ConfirmationRequiredError extends BailianError {
         type: "requires_confirmation",
         message: this.message,
         hint: this.hint,
+        ...this.confirmationDetails,
       },
     };
   }

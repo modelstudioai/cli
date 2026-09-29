@@ -15,6 +15,7 @@ import { parsePath } from "./args.ts";
 export type Resolution =
   | { kind: "version" }
   | { kind: "help"; path: string[] }
+  | { kind: "introspect"; path: string[] }
   | { kind: "run"; path: string[]; command: AnyCommand; rest: string[] }
   | { kind: "usageError"; error: UsageError };
 
@@ -24,10 +25,13 @@ export type Resolution =
  * for the routing decision. Never throws. Trivially unit-testable.
  */
 export function resolve(argv: string[], registry: CommandRegistry): Resolution {
-  const { path, rest, hasHelpFlag, hasVersionFlag } = parsePath(argv);
+  const { path, rest, hasHelpFlag, hasVersionFlag, hasIntrospectFlag } = parsePath(argv);
   if (hasVersionFlag) return { kind: "version" };
 
   const target = registry.locate(path);
+  if (hasIntrospectFlag && target.kind !== "unknown") {
+    return { kind: "introspect", path: target.matched };
+  }
   switch (target.kind) {
     case "leaf":
       return hasHelpFlag

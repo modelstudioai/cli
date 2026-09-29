@@ -26,6 +26,8 @@
 
 ## 运行
 
+J6 对应 `j6-init.e2e.test.ts`：预览无 checkpoint → 显式确认 init → 样例检索成功 → 不带 yes 重复执行并核对 IDs 完全一致、全部资源复用 → 清理本次新建资源。失败时从 stderr 资源事件记录已创建对象，不依赖最终 stdout 成功输出；pending 未决操作也写入 `resources.json`，恢复记录保留在报告目录。知识库清理失败时保留关联源文件，未清理资源使验收失败。
+
 ```sh
 pnpm run test:journey            # 全部 journey（无凭证时全部 skip）
 vp test packages/commands/tests/e2e/knowledge/journeys/j1-cold-start.e2e.test.ts
@@ -33,7 +35,25 @@ vp test packages/commands/tests/e2e/knowledge/journeys/j1-cold-start.e2e.test.ts
 
 live 运行需 `.env`：`BAILIAN_E2E=1` + DashScope API key + `BAILIAN_WORKSPACE_ID`；J5 另需 `BAILIAN_E2E_CONNECTOR=1`。
 
+J6 还需要显式设置 `BAILIAN_E2E_INIT_JOURNEY=1`，使用专用测试 Workspace。知识库创建即可能计费，标准版共享免费额度不保证本次免费，样例模型调用另计：
+
+```sh
+pnpm exec vp test packages/commands/tests/e2e/knowledge/journeys/j6-init.e2e.test.ts
+```
+
+默认 skip 或脚本静态检查通过都不代表真实链路验收完成。
+
 测试初始化会读取根目录 `.env` 并覆盖同名进程环境变量。离线回归前须在 `.env` 中设置 `BAILIAN_E2E=0`；不要只依赖命令前缀中的环境变量。
+
+## 目录同步远端契约（独立开启）
+
+`../knowledge-sync-contract.e2e.test.ts` 验证同名文件新旧版本共存、标签到 fileId/docId 的唯一关联、分页和索引删除最终一致性。它会创建一个专用知识库和三份测试文件；创建即可能计费，模型调用费用另计。使用专用测试 Workspace，并同时设置 `BAILIAN_E2E=1`、可用的 API Key、`BAILIAN_WORKSPACE_ID` 和 `BAILIAN_E2E_SYNC_CONTRACT=1`。
+
+```sh
+pnpm exec vp test packages/commands/tests/e2e/knowledge/knowledge-sync-contract.e2e.test.ts
+```
+
+无专用开关或前提不齐时跳过。测试在 finally 清理本次资源，未清理 ID 留在 `resources.json`。报告目录中的 `sync-remote-contract.json` 仅在完整验证成功后标记 `verified: true`；失败或跳过不能作为同步替换/删除能力的验收证据。脱敏产物经核对后再纳入固定 fixture。
 
 ## RAG 音视频验收（独立开启）
 
@@ -65,3 +85,7 @@ pnpm exec vp test packages/commands/tests/e2e/knowledge/journeys/rag-media.e2e.t
 仅回收本次拥有且满足终态条件的资源；失败/不确定状态保留 IDs 和 resources.json，供续查。缺少专用开关记为 skip；没有真实运行不能声称线上链路通过。2 GiB 真传不作为常规验收。
 
 问答离线 PTY 测试在 macOS/Linux 使用系统 Python 3 创建终端；Windows 跳过该代表性 PTY 用例，其余模式合同仍离线覆盖。
+
+## J7 目录同步验收（独立开启）
+
+配置知识库 API Key 与 `BAILIAN_WORKSPACE_ID` 后，通过 `BAILIAN_E2E_SYNC_JOURNEY=1` 单独开启 `j7-doc-sync.e2e.test.ts`。测试新建独立知识库（可能产生运行时长及模型费用），验证添加、无变复跑、替换确认、本地删除保留与显式删除；每一步核对未托管哨兵仍存在。测试结束先删除知识库，成功后才删除本次源文件；资源清理结果写入 `resources.json`。只有完整真实测试通过才构成旅程验收，默认跳过不代表通过。

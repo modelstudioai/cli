@@ -146,6 +146,7 @@ describe.skipIf(!isKbAdminE2EReady())("e2e: knowledge doc status (live, 自清�
       const createRun = await runCommandE2e(KNOWLEDGE_DOC_STATUS_ROUTES, [
         "knowledge",
         "create",
+        "--yes",
         "--name",
         `e2e-st-${Date.now() % 100000000}`,
         "--description",

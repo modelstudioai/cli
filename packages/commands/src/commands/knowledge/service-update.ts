@@ -1,3 +1,4 @@
+import { updateKnowledgeService, getKnowledgeService } from "./operations/service.ts";
 import { readFileSync } from "node:fs";
 import {
   defineCommand,
@@ -9,8 +10,6 @@ import {
   type Client,
   type FlagsDef,
   type RagAgentConfig,
-  type RagAgentGetResponse,
-  type RagAgentMutationResponse,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
@@ -257,11 +256,7 @@ async function fetchBetaConfig(
   workspaceId: string,
   agentId: string,
 ): Promise<RagAgentConfig> {
-  const response = await client.requestJson<RagAgentGetResponse>({
-    path: ragEndpoint(workspaceId, RAG_PATHS.agentGet),
-    method: "POST",
-    body: { agent_id: agentId, agent_version: "beta" },
-  });
+  const response = await getKnowledgeService(client, workspaceId, agentId, "beta");
   const betaDetail = (response.data?.agent_details ?? []).find(
     (detail) => detail.agent_version === "beta",
   );
@@ -419,11 +414,7 @@ export default defineCommand({
       return;
     }
 
-    const response = await ctx.client.requestJson<RagAgentMutationResponse>({
-      path: endpoint,
-      method: "POST",
-      body,
-    });
+    const response = await updateKnowledgeService(ctx.client, workspaceId, body);
 
     if (settings.quiet) return;
     if (format === "text") {

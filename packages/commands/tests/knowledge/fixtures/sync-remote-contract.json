@@ -1,0 +1,100 @@
+{
+  "verified": true,
+  "capturedAt": "2026-09-29T06:18:06.214Z",
+  "mapping": "unique-complete-tags",
+  "sameNameCoexistence": true,
+  "deletionObserved": true,
+  "sentinelSurvived": true,
+  "sentinelDocId": "doc-sentinel",
+  "pagination": {
+    "pageSize": 1,
+    "total": 3,
+    "uniqueDocumentCount": 3
+  },
+  "totalBeforeDelete": 3,
+  "totalAfterDelete": 2,
+  "versions": [
+    {
+      "fileId": "file-1",
+      "docId": "file-1",
+      "tags": [
+        "se94535b8330a307adee16e125d0bf00",
+        "p0ab683c8296635a07ca7113569db3f1",
+        "027759a436ac91dfa1fd45bc08d9f5c6"
+      ],
+      "file": {
+        "fileId": "file-1",
+        "fileName": "same.md",
+        "category": "category-fixture",
+        "tags": [
+          "se94535b8330a307adee16e125d0bf00",
+          "p0ab683c8296635a07ca7113569db3f1",
+          "027759a436ac91dfa1fd45bc08d9f5c6"
+        ]
+      },
+      "listedFile": {
+        "fileId": "file-1",
+        "tags": [
+          "se94535b8330a307adee16e125d0bf00",
+          "p0ab683c8296635a07ca7113569db3f1",
+          "027759a436ac91dfa1fd45bc08d9f5c6"
+        ]
+      },
+      "job": {
+        "doc_id": "file-1",
+        "code": "FINISH"
+      },
+      "document": {
+        "doc_id": "file-1",
+        "doc_name": "same",
+        "status": "FINISH",
+        "tags": [
+          "se94535b8330a307adee16e125d0bf00",
+          "p0ab683c8296635a07ca7113569db3f1",
+          "027759a436ac91dfa1fd45bc08d9f5c6"
+        ]
+      }
+    },
+    {
+      "fileId": "file-2",
+      "docId": "file-2",
+      "tags": [
+        "se94535b8330a307adee16e125d0bf00",
+        "p0ab683c8296635a07ca7113569db3f1",
+        "828096fd52da3e76354effa5c0fb843a"
+      ],
+      "file": {
+        "fileId": "file-2",
+        "fileName": "same.md",
+        "category": "category-fixture",
+        "tags": [
+          "se94535b8330a307adee16e125d0bf00",
+          "p0ab683c8296635a07ca7113569db3f1",
+          "828096fd52da3e76354effa5c0fb843a"
+        ]
+      },
+      "listedFile": {
+        "fileId": "file-2",
+        "tags": [
+          "se94535b8330a307adee16e125d0bf00",
+          "p0ab683c8296635a07ca7113569db3f1",
+          "828096fd52da3e76354effa5c0fb843a"
+        ]
+      },
+      "job": {
+        "doc_id": "file-2",
+        "code": "FINISH"
+      },
+      "document": {
+        "doc_id": "file-2",
+        "doc_name": "same",
+        "status": "FINISH",
+        "tags": [
+          "se94535b8330a307adee16e125d0bf00",
+          "p0ab683c8296635a07ca7113569db3f1",
+          "828096fd52da3e76354effa5c0fb843a"
+        ]
+      }
+    }
+  ]
+}

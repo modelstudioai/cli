@@ -147,6 +147,31 @@ export class CommandRegistry {
     return commands;
   }
 
+  /** Read-only metadata traversal for command discovery and documentation. */
+  entries(
+    path: readonly string[] = [],
+  ): readonly { path: readonly string[]; command: AnyCommand }[] {
+    let node = this.root;
+    for (const part of path) {
+      const child = node.children.get(part);
+      if (!child) return [];
+      node = child;
+    }
+    const entries: { path: readonly string[]; command: AnyCommand }[] = [];
+    const visit = (current: CommandNode, currentPath: readonly string[]) => {
+      if (current.command) entries.push({ path: currentPath, command: current.command });
+      for (const [name, child] of current.children) visit(child, [...currentPath, name]);
+    };
+    visit(node, [...path]);
+    return entries;
+  }
+
+  /** No fallback when aliases make the intended product route ambiguous. */
+  commandPath(command: AnyCommand): string[] | undefined {
+    const matches = this.entries().filter((entry) => entry.command === command);
+    return matches.length === 1 ? [...matches[0]!.path] : undefined;
+  }
+
   /** First registered command path, for the "Getting Help" example (e.g. "knowledge search"). */
   private helpExample(): string {
     const walk = (node: CommandNode, path: string[]): string | null => {

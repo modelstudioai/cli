@@ -17,6 +17,7 @@ export interface ParsePathResult {
   rest: string[];
   hasHelpFlag: boolean;
   hasVersionFlag: boolean;
+  hasIntrospectFlag: boolean;
 }
 
 /**
@@ -34,6 +35,7 @@ export function parsePath(argv: string[]): ParsePathResult {
     rest,
     hasHelpFlag: rest.includes("--help"),
     hasVersionFlag: rest.includes("--version"),
+    hasIntrospectFlag: rest.includes("--introspect"),
   };
 }
 

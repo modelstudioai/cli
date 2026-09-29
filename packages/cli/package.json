@@ -41,7 +41,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "generate:reference": "tsx ../../tools/generate-reference.ts && sh -c 'cd ../.. && vp check --fix skills/bailian-cli/reference skills/bailian-gen/reference skills/bailian-finetune/reference skills/bailian-managed-agent/reference skills/bailian-sandbox/reference skills/bailian-memory/reference'",
+    "generate:reference": "tsx ../../tools/generate-reference.ts && sh -c 'cd ../.. && vp check --fix skills/bailian-cli/reference skills/bailian-gen/reference skills/bailian-finetune/reference skills/bailian-managed-agent/reference skills/bailian-sandbox/reference skills/bailian-memory/reference skills/bailian-knowledge/reference'",
     "sync:skill-version": "tsx ../../tools/sync-skill-metadata.ts",
     "build": "vp pack",
     "dev": "tsx src/main.ts",
@@ -58,6 +58,7 @@
   "devDependencies": {
     "@clack/prompts": "^0.7.0",
     "@types/node": "catalog:",
+    "@types/tar-stream": "catalog:",
     "@typescript/native-preview": "7.0.0-dev.20260328.1",
     "ajv": "catalog:",
     "boxen": "catalog:",

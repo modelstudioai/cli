@@ -14,7 +14,7 @@
  * Uses tsx and reads workspace packages from source
  */
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   CONSOLE_AUTH_FLAGS,
@@ -30,6 +30,7 @@ import {
 } from "../packages/core/src/index.ts";
 import { commands } from "../packages/cli/src/commands.ts";
 import { confirmationFlagDefs } from "../packages/runtime/src/confirm.ts";
+import { writeKnowledgeReferences } from "./generate-knowledge-reference.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SKILLS_DIR = join(__dirname, "../skills");
@@ -58,6 +59,7 @@ const GROUP_OWNER_SKILL: Readonly<Record<string, string>> = {
   sandbox: "bailian-sandbox",
   // bailian-memory — personal memory and explicit Memory resource operations
   memory: "bailian-memory",
+  knowledge: "bailian-knowledge",
   // everything else → bailian-cli (hub)
 };
 
@@ -340,10 +342,19 @@ function clearGeneratedMarkdown(refDir: string): void {
 function writeSkillReference(
   skillName: string,
   skillGroups: Map<string, [string, AnyCommand][]>,
+  skillsDirectory: string,
 ): { groupCount: number; commandCount: number } {
-  const refDir = join(SKILLS_DIR, skillName, "reference");
+  const refDir = join(skillsDirectory, skillName, "reference");
   mkdirSync(refDir, { recursive: true });
   clearGeneratedMarkdown(refDir);
+
+  if (skillName === "bailian-knowledge") {
+    writeKnowledgeReferences(refDir);
+    return {
+      groupCount: skillGroups.size,
+      commandCount: [...skillGroups.values()].reduce((count, entries) => count + entries.length, 0),
+    };
+  }
 
   const entries: [string, AnyCommand][] = [];
   for (const group of [...skillGroups.keys()].sort((a, b) => a.localeCompare(b))) {
@@ -358,7 +369,7 @@ function writeSkillReference(
   return { groupCount: skillGroups.size, commandCount: entries.length };
 }
 
-function writeReference(): void {
+export function writeReference(skillsDirectory: string = SKILLS_DIR): void {
   const entries = Object.entries(commands).sort(([a], [b]) => a.localeCompare(b));
   const groups = groupByTopLevel(entries);
 
@@ -381,17 +392,19 @@ function writeReference(): void {
   ]);
   for (const skillName of knownSkills) {
     if (!bySkill.has(skillName)) {
-      clearGeneratedMarkdown(join(SKILLS_DIR, skillName, "reference"));
+      clearGeneratedMarkdown(join(skillsDirectory, skillName, "reference"));
     }
   }
 
   const summaries: string[] = [];
   for (const skillName of [...bySkill.keys()].sort((a, b) => a.localeCompare(b))) {
-    const result = writeSkillReference(skillName, bySkill.get(skillName)!);
+    const result = writeSkillReference(skillName, bySkill.get(skillName)!, skillsDirectory);
     summaries.push(`${skillName}: ${result.groupCount} groups / ${result.commandCount} commands`);
   }
 
   console.log(`Wrote skill references:\n  - ${summaries.join("\n  - ")}`);
 }
 
-writeReference();
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  writeReference();
+}

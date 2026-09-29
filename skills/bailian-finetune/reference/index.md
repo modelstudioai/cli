@@ -64,16 +64,17 @@ Use this index for the skill-scoped quick index and global flags.
 
 Available on every command (in addition to command-specific flags):
 
-| Flag                  | Type   | Required | Description                           |
-| --------------------- | ------ | -------- | ------------------------------------- |
-| `--output <format>`   | string | no       | Output format: text, json             |
-| `--timeout <seconds>` | number | no       | Request timeout                       |
-| `--quiet`             | switch | no       | Suppress non-essential output         |
-| `--verbose`           | switch | no       | Print HTTP request/response details   |
-| `--dry-run`           | switch | no       | Dry run mode                          |
-| `--config <name>`     | string | no       | Use a config profile for this command |
-| `--help`              | switch | no       | Show help                             |
-| `--version`           | switch | no       | Print version                         |
+| Flag                  | Type   | Required | Description                                               |
+| --------------------- | ------ | -------- | --------------------------------------------------------- |
+| `--introspect`        | switch | no       | Print the machine-readable command schema (JSON) and exit |
+| `--output <format>`   | string | no       | Output format: text, json                                 |
+| `--timeout <seconds>` | number | no       | Request timeout                                           |
+| `--quiet`             | switch | no       | Suppress non-essential output                             |
+| `--verbose`           | switch | no       | Print HTTP request/response details                       |
+| `--dry-run`           | switch | no       | Dry run mode                                              |
+| `--config <name>`     | string | no       | Use a config profile for this command                     |
+| `--help`              | switch | no       | Show help                                                 |
+| `--version`           | switch | no       | Print version                                             |
 
 ## Model auth flags
 

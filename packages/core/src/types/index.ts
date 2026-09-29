@@ -2,6 +2,8 @@ export type {
   Command,
   CommandRisk,
   CommandRiskLevel,
+  CommandNotice,
+  CommandPreparation,
   AnyCommand,
   CommandContext,
   LocalizedText,

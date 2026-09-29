@@ -1,5 +1,5 @@
+import { importKnowledgeFiles } from "./operations/index.ts";
 // Orchestration command: local file → data center → (optional) import into a knowledge base.
-import { statSync } from "node:fs";
 import { basename } from "node:path";
 import {
   defineCommand,
@@ -9,9 +9,6 @@ import {
   BailianError,
   ExitCode,
   type FlagsDef,
-  type RagUploadLeaseResponse,
-  type RagAddFileResponse,
-  type RagJobCreateResponse,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
@@ -31,7 +28,7 @@ import {
   UPLOAD_FORMAT_RULES,
 } from "./upload-support.ts";
 
-import { computeFileMd5, putFileStream } from "./upload-stream.ts";
+import { uploadKnowledgeFile } from "./operations/upload.ts";
 import { PARSER_FLAGS, readParserOptions } from "./parser-config.ts";
 
 const DOC_UPLOAD_FLAGS = {
@@ -251,118 +248,18 @@ export default defineCommand({
     const uploaded: UploadedFile[] = [];
     for (const checkedFile of checkedFiles) {
       try {
-        const originalStat = statSync(checkedFile.filePath);
-        if (originalStat.size !== checkedFile.sizeBytes) {
-          throw new BailianError(
-            ctx.localize({
-              "en-US": "The source file changed since validation; upload was stopped.",
-              "zh-CN": "源文件在校验后发生变化，已停止上传。",
-            }),
-            ExitCode.GENERAL,
-          );
-        }
-        const contentMd5 = await computeFileMd5(checkedFile.filePath);
-
-        // 1) Apply for an upload lease (gotcha: the category parameter is named
-        //    category, not categoryId; sizeBytes must be a string)
-        const lease = await ctx.client.requestJson<RagUploadLeaseResponse>({
-          path: ragEndpoint(workspaceId, RAG_PATHS.applyFileUploadLease),
-          method: "POST",
-          body: {
-            category: categoryId,
-            ...(flags.categoryType ? { categoryType: flags.categoryType } : {}),
-            fileName: basename(checkedFile.filePath),
-            sizeBytes: String(checkedFile.sizeBytes),
-            contentMd5,
-          },
+        const { fileId } = await uploadKnowledgeFile({
+          client: ctx.client,
+          workspaceId,
+          filePath: checkedFile.filePath,
+          sizeBytes: checkedFile.sizeBytes,
+          categoryId,
+          categoryType: flags.categoryType,
+          parserOptions,
+          tags: flags.tag,
+          timeout: settings.timeout,
+          localize: ctx.localize,
         });
-        const leaseId = lease.data?.leaseId;
-        const leaseParam = lease.data?.param;
-        if (!leaseId || !leaseParam?.url) {
-          throw new BailianError(
-            `Upload lease response missing leaseId/url for ${checkedFile.filePath}`,
-            ExitCode.GENERAL,
-          );
-        }
-
-        // 2) OSS upload: goes to the OSS host, not the DashScope gateway — native fetch without a Bearer header
-        let ossResponse: Response;
-        try {
-          ossResponse = await putFileStream(
-            checkedFile.filePath,
-            { ...leaseParam, url: leaseParam.url },
-            AbortSignal.timeout(settings.timeout * 1000),
-          );
-        } catch (error) {
-          const fileError = error as { code?: string; cause?: { code?: string } };
-          const causeCode = fileError.code ?? fileError.cause?.code;
-          const localReadFailure = ["ENOENT", "EACCES", "EPERM", "EISDIR", "EIO"].includes(
-            causeCode ?? "",
-          );
-          throw new BailianError(
-            ctx.localize({
-              "en-US": `OSS upload failed for ${basename(checkedFile.filePath)}`,
-              "zh-CN": `文件 ${basename(checkedFile.filePath)} 的 OSS 上传失败`,
-            }),
-            localReadFailure ? ExitCode.GENERAL : ExitCode.NETWORK,
-            causeCode
-              ? ctx.localize(
-                  localReadFailure
-                    ? {
-                        "en-US": `File read error (${causeCode}); check that the source exists and is readable.`,
-                        "zh-CN": `文件读取错误（${causeCode}）；请检查源文件是否存在且可读。`,
-                      }
-                    : {
-                        "en-US": `Network error (${causeCode}).`,
-                        "zh-CN": `网络错误（${causeCode}）。`,
-                      },
-                )
-              : undefined,
-            { cause: error },
-          );
-        }
-        if (!ossResponse.ok) {
-          const ossBody = await ossResponse.text().catch(() => "");
-          throw new BailianError(
-            `OSS upload rejected (HTTP ${ossResponse.status}) for ${basename(checkedFile.filePath)}${ossBody ? `: ${ossBody.slice(0, 300)}` : ""}`,
-            ExitCode.GENERAL,
-          );
-        }
-
-        const uploadedStat = statSync(checkedFile.filePath);
-        if (
-          originalStat.size !== uploadedStat.size ||
-          originalStat.mtimeMs !== uploadedStat.mtimeMs ||
-          originalStat.ino !== uploadedStat.ino
-        ) {
-          throw new BailianError(
-            ctx.localize({
-              "en-US": "The source file changed during upload; registration was stopped.",
-              "zh-CN": "源文件在上传过程中发生变化，已停止注册。",
-            }),
-            ExitCode.GENERAL,
-          );
-        }
-
-        // 3) Register the file
-        const added = await ctx.client.requestJson<RagAddFileResponse>({
-          path: ragEndpoint(workspaceId, RAG_PATHS.addFile),
-          method: "POST",
-          body: {
-            leaseId,
-            category: categoryId,
-            ...(flags.categoryType ? { categoryType: flags.categoryType } : {}),
-            ...parserOptions,
-            ...(flags.tag?.length ? { tags: flags.tag } : {}),
-          },
-        });
-        const fileId = added.data?.fileId;
-        if (!fileId) {
-          throw new BailianError(
-            `addFile response missing fileId for ${checkedFile.filePath}`,
-            ExitCode.GENERAL,
-          );
-        }
         uploaded.push({ path: checkedFile.filePath, fileId });
       } catch (error) {
         // Partial-failure semantics: abort with an error, listing already-registered
@@ -382,17 +279,13 @@ export default defineCommand({
     let finalStatus: string | undefined;
     if (flags.indexId) {
       try {
-        const job = await ctx.client.requestJson<RagJobCreateResponse>({
-          path: ragEndpoint(workspaceId, RAG_PATHS.indexJobCreate),
-          method: "POST",
-          body: {
-            indexId: flags.indexId,
-            // Live-verified: the field name is docIds (not documentIds as in the
-            // public docs); omitting sourceType would import the entire data center.
-            sourceType: "DATA_CENTER_FILE",
-            docIds: uploaded.map((item) => item.fileId),
-          },
-        });
+        const job = await importKnowledgeFiles(
+          ctx.client,
+          workspaceId,
+          flags.indexId,
+          uploaded.map((item) => item.fileId),
+          ctx.localize,
+        );
         ingestionId = job.data?.ingestionId;
         if (flags.wait && ingestionId) {
           const statusResponse = await pollImportJob(ctx.client, settings, {

@@ -1,6 +1,7 @@
 import { parseFlags } from "./args.ts";
 import { CommandRegistry } from "./registry.ts";
 import { resolve } from "./resolve.ts";
+import { buildCommandSchema, serializeCommandSchema } from "./introspect.ts";
 import {
   compose,
   authStage,
@@ -186,6 +187,11 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     const res = resolve(argv, registry);
 
     switch (res.kind) {
+      case "introspect":
+        process.stdout.write(
+          serializeCommandSchema(buildCommandSchema(registry, identity, res.path)),
+        );
+        return;
       case "version":
         process.stdout.write(`${binName} ${version}\n`);
         return;
@@ -224,6 +230,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
           const sources = buildSources(globalFlags);
           const settings = buildSettings(sources);
           const ctx: RunContext = {
+            commandPath: (command) => registry.commandPath(command),
             identity,
             path: res.path,
             command: res.command,

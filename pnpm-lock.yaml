@@ -159,6 +159,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.12.2
+      '@types/tar-stream':
+        specifier: 'catalog:'
+        version: 3.1.4
       '@typescript/native-preview':
         specifier: 7.0.0-dev.20260328.1
         version: 7.0.0-dev.20260328.1

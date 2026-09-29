@@ -10,6 +10,30 @@ const groupPaths = deriveGroupPaths(commandPaths);
 const registry = new CommandRegistry(commands, "kscli");
 
 describe("e2e: kscli registry smoke", () => {
+  test("init is registered with read-only preparation and billing risk", () => {
+    expect(commands.init).toMatchObject({
+      auth: "apiKey",
+      risk: { reason: "billing" },
+      prepare: expect.any(Function),
+    });
+    expect(captureRegistryHelp(registry, ["init"])).toContain("--state-file");
+  });
+  test("root introspect returns deterministic JSON with kscli paths", async () => {
+    const first = await runKscli(["--introspect"]);
+    const second = await runKscli(["--introspect", "--quiet"]);
+    expect(first.exitCode, first.stderr).toBe(0);
+    expect(second.exitCode, second.stderr).toBe(0);
+    expect(first.stderr).toBe("");
+    expect(second.stdout).toBe(first.stdout);
+    const schema = JSON.parse(first.stdout);
+    expect(schema).toMatchObject({ bin: "kscli", schema_version: 1 });
+    expect(schema.commands).toHaveLength(commandPaths.length);
+    expect(
+      schema.commands.find((entry: { path: string[] }) => entry.path.join(" ") === "kb create")
+        .usage,
+    ).toMatch(/^kscli kb create /);
+  });
+
   test("根帮助展示 kscli 与全局 flag", async () => {
     const { stderr, exitCode } = await runKscli(["--help"]);
     expect(exitCode, stderr).toBe(0);

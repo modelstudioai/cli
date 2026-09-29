@@ -19,6 +19,30 @@ function runCliSmoke(args: string[]) {
 }
 
 describe("e2e: bl registry smoke", () => {
+  test("knowledge init is registered with read-only preparation and billing risk", () => {
+    expect(commands["knowledge init"]).toMatchObject({
+      auth: "apiKey",
+      risk: { reason: "billing" },
+      prepare: expect.any(Function),
+    });
+    expect(captureRegistryHelp(registry, ["knowledge", "init"])).toContain("--state-file");
+  });
+  test("knowledge introspect bypasses required flags and emits only product-correct JSON", async () => {
+    const { stdout, stderr, exitCode } = await runCliSmoke([
+      "knowledge",
+      "create",
+      "--introspect",
+      "--quiet",
+    ]);
+    expect(exitCode, stderr).toBe(0);
+    expect(stderr).toBe("");
+    const schema = JSON.parse(stdout);
+    expect(schema).toMatchObject({ bin: "bl", scope: ["knowledge", "create"] });
+    expect(schema.commands).toHaveLength(1);
+    expect(schema.commands[0].usage).toMatch(/^bl knowledge create /);
+    expect(schema.commands[0].risk).toMatchObject({ reason: "billing" });
+  });
+
   test("根帮助展示 bl、逐命令鉴权域与全局 flag", async () => {
     const { stderr, exitCode } = await runCliSmoke(["--help"]);
     expect(exitCode, stderr).toBe(0);

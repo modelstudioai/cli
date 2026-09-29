@@ -69,19 +69,19 @@ function matchesIncludeCriteria(exitCode, apiCode, message):
 
 These are **user**, **environment**, or **service business** errors. Give fix hints; do not ask to file an issue.
 
-| Category                   | Signal                                    | Examples                                                                        |
-| -------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------- |
-| **Usage / args**           | Exit code **2** (USAGE)                   | Missing flag, invalid path, unknown subcommand, local file not found            |
-| **Auth**                   | Exit code **3** (AUTH)                    | No API key, invalid key, expired console token                                  |
-| **Quota**                  | Exit code **4** (QUOTA)                   | Free tier exhausted, rate limit / quota messages                                |
-| **Confirmation required**  | Exit code **7** + `requires_confirmation` | Expected high-risk control flow; ask the user, never auto-retry with `--yes`    |
-| **Content filter**         | Exit code **10** (CONTENT_FILTER)         | Content moderation blocked the request                                          |
-| **Model not found**        | Message or `api_code`                     | `ModelNotFound`, `invalid_request_error` naming a bad model, HTTP 404 for model |
-| **Invalid API params**     | USAGE or service validation               | `InvalidParameter`, `invalid_request_error` for bad `--size`, `--format`, etc.  |
-| **Free quota query**       | `bl usage free` business result           | Quota used up — not a CLI defect                                                |
-| **Obvious local env**      | Hint is sufficient                        | `ENOENT` / `EACCES`, wrong file path, disk full                                 |
-| **Network (self-service)** | Exit code **6** (NETWORK) + clear hint    | DNS, proxy, TLS — user fixes `DASHSCOPE_BASE_URL`, proxy, or network            |
-| **Timeout (self-service)** | Exit code **5** (TIMEOUT) + hint works    | Increase `--timeout`, check `base_url` with `bl auth status`                    |
+| Category                   | Signal                                    | Examples                                                                                                                                                             |
+| -------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Usage / args**           | Exit code **2** (USAGE)                   | Missing flag, invalid path, unknown subcommand, local file not found                                                                                                 |
+| **Auth**                   | Exit code **3** (AUTH)                    | No API key, invalid key, expired console token                                                                                                                       |
+| **Quota**                  | Exit code **4** (QUOTA)                   | Free tier exhausted, rate limit / quota messages                                                                                                                     |
+| **Confirmation required**  | Exit code **7** + `requires_confirmation` | Expected high-risk control flow; reuse explicit authorization covering this action, target, risk, and scope; otherwise ask. Retry with `--yes` only when authorized. |
+| **Content filter**         | Exit code **10** (CONTENT_FILTER)         | Content moderation blocked the request                                                                                                                               |
+| **Model not found**        | Message or `api_code`                     | `ModelNotFound`, `invalid_request_error` naming a bad model, HTTP 404 for model                                                                                      |
+| **Invalid API params**     | USAGE or service validation               | `InvalidParameter`, `invalid_request_error` for bad `--size`, `--format`, etc.                                                                                       |
+| **Free quota query**       | `bl usage free` business result           | Quota used up — not a CLI defect                                                                                                                                     |
+| **Obvious local env**      | Hint is sufficient                        | `ENOENT` / `EACCES`, wrong file path, disk full                                                                                                                      |
+| **Network (self-service)** | Exit code **6** (NETWORK) + clear hint    | DNS, proxy, TLS — user fixes `DASHSCOPE_BASE_URL`, proxy, or network                                                                                                 |
+| **Timeout (self-service)** | Exit code **5** (TIMEOUT) + hint works    | Increase `--timeout`, check `base_url` with `bl auth status`                                                                                                         |
 
 **Rule:** If the authoritative source of the error is the **service response** or **user input**, treat it as non-reportable (same boundary as the CLI repo’s error-handling docs).
 
@@ -117,9 +117,9 @@ Offer reporting when **none** of EXCLUDE applies **and** any of the following ho
 
 1. Align versions: [SKILL.md → Version & updates](../SKILL.md#version--updates-after-provider-selection-before-the-first-bl-command) — run `bl update` and `bl skill update` if mismatched. If needed skills are missing, run `bl skill init`.
 2. Confirm `bl auth status` is healthy (for commands that need auth).
-3. Retry once with `--verbose` if stderr was thin.
+3. Preserve existing output. If stderr was thin, use the safe diagnostic procedure below; retry is optional and is never a prerequisite for reporting an uncertain write.
 
-If it still fails with INCLUDE signals → offer reporting.
+If available evidence matches INCLUDE → offer reporting; missing retry logs do not prevent a report.
 
 ---
 
@@ -150,19 +150,19 @@ If the user agrees → [Collect information](#collect-information) → [Submit](
 
 Run these commands and paste results into the issue template (redact first).
 
-| Field               | How to obtain                                              |
-| ------------------- | ---------------------------------------------------------- |
-| CLI version         | `bl --version`                                             |
-| Skill version       | `metadata.version` in installed `SKILL.md` frontmatter     |
-| Node version        | `node --version`                                           |
-| OS                  | `uname -a` (Linux/macOS) or `sw_vers` (macOS)              |
-| Region              | `bl auth status` or `bl config show` (redacted)            |
-| Command             | Exact command the user ran (redacted)                      |
-| stderr / text error | Original failure output; re-run with `--verbose` if needed |
-| Structured error    | Re-run with `--output json` on the same command            |
-| Repro steps         | Numbered 1-2-3                                             |
-| Expected vs actual  | One sentence each                                          |
-| Frequency           | Always / sometimes / once                                  |
+| Field               | How to obtain                                                        |
+| ------------------- | -------------------------------------------------------------------- |
+| CLI version         | `bl --version`                                                       |
+| Skill version       | `metadata.version` in installed `SKILL.md` frontmatter               |
+| Node version        | `node --version`                                                     |
+| OS                  | `uname -a` (Linux/macOS) or `sw_vers` (macOS)                        |
+| Region              | `bl auth status` or `bl config show` (redacted)                      |
+| Command             | Exact command the user ran (redacted)                                |
+| stderr / text error | Original failure output; optional safe diagnostics below             |
+| Structured error    | Existing JSON error, if available; do not replay writes to obtain it |
+| Repro steps         | Numbered 1-2-3                                                       |
+| Expected vs actual  | One sentence each                                                    |
+| Frequency           | Always / sometimes / once                                            |
 
 ### Redaction
 
@@ -179,17 +179,23 @@ Before any paste or `gh issue create`:
 
 **Principle:** Anything that could identify the user's account, credentials, internal infrastructure, or business content must be redacted. When in doubt, redact.
 
-### Optional verbose re-run
+### Optional safe diagnostics
+
+First preserve the original stdout, stderr, request/task/resource IDs, and local checkpoint. A timeout or broken connection does not prove that the service rejected a write.
+
+- For an uncertain create/upload/update/delete, inspect the existing checkpoint and use supported read-only resource or task queries. Do not resubmit the write to obtain richer logs. If the outcome cannot be established, report the uncertainty and stop.
+- For polling or download failures, query or resume the existing task/download using its ID and supported commands. Do not restart generation or resource creation. If no resume command exists, use the original evidence in the issue.
+- Re-run only read-only operations, or writes proven safe to repeat and covered by explicit authorization. New paid work needs authorization for that scope; a warning alone is not authorization.
+- A supported `--dry-run --output json` can inspect request preparation without writes; it does not reproduce polling/download failures and may perform read-only remote queries.
+
+For an operation that meets those conditions:
 
 ```bash
-# Same command as the user. --verbose prints HTTP request/response details;
-# DASHSCOPE_VERBOSE=1 adds the stack trace for uncaught errors.
-DASHSCOPE_VERBOSE=1 bl <...original args...> --verbose --output json 2>verbose-stderr.txt
+# Use only the verified-safe operation, not an uncertain original write.
+DASHSCOPE_VERBOSE=1 bl <...verified-safe args...> --verbose --output json >verbose-stdout.txt 2>verbose-stderr.txt
 ```
 
-Capture full stderr (`verbose-stderr.txt`) and JSON `error` object from stdout.
-
-**Note for async/paid commands** (e.g. `bl video generate`, `bl image generate`): re-running consumes quota. Prefer adding only `--dry-run --output json` to capture the request payload without actually invoking the API. If the error occurs during polling/download (not request building), a full re-run is needed — warn the user about quota cost first.
+Capture both streams, including any JSON error, and redact them before sharing. Diagnostic output may contain credentials or business content.
 
 ---
 

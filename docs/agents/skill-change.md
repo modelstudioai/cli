@@ -59,6 +59,7 @@ bailian-gen      bailian-finetune  bailian-managed-agent   bailian-web-search
 - [ ] 新增领域目录时：补齐 `SKILL.md`（含 `metadata.version`），同步 `packages/cli/package.json` 的 reference 格式化路径、`.vite-hooks/pre-commit` 的生成物暂存清单、`tools/release/check.mjs` 的生成物校验清单；同步 hub 与共享协议的领域路由
 - [ ] 跑 `pnpm run sync:skill-assets`（或 commit 走 pre-commit），提交生成的 `reference/` 与 version 同步结果
 - [ ] 高风险命令生成的 reference 必须包含 `Risk` / `Risk message` 和简短 Agent safety 提示；带 `--yes` 的示例必须标注只能在确认后执行，不要手改生成物
+- [ ] `bailian-knowledge/reference` 由 `generate-knowledge-reference.ts` 通过 runtime 的 `buildCommandSchema` 生成，与 `--introspect` 共用数据源；分别读取 bl / kscli 的真实入口 map，不用字符串替换推导产品路径。统一生成入口负责归属迁移与旧文件清理。改动后运行 `tools/generate-reference.test.ts`、`tools/generate-knowledge-reference.test.ts` 和 `tools/knowledge-reference-renderer.test.ts`。
 - [ ] 默认模型若写在领域路由表（如 `bailian-gen`）：与命令 default / [model-add-remove.md](model-add-remove.md) 一并核对
 
 ## 完成后自查
@@ -77,5 +78,6 @@ bl skill init
 - ✗ 重新加回 `companions` 并宣称安装器硬依赖 → 与 `bl skill add` 合同不符
 - ✗ 软 hand-off 写成硬路径 `../bailian-*/SKILL.md` 当执行前提 → 子集安装断链
 - ✗ 只改 SKILL、忘改 `GROUP_OWNER_SKILL` → reference 落错 skill
+- ✗ 安装测试只隔离 HOME，遗漏 `/etc/codex` 或 `/Applications/ZCode.app` 等系统安装标记 → 开发机上多检测出 Agent。单元测试应模拟这些标记，并单独覆盖标记存在的行为；不要放宽 Agent 数量断言或修改产品识别规则来迁就测试环境。
 - ✗ 手改 `skills/*/reference/*.md` → 下次 generate 被覆盖
 - ✗ 改默认模型只动 flag description / reference，忘改领域 SKILL「When to use which command」表（见 [model-add-remove.md](model-add-remove.md)）

@@ -3,6 +3,8 @@
 
 // Entrypoint factory + identity
 export { createCli } from "./create-cli.ts";
+export { buildCommandSchema, serializeCommandSchema } from "./introspect.ts";
+export type { CommandSchema, CommandSchemaNode } from "./introspect.ts";
 export type { Cli, CliOptions } from "./create-cli.ts";
 
 // Command Pack product policy
@@ -33,6 +35,7 @@ export {
   BAILIAN_CONSOLE_ROOT,
   BAILIAN_CONSOLE,
   API_KEY_PAGE,
+  KNOWLEDGE_BILLING_PAGE,
   TOKEN_PLAN_PAGE,
   MCP_WEBSEARCH_PAGE,
   mcpMarketplaceDetailPage,

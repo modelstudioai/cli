@@ -1,3 +1,4 @@
+import { searchKnowledge } from "./operations/search.ts";
 import { readFileSync } from "node:fs";
 import { firstNonEmptyText, mediaSummary } from "./media-output.ts";
 import {
@@ -8,7 +9,6 @@ import {
   detectOutputFormat,
   type FlagsDef,
   type KnowledgeSearchRequest,
-  type KnowledgeSearchResponse,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
@@ -180,11 +180,7 @@ export default defineCommand({
       return;
     }
 
-    const response = await ctx.client.requestJson<KnowledgeSearchResponse>({
-      path: url,
-      method: "POST",
-      body,
-    });
+    const response = await searchKnowledge(ctx.client, workspaceId, body);
 
     const nodes = response.data?.nodes || [];
     if (settings.quiet || format === "text") {

@@ -5,6 +5,17 @@ import { afterEach, expect, test, vi } from "vite-plus/test";
 import { maybeSyncWikiData } from "../src/advisor/sync.ts";
 import { readSkillLock } from "../src/skills/lock.ts";
 
+// A real system-wide Codex/ZCode installation must not change this fixture's
+// one-agent fan-out expectation. Ordinary temporary-home files remain real.
+vi.mock("fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("fs")>();
+  return {
+    ...actual,
+    existsSync: (path: Parameters<typeof actual.existsSync>[0]) =>
+      path === "/etc/codex" || path === "/Applications/ZCode.app" ? false : actual.existsSync(path),
+  };
+});
+
 const WIKI_SKILL_NAME = "bailian-docs-llm-wiki";
 const CONTENT_HASH = `sha256:${"a".repeat(64)}`;
 

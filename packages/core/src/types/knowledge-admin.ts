@@ -42,7 +42,7 @@ export interface RagIndexRow {
 
 export interface RagIndexListData {
   rows?: RagIndexRow[];
-  total?: number;
+  total_count?: number;
   [key: string]: unknown;
 }
 export type RagIndexListResponse = RagResponse<RagIndexListData>;

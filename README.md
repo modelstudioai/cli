@@ -125,6 +125,18 @@ Once installed, just describe your task to your AI Agent — no need to assemble
 
 > More examples and scenarios: [Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)
 
+### Try a knowledge base
+
+With a valid API key and workspace, preview initialization first:
+
+```bash
+bl knowledge init --workspace-id <workspace-id> --dry-run
+```
+
+Knowledge bases accrue running-time charges from creation, even without queries. The one-time Standard Edition 720-hour allowance is shared across knowledge bases and expires 30 days after activation for new users. Model calls cost extra; your remaining allowance is unknown. Review the plan and [billing rules](https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base), then add `--yes` to the same command **after confirming the operation**, removing `--dry-run` to execute.
+
+Keep the returned IDs and recovery record. Closing the CLI or a later failure does not stop billing; follow the reported cleanup actions to delete unused knowledge bases. See the [Knowledge Studio quick start](packages/kscli/README.md#quick-start) for retrieval and cleanup. The `bailian-knowledge` Skill is available through `bl skill init`.
+
 ## Authentication
 
 ### Console Login (OAuth, Recommended)

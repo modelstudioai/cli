@@ -1,3 +1,4 @@
+import { createKnowledgeService } from "./operations/service.ts";
 import { parseConfigFile } from "./service-update.ts";
 import {
   defineCommand,
@@ -5,7 +6,6 @@ import {
   RAG_PATHS,
   detectOutputFormat,
   type FlagsDef,
-  type RagAgentMutationResponse,
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import { agentMutationField, resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
@@ -135,11 +135,7 @@ export default defineCommand({
       return;
     }
 
-    const response = await ctx.client.requestJson<RagAgentMutationResponse>({
-      path: endpoint,
-      method: "POST",
-      body,
-    });
+    const response = await createKnowledgeService(ctx.client, workspaceId, body);
 
     const agentId = agentMutationField(response, "agent_id");
     if (settings.quiet) {

@@ -38,38 +38,40 @@ npm install -g knowledge-studio-cli
 
 ## Quick Start
 
+Configure a valid DashScope API key (for example through `DASHSCOPE_API_KEY`) and choose a workspace with knowledge-base permissions. Replace the placeholder IDs below with your actual values.
+
+Knowledge bases accrue running-time charges from creation, even without queries. The one-time **720-hour Standard Edition allowance is shared across knowledge bases and expires 30 days after service activation for new users**. Model calls are billed separately; the CLI does not assume your remaining allowance. See [billing rules](https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base).
+
 ```bash
-# 1. Create a knowledge base
-kscli kb create \
-  --name "my-kb" \
-  --description "my product docs knowledge base" \
-  --embedding-model text-embedding-v3 \
-  --workspace-id <your-workspace-id>
-
-# 2. Upload a document
-kscli doc upload \
-  --kb-id <kb-id> \
-  --file ./product-docs.pdf \
-  --workspace-id <your-workspace-id>
-
-# 3. Check processing status
-kscli doc status \
-  --kb-id <kb-id> \
-  --doc-id <doc-id> \
-  --workspace-id <your-workspace-id>
-
-# 4. Semantic search
-kscli search \
-  --query "What is Model Studio?" \
-  --agent-id <your-agent-id> \
-  --workspace-id <your-workspace-id>
-
-# 5. Knowledge-base Q&A (streaming)
-kscli chat \
-  --message "What is RAG?" \
-  --agent-id <your-agent-id> \
-  --workspace-id <your-workspace-id>
+# Preview first; this may authenticate and read existing resources, but writes nothing.
+kscli init --workspace-id <workspace-id> --dry-run
 ```
+
+Review the plan and billing notice. Only after confirming this operation and its scope, run:
+
+```bash
+kscli init --workspace-id <workspace-id> --yes
+```
+
+Initialization uploads a sample, creates or reuses an owned knowledge base and beta retrieval service, and verifies sample retrieval. It does not create a chat service or deploy a service. Keep the returned IDs and `.bailian/knowledge/init.json` recovery record. Use the returned **agent ID**, not the knowledge-base index ID:
+
+```bash
+kscli search --agent-id <agent-id> --agent-version beta --query "RAG" --workspace-id <workspace-id>
+```
+
+Closing the terminal or a failed later step does not stop billing. Inspect the resources and cleanup actions reported by init, including partial failures. Delete only the resources you no longer need; reused resources are not temporary resources. After reviewing the specific knowledge base and deletion consequences:
+
+```bash
+kscli kb delete --index-id <index-id> --workspace-id <workspace-id>
+```
+
+Deletion requires confirmation; add `--yes` only after confirming that scope. Successful knowledge-base deletion stops its running-time charges. Deleting documents or a retrieval service alone does not. Source files and other resources may require separate cleanup.
+
+### Use with an AI assistant
+
+Install the knowledge workflow through `bl skill init`, or select `bl skill add --name bailian-protocol,bailian-knowledge`. Use `bl skill update` to update installed skills. This uses the full Bailian CLI installer; `kscli` has no `skill` subcommand.
+
+The assistant first reads `kscli --introspect` to check the installed capabilities. It previews changes and explains billing before creating resources. Capabilities absent from that schema are not available in the installed version.
 
 ## Commands
 
