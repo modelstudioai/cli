@@ -11,6 +11,7 @@ import { emitBare, emitResult } from "bailian-cli-runtime";
 import { knowledgeCreationRisk, localizedKnowledgeBillingNotice } from "./billing.ts";
 import { prepareKnowledgeInit, type InitPrepared } from "./init-prepare.ts";
 import { runKnowledgeInit, type InitResource } from "./init-workflow.ts";
+import { matchesInitSample } from "./init-sample.ts";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 import deleteIndex from "./kb-delete.ts";
 import deleteService from "./service-delete.ts";
@@ -214,6 +215,26 @@ export default defineCommand<typeof INIT_FLAGS, InitPrepared>({
     emitBare(
       `indexId: ${result.indexId}\nagentId: ${result.agentId}\nstateFile: ${result.stateFile}`,
     );
+    const sampleNode = result.sampleSearch.response.data.nodes.find((node) =>
+      matchesInitSample({ data: { nodes: [node] } }),
+    );
+    const content = sampleNode?.metadata?.content || sampleNode?.text || "";
+    const excerpt = content.length > 400 ? `${content.slice(0, 400)}…` : content;
+    emitBare(context.localize({ "en-US": "Sample search", "zh-CN": "样例检索" }));
+    emitBare(
+      context.localize({
+        "en-US": `Query: ${result.sampleSearch.query}`,
+        "zh-CN": `查询：${result.sampleSearch.query}`,
+      }),
+    );
+    if (sampleNode?.metadata?.doc_name)
+      emitBare(
+        context.localize({
+          "en-US": `Document: ${sampleNode.metadata.doc_name}`,
+          "zh-CN": `文档：${sampleNode.metadata.doc_name}`,
+        }),
+      );
+    emitBare(context.localize({ "en-US": `Content: ${excerpt}`, "zh-CN": `内容：${excerpt}` }));
     if (nextSearch) emitBare(renderAction(context.identity.binName, nextSearch));
     emitBare(notices[0]!.message);
     if (cleanup.length)

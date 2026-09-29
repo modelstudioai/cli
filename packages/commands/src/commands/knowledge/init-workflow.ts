@@ -220,17 +220,14 @@ export async function runKnowledgeInit(options: InitRunOptions) {
         agent_version: "beta",
         agent_config: completed.config,
       });
-    await waitForSample(
-      async () =>
-        matchesInitSample(
-          await searchKnowledge(client, workspaceId, {
-            agent_id: state.agentId!,
-            agent_version: "beta",
-            query: INIT_SAMPLE.query,
-          }),
-        ),
-      options,
-    );
+    const sampleResponse = await waitForSample(async () => {
+      const response = await searchKnowledge(client, workspaceId, {
+        agent_id: state.agentId!,
+        agent_version: "beta",
+        query: INIT_SAMPLE.query,
+      });
+      return matchesInitSample(response) ? response : false;
+    }, options);
     state.phase = "verified";
     await checkpoint();
     return {
@@ -239,6 +236,7 @@ export async function runKnowledgeInit(options: InitRunOptions) {
       fileId: state.fileId,
       agentVersion: "beta" as const,
       sampleMatched: true as const,
+      sampleSearch: { query: INIT_SAMPLE.query, response: sampleResponse },
       resources,
       stateFile,
       timeToFirstValueMs: Date.now() - startedAt,
@@ -246,13 +244,14 @@ export async function runKnowledgeInit(options: InitRunOptions) {
   });
 }
 
-async function waitForSample(
-  check: () => Promise<boolean>,
+async function waitForSample<Result>(
+  check: () => Promise<Result | false>,
   options: InitRunOptions,
-): Promise<void> {
+): Promise<Result> {
   const deadline = Date.now() + options.settings.timeout * 1000;
   while (Date.now() < deadline) {
-    if (await check()) return;
+    const result = await check();
+    if (result) return result;
     const remaining = deadline - Date.now();
     if (remaining <= 0) break;
     await new Promise((resolve) =>

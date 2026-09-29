@@ -165,6 +165,8 @@ bl knowledge init --workspace-id <workspace-id> --dry-run
 
 知识库从创建成功起持续按时计费。标准版一次性 720 小时额度由多个知识库共享，新用户开通后 30 天内有效，模型调用另计；CLI 不假定账户余额。见[计费规则](https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base)。
 
+初始化成功后，文本输出展示实际样例查询、命中文档名称（服务端提供时）和最多 400 字符的内容摘要。`--output json` 的 `sampleSearch.query` 是实际查询，`sampleSearch.response` 保留该次成功检索的完整响应（包括命中内容、评分和 request_id）；原有 `sampleMatched` 字段保持兼容。展示复用初始化验证中的响应，不额外调用检索接口，也不将检索响应写入恢复记录。
+
 保留返回的 index/agent ID、created/reused 信息和 `.bailian/knowledge/init.json`（可用 `--state-file` 指定）。重复执行先核对已有资源；同名但归属不明或请求结果不确定时不会擅自重建。创建后失败仍会输出已创建资源与计费提醒。按返回的清理动作处理本次新建资源，复用资源不属于默认清理范围；关闭终端不停止计费，成功删除知识库才能停止其规格计费。
 
 ---

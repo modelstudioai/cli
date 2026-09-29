@@ -88,6 +88,10 @@ test("confirmed init uses the full runtime and reuses the same resources on a se
     indexId: "index-test",
     agentId: "agent-test",
     sampleMatched: true,
+    sampleSearch: {
+      response: { data: { nodes: expect.any(Array) } },
+      query: expect.stringContaining("RAG"),
+    },
   });
   expect(payload.cleanup).toContainEqual({
     path: ["knowledge", "delete"],

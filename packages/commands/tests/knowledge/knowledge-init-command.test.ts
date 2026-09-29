@@ -5,8 +5,22 @@ import deleteIndex from "../../src/commands/knowledge/kb-delete.ts";
 import deleteService from "../../src/commands/knowledge/service-delete.ts";
 import deleteFile from "../../src/commands/knowledge/file-delete.ts";
 import search from "../../src/commands/knowledge/search.ts";
+import { INIT_SAMPLE } from "../../src/commands/knowledge/init-sample.ts";
 import * as workflow from "../../src/commands/knowledge/init-workflow.ts";
 
+const sampleSearch = {
+  query: INIT_SAMPLE.query,
+  response: {
+    code: "Success",
+    status_code: 200,
+    request_id: "search-request-1",
+    data: {
+      total: 1,
+      cost_time: 12,
+      nodes: [{ text: INIT_SAMPLE.content, score: 0.9, metadata: { doc_name: "sample-document" } }],
+    },
+  },
+};
 afterEach(() => vi.restoreAllMocks());
 function fixture(binName = "kscli") {
   const registry = new CommandRegistry(
@@ -53,12 +67,14 @@ test.each(["kscli", "bl"])(
       fileId: "file-1",
       agentVersion: "beta",
       sampleMatched: true,
+      sampleSearch,
       resources: [...resources],
       stateFile: "state.json",
       timeToFirstValueMs: 1,
     });
     await command.run(context);
     const output = JSON.parse(stdout.mock.calls.map(([text]) => text).join(""));
+    expect(output.sampleSearch).toEqual(sampleSearch);
     expect(output.cleanup).toEqual([
       {
         path: binName === "kscli" ? ["kb", "delete"] : ["knowledge", "delete"],
@@ -102,6 +118,7 @@ test("missing product route omits the command instead of inventing one", async (
     fileId: "file-1",
     agentVersion: "beta",
     sampleMatched: true,
+    sampleSearch,
     resources: [{ kind: "knowledge-base", id: "index-1", created: true }],
     stateFile: "state.json",
     timeToFirstValueMs: 1,
@@ -122,4 +139,64 @@ test.each([
   { stateFile: " " },
 ])("invalid initialization flags fail before preparation %#", (flags) => {
   expect(command.validate?.(flags)).toBeDefined();
+});
+
+test.each(["en-US", "zh-CN"] as const)(
+  "text output shows actual sample query and retrieved content in %s",
+  async (language) => {
+    const { context, stdout } = fixture();
+    context.settings.output = "text";
+    context.settings.quiet = false;
+    context.localize = (text) => (typeof text === "string" ? text : text[language]);
+    vi.spyOn(workflow, "runKnowledgeInit").mockResolvedValue({
+      indexId: "index-1",
+      agentId: "agent-1",
+      fileId: "file-1",
+      agentVersion: "beta",
+      sampleMatched: true,
+      sampleSearch,
+      resources: [],
+      stateFile: "state.json",
+      timeToFirstValueMs: 1,
+    });
+    await command.run(context);
+    const output = stdout.mock.calls.map(([text]) => text).join("");
+    expect(output).toContain(INIT_SAMPLE.query);
+    expect(output).toContain("sample-document");
+    expect(output).toContain("RAG means retrieval-augmented generation.");
+    expect(output).toContain(language === "zh-CN" ? "样例检索" : "Sample search");
+  },
+);
+
+test("text summary selects the matched node, prefers metadata content and bounds the excerpt", async () => {
+  const { context, stdout } = fixture();
+  context.settings.output = "text";
+  const content = "BAILIAN_CLI_INIT_SAMPLE_V1 " + "retrieved content ".repeat(40);
+  const response = {
+    ...sampleSearch.response,
+    data: {
+      ...sampleSearch.response.data,
+      nodes: [
+        { text: "Unrelated result", score: 1, metadata: { doc_name: "unrelated" } },
+        { text: "Alternative representation", score: 0.9, metadata: { content } },
+      ],
+    },
+  };
+  vi.spyOn(workflow, "runKnowledgeInit").mockResolvedValue({
+    indexId: "index-1",
+    agentId: "agent-1",
+    fileId: "file-1",
+    agentVersion: "beta",
+    sampleMatched: true,
+    sampleSearch: { query: INIT_SAMPLE.query, response },
+    resources: [],
+    stateFile: "state.json",
+    timeToFirstValueMs: 1,
+  });
+  await command.run(context);
+  const output = stdout.mock.calls.map(([text]) => text).join("");
+  expect(output).toContain(`Content: ${content.slice(0, 400)}…`);
+  expect(output).not.toContain(content);
+  expect(output).not.toContain("Unrelated result");
+  expect(output).not.toContain("Document: undefined");
 });

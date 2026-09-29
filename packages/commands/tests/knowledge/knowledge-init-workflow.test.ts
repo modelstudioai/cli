@@ -42,6 +42,8 @@ async function fixture() {
     serviceFailure: undefined as Error | undefined,
     searchFailure: undefined as Error | undefined,
     emptySearch: false,
+    emptySearchesRemaining: 0,
+    searchCount: 0,
     unknownIndexResult: false,
   };
   const calls: string[] = [];
@@ -125,7 +127,11 @@ async function fixture() {
     if (body.query !== undefined) {
       if (remote.searchFailure) throw remote.searchFailure;
       expect(body.agent_version).toBe("beta");
+      remote.searchCount += 1;
+      if (remote.emptySearchesRemaining-- > 0)
+        return { request_id: "not-ready", data: { nodes: [] } };
       return {
+        request_id: "search-request-1",
         data: { nodes: remote.emptySearch ? [] : [{ text: INIT_SAMPLE.content, score: 0.9 }] },
       };
     }
@@ -153,7 +159,7 @@ async function fixture() {
 }
 
 test("first execution creates and verifies resources; second execution performs no creation or update", async () => {
-  const { execute, calls, options, report } = await fixture();
+  const { execute, calls, options, report, requestJson } = await fixture();
   const first = await execute();
   expect(first).toMatchObject({
     indexId: "index-1",
@@ -161,6 +167,13 @@ test("first execution creates and verifies resources; second execution performs 
     agentId: "agent-1",
     agentVersion: "beta",
     sampleMatched: true,
+    sampleSearch: {
+      query: INIT_SAMPLE.query,
+      response: {
+        request_id: "search-request-1",
+        data: { nodes: [{ text: INIT_SAMPLE.content, score: 0.9 }] },
+      },
+    },
   });
   expect(await stateStore.readStateFile(options.stateFile, localize)).toMatchObject({
     phase: "verified",
@@ -171,12 +184,18 @@ test("first execution creates and verifies resources; second execution performs 
   expect(report).toHaveBeenCalledWith(
     expect.objectContaining({ kind: "knowledge-base", id: "index-1", created: true }),
   );
+  expect(
+    requestJson.mock.calls.filter(([request]) => request.body?.query !== undefined),
+  ).toHaveLength(1);
   const previousLength = calls.length;
   expect(await execute()).toMatchObject({
     indexId: first.indexId,
     agentId: first.agentId,
     sampleMatched: true,
   });
+  expect(
+    requestJson.mock.calls.filter(([request]) => request.body?.query !== undefined),
+  ).toHaveLength(2);
   expect(calls.slice(previousLength)).not.toEqual(
     expect.arrayContaining([RAG_PATHS.indexCreateV2]),
   );
@@ -283,4 +302,16 @@ test("state changes between prepare and execution stop before any cloud mutation
     }),
   ).rejects.toThrow(/changed/);
   expect(requestJson).not.toHaveBeenCalled();
+});
+
+test("returns the successful polling response without another search and does not persist it", async () => {
+  const { execute, remote, options } = await fixture();
+  remote.emptySearchesRemaining = 1;
+  const result = await execute();
+  expect(result.sampleSearch.response.request_id).toBe("search-request-1");
+  expect(result.sampleSearch.response.data.nodes[0].text).toBe(INIT_SAMPLE.content);
+  expect(remote.searchCount).toBe(2);
+  expect(await stateStore.readStateFile(options.stateFile, localize)).not.toHaveProperty(
+    "sampleSearch",
+  );
 });
