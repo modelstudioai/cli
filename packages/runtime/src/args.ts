@@ -1,5 +1,5 @@
 import type { FlagsDef, ParsedFlags } from "bailian-cli-core";
-import { UsageError } from "bailian-cli-core";
+import { GLOBAL_FLAGS, UsageError } from "bailian-cli-core";
 
 function kebabToCamel(str: string): string {
   return str.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
@@ -11,26 +11,82 @@ export function camelToKebab(str: string): string {
 }
 
 export interface ParsePathResult {
-  /** Command path: the leading run of bare tokens, e.g. ["speech", "recognize"]. */
+  /** Command path: consecutive bare tokens after any leading global flags. */
   path: string[];
-  /** Everything from the first flag onward — handed to parseFlags later. */
+  /**
+   * Flag region handed to parseFlags later.
+   * Includes peeled leading GLOBAL_FLAGS plus everything after the command path.
+   */
   rest: string[];
   hasHelpFlag: boolean;
   hasVersionFlag: boolean;
 }
 
 /**
- * First pass — routing only. The command path is the leading run of bare
- * (non-`-`) tokens; the first flag ends it ("command path first, then flags",
- * oclif-style). There are no positionals, so nothing bare can legitimately
- * follow a flag — and no flags precede the path, so this needs no schema.
+ * First-pass routing parse.
+ * - Known GLOBAL_FLAGS may appear before the command path (git/docker style).
+ * - Bare tokens form the command path; everything after the path goes into rest.
+ * - Unknown flags before the path throw UsageError (no silent root-help fallback).
  */
 export function parsePath(argv: string[]): ParsePathResult {
-  let i = 0;
-  while (i < argv.length && !argv[i]!.startsWith("-")) i++;
-  const rest = argv.slice(i);
+  const leadingRest: string[] = [];
+  let index = 0;
+
+  while (index < argv.length) {
+    const argument = argv[index]!;
+    if (!argument.startsWith("-")) break;
+
+    if (!argument.startsWith("--")) {
+      throw new UsageError(`Unknown flag "${argument}". Use the --long form.`);
+    }
+
+    const equalsIndex = argument.indexOf("=");
+    const rawKey = equalsIndex !== -1 ? argument.slice(2, equalsIndex) : argument.slice(2);
+    if (rawKey === "") {
+      throw new UsageError(`Unknown flag "${argument}".`);
+    }
+
+    const flagKey = kebabToCamel(rawKey);
+    const flagDef =
+      flagKey in GLOBAL_FLAGS ? GLOBAL_FLAGS[flagKey as keyof typeof GLOBAL_FLAGS] : undefined;
+    if (!flagDef) {
+      throw new UsageError(
+        `Unknown flag "--${rawKey}" before the command path. Only global flags may appear before the command; put command-specific flags after it.`,
+      );
+    }
+
+    if (flagDef.type === "switch") {
+      leadingRest.push(argument);
+      index += 1;
+      continue;
+    }
+
+    // Value-taking global flags: support --flag=value and --flag value.
+    if (equalsIndex !== -1) {
+      leadingRest.push(argument);
+      index += 1;
+      continue;
+    }
+
+    const value = argv[index + 1];
+    if (value === undefined || value.startsWith("--")) {
+      // Leave a missing value for parseFlags so trailing form keeps the same error path.
+      leadingRest.push(argument);
+      index += 1;
+      continue;
+    }
+
+    leadingRest.push(argument, value);
+    index += 2;
+  }
+
+  const pathStart = index;
+  while (index < argv.length && !argv[index]!.startsWith("-")) index += 1;
+  const path = argv.slice(pathStart, index);
+  const rest = leadingRest.concat(argv.slice(index));
+
   return {
-    path: argv.slice(0, i),
+    path,
     rest,
     hasHelpFlag: rest.includes("--help"),
     hasVersionFlag: rest.includes("--version"),

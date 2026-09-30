@@ -20,8 +20,10 @@ export type Resolution =
 
 /**
  * Classify argv into a {@link Resolution}. Pure over (argv, registry): one
- * `parsePath` scan for the command path + flag region, one `registry.locate`
- * for the routing decision. Never throws. Trivially unit-testable.
+ * `parsePath` scan for the command path + flag region (leading GLOBAL_FLAGS
+ * allowed), one `registry.locate` for the routing decision. `parsePath` may
+ * throw UsageError for unknown flags before the command path; otherwise this
+ * function itself does not throw. Trivially unit-testable.
  */
 export function resolve(argv: string[], registry: CommandRegistry): Resolution {
   const { path, rest, hasHelpFlag, hasVersionFlag } = parsePath(argv);
