@@ -1230,7 +1230,7 @@ bl managed-agent project build --project ./my-agent
 #### Notes
 
 - Without --project, creates a managed-agent/ subdirectory. Enter it before running other project commands. Use --project . to initialize in place or convert the current agents.yaml; existing project files are not overwritten.
-- New projects include Skill, File, Vault, and Environment examples under each resource directory's \_examples/. They are not referenced by agent.json and are excluded from Build/Publish. Copy an example outside \_examples/ to enable it, then configure its Agent reference.
+- New projects include Skill, File, Vault, and Environment examples under each resource directory's _examples/. They are not referenced by agent.json and are excluded from Build/Publish. Copy an example outside _examples/ to enable it, then configure its Agent reference.
 
 #### Examples
 
