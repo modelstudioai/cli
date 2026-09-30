@@ -4,7 +4,7 @@
 > Regenerate: `pnpm --filter bailian-cli run generate:reference`.
 
 Command **details** are in sibling `<group>.md` files in this directory.
-This index only covers groups owned by this skill. Other `bl` groups live in sibling bailian-* skills.
+This index only covers groups owned by this skill. Other `bl` groups live in sibling bailian-\* skills.
 Use this index for the skill-scoped quick index and global flags.
 
 ## Quick index
@@ -65,7 +65,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl knowledge list`              | API Key        | List knowledge bases in the workspace                                                                              | [knowledge.md](knowledge.md)   |
 | `bl knowledge retrieve`          | API Key        | Retrieve from a Bailian knowledge base (deprecated, use `search` instead)                                          | [knowledge.md](knowledge.md)   |
 | `bl knowledge search`            | API Key        | Search a Bailian knowledge base (RAG semantic retrieval)                                                           | [knowledge.md](knowledge.md)   |
-| `bl knowledge service copy`      | API Key        | Copy a service into a new draft (name gets a copy_ prefix)                                                         | [knowledge.md](knowledge.md)   |
+| `bl knowledge service copy`      | API Key        | Copy a service into a new draft (name gets a copy\_ prefix)                                                        | [knowledge.md](knowledge.md)   |
 | `bl knowledge service create`    | API Key        | Create a retrieval / Q&A service (initial status: draft, version: beta)                                            | [knowledge.md](knowledge.md)   |
 | `bl knowledge service delete`    | API Key        | Delete a retrieval / Q&A service (soft delete, idempotent)                                                         | [knowledge.md](knowledge.md)   |
 | `bl knowledge service deploy`    | API Key        | Publish the beta draft of a service as a new version                                                               | [knowledge.md](knowledge.md)   |
@@ -126,7 +126,7 @@ Use this index for the skill-scoped quick index and global flags.
 | `bl quota update`                | API Key        | Update model rate limits (QPM/TPM)                                                                                 | [quota.md](quota.md)           |
 | `bl search web`                  | API Key        | Search the web using DashScope MCP WebSearch service                                                               | [search.md](search.md)         |
 | `bl skill add`                   | No Auth        | Install skills from the Bailian skill registry into local agents                                                   | [skill.md](skill.md)           |
-| `bl skill init`                  | No Auth        | Install all bailian-* skills (one-shot bootstrap for new environments)                                             | [skill.md](skill.md)           |
+| `bl skill init`                  | No Auth        | Install all bailian-\* skills (one-shot bootstrap for new environments)                                            | [skill.md](skill.md)           |
 | `bl skill list`                  | No Auth        | List registry skills and diff against local installs                                                               | [skill.md](skill.md)           |
 | `bl skill remove`                | No Auth        | Remove locally installed skills (registry is untouched)                                                            | [skill.md](skill.md)           |
 | `bl skill update`                | No Auth        | Update installed skills to the latest registry versions                                                            | [skill.md](skill.md)           |

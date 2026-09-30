@@ -12,7 +12,7 @@ const IMAGE_GENERATE_FLAGS = {
 } satisfies FlagsDef;
 const OPTS = { ...GLOBAL_FLAGS, ...IMAGE_GENERATE_FLAGS };
 
-// ---- parsePath: routing only (command path first, then flags) ----
+// ---- parsePath: routing (leading GLOBAL_FLAGS + command path + trailing flags) ----
 
 test("parsePath splits leading bare tokens as the command path", () => {
   const r = parsePath(["image", "generate", "--prompt", "cat"]);
@@ -20,7 +20,7 @@ test("parsePath splits leading bare tokens as the command path", () => {
   expect(r.rest).toEqual(["--prompt", "cat"]);
 });
 
-test("parsePath stops the path at the first flag", () => {
+test("parsePath stops the path at the first trailing flag", () => {
   const r = parsePath(["speech"]);
   expect(r.path).toEqual(["speech"]);
   expect(r.rest).toEqual([]);
@@ -31,6 +31,50 @@ test("parsePath detects --help and --version in the flag region", () => {
   const v = parsePath(["--version"]);
   expect(v.hasVersionFlag).toBe(true);
   expect(v.path).toEqual([]);
+  expect(v.rest).toEqual(["--version"]);
+});
+
+test("parsePath peels leading --config before the command path", () => {
+  const r = parsePath(["--config", "token-plan", "config", "show"]);
+  expect(r.path).toEqual(["config", "show"]);
+  expect(r.rest).toEqual(["--config", "token-plan"]);
+});
+
+test("parsePath peels leading --config=value before the command path", () => {
+  const r = parsePath(["--config=token-plan", "auth", "status"]);
+  expect(r.path).toEqual(["auth", "status"]);
+  expect(r.rest).toEqual(["--config=token-plan"]);
+});
+
+test("parsePath peels multiple leading global flags and keeps trailing flags", () => {
+  const r = parsePath(["--verbose", "--config", "token-plan", "text", "chat", "--prompt", "hi"]);
+  expect(r.path).toEqual(["text", "chat"]);
+  expect(r.rest).toEqual(["--verbose", "--config", "token-plan", "--prompt", "hi"]);
+});
+
+test("parsePath still accepts global flags after the command path", () => {
+  const r = parsePath(["config", "show", "--config", "token-plan", "--quiet"]);
+  expect(r.path).toEqual(["config", "show"]);
+  expect(r.rest).toEqual(["--config", "token-plan", "--quiet"]);
+});
+
+test("parsePath rejects unknown flags before the command path", () => {
+  expect(() => parsePath(["--prompt", "hi", "text", "chat"])).toThrowError(
+    expect.objectContaining({
+      name: "UsageError",
+      exitCode: ExitCode.USAGE,
+      message: expect.stringContaining('Unknown flag "--prompt" before the command path'),
+    }),
+  );
+});
+
+test("parsePath rejects short flags before the command path", () => {
+  expect(() => parsePath(["-h", "config", "show"])).toThrowError(
+    expect.objectContaining({
+      name: "UsageError",
+      message: expect.stringContaining("Use the --long form"),
+    }),
+  );
 });
 
 // ---- parseFlags: typed parsing ----
