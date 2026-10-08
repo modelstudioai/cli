@@ -21,6 +21,7 @@ import {
   rollingManifestChannelId,
   rollingManifestFileName,
 } from "./binary-options.mjs";
+import { signDarwinAdhoc } from "./binary-codesign.mjs";
 import { ensureTar, tarOne } from "./binary-tar.mjs";
 import { ensureZip, zipOne } from "./binary-zip.mjs";
 
@@ -164,8 +165,10 @@ function compileOne({ bunTarget, os, arch, exe }, version, outdir, entry) {
   }
   if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
-  // Bun 1.2.19 writes windows-x64 .exe with mode 000 on Unix hosts (oven-sh/bun#21308).
+  // Bun has written windows-x64 .exe as mode 000 on Unix hosts (oven-sh/bun#21308).
   chmodSync(innerPath, 0o755);
+  // Sign after chmod. Bun's linker signature does not match the final Mach-O bytes.
+  if (os === "darwin") signDarwinAdhoc(innerPath, { log });
   return { innerName, innerPath, os, arch, exe };
 }
 

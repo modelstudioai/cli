@@ -59,13 +59,28 @@ jobs:
       - name: Ensure zip and tar (per-platform binary archives)
         run: sudo apt-get update && sudo apt-get install -y zip
 
+      # bun build --compile leaves an invalid darwin linker signature. rcodesign
+      # re-signs those Mach-O files on the Linux runner (binary-codesign.mjs).
+      - name: Install rcodesign (ad-hoc sign darwin binaries)
+        run: |
+          set -euo pipefail
+          RCODESIGN_VERSION=0.29.0
+          asset="apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          curl -fsSL -o "/tmp/${asset}" \
+            "https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign/${RCODESIGN_VERSION}/${asset}"
+          tar -xzf "/tmp/${asset}" -C /tmp
+          sudo install -m 755 \
+            "/tmp/apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl/rcodesign" \
+            /usr/local/bin/rcodesign
+          rcodesign --version
+
       - run: pnpm install --frozen-lockfile
 
       # Binary compile uses `bun build --compile` CLI (not Bun.build API).
       # Keep this pin in sync with any local smoke tests of binary-compile.mjs.
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.2.19"
+          bun-version: "1.3.14"
 
       - name: publish-stable
         env:
@@ -79,6 +94,8 @@ jobs:
           # Bucket / prefix / allowlists live in the FC function.
           FC_TRIGGER_URL: ${{ vars.FC_TRIGGER_URL }}
           FC_RELEASE_AUDIENCE: ${{ vars.FC_RELEASE_AUDIENCE }}
+        # Script order: git tag, then binary GitHub Release + OSS, then npm.
+        # OSS upload can fail on a network blip; npm must not succeed first.
         run: node tools/release/publish-stable.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }}
 
   publish-channel:
@@ -117,13 +134,28 @@ jobs:
       - name: Ensure zip and tar (per-platform binary archives)
         run: sudo apt-get update && sudo apt-get install -y zip
 
+      # bun build --compile leaves an invalid darwin linker signature. rcodesign
+      # re-signs those Mach-O files on the Linux runner (binary-codesign.mjs).
+      - name: Install rcodesign (ad-hoc sign darwin binaries)
+        run: |
+          set -euo pipefail
+          RCODESIGN_VERSION=0.29.0
+          asset="apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          curl -fsSL -o "/tmp/${asset}" \
+            "https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign/${RCODESIGN_VERSION}/${asset}"
+          tar -xzf "/tmp/${asset}" -C /tmp
+          sudo install -m 755 \
+            "/tmp/apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl/rcodesign" \
+            /usr/local/bin/rcodesign
+          rcodesign --version
+
       - run: pnpm install --frozen-lockfile
 
       # Binary compile uses `bun build --compile` CLI (not Bun.build API).
       # Keep this pin in sync with any local smoke tests of binary-compile.mjs.
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.2.19"
+          bun-version: "1.3.14"
 
       - name: publish-channel
         env:
@@ -132,6 +164,8 @@ jobs:
           # credentials in this repo (see publish-stable env notes).
           FC_TRIGGER_URL: ${{ vars.FC_TRIGGER_URL }}
           FC_RELEASE_AUDIENCE: ${{ vars.FC_RELEASE_AUDIENCE }}
+        # Script order: binary GitHub Release + OSS, then npm.
+        # OSS upload can fail on a network blip; npm must not succeed first.
         run: node tools/release/publish-channel.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }} --channel "${{ inputs.channel }}"
 
   # bailian-kb-dsh is the dsh plugin (downstream host adapter): independent version,

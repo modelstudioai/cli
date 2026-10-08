@@ -62,14 +62,7 @@ try {
     );
   }
 
-  // 1) npm (dependency order: core → runtime → commands → cli [→ kscli])
-  for (const pkg of packages) {
-    if (published.get(pkg.key)) continue;
-    step(`publish ${pkg.name}@${version} (tag=latest, provenance)`);
-    pnpmPublish(pkg, { tag: "latest", provenance: true, dryRun });
-  }
-
-  // 2) git tag — must be on origin before the GitHub Release step (--verify-tag)
+  // 1) git tag — must be on origin before the GitHub Release step (--verify-tag)
   const tag = `v${version}`;
   if (dryRun) {
     log("\n[dry-run] skipping git tag");
@@ -81,12 +74,20 @@ try {
     pushTag(tag);
   }
 
-  // 3) binary GitHub Release (same version; orchestrated here, not a separate release entry)
+  // 2) binary GitHub Release + OSS before npm. The OSS upload can fail on a
+  // network blip; publishing npm first would leave latest without binaries.
   if (skipBinary) {
     log("\n[skip-binary] skipping binary GitHub Release");
   } else {
     step(`publish binary GitHub Release (mode=stable, version=${version})`);
     await releaseBinaryArtifacts({ mode: "stable", dryRun });
+  }
+
+  // 3) npm (dependency order: core → runtime → commands → cli [→ kscli])
+  for (const pkg of packages) {
+    if (published.get(pkg.key)) continue;
+    step(`publish ${pkg.name}@${version} (tag=latest, provenance)`);
+    pnpmPublish(pkg, { tag: "latest", provenance: true, dryRun });
   }
 
   const parts = ["npm"];

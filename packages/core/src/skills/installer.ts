@@ -3,7 +3,12 @@ import { join } from "node:path";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import { detectInstalledAgents, fanOutSkillToAgents, type AgentTarget } from "./agents.ts";
-import { atomicSwap, computeDirContentHash, extractTarBr } from "./extract.ts";
+import {
+  atomicSwap,
+  computeDirContentHash,
+  extractTarBr,
+  findWindowsPathViolation,
+} from "./extract.ts";
 import { getSkillsDir } from "./lock.ts";
 import { downloadSkillAsset } from "./registry.ts";
 import { isSafeSkillName } from "./sanitize.ts";
@@ -36,6 +41,7 @@ export async function installSkillFromBuffer(
   name: string,
   tarBrBuffer: Buffer,
   expectedContentHash?: string,
+  windowsPathRoots?: string[],
 ): Promise<InstalledSkill> {
   assertSafeName(name);
   const skillsDir = getSkillsDir();
@@ -45,6 +51,15 @@ export async function installSkillFromBuffer(
   try {
     mkdirSync(tmpDir, { recursive: true });
     await extractTarBr(tarBrBuffer, tmpDir);
+    const projectedRoots = windowsPathRoots ?? (process.platform === "win32" ? [dest] : []);
+    const pathViolation = findWindowsPathViolation(tmpDir, projectedRoots);
+    if (pathViolation) {
+      throw new BailianError(
+        `Skill ${name} contains a Windows-incompatible path (${pathViolation.pathLength} characters): ${pathViolation.relativePath}`,
+        ExitCode.GENERAL,
+        "The skill package must shorten this path before it can be installed safely on Windows. / Skill 包必须缩短该路径后才能在 Windows 上安全安装。",
+      );
+    }
     // Integrity check before touching canonical: recompute the publisher fingerprint over
     // the extracted files; on mismatch the current installation is left untouched
     if (expectedContentHash?.startsWith("sha256:")) {
@@ -76,6 +91,7 @@ export async function installSkill(
   name: string,
   entry: SkillIndexEntry,
   downloadAttempts?: number,
+  windowsPathRoots?: string[],
 ): Promise<InstalledSkill> {
   if (entry.compression && entry.compression !== "tar.br") {
     throw new BailianError(
@@ -85,7 +101,7 @@ export async function installSkill(
     );
   }
   const buffer = await downloadSkillAsset(name, entry, downloadAttempts);
-  return installSkillFromBuffer(name, buffer, entry.contentHash);
+  return installSkillFromBuffer(name, buffer, entry.contentHash, windowsPathRoots);
 }
 
 /** Remove the skill directory under canonical; returns whether it was actually deleted (dir absent → false) */
@@ -136,7 +152,11 @@ export async function installSkillWithFanout(
   recordedLinks: string[] = [],
   downloadAttempts?: number,
 ): Promise<SkillInstallRecord> {
-  await installSkill(name, entry, downloadAttempts);
+  const windowsPathRoots =
+    process.platform === "win32"
+      ? [join(getSkillsDir(), name), ...agents.map((agent) => join(agent.skillsDir, name))]
+      : undefined;
+  await installSkill(name, entry, downloadAttempts, windowsPathRoots);
   const fanout = fanOutSkillToAgents(name, agents, recordedLinks);
   return {
     lockEntry: buildSkillLockEntry(entry, fanout.links),
