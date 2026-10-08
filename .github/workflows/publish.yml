@@ -11,6 +11,7 @@ on:
           - bailian-cli
           - knowledge-studio-cli
           - bailian-kb-dsh
+          - bailian-memo-dsh
       mode:
         description: "Publish mode"
         required: true
@@ -19,7 +20,7 @@ on:
           - channel
           - stable
       channel:
-        description: "Required when mode=channel. npm dist-tag only (lowercase, digits, dashes), e.g. mcp / plugin / sync-release. bailian-cli binary CDN always overwrites sync-release.json; knowledge-studio-cli and bailian-kb-dsh are npm-only."
+        description: "Required when mode=channel. npm dist-tag only (lowercase, digits, dashes), e.g. mcp / plugin / sync-release. bailian-cli binary CDN always overwrites sync-release.json; knowledge-studio-cli and dsh plugins are npm-only."
         required: false
         type: string
 
@@ -29,7 +30,7 @@ concurrency:
 
 jobs:
   publish-stable:
-    if: inputs.mode == 'stable' && inputs.package != 'bailian-kb-dsh'
+    if: inputs.mode == 'stable' && inputs.package != 'bailian-kb-dsh' && inputs.package != 'bailian-memo-dsh'
     name: publish stable (${{ inputs.package }}) to npm + binary + tag
     runs-on: ubuntu-latest
     environment: production # Required Reviewers gate
@@ -99,7 +100,7 @@ jobs:
         run: node tools/release/publish-stable.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }}
 
   publish-channel:
-    if: inputs.mode == 'channel' && inputs.package != 'bailian-kb-dsh'
+    if: inputs.mode == 'channel' && inputs.package != 'bailian-kb-dsh' && inputs.package != 'bailian-memo-dsh'
     name: publish channel (${{ inputs.package }}) to npm + binary
     runs-on: ubuntu-latest
     permissions:
@@ -168,20 +169,17 @@ jobs:
         # OSS upload can fail on a network blip; npm must not succeed first.
         run: node tools/release/publish-channel.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }} --channel "${{ inputs.channel }}"
 
-  # bailian-kb-dsh is the dsh plugin (downstream host adapter): independent version,
-  # tsc + tsdown build, npm-only. It shares this workflow's entry UI and setup steps
-  # but NOT publish-stable.mjs / publish-channel.mjs — those broadcast one version
-  # across the locked bl package set and produce binary artifacts, neither of which
-  # applies here. See docs/agents/dsh-plugin.md.
-  publish-kb-dsh:
-    if: inputs.package == 'bailian-kb-dsh'
-    name: publish ${{ inputs.mode }} (bailian-kb-dsh) to npm
+  # Independent dsh plugins (downstream host adapters): own version, tsc + tsdown,
+  # npm-only. Shared workflow entry; NOT publish-stable/channel.mjs. See docs/agents/dsh-plugin.md.
+  publish-dsh-plugin:
+    if: inputs.package == 'bailian-kb-dsh' || inputs.package == 'bailian-memo-dsh'
+    name: publish ${{ inputs.mode }} (${{ inputs.package }}) to npm
     runs-on: ubuntu-latest
     # stable goes through the Required Reviewers gate, same as the bl stable job;
     # channel stays ungated so dist-tag drops need no approval.
     environment: ${{ inputs.mode == 'stable' && 'production' || '' }}
     permissions:
-      contents: write # push the bailian-kb-dsh-v<version> tag (stable only)
+      contents: write # push the <package>-v<version> tag (stable only)
       id-token: write # OIDC for npm Trusted Publishing + provenance
     steps:
       - name: Require channel input
@@ -211,5 +209,5 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: publish-kb-dsh
-        run: node tools/release/publish-kb-dsh.mjs ${{ inputs.mode == 'channel' && format('--channel "{0}"', inputs.channel) || '' }}
+      - name: publish-dsh-plugin
+        run: node tools/release/publish-dsh-plugin.mjs --package "${{ inputs.package }}" ${{ inputs.mode == 'channel' && format('--channel "{0}"', inputs.channel) || '' }}

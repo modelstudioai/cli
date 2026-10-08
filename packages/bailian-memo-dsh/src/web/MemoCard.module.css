@@ -1,0 +1,267 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(100%, 760px);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, currentColor 2%, transparent);
+}
+
+.sectionHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.sectionHeading h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.sectionHeading p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.68;
+}
+
+.consent {
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 5%, transparent);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.status {
+  flex: none;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.setupRequired,
+.initializing,
+.automaticDisabled {
+  color: #8a5700;
+  background: color-mix(in srgb, #f2a900 16%, transparent);
+}
+
+.active {
+  color: #137548;
+  background: color-mix(in srgb, #1a9b62 14%, transparent);
+}
+
+.paused {
+  color: #666;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.factGrid {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.5fr) minmax(0, 1fr);
+  gap: 9px 16px;
+  align-items: baseline;
+  font-size: 12px;
+}
+
+.factGrid > span {
+  opacity: 0.65;
+}
+
+.factGrid code {
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.inputGroup small {
+  font-weight: 400;
+  opacity: 0.65;
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+}
+
+.input:disabled {
+  opacity: 0.65;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton,
+.resetButton {
+  padding: 7px 12px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  color: inherit;
+  cursor: pointer;
+}
+
+.primaryButton {
+  color: white;
+  border-color: #3377e5;
+  background: #3377e5;
+}
+
+.secondaryButton,
+.resetButton {
+  background: transparent;
+}
+
+.dangerButton {
+  color: #b33838;
+  border-color: color-mix(in srgb, #b33838 45%, transparent);
+  background: transparent;
+}
+
+.resetButton {
+  padding: 4px 7px;
+  border: 0;
+  font-size: 11px;
+  opacity: 0.72;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.dangerButton:disabled,
+.resetButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.message {
+  padding: 9px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: #c0392b;
+  background: color-mix(in srgb, #c0392b 8%, transparent);
+}
+
+.flowStatus {
+  padding: 9px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: #137548;
+  background: color-mix(in srgb, #1a9b62 10%, transparent);
+}
+
+.settingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 10px 0;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.settingCopy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.settingTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.settingControl {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.hint {
+  font-size: 11px;
+  line-height: 1.4;
+  opacity: 0.65;
+}
+
+.overridden {
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 500;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.task {
+  display: grid;
+  grid-template-columns: minmax(90px, auto) 1fr;
+  gap: 4px 12px;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: color-mix(in srgb, currentColor 4%, transparent);
+}
+
+.task span {
+  overflow-wrap: anywhere;
+  opacity: 0.7;
+}
+
+.taskError {
+  grid-column: 1 / -1;
+  color: #c0392b;
+}
+
+@media (max-width: 560px) {
+  .sectionHeading,
+  .settingRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .factGrid {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .factGrid > strong,
+  .factGrid > code {
+    margin-bottom: 6px;
+  }
+}
