@@ -176,3 +176,71 @@ describe("task store idempotency", () => {
     expect(close).toHaveBeenCalledOnce();
   });
 });
+
+it("gates extraction and resolves a fresh schema for each new write", async () => {
+  const store = new InMemoryTaskStore();
+  const getProfileSchemaId = vi
+    .fn()
+    .mockResolvedValueOnce("schema-one")
+    .mockResolvedValueOnce("schema-two");
+  const addAsync = vi.fn(async (_input: Parameters<MemoryClient["addAsync"]>[0]) => ({
+    event_id: "event",
+  }));
+  const client = { getProfileSchemaId, addAsync } as unknown as MemoryClient;
+  const input = {
+    store,
+    client,
+    userId: "user",
+    messages: [{ role: "user" as const, content: "A fact" }],
+  };
+  await submitAddIntent({ ...input, extractProfile: false, note: "off" });
+  expect(getProfileSchemaId).not.toHaveBeenCalled();
+  expect(addAsync.mock.calls[0]?.[0]).toMatchObject({ profileSchema: undefined });
+  await submitAddIntent({ ...input, extractProfile: true, note: "first" });
+  await submitAddIntent({ ...input, extractProfile: true, note: "second" });
+  expect(getProfileSchemaId).toHaveBeenCalledTimes(2);
+  expect(addAsync.mock.calls[1]?.[0]).toMatchObject({ profileSchema: "schema-one" });
+  expect(addAsync.mock.calls[2]?.[0]).toMatchObject({ profileSchema: "schema-two" });
+  await submitAddIntent({ ...input, extractProfile: true, note: "second" });
+  expect(getProfileSchemaId).toHaveBeenCalledTimes(2);
+});
+
+it("records missing profile rule as failure without silently submitting a different request", async () => {
+  const store = new InMemoryTaskStore();
+  const addAsync = vi.fn();
+  const client = { getProfileSchemaId: async () => undefined, addAsync } as unknown as MemoryClient;
+  await expect(
+    submitAddIntent({
+      store,
+      client,
+      userId: "user",
+      messages: [{ role: "user", content: "A fact" }],
+      extractProfile: true,
+    }),
+  ).rejects.toThrow(/No existing profile rule/);
+  expect(addAsync).not.toHaveBeenCalled();
+  expect(await store.listRecent()).toMatchObject([{ status: "failed" }]);
+});
+
+it("passes only the selected profile rule and treats a changed selection as a new intent", async () => {
+  const store = new InMemoryTaskStore();
+  const getProfileSchemaId = vi.fn(async (selected: string) => selected);
+  const addAsync = vi.fn(async (_input: Parameters<MemoryClient["addAsync"]>[0]) => ({
+    event_id: "event",
+  }));
+  const client = { getProfileSchemaId, addAsync } as unknown as MemoryClient;
+  const input = {
+    store,
+    client,
+    userId: "user",
+    messages: [{ role: "user" as const, content: "A fact" }],
+    extractProfile: true,
+  };
+  await submitAddIntent({ ...input, profileSchemaId: "chosen-one" });
+  await submitAddIntent({ ...input, profileSchemaId: "chosen-two" });
+  expect(getProfileSchemaId.mock.calls).toEqual([["chosen-one"], ["chosen-two"]]);
+  expect(addAsync.mock.calls.map(([request]) => request.profileSchema)).toEqual([
+    "chosen-one",
+    "chosen-two",
+  ]);
+});

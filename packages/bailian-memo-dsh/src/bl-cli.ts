@@ -14,21 +14,21 @@ export interface BlCliConfigSeed {
 export function readBlCliConfig(home: string = homedir()): BlCliConfigSeed {
   try {
     const text = readFileSync(join(home, ".bailian", "config.json"), "utf8");
-    const parsed = JSON.parse(text) as {
-      api_key?: string;
-      apiKey?: string;
-      workspace_id?: string;
-      workspaceId?: string;
-      active_config?: string;
-      configs?: Record<string, { api_key?: string; workspace_id?: string }>;
-    };
+    const parsed = JSON.parse(text) as Record<string, unknown>;
     const activeName = parsed.active_config;
-    const active = activeName && parsed.configs ? parsed.configs[activeName] : undefined;
-    const apiKey = active?.api_key ?? parsed.api_key ?? parsed.apiKey;
-    const workspaceId = active?.workspace_id ?? parsed.workspace_id ?? parsed.workspaceId;
+    const selected =
+      typeof activeName === "string" && activeName !== "" && activeName !== "default"
+        ? parsed[activeName]
+        : parsed;
+    if (!selected || typeof selected !== "object") return {};
+    const active = selected as Record<string, unknown>;
+    const apiKey = active.api_key ?? active.apiKey;
+    const workspaceId = active.workspace_id ?? active.workspaceId;
     return {
-      ...(typeof apiKey === "string" && apiKey.length > 0 ? { apiKey } : {}),
-      ...(typeof workspaceId === "string" && workspaceId.length > 0 ? { workspaceId } : {}),
+      ...(typeof apiKey === "string" && apiKey.trim().length > 0 ? { apiKey: apiKey.trim() } : {}),
+      ...(typeof workspaceId === "string" && workspaceId.trim().length > 0
+        ? { workspaceId: workspaceId.trim() }
+        : {}),
     };
   } catch {
     return {};

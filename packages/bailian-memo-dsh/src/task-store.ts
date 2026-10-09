@@ -282,13 +282,15 @@ export async function submitAddIntent(input: {
   client: MemoryClient;
   userId: string;
   messages: Array<{ role: "user" | "assistant" | "system"; content: string }>;
-  profileSchema?: string;
+  extractProfile?: boolean;
+  profileSchemaId?: string;
   note?: string;
 }): Promise<MemoTaskRecord> {
   const digest = payloadDigest({
     userId: input.userId,
     messages: input.messages,
-    profileSchema: input.profileSchema ?? null,
+    extractProfile: input.extractProfile === true,
+    profileSchemaId: input.extractProfile ? (input.profileSchemaId ?? null) : null,
     note: input.note ?? null,
   });
   const intentId = createIntentId(digest);
@@ -318,10 +320,18 @@ export async function submitAddIntent(input: {
   await input.store.put(pending);
   let submission;
   try {
+    const profileSchema = input.extractProfile
+      ? await input.client.getProfileSchemaId(input.profileSchemaId)
+      : undefined;
+    if (input.extractProfile && !profileSchema) {
+      throw new Error(
+        "No existing profile rule found. Configure one in the memory console. / 未找到已有画像规则，请在记忆库控制台配置。",
+      );
+    }
     submission = await input.client.addAsync({
       userId: input.userId,
       messages: input.messages,
-      profileSchema: input.profileSchema,
+      profileSchema,
     });
   } catch (error) {
     await input.store.put({

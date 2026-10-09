@@ -1,6 +1,6 @@
 # bailian-memo-dsh: Bailian personal memory over dsh-base.
 # Identity/consent live in ~/.bailian/personal-memory/config.json (cross-profile).
-# API key resolves from dsh credentials (DASHSCOPE_API_KEY).
+# API key resolves from dsh credentials (BAILIAN_MEMO_API_KEY).
 
 - insert:
     - id: tool-bailian-memo

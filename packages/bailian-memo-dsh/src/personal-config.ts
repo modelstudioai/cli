@@ -8,9 +8,8 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
-export const PERSONAL_MEMORY_SCHEMA_VERSION = 2;
+export const PERSONAL_MEMORY_SCHEMA_VERSION = 3;
 export const CONSENT_VERSION = 1;
-export const PROFILE_SCHEMA_VERSION = 1;
 
 export type PersonalMemoryStatus = "unconfigured" | "initializing" | "active" | "paused";
 
@@ -21,8 +20,6 @@ export interface PersonalMemoryConfig {
   user_id: string | null;
   library_mode: "default";
   project_mode: "default";
-  profile_schema_id: string | null;
-  profile_schema_version: number;
   consent_version: number;
   consented_at: string | null;
   sensitive_memory_policy: "explicit_only";
@@ -56,8 +53,6 @@ export function emptyPersonalMemoryConfig(): PersonalMemoryConfig {
     user_id: null,
     library_mode: "default",
     project_mode: "default",
-    profile_schema_id: null,
-    profile_schema_version: PROFILE_SCHEMA_VERSION,
     consent_version: CONSENT_VERSION,
     consented_at: null,
     sensitive_memory_policy: "explicit_only",
@@ -65,19 +60,19 @@ export function emptyPersonalMemoryConfig(): PersonalMemoryConfig {
   };
 }
 
-/** Schema name: `pm_` + first 24 hex chars of user_id without hyphens. */
-export function profileSchemaNameForUser(userId: string): string {
-  const hex = userId.replace(/-/g, "").slice(0, 24);
-  return `pm_${hex}`;
-}
-
 export function migrateLegacyConfig(raw: LegacyPersonalMemoryConfig): PersonalMemoryConfig {
   const base = emptyPersonalMemoryConfig();
   const version = raw.schema_version ?? 1;
-  if (version === 2 && typeof (raw as PersonalMemoryConfig).status === "string") {
+  if (
+    (version === 2 || version === 3) &&
+    typeof (raw as PersonalMemoryConfig).status === "string"
+  ) {
+    const identity = { ...raw };
+    delete identity.profile_schema_id;
+    delete identity.profile_schema_version;
     return {
       ...base,
-      ...(raw as PersonalMemoryConfig),
+      ...(identity as PersonalMemoryConfig),
       schema_version: PERSONAL_MEMORY_SCHEMA_VERSION,
       library_mode: "default",
       project_mode: "default",
@@ -92,10 +87,8 @@ export function migrateLegacyConfig(raw: LegacyPersonalMemoryConfig): PersonalMe
     raw.workspace_id.length > 0;
 
   let status: PersonalMemoryStatus = "unconfigured";
-  if (raw.enabled === true && hasIdentity && raw.profile_schema_id) {
+  if (raw.enabled === true && hasIdentity) {
     status = "active";
-  } else if (raw.enabled === true && hasIdentity) {
-    status = "initializing";
   } else if (raw.enabled === false && hasIdentity) {
     // Ambiguous: paused vs unfinished init — keep automatic ops off.
     status = "paused";
@@ -106,8 +99,6 @@ export function migrateLegacyConfig(raw: LegacyPersonalMemoryConfig): PersonalMe
     status,
     workspace_id: raw.workspace_id ?? null,
     user_id: raw.user_id ?? null,
-    profile_schema_id: raw.profile_schema_id ?? null,
-    profile_schema_version: raw.profile_schema_version ?? PROFILE_SCHEMA_VERSION,
     consent_version: raw.consent_version ?? CONSENT_VERSION,
     consented_at: raw.consented_at ?? null,
   };
@@ -119,10 +110,7 @@ export function parsePersonalMemoryConfig(text: string): PersonalMemoryConfig {
     throw new Error("personal-memory config is not an object");
   }
   const migrated = migrateLegacyConfig(parsed);
-  if (
-    migrated.status === "active" &&
-    (!migrated.user_id || !migrated.workspace_id || !migrated.profile_schema_id)
-  ) {
+  if (migrated.status === "active" && (!migrated.user_id || !migrated.workspace_id)) {
     throw new Error("personal-memory config marked active but missing required identity fields");
   }
   return migrated;
@@ -167,6 +155,7 @@ export async function beginEnable(
   path: string = personalMemoryConfigPath(),
 ): Promise<PersonalMemoryConfig> {
   const current = await readPersonalMemoryConfig(path);
+  assertWorkspaceBinding(input.workspaceId, current.workspace_id);
   const userId = current.user_id ?? randomUUID();
   const next: PersonalMemoryConfig = {
     ...current,
@@ -186,15 +175,12 @@ export async function beginEnable(
 }
 
 export async function markActive(
-  profileSchemaId: string,
   path: string = personalMemoryConfigPath(),
 ): Promise<PersonalMemoryConfig> {
   const current = await readPersonalMemoryConfig(path);
   const next: PersonalMemoryConfig = {
     ...current,
     status: "active",
-    profile_schema_id: profileSchemaId,
-    profile_schema_version: PROFILE_SCHEMA_VERSION,
     last_error: null,
   };
   await writePersonalMemoryConfig(next, path);
@@ -238,10 +224,7 @@ export async function resumePersonalMemory(
     return current;
   }
   const complete =
-    Boolean(current.user_id) &&
-    Boolean(current.workspace_id) &&
-    Boolean(current.profile_schema_id) &&
-    Boolean(current.consented_at);
+    Boolean(current.user_id) && Boolean(current.workspace_id) && Boolean(current.consented_at);
   const next: PersonalMemoryConfig = {
     ...current,
     status: complete ? "active" : "initializing",
@@ -252,10 +235,27 @@ export async function resumePersonalMemory(
 }
 
 export function isAutomaticOpsAllowed(config: PersonalMemoryConfig): boolean {
-  return (
-    config.status === "active" &&
-    Boolean(config.user_id) &&
-    Boolean(config.workspace_id) &&
-    Boolean(config.profile_schema_id)
-  );
+  return config.status === "active" && Boolean(config.user_id) && Boolean(config.workspace_id);
+}
+
+/** The identity binding must never move implicitly with connection settings. */
+export function assertWorkspaceBinding(workspaceId: string, boundWorkspace: string | null): void {
+  if (boundWorkspace && boundWorkspace !== workspaceId) {
+    throw new Error(
+      "Workspace mismatch: restore the dsh Workspace to the personal identity binding. / Workspace 不匹配：请将 dsh Workspace 恢复为个人身份绑定的工作空间。",
+    );
+  }
+}
+
+export function resolveMemoryWorkspace(
+  workspaceId: string | undefined,
+  boundWorkspace: string | null,
+): string {
+  const normalized = workspaceId?.trim();
+  if (!normalized)
+    throw new Error(
+      "Workspace is not configured in dsh settings. / 请在 dsh 设置中配置 Workspace。",
+    );
+  assertWorkspaceBinding(normalized, boundWorkspace);
+  return normalized;
 }

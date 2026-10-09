@@ -27,7 +27,7 @@ describe("memo configuration UX", () => {
     ]);
   });
 
-  it("exposes only the automatic behavior controls", () => {
+  it("keeps connection edits separate from automatic behavior controls", () => {
     expect(MEMO_SETTINGS_FIELDS).toEqual([
       { field: "enabled", kind: "toggle" },
       { field: "autoRecall", kind: "toggle" },
@@ -74,8 +74,8 @@ describe("memo configuration UX", () => {
       expect(en[key].trim()).not.toBe("");
       expect(zh[key].trim()).not.toBe("");
     }
-    expect(en.consoleLogin).toBe("Automatically retrieve/update credentials");
-    expect(zh.consoleLogin).toBe("自动获取/更新凭据");
+    expect(en.consoleLogin).toBe("Fetch from console login");
+    expect(zh.consoleLogin).toBe("自动获取");
     expect(en.loginDone).toBe("Credentials updated");
     expect(zh.loginDone).toBe("凭据已更新");
     expect(Object.values(en).join("\n")).not.toContain("Signed in");

@@ -72,18 +72,6 @@ export interface MemoryEventsResponse {
   events?: MemoryEventItem[];
 }
 
-export interface ProfileAttributeDef {
-  name: string;
-  description?: string;
-  default_value?: string | null;
-}
-
-export interface ProfileSchemaCreateResponse {
-  request_id?: string;
-  profile_schema_id?: string;
-  id?: string;
-}
-
 export interface UserProfileValueItem {
   item_id?: number;
   status?: string;
@@ -271,20 +259,47 @@ export class MemoryClient {
     return this.requestJson("DELETE", memoryNodePath(nodeId));
   }
 
-  async createProfileSchema(input: {
-    name: string;
-    description?: string;
-    attributes: ProfileAttributeDef[];
-    extractScene?: "efficient" | "complete";
-    planVersion?: "pro" | "lite";
-  }): Promise<ProfileSchemaCreateResponse> {
-    return this.requestJson("POST", profileSchemaPath(), {
-      name: input.name,
-      description: input.description,
-      attributes: input.attributes,
-      extract_scene: input.extractScene ?? "efficient",
-      plan_version: input.planVersion ?? "pro",
-    });
+  /** Read the complete server order so the default is the last rule, including later pages. */
+  async listProfileSchemas(): Promise<Array<{ id: string; name: string }>> {
+    const schemas: Array<{ id: string; name: string }> = [];
+    const pageSize = 50;
+    for (let page = 1; page <= 100; page += 1) {
+      const result = await this.requestJson<{
+        total?: number;
+        profile_schemas?: Array<{ profile_schema_id?: string; name?: string }>;
+      }>("GET", profileSchemaPath(), undefined, {
+        page_num: String(page),
+        page_size: String(pageSize),
+      });
+      const rows = result.profile_schemas ?? [];
+      for (const row of rows) {
+        if (!row.profile_schema_id)
+          throw new Error("Profile rule returned no ID. / 画像规则未返回 ID。");
+        schemas.push({ id: row.profile_schema_id, name: row.name ?? row.profile_schema_id });
+      }
+      if (result.total !== undefined ? schemas.length >= result.total : rows.length < pageSize)
+        return schemas;
+      if (!rows.length) break;
+    }
+    throw new Error("Profile rule list is incomplete. / 画像规则列表未获取完整。");
+  }
+
+  async getProfileSchemaId(selectedId?: string): Promise<string | undefined> {
+    const schemas = await this.listProfileSchemas();
+    if (selectedId) {
+      if (!schemas.some((schema) => schema.id === selectedId)) {
+        throw new Error(
+          "The selected profile rule is unavailable; select a rule again. / 已选画像规则不可用，请重新选择。",
+        );
+      }
+      return selectedId;
+    }
+    return schemas.at(-1)?.id;
+  }
+
+  async getCurrentProfile(userId: string, selectedId?: string): Promise<UserProfileResponse> {
+    const schemaId = await this.getProfileSchemaId(selectedId);
+    return schemaId ? this.getProfile({ schemaId, userId }) : { profile: { attributes: [] } };
   }
 
   async getProfile(input: {

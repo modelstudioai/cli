@@ -3,6 +3,73 @@
    intro, `--dsw-alias-*` tokens — an out-of-tree bundle cannot value-import
    the host section components, only their platform primitives). */
 
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(100%, 760px);
+  color: var(--dsw-alias-label-primary);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 2%, transparent);
+}
+
+.sectionHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.sectionHeading h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.sectionHeading p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.status {
+  flex: none;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.statusReady {
+  color: var(--dsw-alias-state-success-primary);
+  background: var(--dsw-alias-state-success-tertiary);
+}
+
+.statusSetup {
+  color: #8a5700;
+  background: color-mix(in srgb, #f2a900 16%, transparent);
+}
+
+.callout {
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 5%, transparent);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 .section {
   display: flex;
   flex-direction: column;

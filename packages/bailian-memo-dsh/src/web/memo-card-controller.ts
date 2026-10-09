@@ -8,6 +8,7 @@ import type { SnapshotStore } from "@deepseek-ai/dsh-client-store";
 import {
   SettingsFormModel,
   settingsNumberField,
+  settingsTextField,
   type SettingsFieldSpec,
   type SettingsFieldState,
   type SettingsFormActions,
@@ -28,6 +29,8 @@ export interface MemoPluginSettings {
   enabled?: boolean;
   autoRecall?: boolean;
   autoCurate?: boolean;
+  extractProfile?: boolean;
+  profileSchemaId?: string;
   recallTopK?: number;
   minScore?: number;
 }
@@ -53,7 +56,6 @@ export interface PersonalStatus {
   status: string;
   workspace_id: string | null;
   user_id: string | null;
-  profile_schema_id: string | null;
   consented_at: string | null;
   last_error?: string | null;
 }
@@ -87,6 +89,11 @@ export interface MemoCardState extends SettingsFormShell {
   enabled: SettingsFieldState;
   autoRecall: SettingsFieldState;
   autoCurate: SettingsFieldState;
+  extractProfile: SettingsFieldState;
+  profileSchemaId: SettingsFieldState;
+  profileSchemas: Array<{ id: string; name: string }>;
+  profileSchemasLoading: boolean;
+  profileSchemasError: string | null;
   recallTopK: SettingsFieldState;
   minScore: SettingsFieldState;
   memoryState: MemoryDisplayState;
@@ -95,6 +102,7 @@ export interface MemoCardState extends SettingsFormShell {
   apiKey: ApiKeyStatus;
   consoleLoginStatus: ConsoleLoginStatus | null;
   workspaceDraft: string;
+  apiKeyDraft: string;
   busy: boolean;
   message: string | null;
 }
@@ -109,6 +117,9 @@ export interface MemoCardFace extends SettingsFormActions {
   consoleLogin: () => Promise<void>;
   refresh: () => Promise<void>;
   setWorkspaceDraft: (text: string) => void;
+  setApiKeyDraft: (text: string) => void;
+  saveConnection: () => Promise<void>;
+  refreshProfileSchemas: () => Promise<void>;
 }
 
 export class MemoCardController {
@@ -119,8 +130,15 @@ export class MemoCardController {
   private apiKey: ApiKeyStatus = { configured: false, writable: true };
   private loginStatus: ConsoleLoginStatus | null = null;
   private workspaceDraft = "";
+  private apiKeyDraft = "";
+  private connectionDirty = false;
   private busy = false;
   private message: string | null = null;
+  private profileSchemas: Array<{ id: string; name: string }> = [];
+  private profileSchemasLoading = false;
+  private profileSchemasError: string | null = null;
+  private profileRequest = 0;
+  private disposed = false;
   private loginPollTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly disposeRemoteListeners: Array<() => void> = [];
 
@@ -132,14 +150,16 @@ export class MemoCardController {
       settingsBoolField("enabled"),
       settingsBoolField("autoRecall"),
       settingsBoolField("autoCurate"),
+      settingsBoolField("extractProfile"),
+      settingsTextField("profileSchemaId"),
       settingsNumberField("recallTopK"),
       settingsScoreField("minScore"),
     ]);
     this.store = this.form.bind(() => this.projection());
-    const credentialEvents = this._ctx.remote as typeof this._ctx.remote & CredentialEventRemote;
+    const credentialEvents = this._ctx.remote as unknown as CredentialEventRemote;
     this.disposeRemoteListeners.push(
-      credentialEvents.$on("credentials/reference-updated", (reference) => {
-        if (reference === "DASHSCOPE_API_KEY") void this.refresh();
+      credentialEvents.$on("credentials/reference-updated", (reference: string) => {
+        if (reference === "BAILIAN_MEMO_API_KEY") void this.refresh();
       }),
     );
     void this.refresh();
@@ -152,6 +172,11 @@ export class MemoCardController {
       enabled,
       autoRecall: this.form.field("autoRecall"),
       autoCurate: this.form.field("autoCurate"),
+      extractProfile: this.form.field("extractProfile"),
+      profileSchemaId: this.form.field("profileSchemaId"),
+      profileSchemas: this.profileSchemas,
+      profileSchemasLoading: this.profileSchemasLoading,
+      profileSchemasError: this.profileSchemasError,
       recallTopK: this.form.field("recallTopK"),
       minScore: this.form.field("minScore"),
       memoryState: projectMemoryDisplayState(this.personal, enabled.text !== "false"),
@@ -160,6 +185,7 @@ export class MemoCardController {
       apiKey: this.apiKey,
       consoleLoginStatus: this.loginStatus,
       workspaceDraft: this.workspaceDraft,
+      apiKeyDraft: this.apiKeyDraft,
       busy: this.busy,
       message: this.message,
     };
@@ -171,7 +197,28 @@ export class MemoCardController {
 
   setWorkspaceDraft(text: string): void {
     this.workspaceDraft = text;
+    this.connectionDirty = true;
     this.publish();
+  }
+
+  setApiKeyDraft(text: string): void {
+    this.apiKeyDraft = text;
+    this.connectionDirty = true;
+    this.publish();
+  }
+
+  async saveConnection(): Promise<void> {
+    await this.post(
+      "/plugins/bailian-memo-dsh/credentials",
+      {
+        workspaceId: this.workspaceDraft.trim(),
+        apiKey: this.apiKeyDraft,
+      },
+      () => {
+        this.apiKeyDraft = "";
+        this.connectionDirty = false;
+      },
+    );
   }
 
   async refresh(): Promise<void> {
@@ -180,25 +227,58 @@ export class MemoCardController {
       if (!response.ok) return;
       const body = (await response.json()) as {
         personal?: PersonalStatus;
+        plugin?: { workspaceId?: string };
         apiKey?: ApiKeyStatus;
         consoleLogin?: ConsoleLoginStatus;
         recentTasks?: RecentTaskStatus[];
       };
+      if (body.consoleLogin?.phase === "done" && this.loginStatus?.phase !== "done") {
+        this.apiKeyDraft = "";
+        this.connectionDirty = false;
+      }
+      if (!this.connectionDirty) this.workspaceDraft = body.plugin?.workspaceId ?? "";
       this.personal = body.personal ?? null;
       this.recentTasks = body.recentTasks ?? [];
       this.apiKey = body.apiKey ?? { configured: false, writable: true };
       this.loginStatus = body.consoleLogin ?? null;
-      if (this.personal?.workspace_id && !this.workspaceDraft) {
-        this.workspaceDraft = this.personal.workspace_id;
-      }
       this.publish();
       this.scheduleLoginPoll();
+      if (this.form.field("extractProfile").text === "true") await this.refreshProfileSchemas();
     } catch {
       /* keep last snapshot */
     }
   }
 
-  private async post(path: string, body?: unknown): Promise<void> {
+  async refreshProfileSchemas(): Promise<void> {
+    if (this.disposed) return;
+    const request = ++this.profileRequest;
+    this.profileSchemasLoading = true;
+    this.profileSchemasError = null;
+    this.profileSchemas = [];
+    this.publish();
+    try {
+      const response = await fetch("/plugins/bailian-memo-dsh/profile-schemas");
+      const body = (await response.json().catch(() => ({}))) as {
+        schemas?: Array<{ id: string; name: string }>;
+        error?: string;
+      };
+      if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
+      if (!Array.isArray(body.schemas))
+        throw new Error("Invalid profile rule response. / 画像规则响应无效。");
+      if (!this.disposed && request === this.profileRequest) this.profileSchemas = body.schemas;
+    } catch (error) {
+      if (!this.disposed && request === this.profileRequest)
+        this.profileSchemasError =
+          error instanceof Error ? error.message : "Profile rules unavailable. / 画像规则不可用。";
+    } finally {
+      if (!this.disposed && request === this.profileRequest) {
+        this.profileSchemasLoading = false;
+        this.publish();
+      }
+    }
+  }
+
+  private async post(path: string, body?: unknown, onSuccess?: () => void): Promise<void> {
     this.busy = true;
     this.message = null;
     this.publish();
@@ -217,6 +297,7 @@ export class MemoCardController {
           this.message = text || `HTTP ${response.status}`;
         }
       } else {
+        onSuccess?.();
         this.message = null;
       }
       await this.refresh();
@@ -258,8 +339,32 @@ export class MemoCardController {
   }
 
   inject(): MemoCardFace {
+    const actions = this.form.actions();
     return {
-      ...this.form.actions(),
+      ...actions,
+      edit: (field, text) => {
+        actions.edit(field, text);
+        if (field === "extractProfile" && text === "true") void this.refreshProfileSchemas();
+      },
+      save: () => {
+        if (this.form.field("extractProfile").text === "true") {
+          const selected =
+            this.form.field("profileSchemaId").text || this.profileSchemas.at(-1)?.id;
+          if (
+            this.profileSchemasLoading ||
+            !selected ||
+            !this.profileSchemas.some((schema) => schema.id === selected)
+          ) {
+            this.profileSchemasError =
+              "Choose an available profile rule before saving. / 保存前请选择可用的画像规则。";
+            this.publish();
+            return;
+          }
+          actions.edit("profileSchemaId", selected);
+        }
+        actions.save();
+      },
+      refreshProfileSchemas: () => this.refreshProfileSchemas(),
       hooks: { memoCard: this.store },
       enable: () => this.enable(),
       pause: () => this.pause(),
@@ -267,10 +372,16 @@ export class MemoCardController {
       consoleLogin: () => this.consoleLogin(),
       refresh: () => this.refresh(),
       setWorkspaceDraft: (text) => this.setWorkspaceDraft(text),
+      setApiKeyDraft: (text) => this.setApiKeyDraft(text),
+      saveConnection: () => this.saveConnection(),
     };
   }
 
   dispose(): void {
+    this.disposed = true;
+    this.profileRequest += 1;
+    this.apiKeyDraft = "";
+    this.publish();
     if (this.loginPollTimer !== undefined) clearTimeout(this.loginPollTimer);
     for (const dispose of this.disposeRemoteListeners) dispose();
     this.form.dispose();

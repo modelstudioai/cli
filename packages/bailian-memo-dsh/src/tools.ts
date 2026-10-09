@@ -123,7 +123,7 @@ export function createMemoTools(deps: MemoToolDeps) {
         status: config.status,
         workspace_id: config.workspace_id,
         user_id: config.user_id,
-        profile_schema_id: config.profile_schema_id,
+        extract_profile: deps.resolveConfig().extractProfile,
         consented_at: config.consented_at,
         last_error: config.last_error ?? null,
         recent_tasks: recent.map((task) => ({
@@ -150,17 +150,13 @@ export function createMemoTools(deps: MemoToolDeps) {
         required: true,
         description: "Exact memory text to store",
       },
-      include_profile: {
-        type: "boolean",
-        description: "Also extract into the personal profile schema",
-      },
       allow_sensitive: {
         type: "boolean",
         description: "Set true only when the user explicitly asked to store sensitive content",
       },
     },
     output: textOutput,
-    async execute(args) {
+    async execute(args, exec) {
       const config = await requireActive();
       if (config.status === "paused") {
         return {
@@ -182,10 +178,15 @@ export function createMemoTools(deps: MemoToolDeps) {
         client,
         userId: config.user_id!,
         messages: [{ role: "user", content: filtered.safeText }],
-        profileSchema:
-          args.include_profile === true ? (config.profile_schema_id ?? undefined) : undefined,
+        extractProfile: deps.resolveConfig().extractProfile,
+        profileSchemaId: deps.resolveConfig().profileSchemaId,
         note: "explicit-remember",
       });
+      if (task.eventId && task.status !== "failed" && task.status !== "abandoned") {
+        exec.agent?.session.append("bailian-memo/remember-submitted", {
+          intentId: task.intentId,
+        });
+      }
       return {
         message: `Submitted remember intent ${task.intentId} (event ${task.eventId ?? "none"}, status=${task.status}).`,
       };
@@ -282,14 +283,12 @@ export function createMemoTools(deps: MemoToolDeps) {
         }
       }
 
-      if (
-        typeof args.profile_attribute_id === "string" &&
-        args.profile_attribute_id &&
-        config.profile_schema_id
-      ) {
+      if (typeof args.profile_attribute_id === "string" && args.profile_attribute_id) {
         try {
+          const schemaId = await client.getProfileSchemaId(deps.resolveConfig().profileSchemaId);
+          if (!schemaId) throw new Error("No profile rule found. / 未找到画像规则。");
           const detailed = await client.getProfile({
-            schemaId: config.profile_schema_id,
+            schemaId,
             userId: config.user_id!,
             needDetail: true,
           });
@@ -303,14 +302,14 @@ export function createMemoTools(deps: MemoToolDeps) {
               : attribute?.value_items?.[0]?.item_id;
           if (attribute && itemId !== undefined) {
             await client.patchProfileValue({
-              schemaId: config.profile_schema_id,
+              schemaId,
               entityId: config.user_id!,
               attributeId: attribute.id,
               opType: "delete",
               itemId,
             });
             const verified = await client.getProfile({
-              schemaId: config.profile_schema_id,
+              schemaId,
               userId: config.user_id!,
               needDetail: true,
             });

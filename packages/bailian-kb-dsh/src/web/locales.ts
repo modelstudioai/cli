@@ -1,21 +1,30 @@
 /**
- * Locale bundles for the Bailian knowledge-base settings page. The workspace,
- * default-retrieval-service and default-chat-service ids echo from the
- * settings section while it is available and fall back to write-only
- * credential controls otherwise; the API key copy is always written for a
- * write-only control: state is reported as configured/unconfigured, and a
- * stored key is never echoed back.
+ * Locale bundles for the Bailian knowledge-base plugin page.
+ * Workspace and default services are plugin config. The API key stays in credentials.
  */
+
+import type { SettingsFormLabels } from "@deepseek-ai/dsh-client-ui-primitives";
 
 /** Locale keys this page renders. */
 export type BailianKbLocaleKey =
+  | "keyPlaceholder"
+  | "privateKeyHint"
+  | "connectionHint"
+  | "saveConnection"
+  | "overviewTitle"
+  | "overviewHint"
+  | "overviewBody"
+  | "overviewReady"
+  | "overviewSetup"
+  | "connectionTitle"
+  | "connectionSectionHint"
+  | "servicesTitle"
+  | "servicesHint"
   | "nav"
   | "title"
   | "description"
   | "settingsUnavailable"
-  | "fallbackConfigured"
   | "apiKey"
-  | "apiKeyHint"
   | "apiKeySet"
   | "apiKeyUnset"
   | "apiKeyGet"
@@ -61,25 +70,43 @@ export type BailianKbLocaleKey =
   | "cacheRefresh"
   | "cacheRefreshing"
   | "pickerNone"
-  | "pickerClear";
+  | "pickerClear"
+  | "unavailable"
+  | "readOnly"
+  | "overridden"
+  | "reset";
 
 /** English copy. */
 export const en: Record<BailianKbLocaleKey, string> = {
+  keyPlaceholder: "Leave blank to keep the current key",
+  privateKeyHint:
+    "This API key and workspace belong only to this plugin. The stored key is never displayed.",
+  connectionHint:
+    "Save Workspace and API Key together after verifying access. Other plugin Workspaces are unchanged.",
+  saveConnection: "Verify and save",
+  overviewTitle: "Knowledge base",
+  overviewHint: "One status shows whether retrieval and Q&A can run.",
+  overviewBody:
+    "kb_search retrieves passages from deployed retrieval services, and kb_chat answers through a Q&A service. After the connection is set, each conversation includes this workspace’s service list.",
+  overviewReady: "Ready",
+  overviewSetup: "Setup required",
+  connectionTitle: "Connection",
+  connectionSectionHint: "API key and workspace for the knowledge-base plugin only.",
+  servicesTitle: "Default services",
+  servicesHint:
+    "Services kb_search and kb_chat use when a call omits agent_id. Leave unset to inject the full list.",
   nav: "Bailian KB",
   title: "Bailian knowledge base",
   description: "Account for the knowledge tools: API key, workspace, and default services.",
   settingsUnavailable:
-    "The settings document is not reachable from this browser; values below are write-only and stored in the credential store.",
-  fallbackConfigured: "Falling back to a configured credential-store value.",
+    "The settings document is not reachable from this browser; plugin configuration cannot be saved.",
   apiKey: "API key",
-  apiKeyHint:
-    "DashScope API key. Stored in the credentials store and never shown again; leave blank to keep the current one.",
   apiKeySet: "A key is configured.",
   apiKeyUnset: "No key is configured; knowledge tools fail until one is.",
   apiKeyGet: "Get",
   workspaceId: "Workspace id",
   workspaceIdHint:
-    "Bailian workspace id — the subdomain of your endpoints. Stored in the settings document; clear and save to fall back to the credential store.",
+    "Bailian workspace id — the subdomain of your endpoints. Saved in this plugin’s config; clearing it disables knowledge calls until configured again.",
   workspaceIdHintFallback:
     "Bailian workspace id — the subdomain of your endpoints. Leave blank to keep the current one.",
   workspaceIdSet: "A workspace is configured.",
@@ -129,23 +156,50 @@ export const en: Record<BailianKbLocaleKey, string> = {
   cacheRefreshing: "Refreshing…",
   pickerNone: "Not set — the full list is injected instead",
   pickerClear: "Clear",
+  unavailable: "This plugin is not loaded, so it cannot be configured right now.",
+  readOnly: "This deployment stores settings read-only.",
+  overridden: "Overridden",
+  reset: "Reset to default",
 };
+
+export function formLabels(t: (key: BailianKbLocaleKey) => string): SettingsFormLabels {
+  return {
+    unavailable: t("unavailable"),
+    readOnly: t("readOnly"),
+    saveFailed: t("saveFailed"),
+    save: t("save"),
+    saving: t("saving"),
+  };
+}
 
 /** Simplified Chinese copy. */
 export const zh: Record<BailianKbLocaleKey, string> = {
+  keyPlaceholder: "留空保留当前 Key",
+  privateKeyHint:
+    "此 API Key 和工作空间仅用于当前插件，修改不会影响另一个插件；已保存的 Key 不会回显。",
+  connectionHint: "验证访问权限后一起保存 Workspace 和 API Key；不会修改另一插件的 Workspace。",
+  saveConnection: "验证并保存",
+  overviewTitle: "知识库",
+  overviewHint: "用一个状态表示检索和问答是否已经可以调用。",
+  overviewBody:
+    "kb_search 从已部署的检索服务取回内容，kb_chat 用问答服务回答。配好连接后，每次对话都会带上当前工作空间的服务清单。",
+  overviewReady: "已就绪",
+  overviewSetup: "需要设置",
+  connectionTitle: "连接",
+  connectionSectionHint: "知识库插件独立使用的 API 密钥与工作空间。",
+  servicesTitle: "默认服务",
+  servicesHint: "kb_search 和 kb_chat 未指定 agent_id 时使用的服务。不设置则注入完整清单。",
   nav: "百炼知识库",
   title: "百炼知识库",
   description: "知识库工具的账号信息：API 密钥、工作空间与默认服务。",
-  settingsUnavailable: "当前浏览器无法访问设置文档；以下字段仅可写入凭据存储，不回显。",
-  fallbackConfigured: "回退：凭据存储中已有值。",
+  settingsUnavailable: "当前浏览器无法访问设置文档；无法保存插件配置。",
   apiKey: "API 密钥",
-  apiKeyHint: "DashScope API key。保存在凭据存储中且不会再次显示；留空表示保持当前值。",
   apiKeySet: "已配置密钥。",
   apiKeyUnset: "未配置密钥；配置前知识库工具不可用。",
   apiKeyGet: "去获取",
   workspaceId: "工作空间 ID",
   workspaceIdHint:
-    "百炼工作空间 ID，即终端节点地址的子域名。存入设置文档；清空并保存则回退到凭据存储。",
+    "百炼工作空间 ID，即终端节点地址的子域名。保存在本插件配置中；清空后需重新配置才能调用知识库。",
   workspaceIdHintFallback: "百炼工作空间 ID，即终端节点地址的子域名。留空表示保持当前值。",
   workspaceIdSet: "已配置工作空间。",
   workspaceIdUnset: "未配置工作空间；配置前知识库工具不可用。",
@@ -187,4 +241,8 @@ export const zh: Record<BailianKbLocaleKey, string> = {
   cacheRefreshing: "刷新中…",
   pickerNone: "未设置 —— 会注入完整清单",
   pickerClear: "清空",
+  unavailable: "该插件当前未加载，暂时无法配置。",
+  readOnly: "本部署以只读方式保存设置。",
+  overridden: "已覆盖",
+  reset: "恢复默认",
 };

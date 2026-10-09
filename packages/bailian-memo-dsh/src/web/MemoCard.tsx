@@ -14,19 +14,12 @@ export type MemoCardProps = PluginConfigViewProps &
   PropsLocale<"settings.bailianMemo"> &
   InjectFace<MemoCardFace>;
 
-function credentialSourceKey(
-  source: MemoCardState["apiKey"]["source"],
-):
-  | "apiKeySourceEnvironment"
-  | "apiKeySourceLocal"
-  | "apiKeySourceProjectEnvironment"
-  | "apiKeySourceUserEnvironment"
-  | undefined {
-  if (source === "environment") return "apiKeySourceEnvironment";
-  if (source === "local") return "apiKeySourceLocal";
-  if (source === "projectEnvironment") return "apiKeySourceProjectEnvironment";
-  if (source === "userEnvironment") return "apiKeySourceUserEnvironment";
-  return undefined;
+const API_KEY_URL = "https://bailian.console.aliyun.com/cn-beijing?tab=globalset#/efm/api_key";
+
+function credentialLabel(t: (key: MemoSettingsLocaleKey) => string, state: MemoCardState): string {
+  if (!state.apiKey.configured) return t("apiKeyUnset");
+  if (!state.apiKey.writable) return t("fromEnv");
+  return t("apiKeySet");
 }
 
 function taskStatusKey(status: string): MemoSettingsLocaleKey {
@@ -41,7 +34,7 @@ function taskStatusKey(status: string): MemoSettingsLocaleKey {
 }
 
 interface ToggleSettingProps {
-  field: keyof Pick<MemoPluginSettings, "enabled" | "autoRecall" | "autoCurate">;
+  field: keyof Pick<MemoPluginSettings, "enabled" | "autoRecall" | "autoCurate" | "extractProfile">;
   label: string;
   hint: string;
   state: MemoCardState["enabled"];
@@ -76,7 +69,11 @@ function ToggleSetting(props: ToggleSettingProps) {
           </button>
         ) : null}
         <Switch
-          checked={props.state.text !== "false"}
+          checked={
+            props.field === "extractProfile"
+              ? props.state.text === "true"
+              : props.state.text !== "false"
+          }
           onChange={(next) => props.edit(props.field, String(next))}
           label={props.label}
           disabled={!props.writable}
@@ -96,11 +93,8 @@ export function MemoCard(props: MemoCardProps) {
     !personal || personal.status === "unconfigured" || personal.status === "initializing";
   const canPause = personal?.status === "active";
   const canResume = personal?.status === "paused";
-  const sourceKey = credentialSourceKey(state.apiKey.source);
-  const credentialStatus = state.apiKey.configured
-    ? `${t("apiKeyConfigured")}${sourceKey ? ` · ${t(sourceKey)}` : ""}`
-    : t("apiKeyMissing");
   const autofillStatus = state.consoleLoginStatus;
+  const loginWaiting = autofillStatus?.phase === "waiting";
   return (
     <div className={css.root}>
       <section className={css.section} aria-labelledby="bailian-memo-status-heading">
@@ -159,63 +153,92 @@ export function MemoCard(props: MemoCardProps) {
             {t("refresh")}
           </button>
         </div>
-        <div className={css.factGrid}>
-          <span>{t("apiKey")}</span>
-          <strong>{credentialStatus}</strong>
+        <div className={css.autofillRow}>
+          <button
+            type="button"
+            className={css.secondaryButton}
+            disabled={state.busy || !state.apiKey.writable || loginWaiting}
+            onClick={() => void props.consoleLogin()}
+          >
+            {t(loginWaiting ? "loginWaiting" : "consoleLogin")}
+          </button>
+          <span
+            className={
+              autofillStatus?.phase === "done" ? css.autofillStatusSuccess : css.autofillStatus
+            }
+          >
+            {autofillStatus?.phase === "done"
+              ? t("loginDone")
+              : autofillStatus?.phase === "failed"
+                ? `${t("loginFailed")}${autofillStatus.reason ? `: ${autofillStatus.reason}` : ""}`
+                : autofillStatus?.phase === "waiting"
+                  ? t("loginWaiting")
+                  : state.apiKey.configured
+                    ? t("autofillConfigured")
+                    : t("autofillHint")}
+          </span>
         </div>
         {!state.apiKey.writable ? (
           <div className={css.message} role="alert">
             {t("environmentOverrideGuidance")}
           </div>
         ) : null}
+        <label className={css.inputGroup} htmlFor="bailian-memo-api-key">
+          <span className={css.fieldHead}>
+            <span className={css.fieldTitle}>
+              <span>{t("apiKey")}</span>
+              <a className={css.getLink} href={API_KEY_URL} target="_blank" rel="noreferrer">
+                {t("apiKeyGet")}
+              </a>
+            </span>
+            <span className={state.apiKey.configured ? css.badge : css.badgeMuted}>
+              {credentialLabel(t, state)}
+            </span>
+          </span>
+          <input
+            id="bailian-memo-api-key"
+            className={css.input}
+            type="password"
+            autoComplete="new-password"
+            value={state.apiKeyDraft}
+            disabled={state.busy || !state.apiKey.writable}
+            onChange={(event) => props.setApiKeyDraft(event.target.value)}
+            placeholder={t("apiKeyPlaceholder")}
+          />
+          <small>{t("privateKeyHint")}</small>
+        </label>
         <label className={css.inputGroup} htmlFor="bailian-memo-workspace">
           <span>{t("workspace")}</span>
           <input
             id="bailian-memo-workspace"
             className={css.input}
             value={state.workspaceDraft}
-            disabled={!canEnable || state.busy}
+            disabled={!state.writable || state.busy}
             onChange={(event) => props.setWorkspaceDraft(event.target.value)}
             placeholder="ws-..."
           />
-          <small>{canEnable ? t("workspaceHint") : t("workspaceLockedHint")}</small>
+          <small>{t("workspaceHint")}</small>
         </label>
         <div className={css.actions}>
           <button
             type="button"
-            className={css.secondaryButton}
-            disabled={state.busy || !state.apiKey.writable}
-            onClick={() => void props.consoleLogin()}
+            className={css.primaryButton}
+            disabled={state.busy || !state.writable || !state.workspaceDraft.trim()}
+            onClick={() => void props.saveConnection()}
           >
-            {t("consoleLogin")}
+            {t("saveConnection")}
           </button>
           {canEnable ? (
             <button
               type="button"
-              className={css.primaryButton}
-              disabled={state.busy || !state.workspaceDraft.trim()}
+              className={css.secondaryButton}
+              disabled={state.busy || !state.workspaceDraft.trim() || Boolean(state.apiKeyDraft)}
               onClick={() => void props.enable()}
             >
               {t("enable")}
             </button>
           ) : null}
         </div>
-        {autofillStatus?.phase === "waiting" ? (
-          <div className={css.flowStatus} role="status">
-            {t("loginWaiting")}
-          </div>
-        ) : null}
-        {autofillStatus?.phase === "done" ? (
-          <div className={css.flowStatus} role="status">
-            {t("loginDone")}
-          </div>
-        ) : null}
-        {autofillStatus?.phase === "failed" ? (
-          <div className={css.message} role="alert">
-            {t("loginFailed")}
-            {autofillStatus.reason ? `: ${autofillStatus.reason}` : ""}
-          </div>
-        ) : null}
         {state.message ? (
           <div className={css.message} role="alert">
             {state.message}
@@ -223,13 +246,13 @@ export function MemoCard(props: MemoCardProps) {
         ) : null}
       </section>
 
-      <SettingsForm
-        labels={formLabels(t)}
-        state={state}
-        onSave={props.save}
-        onDiscard={props.discard}
-      >
-        <section className={css.section} aria-labelledby="bailian-memo-automatic-heading">
+      <section className={css.section} aria-labelledby="bailian-memo-automatic-heading">
+        <SettingsForm
+          labels={formLabels(t)}
+          state={state}
+          onSave={props.save}
+          onDiscard={props.discard}
+        >
           <div className={css.sectionHeading}>
             <div>
               <h2 id="bailian-memo-automatic-heading">{t("automaticTitle")}</h2>
@@ -269,6 +292,62 @@ export function MemoCard(props: MemoCardProps) {
             edit={props.edit}
             resetField={props.resetField}
           />
+          <ToggleSetting
+            field="extractProfile"
+            label={t("extractProfile")}
+            hint={t("extractProfileHint")}
+            state={state.extractProfile}
+            writable={state.writable}
+            overriddenLabel={t("overridden")}
+            resetLabel={t("reset")}
+            edit={props.edit}
+            resetField={props.resetField}
+          />
+          {state.extractProfile.text === "true" ? (
+            <div className={css.inputGroup}>
+              <label htmlFor="bailian-memo-profile-schema">{t("profileSchema")}</label>
+              <select
+                id="bailian-memo-profile-schema"
+                className={css.input}
+                value={state.profileSchemaId.text || state.profileSchemas.at(-1)?.id || ""}
+                disabled={!state.writable || state.profileSchemasLoading}
+                onChange={(event) => props.edit("profileSchemaId", event.target.value)}
+              >
+                {state.profileSchemas.length === 0 ? (
+                  <option value="">
+                    {t(
+                      state.profileSchemasLoading ? "profileSchemasLoading" : "profileSchemasEmpty",
+                    )}
+                  </option>
+                ) : null}
+                {state.profileSchemaId.text &&
+                !state.profileSchemas.some((schema) => schema.id === state.profileSchemaId.text) ? (
+                  <option value={state.profileSchemaId.text}>
+                    {t("profileSchemaUnavailable")}: {state.profileSchemaId.text}
+                  </option>
+                ) : null}
+                {state.profileSchemas.map((schema) => (
+                  <option key={schema.id} value={schema.id}>
+                    {schema.name} · {schema.id}
+                  </option>
+                ))}
+              </select>
+              <small>{t("profileSchemaHint")}</small>
+              <button
+                type="button"
+                className={css.secondaryButton}
+                disabled={state.profileSchemasLoading}
+                onClick={() => void props.refreshProfileSchemas()}
+              >
+                {t("refresh")}
+              </button>
+              {state.profileSchemasError ? (
+                <p className={css.message} role="alert">
+                  {state.profileSchemasError}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           <SettingsValueField
             id="bailian-memo-recall-top-k"
             label={t("recallTopK")}
@@ -296,8 +375,8 @@ export function MemoCard(props: MemoCardProps) {
             onEdit={(text) => props.edit("minScore", text)}
             onReset={() => props.resetField("minScore")}
           />
-        </section>
-      </SettingsForm>
+        </SettingsForm>
+      </section>
 
       <section className={css.section} aria-labelledby="bailian-memo-identity-heading">
         <div className={css.sectionHeading}>
@@ -309,8 +388,6 @@ export function MemoCard(props: MemoCardProps) {
         <div className={css.factGrid}>
           <span>{t("userId")}</span>
           <code>{personal?.user_id ?? "—"}</code>
-          <span>{t("profileSchema")}</span>
-          <code>{personal?.profile_schema_id ?? "—"}</code>
           <span>{t("consentedAt")}</span>
           <code>{personal?.consented_at ?? "—"}</code>
         </div>

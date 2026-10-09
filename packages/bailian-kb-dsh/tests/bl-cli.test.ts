@@ -26,6 +26,19 @@ describe("readBlCliConfig", () => {
     expect(readBlCliConfig(path)).toEqual({ apiKey: "sk-abc", workspaceId: "ws-1" });
   });
 
+  it("reads only the active root-level named profile", () => {
+    const path = fileWith(
+      "active.json",
+      JSON.stringify({
+        active_config: "work",
+        api_key: "default-key",
+        workspace_id: "default-workspace",
+        work: { api_key: "work-key" },
+      }),
+    );
+    expect(readBlCliConfig(path)).toEqual({ apiKey: "work-key" });
+  });
+
   it("omits absent, blank, and non-string fields instead of returning empties", () => {
     const path = fileWith(
       "partial.json",

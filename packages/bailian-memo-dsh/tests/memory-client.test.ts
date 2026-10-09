@@ -74,3 +74,62 @@ describe("MemoryClient", () => {
     });
   });
 });
+
+it("resolves the unique rule afresh using current credentials and never creates a schema", async () => {
+  let workspace = "ws-one";
+  let key = "key-one";
+  const fetchImpl = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    const href = typeof url === "string" ? url : url instanceof URL ? url.href : url.url;
+    expect(href).toContain(`${workspace}.cn-beijing.maas.aliyuncs.com`);
+    expect(init?.method).toBe("GET");
+    expect(init?.headers).toMatchObject({ Authorization: `Bearer ${key}` });
+    expect(href).not.toContain("memory_library_id");
+    return Response.json({ total: 1, profile_schemas: [{ profile_schema_id: workspace }] });
+  });
+  const client = new MemoryClient({
+    resolveApiKey: async () => key,
+    resolveWorkspaceId: async () => workspace,
+    fetchImpl,
+  });
+  expect(await client.getProfileSchemaId()).toBe("ws-one");
+  workspace = "ws-two";
+  key = "key-two";
+  expect(await client.getProfileSchemaId()).toBe("ws-two");
+  expect(fetchImpl).toHaveBeenCalledTimes(2);
+});
+
+it("defaults to the last rule across pages and validates explicit selection", async () => {
+  const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+    const url = input as URL;
+    const rows =
+      url.searchParams.get("page_num") === "1"
+        ? [{ profile_schema_id: "first", name: "First" }]
+        : [{ profile_schema_id: "last", name: "Last" }];
+    return Response.json({ total: 2, profile_schemas: rows });
+  });
+  const client = new MemoryClient({
+    resolveApiKey: async () => "key",
+    resolveWorkspaceId: async () => "ws",
+    fetchImpl,
+  });
+  expect(await client.getProfileSchemaId()).toBe("last");
+  expect(await client.getProfileSchemaId("first")).toBe("first");
+  await expect(client.getProfileSchemaId("deleted")).rejects.toThrow(/selected profile rule/i);
+});
+
+it("returns no profile when there is no rule, and search stays independent", async () => {
+  const fetchImpl = vi.fn(async () => Response.json({ total: 0, profile_schemas: [] }));
+  const client = new MemoryClient({
+    resolveApiKey: async () => "key",
+    resolveWorkspaceId: async () => "ws",
+    fetchImpl,
+  });
+  expect(await client.getCurrentProfile("user")).toEqual({ profile: { attributes: [] } });
+  expect(fetchImpl).toHaveBeenCalledOnce();
+  fetchImpl.mockClear();
+  await client.search({ userId: "user", query: "hello" });
+  expect(fetchImpl).toHaveBeenCalledOnce();
+  const [url, options] = fetchImpl.mock.calls[0] as unknown as [URL, RequestInit];
+  expect(url.pathname).toContain("memory_nodes/search");
+  expect(JSON.parse(options.body as string)).not.toHaveProperty("profile_schema");
+});

@@ -189,12 +189,15 @@ export function installAutomaticRecall(ctx: Context, deps: RecallDeps): void {
         };
         const [search, profile] = await Promise.all([
           deps.client.search(searchInput),
-          personal.profile_schema_id
-            ? deps.client.getProfile({
-                schemaId: personal.profile_schema_id,
-                userId: personal.user_id!,
-              })
-            : Promise.resolve({ profile: { attributes: [] } }),
+          deps.client
+            .getCurrentProfile(personal.user_id!, pluginConfig.profileSchemaId)
+            .catch((error: unknown) => {
+              agent.session.append("bailian-memo/profile-recall-failed", {
+                turn,
+                reason: error instanceof Error ? error.message : "Profile recall failed",
+              });
+              return { profile: { attributes: [] } };
+            }),
         ]);
         signal.throwIfAborted();
         const hits = search.memory_nodes ?? [];

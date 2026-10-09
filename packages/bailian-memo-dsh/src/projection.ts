@@ -96,6 +96,8 @@ declare module "@deepseek-ai/dsh-session-projection" {
 
 declare module "@deepseek-ai/dsh-session/types" {
   interface SessionEventMap {
+    "bailian-memo/remember-submitted": { intentId: string };
+    "bailian-memo/profile-recall-failed": { turn: number; reason: string };
     "bailian-memo/recall-empty": {
       turn: number;
       scope?: unknown;

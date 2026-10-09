@@ -50,64 +50,25 @@ Verify the plugin is composed — `dsh --profile web --dump-config` should list 
 
 ## Configuration
 
-### Option 1 — Settings page (recommended)
+Configure the plugin from its dsh settings page. The API key belongs only to this plugin in dsh credentials (`BAILIAN_KB_API_KEY`, normally `~/.dsh/.credentials.yaml`; the host owns the actual path). All business settings belong exclusively to this plugin's dsh configuration:
 
-After installation, **Settings → Bailian KB** appears in the web UI:
+| Field                    | Meaning                                   | Default          |
+| ------------------------ | ----------------------------------------- | ---------------- |
+| `workspaceId`            | Workspace for all knowledge calls         | Required         |
+| `defaultRetrieveAgentId` | Default retrieval service                 | Unset            |
+| `defaultChatAgentId`     | Default Q&A service                       | Unset            |
+| `agentVersion`           | Draft `beta` or published service version | Latest published |
+| `chatTimeoutMs`          | Chat timeout in milliseconds              | 300000           |
 
-- **Fetch from console login** — opens the Bailian console in a browser on the host machine; when you finish signing in, the API key and workspace id of that account are stored on the host (the key never travels to the browser). Each login requests a freshly issued key, so switching accounts is one click.
-- **API key** — write-only: the stored value is never echoed back, only reported as configured or not.
-- **Workspace id / default retrieval service / default Q&A service** — editable with echo; the service ids can be picked from the cached service list. Clearing a value falls back to the layers below.
-- **Retrieval service cache** — shows when the injected service list was last fetched, how many services it holds, and offers a manual refresh for a service you just created.
+The endpoint is fixed to `cn-beijing.maas.aliyuncs.com`. There is no endpoint setting. Settings page edits apply to the next call.
 
-If you have already run `bl auth login`, the API key and workspace id are adopted once from `~/.bailian/config.json` at startup. A value you deliberately clear is never re-filled.
+At startup, a missing API key may be imported from the active profile in `~/.bailian/config.json`. On the first configuration migration, missing workspace/default-service fields are imported from legacy dsh credentials, with the bl profile as the workspace default. Explicit dsh settings win. The internal `configInitialized` marker prevents cleared settings from being imported again. A missing API key can still be seeded on subsequent startups.
 
-### Option 2 — Environment and credential files
+After initialization, business fields are read only from dsh plugin settings, never from bl or legacy credential fields. Clearing Workspace makes calls fail until it is configured again. Console login saves the key in dsh credentials and Workspace in dsh settings. KB does not create a `personal-kb/config.json` file.
 
-```sh
-# ~/.dsh/.env, or the credential store at ~/.dsh/.credentials.yaml
-DASHSCOPE_API_KEY=sk-xxx                    # required
-BAILIAN_WORKSPACE_ID=ws-xxx                 # required
-BAILIAN_DEFAULT_RETRIEVE_AGENT_ID=aid-xxx   # optional
-BAILIAN_DEFAULT_CHAT_AGENT_ID=aid-xxx       # optional
-```
+The connection panel also accepts a new API key in a password field. Leave it blank to retain the current key, then use **Verify and save** to validate the key/Workspace pair before saving. Failed validation changes neither value; a settings-write failure attempts to restore the previous pair. The key is never read back and the input is cleared after success. Each plugin keeps its own API key and Workspace; editing one plugin does not affect the other. A key supplied by the launch environment must be changed there.
 
-### Option 3 — Profile patch
-
-The bundle inserts its own entry into the profile; you can override it by id in `~/.dsh/cordis.patch.yml` or the profile's patch file. An override **replaces the whole config object** (no deep merge):
-
-```yaml
-- id: tool-bailian-kb
-  config:
-    defaultRetrieveAgentId: aid-search-service
-    defaultChatAgentId: aid-chat-service
-    chatTimeoutMs: 600000
-```
-
-Disable the plugin with `- id: tool-bailian-kb` plus `disabled: true`.
-
-### Config fields
-
-The config doubles as the `bailian-kb` settings section, so edits in the settings page or settings document apply to the next call without a restart.
-
-| Field                    | Type    | Default                        | Meaning                                                                                                          |
-| ------------------------ | ------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `workspaceId`            | string? | —                              | Bailian workspace id; the API host is the workspace subdomain `https://<workspaceId>.<endpointHost>`             |
-| `endpointHost`           | string  | `cn-beijing.maas.aliyuncs.com` | Host suffix; replace for another region or a private deployment                                                  |
-| `defaultRetrieveAgentId` | string? | —                              | Service `kb_search` falls back to when the caller omits `agent_id`                                               |
-| `defaultChatAgentId`     | string? | —                              | Service `kb_chat` falls back to when the caller omits `agent_id`                                                 |
-| `agentVersion`           | string? | —                              | `beta` (draft) or a published version number; defaults to the latest published version. Not exposed to the model |
-| `chatTimeoutMs`          | number  | `300000`                       | `kb_chat` timeout — the server side is a minutes-scale agentic loop                                              |
-
-### Resolution order
-
-| Value                     | Settings layer (settings page) | Entry config (profile patch) | Credential store / env              |
-| ------------------------- | ------------------------------ | ---------------------------- | ----------------------------------- |
-| `DASHSCOPE_API_KEY`       | write-only control             | —                            | `DASHSCOPE_API_KEY`                 |
-| workspace id              | ✅ `workspaceId`               | ✅ `workspaceId`             | `BAILIAN_WORKSPACE_ID`              |
-| default retrieval service | ✅ `defaultRetrieveAgentId`    | ✅ `defaultRetrieveAgentId`  | `BAILIAN_DEFAULT_RETRIEVE_AGENT_ID` |
-| default Q&A service       | ✅ `defaultChatAgentId`        | ✅ `defaultChatAgentId`      | `BAILIAN_DEFAULT_CHAT_AGENT_ID`     |
-
-Every value is re-read per call, so a rotated key or a switched workspace takes effect immediately. The API key and workspace id are mandatory: without them the tools fail with a message pointing at these configuration paths. Default services are optional — when the workspace has exactly one deployed service for a scene, that one is used.
+Management uses `kb_manage` with arguments after `bl knowledge`, for example `{"args":["service","list","--scene","search"]}`. The host executes the installed `bl` executable with a temporary isolated config directory and the same current key/Workspace as the native tools. Connection override flags are rejected. Secrets are passed through the child environment, never tool arguments. Direct shell invocation of bl remains independent and is not the plugin management path.
 
 ## Tools
 
@@ -115,6 +76,7 @@ Every value is re-read per call, so a rotated key or a switched workspace takes 
 | ----------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
 | `kb_search` | `query`, `agent_id` (required), `top_k?` (default 5, applied client-side), `images?` (image URLs for multimodal) | Scored chunks with source references, plus a total |
 | `kb_chat`   | `message`, `agent_id` (required)                                                                                 | The complete answer plus a `request_id`            |
+| `kb_manage` | `args`                                                                                                           | Knowledge management using dsh configuration       |
 
 `agent_id` is required in both schemas: the schema cannot tell the model whether this deployment pins a default, and discovering a missing default at call time wastes a round-trip. The configured default is still honoured for programmatic calls that omit it.
 
@@ -157,3 +119,5 @@ Bug reports, feature requests, and PRs are welcome. See [CONTRIBUTING.md](https:
 ## License
 
 [Apache 2.0](LICENSE)
+
+The former shared `DASHSCOPE_API_KEY` is no longer read, modified, or deleted. If the plugin-specific key is absent and bl has no default to import, save a key on each plugin’s page.

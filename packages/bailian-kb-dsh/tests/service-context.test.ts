@@ -4,13 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { KbClient } from "../src/client.js";
 import { ServiceCache, serviceCachePath, writeServiceCache } from "../src/service-cache.js";
-import { installServiceContext } from "../src/service-context.js";
+import { installServiceContext, KB_CATALOG_SOURCE_KIND } from "../src/service-context.js";
 
 const HOST = "cn-beijing.maas.aliyuncs.com";
 const WS = "llm-a";
-const SOURCE_PLUGIN = "tool-bailian-kb/services";
 
-type Injected = { id: string; source: { plugin?: string }; content: { text?: string }[] };
+type Injected = { id: string; source: { kind: string }; content: { text?: string }[] };
 type Decision = { kind: string; messages: Injected[] };
 
 interface HarnessOptions {
@@ -69,7 +68,7 @@ function harness(options: HarnessOptions = {}) {
   const events: { type: string; seq: number; data: unknown }[] = [];
   const agent = {
     session: {
-      events,
+      snapshotEvents: () => events,
       surface: { nodes: [] as number[] },
       header: { cwd: "/tmp" },
     },
@@ -99,7 +98,7 @@ function harness(options: HarnessOptions = {}) {
     },
     /** This module's own messages within a decision. */
     injected: (decision: Decision) =>
-      decision.messages.filter((m) => m.source.plugin === SOURCE_PLUGIN),
+      decision.messages.filter((message) => message.source.kind === KB_CATALOG_SOURCE_KIND),
   };
 }
 

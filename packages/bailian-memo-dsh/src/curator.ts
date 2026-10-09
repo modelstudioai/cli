@@ -31,7 +31,6 @@ export interface CuratorDecision {
   reason?: string;
   quotes?: string[];
   memoryText?: string;
-  includeProfile?: boolean;
   allowSensitive?: boolean;
 }
 
@@ -88,7 +87,7 @@ export function parseCuratorDecision(text: string): CuratorDecision {
 export function validateCuratorDecision(
   decision: CuratorDecision,
   sourceTexts: readonly string[],
-): { ok: true; text: string; includeProfile: boolean } | { ok: false; reason: string } {
+): { ok: true; text: string } | { ok: false; reason: string } {
   if (decision.action === "skip") {
     return { ok: false, reason: decision.reason ?? "skip" };
   }
@@ -115,7 +114,6 @@ export function validateCuratorDecision(
   return {
     ok: true,
     text: filtered.safeText,
-    includeProfile: decision.includeProfile === true,
   };
 }
 
@@ -123,6 +121,20 @@ interface TurnUtterance {
   seq: number;
   role: "user" | "assistant";
   text: string;
+}
+
+function hasExplicitRemember(agent: Agent, turn: number): boolean {
+  let inTurn = false;
+  for (const event of agent.session.snapshotEvents()) {
+    if (event.type === "turn/start") {
+      inTurn = event.data.turn === turn;
+    } else if (event.type === "turn/end") {
+      if (event.data.turn === turn) break;
+    } else if (inTurn && event.type === "bailian-memo/remember-submitted") {
+      return true;
+    }
+  }
+  return false;
 }
 
 function collectTurnUtterances(agent: Agent, turn: number): TurnUtterance[] {
@@ -171,7 +183,7 @@ function systemPrompt(): string {
     "You are a silent personal-memory curator for Bailian.",
     "Decide whether the latest turn contains durable personal facts worth storing.",
     "Return ONLY one JSON object:",
-    '{"action":"commit"|"skip","reason":"...","quotes":["verbatim user/assistant substrings"],"memoryText":"...","includeProfile":boolean,"allowSensitive":boolean}',
+    '{"action":"commit"|"skip","reason":"...","quotes":["verbatim user/assistant substrings"],"memoryText":"...","allowSensitive":boolean}',
     "Rules:",
     "- Prefer user statements over assistant guesses.",
     "- Do not store passwords, API keys, secrets, or private keys.",
@@ -218,6 +230,15 @@ export function installAuxiliaryCurator(ctx: Context, deps: CuratorDeps): void {
 
     const projection = ctx.get("sessionProjections")?.stateOf(agent.session, "bailianMemo");
     if (projection?.lastCurateTurn === turn) return;
+
+    if (hasExplicitRemember(agent, turn)) {
+      agent.session.append("bailian-memo/curator-finished", {
+        turn,
+        committed: false,
+        reason: "explicit remember already submitted",
+      });
+      return;
+    }
 
     const utterances = collectTurnUtterances(agent, turn);
     if (utterances.length === 0) return;
@@ -307,9 +328,8 @@ export function installAuxiliaryCurator(ctx: Context, deps: CuratorDeps): void {
         client: deps.client,
         userId: personal.user_id!,
         messages: [{ role: "user", content: validated.text }],
-        profileSchema: validated.includeProfile
-          ? (personal.profile_schema_id ?? undefined)
-          : undefined,
+        extractProfile: deps.resolveConfig().extractProfile,
+        profileSchemaId: deps.resolveConfig().profileSchemaId,
         note: `turn:${turn}`,
       });
       agent.session.append("bailian-memo/curator-finished", {

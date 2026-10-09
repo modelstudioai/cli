@@ -21,10 +21,10 @@
 
 当前包：
 
-| 包                 | 职责                                       | 目标 dsh                                      | 设计文档                       |
-| ------------------ | ------------------------------------------ | --------------------------------------------- | ------------------------------ |
-| `bailian-kb-dsh`   | 知识库 `kb_search` / `kb_chat` + skill     | 仍为 rc-era SettingsProvider 模式（迁移另开） | [docs/kb-dsh/](../kb-dsh/)     |
-| `bailian-memo-dsh` | 个人记忆自动召回 / 静默筛选 / 工具与设置页 | **0.2.1** Volatile Config + SettingsForms     | [docs/memo-dsh/](../memo-dsh/) |
+| 包                 | 职责                                       | 目标 dsh                                  | 设计文档                       |
+| ------------------ | ------------------------------------------ | ----------------------------------------- | ------------------------------ |
+| `bailian-kb-dsh`   | 知识库 `kb_search` / `kb_chat` + skill     | **0.2.1** Volatile Config + SettingsForms | [docs/kb-dsh/](../kb-dsh/)     |
+| `bailian-memo-dsh` | 个人记忆自动召回 / 静默筛选 / 工具与设置页 | **0.2.1** Volatile Config + SettingsForms | [docs/memo-dsh/](../memo-dsh/) |
 
 ## tsconfig 三件套（改动前先读）
 
@@ -61,13 +61,24 @@
 
 ### D. 现代 vs 遗留 Settings（重要）
 
-|               | `bailian-memo-dsh`（新）                        | `bailian-kb-dsh`（遗留，待迁移）                  |
-| ------------- | ----------------------------------------------- | ------------------------------------------------- |
-| Config        | `Volatile` / `.volatile()`                      | 普通 Config + `SettingsProvider`                  |
-| Client        | `SettingsFormModel` + `configForms.whileServed` | 自定义 `/settings` bridge + `credentials/updated` |
-| Host 辅助路由 | `webServer` + `connection.requestRejection`     | 同类 bridge 路由                                  |
+|               | `bailian-memo-dsh` / `bailian-kb-dsh`           |
+| ------------- | ----------------------------------------------- |
+| Config        | `Volatile` / `.volatile()`                      |
+| Client        | `SettingsFormModel` + `configForms.whileServed` |
+| Host 辅助路由 | `webServer` + `connection.requestRejection`     |
 
-**新插件禁止**复制 kb-dsh 的 SettingsProvider / `/settings` bridge / `credentials/updated`。kb-dsh 迁移到 0.2.1 模式另开任务，不要塞进 memo 变更。
+**新插件禁止**复制已删除的 SettingsProvider / `/settings` bridge / `credentials/updated`。API Key 放凭据域，页面字段放插件 Volatile Config。
+
+### 配置归属与迁移
+
+- 两插件分别使用 dsh credentials 的 `BAILIAN_KB_API_KEY` / `BAILIAN_MEMO_API_KEY`，独立读写，运行时不读取通用 `DASHSCOPE_API_KEY`；Workspace、默认服务、行为设置只放各自的 dsh Volatile Config。
+- `endpointHost` 不再是插件配置，使用固定北京端点。
+- bl `~/.bailian/config.json` 只作为启动默认值来源，按根级 `active_config` 指向的命名 block 读取，不混用默认 Profile 的字段。
+- 首次启动将旧 Workspace / 默认服务迁入 dsh settings；`configInitialized` 防止用户清空后再次导入。缺失的插件专属 Key 仍允许在启动时补入。
+- memo 个人文件只负责身份、授权状态和 Workspace 绑定；请求 Workspace 取 dsh，绑定不一致必须阻止请求，不能静默修改绑定。
+- kb 管理操作走 `kb_manage`，宿主用独立临时配置目录执行 bl，传递当前 dsh Key / Workspace，拒绝连接覆盖参数（含 camelCase 形式），保留 CLI 确认机制。
+- 手动 Key / Workspace 编辑使用独立连接草稿和受鉴权保护的保存接口；Key 留空保留、旧值不回显，先验证组合再保存。密钥不进入 SettingsForm 业务配置，错误消息不能包含请求中的密钥；页面明确两个插件的 Key 和 Workspace 相互独立。
+- 改配置时测试启动等待、迁移优先级、清空后重启、运行时配置修改、身份绑定和管理进程隔离。
 
 ### E. 文档
 
@@ -132,3 +143,11 @@ node tools/release/publish-kb-dsh.mjs --dry-run
 - memo 设计：[docs/memo-dsh/](../memo-dsh/)
 - kb 设计 / 运行时：[docs/kb-dsh/](../kb-dsh/)
 - 用户面：各包 `README.md` / `README.zh.md`
+
+### Memo 画像规则
+
+- `extractProfile` 默认 false，保存在 memo 的 dsh settings；显式记忆与自动整理共用此开关，模型参数不能越过它。
+- 不创建画像模板；用户所选 `profileSchemaId` 保存在 memo dsh settings；每次实际提交画像抽取或读取画像前查询已有规则，普通 search 无需查询。
+- 列表/详情实测都没有默认标记和创建时间；按用户约定，未选择时默认完整列表最后一项。UI 在开启抽取时显示选择框，保存时持久化所选 ID；已有 ID 不可用必须提示重选。不能将列表顺序解释为创建时间。
+- 抽取关闭不删除或停止召回已有画像；画像读取失败不阻断普通记忆召回。画像删除全过程必须使用同一个已解析 ID。
+- 个人配置 v3 去掉旧画像引用，保留身份/授权/暂停/绑定；回归测试必须隔离 homedir 或显式传入临时路径，禁止真实个人配置读写。

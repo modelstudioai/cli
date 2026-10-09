@@ -1,23 +1,39 @@
 import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 import {
   beginEnable,
   markActive,
   markPaused,
   migrateLegacyConfig,
   parsePersonalMemoryConfig,
-  profileSchemaNameForUser,
   resumePersonalMemory,
   writePersonalMemoryConfig,
 } from "../src/personal-config.ts";
 
+vi.mock("node:os", async (original) => ({
+  ...(await original<typeof import("node:os")>()),
+  homedir: () => {
+    throw new Error("Tests must pass an explicit temporary config path");
+  },
+}));
+
 describe("personal-config state machine", () => {
-  it("derives profile schema name from user id", () => {
-    expect(profileSchemaNameForUser("01234567-89ab-cdef-0123-456789abcdef")).toBe(
-      "pm_0123456789abcdef01234567",
+  it("accepts active identity without a profile schema and drops obsolete schema state", () => {
+    const migrated = parsePersonalMemoryConfig(
+      JSON.stringify({
+        schema_version: 2,
+        status: "active",
+        workspace_id: "ws",
+        user_id: "user",
+        profile_schema_id: "old-schema",
+        profile_schema_version: 1,
+      }),
     );
+    expect(migrated.status).toBe("active");
+    expect(migrated).not.toHaveProperty("profile_schema_id");
+    expect(migrated).not.toHaveProperty("profile_schema_version");
   });
 
   it("migrates legacy enabled=true with full identity to active", () => {
@@ -49,9 +65,9 @@ describe("personal-config state machine", () => {
     const started = await beginEnable({ workspaceId: "ws-abc" }, path);
     expect(started.status).toBe("initializing");
     expect(started.user_id).toBeTruthy();
-    const active = await markActive("schema-xyz", path);
+    const active = await markActive(path);
     expect(active.status).toBe("active");
-    expect(active.profile_schema_id).toBe("schema-xyz");
+    expect(active).not.toHaveProperty("profile_schema_id");
     const paused = await markPaused("test", path);
     expect(paused.status).toBe("paused");
     const resumed = await resumePersonalMemory(path);
@@ -65,8 +81,11 @@ describe("personal-config state machine", () => {
     const path = join(directory, "config.json");
     const first = await beginEnable({ workspaceId: "ws-1" }, path);
     await writePersonalMemoryConfig({ ...first, last_error: "x" }, path);
-    const second = await beginEnable({ workspaceId: "ws-2" }, path);
-    expect(second.user_id).toBe(first.user_id);
-    expect(second.workspace_id).toBe("ws-2");
+    await expect(beginEnable({ workspaceId: "ws-2" }, path)).rejects.toThrow(
+      /workspace.*mismatch/i,
+    );
+    const unchanged = parsePersonalMemoryConfig(await readFile(path, "utf8"));
+    expect(unchanged.user_id).toBe(first.user_id);
+    expect(unchanged.workspace_id).toBe("ws-1");
   });
 });
