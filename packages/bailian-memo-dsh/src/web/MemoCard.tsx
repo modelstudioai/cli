@@ -91,8 +91,6 @@ export function MemoCard(props: MemoCardProps) {
   const personal = state.personal;
   const canEnable =
     !personal || personal.status === "unconfigured" || personal.status === "initializing";
-  const canPause = personal?.status === "active";
-  const canResume = personal?.status === "paused";
   const autofillStatus = state.consoleLoginStatus;
   const loginWaiting = autofillStatus?.phase === "waiting";
   return (
@@ -114,28 +112,6 @@ export function MemoCard(props: MemoCardProps) {
             ) : null}
           </div>
         ) : null}
-        <div className={css.actions}>
-          {canPause ? (
-            <button
-              type="button"
-              className={css.dangerButton}
-              disabled={state.busy}
-              onClick={() => void props.pause()}
-            >
-              {t("pause")}
-            </button>
-          ) : null}
-          {canResume ? (
-            <button
-              type="button"
-              className={css.primaryButton}
-              disabled={state.busy}
-              onClick={() => void props.resume()}
-            >
-              {t("resume")}
-            </button>
-          ) : null}
-        </div>
       </section>
 
       <section className={css.section} aria-labelledby="bailian-memo-connection-heading">

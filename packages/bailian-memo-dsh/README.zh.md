@@ -35,7 +35,7 @@ dsh plugin --profile <profile> add /path/to/cli/packages/bailian-memo-dsh
 - **个人身份：** `~/.bailian/personal-memory/config.json`（`status`：`unconfigured` / `initializing` / `active` / `paused`）
 - **插件设置（Volatile）：** `enabled`、`autoRecall`、`autoCurate` 使用真实开关，并直接显示 `recallTopK` 召回结果数量和 `minScore` 最小分数阈值（默认 0）。该阈值用于自动召回，也用于未传 `min_score` 的手动检索。`workspaceId` 与 curator 参数同样保存在 dsh 设置中；端点使用固定的 Memory 默认域名。
 - **密钥：** 不写入个人配置文件；设置页只显示当前生效凭据是否已配置及其来源类别，绝不显示值
-- **安全控制：** 暂停/恢复会保留云端数据；页面不提供全量清除
+- **插件控制：** 通过已安装插件列表右侧的开关启用或停用插件。设置页不再提供暂停/恢复按钮，也不提供全量清除；云端数据保留。
 - **诊断：** 异步写入会区分已提交、成功且有变更、成功但无变更和失败。空检索会附带只含哈希与长度的脱敏范围；`bailian_memo_search` 支持可选 `min_score`。
 
 自动更新将 API Key 与 Workspace 视为同一组凭据，先发起只读 Memory 请求验证，再保存两者并显示**凭据已更新**。若 `BAILIAN_MEMO_API_KEY` 来自启动 dsh 的环境变量，它具有更高优先级且无法在页面中替换：请在启动 dsh 的 Shell 或服务中取消该变量、重启 dsh 后重试。

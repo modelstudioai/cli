@@ -39,8 +39,6 @@ export const en = {
   apiKeyGet: "Get",
   fromEnv: "Set by the environment (read-only here)",
   enable: "Enable personal memory",
-  pause: "Pause personal memory",
-  resume: "Resume personal memory",
   consoleLogin: "Fetch from console login",
   autofillHint:
     "Sign in to the Bailian console to fill in that account’s API key and workspace id.",
@@ -52,7 +50,7 @@ export const en = {
   environmentOverrideGuidance:
     "BAILIAN_MEMO_API_KEY from the environment that launched dsh takes priority. Unset it in that shell or service and restart dsh before using automatic credential update.",
   consent:
-    "By enabling, selected conversation fragments are sent to Bailian cloud for long-term memory and a basic profile, which may incur charges. Ordinary personal facts may be remembered automatically; sensitive data only when you explicitly ask. Passwords and secrets are never stored. You can pause at any time without deleting cloud data.",
+    "By enabling, selected conversation fragments are sent to Bailian cloud for long-term memory and a basic profile, which may incur charges. Ordinary personal facts may be remembered automatically; sensitive data only when you explicitly ask. Passwords and secrets are never stored. You can disable the plugin at any time using the switch in the installed plugins list without deleting cloud data.",
   automaticTitle: "Automatic behavior",
   automaticHint: "Changes are staged until you select Save.",
   automaticEnabled: "Automatic memory",
@@ -139,8 +137,6 @@ export const zh: Record<MemoSettingsLocaleKey, string> = {
   apiKeyGet: "去获取",
   fromEnv: "来自环境变量（此处只读）",
   enable: "启用个人记忆",
-  pause: "暂停个人记忆",
-  resume: "恢复个人记忆",
   consoleLogin: "自动获取",
   autofillHint: "登录百炼控制台，自动填入该账号的 API 密钥与工作空间 ID。",
   autofillConfigured: "已配置完成，点击按钮重新获取该账号的 API 密钥与工作空间 ID。",
@@ -150,7 +146,7 @@ export const zh: Record<MemoSettingsLocaleKey, string> = {
   environmentOverrideGuidance:
     "启动 dsh 的环境变量 BAILIAN_MEMO_API_KEY 优先级更高。请在启动 dsh 的 Shell 或服务中取消该变量并重启 dsh，然后再自动更新凭据。",
   consent:
-    "启用即表示同意将选定的对话片段发送到百炼云端，用于长期记忆和基础画像，并可能产生费用。普通个人信息可能自动记忆；敏感信息仅在你明确要求时保存。密码和密钥永不保存。你可以随时暂停，暂停不会删除云端数据。",
+    "启用即表示同意将选定的对话片段发送到百炼云端，用于长期记忆和基础画像，并可能产生费用。普通个人信息可能自动记忆；敏感信息仅在你明确要求时保存。密码和密钥永不保存。你可以随时通过已安装插件列表右侧的开关停用插件，不会删除云端数据。",
   automaticTitle: "自动行为",
   automaticHint: "修改会暂存，点击“保存”后生效。",
   automaticEnabled: "自动记忆",

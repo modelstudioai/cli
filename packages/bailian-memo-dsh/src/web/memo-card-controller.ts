@@ -112,8 +112,6 @@ export interface MemoCardFace extends SettingsFormActions {
     memoCard: SnapshotStore<MemoCardState>;
   };
   enable: () => Promise<void>;
-  pause: () => Promise<void>;
-  resume: () => Promise<void>;
   consoleLogin: () => Promise<void>;
   refresh: () => Promise<void>;
   setWorkspaceDraft: (text: string) => void;
@@ -316,14 +314,6 @@ export class MemoCardController {
     });
   }
 
-  async pause(): Promise<void> {
-    await this.post("/plugins/bailian-memo-dsh/pause");
-  }
-
-  async resume(): Promise<void> {
-    await this.post("/plugins/bailian-memo-dsh/resume");
-  }
-
   async consoleLogin(): Promise<void> {
     await this.post("/plugins/bailian-memo-dsh/console-login", { site: "domestic" });
   }
@@ -367,8 +357,6 @@ export class MemoCardController {
       refreshProfileSchemas: () => this.refreshProfileSchemas(),
       hooks: { memoCard: this.store },
       enable: () => this.enable(),
-      pause: () => this.pause(),
-      resume: () => this.resume(),
       consoleLogin: () => this.consoleLogin(),
       refresh: () => this.refresh(),
       setWorkspaceDraft: (text) => this.setWorkspaceDraft(text),

@@ -180,7 +180,6 @@
 
 .primaryButton,
 .secondaryButton,
-.dangerButton,
 .resetButton {
   padding: 7px 12px;
   border-radius: 7px;
@@ -200,12 +199,6 @@
   background: transparent;
 }
 
-.dangerButton {
-  color: #b33838;
-  border-color: color-mix(in srgb, #b33838 45%, transparent);
-  background: transparent;
-}
-
 .resetButton {
   padding: 4px 7px;
   border: 0;
@@ -215,7 +208,6 @@
 
 .primaryButton:disabled,
 .secondaryButton:disabled,
-.dangerButton:disabled,
 .resetButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;

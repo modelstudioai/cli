@@ -35,7 +35,7 @@ The installed bundle row also exposes **Configure** for `bailian-memo-dsh#tool-b
 - **Personal identity:** `~/.bailian/personal-memory/config.json` (`status`: `unconfigured` / `initializing` / `active` / `paused`)
 - **Plugin settings (Volatile):** real toggles for `enabled`, `autoRecall`, and `autoCurate`, plus the visible `recallTopK` result limit and `minScore` threshold (default 0). The threshold applies to automatic recall and to manual search when `min_score` is omitted. `workspaceId` and curator options also live in dsh settings. The endpoint uses the fixed default Memory host.
 - **Secrets:** never stored in the personal config file; the UI shows only whether the effective credential is configured and its source category, never its value
-- **Safe controls:** pause/resume keeps cloud data; the page does not expose a full wipe
+- **Plugin control:** use the switch in the installed plugins list to enable or disable the plugin. The settings page has no pause/resume buttons and does not expose a full wipe; cloud data is kept.
 - **Diagnostics:** async writes distinguish submitted, succeeded with changes, succeeded without changes, and failed. Empty searches include a sanitized scope (hashes and lengths only); `bailian_memo_search` accepts optional `min_score`.
 
 On first startup, an absent dsh `workspaceId` is seeded from the personal identity binding, then from the active `bl` profile. Explicit dsh values are preserved. `configInitialized` records this migration, so clearing a setting does not reimport it on restart. Missing API keys may be seeded into the plugin-specific dsh `BAILIAN_MEMO_API_KEY` credential; requests never fall back to `bl` or environment workspace values.
