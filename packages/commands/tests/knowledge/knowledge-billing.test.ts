@@ -38,12 +38,14 @@ function fixture(
   return { context, requestJson, stdout, stderr };
 }
 
-test("direct creation declares billing risk for runtime confirmation and discovery", () => {
-  expect(create.risk).toMatchObject({ level: "high", reason: "billing" });
-  expect(create.risk?.message).toMatchObject({
-    "en-US": expect.stringContaining("720"),
-    "zh-CN": expect.stringContaining("30"),
-  });
+test("direct creation exposes billing in help without requiring confirmation", () => {
+  expect(create.risk).toBeUndefined();
+  expect(create.notes).toContainEqual(
+    expect.objectContaining({
+      "en-US": expect.stringContaining("720"),
+      "zh-CN": expect.stringContaining("30"),
+    }),
+  );
 });
 
 test.each(["en-US", "zh-CN"] as const)(

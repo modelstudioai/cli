@@ -10,7 +10,7 @@ import {
 } from "bailian-cli-core";
 import { emitResult, emitBare } from "bailian-cli-runtime";
 import {
-  knowledgeCreationRisk,
+  knowledgeBillingNotice,
   localizedKnowledgeBillingNotice,
   writeKnowledgeBillingNotice,
   reportCreatedKnowledgeBase,
@@ -155,10 +155,13 @@ export default defineCommand({
     "zh-CN": "创建知识库并导入数据中心文件或类目",
   },
   auth: "apiKey",
-  risk: knowledgeCreationRisk,
   usageArgs: "--name <text> --description <text> (--doc-id <id> | --category-id <id>) [flags]",
   flags: KB_CREATE_FLAGS,
   notes: [
+    {
+      "en-US": `${knowledgeBillingNotice.message["en-US"]}\n${knowledgeBillingNotice.url}`,
+      "zh-CN": `${knowledgeBillingNotice.message["zh-CN"]}\n${knowledgeBillingNotice.url}`,
+    },
     {
       "en-US":
         "Structure/sink types are unstructured and BUILT_IN. Multimedia uses basic_multimedia_qa, qwen3-vl-embedding and qwen3-vl-rerank with similar reranking. Allowed explicit models are validated by the server.",

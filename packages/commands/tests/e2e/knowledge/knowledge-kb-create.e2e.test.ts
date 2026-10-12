@@ -16,28 +16,6 @@ interface DryRunBody {
 }
 
 describe("e2e: knowledge kb create", () => {
-  test("creation requires explicit billing confirmation before authentication", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(KNOWLEDGE_KB_CREATE_ROUTES, [
-      "knowledge",
-      "create",
-      "--name",
-      "demo",
-      "--description",
-      "demo",
-      "--doc-id",
-      "file-test",
-      "--workspace-id",
-      "ws-test",
-      "--output",
-      "json",
-    ]);
-    expect(exitCode).toBe(7);
-    expect(stdout).toBe("");
-    expect(JSON.parse(stderr)).toMatchObject({
-      error: { code: 7, type: "requires_confirmation", message: expect.stringContaining("720") },
-    });
-  });
-
   test("--help 展示 flags", async () => {
     const { stderr, exitCode } = await runCommandHelp(KNOWLEDGE_KB_CREATE_ROUTES, [
       "knowledge",
@@ -51,6 +29,9 @@ describe("e2e: knowledge kb create", () => {
     expect(stderr).toMatch(/--category-id/i);
     expect(stderr).toMatch(/--embedding-model/i);
     expect(stderr).toMatch(/--chunk-size/i);
+    expect(stderr).toContain("720");
+    expect(stderr).toContain("billing-for-knowledge-base");
+    expect(stderr).not.toContain("--yes");
   });
 
   test("缺 --name 报 USAGE (2)", async () => {

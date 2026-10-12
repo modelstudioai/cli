@@ -125,7 +125,7 @@ bl knowledge info --index-id idx-xxx --workspace-id ws-xxx
 
 创建知识库并导入数据中心文件或分类。
 
-**计费与确认**：创建成功即开始按运行时长计费，即使不检索也一样。标准版一次性 720 小时额度由多个知识库共享，新用户开通后 30 天内有效；模型调用另计，当前账户剩余额度未核实。见[计费规则](https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base)。先用 `--dry-run` 预览；实际创建未带 `--yes` 时返回退出码 7（`requires_confirmation`），不会创建资源。确认本次操作及范围后才添加 `--yes`。
+**计费提示**：创建成功即开始按运行时长计费，即使不检索也一样。标准版一次性 720 小时额度由多个知识库共享，新用户开通后 30 天内有效；模型调用另计，当前账户剩余额度未核实。见[计费规则](https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base)。可用 `--dry-run` 预览；直接创建无需 `--yes`。创建命令的 `--help` 和创建结果均包含计费提示，JSON 结果通过 `notices` 提供结构化说明。
 
 **用法**
 
@@ -165,9 +165,15 @@ status: COMPLETED
 Next: check the import job status, then search against this knowledge base.
 ```
 
-quiet 模式：只输出知识库 ID。
+quiet 模式：stdout 只输出知识库 ID，stderr 仍保留计费提示和已创建资源诊断。
 
-json 模式：返回 API 原始响应，包含 `pipelineId`（知识库 ID）和 `ingestionId`（导入任务 ID）。`--wait` 时追加 `final_status` 字段。
+json 模式：保留 API 原始响应，`data` 包含 `pipelineId`（知识库 ID）和 `ingestionId`（导入任务 ID），并追加：
+
+- `notices`：计费提示，包含 `code: "KNOWLEDGE_BILLING"`、本地化 `message`、计费规则 `url` 和 `remainingAllowance: "unknown"`。不代表已查询账户余额。
+- `resources`：本次创建的资源及清理指令。
+- `final_status`：仅在使用 `--wait` 并获得导入终态时返回。
+
+提示不会在 JSON stdout 后追加普通文本；stderr 单独输出诊断信息。text 模式的上述示例仅展示 stdout，计费提示同时显示在 stderr。
 
 **注意事项**
 
@@ -181,7 +187,11 @@ json 模式：返回 API 原始响应，包含 `pipelineId`（知识库 ID）和
 **示例**
 
 ```bash
-# 从指定文件创建知识库
+# 查看建库帮助中的计费提示
+bl knowledge create --help
+# kscli 对应：kscli kb create --help
+
+# 从指定文件创建知识库，无需 --yes
 bl knowledge create --name demo --description '产品文档' --doc-id file-xxx --workspace-id ws-xxx
 
 # 从分类导入并等待导入完成

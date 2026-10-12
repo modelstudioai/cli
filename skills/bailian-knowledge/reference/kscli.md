@@ -1264,13 +1264,6 @@ kscli kb create --name <text> --description <text> (--doc-id <id> | --category-i
 - Authentication: apiKey
 - Preparation: none
 
-**Risk: high (billing)**
-
-Knowledge bases accrue running-time charges from creation, even without queries. The one-time 720-hour allowance is shared across Standard Edition knowledge bases and expires 30 days after service activation for new users. Model calls are billed separately. Your remaining allowance has not been verified. Delete unused knowledge bases to stop their running-time charges.
-https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base
-
-Use `--yes` only after the user has confirmed this operation and its scope. Exit code 7 is a confirmation request, not a bug.
-
 ### Flags
 
 | Flag                                    | Type   | Required | Description                                                                                               |
@@ -1298,9 +1291,11 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 | --version                               | switch | —        | Print version                                                                                             |
 | --wait                                  | switch | —        | Poll the initial import job to a terminal state                                                           |
 | --workspace-id <id>                     | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                           |
-| --yes                                   | switch | —        | Confirm this high-risk operation                                                                          |
 
 ### Notes
+
+Knowledge bases accrue running-time charges from creation, even without queries. The one-time 720-hour allowance is shared across Standard Edition knowledge bases and expires 30 days after service activation for new users. Model calls are billed separately. Your remaining allowance has not been verified. Delete unused knowledge bases to stop their running-time charges.
+https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base
 
 Structure/sink types are unstructured and BUILT_IN. Multimedia uses basic_multimedia_qa, qwen3-vl-embedding and qwen3-vl-rerank with similar reranking. Allowed explicit models are validated by the server.
 

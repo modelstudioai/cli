@@ -138,7 +138,9 @@
 
 涉及删除的命令（`kb delete`、`doc delete`、`chunk delete`、`file delete`、`category delete`、`service delete`、`service deploy`）属于高风险操作。未带 `--yes` 时 CLI 不会执行，也不会弹出交互式 Y/N，而是返回 exit code 7 和 `requires_confirmation`；确认后在原命令中添加 `--yes` 重新执行。
 
-直接创建知识库同样需要计费确认；`init` 根据只读预检计划判断是否需要新建。已授权且范围未改变时无需重复征询，但不能因为存在免费额度就自动确认。费用提醒和已创建资源诊断可能输出到 stderr，quiet 不会抑制这些提醒。
+直接创建知识库（`bl knowledge create` / `kscli kb create`）无需 `--yes`，不会因缺少确认参数返回退出码 7。计费提示展示在 `--help` 和创建结果中；JSON 结果的 `notices` 包含 `KNOWLEDGE_BILLING` 提示，stderr 也保留费用提醒和已创建资源诊断，`--quiet` 不抑制这些提醒。
+
+`init` 根据只读预检计划判断是否需要新建，涉及新建时仍需要 `--yes`。已授权且范围未改变时无需重复征询，但不能因为存在免费额度就自动确认。
 
 ### Dry-run 模式
 
@@ -180,7 +182,7 @@ bl knowledge init --workspace-id <workspace-id> --dry-run
 bl knowledge doc upload --file ./docs/intro.md --workspace-id ws-xxx
 # → 返回 file-id
 
-# 2. 用文件创建知识库
+# 2. 用文件创建知识库（无需 --yes，结果包含计费提示）
 bl knowledge create --name my-kb --description '产品文档' --doc-id file-xxx --workspace-id ws-xxx --wait
 # → 返回 index-id (pipelineId) 和导入任务状态
 
