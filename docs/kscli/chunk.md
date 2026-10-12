@@ -246,3 +246,9 @@ kscli chunk delete --index-id idx-xxx --chunk-id chunk-a --yes
 ---
 
 ← [返回总览](./kscli-cli-guide.md)
+
+## 音视频切片输出
+
+`chunk list` 文本在 content/text 为空时回退到 clip_description，并展示视频、音频、图片 URL、毫秒时间范围和 audio_segments。0 毫秒是有效起点；跨 clip 的音频片段不裁剪。JSON 原样保留媒体数组、历史标量与未知 metadata 字段。
+
+`chunk add` 不支持 multimedia 知识库，命令帮助明确提示；CLI 不额外查询知识库类型，服务端拒绝原样透传。不提供媒体 chunk 的新增或编辑。

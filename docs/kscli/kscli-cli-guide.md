@@ -1,6 +1,6 @@
 # `kscli` 命令完整用法指南
 
-> Knowledge Studio CLI（`kscli`）命令总览，覆盖全部 37 个命令：34 个知识库命令 + 3 个配置/维护命令。完整参数与示例请参阅各子域手册。
+> Knowledge Studio CLI（`kscli`）命令总览，覆盖全部 39 个命令：36 个知识库命令 + 3 个配置/维护命令。完整参数与示例请参阅各子域手册。
 
 ---
 
@@ -11,6 +11,7 @@
 3. [通用约定](#通用约定)
 4. [典型工作流](#典型工作流)
 5. [命令手册](#命令手册)
+   - [初始化](#初始化)
    - [知识库管理](#知识库管理) → [完整手册](kb.md)
    - [文档管理](#文档管理) → [完整手册](doc.md)
    - [检索服务管理](#检索服务管理) → [完整手册](service.md)
@@ -21,6 +22,7 @@
    - [配置与维护](#配置与维护)
 6. [常见错误与排查](#常见错误与排查)
 7. [附录：命令速查表](#附录命令速查表)
+8. [音视频升级入口](#音视频升级入口)
 
 ---
 
@@ -28,15 +30,16 @@
 
 `kscli`（`knowledge-studio-cli`）是面向 RAG 开发者的知识库专用 CLI，把知识库能力铺平成一级命令组，覆盖 RAG（检索增强生成）全链路：
 
-- **知识库全生命周期管理**：创建、查看、更新、删除、监控
-- **文档管理**：上传本地文件或目录、从 OSS 批量导入、查看解析状态、删除、打标签
+- **快速初始化**：`init` 上传样例、创建或复用归属明确的知识库与 beta 检索服务，并以样例检索成功为完成标准
+- **知识库全生命周期管理**：创建、查看、更新、删除、监控；支持文档库与音视频库
+- **文档管理**：上传本地文件或目录、目录增量同步、从 OSS 批量导入、把已有文件导入知识库、查看解析状态、删除、打标签；支持音视频接入
 - **Chunk 级运维**：直接增删改查知识库中的内容切片
 - **检索服务管理**：创建/部署/复制/删除 Q&A 和检索服务（agent），管理 draft 与发布版本
 - **数据中心管理**：文件、数据集（collection）、分类的增删查
-- **检索与对话**：语义检索（search）、多轮对话（chat）
+- **检索与对话**：语义检索（search）、多轮对话（chat）；保留媒体来源与问答过程字段
 - **配置与维护**：查看/修改本地配置、自更新 CLI
 
-共 37 个命令：34 个知识库命令（按功能域分为 7 组）+ `config show` / `config set` / `update`。所有知识库命令均使用 DashScope API Key 鉴权。
+共 39 个命令：36 个知识库命令（按功能域分为 7 组，另加顶层 `init`）+ `config show` / `config set` / `update`。所有知识库命令均使用 DashScope API Key 鉴权。`--help` 与 `--introspect` 不需要凭证。
 
 > **与 `bl` 的关系**：`kscli` 与 `bl knowledge` 复用同一套命令实现，flag 名、行为逻辑、校验规则完全一致，只有命令路径不同 —— `kscli` 把知识库能力铺平（`kscli kb list`、`kscli file list`），`bl` 则把它们收在 `bl knowledge` 之下。用 `bl` 的读者请参阅 [`bl knowledge` 指南](../knowledge/knowledge-cli-guide.md)。
 
@@ -65,7 +68,7 @@ kscli --help
 │                      │                      可多级嵌套       │
 │                      └── 默认分类                            │
 │                                                             │
-│  文件来源：doc upload(本地上传) / doc import-oss(OSS导入)     │
+│  文件来源：upload / sync / import-oss / import                │
 └──────────────────────────┬──────────────────────────────────┘
                            │ 导入 (import job)
                            ▼
@@ -77,7 +80,8 @@ kscli --help
 │    │     └── Chunk ── 内容切片，可增删改查、排除/恢复检索     │
 │    └── 索引设置 (immutable): 向量模型、切片大小等             │
 │                                                             │
-│  知识库管理命令: kb create / list / info / update / delete / stats │
+│  管理命令: init / kb create / list / info / update / delete   │
+│           / stats                                             │
 └──────────────────────────┬──────────────────────────────────┘
                            │ 绑定 (agent_config.kb_search_configs)
                            ▼
@@ -97,7 +101,7 @@ kscli --help
 
 **关键关系**：
 
-- **数据中心文件 → 知识库**：通过 `kscli kb create --doc-id` 或 `kscli doc upload --index-id` 导入，文件解析后自动生成 chunk
+- **数据中心文件 → 知识库**：通过 `kscli kb create --doc-id`、`kscli doc upload --index-id`、`kscli doc import` 或 `kscli doc sync` 导入，文件解析后自动生成 chunk
 - **知识库 → 检索服务**：一个服务可绑定多个知识库，服务配置中 `kb_search_configs` 指定关联的知识库 ID
 - **检索服务 → 检索/对话**：`kscli search` 和 `kscli chat` 通过 `--agent-id` 指定服务来执行检索或对话
 
@@ -107,7 +111,7 @@ kscli --help
 
 ### 鉴权
 
-所有知识库命令均使用 **DashScope API Key**（Bearer token）鉴权。获取方式：百炼控制台 API Key 页面。
+知识库业务命令使用 **DashScope API Key**（Bearer token）鉴权。`--help` 和 `--introspect` 无需凭证。获取方式：百炼控制台 API Key 页面。
 
 优先级（高 → 低）：
 
@@ -139,8 +143,9 @@ kscli --help
 | `--timeout <seconds>` | number | 请求超时秒数                                                |
 | `--quiet`             | switch | 静默模式，只输出关键结果（如 ID 列表）                      |
 | `--verbose`           | switch | 详细模式，打印 HTTP 请求/响应详情到 stderr                  |
-| `--dry-run`           | switch | 干跑模式，预览将发送的请求结构，不实际调用 API              |
-| `--config <name>`     | string | 使用指定配置 profile 执行命令                               |
+| `--dry-run`           | switch | 预览请求或执行计划，不写入；带只读预检的命令可能读取远端资源 |
+| `--introspect`        | switch | 输出当前命令范围的结构化能力说明，无需凭证                   |
+| `--config <name>`     | string | 使用指定配置 profile 执行命令                                |
 
 > **注意**：命令手册中每个命令的参数表只列出该命令**特有**的参数。上述全局参数对所有命令有效。
 
@@ -154,9 +159,42 @@ kscli --help
 
 涉及删除的命令（`kb delete`、`doc delete`、`chunk delete`、`file delete`、`category delete`、`service delete`）以及 `service deploy` 属于高风险操作。未带 `--yes` 时 CLI 不会执行，也不会弹出交互式 Y/N，而是返回 exit code 7 和 `requires_confirmation`；确认后在原命令中添加 `--yes` 重新执行。
 
+直接创建知识库同样需要计费确认；`init` 根据只读预检计划判断是否需要新建。已授权且范围未改变时无需重复征询，但不能因为存在免费额度就自动确认。费用提醒和已创建资源诊断可能输出到 stderr，quiet 不会抑制这些提醒。`doc sync` 在替换或删除已有文档时同样返回确认要求。
+
 ### Dry-run 模式
 
-`--dry-run` 模式下，命令会输出将发送的 endpoint 和 request body，但**不实际发起网络请求**。部分命令在 dry-run 下仍会执行本地校验（如文件扩展名检查、参数约束检查）。
+普通静态命令的 `--dry-run` 输出请求预览，不发起网络请求，可能执行文件扩展名等本地校验。声明只读预检的命令（如 `init`、`doc sync`）会鉴权并读取已有资源以生成真实计划；不修改云端资源或本地恢复记录。`init --dry-run` 也不运行样例检索。不要把所有 dry-run 都当成离线模式。
+
+### 命令能力发现
+
+```bash
+kscli --introspect
+kscli init --introspect
+kscli doc sync --introspect
+```
+
+分别获取根命令或单个叶子命令的一份 JSON，包含真实产品命令路径、双语描述、参数、示例、鉴权域、风险和只读预检标识。它无需凭证，不执行业务请求，也不返回凭证值。当前 `schema_version` 为 1；已安装 CLI 版本用 `kscli --version` 查询，schema 不携带渠道临时版本号。同版本只做兼容性字段增加；消费者应忽略未知字段，遇到不支持的 schema 版本明确报错。跨参数校验不在 schema 中导出，不能从描述推断结构化默认值。Skill 参数参考与此 schema 使用同一数据源。`bl knowledge --introspect` 描述的是同一套实现在 `bl` 上的路径。
+
+### 初始化与持续计费
+
+```bash
+kscli init --workspace-id <workspace-id> --dry-run
+```
+
+查看计划后确认创建及费用，再去掉 `--dry-run` 并添加 `--yes`。初始化会上传样例、创建或复用归属明确的知识库与 beta 检索服务，以检索到样例内容为成功标准；不会自动创建问答服务或发布服务。
+
+知识库从创建成功起持续按时计费。标准版一次性 720 小时额度由多个知识库共享，新用户开通后 30 天内有效，模型调用另计；CLI 不假定账户余额。见[计费规则](https://help.aliyun.com/zh/model-studio/billing-for-knowledge-base)。
+
+初始化成功后，文本输出展示实际样例查询、命中文档名称（服务端提供时）和最多 400 字符的内容摘要。`--output json` 的 `sampleSearch.query` 是实际查询，`sampleSearch.response` 保留该次成功检索的完整响应（包括命中内容、评分和 request_id）；原有 `sampleMatched` 字段保持兼容。展示复用初始化验证中的响应，不额外调用检索接口，也不将检索响应写入恢复记录。
+
+保留返回的 index/agent ID、created/reused 信息和 `.bailian/knowledge/init.json`（可用 `--state-file` 指定）。继续检索时使用返回的 **agent ID**，不要填知识库 index ID。重复执行先核对已有资源；同名但归属不明或请求结果不确定时不会擅自重建。创建后失败仍会输出已创建资源与计费提醒。按返回的清理动作处理本次新建资源，复用资源不属于默认清理范围；关闭终端不停止计费，成功删除知识库才能停止其规格计费。
+
+```bash
+kscli search --agent-id <agent-id> --agent-version beta --query "RAG" --workspace-id <workspace-id>
+kscli kb delete --index-id <index-id> --workspace-id <workspace-id>
+```
+
+删除需要确认；只有确认范围后才添加 `--yes`。仅删除文档或检索服务不能停止知识库规格计费。
 
 ---
 
@@ -268,19 +306,63 @@ kscli kb create --name oss-kb --description 'OSS 导入文档' --doc-id file-a -
 kscli search --query "相关内容" --agent-id aid-xxx --workspace-id ws-xxx
 ```
 
+### 场景 G：把本地目录持续同步到已有知识库
+
+```bash
+# 1. 先预览。允许读取远端，不上传、不删除
+kscli doc sync --dir ./docs --index-id idx-xxx --dry-run
+
+# 2. 确认替换范围后执行。仅新增不要求 --yes；替换或删除返回退出码 7
+kscli doc sync --dir ./docs --index-id idx-xxx --yes
+
+# 3. 本地删除默认保留远端。要删除索引文档时单独预览并确认
+kscli doc sync --dir ./docs --index-id idx-xxx --delete --dry-run
+kscli doc sync --dir ./docs --index-id idx-xxx --delete --yes
+```
+
+状态文件默认在 `<dir>/.bailian/sync-state.json`。音视频和不受支持的格式会跳过。参数与失败恢复见 [文档管理](doc.md#kscli-doc-sync)。
+
+### 场景 H：把已有文件或音视频导入已有库
+
+```bash
+# 已有数据中心 fileId，不重复上传
+kscli doc import --index-id idx-xxx --doc-id file-xxx --wait
+
+# 本地音视频上传并入库
+kscli doc upload --file ./short.mp4 --parser DOCMIND_LLM_VERSION_MEDIA --index-id idx-xxx --wait
+```
+
+历史 fileId 的查找步骤见 [数据集与分类](collection-category.md#从-collection-查历史-fileid)。接入参数见 [文档管理](doc.md#已有文件导入与音视频接入)。
+
 ---
 
 ## 命令手册
 
-以下按功能域分组，覆盖全部 37 个命令。每个条目包含功能说明、用法签名和详细手册链接。
+以下按功能域分组，覆盖全部 39 个命令。每个条目包含功能说明、用法签名和详细手册链接。
 
 > 完整参数表、参数约束、输出说明、注意事项与示例请参阅各子域手册。
 
 ---
 
+### 初始化
+
+> 行为、计费与恢复记录见 [初始化与持续计费](#初始化与持续计费)。
+
+#### `kscli init`
+
+上传样例，创建或复用知识库与 beta 检索服务，并验证样例检索。
+
+```bash
+kscli init --workspace-id <id> [--dry-run] [--yes]
+```
+
+→ [初始化与持续计费](#初始化与持续计费)
+
+---
+
 ### 知识库管理
 
-> 📖 [完整手册](kb.md) — 6 个命令
+> 📖 [完整手册](kb.md) — 6 个命令。音视频建库见 [音视频知识库](kb.md#音视频知识库)。
 
 #### `kscli kb list`
 
@@ -356,7 +438,19 @@ kscli kb stats --index-id <id> [flags]
 
 ### 文档管理
 
-> 📖 [完整手册](doc.md) — 6 个命令
+> 📖 [完整手册](doc.md) — 8 个命令
+
+#### `kscli doc sync`
+
+将本地目录增量同步到已有知识库。
+
+```bash
+kscli doc sync --dir <path> --index-id <id> [--delete] [--dry-run] [--yes]
+```
+
+→ [完整参数与示例](doc.md#kscli-doc-sync)
+
+---
 
 #### `kscli doc list`
 
@@ -430,9 +524,21 @@ kscli doc import-oss --bucket <name> --region <id> --oss-key <key> [flags]
 
 ---
 
+#### `kscli doc import`
+
+把已有数据中心文件或分类导入已有知识库，不重复上传。
+
+```bash
+kscli doc import --index-id <id> (--doc-id <id> | --category-id <id>) [flags]
+```
+
+→ [已有文件导入与音视频接入](doc.md#已有文件导入与音视频接入)
+
+---
+
 ### 检索服务管理
 
-> 📖 [完整手册](service.md) — 7 个命令
+> 📖 [完整手册](service.md) — 7 个命令。媒体检索模型见 [完整服务配置与媒体检索模型](service.md#完整服务配置与媒体检索模型)。
 
 #### `kscli service list`
 
@@ -683,7 +789,7 @@ kscli category delete --category-id <id> [flags]
 对知识库执行语义检索（RAG 检索）。
 
 ```bash
-kscli search --query <text> --agent-id <id> [flags]
+kscli search --agent-id <id> (--query <text> | --image <url>) [flags]
 ```
 
 → [完整参数与示例](search-chat.md#kscli-search)
@@ -872,18 +978,21 @@ kscli config set --key workspace_id --value ws-xxx
 
 | 命令                      | 功能         | 关键参数                                                    |
 | ------------------------- | ------------ | ----------------------------------------------------------- |
+| `kscli init`              | 样例初始化   | `--workspace-id`, `--dry-run`, `--yes`                      |
 | `kscli kb list`           | 列出知识库   | `--name`                                                    |
 | `kscli kb info`           | 知识库详情   | `--index-id`                                                |
-| `kscli kb create`         | 创建知识库   | `--name`, `--description`, `--doc-id`/`--category-id`       |
+| `kscli kb create`         | 创建知识库   | `--name`, `--doc-id`/`--category-id`, `--knowledge-type`    |
 | `kscli kb update`         | 更新知识库   | `--index-id`, `--name`/`--description`/`--rerank-min-score` |
 | `kscli kb delete`         | 删除知识库   | `--index-id`, `--yes`                                       |
 | `kscli kb stats`          | 监控数据     | `--index-id`, `--start`/`--end`                             |
-| `kscli doc list`          | 文档列表     | `--index-id`                                                |
+| `kscli doc sync`          | 目录增量同步 | `--dir`, `--index-id`, `--delete`, `--yes`                  |
+| `kscli doc list`          | 文档列表     | `--index-id`, `--details`                                   |
 | `kscli doc status`        | 导入任务状态 | `--index-id`, `--job-id`, `--wait`                          |
 | `kscli doc upload`        | 上传文件     | `--file`, `--index-id`, `--wait`                            |
 | `kscli doc delete`        | 删除文档     | `--index-id`, `--doc-id`                                    |
 | `kscli doc tag`           | 文件打标签   | `--doc-id`, `--tag`, `--mode`                               |
-| `kscli doc import-oss`    | OSS 导入     | `--bucket`, `--region`, `--oss-key`                         |
+| `kscli doc import-oss`    | OSS 导入     | `--bucket`, `--region`, `--oss-key`, `--parser`             |
+| `kscli doc import`        | 已有文件入库 | `--index-id`, `--doc-id`/`--category-id`, `--wait`          |
 | `kscli service list`      | 服务列表     | `--scene`                                                   |
 | `kscli service get`       | 服务详情     | `--agent-id`                                                |
 | `kscli service create`    | 创建服务     | `--name`, `--scene`, `--index-id`                           |
@@ -903,8 +1012,12 @@ kscli config set --key workspace_id --value ws-xxx
 | `kscli category list`     | 分类列表     | `--collection-id`, `--parent-id`                            |
 | `kscli category add`      | 创建分类     | `--name`, `--parent-id`                                     |
 | `kscli category delete`   | 删除分类     | `--category-id`, `--yes`                                    |
-| `kscli search`            | 语义检索     | `--query`, `--agent-id`                                     |
-| `kscli chat`              | RAG 对话     | `--message`, `--agent-id`                                   |
+| `kscli search`            | 语义检索     | `--agent-id`, `--query`/`--image`                           |
+| `kscli chat`              | RAG 对话     | `--agent-id`, `--message`/`--messages-file`                 |
 | `kscli config show`       | 查看配置     | `--output`                                                  |
 | `kscli config set`        | 写入配置     | `--key`, `--value`                                          |
 | `kscli update`            | 自更新 CLI   | `--to`                                                      |
+
+## 音视频升级入口
+
+已有文件接入已有库使用 `kscli doc import --index-id <id> --doc-id <fileId>`。它与 `doc upload`（本地上传）和 `doc import-oss`（OSS 注册）分开；`bl knowledge doc import` 参数相同。历史 fileId 的发现步骤见 [数据集与分类](collection-category.md#从-collection-查历史-fileid)。媒体接入参数见 [文档管理](doc.md#已有文件导入与音视频接入)，输出合同见 [检索与对话](search-chat.md#媒体结果与问答输出合同)。

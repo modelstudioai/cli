@@ -266,3 +266,16 @@ kscli category delete --category-id cate-xxx --yes
 ---
 
 ← [返回总览](./kscli-cli-guide.md)
+
+## 从 collection 查历史 fileId
+
+历史 fileId 不限于 `doc import-oss` 创建的文件。先列出 collection 的分类，再逐个列出文件：
+
+```sh
+kscli category list --collection-id collection-example --output json
+kscli category list --collection-id collection-example --parent-id category-example --output json
+kscli file list --category-id category-example --output json
+kscli doc import --index-id index-example --doc-id file-example --wait
+```
+
+分类与文件列表遇到 `data.nextToken` 时，保持原过滤条件并追加 `--next-token` 继续读取；对子分类重复遍历。文件 ID 取自 `data.fileList[].fileId`，不要把分类 ID 或知识库 doc ID 当作文件 ID。`doc import` 不重复上传文件，但重新入库仍可能触发解析，真实验收仍计入一次解析预算。
