@@ -23,8 +23,10 @@
  */
 import { createHash } from "node:crypto";
 import {
+  copyFileSync,
   createWriteStream,
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -33,7 +35,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { createBrotliDecompress } from "node:zlib";
@@ -52,6 +54,7 @@ const OBJECT_FILE_RE = /^sha256-[0-9a-f]{64}\.tar\.br$/;
 
 const INDEX_TIMEOUT_MS = 3000;
 const DOWNLOAD_TIMEOUT_MS = 30000;
+const WINDOWS_LEGACY_MAX_PATH = 259;
 
 function getConfigDir() {
   if (process.env.BAILIAN_CONFIG_DIR) return process.env.BAILIAN_CONFIG_DIR;
@@ -170,24 +173,115 @@ function computeDirContentHash(dir) {
   return `sha256:${hash.digest("hex")}`;
 }
 
+function listTreeEntries(rootDir) {
+  const entries = [];
+  const visit = (currentDir) => {
+    for (const entry of readdirSync(currentDir, { withFileTypes: true }).sort((left, right) =>
+      left.name.localeCompare(right.name),
+    )) {
+      const path = join(currentDir, entry.name);
+      const relativePath = relative(rootDir, path);
+      if (entry.isDirectory()) {
+        entries.push({ relativePath, type: "directory" });
+        visit(path);
+      } else if (entry.isFile()) {
+        entries.push({ relativePath, type: "file" });
+      }
+    }
+  };
+  visit(rootDir);
+  return entries;
+}
+
+function assertWindowsCompatiblePaths(sourceDir, projectedRoot) {
+  if (process.platform !== "win32") return;
+  for (const entry of listTreeEntries(sourceDir)) {
+    const pathLength = join(projectedRoot, entry.relativePath).length;
+    if (pathLength > WINDOWS_LEGACY_MAX_PATH) {
+      throw new Error(
+        `Windows-incompatible skill path (${pathLength} characters): ${entry.relativePath}. ` +
+          "The skill package must shorten this path before it can be installed safely.",
+      );
+    }
+  }
+}
+
+/** Replace children without renaming a root directory held open by a Windows agent. */
+function reconcileDirectoryContents(sourceDir, destDir) {
+  const sourceEntries = listTreeEntries(sourceDir);
+  const expectedPaths = new Set(sourceEntries.map((entry) => entry.relativePath));
+  mkdirSync(destDir, { recursive: true });
+
+  for (const entry of sourceEntries) {
+    const sourcePath = join(sourceDir, entry.relativePath);
+    const destPath = join(destDir, entry.relativePath);
+    if (existsSync(destPath)) {
+      const destStat = lstatSync(destPath);
+      const typeMatches = entry.type === "directory" ? destStat.isDirectory() : destStat.isFile();
+      if (!typeMatches || destStat.isSymbolicLink()) {
+        rmSync(destPath, { recursive: true, force: true });
+      }
+    }
+    if (entry.type === "directory") {
+      mkdirSync(destPath, { recursive: true });
+    } else {
+      mkdirSync(dirname(destPath), { recursive: true });
+      copyFileSync(sourcePath, destPath);
+    }
+  }
+
+  const staleEntries = listTreeEntries(destDir)
+    .filter((entry) => !expectedPaths.has(entry.relativePath))
+    .sort((left, right) => right.relativePath.length - left.relativePath.length);
+  for (const entry of staleEntries) {
+    rmSync(join(destDir, entry.relativePath), { recursive: true, force: true });
+  }
+}
+
+function cleanupBackup(backup) {
+  try {
+    if (existsSync(backup)) rmSync(backup, { recursive: true, force: true });
+  } catch {
+    /* keep the backup on disk rather than report a completed swap as failed */
+  }
+}
+
 /** Atomic swap: tmpDir (same volume) → catalogDir. */
 function atomicSwap(tmpDir, catalogDir) {
   mkdirSync(dirname(catalogDir), { recursive: true });
   const backup = `${catalogDir}.old-${Date.now()}`;
-  if (existsSync(catalogDir)) renameSync(catalogDir, backup);
+  if (existsSync(catalogDir)) {
+    try {
+      renameSync(catalogDir, backup);
+    } catch (error) {
+      if (process.platform !== "win32" || (error?.code !== "EPERM" && error?.code !== "EBUSY")) {
+        throw error;
+      }
+      try {
+        reconcileDirectoryContents(catalogDir, backup);
+        reconcileDirectoryContents(tmpDir, catalogDir);
+        cleanupBackup(backup);
+        return;
+      } catch (fallbackError) {
+        try {
+          if (existsSync(backup)) reconcileDirectoryContents(backup, catalogDir);
+        } catch {
+          /* retain backup for manual recovery if an open file also blocks rollback */
+        }
+        throw new Error(
+          `Skill directory is in use and could not be updated in place. Close running agent hosts and retry. ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`,
+          { cause: fallbackError },
+        );
+      }
+    }
+  }
   try {
     renameSync(tmpDir, catalogDir);
   } catch (err) {
     if (existsSync(backup) && !existsSync(catalogDir)) renameSync(backup, catalogDir);
     throw err;
   }
-  // Best-effort cleanup (symmetric with core skills/extract.ts): the swap already
-  // succeeded, so a backup deletion failure must not fail the pre-download
-  try {
-    if (existsSync(backup)) rmSync(backup, { recursive: true, force: true });
-  } catch {
-    /* keep the backup on disk rather than report a completed swap as failed */
-  }
+  cleanupBackup(backup);
 }
 
 async function main() {
@@ -208,6 +302,7 @@ async function main() {
   try {
     mkdirSync(tmpDir, { recursive: true });
     await extractTarBr(tarBuf, tmpDir);
+    assertWindowsCompatiblePaths(tmpDir, catalogDir);
     // Symmetric with layer 2 (core installer): reject archive/index fingerprint mismatch
     // before touching the canonical dir
     if (entry.contentHash.startsWith("sha256:")) {

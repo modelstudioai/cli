@@ -38,20 +38,19 @@ export default defineCommand({
     }
 
     const hyperParameters = job.hyper_parameters;
-    const hyperParts: string[] = [];
-    if (hyperParameters?.n_epochs !== undefined)
-      hyperParts.push(`n_epochs=${hyperParameters.n_epochs}`);
-    if (hyperParameters?.batch_size !== undefined)
-      hyperParts.push(`batch_size=${hyperParameters.batch_size}`);
-    if (hyperParameters?.learning_rate !== undefined)
-      hyperParts.push(`learning_rate=${hyperParameters.learning_rate}`);
-    if (hyperParameters?.max_length !== undefined)
-      hyperParts.push(`max_length=${hyperParameters.max_length}`);
+    const hyperParts = Object.entries(hyperParameters ?? {}).map(
+      ([parameterName, value]) =>
+        `${parameterName}=${typeof value === "string" ? value : JSON.stringify(value)}`,
+    );
 
     const usageTokens = typeof job.usage === "number" ? job.usage : undefined;
 
     const item: Record<string, unknown> = {
       job_id: job.job_id ?? jobId,
+      job_name: job.job_name ?? "",
+      priority: job.priority ?? "",
+      hyper_parameters: hyperParameters ?? {},
+      max_output_cnt: job.max_output_cnt ?? null,
       base_model: job.model ?? "",
       status: job.status ?? "",
       training_type: job.training_type ?? "",

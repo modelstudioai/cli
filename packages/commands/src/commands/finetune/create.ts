@@ -264,12 +264,104 @@ const COMMON_FLAGS = {
 
 /**
  * Text flags: text models consume the full hyper-parameter surface — training
- * type selection plus n_epochs / batch_size / learning_rate / max_length (see
+ * type selection, base parameters and explicit LoRA/evaluation/save settings (see
  * resolveTextHyperParameters). Only text exposes --training-type because only
  * text models support types other than the sft-lora default.
  */
 const TEXT_FLAGS = {
   ...COMMON_FLAGS,
+  jobName: {
+    type: "string",
+    valueHint: "<value>",
+    description: {
+      "en-US": "Training job display name (job_name)",
+      "zh-CN": "训练任务显示名称（job_name）",
+    },
+  },
+  priority: {
+    type: "string",
+    valueHint: "<value>",
+    description: {
+      "en-US": "Requested scheduling priority; verify the service response",
+      "zh-CN": "请求的调度优先级；请核对服务端回执",
+    },
+    choices: ["L0", "L1", "L2", "L3"] as const,
+  },
+  evalSteps: {
+    type: "number",
+    valueHint: "<value>",
+    description: { "en-US": "Validation interval in training steps", "zh-CN": "训练验证间隔步数" },
+  },
+  loraAlpha: {
+    type: "number",
+    valueHint: "<value>",
+    description: { "en-US": "LoRA scaling coefficient", "zh-CN": "LoRA 缩放系数" },
+  },
+  loraDropout: {
+    type: "number",
+    valueHint: "<value>",
+    description: { "en-US": "LoRA dropout probability", "zh-CN": "LoRA 丢弃率" },
+  },
+  loraRank: {
+    type: "number",
+    valueHint: "<value>",
+    description: { "en-US": "LoRA matrix rank", "zh-CN": "LoRA 矩阵秩" },
+  },
+  lrSchedulerType: {
+    type: "string",
+    valueHint: "<value>",
+    description: {
+      "en-US": "Learning rate scheduler supported by the selected model",
+      "zh-CN": "所选模型支持的学习率调度策略",
+    },
+  },
+  saveStrategy: {
+    type: "string",
+    valueHint: "<value>",
+    description: { "en-US": "Checkpoint saving strategy", "zh-CN": "Checkpoint 保存策略" },
+    choices: ["epoch", "steps"] as const,
+  },
+  saveTotalLimit: {
+    type: "number",
+    valueHint: "<value>",
+    description: {
+      "en-US": "Maximum number of saved checkpoints",
+      "zh-CN": "最多保存的 Checkpoint 数量",
+    },
+  },
+  saveSteps: {
+    type: "number",
+    valueHint: "<value>",
+    description: {
+      "en-US": "Checkpoint saving interval for strategy=steps",
+      "zh-CN": "按 steps 保存时的间隔",
+    },
+  },
+  split: {
+    type: "number",
+    valueHint: "<value>",
+    description: {
+      "en-US": "Training fraction when no validation dataset is supplied",
+      "zh-CN": "未指定验证集时训练集所占比例",
+    },
+  },
+  maxSplitValDatasetSample: {
+    type: "number",
+    valueHint: "<value>",
+    description: {
+      "en-US": "Maximum automatically split validation samples",
+      "zh-CN": "自动切分验证集的样本数量上限",
+    },
+  },
+  dataAugmentation: {
+    type: "string",
+    valueHint: "<value>",
+    description: {
+      "en-US": "Mix platform training data (true or false)",
+      "zh-CN": "是否混入平台训练数据（true 或 false）",
+    },
+    choices: ["true", "false"] as const,
+  },
   trainingType: {
     type: "string",
     valueHint: "<t>",
@@ -348,7 +440,7 @@ const IMAGE_FLAGS = {
 } satisfies FlagsDef;
 
 const TEXT_USAGE =
-  "--base-model <model> --datasets <id|path,...> [--validations <id|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>]";
+  "--base-model <model> --datasets <id|path,...> [--validations <id|path,...>] [--job-name <name>] [--priority <L0|L1|L2|L3>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft|sft-lora|dpo|dpo-lora|cpt>]";
 
 const AUDIO_USAGE =
   "--base-model <model> --datasets <id|path> [--validations <id|path>] [--model-name <name>] [--suffix <text>]";
@@ -573,6 +665,77 @@ async function runCreate<F extends FlagsDef>(
     flags as Record<string, unknown>,
   ) as FineTuneHyperParameters;
 
+  if (commandModality === "text") {
+    const extraParameters: Record<string, string> = {
+      evalSteps: "eval_steps",
+      loraAlpha: "lora_alpha",
+      loraDropout: "lora_dropout",
+      loraRank: "lora_rank",
+      lrSchedulerType: "lr_scheduler_type",
+      saveStrategy: "save_strategy",
+      saveTotalLimit: "save_total_limit",
+      saveSteps: "save_steps",
+      split: "split",
+      maxSplitValDatasetSample: "max_split_val_dataset_sample",
+    };
+    for (const [flagName, parameterName] of Object.entries(extraParameters)) {
+      const value = flags[flagName];
+      if (value !== undefined) hp[parameterName] = value;
+    }
+    for (const parameterName of [
+      "eval_steps",
+      "lora_alpha",
+      "lora_rank",
+      "save_total_limit",
+      "save_steps",
+      "max_split_val_dataset_sample",
+    ]) {
+      const value = hp[parameterName];
+      if (
+        value !== undefined &&
+        (typeof value !== "number" || !Number.isInteger(value) || value <= 0)
+      ) {
+        throw new BailianError(
+          `${parameterName} must be a positive integer. / 必须为正整数。`,
+          ExitCode.USAGE,
+        );
+      }
+    }
+    if (
+      hp.lora_dropout !== undefined &&
+      (typeof hp.lora_dropout !== "number" ||
+        !Number.isFinite(hp.lora_dropout) ||
+        hp.lora_dropout < 0 ||
+        hp.lora_dropout >= 1)
+    ) {
+      throw new BailianError(
+        "lora_dropout must be in [0, 1). / LoRA 丢弃率必须在 [0, 1) 内。",
+        ExitCode.USAGE,
+      );
+    }
+    if (
+      hp.split !== undefined &&
+      (typeof hp.split !== "number" ||
+        !Number.isFinite(hp.split) ||
+        hp.split <= 0 ||
+        hp.split >= 1 ||
+        flags.validations)
+    ) {
+      throw new BailianError(
+        "split must be in (0, 1) and cannot be combined with validations. / 切分比例须在 (0, 1) 内，且不能与独立验证集同时设置。",
+        ExitCode.USAGE,
+      );
+    }
+    if (flags.dataAugmentation !== undefined)
+      hp.data_augmentation = flags.dataAugmentation === "true";
+    if (hp.save_strategy === "steps" && hp.save_steps === undefined) {
+      throw new BailianError(
+        "save_strategy=steps requires --save-steps. / 按步保存时必须指定 --save-steps。",
+        ExitCode.USAGE,
+      );
+    }
+  }
+
   // Restore the batch-size clamping warning that was lost when the logic moved
   // into profiles. The profile silently clamps to [8, 1024]; surface it here
   // so the user has an audit trail. Skip modalities that bypass the batch_size
@@ -699,6 +862,8 @@ async function runCreate<F extends FlagsDef>(
   if (validationFileIds && validationFileIds.length > 0) {
     body.validation_file_ids = validationFileIds;
   }
+  if (typeof flags.jobName === "string") body.job_name = flags.jobName;
+  if (typeof flags.priority === "string") body.priority = flags.priority;
   if (modelName) body.model_name = modelName;
   if (suffix) body.finetuned_output_suffix = suffix;
 
@@ -741,6 +906,7 @@ export const finetuneTextCreate = defineCommand({
     "--base-model qwen3-8b --datasets ./train.jsonl --validations ./eval.jsonl",
     "--base-model qwen3-8b --datasets file-aaa,./extra.jsonl",
     "--base-model qwen3-8b --datasets ./train.jsonl --training-type sft",
+    "--base-model qwen3-8b --datasets ./jev-train.jsonl --job-name jev-train-v1 --priority L0 --lora-rank 8 --lora-alpha 16 --lora-dropout 0.1 --lr-scheduler-type linear --eval-steps 50 --save-strategy epoch --save-total-limit 3 --split 0.9 --max-split-val-dataset-sample 1000 --data-augmentation false --dry-run",
     '--base-model qwen3-8b --datasets file-xxx --learning-rate "1.6e-5" --n-epochs 4',
     "--base-model qwen3-8b --datasets file-xxx --output json",
     "--base-model qwen3-8b --datasets file-xxx --dry-run",

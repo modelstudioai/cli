@@ -39,6 +39,8 @@ export interface CreateFineTuneRequest {
   hyper_parameters?: FineTuneHyperParameters;
   /** Display name for the job (optional, server generates if omitted). */
   job_name?: string;
+  /** Requested scheduling priority; the service determines the effective priority. */
+  priority?: string;
   /** Output model name. Either bring your own or let the server generate one. */
   model_name?: string;
   /** Suffix appended by the platform; field is `finetuned_output_suffix` (NOT `suffix`). */

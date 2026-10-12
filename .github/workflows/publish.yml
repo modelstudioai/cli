@@ -11,6 +11,7 @@ on:
           - bailian-cli
           - knowledge-studio-cli
           - bailian-kb-dsh
+          - bailian-memo-dsh
       mode:
         description: "Publish mode"
         required: true
@@ -19,7 +20,7 @@ on:
           - channel
           - stable
       channel:
-        description: "Required when mode=channel. npm dist-tag only (lowercase, digits, dashes), e.g. mcp / plugin / sync-release. bailian-cli binary CDN always overwrites sync-release.json; knowledge-studio-cli and bailian-kb-dsh are npm-only."
+        description: "Required when mode=channel. npm dist-tag only (lowercase, digits, dashes), e.g. mcp / plugin / sync-release. bailian-cli binary CDN always overwrites sync-release.json; knowledge-studio-cli and dsh plugins are npm-only."
         required: false
         type: string
 
@@ -29,7 +30,7 @@ concurrency:
 
 jobs:
   publish-stable:
-    if: inputs.mode == 'stable' && inputs.package != 'bailian-kb-dsh'
+    if: inputs.mode == 'stable' && inputs.package != 'bailian-kb-dsh' && inputs.package != 'bailian-memo-dsh'
     name: publish stable (${{ inputs.package }}) to npm + binary + tag
     runs-on: ubuntu-latest
     environment: production # Required Reviewers gate
@@ -59,13 +60,28 @@ jobs:
       - name: Ensure zip and tar (per-platform binary archives)
         run: sudo apt-get update && sudo apt-get install -y zip
 
+      # bun build --compile leaves an invalid darwin linker signature. rcodesign
+      # re-signs those Mach-O files on the Linux runner (binary-codesign.mjs).
+      - name: Install rcodesign (ad-hoc sign darwin binaries)
+        run: |
+          set -euo pipefail
+          RCODESIGN_VERSION=0.29.0
+          asset="apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          curl -fsSL -o "/tmp/${asset}" \
+            "https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign/${RCODESIGN_VERSION}/${asset}"
+          tar -xzf "/tmp/${asset}" -C /tmp
+          sudo install -m 755 \
+            "/tmp/apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl/rcodesign" \
+            /usr/local/bin/rcodesign
+          rcodesign --version
+
       - run: pnpm install --frozen-lockfile
 
       # Binary compile uses `bun build --compile` CLI (not Bun.build API).
       # Keep this pin in sync with any local smoke tests of binary-compile.mjs.
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.2.19"
+          bun-version: "1.3.14"
 
       - name: publish-stable
         env:
@@ -79,10 +95,12 @@ jobs:
           # Bucket / prefix / allowlists live in the FC function.
           FC_TRIGGER_URL: ${{ vars.FC_TRIGGER_URL }}
           FC_RELEASE_AUDIENCE: ${{ vars.FC_RELEASE_AUDIENCE }}
+        # Script order: git tag, then binary GitHub Release + OSS, then npm.
+        # OSS upload can fail on a network blip; npm must not succeed first.
         run: node tools/release/publish-stable.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }}
 
   publish-channel:
-    if: inputs.mode == 'channel' && inputs.package != 'bailian-kb-dsh'
+    if: inputs.mode == 'channel' && inputs.package != 'bailian-kb-dsh' && inputs.package != 'bailian-memo-dsh'
     name: publish channel (${{ inputs.package }}) to npm + binary
     runs-on: ubuntu-latest
     permissions:
@@ -117,13 +135,28 @@ jobs:
       - name: Ensure zip and tar (per-platform binary archives)
         run: sudo apt-get update && sudo apt-get install -y zip
 
+      # bun build --compile leaves an invalid darwin linker signature. rcodesign
+      # re-signs those Mach-O files on the Linux runner (binary-codesign.mjs).
+      - name: Install rcodesign (ad-hoc sign darwin binaries)
+        run: |
+          set -euo pipefail
+          RCODESIGN_VERSION=0.29.0
+          asset="apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          curl -fsSL -o "/tmp/${asset}" \
+            "https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign/${RCODESIGN_VERSION}/${asset}"
+          tar -xzf "/tmp/${asset}" -C /tmp
+          sudo install -m 755 \
+            "/tmp/apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl/rcodesign" \
+            /usr/local/bin/rcodesign
+          rcodesign --version
+
       - run: pnpm install --frozen-lockfile
 
       # Binary compile uses `bun build --compile` CLI (not Bun.build API).
       # Keep this pin in sync with any local smoke tests of binary-compile.mjs.
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.2.19"
+          bun-version: "1.3.14"
 
       - name: publish-channel
         env:
@@ -132,22 +165,21 @@ jobs:
           # credentials in this repo (see publish-stable env notes).
           FC_TRIGGER_URL: ${{ vars.FC_TRIGGER_URL }}
           FC_RELEASE_AUDIENCE: ${{ vars.FC_RELEASE_AUDIENCE }}
+        # Script order: binary GitHub Release + OSS, then npm.
+        # OSS upload can fail on a network blip; npm must not succeed first.
         run: node tools/release/publish-channel.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }} --channel "${{ inputs.channel }}"
 
-  # bailian-kb-dsh is the dsh plugin (downstream host adapter): independent version,
-  # tsc + tsdown build, npm-only. It shares this workflow's entry UI and setup steps
-  # but NOT publish-stable.mjs / publish-channel.mjs — those broadcast one version
-  # across the locked bl package set and produce binary artifacts, neither of which
-  # applies here. See docs/agents/dsh-plugin.md.
-  publish-kb-dsh:
-    if: inputs.package == 'bailian-kb-dsh'
-    name: publish ${{ inputs.mode }} (bailian-kb-dsh) to npm
+  # Independent dsh plugins (downstream host adapters): own version, tsc + tsdown,
+  # npm-only. Shared workflow entry; NOT publish-stable/channel.mjs. See docs/agents/dsh-plugin.md.
+  publish-dsh-plugin:
+    if: inputs.package == 'bailian-kb-dsh' || inputs.package == 'bailian-memo-dsh'
+    name: publish ${{ inputs.mode }} (${{ inputs.package }}) to npm
     runs-on: ubuntu-latest
     # stable goes through the Required Reviewers gate, same as the bl stable job;
     # channel stays ungated so dist-tag drops need no approval.
     environment: ${{ inputs.mode == 'stable' && 'production' || '' }}
     permissions:
-      contents: write # push the bailian-kb-dsh-v<version> tag (stable only)
+      contents: write # push the <package>-v<version> tag (stable only)
       id-token: write # OIDC for npm Trusted Publishing + provenance
     steps:
       - name: Require channel input
@@ -177,5 +209,5 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: publish-kb-dsh
-        run: node tools/release/publish-kb-dsh.mjs ${{ inputs.mode == 'channel' && format('--channel "{0}"', inputs.channel) || '' }}
+      - name: publish-dsh-plugin
+        run: node tools/release/publish-dsh-plugin.mjs --package "${{ inputs.package }}" ${{ inputs.mode == 'channel' && format('--channel "{0}"', inputs.channel) || '' }}

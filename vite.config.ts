@@ -94,7 +94,7 @@ export default defineConfig({
         // dsh 插件（下游宿主适配层）的 `_` 前缀是“有意不用”的声明：被忽略的 catch
         // 绑定用 `_原因` 命名解释为何可以忽略，测试 mock 的 `_path` 类参数则是为了
         // 钉住被 mock 函数的签名（删了就不再约束调用形状）。
-        files: ["packages/bailian-kb-dsh/**/*.{ts,tsx}"],
+        files: ["packages/bailian-kb-dsh/**/*.{ts,tsx}", "packages/bailian-memo-dsh/**/*.{ts,tsx}"],
         rules: {
           "no-unused-vars": ["error", { caughtErrorsIgnorePattern: "^_", argsIgnorePattern: "^_" }],
         },
@@ -104,7 +104,10 @@ export default defineConfig({
         // node 内置模块和本仓 CLI 包在那里根本不存在,import 到就是运行时必崩。
         // @deepseek-ai/* 的 platform module 白名单仍由 tsdown 的 dsh-client-bundle-purity
         // 插件在构建期把关（名单即 CLIENT_EXTERNALS,见 tsdown.config.ts）。
-        files: ["packages/bailian-kb-dsh/src/web/**/*.{ts,tsx}"],
+        files: [
+          "packages/bailian-kb-dsh/src/web/**/*.{ts,tsx}",
+          "packages/bailian-memo-dsh/src/web/**/*.{ts,tsx}",
+        ],
         rules: {
           "no-restricted-imports": [
             "error",

@@ -2,7 +2,7 @@
  * The two model-facing knowledge tools (kb_search, kb_chat). agent_id is REQUIRED in the schema:
  * a model cannot know from the tool spec whether this deployment configures a default service, and a
  * missing default previously only surfaced at call time, forcing a wasted round-trip. The per-call
- * fallback to a configured default (settings/config or credential) is retained as defense-in-depth,
+ * fallback to a configured default (dsh plugin settings) is retained as defense-in-depth,
  * but note defineTool validates args against the schema before execute, so through that entry point
  * the fallback is inert; the model-facing contract is explicit.
  *
@@ -31,9 +31,9 @@ const DEFAULT_TOP_K = 5;
 
 export interface KbToolDeps {
   client: KbClient;
-  /** Resolves the default retrieval agent id per call (settings/patch config or credential); omitted means no default for kb_search. */
+  /** Resolves the default retrieval agent id per call (dsh plugin settings); omitted means no default for kb_search. */
   resolveDefaultRetrieveAgentId?: () => Promise<string | undefined>;
-  /** Resolves the default chat agent id per call (settings/patch config or credential); omitted means no default for kb_chat. */
+  /** Resolves the default chat agent id per call (dsh plugin settings); omitted means no default for kb_chat. */
   resolveDefaultChatAgentId?: () => Promise<string | undefined>;
   /**
    * Refreshes the service cache and summarizes what the workspace currently
@@ -104,9 +104,8 @@ export function createKbTools(deps: KbToolDeps) {
     if (defaultId === undefined) {
       throw new Error(
         "agent_id is required: no default retrieval service is configured. Pass agent_id explicitly " +
-          "(find ids: `bl knowledge service list --scene search --workspace-id <workspaceId>`), or configure a " +
-          "default: bailian-kb.defaultRetrieveAgentId in ~/.dsh/settings.yaml or " +
-          "BAILIAN_DEFAULT_RETRIEVE_AGENT_ID in ~/.dsh/.credentials.yaml.",
+          '(find ids: `kb_manage args=["service", "list", "--scene", "search"]`), or configure a ' +
+          "defaultRetrieveAgentId on the Bailian knowledge base plugin page.",
       );
     }
     return defaultId;
@@ -118,9 +117,8 @@ export function createKbTools(deps: KbToolDeps) {
     if (defaultId === undefined) {
       throw new Error(
         "agent_id is required: no default chat service is configured. Pass agent_id explicitly " +
-          "(find ids: `bl knowledge service list --scene chat --workspace-id <workspaceId>`), or configure a " +
-          "default: bailian-kb.defaultChatAgentId in ~/.dsh/settings.yaml or " +
-          "BAILIAN_DEFAULT_CHAT_AGENT_ID in ~/.dsh/.credentials.yaml.",
+          '(find ids: `kb_manage args=["service", "list", "--scene", "chat"]`), or configure a ' +
+          "defaultChatAgentId on the Bailian knowledge base plugin page.",
       );
     }
     return defaultId;
@@ -135,7 +133,7 @@ export function createKbTools(deps: KbToolDeps) {
       "top_k caps how many chunks return (client-side cut of the score-ranked results). " +
       "Use kb_chat instead when the user question can be answered by the knowledge base alone. " +
       "Credentials and workspace resolve automatically from DSH config " +
-      "(bailian-kb in ~/.dsh/settings.yaml, DASHSCOPE_API_KEY in ~/.dsh/.credentials.yaml) — " +
+      "(the Bailian knowledge base plugin page, BAILIAN_KB_API_KEY in ~/.dsh/.credentials.yaml) — " +
       "never read or pass them yourself. agent_id is REQUIRED (see its parameter description). " +
       "If no listed service covers what the user is asking about, say so plainly rather than trying " +
       "the closest-looking id: unrelated evidence is worse for the user than none.",
@@ -232,7 +230,7 @@ export function createKbTools(deps: KbToolDeps) {
       "use kb_search instead when you need raw chunks to verify, cite, or combine with other work. " +
       "The pipeline runs an internal analysis/retrieval loop and may take a few minutes. " +
       "Credentials and workspace resolve automatically from DSH config " +
-      "(bailian-kb in ~/.dsh/settings.yaml, DASHSCOPE_API_KEY in ~/.dsh/.credentials.yaml) — " +
+      "(the Bailian knowledge base plugin page, BAILIAN_KB_API_KEY in ~/.dsh/.credentials.yaml) — " +
       "never read or pass them yourself. agent_id is REQUIRED (see its parameter description). " +
       "If no listed service covers what the user is asking about, say so plainly rather than trying " +
       "the closest-looking id.",

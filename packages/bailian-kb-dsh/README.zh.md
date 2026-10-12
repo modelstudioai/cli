@@ -50,64 +50,25 @@ dsh plugin --profile web remove bailian-kb-dsh
 
 ## 配置
 
-### 方式一 — 设置页（推荐）
+通过 dsh 插件设置页配置。API Key 独立使用 dsh credentials 中的 `BAILIAN_KB_API_KEY`（通常为 `~/.dsh/.credentials.yaml`，实际路径由宿主决定）。所有业务设置只保存到本插件的 dsh 配置：
 
-安装后，Web UI 的 **Settings → 百炼知识库** 页出现：
+| 字段                     | 含义                           | 默认值     |
+| ------------------------ | ------------------------------ | ---------- |
+| `workspaceId`            | 所有知识库调用使用的 Workspace | 必填       |
+| `defaultRetrieveAgentId` | 默认检索服务                   | 未设置     |
+| `defaultChatAgentId`     | 默认问答服务                   | 未设置     |
+| `agentVersion`           | 草稿 `beta` 或已发布服务版本   | 最新发布版 |
+| `chatTimeoutMs`          | 问答超时，毫秒                 | 300000     |
 
-- **自动获取** — 在宿主机浏览器中拉起百炼控制台登录；登录完成后，该账号的 API 密钥与工作空间 ID 直接落到宿主机（明文密钥不经过浏览器）。每次登录都会请求签发新密钥，因此切换账号点一次即可。
-- **API 密钥** — 只写不回显：存下的值不会再次显示，只显示"已配置 / 未配置"。
-- **工作空间 ID / 默认检索服务 / 默认对话服务** — 可编辑且回显；两个服务 ID 可从缓存的服务清单里选。清空保存则回退到下层来源。
-- **检索服务缓存** — 展示注入清单的上次拉取时间、各场景服务条数、是否被截断，并提供手动刷新（刚新建完服务想立刻生效时用）。
+端点固定为 `cn-beijing.maas.aliyuncs.com`，不提供端点配置。在设置页保存后，下一次调用即生效。
 
-如果此前已运行过 `bl auth login`，启动时会从 `~/.bailian/config.json` 一次性采纳 API 密钥与工作空间 ID。被你主动清空的值不会被重新填回。
+启动时，缺失的 API Key 可以从 `~/.bailian/config.json` 当前激活的 Profile 导入。首次配置迁移时，缺失的 Workspace 和默认服务从旧 dsh 凭据导入，Workspace 再以 bl Profile 作为初始默认值；已有 dsh 设置优先。内部 `configInitialized` 标记确保清空的设置不会被再次填入。缺失的 API Key 仍允许在后续启动时补入。
 
-### 方式二 — 环境变量与凭据文件
+初始化完成后，业务字段只读 dsh 插件配置，不再读取 bl 或旧凭据字段。清空 Workspace 后，调用会报缺配置。控制台登录把 Key 保存到 dsh credentials，把 Workspace 保存到 dsh 设置。kb 不创建 `personal-kb/config.json`。
 
-```sh
-# ~/.dsh/.env，或凭据存储 ~/.dsh/.credentials.yaml
-DASHSCOPE_API_KEY=sk-xxx                    # 必填
-BAILIAN_WORKSPACE_ID=ws-xxx                 # 必填
-BAILIAN_DEFAULT_RETRIEVE_AGENT_ID=aid-xxx   # 选填
-BAILIAN_DEFAULT_CHAT_AGENT_ID=aid-xxx       # 选填
-```
+连接区域支持在密码输入框中填写新 API Key，留空表示保留当前 Key。点击**验证并保存**会先验证 Key 与 Workspace 的组合，再保存；验证失败不修改配置，设置写入失败时尝试恢复原配置。旧 Key 不回显，保存成功后清空输入框。知识库和记忆插件各自使用独立的 Key 与 Workspace，修改互不影响。来自启动环境的 Key 需要在启动环境中修改。
 
-### 方式三 — Profile patch
-
-bundle 会向 profile 插入自己的 entry，你可以在 `~/.dsh/cordis.patch.yml` 或 profile 的 patch 文件里按 id 覆盖。覆盖时**替换整个 config 对象（无 deep-merge）**：
-
-```yaml
-- id: tool-bailian-kb
-  config:
-    defaultRetrieveAgentId: aid-search-service
-    defaultChatAgentId: aid-chat-service
-    chatTimeoutMs: 600000
-```
-
-禁用插件：`- id: tool-bailian-kb` 加 `disabled: true`。
-
-### 配置字段
-
-Config 同时注册为 `bailian-kb` settings section，因此在设置页或设置文档里的修改会在下一次调用生效，无需重启。
-
-| 字段                     | 类型    | 默认值                         | 语义                                                                              |
-| ------------------------ | ------- | ------------------------------ | --------------------------------------------------------------------------------- |
-| `workspaceId`            | string? | —                              | 百炼工作空间 ID；API host 为工作空间子域名 `https://<workspaceId>.<endpointHost>` |
-| `endpointHost`           | string  | `cn-beijing.maas.aliyuncs.com` | host 后缀，其他 region 或私有化部署时替换                                         |
-| `defaultRetrieveAgentId` | string? | —                              | 调用方省略 `agent_id` 时 `kb_search` 使用的服务                                   |
-| `defaultChatAgentId`     | string? | —                              | 调用方省略 `agent_id` 时 `kb_chat` 使用的服务                                     |
-| `agentVersion`           | string? | —                              | `beta`（草稿调试）或已发布版本号；默认调用最新发布版本。不暴露给模型              |
-| `chatTimeoutMs`          | number  | `300000`                       | `kb_chat` 超时时间 —— 服务端是分钟级的多轮检索循环                                |
-
-### 解析优先级
-
-| 值                  | settings 用户层（设置页）   | entry config（profile patch） | 凭据存储 / 环境变量                 |
-| ------------------- | --------------------------- | ----------------------------- | ----------------------------------- |
-| `DASHSCOPE_API_KEY` | 只写控件                    | —                             | `DASHSCOPE_API_KEY`                 |
-| 工作空间 ID         | ✅ `workspaceId`            | ✅ `workspaceId`              | `BAILIAN_WORKSPACE_ID`              |
-| 默认检索服务        | ✅ `defaultRetrieveAgentId` | ✅ `defaultRetrieveAgentId`   | `BAILIAN_DEFAULT_RETRIEVE_AGENT_ID` |
-| 默认对话服务        | ✅ `defaultChatAgentId`     | ✅ `defaultChatAgentId`       | `BAILIAN_DEFAULT_CHAT_AGENT_ID`     |
-
-所有值每次调用重新解析，因此轮换密钥或切换工作空间即时生效。API 密钥与工作空间 ID 是必填项：缺失时工具调用会报错并指出上述配置路径。默认服务是选填的 —— 当某个场景下工作空间只有一个已部署服务时，直接用它。
+管理操作使用 `kb_manage`，参数为 `bl knowledge` 之后的数组，例如 `{"args":["service","list","--scene","search"]}`。宿主内部执行已安装的 bl，使用临时隔离配置目录，并注入与原生工具相同的当前 Key 和 Workspace；不允许通过参数覆盖连接配置。密钥只通过子进程环境传递，不进入工具参数。直接在 shell 中运行 bl 仍是独立 CLI，不是插件管理入口。
 
 ## 工具
 
@@ -115,6 +76,7 @@ Config 同时注册为 `bailian-kb` settings section，因此在设置页或设�
 | ----------- | ---------------------------------------------------------------------------------------- | ------------------------------ |
 | `kb_search` | `query`、`agent_id`（必填）、`top_k?`（默认 5，客户端截断）、`images?`（多模态图片 URL） | 带来源引用的评分切片，以及总数 |
 | `kb_chat`   | `message`、`agent_id`（必填）                                                            | 完整答案，以及 `request_id`    |
+| `kb_manage` | `args`                                                                                   | 使用 dsh 配置执行知识库管理    |
 
 两个工具的 schema 中 `agent_id` 均为必填：schema 无法告诉模型这套部署是否配了默认服务，而"调用时才发现没有默认值"会白费一轮。配置的默认服务仍对省略该参数的程序化调用生效。
 
@@ -157,3 +119,5 @@ dsh plugin --profile dev add <本仓库>/packages/bailian-kb-dsh
 ## 许可证
 
 [Apache 2.0](LICENSE)
+
+升级后不再读取原来共用的 `DASHSCOPE_API_KEY`，也不会修改或删除它。若插件专属 Key 尚未配置且 bl 没有可导入的默认值，请在各插件页面分别保存 Key。

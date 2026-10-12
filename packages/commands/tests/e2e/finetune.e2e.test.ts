@@ -539,3 +539,89 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: finetune (DashScope)", () => {
     }
   }, 60_000);
 });
+
+describe("finetune complete recipe (offline)", () => {
+  const recipeArgs = [
+    "finetune",
+    "text",
+    "create",
+    "--base-model",
+    "qwen3-4b-instruct-2507",
+    "--datasets",
+    "file-jev",
+    "--job-name",
+    "jev-train",
+    "--model-name",
+    "jev-model",
+    "--priority",
+    "L0",
+    "--n-epochs",
+    "1",
+    "--batch-size",
+    "8",
+    "--learning-rate",
+    "5e-5",
+    "--max-length",
+    "32768",
+    "--eval-steps",
+    "50",
+    "--lora-alpha",
+    "16",
+    "--lora-dropout",
+    "0.1",
+    "--lora-rank",
+    "8",
+    "--lr-scheduler-type",
+    "linear",
+    "--save-strategy",
+    "epoch",
+    "--save-total-limit",
+    "3",
+    "--split",
+    "0.9",
+    "--max-split-val-dataset-sample",
+    "1000",
+    "--data-augmentation",
+    "false",
+    "--dry-run",
+    "--output",
+    "json",
+  ];
+  test("preserves names, priority and every explicit hyperparameter", async () => {
+    const result = await runCommandE2e(FINETUNE_ROUTES, recipeArgs);
+    expect(result.exitCode, result.stderr).toBe(0);
+    const response = parseStdoutJson<{ body: Record<string, unknown> }>(result.stdout);
+    expect(response.body).toMatchObject({
+      job_name: "jev-train",
+      model_name: "jev-model",
+      priority: "L0",
+    });
+    expect(response.body.hyper_parameters).toEqual({
+      n_epochs: 1,
+      batch_size: 8,
+      learning_rate: "5e-5",
+      max_length: 32768,
+      eval_steps: 50,
+      lora_alpha: 16,
+      lora_dropout: 0.1,
+      lora_rank: 8,
+      lr_scheduler_type: "linear",
+      save_strategy: "epoch",
+      save_total_limit: 3,
+      split: 0.9,
+      max_split_val_dataset_sample: 1000,
+      data_augmentation: false,
+    });
+  });
+  test.each([
+    ["--lora-rank", "0"],
+    ["--lora-dropout", "1"],
+    ["--split", "1"],
+    ["--priority", "L9"],
+  ])("rejects invalid %s before submission", async (flagName, invalidValue) => {
+    const invalidArgs = [...recipeArgs];
+    invalidArgs[invalidArgs.indexOf(flagName) + 1] = invalidValue;
+    const result = await runCommandE2e(FINETUNE_ROUTES, invalidArgs);
+    expect(result.exitCode).toBe(2);
+  });
+});
