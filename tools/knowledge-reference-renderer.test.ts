@@ -82,6 +82,17 @@ test("rendering is deterministic and does not mutate schema", () => {
   expect(renderKnowledgeReference(input)).toBe(renderKnowledgeReference(input));
   expect(input).toEqual(snapshot);
 });
+test("temporary channel versions do not change committed references", () => {
+  for (const bin of ["bl", "kscli"]) {
+    const stable = schema(bin, bin === "bl" ? "knowledge init" : "init");
+    const channel = { ...stable, version: "0.0.0-beta-abcdef0-202610120930" };
+    for (const locale of ["en-US", "zh-CN"] as const) {
+      expect(renderKnowledgeReference(channel, locale)).toBe(
+        renderKnowledgeReference(stable, locale),
+      );
+    }
+  }
+});
 test("index links both actual product references", () => {
   const output = renderKnowledgeReferenceIndex();
   expect(output).toContain("(knowledge.md)");

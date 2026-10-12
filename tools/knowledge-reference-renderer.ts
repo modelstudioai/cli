@@ -35,7 +35,12 @@ export function renderKnowledgeReference(schema: CommandSchema, locale: Locale =
       "> Generated from the same schema as `--introspect`. Do not edit by hand.",
       "> 与 `--introspect` 使用同一份 schema 自动生成，请勿手动修改。",
     ),
-    `> ${pick("Version", "版本")}: ${schema.version}; schema: ${schema.schema_version}.`,
+    // Channel releases temporarily bump package versions before checking these tracked assets.
+    `> ${pick("Schema version", "Schema 版本")}: ${schema.schema_version}.`,
+    pick(
+      `> Query the installed CLI version with \`${schema.bin} --version\`.`,
+      `> 使用 \`${schema.bin} --version\` 查询已安装的 CLI 版本。`,
+    ),
     "",
     pick(
       "Cross-flag constraints are validated at execution and are not exported by this schema.",

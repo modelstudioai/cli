@@ -1,7 +1,8 @@
 # bl command reference
 
 > Generated from the same schema as `--introspect`. Do not edit by hand.
-> Version: 2.0.1; schema: 1.
+> Schema version: 1.
+> Query the installed CLI version with `bl --version`.
 
 Cross-flag constraints are validated at execution and are not exported by this schema.
 

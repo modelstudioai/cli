@@ -63,6 +63,7 @@ bailian-gen      bailian-finetune  bailian-managed-agent   bailian-web-search
 - [ ] 跑 `pnpm run sync:skill-assets`（或 commit 走 pre-commit），提交生成的 `reference/` 与 version 同步结果
 - [ ] 高风险命令生成的 reference 必须包含 `Risk` / `Risk message` 和简短 Agent safety 提示；带 `--yes` 的示例必须标注只能在确认后执行，不要手改生成物
 - [ ] `bailian-knowledge/reference` 由 `generate-knowledge-reference.ts` 通过 runtime 的 `buildCommandSchema` 生成，与 `--introspect` 共用数据源；分别读取 bl / kscli 的真实入口 map，不用字符串替换推导产品路径。统一生成入口负责归属迁移与旧文件清理。改动后运行 `tools/generate-reference.test.ts`、`tools/generate-knowledge-reference.test.ts` 和 `tools/knowledge-reference-renderer.test.ts`。
+- [ ] 纳入 Git 的 reference 不写入包版本号：channel 发布会在生成前临时 bump 为带时间戳的 beta 版本，否则每次发布都会触发生成物差异。可保留 schema 协议版本，实际 CLI 版本通过 `--version` / `--introspect` 查询。
 - [ ] 默认模型若写在领域路由表（如 `bailian-gen`）：与命令 default / [model-add-remove.md](model-add-remove.md) 一并核对
 
 ## 完成后自查
