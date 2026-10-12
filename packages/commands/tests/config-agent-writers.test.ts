@@ -1,4 +1,12 @@
-import { mkdtempSync, rmSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "fs";
+import {
+  mkdtempSync,
+  rmSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  readdirSync,
+  existsSync,
+} from "fs";
 import { tmpdir, homedir } from "os";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
@@ -498,6 +506,34 @@ describe("config agent writers", () => {
       api_key: "sk-h",
       api_mode: "anthropic_messages",
     });
+  });
+
+  test("hermes 尊重 HERMES_HOME 环境变量，写入自定义 home 而非 ~/.hermes", () => {
+    const customHome = join(home, "custom-hermes-home");
+    mkdirSync(customHome, { recursive: true });
+    const prevHermesHome = process.env.HERMES_HOME;
+    process.env.HERMES_HOME = customHome;
+    try {
+      const summary = hermes.write({
+        baseUrl: OAI_URL,
+        apiKey: "sk-h",
+        model: "qwen3-coder-plus",
+      });
+      const expectedPath = join(customHome, "config.yaml");
+      // 写入位置与返回的 paths 都必须是 $HERMES_HOME/config.yaml
+      expect(summary.paths).toEqual([expectedPath]);
+      const config = yaml.parse(readFileSync(expectedPath, "utf8"));
+      expect(config.model).toMatchObject({
+        default: "qwen3-coder-plus",
+        provider: "custom",
+        base_url: OAI_URL,
+      });
+      // 不再写入硬编码的 ~/.hermes/config.yaml（否则 Hermes 读不到，静默失效）
+      expect(existsSync(join(home, ".hermes", "config.yaml"))).toBe(false);
+    } finally {
+      if (prevHermesHome === undefined) delete process.env.HERMES_HOME;
+      else process.env.HERMES_HOME = prevHermesHome;
+    }
   });
 
   test("codex 写入 config.toml 与 auth.json（官方 env_key 结构，合并保留）", () => {

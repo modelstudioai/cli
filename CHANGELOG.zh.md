@@ -6,6 +6,12 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.2.1] - 2026-10-12
+
+### 修复
+
+- **Hermes Agent 配置路径** —— `bl config agent --agent hermes` 现在会写入 Hermes 实际读取的位置（`$HERMES_HOME/config.yaml`，或平台原生默认路径：Windows 为 `%LOCALAPPDATA%\hermes`，其它平台为 `~/.hermes`），不再固定写 `~/.hermes/config.yaml`。此前在 Windows 或自定义 `HERMES_HOME` 环境下，配置被写到 Hermes 不读取的文件、变更静默失效，Agent 探测也可能误报 Hermes 为「未配置」。
+
 ## [2.2.0] - 2026-10-12
 
 ### 变更

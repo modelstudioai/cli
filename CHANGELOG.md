@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.2.1] - 2026-10-12
+
+### Fixed
+
+- **Hermes agent config path** — `bl config agent --agent hermes` now writes to the location Hermes actually reads (`$HERMES_HOME/config.yaml`, or the platform-native default: `%LOCALAPPDATA%\hermes` on Windows, `~/.hermes` elsewhere) instead of always `~/.hermes/config.yaml`. Previously on Windows or with a custom `HERMES_HOME`, config landed where Hermes never read it and the change silently took no effect; agent detection could also falsely report Hermes as unconfigured.
+
 ## [2.2.0] - 2026-10-12
 
 ### Changed

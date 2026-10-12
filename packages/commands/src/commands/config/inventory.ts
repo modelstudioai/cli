@@ -19,6 +19,7 @@ import {
 import { inflateRawSync } from "node:zlib";
 import yaml from "yaml";
 import { parse as parseToml } from "smol-toml";
+import { getHermesHome } from "bailian-cli-core";
 import { qwenworkMcpPath, workbuddyMcpPaths } from "../mcp/agent-config.ts";
 
 /**
@@ -143,7 +144,7 @@ function skillRoots(home: string): Array<{ source: string; dir: string }> {
     { source: "opencode", dir: join(home, ".config", "opencode", "skills") },
     { source: "openclaw", dir: join(home, ".openclaw", "skills") },
     { source: "openclaw", dir: join(home, ".openclaw", "workspace", "skills") },
-    { source: "hermes", dir: join(home, ".hermes", "skills") },
+    { source: "hermes", dir: join(getHermesHome(home), "skills") },
     { source: "gemini", dir: join(home, ".gemini", "skills") },
     {
       source: "antigravity",
@@ -857,9 +858,9 @@ const AGENT_PROBES: AgentProbe[] = [
   {
     id: "hermes",
     label: "Hermes Agent",
-    paths: (h) => [join(h, ".hermes", "config.yaml")],
+    paths: (h) => [join(getHermesHome(h), "config.yaml")],
     detect: (h) => {
-      const text = readText(join(h, ".hermes", "config.yaml"));
+      const text = readText(join(getHermesHome(h), "config.yaml"));
       if (!text) return { configured: false };
       let config: Record<string, unknown> | undefined;
       try {
@@ -1000,7 +1001,7 @@ function agentDetailFields(id: string, home: string): AgentField[] {
     pushField(out, "API", bailian?.api);
     pushField(out, "API Key", bailian?.apiKey, true);
   } else if (id === "hermes") {
-    const text = readText(join(home, ".hermes", "config.yaml"));
+    const text = readText(join(getHermesHome(home), "config.yaml"));
     let config: Record<string, unknown> | undefined;
     if (text) {
       try {
