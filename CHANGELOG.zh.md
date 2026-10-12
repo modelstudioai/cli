@@ -6,6 +6,12 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.2.0] - 2026-10-12
+
+### 变更
+
+- **Token Plan 额度窗口** —— `bl usage token-plan` 现在只展示月度额度（使用百分比与重置时间），不再显示此前的 5 小时和 1 周窗口。
+
 ## [2.1.0] - 2026-09-28
 
 ### 新增

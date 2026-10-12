@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.2.0] - 2026-10-12
+
+### Changed
+
+- **Token Plan usage window** — `bl usage token-plan` now reports a single monthly quota (usage percentage and reset time) instead of the previous 5-hour and 1-week windows.
+
 ## [2.1.0] - 2026-09-28
 
 ### Added
