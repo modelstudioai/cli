@@ -10,6 +10,7 @@ import {
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { getSkillsDir } from "./lock.ts";
+import { getHermesHome } from "../utils/agent-home.ts";
 
 /**
  * Agent fan-out: after a skill lands in the canonical dir (~/.bailian/skills/<name>),
@@ -164,7 +165,9 @@ export function getAgentTargets(): AgentTarget[] {
       detectDirs: [join(xdgConfig, "goose")],
     },
     fromBase("grok", "Grok Build", envBase(process.env.GROK_HOME, ".grok")),
-    fromBase("hermes", "Hermes Agent", envBase(process.env.HERMES_HOME, ".hermes")),
+    // Hermes resolves its home via HERMES_HOME → platform-native default; share the
+    // canonical resolver so skill fan-out, the config writer and the inventory probe agree.
+    fromBase("hermes", "Hermes Agent", getHermesHome(home)),
     simple("iflow-cli", "iFlow CLI", ".iflow"),
     simple("inference-sh", "inference.sh", ".inferencesh"),
     {
