@@ -18,20 +18,20 @@ bl memory add --user-id <id> [--messages <json>] [--content <text>] [flags]
 
 **参数**
 
-| 参数                            | 类型   | 必填 | 说明                                                                                          |
-| ------------------------------- | ------ | ---- | --------------------------------------------------------------------------------------------- |
-| `--user-id <id>`                | string | 是   | 记忆归属实体 ID，最长 64                                                                      |
-| `--messages <json>`             | string | 否¹  | 消息 JSON 数组，最多 50 条。role 支持 `user`、`assistant`、`tool`                             |
-| `--content <text>`              | string | 否¹  | 按原文写入的内容，最长 512。传入后服务端忽略 `--messages`                                     |
-| `--profile-schema <id>`         | string | 否   | 画像模板 ID。不传则不抽取用户画像                                                             |
-| `--extract-mode <profile_only>` | string | 否   | 只抽取画像。需要 `--profile-schema` 和 `--messages`，并且不传 `--content`                     |
-| `--project-id <id>`             | array  | 否   | 片段规则 ID。内容直存最多 1 个，消息抽取最多 5 个                                             |
-| `--skill-name <name>`           | string | 否²  | Skill 名称。与描述、标签一起出现                                                              |
-| `--skill-description <text>`    | string | 否²  | Skill 描述                                                                                    |
-| `--skill-tags <tag>`            | array  | 否²  | Skill 标签，可重复                                                                            |
-| `--meta-data <json>`            | string | 否   | 自定义元数据 JSON 对象                                                                        |
-| `--wait <seconds>`              | number | 否   | 轮询预算秒数，非负，默认 120。`0` 提交后立即返回 `event_id`                                   |
-| `--library-id <id>`             | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库                                                      |
+| 参数                            | 类型   | 必填 | 说明                                                                      |
+| ------------------------------- | ------ | ---- | ------------------------------------------------------------------------- |
+| `--user-id <id>`                | string | 是   | 记忆归属实体 ID，最长 64                                                  |
+| `--messages <json>`             | string | 否¹  | 消息 JSON 数组，最多 50 条。role 支持 `user`、`assistant`、`tool`         |
+| `--content <text>`              | string | 否¹  | 按原文写入的内容，最长 512。传入后服务端忽略 `--messages`                 |
+| `--profile-schema <id>`         | string | 否   | 画像模板 ID。不传则不抽取用户画像                                         |
+| `--extract-mode <profile_only>` | string | 否   | 只抽取画像。需要 `--profile-schema` 和 `--messages`，并且不传 `--content` |
+| `--project-id <id>`             | array  | 否   | 片段规则 ID。内容直存最多 1 个，消息抽取最多 5 个                         |
+| `--skill-name <name>`           | string | 否²  | Skill 名称。与描述、标签一起出现                                          |
+| `--skill-description <text>`    | string | 否²  | Skill 描述                                                                |
+| `--skill-tags <tag>`            | array  | 否²  | Skill 标签，可重复                                                        |
+| `--meta-data <json>`            | string | 否   | 自定义元数据 JSON 对象                                                    |
+| `--wait <seconds>`              | number | 否   | 轮询预算秒数，非负，默认 120。`0` 提交后立即返回 `event_id`               |
+| `--library-id <id>`             | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库                                  |
 
 > ¹ `--content` 与 `--messages` 提供一种作为写入来源。
 >
@@ -114,13 +114,13 @@ bl memory list --user-id <id> [flags]
 
 **参数**
 
-| 参数                | 类型   | 必填 | 说明                                                     |
-| ------------------- | ------ | ---- | -------------------------------------------------------- |
-| `--user-id <id>`    | string | 是   | 记忆归属实体 ID，最长 64                                 |
-| `--page <n>`        | number | 否   | 页码，至少 1，默认 1。不自动翻页                         |
-| `--page-size <n>`   | number | 否   | 每页条数，至少 1，默认 10                                |
-| `--project-id <id>` | string | 否   | 片段规则 ID。省略时只查该库的默认规则                    |
-| `--library-id <id>` | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库                 |
+| 参数                | 类型   | 必填 | 说明                                     |
+| ------------------- | ------ | ---- | ---------------------------------------- |
+| `--user-id <id>`    | string | 是   | 记忆归属实体 ID，最长 64                 |
+| `--page <n>`        | number | 否   | 页码，至少 1，默认 1。不自动翻页         |
+| `--page-size <n>`   | number | 否   | 每页条数，至少 1，默认 10                |
+| `--project-id <id>` | string | 否   | 片段规则 ID。省略时只查该库的默认规则    |
+| `--library-id <id>` | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库 |
 
 **输出**
 
@@ -166,19 +166,19 @@ bl memory search --user-id <id> [--query <text>] [--messages <json>] [flags]
 
 **参数**
 
-| 参数                                  | 类型   | 必填 | 说明                                                                 |
-| ------------------------------------- | ------ | ---- | -------------------------------------------------------------------- |
-| `--user-id <id>`                      | string | 是   | 记忆归属实体 ID，最长 64                                             |
-| `--query <text>`                      | string | 否   | 检索文本。单独使用时包装成一条 user 消息                             |
-| `--messages <json>`                   | string | 否   | 用于结合上下文检索的消息 JSON 数组。传入后优先于 `--query`           |
-| `--top-k <n>`                         | number | 否   | 最多返回条数，1–100。服务端默认 10                                   |
-| `--min-score <score>`                 | number | 否   | 最低相似度，0–1。服务端默认 0.3                                      |
-| `--memory-types <observation\|skill>` | array  | 否   | 要检索的类型，可重复。省略时服务端默认只查 observation               |
-| `--memory-type <observation\|skill>`  | string | 否   | `--memory-types` 的弃用别名。与 `--memory-types` 互斥                |
-| `--project-ids <id>`                  | array  | 否   | 片段规则 ID，可重复                                                   |
-| `--project-id <id>`                   | array  | 否   | `--project-ids` 的弃用别名，可重复。与 `--project-ids` 互斥          |
-| `--plan-version <pro\|lite>`          | string | 否   | `pro` 开启 rerank，`lite` 关闭 rerank。省略时服务端默认 pro          |
-| `--library-id <id>`                   | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库                             |
+| 参数                                  | 类型   | 必填 | 说明                                                        |
+| ------------------------------------- | ------ | ---- | ----------------------------------------------------------- |
+| `--user-id <id>`                      | string | 是   | 记忆归属实体 ID，最长 64                                    |
+| `--query <text>`                      | string | 否   | 检索文本。单独使用时包装成一条 user 消息                    |
+| `--messages <json>`                   | string | 否   | 用于结合上下文检索的消息 JSON 数组。传入后优先于 `--query`  |
+| `--top-k <n>`                         | number | 否   | 最多返回条数，1–100。服务端默认 10                          |
+| `--min-score <score>`                 | number | 否   | 最低相似度，0–1。服务端默认 0.3                             |
+| `--memory-types <observation\|skill>` | array  | 否   | 要检索的类型，可重复。省略时服务端默认只查 observation      |
+| `--memory-type <observation\|skill>`  | string | 否   | `--memory-types` 的弃用别名。与 `--memory-types` 互斥       |
+| `--project-ids <id>`                  | array  | 否   | 片段规则 ID，可重复                                         |
+| `--project-id <id>`                   | array  | 否   | `--project-ids` 的弃用别名，可重复。与 `--project-ids` 互斥 |
+| `--plan-version <pro\|lite>`          | string | 否   | `pro` 开启 rerank，`lite` 关闭 rerank。省略时服务端默认 pro |
+| `--library-id <id>`                   | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库                    |
 
 **参数约束**
 
@@ -231,9 +231,9 @@ bl memory node show --node-id <id> [flags]
 
 **参数**
 
-| 参数             | 类型   | 必填 | 说明          |
-| ---------------- | ------ | ---- | ------------- |
-| `--node-id <id>` | string | 是   | 记忆节点 ID   |
+| 参数             | 类型   | 必填 | 说明        |
+| ---------------- | ------ | ---- | ----------- |
+| `--node-id <id>` | string | 是   | 记忆节点 ID |
 
 本命令不接受 `--user-id` 或 `--library-id`。
 
@@ -282,15 +282,15 @@ bl memory update --node-id <id> --content <text> [flags]
 
 **参数**
 
-| 参数                         | 类型   | 必填 | 说明                                                    |
-| ---------------------------- | ------ | ---- | ------------------------------------------------------- |
-| `--node-id <id>`             | string | 是   | 记忆节点 ID                                             |
-| `--content <text>`           | string | 是   | 新内容，最长 512                                        |
-| `--meta-data <json>`         | string | 否   | JSON 对象，按增量合并                                   |
-| `--skill-name <name>`        | string | 否¹  | Skill 名称                                              |
-| `--skill-description <text>` | string | 否¹  | Skill 描述                                              |
-| `--skill-tags <tag>`         | array  | 否¹  | Skill 标签，可重复                                      |
-| `--library-id <id>`          | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库                |
+| 参数                         | 类型   | 必填 | 说明                                     |
+| ---------------------------- | ------ | ---- | ---------------------------------------- |
+| `--node-id <id>`             | string | 是   | 记忆节点 ID                              |
+| `--content <text>`           | string | 是   | 新内容，最长 512                         |
+| `--meta-data <json>`         | string | 否   | JSON 对象，按增量合并                    |
+| `--skill-name <name>`        | string | 否¹  | Skill 名称                               |
+| `--skill-description <text>` | string | 否¹  | Skill 描述                               |
+| `--skill-tags <tag>`         | array  | 否¹  | Skill 标签，可重复                       |
+| `--library-id <id>`          | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库 |
 
 > ¹ 目标是 skill 节点时，这三项一起提供，包括只改正文的情况。
 

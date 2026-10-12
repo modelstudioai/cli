@@ -113,18 +113,18 @@ bl memory --help
 
 以下参数在记忆命令中通用，后续命令手册不再逐条列出：
 
-| 参数                  | 类型   | 说明                                                         |
-| --------------------- | ------ | ------------------------------------------------------------ |
-| `--output <format>`   | string | 输出格式：`text`（默认）或 `json`                            |
-| `--api-key <key>`     | string | DashScope API Key                                            |
-| `--base-url <url>`    | string | API 基地址；不能用来切换 Memory 的 Workspace 网关            |
-| `--timeout <seconds>` | number | 请求超时秒数                                                 |
-| `--quiet`             | switch | 与 text 使用同一套摘要；同时指定 json 时仍输出文本摘要       |
-| `--verbose`           | switch | 详细模式。`add` 轮询进度写到 stderr                          |
-| `--dry-run`           | switch | 预览 endpoint、method 和 request，不发送 Memory 业务请求    |
-| `--introspect`        | switch | 输出当前命令范围的结构化能力说明，无需凭证                   |
-| `--config <name>`     | string | 使用指定配置 profile 执行命令                                |
-| `--workspace-id <id>` | string | Workspace ID                                                 |
+| 参数                  | 类型   | 说明                                                     |
+| --------------------- | ------ | -------------------------------------------------------- |
+| `--output <format>`   | string | 输出格式：`text`（默认）或 `json`                        |
+| `--api-key <key>`     | string | DashScope API Key                                        |
+| `--base-url <url>`    | string | API 基地址；不能用来切换 Memory 的 Workspace 网关        |
+| `--timeout <seconds>` | number | 请求超时秒数                                             |
+| `--quiet`             | switch | 与 text 使用同一套摘要；同时指定 json 时仍输出文本摘要   |
+| `--verbose`           | switch | 详细模式。`add` 轮询进度写到 stderr                      |
+| `--dry-run`           | switch | 预览 endpoint、method 和 request，不发送 Memory 业务请求 |
+| `--introspect`        | switch | 输出当前命令范围的结构化能力说明，无需凭证               |
+| `--config <name>`     | string | 使用指定配置 profile 执行命令                            |
+| `--workspace-id <id>` | string | Workspace ID                                             |
 
 > 命令手册中的参数表只列出该命令特有的参数。
 
@@ -157,14 +157,14 @@ bl memory add --introspect
 
 `memory add` 提交异步任务并在进程内轮询。默认 `--wait 120`（秒），间隔 3 秒。这是轮询预算，不是整个进程的严格时限。`--wait 0` 只返回提交回执。
 
-| 状态       | 处理方式                                                |
-| ---------- | ------------------------------------------------------- |
-| PENDING    | 继续轮询                                                |
-| RUNNING    | 继续轮询                                                |
-| SUCCEEDED  | 成功终态；`result` 为空表示这次没有记忆变化             |
-| SUCCESS    | CLI 兼容的成功拼写，与 SUCCEEDED 同一类终态             |
-| UNRECORDED | 终态。CLI 展示状态，不把它当作已写入成功                |
-| FAILED     | 失败终态。已完成的部分会先输出，然后命令以非零状态退出  |
+| 状态       | 处理方式                                               |
+| ---------- | ------------------------------------------------------ |
+| PENDING    | 继续轮询                                               |
+| RUNNING    | 继续轮询                                               |
+| SUCCEEDED  | 成功终态；`result` 为空表示这次没有记忆变化            |
+| SUCCESS    | CLI 兼容的成功拼写，与 SUCCEEDED 同一类终态            |
+| UNRECORDED | 终态。CLI 展示状态，不把它当作已写入成功               |
+| FAILED     | 失败终态。已完成的部分会先输出，然后命令以非零状态退出 |
 
 一个 `event_id` 可以包含多项任务。部分失败时，成功部分可能已经落地。超时只表示 CLI 停止等待，后台任务仍可能继续。当前没有独立的事件查询命令，稍后用 `list`、`search` 或 `profile get` 核对。
 
@@ -469,20 +469,20 @@ bl memory skill export --node-id <id> [flags]
 
 ## 附录：命令速查表
 
-| 命令                         | 功能           | 关键参数                                                                 |
-| ---------------------------- | -------------- | ------------------------------------------------------------------------ |
-| `bl memory add`              | 异步抽取       | `--user-id`, `--content`/`--messages`, `--wait`, `--profile-schema`     |
-| `bl memory list`             | 分页列出节点   | `--user-id`, `--project-id`, `--page`, `--page-size`                     |
-| `bl memory search`           | 语义检索       | `--user-id`, `--query`/`--messages`, `--memory-types`, `--plan-version` |
-| `bl memory node show`        | 节点详情       | `--node-id`                                                              |
-| `bl memory update`           | 更新节点       | `--node-id`, `--content`, `--meta-data`                                  |
-| `bl memory delete`           | 删除节点       | `--node-id`, `--yes`                                                     |
-| `bl memory profile create`   | 创建画像模板   | `--name`, `--attributes`, `--plan-version`, `--extract-scene`            |
-| `bl memory profile list`     | 列出模板       | `--page`, `--page-size`, `--library-id`                                  |
-| `bl memory profile show`     | 模板详情       | `--schema-id`                                                            |
-| `bl memory profile update`   | 更新模板       | `--schema-id`, `--attributes-operations`                                 |
-| `bl memory profile delete`   | 删除模板       | `--schema-id`, `--yes`                                                   |
-| `bl memory profile get`      | 读取用户画像   | `--schema-id`, `--user-id`                                               |
-| `bl memory skill export`     | 导出 Skill 正文 | `--node-id`                                                             |
+| 命令                       | 功能            | 关键参数                                                                |
+| -------------------------- | --------------- | ----------------------------------------------------------------------- |
+| `bl memory add`            | 异步抽取        | `--user-id`, `--content`/`--messages`, `--wait`, `--profile-schema`     |
+| `bl memory list`           | 分页列出节点    | `--user-id`, `--project-id`, `--page`, `--page-size`                    |
+| `bl memory search`         | 语义检索        | `--user-id`, `--query`/`--messages`, `--memory-types`, `--plan-version` |
+| `bl memory node show`      | 节点详情        | `--node-id`                                                             |
+| `bl memory update`         | 更新节点        | `--node-id`, `--content`, `--meta-data`                                 |
+| `bl memory delete`         | 删除节点        | `--node-id`, `--yes`                                                    |
+| `bl memory profile create` | 创建画像模板    | `--name`, `--attributes`, `--plan-version`, `--extract-scene`           |
+| `bl memory profile list`   | 列出模板        | `--page`, `--page-size`, `--library-id`                                 |
+| `bl memory profile show`   | 模板详情        | `--schema-id`                                                           |
+| `bl memory profile update` | 更新模板        | `--schema-id`, `--attributes-operations`                                |
+| `bl memory profile delete` | 删除模板        | `--schema-id`, `--yes`                                                  |
+| `bl memory profile get`    | 读取用户画像    | `--schema-id`, `--user-id`                                              |
+| `bl memory skill export`   | 导出 Skill 正文 | `--node-id`                                                             |
 
 当前没有这些命令：事件状态查询、记忆库管理、片段规则管理、直接编辑画像值项、清空某个用户的全部记忆或全部画像。

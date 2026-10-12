@@ -18,14 +18,14 @@ bl memory profile create --name <name> --attributes <json> [flags]
 
 **参数**
 
-| 参数                                       | 类型   | 必填 | 说明                                                                 |
-| ------------------------------------------ | ------ | ---- | -------------------------------------------------------------------- |
-| `--name <name>`                            | string | 是   | 模板名称，最长 32                                                    |
-| `--description <text>`                     | string | 否   | 模板描述。长度由服务端决定                                           |
-| `--attributes <json>`                      | string | 是   | 属性定义 JSON 数组                                                   |
-| `--plan-version <pro\|lite>`               | string | 否   | `pro` 开启 rerank，`lite` 关闭 rerank。两者计费不同                  |
-| `--extract-scene <efficient\|intelligent>` | string | 否   | 抽取场景。创建时默认 `efficient`                                     |
-| `--library-id <id>`                        | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库                             |
+| 参数                                       | 类型   | 必填 | 说明                                                |
+| ------------------------------------------ | ------ | ---- | --------------------------------------------------- |
+| `--name <name>`                            | string | 是   | 模板名称，最长 32                                   |
+| `--description <text>`                     | string | 否   | 模板描述。长度由服务端决定                          |
+| `--attributes <json>`                      | string | 是   | 属性定义 JSON 数组                                  |
+| `--plan-version <pro\|lite>`               | string | 否   | `pro` 开启 rerank，`lite` 关闭 rerank。两者计费不同 |
+| `--extract-scene <efficient\|intelligent>` | string | 否   | 抽取场景。创建时默认 `efficient`                    |
+| `--library-id <id>`                        | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库            |
 
 **参数约束**
 
@@ -162,15 +162,15 @@ bl memory profile update --schema-id <id> [flags]
 
 **参数**
 
-| 参数                                       | 类型   | 必填 | 说明                                                                 |
-| ------------------------------------------ | ------ | ---- | -------------------------------------------------------------------- |
-| `--schema-id <id>`                         | string | 是   | 画像模板 ID                                                          |
-| `--name <name>`                            | string | 否¹  | 新名称，最长 32                                                      |
-| `--description <text>`                     | string | 否¹  | 新描述                                                               |
-| `--attributes-operations <json>`           | string | 否¹  | 属性操作 JSON 数组                                                   |
-| `--plan-version <pro\|lite>`               | string | 否¹  | 策略档位                                                             |
-| `--extract-scene <efficient\|intelligent>` | string | 否¹  | 抽取场景                                                             |
-| `--library-id <id>`                        | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库                             |
+| 参数                                       | 类型   | 必填 | 说明                                     |
+| ------------------------------------------ | ------ | ---- | ---------------------------------------- |
+| `--schema-id <id>`                         | string | 是   | 画像模板 ID                              |
+| `--name <name>`                            | string | 否¹  | 新名称，最长 32                          |
+| `--description <text>`                     | string | 否¹  | 新描述                                   |
+| `--attributes-operations <json>`           | string | 否¹  | 属性操作 JSON 数组                       |
+| `--plan-version <pro\|lite>`               | string | 否¹  | 策略档位                                 |
+| `--extract-scene <efficient\|intelligent>` | string | 否¹  | 抽取场景                                 |
+| `--library-id <id>`                        | string | 否   | 记忆库 ID，最长 32。省略时使用账号默认库 |
 
 > ¹ 至少提供 `--name`、`--description`、`--attributes-operations`、`--plan-version`、`--extract-scene` 之一。
 
