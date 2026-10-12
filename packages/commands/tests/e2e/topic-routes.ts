@@ -205,6 +205,19 @@ export const SANDBOX_ROUTES: E2eRouteExports = {
   "sandbox template delete": "sandboxTemplateDelete",
 };
 
+export const MANAGED_AGENT_WEBHOOK_ROUTES: E2eRouteExports = {
+  "managed-agent webhook create": "managedAgentWebhookCreate",
+  "managed-agent webhook list": "managedAgentWebhookList",
+  "managed-agent webhook get": "managedAgentWebhookGet",
+  "managed-agent webhook update": "managedAgentWebhookUpdate",
+  "managed-agent webhook delete": "managedAgentWebhookDelete",
+  "managed-agent webhook enable": "managedAgentWebhookEnable",
+  "managed-agent webhook disable": "managedAgentWebhookDisable",
+  "managed-agent webhook test": "managedAgentWebhookTest",
+  "managed-agent webhook reset-secret": "managedAgentWebhookResetSecret",
+  "managed-agent webhook events": "managedAgentWebhookEvents",
+};
+
 export const MANAGED_AGENT_ROUTES: E2eRouteExports = {
   "managed-agent init": "managedAgentInit",
   "managed-agent validate": "managedAgentValidate",

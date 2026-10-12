@@ -52,3 +52,33 @@ test("records BailianError exitCode in local events and AEM ext", async () => {
     ext: expect.objectContaining({ exitCode: 7 }),
   });
 });
+
+test.each([
+  { label: "numeric page", page: 2, expectedParams: { page: 2, pageSize: 20 } },
+  { label: "opaque cursor", page: "opaque+/=&cursor", expectedParams: { pageSize: 20 } },
+  { label: "numeric-looking cursor", page: "2", expectedParams: { pageSize: 20 } },
+  { label: "NaN page", page: Number.NaN, expectedParams: { pageSize: 20 } },
+  { label: "positive infinity page", page: Infinity, expectedParams: { pageSize: 20 } },
+  { label: "negative infinity page", page: -Infinity, expectedParams: { pageSize: 20 } },
+])(
+  "filters $label consistently in local and remote telemetry",
+  async ({ page, expectedParams }) => {
+    sinkMocks.localSink.mockClear();
+    sinkMocks.remoteSink.mockClear();
+
+    await trackCommandExecution(
+      { identity, settings: { telemetry: true } as Settings, authMethod: "apiKey" },
+      ["managed-agent", "webhook", "events"],
+      { page, pageSize: 20 },
+      async () => {},
+    );
+
+    expect(sinkMocks.localSink).toHaveBeenCalledOnce();
+    expect(sinkMocks.remoteSink).toHaveBeenCalledOnce();
+    const localEvent = sinkMocks.localSink.mock.calls[0]![0];
+    const remoteEvent = sinkMocks.remoteSink.mock.calls[0]![0];
+    expect(localEvent.params).toEqual(expectedParams);
+    expect(remoteEvent.params).toEqual(expectedParams);
+    expect(buildRemoteAemOptions(remoteEvent).c1).toEqual(expectedParams);
+  },
+);

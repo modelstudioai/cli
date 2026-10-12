@@ -7,8 +7,8 @@ metadata:
 description: >-
   阿里云百炼托管 Agent 声明式基础设施与 API 命令入口：用户要创建agent、初始化 agents.yaml、校验或预览配置变更、
   创建/更新/销毁托管 Agent 或 Deployment、在 Workbench 编辑和调试目录项目、管理本地快照版本，或查询
-  Agent/Environment/Skill/Vault/Deployment、管理 Session/Event/File、运行/暂停 Deployment 时使用
-  `bl managed-agent`。持久资源仍以 agents.yaml 为唯一事实源做 IaC；公开 API 能力按资源透出
+  Agent/Environment/Skill/Vault/Deployment、管理 Session/Event/File/Webhook、运行/暂停 Deployment 时使用
+  `bl managed-agent`。Agent/Environment/Skill/Vault/Deployment 仍以 agents.yaml 为唯一事实源做 IaC；Webhook 使用无需项目文件的工作空间 API；公开 API 能力按资源透出
   list/get/search/versions/download、数据面和运行时动作命令。apply / destroy 与破坏性 API 命令受统一高风险确认闸门保护；
   务必先展示预览再让用户确认，禁止自动添加 `--yes`。
   反触发：调用已上线的百炼应用/智能体走 bailian-app-call 或 `bl app`；宿主 agent 自身的记忆、技能、
@@ -32,6 +32,7 @@ description: >-
 API-oriented commands do not replace IaC. Agent / Environment / Skill / Vault / Deployment 的 create 命令仍通过
 `agents.yaml → scoped plan → scoped apply` 管理；查询命令和 Session、Event、File、Deployment 运行时动作直接调用 API。
 `session archive|delete`、`file delete`、`deployment run|pause|unpause` 也需要先 `--dry-run`，确认后才传 `--yes`。
+Webhook 是工作空间级 API 资源，不写入 `agents.yaml` 或 State。`webhook create|update|delete|enable|disable|test|reset-secret` 都是高风险操作：先展示 `--dry-run` 的目标和请求，用户确认后才加 `--yes`；`test` 会向接收端投递事件。
 
 `state rm`, `session archive|delete`, `file delete`, `deployment run|pause|unpause`, and future
 `risk: high` commands follow the shared protocol: show the risk message and exact scope, then wait
@@ -163,12 +164,33 @@ Managed Agents 的子线程通过 Event 中的 `session_thread_id` 暴露；公�
 | Work with raw events                   | `session event send`, `session event list`, `session event stream`                                      |
 | Diagnose/export a session              | `session debug`, `session export`                                                                       |
 | Work with files                        | `file upload`, `file list`, `file get`, `file search`, `file download`, `file delete`                   |
+| Inspect workspace Webhooks and events  | `webhook list`, `webhook get`, `webhook events`                                                         |
+| Manage Webhook delivery endpoints      | `webhook create`, `webhook update`, `webhook delete`, `webhook enable`, `webhook disable`               |
+| Test delivery or rotate its secret     | `webhook test`, `webhook reset-secret`                                                                  |
 
 - 所有 Cursor 都是不透明字符串：只回传 `next_page`，不得转换为数字页码。
 - 客户端搜索默认最多扫描 10 页；需要扩大范围时显式传 `--page-limit`。Deployment 搜索直接映射服务端 `keyword`。
 - 下载必须给出 `--output-file`；默认不覆盖已有文件，只有用户确认后才可加 `--force`。
 - `session export` 只导出诊断元数据，不含 File 正文，并会脱敏凭证类字段。
 - 公开 Managed Agents API 没有模型 Catalog，也没有 MCP OAuth Login；CLI 不注册对应命令。
+
+### Workspace Webhooks
+
+- Webhook commands use the CLI API Key, Base URL, and workspace settings directly through the SDK. They do not need `agents.yaml`, a project Build, or local State. / Webhook 命令直接使用 CLI 鉴权与工作空间配置，无需创建项目文件。
+- Select the workspace with `--workspace-id` or the configured environment/Profile. Explicit flags take precedence over environment variables, then the selected Profile. Check `webhook <command> --help` for the available request fields.
+- `webhook events` uses `--limit` (1–100) and the opaque `--page` cursor; pass `next_page` back unchanged. / 事件分页游标保持原样传回，不转换成数字页码。
+- Successful `create` and `reset-secret` responses can contain `signing_secret`. Store that response securely for signature verification; do not paste it into logs, issue reports, or source files. Verbose diagnostics and errors must not expose secrets. / 创建或重置密钥的成功响应可能包含签名密钥；请安全保存，不写入日志或代码。
+
+```bash
+bl managed-agent webhook list --workspace-id ws-example --output json
+bl managed-agent webhook create \
+  --workspace-id ws-example \
+  --url https://example.com/agent-events \
+  --event session.updated \
+  --dry-run
+```
+
+Review the preview and obtain confirmation before removing `--dry-run` and adding `--yes`. Event names are passed to the service as supplied; use the event types supported by your endpoint. / 预览并确认后再执行写操作；事件名以服务端支持的事件类型为准。
 
 ## Local state management
 

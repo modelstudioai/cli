@@ -218,6 +218,18 @@ export {
   managedAgentFileSearch,
   managedAgentFileUpload,
 } from "./commands/managed-agent/file.ts";
+export {
+  managedAgentWebhookCreate,
+  managedAgentWebhookList,
+  managedAgentWebhookGet,
+  managedAgentWebhookUpdate,
+  managedAgentWebhookDelete,
+  managedAgentWebhookEnable,
+  managedAgentWebhookDisable,
+  managedAgentWebhookTest,
+  managedAgentWebhookResetSecret,
+  managedAgentWebhookEvents,
+} from "./commands/managed-agent/webhook.ts";
 export { default as workspaceInit } from "./commands/workspace/init.ts";
 export { default as pluginInstall } from "./commands/plugin/install.ts";
 export { default as pluginLink } from "./commands/plugin/link.ts";

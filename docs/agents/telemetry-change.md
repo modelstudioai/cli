@@ -99,6 +99,8 @@ source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网�
 
 参数默认不上传，只有 `packages/core/src/telemetry/tracker.ts` 的 `PARAM_ALLOWLIST` 中字段会进入事件。不得加入 prompt、凭证、文件路径、URL、账号/租户/工作空间 ID 或其他用户内容。
 
+`page` 仅记录有限数值页码；Webhook 等命令使用的不透明字符串游标不得进入本地日志或远端 AEM，即使字符串内容看起来是数字。
+
 事件同时写入两处：
 
 1. 本地 `~/.bailian/telemetry.jsonl`：权限 `0600`，超过 5 MB 后重建

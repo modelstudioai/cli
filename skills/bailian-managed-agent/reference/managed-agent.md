@@ -81,6 +81,16 @@ Index: [index.md](index.md)
 | `bl managed-agent vault get`               | API Key        | Get a Managed Agent vault                                                    |
 | `bl managed-agent vault list`              | API Key        | List Managed Agent vaults                                                    |
 | `bl managed-agent vault search`            | API Key        | Search Managed Agent vaults                                                  |
+| `bl managed-agent webhook create`          | API Key        | Create a Webhook endpoint                                                    |
+| `bl managed-agent webhook delete`          | API Key        | Delete a Webhook endpoint                                                    |
+| `bl managed-agent webhook disable`         | API Key        | Disable a Webhook endpoint                                                   |
+| `bl managed-agent webhook enable`          | API Key        | Enable a Webhook endpoint                                                    |
+| `bl managed-agent webhook events`          | API Key        | List recent Webhook delivery events                                          |
+| `bl managed-agent webhook get`             | API Key        | Get a Webhook endpoint                                                       |
+| `bl managed-agent webhook list`            | API Key        | List all Webhook endpoints                                                   |
+| `bl managed-agent webhook reset-secret`    | API Key        | Reset a Webhook signing secret                                               |
+| `bl managed-agent webhook test`            | API Key        | Send a real Webhook test event                                               |
+| `bl managed-agent webhook update`          | API Key        | Update a Webhook endpoint                                                    |
 
 ## Command details
 
@@ -2659,4 +2669,358 @@ bl managed-agent vault search --query github
 
 ```bash
 bl managed-agent vault search --query production --page-limit 20 --output json
+```
+
+### `bl managed-agent webhook create`
+
+| Field              | Value                                                                                                                      |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent webhook create`                                                                                             |
+| **Description**    | Create a Webhook endpoint                                                                                                  |
+| **Authentication** | API Key                                                                                                                    |
+| **Usage**          | `bl managed-agent webhook create --url <url> --event <type> [--event <type>] [--description <text>] [--workspace-id <id>]` |
+| **Risk**           | `high`                                                                                                                     |
+| **Risk message**   | This creates a Webhook and starts delivering subscribed events to its callback URL.                                        |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                   | Type   | Required | Description                                                                     |
+| ---------------------- | ------ | -------- | ------------------------------------------------------------------------------- |
+| `--workspace-id <id>`  | string | no       | Workspace ID; optional when a base URL is configured                            |
+| `--url <url>`          | string | yes      | Public HTTP or HTTPS callback URL                                               |
+| `--event <type>`       | array  | yes      | Named event subscription; repeat for multiple events, wildcards are unsupported |
+| `--description <text>` | string | no       | Description, up to 256 characters; an empty string clears it on update          |
+| `--yes`                | switch | no       | Confirm this high-risk operation                                                |
+| `--api-key <key>`      | string | no       | API key                                                                         |
+| `--base-url <url>`     | string | no       | API base URL                                                                    |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+- Signing Secret is returned only on create/reset. Save it from this successful response; the CLI does not persist it.
+
+#### Examples
+
+```bash
+# Only after explicit user confirmation:
+bl managed-agent webhook create --workspace-id workspace-example --url https://example.com/webhooks --event session.updated --yes
+```
+
+### `bl managed-agent webhook delete`
+
+| Field              | Value                                                                         |
+| ------------------ | ----------------------------------------------------------------------------- |
+| **Name**           | `managed-agent webhook delete`                                                |
+| **Description**    | Delete a Webhook endpoint                                                     |
+| **Authentication** | API Key                                                                       |
+| **Usage**          | `bl managed-agent webhook delete --webhook-id <wep_id> [--workspace-id <id>]` |
+| **Risk**           | `high`                                                                        |
+| **Risk message**   | This deletes the Webhook and cancels its pending deliveries.                  |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                          |
+| ----------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--workspace-id <id>`   | string | no       | Workspace ID; optional when a base URL is configured |
+| `--webhook-id <wep_id>` | string | yes      | Webhook endpoint ID                                  |
+| `--yes`                 | switch | no       | Confirm this high-risk operation                     |
+| `--api-key <key>`       | string | no       | API key                                              |
+| `--base-url <url>`      | string | no       | API base URL                                         |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+
+#### Examples
+
+```bash
+# Only after explicit user confirmation:
+bl managed-agent webhook delete --workspace-id workspace-example --webhook-id wep_example --yes
+```
+
+### `bl managed-agent webhook disable`
+
+| Field              | Value                                                                          |
+| ------------------ | ------------------------------------------------------------------------------ |
+| **Name**           | `managed-agent webhook disable`                                                |
+| **Description**    | Disable a Webhook endpoint                                                     |
+| **Authentication** | API Key                                                                        |
+| **Usage**          | `bl managed-agent webhook disable --webhook-id <wep_id> [--workspace-id <id>]` |
+| **Risk**           | `high`                                                                         |
+| **Risk message**   | This stops new event deliveries and cancels pending deliveries.                |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                          |
+| ----------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--workspace-id <id>`   | string | no       | Workspace ID; optional when a base URL is configured |
+| `--webhook-id <wep_id>` | string | yes      | Webhook endpoint ID                                  |
+| `--yes`                 | switch | no       | Confirm this high-risk operation                     |
+| `--api-key <key>`       | string | no       | API key                                              |
+| `--base-url <url>`      | string | no       | API base URL                                         |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+
+#### Examples
+
+```bash
+# Only after explicit user confirmation:
+bl managed-agent webhook disable --workspace-id workspace-example --webhook-id wep_example --yes
+```
+
+### `bl managed-agent webhook enable`
+
+| Field              | Value                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------ |
+| **Name**           | `managed-agent webhook enable`                                                       |
+| **Description**    | Enable a Webhook endpoint                                                            |
+| **Authentication** | API Key                                                                              |
+| **Usage**          | `bl managed-agent webhook enable --webhook-id <wep_id> [--workspace-id <id>]`        |
+| **Risk**           | `high`                                                                               |
+| **Risk message**   | This resumes new event deliveries. Events from the disabled period are not replayed. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                          |
+| ----------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--workspace-id <id>`   | string | no       | Workspace ID; optional when a base URL is configured |
+| `--webhook-id <wep_id>` | string | yes      | Webhook endpoint ID                                  |
+| `--yes`                 | switch | no       | Confirm this high-risk operation                     |
+| `--api-key <key>`       | string | no       | API key                                              |
+| `--base-url <url>`      | string | no       | API base URL                                         |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+
+#### Examples
+
+```bash
+# Only after explicit user confirmation:
+bl managed-agent webhook enable --workspace-id workspace-example --webhook-id wep_example --yes
+```
+
+### `bl managed-agent webhook events`
+
+| Field              | Value                                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent webhook events`                                                                                    |
+| **Description**    | List recent Webhook delivery events                                                                               |
+| **Authentication** | API Key                                                                                                           |
+| **Usage**          | `bl managed-agent webhook events --webhook-id <wep_id> [--limit <count>] [--page <cursor>] [--workspace-id <id>]` |
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                          |
+| ----------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--workspace-id <id>`   | string | no       | Workspace ID; optional when a base URL is configured |
+| `--webhook-id <wep_id>` | string | yes      | Webhook endpoint ID                                  |
+| `--limit <count>`       | number | no       | Page size, 1–100 (default: 20)                       |
+| `--page <cursor>`       | string | no       | Opaque next_page cursor from the previous response   |
+| `--api-key <key>`       | string | no       | API key                                              |
+| `--base-url <url>`      | string | no       | API base URL                                         |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+- Returns one page of delivery events retained for 7 days. Continue with next_page; deleted Webhooks' retained events remain queryable.
+
+#### Examples
+
+```bash
+bl managed-agent webhook events --workspace-id workspace-example --webhook-id wep_example --limit 20 --output json
+```
+
+### `bl managed-agent webhook get`
+
+| Field              | Value                                                                      |
+| ------------------ | -------------------------------------------------------------------------- |
+| **Name**           | `managed-agent webhook get`                                                |
+| **Description**    | Get a Webhook endpoint                                                     |
+| **Authentication** | API Key                                                                    |
+| **Usage**          | `bl managed-agent webhook get --webhook-id <wep_id> [--workspace-id <id>]` |
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                          |
+| ----------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--workspace-id <id>`   | string | no       | Workspace ID; optional when a base URL is configured |
+| `--webhook-id <wep_id>` | string | yes      | Webhook endpoint ID                                  |
+| `--api-key <key>`       | string | no       | API key                                              |
+| `--base-url <url>`      | string | no       | API base URL                                         |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+
+#### Examples
+
+```bash
+bl managed-agent webhook get --workspace-id workspace-example --webhook-id wep_example
+```
+
+### `bl managed-agent webhook list`
+
+| Field              | Value                                                 |
+| ------------------ | ----------------------------------------------------- |
+| **Name**           | `managed-agent webhook list`                          |
+| **Description**    | List all Webhook endpoints                            |
+| **Authentication** | API Key                                               |
+| **Usage**          | `bl managed-agent webhook list [--workspace-id <id>]` |
+
+#### Flags
+
+| Flag                  | Type   | Required | Description                                          |
+| --------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--workspace-id <id>` | string | no       | Workspace ID; optional when a base URL is configured |
+| `--api-key <key>`     | string | no       | API key                                              |
+| `--base-url <url>`    | string | no       | API base URL                                         |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+- Returns every undeleted Webhook without pagination.
+
+#### Examples
+
+```bash
+bl managed-agent webhook list --workspace-id workspace-example --output json
+```
+
+### `bl managed-agent webhook reset-secret`
+
+| Field              | Value                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent webhook reset-secret`                                                                    |
+| **Description**    | Reset a Webhook signing secret                                                                          |
+| **Authentication** | API Key                                                                                                 |
+| **Usage**          | `bl managed-agent webhook reset-secret --webhook-id <wep_id> [--workspace-id <id>]`                     |
+| **Risk**           | `high`                                                                                                  |
+| **Risk message**   | This immediately invalidates the previous signing secret. Save the new secret and update your receiver. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                          |
+| ----------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--workspace-id <id>`   | string | no       | Workspace ID; optional when a base URL is configured |
+| `--webhook-id <wep_id>` | string | yes      | Webhook endpoint ID                                  |
+| `--yes`                 | switch | no       | Confirm this high-risk operation                     |
+| `--api-key <key>`       | string | no       | API key                                              |
+| `--base-url <url>`      | string | no       | API base URL                                         |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+- Signing Secret is returned only on create/reset. Save it from this successful response; the CLI does not persist it.
+
+#### Examples
+
+```bash
+# Only after explicit user confirmation:
+bl managed-agent webhook reset-secret --workspace-id workspace-example --webhook-id wep_example --yes
+```
+
+### `bl managed-agent webhook test`
+
+| Field              | Value                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------ |
+| **Name**           | `managed-agent webhook test`                                                                           |
+| **Description**    | Send a real Webhook test event                                                                         |
+| **Authentication** | API Key                                                                                                |
+| **Usage**          | `bl managed-agent webhook test --webhook-id <wep_id> [--workspace-id <id>]`                            |
+| **Risk**           | `high`                                                                                                 |
+| **Risk message**   | This sends a real callback request; redirects or security validation failures may disable the Webhook. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                          |
+| ----------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--workspace-id <id>`   | string | no       | Workspace ID; optional when a base URL is configured |
+| `--webhook-id <wep_id>` | string | yes      | Webhook endpoint ID                                  |
+| `--yes`                 | switch | no       | Confirm this high-risk operation                     |
+| `--api-key <key>`       | string | no       | API key                                              |
+| `--base-url <url>`      | string | no       | API base URL                                         |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+- Tests are synchronous, are not retried or recorded, and do not affect consecutive failure counts.
+
+#### Examples
+
+```bash
+# Only after explicit user confirmation:
+bl managed-agent webhook test --workspace-id workspace-example --webhook-id wep_example --yes
+```
+
+### `bl managed-agent webhook update`
+
+| Field              | Value                                                                                                                               |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent webhook update`                                                                                                      |
+| **Description**    | Update a Webhook endpoint                                                                                                           |
+| **Authentication** | API Key                                                                                                                             |
+| **Usage**          | `bl managed-agent webhook update --webhook-id <wep_id> [--url <url>] [--event <type>] [--description <text>] [--workspace-id <id>]` |
+| **Risk**           | `high`                                                                                                                              |
+| **Risk message**   | This updates the callback URL, description, or event subscriptions of the Webhook.                                                  |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag                    | Type   | Required | Description                                                                     |
+| ----------------------- | ------ | -------- | ------------------------------------------------------------------------------- |
+| `--workspace-id <id>`   | string | no       | Workspace ID; optional when a base URL is configured                            |
+| `--webhook-id <wep_id>` | string | yes      | Webhook endpoint ID                                                             |
+| `--url <url>`           | string | no       | Public HTTP or HTTPS callback URL                                               |
+| `--event <type>`        | array  | no       | Named event subscription; repeat for multiple events, wildcards are unsupported |
+| `--description <text>`  | string | no       | Description, up to 256 characters; an empty string clears it on update          |
+| `--yes`                 | switch | no       | Confirm this high-risk operation                                                |
+| `--api-key <key>`       | string | no       | API key                                                                         |
+| `--base-url <url>`      | string | no       | API base URL                                                                    |
+
+#### Notes
+
+- Manages workspace-level Webhooks directly; no agents.yaml or local state is required.
+- Auth: --api-key > DASHSCOPE_API_KEY > active profile API key. Credentials are injected into the SDK in memory only.
+- Base URL: --base-url > DASHSCOPE_BASE_URL > profile base_url. Without a configured URL, use --workspace-id > BAILIAN_WORKSPACE_ID > config workspace_id for the cn-beijing endpoint.
+- Omitted fields stay unchanged; --event replaces the complete subscription list.
+
+#### Examples
+
+```bash
+# Only after explicit user confirmation:
+bl managed-agent webhook update --workspace-id workspace-example --webhook-id wep_example --description "" --yes
 ```
