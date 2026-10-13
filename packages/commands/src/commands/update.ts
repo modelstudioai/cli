@@ -122,8 +122,11 @@ export default defineCommand({
     const targetVersion = pinnedVersion ?? (await resolveLatest(method, npmPackage));
 
     if (!targetVersion) {
-      process.stderr.write(`${color.yellow("Could not determine the latest version.")}\n`);
-      return;
+      throw new BailianError(
+        "Could not determine the latest version.",
+        ExitCode.GENERAL,
+        "Check network access, or pass --to <version>.",
+      );
     }
 
     if (targetVersion === currentVersion) {
@@ -157,10 +160,10 @@ export default defineCommand({
             ? error.hint.replace(/^Re-run:\s*/i, "")
             : binaryReinstallHint().trim();
         throw new BailianError(
-          `Automatic binary update failed: ${message}`,
+          "Automatic binary update failed.",
           ExitCode.GENERAL,
           `Re-run the install script:\n  ${reinstall}`,
-          { cause: error },
+          { cause: message },
         );
       }
       return;
