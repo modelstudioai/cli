@@ -2,6 +2,10 @@
 
 > `bl knowledge` / `kscli` 知识库 CLI 命令总览，覆盖知识库子命令。完整参数与示例请参阅各子域手册。
 
+首次体验请参阅 [init 初始化完整手册](init.md)：包含样例内容、参数、预览与确认、恢复及清理说明。
+
+新增文档命令：[doc sync 目录增量同步](doc.md#doc-sync) · [doc import 已有文件导入](doc.md#doc-import)。
+
 ---
 
 ## 目录

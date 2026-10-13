@@ -6,7 +6,18 @@
 
 ---
 
-#### `bl knowledge doc sync`
+## 命令目录
+
+- [doc sync](#doc-sync)
+- [doc list](#doc-list)
+- [doc status](#doc-status)
+- [doc upload](#doc-upload)
+- [doc delete](#doc-delete)
+- [doc tag](#doc-tag)
+- [doc import-oss](#doc-import-oss)
+- [doc import](#doc-import)
+
+## doc sync
 
 将本地目录增量同步到已有知识库；`kscli` 的对应路径是 `kscli doc sync`。
 
@@ -49,7 +60,7 @@ JSON 输出包含 `summary`、`actions`、`skipped`、`unmanaged`、`orphans`、
 
 ---
 
-#### `bl knowledge doc list`
+## doc list
 
 列出知识库中的文档及其解析/索引状态。
 
@@ -101,7 +112,7 @@ bl knowledge doc list --index-id idx-xxx --page-size 100
 
 ---
 
-#### `bl knowledge doc status`
+## doc status
 
 查看知识库导入任务状态。
 
@@ -154,7 +165,7 @@ bl knowledge doc status --index-id idx-xxx --job-id job-xxx --wait --poll-interv
 
 ---
 
-#### `bl knowledge doc upload`
+## doc upload
 
 上传本地文件或目录到数据中心，可选导入到知识库。
 
@@ -221,7 +232,7 @@ bl knowledge doc upload --file ./docs/ --dry-run --verbose
 
 ---
 
-#### `bl knowledge doc delete`
+## doc delete
 
 从知识库中删除文档及其 chunk。
 
@@ -272,7 +283,7 @@ bl knowledge doc delete --index-id idx-xxx --doc-id doc-a --doc-id doc-b --yes
 
 ---
 
-#### `bl knowledge doc tag`
+## doc tag
 
 批量更新数据中心文件的标签。
 
@@ -326,7 +337,7 @@ bl knowledge doc tag --doc-id file-a --doc-id file-b --tag final --mode overwrit
 
 ---
 
-#### `bl knowledge doc import-oss`
+## doc import-oss
 
 从已授权的 OSS bucket 批量导入文件到数据中心。
 
@@ -386,7 +397,7 @@ bl knowledge doc import-oss --bucket my-bucket --region cn-beijing --oss-key doc
 
 ← [返回总览](knowledge-cli-guide.md)
 
-## 已有文件导入与音视频接入
+## doc import
 
 `doc upload` 从本地上传到数据中心，`doc import-oss` 从已授权 OSS 注册到数据中心；两者产生 fileId。新增 `doc import` 把这些已有文件加入已有知识库，不重复上传。kscli 使用相同参数，省略 `knowledge` 前缀。
 
@@ -399,6 +410,41 @@ bl knowledge doc list --index-id idx-xxx --details --page-number 2 --page-size 1
 `--doc-id` 与 `--category-id` 可重复但互斥，必须选一种。`--wait` 与 `--poll-interval` 控制等待；返回 ingestionId。等待会汇总任务所有页的文件状态，失败文件不会因不在第一页而漏掉。超时后用原 ingestionId 继续查询，不必重新导入。
 
 普通文档可传 `--chunk-mode h1|h2|h3|h4|h5|length|page|regex`、`--chunk-size`、`--overlap-size`、`--separator`、`--enable-headers true|false`。length 需要 chunk-size，regex 需要 separator；这些不是音视频的按秒切片参数。
+
+### 参数与输出
+
+| 参数               | 类型    | 说明                                                           |
+| ------------------ | ------- | -------------------------------------------------------------- |
+| `--index-id`       | string  | 必填，目标已有知识库 ID。                                      |
+| `--doc-id`         | array   | 数据中心 fileId，可重复；与 category-id 二选一，不是本地路径。 |
+| `--category-id`    | array   | 数据中心分类 ID，可重复；与 doc-id 互斥。                      |
+| `--workspace-id`   | string  | 目标工作空间；也可使用已配置值。                               |
+| `--wait`           | switch  | 等待导入完成；不传时提交任务后返回。                           |
+| `--poll-interval`  | number  | 轮询间隔秒数，默认 5，必须为正数。                             |
+| `--chunk-mode`     | string  | h1/h2/h3/h4/h5/length/page/regex，文档切片模式。               |
+| `--chunk-size`     | number  | 1–6000 的整数；length 模式必填。                               |
+| `--overlap-size`   | number  | 0–1024 的整数。                                                |
+| `--separator`      | string  | regex 模式必填的分隔表达式。                                   |
+| `--enable-headers` | boolean | 显式传 true 或 false，控制标题提取。                           |
+| `--dry-run`        | switch  | 预览请求，不执行导入。                                         |
+
+导入复用已有 fileId，不重新上传文件或创建知识库。任务返回 ingestionId；需要实际完成状态时使用 --wait。已有文件的类型和导入数量由服务端校验，不能用分类个数代替文件数。文档切片参数不是音视频按秒切片参数。
+
+### 不同场景怎么处理
+
+- 已上传单个文件：使用 --doc-id fileId，向已有知识库发起导入。
+- 已上传多个文件：重复传 --doc-id；不要传逗号拼接的 ID 字符串。
+- 按分类导入：使用 --category-id，可重复；不能与 --doc-id 混用。
+- 两种来源均未提供或同时提供：本地校验失败，不发起导入。
+- 等待超时或任务部分失败：保留返回的 ingestionId，通过 doc status 核对；不要直接重复提交。等待会检查所有页的文件状态，不把部分失败报告为全部成功。
+
+```bash
+bl knowledge doc import --index-id idx-xxx --doc-id file-a --doc-id file-b --workspace-id ws-xxx --wait
+kscli doc import --index-id idx-xxx --category-id cate-xxx --workspace-id ws-xxx --dry-run
+bl knowledge doc import --index-id idx-xxx --doc-id file-xxx --chunk-mode length --chunk-size 600 --overlap-size 100 --enable-headers true --dry-run
+```
+
+## 文件详情与音视频接入补充
 
 `doc list --details` 调用文件详情列表接口，文本显示 chunkSize、overlapSize、separator、chunkMode、enableHeaders；JSON 保留原始响应。详情接口每页最多 **10** 条，默认普通列表仍为最多 100 条。
 
