@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 import {
   BailianError,
   ExitCode,
@@ -10,6 +10,7 @@ import {
   type CommandNotice,
 } from "bailian-cli-core";
 import { listKnowledgeIndexes } from "../operations/list.ts";
+import { defaultSyncStatePath } from "../state-paths.ts";
 import { readSyncCheckpoint } from "./state.ts";
 import { resolveSyncCategory } from "./category.ts";
 import { scanSyncDirectory } from "./scan.ts";
@@ -53,7 +54,7 @@ export async function prepareSync(options: SyncPrepareOptions) {
       ExitCode.USAGE,
     );
   const directory = resolve(options.directory);
-  const stateFile = resolve(options.stateFile ?? join(directory, ".bailian", "sync-state.json"));
+  const stateFile = resolve(options.stateFile ?? defaultSyncStatePath(directory, indexId));
   const scope = {
     endpointOrigin: new URL(ragEndpoint(workspaceId, RAG_PATHS.indexList)).origin,
     workspaceId,

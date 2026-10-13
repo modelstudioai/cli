@@ -14,6 +14,8 @@ test("help exposes billing, state file and read-only network preview", async () 
   expect(result.stderr).toContain("720");
   expect(result.stderr).toContain("--yes");
   expect(result.stderr).toContain("--state-file");
+  expect(result.stderr).toContain("~/.bailian/knowledge/init/<key>.json");
+  expect(result.stderr).toContain("workspace and name");
   expect(result.stderr).toContain("--dry-run");
 });
 

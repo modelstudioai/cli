@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,14 +17,14 @@ afterEach(async () => {
     directories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })),
   );
 });
-async function setup() {
+async function setup(stateRelativePath = "state/sync.json") {
   const directory = await mkdtemp(join(tmpdir(), "sync-runtime-"));
   directories.push(directory);
   const docs = join(directory, "docs");
   await mkdir(docs);
   const source = join(docs, "article.md");
   await writeFile(source, "first content");
-  const stateFile = join(directory, "state/sync.json");
+  const stateFile = join(directory, stateRelativePath);
   const run = (args: string[] = [], failure = "") =>
     runNodeMain(
       fixture,
@@ -78,6 +78,51 @@ const mutations = [
   RAG_PATHS.indexJobCreate,
   RAG_PATHS.indexDeleteFile,
 ];
+
+test("F02-03 mixed directory uploads supported files while reporting unsupported files, media and links as skipped", async () => {
+  const context = await setup("docs/checkpoint.md");
+  const docs = dirname(context.source);
+  const supported = ["nested/中文 空格.md", "nested/deeper/notes.txt"];
+  const excluded = [".bailian/state.md", ".git/hidden.md", "node_modules/hidden.md"];
+  const unsupported = ["archive.zip", "script.ts", "no-extension", "audio.MP3", "video.mp4"];
+  for (const relativePath of [...supported, ...excluded, ...unsupported]) {
+    const filePath = join(docs, relativePath);
+    await mkdir(dirname(filePath), { recursive: true });
+    await writeFile(filePath, "fixture content");
+  }
+  const outside = join(context.directory, "outside");
+  await mkdir(outside);
+  await writeFile(join(outside, "secret.md"), "must never upload");
+  await symlink(outside, join(docs, "linked-directory"));
+  await symlink(join(outside, "secret.md"), join(docs, "linked.md"));
+  const stateFile = context.stateFile;
+  const result = await context.run();
+  expect(result.exitCode, result.stderr).toBe(0);
+  const output = JSON.parse(result.stdout);
+  expect(output.summary.add).toBe(3);
+  for (const relativePath of unsupported)
+    expect(output.skipped).toContainEqual({ relativePath, reason: "unsupported", subtree: false });
+  for (const relativePath of [".bailian", ".git", "node_modules"])
+    expect(output.skipped).toContainEqual({ relativePath, reason: "excluded", subtree: true });
+  for (const relativePath of ["linked-directory", "linked.md"])
+    expect(output.skipped).toContainEqual({ relativePath, reason: "symlink", subtree: true });
+  const checkpoint = await readFile(stateFile, "utf8");
+  expect(Object.keys(JSON.parse(checkpoint).entries).sort()).toEqual(
+    ["article.md", ...supported].sort(),
+  );
+  expect((await context.remote()).files).toHaveLength(3);
+
+  const repeated = await context.run();
+  expect(repeated.exitCode, repeated.stderr).toBe(0);
+  expect(JSON.parse(repeated.stdout).skipped).toContainEqual({
+    relativePath: "checkpoint.md",
+    reason: "excluded",
+    subtree: false,
+  });
+  expect(JSON.parse(repeated.stdout).summary.skip).toBe(3);
+  expect((await context.remote()).files).toHaveLength(3);
+  expect(await readFile(stateFile, "utf8")).toBe(checkpoint);
+});
 
 test("sync dry-run reads inventory without creating remote resources, state or lock", async () => {
   const context = await setup();

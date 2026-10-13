@@ -921,28 +921,28 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 
 ### Flags
 
-| Flag                      | Type   | Required | Description                                                       |
-| ------------------------- | ------ | -------- | ----------------------------------------------------------------- |
-| --api-key <key>           | string | —        | API key                                                           |
-| --base-url <url>          | string | —        | API base URL                                                      |
-| --category-id <id>        | string | —        | Data-center category ID (default: workspace default on first run) |
-| --config <name>           | string | —        | Use a config profile for this command                             |
-| --delete                  | switch | —        | Delete managed index documents missing locally                    |
-| --dir <path>              | string | yes      | Local document directory                                          |
-| --dry-run                 | switch | —        | Dry run mode                                                      |
-| --help                    | switch | —        | Show help                                                         |
-| --index-id <id>           | string | yes      | Target knowledge base ID                                          |
-| --introspect              | switch | —        | Print the machine-readable command schema (JSON) and exit         |
-| --output <format>         | string | —        | Output format: text, json                                         |
-| --poll-interval <seconds> | number | —        | Polling interval (default: 5 seconds)                             |
-| --quiet                   | switch | —        | Suppress non-essential output                                     |
-| --state-file <path>       | string | —        | Checkpoint path (default: <dir>/.bailian/sync-state.json)         |
-| --sync-id <uuid>          | string | —        | Synchronization set UUID                                          |
-| --timeout <seconds>       | number | —        | Request timeout                                                   |
-| --verbose                 | switch | —        | Print HTTP request/response details                               |
-| --version                 | switch | —        | Print version                                                     |
-| --workspace-id <id>       | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)   |
-| --yes                     | switch | —        | Confirm this high-risk operation                                  |
+| Flag                      | Type   | Required | Description                                                                           |
+| ------------------------- | ------ | -------- | ------------------------------------------------------------------------------------- |
+| --api-key <key>           | string | —        | API key                                                                               |
+| --base-url <url>          | string | —        | API base URL                                                                          |
+| --category-id <id>        | string | —        | Data-center category ID (default: workspace default on first run)                     |
+| --config <name>           | string | —        | Use a config profile for this command                                                 |
+| --delete                  | switch | —        | Delete managed index documents missing locally                                        |
+| --dir <path>              | string | yes      | Local document directory                                                              |
+| --dry-run                 | switch | —        | Dry run mode                                                                          |
+| --help                    | switch | —        | Show help                                                                             |
+| --index-id <id>           | string | yes      | Target knowledge base ID                                                              |
+| --introspect              | switch | —        | Print the machine-readable command schema (JSON) and exit                             |
+| --output <format>         | string | —        | Output format: text, json                                                             |
+| --poll-interval <seconds> | number | —        | Polling interval (default: 5 seconds)                                                 |
+| --quiet                   | switch | —        | Suppress non-essential output                                                         |
+| --state-file <path>       | string | —        | Checkpoint path (default: <dir>/.bailian/sync/<key>.json, keyed by knowledge base ID) |
+| --sync-id <uuid>          | string | —        | Synchronization set UUID                                                              |
+| --timeout <seconds>       | number | —        | Request timeout                                                                       |
+| --verbose                 | switch | —        | Print HTTP request/response details                                                   |
+| --version                 | switch | —        | Print version                                                                         |
+| --workspace-id <id>       | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                       |
+| --yes                     | switch | —        | Confirm this high-risk operation                                                      |
 
 ### Notes
 
@@ -1277,24 +1277,24 @@ Use `--yes` only after the user has confirmed this operation and its scope. Exit
 
 ### Flags
 
-| Flag                      | Type   | Required | Description                                                     |
-| ------------------------- | ------ | -------- | --------------------------------------------------------------- |
-| --api-key <key>           | string | —        | API key                                                         |
-| --base-url <url>          | string | —        | API base URL                                                    |
-| --config <name>           | string | —        | Use a config profile for this command                           |
-| --dry-run                 | switch | —        | Dry run mode                                                    |
-| --help                    | switch | —        | Show help                                                       |
-| --introspect              | switch | —        | Print the machine-readable command schema (JSON) and exit       |
-| --name <name>             | string | —        | Knowledge base name (1-20 characters; default: cli-demo)        |
-| --output <format>         | string | —        | Output format: text, json                                       |
-| --poll-interval <seconds> | number | —        | Polling interval (default: 5 seconds)                           |
-| --quiet                   | switch | —        | Suppress non-essential output                                   |
-| --state-file <path>       | string | —        | Recovery checkpoint (default: .bailian/knowledge/init.json)     |
-| --timeout <seconds>       | number | —        | Request timeout                                                 |
-| --verbose                 | switch | —        | Print HTTP request/response details                             |
-| --version                 | switch | —        | Print version                                                   |
-| --workspace-id <id>       | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID) |
-| --yes                     | switch | —        | Confirm this high-risk operation                                |
+| Flag                      | Type   | Required | Description                                                                                      |
+| ------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------ |
+| --api-key <key>           | string | —        | API key                                                                                          |
+| --base-url <url>          | string | —        | API base URL                                                                                     |
+| --config <name>           | string | —        | Use a config profile for this command                                                            |
+| --dry-run                 | switch | —        | Dry run mode                                                                                     |
+| --help                    | switch | —        | Show help                                                                                        |
+| --introspect              | switch | —        | Print the machine-readable command schema (JSON) and exit                                        |
+| --name <name>             | string | —        | Knowledge base name (1-20 characters; default: cli-demo)                                         |
+| --output <format>         | string | —        | Output format: text, json                                                                        |
+| --poll-interval <seconds> | number | —        | Polling interval (default: 5 seconds)                                                            |
+| --quiet                   | switch | —        | Suppress non-essential output                                                                    |
+| --state-file <path>       | string | —        | Recovery checkpoint (default: ~/.bailian/knowledge/init/<key>.json, keyed by workspace and name) |
+| --timeout <seconds>       | number | —        | Request timeout                                                                                  |
+| --verbose                 | switch | —        | Print HTTP request/response details                                                              |
+| --version                 | switch | —        | Print version                                                                                    |
+| --workspace-id <id>       | string | —        | Workspace ID for API endpoint URL (or set BAILIAN_WORKSPACE_ID)                                  |
+| --yes                     | switch | —        | Confirm this high-risk operation                                                                 |
 
 ### Notes
 

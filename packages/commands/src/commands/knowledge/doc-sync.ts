@@ -32,8 +32,9 @@ const flags = {
     type: "string",
     valueHint: "<path>",
     description: {
-      "en-US": "Checkpoint path (default: <dir>/.bailian/sync-state.json)",
-      "zh-CN": "状态路径（默认 <dir>/.bailian/sync-state.json）",
+      "en-US":
+        "Checkpoint path (default: <dir>/.bailian/sync/<key>.json, keyed by knowledge base ID)",
+      "zh-CN": "状态路径（默认 <dir>/.bailian/sync/<key>.json，按知识库 ID 隔离）",
     },
   },
   categoryId: {

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, expect, test, vi } from "vite-plus/test";
 import { RAG_PATHS, type Client, type LocalizedText } from "bailian-cli-core";
 import { prepareSync } from "../../src/commands/knowledge/sync/prepare.ts";
+import { writeStateFile } from "../../src/commands/knowledge/state-store.ts";
 const localize = (text: LocalizedText) => (typeof text === "string" ? text : text["en-US"]);
 const directories: string[] = [];
 afterEach(async () => {
@@ -20,7 +21,10 @@ async function fixture() {
     const path = new URL(request.path).pathname;
     if (path.endsWith(RAG_PATHS.indexList))
       return {
-        data: { rows: [{ id: "index", name: "test", knowledgeType: "document" }], total_count: 1 },
+        data: {
+          rows: ["index", "other-index"].map((id) => ({ id, name: id, knowledgeType: "document" })),
+          total_count: 2,
+        },
       };
     if (path.endsWith(RAG_PATHS.listCategory))
       return { data: { categoryList: [{ categoryId: "real-category", isDefault: true }] } };
@@ -72,6 +76,50 @@ test("existing checkpoint preserves actual category and synchronization ID", asy
   expect(repeated.state.syncId).toBe(prepared.state.syncId);
   expect(repeated.stateRevision).toMatch(/^[a-f0-9]{64}$/);
   expect(repeated.scan.files.map((file) => file.relativePath)).toEqual(["a.md"]);
+});
+
+test.each(["ws", "other-ws"])(
+  "default checkpoints isolate indexes and restore each synchronization when switching back in %s",
+  async (workspaceId) => {
+    const input = await fixture();
+    const first = await prepareSync(input);
+    await writeStateFile(first.stateFile, first.state);
+    const second = await prepareSync({ ...input, workspaceId, indexId: "other-index" });
+    expect(second.stateFile).not.toBe(first.stateFile);
+    expect(second.stateRevision).toBeNull();
+    expect(second.state.syncId).not.toBe(first.state.syncId);
+    await writeStateFile(second.stateFile, second.state);
+
+    for (const saved of [first, second]) {
+      const restored = await prepareSync({
+        ...input,
+        workspaceId: saved.state.target.workspaceId,
+        indexId: saved.state.target.indexId,
+      });
+      expect(restored.stateFile).toBe(saved.stateFile);
+      expect(restored.state).toEqual(saved.state);
+      expect(restored.stateRevision).not.toBeNull();
+      expect(restored.scan.files.map((file) => file.relativePath)).toEqual(["a.md"]);
+    }
+  },
+);
+
+test("default sync path depends only on index ID within its source directory", async () => {
+  const input = await fixture();
+  const first = await prepareSync(input);
+  const otherWorkspace = await prepareSync({ ...input, workspaceId: "other-ws" });
+  expect(otherWorkspace.stateFile).toBe(first.stateFile);
+  await expect(stat(join(input.directory, ".bailian"))).rejects.toMatchObject({ code: "ENOENT" });
+});
+
+test("legacy default checkpoint is not read or migrated", async () => {
+  const input = await fixture();
+  const legacyPath = join(input.directory, ".bailian", "sync-state.json");
+  await writeStateFile(legacyPath, { obsolete: true });
+  const prepared = await prepareSync(input);
+  expect(prepared.stateFile).not.toBe(legacyPath);
+  expect(prepared.stateRevision).toBeNull();
+  await expect(stat(prepared.stateFile)).rejects.toMatchObject({ code: "ENOENT" });
 });
 
 test("verified existing document produces replacement risk after local changes", async () => {

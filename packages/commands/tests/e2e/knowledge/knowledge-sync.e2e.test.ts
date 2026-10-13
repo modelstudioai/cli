@@ -14,6 +14,8 @@ test("sync help exposes preview, opt-in deletion and billing implications", asyn
   expect(result.exitCode, result.stderr).toBe(0);
   for (const flag of ["--dir", "--index-id", "--delete", "--dry-run", "--state-file", "--yes"])
     expect(result.stderr).toContain(flag);
+  expect(result.stderr).toContain(".bailian/sync/<key>.json");
+  expect(result.stderr).toContain("knowledge base ID");
 });
 
 test.each([{ args: [] }, { args: ["--dir", directory] }, { args: ["--index-id", "index-test"] }])(

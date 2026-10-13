@@ -12,6 +12,7 @@ import { knowledgeCreationRisk, localizedKnowledgeBillingNotice } from "./billin
 import { prepareKnowledgeInit, type InitPrepared } from "./init-prepare.ts";
 import { runKnowledgeInit, type InitResource } from "./init-workflow.ts";
 import { matchesInitSample } from "./init-sample.ts";
+import { defaultInitStatePath } from "./state-paths.ts";
 import { resolveWorkspaceId, WORKSPACE_FLAG } from "./shared.ts";
 import deleteIndex from "./kb-delete.ts";
 import deleteService from "./service-delete.ts";
@@ -31,8 +32,9 @@ const INIT_FLAGS = {
     type: "string",
     valueHint: "<path>",
     description: {
-      "en-US": "Recovery checkpoint (default: .bailian/knowledge/init.json)",
-      "zh-CN": "恢复记录路径（默认 .bailian/knowledge/init.json）",
+      "en-US":
+        "Recovery checkpoint (default: ~/.bailian/knowledge/init/<key>.json, keyed by workspace and name)",
+      "zh-CN": "恢复记录路径（默认 ~/.bailian/knowledge/init/<key>.json，按工作空间和名称隔离）",
     },
   },
   pollInterval: {
@@ -127,11 +129,13 @@ export default defineCommand<typeof INIT_FLAGS, InitPrepared>({
     return undefined;
   },
   async prepare(context) {
+    const workspaceId = resolveWorkspaceId(context);
+    const name = context.flags.name ?? "cli-demo";
     return prepareKnowledgeInit({
       client: context.client,
-      workspaceId: resolveWorkspaceId(context),
-      name: context.flags.name ?? "cli-demo",
-      stateFile: resolve(context.flags.stateFile ?? ".bailian/knowledge/init.json"),
+      workspaceId,
+      name,
+      stateFile: resolve(context.flags.stateFile ?? defaultInitStatePath(workspaceId, name)),
       localize: context.localize,
     });
   },
