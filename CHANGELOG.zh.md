@@ -6,15 +6,23 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
-## [未发布]
+## [2.2.2] - 2026-10-14
 
 ### 新增
 
+- **模型压缩完整生命周期** —— 新增 `bl finetune compress templates/create/list/get/watch/logs/cancel/delete`，支持对符合条件的全参调优模型执行量化压缩，并覆盖 dry-run 预览、状态轮询、日志查询和安全删除确认。
+- **支持 Pi Agent** —— `bl config agent` 与 `bl mcp connect` / `bl mcp disconnect` 新增支持 Pi，写入其原生配置并保留已有设置，输出中的凭据会脱敏。
+- **全局参数可前置** —— `--config` 等全局参数现在既可放在命令之后，也可放在命令之前（`bl --config token-plan auth status`）；两种写法都只对本次调用选择 Profile，不修改 `active_config`。命令专属参数和凭证域参数仍须放在命令路径之后。
 - **决策模型推理** —— 新增 `bl decision`，通过工作空间专属 Endpoint 调用 TypeSafe System One，支持 `choice` / `noul` / `score` 校验、JSON 与文本输出、复用训练样本、北京/新加坡地域路由及 dry-run 预览。
 
 ### 变更
 
 - **决策数据集校验** —— 与最新 API 对齐：`state` 可为字符串、对象或数组，`instructions` 改为可选，并按接口限制校验各类问题的 criteria。
+- **更严格的参数校验** —— 只接受命令已定义的参数。未知参数、缺少参数值或参数值非法时，即使本次调用原本会显示帮助，也返回用法错误退出码 2，解析错误提示跟随 Profile 语言；不带参数的根命令或命令组仍显示帮助并返回 0。`--timeout` 在命令行和最终生效配置中使用同一套“正有限数”校验规则。
+
+### 修复
+
+- **临时文件上传超时** —— 本地文件上传到临时 OSS 存储时会遵循 `--timeout`，不再固定为 120 秒。
 
 ## [2.2.1] - 2026-10-12
 
@@ -23,10 +31,6 @@
 - **Hermes Agent 配置路径** —— `bl config agent --agent hermes` 现在会写入 Hermes 实际读取的位置（`$HERMES_HOME/config.yaml`，或平台原生默认路径：Windows 为 `%LOCALAPPDATA%\hermes`，其它平台为 `~/.hermes`），不再固定写 `~/.hermes/config.yaml`。此前在 Windows 或自定义 `HERMES_HOME` 环境下，配置被写到 Hermes 不读取的文件、变更静默失效，Agent 探测也可能误报 Hermes 为「未配置」。
 
 ## [2.2.0] - 2026-10-12
-
-### 新增
-
-- **模型压缩完整生命周期** —— 新增 `bl finetune compress templates/create/list/get/watch/logs/cancel/delete`，支持对符合条件的全参调优模型执行量化压缩，并覆盖 dry-run 预览、状态轮询、日志查询和安全删除确认。
 
 ### 变更
 
