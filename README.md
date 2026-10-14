@@ -121,6 +121,7 @@ Once installed, just describe your task to your AI Agent — no need to assemble
 | Monitoring & alerts      | "Show my model call stats, failures and logs, and create an alert rule."                                                              |
 | Throughput reservations  | "List my throughput reservations and capacity instances, then scale, renew or release capacity and wait for the operation to finish." |
 | Model selection          | "Recommend a model for image understanding and customer support."                                                                     |
+| Decision model           | "Use the Bailian decision model to route this ticket and assess whether it needs escalation."                                         |
 | About Bailian CLI        | "Tell me what Bailian CLI can do for me, and suggest how to use it for my needs."                                                     |
 
 > More examples and scenarios: [Aliyun Model Studio CLI Site](https://bailian.console.aliyun.com/cli?spm=a2ty07.github)

@@ -8,6 +8,7 @@ export {
   listSupportedFormats,
   MAX_DATASET_BYTES,
   MAX_CPT_BYTES,
+  MAX_DECISION_DATASET_BYTES,
   MAX_MEDIA_ZIP_BYTES,
   parseDatasetSchemaFlag,
   formatIssue,
