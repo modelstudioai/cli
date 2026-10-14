@@ -77,6 +77,40 @@ test("parsePath rejects short flags before the command path", () => {
   );
 });
 
+test.each(["constructor", "to-string", "__proto__"])(
+  "parsePath rejects inherited property --%s as a leading global flag",
+  (flagName) => {
+    expect(() => parsePath([`--${flagName}=ignored`, "config", "show"])).toThrowError(
+      expect.objectContaining({ name: "UsageError", exitCode: ExitCode.USAGE }),
+    );
+  },
+);
+
+test.each([
+  ["--config"],
+  ["--timeout", "--quiet", "auth"],
+  ["--timeout", "--help"],
+  ["--config", "work", "--timeout", "--version"],
+])(
+  "parsePath leaves missing leading values for unified flag validation: %j",
+  (...argumentsList) => {
+    expect(parsePath(argumentsList)).toMatchObject({ path: [], rest: argumentsList });
+  },
+);
+
+test.each([
+  ["--timeout", "invalid"],
+  ["--timeout", "0"],
+  ["--timeout=-1"],
+  ["--quiet=true"],
+  ["--config", "first", "--config", "second"],
+])("parsePath preserves raw leading values for later validation: %j", (...leadingFlags) => {
+  expect(parsePath([...leadingFlags, "auth"])).toMatchObject({
+    path: ["auth"],
+    rest: leadingFlags,
+  });
+});
+
 // ---- parseFlags: typed parsing ----
 
 test("parseFlags parses string / number / switch", () => {
@@ -84,6 +118,15 @@ test("parseFlags parses string / number / switch", () => {
   expect(flags.prompt).toBe("cat");
   expect(flags.n).toBe(3);
   expect(flags.async).toBe(true);
+});
+
+test("help mode skips required enforcement while still parsing supplied values", () => {
+  expect(parseFlags(["--n", "2"], OPTS, undefined, { enforceRequired: false })).toMatchObject({
+    n: 2,
+  });
+  expect(() =>
+    parseFlags(["--n", "invalid"], OPTS, undefined, { enforceRequired: false }),
+  ).toThrowError(expect.objectContaining({ exitCode: ExitCode.USAGE }));
 });
 
 test("parseFlags supports the --flag=value form", () => {
@@ -145,6 +188,15 @@ test("parseFlags rejects unknown long flags", () => {
     }),
   );
 });
+
+test.each(["constructor", "to-string", "__proto__"])(
+  "parseFlags rejects inherited property --%s instead of ignoring it",
+  (flagName) => {
+    expect(() => parseFlags(["--prompt", "cat", `--${flagName}=ignored`], OPTS)).toThrowError(
+      expect.objectContaining({ name: "UsageError", exitCode: ExitCode.USAGE }),
+    );
+  },
+);
 
 test("parseFlags rejects short flags", () => {
   expect(() => parseFlags(["--prompt", "x", "-h"], OPTS)).toThrowError(

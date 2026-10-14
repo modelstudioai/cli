@@ -764,8 +764,8 @@ describe("e2e: auth", () => {
       "--base-url",
       "https://x.test",
     ]);
-    expect(exitCode).not.toBe(0);
-    expect(stderr).toMatch(/Unknown flag.*--base-url/);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/(?:Unknown flag|未知参数).*--base-url/);
   });
 
   test("auth status 展示 env OpenAPI AK/SK 且不接受 OpenAPI flag 覆盖", async () => {
@@ -788,8 +788,8 @@ describe("e2e: auth", () => {
     expect(data.openapi?.access_key_secret).not.toBe("secret-e2e-placeholder");
 
     const denied = await runCommandE2e(AUTH_ROUTES, ["auth", "status", "--access-key-id", "ak"]);
-    expect(denied.exitCode).not.toBe(0);
-    expect(denied.stderr).toMatch(/Unknown flag.*--access-key-id/);
+    expect(denied.exitCode).toBe(2);
+    expect(denied.stderr).toMatch(/(?:Unknown flag|未知参数).*--access-key-id/);
   });
 
   test.skipIf(!isOpenApiE2EReady())(

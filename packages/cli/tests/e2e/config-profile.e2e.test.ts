@@ -111,6 +111,112 @@ describe("e2e: named config", () => {
     });
   });
 
+  test.each(["config show", "auth status"])(
+    "前置和后置 --config 为 %s 选择同一份非激活 Profile，且不修改配置",
+    async (commandPath) => {
+      await withTempConfigDir(async (configDir) => {
+        const originalConfig = {
+          active_config: "default",
+          api_key: "sk-default-review",
+          base_url: "https://default.example.test",
+          work: {
+            api_key: "sk-work-review",
+            base_url: "https://work.example.test",
+            access_token: "console-work-review",
+            console_site: "international",
+            console_region: "ap-southeast-1",
+            workspace_id: "work-space-review",
+            output: "json",
+          },
+        };
+        writeConfig(configDir, originalConfig);
+        const env = {
+          BAILIAN_CONFIG_DIR: configDir,
+          DASHSCOPE_API_KEY: "",
+          DASHSCOPE_BASE_URL: "",
+          DASHSCOPE_OUTPUT: "",
+          ALIBABA_CLOUD_ACCESS_KEY_ID: "",
+          ALIBABA_CLOUD_ACCESS_KEY_SECRET: "",
+        };
+        const leading = await runCli(["--config", "work", ...commandPath.split(" ")], env);
+        const trailing = await runCli([...commandPath.split(" "), "--config=work"], env);
+        expect(leading.exitCode, leading.stderr).toBe(0);
+        expect(trailing.exitCode, trailing.stderr).toBe(0);
+        const leadingData = parseStdoutJson<Record<string, unknown>>(leading.stdout);
+        expect(leadingData).toEqual(parseStdoutJson(trailing.stdout));
+        expect(leadingData.config).toBe("work");
+        if (commandPath === "auth status") {
+          expect(leadingData).toMatchObject({
+            authenticated: true,
+            api_key: { source: "config", base_url: "https://work.example.test" },
+            console: { source: "config", site: "international", region: "ap-southeast-1" },
+          });
+        } else {
+          expect(leadingData.base_url).toBe("https://work.example.test");
+          expect(leadingData.workspace_id).toBe("work-space-review");
+        }
+        expect(JSON.parse(readFileSync(join(configDir, "config.json"), "utf8"))).toEqual(
+          originalConfig,
+        );
+      });
+    },
+  );
+
+  test.each([
+    { language: "en-US", expectedMessage: /before the command path/, expectedHint: /after/ },
+    { language: "zh-CN", expectedMessage: /命令路径之前/, expectedHint: /之后/ },
+  ])(
+    "前置非全局参数的 JSON 错误遵循选中 Profile 的语言 $language",
+    async ({ language, expectedMessage, expectedHint }) => {
+      await withTempConfigDir(async (configDir) => {
+        writeConfig(configDir, { language: "en-US", work: { language } });
+        const result = await runCli(
+          ["--config=work", "--output=json", "--prompt", "hi", "text", "chat"],
+          { BAILIAN_CONFIG_DIR: configDir },
+        );
+        expect(result.exitCode).toBe(2);
+        expect(result.stdout).toBe("");
+        const { error } = JSON.parse(result.stderr) as {
+          error: { code: number; message: string; hint: string };
+        };
+        expect(error.code).toBe(2);
+        expect(error.message).toMatch(expectedMessage);
+        expect(error.hint).toMatch(expectedHint);
+      });
+    },
+  );
+
+  test.each([
+    { argv: ["--config=work", "auth"], help: /Usage: bl auth <command>/ },
+    { argv: ["--config=work"], help: /Usage: bl <resource> <command>/ },
+  ])("合法前置参数保留相应帮助页: $argv", async ({ argv, help }) => {
+    await withTempConfigDir(async (configDir) => {
+      writeConfig(configDir, { work: { language: "en-US" } });
+      const result = await runCli(argv, { BAILIAN_CONFIG_DIR: configDir });
+      expect(result.exitCode, result.stderr).toBe(0);
+      expect(result.stderr).toMatch(help);
+      expect(result.stdout).toBe("");
+    });
+  });
+
+  test.each([
+    ["auth", "--output=json", "--timeout"],
+    ["--output=json", "--timeout", "--help"],
+    ["--config=work", "--output=json", "--timeout", "--version"],
+  ])("中文帮助分支缺少参数值时返回结构化用法错误: %j", async (...argv) => {
+    await withTempConfigDir(async (configDir) => {
+      writeConfig(configDir, { language: "zh-CN", work: { language: "zh-CN" } });
+      const result = await runCli(argv, {
+        BAILIAN_CONFIG_DIR: configDir,
+      });
+      expect(result.exitCode).toBe(2);
+      expect(result.stdout).toBe("");
+      expect(JSON.parse(result.stderr)).toMatchObject({
+        error: { code: 2, message: expect.stringMatching(/--timeout.*需要.*值/) },
+      });
+    });
+  });
+
   test("--config default 等价默认配置", async () => {
     await withTempConfigDir(async (dir) => {
       writeConfig(dir, {

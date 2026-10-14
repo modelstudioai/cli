@@ -245,7 +245,7 @@ describe("e2e: managed-agent", () => {
       "--refresh-only",
     ]);
     expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/Unknown flag.*--refresh-only/i);
+    expect(stderr).toMatch(/(?:Unknown flag|未知参数).*--refresh-only/i);
   });
 
   test("managed-agent init 不再暴露 Git 仓库脚手架", async () => {
@@ -538,8 +538,8 @@ agents:
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--name|--model|--instructions|--skill|--skill-dir|--type|--yes/i);
-    expect(stderr).toMatch(/remote Skill ID/i);
-    expect(stderr).toMatch(/local Skill directory/i);
+    expect(stderr).toMatch(/remote Skill ID|远端 Skill ID/i);
+    expect(stderr).toMatch(/local Skill directory|本地 Skill 目录/i);
     expect(stderr).not.toMatch(/--key|--environment|--vault/i);
   });
 
@@ -577,7 +577,7 @@ agents:
       "--quiet",
     ]);
     expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/Unknown option|unknown flag|unexpected/i);
+    expect(stderr).toMatch(new RegExp(`(?:Unknown flag|未知参数).*${flag}`, "i"));
   });
 
   test("managed-agent agent create 将 official Skill ID 写为外部引用", async () => {
@@ -1355,7 +1355,9 @@ vaults:
       "--quiet",
     ]);
     expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/--source must be one of: custom, official/i);
+    expect(stderr).toMatch(
+      /--source (?:must be one of: |必须为以下值之一：)custom, official, all/i,
+    );
   });
 
   test("managed-agent skill-list --source all 通过参数校验（缺配置文件时才失败）", async () => {
@@ -1376,7 +1378,7 @@ vaults:
     );
     // all 是合法值：不应报 --source 用法错误，而是走到配置加载后因文件缺失退出
     expect(exitCode).toBe(2);
-    expect(stderr).not.toMatch(/--source must be one of/i);
+    expect(stderr).not.toMatch(/--source (?:must be one of|必须为以下值之一)/i);
     expect(stderr).toMatch(/File not found.*agents\.e2e-missing\.yaml/i);
   });
 
@@ -1419,7 +1421,7 @@ vaults:
       "bailian",
     ]);
     expect(providerResult.exitCode).toBe(2);
-    expect(providerResult.stderr).toMatch(/Unknown flag.*--provider/i);
+    expect(providerResult.stderr).toMatch(/(?:Unknown flag|未知参数).*--provider/i);
 
     const purposeResult = await runCommandE2e(MANAGED_AGENT_ROUTES, [
       "managed-agent",
@@ -1432,7 +1434,7 @@ vaults:
       "agent",
     ]);
     expect(purposeResult.exitCode).toBe(2);
-    expect(purposeResult.stderr).toMatch(/Unknown flag.*--purpose/i);
+    expect(purposeResult.stderr).toMatch(/(?:Unknown flag|未知参数).*--purpose/i);
   });
 });
 
@@ -1537,7 +1539,7 @@ describe("e2e: managed-agent（--dry-run 短路，不联网不写盘）", () => 
       "claude",
     ]);
     expect(exitCode).toBe(2);
-    expect(stderr).toMatch(/Unknown flag.*--provider/i);
+    expect(stderr).toMatch(/(?:Unknown flag|未知参数).*--provider/i);
   });
 
   test("project init --dry-run 不需要密钥且不创建目录", async () => {

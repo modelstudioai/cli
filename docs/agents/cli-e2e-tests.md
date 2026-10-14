@@ -40,6 +40,7 @@
 - kscli：`runKscli` from `packages/kscli/tests/e2e/helpers.ts`
 - 全量 leaf/group help 使用产品 `commands` 创建 `CommandRegistry`，先通过 `resolve([...path, "--help"])` 检查 help 路由，再用 `captureRegistryHelp` 检查完整 Usage；禁止在 `test.each(commandPaths/groupPaths)` 中逐条启动 `tsx` 子进程
 - 真实子进程只保留根 help/version、产品身份、代表性叶子 help/鉴权域和缺参退出码等 shell/stdio/env 契约
+- 子进程的 parser 错误和 help 文案遵循 Profile 语言；语义断言应兼容中英文，同时检查参数名和退出码，并使用独立的中英文配置复跑，避免依赖本机 Profile
 
 ### 共享
 

@@ -24,6 +24,7 @@
 ### B. 鉴权 / 全局选项
 
 - [ ] 如果是**全局 flag**(所有命令通用),改 `packages/core/src/types/command.ts` 的 `GLOBAL_FLAGS`
+- [ ] 全局参数支持完整命令路径前置或后置；命令专属参数和凭证域参数只支持后置，路径各级之间不插入参数。改路由解析时，覆盖根/分组/显式 help 的无效参数校验、前后重复参数、Profile 选择和激活状态不变；纯裸命令与合法分组帮助仍返回 0，参数错误返回 2
 - [ ] 如果是凭证域 flag,优先确认是否属于 `MODEL_AUTH_FLAGS` 或 `CONSOLE_AUTH_FLAGS`;不要在单个命令里重复声明
 - [ ] 如果新 flag 影响有效配置面,改 `packages/core/src/config/schema.ts` 的 `Settings` 接口
 - [ ] 如果对应 env var 或 config 文件字段,改 `packages/core/src/config/loader.ts` 的 `buildSettings`
