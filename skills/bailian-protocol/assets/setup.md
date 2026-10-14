@@ -129,6 +129,14 @@ API Key login selects and activates the matching built-in Profile only after the
 persisted `active_config` > `default`; credential and endpoint fields inside the selected Profile
 still follow flag > environment > config.
 
+Global flags can precede or follow the complete command path:
+`bl --config token-plan auth status` and `bl auth status --config token-plan` select
+the same Profile for one invocation without changing `active_config`. Keep command
+path segments together. Command-specific and credential flags must follow the path.
+Unknown flags, missing flag values, and invalid supplied values return usage exit
+code 2, including when the invocation would otherwise display help. A valid bare
+root or command-group invocation displays the corresponding help and returns 0.
+
 Activation selects the entire Config for every credential domain, not only model consumption. The only exception is the API Key capability fallback described above. After activating `token-plan`, Token Plan management and Console commands still read their OpenAPI or Console credentials from that Profile. If those credentials remain in `default`, invoke the command with `--config default` or log the corresponding credential domain into `token-plan`.
 
 The built-in `token-plan` preset contains the following defaults. The CLI materializes them only after

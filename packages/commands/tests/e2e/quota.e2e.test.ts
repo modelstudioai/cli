@@ -93,14 +93,14 @@ describe("e2e: quota", () => {
       "--delete",
     ]);
     expect(exitCode).toBe(2);
-    expect(stderr).toContain("Unknown flag");
+    expect(stderr).toMatch(/(?:Unknown flag|未知参数).*--delete/);
   });
 
   test("quota delete 缺少 --model 报用法错误", async () => {
     // 裸 `quota delete`（无任何 flag）会渲染 help 并正常退出，需带 flag 触发必填校验
     const { stderr, exitCode } = await runCommandE2e(QUOTA_ROUTES, ["quota", "delete", "--yes"]);
     expect(exitCode).toBe(2);
-    expect(stderr).toContain("Missing required flag: --model");
+    expect(stderr).toMatch(/(?:Missing required flag: |缺少必填参数：)--model/);
   });
 
   test("quota delete 无 --yes 返回确认请求 (7)", async () => {

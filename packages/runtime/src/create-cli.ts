@@ -1,4 +1,3 @@
-import { parseFlags } from "./args.ts";
 import { CommandRegistry } from "./registry.ts";
 import { resolve } from "./resolve.ts";
 import {
@@ -19,11 +18,8 @@ import type {
   SourceFlags,
 } from "bailian-cli-core";
 import {
-  CONSOLE_AUTH_FLAGS,
   DEFAULT_LANGUAGE,
   GLOBAL_FLAGS,
-  MODEL_AUTH_FLAGS,
-  OPENAPI_AUTH_FLAGS,
   UsageError,
   credentialFlagDefs,
   buildSources,
@@ -41,7 +37,6 @@ import { loadCommandPacks } from "./command-packs/load.ts";
 import { createCommandPackManager } from "./command-packs/manager.ts";
 import type { CommandPackPolicy } from "./command-packs/types.ts";
 import { createTranslator } from "./i18n.ts";
-import { confirmationFlagDefs } from "./confirm.ts";
 
 /** Per-product identity injected by each CLI entrypoint (bl / rag / …). */
 export interface CliOptions {
@@ -75,7 +70,8 @@ function pickConfigFlag(argv: string[]): Partial<SourceFlags> {
   for (let argumentIndex = 0; argumentIndex < argv.length; argumentIndex++) {
     const argument = argv[argumentIndex];
     if (argument === "--config") {
-      return { config: argv[argumentIndex + 1] };
+      const value = argv[argumentIndex + 1];
+      return value === undefined || value.startsWith("--") ? {} : { config: value };
     }
     if (argument?.startsWith("--config=")) {
       return { config: argument.slice("--config=".length) };
@@ -151,25 +147,20 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
   }
 
   /** Render help for `path`; root ([]) doubles as the onboarding / login guide. */
-  function renderHelp(registry: CommandRegistry, path: string[], argv: string[]): void {
+  function renderHelp(
+    registry: CommandRegistry,
+    path: string[],
+    parsedFlags: Record<string, unknown>,
+  ): void {
     registry.printHelp(path, process.stderr);
     if (path.length > 0) return;
 
     let hasKey = false;
     try {
-      const auth = describeAuthState(
-        buildSources(
-          parseFlags(argv, {
-            ...GLOBAL_FLAGS,
-            ...MODEL_AUTH_FLAGS,
-            ...CONSOLE_AUTH_FLAGS,
-            ...OPENAPI_AUTH_FLAGS,
-          }) as Partial<SourceFlags>,
-        ),
-      );
+      const auth = describeAuthState(buildSources(parsedFlags as Partial<SourceFlags>));
       hasKey = !!(auth.apiKey || auth.console);
     } catch {
-      /* unparseable global flags on the bare invocation — fall through to welcome */
+      /* Credential inspection failure — fall through to welcome. */
     }
     if (hasKey) {
       if (opts.quickStartTasks?.length) registry.printQuickStart(opts.quickStartTasks);
@@ -183,7 +174,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
     argv: string[],
     localize: (text: LocalizedText) => string,
   ): Promise<void> {
-    const res = resolve(argv, registry);
+    const res = resolve(argv, registry, localize);
 
     switch (res.kind) {
       case "version":
@@ -191,7 +182,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         return;
 
       case "help":
-        renderHelp(registry, res.path, argv);
+        renderHelp(registry, res.path, res.parsedFlags);
         return;
 
       case "usageError":
@@ -202,13 +193,7 @@ export function createCli(commands: Record<string, AnyCommand>, opts: CliOptions
         try {
           // 全局与凭证域 flag 进 sources,命令自有 flag 进 ctx.flags。
           const credDefs = credentialFlagDefs(res.command);
-          const confirmationDefs = confirmationFlagDefs(res.command);
-          const parsedFlags = parseFlags(res.rest, {
-            ...GLOBAL_FLAGS,
-            ...credDefs,
-            ...confirmationDefs,
-            ...res.command.flags,
-          }) as Record<string, unknown>;
+          const parsedFlags = res.parsedFlags;
           const globalFlags = pick(parsedFlags, [
             ...Object.keys(GLOBAL_FLAGS),
             ...Object.keys(credDefs),
