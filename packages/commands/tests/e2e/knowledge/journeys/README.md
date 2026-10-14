@@ -89,3 +89,13 @@ pnpm exec vp test packages/commands/tests/e2e/knowledge/journeys/rag-media.e2e.t
 ## J7 目录同步验收（独立开启）
 
 配置知识库 API Key 与 `BAILIAN_WORKSPACE_ID` 后，通过 `BAILIAN_E2E_SYNC_JOURNEY=1` 单独开启 `j7-doc-sync.e2e.test.ts`。测试新建独立知识库（可能产生运行时长及模型费用），验证添加、无变复跑、替换确认、本地删除保留与显式删除；每一步核对未托管哨兵仍存在。测试结束先删除知识库，成功后才删除本次源文件；资源清理结果写入 `resources.json`。只有完整真实测试通过才构成旅程验收，默认跳过不代表通过。
+
+## F02-03 WebM 跳过验证（独立开启）
+
+配置知识库 API Key、`BAILIAN_WORKSPACE_ID` 和 `BAILIAN_E2E=1`，并安装 `ffmpeg` 后运行：
+
+```bash
+BAILIAN_E2E_SYNC_WEBM=1 pnpm exec vp test packages/commands/tests/e2e/knowledge/journeys/sync-webm.e2e.test.ts
+```
+
+用例生成真实的 1 秒 WebM，与 Markdown 放在同一目录；新建独立知识库，验证 dry-run 和正式同步均将 WebM 列为 `skipped`，Markdown 正常导入，远端知识库仅有哨兵与 Markdown，数据中心不存在同名 WebM。测试会产生临时建库与导入费用，结束后先删库、再清理本次源文件。执行输出、测试样本和 `resources.json` 保留在报告目录；默认跳过不代表 live 通过。
