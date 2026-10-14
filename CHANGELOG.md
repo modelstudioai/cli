@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.3.0] - 2026-10-14
+
+### Added
+
+- **Pi Agent integration** — Added support for Pi:
+  - `bl config agent` adds `--agent pi` to configure Pi to use Bailian models.
+  - `bl mcp connect` / `bl mcp disconnect` add `--agent pi` to register or remove Bailian MCP servers.
+
+### Fixed
+
+- **Global flag placement** — Use global flags before the complete command path, for example `bl --config token-plan auth status`; command-specific and credential flags must follow the path.
+- **Parameter validation and messages** — Help and version queries validate supplied flags. Only explicitly declared flag names are accepted, and parsing errors support English and Chinese messages based on the configured language.
+- **File upload timeout** — Use `--timeout` to set the transfer timeout when uploading local files to temporary OSS storage.
+
 ## [2.2.2] - 2026-10-14
 
 ### Added
