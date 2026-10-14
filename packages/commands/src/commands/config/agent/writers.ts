@@ -7,6 +7,7 @@ import opencode from "./writers/opencode.ts";
 import openclaw from "./writers/openclaw.ts";
 import hermes from "./writers/hermes.ts";
 import codex from "./writers/codex.ts";
+import pi from "./writers/pi.ts";
 
 export const AGENTS: Record<string, AgentDef> = {
   "claude-code": claudeCode,
@@ -15,6 +16,7 @@ export const AGENTS: Record<string, AgentDef> = {
   openclaw,
   hermes,
   codex,
+  pi,
 };
 
 export const VALID_AGENT_NAMES = Object.keys(AGENTS) as [string, ...string[]];
