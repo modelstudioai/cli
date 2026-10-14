@@ -1,6 +1,6 @@
 import { dirname } from "path";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, copyFileSync } from "fs";
-import { BailianError, ExitCode } from "bailian-cli-core";
+import { BailianError, ExitCode, type LocalizedText } from "bailian-cli-core";
 
 /** Parameters shared by every agent writer. */
 export interface WriteParams {
@@ -11,6 +11,8 @@ export interface WriteParams {
   contextWindow?: number;
   /** Codex provider wire protocol: "responses" or "chat". */
   wireApi?: string;
+  /** Locale selection for new agent-specific messages. */
+  localize?: (text: LocalizedText) => string;
 }
 
 /** What a writer reports back after configuring an agent. */
