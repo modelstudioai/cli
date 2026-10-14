@@ -6,6 +6,20 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.3.0] - 2026-10-14
+
+### 新增
+
+- **Pi Agent 接入** —— 新增 Pi 支持：
+  - `bl config agent` 新增 `--agent pi`，用于配置 Pi 使用百炼模型。
+  - `bl mcp connect` / `bl mcp disconnect` 新增 `--agent pi`，用于接入和移除百炼 MCP 服务。
+
+### 修复
+
+- **全局参数位置** —— 支持在完整命令路径前使用全局参数，例如 `bl --config token-plan auth status`；命令专属参数和鉴权参数需放在路径后。
+- **参数校验与提示** —— 帮助和版本查询会校验已传入的参数；仅接受命令支持的参数名，参数解析错误支持按配置语言显示中英文提示。
+- **文件上传超时** —— `--timeout` 可设置本地文件上传至临时 OSS 的传输超时时间。
+
 ## [2.2.1] - 2026-10-12
 
 ### 修复
