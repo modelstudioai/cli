@@ -6,7 +6,7 @@ metadata:
     bins: ["bl"]
 description: >-
   阿里云百炼 / Aliyun Bailian / DashScope 资源管理与 `bl` CLI hub：
-  应用调用（bl app）、应用记忆、知识库检索、模型目录/模型列表、用量/额度/配额、免费额度、
+  应用调用（bl app）、决策模型推理（bl decision）、应用记忆、知识库检索、模型目录/模型列表、用量/额度/配额、免费额度、
   工作空间、MCP 市场、pipeline、文件上传、console API、登录鉴权与配置、
   Agent skill 安装/列表/更新/卸载（bl skill add|list|update|remove，百炼 skill registry）。
   用户点名百炼 / DashScope / `bl`，或继续既有 `bl` 工作流时直接使用。
@@ -61,6 +61,7 @@ Use this table only after the decision table in [`bailian-protocol`](../bailian-
 | User intent                                         | Command                                                                                                        | Notes                                                                                                                              |
 | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Explicit Bailian model chat / text execution        | `bl text chat`                                                                                                 | Default `qwen3.8-max`                                                                                                              |
+| Typed decision model inference                      | `bl decision`                                                                                                  | Workspace endpoint; returns `choice` / `noul` / `score` values and probabilities, not generated text                               |
 | Bailian agent / workflow                            | `bl app call`                                                                                                  | Needs `--app-id`                                                                                                                   |
 | Find app by name                                    | `bl app list` then `bl app call`                                                                               | Console auth                                                                                                                       |
 | Bailian app memory CRUD (not host-agent memory)     | `bl memory *`                                                                                                  | [`reference/memory.md`](reference/memory.md)                                                                                       |
@@ -99,6 +100,7 @@ Flags, usage, and examples: see hub [`reference/`](reference/index.md) or `bl <c
 
 ```bash
 bl text chat --message "Write a poem about spring in Chinese"
+bl decision --workspace-id <id> --state "Is this requesting a refund?" --questions '{"refund":{"type":"noul"}}'
 bl app list --output json
 bl app call --app-id <code> --prompt "Hello"
 bl usage stats

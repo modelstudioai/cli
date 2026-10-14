@@ -6,7 +6,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [Unreleased]
+
+### Added
+
+- **Decision model inference** — Added `bl decision` for TypeSafe System One requests against workspace-scoped endpoints, including `choice` / `noul` / `score` validation, JSON and text output, training-sample reuse, Beijing/Singapore routing, and dry-run previews.
+
+### Changed
+
+- **Decision dataset validation** — Aligned the `decision` schema with the current API: `state` may be a string, object, or array; `instructions` is optional; and question criteria now enforce API limits.
+
 ## [2.2.0] - 2026-10-12
+
+### Added
+
+- **Model compression lifecycle** — Added `bl finetune compress templates/create/list/get/watch/logs/cancel/delete` for quantizing supported full-parameter fine-tuned models, including dry-run previews, status polling, log retrieval, and safe deletion confirmation.
 
 ### Changed
 

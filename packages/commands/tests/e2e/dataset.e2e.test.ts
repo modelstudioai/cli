@@ -31,6 +31,7 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: dataset (offline)", () => {
     ]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--file|jsonl/i);
+    expect(stderr).toMatch(/decision/i);
   });
 
   test("dataset validate 通过合法 JSONL", async () => {
