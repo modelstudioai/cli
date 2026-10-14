@@ -67,14 +67,14 @@ bl auth logout --console  # clear console token only
 bl auth logout --open-api # clear OpenAPI AK/SK only
 ```
 
-- Get a DashScope API key: https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key
-- Get a Token Plan API key: https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview
+- Get a DashScope API key: https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key
+- Get a Token Plan API key: https://bailian.console.aliyun.com/cn-beijing?spm=a2ty07.github&tab=plan#/efm/subscription/overview
 - Get an Alibaba Cloud AccessKey for OpenAPI AK/SK: https://ram.console.aliyun.com/manage/ak
-- Console login: China site https://bailian.console.aliyun.com or international site https://modelstudio.console.alibabacloud.com
+- Console login: China site https://bailian.console.aliyun.com?spm=a2ty07.github or international site https://modelstudio.console.alibabacloud.com
 
 ### Token Plan model consumption
 
-Get or copy the Token Plan API key from the [subscription overview](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview). A `PlainApiKey` returned by `bl token-plan create-key` is the same credential type. It is separate from the OpenAPI AK/SK used by Token Plan management commands.
+Get or copy the Token Plan API key from the [subscription overview](https://bailian.console.aliyun.com/cn-beijing?spm=a2ty07.github&tab=plan#/efm/subscription/overview). A `PlainApiKey` returned by `bl token-plan create-key` is the same credential type. It is separate from the OpenAPI AK/SK used by Token Plan management commands.
 
 Token Plan and other subscription plans cannot use `--console`; log in directly with the subscription API Key:
 

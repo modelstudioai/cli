@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?source_channel=cli_github&) · [English](https://github.com/modelstudioai/cli/blob/main/README.md) · [API 文档](https://help.aliyun.com/zh/model-studio/) · [获取 API Key](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key)
+[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?spm=a2ty07.github) · [English](https://github.com/modelstudioai/cli/blob/main/README.md) · [API 文档](https://help.aliyun.com/zh/model-studio/) · [获取 API Key](https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key)
 
 ---
 
@@ -66,7 +66,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 
 - **[Qwen Code](https://github.com/QwenLM/qwen-code)** —— 理解需求并生成 Agent 配置
 - **[阿里云百炼 CLI](https://github.com/modelstudioai/cli/)** —— 校验配置、预览变更并完成部署
-- **[Managed Agent](https://bailian.console.aliyun.com/cn-beijing/?tab=managed-agents#/managed-agents/quick-start)** —— 在云端运行导演角色及其 Skill 和工具
+- **[Managed Agent](https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=managed-agents#/managed-agents/quick-start)** —— 在云端运行导演角色及其 Skill 和工具
 
 ### 唯一的提示词
 
@@ -122,7 +122,7 @@ irm https://bailian.aliyun.com/cli/install.ps1 | iex
 | 模型选型         | “推荐一个适合图片理解和智能客服的模型。”                                     |
 | 了解 Bailian CLI | “介绍一下 Bailian CLI 能帮我完成哪些任务，并根据我的需求推荐使用方式。”      |
 
-> 更多案例与使用场景：[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)
+> 更多案例与使用场景：[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?spm=a2ty07.github)
 
 ## 认证方式
 
@@ -144,7 +144,7 @@ bl auth login --console
 bl auth login --api-key <API_KEY>
 ```
 
-普通 Key 前往 [DashScope 控制台](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key) 获取，Token Plan Key 前往 [订阅详情](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview) 获取。
+普通 Key 前往 [DashScope 控制台](https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key) 获取，Token Plan Key 前往 [订阅详情](https://bailian.console.aliyun.com/cn-beijing?spm=a2ty07.github&tab=plan#/efm/subscription/overview) 获取。
 
 ### 阿里云 OpenAPI AK/SK
 
@@ -192,12 +192,12 @@ bl update
 
 ## 相关链接
 
-| 资源                    | 地址                                                                                      |
-| :---------------------- | :---------------------------------------------------------------------------------------- |
-| 阿里云百炼 CLI 官方主页 | https://bailian.console.aliyun.com/cli?source_channel=cli_github&                         |
-| DashScope API 文档      | https://help.aliyun.com/zh/model-studio/                                                  |
-| 通义千问模型列表        | https://help.aliyun.com/zh/model-studio/getting-started/models                            |
-| 阿里云百炼控制台        | https://bailian.console.aliyun.com/?source_channel=cli_github                             |
-| 获取 API Key            | https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key |
-| 获取 Token Plan API Key | https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview         |
-| 获取 AccessKey          | https://ram.console.aliyun.com/manage/ak                                                  |
+| 资源                    | 地址                                                                                                |
+| :---------------------- | :-------------------------------------------------------------------------------------------------- |
+| 阿里云百炼 CLI 官方主页 | https://bailian.console.aliyun.com/cli?spm=a2ty07.github                                            |
+| DashScope API 文档      | https://help.aliyun.com/zh/model-studio/                                                            |
+| 通义千问模型列表        | https://help.aliyun.com/zh/model-studio/getting-started/models                                      |
+| 阿里云百炼控制台        | https://bailian.console.aliyun.com/?spm=a2ty07.github                                               |
+| 获取 API Key            | https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key                   |
+| 获取 Token Plan API Key | https://bailian.console.aliyun.com/cn-beijing?spm=a2ty07.github&tab=plan#/efm/subscription/overview |
+| 获取 AccessKey          | https://ram.console.aliyun.com/manage/ak                                                            |
