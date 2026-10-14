@@ -62,6 +62,8 @@ async function getUploadPolicy(
   return body.data;
 }
 
+const DEFAULT_UPLOAD_TIMEOUT = 120;
+
 /**
  * Step 2: Upload the file to OSS using the policy.
  */
@@ -69,6 +71,7 @@ async function uploadToOSS(
   policy: UploadPolicy,
   filePath: string,
   signal?: AbortSignal,
+  timeoutSeconds: number = DEFAULT_UPLOAD_TIMEOUT,
 ): Promise<string> {
   const fileName = basename(filePath);
   const key = `${policy.upload_dir}/${fileName}`;
@@ -85,7 +88,7 @@ async function uploadToOSS(
   form.append("success_action_status", "200");
   form.append("file", new Blob([fileData]), fileName);
 
-  const uploadSignal = combineWithTimeout(120_000, signal);
+  const uploadSignal = combineWithTimeout(timeoutSeconds * 1000, signal);
   const res = await fetch(policy.upload_host, {
     method: "POST",
     body: form,
@@ -109,6 +112,7 @@ export interface UploadOptions {
   filePath: string;
   identity: TrackingIdentity;
   signal?: AbortSignal;
+  timeout?: number;
 }
 
 const IMAGE_MIME_TYPES: Readonly<Record<string, string>> = {
@@ -159,7 +163,7 @@ export function redactDataUri(input: string): string {
  * The URL is valid for 48 hours.
  */
 export async function uploadFile(opts: UploadOptions): Promise<string> {
-  const { apiKey, model, filePath, identity, signal } = opts;
+  const { apiKey, model, filePath, identity, signal, timeout } = opts;
 
   if (!existsSync(filePath)) {
     throw new BailianError(`File not found: ${filePath}`, ExitCode.USAGE);
@@ -171,7 +175,7 @@ export async function uploadFile(opts: UploadOptions): Promise<string> {
   }
 
   const policy = await getUploadPolicy(apiKey, model, identity, signal);
-  return uploadToOSS(policy, filePath, signal);
+  return uploadToOSS(policy, filePath, signal, timeout);
 }
 
 /**
@@ -192,7 +196,7 @@ export async function resolveFileUrl(
   input: string,
   apiKey: string,
   model: string,
-  opts: { identity: TrackingIdentity; signal?: AbortSignal },
+  opts: { identity: TrackingIdentity; signal?: AbortSignal; timeout?: number },
 ): Promise<string> {
   if (!isLocalFile(input)) return input;
   return uploadFile({
@@ -201,6 +205,7 @@ export async function resolveFileUrl(
     filePath: input,
     identity: opts.identity,
     signal: opts.signal,
+    timeout: opts.timeout,
   });
 }
 
