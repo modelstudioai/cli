@@ -347,33 +347,34 @@ bl managed-agent apply --yes
 
 ### `bl managed-agent deployment create`
 
-| Field              | Value                                                                                                                                                                                                                                                                                                                                                    |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent deployment create`                                                                                                                                                                                                                                                                                                                        |
-| **Description**    | Declare and create one Managed Agent Deployment through a scoped YAML apply                                                                                                                                                                                                                                                                              |
-| **Authentication** | API Key                                                                                                                                                                                                                                                                                                                                                  |
-| **Usage**          | `bl managed-agent deployment create --name <name> --agent <yaml-key> (--message <text>... \| --event <json\|@path>...) [--agent-version <number>] [--environment <yaml-key>] [--vault <yaml-key>...] [--resource <json\|@path>...] [--schedule <cron> --timezone <timezone>] [--description <text>] [--metadata <key=value>...] [--file <path>] [--yes]` |
+| Field              | Value                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent deployment create`                                                                                                                                                                                                                                                                                                                                                                 |
+| **Description**    | Declare and create one Managed Agent Deployment through a scoped YAML apply                                                                                                                                                                                                                                                                                                                       |
+| **Authentication** | API Key                                                                                                                                                                                                                                                                                                                                                                                           |
+| **Usage**          | `bl managed-agent deployment create --name <name> --agent <yaml-key> (--message <text>... \| --event <json\|@path>...) [--agent-version <number>] [--environment <yaml-key>] [--environment_variables <KEY=VALUE>...] [--vault <yaml-key>...] [--resource <json\|@path>...] [--schedule <cron> --timezone <timezone>] [--description <text>] [--metadata <key=value>...] [--file <path>] [--yes]` |
 
 #### Flags
 
-| Flag                       | Type   | Required | Description                                                             |
-| -------------------------- | ------ | -------- | ----------------------------------------------------------------------- |
-| `--name <name>`            | string | yes      | Remote Deployment display name; the YAML key is generated automatically |
-| `--agent <yaml-key>`       | string | yes      | Existing Agent key from agents.yaml                                     |
-| `--agent-version <number>` | number | no       | Agent version                                                           |
-| `--environment <yaml-key>` | string | no       | Existing Environment key from agents.yaml                               |
-| `--vault <yaml-key>`       | array  | no       | Existing Vault key from agents.yaml (repeatable)                        |
-| `--message <text>`         | array  | no       | Initial user message (repeatable)                                       |
-| `--event <json\|@path>`    | array  | no       | Initial user.message or system.message JSON (repeatable)                |
-| `--resource <json\|@path>` | array  | no       | File Resource JSON with source or file_id (repeatable)                  |
-| `--schedule <cron>`        | string | no       | Five-field cron expression                                              |
-| `--timezone <timezone>`    | string | no       | IANA schedule timezone                                                  |
-| `--description <text>`     | string | no       | Deployment description                                                  |
-| `--metadata <key=value>`   | array  | no       | Metadata entry (repeatable)                                             |
-| `--file <path>`            | string | no       | Config file path (default: agents.yaml)                                 |
-| `--yes`                    | switch | no       | Write YAML and run the scoped remote create                             |
-| `--api-key <key>`          | string | no       | API key                                                                 |
-| `--base-url <url>`         | string | no       | API base URL                                                            |
+| Flag                                  | Type   | Required | Description                                                                |
+| ------------------------------------- | ------ | -------- | -------------------------------------------------------------------------- |
+| `--environment_variables <KEY=VALUE>` | array  | no       | Runtime environment variable; repeat for multiple values (last value wins) |
+| `--name <name>`                       | string | yes      | Remote Deployment display name; the YAML key is generated automatically    |
+| `--agent <yaml-key>`                  | string | yes      | Existing Agent key from agents.yaml                                        |
+| `--agent-version <number>`            | number | no       | Agent version                                                              |
+| `--environment <yaml-key>`            | string | no       | Existing Environment key from agents.yaml                                  |
+| `--vault <yaml-key>`                  | array  | no       | Existing Vault key from agents.yaml (repeatable)                           |
+| `--message <text>`                    | array  | no       | Initial user message (repeatable)                                          |
+| `--event <json\|@path>`               | array  | no       | Initial user.message or system.message JSON (repeatable)                   |
+| `--resource <json\|@path>`            | array  | no       | File Resource JSON with source or file_id (repeatable)                     |
+| `--schedule <cron>`                   | string | no       | Five-field cron expression                                                 |
+| `--timezone <timezone>`               | string | no       | IANA schedule timezone                                                     |
+| `--description <text>`                | string | no       | Deployment description                                                     |
+| `--metadata <key=value>`              | array  | no       | Metadata entry (repeatable)                                                |
+| `--file <path>`                       | string | no       | Config file path (default: agents.yaml)                                    |
+| `--yes`                               | switch | no       | Write YAML and run the scoped remote create                                |
+| `--api-key <key>`                     | string | no       | API key                                                                    |
+| `--base-url <url>`                    | string | no       | API base URL                                                               |
 
 #### Notes
 
@@ -381,13 +382,14 @@ bl managed-agent apply --yes
 - Bailian credentials come from bl's auth chain: --api-key > DASHSCOPE_API_KEY > `bl auth login` (active config profile).
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 - Without --yes, this command only previews. --dry-run is fully offline. The scoped flow checks only the target resource and its transitive dependencies; unrelated resources are not refreshed or drift-checked.
+- --environment_variables writes string values to the Deployment YAML declaration when --yes is used. Repeat the flag for multiple variables; empty values and values containing = are allowed. Later apply runs manage these values; removing the field or using {} clears them. YAML stores these values; the key `__proto__` is reserved.
 - Initial Events must contain 1-50 user.message/system.message entries. --resource accepts only File Resources in this release.
 - Use either repeatable --message values or repeatable --event values; the two input forms cannot be mixed.
 
 #### Examples
 
 ```bash
-bl managed-agent deployment create --name Daily --agent assistant --message "Generate the report"
+bl managed-agent deployment create --name Daily --agent assistant --message "Generate the report" --environment_variables LOG_LEVEL=info
 ```
 
 ```bash
@@ -1942,26 +1944,27 @@ bl managed-agent session archive --session-id sess_abc --yes
 
 ### `bl managed-agent session create`
 
-| Field              | Value                                                                                                                                                              |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Name**           | `managed-agent session create`                                                                                                                                     |
-| **Description**    | Create a new session for an agent                                                                                                                                  |
-| **Authentication** | API Key                                                                                                                                                            |
-| **Usage**          | `bl managed-agent session create [--agent <name>] [--environment <name>] [--title <title>] [--memory-stores <keys>] [--resource <json\|@path>...] [--file <path>]` |
+| Field              | Value                                                                                                                                                                                                       |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent session create`                                                                                                                                                                              |
+| **Description**    | Create a new session for an agent                                                                                                                                                                           |
+| **Authentication** | API Key                                                                                                                                                                                                     |
+| **Usage**          | `bl managed-agent session create [--agent <name>] [--environment <name>] [--title <title>] [--environment_variables <KEY=VALUE>...] [--memory-stores <keys>] [--resource <json\|@path>...] [--file <path>]` |
 
 #### Flags
 
-| Flag                       | Type   | Required | Description                                                                               |
-| -------------------------- | ------ | -------- | ----------------------------------------------------------------------------------------- |
-| `--resource <json\|@path>` | array  | no       | Session resource JSON (repeatable); memory_store uses a YAML key, access and instructions |
-| `--file <path>`            | string | no       | Config file path (default: agents.yaml)                                                   |
-| `--agent <name>`           | string | no       | Agent name (auto-detected when only one agent is configured)                              |
-| `--environment <name>`     | string | no       | Override agent's declared environment                                                     |
-| `--vault <name>`           | string | no       | Override agent's declared vault                                                           |
-| `--memory-stores <names>`  | string | no       | Override memory stores with comma-separated YAML keys                                     |
-| `--title <title>`          | string | no       | Session title                                                                             |
-| `--api-key <key>`          | string | no       | API key                                                                                   |
-| `--base-url <url>`         | string | no       | API base URL                                                                              |
+| Flag                                  | Type   | Required | Description                                                                               |
+| ------------------------------------- | ------ | -------- | ----------------------------------------------------------------------------------------- |
+| `--environment_variables <KEY=VALUE>` | array  | no       | Runtime environment variable; repeat for multiple values (last value wins)                |
+| `--resource <json\|@path>`            | array  | no       | Session resource JSON (repeatable); memory_store uses a YAML key, access and instructions |
+| `--file <path>`                       | string | no       | Config file path (default: agents.yaml)                                                   |
+| `--agent <name>`                      | string | no       | Agent name (auto-detected when only one agent is configured)                              |
+| `--environment <name>`                | string | no       | Override agent's declared environment                                                     |
+| `--vault <name>`                      | string | no       | Override agent's declared vault                                                           |
+| `--memory-stores <names>`             | string | no       | Override memory stores with comma-separated YAML keys                                     |
+| `--title <title>`                     | string | no       | Session title                                                                             |
+| `--api-key <key>`                     | string | no       | API key                                                                                   |
+| `--base-url <url>`                    | string | no       | API base URL                                                                              |
 
 #### Notes
 
@@ -1970,6 +1973,10 @@ bl managed-agent session archive --session-id sess_abc --yes
 - Resolved credentials are injected into the SDK in-memory and cleared from the environment; they never persist in process env.
 
 #### Examples
+
+```bash
+bl managed-agent session create --agent assistant --environment_variables LOG_LEVEL=info --environment_variables FEATURE_FLAG=on
+```
 
 ```bash
 bl managed-agent session create --agent assistant --resource '{"type":"memory_store","memory_store":"notes","access":"read_only"}'
@@ -2321,28 +2328,29 @@ bl managed-agent session list --all
 
 ### `bl managed-agent session run`
 
-| Field              | Value                                                                                                                                                |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Name**           | `managed-agent session run`                                                                                                                          |
-| **Description**    | Create a session, send a message, and stream the response                                                                                            |
-| **Authentication** | API Key                                                                                                                                              |
-| **Usage**          | `bl managed-agent session run --prompt <text> [--agent <name>] [--no-stream] [--memory-stores <keys>] [--resource <json\|@path>...] [--file <path>]` |
+| Field              | Value                                                                                                                                                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `managed-agent session run`                                                                                                                                                                   |
+| **Description**    | Create a session, send a message, and stream the response                                                                                                                                     |
+| **Authentication** | API Key                                                                                                                                                                                       |
+| **Usage**          | `bl managed-agent session run --prompt <text> [--agent <name>] [--no-stream] [--environment_variables <KEY=VALUE>...] [--memory-stores <keys>] [--resource <json\|@path>...] [--file <path>]` |
 
 #### Flags
 
-| Flag                       | Type   | Required | Description                                                                               |
-| -------------------------- | ------ | -------- | ----------------------------------------------------------------------------------------- |
-| `--resource <json\|@path>` | array  | no       | Session resource JSON (repeatable); memory_store uses a YAML key, access and instructions |
-| `--prompt <text>`          | string | yes      | Prompt to send (required)                                                                 |
-| `--file <path>`            | string | no       | Config file path (default: agents.yaml)                                                   |
-| `--agent <name>`           | string | no       | Agent name (auto-detected when only one agent is configured)                              |
-| `--environment <name>`     | string | no       | Override agent's declared environment                                                     |
-| `--vault <name>`           | string | no       | Override agent's declared vault                                                           |
-| `--memory-stores <names>`  | string | no       | Override memory stores with comma-separated YAML keys                                     |
-| `--title <title>`          | string | no       | Session title                                                                             |
-| `--no-stream`              | switch | no       | Use polling instead of SSE streaming                                                      |
-| `--api-key <key>`          | string | no       | API key                                                                                   |
-| `--base-url <url>`         | string | no       | API base URL                                                                              |
+| Flag                                  | Type   | Required | Description                                                                               |
+| ------------------------------------- | ------ | -------- | ----------------------------------------------------------------------------------------- |
+| `--environment_variables <KEY=VALUE>` | array  | no       | Runtime environment variable; repeat for multiple values (last value wins)                |
+| `--resource <json\|@path>`            | array  | no       | Session resource JSON (repeatable); memory_store uses a YAML key, access and instructions |
+| `--prompt <text>`                     | string | yes      | Prompt to send (required)                                                                 |
+| `--file <path>`                       | string | no       | Config file path (default: agents.yaml)                                                   |
+| `--agent <name>`                      | string | no       | Agent name (auto-detected when only one agent is configured)                              |
+| `--environment <name>`                | string | no       | Override agent's declared environment                                                     |
+| `--vault <name>`                      | string | no       | Override agent's declared vault                                                           |
+| `--memory-stores <names>`             | string | no       | Override memory stores with comma-separated YAML keys                                     |
+| `--title <title>`                     | string | no       | Session title                                                                             |
+| `--no-stream`                         | switch | no       | Use polling instead of SSE streaming                                                      |
+| `--api-key <key>`                     | string | no       | API key                                                                                   |
+| `--base-url <url>`                    | string | no       | API base URL                                                                              |
 
 #### Notes
 
@@ -2352,6 +2360,10 @@ bl managed-agent session list --all
 - --output json emits one envelope: { session_id, provider, agent, events } — read session_id to chain `session send/get/events/delete`.
 
 #### Examples
+
+```bash
+bl managed-agent session run --agent assistant --environment_variables LOG_LEVEL=info --prompt "hello"
+```
 
 ```bash
 bl managed-agent session run --agent assistant --resource '{"type":"memory_store","memory_store":"notes","access":"read_only"}' --prompt "hello"

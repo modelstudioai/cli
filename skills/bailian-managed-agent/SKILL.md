@@ -176,6 +176,8 @@ Managed Agents 的子线程通过 Event 中的 `session_thread_id` 暴露；公�
 - 客户端搜索默认最多扫描 10 页；需要扩大范围时显式传 `--page-limit`。Deployment 搜索直接映射服务端 `keyword`。
 - 下载必须给出 `--output-file`；默认不覆盖已有文件，只有用户确认后才可加 `--force`。
 - `session export` 只导出诊断元数据，不含 File 正文，并会脱敏凭证类字段。
+- `session create|run --environment_variables KEY=VALUE` injects variables into this Session only. Repeat the flag for multiple variables; the last value for a key wins. Empty values and values containing `=` are allowed. Dry-run and diagnostic exports redact values. / 环境变量仅用于本次 Session，不写入 YAML 或 State；可重复传入，允许空值和包含 `=` 的值，预览和诊断导出会脱敏变量值。
+- `deployment create --environment_variables KEY=VALUE` declares runtime variables under `deployments.<key>.environment_variables` as a string map. With `--yes`, the scoped create writes YAML and creates the Deployment. YAML + `apply` also manages this field; changing values updates the Deployment, and removing the field or setting `{}` clears it. Create and plan previews omit values; YAML stores them. / Deployment 环境变量以字符串键值对象声明；创建命令使用 `--yes` 后写入 YAML 并定向创建，也可直接用 YAML + `apply` 管理。修改值会更新部署，删除字段或设置 `{}` 会清空变量。预览输出不展示变量值，YAML 会保存这些值。
 - 公开 Managed Agents API 没有模型 Catalog，也没有 MCP OAuth Login；CLI 不注册对应命令。
 
 ### Memory Stores and Session mounts

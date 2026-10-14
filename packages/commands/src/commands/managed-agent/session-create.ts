@@ -4,10 +4,16 @@ import { createSessionForAgent } from "@openagentpack/sdk";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
+import {
+  parseEnvironmentVariables,
+  redactEnvironmentVariables,
+  ENVIRONMENT_VARIABLE_FLAGS,
+} from "./_engine/environment-variables.ts";
 import { readSessionResources, SESSION_RESOURCE_FLAGS } from "./_engine/session-resources.ts";
 import { parseMemoryStores } from "./_engine/session-render.ts";
 
 const SESSION_CREATE_FLAGS = {
+  ...ENVIRONMENT_VARIABLE_FLAGS,
   ...SESSION_RESOURCE_FLAGS,
   file: {
     type: "string",
@@ -57,9 +63,10 @@ export default defineCommand({
   description: { "en-US": "Create a new session for an agent", "zh-CN": "为 Agent 创建新 Session" },
   auth: "apiKey",
   usageArgs:
-    "[--agent <name>] [--environment <name>] [--title <title>] [--memory-stores <keys>] [--resource <json|@path>...] [--file <path>]",
+    "[--agent <name>] [--environment <name>] [--title <title>] [--environment_variables <KEY=VALUE>...] [--memory-stores <keys>] [--resource <json|@path>...] [--file <path>]",
   flags: SESSION_CREATE_FLAGS,
   exampleArgs: [
+    "--agent assistant --environment_variables LOG_LEVEL=info --environment_variables FEATURE_FLAG=on",
     '--agent assistant --resource \'{"type":"memory_store","memory_store":"notes","access":"read_only"}\'',
     "",
     "--agent assistant",
@@ -70,12 +77,14 @@ export default defineCommand({
   ],
   notes: CREDENTIALS_NOTE,
   async validate(flags) {
+    parseEnvironmentVariables(flags.environment_variables);
     await readSessionResources(flags.resource);
   },
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
     const file = flags.file ?? "agents.yaml";
+    const environmentVariables = parseEnvironmentVariables(flags.environment_variables);
     const resources = await readSessionResources(flags.resource);
 
     if (settings.dryRun) {
@@ -85,6 +94,7 @@ export default defineCommand({
             agent: flags.agent ?? "auto",
             provider: "bailian",
             environment: flags.environment,
+            environment_variables: redactEnvironmentVariables(environmentVariables),
             vault: flags.vault,
             memory_stores: parseMemoryStores(flags.memoryStores),
             resources,
@@ -104,6 +114,7 @@ export default defineCommand({
           agent: flags.agent,
           provider: "bailian",
           environment: flags.environment,
+          environmentVariables,
           vault: flags.vault,
           memoryStores: parseMemoryStores(flags.memoryStores),
           resources,
