@@ -259,3 +259,17 @@ export {
   sandboxTemplateList,
   sandboxTemplateUpdate,
 } from "./commands/sandbox/template.ts";
+
+export { default as managedAgentMemoryStoreCreate } from "./commands/managed-agent/memory-store/create.ts";
+export {
+  managedAgentMemoryStoreList,
+  managedAgentMemoryStoreGet,
+  managedAgentMemoryCreate,
+  managedAgentMemoryList,
+  managedAgentMemoryGet,
+  managedAgentMemoryUpdate,
+  managedAgentMemoryDelete,
+  managedAgentMemoryVersionList,
+  managedAgentMemoryVersionGet,
+  managedAgentMemoryVersionRedact,
+} from "./commands/managed-agent/memory-store/api.ts";

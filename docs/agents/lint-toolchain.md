@@ -66,3 +66,4 @@ node tools/release/check.mjs
 - ✗ 改 cli/kscli 的 vite config 把 core/runtime/commands 不小心打成 inline,bundle 体积暴涨
 - ✗ Oxlint 配置改了但 IDE 缓存还是旧的(IDE 可能要重启 ts server)
 - ✗ 升级依赖一并升 lockfile,改动量大但没拆 commit
+- ✗ 本地源码启动器未设置 `NO_UPDATE_NOTIFIER=1`，旧分支运行成功后触发 npm 全局自动升级；验证时应覆盖普通命令路径，不能只测 `--help`

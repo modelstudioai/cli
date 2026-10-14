@@ -4,9 +4,11 @@ import { createSessionForAgent } from "@openagentpack/sdk";
 import { buildAgentRuntime, CREDENTIALS_NOTE } from "./_engine/config-loader.ts";
 import { withStdoutProtected } from "./_engine/console-capture.ts";
 import { withAgentErrors } from "./_engine/errors.ts";
+import { readSessionResources, SESSION_RESOURCE_FLAGS } from "./_engine/session-resources.ts";
 import { parseMemoryStores } from "./_engine/session-render.ts";
 
 const SESSION_CREATE_FLAGS = {
+  ...SESSION_RESOURCE_FLAGS,
   file: {
     type: "string",
     valueHint: "<path>",
@@ -40,8 +42,8 @@ const SESSION_CREATE_FLAGS = {
     type: "string",
     valueHint: "<names>",
     description: {
-      "en-US": "Override agent's memory stores (comma-separated)",
-      "zh-CN": "覆盖 Agent 的 Memory Store（以逗号分隔）",
+      "en-US": "Override memory stores with comma-separated YAML keys",
+      "zh-CN": "使用逗号分隔的 YAML key 覆盖 Memory Store",
     },
   },
   title: {
@@ -54,9 +56,11 @@ const SESSION_CREATE_FLAGS = {
 export default defineCommand({
   description: { "en-US": "Create a new session for an agent", "zh-CN": "为 Agent 创建新 Session" },
   auth: "apiKey",
-  usageArgs: "[--agent <name>] [--environment <name>] [--title <title>] [--file <path>]",
+  usageArgs:
+    "[--agent <name>] [--environment <name>] [--title <title>] [--memory-stores <keys>] [--resource <json|@path>...] [--file <path>]",
   flags: SESSION_CREATE_FLAGS,
   exampleArgs: [
+    '--agent assistant --resource \'{"type":"memory_store","memory_store":"notes","access":"read_only"}\'',
     "",
     "--agent assistant",
     {
@@ -65,10 +69,14 @@ export default defineCommand({
     },
   ],
   notes: CREDENTIALS_NOTE,
+  async validate(flags) {
+    await readSessionResources(flags.resource);
+  },
   async run(ctx) {
     const { settings, flags } = ctx;
     const format = detectOutputFormat(settings.output);
     const file = flags.file ?? "agents.yaml";
+    const resources = await readSessionResources(flags.resource);
 
     if (settings.dryRun) {
       emitResult(
@@ -79,6 +87,7 @@ export default defineCommand({
             environment: flags.environment,
             vault: flags.vault,
             memory_stores: parseMemoryStores(flags.memoryStores),
+            resources,
             title: flags.title,
           },
           config_file: file,
@@ -97,6 +106,7 @@ export default defineCommand({
           environment: flags.environment,
           vault: flags.vault,
           memoryStores: parseMemoryStores(flags.memoryStores),
+          resources,
           title: flags.title,
         });
       }),
