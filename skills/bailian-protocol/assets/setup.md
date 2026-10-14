@@ -67,14 +67,14 @@ bl auth logout --console  # clear console token only
 bl auth logout --open-api # clear OpenAPI AK/SK only
 ```
 
-- Get a DashScope API key: https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key
-- Get a Token Plan API key: https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview
+- Get a DashScope API key: https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key
+- Get a Token Plan API key: https://bailian.console.aliyun.com/cn-beijing?spm=a2ty07.github&tab=plan#/efm/subscription/overview
 - Get an Alibaba Cloud AccessKey for OpenAPI AK/SK: https://ram.console.aliyun.com/manage/ak
-- Console login: China site https://bailian.console.aliyun.com or international site https://modelstudio.console.alibabacloud.com
+- Console login: China site https://bailian.console.aliyun.com?spm=a2ty07.github or international site https://modelstudio.console.alibabacloud.com
 
 ### Token Plan model consumption
 
-Get or copy the Token Plan API key from the [subscription overview](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview). A `PlainApiKey` returned by `bl token-plan create-key` is the same credential type. It is separate from the OpenAPI AK/SK used by Token Plan management commands.
+Get or copy the Token Plan API key from the [subscription overview](https://bailian.console.aliyun.com/cn-beijing?spm=a2ty07.github&tab=plan#/efm/subscription/overview). A `PlainApiKey` returned by `bl token-plan create-key` is the same credential type. It is separate from the OpenAPI AK/SK used by Token Plan management commands.
 
 Token Plan and other subscription plans cannot use `--console`; log in directly with the subscription API Key:
 
@@ -128,6 +128,14 @@ API Key login selects and activates the matching built-in Profile only after the
 `--config default` for a one-command override. Config selection follows explicit `--config` >
 persisted `active_config` > `default`; credential and endpoint fields inside the selected Profile
 still follow flag > environment > config.
+
+Global flags can precede or follow the complete command path:
+`bl --config token-plan auth status` and `bl auth status --config token-plan` select
+the same Profile for one invocation without changing `active_config`. Keep command
+path segments together. Command-specific and credential flags must follow the path.
+Unknown flags, missing flag values, and invalid supplied values return usage exit
+code 2, including when the invocation would otherwise display help. A valid bare
+root or command-group invocation displays the corresponding help and returns 0.
 
 Activation selects the entire Config for every credential domain, not only model consumption. The only exception is the API Key capability fallback described above. After activating `token-plan`, Token Plan management and Console commands still read their OpenAPI or Console credentials from that Profile. If those credentials remain in `default`, invoke the command with `--config default` or log the corresponding credential domain into `token-plan`.
 

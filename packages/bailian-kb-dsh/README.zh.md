@@ -9,13 +9,13 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[百炼控制台](https://bailian.console.aliyun.com/) · [English](README.md) · [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) · [API 文档](https://help.aliyun.com/zh/model-studio/)
+[百炼控制台](https://bailian.console.aliyun.com/?spm=a2ty07.github) · [English](README.md) · [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) · [API 文档](https://help.aliyun.com/zh/model-studio/)
 
 </div>
 
 ## 这是什么？
 
-`bailian-kb-dsh` 是一个 DeepSeek Harness 插件（同时是 dsh bundle），让 agent 能检索托管在[阿里云百炼](https://bailian.console.aliyun.com/)上的知识库。它注册两个面向模型的工具 —— `kb_search` 取原始证据、`kb_chat` 出成品答案 —— 并附带一个设置页和一份面向 [`bl` CLI](https://www.npmjs.com/package/bailian-cli) 的管理 skill。
+`bailian-kb-dsh` 是一个 DeepSeek Harness 插件（同时是 dsh bundle），让 agent 能检索托管在[阿里云百炼](https://bailian.console.aliyun.com/?spm=a2ty07.github)上的知识库。它注册两个面向模型的工具 —— `kb_search` 取原始证据、`kb_chat` 出成品答案 —— 并附带一个设置页和一份面向 [`bl` CLI](https://www.npmjs.com/package/bailian-cli) 的管理 skill。
 
 检索经由你在百炼上部署的**检索服务**完成：一个服务把一个或多个知识库绑定到指定的向量 / 排序配置上，通过 `agent_id` 寻址。插件会把已部署服务的清单持续呈现给模型，让它能判断用户的问题是否落在你的知识范围内。
 
@@ -30,8 +30,8 @@
 ## 环境要求
 
 - DeepSeek Harness 及其插件运行时（`@deepseek-ai/dsh-*`），Node.js >= 22.12
-- 阿里云百炼账号：一个**工作空间 ID** 和一个 **DashScope API 密钥**（[去获取](https://bailian.console.aliyun.com/?tab=app#/api-key)）
-- 该工作空间下至少有一个**已部署**的检索或问答服务 —— 可在[控制台](https://bailian.console.aliyun.com/)创建，或用 `bl knowledge service create` / `bl knowledge service deploy`
+- 阿里云百炼账号：一个**工作空间 ID** 和一个 **DashScope API 密钥**（[去获取](https://bailian.console.aliyun.com/?spm=a2ty07.github&tab=app#/api-key)）
+- 该工作空间下至少有一个**已部署**的检索或问答服务 —— 可在[控制台](https://bailian.console.aliyun.com/?spm=a2ty07.github)创建，或用 `bl knowledge service create` / `bl knowledge service deploy`
 - 管理面的事（建库、导入文档、部署服务）需要 [`bl` CLI](https://www.npmjs.com/package/bailian-cli)（`npm install -g bailian-cli`）。检索本身直连 API、从不起子进程，所以 `kb_search` / `kb_chat` 不装也能用
 
 ## 安装

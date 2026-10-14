@@ -92,8 +92,8 @@ describe("e2e: console global flags (dry-run)", () => {
       "--region",
       "cn",
     ]);
-    expect(exitCode).not.toBe(0);
-    expect(stderr).toMatch(/Unknown flag.*--region/);
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/(?:Unknown flag|未知参数).*--region/);
   });
 
   test("mcp list --dry-run --console-region 透传", async () => {

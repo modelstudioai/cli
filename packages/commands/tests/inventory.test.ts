@@ -240,3 +240,35 @@ test("listAgents 报告安装与已连接 bailian-cli 的状态", () => {
     expect(agents).toHaveLength(6);
   });
 });
+
+test("listAgents 通过 HERMES_HOME 探测 relocated 的 hermes 配置", () => {
+  const prevHermesHome = process.env.HERMES_HOME;
+  withHome((home) => {
+    // Hermes home relocated away from ~/.hermes via HERMES_HOME.
+    const hermesHome = join(home, "relocated-hermes");
+    process.env.HERMES_HOME = hermesHome;
+    write(
+      hermesHome,
+      "config.yaml",
+      [
+        "model:",
+        "  default: qwen3-max",
+        "  provider: custom",
+        "  base_url: https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "  api_key: sk-test",
+      ].join("\n"),
+    );
+    try {
+      const byId = Object.fromEntries(listAgents(home).map((a) => [a.id, a]));
+      // Probe must follow HERMES_HOME, not the hard-coded ~/.hermes (issue #131).
+      expect(byId.hermes).toMatchObject({
+        installed: true,
+        configured: true,
+        model: "qwen3-max",
+      });
+    } finally {
+      if (prevHermesHome === undefined) delete process.env.HERMES_HOME;
+      else process.env.HERMES_HOME = prevHermesHome;
+    }
+  });
+});

@@ -5,6 +5,7 @@ import { detectOutputFormat } from "../output/formatter.ts";
 import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import type { SourceFlags } from "../types/command.ts";
+import { validateTimeout } from "./validation.ts";
 
 const CONFIG_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 const ACTIVE_CONFIG_KEY = "active_config";
@@ -256,13 +257,11 @@ export function buildSettings(s: ResolutionSources): Settings {
   const { flags, file, env } = s;
 
   const envTimeout = env.DASHSCOPE_TIMEOUT ? Number(env.DASHSCOPE_TIMEOUT) : undefined;
-  const validEnvTimeout =
-    envTimeout !== undefined && Number.isFinite(envTimeout) && envTimeout > 0
-      ? envTimeout
-      : undefined;
+  const validEnvTimeout = validateTimeout(envTimeout) === undefined ? envTimeout : undefined;
   const timeout = flags.timeout ?? validEnvTimeout ?? file.timeout ?? 300;
-  if (!Number.isFinite(timeout) || timeout <= 0) {
-    throw new BailianError("Timeout must be a positive finite number.", ExitCode.USAGE);
+  const timeoutError = validateTimeout(timeout);
+  if (timeoutError) {
+    throw new BailianError(timeoutError["en-US"], ExitCode.USAGE);
   }
 
   return {
