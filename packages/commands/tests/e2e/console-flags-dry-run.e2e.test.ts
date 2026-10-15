@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
+import { parseStdoutJson, runCommandHelp, runCommandE2e, runCommandInProcess } from "./helpers.ts";
 import { CONSOLE_FLAGS_DRY_RUN_ROUTES } from "./topic-routes.ts";
 
 type ConsoleDryRunMeta = {
@@ -56,7 +56,7 @@ describe("e2e: console global flags (dry-run)", () => {
   });
 
   test("console call --dry-run --console-region / --console-site / --console-switch-agent 透传", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
       "console",
       "call",
       "--api",
@@ -81,7 +81,7 @@ describe("e2e: console global flags (dry-run)", () => {
   });
 
   test("console call 拒绝未知全局 flag --region", async () => {
-    const { stderr, exitCode } = await runCommandE2e(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
       "console",
       "call",
       "--api",
@@ -97,7 +97,7 @@ describe("e2e: console global flags (dry-run)", () => {
   });
 
   test("mcp list --dry-run --console-region 透传", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
       "mcp",
       "list",
       "--dry-run",
@@ -112,7 +112,7 @@ describe("e2e: console global flags (dry-run)", () => {
   });
 
   test("quota check --dry-run --console-region 透传", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(CONSOLE_FLAGS_DRY_RUN_ROUTES, [
       "quota",
       "check",
       "--dry-run",
