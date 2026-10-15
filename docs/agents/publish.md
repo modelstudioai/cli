@@ -111,6 +111,18 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 
 ## CI 基础设施
 
+### 批量清理 npm dist-tags
+
+独立入口：GitHub Actions → **Clean npm tags**（`.github/workflows/cleanup-npm-tags.yml`）。
+
+- 六个包复选框默认全选；`tags` 输入待删除的标签，支持空格、逗号或换行分隔。
+- `dry_run` 默认开启，只查询并预览。实际删除前先检查预览，再取消勾选；首次试跑只选 `bailian-cli`，标签填 `release-test`。
+- 先校验全部输入并读取所有所选包的标签，拒绝空选择、非法标签和 `latest`；标签不存在则跳过。
+- 实际删除串行调用 `npm dist-tag rm`，每次删除前检查标签是否仍指向预览版本，删除后查询确认；发生错误立即停止，已删除的标签不会自动恢复。日志及 Actions Summary 保留每条完成结果，可按同样输入重跑剩余项。
+- 此入口不发布版本、不构建二进制、不修改 CDN、不删除 npm 历史版本。
+- 所有目标包需要新增指向 `modelstudioai/cli` / `cleanup-npm-tags.yml` 的 Trusted Publisher，开启 **Allow npm dist-tag**；保留原 `publish.yml` 配置。清理入口使用 npm 11.21.0、`id-token: write` 和 GitHub 托管 runner，不使用长效 npm token。
+- 新增手动 workflow 需先进入默认分支才能触发。新 Trusted Publisher 有 48 小时首次验证期限；删除标签能否完成首次验证需要看 npm 页面实际状态，不能由清理成功推断 `Valid`。不要为验证自动发布 beta。
+
 - **认证**：npm OIDC Trusted Publishing（无 token），需要 `id-token: write` 权限；OSS 通道复用同一 OIDC token 向 FC 证明身份（见上文「OSS 通道」）
 - **GitHub Release**：`contents: write` + `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`（stable / channel 均需）
 - **Node 版本**：24（npm 11.5+ 才支持 OIDC token 交换）
