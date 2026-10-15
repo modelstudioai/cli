@@ -154,7 +154,6 @@ export default defineCommand({
         writeUpdateState(newVer);
         updateAgentSkill(color);
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
         const reinstall =
           error instanceof BailianError && error.hint
             ? error.hint.replace(/^Re-run:\s*/i, "")
@@ -163,7 +162,7 @@ export default defineCommand({
           "Automatic binary update failed.",
           ExitCode.GENERAL,
           `Re-run the install script:\n  ${reinstall}`,
-          { cause: message },
+          { cause: error },
         );
       }
       return;
