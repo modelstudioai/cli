@@ -6,6 +6,7 @@ let captureQueue: Promise<unknown> = Promise.resolve();
 
 interface CaptureOptions {
   cwd?: string;
+  /** Full child env (execFile-style replace). Omit to inherit process.env. */
   env?: NodeJS.ProcessEnv;
   entrypoint?: string;
 }
@@ -19,6 +20,13 @@ function restoreListeners(
 ): void {
   emitter.removeAllListeners(event);
   for (const listener of listeners) emitter.on(event, listener);
+}
+
+function replaceProcessEnv(next: NodeJS.ProcessEnv): void {
+  for (const name of Object.keys(process.env)) delete process.env[name];
+  for (const [name, value] of Object.entries(next)) {
+    if (value !== undefined) process.env[name] = value;
+  }
 }
 
 async function capture(
@@ -72,11 +80,8 @@ async function capture(
 
   try {
     if (options.cwd) process.chdir(options.cwd);
+    if (options.env) replaceProcessEnv(options.env);
     Object.assign(process.env, { NODE_NO_WARNINGS: "1", DO_NOT_TRACK: "1" });
-    for (const [name, value] of Object.entries(options.env ?? {})) {
-      if (value === undefined) delete process.env[name];
-      else process.env[name] = value;
-    }
     process.argv = [process.execPath, options.entrypoint ?? "commands-e2e", ...args];
     process.exitCode = 0;
     for (const { stream, property } of terminalProperties)
@@ -103,9 +108,7 @@ async function capture(
     process.exit = originalExit;
     process.exitCode = originalExitCode;
     process.argv = originalArgv;
-    for (const name of Object.keys(process.env))
-      if (!(name in originalEnvironment)) delete process.env[name];
-    Object.assign(process.env, originalEnvironment);
+    replaceProcessEnv(originalEnvironment);
     for (const { stream, property, descriptor } of terminalProperties) {
       if (descriptor) Object.defineProperty(stream, property, descriptor);
       else Reflect.deleteProperty(stream, property);

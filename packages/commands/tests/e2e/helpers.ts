@@ -10,8 +10,9 @@ import {
 } from "e2e/output";
 import { captureRegistryHelp } from "e2e/registry-smoke";
 import { runNodeMain, type RunCliResult } from "e2e/runner";
-import { CommandRegistry, createCli, resolve } from "bailian-cli-runtime";
+import { buildIsolatedCliEnv } from "e2e/isolation";
 import { runInProcess } from "e2e/in-process";
+import { CommandRegistry, createCli, resolve } from "bailian-cli-runtime";
 import { loadRouteCommands } from "./harness/routes.ts";
 import { E2E_HARNESS_IDENTITY } from "./harness/identity.ts";
 import { withHarnessUpdateFixture } from "./harness/update-fixture.ts";
@@ -50,10 +51,8 @@ const e2eDir = dirname(fileURLToPath(import.meta.url));
 const harnessMainTs = join(e2eDir, "harness", "main.ts");
 const registryCache = new WeakMap<E2eRouteExports, Promise<CommandRegistry>>();
 
-/** `packages/commands` 根目录 */
 export const commandsPackageRoot = join(e2eDir, "..", "..");
 
-/** E2E fixtures 目录 */
 export const e2eFixturesDir = join(e2eDir, "fixtures");
 
 function serializeRoutes(routes: E2eRouteExports): string {
@@ -73,7 +72,7 @@ function getCommandRegistry(routes: E2eRouteExports): Promise<CommandRegistry> {
   return registryPromise;
 }
 
-/** 使用 topic 最小路由在当前 Vitest worker 中渲染命令 help，不启动 CLI 子进程。 */
+/** In-worker help via topic routes (no CLI subprocess). */
 export async function captureCommandHelp(
   routes: E2eRouteExports,
   commandPath: string[],
@@ -86,7 +85,7 @@ export async function captureCommandHelp(
   return captureRegistryHelp(registry, commandPath);
 }
 
-/** 与 runCommandE2e 的结果结构兼容，但 help 在当前 Vitest worker 中渲染。 */
+/** Same result shape as runCommandE2e; help is rendered in-worker. */
 export async function runCommandHelp(
   routes: E2eRouteExports,
   args: string[],
@@ -99,14 +98,11 @@ export async function runCommandHelp(
 }
 
 export interface CommandE2eRunOptions {
-  /** 把本机 config 里的 console access_token 写入隔离配置。 */
+  /** Copy host console access_token into the isolated config. */
   seedCredentials?: boolean;
 }
 
-/**
- * 通过 harness 子进程执行命令 E2E。
- * `routes` 为本用例所需的最小 path → export 映射，不维护全量产品 map。
- */
+/** Harness subprocess E2E; `routes` is the minimal path → export map for this topic. */
 export async function runCommandE2e(
   routes: E2eRouteExports,
   args: string[],
@@ -123,7 +119,7 @@ export async function runCommandE2e(
   });
 }
 
-/** Console live 用例：隔离环境里带上本机 access_token。 */
+/** Console live: isolate and seed host access_token. */
 export async function runConsoleCommandE2e(
   routes: E2eRouteExports,
   args: string[],
@@ -132,7 +128,10 @@ export async function runConsoleCommandE2e(
   return runCommandE2e(routes, args, envOverrides, { seedCredentials: true });
 }
 
-/** Opt-in for offline cases; process preloads and proxy configuration retain real subprocesses. */
+/**
+ * Offline opt-in: real createCli in-process with e2e/isolation.
+ * Falls back to a subprocess when NODE_OPTIONS or HTTP(S)_PROXY is set.
+ */
 export async function runCommandInProcess(
   routes: E2eRouteExports,
   args: string[],
@@ -145,12 +144,18 @@ export async function runCommandInProcess(
     environment.HTTPS_PROXY ||
     environment.http_proxy ||
     environment.https_proxy
-  )
+  ) {
     return runCommandE2e(routes, args, envOverrides);
-  const commands = await loadRouteCommands(routes);
-  return runInProcess(
-    () => withHarnessUpdateFixture(() => createCli(commands, E2E_HARNESS_IDENTITY).run(args)),
-    args,
-    { cwd: commandsPackageRoot, env: envOverrides, entrypoint: harnessMainTs },
-  );
+  }
+  const isolated = buildIsolatedCliEnv({ overrides: envOverrides });
+  try {
+    const commands = await loadRouteCommands(routes);
+    return await runInProcess(
+      () => withHarnessUpdateFixture(() => createCli(commands, E2E_HARNESS_IDENTITY).run(args)),
+      args,
+      { cwd: commandsPackageRoot, env: isolated.env, entrypoint: harnessMainTs },
+    );
+  } finally {
+    isolated.dispose();
+  }
 }

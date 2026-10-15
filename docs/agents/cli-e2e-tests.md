@@ -113,7 +113,7 @@ describe.skipIf(<ready>)("e2e: <topic>（DashScope …）", () => {
 
 - **禁止破坏真实用户配置**：`auth logout` 和 `config set` 默认只用 `--dry-run`；只有验证持久化契约时，才允许通过
   `BAILIAN_CONFIG_DIR` 指向每个用例独占的临时目录实际落盘，并必须在 `finally` 中清理；禁止写入或复用真实 `~/.bailian`
-- **默认测试隔离**：`runNodeMain` / `runCommandE2e` / `runCli` / `runKscli` 默认走 `e2e/isolation`（HOME 与 `XDG_CONFIG_HOME` 隔离、强制 `language: en-US`、关闭 HOME 外的系统/项目目录探测、清空 Agent 覆盖 env）。DashScope / OpenAPI 凭证继续走环境变量；Console live 用例用 `runConsoleCommandE2e` / `runConsoleCli` 带上 `access_token`。进程内单测用 `withIsolatedHome` / `enterIsolatedHome`，**禁止**各文件自写 `inFakeHome`。完整约定见 [test-isolation.md](test-isolation.md)。
+- **默认测试隔离**：`runNodeMain` / `runCommandE2e` / `runCommandInProcess` / `runCli` / `runKscli` 默认走 `e2e/isolation`（HOME 与 `XDG_CONFIG_HOME` 隔离、强制 `language: en-US`、关闭 HOME 外的系统/项目目录探测、清空 Agent 覆盖 env）。`runCommandInProcess` 经 `buildIsolatedCliEnv` 后把完整 env 快照交给 `runInProcess`（与子进程 `env` 同语义）。DashScope / OpenAPI 凭证继续走环境变量；Console live 用例用 `runConsoleCommandE2e` / `runConsoleCli` 带上 `access_token`。进程内单测用 `withIsolatedHome` / `enterIsolatedHome`，**禁止**各文件自写 `inFakeHome`。完整约定见 [test-isolation.md](test-isolation.md)。
 - **不加 dry-run**：`dryRun` 在 `resolveFileUrl` / `resolveCredential` / 上传**之后**的命令（如 `image edit`、`speech recognize` 带 `--url`）
 - **`--list-voices` 等旁路**：先于 `--text` 校验的 flag，缺参用例勿带该 flag
 - 新增 required option → 至少一条缺参用例；改 dry-run 输出 → 更新对应断言

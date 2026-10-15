@@ -16,8 +16,9 @@
         │
         ▼
   e2e/isolation（统一入口）
-        ├─ 进程内：withIsolatedHome / enterIsolatedHome
-        └─ 子进程：runNodeMain → buildIsolatedCliEnv
+        ├─ 进程内单测：withIsolatedHome / enterIsolatedHome
+        ├─ 离线 in-process E2E：runCommandInProcess → buildIsolatedCliEnv → runInProcess(完整 env 快照)
+        └─ 子进程 E2E：runNodeMain → buildIsolatedCliEnv
               │
               ├─ 调用方 HOME，否则临时 HOME；XDG 始终改写到该 HOME
               ├─ 未传 BAILIAN_CONFIG_DIR：空 HOME 写 $HOME/.bailian；已有 config 则用自有临时目录（不覆盖）
@@ -26,7 +27,7 @@
               ├─ Console access_token 仅 seedCredentials: true 时拷贝
               ├─ 清空 AGENT_ENV_KEYS（含 OPENCLAW / ZCODE / LOCALAPPDATA）
               ├─ BL_SKIP_HOST_AGENTS=1
-              └─ runNodeMain 结束时删除自己创建的临时目录
+              └─ 结束后 dispose / restore 删除自己创建的临时目录
 
   Session 父目录（仅扫尾归堆，不承载隔离语义）：
   globalSetup createIsolationSessionRoot → provide → setupFiles 写 BL_ISO_ROOT
@@ -42,6 +43,7 @@
 - [ ] **commands / runtime 进程内单测**（agent writer 等）：`import { withIsolatedHome, enterIsolatedHome } from "e2e/isolation"`
 - [ ] 禁止本地再写 `inFakeHome` / 直接 `process.env.HOME =`
 - [ ] **CLI 子进程 E2E**：走 `runCommandE2e` / `runCli` / `runKscli` → 底层 `runNodeMain` **默认已隔离**；用例只需在需要时传自己的 `BAILIAN_CONFIG_DIR` / `HOME`
+- [ ] **离线 in-process E2E**：走 `runCommandInProcess` → 同样 `buildIsolatedCliEnv`；`runInProcess` 的 `env` 是完整快照（非增量 merge）
 - [ ] 只传 `HOME` 且该 HOME 下**已有** `config.json` 时，基建**不会覆盖**，改用自有临时 `BAILIAN_CONFIG_DIR`；空 HOME 才写 `$HOME/.bailian`
 - [ ] 隔离关键键的 `undefined` / 空串会被忽略，不能拆掉隔离；其它键传 `undefined` 会删除继承凭证（如 `DASHSCOPE_API_KEY: undefined`）
 - [ ] **必须继承真实用户配置**的极少数用例：`runNodeMain(..., { isolate: false })`，并在注释里写明原因

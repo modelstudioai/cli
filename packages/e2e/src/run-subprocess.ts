@@ -16,26 +16,19 @@ export interface RunCliResult {
 export interface RunNodeMainOptions {
   cwd: string;
   env?: NodeJS.ProcessEnv;
-  /**
-   * 默认 true：子进程使用隔离 HOME/config（强制 en-US、关闭系统 Agent 探测）。
-   * 仅当用例必须完整继承宿主 `~/.bailian` 时设为 false。
-   */
+  /** Default true. Set false only when the case must inherit the host `~/.bailian`. */
   isolate?: boolean;
-  /**
-   * 为 true 时把本机 config 里的 console access_token 写入隔离配置。
-   * 默认 false。DashScope / OpenAPI 继续使用环境变量。
-   */
+  /** Opt-in: copy host console access_token into isolated config. */
   seedCredentials?: boolean;
 }
 
-/** monorepo 根目录下的 tsx 可执行文件 */
 export function resolveTsxBin(): string {
   const root = monorepoRoot();
   const name = process.platform === "win32" ? "tsx.cmd" : "tsx";
   return join(root, "node_modules", ".bin", name);
 }
 
-/** 子进程通过 Node 的 tsx loader 执行指定 main.ts 入口，不启动 tsx CLI 的 IPC server。 */
+/** Run main.ts via Node's tsx loader (no tsx CLI IPC server). */
 export async function runNodeMain(
   mainTs: string,
   args: string[],

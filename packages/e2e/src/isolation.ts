@@ -32,30 +32,21 @@ const CRITICAL_ENVS = new Set([
   SKIP_HOST_AGENTS_ENV,
 ]);
 
-/**
- * 本轮隔离父目录（仅供 Vitest globalSetup 调用一次）。
- * 返回值必须由 teardown 闭包捕获后删除；worker 通过 provide → BL_ISO_ROOT 复用，不宣称所有权。
- */
+/** Create this run's isolation parent (globalSetup once). Teardown must delete the returned path. */
 export function createIsolationSessionRoot(): string {
   const sessionRoot = mkdtempSync(join(tmpdir(), "bl-e2e-session-"));
   process.env[ISO_ROOT_ENV] = sessionRoot;
   return sessionRoot;
 }
 
-/**
- * 临时目录父路径：优先 globalSetup 注入的 `BL_ISO_ROOT`，否则 `os.tmpdir()`。
- * 不惰性创建 session、不挂信号、不维护进程所有权。
- */
+/** Temp parent: `BL_ISO_ROOT` from globalSetup, else `os.tmpdir()`. */
 export function getIsolationSessionRoot(): string {
   const fromEnv = process.env[ISO_ROOT_ENV]?.trim();
   if (fromEnv && existsSync(fromEnv)) return fromEnv;
   return tmpdir();
 }
 
-/**
- * 删除指定 session 根。幂等（force）；只删传入路径。
- * globalSetup teardown 必须传入自己闭包里的 root。
- */
+/** Delete the given session root (idempotent). Teardown must pass its closed-over path. */
 export function cleanupIsolationSessionRootAt(sessionRoot: string): void {
   if (!sessionRoot) return;
   if (process.env[ISO_ROOT_ENV] === sessionRoot) {
@@ -64,7 +55,6 @@ export function cleanupIsolationSessionRootAt(sessionRoot: string): void {
   rmSync(sessionRoot, { recursive: true, force: true });
 }
 
-/** 在 session 根（或 os.tmpdir）下创建临时子目录。 */
 function mkIsolationTemp(prefix: string): string {
   return mkdtempSync(join(getIsolationSessionRoot(), prefix));
 }

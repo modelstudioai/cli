@@ -44,7 +44,6 @@ test("withIsolatedHome 关闭系统 detectDirs，空 HOME 下不探测主机路�
     expect(process.env.CLAUDE_CONFIG_DIR).toBeUndefined();
     expect(process.env.LOCALAPPDATA).toBeUndefined();
 
-    // 未创建任何 agent 目录时，列表应为空（不受 /etc/codex 等主机路径影响）
     expect(detectInstalledAgents()).toEqual([]);
 
     mkdirSync(join(home, ".claude"), { recursive: true });
@@ -241,7 +240,6 @@ test("undefined / 空串 overrides 不会取消 HOME 与 config 隔离", () => {
     expect(isolated.env.BAILIAN_CONFIG_DIR).toBeTruthy();
     expect(isolated.env.XDG_CONFIG_HOME).toBe(join(isolated.env.HOME!, ".config"));
     expect(isolated.env[SKIP_HOST_AGENTS_ENV]).toBe("1");
-    // 非隔离关键键仍允许空串（测试故意清凭证）
     expect(isolated.env.DASHSCOPE_API_KEY).toBe("");
     expect(existsSync(join(isolated.env.BAILIAN_CONFIG_DIR!, "config.json"))).toBe(true);
   } finally {

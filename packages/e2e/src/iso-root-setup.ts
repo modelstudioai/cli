@@ -1,6 +1,6 @@
 /**
- * Vitest setupFiles：把 globalSetup provide 的本轮隔离父目录写入 BL_ISO_ROOT，
- * 供 mkIsolationTemp 挂载临时子目录。只依赖 iso-root-keys，不拉 isolation/core。
+ * Vitest setupFiles: copy provided isolation parent into BL_ISO_ROOT.
+ * Depends only on iso-root-keys (not isolation/core).
  */
 import { inject } from "vite-plus/test";
 import { ISO_ROOT_ENV, ISO_ROOT_KEY } from "./iso-root-keys.ts";
@@ -12,5 +12,5 @@ try {
     process.env[ISO_ROOT_ENV] = sessionRoot;
   }
 } catch {
-  // 无 globalSetup/provide 时不写 BL_ISO_ROOT，getIsolationSessionRoot 回退到 os.tmpdir()。
+  // No provide: leave BL_ISO_ROOT unset; getIsolationSessionRoot falls back to os.tmpdir().
 }
