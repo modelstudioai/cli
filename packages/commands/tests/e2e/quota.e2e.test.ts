@@ -6,6 +6,7 @@ import {
   parseStdoutJson,
   runCommandHelp,
   runCommandE2e,
+  runConsoleCommandE2e,
 } from "./helpers.ts";
 import { QUOTA_ROUTES } from "./topic-routes.ts";
 
@@ -359,13 +360,13 @@ describe.skipIf(!isDashScopeE2EReady())("e2e: quota（DashScope）", () => {
 
 describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   test("quota check 文本输出包含英文表头", async () => {
-    const result = await runCommandE2e(QUOTA_ROUTES, ["quota", "check", "--output", "text"]);
+    const result = await runConsoleCommandE2e(QUOTA_ROUTES, ["quota", "check", "--output", "text"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("quota check --model 指定单模型", async () => {
-    const result = await runCommandE2e(QUOTA_ROUTES, [
+    const result = await runConsoleCommandE2e(QUOTA_ROUTES, [
       "quota",
       "check",
       "--model",
@@ -378,7 +379,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota check --model 逗号分隔多模型", async () => {
-    const result = await runCommandE2e(QUOTA_ROUTES, [
+    const result = await runConsoleCommandE2e(QUOTA_ROUTES, [
       "quota",
       "check",
       "--model",
@@ -391,7 +392,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: quota（Console）", () => {
   });
 
   test("quota check JSON 输出包含用量和限额字段", async () => {
-    const result = await runCommandE2e(QUOTA_ROUTES, [
+    const result = await runConsoleCommandE2e(QUOTA_ROUTES, [
       "quota",
       "check",
       "--model",

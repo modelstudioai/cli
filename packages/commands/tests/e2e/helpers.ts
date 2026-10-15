@@ -104,6 +104,11 @@ export async function runCommandHelp(
   return { stdout: "", stderr, exitCode: 0 };
 }
 
+export interface CommandE2eRunOptions {
+  /** 把本机 config 里的 console access_token 写入隔离配置。 */
+  seedCredentials?: boolean;
+}
+
 /**
  * 通过 harness 子进程执行命令 E2E。
  * `routes` 为本用例所需的最小 path → export 映射，不维护全量产品 map。
@@ -112,12 +117,23 @@ export async function runCommandE2e(
   routes: E2eRouteExports,
   args: string[],
   envOverrides: NodeJS.ProcessEnv = {},
+  options: CommandE2eRunOptions = {},
 ): Promise<RunCliResult> {
   return runNodeMain(harnessMainTs, args, {
     cwd: commandsPackageRoot,
+    seedCredentials: options.seedCredentials,
     env: {
       BAILIAN_E2E_ROUTES: serializeRoutes(routes),
       ...envOverrides,
     },
   });
+}
+
+/** Console live 用例：隔离环境里带上本机 access_token。 */
+export async function runConsoleCommandE2e(
+  routes: E2eRouteExports,
+  args: string[],
+  envOverrides: NodeJS.ProcessEnv = {},
+): Promise<RunCliResult> {
+  return runCommandE2e(routes, args, envOverrides, { seedCredentials: true });
 }

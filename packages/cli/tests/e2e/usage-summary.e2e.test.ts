@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isConsoleE2EReady, isConsoleAuthFailure, parseStdoutJson, runCli } from "./helpers.ts";
+import {
+  isConsoleE2EReady,
+  isConsoleAuthFailure,
+  parseStdoutJson,
+  runCli,
+  runConsoleCli,
+} from "./helpers.ts";
 
 describe("e2e: usage summary", () => {
   test("usage summary --help 正常退出", async () => {
@@ -18,7 +24,7 @@ describe("e2e: usage summary", () => {
 
 describe.skipIf(!isConsoleE2EReady())("e2e: usage summary（Console）", () => {
   test("usage summary --dry-run 输出 free-tier 计划请求", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
+    const { stdout, stderr, exitCode } = await runConsoleCli([
       "usage",
       "summary",
       "--dry-run",
@@ -31,7 +37,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage summary（Console）", () => {
   });
 
   test("usage summary --dry-run --workspace-id 附带用量概览计划请求", async () => {
-    const { stdout, stderr, exitCode } = await runCli([
+    const { stdout, stderr, exitCode } = await runConsoleCli([
       "usage",
       "summary",
       "--dry-run",
@@ -49,13 +55,13 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage summary（Console）", () => {
   });
 
   test("usage summary 文本输出正常返回", async () => {
-    const result = await runCli(["usage", "summary", "--output", "text"]);
+    const result = await runConsoleCli(["usage", "summary", "--output", "text"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
   });
 
   test("usage summary JSON 输出包含 freeTier 字段", async () => {
-    const result = await runCli(["usage", "summary", "--output", "json"]);
+    const result = await runConsoleCli(["usage", "summary", "--output", "json"]);
     if (isConsoleAuthFailure(result)) return;
     expect(result.exitCode, result.stderr).toBe(0);
     const data = parseStdoutJson<{ freeTier?: unknown; period?: unknown }>(result.stdout);

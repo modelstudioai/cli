@@ -1,14 +1,7 @@
-import {
-  mkdtempSync,
-  rmSync,
-  readFileSync,
-  writeFileSync,
-  mkdirSync,
-  readdirSync,
-  existsSync,
-} from "fs";
-import { tmpdir, homedir } from "os";
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from "fs";
+import { homedir } from "os";
 import { join } from "path";
+import { enterIsolatedHome, type IsolatedHomeHandle } from "e2e/isolation";
 import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
 import claudeCode from "../src/commands/config/agent/writers/claude-code.ts";
 import qwenCode from "../src/commands/config/agent/writers/qwen-code.ts";
@@ -28,20 +21,18 @@ const OAI_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
 const ANTHROPIC_URL = "https://dashscope.aliyuncs.com/apps/anthropic";
 
 let home = "";
-let prevHome: string | undefined;
+let isolation: IsolatedHomeHandle | undefined;
 
 beforeEach(() => {
-  home = mkdtempSync(join(tmpdir(), "bl-agent-writer-"));
-  prevHome = process.env.HOME;
-  process.env.HOME = home;
+  isolation = enterIsolatedHome();
+  home = isolation.home;
   // homedir() 在 POSIX 读 $HOME；断言隔离生效。
   expect(homedir()).toBe(home);
 });
 
 afterEach(() => {
-  if (prevHome === undefined) delete process.env.HOME;
-  else process.env.HOME = prevHome;
-  rmSync(home, { recursive: true, force: true });
+  isolation?.restore();
+  isolation = undefined;
 });
 
 function readJsonAt(...segments: string[]): Record<string, unknown> {

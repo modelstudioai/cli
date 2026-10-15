@@ -4,7 +4,7 @@ import {
   isConsoleAuthFailure,
   parseStdoutJson,
   runCommandHelp,
-  runCommandE2e,
+  runConsoleCommandE2e,
 } from "./helpers.ts";
 import { USAGE_ROUTES } from "./topic-routes.ts";
 import { buildSources } from "bailian-cli-core";
@@ -27,7 +27,12 @@ async function fetchDefaultWorkspaceId(): Promise<string> {
   const staticId = getStaticWorkspaceId();
   if (staticId) return staticId;
 
-  const result = await runCommandE2e(USAGE_ROUTES, ["workspace", "list", "--output", "json"]);
+  const result = await runConsoleCommandE2e(USAGE_ROUTES, [
+    "workspace",
+    "list",
+    "--output",
+    "json",
+  ]);
   if (isConsoleAuthFailure(result) || result.exitCode !== 0) return FALLBACK_WORKSPACE_ID;
   try {
     const parsed = JSON.parse(result.stdout);
@@ -73,7 +78,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
   });
 
   test("usage stats --dry-run 概览模式输出请求参数", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runConsoleCommandE2e(USAGE_ROUTES, [
       "usage",
       "stats",
       "--workspace-id",
@@ -102,7 +107,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
   });
 
   test("usage stats --dry-run --days 30 时间跨度约 30 天", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runConsoleCommandE2e(USAGE_ROUTES, [
       "usage",
       "stats",
       "--workspace-id",
@@ -124,7 +129,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
   });
 
   test("usage stats --dry-run --model 指定模型使用 list API", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runConsoleCommandE2e(USAGE_ROUTES, [
       "usage",
       "stats",
       "--workspace-id",
@@ -146,7 +151,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
   });
 
   test("usage stats --dry-run --type Text 传递 obsModelType", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(USAGE_ROUTES, [
+    const { stdout, stderr, exitCode } = await runConsoleCommandE2e(USAGE_ROUTES, [
       "usage",
       "stats",
       "--workspace-id",
@@ -165,7 +170,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
   });
 
   test("usage stats 概览模式返回 JSON 结果", async () => {
-    const result = await runCommandE2e(USAGE_ROUTES, [
+    const result = await runConsoleCommandE2e(USAGE_ROUTES, [
       "usage",
       "stats",
       "--workspace-id",
@@ -178,7 +183,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
   });
 
   test("usage stats 概览文本输出包含英文标签", async () => {
-    const result = await runCommandE2e(USAGE_ROUTES, [
+    const result = await runConsoleCommandE2e(USAGE_ROUTES, [
       "usage",
       "stats",
       "--workspace-id",
@@ -191,7 +196,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
   });
 
   test("usage stats 概览文本输出包含 Token 用量", async () => {
-    const result = await runCommandE2e(USAGE_ROUTES, [
+    const result = await runConsoleCommandE2e(USAGE_ROUTES, [
       "usage",
       "stats",
       "--workspace-id",
@@ -204,7 +209,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
   });
 
   test("usage stats --model 单模型文本输出包含英文表头", async () => {
-    const result = await runCommandE2e(USAGE_ROUTES, [
+    const result = await runConsoleCommandE2e(USAGE_ROUTES, [
       "usage",
       "stats",
       "--workspace-id",
@@ -219,7 +224,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
   });
 
   test("usage stats --model 逗号分隔多模型返回多行", async () => {
-    const result = await runCommandE2e(USAGE_ROUTES, [
+    const result = await runConsoleCommandE2e(USAGE_ROUTES, [
       "usage",
       "stats",
       "--workspace-id",
@@ -234,7 +239,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
   });
 
   test("usage stats --model 不存在的模型返回空表格", async () => {
-    const result = await runCommandE2e(USAGE_ROUTES, [
+    const result = await runConsoleCommandE2e(USAGE_ROUTES, [
       "usage",
       "stats",
       "--workspace-id",
@@ -249,7 +254,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
   });
 
   test("usage stats --days 1 短时间范围正常返回", async () => {
-    const result = await runCommandE2e(USAGE_ROUTES, [
+    const result = await runConsoleCommandE2e(USAGE_ROUTES, [
       "usage",
       "stats",
       "--workspace-id",
@@ -264,7 +269,7 @@ describe.skipIf(!isConsoleE2EReady())("e2e: usage stats（Console）", () => {
   });
 
   test("usage stats --type Vision 按类型过滤", async () => {
-    const result = await runCommandE2e(USAGE_ROUTES, [
+    const result = await runConsoleCommandE2e(USAGE_ROUTES, [
       "usage",
       "stats",
       "--workspace-id",
