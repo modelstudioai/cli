@@ -1,5 +1,3 @@
-import { mkdtempSync } from "fs";
-import { tmpdir } from "os";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { parseStdoutJson } from "e2e/output";
@@ -27,16 +25,16 @@ export const kscliPackageRoot = join(dirname(fileURLToPath(import.meta.url)), ".
 
 const mainTs = join(kscliPackageRoot, "src", "main.ts");
 
-/** 子进程执行 kscli */
+/**
+ * 子进程执行 kscli。
+ * 默认走 e2e runner 的隔离环境（临时 HOME/config + en-US）；无需再手建 BAILIAN_CONFIG_DIR。
+ */
 export async function runKscli(
   args: string[],
   envOverrides: NodeJS.ProcessEnv = {},
 ): Promise<RunCliResult> {
   return runNodeMain(mainTs, args, {
     cwd: kscliPackageRoot,
-    env: {
-      BAILIAN_CONFIG_DIR: mkdtempSync(join(tmpdir(), "kscli-test-")),
-      ...envOverrides,
-    },
+    env: envOverrides,
   });
 }

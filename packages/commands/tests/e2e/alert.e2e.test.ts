@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { parseStdoutJson, runCommandE2e, runCommandInProcess } from "./helpers.ts";
 import { ALERT_ROUTES } from "./topic-routes.ts";
 
 // 只覆盖 help / 参数校验 / dry-run；真实调用依赖 console 凭证与已开通的 CMS 服务。
@@ -74,7 +74,7 @@ describe("e2e: alert", () => {
   });
 
   test("alert create --dry-run 输出完整通知配置", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(ALERT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(ALERT_ROUTES, [
       "alert",
       "create",
       "--name",
@@ -146,7 +146,7 @@ describe("e2e: alert", () => {
   });
 
   test("alert delete --dry-run 支持多 ID", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(ALERT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(ALERT_ROUTES, [
       "alert",
       "delete",
       "--rule-id",
@@ -187,7 +187,7 @@ describe("e2e: alert", () => {
       ["enable", "zeldaEasy.bailian-telemetry.alertRule.enableAlertRule"],
       ["disable", "zeldaEasy.bailian-telemetry.alertRule.disableAlertRule"],
     ] as const) {
-      const { stdout, stderr, exitCode } = await runCommandE2e(ALERT_ROUTES, [
+      const { stdout, stderr, exitCode } = await runCommandInProcess(ALERT_ROUTES, [
         "alert",
         verb,
         "--rule-id",
@@ -246,7 +246,7 @@ describe("e2e: alert", () => {
   });
 
   test("alert template create --dry-run 输出条件结构", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(ALERT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(ALERT_ROUTES, [
       "alert",
       "template",
       "create",
@@ -295,7 +295,7 @@ describe("e2e: alert", () => {
   });
 
   test("alert template update --dry-run 输出更新请求", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(ALERT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(ALERT_ROUTES, [
       "alert",
       "template",
       "update",
@@ -319,7 +319,7 @@ describe("e2e: alert", () => {
   });
 
   test("alert template delete --dry-run 支持多 ID", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(ALERT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(ALERT_ROUTES, [
       "alert",
       "template",
       "delete",
@@ -362,7 +362,7 @@ describe("e2e: alert", () => {
   });
 
   test("alert history --dry-run 输出时间范围映射", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(ALERT_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(ALERT_ROUTES, [
       "alert",
       "history",
       "--rule-id",
