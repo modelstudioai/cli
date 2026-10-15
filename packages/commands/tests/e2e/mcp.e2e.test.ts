@@ -3,7 +3,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parse as parseToml } from "smol-toml";
 import { describe, expect, test } from "vite-plus/test";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
+import {
+  isDashScopeE2EReady,
+  parseStdoutJson,
+  runCommandHelp,
+  runCommandE2e,
+  runCommandInProcess,
+} from "./helpers.ts";
 import { MCP_ROUTES } from "./topic-routes.ts";
 
 /**
@@ -72,7 +78,7 @@ describe("e2e: mcp", () => {
   test("mcp connect --dry-run 输出端点和 Header 名但不写配置", async () => {
     const tempHome = mkdtempSync(join(tmpdir(), "bl-mcp-connect-dry-"));
     try {
-      const { stdout, stderr, exitCode } = await runCommandE2e(
+      const { stdout, stderr, exitCode } = await runCommandInProcess(
         MCP_ROUTES,
         [
           "mcp",
@@ -162,7 +168,7 @@ describe("e2e: mcp", () => {
         "sk-test-secret",
       );
 
-      const preview = await runCommandE2e(
+      const preview = await runCommandInProcess(
         MCP_ROUTES,
         [
           "mcp",
@@ -203,7 +209,7 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp list --dry-run 仅打印计划且固定 activated=1", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MCP_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MCP_ROUTES, [
       "mcp",
       "list",
       "--dry-run",
@@ -241,7 +247,7 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp list --dry-run 自定义 --console-region 透传", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MCP_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MCP_ROUTES, [
       "mcp",
       "list",
       "--dry-run",
@@ -256,7 +262,7 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp tools --server <code> --dry-run 输出 /api/v1/mcps/<code>/mcp 形态 URL", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MCP_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MCP_ROUTES, [
       "mcp",
       "tools",
       "--server",
@@ -275,7 +281,7 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp tools --url 覆盖 baseUrl 约定", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MCP_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MCP_ROUTES, [
       "mcp",
       "tools",
       "--server",
@@ -299,7 +305,7 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp call --target <server.tool> --dry-run 输出工具调用计划", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MCP_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MCP_ROUTES, [
       "mcp",
       "call",
       "--target",
@@ -325,7 +331,7 @@ describe("e2e: mcp", () => {
   });
 
   test("mcp call --json 与 --arg 合并(arg 覆盖 json),--query 等价 arg.query", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(MCP_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(MCP_ROUTES, [
       "mcp",
       "call",
       "--target",

@@ -16,17 +16,18 @@ import type { RecordSchemaSpec } from "./types.ts";
 import { chatmlSchema } from "./chatml.ts";
 import { cptSchema } from "./cpt.ts";
 import { dpoSchema } from "./dpo.ts";
+import { decisionSchema } from "./decision.ts";
 import { ttsSchema } from "./tts.ts";
 import { imageSchema } from "./image.ts";
 import { videoSchema } from "./video.ts";
 
-// Order matters: TTS (wav_fn), image (img_path), video (first_frame_path/
-// video_path), DPO (chosen/rejected) and CPT (text) before ChatML (the catch-
-// all fallback). Each keys off a distinguishing field so they partition cleanly.
+// 顺序决定自动识别优先级：所有特定 Schema 必须位于 ChatML 兜底项之前。
+// decision 仅识别 questions，或不含 messages 的 state，避免影响扩展了 state 的 ChatML 记录。
 export const RECORD_SCHEMAS: RecordSchemaSpec[] = [
   ttsSchema,
   imageSchema,
   videoSchema,
+  decisionSchema,
   dpoSchema,
   cptSchema,
   chatmlSchema,

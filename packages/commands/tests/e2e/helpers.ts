@@ -10,8 +10,11 @@ import {
 } from "e2e/output";
 import { captureRegistryHelp } from "e2e/registry-smoke";
 import { runNodeMain, type RunCliResult } from "e2e/runner";
-import type { AnyCommand } from "bailian-cli-core";
-import { CommandRegistry, resolve } from "bailian-cli-runtime";
+import { CommandRegistry, createCli, resolve } from "bailian-cli-runtime";
+import { runInProcess } from "e2e/in-process";
+import { loadRouteCommands } from "./harness/routes.ts";
+import { E2E_HARNESS_IDENTITY } from "./harness/identity.ts";
+import { withHarnessUpdateFixture } from "./harness/update-fixture.ts";
 import type { E2eRouteExports } from "./topic-routes.ts";
 
 export {
@@ -63,18 +66,9 @@ function getCommandRegistry(routes: E2eRouteExports): Promise<CommandRegistry> {
   const cachedRegistry = registryCache.get(routes);
   if (cachedRegistry) return cachedRegistry;
 
-  const registryPromise = import("bailian-cli-commands").then((commandExports) => {
-    const commandLibrary = commandExports as Record<string, unknown>;
-    const commands: Record<string, AnyCommand> = {};
-    for (const [path, exportName] of Object.entries(routes)) {
-      const command = commandLibrary[exportName];
-      if (typeof command !== "object" || command === null || !("run" in command)) {
-        throw new Error(`Unknown bailian-cli-commands export: ${exportName}`);
-      }
-      commands[path] = command as AnyCommand;
-    }
-    return new CommandRegistry(commands, "bl");
-  });
+  const registryPromise = loadRouteCommands(routes).then(
+    (commands) => new CommandRegistry(commands, "bl"),
+  );
   registryCache.set(routes, registryPromise);
   return registryPromise;
 }
@@ -136,4 +130,27 @@ export async function runConsoleCommandE2e(
   envOverrides: NodeJS.ProcessEnv = {},
 ): Promise<RunCliResult> {
   return runCommandE2e(routes, args, envOverrides, { seedCredentials: true });
+}
+
+/** Opt-in for offline cases; process preloads and proxy configuration retain real subprocesses. */
+export async function runCommandInProcess(
+  routes: E2eRouteExports,
+  args: string[],
+  envOverrides: NodeJS.ProcessEnv = {},
+): Promise<RunCliResult> {
+  const environment = { ...process.env, ...envOverrides };
+  if (
+    environment.NODE_OPTIONS ||
+    environment.HTTP_PROXY ||
+    environment.HTTPS_PROXY ||
+    environment.http_proxy ||
+    environment.https_proxy
+  )
+    return runCommandE2e(routes, args, envOverrides);
+  const commands = await loadRouteCommands(routes);
+  return runInProcess(
+    () => withHarnessUpdateFixture(() => createCli(commands, E2E_HARNESS_IDENTITY).run(args)),
+    args,
+    { cwd: commandsPackageRoot, env: envOverrides, entrypoint: harnessMainTs },
+  );
 }

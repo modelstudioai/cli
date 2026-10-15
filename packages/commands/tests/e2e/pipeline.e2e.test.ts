@@ -238,7 +238,7 @@ describe("e2e: pipeline", () => {
     ]);
     expect(exitCode).toBe(2);
     expect(stdout).toBe("");
-    expect(stderr).toMatch(/--events must be one of: jsonl/i);
+    expect(stderr).toMatch(/--events (?:must be one of: |必须为以下值之一：)jsonl/i);
   });
 
   test("pipeline image/generate dry-run 继承 Profile watermark=false", async () => {

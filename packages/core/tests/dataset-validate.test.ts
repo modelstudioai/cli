@@ -144,6 +144,196 @@ describe("validateDataset — DPO schema", () => {
   });
 });
 
+describe("validateDataset — decision schema", () => {
+  const DECISION_OK = JSON.stringify({
+    state: { content: "发票抬头写错了，请重新开票。" },
+    questions: {
+      department: {
+        type: "choice",
+        instructions: "应该由哪个团队处理？",
+        criteria: { billing: "支付和账单问题", technical: "产品故障问题" },
+        label: "billing",
+        target: { billing: 0.96, technical: 0.04 },
+      },
+      escalate: {
+        type: "noul",
+        instructions: "是否需要立即通知值班人员？",
+        label: false,
+        target: { true: 0.1, false: 0.9 },
+      },
+      severity: {
+        type: "score",
+        instructions: "这个问题有多严重？",
+        criteria: ["轻微", "一般", "严重"],
+        label: 0,
+        target: { "0": 1, "1": 0, "2": 0 },
+      },
+    },
+  });
+
+  test("valid decision record passes under auto-detect and --schema decision", async () => {
+    const datasetPath = file("decision_ok.jsonl", [DECISION_OK]);
+    const automatic = await validateDataset(datasetPath, { fullValidate: true });
+    expect(automatic.valid).toBe(true);
+    const explicit = await validateDataset(datasetPath, {
+      fullValidate: true,
+      schema: "decision",
+    });
+    expect(explicit.valid).toBe(true);
+  });
+
+  test("missing state and empty questions are rejected", async () => {
+    const datasetPath = file("decision_missing.jsonl", [JSON.stringify({ questions: {} })]);
+    const result = await validateDataset(datasetPath, { fullValidate: true });
+    expect(result.valid).toBe(false);
+    expect(codes(result).errors).toEqual(
+      expect.arrayContaining(["DECISION_INVALID_STATE", "DECISION_INVALID_QUESTIONS"]),
+    );
+  });
+
+  test("choice criteria and label must use the declared option set", async () => {
+    const datasetPath = file("decision_choice_bad.jsonl", [
+      JSON.stringify({
+        state: { content: "x" },
+        questions: {
+          department: {
+            type: "choice",
+            instructions: "team?",
+            criteria: { billing: "账单" },
+            label: "technical",
+          },
+        },
+      }),
+    ]);
+    const result = await validateDataset(datasetPath, { fullValidate: true });
+    expect(codes(result).errors).toContain("DECISION_INVALID_CHOICE_LABEL");
+  });
+
+  test("noul label must be boolean", async () => {
+    const datasetPath = file("decision_noul_bad.jsonl", [
+      JSON.stringify({
+        state: { content: "x" },
+        questions: {
+          escalate: { type: "noul", instructions: "notify?", label: "false" },
+        },
+      }),
+    ]);
+    const result = await validateDataset(datasetPath, { fullValidate: true });
+    expect(codes(result).errors).toContain("DECISION_INVALID_NOUL_LABEL");
+  });
+
+  test("score label must be an in-range integer", async () => {
+    const datasetPath = file("decision_score_bad.jsonl", [
+      JSON.stringify({
+        state: { content: "x" },
+        questions: {
+          severity: {
+            type: "score",
+            instructions: "severity?",
+            criteria: ["low", "high"],
+            label: 2,
+          },
+        },
+      }),
+    ]);
+    const result = await validateDataset(datasetPath, { fullValidate: true });
+    expect(codes(result).errors).toContain("DECISION_INVALID_SCORE_LABEL");
+  });
+
+  test("target must cover all options and sum to one", async () => {
+    const datasetPath = file("decision_target_bad.jsonl", [
+      JSON.stringify({
+        state: { content: "x" },
+        questions: {
+          department: {
+            type: "choice",
+            instructions: "team?",
+            criteria: { billing: "账单", technical: "技术" },
+            label: "billing",
+            target: { billing: 0.8 },
+          },
+          severity: {
+            type: "score",
+            instructions: "severity?",
+            criteria: ["low", "high"],
+            label: 0,
+            target: { "0": 0.8, "1": 0.3 },
+          },
+        },
+      }),
+    ]);
+    const result = await validateDataset(datasetPath, { fullValidate: true });
+    expect(codes(result).errors).toEqual(
+      expect.arrayContaining(["DECISION_INVALID_TARGET_KEYS", "DECISION_TARGET_SUM_NOT_ONE"]),
+    );
+  });
+
+  test("API-aligned relaxations: string state, optional instructions, noul criteria", async () => {
+    const datasetPath = file("decision_relaxed.jsonl", [
+      JSON.stringify({
+        state: "这段评论是否在索要退款？",
+        questions: {
+          refund: {
+            type: "noul",
+            criteria: { true: "索要退款", false: "未索要退款" },
+            label: true,
+          },
+        },
+      }),
+      JSON.stringify({
+        state: [{ role: "user", content: "我要退款" }],
+        questions: {
+          severity: { type: "score", criteria: ["low", "high"], label: 1 },
+        },
+      }),
+    ]);
+    const result = await validateDataset(datasetPath, { fullValidate: true, schema: "decision" });
+    expect(result.valid).toBe(true);
+  });
+
+  test("criteria bounds follow the API: score needs >= 2 levels, noul only true/false", async () => {
+    const datasetPath = file("decision_bounds_bad.jsonl", [
+      JSON.stringify({
+        state: "x",
+        questions: {
+          severity: { type: "score", criteria: ["only"], label: 0 },
+          refund: { type: "noul", criteria: { maybe: "不确定" }, label: true },
+          team: {
+            type: "choice",
+            instructions: 1,
+            criteria: { billing: "账单" },
+            label: "billing",
+          },
+        },
+      }),
+    ]);
+    const result = await validateDataset(datasetPath, { fullValidate: true, schema: "decision" });
+    expect(codes(result).errors).toEqual(
+      expect.arrayContaining([
+        "DECISION_INVALID_SCORE_CRITERIA",
+        "DECISION_INVALID_NOUL_CRITERIA",
+        "DECISION_INVALID_INSTRUCTIONS",
+      ]),
+    );
+  });
+
+  test("ChatML record with extension state/questions fields remains ChatML", async () => {
+    const datasetPath = file("chatml_with_decision_extensions.jsonl", [
+      JSON.stringify({
+        state: { trace_id: "trace-1" },
+        questions: { source: "legacy-metadata" },
+        messages: [
+          { role: "user", content: "hi" },
+          { role: "assistant", content: "hello" },
+        ],
+      }),
+    ]);
+    const result = await validateDataset(datasetPath, { fullValidate: true });
+    expect(result.valid).toBe(true);
+    expect(codes(result).errors).not.toContain("DECISION_INVALID_QUESTIONS");
+  });
+});
+
 describe("validateDataset — CPT schema", () => {
   const CPT_OK = '{"text":"The quick brown fox jumps over the lazy dog."}';
 
@@ -594,10 +784,11 @@ describe("parseDatasetSchemaFlag", () => {
     expect(parseDatasetSchemaFlag("  ")).toBeUndefined();
   });
 
-  test("chatml / dpo / cpt / tts / image / video pass through", () => {
+  test("chatml / dpo / cpt / decision / tts / image / video pass through", () => {
     expect(parseDatasetSchemaFlag("chatml")).toBe("chatml");
     expect(parseDatasetSchemaFlag("dpo")).toBe("dpo");
     expect(parseDatasetSchemaFlag("cpt")).toBe("cpt");
+    expect(parseDatasetSchemaFlag("decision")).toBe("decision");
     expect(parseDatasetSchemaFlag("tts")).toBe("tts");
     expect(parseDatasetSchemaFlag("image")).toBe("image");
     expect(parseDatasetSchemaFlag("video")).toBe("video");

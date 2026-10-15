@@ -6,6 +6,38 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.3.0] - 2026-10-14
+
+### Added
+
+- **Pi Agent integration** — Added support for Pi:
+  - `bl config agent` adds `--agent pi` to configure Pi to use Bailian models.
+  - `bl mcp connect` / `bl mcp disconnect` add `--agent pi` to register or remove Bailian MCP servers.
+
+### Fixed
+
+- **Global flag placement** — Use global flags before the complete command path, for example `bl --config token-plan auth status`; command-specific and credential flags must follow the path.
+- **Parameter validation and messages** — Help and version queries validate supplied flags. Only explicitly declared flag names are accepted, and parsing errors support English and Chinese messages based on the configured language.
+- **File upload timeout** — Use `--timeout` to set the transfer timeout when uploading local files to temporary OSS storage.
+
+## [2.2.2] - 2026-10-14
+
+### Added
+
+- **Model compression lifecycle** — Added `bl finetune compress templates/create/list/get/watch/logs/cancel/delete` for quantizing supported full-parameter fine-tuned models, including dry-run previews, status polling, log retrieval, and safe deletion confirmation.
+- **Pi agent support** — `bl config agent` and `bl mcp connect` / `bl mcp disconnect` now support Pi, writing its native configuration while preserving existing settings and redacting credentials in output.
+- **Global flags before the command path** — Global flags such as `--config` can now precede the command (`bl --config token-plan auth status`) as well as follow it; both select the Profile for that invocation only, without changing `active_config`. Command-specific and credential flags must still follow the command path.
+- **Decision model inference** — Added `bl decision` for TypeSafe System One requests against workspace-scoped endpoints, including `choice` / `noul` / `score` validation, JSON and text output, training-sample reuse, Beijing/Singapore routing, and dry-run previews.
+
+### Changed
+
+- **Decision dataset validation** — Aligned the `decision` schema with the current API: `state` may be a string, object, or array; `instructions` is optional; and question criteria now enforce API limits.
+- **Stricter flag validation** — Only flags defined for a command are accepted. Unknown flags, missing values, and invalid values now return usage exit code 2 even when the invocation would otherwise show help, and parser errors follow the Profile language. A bare root or command-group invocation still shows help and returns 0. `--timeout` uses the same positive-finite rule on the command line and in resolved settings.
+
+### Fixed
+
+- **Temporary file upload timeout** — Uploads of local files to temporary OSS storage now honor `--timeout` instead of a fixed 120-second limit.
+
 ## [2.2.1] - 2026-10-12
 
 ### Fixed

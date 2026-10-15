@@ -187,6 +187,32 @@ test("timeout:flag > 合法 env > file > 300;非法 env 被跳过;非法 flag �
   expect(() => resolve({ flags: { timeout: -1 } })).toThrow(/Timeout/);
 });
 
+test.each([0, -1, NaN, Infinity, -Infinity])(
+  "invalid explicit timeout %s is rejected instead of falling back to env or config",
+  (timeout) => {
+    expect(() =>
+      resolve({
+        flags: { timeout },
+        env: { DASHSCOPE_TIMEOUT: "20" },
+        file: { timeout: 30 },
+      }),
+    ).toThrow(expect.objectContaining({ exitCode: 2 }));
+  },
+);
+
+test.each(["0", "-1", "NaN", "Infinity", "-Infinity"])(
+  "invalid environment timeout %s falls back to the selected config",
+  (environmentTimeout) => {
+    expect(
+      resolve({ env: { DASHSCOPE_TIMEOUT: environmentTimeout }, file: { timeout: 30 } }).timeout,
+    ).toBe(30);
+  },
+);
+
+test("positive fractional timeouts remain valid", () => {
+  expect(resolve({ flags: { timeout: 0.1 } }).timeout).toBe(0.1);
+});
+
 test("workspaceId:flag > env > file(console 域 flag)", () => {
   const file: ConfigFile = { workspace_id: "ws-file" };
   const env = { BAILIAN_WORKSPACE_ID: "ws-env" };

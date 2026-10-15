@@ -11,6 +11,11 @@ export function responsesPath(): string {
   return "/compatible-mode/v1/responses";
 }
 
+// ---- Decision model (TypeSafe System One, workspace-based host) ----
+export function decisionPath(): string {
+  return "/compatible-mode/v1/systemone";
+}
+
 // ---- Image Generation (DashScope) ----
 /** Async image API used by wan2.6-t2i / wan2.6-image (T2I) and similar message-format models. */
 export function imagePath(): string {
@@ -108,10 +113,10 @@ export function knowledgeRetrievePath(): string {
   return "/api/v1/indices/rag/index/retrieve";
 }
 
-// ---- Workspace-scoped MaaS endpoints (cn-beijing only) ----
+// ---- Workspace-scoped MaaS endpoints (cn-beijing by default) ----
 
-export function workspaceMaaSBaseUrl(workspaceId: string): string {
-  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com`;
+export function workspaceMaaSBaseUrl(workspaceId: string, region = "cn-beijing"): string {
+  return `https://${workspaceId}.${region}.maas.aliyuncs.com`;
 }
 
 // ---- Knowledge Search (新版 RAG 检索, workspace-based host) ----
@@ -217,6 +222,33 @@ export function finetuneCheckpointsPath(jobId: string): string {
 /** GET /api/v1/fine-tunes/{job_id}/export/{checkpoint} */
 export function finetuneExportPath(jobId: string, checkpoint: string): string {
   return `/api/v1/fine-tunes/${encodeURIComponent(jobId)}/export/${encodeURIComponent(checkpoint)}`;
+}
+
+// ---- Model Compression (DashScope /api/v1/fine-tunes/compress) ----
+
+/** GET /api/v1/fine-tunes/compress/templates */
+export function finetuneCompressTemplatesPath(): string {
+  return "/api/v1/fine-tunes/compress/templates";
+}
+
+/** Create (POST) and list (GET) endpoint. */
+export function finetuneCompressJobsPath(): string {
+  return "/api/v1/fine-tunes/compress/jobs";
+}
+
+/** Single-job get / delete endpoint. */
+export function finetuneCompressJobPath(jobId: string): string {
+  return `/api/v1/fine-tunes/compress/jobs/${encodeURIComponent(jobId)}`;
+}
+
+/** POST /api/v1/fine-tunes/compress/jobs/{job_id}/cancel */
+export function finetuneCompressCancelPath(jobId: string): string {
+  return `/api/v1/fine-tunes/compress/jobs/${encodeURIComponent(jobId)}/cancel`;
+}
+
+/** GET /api/v1/fine-tunes/compress/jobs/{job_id}/logs */
+export function finetuneCompressLogsPath(jobId: string): string {
+  return `/api/v1/fine-tunes/compress/jobs/${encodeURIComponent(jobId)}/logs`;
 }
 
 // ---- Model Deployments (DashScope /api/v1/deployments) ----

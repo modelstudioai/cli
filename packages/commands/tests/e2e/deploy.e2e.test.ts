@@ -1,6 +1,12 @@
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vite-plus/test";
-import { isDashScopeE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
+import {
+  isDashScopeE2EReady,
+  parseStdoutJson,
+  runCommandHelp,
+  runCommandE2e,
+  runCommandInProcess,
+} from "./helpers.ts";
 import { DEPLOY_ROUTES } from "./topic-routes.ts";
 
 // No files are created: isolate user config and block fetch in the child process,
@@ -15,7 +21,7 @@ const READ_ONLY_ENV: NodeJS.ProcessEnv = {
 };
 
 function runReadOnlyDeploy(args: string[]) {
-  return runCommandE2e(
+  return runCommandInProcess(
     DEPLOY_ROUTES,
     ["deploy", ...args, "--api-key", "e2e-dummy-key", "--dry-run", "--output", "json", "--quiet"],
     READ_ONLY_ENV,

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCommandE2e } from "./helpers.ts";
+import { parseStdoutJson, runCommandE2e, runCommandInProcess } from "./helpers.ts";
 import { LOG_ROUTES } from "./topic-routes.ts";
 
 // 只覆盖 help / 参数校验 / dry-run；真实调用依赖 console 凭证与已开启的日志投递。
@@ -30,7 +30,7 @@ describe("e2e: log", () => {
   });
 
   test("log audit list --dry-run 输出审计口径查询参数", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(LOG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(LOG_ROUTES, [
       "log",
       "audit",
       "list",
@@ -84,7 +84,7 @@ describe("e2e: log", () => {
   });
 
   test("log audit count --dry-run 输出 AuditLog 计数请求", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(LOG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(LOG_ROUTES, [
       "log",
       "audit",
       "count",
@@ -104,7 +104,7 @@ describe("e2e: log", () => {
   });
 
   test("log audit enable --dry-run 输出 AuditLog 开通链路", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(LOG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(LOG_ROUTES, [
       "log",
       "audit",
       "enable",
@@ -125,7 +125,7 @@ describe("e2e: log", () => {
   });
 
   test("log audit disable --dry-run 输出 AuditLog 关闭请求", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(LOG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(LOG_ROUTES, [
       "log",
       "audit",
       "disable",
@@ -143,7 +143,7 @@ describe("e2e: log", () => {
   });
 
   test("log inference list --dry-run 输出推理口径查询参数", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(LOG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(LOG_ROUTES, [
       "log",
       "inference",
       "list",
@@ -177,7 +177,7 @@ describe("e2e: log", () => {
   });
 
   test("log inference get --dry-run 输出列表 + 回捞两段请求", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(LOG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(LOG_ROUTES, [
       "log",
       "inference",
       "get",
@@ -194,7 +194,7 @@ describe("e2e: log", () => {
   });
 
   test("log inference count --dry-run 输出 InferenceLog 计数请求", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(LOG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(LOG_ROUTES, [
       "log",
       "inference",
       "count",
@@ -214,7 +214,7 @@ describe("e2e: log", () => {
   });
 
   test("log inference enable --dry-run 输出 InferenceLog 开通链路", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(LOG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(LOG_ROUTES, [
       "log",
       "inference",
       "enable",
@@ -235,7 +235,7 @@ describe("e2e: log", () => {
   });
 
   test("log inference disable --dry-run 输出 InferenceLog 关闭请求", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(LOG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(LOG_ROUTES, [
       "log",
       "inference",
       "disable",
@@ -265,7 +265,7 @@ describe("e2e: log", () => {
   });
 
   test("log trace list --dry-run 输出 trace 查询", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(LOG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(LOG_ROUTES, [
       "log",
       "trace",
       "list",
@@ -298,7 +298,7 @@ describe("e2e: log", () => {
   });
 
   test("log trace stats --dry-run 输出统计 API", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(LOG_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(LOG_ROUTES, [
       "log",
       "trace",
       "stats",
