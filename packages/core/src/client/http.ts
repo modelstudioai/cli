@@ -5,6 +5,14 @@ import { ExitCode } from "../errors/codes.ts";
 import { mapApiError } from "../errors/api.ts";
 import { maskToken } from "../utils/token.ts";
 import { sourceConfig, trackingHeaders } from "./headers.ts";
+import { Dispatcher, getGlobalDispatcher } from "undici";
+
+// 请求已由 --timeout 对应的 signal 控制超时。这里在实际发送前关闭底层默认的
+// 300 秒响应头超时，避免用户设置更长等待时间后，请求仍在 300 秒时被提前中断。
+// 只覆盖 headersTimeout，响应体的空闲超时保持原值。
+const withoutHeadersTimeout: Dispatcher.DispatcherComposeInterceptor =
+  (dispatch) => (options, handler) =>
+    dispatch({ ...options, headersTimeout: 0 }, handler);
 
 /** 传输层依赖:UA 用 identity,timeout/verbose 用 settings。凭证由调用方(Client)注头。 */
 export interface HttpDeps {
@@ -77,7 +85,7 @@ async function performRequest(
     console.error(`> x-dashscope-source-config: ${sourceConfig(deps.identity)}`);
   }
 
-  const res = await fetch(opts.url, {
+  const requestInit = {
     method: opts.method ?? "GET",
     headers,
     body: opts.body
@@ -86,7 +94,14 @@ async function performRequest(
         : JSON.stringify(opts.body)
       : undefined,
     signal,
-  });
+    // 复用当前客户端，仅关闭本次请求的响应头超时。
+    // 从原型调用 compose，兼容没有 compose 方法的客户端；类型断言适配 Node 的 fetch 类型。
+    dispatcher: Dispatcher.prototype.compose.call(
+      getGlobalDispatcher(),
+      withoutHeadersTimeout,
+    ) as unknown as RequestInit["dispatcher"],
+  };
+  const res = await fetch(opts.url, requestInit);
 
   if (deps.settings.verbose) {
     console.error(`< ${res.status} ${res.statusText}`);

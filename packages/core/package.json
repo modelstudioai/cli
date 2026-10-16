@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "tar-stream": "catalog:",
+    "undici": "catalog:",
     "yaml": "^2.8.3",
     "yauzl": "catalog:"
   },
