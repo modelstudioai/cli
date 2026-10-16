@@ -3,7 +3,7 @@
  *   bun tools/release/lib/binary-compile.mjs --entry <path> --outfile <path> --target <bun-target>
  *
  * Uses `bun build --compile` (CLI). The Bun.build({ compile }) API on ≤1.2.19
- * can exit 0 without writing outfile; CI pins 1.2.19 so we stay on the CLI.
+ * can exit 0 without writing outfile; CI stays on the CLI.
  *
  * Called by binary-build.mjs (Node orchestration stays on Node).
  */

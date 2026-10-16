@@ -22,6 +22,7 @@ import {
   inspectResponsesStreamEvent,
   extractResponsesText,
 } from "./responses.ts";
+import { PRIME_FLAGS, resolvePrimeEndpoint, validatePrimeFlags } from "../shared/prime.ts";
 
 const CHAT_FLAGS = {
   api: {
@@ -107,6 +108,7 @@ const CHAT_FLAGS = {
       "zh-CN": "思考过程最大 Token 数（默认：4096）",
     },
   },
+  ...PRIME_FLAGS,
 } satisfies FlagsDef;
 type ChatFlags = ParsedFlags<typeof CHAT_FLAGS>;
 
@@ -187,10 +189,32 @@ export default defineCommand({
       "en-US": '--model qwq-plus --message "Solve 1+1" --enable-thinking',
       "zh-CN": '--model qwq-plus --message "计算 1+1" --enable-thinking',
     },
+    {
+      "en-US": '--prime --workspace-id <id> --model glm-5.3-prime --message "Explain this code"',
+      "zh-CN": '--prime --workspace-id <id> --model glm-5.3-prime --message "解释这段代码"',
+    },
+  ],
+  notes: [
+    {
+      "en-US":
+        "Prime mode requires an explicit model and currently supports only the Chat Completions API.",
+      "zh-CN": "Prime 模式必须显式指定模型，且当前仅支持 Chat Completions API。",
+    },
+    {
+      "en-US":
+        "Prime endpoint: configured --base-url, DASHSCOPE_BASE_URL, or profile base_url takes precedence; otherwise workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.",
+      "zh-CN":
+        "Prime Endpoint：已配置的 --base-url、DASHSCOPE_BASE_URL 或 Profile base_url 优先；否则按 --workspace-id、BAILIAN_WORKSPACE_ID、配置项 workspace_id 解析工作空间。",
+    },
   ],
   validate: (flags) => {
     if (!flags.message && !flags.messagesFile) {
       return "Provide --message or --messages-file.";
+    }
+    const primeValidation = validatePrimeFlags(flags);
+    if (primeValidation) return primeValidation;
+    if (flags.prime && flags.api === "responses") {
+      return "--prime currently supports only --api chat.";
     }
     if (flags.api === "responses" && flags.thinkingBudget !== undefined) {
       return "--thinking-budget is not supported by the Responses API.";
@@ -240,6 +264,12 @@ export default defineCommand({
       }
     }
 
+    const requestPath = flags.prime
+      ? resolvePrimeEndpoint(ctx, chatPath())
+      : api === "responses"
+        ? responsesPath()
+        : chatPath();
+
     if (flags.tool) {
       const tools = flags.tool.map((toolValue) => {
         try {
@@ -253,13 +283,16 @@ export default defineCommand({
     }
 
     if (settings.dryRun) {
-      emitResult({ request: body }, format);
+      emitResult(
+        flags.prime ? { endpoint: requestPath, request: body } : { request: body },
+        format,
+      );
       return;
     }
 
     if (shouldStream) {
       const responseStream = await ctx.client.request({
-        path: api === "responses" ? responsesPath() : chatPath(),
+        path: requestPath,
         method: "POST",
         body,
         stream: true,
@@ -336,7 +369,7 @@ export default defineCommand({
       }
     } else if (api === "responses") {
       const response = await ctx.client.requestJson<ResponsesResponse>({
-        path: responsesPath(),
+        path: requestPath,
         method: "POST",
         body,
       });
@@ -350,7 +383,7 @@ export default defineCommand({
       }
     } else {
       const response = await ctx.client.requestJson<ChatResponse>({
-        path: chatPath(),
+        path: requestPath,
         method: "POST",
         body,
       });

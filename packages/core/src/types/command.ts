@@ -238,6 +238,14 @@ export function credentialFlagDefs(cmd: { auth: AuthRequirement }): FlagsDef {
 export interface CommandContext<F extends FlagsDef = FlagsDef> {
   /** 静态产品身份(binName/version/npmPackage/clientName)。 */
   identity: Identity;
+  /**
+   * Locale selector for user-facing output: picks the `en-US` / `zh-CN` variant
+   * of a {@link LocalizedText} per the resolved language. Supplied by the runtime
+   * (RunContext.localize). Commands use it to localize what they *print*; the
+   * localized command metadata (description/flags/notes) is rendered by the
+   * runtime's help output and does not need this.
+   */
+  localize: (text: LocalizedText) => string;
   /** flag/env/file 解析后的有效配置面。 */
   settings: Settings;
   /** 只含本命令声明的 flag;全局 flag 经 settings 读。 */

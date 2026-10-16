@@ -11,6 +11,11 @@ export function responsesPath(): string {
   return "/compatible-mode/v1/responses";
 }
 
+// ---- Decision model (TypeSafe System One, workspace-based host) ----
+export function decisionPath(): string {
+  return "/compatible-mode/v1/systemone";
+}
+
 // ---- Image Generation (DashScope) ----
 /** Async image API used by wan2.6-t2i / wan2.6-image (T2I) and similar message-format models. */
 export function imagePath(): string {
@@ -108,6 +113,12 @@ export function knowledgeRetrievePath(): string {
   return "/api/v1/indices/rag/index/retrieve";
 }
 
+// ---- Workspace-scoped MaaS endpoints (cn-beijing by default) ----
+
+export function workspaceMaaSBaseUrl(workspaceId: string, region = "cn-beijing"): string {
+  return `https://${workspaceId}.${region}.maas.aliyuncs.com`;
+}
+
 // ---- Knowledge Search (新版 RAG 检索, workspace-based host) ----
 
 export function knowledgeSearchEndpoint(workspaceId: string): string {
@@ -118,6 +129,33 @@ export function knowledgeSearchEndpoint(workspaceId: string): string {
 
 export function knowledgeChatEndpoint(workspaceId: string): string {
   return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com/api/v2/apps/knowledge/chat`;
+}
+
+// ---- Agent Security Center (AgentStudio, workspace-based host) ----
+// AgentStudio shares the per-workspace host scheme with the RAG admin plane
+// below, not the shared DashScope gateway. The region is fixed to cn-beijing
+// per the backend — a full cloud region, a different namespace from the CLI's
+// region (cn / us / intl), so it is never derived from it.
+
+/** Per-workspace AgentStudio host (same shape as {@link ragEndpoint}'s host). */
+export function agentStudioHost(workspaceId: string): string {
+  return `https://${workspaceId}.cn-beijing.maas.aliyuncs.com`;
+}
+
+const SECURITY_PREFIX = "/api/v1/agentstudio/security";
+
+// Security endpoints take an already-resolved AgentStudio host (origin) —
+// normally agentStudioHost(workspaceId), or a --base-url override for
+// pre-release / private / mock. See resolveSecurityHost in client/security.ts.
+
+/** GET protection overview — fixed to the last 24 hours, no request params. */
+export function securityOverviewEndpoint(host: string): string {
+  return `${host}${SECURITY_PREFIX}/overview`;
+}
+
+/** GET alert list (agent_logs); filters / pagination go in the query string. */
+export function securityAgentLogsEndpoint(host: string): string {
+  return `${host}${SECURITY_PREFIX}/agent_logs`;
 }
 
 // ---- MCP Services (Streamable HTTP) ----
@@ -186,6 +224,33 @@ export function finetuneExportPath(jobId: string, checkpoint: string): string {
   return `/api/v1/fine-tunes/${encodeURIComponent(jobId)}/export/${encodeURIComponent(checkpoint)}`;
 }
 
+// ---- Model Compression (DashScope /api/v1/fine-tunes/compress) ----
+
+/** GET /api/v1/fine-tunes/compress/templates */
+export function finetuneCompressTemplatesPath(): string {
+  return "/api/v1/fine-tunes/compress/templates";
+}
+
+/** Create (POST) and list (GET) endpoint. */
+export function finetuneCompressJobsPath(): string {
+  return "/api/v1/fine-tunes/compress/jobs";
+}
+
+/** Single-job get / delete endpoint. */
+export function finetuneCompressJobPath(jobId: string): string {
+  return `/api/v1/fine-tunes/compress/jobs/${encodeURIComponent(jobId)}`;
+}
+
+/** POST /api/v1/fine-tunes/compress/jobs/{job_id}/cancel */
+export function finetuneCompressCancelPath(jobId: string): string {
+  return `/api/v1/fine-tunes/compress/jobs/${encodeURIComponent(jobId)}/cancel`;
+}
+
+/** GET /api/v1/fine-tunes/compress/jobs/{job_id}/logs */
+export function finetuneCompressLogsPath(jobId: string): string {
+  return `/api/v1/fine-tunes/compress/jobs/${encodeURIComponent(jobId)}/logs`;
+}
+
 // ---- Model Deployments (DashScope /api/v1/deployments) ----
 
 /** POST (create) and GET (list) endpoint. */
@@ -205,9 +270,39 @@ export function deploymentPath(deployedModel: string): string {
   return `/api/v1/deployments/${encodeURIComponent(deployedModel)}`;
 }
 
+/** GET /api/v1/deployments/{deployed_model}/capacity-instances */
+export function deploymentCapacityInstancesPath(code: string): string {
+  return `${deploymentPath(code)}/capacity-instances`;
+}
+
+/** GET /api/v1/deployments/{deployed_model}/capacity-instances/{instance_id} */
+export function deploymentCapacityInstancePath(code: string, id: string): string {
+  return `${deploymentCapacityInstancesPath(code)}/${encodeURIComponent(id)}`;
+}
+
+/** PUT /api/v1/deployments/{deployed_model}/capacity-instances/{instance_id}/scale */
+export function deploymentCapacityInstanceScalePath(code: string, id: string): string {
+  return `${deploymentCapacityInstancePath(code, id)}/scale`;
+}
+
+/** PUT /api/v1/deployments/{deployed_model}/capacity-instances/{instance_id}/renew */
+export function deploymentCapacityInstanceRenewPath(code: string, id: string): string {
+  return `${deploymentCapacityInstancePath(code, id)}/renew`;
+}
+
+/** PUT /api/v1/deployments/{deployed_model}/update-overflowstrategy */
+export function deploymentOverflowPath(code: string): string {
+  return `${deploymentPath(code)}/update-overflowstrategy`;
+}
+
+/** GET /api/v1/deployments/{deployed_model}/capacity-operations/{operation_id} */
+export function deploymentCapacityOperationPath(code: string, id: string): string {
+  return `${deploymentPath(code)}/capacity-operations/${encodeURIComponent(id)}`;
+}
+
 /** PUT /api/v1/deployments/{deployed_model}/scale — capacity adjust. */
 export function deploymentScalePath(deployedModel: string): string {
-  return `/api/v1/deployments/${encodeURIComponent(deployedModel)}/scale`;
+  return `${deploymentPath(deployedModel)}/scale`;
 }
 
 /**

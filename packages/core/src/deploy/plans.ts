@@ -19,15 +19,24 @@ import { BailianError } from "../errors/base.ts";
 import { ExitCode } from "../errors/codes.ts";
 import type { Client } from "../client/client.ts";
 import { DEPLOY_PLAN, BILLING_METHOD, CHARGE_TYPE, DEFAULT_BILLING_METHOD } from "./constants.ts";
+import {
+  buildPrepaidInfo,
+  buildReservationCapacity,
+  hasPrepaidFlags,
+  validatePrepaidFlags,
+  validateReservationCapacity,
+  type ReservationFlags,
+} from "./reservation.ts";
 
 /** Plan-relevant subset of `deploy <modality> create` flags (parsed flags satisfy this shape). */
-export interface CreatePlanFlags {
+export interface CreatePlanFlags extends ReservationFlags {
   plan?: string;
   deploySpec?: string;
   capacity?: number;
   billingMethod?: string;
-  inputTpm?: number;
-  outputTpm?: number;
+  chargeType?: string;
+  serviceTier?: string;
+  suffix?: string;
   thinkingOutputTpm?: number;
 }
 
@@ -40,8 +49,8 @@ export interface PlanContext {
   flags: CreatePlanFlags;
   /** Underlying model identifier (`--model`). */
   model: string;
-  /** Console display name (`--name`). */
-  name: string;
+  /** Optional console display name (`--name`); PTU can use the generated name. */
+  name?: string;
 }
 
 export interface PlanResolved {
@@ -79,29 +88,51 @@ const loraStrategy: PlanStrategy = {
   },
 };
 
-/**
- * `ptu` (Token-billed, provisioned throughput). The platform rejects creation
- * without `ptu_capacity.input_tpm` / `output_tpm` ("Miss ptu capacity info")
- * even though the doc lists 10000/1000 defaults — so the CLI treats them as
- * required.
- */
+/** PTU reservation creation buys the first instance; capacity is expressed in kTPM. */
 const ptuStrategy: PlanStrategy = {
   name: DEPLOY_PLAN.PTU,
   validateFlags(flags) {
-    if (flags.inputTpm === undefined || flags.outputTpm === undefined) {
-      return "--input-tpm and --output-tpm are required for plan=ptu.";
+    if (
+      flags.capacity !== undefined ||
+      flags.deploySpec !== undefined ||
+      flags.billingMethod !== undefined
+    ) {
+      return "--capacity, --deploy-spec and --billing-method are not supported for plan=ptu; use reservation capacity and --charge-type.\nplan=ptu 不支持 --capacity、--deploy-spec 和 --billing-method；请使用预留容量参数和 --charge-type。";
     }
-    return undefined;
+    if (flags.thinkingOutputTpm !== undefined) {
+      return "--thinking-output-tpm is not supported by current reservation models.\n当前吞吐预留模型不支持 --thinking-output-tpm。";
+    }
+    if (flags.chargeType !== CHARGE_TYPE.PRE_PAID && flags.chargeType !== CHARGE_TYPE.POST_PAID) {
+      return "--charge-type is required for plan=ptu and must be pre_paid or post_paid.\nplan=ptu 必须提供 --charge-type，且只能为 pre_paid 或 post_paid。";
+    }
+    if (
+      flags.serviceTier !== undefined &&
+      flags.serviceTier !== "ptu_fast" &&
+      flags.serviceTier !== "ptu_default"
+    ) {
+      return "--service-tier must be ptu_fast or ptu_default.\n--service-tier 只能为 ptu_fast 或 ptu_default。";
+    }
+    if (flags.serviceTier === "ptu_default" && flags.chargeType === CHARGE_TYPE.POST_PAID) {
+      return "ptu_default only supports pre_paid.\nptu_default 仅支持 pre_paid。";
+    }
+    if (flags.chargeType === CHARGE_TYPE.POST_PAID && hasPrepaidFlags(flags)) {
+      return "Prepaid flags are not allowed with --charge-type post_paid.\n--charge-type post_paid 不允许提供预付费参数。";
+    }
+    return (
+      validateReservationCapacity(flags, true) ??
+      validatePrepaidFlags(flags, flags.chargeType === CHARGE_TYPE.PRE_PAID)
+    );
   },
   async resolve(ctx: PlanContext): Promise<PlanResolved> {
-    const ptuCapacity: Record<string, number> = {
-      input_tpm: ctx.flags.inputTpm!,
-      output_tpm: ctx.flags.outputTpm!,
+    const body: Record<string, unknown> = {
+      charge_type: ctx.flags.chargeType,
+      ptu_capacity: buildReservationCapacity(ctx.flags),
     };
-    if (ctx.flags.thinkingOutputTpm !== undefined) {
-      ptuCapacity.thinking_output_tpm = ctx.flags.thinkingOutputTpm;
-    }
-    return { body: { ptu_capacity: ptuCapacity } };
+    if (ctx.flags.serviceTier !== undefined) body.service_tier = ctx.flags.serviceTier;
+    if (ctx.flags.suffix !== undefined) body.suffix = ctx.flags.suffix;
+    const prepaid = buildPrepaidInfo(ctx.flags);
+    if (prepaid !== undefined) body.pre_paid_info = prepaid;
+    return { body };
   },
 };
 

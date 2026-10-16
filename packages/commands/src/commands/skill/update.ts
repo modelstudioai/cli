@@ -14,12 +14,21 @@ import {
   writeSkillLock,
 } from "bailian-cli-core";
 import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
+import { planFanoutLinks, summarizeAgents } from "./dry-run-plan.ts";
 
 interface UpdateOutcome {
   name: string;
   status: "updated" | "up-to-date" | "skipped" | "failed";
   publishedAt?: string;
   reason?: string;
+}
+
+interface UpdatePlanItem {
+  name: string;
+  status: "update" | "up-to-date" | "skipped" | "failed";
+  publishedAt?: string;
+  reason?: string;
+  links?: ReturnType<typeof planFanoutLinks>;
 }
 
 /** Max number of skills downloading/installing at the same time. */
@@ -61,10 +70,11 @@ export default defineCommand({
     const index = await fetchSkillsIndex();
     const lock = readSkillLock();
     const disk = new Set(listSkillDirsOnDisk());
-
     const agents = detectInstalledAgents();
+
     const results: UpdateOutcome[] = [];
     const targets: string[] = [];
+
     if (requested === "all") {
       // Default: only process skills already installed in lock; reinstall only if version changed or local dir is missing
       for (const [name, locked] of Object.entries(lock.skills)) {
@@ -78,6 +88,11 @@ export default defineCommand({
           continue;
         }
         if (entry.contentHash === locked.contentHash && disk.has(name)) {
+          if (ctx.settings.dryRun) {
+            // 真实路径仍会 fan-out 自愈；dry-run 只展示目标路径与存在性，不写盘
+            results.push({ name, status: "up-to-date", publishedAt: locked.publishedAt });
+            continue;
+          }
           // Self-healing: content unchanged, but still fill fan-out links for agents
           // detected since the last install (and refresh recorded copies); the merged
           // ledger keeps paths of unvisited agents reclaimable by bl skill remove
@@ -101,6 +116,67 @@ export default defineCommand({
         }
         targets.push(name);
       }
+    }
+
+    if (ctx.settings.dryRun) {
+      const plan: UpdatePlanItem[] = results.map((result) => {
+        if (result.status === "up-to-date") {
+          return {
+            name: result.name,
+            status: "up-to-date" as const,
+            publishedAt: result.publishedAt,
+            links: planFanoutLinks(result.name, agents),
+          };
+        }
+        if (result.status === "skipped") {
+          return {
+            name: result.name,
+            status: "skipped" as const,
+            publishedAt: result.publishedAt,
+            reason: result.reason,
+          };
+        }
+        return {
+          name: result.name,
+          status: "failed" as const,
+          publishedAt: result.publishedAt,
+          reason: result.reason,
+        };
+      });
+
+      for (const name of targets) {
+        const entry = index.skills[name];
+        if (!entry) {
+          plan.push({ name, status: "failed", reason: "skill not found in registry" });
+          continue;
+        }
+        plan.push({
+          name,
+          status: "update",
+          publishedAt: entry.publishedAt,
+          links: planFanoutLinks(name, agents),
+        });
+      }
+
+      emitResult(
+        {
+          action: "skill.update",
+          registry: getSkillRegistryBaseUrl(),
+          agents: summarizeAgents(agents),
+          skills: plan,
+        },
+        format,
+      );
+
+      const failed = plan.filter((item) => item.status === "failed");
+      if (failed.length > 0) {
+        throw new BailianError(
+          `${failed.length} skill(s) failed to update`,
+          ExitCode.GENERAL,
+          "Check the reason for failed skills in the output; network failures can be retried with bl skill update",
+        );
+      }
+      return;
     }
 
     const tasks = targets.map((name) => async (): Promise<UpdateOutcome> => {

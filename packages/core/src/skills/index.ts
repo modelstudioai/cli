@@ -28,9 +28,13 @@ export { extractTarBr, atomicSwap, isSafeEntryName, computeDirContentHash } from
 export {
   getAgentTargets,
   detectInstalledAgents,
+  isHostSystemDetectDir,
   linkSkillToAgents,
   fanOutSkillToAgents,
+  planUnlinkSkillFromAgents,
   unlinkSkillFromAgents,
+  AGENT_ENV_KEYS,
+  SKIP_HOST_AGENTS_ENV,
   type AgentTarget,
   type LinkResult,
   type FanoutOutcome,

@@ -127,6 +127,25 @@ describe("e2e: Sandbox shared base URL resolution", () => {
   });
 
   test("auth login persists a base URL that Sandbox uses without a workspace flag", async () => {
+    const requests: Array<{ authorization?: string; method?: string; path?: string }> = [];
+    const server = createServer((request, response) => {
+      request.resume();
+      requests.push({
+        authorization: request.headers.authorization,
+        method: request.method,
+        path: request.url,
+      });
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ data: [{ id: "qwen-plus" }] }));
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    servers.push(server);
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Expected a local TCP server.");
+    const origin = `http://127.0.0.1:${address.port}`;
     const env = makeConfigEnv();
     const login = await runCommandE2e(
       ROUTES,
@@ -138,14 +157,21 @@ describe("e2e: Sandbox shared base URL resolution", () => {
         "--api-key",
         "sk-login-test",
         "--base-url",
-        "https://login.example.test/api/v1/agentstudio/sandbox/",
+        `${origin}/api/v1/agentstudio/sandbox/`,
       ],
       env,
     );
     expect(login.exitCode, login.stderr).toBe(0);
+    expect(requests).toEqual([
+      {
+        authorization: "Bearer sk-login-test",
+        method: "GET",
+        path: "/api/v1/models?page_no=1&page_size=1",
+      },
+    ]);
     const stored = JSON.parse(readFileSync(join(env.BAILIAN_CONFIG_DIR!, "config.json"), "utf8"));
     expect(stored.active_config).toBe("sandbox-test");
-    expect(stored["sandbox-test"].base_url).toBe("https://login.example.test");
+    expect(stored["sandbox-test"].base_url).toBe(origin);
 
     const result = await runCommandE2e(
       ROUTES,
@@ -154,7 +180,7 @@ describe("e2e: Sandbox shared base URL resolution", () => {
     );
     expect(result.exitCode, result.stderr).toBe(0);
     expect(parseStdoutJson(result.stdout)).toMatchObject({
-      endpoint: `https://login.example.test${API_PATH}/sandboxes/sbx-test/pause`,
+      endpoint: `${origin}${API_PATH}/sandboxes/sbx-test/pause`,
     });
   });
 });

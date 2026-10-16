@@ -115,7 +115,7 @@ Offer reporting when **none** of EXCLUDE applies **and** any of the following ho
 
 ### Before offering to report
 
-1. Align versions: [SKILL.md → Version & updates](../SKILL.md#version--updates-after-provider-selection-before-the-first-bl-command) — run `bl update` and `bl skill init` if mismatched.
+1. Align versions: [SKILL.md → Version & updates](../SKILL.md#version--updates-after-provider-selection-before-the-first-bl-command) — run `bl update` and `bl skill update` if mismatched. If needed skills are missing, run `bl skill init`.
 2. Confirm `bl auth status` is healthy (for commands that need auth).
 3. Retry once with `--verbose` if stderr was thin.
 

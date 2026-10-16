@@ -14,6 +14,7 @@ export {
   DEFAULT_INSTALL_SCRIPT_URL,
   GITHUB_RELEASES_BASE,
   binaryAssetFileName,
+  binaryTarFileName,
   binaryInnerFileName,
   channelManifestUrl,
   detectBinaryPlatform,

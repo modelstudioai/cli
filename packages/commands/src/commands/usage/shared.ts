@@ -251,49 +251,10 @@ export interface ListStatisticResponse {
   maxResults: number;
 }
 
-const POLL_INTERVAL_MS = 500;
-const DEFAULT_MAX_POLLS = 30;
-
-/**
- * Poll a console API until it returns a terminal (non task-id) response.
- * The gateway answers an async request with a bare `{taskId}` envelope; the
- * caller re-issues with that id until real data arrives or the budget runs out.
- * `buildRequest` shapes each attempt (initial call vs. taskId follow-up) so the
- * same loop serves every request-wrapper convention (telemetry `reqDTO`,
- * free-tier batch `…Request`).
- */
-export async function pollConsoleUntilDone(
-  client: Client,
-  api: string,
-  buildRequest: (taskId: string | undefined) => Record<string, unknown>,
-  maxPolls = DEFAULT_MAX_POLLS,
-): Promise<unknown> {
-  let nextTaskId: string | undefined;
-
-  for (let attempt = 0; attempt < maxPolls; attempt++) {
-    const raw = await client.console(api, buildRequest(nextTaskId));
-    const resp = unwrapResponse(raw as Record<string, unknown>);
-
-    if (resp.taskId && Object.keys(resp).length === 1) {
-      nextTaskId = resp.taskId as string;
-      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-      continue;
-    }
-    return raw;
-  }
-  return null;
-}
-
-/** Telemetry APIs wrap the payload in `reqDTO` and echo the task id as `asyncTaskId`. */
-export async function pollTelemetryApi(
-  client: Client,
-  api: string,
-  reqDTO: Record<string, unknown>,
-): Promise<unknown> {
-  return pollConsoleUntilDone(client, api, (taskId) =>
-    taskId ? { reqDTO: { ...reqDTO, asyncTaskId: taskId } } : { reqDTO },
-  );
-}
+// Polling primitives live in the shared telemetry module; re-exported here so
+// existing usage/* imports keep working.
+export { pollConsoleUntilDone, pollTelemetryApi } from "../shared/telemetry.ts";
+import { pollConsoleUntilDone } from "../shared/telemetry.ts";
 
 /** Free-tier batch activate/deactivate wrap the payload in `requestKey` and echo `taskId`. */
 export async function pollFreeTierBatch(

@@ -56,8 +56,23 @@ jobs:
             | sudo tar -xz -C /usr/local/bin gitleaks
           gitleaks version
 
-      - name: Ensure zip (per-platform binary archives)
+      - name: Ensure zip and tar (per-platform binary archives)
         run: sudo apt-get update && sudo apt-get install -y zip
+
+      # bun build --compile leaves an invalid darwin linker signature. rcodesign
+      # re-signs those Mach-O files on the Linux runner (binary-codesign.mjs).
+      - name: Install rcodesign (ad-hoc sign darwin binaries)
+        run: |
+          set -euo pipefail
+          RCODESIGN_VERSION=0.29.0
+          asset="apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          curl -fsSL -o "/tmp/${asset}" \
+            "https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign/${RCODESIGN_VERSION}/${asset}"
+          tar -xzf "/tmp/${asset}" -C /tmp
+          sudo install -m 755 \
+            "/tmp/apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl/rcodesign" \
+            /usr/local/bin/rcodesign
+          rcodesign --version
 
       - run: pnpm install --frozen-lockfile
 
@@ -65,22 +80,22 @@ jobs:
       # Keep this pin in sync with any local smoke tests of binary-compile.mjs.
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.2.19"
+          bun-version: "1.3.14"
 
       - name: publish-stable
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # OSS release channel runs fully in CI: upload + reconcile + manifest.json.
-          # All values come from repo Settings → Secrets — no OSS defaults live in
-          # code. Leave AK/SK unset to skip the OSS channel; once enabled,
-          # bucket/region/prefix are required.
-          BAILIAN_OSS_AK: ${{ secrets.BAILIAN_OSS_AK }}
-          BAILIAN_OSS_SK: ${{ secrets.BAILIAN_OSS_SK }}
-          BAILIAN_OSS_BUCKET: ${{ secrets.BAILIAN_OSS_BUCKET }}
-          BAILIAN_OSS_REGION: ${{ secrets.BAILIAN_OSS_REGION }}
-          BAILIAN_OSS_ENDPOINT: ${{ secrets.BAILIAN_OSS_ENDPOINT }}
-          BAILIAN_RELEASE_PREFIX: ${{ secrets.BAILIAN_RELEASE_PREFIX }}
-          BAILIAN_STATIC_PREFIX: ${{ secrets.BAILIAN_STATIC_PREFIX }}
+          # OSS release channel goes through the FC release function (presigned
+          # upload + reconcile + manifest.json): this repo holds no OSS
+          # credentials, the job only presents its GitHub OIDC token (requires
+          # id-token: write above). The trigger URL is the shared
+          # FC_TRIGGER_URL (same function serves publish-skills; actions are
+          # routed by URL path); leave it unset to skip the OSS channel.
+          # Bucket / prefix / allowlists live in the FC function.
+          FC_TRIGGER_URL: ${{ vars.FC_TRIGGER_URL }}
+          FC_RELEASE_AUDIENCE: ${{ vars.FC_RELEASE_AUDIENCE }}
+        # Script order: git tag, then binary GitHub Release + OSS, then npm.
+        # OSS upload can fail on a network blip; npm must not succeed first.
         run: node tools/release/publish-stable.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }}
 
   publish-channel:
@@ -116,8 +131,23 @@ jobs:
             | sudo tar -xz -C /usr/local/bin gitleaks
           gitleaks version
 
-      - name: Ensure zip (per-platform binary archives)
+      - name: Ensure zip and tar (per-platform binary archives)
         run: sudo apt-get update && sudo apt-get install -y zip
+
+      # bun build --compile leaves an invalid darwin linker signature. rcodesign
+      # re-signs those Mach-O files on the Linux runner (binary-codesign.mjs).
+      - name: Install rcodesign (ad-hoc sign darwin binaries)
+        run: |
+          set -euo pipefail
+          RCODESIGN_VERSION=0.29.0
+          asset="apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          curl -fsSL -o "/tmp/${asset}" \
+            "https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign/${RCODESIGN_VERSION}/${asset}"
+          tar -xzf "/tmp/${asset}" -C /tmp
+          sudo install -m 755 \
+            "/tmp/apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl/rcodesign" \
+            /usr/local/bin/rcodesign
+          rcodesign --version
 
       - run: pnpm install --frozen-lockfile
 
@@ -125,19 +155,17 @@ jobs:
       # Keep this pin in sync with any local smoke tests of binary-compile.mjs.
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.2.19"
+          bun-version: "1.3.14"
 
       - name: publish-channel
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # OSS release channel — same Settings-injected values as stable.
-          BAILIAN_OSS_AK: ${{ secrets.BAILIAN_OSS_AK }}
-          BAILIAN_OSS_SK: ${{ secrets.BAILIAN_OSS_SK }}
-          BAILIAN_OSS_BUCKET: ${{ secrets.BAILIAN_OSS_BUCKET }}
-          BAILIAN_OSS_REGION: ${{ secrets.BAILIAN_OSS_REGION }}
-          BAILIAN_OSS_ENDPOINT: ${{ secrets.BAILIAN_OSS_ENDPOINT }}
-          BAILIAN_RELEASE_PREFIX: ${{ secrets.BAILIAN_RELEASE_PREFIX }}
-          BAILIAN_STATIC_PREFIX: ${{ secrets.BAILIAN_STATIC_PREFIX }}
+          # OSS release channel — same FC-backed flow as stable; no OSS
+          # credentials in this repo (see publish-stable env notes).
+          FC_TRIGGER_URL: ${{ vars.FC_TRIGGER_URL }}
+          FC_RELEASE_AUDIENCE: ${{ vars.FC_RELEASE_AUDIENCE }}
+        # Script order: binary GitHub Release + OSS, then npm.
+        # OSS upload can fail on a network blip; npm must not succeed first.
         run: node tools/release/publish-channel.mjs ${{ inputs.package == 'knowledge-studio-cli' && '--knowledge' || '' }} --channel "${{ inputs.channel }}"
 
   # bailian-kb-dsh is the dsh plugin (downstream host adapter): independent version,

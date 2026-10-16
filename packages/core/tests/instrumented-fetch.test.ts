@@ -58,6 +58,7 @@ test("adds UA and tracking header on Alibaba Cloud hosts", async () => {
     }),
   );
   expect(headers.get("x-dashscope-openapisource")).toBe("BailianCLI");
+  expect(headers.get("x-dashscope-service")).toBe("bailian-cli");
   expect(headers.get("authorization")).toBe("Bearer k");
 });
 
@@ -68,6 +69,7 @@ test("adds UA but no tracking header on third-party hosts", async () => {
   expect(headers.get("user-agent")).toBe("bailian-cli/1.2.3");
   expect(headers.get("x-dashscope-source-config")).toBeNull();
   expect(headers.get("x-dashscope-openapisource")).toBeNull();
+  expect(headers.get("x-dashscope-service")).toBeNull();
 });
 
 test("does not override a caller-provided User-Agent", async () => {
@@ -89,6 +91,7 @@ test("passes non-URL-parseable inputs through without tracking headers", async (
   expect(url).toBe("/relative/path");
   expect(headers.get("x-dashscope-source-config")).toBeNull();
   expect(headers.get("x-dashscope-openapisource")).toBeNull();
+  expect(headers.get("x-dashscope-service")).toBeNull();
 });
 
 test("uses kscli identity and version in source config", () => {

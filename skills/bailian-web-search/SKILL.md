@@ -1,7 +1,7 @@
 ---
 name: bailian-web-search
 metadata:
-  version: "1.24.0"
+  version: "2.3.1"
   requires:
     bins: ["bl"]
 description: >-

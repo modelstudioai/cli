@@ -20,16 +20,16 @@ import {
   type AnsiStyles,
 } from "bailian-cli-runtime";
 
-const SKILL_INSTALL_CMD = "bl skill init";
+const SKILL_UPDATE_CMD = "bl skill update";
 
 function updateAgentSkill(color: AnsiStyles): void {
   process.stderr.write("\nUpdating agent skill...\n");
   try {
-    execSync(SKILL_INSTALL_CMD, { stdio: "inherit" });
+    execSync(SKILL_UPDATE_CMD, { stdio: "inherit" });
     process.stderr.write(`${color.green("\u2713 Agent skill updated.")}\n`);
   } catch {
     process.stderr.write(
-      `${color.yellow(`Agent skill update skipped. Run manually: ${SKILL_INSTALL_CMD}`)}\n`,
+      `${color.yellow(`Agent skill update skipped. Run manually: ${SKILL_UPDATE_CMD}`)}\n`,
     );
   }
 }

@@ -25,13 +25,17 @@ type CommandCapability = CommandCapabilityRestriction["property"];
 
 function restrictCommandCapabilities(
   allowed?: CommandCapability,
-): ["error", ...CommandCapabilityRestriction[]] {
-  return ["error", ...commandCapabilityRestrictions.filter(({ property }) => property !== allowed)];
+): ["error", CommandCapabilityRestriction, ...CommandCapabilityRestriction[]] {
+  return [
+    "error",
+    ...commandCapabilityRestrictions.filter(({ property }) => property !== allowed),
+  ] as ["error", CommandCapabilityRestriction, ...CommandCapabilityRestriction[]];
 }
 
 export default defineConfig({
   test: {
     globalSetup: "./packages/e2e/src/global-setup.ts",
+    setupFiles: ["./packages/e2e/src/iso-root-setup.ts"],
     testTimeout: 60_000,
     hookTimeout: 60_000,
   },

@@ -1,6 +1,7 @@
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
+import { AGENT_ENV_KEYS } from "bailian-cli-core";
 import { expect, test } from "vite-plus/test";
 import {
   listSkills,
@@ -8,13 +9,26 @@ import {
   listAgents,
   getSkillDetail,
 } from "../src/commands/config/inventory.ts";
+import { qwenworkMcpPath } from "../src/commands/mcp/agent-config.ts";
 
-/** Build an isolated fake $HOME and clean it up afterwards. */
-function withHome(fn: (home: string) => void): void {
+/**
+ * Temp home plus cleared Agent/MCP override env vars.
+ * Inventory takes an explicit home, but Claude/Hermes probes still read process.env.
+ */
+function withTempHomeDir(fn: (home: string) => void): void {
   const home = mkdtempSync(join(tmpdir(), "bl-inv-"));
+  const saved: Record<string, string | undefined> = {};
+  for (const key of AGENT_ENV_KEYS) {
+    saved[key] = process.env[key];
+    delete process.env[key];
+  }
   try {
     fn(home);
   } finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
     rmSync(home, { recursive: true, force: true });
   }
 }
@@ -26,7 +40,7 @@ function write(home: string, rel: string, content: string): void {
 }
 
 test("getSkillDetail 返回 SKILL.md 原文,未知 id 返回 null", () => {
-  withHome((home) => {
+  withTempHomeDir((home) => {
     write(
       home,
       ".agents/skills/demo/SKILL.md",
@@ -42,7 +56,7 @@ test("getSkillDetail 返回 SKILL.md 原文,未知 id 返回 null", () => {
 });
 
 test("listSkills 解析 SKILL.md frontmatter 与文件数", () => {
-  withHome((home) => {
+  withTempHomeDir((home) => {
     write(
       home,
       ".agents/skills/demo/SKILL.md",
@@ -67,7 +81,7 @@ test("listSkills 解析 SKILL.md frontmatter 与文件数", () => {
 });
 
 test("listSkills 将 agent 目录下的软链接视为安装来源", () => {
-  withHome((home) => {
+  withTempHomeDir((home) => {
     write(home, ".agents/skills/bailian-cli/SKILL.md", "---\nname: bailian-cli\n---\n");
     // Mimic `skills add`: the agent copy is a symlink back to the global dir.
     mkdirSync(join(home, ".claude/skills"), { recursive: true });
@@ -80,7 +94,7 @@ test("listSkills 将 agent 目录下的软链接视为安装来源", () => {
 });
 
 test("listSkills 跨 agent 模块聚合并记录来源", () => {
-  withHome((home) => {
+  withTempHomeDir((home) => {
     // Same skill installed in the global dir and two agent modules.
     const skillMd = "---\nname: bailian-cli\n---\n# B\n";
     write(home, ".agents/skills/bailian-cli/SKILL.md", skillMd);
@@ -97,13 +111,13 @@ test("listSkills 跨 agent 模块聚合并记录来源", () => {
 });
 
 test("listSkills 目录缺失时返回空数组", () => {
-  withHome((home) => {
+  withTempHomeDir((home) => {
     expect(listSkills(home)).toEqual([]);
   });
 });
 
 test("listMcpServers 汇总 codex(toml) 与 claude(json) 的 MCP 定义", () => {
-  withHome((home) => {
+  withTempHomeDir((home) => {
     write(home, ".codex/config.toml", '[mcp_servers.repl]\ncommand = "node"\nargs = ["repl.js"]\n');
     write(
       home,
@@ -140,13 +154,39 @@ test("listMcpServers 汇总 codex(toml) 与 claude(json) 的 MCP 定义", () => 
 });
 
 test("listMcpServers 无配置时返回空数组", () => {
-  withHome((home) => {
+  withTempHomeDir((home) => {
     expect(listMcpServers(home)).toEqual([]);
   });
 });
 
+test("listMcpServers 区分 Qoder、Qoder Work 与千问办公 QwenWork", () => {
+  withTempHomeDir((home) => {
+    write(
+      home,
+      ".qoder/mcp.json",
+      JSON.stringify({ mcpServers: { qoder: { url: "https://qoder" } } }),
+    );
+    write(
+      home,
+      ".qoderwork/mcp.json",
+      JSON.stringify({ mcpServers: { qoderwork: { url: "https://qoderwork" } } }),
+    );
+    write(
+      home,
+      relative(home, qwenworkMcpPath(home)),
+      JSON.stringify({ mcpServers: { qwenwork: { type: "http", url: "https://qwenwork" } } }),
+    );
+
+    const servers = listMcpServers(home);
+    const byName = Object.fromEntries(servers.map((s) => [s.name, s]));
+    expect(byName.qoder).toMatchObject({ source: "qoder" });
+    expect(byName.qoderwork).toMatchObject({ source: "qoderwork" });
+    expect(byName.qwenwork).toMatchObject({ source: "qwenwork" });
+  });
+});
+
 test("listAgents 报告安装与已连接 bailian-cli 的状态", () => {
-  withHome((home) => {
+  withTempHomeDir((home) => {
     // Claude Code: installed + configured (base url present).
     write(
       home,
@@ -212,4 +252,72 @@ test("listAgents 报告安装与已连接 bailian-cli 的状态", () => {
     // Always reports all six known frameworks.
     expect(agents).toHaveLength(6);
   });
+});
+
+test("listAgents 通过 HERMES_HOME 探测 relocated 的 hermes 配置", () => {
+  withTempHomeDir((home) => {
+    // Hermes home relocated away from ~/.hermes via HERMES_HOME。
+    // withTempHomeDir 已清空宿主 HERMES_HOME；本用例再显式注入。
+    const hermesHome = join(home, "relocated-hermes");
+    process.env.HERMES_HOME = hermesHome;
+    write(
+      hermesHome,
+      "config.yaml",
+      [
+        "model:",
+        "  default: qwen3-max",
+        "  provider: custom",
+        "  base_url: https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "  api_key: sk-test",
+      ].join("\n"),
+    );
+    const byId = Object.fromEntries(listAgents(home).map((agent) => [agent.id, agent]));
+    // Probe must follow HERMES_HOME, not the hard-coded ~/.hermes (issue #131).
+    expect(byId.hermes).toMatchObject({
+      installed: true,
+      configured: true,
+      model: "qwen3-max",
+    });
+  });
+});
+
+test("listAgents 不受宿主 CLAUDE_CONFIG_DIR 干扰", () => {
+  const previousClaude = process.env.CLAUDE_CONFIG_DIR;
+  const leaked = mkdtempSync(join(tmpdir(), "bl-inv-leaked-claude-"));
+  try {
+    process.env.CLAUDE_CONFIG_DIR = leaked;
+    writeFileSync(
+      join(leaked, "settings.json"),
+      JSON.stringify({
+        env: {
+          ANTHROPIC_BASE_URL: "https://leaked.example/anthropic",
+          ANTHROPIC_MODEL: "leaked-model",
+        },
+      }),
+    );
+    withTempHomeDir((home) => {
+      // helper 清空后，探测应只看传入的 home，而不是宿主 CLAUDE_CONFIG_DIR
+      expect(process.env.CLAUDE_CONFIG_DIR).toBeUndefined();
+      write(
+        home,
+        ".claude/settings.json",
+        JSON.stringify({
+          env: {
+            ANTHROPIC_BASE_URL: "https://dashscope.aliyuncs.com/apps/anthropic",
+            ANTHROPIC_MODEL: "qwen3-max",
+          },
+        }),
+      );
+      const byId = Object.fromEntries(listAgents(home).map((agent) => [agent.id, agent]));
+      expect(byId["claude-code"]).toMatchObject({
+        installed: true,
+        configured: true,
+        model: "qwen3-max",
+      });
+    });
+  } finally {
+    if (previousClaude === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+    else process.env.CLAUDE_CONFIG_DIR = previousClaude;
+    rmSync(leaked, { recursive: true, force: true });
+  }
 });

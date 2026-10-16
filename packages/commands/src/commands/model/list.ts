@@ -7,13 +7,21 @@ import {
   fetchPredictConfig,
   type FlagsDef,
   type ModelGroup,
-  type ModelGroupItem,
   type ModelPriceInfo,
   type PredictConfigEntry,
 } from "bailian-cli-core";
 import { emitResult, emitBare, formatTable } from "bailian-cli-runtime";
-
-const DATE_SUFFIX_RE = /-\d{4}-\d{2}-\d{2}$/;
+import {
+  MODEL_FILTER_FLAGS,
+  filterModelsLocally,
+  formatOfflineMarker,
+  formatPriceCompact,
+  itemModalities,
+  matchesModality,
+  modelFilterParams,
+  modelLifecycle,
+  pickTrunkItems,
+} from "./shared.ts";
 
 const LIST_FLAGS = {
   model: {
@@ -27,45 +35,20 @@ const LIST_FLAGS = {
   page: {
     type: "number",
     valueHint: "<n>",
-    description: { "en-US": "Page number (default: 1)", "zh-CN": "页码（默认：1）" },
+    description: {
+      "en-US": "Page number (default: 1)",
+      "zh-CN": "页码（默认：1）",
+    },
   },
   pageSize: {
     type: "number",
     valueHint: "<n>",
-    description: { "en-US": "Results per page (default: 10)", "zh-CN": "每页结果数（默认：10）" },
-  },
-  provider: {
-    type: "array",
-    valueHint: "<p>",
     description: {
-      "en-US": "Filter by provider (repeatable, e.g. --provider alibaba --provider deepseek)",
-      "zh-CN": "按提供商筛选（可重复，例如 --provider alibaba --provider deepseek）",
+      "en-US": "Results per page (default: 10)",
+      "zh-CN": "每页结果数（默认：10）",
     },
   },
-  capability: {
-    type: "array",
-    valueHint: "<c>",
-    description: {
-      "en-US": "Filter by capability code (TG, Reasoning, VU, IG, VG, TTS, ASR, …)",
-      "zh-CN": "按能力代码筛选（TG、Reasoning、VU、IG、VG、TTS、ASR 等）",
-    },
-  },
-  feature: {
-    type: "array",
-    valueHint: "<f>",
-    description: {
-      "en-US": "Filter by feature (function-calling, web-search, structured-outputs, …)",
-      "zh-CN": "按特性筛选（function-calling、web-search、structured-outputs 等）",
-    },
-  },
-  contextWindow: {
-    type: "array",
-    valueHint: "<w>",
-    description: {
-      "en-US": "Filter by context window range bucket",
-      "zh-CN": "按上下文窗口范围筛选",
-    },
-  },
+  ...MODEL_FILTER_FLAGS,
   enrich: {
     type: "switch",
     description: {
@@ -83,19 +66,6 @@ const LIST_FLAGS = {
 /** Strip group- prefix from the family model key. */
 function familySlug(group: ModelGroup): string {
   return (group.model ?? "").replace(/^group-/, "") || group.name || "unknown";
-}
-
-/** Format a single price entry compactly for table display. */
-function formatPriceCompact(prices: ModelPriceInfo[] | undefined): string {
-  if (!prices?.length) return "-";
-  const inputPrice =
-    prices.find(
-      (priceEntry) => typeof priceEntry.type === "string" && priceEntry.type.includes("input"),
-    ) ?? prices[0];
-  const typeLabel = inputPrice.type ?? "";
-  const priceStr = String(inputPrice.price ?? "?");
-  const unit = inputPrice.priceUnit ?? "";
-  return `${typeLabel}:${priceStr}/${unit}`;
 }
 
 /** Aggregate metadata from a group's items. */
@@ -136,21 +106,20 @@ function aggregateGroupMeta(group: ModelGroup) {
   };
 }
 
-/** Pick trunk items: exclude date-suffixed snapshots; if all snapshots, keep the latest. */
-function pickTrunkItems(items: ModelGroupItem[]): ModelGroupItem[] {
-  if (items.length === 0) return [];
-  const trunk = items.filter((item) => !DATE_SUFFIX_RE.test(item.model ?? ""));
-  if (trunk.length > 0) return trunk;
-  return [...items]
-    .sort((first, second) => String(second.model).localeCompare(String(first.model)))
-    .slice(0, 1);
-}
-
 // ---------------------------------------------------------------------------
 // Browse mode — family-level paginated listing
 // ---------------------------------------------------------------------------
 
-function printBrowseText(groups: ModelGroup[], total: number): void {
+interface BrowseFooter {
+  /** Catalog total for the server-side filters. */
+  total: number;
+  /** Models dropped from this page by the offline filter. */
+  hiddenOffline: number;
+  /** Models dropped from this page by the modality filter. */
+  hiddenModality: number;
+}
+
+function printBrowseText(groups: ModelGroup[], footer: BrowseFooter): void {
   if (groups.length === 0) {
     emitBare("No model families found.");
     return;
@@ -170,7 +139,18 @@ function printBrowseText(groups: ModelGroup[], total: number): void {
   });
 
   for (const line of formatTable(headers, rows)) emitBare(line);
-  emitBare(`\nTotal: ${total}`);
+  emitBare(`\nTotal: ${footer.total}`);
+  // Modality filtering is per page, so the catalog total above predates it.
+  if (footer.hiddenModality > 0) {
+    emitBare(
+      `${footer.hiddenModality} models on this page excluded by the modality filter (not reflected in Total).`,
+    );
+  }
+  if (footer.hiddenOffline > 0) {
+    emitBare(
+      `${footer.hiddenOffline} offline models hidden — use --include-deprecated to include them.`,
+    );
+  }
 }
 
 function formatBrowseJson(groups: ModelGroup[], total: number) {
@@ -207,16 +187,22 @@ function printDetailText(detail: ModelGroup, includePredictConfig: boolean): voi
   emitBare("");
 
   // Items table
+  const showStatus = items.some((item) => formatOfflineMarker(modelLifecycle(item)) !== "");
   const headers = ["MODEL", "PROVIDER", "CAPABILITIES", "CONTEXT", "OUTPUT", "CATEGORY", "PRICE"];
-  const rows = items.map((item) => [
-    item.model ?? "-",
-    item.provider ?? "-",
-    (item.capabilities ?? []).join(",") || "-",
-    item.contextWindow ? String(item.contextWindow) : "-",
-    item.maxOutputTokens ? String(item.maxOutputTokens) : "-",
-    item.category ?? "-",
-    formatPriceCompact(item.prices),
-  ]);
+  if (showStatus) headers.push("STATUS");
+  const rows = items.map((item) => {
+    const row = [
+      item.model ?? "-",
+      item.provider ?? "-",
+      (item.capabilities ?? []).join(",") || "-",
+      item.contextWindow ? String(item.contextWindow) : "-",
+      item.maxOutputTokens ? String(item.maxOutputTokens) : "-",
+      item.category ?? "-",
+      formatPriceCompact(item.prices),
+    ];
+    if (showStatus) row.push(formatOfflineMarker(modelLifecycle(item)));
+    return row;
+  });
 
   for (const line of formatTable(headers, rows)) emitBare(line);
   emitBare(
@@ -276,6 +262,7 @@ function formatDetailJson(detail: ModelGroup, includePredictConfig: boolean) {
     description: detail.description,
     updateAt: detail.updateAt,
     items: items.map((item) => {
+      const lifecycle = modelLifecycle(item);
       const entry: Record<string, unknown> = {
         model: item.model,
         name: item.name,
@@ -289,9 +276,13 @@ function formatDetailJson(detail: ModelGroup, includePredictConfig: boolean) {
         openSource: item.openSource,
         docUrl: item.docUrl,
         versionTag: item.versionTag,
+        modalities: itemModalities(item),
       };
       if (item.prices) entry.prices = item.prices;
       if (item.qpmInfo) entry.qpmInfo = item.qpmInfo;
+      if (lifecycle.offline) entry.offline = true;
+      if (lifecycle.upcomingOfflineAt) entry.upcomingOfflineAt = lifecycle.upcomingOfflineAt;
+      if (lifecycle.announceUrl) entry.announceUrl = lifecycle.announceUrl;
       if (includePredictConfig && item.predictConfig) {
         entry.predictConfig = item.predictConfig;
       }
@@ -322,12 +313,14 @@ export default defineCommand({
   },
   auth: "none",
   usageArgs:
-    "[--model <model>] [--page <n>] [--page-size <n>] [--provider <p>] [--capability <c>] [--feature <f>] [--enrich]",
+    "[--model <model>] [--page <n>] [--page-size <n>] [--provider <p>] [--capability <c>] [--feature <f>] [--input-modality <m>] [--output-modality <m>] [--include-deprecated] [--enrich]",
   flags: LIST_FLAGS,
   exampleArgs: [
     "",
     "--provider alibaba",
     "--capability TG --capability Reasoning",
+    "--input-modality Image --output-modality Text",
+    "--include-deprecated",
     "--model qwen-max",
     "--model qwen-max --enrich --output json",
     "--feature function-calling --output json",
@@ -337,6 +330,12 @@ export default defineCommand({
       "en-US":
         "Both the catalog and --enrich parameter-schema endpoints are public — no console login needed.",
       "zh-CN": "模型目录和 --enrich 使用的参数 Schema Endpoint 均为公开接口，无需登录控制台。",
+    },
+    {
+      "en-US":
+        "Browse mode hides models that are already offline; use --include-deprecated to include them. Detail mode (--model) always lists every version and flags its status instead.",
+      "zh-CN":
+        "浏览模式会隐藏已下线的模型，可用 --include-deprecated 包含它们；详情模式（--model）始终列出全部版本并标注状态。",
     },
   ],
   async run(ctx) {
@@ -385,24 +384,45 @@ export default defineCommand({
     const params = {
       pageNo: flags.page,
       pageSize: flags.pageSize ?? 10,
-      providers: flags.provider?.length ? flags.provider : undefined,
-      capabilities: flags.capability?.length ? flags.capability : undefined,
-      features: flags.feature?.length ? flags.feature : undefined,
-      contextWindows: flags.contextWindow?.length ? flags.contextWindow : undefined,
+      ...modelFilterParams(flags),
     };
 
     if (settings.dryRun) {
-      emitResult({ action: "model.list", ...params }, format);
+      emitResult(
+        {
+          action: "model.list",
+          includeDeprecated: Boolean(flags.includeDeprecated),
+          ...params,
+        },
+        format,
+      );
       return;
     }
 
     const { total, groups } = await fetchModelGroups(call, params);
 
+    // The list API has no modality or lifecycle parameter, so both are applied to
+    // each family's items; a family drops out once every version is filtered away.
+    const listedGroups = groups
+      .map((group) => ({
+        ...group,
+        items: filterModelsLocally(group.items ?? [], flags),
+      }))
+      .filter((group) => group.items.length > 0);
+
+    const pageItems = groups.flatMap((group) => group.items ?? []);
+    const hiddenOffline = flags.includeDeprecated
+      ? 0
+      : pageItems.filter((item) => modelLifecycle(item).offline).length;
+    const hiddenModality = pageItems.filter(
+      (item) => !matchesModality(item, flags.inputModality ?? [], flags.outputModality ?? []),
+    ).length;
+
     if (format === "json") {
-      emitResult(formatBrowseJson(groups, total), format);
+      emitResult(formatBrowseJson(listedGroups, total), format);
       return;
     }
 
-    printBrowseText(groups, total);
+    printBrowseText(listedGroups, { total, hiddenOffline, hiddenModality });
   },
 });

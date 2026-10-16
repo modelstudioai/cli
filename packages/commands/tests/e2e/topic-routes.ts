@@ -16,6 +16,8 @@ export const UPDATE_ROUTES: E2eRouteExports = {
 
 export const TEXT_CHAT_ROUTES: E2eRouteExports = { "text chat": "textChat" };
 
+export const DECISION_ROUTES: E2eRouteExports = { decision: "decisionPredict" };
+
 export const CONFIG_ROUTES: E2eRouteExports = {
   "config show": "configShow",
   "config set": "configSet",
@@ -81,11 +83,18 @@ export const SPEECH_ROUTES: E2eRouteExports = {
 
 export const MCP_ROUTES: E2eRouteExports = {
   "mcp call": "mcpCall",
+  "mcp connect": "mcpConnect",
+  "mcp disconnect": "mcpDisconnect",
   "mcp list": "mcpList",
   "mcp tools": "mcpTools",
 };
 
 export const SEARCH_WEB_ROUTES: E2eRouteExports = { "search web": "searchWeb" };
+
+export const SECURITY_ROUTES: E2eRouteExports = {
+  "agents security overview": "securityOverview",
+  "agents security alerts": "securityAlerts",
+};
 
 export const PIPELINE_ROUTES: E2eRouteExports = {
   "pipeline run": "pipelineRun",
@@ -105,6 +114,12 @@ export const ADVISOR_ROUTES: E2eRouteExports = {
   "advisor recommend": "advisorRecommend",
 };
 
+export const MODEL_ROUTES: E2eRouteExports = {
+  "model list": "modelList",
+  "model search": "modelSearch",
+  "model code": "modelCode",
+};
+
 export const QUOTA_ROUTES: E2eRouteExports = {
   "quota list": "quotaList",
   "quota update": "quotaUpdate",
@@ -113,6 +128,48 @@ export const QUOTA_ROUTES: E2eRouteExports = {
   "quota request": "quotaUpdate",
   "quota history": "quotaHistory",
   "quota check": "quotaCheck",
+};
+
+export const MONITOR_ROUTES: E2eRouteExports = {
+  "monitor overview": "monitorOverview",
+  "monitor models": "monitorModels",
+  "monitor metrics": "monitorMetrics",
+  "monitor errors": "monitorErrors",
+  "monitor delivery status": "monitorDeliveryStatus",
+  "monitor delivery enable": "monitorDeliveryEnable",
+  "monitor delivery disable": "monitorDeliveryDisable",
+};
+
+export const LOG_ROUTES: E2eRouteExports = {
+  "log status": "logStatus",
+  "log audit list": "logAuditList",
+  "log audit get": "logAuditGet",
+  "log audit count": "logAuditCount",
+  "log audit enable": "logAuditEnable",
+  "log audit disable": "logAuditDisable",
+  "log inference list": "logInferenceList",
+  "log inference get": "logInferenceGet",
+  "log inference count": "logInferenceCount",
+  "log inference enable": "logInferenceEnable",
+  "log inference disable": "logInferenceDisable",
+  "log trace list": "logTraceList",
+  "log trace get": "logTraceGet",
+  "log trace stats": "logTraceStats",
+};
+
+export const ALERT_ROUTES: E2eRouteExports = {
+  "alert metrics": "alertMetrics",
+  "alert template list": "alertTemplateList",
+  "alert template create": "alertTemplateCreate",
+  "alert template update": "alertTemplateUpdate",
+  "alert template delete": "alertTemplateDelete",
+  "alert list": "alertList",
+  "alert create": "alertCreate",
+  "alert update": "alertUpdate",
+  "alert delete": "alertDelete",
+  "alert enable": "alertEnable",
+  "alert disable": "alertDisable",
+  "alert history": "alertHistory",
 };
 
 export const PERMISSION_ROUTES: E2eRouteExports = {
@@ -135,6 +192,16 @@ export const DEPLOY_ROUTES: E2eRouteExports = {
   "deploy image create": "deployImageCreate",
   "deploy list": "deployList",
   "deploy get": "deployGet",
+  "deploy capacity list": "deployCapacityList",
+  "deploy capacity get": "deployCapacityGet",
+  "deploy capacity create": "deployCapacityCreate",
+  "deploy capacity scale": "deployCapacityScale",
+  "deploy capacity renew": "deployCapacityRenew",
+  "deploy capacity delete": "deployCapacityDelete",
+  "deploy capacity unsubscribe": "deployCapacityUnsubscribe",
+  "deploy overflow": "deployOverflow",
+  "deploy operation get": "deployOperationGet",
+  "deploy operation wait": "deployOperationWait",
   "deploy models": "deployModels",
   "deploy scale": "deployScale",
   "deploy update": "deployUpdate",
@@ -163,6 +230,14 @@ export const FINETUNE_ROUTES: E2eRouteExports = {
   "finetune export": "finetuneExport",
   "finetune watch": "finetuneWatch",
   "finetune capability": "finetuneCapability",
+  "finetune compress templates": "finetuneCompressTemplates",
+  "finetune compress create": "finetuneCompressCreate",
+  "finetune compress list": "finetuneCompressList",
+  "finetune compress get": "finetuneCompressGet",
+  "finetune compress watch": "finetuneCompressWatch",
+  "finetune compress logs": "finetuneCompressLogs",
+  "finetune compress cancel": "finetuneCompressCancel",
+  "finetune compress delete": "finetuneCompressDelete",
 };
 
 export const CONSOLE_FLAGS_DRY_RUN_ROUTES: E2eRouteExports = {
@@ -177,6 +252,7 @@ export const TOKEN_PLAN_ROUTES: E2eRouteExports = {
   "token-plan create-key": "tokenPlanCreateKey",
   "token-plan assign-seats": "tokenPlanAssignSeats",
   "token-plan add-member": "tokenPlanAddMember",
+  "token-plan harness-quota": "tokenPlanHarnessQuota",
 };
 
 export const SKILL_ROUTES: E2eRouteExports = {

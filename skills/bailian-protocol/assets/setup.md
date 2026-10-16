@@ -32,6 +32,8 @@ curl -fsSL https://bailian.aliyun.com/cli/install.sh | bash
 
 Windows PowerShell: `irm https://bailian.aliyun.com/cli/install.ps1 | iex`
 
+Unix `install.sh` prefers the `.tar.gz` asset and does not require `unzip`. Windows keeps `.zip`.
+
 ### Skills
 
 - **Supported:** `bl skill init` (installs every `bailian-*`, including `bailian-protocol`)
@@ -52,12 +54,11 @@ Verify: `bl --version` (prints `bl X.Y.Z`).
 
 For the exact command-to-auth mapping, read the owning skill's `reference/index.md` or run `bl <command> --help`.
 
-| Auth               | How                                                                                              | Used by                                       |
-| ------------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------- |
-| API key            | `export DASHSCOPE_API_KEY=sk-...` or `bl auth login --api-key sk-...`                            | Most DashScope API commands                   |
-| Token Plan API key | `bl auth login --config token-plan --api-key sk-sp-...`                                          | Token Plan text, image, and video consumption |
-| Console            | `bl auth login --console --console-site domestic` or `... international`                         | `app list`, `usage free`, `console call`      |
-| OpenAPI AK/SK      | `bl auth login --open-api --access-key-id <id> --access-key-secret <secret>` or Alibaba env vars | Token Plan management commands (`token-plan`) |
+| Auth          | How                                                                                              | Used by                                         |
+| ------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| Console       | `bl auth login --console` or `... --console-site international`                                  | Recommended; may create an ordinary API Key     |
+| API key       | `bl auth login --api-key <key>`                                                                  | Existing keys, including Token Plan consumption |
+| OpenAPI AK/SK | `bl auth login --open-api --access-key-id <id> --access-key-secret <secret>` or Alibaba env vars | Token Plan management commands (`token-plan`)   |
 
 ```bash
 bl auth status            # check current auth
@@ -66,25 +67,29 @@ bl auth logout --console  # clear console token only
 bl auth logout --open-api # clear OpenAPI AK/SK only
 ```
 
-- Get a DashScope API key: https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key
-- Get a Token Plan API key: https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview
+- Get a DashScope API key: https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key
+- Get a Token Plan API key: https://bailian.console.aliyun.com/cn-beijing?spm=a2ty07.github&tab=plan#/efm/subscription/overview
 - Get an Alibaba Cloud AccessKey for OpenAPI AK/SK: https://ram.console.aliyun.com/manage/ak
-- Console login: China site https://bailian.console.aliyun.com or international site https://modelstudio.console.alibabacloud.com
+- Console login: China site https://bailian.console.aliyun.com?spm=a2ty07.github or international site https://modelstudio.console.alibabacloud.com
 
 ### Token Plan model consumption
 
-Get or copy the Token Plan API key from the [subscription overview](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview). A `PlainApiKey` returned by `bl token-plan create-key` is the same credential type. It is separate from the OpenAPI AK/SK used by Token Plan management commands.
+Get or copy the Token Plan API key from the [subscription overview](https://bailian.console.aliyun.com/cn-beijing?spm=a2ty07.github&tab=plan#/efm/subscription/overview). A `PlainApiKey` returned by `bl token-plan create-key` is the same credential type. It is separate from the OpenAPI AK/SK used by Token Plan management commands.
+
+Token Plan and other subscription plans cannot use `--console`; log in directly with the subscription API Key:
 
 ```bash
-bl auth login --config token-plan --api-key sk-sp-xxx
+bl auth login --api-key sk-sp-xxx
 bl text chat --message "Hello"
 bl image generate --prompt "A cat"
 bl video generate --prompt "A horse running through a field"
 ```
 
-The built-in Profile supplies the Token Plan Base URL. `auth login` saves the key and activates
-the Profile without a live model probe; do not ask the user to configure the Base URL or run a
-duplicate smoke test.
+Ordinary API Keys use the same command:
+
+```bash
+bl auth login --api-key <key>
+```
 
 ### API Key capability fallback
 
@@ -119,19 +124,26 @@ bl config list
 bl config use --name default
 ```
 
-`auth login --config token-plan` creates or updates that Profile and activates it only after the
-credential is saved. Failed login and `--dry-run` do not switch Profiles. Use
+API Key login selects and activates the matching built-in Profile only after the credential is saved. Failed login and `--dry-run` do not switch Profiles. Use
 `--config default` for a one-command override. Config selection follows explicit `--config` >
 persisted `active_config` > `default`; credential and endpoint fields inside the selected Profile
 still follow flag > environment > config.
 
+Global flags can precede or follow the complete command path:
+`bl --config token-plan auth status` and `bl auth status --config token-plan` select
+the same Profile for one invocation without changing `active_config`. Keep command
+path segments together. Command-specific and credential flags must follow the path.
+Unknown flags, missing flag values, and invalid supplied values return usage exit
+code 2, including when the invocation would otherwise display help. A valid bare
+root or command-group invocation displays the corresponding help and returns 0.
+
 Activation selects the entire Config for every credential domain, not only model consumption. The only exception is the API Key capability fallback described above. After activating `token-plan`, Token Plan management and Console commands still read their OpenAPI or Console credentials from that Profile. If those credentials remain in `default`, invoke the command with `--config default` or log the corresponding credential domain into `token-plan`.
 
-The built-in `token-plan` preset contains the following values. The CLI materializes them only after
-a successful `auth login --config token-plan`. It does not replace them at runtime; run the login
+The built-in `token-plan` preset contains the following defaults. The CLI materializes them only after
+a successful Token Plan API Key login. It does not replace them at runtime; run the login
 command again to persist a newer preset:
 
-- Base URL: `https://token-plan.cn-beijing.maas.aliyuncs.com`
+- Base URL: the matching domestic or international Token Plan site
 - Text model: `qwen3.8-max`
 - Image model: `wan2.7-image`
 - Text-to-video model (`default_video_model`): `happyhorse-1.1-t2v`
@@ -147,14 +159,14 @@ The usual priority applies to this profile too: per-command `--api-key` / `--bas
 
 Console login and console-gateway commands (`app list`, `usage *`, `quota *`, `workspace list`, `console call`) target one of two Bailian consoles:
 
+Console login may create an **ordinary** API Key. Token Plan and other subscription plans cannot use `--console`; run `bl auth login --api-key <key>` instead.
+
 | Site              | Value           | Login URL                                      |
 | ----------------- | --------------- | ---------------------------------------------- |
 | Domestic (中国站) | `domestic`      | `https://bailian.console.aliyun.com`           |
 | International     | `international` | `https://modelstudio.console.alibabacloud.com` |
 
-**Do not run bare `bl auth login --console`** — the CLI defaults to `domestic`. Always pass `--console-site` explicitly (or rely on a saved `console_site` in config).
-
-**Before console login**, run `bl config show --output json` and check `console_site`.
+Use `bl auth login --console` for the China site. Add `--console-site international` for the international site. When the flag is omitted, a saved `console_site` continues to apply; otherwise the CLI defaults to `domestic`.
 
 **How to choose the site** (first match wins):
 
@@ -168,7 +180,7 @@ Console login and console-gateway commands (`app list`, `usage *`, `quota *`, `w
 
 ```bash
 # Domestic
-bl auth login --console --console-site domestic
+bl auth login --console
 
 # International
 bl auth login --console --console-site international

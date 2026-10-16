@@ -6,6 +6,125 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 [中文版](CHANGELOG.zh.md) · [README](README.md) · [Contributing](CONTRIBUTING.md)
 
+## [2.3.1] - 2026-10-16
+
+### Fixed
+
+- **Request timeout** — Requests configured with a timeout longer than 300 seconds are no longer interrupted by the default response-header timeout.
+
+## [2.3.0] - 2026-10-14
+
+### Added
+
+- **Pi Agent integration** — Added support for Pi:
+  - `bl config agent` adds `--agent pi` to configure Pi to use Bailian models.
+  - `bl mcp connect` / `bl mcp disconnect` add `--agent pi` to register or remove Bailian MCP servers.
+
+### Fixed
+
+- **Global flag placement** — Use global flags before the complete command path, for example `bl --config token-plan auth status`; command-specific and credential flags must follow the path.
+- **Parameter validation and messages** — Help and version queries validate supplied flags. Only explicitly declared flag names are accepted, and parsing errors support English and Chinese messages based on the configured language.
+- **File upload timeout** — Use `--timeout` to set the transfer timeout when uploading local files to temporary OSS storage.
+
+## [2.2.2] - 2026-10-14
+
+### Added
+
+- **Model compression lifecycle** — Added `bl finetune compress templates/create/list/get/watch/logs/cancel/delete` for quantizing supported full-parameter fine-tuned models, including dry-run previews, status polling, log retrieval, and safe deletion confirmation.
+- **Pi agent support** — `bl config agent` and `bl mcp connect` / `bl mcp disconnect` now support Pi, writing its native configuration while preserving existing settings and redacting credentials in output.
+- **Global flags before the command path** — Global flags such as `--config` can now precede the command (`bl --config token-plan auth status`) as well as follow it; both select the Profile for that invocation only, without changing `active_config`. Command-specific and credential flags must still follow the command path.
+- **Decision model inference** — Added `bl decision` for TypeSafe System One requests against workspace-scoped endpoints, including `choice` / `noul` / `score` validation, JSON and text output, training-sample reuse, Beijing/Singapore routing, and dry-run previews.
+
+### Changed
+
+- **Decision dataset validation** — Aligned the `decision` schema with the current API: `state` may be a string, object, or array; `instructions` is optional; and question criteria now enforce API limits.
+- **Stricter flag validation** — Only flags defined for a command are accepted. Unknown flags, missing values, and invalid values now return usage exit code 2 even when the invocation would otherwise show help, and parser errors follow the Profile language. A bare root or command-group invocation still shows help and returns 0. `--timeout` uses the same positive-finite rule on the command line and in resolved settings.
+
+### Fixed
+
+- **Temporary file upload timeout** — Uploads of local files to temporary OSS storage now honor `--timeout` instead of a fixed 120-second limit.
+
+## [2.2.1] - 2026-10-12
+
+### Fixed
+
+- **Hermes agent config path** — `bl config agent --agent hermes` now writes to the location Hermes actually reads (`$HERMES_HOME/config.yaml`, or the platform-native default: `%LOCALAPPDATA%\hermes` on Windows, `~/.hermes` elsewhere) instead of always `~/.hermes/config.yaml`. Previously on Windows or with a custom `HERMES_HOME`, config landed where Hermes never read it and the change silently took no effect; agent detection could also falsely report Hermes as unconfigured.
+
+## [2.2.0] - 2026-10-12
+
+### Changed
+
+- **Token Plan usage window** — `bl usage token-plan` now reports a single monthly quota (usage percentage and reset time) instead of the previous 5-hour and 1-week windows.
+
+## [2.1.0] - 2026-09-28
+
+### Added
+
+- **Text fine-tuning parameters** — `bl finetune text create` now accepts job name, priority, LoRA, evaluation, checkpoint, dataset-split, and data-augmentation parameters. `bl finetune get` returns expanded job metadata and hyperparameters.
+
+### Fixed
+
+- **Windows Skill installation** — Handle legacy path limits and update installed Skills in place when running agents keep directories open.
+
+### Internal
+
+- Publish binaries before npm `latest` and ad-hoc sign macOS release binaries.
+
+## [2.0.0] - 2026-09-22
+
+### Added
+
+- **Native MCP registration** — Added `bl mcp connect` and `bl mcp disconnect` to add or remove Bailian MCP servers in Agent-native configurations:
+  - Supports `streamable-http` and SSE, targeting an individual Agent or all installed Agents with `--agent all`.
+  - Supports Codex, Claude Code, Cursor, Qoder, Qoder Work, QwenWork, Qwen Code, Gemini, OpenCode, OpenClaw, DeepSeek Harness, ZCode, and WorkBuddy.
+  - Never overwrites unmanaged entries and preserves registrations modified by users during removal.
+- **Broader Skill delivery** — Skill installation and updates now support WorkBuddy, Trae CLI, and DeepSeek DSH through their global Skill directories.
+
+### Fixed
+
+- **Skill operation previews** — `bl skill init`, `add`, `update`, and `remove` now honor `--dry-run`, showing the planned Skills, Agents, and target paths without writing. Invalid requests retain the same failure status as real execution.
+- **Safer Skill cleanup** — `bl skill remove` previews and executions now use the same managed-link discovery scope, recognize historical managed links, and recheck targets immediately before deletion to avoid removing changed or unmanaged content.
+
+## [1.28.0] - 2026-09-20
+
+### Added
+
+- **Agent security commands** — `bl agents security overview` (protection overview for the last 24 hours) and `bl agents security alerts` (alert list with risk-level, asset-type, status, vendor, pagination and sorting filters). Both call the per-workspace AgentStudio host and honor the shared `text` / `json` / `--quiet` / `--dry-run` contract. The host is derived from `--workspace-id`, or overridden by `--base-url` / `DASHSCOPE_BASE_URL` / `auth login --base-url` pointed at a workspace or pre-release origin (e.g. `https://<workspace-id>.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio`).
+
+### Internal
+
+- Add Agent security E2E coverage (help, missing-workspace usage error, dry-run host derivation and `--base-url` override, query-string filters, enum fast-fail) and generate the `bailian-cli` skill reference for the new `agents` group.
+
+## [1.27.0] - 2026-09-18
+
+### Added
+
+- **Monitoring, logs, and alerts** — Added `bl monitor`, `bl log`, and `bl alert` command groups for model call statistics, failures, latency, token usage, audit and inference logs, traces, delivery configuration, and alert management.
+- **Model discovery and code samples** — Added `bl model search` for relevance-ranked catalog search and `bl model code` for ready-to-run SDK examples.
+
+### Changed
+
+- **Model catalog** — `bl model list` now supports input/output modality filters, hides offline models by default, and can include them with `--include-deprecated`.
+
+### Fixed
+
+- **Speech voices** — `bl speech synthesize --list-voices` now supports the built-in voices and documentation links for `qwen-audio-3.0-tts-plus` and `qwen-audio-3.0-tts-flash`.
+- **Unix binary distribution** — Added `.tar.gz` release assets and checksums for macOS and Linux, enabling installation without an `unzip` dependency while retaining `.zip` assets for compatibility.
+
+## [1.26.0] - 2026-09-17
+
+### Changed
+
+- **Simplified authentication** — Console login is now the recommended default and can create an ordinary API key when needed. Existing ordinary API keys and Token Plan subscription keys use the same `bl auth login --api-key <API_KEY>` command.
+- **Automatic API key validation and endpoint selection** — API keys are validated before being saved. The CLI automatically selects an available regional endpoint and applies the appropriate Token Plan configuration when applicable.
+
+## [1.25.0] - 2026-09-14
+
+### Added
+
+- **Token Plan harness quota** — `bl token-plan harness-quota` shows Token Plan harness entitlement quota usage (Console auth), joining the harness list with issued entitlements to display used/total quota, usage ratio, and reset time; harnesses with a pending entitlement are listed as issuing.
+- Filter the harness list with `--type official_tool|infrastructure`; render as a quota box or `--output json`.
+
 ## [1.24.0] - 2026-09-11
 
 ### Added

@@ -37,6 +37,7 @@ export {
   MCP_WEBSEARCH_PAGE,
   mcpMarketplaceDetailPage,
   VOICE_TTS_PAGE,
+  refundConsolePage,
 } from "./urls.ts";
 
 // Output facilities consumed by commands

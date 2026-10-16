@@ -6,6 +6,125 @@
 
 [English](CHANGELOG.md) · [README](README.zh.md) · [参与贡献](CONTRIBUTING.zh.md)
 
+## [2.3.1] - 2026-10-16
+
+### 修复
+
+- **请求超时** —— 设置超过 300 秒的请求超时时间后，不再被默认的响应头超时提前中断。
+
+## [2.3.0] - 2026-10-14
+
+### 新增
+
+- **Pi Agent 接入** —— 新增 Pi 支持：
+  - `bl config agent` 新增 `--agent pi`，用于配置 Pi 使用百炼模型。
+  - `bl mcp connect` / `bl mcp disconnect` 新增 `--agent pi`，用于接入和移除百炼 MCP 服务。
+
+### 修复
+
+- **全局参数位置** —— 支持在完整命令路径前使用全局参数，例如 `bl --config token-plan auth status`；命令专属参数和鉴权参数需放在路径后。
+- **参数校验与提示** —— 帮助和版本查询会校验已传入的参数；仅接受命令支持的参数名，参数解析错误支持按配置语言显示中英文提示。
+- **文件上传超时** —— `--timeout` 可设置本地文件上传至临时 OSS 的传输超时时间。
+
+## [2.2.2] - 2026-10-14
+
+### 新增
+
+- **模型压缩完整生命周期** —— 新增 `bl finetune compress templates/create/list/get/watch/logs/cancel/delete`，支持对符合条件的全参调优模型执行量化压缩，并覆盖 dry-run 预览、状态轮询、日志查询和安全删除确认。
+- **支持 Pi Agent** —— `bl config agent` 与 `bl mcp connect` / `bl mcp disconnect` 新增支持 Pi，写入其原生配置并保留已有设置，输出中的凭据会脱敏。
+- **全局参数可前置** —— `--config` 等全局参数现在既可放在命令之后，也可放在命令之前（`bl --config token-plan auth status`）；两种写法都只对本次调用选择 Profile，不修改 `active_config`。命令专属参数和凭证域参数仍须放在命令路径之后。
+- **决策模型推理** —— 新增 `bl decision`，通过工作空间专属 Endpoint 调用 TypeSafe System One，支持 `choice` / `noul` / `score` 校验、JSON 与文本输出、复用训练样本、北京/新加坡地域路由及 dry-run 预览。
+
+### 变更
+
+- **决策数据集校验** —— 与最新 API 对齐：`state` 可为字符串、对象或数组，`instructions` 改为可选，并按接口限制校验各类问题的 criteria。
+- **更严格的参数校验** —— 只接受命令已定义的参数。未知参数、缺少参数值或参数值非法时，即使本次调用原本会显示帮助，也返回用法错误退出码 2，解析错误提示跟随 Profile 语言；不带参数的根命令或命令组仍显示帮助并返回 0。`--timeout` 在命令行和最终生效配置中使用同一套“正有限数”校验规则。
+
+### 修复
+
+- **临时文件上传超时** —— 本地文件上传到临时 OSS 存储时会遵循 `--timeout`，不再固定为 120 秒。
+
+## [2.2.1] - 2026-10-12
+
+### 修复
+
+- **Hermes Agent 配置路径** —— `bl config agent --agent hermes` 现在会写入 Hermes 实际读取的位置（`$HERMES_HOME/config.yaml`，或平台原生默认路径：Windows 为 `%LOCALAPPDATA%\hermes`，其它平台为 `~/.hermes`），不再固定写 `~/.hermes/config.yaml`。此前在 Windows 或自定义 `HERMES_HOME` 环境下，配置被写到 Hermes 不读取的文件、变更静默失效，Agent 探测也可能误报 Hermes 为「未配置」。
+
+## [2.2.0] - 2026-10-12
+
+### 变更
+
+- **Token Plan 额度窗口** —— `bl usage token-plan` 现在只展示月度额度（使用百分比与重置时间），不再显示此前的 5 小时和 1 周窗口。
+
+## [2.1.0] - 2026-09-28
+
+### 新增
+
+- **文本微调参数** —— `bl finetune text create` 现在支持任务名、优先级、LoRA、评估、Checkpoint、数据集切分和数据增强参数；`bl finetune get` 返回更完整的任务元数据与超参数。
+
+### 修复
+
+- **Windows Skill 安装** —— 处理传统路径长度限制，并可在运行中的 Agent 占用目录时原地更新已安装的 Skill。
+
+### 内部
+
+- 调整发布顺序，在 npm `latest` 前发布二进制，并对 macOS 发布二进制进行 ad-hoc 签名。
+
+## [2.0.0] - 2026-09-22
+
+### 新增
+
+- **原生 MCP 注册** —— 新增 `bl mcp connect` 和 `bl mcp disconnect`，支持在 Agent 原生配置中接入或移除百炼 MCP 服务：
+  - 支持 `streamable-http` 与 SSE，可指定单个 Agent 或使用 `--agent all`。
+  - 支持 Codex、Claude Code、Cursor、Qoder、Qoder Work、QwenWork、Qwen Code、Gemini、OpenCode、OpenClaw、DeepSeek Harness、ZCode 和 WorkBuddy。
+  - 不会覆盖非 CLI 管理的同名配置；移除时会保留已被用户修改的注册项。
+- **扩展 Skill 分发范围** —— Skill 安装和更新新增支持 WorkBuddy、Trae CLI 与 DeepSeek DSH，并使用各自的全局 Skill 目录。
+
+### 修复
+
+- **Skill 操作预览** —— `bl skill init`、`add`、`update` 和 `remove` 现在会正确响应 `--dry-run`，只读展示计划操作的 Skill、Agent 和目标路径；无效请求的失败状态与实际执行保持一致。
+- **Skill 清理安全性** —— `bl skill remove` 的预览与实际执行现在使用相同的托管链接发现范围，可识别历史托管链接，并在删除前重新校验目标，避免误删已变化或不再由 CLI 管理的内容。
+
+## [1.28.0] - 2026-09-20
+
+### 新增
+
+- **Agent 安全命令** —— `bl agents security overview`（最近 24 小时的防护总览）与 `bl agents security alerts`（告警列表，支持风险等级、资产类型、状态、厂商、分页与排序等筛选）。两者均对接按 workspace 区分的 AgentStudio 域名，遵循统一的 `text` / `json` / `--quiet` / `--dry-run` 约定。域名默认由 `--workspace-id` 推导，也可通过 `--base-url` / `DASHSCOPE_BASE_URL` / `auth login --base-url` 指向某个 workspace 或预发源覆盖（例如 `https://<workspace-id>.cn-beijing.maas.aliyuncs.com/api/v1/agentstudio`）。
+
+### 内部
+
+- 补充 Agent 安全 E2E 覆盖（help、缺 workspace 的 usage 错误、dry-run 域名推导与 `--base-url` 覆盖、query string 筛选、枚举快失败），并为新的 `agents` 组生成 `bailian-cli` 技能 reference。
+
+## [1.27.0] - 2026-09-18
+
+### 新增
+
+- **监控、日志与告警** —— 新增 `bl monitor`、`bl log` 和 `bl alert` 命令组，支持查看模型调用量、失败、耗时、Token 用量、审计与推理日志、调用链，配置数据投递并管理告警。
+- **模型发现与示例代码** —— 新增 `bl model search`，可按相关度搜索模型目录；新增 `bl model code`，可获取开箱即用的 SDK 调用示例。
+
+### 变更
+
+- **模型目录** —— `bl model list` 新增输入/输出模态筛选，默认隐藏已下线模型，并可通过 `--include-deprecated` 将其包含在结果中。
+
+### 修复
+
+- **语音音色** —— `bl speech synthesize --list-voices` 现在支持查看 `qwen-audio-3.0-tts-plus` 和 `qwen-audio-3.0-tts-flash` 的内置音色及对应文档。
+- **Unix 二进制分发** —— 为 macOS 和 Linux 增加带校验和的 `.tar.gz` 发布资产，使安装流程可不依赖 `unzip`，同时保留 `.zip` 资产以兼容现有流程。
+
+## [1.26.0] - 2026-09-17
+
+### 变更
+
+- **简化认证方式** —— 默认推荐使用控制台登录，需要时可自动创建普通 API Key。已有普通 API Key 和 Token Plan 订阅 Key 统一使用 `bl auth login --api-key <API_KEY>` 登录。
+- **API Key 自动校验与地域识别** —— API Key 会在保存前进行校验，CLI 自动选择可用地域，并在适用时完成 Token Plan 配置。
+
+## [1.25.0] - 2026-09-14
+
+### 新增
+
+- **Token Plan harness 权益额度** —— `bl token-plan harness-quota` 查看 Token Plan harness 权益额度用量（Console 认证），联合 harness 列表与已发放权益，展示已用/总额度、使用比例和重置时间；待发放权益的 harness 以「发放中」状态列出。
+- 通过 `--type official_tool|infrastructure` 筛选 harness 列表；支持额度框输出或 `--output json`。
+
 ## [1.24.0] - 2026-09-11
 
 ### 新增

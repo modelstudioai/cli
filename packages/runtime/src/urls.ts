@@ -31,3 +31,12 @@ export const MCP_WEBSEARCH_PAGE = mcpMarketplaceDetailPage("WebSearch");
 
 /** Voice TTS experience center — browse system and custom voices. */
 export const VOICE_TTS_PAGE = "https://help.aliyun.com/zh/model-studio/cosyvoice-voice-list";
+
+/**
+ * Aliyun billing console refund (unsubscribe) page for one prepaid instance.
+ * Unsubscribing a prepaid PTU capacity instance is a billing action that has
+ * no API; users complete it here with the account that placed the order.
+ */
+export function refundConsolePage(instanceId: string): string {
+  return `https://billing-cost.console.aliyun.com/refund/refund?instanceId=${encodeURIComponent(instanceId)}`;
+}

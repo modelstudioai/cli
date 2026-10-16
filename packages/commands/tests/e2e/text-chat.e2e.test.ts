@@ -1,6 +1,35 @@
-import { describe, expect, test } from "vite-plus/test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
 import { isDashScopeE2EReady, parseStdoutJson, runCommandHelp, runCommandE2e } from "./helpers.ts";
 import { TEXT_CHAT_ROUTES } from "./topic-routes.ts";
+
+let isolatedDirectory: string;
+
+beforeEach(() => {
+  isolatedDirectory = mkdtempSync(join(tmpdir(), "bl-text-prime-e2e-"));
+  writeFileSync(join(isolatedDirectory, "config.json"), "{}");
+});
+
+afterEach(() => {
+  rmSync(isolatedDirectory, { recursive: true, force: true });
+});
+
+function runIsolatedTextChat(args: string[], envOverrides: NodeJS.ProcessEnv = {}) {
+  return runCommandE2e(TEXT_CHAT_ROUTES, args, {
+    BAILIAN_CONFIG_DIR: isolatedDirectory,
+    HOME: isolatedDirectory,
+    USERPROFILE: isolatedDirectory,
+    ...envOverrides,
+  });
+}
+
+const EMPTY_MODEL_ENV = {
+  DASHSCOPE_API_KEY: "",
+  DASHSCOPE_BASE_URL: "",
+  BAILIAN_WORKSPACE_ID: "",
+};
 
 /**
  * Text chat：help / 分组不依赖密钥；对话需 DashScope。
@@ -11,6 +40,8 @@ describe("e2e: text chat", () => {
     const { stderr, exitCode } = await runCommandHelp(TEXT_CHAT_ROUTES, ["text", "chat", "--help"]);
     expect(exitCode, stderr).toBe(0);
     expect(stderr).toMatch(/--api\s+<chat\|responses>/i);
+    expect(stderr).toMatch(/--prime/i);
+    expect(stderr).toMatch(/--workspace-id/i);
     expect(stderr).toMatch(/chat|--message|model|stream/i);
   });
 
@@ -40,6 +71,101 @@ describe("e2e: text chat", () => {
     ]);
     expect(exitCode).toBe(2);
     expect(stderr).toMatch(/thinking-budget.*Responses/i);
+  });
+
+  test("Prime 模式要求显式 --model", async () => {
+    const { stderr, exitCode } = await runIsolatedTextChat(
+      ["text", "chat", "--prime", "--message", "hello"],
+      EMPTY_MODEL_ENV,
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--prime.*--model/i);
+  });
+
+  test("Prime 模式在默认 Base URL 下要求 workspace", async () => {
+    const { stderr, exitCode } = await runIsolatedTextChat(
+      ["text", "chat", "--prime", "--model", "glm-5.3-prime", "--message", "hello", "--dry-run"],
+      EMPTY_MODEL_ENV,
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/Workspace ID is required/i);
+  });
+
+  test("Prime 模式拒绝 Responses API", async () => {
+    const { stderr, exitCode } = await runIsolatedTextChat(
+      [
+        "text",
+        "chat",
+        "--prime",
+        "--api",
+        "responses",
+        "--model",
+        "glm-5.3-prime",
+        "--message",
+        "hello",
+      ],
+      EMPTY_MODEL_ENV,
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--prime.*--api chat/i);
+  });
+
+  test("未启用 Prime 时拒绝 --workspace-id", async () => {
+    const { stderr, exitCode } = await runIsolatedTextChat(
+      ["text", "chat", "--workspace-id", "ws_test", "--message", "hello"],
+      EMPTY_MODEL_ENV,
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--workspace-id.*--prime/i);
+  });
+
+  test("Prime dry-run 输出 workspace Endpoint 和请求体", async () => {
+    const { stdout, stderr, exitCode } = await runIsolatedTextChat(
+      [
+        "text",
+        "chat",
+        "--prime",
+        "--workspace-id",
+        "ws_test",
+        "--model",
+        "glm-5.3-prime",
+        "--message",
+        "hello",
+        "--dry-run",
+        "--output",
+        "json",
+      ],
+      EMPTY_MODEL_ENV,
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ endpoint?: string; request?: { model?: string } }>(stdout);
+    expect(data.endpoint).toBe(
+      "https://ws_test.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions",
+    );
+    expect(data.request?.model).toBe("glm-5.3-prime");
+  });
+
+  test("Prime dry-run 允许自定义 Base URL 覆盖 workspace Endpoint", async () => {
+    const { stdout, stderr, exitCode } = await runIsolatedTextChat(
+      [
+        "text",
+        "chat",
+        "--prime",
+        "--model",
+        "glm-5.3-prime",
+        "--message",
+        "hello",
+        "--base-url",
+        "https://example.test",
+        "--dry-run",
+        "--output",
+        "json",
+      ],
+      EMPTY_MODEL_ENV,
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ endpoint?: string }>(stdout);
+    expect(data.endpoint).toBe("https://example.test/compatible-mode/v1/chat/completions");
   });
 });
 

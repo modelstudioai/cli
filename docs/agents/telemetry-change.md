@@ -27,20 +27,20 @@
 
 ### 1. 三套鉴权与埋点标识
 
-| 命令声明          | 凭证 / 请求域                                       | 主要请求出口                                                                          | 后端埋点标识                                  | 前端埋点标识（AEM）                              |
-| ----------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------ |
-| `auth: "apiKey"`  | API Key；DashScope / OpenAI-compatible 模型域       | `Client.request/requestJson`、`McpClient`、Managed Agent instrumented fetch、上传策略 | 有：`User-Agent`、`x-dashscope-source-config` | 有：`pid=bailian-cli-node`、`authMethod=apiKey`  |
-| `auth: "console"` | Console access token；Bailian Console Gateway       | `callConsoleGateway()` → `/cli/api.json`                                              | 有：Console Gateway 后端直接标识              | 有：`pid=bailian-cli-node`、`authMethod=console` |
-| `auth: "openapi"` | AccessKey ID/Secret，可选 STS token；阿里云 OpenAPI | `Client.openApiJson()`                                                                | 有：`x-dashscope-source-config`               | 有：`pid=bailian-cli-node`、`authMethod=openapi` |
-| `auth: "none"`    | 无凭证域                                            | 本地逻辑或命令自行管理的登录/配置流程                                                 | 无                                            | 有：`pid=bailian-cli-node`、`authMethod=none`    |
+| 命令声明          | 凭证 / 请求域                                       | 主要请求出口                                                                          | 后端埋点标识                                                                      | 前端埋点标识（AEM）                              |
+| ----------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `auth: "apiKey"`  | API Key；DashScope / OpenAI-compatible 模型域       | `Client.request/requestJson`、`McpClient`、Managed Agent instrumented fetch、上传策略 | 有：`User-Agent`、`x-dashscope-source-config`、`X-Dashscope-Service: bailian-cli` | 有：`pid=bailian-cli-node`、`authMethod=apiKey`  |
+| `auth: "console"` | Console access token；Bailian Console Gateway       | `callConsoleGateway()` → `/cli/api.json`                                              | 有：Console Gateway 后端直接标识                                                  | 有：`pid=bailian-cli-node`、`authMethod=console` |
+| `auth: "openapi"` | AccessKey ID/Secret，可选 STS token；阿里云 OpenAPI | `Client.openApiJson()`                                                                | 有：`x-dashscope-source-config`、`X-Dashscope-Service: bailian-cli`               | 有：`pid=bailian-cli-node`、`authMethod=openapi` |
+| `auth: "none"`    | 无凭证域                                            | 本地逻辑或命令自行管理的登录/配置流程                                                 | 无                                                                                | 有：`pid=bailian-cli-node`、`authMethod=none`    |
 
 `authMethod` 记录的是命令声明的鉴权域，不是凭证来源。它不会区分 API Key 来自 flag、env 还是 config。
 鉴权域是命令的准入门槛和主请求域，不保证命令内部只有一种网络出口；例如部分 `apiKey` 命令也可能读取匿名 Console 公共目录，Managed Agent 还可能访问其他 provider。
 
 表中的后端埋点按该鉴权域的主要业务请求填写：
 
-- Managed Agent 的 `User-Agent` 对所有 SDK 请求注入；`x-dashscope-source-config` 仅对阿里云 host 注入
-- DashScope 上传策略 `getPolicy` 只有 `x-dashscope-source-config`，没有显式 CLI `User-Agent`
+- Managed Agent 的 `User-Agent` 对所有 SDK 请求注入；`x-dashscope-source-config` 与 `X-Dashscope-Service` 仅对阿里云 host 注入
+- DashScope 上传策略 `getPolicy` 走 `trackingHeaders()`（含 source-config 与 `X-Dashscope-Service`），没有显式 CLI `User-Agent`
 - Console Gateway 用户数据由后端直接区分，不依赖 `x-dashscope-source-config`；AEM 的 `authMethod=console` 是独立的命令侧统计
 - OpenAPI 的 ACS 签名头，以及 Console Gateway 的 `product`、`action`、`api` 是鉴权或路由字段，不计为埋点标识
 
@@ -63,6 +63,7 @@
 - `t3` 取产品 `identity.version`，由产品入口的 `package.json` 注入
 - `channel` 与 `t1` 是当前固定口径
 - `User-Agent` 是独立标识：`bl` 为 `bailian-cli/<version>`，`kscli` 为 `knowledge-studio-cli/<version>`
+- `X-Dashscope-Service: bailian-cli` 与 source-config 一起由 `trackingHeaders()` 注入；凡走该函数的百炼 / DashScope 请求（含 MCP 注册与 JSON-RPC）都会带上。OSS、结果文件下载、npm / Skill 仍不发送。
 
 source-config 只用于百炼 / DashScope API 侧消费，不发送到通用网络传输：
 

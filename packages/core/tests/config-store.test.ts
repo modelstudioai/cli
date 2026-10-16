@@ -144,6 +144,58 @@ test("AuthStore:未传 --config 时写当前激活项，显式配置在登录成
   });
 });
 
+test.each([
+  {
+    name: "普通 sk Key 避开 token-plan",
+    activeConfig: "token-plan",
+    apiKey: "sk-standard",
+    targetConfig: undefined,
+  },
+  {
+    name: "普通 sk-ws Key 避开 token-plan",
+    activeConfig: "token-plan",
+    apiKey: "sk-ws-workspace",
+    targetConfig: undefined,
+  },
+  {
+    name: "普通 Key 保留非 token-plan Profile",
+    activeConfig: "dev",
+    apiKey: "sk-standard",
+    targetConfig: "dev",
+  },
+  {
+    name: "其他格式 Key 不限制 Profile",
+    activeConfig: "token-plan",
+    apiKey: "custom-key",
+    targetConfig: "token-plan",
+  },
+])("AuthStore:API Key 路由规则：$name", async (testCase) => {
+  await inTempConfigDir(async () => {
+    await writeConfigFile(
+      {
+        api_key: `existing-${testCase.activeConfig}`,
+        base_url:
+          testCase.activeConfig === "token-plan"
+            ? "https://token-plan.cn-beijing.maas.aliyuncs.com"
+            : "https://dev.example.test",
+      },
+      testCase.activeConfig,
+    );
+    await activateConfigProfile(testCase.activeConfig);
+
+    const store = makeAuthStore(buildSources({}));
+    await store.login({ api_key: testCase.apiKey });
+
+    expect(readConfigFile(testCase.targetConfig).api_key).toBe(testCase.apiKey);
+    expect(readConfigProfiles().active).toBe(testCase.targetConfig ?? "default");
+    if (testCase.targetConfig !== "token-plan") {
+      expect(readConfigFile("token-plan").api_key).toBe(
+        testCase.activeConfig === "token-plan" ? "existing-token-plan" : undefined,
+      );
+    }
+  });
+});
+
 test("Console access token 自动刷新只读取当前选中 Config 的 AK/SK", async () => {
   await inTempConfigDir(async () => {
     await writeConfigFile({

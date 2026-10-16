@@ -1,6 +1,6 @@
 {
   "name": "bailian-cli-core",
-  "version": "1.24.0",
+  "version": "2.3.1",
   "description": "Core SDK for bailian-cli. See https://www.npmjs.com/package/bailian-cli for usage.",
   "homepage": "https://bailian.console.aliyun.com/cli",
   "bugs": {
@@ -26,11 +26,11 @@
     "./package.json": "./package.json"
   },
   "publishConfig": {
-    "access": "public",
     "exports": {
       ".": "./dist/index.mjs",
       "./package.json": "./package.json"
     },
+    "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "tar-stream": "catalog:",
+    "undici": "catalog:",
     "yaml": "^2.8.3",
     "yauzl": "catalog:"
   },

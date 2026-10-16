@@ -1639,7 +1639,10 @@ const PAGE_HTML = `<!doctype html>
     { id: 'gemini', label: 'Gemini' },
     { id: 'opencode', label: 'OpenCode' },
     { id: 'openclaw', label: 'OpenClaw' },
-    { id: 'qoderwork', label: 'QoderWork' }
+    { id: 'qoderwork', label: 'QoderWork' },
+    { id: 'zcode', label: 'ZCode' },
+    { id: 'workbuddy', label: 'WorkBuddy' },
+    { id: 'deepseek-harness', label: 'DeepSeek Harness' }
   ];
   function copyButton(getText) {
     var b = uiEl('button', 'copy-btn', 'Copy'); b.type = 'button';

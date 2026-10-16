@@ -53,10 +53,15 @@ export default defineCommand({
     });
 
     if (taskInfo.output.task_status !== "SUCCEEDED") {
+      const status = taskInfo.output.task_status;
+      const detail = taskInfo.output.message || taskInfo.output.code;
+      const message = detail
+        ? `Task is not complete (status: ${status}): ${detail}`
+        : `Task is not complete (status: ${status}).`;
       throw new BailianError(
-        `Task is not complete (status: ${taskInfo.output.task_status}).`,
+        message,
         ExitCode.GENERAL,
-        "Wait for the task to complete before downloading.",
+        status === "FAILED" ? undefined : "Wait for the task to complete before downloading.",
       );
     }
 

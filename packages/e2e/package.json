@@ -7,10 +7,12 @@
   "exports": {
     "./gating": "./src/gating.ts",
     "./runner": "./src/run-subprocess.ts",
+    "./in-process": "./src/run-in-process.ts",
     "./output": "./src/output.ts",
     "./global-setup": "./src/global-setup.ts",
     "./monorepo-root": "./src/monorepo-root.ts",
-    "./registry-smoke": "./src/registry-smoke.ts"
+    "./registry-smoke": "./src/registry-smoke.ts",
+    "./isolation": "./src/isolation.ts"
   },
   "dependencies": {
     "bailian-cli-core": "workspace:*"
@@ -18,9 +20,9 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "typescript": "^6.0.2",
-    "vite-plus": "0.1.22"
+    "vite-plus": "catalog:"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": "^22.18.0 || >=24.11.0"
   }
 }

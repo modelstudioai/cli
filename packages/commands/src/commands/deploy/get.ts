@@ -1,17 +1,8 @@
-import { defineCommand, getDeployment, type FlagsDef } from "bailian-cli-core";
+import { defineCommand, getDeployment } from "bailian-cli-core";
 import { emitResult } from "bailian-cli-runtime";
+import { DEPLOYED_MODEL_FLAG, validateQueryIds } from "./query-shared.ts";
 
-const GET_FLAGS = {
-  deployedModel: {
-    type: "string",
-    valueHint: "<id>",
-    description: {
-      "en-US": "Deployed model identifier (required)",
-      "zh-CN": "已部署模型标识（必填）",
-    },
-    required: true,
-  },
-} satisfies FlagsDef;
+const GET_FLAGS = DEPLOYED_MODEL_FLAG;
 
 export default defineCommand({
   description: {
@@ -25,6 +16,15 @@ export default defineCommand({
     "--deployed-model qwen-plus-2025-12-01-b6d61c71",
     "--deployed-model qwen-plus-2025-12-01-b6d61c71 --output json",
   ],
+  notes: [
+    {
+      "en-US":
+        "Preserves deployment fields including ptu_capacity (aggregate effective kTPM), ptu_service_tier, overflow_strategy and pre_paid_info. For mixed billing or multiple instances, query capacity list/get for each instance's status, expiry and capacity; ModelCode status is not instance status.",
+      "zh-CN":
+        "保留部署字段，包括 ptu_capacity（汇总生效容量，kTPM）、ptu_service_tier、overflow_strategy 及 pre_paid_info。混合付费或多实例时，通过 capacity list/get 查询各实例状态、到期时间和容量；ModelCode 状态不等于实例状态。",
+    },
+  ],
+  validate: validateQueryIds,
   async run(ctx) {
     const { settings, flags } = ctx;
     const deployedModel = flags.deployedModel;
@@ -43,6 +43,7 @@ export default defineCommand({
     }
 
     const item: Record<string, unknown> = {
+      ...deployment,
       deployed_model: deployment.deployed_model ?? deployedModel,
       deployed_name: deployment.name ?? "",
       model_name: deployment.model_name ?? "",

@@ -163,7 +163,7 @@ describe("e2e: managed-agent project init directory defaults", () => {
     const directory = await temporaryDirectory();
     const removedFlag = await runProject(directory, "build", ["--yes"]);
     expect(removedFlag.exitCode).toBe(2);
-    expect(removedFlag.stderr).toMatch(/Unknown flag.*--yes/);
+    expect(removedFlag.stderr).toMatch(/(?:Unknown flag|未知参数).*--yes/);
   });
 
   test("nested build and validate explain the project root without changing directories", async () => {

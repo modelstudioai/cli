@@ -7,12 +7,13 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                      | Authentication | Description                               |
-| ---------------------------- | -------------- | ----------------------------------------- |
-| `bl token-plan add-member`   | AK/SK          | Add a member to a Token Plan organization |
-| `bl token-plan assign-seats` | AK/SK          | Batch assign Token Plan seats to members  |
-| `bl token-plan create-key`   | AK/SK          | Create a Token Plan API key for a seat    |
-| `bl token-plan list-seats`   | AK/SK          | List Token Plan subscription seat details |
+| Command                       | Authentication | Description                                     |
+| ----------------------------- | -------------- | ----------------------------------------------- |
+| `bl token-plan add-member`    | AK/SK          | Add a member to a Token Plan organization       |
+| `bl token-plan assign-seats`  | AK/SK          | Batch assign Token Plan seats to members        |
+| `bl token-plan create-key`    | AK/SK          | Create a Token Plan API key for a seat          |
+| `bl token-plan harness-quota` | Console        | Show Token Plan harness entitlement quota usage |
+| `bl token-plan list-seats`    | AK/SK          | List Token Plan subscription seat details       |
 
 ## Command details
 
@@ -116,6 +117,39 @@ bl token-plan create-key --account-id acc_123 --workspace-id ws_456
 
 ```bash
 bl token-plan create-key --account-id acc_123 --workspace-id ws_456 --description 'Dev key'
+```
+
+### `bl token-plan harness-quota`
+
+| Field              | Value                                           |
+| ------------------ | ----------------------------------------------- |
+| **Name**           | `token-plan harness-quota`                      |
+| **Description**    | Show Token Plan harness entitlement quota usage |
+| **Authentication** | Console                                         |
+| **Usage**          | `bl token-plan harness-quota [flags]`           |
+
+#### Flags
+
+| Flag                                     | Type   | Required | Description                                                |
+| ---------------------------------------- | ------ | -------- | ---------------------------------------------------------- |
+| `--type <official_tool\|infrastructure>` | string | no       | Filter harness list by type: official_tool, infrastructure |
+| `--console-region <region>`              | string | no       | Console gateway region (e.g. cn-beijing, ap-southeast-1)   |
+| `--console-site <site>`                  | string | no       | Console site: domestic, international                      |
+| `--console-switch-agent <uid>`           | number | no       | Switch agent UID for delegated access                      |
+| `--workspace-id <id>`                    | string | no       | Workspace ID (env: BAILIAN_WORKSPACE_ID)                   |
+
+#### Examples
+
+```bash
+bl token-plan harness-quota
+```
+
+```bash
+bl token-plan harness-quota --type official_tool
+```
+
+```bash
+bl token-plan harness-quota --output json
 ```
 
 ### `bl token-plan list-seats`

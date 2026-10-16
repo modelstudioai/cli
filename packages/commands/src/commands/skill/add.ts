@@ -12,6 +12,7 @@ import {
   writeSkillLock,
 } from "bailian-cli-core";
 import { emitBare, emitResult, formatTable } from "bailian-cli-runtime";
+import { planFanoutLinks, summarizeAgents } from "./dry-run-plan.ts";
 
 interface AddOutcome {
   name: string;
@@ -61,9 +62,48 @@ export default defineCommand({
     const remoteNames = Object.keys(index.skills);
     const parsed = ctx.flags.all ? "all" : parseSkillNames(ctx.flags.name, false);
     const names = parsed === "all" ? remoteNames : parsed;
+    const agents = detectInstalledAgents();
+
+    if (ctx.settings.dryRun) {
+      const skills = names.map((name) => {
+        const entry = index.skills[name];
+        if (!entry) {
+          return {
+            name,
+            status: "failed" as const,
+            reason: "skill not found in registry",
+          };
+        }
+        return {
+          name,
+          status: "install" as const,
+          publishedAt: entry.publishedAt,
+          links: planFanoutLinks(name, agents),
+        };
+      });
+
+      emitResult(
+        {
+          action: "skill.add",
+          registry: getSkillRegistryBaseUrl(),
+          agents: summarizeAgents(agents),
+          skills,
+        },
+        format,
+      );
+
+      const failed = skills.filter((skill) => skill.status === "failed");
+      if (failed.length > 0) {
+        throw new BailianError(
+          `${failed.length}/${skills.length} skill(s) failed to install`,
+          ExitCode.GENERAL,
+          "Check the reason for failed skills in the output; network failures can be retried with bl skill add",
+        );
+      }
+      return;
+    }
 
     const lock = readSkillLock();
-    const agents = detectInstalledAgents();
 
     // collect-then-throw: a single skill failure only affects itself; successful ones are written to disk and lock as usual.
     // Skills install concurrently (bounded by INSTALL_CONCURRENCY) — each writes to a disjoint canonical dir, unique tmpDir, and distinct lock key.

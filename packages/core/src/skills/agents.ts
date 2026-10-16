@@ -4,12 +4,14 @@ import {
   lstatSync,
   mkdirSync,
   readlinkSync,
+  realpathSync,
   rmSync,
   symlinkSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, isAbsolute, join, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { getSkillsDir } from "./lock.ts";
+import { getHermesHome } from "../utils/agent-home.ts";
 
 /**
  * Agent fan-out: after a skill lands in the canonical dir (~/.bailian/skills/<name>),
@@ -25,9 +27,36 @@ export interface AgentTarget {
   displayName: string;
   /** Global directory where this agent reads skills from */
   skillsDir: string;
-  /** 任一存在即判定"本机装了该 agent" */
+  /** Any existing path means this agent is installed on the host */
   detectDirs: string[];
 }
+
+/**
+ * Test-only switch: when set to `"1"`, `detectInstalledAgents` skips absolute
+ * detectDirs outside HOME / `XDG_CONFIG_HOME` (e.g. `/etc/codex`, `/Applications/…`,
+ * and project dirs under cwd). Not for end users.
+ */
+export const SKIP_HOST_AGENTS_ENV = "BL_SKIP_HOST_AGENTS";
+
+/**
+ * Official Agent config-path override env vars. Clear these in isolated tests
+ * so detection does not point at the developer machine.
+ */
+export const AGENT_ENV_KEYS = [
+  "CLAUDE_CONFIG_DIR",
+  "CODEX_HOME",
+  "VIBE_HOME",
+  "HERMES_HOME",
+  "AUTOHAND_HOME",
+  "GROK_HOME",
+  "DSH_HOME",
+  "OPENCLAW_CONFIG_PATH",
+  "ZCODE_HOME",
+  "APPDATA",
+  "LOCALAPPDATA",
+  "FLATPAK_XDG_CONFIG_HOME",
+  "PI_CODING_AGENT_DIR",
+] as const;
 
 /**
  * Computed on each call (depends on homedir / XDG_CONFIG_HOME / cwd; easy to override in tests).
@@ -152,6 +181,8 @@ export function getAgentTargets(): AgentTarget[] {
       detectDirs: [join(xdgConfig, "devin")],
     },
     simple("droid", "Droid", ".factory"),
+    // DeepSeek DSH reads global skills from <dshHome>/skills; DSH_HOME relocates the home
+    fromBase("dsh", "DeepSeek DSH", envBase(process.env.DSH_HOME, ".dsh")),
     simple("forgecode", "ForgeCode", ".forge"),
     simple("gemini-cli", "Gemini CLI", ".gemini"),
     simple("github-copilot", "GitHub Copilot", ".copilot"),
@@ -162,7 +193,9 @@ export function getAgentTargets(): AgentTarget[] {
       detectDirs: [join(xdgConfig, "goose")],
     },
     fromBase("grok", "Grok Build", envBase(process.env.GROK_HOME, ".grok")),
-    fromBase("hermes", "Hermes Agent", envBase(process.env.HERMES_HOME, ".hermes")),
+    // Hermes resolves its home via HERMES_HOME → platform-native default; share the
+    // canonical resolver so skill fan-out, the config writer and the inventory probe agree.
+    fromBase("hermes", "Hermes Agent", getHermesHome(home)),
     simple("iflow-cli", "iFlow CLI", ".iflow"),
     simple("inference-sh", "inference.sh", ".inferencesh"),
     {
@@ -224,8 +257,12 @@ export function getAgentTargets(): AgentTarget[] {
     simple("terramind", "Terramind", ".terramind"),
     simple("tinycloud", "Tinycloud", ".tinycloud"),
     simple("trae", "Trae", ".trae"),
+    // Trae CLI reads global skills from ~/.traecli/skills (project-level .trae/skills stays project-only)
+    simple("trae-cli", "Trae CLI", ".traecli"),
     simple("trae-cn", "Trae CN", ".trae-cn"),
     simple("windsurf", "Windsurf", ".codeium/windsurf"),
+    // Tencent WorkBuddy reads global skills from ~/.workbuddy/skills
+    simple("workbuddy", "Tencent WorkBuddy", ".workbuddy"),
     {
       id: "zcode",
       displayName: "ZCode",
@@ -237,8 +274,60 @@ export function getAgentTargets(): AgentTarget[] {
   ];
 }
 
+/**
+ * Resolve to a real absolute path. If the path does not exist yet, realpath
+ * ancestors and rejoin the suffix so macOS cwd=`/private/var/...` vs
+ * HOME=`/var/...` is not misclassified as a host system dir.
+ */
+function canonicalPath(path: string): string {
+  const absolute = resolve(path);
+  try {
+    return realpathSync(absolute);
+  } catch {
+    const parts: string[] = [];
+    let current = absolute;
+    while (current !== dirname(current)) {
+      if (existsSync(current)) {
+        try {
+          return join(realpathSync(current), ...parts.reverse());
+        } catch {
+          break;
+        }
+      }
+      parts.push(basename(current));
+      current = dirname(current);
+    }
+    return absolute;
+  }
+}
+
+function isPathInside(candidate: string, root: string): boolean {
+  const resolvedCandidate = canonicalPath(candidate);
+  const resolvedRoot = canonicalPath(root);
+  return resolvedCandidate === resolvedRoot || resolvedCandidate.startsWith(resolvedRoot + sep);
+}
+
+/**
+ * Host-level detect path: absolute and not under the current HOME /
+ * `XDG_CONFIG_HOME` (e.g. `/etc/codex`, `/Applications/…`).
+ */
+export function isHostSystemDetectDir(dir: string): boolean {
+  if (!isAbsolute(dir)) return false;
+  if (isPathInside(dir, homedir())) return false;
+  const xdgConfig = process.env.XDG_CONFIG_HOME?.trim();
+  if (xdgConfig && isPathInside(dir, xdgConfig)) return false;
+  return true;
+}
+
+function shouldProbeDetectDir(dir: string): boolean {
+  if (process.env[SKIP_HOST_AGENTS_ENV] !== "1") return true;
+  return !isHostSystemDetectDir(dir);
+}
+
 export function detectInstalledAgents(): AgentTarget[] {
-  return getAgentTargets().filter((agent) => agent.detectDirs.some((dir) => existsSync(dir)));
+  return getAgentTargets().filter((agent) =>
+    agent.detectDirs.some((dir) => shouldProbeDetectDir(dir) && existsSync(dir)),
+  );
 }
 
 /** Path equality that respects the host filesystem's case rules (Windows is case-insensitive) */
@@ -423,13 +512,13 @@ export function fanOutSkillToAgents(
 }
 
 /**
- * Reclaim fan-out artifacts for a skill across all agent dirs.
- * Symlinks pointing to canonical are removed (including historical links not in lock,
- * via defensive scan of the full registry); real directories are only removed if recorded
- * in lock (copy-fallback artifacts). A single failure does not block the rest.
+ * Collect paths that unlinkSkillFromAgents would reclaim (read-only).
+ * Same candidate set and eligibility rules as the mutating unlink: managed
+ * symlinks anywhere under the agent registry (including historical links not
+ * in lock), plus recorded copy-fallback directories.
  */
-export function unlinkSkillFromAgents(name: string, recordedLinks: string[] = []): string[] {
-  const removed: string[] = [];
+export function planUnlinkSkillFromAgents(name: string, recordedLinks: string[] = []): string[] {
+  const planned: string[] = [];
   const candidates = new Set(recordedLinks);
   for (const agent of getAgentTargets()) candidates.add(join(agent.skillsDir, name));
   for (const linkPath of candidates) {
@@ -441,14 +530,38 @@ export function unlinkSkillFromAgents(name: string, recordedLinks: string[] = []
         continue;
       }
       if (stat.isSymbolicLink()) {
-        if (isManagedLink(linkPath)) {
-          rmSync(linkPath);
-          removed.push(linkPath);
-        }
+        if (isManagedLink(linkPath)) planned.push(linkPath);
       } else if (recordedLinks.some((recorded) => samePath(recorded, linkPath))) {
-        rmSync(linkPath, { recursive: true, force: true });
-        removed.push(linkPath);
+        planned.push(linkPath);
       }
+    } catch {
+      /* single failure does not block remaining scan */
+    }
+  }
+  return planned;
+}
+
+/**
+ * Reclaim fan-out artifacts for a skill across all agent dirs.
+ * Symlinks pointing to canonical are removed (including historical links not in lock,
+ * via defensive scan of the full registry); real directories are only removed if recorded
+ * in lock (copy-fallback artifacts). A single failure does not block the rest.
+ */
+export function unlinkSkillFromAgents(name: string, recordedLinks: string[] = []): string[] {
+  const removed: string[] = [];
+  for (const linkPath of planUnlinkSkillFromAgents(name, recordedLinks)) {
+    try {
+      if (isManagedLink(linkPath)) {
+        rmSync(linkPath);
+      } else if (
+        !lstatSync(linkPath).isSymbolicLink() &&
+        recordedLinks.some((recorded) => samePath(recorded, linkPath))
+      ) {
+        rmSync(linkPath, { recursive: true, force: true });
+      } else {
+        continue;
+      }
+      removed.push(linkPath);
     } catch {
       /* single failure does not block remaining cleanup */
     }

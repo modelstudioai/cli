@@ -7,22 +7,30 @@ Index: [index.md](index.md)
 
 ## Commands in this group
 
-| Command                    | Authentication | Description                                                                                                                     |
-| -------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `bl finetune audio create` | API Key        | Create an audio TTS model fine-tune job (sft-lora)                                                                              |
-| `bl finetune cancel`       | API Key        | Cancel a running fine-tune job                                                                                                  |
-| `bl finetune capability`   | No Auth        | Query fine-tune training capability — by model (which training types it supports) or by training type (which models support it) |
-| `bl finetune checkpoints`  | API Key        | List checkpoints produced by a fine-tune job                                                                                    |
-| `bl finetune delete`       | API Key        | Delete a fine-tune job record                                                                                                   |
-| `bl finetune export`       | API Key        | Publish a checkpoint as a deployable model                                                                                      |
-| `bl finetune get`          | API Key        | Get details of a single fine-tune job                                                                                           |
-| `bl finetune image create` | API Key        | Create an image generation model fine-tune job (sft-lora)                                                                       |
-| `bl finetune list`         | API Key        | List fine-tune jobs                                                                                                             |
-| `bl finetune logs`         | API Key        | Fetch training logs for a fine-tune job                                                                                         |
-| `bl finetune price`        | Console        | Estimate the training cost for a fine-tune job (token billing)                                                                  |
-| `bl finetune text create`  | API Key        | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                   |
-| `bl finetune video create` | API Key        | Create a video generation model fine-tune job (Wan i2v/kf2v, efficient_sft)                                                     |
-| `bl finetune watch`        | API Key        | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                      |
+| Command                          | Authentication | Description                                                                                                                     |
+| -------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `bl finetune audio create`       | API Key        | Create an audio TTS model fine-tune job (sft-lora)                                                                              |
+| `bl finetune cancel`             | API Key        | Cancel a running fine-tune job                                                                                                  |
+| `bl finetune capability`         | No Auth        | Query fine-tune training capability — by model (which training types it supports) or by training type (which models support it) |
+| `bl finetune checkpoints`        | API Key        | List checkpoints produced by a fine-tune job                                                                                    |
+| `bl finetune compress cancel`    | API Key        | Cancel a compression job                                                                                                        |
+| `bl finetune compress create`    | API Key        | Create a model compression job                                                                                                  |
+| `bl finetune compress delete`    | API Key        | Delete a compression job record                                                                                                 |
+| `bl finetune compress get`       | API Key        | Get a compression job                                                                                                           |
+| `bl finetune compress list`      | API Key        | List model compression jobs                                                                                                     |
+| `bl finetune compress logs`      | API Key        | Get compression job logs                                                                                                        |
+| `bl finetune compress templates` | API Key        | List quantizable models and their compression templates                                                                         |
+| `bl finetune compress watch`     | API Key        | Probe or follow a compression job's status                                                                                      |
+| `bl finetune delete`             | API Key        | Delete a fine-tune job record                                                                                                   |
+| `bl finetune export`             | API Key        | Publish a checkpoint as a deployable model                                                                                      |
+| `bl finetune get`                | API Key        | Get details of a single fine-tune job                                                                                           |
+| `bl finetune image create`       | API Key        | Create an image generation model fine-tune job (sft-lora)                                                                       |
+| `bl finetune list`               | API Key        | List fine-tune jobs                                                                                                             |
+| `bl finetune logs`               | API Key        | Fetch training logs for a fine-tune job                                                                                         |
+| `bl finetune price`              | Console        | Estimate the training cost for a fine-tune job (token billing)                                                                  |
+| `bl finetune text create`        | API Key        | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                   |
+| `bl finetune video create`       | API Key        | Create a video generation model fine-tune job (Wan i2v/kf2v, efficient_sft)                                                     |
+| `bl finetune watch`              | API Key        | Probe a fine-tune job's status (default: single non-blocking fetch). Pass --follow to poll until terminal.                      |
 
 ## Command details
 
@@ -179,6 +187,292 @@ bl finetune checkpoints --job-id ft-xxx
 bl finetune checkpoints --job-id ft-xxx --output json
 ```
 
+### `bl finetune compress cancel`
+
+| Field              | Value                                       |
+| ------------------ | ------------------------------------------- |
+| **Name**           | `finetune compress cancel`                  |
+| **Description**    | Cancel a compression job                    |
+| **Authentication** | API Key                                     |
+| **Usage**          | `bl finetune compress cancel --job-id <id>` |
+
+#### Flags
+
+| Flag               | Type   | Required | Description                   |
+| ------------------ | ------ | -------- | ----------------------------- |
+| `--job-id <id>`    | string | yes      | Compression job ID (required) |
+| `--api-key <key>`  | string | no       | API key                       |
+| `--base-url <url>` | string | no       | API base URL                  |
+
+#### Notes
+
+- Only PENDING, QUEUING, or RUNNING jobs can be cancelled.
+
+#### Examples
+
+```bash
+bl finetune compress cancel --job-id quant-xxx
+```
+
+```bash
+bl finetune compress cancel --job-id quant-xxx --dry-run
+```
+
+### `bl finetune compress create`
+
+| Field              | Value                                                                    |
+| ------------------ | ------------------------------------------------------------------------ |
+| **Name**           | `finetune compress create`                                               |
+| **Description**    | Create a model compression job                                           |
+| **Authentication** | API Key                                                                  |
+| **Usage**          | `bl finetune compress create --model <model> --template-id <id> [flags]` |
+
+#### Flags
+
+| Flag                                | Type   | Required | Description                                           |
+| ----------------------------------- | ------ | -------- | ----------------------------------------------------- |
+| `--model <model>`                   | string | yes      | Source custom model ID (required)                     |
+| `--template-id <id>`                | string | yes      | Compression template ID (required)                    |
+| `--job-name <name>`                 | string | no       | Unique job name (max 50 characters)                   |
+| `--description <text>`              | string | no       | Job description (max 200 characters)                  |
+| `--hparam <key=value>`              | array  | no       | Hyper-parameter override; repeat for multiple values  |
+| `--calibration-files <file-id,...>` | string | no       | Comma-separated calibration dataset file IDs          |
+| `--suffix <suffix>`                 | string | no       | Output model suffix (1–8 lowercase letters or digits) |
+| `--api-key <key>`                   | string | no       | API key                                               |
+| `--base-url <url>`                  | string | no       | API base URL                                          |
+
+#### Notes
+
+- Run `finetune compress templates` first to get a compatible template ID.
+- Model compression APIs are currently available only in the Beijing region.
+
+#### Examples
+
+```bash
+bl finetune compress create --model qwen3.5-flash-2026-02-23-ft-xxx --template-id quant-flash-nvfp4-mlp-nomtp
+```
+
+```bash
+bl finetune compress create --model qwen3.5-flash-2026-02-23-ft-xxx --template-id quant-flash-nvfp4-mlp-nomtp --suffix test --hparam calib_input=true
+```
+
+### `bl finetune compress delete`
+
+| Field              | Value                                                                     |
+| ------------------ | ------------------------------------------------------------------------- |
+| **Name**           | `finetune compress delete`                                                |
+| **Description**    | Delete a compression job record                                           |
+| **Authentication** | API Key                                                                   |
+| **Usage**          | `bl finetune compress delete --job-id <id>`                               |
+| **Risk**           | `high`                                                                    |
+| **Risk message**   | This permanently deletes the compression job record and cannot be undone. |
+
+> **Agent safety:** Never add `--yes` automatically. On `type="requires_confirmation"`, stop and ask for explicit user confirmation of the same action and scope.
+
+#### Flags
+
+| Flag               | Type   | Required | Description                      |
+| ------------------ | ------ | -------- | -------------------------------- |
+| `--job-id <id>`    | string | yes      | Compression job ID (required)    |
+| `--yes`            | switch | no       | Confirm this high-risk operation |
+| `--api-key <key>`  | string | no       | API key                          |
+| `--base-url <url>` | string | no       | API base URL                     |
+
+#### Notes
+
+- Only terminal jobs can be deleted. Deleting a job record does not delete its quantized output model.
+
+#### Examples
+
+```bash
+bl finetune compress delete --job-id quant-xxx
+```
+
+```bash
+bl finetune compress delete --job-id quant-xxx --dry-run
+```
+
+```bash
+# Only after explicit user confirmation:
+bl finetune compress delete --job-id quant-xxx --yes
+```
+
+### `bl finetune compress get`
+
+| Field              | Value                                    |
+| ------------------ | ---------------------------------------- |
+| **Name**           | `finetune compress get`                  |
+| **Description**    | Get a compression job                    |
+| **Authentication** | API Key                                  |
+| **Usage**          | `bl finetune compress get --job-id <id>` |
+
+#### Flags
+
+| Flag               | Type   | Required | Description                   |
+| ------------------ | ------ | -------- | ----------------------------- |
+| `--job-id <id>`    | string | yes      | Compression job ID (required) |
+| `--api-key <key>`  | string | no       | API key                       |
+| `--base-url <url>` | string | no       | API base URL                  |
+
+#### Examples
+
+```bash
+bl finetune compress get --job-id quant-xxx
+```
+
+### `bl finetune compress list`
+
+| Field              | Value                                                                |
+| ------------------ | -------------------------------------------------------------------- |
+| **Name**           | `finetune compress list`                                             |
+| **Description**    | List model compression jobs                                          |
+| **Authentication** | API Key                                                              |
+| **Usage**          | `bl finetune compress list [filters] [--page <n>] [--page-size <n>]` |
+
+#### Flags
+
+| Flag                                | Type   | Required | Description                                    |
+| ----------------------------------- | ------ | -------- | ---------------------------------------------- |
+| `--status <status>`                 | string | no       | Filter by job status                           |
+| `--model <model>`                   | string | no       | Filter by source model ID                      |
+| `--template-id <id>`                | string | no       | Filter by template ID                          |
+| `--quant-spec <spec>`               | string | no       | Filter by quantization specification           |
+| `--quant-method <method>`           | string | no       | Filter by quantization method                  |
+| `--start-time <time>`               | string | no       | Filter jobs starting no earlier than this time |
+| `--end-time <time>`                 | string | no       | Filter jobs ending no later than this time     |
+| `--search <keyword>`                | string | no       | Search job ID or name                          |
+| `--search-field <job_id\|job_name>` | string | no       | Limit --search to job_id or job_name           |
+| `--sort-order <asc\|desc>`          | string | no       | Sort order by create_time (default: desc)      |
+| `--page <n>`                        | number | no       | Page number (default: 1)                       |
+| `--page-size <n>`                   | number | no       | Results per page (default: 10, max: 100)       |
+| `--api-key <key>`                   | string | no       | API key                                        |
+| `--base-url <url>`                  | string | no       | API base URL                                   |
+
+#### Examples
+
+```bash
+bl finetune compress list
+```
+
+```bash
+bl finetune compress list --status SUCCEEDED --page-size 20
+```
+
+```bash
+bl finetune compress list --quant-method gptq
+```
+
+```bash
+bl finetune compress list --search qwen3 --search-field job_name --sort-order asc
+```
+
+### `bl finetune compress logs`
+
+| Field              | Value                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------ |
+| **Name**           | `finetune compress logs`                                                             |
+| **Description**    | Get compression job logs                                                             |
+| **Authentication** | API Key                                                                              |
+| **Usage**          | `bl finetune compress logs --job-id <id> [--offset <n>] [--lines <n> \| --tail <n>]` |
+
+#### Flags
+
+| Flag               | Type   | Required | Description                                       |
+| ------------------ | ------ | -------- | ------------------------------------------------- |
+| `--job-id <id>`    | string | yes      | Compression job ID (required)                     |
+| `--offset <n>`     | number | no       | Skip the first N lines (default: 0)               |
+| `--lines <n>`      | number | no       | Number of lines to read (default: 100, max: 1000) |
+| `--tail <n>`       | number | no       | Read the last N log lines                         |
+| `--api-key <key>`  | string | no       | API key                                           |
+| `--base-url <url>` | string | no       | API base URL                                      |
+
+#### Examples
+
+```bash
+bl finetune compress logs --job-id quant-xxx
+```
+
+```bash
+bl finetune compress logs --job-id quant-xxx --offset 0 --lines 50
+```
+
+```bash
+bl finetune compress logs --job-id quant-xxx --tail 20
+```
+
+### `bl finetune compress templates`
+
+| Field              | Value                                                   |
+| ------------------ | ------------------------------------------------------- |
+| **Name**           | `finetune compress templates`                           |
+| **Description**    | List quantizable models and their compression templates |
+| **Authentication** | API Key                                                 |
+| **Usage**          | `bl finetune compress templates [--model <model>]`      |
+
+#### Flags
+
+| Flag               | Type   | Required | Description                                  |
+| ------------------ | ------ | -------- | -------------------------------------------- |
+| `--model <model>`  | string | no       | Filter by custom model ID or base model name |
+| `--api-key <key>`  | string | no       | API key                                      |
+| `--base-url <url>` | string | no       | API base URL                                 |
+
+#### Notes
+
+- Only supported full-parameter fine-tuned models are returned. LoRA and already-quantized models are excluded.
+- Template IDs live in output.custom_models[].templates[].template_id. output.base_models only lists quantizable base model names and carries no templates, so an empty custom_models array means no template ID is available yet.
+- An empty templates[].hyper_parameters array means that template exposes no tunable hyper-parameters; omit --hparam when creating the compression job.
+- template_name and description are localized server-side from the CLI language setting (default en-US), sent as the lang query parameter. Run `config set --key language --value zh-CN` to get Chinese text.
+
+#### Examples
+
+```bash
+bl finetune compress templates
+```
+
+```bash
+bl finetune compress templates --model qwen3.5-flash-2026-02-23-ft-xxx
+```
+
+### `bl finetune compress watch`
+
+| Field              | Value                                                                                           |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| **Name**           | `finetune compress watch`                                                                       |
+| **Description**    | Probe or follow a compression job's status                                                      |
+| **Authentication** | API Key                                                                                         |
+| **Usage**          | `bl finetune compress watch --job-id <id> [--follow] [--interval <sec>] [--poll-timeout <sec>]` |
+
+#### Flags
+
+| Flag                   | Type   | Required | Description                                          |
+| ---------------------- | ------ | -------- | ---------------------------------------------------- |
+| `--job-id <id>`        | string | yes      | Compression job ID (required)                        |
+| `--follow`             | switch | no       | Poll until the job reaches a terminal state          |
+| `--interval <sec>`     | number | no       | Polling interval with --follow (default: 10, min: 1) |
+| `--poll-timeout <sec>` | number | no       | Stop polling after this many seconds                 |
+| `--api-key <key>`      | string | no       | API key                                              |
+| `--base-url <url>`     | string | no       | API base URL                                         |
+
+#### Notes
+
+- Without --follow, the command performs one non-blocking status probe.
+- On success, quantized_output can be passed to `deploy text create --model-name`.
+
+#### Examples
+
+```bash
+bl finetune compress watch --job-id quant-xxx
+```
+
+```bash
+bl finetune compress watch --job-id quant-xxx --follow
+```
+
+```bash
+bl finetune compress watch --job-id quant-xxx --follow --interval 30 --poll-timeout 7200
+```
+
 ### `bl finetune delete`
 
 | Field              | Value                                                                             |
@@ -203,6 +497,7 @@ bl finetune checkpoints --job-id ft-xxx --output json
 
 #### Notes
 
+- Irreversible — the job record is permanently removed.
 - Cancel a RUNNING job first via `finetune cancel` — the platform refuses to delete jobs that are still in flight.
 
 #### Examples
@@ -461,29 +756,42 @@ bl finetune price --base-model qwen3-8b --datasets file-ft-xxx --training-type c
 
 ### `bl finetune text create`
 
-| Field              | Value                                                                                                                                                                                                                                                                                |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Name**           | `finetune text create`                                                                                                                                                                                                                                                               |
-| **Description**    | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                                                                                                                                                                        |
-| **Authentication** | API Key                                                                                                                                                                                                                                                                              |
-| **Usage**          | `bl finetune text create --base-model <model> --datasets <id\|path,...> [--validations <id\|path,...>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft\|sft-lora\|dpo\|dpo-lora\|cpt>]` |
+| Field              | Value                                                                                                                                                                                                                                                                                                                                  |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**           | `finetune text create`                                                                                                                                                                                                                                                                                                                 |
+| **Description**    | Create a text model fine-tune job (sft \| sft-lora \| dpo \| dpo-lora \| cpt)                                                                                                                                                                                                                                                          |
+| **Authentication** | API Key                                                                                                                                                                                                                                                                                                                                |
+| **Usage**          | `bl finetune text create --base-model <model> --datasets <id\|path,...> [--validations <id\|path,...>] [--job-name <name>] [--priority <L0\|L1\|L2\|L3>] [--model-name <name>] [--suffix <text>] [--n-epochs <n>] [--batch-size <n>] [--learning-rate <str>] [--max-length <n>] [--training-type <sft\|sft-lora\|dpo\|dpo-lora\|cpt>]` |
 
 #### Flags
 
-| Flag                         | Type   | Required | Description                                                                                                                                                                              |
-| ---------------------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--base-model <model>`       | string | yes      | Base model to fine-tune (e.g. qwen3-8b; not the output model name)                                                                                                                       |
-| `--datasets <ids\|paths>`    | string | yes      | Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image/video). Local paths are uploaded (validated) first, then their file-ids are used.                 |
-| `--validations <ids\|paths>` | string | no       | Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).                                                                                              |
-| `--model-name <name>`        | string | no       | Output model name (after training)                                                                                                                                                       |
-| `--suffix <text>`            | string | no       | Output suffix appended by the platform (finetuned_output_suffix)                                                                                                                         |
-| `--training-type <t>`        | string | no       | Training type: sft \| sft-lora \| dpo \| dpo-lora \| cpt (default: sft-lora). Mapping to the server happens at the interface boundary (e.g. sft-lora -> efficient_sft, dpo -> dpo_full). |
-| `--n-epochs <n>`             | number | no       | Number of epochs (default: 3)                                                                                                                                                            |
-| `--batch-size <n>`           | number | no       | Per-device batch size (clamped to [8, 1024]). Auto-set to 8 for small datasets (<100KB)                                                                                                  |
-| `--learning-rate <str>`      | string | no       | Learning rate as a string to preserve precision (e.g. "1.6e-5")                                                                                                                          |
-| `--max-length <n>`           | number | no       | Max sequence length                                                                                                                                                                      |
-| `--api-key <key>`            | string | no       | API key                                                                                                                                                                                  |
-| `--base-url <url>`           | string | no       | API base URL                                                                                                                                                                             |
+| Flag                                     | Type   | Required | Description                                                                                                                                                                              |
+| ---------------------------------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--base-model <model>`                   | string | yes      | Base model to fine-tune (e.g. qwen3-8b; not the output model name)                                                                                                                       |
+| `--datasets <ids\|paths>`                | string | yes      | Comma-separated dataset file IDs or local paths (.jsonl for text, .zip for audio/image/video). Local paths are uploaded (validated) first, then their file-ids are used.                 |
+| `--validations <ids\|paths>`             | string | no       | Comma-separated validation dataset file IDs or local paths (auto-uploaded like --datasets).                                                                                              |
+| `--model-name <name>`                    | string | no       | Output model name (after training)                                                                                                                                                       |
+| `--suffix <text>`                        | string | no       | Output suffix appended by the platform (finetuned_output_suffix)                                                                                                                         |
+| `--job-name <value>`                     | string | no       | Training job display name (job_name)                                                                                                                                                     |
+| `--priority <L0\|L1\|L2\|L3>`            | string | no       | Requested scheduling priority; verify the service response                                                                                                                               |
+| `--eval-steps <value>`                   | number | no       | Validation interval in training steps                                                                                                                                                    |
+| `--lora-alpha <value>`                   | number | no       | LoRA scaling coefficient                                                                                                                                                                 |
+| `--lora-dropout <value>`                 | number | no       | LoRA dropout probability                                                                                                                                                                 |
+| `--lora-rank <value>`                    | number | no       | LoRA matrix rank                                                                                                                                                                         |
+| `--lr-scheduler-type <value>`            | string | no       | Learning rate scheduler supported by the selected model                                                                                                                                  |
+| `--save-strategy <epoch\|steps>`         | string | no       | Checkpoint saving strategy                                                                                                                                                               |
+| `--save-total-limit <value>`             | number | no       | Maximum number of saved checkpoints                                                                                                                                                      |
+| `--save-steps <value>`                   | number | no       | Checkpoint saving interval for strategy=steps                                                                                                                                            |
+| `--split <value>`                        | number | no       | Training fraction when no validation dataset is supplied                                                                                                                                 |
+| `--max-split-val-dataset-sample <value>` | number | no       | Maximum automatically split validation samples                                                                                                                                           |
+| `--data-augmentation <true\|false>`      | string | no       | Mix platform training data (true or false)                                                                                                                                               |
+| `--training-type <t>`                    | string | no       | Training type: sft \| sft-lora \| dpo \| dpo-lora \| cpt (default: sft-lora). Mapping to the server happens at the interface boundary (e.g. sft-lora -> efficient_sft, dpo -> dpo_full). |
+| `--n-epochs <n>`                         | number | no       | Number of epochs (default: 3)                                                                                                                                                            |
+| `--batch-size <n>`                       | number | no       | Per-device batch size (clamped to [8, 1024]). Auto-set to 8 for small datasets (<100KB)                                                                                                  |
+| `--learning-rate <str>`                  | string | no       | Learning rate as a string to preserve precision (e.g. "1.6e-5")                                                                                                                          |
+| `--max-length <n>`                       | number | no       | Max sequence length                                                                                                                                                                      |
+| `--api-key <key>`                        | string | no       | API key                                                                                                                                                                                  |
+| `--base-url <url>`                       | string | no       | API base URL                                                                                                                                                                             |
 
 #### Notes
 
@@ -516,6 +824,10 @@ bl finetune text create --base-model qwen3-8b --datasets file-aaa,./extra.jsonl
 
 ```bash
 bl finetune text create --base-model qwen3-8b --datasets ./train.jsonl --training-type sft
+```
+
+```bash
+bl finetune text create --base-model qwen3-8b --datasets ./jev-train.jsonl --job-name jev-train-v1 --priority L0 --lora-rank 8 --lora-alpha 16 --lora-dropout 0.1 --lr-scheduler-type linear --eval-steps 50 --save-strategy epoch --save-total-limit 3 --split 0.9 --max-split-val-dataset-sample 1000 --data-augmentation false --dry-run
 ```
 
 ```bash

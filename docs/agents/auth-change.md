@@ -33,8 +33,9 @@ defineCommand({ auth }) → runtime/authStage → ctx.client → command.run(ctx
 
 `~/.bailian/config.json` 可同时保存 `api_key`、`access_token` 与 `access_key_*`。登录任一种方式不得删除另一种:
 
-- `bl auth login --api-key ...` 更新 `api_key`;显式 `base_url` 会一并写入，所选命名 Profile 若命中内置套餐预设（当前为 `token-plan`），则在尚未保存 `base_url` 时补写预设地址，并把该预设的默认模型物化写入。API Key 落盘成功后，`api_key_capabilities` 保留已有项并追加当前 preset 中缺少的项，不自动删除任何已有能力；无 preset 的自定义 Profile 不做合并。登录仍不得删除其他鉴权域的凭证
-- `bl auth login --console` 只更新 `access_token` 以及回调携带的 console 作用域字段
+- `bl auth login --api-key ...` 先通过只读 `GET /models` 校验 Key，校验成功后才原子写入 `api_key` 与实际匹配的 `base_url`。显式 `--base-url` 只校验该站点，不自动改写；未显式指定时，普通 `sk-*` / `sk-ws-*` 按“当前 Profile 已保存的同类站点 → 基于 `workspace_id` 构造的各地域 Workspace 专属站点 → 公共地域”顺序选择首个成功结果，`sk-sp-*` 并行探测国内站与新加坡 Token Plan，其他格式同时尝试两类候选。所有候选明确拒绝时返回 `AUTH`；网络、超时、非 JSON 或 5xx 视为校验无法确定并透传原错误。任一失败都不落盘、不激活 Profile
+- 未显式传 `--config` 时，`sk-sp-*` 自动写入并激活 `token-plan`；普通 `sk-*` / `sk-ws-*` 仅在当前为 `token-plan` 时改写并激活 `default`，否则保留当前 Profile；其他格式不自动切换。显式 `--config` 始终优先。`sk-sp-*` 无论写入哪个 Profile 都会携带 Token Plan 的预设默认模型，并在保留已有项的基础上补齐 `api_key_capabilities`，不自动删除任何已有能力。登录仍不得删除其他鉴权域的凭证
+- `bl auth login --console` 更新 `access_token` 以及回调携带的 console 作用域字段；若所选 Profile 没有模型 API Key，会要求控制台页面创建并回传一个普通 API Key 与 Base URL 一并保存。该回调结果不重复执行 `/models` 校验，且不会创建或配置 Token Plan
 - `bl auth login --open-api ...` 更新 `access_key_id` / `access_key_secret`,同时会调用 OpenAPI 生成 CLI `access_token` 并一并写入;即一次 `--open-api` 登录同时产生 `openapi` 与 `console` 域凭证
 - `bl auth logout --console` 只清 `access_token`
 - `bl auth logout --open-api` 只清 `access_key_id` / `access_key_secret` / `security_token`

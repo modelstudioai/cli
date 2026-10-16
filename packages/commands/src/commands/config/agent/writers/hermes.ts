@@ -1,13 +1,15 @@
-import { homedir } from "os";
 import { join } from "path";
 import { existsSync, readFileSync } from "fs";
 import yaml from "yaml";
+import { getHermesHome } from "bailian-cli-core";
 import { backup, writeTextAtomic, isAnthropicEndpoint, type AgentDef } from "./utils.ts";
 
 export default {
   label: "Hermes Agent",
   write({ baseUrl, apiKey, model }) {
-    const configPath = join(homedir(), ".hermes", "config.yaml");
+    // Honor HERMES_HOME / the platform-native default so the config lands where
+    // Hermes actually reads it (see core getHermesHome); never hard-code ~/.hermes.
+    const configPath = join(getHermesHome(), "config.yaml");
 
     backup(configPath);
 

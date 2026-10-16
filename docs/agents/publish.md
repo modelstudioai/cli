@@ -15,14 +15,37 @@
 
 ```text
 publish-stable.mjs / publish-channel.mjs   ← 唯一发版入口
-        ├─ npm（pnpm publish）
-        └─ binary（lib/binary-release
-              → binary-build
-              → gh-release
-              → oss-direct-upload）
+        ├─ binary 先走（lib/binary-release
+        │     → binary-build → gh-release
+        │     → oss-direct-upload → FC release 通道）
+        └─ OSS 成功后再 npm（pnpm publish）
 ```
 
+bailian-cli 的二进制（GitHub Release + OSS）在 npm 之前。OSS 上传受网络波动可能失败；若 npm 先成功，会出现 latest 已发出但 CDN 没有对应二进制。stable 仍要先推 `v<version>` tag，因为 GitHub Release 首次创建带 `--verify-tag`。`knowledge-studio-cli` / `--skip-binary` 没有二进制，仍只发 npm。
+
 `tools/release/lib/binary-release.mjs` 等是实现，一般不要单独当发版入口（调试可用）。
+
+### OSS 通道：FC 预签名上传（仓库不持有任何 OSS 凭据）
+
+二进制与静态文件（changelog）上 OSS 不再由 CI 持 AK/SK 直传，而是经 FC 函数
+（bailian-docs-llm-wiki-crawl 的 `release-prepare` / `release-finalize` action）：
+
+1. CI 用本 job 的 GitHub OIDC token（`id-token: write`）调 `release-prepare`；FC 验签
+   （白名单仓库 + ref）后返回 OSS 预签名 PUT URL（30 分钟过期）
+2. runner 拿 URL 直传 OSS（文件体不经过 FC）
+3. CI 调 `release-finalize`：FC 用函数角色 STS 凭证做 HEAD 字节数对账；stable 额外
+   维护 `manifest.json` / `latest.json`（newer-version 守卫在 FC 侧）
+
+配置面：
+
+| 位置             | 变量                                                                                                                        | 说明                                                                                             |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| GitHub Variables | 触发 URL 复用共享的 `FC_TRIGGER_URL`（publish-skills 同源，同一 FC 函数按 URL 路径路由 action）；另需 `FC_RELEASE_AUDIENCE` | 未设 URL 则跳过 OSS 通道（不阻塞 npm 发布）；复用意味着 FC 部署完成前不要合入 release 工具链改动 |
+| FC 函数 env      | `RELEASE_OIDC_AUD` / `RELEASE_ALLOWED_REPOS` / `RELEASE_ALLOWED_REFS`                                                       | 鉴权策略；audience 需与 CI 侧一致                                                                |
+| FC 函数 env      | `OSS_BUCKET` / `OSS_REGION` / `OSS_RELEASE_PREFIX` / `OSS_STATIC_PREFIX`                                                    | bucket 与 key 前缀（原七组 OSS secrets 收敛至此）                                                |
+
+改动 FC 侧逻辑（验签策略 / 对账 / manifest 守卫）去 bailian-docs-llm-wiki-crawl 仓库；
+本仓库只维护 client（`tools/release/lib/oss-direct-upload.mjs`）。
 
 ### bailian-kb-dsh（独立版本、npm-only）
 
@@ -49,9 +72,9 @@ workflow 的 `channel` 输入**只决定 npm dist-tag**（如 `mcp` / `plugin` /
 ### channel 发布
 
 1. 在 GitHub 触发 Publish workflow，mode 选 `channel`，channel 填 npm dist-tag 名：
-   - **`bailian-cli`**：npm 发到该 tag；二进制同时刷新 CDN `sync-release.json`（与 tag 名无关）。本机验证：`BAILIAN_CHANNEL=sync-release`
+   - **`bailian-cli`**：npm 发到该 tag；二进制同时刷新 CDN `sync-release.json`（与 tag 名无关）。本机验证：`BAILIAN_CHANNEL=sync-release`。**先发二进制（zip+tar.gz 上齐）再发静态仓 `install.sh`**，避免新脚本去拉还不存在的 `.tar.gz`。
    - **`knowledge-studio-cli`**：仅 npm（自动跳过 binary，不碰 `sync-release.json`）
-2. CI 自动：生成 `0.0.0-beta-<sha7>-<YYYYMMDDHHMM>`（UTC 到分钟；同 commit 同分钟重跑会覆盖同号）→ 临时 bump → 自检 → **npm 发到 dist-tag** →（bailian-cli）**Bun 编二进制 + GH prerelease + 覆盖 `sync-release.json`** → 还原 package.json
+2. CI 自动：生成 `0.0.0-beta-<sha7>-<YYYYMMDDHHMM>`（UTC 到分钟；同 commit 同分钟重跑会覆盖同号）→ 临时 bump → 自检 →（bailian-cli）**Bun 编二进制 + GH prerelease + 覆盖 `sync-release.json`** → **npm 发到 dist-tag** → 还原 package.json
 3. 对应脚本：`tools/release/publish-channel.mjs`
 
 ### stable 发布
@@ -59,7 +82,7 @@ workflow 的 `channel` 输入**只决定 npm dist-tag**（如 `mcp` / `plugin` /
 1. 确保当前 release tooling 覆盖的包(`tools/release/lib/packages.mjs`)已升到目标版本且一致;当前基础集合为 `packages/core` / `packages/runtime` / `packages/commands` / `packages/cli`，`knowledge-studio-cli` 发布会额外包含 `packages/kscli`
 2. 在 GitHub 触发 Publish workflow，package 选目标包集合，mode 选 `stable`
 3. 需要 production environment 审批人批准
-4. CI 自动：自检 → **npm 发到 latest** → **推送 git tag `v<ver>`** → **Bun 编二进制并创建/更新 GitHub Release** →（bailian-cli）维护 CDN **`manifest.json`** → 完成
+4. CI 自动：自检 → **推送 git tag `v<ver>`** → **Bun 编二进制并创建/更新 GitHub Release**（每平台 `.zip`，darwin/linux 额外 `.tar.gz`）→（bailian-cli）维护 CDN **`manifest.json`**（unix 资产含 `tar` / `tarSha256`，`file` 仍为 zip）→ **npm 发到 latest** → 完成
 5. 如果所选发布集合的当前版本已全部存在于 npm，stable 发布会失败并提示先升级版本号；如果只有部分包已发布，CI 会继续补发缺失包
 6. 对应脚本：`tools/release/publish-stable.mjs`
 
@@ -88,10 +111,23 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 
 ## CI 基础设施
 
-- **认证**：npm OIDC Trusted Publishing（无 token），需要 `id-token: write` 权限
+### 批量清理 npm dist-tags
+
+独立入口：GitHub Actions → **Clean npm tags**（`.github/workflows/cleanup-npm-tags.yml`）。
+
+- 六个包复选框默认全选；`tags` 输入待删除的标签，支持空格、逗号或换行分隔。
+- `dry_run` 默认开启，只查询并预览。实际删除前先检查预览，再取消勾选；首次试跑只选 `bailian-cli`，标签填 `release-test`。
+- 先校验全部输入并读取所有所选包的标签，拒绝空选择、非法标签和 `latest`；标签不存在则跳过。
+- 实际删除串行调用 `npm dist-tag rm`，每次删除前检查标签是否仍指向预览版本，删除后最多查询 5 次确认（间隔 1、2、4、8 秒），容忍 registry 短暂返回旧数据，删除命令只执行一次；发生错误立即停止，已删除的标签不会自动恢复。日志及 Actions Summary 保留每条完成结果，可按同样输入重跑剩余项。
+- 此入口不发布版本、不构建二进制、不修改 CDN、不删除 npm 历史版本。
+- 所有目标包需要新增指向 `modelstudioai/cli` / `cleanup-npm-tags.yml` 的 Trusted Publisher，开启 **Allow npm dist-tag**；保留原 `publish.yml` 配置。清理入口使用 npm 11.21.0、`id-token: write` 和 GitHub 托管 runner，不使用长效 npm token。
+- 新增手动 workflow 需先进入默认分支才能触发。新 Trusted Publisher 有 48 小时首次验证期限；2026-10-15 首次试跑仅删除 `bailian-cli` 的 `release-test`，npm 页面确认该清理连接已变为 `Valid`，没有发布新版本。其他连接仍需查看各包页面确认，不能由清理成功推断 `Valid`。不要为验证自动发布 beta。
+
+- **认证**：npm OIDC Trusted Publishing（无 token），需要 `id-token: write` 权限；OSS 通道复用同一 OIDC token 向 FC 证明身份（见上文「OSS 通道」）
 - **GitHub Release**：`contents: write` + `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`（stable / channel 均需）
 - **Node 版本**：24（npm 11.5+ 才支持 OIDC token 交换）
 - **Bun**：`oven-sh/setup-bun`，版本钉死在 workflow 中
+- **darwin 签名**：编完后 `binary-codesign.mjs` 对 darwin Mach-O 做 ad-hoc 重签，并按 Apple 的方式重算每一页 SHA-256（末页不补零）。对不上就中止发布。macOS runner 额外跑 `codesign --verify --strict`。Linux runner 用 `rcodesign 0.29.0 sign`；不要用 `rcodesign verify`（会拒绝 Apple 已通过的 ad-hoc 签名）。漏签时 Apple Silicon 会在启动时 SIGKILL
 - **Actions 版本**：checkout/setup-node/pnpm-action 均为 v6（Node 24 兼容）
 - **npm 配置**：当前 release tooling 发布的包(`bailian-cli-core` / `bailian-cli-runtime` / `bailian-cli-commands` / `bailian-cli` / `knowledge-studio-cli`)的 Trusted Publisher 指向 `modelstudioai/cli` 的 `publish.yml`;新增发布包时同步 npm Trusted Publisher
 
@@ -138,4 +174,6 @@ node tools/release/publish-channel.mjs --channel test --knowledge --dry-run
 | CI 用 Node 22（npm 10）跑 publish                                   | npm 10 不支持 OIDC token 交换，publish 报 404                                      |
 | stable 发布前没有升级版本号                                         | 所选发布集合的版本已全部存在于 npm，CI 明确报错并要求先升级版本号                  |
 | channel job 缺少 `contents: write`                                  | `gh release create` 失败                                                           |
+| darwin 二进制编完后没有 ad-hoc 重签                                 | Apple Silicon / macOS 27 对失效的 linker 签名直接 SIGKILL（`Killed: 9`）           |
+| npm 先于二进制 / OSS 成功                                           | latest 已发出，CDN 上没有对应 zip/tar.gz；OSS 网络失败时无法回滚 npm               |
 | stable 未先推 tag 就建 Release                                      | `--verify-tag` 失败                                                                |

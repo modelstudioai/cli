@@ -2,7 +2,12 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
-import { parseStdoutJson, runCommandE2e as runBaseCommandE2e, runCommandHelp } from "./helpers.ts";
+import {
+  parseStdoutJson,
+  runCommandE2e as runBaseCommandE2e,
+  runCommandInProcess as runBaseCommandInProcess,
+  runCommandHelp,
+} from "./helpers.ts";
 import { SANDBOX_ROUTES } from "./topic-routes.ts";
 
 const AUTH_ARGS = ["--api-key", "sk-sandbox-e2e", "--workspace-id", "ws-e2e"];
@@ -19,6 +24,15 @@ afterEach(() => {
 
 function runCommandE2e(routes: typeof SANDBOX_ROUTES, args: string[]) {
   return runBaseCommandE2e(routes, args, {
+    BAILIAN_CONFIG_DIR: configDirectory,
+    DASHSCOPE_BASE_URL: "",
+    DASHSCOPE_API_KEY: "",
+    BAILIAN_WORKSPACE_ID: "",
+  });
+}
+
+function runCommandInProcess(routes: typeof SANDBOX_ROUTES, args: string[]) {
+  return runBaseCommandInProcess(routes, args, {
     BAILIAN_CONFIG_DIR: configDirectory,
     DASHSCOPE_BASE_URL: "",
     DASHSCOPE_API_KEY: "",
@@ -146,7 +160,7 @@ describe("e2e: Sandbox offline validation and dry-run", () => {
   ])(
     "template $operation resolves --image before dry-run output",
     async ({ operation, args, selector, method }) => {
-      const { stdout, stderr, exitCode } = await runCommandE2e(SANDBOX_ROUTES, [
+      const { stdout, stderr, exitCode } = await runCommandInProcess(SANDBOX_ROUTES, [
         "sandbox",
         "template",
         operation,
@@ -170,7 +184,7 @@ describe("e2e: Sandbox offline validation and dry-run", () => {
   );
 
   test("unknown image selector fails before a request", async () => {
-    const { stderr, exitCode } = await runCommandE2e(SANDBOX_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(SANDBOX_ROUTES, [
       "sandbox",
       "template",
       "create",
@@ -194,7 +208,7 @@ describe("e2e: Sandbox offline validation and dry-run", () => {
   });
 
   test("create requires a template in flags or body", async () => {
-    const { stderr, exitCode } = await runCommandE2e(SANDBOX_ROUTES, [
+    const { stderr, exitCode } = await runCommandInProcess(SANDBOX_ROUTES, [
       "sandbox",
       "create",
       ...AUTH_ARGS,
@@ -209,7 +223,7 @@ describe("e2e: Sandbox offline validation and dry-run", () => {
   });
 
   test("create body flags win and request environment values are redacted", async () => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(SANDBOX_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(SANDBOX_ROUTES, [
       "sandbox",
       "create",
       "--body",
@@ -299,7 +313,7 @@ describe("e2e: Sandbox offline validation and dry-run", () => {
       suffix: "/templates/template-test",
     },
   ])("$name dry-run stays offline", async ({ args, method, suffix }) => {
-    const { stdout, stderr, exitCode } = await runCommandE2e(SANDBOX_ROUTES, [
+    const { stdout, stderr, exitCode } = await runCommandInProcess(SANDBOX_ROUTES, [
       ...args,
       ...AUTH_ARGS,
       "--dry-run",

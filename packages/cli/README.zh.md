@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?source_channel=cli_github&) · [English](https://github.com/modelstudioai/cli/blob/main/README.md) · [API 文档](https://help.aliyun.com/zh/model-studio/) · [获取 API Key](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key)
+[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?spm=a2ty07.github) · [English](https://github.com/modelstudioai/cli/blob/main/README.md) · [API 文档](https://help.aliyun.com/zh/model-studio/) · [获取 API Key](https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key)
 
 ---
 
@@ -25,11 +25,12 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 - **模型生成** — 文本、图像、视频、语音全模态生成，支持编辑与参考生成
 - **素材理解** — 图像、文档、音频、长视频的解析与问答
 - **应用编排** — 调用百炼已发布的 Managed Agent、智能体和工作流，接入知识库、记忆库、联网搜索与 MCP 工具
+- **原生 MCP 接入** — 将百炼 MCP 服务注册到 Codex、Claude Code、Cursor、Qoder、Qoder Work、千问办公（QwenWork）、Qwen Code、Gemini CLI 或 Pi
 - **模型训推** — 数据集校验上传、模型精调、专属模型部署上线
 - **账号运维** — 授权登录、界面化配置、模型市场、用量与额度、限流提额、团队席位管理
 - **套餐接入** — 支持 Token Plan 等订阅计划一键接到 CLI 和常见 Coding Agent
 
-> **注意：** 应用编排、模型训推、账号运维和套餐接入目前仅支持中国站（aliyun.com）账号，暂不支持国际站 / 全球站账号。
+> **注意：** 应用编排、原生 MCP 接入、模型训推、账号运维和套餐接入目前仅支持中国站（aliyun.com）账号，暂不支持国际站 / 全球站账号。
 
 ## 示例 1：一句话生成一部电影短片
 
@@ -65,7 +66,7 @@ _专为 AI Agent 打造，每个命令均可作为结构化工具调用。_
 
 - **[Qwen Code](https://github.com/QwenLM/qwen-code)** —— 理解需求并生成 Agent 配置
 - **[阿里云百炼 CLI](https://github.com/modelstudioai/cli/)** —— 校验配置、预览变更并完成部署
-- **[Managed Agent](https://bailian.console.aliyun.com/cn-beijing/?tab=managed-agents#/managed-agents/quick-start)** —— 在云端运行导演角色及其 Skill 和工具
+- **[Managed Agent](https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=managed-agents#/managed-agents/quick-start)** —— 在云端运行导演角色及其 Skill 和工具
 
 ### 唯一的提示词
 
@@ -110,40 +111,41 @@ irm https://bailian.aliyun.com/cli/install.ps1 | iex
 
 安装完成后，直接在 AI Agent 中描述你的任务，无需手动拼接命令。
 
-| 场景             | 可以这样对 Agent 说                                                     |
-| ---------------- | ----------------------------------------------------------------------- |
-| Managed Agent    | “帮我创建一个能够生成短片分镜和视频的 Managed Agent。”                  |
-| 图片和视频生成   | “生成一张穿着太空服的猫站在火星上的图片，再把它制作成一段视频。”        |
-| 语音识别         | “把这段音频转写成文字，专有名词识别不准的话帮我加上热词再试。”          |
-| 用量与额度       | “查看最近的模型用量、免费额度和限流情况。”                              |
-| 模型选型         | “推荐一个适合图片理解和智能客服的模型。”                                |
-| 了解 Bailian CLI | “介绍一下 Bailian CLI 能帮我完成哪些任务，并根据我的需求推荐使用方式。” |
+| 场景             | 可以这样对 Agent 说                                                          |
+| ---------------- | ---------------------------------------------------------------------------- |
+| Managed Agent    | “帮我创建一个能够生成短片分镜和视频的 Managed Agent。”                       |
+| 图片和视频生成   | “生成一张穿着太空服的猫站在火星上的图片，再把它制作成一段视频。”             |
+| 语音识别         | “把这段音频转写成文字，专有名词识别不准的话帮我加上热词再试。”               |
+| 用量与额度       | “查看最近的模型用量、免费额度和限流情况。”                                   |
+| 监控与告警       | “查看我的模型调用统计、失败明细和调用日志，并创建一条告警规则。”             |
+| 吞吐预留         | “查看我的吞吐预留及容量实例，并对容量进行扩缩、续订或释放，再等待操作完成。” |
+| 模型选型         | “推荐一个适合图片理解和智能客服的模型。”                                     |
+| 决策模型         | “用百炼决策模型给这张工单分流，并判断是否需要升级处理。”                     |
+| 了解 Bailian CLI | “介绍一下 Bailian CLI 能帮我完成哪些任务，并根据我的需求推荐使用方式。”      |
 
-> 更多案例与使用场景：[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?source_channel=cli_github&)
+> 更多案例与使用场景：[阿里云百炼 CLI 官方主页](https://bailian.console.aliyun.com/cli?spm=a2ty07.github)
 
 ## 认证方式
 
-### API Key
+### 控制台登录（OAuth，推荐）
 
-大部分命令均需要 API Key。前往 [DashScope 控制台](https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key) 获取。
-
-```bash
-bl auth login --api-key sk-xxxxx
-```
-
-Token Plan 的 API Key 前往 [Token Plan 订阅详情](https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview) 获取或复制。
-
-```bash
-bl auth login --config token-plan --api-key sk-sp-xxxxx
-```
-
-### 控制台登录（OAuth）
-
-控制台能力命令（模型列表、应用列表、MCP 列表、工作空间、用量查询、限流提额、控制台直调）需要使用此登录方式。打开浏览器跳转百炼控制台完成登录。
+控制台能力命令（模型列表、应用列表、MCP 列表、工作空间、用量查询、限流提额、控制台直调）需要使用此登录方式，并可在需要时创建普通 API Key。Token Plan 等订阅计划不能使用 `--console`，请使用下面的 API Key 登录方式。
 
 ```bash
 bl auth login --console
 ```
+
+国际站请使用 `--console-site international`。
+
+### API Key
+
+使用已有的普通 API Key 或 Token Plan 订阅 Key，都执行同一条命令：
+
+```bash
+bl auth login --api-key <API_KEY>
+```
+
+普通 Key 前往 [DashScope 控制台](https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key) 获取，Token Plan Key 前往 [订阅详情](https://bailian.console.aliyun.com/cn-beijing?spm=a2ty07.github&tab=plan#/efm/subscription/overview) 获取。
 
 ### 阿里云 OpenAPI AK/SK
 
@@ -191,12 +193,12 @@ bl update
 
 ## 相关链接
 
-| 资源                    | 地址                                                                                      |
-| :---------------------- | :---------------------------------------------------------------------------------------- |
-| 阿里云百炼 CLI 官方主页 | https://bailian.console.aliyun.com/cli?source_channel=cli_github&                         |
-| DashScope API 文档      | https://help.aliyun.com/zh/model-studio/                                                  |
-| 通义千问模型列表        | https://help.aliyun.com/zh/model-studio/getting-started/models                            |
-| 阿里云百炼控制台        | https://bailian.console.aliyun.com/?source_channel=cli_github                             |
-| 获取 API Key            | https://bailian.console.aliyun.com/cn-beijing/?source_channel=key_github&tab=app#/api-key |
-| 获取 Token Plan API Key | https://bailian.console.aliyun.com/cn-beijing?tab=plan#/efm/subscription/overview         |
-| 获取 AccessKey          | https://ram.console.aliyun.com/manage/ak                                                  |
+| 资源                    | 地址                                                                                                |
+| :---------------------- | :-------------------------------------------------------------------------------------------------- |
+| 阿里云百炼 CLI 官方主页 | https://bailian.console.aliyun.com/cli?spm=a2ty07.github                                            |
+| DashScope API 文档      | https://help.aliyun.com/zh/model-studio/                                                            |
+| 通义千问模型列表        | https://help.aliyun.com/zh/model-studio/getting-started/models                                      |
+| 阿里云百炼控制台        | https://bailian.console.aliyun.com/?spm=a2ty07.github                                               |
+| 获取 API Key            | https://bailian.console.aliyun.com/cn-beijing/?spm=a2ty07.github&tab=app#/api-key                   |
+| 获取 Token Plan API Key | https://bailian.console.aliyun.com/cn-beijing?spm=a2ty07.github&tab=plan#/efm/subscription/overview |
+| 获取 AccessKey          | https://ram.console.aliyun.com/manage/ak                                                            |

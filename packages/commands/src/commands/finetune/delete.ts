@@ -25,6 +25,10 @@ export default defineCommand({
   exampleArgs: ["--job-id ft-xxx", "--job-id ft-xxx --dry-run", "--job-id ft-xxx --yes"],
   notes: [
     {
+      "en-US": "Irreversible — the job record is permanently removed.",
+      "zh-CN": "该操作不可撤销——任务记录将被永久删除。",
+    },
+    {
       "en-US":
         "Cancel a RUNNING job first via `finetune cancel` — the platform refuses to delete jobs that are still in flight.",
       "zh-CN": "请先通过 `finetune cancel` 取消 RUNNING 任务，平台拒绝删除仍在运行的任务。",

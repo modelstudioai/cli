@@ -28,6 +28,10 @@ export {
   sandboxTemplatePath,
   sandboxTemplateBuildStatusPath,
   responsesPath,
+  decisionPath,
+  agentStudioHost,
+  securityOverviewEndpoint,
+  securityAgentLogsEndpoint,
   speechRecognizePath,
   speechSynthesizePath,
   speechVocabularyPath,
@@ -35,6 +39,7 @@ export {
   userProfilePath,
   videoGeneratePath,
   image2videoPath,
+  workspaceMaaSBaseUrl,
 } from "./endpoints.ts";
 export {
   isLegacyImage2ImageModel,
@@ -65,6 +70,7 @@ export {
 } from "./asr-routes.ts";
 export {
   CHANNEL,
+  DASHSCOPE_SERVICE_HEADER,
   OPEN_API_SOURCE,
   sourceConfig,
   trackingHeaders,
@@ -72,6 +78,7 @@ export {
 } from "./headers.ts";
 export type { HttpDeps, RequestOpts } from "./http.ts";
 export { request, requestJson } from "./http.ts";
+export { securityGet, parseSecurityBody, isDashScopeGateway } from "./security.ts";
 export { createInstrumentedFetch, type FetchImplementation } from "./instrumented-fetch.ts";
 export {
   Client,

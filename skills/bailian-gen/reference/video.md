@@ -121,11 +121,18 @@ bl video edit --video https://example.com/input.mp4 --prompt "Put clothes on the
 | `--seed <n>`                | number  | no       | Random seed for reproducible generation                                                                              |
 | `--download <path>`         | string  | no       | Save video to file on completion                                                                                     |
 | `--file <url-or-path>`      | string  | no       | Reference file URL or local path for file-to-video (wan3.0-video only; mutually exclusive with --image/--last-frame) |
+| `--prime`                   | switch  | no       | Use Prime mode with a workspace-scoped endpoint                                                                      |
+| `--workspace-id <id>`       | string  | no       | Workspace ID for the default Prime endpoint (or set BAILIAN_WORKSPACE_ID)                                            |
 | `--async`                   | switch  | no       | Return async task id without waiting                                                                                 |
 | `--concurrent <n>`          | number  | no       | Run N parallel requests (default: 1)                                                                                 |
 | `--poll-interval <seconds>` | number  | no       | Polling interval when waiting (default: 5)                                                                           |
 | `--api-key <key>`           | string  | no       | API key                                                                                                              |
 | `--base-url <url>`          | string  | no       | API base URL                                                                                                         |
+
+#### Notes
+
+- Prime mode requires an explicit model.
+- Prime endpoint: configured --base-url, DASHSCOPE_BASE_URL, or profile base_url takes precedence; otherwise workspace is resolved from --workspace-id, BAILIAN_WORKSPACE_ID, then config workspace_id.
 
 #### Examples
 
@@ -147,6 +154,10 @@ bl video generate --prompt "Mountain landscape" --resolution 720P --duration 5
 
 ```bash
 bl video generate --prompt "A cat playing with a ball" --watermark false
+```
+
+```bash
+bl video generate --prime --workspace-id <id> --model wan3.0-video-prime --prompt "Ocean waves at sunset"
 ```
 
 ### `bl video ref`

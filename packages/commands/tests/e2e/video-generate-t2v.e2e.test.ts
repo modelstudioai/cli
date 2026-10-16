@@ -1,5 +1,7 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, test } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
 import {
   cliTimeoutPrefix,
   e2eLabelFromMetaUrl,
@@ -11,6 +13,32 @@ import {
   runCommandE2e,
 } from "./helpers.ts";
 import { VIDEO_ROUTES } from "./topic-routes.ts";
+
+let isolatedDirectory: string;
+
+beforeEach(() => {
+  isolatedDirectory = mkdtempSync(join(tmpdir(), "bl-video-prime-e2e-"));
+  writeFileSync(join(isolatedDirectory, "config.json"), "{}");
+});
+
+afterEach(() => {
+  rmSync(isolatedDirectory, { recursive: true, force: true });
+});
+
+function runIsolatedVideoGenerate(args: string[], envOverrides: NodeJS.ProcessEnv = {}) {
+  return runCommandE2e(VIDEO_ROUTES, args, {
+    BAILIAN_CONFIG_DIR: isolatedDirectory,
+    HOME: isolatedDirectory,
+    USERPROFILE: isolatedDirectory,
+    ...envOverrides,
+  });
+}
+
+const EMPTY_MODEL_ENV = {
+  DASHSCOPE_API_KEY: "",
+  DASHSCOPE_BASE_URL: "",
+  BAILIAN_WORKSPACE_ID: "",
+};
 
 /**
  * Video generate (t2v)：help / 分组不依赖密钥；长任务需视频 E2E + DashScope。
@@ -24,7 +52,78 @@ describe("e2e: video generate (t2v)", () => {
       "--help",
     ]);
     expect(exitCode, stderr).toBe(0);
+    expect(stderr).toMatch(/--prime/i);
+    expect(stderr).toMatch(/--workspace-id/i);
     expect(stderr).toMatch(/generate|--prompt|--model|download|image/i);
+  });
+
+  test("Prime 模式要求显式 --model", async () => {
+    const { stderr, exitCode } = await runIsolatedVideoGenerate(
+      ["video", "generate", "--prime", "--prompt", "hello"],
+      EMPTY_MODEL_ENV,
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--prime.*--model/i);
+  });
+
+  test("未启用 Prime 时拒绝 --workspace-id", async () => {
+    const { stderr, exitCode } = await runIsolatedVideoGenerate(
+      ["video", "generate", "--workspace-id", "ws_test", "--prompt", "hello"],
+      EMPTY_MODEL_ENV,
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toMatch(/--workspace-id.*--prime/i);
+  });
+
+  test("Prime dry-run 输出 workspace Endpoint 和请求体", async () => {
+    const { stdout, stderr, exitCode } = await runIsolatedVideoGenerate(
+      [
+        "video",
+        "generate",
+        "--prime",
+        "--workspace-id",
+        "ws_test",
+        "--model",
+        "wan3.0-video-prime",
+        "--prompt",
+        "hello",
+        "--dry-run",
+        "--output",
+        "json",
+      ],
+      EMPTY_MODEL_ENV,
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ endpoint?: string; request?: { model?: string } }>(stdout);
+    expect(data.endpoint).toBe(
+      "https://ws_test.cn-beijing.maas.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis",
+    );
+    expect(data.request?.model).toBe("wan3.0-video-prime");
+  });
+
+  test("Prime dry-run 允许自定义 Base URL 覆盖 workspace Endpoint", async () => {
+    const { stdout, stderr, exitCode } = await runIsolatedVideoGenerate(
+      [
+        "video",
+        "generate",
+        "--prime",
+        "--model",
+        "wan3.0-video-prime",
+        "--prompt",
+        "hello",
+        "--base-url",
+        "https://example.test",
+        "--dry-run",
+        "--output",
+        "json",
+      ],
+      EMPTY_MODEL_ENV,
+    );
+    expect(exitCode, stderr).toBe(0);
+    const data = parseStdoutJson<{ endpoint?: string }>(stdout);
+    expect(data.endpoint).toBe(
+      "https://example.test/api/v1/services/aigc/video-generation/video-synthesis",
+    );
   });
 });
 

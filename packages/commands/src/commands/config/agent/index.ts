@@ -132,6 +132,7 @@ export default defineCommand({
       model,
       contextWindow,
       wireApi,
+      localize: ctx.localize,
     };
     const summary = agentDef.write(params);
 
