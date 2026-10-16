@@ -53,6 +53,7 @@ pnpm -F bailian-cli exec tsx src/main.ts <command> --new-flag x   # 实测一遍
 
 ## 常见漏点
 
+- 修改请求超时时，检查底层 HTTP 限制：core 的公共 HTTP 请求层仅为已设置超时计时器的请求关闭 `headersTimeout`，由请求 `AbortSignal` 控制响应头等待；保留 `bodyTimeout` 空闲保护，不全局关闭其他请求的超时。仅设置 Agent 默认值会被 Node `fetch` 的逐请求默认值覆盖。流式读取的总时长另由调用方管理，不能据此宣称 `--timeout` 覆盖整个流。
 - ✗ 加了 array 型 flag 但没考虑用户可能传多次
 - ✗ 改默认值忘记更新 description 里的 "(default: xxx)" 文案
 - ✗ 在 `usageArgs` / `exampleArgs` 里写死 `bl <path>`,导致其它产品入口复用时 help 错
